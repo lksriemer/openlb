@@ -74,16 +74,20 @@ public:
   /// Adds needed Cells to the Communicator _commBC in SuperLattice
   void addPoints2CommBC(SuperGeometry3D<T>& superGeometry, int material);
 
-  SuperLattice3D<T,Lattice>& getSuperLattice() {
+  SuperLattice3D<T,Lattice>& getSuperLattice()
+  {
     return _sLattice;
   };
-  std::vector<OffLatticeBoundaryCondition3D<T,Lattice>* >& getBlockBCs() {
+  std::vector<OffLatticeBoundaryCondition3D<T,Lattice>* >& getBlockBCs()
+  {
     return _blockBCs;
   };
-  int getOverlap() {
+  int getOverlap()
+  {
     return _overlap;
   };
-  void setOverlap(int overlap) {
+  void setOverlap(int overlap)
+  {
     _overlap = overlap;
   };
 

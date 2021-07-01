@@ -35,8 +35,9 @@ namespace olb {
 template class LBunits<double>;
 
 template class LBconverter<double>;
-template class RTLBconverter<double>;
-template class RTLBConstconverter<double>;
+//template class RTLBconverter<double>;
+//template class RTLBConstconverter<double>;
+//template class TLBconverter<double>;
 
 template void writeLogFile
 (LBunits<double> const& converter, std::string const& title);

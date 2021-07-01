@@ -1,6 +1,6 @@
 /*  This file is part of the OpenLB library
  *
- *  Copyright (C) 2014  Albert Mink, Mathias J. Krause
+ *  Copyright (C) 2016 Benjamin Förster
  *  E-mail contact: info@openlb.net
  *  The most recent release of OpenLB can be downloaded at
  *  <http://www.openlb.net/>
@@ -21,17 +21,13 @@
  *  Boston, MA  02110-1301, USA.
 */
 
-/** \file
- * A method to write vtk data for cuboid geometries
- * (only for uniform grids) -- template instantiation.
- */
 
-#include "io/superVtkWriter3D.h"
-#include "io/superVtkWriter3D.hh"
+#include "superIndicatorBaseF3D.h"
+#include "superIndicatorBaseF3D.hh"
 
 namespace olb {
 
-template class SuperVTKwriter3D<double>;
+template class SuperIndicatorF3D<double>;
+template class SuperIndicatorFfromIndicatorF3D<double>;
 
-} // end namespace olb
-
+}

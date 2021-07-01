@@ -43,7 +43,7 @@ namespace olb {
  * holds the actual data with the materials. It stores pointers
  * to all dependent block geometry views.
  * It presents a volume of voxels where different types are
- * given my material numbers which is imporant e.g. to work
+ * given by material numbers which is important e.g. to work
  * with different boundaries (like for inflow/output regions).
  *
  * This class is not intended to be derived from.
@@ -114,7 +114,7 @@ private:
 
   /// Re-initialization of the block geometry
   /*void reInit(T originX, T originY, T originZ, T deltaR, int nX, int nY, int nZ, int iCglob = -1,
-              olb::ScalarField3D<int>* geometryData = NULL);*/
+              olb::ScalarField3D<int>* geometryData = nullptr);*/
   /// Resets all depending statistic flags
   void resetStatistics();
 };

@@ -30,6 +30,7 @@
 #include <fstream>
 #include <iostream>
 #include <string>
+#include <bitset>
 
 #include "core/singleton.h"
 #include "core/units.h"
@@ -62,9 +63,10 @@ public:
   void set(unsigned short);
 
   enum particleProperties
-  : unsigned short {velocity = 1, radius = 2, mass = 4, force = 8, cuboid = 16, active = 32};
+    : unsigned short {velocity = 1, radius = 2, mass = 4, force = 8, cuboid = 16, active = 32};
 
-private:
+//private:
+protected:
   ///  performes <VTKFile ...>, <ImageData ...> and <PieceExtent ...>
   void preambleVTU(const std::string& fullName);
   ///  performes </ImageData> and </VTKFile>
@@ -90,13 +92,46 @@ private:
 
   void createMasterFile();
 
-private:
-  unsigned short _properties;
-  bool _haveMaster;
+//private:
+protected:
   SuperParticleSystem3D<T, PARTICLETYPE>& _psys;
   std::string _name;
+  unsigned short _properties;
   bool _binary;
+  bool _haveMaster;
   mutable OstreamManager clout;
+
+};
+
+template<typename T>
+class SuperParticleSysVtuWriterMag : public SuperParticleSysVtuWriter<T, MagneticParticle3D> {
+public:
+  const int pPropActive = 0;
+  const int pPropCuboid = 1;
+  const int pPropMass = 2;
+  const int pPropRadius = 3;
+  const int pPropVelocity = 4;
+  const int pPropForce = 5;
+  const int pPropAVel = 6;
+  const int pPropTorque = 7;
+  const int pPropMoment = 8;
+
+  SuperParticleSysVtuWriterMag(SuperParticleSystem3D<T, MagneticParticle3D>&,
+                               std::string const,
+                               const std::bitset<9>& properties,
+                               bool binary = true);
+  SuperParticleSysVtuWriterMag(const SuperParticleSysVtuWriterMag<T>& rhs);
+  SuperParticleSysVtuWriterMag(const SuperParticleSysVtuWriterMag<T>&& rhs);
+
+  void write(int iT = 0);
+  void set(int);
+
+private:
+  void dataArray(const std::string& fullName);
+  void dataArrayBinary(const std::string& fullName);
+
+  std::bitset<9> _properties;
+
 };
 
 }  // namespace OLB

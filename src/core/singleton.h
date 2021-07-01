@@ -43,50 +43,73 @@ namespace singleton {
 
 class Directories {
 public:
-  void setOlbDir(std::string olbDir_) {
+  void setOlbDir(std::string olbDir_)
+  {
     createDirectory(olbDir_);
     olbDir = olbDir_;
   }
-  void setOutputDir(std::string outputDir) {
+  void setOutputDir(std::string outputDir)
+  {
     setLogOutDir(outputDir);
     setImageOutDir(outputDir + "imageData/");
     setVtkOutDir(outputDir + "vtkData/");
+    setGnuplotOutDir(outputDir + "gnuplotData/");
   }
-  void setLogOutDir(std::string logOutDir_) {
+  void setLogOutDir(std::string logOutDir_)
+  {
     createDirectory(logOutDir_);
     logOutDir = logOutDir_;
   }
-  void setImageOutDir(std::string imageOutDir_) {
+  void setImageOutDir(std::string imageOutDir_)
+  {
     createDirectory(imageOutDir_);
     imageOutDir = imageOutDir_;
   }
-  void setVtkOutDir(std::string vtkOutDir_) {
+  void setVtkOutDir(std::string vtkOutDir_)
+  {
     createDirectory(vtkOutDir_);
     createDirectory(vtkOutDir_+"data/");
     vtkOutDir = vtkOutDir_;
   }
-  std::string getOlbDir() const {
+  void setGnuplotOutDir(std::string gnuplotOutDir_)
+  {
+    createDirectory(gnuplotOutDir_);
+    createDirectory(gnuplotOutDir_+"data/");
+    gnuplotOutDir = gnuplotOutDir_;
+  }
+  std::string getOlbDir() const
+  {
     return olbDir;
   }
-  std::string getLogOutDir() const {
+  std::string getLogOutDir() const
+  {
     return logOutDir;
   }
-  std::string getImageOutDir() const {
+  std::string getImageOutDir() const
+  {
     return imageOutDir;
   }
-  std::string getVtkOutDir() const {
+  std::string getVtkOutDir() const
+  {
     return vtkOutDir;
   }
+  std::string getGnuplotOutDir() const
+  {
+    return gnuplotOutDir;
+  }
 private:
-  Directories() : clout(std::cout,"Directories") {
+  Directories() : clout(std::cout,"Directories")
+  {
     setOlbDir("");
     setLogOutDir("./tmp/");
     setImageOutDir("./tmp/imageData/");
     setVtkOutDir("./tmp/vtkData/");
+    setGnuplotOutDir("./tmp/gnuplotData/");
   }
   ~Directories() { }
 
-  void createDirectory(std::string path) {
+  void createDirectory(std::string path)
+  {
     int rank = 0;
 #ifdef PARALLEL_MODE_MPI
     rank = singleton::mpi().getRank();
@@ -114,6 +137,7 @@ private:
   std::string logOutDir;
   std::string imageOutDir;
   std::string vtkOutDir;
+  std::string gnuplotOutDir;
 
   friend Directories& directories();
 };
@@ -124,7 +148,8 @@ inline Directories& directories()
   return singleton;
 }
 
-inline void checkValue(double input)
+template<typename T>
+inline void checkValue(T input)
 {
   if (280877.9 < input && input < 280878.1) {
     std::cout << "Error: stop simulation due to 280878" << std::endl;

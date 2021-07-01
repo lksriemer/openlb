@@ -40,7 +40,8 @@ struct mrtHelpers<T, descriptors::MRTD3Q19Descriptor> {
   /// Computation of all equilibrium distribution (in momenta space)
   static void computeEquilibrium( T momentaEq[19],
                                   T rho, const T u[3],
-                                  const T uSqr ) {
+                                  const T uSqr )
+  {
     OstreamManager clout(std::cout,"collision");
 
     momentaEq[1] = rho*(-(T)11 + (T)19*uSqr);
@@ -83,7 +84,8 @@ struct mrtHelpers<T, descriptors::MRTD3Q19Descriptor> {
   }
 
   /// Computation of all momenta (specialized for d3q19)
-  static void computeMomenta(T momenta[19], Cell<T,MRTD3Q19Descriptor> &cell) {
+  static void computeMomenta(T momenta[19], Cell<T,MRTD3Q19Descriptor> &cell)
+  {
     momenta[1] =
       -(T)30*cell[0]-(T)11*cell[1]-(T)11*cell[2]-(T)11*cell[3]
       +(T)8*cell[4]+(T)8*cell[5]+(T)8*cell[6]+(T)8*cell[7]
@@ -153,7 +155,8 @@ struct mrtHelpers<T, descriptors::MRTD3Q19Descriptor> {
   /// MRT collision step
   static T mrtCollision( Cell<T,MRTD3Q19Descriptor>& cell,
                          T rho, const T u[3],
-                         T invM_S[19][19] ) {
+                         T invM_S[19][19] )
+  {
     T uSqr = util::normSqr<T,3>(u);
     T momenta[19];
     T momentaEq[19];
@@ -369,7 +372,8 @@ struct mrtHelpers<T, descriptors::MRTD3Q19Descriptor> {
   /// MRT collision step
   static T mrtSGSCollision( Cell<T,MRTD3Q19Descriptor>& cell,
                             T rho, const T u[3], T omega,
-                            T invM_S_SGS[19][19] ) {
+                            T invM_S_SGS[19][19] )
+  {
     T uSqr = util::normSqr<T,3>(u);
     T momenta[19];
     T momentaEq[19];

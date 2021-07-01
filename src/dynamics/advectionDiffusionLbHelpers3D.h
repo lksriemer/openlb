@@ -1,6 +1,6 @@
 /*  This file is part of the OpenLB library
  *
- *  Copyright (C) 2008,2015 Orestis Malaspinas, Andrea Parmigiani, Albert Mink
+ *  Copyright (C) 2008,2017 Orestis Malaspinas, Andrea Parmigiani, Albert Mink
  *  E-mail contact: info@openlb.net
  *  The most recent release of OpenLB can be downloaded at
  *  <http://www.openlb.net/>
@@ -33,19 +33,85 @@
 
 namespace olb {
 
+/** partial template specialization for D3Q7DescriptorBaseRTLB.
+ */
+template<typename T>
+struct adLbDynamicsHelpers< T,descriptors::D3Q7DescriptorBaseRTLB<T> > {
+  static T equilibrium( int iPop, T rho, const T u[3] )
+  {
+    typedef descriptors::D3Q7DescriptorBaseRTLB<T> L;
+    return rho * L::t[iPop] - L::t[iPop];
+  }
+
+  // BGK advection diffusion collision step
+  static T bgkCollision( T *cell, T rho, const T u[3], T omega )
+  {
+    const T Cs2 = 0.25;
+    const T uSqr = u[0] * u[0] + u[1] * u[1] + u[2] * u[2];
+
+    const T omega_ = (T)1 - omega;
+    const T omega_2 = (T)0.5 * omega;
+    T rho_ = ( rho - (T)1 );
+    cell[0] = omega_ * cell[0] + omega * ( (T)1 - (T)3 * Cs2 ) * rho_;
+    const T jx = rho * u[0];
+    const T jy = rho * u[1];
+    const T jz = rho * u[2];
+
+    rho_ *= Cs2;
+    cell[1] = omega_ * cell[1] + omega_2 * ( rho_ - jx );
+    cell[2] = omega_ * cell[2] + omega_2 * ( rho_ - jy );
+    cell[3] = omega_ * cell[3] + omega_2 * ( rho_ - jz );
+    cell[4] = omega_ * cell[4] + omega_2 * ( rho_ + jx );
+    cell[5] = omega_ * cell[5] + omega_2 * ( rho_ + jy );
+    cell[6] = omega_ * cell[6] + omega_2 * ( rho_ + jz );
+
+    return uSqr;
+  }
+
+  /// Paper: Mink et al. 2016 DOI: 10.1016/j.jocs.2016.03.014
+  /// omega is expected to be one
+  static T sinkCollision( T *cell, T intensity, T omega, T sink )
+  {
+// equivalent code
+//    for ( int iPop = 1; iPop < 7; ++iPop ) {
+//      cell[iPop] = intensity*0.125 - sink*( cell[iPop] + 0.125 ) - 0.125;
+//    }
+//    cell[0] = intensity*0.25 - sink*( cell[0] + 0.125 ) - 0.25;
+// equivalent code
+
+    const T omega_ = (T)1 - omega;
+    T ti = 0.25;
+    cell[0] =  omega_ * ( cell[0] + ti ) + omega * intensity * ti - sink * ( cell[0] + ti ) - ti;
+
+    // fi = (1-w) fi + w fi^{eq} - absorption fi;
+    // where fi^{eq} = rho ti and t0 = 1/4, t1=...t6=1/8
+    // note: cell[i] = fi - ti
+    ti = 0.125;
+    cell[1] = omega_ * ( cell[1] + ti ) + omega * intensity * ti - sink * ( cell[1] + ti ) - ti;
+    cell[2] = omega_ * ( cell[2] + ti ) + omega * intensity * ti - sink * ( cell[2] + ti ) - ti;
+    cell[3] = omega_ * ( cell[3] + ti ) + omega * intensity * ti - sink * ( cell[3] + ti ) - ti;
+    cell[4] = omega_ * ( cell[4] + ti ) + omega * intensity * ti - sink * ( cell[4] + ti ) - ti;
+    cell[5] = omega_ * ( cell[5] + ti ) + omega * intensity * ti - sink * ( cell[5] + ti ) - ti;
+    cell[6] = omega_ * ( cell[6] + ti ) + omega * intensity * ti - sink * ( cell[6] + ti ) - ti;
+    return 0.0;
+  }
+};
+
 
 template<typename T>
-struct adLbDynamicsHelpers<T, descriptors::D3Q7DescriptorBase<T> > {
+struct adLbDynamicsHelpers<T,descriptors::D3Q7DescriptorBase<T> > {
   /// equilibrium distribution
-  static T equilibrium( int iPop, T rho, const T u[3] ) {
+  static T equilibrium( int iPop, T rho, const T u[3] )
+  {
     typedef descriptors::D3Q7DescriptorBase<T> L;
-    T c_u = L::c[iPop][0] * u[0] + L::c[iPop][1] * u[1] + L::c[iPop][2] * u[2];
+    //T c_u = L::c[iPop][0] * u[0] + L::c[iPop][1] * u[1] + L::c[iPop][2] * u[2];
 
-    return rho * L::t[iPop] * ( (T)1 + c_u * L::invCs2 ) - L::t[iPop];
+    return rho * L::t[iPop] - L::t[iPop];
   }
 
   /// RLB advection diffusion collision step
-  static T rlbCollision( T* cell, T rho, const T u[3], T omega ) {
+  static T rlbCollision( T* cell, T rho, const T u[3], T omega )
+  {
     typedef descriptors::D3Q7DescriptorBase<T> L;
     const T uSqr = u[0] * u[0] + u[1] * u[1] + u[2] * u[2];
 
@@ -80,8 +146,9 @@ struct adLbDynamicsHelpers<T, descriptors::D3Q7DescriptorBase<T> > {
     return uSqr;
   }
 
-  // BGK advection diffusion collision step
-  static T bgkCollision( T *cell, T rho, const T u[2], T omega ) {
+  /// BGK advection diffusion collision step
+  static T bgkCollision( T *cell, T rho, const T u[3], T omega )
+  {
     typedef descriptors::D3Q7DescriptorBase<T> L;
 
     const T Cs2 = (T)1 / L::invCs2;
@@ -104,28 +171,6 @@ struct adLbDynamicsHelpers<T, descriptors::D3Q7DescriptorBase<T> > {
     cell[6] = omega_ * cell[6] + omega_2 * ( rho_ + jz );
 
     return uSqr;
-  }
-
-
-
-  /// approximate D \Delta \Phi = \sigma_a \Phi
-  static T sinkCollision( T *cell, T rho, const T u[2], T omega, T sink ) {
-
-    const T omega_ = (T)1 - omega;
-    T ti = 1 / 4.0;
-    cell[0] = omega_*( cell[0] + ti ) + omega*rho*ti - sink*( cell[0] + ti ) - ti;
-
-    // fi = (1-w) fi + w fi^{eq} - absorption fi;
-    // where fi^{eq} = rho ti and t0 = 1/4, t1=...t6=1/8
-    // note: cell[i] = fi - ti
-    ti = 1 / 8.0;
-    cell[1] = omega_ * ( cell[1] + ti ) + omega * rho * ti - sink * ( cell[1] + ti ) - ti;
-    cell[2] = omega_ * ( cell[2] + ti ) + omega * rho * ti - sink * ( cell[2] + ti ) - ti;
-    cell[3] = omega_ * ( cell[3] + ti ) + omega * rho * ti - sink * ( cell[3] + ti ) - ti;
-    cell[4] = omega_ * ( cell[4] + ti ) + omega * rho * ti - sink * ( cell[4] + ti ) - ti;
-    cell[5] = omega_ * ( cell[5] + ti ) + omega * rho * ti - sink * ( cell[5] + ti ) - ti;
-    cell[6] = omega_ * ( cell[6] + ti ) + omega * rho * ti - sink * ( cell[6] + ti ) - ti;
-    return 0.0;
   }
 
 };

@@ -103,6 +103,7 @@ public:
   /// Gives for a given point (globX/globY/globZ) the related cuboidID
   /// and _p if the point is not in any of the cuboid _childrenQ
   int get_iC(T globX, T globY, T globZ, int offset = 0) const; //TODO old ones
+  int get_iC(Vector<T,3>, int offset = 0) const;
   /// This function checks if the points (globX/globY/globZ) and
   /// (globX + orientationX/delta/globY + orientationY/delta/
   /// globZ + orientationZ/delta) is in a cuboid.
@@ -160,7 +161,8 @@ public:
   /// Sets the number of full cells of each cuboid
   void setWeights(IndicatorF3D<T>& indicatorF);
   /// Resets the cuboid array
-  void clearCuboids() {
+  void clearCuboids()
+  {
     _cuboids.clear();
   }
   /// Adds a cuboid

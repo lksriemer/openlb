@@ -35,27 +35,31 @@ namespace olb {
 template<typename T>
 struct lbDynamicsHelpers<T, descriptors::D3Q19DescriptorBase<T> > {
 
-  static T equilibrium( int iPop, T rho, const T u[3], const T uSqr ) {
+  static T equilibrium( int iPop, T rho, const T u[3], const T uSqr )
+  {
     typedef descriptors::D3Q19DescriptorBase<T> L;
     T c_u = L::c[iPop][0]*u[0] + L::c[iPop][1]*u[1] + L::c[iPop][2]*u[2];
     return rho * L::t[iPop] * ( 1. + 3.*c_u + 4.5*c_u*c_u - 1.5*uSqr ) - L::t[iPop];
   }
 
-  static T incEquilibrium(int iPop, const T j[3], const T jSqr, const T pressure) {
+  static T incEquilibrium(int iPop, const T j[3], const T jSqr, const T pressure)
+  {
     typedef descriptors::D3Q19DescriptorBase<T> L;
     T c_j = L::c[iPop][0]*j[0] + L::c[iPop][1]*j[1] + L::c[iPop][2]*j[2];
     return L::t[iPop] * ( 3.*pressure + 3.*c_j + 4.5*c_j*c_j - 1.5*jSqr ) - L::t[iPop];
   }
 
   static void computeFneq (
-    CellBase<T,descriptors::D3Q19DescriptorBase<T> > const& cell, T fNeq[19], T rho, const T u[3] ) {
+    CellBase<T,descriptors::D3Q19DescriptorBase<T> > const& cell, T fNeq[19], T rho, const T u[3] )
+  {
     const T uSqr = u[0]*u[0] + u[1]*u[1] + u[2]*u[2];
     for (int iPop=0; iPop < 19; ++iPop) {
       fNeq[iPop] = cell[iPop] - equilibrium(iPop, rho, u, uSqr);
     }
   }
 
-  static T bgkCollision(CellBase<T,descriptors::D3Q19DescriptorBase<T> >& cell, T const& rho, const T u[3], T const& omega) {
+  static T bgkCollision(CellBase<T,descriptors::D3Q19DescriptorBase<T> >& cell, T const& rho, const T u[3], T const& omega)
+  {
     typedef descriptors::D3Q19DescriptorBase<T> L;
 
     T one_m_omega = (T)1 - omega;
@@ -199,7 +203,8 @@ struct lbDynamicsHelpers<T, descriptors::D3Q19DescriptorBase<T> > {
     return uSqr;
   }
 
-  static T incBgkCollision(CellBase<T,descriptors::D3Q19DescriptorBase<T> >& cell, T pressure, const T j[3], T omega) {
+  static T incBgkCollision(CellBase<T,descriptors::D3Q19DescriptorBase<T> >& cell, T pressure, const T j[3], T omega)
+  {
     const T jSqr = util::normSqr<T,descriptors::D3Q19DescriptorBase<T>::d>(j);
     for (int iPop=0; iPop < descriptors::D3Q19DescriptorBase<T>::q; ++iPop) {
       cell[iPop] *= (T)1-omega;
@@ -209,7 +214,8 @@ struct lbDynamicsHelpers<T, descriptors::D3Q19DescriptorBase<T> > {
     return jSqr;
   }
 
-  static T constRhoBgkCollision(CellBase<T,descriptors::D3Q19DescriptorBase<T> >& cell, T rho, const T u[3], T ratioRho, T omega) {
+  static T constRhoBgkCollision(CellBase<T,descriptors::D3Q19DescriptorBase<T> >& cell, T rho, const T u[3], T ratioRho, T omega)
+  {
     const T uSqr = util::normSqr<T,descriptors::D3Q19DescriptorBase<T>::d>(u);
     for (int iPop=0; iPop < descriptors::D3Q19DescriptorBase<T>::q; ++iPop) {
       T feq = lbDynamicsHelpers<T,descriptors::D3Q19DescriptorBase<T> >::
@@ -224,7 +230,8 @@ struct lbDynamicsHelpers<T, descriptors::D3Q19DescriptorBase<T> > {
 
   static void partial_rho ( CellBase<T,descriptors::D3Q19DescriptorBase<T> > const& cell,
                             T& surfX_M1, T& surfX_0, T& surfX_P1,
-                            T& surfY_M1, T& surfY_P1, T& surfZ_M1, T& surfZ_P1 ) {
+                            T& surfY_M1, T& surfY_P1, T& surfZ_M1, T& surfZ_P1 )
+  {
     surfX_M1 = cell[1] + cell[4] + cell[5] + cell[6] + cell[7];
     surfX_0  = cell[0] + cell[2] + cell[3] + cell[8] +
                cell[9] + cell[11] + cell[12] + cell[17] + cell[18];
@@ -238,7 +245,8 @@ struct lbDynamicsHelpers<T, descriptors::D3Q19DescriptorBase<T> > {
 
   }
 
-  static void computeRhoU(CellBase<T,descriptors::D3Q19DescriptorBase<T> > const& cell, T& rho, T u[3]) {
+  static void computeRhoU(CellBase<T,descriptors::D3Q19DescriptorBase<T> > const& cell, T& rho, T u[3])
+  {
     T surfX_M1, surfX_0, surfX_P1, surfY_M1, surfY_P1, surfZ_M1, surfZ_P1;
 
     surfX_M1 = cell[1] + cell[4] + cell[5] + cell[6] + cell[7];
@@ -260,7 +268,8 @@ struct lbDynamicsHelpers<T, descriptors::D3Q19DescriptorBase<T> > {
     u[2]  = ( surfZ_P1 - surfZ_M1 )*invRho;
   }
 
-  static void computeRhoJ(CellBase<T,descriptors::D3Q19DescriptorBase<T> > const& cell, T& rho, T j[3]) {
+  static void computeRhoJ(CellBase<T,descriptors::D3Q19DescriptorBase<T> > const& cell, T& rho, T j[3])
+  {
     T surfX_M1, surfX_0, surfX_P1,
     surfY_M1, surfY_P1, surfZ_M1, surfZ_P1;
 
@@ -274,7 +283,8 @@ struct lbDynamicsHelpers<T, descriptors::D3Q19DescriptorBase<T> > {
     j[2]  = ( surfZ_P1 - surfZ_M1 );
   }
 
-  static void computeJ(CellBase<T,descriptors::D3Q19DescriptorBase<T> > const& cell, T j[3]) {
+  static void computeJ(CellBase<T,descriptors::D3Q19DescriptorBase<T> > const& cell, T j[3])
+  {
     T surfX_M1, surfX_P1, surfY_M1, surfY_P1, surfZ_M1, surfZ_P1;
 
     surfX_M1 = cell[1] + cell[4] + cell[5] + cell[6] + cell[7];
@@ -291,7 +301,8 @@ struct lbDynamicsHelpers<T, descriptors::D3Q19DescriptorBase<T> > {
     j[2]  = ( surfZ_P1 - surfZ_M1 );
   }
 
-  static void computeStress(CellBase<T,descriptors::D3Q19DescriptorBase<T> > const& cell, T rho, const T u[3], T pi[6]) {
+  static void computeStress(CellBase<T,descriptors::D3Q19DescriptorBase<T> > const& cell, T rho, const T u[3], T pi[6])
+  {
     typedef descriptors::D3Q19DescriptorBase<T> L;
     // Workaround for Intel(r) compiler 9.1;
     // "using namespace util::tensorIndices3D" is not sufficient
@@ -317,7 +328,8 @@ struct lbDynamicsHelpers<T, descriptors::D3Q19DescriptorBase<T> > {
     pi[yz] = cell[8] - cell[9] + cell[17] - cell[18] - rho*u[1]*u[2];
   }
 
-  static void computeAllMomenta(CellBase<T,descriptors::D3Q19DescriptorBase<T> > const& cell, T& rho, T u[3], T pi[6]) {
+  static void computeAllMomenta(CellBase<T,descriptors::D3Q19DescriptorBase<T> > const& cell, T& rho, T u[3], T pi[6])
+  {
     typedef descriptors::D3Q19DescriptorBase<T> L;
     // Workaround for Intel(r) compiler 9.1;
     // "using namespace util::tensorIndices3D" is not sufficient
@@ -352,7 +364,8 @@ struct lbDynamicsHelpers<T, descriptors::D3Q19DescriptorBase<T> > {
     pi[yz] = cell[8] - cell[9] + cell[17] - cell[18] - rhoU1*u[2];
   }
 
-  static T computeRho(CellBase<T,descriptors::D3Q19DescriptorBase<T> > const& cell) {
+  static T computeRho(CellBase<T,descriptors::D3Q19DescriptorBase<T> > const& cell)
+  {
     T rho = cell[0] + cell[1] + cell[2] + cell[3] + cell[4]
             + cell[5] + cell[6] + cell[7] + cell[8]
             + cell[9] + cell[10] + cell[11] + cell[12]
@@ -361,7 +374,8 @@ struct lbDynamicsHelpers<T, descriptors::D3Q19DescriptorBase<T> > {
     return rho;
   }
 
-  static void modifyVelocity(CellBase<T,descriptors::D3Q19DescriptorBase<T> > const& cell, const T newU[3]) {
+  static void modifyVelocity(CellBase<T,descriptors::D3Q19DescriptorBase<T> > const& cell, const T newU[3])
+  {
     T rho, oldU[3];
     computeRhoU(cell, rho, oldU);
     const T oldUSqr = util::normSqr<T,3>(oldU);
@@ -384,7 +398,8 @@ struct lbLatticeHelpers<T, descriptors::D3Q19Descriptor> {
 
   static void swapAndStreamCell (
     Cell<T,descriptors::D3Q19Descriptor> ***grid,
-    int iX, int iY, int iZ, int nX, int nY, int nZ, int iPop, T& fTmp ) {
+    int iX, int iY, int iZ, int nX, int nY, int nZ, int iPop, T& fTmp )
+  {
     fTmp                     = grid[iX][iY][iZ][iPop];
     grid[iX][iY][iZ][iPop]   = grid[iX][iY][iZ][iPop+9];
     grid[iX][iY][iZ][iPop+9] = grid[nX][nY][nZ][iPop];
@@ -392,7 +407,8 @@ struct lbLatticeHelpers<T, descriptors::D3Q19Descriptor> {
   }
 
   static void swapAndStream3D(Cell<T,descriptors::D3Q19Descriptor> ***grid,
-                              int iX, int iY, int iZ) {
+                              int iX, int iY, int iZ)
+  {
     T fTmp;
     swapAndStreamCell(grid, iX, iY, iZ, iX-1, iY,   iZ,   1, fTmp);
     swapAndStreamCell(grid, iX, iY, iZ, iX,   iY-1, iZ,   2, fTmp);
@@ -412,7 +428,8 @@ struct lbLatticeHelpers<T, descriptors::ForcedD3Q19Descriptor> {
 
   static void swapAndStreamCell (
     Cell<T,descriptors::ForcedD3Q19Descriptor> ***grid,
-    int iX, int iY, int iZ, int nX, int nY, int nZ, int iPop, T& fTmp ) {
+    int iX, int iY, int iZ, int nX, int nY, int nZ, int iPop, T& fTmp )
+  {
     fTmp                     = grid[iX][iY][iZ][iPop];
     grid[iX][iY][iZ][iPop]   = grid[iX][iY][iZ][iPop+9];
     grid[iX][iY][iZ][iPop+9] = grid[nX][nY][nZ][iPop];
@@ -420,7 +437,8 @@ struct lbLatticeHelpers<T, descriptors::ForcedD3Q19Descriptor> {
   }
 
   static void swapAndStream3D(Cell<T,descriptors::ForcedD3Q19Descriptor> ***grid,
-                              int iX, int iY, int iZ) {
+                              int iX, int iY, int iZ)
+  {
     T fTmp;
     swapAndStreamCell(grid, iX, iY, iZ, iX-1, iY,   iZ,   1, fTmp);
     swapAndStreamCell(grid, iX, iY, iZ, iX,   iY-1, iZ,   2, fTmp);
@@ -440,26 +458,30 @@ struct lbLatticeHelpers<T, descriptors::ForcedD3Q19Descriptor> {
 template<typename T>
 struct lbDynamicsHelpers<T, descriptors::D3Q15DescriptorBase<T> > {
 
-  static T equilibrium( int iPop, T rho, const T u[3], const T uSqr ) {
+  static T equilibrium( int iPop, T rho, const T u[3], const T uSqr )
+  {
     typedef descriptors::D3Q15DescriptorBase<T> L;
     T c_u = L::c[iPop][0]*u[0] + L::c[iPop][1]*u[1] + L::c[iPop][2]*u[2];
     return rho * L::t[iPop] * ( 1. + 3.*c_u + 4.5*c_u*c_u - 1.5*uSqr ) - L::t[iPop];
   }
 
-  static T incEquilibrium(int iPop, const T j[3], const T jSqr, const T pressure) {
+  static T incEquilibrium(int iPop, const T j[3], const T jSqr, const T pressure)
+  {
     typedef descriptors::D3Q15DescriptorBase<T> L;
     T c_j = L::c[iPop][0]*j[0] + L::c[iPop][1]*j[1] + L::c[iPop][2]*j[2];
     return L::t[iPop] * ( 3.*pressure + 3.*c_j + 4.5*c_j*c_j - 1.5*jSqr ) - L::t[iPop];
   }
 
-  static void computeFneq(CellBase<T,descriptors::D3Q15DescriptorBase<T> > const& cell, T fNeq[15], T rho, const T u[3] ) {
+  static void computeFneq(CellBase<T,descriptors::D3Q15DescriptorBase<T> > const& cell, T fNeq[15], T rho, const T u[3] )
+  {
     const T uSqr = u[0]*u[0] + u[1]*u[1] + u[2]*u[2];
     for (int iPop=0; iPop < 15; ++iPop) {
       fNeq[iPop] = cell[iPop] - equilibrium(iPop, rho, u, uSqr);
     }
   }
 
-  static T bgkCollision(CellBase<T,descriptors::D3Q15DescriptorBase<T> >& cell, T const& rho, const T u[3], T const& omega) {
+  static T bgkCollision(CellBase<T,descriptors::D3Q15DescriptorBase<T> >& cell, T const& rho, const T u[3], T const& omega)
+  {
     const T uSqr = u[0]*u[0] + u[1]*u[1] + u[2]*u[2];
     for (int iPop=0; iPop < 15; ++iPop) {
       cell[iPop] *= (T)1-omega;
@@ -469,7 +491,8 @@ struct lbDynamicsHelpers<T, descriptors::D3Q15DescriptorBase<T> > {
     return uSqr;
   }
 
-  static T incBgkCollision(CellBase<T,descriptors::D3Q15DescriptorBase<T> >& cell, T pressure, const T j[3], T omega) {
+  static T incBgkCollision(CellBase<T,descriptors::D3Q15DescriptorBase<T> >& cell, T pressure, const T j[3], T omega)
+  {
     const T jSqr = util::normSqr<T,descriptors::D3Q15DescriptorBase<T>::d>(j);
     for (int iPop=0; iPop < descriptors::D3Q15DescriptorBase<T>::q; ++iPop) {
       cell[iPop] *= (T)1-omega;
@@ -479,7 +502,8 @@ struct lbDynamicsHelpers<T, descriptors::D3Q15DescriptorBase<T> > {
     return jSqr;
   }
 
-  static T constRhoBgkCollision(CellBase<T,descriptors::D3Q15DescriptorBase<T> >& cell, T rho, const T u[3], T ratioRho, T omega) {
+  static T constRhoBgkCollision(CellBase<T,descriptors::D3Q15DescriptorBase<T> >& cell, T rho, const T u[3], T ratioRho, T omega)
+  {
     const T uSqr = util::normSqr<T,descriptors::D3Q15DescriptorBase<T>::d>(u);
     for (int iPop=0; iPop < descriptors::D3Q15DescriptorBase<T>::q; ++iPop) {
       T feq = lbHelpers<T,descriptors::D3Q15DescriptorBase>::
@@ -494,7 +518,8 @@ struct lbDynamicsHelpers<T, descriptors::D3Q15DescriptorBase<T> > {
 
   static void partial_rho(CellBase<T,descriptors::D3Q15DescriptorBase<T> > const& cell,
                           T& surfX_M1, T& surfX_0, T& surfX_P1,
-                          T& surfY_M1, T& surfY_P1, T& surfZ_M1, T& surfZ_P1 ) {
+                          T& surfY_M1, T& surfY_P1, T& surfZ_M1, T& surfZ_P1 )
+  {
     surfX_M1 = cell[1] + cell[4] + cell[5] + cell[6] + cell[7];
     surfX_0  = cell[0] + cell[2] + cell[3] + cell[9] + cell[10];
     surfX_P1 = cell[8] + cell[11] + cell[12] + cell[13] + cell[14];
@@ -506,7 +531,8 @@ struct lbDynamicsHelpers<T, descriptors::D3Q15DescriptorBase<T> > {
     surfZ_P1 = cell[5] + cell[7] + cell[10] + cell[11] + cell[13];
   }
 
-  static T computeRho(CellBase<T,descriptors::D3Q15DescriptorBase<T> > const& cell) {
+  static T computeRho(CellBase<T,descriptors::D3Q15DescriptorBase<T> > const& cell)
+  {
     T rho = cell[0] + cell[1] + cell[2] + cell[3] + cell[4]
             + cell[5] + cell[6] + cell[7] + cell[8]
             + cell[9] + cell[10] + cell[11] + cell[12]
@@ -514,7 +540,8 @@ struct lbDynamicsHelpers<T, descriptors::D3Q15DescriptorBase<T> > {
     return rho;
   }
 
-  static void computeRhoU(CellBase<T,descriptors::D3Q15DescriptorBase<T> > const& cell, T& rho, T u[3]) {
+  static void computeRhoU(CellBase<T,descriptors::D3Q15DescriptorBase<T> > const& cell, T& rho, T u[3])
+  {
     T surfX_M1, surfX_0, surfX_P1,
     surfY_M1, surfY_P1, surfZ_M1, surfZ_P1;
 
@@ -528,7 +555,8 @@ struct lbDynamicsHelpers<T, descriptors::D3Q15DescriptorBase<T> > {
     u[2]  = ( surfZ_P1 - surfZ_M1 ) / rho;
   }
 
-  static void computeRhoJ(CellBase<T,descriptors::D3Q15DescriptorBase<T> > const& cell, T& rho, T j[3]) {
+  static void computeRhoJ(CellBase<T,descriptors::D3Q15DescriptorBase<T> > const& cell, T& rho, T j[3])
+  {
     T surfX_M1, surfX_0, surfX_P1,
     surfY_M1, surfY_P1, surfZ_M1, surfZ_P1;
 
@@ -542,7 +570,8 @@ struct lbDynamicsHelpers<T, descriptors::D3Q15DescriptorBase<T> > {
     j[2]  = ( surfZ_P1 - surfZ_M1 );
   }
 
-  static void computeJ(CellBase<T,descriptors::D3Q15DescriptorBase<T> > const& cell, T j[3]) {
+  static void computeJ(CellBase<T,descriptors::D3Q15DescriptorBase<T> > const& cell, T j[3])
+  {
     T surfX_M1, surfX_P1, surfY_M1, surfY_P1, surfZ_M1, surfZ_P1;
 
     surfX_M1 = cell[1] + cell[4] + cell[5] + cell[6] + cell[7];
@@ -559,7 +588,8 @@ struct lbDynamicsHelpers<T, descriptors::D3Q15DescriptorBase<T> > {
     j[2]  = ( surfZ_P1 - surfZ_M1 );
   }
 
-  static void computeStress(CellBase<T,descriptors::D3Q15DescriptorBase<T> > const& cell, T rho, const T u[3], T pi[6]) {
+  static void computeStress(CellBase<T,descriptors::D3Q15DescriptorBase<T> > const& cell, T rho, const T u[3], T pi[6])
+  {
     typedef descriptors::D3Q15DescriptorBase<T> L;
     using namespace util::tensorIndices3D;
 
@@ -582,7 +612,8 @@ struct lbDynamicsHelpers<T, descriptors::D3Q15DescriptorBase<T> > {
 
   }
 
-  static void computeAllMomenta(CellBase<T,descriptors::D3Q15DescriptorBase<T> > const& cell, T& rho, T u[3], T pi[6]) {
+  static void computeAllMomenta(CellBase<T,descriptors::D3Q15DescriptorBase<T> > const& cell, T& rho, T u[3], T pi[6])
+  {
     typedef descriptors::D3Q15DescriptorBase<T> L;
     using namespace util::tensorIndices3D;
 
@@ -613,7 +644,8 @@ struct lbDynamicsHelpers<T, descriptors::D3Q15DescriptorBase<T> > {
                + cell[11] - cell[12] - cell[13] + cell[14] - rhoU1*u[2];
   }
 
-  static void modifyVelocity(CellBase<T,descriptors::D3Q19DescriptorBase<T> >& cell, const T newU[3]) {
+  static void modifyVelocity(CellBase<T,descriptors::D3Q19DescriptorBase<T> >& cell, const T newU[3])
+  {
     T rho, oldU[3];
     computeRhoU(cell, rho, oldU);
     const T oldUSqr = util::normSqr<T,3>(oldU);
@@ -635,7 +667,8 @@ template<typename T>
 struct lbLatticeHelpers<T, descriptors::D3Q15Descriptor> {
   static void swapAndStreamCell (
     Cell<T,descriptors::D3Q15Descriptor> ***grid,
-    int iX, int iY, int iZ, int nX, int nY, int nZ, int iPop, T& fTmp ) {
+    int iX, int iY, int iZ, int nX, int nY, int nZ, int iPop, T& fTmp )
+  {
     fTmp                     = grid[iX][iY][iZ][iPop];
     grid[iX][iY][iZ][iPop]   = grid[iX][iY][iZ][iPop+7];
     grid[iX][iY][iZ][iPop+7] = grid[nX][nY][nZ][iPop];
@@ -643,7 +676,8 @@ struct lbLatticeHelpers<T, descriptors::D3Q15Descriptor> {
   }
 
   static void swapAndStream3D(Cell<T,descriptors::D3Q15Descriptor> ***grid,
-                              int iX, int iY, int iZ) {
+                              int iX, int iY, int iZ)
+  {
     T fTmp;
     swapAndStreamCell(grid, iX, iY, iZ, iX-1, iY,   iZ,   1, fTmp);
     swapAndStreamCell(grid, iX, iY, iZ, iX,   iY-1, iZ,   2, fTmp);
@@ -662,7 +696,8 @@ struct lbLatticeHelpers<T, descriptors::ForcedD3Q15Descriptor> {
 
   static void swapAndStreamCell (
     Cell<T,descriptors::D3Q15Descriptor> ***grid,
-    int iX, int iY, int iZ, int nX, int nY, int nZ, int iPop, T& fTmp ) {
+    int iX, int iY, int iZ, int nX, int nY, int nZ, int iPop, T& fTmp )
+  {
     fTmp                     = grid[iX][iY][iZ][iPop];
     grid[iX][iY][iZ][iPop]   = grid[iX][iY][iZ][iPop+7];
     grid[iX][iY][iZ][iPop+7] = grid[nX][nY][nZ][iPop];
@@ -670,7 +705,8 @@ struct lbLatticeHelpers<T, descriptors::ForcedD3Q15Descriptor> {
   }
 
   static void swapAndStream3D(Cell<T,descriptors::D3Q15Descriptor> ***grid,
-                              int iX, int iY, int iZ) {
+                              int iX, int iY, int iZ)
+  {
     T fTmp;
     swapAndStreamCell(grid, iX, iY, iZ, iX-1, iY,   iZ,   1, fTmp);
     swapAndStreamCell(grid, iX, iY, iZ, iX,   iY-1, iZ,   2, fTmp);

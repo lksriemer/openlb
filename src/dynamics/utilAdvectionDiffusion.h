@@ -37,7 +37,8 @@ namespace utilAdvDiff {
 template <typename Descriptor, int direction, int orientation>
 class SubIndexOutgoing {
 private:
-  SubIndexOutgoing() {
+  SubIndexOutgoing()
+  {
     int normalX,normalY,normalZ;
     typedef Descriptor L;
 
@@ -109,7 +110,8 @@ std::vector<int> const& subIndexOutgoing()
 template <typename Descriptor, int plane, int normal1, int normal2>
 class SubIndexOutgoing3DonEdges {
 private:
-  SubIndexOutgoing3DonEdges() {
+  SubIndexOutgoing3DonEdges()
+  {
     int normalX,normalY,normalZ;
     typedef Descriptor L;
 
@@ -182,7 +184,8 @@ std::vector<int> const& subIndexOutgoing3DonEdges()
 template <typename Descriptor, int normalX, int normalY, int normalZ>
 class SubIndexOutgoing3DonCorners {
 private:
-  SubIndexOutgoing3DonCorners() {
+  SubIndexOutgoing3DonCorners()
+  {
     typedef Descriptor L;
 
     // add zero velocity
@@ -214,7 +217,8 @@ std::vector<int> const& subIndexOutgoing3DonCorners()
 template <typename Descriptor, int normalX, int normalY>
 class SubIndexOutgoing2DonCorners {
 private:
-  SubIndexOutgoing2DonCorners() {
+  SubIndexOutgoing2DonCorners()
+  {
     typedef Descriptor L;
 
     // add zero velocity

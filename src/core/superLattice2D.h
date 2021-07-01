@@ -107,37 +107,45 @@ public:
   SuperLattice2D(SuperGeometry2D<T>& superGeometry, int overlapRefinement=0);
   ~SuperLattice2D();
   /// Read and write access to a block lattice
-  BlockLattice2D<T,Lattice>& getExtendedBlockLattice(int locIC) {
+  BlockLattice2D<T,Lattice>& getExtendedBlockLattice(int locIC)
+  {
     return _extendedBlockLattices[locIC];
   };
   /// Read only access to a block lattice
-  BlockLattice2D<T,Lattice> const& getExtendedBlockLattice(int locIC) const {
+  BlockLattice2D<T,Lattice> const& getExtendedBlockLattice(int locIC) const
+  {
     return _extendedBlockLattices[locIC];
   };
   /// Read and write access to a lattice (block lattice view, one
   /// without overlap).
-  BlockLatticeView2D<T,Lattice>& getBlockLattice(int locIC) {
+  BlockLatticeView2D<T,Lattice>& getBlockLattice(int locIC)
+  {
     return _blockLattices[locIC];
   };
   /// Read only access to a lattice
-  BlockLatticeView2D<T,Lattice> const& getBlockLattice(int locIC) const {
+  BlockLatticeView2D<T,Lattice> const& getBlockLattice(int locIC) const
+  {
     return _blockLattices[locIC];
   };
 
   /// Read and write access to the streaming communicator
-  Communicator2D<T>& get_commStream() {
+  Communicator2D<T>& get_commStream()
+  {
     return _commStream;
   };
   /// Read only access to the streaming communicator
-  Communicator2D<T> const& get_commStream() const {
+  Communicator2D<T> const& get_commStream() const
+  {
     return _commStream;
   };
   /// Read and write access to the boundary communicator
-  Communicator2D<T>& get_commBC() {
+  Communicator2D<T>& get_commBC()
+  {
     return _commBC;
   };
   /// Read only access to the boundary communicator
-  Communicator2D<T> const& get_commBC() const {
+  Communicator2D<T> const& get_commBC() const
+  {
     return _commBC;
   };
 
@@ -157,15 +165,18 @@ public:
   Cell<T,Lattice> get(int iC, T locX, T locY) const;
 
   /// Write access to the memory of the data of the super structure
-  virtual bool* operator() (int iCloc, int iX, int iY, int iData) {
+  virtual bool* operator() (int iCloc, int iX, int iY, int iData)
+  {
     return (bool*)&getExtendedBlockLattice(iCloc).get(iX+this->_overlap, iY+this->_overlap)[iData];
   };
   /// Read only access to the dim of the data of the super structure
-  virtual int getDataSize() const {
+  virtual int getDataSize() const
+  {
     return Lattice<T>::q;
   };
   /// Read only access to the data type dim of the data of the super structure
-  virtual int getDataTypeSize() const {
+  virtual int getDataTypeSize() const
+  {
     return sizeof(T);
   };
   /// Initialize all lattice cells to become ready for simulation
@@ -199,7 +210,7 @@ public:
   /// Resets an external Particle Field
   void resetExternalParticleField(SuperGeometry2D<T>& sGeometry, IndicatorF2D<T>& indicator);
   void setExternalParticleField(SuperGeometry2D<T>& sGeometry, AnalyticalF2D<T,T>& velocity,
-                                SmoothIndicatorF2D<T,T>& sIndicator);
+                                ParticleIndicatorF2D<T,T>& sIndicator);
   void addExternalField(SuperGeometry2D<T>& sGeometry, IndicatorF2D<T>& indicator,
                         int fieldBeginsAt, int sizeOfField, AnalyticalF2D<T,T>& field);
   void addExternalField(SuperGeometry2D<T>& sGeometry, IndicatorF2D<T>& indicator,
@@ -243,12 +254,14 @@ public:
   /// Subtract a constant offset from the density within a rect. domain
   void stripeOffDensityOffset(T offset);
   /// Switches Statistics on (default on)
-  void statisticsOn() {
+  void statisticsOn()
+  {
     _statistics_on = true;
   };
   /// Switches Statistics off (default on). That speeds up
   /// the execution time.
-  void statisticsOff() {
+  void statisticsOff()
+  {
     _statistics_on = false;
   };
 

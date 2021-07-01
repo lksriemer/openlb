@@ -73,6 +73,8 @@ public:
   virtual ~LoadBalancer();
   /// Swap method
   void swap(LoadBalancer<T>& loadBalancer);
+  /// returns whether `glob` is on this process
+  bool isLocal(const int& glob);
   /// \return local cuboid number of relevant thread
   int loc(const int& glob);
   /// \return local cuboid number of relevant thread
@@ -103,12 +105,14 @@ public:
   virtual void reInit(CuboidGeometry2D<T>& cGeometry2d, const double ratioFullEmpty=3.7) {}
 
   /// Write itself into Stringstream
-  virtual void writeToStream(std::ostream& stream) {
+  virtual void writeToStream(std::ostream& stream)
+  {
     std::cout << "Error: LoadBalancer.writeToStream not implemented yet." << std::endl;
     exit(-1);
   };
   /// Write itself into File
-  virtual void writeToFile(std::string fileName) {
+  virtual void writeToFile(std::string fileName)
+  {
     std::cout << "Error: LoadBalancer.writeToFile not implemented yet." << std::endl;
     exit(-1);
   };

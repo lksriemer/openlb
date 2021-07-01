@@ -32,15 +32,6 @@ namespace util {
 inline bool nearZero(const float& a);
 inline bool nearZero(const double& a);
 
-//inline std::vector<int> operator- (const std::vector<int>& a, const std::vector<int>& b);
-//inline std::vector<double> operator- (const std::vector<double>& a, const std::vector<double>& b);
-
-//inline std::vector<int> operator+ (const std::vector<int>& a, const std::vector<int>& b);
-//inline std::vector<double> operator+ (const std::vector<double>& a, const std::vector<double>& b);
-
-//std::vector<double> dotProduct3D(const std::vector<double>& a, const std::vector<double>& b); // Was commented out
-//std::vector<int> crossProduct3D(const std::vector<int> a, const std::vector<int> b); // Was commented out
-//std::vector<double> crossProduct3D(const std::vector<double>& a, const std::vector<double>& b); // Was commented out
 
 std::vector<double> fromVector3(const Vector<double, 3>& vec);
 std::vector<double> fromVector2(const Vector<double, 2>& vec);
@@ -60,11 +51,6 @@ std::vector<double> normalize(const std::vector<double>& a);
 
 //bool triangleIntersectionWithNormalDirection(const std::vector<double>& point0, const std::vector<double>& point1, const std::vector<double>& point2, const std::vector<double>& origign, const std::vector<double>& normalDirection, double& distance);
 
-//std::vector<int> assign(int a, int b);
-//std::vector<double> assign(double a, double b);
-
-//std::vector<int> assign(int a, int b, int c);
-//std::vector<double> assign(double a, double b, double c);
 
 void print(const int& a);
 void print(const double& a);

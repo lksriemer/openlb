@@ -61,7 +61,7 @@ void PowerLawBGKdynamics<T,Lattice>::collide (
   LatticeStatistics<T>& statistics )
 {
   T rho, u[Lattice<T>::d], pi[util::TensorVal<Lattice<T> >::n];
-  this->momenta.computeAllMomenta(cell, rho, u, pi);
+  this->_momenta.computeAllMomenta(cell, rho, u, pi);
   // load old omega from dyn. omega descriptor
   //T oldOmega = this->getOmega(); //compute with constant omega
   T oldOmega = cell.getExternal(Lattice<T>::ExternalField::omegaBeginsAt)[0]; //compute with dynamic omega
@@ -82,7 +82,7 @@ void PowerLawBGKdynamics<T,Lattice>::staticCollide (
   LatticeStatistics<T>& statistics )
 {
   T rho, uTemp[Lattice<T>::d], pi[util::TensorVal<Lattice<T> >::n];
-  this->momenta.computeAllMomenta(cell, rho, uTemp, pi);
+  this->_momenta.computeAllMomenta(cell, rho, uTemp, pi);
   T newOmega = computeOmega(this->getOmega(), preFactor, rho, pi);
   T uSqr = lbHelpers<T,Lattice>::bgkCollision(cell, rho, u, newOmega);
   if (cell.takesStatistics()) {
@@ -101,7 +101,7 @@ template<typename T, template<typename U> class Lattice>
 T PowerLawBGKdynamics<T,Lattice>::getPowerLawOmega(Cell<T,Lattice>& cell )
 {
   T rho, uTemp[Lattice<T>::d], pi[util::TensorVal<Lattice<T> >::n];
-  this->momenta.computeAllMomenta(cell, rho, uTemp, pi);
+  this->_momenta.computeAllMomenta(cell, rho, uTemp, pi);
   T newOmega = computeOmega(this->getOmega(), preFactor, rho, pi);
   return newOmega;
 }
@@ -166,7 +166,7 @@ void PowerLawForcedBGKdynamics<T,Lattice>::collide (
   LatticeStatistics<T>& statistics )
 {
   T rho, u[Lattice<T>::d], pi[util::TensorVal<Lattice<T> >::n];
-  this->momenta.computeAllMomenta(cell, rho, u, pi);
+  this->_momenta.computeAllMomenta(cell, rho, u, pi);
   // load old omega from dyn. omega descriptor
   //T oldOmega = this->getOmega(); //compute with constant omega
   T oldOmega = cell.getExternal(Lattice<T>::ExternalField::omegaBeginsAt)[0]; //compute with dynamic omega
@@ -191,7 +191,7 @@ void PowerLawForcedBGKdynamics<T,Lattice>::staticCollide (
   LatticeStatistics<T>& statistics )
 {
   T rho, uTemp[Lattice<T>::d], pi[util::TensorVal<Lattice<T> >::n];
-  this->momenta.computeAllMomenta(cell, rho, uTemp, pi);
+  this->_momenta.computeAllMomenta(cell, rho, uTemp, pi);
   T newOmega = computeOmega(this->getOmega(), preFactor, rho, pi);
   T uSqr = lbHelpers<T,Lattice>::bgkCollision(cell, rho, u, newOmega);
   lbHelpers<T,Lattice>::addExternalForce(cell, u, newOmega, rho);
@@ -211,7 +211,7 @@ template<typename T, template<typename U> class Lattice>
 T PowerLawForcedBGKdynamics<T,Lattice>::getPowerLawOmega(Cell<T,Lattice>& cell )
 {
   T rho, uTemp[Lattice<T>::d], pi[util::TensorVal<Lattice<T> >::n];
-  this->momenta.computeAllMomenta(cell, rho, uTemp, pi);
+  this->_momenta.computeAllMomenta(cell, rho, uTemp, pi);
   T newOmega = computeOmega(this->getOmega(), preFactor, rho, pi);
   return newOmega;
 }

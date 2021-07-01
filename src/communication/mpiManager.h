@@ -143,6 +143,9 @@ public:
   template <typename T>
   void sendRecv(T *sendBuf, T *recvBuf, int count, int dest, int source, int tag = 0,
                 MPI_Comm comm = MPI_COMM_WORLD);
+#ifdef ADT
+  template <typename T,unsigned DIM> void sendRecv(ADf<T,DIM> *sendBuf, ADf<T,DIM> *recvBuf, int count, int dest, int source, int tag = 0, MPI_Comm comm = MPI_COMM_WORLD);
+#endif
 
   /// Sends data to master processor
   template <typename T>
@@ -227,19 +230,23 @@ public:
   /// Initializes the mpi manager
   void init(int *argc, char ***argv, bool verbose=false) { }
   /// Returns the number of processes
-  int getSize() const {
+  int getSize() const
+  {
     return 1;
   }
   /// Returns the process ID
-  int getRank() const {
+  int getRank() const
+  {
     return 0;
   }
   /// Returns process ID of main processor
-  int bossId() const {
+  int bossId() const
+  {
     return 0;
   }
   /// Tells whether current processor is main processor
-  bool isMainProcessor() const {
+  bool isMainProcessor() const
+  {
     return true;
   }
 

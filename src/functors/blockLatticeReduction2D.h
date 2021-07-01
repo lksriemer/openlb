@@ -52,7 +52,7 @@ class BlockStructure2D;
  *  This class is not intended to be derived from.
  */
 template< typename T, template <typename U> class DESCRIPTOR >
-class BlockLatticeReduction2D : public BlockDataF2D<T,T> {
+class BlockLatticeReduction2D final : public BlockDataF2D<T,T> {
 private:
   /// Data fields which hold the reduced data
   BlockData2D<T,T>* _tmpBlockData;
@@ -95,7 +95,7 @@ private:
  *  This class is not intended to be derived from.
  */
 template< typename T, template <typename U> class DESCRIPTOR >
-class BlockLatticeReduction3D : public BlockDataF2D<T,T> {
+class BlockLatticeReduction3D final : public BlockDataF2D<T,T> {
 private:
   /// Data fields which hold the reduced data
   BlockData2D<T,T>* _tmpBlockData;
@@ -120,10 +120,10 @@ private:
 public:
   /// Construction based on a functor f which is reduced to a 2D cuboid (with origin and span vectors u and v)
   BlockLatticeReduction3D(SuperLatticeF3D<T,DESCRIPTOR>& f, Vector<T,3>& u,
-                          Vector<T,3>& v, int resolution=600, T const origin[3]=NULL);
+                          Vector<T,3>& v, int resolution=600, T const origin[3]=nullptr);
   /// Construction based on a functor f which is reduced to a 2D cuboid (with origin and normal)
   //BlockLatticeReduction3D( SuperLatticeF3D<T,DESCRIPTOR>& f, T const normal[3], int resolution=600,
-  //                         T const origin[3]=NULL);
+  //                         T const origin[3]=nullptr);
   /// Construction based on a functor f which is reduced to a 2D cuboid (with normal)
   BlockLatticeReduction3D(SuperLatticeF3D<T,DESCRIPTOR>& f, T const normalX,
                           T const normalY, T const normalZ, int resolution=600);

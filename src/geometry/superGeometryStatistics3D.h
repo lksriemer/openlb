@@ -42,10 +42,10 @@
 namespace olb {
 
 /// Representation of a statistic for a parallel 3D geometry
-/** A super geomety statistic computes different integral
+/** A super geometry statistic computes different integral
  * values, like total number of different materials,
  * materials of any kind, min./max. physical position, of an
- * underlying super geoemtry.
+ * underlying super geometry.
  *
  * This class is not intended to be derived from.
  */

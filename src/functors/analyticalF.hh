@@ -33,6 +33,7 @@
 #include "functors/analyticalF.h"
 #include "core/singleton.h"
 #include "communication/mpiManager.h"
+#include "utilities/vectorHelpers.h"
 
 namespace olb {
 
@@ -73,7 +74,7 @@ template <typename T, typename S>
 AnalyticalLinear1D<T,S>::AnalyticalLinear1D(S x0, T v0, S x1, T v1)
   : AnalyticalF1D<T,S>(1)
 {
-  if ( x1-x0 == 0 ) {
+  if ( util::nearZero(x1-x0) ) {
     std::cout << "Error: x1-x2=0" << std::endl;
   } else {
     _a = ( v1-v0 ) / ( x1-x0 );
@@ -162,7 +163,23 @@ bool SinusStartScale<T,S>::operator()(T output[], const S x[])
   return true;
 }
 
+template <typename T>
+AnalyticalDiffFD1D<T>::AnalyticalDiffFD1D(AnalyticalF1D<T,T>& f, T eps) : AnalyticalF1D<T,T>(1), _f(f), _eps(eps)
+{
+}
 
+template <typename T>
+bool AnalyticalDiffFD1D<T>::operator() (T output[], const T input[])
+{
+  _f(output,input);
+  T x = output[0];
+  T input2[1];
+  input2[0] = input[0] + _eps;
+  _f(output,input2);
+  output[0] -= x;
+  output[0] /= _eps;
+  return true;
+}
 
 ///////////////////////////////////////2D///////////////////////////////////////
 template <typename T, typename S>
@@ -231,7 +248,7 @@ AnalyticalLinear2D<T,S>::AnalyticalLinear2D(S x0, S y0, T v0, S x1, S y1,
 {
   this->getName() = "linear";
   T n2= (x1-x0)*(y2-y0) - (y1-y0)*(x2-x0);
-  if ( n2 == 0 ) {
+  if ( util::nearZero(n2) ) {
     std::cout << "Error function" << std::endl;
   } else {
     T n0 = (y1-y0)*(v2-v0) - (v1-v0)*(y2-y0);
@@ -248,6 +265,31 @@ bool AnalyticalLinear2D<T,S>::operator()(T output[], const S x[])
   output[0]=_a*x[0] + _b*x[1] + _c;
   return true;
 }
+
+template <typename T, typename S>
+AnalyticalParticleAdsorptionLinear2D<T,S>::AnalyticalParticleAdsorptionLinear2D(T center[], T radius, T maxValue) : AnalyticalF2D<T,S>(2), _radius(radius), _maxValue(maxValue)
+{
+  _center[0] = center[0];
+  _center[1] = center[1];
+  this->getName() = "particleAdsorptionLinear2D";
+}
+
+template <typename T, typename S>
+bool AnalyticalParticleAdsorptionLinear2D<T,S>::operator()(T output[], const S input[])
+{
+  T dist = sqrt((input[0]-_center[0])*(input[0]-_center[0]) + (input[1]-_center[1])*(input[1]-_center[1]));
+
+  if (dist > _radius) {
+    output[0] = T();
+    output[1] = T();
+    return true;
+  } else {
+    output[0] = _maxValue*(T(1) - dist/_radius)*(_center[0]-input[0])/_radius;
+    output[1] = _maxValue*(T(1) - dist/_radius)*(_center[1]-input[1])/_radius;
+    return true;
+  }
+}
+
 
 
 template <typename T, typename S>
@@ -274,7 +316,7 @@ bool AnalyticalRandom2D<T,S>::operator()(T output[], const S x[])
 }
 
 template <typename T, typename S>
-ParticleU2D<T,S>::ParticleU2D(SmoothIndicatorF2D<T,T>& indicator, std::vector<T>& u, T& omega)
+ParticleU2D<T,S>::ParticleU2D(ParticleIndicatorF2D<T,T>& indicator, std::vector<T>& u, T& omega)
   :AnalyticalF2D<T,S>(2), _indicator(indicator), _u(u), _omega(omega)
 {
   this->getName() = "ParticleU";
@@ -283,7 +325,7 @@ ParticleU2D<T,S>::ParticleU2D(SmoothIndicatorF2D<T,T>& indicator, std::vector<T>
 template <typename T, typename S>
 bool ParticleU2D<T,S>::operator()(T output[], const S input[])
 {
-  T inside[1];
+  //T inside[1];
   output[0] = T();
   output[1] = T();
 
@@ -291,8 +333,8 @@ bool ParticleU2D<T,S>::operator()(T output[], const S input[])
   //if (inside[0] != 0) {
 
   //two dimensions: u = U + w x r = (Ux, Uy, 0) + (0,0,w) x (x,y,0) = (Ux, Uy, 0) + (-wy, wx, 0)
-  output[0] = _u[0] - _omega*(input[1] - _indicator.getCenter()[1]);
-  output[1] = _u[1] + _omega*(input[0] - _indicator.getCenter()[0]);
+  output[0] = _u[0] - _omega*(input[1] - _indicator.getPos()[1]);
+  output[1] = _u[1] + _omega*(input[0] - _indicator.getPos()[0]);
 
   return true;
 }
@@ -378,7 +420,7 @@ AnalyticalLinear3D<T,S>::AnalyticalLinear3D(S x0, S y0, S z0, T v0, S x1,
   this->getName() = "linear";
   T n = ( (y3-y0)*(x1-x0)-(x3-x0)*(y1-y0) ) * ( (x2-x0)*(z1-z0)-(z2-z0)*(x1-x0) )
         +( (z3-z0)*(x1-x0)-(x3-x0)*(z1-z0) ) * ( (y2-y0)*(x1-x0)-(x2-x0)*(y1-y0) );
-  if ( n == 0 ) {
+  if ( util::nearZero(n) ) {
     std::cout << "Error function" << std::endl;
   } else {
     T w = ( (y1-y0)*(x3-x0)-(x1-x0)*(y3-y0) ) * ( (v2-v0)-(x2-x0)*(v1-v0) / (x1-x0) )
@@ -450,7 +492,7 @@ bool AnalyticalScaled3D<T,S>::operator()(T output[], const S x[])
 
 
 template <typename T, typename S>
-ParticleU3D<T,S>::ParticleU3D(SmoothIndicatorSphere3D<T,T>& indicator,
+ParticleU3D<T,S>::ParticleU3D(ParticleIndicatorF3D<T,T>& indicator,
                               std::vector<T>& u, std::vector<T>& omega)
   : AnalyticalF3D<T,S>(1), _indicator(indicator), _u(u), _omega(omega)
 {
@@ -461,10 +503,10 @@ ParticleU3D<T,S>::ParticleU3D(SmoothIndicatorSphere3D<T,T>& indicator,
 template <typename T, typename S>
 bool ParticleU3D<T,S>::operator()(T output[], const S input[])
 {
-  if (_indicator(input)[0] != 0) {
-    output[0] = _u[0] + ( _omega[1]*(input[2] - _indicator.getCenter()[2]) - _omega[2]*(input[1] - _indicator.getCenter()[1]) );
-    output[1] = _u[1] + ( _omega[2]*(input[0] - _indicator.getCenter()[0]) - _omega[0]*(input[2] - _indicator.getCenter()[2]) );
-    output[2] = _u[2] + ( _omega[0]*(input[1] - _indicator.getCenter()[1]) - _omega[1]*(input[0] - _indicator.getCenter()[0]) );
+  if (_indicator(output, input) != 0) {
+    output[0] = _u[0] + ( _omega[1]*(input[2] - _indicator.getPos()[2]) - _omega[2]*(input[1] - _indicator.getPos()[1]) );
+    output[1] = _u[1] + ( _omega[2]*(input[0] - _indicator.getPos()[0]) - _omega[0]*(input[2] - _indicator.getPos()[2]) );
+    output[2] = _u[2] + ( _omega[0]*(input[1] - _indicator.getPos()[1]) - _omega[1]*(input[0] - _indicator.getPos()[0]) );
   }
   return true;
 }

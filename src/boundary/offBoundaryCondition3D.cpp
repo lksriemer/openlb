@@ -30,10 +30,10 @@ namespace olb {
 
 template class OffBoundaryConditionInstantiator3D
 <
-double, descriptors::D3Q19Descriptor,
-        BouzidiBoundaryManager3D < double, descriptors::D3Q19Descriptor,
-        BGKdynamics<double,descriptors::D3Q19Descriptor> >
-        >;
+  double, descriptors::D3Q19Descriptor,
+  BouzidiBoundaryManager3D < double, descriptors::D3Q19Descriptor,
+                             BGKdynamics<double,descriptors::D3Q19Descriptor> >
+  >;
 
 template OffLatticeBoundaryCondition3D<double,descriptors::D3Q19Descriptor>*
 createBouzidiBoundaryCondition3D < double,descriptors::D3Q19Descriptor,

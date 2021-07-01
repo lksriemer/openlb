@@ -36,6 +36,7 @@
 #include "geometry/blockGeometryStructure3D.h"
 #include "latticeStatistics.h"
 #include "functors/analyticalF.h"
+#include "functors/indicator/indicatorBaseF3D.h"
 
 
 namespace olb {
@@ -44,9 +45,13 @@ template<typename T, typename S> class AnalyticalF3D;
 template<typename T, template<typename U> class Lattice> struct Dynamics;
 template<typename T, template<typename U> class Lattice> class Cell;
 template<typename T, template<typename U> class Lattice> struct WriteCellFunctional;
-template <typename T> class IndicatorSphere3D;
+template<typename T> class IndicatorSphere3D;
 template<typename T> class BlockGeometryStructure3D;
 
+
+/** BlockLatticeStructure3D is a interface class for defining dynamics on a BlockStructure3D.
+ *  The pure virtual methods are wrapped by generic methods.
+ */
 template<typename T, template<typename U> class Lattice>
 class BlockLatticeStructure3D : public BlockStructure3D, public SpatiallyExtendedObject3D {
 public:
@@ -67,6 +72,8 @@ public:
   virtual void defineExternalField(BlockGeometryStructure3D<T>& blockGeometry,
                                    IndicatorSphere3D<T>& indicator, int fieldBeginsAt, int sizeOfField,
                                    AnalyticalF3D<T,T>& field);
+  virtual void setExternalParticleField(BlockGeometryStructure3D<T>& blockGeometry, AnalyticalF3D<T,T>& velocity, ParticleIndicatorF3D<T,T>& sIndicator);
+
   virtual void iniEquilibrium(BlockGeometryStructure3D<T>& blockGeometry, int material,
                               AnalyticalF3D<T,T>& rho , AnalyticalF3D<T,T>& u);
   // pure virtual member functions

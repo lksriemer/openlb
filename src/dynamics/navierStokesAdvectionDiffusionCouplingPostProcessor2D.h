@@ -50,10 +50,12 @@ public:
   NavierStokesAdvectionDiffusionCouplingPostProcessor2D(int x0_, int x1_, int y0_, int y1_,
       T gravity_, T T0_, T deltaTemp_, std::vector<T> dir_,
       std::vector<SpatiallyExtendedObject2D* > partners_);
-  virtual int extent() const {
+  virtual int extent() const
+  {
     return 0;
   }
-  virtual int extent(int whichDirection) const {
+  virtual int extent(int whichDirection) const
+  {
     return 0;
   }
   virtual void process(BlockLattice2D<T,Lattice>& blockLattice);

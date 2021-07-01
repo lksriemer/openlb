@@ -74,7 +74,7 @@ CuboidGeometry3D<T>::CuboidGeometry3D(IndicatorF3D<T>& indicatorF, T voxelSize, 
                    (int)((indicatorF.getMax()[0] - indicatorF.getMin()[0]) / voxelSize + 1.5),
                    (int)((indicatorF.getMax()[1] - indicatorF.getMin()[1]) / voxelSize + 1.5),
                    (int)((indicatorF.getMax()[2] - indicatorF.getMin()[2]) / voxelSize + 1.5)),
-  _periodicityOn(false), clout(std::cout, "CuboidGeometry3D")
+    _periodicityOn(false), clout(std::cout, "CuboidGeometry3D")
 {
   add(_motherCuboid);
   split(0, nC);
@@ -128,6 +128,13 @@ int CuboidGeometry3D<T>::get_iC(T x, T y, T z, int offset) const
     }
   }
   return (int)i;
+}
+
+
+template<typename T>
+int CuboidGeometry3D<T>::get_iC(Vector<T,3> coords, int offset) const
+{
+  return get_iC(coords[0], coords[1], coords[2], offset);
 }
 
 template<typename T>
@@ -857,7 +864,7 @@ std::string CuboidGeometry3D<T>::_cuboidParameters(Cuboid3D<T> const& cub)
   }
 
   ss << "\" origin=\"";
- for (int i = 0; i<3; i++) {
+  for (int i = 0; i<3; i++) {
     ss << cub.getOrigin()[i] << " ";
   }
 

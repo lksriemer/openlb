@@ -32,25 +32,25 @@
 namespace olb {
 
 
-template <typename T>
-SuperCalc3D<T>::SuperCalc3D(SuperF3D<T>& f, SuperF3D<T>& g)
-  : SuperF3D<T>( f.getSuperStructure(), f.getTargetDim() ), _f(f), _g(g)
+template <typename T, typename W>
+SuperCalc3D<T,W>::SuperCalc3D(SuperF3D<T,W>& f, SuperF3D<T,W>& g)
+  : SuperF3D<T,W>( f.getSuperStructure(), f.getTargetDim() ), _f(f), _g(g)
 {
   std::swap(f._ptrCalcC, this->_ptrCalcC);
 }
 
-// addition
-template <typename T>
-SuperPlus3D<T>::SuperPlus3D(SuperF3D<T>& f, SuperF3D<T>& g) : SuperCalc3D<T>(f,g)
+// Addition
+template <typename T, typename W>
+SuperPlus3D<T,W>::SuperPlus3D(SuperF3D<T,W>& f, SuperF3D<T,W>& g) : SuperCalc3D<T,W>(f,g)
 {
   this->getName() = "(" + f.getName() + "+" + g.getName() + ")";
 }
 
-template <typename T>
-bool SuperPlus3D<T>::operator()(T output[], const int input[])
+template <typename T, typename W>
+bool SuperPlus3D<T,W>::operator()(W output[], const int input[])
 {
   this->_f(output,input);
-  T tmp[this->_g.getTargetDim()];
+  W tmp[this->_g.getTargetDim()];
   this->_g(tmp, input);
   for (int i = 0; i < this->_f.getTargetDim(); i++) {
     output[i] += tmp[i];
@@ -58,18 +58,18 @@ bool SuperPlus3D<T>::operator()(T output[], const int input[])
   return true;
 }
 
-// subtraction
-template <typename T>
-SuperMinus3D<T>::SuperMinus3D(SuperF3D<T>& f, SuperF3D<T>& g) : SuperCalc3D<T>(f,g)
+// Subtraction
+template <typename T, typename W>
+SuperMinus3D<T,W>::SuperMinus3D(SuperF3D<T,W>& f, SuperF3D<T,W>& g) : SuperCalc3D<T,W>(f,g)
 {
   this->getName() = "(" + f.getName() + "-" + g.getName() + ")";
 }
 
-template <typename T>
-bool SuperMinus3D<T>::operator()(T output[], const int input[])
+template <typename T, typename W>
+bool SuperMinus3D<T,W>::operator()(W output[], const int input[])
 {
   this->_f(output,input);
-  T tmp[this->_g.getTargetDim()];
+  W tmp[this->_g.getTargetDim()];
   this->_g(tmp, input);
   for (int i = 0; i < this->_f.getTargetDim(); i++) {
     output[i] -= tmp[i];
@@ -78,19 +78,39 @@ bool SuperMinus3D<T>::operator()(T output[], const int input[])
 }
 
 
-// multiplication
+// Subtraction (bool sepcialzation)
 template <typename T>
-SuperMultiplication3D<T>::SuperMultiplication3D(SuperF3D<T>& f, SuperF3D<T>& g)
-  : SuperCalc3D<T>(f,g)
+SuperMinus3D<T,bool>::SuperMinus3D(SuperF3D<T,bool>& f, SuperF3D<T,bool>& g) : SuperCalc3D<T,bool>(f,g)
+{
+  this->getName() = "(" + f.getName() + "-" + g.getName() + ")";
+}
+// Subtraction specialization for bool -> "Without" operator
+template <typename T>
+bool SuperMinus3D<T,bool>::operator()(bool output[], const int input[])
+{
+  this->_f(output,input);
+  bool tmp[this->_g.getTargetDim()];
+  this->_g(tmp, input);
+  for (int i = 0; i < this->_f.getTargetDim(); i++) {
+    output[i] &= !tmp[i];
+  }
+  return true;
+}
+
+
+// Multiplication
+template <typename T, typename W>
+SuperMultiplication3D<T,W>::SuperMultiplication3D(SuperF3D<T,W>& f, SuperF3D<T,W>& g)
+  : SuperCalc3D<T,W>(f,g)
 {
   this->getName() = f.getName() + "*" + g.getName();
 }
 
-template <typename T>
-bool SuperMultiplication3D<T>::operator()(T output[], const int input[])
+template <typename T, typename W>
+bool SuperMultiplication3D<T,W>::operator()(W output[], const int input[])
 {
   this->_f(output,input);
-  T tmp[this->_g.getTargetDim()];
+  W tmp[this->_g.getTargetDim()];
   this->_g(tmp, input);
   for (int i = 0; i < this->_f.getTargetDim(); i++) {
     output[i] *= tmp[i];
@@ -99,19 +119,19 @@ bool SuperMultiplication3D<T>::operator()(T output[], const int input[])
 }
 
 
-// division
-template <typename T>
-SuperDivision3D<T>::SuperDivision3D(SuperF3D<T>& f, SuperF3D<T>& g)
-  : SuperCalc3D<T>(f,g)
+// Division
+template <typename T, typename W>
+SuperDivision3D<T,W>::SuperDivision3D(SuperF3D<T,W>& f, SuperF3D<T,W>& g)
+  : SuperCalc3D<T,W>(f,g)
 {
   this->getName() = f.getName() + "/" + g.getName();
 }
 
-template <typename T>
-bool SuperDivision3D<T>::operator()(T output[], const int input[])
+template <typename T, typename W>
+bool SuperDivision3D<T,W>::operator()(W output[], const int input[])
 {
   this->_f(output,input);
-  T tmp[this->_g.getTargetDim()];
+  W tmp[this->_g.getTargetDim()];
   this->_g(tmp, input);
   for (int i = 0; i < this->_f.getTargetDim(); i++) {
     output[i] /= tmp[i];
@@ -121,34 +141,34 @@ bool SuperDivision3D<T>::operator()(T output[], const int input[])
 
 
 /////////////////////////////////operator()/// ////////////////////////////////
-template <typename T>
-SuperF3D<T>& SuperF3D<T>::operator+(SuperF3D<T>& rhs)
+template <typename T, typename W>
+SuperF3D<T,W>& SuperF3D<T,W>::operator+(SuperF3D<T,W>& rhs)
 {
-  auto tmp = std::make_shared< SuperPlus3D<T> >(*this,rhs);
+  auto tmp = std::make_shared< SuperPlus3D<T,W> >(*this,rhs);
   this->_ptrCalcC = tmp;
   return *tmp;
 }
 
-template <typename T>
-SuperF3D<T>& SuperF3D<T>::operator-(SuperF3D<T>& rhs)
+template <typename T, typename W>
+SuperF3D<T,W>& SuperF3D<T,W>::operator-(SuperF3D<T,W>& rhs)
 {
-  auto tmp = std::make_shared< SuperMinus3D<T> >(*this,rhs);
+  auto tmp = std::make_shared< SuperMinus3D<T,W> >(*this,rhs);
   this->_ptrCalcC = tmp;
   return *tmp;
 }
 
-template <typename T>
-SuperF3D<T>& SuperF3D<T>::operator*(SuperF3D<T>& rhs)
+template <typename T, typename W>
+SuperF3D<T,W>& SuperF3D<T,W>::operator*(SuperF3D<T,W>& rhs)
 {
-  auto tmp = std::make_shared< SuperMultiplication3D<T> >(*this,rhs);
+  auto tmp = std::make_shared< SuperMultiplication3D<T,W> >(*this,rhs);
   this->_ptrCalcC = tmp;
   return *tmp;
 }
 
-template <typename T>
-SuperF3D<T>& SuperF3D<T>::operator/(SuperF3D<T>& rhs)
+template <typename T, typename W>
+SuperF3D<T,W>& SuperF3D<T,W>::operator/(SuperF3D<T,W>& rhs)
 {
-  auto tmp = std::make_shared< SuperDivision3D<T> >(*this,rhs);
+  auto tmp = std::make_shared< SuperDivision3D<T,W> >(*this,rhs);
   this->_ptrCalcC = tmp;
   return *tmp;
 }

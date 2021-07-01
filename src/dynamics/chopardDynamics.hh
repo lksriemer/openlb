@@ -87,7 +87,7 @@ void ChopardDynamics<T,Lattice>::collide (
   LatticeStatistics<T>& statistics )
 {
   T rho, u[Lattice<T>::d];
-  this->momenta.computeRhoU(cell, rho, u);
+  this->_momenta.computeRhoU(cell, rho, u);
   T uSqr = chopardBgkCollision(cell, rho, u, vs2, omega);
   if (cell.takesStatistics()) {
     statistics.incrementStats(rho, uSqr);
@@ -101,7 +101,7 @@ void ChopardDynamics<T,Lattice>::staticCollide (
   LatticeStatistics<T>& statistics )
 {
   T rho;
-  rho = this->momenta.computeRho(cell);
+  rho = this->_momenta.computeRho(cell);
   T uSqr = chopardBgkCollision(cell, rho, u, vs2, omega);
   if (cell.takesStatistics()) {
     statistics.incrementStats(rho, uSqr);

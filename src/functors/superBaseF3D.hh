@@ -1,7 +1,7 @@
 /*  This file is part of the OpenLB library
  *
- *  Copyright (C) 2012 Lukas Baron, Tim Dornieden, Mathias J. Krause,
- *  Albert Mink
+ *  Copyright (C) 2012-2016 Lukas Baron, Tim Dornieden, Mathias J. Krause,
+ *                          Albert Mink, Benjamin Förster
  *  E-mail contact: info@openlb.net
  *  The most recent release of OpenLB can be downloaded at
  *  <http://www.openlb.net/>
@@ -30,29 +30,27 @@
 
 namespace olb {
 
-template <typename T>
-SuperF3D<T>::SuperF3D(SuperStructure3D<T>& superStructure, int targetDim)
-  : GenericF<T,int>(targetDim,4), _superStructure(superStructure) { }
+template <typename T, typename W>
+SuperF3D<T,W>::SuperF3D(SuperStructure3D<T>& superStructure, int targetDim)
+  : GenericF<W,int>(targetDim,4), _superStructure(superStructure) { }
 
-template <typename T>
-SuperF3D<T>::~SuperF3D()
+template <typename T, typename W>
+SuperF3D<T,W>::~SuperF3D()
 {
-  if (_blockF.size() != 0) {
-    for (unsigned int iC = 0; iC < _blockF.size(); ++iC) {
-      delete _blockF[iC];
-    }
-    _blockF.resize(0);
+  for (auto&& element : _blockF) {
+    delete element;
   }
+  _blockF.resize(0);
 }
 
-template <typename T>
-SuperStructure3D<T>& SuperF3D<T>::getSuperStructure()
+template <typename T, typename W>
+SuperStructure3D<T>& SuperF3D<T,W>::getSuperStructure()
 {
   return _superStructure;
 }
 
-template <typename T>
-BlockF3D<T>& SuperF3D<T>::getBlockF(int iCloc)
+template <typename T, typename W>
+BlockF3D<T>& SuperF3D<T,W>::getBlockF(int iCloc)
 {
   return *(_blockF[iCloc]);
 }
@@ -62,20 +60,19 @@ BlockF3D<T>& SuperF3D<T>::getBlockF(int iCloc)
 
 template <typename T,typename BaseType>
 SuperDataF3D<T,BaseType>::SuperDataF3D(SuperData3D<T,BaseType>& superData)
-  : SuperF3D<T>( superData, superData.getDataSize() ), _superData(superData)
+  : SuperF3D<T,BaseType>( superData, superData.getDataSize() ), _superData(superData)
 {
 }
 
 
 template <typename T,typename BaseType>
-bool SuperDataF3D<T,BaseType>::operator() (T output[], const int input[])
+bool SuperDataF3D<T,BaseType>::operator() (BaseType output[], const int input[])
 {
-  // return the actual block, don't calculate with overlap
+  int iC_loc = _superData.getLoadBalancer().loc(input[0]);
   for (int i=0; i < _superData.getDataSize(); i++) {
-    output[i] = _superData.get(_superData.getLoadBalancer().loc(input[0]))
-                .get(input[1]+_superData.getOverlap(),
-                     input[2]+_superData.getOverlap(),
-                     input[3]+_superData.getOverlap(), i);
+    output[i] = _superData.get(iC_loc).get(input[1] + _superData.getOverlap(),
+                                           input[2] + _superData.getOverlap(),
+                                           input[3] + _superData.getOverlap(), i);
   }
   return true;
 }
@@ -88,18 +85,48 @@ SuperData3D<T,BaseType>& SuperDataF3D<T,BaseType>::getSuperData()
 
 
 
-template <typename T>
-SuperIdentity3D<T>::SuperIdentity3D(SuperF3D<T>& f)
-  : SuperF3D<T>(f.getSuperStructure() ,f.getTargetDim() ), _f(f)
+template <typename T, typename W>
+SuperIdentity3D<T,W>::SuperIdentity3D(SuperF3D<T,W>& f)
+  : SuperF3D<T,W>(f.getSuperStructure() ,f.getTargetDim() ), _f(f)
 {
   this->getName() = _f.getName();
   std::swap( _f._ptrCalcC, this->_ptrCalcC );
 }
 
-template <typename T>
-bool SuperIdentity3D<T>::operator()(T output[], const int input[])
+template <typename T, typename W>
+bool SuperIdentity3D<T,W>::operator()(W output[], const int input[])
 {
   _f(output, input);
+  return true;
+}
+
+
+
+template <typename T, typename W>
+SuperIdentityOnSuperIndicatorF3D<T,W>::SuperIdentityOnSuperIndicatorF3D(SuperF3D<T,W>& f,
+    SuperIndicatorF3D<T>& indicatorF,
+    W defaultValue)
+  : SuperF3D<T,W>(f.getSuperStructure() ,f.getTargetDim() ),
+    _f(f),
+    _indicatorF(indicatorF),
+    _defaultValue(defaultValue)
+{
+  this->getName() = _f.getName() + std::string("_on_") + _indicatorF.getName();
+  std::swap( _f._ptrCalcC, this->_ptrCalcC );
+}
+
+template <typename T, typename W>
+bool SuperIdentityOnSuperIndicatorF3D<T,W>::operator()(W output[], const int input[])
+{
+  bool indic;
+  _indicatorF(&indic, input);
+  if (indic) {
+    _f(output, input);
+  } else {
+    for (int i=0; i<_f.getTargetDim(); i++) {
+      output[i] = _defaultValue;
+    }
+  }
   return true;
 }
 
@@ -107,7 +134,7 @@ bool SuperIdentity3D<T>::operator()(T output[], const int input[])
 template <typename T, template <typename U> class Lattice>
 SuperLatticeF3D<T,Lattice>::SuperLatticeF3D(SuperLattice3D<T,Lattice>& superLattice,
     int targetDim)
-  : SuperF3D<T>(superLattice, targetDim), _sLattice(superLattice) { }
+  : SuperF3D<T,T>(superLattice, targetDim), _sLattice(superLattice) { }
 
 template <typename T, template <typename U> class Lattice>
 SuperLattice3D<T,Lattice>& SuperLatticeF3D<T,Lattice>::getSuperLattice()
@@ -141,7 +168,7 @@ template <typename T, template <typename U> class Lattice>
 bool ComposedSuperLatticeF3D<T,Lattice>::operator() (T output[], const int input[])
 {
   T tmp[3] = {};
-  SuperIdentity3D<T> ff0(_f0), ff1(_f1), ff2(_f2);
+  SuperIdentity3D<T,T> ff0(_f0), ff1(_f1), ff2(_f2);
   _f0(tmp,input);
   output[0]=tmp[0];
   _f1(tmp,input);

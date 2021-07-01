@@ -171,7 +171,7 @@ BlockDataF3D<T,BaseType>::BlockDataF3D(BlockF3D<BaseType>& f)
 
 template <typename T,typename BaseType>
 BlockDataF3D<T,BaseType>::BlockDataF3D(int nx, int ny, int nz, int size)
-  : BlockF3D<T>( _blockData, size ), _blockData( *(new BlockData3D<T,BaseType>(nx, ny, nz, size)) ),
+  : BlockF3D<T>( *(new BlockData3D<T,BaseType>(nx, ny, nz, size)), size ), _blockData( static_cast<BlockData3D<T,BaseType>&>(this->getBlockStructure() )),
     _isConstructed(true)
 {}
 
@@ -191,10 +191,10 @@ BlockData3D<T,BaseType>& BlockDataF3D<T,BaseType>::getBlockData()
 
 // access _blockLattice3D
 template <typename T, typename BaseType>
-bool BlockDataF3D<T, BaseType>::operator()(T output[], const int input[])
+bool BlockDataF3D<T, BaseType>::operator()(BaseType output[], const int input[])
 {
   for (int iDim = 0; iDim < this->getTargetDim(); ++iDim) {
-    output[iDim] = (T)_blockData.get( input[0], input[1], input[2], iDim );
+    output[iDim] = _blockData.get( input[0], input[1], input[2], iDim );
   }
   return true;
 }

@@ -95,7 +95,7 @@ void MRTdynamics<T,Lattice>::collide (
   typedef mrtHelpers<T,Lattice> mrtH;
 
   T rho, u[L::d];
-  this->momenta.computeRhoU(cell, rho, u);
+  this->_momenta.computeRhoU(cell, rho, u);
 
   T uSqr = mrtH::mrtCollision(cell,rho,u,invM_S);
 
@@ -182,7 +182,7 @@ void MRTdynamics2<T,Lattice>::collide (
   typedef mrtHelpers<T,Lattice> mrtH;
 
   T rho, u[L::d];
-  this->momenta.computeRhoU(cell, rho, u);
+  this->_momenta.computeRhoU(cell, rho, u);
 
   T uSqr = mrtH::mrtCollision(cell,rho,u,invM_S_2);
 
@@ -209,7 +209,7 @@ void ForcedMRTdynamics<T,Lattice>::collide (
   typedef mrtHelpers<T,Lattice> mrtH;
 
   T rho, u[L::d];
-  this->momenta.computeRhoU(cell, rho, u);
+  this->_momenta.computeRhoU(cell, rho, u);
 
   T uSqr = mrtH::mrtCollision(cell,rho,u,this->invM_S);
   mrtH::addExternalForce(cell, rho, u, this->invM_S);

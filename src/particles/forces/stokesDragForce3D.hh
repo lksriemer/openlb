@@ -48,11 +48,15 @@ StokesDragForce3D<T, PARTICLETYPE, DESCRIPTOR>::StokesDragForce3D(SuperLatticeIn
   : Force3D<T, PARTICLETYPE>(),
     _getVel(getVel)
 {
+  //implicit formulation
   _C1 = 6. * M_PI * converter.getDynamicViscosity() * converter.physTime();
+  _mu = converter.getDynamicViscosity();
+  // explicit formulation
+  //  _C1 = 6. * M_PI * converter.getDynamicViscosity();
   _dTinv = 1. / converter.physTime();
 }
 
-/// 6 Pi r mu U_rel
+/// 6 Pi r mu (u_f-u_p)
 template<typename T, template<typename U> class PARTICLETYPE, template<typename W> class DESCRIPTOR>
 void StokesDragForce3D<T, PARTICLETYPE, DESCRIPTOR>::applyForce(
   typename std::deque<PARTICLETYPE<T> >::iterator p, int pInt,
@@ -60,6 +64,8 @@ void StokesDragForce3D<T, PARTICLETYPE, DESCRIPTOR>::applyForce(
 {
   T fluidVel[3] = {0.,0.,0.};
 
+
+  //implicit formulation
   _getVel(fluidVel, &p->getPos()[0], p->getCuboid());
 
   T c = _C1 * p->getRad() * p->getInvMass();
@@ -75,27 +81,34 @@ void StokesDragForce3D<T, PARTICLETYPE, DESCRIPTOR>::applyForce(
   p->getForce()[2] += p->getMass() * _dTinv
                       * ((c * fluidVel[2] + p->getVel()[2]) * C2 - p->getVel()[2]);
 
+  // explicit formulation
+  //  T cex = 6. * M_PI * _mu * p->getRad();
+  //  p->getForce()[0] += cex * (fluidVel[0]-p->getVel()[0]);
+  //  p->getForce()[1] += cex * (fluidVel[1]-p->getVel()[1]);
+  //  p->getForce()[2] += cex * (fluidVel[2]-p->getVel()[2]);
 }
 
 template<typename T, template<typename U> class PARTICLETYPE, template<typename W> class DESCRIPTOR>
 void StokesDragForce3D<T, PARTICLETYPE, DESCRIPTOR>::computeForce(
-  int pInt, ParticleSystem3D<T, PARTICLETYPE>& psSys, T force[3])
+  int pInt, ParticleSystem3D<T, PARTICLETYPE>* psSys, T force[3])
 {
   T fluidVel[3] = {0.,0.,0.};
 
-  _getVel(fluidVel, &psSys[pInt].getPos()[0], psSys[pInt].getCuboid());
+  _getVel(fluidVel, &psSys->operator[](pInt).getPos()[0], psSys->operator[](pInt).getCuboid());
 
-  T c = _C1 * psSys[pInt].getRad() * psSys[pInt].getInvMass();
+  T c = _C1 * psSys->operator[](pInt).getRad() * psSys->operator[](pInt).getInvMass();
   T C2 = 1. / (1. + c);
-  force[0] = psSys[pInt].getMass() * _dTinv
-             * ((c * fluidVel[0] + psSys[pInt].getVel()[0]) * C2
-                - psSys[pInt].getVel()[0]);
-  force[1] = psSys[pInt].getMass() * _dTinv
-             * ((c * fluidVel[1] + psSys[pInt].getVel()[1]) * C2
-                - psSys[pInt].getVel()[1]);
-  force[2] = psSys[pInt].getMass() * _dTinv
-             * ((c * fluidVel[2] + psSys[pInt].getVel()[2]) * C2
-                - psSys[pInt].getVel()[2]);
+  T mass = psSys->operator[](pInt).getMass();
+  std::vector<T> vel = psSys->operator[](pInt).getVel();
+  force[0] = mass * _dTinv
+             * ((c * fluidVel[0] + vel[0]) * C2
+                - vel[0]);
+  force[1] = mass * _dTinv
+             * ((c * fluidVel[1] + vel[1]) * C2
+                - vel[1]);
+  force[2] = mass * _dTinv
+             * ((c * fluidVel[2] + vel[2]) * C2
+                - vel[2]);
 }
 
 }

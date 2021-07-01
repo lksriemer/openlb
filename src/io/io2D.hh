@@ -28,7 +28,7 @@
 #include "blockGifWriter.hh"
 #include "blockVtkWriter2D.hh"
 #include "colormaps.hh"
+#include "gnuplotWriter.hh"
 #include "serializerIO.hh"
-#include "superVtkWriter2D.hh"
-#include "vtiReader.hh"
+#include "superVtmWriter2D.hh"
 

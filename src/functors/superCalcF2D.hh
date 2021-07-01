@@ -32,25 +32,25 @@
 namespace olb {
 
 
-template <typename T>
-SuperCalc2D<T>::SuperCalc2D(SuperF2D<T>& f, SuperF2D<T>& g)
-  : SuperF2D<T>( f.getSuperStructure(), f.getTargetDim() ), _f(f), _g(g)
+template <typename T, typename W>
+SuperCalc2D<T,W>::SuperCalc2D(SuperF2D<T,W>& f, SuperF2D<T,W>& g)
+  : SuperF2D<T,W>( f.getSuperStructure(), f.getTargetDim() ), _f(f), _g(g)
 {
   std::swap(f._ptrCalcC, this->_ptrCalcC);
 }
 
 // addition
-template <typename T>
-SuperPlus2D<T>::SuperPlus2D(SuperF2D<T>& f, SuperF2D<T>& g) : SuperCalc2D<T>(f,g)
+template <typename T, typename W>
+SuperPlus2D<T,W>::SuperPlus2D(SuperF2D<T,W>& f, SuperF2D<T,W>& g) : SuperCalc2D<T,W>(f,g)
 {
   this->getName() = "(" + f.getName() + "+" + g.getName() + ")";
 }
 
-template <typename T>
-bool SuperPlus2D<T>::operator()(T output[], const int input[])
+template <typename T, typename W>
+bool SuperPlus2D<T,W>::operator()(W output[], const int input[])
 {
   this->_f(output,input);
-  T tmp[this->_g.getTargetDim()];
+  W tmp[this->_g.getTargetDim()];
   this->_g(tmp,input);
   for (int i = 0; i < this->_f.getTargetDim(); i++) {
     output[i]+=tmp[i];
@@ -60,17 +60,17 @@ bool SuperPlus2D<T>::operator()(T output[], const int input[])
 
 
 // subtraction
-template <typename T>
-SuperMinus2D<T>::SuperMinus2D(SuperF2D<T>& f, SuperF2D<T>& g) : SuperCalc2D<T>(f,g)
+template <typename T, typename W>
+SuperMinus2D<T,W>::SuperMinus2D(SuperF2D<T,W>& f, SuperF2D<T,W>& g) : SuperCalc2D<T,W>(f,g)
 {
   this->getName() = "(" + f.getName() + "-" + g.getName() + ")";
 }
 
-template <typename T>
-bool SuperMinus2D<T>::operator()(T output[], const int input[])
+template <typename T, typename W>
+bool SuperMinus2D<T,W>::operator()(W output[], const int input[])
 {
   this->_f(output,input);
-  T tmp[this->_g.getTargetDim()];
+  W tmp[this->_g.getTargetDim()];
   this->_g(tmp,input);
   for (int i = 0; i < this->_f.getTargetDim(); i++) {
     output[i]-=tmp[i];
@@ -80,18 +80,18 @@ bool SuperMinus2D<T>::operator()(T output[], const int input[])
 
 
 // multiplication
-template <typename T>
-SuperMultiplication2D<T>::SuperMultiplication2D(SuperF2D<T>& f, SuperF2D<T>& g)
-  : SuperCalc2D<T>(f,g)
+template <typename T, typename W>
+SuperMultiplication2D<T,W>::SuperMultiplication2D(SuperF2D<T,W>& f, SuperF2D<T,W>& g)
+  : SuperCalc2D<T,W>(f,g)
 {
   this->getName() = f.getName() + "*" + g.getName();
 }
 
-template <typename T>
-bool SuperMultiplication2D<T>::operator()(T output[], const int input[])
+template <typename T, typename W>
+bool SuperMultiplication2D<T,W>::operator()(W output[], const int input[])
 {
   this->_f(output,input);
-  T tmp[this->_g.getTargetDim()];
+  W tmp[this->_g.getTargetDim()];
   this->_g(tmp,input);
   for (int i = 0; i < this->_f.getTargetDim(); i++) {
     output[i]*=tmp[i];
@@ -101,19 +101,19 @@ bool SuperMultiplication2D<T>::operator()(T output[], const int input[])
 
 
 // division
-template <typename T>
-SuperDivision2D<T>::SuperDivision2D(SuperF2D<T>& f, SuperF2D<T>& g)
-  : SuperCalc2D<T>(f,g)
+template <typename T, typename W>
+SuperDivision2D<T,W>::SuperDivision2D(SuperF2D<T,W>& f, SuperF2D<T,W>& g)
+  : SuperCalc2D<T,W>(f,g)
 {
   this->getName() = f.getName() + "/" + g.getName();
 }
 
 
-template <typename T>
-bool SuperDivision2D<T>::operator()(T output[], const int input[])
+template <typename T, typename W>
+bool SuperDivision2D<T,W>::operator()(W output[], const int input[])
 {
   this->_f(output,input);
-  T tmp[this->_g.getTargetDim()];
+  W tmp[this->_g.getTargetDim()];
   this->_g(tmp,input);
   for (int i = 0; i < this->_f.getTargetDim(); i++) {
     output[i]/=tmp[i];
@@ -123,34 +123,34 @@ bool SuperDivision2D<T>::operator()(T output[], const int input[])
 
 
 /////////////////////////////////operator()/// ////////////////////////////////
-template <typename T>
-SuperF2D<T>& SuperF2D<T>::operator+(SuperF2D<T>& rhs)
+template <typename T, typename W>
+SuperF2D<T,W>& SuperF2D<T,W>::operator+(SuperF2D<T,W>& rhs)
 {
-  auto tmp = std::make_shared< SuperPlus2D<T> >(*this,rhs);
+  auto tmp = std::make_shared< SuperPlus2D<T,W> >(*this,rhs);
   this->_ptrCalcC = tmp;
   return *tmp;
 }
 
-template <typename T>
-SuperF2D<T>& SuperF2D<T>::operator-(SuperF2D<T>& rhs)
+template <typename T, typename W>
+SuperF2D<T,W>& SuperF2D<T,W>::operator-(SuperF2D<T,W>& rhs)
 {
-  auto tmp = std::make_shared< SuperMinus2D<T> >(*this,rhs);
+  auto tmp = std::make_shared< SuperMinus2D<T,W> >(*this,rhs);
   this->_ptrCalcC = tmp;
   return *tmp;
 }
 
-template <typename T>
-SuperF2D<T>& SuperF2D<T>::operator*(SuperF2D<T>& rhs)
+template <typename T, typename W>
+SuperF2D<T,W>& SuperF2D<T,W>::operator*(SuperF2D<T,W>& rhs)
 {
-  auto tmp = std::make_shared< SuperMultiplication2D<T> >(*this,rhs);
+  auto tmp = std::make_shared< SuperMultiplication2D<T,W> >(*this,rhs);
   this->_ptrCalcC = tmp;
   return *tmp;
 }
 
-template <typename T>
-SuperF2D<T>& SuperF2D<T>::operator/(SuperF2D<T>& rhs)
+template <typename T, typename W>
+SuperF2D<T,W>& SuperF2D<T,W>::operator/(SuperF2D<T,W>& rhs)
 {
-  auto tmp = std::make_shared< SuperDivision2D<T> >(*this,rhs);
+  auto tmp = std::make_shared< SuperDivision2D<T,W> >(*this,rhs);
   this->_ptrCalcC = tmp;
   return *tmp;
 }

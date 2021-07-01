@@ -28,5 +28,13 @@
 namespace olb {
 
 template class SuperLatticeYplus3D<double,descriptors::D3Q19Descriptor>;
+template class BlockLatticePhysDissipationFD3D<double,descriptors::D3Q19Descriptor>;
+template class SuperLatticePhysDissipationFD3D<double,descriptors::D3Q19Descriptor>;
+template class BlockLatticePhysEffectiveDissipationFD3D<double,descriptors::D3Q19Descriptor>;
+template class SuperLatticePhysEffectiveDissipationFD3D<double,descriptors::D3Q19Descriptor>;
+//template class BlockLatticeADM3D<double,descriptors::D3Q19Descriptor>;
+//template class SuperLatticeADM3D<double,descriptors::D3Q19Descriptor>;
+//template class SuperLatticeSigmaADM3D<double,descriptors::D3Q19Descriptor>;
+
 
 }

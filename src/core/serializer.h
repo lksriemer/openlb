@@ -186,7 +186,8 @@ public:
    *     std::accumulate(v.begin(), v.end(), size_t(0), Serializable::sumNblock());
    */
   struct sumNblock : public std::binary_function<size_t, Serializable, size_t> {
-    std::size_t operator()(std::size_t sum, const Serializable& s) {
+    std::size_t operator()(std::size_t sum, const Serializable& s)
+    {
       return sum + s.getNblock();
     }
   };
@@ -198,7 +199,8 @@ public:
    *     std::accumulate(v.begin(), v.end(), size_t(0), Serializable::sumSerializableSize());
    */
   struct sumSerializableSize : public std::binary_function<size_t, Serializable, size_t> {
-    std::size_t operator()(std::size_t sum, const Serializable& s) {
+    std::size_t operator()(std::size_t sum, const Serializable& s)
+    {
       return sum + s.getSerializableSize();
     }
   };
@@ -223,7 +225,8 @@ protected:
    */
   template<typename DataType>
   void registerVar(const std::size_t iBlock, std::size_t &sizeBlock, std::size_t &currentBlock, bool *&dataPtr,
-                   const DataType &data, const size_t arrayLength = 1) const {
+                   const DataType &data, const size_t arrayLength = 1) const
+  {
     if (iBlock == currentBlock) {
       sizeBlock = sizeof(DataType) * arrayLength;
       dataPtr = (bool *) (&data);
@@ -245,7 +248,8 @@ protected:
    */
   template<typename DataType>
   void registerSerializableOfConstSize(const std::size_t iBlock, std::size_t &sizeBlock, std::size_t &currentBlock,
-                                       bool *&dataPtr, DataType &data, const bool loadingMode=false) {
+                                       bool *&dataPtr, DataType &data, const bool loadingMode=false)
+  {
     static_assert(std::is_base_of<Serializable, DataType>::value, "DataType must be a Serializable.");
 
     if (iBlock >= currentBlock && iBlock < currentBlock + data.getNblock()) {
@@ -269,7 +273,8 @@ protected:
   template<typename DataType>
   void registerSerializablesOfConstSize(const std::size_t iBlock, std::size_t &sizeBlock, std::size_t &currentBlock,
                                         bool *&dataPtr, DataType* data, const size_t arrayLength,
-                                        const bool loadingMode=false) {
+                                        const bool loadingMode=false)
+  {
     static_assert(std::is_base_of<Serializable, DataType>::value, "DataType must be a Serializable.");
 
     if ( arrayLength > 0 ) {
@@ -336,7 +341,8 @@ protected:
   template<typename DataType>
   void registerSerializable(const std::size_t iBlock, std::size_t &sizeBlock, std::size_t &currentBlock,
                             size_t &sizeBufferIndex, bool *&dataPtr, DataType &data,
-                            const bool loadingMode=false) {
+                            const bool loadingMode=false)
+  {
     static_assert(std::is_base_of<Serializable, DataType>::value, "DataType must be a Serializable.");
 
     size_t dataBlockCount = 0;
@@ -376,7 +382,8 @@ protected:
   template<typename DataType>
   void registerStdVectorOfVars(const std::size_t iBlock, std::size_t &sizeBlock, std::size_t &currentBlock,
                                size_t &sizeBufferIndex, bool *&dataPtr, std::vector<DataType> &data,
-                               const bool loadingMode = false) {
+                               const bool loadingMode = false)
+  {
     if (iBlock >= currentBlock) {
       // process length of data vector
       size_t sizeOfVector = addSizeToBuffer(iBlock, sizeBlock, currentBlock, sizeBufferIndex, dataPtr, data.size());
@@ -422,7 +429,8 @@ protected:
   template<typename DataType>
   void registerStdVectorOfSerializablesOfConstSize(const std::size_t iBlock, std::size_t &sizeBlock,
       std::size_t &currentBlock, size_t &sizeBufferIndex, bool *&dataPtr,
-      std::vector<DataType> &data, const bool loadingMode = false) {
+      std::vector<DataType> &data, const bool loadingMode = false)
+  {
     static_assert(std::is_base_of<Serializable, DataType>::value, "DataType must be a Serializable.");
 
     if (iBlock >= currentBlock) {
@@ -474,7 +482,8 @@ protected:
   template<typename DataType>
   void registerStdVectorOfSerializables(const std::size_t iBlock, std::size_t &sizeBlock, std::size_t &currentBlock,
                                         size_t &sizeBufferIndex, bool *&dataPtr, std::vector<DataType> &data,
-                                        const bool loadingMode = false) {
+                                        const bool loadingMode = false)
+  {
     static_assert(std::is_base_of<Serializable, DataType>::value, "DataType must be a Serializable.");
 
     if (iBlock >= currentBlock) {
@@ -523,7 +532,8 @@ protected:
    */
   template<typename DataTypeKey, typename DataTypeValue>
   void registerMap(const std::size_t iBlock, std::size_t &sizeBlock, std::size_t &currentBlock, size_t &sizeBufferIndex,
-                   bool *&dataPtr, std::map<DataTypeKey, DataTypeValue> &data, const bool loadingMode = false) {
+                   bool *&dataPtr, std::map<DataTypeKey, DataTypeValue> &data, const bool loadingMode = false)
+  {
     if (iBlock >= currentBlock) {
       // process length of data map
       size_t sizeOfMap = addSizeToBuffer(iBlock, sizeBlock, currentBlock, sizeBufferIndex, dataPtr, data.size());
@@ -571,7 +581,8 @@ protected:
    *   - `n-th` round: push given size_t to sizeBuffer and provide pointer to it.
    */
   size_t addSizeToBuffer(const std::size_t iBlock, std::size_t& sizeBlock, std::size_t&currentBlock,
-                         size_t& sizeBufferIndex, bool*& dataPtr, const size_t data) const {
+                         size_t& sizeBufferIndex, bool*& dataPtr, const size_t data) const
+  {
     size_t returnSize = 0;
 
     if (iBlock == currentBlock) {

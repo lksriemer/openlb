@@ -35,14 +35,14 @@ template<typename T>
 Timer<T>::Timer()
   : clout(std::cout,"Timer")
 {
-  tp = NULL;
+  tp = nullptr;
 }
 
 template<typename T>
 Timer<T>::Timer(int maxTimeSteps, int numFluidCells, bool *p, int size_p)
   : clout(std::cout,"Timer")
 {
-  tp = NULL;
+  tp = nullptr;
   initialize(maxTimeSteps, numFluidCells, p, size_p);
 }
 
@@ -82,7 +82,7 @@ T Timer<T>::getMLUPps()
 template<typename T>
 T Timer<T>::getTotalMLUPs()
 {
-  T tmlups = ((T)numFC * maxTS) / (timevalDiffTimeMs(msTimeEnd, msTimeStart)*1000);
+  T tmlups = ((T)numFC * curTS) / (timevalDiffTimeMs(msTimeEnd, msTimeStart)*1000);
   return tmlups;
 }
 
@@ -117,15 +117,15 @@ void Timer<T>::update(int currentTimeStep)    // Is int sufficient? Is it possib
   curTS   = currentTimeStep;              // of update() critical
 
   rtPas   = difftime(sTimeCur,sTimeStart);                // here calculation is based on s-time
-  rtTot   = rtPas*maxTS/curTS;
+  rtTot   = rtPas*maxTS/std::max<int>(curTS, 1);
   rtRem   = rtTot-rtPas;
 
   rtPasMs = timevalDiffTimeMs(msTimeCur, msTimeStart);    // here with ms-time as timeval-value
-  rtTotMs = rtPasMs*maxTS/curTS;
+  rtTotMs = rtPasMs*maxTS/std::max<int>(curTS, 1);
   rtRemMs = rtTotMs-rtPasMs;
 
   ctPas   = (cpuTimeCur-cpuTimeStart)/CLOCKS_PER_SEC;     // and here the same for CPU-time
-  ctTot   = ctPas*maxTS/curTS;
+  ctTot   = ctPas*maxTS/std::max<int>(curTS, 1);
   ctRem   = ctTot-ctPas;
 
 }
@@ -258,9 +258,9 @@ Timer<T>* createTimer(XMLreader& param, const LBconverter<T>& converter, int num
   if ( ! param["Application"]["PhysParam"]["MaxTime"].read(physMaxT) ) {
     clout << "PhysMaxTime not found" << std::endl;
   }
-  if ( ! param["Application"]["PhysParam"]["MaxStartTime"].read(physStartT) ) {
-    clout << "PhysStartTime not found" << std::endl;
-  }
+//  if ( ! param["Application"]["PhysParam"]["MaxStartTime"].read(physStartT) ) {
+//    clout << "PhysStartTime not found" << std::endl;
+//  }
   if ( ! param["Application"]["dim"].read(dim) ) {
     clout << "dim not found" << std::endl;
   }

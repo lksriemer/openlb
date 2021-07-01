@@ -1,7 +1,7 @@
 /*  This file is part of the OpenLB library
  *
- *  Copyright (C) 2012 Lukas Baron, Tim Dornieden, Mathias J. Krause,
- *  Albert Mink
+ *  Copyright (C) 2012-2016 Lukas Baron, Tim Dornieden, Mathias J. Krause,
+ *  Albert Mink, Benjamin Förster
  *  E-mail contact: info@openlb.net
  *  The most recent release of OpenLB can be downloaded at
  *  <http://www.openlb.net/>
@@ -28,17 +28,35 @@
 
 namespace olb {
 
-template class SuperMin3D<double,descriptors::D3Q19Descriptor>;
-template class SuperMax3D<double,descriptors::D3Q19Descriptor>;
-template class SuperSum3D<double,descriptors::D3Q19Descriptor>;
-template class SuperSumIndicator3D<double,descriptors::D3Q19Descriptor>;
-template class SuperAverage3D<double,descriptors::D3Q19Descriptor>;
-template class SuperIntegral3D<double,descriptors::D3Q19Descriptor>;
-template class SuperL1Norm3D<double,descriptors::D3Q19Descriptor>;
-template class SuperL2Norm3D<double,descriptors::D3Q19Descriptor>;
-template class SuperLpNorm3D<double,descriptors::D3Q19Descriptor>;
-template class SuperLinfNorm3D<double,descriptors::D3Q19Descriptor>;
+template class SuperMin3D<double,double>;
+template class SuperMin3D<double,int>;
+template class SuperMin3D<double,bool>;
+
+template class SuperMax3D<double,double>;
+template class SuperMax3D<double,int>;
+template class SuperMax3D<double,bool>;
+
+template class SuperSum3D<double,double>;
+template class SuperSum3D<double,int>;
+
+template class SuperSumIndicator3D<double,double>;
+
+template class SuperAverage3D<double,double>;
+
+template class SuperIntegral3D<double,double>;
+template class SuperIntegral3D<double,int>;
+
+template class SuperLpNorm3D<double,double>;
+template class SuperLpNorm3D<double,int>;
+template class SuperL1Norm3D<double,double>;
+template class SuperL1Norm3D<double,int>;
+template class SuperL2Norm3D<double,double>;
+template class SuperL2Norm3D<double,int>;
+template class SuperLinfNorm3D<double,double>;
+template class SuperLinfNorm3D<double,int>;
+
 template class SuperGeometryFaces3D<double>;
+
 template class SuperLatticePhysDrag3D<double,descriptors::D3Q19Descriptor>;
 template class SuperLatticePhysDragIndicator3D<double,descriptors::D3Q19Descriptor>;
 template class SuperLatticePhysCorrDrag3D<double,descriptors::D3Q19Descriptor>;

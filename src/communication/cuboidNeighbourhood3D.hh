@@ -240,7 +240,7 @@ void CuboidNeighbourhood3D<T>::init_inCN()
   for (int i=0; i<_nC; i++) {
     int dRank = _superStructure.getLoadBalancer().rank(i);
     if ( singleton::mpi().getRank() != dRank ) {
-      singleton::mpi().iSend(&_tempInCN[i] , 1, dRank, &_mpiNbHelper.get_mpiRequest()[counter], i*_nC+_iCglob);
+      singleton::mpi().iSend(&_tempInCN[i] , 1, dRank, &_mpiNbHelper.get_mpiRequest()[counter], _iCglob);
       counter++;
     }
   }
@@ -268,7 +268,7 @@ void CuboidNeighbourhood3D<T>::init_outCN()
 #ifdef PARALLEL_MODE_MPI
     int sRank = _superStructure.getLoadBalancer().rank(i);
     if ( singleton::mpi().getRank() != sRank ) {
-      singleton::mpi().receive(&temp[i], 1, sRank, _iCglob*_nC+i);
+      singleton::mpi().receive(&temp[i], 1, sRank, i);
     }
 #endif
     if (temp[i]!=0) {
@@ -313,7 +313,7 @@ void CuboidNeighbourhood3D<T>::bufSend_inCells()
     int dRank = _superStructure.getLoadBalancer().rank(_inC[iC]);
     //if ( singleton::mpi().getRank() != dRank ) {
     singleton::mpi().iSend( _inDataCoordinates[_inC[iC]],
-                            _inN[iC]*3, dRank, &_mpiNbHelper.get_mpiRequest()[counter], _inC[iC]*_nC+_iCglob);
+                            _inN[iC]*3, dRank, &_mpiNbHelper.get_mpiRequest()[counter], _iCglob);
     counter++;
     //}
   }
@@ -327,9 +327,9 @@ void CuboidNeighbourhood3D<T>::recWrite_outCells()
 #ifdef PARALLEL_MODE_MPI
   for (unsigned iC=0; iC<_outC.size(); iC++) {
     int sRank = _superStructure.getLoadBalancer().rank(_outC[iC]);
-    singleton::mpi().receive(_outDataCoordinates[_outC[iC]], _outN[iC]*3, sRank, _iCglob*_nC+_outC[iC]);
+    singleton::mpi().receive(_outDataCoordinates[_outC[iC]], _outN[iC]*3, sRank,_outC[iC]);
     if ( singleton::mpi().getRank() != sRank ) {
-      //singleton::mpi().receive(_outDataCoordinates[_outC[iC]], _outN[iC]*3, sRank, _iCglob*_nC+_outC[iC]);
+      //singleton::mpi().receive(_outDataCoordinates[_outC[iC]], _outN[iC]*3, sRank, _outC[iC]);
       Cell3D<T> found;
       for (int i=0; i<_outN[iC]; i++) {
         found.physR[0] = _outDataCoordinates[_outC[iC]][3*i];
@@ -380,7 +380,7 @@ void CuboidNeighbourhood3D<T>::send_outData()
   for (unsigned iC=0; iC<_outC.size(); iC++) {
     int dRank = _superStructure.getLoadBalancer().rank(_outC[iC]);
     singleton::mpi().iSend( _outData[_outC[iC]],
-                            _outN[iC]*_nData*_nDataType, dRank, &_mpiNbHelper.get_mpiRequest()[iC], _outC[iC]*_nC+_iCglob);
+                            _outN[iC]*_nData*_nDataType, dRank, &_mpiNbHelper.get_mpiRequest()[iC], _iCglob);
   }
 #endif
 }
@@ -391,7 +391,7 @@ void CuboidNeighbourhood3D<T>::receive_inData()
 #ifdef PARALLEL_MODE_MPI
   for (unsigned iC=0; iC<_inC.size(); iC++) {
     int sRank = _superStructure.getLoadBalancer().rank(_inC[iC]);
-    singleton::mpi().receive(_inData[_inC[iC]], _inN[iC]*_nData*_nDataType, sRank, _iCglob*_nC+_inC[iC]);
+    singleton::mpi().receive(_inData[_inC[iC]], _inN[iC]*_nData*_nDataType, sRank,_inC[iC]);
   }
 #endif
 }

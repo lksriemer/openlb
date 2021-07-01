@@ -75,7 +75,7 @@ template<typename T, template<typename U> class Lattice> class SuperLatticeF3D;
 
 /// Functor with a linear profile e.g. for rotating velocity fields.
 template <typename T>
-class RotatingLinear3D : public AnalyticalF3D<T,T> {
+class RotatingLinear3D final : public AnalyticalF3D<T,T> {
 protected:
   std::vector<T> axisPoint;
   std::vector<T> axisDirection;
@@ -97,7 +97,7 @@ public:
 
 /// Functor with a parabolic profile e.g. for rotating pressure fields.
 template <typename T>
-class RotatingQuadratic1D : public AnalyticalF3D<T,T> {
+class RotatingQuadratic1D final : public AnalyticalF3D<T,T> {
 protected:
   std::vector<T> axisPoint;
   std::vector<T> axisDirection;
@@ -125,7 +125,7 @@ public:
 */
 /// Functor for the rotation of forces.
 template <typename T, template <typename U> class DESCRIPTOR>
-class RotatingForceField3D : public SuperLatticeF3D<T,DESCRIPTOR> {
+class RotatingForceField3D final : public SuperLatticeF3D<T,DESCRIPTOR> {
 protected:
   SuperGeometry3D<T>& sg;
   const LBconverter<T>& converter;
@@ -148,7 +148,8 @@ public:
                        bool coriolisForceOn_ = true);
 
   bool operator() (T output[], const int x[]);
-  std::string name() {
+  std::string name()
+  {
     return "rotatingForce";
   }
 };
@@ -175,7 +176,7 @@ public:
   */
 /// Velocity profile for round pipes.
 template <typename T>
-class CirclePoiseuille3D : public AnalyticalF3D<T,T> {
+class CirclePoiseuille3D final : public AnalyticalF3D<T,T> {
 protected:
   std::vector<T> _center;
   std::vector<T> _normal;
@@ -186,7 +187,8 @@ protected:
 
 public:
   CirclePoiseuille3D(std::vector<T> axisPoint_, std::vector<T> axisDirection_,  T maxVelocity_, T radius_, T scale_=1);
-  CirclePoiseuille3D(T center0, T center1, T center2, T normal0, T normal1, T normal2, T radius, T maxVelocity = T(1), T scale = T(1) ) : AnalyticalF3D<T,T>(3), _radius(radius), _maxVelocity(maxVelocity), _scale(scale) {
+  CirclePoiseuille3D(T center0, T center1, T center2, T normal0, T normal1, T normal2, T radius, T maxVelocity = T(1), T scale = T(1) ) : AnalyticalF3D<T,T>(3), _radius(radius), _maxVelocity(maxVelocity), _scale(scale)
+  {
     _center.push_back(center0);
     _center.push_back(center1);
     _center.push_back(center2);
@@ -201,15 +203,18 @@ public:
   CirclePoiseuille3D(SuperGeometry3D<T>& superGeometry_, int material_, T maxVelocity_, T scale_=1);
 
   /// Returns centerpoint vector
-  std::vector<T> getCenter() {
+  std::vector<T> getCenter()
+  {
     return _center;
   };
   /// Returns normal vector
-  std::vector<T> getNormal() {
+  std::vector<T> getNormal()
+  {
     return _normal;
   };
   /// Returns radi
-  T getRadius() {
+  T getRadius()
+  {
     return _radius;
   };
 
@@ -221,7 +226,7 @@ public:
 */
 /// velocity profile for pipes with rectangular cross-section.
 template <typename T>
-class RectanglePoiseuille3D : public AnalyticalF3D<T,T> {
+class RectanglePoiseuille3D final : public AnalyticalF3D<T,T> {
 protected:
   OstreamManager clout;
   std::vector<T> x0;
@@ -250,7 +255,7 @@ public:
   */
 /// Velocity profile for round pipes.
 template <typename T>
-class EllipticPoiseuille3D : public AnalyticalF3D<T,T> {
+class EllipticPoiseuille3D final : public AnalyticalF3D<T,T> {
 protected:
   OstreamManager clout;
   std::vector<T> _center;
@@ -271,7 +276,7 @@ public:
 /// Vector x has to be turned by alpha in mathematical positive sense depending
 /// to _orientation to lie over vector _referenceVector
 template <typename T, typename S>
-class AngleBetweenVectors3D : public AnalyticalF3D<T,S> {
+class AngleBetweenVectors3D final : public AnalyticalF3D<T,S> {
 protected:
   /// between _referenceVector and vector x, angle is calculated
   std::vector<T> _referenceVector;
@@ -292,7 +297,7 @@ public:
 /// angle _alpha in math positive sense relative to _rotAxisDirection with a
 /// given _origin.
 template <typename T, typename S>
-class RotationRoundAxis3D : public AnalyticalF3D<T,S> {
+class RotationRoundAxis3D final : public AnalyticalF3D<T,S> {
 protected:
   /// origin, around which x is turned
   std::vector<T> _origin;
@@ -320,7 +325,7 @@ public:
 /// lies in the x-y-plane and turns round the _cylinderOrigin, the z-axis
 /// direction equals the axis direction of the cylinder.
 template <typename T, typename S>
-class CylinderToCartesian3D : public AnalyticalF3D<T,S> {
+class CylinderToCartesian3D final : public AnalyticalF3D<T,S> {
 protected:
   std::vector<T> _cylinderOrigin;
 public:
@@ -340,7 +345,7 @@ public:
 /// _cartesianOrigin. The radius is the distance of point x to the
 /// _axisDirection and z the distance to _cartesianOrigin along _axisDirection.
 template <typename T, typename S>
-class CartesianToCylinder3D : public AnalyticalF3D<T,S> {
+class CartesianToCylinder3D final : public AnalyticalF3D<T,S> {
 protected:
   /// origin of the Cartesian coordinate system
   std::vector<T> _cartesianOrigin;
@@ -390,7 +395,7 @@ public:
 /// the _orientation of the spherical coordinate system.
 /// The radius is distance of point x to the Cartesian _origin
 template <typename T, typename S>
-class SphericalToCartesian3D : public AnalyticalF3D<T,S> {
+class SphericalToCartesian3D final : public AnalyticalF3D<T,S> {
   //protected:
 public:
   SphericalToCartesian3D();
@@ -408,7 +413,7 @@ public:
 /// lies in x-y-plane and theta in x-z-plane.
 /// The z axis is the orientation for the mathematical positive sense of phi.
 template <typename T, typename S>
-class CartesianToSpherical3D : public AnalyticalF3D<T,S> {
+class CartesianToSpherical3D final : public AnalyticalF3D<T,S> {
 protected:
   /// origin of the Cartesian coordinate system
   std::vector<T> _cartesianOrigin;
@@ -434,7 +439,7 @@ public:
 ///  Fm = mu0*4/3.*PI*radParticle^3*_Mp*radWire^2/r^3 *
 ///       [radWire^2/r^2+cos(2*theta), sin(2*theta), 0]
 template <typename T, typename S>
-class MagneticForceFromCylinder3D : public AnalyticalF3D<T,S> {
+class MagneticForceFromCylinder3D final : public AnalyticalF3D<T,S> {
 protected:
   CartesianToCylinder3D<T,S>& _car2cyl;
   /// length of the wire, from origin to _car2cyl.axisDirection

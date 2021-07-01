@@ -27,5 +27,6 @@
 namespace olb {
 
 template class Particle3D<double>;
+template class MagneticParticle3D<double>;
 
 }  // namespace olb

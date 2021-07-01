@@ -30,6 +30,7 @@ namespace util {
 
 template class ValueTracer<double>;
 template class BisectStepper<double>;
+template class Newton1D<double>;
 
 }
 

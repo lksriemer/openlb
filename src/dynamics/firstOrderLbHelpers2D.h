@@ -71,7 +71,8 @@ struct rlbHelpers<T, descriptors::D2Q9Descriptor> {
 
   static T rlbCollision (
     Cell<T,descriptors::D2Q9Descriptor>& cell,
-    T rho, const T u[2], const T pi[3], T omega ) {
+    T rho, const T u[2], const T pi[3], T omega )
+  {
     typedef lbHelpers<T, descriptors::D2Q9Descriptor> LH;
     const T uSqr = u[0]*u[0] + u[1]*u[1];
 

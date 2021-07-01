@@ -47,8 +47,8 @@ namespace olb {
 
 
 /// functor that returns the max in each component of all points of a certain material
-template <typename T, template <typename U> class DESCRIPTOR>
-class SuperMax2D : public SuperF2D<T> {
+template <typename T>
+class SuperMax2D final : public SuperF2D<T> {
 private:
   SuperF2D<T>& _f;
   SuperGeometry2D<T>& _superGeometry;
@@ -56,13 +56,13 @@ private:
 public:
   SuperMax2D(SuperF2D<T>& f, SuperGeometry2D<T>& superGeometry,
              const int material);
-  bool operator() (T output[], const int input[]);
+  bool operator() (T output[], const int input[]) override;
 };
 
 
 /// functor that returns the min in each component of all points of a certain material
-template <typename T, template <typename U> class DESCRIPTOR>
-class SuperMin2D : public SuperF2D<T> {
+template <typename T>
+class SuperMin2D final : public SuperF2D<T> {
 private:
   SuperF2D<T>& _f;
   SuperGeometry2D<T>& _superGeometry;
@@ -70,12 +70,12 @@ private:
 public:
   SuperMin2D(SuperF2D<T>& f, SuperGeometry2D<T>& superGeometry,
              const int material);
-  bool operator() (T output[], const int input[]);
+  bool operator() (T output[], const int input[]) override;
 };
 
 /// sums over all cells of a certain material number
-template <typename T, template <typename U> class DESCRIPTOR>
-class SuperSum2D : public SuperF2D<T> {
+template <typename T>
+class SuperSum2D final : public SuperF2D<T> {
 private:
   SuperF2D<T>& _f;
   SuperGeometry2D<T>& _superGeometry;
@@ -83,26 +83,26 @@ private:
 public:
   SuperSum2D(SuperF2D<T>& f, SuperGeometry2D<T>& superGeometry,
              const int material);
-  bool operator() (T output[], const int input[]);
+  bool operator() (T output[], const int input[]) override;
 };
 
 
 /// sums over all cells of a certain indicator
-template <typename T, template <typename U> class DESCRIPTOR>
-class SuperSumIndicator2D : public SuperF2D<T> {
+template <typename T>
+class SuperSumIndicator2D final : public SuperF2D<T> {
 private:
   SuperF2D<T>& _f;
   SuperGeometry2D<T>& _superGeometry;
-  SmoothIndicatorF2D<T,T>& _indicator;
+  ParticleIndicatorF2D<T,T>& _indicator;
 public:
   SuperSumIndicator2D(SuperF2D<T>& f, SuperGeometry2D<T>& superGeometry,
-                      SmoothIndicatorF2D<T,T>& indicator);
-  bool operator() (T output[], const int input[]);
+                      ParticleIndicatorF2D<T,T>& indicator);
+  bool operator() (T output[], const int input[]) override;
 };
 
 
-template <typename T, template <typename U> class DESCRIPTOR>
-class SuperIntegral2D : public SuperF2D<T> {
+template <typename T>
+class SuperIntegral2D final : public SuperF2D<T> {
 private:
   SuperF2D<T>& _f;
   SuperGeometry2D<T>& _superGeometry;
@@ -110,13 +110,13 @@ private:
 public:
   SuperIntegral2D(SuperF2D<T>& f, SuperGeometry2D<T>& superGeometry,
                   const int material);
-  bool operator() (T output[], const int input[]);
+  bool operator() (T output[], const int input[]) override;
 };
 
 
 /// functor that returns componentwise the l1 norm
-template <typename T, template <typename U> class DESCRIPTOR>
-class SuperL1Norm2D : public SuperF2D<T> {
+template <typename T>
+class SuperL1Norm2D final : public SuperF2D<T> {
 private:
   SuperF2D<T>& _f;
   SuperGeometry2D<T>& _superGeometry;
@@ -124,12 +124,12 @@ private:
 public:
   SuperL1Norm2D(SuperF2D<T>& f, SuperGeometry2D<T>& superGeometry,
                 const int material);
-  bool operator() (T output[], const int input[]);
+  bool operator() (T output[], const int input[]) override;
 };
 
 /// functor that returns the L2 norm over omega (with given material) of the the euklid norm of the input functor
-template <typename T, template <typename U> class DESCRIPTOR>
-class SuperL2Norm2D : public SuperF2D<T> {
+template <typename T>
+class SuperL2Norm2D final : public SuperF2D<T> {
 private:
   SuperF2D<T>& _f;
   SuperGeometry2D<T>& _superGeometry;
@@ -137,13 +137,13 @@ private:
 public:
   SuperL2Norm2D(SuperF2D<T>& f, SuperGeometry2D<T>& superGeometry,
                 const int material);
-  bool operator() (T output[], const int input[]);
+  bool operator() (T output[], const int input[]) override;
 };
 
 
 /// functor that returns the Linf norm over omega (with given material) of the the euklid norm of the input functor
-template <typename T, template <typename U> class DESCRIPTOR>
-class SuperLinfNorm2D : public SuperF2D<T> {
+template <typename T>
+class SuperLinfNorm2D final : public SuperF2D<T> {
 private:
   SuperF2D<T>& _f;
   SuperGeometry2D<T>& _superGeometry;
@@ -151,12 +151,12 @@ private:
 public:
   SuperLinfNorm2D(SuperF2D<T>& f, SuperGeometry2D<T>& superGeometry,
                   const int material);
-  bool operator() (T output[], const int input[]);
+  bool operator() (T output[], const int input[]) override;
 };
 
 /// functor that returns componentwise the squared l2-norm
-template <typename T, template <typename U> class DESCRIPTOR>
-class SuperL222D : public SuperF2D<T> {
+template <typename T>
+class SuperL222D final : public SuperF2D<T> {
 private:
   SuperF2D<T>& _f;
   SuperGeometry2D<T>& _superGeometry;
@@ -164,13 +164,13 @@ private:
 public:
   SuperL222D(SuperF2D<T>& f, SuperGeometry2D<T>& superGeometry,
              const int material);
-  bool operator() (T output[], const int input[]);
+  bool operator() (T output[], const int input[]) override;
 };
 
 
 /// functor counts to get the discrete surface for a material no. in direction (1,0,0), (0,1,0), (0,0,1), (-1,0,0), (0,-1,0), (0,0,-1) and total surface, then it converts it into phys units
 template <typename T>
-class SuperGeometryFaces2D : public GenericF<T,int> {
+class SuperGeometryFaces2D final : public GenericF<T,int> {
 private:
   SuperGeometry2D<T>&   _superGeometry;
   const int             _material;
@@ -184,7 +184,7 @@ public:
 
 /// functor counts to get the discrete surface for a material no. in direction (1,0,0), (0,1,0), (0,0,1), (-1,0,0), (0,-1,0), (0,0,-1) and total surface, then it converts it into phys units
 template <typename T>
-class SuperGeometryFacesIndicator2D : public GenericF<T,int> {
+class SuperGeometryFacesIndicator2D final : public GenericF<T,int> {
 private:
   SuperGeometry2D<T>&   _superGeometry;
   SmoothIndicatorCircle2D<T,T>& _indicator;
@@ -199,7 +199,7 @@ public:
 
 /// functor to get pointwise phys force acting on a boundary with a given material on local lattice
 template <typename T, template <typename U> class DESCRIPTOR>
-class SuperLatticePhysDrag2D : public SuperLatticePhysF2D<T,DESCRIPTOR> {
+class SuperLatticePhysDrag2D final : public SuperLatticePhysF2D<T,DESCRIPTOR> {
 private:
   SuperGeometry2D<T>& _superGeometry;
   const int _material;
@@ -212,21 +212,21 @@ public:
 
 /// functor to get pointwise phys force acting on a boundary with a given indicator on local lattice
 template <typename T, template <typename U> class DESCRIPTOR>
-class SuperLatticePhysDragIndicator2D : public SuperLatticePhysF2D<T,DESCRIPTOR> {
+class SuperLatticePhysDragIndicator2D final : public SuperLatticePhysF2D<T,DESCRIPTOR> {
 private:
   SuperGeometry2D<T>& _superGeometry;
-  SmoothIndicatorF2D<T,T>& _indicator;
+  ParticleIndicatorF2D<T,T>& _indicator;
 public:
   SuperLatticePhysDragIndicator2D(SuperLattice2D<T,DESCRIPTOR>& sLattice,
                                   SuperGeometry2D<T>& superGeometry,
-                                  SmoothIndicatorF2D<T,T>& indicator,
+                                  ParticleIndicatorF2D<T,T>& indicator,
                                   const LBconverter<T>& converter);
   bool operator() (T output[], const int input[]);
 };
 
 /// functor to get pointwise phys force acting on a boundary with a given indicator on local lattice
 template <typename T, template <typename U> class DESCRIPTOR>
-class SuperLatticePhysDragIndicator2D_2 : public SuperLatticePhysF2D<T,DESCRIPTOR> {
+class SuperLatticePhysDragIndicator2D_2 final : public SuperLatticePhysF2D<T,DESCRIPTOR> {
 private:
   SuperGeometry2D<T>& _superGeometry;
   SmoothIndicatorF2D<T,T>& _indicator;
@@ -244,7 +244,7 @@ public:
  *  see: Caiazzo, Junk: Boundary Forces in lattice Boltzmann: Analysis of MEA
  */
 template <typename T, template <typename U> class DESCRIPTOR>
-class SuperLatticePhysCorrDrag2D : public SuperLatticePhysF2D<T,DESCRIPTOR> {
+class SuperLatticePhysCorrDrag2D final : public SuperLatticePhysF2D<T,DESCRIPTOR> {
 private:
   SuperGeometry2D<T>& _superGeometry;
   const int _material;
@@ -260,7 +260,7 @@ public:
  *  is represented by a SuperLatticeF functor and the surface is a line
  */
 template<typename T, template<typename U> class DESCRIPTOR>
-class SuperLatticeFlux2D: public SuperLatticeF2D<T, DESCRIPTOR> {
+class SuperLatticeFlux2D final : public SuperLatticeF2D<T, DESCRIPTOR> {
 protected:
   SuperGeometry2D<T>& _sg;
   /// define the line by a vectors u or normal and point A
@@ -301,7 +301,8 @@ public:
   /// if quantity has dimension one: output[0] (=flux) is replaced by the force
   bool operator() (T output[], const int input[]);
 
-  std::string name() {
+  std::string name()
+  {
     return "SuperLatticeFlux2D";
   }
 
@@ -312,7 +313,7 @@ public:
 
 
 template<typename T, template<typename U> class DESCRIPTOR>
-class SuperLatticePhysPressureFlux2D : public SuperLatticeF2D<T, DESCRIPTOR> {
+class SuperLatticePhysPressureFlux2D final : public SuperLatticeF2D<T, DESCRIPTOR> {
 private:
   SuperLatticePhysPressure2D<T, DESCRIPTOR> _p;
   SuperLatticeFlux2D<T, DESCRIPTOR> _fluxF;
@@ -342,7 +343,8 @@ public:
   /// if quantity has dimension one: output[0] (=flux) is replaced by the force
   bool operator() (T output[], const int input[]);
 
-  std::string name() {
+  std::string name()
+  {
     return "SuperLatticePhysPressureFlux2D";
   }
 
@@ -353,7 +355,7 @@ public:
 
 
 template<typename T, template<typename U> class DESCRIPTOR>
-class SuperLatticePhysVelocityFlux2D : public SuperLatticeF2D<T, DESCRIPTOR> {
+class SuperLatticePhysVelocityFlux2D final : public SuperLatticeF2D<T, DESCRIPTOR> {
 private:
   SuperLatticePhysVelocity2D<T, DESCRIPTOR> _vel;
   SuperLatticeFlux2D<T, DESCRIPTOR> _fluxF;
@@ -381,7 +383,8 @@ public:
   /// if quantity has dimension one: output[0] (=flux) is replaced by the force
   bool operator() (T output[], const int input[]);
 
-  std::string name() {
+  std::string name()
+  {
     return "SuperLatticePhysVelocityFlux2D";
   }
 

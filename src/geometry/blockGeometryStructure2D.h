@@ -29,6 +29,7 @@
 #define BLOCK_GEOMETRY_STRUCTURE_2D_H
 
 #include <vector>
+#include <list>
 #include "functors/indicator/indicatorF2D.h"
 #include "geometry/blockGeometryStatistics2D.h"
 #include "io/ostreamManager.h"
@@ -115,6 +116,9 @@ public:
   /// Changes all materials with material fromM to 1 if there is a non robust constiallation
   virtual int innerClean(int fromM, bool verbose=true);
 
+  /// Returns true if there is at least one stream diection found for a voxel with coordinates (iX,iY) of material and if the neighbouring material is one of the bulkMaterials in the list. It further fills the vector streamDirection with true if this direction is pointing to a bulkMaterial.
+  template<typename V, template<typename U> class Lattice >
+  bool findStreamDirections(int iX, int iY, int material, std::list<int> bulkMaterials, bool streamDirections[]);
   /// Returns the coordinates (iX,iY) of a voxel with a given material number (material) if there exists an neighbourhood of size (offsetX,offsetY) only with voxels of the  given material number
   virtual bool find(int material, unsigned offsetX, unsigned offsetY, int& iX, int& iY);
   /// Returns true if at position (iX,iY) and in a neighbourhood of size (offsetX,offsetY) only voxels with a given material number (material) are there
@@ -136,7 +140,7 @@ public:
   virtual void rename(int fromM, int toM, int fluidM, IndicatorF2D<T>& condition);
 
   /// Replaces all material numbers (fromM) to another (toM) using a seed point and max. directions indicated by offsetX,Y != 0
-  virtual void regionGrowing(int fromM, int toM, int seedX, int seedY, int offsetX, int offsetY, std::map<std::vector<int>, int >* tmp=NULL);
+  virtual void regionGrowing(int fromM, int toM, int seedX, int seedY, int offsetX, int offsetY, std::map<std::vector<int>, int >* tmp=nullptr);
 
 public:
 

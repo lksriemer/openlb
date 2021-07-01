@@ -28,6 +28,7 @@
 #include "advectionDiffusionBoundaries.hh"
 #include "advectionDiffusionBoundaryCondition3D.hh"
 #include "advectionDiffusionDynamics.hh"
+#include "advectionDiffusionForces.hh"
 #include "advectionDiffusionLatticeDescriptors.hh"
 #include "advectionDiffusionMomenta.hh"
 #include "chopardDynamics.hh"

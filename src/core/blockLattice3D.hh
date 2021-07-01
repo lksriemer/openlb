@@ -835,14 +835,16 @@ void BlockLattice3D<T,Lattice>::bulkCollideAndStream (
       int iX, iY, iZ, iPop;
 
       iX=loadbalance.firstGlobNum();
-      for (int iY=y0; iY<=y1; ++iY) {
+      for (int iY=y0; iY<=y1; ++iY)
+      {
         for (int iZ=z0; iZ<=z1; ++iZ) {
           grid[iX][iY][iZ].collide(getStatistics());
           grid[iX][iY][iZ].revert();
         }
       }
 
-      for (iX=loadbalance.firstGlobNum()+1; iX<=loadbalance.lastGlobNum(); ++iX) {
+      for (iX=loadbalance.firstGlobNum()+1; iX<=loadbalance.lastGlobNum(); ++iX)
+      {
         for (iY=y0; iY<=y1; ++iY) {
           for (iZ=z0; iZ<=z1; ++iZ) {
             grid[iX][iY][iZ].collide(getStatistics());
@@ -867,7 +869,8 @@ void BlockLattice3D<T,Lattice>::bulkCollideAndStream (
 
       #pragma omp barrier
       iX=loadbalance.firstGlobNum();
-      for (iY=y0; iY<=y1; ++iY) {
+      for (iY=y0; iY<=y1; ++iY)
+      {
         for (iZ=z0; iZ<=z1; ++iZ) {
           for (iPop=1; iPop<=Lattice<T>::q/2; ++iPop) {
             int nextX = iX + Lattice<T>::c[iPop][0];

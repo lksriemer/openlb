@@ -50,6 +50,12 @@ const int D2Q9DescriptorBase<T>::c
 };
 
 template<typename T>
+const int D2Q9DescriptorBase<T>::opposite[D2Q9DescriptorBase<T>::q] = {
+  0, 5, 6, 7, 8, 1, 2, 3, 4
+};
+
+
+template<typename T>
 const T D2Q9DescriptorBase<T>::t[D2Q9DescriptorBase<T>::q] = {
   (T)4/(T)9, (T)1/(T)36, (T)1/(T)9, (T)1/(T)36, (T)1/(T)9,
   (T)1/(T)36, (T)1/(T)9, (T)1/(T)36, (T)1/(T)9
@@ -73,6 +79,11 @@ const int D3Q13DescriptorBase<T>::c
 
   { 1, 1, 0}, { 1,-1, 0}, { 1, 0, 1},
   { 1, 0,-1}, { 0, 1, 1}, { 0, 1,-1}
+};
+
+template<typename T>
+const int D3Q13DescriptorBase<T>::opposite[D3Q13DescriptorBase<T>::q] = {
+  0, 7, 8, 9, 10, 11, 12, 1, 2, 3, 4, 5, 6
 };
 
 template<typename T>
@@ -119,6 +130,11 @@ const int D3Q15DescriptorBase<T>::c
 };
 
 template<typename T>
+const int D3Q15DescriptorBase<T>::opposite[D3Q15DescriptorBase<T>::q] = {
+  0, 8, 9, 10, 11, 12, 13, 14, 1, 2, 3, 4, 5, 6, 7
+};
+
+template<typename T>
 const T D3Q15DescriptorBase<T>::t[D3Q15DescriptorBase<T>::q] = {
   (T)2/(T)9,
 
@@ -150,6 +166,11 @@ const int D3Q19DescriptorBase<T>::c
   { 1, 0, 0}, { 0, 1, 0}, { 0, 0, 1},
   { 1, 1, 0}, { 1,-1, 0}, { 1, 0, 1},
   { 1, 0,-1}, { 0, 1, 1}, { 0, 1,-1}
+};
+
+template<typename T>
+const int D3Q19DescriptorBase<T>::opposite[D3Q19DescriptorBase<T>::q] = {
+  0, 10, 11, 12, 13, 14, 15, 16, 17, 18, 1, 2, 3, 4, 5, 6, 7, 8, 9
 };
 
 template<typename T>
@@ -188,6 +209,12 @@ const int D3Q27DescriptorBase<T>::c
   { 1, 1, 0}, { 1,-1, 0}, { 1, 0, 1},
   { 1, 0,-1}, { 0, 1, 1}, { 0, 1,-1},
   { 1, 1, 1}, { 1, 1,-1}, { 1,-1, 1}, { 1,-1,-1}
+};
+
+template<typename T>
+const int D3Q27DescriptorBase<T>::opposite[D3Q27DescriptorBase<T>::q] = {
+  0, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26,
+  1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13
 };
 
 template<typename T>

@@ -53,6 +53,12 @@ void LoadBalancer<T>::swap(LoadBalancer<T>& loadBalancer)
 }
 
 template<typename T>
+bool LoadBalancer<T>::isLocal(const int& glob)
+{
+  return rank(glob) == singleton::mpi().getRank();
+}
+
+template<typename T>
 int LoadBalancer<T>::loc(const int& glob)
 {
   return _loc[glob];

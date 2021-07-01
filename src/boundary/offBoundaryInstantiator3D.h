@@ -42,7 +42,7 @@ namespace olb {
 
 template<typename T, template<typename U> class Lattice, class BoundaryManager>
 class OffBoundaryConditionInstantiator3D: public OffLatticeBoundaryCondition3D<T,
-    Lattice> {
+  Lattice> {
 public:
   OffBoundaryConditionInstantiator3D(BlockLatticeStructure3D<T, Lattice>& block_, T epsFraction_ = 0.0001);
   ~OffBoundaryConditionInstantiator3D();
@@ -243,7 +243,7 @@ addZeroVelocityBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int
   //addOffDynamics(x, y, z, location, distancesCopy);
 
   for (int iPop = 1; iPop < L::q ; ++iPop) {
-    if (distances[iPop] != -1) {
+    if ( !util::nearZero(distances[iPop]+1) ) {
       const int* c = L::c[iPop];
       addZeroVelocityBoundary(blockGeometryStructure, x-c[0], y-c[1], z-c[2], iPop, distances[iPop]);
     }
@@ -371,14 +371,14 @@ addVelocityBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int x, 
   T spacing = blockGeometryStructure.getDeltaR();
   for (int iPop = 1; iPop < L::q ; ++iPop) {
     distancesCopy[iPop] = spacing*(1.-distances[iPop]);
-    if (distances[iPop] == -1) {
+    if ( util::nearZero(distances[iPop]+1) ) {
       distancesCopy[iPop] = -1;
     }
   }
   addOffDynamics(x, y, z, location, distancesCopy);
 
   for (int iPop = 1; iPop < L::q ; ++iPop) {
-    if (distances[iPop] != -1) {
+    if (!util::nearZero(distances[iPop]+1)) {
       const int* c = L::c[iPop];
       addVelocityBoundary(blockGeometryStructure, x-c[0], y-c[1], z-c[2], iPop, distances[iPop]);
     }

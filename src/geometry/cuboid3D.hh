@@ -117,6 +117,18 @@ void Cuboid3D<T>::init(T globPosX, T globPosY, T globPosZ, T delta, int nX, int 
 }
 
 template<typename T>
+std::size_t Cuboid3D<T>::getNblock() const
+{
+  return 9;
+}
+
+template<typename T>
+std::size_t Cuboid3D<T>::getSerializableSize() const
+{
+  return ( 4 * sizeof(T) )  + ( 5 * sizeof(int) );
+}
+
+template<typename T>
 Vector<T,3> const Cuboid3D<T>::getOrigin() const
 {
   return Vector<T,3> (_globPosX, _globPosY, _globPosZ);
@@ -285,36 +297,48 @@ void Cuboid3D<T>::getPhysR(T physR[3], const int& iX, const int& iY, const int& 
   physR[2] = _globPosZ + iZ*_delta;
 }
 
+template<typename T>
+void Cuboid3D<T>::getLatticeR(int latticeR[3], const T physR[3]) const
+{
+  latticeR[0] = (int)floor( (physR[0] - _globPosX )/_delta +.5);
+  latticeR[1] = (int)floor( (physR[1] - _globPosY )/_delta +.5);
+  latticeR[2] = (int)floor( (physR[2] - _globPosZ )/_delta +.5);
+}
+
+template<typename T>
+void Cuboid3D<T>::getFloorLatticeR(const std::vector<T>& physR, std::vector<int>& latticeR) const
+{
+  getFloorLatticeR(&latticeR[0], &physR[0]);
+}
+
+template<typename T>
+void Cuboid3D<T>::getFloorLatticeR(int latticeR[3], const T physR[3]) const
+{
+  latticeR[0] = (int)floor( (physR[0] - _globPosX)/_delta);
+  latticeR[1] = (int)floor( (physR[1] - _globPosY)/_delta);
+  latticeR[2] = (int)floor( (physR[2] - _globPosZ)/_delta);
+}
 
 template<typename T>
 bool Cuboid3D<T>::checkPoint(T globX, T globY, T globZ, int overlap) const
 {
-  if (_globPosX - _delta/2. <= globX + overlap * _delta &&
-      _globPosX + T(_nX-0.5+overlap) * _delta  > globX &&
-      _globPosY - _delta/2. <= globY + overlap * _delta &&
-      _globPosY + T(_nY-0.5+overlap) * _delta  > globY &&
-      _globPosZ - _delta/2. <= globZ + overlap * _delta &&
-      _globPosZ + T(_nZ-0.5+overlap) * _delta  > globZ ) {
-    return true;
-  } else {
-    return false;
-  }
+  return _globPosX - _delta / 2. <= globX + overlap * _delta &&
+         _globPosX + T(_nX-0.5+overlap) * _delta  > globX &&
+         _globPosY - _delta/2. <= globY + overlap * _delta &&
+         _globPosY + T(_nY-0.5+overlap) * _delta  > globY &&
+         _globPosZ - _delta/2. <= globZ + overlap * _delta &&
+         _globPosZ + T(_nZ-0.5+overlap) * _delta  > globZ;
 }
 
 template<typename T>
 bool Cuboid3D<T>::physCheckPoint(T globX, T globY, T globZ, double overlap) const
 {
-  if (_globPosX - T(0.5 + overlap)*_delta <= globX &&
-      _globPosX + T(_nX-0.5+overlap)*_delta  > globX &&
-      _globPosY - T(0.5 + overlap)*_delta <= globY &&
-      _globPosY + T(_nY-0.5+overlap)*_delta  > globY &&
-      _globPosZ - T(0.5 + overlap)*_delta <= globZ &&
-      _globPosZ + T(_nZ-0.5+overlap)*_delta  > globZ ) {
-
-    return true;
-  } else {
-    return false;
-  }
+  return _globPosX - T(0.5 + overlap) * _delta <= globX &&
+         _globPosX + T(_nX-0.5+overlap)*_delta  > globX &&
+         _globPosY - T(0.5 + overlap)*_delta <= globY &&
+         _globPosY + T(_nY-0.5+overlap)*_delta  > globY &&
+         _globPosZ - T(0.5 + overlap)*_delta <= globZ &&
+         _globPosZ + T(_nZ-0.5+overlap)*_delta  > globZ;
 }
 
 template<typename T>
@@ -451,18 +475,18 @@ void Cuboid3D<T>::divide(int p, std::vector<Cuboid3D<T> > &childrenC) const
 
   OLB_PRECONDITION(p>0);
 
-  int iX = 1;
-  int iY = 1;
-  int iZ = p;
-  int nX = _nX/iX;
-  int bestIx = iX;
-  int nY = _nY/iY;
-  int bestIy = iY;
-  int nZ = _nZ/iZ;
-  int bestIz = iZ;
-  T bestRatio = ((T)(_nX/iX)/(T)(_nY/iY)-1)*((T)(_nX/iX)/(T)(_nY/iY)-1)
-                + ((T)(_nY/iY)/(T)(_nZ/iZ)-1)*((T)(_nY/iY)/(T)(_nZ/iZ)-1)
-                + ((T)(_nZ/iZ)/(T)(_nX/iX)-1)*((T)(_nZ/iZ)/(T)(_nX/iX)-1);
+  int iXX = 1;
+  int iYY = 1;
+  int iZZ = p;
+  int nX = _nX/iXX;
+  int bestIx = iXX;
+  int nY = _nY/iYY;
+  int bestIy = iYY;
+  int nZ = _nZ/iZZ;
+  int bestIz = iZZ;
+  T bestRatio = ((T)(_nX/iXX)/(T)(_nY/iYY)-1)*((T)(_nX/iXX)/(T)(_nY/iYY)-1)
+                + ((T)(_nY/iYY)/(T)(_nZ/iZZ)-1)*((T)(_nY/iYY)/(T)(_nZ/iZZ)-1)
+                + ((T)(_nZ/iZZ)/(T)(_nX/iXX)-1)*((T)(_nZ/iZZ)/(T)(_nX/iXX)-1);
 
   for (int iX=1; iX<=p; iX++) {
     for (int iY=1; iY*iX<=p; iY++) {

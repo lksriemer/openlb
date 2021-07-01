@@ -71,6 +71,10 @@ public:
   BlockData3D(BlockData3D<T,BaseType> const& rhs);
   /// Assignment Operator
   BlockData3D<T,BaseType>& operator=(BlockData3D<T,BaseType> const& rhs);
+  /// Move Operator
+  BlockData3D<T,BaseType>& operator=(BlockData3D<T,BaseType>&& rhs);
+  /// Move Constructor
+  BlockData3D<T,BaseType>(BlockData3D<T,BaseType>&& rhs);
   /// Swap rhs Data into local fields
   void swap(BlockData3D<T,BaseType>& rhs);
   /// Memory Management
@@ -101,7 +105,8 @@ public:
   /// \return _size, the dimension of an data element
   int getSize() const;
   /// Number of data blocks for the serializable interface
-  virtual std::size_t getNblock() const {
+  virtual std::size_t getNblock() const
+  {
     return 5;
   };
   /// Binary size for the serializer

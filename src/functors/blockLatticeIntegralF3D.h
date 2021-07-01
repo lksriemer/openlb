@@ -41,7 +41,7 @@ template<typename T, template<typename U> class Lattice> class BlockLattice3D;
 
 /// BlockMax3D returns the max in each component of all points of a certain material
 template <typename T, template <typename U> class DESCRIPTOR>
-class BlockMax3D : public BlockLatticeF3D<T,DESCRIPTOR> {
+class BlockMax3D final : public BlockLatticeF3D<T,DESCRIPTOR> {
 protected:
   BlockLatticeF3D<T,DESCRIPTOR>& _f;
   BlockGeometry3D<T>& _blockGeometry;
@@ -55,7 +55,7 @@ public:
 
 /// BlockSum3D sums over all cells of a certain material number
 template <typename T, template <typename U> class DESCRIPTOR>
-class BlockSum3D : public BlockLatticeF3D<T,DESCRIPTOR> {
+class BlockSum3D final : public BlockLatticeF3D<T,DESCRIPTOR> {
 protected:
   BlockLatticeF3D<T,DESCRIPTOR>& _f;
   BlockGeometry3D<T>& _blockGeometry;
@@ -69,7 +69,7 @@ public:
 
 /// BlockIntegral3D
 template <typename T, template <typename U> class DESCRIPTOR>
-class BlockIntegral3D : public BlockLatticeF3D<T,DESCRIPTOR> {
+class BlockIntegral3D final : public BlockLatticeF3D<T,DESCRIPTOR> {
 protected:
   BlockLatticeF3D<T,DESCRIPTOR>& _f;
   BlockGeometry3D<T>& _blockGeometry;
@@ -83,7 +83,7 @@ public:
 
 /// BlockL1Norm3D returns componentwise the l1 norm
 template <typename T, template <typename U> class DESCRIPTOR>
-class BlockL1Norm3D : public BlockLatticeF3D<T,DESCRIPTOR> {
+class BlockL1Norm3D final : public BlockLatticeF3D<T,DESCRIPTOR> {
 protected:
   BlockLatticeF3D<T,DESCRIPTOR>& _f;
   BlockGeometry3D<T>& _blockGeometry;
@@ -96,7 +96,7 @@ public:
 
 /// BlockL223D returns componentwise the squared l2-norm
 template <typename T, template <typename U> class DESCRIPTOR>
-class BlockL223D : public BlockLatticeF3D<T,DESCRIPTOR> {
+class BlockL223D final : public BlockLatticeF3D<T,DESCRIPTOR> {
 protected:
   BlockLatticeF3D<T,DESCRIPTOR>& _f;
   BlockGeometry3D<T>& _blockGeometry;
@@ -111,7 +111,7 @@ public:
 
 /// BlockGeometryFaces3D counts to get the discrete surface for a material no. in direction (1,0,0), (0,1,0), (0,0,1), (-1,0,0), (0,-1,0), (0,0,-1) and total surface, then it converts it into phys units
 template <typename T>
-class BlockGeometryFaces3D : public GenericF<T,int> {
+class BlockGeometryFaces3D final : public GenericF<T,int> {
 private:
   BlockGeometryStructure3D<T>& _blockGeometry;
   int _material;
@@ -128,7 +128,7 @@ public:
  *  the local processor, the returned vector is empty
  */
 template <typename T, template <typename U> class DESCRIPTOR>
-class BlockLatticePhysDrag3D : public BlockLatticePhysF3D<T,DESCRIPTOR> {
+class BlockLatticePhysDrag3D final : public BlockLatticePhysF3D<T,DESCRIPTOR> {
 private:
   BlockGeometry3D<T>& _blockGeometry;
   int _material;
@@ -146,7 +146,7 @@ public:
  *  see: Caiazzo, Junk: Boundary Forces in lattice Boltzmann: Analysis of MEA
  */
 template <typename T, template <typename U> class DESCRIPTOR>
-class BlockLatticePhysCorrDrag3D : public BlockLatticePhysF3D<T,DESCRIPTOR> {
+class BlockLatticePhysCorrDrag3D final : public BlockLatticePhysF3D<T,DESCRIPTOR> {
 private:
   BlockGeometry3D<T>& _blockGeometry;
   int _material;

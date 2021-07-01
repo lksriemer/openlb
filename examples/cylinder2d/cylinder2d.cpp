@@ -70,36 +70,35 @@ const T centerCylinderY = 0.2+L/2.;
 const T radiusCylinder = 0.05;
 
 
-/// Stores geometry information in form of material numbers
-void prepareGeometry(LBconverter<T> const& converter,
-                     SuperGeometry2D<T>& superGeometry)
-{
+// Stores geometry information in form of material numbers
+void prepareGeometry( LBconverter<T> const& converter,
+                      SuperGeometry2D<T>& superGeometry ) {
 
-  OstreamManager clout(std::cout,"prepareGeometry");
+  OstreamManager clout( std::cout,"prepareGeometry" );
   clout << "Prepare Geometry ..." << std::endl;
 
-  Vector<T,2> extend(lengthX,lengthY);
-  Vector<T,2> center(centerCylinderX,centerCylinderY);
+  Vector<T,2> extend( lengthX,lengthY );
+  Vector<T,2> center( centerCylinderX,centerCylinderY );
   Vector<T,2> origin;
-  IndicatorCircle2D<T> circle(center, radiusCylinder);
+  IndicatorCircle2D<T> circle( center, radiusCylinder );
 
-  superGeometry.rename(0,2);
+  superGeometry.rename( 0,2 );
 
-  superGeometry.rename(2,1,1,1);
+  superGeometry.rename( 2,1,1,1 );
 
-  /// Set material number for inflow
+  // Set material number for inflow
   extend[0] = 2.*L;
   origin[0] = -L;
-  IndicatorCuboid2D<T> inflow(extend, origin);
-  superGeometry.rename(2,3,1,inflow);
-  /// Set material number for outflow
+  IndicatorCuboid2D<T> inflow( extend, origin );
+  superGeometry.rename( 2,3,1,inflow );
+  // Set material number for outflow
   origin[0] = lengthX-L;
-  IndicatorCuboid2D<T> outflow(extend, origin);
-  superGeometry.rename(2,4,1,outflow);
-  /// Set material number for cylinder
-  superGeometry.rename(1,5,circle);
+  IndicatorCuboid2D<T> outflow( extend, origin );
+  superGeometry.rename( 2,4,1,outflow );
+  // Set material number for cylinder
+  superGeometry.rename( 1,5,circle );
 
-  /// Removes all not needed boundary voxels outside the surface
+  // Removes all not needed boundary voxels outside the surface
   superGeometry.clean();
   superGeometry.checkForErrors();
 
@@ -108,62 +107,61 @@ void prepareGeometry(LBconverter<T> const& converter,
   clout << "Prepare Geometry ... OK" << std::endl;
 }
 
-/// Set up the geometry of the simulation
-void prepareLattice(SuperLattice2D<T,DESCRIPTOR>& sLattice,
-                    LBconverter<T> const& converter,
-                    Dynamics<T, DESCRIPTOR>& bulkDynamics,
-                    sOnLatticeBoundaryCondition2D<T,DESCRIPTOR>& sBoundaryCondition,
-                    sOffLatticeBoundaryCondition2D<T,DESCRIPTOR>& offBc,
-                    SuperGeometry2D<T>& superGeometry)
-{
+// Set up the geometry of the simulation
+void prepareLattice( SuperLattice2D<T,DESCRIPTOR>& sLattice,
+                     LBconverter<T> const& converter,
+                     Dynamics<T, DESCRIPTOR>& bulkDynamics,
+                     sOnLatticeBoundaryCondition2D<T,DESCRIPTOR>& sBoundaryCondition,
+                     sOffLatticeBoundaryCondition2D<T,DESCRIPTOR>& offBc,
+                     SuperGeometry2D<T>& superGeometry ) {
 
-  OstreamManager clout(std::cout,"prepareLattice");
+  OstreamManager clout( std::cout,"prepareLattice" );
   clout << "Prepare Lattice ..." << std::endl;
 
   const T omega = converter.getOmega();
 
-  /// Material=0 -->do nothing
-  sLattice.defineDynamics(superGeometry, 0, &instances::getNoDynamics<T, DESCRIPTOR>());
+  // Material=0 -->do nothing
+  sLattice.defineDynamics( superGeometry, 0, &instances::getNoDynamics<T, DESCRIPTOR>() );
 
-  /// Material=1 -->bulk dynamics
-  sLattice.defineDynamics(superGeometry, 1, &bulkDynamics);
+  // Material=1 -->bulk dynamics
+  sLattice.defineDynamics( superGeometry, 1, &bulkDynamics );
 
-  /// Material=2 -->bounce back
-  sLattice.defineDynamics(superGeometry, 2, &instances::getBounceBack<T, DESCRIPTOR>());
+  // Material=2 -->bounce back
+  sLattice.defineDynamics( superGeometry, 2, &instances::getBounceBack<T, DESCRIPTOR>() );
 
-  /// Material=3 -->bulk dynamics (inflow)
-  sLattice.defineDynamics(superGeometry, 3, &bulkDynamics);
+  // Material=3 -->bulk dynamics (inflow)
+  sLattice.defineDynamics( superGeometry, 3, &bulkDynamics );
 
-  /// Material=4 -->bulk dynamics (outflow)
-  sLattice.defineDynamics(superGeometry, 4, &bulkDynamics);
+  // Material=4 -->bulk dynamics (outflow)
+  sLattice.defineDynamics( superGeometry, 4, &bulkDynamics );
 
-  /// Setting of the boundary conditions
-  sBoundaryCondition.addVelocityBoundary(superGeometry, 3, omega);
-  sBoundaryCondition.addPressureBoundary(superGeometry, 4, omega);
+  // Setting of the boundary conditions
+  sBoundaryCondition.addVelocityBoundary( superGeometry, 3, omega );
+  sBoundaryCondition.addPressureBoundary( superGeometry, 4, omega );
 
   // Material=5 -->bounce back
   //sLattice.defineDynamics(superGeometry, 5, &instances::getBounceBack<T, DESCRIPTOR>());
 
-  /// Material=5 -->bouzidi
+  // Material=5 -->bouzidi
 
-  Vector<T,2> center(centerCylinderX,centerCylinderY);
-  IndicatorCircle2D<T> circle(center, radiusCylinder);
+  Vector<T,2> center( centerCylinderX,centerCylinderY );
+  IndicatorCircle2D<T> circle( center, radiusCylinder );
 
-  sLattice.defineDynamics(superGeometry, 5, &instances::getNoDynamics<T,DESCRIPTOR>());
-  offBc.addZeroVelocityBoundary(superGeometry, 5, circle);
+  sLattice.defineDynamics( superGeometry, 5, &instances::getNoDynamics<T,DESCRIPTOR>() );
+  offBc.addZeroVelocityBoundary( superGeometry, 5, circle );
 
-  /// Initial conditions
-  AnalyticalConst2D<T,T> rhoF(1);
-  std::vector<T> velocity(2,T(0));
-  AnalyticalConst2D<T,T> uF(velocity);
+  // Initial conditions
+  AnalyticalConst2D<T,T> rhoF( 1 );
+  std::vector<T> velocity( 2,T( 0 ) );
+  AnalyticalConst2D<T,T> uF( velocity );
 
   // Initialize all values of distribution functions to their local equilibrium
-  sLattice.defineRhoU(superGeometry, 1, rhoF, uF);
-  sLattice.iniEquilibrium(superGeometry, 1, rhoF, uF);
-  sLattice.defineRhoU(superGeometry, 3, rhoF, uF);
-  sLattice.iniEquilibrium(superGeometry, 3, rhoF, uF);
-  sLattice.defineRhoU(superGeometry, 4, rhoF, uF);
-  sLattice.iniEquilibrium(superGeometry, 4, rhoF, uF);
+  sLattice.defineRhoU( superGeometry, 1, rhoF, uF );
+  sLattice.iniEquilibrium( superGeometry, 1, rhoF, uF );
+  sLattice.defineRhoU( superGeometry, 3, rhoF, uF );
+  sLattice.iniEquilibrium( superGeometry, 3, rhoF, uF );
+  sLattice.defineRhoU( superGeometry, 4, rhoF, uF );
+  sLattice.iniEquilibrium( superGeometry, 4, rhoF, uF );
 
   // Make the lattice ready for simulation
   sLattice.initialize();
@@ -171,93 +169,97 @@ void prepareLattice(SuperLattice2D<T,DESCRIPTOR>& sLattice,
   clout << "Prepare Lattice ... OK" << std::endl;
 }
 
-/// Generates a slowly increasing inflow for the first iTMaxStart timesteps
-void setBoundaryValues(SuperLattice2D<T, DESCRIPTOR>& sLattice,
-                       LBconverter<T> const& converter, int iT,
-                       SuperGeometry2D<T>& superGeometry)
-{
+// Generates a slowly increasing inflow for the first iTMaxStart timesteps
+void setBoundaryValues( SuperLattice2D<T, DESCRIPTOR>& sLattice,
+                        LBconverter<T> const& converter, int iT,
+                        SuperGeometry2D<T>& superGeometry ) {
 
-  OstreamManager clout(std::cout,"setBoundaryValues");
+  OstreamManager clout( std::cout,"setBoundaryValues" );
 
   // No of time steps for smooth start-up
-  int iTmaxStart = converter.numTimeSteps(maxPhysT*0.4);
+  int iTmaxStart = converter.numTimeSteps( maxPhysT*0.4 );
   int iTupdate = 5;
 
-  if (iT%iTupdate==0 && iT<= iTmaxStart) {
+  if ( iT%iTupdate==0 && iT<= iTmaxStart ) {
     // Smooth start curve, sinus
     // SinusStartScale<T,int> StartScale(iTmaxStart, T(1));
 
     // Smooth start curve, polynomial
-    PolynomialStartScale<T,T> StartScale(iTmaxStart, T(1));
+    PolynomialStartScale<T,T> StartScale( iTmaxStart, T( 1 ) );
 
     // Creates and sets the Poiseuille inflow profile using functors
-    T iTvec[1] = {T(iT)};
+    T iTvec[1] = {T( iT )};
     T frac[1] = {};
-    StartScale(frac,iTvec);
+    StartScale( frac,iTvec );
     T maxVelocity = converter.getLatticeU()*3./2.*frac[0];
     T distance2Wall = L/2.;
-    Poiseuille2D<T> poiseuilleU(superGeometry, 3, maxVelocity, distance2Wall);
+    Poiseuille2D<T> poiseuilleU( superGeometry, 3, maxVelocity, distance2Wall );
 
-    sLattice.defineU(superGeometry, 3, poiseuilleU);
+    sLattice.defineU( superGeometry, 3, poiseuilleU );
   }
 }
 
-/// Computes the pressure drop between the voxels before and after the cylinder
-void getResults(SuperLattice2D<T, DESCRIPTOR>& sLattice,
-                LBconverter<T> const& converter, int iT,
-                SuperGeometry2D<T>& superGeometry, Timer<T>& timer)
-{
+// Computes the pressure drop between the voxels before and after the cylinder
+void getResults( SuperLattice2D<T, DESCRIPTOR>& sLattice,
+                 LBconverter<T> const& converter, int iT,
+                 SuperGeometry2D<T>& superGeometry, Timer<T>& timer ) {
 
-  OstreamManager clout(std::cout,"getResults");
+  OstreamManager clout( std::cout,"getResults" );
 
-  SuperVTKwriter2D<T> vtkWriter("cylinder2d");
-  SuperLatticePhysVelocity2D<T, DESCRIPTOR> velocity(sLattice, converter);
-  SuperLatticePhysPressure2D<T, DESCRIPTOR> pressure(sLattice, converter);
-  vtkWriter.addFunctor( velocity );
-  vtkWriter.addFunctor( pressure );
+  SuperVTMwriter2D<T> vtmWriter( "cylinder2d" );
+  SuperLatticePhysVelocity2D<T, DESCRIPTOR> velocity( sLattice, converter );
+  SuperLatticePhysPressure2D<T, DESCRIPTOR> pressure( sLattice, converter );
+  vtmWriter.addFunctor( velocity );
+  vtmWriter.addFunctor( pressure );
 
-  const int vtkIter  = converter.numTimeSteps(.3);
-  const int statIter = converter.numTimeSteps(.1);
+  const int vtkIter  = converter.numTimeSteps( .3 );
+  const int statIter = converter.numTimeSteps( .1 );
 
-  if (iT == 0) {
-    /// Writes the converter log file
-    writeLogFile(converter, "cylinder2d");
+  if ( iT == 0 ) {
+    // Writes the geometry, cuboid no. and rank no. as vti file for visualization
+    SuperLatticeGeometry2D<T, DESCRIPTOR> geometry( sLattice, superGeometry );
+    SuperLatticeCuboid2D<T, DESCRIPTOR> cuboid( sLattice );
+    SuperLatticeRank2D<T, DESCRIPTOR> rank( sLattice );
+    vtmWriter.write( geometry );
+    vtmWriter.write( cuboid );
+    vtmWriter.write( rank );
 
-    /// Writes the geometry, cuboid no. and rank no. as vti file for visualization
-    SuperLatticeGeometry2D<T, DESCRIPTOR> geometry(sLattice, superGeometry);
-    SuperLatticeCuboid2D<T, DESCRIPTOR> cuboid(sLattice);
-    SuperLatticeRank2D<T, DESCRIPTOR> rank(sLattice);
-    vtkWriter.write(geometry);
-    vtkWriter.write(cuboid);
-    vtkWriter.write(rank);
-
-    vtkWriter.createMasterFile();
+    vtmWriter.createMasterFile();
   }
 
-  /// Writes the vtk files
-  if (iT%vtkIter == 0) {
-    vtkWriter.write(iT);
+  // Writes the vtk files
+  if ( iT%vtkIter == 0 && iT > 0 ) {
+    vtmWriter.write( iT );
 
-    SuperEuklidNorm2D<T, DESCRIPTOR> normVel(velocity);
-    BlockLatticeReduction2D<T, DESCRIPTOR> planeReduction(normVel);
+    SuperEuklidNorm2D<T, DESCRIPTOR> normVel( velocity );
+    BlockLatticeReduction2D<T, DESCRIPTOR> planeReduction( normVel );
     BlockGifWriter<T> gifWriter;
     //gifWriter.write(planeReduction, 0, 0.7, iT, "vel"); //static scale
-    gifWriter.write(planeReduction, iT, "vel"); // scaled
+    gifWriter.write( planeReduction, iT, "vel" ); // scaled
   }
 
-  /// Writes output on the console
-  if (iT%statIter == 0) {
-    /// Timer console output
-    timer.update(iT);
+  // Gnuplot constructor (must be static!)
+  // for real-time plotting: gplot("name", true) // experimental!
+  static Gnuplot<T> gplot( "drag" );
+
+  // write pdf at last time step
+  if ( iT == converter.numTimeSteps( maxPhysT )-1 ) {
+    // writes pdf
+    gplot.writePDF();
+  }
+
+  // Writes output on the console
+  if ( iT%statIter == 0 ) {
+    // Timer console output
+    timer.update( iT );
     timer.printStep();
 
-    /// Lattice statistics console output
-    sLattice.getStatistics().print(iT,converter.physTime(iT));
+    // Lattice statistics console output
+    sLattice.getStatistics().print( iT,converter.physTime( iT ) );
 
-    /// Drag, lift, pressure drop
-    SuperLatticePhysPressure2D<T, DESCRIPTOR> pressure(sLattice, converter);
-    AnalyticalFfromSuperLatticeF2D<T, DESCRIPTOR> intpolatePressure(pressure, true);
-    SuperLatticePhysDrag2D<T,DESCRIPTOR> drag(sLattice, superGeometry, 5, converter);
+    // Drag, lift, pressure drop
+    AnalyticalFfromSuperLatticeF2D<T, DESCRIPTOR> intpolatePressure( pressure, true );
+    SuperLatticePhysDrag2D<T,DESCRIPTOR> drag( sLattice, superGeometry, 5, converter );
 
 
     T point1[2] = {};
@@ -270,8 +272,8 @@ void getResults(SuperLattice2D<T, DESCRIPTOR>& sLattice,
     point2[1] = centerCylinderY;
 
     T p1, p2;
-    intpolatePressure(&p1,point1);
-    intpolatePressure(&p2,point2);
+    intpolatePressure( &p1,point1 );
+    intpolatePressure( &p2,point2 );
 
     clout << "pressure1=" << p1;
     clout << "; pressure2=" << p2;
@@ -281,82 +283,94 @@ void getResults(SuperLattice2D<T, DESCRIPTOR>& sLattice,
 
     int input[3] = {};
     T _drag[drag.getTargetDim()];
-    drag(_drag,input);
+    drag( _drag,input );
     clout << "; drag=" << _drag[0] << "; lift=" << _drag[1] << endl;
+
+    // set data for gnuplot: input={xValue, yValue(s), names (optional), position of key (optional)}
+    gplot.setData( converter.physTime( iT ), {_drag[0], 5.58}, {"drag(openLB)", "drag(schaeferTurek)"}, "bottom right" );
+    // writes a png in one file for every timestep, if the file is open it can be used as a "liveplot"
+    gplot.writePNG();
+
+    // every (iT%vtkIter) write an png of the plot
+    if ( iT%( vtkIter ) == 0 ) {
+      // writes pngs: input={name of the files (optional), x range for the plot (optional)}
+      gplot.writePNG( iT, maxPhysT );
+    }
   }
 }
 
-int main(int argc, char* argv[])
-{
+int main( int argc, char* argv[] ) {
 
-  /// === 1st Step: Initialization ===
-  olbInit(&argc, &argv);
-  singleton::directories().setOutputDir("./tmp/");
-  OstreamManager clout(std::cout,"main");
+  // === 1st Step: Initialization ===
+  olbInit( &argc, &argv );
+  singleton::directories().setOutputDir( "./tmp/" );
+  OstreamManager clout( std::cout,"main" );
   // display messages from every single mpi process
   //clout.setMultiOutput(true);
 
   LBconverter<T> converter(
-    (int) 2,                               // dim
-    (T)   L,                               // latticeL_
-    (T)   0.02/M,                          // latticeU_
-    (T)   0.2*2.*radiusCylinder/Re,        // charNu_
-    (T)   2*radiusCylinder,                // charL_ = 1
-    (T)   0.2                              // charU_ = 1
+    ( int ) 2,                             // dim
+    ( T )   L,                             // latticeL_
+    ( T )   0.02/M,                        // latticeU_
+    ( T )   0.2*2.*radiusCylinder/Re,      // charNu_
+    ( T )   2*radiusCylinder,              // charL_ = 1
+    ( T )   0.2                            // charU_ = 1
   );
   converter.print();
+  writeLogFile( converter, "cylinder2d" );
 
-  /// === 2rd Step: Prepare Geometry ===
-  Vector<T,2> extend(lengthX,lengthY);
+
+  // === 2rd Step: Prepare Geometry ===
+  Vector<T,2> extend( lengthX,lengthY );
   Vector<T,2> origin;
-  IndicatorCuboid2D<T> cuboid(extend, origin);
+  IndicatorCuboid2D<T> cuboid( extend, origin );
 
-  /// Instantiation of a cuboidGeometry with weights
+  // Instantiation of a cuboidGeometry with weights
 #ifdef PARALLEL_MODE_MPI
   const int noOfCuboids = singleton::mpi().getSize();
 #else
   const int noOfCuboids = 7;
 #endif
-  CuboidGeometry2D<T> cuboidGeometry(cuboid, L, noOfCuboids);
+  CuboidGeometry2D<T> cuboidGeometry( cuboid, L, noOfCuboids );
 
-  /// Instantiation of a loadBalancer
-  HeuristicLoadBalancer<T> loadBalancer(cuboidGeometry);
+  // Instantiation of a loadBalancer
+  HeuristicLoadBalancer<T> loadBalancer( cuboidGeometry );
 
-  /// Instantiation of a superGeometry
-  SuperGeometry2D<T> superGeometry(cuboidGeometry, loadBalancer, 2);
+  // Instantiation of a superGeometry
+  SuperGeometry2D<T> superGeometry( cuboidGeometry, loadBalancer, 2 );
 
-  prepareGeometry(converter, superGeometry);
+  prepareGeometry( converter, superGeometry );
 
-  /// === 3rd Step: Prepare Lattice ===
-  SuperLattice2D<T, DESCRIPTOR> sLattice(superGeometry);
+  // === 3rd Step: Prepare Lattice ===
+  SuperLattice2D<T, DESCRIPTOR> sLattice( superGeometry );
 
-  BGKdynamics<T, DESCRIPTOR> bulkDynamics(converter.getOmega(), instances::getBulkMomenta<T, DESCRIPTOR>());
+  BGKdynamics<T, DESCRIPTOR> bulkDynamics( converter.getOmega(), instances::getBulkMomenta<T, DESCRIPTOR>() );
 
   // choose between local and non-local boundary condition
-  sOnLatticeBoundaryCondition2D<T,DESCRIPTOR> sBoundaryCondition(sLattice);
+  sOnLatticeBoundaryCondition2D<T,DESCRIPTOR> sBoundaryCondition( sLattice );
   // createInterpBoundaryCondition2D<T,DESCRIPTOR>(sBoundaryCondition);
-  createLocalBoundaryCondition2D<T,DESCRIPTOR>(sBoundaryCondition);
+  createLocalBoundaryCondition2D<T,DESCRIPTOR>( sBoundaryCondition );
 
-  sOffLatticeBoundaryCondition2D<T, DESCRIPTOR> sOffBoundaryCondition(sLattice);
-  createBouzidiBoundaryCondition2D<T, DESCRIPTOR> (sOffBoundaryCondition);
+  sOffLatticeBoundaryCondition2D<T, DESCRIPTOR> sOffBoundaryCondition( sLattice );
+  createBouzidiBoundaryCondition2D<T, DESCRIPTOR> ( sOffBoundaryCondition );
 
-  prepareLattice(sLattice, converter, bulkDynamics, sBoundaryCondition, sOffBoundaryCondition, superGeometry);
+  prepareLattice( sLattice, converter, bulkDynamics, sBoundaryCondition, sOffBoundaryCondition, superGeometry );
 
-  /// === 4th Step: Main Loop with Timer ===
+  // === 4th Step: Main Loop with Timer ===
   clout << "starting simulation..." << endl;
-  Timer<T> timer(converter.numTimeSteps(maxPhysT), superGeometry.getStatistics().getNvoxel() );
+  Timer<T> timer( converter.numTimeSteps( maxPhysT ), superGeometry.getStatistics().getNvoxel() );
   timer.start();
 
-  for (int iT = 0; iT < converter.numTimeSteps(maxPhysT); ++iT) {
+  for ( int iT = 0; iT < converter.numTimeSteps( maxPhysT ); ++iT ) {
 
-    /// === 5th Step: Definition of Initial and Boundary Conditions ===
-    setBoundaryValues(sLattice, converter, iT, superGeometry);
+    // === 5th Step: Definition of Initial and Boundary Conditions ===
+    setBoundaryValues( sLattice, converter, iT, superGeometry );
 
-    /// === 6th Step: Collide and Stream Execution ===
+    // === 6th Step: Collide and Stream Execution ===
     sLattice.collideAndStream();
 
-    /// === 7th Step: Computation and Output of the Results ===
-    getResults(sLattice, converter, iT, superGeometry, timer);
+    // === 7th Step: Computation and Output of the Results ===
+    getResults( sLattice, converter, iT, superGeometry, timer );
   }
 
   timer.stop();

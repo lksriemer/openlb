@@ -1,6 +1,6 @@
 /*  This file is part of the OpenLB library
  *
- *  Copyright (C) 2012 Jonas Kratzke, Mathias J. Krause
+ *  Copyright (C) 2012, 2016 Jonas Kratzke, Mathias J. Krause
  *  E-mail contact: info@openlb.net
  *  The most recent release of OpenLB can be downloaded at
  *  <http://www.openlb.net/>
@@ -116,6 +116,56 @@ addVelocityBoundary(SuperGeometry2D<T>& superGeometry, int material, IndicatorF2
   addPoints2CommBC(superGeometry, material);
 }
 
+template<typename T, template<typename U> class Lattice>
+void sOffLatticeBoundaryCondition2D<T,Lattice>::
+addPressureBoundary(SuperGeometry2D<T>& superGeometry, int material, IndicatorF2D<T>& indicator, std::list<int> bulkMaterials)
+{
+  clout << "epsFraction=" << _epsFraction << std::endl;
+  clout.setMultiOutput(true);
+  int nC = _sLattice.getLoadBalancer().size();
+  for (int iCloc = 0; iCloc < nC; iCloc++) {
+    clout << "Cuboid globiC " << _sLattice.getLoadBalancer().glob(iCloc)
+          << " starts to read distances for Pressure Boundary..." << std::endl;
+    _blockBCs[iCloc]->addPressureBoundary(superGeometry.getExtendedBlockGeometry(iCloc), material, indicator, bulkMaterials);
+    clout << "Cuboid globiC " << _sLattice.getLoadBalancer().glob(iCloc)
+          << " finished reading distances for Pressure Boundary." << std::endl;
+  }
+  clout.setMultiOutput(false);
+  addPoints2CommBC(superGeometry, material);
+}
+
+
+template<typename T, template<typename U> class Lattice>
+void sOffLatticeBoundaryCondition2D<T,Lattice>::addZeroVelocityBoundary(SuperGeometry2D<T>& superGeometry, int material, std::list<int> bulkMaterials)
+{
+  int nCloc = _sLattice.getLoadBalancer().size();
+  for (int iCloc = 0; iCloc < nCloc; iCloc++) {
+    _blockBCs[iCloc]->addZeroVelocityBoundary(superGeometry.getExtendedBlockGeometry(iCloc), material, bulkMaterials);
+  }
+  addPoints2CommBC(superGeometry, material);
+}
+
+template<typename T, template<typename U> class Lattice>
+void sOffLatticeBoundaryCondition2D<T,Lattice>::
+addVelocityBoundary(SuperGeometry2D<T>& superGeometry, int material, std::list<int> bulkMaterials)
+{
+  int nC = _sLattice.getLoadBalancer().size();
+  for (int iCloc = 0; iCloc < nC; iCloc++) {
+    _blockBCs[iCloc]->addVelocityBoundary(superGeometry.getExtendedBlockGeometry(iCloc), material, bulkMaterials);
+  }
+  addPoints2CommBC(superGeometry, material);
+}
+
+template<typename T, template<typename U> class Lattice>
+void sOffLatticeBoundaryCondition2D<T,Lattice>::
+addPressureBoundary(SuperGeometry2D<T>& superGeometry, int material, std::list<int> bulkMaterials)
+{
+  int nC = _sLattice.getLoadBalancer().size();
+  for (int iCloc = 0; iCloc < nC; iCloc++) {
+    _blockBCs[iCloc]->addPressureBoundary(superGeometry.getExtendedBlockGeometry(iCloc), material, bulkMaterials);
+  }
+  addPoints2CommBC(superGeometry, material);
+}
 
 template<typename T, template<typename U> class Lattice>
 void sOffLatticeBoundaryCondition2D<T,Lattice>::
@@ -128,6 +178,16 @@ defineU(SuperGeometry2D<T>& superGeometry, int material, AnalyticalF2D<T,T>& u, 
   }
 }
 
+template<typename T, template<typename U> class Lattice>
+void sOffLatticeBoundaryCondition2D<T,Lattice>::
+defineRho(SuperGeometry2D<T>& superGeometry, int material, AnalyticalF2D<T,T>& rho, std::list<int> bulkMaterials )
+{
+
+  int nC = _sLattice.getLoadBalancer().size();
+  for (int iCloc = 0; iCloc < nC; iCloc++) {
+    _blockBCs[iCloc]->defineRho(superGeometry.getExtendedBlockGeometry(iCloc), material, rho, bulkMaterials );
+  }
+}
 
 template<typename T, template<typename U> class Lattice>
 void sOffLatticeBoundaryCondition2D<T,Lattice>::
@@ -202,6 +262,19 @@ void createBouzidiBoundaryCondition2D(sOffLatticeBoundaryCondition2D<T,Lattice>&
   for (int iC=0; iC<nC; iC++) {
     OffLatticeBoundaryCondition2D<T,Lattice>* blockBC
       = createBouzidiBoundaryCondition2D<T,Lattice,MixinDynamics>(sBC.getSuperLattice().getExtendedBlockLattice(iC));
+    sBC.getBlockBCs().push_back(blockBC);
+  }
+}
+
+template<typename T, template<typename U> class Lattice>
+void createBounceBackBoundaryCondition2D(sOffLatticeBoundaryCondition2D<T,Lattice>& sBC)
+{
+
+  int nC = sBC.getSuperLattice().getLoadBalancer().size();
+  sBC.setOverlap(1);
+  for (int iC=0; iC<nC; iC++) {
+    OffLatticeBoundaryCondition2D<T,Lattice>* blockBC
+      = createBouzidiBoundaryCondition2D<T,Lattice>(sBC.getSuperLattice().getExtendedBlockLattice(iC));
     sBC.getBlockBCs().push_back(blockBC);
   }
 }

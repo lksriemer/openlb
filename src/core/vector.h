@@ -438,25 +438,18 @@ inline bool operator>=(const Vector<T, Size>& lhs, const Vector<T, Size>& rhs)
 }
 
 
-
+template <typename T>
+using Scalar   = Vector<T,1>;
 
 template <typename T>
-class Scalar : public Vector<T,1> {
-};
+using Vector2D = Vector<T,2>;
 
 template <typename T>
-class Vector2D : public Vector<T,2> {
-};
+using Vector3D = Vector<T,3>;
 
 template <typename T>
-class Vector3D : public Vector<T,3> {
-};
-
-template <typename T>
-class Vector4D : public Vector<T,4> {
-};
+using Vector4D = Vector<T,4>;
 
 } // end namespace olb
 
 #endif
-

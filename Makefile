@@ -105,10 +105,13 @@ cleansamples:
 ###########################################################################
 ## lib
 
-lib: depend compile $(LIBDIR)/lib$(LIB).a
+lib: depend compile $(LIBDIR)/lib$(LIB).a $(LIBDIR)/libz.a
 $(LIBDIR)/lib$(LIB).a: $(wildcard $(OBJDIR)/*.o)
 	@echo Build lib$(LIB).a:
 	@$(ARPRG) -rusv $(LIBDIR)/lib$(LIB).a $(OBJDIR)/*.o
+
+$(LIBDIR)/libz.a: src/external/zlib/libz.a
+	@cp src/external/zlib/libz.a $(LIBDIR)/libz.a
 
 ###########################################################################
 ## examples
@@ -124,7 +127,13 @@ samples:
            echo "-------------------------------------------------------------") \
 	done
 
-## the following lines work only in git and should be removed for release
+###########################################################################
+## user guide documentation
+
+userguide:
+	@cd doc/olb-ug-latest/; \
+	latexmk -pdf -silent -f olb-ug.tex
+
 ###########################################################################
 ## doxygen documentation
 

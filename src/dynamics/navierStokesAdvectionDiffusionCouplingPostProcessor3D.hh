@@ -30,6 +30,8 @@
 #include "core/blockLattice3D.h"
 #include "core/util.h"
 #include "core/finiteDifference3D.h"
+#include "advectionDiffusionForces.hh"
+#include "advectionDiffusionForces.h"
 
 namespace olb {
 
@@ -111,13 +113,15 @@ process(BlockLattice3D<T,Lattice>& blockLattice)
 //=====================================================================================
 
 template<typename T, template<typename U> class Lattice>
-StokesDragCouplingPostProcessor3D<T,Lattice>::
-StokesDragCouplingPostProcessor3D(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_,
-                                  T dragCoeff_, int offset_, std::vector<SpatiallyExtendedObject3D* > partners_)
-  :  x0(x0_), x1(x1_), y0(y0_), y1(y1_), z0(z0_), z1(z1_), dragCoeff(dragCoeff_), offset(offset_), partners(partners_)
+AdvectionDiffusionParticleCouplingPostProcessor3D<T,Lattice>::
+AdvectionDiffusionParticleCouplingPostProcessor3D(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_, int iC_,
+    int offset_, std::vector<SpatiallyExtendedObject3D* > partners_,
+    std::vector<std::reference_wrapper<advectionDiffusionForce3D<T, Lattice> > > forces_)
+  :  x0(x0_), x1(x1_), y0(y0_), y1(y1_), z0(z0_), z1(z1_), iC(iC_), offset(offset_), forces(forces_)
 {
-  BlockLattice3D<T,StokesDragAdvectionDiffusionD3Q7Descriptor> *partnerLattice =
-    dynamic_cast<BlockLattice3D<T,StokesDragAdvectionDiffusionD3Q7Descriptor> *>(partners[0]);
+  BlockLattice3D<T,descriptors::particleAdvectionDiffusionD3Q7Descriptor> *partnerLattice =
+    dynamic_cast<BlockLattice3D<T,particleAdvectionDiffusionD3Q7Descriptor> *>(partners_[0]);
+  adCell = &partnerLattice->get(x0,y0,z0);
   vel = partnerLattice->get(x0,y0,z0).getExternal(offset);
   vel_new = partnerLattice->get(x0,y0,z0).getExternal(offset);
   velXp = partnerLattice->get(x0+1,y0,z0).getExternal(offset);
@@ -129,7 +133,7 @@ StokesDragCouplingPostProcessor3D(int x0_, int x1_, int y0_, int y1_, int z0_, i
 }
 
 template<typename T, template<typename U> class Lattice>
-void StokesDragCouplingPostProcessor3D<T,Lattice>::
+void AdvectionDiffusionParticleCouplingPostProcessor3D<T,Lattice>::
 processSubDomain(BlockLattice3D<T,Lattice>& blockLattice,
                  int x0_, int x1_, int y0_, int y1_, int z0_, int z1_)
 {
@@ -144,9 +148,11 @@ processSubDomain(BlockLattice3D<T,Lattice>& blockLattice,
         for (int iZ=newZ0; iZ<=newZ1; ++iZ) {
           int off = (par) ? 3 : 0;
           int off2 = (par) ? 0 : 3;
-          T velF[3] = {0.,0.,0.};
+          int latticeR[4] = {iC, iX, iY, iZ};
           T velGrad[3] = {0.,0.,0.};
-          blockLattice.get(iX,iY,iZ).computeU(velF);
+          T forceValue[3] = {0.,0.,0.};
+          nsCell = &(blockLattice.get(iX,iY,iZ));
+          //.computeU(velF);
 
           // calculating upwind Gradient
           if (vel[0+off]<0.) {
@@ -177,9 +183,13 @@ processSubDomain(BlockLattice3D<T,Lattice>& blockLattice,
             velGrad[2] += vel[2+off]*(vel[2+off]-velZn[2+off]);
           }
 
+          for (advectionDiffusionForce3D<T, Lattice>& f : forces) {
+            f.applyForce(forceValue, nsCell, adCell, &vel[off], latticeR);
+          }
+
           // compute new particle velocity
           for (int i=0; i < Lattice<T>::d; i++) {
-            vel_new[i+off2] = vel[i+off] + dragCoeff*(velF[i]-vel[i+off]) - velGrad[i];
+            vel_new[i+off2] = vel[i+off] + forceValue[i] - velGrad[i];
           }
           par = !par;
 
@@ -190,7 +200,7 @@ processSubDomain(BlockLattice3D<T,Lattice>& blockLattice,
 }
 
 template<typename T, template<typename U> class Lattice>
-void StokesDragCouplingPostProcessor3D<T,Lattice>::
+void AdvectionDiffusionParticleCouplingPostProcessor3D<T,Lattice>::
 process(BlockLattice3D<T,Lattice>& blockLattice)
 {
   processSubDomain(blockLattice, x0, x1, y0, y1, z0, z1);
@@ -223,27 +233,29 @@ LatticeCouplingGenerator3D<T,Lattice>* NavierStokesAdvectionDiffusionCouplingGen
 // LatticeCouplingGenerator for one-way advectionDiffusion coupling with Stokes drag
 
 template<typename T, template<typename U> class Lattice>
-StokesDragCouplingGenerator3D<T,Lattice>::
-StokesDragCouplingGenerator3D(LBconverter<T> const& converter_, T radius_, T particleRho_, int offset_)
+AdvectionDiffusionParticleCouplingGenerator3D<T,Lattice>::
+AdvectionDiffusionParticleCouplingGenerator3D(int offset_)
   : LatticeCouplingGenerator3D<T,Lattice>(0, 0, 0, 0, 0, 0), offset(offset_)
-{
-  dragCoeff = (9.*converter_.getCharNu()*converter_.getCharRho()*converter_.physTime()) / (2.*particleRho_*radius_*radius_);
-}
+{ }
 
 template<typename T, template<typename U> class Lattice>
-PostProcessor3D<T,Lattice>* StokesDragCouplingGenerator3D<T,Lattice>::generate (
+PostProcessor3D<T,Lattice>* AdvectionDiffusionParticleCouplingGenerator3D<T,Lattice>::generate (
   std::vector<SpatiallyExtendedObject3D* > partners) const
 {
-  return new StokesDragCouplingPostProcessor3D<T,Lattice>(this->x0,this->x1,this->y0,this->y1,this->z0,this->z1, dragCoeff, offset, partners);
+  return new AdvectionDiffusionParticleCouplingPostProcessor3D<T,Lattice>(this->x0,this->x1,this->y0,this->y1,this->z0,this->z1, this->iC, offset, partners, ADforces);
 }
 
 template<typename T, template<typename U> class Lattice>
-LatticeCouplingGenerator3D<T,Lattice>* StokesDragCouplingGenerator3D<T,Lattice>::clone() const
+LatticeCouplingGenerator3D<T,Lattice>* AdvectionDiffusionParticleCouplingGenerator3D<T,Lattice>::clone() const
 {
-  return new StokesDragCouplingGenerator3D<T,Lattice>(*this);
+  return new AdvectionDiffusionParticleCouplingGenerator3D<T,Lattice>(*this);
 }
 
-
+template<typename T, template<typename U> class Lattice>
+void AdvectionDiffusionParticleCouplingGenerator3D<T,Lattice>::addForce(advectionDiffusionForce3D<T,Lattice> &force)
+{
+  ADforces.push_back(force);
+}
 
 
 }  // namespace olb

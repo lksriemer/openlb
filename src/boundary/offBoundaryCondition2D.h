@@ -1,6 +1,6 @@
 /*  This file is part of the OpenLB library
  *
- *  Copyright (C) 2012 Jonas Kratzke, Mathias J. Krause
+ *  Copyright (C) 2012, 2016 Jonas Kratzke, Mathias J. Krause
  *  E-mail contact: info@openlb.net
  *  The most recent release of OpenLB can be downloaded at
  *  <http://www.openlb.net/>
@@ -69,8 +69,20 @@ public:
   //virtual void addVelocityBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int x, int y, int z, T distances[Lattice<T>::q]) =0;
   virtual void addVelocityBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int material, IndicatorF2D<T>& indicator, std::list<int> bulkMaterials = std::list<int>(1,1)) =0;
 
+  virtual void addPressureBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int material, IndicatorF2D<T>& indicator, std::list<int> bulkMaterials = std::list<int>(1,1)) =0;
+
+
+  virtual void addZeroVelocityBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int material, std::list<int> bulkMaterials = std::list<int>(1,1)) =0;
+
+  virtual void addVelocityBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int material, std::list<int> bulkMaterials = std::list<int>(1,1)) =0;
+
+  virtual void addPressureBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int material, std::list<int> bulkMaterials = std::list<int>(1,1)) =0;
+
+
   virtual void defineU(int iX, int iY, int iPop, const T u[Lattice<T>::d]) =0;
   virtual void defineU(BlockGeometryStructure2D<T>& blockGeometryStructure, int material, AnalyticalF2D<T,T>& u, std::list<int> bulkMaterials = std::list<int>(1,1) ) =0;
+  virtual void defineRho(int iX, int iY, int iPop, const T rho) =0;
+  virtual void defineRho(BlockGeometryStructure2D<T>& blockGeometryStructure, int material, AnalyticalF2D<T,T>& rho, std::list<int> bulkMaterials = std::list<int>(1,1) ) =0;
 
   virtual BlockLatticeStructure2D<T,Lattice>& getBlock() =0;
   virtual BlockLatticeStructure2D<T,Lattice> const& getBlock() const =0;
@@ -94,6 +106,13 @@ OffLatticeBoundaryCondition2D<T,Lattice>*
 createBouzidiBoundaryCondition2D(BlockLatticeStructure2D<T,Lattice>& block)
 {
   return createBouzidiBoundaryCondition2D<T,Lattice,BGKdynamics<T,Lattice> >(block);
+}
+
+template<typename T, template<typename U> class Lattice>
+OffLatticeBoundaryCondition2D<T,Lattice>*
+createBounceBackBoundaryCondition2D(BlockLatticeStructure2D<T,Lattice>& block)
+{
+  return createBounceBackBoundaryCondition2D<T,Lattice>(block);
 }
 
 }

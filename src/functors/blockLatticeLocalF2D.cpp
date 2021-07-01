@@ -45,6 +45,6 @@ template class BlockLatticePorosity2D<double,descriptors::D2Q9Descriptor>;
 template class BlockLatticePhysPermeability2D<double,descriptors::D2Q9Descriptor>;
 template class BlockLatticePhysDarcyForce2D<double,descriptors::D2Q9Descriptor>;
 template class BlockLatticeAverage2D<double,descriptors::D2Q9Descriptor>;
-template class BlockL2Norm2D<double,descriptors::D2Q9Descriptor>;
+template class BlockEuklidNorm2D<double,descriptors::D2Q9Descriptor>;
 
 } // end namespace olb

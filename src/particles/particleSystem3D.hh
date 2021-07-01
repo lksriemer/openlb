@@ -35,6 +35,8 @@
 
 #include "particle3D.h"
 #include "particleSystem3D.h"
+//#include "../functors/frameChangeF3D.h" //check
+//#include "../utilities/vectorHelpers.h" //check
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -96,7 +98,6 @@ void ParticleSystem3D<T, PARTICLETYPE>::setContactDetection(ContactDetection<T, 
   _contactDetection = contactDetection.generate(*this);
 }
 
-// TEST FÜR SCHNELLERE P-P INTERAKTION
 template<typename T, template<typename U> class PARTICLETYPE>
 void ParticleSystem3D<T, PARTICLETYPE>::setPosExt(std::vector<T> physPos,
     std::vector<T> physExtend)
@@ -204,6 +205,12 @@ template<typename T, template<typename U> class PARTICLETYPE>
 void ParticleSystem3D<T, PARTICLETYPE>::addParticle(PARTICLETYPE<T> &p)
 {
   _particles.push_back(p);
+}
+
+template<typename T, template<typename U> class PARTICLETYPE>
+void ParticleSystem3D<T, PARTICLETYPE>::clearParticles()
+{
+  _particles.clear();
 }
 
 template<typename T, template<typename U> class PARTICLETYPE>
@@ -335,20 +342,65 @@ void ParticleSystem3D<T, PARTICLETYPE>::explicitEuler(T dT)
   }
 }
 
-/*
-template<typename T, template<typename U> class PARTICLETYPE>
-void ParticleSystem3D<T, PARTICLETYPE>::integrateTorque(T dT)
-{
-  for (auto& p : _particles) {
-    if (p.getActive()) {
-      for (int i = 0; i < 3; i++) {
-        p.getAVel()[i] += p.getTorque()[i] * 1.
-                          / (2. / 5. * p.getMass() * std::pow(p.getRad(), 2)) * dT;
-      }
-    }
-  }
-}
-*/
+
+//template<typename T, template<typename U> class PARTICLETYPE>
+//void ParticleSystem3D<T, PARTICLETYPE>::integrateTorque(T dT)
+//{
+//  for (auto& p : _particles) {
+//    if (p.getActive()) {
+//      for (int i = 0; i < 3; i++) {
+//        p.getAVel()[i] += p.getTorque()[i] * 1.
+//                          / (2. / 5. * p.getMass() * std::pow(p.getRad(), 2)) * dT;
+//      }
+//    }
+//  }
+//}
+
+//template<typename T, template<typename U> class PARTICLETYPE>
+//void ParticleSystem3D<T, PARTICLETYPE>::integrateTorqueMag(T dT) {
+////template<typename T>
+////void ParticleSystem3D<T, MagneticParticle3D>::integrateTorqueMag(T dT) {
+//  for (auto& p : _particles) {
+//    if (p.getActive()) {
+//      Vector<T, 3> deltaAngle;
+//      T angle;
+//      T epsilon = std::numeric_limits<T>::epsilon();
+//      for (int i = 0; i < 3; i++) {
+//        // change orientation due to torque moments
+//        deltaAngle[i] = (5. * p.getTorque()[i] * dT * dT) / (2. * p.getMass() * std::pow(p.getRad(), 2));
+//        // apply change in angle to dMoment vector
+//      }
+//      angle = norm(deltaAngle);
+//      if (angle > epsilon) {
+//        //Vector<T, 3> axis(deltaAngle);
+//        //  Vector<T, 3> axis(T(), T(), T(1));
+//        //axis.normalize();
+//        std::vector<T> null(3, T());
+//
+//        //RotationRoundAxis3D<T, S> rotRAxis(p.getPos(), fromVector3(axis), angle);
+//        RotationRoundAxis3D<T, S> rotRAxis(null, fromVector3(deltaAngle), angle);
+//        T input[3] = {p.getMoment()[0], p.getMoment()[1], p.getMoment()[2]};
+//        Vector<T, 3> in(input);
+//        T output[3] = {T(), T(), T()};
+//        rotRAxis(output, input);
+//        Vector<T, 3> out(output);
+////        std::vector<T> mainRefVec(3, T());
+////        mainRefVec[0] = 1.;
+////        std::vector<T> secondaryRefVec(3, T());
+////        secondaryRefVec[2] = 1.;
+////        AngleBetweenVectors3D<T, T> checkAngle(mainRefVec, secondaryRefVec);
+////        T angle[1];
+////        checkAngle(angle, input);
+//        std::cout<< "|moment|_in: " << in.norm() << ", |moment|_out: " << out.norm()
+//                 << ", | |in| - |out| |: " << fabs(in.norm() - out.norm())
+//                 /*<< " Angle: " << angle[0] */<< std::endl;
+//        p.getMoment()[0] = output[0];
+//        p.getMoment()[1] = output[1];
+//        p.getMoment()[2] = output[2];
+//      }
+//    }
+//  }
+//}
 
 //template<typename T, template<typename U> class PARTICLETYPE>
 //void ParticleSystem3D<T, PARTICLETYPE>::implicitEuler(T dT, AnalyticalF3D<T,T>& getvel) {
@@ -443,54 +495,62 @@ void ParticleSystem3D<T, PARTICLETYPE>::adamBashforth4(T dT)
 }
 */
 
-//template<typename T, template<typename U> class PARTICLETYPE>
-//void ParticleSystem3D<T, PARTICLETYPE>::velocityVerlet1(T dT)
-//{
+template<typename T, template<typename U> class PARTICLETYPE>
+void ParticleSystem3D<T, PARTICLETYPE>::velocityVerlet1(T dT)
+{
+  for (auto& p : _particles) {
+    if (p.getActive()) {
+      std::vector<T> pos = p.getPos();
+      for (int i = 0; i < 3; i++) {
+        pos[i] += p.getVel()[i] * dT
+                  + .5 * p.getForce()[i] / p.getMass() * std::pow(dT, 2);
+      }
+      p.setPos(pos);
+    }
+  }
+}
+
+template<typename T, template<typename U> class PARTICLETYPE>
+void ParticleSystem3D<T, PARTICLETYPE>::velocityVerlet2(T dT)
+{
+  std::vector<T> frc;
+  std::vector<T> vel;
+  typename std::deque<PARTICLETYPE<T> >::iterator p;
+  int pInt = 0;
+  for (p = _particles.begin(); p != _particles.end(); ++p, ++pInt) {
 //  for (auto& p : _particles) {
-//    if (p.getActive()) {
-//      std::vector<T> pos = p.getPos();
-//      for (int i = 0; i < 3; i++) {
-//        pos[i] += p.getVel()[i] * dT
-//                  + .5 * p.getForce()[i] / p.getMass() * std::pow(dT, 2);
-//      }
-//      p.setPos(pos);
-//    }
-//  }
-//}
-//
-//// TODO inserted pINt ok?
-//template<typename T, template<typename U> class PARTICLETYPE>
-//void ParticleSystem3D<T, PARTICLETYPE>::velocityVerlet2(T dT)
-//{
-//  std::vector<T> frc;
-//  std::vector<T> vel;
-//  typename std::deque<PARTICLETYPE<T> >::iterator p;
-//  int pInt = 0;
-//  for (p = _particles.begin(); p != _particles.end(); ++p, ++pInt) {
-////  for (auto& p : _particles) {
-//    if (p->getActive()) {
-//      frc = p->getForce();
-//      vel = p->getVel();
-//      p->resetForce();
-//      for (auto f : _forces) {
-//        f->applyForce(p, pInt, *this);
-//      }
-//      for (int i = 0; i < 3; i++) {
-//        vel[i] += .5 * (p->getForce()[i] + frc[i]) / p->getMass() * dT;
-//      }
-//      p->setVel(vel);
-//    }
-//  }
-//}
+    if (p->getActive()) {
+      frc = p->getForce();
+      vel = p->getVel();
+      p->resetForce();
+      for (auto f : _forces) {
+        f->applyForce(p, pInt, *this);
+      }
+      for (int i = 0; i < 3; i++) {
+        vel[i] += .5 * (p->getForce()[i] + frc[i]) / p->getMass() * dT;
+      }
+      p->setVel(vel);
+    }
+  }
+}
 
 /*
+template<typename T, template<typename U> class PARTICLETYPE>
+void ParticleSystem3D<T, PARTICLETYPE>::rungeKutta4(T dT)
+{
+  rungeKutta4_1(dT);
+  rungeKutta4_2(dT);
+  rungeKutta4_3(dT);
+  rungeKutta4_4(dT);
+}
+
+
 template<typename T, template<typename U> class PARTICLETYPE>
 void ParticleSystem3D<T, PARTICLETYPE>::rungeKutta4_1(T dT)
 {
   typename std::deque<PARTICLETYPE<T> >::iterator p;
   int pInt = 0;
   for (p = _particles.begin(); p != _particles.end(); ++p, ++pInt) {
-//  for (auto& p : _particles) {
     if (p->getActive()) {
       p->resetForce();
       for (auto f : _forces) {
@@ -515,25 +575,28 @@ void ParticleSystem3D<T, PARTICLETYPE>::rungeKutta4_1(T dT)
   }
 }
 
+
 template<typename T, template<typename U> class PARTICLETYPE>
 void ParticleSystem3D<T, PARTICLETYPE>::rungeKutta4_2(T dT)
 {
-  for (auto& p : _particles) {
-    if (p.getActive()) {
-      p.resetForce();
+  typename std::deque<PARTICLETYPE<T> >::iterator p;
+  int pInt = 0;
+  for (p = _particles.begin(); p != _particles.end(); ++p, ++pInt) {
+    if (p->getActive()) {
+      p->resetForce();
       for (auto f : _forces) {
-        f->applyForce(p, *this);
+        f->applyForce(p, pInt, *this);
       }
-      std::vector<T> k2 = p.getForce();
-      p.setForce(k2, 2);
+      std::vector<T> k2 = p->getForce();
+      p->setForce(k2, 2);
 
       std::vector<T> vel(3, T()), pos(3, T());
       for (int i = 0; i < 3; i++) {
-        vel[i] = p.getVel(3)[i] + dT / 2. / p.getMass() * k2[i];
-        pos[i] = p.getVel(2)[i] + dT / 2. * vel[i];
+        vel[i] = p->getVel(3)[i] + dT / 2. / p->getMass() * k2[i];
+        pos[i] = p->getVel(2)[i] + dT / 2. * vel[i];
       }
-      p.setVel(vel);
-      p.setPos(pos);
+      p->setVel(vel);
+      p->setPos(pos);
     }
   }
 }
@@ -541,21 +604,23 @@ void ParticleSystem3D<T, PARTICLETYPE>::rungeKutta4_2(T dT)
 template<typename T, template<typename U> class PARTICLETYPE>
 void ParticleSystem3D<T, PARTICLETYPE>::rungeKutta4_3(T dT)
 {
-  for (auto& p : _particles) {
-    if (p.getActive()) {
-      p.resetForce();
+  typename std::deque<PARTICLETYPE<T> >::iterator p;
+  int pInt = 0;
+  for (p = _particles.begin(); p != _particles.end(); ++p, ++pInt) {
+    if (p->getActive()) {
+      p->resetForce();
       for (auto f : _forces) {
-        f->applyForce(p, *this);
+        f->applyForce(p, pInt, *this);
       }
-      std::vector<T> k3 = p.getForce();
-      p.setForce(k3, 1);
+      std::vector<T> k3 = p->getForce();
+      p->setForce(k3, 1);
       std::vector<T> vel(3, T()), pos(3, T());
       for (int i = 0; i < 3; i++) {
-        vel[i] = p.getVel(3)[i] + dT / p.getMass() * k3[i];
-        pos[i] = p.getVel(2)[i] + dT * vel[i];
+        vel[i] = p->getVel(3)[i] + dT / p->getMass() * k3[i];
+        pos[i] = p->getVel(2)[i] + dT * vel[i];
       }
-      p.setVel(vel);
-      p.setPos(pos);
+      p->setVel(vel);
+      p->setPos(pos);
     }
   }
 }
@@ -563,28 +628,31 @@ void ParticleSystem3D<T, PARTICLETYPE>::rungeKutta4_3(T dT)
 template<typename T, template<typename U> class PARTICLETYPE>
 void ParticleSystem3D<T, PARTICLETYPE>::rungeKutta4_4(T dT)
 {
-  for (auto& p : _particles) {
-    if (p.getActive()) {
-      p.resetForce();
+  typename std::deque<PARTICLETYPE<T> >::iterator p;
+  int pInt = 0;
+  for (p = _particles.begin(); p != _particles.end(); ++p, ++pInt) {
+    if (p->getActive()) {
+      p->resetForce();
       for (auto f : _forces) {
-        f->applyForce(p, *this);
+        f->applyForce(p, pInt, *this);
       }
-      std::vector<T> k4 = p.getForce();
+      std::vector<T> k4 = p->getForce();
 
       std::vector<T> vel(3, T()), pos(3, T());
       for (int i = 0; i < 3; i++) {
-        vel[i] = p.getVel(3)[i]
-                 + dT / 6. / p.getMass()
-                 * (p.getForce(3)[i] + 2 * p.getForce(2)[i]
-                    + 2 * p.getForce(1)[i] + p.getForce(0)[i]);
-        pos[i] = p.getVel(2)[i] + dT * vel[i];
+        vel[i] = p->getVel(3)[i]
+                 + dT / 6. / p->getMass()
+                 * (p->getForce(3)[i] + 2 * p->getForce(2)[i]
+                    + 2 * p->getForce(1)[i] + p->getForce()[i]);
+        pos[i] = p->getVel(2)[i] + dT * vel[i];
       }
-      p.setVel(vel);
-      p.setPos(pos);
+      p->setVel(vel);
+      p->setPos(pos);
     }
   }
 }
 */
+
 
 template<typename T, template<typename U> class PARTICLETYPE>
 void ParticleSystem3D<T, PARTICLETYPE>::saveToFile(std::string fullName)
@@ -706,6 +774,70 @@ void ParticleSystem3D<T, PARTICLETYPE>::saveToFile(std::string fullName)
 //    }
 //  }
 //}
+
+
+template<>
+void ParticleSystem3D<double, MagneticParticle3D>::resetMag()
+{
+  typename std::deque<MagneticParticle3D<double> >::iterator p;
+  int pInt = 0;
+  for (p = _particles.begin(); p != _particles.end(); ++p, ++pInt) {
+    if (p->getActive()) {
+      p->resetForce();
+      p->resetTorque();
+    }
+  }
+}
+
+template<>
+void ParticleSystem3D<double, MagneticParticle3D>::computeForce()
+{
+  typename std::deque<MagneticParticle3D<double> >::iterator p;
+  int pInt = 0;
+  for (p = _particles.begin(); p != _particles.end(); ++p, ++pInt) {
+    if (p->getActive()) {
+      for (auto f : _forces) {
+        f->applyForce(p, pInt, *this);
+      }
+    }
+  }
+}
+
+template<>
+void ParticleSystem3D<double, MagneticParticle3D>::integrateTorqueMag(double dT)
+{
+  for (auto& p : _particles) {
+    Vector<double, 3> deltaAngle;
+    double angle;
+    double epsilon = std::numeric_limits<double>::epsilon();
+    double damping = std::pow((1. - p.getADamping()), dT);
+    for (int i = 0; i < 3; i++) {
+      p.getAVel()[i] += (5. * (p.getTorque()[i]) * dT) / (2.  * p.getMass() * std::pow(p.getRad(), 2));
+      p.getAVel()[i] *= damping;
+      deltaAngle[i] = p.getAVel()[i] * dT;
+    }
+    angle = norm(deltaAngle);
+    if (angle > epsilon) {
+      std::vector<double> null(3, double());
+
+      RotationRoundAxis3D<double, double> rotRAxis(null, util::fromVector3(deltaAngle), angle);
+      double input[3] = {p.getMoment()[0], p.getMoment()[1], p.getMoment()[2]};
+      Vector<double, 3> in(input);
+      double output[3] = {double(), double(), double()};
+      rotRAxis(output, input);
+      Vector<double, 3> out(output);
+      // renormalize output
+      if (out.norm() > epsilon) {
+        out = (1. / out.norm()) * out;
+      }
+
+      p.getMoment()[0] = out[0];
+      p.getMoment()[1] = out[1];
+      p.getMoment()[2] = out[2];
+    }
+  }
+}
+
 
 }  //namespace olb
 #endif /* PARTICLESYSTEM_3D_HH */

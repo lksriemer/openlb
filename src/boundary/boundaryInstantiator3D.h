@@ -47,6 +47,8 @@ public:
   void addVelocityBoundary2N(int x0, int x1, int y0, int y1, int z0, int z1, T omega);
   void addVelocityBoundary2P(int x0, int x1, int y0, int y1, int z0, int z1, T omega);
 
+  void addSlipBoundary(int x0, int x1, int y0, int y1, int z0, int z1, int discreteNormalX, int discreteNormalY, int discreteNormalZ);
+
   void addPressureBoundary0N(int x0, int x1, int y0, int y1, int z0, int z1, T omega);
   void addPressureBoundary0P(int x0, int x1, int y0, int y1, int z0, int z1, T omega);
   void addPressureBoundary1N(int x0, int x1, int y0, int y1, int z0, int z1, T omega);
@@ -108,9 +110,14 @@ public:
   void addVelocityBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int material, int x0, int x1, int y0, int y1, int z0, int z1,
                            T omega);
   void addVelocityBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int material, T omega);
+
+  void addSlipBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int material, int x0, int x1, int y0, int y1, int z0, int z1);
+  void addSlipBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int material);
+
   void addPressureBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int material, int x0, int x1, int y0, int y1, int z0, int z1,
                            T omega);
   void addPressureBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int material, T omega);
+
   void addConvectionBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int material, int x0, int x1, int y0, int y1, int z0, int z1,
                              T omega, T* uAv=NULL);
   void addConvectionBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int material, T omega, T* uAv=NULL);
@@ -194,6 +201,31 @@ addVelocityBoundary(int x0, int x1, int y0, int y1, int z0, int z1, T omega)
     this->getBlock().addPostProcessor(*postProcessor);
   }
 }
+
+// Slip BC
+
+template<typename T, template<typename U> class Lattice, class BoundaryManager>
+void BoundaryConditionInstantiator3D<T, Lattice, BoundaryManager>::addSlipBoundary(
+  int x0, int x1, int y0, int y1, int z0, int z1, int discreteNormalX, int discreteNormalY, int discreteNormalZ)
+{
+  OLB_PRECONDITION(x0==x1 || y0==y1 || z0==z1);
+
+  for (int iX = x0; iX <= x1; ++iX) {
+    for (int iY = y0; iY <= y1; ++iY) {
+      for (int iZ = z0; iZ <= z1; ++iZ) {
+        if (_output) {
+          clout << "addSlipBoundary<" << discreteNormalX << ","<< discreteNormalY << ","<< discreteNormalZ << ">("  << x0 << ", "<< x1 << ", " << y0 << ", " << y1 << ", " << z0 << ", " << z1 << " )" << std::endl;
+        }
+      }
+    }
+  }
+
+  PostProcessorGenerator3D<T, Lattice>* postProcessor = new SlipBoundaryProcessorGenerator3D<T, Lattice>(x0, x1, y0, y1, z0, z1, discreteNormalX, discreteNormalY, discreteNormalZ);
+  if (postProcessor) {
+    this->getBlock().addPostProcessor(*postProcessor);
+  }
+}
+
 // Pressure BC
 
 template<typename T, template<typename U> class Lattice, class BoundaryManager>
@@ -696,6 +728,40 @@ addVelocityBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int mat
   addVelocityBoundary(blockGeometryStructure, material, 0, blockGeometryStructure.getNx()-1, 0, blockGeometryStructure.getNy()-1, 0, blockGeometryStructure.getNz()-1, omega);
 
 }
+
+// Slip BC
+
+template<typename T, template<typename U> class Lattice, class BoundaryManager>
+void BoundaryConditionInstantiator3D<T, Lattice, BoundaryManager>::addSlipBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int material, int x0, int x1, int y0, int y1, int z0, int z1)
+{
+  std::vector<int> discreteNormal(4, 0);
+  for (int iX = x0; iX <= x1; iX++) {
+    for (int iY = y0; iY <= y1; iY++) {
+      for (int iZ = z0; iZ <= z1; iZ++) {
+        const BlockGeometryStructure3D<T>& bgs = blockGeometryStructure;
+        if (bgs.get(iX, iY, iZ) == material) {
+          discreteNormal = blockGeometryStructure.getStatistics().getType(iX, iY, iZ);
+          if (discreteNormal[1]!=0 || discreteNormal[2]!=0 || discreteNormal[3]!=0) {
+            addSlipBoundary(iX, iX, iY, iY, iZ, iZ, discreteNormal[1], discreteNormal[2], discreteNormal[3]);
+          } else {
+            clout << "Warning: Could not addSlipBoundary (" << iX << ", " << iY << ", " << iZ << "), discreteNormal=(" << discreteNormal[0] <<","<< discreteNormal[1] <<","<< discreteNormal[2] <<","<< discreteNormal[3] <<"), set to bounceBack" << std::endl;
+            this->getBlock().defineDynamics(iX, iY, iZ, &instances::getBounceBack<T, Lattice>() );
+          }
+        }
+      }
+    }
+  }
+}
+
+template<typename T, template<typename U> class Lattice, class BoundaryManager>
+void BoundaryConditionInstantiator3D<T, Lattice, BoundaryManager>::addSlipBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int material)
+{
+  addSlipBoundary(blockGeometryStructure, material, 0,
+                  blockGeometryStructure.getNx()-1, 0,
+                  blockGeometryStructure.getNy()-1, 0,
+                  blockGeometryStructure.getNz()-1);
+}
+
 
 // Pressure BC
 

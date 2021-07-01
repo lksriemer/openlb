@@ -69,15 +69,13 @@ SuperLattice3D<T, Lattice>::SuperLattice3D(CuboidGeometry3D<T>& cGeometry,
   this->_communicator.add_cells(this->_overlap);
   this->_communicator.init();
 
+  _extendedBlockLattices.reserve(this->_loadBalancer.size());
   for (int iC = 0; iC < this->_loadBalancer.size(); ++iC) {
     int nX = this->_cuboidGeometry.get(this->_loadBalancer.glob(iC)).getNx() + 2 * this->_overlap;
     int nY = this->_cuboidGeometry.get(this->_loadBalancer.glob(iC)).getNy() + 2 * this->_overlap;
     int nZ = this->_cuboidGeometry.get(this->_loadBalancer.glob(iC)).getNz() + 2 * this->_overlap;
 
-    BlockLattice3D<T, Lattice> tmp(0, 0, 0);
-    _extendedBlockLattices.push_back(tmp);
-    BlockLattice3D<T, Lattice> blockLattice(nX, nY, nZ);
-    _extendedBlockLattices.back().swap(blockLattice);
+    _extendedBlockLattices.emplace_back(nX, nY, nZ);
   }
   for (int iC = 0; iC < this->_loadBalancer.size(); ++iC) {
     BlockLatticeView3D<T, Lattice> lattice(_extendedBlockLattices[iC], this->_overlap,
@@ -315,6 +313,17 @@ void SuperLattice3D<T,Lattice>::defineExternalField( SuperGeometry3D<T>& sGeomet
     }
   }
 }
+
+
+template<typename T, template<typename U> class Lattice>
+void SuperLattice3D<T,Lattice>::setExternalParticleField(SuperGeometry3D<T>& sGeometry,
+    AnalyticalF3D<T,T>& velocity, ParticleIndicatorF3D<T,T>& sIndicator)
+{
+  for (int iC = 0; iC < this->_loadBalancer.size(); ++iC) {
+    _extendedBlockLattices[iC].setExternalParticleField(sGeometry.getExtendedBlockGeometry(iC), velocity, sIndicator);
+  }
+}
+
 
 
 template<typename T, template<typename U> class Lattice>
@@ -622,8 +631,8 @@ void SuperLattice3D<T, Lattice>::addLatticeCoupling( SuperGeometry3D<T>& sGeomet
           //TODO done quick and dirty
           if (extractedLcGen->extract(0, 0, 0, 0, 0, 0) ) {
             if (sGeometry.get(this->_loadBalancer.glob(iC), iX-this->_overlap, iY-this->_overlap, iZ-this->_overlap) == material) {
-              extractedLcGen->shift(iX, iY, iZ);
-              _extendedBlockLattices[iC].addLatticeCoupling(*extractedLcGen, partnerOne );
+              extractedLcGen->shift(iX, iY, iZ, this->_loadBalancer.glob(iC));
+              _extendedBlockLattices[iC].addLatticeCoupling(*extractedLcGen, partnerOne);
             }
           }
           delete extractedLcGen;

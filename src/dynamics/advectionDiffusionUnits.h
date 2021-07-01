@@ -49,106 +49,132 @@ public:
   AdvectionDiffusionUnitLB(T Ra, T Pr, T Tcold, T Thot, T N, T deltaT,
                            T lx, T ly, T lz=T() )
     : _Ra(Ra), _Pr(Pr), _Tcold(Tcold), _Thot(Thot), _NN(N), _deltaT(deltaT),
-      _lx(lx), _ly(ly), _lz(lz) {
+      _lx(lx), _ly(ly), _lz(lz)
+  {
   }
   /// Rayleigh number
-  T getRa() const      {
+  T getRa() const
+  {
     return _Ra;
   }
   /// Prandlt number
-  T getPr() const      {
+  T getPr() const
+  {
     return _Pr;
   }
   /// minimum temperature
-  T getTcold() const   {
+  T getTcold() const
+  {
     return _Tcold;
   }
   /// maximum temperature
-  T getThot() const    {
+  T getThot() const
+  {
     return _Thot;
   }
   /// delta temperature number
-  T getDeltaTemperature() const {
+  T getDeltaTemperature() const
+  {
     return _Thot - _Tcold;
   }
   /// mid-temperature
-  T getT0() const      {
+  T getT0() const
+  {
     return (_Thot + _Tcold)/(T)2;
   }
   /// resolution (a lattice of size 1 has getN()+1 cells)
-  T getN() const       {
+  T getN() const
+  {
     return _NN;
   }
   /// x-length in dimensionless units
-  T getLx() const      {
+  T getLx() const
+  {
     return _lx;
   }
   /// y-length in dimensionless units
-  T getLy() const      {
+  T getLy() const
+  {
     return _ly;
   }
   /// z-length in dimensionless units
-  T getLz() const      {
+  T getLz() const
+  {
     return _lz;
   }
   /// lattice spacing in dimensionless units
-  T getDeltaX() const  {
+  T getDeltaX() const
+  {
     return (T)1 / _NN;
   }
   /// time step in dimensionless units
-  T getDeltaT() const  {
+  T getDeltaT() const
+  {
     return _deltaT;
   }
   /// conversion from dimensionless to lattice units for space coordinate
-  int nCell(T l) const {
+  int nCell(T l) const
+  {
     return (int)(l/getDeltaX()+(T)0.5);
   }
   /// conversion from dimensionless to lattice units for time coordinate
-  int nStep(T t) const {
+  int nStep(T t) const
+  {
     return (int)(t/getDeltaT()+(T)0.5);
   }
   /// number of lattice cells in x-direction
-  int getNx() const    {
+  int getNx() const
+  {
     return nCell(_lx) + 1;
   }
   /// number of lattice cells in y-direction
-  int getNy() const    {
+  int getNy() const
+  {
     return nCell(_ly) + 1;
   }
   /// number of lattice cells in z-direction
-  int getNz() const    {
+  int getNz() const
+  {
     return nCell(_lz) + 1;
   }
   /// velocity in lattice units (proportional to Mach number)
-  T getU() const       {
+  T getU() const
+  {
     return getDeltaT() / getDeltaX()  ;
   }
   /// viscosity in lattice units
-  T getNu() const      {
+  T getNu() const
+  {
     return sqrt(getPr()/getRa()) * getDeltaT() / (getDeltaX()*getDeltaX());
   }
   /// thermal conductivity in lattice units
-  T getKappa() const   {
+  T getKappa() const
+  {
     return sqrt((T)1/(getPr()*getRa()))*getDeltaT()/(getDeltaX()*getDeltaX());
   }
   /// viscosity in lattice units
-  T getGravity() const {
+  T getGravity() const
+  {
     return getDeltaT() * getDeltaT() / getDeltaX();
   }
   /// relaxation time
-  T getTauNS() const   {
+  T getTauNS() const
+  {
     return NSLattice<T>::invCs2*getNu()+(T)0.5;
   }
   /// relaxation frequency
-  T getOmegaNS() const {
+  T getOmegaNS() const
+  {
     return (T)1 / getTauNS();
   }
   /// relaxation time
-  T getTauT() const    {
+  T getTauT() const
+  {
     return ADLattice<T>::invCs2*getKappa() + (T)0.5;
   }
   /// relaxation frequency
-  T getOmegaT() const  {
+  T getOmegaT() const
+  {
     return (T)1 / getTauT();
   }
 private:

@@ -90,7 +90,7 @@ void ZouHeDynamics<T,Lattice,Dynamics,direction,orientation>::collide (
 
   T rho, u[L::d];
   T falseRho, falseU[L::d];
-  this->momenta.computeRhoU(cell, rho, u);
+  this->_momenta.computeRhoU(cell, rho, u);
 
   T uSqr = util::normSqr<T,L::d>(u);
 
@@ -149,7 +149,7 @@ void ZouHeDynamics<T,Lattice,Dynamics,direction,orientation>::staticCollide (
     }
   }
 
-  T rho = this->momenta.computeRho(cell);
+  T rho = this->_momenta.computeRho(cell);
 
   T uSqr = util::normSqr<T,L::d>(u);
 

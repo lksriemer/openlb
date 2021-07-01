@@ -74,36 +74,36 @@ public:
 };
 
 
-//////////////////////////////// Discrete Indicator ////////////////////////////////
-/// arithmetic helper class for discrete indicator 3d functors
-class DiscIndicCalc3D : public DiscreteIndicatorF3D {
-protected:
-  DiscreteIndicatorF3D& _f;
-  DiscreteIndicatorF3D& _g;
-public:
-  DiscIndicCalc3D(DiscreteIndicatorF3D& f, DiscreteIndicatorF3D& g);
-};
-
-/// addition functor acts as union
-class DiscIndicPlus3D : public DiscIndicCalc3D {
-public:
-  DiscIndicPlus3D(DiscreteIndicatorF3D& f, DiscreteIndicatorF3D& g);
-  bool operator() (bool output[], const int input[]);
-};
-
-/// subtraction functor acts as without
-class DiscIndicMinus3D : public DiscIndicCalc3D {
-public:
-  DiscIndicMinus3D(DiscreteIndicatorF3D& f, DiscreteIndicatorF3D& g);
-  bool operator() (bool output[], const int input[]);
-};
-
-/// multiplication functor acts as intersection
-class DiscIndicMultiplication3D : public DiscIndicCalc3D {
-public:
-  DiscIndicMultiplication3D(DiscreteIndicatorF3D& f, DiscreteIndicatorF3D& g);
-  bool operator() (bool output[], const int input[]);
-};
+////////////////////////////////// Discrete Indicator ////////////////////////////////
+///// arithmetic helper class for discrete indicator 3d functors
+//class DiscIndicCalc3D : public SuperIndicatorF3D {
+//protected:
+//  SuperIndicatorF3D<T>& _f;
+//  SuperIndicatorF3D<T>& _g;
+//public:
+//  DiscIndicCalc3D(SuperIndicatorF3D<T>& f, SuperIndicatorF3D<T>& g);
+//};
+//
+///// addition functor acts as union
+//class DiscIndicPlus3D : public DiscIndicCalc3D {
+//public:
+//  DiscIndicPlus3D(SuperIndicatorF3D<T>& f, SuperIndicatorF3D<T>& g);
+//  bool operator() (bool output[], const int input[]);
+//};
+//
+///// subtraction functor acts as without
+//class DiscIndicMinus3D : public DiscIndicCalc3D {
+//public:
+//  DiscIndicMinus3D(SuperIndicatorF3D<T>& f, SuperIndicatorF3D<T>& g);
+//  bool operator() (bool output[], const int input[]);
+//};
+//
+///// multiplication functor acts as intersection
+//class DiscIndicMultiplication3D : public DiscIndicCalc3D {
+//public:
+//  DiscIndicMultiplication3D(SuperIndicatorF3D<T>& f, SuperIndicatorF3D<T>& g);
+//  bool operator() (bool output[], const int input[]);
+//};
 
 
 

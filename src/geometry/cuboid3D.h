@@ -54,7 +54,7 @@ template<typename T> class IndicatorF3D;
  * This class is not intended to be derived from.
  */
 template<typename T>
-class Cuboid3D : public Serializable {
+class Cuboid3D final : public Serializable {
 private:
   /// Global position of the left lower corner of the cuboid
   T   _globPosX, _globPosY, _globPosZ;
@@ -84,8 +84,7 @@ public:
   /// Copy assignment
   Cuboid3D& operator=(Cuboid3D const& rhs);
   /// Initializes the cuboid
-  void init(T globPosX, T globPosY, T globPosZ, T delta, int nX, int nY, int nZ,
-            int refinementLevel=0); //TODO: remove or private
+  void init(T globPosX, T globPosY, T globPosZ, T delta, int nX, int nY, int nZ, int refinementLevel=0); //TODO: remove or private
 
   /// Read only access to left lower corner coordinates
   Vector<T,3> const getOrigin() const;
@@ -122,15 +121,11 @@ public:
   bool operator==(const Cuboid3D<T>& rhs) const;
 
   /// Number of data blocks for the serializable interface
-  std::size_t getNblock() const {
-    return 9;
-  };
+  std::size_t getNblock() const override;
   /// Binary size for the serializer interface
-  std::size_t getSerializableSize() const {
-    return ( 4 * sizeof(T) )  + ( 5 * sizeof(int) );
-  }
+  std::size_t getSerializableSize() const override;
   /// \return a pointer to the memory of the current block and its size for the serializable interface
-  bool* getBlock(std::size_t iBlock, std::size_t& sizeBlock, bool loadingMode);
+  bool* getBlock(std::size_t iBlock, std::size_t& sizeBlock, bool loadingMode) override;
 
   /// Prints cuboid details
   void print() const;
@@ -138,21 +133,9 @@ public:
   void getPhysR(T physR[3], const int latticeR[3]) const;
   void getPhysR(T physR[3], const int& iX, const int& iY, const int& iZ) const;
 
-  void getLatticeR(int latticeR[3], const T physR[3]) const {
-    latticeR[0] = (int)floor( (physR[0] - _globPosX )/_delta +.5);
-    latticeR[1] = (int)floor( (physR[1] - _globPosY )/_delta +.5);
-    latticeR[2] = (int)floor( (physR[2] - _globPosZ )/_delta +.5);
-  }
-
-  void getFloorLatticeR(const std::vector<T>& physR, std::vector<int>& latticeR) const {
-    getFloorLatticeR(&latticeR[0], &physR[0]);
-  }
-
-  void getFloorLatticeR(int latticeR[3], const T physR[3]) const {
-    latticeR[0] = (int)floor( (physR[0] - _globPosX)/_delta);
-    latticeR[1] = (int)floor( (physR[1] - _globPosY)/_delta);
-    latticeR[2] = (int)floor( (physR[2] - _globPosZ)/_delta);
-  }
+  void getLatticeR(int latticeR[3], const T physR[3]) const;
+  void getFloorLatticeR(const std::vector<T>& physR, std::vector<int>& latticeR) const;
+  void getFloorLatticeR(int latticeR[3], const T physR[3]) const;
 
   /// Checks whether a point (globX/gloxY/globZ) is contained in the cuboid
   /// extended with an layer of size overlap*delta

@@ -45,7 +45,8 @@ struct d3q13Helpers {
   /// BGK collision step
   static T collision( Cell<T,descriptors::D3Q13Descriptor>& cell,
                       T rho, const T u[Lattice::d],
-                      T lambda_nu, T lambda_nu_prime) {
+                      T lambda_nu, T lambda_nu_prime)
+  {
     const T lambda_e = descriptors::D3Q13Descriptor<T>::lambda_e;
     const T lambda_h = descriptors::D3Q13Descriptor<T>::lambda_h;
 
@@ -127,7 +128,8 @@ struct d3q13Helpers {
   static T constRhoCollision( Cell<T,descriptors::D3Q13Descriptor>& cell,
                               T rho, const T u[Lattice::d],
                               T ratioRho,
-                              T lambda_nu, T lambda_nu_prime) {
+                              T lambda_nu, T lambda_nu_prime)
+  {
     const T uSqr = util::normSqr<T,Lattice::d>(u);
 
     return uSqr;

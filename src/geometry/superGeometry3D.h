@@ -25,14 +25,14 @@
  * Representation of a parallel 3D geometry -- header file.
  */
 
-/// A super geometry represents a parrallel voxel mesh
-/** A super geometry consits of a number of block geometries,
+/// A super geometry represents a parallel voxel mesh
+/** A super geometry consists of a number of block geometries,
  * where the material numbers are stored. It is constructed
  * from a cuboid geometry. All coboids of the cuboid geometry
- * are asigned to block geometries which are extended by an
+ * are assigned to block geometries which are extended by an
  * overlap in order to enable efficient parallelisation.
  *
- * By the class access is provied to the material numbers of
+ * By the class access is provided to the material numbers of
  * the mesh. Methods for renaming materials are provided as
  * well as a statistic class.
  *

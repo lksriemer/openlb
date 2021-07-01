@@ -752,12 +752,14 @@ void BlockLattice2D<T,Lattice>::bulkCollideAndStream (
       int iX, iY, iPop;
 
       iX=loadbalance.firstGlobNum();
-      for (int iY=y0; iY<=y1; ++iY) {
+      for (int iY=y0; iY<=y1; ++iY)
+      {
         grid[iX][iY].collide(getStatistics());
         grid[iX][iY].revert();
       }
 
-      for (iX=loadbalance.firstGlobNum()+1; iX<=loadbalance.lastGlobNum(); ++iX) {
+      for (iX=loadbalance.firstGlobNum()+1; iX<=loadbalance.lastGlobNum(); ++iX)
+      {
         for (iY=y0; iY<=y1; ++iY) {
           grid[iX][iY].collide(getStatistics());
           /** The method beneath doesnt work with Intel compiler 9.1044 and 9.1046 for Itanium prozessors
@@ -779,7 +781,8 @@ void BlockLattice2D<T,Lattice>::bulkCollideAndStream (
       #pragma omp barrier
 
       iX=loadbalance.firstGlobNum();
-      for (iY=y0; iY<=y1; ++iY) {
+      for (iY=y0; iY<=y1; ++iY)
+      {
         for (iPop=1; iPop<=Lattice<T>::q/2; ++iPop) {
           int nextX = iX + Lattice<T>::c[iPop][0];
           int nextY = iY + Lattice<T>::c[iPop][1];

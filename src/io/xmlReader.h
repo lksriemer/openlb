@@ -48,23 +48,12 @@ public:
    * \param pParent The new root node for the XMLreader
    */
   XMLreader( TiXmlNode* pParent );
-
-  /**
-   * Constructs a new XMLreader from a file
-   * \param fName The XML file name
-   */
+  /// Constructs a new XMLreader from a XML file fName
   XMLreader( const std::string& fName );
-
-  /**
-   * destructor
-   */
+  /// destructor
   ~XMLreader();
-
-  /**
-   * Prints out the XML structure read in, mostly for debugging purposes
-   */
+  /// Prints out the XML structure read in, mostly for debugging purposes
   void print(int indent) const;
-
   /**
    * Read a value from the xml file
    * \param reference to return the value
@@ -76,48 +65,27 @@ public:
   template <typename T,unsigned DIM> bool read(ADf<T,DIM>& value, bool verboseOn = true) const;
 #endif
   template <typename T> bool read(std::vector<T>& value, bool verboseOn = true) const;
-
   template <typename T> T get(bool verboseOn = true) const;
-
-  /**
-   * Return a Subtree placed at name
-   * \param name The name from which to take the subtree
-   */
+  /// \return a Subtree placed at name \param name The name from which to take the subtree
   XMLreader const& operator[] (std::string name) const;
-
   /**
    * Returns an iterator.begin() of the child XMLreader
    * This means an iterator to the next level on an XML tree.
    */
   std::vector<XMLreader*>::const_iterator begin() const;
-
   /**
    * Returns an iterator.end() of the child XMLreader
    * This means an iterator to the next level on an XML tree.
    */
   std::vector<XMLreader*>::const_iterator end() const;
-
-  /**
-   * switch warnings on/off
-   */
+  /// switch warnings on/off
   void setWarningsOn(bool warnings) const;
-
-  /**
-   * return the name of the element
-   */
+  /// return the name of the element
   std::string getName() const;
-
-
-  /**
-   * return the value of attribute
-   */
+  /// \return the value of attribute
   std::string getAttribute(const std::string& aName) const;
-
-
   /// print warning if verbose mode is on
   void printWarning(std::string typeName, std::string value, bool verboseOn) const;
-
-
 private:
   void mainProcessorIni(TiXmlNode* pParent);
   void slaveProcessorIni();

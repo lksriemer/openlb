@@ -46,13 +46,16 @@ protected:
 public:
   BlockStructure2D(int nx, int ny) : _nx(nx), _ny(ny) {};
   /// Read only access to block width
-  virtual int getNx() const {
+  virtual int getNx() const
+  {
     return _nx;
   };
   /// Read only access to block height
-  virtual int getNy() const {
+  virtual int getNy() const
+  {
     return _ny;
   };
+  virtual ~BlockStructure2D() { }
 };
 
 }  // namespace olb

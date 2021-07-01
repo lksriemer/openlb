@@ -64,7 +64,7 @@ StochasticSGSdynamics<T,Lattice>::StochasticSGSdynamics (
     turbulenceInt(turbulenceInt_),
     smagoConst(smagoConst_),
     charU(charU_),
-    preFactor(computePreFactor(omega_,smagoConst_, dx_, dt_) )
+    preFactor(computePreFactor(omega_,smagoConst_) )
 
 {
 
@@ -120,7 +120,7 @@ void StochasticSGSdynamics<T,Lattice>::collide(
   // cout << result<< endl;
 
 
-  this->momenta.computeAllMomenta(cell, rho, u, pi);
+  this->_momenta.computeAllMomenta(cell, rho, u, pi);
   T newOmega = computeOmega(this->getOmega(), preFactor, rho, pi, X_lang_n);
 
 
@@ -162,7 +162,7 @@ void StochasticSGSdynamics<T,Lattice>::collide(
 
 //   T X_lang_n = getRandomWalk(cell,charU, drift, result );
 //   T rho, uTemp[Lattice<T>::d], pi[util::TensorVal<Lattice<T> >::n];
-//   this->momenta.computeAllMomenta(cell, rho, uTemp, pi);
+//   this->_momenta.computeAllMomenta(cell, rho, uTemp, pi);
 //   T newOmega = computeOmega(this->getOmega(), preFactor, rho, pi,  X_lang_n);
 
 // //  T invM_S_SGS_new[Lattice<T>::q][Lattice<T>::q];
@@ -204,14 +204,14 @@ template<typename T, template<typename U> class Lattice>
 void StochasticSGSdynamics<T,Lattice>::setOmega(T omega)
 {
   this->setOmega(omega);
-  preFactor = computePreFactor(omega, smagoConst, dx, dt);
+  preFactor = computePreFactor(omega, smagoConst);
 }
 
 template<typename T, template<typename U> class Lattice>
 T StochasticSGSdynamics<T,Lattice>::getSmagorinskyOmega(Cell<T,Lattice>& cell, T X_lang_n )
 {
   T rho, uTemp[Lattice<T>::d], pi[util::TensorVal<Lattice<T> >::n];
-  this->momenta.computeAllMomenta(cell, rho, uTemp, pi);
+  this->_momenta.computeAllMomenta(cell, rho, uTemp, pi);
   T newOmega = computeOmega(this->getOmega(), preFactor, rho, pi, X_lang_n);
   return newOmega;
 }
@@ -316,9 +316,9 @@ T StochasticSGSdynamics<T,Lattice>::computeTimeScale(
 
 
 template<typename T, template<typename U> class Lattice>
-T StochasticSGSdynamics<T,Lattice>::computePreFactor(T omega, T smagoConst, T dx, T dt)
+T StochasticSGSdynamics<T,Lattice>::computePreFactor(T omega, T smagoConst)
 {
-  return (T)(smagoConst*smagoConst*dx*dx)*Lattice<T>::invCs2/dt*4*sqrt(2);
+  return (T)smagoConst*smagoConst*Lattice<T>::invCs2*Lattice<T>::invCs2*2*sqrt(2);
 }
 
 template<typename T, template<typename U> class Lattice>

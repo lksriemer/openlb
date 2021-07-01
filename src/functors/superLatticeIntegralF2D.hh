@@ -37,17 +37,16 @@ using namespace olb::util;
 namespace olb {
 
 
-template <typename T, template <typename U> class DESCRIPTOR>
-SuperMax2D<T,DESCRIPTOR>::SuperMax2D(SuperF2D<T>& f,
-                                     SuperGeometry2D<T>& superGeometry, const int material)
+template <typename T>
+SuperMax2D<T>::SuperMax2D(SuperF2D<T>& f, SuperGeometry2D<T>& superGeometry, const int material)
   : SuperF2D<T>(f.getSuperStructure(),f.getTargetDim()),
     _f(f), _superGeometry(superGeometry), _material(material)
 {
   this->getName() = "Max("+_f.getName()+")";
 }
 
-template <typename T, template <typename U> class DESCRIPTOR>
-bool SuperMax2D<T,DESCRIPTOR>::operator() (T output[], const int input[])
+template <typename T>
+bool SuperMax2D<T>::operator() (T output[], const int input[])
 {
   _f.getSuperStructure().communicate();
   CuboidGeometry2D<T>& cGeometry = _f.getSuperStructure().getCuboidGeometry();
@@ -77,17 +76,16 @@ bool SuperMax2D<T,DESCRIPTOR>::operator() (T output[], const int input[])
   return true;
 }
 
-template <typename T, template <typename U> class DESCRIPTOR>
-SuperMin2D<T,DESCRIPTOR>::SuperMin2D(SuperF2D<T>& f,
-                                     SuperGeometry2D<T>& superGeometry, const int material)
+template <typename T>
+SuperMin2D<T>::SuperMin2D(SuperF2D<T>& f, SuperGeometry2D<T>& superGeometry, const int material)
   : SuperF2D<T>(f.getSuperStructure(),f.getTargetDim()),
     _f(f), _superGeometry(superGeometry), _material(material)
 {
   this->getName() = "Min("+_f.getName()+")";
 }
 
-template <typename T, template <typename U> class DESCRIPTOR>
-bool SuperMin2D<T,DESCRIPTOR>::operator() (T output[], const int input[])
+template <typename T>
+bool SuperMin2D<T>::operator() (T output[], const int input[])
 {
   _f.getSuperStructure().communicate();
   CuboidGeometry2D<T>& cGeometry = _f.getSuperStructure().getCuboidGeometry();
@@ -118,17 +116,16 @@ bool SuperMin2D<T,DESCRIPTOR>::operator() (T output[], const int input[])
 }
 
 
-template <typename T, template <typename U> class DESCRIPTOR>
-SuperSum2D<T,DESCRIPTOR>::SuperSum2D(SuperF2D<T>& f,
-                                     SuperGeometry2D<T>& superGeometry, const int material)
+template <typename T>
+SuperSum2D<T>::SuperSum2D(SuperF2D<T>& f, SuperGeometry2D<T>& superGeometry, const int material)
   : SuperF2D<T>(f.getSuperStructure(),f.getTargetDim()+1),
     _f(f), _superGeometry(superGeometry), _material(material)
 {
   this->getName() = "Sum("+_f.getName()+")";
 }
 
-template <typename T, template <typename U> class DESCRIPTOR>
-bool SuperSum2D<T,DESCRIPTOR>::operator() (T output[], const int input[])
+template <typename T>
+bool SuperSum2D<T>::operator() (T output[], const int input[])
 {
   _f.getSuperStructure().communicate();
   CuboidGeometry2D<T>& cGeometry = _f.getSuperStructure().getCuboidGeometry();
@@ -165,17 +162,17 @@ bool SuperSum2D<T,DESCRIPTOR>::operator() (T output[], const int input[])
 }
 
 
-template <typename T, template <typename U> class DESCRIPTOR>
-SuperSumIndicator2D<T,DESCRIPTOR>::SuperSumIndicator2D(SuperF2D<T>& f,
-    SuperGeometry2D<T>& superGeometry, SmoothIndicatorF2D<T,T>& indicator)
+template <typename T>
+SuperSumIndicator2D<T>::SuperSumIndicator2D(SuperF2D<T>& f,
+    SuperGeometry2D<T>& superGeometry, ParticleIndicatorF2D<T,T>& indicator)
   : SuperF2D<T>(f.getSuperStructure(),f.getTargetDim()+1),
     _f(f), _superGeometry(superGeometry), _indicator(indicator)
 {
   this->getName() = "Sum("+_f.getName()+")";
 }
 
-template <typename T, template <typename U> class DESCRIPTOR>
-bool SuperSumIndicator2D<T,DESCRIPTOR>::operator() (T output[], const int input[])
+template <typename T>
+bool SuperSumIndicator2D<T>::operator() (T output[], const int input[])
 {
   _f.getSuperStructure().communicate();
   LoadBalancer<T>& load = _f.getSuperStructure().getLoadBalancer();
@@ -189,23 +186,32 @@ bool SuperSumIndicator2D<T,DESCRIPTOR>::operator() (T output[], const int input[
   int numVoxels(0);
   T outputTmp[_f.getTargetDim()];
   Cuboid2D<T>* cub = nullptr;
+  int start[2] = {0}, span[2] = {0};
   for (int iC = 0; iC < load.size(); ++iC) {
     int globiC = load.glob(iC);
     cub = &_superGeometry.getCuboidGeometry().get(globiC);
-
-    if (! (cub->get_globPosX() > _indicator.getMax()[0] ||
-           cub->get_globPosY() > _indicator.getMax()[1] ||
-           _indicator.getMin()[0] > cub->get_globPosX() + cub->getExtend()[0] * cub->getDeltaR() ||
-           _indicator.getMin()[1] > cub->get_globPosY() + cub->getExtend()[1] * cub->getDeltaR())) {
-      int nX = cub->getNx();
-      int nY = cub->getNy();
-      for (int iX = 0; iX < nX; iX++) {
-        for (int iY = 0; iY < nY; iY++) {
-          //_superGeometry.getPhysR(physR, globiC,iX,iY);
+    if (! (cub->get_globPosX() > _indicator.getPos()[0]+_indicator.getMax()[0] ||
+           cub->get_globPosY() > _indicator.getPos()[1]+_indicator.getMax()[1] ||
+           _indicator.getPos()[0]+_indicator.getMin()[0] > cub->get_globPosX() + cub->getExtend()[0] * cub->getDeltaR() ||
+           _indicator.getPos()[1]+_indicator.getMin()[1] > cub->get_globPosY() + cub->getExtend()[1] * cub->getDeltaR())) {
+      for (int k=0; k<2; k++) {
+        start[k] = (_indicator.getPos()[k]+_indicator.getMin()[k] - cub->getOrigin()[k]) /
+                   cub->getDeltaR();
+        if (start[k] < 0) {
+          start[k] = 0;
+        }
+        span[k] = (_indicator.getMax()[k] -
+                   _indicator.getMin()[k])/cub->getDeltaR() + 3;
+        if (span[k] + start[k] > cub->getExtend()[k]) {
+          span[k] = cub->getExtend()[k] - start[k];
+        }
+      }
+      for (int iX = start[0]; iX < start[0]+span[0]; iX++) {
+        for (int iY = start[1]; iY < start[1]+span[1]; iY++) {
           if (_superGeometry.get(globiC, iX, iY) == 1) {
             cub->getPhysR(physR,iX,iY);
             _indicator(inside, physR);
-            if ( inside[0] != 0) {
+            if ( !util::nearZero(inside[0]) ) {
               _f(outputTmp,globiC,iX,iY);
               for (int i = 0; i < this->getTargetDim()-1; ++i) {
                 output[i] += outputTmp[i];
@@ -217,7 +223,6 @@ bool SuperSumIndicator2D<T,DESCRIPTOR>::operator() (T output[], const int input[
       }
     }
   }
-  //  cout << this->getTargetDim() << std::endl;
 #ifdef PARALLEL_MODE_MPI
   for (int i = 0; i < this->getTargetDim()-1; ++i) {
     singleton::mpi().reduceAndBcast(output[i], MPI_SUM);
@@ -229,17 +234,15 @@ bool SuperSumIndicator2D<T,DESCRIPTOR>::operator() (T output[], const int input[
 }
 
 
-template <typename T, template <typename U> class DESCRIPTOR>
-SuperIntegral2D<T,DESCRIPTOR>::SuperIntegral2D(SuperF2D<T>& f,
-    SuperGeometry2D<T>& superGeometry, const int material)
-  : SuperF2D<T>(f.getSuperStructure(),f.getTargetDim()),
-    _f(f), _superGeometry(superGeometry), _material(material)
+template <typename T>
+SuperIntegral2D<T>::SuperIntegral2D(SuperF2D<T>& f, SuperGeometry2D<T>& superGeometry, const int material)
+  : SuperF2D<T>(f.getSuperStructure(),f.getTargetDim()), _f(f), _superGeometry(superGeometry), _material(material)
 {
   this->getName() = "Integral("+_f.getName()+")";
 }
 
-template <typename T, template <typename U> class DESCRIPTOR>
-bool SuperIntegral2D<T,DESCRIPTOR>::operator() (T output[], const int input[])
+template <typename T>
+bool SuperIntegral2D<T>::operator() (T output[], const int input[])
 {
   //  f.getSuperStructure().communicate();
   //  CuboidGeometry2D<T>& cGeometry = f.getSuperStructure().getCuboidGeometry();
@@ -277,17 +280,16 @@ bool SuperIntegral2D<T,DESCRIPTOR>::operator() (T output[], const int input[])
   return false;
 }
 
-template <typename T, template <typename U> class DESCRIPTOR>
-SuperL1Norm2D<T,DESCRIPTOR>::SuperL1Norm2D(SuperF2D<T>& f,
-    SuperGeometry2D<T>& superGeometry, const int material)
+template <typename T>
+SuperL1Norm2D<T>::SuperL1Norm2D(SuperF2D<T>& f, SuperGeometry2D<T>& superGeometry, const int material)
   : SuperF2D<T>(f.getSuperStructure(),1), _f(f), _superGeometry(superGeometry),
     _material(material)
 {
   this->getName() = "L1("+_f.getName()+")";
 }
 
-template <typename T, template <typename U> class DESCRIPTOR>
-bool SuperL1Norm2D<T,DESCRIPTOR>::operator() (T output[], const int input[])
+template <typename T>
+bool SuperL1Norm2D<T>::operator() (T output[], const int input[])
 {
   _f.getSuperStructure().communicate();
   CuboidGeometry2D<T>& cGeometry = _f.getSuperStructure().getCuboidGeometry();
@@ -323,17 +325,17 @@ bool SuperL1Norm2D<T,DESCRIPTOR>::operator() (T output[], const int input[])
 }
 
 
-template <typename T, template <typename U> class DESCRIPTOR>
-SuperL2Norm2D<T,DESCRIPTOR>::SuperL2Norm2D(SuperF2D<T>& f,
-    SuperGeometry2D<T>& superGeometry, const int material)
+template <typename T>
+SuperL2Norm2D<T>::SuperL2Norm2D(SuperF2D<T>& f,
+                                SuperGeometry2D<T>& superGeometry, const int material)
   : SuperF2D<T>(f.getSuperStructure(),1), _f(f), _superGeometry(superGeometry),
     _material(material)
 {
   this->getName() = "L2Norm("+_f.getName()+")";
 }
 
-template <typename T, template <typename U> class DESCRIPTOR>
-bool SuperL2Norm2D<T,DESCRIPTOR>::operator() (T output[], const int input[])
+template <typename T>
+bool SuperL2Norm2D<T>::operator() (T output[], const int input[])
 {
   _f.getSuperStructure().communicate();
   CuboidGeometry2D<T>& cGeometry = _f.getSuperStructure().getCuboidGeometry();
@@ -370,17 +372,17 @@ bool SuperL2Norm2D<T,DESCRIPTOR>::operator() (T output[], const int input[])
 }
 
 
-template <typename T, template <typename U> class DESCRIPTOR>
-SuperLinfNorm2D<T,DESCRIPTOR>::SuperLinfNorm2D(SuperF2D<T>& f,
-    SuperGeometry2D<T>& superGeometry, const int material)
+template <typename T>
+SuperLinfNorm2D<T>::SuperLinfNorm2D(SuperF2D<T>& f,
+                                    SuperGeometry2D<T>& superGeometry, const int material)
   : SuperF2D<T>(f.getSuperStructure(),1), _f(f), _superGeometry(superGeometry),
     _material(material)
 {
   this->getName() = "LinfNorm("+_f.getName()+")";
 }
 
-template <typename T, template <typename U> class DESCRIPTOR>
-bool SuperLinfNorm2D<T,DESCRIPTOR>::operator() (T output[], const int input[])
+template <typename T>
+bool SuperLinfNorm2D<T>::operator() (T output[], const int input[])
 {
   _f.getSuperStructure().communicate();
   CuboidGeometry2D<T>& cGeometry = _f.getSuperStructure().getCuboidGeometry();
@@ -416,17 +418,16 @@ bool SuperLinfNorm2D<T,DESCRIPTOR>::operator() (T output[], const int input[])
   return true;
 }
 
-template <typename T, template <typename U> class DESCRIPTOR>
-SuperL222D<T,DESCRIPTOR>::SuperL222D(SuperF2D<T>& f,
-                                     SuperGeometry2D<T>& superGeometry, const int material)
+template <typename T>
+SuperL222D<T>::SuperL222D(SuperF2D<T>& f, SuperGeometry2D<T>& superGeometry, const int material)
   : SuperF2D<T>(f.getSuperStructure(),f.getTargetDim()),
     _f(f), _superGeometry(superGeometry), _material(material)
 {
   this->getName() = "L22("+_f.getName()+")";
 }
 
-template <typename T, template <typename U> class DESCRIPTOR>
-bool SuperL222D<T,DESCRIPTOR>::operator() (T output[], const int input[])
+template <typename T>
+bool SuperL222D<T>::operator() (T output[], const int input[])
 {
   //  f.getSuperStructure().communicate();
   //  CuboidGeometry2D<T>& cGeometry = f.getSuperStructure().getCuboidGeometry();
@@ -551,7 +552,7 @@ bool SuperLatticePhysDrag2D<T,DESCRIPTOR>::operator() (T output[], const int inp
 {
   SuperGeometryFaces2D<T> faces(_superGeometry, _material, this->_converter);
   SuperLatticePhysBoundaryForce2D<T,DESCRIPTOR> f(this->_sLattice, _superGeometry, _material, this->_converter);
-  SuperSum2D<T,DESCRIPTOR> sumF(f, _superGeometry, _material);
+  SuperSum2D<T> sumF(f, _superGeometry, _material);
 
   T factor = 2. / (this->_converter.getCharRho() * this->_converter.getCharU() * this->_converter.getCharU());
 
@@ -568,7 +569,7 @@ bool SuperLatticePhysDrag2D<T,DESCRIPTOR>::operator() (T output[], const int inp
 template <typename T, template <typename U> class DESCRIPTOR>
 SuperLatticePhysDragIndicator2D<T,DESCRIPTOR>::SuperLatticePhysDragIndicator2D
 (SuperLattice2D<T,DESCRIPTOR>& sLattice, SuperGeometry2D<T>& superGeometry,
- SmoothIndicatorF2D<T,T>& indicator, const LBconverter<T>& converter)
+ ParticleIndicatorF2D<T,T>& indicator, const LBconverter<T>& converter)
   : SuperLatticePhysF2D<T,DESCRIPTOR>(sLattice,converter,2),
     _superGeometry(superGeometry), _indicator(indicator)
 {
@@ -579,7 +580,7 @@ template <typename T, template <typename U> class DESCRIPTOR>
 bool SuperLatticePhysDragIndicator2D<T,DESCRIPTOR>::operator() (T output[], const int input[])
 {
   SuperLatticePhysBoundaryForceIndicator2D<T,DESCRIPTOR> f(this->_sLattice, _superGeometry, _indicator, this->_converter);
-  SuperSumIndicator2D<T,DESCRIPTOR> sumF(f, _superGeometry, _indicator);
+  SuperSumIndicator2D<T> sumF(f, _superGeometry, _indicator);
 
   T factor = 2. / (this->_converter.getCharRho() * this->_converter.getCharU() * this->_converter.getCharU());
 
@@ -607,7 +608,7 @@ bool SuperLatticePhysDragIndicator2D_2<T,DESCRIPTOR>::operator() (T output[], co
 {
   SuperLatticePhysBoundaryForceIndicator2D<T,DESCRIPTOR> f(this->_sLattice, _superGeometry, _indicator, this->_converter);
 //  SuperLatticePhysVolumeForceIndicator2D<T,DESCRIPTOR> f(this->_sLattice, _superGeometry, _indicator, this->_converter);
-  SuperSumIndicator2D<T,DESCRIPTOR> sumF(f, _superGeometry, _indicator);
+  SuperSumIndicator2D<T> sumF(f, _superGeometry, _indicator);
 
   T sumFTmp[sumF.getTargetDim()];
   sumF(output, input);
@@ -632,7 +633,7 @@ bool SuperLatticePhysCorrDrag2D<T,DESCRIPTOR>::operator() (T output[], const int
   //  SuperGeometryFaces2D<T> faces(superGeometry, material, this->converter);
 
   //  SuperLatticePhysCorrBoundaryForce2D<T,DESCRIPTOR> f(this->sLattice, superGeometry, material, this->converter);
-  //  SuperSum2D<T,DESCRIPTOR> sumF(f, superGeometry, material);
+  //  SuperSum2D<T> sumF(f, superGeometry, material);
 
   //  T factor = 2. / (this->converter.getCharRho() * this->converter.getCharU() * this->converter.getCharU());
 

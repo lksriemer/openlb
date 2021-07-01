@@ -390,6 +390,12 @@ std::vector<T> SuperGeometryStatistics3D<T>::computeNormal(int material)
   }
 #endif
 
+  if (getNvoxel(material) == 0)
+  {
+      std::cerr << "Unkown material number" << std::endl;
+      std::exit(-1);
+  }
+
   for (int iDim=0; iDim<3; iDim++) {
     normal[iDim] /= getNvoxel(material);
   }

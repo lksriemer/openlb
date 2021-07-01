@@ -25,11 +25,15 @@
  * Representation of a 2d block geometry structure -- template instantiation.
  */
 
+#include "dynamics/latticeDescriptors.h"
+#include "dynamics/latticeDescriptors.hh"
 #include "blockGeometryStructure2D.h"
 #include "blockGeometryStructure2D.hh"
 
 namespace olb {
 
 template class BlockGeometryStructure2D<double>;
+
+template bool BlockGeometryStructure2D<double>::findStreamDirections<double,descriptors::D2Q9Descriptor>(int iX, int iY, int material, std::list<int> bulkMaterials, bool streamDirections[]);
 
 }

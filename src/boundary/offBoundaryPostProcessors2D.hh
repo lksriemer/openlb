@@ -187,6 +187,7 @@ process(BlockLattice2D<T,Lattice>& blockLattice)
   blockLattice.get(x, y)[opp] = blockLattice.get(xN, yN)[iPop];
 }
 
+
 template<typename T, template<typename U> class Lattice>
 VelocityBounceBackPostProcessor2D<T,Lattice>::
 VelocityBounceBackPostProcessor2D(int x_, int y_, int iPop_, T dist_)
@@ -226,6 +227,79 @@ process(BlockLattice2D<T,Lattice>& blockLattice)
   T j = u;//*blockLattice.get(x, y).computeRho();
   blockLattice.get(x, y)[opp] = blockLattice.get(xN, yN)[iPop] + j;
 }
+
+
+template<typename T, template<typename U> class Lattice>
+AntiBounceBackPostProcessor2D<T,Lattice>::
+AntiBounceBackPostProcessor2D(int x_, int y_, int iPop_)
+  : x(x_), y(y_), iPop(iPop_)
+{
+  typedef Lattice<T> L;
+  const int* c = L::c[iPop];
+  opp = util::opposite<L>(iPop);
+  xN = x + c[0];
+  yN = y + c[1];
+
+  /*
+    std::cout << "Corner (" << x << "," << y << "," <<
+        "), iPop: " << iPop << ", nP: (" << xN << "," << yN << "," <<
+        "), dist: " << dist << std::endl;
+  */
+}
+
+template<typename T, template<typename U> class Lattice>
+void AntiBounceBackPostProcessor2D<T,Lattice>::
+processSubDomain(BlockLattice2D<T,Lattice>& blockLattice, int x0_, int x1_, int y0_, int y1_)
+{
+  if (util::contained(x, y, x0_, x1_, y0_, y1_) ) {
+    process(blockLattice);
+  }
+}
+
+template<typename T, template<typename U> class Lattice>
+void AntiBounceBackPostProcessor2D<T,Lattice>::
+process(BlockLattice2D<T,Lattice>& blockLattice)
+{
+  /*T u = blockLattice.get(xN, yN).getDynamics()->getVelocityCoefficient(iPop);
+  blockLattice.get(xN, yN).getDynamics()->defineRho( blockLattice.get(xN, yN), blockLattice.get(x, y).computeRho() );*/
+  //T j = u;//*blockLattice.get(x, y).computeRho();
+  if (Lattice<T>::c[iPop][1]==0) {
+    blockLattice.get(x, y)[opp] = -blockLattice.get(xN, yN)[iPop];  // + j;
+  }
+  //std::cout << "here" << std::endl;
+}
+
+
+template<typename T, template<typename U> class Lattice>
+BoundaryStreamPostProcessor2D<T,Lattice>::
+BoundaryStreamPostProcessor2D(int x_, int y_, const bool streamDirection[Lattice<T>::q])
+  : x(x_), y(y_)
+{
+  for (int iPop = 0; iPop < Lattice<T>::q ; ++iPop) {
+    this->_streamDirections[iPop] = streamDirection[iPop];
+  }
+}
+
+template<typename T, template<typename U> class Lattice>
+void BoundaryStreamPostProcessor2D<T,Lattice>::
+processSubDomain(BlockLattice2D<T,Lattice>& blockLattice, int x0_, int x1_, int y0_, int y1_)
+{
+  if (util::contained(x, y, x0_, x1_, y0_, y1_) ) {
+    process(blockLattice);
+  }
+}
+
+template<typename T, template<typename U> class Lattice>
+void BoundaryStreamPostProcessor2D<T,Lattice>::
+process(BlockLattice2D<T,Lattice>& blockLattice)
+{
+  for (int iPop = 1; iPop < Lattice<T>::q ; ++iPop) {
+    if (_streamDirections[iPop]) {
+      blockLattice.get(x + Lattice<T>::c[iPop][0], y + Lattice<T>::c[iPop][1])[iPop] = blockLattice.get(x, y)[iPop];
+    }
+  }
+}
+
 
 ////////  LinearBouzidiBoundaryPostProcessorGenerator ////////////////////////////////
 
@@ -323,6 +397,56 @@ VelocityBounceBackPostProcessorGenerator2D<T,Lattice>::clone() const
          (this->x, this->y, this->iPop, this->dist);
 }
 
+
+template<typename T, template<typename U> class Lattice>
+AntiBounceBackPostProcessorGenerator2D<T,Lattice>::
+AntiBounceBackPostProcessorGenerator2D(int x_, int y_, int iPop_)
+  : PostProcessorGenerator2D<T,Lattice>(x_, x_, y_, y_),
+    x(x_), y(y_), iPop(iPop_)
+{ }
+
+template<typename T, template<typename U> class Lattice>
+PostProcessor2D<T,Lattice>*
+AntiBounceBackPostProcessorGenerator2D<T,Lattice>::generate() const
+{
+  return new AntiBounceBackPostProcessor2D<T,Lattice>
+         ( this->x, this->y, this->iPop);
+}
+
+template<typename T, template<typename U> class Lattice>
+PostProcessorGenerator2D<T,Lattice>*
+AntiBounceBackPostProcessorGenerator2D<T,Lattice>::clone() const
+{
+  return new AntiBounceBackPostProcessorGenerator2D<T,Lattice>
+         (this->x, this->y, this->iPop);
+}
+
+template<typename T, template<typename U> class Lattice>
+BoundaryStreamPostProcessorGenerator2D<T,Lattice>::
+BoundaryStreamPostProcessorGenerator2D(int x_, int y_, const bool streamDirections[Lattice<T>::q])
+  : PostProcessorGenerator2D<T,Lattice>(x_, x_, y_, y_),
+    x(x_), y(y_)
+{
+  for (int iPop = 0; iPop < Lattice<T>::q ; ++iPop) {
+    this->_streamDirections[iPop] = streamDirections[iPop];
+  }
+}
+
+template<typename T, template<typename U> class Lattice>
+PostProcessor2D<T,Lattice>*
+BoundaryStreamPostProcessorGenerator2D<T,Lattice>::generate() const
+{
+  return new BoundaryStreamPostProcessor2D<T,Lattice>
+         ( this->x, this->y, this->_streamDirections);
+}
+
+template<typename T, template<typename U> class Lattice>
+PostProcessorGenerator2D<T,Lattice>*
+BoundaryStreamPostProcessorGenerator2D<T,Lattice>::clone() const
+{
+  return new BoundaryStreamPostProcessorGenerator2D<T,Lattice>
+         (this->x, this->y, this->_streamDirections);
+}
 }  // namespace olb
 
 #endif

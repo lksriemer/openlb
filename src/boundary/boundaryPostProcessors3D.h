@@ -42,10 +42,12 @@ template<typename T, template<typename U> class Lattice, int direction, int orie
 class PlaneFdBoundaryProcessor3D : public LocalPostProcessor3D<T,Lattice> {
 public:
   PlaneFdBoundaryProcessor3D (int x0_, int x1_, int y0_, int y1_, int z0_, int z1_);
-  virtual int extent() const {
+  virtual int extent() const
+  {
     return 1;
   }
-  virtual int extent(int whichDirection) const {
+  virtual int extent(int whichDirection) const
+  {
     return 1;
   }
   virtual void process(BlockLattice3D<T,Lattice>& blockLattice);
@@ -77,10 +79,12 @@ class StraightConvectionBoundaryProcessor3D : public LocalPostProcessor3D<T,Latt
 public:
   StraightConvectionBoundaryProcessor3D(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_, T* uAv_ = NULL);
   ~StraightConvectionBoundaryProcessor3D();
-  virtual int extent() const {
+  virtual int extent() const
+  {
     return 1;
   }
-  virtual int extent(int whichDirection) const {
+  virtual int extent(int whichDirection) const
+  {
     return 1;
   }
   virtual void process(BlockLattice3D<T,Lattice>& blockLattice);
@@ -115,10 +119,12 @@ public:
 public:
   OuterVelocityEdgeProcessor3D (
     int x0_, int x1_, int y0_, int y1_, int z0_, int z1_ );
-  virtual int extent() const {
+  virtual int extent() const
+  {
     return 2;
   }
-  virtual int extent(int whichDirection) const {
+  virtual int extent(int whichDirection) const
+  {
     return 2;
   }
   virtual void process(BlockLattice3D<T,Lattice>& blockLattice);
@@ -139,7 +145,7 @@ private:
 template<typename T, template<typename U> class Lattice,
          int plane, int normal1, int normal2>
 class OuterVelocityEdgeProcessorGenerator3D
-    : public PostProcessorGenerator3D<T,Lattice> {
+  : public PostProcessorGenerator3D<T,Lattice> {
 public:
   OuterVelocityEdgeProcessorGenerator3D(int x0_, int x1_, int y0_, int y1_,
                                         int z0_, int z1_);
@@ -153,10 +159,12 @@ template<typename T, template<typename U> class Lattice,
 class OuterVelocityCornerProcessor3D : public LocalPostProcessor3D<T,Lattice> {
 public:
   OuterVelocityCornerProcessor3D(int x_, int y_, int z_);
-  virtual int extent() const {
+  virtual int extent() const
+  {
     return 2;
   }
-  virtual int extent(int whichDirection) const {
+  virtual int extent(int whichDirection) const
+  {
     return 2;
   }
   virtual void process(BlockLattice3D<T,Lattice>& blockLattice);
@@ -170,13 +178,49 @@ private:
 template<typename T, template<typename U> class Lattice,
          int xNormal, int yNormal, int zNormal>
 class OuterVelocityCornerProcessorGenerator3D
-    : public PostProcessorGenerator3D<T,Lattice> {
+  : public PostProcessorGenerator3D<T,Lattice> {
 public:
   OuterVelocityCornerProcessorGenerator3D(int x_, int y_, int z_);
   virtual PostProcessor3D<T,Lattice>* generate() const;
   virtual PostProcessorGenerator3D<T,Lattice>*  clone() const;
 };
 
+/**
+* This class computes a slip BC in 3D
+*/
+
+template<typename T, template<typename U> class Lattice>
+class SlipBoundaryProcessor3D : public LocalPostProcessor3D<T,Lattice> {
+public:
+  SlipBoundaryProcessor3D(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_, int discreteNormalX_, int discreteNormalY_, int discreteNormalZ_);
+  virtual int extent() const
+  {
+    return 0;
+  }
+  virtual int extent(int whichDirection) const
+  {
+    return 0;
+  }
+  virtual void process(BlockLattice3D<T,Lattice>& blockLattice);
+  virtual void processSubDomain ( BlockLattice3D<T,Lattice>& blockLattice,
+                                  int x0_, int x1_, int y0_, int y1_, int z0_, int z1_ );
+private:
+  int reflectionPop[Lattice<T>::q];
+  int x0, x1, y0, y1, z0, z1;
+};
+
+
+template<typename T, template<typename U> class Lattice>
+class SlipBoundaryProcessorGenerator3D : public PostProcessorGenerator3D<T,Lattice> {
+public:
+  SlipBoundaryProcessorGenerator3D(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_, int discreteNormalX_, int discreteNormalY_, int discreteNormalZ_);
+  virtual PostProcessor3D<T,Lattice>* generate() const;
+  virtual PostProcessorGenerator3D<T,Lattice>*  clone() const;
+private:
+  int discreteNormalX;
+  int discreteNormalY;
+  int discreteNormalZ;
+};
 }
 
 #endif

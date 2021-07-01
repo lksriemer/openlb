@@ -139,11 +139,13 @@ struct V12Force3dDescriptorBase {
 template<typename T, typename ExternalField>
 class ExternalFieldArray {
 public:
-  T* get(int index) {
+  T* get(int index)
+  {
     OLB_PRECONDITION( index < ExternalField::numScalars );
     return data+index;
   }
-  T const* get(int index) const {
+  T const* get(int index) const
+  {
     OLB_PRECONDITION( index < ExternalField::numScalars );
     return data+index;
   }
@@ -154,12 +156,14 @@ private:
 template<typename T>
 class ExternalFieldArray<T,descriptors::NoExternalField> {
 public:
-  T* get(unsigned index) {
+  T* get(unsigned index)
+  {
     OLB_PRECONDITION( false );
     static T data = T();
     return &data;
   }
-  T const* get(unsigned index) const {
+  T const* get(unsigned index) const
+  {
     OLB_PRECONDITION( false );
     static T data = T();
     return &data;
@@ -173,6 +177,7 @@ template <typename T> struct D2Q9DescriptorBase {
   enum { d = 2, q = 9 };      ///< number of dimensions/distr. functions
   static const int vicinity;  ///< size of neighborhood
   static const int c[q][d];   ///< lattice directions
+  static const int opposite[q]; ///< opposite entry
   static const T t[q];        ///< lattice weights
   static const T invCs2;      ///< inverse square of speed of sound
 };
@@ -183,6 +188,7 @@ template <typename T> struct D3Q13DescriptorBase {
   enum { d = 3, q = 13 };     ///< number of dimensions/distr. functions
   static const int vicinity;  ///< size of neighborhood
   static const int c[q][d];   ///< lattice directions
+  static const int opposite[q]; ///< opposite entry
   static const T t[q];        ///< lattice weights
   static const T invCs2;      ///< inverse square of speed of sound
   static const T lambda_e;    ///< relaxation parameter for the bulk stress
@@ -195,6 +201,7 @@ template <typename T> struct D3Q15DescriptorBase {
   enum { d = 3, q = 15 };     ///< number of dimensions/distr. functions
   static const int vicinity;  ///< size of neighborhood
   static const int c[q][d];   ///< lattice directions
+  static const int opposite[q]; ///< opposite entry
   static const T t[q];        ///< lattice weights
   static const T invCs2;      ///< inverse square of speed of sound
 };
@@ -205,6 +212,7 @@ template <typename T> struct D3Q19DescriptorBase {
   enum { d = 3, q = 19 };     ///< number of dimensions/distr. functions
   static const int vicinity;  ///< size of neighborhood
   static const int c[q][d];   ///< lattice directions
+  static const int opposite[q]; ///< opposite entry
   static const T t[q];        ///< lattice weights
   static const T invCs2;      ///< inverse square of speed of sound
 };
@@ -215,56 +223,57 @@ template <typename T> struct D3Q27DescriptorBase {
   enum { d = 3, q = 27 };     ///< number of dimensions/distr. functions
   static const int vicinity;  ///< size of neighborhood
   static const int c[q][d];   ///< lattice directions
+  static const int opposite[q]; ///< opposite entry
   static const T t[q];        ///< lattice weights
   static const T invCs2;      ///< inverse square of speed of sound
 };
 
 template <typename T> struct D2Q9Descriptor
-    : public D2Q9DescriptorBase<T>, public NoExternalFieldBase {
+  : public D2Q9DescriptorBase<T>, public NoExternalFieldBase {
 };
 
 template <typename T> struct ForcedD2Q9Descriptor
-    : public D2Q9DescriptorBase<T>, public Force2dDescriptorBase {
+  : public D2Q9DescriptorBase<T>, public Force2dDescriptorBase {
 };
 
 template <typename T> struct V6ForcedD2Q9Descriptor
-    : public D2Q9DescriptorBase<T>, public V6Force2dDescriptorBase {
+  : public D2Q9DescriptorBase<T>, public V6Force2dDescriptorBase {
 };
 
 template <typename T> struct D3Q13Descriptor
-    : public D3Q13DescriptorBase<T>, public NoExternalFieldBase {
+  : public D3Q13DescriptorBase<T>, public NoExternalFieldBase {
 };
 
 template <typename T> struct ForcedD3Q13Descriptor
-    : public D3Q13DescriptorBase<T>, public Force3dDescriptorBase {
+  : public D3Q13DescriptorBase<T>, public Force3dDescriptorBase {
 };
 
 template <typename T> struct D3Q15Descriptor
-    : public D3Q15DescriptorBase<T>, public NoExternalFieldBase {
+  : public D3Q15DescriptorBase<T>, public NoExternalFieldBase {
 };
 
 template <typename T> struct ForcedD3Q15Descriptor
-    : public D3Q15DescriptorBase<T>, public Force3dDescriptorBase {
+  : public D3Q15DescriptorBase<T>, public Force3dDescriptorBase {
 };
 
 template <typename T> struct D3Q19Descriptor
-    : public D3Q19DescriptorBase<T>, public NoExternalFieldBase {
+  : public D3Q19DescriptorBase<T>, public NoExternalFieldBase {
 };
 
 template <typename T> struct ForcedD3Q19Descriptor
-    : public D3Q19DescriptorBase<T>, public Force3dDescriptorBase {
+  : public D3Q19DescriptorBase<T>, public Force3dDescriptorBase {
 };
 
 template <typename T> struct V12ForcedD3Q19Descriptor
-    : public D3Q19DescriptorBase<T>, public V12Force3dDescriptorBase {
+  : public D3Q19DescriptorBase<T>, public V12Force3dDescriptorBase {
 };
 
 template <typename T> struct D3Q27Descriptor
-    : public D3Q27DescriptorBase<T>, public NoExternalFieldBase {
+  : public D3Q27DescriptorBase<T>, public NoExternalFieldBase {
 };
 
 template <typename T> struct ForcedD3Q27Descriptor
-    : public D3Q27DescriptorBase<T>, public Force3dDescriptorBase {
+  : public D3Q27DescriptorBase<T>, public Force3dDescriptorBase {
 };
 
 }  // namespace descriptors

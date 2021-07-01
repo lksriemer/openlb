@@ -24,7 +24,7 @@
 #ifndef BLOCK_LATTICE_LOCAL_F_3D_H
 #define BLOCK_LATTICE_LOCAL_F_3D_H
 
-
+#include "core/units.h"
 #include "functors/blockBaseF3D.h"
 #include "geometry/blockGeometry3D.h"
 
@@ -43,7 +43,7 @@ template<typename T, template<typename U> class Lattice> class blockLatticeStruc
 
 /// functor returns pointwise f population on local lattices
 template <typename T, template <typename U> class DESCRIPTOR>
-class BlockLatticeFpop3D : public BlockLatticeF3D<T,DESCRIPTOR> {
+class BlockLatticeFpop3D final : public BlockLatticeF3D<T,DESCRIPTOR> {
 protected:
 public:
   BlockLatticeFpop3D(BlockLatticeStructure3D<T,DESCRIPTOR>& blockLattice);
@@ -54,7 +54,7 @@ public:
 
 /// functor returns pointwise dissipation density on local lattices
 template <typename T, template <typename U> class DESCRIPTOR>
-class BlockLatticeDissipation3D : public BlockLatticeF3D<T,DESCRIPTOR> {
+class BlockLatticeDissipation3D final : public BlockLatticeF3D<T,DESCRIPTOR> {
 protected:
   const LBconverter<T>& _converter;
 public:
@@ -65,7 +65,7 @@ public:
 
 /// functor returns pointwise dissipation density on local lattices
 template <typename T, template <typename U> class DESCRIPTOR>
-class BlockLatticePhysDissipation3D : public BlockLatticeF3D<T,DESCRIPTOR> {
+class BlockLatticePhysDissipation3D final : public BlockLatticeF3D<T,DESCRIPTOR> {
 protected:
   const LBconverter<T>& _converter;
 public:
@@ -74,11 +74,34 @@ public:
   bool operator() (T output[], const int input[]);
 };
 
+/// functor returns pointwise turbulent dissipation density on local lattices
+template <typename T, template <typename U> class DESCRIPTOR>
+class BlockLatticeEffevtiveDissipation3D final : public BlockLatticeF3D<T,DESCRIPTOR> {
+protected:
+  const LBconverter<T>& _converter;
+  T _smagoConst;
+public:
+  BlockLatticeEffevtiveDissipation3D(BlockLatticeStructure3D<T,DESCRIPTOR>& blockLattice,
+                                     const LBconverter<T>& converter, T smagoConst);
+  bool operator() (T output[], const int input[]);
+};
+
+/// functor returns pointwise turbulent dissipation density on local lattices
+template <typename T, template <typename U> class DESCRIPTOR>
+class BlockLatticePhysEffevtiveDissipation3D final : public BlockLatticeF3D<T,DESCRIPTOR> {
+protected:
+  const LBconverter<T>& _converter;
+  T _smagoConst;
+public:
+  BlockLatticePhysEffevtiveDissipation3D(BlockLatticeStructure3D<T,DESCRIPTOR>& blockLattice,
+                                         const LBconverter<T>& converter, T smagoConst);
+  bool operator() (T output[], const int input[]);
+};
 
 
 /// functor returns pointwise density rho on local lattices
 template <typename T, template <typename U> class DESCRIPTOR>
-class BlockLatticeDensity3D : public BlockLatticeF3D<T,DESCRIPTOR> {
+class BlockLatticeDensity3D final : public BlockLatticeF3D<T,DESCRIPTOR> {
 public:
   BlockLatticeDensity3D(BlockLatticeStructure3D<T,DESCRIPTOR>& blockLattice);
   bool operator() (T output[], const int input[]);
@@ -87,7 +110,7 @@ public:
 
 /// functor returns pointwise velocity on local lattice
 template <typename T, template <typename U> class DESCRIPTOR>
-class BlockLatticeVelocity3D : public BlockLatticeF3D<T,DESCRIPTOR> {
+class BlockLatticeVelocity3D final : public BlockLatticeF3D<T,DESCRIPTOR> {
 public:
   BlockLatticeVelocity3D(BlockLatticeStructure3D<T,DESCRIPTOR>& blockLattice);
   bool operator() (T output[], const int input[]);
@@ -96,7 +119,7 @@ public:
 
 /// functor returns pointwise the material no. presenting the geometry on local lattice
 template <typename T, template <typename U> class DESCRIPTOR>
-class BlockLatticeGeometry3D : public BlockLatticeF3D<T,DESCRIPTOR> {
+class BlockLatticeGeometry3D final : public BlockLatticeF3D<T,DESCRIPTOR> {
   BlockGeometryStructure3D<T>& _blockGeometry;
   int _material;
 public:
@@ -105,10 +128,29 @@ public:
   bool operator() (T output[], const int input[]);
 };
 
+/// functor to get pointwise the rank no. + 1 on local lattice
+template <typename T, template <typename U> class DESCRIPTOR>
+class BlockLatticeRank3D final : public BlockLatticeF3D<T,DESCRIPTOR> {
+public:
+  BlockLatticeRank3D(BlockLatticeStructure3D<T,DESCRIPTOR>& blockLattice);
+  bool operator() (T output[], const int input[]);
+};
+
+/// functor to get pointwise the cuboid no. + 1 on local lattice
+template <typename T, template <typename U> class DESCRIPTOR>
+class BlockLatticeCuboid3D final : public BlockLatticeF3D<T,DESCRIPTOR> {
+private:
+  // holds cuboid nmb of current block
+  int _iC;
+public:
+  BlockLatticeCuboid3D(BlockLatticeStructure3D<T,DESCRIPTOR>& blockLattice, int iC);
+  bool operator() (T output[], const int input[]);
+};
+
 
 /// functor returns pointwise phys pressure from rho on local lattices
 template <typename T, template <typename U> class DESCRIPTOR>
-class BlockLatticePhysPressure3D : public BlockLatticePhysF3D<T,DESCRIPTOR> {
+class BlockLatticePhysPressure3D final : public BlockLatticePhysF3D<T,DESCRIPTOR> {
 public:
   BlockLatticePhysPressure3D(BlockLatticeStructure3D<T,DESCRIPTOR>& blockLattice,
                              const LBconverter<T>& converter);
@@ -118,7 +160,7 @@ public:
 
 /// functor returns pointwise phys velocity on local lattice
 template <typename T, template <typename U> class DESCRIPTOR>
-class BlockLatticePhysVelocity3D : public BlockLatticePhysF3D<T,DESCRIPTOR> {
+class BlockLatticePhysVelocity3D final : public BlockLatticePhysF3D<T,DESCRIPTOR> {
 public:
   BlockLatticePhysVelocity3D(BlockLatticeStructure3D<T,DESCRIPTOR>& blockLattice,
                              const LBconverter<T>& converter, bool print=false);
@@ -128,7 +170,41 @@ private:
 };
 
 template <typename T, template <typename U> class DESCRIPTOR>
-class BlockLatticePhysExternal3D : public BlockLatticePhysF3D<T,DESCRIPTOR> {
+class BlockLatticePhysExternalVelocity3D final : public BlockLatticePhysF3D<T,DESCRIPTOR> {
+public:
+  BlockLatticePhysExternalVelocity3D(BlockLatticeStructure3D<T,DESCRIPTOR>& blockLattice,
+                                     const LBconverter<T>& converter);
+  bool operator() (T output[], const int input[]);
+};
+
+template <typename T, template <typename U> class DESCRIPTOR>
+class BlockLatticePhysExternalPorosity3D final : public BlockLatticePhysF3D<T,DESCRIPTOR> {
+public:
+  BlockLatticePhysExternalPorosity3D(BlockLatticeStructure3D<T,DESCRIPTOR>& blockLattice,
+                                     const LBconverter<T>& converter);
+  bool operator() (T output[], const int input[]);
+};
+
+template <typename T, template <typename U> class DESCRIPTOR>
+class BlockLatticePhysExternalParticleVelocity3D final : public BlockLatticePhysF3D<T,DESCRIPTOR> {
+public:
+  BlockLatticePhysExternalParticleVelocity3D(BlockLatticeStructure3D<T,DESCRIPTOR>& blockLattice,
+      const LBconverter<T>& converter);
+  bool operator() (T output[], const int input[]);
+};
+
+template <typename T, template <typename U> class DESCRIPTOR>
+class BlockLatticeExternal3D final : public BlockLatticeF3D<T,DESCRIPTOR> {
+public:
+  BlockLatticeExternal3D(BlockLatticeStructure3D<T,DESCRIPTOR>& blockLattice, int begin, int size);
+  bool operator() (T output[], const int input[]);
+private:
+  int _start, _size;
+};
+
+
+template <typename T, template <typename U> class DESCRIPTOR>
+class BlockLatticePhysExternal3D final : public BlockLatticePhysF3D<T,DESCRIPTOR> {
 public:
   BlockLatticePhysExternal3D(BlockLatticeStructure3D<T,DESCRIPTOR>& blockLattice,
                              const LBconverter<T>& converter);
@@ -137,7 +213,7 @@ public:
 
 /// functor returns pointwise strain rate on local lattice, s_ij = 1/2*(du_idr_j + du_jdr_i)
 template <typename T, template <typename U> class DESCRIPTOR>
-class BlockLatticeStrainRate3D : public BlockLatticePhysF3D<T,DESCRIPTOR> {
+class BlockLatticeStrainRate3D final : public BlockLatticePhysF3D<T,DESCRIPTOR> {
 public:
   BlockLatticeStrainRate3D(BlockLatticeStructure3D<T,DESCRIPTOR>& blockLattice,
                            const LBconverter<T>& converter);
@@ -146,7 +222,7 @@ public:
 
 /// functor returns pointwise phys strain rate on local lattice, s_ij = 1/2*(du_idr_j + du_jdr_i)
 template <typename T, template <typename U> class DESCRIPTOR>
-class BlockLatticePhysStrainRate3D : public BlockLatticePhysF3D<T,DESCRIPTOR> {
+class BlockLatticePhysStrainRate3D final : public BlockLatticePhysF3D<T,DESCRIPTOR> {
 public:
   BlockLatticePhysStrainRate3D(BlockLatticeStructure3D<T,DESCRIPTOR>& blockLattice,
                                const LBconverter<T>& converter);
@@ -155,7 +231,7 @@ public:
 
 /// functor returns pointwise phys force acting on a boundary with a given material on local lattice
 template <typename T, template <typename U> class DESCRIPTOR>
-class BlockLatticePhysBoundaryForce3D : public BlockLatticePhysF3D<T,DESCRIPTOR> {
+class BlockLatticePhysBoundaryForce3D final : public BlockLatticePhysF3D<T,DESCRIPTOR> {
 private:
   BlockGeometryStructure3D<T>& _blockGeometry;
   int _material;
@@ -172,7 +248,7 @@ public:
  *  see: Caiazzo, Junk: Boundary Forces in lattice Boltzmann: Analysis of MEA
  */
 template <typename T, template <typename U> class DESCRIPTOR>
-class BlockLatticePhysCorrBoundaryForce3D : public BlockLatticePhysF3D<T,DESCRIPTOR> {
+class BlockLatticePhysCorrBoundaryForce3D final : public BlockLatticePhysF3D<T,DESCRIPTOR> {
 private:
   BlockGeometryStructure3D<T>& _blockGeometry;
   int _material;
@@ -186,7 +262,7 @@ public:
 
 /// functor to get pointwise, lattice-dependent external field
 template <typename T, template <typename U> class DESCRIPTOR>
-class BlockLatticeExternalField3D : public BlockLatticeF3D<T,DESCRIPTOR> {
+class BlockLatticeExternalField3D final : public BlockLatticeF3D<T,DESCRIPTOR> {
 private:
   int _beginsAt;
   int _sizeOf;
@@ -200,8 +276,7 @@ public:
  *  in combination with (Extended)PorousBGKdynamics: 0->solid, 1->fluid
  */
 template <typename T, template <typename U> class DESCRIPTOR>
-class BlockLatticePorosity3D : public BlockLatticeF3D<T,DESCRIPTOR> {
-private:
+class BlockLatticePorosity3D final : public BlockLatticeF3D<T,DESCRIPTOR> {
 public:
   BlockLatticePorosity3D(BlockLatticeStructure3D<T,DESCRIPTOR>& blockLattice);
   bool operator() (T output[], const int input[]);
@@ -214,7 +289,33 @@ public:
  *  note: result is cropped to 999999
  */
 template <typename T, template <typename U> class DESCRIPTOR>
-class BlockLatticePhysPermeability3D : public BlockLatticePhysF3D<T,DESCRIPTOR> {
+class BlockLatticePhysPermeability3D final : public BlockLatticeF3D<T,DESCRIPTOR> {
+private:
+  const LBconverter<T>& _converter;
+public:
+  BlockLatticePhysPermeability3D(BlockLatticeStructure3D<T,DESCRIPTOR>& blockLattice, const LBconverter<T>& converter);
+  bool operator() (T output[], const int input[]);
+};
+
+
+/**
+ *  functor to get pointwise mesh-independent permeability values in (0,inf)
+ *  in combination with (Extended)PorousBGKdynamics
+ *  note: result is cropped to 1
+ */
+template <typename T, template <typename U> class DESCRIPTOR>
+class BlockLatticePhysCroppedPermeability3D final : public BlockLatticeF3D<T,DESCRIPTOR> {
+private:
+  const LBconverter<T>& _converter;
+public:
+  BlockLatticePhysCroppedPermeability3D(BlockLatticeStructure3D<T,DESCRIPTOR>& blockLattice, const LBconverter<T>& converter);
+  bool operator() (T output[], const int input[]);
+};
+
+
+/*
+template <typename T, template <typename U> class DESCRIPTOR>
+class BlockLatticePhysPermeability3D final : public BlockLatticePhysF3D<T,DESCRIPTOR> {
 private:
   BlockGeometry3D<T>& _blockGeometry;
   int _material;
@@ -223,12 +324,12 @@ public:
                                  BlockGeometry3D<T>& blockGeometry,
                                  int material, const LBconverter<T>& converter);
   bool operator() (T output[], const int input[]);
-};
+};*/
 
 
 /// functor returns pointwise -nu/K*u on the lattice, can be used with BlockSum3D as objective
 template <typename T, template <typename U> class DESCRIPTOR>
-class BlockLatticePhysDarcyForce3D : public BlockLatticePhysF3D<T,DESCRIPTOR> {
+class BlockLatticePhysDarcyForce3D final : public BlockLatticePhysF3D<T,DESCRIPTOR> {
 private:
   BlockGeometry3D<T>& _blockGeometry;
   int _material;
@@ -246,7 +347,7 @@ public:
  *  the output data must be of the same size and dimension like f
  */
 template <typename T, template <typename U> class DESCRIPTOR>
-class BlockLatticeAverage3D : public BlockLatticeF3D<T,DESCRIPTOR> {
+class BlockLatticeAverage3D final : public BlockLatticeF3D<T,DESCRIPTOR> {
 private:
   BlockLatticeF3D<T,DESCRIPTOR>& _f;
   BlockGeometry3D<T>& _blockGeometry;
@@ -262,7 +363,7 @@ public:
 
 /// functor returns pointwise the l2-norm, e.g. of a velocity
 template <typename T, template <typename U> class DESCRIPTOR>
-class BlockEuklidNorm3D : public BlockF3D<T> {
+class BlockEuklidNorm3D final : public BlockF3D<T> {
 protected:
   BlockF3D<T>& _f;
 public:
@@ -272,7 +373,7 @@ public:
 
 
 template <typename T, template <typename U> class DESCRIPTOR>
-class BlockLatticeInterpPhysVelocity3D : public BlockLatticeF3D<T,DESCRIPTOR> {
+class BlockLatticeInterpPhysVelocity3D final : public BlockLatticeF3D<T,DESCRIPTOR> {
 protected:
   LBconverter<T>& _conv;
   Cuboid3D<T>* _cuboid;
@@ -280,13 +381,42 @@ protected:
 public:
   BlockLatticeInterpPhysVelocity3D(BlockLatticeStructure3D<T,DESCRIPTOR>& blockLattice, LBconverter<T>& conv, Cuboid3D<T>* c, int overlap);
   BlockLatticeInterpPhysVelocity3D(const BlockLatticeInterpPhysVelocity3D<T,DESCRIPTOR>& rhs);
-  bool operator() (T output[3], const int input[3]) {
+  bool operator() (T output[3], const int input[3])
+  {
     return false;
   }
   void operator() (T output[3], const T input[3]);
-
 };
 
+//template <typename T, template <typename U> class DESCRIPTOR>
+//class BlockLatticeInterpPhysVelocity3Degree3D final : public BlockLatticeF3D<T,DESCRIPTOR> {
+//protected:
+//  LBconverter<T>& _conv;
+//  Cuboid3D<T>* _cuboid;
+//  int _overlap;
+//public:
+//  BlockLatticeInterpPhysVelocity3Degree3D(BlockLatticeStructure3D<T,DESCRIPTOR>& blockLattice, LBconverter<T>& conv, Cuboid3D<T>* c, int overlap);
+//  BlockLatticeInterpPhysVelocity3Degree3D(const BlockLatticeInterpPhysVelocity3Degree3D<T,DESCRIPTOR>& rhs);
+//  bool operator() (T output[3], const int input[3]) {
+//    return false;
+//  }
+//  void operator() (T output[3], const T input[3]);
+//};
+//
+//template <typename T, template <typename U> class DESCRIPTOR>
+//class BlockLatticeInterpDensity3Degree3D final : public BlockLatticeF3D<T,DESCRIPTOR> {
+//protected:
+//  LBconverter<T>& _conv;
+//  Cuboid3D<T>* _cuboid;
+//  int _overlap;
+//public:
+//  BlockLatticeInterpDensity3Degree3D(BlockLatticeStructure3D<T,DESCRIPTOR>& blockLattice, LBconverter<T>& conv, Cuboid3D<T>* c, int overlap);
+//  BlockLatticeInterpDensity3Degree3D(const BlockLatticeInterpDensity3Degree3D<T,DESCRIPTOR>& rhs);
+//  bool operator() (T output[3], const int input[3]) {
+//    return false;
+//  }
+//  void operator() (T output[3], const T input[3]);
+//};
 } // end namespace olb
 
 #endif

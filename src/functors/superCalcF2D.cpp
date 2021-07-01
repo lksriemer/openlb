@@ -26,10 +26,23 @@
 
 namespace olb {
 
-template class SuperCalc2D<double>;
-template class SuperPlus2D<double>;
-template class SuperMinus2D<double>;
-template class SuperMultiplication2D<double>;
-template class SuperDivision2D<double>;
+template class SuperCalc2D<double,double>;
+template class SuperCalc2D<double,int>;
+template class SuperCalc2D<double,bool>;
+
+template class SuperPlus2D<double,double>;
+template class SuperPlus2D<double,int>;
+template class SuperPlus2D<double,bool>;
+
+template class SuperMinus2D<double,double>;
+template class SuperMinus2D<double,int>;
+template class SuperMinus2D<double,bool>;
+
+template class SuperMultiplication2D<double,double>;
+template class SuperMultiplication2D<double,int>;
+template class SuperMultiplication2D<double,bool>;
+
+template class SuperDivision2D<double,double>;
+template class SuperDivision2D<double,int>;
 
 } // end namespace olb

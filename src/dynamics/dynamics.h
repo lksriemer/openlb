@@ -116,6 +116,7 @@ struct Dynamics {
   /** \param rho particle density
    */
   virtual void defineRho(Cell<T,Lattice>& cell, T rho) =0;
+  virtual void defineRho(int iPop, T rho);
   /// Set fluid velocity on the cell.
   /** \param u fluid velocity
    */
@@ -165,7 +166,7 @@ struct Dynamics {
   /// Get local relaxation parameter of the dynamics
   virtual T getOmega() const =0;
   /// Set local relaxation parameter of the dynamics
-  virtual void setOmega(T omega_) =0;
+  virtual void setOmega(T omega) =0;
   /// Get local value of any parameter
   virtual T getParameter(int whichParameter) const;
   /// Set local value of any parameter
@@ -229,7 +230,7 @@ template<typename T, template<typename U> class Lattice>
 class BasicDynamics : public Dynamics<T,Lattice> {
 public:
   /// Must be contructed with an object of type Momenta
-  BasicDynamics(Momenta<T,Lattice>& momenta_);
+  BasicDynamics(Momenta<T,Lattice>& momenta);
   /// Implemented via the Momenta object
   virtual T computeRho(Cell<T,Lattice> const& cell) const;
   /// Implemented via the Momenta object
@@ -269,7 +270,7 @@ public:
     T rho, const T u[Lattice<T>::d],
     const T pi[util::TensorVal<Lattice<T> >::n] );
 protected:
-  Momenta<T,Lattice>& momenta;  ///< computation of velocity momenta
+  Momenta<T,Lattice>& _momenta;  ///< computation of velocity momenta
 };
 
 /// Implementation of the BGK collision step
@@ -277,7 +278,7 @@ template<typename T, template<typename U> class Lattice>
 class BGKdynamics : public BasicDynamics<T,Lattice> {
 public:
   /// Constructor
-  BGKdynamics(T omega_, Momenta<T,Lattice>& momenta_);
+  BGKdynamics(T omega, Momenta<T,Lattice>& momenta);
   /// Clone the object on its dynamic type.
   virtual BGKdynamics<T,Lattice>* clone() const;
   /// Compute equilibrium distribution function
@@ -292,9 +293,9 @@ public:
   /// Get local relaxation parameter of the dynamics
   virtual T getOmega() const;
   /// Set local relaxation parameter of the dynamics
-  virtual void setOmega(T omega_);
+  virtual void setOmega(T omega);
 private:
-  T omega;  ///< relaxation parameter
+  T _omega;  ///< relaxation parameter
 };
 
 /// Implementation of the pressure-corrected BGK collision step
@@ -302,7 +303,7 @@ template<typename T, template<typename U> class Lattice>
 class ConstRhoBGKdynamics : public BasicDynamics<T,Lattice> {
 public:
   /// Constructor
-  ConstRhoBGKdynamics(T omega_, Momenta<T,Lattice>& momenta_);
+  ConstRhoBGKdynamics(T omega, Momenta<T,Lattice>& momenta);
   /// Clone the object on its dynamic type.
   virtual ConstRhoBGKdynamics<T,Lattice>* clone() const;
   /// Compute equilibrium distribution function
@@ -317,9 +318,9 @@ public:
   /// Get local relaxation parameter of the dynamics
   virtual T getOmega() const;
   /// Set local relaxation parameter of the dynamics
-  virtual void setOmega(T omega_);
+  virtual void setOmega(T omega);
 private:
-  T omega;  ///< relaxation parameter
+  T _omega;  ///< relaxation parameter
 };
 
 /// Implementation of the so-called incompressible collision step
@@ -327,7 +328,7 @@ template<typename T, template<typename U> class Lattice>
 class IncBGKdynamics : public BasicDynamics<T,Lattice> {
 public:
   /// Constructor
-  IncBGKdynamics(T omega_, Momenta<T,Lattice>& momenta_);
+  IncBGKdynamics(T omega, Momenta<T,Lattice>& momenta);
   /// Clone the object on its dynamic type.
   virtual IncBGKdynamics<T,Lattice>* clone() const;
   /// Compute equilibrium distribution function
@@ -342,9 +343,9 @@ public:
   /// Get local relaxation parameter of the dynamics
   virtual T getOmega() const;
   /// Set local relaxation parameter of the dynamics
-  virtual void setOmega(T omega_);
+  virtual void setOmega(T omega);
 private:
-  T omega;  ///< relaxation parameter
+  T _omega;  ///< relaxation parameter
 };
 
 
@@ -358,7 +359,7 @@ template<typename T, template<typename U> class Lattice>
 class RLBdynamics : public BasicDynamics<T,Lattice> {
 public:
   /// Constructor
-  RLBdynamics(T omega_, Momenta<T,Lattice>& momenta_);
+  RLBdynamics(T omega, Momenta<T,Lattice>& momenta);
   /// Clone the object on its dynamic type.
   virtual RLBdynamics<T,Lattice>* clone() const;
   /// Compute equilibrium distribution function
@@ -373,9 +374,9 @@ public:
   /// Get local relaxation parameter of the dynamics
   virtual T getOmega() const;
   /// Set local relaxation parameter of the dynamics
-  virtual void setOmega(T omega_);
+  virtual void setOmega(T omega);
 private:
-  T omega;  ///< relaxation parameter
+  T _omega;  ///< relaxation parameter
 };
 
 /// Implementation of Regularized BGK collision, followed by any Dynamics
@@ -383,7 +384,7 @@ template<typename T, template<typename U> class Lattice, typename Dynamics>
 class CombinedRLBdynamics : public BasicDynamics<T,Lattice> {
 public:
   /// Constructor
-  CombinedRLBdynamics(T omega_, Momenta<T,Lattice>& momenta_);
+  CombinedRLBdynamics(T omega, Momenta<T,Lattice>& momenta);
   /// Clone the object on its dynamic type.
   virtual CombinedRLBdynamics<T, Lattice, Dynamics>* clone() const;
   /// Compute equilibrium distribution function
@@ -398,13 +399,13 @@ public:
   /// Get local relaxation parameter of the dynamics
   virtual T getOmega() const;
   /// Set local relaxation parameter of the dynamics
-  virtual void setOmega(T omega_);
+  virtual void setOmega(T omega);
   /// Get local value of any parameter
   virtual T getParameter(int whichParameter) const;
   /// Set local value of any parameter
   virtual void setParameter(int whichParameter, T value);
 private:
-  Dynamics boundaryDynamics;
+  Dynamics _boundaryDynamics;
 };
 
 /// Implementation of the BGK collision step with external force
@@ -412,7 +413,7 @@ template<typename T, template<typename U> class Lattice>
 class ForcedBGKdynamics : public BasicDynamics<T,Lattice> {
 public:
   /// Constructor
-  ForcedBGKdynamics(T omega_, Momenta<T,Lattice>& momenta_);
+  ForcedBGKdynamics(T omega, Momenta<T,Lattice>& momenta);
   /// Clone the object on its dynamic type.
   virtual ForcedBGKdynamics<T,Lattice>* clone() const;
   ///  Compute fluid velocity on the cell.
@@ -435,11 +436,32 @@ public:
   /// Get local relaxation parameter of the dynamics
   virtual T getOmega() const;
   /// Set local relaxation parameter of the dynamics
-  virtual void setOmega(T omega_);
+  virtual void setOmega(T omega);
 protected:
-  T omega;  ///< relaxation parameter
+  T _omega;  ///< relaxation parameter
   static const int forceBeginsAt = Lattice<T>::ExternalField::forceBeginsAt;
   static const int sizeOfForce   = Lattice<T>::ExternalField::sizeOfForce;
+};
+
+/// Implementation of the BGK collision step with external force
+template<typename T, template<typename U> class Lattice>
+class ResettingForcedBGKdynamics : public ForcedBGKdynamics<T,Lattice> {
+public:
+  ResettingForcedBGKdynamics(T omega, Momenta<T,Lattice>& momenta);
+  /// Collision step
+  virtual void collide(Cell<T,Lattice>& cell,
+                       LatticeStatistics<T>& statistics_);
+  inline void setForce(T force[3])
+  {
+//    _frc[0] = force[0];
+//    _frc[1] = force[1];
+//    _frc[2] = force[2];
+    _frc[0] = 0.0;
+    _frc[1] = 0.0;
+    _frc[2] = 0.0;
+  }
+private:
+  T _frc[3];
 };
 
 /// Other Implementation of the BGK collision step with external force
@@ -447,7 +469,7 @@ template<typename T, template<typename U> class Lattice>
 class ForcedShanChenBGKdynamics : public ForcedBGKdynamics<T,Lattice> {
 public:
   /// Constructor
-  ForcedShanChenBGKdynamics(T omega_, Momenta<T,Lattice>& momenta_);
+  ForcedShanChenBGKdynamics(T omega, Momenta<T,Lattice>& momenta);
   ///  Compute fluid velocity on the cell.
   virtual void computeU (
     Cell<T,Lattice> const& cell,
@@ -470,7 +492,7 @@ template<typename T, template<typename U> class Lattice>
 class D3Q13dynamics : public BasicDynamics<T,Lattice> {
 public:
   /// Constructor
-  D3Q13dynamics(T omega_, Momenta<T,Lattice>& momenta_);
+  D3Q13dynamics(T omega, Momenta<T,Lattice>& momenta);
   /// Clone the object on its dynamic type.
   virtual D3Q13dynamics<T,Lattice>* clone() const;
   /// Compute equilibrium distribution function
@@ -485,7 +507,7 @@ public:
   /// Get local relaxation parameter of the dynamics
   virtual T getOmega() const;
   /// Set local relaxation parameter of the dynamics
-  virtual void setOmega(T omega_);
+  virtual void setOmega(T omega);
 private:
   T lambda_nu;        ///< first relaxation parameter
   T lambda_nu_prime;  ///< second relaxation parameter
@@ -591,7 +613,7 @@ public:
   /// A fictitious density value on bounce-back in not fixed on nodes via this constructor.
   BounceBack();
   /// You may fix a fictitious density value on bounce-back nodes via this constructor.
-  BounceBack(T rho_);
+  BounceBack(T rho);
   /// Clone the object on its dynamic type.
   virtual BounceBack<T,Lattice>* clone() const;
   /// Yields 0;
@@ -642,11 +664,175 @@ public:
   /// Yields NaN
   virtual T getOmega() const;
   /// Does nothing
-  virtual void setOmega(T omega_);
+  virtual void setOmega(T omega);
 private:
-  T rho;
-  bool rhoFixed;
+  T _rho;
+  bool _rhoFixed;
 };
+
+/// Implementation of "bounce-back velocity" dynamics
+/** This is a very popular way to implement no-slip boundary conditions,
+ * because the dynamics are independent of the orientation of the boundary.
+ * It is a special case, because it implements no usual LB dynamics.
+ * For that reason, it derives directly from the class Dynamics. It
+ * fixes the velociy to a given velocity _u.
+ *
+ * The code works for both 2D and 3D lattices.
+ */
+template<typename T, template<typename U> class Lattice>
+class BounceBackVelocity : public Dynamics<T,Lattice> {
+public:
+  /// A fictitious density value on bounce-back in not fixed on nodes via this constructor.
+  BounceBackVelocity(const T u[Lattice<T>::d]);
+  /// You may fix a fictitious density value on bounce-back nodes via this constructor.
+  BounceBackVelocity(const T rho, const T u[Lattice<T>::d]);
+  /// Clone the object on its dynamic type.
+  virtual BounceBackVelocity<T,Lattice>* clone() const;
+  /// Yields 0;
+  virtual T computeEquilibrium(int iPop, T rho, const T u[Lattice<T>::d], T uSqr) const;
+  /// Collision step, bounce back with a fixed velocity _u
+  virtual void collide(Cell<T,Lattice>& cell,
+                       LatticeStatistics<T>& statistics_);
+  /// Collide with fixed velocity
+  virtual void staticCollide(Cell<T,Lattice>& cell,
+                             const T u[Lattice<T>::d],
+                             LatticeStatistics<T>& statistics_);
+  /// Retuns rho (if defined else zero)
+  virtual T computeRho(Cell<T,Lattice> const& cell) const;
+  /// Retuns _u
+  virtual void computeU (
+    Cell<T,Lattice> const& cell,
+    T u[Lattice<T>::d] ) const;
+  /// Retuns rho (if defined else zero) times _u
+  virtual void computeJ (
+    Cell<T,Lattice> const& cell,
+    T j[Lattice<T>::d] ) const;
+  /// Yields NaN
+  virtual void computeStress (
+    Cell<T,Lattice> const& cell,
+    T rho, const T u[Lattice<T>::d],
+    T pi[util::TensorVal<Lattice<T> >::n] ) const;
+  /// Retuns rho (if defined else zero) and _u
+  virtual void computeRhoU (
+    Cell<T,Lattice> const& cell,
+    T& rho, T u[Lattice<T>::d]) const;
+  virtual void computeAllMomenta (
+    Cell<T,Lattice> const& cell,
+    T& rho, T u[Lattice<T>::d],
+    T pi[util::TensorVal<Lattice<T> >::n] ) const;
+  /// Devines the velocity rho
+  virtual void defineRho(Cell<T,Lattice>& cell, T rho);
+  /// Devines the velocity _u
+  virtual void defineU(Cell<T,Lattice>& cell,
+                       const T u[Lattice<T>::d]);
+  /// Devines rho and _u
+  virtual void defineRhoU (
+    Cell<T,Lattice>& cell,
+    T rho, const T u[Lattice<T>::d]);
+  /// Does nothing
+  virtual void defineAllMomenta (
+    Cell<T,Lattice>& cell,
+    T rho, const T u[Lattice<T>::d],
+    const T pi[util::TensorVal<Lattice<T> >::n] );
+  /// Yields NaN
+  virtual T getOmega() const;
+  /// Does nothing
+  virtual void setOmega(T omega);
+private:
+  T _rho;
+  bool _rhoFixed;
+  T _u[Lattice<T>::d];
+};
+
+/// Implementation of "bounce-back anti" dynamics
+/** This is a way to implement a Dirichlet rho/pressure boundary conditions,
+ * because the dynamics are independent of the orientation of the boundary.
+ * It is a special case, because it implements no usual LB dynamics.
+ * For that reason, it derives directly from the class Dynamics. It
+ * fixes the rho to a given _rho.
+ *
+ * The code works for both 2D and 3D lattices.
+ */
+template<typename T, template<typename U> class Lattice>
+class BounceBackAnti : public Dynamics<T,Lattice> {
+public:
+  /// A fictitious density value on bounce-back in not fixed on nodes via this constructor.
+  BounceBackAnti();
+  /// You may fix a fictitious density value on bounce-back nodes via this constructor.
+  BounceBackAnti(T rho);
+  /// Clone the object on its dynamic type.
+  virtual BounceBackAnti<T,Lattice>* clone() const;
+  /// Yields 0;
+  virtual T computeEquilibrium(int iPop, T rho, const T u[Lattice<T>::d], T uSqr) const;
+  /// Collision step, bounce back with a fixed velocity _u
+  virtual void collide(Cell<T,Lattice>& cell,
+                       LatticeStatistics<T>& statistics_);
+  /// Collide with fixed velocity
+  virtual void staticCollide(Cell<T,Lattice>& cell,
+                             const T u[Lattice<T>::d],
+                             LatticeStatistics<T>& statistics_);
+  /// Retuns rho (if defined else zero)
+  virtual T computeRho(Cell<T,Lattice> const& cell) const;
+  /// Retuns _u
+  virtual void computeU (
+    Cell<T,Lattice> const& cell,
+    T u[Lattice<T>::d] ) const;
+  /// Retuns rho (if defined else zero) times _u
+  virtual void computeJ (
+    Cell<T,Lattice> const& cell,
+    T j[Lattice<T>::d] ) const;
+  /// Yields NaN
+  virtual void computeStress (
+    Cell<T,Lattice> const& cell,
+    T rho, const T u[Lattice<T>::d],
+    T pi[util::TensorVal<Lattice<T> >::n] ) const;
+  /// Retuns rho (if defined else zero) and _u
+  virtual void computeRhoU (
+    Cell<T,Lattice> const& cell,
+    T& rho, T u[Lattice<T>::d]) const;
+  virtual void computeAllMomenta (
+    Cell<T,Lattice> const& cell,
+    T& rho, T u[Lattice<T>::d],
+    T pi[util::TensorVal<Lattice<T> >::n] ) const;
+  /// Devines the velocity rho
+  virtual void defineRho(Cell<T,Lattice>& cell, T rho);
+  /// Devines the velocity _u
+  virtual void defineU(Cell<T,Lattice>& cell,
+                       const T u[Lattice<T>::d]);
+  /// Devines rho and _u
+  virtual void defineRhoU (
+    Cell<T,Lattice>& cell,
+    T rho, const T u[Lattice<T>::d]);
+  /// Does nothing
+  virtual void defineAllMomenta (
+    Cell<T,Lattice>& cell,
+    T rho, const T u[Lattice<T>::d],
+    const T pi[util::TensorVal<Lattice<T> >::n] );
+  /// Yields NaN
+  virtual T getOmega() const;
+  /// Does nothing
+  virtual void setOmega(T omega);
+private:
+  T _rho;
+  bool _rhoFixed;
+  T _u[Lattice<T>::d];
+};
+
+/** Robin Boundary for Diffusion Equation
+ * documentation Hiorth, Lad, Evje and Skjæveland 2008
+ */
+template<typename T, template<typename U> class Lattice>
+class BounceBackReflective : public BounceBack<T,Lattice> {
+public:
+  BounceBackReflective(T zeta);
+  virtual T computeEquilibrium( int iPop, T rho, const T u[Lattice<T>::d], T uSqr ) const;
+  /// Collision step
+  virtual void collide(Cell<T,Lattice>& cell,
+                       LatticeStatistics<T>& statistics_) final;
+private:
+  T _zeta;
+};
+
 
 /// Implementation of a "dead cell" that does nothing
 template<typename T, template<typename U> class Lattice>
@@ -704,7 +890,7 @@ public:
   /// Yields NaN
   virtual T getOmega() const;
   /// Does nothing
-  virtual void setOmega(T omega_);
+  virtual void setOmega(T omega);
 
 private:
   /// Default rho=1
@@ -731,6 +917,8 @@ public:
   virtual bool getBoundaryIntersection(int iPop, T intersection[Lattice<T>::d]);
   /// Set particle density on the cell.
   virtual void defineRho(Cell<T,Lattice>& cell, T rho);
+  /// Set single velocity
+  virtual void defineRho(int iPop, T rho);
   /// Set fluid velocity on the cell.
   virtual void defineU(Cell<T,Lattice>& cell, const T u[Lattice<T>::d]);
   /// Set constant velocity
@@ -741,7 +929,7 @@ public:
   virtual T getVelocityCoefficient(int iPop);
 
 private:
-  T rho;
+  T _rho;
   T _u[Lattice<T>::q][Lattice<T>::d];
   T location[Lattice<T>::d];
   T distances[Lattice<T>::q];
@@ -749,7 +937,7 @@ private:
   T velocityCoefficient[Lattice<T>::q];
 };
 
-/// Implementation of density sink by setting a zero distributio on the cell
+/// Implementation of density sink by setting a zero distribution on the cell
 template<typename T, template<typename U> class Lattice>
 class ZeroDistributionDynamics : public NoDynamics<T,Lattice> {
 public:
@@ -775,6 +963,12 @@ ExternalVelocityMomenta<T,Lattice>& getExternalVelocityMomenta();
 
 template<typename T, template<typename U> class Lattice>
 BounceBack<T,Lattice>& getBounceBack();
+
+template<typename T, template<typename U> class Lattice>
+BounceBackVelocity<T,Lattice>& getBounceBackVelocity(const double rho, const double u[Lattice<T>::d]);
+
+template<typename T, template<typename U> class Lattice>
+BounceBackAnti<T,Lattice>& getBounceBackAnti(const double rho);
 
 template<typename T, template<typename U> class Lattice>
 NoDynamics<T,Lattice>& getNoDynamics(T rho = T(1) );

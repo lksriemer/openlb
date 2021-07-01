@@ -32,6 +32,8 @@ namespace olb {
 template class BlockF3D<int>;
 template class BlockF3D<double>;
 
+template class BlockDataF3D<double,double>;
+
 template class BlockIdentity3D<int>;
 template class BlockIdentity3D<double>;
 

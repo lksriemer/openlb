@@ -32,6 +32,8 @@
 #include "forces/force3D.h"
 #include "functors/analyticalF.h"
 #include "boundaries/boundary3D.h"
+#include "functors/frameChangeF3D.h"
+#include "utilities/vectorHelpers.h"
 
 namespace olb {
 
@@ -48,29 +50,37 @@ template<typename T, template<typename U> class PARTICLETYPE>
 class SuperParticleSystem3D;
 template<typename T, template<typename U> class PARTICLETYPE>
 class SuperParticleSysVtuWriter;
+template<typename T>
+class SuperParticleSysVtuWriterMag;
 
 template<typename T, template<typename U> class PARTICLETYPE>
 class SimulateParticles {
 public:
   SimulateParticles(ParticleSystem3D<T, PARTICLETYPE>* ps)
-    : _pSys(ps) {
+    : _pSys(ps)
+  {
   }
-  inline void simulate(T dT) {
+  inline void simulate(T dT)
+  {
     _pSys->computeForce();
     _pSys->explicitEuler(dT);
+    //_pSys->rungeKutta4(dT);
   }
 private:
   ParticleSystem3D<T, PARTICLETYPE>* _pSys;
+
 };
 
-/*
+
 template<typename T>
 class SimulateParticles<T, RotatingParticle3D> {
 public:
   SimulateParticles(ParticleSystem3D<T, RotatingParticle3D>* ps)
-    : _pSys(ps) {
+    : _pSys(ps)
+  {
   }
-  inline void simulate(T dT) {
+  inline void simulate(T dT)
+  {
     _pSys->computeForce();
     _pSys->explicitEuler(dT);
     _pSys->integrateTorque(dT);
@@ -78,7 +88,30 @@ public:
 private:
   ParticleSystem3D<T, RotatingParticle3D>* _pSys;
 };
-*/
+
+template<typename T>
+class SimulateParticles<T, MagneticParticle3D> {
+public:
+  SimulateParticles(ParticleSystem3D<T, MagneticParticle3D>* ps)
+    : _pSys(ps)
+  {
+  }
+  inline void simulate(T dT)
+  {
+    _pSys->resetMag();
+    _pSys->computeForce();
+    _pSys->explicitEuler(dT);
+    // calculates changes in orientation (dipole moment direction)
+    // due to torque moments induced in
+    // interpMagForceForMagP3D & magneticForceForMagP3D
+    _pSys->integrateTorqueMag(dT);
+
+  }
+private:
+  ParticleSystem3D<T, MagneticParticle3D>* _pSys;
+
+};
+
 
 template<typename T, template<typename U> class PARTICLETYPE>
 class ParticleSystem3D {
@@ -110,6 +143,8 @@ public:
 
   /// Add a particle to ParticleSystem
   void addParticle(PARTICLETYPE<T>& p);
+  /// Removes all particles from system
+  void clearParticles();
   /// Add a force to ParticleSystem
   void addForce(std::shared_ptr<Force3D<T, PARTICLETYPE> > pF);
   /// Add a boundary to ParticleSystem
@@ -146,16 +181,17 @@ public:
   ContactDetection<T, PARTICLETYPE>* getContactDetection();
 
   /// Particle-Fluid interaction for subgrid scale particles
-//  template<template<typename V> class DESCRIPTOR>
-//  void particleOnFluid(BlockLatticeStructure3D<T, DESCRIPTOR>& bLattice,
-//                       Cuboid3D<T>& cuboid, int overlap, T eps,
-//                       BlockGeometryStructure3D<T>& bGeometry);
-//  template<template<typename V> class DESCRIPTOR>
-//  void resetFluid(BlockLatticeStructure3D<T, DESCRIPTOR>& bLattice,
-//                  Cuboid3D<T>& cuboid, int overlap);
+  //  template<template<typename V> class DESCRIPTOR>
+  //  void particleOnFluid(BlockLatticeStructure3D<T, DESCRIPTOR>& bLattice,
+  //                       Cuboid3D<T>& cuboid, int overlap, T eps,
+  //                       BlockGeometryStructure3D<T>& bGeometry);
+  //  template<template<typename V> class DESCRIPTOR>
+  //  void resetFluid(BlockLatticeStructure3D<T, DESCRIPTOR>& bLattice,
+  //                  Cuboid3D<T>& cuboid, int overlap);
 
   friend class SuperParticleSystem3D<T, PARTICLETYPE>;
   friend class SuperParticleSysVtuWriter<T, PARTICLETYPE>;
+  friend class SuperParticleSysVtuWriterMag<T>;
   friend class SimulateParticles<T, PARTICLETYPE>;
 
   //std::map<T, int> radiusDistribution();
@@ -163,15 +199,19 @@ public:
   /// Integration method: explicit Euler
   void explicitEuler(T dT);
 
-  ContactDetection<T, PARTICLETYPE>* getDetection() {
+  ContactDetection<T, PARTICLETYPE>* getDetection()
+  {
     return _contactDetection;
   }
-  std::deque<PARTICLETYPE<T>> getParticles() {
+  std::deque<PARTICLETYPE<T>> getParticles()
+  {
     return _particles;
   }
 
 protected:
-//  void integrateTorque(T dT);
+  void integrateTorque(T dT);
+  void integrateTorqueMag(T dT) {};
+  void resetMag() {};
 
   void addShadowParticle(PARTICLETYPE<T>& p);
 
@@ -191,18 +231,27 @@ protected:
 
 
   /// Integration methods, each need a special template particle
-//  void velocityVerlet1(T deltatime);
-//  void velocityVerlet2(T deltatime);
+  void velocityVerlet1(T dT);
+  void velocityVerlet2(T dT);
 //  void implicitEuler(T dT, AnalyticalF3D<T,T>& getvel);
 //  void adamBashforth4(T dT);
 //  void predictorCorrector1(T dT);
 //  void predictorCorrector2(T dT);
-//  void rungeKutta4_1(T dt);
-//  void rungeKutta4_2(T dt);
-//  void rungeKutta4_3(T dt);
-//  void rungeKutta4_4(T dt);
+  void rungeKutta4_1(T dt);
+  void rungeKutta4_2(T dt);
+  void rungeKutta4_3(T dt);
+  void rungeKutta4_4(T dt);
+  void rungeKutta4(T dT);
+  void updateParticleDistribution();
 };
 
+// Magnetic particle type
+template<>
+void ParticleSystem3D<double, MagneticParticle3D>::integrateTorqueMag(double dT);
+template<>
+void ParticleSystem3D<double, MagneticParticle3D>::computeForce();
+template<>
+void ParticleSystem3D<double, MagneticParticle3D>::resetMag();
 
 }  //namespace olb
 #endif /* PARTICLE_SYSTEM_3D_H */

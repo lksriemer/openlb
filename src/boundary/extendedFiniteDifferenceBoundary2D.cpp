@@ -42,10 +42,10 @@ template class ExtendedStraightFdBoundaryProcessorGenerator2D<double, descriptor
 
 template class BoundaryConditionInstantiator2D
 <
-double, descriptors::D2Q9Descriptor,
-        ExtendedFdBoundaryManager2D < double, descriptors::D2Q9Descriptor,
-        BGKdynamics<double,descriptors::D2Q9Descriptor> >
-        >;
+  double, descriptors::D2Q9Descriptor,
+  ExtendedFdBoundaryManager2D < double, descriptors::D2Q9Descriptor,
+                                BGKdynamics<double,descriptors::D2Q9Descriptor> >
+  >;
 
 template OnLatticeBoundaryCondition2D<double,descriptors::D2Q9Descriptor>*
 createExtendedFdBoundaryCondition2D < double,descriptors::D2Q9Descriptor,

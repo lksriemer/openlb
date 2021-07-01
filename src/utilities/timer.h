@@ -108,7 +108,7 @@ public:
   Timer();
 
   /// initializes timer with the given values, abbreviation to Timer() + initialize(int,int,bool,int)
-  Timer(int maxTimeSteps, int numFluidCells=1, bool* p=NULL, int size_p=0);
+  Timer(int maxTimeSteps, int numFluidCells=1, bool* p=nullptr, int size_p=0);
 
   /// Initialization with all necessary values for time measurement
   /**
@@ -117,7 +117,7 @@ public:
    \param *p input parameter(s) for control of timer output (as vector or whatever fits, to be implemented later)
    \param size_p size of *p
   */
-  void initialize(int maxTimeSteps, int numFluidCells=1, bool* p=NULL, int size_p=0);
+  void initialize(int maxTimeSteps, int numFluidCells=1, bool* p=nullptr, int size_p=0);
 
   /// returns the time difference between two timeval objects in ms
   /** The timeval data type is used in the variables for ms-time measurement. \sa getTotalRealTimeMs*/

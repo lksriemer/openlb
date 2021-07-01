@@ -31,5 +31,6 @@
 namespace olb {
 
 template class StokesDragForce3D<double,Particle3D,descriptors::D3Q19Descriptor>;
+template class StokesDragForce3D<double,MagneticParticle3D,descriptors::D3Q19Descriptor>;
 
 }  // namespace olb

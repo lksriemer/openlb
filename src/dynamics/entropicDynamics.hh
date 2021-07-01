@@ -70,7 +70,7 @@ void EntropicDynamics<T,Lattice>::collide (
   typedef entropicLbHelpers<T,Lattice> eLbH;
 
   T rho, u[Lattice<T>::d];
-  this->momenta.computeRhoU(cell, rho, u);
+  this->_momenta.computeRhoU(cell, rho, u);
   T uSqr = util::normSqr<T,L::d>(u);
 
   T f[L::q], fEq[L::q], fNeq[L::q];
@@ -113,7 +113,7 @@ void EntropicDynamics<T,Lattice>::staticCollide (
   typedef Lattice<T> L;
   typedef entropicLbHelpers<T,Lattice> eLbH;
 
-  T rho = this->momenta.computeRho(cell);
+  T rho = this->_momenta.computeRho(cell);
   T uSqr = util::normSqr<T,L::d>(u);
 
   T f[L::q], fEq[L::q], fNeq[L::q];
@@ -259,7 +259,7 @@ void ForcedEntropicDynamics<T,Lattice>::collide (
   typedef entropicLbHelpers<T,Lattice> eLbH;
 
   T rho, u[Lattice<T>::d];
-  this->momenta.computeRhoU(cell, rho, u);
+  this->_momenta.computeRhoU(cell, rho, u);
   T uSqr = util::normSqr<T,L::d>(u);
 
   T f[L::q], fEq[L::q], fNeq[L::q];
@@ -309,7 +309,7 @@ void ForcedEntropicDynamics<T,Lattice>::staticCollide (
   typedef entropicLbHelpers<T,Lattice> eLbH;
 
   T rho;
-  rho = this->momenta.computeRho(cell);
+  rho = this->_momenta.computeRho(cell);
   T uSqr = util::normSqr<T,L::d>(u);
 
   T f[L::q], fEq[L::q], fNeq[L::q];

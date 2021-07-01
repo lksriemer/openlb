@@ -252,11 +252,13 @@ SuperVTIreader3D<T,BaseType>::SuperVTIreader3D(const std::string& fName, const s
   // Fill CuboidGeometry
   readCuboidGeometry();
 
+  _cGeometry->printExtended();
+
   // Create LoadBalancer
   _loadBalancer = new HeuristicLoadBalancer<T> (*_cGeometry);
 
   // Create SuperData (allocation of the data, this->_size is already known!)
-  _superData = new SuperData3D<T,BaseType> ( *_cGeometry, *_loadBalancer, 0, this->_size);
+  _superData = new SuperData3D<T,BaseType> ( *_cGeometry, *_loadBalancer, 2, this->_size);
 
   this->clout << "* Reading BlockData..." << std::endl;
 
@@ -269,7 +271,7 @@ SuperVTIreader3D<T,BaseType>::SuperVTIreader3D(const std::string& fName, const s
 template<typename T,typename BaseType>
 void SuperVTIreader3D<T,BaseType>::readCuboidGeometry()
 {
-  _cGeometry->clearCuboids();
+  //_cGeometry->clearCuboids();
   for ( auto& piece : this->_xmlReader["ImageData"] ) {
     if (piece->getName() == "Piece") {
       std::vector<int> extents = this->readExtent(piece, "Extent");
@@ -306,12 +308,26 @@ SuperData3D<T,BaseType>& SuperVTIreader3D<T,BaseType>::getSuperData()
   return *_superData;
 }
 
+template<typename T,typename BaseType>
+CuboidGeometry3D<T>& SuperVTIreader3D<T,BaseType>::getCuboidGeometry()
+{
+  return *_cGeometry;
+}
+
+template<typename T,typename BaseType>
+LoadBalancer<T>& SuperVTIreader3D<T,BaseType>::getLoadBalancer()
+{
+  return *_loadBalancer;
+}
+
+
+
 
 
 
 // ************************************ old 2D ********************************************** //
 
-
+/*
 template<typename T>
 void VTIreader2D<T>::printInfo()
 {
@@ -368,6 +384,7 @@ void VTIreader2D<T>::getCuboids(std::vector<Cuboid2D<T>* >& cuboids)
     }
   }
 }
+*/
 /*
 template<typename T>
 void VTIreader2D<T>::getScalarMultiPieceData(std::vector<const ScalarFieldBase2D<T>* >& bases, const std::string dName)

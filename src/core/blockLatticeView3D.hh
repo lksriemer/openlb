@@ -39,7 +39,7 @@ BlockLatticeView3D<T,Lattice>::BlockLatticeView3D(BlockLatticeStructure3D<T,Latt
   : BlockLatticeStructure3D<T,Lattice>(originalLattice_.getNx(),
                                        originalLattice_.getNy(),
                                        originalLattice_.getNz()),
-  originalLattice(&originalLattice_), x0(0), y0(0), z0(0)
+    originalLattice(&originalLattice_), x0(0), y0(0), z0(0)
 { }
 
 template<typename T, template<typename U> class Lattice>

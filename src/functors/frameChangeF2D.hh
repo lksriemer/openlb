@@ -44,50 +44,67 @@ using namespace olb::util;
 namespace olb {
 
 template <typename T>
-Poiseuille2D<T>::Poiseuille2D(std::vector<T> axisPoint_, std::vector<T> axisDirection_,  T maxVelocity_, T radius_)
-  : AnalyticalF2D<T,T>(2)
+PowerLaw2D<T>::PowerLaw2D(std::vector<T> axisPoint, std::vector<T> axisDirection, T maxVelocity, T radius, T exponent) : AnalyticalF2D<T,T>(2)
 {
-  this->getName() = "Poiseuille2D";
-  axisPoint.resize(2);
-  axisDirection.resize(2);
+  this->getName() = "PowerLaw2D";
+  _axisPoint.resize(2);
+  _axisDirection.resize(2);
   for (int i = 0; i < 2; ++i) {
-    axisDirection[i] = axisDirection_[i];
-    axisPoint[i] = axisPoint_[i];
+    _axisDirection[i] = axisDirection[i];
+    _axisPoint[i] = axisPoint[i];
   }
-  maxVelocity=maxVelocity_;
-  radius = radius_;
+  _maxVelocity = maxVelocity;
+  _radius = radius;
+  _exponent = exponent;
 }
 
-
 template <typename T>
-Poiseuille2D<T>::Poiseuille2D(
-  SuperGeometry2D<T>& superGeometry_, int material_, T maxVelocity_, T distance2Wall_)
-  : AnalyticalF2D<T,T>(2)
+PowerLaw2D<T>::PowerLaw2D(SuperGeometry2D<T>& superGeometry, int material, T maxVelocity, T distance2Wall, T exponent) : AnalyticalF2D<T,T>(2)
 {
-  axisPoint = superGeometry_.getStatistics().getCenterPhysR(material_);
+  this->getName() = "PowerLaw2D";
+  _axisPoint.resize(2);
+  _axisDirection.resize(2);
+  _axisPoint = superGeometry.getStatistics().getCenterPhysR(material);
+  std::vector<int> discreteNormal = superGeometry.getStatistics().computeDiscreteNormal(material);
+  for (int i = 0; i < 2; ++i) {
+    _axisDirection[i] = discreteNormal[i];
+  }
 
-  axisPoint = superGeometry_.getStatistics().getCenterPhysR(material_);
-  std::vector<int> discreteNormal = superGeometry_.getStatistics().computeDiscreteNormal(material_);
-  axisDirection.push_back((T)(discreteNormal[0]));
-  axisDirection.push_back((T)(discreteNormal[1]));
-
-  radius = T(distance2Wall_);
+  _radius = T(distance2Wall);
   for (int iD = 0; iD < 2; iD++) {
-    radius += (superGeometry_.getStatistics().getPhysRadius(material_)[iD]);
+    _radius += (superGeometry.getStatistics().getPhysRadius(material)[iD]);
   }
-  maxVelocity = maxVelocity_;
+  _maxVelocity = maxVelocity;
+  _exponent = exponent;
 }
 
 
 template <typename T>
-bool Poiseuille2D<T>::operator()(T output[], const T x[])
+bool PowerLaw2D<T>::operator()(T output[], const T x[])
 {
-  output[0] = maxVelocity*axisDirection[0]*(1.-((x[1]-axisPoint[1])*(x[1]-axisPoint[1]))/radius/radius);
-  output[1] = maxVelocity*axisDirection[1]*(1.-((x[0]-axisPoint[0])*(x[0]-axisPoint[0]))/radius/radius);
-
+  T d = fabs(_axisDirection[1]*(x[0] - _axisPoint[0]) - _axisDirection[0]*(x[1] - _axisPoint[1]));
+  output[0] = _maxVelocity*_axisDirection[0]*(1. - pow(d/_radius,_exponent));
+  output[1] = _maxVelocity*_axisDirection[1]*(1. - pow(d/_radius,_exponent));
+  if ( 1. - pow(d/_radius,_exponent)  < 0.) {
+    output[0] = T();
+    output[1] = T();
+  }
   return true;
 }
 
+
+template <typename T>
+Poiseuille2D<T>::Poiseuille2D(std::vector<T> axisPoint, std::vector<T> axisDirection, T maxVelocity, T radius) : PowerLaw2D<T>(axisPoint, axisDirection, maxVelocity, radius, 2)
+{
+  this->getName() = "Poiseuille2D";
+}
+
+
+template <typename T>
+Poiseuille2D<T>::Poiseuille2D(SuperGeometry2D<T>& superGeometry, int material, T maxVelocity, T distance2Wall) : PowerLaw2D<T>(superGeometry, material, maxVelocity, distance2Wall, 2)
+{
+  this->getName() = "Poiseuille2D";
+}
 
 
 template <typename T, typename S>
@@ -196,9 +213,9 @@ bool CartesianToPolar2D<T, S>::operator()(T output[], const S x[])
   normalAxisDir.normalize();
 
   // if axis has to be rotated
-  if (!(normalAxisDir[0] == 0 && normalAxisDir[1] == 0 && normalAxisDir[2] == 1)) {
+  if (!( util::nearZero(normalAxisDir[0]) && util::nearZero(normalAxisDir[1]) && util::nearZero(normalAxisDir[2]-1) ) ) {
 
-    if (util::norm(_orientation) != T()) {
+    if ( !util::nearZero(util::norm(_orientation)) ) {
       normal = _orientation;
     }
 

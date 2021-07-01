@@ -69,7 +69,7 @@
 namespace olb {
 
 template< typename T> class CuboidGeometry3D;
-template< typename T> class Cuboid2D;
+//template< typename T> class Cuboid2D;
 template< typename T> class Cuboid3D;
 template< typename T> class LoadBalancer;
 template< typename T, typename BaseType> class SuperData3D;
@@ -144,6 +144,8 @@ public:
   SuperVTIreader3D(const std::string& fName, const std::string dName);
   virtual ~SuperVTIreader3D();
   SuperData3D<T,BaseType>& getSuperData();
+  CuboidGeometry3D<T>& getCuboidGeometry();
+  LoadBalancer<T>& getLoadBalancer();
 private:
   /// Reads Cuboid Geometry and creates Cuboid objects
   void readCuboidGeometry();
@@ -160,8 +162,8 @@ private:
 
 
 
-
-
+/// \todo implement 2D version above
+/*
 template<typename T>
 class VTIreader2D : public XMLreader {
 public:
@@ -177,13 +179,11 @@ public:
   //void getVectorMultiPieceData(std::vector<const TensorFieldBase2D<T, 2>* >& bases, const std::string dName);
   void printInfo();
 private:
-  /* Origin */
   int _x0, _y0, _z0;
-  /* #Nodes */
   int _x, _y, _z;
   T _delta;
 };
-
+*/
 } // namespace olb
 
 #endif

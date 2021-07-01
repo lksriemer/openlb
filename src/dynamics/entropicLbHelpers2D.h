@@ -36,7 +36,8 @@ template<typename T>
 struct entropicLbHelpers<T, descriptors::D2Q9Descriptor> {
   /// Computation of equilibrium distribution with an expansion
   /// with respect to a small velocity u
-  static T equilibrium( int iPop, T rho, const T u[2]) {
+  static T equilibrium( int iPop, T rho, const T u[2])
+  {
     typedef descriptors::D2Q9Descriptor<T> L;
 
     T c_u = L::c[iPop][0]*u[0] + L::c[iPop][1]*u[1];

@@ -35,10 +35,10 @@ namespace olb {
 
 template class BoundaryConditionInstantiator2D
 <
-double, descriptors::D2Q9Descriptor,
-        ZouHeBoundaryManager2D < double, descriptors::D2Q9Descriptor,
-        BGKdynamics<double,descriptors::D2Q9Descriptor> >
-        >;
+  double, descriptors::D2Q9Descriptor,
+  ZouHeBoundaryManager2D < double, descriptors::D2Q9Descriptor,
+                           BGKdynamics<double,descriptors::D2Q9Descriptor> >
+  >;
 
 template OnLatticeBoundaryCondition2D<double,descriptors::D2Q9Descriptor>*
 createZouHeBoundaryCondition2D < double,descriptors::D2Q9Descriptor,

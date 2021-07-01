@@ -38,4 +38,8 @@ template class VelocityBouzidiLinearPostProcessor2D<double, descriptors::D2Q9Des
 template class VelocityBouzidiLinearPostProcessorGenerator2D<double, descriptors::D2Q9Descriptor>;
 template class VelocityBounceBackPostProcessor2D<double, descriptors::D2Q9Descriptor>;
 template class VelocityBounceBackPostProcessorGenerator2D<double, descriptors::D2Q9Descriptor>;
+template class AntiBounceBackPostProcessor2D<double, descriptors::D2Q9Descriptor>;
+template class AntiBounceBackPostProcessorGenerator2D<double, descriptors::D2Q9Descriptor>;
+template class BoundaryStreamPostProcessor2D<double, descriptors::D2Q9Descriptor>;
+template class BoundaryStreamPostProcessorGenerator2D<double, descriptors::D2Q9Descriptor>;
 }  // namespace olb

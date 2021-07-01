@@ -47,7 +47,7 @@ BlockLatticeDissipation2D<T,DESCRIPTOR>::BlockLatticeDissipation2D
   this->getName() = "dissipation";
 }
 
-
+// todo: get functor working
 template <typename T, template <typename U> class DESCRIPTOR>
 bool BlockLatticeDissipation2D<T,DESCRIPTOR>::operator() (T output[], const int input[])
 {
@@ -228,23 +228,15 @@ BlockLatticeRank2D<T,DESCRIPTOR>::BlockLatticeRank2D
 template <typename T, template <typename U> class DESCRIPTOR>
 bool BlockLatticeRank2D<T,DESCRIPTOR>::operator() (T output[], const int input[])
 {
-  //  int globIC = input[0]; // int locix= input[1]; int lociy= input[2]; int lociz= input[3];
-  //  if ( this->_blockLattice.get_load().rank(globIC) == singleton::mpi().getRank() ) {
-  //    T rank[1];
-  //    rank[0] = singleton::mpi().getRank() + 1;
-  //    std::vector<T> out(rank, rank+1);  // first adress, last adress
-  //    return out;
-  //  } else {
-  //    return std::vector<T>();
-  //  }
+  output[0] = singleton::mpi().getRank() + 1;
   return false;
 }
 
 
 template <typename T, template <typename U> class DESCRIPTOR>
 BlockLatticeCuboid2D<T,DESCRIPTOR>::BlockLatticeCuboid2D
-(BlockLatticeStructure2D<T,DESCRIPTOR>& blockLattice)
-  : BlockLatticeF2D<T,DESCRIPTOR>(blockLattice,1)
+(BlockLatticeStructure2D<T,DESCRIPTOR>& blockLattice, const int iC)
+  : BlockLatticeF2D<T,DESCRIPTOR>(blockLattice,1), _iC(iC)
 {
   this->getName() = "cuboid";
 }
@@ -252,15 +244,7 @@ BlockLatticeCuboid2D<T,DESCRIPTOR>::BlockLatticeCuboid2D
 template <typename T, template <typename U> class DESCRIPTOR>
 bool BlockLatticeCuboid2D<T,DESCRIPTOR>::operator() (T output[], const int input[])
 {
-  //  int globIC = input[0]; // int locix= input[1]; int lociy= input[2]; int lociz= input[3];
-  //  if ( this->_blockLattice.get_load().rank(globIC) == singleton::mpi().getRank() ) {
-  //    T cuboid[1];
-  //    cuboid[0] = globIC+1;
-  //    std::vector<T> out(cuboid, cuboid+1);  // first adress, last adress
-  //    return out;
-  //  } else {
-  //    return std::vector<T>();
-  //  }
+  output[0] = _iC + 1;
   return false;
 }
 
@@ -493,10 +477,9 @@ bool BlockLatticePhysCorrBoundaryForce2D<T,DESCRIPTOR>::operator() (T output[], 
 
 template <typename T, template <typename U> class DESCRIPTOR>
 BlockLatticePorosity2D<T,DESCRIPTOR>::BlockLatticePorosity2D
-(BlockLatticeStructure2D<T,DESCRIPTOR>& blockLattice, BlockGeometry2D<T>& blockGeometry,
+(BlockLatticeStructure2D<T,DESCRIPTOR>& blockLattice, BlockGeometryStructure2D<T>& blockGeometry,
  int material, const LBconverter<T>& converter)
-  : BlockLatticePhysF2D<T,DESCRIPTOR>(blockLattice,converter,1),
-    _blockGeometry(blockGeometry), _material(material)
+  : BlockLatticePhysF2D<T,DESCRIPTOR>(blockLattice,converter,1), _blockGeometry(blockGeometry), _material(material)
 {
   this->getName() = "porosity";
 }
@@ -522,10 +505,9 @@ bool BlockLatticePorosity2D<T,DESCRIPTOR>::operator()(T output[], const int inpu
 
 template <typename T, template <typename U> class DESCRIPTOR>
 BlockLatticePhysPermeability2D<T,DESCRIPTOR>::BlockLatticePhysPermeability2D
-(BlockLatticeStructure2D<T,DESCRIPTOR>& blockLattice, BlockGeometry2D<T>& blockGeometry,
+(BlockLatticeStructure2D<T,DESCRIPTOR>& blockLattice, BlockGeometryStructure2D<T>& blockGeometry,
  int material, const LBconverter<T>& converter)
-  : BlockLatticePhysF2D<T,DESCRIPTOR>(blockLattice,converter,1),
-    _blockGeometry(blockGeometry),  _material(material)
+  : BlockLatticePhysF2D<T,DESCRIPTOR>(blockLattice,converter,1), _blockGeometry(blockGeometry), _material(material)
 {
   this->getName() = "permeability";
 }
@@ -648,15 +630,16 @@ bool BlockLatticeAverage2D<T,DESCRIPTOR>::operator() (T output[], const int inpu
 
 
 template <typename T, template <typename U> class DESCRIPTOR>
-BlockL2Norm2D<T,DESCRIPTOR>::BlockL2Norm2D(BlockF2D<T>& f)
+BlockEuklidNorm2D<T,DESCRIPTOR>::BlockEuklidNorm2D(BlockF2D<T>& f)
   : BlockF2D<T>(f.getBlockStructure(),1), _f(f)
 {
   this->getName() = "l2("+f.getName()+")";
 }
 
 template <typename T, template <typename U> class DESCRIPTOR>
-bool BlockL2Norm2D<T,DESCRIPTOR>::operator() (T output[], const int input[])
+bool BlockEuklidNorm2D<T,DESCRIPTOR>::operator() (T output[], const int input[])
 {
+  output[0] = T();  // flash output, since this methods adds values.
   T data[_f.getTargetDim()];
   _f(data,input);
   for ( int i = 0; i < _f.getTargetDim(); ++i) {

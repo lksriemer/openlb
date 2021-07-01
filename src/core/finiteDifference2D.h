@@ -49,7 +49,8 @@ template<typename T, template<typename U> class Lattice,
 struct DirectedGradients2D<T, Lattice, direction, orientation, true> {
   static void interpolateVector(T velDeriv[Lattice<T>::d],
                                 BlockLattice2D<T,Lattice> const& blockLattice,
-                                int iX, int iY) {
+                                int iX, int iY)
+  {
     using namespace fd;
 
     T u0[Lattice<T>::d], u1[Lattice<T>::d], u2[Lattice<T>::d];
@@ -69,7 +70,8 @@ struct DirectedGradients2D<T, Lattice, direction, orientation, true> {
 
   static void interpolateScalar(T& rhoDeriv,
                                 BlockLattice2D<T,Lattice> const& blockLattice,
-                                int iX, int iY) {
+                                int iX, int iY)
+  {
     using namespace fd;
 
     T rho0 = blockLattice.get(iX,iY).computeRho();
@@ -93,7 +95,8 @@ template<typename T, template<typename U> class Lattice,
 struct DirectedGradients2D<T, Lattice, direction, orientation, false> {
   static void interpolateVector(T velDeriv[Lattice<T>::d],
                                 BlockLattice2D<T,Lattice> const& blockLattice,
-                                int iX, int iY) {
+                                int iX, int iY)
+  {
     using namespace fd;
 
     T u_p1[Lattice<T>::d], u_m1[Lattice<T>::d];
@@ -113,7 +116,8 @@ struct DirectedGradients2D<T, Lattice, direction, orientation, false> {
 
   static void  interpolateScalar(T& rhoDeriv,
                                  BlockLattice2D<T,Lattice> const& blockLattice,
-                                 int iX, int iY) {
+                                 int iX, int iY)
+  {
     using namespace fd;
 
     int deriveDirection = 1-direction;

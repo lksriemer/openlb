@@ -56,7 +56,8 @@ struct STLpoint {
   /// Constructor constructs
   STLpoint() : r(3, T()) {};
   /// Operator= equals
-  STLpoint<T>& operator=(STLpoint<T> const& rhs) {
+  STLpoint<T>& operator=(STLpoint<T> const& rhs)
+  {
     r = rhs.r;
     return *this;
   };
@@ -97,7 +98,8 @@ public:
   /// CopyConstructor copies
   STLtriangle(STLtriangle<T> const& tri):point(tri.point), normal(tri.normal), uBeta(tri.uBeta), uGamma(tri.uGamma), d(tri.d), kBeta(tri.kBeta), kGamma(tri.kGamma) {};
   /// Operator= equals
-  STLtriangle<T>& operator=(STLtriangle<T> const& tri) {
+  STLtriangle<T>& operator=(STLtriangle<T> const& tri)
+  {
     point = tri.point;
     normal = tri.normal;
     uBeta = tri.uBeta;
@@ -113,7 +115,8 @@ public:
   /// Initializes triangle and precomputes member variables.
   void init();
   /// Return write access to normal
-  inline Vector<T,3>& getNormal() {
+  inline Vector<T,3>& getNormal()
+  {
     return normal;
   }
   /// Returns Pt0-Pt1
@@ -146,23 +149,28 @@ public:
   STLmesh(std::string, T stlSize = 1.);
 
   /// Returns reference to a triangle
-  inline STLtriangle<T>& getTri(unsigned int i) {
+  inline STLtriangle<T>& getTri(unsigned int i)
+  {
     return _triangles[i];
   }
   /// Returns number of triangles
-  inline unsigned int triangleSize() const {
+  inline unsigned int triangleSize() const
+  {
     return _triangles.size();
   }
   /// Returns _min
-  inline Vector<T,3>& getMin() {
+  inline Vector<T,3>& getMin()
+  {
     return _min;
   };
   /// Returns _max
-  inline Vector<T,3>& getMax() {
+  inline Vector<T,3>& getMax()
+  {
     return _max;
   };
   /// Returns maxDist squared
-  inline float maxDist2() const {
+  inline float maxDist2() const
+  {
     return _maxDist2;
   }
   /// Prints console output
@@ -219,6 +227,7 @@ public:
   STLreader(const std::string fName, T voxelSize, T stlSize=1, unsigned short int method=2,
             bool verbose = false, T overlap=0., T max=0.);
 
+  ~STLreader();
   /// Returns whether node is inside or not.
   bool operator() (bool output[], const T input[]) override;
 
@@ -238,13 +247,15 @@ public:
   void setNormalsOutside();
 
   /// Returns tree
-  inline Octree<T>* getTree() const {
+  inline Octree<T>* getTree() const
+  {
     return _tree;
   };
 
 
   /// Returns mesh
-  inline STLmesh<T>& getMesh() {
+  inline STLmesh<T>& getMesh()
+  {
     return _mesh;
   };
 };

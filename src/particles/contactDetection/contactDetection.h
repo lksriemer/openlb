@@ -36,22 +36,29 @@ class ParticleSystem3D;
 template<typename T, template<typename U> class PARTICLETYPE>
 class ContactDetection {
 public:
-  ContactDetection(ParticleSystem3D<T, PARTICLETYPE>& pSys) : _pSys(pSys) {};
+  ContactDetection(ParticleSystem3D<T, PARTICLETYPE>& pSys) : _pSys(pSys), _name("ContactDetection") {};
+  ContactDetection(ParticleSystem3D<T, PARTICLETYPE>& pSys, std::string name) : _pSys(pSys), _name(name) {};
 
   virtual void sort() {};
-  virtual int getMatches(int pInt, std::vector<std::pair<size_t, T> >& matches) {
+  virtual int getMatches(int pInt, std::vector<std::pair<size_t, T> >& matches)
+  {
     return 0;
   };
 
   virtual ~ContactDetection() {};
-  //TODO =0 is needed at some time
-  virtual ContactDetection<T, PARTICLETYPE>* generate(ParticleSystem3D<T, PARTICLETYPE>& pSys) {
+  virtual ContactDetection<T, PARTICLETYPE>* generate(ParticleSystem3D<T, PARTICLETYPE>& pSys)
+  {
     return this;
   };
 
+  inline std::string getName()
+  {
+    return _name;
+  }
 
 protected:
   ParticleSystem3D<T, PARTICLETYPE>& _pSys;
+  std::string _name;
 };
 
 } // namespace olb

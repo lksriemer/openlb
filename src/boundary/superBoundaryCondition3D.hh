@@ -91,6 +91,18 @@ void sOnLatticeBoundaryCondition3D<T, Lattice>::addVelocityBoundary(
 }
 
 template<typename T, template<typename U> class Lattice>
+void sOnLatticeBoundaryCondition3D<T, Lattice>::addSlipBoundary(
+  SuperGeometry3D<T>& superGeometry, int material)
+{
+
+  int nC = _sLattice.getLoadBalancer().size();
+  for (int iCloc = 0; iCloc < nC; iCloc++) {
+    _blockBCs[iCloc]->addSlipBoundary(superGeometry.getExtendedBlockGeometry(iCloc), material);
+  }
+  addPoints2CommBC(superGeometry, material);
+}
+
+template<typename T, template<typename U> class Lattice>
 void sOnLatticeBoundaryCondition3D<T, Lattice>::addTemperatureBoundary(
   SuperGeometry3D<T>& superGeometry, int material, T omega)
 {
@@ -98,6 +110,18 @@ void sOnLatticeBoundaryCondition3D<T, Lattice>::addTemperatureBoundary(
   int nC = _sLattice.getLoadBalancer().size();
   for (int iCloc = 0; iCloc < nC; iCloc++) {
     _ADblockBCs[iCloc]->addTemperatureBoundary(superGeometry.getExtendedBlockGeometry(iCloc), material, omega);
+  }
+  addPoints2CommBC(superGeometry, material);
+}
+
+template<typename T, template<typename U> class Lattice>
+void sOnLatticeBoundaryCondition3D<T, Lattice>::addDiffuseReflectionBoundary(
+  SuperGeometry3D<T>& superGeometry, int material, T omega, T zeta)
+{
+
+  int nC = _sLattice.getLoadBalancer().size();
+  for (int iCloc = 0; iCloc < nC; iCloc++) {
+    _ADblockBCs[iCloc]->addDiffuseReflectionBoundary(superGeometry.getExtendedBlockGeometry(iCloc), material, omega, zeta);
   }
   addPoints2CommBC(superGeometry, material);
 }

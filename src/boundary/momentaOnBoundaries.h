@@ -44,62 +44,45 @@ template<typename T, template<typename U> class Lattice>
 class EquilibriumBM : public DirichletBoundaryMomenta<T,Lattice> {
 public:
   EquilibriumBM();
-  EquilibriumBM(T rho_, const T u_[Lattice<T>::d]);
-  virtual T computeRho(Cell<T,Lattice> const& cell) const;
-  virtual void computeU (
-    Cell<T,Lattice> const& cell,
-    T u[Lattice<T>::d] ) const;
-  virtual void computeJ (
-    Cell<T,Lattice> const& cell,
-    T j[Lattice<T>::d] ) const;
-  virtual void computeStress (
-    Cell<T,Lattice> const& cell,
-    T rho, const T u[Lattice<T>::d],
-    T pi[util::TensorVal<Lattice<T> >::n] ) const;
-  virtual void defineRho(Cell<T,Lattice>& cell, T rho) ;
-  virtual void defineU(Cell<T,Lattice>& cell,
-                       const T u[Lattice<T>::d]) ;
-  virtual void defineAllMomenta (
-    Cell<T,Lattice>& cell,
-    T rho, const T u[Lattice<T>::d],
-    const T pi[util::TensorVal<Lattice<T> >::n] );
+  EquilibriumBM( T rho, const T u[Lattice<T>::d] );
+  virtual T computeRho( Cell<T,Lattice> const& cell ) const;
+  virtual void computeU( Cell<T,Lattice> const& cell, T u[Lattice<T>::d] ) const;
+  virtual void computeJ( Cell<T,Lattice> const& cell, T j[Lattice<T>::d] ) const;
+  virtual void computeStress( Cell<T,Lattice> const& cell, T rho, const T u[Lattice<T>::d],
+                              T pi[util::TensorVal<Lattice<T> >::n] ) const;
+  virtual void defineRho( Cell<T,Lattice>& cell, T rho);
+  virtual void defineU( Cell<T,Lattice>& cell, const T u[Lattice<T>::d]);
+  virtual void defineAllMomenta( Cell<T,Lattice>& cell, T rho, const T u[Lattice<T>::d],
+                                 const T pi[util::TensorVal<Lattice<T> >::n] );
 private:
-  T rho, u[Lattice<T>::d];
+  T _rho;
+  T _u[Lattice<T>::d];   ///< value of the velocity on the boundary
 };
 
 /// Computation of velocity momenta on a velocity boundary
-template<typename T, template<typename U> class Lattice,
-         int direction, int orientation>
+template<typename T, template<typename U> class Lattice, int direction, int orientation>
 class VelocityBM : virtual public DirichletBoundaryMomenta<T,Lattice> {
 public:
   /// Default Constructor: initialization to zero
   VelocityBM();
   /// Constructor with boundary initialization
-  VelocityBM(const T u_[Lattice<T>::d]);
+  VelocityBM(const T u[Lattice<T>::d]);
 
   virtual T computeRho(Cell<T,Lattice> const& cell) const;
-  virtual void computeU (
-    Cell<T,Lattice> const& cell,
-    T u[Lattice<T>::d] ) const;
-  virtual void computeJ (
-    Cell<T,Lattice> const& cell,
-    T j[Lattice<T>::d] ) const;
+  virtual void computeU ( Cell<T,Lattice> const& cell, T u[Lattice<T>::d] ) const;
+  virtual void computeJ ( Cell<T,Lattice> const& cell, T j[Lattice<T>::d] ) const;
   void computeU(T u[Lattice<T>::d]) const;
   virtual void defineRho(Cell<T,Lattice>& cell, T rho) ;
-  virtual void defineU(Cell<T,Lattice>& cell,
-                       const T u[Lattice<T>::d]) ;
+  virtual void defineU(Cell<T,Lattice>& cell, const T u[Lattice<T>::d]) ;
   void defineU(const T u[Lattice<T>::d]);
-  virtual void defineAllMomenta (
-    Cell<T,Lattice>& cell,
-    T rho, const T u[Lattice<T>::d],
-    const T pi[util::TensorVal<Lattice<T> >::n] );
+  virtual void defineAllMomenta( Cell<T,Lattice>& cell, T rho, const T u[Lattice<T>::d],
+                                 const T pi[util::TensorVal<Lattice<T> >::n] );
 private:
-  T u[Lattice<T>::d];   ///< value of the velocity on the boundary
+  T _u[Lattice<T>::d];   ///< value of the velocity on the boundary
 };
 
 /// Computation of velocity momenta on a velocity boundary
-template<typename T, template<typename U> class Lattice,
-         int direction, int orientation>
+template<typename T, template<typename U> class Lattice, int direction, int orientation>
 class PressureBM : virtual public DirichletBoundaryMomenta<T,Lattice> {
 public:
   /// Default Constructor: initialization to u=0, rho=1
@@ -109,87 +92,62 @@ public:
 
   virtual T computeRho(Cell<T,Lattice> const& cell) const;
   T computeRho() const;
-  virtual void computeU (
-    Cell<T,Lattice> const& cell,
-    T u[Lattice<T>::d] ) const;
-  virtual void computeJ (
-    Cell<T,Lattice> const& cell,
-    T j[Lattice<T>::d] ) const;
+  virtual void computeU( Cell<T,Lattice> const& cell, T u[Lattice<T>::d] ) const;
+  virtual void computeJ( Cell<T,Lattice> const& cell, T j[Lattice<T>::d] ) const;
   virtual void defineRho(Cell<T,Lattice>& cell, T rho);
   void defineRho(T rho);
-  virtual void defineU(Cell<T,Lattice>& cell,
-                       const T u[Lattice<T>::d]);
-  virtual void defineAllMomenta (
-    Cell<T,Lattice>& cell,
-    T rho, const T u[Lattice<T>::d],
-    const T pi[util::TensorVal<Lattice<T> >::n] );
-
+  virtual void defineU(Cell<T,Lattice>& cell, const T u[Lattice<T>::d]);
+  virtual void defineAllMomenta( Cell<T,Lattice>& cell, T rho, const T u[Lattice<T>::d],
+                                 const T pi[util::TensorVal<Lattice<T> >::n] );
 private:
   /// Velocity/Density on boundary.
   /** Contains velocity on the boundary, except for values[direction] that
    * contains a prescription for the density.
    */
-  T values[Lattice<T>::d];
+  T _values[Lattice<T>::d];
 };
 
 /// Here, the stress is computed from the particle distribution functions
 template<typename T, template<typename U> class Lattice>
 class FreeStressBM : virtual public DirichletBoundaryMomenta<T,Lattice> {
 public:
-  virtual void computeStress (
-    Cell<T,Lattice> const& cell,
-    T rho, const T u[Lattice<T>::d],
-    T pi[util::TensorVal<Lattice<T> >::n] ) const;
+  virtual void computeStress( Cell<T,Lattice> const& cell, T rho, const T u[Lattice<T>::d],
+                              T pi[util::TensorVal<Lattice<T> >::n] ) const;
 };
 
 /// Use special trick to compute u resp. rho, but compute pi from part. distr. functions
 template<typename T, template<typename U> class Lattice,
          template <
-         typename T_, template<typename U_> class Lattice_,
-         int direction_, int orientation_ >
+           typename T_, template<typename U_> class Lattice_,
+           int direction_, int orientation_ >
          class HydroBM,
          int direction, int orientation>
-class BasicDirichletBM
-  : public FreeStressBM<T, Lattice>,
-    public HydroBM<T,Lattice,direction,orientation> {
+class BasicDirichletBM : public FreeStressBM<T, Lattice>, public HydroBM<T,Lattice,direction,orientation> {
 };
 
 /// Computation of the stress tensor for regularized boundary
-template<typename T, template<typename U> class Lattice,
-         int direction, int orientation>
+template<typename T, template<typename U> class Lattice, int direction, int orientation>
 class RegularizedBM : virtual public DirichletBoundaryMomenta<T,Lattice> {
 public:
   /// Stress tensor
-  virtual void computeStress (
-    Cell<T,Lattice> const& cell,
-    T rho, const T u[Lattice<T>::d],
-    T pi[util::TensorVal<Lattice<T> >::n] ) const;
+  virtual void computeStress( Cell<T,Lattice> const& cell, T rho, const T u[Lattice<T>::d],
+                              T pi[util::TensorVal<Lattice<T> >::n] ) const;
 };
 
 /// Regularized velocity boundary node
-template<typename T, template<typename U> class Lattice,
-         int direction, int orientation>
-class RegularizedVelocityBM
-  : public RegularizedBM<T,Lattice,direction,orientation>,
-    public VelocityBM<T,Lattice,direction,orientation> {
+template<typename T, template<typename U> class Lattice, int direction, int orientation>
+class RegularizedVelocityBM : public RegularizedBM<T,Lattice,direction,orientation>, public VelocityBM<T,Lattice,direction,orientation> {
 public:
   RegularizedVelocityBM() { }
-  RegularizedVelocityBM(const T u_[Lattice<T>::d])
-    : VelocityBM<T,Lattice,direction,orientation>(u_) {
-  }
+  RegularizedVelocityBM(const T u[Lattice<T>::d]) : VelocityBM<T,Lattice,direction,orientation>(u) {}
 };
 
 /// Regularized pressure boundary node
-template<typename T, template<typename U> class Lattice,
-         int direction, int orientation>
-class RegularizedPressureBM
-  : public RegularizedBM<T,Lattice,direction,orientation>,
-    public PressureBM<T,Lattice,direction,orientation> {
+template<typename T, template<typename U> class Lattice, int direction, int orientation>
+class RegularizedPressureBM : public RegularizedBM<T,Lattice,direction,orientation>, public PressureBM<T,Lattice,direction,orientation> {
 public:
   RegularizedPressureBM() { }
-  RegularizedPressureBM(const T values_[Lattice<T>::d])
-    : PressureBM<T,Lattice,direction,orientation>(values_) {
-  }
+  RegularizedPressureBM(const T values[Lattice<T>::d]) : PressureBM<T,Lattice,direction,orientation>(values) { }
 };
 
 /// In this class, the velocity is fixed
@@ -202,37 +160,21 @@ template<typename T, template<typename U> class Lattice>
 class FixedVelocityBM : public Momenta<T,Lattice> {
 public:
   virtual T computeRho(Cell<T,Lattice> const& cell) const;
-  virtual void computeU (
-    Cell<T,Lattice> const& cell,
-    T u[Lattice<T>::d] ) const;
-  virtual void computeJ (
-    Cell<T,Lattice> const& cell,
-    T j[Lattice<T>::d] ) const;
-  virtual void computeStress (
-    Cell<T,Lattice> const& cell,
-    T rho, const T u[Lattice<T>::d],
-    T pi[util::TensorVal<Lattice<T> >::n] ) const;
-  virtual void computeRhoU (
-    Cell<T,Lattice> const& cell,
-    T& rho, T u[Lattice<T>::d]) const;
-  virtual void computeAllMomenta (
-    Cell<T,Lattice> const& cell,
-    T& rho, T u[Lattice<T>::d],
-    T pi[util::TensorVal<Lattice<T> >::n] ) const;
+  virtual void computeU( Cell<T,Lattice> const& cell, T u[Lattice<T>::d] ) const;
+  virtual void computeJ( Cell<T,Lattice> const& cell, T j[Lattice<T>::d] ) const;
+  virtual void computeStress( Cell<T,Lattice> const& cell, T rho, const T u[Lattice<T>::d],
+                              T pi[util::TensorVal<Lattice<T> >::n] ) const;
+  virtual void computeRhoU( Cell<T,Lattice> const& cell, T& rho, T u[Lattice<T>::d]) const;
+  virtual void computeAllMomenta( Cell<T,Lattice> const& cell, T& rho, T u[Lattice<T>::d],
+                                  T pi[util::TensorVal<Lattice<T> >::n] ) const;
   virtual void defineRho(Cell<T,Lattice>& cell, T rho);
-  virtual void defineU(Cell<T,Lattice>& cell,
-                       const T u[Lattice<T>::d]);
-  virtual void defineRhoU (
-    Cell<T,Lattice>& cell,
-    T rho, const T u[Lattice<T>::d]);
-  virtual void defineAllMomenta (
-    Cell<T,Lattice>& cell,
-    T rho, const T u[Lattice<T>::d],
-    const T pi[util::TensorVal<Lattice<T> >::n] );
-
+  virtual void defineU(Cell<T,Lattice>& cell, const T u[Lattice<T>::d]);
+  virtual void defineRhoU( Cell<T,Lattice>& cell, T rho, const T u[Lattice<T>::d]);
+  virtual void defineAllMomenta( Cell<T,Lattice>& cell, T rho, const T u[Lattice<T>::d],
+                                 const T pi[util::TensorVal<Lattice<T> >::n] );
 private:
-  BulkMomenta<T,Lattice> basicMomenta;
-  T fixU[Lattice<T>::d];
+  BulkMomenta<T,Lattice> _basicMomenta;
+  T _fixU[Lattice<T>::d];
 };
 
 }  // namespace olb

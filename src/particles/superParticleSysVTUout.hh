@@ -41,31 +41,29 @@ void SuperParticleSysVtuWriter<T, PARTICLETYPE>::set(unsigned short pref)
 }
 
 template<typename T, template<typename U> class PARTICLETYPE>
-SuperParticleSysVtuWriter<T, PARTICLETYPE>::SuperParticleSysVtuWriter(const SuperParticleSysVtuWriter<T, PARTICLETYPE>& rhs) :
-  _properties(rhs._properties), _haveMaster(rhs._haveMaster), _psys(rhs._psys), _name(
-    rhs._name), _binary(rhs._binary), clout(std::cout, "SuperParticleSysVtuWriter")
+SuperParticleSysVtuWriter<T, PARTICLETYPE>::SuperParticleSysVtuWriter(const SuperParticleSysVtuWriter<T, PARTICLETYPE>& rhs)
+  : _psys(rhs._psys), _name(rhs._name), _properties(rhs._properties), _binary(rhs._binary), _haveMaster(rhs._haveMaster), clout(std::cout, "SuperParticleSysVtuWriter")
 {
 }
 
 template<typename T, template<typename U> class PARTICLETYPE>
-SuperParticleSysVtuWriter<T, PARTICLETYPE>::SuperParticleSysVtuWriter(const SuperParticleSysVtuWriter<T, PARTICLETYPE>&& rhs) :
-  _properties(rhs._properties), _haveMaster(rhs._haveMaster), _psys(rhs._psys), _name(
-    rhs._name), _binary(rhs._binary), clout(std::cout, "SuperParticleSysVtuWriter")
+SuperParticleSysVtuWriter<T, PARTICLETYPE>::SuperParticleSysVtuWriter(const SuperParticleSysVtuWriter<T, PARTICLETYPE>&& rhs)
+  : _psys(rhs._psys), _name(rhs._name), _properties(rhs._properties), _binary(rhs._binary), _haveMaster(rhs._haveMaster), clout(std::cout, "SuperParticleSysVtuWriter")
 {
 }
 
 
 template<typename T, template<typename U> class PARTICLETYPE>
-SuperParticleSysVtuWriter<T, PARTICLETYPE>::SuperParticleSysVtuWriter(
-  SuperParticleSystem3D<T, PARTICLETYPE>& psys,
-  std::string const filename, unsigned short properties, bool binary) :
-  _properties(properties), _haveMaster(false), _psys(psys), _name(
-    filename), _binary(binary), clout(std::cout,
-                                      "SuperParticleSysVtuWriter") {}
+SuperParticleSysVtuWriter<T, PARTICLETYPE>::SuperParticleSysVtuWriter( SuperParticleSystem3D<T, PARTICLETYPE>& psys,
+    std::string const filename, unsigned short properties, bool binary)
+  : _psys(psys), _name(filename), _properties(properties), _binary(binary), _haveMaster(false), clout(std::cout, "SuperParticleSysVtuWriter")
+{
+}
 
 template<typename T, template<typename U> class PARTICLETYPE>
 void SuperParticleSysVtuWriter<T, PARTICLETYPE>::write(int iT)
 {
+  //std::cout << "Write base" << std::endl;
   int rank = 0;
   int size = 1;
 #ifdef PARALLEL_MODE_MPI
@@ -99,9 +97,9 @@ void SuperParticleSysVtuWriter<T, PARTICLETYPE>::write(int iT)
                             + "data/" + createFileName(_name, iT, rank) + ".vtu";
   preambleVTU(fullNameVTU);
   if (_binary) {
-    dataArrayBinary(fullNameVTU);
+    this->dataArrayBinary(fullNameVTU);
   } else {
-    dataArray(fullNameVTU);
+    this->dataArray(fullNameVTU);
   }
   closeVTU(fullNameVTU);
 }
@@ -219,6 +217,7 @@ template<typename T, template<typename U> class PARTICLETYPE>
 void SuperParticleSysVtuWriter<T, PARTICLETYPE>::dataArray(
   const std::string& fullName)
 {
+  //std::cout<< "Base member accessed" << std::endl;
   std::ofstream fout(fullName.c_str(), std::ios::app);
   if (!fout) {
     clout << "Error: could not open " << fullName << std::endl;
@@ -229,7 +228,7 @@ void SuperParticleSysVtuWriter<T, PARTICLETYPE>::dataArray(
         << "<DataArray type=\"Float32\" Name=\"Radius\" NumberOfComponents=\"1\" format=\"ascii\">"
         << std::endl;
     for (auto pS : _psys._pSystems) {
-      for (auto p : pS->_particles) {
+      for (auto& p : pS->_particles) {
         fout << p.getRad() << " ";
       }
     }
@@ -240,7 +239,7 @@ void SuperParticleSysVtuWriter<T, PARTICLETYPE>::dataArray(
         << "<DataArray type=\"Float32\" Name=\"Mass\" NumberOfComponents=\"1\" format=\"ascii\">"
         << std::endl;
     for (auto pS : _psys._pSystems) {
-      for (auto p : pS->_particles) {
+      for (auto& p : pS->_particles) {
         fout << p.getMass() << " ";
       }
     }
@@ -251,7 +250,7 @@ void SuperParticleSysVtuWriter<T, PARTICLETYPE>::dataArray(
         << "<DataArray type=\"Int16\" Name=\"Cuboid\" NumberOfComponents=\"1\" format=\"ascii\">"
         << std::endl;
     for (auto pS : _psys._pSystems) {
-      for (auto p : pS->_particles) {
+      for (auto& p : pS->_particles) {
         fout << p.getCuboid() << " ";
       }
     }
@@ -262,7 +261,7 @@ void SuperParticleSysVtuWriter<T, PARTICLETYPE>::dataArray(
         << "<DataArray type=\"Int16\" Name=\"Active\" NumberOfComponents=\"1\" format=\"ascii\">"
         << std::endl;
     for (auto pS : _psys._pSystems) {
-      for (auto p : pS->_particles) {
+      for (auto& p : pS->_particles) {
         if (p.getActive()) {
           fout << "1 ";
         } else {
@@ -277,7 +276,7 @@ void SuperParticleSysVtuWriter<T, PARTICLETYPE>::dataArray(
         << "<DataArray type=\"Float32\" Name=\"Velocity\" NumberOfComponents=\"3\" format=\"ascii\">"
         << std::endl;
     for (auto pS : _psys._pSystems) {
-      for (auto p : pS->_particles) {
+      for (auto& p : pS->_particles) {
         fout << p.getVel()[0] << " " << p.getVel()[1] << " " << p.getVel()[2]
              << " ";
       }
@@ -289,7 +288,7 @@ void SuperParticleSysVtuWriter<T, PARTICLETYPE>::dataArray(
         << "<DataArray type=\"Float32\" Name=\"Force\" NumberOfComponents=\"3\" format=\"ascii\">"
         << std::endl;
     for (auto pS : _psys._pSystems) {
-      for (auto p : pS->_particles) {
+      for (auto& p : pS->_particles) {
         fout << p.getForce()[0] << " " << p.getForce()[1] << " " << p.getForce()[2]
              << " ";
       }
@@ -333,7 +332,7 @@ void SuperParticleSysVtuWriter<T, PARTICLETYPE>::dataArray(
       << std::endl;
 
   for (auto pS : _psys._pSystems) {
-    for (auto p : pS->_particles) {
+    for (auto& p : pS->_particles) {
       fout << p.getPos()[0] << " " << p.getPos()[1] << " " << p.getPos()[2] << " ";
     }
   }
@@ -348,6 +347,7 @@ template<typename T, template<typename U> class PARTICLETYPE>
 void SuperParticleSysVtuWriter<T, PARTICLETYPE>::dataArrayBinary(
   const std::string& fullName)
 {
+  //std::cout<< "Base member accessed - binary" << std::endl;
   std::ofstream fout(fullName.c_str(), std::ios::app);
   if (!fout) {
     clout << "Error: could not open " << fullName << std::endl;
@@ -359,9 +359,8 @@ void SuperParticleSysVtuWriter<T, PARTICLETYPE>::dataArrayBinary(
         << std::endl;
     fout.close();
 
-    std::ofstream* ofstr; // only used for binary output // passed to Base64Encoder
-    ofstr = new std::ofstream(fullName.c_str(),
-                              std::ios::out | std::ios::app | std::ios::binary);
+    std::ofstream ofstr(fullName.c_str(),
+                        std::ios::out | std::ios::app | std::ios::binary); // only used for binary output // passed to Base64Encoder
     if (!ofstr) {
       clout << "Error: could not open " << fullName << std::endl;
     }
@@ -369,19 +368,18 @@ void SuperParticleSysVtuWriter<T, PARTICLETYPE>::dataArrayBinary(
     size_t fullSize = _psys.rankNumOfParticles(); //  how many numbers to write
     size_t binarySize = size_t(fullSize * sizeof(float));
     // writes first number, which have to be the size(byte) of the following data
-    Base64Encoder<unsigned int> sizeEncoder(*ofstr, 1);
+    Base64Encoder<unsigned int> sizeEncoder(ofstr, 1);
     unsigned int uintBinarySize = (unsigned int) binarySize;
     sizeEncoder.encode(&uintBinarySize, 1);
     //  write numbers from functor
-    Base64Encoder<float>* dataEncoder = new Base64Encoder<float>(*ofstr,
-        fullSize);
+    Base64Encoder<float> dataEncoder(ofstr, fullSize);
     for (auto pS : _psys._pSystems) {
-      for (auto p : pS->_particles) {
+      for (auto& p : pS->_particles) {
         const float tmp = float(p.getRad());
-        dataEncoder->encode(&tmp, 1);
+        dataEncoder.encode(&tmp, 1);
       }
     }
-    ofstr->close();
+    ofstr.close();
 
     fout.open(fullName.c_str(), std::ios::out | std::ios::app);
     fout << "</DataArray>" << std::endl;
@@ -393,9 +391,8 @@ void SuperParticleSysVtuWriter<T, PARTICLETYPE>::dataArrayBinary(
         << std::endl;
     fout.close();
 
-    std::ofstream* ofstr; // only used for binary output // passed to Base64Encoder
-    ofstr = new std::ofstream(fullName.c_str(),
-                              std::ios::out | std::ios::app | std::ios::binary);
+    std::ofstream ofstr(fullName.c_str(),
+                        std::ios::out | std::ios::app | std::ios::binary); // only used for binary output // passed to Base64Encoder
     if (!ofstr) {
       clout << "Error: could not open " << fullName << std::endl;
     }
@@ -403,19 +400,18 @@ void SuperParticleSysVtuWriter<T, PARTICLETYPE>::dataArrayBinary(
     size_t fullSize = _psys.rankNumOfParticles(); //  how many numbers to write
     size_t binarySize = size_t(fullSize * sizeof(float));
     // writes first number, which have to be the size(byte) of the following data
-    Base64Encoder<unsigned int> sizeEncoder(*ofstr, 1);
+    Base64Encoder<unsigned int> sizeEncoder(ofstr, 1);
     unsigned int uintBinarySize = (unsigned int) binarySize;
     sizeEncoder.encode(&uintBinarySize, 1);
     //  write numbers from functor
-    Base64Encoder<float>* dataEncoder = new Base64Encoder<float>(*ofstr,
-        fullSize);
+    Base64Encoder<float> dataEncoder(ofstr, fullSize);
     for (auto pS : _psys._pSystems) {
-      for (auto p : pS->_particles) {
+      for (auto& p : pS->_particles) {
         const float tmp = float(p.getMass());
-        dataEncoder->encode(&tmp, 1);
+        dataEncoder.encode(&tmp, 1);
       }
     }
-    ofstr->close();
+    ofstr.close();
 
     fout.open(fullName.c_str(), std::ios::out | std::ios::app);
     fout << "</DataArray>" << std::endl;
@@ -426,9 +422,8 @@ void SuperParticleSysVtuWriter<T, PARTICLETYPE>::dataArrayBinary(
         << std::endl;
     fout.close();
 
-    std::ofstream* ofstr; // only used for binary output // passed to Base64Encoder
-    ofstr = new std::ofstream(fullName.c_str(),
-                              std::ios::out | std::ios::app | std::ios::binary);
+    std::ofstream ofstr(fullName.c_str(),
+                        std::ios::out | std::ios::app | std::ios::binary); // only used for binary output // passed to Base64Encoder
     if (!ofstr) {
       clout << "Error: could not open " << fullName << std::endl;
     }
@@ -436,19 +431,19 @@ void SuperParticleSysVtuWriter<T, PARTICLETYPE>::dataArrayBinary(
     size_t fullSize = _psys.rankNumOfParticles(); //  how many numbers to write
     size_t binarySize = size_t(fullSize * sizeof(int));
     // writes first number, which have to be the size(byte) of the following data
-    Base64Encoder<unsigned int> sizeEncoder(*ofstr, 1);
+    Base64Encoder<unsigned int> sizeEncoder(ofstr, 1);
     unsigned int uintBinarySize = (unsigned int) binarySize;
     sizeEncoder.encode(&uintBinarySize, 1);
     //  write numbers from functor
-    Base64Encoder<int>* dataEncoder = new Base64Encoder<int>(*ofstr,
-        fullSize);
+    Base64Encoder<int> dataEncoder(ofstr,
+                                   fullSize);
     for (auto pS : _psys._pSystems) {
-      for (auto p : pS->_particles) {
+      for (auto& p : pS->_particles) {
         const int tmp = int(p.getCuboid());
-        dataEncoder->encode(&tmp, 1);
+        dataEncoder.encode(&tmp, 1);
       }
     }
-    ofstr->close();
+    ofstr.close();
 
     fout.open(fullName.c_str(), std::ios::out | std::ios::app);
     fout << "</DataArray>" << std::endl;
@@ -459,9 +454,8 @@ void SuperParticleSysVtuWriter<T, PARTICLETYPE>::dataArrayBinary(
         << std::endl;
     fout.close();
 
-    std::ofstream* ofstr; // only used for binary output // passed to Base64Encoder
-    ofstr = new std::ofstream(fullName.c_str(),
-                              std::ios::out | std::ios::app | std::ios::binary);
+    std::ofstream ofstr(fullName.c_str(),
+                        std::ios::out | std::ios::app | std::ios::binary); // only used for binary output // passed to Base64Encoder
     if (!ofstr) {
       clout << "Error: could not open " << fullName << std::endl;
     }
@@ -469,22 +463,21 @@ void SuperParticleSysVtuWriter<T, PARTICLETYPE>::dataArrayBinary(
     size_t fullSize = _psys.rankNumOfParticles(); //  how many numbers to write
     size_t binarySize = size_t(fullSize * sizeof(int));
     // writes first number, which have to be the size(byte) of the following data
-    Base64Encoder<unsigned int> sizeEncoder(*ofstr, 1);
+    Base64Encoder<unsigned int> sizeEncoder(ofstr, 1);
     unsigned int uintBinarySize = (unsigned int) binarySize;
     sizeEncoder.encode(&uintBinarySize, 1);
     //  write numbers from functor
-    Base64Encoder<int>* dataEncoder = new Base64Encoder<int>(*ofstr,
-        fullSize);
+    Base64Encoder<int> dataEncoder(ofstr, fullSize);
     for (auto pS : _psys._pSystems) {
-      for (auto p : pS->_particles) {
+      for (auto& p : pS->_particles) {
         int tmp = 0;
         if (p.getActive()) {
           tmp = 1;
         }
-        dataEncoder->encode(&tmp, 1);
+        dataEncoder.encode(&tmp, 1);
       }
     }
-    ofstr->close();
+    ofstr.close();
 
     fout.open(fullName.c_str(), std::ios::out | std::ios::app);
     fout << "</DataArray>" << std::endl;
@@ -496,9 +489,8 @@ void SuperParticleSysVtuWriter<T, PARTICLETYPE>::dataArrayBinary(
         << std::endl;
     fout.close();
 
-    std::ofstream* ofstr; // only used for binary output // passed to Base64Encoder
-    ofstr = new std::ofstream(fullName.c_str(),
-                              std::ios::out | std::ios::app | std::ios::binary);
+    std::ofstream ofstr(fullName.c_str(),
+                        std::ios::out | std::ios::app | std::ios::binary); // only used for binary output // passed to Base64Encoder
     if (!ofstr) {
       clout << "Error: could not open " << fullName << std::endl;
     }
@@ -506,21 +498,20 @@ void SuperParticleSysVtuWriter<T, PARTICLETYPE>::dataArrayBinary(
     size_t fullSize = _psys.rankNumOfParticles() * 3; //  how many numbers to write
     size_t binarySize = size_t(fullSize * sizeof(float));
     // writes first number, which have to be the size(byte) of the following data
-    Base64Encoder<unsigned int> sizeEncoder(*ofstr, 1);
+    Base64Encoder<unsigned int> sizeEncoder(ofstr, 1);
     unsigned int uintBinarySize = (unsigned int) binarySize;
     sizeEncoder.encode(&uintBinarySize, 1);
     //  write numbers from functor
-    Base64Encoder<float>* dataEncoder = new Base64Encoder<float>(*ofstr,
-        fullSize);
+    Base64Encoder<float> dataEncoder(ofstr, fullSize);
     for (auto pS : _psys._pSystems) {
-      for (auto p : pS->_particles) {
+      for (auto& p : pS->_particles) {
         for (int iDim = 0; iDim < 3; ++iDim) {
           const float tmp = float(p.getVel()[iDim]);
-          dataEncoder->encode(&tmp, 1);
+          dataEncoder.encode(&tmp, 1);
         }
       }
     }
-    ofstr->close();
+    ofstr.close();
     fout.open(fullName.c_str(), std::ios::out | std::ios::app);
     fout << "</DataArray>" << std::endl;
   }
@@ -530,9 +521,8 @@ void SuperParticleSysVtuWriter<T, PARTICLETYPE>::dataArrayBinary(
         << std::endl;
     fout.close();
 
-    std::ofstream* ofstr; // only used for binary output // passed to Base64Encoder
-    ofstr = new std::ofstream(fullName.c_str(),
-                              std::ios::out | std::ios::app | std::ios::binary);
+    std::ofstream ofstr(fullName.c_str(),
+                        std::ios::out | std::ios::app | std::ios::binary); // only used for binary output // passed to Base64Encoder
     if (!ofstr) {
       clout << "Error: could not open " << fullName << std::endl;
     }
@@ -540,21 +530,20 @@ void SuperParticleSysVtuWriter<T, PARTICLETYPE>::dataArrayBinary(
     size_t fullSize = _psys.rankNumOfParticles() * 3; //  how many numbers to write
     size_t binarySize = size_t(fullSize * sizeof(float));
     // writes first number, which have to be the size(byte) of the following data
-    Base64Encoder<unsigned int> sizeEncoder(*ofstr, 1);
+    Base64Encoder<unsigned int> sizeEncoder(ofstr, 1);
     unsigned int uintBinarySize = (unsigned int) binarySize;
     sizeEncoder.encode(&uintBinarySize, 1);
     //  write numbers from functor
-    Base64Encoder<float>* dataEncoder = new Base64Encoder<float>(*ofstr,
-        fullSize);
+    Base64Encoder<float> dataEncoder(ofstr, fullSize);
     for (auto pS : _psys._pSystems) {
-      for (auto p : pS->_particles) {
+      for (auto& p : pS->_particles) {
         for (int iDim = 0; iDim < 3; ++iDim) {
           const float tmp = float(p.getForce()[iDim]);
-          dataEncoder->encode(&tmp, 1);
+          dataEncoder.encode(&tmp, 1);
         }
       }
     }
-    ofstr->close();
+    ofstr.close();
     fout.open(fullName.c_str(), std::ios::out | std::ios::app);
     fout << "</DataArray>" << std::endl;
   }
@@ -565,27 +554,26 @@ void SuperParticleSysVtuWriter<T, PARTICLETYPE>::dataArrayBinary(
   fout << "<DataArray type=\"Int32\" Name=\"connectivity\" format=\"binary\" encoding=\"base64\">" << std::endl;
   fout.close();
   {
-    std::ofstream* ofstr; // only used for binary output // passed to Base64Encoder
-    ofstr = new std::ofstream(fullName.c_str(), std::ios::out | std::ios::app | std::ios::binary);
+    std::ofstream ofstr(fullName.c_str(),
+                        std::ios::out | std::ios::app | std::ios::binary); // only used for binary output // passed to Base64Encoder
     if (!ofstr) {
       clout << "Error: could not open " << fullName << std::endl;
     }
 
     size_t fullSize = _psys.rankNumOfParticles(); //  how many numbers to write
     size_t binarySize = size_t(fullSize * sizeof(int));
-    Base64Encoder<unsigned int> sizeEncoder(*ofstr, 1);
+    Base64Encoder<unsigned int> sizeEncoder(ofstr, 1);
     unsigned int uintBinarySize = (unsigned int) binarySize;
     sizeEncoder.encode(&uintBinarySize, 1);
-    Base64Encoder<int32_t>* dataEncoder = new Base64Encoder<int32_t>(*ofstr,
-        fullSize);
+    Base64Encoder<int32_t> dataEncoder(ofstr, fullSize);
     int i = 0;
     for (auto pS : _psys._pSystems) {
       for (unsigned int p=0; p<pS->_particles.size(); p++) {
         const int32_t tmp = i++;
-        dataEncoder->encode(&tmp, 1);
+        dataEncoder.encode(&tmp, 1);
       }
     }
-    ofstr->close();
+    ofstr.close();
   }
   fout.open(fullName.c_str(), std::ios::out | std::ios::app);
   fout << "</DataArray>" << std::endl;
@@ -594,27 +582,25 @@ void SuperParticleSysVtuWriter<T, PARTICLETYPE>::dataArrayBinary(
        << std::endl;
   fout.close();
   {
-    std::ofstream* ofstr; // only used for binary output // passed to Base64Encoder
-    ofstr = new std::ofstream(fullName.c_str(), std::ios::out | std::ios::app | std::ios::binary);
+    std::ofstream ofstr(fullName.c_str(), std::ios::out | std::ios::app | std::ios::binary); // only used for binary output // passed to Base64Encoder
     if (!ofstr) {
       clout << "Error: could not open " << fullName << std::endl;
     }
 
     size_t fullSize = _psys.rankNumOfParticles(); //  how many numbers to write
     size_t binarySize = size_t(fullSize * sizeof(int));
-    Base64Encoder<unsigned int> sizeEncoder(*ofstr, 1);
+    Base64Encoder<unsigned int> sizeEncoder(ofstr, 1);
     unsigned int uintBinarySize = (unsigned int) binarySize;
     sizeEncoder.encode(&uintBinarySize, 1);
-    Base64Encoder<int32_t>* dataEncoder = new Base64Encoder<int32_t>(*ofstr,
-        fullSize);
+    Base64Encoder<int32_t> dataEncoder(ofstr, fullSize);
     int i = 1;
     for (auto pS : _psys._pSystems) {
       for (unsigned int p=0; p<pS->_particles.size(); p++) {
         const int32_t tmp = i++;
-        dataEncoder->encode(&tmp, 1);
+        dataEncoder.encode(&tmp, 1);
       }
     }
-    ofstr->close();
+    ofstr.close();
   }
   fout.open(fullName.c_str(), std::ios::out | std::ios::app);
   fout << "</DataArray>" << std::endl;
@@ -624,26 +610,25 @@ void SuperParticleSysVtuWriter<T, PARTICLETYPE>::dataArrayBinary(
        << std::endl;
   fout.close();
   {
-    std::ofstream* ofstr; // only used for binary output // passed to Base64Encoder
-    ofstr = new std::ofstream(fullName.c_str(), std::ios::out | std::ios::app | std::ios::binary);
+    std::ofstream ofstr(fullName.c_str(),
+                        std::ios::out | std::ios::app | std::ios::binary); // only used for binary output // passed to Base64Encoder
     if (!ofstr) {
       clout << "Error: could not open " << fullName << std::endl;
     }
 
     size_t fullSize = _psys.rankNumOfParticles(); //  how many numbers to write
     size_t binarySize = size_t(fullSize * sizeof(int));
-    Base64Encoder<unsigned int> sizeEncoder(*ofstr, 1);
+    Base64Encoder<unsigned int> sizeEncoder(ofstr, 1);
     unsigned int uintBinarySize = (unsigned int) binarySize;
     sizeEncoder.encode(&uintBinarySize, 1);
-    Base64Encoder<uint8_t>* dataEncoder = new Base64Encoder<uint8_t>(*ofstr,
-        fullSize);
+    Base64Encoder<uint8_t> dataEncoder(ofstr, fullSize);
     for (auto pS : _psys._pSystems) {
       for (unsigned int p=0; p<pS->_particles.size(); p++) {
         const uint8_t tmp = 1;
-        dataEncoder->encode(&tmp, 1);
+        dataEncoder.encode(&tmp, 1);
       }
     }
-    ofstr->close();
+    ofstr.close();
   }
   fout.open(fullName.c_str(), std::ios::out | std::ios::app);
   fout << "</DataArray>" << std::endl;
@@ -654,9 +639,8 @@ void SuperParticleSysVtuWriter<T, PARTICLETYPE>::dataArrayBinary(
 
   fout.close();
 
-  std::ofstream* ofstr; // only used for binary output // passed to Base64Encoder
-  ofstr = new std::ofstream(fullName.c_str(),
-                            std::ios::out | std::ios::app | std::ios::binary);
+  std::ofstream ofstr(fullName.c_str(),
+                      std::ios::out | std::ios::app | std::ios::binary); // only used for binary output // passed to Base64Encoder
   if (!ofstr) {
     clout << "Error: could not open " << fullName << std::endl;
   }
@@ -664,21 +648,20 @@ void SuperParticleSysVtuWriter<T, PARTICLETYPE>::dataArrayBinary(
   size_t fullSize = _psys.rankNumOfParticles() * 3; //  how many numbers to write
   size_t binarySize = size_t(fullSize * sizeof(float));
   // writes first number, which have to be the size(byte) of the following data
-  Base64Encoder<unsigned int> sizeEncoder(*ofstr, 1);
+  Base64Encoder<unsigned int> sizeEncoder(ofstr, 1);
   unsigned int uintBinarySize = (unsigned int) binarySize;
   sizeEncoder.encode(&uintBinarySize, 1);
   //  write numbers from functor
-  Base64Encoder<float>* dataEncoder = new Base64Encoder<float>(*ofstr,
-      fullSize);
+  Base64Encoder<float> dataEncoder(ofstr, fullSize);
   for (auto pS : _psys._pSystems) {
-    for (auto p : pS->_particles) {
+    for (auto& p : pS->_particles) {
       for (int iDim = 0; iDim < 3; ++iDim) {
         const float tmp = float(p.getPos()[iDim]);
-        dataEncoder->encode(&tmp, 1);
+        dataEncoder.encode(&tmp, 1);
       }
     }
   }
-  ofstr->close();
+  ofstr.close();
   fout.open(fullName.c_str(), std::ios::out | std::ios::app);
 
   fout << "</DataArray>" << std::endl;
@@ -686,6 +669,659 @@ void SuperParticleSysVtuWriter<T, PARTICLETYPE>::dataArrayBinary(
   fout << "</Piece>" << std::endl;
   fout.close();
 }
+
+
+
+// specialization for magnetic particle
+
+template<typename T>
+SuperParticleSysVtuWriterMag<T>::SuperParticleSysVtuWriterMag(const SuperParticleSysVtuWriterMag<T>& rhs) :
+  SuperParticleSysVtuWriter<T, MagneticParticle3D>(rhs), _properties(rhs._properties) {}
+
+template<typename T>
+SuperParticleSysVtuWriterMag<T>::SuperParticleSysVtuWriterMag(const SuperParticleSysVtuWriterMag<T>&& rhs) :
+  SuperParticleSysVtuWriter<T, MagneticParticle3D>(rhs), _properties(rhs._properties) {}
+
+
+template<typename T>
+SuperParticleSysVtuWriterMag<T>::SuperParticleSysVtuWriterMag(
+  SuperParticleSystem3D<T, MagneticParticle3D>& psys,
+  std::string const filename, const std::bitset<9>& properties, bool binary) :
+  SuperParticleSysVtuWriter<T, MagneticParticle3D>(psys, filename, 0, binary), _properties(properties) {}
+
+
+template<typename T>
+void SuperParticleSysVtuWriterMag<T>::dataArrayBinary(
+  const std::string& fullName)
+{
+  //std::cout<< "Special member accessed - binary" << std::endl;
+  std::ofstream fout(fullName.c_str(), std::ios::app);
+  if (!fout) {
+    this->clout << "Error: could not open " << fullName << std::endl;
+  }
+
+  if (_properties.test(pPropRadius)) {
+    fout
+        << "<DataArray type=\"Float32\" Name=\"Radius\" NumberOfComponents=\"1\" format=\"binary\" encoding=\"base64\">"
+        << std::endl;
+    fout.close();
+
+    std::ofstream ofstr(fullName.c_str(),
+                        std::ios::out | std::ios::app | std::ios::binary); // only used for binary output // passed to Base64Encoder
+    if (!ofstr) {
+      this->clout << "Error: could not open " << fullName << std::endl;
+    }
+
+    size_t fullSize = this->_psys.rankNumOfParticles(); //  how many numbers to write
+    size_t binarySize = size_t(fullSize * sizeof(float));
+    // writes first number, which have to be the size(byte) of the following data
+    Base64Encoder<unsigned int> sizeEncoder(ofstr, 1);
+    unsigned int uintBinarySize = (unsigned int) binarySize;
+    sizeEncoder.encode(&uintBinarySize, 1);
+    //  write numbers from functor
+    Base64Encoder<float> dataEncoder(ofstr, fullSize);
+    for (auto pS : this->_psys._pSystems) {
+      for (auto& p : pS->_particles) {
+        const float tmp = float(p.getRad());
+        dataEncoder.encode(&tmp, 1);
+      }
+    }
+    ofstr.close();
+
+    fout.open(fullName.c_str(), std::ios::out | std::ios::app);
+    fout << "</DataArray>" << std::endl;
+  }
+
+  if (_properties.test(pPropMass)) {
+    fout
+        << "<DataArray type=\"Float32\" Name=\"Mass\" NumberOfComponents=\"1\" format=\"binary\" encoding=\"base64\">"
+        << std::endl;
+    fout.close();
+
+    std::ofstream ofstr(fullName.c_str(),
+                        std::ios::out | std::ios::app | std::ios::binary); // only used for binary output // passed to Base64Encoder
+    if (!ofstr) {
+      this->clout << "Error: could not open " << fullName << std::endl;
+    }
+
+    size_t fullSize = this->_psys.rankNumOfParticles(); //  how many numbers to write
+    size_t binarySize = size_t(fullSize * sizeof(float));
+    // writes first number, which have to be the size(byte) of the following data
+    Base64Encoder<unsigned int> sizeEncoder(ofstr, 1);
+    unsigned int uintBinarySize = (unsigned int) binarySize;
+    sizeEncoder.encode(&uintBinarySize, 1);
+    //  write numbers from functor
+    Base64Encoder<float> dataEncoder(ofstr, fullSize);
+    for (auto pS : this->_psys._pSystems) {
+      for (auto& p : pS->_particles) {
+        const float tmp = float(p.getMass());
+        dataEncoder.encode(&tmp, 1);
+      }
+    }
+    ofstr.close();
+
+    fout.open(fullName.c_str(), std::ios::out | std::ios::app);
+    fout << "</DataArray>" << std::endl;
+  }
+  if (_properties.test(pPropCuboid)) {
+    fout
+        << "<DataArray type=\"Int32\" Name=\"Cuboid\" NumberOfComponents=\"1\" format=\"binary\" encoding=\"base64\">"
+        << std::endl;
+    fout.close();
+
+    std::ofstream ofstr(fullName.c_str(),
+                        std::ios::out | std::ios::app | std::ios::binary); // only used for binary output // passed to Base64Encoder
+    if (!ofstr) {
+      this->clout << "Error: could not open " << fullName << std::endl;
+    }
+
+    size_t fullSize = this->_psys.rankNumOfParticles(); //  how many numbers to write
+    size_t binarySize = size_t(fullSize * sizeof(int));
+    // writes first number, which have to be the size(byte) of the following data
+    Base64Encoder<unsigned int> sizeEncoder(ofstr, 1);
+    unsigned int uintBinarySize = (unsigned int) binarySize;
+    sizeEncoder.encode(&uintBinarySize, 1);
+    //  write numbers from functor
+    Base64Encoder<int> dataEncoder(ofstr, fullSize);
+    for (auto pS : this->_psys._pSystems) {
+      for (auto& p : pS->_particles) {
+        const int tmp = int(p.getCuboid());
+        dataEncoder.encode(&tmp, 1);
+      }
+    }
+    ofstr.close();
+
+    fout.open(fullName.c_str(), std::ios::out | std::ios::app);
+    fout << "</DataArray>" << std::endl;
+  }
+  if (_properties.test(pPropActive)) {
+    fout
+        << "<DataArray type=\"Int32\" Name=\"Active\" NumberOfComponents=\"1\" format=\"binary\" encoding=\"base64\">"
+        << std::endl;
+    fout.close();
+
+    std::ofstream ofstr(fullName.c_str(),
+                        std::ios::out | std::ios::app | std::ios::binary); // only used for binary output // passed to Base64Encoder
+    if (!ofstr) {
+      this->clout << "Error: could not open " << fullName << std::endl;
+    }
+
+    size_t fullSize = this->_psys.rankNumOfParticles(); //  how many numbers to write
+    size_t binarySize = size_t(fullSize * sizeof(int));
+    // writes first number, which have to be the size(byte) of the following data
+    Base64Encoder<unsigned int> sizeEncoder(ofstr, 1);
+    unsigned int uintBinarySize = (unsigned int) binarySize;
+    sizeEncoder.encode(&uintBinarySize, 1);
+    //  write numbers from functor
+    Base64Encoder<int> dataEncoder(ofstr, fullSize);
+    for (auto pS : this->_psys._pSystems) {
+      for (auto& p : pS->_particles) {
+        int tmp = 0;
+        if (p.getActive()) {
+          tmp = 1;
+        }
+        dataEncoder.encode(&tmp, 1);
+      }
+    }
+    ofstr.close();
+
+    fout.open(fullName.c_str(), std::ios::out | std::ios::app);
+    fout << "</DataArray>" << std::endl;
+  }
+
+  if (_properties.test(pPropVelocity)) {
+    fout
+        << "<DataArray type=\"Float32\" Name=\"Velocity\" NumberOfComponents=\"3\" format=\"binary\" encoding=\"base64\">"
+        << std::endl;
+    fout.close();
+
+    std::ofstream ofstr(fullName.c_str(),
+                        std::ios::out | std::ios::app | std::ios::binary); // only used for binary output // passed to Base64Encoder
+    if (!ofstr) {
+      this->clout << "Error: could not open " << fullName << std::endl;
+    }
+
+    size_t fullSize = this->_psys.rankNumOfParticles() * 3; //  how many numbers to write
+    size_t binarySize = size_t(fullSize * sizeof(float));
+    // writes first number, which have to be the size(byte) of the following data
+    Base64Encoder<unsigned int> sizeEncoder(ofstr, 1);
+    unsigned int uintBinarySize = (unsigned int) binarySize;
+    sizeEncoder.encode(&uintBinarySize, 1);
+    //  write numbers from functor
+    Base64Encoder<float> dataEncoder(ofstr, fullSize);
+    for (auto pS : this->_psys._pSystems) {
+      for (auto& p : pS->_particles) {
+        for (int iDim = 0; iDim < 3; ++iDim) {
+          const float tmp = float(p.getVel()[iDim]);
+          dataEncoder.encode(&tmp, 1);
+        }
+      }
+    }
+    ofstr.close();
+    fout.open(fullName.c_str(), std::ios::out | std::ios::app);
+    fout << "</DataArray>" << std::endl;
+  }
+
+  if (_properties.test(pPropForce)) {
+    fout
+        << "<DataArray type=\"Float32\" Name=\"Force\" NumberOfComponents=\"3\" format=\"binary\" encoding=\"base64\">"
+        << std::endl;
+    fout.close();
+
+    std::ofstream ofstr(fullName.c_str(),
+                        std::ios::out | std::ios::app | std::ios::binary); // only used for binary output // passed to Base64Encoder
+    if (!ofstr) {
+      this->clout << "Error: could not open " << fullName << std::endl;
+    }
+
+    size_t fullSize = this->_psys.rankNumOfParticles() * 3; //  how many numbers to write
+    size_t binarySize = size_t(fullSize * sizeof(float));
+    // writes first number, which have to be the size(byte) of the following data
+    Base64Encoder<unsigned int> sizeEncoder(ofstr, 1);
+    unsigned int uintBinarySize = (unsigned int) binarySize;
+    sizeEncoder.encode(&uintBinarySize, 1);
+    //  write numbers from functor
+    Base64Encoder<float> dataEncoder(ofstr, fullSize);
+    for (auto pS : this->_psys._pSystems) {
+      for (auto& p : pS->_particles) {
+        for (int iDim = 0; iDim < 3; ++iDim) {
+          const float tmp = float(p.getForce()[iDim]);
+          dataEncoder.encode(&tmp, 1);
+        }
+      }
+    }
+    ofstr.close();
+    fout.open(fullName.c_str(), std::ios::out | std::ios::app);
+    fout << "</DataArray>" << std::endl;
+  }
+  if (_properties.test(pPropMoment)) {
+    fout
+        << "<DataArray type=\"Float32\" Name=\"Moment\" NumberOfComponents=\"3\" format=\"binary\" encoding=\"base64\">"
+        << std::endl;
+    fout.close();
+
+    std::ofstream ofstr(fullName.c_str(),
+                        std::ios::out | std::ios::app | std::ios::binary); // only used for binary output // passed to Base64Encoder
+    if (!ofstr) {
+      this->clout << "Error: could not open " << fullName << std::endl;
+    }
+
+    size_t fullSize = this->_psys.rankNumOfParticles() * 3; //  how many numbers to write
+    size_t binarySize = size_t(fullSize * sizeof(float));
+    // writes first number, which have to be the size(byte) of the following data
+    Base64Encoder<unsigned int> sizeEncoder(ofstr, 1);
+    unsigned int uintBinarySize = (unsigned int) binarySize;
+    sizeEncoder.encode(&uintBinarySize, 1);
+    //  write numbers from functor
+    Base64Encoder<float> dataEncoder(ofstr, fullSize);
+    for (auto pS : this->_psys._pSystems) {
+      for (auto& p : pS->_particles) {
+        for (int iDim = 0; iDim < 3; ++iDim) {
+          const float tmp = float(p.getMoment()[iDim]);
+          dataEncoder.encode(&tmp, 1);
+        }
+      }
+    }
+    ofstr.close();
+    fout.open(fullName.c_str(), std::ios::out | std::ios::app);
+    fout << "</DataArray>" << std::endl;
+  }
+  if (_properties.test(pPropAVel)) {
+    fout
+        << "<DataArray type=\"Float32\" Name=\"AngularVelocity\" NumberOfComponents=\"3\" format=\"binary\" encoding=\"base64\">"
+        << std::endl;
+    fout.close();
+
+    std::ofstream ofstr(fullName.c_str(),
+                              std::ios::out | std::ios::app | std::ios::binary);
+    if (!ofstr) {
+      this->clout << "Error: could not open " << fullName << std::endl;
+    }
+
+    size_t fullSize = this->_psys.rankNumOfParticles() * 3; //  how many numbers to write
+    size_t binarySize = size_t(fullSize * sizeof(float));
+    // writes first number, which have to be the size(byte) of the following data
+    Base64Encoder<unsigned int> sizeEncoder(ofstr, 1);
+    unsigned int uintBinarySize = (unsigned int) binarySize;
+    sizeEncoder.encode(&uintBinarySize, 1);
+    //  write numbers from functor
+    Base64Encoder<float> dataEncoder(ofstr,
+        fullSize);
+    for (auto pS : this->_psys._pSystems) {
+      for (auto p : pS->_particles) {
+        for (int iDim = 0; iDim < 3; ++iDim) {
+          const float tmp = float(p.getAVel()[iDim]);
+          dataEncoder.encode(&tmp, 1);
+        }
+      }
+    }
+    ofstr.close();
+    fout.open(fullName.c_str(), std::ios::out | std::ios::app);
+    fout << "</DataArray>" << std::endl;
+  }
+  if (_properties.test(pPropTorque)) {
+    fout
+        << "<DataArray type=\"Float32\" Name=\"Torque\" NumberOfComponents=\"3\" format=\"binary\" encoding=\"base64\">"
+        << std::endl;
+    fout.close();
+
+    std::ofstream ofstr(fullName.c_str(),
+                              std::ios::out | std::ios::app | std::ios::binary);
+    if (!ofstr) {
+      this->clout << "Error: could not open " << fullName << std::endl;
+    }
+
+    size_t fullSize = this->_psys.rankNumOfParticles() * 3; //  how many numbers to write
+    size_t binarySize = size_t(fullSize * sizeof(float));
+    // writes first number, which have to be the size(byte) of the following data
+    Base64Encoder<unsigned int> sizeEncoder(ofstr, 1);
+    unsigned int uintBinarySize = (unsigned int) binarySize;
+    sizeEncoder.encode(&uintBinarySize, 1);
+    //  write numbers from functor
+    Base64Encoder<float> dataEncoder(ofstr,
+        fullSize);
+    for (auto pS : this->_psys._pSystems) {
+      for (auto p : pS->_particles) {
+        for (int iDim = 0; iDim < 3; ++iDim) {
+          const float tmp = float(p.getTorque()[iDim]);
+          dataEncoder.encode(&tmp, 1);
+        }
+      }
+    }
+    ofstr.close();
+    fout.open(fullName.c_str(), std::ios::out | std::ios::app);
+    fout << "</DataArray>" << std::endl;
+  }
+  fout << "</PointData>" << std::endl;
+
+  fout << "<CellData /> " << std::endl;
+  fout << "<Cells>" << std::endl;
+  fout << "<DataArray type=\"Int32\" Name=\"connectivity\" format=\"binary\" encoding=\"base64\">" << std::endl;
+  fout.close();
+  {
+    std::ofstream ofstr(fullName.c_str(),
+                        std::ios::out | std::ios::app | std::ios::binary); // only used for binary output // passed to Base64Encoder
+    if (!ofstr) {
+      this->clout << "Error: could not open " << fullName << std::endl;
+    }
+
+    size_t fullSize = this->_psys.rankNumOfParticles(); //  how many numbers to write
+    size_t binarySize = size_t(fullSize * sizeof(int));
+    Base64Encoder<unsigned int> sizeEncoder(ofstr, 1);
+    unsigned int uintBinarySize = (unsigned int) binarySize;
+    sizeEncoder.encode(&uintBinarySize, 1);
+    Base64Encoder<int32_t> dataEncoder(ofstr,
+                                       fullSize);
+    int i = 0;
+    for (auto pS : this->_psys._pSystems) {
+      for (unsigned int p=0; p<pS->_particles.size(); p++) {
+        const int32_t tmp = i++;
+        dataEncoder.encode(&tmp, 1);
+      }
+    }
+    ofstr.close();
+  }
+  fout.open(fullName.c_str(), std::ios::out | std::ios::app);
+  fout << "</DataArray>" << std::endl;
+
+  fout << "<DataArray type=\"Int32\" Name=\"offsets\" format=\"binary\" encoding=\"base64\">"
+       << std::endl;
+  fout.close();
+  {
+    std::ofstream ofstr(fullName.c_str(),
+                        std::ios::out | std::ios::app | std::ios::binary); // only used for binary output // passed to Base64Encoder
+    if (!ofstr) {
+      this->clout << "Error: could not open " << fullName << std::endl;
+    }
+
+    size_t fullSize = this->_psys.rankNumOfParticles(); //  how many numbers to write
+    size_t binarySize = size_t(fullSize * sizeof(int));
+    Base64Encoder<unsigned int> sizeEncoder(ofstr, 1);
+    unsigned int uintBinarySize = (unsigned int) binarySize;
+    sizeEncoder.encode(&uintBinarySize, 1);
+    Base64Encoder<int32_t> dataEncoder(ofstr, fullSize);
+    int i = 1;
+    for (auto pS : this->_psys._pSystems) {
+      for (unsigned int p=0; p<pS->_particles.size(); p++) {
+        const int32_t tmp = i++;
+        dataEncoder.encode(&tmp, 1);
+      }
+    }
+    ofstr.close();
+  }
+  fout.open(fullName.c_str(), std::ios::out | std::ios::app);
+  fout << "</DataArray>" << std::endl;
+
+
+  fout << "<DataArray type=\"UInt8\" Name=\"types\" format=\"binary\" encoding=\"base64\">"
+       << std::endl;
+  fout.close();
+  {
+    std::ofstream ofstr(fullName.c_str(),
+                        std::ios::out | std::ios::app | std::ios::binary); // only used for binary output // passed to Base64Encoder
+    if (!ofstr) {
+      this->clout << "Error: could not open " << fullName << std::endl;
+    }
+
+    size_t fullSize = this->  _psys.rankNumOfParticles(); //  how many numbers to write
+    size_t binarySize = size_t(fullSize * sizeof(int));
+    Base64Encoder<unsigned int> sizeEncoder(ofstr, 1);
+    unsigned int uintBinarySize = (unsigned int) binarySize;
+    sizeEncoder.encode(&uintBinarySize, 1);
+    Base64Encoder<uint8_t> dataEncoder(ofstr, fullSize);
+    for (auto pS : this->_psys._pSystems) {
+      for (unsigned int p=0; p<pS->_particles.size(); p++) {
+        const uint8_t tmp = 1;
+        dataEncoder.encode(&tmp, 1);
+      }
+    }
+    ofstr.close();
+  }
+  fout.open(fullName.c_str(), std::ios::out | std::ios::app);
+  fout << "</DataArray>" << std::endl;
+  fout << "</Cells>" << std::endl;
+  fout << "<Points>" << std::endl;
+  fout << "<DataArray type=\"Float32\" Name=\"Position\" NumberOfComponents=\"3\" format=\"binary\" encoding=\"base64\">"
+       << std::endl;
+
+  fout.close();
+
+  std::ofstream ofstr(fullName.c_str(),
+                      std::ios::out | std::ios::app | std::ios::binary); // only used for binary output // passed to Base64Encoder
+  if (!ofstr) {
+    this->clout << "Error: could not open " << fullName << std::endl;
+  }
+
+  size_t fullSize = this->_psys.rankNumOfParticles() * 3; //  how many numbers to write
+  size_t binarySize = size_t(fullSize * sizeof(float));
+  // writes first number, which have to be the size(byte) of the following data
+  Base64Encoder<unsigned int> sizeEncoder(ofstr, 1);
+  unsigned int uintBinarySize = (unsigned int) binarySize;
+  sizeEncoder.encode(&uintBinarySize, 1);
+  //  write numbers from functor
+  Base64Encoder<float> dataEncoder(ofstr, fullSize);
+  for (auto pS : this->_psys._pSystems) {
+    for (auto& p : pS->_particles) {
+      for (int iDim = 0; iDim < 3; ++iDim) {
+        const float tmp = float(p.getPos()[iDim]);
+        dataEncoder.encode(&tmp, 1);
+      }
+    }
+  }
+  ofstr.close();
+  fout.open(fullName.c_str(), std::ios::out | std::ios::app);
+
+  fout << "</DataArray>" << std::endl;
+  fout << "</Points>" << std::endl;
+  fout << "</Piece>" << std::endl;
+  fout.close();
+}
+
+template<typename T>
+void SuperParticleSysVtuWriterMag<T>::dataArray(
+  const std::string& fullName)
+{
+  std::cout<< "Special member accessed" << std::endl;
+  std::ofstream fout(fullName.c_str(), std::ios::app);
+  if (!fout) {
+    this->clout << "Error: could not open " << fullName << std::endl;
+  }
+
+  if (_properties.test(pPropRadius)) {
+    fout
+        << "<DataArray type=\"Float32\" Name=\"Radius\" NumberOfComponents=\"1\" format=\"ascii\">"
+        << std::endl;
+    for (auto pS : this->_psys._pSystems) {
+      for (auto& p : pS->_particles) {
+        fout << p.getRad() << " ";
+      }
+    }
+    fout << "</DataArray>" << std::endl;
+  }
+  if (_properties.test(pPropMass)) {
+    fout
+        << "<DataArray type=\"Float32\" Name=\"Mass\" NumberOfComponents=\"1\" format=\"ascii\">"
+        << std::endl;
+    for (auto pS : this->_psys._pSystems) {
+      for (auto& p : pS->_particles) {
+        fout << p.getMass() << " ";
+      }
+    }
+    fout << "</DataArray>" << std::endl;
+  }
+  if (_properties.test(pPropCuboid)) {
+    fout
+        << "<DataArray type=\"Int16\" Name=\"Cuboid\" NumberOfComponents=\"1\" format=\"ascii\">"
+        << std::endl;
+    for (auto pS : this->_psys._pSystems) {
+      for (auto& p : pS->_particles) {
+        fout << p.getCuboid() << " ";
+      }
+    }
+    fout << "</DataArray>" << std::endl;
+  }
+  if (_properties.test(pPropActive)) {
+    fout
+        << "<DataArray type=\"Int16\" Name=\"Active\" NumberOfComponents=\"1\" format=\"ascii\">"
+        << std::endl;
+    for (auto pS : this->_psys._pSystems) {
+      for (auto& p : pS->_particles) {
+        if (p.getActive()) {
+          fout << "1 ";
+        } else {
+          fout << "0 ";
+        }
+      }
+    }
+    fout << "</DataArray>" << std::endl;
+  }
+  if (_properties.test(pPropVelocity)) {
+    fout
+        << "<DataArray type=\"Float32\" Name=\"Velocity\" NumberOfComponents=\"3\" format=\"ascii\">"
+        << std::endl;
+    for (auto pS : this->_psys._pSystems) {
+      for (auto& p : pS->_particles) {
+        fout << p.getVel()[0] << " " << p.getVel()[1] << " " << p.getVel()[2]
+             << " ";
+      }
+    }
+    fout << "</DataArray>" << std::endl;
+  }
+  if (_properties.test(pPropForce)) {
+    fout
+        << "<DataArray type=\"Float32\" Name=\"Force\" NumberOfComponents=\"3\" format=\"ascii\">"
+        << std::endl;
+    for (auto pS : this->_psys._pSystems) {
+      for (auto& p : pS->_particles) {
+        fout << p.getForce()[0] << " " << p.getForce()[1] << " " << p.getForce()[2]
+             << " ";
+      }
+    }
+    fout << "</DataArray>" << std::endl;
+  }
+  if (_properties.test(pPropMoment)) {
+    fout
+        << "<DataArray type=\"Float32\" Name=\"Moment\" NumberOfComponents=\"3\" format=\"ascii\">"
+        << std::endl;
+    for (auto pS : this->_psys._pSystems) {
+      for (auto& p : pS->_particles) {
+        fout << p.getMoment()[0] << " " << p.getMoment()[1] << " " << p.getMoment()[2]
+             << " ";
+      }
+    }
+    fout << "</DataArray>" << std::endl;
+  }
+  if (_properties.test(pPropTorque)) {
+    fout
+        << "<DataArray type=\"Float32\" Name=\"Torque\" NumberOfComponents=\"3\" format=\"ascii\">"
+        << std::endl;
+    for (auto pS : this->_psys._pSystems) {
+      for (auto p : pS->_particles) {
+        fout << p.getTorque()[0] << " " << p.getTorque()[1] << " " << p.getTorque()[2]
+             << " ";
+      }
+    }
+    fout << "</DataArray>" << std::endl;
+  }
+  fout << "</PointData>" << std::endl;
+
+  fout << "<CellData /> " << std::endl;
+  fout << "<Cells>" << std::endl;
+  fout << "<DataArray type=\"Int32\" Name=\"connectivity\" format=\"ascii\">"
+       << std::endl;
+  int32_t i = 0;
+  for (auto pS : this->_psys._pSystems) {
+    for (unsigned int p=0; p<pS->_particles.size(); p++) {
+      fout << i++ << " ";
+    }
+  }
+  fout << "</DataArray>" << std::endl;
+  fout << "<DataArray type=\"Int32\" Name=\"offsets\" format=\"ascii\">"
+       << std::endl;
+  i = 1;
+  for (auto pS : this->_psys._pSystems) {
+    for (unsigned int p=0; p<pS->_particles.size(); p++) {
+      fout << i++ << " ";
+    }
+  }
+  fout << "</DataArray>" << std::endl;
+  fout << "<DataArray type=\"UInt8\" Name=\"types\" format=\"ascii\">"
+       << std::endl;
+  for (auto pS : this->_psys._pSystems) {
+    for (unsigned int p=0; p<pS->_particles.size(); p++) {
+      fout << 1 << " ";
+    }
+  }
+  fout << "</DataArray>" << std::endl;
+  fout << "</Cells>" << std::endl;
+  fout << "<Points>" << std::endl;
+  fout
+      << "<DataArray type=\"Float32\" Name=\"Position\" NumberOfComponents=\"3\">"
+      << std::endl;
+
+  for (auto pS : this->_psys._pSystems) {
+    for (auto& p : pS->_particles) {
+      fout << p.getPos()[0] << " " << p.getPos()[1] << " " << p.getPos()[2] << " ";
+    }
+  }
+
+  fout << "</DataArray>" << std::endl;
+  fout << "</Points>" << std::endl;
+  fout << "</Piece>" << std::endl;
+  fout.close();
+}
+
+template<typename T>
+void SuperParticleSysVtuWriterMag<T>::write(int iT)
+{
+  //std::cout << "Write derived" << std::endl;
+  int rank = 0;
+  int size = 1;
+#ifdef PARALLEL_MODE_MPI
+  rank = singleton::mpi().getRank();
+  size = singleton::mpi().getSize();
+#endif
+
+  if (rank == 0) { // master only
+    if (!this->_haveMaster) {
+      this->createMasterFile();
+    }
+
+    std::string fullNamePVDmaster = singleton::directories().getVtkOutDir()
+                                    + createFileName(this->_name) + "_master.pvd";
+    std::string fullNamePVD = singleton::directories().getVtkOutDir() + "data/"
+                              + createFileName(this->_name, iT) + ".pvd";
+
+    this->preamblePVD(fullNamePVD);         // timestep
+    for (int iR = 0; iR < size; iR++) { // cuboid
+      std::string namePiece =  "data/" + createFileName(this->_name, iT, iR) + ".vtu";
+      // puts name of .vti piece to a .pvd file [fullNamePVD]
+      this->dataPVD(iT, iR, fullNamePVD, namePiece);
+      // adds a namePiece to master.pvd file.
+      // To do so we overwrite closePVD() and add new entry.
+      this->dataPVDmaster(iT, iR, fullNamePVDmaster, namePiece);
+    } // cuboid
+    this->closePVD(fullNamePVD);            // timestep
+  } // master only
+
+  std::string fullNameVTU = singleton::directories().getVtkOutDir()
+                            + "data/" + createFileName(this->_name, iT, rank) + ".vtu";
+  this->preambleVTU(fullNameVTU);
+  if (this->_binary) {
+    this->dataArrayBinary(fullNameVTU);
+  } else {
+    this->dataArray(fullNameVTU);
+  }
+  this->closeVTU(fullNameVTU);
+}
+
+template<typename T>
+void SuperParticleSysVtuWriterMag<T>::set(int pref)
+{
+  _properties.set(pref);
+}
+
+
 
 }  // namespace OLB
 

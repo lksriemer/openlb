@@ -44,7 +44,7 @@ struct DynSmagorinsky2dDescriptorBase {
 };
 
 template <typename T> struct DynSmagorinskyD2Q9Descriptor
-    : public D2Q9DescriptorBase<T>, public DynSmagorinsky2dDescriptorBase {
+  : public D2Q9DescriptorBase<T>, public DynSmagorinsky2dDescriptorBase {
 };
 
 
@@ -63,7 +63,7 @@ struct DynSmagorinsky3dDescriptorBase {
 };
 
 template <typename T> struct DynSmagorinskyD3Q19Descriptor
-    : public D3Q19DescriptorBase<T>, public DynSmagorinsky3dDescriptorBase {
+  : public D3Q19DescriptorBase<T>, public DynSmagorinsky3dDescriptorBase {
 };
 
 

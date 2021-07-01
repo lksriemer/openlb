@@ -35,6 +35,8 @@ namespace olb {
 
 template class SuperParticleSystem3D<double,Particle3D>;
 
+template class SuperParticleSystem3D<double,MagneticParticle3D>;
+
 template<>
 template<>
 void SuperParticleSystem3D<double,Particle3D>::
@@ -45,5 +47,40 @@ setVelToFluidVel<descriptors::D3Q19Descriptor>(
     pS->setVelToFluidVel(fVel);
   }
 };
+
+template<>
+template<>
+void SuperParticleSystem3D<double,MagneticParticle3D>::
+setVelToFluidVel<descriptors::D3Q19Descriptor>(
+  SuperLatticeInterpPhysVelocity3D<double, descriptors::D3Q19Descriptor>& fVel)
+{
+  for (auto pS : _pSystems) {
+    pS->setVelToFluidVel(fVel);
+  }
+};
+
+#ifndef OLB_PRECOMPILED
+template<>
+template<>
+void SuperParticleSystem3D<double,Particle3D>::
+setVelToFluidVel<descriptors::ForcedD3Q19Descriptor>(
+  SuperLatticeInterpPhysVelocity3D<double, descriptors::ForcedD3Q19Descriptor>& fVel)
+{
+  for (auto pS : _pSystems) {
+    pS->setVelToFluidVel(fVel);
+  }
+};
+
+template<>
+template<>
+void SuperParticleSystem3D<double,MagneticParticle3D>::
+setVelToFluidVel<descriptors::ForcedD3Q19Descriptor>(
+  SuperLatticeInterpPhysVelocity3D<double, descriptors::ForcedD3Q19Descriptor>& fVel)
+{
+  for (auto pS : _pSystems) {
+    pS->setVelToFluidVel(fVel);
+  }
+};
+#endif
 
 }  // namespace olb

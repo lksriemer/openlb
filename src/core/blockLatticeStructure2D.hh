@@ -225,34 +225,40 @@ void BlockLatticeStructure2D<T,Lattice>::resetExternalParticleField(
 }
 
 template<typename T, template<typename U> class Lattice>
-void BlockLatticeStructure2D<T,Lattice>::setExternalParticleField(BlockGeometryStructure2D<T>& blockGeometry, AnalyticalF2D<T,T>& velocity,  SmoothIndicatorF2D<T,T>& sIndicator)
+void BlockLatticeStructure2D<T,Lattice>::setExternalParticleField(BlockGeometryStructure2D<T>& blockGeometry, AnalyticalF2D<T,T>& velocity, ParticleIndicatorF2D<T,T>& sIndicator)
 {
-  T foo[3] = {T(), T(), T()}; /// Contains foo[0]=vel0; foo[1]=vel1; foo[2]=
+
+  int start[2] = {0}, span[2] = {0};
+  for (int k=0; k<2; k++) {
+    start[k] = (sIndicator.getPos()[k]+sIndicator.getMin()[k] - blockGeometry.getOrigin()[k]) / blockGeometry.getDeltaR();
+    if (start[k] < 0) {
+      start[k] = 0;
+    }
+    span[k] = (sIndicator.getMax()[k] - sIndicator.getMin()[k])/blockGeometry.getDeltaR() + 3;
+    if (span[k] + start[k] > blockGeometry.getExtend()[k]) {
+      span[k] = blockGeometry.getExtend()[k] - start[k];
+    }
+  }
+
+  T foo[3] = {T(), T(), T()}; /// Contains foo[0]=vel0; foo[1]=vel1; foo[2]=porosity
   T physR[2]= {T(),T()};
   T porosity[1] = {T()};
-  for (int iX = 0; iX < this->_nx; iX++) {
-    for (int iY = 0; iY < this->_ny; iY++) {
+  for (int iX = start[0]; iX < start[0]+span[0]; iX++) {
+    for (int iY = start[1]; iY < start[1]+span[1]; iY++) {
       blockGeometry.getPhysR(physR, iX,iY);
-      if (physR[0] > sIndicator.getMin()[0] &&
-          physR[0] < sIndicator.getMax()[0] &&
-          physR[1] > sIndicator.getMin()[1] &&
-          physR[1] < sIndicator.getMax()[1]) {
-        sIndicator(porosity, physR);
-        if (porosity[0]>0.) {
-          velocity(foo,physR);
-          foo[0] *= porosity[0];
-          foo[1] *= porosity[0];
-          foo[2] = porosity[0];
-          get(iX,iY).addExternalField(1,3, foo);
-          porosity[0] = 1.-porosity[0];
-          get(iX,iY).multiplyExternalField(0,1, porosity);
-        }
+      sIndicator(porosity, physR);
+      if (porosity[0]>0.) {
+        velocity(foo,physR);
+        foo[0] *= porosity[0];
+        foo[1] *= porosity[0];
+        foo[2] = porosity[0];
+        get(iX,iY).addExternalField(1,3, foo);
+        porosity[0] = 1.-porosity[0];
+        get(iX,iY).multiplyExternalField(0,1, porosity);
       }
     }
   }
 }
-
-
 
 template<typename T, template<typename U> class Lattice>
 void BlockLatticeStructure2D<T,Lattice>::multiplyExternalField(

@@ -78,7 +78,7 @@ public:
                                 AnalyticalF2D<T,T>& field, AnalyticalF2D<T,T>& porous);
   virtual void resetExternalParticleField(BlockGeometryStructure2D<T>& blockGeometry,
                                           IndicatorF2D<T>& indicator);
-  virtual void setExternalParticleField(BlockGeometryStructure2D<T>& blockGeometry, AnalyticalF2D<T,T>& velocity, SmoothIndicatorF2D<T,T>& sIndicator);
+  virtual void setExternalParticleField(BlockGeometryStructure2D<T>& blockGeometry, AnalyticalF2D<T,T>& velocity, ParticleIndicatorF2D<T,T>& sIndicator);
   virtual void multiplyExternalField(BlockGeometryStructure2D<T>& blockGeometry,
                                      IndicatorF2D<T>& indicator, int fieldBeginsAt, int sizeOfField,
                                      AnalyticalF2D<T,T>& field);

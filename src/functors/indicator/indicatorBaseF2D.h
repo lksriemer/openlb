@@ -156,6 +156,102 @@ public:
   bool operator() (T output[], const S input[]) override;
 };
 
+/** ParticleIndicatorF2D is an application from \f$ \Omega \subset R^3 \to [0,1] \f$.
+  * \param _myMin   holds minimal(component wise) vector of the domain \f$ \Omega \f$.
+  * \param _myMax   holds maximal(component wise) vector of the domain \f$ \Omega \f$.
+  * \param _center
+  * \param _diam
+  */
+template <typename T, typename S>
+class ParticleIndicatorF2D : public AnalyticalF2D<T,S> {
+protected:
+  ParticleIndicatorF2D();
+  Vector<S,2> _myMin;
+  Vector<S,2> _myMax;
+  Vector<S,2> _pos;
+  Vector<S,2> _vel;
+  Vector<S,2> _acc;
+  Vector<S,2> _acc2;
+  S _theta;
+  S _omega;
+  S _alpha;
+  S _alpha2;
+  S _mass;
+  S _mofi; //Moment of Inertia
+  S _epsilon;
+  S _radius;
+
+public:
+  Vector<S,2>& getMin()
+  {
+    return _myMin;
+  };
+  Vector<S,2>& getMax()
+  {
+    return _myMax;
+  };
+  Vector<S,2>& getVel()
+  {
+    return _vel;
+  };
+  Vector<S,2>& getAcc()
+  {
+    return _acc;
+  };
+  Vector<S,2>& getAcc2()
+  {
+    return _acc2;
+  };
+  Vector<S,2>& getPos()
+  {
+    return _pos;
+  };
+  S& getTheta()
+  {
+    return _theta;
+  };
+  S& getOmega()
+  {
+    return _omega;
+  };
+  S& getAlpha()
+  {
+    return _alpha;
+  };
+  S& getAlpha2()
+  {
+    return _alpha2;
+  };
+  S& getMass()
+  {
+    return _mass;
+  };
+  S& getMofi()
+  {
+    return _mofi;
+  };
+  S& getRadius()
+  {
+    return _radius;
+  };
+  S getDiam()
+  {
+    return 2.*_radius;
+  };
+
+  ParticleIndicatorF2D<T,S>& operator+(ParticleIndicatorF2D<T,S>& rhs);
+};
+
+
+template <typename T, typename S>
+class ParticleIndicatorIdentity2D : public ParticleIndicatorF2D<T,S> {
+protected:
+  ParticleIndicatorF2D<T,S>& _f;
+public:
+  ParticleIndicatorIdentity2D(ParticleIndicatorF2D<T,S>& f);
+  bool operator() (T output[], const S input[]) override;
+};
+
 }
 
 #endif

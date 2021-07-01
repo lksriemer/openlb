@@ -952,7 +952,7 @@ void MpiManager::reduceAndBcast<bool>(bool& reductVal, MPI_Op op, int root, MPI_
     return;
   }
   char recvVal;
-  MPI_Reduce(&reductVal, &recvVal, 1, MPI::BOOL, op, root, comm);
+  MPI_Reduce(static_cast<void*>(&reductVal), static_cast<void*>(&recvVal), 1, MPI_BYTE, op, root, comm);
   reductVal = recvVal;
   MPI_Bcast(&reductVal, 1, MPI_BYTE, root, comm);
 

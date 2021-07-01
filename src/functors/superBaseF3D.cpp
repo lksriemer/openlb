@@ -1,7 +1,7 @@
 /*  This file is part of the OpenLB library
  *
- *  Copyright (C) 2012 Lukas Baron, Tim Dornieden, Mathias J. Krause,
- *  Albert Mink
+ *  Copyright (C) 2012-2016 Lukas Baron, Tim Dornieden, Mathias J. Krause,
+ *                          Albert Mink, Benjamin Förster
  *  E-mail contact: info@openlb.net
  *  The most recent release of OpenLB can be downloaded at
  *  <http://www.openlb.net/>
@@ -29,9 +29,13 @@
 
 namespace olb {
 
-template class SuperF3D<double>;
+template class SuperF3D<double,double>;
+template class SuperF3D<double,int>;
+template class SuperF3D<double,bool>;
 
-template class SuperIdentity3D<double>;
+template class SuperIdentity3D<double,double>;
+template class SuperIdentity3D<double,int>;
+template class SuperIdentity3D<double,bool>;
 
 template class SuperLatticeF3D<double,descriptors::D3Q19Descriptor>;
 template class SuperLatticePhysF3D<double,descriptors::D3Q19Descriptor>;

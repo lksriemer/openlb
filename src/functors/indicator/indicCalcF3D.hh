@@ -128,7 +128,7 @@ template <typename T, typename S>
 SmoothIndicCalc3D<T, S>::SmoothIndicCalc3D(SmoothIndicatorF3D<T, S>& f, SmoothIndicatorF3D<T, S>& g)
   : _f(f), _g(g)
 {
- for ( int i=0; i<3; i++) {
+  for ( int i=0; i<3; i++) {
     this->_myMin[i] = std::min(f.getMin()[i], g.getMin()[i]);
     this->_myMax[i] = std::max(f.getMax()[i], g.getMax()[i]);
   }

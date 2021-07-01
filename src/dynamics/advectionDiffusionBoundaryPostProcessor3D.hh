@@ -33,7 +33,8 @@ namespace olb {
 
 template<typename T, template<typename U> class Lattice>
 ConvectionBoundaryProcessor3D<T,Lattice>::
-ConvectionBoundaryProcessor3D(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_, int discreteNormalX, int discreteNormalY, int discreteNormalZ)
+ConvectionBoundaryProcessor3D(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_,
+                              int discreteNormalX, int discreteNormalY, int discreteNormalZ)
   : x0(x0_), x1(x1_), y0(y0_), y1(y1_), z0(z0_), z1(z1_)
 {
   OLB_PRECONDITION(x0==x1 || y0==y1 || z0==z1);
@@ -51,7 +52,8 @@ ConvectionBoundaryProcessor3D(int x0_, int x1_, int y0_, int y1_, int z0_, int z
 
 template<typename T, template<typename U> class Lattice>
 void ConvectionBoundaryProcessor3D<T,Lattice>::
-processSubDomain(BlockLattice3D<T,Lattice>& blockLattice, int x0_, int x1_, int y0_, int y1_, int z0_, int z1_)
+processSubDomain(BlockLattice3D<T,Lattice>& blockLattice, int x0_, int x1_, int y0_,
+                 int y1_, int z0_, int z1_)
 {
   int newX0, newX1, newY0, newY1, newZ0, newZ1;
   if ( util::intersect (
@@ -91,7 +93,8 @@ process(BlockLattice3D<T,Lattice>& blockLattice)
 
 template<typename T, template<typename U> class Lattice>
 ZeroDistributionBoundaryProcessor3D<T,Lattice>::
-ZeroDistributionBoundaryProcessor3D(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_, int discreteNormalX, int discreteNormalY, int discreteNormalZ)
+ZeroDistributionBoundaryProcessor3D(int x0_, int x1_, int y0_, int y1_, int z0_,
+                                    int z1_, int discreteNormalX, int discreteNormalY, int discreteNormalZ)
   : x0(x0_), x1(x1_), y0(y0_), y1(y1_), z0(z0_), z1(z1_)
 {
   OLB_PRECONDITION(x0==x1 || y0==y1 || z0==z1);
@@ -108,7 +111,8 @@ ZeroDistributionBoundaryProcessor3D(int x0_, int x1_, int y0_, int y1_, int z0_,
 
 template<typename T, template<typename U> class Lattice>
 void ZeroDistributionBoundaryProcessor3D<T,Lattice>::
-processSubDomain(BlockLattice3D<T,Lattice>& blockLattice, int x0_, int x1_, int y0_, int y1_, int z0_, int z1_)
+processSubDomain(BlockLattice3D<T,Lattice>& blockLattice, int x0_, int x1_,
+                 int y0_, int y1_, int z0_, int z1_)
 {
   int newX0, newX1, newY0, newY1, newZ0, newZ1;
   if ( util::intersect (
@@ -144,8 +148,11 @@ process(BlockLattice3D<T,Lattice>& blockLattice)
 
 template<typename T, template<typename U> class Lattice>
 ExtFieldBoundaryProcessor3D<T,Lattice>::
-ExtFieldBoundaryProcessor3D(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_, int discreteNormalX_, int discreteNormalY_, int discreteNormalZ_, int offset_)
-  : x0(x0_), x1(x1_), y0(y0_), y1(y1_), z0(z0_), z1(z1_), discreteNormalX(discreteNormalX_), discreteNormalY(discreteNormalY_), discreteNormalZ(discreteNormalZ_), offset(offset_)
+ExtFieldBoundaryProcessor3D(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_,
+                            int discreteNormalX_, int discreteNormalY_, int discreteNormalZ_, int offset_)
+  : x0(x0_), x1(x1_), y0(y0_), y1(y1_), z0(z0_), z1(z1_),
+    discreteNormalX(discreteNormalX_), discreteNormalY(discreteNormalY_),
+    discreteNormalZ(discreteNormalZ_), offset(offset_)
 {
   OLB_PRECONDITION(x0==x1 || y0==y1 || z0==z1);
   par = true;
@@ -153,7 +160,8 @@ ExtFieldBoundaryProcessor3D(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_
 
 template<typename T, template<typename U> class Lattice>
 void ExtFieldBoundaryProcessor3D<T,Lattice>::
-processSubDomain(BlockLattice3D<T,Lattice>& blockLattice, int x0_, int x1_, int y0_, int y1_, int z0_, int z1_)
+processSubDomain(BlockLattice3D<T,Lattice>& blockLattice, int x0_, int x1_,
+                 int y0_, int y1_, int z0_, int z1_)
 {
   int newX0, newX1, newY0, newY1, newZ0, newZ1;
   if ( util::intersect (
@@ -192,72 +200,89 @@ process(BlockLattice3D<T,Lattice>& blockLattice)
 
 template<typename T, template<typename U> class Lattice>
 ConvectionBoundaryProcessorGenerator3D<T,Lattice>::
-ConvectionBoundaryProcessorGenerator3D(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_, int discreteNormalX_, int discreteNormalY_, int discreteNormalZ_)
-  : PostProcessorGenerator3D<T,Lattice>(x0_, x1_, y0_, y1_, z0_, z1_), discreteNormalX(discreteNormalX_), discreteNormalY(discreteNormalY_), discreteNormalZ(discreteNormalZ_)
+ConvectionBoundaryProcessorGenerator3D(int x0_, int x1_, int y0_, int y1_, int z0_,
+                                       int z1_, int discreteNormalX_, int discreteNormalY_, int discreteNormalZ_)
+  : PostProcessorGenerator3D<T,Lattice>(x0_, x1_, y0_, y1_, z0_, z1_),
+    discreteNormalX(discreteNormalX_), discreteNormalY(discreteNormalY_),
+    discreteNormalZ(discreteNormalZ_)
 { }
 
 template<typename T, template<typename U> class Lattice>
 PostProcessor3D<T,Lattice>*
 ConvectionBoundaryProcessorGenerator3D<T,Lattice>::generate() const
 {
-  return new ConvectionBoundaryProcessor3D<T,Lattice>
-         (this->x0, this->x1, this->y0, this->y1, this->z0, this->z1, discreteNormalX, discreteNormalY, discreteNormalZ);
+  return new ConvectionBoundaryProcessor3D<T,Lattice>(this->x0, this->x1, this->y0,
+         this->y1, this->z0, this->z1,
+         discreteNormalX,
+         discreteNormalY,
+         discreteNormalZ);
 }
 
 template<typename T, template<typename U> class Lattice>
 PostProcessorGenerator3D<T,Lattice>*
 ConvectionBoundaryProcessorGenerator3D<T,Lattice>::clone() const
 {
-  return new ConvectionBoundaryProcessorGenerator3D<T,Lattice>
-         (this->x0, this->x1, this->y0, this->y1, this->z0, this->z1, discreteNormalX, discreteNormalY, discreteNormalZ);
+  return new ConvectionBoundaryProcessorGenerator3D<T,Lattice>(this->x0, this->x1,
+         this->y0, this->y1, this->z0, this->z1,
+         discreteNormalX, discreteNormalY, discreteNormalZ);
 }
 
 ////////  ZeroDistributionBoundaryProcessorGenerator3D ////////////////////////////////
 
 template<typename T, template<typename U> class Lattice>
 ZeroDistributionBoundaryProcessorGenerator3D<T,Lattice>::
-ZeroDistributionBoundaryProcessorGenerator3D(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_, int discreteNormalX_, int discreteNormalY_, int discreteNormalZ_)
-  : PostProcessorGenerator3D<T,Lattice>(x0_, x1_, y0_, y1_, z0_, z1_), discreteNormalX(discreteNormalX_), discreteNormalY(discreteNormalY_), discreteNormalZ(discreteNormalZ_)
+ZeroDistributionBoundaryProcessorGenerator3D(int x0_, int x1_, int y0_, int y1_,
+    int z0_, int z1_, int discreteNormalX_, int discreteNormalY_, int discreteNormalZ_)
+  : PostProcessorGenerator3D<T,Lattice>(x0_, x1_, y0_, y1_, z0_, z1_),
+    discreteNormalX(discreteNormalX_), discreteNormalY(discreteNormalY_),
+    discreteNormalZ(discreteNormalZ_)
 { }
 
 template<typename T, template<typename U> class Lattice>
 PostProcessor3D<T,Lattice>*
 ZeroDistributionBoundaryProcessorGenerator3D<T,Lattice>::generate() const
 {
-  return new ZeroDistributionBoundaryProcessor3D<T,Lattice>
-         (this->x0, this->x1, this->y0, this->y1, this->z0, this->z1, discreteNormalX, discreteNormalY, discreteNormalZ);
+  return new ZeroDistributionBoundaryProcessor3D<T,Lattice>(this->x0, this->x1,
+         this->y0, this->y1, this->z0, this->z1,
+         discreteNormalX, discreteNormalY, discreteNormalZ);
 }
 
 template<typename T, template<typename U> class Lattice>
 PostProcessorGenerator3D<T,Lattice>*
 ZeroDistributionBoundaryProcessorGenerator3D<T,Lattice>::clone() const
 {
-  return new ZeroDistributionBoundaryProcessorGenerator3D<T,Lattice>
-         (this->x0, this->x1, this->y0, this->y1, this->z0, this->z1, discreteNormalX, discreteNormalY, discreteNormalZ);
+  return new ZeroDistributionBoundaryProcessorGenerator3D<T,Lattice>(this->x0,
+         this->x1, this->y0, this->y1, this->z0, this->z1,
+         discreteNormalX, discreteNormalY, discreteNormalZ);
 }
 
 ////////  ExtFieldBoundaryProcessorGenerator3D ////////////////////////////////
 
 template<typename T, template<typename U> class Lattice>
 ExtFieldBoundaryProcessorGenerator3D<T,Lattice>::
-ExtFieldBoundaryProcessorGenerator3D(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_, int discreteNormalX_, int discreteNormalY_, int discreteNormalZ_, int offset_)
-  : PostProcessorGenerator3D<T,Lattice>(x0_, x1_, y0_, y1_, z0_, z1_), discreteNormalX(discreteNormalX_), discreteNormalY(discreteNormalY_), discreteNormalZ(discreteNormalZ_), offset(offset_)
+ExtFieldBoundaryProcessorGenerator3D(int x0_, int x1_, int y0_, int y1_, int z0_,
+                                     int z1_, int discreteNormalX_, int discreteNormalY_, int discreteNormalZ_, int offset_)
+  : PostProcessorGenerator3D<T,Lattice>(x0_, x1_, y0_, y1_, z0_, z1_),
+    discreteNormalX(discreteNormalX_), discreteNormalY(discreteNormalY_),
+    discreteNormalZ(discreteNormalZ_), offset(offset_)
 { }
 
 template<typename T, template<typename U> class Lattice>
 PostProcessor3D<T,Lattice>*
 ExtFieldBoundaryProcessorGenerator3D<T,Lattice>::generate() const
 {
-  return new ExtFieldBoundaryProcessor3D<T,Lattice>
-         (this->x0, this->x1, this->y0, this->y1, this->z0, this->z1, discreteNormalX, discreteNormalY, discreteNormalZ, offset);
+  return new ExtFieldBoundaryProcessor3D<T,Lattice>(this->x0, this->x1, this->y0,
+         this->y1, this->z0, this->z1, discreteNormalX, discreteNormalY,
+         discreteNormalZ, offset);
 }
 
 template<typename T, template<typename U> class Lattice>
 PostProcessorGenerator3D<T,Lattice>*
 ExtFieldBoundaryProcessorGenerator3D<T,Lattice>::clone() const
 {
-  return new ExtFieldBoundaryProcessorGenerator3D<T,Lattice>
-         (this->x0, this->x1, this->y0, this->y1, this->z0, this->z1, discreteNormalX, discreteNormalY, discreteNormalZ, offset);
+  return new ExtFieldBoundaryProcessorGenerator3D<T,Lattice>(this->x0, this->x1,
+         this->y0, this->y1, this->z0, this->z1,
+         discreteNormalX, discreteNormalY, discreteNormalZ, offset);
 }
 
 }  // namespace olb

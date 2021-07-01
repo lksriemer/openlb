@@ -1,6 +1,6 @@
 /*  This file is part of the OpenLB library
  *
- *  Copyright (C) 2014  Albert Mink, Mathias J. Krause
+ *  Copyright (C) 2016 Mathias J. Krause, Marie-Luise Maier
  *  E-mail contact: info@openlb.net
  *  The most recent release of OpenLB can be downloaded at
  *  <http://www.openlb.net/>
@@ -21,17 +21,13 @@
  *  Boston, MA  02110-1301, USA.
 */
 
-/** \file
- * A method to write vtk data for cuboid geometries
- * (only for uniform grids) -- template instantiation.
- */
-
-#include "io/superVtkWriter2D.h"
-#include "io/superVtkWriter2D.hh"
+#include "particles/particle3D.h"
+#include "particles/particle3D.hh"
+#include "buoyancyForce3D.h"
+#include "buoyancyForce3D.hh"
 
 namespace olb {
 
-template class SuperVTKwriter2D<double>;
+template class BuoyancyForce3D<double,Particle3D>;
 
-} // end namespace olb
-
+}  // namespace olb

@@ -38,8 +38,6 @@
 #include "communication/mpiManager.h"
 
 
-using namespace olb::util;
-
 /// All OpenLB code is contained in this namespace.
 namespace olb {
 
@@ -60,8 +58,8 @@ BlockLatticeReduction2D<T, DESCRIPTOR>::BlockLatticeReduction2D
     clout << "Error: Functor targetDim is not 1. " << std::endl;
     exit(-1);
   }
-  _origin[0] -= 2*std::numeric_limits<T>::epsilon()*fabs(_origin[0]);
-  _origin[1] -= 2*std::numeric_limits<T>::epsilon()*fabs(_origin[1]);
+  _origin[0] -= 10*std::numeric_limits<T>::epsilon();
+  _origin[1] -= 10*std::numeric_limits<T>::epsilon();
 
   // changes _h, _nx, _ny if needed
   updateToWantedResolution();
@@ -102,8 +100,9 @@ void BlockLatticeReduction2D<T, DESCRIPTOR>::update()
       // store default value
       this->_blockData.get(iX, iY, 0) = T();
       // parallelization, get Cuboid Nmb out of coordinate
-      int iC;
-      if ( _f.getSuperLattice().getCuboidGeometry().getC(vTmp, iC) ) {
+      int iC = 0;
+      if ( _f.getSuperLattice().getCuboidGeometry().getC(vTmp, iC)  &&
+           _f.getSuperLattice().getCuboidGeometry().getMotherCuboid().checkInters(vTmp[0],vTmp[0],vTmp[1],vTmp[1]) ) {
         int rankiC = _f.getSuperLattice().getLoadBalancer().rank(iC);
         T tmp[_f.getTargetDim()];
         T vTmp2[vTmp.size()];
@@ -272,12 +271,12 @@ BlockLatticeReduction3D<T, DESCRIPTOR>::BlockLatticeReduction3D(
 
   // scale vectors which span the plane to be of lenght _h in Si units
   Vector<T,3> normal = {normalX, normalY, normalZ};
-  if (!(normal[0]*normal[1]*normal[2]) ) {
-    if (!(normal[0]) ) {
+  if ( util::nearZero(normal[0]*normal[1]*normal[2]) ) {
+    if ( util::nearZero(normal[0]) ) {
       _u = {T(_h), T(), T()};
-    } else if (!(normal[1]) ) {
+    } else if ( util::nearZero(normal[1]) ) {
       _u = {T(), T(_h), T()};
-    } else if (!(normal[2]) ) {
+    } else if ( util::nearZero(normal[2]) ) {
       _u = {T(), T(), T(_h)};
     }
   } else {
@@ -323,35 +322,36 @@ BlockLatticeReduction3D<T, DESCRIPTOR>::BlockLatticeReduction3D(
 
   // scale vectors which span the plane to be of lenght _h in Si units
   Vector<T,3> normal = {normalX, normalY, normalZ};
-  if ( !(normal[0]*normal[1]*normal[2]) ) {
-    if (!(normal[0]) ) {
-      _u = {T(_h), T(), T()};
-    } else if (!(normal[1]) ) {
-      _u = {T(), T(_h), T()};
-    } else if (!(normal[2]) ) {
-      _u = {T(), T(), T(_h)};
+  if ( util::nearZero(normal[0]*normal[1]*normal[2]) ) {
+    if ( util::nearZero(normal[0]*normal[1]*normal[2]) ) {
+      if ( util::nearZero(normal[0]) ) {
+        _u = {T(_h), T(), T()};
+      } else if ( util::nearZero(normal[1]) ) {
+        _u = {T(), T(_h), T()};
+      } else if ( util::nearZero(normal[2]) ) {
+        _u = {T(), T(), T(_h)};
+      }
+    } else {
+      _u = {T(), normal[1], -normal[2]};
+      _u.normalize(_h);
     }
-  } else {
-    _u = {T(), normal[1], -normal[2]};
-    _u.normalize(_h);
+    _v = normal;
+    _v = crossProduct3D(_u,_v);
+    _v.normalize(_h);
+    // computes max possible distance (sets maxLatticeDistance)
+    int maxLatticeDistance = computeMaxLatticeDistance();
+
+    // computes _origin and _nx, _ny such that the cuboid is right inside cuboid geomety and not too big (sets _origin, _nx, _ny)
+    constructCuboid(maxLatticeDistance);
+    // changes _h, _nx, _ny if needed
+    updateToWantedResolution();
+    // constructs block data fields
+    _tmpBlockData = new BlockData2D<T,T>( _nx, _ny );
+    this->_blockData = *_tmpBlockData;
+    // first update of data
+    update();
   }
-  _v = normal;
-  _v = crossProduct3D(_u,_v);
-  _v.normalize(_h);
-  // computes max possible distance (sets maxLatticeDistance)
-  int maxLatticeDistance = computeMaxLatticeDistance();
-
-  // computes _origin and _nx, _ny such that the cuboid is right inside cuboid geomety and not too big (sets _origin, _nx, _ny)
-  constructCuboid(maxLatticeDistance);
-  // changes _h, _nx, _ny if needed
-  updateToWantedResolution();
-  // constructs block data fields
-  _tmpBlockData = new BlockData2D<T,T>( _nx, _ny );
-  this->_blockData = *_tmpBlockData;
-  // first update of data
-  update();
 }
-
 
 template <typename T, template <typename U> class DESCRIPTOR >
 BlockLatticeReduction3D<T, DESCRIPTOR>::~BlockLatticeReduction3D()
@@ -363,7 +363,7 @@ BlockLatticeReduction3D<T, DESCRIPTOR>::~BlockLatticeReduction3D()
 template <typename T, template <typename U> class DESCRIPTOR >
 void BlockLatticeReduction3D<T, DESCRIPTOR>::constructOrigin(T const origin[3])
 {
-  if (origin == NULL) {
+  if (origin == nullptr) {
     Vector<T,3> originCuboid( _f.getSuperLattice().getCuboidGeometry().getMotherCuboid().getOrigin() );
     Vector<int,3> extend( _f.getSuperLattice().getCuboidGeometry().getMotherCuboid().getExtend() );
     T deltaR = _f.getSuperLattice().getCuboidGeometry().getMotherCuboid().getDeltaR();
@@ -373,7 +373,6 @@ void BlockLatticeReduction3D<T, DESCRIPTOR>::constructOrigin(T const origin[3])
     _origin[0] -= 2*std::numeric_limits<T>::epsilon()*fabs(_origin[0]);
     _origin[1] -= 2*std::numeric_limits<T>::epsilon()*fabs(_origin[1]);
     _origin[2] -= 2*std::numeric_limits<T>::epsilon()*fabs(_origin[2]);
-
   } else {
     _origin[0] = origin[0] - 2*std::numeric_limits<T>::epsilon()*fabs(origin[0]);
     _origin[1] = origin[1] - 2*std::numeric_limits<T>::epsilon()*fabs(origin[1]);

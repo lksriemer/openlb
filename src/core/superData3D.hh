@@ -65,11 +65,11 @@ SuperData3D<T,BaseType>::SuperData3D(SuperData3D<T,BaseType>& rhs)
 }
 
 template<typename T, typename BaseType>
-SuperData3D<T,BaseType>::SuperData3D(SuperF3D<T>& rhs)
+SuperData3D<T,BaseType>::SuperData3D(SuperF3D<T,BaseType>& rhs)
   : SuperStructure3D<T>(rhs.getSuperStructure().getCuboidGeometry(),
                         rhs.getSuperStructure().getLoadBalancer(),
                         rhs.getSuperStructure().getOverlap()),
-  _size(rhs.getTargetDim())
+    _size(rhs.getTargetDim())
 {
   allocateMemory();
   int i[4];
@@ -82,10 +82,10 @@ SuperData3D<T,BaseType>::SuperData3D(SuperF3D<T>& rhs)
           i[1] = iX - this->_overlap;
           i[2] = iY - this->_overlap;
           i[3] = iZ - this->_overlap;
-          T tmp[rhs.getTargetDim()];
+          BaseType tmp[rhs.getTargetDim()];
           rhs(tmp, i);
           for (int iDim=0; iDim<rhs.getTargetDim(); iDim++ ) {
-            get(iCloc).get(iX, iY, iZ, iDim) = (BaseType)(tmp[iDim]);
+            get(iCloc).get(iX, iY, iZ, iDim) = tmp[iDim];
           }
         }
       }
@@ -99,8 +99,10 @@ void SuperData3D<T,BaseType>::allocateMemory()
   for (int iCloc=0; iCloc < this->getLoadBalancer().size(); ++iCloc) {
     int iCglob = this->getLoadBalancer().glob(iCloc);
     Cuboid3D<T> extendedCuboid(this->getCuboidGeometry().get(iCglob), this->getOverlap());
-    BlockData3D<T,BaseType> tmp(extendedCuboid.getNx(), extendedCuboid.getNy(), extendedCuboid.getNz(), _size);
-    _extendedBlockData.push_back(tmp);
+    _extendedBlockData.push_back(BlockData3D<T, BaseType>(extendedCuboid.getNx(),
+                                 extendedCuboid.getNy(),
+                                 extendedCuboid.getNz(),
+                                 _size));
   }
 };
 
@@ -127,7 +129,7 @@ void SuperData3D<T,BaseType>::swap(std::vector< BlockData3D<T,BaseType> >& block
 template<typename T, typename BaseType>
 void SuperData3D<T,BaseType>::swap(SuperData3D<T,BaseType>& rhs)
 {
-  _size = rhs._size;
+  std::swap(_size, rhs._size);
   _extendedBlockData.swap(rhs._extendedBlockData);
 }
 

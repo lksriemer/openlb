@@ -37,10 +37,12 @@ template<typename T, template<typename U> class Lattice>
 class ZeroVelocityBouzidiLinearPostProcessor3D : public LocalPostProcessor3D<T,Lattice> {
 public:
   ZeroVelocityBouzidiLinearPostProcessor3D(int x_, int y_, int z_, int iPop_, T dist_);
-  virtual int extent() const {
+  virtual int extent() const
+  {
     return 1;
   }
-  virtual int extent(int whichDirection) const {
+  virtual int extent(int whichDirection) const
+  {
     return 1;
   }
   virtual void process(BlockLattice3D<T,Lattice>& blockLattice);
@@ -57,10 +59,12 @@ template<typename T, template<typename U> class Lattice>
 class ZeroVelocityBounceBackPostProcessor3D : public LocalPostProcessor3D<T,Lattice> {
 public:
   ZeroVelocityBounceBackPostProcessor3D(int x_, int y_, int z_, int iPop_, T dist_);
-  virtual int extent() const {
+  virtual int extent() const
+  {
     return 1;
   }
-  virtual int extent(int whichDirection) const {
+  virtual int extent(int whichDirection) const
+  {
     return 1;
   }
   virtual void process(BlockLattice3D<T,Lattice>& blockLattice);
@@ -77,10 +81,12 @@ template<typename T, template<typename U> class Lattice>
 class VelocityBouzidiLinearPostProcessor3D : public LocalPostProcessor3D<T,Lattice> {
 public:
   VelocityBouzidiLinearPostProcessor3D(int x_, int y_, int z_, int iPop_, T dist_);
-  virtual int extent() const {
+  virtual int extent() const
+  {
     return 1;
   }
-  virtual int extent(int whichDirection) const {
+  virtual int extent(int whichDirection) const
+  {
     return 1;
   }
   virtual void process(BlockLattice3D<T,Lattice>& blockLattice);
@@ -98,10 +104,12 @@ template<typename T, template<typename U> class Lattice>
 class VelocityBounceBackPostProcessor3D : public LocalPostProcessor3D<T,Lattice> {
 public:
   VelocityBounceBackPostProcessor3D(int x_, int y_, int z_, int iPop_, T dist_);
-  virtual int extent() const {
+  virtual int extent() const
+  {
     return 1;
   }
-  virtual int extent(int whichDirection) const {
+  virtual int extent(int whichDirection) const
+  {
     return 1;
   }
   virtual void process(BlockLattice3D<T,Lattice>& blockLattice);

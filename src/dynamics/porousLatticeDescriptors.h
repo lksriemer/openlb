@@ -44,7 +44,7 @@ struct Porous2dDescriptorBase {
 };
 
 template <typename T> struct PorousD2Q9Descriptor
-    : public D2Q9DescriptorBase<T>, public Porous2dDescriptorBase {
+  : public D2Q9DescriptorBase<T>, public Porous2dDescriptorBase {
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -63,7 +63,7 @@ struct ExtendedPorous2dDescriptorBase {
 };
 
 template <typename T> struct ExtendedPorousD2Q9Descriptor
-    : public D2Q9DescriptorBase<T>, public ExtendedPorous2dDescriptorBase {
+  : public D2Q9DescriptorBase<T>, public ExtendedPorous2dDescriptorBase {
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -89,7 +89,7 @@ struct PorousParticle2dDescriptorBase {
 };
 
 template <typename T> struct PorousParticleD2Q9Descriptor
-    : public D2Q9DescriptorBase<T>, public PorousParticle2dDescriptorBase {
+  : public D2Q9DescriptorBase<T>, public PorousParticle2dDescriptorBase {
 };
 
 
@@ -107,7 +107,7 @@ struct Porous3dDescriptorBase {
 };
 
 template <typename T> struct PorousD3Q19Descriptor
-    : public D3Q19DescriptorBase<T>, public Porous3dDescriptorBase {
+  : public D3Q19DescriptorBase<T>, public Porous3dDescriptorBase {
 };
 
 
@@ -128,8 +128,33 @@ struct ExtendedPorous3dDescriptorBase {
 };
 
 template <typename T> struct ExtendedPorousD3Q19Descriptor
-    : public D3Q19DescriptorBase<T>, public ExtendedPorous3dDescriptorBase {
+  : public D3Q19DescriptorBase<T>, public ExtendedPorous3dDescriptorBase {
 };
+
+////////////////////////////////////////////////////////////////////////////////
+// extended descriptor for porous particles - 3D
+
+struct PorousParticle3dDescriptor {
+  static const int numScalars = 5;
+  static const int numSpecies = 3;
+
+  static const int porosityIsAt      = 0;
+  static const int velNumerator      = 1;
+  static const int velDenominator    = 4;
+
+  static const int sizeOfPorosity    = 1;
+  static const int sizeOfVelNum      = 3;
+  static const int sizeOfVelDenom    = 1;
+};
+
+struct PorousParticle3dDescriptorBase {
+  typedef PorousParticle3dDescriptor ExternalField;
+};
+
+template <typename T> struct PorousParticleD3Q19Descriptor
+  : public D3Q19DescriptorBase<T>, public PorousParticle3dDescriptorBase {
+};
+
 
 } // namespace descriptors
 

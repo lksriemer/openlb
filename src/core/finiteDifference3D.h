@@ -46,10 +46,11 @@ struct DirectedGradients3D {
 template<typename T, template<typename U> class Lattice,
          int direction, int orientation, int deriveDirection>
 struct DirectedGradients3D<T, Lattice, direction, orientation,
-    deriveDirection, true> {
+         deriveDirection, true> {
   static void interpolateVector(T velDeriv[Lattice<T>::d],
                                 BlockLattice3D<T,Lattice> const& blockLattice,
-                                int iX, int iY, int iZ) {
+                                int iX, int iY, int iZ)
+  {
     using namespace fd;
 
     T u0[Lattice<T>::d], u1[Lattice<T>::d], u2[Lattice<T>::d];
@@ -71,7 +72,8 @@ struct DirectedGradients3D<T, Lattice, direction, orientation,
 
   static void interpolateScalar(T& rhoDeriv,
                                 BlockLattice3D<T,Lattice> const& blockLattice,
-                                int iX, int iY, int iZ) {
+                                int iX, int iY, int iZ)
+  {
     using namespace fd;
 
     // note that the derivative runs along direction.
@@ -93,10 +95,11 @@ struct DirectedGradients3D<T, Lattice, direction, orientation,
 template<typename T, template<typename U> class Lattice,
          int direction, int orientation, int deriveDirection>
 struct DirectedGradients3D<T, Lattice, direction, orientation,
-    deriveDirection, false> {
+         deriveDirection, false> {
   static void  interpolateVector(T velDeriv[Lattice<T>::d],
                                  BlockLattice3D<T,Lattice> const& blockLattice,
-                                 int iX, int iY, int iZ) {
+                                 int iX, int iY, int iZ)
+  {
     using namespace fd;
 
     T u_p1[Lattice<T>::d], u_m1[Lattice<T>::d];
@@ -118,7 +121,8 @@ struct DirectedGradients3D<T, Lattice, direction, orientation,
 
   static void  interpolateScalar(T& rhoDeriv,
                                  BlockLattice3D<T,Lattice> const& blockLattice,
-                                 int iX, int iY, int iZ) {
+                                 int iX, int iY, int iZ)
+  {
     using namespace fd;
 
     T rho_p1 = blockLattice.get (

@@ -47,7 +47,7 @@ class Octree;
 
 template <typename T>
 Octree<T>::Octree(Vector<T,3> center, T rad, STLmesh<T>* mesh, short maxDepth, T overlap, Octree<T>* parent)
-  : _center(center), _radius(rad), _mesh(mesh), _maxDepth(maxDepth),_isLeaf(false), _inside(false), _parent(parent)
+  : _center(center), _radius(rad), _mesh(mesh), _maxDepth(maxDepth),_isLeaf(false), _boundaryNode(false), _inside(false), _parent(parent), _child(nullptr)
 {
 
 
@@ -57,62 +57,65 @@ Octree<T>::Octree(Vector<T,3> center, T rad, STLmesh<T>* mesh, short maxDepth, T
 
     _child = new Octree<T>*[8];
 
-    Vector<T,3> center = _center;
-    T rad = _radius/2.;
-    center[0] = _center[0] - rad;
-    center[1] = _center[1] - rad;
-    center[2] = _center[2] + rad;
-    _child[0] = new Octree<T>(center, rad, _mesh, _maxDepth-1, overlap, this);
+    Vector<T,3> tmpCenter = _center;
+    T tmpRad = _radius/2.;
+    tmpCenter[0] = _center[0] - tmpRad;
+    tmpCenter[1] = _center[1] - tmpRad;
+    tmpCenter[2] = _center[2] + tmpRad;
+    _child[0] = new Octree<T>(tmpCenter, tmpRad, _mesh, _maxDepth-1, overlap, this);
 
-    center[0] = _center[0] + rad;
-    center[1] = _center[1] - rad;
-    center[2] = _center[2] + rad;
-    _child[1] = new Octree<T>(center, rad, _mesh, _maxDepth-1, overlap, this);
+    tmpCenter[0] = _center[0] + tmpRad;
+    tmpCenter[1] = _center[1] - tmpRad;
+    tmpCenter[2] = _center[2] + tmpRad;
+    _child[1] = new Octree<T>(tmpCenter, tmpRad, _mesh, _maxDepth-1, overlap, this);
 
-    center[0] = _center[0] - rad;
-    center[1] = _center[1] - rad;
-    center[2] = _center[2] - rad;
-    _child[2] = new Octree<T>(center, rad, _mesh, _maxDepth-1, overlap, this);
+    tmpCenter[0] = _center[0] - tmpRad;
+    tmpCenter[1] = _center[1] - tmpRad;
+    tmpCenter[2] = _center[2] - tmpRad;
+    _child[2] = new Octree<T>(tmpCenter, tmpRad, _mesh, _maxDepth-1, overlap, this);
 
-    center[0] = _center[0] + rad;
-    center[1] = _center[1] - rad;
-    center[2] = _center[2] - rad;
-    _child[3] = new Octree<T>(center, rad, _mesh, _maxDepth-1, overlap, this);
+    tmpCenter[0] = _center[0] + tmpRad;
+    tmpCenter[1] = _center[1] - tmpRad;
+    tmpCenter[2] = _center[2] - tmpRad;
+    _child[3] = new Octree<T>(tmpCenter, tmpRad, _mesh, _maxDepth-1, overlap, this);
 
-    center[0] = _center[0] - rad;
-    center[1] = _center[1] + rad;
-    center[2] = _center[2] + rad;
-    _child[4] = new Octree<T>(center, rad, _mesh, _maxDepth-1, overlap, this);
+    tmpCenter[0] = _center[0] - tmpRad;
+    tmpCenter[1] = _center[1] + tmpRad;
+    tmpCenter[2] = _center[2] + tmpRad;
+    _child[4] = new Octree<T>(tmpCenter, tmpRad, _mesh, _maxDepth-1, overlap, this);
 
-    center[0] = _center[0] + rad;
-    center[1] = _center[1] + rad;
-    center[2] = _center[2] + rad;
-    _child[5] = new Octree<T>(center, rad, _mesh, _maxDepth-1, overlap, this);
+    tmpCenter[0] = _center[0] + tmpRad;
+    tmpCenter[1] = _center[1] + tmpRad;
+    tmpCenter[2] = _center[2] + tmpRad;
+    _child[5] = new Octree<T>(tmpCenter, tmpRad, _mesh, _maxDepth-1, overlap, this);
 
-    center[0] = _center[0] - rad;
-    center[1] = _center[1] + rad;
-    center[2] = _center[2] - rad;
-    _child[6] = new Octree<T>(center, rad, _mesh, _maxDepth-1, overlap, this);
+    tmpCenter[0] = _center[0] - tmpRad;
+    tmpCenter[1] = _center[1] + tmpRad;
+    tmpCenter[2] = _center[2] - tmpRad;
+    _child[6] = new Octree<T>(tmpCenter, tmpRad, _mesh, _maxDepth-1, overlap, this);
 
-    center[0] = _center[0] + rad;
-    center[1] = _center[1] + rad;
-    center[2] = _center[2] - rad;
-    _child[7] = new Octree<T>(center, rad, _mesh, _maxDepth-1, overlap, this);
-
-    std::vector<unsigned int>(_triangles).swap(_triangles);
+    tmpCenter[0] = _center[0] + tmpRad;
+    tmpCenter[1] = _center[1] + tmpRad;
+    tmpCenter[2] = _center[2] - tmpRad;
+    _child[7] = new Octree<T>(tmpCenter, tmpRad, _mesh, _maxDepth-1, overlap, this);
 
   } else {
     _isLeaf = true;
+    if (_triangles.size() > 0 ) {
+      _boundaryNode = true;
+    }
   }
 }
 
 template <typename T>
 Octree<T>::~Octree()
 {
-  for (int i=0; i<8; i++) {
-    delete[] _child[i];
+  if (_maxDepth!=0 && !_isLeaf) {
+    for (int i=0; i<8; i++) {
+      delete _child[i];
+    }
+    delete[] _child;
   }
-  delete[] _child;
 }
 
 template <typename T>
@@ -329,8 +332,8 @@ int Octree<T>::testIntersection(const Vector<T,3>& pt,const Vector<T,3>& dir, bo
     if (_mesh->getTri(_triangles[k]).testRayIntersect(pt, dir, q, a)) {
       if (std::fabs(_center[0]-q[0]) <= _radius + std::numeric_limits<T>::epsilon() + 1/1000. * _radius && std::fabs(_center[1]-q[1]) <= _radius + std::numeric_limits<T>::epsilon() + 1/1000. * _radius && std::fabs(_center[2]-q[2]) <= _radius + std::numeric_limits<T>::epsilon() + 1/1000. * _radius) {
         bool newpoint=true;
-        for (unsigned k=0; k<qs.size(); k++) {
-          newpoint = (q[0] != qs[k][0] || q[1] != qs[k][1] || q[2] != qs[k][2]);
+        for (unsigned i=0; i<qs.size(); i++) {
+          newpoint = ( !util::nearZero(q[0]-qs[i][0]) || !util::nearZero(q[1]-qs[i][1]) || !util::nearZero(q[2]-qs[i][2]) );
         }
         if (newpoint) {
           qs.push_back(q);
@@ -374,8 +377,8 @@ void Octree<T>::checkRay(const Vector<T,3>& pt,const Vector<T,3>& dir, unsigned 
   for (unsigned int k=0; k<_triangles.size(); ++k) {
     if (_mesh->getTri(_triangles[k]).testRayIntersect(pt, dirNormed, q, a, 0.) && a<1.) {
       bool newpoint=true;
-      for (unsigned int k=0; k<qs.size(); k++) {
-        newpoint &= (q[0] != qs[k][0] || q[1] != qs[k][1] || q[2] != qs[k][2]);
+      for (unsigned int i=0; i<qs.size(); i++) {
+        newpoint &= ( !util::nearZero(q[0]-qs[i][0]) || !util::nearZero((q[1]-qs[i][1]) || !util::nearZero(q[2]-qs[i][2])) );
       }
       if (newpoint) {
         qs.push_back(q);
@@ -416,6 +419,12 @@ void Octree<T>::getLeafs(std::vector<Octree<T>* >& pts)
       _child[i]->getLeafs(pts);
     }
   }
+}
+
+template<typename T>
+bool Octree<T>::isLeaf()
+{
+  return _isLeaf;
 }
 
 template<typename T>
@@ -507,6 +516,8 @@ void Octree<T>::write(const std::string fName)
     std::stringstream cell_types;
     // std::stringstream point_data;
     std::stringstream cell_data;
+    std::stringstream cell_leaf;
+    std::stringstream cell_boundary;
 
     points << "POINTS " << leafs.size()*8 << " float" << std::endl;
     cells << "CELLS " << leafs.size() << " " << leafs.size()*9 << std::endl;
@@ -514,6 +525,11 @@ void Octree<T>::write(const std::string fName)
     cell_data << "CELL_DATA " << leafs.size() << std::endl;
     cell_data << "SCALARS insideout int" << std::endl;
     cell_data << "LOOKUP_TABLE default" << std::endl;
+    cell_leaf << "SCALARS leaf int" << std::endl;
+    cell_leaf << "LOOKUP_TABLE default" << std::endl;
+    cell_boundary << "SCALARS boundary int" << std::endl;
+    cell_boundary << "LOOKUP_TABLE default" << std::endl;
+
     Vector<T,3> center;
     Vector<T,3> pt;
 
@@ -573,9 +589,11 @@ void Octree<T>::write(const std::string fName)
       cell_types << 11 << std::endl;
 
       cell_data << (*it)->getInside() << " "<< std::endl;
+      cell_leaf << (*it)->getMaxdepth() << " "<< std::endl;
+      cell_boundary << (*it)->getBoundaryNode() << " " << std::endl;
     }
 
-    f << points.str() << cells.str() << cell_types.str() << cell_data.str();
+    f << points.str() << cells.str() << cell_types.str() << cell_data.str() << cell_leaf.str() << cell_boundary.str();
 
     // f << "POINT_DATA 0\nCELL_DATA 0\n" << std::endl;
     f.close();

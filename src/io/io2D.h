@@ -29,10 +29,10 @@
 #include "blockVtkWriter2D.h"
 #include "colormaps.h"
 #include "fileName.h"
+#include "gnuplotWriter.h"
 #include "ostreamManager.h"
 #include "parallelIO.h"
 #include "serializerIO.h"
-#include "superVtkWriter2D.h"
-#include "vtiReader.h"
+#include "superVtmWriter2D.h"
 #include "xmlReader.h"
 

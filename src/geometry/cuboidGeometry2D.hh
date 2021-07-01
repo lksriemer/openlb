@@ -62,7 +62,7 @@ CuboidGeometry2D<T>::CuboidGeometry2D(IndicatorF2D<T>& indicatorF, T voxelSize, 
   : _motherCuboid(indicatorF.getMin()[0],  indicatorF.getMin()[1], voxelSize,
                   (int)((indicatorF.getMax()[0] - indicatorF.getMin()[0]) / voxelSize + 1.5),
                   (int)((indicatorF.getMax()[1] - indicatorF.getMin()[1]) / voxelSize + 1.5)),
-  _periodicityOn(2, bool(false)), clout(std::cout, "CuboidGeometry2D")
+    _periodicityOn(2, bool(false)), clout(std::cout, "CuboidGeometry2D")
 {
 
   add(_motherCuboid);

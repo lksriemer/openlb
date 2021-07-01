@@ -37,7 +37,8 @@ namespace olb {
 template<typename T>
 struct adLbDynamicsHelpers<T, descriptors::D2Q5DescriptorBase<T> > {
   /// equilibrium distribution
-  static T equilibrium( int iPop, T rho, const T u[2] ) {
+  static T equilibrium( int iPop, T rho, const T u[2] )
+  {
     typedef descriptors::D2Q5DescriptorBase<T> L;
     T c_u = L::c[iPop][0] * u[0] + L::c[iPop][1] * u[1];
 
@@ -46,7 +47,8 @@ struct adLbDynamicsHelpers<T, descriptors::D2Q5DescriptorBase<T> > {
 
   /// RLB advection diffusion collision step
   static T rlbCollision( T* cell,
-                         T rho, const T u[2], T omega ) {
+                         T rho, const T u[2], T omega )
+  {
     typedef descriptors::D2Q5DescriptorBase<T> L;
     const T uSqr = u[0] * u[0] + u[1] * u[1];
 
@@ -77,7 +79,8 @@ struct adLbDynamicsHelpers<T, descriptors::D2Q5DescriptorBase<T> > {
 
   // BGK advection diffusion collision step
   static T bgkCollision( T *cell,
-                         T rho, const T u[2], T omega ) {
+                         T rho, const T u[2], T omega )
+  {
     typedef descriptors::D2Q5DescriptorBase<T> L;
 
     const T Cs2 = ( T )1 / L::invCs2;

@@ -44,10 +44,12 @@ template<typename T, template<typename U> class Lattice, int direction, int orie
 class ExtendedStraightFdBoundaryPostProcessor2D : public LocalPostProcessor2D<T,Lattice> {
 public:
   ExtendedStraightFdBoundaryPostProcessor2D(int x0_, int x1_, int y0_, int y1_);
-  virtual int extent() const {
+  virtual int extent() const
+  {
     return 1;
   }
-  virtual int extent(int whichDirection) const {
+  virtual int extent(int whichDirection) const
+  {
     return 1;
   }
   virtual void process(BlockLattice2D<T,Lattice>& blockLattice);

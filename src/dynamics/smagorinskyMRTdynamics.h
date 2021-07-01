@@ -38,7 +38,7 @@ template<typename T, template<typename U> class Lattice>
 class SmagorinskyMRTdynamics : public MRTdynamics<T,Lattice> {
 public:
   /// Constructor
-  SmagorinskyMRTdynamics(T omega_, Momenta<T,Lattice>& momenta_, T smagoConst_, T dx_, T dt_ );
+  SmagorinskyMRTdynamics(T omega_, Momenta<T,Lattice>& momenta_, T smagoConst_, T dx_ = 1, T dt_ = 1);
 
 
   // Collide
@@ -59,7 +59,7 @@ public:
 
 private:
   /// Computes a constant prefactor in order to speed up the computation
-  T computePreFactor(T omega_, T smagoConst_, T dx_, T dt_);
+  T computePreFactor(T omega_, T smagoConst_);
 
   /// Computes the local smagorinsky relaxation parameter
   T computeOmega(T omega0_, T preFactor_, T rho_, T pi_[util::TensorVal<Lattice<T> >::n] );

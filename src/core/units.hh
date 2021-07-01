@@ -205,6 +205,193 @@ LBconverter<T>* createLBconverter(XMLreader const& params)
                             charRho, pressureLevel);
 }
 
+
+////// ctor
+template<typename T>
+RTLBConstconverter<T>::RTLBConstconverter
+(T latticeL, T physAbsorption, T physScattering, T physRefrMedia, T physRefrAmbient)
+  : LBconverter<T>(3, latticeL, latticeL, 1./6. ), _physAbsorption(physAbsorption),
+    _physScattering(physScattering), _physRefrMedia(physRefrMedia),
+    _physRefrAmbient(physRefrAmbient), clout(std::cout,"RTLBconverter")
+{
+  _sinkTerm = 3 *_physAbsorption *(_physAbsorption+_physScattering) / 8. * latticeL * latticeL;
+  computeZeta();
+}
+
+// public methods
+template<typename T>
+T RTLBConstconverter<T>::getAbsorption() const
+{
+  return _physAbsorption;
+}
+
+template<typename T>
+T RTLBConstconverter<T>::getScattering() const
+{
+  return _physScattering;
+}
+
+template<typename T>
+T RTLBConstconverter<T>::getSingleScatAlbedo() const
+{
+  return _physScattering / (_physAbsorption +_physScattering);
+}
+
+template<typename T>
+T RTLBConstconverter<T>::getExtinctionCoeff() const
+{
+  return (_physAbsorption +_physScattering) * this->getLatticeL();
+}
+
+template<typename T>
+T RTLBConstconverter<T>::getSinkTerm() const
+{
+  return _sinkTerm;
+}
+template<typename T>
+T RTLBConstconverter<T>::getZeta() const
+{
+  return _latticeZeta;
+}
+template<typename T>
+T RTLBConstconverter<T>::getRefractionAmbient() const
+{
+  return _physRefrAmbient;
+}
+template<typename T>
+T RTLBConstconverter<T>::getRefractionMedia() const
+{
+  return _physRefrMedia;
+}
+
+
+template<typename T>
+void RTLBConstconverter<T>::setZeta(  T zeta )
+{
+  _latticeZeta = zeta;
+}
+
+
+template<typename T>
+void RTLBConstconverter<T>::print() const
+{
+  clout << "RTLBConstconverter information" << std::endl;
+  clout << "pysical values" << std::endl;
+  clout << "Phys. kinematic viscosity(m^2/s): charNu="           << this->getCharNu()           << std::endl;
+
+  clout << "lattice values" << std::endl;
+  clout << "DeltaX:                           deltaX= latticeL/charL=" << this->getDeltaX()     << std::endl;
+  clout << "DeltaT:                           deltaT="           << this->getDeltaT()           << std::endl;
+  clout << "DimlessNu:                        dNu="              << this->getDimlessNu()        << std::endl;
+  clout << "Viscosity for computation:        latticeNu="        << this->getLatticeNu()        << std::endl;
+  clout << "Relaxation time:                  tau="              << this->getTau()              << std::endl;
+  clout << "Relaxation frequency:             omega="            << this->getOmega()            << std::endl;
+  clout << "Absorption:                       absorption 1/m="   << getAbsorption()             << std::endl;
+  clout << "Scattering:                       scattering 1/m="   << getScattering()             << std::endl;
+  clout << "Extinction:                       extinction= "      << _physAbsorption +_physScattering  << std::endl;
+  clout << "ScatAlbedo:                       scatAlbedo= "      << this->getSingleScatAlbedo() << std::endl;
+
+  clout << "Mesoscopic sink term              sink="             << getSinkTerm()               << std::endl;
+  clout << "Zeta partial BB:                  zeta partial BB="  << getZeta()                   << std::endl;
+
+
+  clout << "conversion factors" << std::endl;
+  clout << "latticeL(m):                      latticeL="         << this->getLatticeL()         << std::endl;
+  clout << "Time step (s):                    physTime="         << this->physTime()            << std::endl;
+
+}
+
+// privat methods
+template<typename T>
+T RTLBConstconverter<T>::theta_ (T theta)
+{
+  T nrel = _physRefrMedia / _physRefrAmbient;
+  T theta_ = asin( nrel * sin(theta));
+  return theta_;
+}
+
+template<typename T>
+T RTLBConstconverter<T>::rf (T theta)
+{
+  T nrel = _physRefrMedia / _physRefrAmbient;
+  T rf_1 = 0.5 * pow((nrel * cos(theta_(theta)) - cos(theta)) /
+                     (nrel * cos(theta_(theta)) + cos(theta)), 2.);
+  T rf_2 = 0.5 * pow((nrel * cos(theta) - cos(theta_(theta))) /
+                     (nrel * cos(theta) + cos(theta_(theta))), 2.);
+  T rf = rf_1 + rf_2;
+  return rf;
+}
+
+template<typename T>
+T RTLBConstconverter<T>::r_phi_diff (T theta)
+{
+  T r_phi_diff = 2. * sin(theta) * cos(theta) * rf(theta);
+  return r_phi_diff;
+}
+
+template<typename T>
+T RTLBConstconverter<T>::r_j_diff (T theta)
+{
+  T r_j_diff = 3. * sin(theta) * pow(cos(theta),2.) * rf(theta);
+  return r_j_diff;
+}
+
+template<typename T>
+void RTLBConstconverter<T>::computeZeta ()
+{
+  T n = 10000.0;
+  T h = (M_PI / 2.) /n;
+  T r_phi = 0.0;
+  T r_j = 0.0;
+  for (int i = 0; i < n; i++) {
+    r_phi += h*(r_phi_diff(0.5*h + h*i));
+    r_j   += h*(r_j_diff  (0.5*h + h*i));
+  }
+  T r_eff = (r_phi + r_j) / (2 - r_phi + r_j);
+  T c_r  = (1 + r_eff) / (1 - r_eff);
+  T epsilon  = 1.5 * (_physAbsorption + _physScattering) * this->getLatticeL();
+  _latticeZeta = 2. / (1. + (epsilon / (2. * c_r)));
+}
+
+// write logfile
+template<typename T>
+void writeLogFile(RTLBConstconverter<T> const& converter, std::string const& title)
+{
+  std::string fullName = singleton::directories().getLogOutDir() + title + ".dat";
+  olb_ofstream ofile(fullName.c_str());
+  ofile << "LBconverter information\n\n";
+  ofile << "physical values\n";
+  ofile << "----------------------------------------------------------------------\n";
+  ofile << "Dimension(d):                     dim="              << converter.getDim()              << "\n";
+  ofile << "Phys. kinematic viscosity(m^2/s): charNu="           << converter.getCharNu()           << "\n";
+  ofile << "Phys. dynamic viscosity(N*s/m^2): dynVisco="         << converter.getDynamicViscosity() << "\n";
+  ofile << "Absorption(m^-1):                 absorption="       << converter.getAbsorption()       << "\n";
+  ofile << "Scattering(m^-1):                 scattering="       << converter.getScattering()       << "\n";
+
+  ofile << "======================================================================\n\n";
+  ofile << "lattice values\n";
+  ofile << "----------------------------------------------------------------------\n";
+  ofile << "DeltaX:                           deltaX="           << converter.getDeltaX()           << "\n";
+  ofile << "Lattice velocity:                 latticeU="         << converter.getLatticeU()         << "\n";
+  ofile << "DeltaT:                           deltaT="           << converter.getDeltaT()           << "\n";
+  ofile << "Reynolds number:                  Re="               << converter.getRe()               << "\n";
+  ofile << "DimlessNu:                        dNu="              << converter.getDimlessNu()        << "\n";
+  ofile << "Viscosity for computation:        latticeNu="        << converter.getLatticeNu()        << "\n";
+  ofile << "Relaxation time:                  tau="              << converter.getTau()              << "\n";
+  ofile << "Relaxation frequency:             omega="            << converter.getOmega()            << "\n";
+  ofile << "Sink term:                        eta="              << converter.getSinkTerm()         << "\n";
+  ofile << "Knutsen number:                   kappa= "           << 1/(converter.getExtinctionCoeff()/converter.getLatticeL()) << "\n";
+  //ofile << "Extinction:                       extinction= "      << _physAbsorption +_physScattering()  << "\n";
+  ofile << "ScatAlbedo:                       scatAlbedo= "      << converter.getSingleScatAlbedo() << "\n";
+  ofile << "======================================================================\n\n";
+  ofile << "conversion factors\n";
+  ofile << "----------------------------------------------------------------------\n";
+  ofile << "latticeL(m):                      latticeL="         << converter.getLatticeL()         << "\n";
+  ofile << "Time step (s):                    physTime="         << converter.physTime()            << "\n";
+
+}
+
+
 }  // namespace olb
 
 #endif

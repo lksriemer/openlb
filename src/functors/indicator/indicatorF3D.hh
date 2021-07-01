@@ -29,6 +29,8 @@
 #include <sstream>
 #include "indicatorF3D.h"
 #include "indicCalcF3D.h"
+#include "utilities/vectorHelpers.h"
+#include "functors/interpolationF3D.h"
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -119,6 +121,15 @@ IndicatorSphere3D<S>::IndicatorSphere3D(Vector<S,3> center, S radius)
   this->_myMax = _center + radius;
 }
 
+template <typename S>
+IndicatorSphere3D<S>::IndicatorSphere3D(const IndicatorSphere3D& sphere)
+{
+  this->_myMin = sphere._myMin;
+  this->_myMax = sphere._myMax;
+  _center = sphere._center;
+  _radius2 = sphere._radius2;
+}
+
 // returns true if x is inside the sphere
 template <typename S>
 bool IndicatorSphere3D<S>::operator()(bool output[], const S input[])
@@ -137,7 +148,7 @@ bool IndicatorSphere3D<S>::distance(S& distance, const Vector<S,3>& origin,
   S a = direction[0]*direction[0] + direction[1]*direction[1] + direction[2]*direction[2];
 
   // returns 0 if point is at the boundary of the sphere
-  if (a ==_radius2) {
+  if ( util::nearZero(a-_radius2) ) {
     distance = S();
     return true;
   }
@@ -296,8 +307,8 @@ void IndicatorCylinder3D<S>::init()
        };
 
   // _I and _J form an orthonormal base with _K
-  if ((_center2[1]-_center1[1]) == 0 && (_center2[0]-_center1[0]) == 0) {
-    if ((_center2[2]-_center1[2]) == 0) {
+  if ( util::nearZero(_center2[1]-_center1[1]) && util::nearZero(_center2[0]-_center1[0]) ) {
+    if ( util::nearZero(_center2[2]-_center1[2]) ) {
       std::cout << "Warning: in the cylinder, the two centers have the same coordinates";
     }
     _I = {1,0,0};
@@ -372,8 +383,8 @@ IndicatorCone3D<S>::IndicatorCone3D(Vector<S,3> center1, Vector<S,3> center2,
        };
 
   // _I and _J form an orthonormal base with _K
-  if ( _center2[1] - _center1[1] == 0 && _center2[0] - _center1[0] == 0) {
-    if ( _center2[2] - _center1[2] == 0) {
+  if ( util::nearZero(_center2[1]-_center1[1]) && util::nearZero(_center2[0]-_center1[0]) ) {
+    if ( util::nearZero(_center2[2]-_center1[2]) ) {
       std::cout << "Warning: in the cone, the two center have the same coordinates";
     }
     _I = {1,0,0};
@@ -586,12 +597,24 @@ bool IndicatorParallelepiped3D<S>::operator()(bool output[], const S input[])
 
 template <typename T, typename S>
 SmoothIndicatorSphere3D<T,S>::SmoothIndicatorSphere3D(Vector<S,3> center,
-    S radius, S epsilon)
-  : _center(center), _radius2(radius*radius), _epsilon(epsilon)
+    S radius, S epsilon, S mass)
+  : _innerRad(radius-epsilon/2.), _outerRad(radius+epsilon/2.), _epsilon(epsilon)
 {
-  double r = sqrt(_radius2);
-  this->_myMin = {_center[0] - r, _center[1] - r, _center[2] - r};
-  this->_myMax = {_center[0] + r, _center[1] + r, _center[2] + r};
+  this->_mass = mass;
+  this->_center[0] = center[0];
+  this->_center[1] = center[1];
+  this->_center[2] = center[2];
+  this->_mofi = 2./5.*this->_mass*pow(radius, 2);
+  this->_myMin = {this->_center[0] - _outerRad, this->_center[1] - _outerRad, this->_center[2] - _outerRad};
+  this->_myMax = {this->_center[0] + _outerRad, this->_center[1] + _outerRad, this->_center[2] + _outerRad};
+}
+
+template <typename T, typename S>
+SmoothIndicatorSphere3D<T,S>::SmoothIndicatorSphere3D(const SmoothIndicatorSphere3D<T, S>& rhs)
+{
+  _innerRad = rhs._innerRad;
+  _outerRad = rhs._outerRad;
+  _epsilon = rhs._epsilon;
 }
 
 // returns true if x is inside the sphere
@@ -600,41 +623,42 @@ bool SmoothIndicatorSphere3D<T,S>::operator()(T output[], const S input[])
 {
 
   double d;   // distance to the figure
-  double distToCenter = sqrt( (_center[0]-input[0]) * (_center[0]-input[0])+
-                              (_center[1]-input[1]) * (_center[1]-input[1])+
-                              (_center[2]-input[2]) * (_center[2]-input[2]) );
-  double radiusOut = sqrt(_radius2) + _epsilon;
+  double distToCenter = std::sqrt( std::pow((this->_center[0]-input[0]), 2) +
+                                   std::pow((this->_center[1]-input[1]), 2) + std::pow((this->_center[2]-input[2]), 2));
 
-  if ( distToCenter <=  sqrt(_radius2) ) {
+  if ( distToCenter <=  _innerRad ) {
     output[0] = T(1);
+//    std::cout << "One" << distToCenter << " " << _innerRad << std::endl;
     return true;
-  } else if ( distToCenter >= radiusOut) {
+  } else if ( distToCenter >= _outerRad) {
     output[0] = T(0);
+//    std::cout << "Zero " << distToCenter << " " << _outerRad << std::endl;
     return true;
-  } else if ( distToCenter >= sqrt(_radius2) && distToCenter <= radiusOut ) {
-    d = distToCenter - sqrt(_radius2);
+  } else {
+    d = distToCenter - _innerRad;
     output[0] = T( cos(M_PI*d/(2*_epsilon)) *cos(M_PI*d/(2*_epsilon)));
+//    cout << "SmoothIndicatorSphere3D<T,S>::operator()" << output[0] << std::endl;
     return true;
   }
   return false;
 }
 
 template <typename T, typename S>
-Vector<S,3> SmoothIndicatorSphere3D<T,S>::getCenter()
+Vector<S,3>& SmoothIndicatorSphere3D<T,S>::getCenter()
 {
-  return _center;
+  return this->_center;
 }
 
 template <typename T, typename S>
 S SmoothIndicatorSphere3D<T,S>::getRadius()
 {
-  return std::sqrt(_radius2)+_epsilon;
+  return _outerRad;
 }
 
 template <typename T, typename S>
 S SmoothIndicatorSphere3D<T,S>::getDiam()
 {
-  return (2*std::sqrt(_radius2));
+  return (_innerRad+_outerRad);
 }
 
 
@@ -657,8 +681,8 @@ SmoothIndicatorCylinder3D<T,S>::SmoothIndicatorCylinder3D(Vector<S,3> center1,
        };
 
   // _I and _J form an orthonormal base with _K
-  if ( (_center2[1]-_center1[1]) ==0 && (_center2[0]-_center1[0]) == 0 ) {
-    if ((_center2[2]-_center1[2])==0) {
+  if ( util::nearZero(_center2[1]-_center1[1]) && util::nearZero(_center2[0]-_center1[0]) ) {
+    if ( util::nearZero(_center2[2]-_center1[2]) ) {
       std::cout << "Warning: in the cylinder, the two centers have the same coordinates";
     }
     _I = {1,0,0};
@@ -748,8 +772,8 @@ SmoothIndicatorCone3D<T,S>::SmoothIndicatorCone3D(Vector<S,3> center1,
        };
 
   // _I and _J form an orthonormal base with _K
-  if ( _center2[1]-_center1[1] == 0 && _center2[0]-_center1[0] == 0 ) {
-    if ( _center2[2]-_center1[2] == 0 ) {
+  if ( util::nearZero(_center2[1]-_center1[1]) && util::nearZero(_center2[0]-_center1[0]) ) {
+    if ( util::nearZero(_center2[2]-_center1[2]) ) {
       std::cout << "Warning: in the cone, the two center have the same coordinates";
     }
     _I = {1,0,0};
@@ -940,8 +964,12 @@ IndicatorF3D<S>* createIndicatorF3D(XMLreader const& params, bool verbose)
     return output;
   }
 
-  // decend a level in the xml tree
+  // descend a level in the xml tree
   std::vector<XMLreader*>::const_iterator it = params.begin();
+  // \todo This is how we should iterate through all children and make a union
+//  for(XMLreader* child : params) {
+//    clout << "iterator to xml-child: " << child->getName() << std::endl;
+//  }
   std::string childName = (**it).getName();
   //  clout << "iterator to xml-child: " << (**it).getName() << std::endl;
   if ( childName == "IndicatorUnion3D" ) {
@@ -987,6 +1015,300 @@ IndicatorF3D<S>* createIndicatorF3D(XMLreader const& params, bool verbose)
   //  return output;
 }
 
+
+///////////////////////////////////////
+/////     ParticleIndicator3D     /////
+///////////////////////////////////////
+
+template <typename T, typename S>
+ParticleIndicatorSphere3D<T,S>::ParticleIndicatorSphere3D(Vector<S,3> center,
+    S radius, S epsilon, S mass)
+{
+  this->_mass = mass;
+  this->_radius = radius;
+  this->_epsilon = epsilon;
+  this->_pos = center;
+  this->_mofi[0] = 2./5.*this->_mass*pow(radius, 2);
+  this->_mofi[1] = 2./5.*this->_mass*pow(radius, 2);
+  this->_mofi[2] = 2./5.*this->_mass*pow(radius, 2);
+  this->_myMin[0] = - this->_radius - 2.*this->_epsilon;
+  this->_myMin[1] = - this->_radius - 2.*this->_epsilon;
+  this->_myMin[2] = - this->_radius - 2.*this->_epsilon;
+  this->_myMax[0] = this->_radius + 2.*this->_epsilon;
+  this->_myMax[1] = this->_radius + 2.*this->_epsilon;
+  this->_myMax[2] = this->_radius + 2.*this->_epsilon;
+
+  this->_rotMat[0] = std::cos(this->_theta[1])*std::cos(this->_theta[2]);
+  this->_rotMat[1] = std::sin(this->_theta[0])*std::sin(this->_theta[1])*std::cos(this->_theta[2]) - std::cos(this->_theta[0])*std::sin(this->_theta[2]);
+  this->_rotMat[2] = std::cos(this->_theta[0])*std::sin(this->_theta[1])*std::cos(this->_theta[2]) + std::sin(this->_theta[0])*std::sin(this->_theta[2]);
+  this->_rotMat[3] = std::cos(this->_theta[1])*std::sin(this->_theta[2]);
+  this->_rotMat[4] = std::sin(this->_theta[0])*std::sin(this->_theta[1])*std::sin(this->_theta[2]) + std::cos(this->_theta[0])*std::cos(this->_theta[2]);
+  this->_rotMat[5] = std::cos(this->_theta[0])*std::sin(this->_theta[1])*std::sin(this->_theta[2]) - std::sin(this->_theta[0])*std::cos(this->_theta[2]);
+  this->_rotMat[6] = -std::sin(this->_theta[1]);
+  this->_rotMat[7] = std::sin(this->_theta[0])*std::cos(this->_theta[1]);
+  this->_rotMat[8] = std::cos(this->_theta[0])*std::cos(this->_theta[1]);
+}
+
+// returns true if x is inside the sphere
+template <typename T, typename S>
+bool ParticleIndicatorSphere3D<T,S>::operator()(T output[], const S input[])
+{
+
+  double d;   // distance to the figure
+  double distToCenter2 = std::pow((this->_pos[0]-input[0]), 2) +
+                         std::pow((this->_pos[1]-input[1]), 2) + std::pow((this->_pos[2]-input[2]), 2);
+
+  if ( distToCenter2 <= std::pow(this->_radius - this->_epsilon *0.5, 2)) {
+    output[0] = T(1);
+    return true;
+  } else if ( distToCenter2 >= std::pow(this->_radius + this->_epsilon *0.5, 2)) {
+    output[0] = T(0);
+    return true;
+  } else {
+    d = std::pow(this->_radius + this->_epsilon *0.5, 2) - this->_radius + this->_epsilon *0.5;
+    output[0] = T( cos(M_PI*d/(this->_epsilon)) *cos(M_PI*d/(this->_epsilon)));
+    return true;
+  }
+  return false;
+}
+
+template <typename T, typename S>
+ParticleIndicatorCuboid3D<T,S>::ParticleIndicatorCuboid3D(Vector<S,3> center, S xLength, S yLength, S zLength, S mass, S epsilon, Vector<S,3> theta)
+  : _xLength(xLength),_yLength(yLength),_zLength(zLength)
+{
+  this->_pos = center;
+  this->_epsilon = epsilon;
+  this->_theta = theta;
+  this->_mass = mass;
+  this->_radius = .5*(std::sqrt(std::pow(_xLength, 2)+std::pow(_yLength, 2)+std::pow(_zLength, 2)));
+  this->_mofi[0] = this->_mass/12.*(_yLength*_yLength+_zLength*_zLength);
+  this->_mofi[1] = this->_mass/12.*(_xLength*_xLength+_zLength*_zLength);
+  this->_mofi[2] = this->_mass/12.*(_yLength*_yLength+_xLength*_xLength);
+  this->_myMin[0] = - this->_radius - 2.*this->_epsilon;
+  this->_myMin[1] = - this->_radius - 2.*this->_epsilon;
+  this->_myMin[2] = - this->_radius - 2.*this->_epsilon;
+  this->_myMax[0] = this->_radius + 2.*this->_epsilon;
+  this->_myMax[1] = this->_radius + 2.*this->_epsilon;
+  this->_myMax[2] = this->_radius + 2.*this->_epsilon;
+
+  this->_rotMat[0] = std::cos(this->_theta[1])*std::cos(this->_theta[2]);
+  this->_rotMat[1] = std::sin(this->_theta[0])*std::sin(this->_theta[1])*std::cos(this->_theta[2]) - std::cos(this->_theta[0])*std::sin(this->_theta[2]);
+  this->_rotMat[2] = std::cos(this->_theta[0])*std::sin(this->_theta[1])*std::cos(this->_theta[2]) + std::sin(this->_theta[0])*std::sin(this->_theta[2]);
+  this->_rotMat[3] = std::cos(this->_theta[1])*std::sin(this->_theta[2]);
+  this->_rotMat[4] = std::sin(this->_theta[0])*std::sin(this->_theta[1])*std::sin(this->_theta[2]) + std::cos(this->_theta[0])*std::cos(this->_theta[2]);
+  this->_rotMat[5] = std::cos(this->_theta[0])*std::sin(this->_theta[1])*std::sin(this->_theta[2]) - std::sin(this->_theta[0])*std::cos(this->_theta[2]);
+  this->_rotMat[6] = -std::sin(this->_theta[1]);
+  this->_rotMat[7] = std::sin(this->_theta[0])*std::cos(this->_theta[1]);
+  this->_rotMat[8] = std::cos(this->_theta[0])*std::cos(this->_theta[1]);
+}
+
+template <typename T, typename S>
+bool ParticleIndicatorCuboid3D<T,S>::operator()(T output[], const S input[])
+{
+  T xDist = input[0] - this->_pos[0];
+  T yDist = input[1] - this->_pos[1];
+  T zDist = input[2] - this->_pos[2];
+
+  T xL2 = _xLength/2.;
+  T yL2 = _yLength/2.;
+  T zL2 = _zLength/2.;
+
+  // counter-clockwise rotation by _theta=-theta around center
+  T x= this->_pos[0] + this->_rotMat[0]*xDist + this->_rotMat[3]*yDist + this->_rotMat[6]*zDist;
+  T y= this->_pos[1] + this->_rotMat[1]*xDist + this->_rotMat[4]*yDist + this->_rotMat[7]*zDist;
+  T z= this->_pos[2] + this->_rotMat[2]*xDist + this->_rotMat[5]*yDist + this->_rotMat[8]*zDist;
+
+  xDist = fabs(x -this-> _pos[0]);
+  yDist = fabs(y -this-> _pos[1]);
+  zDist = fabs(z -this-> _pos[2]);
+
+  if ( xDist <= xL2 && yDist <= yL2 && zDist <= zL2) {
+    output[0] = 1.;
+    return true;
+  } else {
+    output[0] = 0.;
+    return false;
+  }
+//  if ( xDist > xL2 + this->_epsilon || yDist > yL2 + this->_epsilon || zDist > zL2 + this->_epsilon ) {
+//    output[0] = 0.;
+//    return false;
+//  }
+//  if ( xDist < xL2 && (yDist <= yL2 + this->_epsilon  && yDist > yL2) ) {
+//    output[0] = T( std::pow(cos(M_PI2*(yDist - yL2)/this->_epsilon), 2));
+//    return true;
+//  }
+//  if ( yDist < yL2 && (xDist <= xL2 + this->_epsilon  && xDist > xL2) ) {
+//    output[0] = T( std::pow(cos(M_PI2*(xDist - xL2)/this->_epsilon), 2));
+//    return true;
+//  }
+//  if ( (xDist <= xL2 + this->_epsilon && xDist > xL2) && (yDist <= yL2 + this->_epsilon && yDist > yL2) ) {
+//    output[0] = T( (std::pow(cos(M_PI2*(xDist - xL2)/this->_epsilon), 2) *
+//                    std::pow(cos(M_PI2*(yDist - yL2)/this->_epsilon), 2)) );
+//    return true;
+//  }
+  output[0] = 0.;
+  return false;
+}
+
+template <typename T, typename S>
+ParticleIndicatorCustom3D<T,S>::ParticleIndicatorCustom3D(LBconverter<T> const& converter,
+		IndicatorF3D<T>& ind,
+		Vector<T,3> center,
+		T rhoP,
+        T epsilon,
+		Vector<T,3> theta
+		)
+        : _converter(converter)
+{
+  OstreamManager clout(std::cout,"createIndicatorCustom3D");
+  this->_pos = center;
+  this->_epsilon = epsilon;
+  this->_theta = theta;
+
+  // initialize rotation matrix
+  Vector<int,3> ct;
+  Vector<int,3> st;
+  ct[0] = std::cos(this->_theta[0]);
+  ct[1] = std::cos(this->_theta[1]);
+  ct[2] = std::cos(this->_theta[2]);
+  st[0] = std::sin(this->_theta[0]);
+  st[1] = std::sin(this->_theta[1]);
+  st[2] = std::sin(this->_theta[2]);
+
+  this->_rotMat[0] = ct[1]*ct[2];
+  this->_rotMat[1] = st[0]*st[1]*ct[2] - ct[0]*st[2];
+  this->_rotMat[2] = ct[0]*st[1]*ct[2] + st[0]*st[2];
+  this->_rotMat[3] = ct[1]*st[2];
+  this->_rotMat[4] = st[0]*st[1]*st[2] + ct[0]*ct[2];
+  this->_rotMat[5] = ct[0]*st[1]*st[2] - st[0]*ct[2];
+  this->_rotMat[6] = -st[1];
+  this->_rotMat[7] = st[0]*ct[1];
+  this->_rotMat[8] = ct[0]*ct[1];
+
+  // initialize temporary values
+  SmoothBlockIndicator3D<T,olb::descriptors::D3Q19Descriptor> smoothBlock(ind, this->_epsilon);
+  int _nX = smoothBlock.getBlockData().getNx();
+  int _nY = smoothBlock.getBlockData().getNy();
+  int _nZ = smoothBlock.getBlockData().getNz();
+  T tmpNcells = 0.0;
+
+  // create smoothed blockData
+  BlockData3D<T,BaseType> block_tmp(_nX, _nY, _nZ);
+  for (int iX=0; iX < _nX; iX++) {
+    for (int iY=0; iY < _nY; iY++) {
+	  for (int iZ=0; iZ < _nZ; iZ++) {
+        block_tmp.get(iX, iY, iZ) = smoothBlock.getBlockData().get(iX, iY, iZ);
+		// check if above 0.499 since real boundary is at 0.5 due to smoothing
+		if(block_tmp.get(iX, iY, iZ) > 0.499) tmpNcells += block_tmp.get(iX, iY, iZ);
+	  }
+    }
+  }
+  this->_blockData = block_tmp;
+  T invNcells = 1./tmpNcells;
+
+  // calculate mass and centerpoint for rotation
+  // TODO check again for correctness of center due to smooth boundary and coordinate system
+  this->_mass = rhoP * tmpNcells * _converter.physLength()*_converter.physLength()*_converter.physLength();
+  this->_center[0] = 0.0;
+  this->_center[1] = 0.0;
+  this->_center[2] = 0.0;
+  this->_latticeCenter[0] = 0;
+  this->_latticeCenter[1] = 0;
+  this->_latticeCenter[2] = 0;
+  for(int iX= 0; iX < _nX; iX++) {
+    for(int iY = 0; iY < _nY; iY++) {
+      for(int iZ = 0; iZ < _nZ; iZ++) {
+        if(this->_blockData.get(iX,iY,iZ) > std::numeric_limits<T>::epsilon()) {
+          this->_center[0] += (this->_converter.physLength(iX)) * this->_blockData.get(iX, iY, iZ) * invNcells ;
+          this->_center[1] += (this->_converter.physLength(iY)) * this->_blockData.get(iX, iY, iZ) * invNcells ;
+          this->_center[2] += (this->_converter.physLength(iZ)) * this->_blockData.get(iX, iY, iZ) * invNcells ;
+        }
+      }
+    }
+  }
+  this->_latticeCenter[0] = this->_converter.numCells(this->_center[0]);
+  this->_latticeCenter[1] = this->_converter.numCells(this->_center[1]);
+  this->_latticeCenter[2] = this->_converter.numCells(this->_center[2]);
+
+  // calculate moment of inertia
+  // TODO - calculation
+  T cuboidMofi = pow(this->_converter.physLength(1.), 2)/ 6.0; // Single cuboid mofi at center of gravity
+  T cuboidMass = this->_mass*invNcells;
+  this->_mofi[0] = 0; // x
+  this->_mofi[1] = 0; // y
+  this->_mofi[2] = 0; // z
+  T halfLattice = 0.5*this->_converter.physLength(1.);
+  T dx, dz, dy;
+  for(int iX = 0; iX < _nX; iX++) {
+    dx = std::abs(this->_converter.physLength(iX) - this->_center[0] + halfLattice);
+    for(int iY = 0; iY < _nY; iY++) {
+      dy = std::abs(this->_converter.physLength(iY) - this->_center[1] + halfLattice);
+      for(int iZ = 0; iZ < _nZ; iZ++) {
+        if(this->_blockData.get(iX,iY,iZ) > std::numeric_limits<T>::epsilon()) {
+          dz = std::abs(this->_converter.physLength(iZ) - this->_center[2] + halfLattice);
+          this->_mofi[0] += (dy*dy+dz*dz+cuboidMofi)*this->_blockData.get(iX,iY,iZ);
+          this->_mofi[1] += (dx*dx+dz*dz+cuboidMofi)*this->_blockData.get(iX,iY,iZ);
+          this->_mofi[2] += (dx*dx+dy*dy+cuboidMofi)*this->_blockData.get(iX,iY,iZ);
+        }
+      }
+    }
+  }
+  this->_mofi[0] *= cuboidMass;
+  this->_mofi[1] *= cuboidMass;
+  this->_mofi[2] *= cuboidMass;
+
+  // calculate min and max from circumradius
+  T distance = 0.;
+  for(int iX = 0; iX < _nX; iX++) {
+    T x = this->_converter.physLength(iX);
+    for(int iY = 0; iY < _nY; iY++) {
+      T y = this->_converter.physLength(iY);
+      for(int iZ = 0; iZ < _nZ; iZ++) {
+        T z = this->_converter.physLength(iZ);
+          if(this->_blockData.get(iX,iY,iZ) > std::numeric_limits<T>::epsilon()) {
+            T tmpDist = std::sqrt(std::pow(this->_center[0]-x,2)+std::pow(this->_center[1]-y,2)+std::pow(this->_center[2]-z,2));
+            if (tmpDist > distance) distance = tmpDist;
+          }
+      }
+    }
+  }
+  this->_myMin[0] = -this->_epsilon - distance;
+  this->_myMin[1] = -this->_epsilon - distance;
+  this->_myMin[2] = -this->_epsilon - distance;
+  this->_myMax[0] = this->_epsilon + distance;
+  this->_myMax[1] = this->_epsilon + distance;
+  this->_myMax[2] = this->_epsilon + distance;
+
+//    clout << "----->>>>> Cell Number: " << _nX << " // " << _nY << " // " << _nZ << std::endl;
+//    clout << "----->>>>> Center: " << this->_center[0] << " // " << this->_center[1] << " // " << this->_center[2] << std::endl;
+//    clout << "----->>>>> Lattice Center: " << this->_latticeCenter[0] << " // " << this->_latticeCenter[1] << " // " << this->_latticeCenter[2] << std::endl;
+//    clout << "----->>>>> Mofi: " << this->_mofi[0] << " // " << this->_mofi[1] << " // " << this->_mofi[2] << std::endl;
+//    clout << "----->>>>> Mass: " << this->_mass << std::endl;
+//    clout << "----->>>>> Lenght: " << this->_converter.physLength(_nX) << " // " << this->_converter.physLength(_nY) << " // " << this->_converter.physLength(_nZ) << std::endl;
+}
+
+template <typename T, typename S>
+bool ParticleIndicatorCustom3D<T,S>::operator() (T output[], const S input[]) {
+  // Translation
+  T xDist = input[0] - this->getPos()[0];
+  T yDist = input[1] - this->getPos()[1];
+  T zDist = input[2] - this->getPos()[2];
+
+  // counter-clockwise rotation by _theta=-theta around (0/0) and movement from rotation center to local center
+  int x= this->_latticeCenter[0] + this->_converter.numCells(this->_rotMat[0]*xDist + this->_rotMat[3]*yDist + this->_rotMat[6]*zDist);
+  int y= this->_latticeCenter[1] + this->_converter.numCells(this->_rotMat[1]*xDist + this->_rotMat[4]*yDist + this->_rotMat[7]*zDist);
+  int z= this->_latticeCenter[2] + this->_converter.numCells(this->_rotMat[2]*xDist + this->_rotMat[5]*yDist + this->_rotMat[8]*zDist);
+
+  // Checking if coordinates are inside the BlockData
+  if(x >= 0 && x < _blockData.getNx() && y >= 0 && y < _blockData.getNy() && z >= 0 && z < _blockData.getNz()) {
+    if(this->_blockData.get(x, y, z) > std::numeric_limits<T>::epsilon()) {
+      output[0] = T(this->_blockData.get(x, y, z));
+      return true;
+    }
+  }
+  output[0] = T(0);
+  return false;
+}
 
 } // namespace olb
 

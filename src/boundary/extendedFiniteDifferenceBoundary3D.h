@@ -41,10 +41,12 @@ template<typename T, template<typename U> class Lattice, int direction, int orie
 class ExtendedFdPlaneBoundaryPostProcessor3D : public LocalPostProcessor3D<T,Lattice> {
 public:
   ExtendedFdPlaneBoundaryPostProcessor3D (int x0_, int x1_, int y0_, int y1_, int z0_, int z1_);
-  virtual int extent() const {
+  virtual int extent() const
+  {
     return 1;
   }
-  virtual int extent(int whichDirection) const {
+  virtual int extent(int whichDirection) const
+  {
     return 1;
   }
   virtual void process(BlockLattice3D<T,Lattice>& blockLattice);
@@ -64,7 +66,7 @@ private:
 
 template<typename T, template<typename U> class Lattice, int direction, int orientation>
 class ExtendedFdPlaneBoundaryProcessorGenerator3D
-    : public PostProcessorGenerator3D<T,Lattice> {
+  : public PostProcessorGenerator3D<T,Lattice> {
 public:
   ExtendedFdPlaneBoundaryProcessorGenerator3D(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_);
   virtual PostProcessor3D<T,Lattice>* generate() const;

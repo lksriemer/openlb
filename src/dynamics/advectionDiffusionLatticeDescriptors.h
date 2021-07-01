@@ -58,6 +58,7 @@ template <typename T> struct D2Q5DescriptorBase {
   enum { d = 2, q = 5 };      ///< number of dimensions/distr. functions
   static const int vicinity;  ///< size of neighborhood
   static const int c[q][d];   ///< lattice directions
+  static const int opposite[q]; ///< opposite entry
   static const T t[q];        ///< lattice weights
   static const T invCs2;      ///< inverse square of speed of sound
 };
@@ -84,7 +85,7 @@ struct Velocity3dBase {
   typedef Velocity3dDescriptor ExternalField;
 };
 
-struct StokesDragAdvectionDiffusion3dDescriptor {
+struct particleAdvectionDiffusion3dDescriptor {
   static const int numScalars = 6;
   static const int numSpecies = 2;
   static const int velocityBeginsAt = 0;
@@ -93,32 +94,89 @@ struct StokesDragAdvectionDiffusion3dDescriptor {
   static const int sizeOfVelocity2   = 3;
 };
 
-struct StokesDragAdvectionDiffusion3dDescriptorBase {
-  typedef StokesDragAdvectionDiffusion3dDescriptor ExternalField;
+struct particleAdvectionDiffusion3dDescriptorBase {
+  typedef particleAdvectionDiffusion3dDescriptor ExternalField;
 };
 
 /// AD D2Q5 lattice
-template <typename T> struct AdvectionDiffusionD2Q5Descriptor
-    : public D2Q5DescriptorBase<T>, public Velocity2dBase {
-};
+template <typename T>
+struct AdvectionDiffusionD2Q5Descriptor : public D2Q5DescriptorBase<T>, public Velocity2dBase {};
 
 /// D3Q7 lattice
-template <typename T> struct D3Q7DescriptorBase {
+template <typename T>
+struct D3Q7DescriptorBase {
   typedef D3Q7DescriptorBase<T> BaseDescriptor;
   enum { d = 3, q = 7 };     ///< number of dimensions/distr. functions
   static const int vicinity;  ///< size of neighborhood
   static const int c[q][d];   ///< lattice directions
+  static const int opposite[q]; ///< opposite entry
   static const T t[q];        ///< lattice weights
   static const T invCs2;      ///< inverse square of speed of sound
+
+
 };
 
-template <typename T> struct AdvectionDiffusionD3Q7Descriptor
-    : public D3Q7DescriptorBase<T>, public Velocity3dBase {
+template <typename T>
+struct AdvectionDiffusionD3Q7Descriptor : public D3Q7DescriptorBase<T>, public Velocity3dBase {};
+
+template <typename T>
+struct particleAdvectionDiffusionD3Q7Descriptor : public D3Q7DescriptorBase<T>, public particleAdvectionDiffusion3dDescriptorBase { };
+
+
+/// D3Q7 lattice for radiative transport problems @2016 A. Mink et al.
+/// D3Q7 lattice
+template <typename T>
+struct D3Q7DescriptorBaseRTLB {
+  typedef D3Q7DescriptorBaseRTLB<T> BaseDescriptor;
+  enum { d = 3, q = 7 };     ///< number of dimensions/distr. functions
+  static const int vicinity;  ///< size of neighborhood
+  static const int c[q][d];   ///< lattice directions
+  static const int opposite[q]; ///< opposite entry
+  static const T t[q];        ///< lattice weights
+  static const T invCs2;      ///< inverse square of speed of sound
+  static const double henyeyPhaseFunction[q][q]; ///<anisotropic discrete scattering coefficient
 };
 
-template <typename T> struct StokesDragAdvectionDiffusionD3Q7Descriptor
-    : public D3Q7DescriptorBase<T>, public StokesDragAdvectionDiffusion3dDescriptorBase {
+// TODO: AM, Why inherit from Velocity3dBase?
+template <typename T>
+struct D3Q7DescriptorRTLB : public D3Q7DescriptorBaseRTLB<T>, public Velocity3dBase { };
+
+
+/// D3Q19 lattice TODO: AM
+template <typename T>
+struct D3Q19DescriptorBaseRTLB {
+  typedef D3Q19DescriptorBaseRTLB<T> BaseDescriptor;
+  enum { d = 3, q = 19 };     ///< number of dimensions/distr. functions
+  static const int vicinity;  ///< size of neighborhood
+  static const int c[q][d];   ///< lattice directions
+  static const int opposite[q]; ///< opposite entry
+  static const T t[q];        ///< lattice weights
+  static const T invCs2;      ///< inverse square of speed of sound
+  static const double henyeyPhaseFunction[q][q]; ///<anisotropic discrete scattering coefficient
 };
+
+template <typename T>
+struct D3Q19DescriptorRTLB  : public D3Q19DescriptorBaseRTLB<T>, public Velocity3dBase {};
+
+
+
+/// D3Q27 lattice
+template <typename T>
+struct D3Q27DescriptorBaseRTLB {
+  typedef D3Q27DescriptorBaseRTLB<T> BaseDescriptor;
+  enum { d = 3, q = 27 };     ///< number of dimensions/distr. functions
+  static const int vicinity;  ///< size of neighborhood
+  static const int c[q][d];   ///< lattice directions
+  static const int opposite[q]; ///< opposite entry
+  static const T t[q];        ///< lattice weights
+  static const T invCs2;      ///< inverse square of speed of sound
+  static const double henyeyPhaseFunction[q][q]; ///<anisotropic discrete scattering coefficient
+};
+
+
+template <typename T>
+struct D3Q27DescriptorRTLB  : public D3Q27DescriptorBaseRTLB<T>, public Velocity3dBase {};
+
 
 }  // namespace descriptors
 

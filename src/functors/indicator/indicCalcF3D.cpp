@@ -37,80 +37,80 @@ template class IndicMultiplication3D<double>;
 template class SmoothIndicCalc3D<double,double>;
 template class SmoothIndicPlus3D<double,double>;
 
-//////////////////// Discrete Indicator //////////////////
-DiscIndicCalc3D::DiscIndicCalc3D(DiscreteIndicatorF3D& f, DiscreteIndicatorF3D& g)
-  : _f(f), _g(g)
-{
-  std::swap(f._ptrCalcC, this->_ptrCalcC);
-}
-
-
-DiscIndicPlus3D::DiscIndicPlus3D(DiscreteIndicatorF3D& f, DiscreteIndicatorF3D& g)
-  : DiscIndicCalc3D(f, g)
-{}
-
-// returns 1 if( f==1 || g==1 ) UNION
-bool DiscIndicPlus3D::operator() (bool output[], const int input[])
-{
-  this->_f(output, input);
-  bool tmp;
-  this->_g(&tmp, input);
-  output[0] |= tmp;
-  return true;
-}
-
-
-DiscIndicMinus3D::DiscIndicMinus3D(DiscreteIndicatorF3D& f, DiscreteIndicatorF3D& g)
-  : DiscIndicCalc3D(f, g)
-{}
-
-// returns 1 if( f==1 && g==0 ) WITHOUT
-bool DiscIndicMinus3D::operator()(bool output[], const int input[])
-{
-  this->_f(output, input);
-  bool tmp;
-  this->_g(&tmp, input);
-  output[0] &= !tmp;
-  return true;
-}
-
-
-// returns 1 if( f==1 && g==1 ) INTERSECTION
-DiscIndicMultiplication3D::DiscIndicMultiplication3D(DiscreteIndicatorF3D& f, DiscreteIndicatorF3D& g)
-  : DiscIndicCalc3D(f, g)
-{}
-
-
-bool DiscIndicMultiplication3D::operator() (bool output[], const int input[])
-{
-  this->_f(output, input);
-  bool tmp;
-  this->_g(&tmp, input);
-  output[0] &= tmp;
-  return true;
-}
-
-
-DiscreteIndicatorF3D& DiscreteIndicatorF3D::operator+(DiscreteIndicatorF3D& rhs)
-{
-  auto tmp = std::make_shared< DiscIndicPlus3D >(*this, rhs);
-  this->_ptrCalcC = tmp;
-  return *tmp;
-}
-
-DiscreteIndicatorF3D& DiscreteIndicatorF3D::operator-(DiscreteIndicatorF3D& rhs)
-{
-  auto tmp = std::make_shared< DiscIndicMinus3D >(*this, rhs);
-  this->_ptrCalcC = tmp;
-  return *tmp;
-}
-
-DiscreteIndicatorF3D& DiscreteIndicatorF3D::operator*(DiscreteIndicatorF3D& rhs)
-{
-  auto tmp = std::make_shared< DiscIndicMultiplication3D >(*this, rhs);
-  this->_ptrCalcC = tmp;
-  return *tmp;
-}
+////////////////////// Discrete Indicator //////////////////
+//DiscIndicCalc3D::DiscIndicCalc3D(SuperIndicatorF3D<T>& f, SuperIndicatorF3D<T>& g)
+//  : _f(f), _g(g)
+//{
+//  std::swap(f._ptrCalcC, this->_ptrCalcC);
+//}
+//
+//
+//DiscIndicPlus3D::DiscIndicPlus3D(SuperIndicatorF3D<T>& f, SuperIndicatorF3D<T>& g)
+//  : DiscIndicCalc3D(f, g)
+//{}
+//
+//// returns 1 if( f==1 || g==1 ) UNION
+//bool DiscIndicPlus3D::operator() (bool output[], const int input[])
+//{
+//  this->_f(output, input);
+//  bool tmp;
+//  this->_g(&tmp, input);
+//  output[0] |= tmp;
+//  return true;
+//}
+//
+//
+//DiscIndicMinus3D::DiscIndicMinus3D(SuperIndicatorF3D<T>& f, SuperIndicatorF3D<T>& g)
+//  : DiscIndicCalc3D(f, g)
+//{}
+//
+//// returns 1 if( f==1 && g==0 ) WITHOUT
+//bool DiscIndicMinus3D::operator()(bool output[], const int input[])
+//{
+//  this->_f(output, input);
+//  bool tmp;
+//  this->_g(&tmp, input);
+//  output[0] &= !tmp;
+//  return true;
+//}
+//
+//
+//// returns 1 if( f==1 && g==1 ) INTERSECTION
+//DiscIndicMultiplication3D::DiscIndicMultiplication3D(SuperIndicatorF3D<T>& f, SuperIndicatorF3D<T>& g)
+//  : DiscIndicCalc3D(f, g)
+//{}
+//
+//
+//bool DiscIndicMultiplication3D::operator() (bool output[], const int input[])
+//{
+//  this->_f(output, input);
+//  bool tmp;
+//  this->_g(&tmp, input);
+//  output[0] &= tmp;
+//  return true;
+//}
+//
+//
+//SuperIndicatorF3D<T>& SuperIndicatorF3D::operator+(SuperIndicatorF3D<T>& rhs)
+//{
+//  auto tmp = std::make_shared< DiscIndicPlus3D >(*this, rhs);
+//  this->_ptrCalcC = tmp;
+//  return *tmp;
+//}
+//
+//SuperIndicatorF3D<T>& SuperIndicatorF3D::operator-(SuperIndicatorF3D<T>& rhs)
+//{
+//  auto tmp = std::make_shared< DiscIndicMinus3D >(*this, rhs);
+//  this->_ptrCalcC = tmp;
+//  return *tmp;
+//}
+//
+//SuperIndicatorF3D<T>& SuperIndicatorF3D::operator*(SuperIndicatorF3D<T>& rhs)
+//{
+//  auto tmp = std::make_shared< DiscIndicMultiplication3D >(*this, rhs);
+//  this->_ptrCalcC = tmp;
+//  return *tmp;
+//}
 
 
 }

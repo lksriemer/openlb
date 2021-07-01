@@ -34,12 +34,22 @@ namespace olb {
 // BlockF2D
 template <typename T>
 BlockF2D<T>::BlockF2D(BlockStructure2D& blockStructure, int targetDim)
-  : GenericF<T,int>(targetDim,2), _blockStructure(blockStructure) { }
+  : GenericF<T,int>(targetDim,2), _blockStructure(&blockStructure) { }
+
+template <typename T>
+BlockF2D<T>::BlockF2D(int targetDim)
+  : GenericF<T,int>(targetDim,2), _blockStructure(nullptr) { }
 
 template <typename T>
 BlockStructure2D& BlockF2D<T>::getBlockStructure()
 {
-  return _blockStructure;
+  return *_blockStructure;
+}
+
+template <typename T>
+void BlockF2D<T>::setBlockStructure(BlockStructure2D* blockStructure)
+{
+    _blockStructure = blockStructure;
 }
 
 //template <typename T>
@@ -99,9 +109,11 @@ BlockDataF2D<T,BaseType>::BlockDataF2D(BlockF2D<BaseType>& f)
 
 template <typename T,typename BaseType>
 BlockDataF2D<T,BaseType>::BlockDataF2D(int nx, int ny, int size)
-  : BlockF2D<T>( _blockData, size ), _blockData( *(new BlockData2D<T,BaseType>(nx, ny, size)) ),
+  : BlockF2D<T>( size ), _blockData( *(new BlockData2D<T,BaseType>(nx, ny, size)) ),
     _isConstructed(true)
-{}
+{
+    this->setBlockStructure(&_blockData);
+}
 
 template <typename T,typename BaseType>
 BlockDataF2D<T,BaseType>::~BlockDataF2D()

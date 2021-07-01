@@ -1,6 +1,6 @@
 /*  This file is part of the OpenLB library
  *
- *  Copyright (C) 2012 Jonas Kratzke, Mathias J. Krause
+ *  Copyright (C) 2012, 2016 Jonas Kratzke, Mathias J. Krause
  *  E-mail contact: info@openlb.net
  *  The most recent release of OpenLB can be downloaded at
  *  <http://www.openlb.net/>
@@ -68,22 +68,32 @@ public:
   /// Add post processors. Ensure that offDynamics are defined!
   void addVelocityBoundary(SuperGeometry2D<T>& superGeometry, int material, IndicatorF2D<T>& indicator, std::list<int> bulkMaterials = std::list<int>(1,1));
   void addZeroVelocityBoundary(SuperGeometry2D<T>& superGeometry, int material, IndicatorF2D<T>& indicator, std::list<int> bulkMaterials = std::list<int>(1,1));
+  void addPressureBoundary(SuperGeometry2D<T>& superGeometry, int material, IndicatorF2D<T>& indicator, std::list<int> bulkMaterials = std::list<int>(1,1));
 
+  void addVelocityBoundary(SuperGeometry2D<T>& superGeometry, int material, std::list<int> bulkMaterials = std::list<int>(1,1));
+  void addZeroVelocityBoundary(SuperGeometry2D<T>& superGeometry, int material,  std::list<int> bulkMaterials = std::list<int>(1,1));
+  void addPressureBoundary(SuperGeometry2D<T>& superGeometry, int material,  std::list<int> bulkMaterials = std::list<int>(1,1));
+
+  void defineRho(SuperGeometry2D<T>& superGeometry, int material, AnalyticalF2D<T,T>& rho, std::list<int> bulkMaterials = std::list<int>(1,1) );
   void defineU(SuperGeometry2D<T>& superGeometry, int material, AnalyticalF2D<T,T>& u, std::list<int> bulkMaterials = std::list<int>(1,1) );
 
   /// Adds needed Cells to the Communicator _commBC in SuperLattice
   void addPoints2CommBC(SuperGeometry2D<T>& superGeometry, int material);
 
-  SuperLattice2D<T,Lattice>& getSuperLattice() {
+  SuperLattice2D<T,Lattice>& getSuperLattice()
+  {
     return _sLattice;
   };
-  std::vector<OffLatticeBoundaryCondition2D<T,Lattice>* >& getBlockBCs() {
+  std::vector<OffLatticeBoundaryCondition2D<T,Lattice>* >& getBlockBCs()
+  {
     return _blockBCs;
   };
-  int getOverlap() {
+  int getOverlap()
+  {
     return _overlap;
   };
-  void setOverlap(int overlap) {
+  void setOverlap(int overlap)
+  {
     _overlap = overlap;
   };
 
@@ -107,6 +117,10 @@ void createBouzidiBoundaryCondition2D(sOffLatticeBoundaryCondition2D<T,Lattice>&
 {
   createBouzidiBoundaryCondition2D<T,Lattice,BGKdynamics<T,Lattice> > (sBC);
 }
+
+
+template<typename T, template<typename U> class Lattice>
+void createBounceBackBoundaryCondition2D(sOffLatticeBoundaryCondition2D<T,Lattice>& sBC);
 
 }  // namespace olb
 

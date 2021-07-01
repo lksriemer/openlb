@@ -81,7 +81,7 @@ public:
 
 /// AnalyticalIdentity1D stores vectors, result of addition,multiplication, ...
 template <typename T, typename S>
-class AnalyticalIdentity1D : public AnalyticalF1D<T,S> {
+class AnalyticalIdentity1D final : public AnalyticalF1D<T,S> {
 protected:
   AnalyticalF1D<T,S>& _f;
 public:
@@ -91,7 +91,7 @@ public:
 
 /// AnalyticalIdentity2D stores vectors, result of addition,multiplication, ...
 template <typename T, typename S>
-class AnalyticalIdentity2D : public AnalyticalF2D<T,S> {
+class AnalyticalIdentity2D final : public AnalyticalF2D<T,S> {
 protected:
   AnalyticalF2D<T,S>& _f;
 public:
@@ -101,7 +101,7 @@ public:
 
 /// AnalyticalIdentity3D stores vectors, result of addition,multiplication, ...
 template <typename T, typename S>
-class AnalyticalIdentity3D : public AnalyticalF3D<T,S> {
+class AnalyticalIdentity3D final : public AnalyticalF3D<T,S> {
 protected:
   AnalyticalF3D<T,S>& _f;
 public:

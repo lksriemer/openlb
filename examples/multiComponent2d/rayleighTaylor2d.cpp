@@ -50,43 +50,32 @@ const int ny   = 200;
 const int maxIter  = 20000;
 
 
-/// Stores geometry information in form of material numbers
-void prepareGeometry(SuperGeometry2D<T>& superGeometry) {
+// Stores geometry information in form of material numbers
+void prepareGeometry( SuperGeometry2D<T>& superGeometry ) {
 
-  OstreamManager clout(std::cout,"prepareGeometry");
+  OstreamManager clout( std::cout,"prepareGeometry" );
   clout << "Prepare Geometry ..." << std::endl;
 
   // Sets material number for fluid and boundary
-  superGeometry.rename(0,1);
+  superGeometry.rename( 0,1 );
 
-  std::vector<T> origin1(2,T());
-  origin1[0] = -2.;
-  origin1[1] = -2.;
-  std::vector<T> origin2(2,T());
-  origin2[0] = -2.;
-  origin2[1] = ny/2.;
-  std::vector<T> origin3(2,T());
-  origin3[0] = -2.;
-  origin3[1] = ny-1.;
+  Vector<T,2> origin1( -.5, -.5 );
+  Vector<T,2> origin2( -.5,ny/2. );
+  Vector<T,2> origin3( -.5, ny-1.5 );
+  Vector<T,2> extend1( nx+2, 1. );
+  Vector<T,2> extend2( nx+2., ny/2.+2. );
 
-  std::vector<T> extend1(2,T());
-  extend1[0] = nx+3.;
-  extend1[1] = 2.;
-  std::vector<T> extend2(2,T());
-  extend2[0] = nx+3.;
-  extend2[1] = ny/2.+2.;
+  IndicatorCuboid2D<T> bottom( extend1, origin1 );
+  IndicatorCuboid2D<T> upper( extend2, origin2 );
+  IndicatorCuboid2D<T> top( extend1, origin3 );
 
-  IndicatorCuboid2D<T> bottom(extend1, origin1);
-  IndicatorCuboid2D<T> upper(extend2, origin2);
-  IndicatorCuboid2D<T> top(extend1, origin3);
+  superGeometry.rename( 1,2,upper );
+  superGeometry.rename( 1,3,bottom );
+  superGeometry.rename( 2,4,top );
 
-  superGeometry.rename(1,2,upper);
-  superGeometry.rename(1,3,bottom);
-  superGeometry.rename(2,4,top);
-
-  /// Removes all not needed boundary voxels outside the surface
+  // Removes all not needed boundary voxels outside the surface
   //superGeometry.clean();
-  /// Removes all not needed boundary voxels inside the surface
+  // Removes all not needed boundary voxels inside the surface
   superGeometry.innerClean();
   superGeometry.checkForErrors();
 
@@ -95,16 +84,15 @@ void prepareGeometry(SuperGeometry2D<T>& superGeometry) {
   clout << "Prepare Geometry ... OK" << std::endl;
 }
 
-void prepareLattice(SuperLattice2D<T, DESCRIPTOR>& sLatticeOne,
-                    SuperLattice2D<T, DESCRIPTOR>& sLatticeTwo,
-                    Dynamics<T, DESCRIPTOR>& bulkDynamics1,
-                    Dynamics<T, DESCRIPTOR>& bulkDynamics2,
-                    Dynamics<T, DESCRIPTOR>& bounceBackRho0,
-                    Dynamics<T, DESCRIPTOR>& bounceBackRho1,
-                    SuperGeometry2D<T>& superGeometry)
-{
+void prepareLattice( SuperLattice2D<T, DESCRIPTOR>& sLatticeOne,
+                     SuperLattice2D<T, DESCRIPTOR>& sLatticeTwo,
+                     Dynamics<T, DESCRIPTOR>& bulkDynamics1,
+                     Dynamics<T, DESCRIPTOR>& bulkDynamics2,
+                     Dynamics<T, DESCRIPTOR>& bounceBackRho0,
+                     Dynamics<T, DESCRIPTOR>& bounceBackRho1,
+                     SuperGeometry2D<T>& superGeometry ) {
 
-  OstreamManager clout(std::cout,"prepareLattice");
+  OstreamManager clout( std::cout,"prepareLattice" );
   clout << "Prepare Lattice ..." << std::endl;
 
   // The setup is: periodicity along horizontal direction, bounce-back on top
@@ -112,63 +100,63 @@ void prepareLattice(SuperLattice2D<T, DESCRIPTOR>& sLatticeOne,
   // and the lower half with fluid 2. Only fluid 1 experiences a forces,
   // directed downwards.
 
-  /// define lattice Dynamics
-  sLatticeOne.defineDynamics(superGeometry, 0, &instances::getNoDynamics<T, DESCRIPTOR>());
-  sLatticeTwo.defineDynamics(superGeometry, 0, &instances::getNoDynamics<T, DESCRIPTOR>());
+  // define lattice Dynamics
+  sLatticeOne.defineDynamics( superGeometry, 0, &instances::getNoDynamics<T, DESCRIPTOR>() );
+  sLatticeTwo.defineDynamics( superGeometry, 0, &instances::getNoDynamics<T, DESCRIPTOR>() );
 
-  sLatticeOne.defineDynamics(superGeometry, 1, &bulkDynamics1);
-  sLatticeOne.defineDynamics(superGeometry, 2, &bulkDynamics1);
-  sLatticeOne.defineDynamics(superGeometry, 3, &bulkDynamics1);
-  sLatticeOne.defineDynamics(superGeometry, 4, &bulkDynamics1);
-  sLatticeTwo.defineDynamics(superGeometry, 1, &bulkDynamics2);
-  sLatticeTwo.defineDynamics(superGeometry, 2, &bulkDynamics2);
-  sLatticeTwo.defineDynamics(superGeometry, 3, &bulkDynamics2);
-  sLatticeTwo.defineDynamics(superGeometry, 4, &bulkDynamics2);
+  sLatticeOne.defineDynamics( superGeometry, 1, &bulkDynamics1 );
+  sLatticeOne.defineDynamics( superGeometry, 2, &bulkDynamics1 );
+  sLatticeOne.defineDynamics( superGeometry, 3, &bulkDynamics1 );
+  sLatticeOne.defineDynamics( superGeometry, 4, &bulkDynamics1 );
+  sLatticeTwo.defineDynamics( superGeometry, 1, &bulkDynamics2 );
+  sLatticeTwo.defineDynamics( superGeometry, 2, &bulkDynamics2 );
+  sLatticeTwo.defineDynamics( superGeometry, 3, &bulkDynamics2 );
+  sLatticeTwo.defineDynamics( superGeometry, 4, &bulkDynamics2 );
 
-  sLatticeOne.defineDynamics(superGeometry, 3, &bounceBackRho0);
-  sLatticeTwo.defineDynamics(superGeometry, 3, &bounceBackRho1);
-  sLatticeOne.defineDynamics(superGeometry, 4, &bounceBackRho1);
-  sLatticeTwo.defineDynamics(superGeometry, 4, &bounceBackRho0);
+  sLatticeOne.defineDynamics( superGeometry, 3, &bounceBackRho0 );
+  sLatticeTwo.defineDynamics( superGeometry, 3, &bounceBackRho1 );
+  sLatticeOne.defineDynamics( superGeometry, 4, &bounceBackRho1 );
+  sLatticeTwo.defineDynamics( superGeometry, 4, &bounceBackRho0 );
 
   clout << "Prepare Lattice ... OK" << std::endl;
 }
 
-void setBoundaryValues(SuperLattice2D<T, DESCRIPTOR>& sLatticeOne,
-                       SuperLattice2D<T, DESCRIPTOR>& sLatticeTwo,
-                       T force, int iT, SuperGeometry2D<T>& superGeometry) {
+void setBoundaryValues( SuperLattice2D<T, DESCRIPTOR>& sLatticeOne,
+                        SuperLattice2D<T, DESCRIPTOR>& sLatticeTwo,
+                        T force, int iT, SuperGeometry2D<T>& superGeometry ) {
 
-  if(iT==0) {
+  if ( iT==0 ) {
 
-    AnalyticalConst2D<T,T> noise(4.e-2);
-    std::vector<T> v(2,T());
-    AnalyticalConst2D<T,T> zeroV(v);
-    AnalyticalConst2D<T,T> zero(0.);
-    AnalyticalLinear2D<T,T> one(0.,-force*DESCRIPTOR<T>::invCs2,0.98+force*ny*DESCRIPTOR<T>::invCs2);
-    AnalyticalConst2D<T,T> onePlus(0.98+force*ny/2.*DESCRIPTOR<T>::invCs2);
+    AnalyticalConst2D<T,T> noise( 4.e-2 );
+    std::vector<T> v( 2,T() );
+    AnalyticalConst2D<T,T> zeroV( v );
+    AnalyticalConst2D<T,T> zero( 0. );
+    AnalyticalLinear2D<T,T> one( 0.,-force*DESCRIPTOR<T>::invCs2,0.98+force*ny*DESCRIPTOR<T>::invCs2 );
+    AnalyticalConst2D<T,T> onePlus( 0.98+force*ny/2.*DESCRIPTOR<T>::invCs2 );
     AnalyticalRandom2D<T,T> random;
-    AnalyticalIdentity2D<T,T> randomOne(random*noise+one);
-    AnalyticalIdentity2D<T,T> randomPlus(random*noise+onePlus);
-    std::vector<T> F(2,T());
+    AnalyticalIdentity2D<T,T> randomOne( random*noise+one );
+    AnalyticalIdentity2D<T,T> randomPlus( random*noise+onePlus );
+    std::vector<T> F( 2,T() );
     F[1] = -force;
-    AnalyticalConst2D<T,T> f(F);
+    AnalyticalConst2D<T,T> f( F );
 
-    /// for each material set the defineRhou and the Equilibrium
+    // for each material set the defineRhou and the Equilibrium
 
-    sLatticeOne.defineRhoU(superGeometry, 1, zero, zeroV);
-    sLatticeOne.iniEquilibrium(superGeometry, 1, zero, zeroV);
-    sLatticeOne.defineExternalField(superGeometry, 1,
-                                    DESCRIPTOR<T>::ExternalField::externalForceBeginsAt,
-                                    DESCRIPTOR<T>::ExternalField::sizeOfExternalForce, f );
-    sLatticeTwo.defineRhoU(superGeometry, 1, randomPlus, zeroV);
-    sLatticeTwo.iniEquilibrium(superGeometry, 1, randomPlus, zeroV);
+    sLatticeOne.defineRhoU( superGeometry, 1, zero, zeroV );
+    sLatticeOne.iniEquilibrium( superGeometry, 1, zero, zeroV );
+    sLatticeOne.defineExternalField( superGeometry, 1,
+                                     DESCRIPTOR<T>::ExternalField::externalForceBeginsAt,
+                                     DESCRIPTOR<T>::ExternalField::sizeOfExternalForce, f );
+    sLatticeTwo.defineRhoU( superGeometry, 1, randomPlus, zeroV );
+    sLatticeTwo.iniEquilibrium( superGeometry, 1, randomPlus, zeroV );
 
-    sLatticeOne.defineRhoU(superGeometry, 2, randomOne, zeroV);
-    sLatticeOne.iniEquilibrium(superGeometry, 2, randomOne, zeroV);
-    sLatticeOne.defineExternalField(superGeometry, 2,
-                                    DESCRIPTOR<T>::ExternalField::externalForceBeginsAt,
-                                    DESCRIPTOR<T>::ExternalField::sizeOfExternalForce, f );
-    sLatticeTwo.defineRhoU(superGeometry, 2, zero, zeroV);
-    sLatticeTwo.iniEquilibrium(superGeometry, 2, zero, zeroV);
+    sLatticeOne.defineRhoU( superGeometry, 2, randomOne, zeroV );
+    sLatticeOne.iniEquilibrium( superGeometry, 2, randomOne, zeroV );
+    sLatticeOne.defineExternalField( superGeometry, 2,
+                                     DESCRIPTOR<T>::ExternalField::externalForceBeginsAt,
+                                     DESCRIPTOR<T>::ExternalField::sizeOfExternalForce, f );
+    sLatticeTwo.defineRhoU( superGeometry, 2, zero, zeroV );
+    sLatticeTwo.iniEquilibrium( superGeometry, 2, zero, zeroV );
 
     /*sLatticeOne.defineRhoU(superGeometry, 3, zero, zeroV);
     sLatticeOne.iniEquilibrium(superGeometry, 3, zero, zeroV);
@@ -186,36 +174,36 @@ void setBoundaryValues(SuperLattice2D<T, DESCRIPTOR>& sLatticeOne,
     sLatticeTwo.defineRhoU(superGeometry, 4, zero, zeroV);
     sLatticeTwo.iniEquilibrium(superGeometry, 4, zero, zeroV);*/
 
-    /// Make the lattice ready for simulation
+    // Make the lattice ready for simulation
     sLatticeOne.initialize();
     sLatticeTwo.initialize();
   }
 }
 
-void getResults(SuperLattice2D<T, DESCRIPTOR>&    sLatticeTwo,
-                SuperLattice2D<T, DESCRIPTOR>&    sLatticeOne, int iT,
-                SuperGeometry2D<T>& superGeometry, Timer<T>& timer) {
+void getResults( SuperLattice2D<T, DESCRIPTOR>&    sLatticeTwo,
+                 SuperLattice2D<T, DESCRIPTOR>&    sLatticeOne, int iT,
+                 SuperGeometry2D<T>& superGeometry, Timer<T>& timer ) {
 
-  OstreamManager clout(std::cout,"getResults");
-  SuperVTKwriter2D<T> vtkWriter("rayleighTaylor2dsLatticeOne");
+  OstreamManager clout( std::cout,"getResults" );
+  SuperVTMwriter2D<T> vtmWriter( "rayleighTaylor2dsLatticeOne" );
 
   const int vtkIter = 100;
   const int statIter = 10;
 
-  if (iT==0) {
-    /// Writes the geometry, cuboid no. and rank no. as vti file for visualization
-    SuperLatticeGeometry2D<T, DESCRIPTOR> geometry(sLatticeOne, superGeometry);
-    SuperLatticeCuboid2D<T, DESCRIPTOR> cuboid(sLatticeOne);
-    SuperLatticeRank2D<T, DESCRIPTOR> rank(sLatticeOne);
-    vtkWriter.write(geometry);
-    vtkWriter.write(cuboid);
-    vtkWriter.write(rank);
-    vtkWriter.createMasterFile();
+  if ( iT==0 ) {
+    // Writes the geometry, cuboid no. and rank no. as vti file for visualization
+    SuperLatticeGeometry2D<T, DESCRIPTOR> geometry( sLatticeOne, superGeometry );
+    SuperLatticeCuboid2D<T, DESCRIPTOR> cuboid( sLatticeOne );
+    SuperLatticeRank2D<T, DESCRIPTOR> rank( sLatticeOne );
+    vtmWriter.write( geometry );
+    vtmWriter.write( cuboid );
+    vtmWriter.write( rank );
+    vtmWriter.createMasterFile();
   }
 
-  /// Get statistics
-  if (iT%statIter==0 && iT > 0) {
-    /// Timer console output
+  // Get statistics
+  if ( iT%statIter==0 && iT > 0 ) {
+    // Timer console output
     timer.update( iT );
     timer.printStep();
 
@@ -223,57 +211,57 @@ void getResults(SuperLattice2D<T, DESCRIPTOR>&    sLatticeTwo,
     clout << "; averageRhoFluidTwo=" << sLatticeTwo.getStatistics().getAverageRho() << std::endl;
   }
 
-  /// Writes the VTK files
-  if (iT%vtkIter==0) {
+  // Writes the VTK files
+  if ( iT%vtkIter==0 ) {
     clout << "Writing VTK ..." << std::endl;
-    SuperLatticeVelocity2D<T, DESCRIPTOR> velocity(sLatticeOne);
-    SuperLatticeDensity2D<T, DESCRIPTOR> density(sLatticeOne);
-    vtkWriter.addFunctor( velocity );
-    vtkWriter.addFunctor( density );
-    vtkWriter.write(iT);
+    SuperLatticeVelocity2D<T, DESCRIPTOR> velocity( sLatticeOne );
+    SuperLatticeDensity2D<T, DESCRIPTOR> density( sLatticeOne );
+    vtmWriter.addFunctor( velocity );
+    vtmWriter.addFunctor( density );
+    vtmWriter.write( iT );
 
-    BlockLatticeReduction2D<T, DESCRIPTOR> planeReduction(density);
+    BlockLatticeReduction2D<T, DESCRIPTOR> planeReduction( density );
     BlockGifWriter<T> gifWriter;
-    gifWriter.write(planeReduction, iT, "density");
+    gifWriter.write( planeReduction, iT, "density" );
 
     clout << "Writing VTK ... OK" << std::endl;
   }
 }
 
-int main(int argc, char *argv[]) {
+int main( int argc, char *argv[] ) {
 
-  /// === 1st Step: Initialization ===
+  // === 1st Step: Initialization ===
 
-  olbInit(&argc, &argv);
-  singleton::directories().setOutputDir("./tmp/");
-  OstreamManager clout(std::cout,"main");
+  olbInit( &argc, &argv );
+  singleton::directories().setOutputDir( "./tmp/" );
+  OstreamManager clout( std::cout,"main" );
 
   const T omega1 = 1.0;
   const T omega2 = 1.0;
   const T G      = 3.;
-  T force        = 30./(T)ny/(T)ny;
+  T force        = 30./( T )ny/( T )ny;
 
-  /// === 2nd Step: Prepare Geometry ===
-  /// Instantiation of a cuboidGeometry with weights
+  // === 2nd Step: Prepare Geometry ===
+  // Instantiation of a cuboidGeometry with weights
 
 #ifdef PARALLEL_MODE_MPI
-  CuboidGeometry2D<T> cGeometry(0, 0, 1, nx, ny, singleton::mpi().getSize());
+  CuboidGeometry2D<T> cGeometry( 0, 0, 1, nx, ny, singleton::mpi().getSize() );
 #else
-  CuboidGeometry2D<T> cGeometry(0, 0, 1, nx, ny, 1);
+  CuboidGeometry2D<T> cGeometry( 0, 0, 1, nx, ny, 1 );
 #endif
 
-  cGeometry.setPeriodicity(true, false);
+  cGeometry.setPeriodicity( true, false );
 
-  HeuristicLoadBalancer<T> loadBalancer(cGeometry);
+  HeuristicLoadBalancer<T> loadBalancer( cGeometry );
 
-  SuperGeometry2D<T> superGeometry(cGeometry, loadBalancer, 2);
+  SuperGeometry2D<T> superGeometry( cGeometry, loadBalancer, 2 );
 
-  prepareGeometry(superGeometry);
+  prepareGeometry( superGeometry );
 
-  /// === 3rd Step: Prepare Lattice ===
+  // === 3rd Step: Prepare Lattice ===
 
-  SuperLattice2D<T, DESCRIPTOR> sLatticeOne(superGeometry);
-  SuperLattice2D<T, DESCRIPTOR> sLatticeTwo(superGeometry);
+  SuperLattice2D<T, DESCRIPTOR> sLatticeOne( superGeometry );
+  SuperLattice2D<T, DESCRIPTOR> sLatticeTwo( superGeometry );
 
   ForcedBGKdynamics<T, DESCRIPTOR> bulkDynamics1 (
     omega1, instances::getExternalVelocityMomenta<T,DESCRIPTOR>() );
@@ -288,31 +276,31 @@ int main(int argc, char *argv[]) {
   BounceBack<T, DESCRIPTOR> bounceBackRho0( 0. );
 
   std::vector<T> rho0;
-  rho0.push_back(1);
-  rho0.push_back(1);
+  rho0.push_back( 1 );
+  rho0.push_back( 1 );
   PsiEqualsRho<T,T> interactionPotential;
-  ShanChenForcedGenerator2D<T,DESCRIPTOR> coupling(G,rho0,interactionPotential);
+  ShanChenForcedGenerator2D<T,DESCRIPTOR> coupling( G,rho0,interactionPotential );
 
-  sLatticeOne.addLatticeCoupling(superGeometry, 1, coupling, sLatticeTwo);
-  sLatticeOne.addLatticeCoupling(superGeometry, 2, coupling, sLatticeTwo);
+  sLatticeOne.addLatticeCoupling( superGeometry, 1, coupling, sLatticeTwo );
+  sLatticeOne.addLatticeCoupling( superGeometry, 2, coupling, sLatticeTwo );
   //sLatticeOne.addLatticeCoupling(superGeometry, 3, coupling, sLatticeTwo);
   //sLatticeOne.addLatticeCoupling(superGeometry, 4, coupling, sLatticeTwo);
 
-  prepareLattice(sLatticeOne, sLatticeTwo, bulkDynamics1, bulkDynamics2,
-                 bounceBackRho0, bounceBackRho1, superGeometry);
+  prepareLattice( sLatticeOne, sLatticeTwo, bulkDynamics1, bulkDynamics2,
+                  bounceBackRho0, bounceBackRho1, superGeometry );
 
-  /// === 4th Step: Main Loop with Timer ===
+  // === 4th Step: Main Loop with Timer ===
   int iT = 0;
   clout << "starting simulation..." << endl;
   Timer<T> timer( maxIter, superGeometry.getStatistics().getNvoxel() );
   timer.start();
 
-  for (iT=0; iT<maxIter; ++iT) {
+  for ( iT=0; iT<maxIter; ++iT ) {
 
-    /// === 5th Step: Definition of Initial and Boundary Conditions ===
-    setBoundaryValues(sLatticeOne, sLatticeTwo, force, iT, superGeometry);
+    // === 5th Step: Definition of Initial and Boundary Conditions ===
+    setBoundaryValues( sLatticeOne, sLatticeTwo, force, iT, superGeometry );
 
-    /// === 6th Step: Collide and Stream Execution ===
+    // === 6th Step: Collide and Stream Execution ===
     sLatticeOne.collideAndStream();
     sLatticeTwo.collideAndStream();
 
@@ -322,8 +310,8 @@ int main(int argc, char *argv[]) {
     sLatticeOne.executeCoupling();
     //sLatticeTwo.executeCoupling();
 
-    /// === 7th Step: Computation and Output of the Results ===
-    getResults(sLatticeTwo, sLatticeOne, iT, superGeometry, timer);
+    // === 7th Step: Computation and Output of the Results ===
+    getResults( sLatticeTwo, sLatticeOne, iT, superGeometry, timer );
   }
 
   timer.stop();

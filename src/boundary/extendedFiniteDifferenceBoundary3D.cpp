@@ -47,10 +47,10 @@ template class ExtendedFdPlaneBoundaryProcessorGenerator3D<double, descriptors::
 
 template class BoundaryConditionInstantiator3D
 <
-double, descriptors::D3Q19Descriptor,
-        ExtendedFdBoundaryManager3D < double, descriptors::D3Q19Descriptor,
-        BGKdynamics<double,descriptors::D3Q19Descriptor> >
-        >;
+  double, descriptors::D3Q19Descriptor,
+  ExtendedFdBoundaryManager3D < double, descriptors::D3Q19Descriptor,
+                                BGKdynamics<double,descriptors::D3Q19Descriptor> >
+  >;
 
 template OnLatticeBoundaryCondition3D<double,descriptors::D3Q19Descriptor>*
 createExtendedFdBoundaryCondition3D < double,descriptors::D3Q19Descriptor,

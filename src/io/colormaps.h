@@ -61,7 +61,8 @@ private:
 
 template <typename T>
 struct Piece {
-  Piece(T closedBegin_, T openEnd_) : closedBegin(closedBegin_), openEnd(openEnd_) {
+  Piece(T closedBegin_, T openEnd_) : closedBegin(closedBegin_), openEnd(openEnd_)
+  {
   }
   T closedBegin, openEnd;
 };
@@ -84,7 +85,8 @@ private:
 
 template <typename T>
 struct rgb {
-  rgb(T r_, T g_, T b_) : r(r_), g(g_), b(b_) {
+  rgb(T r_, T g_, T b_) : r(r_), g(g_), b(b_)
+  {
   }
   T r,g,b;
 };

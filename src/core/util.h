@@ -28,11 +28,80 @@
 #ifndef UTIL_H
 #define UTIL_H
 
+#include<sstream>
 #include<algorithm>
+#include<utilities/vectorHelpers.h>
+
+// patch due to ploblems with older compilers
+namespace std {
+template<typename T>
+std::string to_string(const T &n)
+{
+  std::ostringstream s;
+  s << n;
+  return s.str();
+}
+}
 
 namespace olb {
 
 namespace util {
+
+template<typename T> T norm(const std::vector<T>& a);
+
+template <typename T>
+inline int sign(T val)
+{
+  return (0 < val) - (val < 0);
+}
+
+template <typename T>
+inline T clamp_low(T val, T a)
+{
+  return val < a ? a : val;
+}
+
+template <typename T>
+inline T clamp_high(T val, T b)
+{
+  return val > b ? b : val;
+}
+
+template <typename T>
+inline T clamp(T val, T a, T b)
+{
+  return val < a ? a : (val > b ? b : val);
+}
+
+template <typename T>
+inline bool aligned_to_x(std::vector<T> vec)
+{
+  return (vec[0]!=0 and vec[1]==0 and vec[2]==0);
+}
+
+template <typename T>
+inline bool aligned_to_y(std::vector<T> vec)
+{
+  return (vec[0]==0 and vec[1]!=0 and vec[2]==0);
+}
+
+template <typename T>
+inline bool aligned_to_z(std::vector<T> vec)
+{
+  return (vec[0]==0 and vec[1]==0 and vec[2]!=0);
+}
+
+template <typename T>
+inline bool aligned_to_grid(std::vector<T> vec)
+{
+  return (aligned_to_x<T>(vec) or
+          aligned_to_y<T>(vec) or
+          aligned_to_z<T>(vec));
+}
+
+
+
+
 
 inline bool intersect (
   int x0, int x1, int y0, int y1,
@@ -128,19 +197,14 @@ template <typename Descriptor> struct TensorVal {
 /// Compute the opposite of a given direction
 template <typename Descriptor> inline int opposite(int iPop)
 {
-  if (iPop==0) {
-    return 0;
-  }
-  if (iPop<=Descriptor::q/2) {
-    return iPop + Descriptor::q/2;
-  }
-  return iPop - Descriptor::q/2;
+  return Descriptor::opposite[iPop];
 }
 
 template <typename Descriptor, int index, int value>
 class SubIndex {
 private:
-  SubIndex() {
+  SubIndex()
+  {
     for (int iVel=0; iVel<Descriptor::q; ++iVel) {
       if (Descriptor::c[iVel][index]==value) {
         indices.push_back(iVel);
@@ -187,7 +251,8 @@ int findVelocity(const int v[Descriptor::d])
 template <typename Descriptor, int direction, int orientation>
 class SubIndexOutgoing {
 private:
-  SubIndexOutgoing() { // finds the indexes outgoing from the walls
+  SubIndexOutgoing()   // finds the indexes outgoing from the walls
+  {
     indices = util::subIndex<Descriptor,direction,orientation>();
 
     for (unsigned iPop = 0; iPop < indices.size(); ++iPop) {
@@ -232,7 +297,8 @@ std::vector<int> remainingIndexes(const std::vector<int> &indices)
 template <typename Descriptor, int xNormal, int yNormal>
 class SubIndexOutgoingCorner2D {
 private:
-  SubIndexOutgoingCorner2D() {
+  SubIndexOutgoingCorner2D()
+  {
     typedef Descriptor L;
 
     int vect[L::d] = {xNormal, yNormal};
@@ -261,6 +327,24 @@ std::vector<int> const& subIndexOutgoingCorner2D()
 {
   static SubIndexOutgoingCorner2D<Descriptor, xNormal, yNormal> subIndexOutgoingCorner2DSingleton;
   return subIndexOutgoingCorner2DSingleton.indices;
+}
+
+/// Util Function for Wall Model of Malaspinas
+/// get link with smallest angle to a vector
+template <typename T, template <typename U> class DESCRIPTOR>
+int get_nearest_link(std::vector<T> vec)
+{
+  T max=-1;
+  int max_index = 0;
+  for (int iQ=1; iQ<DESCRIPTOR<T>::q; ++iQ) {
+    std::vector<T> c_i(DESCRIPTOR<T>::c[iQ], DESCRIPTOR<T>::c[iQ]+3);
+    T tmp = util::scalarProduct<T>(c_i, vec)/util::norm(c_i);
+    if (tmp > max) {
+      max = tmp;
+      max_index = iQ;
+    }
+  }
+  return max_index;
 }
 
 namespace tensorIndices2D {

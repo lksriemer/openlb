@@ -110,6 +110,8 @@ public:
   /// adds a pressure or velocity boundary for one material and a range (x0-x1, y0-y1, z0-z1) or the whole geometry
   virtual void addVelocityBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int material, int x0, int x1, int y0, int y1, int z0, int z1, T omega) =0;
   virtual void addVelocityBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int material, T omega) =0;
+  virtual void addSlipBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int material, int x0, int x1, int y0, int y1, int z0, int z1) =0;
+  virtual void addSlipBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int material) =0;
   virtual void addPressureBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int material, int x0, int x1, int y0, int y1, int z0, int z1, T omega) =0;
   virtual void addPressureBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int material, T omega) =0;
   virtual void addConvectionBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int material, int x0, int x1, int y0, int y1, int z0, int z1, T omega, T* uAv=NULL) =0;

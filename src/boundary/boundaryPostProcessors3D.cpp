@@ -102,4 +102,8 @@ template class OuterVelocityCornerProcessorGenerator3D <double, descriptors::D3Q
 template class OuterVelocityCornerProcessor3D          <double, descriptors::D3Q19Descriptor,  1, 1, 1>;
 template class OuterVelocityCornerProcessorGenerator3D <double, descriptors::D3Q19Descriptor,  1, 1, 1>;
 
+
+template class SlipBoundaryProcessor3D<double, descriptors::D3Q19Descriptor>;
+template class SlipBoundaryProcessorGenerator3D<double, descriptors::D3Q19Descriptor>;
+
 }

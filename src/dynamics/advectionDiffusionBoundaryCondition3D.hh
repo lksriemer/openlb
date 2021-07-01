@@ -31,6 +31,7 @@
 #include "advectionDiffusionBoundaries.hh"
 #include "advectionDiffusionBoundaryCondition3D.h"
 #include "advectionDiffusionBoundaryInstantiator3D.h"
+#include "advectionDiffusionBoundaryInstantiator3D.hh"
 
 
 namespace olb {
@@ -38,26 +39,26 @@ namespace olb {
 template<typename T, template<typename U> class Lattice, class MixinDynamics>
 class AdvectionDiffusionBoundaryManager3D {
 public:
-  template<int direction, int orientation> static Momenta<T,Lattice>*
-  getTemperatureBoundaryMomenta();
-  template<int direction, int orientation> static Dynamics<T,Lattice>*
-  getTemperatureBoundaryDynamics(T omega, Momenta<T,Lattice>& momenta);
-  template<int direction, int orientation> static PostProcessorGenerator3D<T,Lattice>*
-  getTemperatureBoundaryProcessor(int x0, int x1, int y0, int y1, int z0, int z1);
+  template<int direction, int orientation>
+  static Momenta<T,Lattice>* getTemperatureBoundaryMomenta();
+  template<int direction, int orientation>
+  static Dynamics<T,Lattice>* getTemperatureBoundaryDynamics(T omega, Momenta<T,Lattice>& momenta);
+  template<int direction, int orientation>
+  static PostProcessorGenerator3D<T,Lattice>* getTemperatureBoundaryProcessor(int x0, int x1, int y0, int y1, int z0, int z1);
 
-  template<int plane, int normal1, int normal2> static Momenta<T,Lattice>*
-  getTemperatureBoundaryEdgeMomenta();
-  template<int plane, int normal1, int normal2> static Dynamics<T,Lattice>*
-  getTemperatureBoundaryEdgeDynamics(T omega, Momenta<T,Lattice>& momenta);
-  template<int plane, int normal1, int normal2> static PostProcessorGenerator3D<T,Lattice>*
-  getTemperatureBoundaryEdgeProcessor(int x0, int x1, int y0, int y1, int z0, int z1);
+  template<int plane, int normal1, int normal2>
+  static Momenta<T,Lattice>* getTemperatureBoundaryEdgeMomenta();
+  template<int plane, int normal1, int normal2>
+  static Dynamics<T,Lattice>* getTemperatureBoundaryEdgeDynamics(T omega, Momenta<T,Lattice>& momenta);
+  template<int plane, int normal1, int normal2>
+  static PostProcessorGenerator3D<T,Lattice>* getTemperatureBoundaryEdgeProcessor(int x0, int x1, int y0, int y1, int z0, int z1);
 
-  template<int normalX, int normalY, int normalZ> static Momenta<T,Lattice>*
-  getTemperatureBoundaryCornerMomenta();
-  template<int normalX, int normalY, int normalZ> static Dynamics<T,Lattice>*
-  getTemperatureBoundaryCornerDynamics(T omega, Momenta<T,Lattice>& momenta);
-  template<int normalX, int normalY, int normalZ> static PostProcessorGenerator3D<T,Lattice>*
-  getTemperatureBoundaryCornerProcessor(int x, int y, int z);
+  template<int normalX, int normalY, int normalZ>
+  static Momenta<T,Lattice>* getTemperatureBoundaryCornerMomenta();
+  template<int normalX, int normalY, int normalZ>
+  static Dynamics<T,Lattice>* getTemperatureBoundaryCornerDynamics(T omega, Momenta<T,Lattice>& momenta);
+  template<int normalX, int normalY, int normalZ>
+  static PostProcessorGenerator3D<T,Lattice>* getTemperatureBoundaryCornerProcessor(int x, int y, int z);
 
 };
 
@@ -65,12 +66,10 @@ public:
 //============================ Boundary manager for regularized model ===================
 //=======================================================================================
 
-
-
 template<typename T, template<typename U> class Lattice, class MixinDynamics>
 template<int direction, int orientation>
-Momenta<T,Lattice>*
-AdvectionDiffusionBoundaryManager3D<T,Lattice,MixinDynamics>::getTemperatureBoundaryMomenta()
+Momenta<T,Lattice>* AdvectionDiffusionBoundaryManager3D<T,Lattice,MixinDynamics>::
+getTemperatureBoundaryMomenta()
 {
   return new EquilibriumBM<T,Lattice>;
 }
@@ -85,8 +84,7 @@ getTemperatureBoundaryDynamics(T omega, Momenta<T,Lattice>& momenta)
 
 template<typename T, template<typename U> class Lattice, class MixinDynamics>
 template<int direction, int orientation>
-PostProcessorGenerator3D<T,Lattice>*
-AdvectionDiffusionBoundaryManager3D<T,Lattice,MixinDynamics>::
+PostProcessorGenerator3D<T,Lattice>* AdvectionDiffusionBoundaryManager3D<T,Lattice,MixinDynamics>::
 getTemperatureBoundaryProcessor(int x0, int x1, int y0, int y1, int z0, int z1)
 {
   return 0;
@@ -94,11 +92,10 @@ getTemperatureBoundaryProcessor(int x0, int x1, int y0, int y1, int z0, int z1)
 
 //==================  Edges ================================
 
-
 template<typename T, template<typename U> class Lattice, class MixinDynamics>
 template<int plane, int normal1, int normal2>
-Momenta<T,Lattice>*
-AdvectionDiffusionBoundaryManager3D<T,Lattice,MixinDynamics>::getTemperatureBoundaryEdgeMomenta()
+Momenta<T,Lattice>* AdvectionDiffusionBoundaryManager3D<T,Lattice,MixinDynamics>::
+getTemperatureBoundaryEdgeMomenta()
 {
   return new EquilibriumBM<T,Lattice>;
 }
@@ -113,8 +110,7 @@ getTemperatureBoundaryEdgeDynamics(T omega, Momenta<T,Lattice>& momenta)
 
 template<typename T, template<typename U> class Lattice, class MixinDynamics>
 template<int plane, int normal1, int normal2>
-PostProcessorGenerator3D<T,Lattice>*
-AdvectionDiffusionBoundaryManager3D<T,Lattice,MixinDynamics>::
+PostProcessorGenerator3D<T,Lattice>* AdvectionDiffusionBoundaryManager3D<T,Lattice,MixinDynamics>::
 getTemperatureBoundaryEdgeProcessor(int x0, int x1, int y0, int y1, int z0, int z1)
 {
   return 0;
@@ -127,8 +123,8 @@ getTemperatureBoundaryEdgeProcessor(int x0, int x1, int y0, int y1, int z0, int 
 
 template<typename T, template<typename U> class Lattice, class MixinDynamics>
 template<int xNormal, int yNormal, int zNormal>
-Momenta<T,Lattice>*
-AdvectionDiffusionBoundaryManager3D<T,Lattice,MixinDynamics>::getTemperatureBoundaryCornerMomenta()
+Momenta<T,Lattice>* AdvectionDiffusionBoundaryManager3D<T,Lattice,MixinDynamics>::
+getTemperatureBoundaryCornerMomenta()
 {
   return new EquilibriumBM<T,Lattice>;
 }
@@ -145,8 +141,7 @@ getTemperatureBoundaryCornerDynamics(T omega, Momenta<T,Lattice>& momenta)
 
 template<typename T, template<typename U> class Lattice, class MixinDynamics>
 template<int xNormal, int yNormal, int zNormal>
-PostProcessorGenerator3D<T,Lattice>*
-AdvectionDiffusionBoundaryManager3D<T,Lattice,MixinDynamics>::
+PostProcessorGenerator3D<T,Lattice>* AdvectionDiffusionBoundaryManager3D<T,Lattice,MixinDynamics>::
 getTemperatureBoundaryCornerProcessor(int x, int y, int z)
 {
   return 0;
@@ -154,8 +149,6 @@ getTemperatureBoundaryCornerProcessor(int x, int y, int z)
 
 
 ////////// Factory functions //////////////////////////////////////////////////
-
-
 
 template<typename T, template<typename U> class Lattice, typename MixinDynamics>
 OnLatticeAdvectionDiffusionBoundaryCondition3D<T,Lattice>*

@@ -89,28 +89,41 @@ public:
   void getCenterpoints(std::vector<std::vector<T> >& pts);
   /// Collectes all leafs
   void getLeafs(std::vector<Octree<T>* >& pts);
+  /// Return status of _isLeaf;
+  bool isLeaf();
   /// Sets Inside
-  inline void setInside(bool ins) {
+  inline void setInside(bool ins)
+  {
     _inside = ins;
   };
   /// Gets Inside
-  inline bool getInside() {
+  inline bool getInside()
+  {
     return _inside;
   };
+  /// Gets _boundarNode
+  inline bool getBoundaryNode()
+  {
+    return _boundaryNode;
+  };
   /// Gets Maxdepth
-  inline int getMaxdepth() const {
+  inline int getMaxdepth() const
+  {
     return _maxDepth;
   };
   /// Gets numbers of triangles contained by this Octree
-  inline const std::vector<unsigned int>& getTriangles() const {
+  inline const std::vector<unsigned int>& getTriangles() const
+  {
     return _triangles;
   };
   /// Gets centerpoint
-  inline const Vector<T,3>& getCenter() const {
+  inline const Vector<T,3>& getCenter() const
+  {
     return _center;
   };
   /// Gets radius
-  inline const T getRadius() const {
+  inline const T getRadius() const
+  {
     return _radius;
   };
   /// Prints console output
@@ -118,7 +131,8 @@ public:
   /// Returns set of indices of all triangles in nodes containing a line.
   void trianglesOnLine(const Vector<T,3>& pt1, const Vector<T,3>& pt2, std::set<unsigned int>& tris);
   /// Returns reference to _mesh
-  inline STLmesh<T>* getMesh() {
+  inline STLmesh<T>* getMesh()
+  {
     return _mesh;
   }
 
@@ -130,6 +144,7 @@ protected:
   STLmesh<T>* _mesh;
   short _maxDepth;
   bool _isLeaf;
+  bool _boundaryNode;
   bool _inside;
   Octree<T> *_parent;
   Octree<T> **_child;

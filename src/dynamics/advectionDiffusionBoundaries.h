@@ -50,8 +50,7 @@ public:
   /// Collision step
   virtual void collide(Cell<T,Lattice>& cell, LatticeStatistics<T>& statistics);
   /// Collide with fixed velocity
-  virtual void staticCollide(Cell<T,Lattice>& cell,
-                             const T u[Lattice<T>::d],
+  virtual void staticCollide(Cell<T,Lattice>& cell, const T u[Lattice<T>::d],
                              LatticeStatistics<T>& statistics);
   /// Get local relaxation parameter of the dynamics
   virtual T getOmega() const;

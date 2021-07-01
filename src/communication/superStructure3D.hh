@@ -49,9 +49,9 @@ SuperStructure3D<T>::SuperStructure3D(CuboidGeometry3D<T>& cuboidGeometry,
 template<typename T>
 SuperStructure3D<T>::SuperStructure3D(int overlap)
   : SuperStructure3D(
-    *(new CuboidGeometry3D<T> ()),
-    *(new LoadBalancer<T> ()),
-    overlap)
+      *(new CuboidGeometry3D<T> ()),
+      *(new LoadBalancer<T> ()),
+      overlap)
 {
 }
 

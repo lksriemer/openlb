@@ -64,6 +64,75 @@ void ADMBGKdynamics<T,Lattice>::staticCollide( Cell<T,Lattice>& cell,
 }
 
 
+///////////////////////// ForcedADM BGK /////////////////////////////
+
+template<typename T, template<typename U> class Lattice>
+ForcedADMBGKdynamics<T,Lattice>::ForcedADMBGKdynamics (
+  T omega_, Momenta<T,Lattice>& momenta_ )
+  : BGKdynamics<T,Lattice>(omega_,momenta_),
+    omega(omega_)
+{ }
+
+template<typename T, template<typename U> class Lattice>
+void ForcedADMBGKdynamics<T,Lattice>::collide (
+  Cell<T,Lattice>& cell,
+  LatticeStatistics<T>& statistics )
+{
+  OstreamManager clout(std::cout,"Forced ADM collide:");
+  T rho, u[Lattice<T>::d], utst[Lattice<T>::d];
+
+// this->momenta.computeAllMomenta(cell, rho, utst, pi);
+
+  T* rho_fil = cell.getExternal(filRhoIsAt);
+  T* u_filX = cell.getExternal(localFilVelXBeginsAt);
+  T* u_filY = cell.getExternal(localFilVelYBeginsAt);
+  T* u_filZ = cell.getExternal(localFilVelZBeginsAt);
+
+  u[0] = *u_filX;/// *rho_fil;
+  u[1] = *u_filY;/// *rho_fil;
+  u[2] = *u_filZ;/// *rho_fil;
+
+  T* force = cell.getExternal(forceBeginsAt);
+  for (int iVel=0; iVel<Lattice<T>::d; ++iVel) {
+    u[iVel] += force[iVel] / (T)2.;
+  }
+
+  T uSqr = lbHelpers<T,Lattice>::bgkCollision(cell, *rho_fil, u, omega);
+
+  lbHelpers<T,Lattice>::addExternalForce(cell, u, omega);
+
+  if (cell.takesStatistics()) {
+    statistics.incrementStats(rho, uSqr);
+  }
+}
+
+template<typename T, template<typename U> class Lattice>
+void ForcedADMBGKdynamics<T,Lattice>::staticCollide (
+  Cell<T,Lattice>& cell,
+  const T u[Lattice<T>::d],
+  LatticeStatistics<T>& statistics )
+{
+  T rho, uTemp[Lattice<T>::d];
+
+
+  T* rho_fil = cell.getExternal(filRhoIsAt);
+  T* u_filX = cell.getExternal(localFilVelXBeginsAt);
+  T* u_filY = cell.getExternal(localFilVelYBeginsAt);
+  T* u_filZ = cell.getExternal(localFilVelZBeginsAt);
+
+  uTemp[0] = *u_filX;/// *rho_fil;
+  uTemp[1] = *u_filY;/// *rho_fil;
+  uTemp[2] = *u_filZ;/// *rho_fil;
+
+
+  T uSqr = lbHelpers<T,Lattice>::bgkCollision(cell, *rho_fil, uTemp, omega);
+  if (cell.takesStatistics()) {
+    statistics.incrementStats(rho, uSqr);
+  }
+}
+
+
+
 ///////////////////// Class ConSmagorinskyBGKdynamics //////////////////////////
 //Consistent Smagorinsky BGK --> Malaspinas/Sagaut
 
@@ -71,7 +140,7 @@ template<typename T, template<typename U> class Lattice>
 ConSmagorinskyBGKdynamics<T,Lattice>::ConSmagorinskyBGKdynamics(T omega_,
     Momenta<T,Lattice>& momenta_, T smagoConst_, T dx_, T dt_ )
   : BGKdynamics<T,Lattice>(omega_,momenta_), smagoConst(smagoConst_),
-    preFactor(computePreFactor(omega_,smagoConst_, dx_, dt_)), dx(dx_), dt(dt_)
+    preFactor(computePreFactor(omega_,smagoConst_)), dx(dx_), dt(dt_)
 { }
 
 template<typename T, template<typename U> class Lattice>
@@ -81,14 +150,14 @@ void ConSmagorinskyBGKdynamics<T,Lattice>::collide(Cell<T,Lattice>& cell,
   T rho;
   T u[Lattice<T>::d];
   T pi[util::TensorVal<Lattice<T> >::n];
-  this->momenta.computeAllMomenta(cell, rho, u, pi);
+  this->_momenta.computeAllMomenta(cell, rho, u, pi);
   T omega = this->getOmega();
 
   /**************************************************************/
   T H[util::TensorVal<Lattice<T> >::n];
   T conSmagoR[Lattice<T>::q];
   T S[util::TensorVal<Lattice<T> >::n];
-  this->momenta.computeAllMomenta(cell, rho, u, pi);
+  this->_momenta.computeAllMomenta(cell, rho, u, pi);
   T tau_mol = 1./omega;
   T cs2 = 1./Lattice<T>::invCs2;
 
@@ -161,19 +230,18 @@ void ConSmagorinskyBGKdynamics<T,Lattice>::collide(Cell<T,Lattice>& cell,
 }
 
 template<typename T, template<typename U> class Lattice>
-T ConSmagorinskyBGKdynamics<T,Lattice>::computePreFactor(T omega, T smagoConst,
-    T dx, T dt)
+T ConSmagorinskyBGKdynamics<T,Lattice>::computePreFactor(T omega_, T smagoConst_)
 {
   //Dx
   //return (T) 0.5*(smagoConst*smagoConst*dx*dx)*Lattice<T>::invCs2*Lattice<T>::invCs2*omega;
   //Malas
-  return (T) 0.5*(smagoConst*smagoConst)*Lattice<T>::invCs2*Lattice<T>::invCs2*omega;
+  return (T)smagoConst_*smagoConst_*Lattice<T>::invCs2*Lattice<T>::invCs2*2*sqrt(2);
   //all
   //return (T) 0.5*(smagoConst*smagoConst*dx*dx)*Lattice<T>::invCs2*Lattice<T>::invCs2*dt*omega;
 }
 
 template<typename T, template<typename U> class Lattice>
-T ConSmagorinskyBGKdynamics<T,Lattice>::computeOmega (T omega0, T preFactor,
+T ConSmagorinskyBGKdynamics<T,Lattice>::computeOmega (T omega0, T preFactor_,
     T rho, T pi[util::TensorVal<Lattice<T> >::n] )
 {
   return 0;
@@ -184,7 +252,7 @@ void ConSmagorinskyBGKdynamics<T,Lattice>::staticCollide(Cell<T,Lattice>& cell,
     const T u[Lattice<T>::d], LatticeStatistics<T>& statistics )
 {
   T rho, uTemp[Lattice<T>::d], pi[util::TensorVal<Lattice<T> >::n];
-  this->momenta.computeAllMomenta(cell, rho, uTemp, pi);
+  this->_momenta.computeAllMomenta(cell, rho, uTemp, pi);
   T newOmega = computeOmega(this->getOmega(), preFactor, rho, pi);
   T uSqr = lbHelpers<T,Lattice>::bgkCollision(cell, rho, u, newOmega);
   if (cell.takesStatistics()) {
@@ -193,17 +261,18 @@ void ConSmagorinskyBGKdynamics<T,Lattice>::staticCollide(Cell<T,Lattice>& cell,
 }
 
 template<typename T, template<typename U> class Lattice>
-void ConSmagorinskyBGKdynamics<T,Lattice>::setOmega(T omega)
+void ConSmagorinskyBGKdynamics<T,Lattice>::setOmega(T omega_)
 {
-  this->setOmega(omega);
-  preFactor = computePreFactor(omega, smagoConst, dx, dt);
+//  this->omega = omega_;
+  BGKdynamics<T,Lattice>::setOmega(omega_);
+  preFactor = computePreFactor(omega_, smagoConst);
 }
 
 template<typename T, template<typename U> class Lattice>
 T ConSmagorinskyBGKdynamics<T,Lattice>::getSmagorinskyOmega(Cell<T,Lattice>& cell )
 {
   T rho, uTemp[Lattice<T>::d], pi[util::TensorVal<Lattice<T> >::n];
-  this->momenta.computeAllMomenta(cell, rho, uTemp, pi);
+  this->_momenta.computeAllMomenta(cell, rho, uTemp, pi);
   T newOmega = computeOmega(this->getOmega(), preFactor, rho, pi);
   return newOmega;
 }
@@ -216,7 +285,7 @@ template<typename T, template<typename U> class Lattice>
 ConStrainSmagorinskyBGKdynamics<T,Lattice>::ConStrainSmagorinskyBGKdynamics (
   T omega_, Momenta<T,Lattice>& momenta_, T smagoConst_, T dx_, T dt_ )
   : BGKdynamics<T,Lattice>(omega_,momenta_), smagoConst(smagoConst_),
-    preFactor(computePreFactor(omega_,smagoConst_, dx_, dt_) )
+    preFactor(computePreFactor(omega_,smagoConst_) )
 { }
 
 template<typename T, template<typename U> class Lattice>
@@ -224,7 +293,7 @@ void ConStrainSmagorinskyBGKdynamics<T,Lattice>::collide(Cell<T,Lattice>& cell,
     LatticeStatistics<T>& statistics)
 {
   T rho, u[Lattice<T>::d], pi[util::TensorVal<Lattice<T> >::n];
-  this->momenta.computeAllMomenta(cell, rho, u, pi);
+  this->_momenta.computeAllMomenta(cell, rho, u, pi);
   T newOmega = computeOmega(this->getOmega(), preFactor, rho, pi);
   T uSqr = lbHelpers<T,Lattice>::bgkCollision(cell, rho, u, newOmega);
   if (cell.takesStatistics()) {
@@ -233,14 +302,13 @@ void ConStrainSmagorinskyBGKdynamics<T,Lattice>::collide(Cell<T,Lattice>& cell,
 }
 
 template<typename T, template<typename U> class Lattice>
-T ConStrainSmagorinskyBGKdynamics<T,Lattice>::computePreFactor(T omega, T smagoConst,
-    T dx, T dt)
+T ConStrainSmagorinskyBGKdynamics<T,Lattice>::computePreFactor(T omega_, T smagoConst_)
 {
-  return (T) (smagoConst*smagoConst)*(Lattice<T>::invCs2);
+  return (T)smagoConst_*smagoConst_*Lattice<T>::invCs2*Lattice<T>::invCs2*2*sqrt(2);
 }
 
 template<typename T, template<typename U> class Lattice>
-T ConStrainSmagorinskyBGKdynamics<T,Lattice>::computeOmega(T omega0, T preFactor,
+T ConStrainSmagorinskyBGKdynamics<T,Lattice>::computeOmega(T omega0, T preFactor_,
     T rho, T pi[util::TensorVal<Lattice<T> >::n])
 {
   T S[util::TensorVal<Lattice<T> >::n];
@@ -254,7 +322,7 @@ T ConStrainSmagorinskyBGKdynamics<T,Lattice>::computeOmega(T omega0, T preFactor
   T PiNeqNorm    = sqrt(2*PiNeqNormSqr);
 
   //Strain Tensor
-  if (PiNeqNorm != 0) {
+  if ( !util::nearZero(PiNeqNorm) ) {
     for (int n = 0; n < util::TensorVal<Lattice<T> >::n; ++n) {
       S[n] =
         (-0.5*(-rho*tau_mol*cs2+sqrt(rho*rho*tau_mol*tau_mol*cs2*cs2+2.0*(smagoConst*smagoConst)*rho*PiNeqNorm))/(smagoConst*smagoConst*rho*PiNeqNorm))*pi[n];
@@ -273,7 +341,7 @@ T ConStrainSmagorinskyBGKdynamics<T,Lattice>::computeOmega(T omega0, T preFactor
   T SNorm    = sqrt(2*SNormSqr);
 
   /// Turbulent realaxation time
-  T tau_turb = preFactor*SNorm;
+  T tau_turb = preFactor_*SNorm;
   /// Effective realaxation time
   tau_eff = tau_mol+tau_turb;
   T omega_new= 1./tau_eff;
@@ -285,7 +353,7 @@ void ConStrainSmagorinskyBGKdynamics<T,Lattice>::staticCollide( Cell<T,Lattice>&
     const T u[Lattice<T>::d], LatticeStatistics<T>& statistics )
 {
   T rho, uTemp[Lattice<T>::d], pi[util::TensorVal<Lattice<T> >::n];
-  this->momenta.computeAllMomenta(cell, rho, uTemp, pi);
+  this->_momenta.computeAllMomenta(cell, rho, uTemp, pi);
   T newOmega = computeOmega(this->getOmega(), preFactor, rho, pi);
   T uSqr = lbHelpers<T,Lattice>::bgkCollision(cell, rho, u, newOmega);
   if (cell.takesStatistics()) {
@@ -294,17 +362,17 @@ void ConStrainSmagorinskyBGKdynamics<T,Lattice>::staticCollide( Cell<T,Lattice>&
 }
 
 template<typename T, template<typename U> class Lattice>
-void ConStrainSmagorinskyBGKdynamics<T,Lattice>::setOmega(T omega)
+void ConStrainSmagorinskyBGKdynamics<T,Lattice>::setOmega(T omega_)
 {
-  this->setOmega(omega);
-  preFactor = computePreFactor(omega, smagoConst, dx, dt);
+  BGKdynamics<T,Lattice>::setOmega(omega_);
+  preFactor = computePreFactor(omega_, smagoConst);
 }
 
 template<typename T, template<typename U> class Lattice>
 T ConStrainSmagorinskyBGKdynamics<T,Lattice>::getSmagorinskyOmega(Cell<T,Lattice>& cell )
 {
   T rho, uTemp[Lattice<T>::d], pi[util::TensorVal<Lattice<T> >::n];
-  this->momenta.computeAllMomenta(cell, rho, uTemp, pi);
+  this->_momenta.computeAllMomenta(cell, rho, uTemp, pi);
   T newOmega = computeOmega(this->getOmega(), preFactor, rho, pi);
   return newOmega;
 }
@@ -320,12 +388,11 @@ template<typename T, template<typename U> class Lattice>
 void DynSmagorinskyBGKdynamics<T,Lattice>::collide( Cell<T,Lattice>& cell,
     LatticeStatistics<T>& statistics )
 {
-  T preFactor = computePreFactor(this->getOmega(),
-                                 *cell.getExternal(Lattice<T>::ExternalField::smagoConstIsAt),
-                                 dx, dt);
+  T preFactor_ = computePreFactor(this->getOmega(),
+                                  *cell.getExternal(Lattice<T>::ExternalField::smagoConstIsAt));
   T rho, u[Lattice<T>::d], pi[util::TensorVal<Lattice<T> >::n];
-  this->momenta.computeAllMomenta(cell, rho, u, pi);
-  T newOmega = computeOmega(this->getOmega(), preFactor, rho, pi, cell);
+  this->_momenta.computeAllMomenta(cell, rho, u, pi);
+  T newOmega = computeOmega(this->getOmega(), preFactor_, rho, pi, cell);
   T uSqr = lbHelpers<T,Lattice>::bgkCollision(cell, rho, u, newOmega);
   if (cell.takesStatistics()) {
     statistics.incrementStats(rho, uSqr);
@@ -336,12 +403,11 @@ template<typename T, template<typename U> class Lattice>
 void DynSmagorinskyBGKdynamics<T,Lattice>::staticCollide( Cell<T,Lattice>& cell,
     const T u[Lattice<T>::d], LatticeStatistics<T>& statistics )
 {
-  T preFactor = computePreFactor(this->getOmega(),
-                                 *cell.getExternal(Lattice<T>::ExternalField::smagoConstIsAt),
-                                 dx, dt);
+  T preFactor_ = computePreFactor(this->getOmega(),
+                                  *cell.getExternal(Lattice<T>::ExternalField::smagoConstIsAt));
   T rho, uTemp[Lattice<T>::d], pi[util::TensorVal<Lattice<T> >::n];
-  this->momenta.computeAllMomenta(cell, rho, uTemp, pi);
-  T newOmega = computeOmega(this->getOmega(), preFactor, rho, pi, cell);
+  this->_momenta.computeAllMomenta(cell, rho, uTemp, pi);
+  T newOmega = computeOmega(this->getOmega(), preFactor_, rho, pi, cell);
   T uSqr = lbHelpers<T,Lattice>::bgkCollision(cell, rho, u, newOmega);
   if (cell.takesStatistics()) {
     statistics.incrementStats(rho, uSqr);
@@ -349,31 +415,31 @@ void DynSmagorinskyBGKdynamics<T,Lattice>::staticCollide( Cell<T,Lattice>& cell,
 }
 
 template<typename T, template<typename U> class Lattice>
-void DynSmagorinskyBGKdynamics<T,Lattice>::setOmega(T omega)
+void DynSmagorinskyBGKdynamics<T,Lattice>::setOmega(T omega_)
 {
-  this->setOmega(omega);
+  BGKdynamics<T,Lattice>::setOmega(omega_);
+// this->omega = omega_;
 }
 
 template<typename T, template<typename U> class Lattice>
 T DynSmagorinskyBGKdynamics<T,Lattice>::getSmagorinskyOmega(Cell<T,Lattice>& cell )
 {
-  T preFactor = computePreFactor(this->getOmega(),
-                                 *cell.getExternal(Lattice<T>::ExternalField::smagoConstIsAt),
-                                 dx, dt);
+  T preFactor_ = computePreFactor(this->getOmega(),
+                                  *cell.getExternal(Lattice<T>::ExternalField::smagoConstIsAt));
   T rho, uTemp[Lattice<T>::d], pi[util::TensorVal<Lattice<T> >::n];
-  this->momenta.computeAllMomenta(cell, rho, uTemp, pi);
-  T newOmega = computeOmega(this->getOmega(), preFactor, rho, pi, cell);
+  this->_momenta.computeAllMomenta(cell, rho, uTemp, pi);
+  T newOmega = computeOmega(this->getOmega(), preFactor_, rho, pi, cell);
   return newOmega;
 }
 
 template<typename T, template<typename U> class Lattice>
-T DynSmagorinskyBGKdynamics<T,Lattice>::computePreFactor(T omega, T smagoConst, T dx, T dt)
+T DynSmagorinskyBGKdynamics<T,Lattice>::computePreFactor(T omega_, T smagoConst_)
 {
-  return (T)(smagoConst*smagoConst*dx*dx)*Lattice<T>::invCs2/dt*4*sqrt(2);
+  return (T)smagoConst_*smagoConst_*Lattice<T>::invCs2*Lattice<T>::invCs2*2*sqrt(2);
 }
 
 template<typename T, template<typename U> class Lattice>
-T DynSmagorinskyBGKdynamics<T,Lattice>::computeOmega(T omega0, T preFactor, T rho,
+T DynSmagorinskyBGKdynamics<T,Lattice>::computeOmega(T omega0, T preFactor_, T rho,
     T pi[util::TensorVal<Lattice<T> >::n],Cell<T,Lattice>& cell )
 {
   // computation of the relaxation time
@@ -398,7 +464,7 @@ T DynSmagorinskyBGKdynamics<T,Lattice>::computeOmega(T omega0, T preFactor, T rh
 template<typename T, template<typename U> class Lattice>
 ShearSmagorinskyBGKdynamics<T,Lattice>::ShearSmagorinskyBGKdynamics(T omega_,
     Momenta<T,Lattice>& momenta_, T smagoConst_, T dx_, T dt_ )
-  : BGKdynamics<T,Lattice>(omega_,momenta_), smagoConst(smagoConst_), preFactor(smagoConst_*smagoConst_*dx_*dx_*Lattice<T>::invCs2/dt_*4.*sqrt(2)), dx(dx_), dt(dt_)
+  : BGKdynamics<T,Lattice>(omega_,momenta_), smagoConst(smagoConst_), preFactor(smagoConst_*smagoConst_*Lattice<T>::invCs2*Lattice<T>::invCs2*2*sqrt(2)), dx(dx_), dt(dt_)
 { }
 
 template<typename T, template<typename U> class Lattice>
@@ -406,7 +472,7 @@ void ShearSmagorinskyBGKdynamics<T,Lattice>::collide( Cell<T,Lattice>& cell,
     LatticeStatistics<T>& statistics )
 {
   T rho, u[Lattice<T>::d], pi[util::TensorVal<Lattice<T> >::n];
-  this->momenta.computeAllMomenta(cell, rho, u, pi);
+  this->_momenta.computeAllMomenta(cell, rho, u, pi);
   T newOmega = computeOmega(this->getOmega(), rho, pi, cell, statistics.getTime());
   T uSqr = lbHelpers<T,Lattice>::bgkCollision(cell, rho, u, newOmega);
   if (cell.takesStatistics()) {
@@ -419,7 +485,7 @@ void ShearSmagorinskyBGKdynamics<T,Lattice>::staticCollide( Cell<T,Lattice>& cel
     const T u[Lattice<T>::d], LatticeStatistics<T>& statistics )
 {
   T rho, uTemp[Lattice<T>::d], pi[util::TensorVal<Lattice<T> >::n];
-  this->momenta.computeAllMomenta(cell, rho, uTemp, pi);
+  this->_momenta.computeAllMomenta(cell, rho, uTemp, pi);
   T newOmega = computeOmega(this->getOmega(), rho, pi, cell, statistics.getTime());
   T uSqr = lbHelpers<T,Lattice>::bgkCollision(cell, rho, u, newOmega);
   if (cell.takesStatistics()) {
@@ -428,9 +494,10 @@ void ShearSmagorinskyBGKdynamics<T,Lattice>::staticCollide( Cell<T,Lattice>& cel
 }
 
 template<typename T, template<typename U> class Lattice>
-void ShearSmagorinskyBGKdynamics<T,Lattice>::setOmega(T omega)
+void ShearSmagorinskyBGKdynamics<T,Lattice>::setOmega(T omega_)
 {
-  this->setOmega(omega);
+//  this->omega = omega_;
+  BGKdynamics<T,Lattice>::setOmega(omega_);
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -438,7 +505,7 @@ T ShearSmagorinskyBGKdynamics<T,Lattice>::getSmagorinskyOmega(Cell<T,Lattice>& c
     int iT)
 {
   T rho, uTemp[Lattice<T>::d], pi[util::TensorVal<Lattice<T> >::n];
-  this->momenta.computeAllMomenta(cell, rho, uTemp, pi);
+  this->_momenta.computeAllMomenta(cell, rho, uTemp, pi);
   T newOmega = computeOmega(this->getOmega(), rho, pi, cell, iT);
   return newOmega;
 }
@@ -459,11 +526,10 @@ T ShearSmagorinskyBGKdynamics<T,Lattice>::computeOmega(T omega0,
   T* avShear = cell.getExternal(avShearIsAt);
   *avShear = (*avShear*iT+PiNeqNorm)/(iT+1);
   //clout << "avShear"<< *avShear<<endl;
-
-  T v_t = preFactor*(PiNeqNorm - *avShear);
-
-  T tau_t = 3.*v_t;
   T tau_0 = 1./omega0;
+  T PiNeqNorm_SISM = PiNeqNorm - *avShear;
+  T tau_t = 0.5*(sqrt(tau_0*tau_0+(preFactor*PiNeqNorm_SISM))-tau_0);
+
   T omega_new = 1./(tau_t+tau_0);
   //clout << iT << std::endl;
   return omega_new;
@@ -474,7 +540,7 @@ T ShearSmagorinskyBGKdynamics<T,Lattice>::computeOmega(T omega0,
 template<typename T, template<typename U> class Lattice>
 ShearSmagorinskyForcedBGKdynamics<T,Lattice>::ShearSmagorinskyForcedBGKdynamics(T omega_,
     Momenta<T,Lattice>& momenta_, T smagoConst_, T dx_, T dt_ )
-  : ForcedBGKdynamics<T,Lattice>(omega_,momenta_), smagoConst(smagoConst_), preFactor(smagoConst_*smagoConst_*dx_*dx_*Lattice<T>::invCs2/dt_*4.*sqrt(2)), dx(dx_), dt(dt_)
+  : ForcedBGKdynamics<T,Lattice>(omega_,momenta_), smagoConst(smagoConst_), preFactor(smagoConst_*smagoConst_*Lattice<T>::invCs2*Lattice<T>::invCs2*2*sqrt(2)), dx(dx_), dt(dt_)
 { }
 
 template<typename T, template<typename U> class Lattice>
@@ -482,7 +548,7 @@ void ShearSmagorinskyForcedBGKdynamics<T,Lattice>::collide( Cell<T,Lattice>& cel
     LatticeStatistics<T>& statistics )
 {
   T rho, u[Lattice<T>::d], pi[util::TensorVal<Lattice<T> >::n];
-  this->momenta.computeAllMomenta(cell, rho, u, pi);
+  this->_momenta.computeAllMomenta(cell, rho, u, pi);
   T newOmega = computeOmega(this->getOmega(), rho, pi, cell, statistics.getTime());
 
   T* force = cell.getExternal(this->forceBeginsAt);
@@ -499,9 +565,9 @@ void ShearSmagorinskyForcedBGKdynamics<T,Lattice>::collide( Cell<T,Lattice>& cel
 
 
 template<typename T, template<typename U> class Lattice>
-void ShearSmagorinskyForcedBGKdynamics<T,Lattice>::setOmega(T omega)
+void ShearSmagorinskyForcedBGKdynamics<T,Lattice>::setOmega(T omega_)
 {
-  this->setOmega(omega);
+  ForcedBGKdynamics<T,Lattice>::setOmega(omega_);
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -509,7 +575,7 @@ T ShearSmagorinskyForcedBGKdynamics<T,Lattice>::getSmagorinskyOmega(Cell<T,Latti
     int iT)
 {
   T rho, uTemp[Lattice<T>::d], pi[util::TensorVal<Lattice<T> >::n];
-  this->momenta.computeAllMomenta(cell, rho, uTemp, pi);
+  this->_momenta.computeAllMomenta(cell, rho, uTemp, pi);
   T newOmega = computeOmega(this->getOmega(), rho, pi, cell, iT);
   return newOmega;
 }
@@ -531,10 +597,10 @@ T ShearSmagorinskyForcedBGKdynamics<T,Lattice>::computeOmega(T omega0,
   *avShear = (*avShear*iT+PiNeqNorm)/(iT+1);
   //clout << "avShear"<< *avShear<<endl;
 
-  T v_t = preFactor*(PiNeqNorm - *avShear);
-
-  T tau_t = 3.*v_t;
   T tau_0 = 1./omega0;
+  T PiNeqNorm_SISM = PiNeqNorm - *avShear;
+  T tau_t = 0.5*(sqrt(tau_0*tau_0+(preFactor*PiNeqNorm_SISM))-tau_0);
+
   T omega_new = 1./(tau_t+tau_0);
   //clout << iT << std::endl;
   return omega_new;
@@ -551,7 +617,7 @@ template<typename T, template<typename U> class Lattice>
 SmagorinskyBGKdynamics<T,Lattice>::SmagorinskyBGKdynamics(T omega_,
     Momenta<T,Lattice>& momenta_, T smagoConst_, T dx_, T dt_ )
   : BGKdynamics<T,Lattice>(omega_,momenta_), smagoConst(smagoConst_),
-    preFactor(computePreFactor(omega_,smagoConst_, dx_, dt_) )
+    preFactor(computePreFactor(omega_,smagoConst_) )
 { }
 
 template<typename T, template<typename U> class Lattice>
@@ -559,7 +625,7 @@ void SmagorinskyBGKdynamics<T,Lattice>::collide(Cell<T,Lattice>& cell,
     LatticeStatistics<T>& statistics )
 {
   T rho, u[Lattice<T>::d], pi[util::TensorVal<Lattice<T> >::n];
-  this->momenta.computeAllMomenta(cell, rho, u, pi);
+  this->_momenta.computeAllMomenta(cell, rho, u, pi);
   T newOmega = computeOmega(this->getOmega(), preFactor, rho, pi);
   T uSqr = lbHelpers<T,Lattice>::bgkCollision(cell, rho, u, newOmega);
   if (cell.takesStatistics()) {
@@ -572,7 +638,7 @@ void SmagorinskyBGKdynamics<T,Lattice>::staticCollide(Cell<T,Lattice>& cell,
     const T u[Lattice<T>::d], LatticeStatistics<T>& statistics )
 {
   T rho, uTemp[Lattice<T>::d], pi[util::TensorVal<Lattice<T> >::n];
-  this->momenta.computeAllMomenta(cell, rho, uTemp, pi);
+  this->_momenta.computeAllMomenta(cell, rho, uTemp, pi);
   T newOmega = computeOmega(this->getOmega(), preFactor, rho, pi);
   T uSqr = lbHelpers<T,Lattice>::bgkCollision(cell, rho, u, newOmega);
   if (cell.takesStatistics()) {
@@ -581,31 +647,32 @@ void SmagorinskyBGKdynamics<T,Lattice>::staticCollide(Cell<T,Lattice>& cell,
 }
 
 template<typename T, template<typename U> class Lattice>
-void SmagorinskyBGKdynamics<T,Lattice>::setOmega(T omega)
+void SmagorinskyBGKdynamics<T,Lattice>::setOmega(T omega_)
 {
-  this->setOmega(omega);
-  preFactor = computePreFactor(omega, smagoConst, dx, dt);
+//  this->omega = omega_;
+  BGKdynamics<T,Lattice>::setOmega(omega_);
+  preFactor = computePreFactor(omega_, smagoConst);
 }
 
 template<typename T, template<typename U> class Lattice>
 T SmagorinskyBGKdynamics<T,Lattice>::getSmagorinskyOmega(Cell<T,Lattice>& cell )
 {
   T rho, uTemp[Lattice<T>::d], pi[util::TensorVal<Lattice<T> >::n];
-  this->momenta.computeAllMomenta(cell, rho, uTemp, pi);
+  this->_momenta.computeAllMomenta(cell, rho, uTemp, pi);
   T newOmega = computeOmega(this->getOmega(), preFactor, rho, pi);
   return newOmega;
 }
 
 template<typename T, template<typename U> class Lattice>
-T SmagorinskyBGKdynamics<T,Lattice>::computePreFactor(T omega, T smagoConst, T dx, T dt)
+T SmagorinskyBGKdynamics<T,Lattice>::computePreFactor(T omega_, T smagoConst_)
 {
-  return (T)(smagoConst*smagoConst*dx*dx)*Lattice<T>::invCs2/dt*4*sqrt(2);
+  return (T)smagoConst_*smagoConst_*Lattice<T>::invCs2*Lattice<T>::invCs2*2*sqrt(2);
 }
 
 
 
 template<typename T, template<typename U> class Lattice>
-T SmagorinskyBGKdynamics<T,Lattice>::computeOmega(T omega0, T preFactor, T rho,
+T SmagorinskyBGKdynamics<T,Lattice>::computeOmega(T omega0, T preFactor_, T rho,
     T pi[util::TensorVal<Lattice<T> >::n] )
 {
   T PiNeqNormSqr = pi[0]*pi[0] + 2.0*pi[1]*pi[1] + pi[2]*pi[2];
@@ -616,7 +683,7 @@ T SmagorinskyBGKdynamics<T,Lattice>::computeOmega(T omega0, T preFactor, T rho,
   /// Molecular realaxation time
   T tau_mol = 1. /omega0;
   /// Turbulent realaxation time
-  T tau_turb = 0.5*(sqrt(tau_mol*tau_mol+(preFactor*tau_mol*PiNeqNorm))-tau_mol);
+  T tau_turb = 0.5*(sqrt(tau_mol*tau_mol + preFactor_/rho*PiNeqNorm) - tau_mol);
   /// Effective realaxation time
   tau_eff = tau_mol+tau_turb;
   T omega_new= 1./tau_eff;
@@ -632,7 +699,7 @@ template<typename T, template<typename U> class Lattice>
 SmagorinskyForcedBGKdynamics<T,Lattice>::SmagorinskyForcedBGKdynamics(T omega_,
     Momenta<T,Lattice>& momenta_, T smagoConst_, T dx_, T dt_ )
   : ForcedBGKdynamics<T,Lattice>(omega_,momenta_), smagoConst(smagoConst_),
-    preFactor(computePreFactor(omega_,smagoConst_, dx_, dt_) )
+    preFactor(computePreFactor(omega_,smagoConst_) )
 { }
 
 template<typename T, template<typename U> class Lattice>
@@ -640,7 +707,7 @@ void SmagorinskyForcedBGKdynamics<T,Lattice>::collide(Cell<T,Lattice>& cell,
     LatticeStatistics<T>& statistics )
 {
   T rho, u[Lattice<T>::d], pi[util::TensorVal<Lattice<T> >::n];
-  this->momenta.computeAllMomenta(cell, rho, u, pi);
+  this->_momenta.computeAllMomenta(cell, rho, u, pi);
   T newOmega = computeOmega(this->getOmega(), preFactor, rho, pi);
   T* force = cell.getExternal(this->forceBeginsAt);
   for (int iVel=0; iVel<Lattice<T>::d; ++iVel) {
@@ -658,7 +725,7 @@ void SmagorinskyForcedBGKdynamics<T,Lattice>::staticCollide( Cell<T,Lattice>& ce
     const T u[Lattice<T>::d], LatticeStatistics<T>& statistics )
 {
   T rho, uTemp[Lattice<T>::d], pi[util::TensorVal<Lattice<T> >::n];
-  this->momenta.computeAllMomenta(cell, rho, uTemp, pi);
+  this->_momenta.computeAllMomenta(cell, rho, uTemp, pi);
   T newOmega = computeOmega(this->getOmega(), preFactor, rho, pi);
   T uSqr = lbHelpers<T,Lattice>::bgkCollision(cell, rho, u, newOmega);
   lbHelpers<T,Lattice>::addExternalForce(cell, u, newOmega, rho);
@@ -668,32 +735,31 @@ void SmagorinskyForcedBGKdynamics<T,Lattice>::staticCollide( Cell<T,Lattice>& ce
 }
 
 template<typename T, template<typename U> class Lattice>
-void SmagorinskyForcedBGKdynamics<T,Lattice>::setOmega(T omega)
+void SmagorinskyForcedBGKdynamics<T,Lattice>::setOmega(T omega_)
 {
-  this->setOmega(omega);
-  preFactor = computePreFactor(omega, smagoConst, dx, dt);
+  ForcedBGKdynamics<T,Lattice>::setOmega(omega_);
+  preFactor = computePreFactor(omega_, smagoConst);
 }
 
 template<typename T, template<typename U> class Lattice>
 T SmagorinskyForcedBGKdynamics<T,Lattice>::getSmagorinskyOmega(Cell<T,Lattice>& cell )
 {
   T rho, uTemp[Lattice<T>::d], pi[util::TensorVal<Lattice<T> >::n];
-  this->momenta.computeAllMomenta(cell, rho, uTemp, pi);
+  this->_momenta.computeAllMomenta(cell, rho, uTemp, pi);
   T newOmega = computeOmega(this->getOmega(), preFactor, rho, pi);
   return newOmega;
 }
 
 template<typename T, template<typename U> class Lattice>
-T SmagorinskyForcedBGKdynamics<T,Lattice>::computePreFactor(T omega, T smagoConst,
-    T dx, T dt)
+T SmagorinskyForcedBGKdynamics<T,Lattice>::computePreFactor(T omega_, T smagoConst_)
 {
-  return (T)(smagoConst*smagoConst*dx*dx)*Lattice<T>::invCs2/dt*4*sqrt(2);
+  return (T)smagoConst_*smagoConst_*Lattice<T>::invCs2*Lattice<T>::invCs2*2*sqrt(2);
 }
 
 
 
 template<typename T, template<typename U> class Lattice>
-T SmagorinskyForcedBGKdynamics<T,Lattice>::computeOmega(T omega0, T preFactor, T rho,
+T SmagorinskyForcedBGKdynamics<T,Lattice>::computeOmega(T omega0, T preFactor_, T rho,
     T pi[util::TensorVal<Lattice<T> >::n] )
 {
   T PiNeqNormSqr = pi[0]*pi[0] + 2.0*pi[1]*pi[1] + pi[2]*pi[2];
@@ -704,7 +770,7 @@ T SmagorinskyForcedBGKdynamics<T,Lattice>::computeOmega(T omega0, T preFactor, T
   /// Molecular realaxation time
   T tau_mol = 1. /omega0;
   /// Turbulent realaxation time
-  T tau_turb = 0.5*(sqrt(tau_mol*tau_mol+(preFactor*tau_mol*PiNeqNorm))-tau_mol);
+  T tau_turb = 0.5*(sqrt(tau_mol*tau_mol + preFactor_/rho*PiNeqNorm) - tau_mol);
   /// Effective realaxation time
   tau_eff = tau_mol+tau_turb;
   T omega_new= 1./tau_eff;
@@ -717,7 +783,7 @@ template<typename T, template<typename U> class Lattice>
 SmagorinskyLinearVelocityForcedBGKdynamics<T,Lattice>::SmagorinskyLinearVelocityForcedBGKdynamics(T omega_,
     Momenta<T,Lattice>& momenta_, T smagoConst_, T dx_, T dt_ )
   : ForcedBGKdynamics<T,Lattice>(omega_,momenta_), smagoConst(smagoConst_),
-    preFactor(computePreFactor(omega_,smagoConst_, dx_, dt_) )
+    preFactor(computePreFactor(omega_,smagoConst_) )
 { }
 
 template<typename T, template<typename U> class Lattice>
@@ -725,7 +791,7 @@ void SmagorinskyLinearVelocityForcedBGKdynamics<T,Lattice>::collide(Cell<T,Latti
     LatticeStatistics<T>& statistics )
 {
   T rho, u[Lattice<T>::d], pi[util::TensorVal<Lattice<T> >::n];
-  this->momenta.computeAllMomenta(cell, rho, u, pi);
+  this->_momenta.computeAllMomenta(cell, rho, u, pi);
   T newOmega = computeOmega(this->getOmega(), preFactor, rho, pi);
   T* force = cell.getExternal(this->forceBeginsAt);
   int nDim = Lattice<T>::d;
@@ -761,7 +827,7 @@ void SmagorinskyLinearVelocityForcedBGKdynamics<T,Lattice>::staticCollide( Cell<
     const T u[Lattice<T>::d], LatticeStatistics<T>& statistics )
 {
   T rho, uTemp[Lattice<T>::d], pi[util::TensorVal<Lattice<T> >::n];
-  this->momenta.computeAllMomenta(cell, rho, uTemp, pi);
+  this->_momenta.computeAllMomenta(cell, rho, uTemp, pi);
   T newOmega = computeOmega(this->getOmega(), preFactor, rho, pi);
   T uSqr = lbHelpers<T,Lattice>::bgkCollision(cell, rho, u, newOmega);
   lbHelpers<T,Lattice>::addExternalForce(cell, u, newOmega, rho);
@@ -771,32 +837,31 @@ void SmagorinskyLinearVelocityForcedBGKdynamics<T,Lattice>::staticCollide( Cell<
 }
 
 template<typename T, template<typename U> class Lattice>
-void SmagorinskyLinearVelocityForcedBGKdynamics<T,Lattice>::setOmega(T omega)
+void SmagorinskyLinearVelocityForcedBGKdynamics<T,Lattice>::setOmega(T omega_)
 {
-  this->setOmega(omega);
-  preFactor = computePreFactor(omega, smagoConst, dx, dt);
+  ForcedBGKdynamics<T,Lattice>::setOmega(omega_);
+  preFactor = computePreFactor(omega_, smagoConst);
 }
 
 template<typename T, template<typename U> class Lattice>
 T SmagorinskyLinearVelocityForcedBGKdynamics<T,Lattice>::getSmagorinskyOmega(Cell<T,Lattice>& cell )
 {
   T rho, uTemp[Lattice<T>::d], pi[util::TensorVal<Lattice<T> >::n];
-  this->momenta.computeAllMomenta(cell, rho, uTemp, pi);
+  this->_momenta.computeAllMomenta(cell, rho, uTemp, pi);
   T newOmega = computeOmega(this->getOmega(), preFactor, rho, pi);
   return newOmega;
 }
 
 template<typename T, template<typename U> class Lattice>
-T SmagorinskyLinearVelocityForcedBGKdynamics<T,Lattice>::computePreFactor(T omega, T smagoConst,
-    T dx, T dt)
+T SmagorinskyLinearVelocityForcedBGKdynamics<T,Lattice>::computePreFactor(T omega_, T smagoConst_)
 {
-  return (T)(smagoConst*smagoConst*dx*dx)*Lattice<T>::invCs2/dt*4*sqrt(2);
+  return (T)smagoConst_*smagoConst_*Lattice<T>::invCs2*Lattice<T>::invCs2*2*sqrt(2);
 }
 
 
 
 template<typename T, template<typename U> class Lattice>
-T SmagorinskyLinearVelocityForcedBGKdynamics<T,Lattice>::computeOmega(T omega0, T preFactor, T rho,
+T SmagorinskyLinearVelocityForcedBGKdynamics<T,Lattice>::computeOmega(T omega0, T preFactor_, T rho,
     T pi[util::TensorVal<Lattice<T> >::n] )
 {
   T PiNeqNormSqr = pi[0]*pi[0] + 2.0*pi[1]*pi[1] + pi[2]*pi[2];
@@ -807,7 +872,7 @@ T SmagorinskyLinearVelocityForcedBGKdynamics<T,Lattice>::computeOmega(T omega0, 
   /// Molecular realaxation time
   T tau_mol = 1. /omega0;
   /// Turbulent realaxation time
-  T tau_turb = 0.5*(sqrt(tau_mol*tau_mol+(preFactor*tau_eff*PiNeqNorm))-tau_mol);
+  T tau_turb = 0.5*(sqrt(tau_mol*tau_mol + preFactor_/rho*PiNeqNorm) - tau_mol);
   /// Effective realaxation time
   tau_eff = tau_mol+tau_turb;
   T omega_new= 1./tau_eff;
@@ -822,9 +887,9 @@ T SmagorinskyLinearVelocityForcedBGKdynamics<T,Lattice>::computeOmega(T omega0, 
  */
 template<typename T, template<typename U> class Lattice>
 KrauseBGKdynamics<T,Lattice>::KrauseBGKdynamics(T omega_,
-    Momenta<T,Lattice>& momenta_, T smagoConst_, T dx_, T dt_ )
+    Momenta<T,Lattice>& momenta_, T smagoConst_, T dx_, T dt_)
   : BGKdynamics<T,Lattice>(omega_,momenta_), smagoConst(smagoConst_),
-    preFactor(computePreFactor(omega_,smagoConst_, dx_, dt_) )
+    preFactor(computePreFactor(omega_,smagoConst_) )
 { }
 
 template<typename T, template<typename U> class Lattice>
@@ -833,7 +898,7 @@ void KrauseBGKdynamics<T,Lattice>::collide(Cell<T,Lattice>& cell,
 {
   T rho, u[Lattice<T>::d];
   T newOmega[Lattice<T>::q];
-  this->momenta.computeRhoU(cell, rho, u);
+  this->_momenta.computeRhoU(cell, rho, u);
   computeOmega(this->getOmega(), cell, preFactor, rho, u, newOmega);
   T uSqr = lbHelpers<T,Lattice>::bgkCollision(cell, rho, u, newOmega);
   if (cell.takesStatistics()) {
@@ -847,7 +912,7 @@ void KrauseBGKdynamics<T,Lattice>::staticCollide(Cell<T,Lattice>& cell,
 {
   T rho, uTemp[Lattice<T>::d], pi[util::TensorVal<Lattice<T> >::n];
   T newOmega[Lattice<T>::q];
-  this->momenta.computeAllMomenta(cell, rho, uTemp, pi);
+  this->_momenta.computeAllMomenta(cell, rho, uTemp, pi);
   computeOmega(this->getOmega(), cell, preFactor, rho, uTemp, newOmega);
   T uSqr = lbHelpers<T,Lattice>::bgkCollision(cell, rho, u, newOmega);
   if (cell.takesStatistics()) {
@@ -856,22 +921,22 @@ void KrauseBGKdynamics<T,Lattice>::staticCollide(Cell<T,Lattice>& cell,
 }
 
 template<typename T, template<typename U> class Lattice>
-void KrauseBGKdynamics<T,Lattice>::setOmega(T omega)
+void KrauseBGKdynamics<T,Lattice>::setOmega(T omega_)
 {
-  this->setOmega(omega);
-  preFactor = computePreFactor(omega, smagoConst, dx, dt);
+  BGKdynamics<T,Lattice>::setOmega(omega_);
+  preFactor = computePreFactor(omega_, smagoConst);
 }
 
 template<typename T, template<typename U> class Lattice>
-T KrauseBGKdynamics<T,Lattice>::computePreFactor(T omega, T smagoConst, T dx, T dt)
+T KrauseBGKdynamics<T,Lattice>::computePreFactor(T omega_, T smagoConst_)
 {
-  return (T)(smagoConst*smagoConst*dx*dx)*Lattice<T>::invCs2/dt*4*sqrt(2)*3.16;
+  return (T)smagoConst_*smagoConst_*3*Lattice<T>::invCs2*Lattice<T>::invCs2*2*sqrt(2);
 }
 
 
 
 template<typename T, template<typename U> class Lattice>
-void KrauseBGKdynamics<T,Lattice>::computeOmega(T omega0, Cell<T,Lattice>& cell, T preFactor, T rho,
+void KrauseBGKdynamics<T,Lattice>::computeOmega(T omega0, Cell<T,Lattice>& cell, T preFactor_, T rho,
     T u[Lattice<T>::d], T newOmega[Lattice<T>::q])
 {
   T uSqr = u[0]*u[0];
@@ -884,7 +949,7 @@ void KrauseBGKdynamics<T,Lattice>::computeOmega(T omega0, Cell<T,Lattice>& cell,
   for (int iPop=0; iPop<Lattice<T>::q; iPop++) {
     T fNeq = std::fabs(cell[iPop] - lbHelpers<T,Lattice>::equilibrium(iPop, rho, u, uSqr));
     /// Turbulent realaxation time
-    T tau_turb = 0.5*(sqrt(tau_mol*tau_mol+(preFactor*fNeq))-tau_mol);
+    T tau_turb = 0.5*(sqrt(tau_mol*tau_mol + preFactor_/rho*fNeq) - tau_mol);
     /// Effective realaxation time
     tau_eff = tau_mol + tau_turb;
     newOmega[iPop] = 1./tau_eff;

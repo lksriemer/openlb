@@ -102,26 +102,31 @@ public:
   void getPhysR(T physR[2], const int latticeR[2]) const;
   void getPhysR(T physR[2], const int& iX, const int& iY) const;
 
-  void getLatticeR(int latticeR[2], const T physR[2]) const {
+  void getLatticeR(int latticeR[2], const T physR[2]) const
+  {
     latticeR[0] = (int)floor( (physR[0] - _globPosX )/_delta +.5);
     latticeR[1] = (int)floor( (physR[1] - _globPosY )/_delta +.5);
   }
 
-  void getFloorLatticeR(const std::vector<T>& physR, std::vector<int>& latticeR) const {
+  void getFloorLatticeR(const std::vector<T>& physR, std::vector<int>& latticeR) const
+  {
     getFloorLatticeR(&latticeR[0], &physR[0]);
   }
 
-  void getFloorLatticeR(int latticeR[2], const T physR[2]) const {
+  void getFloorLatticeR(int latticeR[2], const T physR[2]) const
+  {
     latticeR[0] = (int)floor( (physR[0] - _globPosX)/_delta);
     latticeR[1] = (int)floor( (physR[1] - _globPosY)/_delta);
   }
 
   /// Returns the number of full cells
-  int getWeight() const {
+  int getWeight() const
+  {
     /*TODO*/ return 1;
   };
   /// Sets the number of full cells
-  void setWeight(int fullCells) {
+  void setWeight(int fullCells)
+  {
     /*TODO*/
   };
 

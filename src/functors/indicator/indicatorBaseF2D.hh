@@ -32,7 +32,9 @@
 
 namespace olb {
 
-
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
 
 template <typename S>
 IndicatorF1D<S>::IndicatorF1D()
@@ -111,58 +113,68 @@ bool IndicatorF2D<S>::distance(S& distance, const Vector<S,2>& origin, const Vec
   return true;
 }
 
+// given origin (inside) and direction first calculate distance to surface
+// go -90� to direction using POS as origin and check if inside/outside
+// if inside rotate outward, if outside rotate inward
+// iterate until close enough to surface, then store point1
+// repeat for 90� and store point2
+// use point1 and point2 on surface to calculate normal
 template <typename S>
 bool IndicatorF2D<S>::normal(Vector<S,2>& normal, const Vector<S,2>& origin, const Vector<S,2>& direction, int iC)
 {
-//  bool originValue;
-//  (*this)(&originValue, origin.data);
-//  Vector<S,2> currentPoint(origin);
-//
-//  S precision = .0001;
-//  S pitch = 0.5;
-//
-//  bool currentValue;
-//  (*this)(&currentValue, currentPoint.data);
-//  while (currentValue == originValue && isInsideBox(currentPoint)) {
-//    for (int i = 0; i < 2; ++i) {
-//      currentPoint[i] += direction[i];
-//    }
-//    (*this)(&currentValue, currentPoint.data);//changed until first point on the other side (inside/outside) is found
-//  }
-//
-//  if (!isInsideBox(currentPoint) && !originValue) {
-//    return false;
-//  }
-//
-//
-//
-//  while (pitch >= precision) {
-//    if (!isInsideBox(currentPoint) && originValue) {
-//      currentPoint -= pitch * direction;
-//      pitch /= 2.;
-//    }
-//    else {
-//      (*this)(&currentValue, currentPoint.data);
-//      if (currentValue == originValue) {
-//        currentPoint += pitch * direction;
-//        pitch /= 2.;
-//      }
-//      else {
-//        currentPoint-= pitch * direction;
-//        pitch /= 2.;
-//      }
-//    }
-//  }
-//
-//  S distance2 = 0.;
-//  for (int i = 0; i < 2; ++i) {
-//    distance2 += (currentPoint[i] - origin[i]) * (currentPoint[i] - origin[i]);
-//  }
-//
-//  normal = Vector<S,2>((currentPoint - origin).norm());
+  //OstreamManager clout(std::cout,"normal");
+  //clout << "Calculating IndicatorF2D Normal " << endl;
+  bool originValue;
+  (*this)(&originValue, origin.data);
+  Vector<S,2> currentPoint(origin);
+
+  S precision = .0001;
+
   S dist;
   distance(dist, origin, direction, iC);
-  normal = Vector<S,2>(dist);
+
+
+  Vector<S,2> POS(origin + dist*direction*(1/const_cast<Vector<S,2>&> (direction).norm())); //Point on Surface
+
+  Vector<S,2> point1;
+  Vector<S,2> point2;
+
+  bool currentValue;
+
+  for (int n: {
+         -90,90
+       }) { //std::range<int> n = {-90, 90};
+    S rotate(n);
+    S pitch(rotate/2.);
+    while (std::abs(pitch) >= precision) {
+      S theta(rotate*M_PI/180.);
+
+      Vector<S,2> vec(std::cos(theta)*direction[0]+std::sin(theta)*direction[1],-std::sin(theta)*direction[0]+std::cos(theta)*direction[1]);
+      currentPoint = POS + vec;
+      (*this)(&currentValue, currentPoint.data);
+
+      if (currentValue == originValue) {
+        rotate -= pitch;
+      }  else {
+        rotate += pitch;
+      }
+      pitch /= 2.;
+    }
+
+    if (n == -90) {
+      point1 = currentPoint;
+    } else if (n == 90) {
+      point2 = currentPoint;
+    }
+  }
+  // Calculate Normal from point1 and point2
+  normal = Vector<S,2>((point2[1] - point1[1]), (-1)*(point2[0] - point1[0]));
+
+
+  //S dist;
+  //Vector<S,2> dist;
+  //distance(dist, origin, direction, iC);
+  //normal = Vector<S,2>(dist);
   return true;
 }
 
@@ -289,6 +301,31 @@ SmoothIndicatorIdentity2D<T,S>::SmoothIndicatorIdentity2D(SmoothIndicatorF2D<T,S
 
 template <typename T, typename S>
 bool SmoothIndicatorIdentity2D<T,S>::operator() (T output[], const S input[])
+{
+  _f(output, input);
+  return true;
+}
+
+
+template <typename T, typename S>
+ParticleIndicatorF2D<T,S>::ParticleIndicatorF2D()
+  : AnalyticalF2D<T,S>(1),
+    _myMin(S()), _myMax(S()), _pos(S()),
+    _vel(S()), _acc(S()), _acc2(S()), _theta(S()), _omega(S()), _alpha(S()), _alpha2(S()), _mass(S()), _mofi(S()), _radius(S())
+{ }
+
+// identity to "store results"
+template <typename T, typename S>
+ParticleIndicatorIdentity2D<T,S>::ParticleIndicatorIdentity2D(ParticleIndicatorF2D<T,S>& f)
+  : _f(f)
+{
+  this->_myMin = _f.getMin();
+  this->_myMax = _f.getMax();
+  std::swap( _f._ptrCalcC, this->_ptrCalcC );
+}
+
+template <typename T, typename S>
+bool ParticleIndicatorIdentity2D<T,S>::operator() (T output[], const S input[])
 {
   _f(output, input);
   return true;

@@ -79,7 +79,10 @@ SuperGeometry3D<T>::SuperGeometry3D(CuboidGeometry3D<T>& cuboidGeometry, LoadBal
 }
 
 template<typename T>
-SuperGeometry3D<T>::SuperGeometry3D(SuperGeometry3D const& rhs) : SuperStructure3D<T>(rhs._cuboidGeometry, rhs._loadBalancer, rhs._overlap), _statistics(this), clout(std::cout,"SuperGeometry3D")
+SuperGeometry3D<T>::SuperGeometry3D(SuperGeometry3D const& rhs)
+  : SuperStructure3D<T>(rhs._cuboidGeometry, rhs._loadBalancer, rhs._overlap),
+    _statistics(this),
+    clout(std::cout,"SuperGeometry3D")
 {
   // init communicator
   this->_communicator.init_nh();

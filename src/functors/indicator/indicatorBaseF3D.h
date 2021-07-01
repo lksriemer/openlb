@@ -30,14 +30,9 @@
 #include "core/vector.h"
 #include "functors/analyticalBaseF.h"
 #include "functors/genericF.h"
-#include "functors/superBaseF3D.h"
-#include "geometry/superGeometry3D.h"
 
 
 namespace olb {
-
-template<typename T> class SuperF3D;
-template<typename T> class SuperGeometry3D;
 
 /** IndicatorF3D is an application from \f$ \Omega \subset R^3 \to \{0,1\} \f$.
   * \param _myMin   holds minimal(component wise) vector of the domain \f$ \Omega \f$.
@@ -56,6 +51,13 @@ public:
    * Mind that the default computation is done by a numerical approximation which searches .. [TODO: CYRIL]
    */
   virtual bool distance(S& distance, const Vector<S,3>& origin, const Vector<S,3>& direction, int iC=-1);
+  /// returns true and the normal if there was one found for an given origin and direction
+  /**
+   * (mind that the default computation is done by a numerical approximation which searches .. [TODO])
+   */
+  virtual bool normal(Vector<S,3>& normal, const Vector<S,3>& origin, const Vector<S,3>& direction, int iC=-1);
+  ///Rotate vector around axis by angle theta
+  virtual bool rotOnAxis(Vector<S,3>& vec_rot, const Vector<S,3>& vec, const Vector<S,3>& axis, S& theta);
   /// Returns true if `point` is inside a cube with corners `_myMin` and `_myMax`
   bool isInsideBox(Vector<S,3> point);
 
@@ -68,69 +70,6 @@ public:
 };
 
 
-/// Base indicator functor from SuperF3D
-template <typename S>
-class SuperIndicatorF3D : public IndicatorF3D<S> {
-protected:
-  SuperF3D<S>& _superF;
-public:
-  SuperIndicatorF3D (SuperF3D<S>& rhs);
-};
-
-
-/// Base indicator functor (discrete)
-/**
- * Provides Union, Without and Intersection arithmetic.
- * _Note: `operator()` must be overloaded by child classes._
- */
-class DiscreteIndicatorF3D : public GenericF<bool,int> {
-public:
-  DiscreteIndicatorF3D();
-
-  /// + Operator (Union)
-  DiscreteIndicatorF3D& operator+(DiscreteIndicatorF3D& rhs);
-  /// - Operator (Without)
-  DiscreteIndicatorF3D& operator-(DiscreteIndicatorF3D& rhs);
-  /// * Operator (Intersection)
-  DiscreteIndicatorF3D& operator*(DiscreteIndicatorF3D& rhs);
-};
-
-
-
-/// Indicator functor that returns false for all points
-class DiscreteIndicatorFalse3D : public DiscreteIndicatorF3D {
-public:
-  DiscreteIndicatorFalse3D();
-  virtual bool operator() (bool output[], const int input[]);
-};
-
-
-/// Indicator functor that returns true for all points
-class DiscreteIndicatorTrue3D : public DiscreteIndicatorF3D {
-public:
-  DiscreteIndicatorTrue3D();
-  virtual bool operator() (bool output[], const int input[]);
-};
-
-
-/// Indicator functor from material number
-template <typename S>
-class DiscreteIndicatorMaterial3D : public DiscreteIndicatorF3D {
-protected:
-  SuperGeometry3D<S> _superGeometry;
-  std::vector<int> _materialNumbers;
-public:
-  DiscreteIndicatorMaterial3D (SuperGeometry3D<S>& rhs, std::vector<int> materialNumbers);
-  virtual bool operator() (bool output[], const int input[]);
-
-//protected:
-  //void calculateMinMax();
-};
-
-
-
-
-
 template <typename S>
 class IndicatorIdentity3D : public IndicatorF3D<S> {
 protected:
@@ -141,7 +80,6 @@ public:
 };
 
 
-
 /** SmoothIndicatorF3D is an application from \f$ \Omega \subset R^3 \to [0,1] \f$.
   * \param _myMin   holds minimal(component wise) vector of the domain \f$ \Omega \f$.
   * \param _myMax   holds maximal(component wise) vector of the domain \f$ \Omega \f$.
@@ -150,11 +88,39 @@ template <typename T, typename S>
 class SmoothIndicatorF3D : public AnalyticalF3D<T,S> {
 protected:
   SmoothIndicatorF3D();
+  ~SmoothIndicatorF3D() {};
   Vector<S,3> _myMin;
   Vector<S,3> _myMax;
+  Vector<S,3> _center;
+  Vector<S,3> _vel;
+  Vector<S,3> _acc;
+  Vector<S,6> _acc2;
+  Vector<S,3>  _theta;
+  Vector<S,3>  _omega;
+  Vector<S,3>  _alpha;
+
+  S _mass;
+  S _mofi; //Moment of Inertia
+
+  S _epsilon;
+  S _radius;
 public:
   virtual Vector<S,3>& getMin();
   virtual Vector<S,3>& getMax();
+  virtual Vector<S,3>& getCenter();
+  virtual Vector<S,3>& getVel();
+  virtual Vector<S,3>& getAcc();
+  virtual Vector<S,6>& getAcc2();
+  virtual Vector<S,3>& getTheta();
+  virtual Vector<S,3>& getOmega();
+  virtual Vector<S,3>& getAlpha();
+  virtual S& getMass();
+  virtual S& getMofi();
+  virtual S getDiam();
+  virtual S getRadius();
+  virtual void setCenter(S centerX, S centerY, S centerZ);
+  virtual void setTheta(S thetaX, S thetaY, S thetaZ);
+
   SmoothIndicatorF3D<T,S>& operator+(SmoothIndicatorF3D<T,S>& rhs);
 };
 
@@ -165,6 +131,61 @@ protected:
   SmoothIndicatorF3D<T,S>& _f;
 public:
   SmoothIndicatorIdentity3D(SmoothIndicatorF3D<T,S>& f);
+  bool operator() (T output[], const S input[]) override;
+};
+
+//TODO remove now unnecessary stuff from smoothIndicator
+/** ParticleIndicatorF3D is an application from \f$ \Omega \subset R^3 \to [0,1] \f$.
+  * \param _myMin   holds minimal(component wise) vector of the domain \f$ \Omega \f$.
+  * \param _myMax   holds maximal(component wise) vector of the domain \f$ \Omega \f$.
+  */
+template <typename T, typename S>
+class ParticleIndicatorF3D : public AnalyticalF3D<T,S> {
+protected:
+  ParticleIndicatorF3D();
+  ~ParticleIndicatorF3D() {};
+  Vector<S,3> _myMin;
+  Vector<S,3> _myMax;
+  Vector<S,3> _pos;
+  Vector<S,3> _vel;
+  Vector<S,3> _acc;
+  Vector<S,3> _acc2;
+  Vector<S,3> _theta;
+  Vector<S,3> _omega;
+  Vector<S,3> _alpha;
+  Vector<S,3> _alpha2;
+  Vector<S,3> _mofi;  //moment of inertia
+  Vector<S,9> _rotMat;  //saved values of rotation matrix
+  S _mass;
+  S _epsilon;
+  S _radius;
+
+public:
+  Vector<S,3>& getMin();
+  Vector<S,3>& getMax();
+  Vector<S,3>& getPos();
+  Vector<S,3>& getVel();
+  Vector<S,3>& getAcc();
+  Vector<S,3>& getAcc2();
+  Vector<S,3>& getTheta();
+  Vector<S,3>& getOmega();
+  Vector<S,3>& getAlpha();
+  Vector<S,3>& getAlpha2();
+  Vector<S,3>& getMofi();
+  Vector<S,9>& getRotationMat();
+  S& getMass();
+  S& getRadius();
+  S getDiam();
+
+  ParticleIndicatorF3D<T,S>& operator+(ParticleIndicatorF3D<T,S>& rhs);
+};
+
+template <typename T, typename S>
+class ParticleIndicatorIdentity3D : public ParticleIndicatorF3D<T,S> {
+protected:
+  SmoothIndicatorF3D<T,S>& _f;
+public:
+  ParticleIndicatorIdentity3D(ParticleIndicatorF3D<T,S>& f);
   bool operator() (T output[], const S input[]) override;
 };
 

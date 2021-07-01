@@ -37,7 +37,7 @@ namespace olb {
 
 template< typename T> class LoadBalancer;
 template<typename T> class CuboidGeometry;
-template<typename T> class SuperF2D;
+template<typename T, typename W> class SuperF2D;
 template<typename T, typename BaseType> class BlockData2D;
 
 /** SuperData2D orchestrates BlockData2D.
@@ -59,11 +59,12 @@ public:
   /// Simple constructor with size
   SuperData2D(int size=1);
   /// This constructor should be commonly used
-  SuperData2D(CuboidGeometry2D<T>& cuboidGeometry, LoadBalancer<T>& loadBalancer, int overlap=2, int size=1);
+  SuperData2D(CuboidGeometry2D<T>& cuboidGeometry, LoadBalancer<T>& loadBalancer,
+              int overlap=2, int size=1);
   /// Copy Constructor
   SuperData2D(SuperData2D<T,BaseType>& rhs);
   /// Construct `SuperData2D` out of `SuperF2D`
-  SuperData2D(SuperF2D<T>& rhs);
+  SuperData2D(SuperF2D<T,BaseType>& rhs);
   /// Assignment Operator (Swaps content of rhs with local content)
   SuperData2D<T,BaseType>& operator=(SuperData2D<T,BaseType>& rhs);
 

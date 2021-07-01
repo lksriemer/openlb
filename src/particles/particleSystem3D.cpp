@@ -31,8 +31,12 @@
 
 namespace olb {
 
+
 template class SimulateParticles<double,Particle3D>;
 template class ParticleSystem3D<double,Particle3D>;
+
+template class SimulateParticles<double, MagneticParticle3D>;
+template class ParticleSystem3D<double, MagneticParticle3D>;
 
 template<>
 template<>
@@ -46,5 +50,46 @@ setVelToFluidVel<descriptors::D3Q19Descriptor>(
     }
   }
 };
+
+template<>
+template<>
+void ParticleSystem3D<double,MagneticParticle3D>::
+setVelToFluidVel<descriptors::D3Q19Descriptor>(
+  SuperLatticeInterpPhysVelocity3D<double, descriptors::D3Q19Descriptor>& fVel)
+{
+  for (auto& p : _particles) {
+    if (p.getActive()) {
+      fVel(&p.getVel()[0], &p.getPos()[0], p.getCuboid());
+    }
+  }
+};
+
+#ifndef OLB_PRECOMPILED
+template<>
+template<>
+void ParticleSystem3D<double,Particle3D>::
+setVelToFluidVel<descriptors::ForcedD3Q19Descriptor>(
+  SuperLatticeInterpPhysVelocity3D<double, descriptors::ForcedD3Q19Descriptor>& fVel)
+{
+  for (auto& p : _particles) {
+    if (p.getActive()) {
+      fVel(&p.getVel()[0], &p.getPos()[0], p.getCuboid());
+    }
+  }
+};
+
+template<>
+template<>
+void ParticleSystem3D<double,MagneticParticle3D>::
+setVelToFluidVel<descriptors::ForcedD3Q19Descriptor>(
+  SuperLatticeInterpPhysVelocity3D<double, descriptors::ForcedD3Q19Descriptor>& fVel)
+{
+  for (auto& p : _particles) {
+    if (p.getActive()) {
+      fVel(&p.getVel()[0], &p.getPos()[0], p.getCuboid());
+    }
+  }
+};
+#endif
 
 }  // namespace olb

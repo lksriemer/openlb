@@ -40,7 +40,7 @@ template<typename T, template<typename U> class Lattice, typename Dynamics, int 
 class InamuroNewtonRaphsonDynamics : public BasicDynamics<T,Lattice> {
 public:
   /// Constructor
-  InamuroNewtonRaphsonDynamics(T omega_, Momenta<T,Lattice>& momenta_);
+  InamuroNewtonRaphsonDynamics(T omega, Momenta<T,Lattice>& momenta);
   /// Clone the object on its dynamic type.
   virtual InamuroNewtonRaphsonDynamics<T, Lattice, Dynamics, direction, orientation>* clone() const;
   /// Compute equilibrium distribution function
@@ -55,7 +55,7 @@ public:
   /// Get local relaxation parameter of the dynamics
   virtual T getOmega() const;
   /// Set local relaxation parameter of the dynamics
-  virtual void setOmega(T omega_);
+  virtual void setOmega(T omega);
   /// Get local value of any parameter
   virtual T getParameter(int whichParameter) const;
   /// Set local value of any parameter
@@ -84,8 +84,8 @@ public:
 
   bool invert(const T a[3][3],T b[3][3]);
 private:
-  Dynamics boundaryDynamics;
-  T xi[Lattice<T>::d];
+  Dynamics _boundaryDynamics;
+  T _xi[Lattice<T>::d];
   mutable OstreamManager clout;
 };
 

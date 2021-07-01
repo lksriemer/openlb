@@ -77,7 +77,7 @@ struct ShanChenDynOmega2DdescriptorBase {
 
 template <typename T>
 struct ShanChenDynOmegaD2Q9Descriptor
-    : public D2Q9DescriptorBase<T>, public ShanChenDynOmega2DdescriptorBase {
+  : public D2Q9DescriptorBase<T>, public ShanChenDynOmega2DdescriptorBase {
 };
 
 struct ShanChenDynOmegaForced2Ddescriptor {
@@ -99,8 +99,53 @@ struct ShanChenDynOmegaForced2DdescriptorBase {
 
 template <typename T>
 struct ShanChenDynOmegaForcedD2Q9Descriptor
-    : public D2Q9DescriptorBase<T>, public ShanChenDynOmegaForced2DdescriptorBase {
+  : public D2Q9DescriptorBase<T>, public ShanChenDynOmegaForced2DdescriptorBase {
 };
+
+/// 2D Descriptors for modells with variable G and Forced Shan Chen
+
+struct ShanChenDynG2Ddescriptor {
+  static const int numScalars = 6;
+  static const int numSpecies = 3;
+  static const int velocityBeginsAt = 0;
+  static const int sizeOfVelocity   = 2;
+  static const int forceBeginsAt    = 2;
+  static const int sizeOfForce      = 2;
+  static const int gBeginsAt = 4;
+  static const int sizeOfG = 2;
+};
+
+struct ShanChenDynG2DdescriptorBase {
+  typedef ShanChenDynG2Ddescriptor ExternalField;
+};
+
+template <typename T>
+struct ShanChenDynGD2Q9Descriptor
+  : public D2Q9DescriptorBase<T>, public ShanChenDynG2DdescriptorBase {
+};
+
+struct ShanChenDynGForced2Ddescriptor {
+  static const int numScalars = 8;
+  static const int numSpecies = 4;
+  static const int velocityBeginsAt = 0;
+  static const int sizeOfVelocity   = 2;
+  static const int forceBeginsAt    = 2;
+  static const int sizeOfForce      = 2;
+  static const int externalForceBeginsAt    = 4;
+  static const int sizeOfExternalForce      = 2;
+  static const int gBeginsAt = 6;
+  static const int sizeOfG = 2;
+};
+
+struct ShanChenDynGForced2DdescriptorBase {
+  typedef ShanChenDynGForced2Ddescriptor ExternalField;
+};
+
+template <typename T>
+struct ShanChenDynGForcedD2Q9Descriptor
+  : public D2Q9DescriptorBase<T>, public ShanChenDynGForced2DdescriptorBase {
+};
+
 
 struct ShanChenForcedExternal3Ddescriptor {
   static const int numScalars = 6;
@@ -141,7 +186,7 @@ struct ShanChenDynOmega3DdescriptorBase {
 
 template <typename T>
 struct ShanChenDynOmegaD3Q19Descriptor
-    : public D3Q19DescriptorBase<T>, public ShanChenDynOmega3DdescriptorBase {
+  : public D3Q19DescriptorBase<T>, public ShanChenDynOmega3DdescriptorBase {
 };
 
 struct ShanChenDynOmegaForced3Ddescriptor {
@@ -163,7 +208,7 @@ struct ShanChenDynOmegaForced3DdescriptorBase {
 
 template <typename T>
 struct ShanChenDynOmegaForcedD3Q19Descriptor
-    : public D3Q19DescriptorBase<T>, public ShanChenDynOmegaForced3DdescriptorBase {
+  : public D3Q19DescriptorBase<T>, public ShanChenDynOmegaForced3DdescriptorBase {
 };
 
 }  // namespace descriptors

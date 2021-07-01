@@ -119,12 +119,21 @@ public:
   bool operator() (T output[], const S x[]);
 };
 
-
+/// Derivative of a given 1D functor computed with a finite difference
+template <typename T>
+class AnalyticalDiffFD1D : public AnalyticalF1D<T,T> {
+protected:
+  AnalyticalF1D<T,T>& _f;
+  T _eps;
+public:
+  AnalyticalDiffFD1D(AnalyticalF1D<T,T>& f, T eps = 1.e-10);
+  bool operator() (T output[], const T input[]);
+};
 
 //////////////////////////////////2D////////////////////////////////////////////
 
 template <typename T, typename S>
-class AnalyticalComposed2D : public AnalyticalF2D<T,S> {
+class AnalyticalComposed2D final : public AnalyticalF2D<T,S> {
 private:
   AnalyticalF2D<T,S>& _f0;
   AnalyticalF2D<T,S>& _f1;
@@ -135,7 +144,7 @@ public:
 
 /// AnalyticalConst2D: 2D -> XD, where XD is defined by value.size()
 template <typename T, typename S>
-class AnalyticalConst2D : public AnalyticalF2D<T,S> {
+class AnalyticalConst2D final : public AnalyticalF2D<T,S> {
 private:
   // is constant return value of operator()
   std::vector<T> _c;
@@ -148,7 +157,7 @@ public:
 
 /// AnalyticalLinear2D: 2D -> 1D troughout given points (x0,y0,v0), (x1,y1,v1), (x2,y2,v2)
 template <typename T, typename S>
-class AnalyticalLinear2D : public AnalyticalF2D<T,S> {
+class AnalyticalLinear2D final : public AnalyticalF2D<T,S> {
 protected:
   T _a;
   T _b;
@@ -161,28 +170,39 @@ public:
 
 /// AnalyticalRandom2D: 2D -> 1D with random image in (0,1)
 template <typename T, typename S>
-class AnalyticalRandom2D : public AnalyticalF2D<T,S> {
+class AnalyticalRandom2D final : public AnalyticalF2D<T,S> {
 public:
   AnalyticalRandom2D();
   bool operator() (T output[], const S x[]);
 };
 
+/// AnalyticalRandom2D: 2D -> 1D with maxValue in the center decreasing linearly with the distrance to the center to zero at the radius and zero outside
+template <typename T, typename S>
+class AnalyticalParticleAdsorptionLinear2D final : public AnalyticalF2D<T,S> {
+protected:
+  T _center[2];
+  T _radius;
+  T _maxValue;
+public:
+  AnalyticalParticleAdsorptionLinear2D(T center[], T radius, T maxValue);
+  bool operator() (T output[], const S x[]);
+};
 
 template <typename T, typename S>
 class ParticleU2D : public AnalyticalF2D<T,S> {
 protected:
-  SmoothIndicatorF2D<T,T>& _indicator;
+  ParticleIndicatorF2D<T,T>& _indicator;
   std::vector<T> _u;
   T _omega;
 public:
-  ParticleU2D(SmoothIndicatorF2D<T,T>& indicator, std::vector<T>& u, T& omega);
+  ParticleU2D(ParticleIndicatorF2D<T,T>& indicator, std::vector<T>& u, T& omega);
   bool operator()(T output[], const S input[]);
 };
 
 
 //////////////////////////////////3D////////////////////////////////////////////
 template <typename T, typename S>
-class AnalyticalComposed3D : public AnalyticalF3D<T,S> {
+class AnalyticalComposed3D final : public AnalyticalF3D<T,S> {
 private:
   AnalyticalF3D<T,S>& _f0;
   AnalyticalF3D<T,S>& _f1;
@@ -194,7 +214,7 @@ public:
 
 /// AnalyticalConst3D: 3D -> XD, where XD is defined by value.size()
 template <typename T, typename S>
-class AnalyticalConst3D : public AnalyticalF3D<T,S> {
+class AnalyticalConst3D final : public AnalyticalF3D<T,S> {
 private:
   // is constant return value of operator()
   std::vector<T> _c;
@@ -208,7 +228,7 @@ public:
 
 /// AnalyticalLinear3D: 3D -> 1D troughout given points (x0,y0,z0,v0), (x1,y1,z1,v1), (x2,y2,z2,v2), (x3,y3,z3,v3)
 template <typename T, typename S>
-class AnalyticalLinear3D : public AnalyticalF3D<T,S> {
+class AnalyticalLinear3D final : public AnalyticalF3D<T,S> {
 protected:
   T _a;
   T _b;
@@ -223,7 +243,7 @@ public:
 
 /// AnalyticalRandom3D: 3D -> 1D with random image in (0,1)
 template <typename T, typename S>
-class AnalyticalRandom3D : public AnalyticalF3D<T,S> {
+class AnalyticalRandom3D final : public AnalyticalF3D<T,S> {
 public:
   AnalyticalRandom3D();
   bool operator() (T output[], const S x[]);
@@ -231,7 +251,7 @@ public:
 
 /// AnalyticalScaled3D: 3D -> Image(AnalyticalF) scales AnalyticalF by _scale
 template <typename T, typename S>
-class AnalyticalScaled3D : public AnalyticalF3D<T,S> {
+class AnalyticalScaled3D final : public AnalyticalF3D<T,S> {
 private:
   AnalyticalF3D<T,S>& _f;
   T _scale;
@@ -244,11 +264,11 @@ public:
 template <typename T, typename S>
 class ParticleU3D : public AnalyticalF3D<T,S> {
 protected:
-  SmoothIndicatorSphere3D<T,T> _indicator;
+  ParticleIndicatorF3D<T,T>& _indicator;
   std::vector<T> _u;
   std::vector<T> _omega;
 public:
-  ParticleU3D(SmoothIndicatorSphere3D<T,T>& indicator, std::vector<T>& u, std::vector<T>& omega);
+  ParticleU3D(ParticleIndicatorF3D<T,T>& indicator, std::vector<T>& u, std::vector<T>& omega);
   bool operator()(T output[], const S input[]);
 };
 

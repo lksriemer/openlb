@@ -51,7 +51,7 @@ public:
                           int pInt, ParticleSystem3D<T, PARTICLETYPE>& psSys);
 
   /// Compute Force for subgrid scale particles
-  void computeForce(int pInt, ParticleSystem3D<T, PARTICLETYPE>& psSys,
+  void computeForce(int pInt, ParticleSystem3D<T, PARTICLETYPE>* psSys,
                     T force[3]);
 private:
   SuperLatticeInterpPhysVelocity3D<T, DESCRIPTOR>& _getVel;

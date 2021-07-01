@@ -509,6 +509,102 @@ OuterVelocityCornerProcessorGenerator3D<T,Lattice, xNormal,yNormal,zNormal>::clo
          (this->x0, this->y0, this->z0);
 }
 
+
+////////  SlipBoundaryProcessor3D ////////////////////////////////
+
+template<typename T, template<typename U> class Lattice>
+SlipBoundaryProcessor3D<T,Lattice>::
+SlipBoundaryProcessor3D(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_, int discreteNormalX, int discreteNormalY, int discreteNormalZ)
+  : x0(x0_), x1(x1_), y0(y0_), y1(y1_), z0(z0_), z1(z1_)
+{
+  OLB_PRECONDITION(x0==x1 || y0==y1 || z0==z1);
+  reflectionPop[0] = 0;
+  for (int iPop = 1; iPop < Lattice<T>::q; iPop++) {
+    reflectionPop[iPop] = 0;
+    // iPop are the directions which pointing into the fluid, discreteNormal is pointing outwarts
+    if (Lattice<T>::c[iPop][0]*discreteNormalX + Lattice<T>::c[iPop][1]*discreteNormalY + Lattice<T>::c[iPop][2]*discreteNormalZ < 0) {
+      // std::cout << "-----" <<s td::endl;
+      int mirrorDirection0;
+      int mirrorDirection1;
+      int mirrorDirection2;
+      T mult = 2. / (T)(discreteNormalX*discreteNormalX + discreteNormalY*discreteNormalY + discreteNormalZ*discreteNormalZ);
+
+      mirrorDirection0 = (Lattice<T>::c[iPop][0] - mult*(Lattice<T>::c[iPop][0]*discreteNormalX + Lattice<T>::c[iPop][1]*discreteNormalY + Lattice<T>::c[iPop][2]*discreteNormalZ)*discreteNormalX);
+      mirrorDirection1 = (Lattice<T>::c[iPop][1] - mult*(Lattice<T>::c[iPop][0]*discreteNormalX + Lattice<T>::c[iPop][1]*discreteNormalY + Lattice<T>::c[iPop][2]*discreteNormalZ)*discreteNormalY);
+      mirrorDirection2 = (Lattice<T>::c[iPop][2] - mult*(Lattice<T>::c[iPop][0]*discreteNormalX + Lattice<T>::c[iPop][1]*discreteNormalY + Lattice<T>::c[iPop][2]*discreteNormalZ)*discreteNormalZ);
+
+      // computes mirror jPop
+      for (reflectionPop[iPop] = 1; reflectionPop[iPop] < Lattice<T>::q ; reflectionPop[iPop]++) {
+        if (Lattice<T>::c[reflectionPop[iPop]][0]==mirrorDirection0 && Lattice<T>::c[reflectionPop[iPop]][1]==mirrorDirection1 && Lattice<T>::c[reflectionPop[iPop]][2]==mirrorDirection2) {
+          break;
+        }
+      }
+      //std::cout <<iPop << " to "<< jPop <<" for discreteNormal= "<< discreteNormalX << "/"<<discreteNormalY <<std::endl;
+    }
+  }
+}
+
+template<typename T, template<typename U> class Lattice>
+void SlipBoundaryProcessor3D<T,Lattice>::
+processSubDomain(BlockLattice3D<T,Lattice>& blockLattice, int x0_, int x1_, int y0_, int y1_, int z0_, int z1_)
+{
+  int newX0, newX1, newY0, newY1, newZ0, newZ1;
+  if ( util::intersect (
+         x0, x1, y0, y1, z0, z1,
+         x0_, x1_, y0_, y1_, z0_, z1_,
+         newX0, newX1, newY0, newY1, newZ0, newZ1 ) ) {
+
+    int iX;
+#ifdef PARALLEL_MODE_OMP
+    #pragma omp parallel for
+#endif
+    for (iX=newX0; iX<=newX1; ++iX) {
+      for (int iY=newY0; iY<=newY1; ++iY) {
+        for (int iZ=newZ0; iZ<=newZ1; ++iZ) {
+          for (int iPop = 1; iPop < Lattice<T>::q ; ++iPop) {
+            if (reflectionPop[iPop]!=0) {
+              //do reflection
+              blockLattice.get(iX,iY,iZ)[iPop] = blockLattice.get(iX,iY,iZ)[reflectionPop[iPop]];
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+template<typename T, template<typename U> class Lattice>
+void SlipBoundaryProcessor3D<T,Lattice>::
+process(BlockLattice3D<T,Lattice>& blockLattice)
+{
+  processSubDomain(blockLattice, x0, x1, y0, y1, z0, z1);
+}
+
+////////  SlipBoundaryProcessorGenerator3D ////////////////////////////////
+
+template<typename T, template<typename U> class Lattice>
+SlipBoundaryProcessorGenerator3D<T,Lattice>::
+SlipBoundaryProcessorGenerator3D(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_, int discreteNormalX_, int discreteNormalY_, int discreteNormalZ_)
+  : PostProcessorGenerator3D<T,Lattice>(x0_, x1_, y0_, y1_, z0_, z1_), discreteNormalX(discreteNormalX_), discreteNormalY(discreteNormalY_), discreteNormalZ(discreteNormalZ_)
+{ }
+
+template<typename T, template<typename U> class Lattice>
+PostProcessor3D<T,Lattice>*
+SlipBoundaryProcessorGenerator3D<T,Lattice>::generate() const
+{
+  return new SlipBoundaryProcessor3D<T,Lattice>
+         ( this->x0, this->x1, this->y0, this->y1, this->z0, this->z1, discreteNormalX, discreteNormalY, discreteNormalZ);
+}
+
+template<typename T, template<typename U> class Lattice>
+PostProcessorGenerator3D<T,Lattice>*
+SlipBoundaryProcessorGenerator3D<T,Lattice>::clone() const
+{
+  return new SlipBoundaryProcessorGenerator3D<T,Lattice>
+         (this->x0, this->x1, this->y0, this->y1, this->z0, this->z1, discreteNormalX, discreteNormalY, discreteNormalZ);
+}
+
+
 }  // namespace olb
 
 #endif

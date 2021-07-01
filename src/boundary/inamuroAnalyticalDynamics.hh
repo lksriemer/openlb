@@ -98,7 +98,7 @@ void InamuroAnalyticalDynamics<T,Lattice,Dynamics,direction,orientation>::collid
   }
 
   T rho, u[L::d];
-  this->momenta.computeRhoU(cell, rho, u);
+  this->_momenta.computeRhoU(cell, rho, u);
 
   T rhoCs = T();
   T uCs[L::d];
@@ -187,7 +187,7 @@ void InamuroAnalyticalDynamics<T,Lattice,Dynamics,direction,orientation>::static
     }
   }
 
-  T rho = this->momenta.computeRho(cell);
+  T rho = this->_momenta.computeRho(cell);
 
   T rhoCs = T();
   T uCs[L::d];

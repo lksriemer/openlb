@@ -39,11 +39,15 @@ namespace olb {
 template<typename T, template<typename U> class Lattice>
 class ConvectionBoundaryProcessor3D : public LocalPostProcessor3D<T,Lattice> {
 public:
-  ConvectionBoundaryProcessor3D(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_, int discreteNormalX_, int discreteNormalY_, int discreteNormalZ_);
-  virtual int extent() const {
+  ConvectionBoundaryProcessor3D(int x0_, int x1_, int y0_, int y1_, int z0_,
+                                int z1_, int discreteNormalX_,
+                                int discreteNormalY_, int discreteNormalZ_);
+  virtual int extent() const
+  {
     return 0;
   }
-  virtual int extent(int whichDirection) const {
+  virtual int extent(int whichDirection) const
+  {
     return 0;
   }
   virtual void process(BlockLattice3D<T,Lattice>& blockLattice);
@@ -57,7 +61,9 @@ private:
 template<typename T, template<typename U> class Lattice>
 class ConvectionBoundaryProcessorGenerator3D : public PostProcessorGenerator3D<T,Lattice> {
 public:
-  ConvectionBoundaryProcessorGenerator3D(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_, int discreteNormalX_, int discreteNormalY_, int discreteNormalZ_);
+  ConvectionBoundaryProcessorGenerator3D(int x0_, int x1_, int y0_, int y1_,
+                                         int z0_, int z1_, int discreteNormalX_,
+                                         int discreteNormalY_, int discreteNormalZ_);
   virtual PostProcessor3D<T,Lattice>* generate() const;
   virtual PostProcessorGenerator3D<T,Lattice>*  clone() const;
 private:
@@ -74,11 +80,15 @@ private:
 template<typename T, template<typename U> class Lattice>
 class ExtFieldBoundaryProcessor3D : public LocalPostProcessor3D<T,Lattice> {
 public:
-  ExtFieldBoundaryProcessor3D(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_, int discreteNormalX_, int discreteNormalY_, int discreteNormalZ_, int offset_);
-  virtual int extent() const {
+  ExtFieldBoundaryProcessor3D(int x0_, int x1_, int y0_, int y1_, int z0_,
+                              int z1_, int discreteNormalX_, int discreteNormalY_,
+                              int discreteNormalZ_, int offset_);
+  virtual int extent() const
+  {
     return 0;
   }
-  virtual int extent(int whichDirection) const {
+  virtual int extent(int whichDirection) const
+  {
     return 0;
   }
   virtual void process(BlockLattice3D<T,Lattice>& blockLattice);
@@ -94,7 +104,9 @@ private:
 template<typename T, template<typename U> class Lattice>
 class ExtFieldBoundaryProcessorGenerator3D : public PostProcessorGenerator3D<T,Lattice> {
 public:
-  ExtFieldBoundaryProcessorGenerator3D(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_, int discreteNormalX_, int discreteNormalY_, int discreteNormalZ_, int offset_);
+  ExtFieldBoundaryProcessorGenerator3D(int x0_, int x1_, int y0_, int y1_, int z0_,
+                                       int z1_, int discreteNormalX_, int discreteNormalY_,
+                                       int discreteNormalZ_, int offset_);
   virtual PostProcessor3D<T,Lattice>* generate() const;
   virtual PostProcessorGenerator3D<T,Lattice>*  clone() const;
 private:
@@ -111,11 +123,15 @@ private:
 template<typename T, template<typename U> class Lattice>
 class ZeroDistributionBoundaryProcessor3D : public LocalPostProcessor3D<T,Lattice> {
 public:
-  ZeroDistributionBoundaryProcessor3D(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_, int discreteNormalX_, int discreteNormalY_, int discreteNormalZ_);
-  virtual int extent() const {
+  ZeroDistributionBoundaryProcessor3D(int x0_, int x1_, int y0_, int y1_, int z0_,
+                                      int z1_, int discreteNormalX_, int discreteNormalY_,
+                                      int discreteNormalZ_);
+  virtual int extent() const
+  {
     return 0;
   }
-  virtual int extent(int whichDirection) const {
+  virtual int extent(int whichDirection) const
+  {
     return 0;
   }
   virtual void process(BlockLattice3D<T,Lattice>& blockLattice);
@@ -129,7 +145,9 @@ private:
 template<typename T, template<typename U> class Lattice>
 class ZeroDistributionBoundaryProcessorGenerator3D : public PostProcessorGenerator3D<T,Lattice> {
 public:
-  ZeroDistributionBoundaryProcessorGenerator3D(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_, int discreteNormalX_, int discreteNormalY_, int discreteNormalZ_);
+  ZeroDistributionBoundaryProcessorGenerator3D(int x0_, int x1_, int y0_, int y1_,
+      int z0_, int z1_, int discreteNormalX_,
+      int discreteNormalY_, int discreteNormalZ_);
   virtual PostProcessor3D<T,Lattice>* generate() const;
   virtual PostProcessorGenerator3D<T,Lattice>*  clone() const;
 private:

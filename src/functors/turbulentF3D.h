@@ -52,16 +52,24 @@ public:
 
 /// functor to get pointwise explicit filtering on local lattice, if globIC is not on
 /// the local processor, the returned vector is empty
-template <typename T, template <typename U> class DESCRIPTOR>
+/*template <typename T, template <typename U> class DESCRIPTOR>
 class BlockLatticeADM3D : public BlockLatticeF3D<T,DESCRIPTOR> {
 protected:
   T _sigma;
   int _order;
+  bool _adaptive;
+  const LBconverter<T>& _converter;
+
 public:
-  BlockLatticeADM3D(BlockLatticeStructure3D<T,DESCRIPTOR>& blockLattice, T sigma, int order);
+  BlockLatticeADM3D(BlockLatticeStructure3D<T,DESCRIPTOR>& blockLattice, T sigma, int order, bool adaptive, const LBconverter<T>& converter);
   bool operator() (T output[], const int input[]);
   void execute(const int input[]);
   void execute();
+
+  private:
+  const  int _localAvDissBeginsAt = DESCRIPTOR<T>::ExternalField::localAvDissBeginsAt;
+  const  int _localAvTKEBeginsAt = DESCRIPTOR<T>::ExternalField::localAvTKEBeginsAt;
+
 };
 
 /// functor to get pointwise ecplicit filter on local lattice, if globIC is not on
@@ -71,11 +79,82 @@ class SuperLatticeADM3D : public SuperLatticeF3D<T,DESCRIPTOR> {
 protected:
   T _sigma;
   int _order;
+  bool _adaptive;
+  const LBconverter<T>& _converter;
 public:
-  SuperLatticeADM3D(SuperLattice3D<T,DESCRIPTOR>& sLattice, T sigma, int order);
+  SuperLatticeADM3D(SuperLattice3D<T,DESCRIPTOR>& sLattice, T sigma, int order, bool adaptive, const LBconverter<T>& converter);
   bool operator() (T output[], const int input[]);
   void execute(SuperGeometry3D<T>& superGeometry, const int material);
 };
+*/
+/// functor to get pointwise finite difference Dissipation on local lattice, if globIC is not on
+/// the local processor, the returned vector is empty
+template <typename T, template <typename U> class DESCRIPTOR>
+class BlockLatticePhysDissipationFD3D : public BlockLatticeF3D<T,DESCRIPTOR> {
+protected:
+  const LBconverter<T>& converter;
+public:
+  BlockLatticePhysDissipationFD3D(BlockLatticeStructure3D<T,DESCRIPTOR>& blockLattice, const LBconverter<T>& _converter);
+  bool operator() (T output[], const int input[]);
+};
+
+/// functor to get pointwise explicit filter on local lattice, if globIC is not on
+/// the local processor, the returned vector is empty
+template <typename T, template <typename U> class DESCRIPTOR>
+class SuperLatticePhysDissipationFD3D : public SuperLatticeF3D<T,DESCRIPTOR> {
+protected:
+  const LBconverter<T>& converter;
+public:
+  SuperLatticePhysDissipationFD3D(SuperLattice3D<T,DESCRIPTOR>& sLattice, const LBconverter<T>& _converter);
+  bool operator() (T output[], const int input[]);
+};
+
+/// functor to get pointwise finite difference effective Dissipation on local lattice, if globIC is not on
+/// the local processor, the returned vector is empty
+template <typename T, template <typename U> class DESCRIPTOR>
+class BlockLatticePhysEffectiveDissipationFD3D : public BlockLatticeF3D<T,DESCRIPTOR> {
+protected:
+  const LBconverter<T>& converter;
+  T smagoConst;
+public:
+  BlockLatticePhysEffectiveDissipationFD3D(BlockLatticeStructure3D<T,DESCRIPTOR>& blockLattice, const LBconverter<T>& _converter, T _smagoConst);
+  bool operator() (T output[], const int input[]);
+};
+
+/// functor to get pointwise explicit filter on local lattice, if globIC is not on
+/// the local processor, the returned vector is empty
+template <typename T, template <typename U> class DESCRIPTOR>
+class SuperLatticePhysEffectiveDissipationFD3D : public SuperLatticeF3D<T,DESCRIPTOR> {
+protected:
+  const LBconverter<T>& converter;
+  T smagoConst;
+public:
+  SuperLatticePhysEffectiveDissipationFD3D(SuperLattice3D<T,DESCRIPTOR>& sLattice, const LBconverter<T>& _converter, T _smagoConst);
+  bool operator() (T output[], const int input[]);
+};
+
+/*
+template <typename T, template <typename U> class DESCRIPTOR>
+class BlockLatticeSigmaADM3D : public BlockLatticeF3D<T,DESCRIPTOR> {
+protected:
+
+  private:
+  const  int _localSigmaADMBeginsAt = DESCRIPTOR<T>::ExternalField::localSigmaADMBeginsAt;
+public:
+  BlockLatticeSigmaADM3D(BlockLatticeStructure3D<T,DESCRIPTOR>& blockLattice);
+  bool operator() (T output[], const int input[]);
+};
+
+/// functor to get pointwise explicit filter on local lattice, if globIC is not on
+/// the local processor, the returned vector is empty
+template <typename T, template <typename U> class DESCRIPTOR>
+class SuperLatticeSigmaADM3D : public SuperLatticeF3D<T,DESCRIPTOR> {
+protected:
+public:
+  SuperLatticeSigmaADM3D(SuperLattice3D<T,DESCRIPTOR>& sLattice);
+  bool operator() (T output[], const int input[]);
+};
+*/
 
 } // end namespace olb
 

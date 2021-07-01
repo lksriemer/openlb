@@ -44,10 +44,12 @@ template <typename T>
 class BlockF2D : public GenericF<T,int> {
 protected:
   BlockF2D(BlockStructure2D& blockStructure, int targetDim);
-  BlockStructure2D& _blockStructure;
+  BlockF2D(int targetDim);
+  BlockStructure2D* _blockStructure;
 public:
   // virtual due to blockLatticeReduction2D
   virtual BlockStructure2D& getBlockStructure();
+  void setBlockStructure(BlockStructure2D* blockStructure);
 
   // not used anymore? blockData2D computes min/max as well
   /// computes min/maxValue of blockStructure, [iDim]
@@ -84,13 +86,13 @@ private:
 
 /// identity functor
 template <typename T>
-class BlockIdentity2D : public BlockF2D<T> {
+class BlockIdentity2D final : public BlockF2D<T> {
 protected:
   BlockF2D<T>& _f;
 public:
   BlockIdentity2D(BlockF2D<T>& f);
   // access operator should not delete f, since f still has the identity as child
-  bool operator() (T output[], const int input[]);
+  bool operator() (T output[], const int input[]) override;
 };
 
 /// represents all functors that operate on a Lattice in general, e.g. getVelocity(), getForce(), getPressure()

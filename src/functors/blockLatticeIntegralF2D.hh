@@ -30,6 +30,8 @@
 #include "functors/blockLatticeIntegralF2D.h"
 #include "functors/blockLatticeLocalF2D.h"
 #include "functors/blockCalcF2D.h" // for IdentityF
+#include "utilities/vectorHelpers.h"
+
 
 
 namespace olb {
@@ -340,25 +342,25 @@ bool BlockGeometryFacesIndicator2D<T>::operator() (T output[], const int input[]
         // Look at solid nodes only
         _blockGeometry.getPhysR(physR, iX, iY);
         _indicator(inside, physR);
-        if (!inside[0]) {
+        if ( !util::nearZero(inside[0]) ) {
           _blockGeometry.getPhysR(physR, iX-1, iY);
           _indicator(inside, physR);
-          if (!inside[0]) {
+          if ( !util::nearZero(inside[0]) ) {
             counter[0]++;
           }
           _blockGeometry.getPhysR(physR, iX, iY-1);
           _indicator(inside, physR);
-          if (!inside[0]) {
+          if ( !util::nearZero(inside[0]) ) {
             counter[1]++;
           }
           _blockGeometry.getPhysR(physR, iX+1, iY);
           _indicator(inside, physR);
-          if (!inside[0]) {
+          if ( !util::nearZero(inside[0]) ) {
             counter[3]++;
           }
           _blockGeometry.getPhysR(physR, iX, iY+1);
           _indicator(inside, physR);
-          if (!inside[0]) {
+          if ( !util::nearZero(inside[0]) ) {
             counter[4]++;
           }
         }
@@ -366,7 +368,6 @@ bool BlockGeometryFacesIndicator2D<T>::operator() (T output[], const int input[]
     }
 
     T dx = _converter.getLatticeL();
-    std::vector<T> output;
     T total = T();
     for (int i=0; i<6; ++i) {
       output[i]=(T) counter[i] * dx;

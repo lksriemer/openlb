@@ -50,10 +50,12 @@ public:
       std::vector<T> rho0_,
       AnalyticalF1D<T,T>& iP_,
       std::vector<SpatiallyExtendedObject2D*> partners_);
-  virtual int extent() const {
+  virtual int extent() const
+  {
     return 1;
   }
-  virtual int extent(int whichDirection) const {
+  virtual int extent(int whichDirection) const
+  {
     return 1;
   }
   virtual void process(BlockLattice2D<T,Lattice>& blockLattice);

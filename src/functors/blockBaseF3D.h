@@ -60,21 +60,22 @@ public:
 
 /// BlockDataF3D can store data of any BlockFunctor3D
 template <typename T,typename BaseType>
-class BlockDataF3D : public BlockF3D<T> {
+class BlockDataF3D : public BlockF3D<BaseType> {
 protected:
-  BlockDataF3D(BlockData3D<T,BaseType>& blockData);
-  /// to store functor data, constuctor creates _blockData with functor data
-  BlockDataF3D(BlockF3D<BaseType>& f);
   /// used for blockLatticeReduction2D to build BlockData2D by the constructor
   BlockDataF3D(int nx, int ny, int nz, int size=1);
   BlockData3D<T,BaseType>& _blockData;
 public:
+  /// Constructor
+  BlockDataF3D(BlockData3D<T,BaseType>& blockData);
+  /// to store functor data, constuctor creates _blockData with functor data
+  BlockDataF3D(BlockF3D<BaseType>& f);
   /// destructor is called if object was not created by passing a blockData
   ~BlockDataF3D();
   /// returns _blockData
   BlockData3D<T,BaseType>& getBlockData();
   /// access to _blockData via its get()
-  bool operator() (T output[], const int input[]) override;
+  bool operator() (BaseType output[], const int input[]) override;
 private:
   /// flag whether _blockData was allocated with new
   bool _isConstructed;

@@ -134,11 +134,37 @@ private:
                                     sizeOfVelDenom;
   static const int velDenominator = Lattice<T>::ExternalField::
                                     velDenominator;
-  T _fieldTmp[4];
+};
 
-  //  static const int deltaMomentum  = Lattice<T>::ExternalField::deltaMomentum;
-  //  static const int sizeOfDeltaMomentum  = Lattice<T>::ExternalField::sizeOfDeltaMomentum;
+/// Implementation of the BGK collision step for a porosity model enabling
+/// drag computation for many particles
+template<typename T, template<typename U> class Lattice>
+class PorousParticleBGKdynamics3D : public BGKdynamics<T,Lattice> {
+public:
+  /// Constructor
+  PorousParticleBGKdynamics3D(T omega_, Momenta<T,Lattice>& momenta_);
+  /// extended Collision step, computes local drag in a given direction
+  virtual void collide(Cell<T,Lattice>& cell,
+                       LatticeStatistics<T>& statistics_);
+  /// get relaxation parameter
+  T    getOmega() const;
+  /// set relaxation parameter
+  void setOmega(T omega_);
 
+
+private:
+  T omega;      ///< relaxation parameter
+  static const int porosityIsAt   = Lattice<T>::ExternalField::
+                                    porosityIsAt;
+  static const int sizeOfVelNum   = Lattice<T>::ExternalField::
+                                    sizeOfVelNum;
+  static const int velNumerator   = Lattice<T>::ExternalField::
+                                    velNumerator;
+  static const int sizeOfVelDenom = Lattice<T>::ExternalField::
+                                    sizeOfVelDenom;
+  static const int velDenominator = Lattice<T>::ExternalField::
+                                    velDenominator;
+  T _fieldTmp[5];
 };
 
 /// Implementation of the HBGK collision step for a porosity model enabling
@@ -149,7 +175,7 @@ template<typename T, template<typename U> class Lattice>
 class KrauseHBGKdynamics : public BGKdynamics<T,Lattice> {
 public:
   /// Constructor
-  KrauseHBGKdynamics(T omega_, Momenta<T,Lattice>& momenta_, T smagoConst_, T dx_, T dt_);
+  KrauseHBGKdynamics(T omega_, Momenta<T,Lattice>& momenta_, T smagoConst_, T dx_ = 1, T dt_ = 1);
   /// extended Collision step, computes local drag in a given direction
   virtual void collide(Cell<T,Lattice>& cell,
                        LatticeStatistics<T>& statistics_);
@@ -161,7 +187,7 @@ public:
 
 private:
   /// Computes a constant prefactor in order to speed up the computation
-  T computePreFactor(T omega_, T smagoConst_, T dx_, T dt_);
+  T computePreFactor(T omega_, T smagoConst_);
   /// Computes the local smagorinsky relaxation parameter
   void computeOmega(T omega0_, Cell<T,Lattice>& cell, T preFactor_, T rho_,
                     T u[Lattice<T>::d],

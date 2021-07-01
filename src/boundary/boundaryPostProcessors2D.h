@@ -42,10 +42,12 @@ template<typename T, template<typename U> class Lattice, int direction, int orie
 class StraightFdBoundaryProcessor2D : public LocalPostProcessor2D<T,Lattice> {
 public:
   StraightFdBoundaryProcessor2D(int x0_, int x1_, int y0_, int y1_);
-  virtual int extent() const {
+  virtual int extent() const
+  {
     return 1;
   }
-  virtual int extent(int whichDirection) const {
+  virtual int extent(int whichDirection) const
+  {
     return 1;
   }
   virtual void process(BlockLattice2D<T,Lattice>& blockLattice);
@@ -76,10 +78,12 @@ class StraightConvectionBoundaryProcessor2D : public LocalPostProcessor2D<T,Latt
 public:
   StraightConvectionBoundaryProcessor2D(int x0_, int x1_, int y0_, int y1_, T* uAv_ = NULL);
   ~StraightConvectionBoundaryProcessor2D();
-  virtual int extent() const {
+  virtual int extent() const
+  {
     return 1;
   }
-  virtual int extent(int whichDirection) const {
+  virtual int extent(int whichDirection) const
+  {
     return 1;
   }
   virtual void process(BlockLattice2D<T,Lattice>& blockLattice);
@@ -109,10 +113,12 @@ template<typename T, template<typename U> class Lattice>
 class SlipBoundaryProcessor2D : public LocalPostProcessor2D<T,Lattice> {
 public:
   SlipBoundaryProcessor2D(int x0_, int x1_, int y0_, int y1_, int discreteNormalX_, int discreteNormalY_);
-  virtual int extent() const {
+  virtual int extent() const
+  {
     return 0;
   }
-  virtual int extent(int whichDirection) const {
+  virtual int extent(int whichDirection) const
+  {
     return 0;
   }
   virtual void process(BlockLattice2D<T,Lattice>& blockLattice);
@@ -120,6 +126,7 @@ public:
                                   int x0_, int x1_, int y0_, int y1_ );
 private:
   int reflectionPop[Lattice<T>::q];
+  int reflectionPop2[Lattice<T>::q];
   int x0, x1, y0, y1;
 };
 
@@ -144,10 +151,12 @@ template<typename T, template<typename U> class Lattice, int xNormal,int yNormal
 class OuterVelocityCornerProcessor2D : public LocalPostProcessor2D<T, Lattice> {
 public:
   OuterVelocityCornerProcessor2D(int x_, int y_);
-  virtual int extent() const {
+  virtual int extent() const
+  {
     return 2;
   }
-  virtual int extent(int whichDirection) const {
+  virtual int extent(int whichDirection) const
+  {
     return 2;
   }
   virtual void process(BlockLattice2D<T,Lattice>& blockLattice);

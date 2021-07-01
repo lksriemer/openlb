@@ -68,14 +68,12 @@ SuperLattice2D<T, Lattice>::SuperLattice2D(CuboidGeometry2D<T>& cGeometry,
   this->_communicator.add_cells(this->_overlap);
   this->_communicator.init();
 
+  _extendedBlockLattices.reserve(this->_loadBalancer.size());
   for (int iC = 0; iC < this->_loadBalancer.size(); ++iC) {
     int nX = this->_cuboidGeometry.get(this->_loadBalancer.glob(iC)).getNx() + 2 * this->_overlap;
     int nY = this->_cuboidGeometry.get(this->_loadBalancer.glob(iC)).getNy() + 2 * this->_overlap;
 
-    BlockLattice2D<T, Lattice> tmp(0, 0);
-    _extendedBlockLattices.push_back(tmp);
-    BlockLattice2D<T, Lattice> blockLattice(nX, nY);
-    _extendedBlockLattices.back().swap(blockLattice);
+    _extendedBlockLattices.emplace_back(nX, nY);
   }
   for (int iC = 0; iC < this->_loadBalancer.size(); ++iC) {
     BlockLatticeView2D<T, Lattice> lattice(_extendedBlockLattices[iC], this->_overlap,
@@ -116,14 +114,12 @@ SuperLattice2D<T, Lattice>::SuperLattice2D(SuperGeometry2D<T>& superGeometry,
   this->_communicator.add_cells(this->_overlap);
   this->_communicator.init();
 
+  _extendedBlockLattices.reserve(this->_loadBalancer.size());
   for (int iC = 0; iC < this->_loadBalancer.size(); ++iC) {
     int nX = this->_cuboidGeometry.get(this->_loadBalancer.glob(iC)).getNx() + 2 * this->_overlap;
     int nY = this->_cuboidGeometry.get(this->_loadBalancer.glob(iC)).getNy() + 2 * this->_overlap;
 
-    BlockLattice2D<T, Lattice> tmp(0, 0);
-    _extendedBlockLattices.push_back(tmp);
-    BlockLattice2D<T, Lattice> blockLattice(nX, nY);
-    _extendedBlockLattices.back().swap(blockLattice);
+    _extendedBlockLattices.emplace_back(nX, nY);
   }
   for (int iC = 0; iC < this->_loadBalancer.size(); ++iC) {
     BlockLatticeView2D<T, Lattice> lattice(_extendedBlockLattices[iC], this->_overlap,
@@ -377,7 +373,7 @@ void SuperLattice2D<T,Lattice>::resetExternalParticleField( SuperGeometry2D<T>& 
 
 template<typename T, template<typename U> class Lattice>
 void SuperLattice2D<T,Lattice>::setExternalParticleField(SuperGeometry2D<T>& sGeometry,
-    AnalyticalF2D<T,T>& velocity, SmoothIndicatorF2D<T,T>& sIndicator)
+    AnalyticalF2D<T,T>& velocity, ParticleIndicatorF2D<T,T>& sIndicator)
 {
   for (int iC = 0; iC < this->_loadBalancer.size(); ++iC) {
     _extendedBlockLattices[iC].setExternalParticleField(sGeometry.getExtendedBlockGeometry(iC), velocity, sIndicator);

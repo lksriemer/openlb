@@ -62,20 +62,30 @@
 
 namespace olb {
 
-
 template <typename T>
-class Poiseuille2D : public AnalyticalF2D<T,T> {
+class PowerLaw2D : public AnalyticalF2D<T,T> {
 protected:
-  std::vector<T> axisPoint;
-  std::vector<T> axisDirection;
-  T maxVelocity;
-  T radius;
+  std::vector<T> _axisPoint;
+  std::vector<T> _axisDirection;
+  T _maxVelocity;
+  T _radius;
+  T _exponent;
 
 public:
-  Poiseuille2D(std::vector<T> axisPoint_, std::vector<T> axisDirection_,  T maxVelocity_, T radius_);
+  PowerLaw2D(std::vector<T> axisPoint, std::vector<T> axisDirection,  T maxVelocity, T radius, T exponent);
   /// construct from material number, note: untested
-  Poiseuille2D(SuperGeometry2D<T>& superGeometry_, int material_, T maxVelocity_, T distance2Wall_);
-  bool operator()(T output[], const T x[]);
+  PowerLaw2D(SuperGeometry2D<T>& superGeometry, int material, T maxVelocity, T distance2Wall, T exponent);
+  bool operator()(T output[], const T input[]);
+};
+
+template <typename T>
+class Poiseuille2D : public PowerLaw2D<T> {
+
+public:
+  Poiseuille2D(std::vector<T> axisPoint, std::vector<T> axisDirection,  T maxVelocity, T radius);
+  /// construct from material number, note: untested
+  Poiseuille2D(SuperGeometry2D<T>& superGeometry, int material, T maxVelocity, T distance2Wall);
+  //bool operator()(T output[], const T x[]);
 };
 
 

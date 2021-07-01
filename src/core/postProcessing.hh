@@ -145,7 +145,8 @@ void StatisticsPostProcessor2D<T,Lattice>::process (
       *blockLattice.getStatistics().getNumCells();
       avEnergy       += blockLattice.getStatistics().getAverageEnergy()
       *blockLattice.getStatistics().getNumCells();
-      if (maxU<blockLattice.getStatistics().getMaxU() ) {
+      if (maxU<blockLattice.getStatistics().getMaxU() )
+      {
         maxU        = blockLattice.getStatistics().getMaxU();
       }
     }
@@ -261,7 +262,7 @@ LatticeCouplingGenerator3D<T,Lattice>::LatticeCouplingGenerator3D (
 
 template<typename T, template<typename U> class Lattice>
 void LatticeCouplingGenerator3D<T,Lattice>::shift (
-  int deltaX, int deltaY, int deltaZ )
+  int deltaX, int deltaY, int deltaZ, int iC_)
 {
   x0 += deltaX;
   x1 += deltaX;
@@ -269,6 +270,7 @@ void LatticeCouplingGenerator3D<T,Lattice>::shift (
   y1 += deltaY;
   z0 += deltaZ;
   z1 += deltaZ;
+  iC = iC_;
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -330,7 +332,8 @@ void StatisticsPostProcessor3D<T,Lattice>::process (
       *blockLattice.getStatistics().getNumCells();
       avEnergy       += blockLattice.getStatistics().getAverageEnergy()
       *blockLattice.getStatistics().getNumCells();
-      if (maxU<blockLattice.getStatistics().getMaxU() ) {
+      if (maxU<blockLattice.getStatistics().getMaxU() )
+      {
         maxU        = blockLattice.getStatistics().getMaxU();
       }
     }

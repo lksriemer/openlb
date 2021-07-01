@@ -1,7 +1,7 @@
 /*  This file is part of the OpenLB library
  *
- *  Copyright (C) 2012 Lukas Baron, Tim Dornieden, Mathias J. Krause,
- *  Albert Mink
+ *  Copyright (C) 2012-2016 Lukas Baron, Tim Dornieden, Mathias J. Krause,
+ *                          Albert Mink, Benjamin Förster
  *  E-mail contact: info@openlb.net
  *  The most recent release of OpenLB can be downloaded at
  *  <http://www.openlb.net/>
@@ -28,6 +28,7 @@
 
 #include "functors/genericF.h"
 #include "functors/blockBaseF3D.h"
+#include "indicator/superIndicatorBaseF3D.h"
 #include "communication/superStructure3D.h"
 #include "core/superData3D.h"
 #include "core/superLattice3D.h"
@@ -44,22 +45,23 @@ template<typename T, typename BaseType> class SuperData3D;
 template<typename T, template<typename U> class Lattice> class SuperLattice3D;
 template<typename T> class SuperStructure3D;
 template<typename T> class BlockF3D;
-
+template<typename T> class SuperIndicatorF3D;
 
 /// represents all functors that operate on a SuperStructure in general
-template <typename T>
-class SuperF3D : public GenericF<T,int> {
+template <typename T, typename W = T>
+class SuperF3D : public GenericF<W,int> {
 protected:
   SuperF3D(SuperStructure3D<T>& superStructure, int targetDim);
   ~SuperF3D();
 
   SuperStructure3D<T>& _superStructure;
-  std::vector<BlockF3D<T>* > _blockF;
+  // SuperFunctor consists of several BlockFuntors
+  std::vector< BlockF3D<T>* > _blockF;
 public:
-  SuperF3D<T>& operator-(SuperF3D<T>& rhs);
-  SuperF3D<T>& operator+(SuperF3D<T>& rhs);
-  SuperF3D<T>& operator*(SuperF3D<T>& rhs);
-  SuperF3D<T>& operator/(SuperF3D<T>& rhs);
+  SuperF3D<T,W>& operator-(SuperF3D<T,W>& rhs);
+  SuperF3D<T,W>& operator+(SuperF3D<T,W>& rhs);
+  SuperF3D<T,W>& operator*(SuperF3D<T,W>& rhs);
+  SuperF3D<T,W>& operator/(SuperF3D<T,W>& rhs);
   /// \return _superStructure
   SuperStructure3D<T>& getSuperStructure();
   /// \return _blockF[iCloc]
@@ -69,7 +71,7 @@ public:
 
 /// Functor from `SuperData3D`
 template<typename T, typename BaseType>
-class SuperDataF3D : public SuperF3D<T> {
+class SuperDataF3D : public SuperF3D<T,BaseType> {
 protected:
   /// `SuperData3D` object this functor was created from
   SuperData3D<T,BaseType>& _superData;
@@ -77,27 +79,40 @@ public:
   /// Constructor from `SuperData3D` - stores `_superData` reference
   SuperDataF3D(SuperData3D<T,BaseType>& superData);
   /// Operator for this functor - copies data from `_superData` object into output
-  bool operator() (T output[], const int input[]);
+  bool operator() (BaseType output[], const int input[]);
   /// Getter for `_superData`
   SuperData3D<T,BaseType>& getSuperData();
 };
 
 
 /// identity functor for memory management
-template <typename T>
-class SuperIdentity3D : public SuperF3D<T> {
+template <typename T, typename W=T>
+class SuperIdentity3D : public SuperF3D<T,W> {
 protected:
-  SuperF3D<T>& _f;
+  SuperF3D<T,W>& _f;
 public:
-  SuperIdentity3D(SuperF3D<T>& f);
+  SuperIdentity3D(SuperF3D<T,W>& f);
   //  ~SuperLatticeIdentity3D();
   // access operator should not delete f, since f still has the identity as child
-  bool operator() (T output[], const int input[]);
+  bool operator() (W output[], const int input[]);
+};
+
+
+/// identity functor for memory management
+template <typename T, typename W=T>
+class SuperIdentityOnSuperIndicatorF3D : public SuperF3D<T,W> {
+protected:
+  SuperF3D<T,W>& _f;
+  SuperIndicatorF3D<T>& _indicatorF;
+  W _defaultValue;
+public:
+  SuperIdentityOnSuperIndicatorF3D(SuperF3D<T,W>& f, SuperIndicatorF3D<T>& indicatorF, W defaultValue=0.);
+  bool operator() (W output[], const int input[]);
 };
 
 /// represents all functors that operate on a SuperLattice in general, e.g. getVelocity(), getForce(), getPressure()
 template <typename T, template <typename U> class Lattice>
-class SuperLatticeF3D : public SuperF3D<T> {
+class SuperLatticeF3D : public SuperF3D<T,T> {
 protected:
   SuperLatticeF3D(SuperLattice3D<T,Lattice>& superLattice, int targetDim);
 

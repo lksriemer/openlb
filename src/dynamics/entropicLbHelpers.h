@@ -35,7 +35,8 @@ namespace olb {
 template<typename T, template<typename U> class Lattice>
 struct entropicLbHelpers {
   /// Computation of equilibrium distribution
-  static T equilibrium( int iPop, T rho, const T u[Lattice<T>::d]) {
+  static T equilibrium( int iPop, T rho, const T u[Lattice<T>::d])
+  {
     typedef Lattice<T> L;
     const T invCs = sqrt(L::invCs2);
     const T sqt3 = sqrt(3.0);
@@ -52,7 +53,8 @@ struct entropicLbHelpers {
   }
 
   /// Computation of equilibrium distribution
-  static T equilibriumApprox( int iPop, T rho, const T u[Lattice<T>::d]) {
+  static T equilibriumApprox( int iPop, T rho, const T u[Lattice<T>::d])
+  {
     typedef Lattice<T> L;
 
     T uSqr = util::normSqr<T,L::d>(u);

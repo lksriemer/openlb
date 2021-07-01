@@ -1,7 +1,7 @@
 /*  This file is part of the OpenLB library
  *
- *  Copyright (C) 2012 Lukas Baron, Tim Dornieden, Mathias J. Krause,
- *  Albert Mink
+ *  Copyright (C) 2012-2016 Lukas Baron, Tim Dornieden, Mathias J. Krause,
+ *  Albert Mink, Benjamin Förster
  *  E-mail contact: info@openlb.net
  *  The most recent release of OpenLB can be downloaded at
  *  <http://www.openlb.net/>
@@ -30,11 +30,20 @@
 
 namespace olb {
 
-template class AnalyticalFfromBlockF3D<double>;
-template class AnalyticalFfromSuperF3D<double>;
+template class AnalyticalFfromBlockF3D<double,double>;
+template class AnalyticalFfromSuperF3D<double,double>;
 template class SuperLatticeFfromAnalyticalF3D<double,descriptors::D3Q19Descriptor>;
 
 template class BlockLatticeFfromAnalyticalF3D<double,descriptors::D3Q19Descriptor>;
+template class SmoothBlockIndicator3D<double,descriptors::D3Q19Descriptor>;
+
+template class SuperLatticeInterpPhysVelocity3Degree3D<double,descriptors::D3Q19Descriptor>;
+template class SuperLatticeInterpDensity3Degree3D<double,descriptors::D3Q19Descriptor>;
+template class SuperLatticeSmoothDiracDelta3D<double,descriptors::D3Q19Descriptor>;
+
+template class BlockLatticeInterpPhysVelocity3Degree3D<double,descriptors::D3Q19Descriptor>;
+template class BlockLatticeInterpDensity3Degree3D<double,descriptors::D3Q19Descriptor>;
+template class BlockLatticeSmoothDiracDelta3D<double,descriptors::D3Q19Descriptor>;
 
 } // end namespace olb
 

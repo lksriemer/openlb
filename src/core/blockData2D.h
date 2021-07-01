@@ -69,7 +69,7 @@ public:
   BlockData2D();
   /// Construct from cuboid
   BlockData2D(Cuboid2D<T>& cuboid, int size=1);
-  /// Construct from X-Y-Z node count
+  /// Construct from X-Y node count
   BlockData2D(int nx, int ny, int size=1);
   /// Construct from Block Functor, attention!! operator() accesses functor data
   BlockData2D(BlockF2D<BaseType>& rhs);
@@ -77,6 +77,10 @@ public:
   BlockData2D(BlockData2D<T,BaseType> const& rhs);
   /// Assignment Operator
   BlockData2D<T,BaseType>& operator=(BlockData2D<T,BaseType> const& rhs);
+  /// Move Operator
+  BlockData2D<T,BaseType>& operator=(BlockData2D<T,BaseType>&& rhs);
+  /// Move Constructor
+  BlockData2D<T,BaseType>(BlockData2D<T,BaseType>&& rhs);
   /// Swap rhs Data into local fields
   void swap(BlockData2D<T,BaseType>& rhs);
   /// Memory Management
@@ -107,7 +111,8 @@ public:
   /// Read only access to the dim of the data of the super structure
   int getSize() const;
   /// Number of data blocks for the serializable interface
-  virtual std::size_t getNblock() const {
+  virtual std::size_t getNblock() const
+  {
     return 4;
   };
   /// Binary size for the serializer

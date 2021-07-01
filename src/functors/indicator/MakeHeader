@@ -28,4 +28,6 @@ precompiled    := indicatorBaseF2D \
                   indicatorF2D \
                   indicatorF3D \
                   indicCalcF2D \
-                  indicCalcF3D
+                  indicCalcF3D \
+                  superIndicatorBaseF3D \
+                  superIndicatorF3D

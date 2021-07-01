@@ -30,22 +30,34 @@
 
 namespace olb {
 
-template <typename T>
-SuperF2D<T>::SuperF2D(SuperStructure2D<T>& superStructure, int targetDim)
-  : GenericF<T,int>(targetDim,3), _superStructure(superStructure) { }
+template<typename T, typename W>
+SuperF2D<T,W>::SuperF2D(SuperStructure2D<T>& superStructure, int targetDim)
+  : GenericF<W,int>(targetDim,3), _superStructure(superStructure) { }
 
-template <typename T>
-SuperStructure2D<T>& SuperF2D<T>::getSuperStructure()
+template<typename T, typename W>
+SuperF2D<T,W>::~SuperF2D()
+{
+  for (auto&& element : _blockF) {
+    delete element;
+  }
+  _blockF.resize(0);
+}
+
+template<typename T, typename W>
+SuperStructure2D<T>& SuperF2D<T,W>::getSuperStructure()
 {
   return _superStructure;
 }
 
-
-
+template<typename T, typename W>
+BlockF2D<T>& SuperF2D<T,W>::getBlockF(int iCloc)
+{
+  return *(_blockF[iCloc]);
+}
 
 template <typename T,typename BaseType>
 SuperDataF2D<T,BaseType>::SuperDataF2D(SuperData2D<T,BaseType>& superData)
-  : SuperF2D<T>( superData, superData.getDataSize() ), _superData(superData)
+  : SuperF2D<T,BaseType>( superData, superData.getDataSize() ), _superData(superData)
 {}
 
 template <typename T,typename BaseType>
@@ -65,16 +77,16 @@ SuperData2D<T,BaseType>& SuperDataF2D<T,BaseType>::getSuperData()
 }
 
 
-template <typename T>
-SuperIdentity2D<T>::SuperIdentity2D(SuperF2D<T>& f)
-  : SuperF2D<T>(f.getSuperStructure() ,f.getTargetDim() ), _f(f)
+template <typename T, typename W>
+SuperIdentity2D<T,W>::SuperIdentity2D(SuperF2D<T,W>& f)
+  : SuperF2D<T,W>(f.getSuperStructure() ,f.getTargetDim() ), _f(f)
 {
   this->getName() = _f.getName();
   std::swap( _f._ptrCalcC, this->_ptrCalcC );
 }
 
-template <typename T>
-bool SuperIdentity2D<T>::operator()(T output[], const int input[])
+template <typename T, typename W>
+bool SuperIdentity2D<T,W>::operator()(W output[], const int input[])
 {
   _f(output, input);
   return true;
@@ -84,7 +96,7 @@ bool SuperIdentity2D<T>::operator()(T output[], const int input[])
 template <typename T, template <typename U> class DESCRIPTOR>
 SuperLatticeF2D<T,DESCRIPTOR>::SuperLatticeF2D(SuperLattice2D<T,DESCRIPTOR>& superLattice,
     int targetDim)
-  : SuperF2D<T>(superLattice, targetDim), _sLattice(superLattice) { }
+  : SuperF2D<T,T>(superLattice, targetDim), _sLattice(superLattice) { }
 
 template <typename T, template <typename U> class DESCRIPTOR>
 SuperLattice2D<T,DESCRIPTOR>& SuperLatticeF2D<T,DESCRIPTOR>::getSuperLattice()

@@ -39,7 +39,8 @@ Particle3D<T>::Particle3D()
     _rad(0),
     _cuboid(0),
     _id(0),
-    _active(false)
+    _active(false),
+    _storeForce(3,0.)
 {
 }
 
@@ -52,9 +53,14 @@ Particle3D<T>::Particle3D(std::vector<T> pos, T mas, T rad, int id)
     _rad(rad),
     _cuboid(0),
     _id(id),
-    _active(true)
+    _active(true),
+    _storeForce(3,0.)
 {
   _invMas = 1. / _mas;
+  // RK4
+//  _positions = std::vector<std::vector<T> > (4, std::vector<T> (3, T() ));
+//  _velocities = std::vector<std::vector<T> > (4, std::vector<T> (3, T() ));
+//  _forces = std::vector<std::vector<T> > (4, std::vector<T> (3, T() ));
 }
 
 template<typename T>
@@ -66,9 +72,14 @@ Particle3D<T>::Particle3D(const Particle3D<T>& p)
     _rad(p._rad),
     _cuboid(p._cuboid),
     _id(p._id),
-    _active(p._active)
+    _active(p._active),
+    _storeForce(3,0.)
 {
   _invMas = 1. / _mas;
+  // RK4
+//  _positions = std::vector<std::vector<T> > (4, std::vector<T> (3, T() ));
+//  _velocities = std::vector<std::vector<T> > (4, std::vector<T> (3, T() ));
+//  _forces = std::vector<std::vector<T> > (4, std::vector<T> (3, T() ));
 }
 
 template<typename T>
@@ -80,11 +91,15 @@ Particle3D<T>::Particle3D(std::vector<T> pos, std::vector<T> vel, T mas, T rad, 
     _rad(rad),
     _cuboid(0),
     _id(id),
-    _active(true)
+    _active(true),
+    _storeForce(3,0.)
 {
   _vel.resize(12, 0.);
+  // RK4
+//  _positions = std::vector<std::vector<T> > (4, std::vector<T> (3, T() ));
+//  _velocities = std::vector<std::vector<T> > (4, std::vector<T> (3, T() ));
+//  _forces = std::vector<std::vector<T> > (4, std::vector<T> (3, T() ));
 }
-
 template<typename T>
 inline void Particle3D<T>::addForce(std::vector<T>& force)
 {
@@ -111,6 +126,18 @@ inline void Particle3D<T>::resetForce()
   for (int i = 0; i < 3; i++) {
     _force[i] = 0.;
   }
+}
+
+template<typename T>
+inline void Particle3D<T>::setStoredForce(std::vector<T>& force)
+{
+  _storeForce = force;
+}
+
+template<typename T>
+inline std::vector<T>& Particle3D<T>::getStoredForce()
+{
+  return _storeForce;
 }
 
 template<typename T>
@@ -334,6 +361,127 @@ void RotatingParticle3D<T>::unserialize(T* data)
   _torque[0] = (bool) data[16];
   _torque[1] = (bool) data[17];
   _torque[2] = (bool) data[18];
+}
+
+
+template<typename T>
+MagneticParticle3D<T>::MagneticParticle3D()
+  : Particle3D<T>::Particle3D(), _dMoment(3, T()), _aVel(3, T()), _torque(3, T()), _magnetisation(T()), _aDamping(T())
+{
+}
+
+template<typename T>
+MagneticParticle3D<T>::MagneticParticle3D(std::vector<T> pos, T mas, T rad, int id)
+  : Particle3D<T>::Particle3D(pos, mas, rad), _dMoment(3, T()), _aVel(3, T()), _torque(3, T()), _magnetisation(T()), _aDamping(T())
+{
+}
+
+template<typename T>
+MagneticParticle3D<T>::MagneticParticle3D(const MagneticParticle3D<T>& p)
+  : Particle3D<T>::Particle3D(p), _dMoment(p._dMoment), _aVel(p._aVel), _torque(p._torque), _magnetisation(p._magnetisation), _aDamping(p._aDamping)
+{
+}
+
+template<typename T>
+MagneticParticle3D<T>::MagneticParticle3D(std::vector<T> pos, std::vector<T> vel, T mas,
+    T rad, int id)
+  : Particle3D<T>::Particle3D(pos, vel, mas, rad), _dMoment(3, T()), _aVel(3, T()), _torque(3, T()), _magnetisation(T()), _aDamping(T())
+{
+}
+
+template<typename T>
+inline void MagneticParticle3D<T>::resetTorque()
+{
+  for (int i = 0; i < 3; i++) {
+    _torque[i] = 0.;
+  }
+}
+
+template<typename T>
+inline void MagneticParticle3D<T>::setMoment(std::vector<T> moment)
+{
+  _dMoment = moment;
+//  std::cout<< "Setting moment: "<< _dMoment[0] << " " << _dMoment[1] << " " <<_dMoment[2] << std::endl;
+}
+
+template<typename T>
+inline void MagneticParticle3D<T>::setAVel(std::vector<T> aVel)
+{
+  _aVel = aVel;
+}
+
+template<typename T>
+inline void MagneticParticle3D<T>::setTorque(std::vector<T> torque)
+{
+  _torque = torque;
+  //std::cout<< "Setting torque: "<< _torque[0] << " " << _torque[1] << " " <<_torque[2] << std::endl;
+}
+
+template<typename T>
+inline void MagneticParticle3D<T>::setMagnetisation(T magnetisation)
+{
+  _magnetisation = magnetisation;
+  //std::cout<< "Setting magnetisation: "<< _magnetisation << std::endl;
+}
+
+template<typename T>
+inline void MagneticParticle3D<T>::setADamping(T aDamping)
+{
+  _aDamping = aDamping;
+}
+
+template<typename T>
+void MagneticParticle3D<T>::serialize(T serial[])
+{
+  for (int i = 0; i < 3; i++) {
+    serial[i] = this->_pos[i];
+    serial[i + 3] = this->_vel[i];
+    serial[i + 6] = this->_force[i];
+  }
+  serial[9] = this->_mas;
+  serial[10] = this->_rad;
+  serial[11] = this->_cuboid;
+  serial[12] = (double) this->_active;
+  serial[13] = (double) this->_id;
+  serial[14] = _dMoment[0];
+  serial[15] = _dMoment[1];
+  serial[16] = _dMoment[2];
+  serial[17] = _aVel[0];
+  serial[18] = _aVel[1];
+  serial[19] = _aVel[2];
+  serial[20] = _torque[0];
+  serial[21] = _torque[1];
+  serial[22] = _torque[2];
+  serial[23] = _magnetisation;
+  serial[24] = _aDamping;
+
+}
+
+template<typename T>
+void MagneticParticle3D<T>::unserialize(T* data)
+{
+  for (int i = 0; i < 3; i++) {
+    this->_pos[i] = data[i];
+    this->_vel[i] = data[i + 3];
+    this->_force[i] = data[i + 6];
+  }
+  this->_mas = data[9];
+  this->_rad = data[10];
+  this->_cuboid = data[11];
+  this->_active = (bool) data[12];
+  this->_id = (int) data[13];
+  _dMoment[0] = data[14];
+  _dMoment[1] = data[15];
+  _dMoment[2] = data[16];
+  _aVel[0] = data[17];
+  _aVel[1] = data[18];
+  _aVel[2] = data[19];
+  _torque[0] = data[20];
+  _torque[1] = data[21];
+  _torque[2] = data[22];
+  _magnetisation = data[23];
+  _aDamping = data[24];
+
 }
 
 }

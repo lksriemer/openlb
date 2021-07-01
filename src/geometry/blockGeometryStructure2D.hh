@@ -230,6 +230,29 @@ int BlockGeometryStructure2D<T>::innerClean(int fromM, bool verbose)
   return count2;
 }
 
+template<typename T>
+template<typename V, template<typename U> class Lattice >
+bool BlockGeometryStructure2D<T>::findStreamDirections(int iX, int iY, int material, std::list<int>   bulkMaterials, bool streamDirections[])
+{
+
+  bool found = false;
+  if (getMaterial(iX, iY) != material) {
+    return false;
+  } else {
+    std::list<int>::iterator mat;
+    streamDirections[0] = false;
+    for (int iPop = 1; iPop < Lattice<T>::q ; ++iPop) {
+      streamDirections[iPop] = false;
+      for (mat=bulkMaterials.begin(); !streamDirections[iPop] && mat!=bulkMaterials.end(); ++mat) {
+        if (getMaterial(iX + Lattice<V>::c[iPop][0], iY + Lattice<V>::c[iPop][1]) == *mat ) {
+          streamDirections[iPop] = true;
+          found = true;
+        }
+      }
+    }
+    return found;
+  }
+}
 
 template<typename T>
 bool BlockGeometryStructure2D<T>::find(int material, unsigned offsetX, unsigned offsetY,
@@ -434,7 +457,7 @@ void BlockGeometryStructure2D<T>::regionGrowing(int fromM, int toM, int seedX, i
 {
   std::map<std::vector<int>, int> tmp2;
   bool firstCall = false;
-  if (tmp == NULL) {
+  if (tmp == nullptr) {
     tmp = &tmp2;
     firstCall = true;
   }

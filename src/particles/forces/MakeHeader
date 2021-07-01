@@ -25,4 +25,7 @@ generic        :=
 
 precompiled    := force3D \
                   stokesDragForce3D \
-                  weightForce3D
+                  weightForce3D \
+                  buoyancyForce3D \
+                  hertzMindlinDeresiewicz3D
+                  

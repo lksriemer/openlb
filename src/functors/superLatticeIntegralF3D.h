@@ -1,7 +1,7 @@
 /*  This file is part of the OpenLB library
  *
- *  Copyright (C) 2012 Lukas Baron, Tim Dornieden, Mathias J. Krause,
- *  Albert Mink
+ *  Copyright (C) 2012-2016 Lukas Baron, Tim Dornieden, Mathias J. Krause,
+ *  Albert Mink, Benjamin Förster
  *  E-mail contact: info@openlb.net
  *  The most recent release of OpenLB can be downloaded at
  *  <http://www.openlb.net/>
@@ -30,6 +30,9 @@
 #include "functors/genericF.h"
 #include "functors/blockLatticeIntegralF3D.h"
 #include "functors/superBaseF3D.h"
+#include "functors/indicator/superIndicatorBaseF3D.h"
+#include "functors/indicator/indicatorBaseF3D.h"
+#include "functors/indicator/superIndicatorF3D.h"
 #include "functors/superLatticeLocalF3D.h"
 #include "functors/interpolationF3D.h"
 #include "core/superLattice3D.h"
@@ -52,151 +55,145 @@ namespace olb {
 
 
 /// functor that returns the max in each component of all points of a certain material
-template <typename T, template <typename U> class DESCRIPTOR>
-class SuperMin3D : public SuperF3D<T> {
+template <typename T, typename W = T>
+class SuperMin3D final : public SuperF3D<T,W> {
 private:
-  SuperF3D<T>& _f;
+  SuperF3D<T,W>& _f;
   SuperGeometry3D<T>& _superGeometry;
   const int _material;
 public:
-  SuperMin3D(SuperF3D<T>& f, SuperGeometry3D<T>& superGeometry, const int material);
-  bool operator() (T output[], const int input[]);
+  SuperMin3D(SuperF3D<T,W>& f, SuperGeometry3D<T>& superGeometry, const int material);
+  bool operator() (W output[], const int input[]);
 };
 
 /// functor that returns the max in each component of all points of a certain material
-template <typename T, template <typename U> class DESCRIPTOR>
-class SuperMax3D : public SuperF3D<T> {
+template <typename T, typename W = T>
+class SuperMax3D final : public SuperF3D<T,W> {
 private:
-  SuperF3D<T>& _f;
+  SuperF3D<T,W>& _f;
   SuperGeometry3D<T>& _superGeometry;
   const int _material;
 public:
-  SuperMax3D(SuperF3D<T>& f, SuperGeometry3D<T>& superGeometry, const int material);
-  bool operator() (T output[], const int input[]);
+  SuperMax3D(SuperF3D<T,W>& f, SuperGeometry3D<T>& superGeometry, const int material);
+  bool operator() (W output[], const int input[]);
 };
 
 
 /// sums over all cells of a certain material number
-template <typename T, template <typename U> class DESCRIPTOR>
-class SuperSum3D : public SuperF3D<T> {
+template <typename T, typename W = T>
+class SuperSum3D final : public SuperF3D<T,W> {
 private:
-  SuperF3D<T>& _f;
+  SuperF3D<T,W>& _f;
   SuperGeometry3D<T>& _superGeometry;
   const int _material;
 public:
-  SuperSum3D(SuperF3D<T>& f, SuperGeometry3D<T>& superGeometry, const int material);
-  bool operator() (T output[], const int input[]);
+  SuperSum3D(SuperF3D<T,W>& f, SuperGeometry3D<T>& superGeometry, const int material);
+  bool operator() (W output[], const int input[]);
 };
 
 /// sums over all cells of a SmoothIndicatorSphere
-template <typename T, template <typename U> class DESCRIPTOR>
-class SuperSumIndicator3D : public SuperF3D<T> {
+template <typename T, typename W = T>
+class SuperSumIndicator3D final : public SuperF3D<T,W> {
 private:
-  SuperF3D<T>& _f;
+  SuperF3D<T,W>& _f;
   SuperGeometry3D<T>& _superGeometry;
-  SmoothIndicatorSphere3D<T,T>& _indicator;
+  ParticleIndicatorF3D<T,T>& _indicator;
 public:
-  SuperSumIndicator3D(SuperF3D<T>& f, SuperGeometry3D<T>& superGeometry, SmoothIndicatorSphere3D<T,T>& indicator);
+  SuperSumIndicator3D(SuperF3D<T,W>& f, SuperGeometry3D<T>& superGeometry, ParticleIndicatorF3D<T,T>& indicator);
   bool operator() (T output[], const int input[]);
 };
 
 
 /// average over all cells of a certain material number
-template <typename T, template <typename U> class DESCRIPTOR>
-class SuperAverage3D : public SuperF3D<T> {
+template <typename T, typename W = T>
+class SuperAverage3D final : public SuperF3D<T,W> {
 private:
-  SuperF3D<T>& _f;
+  SuperF3D<T,W>& _f;
   SuperGeometry3D<T>& _superGeometry;
   const int _material;
 public:
-  SuperAverage3D(SuperF3D<T>& f, SuperGeometry3D<T>& superGeometry, const int material);
-  bool operator() (T output[], const int input[]);
+  SuperAverage3D(SuperF3D<T,W>& f, SuperGeometry3D<T>& superGeometry, const int material);
+  bool operator() (W output[], const int input[]);
 };
 
-template <typename T, template <typename U> class DESCRIPTOR>
-class SuperIntegral3D : public SuperF3D<T> {
+template <typename T, typename W = T>
+class SuperIntegral3D final : public SuperF3D<T,W> {
 private:
-  SuperF3D<T>& _f;
+  SuperF3D<T,W>& _f;
   SuperGeometry3D<T>& _superGeometry;
   const int _material;
 public:
-  SuperIntegral3D(SuperF3D<T>& f, SuperGeometry3D<T>& superGeometry, const int material);
-  bool operator() (T output[], const int input[]);
+  SuperIntegral3D(SuperF3D<T,W>& f, SuperGeometry3D<T>& superGeometry, const int material);
+  bool operator() (W output[], const int input[]);
 };
 
-
-/// functor that returns the L1 norm over omega (with given material) of the the euklid norm of the input functor
-template <typename T, template <typename U> class DESCRIPTOR>
-class SuperL1Norm3D : public SuperF3D<T> {
+/// functor that returns the Lp norm over omega of the the euklid norm of the input functor
+/**
+ * p == 0: inf norm
+ * p >= 1: p norm
+ */
+template <typename T, typename W = T>
+class SuperLpNorm3D : public SuperF3D<T,W> {
 private:
-  SuperF3D<T>& _f;
+  SuperF3D<T,W>& _f;
   SuperGeometry3D<T>& _superGeometry;
-  const int _material;
-public:
-  SuperL1Norm3D(SuperF3D<T>& f, SuperGeometry3D<T>& superGeometry, const int material);
-  bool operator() (T output[], const int input[]);
-};
-
-
-/// functor that returns the L2 norm over omega (with given material) of the the euklid norm of the input functor
-template <typename T, template <typename U> class DESCRIPTOR>
-class SuperL2Norm3D : public SuperF3D<T> {
-private:
-  SuperF3D<T>& _f;
-  SuperGeometry3D<T>& _superGeometry;
-  const int _material;
-public:
-  SuperL2Norm3D(SuperF3D<T>& f, SuperGeometry3D<T>& superGeometry, const int material);
-  bool operator() (T output[], const int input[]);
-};
-
-///// functor that returns the Lp norm over omega (with given material) of the the euklid norm of the input functor
-//template <typename T, template <typename U> class DESCRIPTOR>
-//class SuperLpNorm3D : public SuperF3D<T> {
-//private:
-//  SuperF3D<T>& _f;
-//  SuperGeometry3D<T>& _superGeometry;
-//  const int _material;
-//  int _p;
-//public:
-//  SuperLpNorm3D(SuperF3D<T>& f, SuperGeometry3D<T>& superGeometry, const int material, int p);
-//  bool operator() (T output[], const int input[]);
-//};
-
-/// functor that returns the Lp norm over omega (with given material) of the the euklid norm of the input functor
-template <typename T, template <typename U> class DESCRIPTOR>
-class SuperLpNorm3D : public SuperF3D<T> {
-private:
-  SuperF3D<T>& _f;
-  SuperGeometry3D<T>& _superGeometry;
-  DiscreteIndicatorF3D& _indicatorF;
+  SuperIndicatorF3D<T>& _indicatorF;
   int _p;
 public:
-  SuperLpNorm3D(SuperF3D<T>& f, SuperGeometry3D<T>& superGeometry, DiscreteIndicatorF3D& indicatorF, int p);
-  SuperLpNorm3D(SuperF3D<T>& f, SuperGeometry3D<T>& superGeometry, std::vector<int> materials, int p);
-  SuperLpNorm3D(SuperF3D<T>& f, SuperGeometry3D<T>& superGeometry, const int material, int p);
-  SuperLpNorm3D(SuperF3D<T>& f, SuperGeometry3D<T>& superGeometry, int p);
-  bool operator() (T output[], const int input[]);
+  SuperLpNorm3D(SuperF3D<T,W>& f, SuperGeometry3D<T>& superGeometry, SuperIndicatorF3D<T>& indicatorF, int p);
+  SuperLpNorm3D(SuperF3D<T,W>& f, SuperGeometry3D<T>& superGeometry, std::vector<int> materials, int p);
+  SuperLpNorm3D(SuperF3D<T,W>& f, SuperGeometry3D<T>& superGeometry, const int material, int p);
+  bool operator() (W output[], const int input[]);
 };
 
-/// functor that returns the Linf norm over omega (with given material) of the the euklid norm of the input functor
-template <typename T, template <typename U> class DESCRIPTOR>
-class SuperLinfNorm3D : public SuperF3D<T> {
-private:
-  SuperF3D<T>& _f;
-  SuperGeometry3D<T>& _superGeometry;
-  const int _material;
+
+/// functor that returns the L1 norm over omega of the the euklid norm of the input functor
+template <typename T, typename W = T>
+class SuperL1Norm3D final : public SuperLpNorm3D<T,W> {
 public:
-  SuperLinfNorm3D(SuperF3D<T>& f, SuperGeometry3D<T>& superGeometry,
-                  const int material);
-  bool operator() (T output[], const int input[]);
+  SuperL1Norm3D(SuperF3D<T,W>& f, SuperGeometry3D<T>& superGeometry, SuperIndicatorF3D<T>& indicatorF);
+  SuperL1Norm3D(SuperF3D<T,W>& f, SuperGeometry3D<T>& superGeometry, std::vector<int> materials);
+  SuperL1Norm3D(SuperF3D<T,W>& f, SuperGeometry3D<T>& superGeometry, const int material);
 };
+
+
+/// functor that returns the L2 norm over omega of the the euklid norm of the input functor
+template <typename T, typename W = T>
+class SuperL2Norm3D final : public SuperLpNorm3D<T,W> {
+public:
+  SuperL2Norm3D(SuperF3D<T,W>& f, SuperGeometry3D<T>& superGeometry, SuperIndicatorF3D<T>& indicatorF);
+  SuperL2Norm3D(SuperF3D<T,W>& f, SuperGeometry3D<T>& superGeometry, std::vector<int> materials);
+  SuperL2Norm3D(SuperF3D<T,W>& f, SuperGeometry3D<T>& superGeometry, const int material);
+};
+
+
+/// functor that returns the Linf norm over omega of the the euklid norm of the input functor
+template <typename T, typename W = T>
+class SuperLinfNorm3D final : public SuperLpNorm3D<T,W> {
+public:
+  SuperLinfNorm3D(SuperF3D<T,W>& f, SuperGeometry3D<T>& superGeometry, SuperIndicatorF3D<T>& indicatorF);
+  SuperLinfNorm3D(SuperF3D<T,W>& f, SuperGeometry3D<T>& superGeometry, std::vector<int> materials);
+  SuperLinfNorm3D(SuperF3D<T,W>& f, SuperGeometry3D<T>& superGeometry, const int material);
+};
+
+///// functor that returns the Linf norm over omega (with given material) of the the euklid norm of the input functor
+///// \todo implement LpNorm with p=0 as infNorm
+//template <typename T, typename W = T>
+//class SuperLinfNorm3D final : public SuperF3D<T,W> {
+//private:
+//  SuperF3D<T,W>& _f;
+//  SuperGeometry3D<T>& _superGeometry;
+//  const int _material;
+//public:
+//  SuperLinfNorm3D(SuperF3D<T,W>& f, SuperGeometry3D<T>& superGeometry, const int material);
+//  bool operator() (W output[], const int input[]);
+//};
 
 
 
 /// functor counts to get the discrete surface for a material no. in direction (1,0,0), (0,1,0), (0,0,1), (-1,0,0), (0,-1,0), (0,0,-1) and total surface, then it converts it into phys units
 template <typename T>
-class SuperGeometryFaces3D : public GenericF<T,int> {
+class SuperGeometryFaces3D final : public GenericF<T,int> {
 private:
   SuperGeometry3D<T>& _superGeometry;
   const int _material;
@@ -206,7 +203,8 @@ public:
   SuperGeometryFaces3D(SuperGeometry3D<T>& superGeometry, const int material,
                        const LBconverter<T>& converter);
   bool operator() (T output[], const int input[]);
-  std::vector<T> operator() (std::vector<int> input) {
+  std::vector<T> operator() (std::vector<int> input)
+  {
     std::vector<T> output(this->getTargetDim(), T());
     operator()(&output[0],&input[0]);
     return output;
@@ -216,13 +214,13 @@ public:
 
 /// functor to get pointwise phys force acting on a boundary with a given material on local lattice
 template <typename T, template <typename U> class DESCRIPTOR>
-class SuperLatticePhysDrag3D : public SuperLatticePhysF3D<T,DESCRIPTOR> {
+class SuperLatticePhysDrag3D final : public SuperLatticePhysF3D<T,DESCRIPTOR> {
 private:
   SuperGeometry3D<T>& _superGeometry;
   const int _material;
   SuperGeometryFaces3D<T> _faces;
   SuperLatticePhysBoundaryForce3D<T,DESCRIPTOR> _pBoundForce;
-  SuperSum3D<T,DESCRIPTOR> _sumF;
+  SuperSum3D<T,T> _sumF;
   T _factor;
 public:
   SuperLatticePhysDrag3D(SuperLattice3D<T,DESCRIPTOR>& sLattice,
@@ -233,14 +231,14 @@ public:
 
 /// functor to get pointwise phys force acting on a boundary with a given indicator on local lattice
 template <typename T, template <typename U> class DESCRIPTOR>
-class SuperLatticePhysDragIndicator3D : public SuperLatticePhysF3D<T,DESCRIPTOR> {
+class SuperLatticePhysDragIndicator3D final : public SuperLatticePhysF3D<T,DESCRIPTOR> {
 private:
   SuperGeometry3D<T>& _superGeometry;
-  SmoothIndicatorSphere3D<T,T>& _indicator;
+  ParticleIndicatorSphere3D<T,T>& _indicator;
 public:
   SuperLatticePhysDragIndicator3D(SuperLattice3D<T,DESCRIPTOR>& sLattice,
                                   SuperGeometry3D<T>& superGeometry,
-                                  SmoothIndicatorSphere3D<T,T>& indicator,
+                                  ParticleIndicatorSphere3D<T,T>& indicator,
                                   const LBconverter<T>& converter);
   bool operator() (T output[], const int input[]);
 };
@@ -251,7 +249,7 @@ public:
  *  see: Caiazzo, Junk: Boundary Forces in lattice Boltzmann: Analysis of MEA
  */
 template <typename T, template <typename U> class DESCRIPTOR>
-class SuperLatticePhysCorrDrag3D : public SuperLatticePhysF3D<T,DESCRIPTOR> {
+class SuperLatticePhysCorrDrag3D final : public SuperLatticePhysF3D<T,DESCRIPTOR> {
 private:
   SuperGeometry3D<T>& _superGeometry;
   const int _material;
@@ -268,7 +266,7 @@ public:
  *  is represented by a SuperLatticeF functor and the surface is a plane (or area of a circle)
  */
 template<typename T, template<typename U> class DESCRIPTOR>
-class SuperLatticeFlux3D: public SuperLatticeF3D<T, DESCRIPTOR> {
+class SuperLatticeFlux3D final : public SuperLatticeF3D<T, DESCRIPTOR> {
 private:
   SuperGeometry3D<T>& _sg;
   /// define the plane by a starting point _origin and either a _normal, or two vectors _u and _v
@@ -348,7 +346,7 @@ public:
 
 
 template<typename T, template<typename U> class DESCRIPTOR>
-class SuperLatticePhysPressureFlux3D : public SuperLatticeF3D<T, DESCRIPTOR> {
+class SuperLatticePhysPressureFlux3D final : public SuperLatticeF3D<T, DESCRIPTOR> {
 private:
   SuperLatticePhysPressure3D<T, DESCRIPTOR> _p;
   SuperLatticeFlux3D<T, DESCRIPTOR> _fluxF;
@@ -415,7 +413,7 @@ public:
 };
 
 template<typename T, template<typename U> class DESCRIPTOR>
-class SuperLatticePhysVelocityFlux3D : public SuperLatticeF3D<T, DESCRIPTOR> {
+class SuperLatticePhysVelocityFlux3D final : public SuperLatticeF3D<T, DESCRIPTOR> {
 private:
   SuperLatticePhysVelocity3D<T, DESCRIPTOR> _vel;
   SuperLatticeFlux3D<T, DESCRIPTOR> _fluxF;
@@ -423,33 +421,37 @@ private:
 
 public:
   /// define plane by
-  /// two vectors
+  /// two vectors u, v
   /// a radius (default=0 -> radius will be initialized as diameter of the geometry)
   /// and grid length h (default=latticeL)
+  /// vector A is origin
   SuperLatticePhysVelocityFlux3D(SuperLattice3D<T, DESCRIPTOR>& sLattice,
                                  LBconverter<T>& converter, SuperGeometry3D<T>& sg,
                                  std::vector<T>& u, std::vector<T>& v, std::vector<T> A,
                                  T radius = T(), T h = T());
   /// define plane by
-  /// two vectors and material list
+  /// two vectors u, v and material list
   /// a radius (default=0 -> radius will be initialized as diameter of the geometry)
   /// and grid length h (default=latticeL)
+  /// vector A is origin
   SuperLatticePhysVelocityFlux3D(SuperLattice3D<T, DESCRIPTOR>& sLattice,
                                  LBconverter<T>& converter, SuperGeometry3D<T>& sg,
                                  std::vector<T>& u, std::vector<T>& v, std::vector<T> A,
                                  std::list<int> materials, T radius = T(), T h = T());
   /// define plane by
-  /// normal
+  /// normal vector n
   /// a radius (default=0 -> radius will be initialized as diameter of the geometry)
   /// and grid length h (default=latticeL)
+  /// vector A is origin
   SuperLatticePhysVelocityFlux3D(SuperLattice3D<T, DESCRIPTOR>& sLattice,
                                  LBconverter<T>& converter, SuperGeometry3D<T>& sg,
                                  std::vector<T>& n, std::vector<T> A, T radius = T(),
                                  T h = T());
   /// define plane by
-  /// normal and material list
+  /// normal vector n and material list
   /// a radius (default=0 -> radius will be initialized as diameter of the geometry)
   /// and grid length h (default=latticeL)
+  /// vector A is origin
   SuperLatticePhysVelocityFlux3D(SuperLattice3D<T, DESCRIPTOR>& sLattice,
                                  LBconverter<T>& converter, SuperGeometry3D<T>& sg,
                                  std::vector<T>& n, std::vector<T> A, std::list<int> materials,

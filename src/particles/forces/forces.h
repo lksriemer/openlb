@@ -29,3 +29,6 @@
 #include "force3D.h"
 #include "stokesDragForce3D.h"
 #include "weightForce3D.h"
+#include "buoyancyForce3D.h"
+#include "hertzMindlinDeresiewicz3D.h"
+

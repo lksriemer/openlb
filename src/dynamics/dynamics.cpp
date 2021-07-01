@@ -42,12 +42,12 @@ void BGKdynamics<double, descriptors::D3Q19Descriptor >::collide (
   typedef descriptors::D3Q19DescriptorBase<T> L;
 
   T rho, u[3];
-  this->momenta.computeRhoU(cell, rho, u);
+  this->_momenta.computeRhoU(cell, rho, u);
 
-  T one_m_omega = (T)1 - omega;
-  T t0_omega = L::t[0]*omega; // weight for i=0
-  T t1_omega = L::t[1]*omega; // weight for i=1,2,3,10,11,12
-  T t4_omega = L::t[4]*omega; // weight for i=4,5,6,7,8,9,13,14,15,16,17,18
+  T one_m_omega = (T)1 - _omega;
+  T t0_omega = L::t[0]*_omega; // weight for i=0
+  T t1_omega = L::t[1]*_omega; // weight for i=1,2,3,10,11,12
+  T t4_omega = L::t[4]*_omega; // weight for i=4,5,6,7,8,9,13,14,15,16,17,18
 
   T uSqr     = u[0]*u[0] + u[1]*u[1] + u[2]*u[2]; // compute of usqr
 
@@ -194,13 +194,15 @@ template class ConstRhoBGKdynamics<double, descriptors::D2Q9Descriptor>;
 template class IncBGKdynamics<double, descriptors::D2Q9Descriptor>;
 template class RLBdynamics<double, descriptors::D2Q9Descriptor>;
 template class CombinedRLBdynamics<double, descriptors::D2Q9Descriptor,
-         RLBdynamics<double, descriptors::D2Q9Descriptor> >;
+                                   RLBdynamics<double, descriptors::D2Q9Descriptor> >;
 template class CombinedRLBdynamics<double, descriptors::D2Q9Descriptor,
-         BGKdynamics<double, descriptors::D2Q9Descriptor> >;
+                                   BGKdynamics<double, descriptors::D2Q9Descriptor> >;
 template class CombinedRLBdynamics<double, descriptors::D2Q9Descriptor,
-         ConstRhoBGKdynamics<double, descriptors::D2Q9Descriptor> >;
+                                   ConstRhoBGKdynamics<double, descriptors::D2Q9Descriptor> >;
 template struct BulkMomenta<double, descriptors::D2Q9Descriptor>;
 template class BounceBack<double, descriptors::D2Q9Descriptor>;
+template class BounceBackVelocity<double, descriptors::D2Q9Descriptor>;
+template class BounceBackAnti<double, descriptors::D2Q9Descriptor>;
 template class NoDynamics<double, descriptors::D2Q9Descriptor>;
 template class OffDynamics<double, descriptors::D2Q9Descriptor>;
 template class ZeroDistributionDynamics<double, descriptors::D2Q9Descriptor>;
@@ -213,13 +215,15 @@ template class ConstRhoBGKdynamics<double, descriptors::D3Q19Descriptor>;
 template class IncBGKdynamics<double, descriptors::D3Q19Descriptor>;
 template class RLBdynamics<double, descriptors::D3Q19Descriptor>;
 template class CombinedRLBdynamics<double, descriptors::D3Q19Descriptor,
-         RLBdynamics<double, descriptors::D3Q19Descriptor> >;
+                                   RLBdynamics<double, descriptors::D3Q19Descriptor> >;
 template class CombinedRLBdynamics<double, descriptors::D3Q19Descriptor,
-         BGKdynamics<double, descriptors::D3Q19Descriptor> >;
+                                   BGKdynamics<double, descriptors::D3Q19Descriptor> >;
 template class CombinedRLBdynamics<double, descriptors::D3Q19Descriptor,
-         ConstRhoBGKdynamics<double, descriptors::D3Q19Descriptor> >;
+                                   ConstRhoBGKdynamics<double, descriptors::D3Q19Descriptor> >;
 template struct BulkMomenta<double, descriptors::D3Q19Descriptor>;
 template class BounceBack<double, descriptors::D3Q19Descriptor>;
+template class BounceBackVelocity<double, descriptors::D3Q19Descriptor>;
+template class BounceBackAnti<double, descriptors::D3Q19Descriptor>;
 template class NoDynamics<double, descriptors::D3Q19Descriptor>;
 template class OffDynamics<double, descriptors::D3Q19Descriptor>;
 template class ZeroDistributionDynamics<double, descriptors::D3Q19Descriptor>;
@@ -231,6 +235,10 @@ template BulkMomenta<double, descriptors::D2Q9Descriptor>& getBulkMomenta();
 
 template BounceBack<double, descriptors::D2Q9Descriptor>& getBounceBack();
 
+template BounceBackAnti<double, descriptors::D2Q9Descriptor>& getBounceBackAnti(const double rho);
+
+template BounceBackVelocity<double, descriptors::D2Q9Descriptor>& getBounceBackVelocity(const double rho, const double u[2]);
+
 template NoDynamics<double, descriptors::D2Q9Descriptor>& getNoDynamics(double rho);
 
 template ZeroDistributionDynamics<double, descriptors::D2Q9Descriptor>& getZeroDistributionDynamics();
@@ -238,6 +246,10 @@ template ZeroDistributionDynamics<double, descriptors::D2Q9Descriptor>& getZeroD
 template BulkMomenta<double, descriptors::D3Q19Descriptor>& getBulkMomenta();
 
 template BounceBack<double, descriptors::D3Q19Descriptor>& getBounceBack();
+
+template BounceBackVelocity<double, descriptors::D3Q19Descriptor>& getBounceBackVelocity(const double rho, const double u[3]);
+
+template BounceBackAnti<double, descriptors::D3Q19Descriptor>& getBounceBackAnti(const double rho);
 
 template NoDynamics<double, descriptors::D3Q19Descriptor>& getNoDynamics(double rho);
 

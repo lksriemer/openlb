@@ -42,7 +42,8 @@ template<typename T, template<typename U> class Lattice>
 struct mrtHelpers {
   /// Computation of equilibrium distribution (in momenta space)
   static T equilibrium( int iPop, T rho, const T u[Lattice<T>::d],
-                        const T uSqr ) {
+                        const T uSqr )
+  {
     T equ = T();
     for (int jPop = 0; jPop < Lattice<T>::q; ++jPop) {
       equ += Lattice<T>::M[iPop][jPop] *
@@ -56,7 +57,8 @@ struct mrtHelpers {
   /// Computation of all equilibrium distribution (in momenta space)
   static void computeEquilibrium( T momentaEq[Lattice<T>::q],
                                   T rho, const T u[Lattice<T>::d],
-                                  const T uSqr ) {
+                                  const T uSqr )
+  {
     for (int iPop = 0; iPop < Lattice<T>::q; ++iPop) {
       momentaEq[iPop] = T();
       for (int jPop = 0; jPop < Lattice<T>::q; ++jPop) {
@@ -67,7 +69,8 @@ struct mrtHelpers {
     }
   }
 
-  static void computeMomenta(T momenta[Lattice<T>::q], Cell<T,Lattice> &cell) {
+  static void computeMomenta(T momenta[Lattice<T>::q], Cell<T,Lattice> &cell)
+  {
     for (int iPop = 0; iPop < Lattice<T>::q; ++iPop) {
       momenta[iPop] = T();
       for (int jPop = 0; jPop < Lattice<T>::q; ++jPop) {
@@ -80,7 +83,8 @@ struct mrtHelpers {
   /// MRT collision step
   static T mrtCollision( Cell<T,Lattice>& cell,
                          T rho, const T u[Lattice<T>::d],
-                         T invM_S[Lattice<T>::q][Lattice<T>::q]) {
+                         T invM_S[Lattice<T>::q][Lattice<T>::q])
+  {
     T uSqr = util::normSqr<T,Lattice<T>::d>(u);
     T momenta[Lattice<T>::q];
     T momentaEq[Lattice<T>::q];
@@ -104,7 +108,8 @@ struct mrtHelpers {
   static T mrtSGSCollision( Cell<T,Lattice>& cell,
                             T rho, const T u[Lattice<T>::d],
                             T omega,
-                            T invM_S_SGS[Lattice<T>::q][Lattice<T>::q]) {
+                            T invM_S_SGS[Lattice<T>::q][Lattice<T>::q])
+  {
     T uSqr = util::normSqr<T,Lattice<T>::d>(u);
     T momenta[Lattice<T>::q];
     T momentaEq[Lattice<T>::q];
@@ -148,7 +153,8 @@ struct mrtHelpers {
   static void addExternalForce( Cell<T,Lattice>& cell,
                                 T rho,
                                 const T u[Lattice<T>::d],
-                                T invM_S[Lattice<T>::q][Lattice<T>::q]) {
+                                T invM_S[Lattice<T>::q][Lattice<T>::q])
+  {
     static const int forceBeginsAt = Lattice<T>::ExternalField::forceBeginsAt;
     T* force = cell.getExternal(forceBeginsAt);
     T f_u = T();

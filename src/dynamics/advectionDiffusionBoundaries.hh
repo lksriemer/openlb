@@ -42,35 +42,37 @@ using namespace descriptors;
 // For flat Walls
 
 template<typename T, template<typename U> class Lattice, typename Dynamics, int direction, int orientation>
-AdvectionDiffusionBoundariesDynamics<T,Lattice,Dynamics,direction,orientation>::AdvectionDiffusionBoundariesDynamics(
-  T omega_, Momenta<T,Lattice>& momenta_)
-  : BasicDynamics<T,Lattice>(momenta_),
-    boundaryDynamics(omega_, momenta_)
+AdvectionDiffusionBoundariesDynamics<T,Lattice,Dynamics,direction,orientation>::
+AdvectionDiffusionBoundariesDynamics( T omega_, Momenta<T,Lattice>& momenta_)
+  : BasicDynamics<T,Lattice>(momenta_), boundaryDynamics(omega_, momenta_)
 {
 }
 
 template<typename T, template<typename U> class Lattice, typename Dynamics, int direction, int orientation>
-AdvectionDiffusionBoundariesDynamics<T,Lattice,Dynamics,direction,orientation>* AdvectionDiffusionBoundariesDynamics<T,Lattice, Dynamics, direction, orientation>::clone() const
+AdvectionDiffusionBoundariesDynamics<T,Lattice,Dynamics,direction,orientation>* AdvectionDiffusionBoundariesDynamics<T,Lattice, Dynamics, direction, orientation>::
+clone() const
 {
   return new AdvectionDiffusionBoundariesDynamics<T,Lattice,Dynamics,direction,orientation>(*this);
 }
 
 template<typename T, template<typename U> class Lattice, typename Dynamics, int direction, int orientation>
-T AdvectionDiffusionBoundariesDynamics<T,Lattice,Dynamics,direction,orientation>::computeEquilibrium(int iPop, T rho, const T u[Lattice<T>::d], T uSqr) const
+T AdvectionDiffusionBoundariesDynamics<T,Lattice,Dynamics,direction,orientation>::
+computeEquilibrium(int iPop, T rho, const T u[Lattice<T>::d], T uSqr) const
 {
   return advectionDiffusionLbHelpers<T,Lattice>::equilibrium(iPop, rho, u);
 }
 
 
 template<typename T, template<typename U> class Lattice, typename Dynamics, int direction, int orientation>
-void AdvectionDiffusionBoundariesDynamics<T,Lattice,Dynamics,direction,orientation>::collide(Cell<T,Lattice>& cell,LatticeStatistics<T>& statistics)
+void AdvectionDiffusionBoundariesDynamics<T,Lattice,Dynamics,direction,orientation>::
+collide(Cell<T,Lattice>& cell,LatticeStatistics<T>& statistics)
 {
   typedef Lattice<T> L;
-  T temperature = this->momenta.computeRho(cell);
+  T temperature = this->_momenta.computeRho(cell);
 
   int missingNormal = 0;
   std::vector<int> missingDiagonal = util::subIndexOutgoing<L,direction,orientation>();
-  std::vector<int> knownIndexes   = util::remainingIndexes<L>(missingDiagonal);
+  std::vector<int> knownIndexes = util::remainingIndexes<L>(missingDiagonal);
   // here I know all missing and non missing f_i
   for (unsigned iPop = 0; iPop < missingDiagonal.size(); ++iPop) {
     int numOfNonNullComp = 0;
@@ -96,22 +98,22 @@ void AdvectionDiffusionBoundariesDynamics<T,Lattice,Dynamics,direction,orientati
 }
 
 template<typename T, template<typename U> class Lattice, typename Dynamics, int direction, int orientation>
-void AdvectionDiffusionBoundariesDynamics<T,Lattice,Dynamics,direction,orientation>::staticCollide (
-  Cell<T,Lattice>& cell,
-  const T u[Lattice<T>::d],
-  LatticeStatistics<T>& statistics )
+void AdvectionDiffusionBoundariesDynamics<T,Lattice,Dynamics,direction,orientation>::
+staticCollide( Cell<T,Lattice>& cell, const T u[Lattice<T>::d], LatticeStatistics<T>& statistics)
 {
   assert(false);
 }
 
 template<typename T, template<typename U> class Lattice, typename Dynamics, int direction, int orientation>
-T AdvectionDiffusionBoundariesDynamics<T,Lattice,Dynamics,direction,orientation>::getOmega() const
+T AdvectionDiffusionBoundariesDynamics<T,Lattice,Dynamics,direction,orientation>::
+getOmega() const
 {
   return boundaryDynamics.getOmega();
 }
 
 template<typename T, template<typename U> class Lattice, typename Dynamics, int direction, int orientation>
-void AdvectionDiffusionBoundariesDynamics<T,Lattice,Dynamics,direction,orientation>::setOmega(T omega_)
+void AdvectionDiffusionBoundariesDynamics<T,Lattice,Dynamics,direction,orientation>::
+setOmega(T omega_)
 {
   boundaryDynamics.setOmega(omega_);
 }
@@ -146,7 +148,7 @@ void AdvectionDiffusionCornerDynamics2D<T,Lattice,Dynamics,xNormal,yNormal>::col
   typedef Lattice<T> L;
   typedef advectionDiffusionLbHelpers<T,Lattice> lbH;
 
-  T temperature = this->momenta.computeRho(cell);
+  T temperature = this->_momenta.computeRho(cell);
   T* u = cell.getExternal(Lattice<T>::ExternalField::velocityBeginsAt);
   // I need to get Missing information on the corners !!!!
   std::vector<int> unknownIndexes = utilAdvDiff::subIndexOutgoing2DonCorners<L,xNormal,yNormal>();
@@ -221,7 +223,7 @@ void AdvectionDiffusionCornerDynamics3D<T,Lattice,Dynamics,xNormal,yNormal,zNorm
   typedef Lattice<T> L;
   typedef advectionDiffusionLbHelpers<T,Lattice> lbH;
 
-  T temperature = this->momenta.computeRho(cell);
+  T temperature = this->_momenta.computeRho(cell);
   T* u = cell.getExternal(Lattice<T>::ExternalField::velocityBeginsAt);
   // I need to get Missing information on the corners !!!!
   std::vector<int> unknownIndexes = utilAdvDiff::subIndexOutgoing3DonCorners<L,xNormal,yNormal,zNormal>();
@@ -294,7 +296,7 @@ void AdvectionDiffusionEdgesDynamics<T,Lattice,Dynamics,plane,normal1, normal2>:
   typedef Lattice<T> L;
   typedef advectionDiffusionLbHelpers<T,Lattice> lbH;
 
-  T temperature = this->momenta.computeRho(cell);
+  T temperature = this->_momenta.computeRho(cell);
   T* u = cell.getExternal(Lattice<T>::ExternalField::velocityBeginsAt);
   // I need to get Missing information on the corners !!!!
   std::vector<int> unknownIndexes = utilAdvDiff::subIndexOutgoing3DonEdges<L,plane,normal1, normal2>();

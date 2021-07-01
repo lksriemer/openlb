@@ -44,8 +44,8 @@ template<typename T> class BlockGeometryStructure3D;
 template<typename T, template<typename U> class Lattice> struct Dynamics;
 
 
-/** A regular lattice for highly efficient 3D LB dynamics.
- * A block lattice contains a regular array of Cell objects and
+/** BlockLattice3D is a regular lattice for highly efficient 3D LB dynamics.
+ * A block lattice contains an array of Cell objects and
  * some useful methods to execute the LB dynamics on the lattice.
  *
  * This class is not intended to be derived from.
@@ -80,14 +80,16 @@ public:
   void swap(BlockLattice3D& rhs);
 
   /// Read/write access to lattice cells
-  virtual Cell<T,Lattice>& get(int iX, int iY, int iZ) {
+  virtual Cell<T,Lattice>& get(int iX, int iY, int iZ)
+  {
     OLB_PRECONDITION(iX<this->_nx);
     OLB_PRECONDITION(iY<this->_ny);
     OLB_PRECONDITION(iZ<this->_nz);
     return grid[iX][iY][iZ];
   }
   /// Read only access to lattice cells
-  virtual Cell<T,Lattice> const& get(int iX, int iY, int iZ) const {
+  virtual Cell<T,Lattice> const& get(int iX, int iY, int iZ) const
+  {
     OLB_PRECONDITION(iX<this->_nx);
     OLB_PRECONDITION(iY<this->_ny);
     OLB_PRECONDITION(iZ<this->_nz);

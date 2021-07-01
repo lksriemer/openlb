@@ -72,12 +72,12 @@ struct ForcedDynOmega2dDescriptorBase {
 
 template <typename T>
 struct DynOmegaD2Q9Descriptor
-    : public D2Q9DescriptorBase<T>, public DynOmegaDescriptorBase {
+  : public D2Q9DescriptorBase<T>, public DynOmegaDescriptorBase {
 };
 
 template <typename T>
 struct ForcedDynOmegaD2Q9Descriptor
-    : public D2Q9DescriptorBase<T>, public ForcedDynOmega2dDescriptorBase {
+  : public D2Q9DescriptorBase<T>, public ForcedDynOmega2dDescriptorBase {
 };
 
 
@@ -98,12 +98,12 @@ struct ForcedDynOmega3dDescriptorBase {
 
 template <typename T>
 struct DynOmegaD3Q19Descriptor
-    : public D3Q19DescriptorBase<T>, public DynOmegaDescriptorBase {
+  : public D3Q19DescriptorBase<T>, public DynOmegaDescriptorBase {
 };
 
 template <typename T>
 struct ForcedDynOmegaD3Q19Descriptor
-    : public D3Q19DescriptorBase<T>, public ForcedDynOmega3dDescriptorBase {
+  : public D3Q19DescriptorBase<T>, public ForcedDynOmega3dDescriptorBase {
 };
 
 

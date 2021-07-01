@@ -104,34 +104,40 @@ public:
   SuperLattice3D(SuperGeometry3D<T>& superGeometry);
   ~SuperLattice3D();
   /// Read and write access to a block lattice
-  BlockLattice3D<T, Lattice>& getExtendedBlockLattice(int locIC) {
+  BlockLattice3D<T, Lattice>& getExtendedBlockLattice(int locIC)
+  {
     return _extendedBlockLattices[locIC];
   }
   ;
   /// Read only access to a block lattice
-  BlockLattice3D<T, Lattice> const& getExtendedBlockLattice(int locIC) const {
+  BlockLattice3D<T, Lattice> const& getExtendedBlockLattice(int locIC) const
+  {
     return _extendedBlockLattices[locIC];
   }
   ;
   /// Read and write access to a lattice (block lattice view, one
   /// without overlap).
-  BlockLatticeView3D<T, Lattice>& getBlockLattice(int locIC) {
+  BlockLatticeView3D<T, Lattice>& getBlockLattice(int locIC)
+  {
     return _blockLattices[locIC];
   }
   ;
   /// Read only access to a lattice
-  BlockLatticeView3D<T, Lattice> const& getBlockLattice(int locIC) const {
+  BlockLatticeView3D<T, Lattice> const& getBlockLattice(int locIC) const
+  {
     return _blockLattices[locIC];
   }
   ;
 
   /// Read and write access to the boundary communicator
-  Communicator3D<T>& get_commBC() {
+  Communicator3D<T>& get_commBC()
+  {
     return _commBC;
   }
   ;
   /// Read only access to the boundary communicator
-  Communicator3D<T> const& get_commBC() const {
+  Communicator3D<T> const& get_commBC() const
+  {
     return _commBC;
   }
   ;
@@ -153,15 +159,18 @@ public:
   Cell<T,Lattice> get(std::vector<int> latticeR) const;
 
   /// Write access to the memory of the data of the super structure
-  virtual bool* operator() (int iCloc, int iX, int iY, int iZ, int iData) {
+  virtual bool* operator() (int iCloc, int iX, int iY, int iZ, int iData)
+  {
     return (bool*)&getExtendedBlockLattice(iCloc).get(iX+this->_overlap, iY+this->_overlap, iZ+this->_overlap)[iData];
   };
   /// Read only access to the dim of the data of the super structure
-  virtual int getDataSize() const {
+  virtual int getDataSize() const
+  {
     return Lattice<T>::q;
   };
   /// Read only access to the data type dim of the data of the super structure
-  virtual int getDataTypeSize() const {
+  virtual int getDataTypeSize() const
+  {
     return sizeof(T);
   };
 
@@ -187,7 +196,8 @@ public:
   /// Defines an external field on a domain with a particular material number
   void defineExternalField(SuperGeometry3D<T>& sGeometry, int material,
                            int fieldBeginsAt, int sizeOfField, SuperLatticeF3D<T,Lattice>& field);
-
+  void setExternalParticleField(SuperGeometry3D<T>& sGeometry, AnalyticalF3D<T,T>& velocity,
+                                ParticleIndicatorF3D<T,T>& sIndicator);
   /// Initializes by equilibrium on a domain with a particular material number
   void iniEquilibrium(SuperGeometry3D<T>& sGeometry, int material,
                       AnalyticalF3D<T,T>& rho , AnalyticalF3D<T,T>& u);
@@ -219,12 +229,14 @@ public:
   /// Subtract a constant offset from the density within a rect. domain
   void stripeOffDensityOffset(T offset);
   /// Switches Statistics on (default on)
-  void statisticsOn() {
+  void statisticsOn()
+  {
     _statistics_on = true;
   };
   /// Switches Statistics off (default on). That speeds up
   /// the execution time.
-  void statisticsOff() {
+  void statisticsOff()
+  {
     _statistics_on = false;
   };
 

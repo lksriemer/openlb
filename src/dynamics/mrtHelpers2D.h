@@ -40,7 +40,8 @@ struct mrtHelpers<T, descriptors::MRTD2Q9Descriptor> {
   /// Computation of all equilibrium distribution (in momenta space)
   static void computeEquilibrium( T momentaEq[9],
                                   T rho, const T u[2],
-                                  const T uSqr ) {
+                                  const T uSqr )
+  {
     //         momentaEq[0] = T();
     momentaEq[1] = -(T)2*rho + (T)3*uSqr;
     momentaEq[2] = rho - (T)3*uSqr;
@@ -53,7 +54,8 @@ struct mrtHelpers<T, descriptors::MRTD2Q9Descriptor> {
   }
 
   /// Computation of all momenta (specialized for d2q9)
-  static void computeMomenta(T momenta[9], Cell<T,MRTD2Q9Descriptor> &cell) {
+  static void computeMomenta(T momenta[9], Cell<T,MRTD2Q9Descriptor> &cell)
+  {
     //         momenta[0] = cell[0] + cell[1] + cell[2] + cell[3] +
     //                 cell[4] + cell[5] + cell[6] + cell[7] + cell[8] + (T)1;
 
@@ -83,7 +85,8 @@ struct mrtHelpers<T, descriptors::MRTD2Q9Descriptor> {
   /// MRT collision step
   static T mrtCollision( Cell<T,MRTD2Q9Descriptor>& cell,
                          T rho, const T u[2],
-                         T invM_S[9][9] ) {
+                         T invM_S[9][9] )
+  {
     T uSqr = util::normSqr<T,2>(u);
     T momenta[9];
     T momentaEq[9];
@@ -151,7 +154,8 @@ struct mrtHelpers<T, descriptors::MRTD2Q9Descriptor> {
   /// MRT collision step
   static T mrtSGSCollision( Cell<T,MRTD2Q9Descriptor>& cell,
                             T rho, const T u[2], T omega,
-                            T invM_S_SGS[9][9] ) {
+                            T invM_S_SGS[9][9] )
+  {
     T uSqr = util::normSqr<T,2>(u);
     T momenta[9];
     T momentaEq[9];

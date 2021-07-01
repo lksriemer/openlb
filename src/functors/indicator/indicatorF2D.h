@@ -1,6 +1,6 @@
 /*  This file is part of the OpenLB library
  *
- *  Copyright (C) 2016 Thomas Henn, Cyril Masquelier, Mathias J. Krause
+ *  Copyright (C) 2016 Thomas Henn, Cyril Masquelier, Jan Marquardt, Mathias J. Krause
  *  E-mail contact: info@openlb.net
  *  The most recent release of OpenLB can be downloaded at
  *  <http://www.openlb.net/>
@@ -28,6 +28,9 @@
 #include "indicatorBaseF2D.h"
 #include "io/xmlReader.h"
 
+#include "core/blockData2D.h"
+#include "core/units.h"
+#include "indicatorBaseF3D.h"
 
 /** \file
  * This file contains indicator functions. These return 1 if the given
@@ -49,6 +52,7 @@ namespace olb {
 
 
 /// indicator function for a 2D-cuboid, parallel to the planes x=0, y=0;
+/// theta rotates cuboid around its center, theta in radian measure
 template <typename S>
 class IndicatorCuboid2D : public IndicatorF2D<S> {
 private:
@@ -90,7 +94,11 @@ IndicatorCircle2D<S>* createIndicatorCircle2D(XMLreader const& params, bool verb
 
 ///////////////////////////SmoothIndicatorF/////////////////////////////////////
 
-/// implements a smooth cuboid in 2D with an _epsilon sector
+/** implements a smooth cuboid in 2D with an _epsilon sector.
+ * \param mass    TODO
+ * \param epsilon
+ * \param theta   TODO
+ */
 template <typename T, typename S>
 class SmoothIndicatorCuboid2D : public SmoothIndicatorF2D<T,S> {
 private:
@@ -99,6 +107,7 @@ private:
 public:
   SmoothIndicatorCuboid2D(Vector<S,2> center, S xLength, S yLength, S mass, S epsilon, S theta=0);
   bool operator()(T output[],const S x[]);
+  /// \return radius of a circle at center, that contains the object
   S getRadius();
   S getDiam();
   Vector<S,2>& getMin();
@@ -133,6 +142,66 @@ public:
   Vector<S,2>& getMin();
   Vector<S,2>& getMax();
 
+};
+
+
+///////////////////////////ParticleIndicatorF/////////////////////////////////////
+
+/** implements a smooth particle cuboid in 2D with an _epsilon sector.
+ * TODO construct by density
+ * TODO rotation seems weird
+ */
+template <typename T, typename S>
+class ParticleIndicatorCuboid2D : public ParticleIndicatorF2D<T,S> {
+private:
+  S _xLength;
+  S _yLength;
+public:
+  ParticleIndicatorCuboid2D(Vector<S,2> center, S xLength, S yLength, S mass, S epsilon, S theta=0);
+  bool operator()(T output[],const S x[]);
+};
+
+/** implements a smooth particle circle in 2D with an _epsilon sector.
+ */
+template <typename T, typename S>
+class ParticleIndicatorCircle2D : public ParticleIndicatorF2D<T,S> {
+public:
+  ParticleIndicatorCircle2D(Vector<S,2> center, S radius, S mass, S epsilon);
+  bool operator() (T output[], const S input[]);
+};
+
+/** implements a smooth particle triangle in 2D with an _epsilon sector, constructed from circumradius
+ * TODO correct mofi computation -> 2D mofi required
+ * TODO generic constructor with angles
+ */
+template <typename T, typename S>
+class ParticleIndicatorTriangle2D : public ParticleIndicatorF2D<T, S> {
+private:
+  /// Eckpunkte des Dreiecks
+  Vector<S, 2> _PointA, _PointB, _PointC;
+  /// Verbindungsvektoren _ab von _A nach _B, etc.
+  Vector<S, 2> _ab, _bc, _ca;
+  /// normal on _ab * _A  = _ab_d
+  S _ab_d, _bc_d, _ca_d;
+
+public:
+  ParticleIndicatorTriangle2D(Vector<S,2> center, S radius, S mass, S epsilon, S theta);
+  bool operator() (T output[], const S input[]);
+};
+
+template<typename T, typename S>
+class ParticleIndicatorCustom2D : public ParticleIndicatorF2D<T, S> {
+private:
+  // _center is the local center, _startPos the center at the start
+  Vector<T,2> _center;
+  // _latticeCenter gives the center in local lattice coordinates
+  Vector<int,2> _latticeCenter;
+  BlockData2D<T, T> _blockData;
+  LBconverter<T> const& _converter;
+
+public:
+  ParticleIndicatorCustom2D(LBconverter<T> const& converter, IndicatorF3D<T>& ind, Vector<T,2> center, T rhoP, T epsilon, T theta, T slice);
+  bool operator() (T output[], const S input[]);
 };
 
 }

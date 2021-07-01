@@ -15,8 +15,8 @@
 #  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 #  GNU General Public License for more details.
 #
-#  You should have received a copy of the GNU General Public 
-#  License along with this program; if not, write to the Free 
+#  You should have received a copy of the GNU General Public
+#  License along with this program; if not, write to the Free
 #  Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
 #  Boston, MA  02110-1301, USA.
 #
@@ -26,7 +26,7 @@
 ## DEFINITIONS TO BE CHANGED
 
 ROOT            := ../..
-SRC             := 
+SRC             :=
 OUTPUT          := rayleighTaylor3d
 
 ###########################################################################
@@ -47,7 +47,7 @@ all : depend compile updatelib link
 ## dependencies
 
 depend : $(DEPS)
-	
+
 $(PWD)/%.d : %.cpp
 	@echo Create dependencies for $<
 	@$(SHELL) -ec '$(CXX) -M $(CXXFLAGS) $(IDIR) $< \
@@ -56,7 +56,7 @@ $(PWD)/%.d : %.cpp
 
 ###########################################################################
 ## compile
-	
+
 compile : $(OBJECTS)
 
 $(PWD)/%.o: %.cpp
@@ -68,16 +68,16 @@ $(PWD)/%.o: %.cpp
 
 clean : cleanrub cleanobj cleandep
 
-cleanrub: 
+cleanrub:
 	@echo Clean rubbish files
 	@rm -f *~ core .tmpfile tmp/*.* $(OUTPUT)
-	@rm -f tmp/vtkData/*.* tmp/vtkData/data/*.* tmp/imageData/*.* 
+	@rm -f tmp/vtkData/*.* tmp/vtkData/data/*.* tmp/imageData/*.* tmp/gnuplotData/*.* tmp/gnuplotData/data/*.*
 
 cleanobj:
 	@echo Clean object files
 	@rm -f $(OBJECTS)
 
-cleandep: 
+cleandep:
 	@echo Clean dependencies files
 	@rm -f $(DEPS)
 
@@ -100,7 +100,7 @@ link: $(OUTPUT)
 
 $(OUTPUT): $(OBJECTS) $(ROOT)/$(LIBDIR)/lib$(LIB).a
 	@echo Link $@
-	$(CXX) $(foreach file, $(SRC), $(file).o) $@.o $(LDFLAGS) -L$(ROOT)/$(LIBDIR) -l$(LIB) -o $@
+	$(CXX) $(foreach file, $(SRC), $(file).o) $@.o $(LDFLAGS) -L$(ROOT)/$(LIBDIR) -l$(LIB) -lz -o $@
 
 ###########################################################################
 ## include dependencies

@@ -40,7 +40,7 @@ namespace olb {
 template< typename T> class LoadBalancer;
 template< typename T> class CuboidGeometry3D;
 template< typename T> class SuperStructure3D;
-template<typename T> class SuperF3D;
+template<typename T, typename W> class SuperF3D;
 template<typename T,typename BaseType> class BlockData3D;
 
 
@@ -64,11 +64,12 @@ public:
   /// Simple constructor with size
   SuperData3D(int size=1);
   /// This constructor should be commonly used
-  SuperData3D(CuboidGeometry3D<T>& cuboidGeometry, LoadBalancer<T>& loadBalancer, int overlap=2, int size=1);
+  SuperData3D(CuboidGeometry3D<T>& cuboidGeometry, LoadBalancer<T>& loadBalancer,
+              int overlap=2, int size=1);
   /// Copy Constructor
   SuperData3D(SuperData3D<T,BaseType>& rhs);
   /// Construct `SuperData3D` out of `SuperF3D`
-  SuperData3D(SuperF3D<T>& rhs);
+  SuperData3D(SuperF3D<T,BaseType>& rhs);
   /// Initialize `_extendedBlockData` from `CuboidGeometry3D` and `LoadBalancer` with `overlap`
   void allocateMemory();
   /// Assignment Operator (Swaps content of rhs with local content)

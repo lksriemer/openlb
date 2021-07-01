@@ -37,14 +37,14 @@ using namespace descriptors;
 
 template<typename T, template<typename U> class Lattice, typename Dynamics, int direction, int orientation>
 InamuroNewtonRaphsonDynamics<T,Lattice,Dynamics,direction,orientation>::InamuroNewtonRaphsonDynamics (
-  T omega_, Momenta<T,Lattice>& momenta_ )
-  : BasicDynamics<T,Lattice>(momenta_),
-    boundaryDynamics(omega_, momenta_),
+  T omega, Momenta<T,Lattice>& momenta )
+  : BasicDynamics<T,Lattice>(momenta),
+    _boundaryDynamics(omega, momenta),
     clout(std::cout,"InamuroNewtonRaphsonDynamics")
 {
-  xi[0] = (T)1;
+  _xi[0] = (T)1;
   for (int iDim = 1; iDim < Lattice<T>::d; ++iDim) {
-    xi[iDim] = T();
+    _xi[iDim] = T();
   }
 }
 
@@ -59,7 +59,7 @@ template<typename T, template<typename U> class Lattice, typename Dynamics, int 
 T InamuroNewtonRaphsonDynamics<T,Lattice, Dynamics, direction, orientation>::
 computeEquilibrium(int iPop, T rho, const T u[Lattice<T>::d], T uSqr) const
 {
-  return boundaryDynamics.computeEquilibrium(iPop, rho, u, uSqr);
+  return _boundaryDynamics.computeEquilibrium(iPop, rho, u, uSqr);
 }
 
 template<typename T, template<typename U> class Lattice, typename Dynamics, int direction, int orientation>
@@ -70,7 +70,7 @@ void InamuroNewtonRaphsonDynamics<T,Lattice,Dynamics,direction,orientation>::col
   typedef Lattice<T> L;
 
   T rho, u[L::d];
-  this->momenta.computeRhoU(cell,rho,u);
+  this->_momenta.computeRhoU(cell,rho,u);
 
   std::vector<int> missingIndexes = util::subIndexOutgoing<L,direction,orientation>();
   std::vector<int> knownIndexes;
@@ -90,7 +90,7 @@ void InamuroNewtonRaphsonDynamics<T,Lattice,Dynamics,direction,orientation>::col
 
   T approxMomentum[L::d];
 
-  computeApproxMomentum(approxMomentum,cell,rho,u,xi,knownIndexes,missingIndexes);
+  computeApproxMomentum(approxMomentum,cell,rho,u,_xi,knownIndexes,missingIndexes);
 
   T error = computeError(rho, u,approxMomentum);
   int counter = 0;
@@ -99,9 +99,9 @@ void InamuroNewtonRaphsonDynamics<T,Lattice,Dynamics,direction,orientation>::col
     ++counter;
 
     T gradError[L::d], gradGradError[L::d][L::d];
-    computeGradGradError(gradGradError,gradError,rho,u,xi,approxMomentum,missingIndexes);
+    computeGradGradError(gradGradError,gradError,rho,u,_xi,approxMomentum,missingIndexes);
 
-    bool everythingWentFine = newtonRaphson(xi,gradError,gradGradError);
+    bool everythingWentFine = newtonRaphson(_xi,gradError,gradGradError);
     if ((counter > 100000) || everythingWentFine == false) {
       // if we need more that 100000 iterations or
       // if we have a problem with the inversion of the
@@ -119,16 +119,16 @@ void InamuroNewtonRaphsonDynamics<T,Lattice,Dynamics,direction,orientation>::col
         clout << ", " << approxMomentum[iD];
       }
       clout << ")" << std::endl;
-      clout << "xi = (" << xi[0];
+      clout << "xi = (" << _xi[0];
       for (int iD=1; iD<Lattice<T>::d; ++iD) {
-        clout << ", " << xi[iD];
+        clout << ", " << _xi[iD];
       }
       clout << ")" << std::endl;
 
       exit(1);
     }
 
-    computeApproxMomentum(approxMomentum,cell,rho,u,xi,knownIndexes,missingIndexes);
+    computeApproxMomentum(approxMomentum,cell,rho,u,_xi,knownIndexes,missingIndexes);
     error = computeError(rho, u,approxMomentum);
 
   }
@@ -140,17 +140,17 @@ void InamuroNewtonRaphsonDynamics<T,Lattice,Dynamics,direction,orientation>::col
       ++counterDim;
       uCs[iDim] = u[iDim];
     } else {
-      uCs[iDim] = u[iDim] + xi[iDim+1-counterDim];
+      uCs[iDim] = u[iDim] + _xi[iDim+1-counterDim];
     }
   }
 
   T uCsSqr = util::normSqr<T,L::d>(uCs);
 
   for (unsigned iPop = 0; iPop < missingIndexes.size(); ++iPop) {
-    cell[missingIndexes[iPop]] = computeEquilibrium(missingIndexes[iPop],xi[0],uCs,uCsSqr);
+    cell[missingIndexes[iPop]] = computeEquilibrium(missingIndexes[iPop],_xi[0],uCs,uCsSqr);
   }
 
-  boundaryDynamics.collide(cell, statistics);
+  _boundaryDynamics.collide(cell, statistics);
 }
 
 template<typename T, template<typename U> class Lattice, typename Dynamics, int direction, int orientation>
@@ -161,7 +161,7 @@ void InamuroNewtonRaphsonDynamics<T,Lattice,Dynamics,direction,orientation>::sta
 {
   typedef Lattice<T> L;
 
-  T rho = this->momenta.computeRho(cell);
+  T rho = this->_momenta.computeRho(cell);
 
   std::vector<int> missingIndexes = util::subIndexOutgoing<L,direction,orientation>();
   std::vector<int> knownIndexes;
@@ -181,7 +181,7 @@ void InamuroNewtonRaphsonDynamics<T,Lattice,Dynamics,direction,orientation>::sta
 
   T approxMomentum[L::d];
 
-  computeApproxMomentum(approxMomentum,cell,rho,u,xi,knownIndexes,missingIndexes);
+  computeApproxMomentum(approxMomentum,cell,rho,u,_xi,knownIndexes,missingIndexes);
 
   T error = computeError(rho, u,approxMomentum);
   int counter = 0;
@@ -190,9 +190,9 @@ void InamuroNewtonRaphsonDynamics<T,Lattice,Dynamics,direction,orientation>::sta
     ++counter;
 
     T gradError[L::d], gradGradError[L::d][L::d];
-    computeGradGradError(gradGradError,gradError,rho,u,xi,approxMomentum,missingIndexes);
+    computeGradGradError(gradGradError,gradError,rho,u,_xi,approxMomentum,missingIndexes);
 
-    bool everythingWentFine = newtonRaphson(xi,gradError,gradGradError);
+    bool everythingWentFine = newtonRaphson(_xi,gradError,gradGradError);
     if ((counter > 100000) || everythingWentFine == false) {
       // if we need more that 100000 iterations or
       // if we have a problem with the inversion of the
@@ -210,16 +210,16 @@ void InamuroNewtonRaphsonDynamics<T,Lattice,Dynamics,direction,orientation>::sta
         clout << ", " << approxMomentum[iD];
       }
       clout << ")" << std::endl;
-      clout << "xi = (" << xi[0];
+      clout << "xi = (" << _xi[0];
       for (int iD=1; iD<Lattice<T>::d; ++iD) {
-        clout << ", " << xi[iD];
+        clout << ", " << _xi[iD];
       }
       clout << ")" << std::endl;
 
       exit(1);
     }
 
-    computeApproxMomentum(approxMomentum,cell,rho,u,xi,knownIndexes,missingIndexes);
+    computeApproxMomentum(approxMomentum,cell,rho,u,_xi,knownIndexes,missingIndexes);
     error = computeError(rho, u,approxMomentum);
 
   }
@@ -231,42 +231,42 @@ void InamuroNewtonRaphsonDynamics<T,Lattice,Dynamics,direction,orientation>::sta
       ++counterDim;
       uCs[iDim] = u[iDim];
     } else {
-      uCs[iDim] = u[iDim] + xi[iDim+1-counterDim];
+      uCs[iDim] = u[iDim] + _xi[iDim+1-counterDim];
     }
   }
 
   T uCsSqr = util::normSqr<T,L::d>(uCs);
 
   for (unsigned iPop = 0; iPop < missingIndexes.size(); ++iPop) {
-    cell[missingIndexes[iPop]] = computeEquilibrium(missingIndexes[iPop],xi[0],uCs,uCsSqr);
+    cell[missingIndexes[iPop]] = computeEquilibrium(missingIndexes[iPop],_xi[0],uCs,uCsSqr);
   }
 
-  boundaryDynamics.staticCollide(cell, u, statistics);
+  _boundaryDynamics.staticCollide(cell, u, statistics);
 
 }
 
 template<typename T, template<typename U> class Lattice, typename Dynamics, int direction, int orientation>
 T InamuroNewtonRaphsonDynamics<T,Lattice,Dynamics,direction,orientation>::getOmega() const
 {
-  return boundaryDynamics.getOmega();
+  return _boundaryDynamics.getOmega();
 }
 
 template<typename T, template<typename U> class Lattice, typename Dynamics, int direction, int orientation>
-void InamuroNewtonRaphsonDynamics<T,Lattice,Dynamics,direction,orientation>::setOmega(T omega_)
+void InamuroNewtonRaphsonDynamics<T,Lattice,Dynamics,direction,orientation>::setOmega(T omega)
 {
-  boundaryDynamics.setOmega(omega_);
+  _boundaryDynamics.setOmega(omega);
 }
 
 template<typename T, template<typename U> class Lattice, typename Dynamics, int direction, int orientation>
 T InamuroNewtonRaphsonDynamics<T,Lattice,Dynamics,direction,orientation>::getParameter(int whichParameter) const
 {
-  return boundaryDynamics.getParameter(whichParameter);
+  return _boundaryDynamics.getParameter(whichParameter);
 }
 
 template<typename T, template<typename U> class Lattice, typename Dynamics, int direction, int orientation>
 void InamuroNewtonRaphsonDynamics<T,Lattice,Dynamics,direction,orientation>::setParameter(int whichParameter, T value)
 {
-  boundaryDynamics.setParameter(whichParameter, value);
+  _boundaryDynamics.setParameter(whichParameter, value);
 }
 
 

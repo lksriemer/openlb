@@ -24,11 +24,14 @@
 #ifndef NAVIER_STOKES_INTO_ADVECTION_DIFFUSION_COUPLING_POST_PROCESSOR_3D_H
 #define NAVIER_STOKES_INTO_ADVECTION_DIFFUSION_COUPLING_POST_PROCESSOR_3D_H
 
+#include <cmath>
+
 #include "core/spatiallyExtendedObject3D.h"
 #include "core/postProcessing.h"
 #include "core/blockLattice3D.h"
-#include <cmath>
-
+#include "core/units.h"
+#include "advectionDiffusionForces.hh"
+#include "advectionDiffusionForces.h"
 
 namespace olb {
 
@@ -46,10 +49,12 @@ public:
     int x0_, int x1_, int y0_, int y1_, int z0_, int z1_,
     T gravity_, T T0_, T deltaTemp_, std::vector<T> dir_,
     std::vector<SpatiallyExtendedObject3D* > partners_);
-  virtual int extent() const {
+  virtual int extent() const
+  {
     return 1;
   }
-  virtual int extent(int whichDirection) const {
+  virtual int extent(int whichDirection) const
+  {
     return 1;
   }
   virtual void process(BlockLattice3D<T,Lattice>& blockLattice);
@@ -83,43 +88,51 @@ private:
 // ========Coupling 3D of Navier-Stokes on Advection-Diffusion with Stokes drag====================//
 //==================================================================================================
 template<typename T, template<typename U> class Lattice>
-class StokesDragCouplingPostProcessor3D :
+class AdvectionDiffusionParticleCouplingPostProcessor3D :
   public LocalPostProcessor3D<T,Lattice> {
 public:
-  StokesDragCouplingPostProcessor3D(
-    int x0_, int x1_, int y0_, int y1_, int z0_, int z1_, T dragCoeff_, int offset_,
-    std::vector<SpatiallyExtendedObject3D* > partners_);
-  virtual int extent() const {
+  AdvectionDiffusionParticleCouplingPostProcessor3D(
+    int x0_, int x1_, int y0_, int y1_, int z0_, int z1_, int iC_, int offset_,
+    std::vector<SpatiallyExtendedObject3D* > partners_, std::vector<std::reference_wrapper<advectionDiffusionForce3D<T, Lattice> > > forces_);
+  virtual int extent() const
+  {
     return 1;
   }
-  virtual int extent(int whichDirection) const {
+  virtual int extent(int whichDirection) const
+  {
     return 1;
   }
   virtual void process(BlockLattice3D<T,Lattice>& blockLattice);
   virtual void processSubDomain(BlockLattice3D<T,Lattice>& blockLattice,
                                 int x0_, int x1_, int y0_, int y1_,  int z0_, int z1_);
 private:
-  int x0, x1, y0, y1, z0, z1;
+  int x0, x1, y0, y1, z0, z1, iC;
   T dragCoeff;
   int offset;
   T *vel, *vel_new, *velXp, *velXn, *velYp, *velYn, *velZp, *velZn;
   bool par = true;
+  Cell<T,descriptors::particleAdvectionDiffusionD3Q7Descriptor> *adCell;
+  Cell<T,Lattice> *nsCell;
 
-  std::vector<SpatiallyExtendedObject3D*> partners;
+protected:
+  std::vector<std::reference_wrapper<advectionDiffusionForce3D<T, Lattice> > > forces;
 };
 
 template<typename T, template<typename U> class Lattice>
-class StokesDragCouplingGenerator3D :
+class AdvectionDiffusionParticleCouplingGenerator3D :
   public LatticeCouplingGenerator3D<T,Lattice> {
 public:
-  StokesDragCouplingGenerator3D(LBconverter<T> const& converter_, T radius_, T particleRho_, int offset_);
+  AdvectionDiffusionParticleCouplingGenerator3D(int offset_);
   virtual PostProcessor3D<T,Lattice>* generate(
     std::vector<SpatiallyExtendedObject3D* > partners) const;
   virtual LatticeCouplingGenerator3D<T,Lattice>* clone() const;
+  void addForce(advectionDiffusionForce3D<T,Lattice> &force);
 
 private:
-  T dragCoeff;
   int offset;
+
+protected:
+  std::vector<std::reference_wrapper<advectionDiffusionForce3D<T, Lattice> > > ADforces;
 };
 
 }

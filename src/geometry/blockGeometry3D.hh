@@ -299,7 +299,7 @@ void BlockGeometry3D<T>::reInit(T x0, T y0, T z0, T h, int nX, int nY, int nZ,
                                 int iCglob, olb::ScalarField3D<int>* geometryData) {
 
   _cuboid = Cuboid3D<T>(x0, y0, z0, h, nX, nY, nZ);
-  if (geometryData != NULL) {
+  if (geometryData != nullptr) {
     _geometryData.swap(*geometryData);
   }
   else {

@@ -26,8 +26,10 @@
 #define OFF_BOUNDARY_INSTANTIATOR_2D_H
 
 #include "offBoundaryCondition2D.h"
+#include "offBoundaryPostProcessors2D.h"
 #include "geometry/blockGeometry2D.h"
 #include "geometry/blockGeometryStatistics2D.h"
+#include "dynamics/dynamics.h"
 #include "core/cell.h"
 #include "io/ostreamManager.h"
 #include "core/util.h"
@@ -42,7 +44,7 @@ namespace olb {
 
 template<typename T, template<typename U> class Lattice, class BoundaryManager>
 class OffBoundaryConditionInstantiator2D: public OffLatticeBoundaryCondition2D<T,
-    Lattice> {
+  Lattice> {
 public:
   OffBoundaryConditionInstantiator2D(BlockLatticeStructure2D<T, Lattice>& block_, T epsFraction_ = 0.0001);
   ~OffBoundaryConditionInstantiator2D();
@@ -61,17 +63,25 @@ public:
   void addZeroVelocityBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int x, int y, T distances[Lattice<T>::q]);
   void addZeroVelocityBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int iX, int iY, IndicatorF2D<T>& indicator, std::list<int> bulkMaterials = std::list<int>(1,1));
   void addZeroVelocityBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int material, IndicatorF2D<T>& indicator, std::list<int> bulkMaterials = std::list<int>(1,1));
+  void addZeroVelocityBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int material, std::list<int> bulkMaterials = std::list<int>(1,1));
 
   void addVelocityBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int x, int y, int iPop, T dist);
   void addVelocityBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int x, int y, T distances[Lattice<T>::q]);
   void addVelocityBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int iX, int iY, IndicatorF2D<T>& indicator, std::list<int> bulkMaterials = std::list<int>(1,1));
   void addVelocityBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int material, IndicatorF2D<T>& indicator, std::list<int> bulkMaterials = std::list<int>(1,1));
+  void addVelocityBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int material, std::list<int> bulkMaterials = std::list<int>(1,1));
+
+  void addPressureBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int material, IndicatorF2D<T>& indicator, std::list<int> bulkMaterials = std::list<int>(1,1));
+  void addPressureBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int material, std::list<int> bulkMaterials = std::list<int>(1,1));
 
   void setBoundaryIntersection(int iX, int iY, int iPop, T distance);
   bool getBoundaryIntersection(int iX, int iY, int iPop, T point[Lattice<T>::d]);
 
   virtual void defineU(int iX, int iY, int iPop, const T u[Lattice<T>::d]);
   virtual void defineU(BlockGeometryStructure2D<T>& blockGeometryStructure, int material, AnalyticalF2D<T,T>& u, std::list<int> bulkMaterials = std::list<int>(1,1) );
+
+  virtual void defineRho(int iX, int iY, int iPop, const T rho);
+  virtual void defineRho(BlockGeometryStructure2D<T>& blockGeometryStructure, int material, AnalyticalF2D<T,T>& rho, std::list<int> bulkMaterials = std::list<int>(1,1) );
 
   void outputOn();
   void outputOff();
@@ -240,7 +250,7 @@ addZeroVelocityBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int
   //addOffDynamics(x, y, z, location, distancesCopy);
 
   for (int iPop = 1; iPop < L::q ; ++iPop) {
-    if (distances[iPop] != -1) {
+    if ( !util::nearZero(distances[iPop]+1) ) {
       const int* c = L::c[iPop];
       addZeroVelocityBoundary(blockGeometryStructure, x-c[0], y-c[1], iPop, distances[iPop]);
     }
@@ -337,6 +347,39 @@ void OffBoundaryConditionInstantiator2D<T, Lattice, BoundaryManager>::addZeroVel
   }
 }
 
+template<typename T, template<typename U> class Lattice, class BoundaryManager>
+void OffBoundaryConditionInstantiator2D<T, Lattice, BoundaryManager>::addZeroVelocityBoundary(
+  BlockGeometryStructure2D<T>& blockGeometryStructure, int material, std::list<int> bulkMaterials)
+{
+
+  if (blockGeometryStructure.getStatistics().getNvoxel(material)!=0) {
+    const int x0 = blockGeometryStructure.getStatistics().getMinLatticeR(material)[0];
+    const int y0 = blockGeometryStructure.getStatistics().getMinLatticeR(material)[1];
+    const int x1 = blockGeometryStructure.getStatistics().getMaxLatticeR(material)[0];
+    const int y1 = blockGeometryStructure.getStatistics().getMaxLatticeR(material)[1];
+
+    for (int iX = x0; iX <= x1; iX++) {
+      for (int iY = y0; iY <= y1; iY++) {
+        if (blockGeometryStructure.getMaterial(iX,iY) == material ) {
+          bool streamDirections[Lattice<T>::q];
+          // check if (ix,iY) is really a boundary node and compute the stream direction
+          if (blockGeometryStructure.template findStreamDirections<T,Lattice>(iX, iY, material, bulkMaterials, streamDirections) ) {
+            T distances[Lattice<T>::q];
+            for (int iPop=0; iPop<Lattice<T>::q; iPop++) {
+              if (streamDirections[iPop]) {
+                distances[Lattice<T>::opposite[iPop]] = .5;
+              } else {
+                distances[Lattice<T>::opposite[iPop]] = -1;
+              }
+            }
+            addZeroVelocityBoundary(blockGeometryStructure, iX, iY, distances);
+          }
+        }
+      }
+    }
+  }
+}
+
 
 template<typename T, template<typename U> class Lattice, class BoundaryManager>
 void OffBoundaryConditionInstantiator2D<T, Lattice, BoundaryManager>::addVelocityBoundary(
@@ -362,14 +405,14 @@ addVelocityBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int x, 
   T spacing = blockGeometryStructure.getDeltaR();
   for (int iPop = 1; iPop < L::q ; ++iPop) {
     distancesCopy[iPop] = spacing*(1.-distances[iPop]);
-    if (distances[iPop] == -1) {
+    if ( !util::nearZero(distances[iPop]+1) ) {
       distancesCopy[iPop] = -1;
     }
   }
   addOffDynamics(x, y, location, distancesCopy);
 
   for (int iPop = 1; iPop < L::q ; ++iPop) {
-    if (distances[iPop] != -1) {
+    if ( !util::nearZero(distances[iPop]+1) ) {
       const int* c = L::c[iPop];
       addVelocityBoundary(blockGeometryStructure, x-c[0], y-c[1], iPop, distances[iPop]);
     }
@@ -465,6 +508,109 @@ void OffBoundaryConditionInstantiator2D<T, Lattice, BoundaryManager>::addVelocit
   }
 }
 
+template<typename T, template<typename U> class Lattice, class BoundaryManager>
+void OffBoundaryConditionInstantiator2D<T, Lattice, BoundaryManager>::addVelocityBoundary(
+  BlockGeometryStructure2D<T>& blockGeometryStructure, int material, std::list<int> bulkMaterials)
+{
+
+  if (blockGeometryStructure.getStatistics().getNvoxel(material)!=0) {
+    const int x0 = blockGeometryStructure.getStatistics().getMinLatticeR(material)[0];
+    const int y0 = blockGeometryStructure.getStatistics().getMinLatticeR(material)[1];
+    const int x1 = blockGeometryStructure.getStatistics().getMaxLatticeR(material)[0];
+    const int y1 = blockGeometryStructure.getStatistics().getMaxLatticeR(material)[1];
+
+    for (int iX = x0; iX <= x1; iX++) {
+      for (int iY = y0; iY <= y1; iY++) {
+        if (blockGeometryStructure.getMaterial(iX,iY) == material ) {
+          bool streamDirections[Lattice<T>::q];
+          // check if (ix,iY) is really a boundary node and compute the stream direction
+          if (blockGeometryStructure.template findStreamDirections<T,Lattice>(iX, iY, material, bulkMaterials, streamDirections) ) {
+            T distances[Lattice<T>::q];
+            for (int iPop=0; iPop<Lattice<T>::q; iPop++) {
+              if (streamDirections[iPop]) {
+                distances[Lattice<T>::opposite[iPop]] = .5;
+              } else {
+                distances[Lattice<T>::opposite[iPop]] = -1;
+              }
+            }
+            addVelocityBoundary(blockGeometryStructure, iX, iY, distances);
+          }
+        }
+      }
+    }
+  }
+}
+
+template<typename T, template<typename U> class Lattice, class BoundaryManager>
+void OffBoundaryConditionInstantiator2D<T, Lattice, BoundaryManager>::addPressureBoundary(
+  BlockGeometryStructure2D<T>& blockGeometryStructure, int material, IndicatorF2D<T>& indicator, std::list<int> bulkMaterials)
+{
+
+  if (blockGeometryStructure.getStatistics().getNvoxel(material)!=0) {
+    const int x0 = blockGeometryStructure.getStatistics().getMinLatticeR(material)[0];
+    const int y0 = blockGeometryStructure.getStatistics().getMinLatticeR(material)[1];
+    const int x1 = blockGeometryStructure.getStatistics().getMaxLatticeR(material)[0];
+    const int y1 = blockGeometryStructure.getStatistics().getMaxLatticeR(material)[1];
+
+    for (int iX = x0; iX <= x1; iX++) {
+      for (int iY = y0; iY <= y1; iY++) {
+        bool streamDirections[Lattice<T>::q];
+        // check if (ix,iY) is really a boundary node and compute the stream direction
+        if (blockGeometryStructure.template findStreamDirections<T,Lattice>(iX, iY, material, bulkMaterials, streamDirections) ) {
+
+          T location[Lattice<T>::d];
+          blockGeometryStructure.getPhysR(location, iX, iX);
+
+          block.defineDynamics(iX,iX,iY,iY,&instances::getBounceBackAnti<T, Lattice>(1.));
+          //addOffDynamics(iX, iX, location, iPopStream);
+          //addStreamBoundary(iX, iY, iPopStream);
+        }
+      }
+    }
+  }
+  clout << "ERROR: OffBoundaryConditionInstantiator2D<T, Lattice, BoundaryManager>::addPressureBoundary NOT YET IMPLEMENTED" << std::endl;
+  exit(-1);
+}
+
+template<typename T, template<typename U> class Lattice, class BoundaryManager>
+void OffBoundaryConditionInstantiator2D<T, Lattice, BoundaryManager>::addPressureBoundary(
+  BlockGeometryStructure2D<T>& blockGeometryStructure, int material, std::list<int> bulkMaterials)
+{
+
+  if (blockGeometryStructure.getStatistics().getNvoxel(material)!=0) {
+    const int x0 = blockGeometryStructure.getStatistics().getMinLatticeR(material)[0];
+    const int y0 = blockGeometryStructure.getStatistics().getMinLatticeR(material)[1];
+    const int x1 = blockGeometryStructure.getStatistics().getMaxLatticeR(material)[0];
+    const int y1 = blockGeometryStructure.getStatistics().getMaxLatticeR(material)[1];
+
+    for (int iX = x0; iX <= x1; iX++) {
+      for (int iY = y0; iY <= y1; iY++) {
+        bool streamDirections[Lattice<T>::q];
+        // check if (ix,iY) is really a boundary node and compute the stream direction
+        if (blockGeometryStructure.template findStreamDirections<T,Lattice>(iX, iY, material, bulkMaterials, streamDirections) ) {
+
+          T location[Lattice<T>::d];
+          blockGeometryStructure.getPhysR(location, iX, iX);
+
+          block.defineDynamics(iX,iX,iY,iY,&instances::getBounceBackAnti<T, Lattice>(1.));
+
+          //addOffDynamics(iX, iX, location, iPopStream);
+
+          for (int iPop = 1; iPop < Lattice<T>::q ; ++iPop) {
+            if (streamDirections[iPop]) {
+              //std::cout << Lattice<T>::c[iPop][1] << std::endl;
+              PostProcessorGenerator2D<T, Lattice>* postProcessor = new AntiBounceBackPostProcessorGenerator2D<T, Lattice>(iX+Lattice<T>::c[iPop][0], iY+Lattice<T>::c[iPop][1], Lattice<T>::opposite[iPop]);
+
+              this->getBlock().addPostProcessor(*postProcessor);
+            }
+          }
+          //addStreamBoundary(iX, iY, streamDirections);
+        }
+      }
+    }
+  }
+}
+
 
 template<typename T, template<typename U> class Lattice, class BoundaryManager>
 void OffBoundaryConditionInstantiator2D<T, Lattice, BoundaryManager>::
@@ -493,6 +639,16 @@ void OffBoundaryConditionInstantiator2D<T, Lattice, BoundaryManager>::defineU(in
   this->getBlock().get(iX,iY).getDynamics()->defineU(iPop, u);
   if (_output) {
     clout << "defineU(" << iX << ", " << iY << " )" << std::endl;
+  }
+}
+
+template<typename T, template<typename U> class Lattice, class BoundaryManager>
+void OffBoundaryConditionInstantiator2D<T, Lattice, BoundaryManager>::defineRho(int iX, int iY, int iPop, const T rho)
+{
+
+  this->getBlock().get(iX,iY).getDynamics()->defineRho(iPop, rho);
+  if (_output) {
+    clout << "defineRho(" << iX << ", " << iY << " )" << std::endl;
   }
 }
 
@@ -537,6 +693,49 @@ void OffBoundaryConditionInstantiator2D<T, Lattice, BoundaryManager>::defineU(Bl
     }
   }
 }
+
+template<typename T, template<typename U> class Lattice, class BoundaryManager>
+void OffBoundaryConditionInstantiator2D<T, Lattice, BoundaryManager>::defineRho(BlockGeometryStructure2D<T>& blockGeometryStructure, int material, AnalyticalF2D<T,T>& rho, std::list<int> bulkMaterials )
+{
+
+  if (blockGeometryStructure.getStatistics().getNvoxel(material)!=0) {
+    const int x0 = blockGeometryStructure.getStatistics().getMinLatticeR(material)[0];
+    const int y0 = blockGeometryStructure.getStatistics().getMinLatticeR(material)[1];
+    const int x1 = blockGeometryStructure.getStatistics().getMaxLatticeR(material)[0];
+    const int y1 = blockGeometryStructure.getStatistics().getMaxLatticeR(material)[1];
+
+    for (int iX = x0; iX <= x1; iX++) {
+      for (int iY = y0; iY <= y1; iY++) {
+
+        if (blockGeometryStructure.getMaterial(iX, iY) == material) {
+          for (int q = 1; q < Lattice<T>::q ; ++q) {
+            // Get direction
+            const int* c = Lattice<T>::c[q];
+            int iXn = iX + c[0];
+            int iYn = iY + c[1];
+            std::list<int>::iterator i;
+            for (i=bulkMaterials.begin(); i!=bulkMaterials.end(); ++i) {
+              if (blockGeometryStructure.getMaterial(iXn, iYn) == *i) {
+                T intersection[] = { T(), T() }; // coord. of intersection
+                int opp = util::opposite<Lattice<T> >(q);
+                if (this->getBoundaryIntersection(iX, iY, opp, intersection) ) {
+                  //                  std::vector<double> intersection2;
+                  //                  intersection2.push_back(intersection[0]);
+                  //                  intersection2.push_back(intersection[1]);
+                  //                  T vel[] = {u(intersection2)[0], u(intersection2)[1] };
+                  T rhoLocal[]= {T(1)};
+                  rho(rhoLocal,intersection);
+                  this->defineRho(iX, iY, opp, rhoLocal[0]);
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
 
 template<typename T, template<typename U> class Lattice, class BoundaryManager>
 void OffBoundaryConditionInstantiator2D<T, Lattice, BoundaryManager>::outputOn()

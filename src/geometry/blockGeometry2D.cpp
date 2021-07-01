@@ -25,6 +25,8 @@
  * Representation of the 2D block geometry -- template instantiation.
  */
 
+#include "dynamics/latticeDescriptors.h"
+#include "dynamics/latticeDescriptors.hh"
 #include "blockGeometry2D.h"
 #include "blockGeometry2D.hh"
 

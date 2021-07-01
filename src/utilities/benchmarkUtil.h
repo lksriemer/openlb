@@ -3,6 +3,7 @@
 
 #include <deque>
 #include "../io/ostreamManager.h"
+#include "../functors/analyticalF.h"
 
 namespace olb {
 
@@ -27,6 +28,7 @@ public:
    * \param _epsilon Precision of the convergence.
    */
   ValueTracer(T u, T L, T epsilon);
+  ValueTracer(int deltaT, T epsilon);
   /// Change values of u and L to update characteristic scales of the system.
   void resetScale(T u, T L);
   /// reinitializes the values
@@ -74,6 +76,36 @@ private:
   T step;
   enum {first, up, down, bisect} state;
   mutable OstreamManager clout;
+};
+
+/// 1D Newton simple scheme
+template<typename T>
+class Newton1D {
+
+protected:
+  AnalyticalF1D<T,T>& _f;
+  AnalyticalDiffFD1D<T> _df;
+  T _yValue;
+  T _eps;
+  int _maxIterations;
+
+public:
+  Newton1D(AnalyticalF1D<T,T>& f, T yValue = T(), T eps = 1.e-8, int maxIterations = 100);
+
+  T solve(T startValue, bool print=false);
+};
+
+/// Trapezoidal rule
+template<typename T>
+class TrapezRuleInt1D {
+
+protected:
+  AnalyticalF1D<T,T>& _f;
+
+public:
+  TrapezRuleInt1D(AnalyticalF1D<T,T>& f);
+
+  T integrate(T min, T max, int nSteps);
 };
 
 } // namespace util

@@ -29,5 +29,8 @@
 namespace olb {
 
 template class SuperParticleSysVtuWriter<double,Particle3D>;
+template class SuperParticleSysVtuWriter<double,MagneticParticle3D>;
+
+template class SuperParticleSysVtuWriterMag<double>;
 
 }  // namespace olb

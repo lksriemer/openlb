@@ -28,6 +28,8 @@
 #include "indicatorBaseF3D.h"
 #include "io/xmlReader.h"
 
+#include "core/blockData3D.h"
+#include "core/units.h"
 
 /** \file
  * This file contains indicator functions. These return 1 if the given
@@ -83,6 +85,7 @@ private:
   S _radius2;
 public:
   IndicatorSphere3D(Vector<S,3> center, S radius);
+  IndicatorSphere3D(const IndicatorSphere3D&);
   bool operator() (bool output[], const S input[]) override;
   virtual bool distance(S& distance, const Vector<S,3>& origin,
                         const Vector<S,3>& direction, int iC=-1) override;
@@ -231,16 +234,17 @@ IndicatorF3D<S>* createIndicatorF3D(XMLreader const& params, bool verbose=false)
 ///////////////////////////SmoothIndicatorF/////////////////////////////////////
 
 /// implements a smooth sphere in 3D with an _epsilon sector
-template <typename T, typename S>
-class SmoothIndicatorSphere3D : public SmoothIndicatorF3D<T,S> {
+template<typename T, typename S>
+class SmoothIndicatorSphere3D: public SmoothIndicatorF3D<T, S> {
 private:
-  Vector<S,3> _center;
-  S _radius2;
+  S _innerRad;
+  S _outerRad;
   S _epsilon;
 public:
-  SmoothIndicatorSphere3D(Vector<S,3> center, S radius, S epsilon);
-  bool operator() (T output[], const S input[]);
-  Vector<S,3> getCenter();
+  SmoothIndicatorSphere3D(Vector<S, 3> center, S radius, S epsilon, S mass);
+  SmoothIndicatorSphere3D(const SmoothIndicatorSphere3D<T, S>& rhs);
+  bool operator()(T output[], const S input[]);
+  Vector<S, 3>& getCenter();
   S getRadius();
   S getDiam();
 };
@@ -282,6 +286,52 @@ public:
   bool operator() (T output[], const S input[]);
 };
 
+
+
+///////////////////////////ParticleIndicatorF/////////////////////////////////////
+
+/// implements a smooth sphere in 3D with an _epsilon sector for particle simulations
+template<typename T, typename S>
+class ParticleIndicatorSphere3D: public ParticleIndicatorF3D<T, S> {
+public:
+  ParticleIndicatorSphere3D(Vector<S, 3> center, S radius, S epsilon, S mass);
+  bool operator()(T output[], const S input[]);
+};
+
+/** implements a smooth particle cuboid in 3D with an _epsilon sector.
+ * TODO construct by density
+ * TODO rotation seems weird
+ */
+template <typename T, typename S>
+class ParticleIndicatorCuboid3D : public ParticleIndicatorF3D<T, S> {
+private:
+  S _xLength;
+  S _yLength;
+  S _zLength;
+public:
+  ParticleIndicatorCuboid3D(Vector<S,3> center, S xLength, S yLength, S zLength, S mass, S epsilon, Vector<S,3> theta);
+  bool operator()(T output[],const S x[]);
+};
+
+/** implements a smooth particle of shape given by in indicator (e.g. STL) in 3D with an _epsilon sector.
+ * TODO construct by density
+ * TODO check correctness of center and mofi
+ */
+template<typename T, typename S>
+class ParticleIndicatorCustom3D : public ParticleIndicatorF3D<T, S> {
+private:
+  // _center is the local center, _startPos the center at the start
+  Vector<T,3> _center;
+  // _latticeCenter gives the center in local lattice coordinates
+  Vector<int,3> _latticeCenter;
+  BlockData3D<T, T> _blockData;
+  LBconverter<T> const& _converter;
+
+public:
+  // for now epsilon has to be chosen to be latticeL
+  ParticleIndicatorCustom3D(LBconverter<T> const& converter, IndicatorF3D<T>& ind, Vector<T,3> center, T rhoP, T epsilon, Vector<T,3> theta);
+  bool operator() (T output[], const S input[]);
+};
 
 }
 

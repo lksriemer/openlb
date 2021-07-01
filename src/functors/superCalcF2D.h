@@ -37,45 +37,45 @@ namespace olb {
 
 /// arithmetic helper class for SuperLatticeF2D functors
 /** Warning: Allocation error possible in functors that have multiple functor evaluation like SuperSum2D */
-template <typename T>
-class SuperCalc2D : public SuperF2D<T> {
+template <typename T, typename W>
+class SuperCalc2D : public SuperF2D<T,W> {
 protected:
-  SuperF2D<T>& _f;
-  SuperF2D<T>& _g;
+  SuperF2D<T,W>& _f;
+  SuperF2D<T,W>& _g;
 public:
-  SuperCalc2D(SuperF2D<T>& f, SuperF2D<T>& g);
+  SuperCalc2D(SuperF2D<T,W>& f, SuperF2D<T,W>& g);
 };
 
 /// addition functor
-template <typename T>
-class SuperPlus2D : public SuperCalc2D<T> {
+template <typename T, typename W>
+class SuperPlus2D : public SuperCalc2D<T,W> {
 public:
-  SuperPlus2D(SuperF2D<T>& f, SuperF2D<T>& g);
-  bool operator() (T output[], const int input[]);
+  SuperPlus2D(SuperF2D<T,W>& f, SuperF2D<T,W>& g);
+  bool operator() (W output[], const int input[]);
 };
 
 /// subtraction functor
-template <typename T>
-class SuperMinus2D : public SuperCalc2D<T> {
+template <typename T, typename W>
+class SuperMinus2D : public SuperCalc2D<T,W> {
 public:
-  SuperMinus2D(SuperF2D<T>& f, SuperF2D<T>& g);
-  bool operator() (T output[], const int input[]);
+  SuperMinus2D(SuperF2D<T,W>& f, SuperF2D<T,W>& g);
+  bool operator() (W output[], const int input[]);
 };
 
 /// multiplication functor
-template <typename T>
-class SuperMultiplication2D : public SuperCalc2D<T> {
+template <typename T, typename W>
+class SuperMultiplication2D : public SuperCalc2D<T,W> {
 public:
-  SuperMultiplication2D(SuperF2D<T>& f, SuperF2D<T>& g);
-  bool operator() (T output[], const int input[]);
+  SuperMultiplication2D(SuperF2D<T,W>& f, SuperF2D<T,W>& g);
+  bool operator() (W output[], const int input[]);
 };
 
 /// division functor
-template <typename T>
-class SuperDivision2D : public SuperCalc2D<T> {
+template <typename T, typename W>
+class SuperDivision2D : public SuperCalc2D<T,W> {
 public:
-  SuperDivision2D(SuperF2D<T>& f, SuperF2D<T>& g);
-  bool operator() (T output[], const int input[]);
+  SuperDivision2D(SuperF2D<T,W>& f, SuperF2D<T,W>& g);
+  bool operator() (W output[], const int input[]);
 };
 
 

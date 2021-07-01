@@ -30,6 +30,9 @@ namespace olb {
 
 template class SuperLatticeFpop3D<double,descriptors::D3Q19Descriptor>;
 template class SuperLatticeDissipation3D<double,descriptors::D3Q19Descriptor>;
+template class SuperLatticePhysDissipation3D<double,descriptors::D3Q19Descriptor>;
+template class SuperLatticeEffevtiveDissipation3D<double,descriptors::D3Q19Descriptor>;
+template class SuperLatticePhysEffevtiveDissipation3D<double,descriptors::D3Q19Descriptor>;
 template class SuperLatticeDensity3D<double,descriptors::D3Q19Descriptor>;
 template class SuperLatticeVelocity3D<double,descriptors::D3Q19Descriptor>;
 template class SuperLatticeStrainRate3D<double,descriptors::D3Q19Descriptor>;
@@ -43,14 +46,11 @@ template class SuperLatticePhysBoundaryForceIndicator3D<double,descriptors::D3Q1
 template class SuperLatticePhysBoundaryTorqueIndicator3D<double,descriptors::D3Q19Descriptor>;
 template class SuperLatticePhysCorrBoundaryForce3D<double,descriptors::D3Q19Descriptor>;
 template class SuperLatticeExternalField3D<double,descriptors::D3Q19Descriptor>;
-//template class SuperLatticePhysExternalPorosity3D<double,descriptors::D3Q19Descriptor>;
-//template class SuperLatticePhysExternalVelocity3D<double,descriptors::D3Q19Descriptor>;
-template class SuperLatticePorosity3D<double,descriptors::D3Q19Descriptor>;
-template class SuperLatticePhysPermeability3D<double,descriptors::D3Q19Descriptor>;
-template class SuperLatticePhysDarcyForce3D<double,descriptors::D3Q19Descriptor>;
 template class SuperLatticeAverage3D<double,descriptors::D3Q19Descriptor>;
 template class SuperEuklidNorm3D<double,descriptors::D3Q19Descriptor>;
 //template class SuperLatticePhysExternal3D<double,descriptors::D3Q19Descriptor>;
 template class SuperLatticeInterpPhysVelocity3D<double,descriptors::D3Q19Descriptor>;
+//template class SuperLatticeInterpDensity3Degree3D<double,descriptors::D3Q19Descriptor>;
+
 
 } // end namespace olb

@@ -28,7 +28,10 @@ CXX             := g++
 #CXX             := mpiCC
 #CXX             := mpic++
 
-OPTIM           := -O3 -Wall
+CC              := gcc                                          # necessary for zlib, for Intel use icc
+
+OPTIM           := -O3 -Wall -march=native -mtune=native        # for gcc
+#OPTIM           := -O3 -Wall -xHost                            # for Intel compiler
 DEBUG           := -g -DOLB_DEBUG
 
 CXXFLAGS        := $(OPTIM)
@@ -56,8 +59,8 @@ PARALLEL_MODE   := OFF
 MPIFLAGS        :=
 OMPFLAGS        := -fopenmp
 
-BUILDTYPE       := precompiled
-#BUILDTYPE       := generic
+#BUILDTYPE       := precompiled
+BUILDTYPE       := generic
 
 
 ###########################################################################
@@ -93,6 +96,7 @@ DEPENDDIR       := build/$(BUILDTYPE)/dep
 OBJDIR          := build/$(BUILDTYPE)/obj
 LIBDIR          := build/$(BUILDTYPE)/lib
 LIB             := olb
+LIBS            := -l$(LIB) -lz
 
 ###########################################################################
 ## search directories
@@ -103,6 +107,7 @@ SUBDIRS         := src/boundary \
                    src/core \
                    src/geometry \
                    src/external/tinyxml \
+                   src/external/zlib \
                    src/functors \
                    src/functors/indicator \
                    src/io \
@@ -130,20 +135,22 @@ EXAMPLEDIRS     := examples/aorta3d \
                    examples/poiseuille2d/bgk \
                    examples/poiseuille2d/forced \
                    examples/poiseuille2d/mrt \
+                   examples/powerLaw2d \
+                   examples/tgv3d \
                    examples/thermal2d \
                    examples/thermal3d \
                    examples/venturi3d
 
 INCLUDEDIRS     := src \
                    src/ \
-                   src/external
+                   src/external \
+                   src/external/zlib
 			
 BUILDTYPEDIRS   := build/precompiled \
                    build/generic
 
 SUBDIRSH        := $(foreach d,$(SUBDIRS),$(ROOT)/$(d))
 IDIR            := $(foreach d,$(INCLUDEDIRS),-I$(ROOT)/$(d))
-
 
 ###########################################################################
 ###########################################################################

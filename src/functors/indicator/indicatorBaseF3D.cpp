@@ -29,7 +29,6 @@
 namespace olb {
 
 template class IndicatorF3D<double>;
-template class DiscreteIndicatorMaterial3D<double>;
 template class IndicatorIdentity3D<double>;
 
 template class SmoothIndicatorF3D<double,double>;

@@ -54,7 +54,7 @@ SmagorinskyMRTdynamics<T,Lattice>::SmagorinskyMRTdynamics (
   T omega_, Momenta<T,Lattice>& momenta_, T smagoConst_, T dx_, T dt_ )
   : MRTdynamics<T,Lattice>(omega_, momenta_/*, smagoConst_*/),
     smagoConst(smagoConst_),
-    preFactor(computePreFactor(omega_,smagoConst_, dx_, dt_ ) )
+    preFactor(computePreFactor(omega_,smagoConst_) )
 {
 
   T rtSGS[Lattice<T>::q]; // relaxation times vector for SGS approach.
@@ -83,7 +83,7 @@ void SmagorinskyMRTdynamics<T,Lattice>::collide(
   LatticeStatistics<T>& statistics )
 {
   T rho, u[Lattice<T>::d], pi[util::TensorVal<Lattice<T> >::n];
-  this->momenta.computeAllMomenta(cell, rho, u, pi);
+  this->_momenta.computeAllMomenta(cell, rho, u, pi);
   T newOmega = computeOmega(this->getOmega(), preFactor, rho, pi);
   for (int iPop = 0; iPop < Lattice<T>::q; ++iPop) {
     for (int jPop = 0; jPop < Lattice<T>::shearIndexes; ++jPop) {
@@ -105,7 +105,7 @@ void SmagorinskyMRTdynamics<T,Lattice>::staticCollide(
   LatticeStatistics<T>& statistics )
 {
   T rho, uTemp[Lattice<T>::d], pi[util::TensorVal<Lattice<T> >::n];
-  this->momenta.computeAllMomenta(cell, rho, uTemp, pi);
+  this->_momenta.computeAllMomenta(cell, rho, uTemp, pi);
   T newOmega = computeOmega(this->getOmega(), preFactor, rho, pi);
   for (int iPop = 0; iPop < Lattice<T>::q; ++iPop) {
     for (int jPop = 0; jPop < Lattice<T>::shearIndexes; ++jPop) {
@@ -123,22 +123,22 @@ template<typename T, template<typename U> class Lattice>
 void SmagorinskyMRTdynamics<T,Lattice>::setOmega(T omega)
 {
   this->setOmega(omega);
-  preFactor = computePreFactor(omega, smagoConst, dx, dt);
+  preFactor = computePreFactor(omega, smagoConst);
 }
 
 template<typename T, template<typename U> class Lattice>
 T SmagorinskyMRTdynamics<T,Lattice>::getSmagorinskyOmega(Cell<T,Lattice>& cell )
 {
   T rho, uTemp[Lattice<T>::d], pi[util::TensorVal<Lattice<T> >::n];
-  this->momenta.computeAllMomenta(cell, rho, uTemp, pi);
+  this->_momenta.computeAllMomenta(cell, rho, uTemp, pi);
   T newOmega = computeOmega(this->getOmega(), preFactor, rho, pi);
   return newOmega;
 }
 
 template<typename T, template<typename U> class Lattice>
-T SmagorinskyMRTdynamics<T,Lattice>::computePreFactor(T omega, T smagoConst, T dx, T dt)
+T SmagorinskyMRTdynamics<T,Lattice>::computePreFactor(T omega, T smagoConst)
 {
-  return (T)(smagoConst*smagoConst*dx*dx)*Lattice<T>::invCs2/dt*4*sqrt(2);
+  return (T)smagoConst*smagoConst*Lattice<T>::invCs2*Lattice<T>::invCs2*2*sqrt(2);
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -153,7 +153,7 @@ T SmagorinskyMRTdynamics<T,Lattice>::computeOmega(T omega0, T preFactor, T rho, 
   /// Molecular realaxation time
   T tau_mol = 1. /omega0;
   /// Turbulent realaxation time
-  T tau_turb = 0.5*(sqrt(tau_mol*tau_mol+(preFactor*tau_eff*PiNeqNorm))-tau_mol);
+  T tau_turb = 0.5*(sqrt(tau_mol*tau_mol + preFactor/rho*PiNeqNorm) - tau_mol);
   /// Effective realaxation time
   tau_eff = tau_mol+tau_turb;
   T omega_new= 1./tau_eff;
@@ -168,7 +168,7 @@ void SmagorinskyForcedMRTdynamics<T,Lattice>::collide(
   LatticeStatistics<T>& statistics )
 {
   T rho, u[Lattice<T>::d], pi[util::TensorVal<Lattice<T> >::n];
-  this->momenta.computeAllMomenta(cell, rho, u, pi);
+  this->_momenta.computeAllMomenta(cell, rho, u, pi);
   T newOmega = computeOmega(this->getOmega(), this->preFactor, rho, pi);
   for (int iPop = 0; iPop < Lattice<T>::q; ++iPop) {
     for (int jPop = 0; jPop < Lattice<T>::shearIndexes; ++jPop) {

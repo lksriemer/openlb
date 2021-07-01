@@ -35,10 +35,10 @@ namespace olb {
 
 template class BoundaryConditionInstantiator3D
 <
-double, descriptors::D3Q19Descriptor,
-        InamuroBoundaryManager3D < double, descriptors::D3Q19Descriptor,
-        BGKdynamics<double,descriptors::D3Q19Descriptor> >
-        >;
+  double, descriptors::D3Q19Descriptor,
+  InamuroBoundaryManager3D < double, descriptors::D3Q19Descriptor,
+                             BGKdynamics<double,descriptors::D3Q19Descriptor> >
+  >;
 
 template OnLatticeBoundaryCondition3D<double,descriptors::D3Q19Descriptor>*
 createInamuroBoundaryCondition3D < double,descriptors::D3Q19Descriptor,

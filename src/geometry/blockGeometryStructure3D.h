@@ -72,6 +72,9 @@ protected:
 public:
   /// Constructor
   BlockGeometryStructure3D(int iCglob=-1);
+  /// dtor
+  ~BlockGeometryStructure3D() {};
+
 
   /// Read only access to the global iC number which is given !=-1 if the block geometries are part of a super geometry
   virtual int const& getIcGlob() const;
@@ -143,7 +146,7 @@ public:
   virtual void rename(int fromM, int toM, int fluidM, IndicatorF3D<T>& condition);
 
   /// Replaces all material numbers (fromM) to another (toM) using a seed point and max. directions indicated by offsetX,Y,Z != 0
-  virtual void regionGrowing(int fromM, int toM, int seedX, int seedY, int seedZ, int offsetX, int offsetY, int offsetZ, std::map<std::vector<int>, int >* tmp=NULL);
+  virtual void regionGrowing(int fromM, int toM, int seedX, int seedY, int seedZ, int offsetX, int offsetY, int offsetZ, std::map<std::vector<int>, int >* tmp=nullptr);
 
 public:
 

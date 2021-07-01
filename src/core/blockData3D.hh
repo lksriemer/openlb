@@ -69,7 +69,7 @@ BlockData3D<T,BaseType>::BlockData3D(BlockF3D<BaseType>& rhs)
   : BlockStructure3D(rhs.getBlockStructure().getNx(),
                      rhs.getBlockStructure().getNy(),
                      rhs.getBlockStructure().getNz()),
-  _size(rhs.getTargetDim())//, _rawData(0), _field(0)
+    _size(rhs.getTargetDim())//, _rawData(0), _field(0)
 {
   construct();
   int i[3];
@@ -88,9 +88,10 @@ BlockData3D<T,BaseType>::BlockData3D(BlockData3D<T,BaseType> const& rhs)
 {
   if (rhs.isConstructed()) {
     construct();
-    for (size_t iData = 0; iData < getDataSize(); ++iData) {
-      (*this)[iData] = rhs[iData];
-    }
+//    for (size_t iData = 0; iData < getDataSize(); ++iData) {
+//      (*this)[iData] = rhs[iData];
+//    }
+    std::copy( rhs._rawData, rhs._rawData + getDataSize(), _rawData );
   }
 }
 
@@ -101,6 +102,38 @@ BlockData3D<T,BaseType>& BlockData3D<T,BaseType>::operator=(BlockData3D<T,BaseTy
   swap(tmp);
   return *this;
 }
+
+template<typename T, typename BaseType>
+BlockData3D<T,BaseType>& BlockData3D<T,BaseType>::operator=(BlockData3D<T,BaseType>&& rhs)
+{
+  std::cout << "/// Move Operator BlockData3D" << std::endl;
+  if (this != &rhs) {
+  }
+//  this->releaseMemory();  // free data of object this
+
+  _size = rhs._size;      // swap object data
+  _rawData = rhs._rawData;
+  _field = rhs._field;
+  this->_nx = rhs._nx;
+  this->_ny = rhs._ny;
+  this->_nz = rhs._nz;
+
+  rhs._rawData = nullptr; // free data of object rhs
+  rhs._field = nullptr;
+  rhs._nx = 0;
+  rhs._ny = 0;
+  rhs._nz = 0;
+  return *this;
+}
+
+template<typename T, typename BaseType>
+BlockData3D<T,BaseType>::BlockData3D(BlockData3D<T,BaseType>&& rhs)
+  : BlockStructure3D(rhs._nx, rhs._ny, rhs._nz), _size(rhs._size), _rawData(nullptr), _field(nullptr)
+{
+  std::cout << "/// Move Ctor BlockData3D" << std::endl;
+  *this = std::move(rhs); // https://msdn.microsoft.com/de-de/library/dd293665.aspx
+}
+
 
 template<typename T, typename BaseType>
 bool BlockData3D<T,BaseType>::isConstructed() const
@@ -150,7 +183,7 @@ template<typename T, typename BaseType>
 void BlockData3D<T,BaseType>::allocateMemory()
 {
   // The conversions to size_t ensure 64-bit compatibility. Note that
-  //   nx and ny are of type int, which might by 32-bit types, even on
+  //   nx and ny are of type int, which might be 32-bit types, even on
   //   64-bit platforms. Therefore, nx*ny may lead to a type overflow.
   _rawData = new BaseType[ getDataSize() ];
   _field   = new BaseType*** [(size_t)(this->_nx)];

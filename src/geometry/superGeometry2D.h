@@ -61,8 +61,8 @@
 namespace olb {
 
 template<typename T> class CuboidGeometry2D;
-template<typename T> class blockGeometry2D;
-template<typename T> class blockGeometryView2D;
+template<typename T> class BlockGeometry2D;
+template<typename T> class BlockGeometryView2D;
 template<typename T> class IndicatorF2D;
 template<typename T> class SuperStructure2D;
 template<typename T> class SuperGeometryStatistics2D;

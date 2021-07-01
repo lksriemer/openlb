@@ -46,6 +46,9 @@ namespace olb {
 template<typename T, template<typename U> class PARTICLETYPE>
 class SuperParticleSysVtuWriter;
 
+template<typename T>
+class SuperParticleSysVtuWriterMag;
+
 template<typename T, template<typename U> class PARTICLETYPE>
 class Force3D;
 
@@ -56,7 +59,7 @@ template <typename T, template <typename U> class DESCRIPTOR>
 class SuperLatticeInterpVelocity3D;
 
 /**
- *  The class superParticleSystem is the basis for particulate flows witin OpenLB.
+ *  The class superParticleSystem is the basis for particulate flows within OpenLB.
  *  Use one of the constructors to instantiate a superParticleSystem. This creates
  *  one particleSystem for each cuboid according to the structure found in
  *  cuboid Geometry.
@@ -71,7 +74,7 @@ class SuperLatticeInterpVelocity3D;
 template<typename T, template<typename U> class PARTICLETYPE>
 class SuperParticleSystem3D : public SuperStructure3D<T> {
 public:
-//  SuperParticleSystem3D() : _overlap(0) {}
+  time_t _stopSorting;
 
   /// Constructor for SuperParticleSystem
   SuperParticleSystem3D(CuboidGeometry3D<T>& cuboidGeometry,
@@ -91,10 +94,27 @@ public:
   void addParticle(PARTICLETYPE<T> &p);
   /// Add a number of identical Particles equally distributed in a given IndicatorF3D
   void addParticle(IndicatorF3D<T>& ind, T mas, T rad, int no = 1, std::vector<T> vel= {0.,0.,0.});
+  /// Add a number of identical Particles equally distributed in a given IndicatorF3D and in given
+  /// Material Number
+  void addParticle(IndicatorF3D<T>& ind, std::set<int>  material, T mas, T rad, int no = 1,
+                   std::vector<T> vel= {0.,0.,0.});
   /// Add a number of identical Particles equally distributed in a given Material Number
-  void addParticle(int material, T mas, T rad, int no);
+  void addParticle(std::set<int>  material, int no, T mas, T rad, std::vector<T> vel = {0.,0.,0.});
   /// Add Particles form a File. Save using saveToFile(std::string name)
   void addParticlesFromFile(std::string name, T mass, T radius);
+  /// Removes all particles from System
+  void clearParticles();
+
+  /// Generates particles with specific volume concentration conc equally
+  /// and randomly distributed in given IndicatorCuboid maintaining a minimum
+  /// distance between each other.
+  /// Be aware that long calculation time can occur because of minDist check.
+  void addParticleWithDistance(IndicatorCuboid3D<T>& ind,
+                               T pMass, T pRad, std::vector<T> vel,
+                               T conc, // volume concentration of particles, noP*vol_1p/volF = conc
+                               T minDist, // minimum distance between each particle
+                               bool checkDist // check whether minDist is choosen too large
+                              );
 
   /// Integrate on Timestep dT
   void simulate(T dT);
@@ -159,32 +179,38 @@ public:
   void captureEscapeRate(std::list<int> mat);
 
   /// Not relevant. But class must inherit from SuperStructure3D so we are forced to implement these functions.
-  virtual bool* operator()(int iCloc, int iX, int iY, int iZ, int iData) {
+  virtual bool* operator()(int iCloc, int iX, int iY, int iZ, int iData)
+  {
     return 0;
   }
-  virtual int getDataSize() const {
+  virtual int getDataSize() const
+  {
     return 0;
   }
-  virtual int getDataTypeSize() const {
+  virtual int getDataTypeSize() const
+  {
     return 0;
   }
 
   /// Destructor
-  virtual ~SuperParticleSystem3D() {
+  virtual ~SuperParticleSystem3D()
+  {
   }
 
   /// Particle-Fluid interaction for subgrid scale particles
-//  template<template<typename V> class DESCRIPTOR>
-//  void particleOnFluid(SuperLattice3D<T, DESCRIPTOR>& sLattice, T eps, SuperGeometry3D<T>& sGeometry);
-//  template<template<typename V> class DESCRIPTOR>
-//  void resetFluid(SuperLattice3D<T, DESCRIPTOR>& sLattice);
+  //  template<template<typename V> class DESCRIPTOR>
+  //  void particleOnFluid(SuperLattice3D<T, DESCRIPTOR>& sLattice, T eps, SuperGeometry3D<T>& sGeometry);
+  //  template<template<typename V> class DESCRIPTOR>
+  //  void resetFluid(SuperLattice3D<T, DESCRIPTOR>& sLattice);
 
-  /// returns the stokes number
-  T getStokes(LBconverter<T>& conv, T pRho, T rad) {
+  /// returns the Stokes number
+  T getStokes(LBconverter<T>& conv, T pRho, T rad)
+  {
     return pRho*std::pow(2.*rad,2)*conv.getCharU()/(18.*conv.getCharL()*(conv.getCharNu()*conv.getCharRho()));
   };
 
   friend class SuperParticleSysVtuWriter<T, PARTICLETYPE> ;
+  friend class SuperParticleSysVtuWriterMag<T> ;
 
 protected:
   mutable OstreamManager clout;

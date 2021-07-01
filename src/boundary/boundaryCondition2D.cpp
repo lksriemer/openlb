@@ -33,8 +33,8 @@
 namespace olb {
 
 template class BoundaryConditionInstantiator2D<double, descriptors::D2Q9Descriptor,
-         RegularizedBoundaryManager2D < double, descriptors::D2Q9Descriptor,
-         RLBdynamics<double,descriptors::D2Q9Descriptor> > >;
+    RegularizedBoundaryManager2D < double, descriptors::D2Q9Descriptor,
+                                   RLBdynamics<double,descriptors::D2Q9Descriptor> > >;
 
 template OnLatticeBoundaryCondition2D<double,descriptors::D2Q9Descriptor>*
 createLocalBoundaryCondition2D < double,descriptors::D2Q9Descriptor,
@@ -51,8 +51,8 @@ createLocalBoundaryCondition2D < double,descriptors::D2Q9Descriptor,
                                );
 
 template class BoundaryConditionInstantiator2D<double, descriptors::D2Q9Descriptor,
-         InterpolationBoundaryManager2D < double, descriptors::D2Q9Descriptor,
-         BGKdynamics<double,descriptors::D2Q9Descriptor> > >;
+    InterpolationBoundaryManager2D < double, descriptors::D2Q9Descriptor,
+                                     BGKdynamics<double,descriptors::D2Q9Descriptor> > >;
 
 template OnLatticeBoundaryCondition2D<double,descriptors::D2Q9Descriptor>*
 createInterpBoundaryCondition2D < double,descriptors::D2Q9Descriptor,

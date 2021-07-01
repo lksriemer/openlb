@@ -61,6 +61,7 @@ template class Base64Encoder<float>;
 template class Base64Encoder<double>;
 template class Base64Encoder<T1>;
 template class Base64Encoder<T2>;
+template class Base64Encoder<unsigned char>;
 
 template class Base64Decoder<bool>;
 template class Base64Decoder<float>;

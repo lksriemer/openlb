@@ -80,13 +80,15 @@ public:
   void swap(BlockLattice2D& rhs);
 public:
   /// Read/write access to lattice cells
-  virtual Cell<T,Lattice>& get(int iX, int iY) {
+  virtual Cell<T,Lattice>& get(int iX, int iY)
+  {
     OLB_PRECONDITION(iX<this->_nx);
     OLB_PRECONDITION(iY<this->_ny);
     return grid[iX][iY];
   }
   /// Read only access to lattice cells
-  virtual Cell<T,Lattice> const& get(int iX, int iY) const {
+  virtual Cell<T,Lattice> const& get(int iX, int iY) const
+  {
     OLB_PRECONDITION(iX<this->_nx);
     OLB_PRECONDITION(iY<this->_ny);
     return grid[iX][iY];

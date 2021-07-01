@@ -54,14 +54,17 @@ public:
   /// Constructor with set of material numbers
   MaterialBoundary3D(SuperGeometry3D<T>& sg,
                      std::set<int> material);
-  virtual ~MaterialBoundary3D() {
+  virtual ~MaterialBoundary3D()
+  {
   }
   /// Add a single material number
-  void addMaterial(int mat) {
+  void addMaterial(int mat)
+  {
     _materials.insert(mat);
   }
   /// Add several material numbers
-  void addMaterial(std::vector<int> mats) {
+  void addMaterial(std::vector<int> mats)
+  {
     for (unsigned i=0; i< mats.size(); ++i) {
       _materials.insert(mats[i]);
     }

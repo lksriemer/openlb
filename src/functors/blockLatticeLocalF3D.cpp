@@ -30,20 +30,25 @@ namespace olb {
 template class BlockLatticeFpop3D<double,descriptors::D3Q19Descriptor>;
 template class BlockLatticeDissipation3D<double,descriptors::D3Q19Descriptor>;
 template class BlockLatticePhysDissipation3D<double,descriptors::D3Q19Descriptor>;
+template class BlockLatticeEffevtiveDissipation3D<double,descriptors::D3Q19Descriptor>;
+template class BlockLatticePhysEffevtiveDissipation3D<double,descriptors::D3Q19Descriptor>;
 template class BlockLatticeDensity3D<double,descriptors::D3Q19Descriptor>;
 template class BlockLatticeVelocity3D<double,descriptors::D3Q19Descriptor>;
 template class BlockLatticeGeometry3D<double,descriptors::D3Q19Descriptor>;
+template class BlockLatticeRank3D<double,descriptors::D3Q19Descriptor>;
+template class BlockLatticeCuboid3D<double,descriptors::D3Q19Descriptor>;
 template class BlockLatticePhysPressure3D<double,descriptors::D3Q19Descriptor>;
 template class BlockLatticePhysVelocity3D<double,descriptors::D3Q19Descriptor>;
 template class BlockLatticeStrainRate3D<double,descriptors::D3Q19Descriptor>;
 template class BlockLatticePhysBoundaryForce3D<double,descriptors::D3Q19Descriptor>;
 template class BlockLatticePhysCorrBoundaryForce3D<double,descriptors::D3Q19Descriptor>;
 template class BlockLatticeExternalField3D<double,descriptors::D3Q19Descriptor>;
-template class BlockLatticePorosity3D<double,descriptors::D3Q19Descriptor>;
-template class BlockLatticePhysPermeability3D<double,descriptors::D3Q19Descriptor>;
-template class BlockLatticePhysDarcyForce3D<double,descriptors::D3Q19Descriptor>;
+//template class BlockLatticePorosity3D<double,descriptors::D3Q19Descriptor>;
+//template class BlockLatticePhysPermeability3D<double,descriptors::D3Q19Descriptor>;
 template class BlockLatticeAverage3D<double,descriptors::D3Q19Descriptor>;
 template class BlockEuklidNorm3D<double,descriptors::D3Q19Descriptor>;
 template class BlockLatticeInterpPhysVelocity3D<double,descriptors::D3Q19Descriptor>;
+//template class BlockLatticeInterpPhysVelocity3Degree3D<double,descriptors::D3Q19Descriptor>;
+//template class BlockLatticeInterpDensity3Degree3D<double,descriptors::D3Q19Descriptor>;
 
 } // end namespace olb

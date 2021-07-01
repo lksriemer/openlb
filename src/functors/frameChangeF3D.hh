@@ -38,7 +38,6 @@
 #define M_PI 3.14159265358979323846
 #endif
 
-using namespace olb::util;
 
 namespace olb {
 
@@ -196,7 +195,7 @@ RectanglePoiseuille3D<T>::RectanglePoiseuille3D(SuperGeometry3D<T>& superGeometr
   x0 = min;
   x1 = min;
   x2 = min;
-  if (max[0]-min[0] == 0) { // orthogonal to x-axis
+  if ( util::nearZero(max[0]-min[0]) ) { // orthogonal to x-axis
     x0[1] -= offsetY;
     x0[2] -= offsetZ;
     x1[1] -= offsetY;
@@ -206,7 +205,7 @@ RectanglePoiseuille3D<T>::RectanglePoiseuille3D(SuperGeometry3D<T>& superGeometr
 
     x1[1] = max[1] + offsetY;
     x2[2] = max[2] + offsetZ;
-  } else if (max[1]-min[1] == 0) { // orthogonal to y-axis
+  } else if ( util::nearZero(max[1]-min[1]) ) { // orthogonal to y-axis
     x0[0] -= offsetX;
     x0[2] -= offsetZ;
     x1[0] -= offsetX;
@@ -216,7 +215,7 @@ RectanglePoiseuille3D<T>::RectanglePoiseuille3D(SuperGeometry3D<T>& superGeometr
 
     x1[0] = max[0] + offsetX;
     x2[2] = max[2] + offsetZ;
-  } else if (max[2]-min[2] == 0) { // orthogonal to z-axis
+  } else if ( util::nearZero(max[2]-min[2]) ) { // orthogonal to z-axis
     x0[0] -= offsetX;
     x0[1] -= offsetY;
     x1[0] -= offsetX;
@@ -251,7 +250,7 @@ bool RectanglePoiseuille3D<T>::operator()(T output[], const T x[])
     s[3][iD] = x2[iD];
   }
   for (int iP = 0; iP < 4; iP++) {
-    n[iP] = olb::util::normalize(n[iP]);
+    n[iP] = util::normalize(n[iP]);
   }
 
   // determine plane coefficients in the coordinate equation E_i: Ax+By+Cz+D=0
@@ -308,7 +307,7 @@ bool EllipticPoiseuille3D<T>::operator()(T output[], const T x[])
   output[0] = 0.;
   output[1] = 0.;
   output[2] = _maxVel*(-x2+1);
-  if (_center[0] == x[0] && _center[1] == x[1]) {
+  if ( util::nearZero(_center[0]-x[0]) && util::nearZero(_center[1]-x[1]) ) {
     output[2] = _maxVel;
   }
   return true;
@@ -339,12 +338,12 @@ bool AngleBetweenVectors3D<T, S>::operator()(T output[], const S x[])
   Vector<T, 3> orientation(_orientation);
   T angle = T(0);
 
-  if (x[0] == T() && x[1] == T() && x[2] == T()) {
+  if ( util::nearZero(x[0]) && util::nearZero(x[1]) && util::nearZero(x[2]) ) {
     // if (abs(x[0]) + abs(x[1]) + abs(x[2]) == T()) {
     output[0] = angle;  // angle = 0
     return true;
   } else {
-    Vector<S, 3> x_tmp(x[3]);
+    //Vector<S, 3> x_tmp(x); // check construction
     n_x[0] = x[0];
     n_x[1] = x[1];
     n_x[2] = x[2];
@@ -357,15 +356,15 @@ bool AngleBetweenVectors3D<T, S>::operator()(T output[], const S x[])
   T n_dot = n_x * n_ref;
 
 
-  if (cross * orientation == T()) {
+  if ( util::nearZero(cross*orientation) ) {
     // std::cout<< "orientation in same plane as x and refvector" << std::endl;
   }
   // angle = Pi, if n_x, n_ref opposite
-  if ((n_x[0] == -n_ref[0] && n_x[1] == -n_ref[1] && n_x[2] == -n_ref[2])) {
+  if ( util::nearZero(n_x[0]+n_ref[0]) && util::nearZero(n_x[1]+n_ref[1]) && util::nearZero(n_x[2]+n_ref[2]) ) {
     angle = acos(-1);
   }
   // angle = 0, if n_x, n_ref equal
-  else if ((n_x[0] == n_ref[0] && n_x[1] == n_ref[1] && n_x[2] == n_ref[2])) {
+  else if ( util::nearZero(n_x[0]-n_ref[0]) && util::nearZero(n_x[1]-n_ref[1]) && util::nearZero(n_x[2]-n_ref[2]) ) {
     angle = T();
   }
   // angle in (0,Pi) or (Pi,2Pi), if n_x, n_ref not opposite or equal
@@ -375,7 +374,7 @@ bool AngleBetweenVectors3D<T, S>::operator()(T output[], const S x[])
     T normal = cross.norm();
     Vector<T, 3> n_orient;
 
-    if (orientation.norm() != T()) {
+    if ( !util::nearZero(orientation.norm()) ) {
       n_orient = orientation;
       n_orient.normalize();
     } else {
@@ -411,31 +410,16 @@ RotationRoundAxis3D<T, S>::RotationRoundAxis3D(std::vector<T> origin,
 template<typename T, typename S>
 bool RotationRoundAxis3D<T, S>::operator()(T output[], const S x[])
 {
-  if (_rotAxisDirection[0] == 0 && _rotAxisDirection[1] == 0
-      && _rotAxisDirection[2] == 0) {
-    // if (abs(_rotAxisDirection[0]) + abs(_rotAxisDirection[1]) +
-    //abs(_rotAxisDirection[2]) == T()) {
-
-    for (int j=0; j<3; j++) {
-      output[j] = x[j];
-    }
-    return true;
-  } else {
+  Vector<T, 3> n(_rotAxisDirection);
+  if ( !util::nearZero(n.norm()) && n.norm() > 0 ) {
+    //std::cout<< "Rotation axis: " << _rotAxisDirection[0] << " " << _rotAxisDirection[1] << " " << _rotAxisDirection[2] << std::endl;
+    n.normalize();
     // translation
     Vector<T, 3> x_tmp;
     for (int i = 0; i < 3; ++i) {
       x_tmp[i] = x[i] - _origin[i];
     }
     // rotation
-    //std::vector<T> y(3, T());
-    Vector<T, 3> n(_rotAxisDirection);
-    if (n.norm() != T() ) {
-      n.normalize();
-    } else {
-      std::cout<< "Axis is null vector." <<std::endl;
-      exit(-1);
-    }
-
     output[0] = (n[0]*n[0]*(1 - cos(_alpha)) + cos(_alpha)) * x_tmp[0]
                 + (n[0]*n[1]*(1 - cos(_alpha)) - n[2]*sin(_alpha))*x_tmp[1]
                 + (n[0]*n[2]*(1 - cos(_alpha)) + n[1]*sin(_alpha))*x_tmp[2]
@@ -450,6 +434,12 @@ bool RotationRoundAxis3D<T, S>::operator()(T output[], const S x[])
                 + (n[2]*n[1]*(1 - cos(_alpha)) + n[0]*sin(_alpha))*x_tmp[1]
                 + (n[2]*n[2]*(1 - cos(_alpha)) + cos(_alpha))*x_tmp[2]
                 + _origin[2];
+    return true;
+  } else {
+    //std::cout<< "Axis is null or NaN" <<std::endl;
+    for (int j=0; j<3; j++) {
+      output[j] = x[j];
+    }
     return true;
   }
 }
@@ -555,13 +545,12 @@ bool CartesianToCylinder3D<T, S>::operator()(T output[], const S x[])
   normalAxisDir.normalize();
 
   // if axis has to be rotated
-  if (!(normalAxisDir[0] == 0 && normalAxisDir[1] == 0
-        && normalAxisDir[2] == 1)) {
+  if (!( util::nearZero(normalAxisDir[0]) && util::nearZero(normalAxisDir[1]) && util::nearZero(normalAxisDir[2]-1) )) {
 
-    if (norm(orientation) != T()) {
+    if ( !util::nearZero(norm(orientation)) ) {
       normal = orientation; // if _orientation = 0,0,0 -> segm. fault
     }
-    AngleBetweenVectors3D<T,S> angle(fromVector3(e3), fromVector3(normal));
+    AngleBetweenVectors3D<T,S> angle(util::fromVector3(e3), util::fromVector3(normal));
     T tmp[3] = {T(),T(),T()};
     tmp[0] = axisDirection[0];
     tmp[1] = axisDirection[1];
@@ -570,10 +559,10 @@ bool CartesianToCylinder3D<T, S>::operator()(T output[], const S x[])
     angle(alpha, tmp);
 
     // rotation with angle alpha to (0,0,1)
-    RotationRoundAxis3D<T, S> rotRAxis(_cartesianOrigin, fromVector3(normal), -alpha[0]);
+    RotationRoundAxis3D<T, S> rotRAxis(_cartesianOrigin, util::fromVector3(normal), -alpha[0]);
     rotRAxis(x_rot, x);
   }
-  CartesianToPolar2D<T, S> car2pol(_cartesianOrigin, fromVector3(e3), _orientation);
+  CartesianToPolar2D<T, S> car2pol(_cartesianOrigin, util::fromVector3(e3), _orientation);
   T x_rot_help[2] = {T(),T()};
   x_rot_help[0] = x_rot[0];
   x_rot_help[1] = x_rot[1];
@@ -685,9 +674,8 @@ bool CartesianToSpherical3D<T, S>::operator()(T output[], const S x[])
   normalAxisDir.normalize();
   Vector<T,3> cross;
   // if axis has to be rotated
-  if (!(normalAxisDir[0] == 0 && normalAxisDir[1] == 0
-        && normalAxisDir[2] == 1)) {
-    AngleBetweenVectors3D<T, S> angle(fromVector3(e3), fromVector3(normal));
+  if ( !( util::nearZero(normalAxisDir[0]) && util::nearZero(normalAxisDir[1]) && util::nearZero(normalAxisDir[2]-1) ) ) {
+    AngleBetweenVectors3D<T, S> angle(util::fromVector3(e3), util::fromVector3(normal));
     T tmp[3] = {T(),T(),T()};
     for (int i=0; i<3; ++i) {
       tmp[i] = axisDirection[i];
@@ -697,11 +685,11 @@ bool CartesianToSpherical3D<T, S>::operator()(T output[], const S x[])
     // cross is rotation axis
     cross = crossProduct3D(e3, axisDirection);
     // rotation with angle alpha to (0,0,1)
-    RotationRoundAxis3D<T, S> rotRAxis(_cartesianOrigin, fromVector3(normal), -alpha[0]);
+    RotationRoundAxis3D<T, S> rotRAxis(_cartesianOrigin, util::fromVector3(normal), -alpha[0]);
     rotRAxis(x_rot,x);
   }
 
-  CartesianToPolar2D<T, S> car2pol(_cartesianOrigin, fromVector3(e3), fromVector3(cross));
+  CartesianToPolar2D<T, S> car2pol(_cartesianOrigin, util::fromVector3(e3), util::fromVector3(cross));
   //  y[0] = car2pol(x_rot)[0];
   Vector<T, 3> difference;
 
@@ -784,13 +772,12 @@ bool MagneticForceFromCylinder3D<T, S>::operator()(T output[], const S x[])
                    + magneticForcePolar[1]*cos(phi);
 
     // if not in standard axis direction
-    if (!(normalAxis[0] == T(0) && normalAxis[1] == T(0)
-          && normalAxis[2] == T(1))) {
+    if ( !( util::nearZero(normalAxis[0]) && util::nearZero(normalAxis[1]) && util::nearZero(normalAxis[2]-1) ) ) {
       Vector<T, 3> e3(T(), T(), T(1));
       Vector<T, 3> orientation =
         crossProduct3D(Vector<T,3>(_car2cyl.getAxisDirection()),e3);
 
-      AngleBetweenVectors3D<T,S> angle(fromVector3(e3), fromVector3(orientation));
+      AngleBetweenVectors3D<T,S> angle(util::fromVector3(e3), util::fromVector3(orientation));
       T alpha[1] = {T()};
       T tmp2[3] = {T(),T(),T()};
       for (int i = 0; i<3; ++i) {
@@ -799,7 +786,7 @@ bool MagneticForceFromCylinder3D<T, S>::operator()(T output[], const S x[])
       angle(alpha,tmp2);
 
       std::vector<T> origin(3, T());
-      RotationRoundAxis3D<T, S> rotRAxis(origin, fromVector3(orientation), alpha[0]);
+      RotationRoundAxis3D<T, S> rotRAxis(origin, util::fromVector3(orientation), alpha[0]);
       rotRAxis(output,outputTmp);
     } else {
       output[0] = outputTmp[0];

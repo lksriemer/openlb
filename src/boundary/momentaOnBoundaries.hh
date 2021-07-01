@@ -39,117 +39,104 @@ namespace olb {
 template<typename T, template<typename U> class Lattice>
 EquilibriumBM<T,Lattice>::EquilibriumBM()
 {
-  rho = (T)1;
+  _rho = (T)1;
   for (int iD=0; iD<Lattice<T>::d; ++iD) {
-    u[iD] = T();
+    _u[iD] = T();
   }
 }
 
 template<typename T, template<typename U> class Lattice>
-EquilibriumBM<T,Lattice>::EquilibriumBM(T rho_, const T u_[Lattice<T>::d])
+EquilibriumBM<T,Lattice>::EquilibriumBM(T rho, const T u[Lattice<T>::d])
 {
-  rho = rho_;
+  _rho = rho;
   for (int iD=0; iD<Lattice<T>::d; ++iD) {
-    u[iD] = u_[iD];
+    _u[iD] = u[iD];
   }
 }
 
 template<typename T, template<typename U> class Lattice>
-T EquilibriumBM<T,Lattice>::computeRho (
-  Cell<T,Lattice> const& cell ) const
+T EquilibriumBM<T,Lattice>::computeRho( Cell<T,Lattice> const& cell ) const
 {
-  return rho;
+  return _rho;
 }
 
 template<typename T, template<typename U> class Lattice>
-void EquilibriumBM<T,Lattice>::computeU (
-  Cell<T,Lattice> const& cell,
-  T u_[Lattice<T>::d]) const
+void EquilibriumBM<T,Lattice>::computeU(
+  Cell<T,Lattice> const& cell, T u[Lattice<T>::d]) const
 {
   for (int iD=0; iD<Lattice<T>::d; ++iD) {
-    u_[iD] = u[iD];
+    u[iD] = _u[iD];
   }
 }
 
 template<typename T, template<typename U> class Lattice>
 void EquilibriumBM<T,Lattice>::computeJ (
-  Cell<T,Lattice> const& cell,
-  T j_[Lattice<T>::d]) const
+  Cell<T,Lattice> const& cell, T j[Lattice<T>::d]) const
 {
   for (int iD=0; iD<Lattice<T>::d; ++iD) {
-    j_[iD] = u[iD]*rho;
+    j[iD] = _u[iD]*_rho;
   }
 }
 
 template<typename T, template<typename U> class Lattice>
-void EquilibriumBM<T,Lattice>::computeStress (
-  Cell<T,Lattice> const& cell,
-  T rho, const T u[Lattice<T>::d],
-  T pi_[util::TensorVal<Lattice<T> >::n] ) const
+void EquilibriumBM<T,Lattice>::computeStress( Cell<T,Lattice> const& cell,
+    T rho, const T u[Lattice<T>::d], T pi[util::TensorVal<Lattice<T> >::n] ) const
 {
   for (int iPi=0; iPi<util::TensorVal<Lattice<T> >::n; ++iPi) {
-    pi_[iPi] = T();
+    pi[iPi] = T();
   }
 }
 
 
 template<typename T, template<typename U> class Lattice>
-void EquilibriumBM<T,Lattice>::defineRho (
-  Cell<T,Lattice>& cell, T rho_ )
+void EquilibriumBM<T,Lattice>::defineRho( Cell<T,Lattice>& cell, T rho )
 {
-  rho = rho_;
+  _rho = rho;
 }
 
 template<typename T, template<typename U> class Lattice>
-void EquilibriumBM<T,Lattice>::defineU (
-  Cell<T,Lattice>& cell,
-  const T u_[Lattice<T>::d])
+void EquilibriumBM<T,Lattice>::defineU(
+  Cell<T,Lattice>& cell, const T u[Lattice<T>::d])
 {
   for (int iD=0; iD<Lattice<T>::d; ++iD) {
-    u[iD] = u_[iD];
+    _u[iD] = u[iD];
   }
 }
 
 template<typename T, template<typename U> class Lattice>
-void EquilibriumBM<T,Lattice>::defineAllMomenta (
-  Cell<T,Lattice>& cell,
-  T rho_, const T u_[Lattice<T>::d],
-  const T pi_[util::TensorVal<Lattice<T> >::n] )
+void EquilibriumBM<T,Lattice>::defineAllMomenta( Cell<T,Lattice>& cell,
+    T rho, const T u[Lattice<T>::d], const T pi[util::TensorVal<Lattice<T> >::n] )
 {
-  defineRho(cell, rho_);
-  defineU(cell, u_);
+  defineRho(cell, rho);
+  defineU(cell, u);
 }
 
 
 
 ////////////////////// Class VelocityBM //////////////////////
 
-template<typename T, template<typename U> class Lattice,
-         int direction, int orientation>
+template<typename T, template<typename U> class Lattice, int direction, int orientation>
 VelocityBM<T,Lattice,direction,orientation>::VelocityBM()
 {
   for (int iD=0; iD<Lattice<T>::d; ++iD) {
-    u[iD] = T();
+    _u[iD] = T();
   }
 }
 
 /** It takes as argument the value of the velocity to be imposed on the
  * boundary.
  */
-template<typename T, template<typename U> class Lattice,
-         int direction, int orientation>
-VelocityBM<T,Lattice,direction,orientation>::
-VelocityBM(const T u_[Lattice<T>::d])
+template<typename T, template<typename U> class Lattice, int direction, int orientation>
+VelocityBM<T,Lattice,direction,orientation>::VelocityBM(const T u[Lattice<T>::d])
 {
   for (int iD=0; iD<Lattice<T>::d; ++iD) {
-    u[iD] = u_[iD];
+    _u[iD] = u[iD];
   }
 }
 
-template<typename T, template<typename U> class Lattice,
-         int direction, int orientation>
-T VelocityBM<T,Lattice,direction,orientation>::computeRho (
-  Cell<T,Lattice> const& cell ) const {
+template<typename T, template<typename U> class Lattice, int direction, int orientation>
+T VelocityBM<T,Lattice,direction,orientation>::computeRho( Cell<T,Lattice> const& cell ) const
+{
   std::vector<int> const& onWallIndices
     = util::subIndex<Lattice<T>, direction, 0>();
 
@@ -167,122 +154,106 @@ T VelocityBM<T,Lattice,direction,orientation>::computeRho (
   }
 
   T rho =((T)2*rhoNormal+rhoOnWall+(T)1) /
-         ((T)1+(T)orientation*this->u[direction]);
+         ((T)1+(T)orientation*this->_u[direction]);
 
   return rho;
 }
 
-template<typename T, template<typename U> class Lattice,
-         int direction, int orientation>
+template<typename T, template<typename U> class Lattice, int direction, int orientation>
 void VelocityBM<T,Lattice,direction,orientation>::computeU (
-  Cell<T,Lattice> const& cell,
-  T u_[Lattice<T>::d]) const {
-  computeU(u_);
+  Cell<T,Lattice> const& cell, T u[Lattice<T>::d]) const
+{
+  computeU(u);
 }
 
-template<typename T, template<typename U> class Lattice,
-         int direction, int orientation>
+template<typename T, template<typename U> class Lattice, int direction, int orientation>
 void VelocityBM<T,Lattice,direction,orientation>::computeJ (
-  Cell<T,Lattice> const& cell,
-  T j_[Lattice<T>::d]) const {
+  Cell<T,Lattice> const& cell, T j[Lattice<T>::d]) const
+{
   T rho = computeRho(cell);
   for (int iD=0; iD<Lattice<T>::d; ++iD) {
-    j_[iD] = u[iD]*rho;
+    j[iD] = _u[iD]*rho;
   }
 }
 
-template<typename T, template<typename U> class Lattice,
-         int direction, int orientation>
-void VelocityBM<T,Lattice,direction,orientation>::computeU (
-  T u_[Lattice<T>::d]) const {
-  for (int iD=0; iD<Lattice<T>::d; ++iD) {
-    u_[iD] = u[iD];
-  }
-}
-
-template<typename T, template<typename U> class Lattice,
-         int direction, int orientation>
-void VelocityBM<T,Lattice,direction,orientation>::defineRho (
-  Cell<T,Lattice>& cell, T rho_ )
-{ }
-
-template<typename T, template<typename U> class Lattice,
-         int direction, int orientation>
-void VelocityBM<T,Lattice,direction,orientation>::defineU (
-  Cell<T,Lattice>& cell,
-  const T u_[Lattice<T>::d])
-{
-  defineU(u_);
-}
-
-template<typename T, template<typename U> class Lattice,
-         int direction, int orientation>
-void VelocityBM<T,Lattice,direction,orientation>::defineU (
-  const T u_[Lattice<T>::d])
+template<typename T, template<typename U> class Lattice, int direction, int orientation>
+void VelocityBM<T,Lattice,direction,orientation>::computeU( T u[Lattice<T>::d] ) const
 {
   for (int iD=0; iD<Lattice<T>::d; ++iD) {
-    u[iD] = u_[iD];
+    u[iD] = _u[iD];
   }
 }
 
-template<typename T, template<typename U> class Lattice,
-         int direction, int orientation>
+template<typename T, template<typename U> class Lattice, int direction, int orientation>
+void VelocityBM<T,Lattice,direction,orientation>::defineRho(Cell<T,Lattice>& cell, T rho )
+{
+}
+
+template<typename T, template<typename U> class Lattice, int direction, int orientation>
+void VelocityBM<T,Lattice,direction,orientation>::defineU (
+  Cell<T,Lattice>& cell, const T u[Lattice<T>::d])
+{
+  defineU(u);
+}
+
+template<typename T, template<typename U> class Lattice, int direction, int orientation>
+void VelocityBM<T,Lattice,direction,orientation>::defineU(const T u[Lattice<T>::d])
+{
+  for (int iD=0; iD<Lattice<T>::d; ++iD) {
+    _u[iD] = u[iD];
+  }
+}
+
+template<typename T, template<typename U> class Lattice, int direction, int orientation>
 void VelocityBM<T,Lattice,direction,orientation>::defineAllMomenta (
-  Cell<T,Lattice>& cell,
-  T rho_, const T u_[Lattice<T>::d],
-  const T pi_[util::TensorVal<Lattice<T> >::n] )
+  Cell<T,Lattice>& cell, T rho, const T u[Lattice<T>::d], const T pi[util::TensorVal<Lattice<T> >::n] )
 {
-  this->defineRhoU(cell, rho_, u_);
+  this->defineRhoU(cell, rho, u);
 }
 
 
 ////////////////////// Class PressureBM //////////////////////
 
-template<typename T, template<typename U> class Lattice,
-         int direction, int orientation>
+template<typename T, template<typename U> class Lattice, int direction, int orientation>
 PressureBM<T,Lattice,direction,orientation>::PressureBM()
 {
   for (int iD=0; iD<Lattice<T>::d; ++iD) {
-    values[iD] = T();
+    _values[iD] = T();
   }
-  values[direction] = 1.;
+  _values[direction] = 1.;
 }
 
 /** It takes as argument the value of the tangential velocity
  * components, and the pressure, to be imposed on the boundary.
  */
-template<typename T, template<typename U> class Lattice,
-         int direction, int orientation>
-PressureBM<T,Lattice,direction,orientation>::
-PressureBM(const T values_[Lattice<T>::d])
+template<typename T, template<typename U> class Lattice, int direction, int orientation>
+PressureBM<T,Lattice,direction,orientation>::PressureBM(const T values[Lattice<T>::d])
 {
   for (int iD=0; iD<Lattice<T>::d; ++iD) {
-    values[iD] = values_[iD];
+    _values[iD] = values[iD];
   }
 }
 
-template<typename T, template<typename U> class Lattice,
-         int direction, int orientation>
-T PressureBM<T,Lattice,direction,orientation>::computeRho (
-  Cell<T,Lattice> const& cell ) const {
+template<typename T, template<typename U> class Lattice, int direction, int orientation>
+T PressureBM<T,Lattice,direction,orientation>::computeRho( Cell<T,Lattice> const& cell ) const
+{
   return computeRho();
 }
 
-template<typename T, template<typename U> class Lattice,
-         int direction, int orientation>
-T PressureBM<T,Lattice,direction,orientation>::computeRho() const {
-  return values[direction];
+template<typename T, template<typename U> class Lattice, int direction, int orientation>
+T PressureBM<T,Lattice,direction,orientation>::computeRho() const
+{
+  return _values[direction];
 }
 
-template<typename T, template<typename U> class Lattice,
-         int direction, int orientation>
+template<typename T, template<typename U> class Lattice, int direction, int orientation>
 void PressureBM<T,Lattice,direction,orientation>::computeU (
-  Cell<T,Lattice> const& cell,
-  T u_[Lattice<T>::d]) const {
+  Cell<T,Lattice> const& cell, T u[Lattice<T>::d]) const
+{
   for (int iD=0; iD<Lattice<T>::d; ++iD) {
-    u_[iD] = values[iD];
+    u[iD] = _values[iD];
   }
-  T rho = values[direction];
+  T rho = _values[direction];
 
   std::vector<int> const& onWallIndices
     = util::subIndex<Lattice<T>, direction, 0>();
@@ -300,58 +271,47 @@ void PressureBM<T,Lattice,direction,orientation>::computeU (
     rhoNormal += cell[normalIndices[fIndex]];
   }
 
-  u_[direction] = (T)orientation*(
-                    ((T)2*rhoNormal+rhoOnWall+(T)1)/rho-(T)1 );
+  u[direction] = (T)orientation*( ((T)2*rhoNormal+rhoOnWall+(T)1 ) / rho-(T)1 );
 }
 
-template<typename T, template<typename U> class Lattice,
-         int direction, int orientation>
+template<typename T, template<typename U> class Lattice, int direction, int orientation>
 void PressureBM<T,Lattice,direction,orientation>::computeJ (
-  Cell<T,Lattice> const& cell,
-  T j_[Lattice<T>::d]) const {
-  computeU(cell, j_);
+  Cell<T,Lattice> const& cell, T j[Lattice<T>::d]) const
+{
+  computeU(cell, j);
   T rho = computeRho(cell);
   for (int iD=0; iD<Lattice<T>::d; ++iD) {
-    j_[iD] *= rho;
+    j[iD] *= rho;
   }
 }
 
-template<typename T, template<typename U> class Lattice,
-         int direction, int orientation>
-void PressureBM<T,Lattice,direction,orientation>::defineRho (
-  Cell<T,Lattice>& cell, T rho_)
+template<typename T, template<typename U> class Lattice, int direction, int orientation>
+void PressureBM<T,Lattice,direction,orientation>::defineRho(Cell<T,Lattice>& cell, T rho)
 {
-  defineRho(rho_);
+  defineRho(rho);
 }
 
-template<typename T, template<typename U> class Lattice,
-         int direction, int orientation>
-void PressureBM<T,Lattice,direction,orientation>::defineRho(T rho_ )
+template<typename T, template<typename U> class Lattice, int direction, int orientation>
+void PressureBM<T,Lattice,direction,orientation>::defineRho(T rho )
 {
-  values[direction] = rho_;
+  _values[direction] = rho;
 }
 
-template<typename T, template<typename U> class Lattice,
-         int direction, int orientation>
-void PressureBM<T,Lattice,direction,orientation>::defineU (
-  Cell<T,Lattice>& cell,
-  const T u_[Lattice<T>::d])
+template<typename T, template<typename U> class Lattice, int direction, int orientation>
+void PressureBM<T,Lattice,direction,orientation>::defineU(Cell<T,Lattice>& cell, const T u[Lattice<T>::d])
 {
   for (int iD=0; iD<Lattice<T>::d; ++iD) {
     if (iD != direction) {
-      values[iD] = u_[iD];
+      _values[iD] = u[iD];
     }
   }
 }
 
-template<typename T, template<typename U> class Lattice,
-         int direction, int orientation>
-void PressureBM<T,Lattice,direction,orientation>::defineAllMomenta (
-  Cell<T,Lattice>& cell,
-  T rho_, const T u_[Lattice<T>::d],
-  const T pi_[util::TensorVal<Lattice<T> >::n] )
+template<typename T, template<typename U> class Lattice, int direction, int orientation>
+void PressureBM<T,Lattice,direction,orientation>::defineAllMomenta(
+  Cell<T,Lattice>& cell, T rho, const T u[Lattice<T>::d], const T pi[util::TensorVal<Lattice<T> >::n] )
 {
-  this->defineRhoU(cell, rho_, u_);
+  this->defineRhoU(cell, rho, u);
 }
 
 
@@ -359,9 +319,7 @@ void PressureBM<T,Lattice,direction,orientation>::defineAllMomenta (
 
 template<typename T, template<typename U> class Lattice>
 void FreeStressBM<T,Lattice>::computeStress (
-  Cell<T,Lattice> const& cell,
-  T rho, const T u[Lattice<T>::d],
-  T pi[util::TensorVal<Lattice<T> >::n] ) const
+  Cell<T,Lattice> const& cell, T rho, const T u[Lattice<T>::d], T pi[util::TensorVal<Lattice<T> >::n] ) const
 {
   lbHelpers<T,Lattice>::computeStress(cell, rho, u, pi);
 }
@@ -370,12 +328,11 @@ void FreeStressBM<T,Lattice>::computeStress (
 
 ////////////////////// Class RegularizedBM //////////////////////
 
-template<typename T, template<typename U> class Lattice,
-         int direction, int orientation>
+template<typename T, template<typename U> class Lattice, int direction, int orientation>
 void RegularizedBM<T,Lattice,direction,orientation>::computeStress (
-  Cell<T,Lattice> const& cell,
-  T rho, const T u[Lattice<T>::d],
-  T pi[util::TensorVal<Lattice<T> >::n] ) const {
+  Cell<T,Lattice> const& cell, T rho, const T u[Lattice<T>::d],
+  T pi[util::TensorVal<Lattice<T> >::n] ) const
+{
   BoundaryHelpers<T,Lattice,direction,orientation>::computeStress(cell, rho, u, pi);
 }
 
@@ -384,14 +341,14 @@ void RegularizedBM<T,Lattice,direction,orientation>::computeStress (
 template<typename T, template<typename U> class Lattice>
 T FixedVelocityBM<T,Lattice>::computeRho(Cell<T,Lattice> const& cell) const
 {
-  return basicMomenta.computeRho(cell);
+  return _basicMomenta.computeRho(cell);
 }
 
 template<typename T, template<typename U> class Lattice>
 void FixedVelocityBM<T,Lattice>::computeU(Cell<T,Lattice> const& cell, T u[Lattice<T>::d]) const
 {
   for (int iD=0; iD<Lattice<T>::d; ++iD) {
-    u[iD] = fixU[iD];
+    u[iD] = _fixU[iD];
   }
 }
 
@@ -400,23 +357,20 @@ void FixedVelocityBM<T,Lattice>::computeJ(Cell<T,Lattice> const& cell, T j[Latti
 {
   T rho = computeRho(cell);
   for (int iD=0; iD<Lattice<T>::d; ++iD) {
-    j[iD] = fixU[iD]*rho;
+    j[iD] = _fixU[iD]*rho;
   }
 }
 
 template<typename T, template<typename U> class Lattice>
 void FixedVelocityBM<T,Lattice>::computeStress (
-  Cell<T,Lattice> const& cell,
-  T rho, const T u[Lattice<T>::d],
-  T pi[util::TensorVal<Lattice<T> >::n] ) const
+  Cell<T,Lattice> const& cell, T rho, const T u[Lattice<T>::d], T pi[util::TensorVal<Lattice<T> >::n] ) const
 {
-  basicMomenta.computeStress(cell, rho, u, pi);
+  _basicMomenta.computeStress(cell, rho, u, pi);
 }
 
 template<typename T, template<typename U> class Lattice>
 void FixedVelocityBM<T,Lattice>::computeRhoU (
-  Cell<T,Lattice> const& cell,
-  T& rho, T u[Lattice<T>::d] ) const
+  Cell<T,Lattice> const& cell, T& rho, T u[Lattice<T>::d] ) const
 {
   rho = computeRho(cell);
   computeU(cell,u);
@@ -424,46 +378,38 @@ void FixedVelocityBM<T,Lattice>::computeRhoU (
 
 template<typename T, template<typename U> class Lattice>
 void FixedVelocityBM<T,Lattice>::computeAllMomenta (
-  Cell<T,Lattice> const& cell,
-  T& rho, T u[Lattice<T>::d],
-  T pi[util::TensorVal<Lattice<T> >::n] ) const
+  Cell<T,Lattice> const& cell, T& rho, T u[Lattice<T>::d], T pi[util::TensorVal<Lattice<T> >::n] ) const
 {
-  basicMomenta.computeAllMomenta(cell, rho, u, pi);
+  _basicMomenta.computeAllMomenta(cell, rho, u, pi);
   computeU(cell, u);
 }
 
 template<typename T, template<typename U> class Lattice>
 void FixedVelocityBM<T,Lattice>::defineRho(Cell<T,Lattice>& cell, T rho)
 {
-  basicMomenta.defineRho(cell, rho);
+  _basicMomenta.defineRho(cell, rho);
 }
 
 template<typename T, template<typename U> class Lattice>
-void FixedVelocityBM<T,Lattice>::defineU (
-  Cell<T,Lattice>& cell,
-  const T u[Lattice<T>::d])
+void FixedVelocityBM<T,Lattice>::defineU(Cell<T,Lattice>& cell, const T u[Lattice<T>::d])
 {
   for (int iD=0; iD<Lattice<T>::d; ++iD) {
-    fixU[iD] = u[iD];
+    _fixU[iD] = u[iD];
   }
 }
 
 template<typename T, template<typename U> class Lattice>
-void FixedVelocityBM<T,Lattice>::defineRhoU (
-  Cell<T,Lattice>& cell,
-  T rho, const T u[Lattice<T>::d])
+void FixedVelocityBM<T,Lattice>::defineRhoU(Cell<T,Lattice>& cell, T rho, const T u[Lattice<T>::d])
 {
   defineRho(cell,rho);
   defineU(cell,u);
 }
 
 template<typename T, template<typename U> class Lattice>
-void FixedVelocityBM<T,Lattice>::defineAllMomenta (
-  Cell<T,Lattice>& cell,
-  T rho, const T u[Lattice<T>::d],
-  const T pi[util::TensorVal<Lattice<T> >::n] )
+void FixedVelocityBM<T,Lattice>::defineAllMomenta( Cell<T,Lattice>& cell, T rho, const T u[Lattice<T>::d],
+    const T pi[util::TensorVal<Lattice<T> >::n] )
 {
-  basicMomenta.defineAllMomenta(cell, rho, u, pi);
+  _basicMomenta.defineAllMomenta(cell, rho, u, pi);
   defineU(cell,u);
 }
 

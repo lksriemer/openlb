@@ -22,6 +22,7 @@
 
 
 generic        := fileName \
+                  gnuplotWriter \
                   ostreamManager \
                   parallelIO \
                   vtiReader \
@@ -34,12 +35,13 @@ precompiled    :=  base64 \
                    blockVtkWriter3D \
                    colormaps \
                    fileName \
+                   gnuplotWriter \
                    ostreamManager \
                    parallelIO \
                    serializerIO \
                    stlReader \
-                   superVtkWriter2D \
-                   superVtkWriter3D \
+                   superVtmWriter2D \
+                   superVtmWriter3D \
                    vtiReader \
                    vtiWriter \
                    xmlReader

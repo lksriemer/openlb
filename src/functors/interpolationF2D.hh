@@ -93,7 +93,7 @@ bool AnalyticalFfromSuperLatticeF2D<T,DESCRIPTOR>::operator() (T output[], const
 
       T outputTmp[_f.getTargetDim()];
       for (int iD = 0; iD < _f.getTargetDim(); ++iD) {
-        output[iD] = T();
+        //output[iD] = T();
         outputTmp[iD] = T();
       }
 
@@ -131,19 +131,29 @@ bool AnalyticalFfromSuperLatticeF2D<T,DESCRIPTOR>::operator() (T output[], const
     }
   }
 
-#ifdef PARALLEL_MODE_MPI
   if (_communicateToAll) {
+#ifdef PARALLEL_MODE_MPI
     singleton::mpi().reduceAndBcast(dataFound, MPI_SUM);
     singleton::mpi().reduceAndBcast(dataSize, MPI_SUM);
+#endif
     dataSize /= dataFound;
+#ifdef PARALLEL_MODE_MPI
     for (int iD = 0; iD < dataSize; ++iD) {
       singleton::mpi().reduceAndBcast(output[iD], MPI_SUM);
     }
+#endif
     for (int iD = 0; iD < dataSize; ++iD) {
       output[iD]/=dataFound;
     }
+  } else {
+    if (dataFound!=0) {
+      dataSize /= dataFound;
+      for (int iD = 0; iD < dataSize; ++iD) {
+        output[iD]/=dataFound;
+      }
+    }
   }
-#endif
+
   if (dataFound>0) {
     return true;
   }
@@ -166,9 +176,13 @@ bool SuperLatticeFfromAnalyticalF2D<T,DESCRIPTOR>::operator() (T output[], const
 {
   // convert to physical coordinates
   T physCoordinate[2] = {};
-  physCoordinate[0] = this->_sg.getPhysR(input[0],input[1],input[2])[0];
-  physCoordinate[1] = this->_sg.getPhysR(input[0],input[1],input[2])[1];
+  physCoordinate[0] = _sg.getPhysR(input[0],input[1],input[2])[0];
+  physCoordinate[1] = _sg.getPhysR(input[0],input[1],input[2])[1];
+
   _f(output,physCoordinate);
+
+//std::cout << physCoordinate[0] << "/"<<physCoordinate[1] << "/"<<output[0]<< "/"<<output[1] <<std::endl;
+
   return true;
 }
 

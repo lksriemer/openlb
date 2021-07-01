@@ -46,6 +46,7 @@ template class PolynomialStartScale<double,double>;
 template class SinusStartScale<double,int>;
 template class SinusStartScale<double,double>;
 
+template class AnalyticalDiffFD1D<double>;
 
 
 template class AnalyticalComposed2D<double,int>;

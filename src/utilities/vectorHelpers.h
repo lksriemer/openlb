@@ -24,6 +24,7 @@
 #ifndef VECTOR_HELPERS_H
 #define VECTOR_HELPERS_H
 
+#include<assert.h>
 #include<cmath>
 #include<vector>
 #include<string>
@@ -34,7 +35,11 @@
 #include "core/vector.h"
 
 namespace olb {
+
+template<typename T, unsigned Size > class Vector;
+
 namespace util {
+
 
 /// return true if a is close to zero
 template <class T>
@@ -47,57 +52,7 @@ inline bool nearZero(const T& a)
     return false;
   }
 }
-/*
-/// computes a-b
-template <class T>
-inline std::vector<T> operator- (const std::vector<T>& a, const std::vector<T>& b)
-{
-  std::vector<T> out(a);
-  for (unsigned int iDim = 0; iDim<a.size(); iDim++) {
-    out[iDim] -= b[iDim];
-  }
-  return out;
-}
 
-template <class T>
-inline std::vector<T> operator- (const std::vector<T>& a, const T& b)
-{
-  std::vector<T> out(a);
-  for (unsigned int iDim = 0; iDim<a.size(); iDim++) {
-    out[iDim] -= b;
-  }
-  return out;
-}
-
-template <class T>
-inline void operator-= (std::vector<T>& a, T b)
-{
-  for (int iDim = 0; iDim<a.size(); iDim++) {
-    a[iDim] -= b;
-  }
-}
-
-/// computes a+b
-template <class T>
-inline std::vector<T> operator+ (const std::vector<T>& a, const std::vector<T>& b)
-{
-  std::vector<T> out(a);
-  for (unsigned int iDim = 0; iDim<a.size(); iDim++) {
-    out[iDim] += b[iDim];
-  }
-  return out;
-}
-
-template <class T>
-inline std::vector<T> operator+ (const std::vector<T>& a, const T& b)
-{
-  std::vector<T> out(a);
-  for (unsigned int iDim = 0; iDim<a.size(); iDim++) {
-    out[iDim] += b;
-  }
-  return out;
-}
-*/
 template <class T>
 inline void copyN(T c[], const T a[], const unsigned dim)
 {
@@ -113,57 +68,10 @@ inline void copy3(T c[], const T a[])
     c[i] = a[i];
   }
 }
-/*
-/// dot product, only valid in 3d
-template <typename T>
-T dotProduct3D(const std::vector<T>& a, const std::vector<T>& b) // Was commented out
-{
-  return a[0]*b[0] + a[1]*b[1] + a[2]*b[2];
-}
-*/
-/*
-template <class T, typename S>
-inline std::vector<T> operator* (const std::vector<T>& a, S b)
-{
-  std::vector<T> out(a);
-  for (unsigned int iDim = 0; iDim<a.size(); iDim++) {
-    out[iDim] *= b;
-  }
-  return out;
-}
 
-template <class T, typename S>
-inline std::vector<T> operator* (S b, const std::vector<T>& a)
-{
-  std::vector<T> out(a);
-  for (unsigned int iDim = 0; iDim<a.size(); iDim++) {
-    out[iDim] *= b;
-  }
-  return out;
-}
-*/
-/*
-/// cross product, only valid in 3d
+
 template <typename T>
-std::vector<T> crossProduct3D(const std::vector<T>& a, const std::vector<T>& b) // Was commented out
-{
-  std::vector<T> v;
-  v.push_back(a[1]*b[2] - a[2]*b[1]);
-  v.push_back(a[2]*b[0] - a[0]*b[2]);
-  v.push_back(a[0]*b[1] - a[1]*b[0]);
-  return v;
-}
-*/
-/*
-template <typename T, unsigned Size>
-std::vector<T> fromVector(const Vector<T, Size>& vec){
-  std::vector<T> v;
-  for (i=0; i<Size; ++i) v.push_back(vec[i]);
-  return v;
-}
-*/
-template <typename T>
-std::vector<T> fromVector3(const Vector<T, 3>& vec)
+std::vector<T> fromVector3(const Vector<T,3>& vec)
 {
   std::vector<T> v;
   v.push_back(vec[0]);
@@ -172,23 +80,15 @@ std::vector<T> fromVector3(const Vector<T, 3>& vec)
   return v;
 }
 template <typename T>
-std::vector<T> fromVector2(const Vector<T, 2>& vec)
+std::vector<T> fromVector2(const Vector<T,2>& vec)
 {
   std::vector<T> v;
   v.push_back(vec[0]);
   v.push_back(vec[1]);
   return v;
 }
-/*
-/// cross product, only valid in 3d
-template <typename T>
-void crossProduct3D(T c[3], const T a[3], const T b[3])
-{
-  c[0] = (a[1]*b[2] - a[2]*b[1]);
-  c[1] = (a[2]*b[0] - a[0]*b[2]);
-  c[2] = (a[0]*b[1] - a[1]*b[0]);
-}
-*/
+
+
 /// l2 norm of a vector of arbitrary length
 template <typename T>
 T norm(const std::vector<T>& a)
@@ -322,7 +222,7 @@ void print(const T a[2], std::string name="", OstreamManager clout = OstreamMana
   if (name != "") {
     clout << name << "=";
   }
-  unsigned size = 3;
+  unsigned size = 2;
   clout << "(";
   for (unsigned iD=0; iD<size-1; iD++) {
     clout << a[iD] << ",";

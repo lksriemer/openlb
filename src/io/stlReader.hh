@@ -594,7 +594,7 @@ STLreader<T>::STLreader(const std::string fName, T voxelSize, T stlSize,
   }
 
   Vector<T,3> extension = _mesh.getMax() - _mesh.getMin();
-  if (max == 0) {
+  if ( util::nearZero(max) ) {
     max = std::max(extension[0], std::max(extension[1], extension[2])) + _voxelSize;
   }
   int j = 0;
@@ -645,6 +645,12 @@ STLreader<T>::STLreader(const std::string fName, T voxelSize, T stlSize,
   }
 }
 
+template<typename T>
+STLreader<T>::~STLreader()
+{
+  delete _tree;
+}
+
 /*
  *  Old indicate function (slower, more stable)
  *  Define three rays (X-, Y-, Z-direction) for each leaf and count intersections
@@ -661,7 +667,7 @@ void STLreader<T>::indicate1()
 
   int intersections = 0;
   int inside = 0;
-  Octree<T>* node = NULL;
+  Octree<T>* node = nullptr;
   T step = 1. / 1000. * _voxelSize;
   for (; it != leafs.end(); it++) {
     inside = 0;
@@ -731,7 +737,7 @@ void STLreader<T>::indicate2()
 
   T step = 1. / 1000. * _voxelSize;
 
-  Octree<T>* node = NULL;
+  Octree<T>* node = nullptr;
   unsigned short rayInside = 0;
   Vector<T,3> nodeInters;
   while (pt[0] < _mesh.getMax()[0] + std::numeric_limits<T>::epsilon()) {
@@ -777,7 +783,7 @@ template<typename T>
 bool STLreader<T>::distance(T& distance, const Vector<T,3>& origin,
                             const Vector<T,3>& direction, int iC)
 {
-  Octree<T>* node = NULL;
+  Octree<T>* node = nullptr;
   Vector<T,3> dir(direction);
   dir.normalize();
   Vector<T,3> extends = _mesh.getMax() - _mesh.getMin();
@@ -878,8 +884,8 @@ bool STLreader<T>::distance(T& distance, const Vector<T,3>& origin,
       distance = vek.norm();
       return true;
     } else {
-      Octree<T>* node = _tree->find(pt);
-      node->intersectRayNode(pt, dir, s);
+      Octree<T>* tmpNode = _tree->find(pt);
+      tmpNode->intersectRayNode(pt, dir, s);
       for (int i = 0; i < 3; i++) {
         pt[i] = s[i] + step * dir[i];
       }
@@ -918,7 +924,7 @@ void STLreader<T>::setNormalsOutside()
 {
   unsigned int noTris = _mesh.triangleSize();
   Vector<T,3> center;
-  //Octree<T>* node = NULL;
+  //Octree<T>* node = nullptr;
   for (unsigned int i = 0; i < noTris; i++) {
     center[0] = (_mesh.getTri(i).point[0].r[0] + _mesh.getTri(i).point[1].r[0]
                  + _mesh.getTri(i).point[2].r[0]) / 3.;

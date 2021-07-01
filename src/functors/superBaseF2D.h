@@ -27,6 +27,7 @@
 
 
 #include "functors/genericF.h"
+#include "functors/blockBaseF2D.h"
 #include "communication/superStructure2D.h"
 #include "core/superData2D.h"
 #include "core/superLattice2D.h"
@@ -40,28 +41,37 @@
 namespace olb {
 
 template<typename T, template<typename U> class Lattice> class SuperLattice2D;
-template<typename T, typename S> class SuperData2D;
+template<typename T, typename BaseType> class SuperData2D;
+template<typename T> class SuperStructure2D;
+template<typename T> class BlockF2D;
 
 /// represents all functors that operate on a SuperStructure in general
-template <typename T>
-class SuperF2D : public GenericF<T, int> {
+template <typename T, typename W = T>
+class SuperF2D : public GenericF<W, int> {
 protected:
-  SuperStructure2D<T>& _superStructure;
-
+  // ctor
   SuperF2D(SuperStructure2D<T>& superStructure, int targetDim);
+  // dtor
+  ~SuperF2D();
+  // SuperFunctor consists of several BlockFuntors
+  std::vector<BlockF2D<T>* > _blockF;
+  SuperStructure2D<T>& _superStructure;
 public:
-  SuperF2D<T>& operator-(SuperF2D<T>& rhs);
-  SuperF2D<T>& operator+(SuperF2D<T>& rhs);
-  SuperF2D<T>& operator*(SuperF2D<T>& rhs);
-  SuperF2D<T>& operator/(SuperF2D<T>& rhs);
+  SuperF2D<T,W>& operator-(SuperF2D<T,W>& rhs);
+  SuperF2D<T,W>& operator+(SuperF2D<T,W>& rhs);
+  SuperF2D<T,W>& operator*(SuperF2D<T,W>& rhs);
+  SuperF2D<T,W>& operator/(SuperF2D<T,W>& rhs);
 
+  /// \return _superStructure
   SuperStructure2D<T>& getSuperStructure();
+  /// \return _blockF[iCloc]
+  BlockF2D<T>& getBlockF(int iCloc);
 };
 
 
 /// Functor from `SuperData2D`
 template<typename T, typename BaseType>
-class SuperDataF2D : public SuperF2D<T> {
+class SuperDataF2D : public SuperF2D<T,BaseType> {
 protected:
   /// `SuperData2D` object this functor was created from
   SuperData2D<T,BaseType>& _superData;
@@ -75,20 +85,20 @@ public:
 };
 
 /// identity functor for memory management
-template <typename T>
-class SuperIdentity2D : public SuperF2D<T> {
+template <typename T, typename W>
+class SuperIdentity2D final : public SuperF2D<T,W> {
 protected:
-  SuperF2D<T>& _f;
+  SuperF2D<T,W>& _f;
 public:
-  SuperIdentity2D(SuperF2D<T>& f);
+  SuperIdentity2D(SuperF2D<T,W>& f);
   //  ~SuperLatticeIdentity2D();
   // access operator should not delete f, since f still has the identity as child
-  bool operator() (T output[], const int input[]);
+  bool operator() (W output[], const int input[]);
 };
 
 /// represents all functors that operate on a SuperLattice in general, e.g. getVelocity(), getForce(), getPressure()
 template <typename T, template <typename U> class DESCRIPTOR>
-class SuperLatticeF2D : public SuperF2D<T> {
+class SuperLatticeF2D : public SuperF2D<T,T> {
 protected:
   SuperLatticeF2D(SuperLattice2D<T,DESCRIPTOR>& superLattice, int targetDim);
 

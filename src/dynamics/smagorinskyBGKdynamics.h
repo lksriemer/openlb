@@ -54,6 +54,30 @@ private:
   static const int sizeOfVelocity = Lattice<T>::ExternalField::sizeOfVelocity;
 };
 
+/// Implementation of the ForcedADMBGK collision step
+template<typename T, template<typename U> class Lattice>
+class ForcedADMBGKdynamics : public BGKdynamics<T,Lattice> {
+public:
+  /// Constructor
+  ForcedADMBGKdynamics(T omega_, Momenta<T,Lattice>& momenta_);
+
+  /// Collision step
+  virtual void collide(Cell<T,Lattice>& cell,
+                       LatticeStatistics<T>& statistics_);
+  /// Collide with fixed velocity
+  virtual void staticCollide(Cell<T,Lattice>& cell,
+                             const T u[Lattice<T>::d],
+                             LatticeStatistics<T>& statistics_);
+private:
+  T omega;
+  static const int forceBeginsAt = Lattice<T>::ExternalField::forceBeginsAt;
+  static const int sizeOfForce   = Lattice<T>::ExternalField::sizeOfForce;
+  static const int filRhoIsAt = Lattice<T>::ExternalField::filRhoIsAt;
+  static const int localFilVelXBeginsAt = Lattice<T>::ExternalField::localFilVelXBeginsAt;
+  static const int localFilVelYBeginsAt = Lattice<T>::ExternalField::localFilVelYBeginsAt;
+  static const int localFilVelZBeginsAt = Lattice<T>::ExternalField::localFilVelZBeginsAt;
+};
+
 
 /// Implementation of the consistent Smagorinsky BGK collision step
 ///
@@ -67,7 +91,7 @@ class ConSmagorinskyBGKdynamics : public BGKdynamics<T,Lattice> {
 public:
   /// Constructor
   ConSmagorinskyBGKdynamics(T omega_, Momenta<T,Lattice>& momenta_, T smagoConst_,
-                            T dx_, T dt_);
+                            T dx_ = 1, T dt_ = 1);
   /// Collision step
   virtual void collide(Cell<T,Lattice>& cell, LatticeStatistics<T>& statistics_);
   /// Collide with fixed velocity
@@ -80,9 +104,9 @@ public:
 
 private:
   /// Computes a constant prefactor in order to speed up the computation
-  T computePreFactor(T omega_, T smagoConst_, T dx_, T dt_);
+  T computePreFactor(T omega_, T smagoConst_);
   /// should be remove --> David
-  T computeOmega(T omega0_, T preFactor_, T rho_, T pi_[util::TensorVal<Lattice<T> >::n] );
+  T computeOmega(T omega0, T preFactor_, T rho, T pi[util::TensorVal<Lattice<T> >::n] );
 
   /// effective collision time based upon Smagorisnky approach
   T tau_eff;
@@ -121,9 +145,9 @@ public:
 
 private:
   /// Computes a constant prefactor in order to speed up the computation
-  T computePreFactor(T omega_, T smagoConst_, T dx_, T dt_);
+  T computePreFactor(T omega_, T smagoConst_);
   /// Computes the local smagorinsky relaxation parameter
-  T computeOmega(T omega0_, T preFactor_, T rho_, T pi_[util::TensorVal<Lattice<T> >::n]);
+  T computeOmega(T omega0, T preFactor_, T rho, T pi[util::TensorVal<Lattice<T> >::n]);
   /// effective collision time based upon Smagorisnky approach
   T tau_eff;
   /// Smagorinsky constant
@@ -140,7 +164,7 @@ template<typename T, template<typename U> class Lattice>
 class DynSmagorinskyBGKdynamics : public BGKdynamics<T,Lattice> {
 public:
   /// Constructor
-  DynSmagorinskyBGKdynamics(T omega_, Momenta<T,Lattice>& momenta_, T dx_, T dt_);
+  DynSmagorinskyBGKdynamics(T omega_, Momenta<T,Lattice>& momenta_, T dx_ = 1, T dt_ = 1);
   /// Collision step
   virtual void collide(Cell<T,Lattice>& cell, LatticeStatistics<T>& statistics_);
   /// Collide with fixed velocity
@@ -153,9 +177,9 @@ public:
 
 private:
   /// Computes a constant prefactor in order to speed up the computation
-  T computePreFactor(T omega_, T smagoConst_, T dx_, T dt_);
+  T computePreFactor(T omega_, T smagoConst_);
   /// Computes the local smagorinsky relaxation parameter
-  T computeOmega(T omega0_, T preFactor_, T rho_, T pi_[util::TensorVal<Lattice<T> >::n],
+  T computeOmega(T omega0, T preFactor_, T rho, T pi[util::TensorVal<Lattice<T> >::n],
                  Cell<T,Lattice>& cell);
   /// effective collision time based upon Smagorisnky approach
   T tau_eff;
@@ -176,7 +200,7 @@ class ShearSmagorinskyBGKdynamics : public BGKdynamics<T,Lattice> {
 public:
   /// Constructor
   ShearSmagorinskyBGKdynamics(T omega_, Momenta<T,Lattice>& momenta_, T smagoConst_,
-                              T dx_, T dt_);
+                              T dx_ = 1, T dt_ = 1);
   /// Collision step
   virtual void collide(Cell<T,Lattice>& cell, LatticeStatistics<T>& statistics_);
   /// Collide with fixed velocity
@@ -211,7 +235,7 @@ class ShearSmagorinskyForcedBGKdynamics : public ForcedBGKdynamics<T,Lattice> {
 public:
   /// Constructor
   ShearSmagorinskyForcedBGKdynamics(T omega_, Momenta<T,Lattice>& momenta_,
-                                    T smagoConst_, T dx_, T dt_);
+                                    T smagoConst_, T dx_ = 1, T dt_ = 1);
   ///collids
   virtual void collide(Cell<T,Lattice>& cell, LatticeStatistics<T>& statistics_);
 
@@ -245,7 +269,7 @@ class SmagorinskyBGKdynamics : public BGKdynamics<T,Lattice> {
 public:
   /// Constructor
   SmagorinskyBGKdynamics(T omega_, Momenta<T,Lattice>& momenta_, T smagoConst_,
-                         T dx_, T dt_);
+                         T dx_ = 1, T dt_ = 1);
   /// Collision step
   virtual void collide(Cell<T,Lattice>& cell, LatticeStatistics<T>& statistics_);
   /// Collide with fixed velocity
@@ -258,10 +282,10 @@ public:
 
 private:
   /// Computes a constant prefactor in order to speed up the computation
-  T computePreFactor(T omega_, T smagoConst_, T dx_, T dt_);
+  T computePreFactor(T omega_, T smagoConst_);
   /// Computes the local smagorinsky relaxation parameter
-  T computeOmega(T omega0_, T preFactor_, T rho_,
-                 T pi_[util::TensorVal<Lattice<T> >::n] );
+  T computeOmega(T omega0, T preFactor_, T rho,
+                 T pi[util::TensorVal<Lattice<T> >::n] );
 
   /// effective collision time based upon Smagorisnky approach
   T tau_eff;
@@ -280,7 +304,7 @@ class SmagorinskyForcedBGKdynamics : public ForcedBGKdynamics<T,Lattice> {
 public:
   /// Constructor
   SmagorinskyForcedBGKdynamics(T omega_, Momenta<T,Lattice>& momenta_,
-                               T smagoConst_, T dx_, T dt_);
+                               T smagoConst_, T dx_ = 1, T dt_ = 1);
   /// Collision step
   virtual void collide(Cell<T,Lattice>& cell, LatticeStatistics<T>& statistics_);
   /// Collide with fixed velocity
@@ -293,10 +317,10 @@ public:
 
 private:
   /// Computes a constant prefactor in order to speed up the computation
-  T computePreFactor(T omega_, T smagoConst_, T dx_, T dt_);
+  T computePreFactor(T omega_, T smagoConst_);
   /// Computes the local smagorinsky relaxation parameter
-  T computeOmega(T omega0_, T preFactor_, T rho_,
-                 T pi_[util::TensorVal<Lattice<T> >::n]);
+  T computeOmega(T omega0, T preFactor_, T rho,
+                 T pi[util::TensorVal<Lattice<T> >::n]);
 
   /// effective collision time based upon Smagorisnky approach
   T tau_eff;
@@ -315,7 +339,7 @@ class SmagorinskyLinearVelocityForcedBGKdynamics : public ForcedBGKdynamics<T,La
 public:
   /// Constructor
   SmagorinskyLinearVelocityForcedBGKdynamics(T omega_, Momenta<T,Lattice>& momenta_,
-      T smagoConst_, T dx_, T dt_);
+      T smagoConst_, T dx_ = 1, T dt_ = 1);
   /// Collision step
   virtual void collide(Cell<T,Lattice>& cell, LatticeStatistics<T>& statistics_);
   /// Collide with fixed velocity
@@ -328,10 +352,10 @@ public:
 
 private:
   /// Computes a constant prefactor in order to speed up the computation
-  T computePreFactor(T omega_, T smagoConst_, T dx_, T dt_);
+  T computePreFactor(T omega_, T smagoConst_);
   /// Computes the local smagorinsky relaxation parameter
-  T computeOmega(T omega0_, T preFactor_, T rho_,
-                 T pi_[util::TensorVal<Lattice<T> >::n]);
+  T computeOmega(T omega0, T preFactor_, T rho,
+                 T pi[util::TensorVal<Lattice<T> >::n]);
 
   /// effective collision time based upon Smagorisnky approach
   T tau_eff;
@@ -349,7 +373,7 @@ class KrauseBGKdynamics : public BGKdynamics<T,Lattice> {
 public:
   /// Constructor
   KrauseBGKdynamics(T omega_, Momenta<T,Lattice>& momenta_, T smagoConst_,
-                    T dx_, T dt_);
+                    T dx_ = 1, T dt_ = 1);
   /// Collision step
   virtual void collide(Cell<T,Lattice>& cell, LatticeStatistics<T>& statistics_);
   /// Collide with fixed velocity
@@ -360,9 +384,9 @@ public:
 
 private:
   /// Computes a constant prefactor in order to speed up the computation
-  T computePreFactor(T omega_, T smagoConst_, T dx_, T dt_);
+  T computePreFactor(T omega_, T smagoConst_);
   /// Computes the local smagorinsky relaxation parameter
-  void computeOmega(T omega0_, Cell<T,Lattice>& cell, T preFactor_, T rho_,
+  void computeOmega(T omega0, Cell<T,Lattice>& cell, T preFactor_, T rho,
                     T u[Lattice<T>::d],
                     T newOmega[Lattice<T>::q] );
 

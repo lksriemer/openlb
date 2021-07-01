@@ -27,6 +27,8 @@
 
 namespace olb {
 
+template class PowerLaw2D<double>;
+
 template class Poiseuille2D<double>;
 
 template class PoiseuilleStrainRate2D<double,double>;

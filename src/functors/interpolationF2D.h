@@ -39,7 +39,7 @@ template< typename T, template <typename U> class DESCRIPTOR> class SuperLattice
 
 /// converts lattice functions to analytical functions
 template <typename T, template <typename U> class DESCRIPTOR>
-class AnalyticalFfromSuperLatticeF2D : public AnalyticalF2D<T,T> {
+class AnalyticalFfromSuperLatticeF2D final : public AnalyticalF2D<T,T> {
 protected:
   SuperLatticeF2D<T,DESCRIPTOR>&  _f;
   CuboidGeometry2D<T>&            _cg;
@@ -58,7 +58,7 @@ public:
  *  function will map lattice->lattice units
  */
 template <typename T, template <typename U> class DESCRIPTOR>
-class SuperLatticeFfromAnalyticalF2D : public SuperLatticeF2D<T,DESCRIPTOR> {
+class SuperLatticeFfromAnalyticalF2D final : public SuperLatticeF2D<T,DESCRIPTOR> {
 protected:
   AnalyticalF2D<T,T>&  _f;
   SuperGeometry2D<T>&  _sg;

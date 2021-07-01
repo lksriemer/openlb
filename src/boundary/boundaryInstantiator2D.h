@@ -35,7 +35,7 @@ namespace olb {
 
 template<typename T, template<typename U> class Lattice, class BoundaryManager>
 class BoundaryConditionInstantiator2D: public OnLatticeBoundaryCondition2D<T,
-    Lattice> {
+  Lattice> {
 public:
   BoundaryConditionInstantiator2D(BlockLatticeStructure2D<T, Lattice>& block_);
   ~BoundaryConditionInstantiator2D();
@@ -131,10 +131,10 @@ void BoundaryConditionInstantiator2D<T, Lattice, BoundaryManager>::addVelocityBo
     for (int iY = y0; iY <= y1; ++iY) {
       Momenta<T, Lattice>* momenta =
         BoundaryManager::template getVelocityBoundaryMomenta<
-        direction, orientation>();
+          direction, orientation>();
       Dynamics<T, Lattice>* dynamics =
         BoundaryManager::template getVelocityBoundaryDynamics<
-        direction, orientation>(omega, *momenta);
+          direction, orientation>(omega, *momenta);
       this->getBlock().defineDynamics(iX, iX, iY, iY, dynamics);
       momentaVector.push_back(momenta);
       dynamicsVector.push_back(dynamics);
@@ -146,7 +146,7 @@ void BoundaryConditionInstantiator2D<T, Lattice, BoundaryManager>::addVelocityBo
 
   PostProcessorGenerator2D<T, Lattice>* postProcessor =
     BoundaryManager::template getVelocityBoundaryProcessor<direction,
-    orientation>(x0, x1, y0, y1);
+        orientation>(x0, x1, y0, y1);
   if (postProcessor) {
     this->getBlock().addPostProcessor(*postProcessor);
   }
@@ -183,10 +183,10 @@ void BoundaryConditionInstantiator2D<T, Lattice, BoundaryManager>::addPressureBo
     for (int iY = y0; iY <= y1; ++iY) {
       Momenta<T, Lattice>* momenta =
         BoundaryManager::template getPressureBoundaryMomenta<
-        direction, orientation>();
+          direction, orientation>();
       Dynamics<T, Lattice>* dynamics =
         BoundaryManager::template getPressureBoundaryDynamics<
-        direction, orientation>(omega, *momenta);
+          direction, orientation>(omega, *momenta);
       this->getBlock().defineDynamics(iX, iX, iY, iY, dynamics);
       momentaVector.push_back(momenta);
       dynamicsVector.push_back(dynamics);
@@ -198,7 +198,7 @@ void BoundaryConditionInstantiator2D<T, Lattice, BoundaryManager>::addPressureBo
 
   PostProcessorGenerator2D<T, Lattice>* postProcessor =
     BoundaryManager::template getPressureBoundaryProcessor<direction,
-    orientation>(x0, x1, y0, y1);
+        orientation>(x0, x1, y0, y1);
   if (postProcessor) {
     this->getBlock().addPostProcessor(*postProcessor);
   }
@@ -234,10 +234,10 @@ void BoundaryConditionInstantiator2D<T, Lattice, BoundaryManager>::addExternalVe
 {
   Momenta<T, Lattice>* momenta =
     BoundaryManager::template getExternalVelocityCornerMomenta<xNormal,
-    yNormal>();
+        yNormal>();
   Dynamics<T, Lattice>* dynamics =
     BoundaryManager::template getExternalVelocityCornerDynamics<
-    xNormal, yNormal>(omega, *momenta);
+      xNormal, yNormal>(omega, *momenta);
 
   this->getBlock().defineDynamics(x, x, y, y, dynamics);
   momentaVector.push_back(momenta);
@@ -245,7 +245,7 @@ void BoundaryConditionInstantiator2D<T, Lattice, BoundaryManager>::addExternalVe
 
   PostProcessorGenerator2D<T, Lattice>* postProcessor =
     BoundaryManager::template getExternalVelocityCornerProcessor<
-    xNormal, yNormal>(x, y);
+      xNormal, yNormal>(x, y);
   if (postProcessor) {
     this->getBlock().addPostProcessor(*postProcessor);
   }
@@ -261,10 +261,10 @@ void BoundaryConditionInstantiator2D<T, Lattice, BoundaryManager>::addInternalVe
 {
   Momenta<T, Lattice>* momenta =
     BoundaryManager::template getInternalVelocityCornerMomenta<xNormal,
-    yNormal>();
+        yNormal>();
   Dynamics<T, Lattice>* dynamics =
     BoundaryManager::template getInternalVelocityCornerDynamics<
-    xNormal, yNormal>(omega, *momenta);
+      xNormal, yNormal>(omega, *momenta);
 
   this->getBlock().defineDynamics(x, x, y, y, dynamics);
   momentaVector.push_back(momenta);
@@ -272,7 +272,7 @@ void BoundaryConditionInstantiator2D<T, Lattice, BoundaryManager>::addInternalVe
 
   PostProcessorGenerator2D<T, Lattice>* postProcessor =
     BoundaryManager::template getInternalVelocityCornerProcessor<
-    xNormal, yNormal>(x, y);
+      xNormal, yNormal>(x, y);
   if (postProcessor) {
     this->getBlock().addPostProcessor(*postProcessor);
   }

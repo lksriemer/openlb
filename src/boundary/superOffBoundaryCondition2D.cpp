@@ -1,6 +1,6 @@
 /*  This file is part of the OpenLB library
  *
- *  Copyright (C) 2012 Jonas Kratzke, Mathias J. Krause
+ *  Copyright (C) 2012, 2016 Jonas Kratzke, Mathias J. Krause
  *  E-mail contact: info@openlb.net
  *  The most recent release of OpenLB can be downloaded at
  *  <http://www.openlb.net/>
@@ -41,9 +41,15 @@ template class sOffLatticeBoundaryCondition2D
 
 template void createBouzidiBoundaryCondition2D
 <double,descriptors::D2Q9Descriptor,
-BGKdynamics<double,descriptors::D2Q9Descriptor> >
+ BGKdynamics<double,descriptors::D2Q9Descriptor> >
 (sOffLatticeBoundaryCondition2D<double,descriptors::D2Q9Descriptor>& sBC);
+
 template void createBouzidiBoundaryCondition2D
+<double,descriptors::D2Q9Descriptor>
+(sOffLatticeBoundaryCondition2D<double,descriptors::D2Q9Descriptor>& sBC);
+
+
+template void createBounceBackBoundaryCondition2D
 <double,descriptors::D2Q9Descriptor>
 (sOffLatticeBoundaryCondition2D<double,descriptors::D2Q9Descriptor>& sBC);
 }

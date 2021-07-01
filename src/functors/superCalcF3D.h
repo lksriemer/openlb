@@ -38,45 +38,53 @@ namespace olb {
 
 /// arithmetic helper class for SuperF3D functors
 /** Warning: Allocation error possible in functors that have multiple functor evaluation like SuperSum3D */
-template <typename T>
-class SuperCalc3D : public SuperF3D< T > {
+template <typename T, typename W>
+class SuperCalc3D : public SuperF3D<T,W> {
 protected:
-  SuperF3D<T>& _f;
-  SuperF3D<T>& _g;
+  SuperF3D<T,W>& _f;
+  SuperF3D<T,W>& _g;
 public:
-  SuperCalc3D(SuperF3D<T>& f, SuperF3D<T>& g);
+  SuperCalc3D(SuperF3D<T,W>& f, SuperF3D<T,W>& g);
 };
 
-/// addition functor
-template <typename T>
-class SuperPlus3D : public SuperCalc3D<T> {
+/// Addition Functor (W==bool: Union)
+template <typename T, typename W>
+class SuperPlus3D : public SuperCalc3D<T,W> {
 public:
-  SuperPlus3D(SuperF3D<T>& f, SuperF3D<T>& g);
-  bool operator() (T output[], const int input[]);
+  SuperPlus3D(SuperF3D<T,W>& f, SuperF3D<T,W>& g);
+  bool operator() (W output[], const int input[]);
 };
 
-/// subtraction functor
-template <typename T>
-class SuperMinus3D : public SuperCalc3D<T> {
+/// Subtraction Functor (W==bool: Without)
+template <typename T, typename W>
+class SuperMinus3D : public SuperCalc3D<T,W> {
 public:
-  SuperMinus3D(SuperF3D<T>& f, SuperF3D<T>& g);
-  bool operator() (T output[], const int input[]);
+  SuperMinus3D(SuperF3D<T,W>& f, SuperF3D<T,W>& g);
+  bool operator() (W output[], const int input[]);
 };
 
-/// multiplication functor
+/// Subtraction Functor (bool specialization)
 template <typename T>
-class SuperMultiplication3D : public SuperCalc3D<T> {
+class SuperMinus3D<T,bool> : public SuperCalc3D<T,bool> {
 public:
-  SuperMultiplication3D(SuperF3D<T>& f, SuperF3D<T>& g);
-  bool operator() (T output[], const int input[]);
+  SuperMinus3D(SuperF3D<T,bool>& f, SuperF3D<T,bool>& g);
+  bool operator() (bool output[], const int input[]);
 };
 
-/// division functor
-template <typename T>
-class SuperDivision3D : public SuperCalc3D<T> {
+/// Multiplication Functor (W==bool: Intersection)
+template <typename T, typename W>
+class SuperMultiplication3D : public SuperCalc3D<T,W> {
 public:
-  SuperDivision3D(SuperF3D<T>& f, SuperF3D<T>& g);
-  bool operator() (T output[], const int input[]);
+  SuperMultiplication3D(SuperF3D<T,W>& f, SuperF3D<T,W>& g);
+  bool operator() (W output[], const int input[]);
+};
+
+/// Division Functor
+template <typename T, typename W>
+class SuperDivision3D : public SuperCalc3D<T,W> {
+public:
+  SuperDivision3D(SuperF3D<T,W>& f, SuperF3D<T,W>& g);
+  bool operator() (W output[], const int input[]);
 };
 
 

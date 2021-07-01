@@ -231,8 +231,7 @@ void BlockVTKwriter2D<T>::writeRawDataBinary(const std::string& fullNameVti,
   }
   fout.close();
 
-  std::ofstream* ofstr;   // only used for binary output // passed to Base64Encoder
-  ofstr = new std::ofstream( fileName, std::ios::out | std::ios::app | std::ios::binary );
+  std::ofstream ofstr( fileName, std::ios::out | std::ios::app | std::ios::binary );
   if (!ofstr) {
     clout << "Error: could not open " << fileName << std::endl;
   }
@@ -240,12 +239,12 @@ void BlockVTKwriter2D<T>::writeRawDataBinary(const std::string& fullNameVti,
   size_t fullSize = f.getTargetDim() * (1 + nx) * (1 + ny) * (1);
   size_t binarySize = size_t( fullSize * sizeof(float) );
   // writes first number, which have to be the size(byte) of the following data
-  Base64Encoder<unsigned int> sizeEncoder(*ofstr, 1);
+  Base64Encoder<unsigned int> sizeEncoder(ofstr, 1);
   unsigned int uintBinarySize = (unsigned int)binarySize;
   sizeEncoder.encode(&uintBinarySize, 1);
   //  write numbers from functor
   Base64Encoder<float>* dataEncoder = 0;
-  dataEncoder = new Base64Encoder<float>( *ofstr, fullSize );
+  dataEncoder = new Base64Encoder<float>( ofstr, fullSize );
 
 
   int i[2] = {int()};
@@ -264,16 +263,15 @@ void BlockVTKwriter2D<T>::writeRawDataBinary(const std::string& fullNameVti,
       }
     }
   }
-
-  ofstr->close();
+  ofstr.close();
 
   if (singleton::mpi().getRank()==0) {
-    std::ofstream fout(fileName,  std::ios::out | std::ios::app);
-    if (!fout) {
+    std::ofstream foutt(fileName,  std::ios::out | std::ios::app);
+    if (!foutt) {
       clout << "Error: could not open " << fileName << std::endl;
     }
-    fout << "\n</DataArray>\n";
-    fout.close();
+    foutt << "\n</DataArray>\n";
+    foutt.close();
   }
   delete dataEncoder;
 }

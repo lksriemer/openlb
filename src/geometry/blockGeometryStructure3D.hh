@@ -702,7 +702,7 @@ void BlockGeometryStructure3D<T>::regionGrowing(int fromM, int toM, int seedX, i
 {
   std::map<std::vector<int>, int> tmp2;
   bool firstCall = false;
-  if (tmp == NULL) {
+  if (tmp == nullptr) {
     tmp = &tmp2;
     firstCall = true;
   }

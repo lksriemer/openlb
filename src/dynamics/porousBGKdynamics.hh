@@ -51,7 +51,7 @@ void PorousBGKdynamics<T,Lattice>::collide (
   LatticeStatistics<T>& statistics )
 {
   T rho, u[Lattice<T>::d];
-  this->momenta.computeRhoU(cell, rho, u);
+  this->_momenta.computeRhoU(cell, rho, u);
   T* porosity = cell.getExternal(porosityIsAt);
   for (int i=0; i<Lattice<T>::d; i++)  {
     u[i] *= porosity[0];
@@ -91,11 +91,11 @@ void ExtendedPorousBGKdynamics<T,Lattice>::collide (
   LatticeStatistics<T>& statistics )
 {
   T rho, u[Lattice<T>::d];
-  this->momenta.computeRhoU(cell, rho, u);
+  this->_momenta.computeRhoU(cell, rho, u);
   T* porosity = cell.getExternal(porosityIsAt);
   T* localVelocity = cell.getExternal(localDragBeginsAt);
 
-  cell.defineExternalField(localDragBeginsAt,2, u);
+  cell.defineExternalField(localDragBeginsAt,Lattice<T>::d, u);
 
   for (int i=0; i<Lattice<T>::d; i++)  {
     u[i] *= porosity[0];
@@ -127,7 +127,7 @@ SubgridParticleBGKdynamics<T,Lattice>::SubgridParticleBGKdynamics (
   : BGKdynamics<T,Lattice>(omega_,momenta_),
     omega(omega_)
 {
-  _fieldTmp[0] = T(1);
+  _fieldTmp[0] = T();
   _fieldTmp[1] = T();
   _fieldTmp[2] = T();
   _fieldTmp[3] = T();
@@ -139,20 +139,23 @@ void SubgridParticleBGKdynamics<T,Lattice>::collide (
   LatticeStatistics<T>& statistics )
 {
   T rho, u[Lattice<T>::d];
-  this->momenta.computeRhoU(cell, rho, u);
+  this->_momenta.computeRhoU(cell, rho, u);
   T* porosity = cell.getExternal(porosityIsAt);
-  T* localVelocity = cell.getExternal(localDragBeginsAt);
-
+  T* extVelocity = cell.getExternal(localDragBeginsAt);
+//  if (porosity[0] != 0) {
+//    cout << "extVelocity: " << extVelocity[0] << " " <<  extVelocity[1] << " " <<  extVelocity[2] << " " << std::endl;
+//    cout << "porosity: " << porosity[0] << std::endl;
+//  }
   for (int i=0; i<Lattice<T>::d; i++)  {
-    u[i] *= porosity[0];
-    u[i] += (1.-porosity[0]) * localVelocity[i];
+    u[i] *= (1.-porosity[0]);
+    u[i] += extVelocity[i];
   }
   T uSqr = lbHelpers<T,Lattice>::bgkCollision(cell, rho, u, omega);
   if (cell.takesStatistics()) {
     statistics.incrementStats(rho, uSqr);
   }
   for (int i=0; i < 4; ++i) {
-    cell.getExternal(0)[i] = _fieldTmp[i];
+    cell.getExternal(0)[i] = 0; //_fieldTmp[i];
   }
 }
 
@@ -175,12 +178,7 @@ PorousParticleBGKdynamics<T,Lattice>::PorousParticleBGKdynamics (
   T omega_, Momenta<T,Lattice>& momenta_)
   : BGKdynamics<T,Lattice>(omega_,momenta_),
     omega(omega_)
-{
-  _fieldTmp[0] = T(1);
-  _fieldTmp[1] = T();
-  _fieldTmp[2] = T();
-  _fieldTmp[3] = T();
-}
+{}
 
 template<typename T, template<typename U> class Lattice>
 void PorousParticleBGKdynamics<T,Lattice>::collide (
@@ -188,14 +186,12 @@ void PorousParticleBGKdynamics<T,Lattice>::collide (
   LatticeStatistics<T>& statistics )
 {
   T rho, u[Lattice<T>::d];
-  this->momenta.computeRhoU(cell, rho, u);
-  T vel_denom = *cell.getExternal(velDenominator);
-  if (vel_denom > std::numeric_limits<T>::epsilon()) {
-    T porosity = *cell.getExternal(porosityIsAt); // prod(1-smoothInd)
-    T* vel_num = cell.getExternal(velNumerator);
-    porosity = 1.-porosity; // 1-prod(1-smoothInd)
+  this->_momenta.computeRhoU(cell, rho, u);
+  T* external = cell.getExternal(0);
+  if (external[velDenominator] > std::numeric_limits<T>::epsilon()) {
+    external[porosityIsAt] = 1.-external[porosityIsAt]; // 1-prod(1-smoothInd)
     for (int i=0; i<Lattice<T>::d; i++)  {
-      u[i] += porosity * (vel_num[i] / vel_denom - u[i]);
+      u[i] += external[porosityIsAt] * (external[velNumerator+i] / external[velDenominator]- u[i]);
     }
   }
   T uSqr = lbHelpers<T,Lattice>::bgkCollision(cell, rho, u, omega);
@@ -203,8 +199,9 @@ void PorousParticleBGKdynamics<T,Lattice>::collide (
     statistics.incrementStats(rho, uSqr);
   }
 
-  for (int i=0; i < 4; ++i) {
-    cell.getExternal(0)[i] = _fieldTmp[i];
+  external[0] = 1.;
+  for (int i=1; i < Lattice<T>::d+2; ++i) {
+    external[i] = 0.;
   }
 
 }
@@ -221,14 +218,13 @@ void PorousParticleBGKdynamics<T,Lattice>::setOmega(T omega_)
   omega = omega_;
 }
 
-
 //////////////////// Class KrauseHBGKdynamics ////////////////////
 
 template<typename T, template<typename U> class Lattice>
 KrauseHBGKdynamics<T,Lattice>::KrauseHBGKdynamics (T omega_,
     Momenta<T,Lattice>& momenta_, T smagoConst_, T dx_, T dt_ )
   : BGKdynamics<T,Lattice>(omega_,momenta_), omega(omega_), smagoConst(smagoConst_),
-    preFactor(computePreFactor(omega_,smagoConst_, dx_, dt_) )
+    preFactor(computePreFactor(omega_,smagoConst_) )
 {
   _fieldTmp[0] = T(1);
   _fieldTmp[1] = T();
@@ -243,7 +239,7 @@ void KrauseHBGKdynamics<T,Lattice>::collide (
 {
   T rho, u[Lattice<T>::d];
   T newOmega[Lattice<T>::q];
-  this->momenta.computeRhoU(cell, rho, u);
+  this->_momenta.computeRhoU(cell, rho, u);
   computeOmega(this->getOmega(), cell, preFactor, rho, u, newOmega);
 
   T vel_denom = *cell.getExternal(velDenominator);
@@ -252,7 +248,7 @@ void KrauseHBGKdynamics<T,Lattice>::collide (
     T* vel_num = cell.getExternal(velNumerator);
     porosity = 1.-porosity; // 1-prod(1-smoothInd)
     for (int i=0; i<Lattice<T>::d; i++)  {
-      u[i] += porosity * (/*TODO REMOVE 0*/0*vel_num[i] / vel_denom - u[i]);
+      u[i] += porosity * (vel_num[i] / vel_denom - u[i]);
     }
   }
   T uSqr = lbHelpers<T,Lattice>::bgkCollision(cell, rho, u, newOmega);
@@ -275,13 +271,13 @@ template<typename T, template<typename U> class Lattice>
 void KrauseHBGKdynamics<T,Lattice>::setOmega(T omega)
 {
   this->setOmega(omega);
-  preFactor = computePreFactor(omega, smagoConst, dx, dt);
+  preFactor = computePreFactor(omega, smagoConst);
 }
 
 template<typename T, template<typename U> class Lattice>
-T KrauseHBGKdynamics<T,Lattice>::computePreFactor(T omega, T smagoConst, T dx, T dt)
+T KrauseHBGKdynamics<T,Lattice>::computePreFactor(T omega, T smagoConst)
 {
-  return (T)(smagoConst*smagoConst*dx*dx)*Lattice<T>::invCs2/dt*4*sqrt(2)*3.16;
+  return (T)smagoConst*smagoConst*Lattice<T>::invCs2*Lattice<T>::invCs2*2*sqrt(2);
 }
 
 
@@ -322,7 +318,7 @@ void ParticlePorousBGKdynamics<T,Lattice>::collide (
   LatticeStatistics<T>& statistics )
 {
   T rho, u[Lattice<T>::d];
-  this->momenta.computeRhoU(cell, rho, u);
+  this->_momenta.computeRhoU(cell, rho, u);
   T* porosity = cell.getExternal(porosityIsAt);
   T* localVelocity = cell.getExternal(localDragBeginsAt);
   for (int i=0; i<Lattice<T>::d; i++)  {
@@ -365,7 +361,7 @@ void SmallParticleBGKdynamics<T,Lattice>::collide (
   LatticeStatistics<T>& statistics )
 {
   T rho, u[Lattice<T>::d];
-  this->momenta.computeRhoU(cell, rho, u);
+  this->_momenta.computeRhoU(cell, rho, u);
   T* porosity = cell.getExternal(porosityIsAt);
   T* localVelocity = cell.getExternal(localDragBeginsAt);
 

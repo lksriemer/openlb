@@ -29,6 +29,7 @@
 #include "advectionDiffusionBoundaries.h"
 #include "advectionDiffusionBoundaryCondition3D.h"
 #include "advectionDiffusionDynamics.h"
+#include "advectionDiffusionForces.h"
 #include "advectionDiffusionLatticeDescriptors.h"
 #include "advectionDiffusionMomenta.h"
 #include "advectionDiffusionUnits.h"

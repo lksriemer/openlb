@@ -46,7 +46,6 @@ namespace olb {
  *
  * This class is not intended to be derived from.
  */
-
 template<typename T, template<typename U> class Lattice>
 class sOnLatticeBoundaryCondition3D {
 
@@ -63,9 +62,11 @@ public:
   ~sOnLatticeBoundaryCondition3D();
 
   void addVelocityBoundary(SuperGeometry3D<T>& superGeometry, int material, T omega);
+  void addSlipBoundary(SuperGeometry3D<T>& superGeometry, int material);
   void addPressureBoundary(SuperGeometry3D<T>& superGeometry, int material, T omega);
   void addConvectionBoundary(SuperGeometry3D<T>& superGeometry, int material, T omega, T* uAv=NULL);
   void addTemperatureBoundary(SuperGeometry3D<T>& superGeometry, int material, T omega);
+  void addDiffuseReflectionBoundary(SuperGeometry3D<T>& superGeometry, int material, T omega, T zeta);
   void addConvectionBoundary(SuperGeometry3D<T>& superGeometry, int material);
   void addExtFieldBoundary(SuperGeometry3D<T>& superGeometry, int material, int offset);
   void addZeroDistributionBoundary(SuperGeometry3D<T>& superGeometry, int material);
@@ -73,23 +74,28 @@ public:
   /// Adds needed Cells to the Communicator _commBC in SuperLattice
   void addPoints2CommBC(SuperGeometry3D<T>& superGeometry, int material);
 
-  SuperLattice3D<T, Lattice>& getSuperLattice() {
+  SuperLattice3D<T, Lattice>& getSuperLattice()
+  {
     return _sLattice;
   };
 
-  std::vector<OnLatticeBoundaryCondition3D<T, Lattice>*>& getBlockBCs() {
+  std::vector<OnLatticeBoundaryCondition3D<T, Lattice>*>& getBlockBCs()
+  {
     return _blockBCs;
   };
 
-  std::vector<OnLatticeAdvectionDiffusionBoundaryCondition3D<T, Lattice>*>& getADblockBCs() {
+  std::vector<OnLatticeAdvectionDiffusionBoundaryCondition3D<T, Lattice>*>& getADblockBCs()
+  {
     return _ADblockBCs;
   };
 
-  int getOverlap() {
+  int getOverlap()
+  {
     return _overlap;
   };
 
-  void setOverlap(int overlap) {
+  void setOverlap(int overlap)
+  {
     _overlap = overlap;
   };
 
