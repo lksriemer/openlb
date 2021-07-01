@@ -1,0 +1,72 @@
+# This file is part of the OpenLB library
+#
+# Copyright (C) 2006, 2007 Jonas Latt
+# OMP parallelization Copyright (C) 2007 Mathias Krause
+# Address: Rue General Dufour 24,  1211 Geneva 4, Switzerland 
+# E-mail: Jonas.Latt@cui.unige.ch
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation; either version 2
+# of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public 
+# License along with this program; if not, write to the Free 
+# Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+# Boston, MA  02110-1301, USA.
+
+## Makefile for cavity3d.cpp, precompiled version.
+## In this version, all OpenLB source code is compiled only once,
+## and instantiated for the D3Q19 lattice. For this to work,
+## the source file must #include the file olb3D.h, but not olb3D.hh.
+## If you want to use another type of lattice, use the generic Makefile.
+
+
+default: cavity3d
+
+CXX      = icpc
+OPTIM    = -O3
+DEBUG    = -g -DOLB_DEBUG
+OLB_BASE_PATH = ../../base
+OLB_ADDON_PATH = ../../addon
+
+COMPFLAGS = $(OPTIM)
+#COMPFLAGS = $(DEBUG)
+CXXFLAGS  = -I$(OLB_BASE_PATH) -I$(OLB_ADDON_PATH) $(COMPFLAGS)
+LOPT      = #$(DEBUG)
+
+include $(OLB_BASE_PATH)/dependencies.mk
+include $(OLB_BASE_PATH)/compilation.mk
+
+include $(OLB_ADDON_PATH)/dependencies.mk
+include $(OLB_ADDON_PATH)/compilation.mk
+
+#PARALLEL_MODE = OFF
+#PARALLEL_MODE = MPI
+PARALLEL_MODE = OMP
+
+ifeq ($(PARALLEL_MODE), OMP)
+	CXXFLAGS = -openmp -DPARALLEL_MODE_OMP -I$(OLB_BASE_PATH) $(COMPFLAGS)
+endif
+
+OBJECTS = $(BASIC_OBJECTS) $(OBJECTS_3D) $(ADDON_OBJECTS_3D)
+
+cavity3d: cavity3d.o $(OBJECTS)
+	$(CXX) $(LOPT) -o cavity3d cavity3d.o $(OBJECTS)
+
+cavity3d.o: cavity3d.cpp $(DEP__OLB_2D_H)
+
+
+clean:
+	rm -f *~ *.o *.exe cavity3d; $(MAKE) clean_addon; $(MAKE) clean_base
+
+clean_addon:
+	cd $(OLB_ADDON_PATH); $(MAKE) clean;
+
+clean_base:
+	cd $(OLB_BASE_PATH); $(MAKE) clean;
