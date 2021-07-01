@@ -28,7 +28,6 @@
 #include <limits>
 #include "simulationSetup3D.h"
 #include "blockLattice3D.h"
-#include "blockStatistics3D.h"
 #include "lbHelpers.h"
 #include "firstOrderLbHelpers.h"
 #include "util.h"
@@ -37,8 +36,7 @@ namespace olb {
 
 template <typename T, template<typename U> class Lattice>
 void iniFirstOrder3D(BlockLatticeView3D<T,Lattice> lattice) {
-    BlockStatistics3D<T,Lattice> statistics(lattice);
-    TensorField3D<T,6> const& strainRate = statistics.getStrainRate();
+    TensorFieldBase3D<T,6> const& strainRate = lattice.getDataAnalysis().getStrainRate();
 
     for (int iX=0; iX<lattice.getNx(); ++iX) {
         for (int iY=0; iY<lattice.getNy(); ++iY) {
@@ -64,8 +62,7 @@ void iniPressure3D(BlockLatticeView3D<T,Lattice> lattice, T epsilon, T lambda) {
     int ly = lattice.getNy();
     int lz = lattice.getNz();
 
-    BlockStatistics3D<T,Lattice> statistics (lattice);
-    ScalarField3D<T> const& poissonTerm = statistics.getPoissonTerm();
+    ScalarFieldBase3D<T> const& poissonTerm = lattice.getDataAnalysis().getPoissonTerm();
 
     ScalarField3D<T> pressure(lx, ly, lz); pressure.construct();
 
@@ -166,8 +163,7 @@ void convergeFixedVelocity(BlockLattice3D<T,Lattice>& lattice,
                            T epsilon, int step)
 {
     BlockLatticeView3D<T,Lattice> latticeView(lattice);
-    BlockStatistics3D<T,Lattice> statistics(latticeView);
-    TensorField3D<T,3> const& velocity = statistics.getVelocity();
+    TensorFieldBase3D<T,3> const& velocity = latticeView.getDataAnalysis().getVelocity();
 
     T maxF = T();
     for (int iX=0; iX<latticeView.getNx(); iX+=step) {

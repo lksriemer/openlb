@@ -20,15 +20,13 @@
  *  Boston, MA  02110-1301, USA.
 */
 
-#include <vector>
-#include <cmath>
-#include <iostream>
-#include <fstream>
 #include "olb2D.h"
 #ifndef OLB_PRECOMPILED // Unless precompiled version is used,
   #include "olb2D.hh"   // include full template code
 #endif
-
+#include <vector>
+#include <cmath>
+#include <iostream>
 
 using namespace olb;
 using namespace olb::descriptors;
@@ -36,11 +34,12 @@ using namespace olb::graphics;
 using namespace std;
 
 typedef double T;
+#define DESCRIPTOR D2Q9Descriptor
 
-void iniGeometry( BlockLattice2D<T,D2Q9Descriptor>& lattice,
+void iniGeometry( BlockStructure2D<T,DESCRIPTOR>& lattice,
                   LBunits<T> const& converter,
-                  Dynamics<T, D2Q9Descriptor>& bulkDynamics,
-                  OnLatticeBoundaryCondition2D<T,D2Q9Descriptor>& bc )
+                  Dynamics<T, DESCRIPTOR>& bulkDynamics,
+                  OnLatticeBoundaryCondition2D<T,DESCRIPTOR>& bc )
 {
     const int nx = converter.getNx();
     const int ny = converter.getNy();
@@ -77,19 +76,31 @@ void iniGeometry( BlockLattice2D<T,D2Q9Descriptor>& lattice,
     lattice.initialize();
 }
 
-void writeGifs(BlockLattice2D<T,D2Q9Descriptor>& lattice,
+void writeGifs(BlockLattice2D<T,DESCRIPTOR>& lattice,
                LBunits<T> const& converter, int iter)
 {
     const int imSize = 600;
 
-    DataAnalysisBase2D<T,D2Q9Descriptor> const& analysis = lattice.getDataAnalysis();
+    DataAnalysisBase2D<T,DESCRIPTOR> const& analysis = lattice.getDataAnalysis();
 
     ImageWriter<T> imageWriter("leeloo");
     imageWriter.writeScaledGif(createFileName("uz", iter, 6),
                                analysis.getVelocityNorm(),
                                imSize, imSize );
-    analysis.reset();
 }
+
+void writeVTK(BlockStructure2D<T,DESCRIPTOR>& lattice,
+              LBunits<T> const& converter, int iter)
+{
+    DataAnalysisBase2D<T,DESCRIPTOR> const& analysis = lattice.getDataAnalysis();
+
+    T dx = converter.getDeltaX();
+    T dt = converter.getDeltaT();
+    VtkImageOutput2D<T> vtkOut(createFileName("vtk", iter, 6), dx);
+    vtkOut.writeData<double>(analysis.getVorticity(), "vorticity", (T)1/dt);
+    vtkOut.writeData<2,double>(analysis.getVelocity(), "velocity", dx/dt);
+}
+
 
 int main(int argc, char* argv[]) {
     olbInit(&argc, &argv);
@@ -99,26 +110,31 @@ int main(int argc, char* argv[]) {
 
     LBunits<T> converter(
             (T) 1e-2,  // uMax
-            (T) 1000.,  // Re
+            (T) 100.,  // Re
             128,        // N
             1.,        // lx
             1.         // ly 
     );
     const T logT     = (T)0.1;
     const T imSave   = (T)1.;
+    const T vtkSave  = (T)1.;
     const T maxT     = (T)20.0;
 
     writeLogFile(converter, "2D cavity");
 
-    BlockLattice2D<T, D2Q9Descriptor> lattice(converter.getNx(),
-                                              converter.getNy());
+#ifndef PARALLEL_MODE_MPI  // sequential program execution
+    BlockLattice2D<T, DESCRIPTOR> lattice(converter.getNx(), converter.getNy() );
+#else                      // parallel program execution
+    MultiBlockLattice2D<T, DESCRIPTOR> lattice (
+        createRegularDataDistribution( converter.getNx(), converter.getNy() ) );
+#endif
 
-    ConstRhoBGKdynamics<T, D2Q9Descriptor> bulkDynamics (
+    ConstRhoBGKdynamics<T, DESCRIPTOR> bulkDynamics (
                       converter.getOmega(),
-                      instances::getBulkMomenta<T,D2Q9Descriptor>()
+                      instances::getBulkMomenta<T,DESCRIPTOR>()
     );
 
-    OnLatticeBoundaryCondition2D<T,D2Q9Descriptor>*
+    OnLatticeBoundaryCondition2D<T,DESCRIPTOR>*
         boundaryCondition = createInterpBoundaryCondition2D(lattice);
 
     iniGeometry(lattice, converter, bulkDynamics, *boundaryCondition);
@@ -138,6 +154,10 @@ int main(int argc, char* argv[]) {
             cout << "Saving Gif ..." << endl;
             writeGifs(lattice, converter, iT);
         }
+        if (iT%converter.nStep(vtkSave)==0 && iT>0) {
+            cout << "Saving VTK file ..." << endl;
+            writeVTK(lattice, converter, iT);
+        }
 
         lattice.collideAndStream();
 
@@ -146,6 +166,4 @@ int main(int argc, char* argv[]) {
     cout << lattice.getStatistics().getAverageEnergy() << endl;
 
     delete boundaryCondition;
-
-    return 0;
 }

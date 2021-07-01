@@ -136,6 +136,14 @@ void BlockLatticeView3D<T,Lattice>::defineDynamics (
 }
 
 template<typename T, template<typename U> class Lattice>
+void BlockLatticeView3D<T,Lattice>::defineDynamics (
+        int iX, int iY, int iZ, Dynamics<T,Lattice>* dynamics )
+{
+    originalLattice->defineDynamics( iX+x0, iY+y0, iZ+z0, dynamics );
+}
+
+
+template<typename T, template<typename U> class Lattice>
 void BlockLatticeView3D<T,Lattice>::specifyStatisticsStatus (
         int x0_, int x1_, int y0_, int y1_, int z0_, int z1_, bool status )
 {
@@ -165,7 +173,7 @@ void BlockLatticeView3D<T,Lattice>::collide() {
 template<typename T, template<typename U> class Lattice>
 void BlockLatticeView3D<T,Lattice>::staticCollide (
         int x0_, int x1_, int y0_, int y1_, int z0_, int z1_,
-        TensorField3D<T,3> const& u)
+        TensorFieldBase3D<T,3> const& u)
 {
     originalLattice->staticCollide( x0_+x0, x1_+x0,
                                     y0_+y0, y1_+y0,
@@ -175,7 +183,7 @@ void BlockLatticeView3D<T,Lattice>::staticCollide (
 
 template<typename T, template<typename U> class Lattice>
 void BlockLatticeView3D<T,Lattice>::staticCollide (
-         TensorField3D<T,3> const& u )
+         TensorFieldBase3D<T,3> const& u )
 {
     originalLattice->staticCollide( x0, x0+nx-1, y0, y0+ny-1,
                                     z0, z0+nz-1, u);
@@ -242,23 +250,28 @@ void BlockLatticeView3D<T,Lattice>::stripeOffDensityOffset(T offset) {
 }
 
 template<typename T, template<typename U> class Lattice>
+void BlockLatticeView3D<T,Lattice>::forAll (
+        int x0_, int x1_, int y0_, int y1_, int z0_, int z1_,
+        WriteCellFunctional<T,Lattice> const& application )
+{
+    originalLattice->forAll( x0_+x0, x1_+x0,
+                             y0_+y0, y1_+y0,
+                             z0_+z0, z1_+z0, application);
+}
+
+template<typename T, template<typename U> class Lattice>
+void BlockLatticeView3D<T,Lattice>::forAll(WriteCellFunctional<T,Lattice> const& application) {
+    originalLattice->forAll (
+            x0, x0+nx-1, y0, y0+ny-1, z0, z0+nz-1, application );
+}
+
+template<typename T, template<typename U> class Lattice>
 void BlockLatticeView3D<T,Lattice>::addPostProcessor (
         PostProcessorGenerator3D<T,Lattice> const& ppGen )
 {
     PostProcessorGenerator3D<T,Lattice>* shiftedGen = ppGen.clone();
     shiftedGen->shift(x0,y0,z0);
     originalLattice->addPostProcessor(*shiftedGen);
-    delete shiftedGen;
-}
-
-template<typename T, template<typename U> class Lattice>
-void BlockLatticeView3D<T,Lattice>::addLatticeCoupling (
-         LatticeCouplingGenerator3D<T,Lattice> const& lcGen,
-         std::vector<SpatiallyExtendedObject3D*> partners )
-{
-    LatticeCouplingGenerator3D<T,Lattice>* shiftedGen = lcGen.clone();
-    shiftedGen->shift(x0,y0,z0);
-    originalLattice->addLatticeCoupling(*shiftedGen, partners);
     delete shiftedGen;
 }
 
@@ -276,8 +289,30 @@ template<typename T, template<typename U> class Lattice>
 void BlockLatticeView3D<T,Lattice>::postProcess(
         int x0_, int x1_, int y0_, int y1_, int z0_, int z1_)
 {
-    originalLattice -> postProcess( x0_+x0, x1_+x0, y0_+y0, y1_+y0,
-                                    z0_+z0, z1_+z0 );
+    originalLattice -> postProcess( x0_+x0, x1_+x0, y0_+y0, y1_+y0, z0_+z0, z1_+z0 );
+}
+
+template<typename T, template<typename U> class Lattice>
+void BlockLatticeView3D<T,Lattice>::addLatticeCoupling (
+         LatticeCouplingGenerator3D<T,Lattice> const& lcGen,
+         std::vector<SpatiallyExtendedObject3D*> partners )
+{
+    LatticeCouplingGenerator3D<T,Lattice>* shiftedGen = lcGen.clone();
+    shiftedGen->shift(x0,y0,z0);
+    originalLattice->addLatticeCoupling(*shiftedGen, partners);
+    delete shiftedGen;
+}
+
+template<typename T, template<typename U> class Lattice>
+void BlockLatticeView3D<T,Lattice>::executeCoupling() {
+    originalLattice -> executeCoupling(x0, x0+nx-1, y0, y0+ny-1, z0, z0+nz-1);
+}
+
+template<typename T, template<typename U> class Lattice>
+void BlockLatticeView3D<T,Lattice>::executeCoupling(
+        int x0_, int x1_, int y0_, int y1_, int z0_, int z1_)
+{
+    originalLattice -> executeCoupling( x0_+x0, x1_+x0, y0_+y0, y1_+y0, z0_+z0, z1_+z0 );
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -302,6 +337,7 @@ LatticeStatistics<T> const& BlockLatticeView3D<T,Lattice>::getStatistics() const
 
 template<typename T, template<typename U> class Lattice>
 DataAnalysisBase3D<T,Lattice> const& BlockLatticeView3D<T,Lattice>::getDataAnalysis() const {
+    dataAnalysis -> reset();
     return *dataAnalysis;
 }
 

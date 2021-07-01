@@ -58,7 +58,7 @@ public:
     virtual int getNx() const { return multiDataFieldHandler->getNx(); }
     virtual int getNy() const { return multiDataFieldHandler->getNy(); }
     virtual int getNz() const { return multiDataFieldHandler->getNz(); }
-    virtual int getSize() const { return getNx()*getNy()*getNz(); }
+    virtual size_t getSize() const { return (size_t)getNx()*(size_t)getNy()*(size_t)getNz(); }
     virtual T& get(int iX, int iY, int iZ);
     virtual T const& get(int iX, int iY, int iZ) const;
     virtual ScalarField2D<T> const& sliceX(int xVal) const;

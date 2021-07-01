@@ -148,7 +148,6 @@ template<typename T, template<typename U> class Lattice>
 void SuperLattice3D<T,Lattice>::initialize() {
 
     if (_commBC_on) {
-        _commBC.sync();
         _commBC.init();
     }
     for (int iC=0; iC<_load.size(); iC++) {

@@ -32,16 +32,19 @@
 namespace olb {
 
 template<typename T>
-void serializer2ostr(DataSerializer<T> const& serializer, std::ostream* ostr);
+void serializer2ostr(DataSerializer<T> const& serializer, std::ostream* ostr, bool enforceUint=false);
 
 template<typename T>
-void istr2unSerializer(DataUnSerializer<T>& unSerializer, std::istream* istr);
+void istr2unSerializer(DataUnSerializer<T>& unSerializer, std::istream* istr, bool enforceUint=false);
 
 template<typename T>
-void saveData(Serializable<T> const& object, std::string fName);
+void saveData(Serializable<T> const& object, std::string fName, bool enforceUint=false);
+
+template<typename T, typename SizeType>
+void loadData(Serializable<T>& object, std::string fName, bool enforceUint=false);
 
 template<typename T>
-void loadData(Serializable<T>& object, std::string fName);
+void saveAsciiData(Serializable<T> const& object, std::string fName);
 
 } // namespace olb
 

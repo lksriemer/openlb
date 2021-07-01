@@ -20,6 +20,7 @@
  *  Boston, MA  02110-1301, USA.
 */
 
+#include "complexGrids/mpiManager/mpiManager.h"
 #include "multiDataAnalysis3D.h"
 #include "multiDataAnalysis3D.hh"
 #include "core/latticeDescriptors.h"

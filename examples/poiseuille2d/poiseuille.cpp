@@ -121,7 +121,6 @@ void produceGif(int iT, BlockStructure2D<T, DESCRIPTOR>& lattice) {
                                 analysis.getPressure(), imSize, imSize);
     imageWriter.writeScaledGif(createFileName("u", iT, 6),
                                 analysis.getVelocityNorm(), imSize, imSize);
-    analysis.reset();
 }
 
 void writeProfile ( string fName,

@@ -80,16 +80,138 @@ void VtkDataWriter3D::writeDataField(DataSerializer<T> const& serializer,
     // when using base64 encoding, that length header must be encoded separately;
     // there must be no newline between the encoded length indicator and the encoded data block.
     //
-    // those properties are properly handled by the serializer2ostr function
+    // those properties are properly handled by the serializer2ostr function, if unsigned int is
+    // equal to UInt32. If not, you are on your own.
 
     ScalingSerializer<T> scaledSerializer(serializer, scalingFactor);
-    serializer2ostr(scaledSerializer, ostr);
+    // true means: enforce unsigned int
+    serializer2ostr<T>(scaledSerializer, ostr, true);
 
     if (singleton::mpi().isMainProcessor()) {
         (*ostr) << "\n</DataArray>\n";
     }
 }
 
+
+////////// class VtkImageOutput2D ////////////////////////////////////
+
+template<typename T>
+VtkImageOutput2D<T>::VtkImageOutput2D(std::string fName, T deltaX_)
+    : fullName ( singleton::directories().getVtkOutDir() + fName+".vti" ),
+      vtiOut( fullName ),
+      deltaX(deltaX_),
+      headerWritten( false )
+{ }
+
+template<typename T>
+VtkImageOutput2D<T>::~VtkImageOutput2D() {
+    writeFooter();
+}
+
+template<typename T>
+void VtkImageOutput2D<T>::writeHeader(int nx_, int ny_) {
+    if (headerWritten) {
+        OLB_PRECONDITION(nx == nx_);
+        OLB_PRECONDITION(ny == ny_);
+    }
+    else {
+        nx = nx_;
+        ny = ny_;
+        vtiOut.writeHeader(0,nx-1,0,ny-1,0,0, 0,0,0,deltaX);
+        vtiOut.startPiece(0,nx-1,0,ny-1,0,0);
+        headerWritten = true;
+    }
+}
+
+template<typename T>
+void VtkImageOutput2D<T>::writeFooter() {
+    if (headerWritten) {
+        vtiOut.endPiece();
+        vtiOut.writeFooter();
+        headerWritten = false;
+    }
+}
+
+template<typename T>
+template<typename TConv>
+void VtkImageOutput2D<T>::writeData( ScalarFieldBase2D<T> const& scalarField,
+                                     std::string scalarFieldName, TConv scalingFactor )
+{
+    writeHeader(scalarField.getNx(), scalarField.getNy());
+    TypeConversionSerializer<T,TConv> convSerializer(scalarField.getSerializer(IndexOrdering::backward) );
+    vtiOut.writeDataField( convSerializer, scalarFieldName, scalingFactor, 1);
+}
+
+template<typename T>
+template<int n, typename TConv>
+void VtkImageOutput2D<T>::writeData( TensorFieldBase2D<T,n> const& tensorField,
+                                     std::string tensorFieldName, TConv scalingFactor )
+{
+    writeHeader(tensorField.getNx(), tensorField.getNy());
+    TypeConversionSerializer<T,TConv> convSerializer(tensorField.getSerializer(IndexOrdering::backward) );
+    vtiOut.writeDataField(convSerializer, tensorFieldName, scalingFactor, n);
+}
+
+////////// class VtkImageOutput3D ////////////////////////////////////
+
+template<typename T>
+VtkImageOutput3D<T>::VtkImageOutput3D(std::string fName, T deltaX_)
+    : fullName ( singleton::directories().getVtkOutDir() + fName+".vti" ),
+      vtiOut( fullName ),
+      deltaX(deltaX_),
+      headerWritten( false )
+{ }
+
+template<typename T>
+VtkImageOutput3D<T>::~VtkImageOutput3D() {
+    writeFooter();
+}
+
+template<typename T>
+void VtkImageOutput3D<T>::writeHeader(int nx_, int ny_, int nz_) {
+    if (headerWritten) {
+        OLB_PRECONDITION(nx == nx_);
+        OLB_PRECONDITION(ny == ny_);
+        OLB_PRECONDITION(nz == nz_);
+    }
+    else {
+        nx = nx_;
+        ny = ny_;
+        nz = nz_;
+        vtiOut.writeHeader(0,nx-1,0,ny-1,0,nz-1,0,0,0,deltaX);
+        vtiOut.startPiece(0,nx-1,0,ny-1,0,nz-1);
+        headerWritten = true;
+    }
+}
+
+template<typename T>
+void VtkImageOutput3D<T>::writeFooter() {
+    if (headerWritten) {
+        vtiOut.endPiece();
+        vtiOut.writeFooter();
+        headerWritten = false;
+    }
+}
+
+template<typename T>
+template<typename TConv>
+void VtkImageOutput3D<T>::writeData( ScalarFieldBase3D<T> const& scalarField,
+                                     std::string scalarFieldName, TConv scalingFactor )
+{
+    writeHeader(scalarField.getNx(), scalarField.getNy(), scalarField.getNz());
+    TypeConversionSerializer<T,TConv> convSerializer(scalarField.getSerializer(IndexOrdering::backward) );
+    vtiOut.writeDataField( convSerializer, scalarFieldName, scalingFactor, 1);
+}
+
+template<typename T>
+template<int n, typename TConv>
+void VtkImageOutput3D<T>::writeData( TensorFieldBase3D<T,n> const& tensorField,
+                                     std::string tensorFieldName, TConv scalingFactor )
+{
+    writeHeader(tensorField.getNx(), tensorField.getNy(), tensorField.getNz());
+    TypeConversionSerializer<T,TConv> convSerializer(tensorField.getSerializer(IndexOrdering::backward) );
+    vtiOut.writeDataField(convSerializer, tensorFieldName, scalingFactor, n);
+}
 
 
 ////////// Free Functions //////////////////////////////////////////////
@@ -117,6 +239,7 @@ template<typename T> void writeVTKData3D (
 
     vtiOut.writeFooter();
 }
+
 
 
 }  // namespace olb

@@ -1,6 +1,6 @@
 /*  This file is part of the OpenLB library
  *
- *  Copyright (C) 2006, 2007 Jonas Latt
+ *  Copyright (C) 2006-2008 Jonas Latt
  *  OMP parallel code by Mathias Krause, Copyright (C) 2007
  *  Address: Rue General Dufour 24,  1211 Geneva 4, Switzerland 
  *  E-mail: jonas.latt@gmail.com
@@ -75,6 +75,7 @@ BlockLattice2D<T,Lattice>::~BlockLattice2D()
 {
     releaseMemory();
     clearPostProcessors();
+    clearLatticeCouplings();
     #ifdef PARALLEL_MODE_OMP
         #pragma omp parallel
         {
@@ -181,6 +182,16 @@ void BlockLattice2D<T,Lattice>::defineDynamics (
 }
 
 template<typename T, template<typename U> class Lattice>
+void BlockLattice2D<T,Lattice>::defineDynamics (
+        int iX, int iY, Dynamics<T,Lattice>* dynamics )
+{
+    OLB_PRECONDITION(iX>=0 && iX<nx);
+    OLB_PRECONDITION(iY>=0 && iY<ny);
+
+    grid[iX][iY].defineDynamics(dynamics);
+}
+
+template<typename T, template<typename U> class Lattice>
 void BlockLattice2D<T,Lattice>::specifyStatisticsStatus (
         int x0, int x1, int y0, int y1, bool status )
 {
@@ -227,7 +238,7 @@ void BlockLattice2D<T,Lattice>::collide() {
  */
 template<typename T, template<typename U> class Lattice>
 void BlockLattice2D<T,Lattice>::staticCollide(int x0, int x1, int y0, int y1,
-                                              TensorField2D<T,2> const& u)
+                                              TensorFieldBase2D<T,2> const& u)
 {
     OLB_PRECONDITION(x0>=0 && x1<nx);
     OLB_PRECONDITION(x1>=x0);
@@ -249,7 +260,7 @@ void BlockLattice2D<T,Lattice>::staticCollide(int x0, int x1, int y0, int y1,
 
 /** \sa collide(int,int,int,int) */
 template<typename T, template<typename U> class Lattice>
-void BlockLattice2D<T,Lattice>::staticCollide(TensorField2D<T,2> const& u) {
+void BlockLattice2D<T,Lattice>::staticCollide(TensorFieldBase2D<T,2> const& u) {
     staticCollide(0, nx-1, 0, ny-1, u);
 }
 
@@ -373,18 +384,27 @@ void BlockLattice2D<T,Lattice>::stripeOffDensityOffset(T offset) {
 }
 
 template<typename T, template<typename U> class Lattice>
+void BlockLattice2D<T,Lattice>::forAll (
+        int x0, int x1, int y0, int y1, WriteCellFunctional<T,Lattice> const& application )
+{
+    for (int iX=x0; iX<=x1; ++iX) {
+        for (int iY=y0; iY<=y1; ++iY) {
+            application.apply( get(iX,iY) );
+        }
+    }
+}
+
+template<typename T, template<typename U> class Lattice>
+void BlockLattice2D<T,Lattice>::forAll(WriteCellFunctional<T,Lattice> const& application) {
+    forAll(0, nx-1, 0, ny-1, application);
+}
+
+
+template<typename T, template<typename U> class Lattice>
 void BlockLattice2D<T,Lattice>::addPostProcessor (
     PostProcessorGenerator2D<T,Lattice> const& ppGen )
 {
     postProcessors.push_back(ppGen.generate());
-}
-
-template<typename T, template<typename U> class Lattice>
-void BlockLattice2D<T,Lattice>::addLatticeCoupling (
-    LatticeCouplingGenerator2D<T,Lattice> const& lcGen,
-    std::vector<SpatiallyExtendedObject2D*> partners )
-{
-    postProcessors.push_back(lcGen.generate(partners));
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -411,13 +431,44 @@ void BlockLattice2D<T,Lattice>::postProcess() {
 }
 
 template<typename T, template<typename U> class Lattice>
-void BlockLattice2D<T,Lattice>::postProcess (
-            int x0_, int x1_, int y0_, int y1_ )
+void BlockLattice2D<T,Lattice>::postProcess(int x0_, int x1_, int y0_, int y1_)
 {
     for (unsigned iPr=0; iPr<postProcessors.size(); ++iPr) {
         postProcessors[iPr] -> processSubDomain(*this, x0_, x1_, y0_, y1_);
     }
 }
+
+template<typename T, template<typename U> class Lattice>
+void BlockLattice2D<T,Lattice>::addLatticeCoupling (
+    LatticeCouplingGenerator2D<T,Lattice> const& lcGen,
+    std::vector<SpatiallyExtendedObject2D*> partners )
+{
+    latticeCouplings.push_back(lcGen.generate(partners));
+}
+
+template<typename T, template<typename U> class Lattice>
+void BlockLattice2D<T,Lattice>::executeCoupling() {
+    for (unsigned iPr=0; iPr<latticeCouplings.size(); ++iPr) {
+        latticeCouplings[iPr] -> process(*this);
+    }
+}
+
+template<typename T, template<typename U> class Lattice>
+void BlockLattice2D<T,Lattice>::executeCoupling(int x0_, int x1_, int y0_, int y1_) {
+    for (unsigned iPr=0; iPr<latticeCouplings.size(); ++iPr) {
+        latticeCouplings[iPr] -> processSubDomain(*this, x0_, x1_, y0_, y1_);
+    }
+}
+
+template<typename T, template<typename U> class Lattice>
+void BlockLattice2D<T,Lattice>::clearLatticeCouplings() {
+    typename PostProcVector::iterator ppIt = latticeCouplings.begin();
+    for (; ppIt != latticeCouplings.end(); ++ppIt) {
+        delete *ppIt;
+    }
+    latticeCouplings.clear();
+}
+
 
 template<typename T, template<typename U> class Lattice>
 void BlockLattice2D<T,Lattice>::subscribeReductions(Reductor<T>& reductor) {
@@ -427,8 +478,7 @@ void BlockLattice2D<T,Lattice>::subscribeReductions(Reductor<T>& reductor) {
 }
 
 template<typename T, template<typename U> class Lattice>
-LatticeStatistics<T>& BlockLattice2D<T,Lattice>::getStatistics()
-{
+LatticeStatistics<T>& BlockLattice2D<T,Lattice>::getStatistics() {
     #ifdef PARALLEL_MODE_OMP
         return *statistics[omp.get_rank()];
     #else
@@ -437,9 +487,7 @@ LatticeStatistics<T>& BlockLattice2D<T,Lattice>::getStatistics()
 }
 
 template<typename T, template<typename U> class Lattice>
-LatticeStatistics<T> const&
-    BlockLattice2D<T,Lattice>::getStatistics() const
-{
+LatticeStatistics<T> const& BlockLattice2D<T,Lattice>::getStatistics() const {
     #ifdef PARALLEL_MODE_OMP
         return *statistics[omp.get_rank()];
     #else
@@ -449,10 +497,13 @@ LatticeStatistics<T> const&
 
 template<typename T, template<typename U> class Lattice>
 void BlockLattice2D<T,Lattice>::allocateMemory() {
-    rawData = new Cell<T,Lattice> [nx*ny];
-    grid    = new Cell<T,Lattice>* [nx];
+    // The conversions to size_t ensure 64-bit compatibility. Note that
+    //   nx and ny are of type int, which might by 32-bit types, even on
+    //   64-bit platforms. Therefore, nx*ny may lead to a type overflow.
+    rawData = new Cell<T,Lattice> [(size_t)nx*(size_t)ny];
+    grid    = new Cell<T,Lattice>* [(size_t)nx];
     for (int iX=0; iX<nx; ++iX) {
-        grid[iX] = rawData + iX*ny;
+        grid[iX] = rawData + (size_t)iX*(size_t)ny;
     }
 }
 
@@ -597,6 +648,7 @@ void BlockLattice2D<T,Lattice>::makePeriodic() {
 
 template<typename T, template<typename U> class Lattice>
 DataAnalysisBase2D<T,Lattice> const& BlockLattice2D<T,Lattice>::getDataAnalysis() const {
+    dataAnalysis -> reset();
     return *dataAnalysis;
 }
 
@@ -683,26 +735,26 @@ BlockLatticeSerializer2D<T,Lattice>::BlockLatticeSerializer2D (
 { }
 
 template<typename T, template<typename U> class Lattice>
-int BlockLatticeSerializer2D<T,Lattice>::getSize() const {
-    return (x1-x0+1) * (y1-y0+1) * sizeOfCell;
+size_t BlockLatticeSerializer2D<T,Lattice>::getSize() const {
+    return (size_t)(x1-x0+1) * (size_t)(y1-y0+1) * (size_t)sizeOfCell;
 }
 
 template<typename T, template<typename U> class Lattice>
-const T* BlockLatticeSerializer2D<T,Lattice>::getNextDataBuffer(int& bufferSize) const {
+const T* BlockLatticeSerializer2D<T,Lattice>::getNextDataBuffer(size_t& bufferSize) const {
     OLB_PRECONDITION( !isEmpty() );
     if (ordering==IndexOrdering::forward || ordering==IndexOrdering::memorySaving) {
-        bufferSize = (y1-y0+1)*sizeOfCell;
+        bufferSize = (size_t)(y1-y0+1)*(size_t)sizeOfCell;
         buffer.resize(bufferSize);
         for (iY=y0; iY<=y1; ++iY) {
-            blockLattice.get(iX,iY).serialize(&buffer[sizeOfCell*(iY-y0)]);
+            blockLattice.get(iX,iY).serialize(&buffer[(size_t)sizeOfCell*(size_t)(iY-y0)]);
         }
         ++iX;
     }
     else {
-        bufferSize = (x1-x0+1)*sizeOfCell;
+        bufferSize = (size_t)(x1-x0+1)*(size_t)sizeOfCell;
         buffer.resize(bufferSize);
         for (iX=x0; iX<=x1; ++iX) {
-            blockLattice.get(iX,iY).serialize(&buffer[sizeOfCell*(iX-x0)]);
+            blockLattice.get(iX,iY).serialize(&buffer[(size_t)sizeOfCell*(size_t)(iX-x0)]);
         }
         ++iY;
     }
@@ -743,18 +795,18 @@ BlockLatticeUnSerializer2D<T,Lattice>::BlockLatticeUnSerializer2D (
 { }
 
 template<typename T, template<typename U> class Lattice>
-int BlockLatticeUnSerializer2D<T,Lattice>::getSize() const {
-    return (x1-x0+1) * (y1-y0+1) * sizeOfCell;
+size_t BlockLatticeUnSerializer2D<T,Lattice>::getSize() const {
+    return (size_t)(x1-x0+1) * (size_t)(y1-y0+1) * (size_t)sizeOfCell;
 }
 
 template<typename T, template<typename U> class Lattice>
-T* BlockLatticeUnSerializer2D<T,Lattice>::getNextDataBuffer(int& bufferSize) {
+T* BlockLatticeUnSerializer2D<T,Lattice>::getNextDataBuffer(size_t& bufferSize) {
     OLB_PRECONDITION( !isFull() );
     if (ordering==IndexOrdering::forward || ordering==IndexOrdering::memorySaving) {
-        bufferSize = (y1-y0+1)*sizeOfCell;
+        bufferSize = (size_t)(y1-y0+1)*(size_t)sizeOfCell;
     }
     else {
-        bufferSize = (x1-x0+1)*sizeOfCell;
+        bufferSize = (size_t)(x1-x0+1)*(size_t)sizeOfCell;
     }
     buffer.resize(bufferSize);
     return &buffer[0];
@@ -765,13 +817,13 @@ void BlockLatticeUnSerializer2D<T,Lattice>::commitData() {
     OLB_PRECONDITION( !isFull() );
     if (ordering==IndexOrdering::forward || ordering==IndexOrdering::memorySaving) {
         for (iY=y0; iY<=y1; ++iY) {
-            blockLattice.get(iX,iY).unSerialize(&buffer[(iY-y0)*sizeOfCell]);
+            blockLattice.get(iX,iY).unSerialize(&buffer[(size_t)(iY-y0)*(size_t)sizeOfCell]);
         }
         ++iX;
     }
     else {
         for (iX=x0; iX<=x1; ++iX) {
-            blockLattice.get(iX,iY).unSerialize(&buffer[(iX-x0)*sizeOfCell]);
+            blockLattice.get(iX,iY).unSerialize(&buffer[(size_t)(iX-x0)*(size_t)sizeOfCell]);
         }
         ++iY;
     }

@@ -56,12 +56,12 @@ MultiSerializer2D<T>::MultiSerializer2D (
 { }
 
 template<typename T>
-int MultiSerializer2D<T>::getSize() const {
+size_t MultiSerializer2D<T>::getSize() const {
     if (ordering==IndexOrdering::memorySaving) {
-        return policy.getMultiData().getNumAllocatedBulkCells() * policy.getElementSize();
+        return policy.getMultiData().getNumAllocatedBulkCells() * (size_t)policy.getElementSize();
     }
     else {
-        return (x1-x0+1) * (y1-y0+1) * policy.getElementSize();
+        return (size_t)(x1-x0+1) * (size_t)(y1-y0+1) * (size_t)policy.getElementSize();
     }
 }
 
@@ -135,7 +135,7 @@ void MultiSerializer2D<T>::fillBufferWithZeros(int nextChunkSize) const {
 }
 
 template<typename T>
-const T* MultiSerializer2D<T>::getNextDataBuffer(int& bufferSize) const {
+const T* MultiSerializer2D<T>::getNextDataBuffer(size_t& bufferSize) const {
     OLB_PRECONDITION( !isEmpty() );
     if (ordering==IndexOrdering::forward || ordering==IndexOrdering::memorySaving) {
         int nextLattice, nextChunkSize;
@@ -219,17 +219,17 @@ MultiUnSerializer2D<T>::MultiUnSerializer2D (
 { }
 
 template<typename T>
-int MultiUnSerializer2D<T>::getSize() const {
+size_t MultiUnSerializer2D<T>::getSize() const {
     if (ordering==IndexOrdering::memorySaving) {
-        return policy.getMultiData().getNumAllocatedBulkCells() * policy.getElementSize();
+        return policy.getMultiData().getNumAllocatedBulkCells() * (size_t)policy.getElementSize();
     }
     else {
-        return (x1-x0+1) * (y1-y0+1) * policy.getElementSize();
+        return (size_t)(x1-x0+1) * (size_t)(y1-y0+1) * (size_t)policy.getElementSize();
     }
 }
 
 template<typename T>
-T* MultiUnSerializer2D<T>::getNextDataBuffer(int& bufferSize) {
+T* MultiUnSerializer2D<T>::getNextDataBuffer(size_t& bufferSize) {
     OLB_PRECONDITION( !isFull() );
     int nextLattice, nextChunkSize;
     if (ordering==IndexOrdering::forward || ordering==IndexOrdering::memorySaving) {

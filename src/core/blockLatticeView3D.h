@@ -59,6 +59,7 @@ public:
     virtual void defineDynamics (
         int x0_, int x1_, int y0_, int y1_, int z0_, int z1_,
         Dynamics<T,Lattice>* dynamics );
+    virtual void defineDynamics(int iX, int iY, int iZ, Dynamics<T,Lattice>* dynamics);
     virtual void specifyStatisticsStatus (
                 int x0_, int x1_, int y0_, int y1_,
                 int z0_, int z1_, bool status );
@@ -67,8 +68,8 @@ public:
     virtual void collide();
     virtual void staticCollide (int x0, int x1, int y0, int y1,
                                 int z0_, int z1_,
-                                TensorField3D<T,3> const& u);
-    virtual void staticCollide (TensorField3D<T,3> const& u);
+                                TensorFieldBase3D<T,3> const& u);
+    virtual void staticCollide (TensorFieldBase3D<T,3> const& u);
     virtual void stream(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_);
     virtual void stream(bool periodic=false);
     virtual void collideAndStream(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_);
@@ -79,15 +80,19 @@ public:
     virtual void stripeOffDensityOffset (
             int x0_, int x1_, int y0_, int y1_, int z0_, int z1_, T offset );
     virtual void stripeOffDensityOffset(T offset);
+    virtual void forAll(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_,
+                        WriteCellFunctional<T,Lattice> const& application);
+    virtual void forAll(WriteCellFunctional<T,Lattice> const& application);
     virtual void addPostProcessor (
                      PostProcessorGenerator3D<T,Lattice> const& ppGen);
+    virtual void resetPostProcessors();
+    virtual void postProcess(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_);
+    virtual void postProcess();
     virtual void addLatticeCoupling (
             LatticeCouplingGenerator3D<T,Lattice> const& lcGen,
             std::vector<SpatiallyExtendedObject3D*> partners );
-    virtual void resetPostProcessors();
-    virtual void postProcess(int x0_, int x1_, int y0_, int y1_,
-                             int z0_, int z1_);
-    virtual void postProcess();
+    virtual void executeCoupling(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_);
+    virtual void executeCoupling();
     virtual void subscribeReductions(Reductor<T>& reductor);
     virtual LatticeStatistics<T>& getStatistics();
     virtual LatticeStatistics<T> const& getStatistics() const;

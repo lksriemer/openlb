@@ -55,6 +55,10 @@ namespace descriptors {
         static const int sizeOfForce   = 0;
     };
 
+    struct NoExternalFieldBase {
+        typedef NoExternalField ExternalField;
+    };
+
     struct Force2dDescriptor {
         static const int numScalars = 2;
         static const int numSpecies = 1;
@@ -62,11 +66,19 @@ namespace descriptors {
         static const int sizeOfForce   = 2;
     };
 
+    struct Force2dDescriptorBase {
+        typedef Force2dDescriptor ExternalField;
+    };
+
     struct Force3dDescriptor {
         static const int numScalars = 3;
         static const int numSpecies = 1;
         static const int forceBeginsAt = 0;
         static const int sizeOfForce   = 3;
+    };
+
+    struct Force3dDescriptorBase {
+        typedef Force3dDescriptor ExternalField;
     };
 
     template<typename T, typename ExternalField>
@@ -101,10 +113,9 @@ namespace descriptors {
 
 
     /// D2Q9 lattice
-    template <typename T>
-        struct D2Q9Descriptor
+    template <typename T> struct D2Q9DescriptorBase
     {
-        typedef NoExternalField ExternalField;
+        typedef D2Q9DescriptorBase<T> BaseDescriptor;
         enum { d = 2, q = 9 };      ///< number of dimensions/distr. functions
         static const int c[q][d];   ///< lattice directions
         static const T t[q];        ///< lattice weights
@@ -112,10 +123,9 @@ namespace descriptors {
     };
 
     /// D3Q13 lattice
-    template <typename T>
-        struct D3Q13Descriptor
+    template <typename T> struct D3Q13DescriptorBase
     {
-        typedef NoExternalField ExternalField;
+        typedef D3Q13DescriptorBase<T> BaseDescriptor;
         enum { d = 3, q = 13 };     ///< number of dimensions/distr. functions
         static const int c[q][d];   ///< lattice directions
         static const T t[q];        ///< lattice weights
@@ -125,10 +135,9 @@ namespace descriptors {
     };
 
     /// D3Q15 lattice
-    template <typename T>
-        struct D3Q15Descriptor
+    template <typename T> struct D3Q15DescriptorBase
     {
-        typedef NoExternalField ExternalField;
+        typedef D3Q15DescriptorBase<T> BaseDescriptor;
         enum { d = 3, q = 15 };     ///< number of dimensions/distr. functions
         static const int c[q][d];   ///< lattice directions
         static const T t[q];        ///< lattice weights
@@ -136,10 +145,9 @@ namespace descriptors {
     };
 
     /// D3Q19 lattice
-    template <typename T>
-        struct D3Q19Descriptor
+    template <typename T> struct D3Q19DescriptorBase
     {
-        typedef NoExternalField ExternalField;
+        typedef D3Q19DescriptorBase<T> BaseDescriptor;
         enum { d = 3, q = 19 };     ///< number of dimensions/distr. functions
         static const int c[q][d];   ///< lattice directions
         static const T t[q];        ///< lattice weights
@@ -147,40 +155,54 @@ namespace descriptors {
     };
 
     /// D3Q27 lattice
-    template <typename T>
-        struct D3Q27Descriptor
+    template <typename T> struct D3Q27DescriptorBase
     {
-        typedef NoExternalField ExternalField;
+        typedef D3Q27DescriptorBase<T> BaseDescriptor;
         enum { d = 3, q = 27 };     ///< number of dimensions/distr. functions
         static const int c[q][d];   ///< lattice directions
         static const T t[q];        ///< lattice weights
         static const T invCs2;      ///< inverse square of speed of sound
     };
 
-    /// D2Q9 lattice with force
-    template <typename T>
-        struct ForcedD2Q9Descriptor
-    {
-        typedef Force2dDescriptor ExternalField;
-        enum { d = 2, q = 9 };      ///< number of dimensions/distr. functions
-        static const int c[q][d];   ///< lattice directions
-        static const T t[q];        ///< lattice weights
-        static const T invCs2;      ///< inverse square of speed of sound
-    };
+    template <typename T> struct D2Q9Descriptor
+        : public D2Q9DescriptorBase<T>, public NoExternalFieldBase
+    { };
 
-    /// D3Q19 lattice with force
-    template <typename T>
-        struct ForcedD3Q19Descriptor
-    {
-        typedef Force3dDescriptor ExternalField;
-        enum { d = 3, q = 19 };     ///< number of dimensions/distr. functions
-        static const int c[q][d];   ///< lattice directions
-        static const T t[q];        ///< lattice weights
-        static const T invCs2;      ///< inverse square of speed of sound
-    };
+    template <typename T> struct ForcedD2Q9Descriptor
+        : public D2Q9DescriptorBase<T>, public Force2dDescriptorBase
+    { };
 
+    template <typename T> struct D3Q13Descriptor
+        : public D3Q13DescriptorBase<T>, public NoExternalFieldBase
+    { };
 
+    template <typename T> struct ForcedD3Q13Descriptor
+        : public D3Q13DescriptorBase<T>, public Force3dDescriptorBase
+    { };
 
+    template <typename T> struct D3Q15Descriptor
+        : public D3Q15DescriptorBase<T>, public NoExternalFieldBase
+    { };
+
+    template <typename T> struct ForcedD3Q15Descriptor
+        : public D3Q15DescriptorBase<T>, public Force3dDescriptorBase
+    { };
+
+    template <typename T> struct D3Q19Descriptor
+        : public D3Q19DescriptorBase<T>, public NoExternalFieldBase
+    { };
+
+    template <typename T> struct ForcedD3Q19Descriptor
+        : public D3Q19DescriptorBase<T>, public Force3dDescriptorBase
+    { };
+
+    template <typename T> struct D3Q27Descriptor
+        : public D3Q27DescriptorBase<T>, public NoExternalFieldBase
+    { };
+
+    template <typename T> struct ForcedD3Q27Descriptor
+        : public D3Q27DescriptorBase<T>, public Force3dDescriptorBase
+    { };
 
 }  // namespace descriptors
 

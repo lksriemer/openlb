@@ -39,10 +39,10 @@ namespace olb {
 template<typename T>
 class Base64Encoder {
 public:
-    Base64Encoder(std::ostream& ostr_, int fullLength_);
-    void encode(const T* data, int length);
+    Base64Encoder(std::ostream& ostr_, size_t fullLength_);
+    void encode(const T* data, size_t length);
 private:
-    void fillOverflow(const unsigned char* charData, int charLength, int& pos);
+    void fillOverflow(const unsigned char* charData, size_t charLength, size_t& pos);
     void flushOverflow();
     void writeSize();
     void encodeBlock( const unsigned char* data);
@@ -51,26 +51,28 @@ private:
     static const char enc64[65];
 private:
     std::ostream& ostr;
-    int charFullLength;
-    int numWritten, numOverflow;
+    size_t charFullLength;
+    size_t numWritten;
+    int numOverflow;
     unsigned char overflow[3];
 };
 
 template<typename T>
 class Base64Decoder {
 public:
-    Base64Decoder(std::istream& istr_, int fullLength_);
-    void decode(T* data, int length);
+    Base64Decoder(std::istream& istr_, size_t fullLength_);
+    void decode(T* data, size_t length);
 private:
-    void flushOverflow(unsigned char* charData, int charLength, int& pos);
+    void flushOverflow(unsigned char* charData, size_t charLength, size_t& pos);
     unsigned char getNext();
     void decodeBlock(unsigned char* data);
 private:
     static const char dec64[82];
 private:
     std::istream& istr;
-    int charFullLength;
-    int numRead, posOverflow;
+    size_t charFullLength;
+    size_t numRead;
+    int posOverflow;
     unsigned char overflow[3];
 };
 

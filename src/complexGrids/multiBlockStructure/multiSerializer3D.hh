@@ -57,12 +57,12 @@ MultiSerializer3D<T>::MultiSerializer3D (
 { }
 
 template<typename T>
-int MultiSerializer3D<T>::getSize() const {
+size_t MultiSerializer3D<T>::getSize() const {
     if (ordering==IndexOrdering::memorySaving) {
-        return policy.getMultiData().getNumAllocatedBulkCells() * policy.getElementSize();
+        return policy.getMultiData().getNumAllocatedBulkCells() * (size_t)policy.getElementSize();
     }
     else {
-        return (x1-x0+1) * (y1-y0+1) * (z1-z0+1) * policy.getElementSize();
+        return (size_t)(x1-x0+1) * (size_t)(y1-y0+1) * (size_t)(z1-z0+1) * (size_t)policy.getElementSize();
     }
 }
 
@@ -138,7 +138,7 @@ void MultiSerializer3D<T>::fillBufferWithZeros(int nextChunkSize) const {
 }
 
 template<typename T>
-const T* MultiSerializer3D<T>::getNextDataBuffer(int& bufferSize) const {
+const T* MultiSerializer3D<T>::getNextDataBuffer(size_t& bufferSize) const {
     OLB_PRECONDITION( !isEmpty() );
     if (ordering==IndexOrdering::forward || ordering==IndexOrdering::memorySaving) {
         int nextLattice, nextChunkSize;
@@ -231,17 +231,17 @@ MultiUnSerializer3D<T>::MultiUnSerializer3D (
 { }
 
 template<typename T>
-int MultiUnSerializer3D<T>::getSize() const {
+size_t MultiUnSerializer3D<T>::getSize() const {
     if (ordering==IndexOrdering::memorySaving) {
-        return policy.getMultiData().getNumAllocatedBulkCells() * policy.getElementSize();
+        return policy.getMultiData().getNumAllocatedBulkCells() * (size_t)policy.getElementSize();
     }
     else {
-        return (x1-x0+1) * (y1-y0+1) * (z1-z0+1) * policy.getElementSize();
+        return (size_t)(x1-x0+1) * (size_t)(y1-y0+1) * (size_t)(z1-z0+1) * (size_t)policy.getElementSize();
     }
 }
 
 template<typename T>
-T* MultiUnSerializer3D<T>::getNextDataBuffer(int& bufferSize) {
+T* MultiUnSerializer3D<T>::getNextDataBuffer(size_t& bufferSize) {
     OLB_PRECONDITION( !isFull() );
     int nextLattice, nextChunkSize;
     if (ordering==IndexOrdering::forward || ordering==IndexOrdering::memorySaving) {

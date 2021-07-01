@@ -33,8 +33,8 @@ template void convergeFixedVelocity<double, descriptors::D2Q9Descriptor> (
     double epsilon, int step);
 
 template void computePressure2D<double, descriptors::D2Q9Descriptor>
-    ( ScalarField2D<double> const& poissonTerm,
-      ScalarField2D<double>& pressure,
+    ( ScalarFieldBase2D<double> const& poissonTerm,
+      ScalarFieldBase2D<double>& pressure,
       double epsilon, double lambda );
 
 template void iniPressure2D (

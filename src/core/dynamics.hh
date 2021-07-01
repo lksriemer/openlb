@@ -564,7 +564,7 @@ void ForcedBGKdynamics<T,Lattice>::collide (
         u[iVel] += force[iVel] / (T)2.;
     }
     T uSqr = lbHelpers<T,Lattice>::bgkCollision(cell, rho, u, omega);
-    externalFieldHelpers<T,Lattice>::addExternalForce(cell, u, omega);
+    lbHelpers<T,Lattice>::addExternalForce(cell, u, omega);
     if (cell.takesStatistics()) {
         statistics.gatherStats(rho, uSqr);
     }
@@ -579,7 +579,7 @@ void ForcedBGKdynamics<T,Lattice>::staticCollide (
     T rho, uDummy[Lattice<T>::d];
     this->momenta.computeRhoU(cell, rho, uDummy);
     T uSqr = lbHelpers<T,Lattice>::bgkCollision(cell, rho, u, omega);
-    externalFieldHelpers<T,Lattice>::addExternalForce(cell, u, omega);
+    lbHelpers<T,Lattice>::addExternalForce(cell, u, omega);
     if (cell.takesStatistics()) {
         statistics.gatherStats(rho, uSqr);
     }
@@ -804,8 +804,114 @@ void BulkMomenta<T,Lattice>::defineAllMomenta (
     }
 }
 
+////////////////////// Class ExternalVelocityMomenta //////////////////////////
+
+template<typename T, template<typename U> class Lattice>
+T ExternalVelocityMomenta<T,Lattice>::computeRho(Cell<T,Lattice> const& cell) const {
+    return lbHelpers<T,Lattice>::computeRho(cell);
+}
+
+template<typename T, template<typename U> class Lattice>
+void ExternalVelocityMomenta<T,Lattice>::computeU(Cell<T,Lattice> const& cell, T u[Lattice<T>::d]) const
+{
+    T const* uExt = cell.getExternal(Lattice<T>::ExternalField::velocityBeginsAt);
+    for (int iD=0; iD<Lattice<T>::d; ++iD) {
+        u[iD] = uExt[iD];
+    }
+}
+
+template<typename T, template<typename U> class Lattice>
+void ExternalVelocityMomenta<T,Lattice>::computeJ(Cell<T,Lattice> const& cell, T j[Lattice<T>::d]) const
+{
+    T rho = computeRho(cell);
+    T const* uExt = cell.getExternal(Lattice<T>::ExternalField::velocityBeginsAt);
+    for (int iD=0; iD<Lattice<T>::d; ++iD) {
+        j[iD] = uExt[iD]*rho;
+    }
+}
+
+template<typename T, template<typename U> class Lattice>
+void ExternalVelocityMomenta<T,Lattice>::computeStress (
+            Cell<T,Lattice> const& cell,
+            T rho, const T u[Lattice<T>::d],
+            T pi[util::TensorVal<Lattice<T> >::n] ) const
+{
+    lbHelpers<T,Lattice>::computeStress(cell, rho, u, pi);
+}
+
+template<typename T, template<typename U> class Lattice>
+void ExternalVelocityMomenta<T,Lattice>::computeRhoU (
+        Cell<T,Lattice> const& cell,
+        T& rho, T u[Lattice<T>::d] ) const
+{
+    rho = computeRho(cell);
+    computeU(cell,u);
+}
+
+template<typename T, template<typename U> class Lattice>
+void ExternalVelocityMomenta<T,Lattice>::computeAllMomenta (
+        Cell<T,Lattice> const& cell,
+        T& rho, T u[Lattice<T>::d],
+        T pi[util::TensorVal<Lattice<T> >::n] ) const
+{
+    computeRhoU(cell, rho,u);
+    computeStress(cell, rho, u, pi);
+}
+
+template<typename T, template<typename U> class Lattice>
+void ExternalVelocityMomenta<T,Lattice>::defineRho(Cell<T,Lattice>& cell, T rho) {
+    T oldRho, u[Lattice<T>::d];
+    computeRhoU(cell, oldRho, u);
+    T uSqr = util::normSqr<T,Lattice<T>::d>(u);
+    T fNeq[Lattice<T>::q];
+    lbHelpers<T,Lattice>::computeFneq(cell, fNeq, oldRho, u);
+    for (int iPop=0; iPop < Lattice<T>::q; ++iPop) {
+        cell[iPop] = lbHelpers<T,Lattice>::equilibrium(iPop, rho, u, uSqr) +
+                     fNeq[iPop];
+    }
+}
+
+template<typename T, template<typename U> class Lattice>
+void ExternalVelocityMomenta<T,Lattice>::defineU (
+    Cell<T,Lattice>& cell,
+    const T u[Lattice<T>::d])
+{
+    T* uExt = cell.getExternal(Lattice<T>::ExternalField::velocityBeginsAt);
+    for (int iD=0; iD<Lattice<T>::d; ++iD) {
+        uExt[iD] = u[iD];
+    }
+}
+
+template<typename T, template<typename U> class Lattice>
+void ExternalVelocityMomenta<T,Lattice>::defineRhoU (
+    Cell<T,Lattice>& cell,
+    T rho, const T u[Lattice<T>::d])
+{
+    defineRho(cell, rho);
+    defineU(cell, u);
+}
+
+template<typename T, template<typename U> class Lattice>
+void ExternalVelocityMomenta<T,Lattice>::defineAllMomenta (
+        Cell<T,Lattice>& cell,
+        T rho, const T u[Lattice<T>::d],
+        const T pi[util::TensorVal<Lattice<T> >::n] )
+{
+    defineU(cell, u);
+    T uSqr = util::normSqr<T,Lattice<T>::d>(u);
+    for (int iPop=0; iPop < Lattice<T>::q; ++iPop) {
+        cell[iPop] = lbHelpers<T,Lattice>::equilibrium(iPop, rho, u, uSqr) +
+                     firstOrderLbHelpers<T,Lattice>::fromPiToFneq(iPop, pi);
+    }
+}
+
 
 ////////////////////// Class BounceBack ///////////////////////////
+
+template<typename T, template<typename U> class Lattice>
+BounceBack<T,Lattice>::BounceBack(T rho_)
+    :rho(rho_)
+{ }
 
 template<typename T, template<typename U> class Lattice>
 BounceBack<T,Lattice>* BounceBack<T,Lattice>::clone() const {
@@ -834,15 +940,12 @@ void BounceBack<T,Lattice>::staticCollide (
     const T u[Lattice<T>::d],
     LatticeStatistics<T>& statistics )
 {
-    // Nothing to be done: The bounce-back boundary node does not allow
-    // a modification of the velocity; it is no-slip by default.
     this->collide(cell, statistics);
 }
 
 template<typename T, template<typename U> class Lattice>
-T BounceBack<T,Lattice>::computeRho(Cell<T,Lattice> const& cell) const
-{
-    return (T)1;
+T BounceBack<T,Lattice>::computeRho(Cell<T,Lattice> const& cell) const {
+    return rho;
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -1050,6 +1153,12 @@ namespace instances {
     BulkMomenta<T,Lattice>& getBulkMomenta() {
         static BulkMomenta<T,Lattice> bulkMomentaSingleton;
         return bulkMomentaSingleton;
+    }
+
+    template<typename T, template<typename U> class Lattice>
+    ExternalVelocityMomenta<T,Lattice>& getExternalVelocityMomenta() {
+        static ExternalVelocityMomenta<T,Lattice> externalVelocityMomentaSingleton;
+        return externalVelocityMomentaSingleton;
     }
 
     template<typename T, template<typename U> class Lattice>

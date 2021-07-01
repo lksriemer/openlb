@@ -26,10 +26,11 @@
 #ifndef MULTI_BLOCK_HANDLER_2D_H
 #define MULTI_BLOCK_HANDLER_2D_H
 
-#include <vector>
+#include "complexGrids/mpiManager/mpiManager.h"
 #include "core/blockLattice2D.h"
 #include "core/cell.h"
 #include "multiDataGeometry2D.h"
+#include <vector>
 
 
 namespace olb {
@@ -42,6 +43,7 @@ struct MultiBlockHandler2D {
     virtual int getNx() const =0;
     virtual int getNy() const =0;
     virtual MultiDataDistribution2D const& getMultiDataDistribution() const =0;
+    virtual RelevantIndexes2D const& getRelevantIndexes() const =0;
     virtual bool getLocalEnvelope(int iBlock, int& lx, int& ly) const =0;
     virtual T reduceSum(T localSum) const =0;
     virtual T reduceAverage(T localAverage, T localWeight) const =0;
@@ -55,7 +57,8 @@ struct MultiBlockHandler2D {
                                                 bool hasBulkCell) const =0;
     virtual Cell<T,Lattice> const& getDistributedCell(std::vector<Cell<T,Lattice> const*>& baseCell,
                                                       bool hasBulkCell) const =0;
-    virtual int locateLocally(int iX, int iY, std::vector<int>& foundId, bool& hasBulkCell, int guess=0) const =0;
+    virtual int locateLocally(int iX, int iY, std::vector<int>& foundId, std::vector<int>& foundX,
+                              std::vector<int>& foundY, bool& hasBulkCell, int guess=0) const =0;
 };
 
 template<typename T, template<typename U> class Lattice>
@@ -67,6 +70,7 @@ public:
     virtual int getNx() const;
     virtual int getNy() const;
     virtual MultiDataDistribution2D const& getMultiDataDistribution() const;
+    virtual RelevantIndexes2D const& getRelevantIndexes() const;
     virtual bool getLocalEnvelope(int iBlock, int& lx, int& ly) const;
     virtual T reduceSum(T localSum) const;
     virtual T reduceAverage(T localAverage, T localWeight) const;
@@ -80,11 +84,13 @@ public:
                                                 bool hasBulkCell) const;
     virtual Cell<T,Lattice> const& getDistributedCell(std::vector<Cell<T,Lattice> const*>& baseCell,
                                                       bool hasBulkCell) const;
-    virtual int locateLocally(int iX, int iY, std::vector<int>& foundId, bool& hasBulkCell, int guess=0) const;
+    virtual int locateLocally(int iX, int iY, std::vector<int>& foundId, std::vector<int>& foundX,
+                              std::vector<int>& foundY, bool& hasBulkCell, int guess=0) const;
 private:
     void copyOverlap(Overlap2D const& overlap, BlockVector2D& lattices) const;
 private:
     MultiDataDistribution2D dataDistribution;
+    RelevantIndexes2D       relevantIndexes;
 };
 
 
@@ -95,17 +101,50 @@ class DataTransmittor2D {
 public:
     typedef std::vector<BlockLattice2D<T,Lattice>*> BlockVector2D;
 public:
-    DataTransmittor2D(Overlap2D const& overlap, MultiDataDistribution2D const& dataDistribution);
-    void prepareTransmission(BlockVector2D& lattices);
-    void executeTransmission(BlockVector2D& lattices);
-    void finalizeTransmission(BlockVector2D& lattices);
+    virtual ~DataTransmittor2D() { }
+    virtual void prepareTransmission(BlockVector2D& lattices) =0;
+    virtual void executeTransmission(BlockVector2D& lattices) =0;
+    virtual void finalizeTransmission(BlockVector2D& lattices) =0;
+};
+
+template<typename T, template<typename U> class Lattice>
+class BlockingDataTransmittor2D : public DataTransmittor2D<T,Lattice> {
+public:
+    typedef std::vector<BlockLattice2D<T,Lattice>*> BlockVector2D;
+public:
+    BlockingDataTransmittor2D(Overlap2D const& overlap, MultiDataDistribution2D const& dataDistribution);
+    virtual void prepareTransmission(BlockVector2D& lattices);
+    virtual void executeTransmission(BlockVector2D& lattices);
+    virtual void finalizeTransmission(BlockVector2D& lattices);
+private:
+    std::vector<char> buffer;
+    int originalId, overlapId;
+    int originalProc, overlapProc;
+    BlockCoordinates2D originalCoords, overlapCoords;
+    int sizeOfCell;
+    int bufferSize;
+    enum {sender, receiver, senderAndReceiver, nothing} myRole;
+};
+
+template<typename T, template<typename U> class Lattice>
+class NonBlockingDataTransmittor2D : public DataTransmittor2D<T,Lattice> {
+public:
+    typedef std::vector<BlockLattice2D<T,Lattice>*> BlockVector2D;
+public:
+    NonBlockingDataTransmittor2D(Overlap2D const& overlap, MultiDataDistribution2D const& dataDistribution);
+    virtual void prepareTransmission(BlockVector2D& lattices);
+    virtual void executeTransmission(BlockVector2D& lattices);
+    virtual void finalizeTransmission(BlockVector2D& lattices);
 private:
     std::vector<T> buffer;
     int originalId, overlapId;
     int originalProc, overlapProc;
     BlockCoordinates2D originalCoords, overlapCoords;
-    int sizeOfCell, bufferSize;
+    int sizeOfCell;
+    int bufferSize;
     enum {sender, receiver, senderAndReceiver, nothing} myRole;
+    MPI_Request request;
+    MPI_Status  status;
 };
 
 template<typename T, template<typename U> class Lattice>
@@ -118,6 +157,7 @@ public:
     virtual int getNx() const;
     virtual int getNy() const;
     virtual MultiDataDistribution2D const& getMultiDataDistribution() const;
+    virtual RelevantIndexes2D const& getRelevantIndexes() const;
     virtual bool getLocalEnvelope(int iBlock, int& lx, int& ly) const;
     virtual T reduceSum(T localSum) const;
     virtual T reduceAverage(T localAverage, T localWeight) const;
@@ -130,16 +170,11 @@ public:
     virtual Cell<T,Lattice>& getDistributedCell(std::vector<Cell<T,Lattice>*>& baseCell, bool hasBulkCell) const;
     virtual Cell<T,Lattice> const& getDistributedCell(std::vector<Cell<T,Lattice> const*>& baseCell,
                                                       bool hasBulkCell) const;
-    virtual int locateLocally(int iX, int iY, std::vector<int>& foundId, bool& hasBulkCell, int guess=0) const;
-private:
-    void computeLocallyRelevantBlocks();
+    virtual int locateLocally(int iX, int iY, std::vector<int>& foundId, std::vector<int>& foundX,
+                              std::vector<int>& foundY, bool& hasBulkCell, int guess=0) const;
 private:
     MultiDataDistribution2D dataDistribution;
-    std::vector<int> myBlocks;
-    std::vector<int> nearbyBlocks;
-    std::vector<int> relevantNormalOverlaps;
-    std::vector<int> relevantPeriodicOverlaps;
-    BlockCoordinates2D boundingBox;
+    RelevantIndexes2D       relevantIndexes;
     std::vector<DataTransmittor2D<T,Lattice>*> normalTransmittors;
     std::vector<DataTransmittor2D<T,Lattice>*> periodicTransmittors;
     mutable Cell<T,Lattice> distributedCell;

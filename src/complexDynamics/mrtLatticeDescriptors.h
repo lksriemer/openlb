@@ -29,6 +29,7 @@
 #ifndef MRT_LATTICE_DESCRIPTORS_H
 #define MRT_LATTICE_DESCRIPTORS_H
 
+#include "core/latticeDescriptors.h"
 #include <vector>
 
 namespace olb {
@@ -51,17 +52,12 @@ namespace descriptors {
     /// with the method of lattice Boltzmann equation", D. Yu, L.-S. Luo, W. Shi,
     /// Progress in Aerospace Sciences 39, (2003), p. 329-367
     template <typename T>
-    struct MRTD2Q9Descriptor
+    struct MRTD2Q9DescriptorBase : public D2Q9DescriptorBase<T>
     {
-        typedef NoExternalField ExternalField;
-        enum { d = 2, q = 9 };      ///< number of dimensions/distr. functions
-        static const int c[q][d];   ///< lattice directions
-        static const T t[q];        ///< lattice weights
-        static const T invCs2;      ///< inverse square of speed of sound
-
-        static const T M[q][q];    // Matrix of base change between f and moments : moments=M.f
-        static const T invM[q][q]; // inverse of base change matrix : f=invM.moments
-        static const T S[q];       // relaxation times
+        enum { d_ = 2, q_ = 9 };     ///< number of dimensions/distr. functions
+        static const T M[q_][q_];    // Matrix of base change between f and moments : moments=M.f
+        static const T invM[q_][q_]; // inverse of base change matrix : f=invM.moments
+        static const T S[q_];       // relaxation times
         enum {shearIndexes = 2};
         static const int shearViscIndexes[shearIndexes]; // relevant indexes of r. t. for shear viscosity
         static const int bulkViscIndex  = 2; // relevant index of r. t. for bulk viscosity
@@ -69,24 +65,30 @@ namespace descriptors {
     
     /// MRT D3Q19 lattice. The numbering follows the one in "Multiple-relaxation-
     /// time lattice Boltzmann models in three dimensions", D. D'Humières, 
-    /// I. Ginzbutg, M. Krafzcyk, P. Lallemand, L.-S. Luo,
+    /// I. Ginzburg, M. Krafzcyk, P. Lallemand, L.-S. Luo,
     /// Phil. Trans. R. Soc. Lond. A (2002) 660, p. 437-451
     template <typename T>
-    struct MRTD3Q19Descriptor
+    struct MRTD3Q19DescriptorBase : public D3Q19DescriptorBase<T>
     {
-        typedef NoExternalField ExternalField;
-        enum { d = 3, q = 19 };      ///< number of dimensions/distr. functions
-        static const int c[q][d];   ///< lattice directions
-        static const T t[q];        ///< lattice weights
-        static const T invCs2;      ///< inverse square of speed of sound
-
-        static const T M[q][q];    // Matrix of base change between f and moments : moments=M.f
-        static const T invM[q][q]; // inverse of base change matrix : f=invM.moments
-        static const T S[q];       // relaxation times
+        enum { d_ = 3, q_ = 19 };     ///< number of dimensions/distr. functions
+        static const T M[q_][q_];    // Matrix of base change between f and moments : moments=M.f
+        static const T invM[q_][q_]; // inverse of base change matrix : f=invM.moments
+        static const T S[q_];       // relaxation times
         enum {shearIndexes = 5};
         static const int shearViscIndexes[shearIndexes]; // relevant indexes of r. t. for shear viscosity
         static const int bulkViscIndex  = 1; // relevant index of r. t. for bulk viscosity
     };
+
+    template <typename T>
+    struct MRTD2Q9Descriptor
+        : public MRTD2Q9DescriptorBase<T>, public NoExternalFieldBase
+    { };
+
+    template <typename T>
+    struct MRTD3Q19Descriptor
+        : public MRTD3Q19DescriptorBase<T>, public NoExternalFieldBase
+    { };
+
 
 }  // namespace descriptors
 

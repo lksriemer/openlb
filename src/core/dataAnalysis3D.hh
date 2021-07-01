@@ -361,7 +361,7 @@ void DataAnalysis3D<T,Lattice>::computeVelocityNormField() const {
     if (flags.velNormFieldComputed) return;
     fields.velNormField.construct();
     computeVelocityField();
-    for (int iEl=0; iEl<fields.velNormField.getSize(); ++iEl) {
+    for (size_t iEl=0; iEl<fields.velNormField.getSize(); ++iEl) {
         fields.velNormField[iEl] = sqrt(util::normSqr<T,3>(fields.velField[iEl]));
     }
     flags.velNormFieldComputed = true;
@@ -372,7 +372,7 @@ void DataAnalysis3D<T,Lattice>::computeVorticityNormField() const {
     if (flags.vortNormFieldComputed) return;
     fields.vortNormField.construct();
     computeVorticityField();
-    for (int iEl=0; iEl<fields.vortNormField.getSize(); ++iEl) {
+    for (size_t iEl=0; iEl<fields.vortNormField.getSize(); ++iEl) {
         fields.vortNormField[iEl] = sqrt(util::normSqr<T,3>(fields.vortField[iEl]));
     }
     flags.vortNormFieldComputed = true;

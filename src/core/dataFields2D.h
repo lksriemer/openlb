@@ -51,7 +51,7 @@ public:
     virtual void reset();
     virtual int getNx() const { return nx; }
     virtual int getNy() const { return ny; }
-    virtual int getSize() const { return nx*ny; }
+    virtual size_t getSize() const { return (size_t)nx*(size_t)ny; }
     virtual T& get(int iX, int iY) {
         OLB_PRECONDITION(iX>=0 && iX<nx);
         OLB_PRECONDITION(iY>=0 && iY<ny);
@@ -178,8 +178,8 @@ public:
     SequentialScalarFieldSerializer2D(ScalarField2D<T> const& scalarField_,
                                       int x0_, int x1_, int y0_, int y1_,
                                       IndexOrdering::OrderingT ordering_);
-    virtual int getSize() const;
-    virtual const T* getNextDataBuffer(int& bufferSize) const;
+    virtual size_t getSize() const;
+    virtual const T* getNextDataBuffer(size_t& bufferSize) const;
     virtual bool isEmpty() const;
 private:
     ScalarField2D<T> const& scalarField;
@@ -197,8 +197,8 @@ public:
     SequentialScalarFieldUnSerializer2D(ScalarField2D<T>& scalarField_,
                                       int x0_, int x1_, int y0_, int y1_,
                                         IndexOrdering::OrderingT ordering_);
-    virtual int getSize() const;
-    virtual T* getNextDataBuffer(int& bufferSize);
+    virtual size_t getSize() const;
+    virtual T* getNextDataBuffer(size_t& bufferSize);
     virtual void commitData();
     virtual bool isFull() const;
 private:
@@ -217,8 +217,8 @@ public:
     SequentialTensorFieldSerializer2D(TensorField2D<T,nDim> const& tensorField_,
                                       int x0_, int x1_, int y0_, int y1_,
                                       IndexOrdering::OrderingT ordering_);
-    virtual int getSize() const;
-    virtual const T* getNextDataBuffer(int& bufferSize) const;
+    virtual size_t getSize() const;
+    virtual const T* getNextDataBuffer(size_t& bufferSize) const;
     virtual bool isEmpty() const;
 private:
     TensorField2D<T,nDim> const& tensorField;
@@ -236,8 +236,8 @@ public:
     SequentialTensorFieldUnSerializer2D(TensorField2D<T,nDim>& tensorField_,
                                         int x0_, int x1_, int y0_, int y1_,
                                         IndexOrdering::OrderingT ordering_);
-    virtual int getSize() const;
-    virtual T* getNextDataBuffer(int& bufferSize);
+    virtual size_t getSize() const;
+    virtual T* getNextDataBuffer(size_t& bufferSize);
     virtual void commitData();
     virtual bool isFull() const;
 private:

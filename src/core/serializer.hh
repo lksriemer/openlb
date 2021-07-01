@@ -40,15 +40,15 @@ ScalingSerializer<T>::ScalingSerializer(DataSerializer<T> const& baseSerializer_
 { }
 
 template<typename T>
-int ScalingSerializer<T>::getSize() const {
+size_t ScalingSerializer<T>::getSize() const {
     return baseSerializer.getSize();
 }
 
 template<typename T>
-const T* ScalingSerializer<T>::getNextDataBuffer(int& bufferSize) const {
+const T* ScalingSerializer<T>::getNextDataBuffer(size_t& bufferSize) const {
     const T* unscaledBuffer = baseSerializer.getNextDataBuffer(bufferSize);
     scaledBuffer.resize(bufferSize);
-    for (int iBuffer=0; iBuffer<bufferSize; ++iBuffer) {
+    for (size_t iBuffer=0; iBuffer<bufferSize; ++iBuffer) {
         scaledBuffer[iBuffer] = unscaledBuffer[iBuffer] * scalingFactor;
     }
     return &scaledBuffer[0];
@@ -59,11 +59,75 @@ bool ScalingSerializer<T>::isEmpty() const {
     return baseSerializer.isEmpty();
 }
 
+////////// class TypeConversionSerializer ////////////////////////////
+
+template<typename T, typename TConv>
+TypeConversionSerializer<T,TConv>::TypeConversionSerializer (
+        DataSerializer<T> const& baseSerializer_)
+    : baseSerializer(baseSerializer_)
+{ }
+
+template<typename T, typename TConv>
+size_t TypeConversionSerializer<T,TConv>::getSize() const {
+    return baseSerializer.getSize();
+}
+
+template<typename T, typename TConv>
+const TConv* TypeConversionSerializer<T,TConv>::getNextDataBuffer(size_t& bufferSize) const {
+    const T* originalBuffer = baseSerializer.getNextDataBuffer(bufferSize);
+    convBuffer.resize(bufferSize);
+    for (size_t iBuffer=0; iBuffer<bufferSize; ++iBuffer) {
+        convBuffer[iBuffer] = static_cast<TConv>( originalBuffer[iBuffer] );
+    }
+    return &convBuffer[0];
+}
+
+template<typename T, typename TConv>
+bool TypeConversionSerializer<T,TConv>::isEmpty() const {
+    return baseSerializer.isEmpty();
+}
+
+/// Specialization of TypeConversionSerializer in case T==TConv, for efficiency reasons
+template<typename T>
+class TypeConversionSerializer<T,T> : public DataSerializer<T> {
+public:
+    TypeConversionSerializer(DataSerializer<T> const& baseSerializer_);
+    virtual size_t getSize() const;
+    virtual const T* getNextDataBuffer(size_t& bufferSize) const;
+    virtual bool isEmpty() const;
+private:
+    DataSerializer<T> const& baseSerializer;
+};
+
+template<typename T>
+TypeConversionSerializer<T,T>::TypeConversionSerializer (
+        DataSerializer<T> const& baseSerializer_)
+    : baseSerializer(baseSerializer_)
+{ }
+
+template<typename T>
+size_t TypeConversionSerializer<T,T>::getSize() const {
+    return baseSerializer.getSize();
+}
+
+template<typename T>
+const T* TypeConversionSerializer<T,T>::getNextDataBuffer(size_t& bufferSize) const {
+    return baseSerializer.getNextDataBuffer(bufferSize);
+}
+
+template<typename T>
+bool TypeConversionSerializer<T,T>::isEmpty() const {
+    return baseSerializer.isEmpty();
+}
+
+
+////////// Free functions ////////////////////////////
+
 template<typename T>
 void copySerializedData(DataSerializer<T> const& serializer, DataUnSerializer<T>& unSerializer) {
     OLB_PRECONDITION( serializer.getSize() == unSerializer.getSize() );
-    int writePos = 0, readPos = 0;
-    int serializerBufferSize =0, unSerializerBufferSize =0;
+    size_t writePos = 0, readPos = 0;
+    size_t serializerBufferSize =0, unSerializerBufferSize =0;
     const T* serializerBuffer =0;
     T* unSerializerBuffer =0;
     while (!unSerializer.isFull()) {
@@ -76,10 +140,10 @@ void copySerializedData(DataSerializer<T> const& serializer, DataUnSerializer<T>
             writePos = 0;
         }
 
-        int remainToRead = serializerBufferSize - readPos;
-        int remainToWrite = unSerializerBufferSize - writePos;
-        int nextChunk = std::min(remainToRead, remainToWrite);
-        for (int iChunk=0; iChunk<nextChunk; ++iChunk, ++readPos, ++writePos) {
+        size_t remainToRead = (ptrdiff_t)serializerBufferSize - (ptrdiff_t)readPos;
+        size_t remainToWrite = (ptrdiff_t)unSerializerBufferSize - (ptrdiff_t)writePos;
+        size_t nextChunk = std::min(remainToRead, remainToWrite);
+        for (size_t iChunk=0; iChunk<nextChunk; ++iChunk, ++readPos, ++writePos) {
             if (singleton::mpi().isMainProcessor()) {
                 unSerializerBuffer[writePos] = serializerBuffer[readPos];
             }

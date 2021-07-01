@@ -29,8 +29,6 @@ precompiled    := blockLattice2D \
                   blockLattice3D \
                   blockLatticeView2D \
                   blockLatticeView3D \
-                  blockStatistics2D \
-                  blockStatistics3D \
                   boundaryCondition2D \
                   boundaryCondition3D \
                   boundaryPostProcessors2D \
@@ -39,7 +37,6 @@ precompiled    := blockLattice2D \
                   dataFields2D \
                   dataFields3D \
                   dynamics \
-                  imageCreator \
                   latticeDescriptors \
                   loadBalancer \
                   momentaOnBoundaries2D \

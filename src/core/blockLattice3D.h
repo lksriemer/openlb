@@ -1,6 +1,6 @@
 /*  This file is part of the OpenLB library
  *
- *  Copyright (C) 2006, 2007 Jonas Latt
+ *  Copyright (C) 2006-2008 Jonas Latt
  *  Address: Rue General Dufour 24,  1211 Geneva 4, Switzerland 
  *  E-mail: jonas.latt@gmail.com
  *
@@ -93,6 +93,8 @@ public:
     virtual void defineDynamics (
         int x0_, int x1_, int y0_, int y1_, int z0_, int z1_,
         Dynamics<T,Lattice>* dynamics );
+    /// Define the dynamics on a lattice site
+    virtual void defineDynamics(int iX, int iY, int iZ, Dynamics<T,Lattice>* dynamics);
     /// Specify wheter statistics measurements are done on a rect. domain
     virtual void specifyStatisticsStatus (
         int x0_, int x1_, int y0_, int y1_, int z0_, int z1_, bool status );
@@ -103,9 +105,9 @@ public:
     virtual void collide();
     /// Apply collision step to a rectangular domain, with fixed velocity
     virtual void staticCollide(int x0_, int x1_, int y0_, int y1_,
-                               int z0_, int z1_, TensorField3D<T,3> const& u);
+                               int z0_, int z1_, TensorFieldBase3D<T,3> const& u);
     /// Apply collision step to the whole domain, with fixed velocity
-    virtual void staticCollide(TensorField3D<T,3> const& u);
+    virtual void staticCollide(TensorFieldBase3D<T,3> const& u);
     /// Apply streaming step to a 3D sub-box
     virtual void stream(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_);
     /// Apply streaming step to the whole domain
@@ -124,20 +126,29 @@ public:
             int x0_, int x1_, int y0_, int y1_, int z0_, int z1_, T offset );
     /// Subtract a constant offset from the density within a rect. domain
     virtual void stripeOffDensityOffset(T offset);
+    /// Apply an operation to all cells of a sub-domain
+    virtual void forAll(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_,
+                        WriteCellFunctional<T,Lattice> const& application);
+    /// Apply an operation to all cells
+    virtual void forAll(WriteCellFunctional<T,Lattice> const& application);
     /// Add a non-local post-processing step
     virtual void addPostProcessor (
                      PostProcessorGenerator3D<T,Lattice> const& ppGen );
+    /// Clean up all non-local post-processing steps
+    virtual void resetPostProcessors();
+    /// Execute post-processing on a sub-lattice
+    virtual void postProcess(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_);
+    /// Execute post-processing steps
+    virtual void postProcess();
     /// Add a non-local post-processing step
     virtual void addLatticeCoupling (
                      LatticeCouplingGenerator3D<T,Lattice> const& lcGen,
                      std::vector<SpatiallyExtendedObject3D*> partners );
-    /// Clean up all non-local post-processing steps
-    virtual void resetPostProcessors();
-    /// Execute post-processing on a sub-lattice
-    virtual void postProcess(int x0_, int x1_, int y0_, int y1_,
-                             int z0_, int z1_);
-    /// Execute post-processing steps
-    virtual void postProcess();
+    /// Execute couplings on a sub-lattice
+    virtual void executeCoupling(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_);
+    /// Execute couplings steps
+    virtual void executeCoupling();
+    /// Subscribe postProcessors for reduction operations
     virtual void subscribeReductions(Reductor<T>& reductor);
     /// Return a handle to the LatticeStatistics object
     virtual LatticeStatistics<T>& getStatistics();
@@ -178,6 +189,8 @@ private:
     void releaseMemory();
     /// Release memory for post processors
     void clearPostProcessors();
+    /// Release memory for post processors
+    void clearLatticeCouplings();
     /// Make the lattice periodic in all directions
     void makePeriodic();
 private:
@@ -186,7 +199,7 @@ private:
     int                  nx, ny, nz;
     Cell<T,Lattice>      *rawData;
     Cell<T,Lattice>      ***grid;
-    PostProcVector       postProcessors;
+    PostProcVector       postProcessors, latticeCouplings;
     #ifdef PARALLEL_MODE_OMP
         LatticeStatistics<T> **statistics;
     #else
@@ -205,8 +218,8 @@ public:
     BlockLatticeSerializer3D(BlockLattice3D<T,Lattice> const& blockLattice_,
                              int x0_, int x1_, int y0_, int y1_, int z0_, int z1_,
                              IndexOrdering::OrderingT ordering_);
-    virtual int getSize() const;
-    virtual const T* getNextDataBuffer(int& bufferSize) const;
+    virtual size_t getSize() const;
+    virtual const T* getNextDataBuffer(size_t& bufferSize) const;
     virtual bool isEmpty() const;
 private:
     BlockLattice3D<T,Lattice> const& blockLattice;
@@ -225,8 +238,8 @@ public:
     BlockLatticeUnSerializer3D(BlockLattice3D<T,Lattice>& blockLattice_,
                                int x0_, int x1_, int y0_, int y1_, int z0_, int z1_,
                                IndexOrdering::OrderingT ordering_);
-    virtual int getSize() const;
-    virtual T* getNextDataBuffer(int& bufferSize);
+    virtual size_t getSize() const;
+    virtual T* getNextDataBuffer(size_t& bufferSize);
     virtual void commitData();
     virtual bool isFull() const;
 private:

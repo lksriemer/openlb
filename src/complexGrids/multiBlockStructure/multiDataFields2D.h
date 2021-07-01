@@ -55,7 +55,7 @@ public:
     virtual void reset();
     virtual int getNx() const { return multiDataFieldHandler->getNx(); }
     virtual int getNy() const { return multiDataFieldHandler->getNy(); }
-    virtual int getSize() const { return getNx()*getNy(); }
+    virtual size_t getSize() const { return (size_t)getNx()*(size_t)getNy(); }
     virtual T& get(int iX, int iY);
     virtual T const& get(int iX, int iY) const;
 public:

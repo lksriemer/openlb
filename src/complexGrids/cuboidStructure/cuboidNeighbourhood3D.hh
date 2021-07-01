@@ -66,8 +66,6 @@ CuboidNeighbourhood3D<T,Lattice>::CuboidNeighbourhood3D (
     _outN          = rhs._outN;
     _initInCNdone  = false;
     _initOutCNdone = false;
-    init_inCN();
-    init_outCN();
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -192,6 +190,15 @@ void CuboidNeighbourhood3D<T,Lattice>::init_inCN() {
             else _inData[i] = NULL;
         #endif
     }
+
+    #ifdef PARALLEL_MODE_MPI
+        _mpiNbHelper.allocate(_nC);
+        for (int i=0; i<_nC; i++) {
+            int dRank = _sLattice.get_load().rank(i);
+            singleton::mpi().iSend(&temp[i] , 1, dRank, &_mpiNbHelper.get_mpiRequest()[i], i*_nC+_iC);
+        }
+    #endif
+
     _initInCNdone = true;
 }
 
@@ -203,10 +210,16 @@ void CuboidNeighbourhood3D<T,Lattice>::init_outCN() {
     _outData = new T* [_nC];
 
     std::vector<int> temp(_nC,0);
-    for (unsigned i=0; i<_outCells.size(); i++) {
-        temp[_outCells[i].iC]++;
-    }
+    #ifndef PARALLEL_MODE_MPI
+        for (unsigned i=0; i<_outCells.size(); i++) {
+            temp[_outCells[i].iC]++;
+        }
+    #endif
     for (int i=0; i<_nC; i++) {
+        #ifdef PARALLEL_MODE_MPI
+            int sRank = _sLattice.get_load().rank(i);
+            singleton::mpi().receive(&temp[i], 1, sRank, _iC*_nC+i);
+        #endif
         if (temp[i]!=0) {
             _outC.push_back(i);
             _outN.push_back(temp[i]);
@@ -214,10 +227,58 @@ void CuboidNeighbourhood3D<T,Lattice>::init_outCN() {
         }
         else _outData[i] = NULL;
     }
-    #ifdef PARALLEL_MODE_MPI
-        _mpiNbHelper.allocate(_outC.size());
-    #endif
+
     _initOutCNdone = true;
+}
+
+template<typename T, template<typename U> class Lattice>
+void CuboidNeighbourhood3D<T,Lattice>::bufSend_inCells() {
+
+    #ifdef PARALLEL_MODE_MPI
+        _mpiNbHelper.free();
+        _mpiNbHelper.allocate(_inC.size());
+
+        std::vector<int> temp(_nC,0);
+        for (unsigned i=0; i<_inCells.size(); i++) {
+            int iC = _inCells[i].iC;
+            _inData[iC][3*temp[iC]] = _inCells[i].globX;
+            _inData[iC][3*temp[iC]+1] = _inCells[i].globY;
+            _inData[iC][3*temp[iC]+2] = _inCells[i].globZ;
+            temp[iC]++;
+        }
+        for (unsigned iC=0; iC<_inC.size(); iC++) {
+            int dRank = _sLattice.get_load().rank(_inC[iC]);
+            singleton::mpi().iSend( _inData[_inC[iC]],
+                _inN[iC]*3, dRank, &_mpiNbHelper.get_mpiRequest()[iC], _inC[iC]*_nC+_iC);
+       }
+    #endif
+}
+
+template<typename T, template<typename U> class Lattice>
+void CuboidNeighbourhood3D<T,Lattice>::recWrite_outCells() {
+
+    #ifdef PARALLEL_MODE_MPI
+        for (unsigned iC=0; iC<_outC.size(); iC++) {
+            int sRank = _sLattice.get_load().rank(_outC[iC]);
+            singleton::mpi().receive(_outData[_outC[iC]], _outN[iC]*3, sRank, _iC*_nC+_outC[iC]);
+            Cell3D<T> found;
+            found.iC = _outC[iC];
+            for (int i=0; i<_outN[iC]; i++) {
+                found.globX = _outData[_outC[iC]][3*i];
+                found.globY = _outData[_outC[iC]][3*i+1];
+                found.globZ = _outData[_outC[iC]][3*i+2];
+                _outCells.push_back(found);
+            }
+        }
+    #endif
+}
+
+template<typename T, template<typename U> class Lattice>
+void CuboidNeighbourhood3D<T,Lattice>::finish_comm() {
+
+    #ifdef PARALLEL_MODE_MPI
+        singleton::mpi().waitAll(_mpiNbHelper);
+    #endif
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -250,7 +311,7 @@ void CuboidNeighbourhood3D<T,Lattice>::send_outData() {
         for (unsigned iC=0; iC<_outC.size(); iC++) {
             int dRank = _sLattice.get_load().rank(_outC[iC]);
             singleton::mpi().iSend( _outData[_outC[iC]],
-                _outN[iC]*Lattice<T>::q, dRank, &_mpiNbHelper.get_mpiRequest()[iC], _iC);
+                _outN[iC]*Lattice<T>::q, dRank, &_mpiNbHelper.get_mpiRequest()[iC], _outC[iC]*_nC+_iC);
        }
     #endif
 }
@@ -260,9 +321,8 @@ void CuboidNeighbourhood3D<T,Lattice>::receive_inData() {
     #ifdef PARALLEL_MODE_MPI
         for (unsigned iC=0; iC<_inC.size(); iC++) {
             int sRank = _sLattice.get_load().rank(_inC[iC]);
-            singleton::mpi().receive(_inData[_inC[iC]], _inN[iC]*Lattice<T>::q, sRank, _inC[iC]);
+            singleton::mpi().receive(_inData[_inC[iC]], _inN[iC]*Lattice<T>::q, sRank, _iC*_nC+_inC[iC]);
         }
-        singleton::mpi().waitAll(_mpiNbHelper);
     #endif
 }
 

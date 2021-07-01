@@ -129,6 +129,13 @@ void BlockLatticeView2D<T,Lattice>::defineDynamics (
 }
 
 template<typename T, template<typename U> class Lattice>
+void BlockLatticeView2D<T,Lattice>::defineDynamics (
+        int iX, int iY, Dynamics<T,Lattice>* dynamics )
+{
+    originalLattice->defineDynamics( iX+x0, iY+y0, dynamics );
+}
+
+template<typename T, template<typename U> class Lattice>
 void BlockLatticeView2D<T,Lattice>::specifyStatisticsStatus (
                 int x0_, int x1_, int y0_, int y1_, bool status )
 {
@@ -154,7 +161,7 @@ void BlockLatticeView2D<T,Lattice>::collide() {
 template<typename T, template<typename U> class Lattice>
 void BlockLatticeView2D<T,Lattice>::staticCollide (
         int x0_, int x1_, int y0_, int y1_,
-        TensorField2D<T,2> const& u)
+        TensorFieldBase2D<T,2> const& u)
 {
     originalLattice->staticCollide( x0_+x0, x1_+x0,
                                     y0_+y0, y1_+y0, u );
@@ -162,7 +169,7 @@ void BlockLatticeView2D<T,Lattice>::staticCollide (
 
 template<typename T, template<typename U> class Lattice>
 void BlockLatticeView2D<T,Lattice>::staticCollide (
-         TensorField2D<T,2> const& u )
+         TensorFieldBase2D<T,2> const& u )
 {
     originalLattice->staticCollide( x0, x0+nx-1, y0, y0+ny-1, u);
 }
@@ -219,23 +226,25 @@ void BlockLatticeView2D<T,Lattice>::stripeOffDensityOffset(T offset) {
 }
 
 template<typename T, template<typename U> class Lattice>
+void BlockLatticeView2D<T,Lattice>::forAll (
+        int x0_, int x1_, int y0_, int y1_, WriteCellFunctional<T,Lattice> const& application )
+{
+    originalLattice->forAll( x0_+x0, x1_+x0, y0_+y0, y1_+y0, application );
+}
+
+template<typename T, template<typename U> class Lattice>
+void BlockLatticeView2D<T,Lattice>::forAll(WriteCellFunctional<T,Lattice> const& application)
+{
+    originalLattice->forAll(x0, x0+nx-1, y0, y0+ny-1, application);
+}
+
+template<typename T, template<typename U> class Lattice>
 void BlockLatticeView2D<T,Lattice>::addPostProcessor (
         PostProcessorGenerator2D<T,Lattice> const& ppGen)
 {
     PostProcessorGenerator2D<T,Lattice>* shiftedGen = ppGen.clone();
     shiftedGen->shift(x0,y0);
     originalLattice->addPostProcessor(*shiftedGen);
-    delete shiftedGen;
-}
-
-template<typename T, template<typename U> class Lattice>
-void BlockLatticeView2D<T,Lattice>::addLatticeCoupling (
-         LatticeCouplingGenerator2D<T,Lattice> const& lcGen,
-         std::vector<SpatiallyExtendedObject2D*> partners )
-{
-    LatticeCouplingGenerator2D<T,Lattice>* shiftedGen = lcGen.clone();
-    shiftedGen->shift(x0,y0);
-    originalLattice->addLatticeCoupling(*shiftedGen, partners);
     delete shiftedGen;
 }
 
@@ -254,6 +263,29 @@ void BlockLatticeView2D<T,Lattice>::postProcess (
         int x0_, int x1_, int y0_, int y1_ )
 {
     originalLattice -> postProcess( x0_+x0, x1_+x0, y0_+y0, y1_+y0 );
+}
+
+template<typename T, template<typename U> class Lattice>
+void BlockLatticeView2D<T,Lattice>::addLatticeCoupling (
+         LatticeCouplingGenerator2D<T,Lattice> const& lcGen,
+         std::vector<SpatiallyExtendedObject2D*> partners )
+{
+    LatticeCouplingGenerator2D<T,Lattice>* shiftedGen = lcGen.clone();
+    shiftedGen->shift(x0,y0);
+    originalLattice->addLatticeCoupling(*shiftedGen, partners);
+    delete shiftedGen;
+}
+
+template<typename T, template<typename U> class Lattice>
+void BlockLatticeView2D<T,Lattice>::executeCoupling() {
+    originalLattice -> executeCoupling(x0, x0+nx-1, y0, y0+ny-1);
+}
+
+template<typename T, template<typename U> class Lattice>
+void BlockLatticeView2D<T,Lattice>::executeCoupling (
+        int x0_, int x1_, int y0_, int y1_ )
+{
+    originalLattice -> executeCoupling( x0_+x0, x1_+x0, y0_+y0, y1_+y0 );
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -277,6 +309,7 @@ LatticeStatistics<T> const& BlockLatticeView2D<T,Lattice>::getStatistics() const
 
 template<typename T, template<typename U> class Lattice>
 DataAnalysisBase2D<T,Lattice> const& BlockLatticeView2D<T,Lattice>::getDataAnalysis() const {
+    dataAnalysis->reset();
     return *dataAnalysis;
 }
 

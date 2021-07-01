@@ -58,7 +58,7 @@ class olb_ofstream : public std::ostream {
 public:
   olb_ofstream();
   explicit olb_ofstream(const char * filename,
-                     openmode mode = out | trunc );
+                        openmode mode = out | trunc );
   ~olb_ofstream();
 
   std::streambuf* rdbuf() const;
@@ -74,7 +74,7 @@ class olb_ifstream : public std::istream {
 public:
   olb_ifstream();
   explicit olb_ifstream(const char * filename,
-                     openmode mode = in );
+                        openmode mode = in );
   ~olb_ifstream();
 
   std::streambuf* rdbuf() const;

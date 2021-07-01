@@ -151,6 +151,9 @@ public:
     void reduceAndBcast(T& reductVal, MPI_Op op, int root = 0, MPI_Comm comm = MPI_COMM_WORLD);
 
     /// Complete a non-blocking MPI operation
+    void wait(MPI_Request* request, MPI_Status* status);
+
+    /// Complete a series of non-blocking MPI operations
     void waitAll(MpiNonBlockingHelper& mpiNbHelper);
 
 private:

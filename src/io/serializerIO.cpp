@@ -26,9 +26,12 @@
 
 namespace olb {
 
-template void serializer2ostr<double>(DataSerializer<double> const& serializer, std::ostream* ostr);
-template void istr2unSerializer<double>(DataUnSerializer<double>& unSerializer, std::istream* istr);
-template void saveData<double>(Serializable<double> const& object, std::string fName);
-template void loadData(Serializable<double>& object, std::string fName);
+template void serializer2ostr<double>(DataSerializer<double> const& serializer,
+                                      std::ostream* ostr, bool enforceUint);
+template void istr2unSerializer<double>(DataUnSerializer<double>& unSerializer,
+                                        std::istream* istr, bool enforceUint);
+template void saveData<double>(Serializable<double> const& object, std::string fName, bool enforceUint);
+template void loadData<double>(Serializable<double>& object, std::string fName, bool enforceUint);
+template void saveAsciiData<double>(Serializable<double> const& object, std::string fName);
 
 }

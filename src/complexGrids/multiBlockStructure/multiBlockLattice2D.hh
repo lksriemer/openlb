@@ -52,11 +52,11 @@ MultiBlockLattice2D<T,Lattice>::MultiBlockLattice2D(MultiDataDistribution2D cons
     statistics = new LatticeStatistics<T>;
     allocateBlocks();
     eliminateStatisticsInEnvelope();
-    for (int iBlock=0; iBlock<getNumBlocks(); ++iBlock) {
-        if (blockLattices[iBlock]) {
-            reductor.startNewSubscription();
-            blockLattices[iBlock] -> subscribeReductions(reductor);
-        }
+    std::vector<int> const& relevantBlocks = getRelevantBlocks();
+    for (int rBlock=0; rBlock<getNumRelevantBlocks(); ++rBlock) {
+        int iBlock = relevantBlocks[rBlock];
+        reductor.startNewSubscription();
+        blockLattices[iBlock] -> subscribeReductions(reductor);
     }
     dataAnalysis = new MultiDataAnalysis2D<T,Lattice>(*this);
 }
@@ -66,7 +66,9 @@ MultiBlockLattice2D<T,Lattice>::~MultiBlockLattice2D() {
     delete serializer;
     delete unSerializer;
     delete statistics;
-    for (int iBlock=0; iBlock<getNumBlocks(); ++iBlock) {
+    std::vector<int> const& relevantBlocks = getRelevantBlocks();
+    for (int rBlock=0; rBlock<getNumRelevantBlocks(); ++rBlock) {
+        int iBlock = relevantBlocks[rBlock];
         delete blockLattices[iBlock];
     }
     delete multiBlockHandler;
@@ -92,16 +94,15 @@ MultiBlockLattice2D<T,Lattice>::MultiBlockLattice2D(MultiBlockLattice2D<T,Lattic
 #endif
     allocateBlocks();
     eliminateStatisticsInEnvelope();
-    for (int iBlock=0; iBlock<getNumBlocks(); ++iBlock) {
-        if (blockLattices[iBlock]) {
-            *(blockLattices[iBlock]) = *(rhs.blockLattices[iBlock]);
-        }
+    std::vector<int> const& relevantBlocks = getRelevantBlocks();
+    for (int rBlock=0; rBlock<getNumRelevantBlocks(); ++rBlock) {
+        int iBlock = relevantBlocks[rBlock];
+        *(blockLattices[iBlock]) = *(rhs.blockLattices[iBlock]);
     }
-    for (int iBlock=0; iBlock<getNumBlocks(); ++iBlock) {
-        if (blockLattices[iBlock]) {
-            reductor.startNewSubscription();
-            blockLattices[iBlock] -> subscribeReductions(reductor);
-        }
+    for (int rBlock=0; rBlock<getNumRelevantBlocks(); ++rBlock) {
+        int iBlock = relevantBlocks[rBlock];
+        reductor.startNewSubscription();
+        blockLattices[iBlock] -> subscribeReductions(reductor);
     }
     dataAnalysis = new MultiDataAnalysis2D<T,Lattice>(*this);
 }
@@ -131,16 +132,13 @@ void MultiBlockLattice2D<T,Lattice>::swap(MultiBlockLattice2D<T,Lattice>& rhs) {
 template<typename T, template<typename U> class Lattice>
 Cell<T,Lattice>& MultiBlockLattice2D<T,Lattice>::get(int iX, int iY) {
     std::vector<int> foundId;
+    std::vector<int> foundX, foundY;
     bool hasBulkCell;
-    locatedBlock = multiBlockHandler -> locateLocally(iX, iY, foundId, hasBulkCell, locatedBlock);
+    locatedBlock = multiBlockHandler -> locateLocally(iX, iY, foundId, foundX, foundY, hasBulkCell, locatedBlock);
     returnCells.clear();
     for (unsigned iBlock=0; iBlock<foundId.size(); ++iBlock) {
         int foundBlock = foundId[iBlock];
-        BlockParameters2D const& param = getParameters(foundBlock);
-        returnCells.push_back (
-                     &blockLattices[foundBlock] -> get ( param.toLocalX(iX),
-                                                         param.toLocalY(iY) )
-        );
+        returnCells.push_back ( &blockLattices[foundBlock] -> get ( foundX[iBlock], foundY[iBlock] ) );
     }
     return multiBlockHandler -> getDistributedCell(returnCells, hasBulkCell);
 }
@@ -148,26 +146,30 @@ Cell<T,Lattice>& MultiBlockLattice2D<T,Lattice>::get(int iX, int iY) {
 template<typename T, template<typename U> class Lattice>
 Cell<T,Lattice> const& MultiBlockLattice2D<T,Lattice>::get(int iX, int iY) const {
     std::vector<int> foundId;
+    std::vector<int> foundX, foundY;
     bool hasBulkCell;
-    locatedBlock = multiBlockHandler -> locateLocally(iX, iY, foundId, hasBulkCell, locatedBlock);
+    locatedBlock = multiBlockHandler -> locateLocally(iX, iY, foundId, foundX, foundY, hasBulkCell, locatedBlock);
     constReturnCells.clear();
     for (unsigned iBlock=0; iBlock<foundId.size(); ++iBlock) {
         int foundBlock = foundId[iBlock];
-        BlockParameters2D const& param = getParameters(foundBlock);
-        constReturnCells.push_back(
-                     &blockLattices[foundBlock] -> get ( param.toLocalX(iX),
-                                                         param.toLocalY(iY) )
-        );
+        constReturnCells.push_back ( &blockLattices[foundBlock] -> get ( foundX[iBlock], foundY[iBlock] ) );
     }
-    return multiBlockHandler -> getDistributedCell(returnCells, hasBulkCell);
+    return multiBlockHandler -> getDistributedCell(constReturnCells, hasBulkCell);
 }
 
 template<typename T, template<typename U> class Lattice>
 void MultiBlockLattice2D<T,Lattice>::initialize() {
-    for (unsigned iBlock=0; iBlock < blockLattices.size(); ++iBlock) {
-        if (blockLattices[iBlock]) {
-            blockLattices[iBlock] -> initialize();
-        }
+    // Invoke postProcessMultiBlock(), which fills the envelope of
+    //   each sub-block. This needs to be done in the first place,
+    //   because the method initialize() of each sub-block may want
+    //   to access the envelope. An additional postProcessMultiBlock()
+    //   is invoked in the end to copy the result of initialize() to
+    //   all processors
+    postProcessMultiBlock();
+    std::vector<int> const& relevantBlocks = getRelevantBlocks();
+    for (int rBlock=0; rBlock < getNumRelevantBlocks(); ++rBlock) {
+        int iBlock = relevantBlocks[rBlock];
+        blockLattices[iBlock] -> initialize();
     }
     postProcessMultiBlock();
 }
@@ -177,26 +179,56 @@ void MultiBlockLattice2D<T,Lattice>::defineDynamics (
         int x0_, int x1_, int y0_, int y1_, Dynamics<T,Lattice>* dynamics )
 {
     BlockCoordinates2D domain(x0_, x1_, y0_, y1_), inters;
-    for (int iBlock=0; iBlock < getNumBlocks(); ++iBlock) {
-        if (blockLattices[iBlock]) {
-            BlockParameters2D const& params = getParameters(iBlock);
-            if (util::intersect(domain, params.getNonPeriodicEnvelope(), inters ) ) {
-                inters = params.toLocal(inters);
-                blockLattices[iBlock] -> defineDynamics (
-                        inters.x0, inters.x1, inters.y0, inters.y1, dynamics );
-            }
+    std::vector<int> const& relevantBlocks = getRelevantBlocks();
+    for (int rBlock=0; rBlock < getNumRelevantBlocks(); ++rBlock) {
+        int iBlock = relevantBlocks[rBlock];
+        BlockParameters2D const& params = getParameters(iBlock);
+        if (util::intersect(domain, params.getNonPeriodicEnvelope(), inters ) ) {
+            inters = params.toLocal(inters);
+            blockLattices[iBlock] -> defineDynamics (
+                    inters.x0, inters.x1, inters.y0, inters.y1, dynamics );
         }
     }
-    for (int iOverlap=0; iOverlap < getNumPeriodicOverlaps(); ++iOverlap) {
+    std::vector<int> const& periodicOverlapWithMe
+        = multiBlockHandler->getRelevantIndexes().getPeriodicOverlapWithMe();
+    for (unsigned rOverlap=0; rOverlap < periodicOverlapWithMe.size(); ++rOverlap) {
+        int iOverlap = periodicOverlapWithMe[rOverlap];
         Overlap2D const& overlap = getPeriodicOverlap(iOverlap);
-        int overlapId  = overlap.getOverlapId();
-        if (blockLattices[overlapId]) {
-            if (util::intersect(domain, overlap.getOriginalCoordinates(), inters ) ) {
-                inters = inters.shift( -overlap.getShiftX(), -overlap.getShiftY() );
-                inters = getParameters(overlapId).toLocal(inters);
-                blockLattices[overlapId] -> defineDynamics (
-                        inters.x0, inters.x1, inters.y0, inters.y1, dynamics );
-            }
+        int overlapId = overlap.getOverlapId();
+        if (util::intersect(domain, overlap.getOriginalCoordinates(), inters ) ) {
+            inters = inters.shift( -overlap.getShiftX(), -overlap.getShiftY() );
+            inters = getParameters(overlapId).toLocal(inters);
+            blockLattices[overlapId] -> defineDynamics (
+                    inters.x0, inters.x1, inters.y0, inters.y1, dynamics );
+        }
+    }
+}
+
+template<typename T, template<typename U> class Lattice>
+void MultiBlockLattice2D<T,Lattice>::defineDynamics (
+        int iX, int iY, Dynamics<T,Lattice>* dynamics )
+{
+    std::vector<int> const& relevantBlocks = getRelevantBlocks();
+    for (int rBlock=0; rBlock < getNumRelevantBlocks(); ++rBlock) {
+        int iBlock = relevantBlocks[rBlock];
+        BlockParameters2D const& params = getParameters(iBlock);
+        if (util::contained(iX, iY, params.getNonPeriodicEnvelope()) ) {
+            int localX = params.toLocalX(iX);
+            int localY = params.toLocalY(iY);
+            blockLattices[iBlock] -> defineDynamics (localX,localY, dynamics );
+        }
+    }
+    std::vector<int> const& periodicOverlapWithMe
+        = multiBlockHandler->getRelevantIndexes().getPeriodicOverlapWithMe();
+    for (unsigned rOverlap=0; rOverlap < periodicOverlapWithMe.size(); ++rOverlap) {
+        int iOverlap = periodicOverlapWithMe[rOverlap];
+        Overlap2D const& overlap = getPeriodicOverlap(iOverlap);
+        int overlapId = overlap.getOverlapId();
+        BlockParameters2D const& params = getParameters(overlapId);
+        if (util::contained(iX,iY, overlap.getOriginalCoordinates()) ) {
+            int localX = params.toLocalX(iX-overlap.getShiftX());
+            int localY = params.toLocalY(iY-overlap.getShiftY());
+            blockLattices[overlapId] -> defineDynamics (localX, localY, dynamics);
         }
     }
 }
@@ -206,14 +238,14 @@ void MultiBlockLattice2D<T,Lattice>::specifyStatisticsStatus (
         int x0_, int x1_, int y0_, int y1_, bool status )
 {
     BlockCoordinates2D domain(x0_, x1_, y0_, y1_), inters;
-    for (int iBlock=0; iBlock < getNumBlocks(); ++iBlock) {
-        if (blockLattices[iBlock]) {
-            BlockParameters2D const& params = getParameters(iBlock);
-            if (util::intersect(domain, params.getBulk(), inters ) ) {
-                inters = params.toLocal(inters);
-                blockLattices[iBlock] -> specifyStatisticsStatus (
-                        inters.x0, inters.x1, inters.y0, inters.y1, status );
-            }
+    std::vector<int> const& relevantBlocks = getRelevantBlocks();
+    for (int rBlock=0; rBlock < getNumRelevantBlocks(); ++rBlock) {
+        int iBlock = relevantBlocks[rBlock];
+        BlockParameters2D const& params = getParameters(iBlock);
+        if (util::intersect(domain, params.getBulk(), inters ) ) {
+            inters = params.toLocal(inters);
+            blockLattices[iBlock] -> specifyStatisticsStatus (
+                    inters.x0, inters.x1, inters.y0, inters.y1, status );
         }
     }
 }
@@ -222,36 +254,36 @@ template<typename T, template<typename U> class Lattice>
 void MultiBlockLattice2D<T,Lattice>::collide(int x0_, int x1_, int y0_, int y1_)
 {
     BlockCoordinates2D domain(x0_, x1_, y0_, y1_), inters;
-    for (int iBlock=0; iBlock < getNumBlocks(); ++iBlock) {
-        if (blockLattices[iBlock]) {
-            BlockParameters2D const& params = getParameters(iBlock);
-            if (util::intersect(domain, params.getEnvelope(), inters ) ) {
-                inters = params.toLocal(inters);
-                blockLattices[iBlock] -> collide(inters.x0, inters.x1, inters.y0, inters.y1);
-            }
+    std::vector<int> const& relevantBlocks = getRelevantBlocks();
+    for (int rBlock=0; rBlock < getNumRelevantBlocks(); ++rBlock) {
+        int iBlock = relevantBlocks[rBlock];
+        BlockParameters2D const& params = getParameters(iBlock);
+        if (util::intersect(domain, params.getEnvelope(), inters ) ) {
+            inters = params.toLocal(inters);
+            blockLattices[iBlock] -> collide(inters.x0, inters.x1, inters.y0, inters.y1);
         }
     }
 }
 
 template<typename T, template<typename U> class Lattice>
 void MultiBlockLattice2D<T,Lattice>::collide() {
-    for (int iBlock=0; iBlock < getNumBlocks(); ++iBlock) {
-        if (blockLattices[iBlock]) {
-            blockLattices[iBlock] -> collide();
-        }
+    std::vector<int> const& relevantBlocks = getRelevantBlocks();
+    for (int rBlock=0; rBlock < getNumRelevantBlocks(); ++rBlock) {
+        int iBlock = relevantBlocks[rBlock];
+        blockLattices[iBlock] -> collide();
     }
 }
 
 template<typename T, template<typename U> class Lattice>
 void MultiBlockLattice2D<T,Lattice>::staticCollide (
         int x0_, int x1_, int y0_, int y1_,
-        TensorField2D<T,2> const& u)
+        TensorFieldBase2D<T,2> const& u)
 {
     OLB_ASSERT(false, "Method not yet implemented");
 }
 
 template<typename T, template<typename U> class Lattice>
-void MultiBlockLattice2D<T,Lattice>::staticCollide(TensorField2D<T,2> const& u)
+void MultiBlockLattice2D<T,Lattice>::staticCollide(TensorFieldBase2D<T,2> const& u)
 {
     OLB_ASSERT(false, "Method not yet implemented");
 }
@@ -260,34 +292,33 @@ template<typename T, template<typename U> class Lattice>
 void MultiBlockLattice2D<T,Lattice>::stream(int x0_, int x1_, int y0_, int y1_)
 {
     BlockCoordinates2D domain(x0_, x1_, y0_, y1_), inters;
-    for (int iBlock=0; iBlock < getNumBlocks(); ++iBlock) {
-        if (blockLattices[iBlock]) {
-            BlockParameters2D const& params = getParameters(iBlock);
-            if (util::intersect(domain, params.getNonPeriodicEnvelope(), inters ) ) {
-                inters = params.toLocal(inters);
-                blockLattices[iBlock] -> stream(inters.x0, inters.x1, inters.y0, inters.y1);
-            }
+    std::vector<int> const& relevantBlocks = getRelevantBlocks();
+    for (int rBlock=0; rBlock < getNumRelevantBlocks(); ++rBlock) {
+        int iBlock = relevantBlocks[rBlock];
+        BlockParameters2D const& params = getParameters(iBlock);
+        if (util::intersect(domain, params.getNonPeriodicEnvelope(), inters ) ) {
+            inters = params.toLocal(inters);
+            blockLattices[iBlock] -> stream(inters.x0, inters.x1, inters.y0, inters.y1);
         }
     }
 }
 
 template<typename T, template<typename U> class Lattice>
 void MultiBlockLattice2D<T,Lattice>::stream(bool periodic) {
+    std::vector<int> const& relevantBlocks = getRelevantBlocks();
     if (periodic) {
-        for (int iBlock=0; iBlock < getNumBlocks(); ++iBlock) {
-            if (blockLattices[iBlock]) {
-                blockLattices[iBlock] -> stream();
-            }
+        for (int rBlock=0; rBlock < getNumRelevantBlocks(); ++rBlock) {
+            int iBlock = relevantBlocks[rBlock];
+            blockLattices[iBlock] -> stream();
         }
     }
     else {
-        for (int iBlock=0; iBlock < getNumBlocks(); ++iBlock) {
-            if (blockLattices[iBlock]) {
-                BlockParameters2D const& params = getParameters(iBlock);
-                BlockCoordinates2D npEnv = params.toLocal(params.getNonPeriodicEnvelope());
-                blockLattices[iBlock] -> stream(npEnv.x0, npEnv.x1, npEnv.y0, npEnv.y1);
-                blockLattices[iBlock] -> postProcess();
-            }
+        for (int rBlock=0; rBlock < getNumRelevantBlocks(); ++rBlock) {
+            int iBlock = relevantBlocks[rBlock];
+            BlockParameters2D const& params = getParameters(iBlock);
+            BlockCoordinates2D npEnv = params.toLocal(params.getNonPeriodicEnvelope());
+            blockLattices[iBlock] -> stream(npEnv.x0, npEnv.x1, npEnv.y0, npEnv.y1);
+            blockLattices[iBlock] -> postProcess();
         }
     }
     postProcessMultiBlock();
@@ -296,34 +327,33 @@ void MultiBlockLattice2D<T,Lattice>::stream(bool periodic) {
 template<typename T, template<typename U> class Lattice>
 void MultiBlockLattice2D<T,Lattice>::collideAndStream(int x0_, int x1_, int y0_, int y1_) {
     BlockCoordinates2D domain(x0_, x1_, y0_, y1_), inters;
-    for (int iBlock=0; iBlock < getNumBlocks(); ++iBlock) {
-        if (blockLattices[iBlock]) {
-            BlockParameters2D const& params = getParameters(iBlock);
-            if (util::intersect(domain, params.getNonPeriodicEnvelope(), inters ) ) {
-                inters = params.toLocal(inters);
-                blockLattices[iBlock] -> stream(inters.x0, inters.x1, inters.y0, inters.y1);
-            }
+    std::vector<int> const& relevantBlocks = getRelevantBlocks();
+    for (int rBlock=0; rBlock < getNumRelevantBlocks(); ++rBlock) {
+        int iBlock = relevantBlocks[rBlock];
+        BlockParameters2D const& params = getParameters(iBlock);
+        if (util::intersect(domain, params.getNonPeriodicEnvelope(), inters ) ) {
+            inters = params.toLocal(inters);
+            blockLattices[iBlock] -> stream(inters.x0, inters.x1, inters.y0, inters.y1);
         }
     }
 }
 
 template<typename T, template<typename U> class Lattice>
 void MultiBlockLattice2D<T,Lattice>::collideAndStream(bool periodic) {
+    std::vector<int> const& relevantBlocks = getRelevantBlocks();
     if (periodic) {
-        for (int iBlock=0; iBlock < getNumBlocks(); ++iBlock) {
-            if (blockLattices[iBlock]) {
-                blockLattices[iBlock] -> collideAndStream();
-            }
+        for (int rBlock=0; rBlock < getNumRelevantBlocks(); ++rBlock) {
+            int iBlock = relevantBlocks[rBlock];
+            blockLattices[iBlock] -> collideAndStream();
         }
     }
     else {
-        for (int iBlock=0; iBlock < getNumBlocks(); ++iBlock) {
-            if (blockLattices[iBlock]) {
-                BlockParameters2D const& params = getParameters(iBlock);
-                BlockCoordinates2D npEnv = params.toLocal(params.getNonPeriodicEnvelope());
-                blockLattices[iBlock] -> collideAndStream(npEnv.x0, npEnv.x1, npEnv.y0, npEnv.y1);
-                blockLattices[iBlock] -> postProcess();
-            }
+        for (int rBlock=0; rBlock < getNumRelevantBlocks(); ++rBlock) {
+            int iBlock = relevantBlocks[rBlock];
+            BlockParameters2D const& params = getParameters(iBlock);
+            BlockCoordinates2D npEnv = params.toLocal(params.getNonPeriodicEnvelope());
+            blockLattices[iBlock] -> collideAndStream(npEnv.x0, npEnv.x1, npEnv.y0, npEnv.y1);
+            blockLattices[iBlock] -> postProcess();
         }
     }
     postProcessMultiBlock();
@@ -333,18 +363,18 @@ template<typename T, template<typename U> class Lattice>
 T MultiBlockLattice2D<T,Lattice>::computeAverageDensity(int x0_, int x1_, int y0_, int y1_) const {
     BlockCoordinates2D domain(x0_, x1_, y0_, y1_), inters;
     T sumWeights = T(), sumDensities = T();
-    for (int iBlock=0; iBlock < getNumBlocks(); ++iBlock) {
-        if (blockLattices[iBlock]) {
-            BlockParameters2D const& params = getParameters(iBlock);
-            if (util::intersect(domain, params.getBulk(), inters ) ) {
-                inters = params.toLocal(inters);
-                T weight = (T) ( (inters.x1-inters.x0+1) * (inters.y1-inters.y0+1) ) /
-                           (T) std::numeric_limits<int>::max();
-                sumWeights += weight;
-                T newDensity = blockLattices[iBlock] -> computeAverageDensity (
-                                   inters.x0, inters.x1, inters.y0, inters.y1 );
-                sumDensities += newDensity * weight;
-            }
+    std::vector<int> const& relevantBlocks = getRelevantBlocks();
+    for (int rBlock=0; rBlock < getNumRelevantBlocks(); ++rBlock) {
+        int iBlock = relevantBlocks[rBlock];
+        BlockParameters2D const& params = getParameters(iBlock);
+        if (util::intersect(domain, params.getBulk(), inters ) ) {
+            inters = params.toLocal(inters);
+            T weight = (T) ( (inters.x1-inters.x0+1) * (inters.y1-inters.y0+1) ) /
+                       (T) std::numeric_limits<int>::max();
+            sumWeights += weight;
+            T newDensity = blockLattices[iBlock] -> computeAverageDensity (
+                               inters.x0, inters.x1, inters.y0, inters.y1 );
+            sumDensities += newDensity * weight;
         }
     }
     if (sumWeights > 1.e-12) {
@@ -362,14 +392,14 @@ T MultiBlockLattice2D<T,Lattice>::computeAverageDensity() const {
 template<typename T, template<typename U> class Lattice>
 void MultiBlockLattice2D<T,Lattice>::stripeOffDensityOffset(int x0_, int x1_, int y0_, int y1_, T offset) {
     BlockCoordinates2D domain(x0_, x1_, y0_, y1_), inters;
-    for (int iBlock=0; iBlock < getNumBlocks(); ++iBlock) {
-        if (blockLattices[iBlock]) {
-            BlockParameters2D const& params = getParameters(iBlock);
-            if (util::intersect(domain, params.getEnvelope(), inters ) ) {
-                inters = params.toLocal(inters);
-                blockLattices[iBlock] -> stripeOffDensityOffset (
-                        inters.x0, inters.x1, inters.y0, inters.y1, offset );
-            }
+    std::vector<int> const& relevantBlocks = getRelevantBlocks();
+    for (int rBlock=0; rBlock < getNumRelevantBlocks(); ++rBlock) {
+        int iBlock = relevantBlocks[rBlock];
+        BlockParameters2D const& params = getParameters(iBlock);
+        if (util::intersect(domain, params.getEnvelope(), inters ) ) {
+            inters = params.toLocal(inters);
+            blockLattices[iBlock] -> stripeOffDensityOffset (
+                    inters.x0, inters.x1, inters.y0, inters.y1, offset );
         }
     }
 }
@@ -380,20 +410,43 @@ void MultiBlockLattice2D<T,Lattice>::stripeOffDensityOffset(T offset) {
 }
 
 template<typename T, template<typename U> class Lattice>
+void MultiBlockLattice2D<T,Lattice>::forAll(int x0_, int x1_, int y0_, int y1_,
+                                            WriteCellFunctional<T,Lattice> const& application)
+{
+    BlockCoordinates2D domain(x0_, x1_, y0_, y1_), inters;
+    std::vector<int> const& relevantBlocks = getRelevantBlocks();
+    for (int rBlock=0; rBlock < getNumRelevantBlocks(); ++rBlock) {
+        int iBlock = relevantBlocks[rBlock];
+        BlockParameters2D const& params = getParameters(iBlock);
+        if (util::intersect(domain, params.getEnvelope(), inters ) ) {
+            inters = params.toLocal(inters);
+            blockLattices[iBlock] -> forAll (
+                    inters.x0, inters.x1, inters.y0, inters.y1, application );
+        }
+    }
+}
+
+template<typename T, template<typename U> class Lattice>
+void MultiBlockLattice2D<T,Lattice>::forAll(WriteCellFunctional<T,Lattice> const& application)
+{
+    forAll(0, getNx()-1, 0,getNy()-1, application);
+}
+
+template<typename T, template<typename U> class Lattice>
 void MultiBlockLattice2D<T,Lattice>::addPostProcessor(PostProcessorGenerator2D<T,Lattice> const& ppGen)
 {
-    for (int iBlock=0; iBlock < getNumBlocks(); ++iBlock) {
-        if (blockLattices[iBlock]) {
-            BlockParameters2D const& params = getParameters(iBlock);
-            BlockCoordinates2D const& bulk = params.getBulk();
-            PostProcessorGenerator2D<T,Lattice> *extractedPpGen = ppGen.clone();
-            if (extractedPpGen->extract( bulk.x0, bulk.x1, bulk.y0, bulk.y1 ) ) {
-                BlockCoordinates2D const& envelope = params.getEnvelope();
-                extractedPpGen->shift(-envelope.x0, -envelope.y0);
-                blockLattices[iBlock] -> addPostProcessor(*extractedPpGen);
-            }
-            delete extractedPpGen;
+    std::vector<int> const& relevantBlocks = getRelevantBlocks();
+    for (int rBlock=0; rBlock < getNumRelevantBlocks(); ++rBlock) {
+        int iBlock = relevantBlocks[rBlock];
+        BlockParameters2D const& params = getParameters(iBlock);
+        BlockCoordinates2D const& bulk = params.getBulk();
+        PostProcessorGenerator2D<T,Lattice> *extractedPpGen = ppGen.clone();
+        if (extractedPpGen->extract( bulk.x0, bulk.x1, bulk.y0, bulk.y1 ) ) {
+            BlockCoordinates2D const& envelope = params.getEnvelope();
+            extractedPpGen->shift(-envelope.x0, -envelope.y0);
+            blockLattices[iBlock] -> addPostProcessor(*extractedPpGen);
         }
+        delete extractedPpGen;
     }
 }
 
@@ -402,31 +455,31 @@ void MultiBlockLattice2D<T,Lattice>::addLatticeCoupling (
                      LatticeCouplingGenerator2D<T,Lattice> const& lcGen,
                      std::vector<SpatiallyExtendedObject2D*> partners )
 {
-    for (int iBlock=0; iBlock < getNumBlocks(); ++iBlock) {
-        if (blockLattices[iBlock]) {
-            std::vector<SpatiallyExtendedObject2D*> extractedPartners(partners.size());
-            for (unsigned iP=0; iP<extractedPartners.size(); ++iP) {
-                extractedPartners[iP] = partners[iP]->getComponent(iBlock);
-            }
-            BlockParameters2D const& params = getParameters(iBlock);
-            BlockCoordinates2D const& bulk = params.getBulk();
-            LatticeCouplingGenerator2D<T,Lattice> *extractedLcGen = lcGen.clone();
-            if (extractedLcGen->extract( bulk.x0, bulk.x1, bulk.y0, bulk.y1 ) ) {
-                BlockCoordinates2D const& envelope = params.getEnvelope();
-                extractedLcGen->shift(-envelope.x0, -envelope.y0);
-                blockLattices[iBlock] -> addLatticeCoupling (*extractedLcGen, extractedPartners);
-            }
-            delete extractedLcGen;
+    std::vector<int> const& relevantBlocks = getRelevantBlocks();
+    for (int rBlock=0; rBlock < getNumRelevantBlocks(); ++rBlock) {
+        int iBlock = relevantBlocks[rBlock];
+        std::vector<SpatiallyExtendedObject2D*> extractedPartners(partners.size());
+        for (unsigned iP=0; iP<extractedPartners.size(); ++iP) {
+            extractedPartners[iP] = partners[iP]->getComponent(iBlock);
         }
+        BlockParameters2D const& params = getParameters(iBlock);
+        BlockCoordinates2D const& bulk = params.getBulk();
+        LatticeCouplingGenerator2D<T,Lattice> *extractedLcGen = lcGen.clone();
+        if (extractedLcGen->extract( bulk.x0, bulk.x1, bulk.y0, bulk.y1 ) ) {
+            BlockCoordinates2D const& envelope = params.getEnvelope();
+            extractedLcGen->shift(-envelope.x0, -envelope.y0);
+            blockLattices[iBlock] -> addLatticeCoupling (*extractedLcGen, extractedPartners);
+        }
+        delete extractedLcGen;
     }
 }
 
 template<typename T, template<typename U> class Lattice>
 void MultiBlockLattice2D<T,Lattice>::resetPostProcessors() {
-    for (int iBlock=0; iBlock < getNumBlocks(); ++iBlock) {
-        if (blockLattices[iBlock]) {
-            blockLattices[iBlock] -> resetPostProcessors();
-        }
+    std::vector<int> const& relevantBlocks = getRelevantBlocks();
+    for (int rBlock=0; rBlock < getNumRelevantBlocks(); ++rBlock) {
+        int iBlock = relevantBlocks[rBlock];
+        blockLattices[iBlock] -> resetPostProcessors();
     }
 }
 
@@ -445,6 +498,7 @@ LatticeStatistics<T> const&
 
 template<typename T, template<typename U> class Lattice>
 DataAnalysisBase2D<T,Lattice> const& MultiBlockLattice2D<T,Lattice>::getDataAnalysis() const {
+    dataAnalysis -> reset();
     return *dataAnalysis;
 }
 
@@ -487,28 +541,51 @@ DataUnSerializer<T>& MultiBlockLattice2D<T,Lattice>::getSubUnSerializer (
 
 
 template<typename T, template<typename U> class Lattice>
-void MultiBlockLattice2D<T,Lattice>::postProcess(int x0_, int x1_, int y0_, int y1_)
-{
+void MultiBlockLattice2D<T,Lattice>::postProcess(int x0_, int x1_, int y0_, int y1_) {
     BlockCoordinates2D domain(x0_, x1_, y0_, y1_), inters;
-    for (int iBlock=0; iBlock < getNumBlocks(); ++iBlock) {
-        if (blockLattices[iBlock]) {
-            BlockParameters2D const& params = getParameters(iBlock);
-            if ( util::intersect(domain, params.getBulk(), inters) ) {
-                inters = params.toLocal(inters);
-                blockLattices[iBlock] -> postProcess(inters.x0, inters.x1, inters.y0, inters.y1);
-            }
+    std::vector<int> const& relevantBlocks = getRelevantBlocks();
+    for (int rBlock=0; rBlock < getNumRelevantBlocks(); ++rBlock) {
+        int iBlock = relevantBlocks[rBlock];
+        BlockParameters2D const& params = getParameters(iBlock);
+        if ( util::intersect(domain, params.getBulk(), inters) ) {
+            inters = params.toLocal(inters);
+            blockLattices[iBlock] -> postProcess(inters.x0, inters.x1, inters.y0, inters.y1);
         }
     }
 }
 
 template<typename T, template<typename U> class Lattice>
 void MultiBlockLattice2D<T,Lattice>::postProcess() {
-    for (int iBlock=0; iBlock < getNumBlocks(); ++iBlock) {
-        if (blockLattices[iBlock]) {
-            blockLattices[iBlock] -> postProcess();
-        }
+    std::vector<int> const& relevantBlocks = getRelevantBlocks();
+    for (int rBlock=0; rBlock < getNumRelevantBlocks(); ++rBlock) {
+        int iBlock = relevantBlocks[rBlock];
+        blockLattices[iBlock] -> postProcess();
     }
     postProcessMultiBlock();
+}
+
+template<typename T, template<typename U> class Lattice>
+void MultiBlockLattice2D<T,Lattice>::executeCoupling(int x0_, int x1_, int y0_, int y1_) {
+    BlockCoordinates2D domain(x0_, x1_, y0_, y1_), inters;
+    std::vector<int> const& relevantBlocks = getRelevantBlocks();
+    for (int rBlock=0; rBlock < getNumRelevantBlocks(); ++rBlock) {
+        int iBlock = relevantBlocks[rBlock];
+        BlockParameters2D const& params = getParameters(iBlock);
+        if ( util::intersect(domain, params.getBulk(), inters) ) {
+            inters = params.toLocal(inters);
+            blockLattices[iBlock] -> executeCoupling(inters.x0, inters.x1, inters.y0, inters.y1);
+        }
+    }
+}
+
+template<typename T, template<typename U> class Lattice>
+void MultiBlockLattice2D<T,Lattice>::executeCoupling() {
+    std::vector<int> const& relevantBlocks = getRelevantBlocks();
+    for (int rBlock=0; rBlock < getNumRelevantBlocks(); ++rBlock) {
+        int iBlock = relevantBlocks[rBlock];
+        blockLattices[iBlock] -> executeCoupling();
+    }
+    multiBlockHandler -> connectBoundaries(blockLattices, periodicCommunicationOn);
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -522,7 +599,7 @@ void MultiBlockLattice2D<T,Lattice>::subscribeReductions(Reductor<T>& reductor)
 
 template<typename T, template<typename U> class Lattice>
 void MultiBlockLattice2D<T,Lattice>::allocateBlocks() {
-    for (int iBlock=0; iBlock<getNumBlocks(); ++iBlock) {
+    for (int iBlock=0; iBlock<getMultiData().getNumBlocks(); ++iBlock) {
         int lx=0, ly=0;
         if (multiBlockHandler->getLocalEnvelope(iBlock, lx, ly)) {
             blockLattices.push_back(new BlockLattice2D<T,Lattice>(lx,ly));
@@ -569,18 +646,18 @@ void MultiBlockLattice2D<T,Lattice>::reduceStatistics() {
 
 template<typename T, template<typename U> class Lattice>
 void MultiBlockLattice2D<T,Lattice>::eliminateStatisticsInEnvelope() {
-    for (int iBlock=0; iBlock<getNumBlocks(); ++iBlock) {
-        if (blockLattices[iBlock]) {
-            int envelopeWidth = getParameters(iBlock).getEnvelopeWidth();
-            BlockLattice2D<T,Lattice>& block = *blockLattices[iBlock];
-            int maxX = block.getNx()-1;
-            int maxY = block.getNy()-1;
+    std::vector<int> const& relevantBlocks = getRelevantBlocks();
+    for (int rBlock=0; rBlock<getNumRelevantBlocks(); ++rBlock) {
+        int iBlock = relevantBlocks[rBlock];
+        int envelopeWidth = getParameters(iBlock).getEnvelopeWidth();
+        BlockLattice2D<T,Lattice>& block = *blockLattices[iBlock];
+        int maxX = block.getNx()-1;
+        int maxY = block.getNy()-1;
 
-            block.specifyStatisticsStatus(0, maxX, 0, envelopeWidth-1, false);
-            block.specifyStatisticsStatus(0, maxX, maxY-envelopeWidth+1, maxY, false);
-            block.specifyStatisticsStatus(0, envelopeWidth-1,         0, maxY, false);
-            block.specifyStatisticsStatus(maxX-envelopeWidth+1, maxX, 0, maxY, false);
-        }
+        block.specifyStatisticsStatus(0, maxX, 0, envelopeWidth-1, false);
+        block.specifyStatisticsStatus(0, maxX, maxY-envelopeWidth+1, maxY, false);
+        block.specifyStatisticsStatus(0, envelopeWidth-1,         0, maxY, false);
+        block.specifyStatisticsStatus(maxX-envelopeWidth+1, maxX, 0, maxY, false);
     }
 }
 
@@ -635,24 +712,20 @@ Overlap2D const& MultiBlockLattice2D<T,Lattice>::getPeriodicOverlap(int iOverlap
 }
 
 template<typename T, template<typename U> class Lattice>
-int MultiBlockLattice2D<T,Lattice>::getNumBlocks() const {
-    return getMultiData().getNumBlocks();
-}
-
-template<typename T, template<typename U> class Lattice>
-int MultiBlockLattice2D<T,Lattice>::getNumNormalOverlaps() const {
-    return getMultiData().getNumNormalOverlaps();
-}
-
-template<typename T, template<typename U> class Lattice>
-int MultiBlockLattice2D<T,Lattice>::getNumPeriodicOverlaps() const {
-    return getMultiData().getNumPeriodicOverlaps();
+int MultiBlockLattice2D<T,Lattice>::getNumRelevantBlocks() const {
+    return getRelevantBlocks().size();
 }
 
 template<typename T, template<typename U> class Lattice>
 MultiDataDistribution2D MultiBlockLattice2D<T,Lattice>::getDataDistribution() const {
     return getMultiData();
 }
+
+template<typename T, template<typename U> class Lattice>
+std::vector<int> const& MultiBlockLattice2D<T,Lattice>::getRelevantBlocks() const {
+    return multiBlockHandler->getRelevantIndexes().getBlocks();
+}
+
 
 template<typename T, template<typename U> class Lattice>
 SpatiallyExtendedObject2D* MultiBlockLattice2D<T,Lattice>::getComponent(int iBlock) {

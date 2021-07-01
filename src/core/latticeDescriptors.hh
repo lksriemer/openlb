@@ -32,13 +32,14 @@
 #include "latticeDescriptors.h"
 
 namespace olb {
+
 namespace descriptors {
 
     // D2Q9 ////////////////////////////////////////////////////////////
 
     template<typename T>
-    const int D2Q9Descriptor<T>::c
-        [D2Q9Descriptor<T>::q][D2Q9Descriptor<T>::d] =
+    const int D2Q9DescriptorBase<T>::c
+        [D2Q9DescriptorBase<T>::q][D2Q9DescriptorBase<T>::d] =
         {
             { 0, 0},
             {-1, 1}, {-1, 0}, {-1,-1}, { 0,-1},
@@ -46,20 +47,20 @@ namespace descriptors {
         };
 
     template<typename T>
-    const T D2Q9Descriptor<T>::t[D2Q9Descriptor<T>::q] =
+    const T D2Q9DescriptorBase<T>::t[D2Q9DescriptorBase<T>::q] =
         {
             (T)4/(T)9, (T)1/(T)36, (T)1/(T)9, (T)1/(T)36, (T)1/(T)9,
                        (T)1/(T)36, (T)1/(T)9, (T)1/(T)36, (T)1/(T)9
         };
 
     template<typename T>
-    const T D2Q9Descriptor<T>::invCs2 = (T)3;
+    const T D2Q9DescriptorBase<T>::invCs2 = (T)3;
 
     // D3Q13 ///////////////////////////////////////////////////////////
 
     template<typename T>
-    const int D3Q13Descriptor<T>::c
-        [D3Q13Descriptor<T>::q][D3Q13Descriptor<T>::d] =
+    const int D3Q13DescriptorBase<T>::c
+        [D3Q13DescriptorBase<T>::q][D3Q13DescriptorBase<T>::d] =
         {
             { 0, 0, 0},
 
@@ -71,7 +72,7 @@ namespace descriptors {
         }; 
 
     template<typename T>
-    const T D3Q13Descriptor<T>::t[D3Q13Descriptor<T>::q] =
+    const T D3Q13DescriptorBase<T>::t[D3Q13DescriptorBase<T>::q] =
         {
             (T)1/(T)2,
 
@@ -83,24 +84,24 @@ namespace descriptors {
         };
 
 
-    /** This parameter is chosen so as to enhance numerical stability */
+    /** This parameter is chosen to enhance numerical stability */
     template<typename T>
-    const T D3Q13Descriptor<T>::invCs2 = (T)3;
+    const T D3Q13DescriptorBase<T>::invCs2 = (T)3;
 
-    /** This parameter is chosen so as to enhance numerical stability */
+    /** This parameter is chosen to enhance numerical stability */
     template<typename T>
-    const T D3Q13Descriptor<T>::lambda_e = (T)1.5;
+    const T D3Q13DescriptorBase<T>::lambda_e = (T)1.5;
 
-    /** This parameter is chosen so as to enhance numerical stability */
+    /** This parameter is chosen to enhance numerical stability */
     template<typename T>
-    const T D3Q13Descriptor<T>::lambda_h = (T)1.8;
+    const T D3Q13DescriptorBase<T>::lambda_h = (T)1.8;
 
 
     // D3Q15 ///////////////////////////////////////////////////////////
 
     template<typename T>
-    const int D3Q15Descriptor<T>::c
-        [D3Q15Descriptor<T>::q][D3Q15Descriptor<T>::d] =
+    const int D3Q15DescriptorBase<T>::c
+        [D3Q15DescriptorBase<T>::q][D3Q15DescriptorBase<T>::d] =
         {
             { 0, 0, 0},
 
@@ -113,7 +114,7 @@ namespace descriptors {
         }; 
  
     template<typename T>
-    const T D3Q15Descriptor<T>::t[D3Q15Descriptor<T>::q] =
+    const T D3Q15DescriptorBase<T>::t[D3Q15DescriptorBase<T>::q] =
         {
             (T)2/(T)9,
 
@@ -125,14 +126,14 @@ namespace descriptors {
         };
 
     template<typename T>
-    const T D3Q15Descriptor<T>::invCs2 = (T)3;
+    const T D3Q15DescriptorBase<T>::invCs2 = (T)3;
 
 
     // D3Q19 ///////////////////////////////////////////////////////////
 
     template<typename T>
-    const int D3Q19Descriptor<T>::c
-        [D3Q19Descriptor<T>::q][D3Q19Descriptor<T>::d] =
+    const int D3Q19DescriptorBase<T>::c
+        [D3Q19DescriptorBase<T>::q][D3Q19DescriptorBase<T>::d] =
         {
             { 0, 0, 0},
 
@@ -146,7 +147,7 @@ namespace descriptors {
         }; 
  
     template<typename T>
-    const T D3Q19Descriptor<T>::t[D3Q19Descriptor<T>::q] =
+    const T D3Q19DescriptorBase<T>::t[D3Q19DescriptorBase<T>::q] =
         {
             (T)1/(T)3,
 
@@ -160,14 +161,14 @@ namespace descriptors {
         };
 
     template<typename T>
-    const T D3Q19Descriptor<T>::invCs2 = (T)3;
+    const T D3Q19DescriptorBase<T>::invCs2 = (T)3;
 
 
     // D3Q27 ///////////////////////////////////////////////////////////
 
     template<typename T>
-    const int D3Q27Descriptor<T>::c
-        [D3Q27Descriptor<T>::q][D3Q27Descriptor<T>::d] =
+    const int D3Q27DescriptorBase<T>::c
+        [D3Q27DescriptorBase<T>::q][D3Q27DescriptorBase<T>::d] =
         {
             { 0, 0, 0},
 
@@ -183,7 +184,7 @@ namespace descriptors {
         }; 
  
     template<typename T>
-    const T D3Q27Descriptor<T>::t[D3Q27Descriptor<T>::q] =
+    const T D3Q27DescriptorBase<T>::t[D3Q27DescriptorBase<T>::q] =
         {
             (T)8/(T)27,
 
@@ -199,68 +200,7 @@ namespace descriptors {
         };
 
     template<typename T>
-    const T D3Q27Descriptor<T>::invCs2 = (T)3;
-
-
-    // D2Q9 with force //////////////////////////////////////////////////
-
-    template<typename T>
-    const int ForcedD2Q9Descriptor<T>::c
-        [ForcedD2Q9Descriptor<T>::q][ForcedD2Q9Descriptor<T>::d] =
-        {
-            { 0, 0},
-            {-1, 1}, {-1, 0}, {-1,-1}, { 0,-1},
-            { 1,-1}, { 1, 0}, { 1, 1}, { 0, 1}
-        };
-
-    template<typename T>
-    const T ForcedD2Q9Descriptor<T>::
-                t[ForcedD2Q9Descriptor<T>::q] =
-        {
-            (T)4/(T)9, (T)1/(T)36, (T)1/(T)9, (T)1/(T)36, (T)1/(T)9,
-                       (T)1/(T)36, (T)1/(T)9, (T)1/(T)36, (T)1/(T)9
-        };
-
-    template<typename T>
-    const T ForcedD2Q9Descriptor<T>::invCs2 = (T)3;
-
-
-    // D3Q19 with force ///////////////////////////////////////////////////
-
-    template<typename T>
-    const int ForcedD3Q19Descriptor<T>::c
-        [ForcedD3Q19Descriptor<T>::q][ForcedD3Q19Descriptor<T>::d] =
-        {
-            { 0, 0, 0},
-
-            {-1, 0, 0}, { 0,-1, 0}, { 0, 0,-1},
-            {-1,-1, 0}, {-1, 1, 0}, {-1, 0,-1},
-            {-1, 0, 1}, { 0,-1,-1}, { 0,-1, 1},
-
-            { 1, 0, 0}, { 0, 1, 0}, { 0, 0, 1},
-            { 1, 1, 0}, { 1,-1, 0}, { 1, 0, 1},
-            { 1, 0,-1}, { 0, 1, 1}, { 0, 1,-1}
-        }; 
- 
-    template<typename T>
-    const T ForcedD3Q19Descriptor<T>::t[ForcedD3Q19Descriptor<T>::q] =
-        {
-            (T)1/(T)3,
-
-            (T)1/(T)18, (T)1/(T)18, (T)1/(T)18, 
-            (T)1/(T)36, (T)1/(T)36, (T)1/(T)36,
-            (T)1/(T)36, (T)1/(T)36, (T)1/(T)36,
-
-            (T)1/(T)18, (T)1/(T)18, (T)1/(T)18, 
-            (T)1/(T)36, (T)1/(T)36, (T)1/(T)36,
-            (T)1/(T)36, (T)1/(T)36, (T)1/(T)36
-        };
-
-    template<typename T>
-    const T ForcedD3Q19Descriptor<T>::invCs2 = (T)3;
-
-
-
+    const T D3Q27DescriptorBase<T>::invCs2 = (T)3;
 
 }  // namespace descriptors
 

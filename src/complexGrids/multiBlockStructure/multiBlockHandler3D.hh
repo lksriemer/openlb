@@ -42,7 +42,10 @@ namespace olb {
 template<typename T, template<typename U> class Lattice>
 SerialMultiBlockHandler3D<T,Lattice>::SerialMultiBlockHandler3D (
         MultiDataDistribution3D const& dataDistribution_ )
-    : dataDistribution(dataDistribution_)
+    : dataDistribution(dataDistribution_),
+      relevantIndexes(dataDistribution.getNumBlocks(), dataDistribution.getNumNormalOverlaps(),
+                      dataDistribution.getNumPeriodicOverlaps(), dataDistribution.getNx(),
+                      dataDistribution.getNy(), dataDistribution.getNz() )
 { }
 
 template<typename T, template<typename U> class Lattice>
@@ -63,6 +66,11 @@ int SerialMultiBlockHandler3D<T,Lattice>::getNz() const {
 template<typename T, template<typename U> class Lattice>
 MultiDataDistribution3D const& SerialMultiBlockHandler3D<T,Lattice>::getMultiDataDistribution() const {
     return dataDistribution;
+}
+
+template<typename T, template<typename U> class Lattice>
+RelevantIndexes3D const& SerialMultiBlockHandler3D<T,Lattice>::getRelevantIndexes() const {
+    return relevantIndexes;
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -174,10 +182,25 @@ Cell<T,Lattice> const& SerialMultiBlockHandler3D<T,Lattice>::
 template<typename T, template<typename U> class Lattice>
 int SerialMultiBlockHandler3D<T,Lattice>::locateLocally(int iX, int iY, int iZ,
                                                         std::vector<int>& foundId,
+                                                        std::vector<int>& foundX,
+                                                        std::vector<int>& foundY,
+                                                        std::vector<int>& foundZ,
                                                         bool& hasBulkCell, int guess) const
 {
+    // In serial there's only one processor, we're therefore sure
+    //   the bulk cell with coordinates (iX,iY,iZ) can be found locally.
     hasBulkCell = true;
-    return dataDistribution.locateInEnvelopes(iX,iY,iZ, foundId, guess);
+    // In serial, it is sufficient to find the bulk-cell representation
+    //   of cell (iX,iY,iZ). Although it might also be present in envelopes,
+    //   these envelope representations are properly treated because all
+    //   of them have a pointer to the same dynamics object.
+    int bulkId = dataDistribution.locate(iX,iY,iZ, guess);
+    foundId.push_back(bulkId);
+    BlockParameters3D const& parameters = dataDistribution.getBlockParameters(bulkId);
+    foundX.push_back(parameters.toLocalX(iX));
+    foundY.push_back(parameters.toLocalY(iY));
+    foundZ.push_back(parameters.toLocalZ(iZ));
+    return bulkId;
 }
 
 
@@ -186,7 +209,7 @@ int SerialMultiBlockHandler3D<T,Lattice>::locateLocally(int iX, int iY, int iZ,
 ////////////////////// Class DataTransmittor3D /////////////////////
 
 template<typename T, template<typename U> class Lattice>
-DataTransmittor3D<T,Lattice>::DataTransmittor3D (
+BlockingDataTransmittor3D<T,Lattice>::BlockingDataTransmittor3D (
         Overlap3D const& overlap, MultiDataDistribution3D const& dataDistribution )
 {
     originalId = overlap.getOriginalId();
@@ -229,7 +252,7 @@ DataTransmittor3D<T,Lattice>::DataTransmittor3D (
 }
 
 template<typename T, template<typename U> class Lattice>
-void DataTransmittor3D<T,Lattice>::prepareTransmission(BlockVector3D& lattices) {
+void BlockingDataTransmittor3D<T,Lattice>::prepareTransmission(BlockVector3D& lattices) {
     if (myRole==sender) {
         T* bufferP = &buffer[0];
         BlockLattice3D<T,Lattice>* lattice = lattices[originalId];
@@ -246,7 +269,7 @@ void DataTransmittor3D<T,Lattice>::prepareTransmission(BlockVector3D& lattices) 
 }
 
 template<typename T, template<typename U> class Lattice>
-void DataTransmittor3D<T,Lattice>::executeTransmission(BlockVector3D& lattices) {
+void BlockingDataTransmittor3D<T,Lattice>::executeTransmission(BlockVector3D& lattices) {
     switch(myRole) {
         case senderAndReceiver:
         {
@@ -278,7 +301,7 @@ void DataTransmittor3D<T,Lattice>::executeTransmission(BlockVector3D& lattices) 
 }
 
 template<typename T, template<typename U> class Lattice>
-void DataTransmittor3D<T,Lattice>::finalizeTransmission(BlockVector3D& lattices) {
+void BlockingDataTransmittor3D<T,Lattice>::finalizeTransmission(BlockVector3D& lattices) {
     if (myRole==receiver) {
         T* bufferP = &buffer[0];
         BlockLattice3D<T,Lattice>* lattice = lattices[overlapId];
@@ -295,35 +318,173 @@ void DataTransmittor3D<T,Lattice>::finalizeTransmission(BlockVector3D& lattices)
 }
 
 
+template<typename T, template<typename U> class Lattice>
+NonBlockingDataTransmittor3D<T,Lattice>::NonBlockingDataTransmittor3D (
+        Overlap3D const& overlap, MultiDataDistribution3D const& dataDistribution )
+{
+    originalId = overlap.getOriginalId();
+    overlapId  = overlap.getOverlapId();
+
+    BlockParameters3D const& originalParameters = dataDistribution.getBlockParameters(originalId);
+    BlockParameters3D const& overlapParameters  = dataDistribution.getBlockParameters(overlapId);
+
+    originalProc = originalParameters.getProcId();
+    overlapProc  = overlapParameters.getProcId();
+    int myProc   = singleton::mpi().getRank();
+
+    originalCoords = originalParameters.toLocal(overlap.getOriginalCoordinates());
+    overlapCoords  = overlapParameters.toLocal(overlap.getOverlapCoordinates());
+
+    int lx = originalCoords.x1-originalCoords.x0+1;
+    int ly = originalCoords.y1-originalCoords.y0+1;
+    int lz = originalCoords.z1-originalCoords.z0+1;
+    OLB_PRECONDITION(lx == overlapCoords.x1-overlapCoords.x0+1);
+    OLB_PRECONDITION(ly == overlapCoords.y1-overlapCoords.y0+1);
+    OLB_PRECONDITION(lz == overlapCoords.z1-overlapCoords.z0+1);
+
+    sizeOfCell = Lattice<T>::q + Lattice<T>::ExternalField::numScalars;
+    bufferSize = lx*ly*lz*sizeOfCell;
+
+    buffer.resize(bufferSize);
+
+    if (originalProc==myProc && overlapProc==myProc) {
+        myRole = senderAndReceiver;
+    }
+    else if (originalProc==myProc) {
+        myRole = sender;
+    }
+    else if (overlapProc==myProc) {
+        myRole = receiver;
+    }
+    else {
+        myRole = nothing;
+    }
+}
+
+template<typename T, template<typename U> class Lattice>
+void NonBlockingDataTransmittor3D<T,Lattice>::prepareTransmission(BlockVector3D& lattices) {
+    switch(myRole) {
+        case senderAndReceiver:
+            break;
+        case sender:
+            break;
+        case receiver:
+        {
+            singleton::mpi().iRecv(&buffer[0], bufferSize, originalProc, &request);
+            break;
+        }
+        case nothing:
+            break;
+    }
+}
+
+template<typename T, template<typename U> class Lattice>
+void NonBlockingDataTransmittor3D<T,Lattice>::executeTransmission(BlockVector3D& lattices) {
+    switch(myRole) {
+        case senderAndReceiver:
+        {
+            int origX = originalCoords.x0;
+            int overlapX = overlapCoords.x0;
+            for (; origX<=originalCoords.x1; ++origX, ++overlapX) {
+                int origY = originalCoords.y0;
+                int overlapY = overlapCoords.y0;
+                for (; origY<=originalCoords.y1; ++origY, ++overlapY) {
+                    int origZ = originalCoords.z0;
+                    int overlapZ = overlapCoords.z0;
+                    for (; origZ<=originalCoords.z1; ++origZ, ++overlapZ) {
+                        lattices[overlapId] -> get(overlapX, overlapY, overlapZ).attributeValues (
+                                lattices[originalId] -> get(origX, origY, origZ) );
+                    }
+                }
+            }
+            break;
+        }
+        case sender:
+        {
+            T* bufferP = &buffer[0];
+            BlockLattice3D<T,Lattice>* lattice = lattices[originalId];
+            int iData=0;
+            for (int iX=originalCoords.x0; iX<=originalCoords.x1; ++iX) {
+                for (int iY=originalCoords.y0; iY<=originalCoords.y1; ++iY) {
+                    for (int iZ=originalCoords.z0; iZ<=originalCoords.z1; ++iZ) {
+                        lattice -> get(iX,iY,iZ).serialize(bufferP+iData);
+                        iData += sizeOfCell;
+                    }
+                }
+            }
+            singleton::mpi().iSend(&buffer[0], bufferSize, overlapProc, &request);
+            break;
+        }
+        case receiver:
+            break;
+        case nothing:
+            break;
+    }
+}
+
+template<typename T, template<typename U> class Lattice>
+void NonBlockingDataTransmittor3D<T,Lattice>::finalizeTransmission(BlockVector3D& lattices) {
+    switch(myRole) {
+        case senderAndReceiver:
+            break;
+        case sender:
+        {
+            singleton::mpi().wait(&request, &status);
+            break;
+        }
+        case receiver:
+        {
+            singleton::mpi().wait(&request, &status);
+            T* bufferP = &buffer[0];
+            BlockLattice3D<T,Lattice>* lattice = lattices[overlapId];
+            int iData=0;
+            for (int iX=overlapCoords.x0; iX<=overlapCoords.x1; ++iX) {
+                for (int iY=overlapCoords.y0; iY<=overlapCoords.y1; ++iY) {
+                    for (int iZ=overlapCoords.z0; iZ<=overlapCoords.z1; ++iZ) {
+                        lattice -> get(iX,iY,iZ).unSerialize(bufferP+iData);
+                        iData += sizeOfCell;
+                    }
+                }
+            }
+            break;
+        }
+        case nothing:
+            break;
+    }
+}
+
+
 ////////////////////// Class ParallelMultiBlockHandler3D /////////////////////
 
 template<typename T, template<typename U> class Lattice>
 ParallelMultiBlockHandler3D<T,Lattice>::ParallelMultiBlockHandler3D (
         MultiDataDistribution3D const& dataDistribution_ )
     : dataDistribution(dataDistribution_),
+      relevantIndexes(dataDistribution, singleton::mpi().getRank()),
       parallelDynamics( 0 )
 {
-    computeLocallyRelevantBlocks();
-    normalTransmittors.resize(relevantNormalOverlaps.size());
-    for (unsigned iRelevant=0; iRelevant<relevantNormalOverlaps.size(); ++iRelevant) {
-        int iOverlap = relevantNormalOverlaps[iRelevant];
+    normalTransmittors.resize(relevantIndexes.getNormalOverlaps().size());
+    for (unsigned iRelevant=0; iRelevant<relevantIndexes.getNormalOverlaps().size(); ++iRelevant) {
+        int iOverlap = relevantIndexes.getNormalOverlaps()[iRelevant];
         normalTransmittors[iRelevant] =
-                new DataTransmittor3D<T,Lattice>(dataDistribution.getNormalOverlap(iOverlap), dataDistribution);
+                new NonBlockingDataTransmittor3D<T,Lattice>(dataDistribution.getNormalOverlap(iOverlap),
+                                                            dataDistribution);
     }
-    periodicTransmittors.resize(relevantPeriodicOverlaps.size());
-    for (unsigned iRelevant=0; iRelevant<relevantPeriodicOverlaps.size(); ++iRelevant) {
-        int iOverlap = relevantPeriodicOverlaps[iRelevant];
+    periodicTransmittors.resize(relevantIndexes.getPeriodicOverlaps().size());
+    for (unsigned iRelevant=0; iRelevant<relevantIndexes.getPeriodicOverlaps().size(); ++iRelevant) {
+        int iOverlap = relevantIndexes.getPeriodicOverlaps()[iRelevant];
         periodicTransmittors[iRelevant] =
-                new DataTransmittor3D<T,Lattice>(dataDistribution.getPeriodicOverlap(iOverlap), dataDistribution);
+                new NonBlockingDataTransmittor3D<T,Lattice>(dataDistribution.getPeriodicOverlap(iOverlap),
+                                                            dataDistribution);
     }
 }
 
 template<typename T, template<typename U> class Lattice>
 ParallelMultiBlockHandler3D<T,Lattice>::~ParallelMultiBlockHandler3D() {
-    for (unsigned iRelevant=0; iRelevant<relevantNormalOverlaps.size(); ++iRelevant) {
+    for (unsigned iRelevant=0; iRelevant<relevantIndexes.getNormalOverlaps().size(); ++iRelevant) {
         delete normalTransmittors[iRelevant];
     }
-    for (unsigned iRelevant=0; iRelevant<relevantPeriodicOverlaps.size(); ++iRelevant) {
+    for (unsigned iRelevant=0; iRelevant<relevantIndexes.getPeriodicOverlaps().size(); ++iRelevant) {
         delete periodicTransmittors[iRelevant];
     }
 }
@@ -346,6 +507,11 @@ int ParallelMultiBlockHandler3D<T,Lattice>::getNz() const {
 template<typename T, template<typename U> class Lattice>
 MultiDataDistribution3D const& ParallelMultiBlockHandler3D<T,Lattice>::getMultiDataDistribution() const {
     return dataDistribution;
+}
+
+template<typename T, template<typename U> class Lattice>
+RelevantIndexes3D const& ParallelMultiBlockHandler3D<T,Lattice>::getRelevantIndexes() const {
+    return relevantIndexes;
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -427,27 +593,27 @@ template<typename T, template<typename U> class Lattice>
 void ParallelMultiBlockHandler3D<T,Lattice>::connectBoundaries (
         ParallelMultiBlockHandler3D<T,Lattice>::BlockVector3D& lattices, bool periodicCommunication ) const
 {
-    for (unsigned iRelevant=0; iRelevant<relevantNormalOverlaps.size(); ++iRelevant) {
+    for (unsigned iRelevant=0; iRelevant<relevantIndexes.getNormalOverlaps().size(); ++iRelevant) {
         normalTransmittors[iRelevant]->prepareTransmission(lattices);
     }
     if (periodicCommunication) {
-        for (unsigned iRelevant=0; iRelevant<relevantPeriodicOverlaps.size(); ++iRelevant) {
+        for (unsigned iRelevant=0; iRelevant<relevantIndexes.getPeriodicOverlaps().size(); ++iRelevant) {
             periodicTransmittors[iRelevant]->prepareTransmission(lattices);
         }
     }
-    for (unsigned iRelevant=0; iRelevant<relevantNormalOverlaps.size(); ++iRelevant) {
+    for (unsigned iRelevant=0; iRelevant<relevantIndexes.getNormalOverlaps().size(); ++iRelevant) {
         normalTransmittors[iRelevant]->executeTransmission(lattices);
     }
     if (periodicCommunication) {
-        for (unsigned iRelevant=0; iRelevant<relevantPeriodicOverlaps.size(); ++iRelevant) {
+        for (unsigned iRelevant=0; iRelevant<relevantIndexes.getPeriodicOverlaps().size(); ++iRelevant) {
             periodicTransmittors[iRelevant]->executeTransmission(lattices);
         }
     }
-    for (unsigned iRelevant=0; iRelevant<relevantNormalOverlaps.size(); ++iRelevant) {
+    for (unsigned iRelevant=0; iRelevant<relevantIndexes.getNormalOverlaps().size(); ++iRelevant) {
         normalTransmittors[iRelevant]->finalizeTransmission(lattices);
     }
     if (periodicCommunication) {
-        for (unsigned iRelevant=0; iRelevant<relevantPeriodicOverlaps.size(); ++iRelevant) {
+        for (unsigned iRelevant=0; iRelevant<relevantIndexes.getPeriodicOverlaps().size(); ++iRelevant) {
             periodicTransmittors[iRelevant]->finalizeTransmission(lattices);
         }
     }
@@ -474,79 +640,56 @@ Cell<T,Lattice> const& ParallelMultiBlockHandler3D<T,Lattice>::
 }
 
 template<typename T, template<typename U> class Lattice>
-int ParallelMultiBlockHandler3D<T,Lattice>::locateLocally(int iX, int iY, int iZ, std::vector<int>& foundId,
+int ParallelMultiBlockHandler3D<T,Lattice>::locateLocally(int iX, int iY, int iZ,
+                                                          std::vector<int>& foundId,
+                                                          std::vector<int>& foundX,
+                                                          std::vector<int>& foundY,
+                                                          std::vector<int>& foundZ,
                                                           bool& hasBulkCell, int guess) const
 {
     hasBulkCell = false;
-    if (!util::contained(iX,iY,iZ,
-                boundingBox.x0, boundingBox.x1, boundingBox.y0, boundingBox.y1,
-                boundingBox.z0, boundingBox.z1) )
-    {
-        return -1;
-    }
-    for (int iBlock=0; iBlock < (int)myBlocks.size(); ++iBlock) {
-        BlockCoordinates3D const& coord = dataDistribution.getBlockParameters(myBlocks[iBlock]).getEnvelope();
-        if (util::contained(iX, iY, iZ, coord.x0, coord.x1, coord.y0, coord.y1, coord.z0, coord.z1)) {
-            BlockCoordinates3D const& bulk =
-                dataDistribution.getBlockParameters(myBlocks[iBlock]).getBulk();
-            if (util::contained(iX, iY, iZ, bulk.x0, bulk.x1, bulk.y0, bulk.y1, bulk.z0, bulk.z1)) {
-                hasBulkCell = true;
-                foundId.insert(foundId.begin(),myBlocks[iBlock]);
+    // First, search in all blocks which are local to the current processor, including in the envelopes.
+    //   These blocks are confined within the relevantIndexes.getBoundingBox(),
+    //   so checking for inclusion in the relevantIndexes.getBoundingBox()
+    //   eliminates most queries and thus enhances efficiency.
+    if (util::contained(iX,iY,iZ, relevantIndexes.getBoundingBox())) {
+        for (unsigned iBlock=0; iBlock < relevantIndexes.getBlocks().size(); ++iBlock) {
+            BlockParameters3D const& parameters = dataDistribution.getBlockParameters(relevantIndexes.getBlocks()[iBlock]);
+            BlockCoordinates3D const& envelope = parameters.getEnvelope();
+            if (util::contained(iX,iY,iZ, envelope)) {
+                BlockCoordinates3D const& bulk = parameters.getBulk();
+                if (util::contained(iX,iY,iZ, bulk)) {
+                    hasBulkCell = true;
+                    foundId.insert(foundId.begin(), relevantIndexes.getBlocks()[iBlock]);
+                    foundX.insert(foundX.begin(), iX-envelope.x0);
+                    foundY.insert(foundY.begin(), iY-envelope.y0);
+                    foundZ.insert(foundZ.begin(), iZ-envelope.z0);
+                }
+                else {
+                    foundId.push_back(relevantIndexes.getBlocks()[iBlock]);
+                    foundX.push_back(iX-envelope.x0);
+                    foundY.push_back(iY-envelope.y0);
+                    foundZ.push_back(iZ-envelope.z0);
+                }
             }
-            foundId.push_back(myBlocks[iBlock]);
+        }
+    }
+    // Here's a subtlety: with periodic boundary conditions, one may need to take into account
+    //   a cell which is not inside the relevantIndexes.getBoundingBox(), because it's at the opposite boundary.
+    //   Therefore, this loop checks all blocks which overlap with the current one by periodicity.
+    for (unsigned iRelevant=0; iRelevant<relevantIndexes.getPeriodicOverlapWithMe().size(); ++iRelevant) {
+        int iOverlap = relevantIndexes.getPeriodicOverlapWithMe()[iRelevant];
+        Overlap3D const& overlap = dataDistribution.getPeriodicOverlap(iOverlap);
+        if (util::contained(iX,iY,iZ, overlap.getOriginalCoordinates())) {
+            int overlapId = overlap.getOverlapId();
+            foundId.push_back(overlapId);
+            BlockParameters3D const& parameters = dataDistribution.getBlockParameters(overlapId);
+            foundX.push_back(parameters.toLocalX(iX-overlap.getShiftX()));
+            foundY.push_back(parameters.toLocalY(iY-overlap.getShiftY()));
+            foundZ.push_back(parameters.toLocalZ(iZ-overlap.getShiftZ()));
         }
     }
     return -1;
-}
-
-
-template<typename T, template<typename U> class Lattice>
-void ParallelMultiBlockHandler3D<T,Lattice>::computeLocallyRelevantBlocks() {
-    for (int iBlock=0; iBlock<dataDistribution.getNumBlocks(); ++iBlock) {
-        if (dataDistribution.getBlockParameters(iBlock).getProcId() == singleton::mpi().getRank()) {
-            BlockCoordinates3D const& newBlock = dataDistribution.getBlockParameters(iBlock).getEnvelope();
-            if (myBlocks.empty()) {
-                boundingBox = newBlock;
-            }
-            else {
-                if (newBlock.x0 < boundingBox.x0) boundingBox.x0 = newBlock.x0;
-                if (newBlock.x1 > boundingBox.x1) boundingBox.x1 = newBlock.x1;
-                if (newBlock.y0 < boundingBox.y0) boundingBox.y0 = newBlock.y0;
-                if (newBlock.y1 > boundingBox.y1) boundingBox.y1 = newBlock.y1;
-                if (newBlock.z0 < boundingBox.z0) boundingBox.z0 = newBlock.z0;
-                if (newBlock.z1 > boundingBox.z1) boundingBox.z1 = newBlock.z1;
-            }
-            myBlocks.push_back(iBlock);
-            nearbyBlocks.push_back(iBlock);
-        }
-    }
-    int myRank = singleton::mpi().getRank();
-    for (int iOverlap=0; iOverlap<dataDistribution.getNumNormalOverlaps(); ++iOverlap) {
-        Overlap3D const& overlap = dataDistribution.getNormalOverlap(iOverlap);
-        int originalProc = dataDistribution.getBlockParameters(overlap.getOriginalId()).getProcId();
-        int overlapProc = dataDistribution.getBlockParameters(overlap.getOverlapId()).getProcId();
-        if (originalProc == myRank) {
-            nearbyBlocks.push_back( overlap.getOverlapId() );
-        }
-        if (originalProc == myRank || overlapProc == myRank) {
-            relevantNormalOverlaps.push_back(iOverlap);
-        }
-    }
-    for (int iOverlap=0; iOverlap<dataDistribution.getNumPeriodicOverlaps(); ++iOverlap) {
-        Overlap3D const& overlap = dataDistribution.getPeriodicOverlap(iOverlap);
-        int originalProc = dataDistribution.getBlockParameters(overlap.getOriginalId()).getProcId();
-        int overlapProc = dataDistribution.getBlockParameters(overlap.getOverlapId()).getProcId();
-        if (originalProc == myRank) {
-            nearbyBlocks.push_back( overlap.getOverlapId() );
-        }
-        if (originalProc == myRank || overlapProc == myRank) {
-            relevantPeriodicOverlaps.push_back(iOverlap);
-        }
-    }
-    // Erase duplicates in nearbyBlocks
-    std::sort(nearbyBlocks.begin(), nearbyBlocks.end());
-    std::vector<int>::iterator newEnd = unique(nearbyBlocks.begin(), nearbyBlocks.end());
-    nearbyBlocks.erase(newEnd, nearbyBlocks.end());
 }
 
 #endif  // PARALLEL_MODE_MPI

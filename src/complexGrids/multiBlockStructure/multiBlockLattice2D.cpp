@@ -24,6 +24,7 @@
  * A 2D multiblock lattice -- template instantiation.
  */
 
+#include "complexGrids/mpiManager/mpiManager.h"
 #include "multiBlockLattice2D.h"
 #include "multiBlockLattice2D.hh"
 #include "core/latticeDescriptors.h"

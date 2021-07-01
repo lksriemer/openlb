@@ -35,16 +35,16 @@ namespace IndexOrdering {
 template<typename T>
 struct DataSerializer {
     virtual ~DataSerializer() { }
-    virtual int getSize() const =0;
-    virtual const T* getNextDataBuffer(int& bufferSize) const =0;
+    virtual size_t getSize() const =0;
+    virtual const T* getNextDataBuffer(size_t& bufferSize) const =0;
     virtual bool isEmpty() const =0;
 };
 
 template<typename T>
 struct DataUnSerializer {
     virtual ~DataUnSerializer() { }
-    virtual int getSize() const =0;
-    virtual T* getNextDataBuffer(int& bufferSize) =0;
+    virtual size_t getSize() const =0;
+    virtual T* getNextDataBuffer(size_t& bufferSize) =0;
     virtual void commitData() =0;
     virtual bool isFull() const =0;
 };
@@ -53,13 +53,25 @@ template<typename T>
 class ScalingSerializer : public DataSerializer<T> {
 public:
     ScalingSerializer(DataSerializer<T> const& baseSerializer_, T scalingFactor_);
-    virtual int getSize() const;
-    virtual const T* getNextDataBuffer(int& bufferSize) const;
+    virtual size_t getSize() const;
+    virtual const T* getNextDataBuffer(size_t& bufferSize) const;
     virtual bool isEmpty() const;
 private:
     DataSerializer<T> const& baseSerializer;
     mutable std::vector<T> scaledBuffer;
     T scalingFactor;
+};
+
+template<typename T, typename TConv>
+class TypeConversionSerializer : public DataSerializer<TConv> {
+public:
+    TypeConversionSerializer(DataSerializer<T> const& baseSerializer_);
+    virtual size_t getSize() const;
+    virtual const TConv* getNextDataBuffer(size_t& bufferSize) const;
+    virtual bool isEmpty() const;
+private:
+    DataSerializer<T> const& baseSerializer;
+    mutable std::vector<TConv> convBuffer;
 };
 
 template<typename T>

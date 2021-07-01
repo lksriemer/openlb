@@ -54,7 +54,7 @@ public:
     virtual int getNx() const { return nx; }
     virtual int getNy() const { return ny; }
     virtual int getNz() const { return nz; }
-    virtual int getSize() const { return nx*ny*nz; }
+    virtual size_t getSize() const { return (size_t)nx*(size_t)ny*(size_t)nz; }
     virtual T& get(int iX, int iY, int iZ) {
         OLB_PRECONDITION(iX>=0 && iX<nx);
         OLB_PRECONDITION(iY>=0 && iY<ny);
@@ -200,8 +200,8 @@ public:
     SequentialScalarFieldSerializer3D(ScalarField3D<T> const& scalarField_,
                                       int x0_, int x1_, int y0_, int y1_, int z0_, int z1_,
                                       IndexOrdering::OrderingT ordering_);
-    virtual int getSize() const;
-    virtual const T* getNextDataBuffer(int& bufferSize) const;
+    virtual size_t getSize() const;
+    virtual const T* getNextDataBuffer(size_t& bufferSize) const;
     virtual bool isEmpty() const;
 private:
     ScalarField3D<T> const& scalarField;
@@ -219,8 +219,8 @@ public:
     SequentialScalarFieldUnSerializer3D(ScalarField3D<T>& scalarField_,
                                         int x0_, int x1_, int y0_, int y1_, int z0_, int z1_,
                                         IndexOrdering::OrderingT ordering_);
-    virtual int getSize() const;
-    virtual T* getNextDataBuffer(int& bufferSize);
+    virtual size_t getSize() const;
+    virtual T* getNextDataBuffer(size_t& bufferSize);
     virtual void commitData();
     virtual bool isFull() const;
 private:
@@ -239,8 +239,8 @@ public:
     SequentialTensorFieldSerializer3D(TensorField3D<T,nDim> const& tensorField_,
                                       int x0_, int x1_, int y0_, int y1_, int z0_, int z1_,
                                       IndexOrdering::OrderingT ordering_);
-    virtual int getSize() const;
-    virtual const T* getNextDataBuffer(int& bufferSize) const;
+    virtual size_t getSize() const;
+    virtual const T* getNextDataBuffer(size_t& bufferSize) const;
     virtual bool isEmpty() const;
 private:
     TensorField3D<T,nDim> const& tensorField;
@@ -258,8 +258,8 @@ public:
     SequentialTensorFieldUnSerializer3D(TensorField3D<T,nDim>& tensorField_,
                                         int x0_, int x1_, int y0_, int y1_, int z0_, int z1_,
                                         IndexOrdering::OrderingT ordering_);
-    virtual int getSize() const;
-    virtual T* getNextDataBuffer(int& bufferSize);
+    virtual size_t getSize() const;
+    virtual T* getNextDataBuffer(size_t& bufferSize);
     virtual void commitData();
     virtual bool isFull() const;
 private:

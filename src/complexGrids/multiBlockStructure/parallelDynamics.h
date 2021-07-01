@@ -39,7 +39,7 @@ namespace olb {
 template<typename T, template<typename U> class Lattice>
 class ParallelDynamics : public Dynamics<T,Lattice> {
 public:
-    ParallelDynamics(std::vector<Cell<T,Lattice>*>& baseCell_, bool hasBulkCell_);
+    ParallelDynamics(std::vector<Cell<T,Lattice>*>& baseCells_, bool hasBulkCell_);
     virtual Dynamics<T,Lattice>* clone() const;
     virtual T computeEquilibrium(int iPop, T rho, const T u[Lattice<T>::d], T uSqr) const;
     virtual void iniEquilibrium(Cell<T,Lattice>& cell, T rho, const T u[Lattice<T>::d]);
@@ -76,15 +76,17 @@ public:
     virtual void defineExternalField(Cell<T,Lattice>& cell, int pos, int size, const T* ext);
     virtual T getOmega() const;
     virtual void setOmega(T omega_);
+    virtual T getParameter(int whichParameter) const;
+    virtual void setParameter(int whichParameter, T value);
 private:
-    std::vector<Cell<T,Lattice>*>& baseCell;
+    std::vector<Cell<T,Lattice>*>& baseCells;
     bool hasBulkCell;
 };
 
 template<typename T, template<typename U> class Lattice>
 class ConstParallelDynamics : public Dynamics<T,Lattice> {
 public:
-    ConstParallelDynamics(std::vector<Cell<T,Lattice> const*>& baseCell_, bool hasBulkCell_);
+    ConstParallelDynamics(std::vector<Cell<T,Lattice> const*>& baseCells_, bool hasBulkCell_);
     virtual Dynamics<T,Lattice>* clone() const;
     virtual T computeEquilibrium(int iPop, T rho, const T u[Lattice<T>::d], T uSqr) const;
     virtual void iniEquilibrium(Cell<T,Lattice>& cell, T rho, const T u[Lattice<T>::d]);
@@ -122,8 +124,10 @@ public:
             Cell<T,Lattice>& cell, int pos, int size, const T* ext);
     virtual T getOmega() const;
     virtual void setOmega(T omega_);
+    virtual T getParameter(int whichParameter) const;
+    virtual void setParameter(int whichParameter, T value);
 private:
-    std::vector<Cell<T,Lattice> const*>& baseCell;
+    std::vector<Cell<T,Lattice> const*>& baseCells;
     bool hasBulkCell;
 };
 

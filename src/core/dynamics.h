@@ -91,7 +91,7 @@ struct Dynamics {
     virtual void computeRhoU (
         Cell<T,Lattice> const& cell,
         T& rho, T u[Lattice<T>::d]) const =0;
-    /// Compute all momenta on the celll, up to second order.
+    /// Compute all momenta on the cell, up to second order.
     /** \param rho particle density
      *  \param u fluid velocity
      *  \param pi stress tensor
@@ -125,7 +125,7 @@ struct Dynamics {
     virtual void defineRhoU (
         Cell<T,Lattice>& cell,
         T rho, const T u[Lattice<T>::d]) =0;
-    /// Define all momenta on the celll, up to second order.
+    /// Define all momenta on the cell, up to second order.
     /** \param rho particle density
      *  \param u fluid velocity
      *  \param pi stress tensor
@@ -181,7 +181,7 @@ struct Momenta {
     virtual void computeRhoU (
         Cell<T,Lattice> const& cell,
         T& rho, T u[Lattice<T>::d]) const;
-    /// Compute all momenta on the celll, up to second order.
+    /// Compute all momenta on the cell, up to second order.
     virtual void computeAllMomenta (
         Cell<T,Lattice> const& cell,
         T& rho, T u[Lattice<T>::d],
@@ -195,7 +195,7 @@ struct Momenta {
     virtual void defineRhoU (
         Cell<T,Lattice>& cell,
         T rho, const T u[Lattice<T>::d]);
-    /// Define all momenta on the celll, up to second order.
+    /// Define all momenta on the cell, up to second order.
     virtual void defineAllMomenta (
         Cell<T,Lattice>& cell,
         T rho, const T u[Lattice<T>::d],
@@ -470,7 +470,7 @@ struct BulkMomenta : public Momenta<T,Lattice> {
     virtual void computeRhoU (
         Cell<T,Lattice> const& cell,
         T& rho, T u[Lattice<T>::d]) const;
-    /// Compute all momenta on the celll, up to second order.
+    /// Compute all momenta on the cell, up to second order.
     virtual void computeAllMomenta (
         Cell<T,Lattice> const& cell,
         T& rho, T u[Lattice<T>::d],
@@ -484,7 +484,50 @@ struct BulkMomenta : public Momenta<T,Lattice> {
     virtual void defineRhoU (
         Cell<T,Lattice>& cell,
         T rho, const T u[Lattice<T>::d]);
-    /// Define all momenta on the celll, up to second order.
+    /// Define all momenta on the cell, up to second order.
+    virtual void defineAllMomenta (
+        Cell<T,Lattice>& cell,
+        T rho, const T u[Lattice<T>::d],
+        const T pi[util::TensorVal<Lattice<T> >::n] );
+};
+
+/// Velocity is stored in external scalar (and computed e.g. in a PostProcessor)
+template<typename T, template<typename U> class Lattice>
+struct ExternalVelocityMomenta : public Momenta<T,Lattice> {
+    /// Compute particle density on the cell.
+    virtual T computeRho(Cell<T,Lattice> const& cell) const;
+    /// Compute fluid velocity on the cell.
+    virtual void computeU (
+        Cell<T,Lattice> const& cell,
+        T u[Lattice<T>::d] ) const;
+    /// Compute fluid momentum on the cell.
+    virtual void computeJ (
+        Cell<T,Lattice> const& cell,
+        T j[Lattice<T>::d] ) const;
+    /// Compute components of the stress tensor on the cell.
+    virtual void computeStress (
+        Cell<T,Lattice> const& cell, 
+        T rho, const T u[Lattice<T>::d],
+        T pi[util::TensorVal<Lattice<T> >::n] ) const;
+    /// Compute fluid velocity and particle density on the cell.
+    virtual void computeRhoU (
+        Cell<T,Lattice> const& cell,
+        T& rho, T u[Lattice<T>::d]) const;
+    /// Compute all momenta on the cell, up to second order.
+    virtual void computeAllMomenta (
+        Cell<T,Lattice> const& cell,
+        T& rho, T u[Lattice<T>::d],
+        T pi[util::TensorVal<Lattice<T> >::n] ) const;
+    /// Set particle density on the cell.
+    virtual void defineRho(Cell<T,Lattice>& cell, T rho);
+    /// Set fluid velocity on the cell.
+    virtual void defineU(Cell<T,Lattice>& cell,
+                         const T u[Lattice<T>::d]);
+    /// Define fluid velocity and particle density on the cell.
+    virtual void defineRhoU (
+        Cell<T,Lattice>& cell,
+        T rho, const T u[Lattice<T>::d]);
+    /// Define all momenta on the cell, up to second order.
     virtual void defineAllMomenta (
         Cell<T,Lattice>& cell,
         T rho, const T u[Lattice<T>::d],
@@ -502,6 +545,8 @@ struct BulkMomenta : public Momenta<T,Lattice> {
 template<typename T, template<typename U> class Lattice>
 class BounceBack : public Dynamics<T,Lattice> {
 public:
+    /// You may fix a fictitious density value on bounce-back nodes via the constructor.
+    BounceBack(T rho_=T());
     /// Clone the object on its dynamic type.
     virtual BounceBack<T,Lattice>* clone() const;
     /// Yields 0;
@@ -553,6 +598,8 @@ public:
     virtual T getOmega() const;
     /// Does nothing
     virtual void setOmega(T omega_);
+private:
+    T rho;
 };
 
 /// Implementation of a "dead cell" that does nothing
@@ -616,6 +663,9 @@ namespace instances {
 
     template<typename T, template<typename U> class Lattice>
     BulkMomenta<T,Lattice>& getBulkMomenta();
+
+    template<typename T, template<typename U> class Lattice>
+    ExternalVelocityMomenta<T,Lattice>& getExternalVelocityMomenta();
 
     template<typename T, template<typename U> class Lattice>
     BounceBack<T,Lattice>& getBounceBack();

@@ -32,29 +32,10 @@
 namespace olb {
 namespace descriptors {
 
-    // D2Q9 ////////////////////////////////////////////////////////////
+    // MRT D2Q9 ////////////////////////////////////////////////////////////
 
     template<typename T>
-    const int MRTD2Q9Descriptor<T>::c
-        [MRTD2Q9Descriptor<T>::q][MRTD2Q9Descriptor<T>::d] =
-        {
-            { 0, 0},
-            {-1, 1}, {-1, 0}, {-1,-1}, { 0,-1},
-            { 1,-1}, { 1, 0}, { 1, 1}, { 0, 1}
-        };
-
-    template<typename T>
-    const T MRTD2Q9Descriptor<T>::t[MRTD2Q9Descriptor<T>::q] =
-        {
-            (T)4/(T)9, (T)1/(T)36, (T)1/(T)9, (T)1/(T)36, (T)1/(T)9,
-                       (T)1/(T)36, (T)1/(T)9, (T)1/(T)36, (T)1/(T)9
-        };
-
-    template<typename T>
-    const T MRTD2Q9Descriptor<T>::invCs2 = (T)3;
-
-    template<typename T>
-    const T MRTD2Q9Descriptor<T>::M[MRTD2Q9Descriptor<T>::q][MRTD2Q9Descriptor<T>::q] =
+    const T MRTD2Q9DescriptorBase<T>::M[MRTD2Q9DescriptorBase<T>::q_][MRTD2Q9DescriptorBase<T>::q_] =
         {
             {(T)1, (T)1, (T)1, (T)1, (T)1, (T)1, (T)1, (T)1, (T)1},
             {-(T)4,(T)2,-(T)1, (T)2,-(T)1, (T)2,-(T)1, (T)2,-(T)1},
@@ -68,7 +49,7 @@ namespace descriptors {
         };
     
     template<typename T>
-    const T MRTD2Q9Descriptor<T>::invM[MRTD2Q9Descriptor<T>::q][MRTD2Q9Descriptor<T>::q] =
+    const T MRTD2Q9DescriptorBase<T>::invM[MRTD2Q9DescriptorBase<T>::q_][MRTD2Q9DescriptorBase<T>::q_] =
         {
             {(T)1/(T)9, -(T)1/(T)9, (T)1/(T)9, T(), T(), T(), T(), T(), T()}, 
             {(T)1/(T)9, (T)1/(T)18, (T)1/(T)36, -(T)1/(T)6, -(T)1/(T)12, (T)1/(T)6, (T)1/(T)12, T(), -(T)1/(T)4}, 
@@ -82,51 +63,20 @@ namespace descriptors {
         };
         
     template<typename T>
-    const T MRTD2Q9Descriptor<T>::S[MRTD2Q9Descriptor<T>::q] =
+    const T MRTD2Q9DescriptorBase<T>::S[MRTD2Q9DescriptorBase<T>::q_] =
     { T(), (T)1.1, (T)1.1, T(), (T)1.1, T(), (T)1.1, T(), T() };
     // s7=s8 to have a shear viscosity nu
     // and the bulk viscosity depends on s2.
     
      
     template<typename T>
-    const int MRTD2Q9Descriptor<T>::shearViscIndexes[MRTD2Q9Descriptor<T>::shearIndexes] = {7, 8};
+    const int MRTD2Q9DescriptorBase<T>::shearViscIndexes[MRTD2Q9DescriptorBase<T>::shearIndexes] = {7, 8};
+
     
-    // D3Q19 ////////////////////////////////////////////////////////////
+    // MRT D3Q19 ////////////////////////////////////////////////////////////
 
     template<typename T>
-    const int MRTD3Q19Descriptor<T>::c
-        [MRTD3Q19Descriptor<T>::q][MRTD3Q19Descriptor<T>::d] =
-        {
-            { 0, 0, 0},
-
-            {-1, 0, 0}, { 0,-1, 0}, { 0, 0,-1},
-            {-1,-1, 0}, {-1, 1, 0}, {-1, 0,-1},
-            {-1, 0, 1}, { 0,-1,-1}, { 0,-1, 1},
-
-            { 1, 0, 0}, { 0, 1, 0}, { 0, 0, 1},
-            { 1, 1, 0}, { 1,-1, 0}, { 1, 0, 1},
-            { 1, 0,-1}, { 0, 1, 1}, { 0, 1,-1}
-        }; 
- 
-    template<typename T>
-    const T MRTD3Q19Descriptor<T>::t[MRTD3Q19Descriptor<T>::q] =
-        {
-            (T)1/(T)3,
-
-            (T)1/(T)18, (T)1/(T)18, (T)1/(T)18, 
-            (T)1/(T)36, (T)1/(T)36, (T)1/(T)36,
-            (T)1/(T)36, (T)1/(T)36, (T)1/(T)36,
-
-            (T)1/(T)18, (T)1/(T)18, (T)1/(T)18, 
-            (T)1/(T)36, (T)1/(T)36, (T)1/(T)36,
-            (T)1/(T)36, (T)1/(T)36, (T)1/(T)36
-        };
-
-    template<typename T>
-    const T MRTD3Q19Descriptor<T>::invCs2 = (T)3;
-
-    template<typename T>
-    const T MRTD3Q19Descriptor<T>::M[MRTD3Q19Descriptor<T>::q][MRTD3Q19Descriptor<T>::q] =
+    const T MRTD3Q19DescriptorBase<T>::M[MRTD3Q19DescriptorBase<T>::q_][MRTD3Q19DescriptorBase<T>::q_] =
         {
  /*0*/      {(T)1, 
              (T)1, (T)1, (T)1, (T)1, (T)1, (T)1, (T)1, (T)1, (T)1, 
@@ -188,7 +138,7 @@ namespace descriptors {
         };
     
     template<typename T>
-    const T MRTD3Q19Descriptor<T>::invM[MRTD3Q19Descriptor<T>::q][MRTD3Q19Descriptor<T>::q] =
+    const T MRTD3Q19DescriptorBase<T>::invM[MRTD3Q19DescriptorBase<T>::q_][MRTD3Q19DescriptorBase<T>::q_] =
         {
 /*0*/       {(T)1/(T)19,
              -(T)5/(T)399,(T)1/(T)21,T(),T(),T(),T(),T(),T(),
@@ -268,7 +218,7 @@ namespace descriptors {
         };
         
     template<typename T>
-    const T MRTD3Q19Descriptor<T>::S[MRTD3Q19Descriptor<T>::q] =
+    const T MRTD3Q19DescriptorBase<T>::S[MRTD3Q19DescriptorBase<T>::q_] =
     {
 /*s0*/  T(), // rho (conserved)
 /*s1*/  (T)1.19, 
@@ -292,7 +242,7 @@ namespace descriptors {
     };
     
     template<typename T>
-    const int MRTD3Q19Descriptor<T>::shearViscIndexes[MRTD3Q19Descriptor<T>::shearIndexes] = 
+    const int MRTD3Q19DescriptorBase<T>::shearViscIndexes[MRTD3Q19DescriptorBase<T>::shearIndexes] = 
         {9, 11, 13, 14, 15};
 
 }  // namespace descriptors

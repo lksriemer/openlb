@@ -94,6 +94,15 @@ namespace util {
         return uSqr;
     }
 
+    template<typename T, int d>
+    T scalarProduct(const T u1[d], const T u2[d]) {
+        T prod = T();
+        for (int iD=0; iD<d; ++iD) {
+            prod += u1[iD]*u2[iD];
+        }
+        return prod;
+    }
+
     /// Compute number of elements of a symmetric d-dimensional tensor
     template <typename Descriptor> struct TensorVal {
         static const int n = 
@@ -157,8 +166,9 @@ namespace util {
         {
             indices = util::subIndex<Descriptor,direction,orientation>();
 
-            for (unsigned iPop = 0; iPop < indices.size(); ++iPop)
+            for (unsigned iPop = 0; iPop < indices.size(); ++iPop) {
                 indices[iPop] = util::opposite<Descriptor>(indices[iPop]);
+            }
 
         }
 

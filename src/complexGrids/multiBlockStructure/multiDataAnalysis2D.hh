@@ -94,6 +94,7 @@ void MultiDataAnalysis2D<T,Lattice>::reset() const {
 
 template<typename T, template<typename U> class Lattice>
 TensorFieldBase2D<T,2> const& MultiDataAnalysis2D<T,Lattice>::getVelocity() const {
+    fields.velField.construct();
     for (unsigned iBlock=0; iBlock<perBlockAnalysis.size(); ++iBlock) {
         if (perBlockAnalysis[iBlock]) {
             perBlockAnalysis[iBlock] -> getVelocity();
@@ -104,6 +105,7 @@ TensorFieldBase2D<T,2> const& MultiDataAnalysis2D<T,Lattice>::getVelocity() cons
 
 template<typename T, template<typename U> class Lattice>
 TensorFieldBase2D<T,2> const& MultiDataAnalysis2D<T,Lattice>::getMomentum() const {
+    fields.momentumField.construct();
     for (unsigned iBlock=0; iBlock<perBlockAnalysis.size(); ++iBlock) {
         if (perBlockAnalysis[iBlock]) {
             perBlockAnalysis[iBlock] -> getMomentum();
@@ -114,6 +116,7 @@ TensorFieldBase2D<T,2> const& MultiDataAnalysis2D<T,Lattice>::getMomentum() cons
 
 template<typename T, template<typename U> class Lattice>
 ScalarFieldBase2D<T> const& MultiDataAnalysis2D<T,Lattice>::getPressure() const {
+    fields.pressureField.construct();
     for (unsigned iBlock=0; iBlock<perBlockAnalysis.size(); ++iBlock) {
         if (perBlockAnalysis[iBlock]) {
             perBlockAnalysis[iBlock] -> getPressure();
@@ -124,6 +127,7 @@ ScalarFieldBase2D<T> const& MultiDataAnalysis2D<T,Lattice>::getPressure() const 
 
 template<typename T, template<typename U> class Lattice>
 ScalarFieldBase2D<T> const& MultiDataAnalysis2D<T,Lattice>::getVelocityNorm() const {
+    fields.velNormField.construct();
     for (unsigned iBlock=0; iBlock<perBlockAnalysis.size(); ++iBlock) {
         if (perBlockAnalysis[iBlock]) {
             perBlockAnalysis[iBlock] -> getVelocityNorm();
@@ -134,6 +138,7 @@ ScalarFieldBase2D<T> const& MultiDataAnalysis2D<T,Lattice>::getVelocityNorm() co
 
 template<typename T, template<typename U> class Lattice>
 ScalarFieldBase2D<T> const& MultiDataAnalysis2D<T,Lattice>::getVorticity() const {
+    fields.vortField.construct();
     for (unsigned iBlock=0; iBlock<perBlockAnalysis.size(); ++iBlock) {
         if (perBlockAnalysis[iBlock]) {
             perBlockAnalysis[iBlock] -> getVorticity();
@@ -144,6 +149,7 @@ ScalarFieldBase2D<T> const& MultiDataAnalysis2D<T,Lattice>::getVorticity() const
 
 template<typename T, template<typename U> class Lattice>
 TensorFieldBase2D<T,3> const& MultiDataAnalysis2D<T,Lattice>::getStrainRate() const {
+    fields.strainRateField.construct();
     for (unsigned iBlock=0; iBlock<perBlockAnalysis.size(); ++iBlock) {
         if (perBlockAnalysis[iBlock]) {
             perBlockAnalysis[iBlock] -> getStrainRate();
@@ -154,6 +160,7 @@ TensorFieldBase2D<T,3> const& MultiDataAnalysis2D<T,Lattice>::getStrainRate() co
 
 template<typename T, template<typename U> class Lattice>
 TensorFieldBase2D<T,3> const& MultiDataAnalysis2D<T,Lattice>::getStrainRateFromStress() const {
+    fields.stressField.construct();
     for (unsigned iBlock=0; iBlock<perBlockAnalysis.size(); ++iBlock) {
         if (perBlockAnalysis[iBlock]) {
             perBlockAnalysis[iBlock] -> getStrainRateFromStress();
@@ -164,6 +171,7 @@ TensorFieldBase2D<T,3> const& MultiDataAnalysis2D<T,Lattice>::getStrainRateFromS
 
 template<typename T, template<typename U> class Lattice>
 ScalarFieldBase2D<T> const& MultiDataAnalysis2D<T,Lattice>::getDivRhoU() const {
+    fields.divRhoUField.construct();
     for (unsigned iBlock=0; iBlock<perBlockAnalysis.size(); ++iBlock) {
         if (perBlockAnalysis[iBlock]) {
             perBlockAnalysis[iBlock] -> getDivRhoU();
@@ -174,6 +182,7 @@ ScalarFieldBase2D<T> const& MultiDataAnalysis2D<T,Lattice>::getDivRhoU() const {
 
 template<typename T, template<typename U> class Lattice>
 ScalarFieldBase2D<T> const& MultiDataAnalysis2D<T,Lattice>::getPoissonTerm() const {
+    fields.poissonField.construct();
     for (unsigned iBlock=0; iBlock<perBlockAnalysis.size(); ++iBlock) {
         if (perBlockAnalysis[iBlock]) {
             perBlockAnalysis[iBlock] -> getPoissonTerm();
@@ -184,6 +193,7 @@ ScalarFieldBase2D<T> const& MultiDataAnalysis2D<T,Lattice>::getPoissonTerm() con
 
 template<typename T, template<typename U> class Lattice>
 TensorFieldBase2D<T, Lattice<T>::q > const& MultiDataAnalysis2D<T,Lattice>::getPopulations() const {
+    fields.populationField.construct();
     for (unsigned iBlock=0; iBlock<perBlockAnalysis.size(); ++iBlock) {
         if (perBlockAnalysis[iBlock]) {
             perBlockAnalysis[iBlock] -> getPopulations();

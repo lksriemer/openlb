@@ -26,10 +26,11 @@
 #ifndef MULTI_BLOCK_HANDLER_3D_H
 #define MULTI_BLOCK_HANDLER_3D_H
 
-#include <vector>
+#include "complexGrids/mpiManager/mpiManager.h"
 #include "core/blockLattice3D.h"
 #include "core/cell.h"
 #include "multiDataGeometry3D.h"
+#include <vector>
 
 
 namespace olb {
@@ -43,6 +44,7 @@ struct MultiBlockHandler3D {
     virtual int getNy() const =0;
     virtual int getNz() const =0;
     virtual MultiDataDistribution3D const& getMultiDataDistribution() const =0;
+    virtual RelevantIndexes3D const& getRelevantIndexes() const =0;
     virtual bool getLocalEnvelope(int iBlock, int& lx, int& ly, int& lz) const =0;
     virtual T reduceSum(T localSum) const =0;
     virtual T reduceAverage(T localAverage, T localWeight) const =0;
@@ -57,7 +59,8 @@ struct MultiBlockHandler3D {
     virtual Cell<T,Lattice> const& getDistributedCell(std::vector<Cell<T,Lattice> const*>& baseCell,
                                                       bool hasBulkCell) const =0;
     virtual int locateLocally(int iX, int iY, int iZ, std::vector<int>& foundId,
-                              bool& hasBulkCell, int guess=0) const =0;
+                              std::vector<int>& foundX, std::vector<int>& foundY,
+                              std::vector<int>& foundZ, bool& hasBulkCell, int guess=0) const =0;
 };
 
 template<typename T, template<typename U> class Lattice>
@@ -70,6 +73,7 @@ public:
     virtual int getNy() const;
     virtual int getNz() const;
     virtual MultiDataDistribution3D const& getMultiDataDistribution() const;
+    virtual RelevantIndexes3D const& getRelevantIndexes() const;
     virtual bool getLocalEnvelope(int iBlock, int& lx, int& ly, int& lz) const;
     virtual T reduceSum(T localSum) const;
     virtual T reduceAverage(T localAverage, T localWeight) const;
@@ -84,11 +88,13 @@ public:
     virtual Cell<T,Lattice> const& getDistributedCell(std::vector<Cell<T,Lattice> const*>& baseCell,
                                                       bool hasBulkCell) const;
     virtual int locateLocally(int iX, int iY, int iZ, std::vector<int>& foundId,
-                              bool& hasBulkCell, int guess=0) const;
+                              std::vector<int>& foundX, std::vector<int>& foundY,
+                              std::vector<int>& foundZ, bool& hasBulkCell, int guess=0) const;
 private:
     void copyOverlap(Overlap3D const& overlap, BlockVector3D& lattices) const;
 private:
     MultiDataDistribution3D dataDistribution;
+    RelevantIndexes3D       relevantIndexes;
 };
 
 
@@ -99,17 +105,50 @@ class DataTransmittor3D {
 public:
     typedef std::vector<BlockLattice3D<T,Lattice>*> BlockVector3D;
 public:
-    DataTransmittor3D(Overlap3D const& overlap, MultiDataDistribution3D const& dataDistribution);
-    void prepareTransmission(BlockVector3D& lattices);
-    void executeTransmission(BlockVector3D& lattices);
-    void finalizeTransmission(BlockVector3D& lattices);
+    virtual ~DataTransmittor3D() { }
+    virtual void prepareTransmission(BlockVector3D& lattices) =0;
+    virtual void executeTransmission(BlockVector3D& lattices) =0;
+    virtual void finalizeTransmission(BlockVector3D& lattices) =0;
+};
+
+template<typename T, template<typename U> class Lattice>
+class BlockingDataTransmittor3D : public DataTransmittor3D<T,Lattice> {
+public:
+    typedef std::vector<BlockLattice3D<T,Lattice>*> BlockVector3D;
+public:
+    BlockingDataTransmittor3D(Overlap3D const& overlap, MultiDataDistribution3D const& dataDistribution);
+    virtual void prepareTransmission(BlockVector3D& lattices);
+    virtual void executeTransmission(BlockVector3D& lattices);
+    virtual void finalizeTransmission(BlockVector3D& lattices);
 private:
     std::vector<T> buffer;
     int originalId, overlapId;
     int originalProc, overlapProc;
     BlockCoordinates3D originalCoords, overlapCoords;
-    int sizeOfCell, bufferSize;
+    int sizeOfCell;
+    int bufferSize;
     enum {sender, receiver, senderAndReceiver, nothing} myRole;
+};
+
+template<typename T, template<typename U> class Lattice>
+class NonBlockingDataTransmittor3D : public DataTransmittor3D<T,Lattice> {
+public:
+    typedef std::vector<BlockLattice3D<T,Lattice>*> BlockVector3D;
+public:
+    NonBlockingDataTransmittor3D(Overlap3D const& overlap, MultiDataDistribution3D const& dataDistribution);
+    virtual void prepareTransmission(BlockVector3D& lattices);
+    virtual void executeTransmission(BlockVector3D& lattices);
+    virtual void finalizeTransmission(BlockVector3D& lattices);
+private:
+    std::vector<T> buffer;
+    int originalId, overlapId;
+    int originalProc, overlapProc;
+    BlockCoordinates3D originalCoords, overlapCoords;
+    int sizeOfCell;
+    int bufferSize;
+    enum {sender, receiver, senderAndReceiver, nothing} myRole;
+    MPI_Request request;
+    MPI_Status  status;
 };
 
 template<typename T, template<typename U> class Lattice>
@@ -123,6 +162,7 @@ public:
     virtual int getNy() const;
     virtual int getNz() const;
     virtual MultiDataDistribution3D const& getMultiDataDistribution() const;
+    virtual RelevantIndexes3D const& getRelevantIndexes() const;
     virtual bool getLocalEnvelope(int iBlock, int& lx, int& ly, int& lz) const;
     virtual T reduceSum(T localSum) const;
     virtual T reduceAverage(T localAverage, T localWeight) const;
@@ -137,16 +177,11 @@ public:
     virtual Cell<T,Lattice> const& getDistributedCell(std::vector<Cell<T,Lattice> const*>& baseCell,
                                                       bool hasBulkCell) const;
     virtual int locateLocally(int iX, int iY, int iZ, std::vector<int>& foundId,
-                              bool& hasBulkCell, int guess=0) const;
-private:
-    void computeLocallyRelevantBlocks();
+                              std::vector<int>& foundX, std::vector<int>& foundY,
+                              std::vector<int>& foundZ, bool& hasBulkCell, int guess=0) const;
 private:
     MultiDataDistribution3D dataDistribution;
-    std::vector<int> myBlocks;
-    std::vector<int> nearbyBlocks;
-    std::vector<int> relevantNormalOverlaps;
-    std::vector<int> relevantPeriodicOverlaps;
-    BlockCoordinates3D boundingBox;
+    RelevantIndexes3D       relevantIndexes;
     std::vector<DataTransmittor3D<T,Lattice>*> normalTransmittors;
     std::vector<DataTransmittor3D<T,Lattice>*> periodicTransmittors;
     mutable Cell<T,Lattice> distributedCell;

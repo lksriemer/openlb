@@ -36,102 +36,267 @@
 
 namespace olb {
 
-/// All helper functions are inside this structure
+
+// Forward declarations
+template<typename T, class Descriptor> struct lbDynamicsHelpers;
+template<typename T, template<typename U> class Lattice> struct lbExternalHelpers;
+template<typename T, template<typename U> class Lattice> struct lbLatticeHelpers;
+
+/// This structure forwards the calls to the appropriate helper class
 template<typename T, template<typename U> class Lattice>
 struct lbHelpers {
-    /// Computation of equilibrium distribution
-    static T equilibrium( int iPop, T rho, const T u[Lattice<T>::d],
-                          const T uSqr )
-    {
-        T c_u = T();
-        for (int iD=0; iD < Lattice<T>::d; ++iD) {
-           c_u += Lattice<T>::c[iPop][iD]*u[iD];
-        }
-        return rho * Lattice<T>::t[iPop] * (
-               (T)1 + Lattice<T>::invCs2 * c_u +
-               Lattice<T>::invCs2 * Lattice<T>::invCs2/(T)2 * c_u*c_u -
-               Lattice<T>::invCs2/(T)2 * uSqr
-           ) - Lattice<T>::t[iPop];
+
+    static T equilibrium(int iPop, T rho, const T u[Lattice<T>::d], const T uSqr) {
+        return lbDynamicsHelpers<T,typename Lattice<T>::BaseDescriptor>
+            ::equilibrium(iPop, rho, u, uSqr);
     }
 
-    static T incEquilibrium( int iPop, const T j[Lattice<T>::d],
+    static T incEquilibrium(int iPop, const T j[Lattice<T>::d], const T jSqr, const T pressure) {
+        return lbDynamicsHelpers<T,typename Lattice<T>::BaseDescriptor>
+            ::incEquilibrium(iPop, j, jSqr, pressure);
+    }
+
+    static void computeFneq ( Cell<T,Lattice> const& cell,
+                              T fNeq[Lattice<T>::q], T rho, const T u[Lattice<T>::d] )
+    {
+        lbDynamicsHelpers<T,typename Lattice<T>::BaseDescriptor>
+            ::computeFneq(&cell[0], fNeq, rho, u);
+    }
+
+    static T bgkCollision(Cell<T,Lattice>& cell, T rho, const T u[Lattice<T>::d], T omega)
+    {
+        return lbDynamicsHelpers<T,typename Lattice<T>::BaseDescriptor>
+            ::bgkCollision(&cell[0], rho, u, omega);
+    }
+
+    static T incBgkCollision(Cell<T,Lattice>& cell, T pressure, const T j[Lattice<T>::d], T omega)
+    {
+        return lbDynamicsHelpers<T,typename Lattice<T>::BaseDescriptor>
+            ::incBgkCollision(&cell[0], pressure, j, omega);
+    }
+
+    static T constRhoBgkCollision(Cell<T,Lattice>& cell,
+                                  T rho, const T u[Lattice<T>::d], T ratioRho, T omega)
+    {
+        return lbDynamicsHelpers<T,typename Lattice<T>::BaseDescriptor>
+                   ::constRhoBgkCollision(&cell[0], rho, u, ratioRho, omega);
+    }
+
+    static T computeRho(Cell<T,Lattice> const& cell) {
+        return lbDynamicsHelpers<T,typename Lattice<T>::BaseDescriptor>
+            ::computeRho(&cell[0]);
+    }
+
+    static void computeJ(Cell<T,Lattice> const& cell, T j[Lattice<T>::d] ) {
+        lbDynamicsHelpers<T,typename Lattice<T>::BaseDescriptor>
+            ::computeJ(&cell[0], j);
+    }
+
+    static void computeRhoU(Cell<T,Lattice> const& cell, T& rho, T u[Lattice<T>::d])
+    {
+        lbDynamicsHelpers<T,typename Lattice<T>::BaseDescriptor>
+            ::computeRhoU(&cell[0], rho, u);
+    }
+
+    static void computeStress(Cell<T,Lattice> const& cell, T rho, const T u[Lattice<T>::d],
+                              T pi[util::TensorVal<Lattice<T> >::n] )
+    {
+        lbDynamicsHelpers<T,typename Lattice<T>::BaseDescriptor>
+            ::computeStress(&cell[0], rho, u, pi);
+    }
+    
+    static void computeAllMomenta(Cell<T,Lattice> const& cell, T& rho, T u[Lattice<T>::d],
+                                  T pi[util::TensorVal<Lattice<T> >::n] )
+    {
+        lbDynamicsHelpers<T,typename Lattice<T>::BaseDescriptor>
+            ::computeAllMomenta(&cell[0], rho, u, pi);
+    }
+
+    static void modifyVelocity(Cell<T,Lattice>& cell, const T newU[Lattice<T>::d]) {
+        lbDynamicsHelpers<T,typename Lattice<T>::BaseDescriptor>
+            ::modifyVelocity(&cell[0], newU);
+    }
+
+    static void addExternalForce(Cell<T,Lattice>& cell, const T u[Lattice<T>::d], T omega, T amplitude=(T)1)
+    {
+        lbExternalHelpers<T,Lattice>::addExternalForce(cell, u, omega, amplitude);
+    }
+
+    static void swapAndStream2D(Cell<T,Lattice> **grid, int iX, int iY)
+    {
+        lbLatticeHelpers<T,Lattice>::swapAndStream2D(grid, iX, iY);
+    }
+
+    static void swapAndStream3D(Cell<T,Lattice> ***grid, int iX, int iY, int iZ)
+    {
+        lbLatticeHelpers<T,Lattice>::swapAndStream3D(grid, iX, iY, iZ);
+    }
+
+};  // struct lbHelpers
+
+
+/// All helper functions are inside this structure
+template<typename T, class Descriptor>
+struct lbDynamicsHelpers {
+    /// Computation of equilibrium distribution
+    static T equilibrium(int iPop, T rho, const T u[Descriptor::d], const T uSqr) {
+        T c_u = T();
+        for (int iD=0; iD < Descriptor::d; ++iD) {
+           c_u += Descriptor::c[iPop][iD]*u[iD];
+        }
+        return rho * Descriptor::t[iPop] * (
+               (T)1 + Descriptor::invCs2 * c_u +
+               Descriptor::invCs2 * Descriptor::invCs2/(T)2 * c_u*c_u -
+               Descriptor::invCs2/(T)2 * uSqr
+           ) - Descriptor::t[iPop];
+    }
+
+    static T incEquilibrium( int iPop, const T j[Descriptor::d],
                              const T jSqr, const T pressure )
     {
         T c_j = T();
-        for (int iD=0; iD < Lattice<T>::d; ++iD) {
-           c_j += Lattice<T>::c[iPop][iD]*j[iD];
+        for (int iD=0; iD < Descriptor::d; ++iD) {
+           c_j += Descriptor::c[iPop][iD]*j[iD];
         }
-        T rho = (T)1 + pressure*Lattice<T>::invCs2;
-        return Lattice<T>::t[iPop] * ( rho +
-               Lattice<T>::invCs2 * c_j +
-               Lattice<T>::invCs2 * Lattice<T>::invCs2/(T)2 * c_j*c_j -
-               Lattice<T>::invCs2/(T)2 * jSqr
-           ) - Lattice<T>::t[iPop];
+        T rho = (T)1 + pressure*Descriptor::invCs2;
+        return Descriptor::t[iPop] * ( rho +
+               Descriptor::invCs2 * c_j +
+               Descriptor::invCs2 * Descriptor::invCs2/(T)2 * c_j*c_j -
+               Descriptor::invCs2/(T)2 * jSqr
+           ) - Descriptor::t[iPop];
     }
 
-    static void computeFneq (
-            Cell<T,Lattice> const& cell,
-            T fNeq[Lattice<T>::q], T rho, const T u[Lattice<T>::d] )
-    {
-        const T uSqr = util::normSqr<T,Lattice<T>::d>(u);
-        for (int iPop=0; iPop < Lattice<T>::q; ++iPop) {
+    static void computeFneq(T const* cell, T fNeq[Descriptor::q], T rho, const T u[Descriptor::d]) {
+        const T uSqr = util::normSqr<T,Descriptor::d>(u);
+        for (int iPop=0; iPop < Descriptor::q; ++iPop) {
             fNeq[iPop] = cell[iPop] - equilibrium(iPop, rho, u, uSqr);
         }
     }
 
-
     /// BGK collision step
-    static T bgkCollision( Cell<T,Lattice>& cell,
-                           T rho, const T u[Lattice<T>::d],
-                           T omega)
-    {
-        const T uSqr = util::normSqr<T,Lattice<T>::d>(u);
-        for (int iPop=0; iPop < Lattice<T>::q; ++iPop) {
+    static T bgkCollision(T* cell, T rho, const T u[Descriptor::d], T omega) {
+        const T uSqr = util::normSqr<T,Descriptor::d>(u);
+        for (int iPop=0; iPop < Descriptor::q; ++iPop) {
             cell[iPop] *= (T)1-omega;
-            cell[iPop] += omega * lbHelpers<T,Lattice>::equilibrium (
-                              iPop, rho, u, uSqr );
+            cell[iPop] += omega * lbDynamicsHelpers<T,Descriptor>::equilibrium (
+                                    iPop, rho, u, uSqr );
         }
         return uSqr;
     }
 
     /// Incompressible BGK collision step
-    static T incBgkCollision( Cell<T,Lattice>& cell,
-                              T pressure,
-                              const T j[Lattice<T>::d],
-                              T omega)
-    {
-        const T jSqr = util::normSqr<T,Lattice<T>::d>(j);
-        for (int iPop=0; iPop < Lattice<T>::q; ++iPop) {
+    static T incBgkCollision(T* cell, T pressure, const T j[Descriptor::d], T omega) {
+        const T jSqr = util::normSqr<T,Descriptor::d>(j);
+        for (int iPop=0; iPop < Descriptor::q; ++iPop) {
             cell[iPop] *= (T)1-omega;
-            cell[iPop] += omega * lbHelpers<T,Lattice>::incEquilibrium (
+            cell[iPop] += omega * lbDynamicsHelpers<T,Descriptor>::incEquilibrium (
                               iPop, j, jSqr, pressure );
         }
         return jSqr;
     }
 
     /// BGK collision step with density correction
-    static T constRhoBgkCollision( Cell<T,Lattice>& cell,
-                                   T rho, const T u[Lattice<T>::d],
-                                   T ratioRho, T omega)
-    {
-        const T uSqr = util::normSqr<T,Lattice<T>::d>(u);
-        for (int iPop=0; iPop < Lattice<T>::q; ++iPop) {
-            T feq = lbHelpers<T,Lattice>::equilibrium(iPop, rho, u, uSqr );
+    static T constRhoBgkCollision(T* cell, T rho, const T u[Descriptor::d], T ratioRho, T omega) {
+        const T uSqr = util::normSqr<T,Descriptor::d>(u);
+        for (int iPop=0; iPop < Descriptor::q; ++iPop) {
+            T feq = lbDynamicsHelpers<T,Descriptor>::equilibrium(iPop, rho, u, uSqr );
             cell[iPop] =
-              ratioRho*(feq+Lattice<T>::t[iPop])-Lattice<T>::t[iPop] +
+              ratioRho*(feq+Descriptor::t[iPop])-Descriptor::t[iPop] +
               ((T)1-omega)*(cell[iPop]-feq);
         }
         return uSqr;
     }
 
+    /// Computation of density
+    static T computeRho(T const* cell) {
+        T rho = T();
+        for (int iPop=0; iPop < Descriptor::q; ++iPop) {
+            rho += cell[iPop];
+        }
+        rho += (T)1;
+        return rho;
+    }
 
-    /// Add a force term after BGK collision
-    static void addExternalForce( Cell<T,Lattice>& cell,
-                                  const T u[Lattice<T>::d],
-                                  T omega )
+    /// Computation of momentum
+    static void computeJ(T const* cell, T j[Descriptor::d]) {
+        for (int iD=0; iD < Descriptor::d; ++iD) {
+            j[iD] = T();
+        }
+        for (int iPop=0; iPop < Descriptor::q; ++iPop) {
+            for (int iD=0; iD < Descriptor::d; ++iD) {
+                j[iD] += cell[iPop]*Descriptor::c[iPop][iD];
+            }
+        }
+    }
+
+    /// Computation of hydrodynamic variables
+    static void computeRhoU(T const* cell, T& rho, T u[Descriptor::d]) {
+        rho = T();
+        for (int iD=0; iD < Descriptor::d; ++iD) {
+            u[iD] = T();
+        }
+        for (int iPop=0; iPop < Descriptor::q; ++iPop) {
+            rho += cell[iPop];
+            for (int iD=0; iD < Descriptor::d; ++iD) {
+                u[iD] += cell[iPop]*Descriptor::c[iPop][iD];
+            }
+        }
+        rho += (T)1;
+        for (int iD=0; iD < Descriptor::d; ++iD) {
+            u[iD] /= rho;
+        }
+    }
+
+    /// Computation of stress tensor
+    static void computeStress(T const* cell, T rho, const T u[Descriptor::d],
+                              T pi[util::TensorVal<Descriptor>::n] )
     {
-        static const int forceBeginsAt
-            = Lattice<T>::ExternalField::forceBeginsAt;
+        int iPi = 0;
+        for (int iAlpha=0; iAlpha < Descriptor::d; ++iAlpha) {
+            for (int iBeta=iAlpha; iBeta < Descriptor::d; ++iBeta) {
+                pi[iPi] = T();
+                for (int iPop=0; iPop < Descriptor::q; ++iPop) {
+                    pi[iPi] += Descriptor::c[iPop][iAlpha]*
+                               Descriptor::c[iPop][iBeta] * cell[iPop];
+                }
+                // stripe off equilibrium contribution
+                pi[iPi] -= rho*u[iAlpha]*u[iBeta];
+                if (iAlpha==iBeta) {
+                    pi[iPi] -= 1./Descriptor::invCs2*(rho-(T)1);
+                }
+                ++iPi;
+            }
+        }
+    }
+    
+    /// Computation of all hydrodynamic variables
+    static void computeAllMomenta(T const* cell, T& rho, T u[Descriptor::d],
+                                  T pi[util::TensorVal<Descriptor>::n] )
+    {
+        computeRhoU(cell, rho, u);
+        computeStress(cell, rho, u, pi);
+    }
+
+    static void modifyVelocity(T* cell, const T newU[Descriptor::d]) {
+        T rho, oldU[Descriptor::d];
+        computeRhoU(cell, rho, oldU);
+        const T oldUSqr = util::normSqr<T,Descriptor::d>(oldU);
+        const T newUSqr = util::normSqr<T,Descriptor::d>(newU);
+        for (int iPop=0; iPop<Descriptor::q; ++iPop) {
+            cell[iPop] = cell[iPop]
+                             - equilibrium(iPop, rho, oldU, oldUSqr)
+                             + equilibrium(iPop, rho, newU, newUSqr);
+        }
+    }
+
+};  // struct lbDynamicsHelpers
+
+/// Helper functions for dynamics that access external field
+template<typename T, template<typename U> class Lattice>
+struct lbExternalHelpers {
+    /// Add a force term after BGK collision
+    static void addExternalForce(Cell<T,Lattice>& cell, const T u[Lattice<T>::d], T omega, T amplitude) {
+        static const int forceBeginsAt = Lattice<T>::ExternalField::forceBeginsAt;
         T* force = cell.getExternal(forceBeginsAt);
         for (int iPop=0; iPop < Lattice<T>::q; ++iPop) {
             T c_u = T();
@@ -149,89 +314,15 @@ struct lbHelpers {
             }
             forceTerm *= Lattice<T>::t[iPop];
             forceTerm *= 1-omega/(T)2;
+            forceTerm *= amplitude;
             cell[iPop] += forceTerm;
         }
     }
+};  // struct externalFieldHelpers
 
-
-    /// Computation of density
-    static T computeRho (
-        Cell<T,Lattice> const& cell)
-    {
-        T rho = T();
-        for (int iPop=0; iPop < Lattice<T>::q; ++iPop) {
-            rho += cell[iPop];
-        }
-        rho += (T)1;
-        return rho;
-    }
-
-    /// Computation of momentum
-    static void computeJ (
-        Cell<T,Lattice> const& cell, T j[Lattice<T>::d] )
-    {
-        for (int iD=0; iD < Lattice<T>::d; ++iD) {
-            j[iD] = T();
-        }
-        for (int iPop=0; iPop < Lattice<T>::q; ++iPop) {
-            for (int iD=0; iD < Lattice<T>::d; ++iD) {
-                j[iD] += cell[iPop]*Lattice<T>::c[iPop][iD];
-            }
-        }
-    }
-
-    /// Computation of hydrodynamic variables
-    static void computeRhoU (
-        Cell<T,Lattice> const& cell, T& rho, T u[Lattice<T>::d] )
-    {
-        rho = T();
-        for (int iD=0; iD < Lattice<T>::d; ++iD) {
-            u[iD] = T();
-        }
-        for (int iPop=0; iPop < Lattice<T>::q; ++iPop) {
-            rho += cell[iPop];
-            for (int iD=0; iD < Lattice<T>::d; ++iD) {
-                u[iD] += cell[iPop]*Lattice<T>::c[iPop][iD];
-            }
-        }
-        rho += (T)1;
-        for (int iD=0; iD < Lattice<T>::d; ++iD) {
-            u[iD] /= rho;
-        }
-    }
-
-    /// Computation of stress tensor
-    static void computeStress (
-        Cell<T,Lattice> const& cell, T rho, const T u[Lattice<T>::d],
-        T pi[util::TensorVal<Lattice<T> >::n] )
-    {
-        int iPi = 0;
-        for (int iAlpha=0; iAlpha < Lattice<T>::d; ++iAlpha) {
-            for (int iBeta=iAlpha; iBeta < Lattice<T>::d; ++iBeta) {
-                pi[iPi] = T();
-                for (int iPop=0; iPop < Lattice<T>::q; ++iPop) {
-                    pi[iPi] += Lattice<T>::c[iPop][iAlpha]*
-                               Lattice<T>::c[iPop][iBeta] * cell[iPop];
-                }
-                // stripe off equilibrium contribution
-                pi[iPi] -= rho*u[iAlpha]*u[iBeta];
-                if (iAlpha==iBeta) {
-                    pi[iPi] -= 1./Lattice<T>::invCs2*(rho-(T)1);
-                }
-                ++iPi;
-            }
-        }
-    }
-    
-    /// Computation of all hydrodynamic variables
-    static void computeAllMomenta (
-        Cell<T,Lattice> const& cell, T& rho, T u[Lattice<T>::d],
-        T pi[util::TensorVal<Lattice<T> >::n] )
-    {
-        computeRhoU(cell, rho, u);
-        computeStress(cell, rho, u, pi);
-    }
-
+/// Helper functions with full-lattice access
+template<typename T, template<typename U> class Lattice>
+struct lbLatticeHelpers {
     /// Swap ("bounce-back") values of a cell (2D), and apply streaming step
     static void swapAndStream2D(Cell<T,Lattice> **grid, int iX, int iY)
     {
@@ -261,65 +352,13 @@ struct lbHelpers {
             grid[nextX][nextY][nextZ][iPop] = fTmp;
          }
     }
-
-    static void modifyVelocity(Cell<T,Lattice>& cell,
-                               const T newU[Lattice<T>::d])
-    {
-        T rho, oldU[Lattice<T>::d];
-        computeRhoU(cell, rho, oldU);
-        const T oldUSqr = util::normSqr<T,Lattice<T>::d>(oldU);
-        const T newUSqr = util::normSqr<T,Lattice<T>::d>(newU);
-        for (int iPop=0; iPop<Lattice<T>::q; ++iPop) {
-            cell[iPop] = cell[iPop]
-                             - equilibrium(iPop, rho, oldU, oldUSqr)
-                             + equilibrium(iPop, rho, newU, newUSqr);
-        }
-    }
-
-};  // struct lbHelpers
-
-/// Helper functions for dynamics that access external field
-template<typename T, template<typename U> class Lattice>
-struct externalFieldHelpers {
-    /// Add a force term after BGK collision
-    static void addExternalForce( Cell<T,Lattice>& cell,
-                                  const T u[Lattice<T>::d],
-                                  T omega,
-                                  T amplitude=(T)1)
-    {
-        static const int forceBeginsAt
-            = Lattice<T>::ExternalField::forceBeginsAt;
-        T* force = cell.getExternal(forceBeginsAt);
-        for (int iPop=0; iPop < Lattice<T>::q; ++iPop) {
-            T c_u = T();
-            for (int iD=0; iD < Lattice<T>::d; ++iD) {
-               c_u += Lattice<T>::c[iPop][iD]*u[iD];
-            }
-            c_u *= Lattice<T>::invCs2 * Lattice<T>::invCs2;
-            T forceTerm = T();
-            for (int iD=0; iD < Lattice<T>::d; ++iD) {
-                forceTerm +=
-                    (   (Lattice<T>::c[iPop][iD]-u[iD]) * Lattice<T>::invCs2
-                      + c_u * Lattice<T>::c[iPop][iD]
-                    )
-                    * force[iD];
-            }
-            forceTerm *= Lattice<T>::t[iPop];
-            forceTerm *= 1-omega/(T)2;
-            forceTerm *= amplitude;
-            cell[iPop] += forceTerm;
-        }
-    }
-};  // struct externalFieldHelpers
-
+};
 
 /// All boundary helper functions are inside this structure
-template<typename T, template<typename U> class Lattice,
-         int direction, int orientation>
+template<typename T, template<typename U> class Lattice, int direction, int orientation>
 struct BoundaryHelpers {
     static void computeStress (
-         Cell<T,Lattice> const& cell,
-         T rho, const T u[Lattice<T>::d],
+         Cell<T,Lattice> const& cell, T rho, const T u[Lattice<T>::d],
          T pi[util::TensorVal<Lattice<T> >::n] )
     {
         typedef Lattice<T> L;

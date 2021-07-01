@@ -29,7 +29,6 @@
 #include <cmath>
 #include "simulationSetup2D.h"
 #include "blockLattice2D.h"
-#include "blockStatistics2D.h"
 #include "lbHelpers.h"
 #include "firstOrderLbHelpers.h"
 #include "util.h"
@@ -37,10 +36,10 @@
 
 namespace olb {
 
+
 template <typename T, template<typename U> class Lattice>
 void iniFirstOrder2D(BlockLatticeView2D<T,Lattice> lattice) {
-    BlockStatistics2D<T,Lattice> statistics(lattice);
-    TensorField2D<T,3> const& strainRate = statistics.getStrainRate();
+    TensorFieldBase2D<T,3> const& strainRate = lattice.getDataAnalysis().getStrainRate();
 
     for (int iX=0; iX<lattice.getNx(); ++iX) {
         for (int iY=0; iY<lattice.getNy(); ++iY) {
@@ -59,8 +58,8 @@ void iniFirstOrder2D(BlockLatticeView2D<T,Lattice> lattice) {
 }
 
 template <typename T, template<typename U> class Lattice>
-void computePressure2D(ScalarField2D<T> const& poissonTerm,
-                       ScalarField2D<T>& pressure,
+void computePressure2D(ScalarFieldBase2D<T> const& poissonTerm,
+                       ScalarFieldBase2D<T>& pressure,
                        T epsilon, T lambda)
 {
     int lx = pressure.getNx();
@@ -177,9 +176,6 @@ template <typename T, template<typename U> class Lattice>
 void iniPressure2D(BlockLatticeView2D<T,Lattice> lattice,
                    T epsilon, T lambda)
 {
-
-    BlockStatistics2D<T,Lattice> statistics (lattice);
-
     int lx = lattice.getNx();
     int ly = lattice.getNy();
 
@@ -187,7 +183,7 @@ void iniPressure2D(BlockLatticeView2D<T,Lattice> lattice,
     pressure.construct(); // Allocate memory
     pressure.reset();     // Reset to zero
 
-    computePressure2D<T,Lattice>(statistics.getPoissonTerm(),
+    computePressure2D<T,Lattice>(lattice.getDataAnalysis().getPoissonTerm(),
                                  pressure,
                                  epsilon, lambda );
 
@@ -204,8 +200,7 @@ void testLaplace(BlockLatticeView2D<T,Lattice> lattice, T epsilon, T lambda) {
     int lx = lattice.getNx();
     int ly = lattice.getNy();
 
-    BlockStatistics2D<T,Lattice> statistics (lattice);
-    ScalarField2D<T> const& poissonTerm = statistics.getPoissonTerm();
+    ScalarFieldBase2D<T> const& poissonTerm = lattice.getDataAnalysis().getPoissonTerm();
 
     ScalarField2D<T> pressure(lx, ly); pressure.construct();
     ScalarField2D<T> pressure2(lx, ly); pressure2.construct();
@@ -335,8 +330,7 @@ void convergeFixedVelocity(BlockLattice2D<T,Lattice>& lattice,
                            T epsilon, int step)
 {
     BlockLatticeView2D<T,Lattice> latticeView(lattice);
-    BlockStatistics2D<T,Lattice> statistics(latticeView);
-    TensorField2D<T,2> const& velocity = statistics.getVelocity();
+    TensorFieldBase2D<T,2> const& velocity = latticeView.getDataAnalysis().getVelocity();
 
     T maxF = T();
     for (int iX=0; iX<latticeView.getNx(); iX+=step) {
@@ -375,7 +369,6 @@ void convergeFixedVelocity(BlockLattice2D<T,Lattice>& lattice,
         }
         oldValues.swap(currentValues);
         currentValues.clear();
-//         std::cout << diff << std::endl;
     }
     while (diff > epsilon);
 }
@@ -384,13 +377,13 @@ template <typename T, template<typename U> class Lattice>
 void testLiShi(BlockLattice2D<T,Lattice>& lattice, T epsilon, T lambda)
 {
     BlockLatticeView2D<T,Lattice> latticeView(lattice);
-    BlockStatistics2D<T,Lattice> statistics(latticeView);
-    TensorField2D<T,2> const& velocity = statistics.getVelocity();
+    DataAnalysisBase2D<T,Lattice> const& analysis = latticeView.getDataAnalysis();
+    TensorFieldBase2D<T,2> const& velocity = analysis.getVelocity();
 
     int lx = lattice.getNx();
     int ly = lattice.getNy();
 
-    ScalarField2D<T> const& poissonTerm = statistics.getPoissonTerm();
+    ScalarField2D<T> const& poissonTerm = analysis.getPoissonTerm();
 
     ScalarField2D<T> pressure(lx, ly); pressure.construct();
 

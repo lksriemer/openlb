@@ -99,6 +99,7 @@ void MultiDataAnalysis3D<T,Lattice>::reset() const {
 
 template<typename T, template<typename U> class Lattice>
 TensorFieldBase3D<T,3> const& MultiDataAnalysis3D<T,Lattice>::getVelocity() const {
+    fields.velField.construct();
     for (unsigned iBlock=0; iBlock<perBlockAnalysis.size(); ++iBlock) {
         if (perBlockAnalysis[iBlock]) {
             perBlockAnalysis[iBlock] -> getVelocity();
@@ -109,6 +110,7 @@ TensorFieldBase3D<T,3> const& MultiDataAnalysis3D<T,Lattice>::getVelocity() cons
 
 template<typename T, template<typename U> class Lattice>
 TensorFieldBase3D<T,3> const& MultiDataAnalysis3D<T,Lattice>::getMomentum() const {
+    fields.momentumField.construct();
     for (unsigned iBlock=0; iBlock<perBlockAnalysis.size(); ++iBlock) {
         if (perBlockAnalysis[iBlock]) {
             perBlockAnalysis[iBlock] -> getMomentum();
@@ -119,6 +121,7 @@ TensorFieldBase3D<T,3> const& MultiDataAnalysis3D<T,Lattice>::getMomentum() cons
 
 template<typename T, template<typename U> class Lattice>
 ScalarFieldBase3D<T> const& MultiDataAnalysis3D<T,Lattice>::getPressure() const {
+    fields.pressureField.construct();
     for (unsigned iBlock=0; iBlock<perBlockAnalysis.size(); ++iBlock) {
         if (perBlockAnalysis[iBlock]) {
             perBlockAnalysis[iBlock] -> getPressure();
@@ -129,6 +132,7 @@ ScalarFieldBase3D<T> const& MultiDataAnalysis3D<T,Lattice>::getPressure() const 
 
 template<typename T, template<typename U> class Lattice>
 TensorFieldBase3D<T,3> const& MultiDataAnalysis3D<T,Lattice>::getVorticity() const {
+    fields.vortField.construct();
     for (unsigned iBlock=0; iBlock<perBlockAnalysis.size(); ++iBlock) {
         if (perBlockAnalysis[iBlock]) {
             perBlockAnalysis[iBlock] -> getVorticity();
@@ -139,6 +143,7 @@ TensorFieldBase3D<T,3> const& MultiDataAnalysis3D<T,Lattice>::getVorticity() con
 
 template<typename T, template<typename U> class Lattice>
 ScalarFieldBase3D<T> const& MultiDataAnalysis3D<T,Lattice>::getVelocityNorm() const {
+    fields.velNormField.construct();
     for (unsigned iBlock=0; iBlock<perBlockAnalysis.size(); ++iBlock) {
         if (perBlockAnalysis[iBlock]) {
             perBlockAnalysis[iBlock] -> getVelocityNorm();
@@ -149,6 +154,7 @@ ScalarFieldBase3D<T> const& MultiDataAnalysis3D<T,Lattice>::getVelocityNorm() co
 
 template<typename T, template<typename U> class Lattice>
 ScalarFieldBase3D<T> const& MultiDataAnalysis3D<T,Lattice>::getVorticityNorm() const {
+    fields.vortNormField.construct();
     for (unsigned iBlock=0; iBlock<perBlockAnalysis.size(); ++iBlock) {
         if (perBlockAnalysis[iBlock]) {
             perBlockAnalysis[iBlock] -> getVorticityNorm();
@@ -159,6 +165,7 @@ ScalarFieldBase3D<T> const& MultiDataAnalysis3D<T,Lattice>::getVorticityNorm() c
 
 template<typename T, template<typename U> class Lattice>
 TensorFieldBase3D<T,6> const& MultiDataAnalysis3D<T,Lattice>::getStrainRate() const {
+    fields.strainRateField.construct();
     for (unsigned iBlock=0; iBlock<perBlockAnalysis.size(); ++iBlock) {
         if (perBlockAnalysis[iBlock]) {
             perBlockAnalysis[iBlock] -> getStrainRate();
@@ -169,6 +176,7 @@ TensorFieldBase3D<T,6> const& MultiDataAnalysis3D<T,Lattice>::getStrainRate() co
 
 template<typename T, template<typename U> class Lattice>
 TensorFieldBase3D<T,6> const& MultiDataAnalysis3D<T,Lattice>::getStrainRateFromStress() const {
+    fields.stressField.construct();
     for (unsigned iBlock=0; iBlock<perBlockAnalysis.size(); ++iBlock) {
         if (perBlockAnalysis[iBlock]) {
             perBlockAnalysis[iBlock] -> getStrainRateFromStress();
@@ -179,6 +187,7 @@ TensorFieldBase3D<T,6> const& MultiDataAnalysis3D<T,Lattice>::getStrainRateFromS
 
 template<typename T, template<typename U> class Lattice>
 ScalarFieldBase3D<T> const& MultiDataAnalysis3D<T,Lattice>::getDivRhoU() const {
+    fields.divRhoUField.construct();
     for (unsigned iBlock=0; iBlock<perBlockAnalysis.size(); ++iBlock) {
         if (perBlockAnalysis[iBlock]) {
             perBlockAnalysis[iBlock] -> getDivRhoU();
@@ -189,6 +198,7 @@ ScalarFieldBase3D<T> const& MultiDataAnalysis3D<T,Lattice>::getDivRhoU() const {
 
 template<typename T, template<typename U> class Lattice>
 ScalarFieldBase3D<T> const& MultiDataAnalysis3D<T,Lattice>::getPoissonTerm() const {
+    fields.poissonField.construct();
     for (unsigned iBlock=0; iBlock<perBlockAnalysis.size(); ++iBlock) {
         if (perBlockAnalysis[iBlock]) {
             perBlockAnalysis[iBlock] -> getPoissonTerm();
@@ -199,6 +209,7 @@ ScalarFieldBase3D<T> const& MultiDataAnalysis3D<T,Lattice>::getPoissonTerm() con
 
 template<typename T, template<typename U> class Lattice>
 TensorFieldBase3D<T, Lattice<T>::q > const& MultiDataAnalysis3D<T,Lattice>::getPopulations() const {
+    fields.populationField.construct();
     for (unsigned iBlock=0; iBlock<perBlockAnalysis.size(); ++iBlock) {
         if (perBlockAnalysis[iBlock]) {
             perBlockAnalysis[iBlock] -> getPopulations();

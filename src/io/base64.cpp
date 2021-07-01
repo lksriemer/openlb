@@ -25,10 +25,42 @@
 
 namespace olb {
 
+// All of the following is a workaround to the following problem: on a
+// 32-bit machine where unsigned int is the same as size_t, Base64Encoder
+// needs to be instantiated on one integer type only. On some 64-bit
+// platforms however, size_t is not equal to unsigned int. In that case,
+// Base64Encoder needs to be instantiated twice. It is however not
+// possible to instantiate this class first on unsigned int and then
+// on size_t, because this yields a double instantiation, and thus
+// an error, where these types are the same. To avoid this problem,
+// the chosen instantiation types are unsigned int and size_t where
+// these types are different, and unsigned char and unsigned int where
+// they are similar. A template-based if-then-else construct is used
+// to distinguish the two cases.
+
+template<bool areEqual> struct DistinctUint;
+
+template<>
+struct DistinctUint<true> {
+    typedef unsigned char T1;
+    typedef size_t T2;
+};
+
+template<>
+struct DistinctUint<false> {
+    typedef unsigned int T1;
+    typedef size_t T2;
+};
+
+typedef DistinctUint<sizeof(unsigned int)==sizeof(size_t)>::T1 T1;
+typedef DistinctUint<sizeof(unsigned int)==sizeof(size_t)>::T2 T2;
+
 template class Base64Encoder<double>;
-template class Base64Encoder<unsigned int>;
+template class Base64Encoder<T1>;
+template class Base64Encoder<T2>;
 
 template class Base64Decoder<double>;
-template class Base64Decoder<unsigned int>;
+template class Base64Decoder<T1>;
+template class Base64Decoder<T2>;
 
 }

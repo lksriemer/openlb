@@ -302,7 +302,7 @@ void ForcedEntropicDynamics<T,Lattice>::collide (
         cell[iPop] *= (T)1-omegaTot;
         cell[iPop] += omegaTot * eLbH::equilibrium(iPop,rho,u);
     }
-    externalFieldHelpers<T,Lattice>::addExternalForce(cell, u, omegaTot);
+    lbHelpers<T,Lattice>::addExternalForce(cell, u, omegaTot);
     
     if (cell.takesStatistics())
     {
@@ -351,7 +351,7 @@ void ForcedEntropicDynamics<T,Lattice>::staticCollide (
         cell[iPop] *= (T)1-omegaTot;
         cell[iPop] += omegaTot * (fEq[iPop]-L::t[iPop]);
     }
-    externalFieldHelpers<T,Lattice>::addExternalForce(cell, u, omegaTot);
+    lbHelpers<T,Lattice>::addExternalForce(cell, u, omegaTot);
     
     if (cell.takesStatistics()) {
         statistics.gatherStats(rho, uSqr);

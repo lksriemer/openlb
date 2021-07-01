@@ -32,6 +32,9 @@ namespace olb {
 
 template class ScalingSerializer<double>;
 template class ScalingSerializer<int>;
+template class TypeConversionSerializer<double,double>;
+template class TypeConversionSerializer<double,float>;
+
 template void copySerializedData<double>(DataSerializer<double> const& serializer,
                                          DataUnSerializer<double>& unSerializer);
 template void copyDataBlock<double>(Serializable<double> const& from, Serializable<double>& to,

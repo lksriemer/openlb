@@ -92,22 +92,6 @@ void VtkDataWriter3D::writeFooter() {
     }
 }
 
-template
-void VtkDataWriter3D::writeDataField (
-        DataSerializer<double> const& serializer, std::string const& name, double scalingFactor, int nDim );
-
-template
-void VtkDataWriter3D::writeDataField (
-        DataSerializer<int> const& serializer, std::string const& name, int scalingFactor, int nDim );
-
-template void writeVTKData3D<double> (
-        std::string const& fName,
-        std::string const& scalarFieldName,
-        ScalarFieldBase3D<double> const& scalarField,
-        std::string const& vectorFieldName,
-        TensorFieldBase3D<double,3> const& vectorField,
-        double deltaX, double deltaT );
-
 template<>
 std::string VtkTypeNames<bool>::getBaseName() {
     return "Int";

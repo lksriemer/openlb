@@ -26,7 +26,6 @@
 #ifndef MULTI_BLOCK_LATTICE_2D_H
 #define MULTI_BLOCK_LATTICE_2D_H
 
-#include <vector>
 #include "core/blockLattice2D.h"
 #include "core/cell.h"
 #include "core/dynamics.h"
@@ -34,6 +33,7 @@
 #include "multiBlockHandler2D.h"
 #include "multiSerializer2D.h"
 #include "core/dataAnalysisBase2D.h"
+#include <vector>
 
 
 namespace olb {
@@ -68,11 +68,12 @@ public:
     virtual Cell<T,Lattice> const& get(int iX, int iY) const;
     virtual void initialize();
     virtual void defineDynamics(int x0_, int x1_, int y0_, int y1_, Dynamics<T,Lattice>* dynamics);
+    virtual void defineDynamics(int iX, int iY, Dynamics<T,Lattice>* dynamics);
     virtual void specifyStatisticsStatus(int x0_, int x1_, int y0_, int y1_, bool status);
     virtual void collide(int x0_, int x1_, int y0_, int y1_);
     virtual void collide();
-    virtual void staticCollide (int x0, int x1, int y0, int y1, TensorField2D<T,2> const& u);
-    virtual void staticCollide (TensorField2D<T,2> const& u);
+    virtual void staticCollide (int x0, int x1, int y0, int y1, TensorFieldBase2D<T,2> const& u);
+    virtual void staticCollide (TensorFieldBase2D<T,2> const& u);
     virtual void stream(int x0_, int x1_, int y0_, int y1_);
     virtual void stream(bool periodic=false);
     virtual void collideAndStream(int x0_, int x1_, int y0_, int y1_);
@@ -82,14 +83,19 @@ public:
     virtual void stripeOffDensityOffset (
             int x0_, int x1_, int y0_, int y1_, T offset );
     virtual void stripeOffDensityOffset(T offset);
+    virtual void forAll(int x0_, int x1_, int y0_, int y1_,
+                        WriteCellFunctional<T,Lattice> const& application);
+    virtual void forAll(WriteCellFunctional<T,Lattice> const& application);
     virtual void addPostProcessor (
                 PostProcessorGenerator2D<T,Lattice> const& ppGen );
+    virtual void resetPostProcessors();
+    virtual void postProcess(int x0_, int x1_, int y0_, int y1_);
+    virtual void postProcess();
     virtual void addLatticeCoupling (
                      LatticeCouplingGenerator2D<T,Lattice> const& lcGen,
                      std::vector<SpatiallyExtendedObject2D*> partners );
-    virtual void resetPostProcessors();
-    virtual void postProcess(int x0_, int x1_, int y0_, int y1_);
-    void postProcess();
+    virtual void executeCoupling(int x0_, int x1_, int y0_, int y1_);
+    virtual void executeCoupling();
     virtual void subscribeReductions(Reductor<T>& reductor);
     virtual LatticeStatistics<T>& getStatistics();
     virtual LatticeStatistics<T> const& getStatistics() const;
@@ -106,6 +112,8 @@ public:
     virtual SpatiallyExtendedObject2D* getComponent(int iBlock);
     virtual SpatiallyExtendedObject2D const* getComponent(int iBlock) const;
     virtual multiPhysics::MultiPhysicsId getMultiPhysicsId() const;
+private:
+    std::vector<int> const& getRelevantBlocks() const;
 public:
     void toggleInternalStatistics(bool statisticsOn_);
     void togglePeriodicCommunication(bool periodicCommunicationOn_);
@@ -124,9 +132,7 @@ private:
     BlockParameters2D const& getParameters(int iParam) const;
     Overlap2D const& getNormalOverlap(int iOverlap) const;
     Overlap2D const& getPeriodicOverlap(int iOverlap) const;
-    int getNumBlocks() const;
-    int getNumNormalOverlaps() const;
-    int getNumPeriodicOverlaps() const;
+    int getNumRelevantBlocks() const;
 private:
     mutable int locatedBlock; ///< for optimization, keep the last index found
     MultiBlockHandler2D<T,Lattice>* multiBlockHandler;

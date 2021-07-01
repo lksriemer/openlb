@@ -78,10 +78,6 @@ class Communicator3D {
         /// Adds all cells of the overlaps to its accociated cuboid
         /// neigbourhood 
         void add_cells(int overlap);
-        /// Synchronizes the communicator (pure mpi method)
-        /// It is needed if the functions add_* are called not by all 
-        /// processes to initialize the communicator correctly.
-        void sync();
         /// Initializes the communicator
         void init();
         /// Resets all cuboids neighbourhoods

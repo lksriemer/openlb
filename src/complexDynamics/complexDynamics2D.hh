@@ -22,7 +22,15 @@
  * Groups all the generic 2D template files in the complexDynamics directory.
  */
 
+#include "mrtLatticeDescriptors.hh"
+#include "advectionDiffusionLatticeDescriptors.hh"
+#include "forcedShanChenLatticeDescriptors.hh"
 #include "entropicDynamics.hh"
 #include "mrtDynamics.hh"
-#include "mrtLatticeDescriptors.hh"
 #include "chopardDynamics.hh"
+#include "navierStokesAdvectionDiffusionCouplingPostProcessor2D.hh"
+#include "advectionDiffusionDynamics.hh"
+#include "advectionDiffusionBoundaries.hh"
+#include "advectionDiffusionBoundaryCondition2D.hh"
+#include "advectionDiffusionMomenta.hh"
+#include "forcedShanChenCouplingPostProcessor2D.hh"

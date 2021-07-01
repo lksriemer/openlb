@@ -55,7 +55,7 @@ ScalarField3D<T>::ScalarField3D(ScalarField3D<T> const& rhs)
 {
     if (rhs.isConstructed()) {
         construct();
-        for (int iData=0; iData<getSize(); ++iData) {
+        for (size_t iData=0; iData<getSize(); ++iData) {
             (*this)[iData] = rhs[iData];
         }
     }
@@ -181,7 +181,7 @@ T ScalarField3D<T>::computeReduction(DataReduction<T>& reduction) const
 {
     OLB_PRECONDITION(isConstructed());
     reduction.reset();
-    for (int iEl=0; iEl<getSize(); iEl++) {
+    for (size_t iEl=0; iEl<getSize(); iEl++) {
         reduction.takeElement( this->operator[](iEl) );
     }
     return reduction.getResult();
@@ -212,12 +212,12 @@ multiPhysics::MultiPhysicsId ScalarField3D<T>::getMultiPhysicsId() const {
 
 template<typename T>
 void ScalarField3D<T>::allocateMemory() {
-    rawData = new T [nx*ny*nz];
-    field   = new T** [nx];
+    rawData = new T [(size_t)nx*(size_t)ny*(size_t)nz];
+    field   = new T** [(size_t)nx];
     for (int iX=0; iX<nx; ++iX) {
-        field[iX] = new T* [ny];
+        field[iX] = new T* [(size_t)ny];
         for (int iY=0; iY<ny; ++iY) {
-            field[iX][iY] = rawData + nz*(iY+ny*iX);
+            field[iX][iY] = rawData + (size_t)nz*((size_t)iY+(size_t)ny*(size_t)iX);
         }
     }
 }
@@ -254,12 +254,12 @@ SequentialScalarFieldSerializer3D<T>::SequentialScalarFieldSerializer3D (
 { }
 
 template<typename T>
-int SequentialScalarFieldSerializer3D<T>::getSize() const {
-    return (x1-x0+1) * (y1-y0+1) * (z1-z0+1);
+size_t SequentialScalarFieldSerializer3D<T>::getSize() const {
+    return (size_t)(x1-x0+1) * (size_t)(y1-y0+1) * (size_t)(z1-z0+1);
 }
 
 template<typename T>
-const T* SequentialScalarFieldSerializer3D<T>::getNextDataBuffer(int& bufferSize) const {
+const T* SequentialScalarFieldSerializer3D<T>::getNextDataBuffer(size_t& bufferSize) const {
     OLB_PRECONDITION( !isEmpty() );
     if (ordering==IndexOrdering::forward || ordering==IndexOrdering::memorySaving) {
         bufferSize = (z1-z0+1);
@@ -320,12 +320,12 @@ SequentialScalarFieldUnSerializer3D<T>::SequentialScalarFieldUnSerializer3D (
 { }
 
 template<typename T>
-int SequentialScalarFieldUnSerializer3D<T>::getSize() const {
-    return (x1-x0+1) * (y1-y0+1) * (z1-z0+1);
+size_t SequentialScalarFieldUnSerializer3D<T>::getSize() const {
+    return (size_t)(x1-x0+1) * (size_t)(y1-y0+1) * (size_t)(z1-z0+1);
 }
 
 template<typename T>
-T* SequentialScalarFieldUnSerializer3D<T>::getNextDataBuffer(int& bufferSize) {
+T* SequentialScalarFieldUnSerializer3D<T>::getNextDataBuffer(size_t& bufferSize) {
     OLB_PRECONDITION( !isFull() );
     if (ordering==IndexOrdering::forward || ordering==IndexOrdering::memorySaving) {
         bufferSize = (z1-z0+1);
@@ -566,12 +566,12 @@ multiPhysics::MultiPhysicsId TensorField3D<T,nDim>::getMultiPhysicsId() const {
 
 template<typename T, int nDim>
 void TensorField3D<T,nDim>::allocateMemory() {
-    rawData = new Tensor   [nx*ny*nz];
-    field   = new Tensor** [nx];
+    rawData = new Tensor   [(size_t)nx*(size_t)ny*(size_t)nz];
+    field   = new Tensor** [(size_t)nx];
     for (int iX=0; iX<nx; ++iX) {
-        field[iX] = new Tensor* [ny];
+        field[iX] = new Tensor* [(size_t)ny];
         for (int iY=0; iY<ny; ++iY) {
-            field[iX][iY] = rawData + nz*(iY+ny*iX);
+            field[iX][iY] = rawData + (size_t)nz*((size_t)iY+(size_t)ny*(size_t)iX);
         }
     }
 }
@@ -618,15 +618,15 @@ SequentialTensorFieldSerializer3D<T,nDim>::SequentialTensorFieldSerializer3D (
 { }
 
 template<typename T, int nDim>
-int SequentialTensorFieldSerializer3D<T, nDim>::getSize() const {
-    return (x1-x0+1) * (y1-y0+1) * (z1-z0+1) * nDim;
+size_t SequentialTensorFieldSerializer3D<T, nDim>::getSize() const {
+    return (size_t)(x1-x0+1) * (size_t)(y1-y0+1) * (size_t)(z1-z0+1) * (size_t)nDim;
 }
 
 template<typename T, int nDim>
-const T* SequentialTensorFieldSerializer3D<T, nDim>::getNextDataBuffer(int& bufferSize) const {
+const T* SequentialTensorFieldSerializer3D<T, nDim>::getNextDataBuffer(size_t& bufferSize) const {
     OLB_PRECONDITION( !isEmpty() );
     if (ordering==IndexOrdering::forward || ordering==IndexOrdering::memorySaving) {
-        bufferSize = (z1-z0+1)*nDim;
+        bufferSize = (size_t)(z1-z0+1)*(size_t)nDim;
         buffer.resize(bufferSize);
         for (iZ=z0; iZ<=z1; ++iZ) {
             for (int iDim=0; iDim<nDim; ++iDim) {
@@ -640,7 +640,7 @@ const T* SequentialTensorFieldSerializer3D<T, nDim>::getNextDataBuffer(int& buff
         }
     }
     else {
-        bufferSize = (x1-x0+1)*nDim;
+        bufferSize = (size_t)(x1-x0+1)*(size_t)nDim;
         buffer.resize(bufferSize);
         for (iX=x0; iX<=x1; ++iX) {
             for (int iDim=0; iDim<nDim; ++iDim) {
@@ -688,18 +688,18 @@ SequentialTensorFieldUnSerializer3D<T,nDim>::SequentialTensorFieldUnSerializer3D
 { }
 
 template<typename T, int nDim>
-int SequentialTensorFieldUnSerializer3D<T, nDim>::getSize() const {
-    return (x1-x0+1) * (y1-y0+1) * (z1-z0+1) * nDim;
+size_t SequentialTensorFieldUnSerializer3D<T, nDim>::getSize() const {
+    return (size_t)(x1-x0+1) * (size_t)(y1-y0+1) * (size_t)(z1-z0+1) * (size_t)nDim;
 }
 
 template<typename T, int nDim>
-T* SequentialTensorFieldUnSerializer3D<T, nDim>::getNextDataBuffer(int& bufferSize) {
+T* SequentialTensorFieldUnSerializer3D<T, nDim>::getNextDataBuffer(size_t& bufferSize) {
     OLB_PRECONDITION( !isFull() );
     if (ordering==IndexOrdering::forward || ordering==IndexOrdering::memorySaving) {
-        bufferSize = (z1-z0+1)*nDim;
+        bufferSize = (size_t)(z1-z0+1)*(size_t)nDim;
     }
     else {
-        bufferSize = (x1-x0+1)*nDim;
+        bufferSize = (size_t)(x1-x0+1)*(size_t)nDim;
     }
     buffer.resize(bufferSize);
     return &buffer[0];

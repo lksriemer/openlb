@@ -52,8 +52,8 @@ void Communicator2D<T,Lattice>::init_nh() {
 
     _nC = _sLattice.get_cGeometry().get_nC();
 
-    for (int iC=0; iC<_nC; iC++) {
-        CuboidNeighbourhood2D<T,Lattice> nh(_sLattice,iC);
+    for (int iC=0; iC<_sLattice.get_load().size(); iC++) {
+        CuboidNeighbourhood2D<T,Lattice> nh(_sLattice,_sLattice.get_load().glob(iC));
         _nh.push_back(nh);
     }
 }
@@ -61,13 +61,17 @@ void Communicator2D<T,Lattice>::init_nh() {
 template<typename T, template<typename U> class Lattice>
 void Communicator2D<T,Lattice>::add_cell(int iC, T globX, T globY) {
 
-    _nh[iC].add_inCell(globX, globY);
+    if( iC >= _sLattice.get_load().get_firstGlobNum() && 
+        iC <= _sLattice.get_load().get_lastGlobNum() )
+    {
+        _nh[_sLattice.get_load().loc(iC)].add_inCell(globX, globY);
+    }
 }
 
 template<typename T, template<typename U> class Lattice>
 void Communicator2D<T,Lattice>::add_cells(int overlap) {
 
-    for (int iC=0; iC<_nC; iC++) {
+    for (int iC=0; iC<_sLattice.get_load().size(); iC++) {
         for (int i=0; i<=overlap; i++) {
             _nh[iC].add_inCells(overlap);
         }
@@ -75,59 +79,46 @@ void Communicator2D<T,Lattice>::add_cells(int overlap) {
 }
 
 template<typename T, template<typename U> class Lattice>
-void Communicator2D<T,Lattice>::sync() {
-
-    #ifdef PARALLEL_MODE_MPI
-        int rank;
-        int nCells;
-        T c_globX, c_globY;
-        for (int iC=0; iC<_nC; iC++) {
-            rank = _sLattice.get_load().rank(iC);
-            nCells = _nh[iC].get_inCellsSize();
-            singleton::mpi().bCast(&nCells, 1, rank);
-            for (int i=0; i<nCells; i++) {
-                if (singleton::mpi().getRank()==rank) {
-                    c_globX = _nh[iC].get_inCell(i).globX;
-                    c_globY = _nh[iC].get_inCell(i).globY;
-                }
-                singleton::mpi().bCast(&c_globX, 1, rank);
-                singleton::mpi().bCast(&c_globY, 1, rank);
-                if (singleton::mpi().getRank()!=rank) {
-                    _nh[iC].add_inCell(c_globX, c_globY);
-                }
-            }
-        }
-    #endif
-}
-
-template<typename T, template<typename U> class Lattice>
 void Communicator2D<T,Lattice>::init() {
 
     reset();
-    for (int iC=0; iC<_nC; iC++) {
+    for (int iC=0; iC<_sLattice.get_load().size(); iC++) {
         _nh[iC].init_inCN();
-        for (int i=0; i<_nh[iC].get_inCellsSize(); i++) {
-            Cell2D<T> temp;
-
-            temp.globX = _nh[iC].get_inCell(i).globX; 
-            temp.globY = _nh[iC].get_inCell(i).globY;
-            temp.iC    = iC;
-
-            int ID = _nh[iC].get_inCell(i).iC;
-            _nh[ID].add_outCell(temp);
-        }
+        #ifndef PARALLEL_MODE_MPI
+            for (int i=0; i<_nh[iC].get_inCellsSize(); i++) {
+                Cell2D<T> temp;
+                temp.globX = _nh[iC].get_inCell(i).globX; 
+                temp.globY = _nh[iC].get_inCell(i).globY;
+                temp.iC    = iC;
+                int ID = _nh[iC].get_inCell(i).iC;
+                _nh[ID].add_outCell(temp);
+            }
+        #endif
     }
-    for (int iC=0; iC<_nC; iC++) {
+    for (int iC=0; iC<_sLattice.get_load().size(); iC++) {
         _nh[iC].init_outCN();
     }
-    _initDone = true;
+    #ifdef PARALLEL_MODE_MPI
+        for (int iC=0; iC<_sLattice.get_load().size(); iC++) {
+            _nh[iC].finish_comm();
+        }
+        for (int iC=0; iC<_sLattice.get_load().size(); iC++) {
+            _nh[iC].bufSend_inCells();
+        }
+        for (int iC=0; iC<_sLattice.get_load().size(); iC++) {
+            _nh[iC].recWrite_outCells();
+        }
+        for (int iC=0; iC<_sLattice.get_load().size(); iC++) {
+            _nh[iC].finish_comm();
+        }
+    #endif
 }
 
 template<typename T, template<typename U> class Lattice>
 void Communicator2D<T,Lattice>::reset() {
 
     if (_initDone) {
-        for (int iC=0; iC<_nC; iC++) {
+        for (int iC=0; iC<_sLattice.get_load().size(); iC++) {
             _nh[iC].reset();
         }
         _initDone = false;
@@ -138,9 +129,9 @@ template<typename T, template<typename U> class Lattice>
 void Communicator2D<T,Lattice>::send() {
 
     for (int iC=0; iC<_sLattice.get_load().size(); iC++) {
-        _nh[_sLattice.get_load().glob(iC)].buffer_outData();
+        _nh[iC].buffer_outData();
         #ifdef PARALLEL_MODE_MPI
-            _nh[_sLattice.get_load().glob(iC)].send_outData();
+            _nh[iC].send_outData();
         #endif
     }
 }
@@ -150,22 +141,26 @@ void Communicator2D<T,Lattice>::receive() {
 
     for (int iC=0; iC<_sLattice.get_load().size(); iC++) {
         #ifdef PARALLEL_MODE_MPI
-            _nh[_sLattice.get_load().glob(iC)].receive_inData();
+            _nh[iC].receive_inData();
         #else
-            int iCglob = _sLattice.get_load().glob(iC);
-            for (int i=0; i<_nh[iCglob].get_inCsize();i++) {
-                _nh[iCglob].get_inData()[_nh[iCglob].get_inC(i)] =
-                    _nh[_nh[iCglob].get_inC(i)].get_outData()[iCglob];
+            for (int i=0; i<_nh[iC].get_inCsize();i++) {
+                _nh[iC].get_inData()[_nh[iC].get_inC(i)] =
+                    _nh[_nh[iC].get_inC(i)].get_outData()[iC];
             }
         #endif
     }
+    #ifdef PARALLEL_MODE_MPI
+        for (int iC=0; iC<_sLattice.get_load().size(); iC++) {
+            _nh[iC].finish_comm();
+        }
+    #endif
 }
 
 template<typename T, template<typename U> class Lattice>
 void Communicator2D<T,Lattice>::write() {
 
     for (int iC=0; iC<_sLattice.get_load().size(); iC++) {
-        _nh[_sLattice.get_load().glob(iC)].write_inData();
+        _nh[iC].write_inData();
     }
 }
 

@@ -290,6 +290,12 @@ private:
     Dynamics<T,Lattice>* dynamics;  ///< local LB dynamics
 };
 
+template<typename T, template<typename U> class Lattice>
+struct WriteCellFunctional {
+    virtual ~WriteCellFunctional() { };
+    virtual void apply(Cell<T,Lattice>& cell) const =0;
+};
+
 }  // namespace olb
 
 #endif

@@ -134,6 +134,13 @@ class CuboidNeighbourhood3D {
         void init_inCN();
         /// Initializes _outC and _outN
         void init_outCN();
+        /// Initialization Helper
+        void bufSend_inCells();
+        /// Initialization Helper
+        void recWrite_outCells();
+        /// Finishes a communication step
+        void finish_comm();
+
         /// Buffers data to be send
         // WARNING: Here is interpolation needed if globX, globY
         // are not integers. This needs to be fixed if one will 

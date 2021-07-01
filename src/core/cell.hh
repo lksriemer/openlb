@@ -29,7 +29,6 @@
 #include <algorithm>
 #include "cell.h"
 #include "util.h"
-#include "lbHelpers.h"
 
 namespace olb {
 
@@ -62,9 +61,7 @@ Cell<T,Lattice>::Cell(Dynamics<T,Lattice>* dynamics_)
 }
 
 template<typename T, template<typename U> class Lattice>
-void Cell<T,Lattice>::defineDynamics (
-        Dynamics<T,Lattice>* dynamics_ )
-{
+void Cell<T,Lattice>::defineDynamics(Dynamics<T,Lattice>* dynamics_) {
     dynamics = dynamics_;
 }
 

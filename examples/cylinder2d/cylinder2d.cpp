@@ -147,12 +147,10 @@ int main(int argc, char* argv[]) {
     // choose between local and non-local boundary condition
     OnLatticeBoundaryCondition2D<T,DESCRIPTOR>*
         // boundaryCondition = createInterpBoundaryCondition2D(lattice);
-        boundaryCondition = createLocalBoundaryCondition2D(lattice);
+    boundaryCondition = createLocalBoundaryCondition2D(lattice);
 
     iniGeometry(lattice, bulkDynamics, *boundaryCondition);
 
-    // Computation of simulation results (e.g. the velocity field)
-    BlockStatistics2D<T,DESCRIPTOR> statistics(lattice);
     // Creation of images representing intermediate simulation results
     ImageWriter<T> imageWriter("leeloo");
 
@@ -174,7 +172,6 @@ int main(int argc, char* argv[]) {
                                        analysis.getPressure());
             imageWriter.writeScaledGif(createFileName("u", iT, 6),
                                        analysis.getVelocityNorm());
-            analysis.reset();
         }
 
         lattice.collideAndStream();

@@ -111,7 +111,6 @@ void writeGifs(BlockStructure2D<T,DESCRIPTOR>& lattice,
                                analysis.getVelocityNorm(), imSize,imSize);
     imageWriter.writeScaledGif(createFileName("omega", iter, 6),
                                analysis.getVorticity(), imSize,imSize);
-    analysis.reset();
 }
 
 int main(int argc, char* argv[]) {
@@ -146,8 +145,8 @@ int main(int argc, char* argv[]) {
 
     // choose between local and non-local boundary condition
     OnLatticeBoundaryCondition2D<T,DESCRIPTOR>*
-        boundaryCondition = createInterpBoundaryCondition2D(lattice);
-        // boundaryCondition = createLocalBoundaryCondition2D(lattice);
+        // boundaryCondition = createInterpBoundaryCondition2D(lattice);
+        boundaryCondition = createLocalBoundaryCondition2D(lattice);
 
     iniGeometry(lattice, converter, bulkDynamics, *boundaryCondition);
 

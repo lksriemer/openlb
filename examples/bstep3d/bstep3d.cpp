@@ -149,18 +149,17 @@ void writeGifs(BlockStructure3D<T,DESCRIPTOR>& lattice,
     imageWriter.writeScaledGif(createFileName("uz", iter, 6),
                                analysis.getVelocityNorm().sliceZ(nz/2),
                                imSize, imSize );
-    analysis.reset();
 }
 
 void writeVTK(BlockStructure3D<T,DESCRIPTOR>& lattice,
               LBunits<T> const& converter, int iter)
 {
+    T dx = converter.getDeltaX();
+    T dt = converter.getDeltaT();
     DataAnalysisBase3D<T,DESCRIPTOR> const& analysis = lattice.getDataAnalysis();
-
-    writeVTKData3D( createFileName("vtk", iter, 6),
-                    "vorticity", analysis.getVorticityNorm(),
-                    "velocity", analysis.getVelocity(),
-                    converter.getDeltaX(), converter.getDeltaT() );
+    VtkImageOutput3D<T> vtkOut(createFileName("vtk", iter, 6), dx);
+    vtkOut.writeData<float>(analysis.getVorticityNorm(), "vorticityNorm", (T)1/dt);
+    vtkOut.writeData<3,float>(analysis.getVelocity(), "velocity", dx/dt);
 }
 
 int main(int argc, char* argv[]) {

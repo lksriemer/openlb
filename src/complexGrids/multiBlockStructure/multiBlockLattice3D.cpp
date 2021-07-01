@@ -24,6 +24,7 @@
  * A 3D multiblock lattice -- template instantiation.
  */
 
+#include "complexGrids/mpiManager/mpiManager.h"
 #include "multiBlockLattice3D.h"
 #include "multiBlockLattice3D.hh"
 #include "core/latticeDescriptors.h"

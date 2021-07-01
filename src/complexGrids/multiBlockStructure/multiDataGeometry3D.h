@@ -56,6 +56,10 @@ inline bool intersect (
                      inters.x0, inters.x1, inters.y0, inters.y1, inters.z0, inters.z1);
 }
 
+inline bool contained(int iX, int iY, int iZ, BlockCoordinates3D const& block) {
+    return contained(iX,iY,iZ, block.x0, block.x1, block.y0, block.y1, block.z0, block.z1);
+}
+
 }
 
 
@@ -128,7 +132,7 @@ public:
     Overlap3D const& getPeriodicOverlap(int whichOverlap) const;
     int locate(int iX, int iY, int iZ, int guess=0) const;
     int locateInEnvelopes(int iX, int iY, int iZ, std::vector<int>& foundId, int guess=0) const;
-    int getNumAllocatedBulkCells() const;
+    size_t getNumAllocatedBulkCells() const;
     bool getNextChunkX(int iX, int iY, int iZ, int& nextLattice, int& nextChunkSize) const;
     bool getNextChunkY(int iX, int iY, int iZ, int& nextLattice, int& nextChunkSize) const;
     bool getNextChunkZ(int iX, int iY, int iZ, int& nextLattice, int& nextChunkSize) const;
@@ -141,6 +145,37 @@ private:
     std::vector<Overlap3D> normalOverlaps;
     std::vector<Overlap3D> periodicOverlaps;
     std::vector<std::vector<int> > neighbors;
+};
+
+/// Indexes of Blocks and Overlaps which are relevant in the parallel case
+class RelevantIndexes3D {
+public:
+    /// Constructor for the serial case: list all blocks and overlaps
+    RelevantIndexes3D(int numBlocks, int numNormalOverlaps, int numPeriodicOverlaps, int nx, int ny, int nz);
+    /// Constructor for the parallel case
+    RelevantIndexes3D(MultiDataDistribution3D const& dataDistribution, int whichRank);
+    /// Index of all blocks local to current processor
+    std::vector<int> const& getBlocks()                const { return myBlocks; }
+    /// Index of all blocks with which current processor has communication
+    std::vector<int> const& getNearbyBlocks()          const { return nearbyBlocks; }
+    /// Index of all overlaps for which original or overlap data are on current processor
+    std::vector<int> const& getNormalOverlaps()        const { return normalOverlaps; }
+    /// Index of all periodic overlaps for which original or overlap data are on current processor
+    std::vector<int> const& getPeriodicOverlaps()      const { return periodicOverlaps; }
+    /// Index of all periodic overlaps for which overlap data are on current processor
+    std::vector<int> const& getPeriodicOverlapWithMe() const { return periodicOverlapWithMe; }
+    /// Bounding box for the envelope of all blocks which are on current processor
+    BlockCoordinates3D const& getBoundingBox()         const { return boundingBox; }
+private:
+    void listAllIndexes(int numBlocks, int numNormalOverlaps, int numPeriodicOverlaps, int nx, int ny, int nz);
+    void computeRelevantIndexesInParallel(MultiDataDistribution3D const& dataDistribution, int whichRank);
+private:
+    std::vector<int> myBlocks;
+    std::vector<int> nearbyBlocks;
+    std::vector<int> normalOverlaps;
+    std::vector<int> periodicOverlaps;
+    std::vector<int> periodicOverlapWithMe;
+    BlockCoordinates3D boundingBox;
 };
 
 }  // namespace olb

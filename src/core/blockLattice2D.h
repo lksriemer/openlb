@@ -1,6 +1,6 @@
 /*  This file is part of the OpenLB library
  *
- *  Copyright (C) 2006, 2007 Jonas Latt
+ *  Copyright (C) 2006-2008 Jonas Latt
  *  Address: Rue General Dufour 24,  1211 Geneva 4, Switzerland 
  *  E-mail: jonas.latt@gmail.com
  *
@@ -89,6 +89,8 @@ public:
     /// Define the dynamics on a rectangular domain
     virtual void defineDynamics (int x0, int x1, int y0, int y1,
                                  Dynamics<T,Lattice>* dynamics );
+    /// Define the dynamics on a lattice site
+    virtual void defineDynamics(int iX, int iY, Dynamics<T,Lattice>* dynamics);
     /// Specify wheter statistics measurements are done on given rect. domain
     virtual void specifyStatisticsStatus (int x0, int x1, int y0, int y1,
                                           bool status );
@@ -98,9 +100,9 @@ public:
     virtual void collide();
     /// Apply collision step to a rectangular domain, with fixed velocity
     virtual void staticCollide (int x0, int x1, int y0, int y1,
-                                TensorField2D<T,2> const& u);
+                                TensorFieldBase2D<T,2> const& u);
     /// Apply collision step to the whole domain, with fixed velocity
-    virtual void staticCollide(TensorField2D<T,2> const& u);
+    virtual void staticCollide(TensorFieldBase2D<T,2> const& u);
     /// Apply streaming step to a rectangular domain
     virtual void stream(int x0, int x1, int y0, int y1);
     /// Apply streaming step to the whole domain
@@ -118,19 +120,28 @@ public:
                 int x0, int x1, int y0, int y1, T offset );
     /// Subtract a constant offset from the density within a rect. domain
     virtual void stripeOffDensityOffset(T offset);
+    /// Apply an operation to all cells of a sub-domain
+    virtual void forAll(int x0_, int x1_, int y0_, int y1_,
+                        WriteCellFunctional<T,Lattice> const& application);
+    /// Apply an operation to all cells
+    virtual void forAll(WriteCellFunctional<T,Lattice> const& application);
     /// Add a non-local post-processing step
     virtual void addPostProcessor (
                 PostProcessorGenerator2D<T,Lattice> const& ppGen );
-    /// Add a non-local post-processing step which couples together lattices
-    virtual void addLatticeCoupling (
-                LatticeCouplingGenerator2D<T,Lattice> const& lcGen,
-                std::vector<SpatiallyExtendedObject2D*> partners );
     /// Clean up all non-local post-processing steps
     virtual void resetPostProcessors();
     /// Execute post-processing on a sub-lattice
     virtual void postProcess(int x0_, int x1_, int y0_, int y1_);
     /// Execute post-processing steps
     virtual void postProcess();
+    /// Add a non-local post-processing step which couples together lattices
+    virtual void addLatticeCoupling (
+                LatticeCouplingGenerator2D<T,Lattice> const& lcGen,
+                std::vector<SpatiallyExtendedObject2D*> partners );
+    /// Execute couplings on a sub-lattice
+    virtual void executeCoupling(int x0_, int x1_, int y0_, int y1_);
+    /// Execute couplings
+    virtual void executeCoupling();
     /// Subscribe postProcessors for reduction operations
     virtual void subscribeReductions(Reductor<T>& reductor);
     /// Return a handle to the LatticeStatistics object
@@ -171,13 +182,15 @@ private:
     void releaseMemory();
     /// Release memory for post processors
     void clearPostProcessors();
+    /// Release memory for lattice couplings
+    void clearLatticeCouplings();
     template<int normalX, int normalY> void periodicEdge(int from, int to);
     void makePeriodic();
 private:
     int                  nx, ny;
     Cell<T,Lattice>      *rawData;
     Cell<T,Lattice>      **grid;
-    PostProcVector       postProcessors;
+    PostProcVector       postProcessors, latticeCouplings;
     #ifdef PARALLEL_MODE_OMP
         LatticeStatistics<T> **statistics;
     #else
@@ -197,8 +210,8 @@ public:
     BlockLatticeSerializer2D(BlockLattice2D<T,Lattice> const& blockLattice_,
                              int x0_, int x1_, int y0_, int y1_,
                              IndexOrdering::OrderingT ordering_);
-    virtual int getSize() const;
-    virtual const T* getNextDataBuffer(int& bufferSize) const;
+    virtual size_t getSize() const;
+    virtual const T* getNextDataBuffer(size_t& bufferSize) const;
     virtual bool isEmpty() const;
 private:
     BlockLattice2D<T,Lattice> const& blockLattice;
@@ -217,8 +230,8 @@ public:
     BlockLatticeUnSerializer2D(BlockLattice2D<T,Lattice>& blockLattice_,
                                int x0_, int x1_, int y0_, int y1_,
                                IndexOrdering::OrderingT ordering_);
-    virtual int getSize() const;
-    virtual T* getNextDataBuffer(int& bufferSize);
+    virtual size_t getSize() const;
+    virtual T* getNextDataBuffer(size_t& bufferSize);
     virtual void commitData();
     virtual bool isFull() const;
 private:

@@ -180,10 +180,10 @@ void MultiDataDistribution2D::computePeriodicOverlaps() {
     }
 }
 
-int MultiDataDistribution2D::getNumAllocatedBulkCells() const {
-    int numCells = 0;
+size_t MultiDataDistribution2D::getNumAllocatedBulkCells() const {
+    size_t numCells = 0;
     for (unsigned iBlock=0; iBlock<blocks.size(); ++iBlock) {
-        numCells += blocks[iBlock].getBulkLx() * blocks[iBlock].getBulkLy();
+        numCells += (size_t)blocks[iBlock].getBulkLx() * (size_t)blocks[iBlock].getBulkLy();
     }
     return numCells;
 }
@@ -218,6 +218,89 @@ bool MultiDataDistribution2D::getNextChunkY(int iX, int iY, int& nextLattice, in
         nextChunkSize = blocks[nextLattice].getBulk().y1-iY+1;
         return true;
     }
+}
+
+
+RelevantIndexes2D::RelevantIndexes2D(int numBlocks, int numNormalOverlaps,
+                                     int numPeriodicOverlaps, int nx, int ny)
+{
+    listAllIndexes(numBlocks, numNormalOverlaps, numPeriodicOverlaps, nx, ny);
+}
+
+RelevantIndexes2D::RelevantIndexes2D(MultiDataDistribution2D const& dataDistribution, int whichRank) {
+    computeRelevantIndexesInParallel(dataDistribution, whichRank);
+}
+
+void RelevantIndexes2D::listAllIndexes (
+        int numBlocks, int numNormalOverlaps, int numPeriodicOverlaps, int nx, int ny)
+{
+    myBlocks.resize(numBlocks);
+    nearbyBlocks.resize(numBlocks);
+    for (int iBlock=0; iBlock<numBlocks; ++iBlock) {
+        myBlocks[iBlock]     = iBlock;
+        nearbyBlocks[iBlock] = iBlock;
+    }
+    normalOverlaps.resize(numNormalOverlaps);
+    for (int iOverlap=0; iOverlap<numNormalOverlaps; ++iOverlap) {
+        normalOverlaps[iOverlap] = iOverlap;
+    }
+    periodicOverlaps.resize(numPeriodicOverlaps);
+    periodicOverlapWithMe.resize(numPeriodicOverlaps);
+    for (int iOverlap=0; iOverlap<numPeriodicOverlaps; ++iOverlap) {
+        periodicOverlaps[iOverlap] = iOverlap;
+        periodicOverlapWithMe[iOverlap] = iOverlap;
+    }
+    boundingBox = BlockCoordinates2D(0,nx-1, 0,ny-1);
+}
+
+void RelevantIndexes2D::computeRelevantIndexesInParallel(MultiDataDistribution2D const& dataDistribution,
+                                                         int whichRank)
+{
+    for (int iBlock=0; iBlock<dataDistribution.getNumBlocks(); ++iBlock) {
+        if (dataDistribution.getBlockParameters(iBlock).getProcId() == whichRank) {
+            BlockCoordinates2D const& newBlock = dataDistribution.getBlockParameters(iBlock).getEnvelope();
+            if (myBlocks.empty()) {
+                boundingBox = newBlock;
+            }
+            else {
+                if (newBlock.x0 < boundingBox.x0) boundingBox.x0 = newBlock.x0;
+                if (newBlock.x1 > boundingBox.x1) boundingBox.x1 = newBlock.x1;
+                if (newBlock.y0 < boundingBox.y0) boundingBox.y0 = newBlock.y0;
+                if (newBlock.y1 > boundingBox.y1) boundingBox.y1 = newBlock.y1;
+            }
+            myBlocks.push_back(iBlock);
+            nearbyBlocks.push_back(iBlock);
+        }
+    }
+    for (int iOverlap=0; iOverlap<dataDistribution.getNumNormalOverlaps(); ++iOverlap) {
+        Overlap2D const& overlap = dataDistribution.getNormalOverlap(iOverlap);
+        int originalProc = dataDistribution.getBlockParameters(overlap.getOriginalId()).getProcId();
+        int overlapProc = dataDistribution.getBlockParameters(overlap.getOverlapId()).getProcId();
+        if (originalProc == whichRank) {
+            nearbyBlocks.push_back( overlap.getOverlapId() );
+        }
+        if (originalProc == whichRank || overlapProc == whichRank) {
+            normalOverlaps.push_back(iOverlap);
+        }
+    }
+    for (int iOverlap=0; iOverlap<dataDistribution.getNumPeriodicOverlaps(); ++iOverlap) {
+        Overlap2D const& overlap = dataDistribution.getPeriodicOverlap(iOverlap);
+        int originalProc = dataDistribution.getBlockParameters(overlap.getOriginalId()).getProcId();
+        int overlapProc = dataDistribution.getBlockParameters(overlap.getOverlapId()).getProcId();
+        if (originalProc == whichRank) {
+            nearbyBlocks.push_back( overlap.getOverlapId() );
+        }
+        if (overlapProc == whichRank) {
+            periodicOverlapWithMe.push_back(iOverlap);
+        }
+        if (originalProc == whichRank || overlapProc == whichRank) {
+            periodicOverlaps.push_back(iOverlap);
+        }
+    }
+    // Erase duplicates in nearbyBlocks
+    std::sort(nearbyBlocks.begin(), nearbyBlocks.end());
+    std::vector<int>::iterator newEnd = unique(nearbyBlocks.begin(), nearbyBlocks.end());
+    nearbyBlocks.erase(newEnd, nearbyBlocks.end());
 }
 
 }  // namespace olb

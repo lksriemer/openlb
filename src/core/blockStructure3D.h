@@ -1,6 +1,6 @@
 /*  This file is part of the OpenLB library
  *
- *  Copyright (C) 2006, 2007 Jonas Latt
+ *  Copyright (C) 2006-2008 Jonas Latt
  *  Address: Rue General Dufour 24,  1211 Geneva 4, Switzerland 
  *  E-mail: jonas.latt@gmail.com
  *
@@ -37,6 +37,7 @@ namespace olb {
 
 template<typename T, template<typename U> class Lattice> struct Dynamics;
 template<typename T, template<typename U> class Lattice> class Cell;
+template<typename T, template<typename U> class Lattice> struct WriteCellFunctional;
 
 template<typename T, template<typename U> class Lattice>
 class BlockStructure3D : public Serializable<T>, public SpatiallyExtendedObject3D {
@@ -52,6 +53,7 @@ public:
     virtual void defineDynamics (
         int x0_, int x1_, int y0_, int y1_, int z0_ , int z1_,
         Dynamics<T,Lattice>* dynamics ) =0;
+    virtual void defineDynamics(int iX, int iY, int iZ, Dynamics<T,Lattice>* dynamics ) =0;
     virtual void specifyStatisticsStatus (
                 int x0_, int x1_, int y0_, int y1_, int z0_, int z1_,
                 bool status ) =0;
@@ -60,8 +62,8 @@ public:
     virtual void collide() =0;
     virtual void staticCollide (
             int x0_, int x1_, int y0_, int y1_, int z0_, int z1_,
-            TensorField3D<T,3> const& u) =0;
-    virtual void staticCollide( TensorField3D<T,3> const& u) =0;
+            TensorFieldBase3D<T,3> const& u) =0;
+    virtual void staticCollide( TensorFieldBase3D<T,3> const& u) =0;
     virtual void stream(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_) =0;
     virtual void stream(bool periodic=false) =0;
     virtual void collideAndStream (int x0_, int x1_, int y0_, int y1_, int z0_, int z1_) =0;
@@ -73,15 +75,19 @@ public:
             int x0_, int x1_, int y0_, int y1_, int z0_, int z1_,
             T offset ) =0;
     virtual void stripeOffDensityOffset(T offset) =0;
+    virtual void forAll(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_,
+                        WriteCellFunctional<T,Lattice> const& application) =0;
+    virtual void forAll(WriteCellFunctional<T,Lattice> const& application) =0;
     virtual void addPostProcessor (
             PostProcessorGenerator3D<T,Lattice> const& ppGen ) =0;
+    virtual void resetPostProcessors() =0;
+    virtual void postProcess(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_) =0;
+    virtual void postProcess() =0;
     virtual void addLatticeCoupling (
             LatticeCouplingGenerator3D<T,Lattice> const& lcGen,
             std::vector<SpatiallyExtendedObject3D*> partners ) =0;
-    virtual void resetPostProcessors() =0;
-    virtual void postProcess(int x0_, int x1_, int y0_, int y1_,
-                             int z0_, int z1_) =0;
-    virtual void postProcess() =0;
+    virtual void executeCoupling(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_) =0;
+    virtual void executeCoupling() =0;
     virtual void subscribeReductions(Reductor<T>& reductor) =0;
     virtual LatticeStatistics<T>& getStatistics() =0;
     virtual LatticeStatistics<T> const& getStatistics() const =0;

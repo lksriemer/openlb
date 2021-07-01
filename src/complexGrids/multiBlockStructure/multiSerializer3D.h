@@ -58,8 +58,8 @@ public:
     MultiSerializer3D(MultiSerializerPolicy3D<T> const& policy_,
                       int x0_, int x1_, int y0_, int y1_, int z0_, int z1_,
                       IndexOrdering::OrderingT ordering_);
-    virtual int getSize() const;
-    virtual const T* getNextDataBuffer(int& bufferSize) const;
+    virtual size_t getSize() const;
+    virtual const T* getNextDataBuffer(size_t& bufferSize) const;
     virtual bool isEmpty() const;
 private:
     void computeBufferAlongX(int nextLattice, int nextChunkSize) const;
@@ -82,8 +82,8 @@ public:
     MultiUnSerializer3D(MultiUnSerializerPolicy3D<T>& policy_,
                         int x0_, int x1_, int y0_, int y1_, int z0_, int z1_,
                         IndexOrdering::OrderingT ordering_);
-    virtual int getSize() const;
-    virtual T* getNextDataBuffer(int& bufferSize);
+    virtual size_t getSize() const;
+    virtual T* getNextDataBuffer(size_t& bufferSize);
     virtual void commitData();
     virtual bool isFull() const;
 private:

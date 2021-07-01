@@ -25,6 +25,7 @@ generic        := parallelIO \
 
 precompiled    :=  serializerIO \
                    vtkDataOutput \
+                   vtkDataOutputPrecompiled \
                    base64 \
                    parallelIO \
                    colormaps \

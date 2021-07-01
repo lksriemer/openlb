@@ -1,6 +1,6 @@
 /*  This file is part of the OpenLB library
  *
- *  Copyright (C) 2006, 2007 Jonas Latt
+ *  Copyright (C) 2006-2008 Jonas Latt
  *  Address: Rue General Dufour 24,  1211 Geneva 4, Switzerland 
  *  E-mail: jonas.latt@gmail.com
  *
@@ -38,6 +38,7 @@ namespace olb {
 
 template<typename T, template<typename U> class Lattice> struct Dynamics;
 template<typename T, template<typename U> class Lattice> class Cell;
+template<typename T, template<typename U> class Lattice> struct WriteCellFunctional;
 
 /// An interface to all the variants of (more or less) regular lattices.
 template<typename T, template<typename U> class Lattice>
@@ -53,13 +54,14 @@ public:
     virtual void defineDynamics (
         int x0_, int x1_, int y0_, int y1_,
         Dynamics<T,Lattice>* dynamics ) =0;
+    virtual void defineDynamics(int iX, int iY, Dynamics<T,Lattice>* dynamics ) =0;
     virtual void specifyStatisticsStatus (
                 int x0_, int x1_, int y0_, int y1_, bool status ) =0;
     virtual void collide(int x0_, int x1_, int y0_, int y1_) =0;
     virtual void collide() =0;
     virtual void staticCollide (int x0, int x1, int y0, int y1,
-                                TensorField2D<T,2> const& u) =0;
-    virtual void staticCollide (TensorField2D<T,2> const& u) =0;
+                                TensorFieldBase2D<T,2> const& u) =0;
+    virtual void staticCollide (TensorFieldBase2D<T,2> const& u) =0;
     virtual void stream(int x0_, int x1_, int y0_, int y1_) =0;
     virtual void stream(bool periodic=false) =0;
     virtual void collideAndStream(int x0_, int x1_, int y0_, int y1_) =0;
@@ -69,14 +71,19 @@ public:
     virtual void stripeOffDensityOffset (
             int x0_, int x1_, int y0_, int y1_, T offset ) =0;
     virtual void stripeOffDensityOffset(T offset) =0;
+    virtual void forAll(int x0_, int x1_, int y0_, int y1_,
+                        WriteCellFunctional<T,Lattice> const& application) =0;
+    virtual void forAll(WriteCellFunctional<T,Lattice> const& application) =0;
     virtual void addPostProcessor (
                      PostProcessorGenerator2D<T,Lattice> const& ppGen) =0;
-    virtual void addLatticeCoupling (
-                     LatticeCouplingGenerator2D<T,Lattice> const& lcGen,
-                     std::vector<SpatiallyExtendedObject2D*> partners ) =0;
     virtual void resetPostProcessors() =0;
     virtual void postProcess(int x0_, int x1_, int y0_, int y1_) =0;
     virtual void postProcess() =0;
+    virtual void addLatticeCoupling (
+                     LatticeCouplingGenerator2D<T,Lattice> const& lcGen,
+                     std::vector<SpatiallyExtendedObject2D*> partners ) =0;
+    virtual void executeCoupling(int x0_, int x1_, int y0_, int y1_) =0;
+    virtual void executeCoupling() =0;
     virtual void subscribeReductions(Reductor<T>& reductor) =0;
     virtual LatticeStatistics<T>& getStatistics() =0;
     virtual LatticeStatistics<T> const& getStatistics() const =0;

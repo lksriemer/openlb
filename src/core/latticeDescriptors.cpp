@@ -31,7 +31,9 @@
 
 namespace olb {
     namespace descriptors {
+        template class D2Q9DescriptorBase<double>;
         template class D2Q9Descriptor<double>;
+        template class D3Q19DescriptorBase<double>;
         template class D3Q19Descriptor<double>;
     }
 }

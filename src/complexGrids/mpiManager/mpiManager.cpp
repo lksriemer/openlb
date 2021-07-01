@@ -638,6 +638,12 @@ void MpiManager::reduceAndBcast<double>(double& reductVal, MPI_Op op, int root, 
 
 }
 
+void MpiManager::wait(MPI_Request* request, MPI_Status* status)
+{
+    if (!ok) return;
+    MPI_Wait(request, status);
+}
+
 void MpiManager::waitAll(MpiNonBlockingHelper& mpiNbHelper)
 {
     if (!ok) return;

@@ -23,8 +23,17 @@
 */
 
 
+#include "mrtLatticeDescriptors.h"
+#include "advectionDiffusionLatticeDescriptors.h"
+#include "forcedShanChenLatticeDescriptors.h"
 #include "entropicDynamics.h"
 #include "entropicLbHelpers.h"
 #include "mrtDynamics.h"
-#include "mrtLatticeDescriptors.h"
 #include "chopardDynamics.h"
+#include "navierStokesAdvectionDiffusionCouplingPostProcessor2D.h"
+#include "advectionDiffusionDynamics.h"
+#include "advectionDiffusionBoundaries.h"
+#include "advectionDiffusionBoundaryCondition2D.h"
+#include "advectionDiffusionMomenta.h"
+#include "advectionDiffusionUnits.h"
+#include "forcedShanChenCouplingPostProcessor2D.h"
