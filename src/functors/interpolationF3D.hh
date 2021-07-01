@@ -1,7 +1,7 @@
 /*  This file is part of the OpenLB library
  *
  *  Copyright (C) 2012 Lukas Baron, Tim Dornieden, Mathias J. Krause,
- *  Albert Mink
+ *  Albert Mink, Fabian Klemens
  *  E-mail contact: info@openlb.net
  *  The most recent release of OpenLB can be downloaded at
  *  <http://www.openlb.net/>
@@ -27,12 +27,12 @@
 
 #include<vector>    // for generic i/o
 
-#include "interpolationF3D.h"
+#include "functors/interpolationF3D.h"
 #include "functors/genericF.h"
 #include "functors/analyticalF.h"
 #include "functors/indicatorF.h"
-#include "complexGrids/cuboidStructure/superLattice3D.h"
-#include "core/lbHelpers.h"  // for computation of lattice rho and velocity
+#include "core/superLattice3D.h"
+#include "dynamics/lbHelpers.h"  // for computation of lattice rho and velocity
 
 
 namespace olb {
@@ -40,71 +40,109 @@ namespace olb {
 
 /// a class used to convert lattice functions to analytical functions
 template <typename T, template <typename U> class DESCRIPTOR>
-AnalyticalFfromSuperLatticeF3D<T,DESCRIPTOR>::
-  AnalyticalFfromSuperLatticeF3D(SuperLatticeF3D<T,DESCRIPTOR>& _f, SuperGeometry3D& _sg, bool _communicateToAll, int _overlap)
-  : AnalyticalF3D<T,T>(_f.getTargetDim()), f(_f), sg(_sg), cg(f.getSuperLattice3D().get_cGeometry()), communicateToAll(_communicateToAll), overlap(_overlap) { }
+AnalyticalFfromSuperLatticeF3D<T,DESCRIPTOR>::AnalyticalFfromSuperLatticeF3D(
+  SuperLatticeF3D<T,DESCRIPTOR>& f, bool communicateToAll, int overlap )
+  : AnalyticalF3D<T,T>(f.getTargetDim()), _f(f),
+    _cuboidGeometry(f.getSuperLattice3D().getCuboidGeometry()),
+    _communicateToAll(communicateToAll), _overlap(overlap)
+{
+  this->_name = "fromSuperLatticeF";
+}
 
 
 template <typename T, template <typename U> class DESCRIPTOR>
-std::vector<T> AnalyticalFfromSuperLatticeF3D<T,DESCRIPTOR>::operator() (std::vector<T> physC) {
-
+std::vector<T> AnalyticalFfromSuperLatticeF3D<T,DESCRIPTOR>::operator()
+(std::vector<T> physC)
+{ 
   // convert to lattice coordinates
   T d[3];
-  std::vector<int> latticeC(4,int());
 
-  int iX = floor((physC[0] - sg.getPositionX())/(T)sg.getSpacing());
-  int iY = floor((physC[1] - sg.getPositionY())/(T)sg.getSpacing());
-  int iZ = floor((physC[2] - sg.getPositionZ())/(T)sg.getSpacing());
-  d[0] = (physC[0] - sg.getPositionX())/sg.getSpacing() - iX;
-  d[1] = (physC[1] - sg.getPositionY())/sg.getSpacing() - iY;
-  d[2] = (physC[2] - sg.getPositionZ())/sg.getSpacing() - iZ;
-
-  f.getSuperLattice3D().communicate();
+  if(_communicateToAll) {
+	  _f.getSuperLattice3D().communicate();
+  }
 
   int locX, locY, locZ;
+#ifdef PARALLEL_MODE_MPI
   int dataSize = 0;
   int dataFound = 0;
-  std::vector<T> pOutput;
+#endif
+  std::vector<T> pOutput(_f.getTargetDim(),T());
+  std::vector<int> latticeC(4,0);
 
-  for (int iC = 0; iC < f.getSuperLattice3D().get_load().size(); iC++) {
-    if (cg.get_cuboid(f.getSuperLattice3D().get_load().glob(iC)).checkPoint(
-        iX, iY, iZ, locX, locY, locZ, overlap-1)) {
-      locX-=overlap;locY-=overlap;locZ-=overlap;
-      latticeC[0] = f.getSuperLattice3D().get_load().glob(iC);
-      std::vector<T> output(f(latticeC).size(), T());
+  for (int iC = 0; iC < _f.getSuperLattice3D().getLoadBalancer().size(); iC++) {
+	  latticeC[0] = _f.getSuperLattice3D().getLoadBalancer().glob(iC);
+    if (_cuboidGeometry.get(latticeC[0]).checkPoint(
+          physC[0], physC[1], physC[2], locX, locY, locZ, _overlap-1)) {
+      locX-=(_overlap-1);
+      locY-=(_overlap-1);
+      locZ-=(_overlap-1);
+
+      std::vector<T> physRiC = _cuboidGeometry.get(latticeC[0]).getPhysR(locX,locY,locZ);
+
+      d[0] = (physC[0] - physRiC[0]);
+      d[1] = (physC[1] - physRiC[1]);
+      d[2] = (physC[2] - physRiC[2]);
+
+      d[0]/=_cuboidGeometry.get(latticeC[0]).getDeltaR();
+      d[1]/=_cuboidGeometry.get(latticeC[0]).getDeltaR();
+      d[2]/=_cuboidGeometry.get(latticeC[0]).getDeltaR();
+
+//      cout << d[0] << " " << d[1] << " " << d[2] << endl;
+
+//      std::vector<T> output(f(latticeC).size(), T());
+      std::vector<T> output(_f.getTargetDim(), T());
+
       for (unsigned int iD=0; iD<output.size(); iD++) {
-        latticeC[1] = locX; latticeC[2] = locY; latticeC[3] = locZ;
-        output[iD] += (f(latticeC)[iD]*(1-d[0])*(1-d[1])*(1-d[2]));
+        latticeC[1] = locX;
+        latticeC[2] = locY;
+        latticeC[3] = locZ;
+        output[iD] += (_f(latticeC)[iD]*(1-d[0])*(1-d[1])*(1-d[2]));
 
-        latticeC[1] = locX; latticeC[2] = locY+1; latticeC[3] = locZ;
-        output[iD] += (f(latticeC)[iD]*(1-d[0])*(d[1])*(1-d[2]));
+        latticeC[1] = locX;
+        latticeC[2] = locY+1;
+        latticeC[3] = locZ;
+        output[iD] += (_f(latticeC)[iD]*(1-d[0])*(d[1])*(1-d[2]));
 
-        latticeC[1] = locX+1; latticeC[2] = locY; latticeC[3] = locZ;
-        output[iD] += (f(latticeC)[iD]*(d[0])*(1-d[1])*(1-d[2]));
+        latticeC[1] = locX+1;
+        latticeC[2] = locY;
+        latticeC[3] = locZ;
+        output[iD] += (_f(latticeC)[iD]*(d[0])*(1-d[1])*(1-d[2]));
 
-        latticeC[1] = locX+1; latticeC[2] = locY+1; latticeC[3] = locZ;
-        output[iD] += (f(latticeC)[iD]*(d[0])*(d[1])*(1-d[2]));
+        latticeC[1] = locX+1;
+        latticeC[2] = locY+1;
+        latticeC[3] = locZ;
+        output[iD] += (_f(latticeC)[iD]*(d[0])*(d[1])*(1-d[2]));
 
-        latticeC[1] = locX; latticeC[2] = locY; latticeC[3] = locZ+1;
-        output[iD] += (f(latticeC)[iD]*(1-d[0])*(1-d[1])*(d[2]));
+        latticeC[1] = locX;
+        latticeC[2] = locY;
+        latticeC[3] = locZ+1;
+        output[iD] += (_f(latticeC)[iD]*(1-d[0])*(1-d[1])*(d[2]));
 
-        latticeC[1] = locX; latticeC[2] = locY+1; latticeC[3] = locZ+1;
-        output[iD] += (f(latticeC)[iD]*(1-d[0])*(d[1])*(d[2]));
+        latticeC[1] = locX;
+        latticeC[2] = locY+1;
+        latticeC[3] = locZ+1;
+        output[iD] += (_f(latticeC)[iD]*(1-d[0])*(d[1])*(d[2]));
 
-        latticeC[1] = locX+1; latticeC[2] = locY; latticeC[3] = locZ+1;
-        output[iD] += (f(latticeC)[iD]*(d[0])*(1-d[1])*(d[2]));
+        latticeC[1] = locX+1;
+        latticeC[2] = locY;
+        latticeC[3] = locZ+1;
+        output[iD] += (_f(latticeC)[iD]*(d[0])*(1-d[1])*(d[2]));
 
-        latticeC[1] = locX+1; latticeC[2] = locY+1; latticeC[3] = locZ+1;
-        output[iD] += (f(latticeC)[iD]*(d[0])*(d[1])*(d[2]));
+        latticeC[1] = locX+1;
+        latticeC[2] = locY+1;
+        latticeC[3] = locZ+1;
+        output[iD] += (_f(latticeC)[iD]*(d[0])*(d[1])*(d[2]));
       }
-    dataSize = f(latticeC).size();
-    dataFound = 1;
-    pOutput = output; 
+#ifdef PARALLEL_MODE_MPI
+      dataSize = _f(latticeC).size();
+      dataFound = 1;
+#endif
+      pOutput = output;
     }
   }
 
 #ifdef PARALLEL_MODE_MPI
-  if(communicateToAll) {
+  if(_communicateToAll) {
     singleton::mpi().reduceAndBcast(dataFound, MPI_SUM);
     singleton::mpi().reduceAndBcast(dataSize, MPI_SUM);
     dataSize/=dataFound;
@@ -123,34 +161,48 @@ std::vector<T> AnalyticalFfromSuperLatticeF3D<T,DESCRIPTOR>::operator() (std::ve
 #endif
 
   return pOutput;
-};
+}
 
 
-
-/// a class used to convert analytical functions to lattice functions
-/// input functions are interpreted as SI->SI units, the resulting lattice
-/// function will map lattice->lattice units
-template <typename T, template <typename U> class DESCRIPTOR>
-SuperLatticeFfromAnalyticalF3D<T,DESCRIPTOR>::
-  SuperLatticeFfromAnalyticalF3D(AnalyticalF3D<T,T>& _f, SuperLattice3D<T,DESCRIPTOR>& _sLattice, SuperGeometry3D& _sg, CuboidGeometry3D<T>& _cg)
-    : SuperLatticeF3D<T,DESCRIPTOR>(_sLattice,_f.getTargetDim()), f(_f), sg(_sg), cg(_cg) { }
 
 template <typename T, template <typename U> class DESCRIPTOR>
-std::vector<T> SuperLatticeFfromAnalyticalF3D<T,DESCRIPTOR>::operator() (std::vector<int> input) {
+SuperLatticeFfromAnalyticalF3D<T,DESCRIPTOR>::SuperLatticeFfromAnalyticalF3D(
+  AnalyticalF3D<T,T>& f, SuperLattice3D<T,DESCRIPTOR>& sLattice )
+  : SuperLatticeF3D<T,DESCRIPTOR>(sLattice,f.getTargetDim()), _f(f)
+{
+  this->_name = "fromAnalyticalF";
+}
 
-  // convert to global coordinates
-  T iX = cg.get_cuboid(input[0]).get_globPosX()+input[1];
-  T iY = cg.get_cuboid(input[0]).get_globPosY()+input[2];
-  T iZ = cg.get_cuboid(input[0]).get_globPosZ()+input[3];
+template <typename T, template <typename U> class DESCRIPTOR>
+std::vector<T> SuperLatticeFfromAnalyticalF3D<T,DESCRIPTOR>::operator()
+  (std::vector<int> input)
+{
+  return _f(this->_sLattice.getCuboidGeometry().getPhysR(input));
+}
 
-  // convert to physical coordinates
-  std::vector<T> physCoordinate;
-  physCoordinate.push_back(this->sg.physCoords(iX,iY,iZ)[0]);
-  physCoordinate.push_back(this->sg.physCoords(iX,iY,iZ)[1]);
-  physCoordinate.push_back(this->sg.physCoords(iX,iY,iZ)[2]);
 
-  return f(physCoordinate);
-};
+
+//////////// not yet working // symbolically ///////////////////
+////////////////////////////////////////////////
+template <typename T, template <typename U> class DESCRIPTOR>
+BlockLatticeFfromAnalyticalF3D<T,DESCRIPTOR>::
+BlockLatticeFfromAnalyticalF3D(AnalyticalF3D<T,T>& f,
+  BlockLattice3D<T,DESCRIPTOR>& sLattice, BlockGeometry3D<T>& superGeometry,
+  CuboidGeometry3D<T>& cuboidGeometry)
+  : BlockLatticeF3D<T,DESCRIPTOR>(sLattice,f.getTargetDim()), _f(f),
+    _superGeometry(superGeometry), _cuboidGeometry(cuboidGeometry)
+{
+  this->_name = "fromAnalyticalF";
+}
+
+template <typename T, template <typename U> class DESCRIPTOR>
+std::vector<T> BlockLatticeFfromAnalyticalF3D<T,DESCRIPTOR>::operator()
+  (std::vector<int> input)
+{
+  std::vector<T> physR = _superGeometry.getPhysR(input[0],input[1],input[2]);
+  return _f(physR);
+}
+
 
 
 } // end namespace olb

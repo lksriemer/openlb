@@ -22,14 +22,18 @@
  *  Boston, MA  02110-1301, USA.
 */
 
-#include "superLatticeBaseF3D.h"
-#include "superLatticeBaseF3D.hh"
-#include "core/latticeDescriptors.h"
+#include "functors/superLatticeBaseF3D.h"
+#include "functors/superLatticeBaseF3D.hh"
+#include "functors/superLatticeCalcF3D.hh"
+#include "dynamics/latticeDescriptors.h"
 
 namespace olb {
 
 template class SuperLatticeF3D<double,descriptors::D3Q19Descriptor>;
 template class SuperLatticePhysF3D<double,descriptors::D3Q19Descriptor>;
+
+template class SuperLatticeIdentity3D<double,descriptors::D3Q19Descriptor>;
+template class ComposedSuperLatticeF3D<double,descriptors::D3Q19Descriptor>;
 
 }
 

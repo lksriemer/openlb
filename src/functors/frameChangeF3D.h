@@ -33,7 +33,7 @@
 #include "functors/analyticalF.h"
 #include "functors/superLatticeBaseF3D.h"
 #include "functors/superLatticeLocalF3D.h"
-#include "complexGrids/cuboidStructure/superLattice3D.h"
+#include "core/superLattice3D.h"
 
 /** \file
   This file contains two different classes of functors, in the FIRST part
@@ -127,7 +127,7 @@ public:
 template <typename T, template <typename U> class DESCRIPTOR>
 class RotatingForceField3D : public SuperLatticeF3D<T,DESCRIPTOR> {
 protected:
-  SuperGeometry3D sg;
+  SuperGeometry3D<T>& sg;
   const LBconverter<T>& converter;
   std::vector<T> axisPoint;
   std::vector<T> axisDirection;
@@ -139,7 +139,7 @@ protected:
 
 public:
   RotatingForceField3D(SuperLattice3D<T,DESCRIPTOR>& sLattice_,
-                       SuperGeometry3D& superGeometry_,
+                       SuperGeometry3D<T>& superGeometry_,
                        const LBconverter<T>& converter_,
                        std::vector<T> axisPoint_,
                        std::vector<T> axisDirection_,
@@ -176,16 +176,32 @@ public:
 template <typename T>
 class CirclePoiseuille3D : public AnalyticalF3D<T,T> {
 protected:
-  std::vector<T> axisPoint;
-  std::vector<T> axisDirection;
-  T maxVelocity;
-  T radius;
-  T scale;
+  std::vector<T> _center;
+  std::vector<T> _normal;
+  T _radius;
+
+  T _maxVelocity;
+  T _scale;
 
 public:
   CirclePoiseuille3D(std::vector<T> axisPoint_, std::vector<T> axisDirection_,  T maxVelocity_, T radius_, T scale_=1);
+  CirclePoiseuille3D(T center0, T center1, T center2, T normal0, T normal1, T normal2, T radius, T maxVelocity = T(1), T scale = T(1) ) : AnalyticalF3D<T,T>(3), _radius(radius), _maxVelocity(maxVelocity), _scale(scale) {
+    _center.push_back(center0); _center.push_back(center1); _center.push_back(center2);
+    std::vector<T> normalTmp;
+    normalTmp.push_back(normal0); normalTmp.push_back(normal1); normalTmp.push_back(normal2 );
+    _normal = normalTmp;
+   };
+
   /// construct from material number, note: untested
-  CirclePoiseuille3D(SuperGeometry3D& superGeometry_, int material_, T maxVelocity_, T scale_=1);
+  CirclePoiseuille3D(SuperGeometry3D<T>& superGeometry_, int material_, T maxVelocity_, T scale_=1);
+
+  /// Returns centerpoint vector
+  std::vector<T> getCenter() { return _center; };
+  /// Returns normal vector
+  std::vector<T> getNormal() { return _normal; };
+  /// Returns radi
+  T getRadius() { return _radius; };
+
   std::vector<T> operator()(std::vector<T> x);
 };
 
@@ -202,27 +218,12 @@ protected:
   std::vector<T> x2;
   std::vector<T> maxVelocity;
 
-  /*
-  /// cross product, only valid in 3d
-  std::vector<T> crossProduct3D(std::vector<T> a, std::vector<T> b) {
-    std::vector<T> v;
-    v.push_back(a[2]*b[3]-a[3]*b[2]);
-    v.push_back(a[3]*b[1]-a[1]*b[3]);
-    v.push_back(a[1]*b[2]-a[2]*b[1]);
-    return v;
-  }
-  */
-
-  /// normalizes an arbitrary vector
-  std::vector<T> normalize(std::vector<T> vec);
-
 public:
   RectanglePoiseuille3D(std::vector<T>& x0_, std::vector<T>& x1_, std::vector<T>& x2_, std::vector<T>& maxVelocity_);
   /// constructor from material numbers
   /** offsetX,Y,Z is a positive number denoting the distance from border
-    * voxels of material_ to the zerovelocity boundary (warning: input is
-    * currently ignored, uses spacing instead) */
-  RectanglePoiseuille3D(SuperGeometry3D& superGeometry_, int material_, std::vector<T>& maxVelocity_, T offsetX=1, T offsetY=1, T offsetZ=1);
+    * voxels of material_ to the zerovelocity boundary */
+  RectanglePoiseuille3D(SuperGeometry3D<T>& superGeometry_, int material_, std::vector<T>& maxVelocity_, T offsetX, T offsetY, T offsetZ);
   std::vector<T> operator()(std::vector<T> x);
 };
 

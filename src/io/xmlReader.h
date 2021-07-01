@@ -36,7 +36,6 @@ template <class T, unsigned DIM> class ADf;
 #include <map>
 #define TIXML_USE_STL
 #include "external/tinyxml/tinyxml.h"
-#include "complexGrids/mpiManager/mpiManager.h"
 #include "io/ostreamManager.h"
 
 namespace olb {

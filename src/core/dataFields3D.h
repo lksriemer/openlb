@@ -92,7 +92,6 @@ public:
     int x0_, int x1_, int y0_, int y1_, int z0_, int z1_,
     IndexOrdering::OrderingT ordering );
   virtual T computeReduction(DataReduction<T>& reduction) const;
-  virtual MultiDataDistribution3D getDataDistribution() const;
   virtual SpatiallyExtendedObject3D* getComponent(int iBlock);
   virtual SpatiallyExtendedObject3D const* getComponent(int iBlock) const;
   virtual multiPhysics::MultiPhysicsId getMultiPhysicsId() const;
@@ -171,7 +170,6 @@ public:
     int x0_, int x1_, int y0_, int y1_, int z0_, int z1_,
     IndexOrdering::OrderingT ordering );
 //     virtual T computeReduction(DataReduction<T>& reduction) const;
-  virtual MultiDataDistribution3D getDataDistribution() const;
   virtual SpatiallyExtendedObject3D* getComponent(int iBlock);
   virtual SpatiallyExtendedObject3D const* getComponent(int iBlock) const;
   virtual multiPhysics::MultiPhysicsId getMultiPhysicsId() const;

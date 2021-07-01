@@ -189,11 +189,6 @@ T ScalarField3D<T>::computeReduction(DataReduction<T>& reduction) const
 }
 
 template<typename T>
-MultiDataDistribution3D ScalarField3D<T>::getDataDistribution() const {
-  return MultiDataDistribution3D(getNx(), getNy(), getNz());
-}
-
-template<typename T>
 SpatiallyExtendedObject3D* ScalarField3D<T>::getComponent(int iBlock) {
   OLB_PRECONDITION( iBlock==0 );
   return this;
@@ -543,11 +538,6 @@ DataUnSerializer<T>& TensorField3D<T,nDim>::getSubUnSerializer (
   unSerializer = new SequentialTensorFieldUnSerializer3D<T, nDim> (
     *this, x0_, x1_, y0_, y1_, z0_, z1_, ordering );
   return *unSerializer;
-}
-
-template<typename T, int nDim>
-MultiDataDistribution3D TensorField3D<T,nDim>::getDataDistribution() const {
-  return MultiDataDistribution3D(getNx(), getNy(), getNz());
 }
 
 template<typename T, int nDim>

@@ -40,8 +40,8 @@ template<typename T>
 class ImageWriter {
 public:
   ImageWriter(std::string const& map);
-  ImageWriter(std::string const& map, int colorRange_, int numColors_);
-  void setMap(std::string const& map, int colorRange_, int numColors_);
+  ImageWriter(std::string const& map, int colorRange, int numColors);
+  void setMap(std::string const& map, int colorRange, int numColors);
   void writePpm(std::string const& fName,
                 ScalarFieldBase2D<T> const& field,
                 T minVal, T maxVal) const;
@@ -62,18 +62,53 @@ public:
                  ScalarFieldBase2D<T> const& field) const;
 private:
   mutable OstreamManager clout;
-  int colorRange, numColors;
-  ColorMap<T> colorMap;
+  int _colorRange;
+  int _numColors;
+  ColorMap<T> _colorMap;
 };
 
 
 ////////// Standalone functions ////////////////////////////////////////
 
-inline std::string createFileName(std::string name, int number, int width) {
+/// for .pvd masterFile
+inline std::string createFileName(std::string name) {
   std::stringstream fNameStream;
-  fNameStream << name << std::setfill('0') << std::setw(width) << number;
+  fNameStream << name;
   return fNameStream.str();
 }
+
+/// used for .pvd file per timeStep iT
+inline std::string createFileName(std::string name, int iT) {
+  std::stringstream fNameStream;
+  fNameStream << name  << "_"
+              << "iT" << std::setw(7) << std::setfill('0') << iT ;
+  return fNameStream.str();
+}
+
+/// every thread writes his cuboids iC per timeStep iT
+inline std::string createFileName(std::string name,  int iT, int iC) {
+  std::stringstream fNameStream;
+  fNameStream << name  << "_"
+              << "iT" << std::setw(7) << std::setfill('0') << iT
+              << "iC" << std::setw(5) << std::setfill('0') << iC ;
+  return fNameStream.str();
+}
+
+/// to write functors instantaneously, without adding
+inline std::string createFileName(std::string name, std::string functor, int iT = 0) {
+  std::stringstream fNameStream;
+  fNameStream << name <<"_"<< functor << "iT" << std::setw(7) << std::setfill('0') << iT;
+  return fNameStream.str();
+}
+
+/// to write functors instantaneously, without adding
+inline std::string createFileName(std::string name, std::string functor, int iT, int iC) {
+  std::stringstream fNameStream;
+  fNameStream << name <<"_"<< functor << "iT" << std::setw(7) << std::setfill('0') << iT
+                                 << "iC" << std::setw(5) << std::setfill('0') << iC ;
+  return fNameStream.str();
+}
+
 
 }  // namespace graphics
 

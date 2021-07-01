@@ -21,7 +21,7 @@
 */
 
 /** \file
- * Base class for data analysis on 2D BlockStructures -- header file.
+ * Base class for data analysis on 2D BlockLatticeStructures -- header file.
  */
 
 #ifndef DATA_ANALYSIS_BASE_2D_H

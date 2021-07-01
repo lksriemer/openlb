@@ -30,12 +30,13 @@
 
 #include <algorithm>
 #include "blockLattice2D.h"
-#include "dynamics.h"
+#include "dynamics/dynamics.h"
 #include "cell.h"
-#include "lbHelpers.h"
+#include "dynamics/lbHelpers.h"
 #include "util.h"
-#include "ompManager.h"
-#include "loadBalancer.h"
+#include "communication/ompManager.h"
+#include "communication/loadBalancer.h"
+#include "communication/blockLoadBalancer.h"
 #include "dataAnalysis2D.h"
 
 namespace olb {
@@ -190,36 +191,6 @@ void BlockLattice2D<T,Lattice>::defineDynamics (
   OLB_PRECONDITION(iY>=0 && iY<ny);
 
   grid[iX][iY].defineDynamics(dynamics);
-}
-
-template<typename T, template<typename U> class Lattice>
-void BlockLattice2D<T,Lattice>::defineDynamics (
-  BlockGeometryStatistics2D* blockGeoSta, Dynamics<T,Lattice>* dynamics, int material )
-{
-  defineDynamics (
-    blockGeoSta,
-    0, blockGeoSta->getBlockGeometry()->getNx()-1, 0, blockGeoSta->getBlockGeometry()->getNy()-1,
-    dynamics, material );
-}
-
-template<typename T, template<typename U> class Lattice>
-void BlockLattice2D<T,Lattice>::defineDynamics (
-  BlockGeometryStatistics2D* blockGeoSta,
-  int x0, int x1, int y0, int y1,
-  Dynamics<T,Lattice>* dynamics, int material )
-{
-  OLB_PRECONDITION(x0>=0 && x1<nx);
-  OLB_PRECONDITION(x1>=x0);
-  OLB_PRECONDITION(y0>=0 && y1<ny);
-  OLB_PRECONDITION(y1>=y0);
-  for (int iX=x0; iX<=x1; ++iX) {
-    for (int iY=y0; iY<=y1; ++iY) {
-      if(blockGeoSta->getBlockGeometry()->getMaterial(iX, iY)==material) {
-        grid[iX][iY].defineDynamics(dynamics);
-
-      }
-    }
-  }
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -729,11 +700,6 @@ DataUnSerializer<T>& BlockLattice2D<T,Lattice>::getSubUnSerializer (
 }
 
 template<typename T, template<typename U> class Lattice>
-MultiDataDistribution2D BlockLattice2D<T,Lattice>::getDataDistribution() const {
-  return MultiDataDistribution2D(getNx(), getNy());
-}
-
-template<typename T, template<typename U> class Lattice>
 SpatiallyExtendedObject2D* BlockLattice2D<T,Lattice>::getComponent(int iBlock) {
   OLB_PRECONDITION( iBlock==0 );
   return this;
@@ -896,16 +862,16 @@ void BlockLattice2D<T,Lattice>::bulkCollideAndStream (
   if (omp.get_size() <= x1-x0+1) {
     #pragma omp parallel
     {
-      loadBalancer loadbalance(omp.get_rank(), omp.get_size(), x1-x0+1, x0);
+      BlockLoadBalancer<T> loadbalance(omp.get_rank(), omp.get_size(), x1-x0+1, x0);
       int iX, iY, iPop;
 
-      iX=loadbalance.get_firstGlobNum();
+      iX=loadbalance.firstGlobNum();
       for (int iY=y0; iY<=y1; ++iY) {
         grid[iX][iY].collide(getStatistics());
         grid[iX][iY].revert();
       }
 
-      for (iX=loadbalance.get_firstGlobNum()+1; iX<=loadbalance.get_lastGlobNum(); ++iX) {
+      for (iX=loadbalance.firstGlobNum()+1; iX<=loadbalance.lastGlobNum(); ++iX) {
         for (iY=y0; iY<=y1; ++iY) {
           grid[iX][iY].collide(getStatistics());
           /** The method beneath doesnt work with Intel compiler 9.1044 and 9.1046 for Itanium prozessors
@@ -926,7 +892,7 @@ void BlockLattice2D<T,Lattice>::bulkCollideAndStream (
 
       #pragma omp barrier
 
-      iX=loadbalance.get_firstGlobNum();
+      iX=loadbalance.firstGlobNum();
       for (iY=y0; iY<=y1; ++iY) {
         for (iPop=1; iPop<=Lattice<T>::q/2; ++iPop) {
           int nextX = iX + Lattice<T>::c[iPop][0];

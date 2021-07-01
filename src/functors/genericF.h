@@ -22,7 +22,7 @@
 */
 
 /** \file
- * The description of a generic interface for all functor classes 
+ * The description of a generic interface for all functor classes
  * -- header file.
  */
 
@@ -30,44 +30,58 @@
 #ifndef GENERIC_F_H
 #define GENERIC_F_H
 
-#include<vector>    // for generic i/o
-#include<cmath>     // for lpnorm
-
-/** Note: Throughout the whole source code directory genericFunctions, the
- *  template parameters for i/o dimensions are:
- *           F: S^m -> T^n  (S=source, T=target)
- */
+#include<vector>
+#include<string>
 
 namespace olb {
 
-////////////////////////////////////////////////////////////////////////////////
-// first level classes
-
-/// generic functions that can represent continuous as well as discrete
-/// functions
+/**
+ *  GenericF is a base class, that can represent continuous as well as discrete
+ *  functions.
+ *  Please take care about the source and target dimensions in the constructor.
+ *                F: S^m -> T^n (S=source, T=target)
+ *
+ *  \param _m     source dimension
+ *  \param _n     target dimension
+ *  \param _name  is functor name e.g. velocity, pressure
+ */
 template <typename T, typename S>
 class GenericF {
-
 protected:
-  int m;             // source dimension, -1 means generic/undefined
-  int n;             // target dimension
-  std::vector< GenericF<T,S>* > pointerVec;
+  GenericF() {};
+  GenericF(int targetDim, int sourceDim) : _n(targetDim), _m(sourceDim) { };
+
+  int _n;
+  int _m;
+  std::vector< GenericF<T,S>* > _pointerVec;
+  std::string _name;
 
 public:
-  GenericF(int targetDim, int sourceDim) : m(sourceDim), n(targetDim) { };
   virtual ~GenericF() {};
+  int getSourceDim() const;
+  int getTargetDim() const;
 
-  const int getSourceDim() const;
-  const int getTargetDim() const;
+  /// read and write access to name
+  std::string& getName();
+  /// read only access to name
+  std::string const& getName() const;
 
   virtual std::vector<T> operator() (std::vector<S> input) = 0;
- 
-  std::vector<T> operator() ();
-  std::vector<T> operator() (S input0);
-  std::vector<T> operator() (S input0, S input1);
-  std::vector<T> operator() (S input0, S input1, S input2);
-  std::vector<T> operator() (S input0, S input1, S input2, S input3);
 
+  virtual std::vector<T> operator() ();
+  virtual std::vector<T> operator() (S input0);
+  virtual std::vector<T> operator() (S input0, S input1);
+  virtual std::vector<T> operator() (S input0, S input1, S input2);
+  virtual std::vector<T> operator() (S input0, S input1, S input2, S input3);
+
+  // memory management
+  /// adds ptr to the child list
+  virtual void addChild(GenericF<T,S>* ptr);
+  /// remove ptr from the child list
+  virtual void removeChild(GenericF<T,S>* ptr);
+  /// deletes ptr from child list and frees the memory for the object *ptr
+  /// CALC CLASSES additionally delete recursively father from grandfather
+  /// and free the memory (if possible)
   virtual void myErase(GenericF<T,S>* ptr);
 };
 

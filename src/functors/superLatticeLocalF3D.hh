@@ -1,6 +1,6 @@
 /*  This file is part of the OpenLB library
  *
- *  Copyright (C) 2012 Lukas Baron, Tim Dornieden, Mathias J. Krause,
+ *  Copyright (C) 2012, 2014 Lukas Baron, Tim Dornieden, Mathias J. Krause,
  *  Albert Mink
  *  E-mail contact: info@openlb.net
  *  The most recent release of OpenLB can be downloaded at
@@ -28,83 +28,211 @@
 #include<vector>    // for generic i/o
 #include<cmath>     // for lpnorm
 
-#include "superLatticeLocalF3D.h"
-
-#include "superLatticeBaseF3D.h"
-#include "functors/genericF.h"
-#include "functors/analyticalF.h"
-#include "functors/indicatorF.h"
-#include "complexGrids/cuboidStructure/superLattice3D.h"
-#include "core/lbHelpers.h"  // for computation of lattice rho and velocity
+#include "functors/superLatticeLocalF3D.h"
+#include "functors/blockLatticeLocalF3D.h"
+#include "dynamics/lbHelpers.h"  // for computation of lattice rho and velocity
 
 namespace olb {
 
-
-template <typename T, template <typename U> class DESCRIPTOR>
-SuperLatticeDissipation3D<T,DESCRIPTOR>::SuperLatticeDissipation3D(SuperLattice3D<T,DESCRIPTOR>& _sLattice, const LBconverter<T>& _converter)
-  : SuperLatticeF3D<T,DESCRIPTOR>(_sLattice,1), converter(_converter) { }
+//template <typename T, template <typename U> class DESCRIPTOR> class BlockLatticeStrainRate3D;
 
 
 template <typename T, template <typename U> class DESCRIPTOR>
-std::vector<T> SuperLatticeDissipation3D<T,DESCRIPTOR>::operator() (std::vector<int> input) {
-  int globIC = input[0]; int locix= input[1]; int lociy= input[2]; int lociz= input[3];
-  if ( this->sLattice.get_load().rank(globIC) == singleton::mpi().getRank() ) {
-    // local coords are given, fetch local cell and compute value(s)
-    T rho, uTemp[DESCRIPTOR<T>::d], pi[util::TensorVal<DESCRIPTOR<T> >::n];
-    T overlap = this->sLattice.get_overlap();
-    this->sLattice.get_blockLattice(this->sLattice.get_load().loc(globIC)).get(locix+overlap, lociy+overlap, lociz+overlap).computeAllMomenta(rho, uTemp, pi);
+SuperLatticeFpop3D<T,DESCRIPTOR>::SuperLatticeFpop3D
+  (SuperLattice3D<T,DESCRIPTOR>& sLattice)
+  : SuperLatticeF3D<T,DESCRIPTOR>(sLattice,DESCRIPTOR<T>::q)
+{ this->_name = "fPop"; }
 
-    T PiNeqNormSqr = pi[0]*pi[0] + 2.*pi[1]*pi[1] + pi[2]*pi[2];
-    if (util::TensorVal<DESCRIPTOR<T> >::n == 6)
-      PiNeqNormSqr += pi[2]*pi[2] + pi[3]*pi[3] + 2.*pi[4]*pi[4] +pi[5]*pi[5];
+template <typename T, template <typename U> class DESCRIPTOR>
+std::vector<T> SuperLatticeFpop3D<T,DESCRIPTOR>::operator() (std::vector<int> input)
+{
+  int globIC = input[0];
+  if ( this->_sLattice.getLoadBalancer().rank(globIC) == singleton::mpi().getRank() ) {
+    std::vector<int> inputLocal(3,T());
+    int overlap = this->_sLattice.getOverlap();
+    inputLocal[0] = input[1] + overlap;
+    inputLocal[1] = input[2] + overlap;
+    inputLocal[2] = input[3] + overlap;
+    
+    BlockLatticeFpop3D<T,DESCRIPTOR> blockLatticeF( this->_sLattice.getExtendedBlockLattice(this->_sLattice.getLoadBalancer().loc(globIC)));
 
-    T nuLattice = converter.getLatticeNu();
-    T omega = converter.getOmega();
-    T finalResult = PiNeqNormSqr*nuLattice*pow(omega*DESCRIPTOR<T>::invCs2,2)/rho/2.;
-
-    return std::vector<T>(1,finalResult);
+    return blockLatticeF(inputLocal);
   } else {
-    return std::vector<T>(); // empty vector
+    return std::vector<T>();
   }
 }
 
+template <typename T, template <typename U> class DESCRIPTOR>
+SuperLatticeDissipation3D<T,DESCRIPTOR>::SuperLatticeDissipation3D
+  (SuperLattice3D<T,DESCRIPTOR>& sLattice, const LBconverter<T>& converter)
+  : SuperLatticeF3D<T,DESCRIPTOR>(sLattice,1), _converter(converter)
+{ this->_name = "dissipation"; }
 
 template <typename T, template <typename U> class DESCRIPTOR>
-SuperLatticeDensity3D<T,DESCRIPTOR>::SuperLatticeDensity3D(SuperLattice3D<T,DESCRIPTOR>& _sLattice)
-  : SuperLatticeF3D<T,DESCRIPTOR>(_sLattice,1) { }
+std::vector<T> SuperLatticeDissipation3D<T,DESCRIPTOR>::operator() (std::vector<int> input)
+{
+  int globIC = input[0];
+  if ( this->_sLattice.getLoadBalancer().rank(globIC) == singleton::mpi().getRank() ) {
+    std::vector<int> inputLocal(3,T());
+    int overlap = this->_sLattice.getOverlap();
+    inputLocal[0] = input[1] + overlap;
+    inputLocal[1] = input[2] + overlap;
+    inputLocal[2] = input[3] + overlap;
+    
+    BlockLatticeDissipation3D<T,DESCRIPTOR> blockLatticeF( this->_sLattice.getExtendedBlockLattice(this->_sLattice.getLoadBalancer().loc(globIC)), this->_converter);
 
-
-template <typename T, template <typename U> class DESCRIPTOR>
-std::vector<T> SuperLatticeDensity3D<T,DESCRIPTOR>::operator() (std::vector<int> input) {
-  int globIC = input[0]; int locix= input[1]; int lociy= input[2]; int lociz= input[3];
-  if ( this->sLattice.get_load().rank(globIC) == singleton::mpi().getRank() ) {
-    // local coords are given, fetch local cell and compute value(s)
-
-    T overlap = this->sLattice.get_overlap();
-    return std::vector<T>(1, this->sLattice
-      .get_blockLattice(this->sLattice.get_load().loc(globIC)).get(locix+overlap, lociy+overlap, lociz+overlap)
-      .computeRho() );
+    return blockLatticeF(inputLocal);
   } else {
-    return std::vector<T>(); // empty vector
+    return std::vector<T>();
   }
 }
 
+template <typename T, template <typename U> class DESCRIPTOR>
+SuperLatticePhysDissipation3D<T,DESCRIPTOR>::SuperLatticePhysDissipation3D
+  (SuperLattice3D<T,DESCRIPTOR>& sLattice, const LBconverter<T>& converter)
+  : SuperLatticePhysF3D<T,DESCRIPTOR>(sLattice,converter,1)
+{ this->_name = "physDissipation"; }
 
 template <typename T, template <typename U> class DESCRIPTOR>
-SuperLatticeVelocity3D<T,DESCRIPTOR>::SuperLatticeVelocity3D(SuperLattice3D<T,DESCRIPTOR>& _sLattice)
-  : SuperLatticeF3D<T,DESCRIPTOR>(_sLattice,3) { }
+std::vector<T> SuperLatticePhysDissipation3D<T,DESCRIPTOR>::operator() (std::vector<int> input)
+{
+  int globIC = input[0];
+  if ( this->_sLattice.getLoadBalancer().rank(globIC) == singleton::mpi().getRank() ) {
+    std::vector<int> inputLocal(3,T());
+    int overlap = this->_sLattice.getOverlap();
+    inputLocal[0] = input[1] + overlap;
+    inputLocal[1] = input[2] + overlap;
+    inputLocal[2] = input[3] + overlap;
+    
+    BlockLatticePhysDissipation3D<T,DESCRIPTOR> blockLatticeF( this->_sLattice.getExtendedBlockLattice(this->_sLattice.getLoadBalancer().loc(globIC)), this->_converter);
 
+    return blockLatticeF(inputLocal);
+  } else {
+    return std::vector<T>();
+  }
+}
 
 template <typename T, template <typename U> class DESCRIPTOR>
-std::vector<T> SuperLatticeVelocity3D<T,DESCRIPTOR>::operator() (std::vector<int> input) {
-  int globIC = input[0]; int locix= input[1]; int lociy= input[2]; int lociz= input[3];
-  if ( this->sLattice.get_load().rank(globIC) == singleton::mpi().getRank() ) {
-    T rho, u[3];
-    T overlap = this->sLattice.get_overlap();
-    this->sLattice.get_blockLattice(this->sLattice.get_load().loc(globIC))
-      .get(locix+overlap, lociy+overlap, lociz+overlap).computeRhoU(rho,u);
-    std::vector<T> v(u, u+3);  // first adress, last adress
-    return v;
+SuperLatticeDensity3D<T,DESCRIPTOR>::SuperLatticeDensity3D
+  (SuperLattice3D<T,DESCRIPTOR>& sLattice) : SuperLatticeF3D<T,DESCRIPTOR>(sLattice,1)
+{ this->_name = "density"; }
+
+template <typename T, template <typename U> class DESCRIPTOR>
+std::vector<T> SuperLatticeDensity3D<T,DESCRIPTOR>::operator() (std::vector<int> input)
+{
+  int globIC = input[0];
+  if ( this->_sLattice.getLoadBalancer().rank(globIC) == singleton::mpi().getRank() ) {
+    std::vector<int> inputLocal(3,T());
+    int overlap = this->_sLattice.getOverlap();
+    inputLocal[0] = input[1] + overlap;
+    inputLocal[1] = input[2] + overlap;
+    inputLocal[2] = input[3] + overlap;
+    
+    BlockLatticeDensity3D<T,DESCRIPTOR> blockLatticeF( this->_sLattice.getExtendedBlockLattice(this->_sLattice.getLoadBalancer().loc(globIC)) );
+
+    return blockLatticeF(inputLocal);
+  } else {
+    return std::vector<T>();
+  }
+}
+
+template <typename T, template <typename U> class DESCRIPTOR>
+SuperLatticeVelocity3D<T,DESCRIPTOR>::SuperLatticeVelocity3D
+  (SuperLattice3D<T,DESCRIPTOR>& sLattice) : SuperLatticeF3D<T,DESCRIPTOR>(sLattice,3)
+{ this->_name = "velocity"; }
+
+template <typename T, template <typename U> class DESCRIPTOR>
+std::vector<T> SuperLatticeVelocity3D<T,DESCRIPTOR>::operator() (std::vector<int> input)
+{
+  int globIC = input[0];
+  if ( this->_sLattice.getLoadBalancer().rank(globIC) == singleton::mpi().getRank() ) {
+    std::vector<int> inputLocal(3,T());
+    int overlap = this->_sLattice.getOverlap();
+    inputLocal[0] = input[1] + overlap;
+    inputLocal[1] = input[2] + overlap;
+    inputLocal[2] = input[3] + overlap;
+
+    BlockLatticeVelocity3D<T,DESCRIPTOR> blockLatticeF( this->_sLattice.getExtendedBlockLattice(this->_sLattice.getLoadBalancer().loc(globIC)) );
+
+    return blockLatticeF(inputLocal);
+  } else {
+    return std::vector<T>();
+  }
+}
+
+template <typename T, template <typename U> class DESCRIPTOR>
+SuperLatticeStrainRate3D<T,DESCRIPTOR>::SuperLatticeStrainRate3D
+  (SuperLattice3D<T,DESCRIPTOR>& sLattice,const LBconverter<T>& converter)
+  : SuperLatticeF3D<T,DESCRIPTOR>(sLattice,9), _converter(converter)
+{ this->_name = "strainRate"; }
+
+template <typename T, template <typename U> class DESCRIPTOR>
+std::vector<T> SuperLatticeStrainRate3D<T,DESCRIPTOR>::operator() (std::vector<int> input)
+{
+  int globIC = input[0];
+  if ( this->_sLattice.getLoadBalancer().rank(globIC) == singleton::mpi().getRank() ) {
+    std::vector<int> inputLocal(3,T());
+    int overlap = this->_sLattice.getOverlap();
+    inputLocal[0] = input[1] + overlap;
+    inputLocal[1] = input[2] + overlap;
+    inputLocal[2] = input[3] + overlap;
+
+    BlockLatticeStrainRate3D<T,DESCRIPTOR> blockLatticeF( this->_sLattice.getExtendedBlockLattice(this->_sLattice.getLoadBalancer().loc(globIC)), this->_converter );
+
+    return blockLatticeF(inputLocal);
+  } else {
+    return std::vector<T>();
+  }
+}
+
+template <typename T, template <typename U> class DESCRIPTOR>
+SuperLatticePhysStrainRate3D<T,DESCRIPTOR>::SuperLatticePhysStrainRate3D
+  (SuperLattice3D<T,DESCRIPTOR>& sLattice, const LBconverter<T>& converter)
+  : SuperLatticePhysF3D<T,DESCRIPTOR>(sLattice,converter,9)
+{ this->_name = "physStrainRate"; }
+
+template <typename T, template <typename U> class DESCRIPTOR>
+std::vector<T> SuperLatticePhysStrainRate3D<T,DESCRIPTOR>::operator() (std::vector<int> input)
+{
+  int globIC = input[0];
+  if ( this->_sLattice.getLoadBalancer().rank(globIC) == singleton::mpi().getRank() ) {
+    std::vector<int> inputLocal(3,T());
+    int overlap = this->_sLattice.getOverlap();
+    inputLocal[0] = input[1] + overlap;
+    inputLocal[1] = input[2] + overlap;
+    inputLocal[2] = input[3] + overlap;
+
+    BlockLatticePhysStrainRate3D<T,DESCRIPTOR> blockLatticeF( this->_sLattice.getExtendedBlockLattice(this->_sLattice.getLoadBalancer().loc(globIC)), this->_converter );
+
+    return blockLatticeF(inputLocal);
+  } else {
+    return std::vector<T>();
+  }
+}
+
+template <typename T, template <typename U> class DESCRIPTOR>
+SuperLatticeGeometry3D<T,DESCRIPTOR>::SuperLatticeGeometry3D
+  (SuperLattice3D<T,DESCRIPTOR>& sLattice, SuperGeometry3D<T>& superGeometry,
+  const int material)
+  : SuperLatticeF3D<T,DESCRIPTOR>(sLattice,1), _superGeometry(superGeometry),
+    _material(material)
+{ this->_name = "geometry"; }
+
+template <typename T, template <typename U> class DESCRIPTOR>
+std::vector<T> SuperLatticeGeometry3D<T,DESCRIPTOR>::operator() (std::vector<int> input)
+{
+  int globIC = input[0];
+  if ( this->_sLattice.getLoadBalancer().rank(globIC) == singleton::mpi().getRank() ) {
+    std::vector<int> inputLocal(3,T());
+    int overlap = this->_sLattice.getOverlap();
+    inputLocal[0] = input[1] + overlap;
+    inputLocal[1] = input[2] + overlap;
+    inputLocal[2] = input[3] + overlap;
+
+    BlockLatticeGeometry3D<T,DESCRIPTOR> blockLatticeF( this->_sLattice.getExtendedBlockLattice(this->_sLattice.getLoadBalancer().loc(globIC)),
+                                                        this->_superGeometry.getExtendedBlockGeometry(this->_sLattice.getLoadBalancer().loc(globIC)), _material );
+
+    return blockLatticeF(inputLocal);
   } else {
     return std::vector<T>();
   }
@@ -112,36 +240,15 @@ std::vector<T> SuperLatticeVelocity3D<T,DESCRIPTOR>::operator() (std::vector<int
 
 
 template <typename T, template <typename U> class DESCRIPTOR>
-SuperLatticeGeometry3D<T,DESCRIPTOR>::SuperLatticeGeometry3D(SuperLattice3D<T,DESCRIPTOR>& _sLattice, SuperGeometry3D& _superGeometry)
-  : SuperLatticeF3D<T,DESCRIPTOR>(_sLattice,1), superGeometry(_superGeometry) { }
-
-
-template <typename T, template <typename U> class DESCRIPTOR>
-std::vector<T> SuperLatticeGeometry3D<T,DESCRIPTOR>::operator() (std::vector<int> input) {
-  int globIC = input[0]; int locix= input[1]; int lociy= input[2]; int lociz= input[3];
-  if ( this->sLattice.get_load().rank(globIC) == singleton::mpi().getRank() ) {
-    // local coords are given, fetch local cell and compute value(s)
-
-    int globX = (int)this->sLattice.get_cGeometry().get_cuboid(globIC).get_globPosX() + locix;
-    int globY = (int)this->sLattice.get_cGeometry().get_cuboid(globIC).get_globPosY() + lociy;
-    int globZ = (int)this->sLattice.get_cGeometry().get_cuboid(globIC).get_globPosZ() + lociz;
-
-    return std::vector<T>(1, this->superGeometry.getMaterial(globX, globY, globZ) );
-  } else {
-    return std::vector<T>(); // empty vector
-  }
-}
-
+SuperLatticeRank3D<T,DESCRIPTOR>::SuperLatticeRank3D
+  (SuperLattice3D<T,DESCRIPTOR>& sLattice) : SuperLatticeF3D<T,DESCRIPTOR>(sLattice,1)
+{ this->_name = "rank"; }
 
 template <typename T, template <typename U> class DESCRIPTOR>
-SuperLatticeRank3D<T,DESCRIPTOR>::SuperLatticeRank3D(SuperLattice3D<T,DESCRIPTOR>& _sLattice)
-  : SuperLatticeF3D<T,DESCRIPTOR>(_sLattice,1) { }
-
-
-template <typename T, template <typename U> class DESCRIPTOR>
-std::vector<T> SuperLatticeRank3D<T,DESCRIPTOR>::operator() (std::vector<int> input) {
+std::vector<T> SuperLatticeRank3D<T,DESCRIPTOR>::operator() (std::vector<int> input)
+{
   int globIC = input[0]; // int locix= input[1]; int lociy= input[2]; int lociz= input[3];
-  if ( this->sLattice.get_load().rank(globIC) == singleton::mpi().getRank() ) {
+  if ( this->_sLattice.getLoadBalancer().rank(globIC) == singleton::mpi().getRank() ) {
     T rank[1];
     rank[0] = singleton::mpi().getRank() + 1;
     std::vector<T> out(rank, rank+1);  // first adress, last adress
@@ -153,14 +260,14 @@ std::vector<T> SuperLatticeRank3D<T,DESCRIPTOR>::operator() (std::vector<int> in
 
 
 template <typename T, template <typename U> class DESCRIPTOR>
-SuperLatticeCuboid3D<T,DESCRIPTOR>::SuperLatticeCuboid3D(SuperLattice3D<T,DESCRIPTOR>& _sLattice)
-  : SuperLatticeF3D<T,DESCRIPTOR>(_sLattice,1) { }
-
+SuperLatticeCuboid3D<T,DESCRIPTOR>::SuperLatticeCuboid3D
+  (SuperLattice3D<T,DESCRIPTOR>& sLattice) : SuperLatticeF3D<T,DESCRIPTOR>(sLattice,1)
+{ this->_name = "cuboid"; }
 
 template <typename T, template <typename U> class DESCRIPTOR>
 std::vector<T> SuperLatticeCuboid3D<T,DESCRIPTOR>::operator() (std::vector<int> input) {
   int globIC = input[0]; // int locix= input[1]; int lociy= input[2]; int lociz= input[3];
-  if ( this->sLattice.get_load().rank(globIC) == singleton::mpi().getRank() ) {
+  if ( this->_sLattice.getLoadBalancer().rank(globIC) == singleton::mpi().getRank() ) {
     T cuboid[1];
     cuboid[0] = globIC+1;
     std::vector<T> out(cuboid, cuboid+1);  // first adress, last adress
@@ -172,44 +279,26 @@ std::vector<T> SuperLatticeCuboid3D<T,DESCRIPTOR>::operator() (std::vector<int> 
 
 
 template <typename T, template <typename U> class DESCRIPTOR>
-SuperLatticePhysPressure3D<T,DESCRIPTOR>::SuperLatticePhysPressure3D(SuperLattice3D<T,DESCRIPTOR>& _sLattice, const LBconverter<T>& _converter)
-  : SuperLatticePhysF3D<T,DESCRIPTOR>(_sLattice,_converter,1) { }
-
-
-template <typename T, template <typename U> class DESCRIPTOR>
-std::vector<T> SuperLatticePhysPressure3D<T,DESCRIPTOR>::operator() (std::vector<int> input) {
-
-  int globIC = input[0]; int locix= input[1]; int lociy= input[2]; int lociz= input[3];
-  if ( this->sLattice.get_load().rank(globIC) == singleton::mpi().getRank() ) {
-    // local coords are given, fetch local cell and compute value(s)
-    T overlap = this->sLattice.get_overlap();
-    return std::vector<T>(1, this->converter.physPressureFromRho(this->sLattice
-      .get_blockLattice(this->sLattice.get_load().loc(globIC)).get(locix+overlap, lociy+overlap, lociz+overlap).computeRho()));
-  } else {
-    return std::vector<T>(); // empty vector
-  }
-}
-
+SuperLatticePhysPressure3D<T,DESCRIPTOR>::SuperLatticePhysPressure3D
+  (SuperLattice3D<T,DESCRIPTOR>& sLattice, const LBconverter<T>& converter)
+  : SuperLatticePhysF3D<T,DESCRIPTOR>(sLattice,converter,1)
+{ this->_name = "physPressure"; }
 
 template <typename T, template <typename U> class DESCRIPTOR>
-SuperLatticePhysVelocity3D<T,DESCRIPTOR>::SuperLatticePhysVelocity3D(SuperLattice3D<T,DESCRIPTOR>& _sLattice, const LBconverter<T>& _converter)
-  : SuperLatticePhysF3D<T,DESCRIPTOR>(_sLattice,_converter,3) { }
+std::vector<T> SuperLatticePhysPressure3D<T,DESCRIPTOR>::operator() (std::vector<int> input)
+{
+  int globIC = input[0];
+  if ( this->_sLattice.getLoadBalancer().rank(globIC) == singleton::mpi().getRank() ) {
+    std::vector<int> inputLocal(3,T());
+    int overlap = this->_sLattice.getOverlap();
+    inputLocal[0] = input[1] + overlap;
+    inputLocal[1] = input[2] + overlap;
+    inputLocal[2] = input[3] + overlap;
+    
+    BlockLatticePhysPressure3D<T,DESCRIPTOR> blockLatticeF( this->_sLattice.getExtendedBlockLattice(this->_sLattice.getLoadBalancer().loc(globIC)) , this->_converter) ;
 
+    return blockLatticeF(inputLocal);
 
-template <typename T, template <typename U> class DESCRIPTOR>
-std::vector<T> SuperLatticePhysVelocity3D<T,DESCRIPTOR>::operator() (std::vector<int> input) {
-  int globIC = input[0]; int locix= input[1]; int lociy= input[2]; int lociz= input[3];
-  if ( this->sLattice.get_load().rank(globIC) == singleton::mpi().getRank() ) {
-    T rho, u[3];
-    T overlap = this->sLattice.get_overlap();  
-    this->sLattice.get_blockLattice(this->sLattice.get_load().loc(globIC))
-      .get(locix+overlap, lociy+overlap, lociz+overlap).computeRhoU(rho,u);     
-    std::vector<T> v(u, u+3);  // first adress, last adress
-    u[0]=this->converter.physVelocity(v[0]);
-    u[1]=this->converter.physVelocity(v[1]);
-    u[2]=this->converter.physVelocity(v[2]);
-    std::vector<T> y(u, u+3);
-    return y; 
   } else {
     return std::vector<T>();
   }
@@ -217,41 +306,70 @@ std::vector<T> SuperLatticePhysVelocity3D<T,DESCRIPTOR>::operator() (std::vector
 
 
 template <typename T, template <typename U> class DESCRIPTOR>
-SuperLatticePhysBoundaryForce3D<T,DESCRIPTOR>::SuperLatticePhysBoundaryForce3D(SuperLattice3D<T,DESCRIPTOR>& _sLattice, SuperGeometry3D& _superGeometry, int _material, const LBconverter<T>& _converter)
-  : SuperLatticePhysF3D<T,DESCRIPTOR>(_sLattice,_converter,3), superGeometry(_superGeometry), material(_material) { }
+SuperLatticePhysVelocity3D<T,DESCRIPTOR>::SuperLatticePhysVelocity3D
+  (SuperLattice3D<T,DESCRIPTOR>& sLattice, const LBconverter<T>& converter, bool print)
+  : SuperLatticePhysF3D<T,DESCRIPTOR>(sLattice,converter,3), _print(print)
+{ this->_name = "physVelocity";}
+
+template <typename T, template <typename U> class DESCRIPTOR>
+std::vector<T> SuperLatticePhysVelocity3D<T,DESCRIPTOR>::operator() (std::vector<int> input)
+{
+  int globIC = input[0];
+  if ( this->_sLattice.getLoadBalancer().rank(globIC) == singleton::mpi().getRank() ) {
+    std::vector<int> inputLocal(3,T());
+    int overlap = this->_sLattice.getOverlap();
+    inputLocal[0] = input[1] + overlap;
+    inputLocal[1] = input[2] + overlap;
+    inputLocal[2] = input[3] + overlap;
+
+    BlockLatticePhysVelocity3D<T,DESCRIPTOR> blockLatticeF(this->_sLattice.getExtendedBlockLattice(this->_sLattice.getLoadBalancer().loc(globIC)), this->_converter, _print);
+    return blockLatticeF(inputLocal);
+  } else {
+    return std::vector<T>();
+  }
+}
 
 
 template <typename T, template <typename U> class DESCRIPTOR>
-std::vector<T> SuperLatticePhysBoundaryForce3D<T,DESCRIPTOR>::operator() (std::vector<int> input) {
-  int globIC = input[0]; int locix= input[1]; int lociy= input[2]; int lociz= input[3];
+SuperLatticePhysBoundaryForce3D<T,DESCRIPTOR>::SuperLatticePhysBoundaryForce3D
+  (SuperLattice3D<T,DESCRIPTOR>& sLattice, SuperGeometry3D<T>& superGeometry,
+  const int material, const LBconverter<T>& converter)
+  : SuperLatticePhysF3D<T,DESCRIPTOR>(sLattice,converter,3),
+    _superGeometry(superGeometry), _material(material)
+{ this->_name = "physBoundaryForce"; }
 
-  if ( this->sLattice.get_load().rank(globIC) == singleton::mpi().getRank() ) {
-    int globX = (int)this->sLattice.get_cGeometry().get_cuboid(globIC).get_globPosX() + locix;
-    int globY = (int)this->sLattice.get_cGeometry().get_cuboid(globIC).get_globPosY() + lociy;
-    int globZ = (int)this->sLattice.get_cGeometry().get_cuboid(globIC).get_globPosZ() + lociz;
-    std::vector<T> force(3, T()); 
-    if(superGeometry.getMaterial(globX, globY, globZ) == material) {
-      for (int iPop = 1; iPop < DESCRIPTOR<T>::q ; ++iPop){
+template <typename T, template <typename U> class DESCRIPTOR>
+std::vector<T> SuperLatticePhysBoundaryForce3D<T,DESCRIPTOR>::operator() (std::vector<int> input)
+{
+  int globIC = input[0];
+  int locix = input[1];
+  int lociy = input[2];
+  int lociz = input[3];
+
+  if ( this->_sLattice.getLoadBalancer().rank(globIC) == singleton::mpi().getRank() ) {
+    std::vector<T> force(3, T());
+    if(this->_superGeometry.get(input) == _material) {
+      for (int iPop = 1; iPop < DESCRIPTOR<T>::q ; ++iPop) {
         // Get direction
         const int* c = DESCRIPTOR<T>::c[iPop];
         // Get next cell located in the current direction
         // Check if the next cell is a fluid node
-        if (superGeometry.getMaterial(globX + c[0], globY + c[1], globZ + c[2]) == 1) {
-          T overlap = this->sLattice.get_overlap();
+        if (this->_superGeometry.get(input[0], input[1] + c[0], input[2] + c[1], input[3] + c[2]) == 1) {
+          int overlap = this->_sLattice.getOverlap();
           // Get f_q of next fluid cell where l = opposite(q)
-          T f = this->sLattice.get_blockLattice(this->sLattice.get_load().loc(globIC)).get(locix+overlap + c[0], lociy+overlap + c[1], lociz+overlap + c[2])[iPop];
+          T f = this->_sLattice.getExtendedBlockLattice(this->_sLattice.getLoadBalancer().loc(globIC)).get(locix+overlap + c[0], lociy+overlap + c[1], lociz+overlap + c[2])[iPop];
           // Get f_l of the boundary cell
           // Add f_q and f_opp
-          f += this->sLattice.get_blockLattice(this->sLattice.get_load().loc(globIC)).get(locix+overlap, lociy+overlap, lociz+overlap)[util::opposite<DESCRIPTOR<T> >(iPop)];
+          f += this->_sLattice.getExtendedBlockLattice(this->_sLattice.getLoadBalancer().loc(globIC)).get(locix+overlap, lociy+overlap, lociz+overlap)[util::opposite<DESCRIPTOR<T> >(iPop)];
           // Update force
           force[0] -= c[0]*f;
           force[1] -= c[1]*f;
           force[2] -= c[2]*f;
         }
       }
-      force[0]=this->converter.physForce(force[0]);
-      force[1]=this->converter.physForce(force[1]);
-      force[2]=this->converter.physForce(force[2]);
+      force[0] = this->_converter.physForce(force[0]);
+      force[1] = this->_converter.physForce(force[1]);
+      force[2] = this->_converter.physForce(force[2]);
       return force;
     }
     else {
@@ -265,41 +383,45 @@ std::vector<T> SuperLatticePhysBoundaryForce3D<T,DESCRIPTOR>::operator() (std::v
 
 
 template <typename T, template <typename U> class DESCRIPTOR>
-SuperLatticePhysCorrBoundaryForce3D<T,DESCRIPTOR>::SuperLatticePhysCorrBoundaryForce3D(SuperLattice3D<T,DESCRIPTOR>& _sLattice, SuperGeometry3D& _superGeometry, int _material, const LBconverter<T>& _converter)
-  : SuperLatticePhysF3D<T,DESCRIPTOR>(_sLattice,_converter,3), superGeometry(_superGeometry), material(_material) { }
-
+SuperLatticePhysCorrBoundaryForce3D<T,DESCRIPTOR>::SuperLatticePhysCorrBoundaryForce3D
+  (SuperLattice3D<T,DESCRIPTOR>& sLattice, SuperGeometry3D<T>& superGeometry,
+  const int material, const LBconverter<T>& converter)
+  : SuperLatticePhysF3D<T,DESCRIPTOR>(sLattice,converter,3),
+    _superGeometry(superGeometry), _material(material)
+{ this->_name = "physCorrBoundaryForce"; }
 
 template <typename T, template <typename U> class DESCRIPTOR>
-std::vector<T> SuperLatticePhysCorrBoundaryForce3D<T,DESCRIPTOR>::operator() (std::vector<int> input) {
-  int globIC = input[0]; int locix= input[1]; int lociy= input[2]; int lociz= input[3];
+std::vector<T> SuperLatticePhysCorrBoundaryForce3D<T,DESCRIPTOR>::operator() (std::vector<int> input)
+{
+  int globIC = input[0];
+  int locix = input[1];
+  int lociy = input[2];
+  int lociz = input[3];
 
   std::vector<T> force(3, T());
-  if ( this->sLattice.get_load().rank(globIC) == singleton::mpi().getRank() ) {
-    int globX = (int)this->sLattice.get_cGeometry().get_cuboid(globIC).get_globPosX() + locix;
-    int globY = (int)this->sLattice.get_cGeometry().get_cuboid(globIC).get_globPosY() + lociy;
-    int globZ = (int)this->sLattice.get_cGeometry().get_cuboid(globIC).get_globPosZ() + lociz;
-    if(superGeometry.getMaterial(globX, globY, globZ) == material) {
-      for (int iPop = 1; iPop < DESCRIPTOR<T>::q ; ++iPop){
+  if ( this->_sLattice.getLoadBalancer().rank(globIC) == singleton::mpi().getRank() ) {
+    if(this->_superGeometry.get(input) == _material) {
+      for (int iPop = 1; iPop < DESCRIPTOR<T>::q ; ++iPop) {
         // Get direction
         const int* c = DESCRIPTOR<T>::c[iPop];
         // Get next cell located in the current direction
         // Check if the next cell is a fluid node
-        if (superGeometry.getMaterial(globX + c[0], globY + c[1], globZ + c[2]) == 1) {
-          T overlap = this->sLattice.get_overlap(); 
+        if (this->_superGeometry.get(input[0], input[1] + c[0], input[2] + c[1], input[3] + c[2]) == 1) {
+          int overlap = this->_sLattice.getOverlap();
           // Get f_q of next fluid cell where l = opposite(q)
-          T f = this->sLattice.get_blockLattice(this->sLattice.get_load().loc(globIC)).get(locix+overlap + c[0], lociy+overlap + c[1], lociz+overlap + c[2])[iPop];
+          T f = this->_sLattice.getExtendedBlockLattice(this->_sLattice.getLoadBalancer().loc(globIC)).get(locix+overlap + c[0], lociy+overlap + c[1], lociz+overlap + c[2])[iPop];
           // Get f_l of the boundary cell
           // Add f_q and f_opp
-          f += this->sLattice.get_blockLattice(this->sLattice.get_load().loc(globIC)).get(locix+overlap, lociy+overlap, lociz+overlap)[util::opposite<DESCRIPTOR<T> >(iPop)];
+          f += this->_sLattice.getExtendedBlockLattice(this->_sLattice.getLoadBalancer().loc(globIC)).get(locix+overlap, lociy+overlap, lociz+overlap)[util::opposite<DESCRIPTOR<T> >(iPop)];
           // Update force
           force[0] -= c[0]*(f-2.*DESCRIPTOR<T>::t[iPop]);
           force[1] -= c[1]*(f-2.*DESCRIPTOR<T>::t[iPop]);
           force[2] -= c[2]*(f-2.*DESCRIPTOR<T>::t[iPop]);
         }
       }
-      force[0]=this->converter.physForce(force[0]);
-      force[1]=this->converter.physForce(force[1]);
-      force[2]=this->converter.physForce(force[2]);
+      force[0] = this->_converter.physForce(force[0]);
+      force[1] = this->_converter.physForce(force[1]);
+      force[2] = this->_converter.physForce(force[2]);
       return force;
     }
     else {
@@ -313,63 +435,74 @@ std::vector<T> SuperLatticePhysCorrBoundaryForce3D<T,DESCRIPTOR>::operator() (st
 
 
 template <typename T, template <typename U> class DESCRIPTOR>
-SuperLatticePorosity3D<T,DESCRIPTOR>::SuperLatticePorosity3D(SuperLattice3D<T,DESCRIPTOR>& _sLattice,
-                     SuperGeometry3D& _superGeometry,
-                     int _material,
-                     const LBconverter<T>& _converter)
-: SuperLatticePhysF3D<T,DESCRIPTOR>(_sLattice,_converter,1), superGeometry(_superGeometry), material(_material) { }
+SuperLatticePorosity3D<T,DESCRIPTOR>::SuperLatticePorosity3D
+  (SuperLattice3D<T,DESCRIPTOR>& sLattice)
+  : SuperLatticeF3D<T,DESCRIPTOR>(sLattice,1)
+{ this->_name = "porosity"; }
+
+template <typename T, template <typename U> class DESCRIPTOR>
+std::vector<T> SuperLatticePorosity3D<T,DESCRIPTOR>::operator()(std::vector<int> input)
+{
+  int globIC = input[0];
+  if ( this->_sLattice.getLoadBalancer().rank(globIC) == singleton::mpi().getRank() ) {
+    std::vector<int> inputLocal(3,T());
+    int overlap = this->_sLattice.getOverlap();
+    inputLocal[0] = input[1] + overlap;
+    inputLocal[1] = input[2] + overlap;
+    inputLocal[2] = input[3] + overlap;
+    
+    BlockLatticePorosity3D<T,DESCRIPTOR> blockLatticeF( this->_sLattice.getExtendedBlockLattice(this->_sLattice.getLoadBalancer().loc(globIC)) ) ;
+
+    return blockLatticeF(inputLocal);
+
+  } else {
+    return std::vector<T>();
+  }
+}
 
 
 template <typename T, template <typename U> class DESCRIPTOR>
-std::vector<T> SuperLatticePorosity3D<T,DESCRIPTOR>::operator()(std::vector<int> input) {
-  int globIC = input[0]; int locix= input[1]; int lociy= input[2]; int lociz= input[3];
+SuperLatticePhysPermeability3D<T,DESCRIPTOR>::SuperLatticePhysPermeability3D
+  (SuperLattice3D<T,DESCRIPTOR>& sLattice, SuperGeometry3D<T>& superGeometry,
+  const int material, const LBconverter<T>& converter)
+  : SuperLatticePhysF3D<T,DESCRIPTOR>(sLattice,converter,1),
+    _superGeometry(superGeometry), _material(material)
+{ this->_name = "permeability"; }
+
+template <typename T, template <typename U> class DESCRIPTOR>
+std::vector<T> SuperLatticePhysPermeability3D<T,DESCRIPTOR>::operator()(std::vector<int> input)
+{
+  int globIC = input[0];
+  int locix = input[1];
+  int lociy = input[2];
+  int lociz = input[3];
 
   T* value = new T[1];
-  T overlap = this->sLattice.get_overlap();
-  this->sLattice.get_blockLattice(this->sLattice.get_load().loc(globIC)).get(locix+overlap, lociy+overlap, lociz+overlap).computeExternalField(0,1,value);
-  std::vector<T> result(1,value[0]);
+  int overlap = this->_sLattice.getOverlap();
+  this->_sLattice.getExtendedBlockLattice(this->_sLattice.getLoadBalancer().loc(globIC)).get(locix+overlap, lociy+overlap, lociz+overlap).computeExternalField(0,1,value);
+  std::vector<T> result(1,this->_converter.physPermeability(value[0]));
   delete value;
+  if (!(result[0]<42) &&! (result[0]>42) &&! (result[0]==42)) result[0] = 999999;
+  if (std::isinf(result[0])) result[0] = 1e6;
   return result;
 }
 
 
 template <typename T, template <typename U> class DESCRIPTOR>
-SuperLatticePhysPermeability3D<T,DESCRIPTOR>::SuperLatticePhysPermeability3D(SuperLattice3D<T,DESCRIPTOR>& _sLattice,
-                               SuperGeometry3D& _superGeometry,
-                               int _material,
-                               const LBconverter<T>& _converter)
-: SuperLatticePhysF3D<T,DESCRIPTOR>(_sLattice,_converter,1), superGeometry(_superGeometry),  material(_material) { }
-
-
-template <typename T, template <typename U> class DESCRIPTOR>
-std::vector<T> SuperLatticePhysPermeability3D<T,DESCRIPTOR>::operator()(std::vector<int> input) {
-  int globIC = input[0]; int locix= input[1]; int lociy= input[2]; int lociz= input[3];
-
-  T* value = new T[1];
-  T overlap = this->sLattice.get_overlap();
-  this->sLattice.get_blockLattice(this->sLattice.get_load().loc(globIC)).get(locix+overlap, lociy+overlap, lociz+overlap).computeExternalField(0,1,value);
-  std::vector<T> result(1,this->converter.physPermeability(value[0]));
-  delete value;
-  if (!(result[0]<42)&&!(result[0]>42)&&!(result[0]==42)) result[0] = 999999;
-  if (isinf(result[0])) result[0] = 1e6;
-  return result;
-}
-
+SuperLatticePhysDarcyForce3D<T,DESCRIPTOR>::SuperLatticePhysDarcyForce3D
+  (SuperLattice3D<T,DESCRIPTOR>& sLattice, SuperGeometry3D<T>& superGeometry,
+  const int material, const LBconverter<T>& converter)
+  : SuperLatticePhysF3D<T,DESCRIPTOR>(sLattice,converter,3),
+    _superGeometry(superGeometry), _material(material)
+{ this->_name = "alphaU"; }
 
 template <typename T, template <typename U> class DESCRIPTOR>
-SuperLatticePhysDarcyForce3D<T,DESCRIPTOR>::SuperLatticePhysDarcyForce3D(SuperLattice3D<T,DESCRIPTOR>& _sLattice,
-                             SuperGeometry3D& _superGeometry,
-                             int _material,
-                             const LBconverter<T>& _converter)
-: SuperLatticePhysF3D<T,DESCRIPTOR>(_sLattice,_converter,3), superGeometry(_superGeometry), material(_material) { }
+std::vector<T> SuperLatticePhysDarcyForce3D<T,DESCRIPTOR>::operator()(std::vector<int> input)
+{
+  SuperLatticePhysPermeability3D<T,DESCRIPTOR> permeability(this->_sLattice,this->_superGeometry,this->_material,this->_converter);
+  SuperLatticeVelocity3D<T,DESCRIPTOR> velocity(this->_sLattice);
 
-
-template <typename T, template <typename U> class DESCRIPTOR>
-std::vector<T> SuperLatticePhysDarcyForce3D<T,DESCRIPTOR>::operator()(std::vector<int> input) {
-  SuperLatticePhysPermeability3D<T,DESCRIPTOR> permeability(this->sLattice,this->superGeometry,this->material,this->converter);
-  SuperLatticeVelocity3D<T,DESCRIPTOR> velocity(this->sLattice);
-
-  T nu = this->converter.getCharNu();
+  T nu = this->_converter.getCharNu();
   T K = permeability(input)[0];
   std::vector<T> u = velocity(input);
 
@@ -383,41 +516,44 @@ std::vector<T> SuperLatticePhysDarcyForce3D<T,DESCRIPTOR>::operator()(std::vecto
 
 
 template <typename T, template <typename U> class DESCRIPTOR>
-SuperLatticeAverage3D<T,DESCRIPTOR>::SuperLatticeAverage3D(SuperLatticeF3D<T,DESCRIPTOR>& _f, SuperGeometry3D& _superGeometry, int _material, T _radius)
-  : SuperLatticeF3D<T,DESCRIPTOR>(_f.getSuperLattice3D(), _f.getTargetDim()), f(_f), superGeometry(_superGeometry), material(_material), radius(_radius) { }
-
+SuperLatticeAverage3D<T,DESCRIPTOR>::SuperLatticeAverage3D
+  (SuperLatticeF3D<T,DESCRIPTOR>& f, SuperGeometry3D<T>& superGeometry,
+  const int material, T radius)
+  : SuperLatticeF3D<T,DESCRIPTOR>(f.getSuperLattice3D(), f.getTargetDim()),
+    _f(f), _superGeometry(superGeometry), _material(material), _radius(radius)
+{ this->_name = "Average("+_f.getName()+")"; }
 
 template <typename T, template <typename U> class DESCRIPTOR>
-std::vector<T> SuperLatticeAverage3D<T,DESCRIPTOR>::operator() (std::vector<int> input) {
-  CuboidGeometry3D<T>& cGeometry = f.getSuperLattice3D().get_cGeometry();
-  loadBalancer& load = f.getSuperLattice3D().get_load();
+std::vector<T> SuperLatticeAverage3D<T,DESCRIPTOR>::operator() (std::vector<int> input)
+{
+  CuboidGeometry3D<T>& cGeometry = _f.getSuperLattice3D().getCuboidGeometry();
+  LoadBalancer<T>& load = _f.getSuperLattice3D().getLoadBalancer();
 
   //create boolean indicator functor isInSphere
-  std::vector<T> center(3,0);
-  center[0] = (int)cGeometry.get_cuboid(load.glob(input[0])).get_globPosX() + input[1];
-  center[1] = (int)cGeometry.get_cuboid(load.glob(input[0])).get_globPosY() + input[2];
-  center[2] = (int)cGeometry.get_cuboid(load.glob(input[0])).get_globPosZ() + input[3];
-  SphereAnalyticalF3D<bool,T> isInSphere(center,radius);
+  std::vector<T> center = cGeometry.getPhysR(input);
+  IndicatorSphere3D<bool,T> isInSphere(center,_radius);
 
   // iterate over all cuboids & points and test for material && isInSphere
-  std::vector<T> tmp( this->n, T() );
+  std::vector<T> tmp( this->_n, T() );
   int numVoxels(0);
-  if (this->superGeometry.getMaterial(center[0],center[1],center[2]) == material) {
-    for (int iC=0; iC<load.size(); iC++) {
-      int nX = cGeometry.get_cuboid(load.glob(iC)).get_nX();
-      int nY = cGeometry.get_cuboid(load.glob(iC)).get_nY();
-      int nZ = cGeometry.get_cuboid(load.glob(iC)).get_nZ();
-      for (int iX=0;iX<nX;iX++) {
-        for (int iY=0;iY<nY;iY++) {
-          for (int iZ=0;iZ<nZ;iZ++) {
-            std::vector<T> glob(3,0);
-            glob[0] = (int)cGeometry.get_cuboid(load.glob(iC)).get_globPosX() + iX;
-            glob[1] = (int)cGeometry.get_cuboid(load.glob(iC)).get_globPosY() + iY;
-            glob[2] = (int)cGeometry.get_cuboid(load.glob(iC)).get_globPosZ() + iZ;
-            if (this->superGeometry.getMaterial(glob[0],glob[1],glob[2]) == material
-                && isInSphere(glob)[0]==true) {
-              for (unsigned iD=0; iD<f(load.glob(0),0,0,0).size(); iD++) {
-                tmp[iD]+=f(load.glob(iC),iX,iY,iZ)[iD];
+  if (this->_superGeometry.get(input) == _material) {
+    for (int iC = 0; iC < load.size(); iC++) {
+      int nX = cGeometry.get(load.glob(iC)).getNx();
+      int nY = cGeometry.get(load.glob(iC)).getNy();
+      int nZ = cGeometry.get(load.glob(iC)).getNz();
+      for (int iX = 0; iX < nX; iX++) {
+        for (int iY = 0; iY < nY; iY++) {
+          for (int iZ = 0; iZ < nZ; iZ++) {
+            std::vector<int> testLatticeR(input); 
+            testLatticeR[0] = load.glob(iC); 
+            testLatticeR[1] = iX;
+            testLatticeR[2] = iY;
+            testLatticeR[3] = iZ;
+            std::vector<T> testPhysR = cGeometry.getPhysR(testLatticeR);
+            if (this->_superGeometry.get(input) == _material
+                && isInSphere(testPhysR)[0] == true) {
+              for (unsigned iD = 0; iD < _f(load.glob(0),0,0,0).size(); iD++) {
+                tmp[iD] += _f(load.glob(iC),iX,iY,iZ)[iD];
               }
               numVoxels++;
             }
@@ -429,11 +565,11 @@ std::vector<T> SuperLatticeAverage3D<T,DESCRIPTOR>::operator() (std::vector<int>
 #ifdef PARALLEL_MODE_MPI
     singleton::mpi().reduceAndBcast(numVoxels, MPI_SUM);
 #endif
-    for (int iD=0; iD<f.getTargetDim(); iD++) {
+    for (int iD = 0; iD < _f.getTargetDim(); iD++) {
 #ifdef PARALLEL_MODE_MPI
       singleton::mpi().reduceAndBcast(tmp[iD], MPI_SUM);
 #endif
-      if (numVoxels>0) {
+      if (numVoxels > 0) {
         tmp[iD] /= numVoxels;
       }
     }
@@ -443,15 +579,19 @@ std::vector<T> SuperLatticeAverage3D<T,DESCRIPTOR>::operator() (std::vector<int>
 
 
 template <typename T, template <typename U> class DESCRIPTOR>
-SuperL2Norm3D<T,DESCRIPTOR>::SuperL2Norm3D(SuperLatticeF3D<T,DESCRIPTOR>& _f)
-  : SuperLatticeF3D<T,DESCRIPTOR>(_f.getSuperLattice3D(),1), f(_f) { }
-
+SuperEuklidNorm3D<T,DESCRIPTOR>::SuperEuklidNorm3D(SuperLatticeF3D<T,DESCRIPTOR>& f)
+  : SuperLatticeF3D<T,DESCRIPTOR>(f.getSuperLattice3D(),1), _f(f)
+{
+  this->_name = "EuklidNorm("+_f.getName()+")"; 
+}
 
 template <typename T, template <typename U> class DESCRIPTOR>
-std::vector<T> SuperL2Norm3D<T,DESCRIPTOR>::operator() (std::vector<int> input) {
-  std::vector<T> data = f(input);
+std::vector<T> SuperEuklidNorm3D<T,DESCRIPTOR>::operator() (std::vector<int> input)
+{
+  //SuperLatticeIdentity3D<T,DESCRIPTOR> ff(f);
+  std::vector<T> data = _f(input);
   std::vector<T> tmp(1,0);
-  for (unsigned i=0; i<data.size(); i++) {
+  for (unsigned i = 0; i < data.size(); i++) {
     tmp[0] += data[i]*data[i];
   }
   tmp[0] = sqrt(tmp[0]);

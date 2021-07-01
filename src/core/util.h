@@ -104,6 +104,17 @@ T scalarProduct(const T u1[d], const T u2[d]) {
   return prod;
 }
 
+template<typename T>
+T scalarProduct(const std::vector<T>& u1, const std::vector<T>& u2) {
+  T prod = T();
+  if (u1.size() == u2.size()) {
+	  for (int iD=0; iD<u1.size(); ++iD) {
+		prod += u1[iD]*u2[iD];
+	  }
+  }
+  return prod;
+}
+
 /// Compute number of elements of a symmetric d-dimensional tensor
 template <typename Descriptor> struct TensorVal {
   static const int n =

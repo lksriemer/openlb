@@ -26,10 +26,11 @@
  */
 #include "base64.h"
 #include "serializerIO.h"
-#include "vtkDataOutput.h"
 #include "parallelIO.h"
 #include "colormaps.h"
 #include "imageWriter.h"
 #include "xmlReader.h"
 #include "ostreamManager.h"
 #include "vtiReader.h"
+#include "superVtkWriter2D.h"
+#include "blockVtkWriter2D.h"

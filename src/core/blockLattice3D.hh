@@ -30,12 +30,13 @@
 
 #include <algorithm>
 #include "blockLattice3D.h"
-#include "dynamics.h"
+#include "dynamics/dynamics.h"
 #include "cell.h"
-#include "lbHelpers.h"
+#include "dynamics/lbHelpers.h"
 #include "util.h"
-#include "ompManager.h"
-#include "loadBalancer.h"
+#include "communication/ompManager.h"
+#include "communication/loadBalancer.h"
+#include "communication/blockLoadBalancer.h"
 #include "dataAnalysis3D.h"
 
 
@@ -67,6 +68,7 @@ BlockLattice3D<T,Lattice>::BlockLattice3D(int nx_, int ny_, int nz_)
 #else
   statistics = new LatticeStatistics<T>;
 #endif
+  statistics->initialize();
 }
 
 /** During destruction, the memory for the lattice and the contained
@@ -127,6 +129,7 @@ BlockLattice3D<T,Lattice>::BlockLattice3D(BlockLattice3D<T,Lattice> const& rhs)
 #else
   statistics = new LatticeStatistics<T> (*rhs.statistics);
 #endif
+  statistics->initialize();
 }
 
 /** The current lattice is deallocated, then the lattice from the rhs
@@ -206,36 +209,16 @@ void BlockLattice3D<T,Lattice>::defineDynamics (
 
 template<typename T, template<typename U> class Lattice>
 void BlockLattice3D<T,Lattice>::defineDynamics (
-  BlockGeometry3D& blockGeometry, int material, Dynamics<T,Lattice>* dynamics)
+  BlockGeometryStructure3D<T>& blockGeometry, int material, Dynamics<T,Lattice>* dynamics)
 {
-  defineDynamics (
-    blockGeometry, material,
-    0, blockGeometry.getNx()-1, 0, blockGeometry.getNy()-1, 0, blockGeometry.getNz()-1,
-    dynamics);
-}
-
-template<typename T, template<typename U> class Lattice>
-void BlockLattice3D<T,Lattice>::defineDynamics (
-  BlockGeometry3D& blockGeometry, int material,
-  int x0, int x1, int y0, int y1, int z0, int z1,
-  Dynamics<T,Lattice>* dynamics)
-{
-  OLB_PRECONDITION(x0>=0 && x1<nx);
-  OLB_PRECONDITION(x1>=x0);
-  OLB_PRECONDITION(y0>=0 && y1<ny);
-  OLB_PRECONDITION(y1>=y0);
-  OLB_PRECONDITION(z0>=0 && z1<nz);
-  OLB_PRECONDITION(z1>=z0);
-  for (int iX=x0; iX<=x1; ++iX) {
-    for (int iY=y0; iY<=y1; ++iY) {
-      for (int iZ=z0; iZ<=z1; ++iZ) {
-
+  for (int iX=0; iX<nx; ++iX) {
+    for (int iY=0; iY<ny; ++iY) {
+      for (int iZ=0; iZ<nz; ++iZ) {
         if(blockGeometry.getMaterial(iX, iY, iZ)==material) {
-
           grid[iX][iY][iZ].defineDynamics(dynamics);
         }
       }
-    }
+    } 
   }
 }
 
@@ -444,9 +427,12 @@ void BlockLattice3D<T,Lattice>::stripeOffDensityOffset (
   for (int iX=x0; iX<=x1; ++iX) {
     for (int iY=y0; iY<=y1; ++iY) {
       for (int iZ=z0; iZ<=z1; ++iZ) {
-        for (int iPop=0; iPop<Lattice<T>::q; ++iPop) {
-          get(iX,iY,iZ)[iPop] -= Lattice<T>::t[iPop] * offset;
-        }
+        // only stripe off if rho stays positive
+        //if (get(iX,iY,iZ).computeRho()>offset) {
+          for (int iPop=0; iPop<Lattice<T>::q; ++iPop) {
+            get(iX,iY,iZ)[iPop] -= Lattice<T>::t[iPop] * offset;
+          }
+        //}
       }
     }
   }
@@ -799,11 +785,6 @@ DataUnSerializer<T>& BlockLattice3D<T,Lattice>::getSubUnSerializer (
 }
 
 template<typename T, template<typename U> class Lattice>
-MultiDataDistribution3D BlockLattice3D<T,Lattice>::getDataDistribution() const {
-  return MultiDataDistribution3D(getNx(), getNy(), getNz());
-}
-
-template<typename T, template<typename U> class Lattice>
 SpatiallyExtendedObject3D* BlockLattice3D<T,Lattice>::getComponent(int iBlock) {
   OLB_PRECONDITION( iBlock==0 );
   return this;
@@ -985,10 +966,10 @@ void BlockLattice3D<T,Lattice>::bulkCollideAndStream (
   if (omp.get_size() <= x1-x0+1) {
     #pragma omp parallel
     {
-      loadBalancer loadbalance(omp.get_rank(), omp.get_size(), x1-x0+1, x0);
+      BlockLoadBalancer<T> loadbalance(omp.get_rank(), omp.get_size(), x1-x0+1, x0);
       int iX, iY, iZ, iPop;
 
-      iX=loadbalance.get_firstGlobNum();
+      iX=loadbalance.firstGlobNum();
       for (int iY=y0; iY<=y1; ++iY) {
         for (int iZ=z0; iZ<=z1; ++iZ) {
           grid[iX][iY][iZ].collide(getStatistics());
@@ -996,7 +977,7 @@ void BlockLattice3D<T,Lattice>::bulkCollideAndStream (
         }
       }
 
-      for (iX=loadbalance.get_firstGlobNum()+1; iX<=loadbalance.get_lastGlobNum(); ++iX) {
+      for (iX=loadbalance.firstGlobNum()+1; iX<=loadbalance.lastGlobNum(); ++iX) {
         for (iY=y0; iY<=y1; ++iY) {
           for (iZ=z0; iZ<=z1; ++iZ) {
             grid[iX][iY][iZ].collide(getStatistics());
@@ -1020,7 +1001,7 @@ void BlockLattice3D<T,Lattice>::bulkCollideAndStream (
       }
 
       #pragma omp barrier
-      iX=loadbalance.get_firstGlobNum();
+      iX=loadbalance.firstGlobNum();
       for (iY=y0; iY<=y1; ++iY) {
         for (iZ=z0; iZ<=z1; ++iZ) {
           for (iPop=1; iPop<=Lattice<T>::q/2; ++iPop) {

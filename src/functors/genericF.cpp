@@ -22,7 +22,7 @@
 */
 
 /** \file
- * The description of a generic interface for all functor classes 
+ * The description of a generic interface for all functor classes
  * -- template instantiation.
  */
 
@@ -32,6 +32,9 @@
 namespace olb {
 
 // first level class
+template class GenericF<int,int>;
+
+// needed for indicatorF
 template class GenericF<bool,int>;
 template class GenericF<bool,double>;
 template class GenericF<double,int>;

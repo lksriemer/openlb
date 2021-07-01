@@ -29,8 +29,8 @@
 
 /*#include "io/xmlReader.h"
 #include "io/xmlReader.cpp"*/
-#include "complexGrids/cuboidStructure/cuboid3D.h"
-#include "complexGrids/cuboidStructure/cuboid2D.h"
+#include "geometry/cuboid3D.h"
+#include "geometry/cuboid2D.h"
 #include "core/dataFields3D.h"
 #include "io/ostreamManager.h"
 #include "io/xmlReader.cpp"
@@ -40,54 +40,54 @@ namespace olb {
 
 template<typename T>
 class VTIreader3D : public XMLreader {
-      VTIreader3D();
+  VTIreader3D();
 
-  public:
-      VTIreader3D(const std::string& fName);
-      ~VTIreader3D();
+public:
+  VTIreader3D(const std::string& fName);
+  ~VTIreader3D();
 
-      void getCuboid(Cuboid3D<T>& cuboid);
-      void getCuboids(std::vector<Cuboid3D<T>* >& cuboids);
-      bool getScalarData(ScalarField3D<T>* base, const std::string dName);
-      bool getVectorData(TensorField3D<T, 3>* base, const std::string dName);
-      void getScalarMultiPieceData(std::vector<const ScalarFieldBase3D<T>* >& bases, const std::string dName);
-      void getVectorMultiPieceData(std::vector<const TensorFieldBase3D<T, 3>* >& bases, const std::string dName);
-      void printInfo();
+  void getCuboid(Cuboid3D<T>& cuboid);
+  void getCuboids(std::vector<Cuboid3D<T>* >& cuboids);
+  bool getScalarData(ScalarField3D<T>* base, const std::string dName);
+  bool getVectorData(TensorField3D<T, 3>* base, const std::string dName);
+  void getScalarMultiPieceData(std::vector<const ScalarFieldBase3D<T>* >& bases, const std::string dName);
+  void getVectorMultiPieceData(std::vector<const TensorFieldBase3D<T, 3>* >& bases, const std::string dName);
+  void printInfo();
 
 
-  private:
-      /* Origin */
-      int _x0, _y0, _z0;
-      /* #Nodes */
-      int _x, _y, _z;
-      T _delta;
-      T *_data;
+private:
+  /* Origin */
+  int _x0, _y0, _z0;
+  /* #Nodes */
+  int _x, _y, _z;
+  T _delta;
+  T *_data;
 };
 
 template<typename T>
 class VTIreader2D : public XMLreader {
-      VTIreader2D();
+  VTIreader2D();
 
-  public:
-      VTIreader2D(const std::string& fName);
-      ~VTIreader2D();
+public:
+  VTIreader2D(const std::string& fName);
+  ~VTIreader2D();
 
-      void getCuboid(Cuboid2D<T>& cuboid);
-      void getCuboids(std::vector<Cuboid2D<T>* >& cuboids);
-      bool getScalarData(ScalarField2D<T>* base, const std::string dName);
-      bool getVectorData(TensorField2D<T, 2>* base, const std::string dName);
-      void getScalarMultiPieceData(std::vector<const ScalarFieldBase2D<T>* >& bases, const std::string dName);
-      void getVectorMultiPieceData(std::vector<const TensorFieldBase2D<T, 2>* >& bases, const std::string dName);
-      void printInfo();
+  void getCuboid(Cuboid2D<T>& cuboid);
+  void getCuboids(std::vector<Cuboid2D<T>* >& cuboids);
+  bool getScalarData(ScalarField2D<T>* base, const std::string dName);
+  bool getVectorData(TensorField2D<T, 2>* base, const std::string dName);
+  void getScalarMultiPieceData(std::vector<const ScalarFieldBase2D<T>* >& bases, const std::string dName);
+  void getVectorMultiPieceData(std::vector<const TensorFieldBase2D<T, 2>* >& bases, const std::string dName);
+  void printInfo();
 
 
-  private:
-      /* Origin */
-      int _x0, _y0, _z0;
-      /* #Nodes */
-      int _x, _y, _z;
-      T _delta;
-      T *_data;
+private:
+  /* Origin */
+  int _x0, _y0, _z0;
+  /* #Nodes */
+  int _x, _y, _z;
+  T _delta;
+  T *_data;
 };
 
 } // namespace olb

@@ -25,7 +25,7 @@
 #ifndef SERIALIZER_HH
 #define SERIALIZER_HH
 
-#include "complexGrids/mpiManager/mpiManager.h"
+#include "communication/mpiManager.h"
 #include "serializer.h"
 #include "olbDebug.h"
 #include <algorithm>

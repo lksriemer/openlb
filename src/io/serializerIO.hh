@@ -24,7 +24,8 @@
 #ifndef SERIALIZER_IO_HH
 #define SERIALIZER_IO_HH
 
-#include "complexGrids/mpiManager/mpiManager.h"
+#include "communication/mpiManager.h"
+#include "core/singleton.h"
 #include "serializerIO.h"
 #include "base64.h"
 #include "core/olbDebug.h"
@@ -80,7 +81,6 @@ void saveData(Serializable<T> const& object, std::string fName, bool enforceUint
 
 template<typename T>
 void istr2unSerializer(DataUnSerializer<T>& unSerializer, std::istream* istr, bool enforceUint) {
-  size_t fullSize = 0;
   if (singleton::mpi().isMainProcessor()) {
     size_t binarySize;
     if (enforceUint) {
@@ -93,8 +93,7 @@ void istr2unSerializer(DataUnSerializer<T>& unSerializer, std::istream* istr, bo
       Base64Decoder<size_t> sizeDecoder(*istr, 1);
       sizeDecoder.decode(&binarySize, 1);
     }
-    fullSize = binarySize / sizeof(T);
-    OLB_PRECONDITION(fullSize == unSerializer.getSize());
+    OLB_PRECONDITION(binarySize/sizeof(T) == unSerializer.getSize());
   }
   Base64Decoder<T>* dataDecoder = 0;
   if (singleton::mpi().isMainProcessor()) {

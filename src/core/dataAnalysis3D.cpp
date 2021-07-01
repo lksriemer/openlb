@@ -22,13 +22,13 @@
 */
 
 /** \file
- * Data analysis (formerly known as BlockStatistics) on 3D BlockStructures -- template instantiation.
+ * Data analysis (formerly known as BlockStatistics) on 3D BlockLatticeStructures -- template instantiation.
  */
 
 #include "dataAnalysis3D.h"
 #include "dataAnalysis3D.hh"
-#include "latticeDescriptors.h"
-#include "latticeDescriptors.hh"
+#include "dynamics/latticeDescriptors.h"
+#include "dynamics/latticeDescriptors.hh"
 
 namespace olb {
 

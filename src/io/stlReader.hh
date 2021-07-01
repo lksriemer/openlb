@@ -1,6 +1,6 @@
 /*  This file is part of the OpenLB library
  *
- *  Copyright (C) 2010 Mathias J. Krause, Thomas Henn, Jonas Kratzke
+ *  Copyright (C) 2010-2015 Thomas Henn, Mathias J. Krause
  *  E-mail contact: info@openlb.net
  *  The most recent release of OpenLB can be downloaded at
  *  <http://www.openlb.net/>
@@ -19,751 +19,687 @@
  *  License along with this program; if not, write to the Free
  *  Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  *  Boston, MA  02110-1301, USA.
- */
+*/
 
 /** \file
- * Input in STL format -- implementation.
+ * Input in STL format -- header file.
  */
 
 #ifndef STL_READER_HH
 #define STL_READER_HH
 
-#include "stlReader.h"
-#include "complexGrids/mpiManager/mpiManager.h"
-#include "external/cvmlcpp/volume/VolumeHelpers.h"
-#include <algorithm>
-#include <cctype>
+#include <string>
+#include <vector>
 #include <iostream>
-#include <queue>
+#include <sstream>
+#include <fstream>
+#include <stdexcept>
+#include "core/singleton.h"
+#include "communication/mpiManager.h"
+#include "octree.hh"
 
+using namespace olb::util;
+
+/// All OpenLB code is contained in this namespace.
 namespace olb {
 
-
-/// Use BFS to find the height of a DTree
-template <typename T, std::size_t D>
-int treeDepth(cvmlcpp::DTree<T,D> tree) {
-  typedef cvmlcpp::DTreeProxy<T, D> DNode;
-  unsigned currentDepth = 0;
-  std::queue< DNode > q;
-  q.push(tree.root());
-
-  while (!q.empty()) {
-    DNode node = q.front();
-    q.pop();
-    if (node.depth() > currentDepth) currentDepth = node.depth();
-    // if the node is a branch
-    if (!node.isLeaf()) {
-      // we examine all of its children
-      for (int i = 0; i < (1 << D); ++i) {
-        q.push(node[i]);
-      }
-    }
+template <typename T>
+void STLtriangle<T>::init() {
+  std::vector<T> A = point[0].r;
+  std::vector<T> B = point[1].r;
+  std::vector<T> C = point[2].r;
+  std::vector<T> b(3, 0.), c(3, 0.);
+ 
+  T bb = 0., bc = 0., cc = 0.;
+ 	
+  for (int i = 0; i < 3; i++) {
+    b[i] = B[i] - A[i];
+    c[i] = C[i] - A[i];
+    bb += b[i]*b[i];
+    bc += b[i]*c[i];
+    cc += c[i]*c[i];
   }
-  return currentDepth;
-}
+  
+  normal[0] = b[1]*c[2] - b[2]*c[1];
+  normal[1] = b[2]*c[0] - b[0]*c[2];
+  normal[2] = b[0]*c[1] - b[1]*c[0];
+ 	
+  T norm = sqrt(std::pow(normal[0], 2) + std::pow(normal[1], 2) 
+ 	                 + std::pow(normal[2], 2));
+  normal[0] /= norm;
+  normal[1] /= norm;
+  normal[2] /= norm;
 
-/// using DFS to find a given node and getting the index collection that created it
-template <typename T, std::size_t D>
-void findPath (
-  cvmlcpp::DTree<T,D> tree, cvmlcpp::DTreeProxy<T, D> &wantedNode, std::vector<int>& indexes ) {
-  typedef cvmlcpp::DTreeProxy<T, D> DNode;
-  DNode node = wantedNode;
-
-  while (node.depth() > 0) {
-    assert( node.depth() < indexes.size() );
-    indexes[node.depth()] = node.index();
-    node = node.parent();
+  T D = 1.0 / (cc*bb - bc*bc);
+  T bbD = bb*D;
+  T bcD = bc*D;
+  T ccD = cc*D;
+	 
+  kBeta = 0.;
+  kGamma = 0.;
+  d = 0.;
+ 
+  for (int i = 0; i < 3; i++) {
+    uBeta[i] = b[i]*ccD - c[i]*bcD;
+    uGamma[i] = c[i]*bbD - b[i]*bcD;
+    kBeta -= A[i]*uBeta[i];
+    kGamma -= A[i]*uGamma[i];
+    d += A[i]*normal[i];
   }
 }
 
-
-template<typename T>
-STLreader<T>::STLreader(const std::string& fName){
-  _innerMaterialNo = 1;
-  _outerMaterialNo = 0;
-  cvmlcpp::readSTL(_geometry, fName);
+template <typename T>
+std::vector<T> STLtriangle<T>::getE0() {
+  std::vector<T> vec(3, T());
+  vec[0] = point[0].r[0] - point[1].r[0];
+  vec[1] = point[0].r[1] - point[1].r[1];
+  vec[2] = point[0].r[2] - point[1].r[2];
+  return vec;
 }
 
-template<typename T>
-STLreader<T>::~STLreader() {
+template <typename T>
+std::vector<T> STLtriangle<T>::getE1() {
+  std::vector<T> vec(3, T());
+  vec[0] = point[0].r[0] - point[2].r[0];
+  vec[1] = point[0].r[1] - point[2].r[1];
+  vec[2] = point[0].r[2] - point[2].r[2];
+  return vec;
 }
 
-template<typename T>
-void STLreader<T>::read(BlockGeometry3D &matrix, unsigned direction,
-                        unsigned voxelNumber, unsigned pad,
-                        double fraction, unsigned samples,
-                        unsigned offsetXN, unsigned offsetXP,
-                        unsigned offsetYN, unsigned offsetYP,
-                        unsigned offsetZN, unsigned offsetZP) const {
-  assert(direction >= 0);
-  assert(direction <= 2);
-  // Find dimensions
-  double geometrySize = 0.;
-  geometrySize = std::max(geometrySize, double(_geometry.max(direction))
-                          - double(_geometry.min(direction)));
-  assert( geometrySize > 0.0 );
-  assert( voxelNumber != 0.0 );
-  double voxelSize = geometrySize / (double) voxelNumber;
-  read(matrix, voxelSize, pad,
-        fraction, samples,
-        offsetXN, offsetXP,
-        offsetYN, offsetYP,
-        offsetZN, offsetZP);
+/* Schnitttest nach
+ * http://www.uninformativ.de/bin/RaytracingSchnitttests-76a577a-CC-BY.pdf
+ */
+template <typename T>
+bool STLtriangle<T>::testRayIntersect(const std::vector<T>& pt,
+                                      const std::vector<T>& dir, 
+                                      std::vector<T>& q, T& alpha,const T& rad) const {
+  T rn = 0.;
+  std::vector<T> testPt = pt + rad*normal;
+  std::vector<T> help(3,0.);
+  q.resize(3);
+ 	
+  for (int i = 0; i < 3; i++) {
+    rn += dir[i]*normal[i];
+  }
+
+  // Schnitttest Flugrichtung -> Ebene
+  if (fabs(rn) < std::numeric_limits<T>::epsilon()) {
+    return false;
+  }
+  alpha = d;
+  for (int i = 0; i < 3; i++) {
+    alpha -= testPt[i]*normal[i];
+  }
+  alpha /= rn;
+
+  // Abstand Partikel Ebene
+  if (alpha < 0) {
+    return false;
+  }
+  for (int i = 0; i < 3; i++) {
+    q[i] = testPt[i] + alpha*dir[i];
+  }
+  double beta = kBeta;
+  for (int i = 0; i < 3; i++) {
+    beta += uBeta[i]*q[i];
+  }
+
+  // Schnittpunkt q in der Ebene?
+  if (beta < -std::numeric_limits<T>::epsilon()) {
+    return false;
+  }
+  double gamma = kGamma;
+  for (int i = 0; i < 3; i++) {
+    gamma += uGamma[i]*q[i];
+  }
+  if (gamma < -std::numeric_limits<T>::epsilon()) {
+    return false;
+  }
+  if (1 - beta - gamma < -std::numeric_limits<T>::epsilon()) {
+   return false;
+  }
+  return true;
 }
 
-template<typename T>
-void STLreader<T>::read(SuperGeometry3D &matrix, unsigned direction,
-                        unsigned voxelNumber, unsigned pad,
-                        double fraction, unsigned samples,
-                        unsigned offsetXN, unsigned offsetXP,
-                        unsigned offsetYN, unsigned offsetYP,
-                        unsigned offsetZN, unsigned offsetZP) const {
-  assert(direction >= 0);
-  assert(direction <= 2);
-  // Find dimensions
-  double geometrySize = 0.;
-  geometrySize = std::max(geometrySize, double(_geometry.max(direction))
-                          - double(_geometry.min(direction)));
-  assert( geometrySize > 0.0 );
-  assert( voxelNumber != 0.0 );
-  double voxelSize = geometrySize / (double) voxelNumber;
-  read(matrix, voxelSize, pad,
-        fraction, samples,
-        offsetXN, offsetXP,
-        offsetYN, offsetYP,
-        offsetZN, offsetZP);
-}
+template <typename T>
+STLmesh<T>::STLmesh(std::string fName, T stlSize): _fName(fName), _min(3,0), _max(3,0), _maxDist2(0), clout(std::cout, "STLmesh"){
+  std::ifstream f(fName.c_str(), std::ios::in);
+_triangles.reserve(10000);
+  if (!f.good()) throw std::runtime_error("STL File not valid.");
+  char buf[6];
+  buf[5] = 0;
+  f.read(buf, 5);
+  const std::string asciiHeader = "solid";
+  if (std::string(buf) == asciiHeader) {
+    f.seekg(0, std::ios::beg);
+    if (f.good()) {
+      std::string s0, s1;
+      int i = 0;
+      while (!f.eof()) {
+        f >> s0;
+        if (s0 == "facet") {
+          STLtriangle<T> tri;
+          f >> s1 >> tri.normal[0] >> tri.normal[1] >> tri.normal[2];
+          f >> s0 >> s1;
+          f >> s0 >> tri.point[0].r[0] >> tri.point[0].r[1] >> tri.point[0].r[2];
+          f >> s0 >> tri.point[1].r[0] >> tri.point[1].r[1] >> tri.point[1].r[2];
+          f >> s0 >> tri.point[2].r[0] >> tri.point[2].r[1] >> tri.point[2].r[2];
+          f >> s0;
+          f >> s0;
+          for (int k=0; k<3; k++) {
+            tri.point[0].r[k] *= stlSize;
+            tri.point[1].r[k] *= stlSize;
+            tri.point[2].r[k] *= stlSize;
+          }
+          if (i==0) {
+            _min.resize(3,0);
+            _max.resize(3,0);
 
-template<typename T>
-void STLreader<T>::read(BlockGeometry3D &matrix, double voxelSize, unsigned int pad,
-                         double fraction, unsigned int samples,
-                         unsigned offsetXN, unsigned offsetXP,
-                         unsigned offsetYN, unsigned offsetYP,
-                         unsigned offsetZN, unsigned offsetZP) const {
-  if (fraction) {
+            _min[0] = tri.point[0].r[0];
+            _min[1] = tri.point[0].r[1];
+            _min[2] = tri.point[0].r[2];
 
-    cvmlcpp::Matrix<double, 3u> voxels;
-    cvmlcpp::fractionVoxelize(_geometry, voxels, voxelSize, samples, 1);
-    matrix.reInit(_geometry.min(0) - (1 - 0.5 + offsetXN) * voxelSize,
-                  _geometry.min(1) - (1 - 0.5 + offsetYN) * voxelSize,
-                  _geometry.min(2) - (1 - 0.5 + offsetZN) * voxelSize,
-                  voxelSize,
-                  voxels.extents()[X] + offsetXN + offsetXP,
-                  voxels.extents()[Y] + offsetYN + offsetYP,
-                  voxels.extents()[Z] + offsetZN + offsetZP, pad);
+            _max[0] = tri.point[0].r[0];
+            _max[1] = tri.point[0].r[1];
+            _max[2] = tri.point[0].r[2];
 
-    for (unsigned z = 0; z < voxels.extents()[Z]; ++z) {
-      for (unsigned y = 0; y < voxels.extents()[Y]; ++y) {
-        for (unsigned x = 0; x < voxels.extents()[X]; ++x) {
-          if (voxels[x][y][z] > fraction)
-            matrix.setMaterial(x + offsetXN, y + offsetYN, z + offsetZN, _innerMaterialNo);
-          else
-            matrix.setMaterial(x + offsetXN, y + offsetYN, z + offsetZN, _outerMaterialNo);
+            _min[0] = std::min(_min[0],tri.point[1].r[0]);
+            _min[1] = std::min(_min[1],tri.point[1].r[1]);
+            _min[2] = std::min(_min[2],tri.point[1].r[2]);
+
+            _max[0] = std::max(_max[0],tri.point[1].r[0]);
+            _max[1] = std::max(_max[1],tri.point[1].r[1]);
+            _max[2] = std::max(_max[2],tri.point[1].r[2]);
+
+            _min[0] = std::min(_min[0],tri.point[2].r[0]);
+            _min[1] = std::min(_min[1],tri.point[2].r[1]);
+            _min[2] = std::min(_min[2],tri.point[2].r[2]);
+
+            _max[0] = std::max(_max[0],tri.point[2].r[0]);
+            _max[1] = std::max(_max[1],tri.point[2].r[1]);
+            _max[2] = std::max(_max[2],tri.point[2].r[2]);
+
+          } else {
+            _min[0] = std::min(_min[0],tri.point[0].r[0]);
+            _min[1] = std::min(_min[1],tri.point[0].r[1]);
+            _min[2] = std::min(_min[2],tri.point[0].r[2]);
+
+            _max[0] = std::max(_max[0],tri.point[0].r[0]);
+            _max[1] = std::max(_max[1],tri.point[0].r[1]);
+            _max[2] = std::max(_max[2],tri.point[0].r[2]);
+
+            _min[0] = std::min(_min[0],tri.point[1].r[0]);
+            _min[1] = std::min(_min[1],tri.point[1].r[1]);
+            _min[2] = std::min(_min[2],tri.point[1].r[2]);
+
+            _max[0] = std::max(_max[0],tri.point[1].r[0]);
+            _max[1] = std::max(_max[1],tri.point[1].r[1]);
+            _max[2] = std::max(_max[2],tri.point[1].r[2]);
+ 
+            _min[0] = std::min(_min[0],tri.point[2].r[0]);
+            _min[1] = std::min(_min[1],tri.point[2].r[1]);
+            _min[2] = std::min(_min[2],tri.point[2].r[2]);
+
+            _max[0] = std::max(_max[0],tri.point[2].r[0]);
+            _max[1] = std::max(_max[1],tri.point[2].r[1]);
+            _max[2] = std::max(_max[2],tri.point[2].r[2]);
+          }
+        
+          i++;
+          tri.init();
+          _triangles.push_back(tri);
+ 
+          _maxDist2 = std::max(distPoints(tri.point[0], tri.point[1]), _maxDist2);
+          _maxDist2 = std::max(distPoints(tri.point[2], tri.point[1]), _maxDist2);
+          _maxDist2 = std::max(distPoints(tri.point[0], tri.point[2]), _maxDist2);
+        } else if (s0 == "endsolid") {
+          break;
         }
       }
     }
   } else {
-    cvmlcpp::Matrix<unsigned short, 3u> voxels;
-    cvmlcpp::voxelize(_geometry, voxels, voxelSize, 1);
-    matrix.reInit(_geometry.min(0) - (1 - 0.5 + offsetXN) * voxelSize,
-                  _geometry.min(1) - (1 - 0.5 + offsetYN) * voxelSize,
-                  _geometry.min(2) - (1 - 0.5 + offsetZN) * voxelSize,
-                  voxelSize,
-                  voxels.extents()[X] + offsetXN + offsetXP,
-                  voxels.extents()[Y] + offsetYN + offsetYP,
-                  voxels.extents()[Z] + offsetZN + offsetZP, pad);
+    f.close();
+    f.open(fName.c_str(), std::ios::in | std::ios::binary);
+    char comment[80];
+    f.read(comment, 80);
+		
+    if (!f.good()) throw std::runtime_error("STL File not valid.");
+		
+    comment[79] = 0;
+    int32_t nFacets;
+    f.read(reinterpret_cast<char *>(&nFacets), sizeof(int32_t));
+		
+    if (!f.good()) throw std::runtime_error("STL File not valid.");
 
-    for (unsigned z = 0; z < voxels.extents()[Z]; ++z) {
-      for (unsigned y = 0; y < voxels.extents()[Y]; ++y) {
-        for (unsigned x = 0; x < voxels.extents()[X]; ++x) {
-          if (voxels[x][y][z] == 1)
-            matrix.setMaterial(x + offsetXN, y + offsetYN, z + offsetZN, _innerMaterialNo);
-          else
-            matrix.setMaterial(x + offsetXN, y + offsetYN, z + offsetZN, _outerMaterialNo);
-        }
+    float v[12];
+    unsigned short uint16;
+    for (int32_t i = 0; i < nFacets; ++i) {
+      for (size_t j = 0; j < 12; ++j) {
+        f.read(reinterpret_cast<char *>(&v[j]), sizeof(float));
       }
+      f.read(reinterpret_cast<char *>(&uint16), sizeof(unsigned short)); 
+      STLtriangle<T> tri;
+      tri.normal[0] = v[0];
+      tri.normal[1] = v[1];
+      tri.normal[2] = v[2];
+      tri.point[0].r[0] = v[3];
+      tri.point[0].r[1] = v[4];
+      tri.point[0].r[2] = v[5];
+      tri.point[1].r[0] = v[6];
+      tri.point[1].r[1] = v[7];
+      tri.point[1].r[2] = v[8];
+      tri.point[2].r[0] = v[9];
+      tri.point[2].r[1] = v[10];
+      tri.point[2].r[2] = v[11];
+   			
+      for (int k=0; k<3; k++) {
+        tri.point[0].r[k] *= stlSize;
+        tri.point[1].r[k] *= stlSize;
+        tri.point[2].r[k] *= stlSize;
+      }
+      if (i==0) {
+        _min[0] = tri.point[0].r[0];
+        _min[1] = tri.point[0].r[1];
+        _min[2] = tri.point[0].r[2];
+
+        _max[0] = tri.point[0].r[0];
+        _max[1] = tri.point[0].r[1];
+        _max[2] = tri.point[0].r[2];
+
+        _min[0] = std::min(_min[0],tri.point[1].r[0]);
+        _min[1] = std::min(_min[1],tri.point[1].r[1]);
+        _min[2] = std::min(_min[2],tri.point[1].r[2]);
+
+        _max[0] = std::max(_max[0],tri.point[1].r[0]);
+        _max[1] = std::max(_max[1],tri.point[1].r[1]);
+        _max[2] = std::max(_max[2],tri.point[1].r[2]);
+
+        _min[0] = std::min(_min[0],tri.point[2].r[0]);
+        _min[1] = std::min(_min[1],tri.point[2].r[1]);
+        _min[2] = std::min(_min[2],tri.point[2].r[2]);
+				
+        _max[0] = std::max(_max[0],tri.point[2].r[0]);
+        _max[1] = std::max(_max[1],tri.point[2].r[1]);
+        _max[2] = std::max(_max[2],tri.point[2].r[2]);
+
+      } else {
+        _min[0] = std::min(_min[0],tri.point[0].r[0]);
+        _min[1] = std::min(_min[1],tri.point[0].r[1]);
+        _min[2] = std::min(_min[2],tri.point[0].r[2]);
+				
+        _max[0] = std::max(_max[0],tri.point[0].r[0]);
+        _max[1] = std::max(_max[1],tri.point[0].r[1]);
+        _max[2] = std::max(_max[2],tri.point[0].r[2]);
+
+        _min[0] = std::min(_min[0],tri.point[1].r[0]);
+        _min[1] = std::min(_min[1],tri.point[1].r[1]);
+        _min[2] = std::min(_min[2],tri.point[1].r[2]);
+
+        _max[0] = std::max(_max[0],tri.point[1].r[0]);
+        _max[1] = std::max(_max[1],tri.point[1].r[1]);
+        _max[2] = std::max(_max[2],tri.point[1].r[2]);
+
+        _min[0] = std::min(_min[0],tri.point[2].r[0]);
+        _min[1] = std::min(_min[1],tri.point[2].r[1]);
+        _min[2] = std::min(_min[2],tri.point[2].r[2]);
+				
+        _max[0] = std::max(_max[0],tri.point[2].r[0]);
+        _max[1] = std::max(_max[1],tri.point[2].r[1]);
+        _max[2] = std::max(_max[2],tri.point[2].r[2]);
+      }
+      tri.init();
+      _triangles.push_back(tri);
+
+      _maxDist2 = std::max(distPoints(tri.point[0], tri.point[1]), _maxDist2);
+      _maxDist2 = std::max(distPoints(tri.point[2], tri.point[1]), _maxDist2);
+      _maxDist2 = std::max(distPoints(tri.point[0], tri.point[2]), _maxDist2);
     }
   }
-}
-
-template<typename T>
-void STLreader<T>::read(SuperGeometry3D &matrix, double voxelSize, unsigned int pad,
-                         double fraction, unsigned int samples,
-                         unsigned offsetXN, unsigned offsetXP,
-                         unsigned offsetYN, unsigned offsetYP,
-                         unsigned offsetZN, unsigned offsetZP) const {
-  if (fraction) {
-
-    cvmlcpp::Matrix<double, 3u> voxels;
-    cvmlcpp::fractionVoxelize(_geometry, voxels, voxelSize, samples, 1);
-    matrix.reInit(_geometry.min(0) - (1 - 0.5 + offsetXN) * voxelSize,
-                  _geometry.min(1) - (1 - 0.5 + offsetYN) * voxelSize,
-                  _geometry.min(2) - (1 - 0.5 + offsetZN) * voxelSize,
-                  voxelSize,
-                  voxels.extents()[X] + offsetXN + offsetXP,
-                  voxels.extents()[Y] + offsetYN + offsetYP,
-                  voxels.extents()[Z] + offsetZN + offsetZP, pad);
-
-    for (unsigned z = 0; z < voxels.extents()[Z]; ++z) {
-      for (unsigned y = 0; y < voxels.extents()[Y]; ++y) {
-        for (unsigned x = 0; x < voxels.extents()[X]; ++x) {
-          if (voxels[x][y][z] > fraction)
-            matrix.setMaterial(x + offsetXN, y + offsetYN, z + offsetZN, _innerMaterialNo);
-          else
-            matrix.setMaterial(x + offsetXN, y + offsetYN, z + offsetZN, _outerMaterialNo);
-        }
-      }
-    }
-  } else {
-    cvmlcpp::Matrix<unsigned short, 3u> voxels;
-    cvmlcpp::voxelize(_geometry, voxels, voxelSize, 1);
-    matrix.reInit(_geometry.min(0) - (1 - 0.5 + offsetXN) * voxelSize,
-                  _geometry.min(1) - (1 - 0.5 + offsetYN) * voxelSize,
-                  _geometry.min(2) - (1 - 0.5 + offsetZN) * voxelSize,
-                  voxelSize,
-                  voxels.extents()[X] + offsetXN + offsetXP,
-                  voxels.extents()[Y] + offsetYN + offsetYP,
-                  voxels.extents()[Z] + offsetZN + offsetZP, pad);
-
-    for (unsigned z = 0; z < voxels.extents()[Z]; ++z) {
-      for (unsigned y = 0; y < voxels.extents()[Y]; ++y) {
-        for (unsigned x = 0; x < voxels.extents()[X]; ++x) {
-          if (voxels[x][y][z] == 1)
-            matrix.setMaterial(x + offsetXN, y + offsetYN, z + offsetZN, _innerMaterialNo);
-          else
-            matrix.setMaterial(x + offsetXN, y + offsetYN, z + offsetZN, _outerMaterialNo);
-        }
-      }
-    }
-  }
-}
-
-template<typename T>
-void STLreader<T>::read(CuboidGeometry3D<T> &cGeometry, BlockGeometry3D &matrix,
-                        unsigned voxelNumber, unsigned minCuboidSize, unsigned pad) {
-  // Find largest direction
-  double geometrySize = 0.;
-  for(int d = 0; d < 3; ++d) {
-    geometrySize = std::max (
-                     geometrySize,
-                     double(_geometry.max(d)) - double(_geometry.min(d))
-                   );
-  }
-
-  assert( geometrySize > 0.0 );
-  assert( voxelNumber != 0.0 );  void initCuboidGeometries(CuboidGeometry3D<T> &cGeometry, loadBalancer &load);
-
-  double voxelSize = geometrySize / (double) voxelNumber;
-  _nX = (double(_geometry.max(0)) - double(_geometry.min(0)))/voxelSize + 3;
-  _nY = (double(_geometry.max(1)) - double(_geometry.min(1)))/voxelSize + 3;
-  _nZ = (double(_geometry.max(2)) - double(_geometry.min(2)))/voxelSize + 3;
-  readOctree(cGeometry, matrix, voxelSize, minCuboidSize, pad);
-}
-
-template<typename T>
-void STLreader<T>::read(CuboidGeometry3D<T> &cGeometry, SuperGeometry3D &matrix,
-                        unsigned voxelNumber, unsigned minCuboidSize, unsigned pad) {
-  // Find largest direction
-  double geometrySize = 0.;
-  for(int d = 0; d < 3; ++d) {
-    geometrySize = std::max (
-                     geometrySize,
-                     double(_geometry.max(d)) - double(_geometry.min(d))
-                   );
-  }
-
-  assert( geometrySize > 0.0 );
-  assert( voxelNumber != 0.0 );  void initCuboidGeometries(CuboidGeometry3D<T> &cGeometry, loadBalancer &load);
-
-  double voxelSize = geometrySize / (double) voxelNumber;
-  _nX = (double(_geometry.max(0)) - double(_geometry.min(0)))/voxelSize + 3;
-  _nY = (double(_geometry.max(1)) - double(_geometry.min(1)))/voxelSize + 3;
-  _nZ = (double(_geometry.max(2)) - double(_geometry.min(2)))/voxelSize + 3;
-  readOctree(cGeometry, matrix, voxelSize, minCuboidSize, pad);
-}
-
-
-template <typename T>
-Cuboid3D<T> STLreader<T>::cuboidFromNode(DNode3D &node, int height, cvmlcpp::DTree<int,3u> &tree) const {
-  std::vector<int> indexes(height+1);
-  for (int i = 0; i < height+1; ++i) indexes[i] = 0;
-  findPath(tree,node,indexes);
-
-  int maxSize = (1  << height);
-  int x0, y0, z0, x1, y1, z1;
-  x0 = y0 = x1 = y1 = z0 = z1 = 1;
-  int blockSize = 1; // we start from the smaller block size
-  for (int i = height; i > 0; --i) {
-    x0 +=  blockSize*(indexes[i] & 1); // first bit
-    y0 += blockSize*((indexes[i] & 2) >> 1); // second bit
-    z0 += blockSize*((indexes[i] & 4) >> 2); // third bit
-    blockSize *= 2;
-  }
-  int extents = maxSize/(1<<node.depth());
-  x1 = std::min(extents,_nX-x0-1);
-  y1 = std::min(extents,_nY-y0-1);
-  z1 = std::min(extents,_nZ-z0-1);
-
-
-  // Extent to have a padding of one around the border
-  if(x0 == 1) {
-    x0 = 0;
-    x1++;
-  }
-  if(y0 == 1) {
-    y0 = 0;
-    y1++;
-  }
-  if(z0 == 1) {
-    z0 = 0;
-    z1++;
-  }
-  if(x1 == _nX-x0-1) {
-    x1++;
-  }
-  if(y1 == _nY-y0-1) {
-    y1++;
-  }
-  if(z1 == _nZ-z0-1) {
-    z1++;
-  }
-  Cuboid3D<T> cuboid(x0, y0, z0, 1, x1, y1, z1);
-  return cuboid;
-}
-
-
-template <typename T>
-void STLreader<T>::setMaterialForNode(BlockGeometry3D &matrix, DNode3D &node, int height, cvmlcpp::DTree<int,3u> &tree) const {
-  std::vector<int> indexes(height+1);
-  for (int i = 0; i < height+1; ++i) indexes[i] = 0;
-  findPath(tree,node,indexes);
-
-  int maxSize = (1  << height);
-  int x0, y0, z0, x1, y1, z1;
-  x0 = y0 = x1 = y1 = z0 = z1 = 1;
-  int blockSize = 1; // we start from the smaller block size
-  for (int i = height; i > 0; --i) {
-    x0 +=  blockSize*(indexes[i] & 1); // first bit
-    y0 += blockSize*((indexes[i] & 2) >> 1); // second bit
-    z0 += blockSize*((indexes[i] & 4) >> 2); // third bit
-    blockSize *= 2;
-  }
-  int extents = maxSize/(1<<node.depth());
-  for(int x = x0; x < std::min(x0+extents, _nX); x++) {
-    for(int y = y0; y < std::min(y0+extents, _nY); y++) {
-      for(int z = z0; z < std::min(z0+extents, _nZ); z++) {
-        if(node()) {
-          matrix.setMaterial(x, y, z, _innerMaterialNo);
-        } else {
-          matrix.setMaterial(x, y, z, _outerMaterialNo);
-        }
-      }
-    }
-  }
+  f.close();
 }
 
 template <typename T>
-void STLreader<T>::setMaterialForNode(SuperGeometry3D &matrix, DNode3D &node, int height, cvmlcpp::DTree<int,3u> &tree) const {
-  std::vector<int> indexes(height+1);
-  for (int i = 0; i < height+1; ++i) indexes[i] = 0;
-  findPath(tree,node,indexes);
-
-  int maxSize = (1  << height);
-  int x0, y0, z0, x1, y1, z1;
-  x0 = y0 = x1 = y1 = z0 = z1 = 1;
-  int blockSize = 1; // we start from the smaller block size
-  for (int i = height; i > 0; --i) {
-    x0 +=  blockSize*(indexes[i] & 1); // first bit
-    y0 += blockSize*((indexes[i] & 2) >> 1); // second bit
-    z0 += blockSize*((indexes[i] & 4) >> 2); // third bit
-    blockSize *= 2;
-  }
-  int extents = maxSize/(1<<node.depth());
-  for(int x = x0; x < std::min(x0+extents, _nX); x++) {
-    for(int y = y0; y < std::min(y0+extents, _nY); y++) {
-      for(int z = z0; z < std::min(z0+extents, _nZ); z++) {
-        if(node()) {
-          matrix.setMaterial(x, y, z, _innerMaterialNo);
-        } else {
-          matrix.setMaterial(x, y, z, _outerMaterialNo);
-        }
-      }
-    }
-  }
+double STLmesh<T>::distPoints(STLpoint<T>& p1, STLpoint<T>& p2) {
+  return std::pow(double(p1.r[0] - p2.r[0]), 2)
+       + std::pow(double(p1.r[1] - p2.r[1]), 2)
+       + std::pow(double(p1.r[2] - p2.r[2]), 2);
 }
 
-
-template<typename T>
-void STLreader<T>::readOctree(CuboidGeometry3D<T> &cGeometry, BlockGeometry3D &matrix, double voxelSize, unsigned minCuboidSize, unsigned pad) const {
-  unsigned limitHeight = 15;
-
-  unsigned currentDepth = 0;
-  cvmlcpp::DTree<int,3u> tree(0);
-
-  cvmlcpp::voxelize(_geometry, tree, voxelSize);
-
-  std::queue< DNode3D > q;
-  q.push(tree.root());
-
-  // retrieve the height of the tree for further computations
-  unsigned height = treeDepth<int,3>(tree);
-  unsigned limitCuboid = 1;
-  while((1u << (height - limitCuboid)) > minCuboidSize) {
-    limitCuboid++;
-  }
-
-  matrix.reInit(_geometry.min(0) - 0.5 * voxelSize,
-                _geometry.min(1) - 0.5 * voxelSize,
-                _geometry.min(2) - 0.5 * voxelSize,
-                voxelSize,
-                _nX, _nY, _nZ,
-                pad);
-  cGeometry.set_motherC(_geometry.min(0) - 0.5 * voxelSize,
-                        _geometry.min(1) - 0.5 * voxelSize,
-                        _geometry.min(2) - 0.5 * voxelSize,
-                        voxelSize,_nX, _nY, _nZ);
-
-  // set all borders to _outerMaterialNo
-  for(int x = 0; x < _nX; x++) {
-    for(int y = 0; y < _nY; y++) {
-      matrix.setMaterial(x,y,0, _outerMaterialNo);
-      matrix.setMaterial(x,y,_nZ-1+2*pad, _outerMaterialNo);
-    }
-    for(int z = 0; z < _nZ; z++) {
-      matrix.setMaterial(x,0,z, _outerMaterialNo);
-      matrix.setMaterial(x,_nY-1+2*pad,z, _outerMaterialNo);
+template <typename T>
+void STLmesh<T>::print(bool full) {
+  if (full) {
+    int i=0;
+    clout << "Triangles: " << std::endl;
+    typename std::vector<STLtriangle<T> >::iterator it = _triangles.begin();
+  		
+    for (; it!=_triangles.end() ; it++) {
+      clout <<i++<<": "<< it->point[0].r[0] << " " << it->point[0].r[1] 
+                << " " << it->point[0].r[2] << " | " << it->point[1].r[0] << " " 
+                << it->point[1].r[1] << " " << it->point[1].r[2] << " | "
+                << it->point[2].r[0] << " " << it->point[2].r[1] << " " 
+                << it->point[2].r[2] << std::endl;
     }
   }
-  for(int y = 0; y < _nY; y++) {
-    for(int z = 0; z < _nZ; z++) {
-      matrix.setMaterial(0,y,z, _outerMaterialNo);
-      matrix.setMaterial(_nX-1+2*pad,y,z, _outerMaterialNo);
-    }
-  }
-
-  Cuboid3D<T> cuboid;
-
-  while (!q.empty()) {
-    DNode3D node = q.front();
-    q.pop();
-
-    if (currentDepth < node.depth()) {
-      currentDepth = node.depth();
-    }
-
-    // if the node is a branch
-    if (!node.isLeaf()) {
-      // we examine all of its children if we have not reached a certain depth
-      if (node.depth() < limitHeight) {
-        if (node.depth() == limitCuboid) {
-          cuboid = cuboidFromNode(node, height, tree);
-          cGeometry.add(cuboid);
-        }
-        for (int i = 0; i < (1 << 3); ++i) {
-          q.push(node[i]);
-        }
-      }
-      else {
-        if (node.depth() == limitCuboid) {
-          cuboid = cuboidFromNode(node, height, tree);
-          cGeometry.add(cuboid);
-          assert(1==0);
-          // reconstruction of the indexes up to this node
-          setMaterialForNode(matrix, node, height, tree);
-        }
-        else {
-          assert(1==0);
-          // reconstruction of the indexes up to this node
-          setMaterialForNode(matrix, node, height, tree);
-        }
-      }
-    }
-    // if we have a leaf node that CONTAINS only liquid before the intended depth
-    else {
-      setMaterialForNode(matrix, node, height, tree);
-      if (node() == 1) {
-        if (node.depth() <= limitCuboid) {
-          // otherwise, the cuboid will already have been added
-          cuboid = cuboidFromNode(node, height, tree);
-          cGeometry.add(cuboid);
-        }
-
-      }
-    }
-  }
+  clout << "nTriangles=" << _triangles.size() << "; maxDist2=" << _maxDist2 << std::endl;
+  clout << "minPhysR(StlMesh)=(" << getMin()[0] << "," << getMin()[1] << "," << getMin()[2] << ")";
+  clout << "; maxPhysR(StlMesh)=(" << getMax()[0] << "," << getMax()[1] << "," << getMax()[2] << ")" << std::endl;
 }
 
-template<typename T>
-void STLreader<T>::readOctree(CuboidGeometry3D<T> &cGeometry, SuperGeometry3D &matrix, double voxelSize, unsigned minCuboidSize, unsigned pad) const {
-  unsigned limitHeight = 15;
-
-  unsigned currentDepth = 0;
-  cvmlcpp::DTree<int,3u> tree(0);
-
-  cvmlcpp::voxelize(_geometry, tree, voxelSize);
-
-  std::queue< DNode3D > q;
-  q.push(tree.root());
-
-  // retrieve the height of the tree for further computations
-  unsigned height = treeDepth<int,3>(tree);
-  unsigned limitCuboid = 1;
-  while((1u << (height - limitCuboid)) > minCuboidSize) {
-    limitCuboid++;
+template <typename T>
+void STLmesh<T>::write(std::string fName) {
+  int rank = 0;
+#ifdef PARALLEL_MODE_MPI
+  rank = singleton::mpi().getRank();
+#endif
+  if(rank==0) {
+    std::string fullName = singleton::directories().getVtkOutDir() + fName + ".stl";
+    std::ofstream f(fullName.c_str());
+    f << "solid ascii " << fullName << "\n";
+  		
+    for (unsigned int i=0; i<_triangles.size(); i++) {
+      f << "facet normal " << _triangles[i].normal[0] << " " 
+        << _triangles[i].normal[1] << " " << _triangles[i].normal[2] << "\n";
+      f << "    outer loop\n";
+      f << "        vertex " << _triangles[i].point[0].r[0] << " " 
+        << _triangles[i].point[0].r[1] << " " << _triangles[i].point[0].r[2] << "\n";
+      f << "        vertex " << _triangles[i].point[1].r[0] << " " 
+        << _triangles[i].point[1].r[1] << " " << _triangles[i].point[1].r[2] << "\n";
+      f << "        vertex " << _triangles[i].point[2].r[0] << " " 
+        << _triangles[i].point[2].r[1] << " " << _triangles[i].point[2].r[2] << "\n";
+      f << "    endloop\n";
+      f << "endfacet\n";
+    }
+    f.close();
   }
-
-  matrix.reInit(_geometry.min(0) - 0.5 * voxelSize,
-                _geometry.min(1) - 0.5 * voxelSize,
-                _geometry.min(2) - 0.5 * voxelSize,
-                voxelSize,
-                _nX, _nY, _nZ,
-                pad);
-  cGeometry.set_motherC(_geometry.min(0) - 0.5 * voxelSize,
-                        _geometry.min(1) - 0.5 * voxelSize,
-                        _geometry.min(2) - 0.5 * voxelSize,
-                        voxelSize,_nX, _nY, _nZ);
-
-  // set all borders to _outerMaterialNo
-  for(int x = 0; x < _nX; x++) {
-    for(int y = 0; y < _nY; y++) {
-      matrix.setMaterial(x,y,0, _outerMaterialNo);
-      matrix.setMaterial(x,y,_nZ-1+2*pad, _outerMaterialNo);
-    }
-    for(int z = 0; z < _nZ; z++) {
-      matrix.setMaterial(x,0,z, _outerMaterialNo);
-      matrix.setMaterial(x,_nY-1+2*pad,z, _outerMaterialNo);
-    }
-  }
-  for(int y = 0; y < _nY; y++) {
-    for(int z = 0; z < _nZ; z++) {
-      matrix.setMaterial(0,y,z, _outerMaterialNo);
-      matrix.setMaterial(_nX-1+2*pad,y,z, _outerMaterialNo);
-    }
-  }
-
-  Cuboid3D<T> cuboid;
-
-  while (!q.empty()) {
-    DNode3D node = q.front();
-    q.pop();
-
-    if (currentDepth < node.depth()) {
-      currentDepth = node.depth();
-    }
-
-    // if the node is a branch
-    if (!node.isLeaf()) {
-      // we examine all of its children if we have not reached a certain depth
-      if (node.depth() < limitHeight) {
-        if (node.depth() == limitCuboid) {
-          cuboid = cuboidFromNode(node, height, tree);
-          cGeometry.add(cuboid);
-        }
-        for (int i = 0; i < (1 << 3); ++i) {
-          q.push(node[i]);
-        }
-      }
-      else {
-        if (node.depth() == limitCuboid) {
-          cuboid = cuboidFromNode(node, height, tree);
-          cGeometry.add(cuboid);
-          assert(1==0);
-          // reconstruction of the indexes up to this node
-          setMaterialForNode(matrix, node, height, tree);
-        }
-        else {
-          assert(1==0);
-          // reconstruction of the indexes up to this node
-          setMaterialForNode(matrix, node, height, tree);
-        }
-      }
-    }
-    // if we have a leaf node that CONTAINS only liquid before the intended depth
-    else {
-      setMaterialForNode(matrix, node, height, tree);
-      if (node() == 1) {
-        if (node.depth() <= limitCuboid) {
-          // otherwise, the cuboid will already have been added
-          cuboid = cuboidFromNode(node, height, tree);
-          cGeometry.add(cuboid);
-        }
-
-      }
-    }
-  }
+  /*if (_verbose)*/ clout << "Write ... OK" << std::endl;
 }
-
-template<typename T>
-bool STLreader<T>::readDistance(T x, T y, T z, T dirX, T dirY, T dirZ, T & distance) {
-
-
-  typedef float Tf;
-
-  const Tf X0 = x;
-  const Tf Y0 = y;
-  const Tf Z0 = z;
-  const Tf X1 = x+dirX;
-  const Tf Y1 = y+dirY;
-  const Tf Z1 = z+dirZ;
-
-  std::vector<cvmlcpp::Point3D<Tf> > points;
-
-  typedef typename cvmlcpp::Geometry<Tf>::const_facet_iterator const_facet_iterator;
-  for (const_facet_iterator f = _geometry.facetsBegin();
-       f != _geometry.facetsEnd(); ++f)
-  {
-    const cvmlcpp::Point3D<Tf> p0 = _geometry.point( (*f)[0] );
-    const cvmlcpp::Point3D<Tf> p1 = _geometry.point( (*f)[1] );
-    const cvmlcpp::Point3D<Tf> p2 = _geometry.point( (*f)[2] );
-
-    const Tf Fx0 = std::min(p2[0],std::min(p0[0],p1[0])); 
-    const Tf Fx1 = std::max(p2[0],std::max(p0[0],p1[0]));
-    const Tf Ix0 = std::max(X0,Fx0);
-    const Tf Ix1 = std::min(X1,Fx1);
-    if (Ix1>=Ix0) {
-      const Tf Fy0 = std::min(p2[1],std::min(p0[1],p1[1]));
-      const Tf Fy1 = std::max(p2[1],std::max(p0[1],p1[1]));
-      const Tf Iy0 = std::max(Y0,Fy0);
-      const Tf Iy1 = std::min(Y1,Fy1);
-      if (Iy1>=Iy0) {
-        const Tf Fz0 = std::min(p2[2],std::min(p0[2],p1[2]));
-        const Tf Fz1 = std::max(p2[2],std::max(p0[2],p1[2]));
-        const Tf Iz0 = std::max(Z0,Fz0);
-        const Tf Iz1 = std::min(Z1,Fz1);
-        if (Iz1>=Iz0){
-          points.push_back(p0);
-          points.push_back(p1);
-          points.push_back(p2);
-        }
-      }
-    }
-  }
-
-  // There should be at least 1 facet in the geometry to prevent segmentation faults
-  if (points.size() == 0){
-    points.push_back(_geometry.point( (*_geometry.facetsBegin())[0] ));
-    points.push_back(_geometry.point( (*_geometry.facetsBegin())[1] ));
-    points.push_back(_geometry.point( (*_geometry.facetsBegin())[2] ));
-  }
-
-  // after collecting all facet points belonging to the current cuboid we
-  // construct a separate geometry for the cuboid
-  cvmlcpp::Geometry<float> g;
-  cvmlcpp::detail::constructGeometry(g, points);
-  //_cuboidGeometries.push_back(g);
-
-  bool result = cvmlcpp::distance(g,
-                           cvmlcpp::Point3D<T>(x,y,z),
-                           cvmlcpp::Point3D<T>(dirX,dirY,dirZ),
-                           distance);
-  g.clear();
-  return result;
 
 /*
-  return cvmlcpp::distance(_geometry,
-                           cvmlcpp::Point3D<T>(x,y,z),
-                           cvmlcpp::Point3D<T>(dirX,dirY,dirZ),
-                           distance);*/
+ * STLReader functions
+ */
+template <typename T>
+STLreader<T>::STLreader(const std::string fName, T voxelSize, T stlSize, unsigned short int method, bool verbose): IndicatorF3D<bool,T>(1), _voxelSize(voxelSize), _stlSize(stlSize), _fName(fName), _mesh(fName, stlSize), _verbose(verbose), clout(std::cout, "STLreader") {
+	if (_verbose) clout << "Voxelizing ..." << std::endl;
+
+	std::vector<T> extension = _mesh.getMax() - _mesh.getMin();
+	T max = std::max(extension[0], std::max(extension[1], extension[2]))  + _voxelSize;
+	int j = 0;
+	for (; _voxelSize * std::pow(2, j) < max; j++);
+	std::vector<T> center(3, T());
+	T radius = _voxelSize * std::pow(2, j-1);
+
+	/// Find center of tree and move by _voxelSize/4.
+	for (int i=0; i<3; i++) {
+		center[i] = (_mesh.getMin()[i] + _mesh.getMax()[i]) / 2. - _voxelSize/4.;
+	}
+
+	/// Create tree
+	_tree = new Octree<T>(center, radius, _mesh, j);
+
+	/// Compute _myMin, _myMax such that they are the smallest (greatest) Voxel inside the STL.
+	this->_myMin = center + _voxelSize/2.;
+	this->_myMax = center - _voxelSize/2.;
+	for (int i=0; i<3; i++) {
+	  while (this->_myMin[i] > _mesh.getMin()[i]) {
+	    this->_myMin[i] -= _voxelSize;
+	  }
+	  while (this->_myMax[i] < _mesh.getMax()[i]) {
+	    this->_myMax[i] += _voxelSize;
+	  }
+	  this->_myMax[i] -= _voxelSize;
+    this->_myMin[i] += _voxelSize;
+	}
+
+	/// Indicate nodes of the tree. (Inside/Outside)
+	switch (method) {
+	  case 1: indicate1(); break;
+	  default: indicate2(); break;
+	}
+
+	if (_verbose) print();
+	if (_verbose) clout << "Voxelizing ... OK" << std::endl;
 }
 
-template<typename T>
-bool STLreader<T>::readDistanceCuboid(T x, T y, T z, T dirX, T dirY, T dirZ, int lociC, T & distance) {
+/*
+ *  Old indicate function (slower, more stable)
+ *  Define three rays (X-, Y-, Z-direction) for each leaf and count intersections
+ *  with STL for each ray. Odd number of intersection means inside (Majority vote).
+ */
+template <typename T>
+void STLreader<T>::indicate1() {
+	std::vector<Octree<T>* > leafs;
+	_tree->getLeafs(leafs);
+	typename std::vector<Octree<T>* >::iterator it = leafs.begin();
+	std::vector<T> dir(3, 0), pt(3, T()), s(3, T());
+	int intersections = 0;
+	int inside = 0;
+	Octree<T>* node = NULL;
+	T step = 1./1000. * _voxelSize;
+	for (; it!= leafs.end(); it++) {
+		inside = 0;
 
-  return cvmlcpp::distance(_cuboidGeometries[lociC],
-                           cvmlcpp::Point3D<T>(x,y,z),
-                           cvmlcpp::Point3D<T>(dirX,dirY,dirZ),
-                           distance);
+		pt = (*it)->getCenter();
+		intersections = 0;
+		s = pt; // + step;
+
+		/// X+ dir
+		dir[0] = 1;
+		dir[1] = 0;
+		dir[2] = 0;
+		while (s[0] < _mesh.getMax()[0] + std::numeric_limits<T>::epsilon()) {
+			node = _tree->find(s, (*it)->getMaxdepth());
+			intersections += node->testIntersection(pt, dir);
+			node->intersectRayNode(pt, dir, s);
+			s = s + step*dir;
+		}
+		inside +=(intersections%2);
+
+		/// Y+ Test
+		intersections = 0;
+		s = pt; // + step;
+		dir[0] = 0;
+		dir[1] = 1;
+		dir[2] = 0;
+		while (s[1] < _mesh.getMax()[1] + std::numeric_limits<T>::epsilon()) {
+			node = _tree->find(s, (*it)->getMaxdepth());
+			intersections += node->testIntersection(pt, dir);
+			node->intersectRayNode(pt, dir, s);
+			s = s + step*dir;
+		}
+		inside +=(intersections%2);
+
+		/// Z+ Test
+		intersections = 0;
+		s = pt; // + step;
+		dir[0] = 0;
+		dir[1] = 0;
+		dir[2] = 1;
+		while (s[2] < _mesh.getMax()[2] + std::numeric_limits<T>::epsilon()) {
+			node = _tree->find(s, (*it)->getMaxdepth());
+			intersections += node->testIntersection(pt, dir);
+			node->intersectRayNode(pt, dir, s);
+			s = s + step*dir;
+		}
+		inside +=(intersections%2);
+		(*it)->setInside(inside>1);
+	}
 }
 
-template<typename T>
-void STLreader<T>::setInnerMaterialNo(unsigned no) {
-  _innerMaterialNo = no;
+/*
+ *  New indicate function (faster, less stable)
+ *  Define ray in Z-direction for each Voxel in XY-layer. Indicate all nodes on the fly.
+ */
+template <typename T>
+void STLreader<T>::indicate2() {
+	T rad = _tree->getRadius();
+	std::vector<T> rayPt = _tree->getCenter() - rad  + .5* _voxelSize;
+	std::vector<T> pt = rayPt;
+	std::vector<T> rayDir(3, T());
+			rayDir[0] = 0.;
+			rayDir[1] = 0.;
+			rayDir[2] = 1.;
+	std::vector<T> maxEdge = _tree->getCenter() +rad;
+
+	T step = 1./1000. * _voxelSize;
+
+	Octree<T>* node = NULL;
+	unsigned short rayInside = 0;
+	std::vector<T> nodeInters(3, T());
+	while (pt[0] < _mesh.getMax()[0] + std::numeric_limits<T>::epsilon()) {
+    node = _tree->find(pt);
+    nodeInters = pt;
+    nodeInters[2] = node->getCenter()[2] - node->getRadius();
+    rayInside = 0;
+    while (pt[1] < _mesh.getMax()[1] + std::numeric_limits<T>::epsilon()) {
+      node = _tree->find(pt);
+      nodeInters = pt;
+      nodeInters[2] = node->getCenter()[2] - node->getRadius();
+      rayInside = 0;
+			while (pt[2] < _mesh.getMax()[2] + std::numeric_limits<T>::epsilon()) {
+			  node = _tree->find(pt);
+				node->checkRay(nodeInters, rayDir, rayInside);
+				node->intersectRayNode(pt, rayDir, nodeInters);
+				pt = nodeInters + step*rayDir;
+			}
+			pt[2] = rayPt[2];
+			pt[1] += _voxelSize;
+		}
+		pt[1] = rayPt[1];
+		pt[0] += _voxelSize;
+	}
 }
 
-template<typename T>
-void STLreader<T>::setOuterMaterialNo(unsigned no) {
-  _outerMaterialNo = no;
+template <typename T>
+std::vector<bool> STLreader<T>::operator()(std::vector<T> pt) {
+  std::vector<bool> ret(1, false);
+  T r = _tree->getRadius();
+  std::vector<T> c = _tree->getCenter();
+  if (c[0]-r < pt[0] && pt[0] < c[0]+r &&
+      c[1]-r < pt[1] && pt[1] < c[1]+r &&
+      c[2]-r < pt[2] && pt[2] < c[2]+r) {
+    ret[0] = _tree->find(pt)->getInside();
+  }
+  return ret;
 }
 
-template<typename T>
-void STLreader<T>::splitGeometry(CuboidGeometry3D<T> &cGeometry, loadBalancer &load){
-  OstreamManager clout(std::cout, "STLreader.splitGeometry");
-  clout << "total number of facets: " << _geometry.nrFacets() << std::endl;
-  clout.setMultiOutput(true);
-  // vector of facet geometries should be empty
-  typedef float Tf;
-  // get information about the coordinate system
-  const T voxelsize = cGeometry.get_motherC().get_delta();
-  const T originX = cGeometry.get_motherC().get_globPosX();
-  const T originY = cGeometry.get_motherC().get_globPosY();
-  const T originZ = cGeometry.get_motherC().get_globPosZ();
-  // iterate over local cuboids
-  for (int locIC = 0; locIC < load.get_locChunkSize(); locIC++){
-    const int globIC = load.glob(locIC);
-    // get geometric information about the current cuboid
-    const Tf X0 = originX + voxelsize* (Tf) (cGeometry.get_cuboid(globIC).get_globPosX()-3);
-    const Tf Y0 = originY + voxelsize* (Tf) (cGeometry.get_cuboid(globIC).get_globPosY()-3);
-    const Tf Z0 = originZ + voxelsize* (Tf) (cGeometry.get_cuboid(globIC).get_globPosZ()-3);
-    const Tf X1 = X0 + voxelsize* (Tf) (cGeometry.get_cuboid(globIC).get_nX()+6);
-    const Tf Y1 = Y0 + voxelsize* (Tf) (cGeometry.get_cuboid(globIC).get_nY()+6);
-    const Tf Z1 = Z0 + voxelsize* (Tf) (cGeometry.get_cuboid(globIC).get_nZ()+6);
+template <typename T>
+bool STLreader<T>::distance(T& distance, const std::vector<T>& origin, 
+                            const std::vector<T>& direction, int iC) {
+  Octree<T>* node = NULL;
+  std::vector<T> dir = normalize(direction);
+  std::vector<T> extends = _mesh.getMax() - _mesh.getMin(), pt = origin, q(3, T()), s(3, T());
+  std::vector<T> center = _mesh.getMin() + 1/2. * extends;
+  T step = _voxelSize/1000., a=0;
+ 	
+  for (int i=0; i<3; i++) {
+    extends[i]/=2.;
+  }
 
-    std::vector<cvmlcpp::Point3D<Tf> > points;
-
-    typedef typename cvmlcpp::Geometry<Tf>::const_facet_iterator const_facet_iterator;
-    for (const_facet_iterator f = _geometry.facetsBegin();
-         f != _geometry.facetsEnd(); ++f)
-      {
-      const cvmlcpp::Point3D<Tf> p0 = _geometry.point( (*f)[0] );
-      const cvmlcpp::Point3D<Tf> p1 = _geometry.point( (*f)[1] );
-      const cvmlcpp::Point3D<Tf> p2 = _geometry.point( (*f)[2] );
-
-      const Tf Fx0 = std::min(p2[0],std::min(p0[0],p1[0])); 
-      const Tf Fx1 = std::max(p2[0],std::max(p0[0],p1[0]));
-      const Tf Ix0 = std::max(X0,Fx0);
-      const Tf Ix1 = std::min(X1,Fx1);
-      if (Ix1>=Ix0) {
-        const Tf Fy0 = std::min(p2[1],std::min(p0[1],p1[1]));
-        const Tf Fy1 = std::max(p2[1],std::max(p0[1],p1[1]));
-        const Tf Iy0 = std::max(Y0,Fy0);
-        const Tf Iy1 = std::min(Y1,Fy1);
-        if (Iy1>=Iy0) {
-          const Tf Fz0 = std::min(p2[2],std::min(p0[2],p1[2]));
-          const Tf Fz1 = std::max(p2[2],std::max(p0[2],p1[2]));
-          const Tf Iz0 = std::max(Z0,Fz0);
-          const Tf Iz1 = std::min(Z1,Fz1);
-          if (Iz1>=Iz0){
-            points.push_back(p0);
-            points.push_back(p1);
-            points.push_back(p2);
-          }
-        }
+  if (!(_mesh.getMin()[0] < origin[0] && origin[0] < _mesh.getMax()[0] &&
+        _mesh.getMin()[1] < origin[1] && origin[1] < _mesh.getMax()[1] &&
+        _mesh.getMin()[2] < origin[2] && origin[2] < _mesh.getMax()[2])) {
+    T t=T(), d=T();
+    bool foundQ = false;
+  		
+    if (dir[0] > 0) {
+      d = _mesh.getMin()[0];
+      t = (d - origin[0])/dir[0];
+      pt = origin + (t+step)*dir;
+      if(_mesh.getMin()[1] < pt[1] && pt[1] < _mesh.getMax()[1] &&
+         _mesh.getMin()[2] < pt[2] && pt[2] < _mesh.getMax()[2]) {
+        foundQ = true;
+       }
+    } else if (dir[0] < 0){
+      d = _mesh.getMax()[0];
+      t = (d - origin[0])/dir[0];
+      pt = origin + (t+step)*dir;
+      if(_mesh.getMin()[1] < pt[1] && pt[1] < _mesh.getMax()[1] &&
+         _mesh.getMin()[2] < pt[2] && pt[2] < _mesh.getMax()[2]) {
+        foundQ = true;
       }
     }
 
-    // There should be at least 1 facet in the geometry to prevent segmentation faults
-    if (points.size() == 0){
-      points.push_back(_geometry.point( (*_geometry.facetsBegin())[0] ));
-      points.push_back(_geometry.point( (*_geometry.facetsBegin())[1] ));
-      points.push_back(_geometry.point( (*_geometry.facetsBegin())[2] ));
+    if (dir[1] > 0 && !foundQ) {
+      d = _mesh.getMin()[1];
+      t = (d - origin[1])/dir[1];
+      pt = origin + (t+step)*dir;
+      if(_mesh.getMin()[0] < pt[0] && pt[0] < _mesh.getMax()[0] &&
+         _mesh.getMin()[2] < pt[2] && pt[2] < _mesh.getMax()[2] ) {
+        foundQ = true;
+      }
+    } else if (dir[1] < 0 && !foundQ) {
+      d = _mesh.getMax()[1];
+      t = (d - origin[1])/dir[1];
+      pt = origin + (t+step)*dir;
+      if(_mesh.getMin()[0] < pt[0] && pt[0] < _mesh.getMax()[0] &&
+         _mesh.getMin()[2] < pt[2] && pt[2] < _mesh.getMax()[2]) {
+        foundQ = true;
+      }
     }
 
-    // after collecting all facet points belonging to the current cuboid we
-    // construct a separate geometry for the cuboid
-    cvmlcpp::Geometry<float> g;
-    cvmlcpp::detail::constructGeometry(g, points);
-    clout << "Cuboid #" << globIC << " has "<< g.nrFacets() <<" Facets" << std::endl;
-    _cuboidGeometries.push_back(g);
+    if (dir[2] > 0  && !foundQ) {
+      d = _mesh.getMin()[2];
+      t = (d - origin[2])/dir[2];
+      pt = origin + (t+step)*dir;
+      if(_mesh.getMin()[0] < pt[0] && pt[0] < _mesh.getMax()[0] &&
+         _mesh.getMin()[1] < pt[1] && pt[1] < _mesh.getMax()[1]) {
+        foundQ = true;
+      }
+    } else if (dir[2] < 0 && !foundQ) {
+      d = _mesh.getMax()[2];
+      t = (d - origin[2])/dir[2];
+      pt = origin + (t+step)*dir;
+      if(_mesh.getMin()[0] < pt[0] && pt[0] < _mesh.getMax()[0] &&
+         _mesh.getMin()[1] < pt[1] && pt[1] < _mesh.getMax()[1]) {
+        foundQ = true;
+      }
+    }
+
+    if (!foundQ) {
+      return false;
+    }
   }
-  clout.setMultiOutput(false);
-  // barrier necessary!
 
-#ifdef PARALLEL_MODE_MPI
-  singleton::mpi().barrier();
-#endif  // PARALLEL_MODE_MPI
-
+  while ((std::fabs(pt[0]-center[0]) < extends[0]) &&
+         (std::fabs(pt[1]-center[1]) < extends[1]) &&
+         (std::fabs(pt[2]-center[2]) < extends[2])) {
+    node = _tree->find(pt);
+    if (node->closestIntersection(origin, dir, q, a)) {
+      std::vector<T> vek = q - origin;
+      distance = norm(vek);
+      return true;
+    } else {
+      Octree<T>* node = _tree->find(pt);
+      node->intersectRayNode(pt, dir, s);
+      for (int i=0; i<3; i++) {
+        pt[i] = s[i] + step*dir[i];
+      }
+    }
+  }
+  clout << "Returning false" << std::endl;
+  return false;
 }
+
+template <typename T>
+void STLreader<T>::print() {
+  _mesh.print();
+  _tree->print();
+  clout << "voxelSize=" << _voxelSize << "; stlSize=" << _stlSize << std::endl;
+  clout << "minPhysR(VoxelMesh)=(" <<  this->_myMin[0] << "," << this->_myMin[1] << "," << this->_myMin[2] << ")";
+  clout << "; maxPhysR(VoxelMesh)=(" <<  this->_myMax[0] << "," << this->_myMax[1] << "," << this->_myMax[2] << ")" << std::endl;
+}
+
+template <typename T>
+void STLreader<T>::writeOctree() {
+  _tree->write(_fName);
+}
+
+template <typename T>
+void STLreader<T>::writeSTL() {
+	_mesh.write(_fName);
+}
+
 
 } // namespace olb
 
-#endif  // STL_READER_H
+#endif

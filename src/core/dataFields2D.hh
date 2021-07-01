@@ -148,11 +148,6 @@ DataUnSerializer<T>& ScalarField2D<T>::getSubUnSerializer (
 }
 
 template<typename T>
-MultiDataDistribution2D ScalarField2D<T>::getDataDistribution() const {
-  return MultiDataDistribution2D(getNx(), getNy());
-}
-
-template<typename T>
 SpatiallyExtendedObject2D* ScalarField2D<T>::getComponent(int iBlock) {
   OLB_PRECONDITION( iBlock==0 );
   return this;
@@ -448,11 +443,6 @@ DataUnSerializer<T>& TensorField2D<T,nDim>::getSubUnSerializer (
   unSerializer = new SequentialTensorFieldUnSerializer2D<T, nDim> (
     *this, x0_, x1_, y0_, y1_, ordering );
   return *unSerializer;
-}
-
-template<typename T, int nDim>
-MultiDataDistribution2D TensorField2D<T,nDim>::getDataDistribution() const {
-  return MultiDataDistribution2D(getNx(), getNy());
 }
 
 template<typename T, int nDim>

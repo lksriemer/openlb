@@ -26,8 +26,8 @@
  */
 #include "cell.h"
 #include "cell.hh"
-#include "latticeDescriptors.h"
-#include "latticeDescriptors.hh"
+#include "dynamics/latticeDescriptors.h"
+#include "dynamics/latticeDescriptors.hh"
 
 namespace olb {
 template class Cell<double, descriptors::D2Q9Descriptor>;

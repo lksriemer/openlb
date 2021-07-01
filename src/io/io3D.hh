@@ -25,9 +25,13 @@
  * Groups all the 3D generic template files for the directory io.
  */
 #include "base64.hh"
-#include "serializerIO.hh"
-#include "vtkDataOutput.hh"
+#include "blockGifWriter3D.hh"
+#include "blockVtkWriter3D.hh"
 #include "colormaps.hh"
 #include "imageWriter.hh"
+#include "serializerIO.hh"
 #include "stlReader.hh"
+#include "superGifWriter3D.hh"
+#include "superVtkWriter3D.hh"
 #include "vtiReader.hh"
+#include "octree.hh"

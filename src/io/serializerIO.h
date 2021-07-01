@@ -25,6 +25,9 @@
 #define SERIALIZER_IO_H
 
 #include "core/serializer.h"
+#include <ostream>
+#include <fstream>
+//#include "communication/mpiManager.h"
 
 namespace olb {
 

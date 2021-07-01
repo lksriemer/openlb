@@ -24,18 +24,25 @@
 
 #include "superLatticeIntegralF3D.h"
 #include "superLatticeIntegralF3D.hh"
-#include "core/latticeDescriptors.h"
+#include "dynamics/latticeDescriptors.h"
 
 namespace olb {
 
-template class SuperMax<double,descriptors::D3Q19Descriptor>;
+template class SuperMin3D<double,descriptors::D3Q19Descriptor>;
+template class SuperMax3D<double,descriptors::D3Q19Descriptor>;
 template class SuperSum3D<double,descriptors::D3Q19Descriptor>;
+template class SuperAverage3D<double,descriptors::D3Q19Descriptor>;
 template class SuperIntegral3D<double,descriptors::D3Q19Descriptor>;
 template class SuperL1Norm3D<double,descriptors::D3Q19Descriptor>;
-template class SuperL223D<double,descriptors::D3Q19Descriptor>;
+template class SuperL2Norm3D<double,descriptors::D3Q19Descriptor>;
+template class SuperLpNorm3D<double,descriptors::D3Q19Descriptor>;
+template class SuperLinfNorm3D<double,descriptors::D3Q19Descriptor>;
 template class SuperGeometryFaces3D<double>;
 template class SuperLatticePhysDrag3D<double,descriptors::D3Q19Descriptor>;
 template class SuperLatticePhysCorrDrag3D<double,descriptors::D3Q19Descriptor>;
+template class SuperLatticeFlux3D<double,descriptors::D3Q19Descriptor>;
+template class SuperLatticePhysPressureFlux3D<double,descriptors::D3Q19Descriptor>;
+template class SuperLatticePhysVelocityFlux3D<double,descriptors::D3Q19Descriptor>;
 
 } // end namespace olb
 

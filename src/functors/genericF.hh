@@ -1,4 +1,4 @@
-/*  This file is part of the OpenLB library
+ /*  This file is part of the OpenLB library
  *
  *  Copyright (C) 2012-2013 Lukas Baron, Mathias J. Krause, Albert Mink
  *  E-mail contact: info@openlb.net
@@ -26,7 +26,7 @@
 
 
 /** \file
- * The description of a generic interface for all functor classes 
+ * The description of a generic interface for all functor classes
  * -- generic implementation.
  */
 
@@ -37,14 +37,22 @@
 namespace olb {
 
 template <typename T, typename S>
-const int GenericF<T,S>::getSourceDim() const {
-  return m;
+int GenericF<T,S>::getSourceDim() const {
+  return _m;
 }
 
 template <typename T, typename S>
-const int GenericF<T,S>::getTargetDim() const {
-  return n;
+int GenericF<T,S>::getTargetDim() const {
+  return _n;
 }
+
+template <typename T, typename S>
+std::string& GenericF<T,S>::getName()
+{ return _name; }
+
+template <typename T, typename S>
+std::string const& GenericF<T,S>::getName() const
+{ return _name; }
 
 template <typename T, typename S>
 std::vector<T> GenericF<T,S>::operator() () {
@@ -55,44 +63,61 @@ std::vector<T> GenericF<T,S>::operator() () {
 template <typename T, typename S>
 std::vector<T> GenericF<T,S>::operator() (S input0) {
   std::vector<S> v;
-  v.push_back(input0); 
+  v.push_back(input0);
   return operator()(v);
 }
 
 template <typename T, typename S>
 std::vector<T> GenericF<T,S>::operator() (S input0, S input1) {
   std::vector<S> v;
-  v.push_back(input0); v.push_back(input1);
+  v.push_back(input0);
+  v.push_back(input1);
   return operator()(v);
 }
 
 template <typename T, typename S>
 std::vector<T> GenericF<T,S>::operator() (S input0, S input1, S input2) {
   std::vector<S> v;
-  v.push_back(input0); v.push_back(input1); v.push_back(input2);
+  v.push_back(input0);
+  v.push_back(input1);
+  v.push_back(input2);
   return operator()(v);
 }
 
 template <typename T, typename S>
 std::vector<T> GenericF<T,S>::operator() (S input0, S input1, S input2, S input3) {
   std::vector<S> v;
-  v.push_back(input0); v.push_back(input1); v.push_back(input2); v.push_back(input3);
+  v.push_back(input0);
+  v.push_back(input1);
+  v.push_back(input2);
+  v.push_back(input3);
   return operator()(v);
 }
- 
+
 template <typename T, typename S>
 void GenericF<T,S>::myErase(GenericF<T,S>* ptr) {
-  unsigned i;
-  for(i = 0; i < this->pointerVec.size(); i++ ) {
-    if( this->pointerVec[i] == ptr ) {
-      delete this->pointerVec[i];
+  // remove ptr from child list
+  this->removeChild(ptr);
+  // delete object
+  delete ptr;
+}
+
+template <typename T, typename S>
+void GenericF<T,S>::addChild(GenericF<T,S>* ptr) {
+  _pointerVec.push_back(ptr);
+}
+
+template <typename T, typename S>
+void GenericF<T,S>::removeChild(GenericF<T,S>* ptr) {
+  for ( unsigned i = 0; i < _pointerVec.size(); i++ ) {
+    if ( _pointerVec[i] == ptr ) {
+      _pointerVec.erase(_pointerVec.begin() + i);
       // jump out of for-loop
-      break;
+      // break;
     }
   }
-  // delete vector entry
-  this->pointerVec.erase( this->pointerVec.begin() + i);
 }
+
 
 } // end namespace olb
 

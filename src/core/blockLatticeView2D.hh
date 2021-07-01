@@ -37,7 +37,7 @@ namespace olb {
 
 template<typename T, template<typename U> class Lattice>
 BlockLatticeView2D<T,Lattice>::BlockLatticeView2D (
-  BlockStructure2D<T,Lattice>& originalLattice_ )
+  BlockLatticeStructure2D<T,Lattice>& originalLattice_ )
   : originalLattice(&originalLattice_),
     x0(0), y0(0),
     nx( originalLattice->getNx() ),
@@ -47,7 +47,7 @@ BlockLatticeView2D<T,Lattice>::BlockLatticeView2D (
 
 template<typename T, template<typename U> class Lattice>
 BlockLatticeView2D<T,Lattice>::BlockLatticeView2D (
-  BlockStructure2D<T,Lattice>& originalLattice_,
+  BlockLatticeStructure2D<T,Lattice>& originalLattice_,
   int x0_, int x1_, int y0_, int y1_ )
   : originalLattice(&originalLattice_),
     x0(x0_), y0(y0_),
@@ -134,29 +134,6 @@ void BlockLatticeView2D<T,Lattice>::defineDynamics (
   int iX, int iY, Dynamics<T,Lattice>* dynamics )
 {
   originalLattice->defineDynamics( iX+x0, iY+y0, dynamics );
-}
-
-template<typename T, template<typename U> class Lattice>
-void BlockLatticeView2D<T,Lattice>::defineDynamics (
-  BlockGeometryStatistics2D* blockGeoSta, Dynamics<T,Lattice>* dynamics, int material )
-{
-
-  originalLattice->defineDynamics (
-    blockGeoSta,
-    x0, x0+nx-1, y0, y0+ny-1,
-    dynamics, material );
-}
-
-template<typename T, template<typename U> class Lattice>
-void BlockLatticeView2D<T,Lattice>::defineDynamics (
-  BlockGeometryStatistics2D* blockGeoSta,
-  int x0_, int x1_, int y0_, int y1_,
-  Dynamics<T,Lattice>* dynamics, int material )
-{
-  originalLattice->defineDynamics (
-    blockGeoSta,
-    x0_+x0, x1_+x0, y0_+y0, y1_+y0,
-    dynamics, material );
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -361,11 +338,6 @@ DataUnSerializer<T>& BlockLatticeView2D<T,Lattice>::getSubUnSerializer (
   IndexOrdering::OrderingT ordering )
 {
   return originalLattice -> getSubUnSerializer(x0_+x0, x1_+x0, y0_+y0, y1_+y0, ordering);
-}
-
-template<typename T, template<typename U> class Lattice>
-MultiDataDistribution2D BlockLatticeView2D<T,Lattice>::getDataDistribution() const {
-  return MultiDataDistribution2D(getNx(), getNy());
 }
 
 template<typename T, template<typename U> class Lattice>

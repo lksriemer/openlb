@@ -24,13 +24,15 @@
 
 #include "superLatticeLocalF3D.h"
 #include "superLatticeLocalF3D.hh"
-#include "core/latticeDescriptors.h"
+#include "dynamics/latticeDescriptors.h"
 
 namespace olb {
 
+template class SuperLatticeFpop3D<double,descriptors::D3Q19Descriptor>;
 template class SuperLatticeDissipation3D<double,descriptors::D3Q19Descriptor>;
 template class SuperLatticeDensity3D<double,descriptors::D3Q19Descriptor>;
 template class SuperLatticeVelocity3D<double,descriptors::D3Q19Descriptor>;
+template class SuperLatticeStrainRate3D<double,descriptors::D3Q19Descriptor>;
 template class SuperLatticeGeometry3D<double,descriptors::D3Q19Descriptor>;
 template class SuperLatticeRank3D<double,descriptors::D3Q19Descriptor>;
 template class SuperLatticeCuboid3D<double,descriptors::D3Q19Descriptor>;
@@ -42,6 +44,6 @@ template class SuperLatticePorosity3D<double,descriptors::D3Q19Descriptor>;
 template class SuperLatticePhysPermeability3D<double,descriptors::D3Q19Descriptor>;
 template class SuperLatticePhysDarcyForce3D<double,descriptors::D3Q19Descriptor>;
 template class SuperLatticeAverage3D<double,descriptors::D3Q19Descriptor>;
-template class SuperL2Norm3D<double,descriptors::D3Q19Descriptor>;
+template class SuperEuklidNorm3D<double,descriptors::D3Q19Descriptor>;
 
 } // end namespace olb

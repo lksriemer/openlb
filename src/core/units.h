@@ -29,7 +29,7 @@
 #ifndef UNITS_H
 #define UNITS_H
 
-#include "complexGrids/mpiManager/mpiManager.h"
+//#include "communication/mpiManager.h"
 #include "io/parallelIO.h"
 #include "io/xmlReader.h"
 #include "io/ostreamManager.h"
@@ -255,13 +255,17 @@ public:
   T latticeForce(T physicalForce = 1) const
   { return physicalForce / physForce(); }
 
-  /// converts a physical permeability K to a velocity scaling factor d, needs PorousBGKdynamics
-  T latticePermeability(T K) const
-  { return 1 - latticeForce(getLatticeNu() / K * getTau()); }
+  /// converts a physical permeability K to a lattice-dependent porosity d
+  /// (a velocity scaling factor depending on Maxwellian distribution function),
+  /// needs PorousBGKdynamics
+  T latticePorosity(T K) const
+  { return 1 - pow(physLength(),getDim()-1)*getLatticeNu()*getTau() / K; }
 
-  /// converts a velocity scaling factor d to a physical permeability K, needs PorousBGKdynamics
+  /// converts a lattice-dependent porosity d (a velocity scaling factor
+  /// depending on Maxwellian distribution function) to a physical permeability K,
+  /// needs PorousBGKdynamics
   T physPermeability(T d) const
-  { return getLatticeNu() * getTau() / physForce(1-d); }
+  { return pow(physLength(),getDim()-1)*getLatticeNu()*getTau()/(1-d) ; }
 
   /// print converter information
   void print() const;

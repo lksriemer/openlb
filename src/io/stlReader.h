@@ -1,6 +1,6 @@
 /*  This file is part of the OpenLB library
  *
- *  Copyright (C) 2010 Mathias J. Krause, Thomas Henn, Jonas Kratzke
+ *  Copyright (C) 2010-2015 Thomas Henn, Mathias J. Krause
  *  E-mail contact: info@openlb.net
  *  The most recent release of OpenLB can be downloaded at
  *  <http://www.openlb.net/>
@@ -32,139 +32,181 @@
 #include <vector>
 #include <iostream>
 #include <sstream>
+#include "communication/loadBalancer.h"
+#include "geometry/cuboidGeometry3D.h"
+#include "functors/indicatorF.h"
+#include "utilities/vectorHelpers.h"
+#include "octree.h"
 
-#include "external/cvmlcpp/base/Matrix"
-#include "external/cvmlcpp/volume/Geometry"
-#include "external/cvmlcpp/volume/VolumeIO"
-#include "external/cvmlcpp/volume/Voxelizer"
-#include "external/cvmlcpp/volume/DTree"
+using namespace olb::util;
 
-#include "core/blockGeometry3D.h"
-#include "complexGrids/cuboidStructure/superGeometry3D.h"
-#include "core/loadBalancer.h"
-#include "complexGrids/cuboidStructure/cuboidGeometry3D.h"
-
-
+/// All OpenLB code is contained in this namespace.
 namespace olb {
 
-typedef cvmlcpp::DTreeProxy<int,3> DNode3D;
+template<typename T>
+class Octree;
 
 template<typename T>
-class STLreader {
+struct STLpoint {
+  /// Constructor constructs
+  STLpoint() : r(3, T()) {};
+  /// Operator= equals
+	STLpoint<T>& operator=(STLpoint<T> const& rhs) {
+		r = rhs.r;
+		return *this;
+	};
+  /// CopyConstructor copies
+	STLpoint(STLpoint<T> const& rhs):r(rhs.r){};
+
+	/// Point coordinates
+  std::vector<T> r;
+};
+
+template<typename T>
+struct STLtriangle {
+  /** Test intersection between ray and triangle
+   * \param pt Raypoint
+   * \param dir Direction
+   * \param q Point of intersection (if intersection occurs)
+   * \param alpha Explained in http://www.uninformativ.de/bin/RaytracingSchnitttests-76a577a-CC-BY.pdf page 7-12
+   *            q = pt + alpha * dir
+   * \param rad It's complicated. Imagine you have a sphere with radius rad moving along the ray. Then q becomes the first point of the sphere to touch the triangle.
+   */
+  bool testRayIntersect(const std::vector<T>& pt,const std::vector<T>& dir, std::vector<T>& q, T& alpha, const T& rad = T()) const;
+
+  /// A triangle contains 3 Points
+  std::vector<STLpoint<T> > point;
+
+  /// normal of triangle
+  std::vector<T> normal;
+
+  /// variables explained in http://www.uninformativ.de/bin/RaytracingSchnitttests-76a577a-CC-BY.pdf page 7-12
+  std::vector<T> uBeta, uGamma;
+  T d, kBeta, kGamma;
+
+public:
+  /// Constructor constructs
+  STLtriangle():point(3, STLpoint<T>()), normal(3,T()), uBeta(3,T()), uGamma(3,T()), d(T()), kBeta(T()), kGamma(T()) {};
+  /// CopyConstructor copies
+  STLtriangle(STLtriangle<T> const& tri):point(tri.point), normal(tri.normal), uBeta(tri.uBeta), uGamma(tri.uGamma), d(tri.d), kBeta(tri.kBeta), kGamma(tri.kGamma) {};
+  /// Operator= equals
+  STLtriangle<T>& operator=(STLtriangle<T> const& tri) {
+		point = tri.point; 
+		normal = tri.normal; 
+		uBeta = tri.uBeta; 
+		uGamma = tri.uGamma; 
+		d = tri.d; 
+		kBeta = tri.kBeta; 
+		kGamma = tri.kGamma;
+		return *this;
+	};
+
+  /// Initializes triangle and precomputes member variables.
+  void init();
+  /// Returns Pt0-Pt1
+  std::vector<T> getE0();
+  /// Returns Pt0-Pt2
+  std::vector<T> getE1();
+};
+
+template<typename T>
+class STLmesh {
+  /// Computes distance squared betwenn p1 and p2
+  double distPoints(STLpoint<T>& p1, STLpoint<T>& p2);
+  /// Filename
+  const std::string& _fName;
+  /// Vector of Triangles
+  std::vector<STLtriangle<T> > _triangles;
+  /// Min and Max points
+  std::vector<T> _min, _max;
+  /// I have no idea, probably max(distPoints)
+  double _maxDist2;
+  /// OstreamManager
+  mutable OstreamManager clout;
+
+public:
+  /**
+   * Constructs a new STLmesh from a file
+   * \param Filename - Filename
+   * \param stlSize - Conversion factor for STL (e.g. STL in mm stlSize=10^-3)
+   */
+  STLmesh(std::string, T stlSize = 1.);
+ 
+  /// Returns reference to a triangle
+  inline const STLtriangle<T>& getTri(size_t i) {return _triangles[i];}
+  /// Returns number of triangles
+  inline size_t triangleSize() const {
+    return _triangles.size();
+  }
+  /// Returns _min
+  inline std::vector<T>& getMin() {return _min;};
+  /// Returns _max
+  inline std::vector<T>& getMax() {return _max;};
+  /// Returns maxDist squared
+  inline float maxDist2() const {return _maxDist2;}
+  /// Prints console output
+  void print(bool full = false);
+ /// Writes STL mesh in Si units
+  void write(std::string fName);
+};
+
+template<typename T>
+class STLreader : public IndicatorF3D<bool,T> {
+private:
+  /// Indicates (slow, more stable)
+  void indicate1();
+  /// Indicates (fast, less stable)
+  void indicate2();
+  /// Size of the smallest voxel
+  T _voxelSize;
+  /// Factor to get Si unit (m), i.e. "0.001" means mm 
+  T _stlSize;
+  /// The tree
+  Octree<T>* _tree;
+  /// The filename
+  const std::string _fName;
+  /// The mesh
+  STLmesh<T> _mesh;
+  /// Variable for output
+  bool _verbose;
+  /// The OstreamManager
+  mutable OstreamManager clout;
+
 public:
   /**
    * Constructs a new STLreader from a file
    * \param fName The STL file name
+   * \param voxelSize Voxelsize in SI units
+   * \param stlSize Conversion factor for STL (e.g. STL in mm stlSize=10^-3)
+   * \param method Choose indication method
+   *               0: fast, less stable
+   *               1: slow, more stable (for untight STLs)
+   * \param verbose Get additional information.
    */
-  STLreader(const std::string& fName);
+  STLreader(const std::string fName, T voxelSize, T stlSize=1, unsigned short int method = 0, bool verbose = false);
 
-  /**
-   * destructor
-   */
-  ~STLreader();
+  /// Returns whether node is inside or not.
+  std::vector<bool> operator()(std::vector<T> input);
 
-  void scale(T scaling) {
-    _geometry.scale(scaling);
-  }
+  /// Computes distance to closest triangle intersection
+  bool distance(T& distance,const std::vector<T>& origin, const std::vector<T>& direction, int iC=-1);
 
-  void translate(T deltaX = 0, T deltaY = 0, T deltaZ = 0) {
-    if (deltaX == 0 && deltaY == 0 && deltaZ == 0){
-      deltaX = -_geometry.min(X);
-      deltaY = -_geometry.min(Y);
-      deltaZ = -_geometry.min(Z);
-    }
-    _geometry.translate(deltaX, deltaY, deltaZ);
-  }
+  /// Prints console output
+  void print();
 
-  /**
-   * Read a voxel mesh from the stl file
-   * \param matrix        contains the voxel mesh
-   * \param direction
-   * \param voxelNumber   number of voxels in direction
-   * \param fraction      If fraction% of a voxel belong to the geometry the voxel belongs to the geometry
-   * \param samples       The number of samples along each dimension of the voxels.
-   * \params offset...    extent the geometry in the particular axis (N= negative, P= positiv)
-   */
-  void read(BlockGeometry3D &matrix,
-            unsigned direction, unsigned voxelNumber, unsigned pad=0,
-            double fraction=0, unsigned samples=3u,
-            unsigned offsetXN=0, unsigned offsetXP=0,
-            unsigned offsetYN=0, unsigned offsetYP=0,
-            unsigned offsetZN=0, unsigned offsetZP=0) const;
+  /// Writes STL mesh in Si units
+  void writeSTL();
 
-  void read(SuperGeometry3D &matrix,
-            unsigned direction, unsigned voxelNumber, unsigned pad=0,
-            double fraction=0, unsigned samples=3u,
-            unsigned offsetXN=0, unsigned offsetXP=0,
-            unsigned offsetYN=0, unsigned offsetYP=0,
-            unsigned offsetZN=0, unsigned offsetZP=0) const;
+  /// Writes Octree 
+  void writeOctree();
 
-  /**
-   * Read a voxel mesh from the stl file
-   * \param matrix        to return the value
-   * \param voxelSize     The size of voxels.
-   * \param fraction      If fraction% of a voxel belong to the geometry the voxel belongs to the geometry
-   * \param samples       The number of samples along each dimension of the voxels.
-   * \params offset...    extent the geometry in the particular axis (N= negative, P= positiv)
-   */
-  void read(BlockGeometry3D &matrix, double voxelSize, unsigned pad=0,
-            double fraction=0, unsigned samples=16u,
-            unsigned offsetXN=0, unsigned offsetXP=0,
-            unsigned offsetYN=0, unsigned offsetYP=0,
-            unsigned offsetZN=0, unsigned offsetZP=0) const;
+  /// Returns tree
+  inline const Octree<T>* getTree() const {return _tree;};
 
-  void read(SuperGeometry3D &matrix, double voxelSize, unsigned pad=0,
-            double fraction=0, unsigned samples=16u,
-            unsigned offsetXN=0, unsigned offsetXP=0,
-            unsigned offsetYN=0, unsigned offsetYP=0,
-            unsigned offsetZN=0, unsigned offsetZP=0) const;
-  /**
-   * Read a voxel mesh from the stl file
-   * \param matrix        To return the cuboid geometry
-   * \param cGeometry     To return the value
-   * \param voxelNumber   the number of voxels to generate
-   * \param minCuboidSize The size of the smallest cuboid (each side will be
-   *            greater or equal)
-   */
-  void read(CuboidGeometry3D<T> &cGeometry, BlockGeometry3D &matrix, unsigned voxelNumber, unsigned minCuboidSize=10, unsigned pad=0);
-
-  void read(CuboidGeometry3D<T> &cGeometry, SuperGeometry3D &matrix, unsigned voxelNumber, unsigned minCuboidSize=10, unsigned pad=0);
-  /**
-   * Read a voxel mesh from the stl file and generate an octree of cuboids
-   * \param matrix        To return the cuboid geometry
-   * \param cGeometry     To return the value
-   * \param voxelSize     The size of voxels to generate
-   * \param minCuboidSize The size of the smallest cuboid (each side will be
-   *            greater or equal)
-   */
-  void readOctree(CuboidGeometry3D<T> &cGeometry, BlockGeometry3D &matrix, double voxelSize, unsigned minCuboidSize=10, unsigned pad=0) const;
-
-  void readOctree(CuboidGeometry3D<T> &cGeometry, SuperGeometry3D &matrix, double voxelSize, unsigned minCuboidSize=10, unsigned pad=0) const;
-
-  /**
-   * Read distance from a point to the next facet of the STL along a specific direction
-   * \params x,y,z          the point from which the distance is to be determined
-   * \params dirX,dirY,dirZ the vector along which the distance is to be determined
-   * all quantities in physical units
-   */
-  bool readDistance(T x, T y, T z, T dirX, T dirY, T dirZ, T & distance);
-  bool readDistanceCuboid(T x, T y, T z, T dirX, T dirY, T dirZ, int lociC, T & distance);
-
-  void setInnerMaterialNo(unsigned no);
-  void setOuterMaterialNo(unsigned no);
-  Cuboid3D<T> cuboidFromNode(DNode3D &node, int height, cvmlcpp::DTree<int,3u> &tree) const;
-  void setMaterialForNode(BlockGeometry3D &matrix, DNode3D &node, int height, cvmlcpp::DTree<int,3u> &tree) const;
-  void setMaterialForNode(SuperGeometry3D &matrix, DNode3D &node, int height, cvmlcpp::DTree<int,3u> &tree) const;
-
-  void splitGeometry(CuboidGeometry3D<T> &cGeometry, loadBalancer &load);
-
-private:
-  cvmlcpp::Geometry<float> _geometry;
-  std::vector<cvmlcpp::Geometry<float> > _cuboidGeometries;
-  int _innerMaterialNo, _outerMaterialNo;
-  int _nX, _nY, _nZ;
+  /// Returns mesh
+  inline STLmesh<T>& getMesh() {return _mesh;};
 };
 
 }  // namespace olb
 
-#endif  // STL_READER_H
+#endif

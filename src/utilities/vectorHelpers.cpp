@@ -1,0 +1,66 @@
+/*  This file is part of the OpenLB library
+ *
+ *  Copyright (C) 2013, 2014 Lukas Baron, Mathias J. Krause
+ *  E-mail contact: info@openlb.net
+ *  The most recent release of OpenLB can be downloaded at
+ *  <http://www.openlb.net/>
+ *
+ *  This program is free software; you can redistribute it and/or
+ *  modify it under the terms of the GNU General Public License
+ *  as published by the Free Software Foundation; either version 2
+ *  of the License, or (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public
+ *  License along with this program; if not, write to the Free
+ *  Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+ *  Boston, MA  02110-1301, USA.
+*/
+
+#include "vectorHelpers.h"
+#include<vector>
+#include<string>
+#include<sstream>
+
+namespace olb {
+namespace util {
+
+inline bool nearZero(const float& a);
+inline bool nearZero(const double& a);
+
+inline std::vector<int> operator- (const std::vector<int>& a, const std::vector<int>& b);
+inline std::vector<double> operator- (const std::vector<double>& a, const std::vector<double>& b);
+
+inline std::vector<int> operator+ (const std::vector<int>& a, const std::vector<int>& b);
+inline std::vector<double> operator+ (const std::vector<double>& a, const std::vector<double>& b);
+
+std::vector<double> dotProduct3D(const std::vector<double>& a, const std::vector<double>& b);
+
+std::vector<int> crossProduct3D(const std::vector<int> a, const std::vector<int> b);
+std::vector<double> crossProduct3D(const std::vector<double>& a, const std::vector<double>& b);
+
+std::vector<double> norm(const std::vector<double>& a);
+std::vector<double> normalize(const std::vector<double>& a);
+
+bool triangleIntersection(const std::vector<double>& point0, const std::vector<double>& point1, const std::vector<double>& point2, const std::vector<double>& origign, const std::vector<double>& direction, double& distance);
+
+bool triangleIntersectionWithNormalDirection(const std::vector<double>& point0, const std::vector<double>& point1, const std::vector<double>& point2, const std::vector<double>& origign, const std::vector<double>& normalDirection, double& distance);
+
+std::vector<int> assign(int a, int b);
+std::vector<double> assign(double a, double b);
+
+std::vector<int> assign(int a, int b, int c);
+std::vector<double> assign(double a, double b, double c);
+
+void print(const int& a);
+void print(const double& a);
+
+void print(const std::vector<int>& vec, std::string name);
+void print(const std::vector<double>& vec, std::string name);
+
+}
+}

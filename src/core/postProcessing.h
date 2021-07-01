@@ -27,7 +27,7 @@
 #ifndef POST_PROCESSING_H
 #define POST_PROCESSING_H
 
-//#include <vector>
+#include <vector>
 #include "spatiallyExtendedObject2D.h"
 #include "spatiallyExtendedObject3D.h"
 #include "io/ostreamManager.h"
@@ -37,10 +37,10 @@ namespace olb {
 /////////////////// Forward Declarations /////////////////////////////
 
 template<typename T, template<typename U> class Lattice>
-class BlockStructure2D;
+class BlockLatticeStructure2D;
 
 template<typename T, template<typename U> class Lattice>
-class BlockStructure3D;
+class BlockLatticeStructure3D;
 
 template<typename T, template<typename U> class Lattice>
 class BlockLattice2D;

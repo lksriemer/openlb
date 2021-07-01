@@ -126,7 +126,6 @@ struct DirectedGradients3D<T, Lattice, direction, orientation,
                                  int iX, int iY, int iZ)
   {
     using namespace fd;
-    typedef Lattice<T> L;
 
     T rho_p1 = blockLattice.get (
                  iX+(deriveDirection==0 ? 1:0),

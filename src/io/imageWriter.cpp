@@ -21,7 +21,6 @@
  *  Boston, MA  02110-1301, USA.
 */
 
-#include "complexGrids/mpiManager/mpiManager.h"
 #include "imageWriter.h"
 #include "imageWriter.hh"
 

@@ -1,6 +1,6 @@
 /*  This file is part of the OpenLB library
  *
- *  Copyright (C) 2013 Patrick Nathen, Mathias J. Krause, Lukas Baron
+ *  Copyright (C) 2013 Patrick Nathen, Mathias J. Krause
  *  E-mail contact: info@openlb.net
  *  The most recent release of OpenLB can be downloaded at
  *  <http://www.openlb.net/>
@@ -21,13 +21,12 @@
  *  Boston, MA  02110-1301, USA.
 */
 
-#include "turbulentF3D.h"
-#include "turbulentF3D.hh"
-#include "core/latticeDescriptors.h"
+#include "functors/turbulentF3D.h"
+#include "functors/turbulentF3D.hh"
+#include "dynamics/latticeDescriptors.h"
 
 namespace olb {
 
 template class SuperLatticeYplus3D<double,descriptors::D3Q19Descriptor>;
-template class SuperLatticeQCrit3D<double,descriptors::D3Q19Descriptor>;
 
 }

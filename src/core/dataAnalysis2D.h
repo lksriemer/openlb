@@ -22,7 +22,7 @@
 */
 
 /** \file
- * Data analysis (formerly known as BlockStatistics) on 2D BlockStructures -- header file.
+ * Data analysis (formerly known as BlockStatistics) on 2D BlockLatticeStructures -- header file.
  */
 
 #ifndef DATA_ANALYSIS_2D_H
@@ -82,8 +82,8 @@ struct AnalysisFields2D {
 template<typename T, template<typename U> class Lattice>
 class DataAnalysis2D : public DataAnalysisBase2D<T,Lattice> {
 public:
-  DataAnalysis2D(BlockStructure2D<T,Lattice> const& block_);
-  DataAnalysis2D(BlockStructure2D<T,Lattice> const& block_, AnalysisFields2D<T,Lattice>& fields_ );
+  DataAnalysis2D(BlockLatticeStructure2D<T,Lattice> const& block_);
+  DataAnalysis2D(BlockLatticeStructure2D<T,Lattice> const& block_, AnalysisFields2D<T,Lattice>& fields_ );
   DataAnalysis2D(DataAnalysis2D<T,Lattice> const& rhs);
   ~DataAnalysis2D();
 public:
@@ -131,7 +131,7 @@ private:
   T boundaryDivRhoU(int iX, int iY) const;
   T boundaryPoisson(int iX, int iY) const;
 private:
-  BlockStructure2D<T,Lattice> const& block;
+  BlockLatticeStructure2D<T,Lattice> const& block;
   bool pointsToDefaultFields;
   mutable AnalysisFieldsImpl2D<T,Lattice> defaultFields;
   mutable AnalysisFields2D<T,Lattice>     fields;

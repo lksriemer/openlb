@@ -26,8 +26,8 @@
 
 #include "ostreamManager.h"
 
-#include "complexGrids/mpiManager/mpiManager.h"
-#include "core/ompManager.h"
+#include "communication/mpiManager.h"
+#include "communication/ompManager.h"
 
 namespace olb {
 

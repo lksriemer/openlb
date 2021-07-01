@@ -22,7 +22,7 @@
 */
 
 /** \file
- * Data analysis (formerly known as BlockStatistics) on 2D BlockStructures -- generic implementation.
+ * Data analysis (formerly known as BlockStatistics) on 2D BlockLatticeStructures -- generic implementation.
  */
 
 #ifndef DATA_ANALYSIS_2D_HH
@@ -98,7 +98,7 @@ AnalysisFields2D<T,Lattice>::AnalysisFields2D(AnalysisFieldsImpl2D<T,Lattice>& i
 /////// Class DataAnalysis2D  /////////////////////////////
 
 template<typename T, template<typename U> class Lattice>
-DataAnalysis2D<T,Lattice>::DataAnalysis2D(BlockStructure2D<T,Lattice> const& block_)
+DataAnalysis2D<T,Lattice>::DataAnalysis2D(BlockLatticeStructure2D<T,Lattice> const& block_)
   : block(block_),
     pointsToDefaultFields(true),
     defaultFields(block.getNx(), block.getNy()),
@@ -108,7 +108,7 @@ DataAnalysis2D<T,Lattice>::DataAnalysis2D(BlockStructure2D<T,Lattice> const& blo
 }
 
 template<typename T, template<typename U> class Lattice>
-DataAnalysis2D<T,Lattice>::DataAnalysis2D(BlockStructure2D<T,Lattice> const& block_,
+DataAnalysis2D<T,Lattice>::DataAnalysis2D(BlockLatticeStructure2D<T,Lattice> const& block_,
     AnalysisFields2D<T,Lattice>& fields_ )
   : block(block_),
     pointsToDefaultFields(false),

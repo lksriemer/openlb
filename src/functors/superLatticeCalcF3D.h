@@ -25,9 +25,7 @@
 #ifndef SUPER_LATTICE_CALC_F_3D_H
 #define SUPER_LATTICE_CALC_F_3D_H
 
-#include<vector>    // for generic i/o
-#include<string>     // for lpnorm
-
+#include<vector>
 #include "genericF.h"
 #include "superLatticeBaseF3D.h"
 
@@ -44,52 +42,49 @@ namespace olb {
 template <typename T, template <typename U> class DESCRIPTOR>
 class SuperLatticeCalc3D : public SuperLatticeF3D< T, DESCRIPTOR > {
 protected:
-  SuperLatticeF3D<T,DESCRIPTOR>& f;
-  SuperLatticeF3D<T,DESCRIPTOR>& g;
+  SuperLatticeF3D<T,DESCRIPTOR>& _f;
+  SuperLatticeF3D<T,DESCRIPTOR>& _g;
 public:
-  
-  // set dimensions as well
-  SuperLatticeCalc3D(SuperLatticeF3D<T,DESCRIPTOR>& _f, SuperLatticeF3D<T,DESCRIPTOR>& _g);
-  std::string name() { return "SuperLatticeCalcF3D"; }
+  SuperLatticeCalc3D(SuperLatticeF3D<T,DESCRIPTOR>& f,
+                     SuperLatticeF3D<T,DESCRIPTOR>& g);
   virtual void myErase(GenericF<T,int>* ptr);
 };
-
 
 /// addition functor
 template <typename T, template <typename U> class DESCRIPTOR>
 class SuperLatticePlus3D : public SuperLatticeCalc3D<T,DESCRIPTOR> {
 public:
-  SuperLatticePlus3D(SuperLatticeF3D<T,DESCRIPTOR>& _f, SuperLatticeF3D<T,DESCRIPTOR>& _g);
+  SuperLatticePlus3D(SuperLatticeF3D<T,DESCRIPTOR>& f,
+                     SuperLatticeF3D<T,DESCRIPTOR>& g);
   std::vector<T> operator()(std::vector<int> input);
 };
-
 
 /// subtraction functor
 template <typename T, template <typename U> class DESCRIPTOR>
 class SuperLatticeMinus3D : public SuperLatticeCalc3D<T,DESCRIPTOR> {
 public:
-  SuperLatticeMinus3D(SuperLatticeF3D<T,DESCRIPTOR>& _f, SuperLatticeF3D<T,DESCRIPTOR>& _g);
+  SuperLatticeMinus3D(SuperLatticeF3D<T,DESCRIPTOR>& f,
+                      SuperLatticeF3D<T,DESCRIPTOR>& g);
   std::vector<T> operator()(std::vector<int> input);
 };
-
 
 /// multiplication functor
 template <typename T, template <typename U> class DESCRIPTOR>
 class SuperLatticeMultiplication3D : public SuperLatticeCalc3D<T,DESCRIPTOR> {
 public:
-  SuperLatticeMultiplication3D(SuperLatticeF3D<T,DESCRIPTOR>& _f, SuperLatticeF3D<T,DESCRIPTOR>& _g);
+  SuperLatticeMultiplication3D(SuperLatticeF3D<T,DESCRIPTOR>& f,
+                               SuperLatticeF3D<T,DESCRIPTOR>& g);
   std::vector<T> operator()(std::vector<int> input);
 };
-
 
 /// division functor
 template <typename T, template <typename U> class DESCRIPTOR>
 class SuperLatticeDivision3D : public SuperLatticeCalc3D<T,DESCRIPTOR> {
 public:
-  SuperLatticeDivision3D(SuperLatticeF3D<T,DESCRIPTOR>& _f, SuperLatticeF3D<T,DESCRIPTOR>& _g);
+  SuperLatticeDivision3D(SuperLatticeF3D<T,DESCRIPTOR>& f,
+                         SuperLatticeF3D<T,DESCRIPTOR>& g);
   std::vector<T> operator()(std::vector<int> input);
 };
-
 
 
 } // end namespace olb

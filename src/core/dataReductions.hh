@@ -27,7 +27,7 @@
 #ifndef DATA_REDUCTIONS_HH
 #define DATA_REDUCTIONS_HH
 
-#include "complexGrids/mpiManager/mpiManager.h"
+#include "communication/mpiManager.h"
 #include <cmath>
 #include <limits>
 #include "dataReductions.h"

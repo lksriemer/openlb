@@ -22,14 +22,16 @@
  *  Boston, MA  02110-1301, USA.
 */
 
-#include "superLatticeBaseF2D.h"
-#include "superLatticeBaseF2D.hh"
-#include "core/latticeDescriptors.h"
+#include "functors/superLatticeBaseF2D.h"
+#include "functors/superLatticeBaseF2D.hh"
+#include "functors/superLatticeCalcF2D.hh"
+#include "dynamics/latticeDescriptors.h"
 
 namespace olb {
 
 template class SuperLatticeF2D<double,descriptors::D2Q9Descriptor>;
 template class SuperLatticePhysF2D<double,descriptors::D2Q9Descriptor>;
 
+template class SuperLatticeIdentity2D<double,descriptors::D2Q9Descriptor>;
 }
 

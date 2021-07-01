@@ -23,15 +23,17 @@
 */
 
 
-#include "interpolationF3D.h"
-#include "interpolationF3D.hh"
-#include "core/latticeDescriptors.h"
+#include "functors/interpolationF3D.h"
+#include "functors/interpolationF3D.hh"
+#include "dynamics/latticeDescriptors.h"
 
 
 namespace olb {
 
 template class AnalyticalFfromSuperLatticeF3D<double,descriptors::D3Q19Descriptor>;
 template class SuperLatticeFfromAnalyticalF3D<double,descriptors::D3Q19Descriptor>;
+
+template class BlockLatticeFfromAnalyticalF3D<double,descriptors::D3Q19Descriptor>;
 
 } // end namespace olb
 

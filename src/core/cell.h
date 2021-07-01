@@ -28,8 +28,8 @@
 #define CELL_H
 
 #include "olbDebug.h"
-#include "latticeDescriptors.h"
-#include "dynamics.h"
+#include "dynamics/latticeDescriptors.h"
+#include "dynamics/dynamics.h"
 
 namespace olb {
 

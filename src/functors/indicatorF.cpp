@@ -21,27 +21,39 @@
  *  Boston, MA  02110-1301, USA.
 */
 
-
+#include "io/stlReader.h"
 #include "indicatorF.h"
 #include "indicatorF.hh"
 
 namespace olb {
 
-template class SphereAnalyticalF1D<bool,int>;
-template class SphereAnalyticalF1D<bool,double>;
+// stl indicator functors
+template class STLreader<double>;
 
-template class SphereAnalyticalF2D<bool,int>;
-template class SphereAnalyticalF2D<bool,double>;
+template class IndicatorStl3D<bool,double>;
 
-template class SphereAnalyticalF3D<bool,int>;
-template class SphereAnalyticalF3D<bool,double>;
 
-template class EllipseAnalyticalF2D<bool,int>;
-template class EllipseAnalyticalF2D<bool,double>;
+// indicator functors 2D
+template class IndicatorCuboid2D<bool,double>;
+template class IndicatorCircle2D<bool,double>;
 
-template class CylinderAnalyticalF3D<bool,int>;
-template class CylinderAnalyticalF3D<bool,double>;
+// indicator functors 3D
+template class IndicatorCircle3D<bool,double>;
+template class IndicatorSphere3D<bool,double>;
+template class IndicatorLayer3D<bool,double>;
+template class IndicatorCylinder3D<bool,double>;
+template class IndicatorCone3D<bool,double>;
+template class IndicatorCuboid3D<bool,double>;
+template IndicatorCuboid3D<bool,double>* createIndicatorCuboid3D(XMLreader const& params, bool verbose);
+template class IndicatorParallelepiped3D<bool,double>;
 
-template class StlIndicatorF3D<bool,double>;
+
+// smoothIndicator functors
+// double since they return values /in [0,1]
+template class SmoothIndicatorCircle2D<double,double>;
+
+template class SmoothIndicatorSphere3D<double,double>;
+template class SmoothIndicatorCylinder3D<double,double>;
+template class SmoothIndicatorCone3D<double,double>;
 
 }

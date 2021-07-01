@@ -32,8 +32,8 @@
 
 #include "simulationSetup2D.h"
 #include "blockLattice2D.h"
-#include "lbHelpers.h"
-#include "firstOrderLbHelpers.h"
+#include "dynamics/lbHelpers.h"
+#include "dynamics/firstOrderLbHelpers.h"
 #include "util.h"
 #include "io/ostreamManager.h"
 

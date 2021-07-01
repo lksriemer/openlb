@@ -23,56 +23,60 @@
 
 #include "functors/analyticalF.h"
 #include "functors/analyticalF.hh"
+#include "functors/superLatticeCalcF2D.hh"
 
 namespace olb {
 
-// 2nd level classes
-template class AnalyticalF1D<double,int>;
-template class AnalyticalF1D<double,double>;
 
-template class AnalyticalF2D<double,int>;
-template class AnalyticalF2D<double,double>;
 
-template class AnalyticalF3D<double,int>;
-template class AnalyticalF3D<double,double>;
-template class AnalyticalF3D<bool,double>; // indicatorF
+template class AnalyticalConst1D<double,int>;
+template class AnalyticalConst1D<double,double>;
 
-// 3rd level classes: AnalyticalF
-template class ConstAnalyticalF1D<double,int>;
-template class ConstAnalyticalF1D<double,double>;
+template class AnalyticalLinear1D<double,int>;
+template class AnalyticalLinear1D<double,double>;
 
-template class ConstAnalyticalF2D<double,int>;
-template class ConstAnalyticalF2D<double,double>;
+template class AnalyticalRandom1D<double,int>;
+template class AnalyticalRandom1D<double,double>;
 
-template class ConstAnalyticalF3D<double,int>;
-template class ConstAnalyticalF3D<double,double>;
-
-template class ComposedAnalyticalF3D<double,int>;
-template class ComposedAnalyticalF3D<double,double>;
-
-template class LinearAnalyticalF1D<double,int>;
-template class LinearAnalyticalF1D<double,double>;
-
-template class LinearAnalyticalF2D<double,int>;
-template class LinearAnalyticalF2D<double,double>;
-
-template class LinearAnalyticalF3D<double,int>;
-template class LinearAnalyticalF3D<double,double>;
-
-template class SquareAnalyticalF<double,int>;
-template class SquareAnalyticalF<double,double>;
-
-template class SinusStartScale<double,int>;
-template class SinusStartScale<double,double>;
+template class AnalyticalSquare1D<double,int>;
+template class AnalyticalSquare1D<double,double>;
 
 template class PolynomialStartScale<double,int>;
 template class PolynomialStartScale<double,double>;
 
-//template class BilinearAnalyticalF<double,int>;
-//template class BilinearAnalyticalF<double,double>;
+template class SinusStartScale<double,int>;
+template class SinusStartScale<double,double>;
 
-//template class PolyAnalyticalF<double,int>;
-//template class PolyAnalyticalF<double,double>;
+
+
+template class AnalyticalComposed2D<double,int>;
+template class AnalyticalComposed2D<double,double>;
+
+template class AnalyticalConst2D<double,int>;
+template class AnalyticalConst2D<double,double>;
+
+template class AnalyticalLinear2D<double,int>;
+template class AnalyticalLinear2D<double,double>;
+
+template class AnalyticalRandom2D<double,int>;
+template class AnalyticalRandom2D<double,double>;
+
+
+
+template class AnalyticalComposed3D<double,int>;
+template class AnalyticalComposed3D<double,double>;
+
+template class AnalyticalConst3D<double,int>;
+template class AnalyticalConst3D<double,double>;
+
+template class AnalyticalLinear3D<double,int>;
+template class AnalyticalLinear3D<double,double>;
+
+template class AnalyticalRandom3D<double,int>;
+template class AnalyticalRandom3D<double,double>;
+
+template class AnalyticalScaled3D<double,int>;
+template class AnalyticalScaled3D<double,double>;
 
 }
 

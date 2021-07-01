@@ -25,22 +25,46 @@
 #ifndef SUPER_LATTICE_BASE_F_2D_HH
 #define SUPER_LATTICE_BASE_F_2D_HH
 
-#include<vector>    // for generic i/o
-
 #include "superLatticeBaseF2D.h"
 
 
 namespace olb {
 
-template<typename T, template<typename U> class DESCRIPTOR> class SuperLatticeF2D;
 
 template <typename T, template <typename U> class DESCRIPTOR>
-SuperLatticeF2D<T,DESCRIPTOR>::SuperLatticeF2D(SuperLattice2D<T,DESCRIPTOR>& _sLattice, int targetDim)
-    : GenericF<T,int>(targetDim,3), sLattice(_sLattice) { }
+SuperLatticeF2D<T,DESCRIPTOR>::SuperLatticeF2D
+  (SuperLattice2D<T,DESCRIPTOR>& sLattice, int targetDim)
+  : GenericF<T,int>(targetDim,3), _sLattice(sLattice) { }
+
 
 template <typename T, template <typename U> class DESCRIPTOR>
-SuperLatticePhysF2D<T,DESCRIPTOR>::SuperLatticePhysF2D(SuperLattice2D<T,DESCRIPTOR>& _sLattice, const LBconverter<T>& _converter, int targetDim)
-    : SuperLatticeF2D<T,DESCRIPTOR>(_sLattice, targetDim), converter(_converter) { }
+SuperLatticePhysF2D<T,DESCRIPTOR>::SuperLatticePhysF2D
+  (SuperLattice2D<T,DESCRIPTOR>& sLattice, const LBconverter<T>& converter,
+  int targetDim)
+  : SuperLatticeF2D<T,DESCRIPTOR>(sLattice, targetDim), _converter(converter) { }
+
+
+template <typename T, template <typename U> class DESCRIPTOR>
+SuperLatticeIdentity2D<T,DESCRIPTOR>::SuperLatticeIdentity2D
+  (SuperLatticeF2D<T,DESCRIPTOR>& f)
+  : SuperLatticeF2D<T,DESCRIPTOR>(f.getSuperLattice2D(),f.getTargetDim() ), _f(f)
+{
+  this->_name = _f.getName();
+  // add 'this' to father's child list to prevent father from being deleted
+  _f.addChild(this);
+}
+
+template <typename T, template <typename U> class DESCRIPTOR>
+SuperLatticeIdentity2D<T,DESCRIPTOR>::~SuperLatticeIdentity2D() {
+  // remove 'this' from father's child list
+  _f.removeChild(this);
+  // delete father from grandfather's child list
+  _f.myErase(NULL);
+}
+
+template <typename T, template <typename U> class DESCRIPTOR>
+std::vector<T> SuperLatticeIdentity2D<T,DESCRIPTOR>::operator()(std::vector<int> input)
+{ return _f(input); }
 
 
 } // end namespace olb

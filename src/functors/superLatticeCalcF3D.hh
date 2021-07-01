@@ -21,117 +21,120 @@
  *  Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  *  Boston, MA  02110-1301, USA.
 */
-#ifndef SUPER_LATTICE_F_3D_HH
-#define SUPER_LATTICE_F_3D_HH
 
-#include<vector>    // for generic i/o
-#include<cmath>     // for lpnorm
-#include<string>     // for lpnorm
+#ifndef SUPER_LATTICE_CALC_F_3D_HH
+#define SUPER_LATTICE_CALC_F_3D_HH
 
-#include "superLatticeCalcF3D.h"
+#include<vector>
+#include "functors/superLatticeCalcF3D.h"
 #include "functors/genericF.h"
-#include "functors/analyticalF.h"
-
-
 
 
 namespace olb {
 
 
 
-////////////////////////////// SuperLatticeCalc3D //////////////////////////////
-
 template <typename T, template <typename U> class DESCRIPTOR>
-SuperLatticeCalc3D<T,DESCRIPTOR>::SuperLatticeCalc3D(SuperLatticeF3D<T,DESCRIPTOR>& _f, SuperLatticeF3D<T,DESCRIPTOR>& _g)
-  : SuperLatticeF3D<T,DESCRIPTOR>( _f.getSuperLattice3D(), _f.getTargetDim() ), f(_f), g(_g) { }
+SuperLatticeCalc3D<T,DESCRIPTOR>::SuperLatticeCalc3D(
+  SuperLatticeF3D<T,DESCRIPTOR>& f, SuperLatticeF3D<T,DESCRIPTOR>& g)
+  : SuperLatticeF3D<T,DESCRIPTOR>( f.getSuperLattice3D(), f.getTargetDim() ),
+    _f(f), _g(g) { }
 
 template <typename T, template <typename U> class DESCRIPTOR>
 void SuperLatticeCalc3D<T,DESCRIPTOR>::myErase(GenericF<T,int>* ptr) {
-  for ( int i = 0; i < this->pointerVec.size(); i++ ) {
-    if ( this->pointerVec[i] == ptr ) {
-      // delete object refered by pointer
-      delete this->pointerVec[i];
-      // delete vector entry
-      this->pointerVec.erase( this->pointerVec.begin() + i);
-    }
-  }
+  this->removeChild(ptr);
+  delete ptr;
+  // additional delete recursively this from father, father from grandfather for all calc classes
+  if (this->_pointerVec.size() == 0)  this->_f.myErase(this);
 }
 
 
 // addition
 template <typename T, template <typename U> class DESCRIPTOR>
-SuperLatticePlus3D<T,DESCRIPTOR>::SuperLatticePlus3D(SuperLatticeF3D<T,DESCRIPTOR>& _f, SuperLatticeF3D<T,DESCRIPTOR>& _g)
-: SuperLatticeCalc3D<T,DESCRIPTOR>(_f,_g) { }
+SuperLatticePlus3D<T,DESCRIPTOR>::SuperLatticePlus3D(
+  SuperLatticeF3D<T,DESCRIPTOR>& f, SuperLatticeF3D<T,DESCRIPTOR>& g)
+  : SuperLatticeCalc3D<T,DESCRIPTOR>(f,g)
+{ this->_name = "(" + f.getName() + "+" + g.getName() + ")"; }
 
 template <typename T, template <typename U> class DESCRIPTOR>
-std::vector<T> SuperLatticePlus3D<T,DESCRIPTOR>::operator()(std::vector<int> input) {
+std::vector<T> SuperLatticePlus3D<T,DESCRIPTOR>::operator()(std::vector<int> input)
+{
   std::vector<T> output;
-  for(int i = 0; i < this->f.getTargetDim(); i++) {
-    output.push_back( this->f(input)[i] + this->g(input)[i] );
+  for(int i = 0; i < this->_f.getTargetDim(); i++) {
+    output.push_back( this->_f(input)[i] + this->_g(input)[i] );
   }
-  // start deleting MinusF and GernericF objects
-//    if (this->pointerVec.size() == 0)  this->f.myErase(this);
+  // 'NULL' initiates the recursion for delete
+  this->myErase(NULL);
   return output;
 }
 
+
 // subtraction
 template <typename T, template <typename U> class DESCRIPTOR>
-SuperLatticeMinus3D<T,DESCRIPTOR>::SuperLatticeMinus3D(SuperLatticeF3D<T,DESCRIPTOR>& _f, SuperLatticeF3D<T,DESCRIPTOR>& _g)
-: SuperLatticeCalc3D<T,DESCRIPTOR>(_f,_g) { }
+SuperLatticeMinus3D<T,DESCRIPTOR>::SuperLatticeMinus3D(
+  SuperLatticeF3D<T,DESCRIPTOR>& f, SuperLatticeF3D<T,DESCRIPTOR>& g)
+  : SuperLatticeCalc3D<T,DESCRIPTOR>(f,g)
+{ this->_name = "(" + f.getName() + "-" + g.getName() + ")"; }
 
 template <typename T, template <typename U> class DESCRIPTOR>
-std::vector<T> SuperLatticeMinus3D<T,DESCRIPTOR>::operator()(std::vector<int> input) {
+std::vector<T> SuperLatticeMinus3D<T,DESCRIPTOR>::operator()(std::vector<int> input)
+{
   std::vector<T> output;
-  for(int i = 0; i < this->f.getTargetDim(); i++) {
-    output.push_back( this->f(input)[i] - this->g(input)[i] );
+  for(int i = 0; i < this->_f.getTargetDim(); i++) {
+    output.push_back( this->_f(input)[i] - this->_g(input)[i] );
   }
-  // start deleting MinusF and GernericF objects
-//    if (this->pointerVec.size() == 0)  this->f.myErase(this);
+  // 'NULL' initiates the recursion for delete
+  this->myErase(NULL);
   return output;
 }
 
 
 // multiplication
 template <typename T, template <typename U> class DESCRIPTOR>
-SuperLatticeMultiplication3D<T,DESCRIPTOR>::SuperLatticeMultiplication3D(SuperLatticeF3D<T,DESCRIPTOR>& _f, SuperLatticeF3D<T,DESCRIPTOR>& _g)
-: SuperLatticeCalc3D<T,DESCRIPTOR>(_f,_g) { }
+SuperLatticeMultiplication3D<T,DESCRIPTOR>::SuperLatticeMultiplication3D(
+  SuperLatticeF3D<T,DESCRIPTOR>& f, SuperLatticeF3D<T,DESCRIPTOR>& g)
+  : SuperLatticeCalc3D<T,DESCRIPTOR>(f,g)
+{ this->_name = f.getName() + "*" + g.getName(); }
 
 template <typename T, template <typename U> class DESCRIPTOR>
-std::vector<T> SuperLatticeMultiplication3D<T,DESCRIPTOR>::operator()(std::vector<int> input) {
+std::vector<T> SuperLatticeMultiplication3D<T,DESCRIPTOR>::operator()(std::vector<int> input)
+{
   std::vector<T> output;
-  for(int i = 0; i < this->f.getTargetDim(); i++) {
-    output.push_back( this->f(input)[i] * this->g(input)[i] );
+  for(int i = 0; i < this->_f.getTargetDim(); i++) {
+    output.push_back( this->_f(input)[i] * this->_g(input)[i] );
   }
-  // start deleting MinusF and GernericF objects
-//    if (this->pointerVec.size() == 0)  this->f.myErase(this);
+  // 'NULL' initiates the recursion for delete
+  this->myErase(NULL);
   return output;
 }
 
 
 // division
 template <typename T, template <typename U> class DESCRIPTOR>
-SuperLatticeDivision3D<T,DESCRIPTOR>::SuperLatticeDivision3D(SuperLatticeF3D<T,DESCRIPTOR>& _f, SuperLatticeF3D<T,DESCRIPTOR>& _g)
-: SuperLatticeCalc3D<T,DESCRIPTOR>(_f,_g) { }
+SuperLatticeDivision3D<T,DESCRIPTOR>::SuperLatticeDivision3D(
+  SuperLatticeF3D<T,DESCRIPTOR>& f, SuperLatticeF3D<T,DESCRIPTOR>& g)
+  : SuperLatticeCalc3D<T,DESCRIPTOR>(f,g)
+{ this->_name = f.getName() + "/" + g.getName(); }
 
 template <typename T, template <typename U> class DESCRIPTOR>
-std::vector<T> SuperLatticeDivision3D<T,DESCRIPTOR>::operator()(std::vector<int> input) {
+std::vector<T> SuperLatticeDivision3D<T,DESCRIPTOR>::operator()(std::vector<int> input)
+{
   std::vector<T> output;
-  for(int i = 0; i < this->f.getTargetDim(); i++) {
-    output.push_back( this->f(input)[i] / this->g(input)[i] );
+  for(int i = 0; i < this->_f.getTargetDim(); i++) {
+    output.push_back( this->_f(input)[i] / this->_g(input)[i] );
   }
-  // start deleting MinusF and GernericF objects
-//    if (this->pointerVec.size() == 0)  this->f.myErase(this);
+  // 'NULL' initiates the recursion for delete
+  this->myErase(NULL);
   return output;
 }
 
 
-// operators definitions
-
+/////////////////////////////////operator()/// ////////////////////////////////
 template <typename T, template <typename U> class DESCRIPTOR>
 SuperLatticeF3D<T,DESCRIPTOR>& SuperLatticeF3D<T,DESCRIPTOR>::operator+(SuperLatticeF3D<T,DESCRIPTOR>& rhs)
 {
   SuperLatticeF3D<T,DESCRIPTOR>* tmp = new SuperLatticePlus3D<T,DESCRIPTOR>(*this,rhs);
-  this->pointerVec.push_back(tmp);
+  this->addChild(tmp);
   return *tmp;
 }
 
@@ -139,7 +142,7 @@ template <typename T, template <typename U> class DESCRIPTOR>
 SuperLatticeF3D<T,DESCRIPTOR>& SuperLatticeF3D<T,DESCRIPTOR>::operator-(SuperLatticeF3D<T,DESCRIPTOR>& rhs)
 {
   SuperLatticeF3D<T,DESCRIPTOR>* tmp = new SuperLatticeMinus3D<T,DESCRIPTOR>(*this,rhs);
-  this->pointerVec.push_back(tmp);
+  this->addChild(tmp);
   return *tmp;
 }
 
@@ -147,7 +150,7 @@ template <typename T, template <typename U> class DESCRIPTOR>
 SuperLatticeF3D<T,DESCRIPTOR>& SuperLatticeF3D<T,DESCRIPTOR>::operator*(SuperLatticeF3D<T,DESCRIPTOR>& rhs)
 {
   SuperLatticeF3D<T,DESCRIPTOR>* tmp = new SuperLatticeMultiplication3D<T,DESCRIPTOR>(*this,rhs);
-  this->pointerVec.push_back(tmp);
+  this->addChild(tmp);
   return *tmp;
 }
 
@@ -155,7 +158,7 @@ template <typename T, template <typename U> class DESCRIPTOR>
 SuperLatticeF3D<T,DESCRIPTOR>& SuperLatticeF3D<T,DESCRIPTOR>::operator/(SuperLatticeF3D<T,DESCRIPTOR>& rhs)
 {
   SuperLatticeF3D<T,DESCRIPTOR>* tmp = new SuperLatticeDivision3D<T,DESCRIPTOR>(*this,rhs);
-  this->pointerVec.push_back(tmp);
+  this->addChild(tmp);
   return *tmp;
 }
 

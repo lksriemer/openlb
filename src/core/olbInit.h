@@ -27,10 +27,10 @@
 #ifndef OLB_INIT_H
 #define OLB_INIT_H
 
-#include "complexGrids/mpiManager/mpiManager.h"
+#include "communication/mpiManager.h"
 #include "io/ostreamManager.h"
 #include "io/parallelIO.h"
-#include "ompManager.h"
+#include "communication/ompManager.h"
 
 namespace olb {
 

@@ -25,6 +25,7 @@ generic        := olbAlgorithms
 
 precompiled    := benchmarkUtil \
                   olbAlgorithms \
-                  timer
+                  timer \
+                  vectorHelpers
 
 

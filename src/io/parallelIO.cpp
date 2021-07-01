@@ -21,7 +21,7 @@
  *  Boston, MA  02110-1301, USA.
 */
 
-#include "complexGrids/mpiManager/mpiManager.h"
+#include "communication/mpiManager.h"
 #include "parallelIO.h"
 
 namespace olb {

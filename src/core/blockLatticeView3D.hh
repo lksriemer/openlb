@@ -36,7 +36,7 @@ namespace olb {
 ////////////////////// Class BlockLatticeView3D /////////////////////////
 
 template<typename T, template<typename U> class Lattice>
-BlockLatticeView3D<T,Lattice>::BlockLatticeView3D(BlockStructure3D<T,Lattice>& originalLattice_)
+BlockLatticeView3D<T,Lattice>::BlockLatticeView3D(BlockLatticeStructure3D<T,Lattice>& originalLattice_)
   : originalLattice(&originalLattice_),
     x0(0), y0(0), z0(0),
     nx( originalLattice->getNx() ),
@@ -47,7 +47,7 @@ BlockLatticeView3D<T,Lattice>::BlockLatticeView3D(BlockStructure3D<T,Lattice>& o
 
 template<typename T, template<typename U> class Lattice>
 BlockLatticeView3D<T,Lattice>::BlockLatticeView3D (
-  BlockStructure3D<T,Lattice>& originalLattice_,
+  BlockLatticeStructure3D<T,Lattice>& originalLattice_,
   int x0_, int x1_, int y0_, int y1_, int z0_, int z1_ )
   : originalLattice(&originalLattice_),
     x0(x0_), y0(y0_), z0(z0_),
@@ -145,25 +145,17 @@ void BlockLatticeView3D<T,Lattice>::defineDynamics (
 
 template<typename T, template<typename U> class Lattice>
 void BlockLatticeView3D<T,Lattice>::defineDynamics (
-  BlockGeometry3D& blockGeometry, int material, Dynamics<T,Lattice>* dynamics)
+  BlockGeometryStructure3D<T>& blockGeometry, int material, Dynamics<T,Lattice>* dynamics)
 {
-
-  originalLattice->defineDynamics (
-    blockGeometry, material,
-    x0, x0+nx-1, y0, y0+ny-1, z0, z0+nz-1,
-    dynamics );
-}
-
-template<typename T, template<typename U> class Lattice>
-void BlockLatticeView3D<T,Lattice>::defineDynamics (
-  BlockGeometry3D& blockGeometry, int material,
-  int x0_, int x1_, int y0_, int y1_, int z0_, int z1_,
-  Dynamics<T,Lattice>* dynamics)
-{
-  originalLattice->defineDynamics (
-    blockGeometry, material,
-    x0_+x0, x1_+x0, y0_+y0, y1_+y0, z0_+z0, z1_+z0,
-    dynamics);
+  for (int iX=0; iX<nx; ++iX) {
+    for (int iY=0; iY<ny; ++iY) {
+      for (int iZ=0; iZ<nz; ++iZ) {
+        if(blockGeometry.getMaterial(iX, iY, iZ)==material) {
+          defineDynamics(iX,iY,iZ, dynamics);
+        }
+      }
+    } 
+  }
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -392,11 +384,6 @@ DataUnSerializer<T>& BlockLatticeView3D<T,Lattice>::getSubUnSerializer (
   IndexOrdering::OrderingT ordering )
 {
   return originalLattice -> getSubUnSerializer(x0_+x0, x1_+x0, y0_+y0, y1_+y0, z0_+z0, z1_+z0, ordering);
-}
-
-template<typename T, template<typename U> class Lattice>
-MultiDataDistribution3D BlockLatticeView3D<T,Lattice>::getDataDistribution() const {
-  return MultiDataDistribution3D(getNx(), getNy(), getNz());
 }
 
 template<typename T, template<typename U> class Lattice>

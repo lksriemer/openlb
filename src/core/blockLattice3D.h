@@ -31,9 +31,9 @@
 #include "olbDebug.h"
 #include "postProcessing.h"
 #include "dataFields3D.h"
-#include "blockStructure3D.h"
+#include "blockLatticeStructure3D.h"
 #include "dataAnalysisBase3D.h"
-#include "blockGeometry3D.h"
+#include "geometry/blockGeometry3D.h"
 #include "multiPhysics.h"
 #include "latticeStatistics.h"
 
@@ -56,7 +56,7 @@ template<typename T, template<typename U> class Lattice> class BlockLatticeUnSer
  * This class is not intended to be derived from.
  */
 template<typename T, template<typename U> class Lattice>
-class BlockLattice3D : public BlockStructure3D<T,Lattice> {
+class BlockLattice3D : public BlockLatticeStructure3D<T,Lattice> {
 public:
   typedef std::vector<PostProcessor3D<T,Lattice>*> PostProcVector;
 public:
@@ -100,9 +100,7 @@ public:
   /// Define the dynamics on a lattice site
   virtual void defineDynamics(int iX, int iY, int iZ, Dynamics<T,Lattice>* dynamics);
   /// Define the dynamics by material
-  virtual void defineDynamics(BlockGeometry3D& blockGeometry, int material, Dynamics<T,Lattice>* dynamics);
-  /// Define the dynamics by material on a 3D sub-box
-  virtual void defineDynamics(BlockGeometry3D& blockGeometry, int material, int x0_, int x1_, int y0_, int y1_, int z0_, int z1_, Dynamics<T,Lattice>* dynamics);
+  virtual void defineDynamics(BlockGeometryStructure3D<T>& blockGeometry, int material, Dynamics<T,Lattice>* dynamics);
   /// Specify whether statistics measurements are done on a rect. domain
   virtual void specifyStatisticsStatus (
     int x0_, int x1_, int y0_, int y1_, int z0_, int z1_, bool status );
@@ -176,7 +174,6 @@ public:
   virtual DataUnSerializer<T>& getSubUnSerializer (
     int x0_, int x1_, int y0_, int y1_, int z0_, int z1_,
     IndexOrdering::OrderingT ordering );
-  virtual MultiDataDistribution3D getDataDistribution() const;
   virtual SpatiallyExtendedObject3D* getComponent(int iBlock);
   virtual SpatiallyExtendedObject3D const* getComponent(int iBlock) const;
   virtual multiPhysics::MultiPhysicsId getMultiPhysicsId() const;

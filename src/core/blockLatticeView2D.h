@@ -28,9 +28,10 @@
 #define BLOCK_LATTICE_VIEW_2D_H
 
 #include <vector>
-#include "blockStructure2D.h"
+#include "blockLatticeStructure2D.h"
 #include "dataAnalysisBase2D.h"
-#include "blockGeometryStatistics2D.h"
+#include "geometry/blockGeometry2D.h"
+#include "geometry/blockGeometryStatistics2D.h"
 
 namespace olb {
 
@@ -39,17 +40,17 @@ template<typename T, template<typename U> class Lattice> class DataAnalysis2D;
 template<typename T, template<typename U> class Lattice> class BlockLatticeViewSerializer2D;
 template<typename T, template<typename U> class Lattice> class BlockLatticeViewUnSerializer2D;
 
-/// A rectangular extract from a given BlockStructure.
+/// A rectangular extract from a given BlockLatticeStructure.
 /** Attention:
  * - This class can only be applied to already existing BlockLattices.
  * - The postProcessors of the original BlockLattice are not called any
  *   more. New, appropriate PostProcessors are generated instead.
  */
 template<typename T, template<typename U> class Lattice>
-class BlockLatticeView2D : public BlockStructure2D<T,Lattice> {
+class BlockLatticeView2D : public BlockLatticeStructure2D<T,Lattice> {
 public:
-  BlockLatticeView2D(BlockStructure2D<T,Lattice>& originalLattice_);
-  BlockLatticeView2D(BlockStructure2D<T,Lattice>& originalLattice_,
+  BlockLatticeView2D(BlockLatticeStructure2D<T,Lattice>& originalLattice_);
+  BlockLatticeView2D(BlockLatticeStructure2D<T,Lattice>& originalLattice_,
                      int x0_, int x1_, int y0_, int y1_);
   ~BlockLatticeView2D();
   BlockLatticeView2D(BlockLatticeView2D const& rhs);
@@ -66,10 +67,6 @@ public:
     int x0_, int x1_, int y0_, int y1_,
     Dynamics<T,Lattice>* dynamics );
   virtual void defineDynamics(int iX, int iY, Dynamics<T,Lattice>* dynamics );
-  /// Define the dynamics by material
-  virtual void defineDynamics(BlockGeometryStatistics2D* blockGeoSta, Dynamics<T,Lattice>* dynamics, int material);
-  /// Define the dynamics by material on a 3D sub-box
-  virtual void defineDynamics(BlockGeometryStatistics2D* blockGeoSta, int x0_, int x1_, int y0_, int y1_, Dynamics<T,Lattice>* dynamics, int material);
   virtual void specifyStatisticsStatus (
     int x0_, int x1_, int y0_, int y1_, bool status );
   virtual void collide(int x0_, int x1_, int y0_, int y1_);
@@ -111,12 +108,11 @@ public:
   virtual DataUnSerializer<T>& getSubUnSerializer (
     int x0_, int x1_, int y0_, int y1_,
     IndexOrdering::OrderingT ordering );
-  virtual MultiDataDistribution2D getDataDistribution() const;
   virtual SpatiallyExtendedObject2D* getComponent(int iBlock);
   virtual SpatiallyExtendedObject2D const* getComponent(int iBlock) const;
   virtual multiPhysics::MultiPhysicsId getMultiPhysicsId() const;
 private:
-  BlockStructure2D<T,Lattice>  *originalLattice;
+  BlockLatticeStructure2D<T,Lattice>  *originalLattice;
   int                          x0, y0;
   int                          nx,ny;
   DataAnalysis2D<T,Lattice>    *dataAnalysis;

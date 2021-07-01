@@ -30,10 +30,7 @@
 #include "dataFields2D.hh"
 #include "dataFields3D.h"
 #include "dataFields3D.hh"
-#include "complexGrids/multiBlockStructure/multiDataFields2D.h"
-#include "complexGrids/multiBlockStructure/multiDataFields2D.hh"
-#include "complexGrids/multiBlockStructure/multiDataFields3D.h"
-#include "complexGrids/multiBlockStructure/multiDataFields3D.hh"
+
 
 namespace olb {
 
@@ -53,27 +50,5 @@ template double computeMax<double, ScalarField3D>(ScalarField3D<double> const& f
 template double computeAverage<double, ScalarField3D>(ScalarField3D<double> const& field);
 template double computeNormSqr<double, ScalarField3D>(ScalarField3D<double> const& field);
 template double computeRMS<double, ScalarField3D>(ScalarField3D<double> const& field);
-
-template double computeMin<double,MultiScalarField2D> (
-  MultiScalarField2D<double> const& field );
-template double computeMax<double,MultiScalarField2D> (
-  MultiScalarField2D<double> const& field );
-template double computeAverage<double,MultiScalarField2D> (
-  MultiScalarField2D<double> const& field );
-template double computeNormSqr<double,MultiScalarField2D> (
-  MultiScalarField2D<double> const& field );
-template double computeRMS<double,MultiScalarField2D> (
-  MultiScalarField2D<double> const& field );
-
-template double computeMin<double,MultiScalarField3D> (
-  MultiScalarField3D<double> const& field );
-template double computeMax<double,MultiScalarField3D> (
-  MultiScalarField3D<double> const& field );
-template double computeAverage<double,MultiScalarField3D> (
-  MultiScalarField3D<double> const& field );
-template double computeNormSqr<double,MultiScalarField3D> (
-  MultiScalarField3D<double> const& field );
-template double computeRMS<double,MultiScalarField3D> (
-  MultiScalarField3D<double> const& field );
 
 }  // namespace olb

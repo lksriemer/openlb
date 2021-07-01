@@ -47,7 +47,7 @@ public:
   virtual int getNx() const =0;
   virtual int getNy() const =0;
   virtual int getNz() const =0;
-  virtual size_t getSize() const =0;
+  virtual std::size_t getSize() const =0;
   virtual T& get(int iX, int iY, int iZ) =0;
   virtual T const& get(int iX, int iY, int iZ) const =0;
   virtual ScalarFieldBase2D<T> const& sliceX(int xVal) const =0;

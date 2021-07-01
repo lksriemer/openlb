@@ -34,6 +34,9 @@ DEBUG           := -g -DOLB_DEBUG
 CXXFLAGS        := $(OPTIM)
 #CXXFLAGS        := $(DEBUG)
 
+#CXXFLAGS        += -fdiagnostics-color=auto
+#CXXFLAGS        += -std=c++0x                  
+
 ARPRG           := ar
 #ARPRG           := xiar                  # mandatory for intel compiler
 
@@ -46,7 +49,6 @@ PARALLEL_MODE   := OFF
 
 MPIFLAGS        :=
 OMPFLAGS        := -fopenmp
-
 
 BUILDTYPE       := precompiled
 #BUILDTYPE       := generic
@@ -89,12 +91,11 @@ LIB             := olb
 ###########################################################################
 ## search directories
 
-SUBDIRS         := src/boundaryConditions \
-                   src/complexDynamics \
-                   src/complexGrids/cuboidStructure \
-                   src/complexGrids/mpiManager \
-                   src/complexGrids/multiBlockStructure \
+SUBDIRS         := src/boundary \
+                   src/communication \
+                   src/dynamics \
                    src/core \
+                   src/geometry \
                    src/external/tinyxml \
                    src/functors \
                    src/io \
@@ -103,26 +104,29 @@ SUBDIRS         := src/boundaryConditions \
 EXAMPLEDIRS     := examples/aorta3d \
                    examples/bstep2d \
                    examples/bstep3d \
-                   examples/cavity2d \
-                   examples/cavity3d \
-                   examples/cavity3d_cuboid_mpi \
+                   examples/cavity2d/sequential \
+                   examples/cavity2d/parallel \
+                   examples/cavity3d/sequential \
+                   examples/cavity3d/parallel \
                    examples/cylinder2d \
                    examples/cylinder3d \
-                   examples/forcedPoiseuille2d \
-                   examples/mrt2d \
+                   examples/d3q13cavity \
                    examples/multiComponent2d \
                    examples/multiComponent3d \
-                   examples/poiseuille2d \
+                   examples/nozzle3d \
+                   examples/phaseSeparation2d \
+                   examples/phaseSeparation3d \
+                   examples/poiseuille2d/bgk \
+                   examples/poiseuille2d/forced \
+                   examples/poiseuille2d/mrt \
                    examples/thermal2d \
-                   examples/thermal3d
+                   examples/thermal3d \
+                   examples/venturi3d
 
 INCLUDEDIRS     := src \
-		   src/external \
-                   src/external/cvmlcpp \
-		   src/external/boost \
-		   src/external/kaffpa
+                   src/ \
+                   src/external
 			
-
 BUILDTYPEDIRS   := build/precompiled \
                    build/generic
 

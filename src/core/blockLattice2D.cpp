@@ -26,8 +26,8 @@
  */
 #include "blockLattice2D.h"
 #include "blockLattice2D.hh"
-#include "latticeDescriptors.h"
-#include "latticeDescriptors.hh"
+#include "dynamics/latticeDescriptors.h"
+#include "dynamics/latticeDescriptors.hh"
 
 namespace olb {
 

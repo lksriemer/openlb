@@ -23,12 +23,29 @@
 
 generic        :=
 
-precompiled    := genericF \
+precompiled    := analyticalBaseF \
                   analyticalF \
                   analyticCalcF \
+                  blockLatticeBaseF2D \
+                  blockLatticeCalcF2D \
+                  blockLatticeIntegralF2D \
+                  blockLatticeLocalF2D \
+                  blockLatticeBaseF3D \
+                  blockLatticeCalcF3D \
+                  blockLatticeIntegralF3D \
+                  blockLatticeLocalF3D \
+                  frameChangeF2D \
                   frameChangeF3D \
+                  genericF \
+                  indicatorBaseF \
                   indicatorF \
+                  indicCalcF \
                   interpolationF3D \
+		              interpolationF2D \
+                  superLatticeBaseF2D \
+                  superLatticeCalcF2D \
+                  superLatticeIntegralF2D \
+                  superLatticeLocalF2D \
                   superLatticeBaseF3D \
                   superLatticeCalcF3D \
                   superLatticeIntegralF3D \

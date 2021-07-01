@@ -119,5 +119,18 @@ samples:
            echo "-------------------------------------------------------------") \
 	done
 
+## the following lines work only in git and should be removed for release
+###########################################################################
+## doxygen documentation
+
+doxygen:
+	doxygen doc/DoxygenConfig
+
+###########################################################################
+## makefile options file
+
+Makefile.inc:
+	cp Makefile.git.inc Makefile.inc
+
 ###########################################################################
 ###########################################################################

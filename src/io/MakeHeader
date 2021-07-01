@@ -22,19 +22,22 @@
 
 
 generic        := parallelIO \
-                  vtkDataOutput \
                   xmlReader \
-                  nastranReader3D \
                   ostreamManager
 
-precompiled    :=  serializerIO \
-                   vtkDataOutput \
-                   vtkDataOutputPrecompiled \
-                   base64 \
-                   parallelIO \
+precompiled    :=  base64 \
+                   blockGifWriter3D \
+                   blockVtkWriter2D \
+                   blockVtkWriter3D \
                    colormaps \
-                   stlReader \
-                   xmlReader \
                    imageWriter \
-                   nastranReader3D \
-                   ostreamManager
+                   ostreamManager \
+                   parallelIO \
+                   serializerIO \
+                   stlReader \
+                   superGifWriter3D \
+                   superVtkWriter2D \
+                   superVtkWriter3D \
+                   xmlReader
+
+

@@ -26,7 +26,8 @@
  */
 #include "base64.hh"
 #include "serializerIO.hh"
-#include "vtkDataOutput.hh"
 #include "colormaps.hh"
 #include "imageWriter.hh"
 #include "vtiReader.hh"
+#include "superVtkWriter2D.hh"
+#include "blockVtkWriter2D.hh"

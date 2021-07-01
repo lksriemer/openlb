@@ -25,11 +25,10 @@
 #ifndef SUPER_LATTICE_BASE_F_2D_H
 #define SUPER_LATTICE_BASE_F_2D_H
 
-#include<vector>    // for generic i/o
-#include<string>     // for lpnorm
+#include<vector>
 
-#include "genericF.h"
-#include "complexGrids/cuboidStructure/superLattice2D.h"
+#include "functors/genericF.h"
+#include "core/superLattice2D.h"
 #include "core/units.h"
 
 /** Note: Throughout the whole source code directory genericFunctions, the
@@ -40,40 +39,46 @@
 namespace olb {
 
 template<typename T, template<typename U> class Lattice> class SuperLattice2D;
-template<typename T, template<typename U> class Lattice> class SuperLatticeF2D;
 
 
-/// represents all functors that operate on a Lattice in general,
-/// e.g. getVelocity(), getForce(), getPressure()
+/// represents all functors that operate on a Lattice in general, e.g. getVelocity(), getForce(), getPressure()
 template <typename T, template <typename U> class DESCRIPTOR>
 class SuperLatticeF2D : public GenericF<T,int> {
 protected:
-  SuperLattice2D<T,DESCRIPTOR>& sLattice;
+  SuperLattice2D<T,DESCRIPTOR>& _sLattice;
 public:
-  SuperLatticeF2D(SuperLattice2D<T,DESCRIPTOR>& _sLattice, int targetDim);
+  SuperLatticeF2D(SuperLattice2D<T,DESCRIPTOR>& sLattice, int targetDim);
 
   SuperLatticeF2D<T,DESCRIPTOR>& operator-(SuperLatticeF2D<T,DESCRIPTOR>& rhs);
   SuperLatticeF2D<T,DESCRIPTOR>& operator+(SuperLatticeF2D<T,DESCRIPTOR>& rhs);
   SuperLatticeF2D<T,DESCRIPTOR>& operator*(SuperLatticeF2D<T,DESCRIPTOR>& rhs);
   SuperLatticeF2D<T,DESCRIPTOR>& operator/(SuperLatticeF2D<T,DESCRIPTOR>& rhs);
 
-  virtual std::string name() = 0;
-  SuperLattice2D<T,DESCRIPTOR>& getSuperLattice2D() { return sLattice; }
+  SuperLattice2D<T,DESCRIPTOR>& getSuperLattice2D() { return _sLattice; }
 };
 
 
-/// represents all functors that operate on a Lattice with output in Phys,
-/// e.g. physVelocity(), physForce(), physPressure()
+/// represents all functors that operate on a Lattice with output in Phys, e.g. physVelocity(), physForce(), physPressure()
 template <typename T, template <typename U> class DESCRIPTOR>
 class SuperLatticePhysF2D : public SuperLatticeF2D<T,DESCRIPTOR> {
 protected:
-  const LBconverter<T>&      converter;
+  const LBconverter<T>& _converter;
 public:
-  SuperLatticePhysF2D(SuperLattice2D<T,DESCRIPTOR>& _sLattice, const LBconverter<T>& _converter, int targetDim); 
-  virtual std::string name() = 0;
+  SuperLatticePhysF2D(SuperLattice2D<T,DESCRIPTOR>& sLattice,
+                      const LBconverter<T>& converter, int targetDim);
 };
 
-
+/// identity functor for memory management
+template <typename T, template <typename U> class DESCRIPTOR>
+class SuperLatticeIdentity2D : public SuperLatticeF2D<T,DESCRIPTOR> {
+protected:
+  SuperLatticeF2D<T,DESCRIPTOR>& _f;
+public:
+  SuperLatticeIdentity2D<T,DESCRIPTOR>(SuperLatticeF2D<T,DESCRIPTOR>& f);
+  ~SuperLatticeIdentity2D<T,DESCRIPTOR>();
+  // access operator should not delete _f, since _f still has the identity as child
+  std::vector<T> operator()(std::vector<int> input);
+};
 
 } // end namespace olb
 

@@ -25,7 +25,6 @@
  * serializer and unserializer -- template instantiation.
  */
 
-#include "complexGrids/mpiManager/mpiManager.h"
 #include "serializer.h"
 #include "serializer.hh"
 

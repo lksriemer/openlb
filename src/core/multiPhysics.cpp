@@ -23,8 +23,8 @@
 
 
 #include "multiPhysics.h"
-#include "latticeDescriptors.h"
-#include "latticeDescriptors.hh"
+#include "dynamics/latticeDescriptors.h"
+#include "dynamics/latticeDescriptors.hh"
 
 
 namespace olb {

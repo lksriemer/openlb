@@ -26,15 +26,15 @@
  */
 #include "dataFields2D.h"
 #include "dataFields2D.hh"
-#include "latticeDescriptors.h"
-#include "latticeDescriptors.hh"
+#include "dynamics/latticeDescriptors.h"
+#include "dynamics/latticeDescriptors.hh"
 
 namespace olb {
 
 using namespace descriptors;
 
 template class ScalarField2D<double>;
-template class ScalarField2D<unsigned short>;
+template class ScalarField2D<int>;
 template class SequentialScalarFieldSerializer2D<double>;
 template class SequentialScalarFieldUnSerializer2D<double>;
 

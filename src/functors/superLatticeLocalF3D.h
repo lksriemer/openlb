@@ -25,11 +25,11 @@
 #ifndef SUPER_LATTICE_LOCAL_F_3D_H
 #define SUPER_LATTICE_LOCAL_F_3D_H
 
-#include<vector>    // for generic i/o
-#include<string>
+#include<vector>
 
-#include "superLatticeBaseF3D.h"
-#include "complexGrids/cuboidStructure/superLattice3D.h"
+#include "functors/superLatticeBaseF3D.h"
+#include "functors/superLatticeCalcF3D.h"
+#include "core/superLattice3D.h"
 
 /** Note: Throughout the whole source code directory genericFunctions, the
  *  template parameters for i/o dimensions are:
@@ -39,164 +39,182 @@
 namespace olb {
 
 
-/// functor to get pointwise dissipation density on local lattices, if globIC is not on
-/// the local processor, the returned vector is empty
+////////////////////////////////////////////////////////////////////////////////
+//////if globIC is not on the local processor, the returned vector is empty/////
+////////////////////////////////////////////////////////////////////////////////
+
+/// functor to get pointwise f population on local lattices
 template <typename T, template <typename U> class DESCRIPTOR>
-class SuperLatticeDissipation3D : public SuperLatticeF3D<T,DESCRIPTOR> {
-protected:
-  const LBconverter<T>& converter;
+class SuperLatticeFpop3D : public SuperLatticeF3D<T,DESCRIPTOR> {
 public:
-  SuperLatticeDissipation3D(SuperLattice3D<T,DESCRIPTOR>& _sLattice, const LBconverter<T>& _converter);
+  SuperLatticeFpop3D(SuperLattice3D<T,DESCRIPTOR>& sLattice);
   std::vector<T> operator() (std::vector<int> input);
-  std::string name() { return "dissipation"; }
 };
 
+/// functor to get pointwise dissipation density on local lattices
+template <typename T, template <typename U> class DESCRIPTOR>
+class SuperLatticeDissipation3D : public SuperLatticeF3D<T,DESCRIPTOR> {
+private:
+  const LBconverter<T>& _converter;
+public:
+  SuperLatticeDissipation3D(SuperLattice3D<T,DESCRIPTOR>& sLattice,
+                            const LBconverter<T>& converter);
+  std::vector<T> operator() (std::vector<int> input);
+};
 
-/// functor to get pointwise density rho on local lattices, if globIC is not on
-/// the local processor, the returned vector is empty
+/// functor to get pointwise dissipation density on local lattices
+template <typename T, template <typename U> class DESCRIPTOR>
+class SuperLatticePhysDissipation3D : public SuperLatticePhysF3D<T,DESCRIPTOR> {
+public:
+  SuperLatticePhysDissipation3D(SuperLattice3D<T,DESCRIPTOR>& sLattice,
+                                const LBconverter<T>& converter);
+  std::vector<T> operator() (std::vector<int> input);
+};
+
+/// functor to get pointwise density rho on local lattices
 template <typename T, template <typename U> class DESCRIPTOR>
 class SuperLatticeDensity3D : public SuperLatticeF3D<T,DESCRIPTOR> {
 public:
-  SuperLatticeDensity3D(SuperLattice3D<T,DESCRIPTOR>& _sLattice);
+  SuperLatticeDensity3D(SuperLattice3D<T,DESCRIPTOR>& sLattice);
   std::vector<T> operator() (std::vector<int> input);
-  std::string name() { return "density"; }
 };
 
 
-/// functor to get pointwise velocity on local lattice, if globIC is not on
-/// the local processor, the returned vector is empty
+/// functor to get pointwise velocity on local lattice
 template <typename T, template <typename U> class DESCRIPTOR>
 class SuperLatticeVelocity3D : public SuperLatticeF3D<T,DESCRIPTOR> {
 public:
-  SuperLatticeVelocity3D(SuperLattice3D<T,DESCRIPTOR>& _sLattice);
+  SuperLatticeVelocity3D(SuperLattice3D<T,DESCRIPTOR>& sLattice);
   std::vector<T> operator() (std::vector<int> input);
-  std::string name() { return "velocity"; }
 };
 
+/// functor to get pointwise strain rate on local lattice
+/// s_ij = 1/2*(du_idr_j + du_jdr_i)
+template <typename T, template <typename U> class DESCRIPTOR>
+class SuperLatticeStrainRate3D : public SuperLatticeF3D<T,DESCRIPTOR> {
+private:
+  const LBconverter<T>& _converter;
+public:
+  SuperLatticeStrainRate3D(SuperLattice3D<T,DESCRIPTOR>& sLattice,
+                       const LBconverter<T>& converter);
+  std::vector<T> operator() (std::vector<int> input);
+};
 
-/// functor to get pointwise the material no. presenting the geometry on local lattice, if globIC is not on
-/// the local processor, the returned vector is empty
+/// functor to get pointwise phys strain rate on local lattice
+/// s_ij = 1/2*(du_idr_j + du_jdr_i)
+template <typename T, template <typename U> class DESCRIPTOR>
+class SuperLatticePhysStrainRate3D : public SuperLatticePhysF3D<T,DESCRIPTOR> {
+public:
+  SuperLatticePhysStrainRate3D(SuperLattice3D<T,DESCRIPTOR>& sLattice,
+                           const LBconverter<T>& converter);
+  std::vector<T> operator() (std::vector<int> input);
+};
+
+/// functor to get pointwise the material no. presenting the geometry on local lattice
 template <typename T, template <typename U> class DESCRIPTOR>
 class SuperLatticeGeometry3D : public SuperLatticeF3D<T,DESCRIPTOR> {
-  SuperGeometry3D& superGeometry;
+private:
+  SuperGeometry3D<T>& _superGeometry;
+  const int _material;
 public:
-  SuperLatticeGeometry3D(SuperLattice3D<T,DESCRIPTOR>& _sLattice, SuperGeometry3D& _superGeometry);
-    std::vector<T> operator() (std::vector<int> input);
-  std::string name() { return "geometry"; }
+  SuperLatticeGeometry3D(SuperLattice3D<T,DESCRIPTOR>& sLattice,
+                         SuperGeometry3D<T>& superGeometry, const int material = -1);
+  std::vector<T> operator() (std::vector<int> input);
 };
 
 
-/// functor to get pointwise the rank no. + 1 on local lattice, if globIC is not on
-/// the local processor, the returned vector is empty
+/// functor to get pointwise the rank no. + 1 on local lattice
 template <typename T, template <typename U> class DESCRIPTOR>
 class SuperLatticeRank3D : public SuperLatticeF3D<T,DESCRIPTOR> {
 public:
-  SuperLatticeRank3D(SuperLattice3D<T,DESCRIPTOR>& _sLattice);
+  SuperLatticeRank3D(SuperLattice3D<T,DESCRIPTOR>& sLattice);
   std::vector<T> operator() (std::vector<int> input);
-  std::string name() { return "rank"; }
 };
 
 
-/// functor to get pointwise the cuboid no. + 1 on local lattice, if globIC is not on
-/// the local processor, the returned vector is empty
+/// functor to get pointwise the cuboid no. + 1 on local lattice
 template <typename T, template <typename U> class DESCRIPTOR>
 class SuperLatticeCuboid3D : public SuperLatticeF3D<T,DESCRIPTOR> {
 public:
-  SuperLatticeCuboid3D(SuperLattice3D<T,DESCRIPTOR>& _sLattice);
+  SuperLatticeCuboid3D(SuperLattice3D<T,DESCRIPTOR>& sLattice);
   std::vector<T> operator() (std::vector<int> input);
-  std::string name() { return "cuboid"; }
 };
 
 
-/// functor to get pointwise phys pressure from rho on local lattices, if globIC is not on
-/// the local processor, the returned vector is empty
+/// functor to get pointwise phys pressure from rho on local lattices
 template <typename T, template <typename U> class DESCRIPTOR>
 class SuperLatticePhysPressure3D : public SuperLatticePhysF3D<T,DESCRIPTOR> {
 public:
-  SuperLatticePhysPressure3D(SuperLattice3D<T,DESCRIPTOR>& _sLattice, const LBconverter<T>& _converter);
+  SuperLatticePhysPressure3D(SuperLattice3D<T,DESCRIPTOR>& sLattice,
+                             const LBconverter<T>& converter);
   std::vector<T> operator() (std::vector<int> input);
-  std::string name() { return "physPressure"; }
 };
 
 
-/// functor to get pointwise phys velocity on local lattice, if globIC is not on
-/// the local processor, the returned vector is empty
+/// functor to get pointwise phys velocity on local lattice
 template <typename T, template <typename U> class DESCRIPTOR>
 class SuperLatticePhysVelocity3D : public SuperLatticePhysF3D<T,DESCRIPTOR> {
 public:
-  SuperLatticePhysVelocity3D(SuperLattice3D<T,DESCRIPTOR>& _sLattice, const LBconverter<T>& _converter);
+  SuperLatticePhysVelocity3D(SuperLattice3D<T,DESCRIPTOR>& sLattice,
+                             const LBconverter<T>& converter, bool print=false);
   std::vector<T> operator() (std::vector<int> input);
-  std::string name() { return "physVelocity"; }
+private:
+  bool _print;
 };
 
 
-/// functor to get pointwise phys force acting on a boundary with a given 
-/// material on local lattice, if globIC is not on
-/// the local processor, the returned vector is empty
+/// functor to get pointwise phys force acting on a boundary with a given material on local lattice
 template <typename T, template <typename U> class DESCRIPTOR>
 class SuperLatticePhysBoundaryForce3D : public SuperLatticePhysF3D<T,DESCRIPTOR> {
-private: 
-  SuperGeometry3D& superGeometry;
-  int material;
-
+private:
+  SuperGeometry3D<T>& _superGeometry;
+  const int _material;
 public:
-  SuperLatticePhysBoundaryForce3D(SuperLattice3D<T,DESCRIPTOR>& _sLattice, SuperGeometry3D& _superGeometry, int _material, const LBconverter<T>& _converter);
+  SuperLatticePhysBoundaryForce3D(SuperLattice3D<T,DESCRIPTOR>& sLattice,
+                                  SuperGeometry3D<T>& superGeometry, const int material,
+                                  const LBconverter<T>& converter);
   std::vector<T> operator() (std::vector<int> input);
-  std::string name() { return "physBoundaryForce"; }
 };
 
 
-/// functor to get pointwise phys force acting on a boundary with a given 
-/// material on local lattice, if globIC is not on
-/// the local processor, the returned vector is empty
+/// functor to get pointwise phys force acting on a boundary with a given material on local lattice
 /// see: Caiazzo, Junk: Boundary Forces in lattice Boltzmann: Analysis of MEA
 template <typename T, template <typename U> class DESCRIPTOR>
 class SuperLatticePhysCorrBoundaryForce3D : public SuperLatticePhysF3D<T,DESCRIPTOR> {
-private: 
-  SuperGeometry3D& superGeometry;
-  int material;
-
+private:
+  SuperGeometry3D<T>& _superGeometry;
+  const int _material;
 public:
-  SuperLatticePhysCorrBoundaryForce3D(SuperLattice3D<T,DESCRIPTOR>& _sLattice, SuperGeometry3D& _superGeometry, int _material, const LBconverter<T>& _converter);
-
+  SuperLatticePhysCorrBoundaryForce3D(SuperLattice3D<T,DESCRIPTOR>& sLattice,
+                                      SuperGeometry3D<T>& superGeometry,
+                                      const int material, const LBconverter<T>& converter);
   std::vector<T> operator() (std::vector<int> input);
-  std::string name() { return "physCorrBoundaryForce"; }
 };
 
 
 /// functor to get pointwise, lattice-dependent porosity values in [0,1]
 /// in combination with (Extended)PorousBGKdynamics: 0->solid, 1->fluid
 template <typename T, template <typename U> class DESCRIPTOR>
-class SuperLatticePorosity3D : public SuperLatticePhysF3D<T,DESCRIPTOR> {
+class SuperLatticePorosity3D : public SuperLatticeF3D<T,DESCRIPTOR> {
 private:
-  SuperGeometry3D& superGeometry;
-  int material;
 public:
-  SuperLatticePorosity3D(SuperLattice3D<T,DESCRIPTOR>& _sLattice,
-                       SuperGeometry3D& _superGeometry,
-                       int _material,
-                       const LBconverter<T>& _converter);
+  SuperLatticePorosity3D(SuperLattice3D<T,DESCRIPTOR>& sLattice);
   std::vector<T> operator()(std::vector<int> input);
-
-  std::string name() { return "porosity"; }
 };
 
 
-/// functor to get pointwise mesh-independent permeability values in (0,inf)
-/// in combination with (Extended)PorousBGKdynamics
+/// functor to get pointwise mesh-independent permeability values in (0,inf) in combination with (Extended)PorousBGKdynamics
 /// note: result is cropped to 999999
 template <typename T, template <typename U> class DESCRIPTOR>
 class SuperLatticePhysPermeability3D : public SuperLatticePhysF3D<T,DESCRIPTOR> {
 private:
-  SuperGeometry3D& superGeometry;
-  int material;
+  SuperGeometry3D<T>& _superGeometry;
+  const int _material;
 public:
-  SuperLatticePhysPermeability3D(SuperLattice3D<T,DESCRIPTOR>& _sLattice,
-                                 SuperGeometry3D& _superGeometry,
-                                 int _material,
-                                 const LBconverter<T>& _converter);
+  SuperLatticePhysPermeability3D(SuperLattice3D<T,DESCRIPTOR>& sLattice,
+                                 SuperGeometry3D<T>& superGeometry,
+                                 const int material, const LBconverter<T>& converter);
   std::vector<T> operator()(std::vector<int> input);
-  std::string name() { return "permeability"; }
 };
 
 
@@ -204,46 +222,40 @@ public:
 template <typename T, template <typename U> class DESCRIPTOR>
 class SuperLatticePhysDarcyForce3D : public SuperLatticePhysF3D<T,DESCRIPTOR> {
 private:
-  SuperGeometry3D& superGeometry;
-  int material;
+  SuperGeometry3D<T>& _superGeometry;
+  const int _material;
 public:
-  SuperLatticePhysDarcyForce3D(SuperLattice3D<T,DESCRIPTOR>& _sLattice,
-                               SuperGeometry3D& _superGeometry,
-                               int _material,
-                               const LBconverter<T>& _converter);
+  SuperLatticePhysDarcyForce3D(SuperLattice3D<T,DESCRIPTOR>& sLattice,
+                               SuperGeometry3D<T>& superGeometry,
+                               const int material, const LBconverter<T>& converter);
   std::vector<T> operator()(std::vector<int> input);
-  std::string name() { return "alphaU"; }
 };
 
 
-/// functor to get a pointwise local average of a passed functor with a given
-/// material and radius on local lattice, if globIC is not on
-/// the local processor, the returned vector is empty
+/// functor to get a pointwise local average of a passed functor with a given material and radius on local lattice
 /// the output data must be of the same size and dimension like f
 template <typename T, template <typename U> class DESCRIPTOR>
 class SuperLatticeAverage3D : public SuperLatticeF3D<T,DESCRIPTOR> {
 private:
-  SuperLatticeF3D<T,DESCRIPTOR>& f;
-  SuperGeometry3D& superGeometry;
-  int material;
-  T radius;
-
+  SuperLatticeF3D<T,DESCRIPTOR>& _f;
+  SuperGeometry3D<T>& _superGeometry;
+  const int _material;
+  T _radius;
 public:
-  SuperLatticeAverage3D(SuperLatticeF3D<T,DESCRIPTOR>& _f, SuperGeometry3D& _superGeometry, int _material, T _radius);
+  SuperLatticeAverage3D(SuperLatticeF3D<T,DESCRIPTOR>& f,
+                        SuperGeometry3D<T>& superGeometry, const int material, T radius);
   std::vector<T> operator() (std::vector<int> input);
-  std::string name() {std::string tmp = "Average("+f.name()+")"; return tmp; }
 };
 
 
 /// functor that returns pointwise the l2-norm, e.g. of a velocity
 template <typename T, template <typename U> class DESCRIPTOR>
-class SuperL2Norm3D : public SuperLatticeF3D<T,DESCRIPTOR> {
-protected:
-  SuperLatticeF3D<T,DESCRIPTOR>& f;
+class SuperEuklidNorm3D : public SuperLatticeF3D<T,DESCRIPTOR> {
+private:
+  SuperLatticeF3D<T,DESCRIPTOR>& _f;
 public:
-  SuperL2Norm3D(SuperLatticeF3D<T,DESCRIPTOR>& _f);
+  SuperEuklidNorm3D(SuperLatticeF3D<T,DESCRIPTOR>& f);
   std::vector<T> operator() (std::vector<int> input);
-  std::string name() {std::string tmp = "l2("+f.name()+")"; return tmp; }
 };
 
 

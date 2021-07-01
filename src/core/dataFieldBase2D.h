@@ -45,7 +45,7 @@ public:
   virtual void reset() =0;
   virtual int getNx() const =0;
   virtual int getNy() const =0;
-  virtual size_t getSize() const =0;
+  virtual std::size_t getSize() const =0;
   virtual T& get(int iX, int iY) =0;
   virtual T const& get(int iX, int iY) const =0;
   virtual T computeReduction(DataReduction<T>& reduction) const =0;

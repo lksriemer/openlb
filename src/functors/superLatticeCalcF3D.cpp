@@ -24,7 +24,7 @@
 
 #include "superLatticeCalcF3D.h"
 #include "superLatticeCalcF3D.hh"
-#include "core/latticeDescriptors.h"
+#include "dynamics/latticeDescriptors.h"
 
 namespace olb {
 

@@ -29,6 +29,8 @@
 #include <algorithm>
 #include <cctype>
 #include <iostream>
+#include "communication/mpiManager.h"
+
 
 namespace olb {
 
@@ -42,7 +44,7 @@ XMLreader::XMLreader()
 
 XMLreader::XMLreader( TiXmlNode* pParent)
   : clout(std::cout,"XMLreader") {
-    warningsOn = true;
+  warningsOn = true;
   if (singleton::mpi().isMainProcessor()) {
     mainProcessorIni(pParent);
   }
@@ -53,7 +55,7 @@ XMLreader::XMLreader( TiXmlNode* pParent)
 
 XMLreader::XMLreader(const std::string& fName)
   : clout(std::cout,"XMLreader") {
-    warningsOn = true;
+  warningsOn = true;
   TiXmlDocument* doc = 0;
   int loadOK = false;
 #ifdef PARALLEL_MODE_MPI  // parallel program execution
@@ -99,14 +101,14 @@ void XMLreader::mainProcessorIni( TiXmlNode* pParent ) {
   TiXmlAttribute* attr = pParent->ToElement()->FirstAttribute();
   while(attr != 0) {
 #ifdef PARALLEL_MODE_MPI  // parallel program execution
-  int size = 0;
-  std::string* key = const_cast<std::string*>(&attr->NameTStr());
-  singleton::mpi().bCast(key, size);
-  std::string* value = const_cast<std::string*>(&attr->ValueStr());
-  singleton::mpi().bCast(value, size);
+    int size = 0;
+    std::string* key = const_cast<std::string*>(&attr->NameTStr());
+    singleton::mpi().bCast(key, size);
+    std::string* value = const_cast<std::string*>(&attr->ValueStr());
+    singleton::mpi().bCast(value, size);
 #endif
-	  attributes[attr->NameTStr()] = attr->ValueStr();
-	  attr = attr->Next();
+    attributes[attr->NameTStr()] = attr->ValueStr();
+    attr = attr->Next();
   }
 #ifdef PARALLEL_MODE_MPI  // parallel program execution
   std::string tmpstr = "";
@@ -149,9 +151,9 @@ void XMLreader::slaveProcessorIni()
   std::string value = "";
   int size = int();
   do {
-	  singleton::mpi().bCast(&key, size);
-	  singleton::mpi().bCast(&value, size);
-	  attributes[key] = value;
+    singleton::mpi().bCast(&key, size);
+    singleton::mpi().bCast(&value, size);
+    attributes[key] = value;
   } while(key != "");
 #endif
 
@@ -277,12 +279,12 @@ bool XMLreader::read<std::string>(std::string& entry, bool verboseOn) const {
 }
 
 std::string XMLreader::getAttribute(const std::string& aName) const {
-	std::map<std::string, std::string>::const_iterator it = attributes.find(aName);
-	if ( it == attributes.end()) {
-		return "Attribute not found.";
-	}
-	return it->second;
-	//return attributes[aName];
+  std::map<std::string, std::string>::const_iterator it = attributes.find(aName);
+  if ( it == attributes.end()) {
+    return "Attribute not found.";
+  }
+  return it->second;
+  //return attributes[aName];
 }
 
 }  // namespace olb

@@ -25,11 +25,10 @@
 #ifndef SUPER_LATTICE_BASE_F_3D_H
 #define SUPER_LATTICE_BASE_F_3D_H
 
-#include<vector>    // for generic i/o
-#include<string>     // for lpnorm
+#include<vector>
 
-#include "genericF.h"
-#include "complexGrids/cuboidStructure/superLattice3D.h"
+#include "functors/genericF.h"
+#include "core/superLattice3D.h"
 #include "core/units.h"
 
 /** Note: Throughout the whole source code directory genericFunctions, the
@@ -40,42 +39,60 @@
 namespace olb {
 
 template<typename T, template<typename U> class Lattice> class SuperLattice3D;
-template<typename T, template<typename U> class Lattice> class SuperLatticeF3D;
-
-//////////////////////////// superLatticeBaseF3D.h /////////////////////////////
 
 
-/// represents all functors that operate on a Lattice in general,
-/// e.g. getVelocity(), getForce(), getPressure()
+/// represents all functors that operate on a Lattice in general, e.g. getVelocity(), getForce(), getPressure()
 template <typename T, template <typename U> class DESCRIPTOR>
 class SuperLatticeF3D : public GenericF<T,int> {
 protected:
-  SuperLattice3D<T,DESCRIPTOR>& sLattice;
+  SuperLattice3D<T,DESCRIPTOR>& _sLattice;
 public:
-  SuperLatticeF3D(SuperLattice3D<T,DESCRIPTOR>& _sLattice, int targetDim);
+  SuperLatticeF3D(SuperLattice3D<T,DESCRIPTOR>& sLattice, int targetDim);
 
   SuperLatticeF3D<T,DESCRIPTOR>& operator-(SuperLatticeF3D<T,DESCRIPTOR>& rhs);
   SuperLatticeF3D<T,DESCRIPTOR>& operator+(SuperLatticeF3D<T,DESCRIPTOR>& rhs);
   SuperLatticeF3D<T,DESCRIPTOR>& operator*(SuperLatticeF3D<T,DESCRIPTOR>& rhs);
   SuperLatticeF3D<T,DESCRIPTOR>& operator/(SuperLatticeF3D<T,DESCRIPTOR>& rhs);
 
-  virtual std::string name() = 0;
-  SuperLattice3D<T,DESCRIPTOR>& getSuperLattice3D() { return sLattice; }
+  SuperLattice3D<T,DESCRIPTOR>& getSuperLattice3D() { return _sLattice; }
 };
 
-
-/// represents all functors that operate on a Lattice with output in Phys,
-/// e.g. physVelocity(), physForce(), physPressure()
+/// represents all functors that operate on a Lattice with output in Phys, e.g. physVelocity(), physForce(), physPressure()
 template <typename T, template <typename U> class DESCRIPTOR>
 class SuperLatticePhysF3D : public SuperLatticeF3D<T,DESCRIPTOR> {
 protected:
-  const LBconverter<T>&      converter;
+  const LBconverter<T>& _converter;
 public:
-  SuperLatticePhysF3D(SuperLattice3D<T,DESCRIPTOR>& _sLattice, const LBconverter<T>& _converter, int targetDim); 
-  virtual std::string name() = 0;
+  SuperLatticePhysF3D(SuperLattice3D<T,DESCRIPTOR>& sLattice,
+                      const LBconverter<T>& converter, int targetDim);
+  LBconverter<T> const& getConverter() const;
+};
+
+/// identity functor for memory management
+template <typename T, template <typename U> class DESCRIPTOR>
+class SuperLatticeIdentity3D : public SuperLatticeF3D<T,DESCRIPTOR> {
+protected:
+  SuperLatticeF3D<T,DESCRIPTOR>& _f;
+public:
+  SuperLatticeIdentity3D<T,DESCRIPTOR>(SuperLatticeF3D<T,DESCRIPTOR>& f);
+  ~SuperLatticeIdentity3D<T,DESCRIPTOR>();
+  // access operator should not delete f, since f still has the identity as child
+  std::vector<T> operator()(std::vector<int> input);
 };
 
 
+template <typename T, template <typename U> class DESCRIPTOR>
+class ComposedSuperLatticeF3D : public SuperLatticeF3D<T,DESCRIPTOR> {
+private:
+  SuperLatticeF3D<T,DESCRIPTOR>& _f0;
+  SuperLatticeF3D<T,DESCRIPTOR>& _f1;
+  SuperLatticeF3D<T,DESCRIPTOR>& _f2;
+public:
+  ComposedSuperLatticeF3D(SuperLatticeF3D<T,DESCRIPTOR>& f0,
+                          SuperLatticeF3D<T,DESCRIPTOR>& f1,
+                          SuperLatticeF3D<T,DESCRIPTOR>& f2);
+  std::vector<T> operator()(std::vector<int> x);
+};
 
 } // end namespace olb
 

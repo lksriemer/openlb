@@ -23,7 +23,7 @@
 
 #include "frameChangeF3D.h"
 #include "frameChangeF3D.hh"
-#include "core/latticeDescriptors.h"
+#include "dynamics/latticeDescriptors.h"
 
 namespace olb {
 

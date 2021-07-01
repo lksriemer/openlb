@@ -26,14 +26,15 @@
 #define INTERPOLATION_F_3D_H
 
 
-#include<vector>    // for generic i/o
-#include<string>     // for lpnorm
+#include<vector>
 
-#include "analyticalF.h"
-#include "complexGrids/cuboidStructure/superLattice3D.h"
-#include "complexGrids/cuboidStructure/superGeometry3D.h"
-#include "complexGrids/cuboidStructure/cuboidGeometry3D.h"
-#include "core/lbHelpers.h"  // for computation of lattice rho and velocity
+#include "functors/analyticalF.h"
+#include "functors/blockLatticeBaseF3D.h"
+#include "core/superLattice3D.h"
+#include "geometry/superGeometry3D.h"
+#include "geometry/cuboidGeometry3D.h"
+#include "core/blockLattice3D.h"
+
 
 namespace olb {
 
@@ -42,34 +43,47 @@ namespace olb {
 template <typename T, template <typename U> class DESCRIPTOR>
 class AnalyticalFfromSuperLatticeF3D : public AnalyticalF3D<T,T> {
 protected:
-  SuperLatticeF3D<T,DESCRIPTOR>&  f;
-  SuperGeometry3D&                sg;
-  CuboidGeometry3D<T>&            cg;
-  bool                            communicateToAll;
-  int                             overlap;
+  SuperLatticeF3D<T,DESCRIPTOR>&  _f;
+  CuboidGeometry3D<T>&            _cuboidGeometry;
+  bool                            _communicateToAll;
+  int                             _overlap;
 public:
-  AnalyticalFfromSuperLatticeF3D(SuperLatticeF3D<T,DESCRIPTOR>& _f, SuperGeometry3D& _sg, bool _communicateToAll=false, int _overlap=2);
-
+  AnalyticalFfromSuperLatticeF3D(SuperLatticeF3D<T,DESCRIPTOR>& f,
+                                 bool communicateToAll=false, int overlap=2);
   std::vector<T> operator() (std::vector<T> physC);
-  std::string name() { return "fromSuperLatticeF"; }
 };
 
 
-/// a class used to convert analytical functions to lattice functions
-/// input functions are interpreted as SI->SI units, the resulting lattice
-/// function will map lattice->lattice units
+/**
+ *  class used to convert analytical functions to lattice functions
+ *  input functions are interpreted as SI->SI units, the resulting lattice
+ *  function will map lattice->lattice units
+ */
 template <typename T, template <typename U> class DESCRIPTOR>
 class SuperLatticeFfromAnalyticalF3D : public SuperLatticeF3D<T,DESCRIPTOR> {
 protected:
-  AnalyticalF3D<T,T>&  f;
-  SuperGeometry3D& sg;
-  CuboidGeometry3D<T>& cg;
-  //const LBconverter<T>&      converter;
+  AnalyticalF3D<T,T>& _f;
 public:
-  SuperLatticeFfromAnalyticalF3D(AnalyticalF3D<T,T>& _f, SuperLattice3D<T,DESCRIPTOR>& _sLattice, SuperGeometry3D& _sg, CuboidGeometry3D<T>& _cg);
-
+  SuperLatticeFfromAnalyticalF3D(AnalyticalF3D<T,T>& f, 
+                                 SuperLattice3D<T,DESCRIPTOR>& sLattice);
   std::vector<T> operator() (std::vector<int> input);
-  std::string name() { return "fromAnalyticalF";}
+};
+
+
+//////////// not yet working // symbolically ///////////////////
+////////////////////////////////////////////////
+template <typename T, template <typename U> class DESCRIPTOR>
+class BlockLatticeFfromAnalyticalF3D : public BlockLatticeF3D<T,DESCRIPTOR> {
+  protected:
+    AnalyticalF3D<T,T>&  _f;
+    BlockGeometry3D<T>&  _superGeometry;
+    CuboidGeometry3D<T>& _cuboidGeometry;
+  public:
+    BlockLatticeFfromAnalyticalF3D(AnalyticalF3D<T,T>& f,
+                                   BlockLattice3D<T,DESCRIPTOR>& sLattice,
+                                   BlockGeometry3D<T>& superGeometry,
+                                   CuboidGeometry3D<T>& cuboidGeometry);
+    std::vector<T> operator() (std::vector<int> input);
 };
 
 

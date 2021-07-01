@@ -22,13 +22,13 @@
 */
 
 /** \file
- * Data analysis (formerly known as BlockStatistics) on 2D BlockStructures -- template instantiation.
+ * Data analysis (formerly known as BlockStatistics) on 2D BlockLatticeStructures -- template instantiation.
  */
 
 #include "dataAnalysis2D.h"
 #include "dataAnalysis2D.hh"
-#include "latticeDescriptors.h"
-#include "latticeDescriptors.hh"
+#include "dynamics/latticeDescriptors.h"
+#include "dynamics/latticeDescriptors.hh"
 
 namespace olb {
 

@@ -1,4 +1,4 @@
-# This file is part of the OpenLB library
+#  This file is part of the OpenLB library
 #
 #  Copyright (C) 2007 Mathias Krause
 #  E-mail contact: info@openlb.net
@@ -19,23 +19,23 @@
 #  License along with this program; if not, write to the Free 
 #  Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
 #  Boston, MA  02110-1301, USA.
-
-
+#
+#
 ###########################################################################
 ###########################################################################
 ## DEFINITIONS TO BE CHANGED
 
 ROOT            := ../..
-SRC             :=
-OUTPUT          := rayleigh_benard3D
+SRC             := 
+OUTPUT          := rayleighBenard3d
 
 ###########################################################################
 ## definitions
 
 include $(ROOT)/Makefile.inc
 
-OBJECTS    := $(foreach file, $(SRC) $(OUTPUT), $(file).o)
-DEPS       := $(foreach file, $(SRC) $(OUTPUT), $(file).d)
+OBJECTS    := $(foreach file, $(SRC) $(OUTPUT), $(PWD)/$(file).o)
+DEPS       := $(foreach file, $(SRC) $(OUTPUT), $(PWD)/$(file).d)
 
 ###########################################################################
 ## all
@@ -47,8 +47,8 @@ all : depend compile updatelib link
 ## dependencies
 
 depend : $(DEPS)
-
-%.d : %.cpp
+	
+$(PWD)/%.d : %.cpp
 	@echo Create dependencies for $<
 	@$(SHELL) -ec '$(CXX) -M $(CXXFLAGS) $(IDIR) $< \
                        | sed -e "s!$*\.o!$(PWD)\/$*\.o!1" > .tmpfile; \
@@ -56,10 +56,10 @@ depend : $(DEPS)
 
 ###########################################################################
 ## compile
-
+	
 compile : $(OBJECTS)
 
-%.o: %.cpp
+$(PWD)/%.o: %.cpp
 	@echo Compile $<
 	$(CXX) $(CXXFLAGS) $(IDIR) -c $< -o $@
 
@@ -70,7 +70,8 @@ clean : cleanrub cleanobj cleandep
 
 cleanrub: 
 	@echo Clean rubbish files
-	@rm -f *~ core .tmpfile $(OUTPUT)
+	@rm -f *~ core .tmpfile tmp/*.* $(OUTPUT)
+	@rm -f *~ core .tmpfile tmp/data/*.* $(OUTPUT)
 
 cleanobj:
 	@echo Clean object files
@@ -84,8 +85,6 @@ cleanbuild:
 	@echo Clean olb main
 	@cd $(ROOT); \
 	 $(MAKE) cleanbuild;
-
-cleanall : clean cleanbuild
 
 ###########################################################################
 ## update lib

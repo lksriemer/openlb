@@ -22,7 +22,7 @@
 */
 
 /** \file
- * Data analysis (formerly known as BlockStatistics) on 3D BlockStructures -- generic implementation.
+ * Data analysis (formerly known as BlockStatistics) on 3D BlockLatticeStructures -- generic implementation.
  */
 
 #ifndef DATA_ANALYSIS_3D_HH
@@ -108,7 +108,7 @@ AnalysisFields3D<T,Lattice>::AnalysisFields3D(AnalysisFieldsImpl3D<T,Lattice>& i
 
 template<typename T, template<typename U> class Lattice>
 DataAnalysis3D<T,Lattice>::DataAnalysis3D (
-  BlockStructure3D<T,Lattice> const& block_ )
+  BlockLatticeStructure3D<T,Lattice> const& block_ )
   : block(block_),
     pointsToDefaultFields(true),
     defaultFields(block.getNx(), block.getNy(), block.getNz()),
@@ -118,7 +118,7 @@ DataAnalysis3D<T,Lattice>::DataAnalysis3D (
 }
 
 template<typename T, template<typename U> class Lattice>
-DataAnalysis3D<T,Lattice>::DataAnalysis3D(BlockStructure3D<T,Lattice> const& block_,
+DataAnalysis3D<T,Lattice>::DataAnalysis3D(BlockLatticeStructure3D<T,Lattice> const& block_,
     AnalysisFields3D<T,Lattice>& fields_ )
   : block(block_),
     pointsToDefaultFields(false),
@@ -324,18 +324,18 @@ template<typename T, template<typename U> class Lattice>
 void DataAnalysis3D<T,Lattice>::computeQCritField() const {
   if (flags.qCritFieldComputed) return;
   fields.qCritField.construct();
- for (int iX=0; iX<fields.qCritField.getNx()-1; ++iX) {
-   for (int iY=0; iY<fields.qCritField.getNy()-1; ++iY) {
-     for (int iZ=0; iZ<fields.qCritField.getNz()-1; ++iZ) {
+  for (int iX=0; iX<fields.qCritField.getNx()-1; ++iX) {
+    for (int iY=0; iY<fields.qCritField.getNy()-1; ++iY) {
+      for (int iZ=0; iZ<fields.qCritField.getNz()-1; ++iZ) {
         //cout << "test "<< iX<<" "<<iY<<" "<<iZ<< endl;
         fields.qCritField.get(iX,iY,iZ) =qCriterion(iX, iY, iZ);
-          
-      //for (size_t iEl=0; iEl<fields.qCritField.getSize(); ++iEl) {
-      //  fields.qCritField.get(iX,iY,iZ) = -1./2.*qCriterion();
+
+        //for (size_t iEl=0; iEl<fields.qCritField.getSize(); ++iEl) {
+        //  fields.qCritField.get(iX,iY,iZ) = -1./2.*qCriterion();
         //fields.qCritField[iEl] =-1./2.*fields.qCritField[iEl];
-      // }
+        // }
+      }
     }
-   }
   }
   flags.qCritFieldComputed = true;
 }
@@ -352,98 +352,98 @@ T DataAnalysis3D<T,Lattice>::qCriterion(int iX, int iY, int iZ) const {
   //   for (int iY=0; iY<ny; ++iY) {
   //     for (int iZ=0; iZ<nz; ++iZ) {
 
-        T dxux = (
-                   fields.velField.get(iX+1,iY+1,iZ  )[0]
-                   + fields.velField.get(iX+1,iY  ,iZ  )[0]
-                   + fields.velField.get(iX+1,iY+1,iZ+1)[0]
-                   + fields.velField.get(iX+1,iY  ,iZ+1)[0]
-                   - fields.velField.get(iX  ,iY+1,iZ  )[0]
-                   - fields.velField.get(iX  ,iY  ,iZ  )[0]
-                   - fields.velField.get(iX  ,iY+1,iZ+1)[0]
-                   - fields.velField.get(iX  ,iY  ,iZ+1)[0] ) / (T)4;
-        T dxuy = (
-                   fields.velField.get(iX+1,iY+1,iZ  )[1]
-                   + fields.velField.get(iX+1,iY  ,iZ  )[1]
-                   + fields.velField.get(iX+1,iY+1,iZ+1)[1]
-                   + fields.velField.get(iX+1,iY  ,iZ+1)[1]
-                   - fields.velField.get(iX  ,iY+1,iZ  )[1]
-                   - fields.velField.get(iX  ,iY  ,iZ  )[1]
-                   - fields.velField.get(iX  ,iY+1,iZ+1)[1]
-                   - fields.velField.get(iX  ,iY  ,iZ+1)[1] ) / (T)4;
-        T dxuz = (
-                   fields.velField.get(iX+1,iY+1,iZ  )[2]
-                   + fields.velField.get(iX+1,iY  ,iZ  )[2]
-                   + fields.velField.get(iX+1,iY+1,iZ+1)[2]
-                   + fields.velField.get(iX+1,iY  ,iZ+1)[2]
-                   - fields.velField.get(iX  ,iY+1,iZ  )[2]
-                   - fields.velField.get(iX  ,iY  ,iZ  )[2]
-                   - fields.velField.get(iX  ,iY+1,iZ+1)[2]
-                   - fields.velField.get(iX  ,iY  ,iZ+1)[2] ) / (T)4;
-        T dyux = (
-                   fields.velField.get(iX  ,iY+1,iZ  )[0]
-                   + fields.velField.get(iX+1,iY+1,iZ  )[0]
-                   + fields.velField.get(iX  ,iY+1,iZ+1)[0]
-                   + fields.velField.get(iX+1,iY+1,iZ+1)[0]
-                   - fields.velField.get(iX  ,iY  ,iZ  )[0]
-                   - fields.velField.get(iX+1,iY  ,iZ  )[0]
-                   - fields.velField.get(iX  ,iY  ,iZ+1)[0]
-                   - fields.velField.get(iX+1,iY  ,iZ+1)[0] ) / (T)4;
-        T dyuy = (
-                   fields.velField.get(iX  ,iY+1,iZ  )[1]
-                   + fields.velField.get(iX+1,iY+1,iZ  )[1]
-                   + fields.velField.get(iX  ,iY+1,iZ+1)[1]
-                   + fields.velField.get(iX+1,iY+1,iZ+1)[1]
-                   - fields.velField.get(iX  ,iY  ,iZ  )[1]
-                   - fields.velField.get(iX+1,iY  ,iZ  )[1]
-                   - fields.velField.get(iX  ,iY  ,iZ+1)[1]
-                   - fields.velField.get(iX+1,iY  ,iZ+1)[1] ) / (T)4;
-        T dyuz = (
-                   fields.velField.get(iX  ,iY+1,iZ  )[2]
-                   + fields.velField.get(iX+1,iY+1,iZ  )[2]
-                   + fields.velField.get(iX  ,iY+1,iZ+1)[2]
-                   + fields.velField.get(iX+1,iY+1,iZ+1)[2]
-                   - fields.velField.get(iX  ,iY  ,iZ  )[2]
-                   - fields.velField.get(iX+1,iY  ,iZ  )[2]
-                   - fields.velField.get(iX  ,iY  ,iZ+1)[2]
-                   - fields.velField.get(iX+1,iY  ,iZ+1)[2] ) / (T)4;
-        T dzux = (
-                   fields.velField.get(iX  ,iY  ,iZ+1)[0]
-                   + fields.velField.get(iX+1,iY+1,iZ+1)[0]
-                   + fields.velField.get(iX  ,iY+1,iZ+1)[0]
-                   + fields.velField.get(iX+1,iY  ,iZ+1)[0]
-                   - fields.velField.get(iX  ,iY  ,iZ  )[0]
-                   - fields.velField.get(iX+1,iY  ,iZ  )[0]
-                   - fields.velField.get(iX  ,iY+1,iZ  )[0]
-                   - fields.velField.get(iX+1,iY+1,iZ  )[0] ) / (T)4;
-        T dzuy = (
-                   fields.velField.get(iX  ,iY  ,iZ+1)[1]
-                   + fields.velField.get(iX+1,iY+1,iZ+1)[1]
-                   + fields.velField.get(iX  ,iY+1,iZ+1)[1]
-                   + fields.velField.get(iX+1,iY  ,iZ+1)[1]
-                   - fields.velField.get(iX  ,iY  ,iZ  )[1]
-                   - fields.velField.get(iX+1,iY  ,iZ  )[1]
-                   - fields.velField.get(iX  ,iY+1,iZ  )[1]
-                   - fields.velField.get(iX+1,iY+1,iZ  )[1] ) / (T)4;
-        T dzuz = (
-                   fields.velField.get(iX  ,iY  ,iZ+1)[2]
-                   + fields.velField.get(iX+1,iY+1,iZ+1)[2]
-                   + fields.velField.get(iX  ,iY+1,iZ+1)[2]
-                   + fields.velField.get(iX+1,iY  ,iZ+1)[2]
-                   - fields.velField.get(iX  ,iY  ,iZ  )[2]
-                   - fields.velField.get(iX+1,iY  ,iZ  )[2]
-                   - fields.velField.get(iX  ,iY+1,iZ  )[2]
-                   - fields.velField.get(iX+1,iY+1,iZ  )[2] ) / (T)4;
+  T dxux = (
+             fields.velField.get(iX+1,iY+1,iZ  )[0]
+             + fields.velField.get(iX+1,iY  ,iZ  )[0]
+             + fields.velField.get(iX+1,iY+1,iZ+1)[0]
+             + fields.velField.get(iX+1,iY  ,iZ+1)[0]
+             - fields.velField.get(iX  ,iY+1,iZ  )[0]
+             - fields.velField.get(iX  ,iY  ,iZ  )[0]
+             - fields.velField.get(iX  ,iY+1,iZ+1)[0]
+             - fields.velField.get(iX  ,iY  ,iZ+1)[0] ) / (T)4;
+  T dxuy = (
+             fields.velField.get(iX+1,iY+1,iZ  )[1]
+             + fields.velField.get(iX+1,iY  ,iZ  )[1]
+             + fields.velField.get(iX+1,iY+1,iZ+1)[1]
+             + fields.velField.get(iX+1,iY  ,iZ+1)[1]
+             - fields.velField.get(iX  ,iY+1,iZ  )[1]
+             - fields.velField.get(iX  ,iY  ,iZ  )[1]
+             - fields.velField.get(iX  ,iY+1,iZ+1)[1]
+             - fields.velField.get(iX  ,iY  ,iZ+1)[1] ) / (T)4;
+  T dxuz = (
+             fields.velField.get(iX+1,iY+1,iZ  )[2]
+             + fields.velField.get(iX+1,iY  ,iZ  )[2]
+             + fields.velField.get(iX+1,iY+1,iZ+1)[2]
+             + fields.velField.get(iX+1,iY  ,iZ+1)[2]
+             - fields.velField.get(iX  ,iY+1,iZ  )[2]
+             - fields.velField.get(iX  ,iY  ,iZ  )[2]
+             - fields.velField.get(iX  ,iY+1,iZ+1)[2]
+             - fields.velField.get(iX  ,iY  ,iZ+1)[2] ) / (T)4;
+  T dyux = (
+             fields.velField.get(iX  ,iY+1,iZ  )[0]
+             + fields.velField.get(iX+1,iY+1,iZ  )[0]
+             + fields.velField.get(iX  ,iY+1,iZ+1)[0]
+             + fields.velField.get(iX+1,iY+1,iZ+1)[0]
+             - fields.velField.get(iX  ,iY  ,iZ  )[0]
+             - fields.velField.get(iX+1,iY  ,iZ  )[0]
+             - fields.velField.get(iX  ,iY  ,iZ+1)[0]
+             - fields.velField.get(iX+1,iY  ,iZ+1)[0] ) / (T)4;
+  T dyuy = (
+             fields.velField.get(iX  ,iY+1,iZ  )[1]
+             + fields.velField.get(iX+1,iY+1,iZ  )[1]
+             + fields.velField.get(iX  ,iY+1,iZ+1)[1]
+             + fields.velField.get(iX+1,iY+1,iZ+1)[1]
+             - fields.velField.get(iX  ,iY  ,iZ  )[1]
+             - fields.velField.get(iX+1,iY  ,iZ  )[1]
+             - fields.velField.get(iX  ,iY  ,iZ+1)[1]
+             - fields.velField.get(iX+1,iY  ,iZ+1)[1] ) / (T)4;
+  T dyuz = (
+             fields.velField.get(iX  ,iY+1,iZ  )[2]
+             + fields.velField.get(iX+1,iY+1,iZ  )[2]
+             + fields.velField.get(iX  ,iY+1,iZ+1)[2]
+             + fields.velField.get(iX+1,iY+1,iZ+1)[2]
+             - fields.velField.get(iX  ,iY  ,iZ  )[2]
+             - fields.velField.get(iX+1,iY  ,iZ  )[2]
+             - fields.velField.get(iX  ,iY  ,iZ+1)[2]
+             - fields.velField.get(iX+1,iY  ,iZ+1)[2] ) / (T)4;
+  T dzux = (
+             fields.velField.get(iX  ,iY  ,iZ+1)[0]
+             + fields.velField.get(iX+1,iY+1,iZ+1)[0]
+             + fields.velField.get(iX  ,iY+1,iZ+1)[0]
+             + fields.velField.get(iX+1,iY  ,iZ+1)[0]
+             - fields.velField.get(iX  ,iY  ,iZ  )[0]
+             - fields.velField.get(iX+1,iY  ,iZ  )[0]
+             - fields.velField.get(iX  ,iY+1,iZ  )[0]
+             - fields.velField.get(iX+1,iY+1,iZ  )[0] ) / (T)4;
+  T dzuy = (
+             fields.velField.get(iX  ,iY  ,iZ+1)[1]
+             + fields.velField.get(iX+1,iY+1,iZ+1)[1]
+             + fields.velField.get(iX  ,iY+1,iZ+1)[1]
+             + fields.velField.get(iX+1,iY  ,iZ+1)[1]
+             - fields.velField.get(iX  ,iY  ,iZ  )[1]
+             - fields.velField.get(iX+1,iY  ,iZ  )[1]
+             - fields.velField.get(iX  ,iY+1,iZ  )[1]
+             - fields.velField.get(iX+1,iY+1,iZ  )[1] ) / (T)4;
+  T dzuz = (
+             fields.velField.get(iX  ,iY  ,iZ+1)[2]
+             + fields.velField.get(iX+1,iY+1,iZ+1)[2]
+             + fields.velField.get(iX  ,iY+1,iZ+1)[2]
+             + fields.velField.get(iX+1,iY  ,iZ+1)[2]
+             - fields.velField.get(iX  ,iY  ,iZ  )[2]
+             - fields.velField.get(iX+1,iY  ,iZ  )[2]
+             - fields.velField.get(iX  ,iY+1,iZ  )[2]
+             - fields.velField.get(iX+1,iY+1,iZ  )[2] ) / (T)4;
 
 
-        qCrit = dxux*dxux+dyux*dxuy+dzux*dxuz
-               +dxuy*dyux+dyuy*dyuy+dzuy*dyuz
-               +dxuz*dzux+dyuz*dzuy+dzuz*dzuz;
- //       cout << qCrit<<endl;
-        qCrit *= (-1./2.);
+  qCrit = dxux*dxux+dyux*dxuy+dzux*dxuz
+          +dxuy*dyux+dyuy*dyuy+dzuy*dyuz
+          +dxuz*dzux+dyuz*dzuy+dzuz*dzuz;
+//       cout << qCrit<<endl;
+  qCrit *= (-1./2.);
   //     }
   //   }
   // }
- 
+
   return qCrit;
 }
 
@@ -528,7 +528,7 @@ void DataAnalysis3D<T,Lattice>::computeVorticityNormField() const {
 // void DataAnalysis3D<T,Lattice>::computeQCritField() const {
 //   if (flags.qCritFieldComputed) return;
 //   fields.qCritField.construct();
-  
+
 
 //   for (size_t iEl=0; iEl<fields.qCritField.getSize(); ++iEl) {
 //     fields.qCritField[iEl] = -1./2.*fields.strainRateField[iEl];

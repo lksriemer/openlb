@@ -25,8 +25,20 @@
  * Groups all include files for the directory genericFunctions.
  */
 
+#include "analyticalBaseF.hh"
 #include "analyticalF.hh"
 #include "analyticCalcF.hh"
+#include "blockLatticeBaseF2D.hh"
+#include "blockLatticeCalcF2D.hh"
+#include "blockLatticeIntegralF2D.hh"
+#include "blockLatticeLocalF2D.hh"
+#include "frameChangeF2D.hh"
 #include "genericF.hh"
+#include "indicatorBaseF.hh"
 #include "indicatorF.hh"
+#include "indicCalcF.hh"
+#include "interpolationF2D.hh"
 #include "superLatticeBaseF2D.hh"
+#include "superLatticeCalcF2D.hh"
+#include "superLatticeIntegralF2D.hh"
+#include "superLatticeLocalF2D.hh"

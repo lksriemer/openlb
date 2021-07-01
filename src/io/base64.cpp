@@ -56,10 +56,12 @@ struct DistinctUint<false> {
 typedef DistinctUint<sizeof(unsigned int)==sizeof(size_t)>::T1 T1;
 typedef DistinctUint<sizeof(unsigned int)==sizeof(size_t)>::T2 T2;
 
+template class Base64Encoder<float>;
 template class Base64Encoder<double>;
 template class Base64Encoder<T1>;
 template class Base64Encoder<T2>;
 
+template class Base64Decoder<float>;
 template class Base64Decoder<double>;
 template class Base64Decoder<T1>;
 template class Base64Decoder<T2>;

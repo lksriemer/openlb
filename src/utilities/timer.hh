@@ -25,7 +25,7 @@
 #define TIMER_HH
 
 #include "timer.h"
-#include "../complexGrids/mpiManager/mpiManager.h"
+#include "communication/mpiManager.h"
 
 namespace olb {
 
@@ -36,7 +36,7 @@ Timer<T>::Timer()
   : clout(std::cout,"Timer")
 {
   tp = NULL;
-};
+}
 
 template<typename T>
 Timer<T>::Timer(int maxTimeSteps, int numFluidCells, bool *p, int size_p)
@@ -53,7 +53,7 @@ void Timer<T>::initialize(int maxTimeSteps, int numFluidCells, bool *p, int size
   rtRemMs=1; // avoids some stupid numbers in first call of printStep() (not for T=double)
   maxTS = maxTimeSteps;
   numFC = numFluidCells;
-};
+}
 
 template<typename T>
 T Timer<T>::timevalDiffTimeMs(timeval end, timeval start) {
@@ -61,7 +61,7 @@ T Timer<T>::timevalDiffTimeMs(timeval end, timeval start) {
   msDiff = 1000*(end.tv_sec - start.tv_sec)
            +(end.tv_usec-start.tv_usec)/1000;
   return msDiff;
-};
+}
 
 template<typename T>
 T Timer<T>::getMLUPs() {
@@ -94,7 +94,7 @@ void Timer<T>::start() {
   gettimeofday(&msTimeStart, 0);  // time in ms
   gettimeofday(&msTimeCur, 0);    // time in ms, here only necessary for MLUP-calculations
   cpuTimeStart = clock();         //cpu-time
-};
+}
 
 template<typename T>
 void Timer<T>::update(int currentTimeStep) {  // Is int sufficient? Is it possible/desirable to have non-integer time steps?
@@ -127,7 +127,7 @@ void Timer<T>::stop() {
   cpuTimeEnd = clock();           // cpu-time
   sTimeEnd = time(tp);            // time in s
   gettimeofday(&msTimeEnd, 0);    // time in ms
-};
+}
 
 template<typename T>
 double Timer<T>::getTotalCpuTime() {
@@ -231,17 +231,20 @@ Timer<T>* createTimer(XMLreader& param, const LBconverter<T>& converter, int num
 
   // initialize parameters with some default values
   int dim = 0;
-  T physMaxT = 0;
+  T physMaxT = T();
+  T physStartT = T();
   int numNodes = numLatticePoints;
 
   // fetch xml Data and error handling
   if ( ! param["Application"]["PhysParam"]["MaxTime"].read(physMaxT) )
-    clout << "MaxTime not found" << std::endl;
+    clout << "PhysMaxTime not found" << std::endl;
+  if ( ! param["Application"]["PhysParam"]["MaxTime"].read(physStartT) )
+    clout << "PhysStartTime not found" << std::endl;
   if ( ! param["Application"]["dim"].read(dim) )
     clout << "dim not found" << std::endl;
 
   // variable processing according to the constructor
-  int maxT = converter.numTimeSteps(physMaxT);
+  int maxT = converter.numTimeSteps(physMaxT) + converter.numTimeSteps(physStartT);
   switch (dim) {
   case 2:
     return new Timer<T>(maxT,numNodes);

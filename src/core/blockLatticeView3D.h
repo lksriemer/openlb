@@ -29,9 +29,9 @@
 #define BLOCK_LATTICE_VIEW_3D_H
 
 #include <vector>
-#include "blockStructure3D.h"
+#include "blockLatticeStructure3D.h"
 #include "dataAnalysisBase3D.h"
-#include "blockGeometryStatistics3D.h"
+#include "geometry/blockGeometryStatistics3D.h"
 
 namespace olb {
 
@@ -41,10 +41,10 @@ template<typename T, template<typename U> class Lattice> class BlockLatticeViewS
 template<typename T, template<typename U> class Lattice> class BlockLatticeViewUnSerializer3D;
 
 template<typename T, template<typename U> class Lattice>
-class BlockLatticeView3D : public BlockStructure3D<T,Lattice> {
+class BlockLatticeView3D : public BlockLatticeStructure3D<T,Lattice> {
 public:
-  BlockLatticeView3D(BlockStructure3D<T,Lattice>& originalLattice_);
-  BlockLatticeView3D(BlockStructure3D<T,Lattice>& originalLattice_,
+  BlockLatticeView3D(BlockLatticeStructure3D<T,Lattice>& originalLattice_);
+  BlockLatticeView3D(BlockLatticeStructure3D<T,Lattice>& originalLattice_,
                      int x0_, int x1_, int y0_, int y1_, int z0_, int z1_);
   ~BlockLatticeView3D();
   BlockLatticeView3D(BlockLatticeView3D const& rhs);
@@ -63,9 +63,7 @@ public:
     Dynamics<T,Lattice>* dynamics );
   virtual void defineDynamics(int iX, int iY, int iZ, Dynamics<T,Lattice>* dynamics);
   /// Define the dynamics by material
-  virtual void defineDynamics(BlockGeometry3D& blockGeometry, int material, Dynamics<T,Lattice>* dynamics);
-  /// Define the dynamics by material on a 3D sub-box
-  virtual void defineDynamics(BlockGeometry3D& blockGeometry, int material, int x0_, int x1_, int y0_, int y1_, int z0_, int z1_, Dynamics<T,Lattice>* dynamics);
+  virtual void defineDynamics(BlockGeometryStructure3D<T>& blockGeometry, int material, Dynamics<T,Lattice>* dynamics);
   virtual void specifyStatisticsStatus (
     int x0_, int x1_, int y0_, int y1_,
     int z0_, int z1_, bool status );
@@ -111,12 +109,11 @@ public:
   virtual DataUnSerializer<T>& getSubUnSerializer (
     int x0_, int x1_, int y0_, int y1_, int z0_, int z1_,
     IndexOrdering::OrderingT ordering );
-  virtual MultiDataDistribution3D getDataDistribution() const;
   virtual SpatiallyExtendedObject3D* getComponent(int iBlock);
   virtual SpatiallyExtendedObject3D const* getComponent(int iBlock) const;
   virtual multiPhysics::MultiPhysicsId getMultiPhysicsId() const;
 private:
-  BlockStructure3D<T,Lattice>  *originalLattice;
+  BlockLatticeStructure3D<T,Lattice>  *originalLattice;
   int                          x0, y0, z0;
   int                          nx,ny,nz;
   DataAnalysis3D<T,Lattice>    *dataAnalysis;

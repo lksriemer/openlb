@@ -1,6 +1,6 @@
 /*  This file is part of the OpenLB library
  *
- *  Copyright (C) 2010 Mathias J. Krause, Thomas Henn
+ *  Copyright (C) 2010-2015 Thomas Henn, Mathias J. Krause
  *  E-mail contact: info@openlb.net
  *  The most recent release of OpenLB can be downloaded at
  *  <http://www.openlb.net/>
@@ -22,15 +22,14 @@
  */
 
 /** \file
- * The dynamics of a 2D block lattice -- template instantiation.
+ * Input in STL format -- template instantiation.
  */
+
 #include "stlReader.h"
 #include "stlReader.hh"
 
 namespace olb {
-//FIXME: The following functions are not (yet) explicitly instanciated!
-//template <double, 3> int treeDepth;
-//template <double, 3> void findPath;
+
 template class STLreader<double>;
 
 }

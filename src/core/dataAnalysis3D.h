@@ -22,7 +22,7 @@
 */
 
 /** \file
- * Data analysis (formerly known as BlockStatistics) on 3D BlockStructures -- header file.
+ * Data analysis (formerly known as BlockStatistics) on 3D BlockLatticeStructures -- header file.
  */
 
 #ifndef DATA_ANALYSIS_3D_H
@@ -88,8 +88,8 @@ struct AnalysisFields3D {
 template<typename T, template<typename U> class Lattice>
 class DataAnalysis3D : public DataAnalysisBase3D<T,Lattice> {
 public:
-  DataAnalysis3D(BlockStructure3D<T,Lattice> const& block_);
-  DataAnalysis3D(BlockStructure3D<T,Lattice> const& block_, AnalysisFields3D<T,Lattice>& fields_ );
+  DataAnalysis3D(BlockLatticeStructure3D<T,Lattice> const& block_);
+  DataAnalysis3D(BlockLatticeStructure3D<T,Lattice> const& block_, AnalysisFields3D<T,Lattice>& fields_ );
   DataAnalysis3D(DataAnalysis3D<T,Lattice> const& rhs);
   ~DataAnalysis3D();
 public:
@@ -109,7 +109,7 @@ public:
   virtual TensorFieldBase3D<T,Lattice<T>::q > const& getPopulations() const;
 
   virtual T computeMeanEnstrophy() const;
- // virtual T computeQCritField() const;
+// virtual T computeQCritField() const;
 
   virtual int getNx() const { return block.getNx(); }
   virtual int getNy() const { return block.getNy(); }
@@ -149,7 +149,7 @@ private:
   T boundaryPoisson(int iX, int iY, int iZ) const;
   T qCriterion(int iX, int iY, int iZ) const;
 private:
-  BlockStructure3D<T,Lattice> const& block;
+  BlockLatticeStructure3D<T,Lattice> const& block;
   bool pointsToDefaultFields;
   mutable AnalysisFieldsImpl3D<T,Lattice> defaultFields;
   mutable AnalysisFields3D<T,Lattice>     fields;

@@ -24,7 +24,7 @@
 #ifndef IMAGE_WRITER_HH
 #define IMAGE_WRITER_HH
 
-#include "complexGrids/mpiManager/mpiManager.h"
+#include "communication/mpiManager.h"
 #include <fstream>
 #include <cstdlib>
 #include <cmath>
@@ -46,55 +46,58 @@ namespace graphics {
 
 template<typename T>
 ImageWriter<T>::ImageWriter(std::string const& map)
-  : clout(std::cout,"ImageWriter"),
-    colorRange(1024),
-    numColors(1024),
-    colorMap( mapGenerators::generateMap<T>(map) )
+  : clout(std::cout,"ImageWriter"), _colorRange(1024), _numColors(1024),
+    _colorMap( mapGenerators::generateMap<T>(map) )
 { }
 
 template<typename T>
-ImageWriter<T>::ImageWriter(std::string const& map, int colorRange_, int numColors_)
-  : clout(std::cout,"ImageWriter"),
-    colorRange(colorRange_),
-    numColors(numColors_),
-    colorMap( mapGenerators::generateMap<T>(map) )
+ImageWriter<T>::ImageWriter(std::string const& map, int colorRange, int numColors)
+  : clout(std::cout,"ImageWriter"), _colorRange(colorRange), _numColors(numColors),
+    _colorMap( mapGenerators::generateMap<T>(map) )
 { }
 
 template<typename T>
-void ImageWriter<T>::setMap(std::string const& map, int colorRange_, int numColors_) {
-  colorRange = colorRange_;
-  numColors  = numColors_;
-  colorMap   = mapGenerators::generateMap<T>(map);
+void ImageWriter<T>::setMap(std::string const& map, int colorRange, int numColors) {
+  _colorRange = colorRange;
+  _numColors  = numColors;
+  _colorMap   = mapGenerators::generateMap<T>(map);
 }
 
+/// the whole work of .gif is here
+/// fist create a .ppm file the via imagemagick .gif
 template<typename T>
 void ImageWriter<T>::writePpm(std::string const& fName,
-                              ScalarFieldBase2D<T> const& field,
-                              T minVal, T maxVal) const
+  ScalarFieldBase2D<T> const& field, T minVal, T maxVal) const
 {
   ScalarField2D<T> localField(field.getNx(), field.getNy());
   localField.construct();
   copyDataBlock(field, localField);
   if (singleton::mpi().isMainProcessor()) {
+    // wenn uebergebene min-max Werte sinnlos sind.
     if (std::fabs(minVal-maxVal)<1.e-12) {
       minVal = computeMin(localField);
       maxVal = computeMax(localField);
     }
     std::string fullName = singleton::directories().getImageOutDir() + fName+".ppm";
     std::ofstream fout(fullName.c_str());
+    // write header
     fout << "P3\n";
+    // dimension of image
     fout << localField.getNx() << " " << localField.getNy() << "\n";
-    fout << (colorRange-1) << "\n";
+    // dynamic range
+    fout << (_colorRange-1) << "\n";
 
-    for (int iY=localField.getNy()-1; iY>=0; --iY) {
-      for (int iX=0; iX<localField.getNx(); ++iX) {
-        T outputValue = ( (localField.get(iX,iY)-minVal)/(maxVal-minVal)/(T)numColors*(T)(numColors-1) );
+    for (int iY=localField.getNy()-1; iY>=0; --iY)
+    { // laeuft von oben links los, und dann x0, x1, ...
+      for (int iX=0; iX<localField.getNx(); ++iX)
+      {
+        T outputValue = ( (localField.get(iX,iY)-minVal)/(maxVal-minVal)/(T)_numColors*(T)(_numColors-1) );
         if (outputValue <   T()) outputValue = T();
-        if (outputValue >= (T)1) outputValue = (T)(numColors-1)/(T)numColors;
-        rgb<T> color = colorMap.get(outputValue);
-        fout << (int) (color.r*(colorRange-1)) << " "
-             << (int) (color.g*(colorRange-1)) << " "
-             << (int) (color.b*(colorRange-1)) << "\n";
+        if (outputValue >= (T)1) outputValue = (T)(_numColors-1)/(T)_numColors;
+        rgb<T> color = _colorMap.get(outputValue);
+        fout << (int) (color.r*(_colorRange-1)) << " "
+             << (int) (color.g*(_colorRange-1)) << " "
+             << (int) (color.b*(_colorRange-1)) << "\n";
       }
     }
   }
@@ -102,8 +105,7 @@ void ImageWriter<T>::writePpm(std::string const& fName,
 
 template<typename T>
 void ImageWriter<T>::writeGif(std::string const& fName,
-                              ScalarFieldBase2D<T> const& field,
-                              T minVal, T maxVal) const
+  ScalarFieldBase2D<T> const& field, T minVal, T maxVal) const
 {
   writePpm(fName, field, minVal, maxVal);
 
@@ -119,16 +121,14 @@ void ImageWriter<T>::writeGif(std::string const& fName,
 
     int retConv = system(convCommand.c_str());
     if (retConv!=0) clout << "Error: ImageMagick convert command failed" << std::endl;
-    int retRm = system(rmCommand.c_str());
-    if (retRm!=0) clout << "Error: removing temporary ppm file failed" << std::endl;
+//    int retRm = system(rmCommand.c_str());
+//    if (retRm!=0) clout << "Error: removing temporary ppm file failed" << std::endl;
   }
 }
 
 template<typename T>
 void ImageWriter<T>::writeGif(std::string const& fName,
-                              ScalarFieldBase2D<T> const& field,
-                              T minVal, T maxVal,
-                              T sizeX, T sizeY) const
+  ScalarFieldBase2D<T> const& field, T minVal, T maxVal, T sizeX, T sizeY) const
 {
   writePpm(fName, field, minVal, maxVal);
   if (singleton::mpi().isMainProcessor()) {
@@ -145,8 +145,8 @@ void ImageWriter<T>::writeGif(std::string const& fName,
     std::string rmCommand =
       std::string("/bin/rm ") +
       singleton::directories().getImageOutDir() + fName + ".ppm";
-    int retRm = system(rmCommand.c_str());
-    if (retRm!=0) clout << "Error: removing temporary ppm file failed" << std::endl;
+//    int retRm = system(rmCommand.c_str());
+//    if (retRm!=0) clout << "Error: removing temporary ppm file failed" << std::endl;
   }
 }
 
@@ -167,14 +167,14 @@ void ImageWriter<T>::writeScaledGif(std::string const& fName,
 
 template<typename T>
 void ImageWriter<T>::writeScaledPpm(std::string const& fName,
-                                    ScalarFieldBase2D<T> const& field) const
+  ScalarFieldBase2D<T> const& field) const
 {
   writePpm(fName, field, T(), T());
 }
 
 template<typename T>
 void ImageWriter<T>::writeText(std::string const& fName,
-                               ScalarFieldBase2D<T> const& field) const
+  ScalarFieldBase2D<T> const& field) const
 {
   ScalarField2D<T> localField(field.getNx(), field.getNy());
   localField.construct();

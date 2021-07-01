@@ -31,10 +31,11 @@
 #include "olbDebug.h"
 #include "postProcessing.h"
 #include "dataFields2D.h"
-#include "blockStructure2D.h"
+#include "blockLatticeStructure2D.h"
 #include "dataAnalysisBase2D.h"
 #include "multiPhysics.h"
-#include "blockGeometryStatistics2D.h"
+#include "geometry/blockGeometry2D.h"
+#include "geometry/blockGeometryStatistics2D.h"
 #include "latticeStatistics.h"
 
 
@@ -57,7 +58,7 @@ template<typename T, template<typename U> class Lattice> class BlockLatticeUnSer
  * This class is not intended to be derived from.
  */
 template<typename T, template<typename U> class Lattice>
-class BlockLattice2D : public BlockStructure2D<T,Lattice> {
+class BlockLattice2D : public BlockLatticeStructure2D<T,Lattice> {
 public:
   typedef std::vector<PostProcessor2D<T,Lattice>*> PostProcVector;
 public:
@@ -93,12 +94,19 @@ public:
   /// Define the dynamics on a rectangular domain
   virtual void defineDynamics (int x0, int x1, int y0, int y1,
                                Dynamics<T,Lattice>* dynamics );
+  virtual void defineDynamics(BlockGeometryStructure2D<T>& blockGeometry, int material,
+                              Dynamics<T,Lattice>* dynamics) {
+    for (int iX = 0; iX < getNx(); iX++) {
+      for (int iY = 0; iY < getNy(); iY++) {
+        if (blockGeometry.getMaterial(iX, iY) == material) {
+          get(iX,iY).defineDynamics(dynamics);
+        }
+      }
+    }
+  };
+
   /// Define the dynamics on a lattice site
   virtual void defineDynamics(int iX, int iY, Dynamics<T,Lattice>* dynamics);
-  /// Define the dynamics by material
-  virtual void defineDynamics(BlockGeometryStatistics2D* blockGeoSta, Dynamics<T,Lattice>* dynamics, int material);
-  /// Define the dynamics by material on a 2D sub-box
-  virtual void defineDynamics(BlockGeometryStatistics2D* blockGeoSta, int x0_, int x1_, int y0_, int y1_, Dynamics<T,Lattice>* dynamics, int material);
   /// Specify whether statistics measurements are done on given rect. domain
   virtual void specifyStatisticsStatus (int x0, int x1, int y0, int y1,
                                         bool status );
@@ -170,7 +178,6 @@ public:
   virtual DataUnSerializer<T>& getSubUnSerializer (
     int x0_, int x1_, int y0_, int y1_,
     IndexOrdering::OrderingT ordering );
-  virtual MultiDataDistribution2D getDataDistribution() const;
   virtual SpatiallyExtendedObject2D* getComponent(int iBlock);
   virtual SpatiallyExtendedObject2D const* getComponent(int iBlock) const;
   virtual multiPhysics::MultiPhysicsId getMultiPhysicsId() const;

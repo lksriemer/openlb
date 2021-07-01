@@ -28,3 +28,4 @@
 #include "benchmarkUtil.h"
 #include "olbAlgorithms.h"
 #include "timer.h"
+#include "vectorHelpers.h"
