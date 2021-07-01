@@ -99,7 +99,6 @@ void STLreader<T>::read(BlockGeometry3D &matrix, unsigned direction,
   assert( voxelNumber != 0.0 );
   double voxelSize = geometrySize / (double) voxelNumber;
   read(matrix, voxelSize, pad, fraction, samples);
-
 }
 
 template<typename T>
@@ -165,7 +164,7 @@ void STLreader<T>::read(CuboidGeometry3D<T> &cGeometry, BlockGeometry3D &matrix,
   _nX = (double(_geometry.max(0)) - double(_geometry.min(0)))/voxelSize + 3;
   _nY = (double(_geometry.max(1)) - double(_geometry.min(1)))/voxelSize + 3;
   _nZ = (double(_geometry.max(2)) - double(_geometry.min(2)))/voxelSize + 3;
-  read(cGeometry, matrix, voxelSize, minCuboidSize, pad);
+  readOctree(cGeometry, matrix, voxelSize, minCuboidSize, pad);
 }
 
 template <typename T>
@@ -250,7 +249,7 @@ void STLreader<T>::setMaterialForNode(BlockGeometry3D &matrix, DNode3D &node, in
 }
 
 template<typename T>
-void STLreader<T>::read(CuboidGeometry3D<T> &cGeometry, BlockGeometry3D &matrix, double voxelSize, unsigned minCuboidSize, unsigned pad) const {
+void STLreader<T>::readOctree(CuboidGeometry3D<T> &cGeometry, BlockGeometry3D &matrix, double voxelSize, unsigned minCuboidSize, unsigned pad) const {
   unsigned limitHeight = 15;
 
   unsigned currentDepth = 0;

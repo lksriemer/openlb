@@ -97,7 +97,7 @@ public:
    * \param minCuboidSize The size of the smallest cuboid (each side will be
    *            greater or equal)
    */
-  void read(CuboidGeometry3D<T> &cGeometry, BlockGeometry3D &matrix, double voxelSize, unsigned minCuboidSize=10, unsigned pad=0) const;
+  void readOctree(CuboidGeometry3D<T> &cGeometry, BlockGeometry3D &matrix, double voxelSize, unsigned minCuboidSize=10, unsigned pad=0) const;
 
   void setInnerMaterialNo(unsigned no);
   void setOuterMaterialNo(unsigned no);
