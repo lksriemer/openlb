@@ -52,6 +52,7 @@ BlockLattice3D<T,Lattice>::
 {
     allocateMemory();
     resetPostProcessors();
+    statistics = new LatticeStatistics<T>;
 }
 
 /** During destruction, the memory for the lattice and the contained
@@ -63,10 +64,13 @@ BlockLattice3D<T,Lattice>::~BlockLattice3D()
 {
     releaseMemory();
     clearPostProcessors();
+    delete statistics;
 }
 
-/** The whole lattice is duplicated, but not the dynamics objects
- * pointed to by the cells.
+/** The whole data of the lattice is duplicated. This includes
+ * both particle distribution function and external fields.
+ * \warning The dynamics objects and postProcessors are not copied
+ * \param rhs the lattice to be duplicated
  */
 template<typename T, template<typename U> class Lattice>
 BlockLattice3D<T,Lattice>::BlockLattice3D (
@@ -76,6 +80,7 @@ BlockLattice3D<T,Lattice>::BlockLattice3D (
     ny = rhs.ny;
     nz = rhs.ny;
     allocateMemory();
+    resetPostProcessors();
     for (int iX=0; iX<nx; ++iX) {
         for (int iY=0; iY<ny; ++iY) {
             for (int iZ=0; iZ<nz; ++iZ) {
@@ -83,10 +88,13 @@ BlockLattice3D<T,Lattice>::BlockLattice3D (
             }
         }
     }
+    statistics = new LatticeStatistics<T> (*rhs.statistics);
 }
 
 /** The current lattice is deallocated, then the lattice from the rhs
- * is duplicated.
+ * is duplicated. This includes both particle distribution function
+ * and external fields. 
+ * \warning The dynamics objects and postProcessors are not copied
  * \param rhs the lattice to be duplicated
  */
 template<typename T, template<typename U> class Lattice>
@@ -108,6 +116,8 @@ void BlockLattice3D<T,Lattice>::swap(BlockLattice3D& rhs) {
     std::swap(nz, rhs.nz);
     std::swap(rawData, rhs.rawData);
     std::swap(grid, rhs.grid);
+    postProcessors.swap(rhs.postProcessors);
+    std::swap(statistics, rhs.statistics);
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -403,7 +413,7 @@ void BlockLattice3D<T,Lattice>::postProcess (
         int x0_, int x1_, int y0_, int y1_, int z0_, int z1_)
 {
     for (unsigned iPr=0; iPr<postProcessors.size(); ++iPr) {
-        postProcessors[iPr] -> process(*this, x0_, x1_, y0_, y1_, z0_, z1_);
+        postProcessors[iPr] -> processSubDomain(*this, x0_, x1_, y0_, y1_, z0_, z1_);
     }
 }
 
@@ -416,14 +426,14 @@ void BlockLattice3D<T,Lattice>::subscribeReductions(Reductor<T>& reductor) {
 
 template<typename T, template<typename U> class Lattice>
 LatticeStatistics<T>& BlockLattice3D<T,Lattice>::getStatistics() {
-    return statistics;
+    return *statistics;
 }
 
 template<typename T, template<typename U> class Lattice>
 LatticeStatistics<T> const&
     BlockLattice3D<T,Lattice>::getStatistics() const
 {
-    return statistics;
+    return *statistics;
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -532,6 +542,8 @@ void BlockLattice3D<T,Lattice>::bulkStream (
     }
 }
 
+#ifndef PARALLEL_MODE_OMP // OpenMP parallel version is at the end
+                          // of this file
 /** This method is fast, but it is erroneous when applied to boundary
  * cells.
  * \sa collideAndStream(int,int,int,int,int,int)
@@ -548,70 +560,125 @@ void BlockLattice3D<T,Lattice>::bulkCollideAndStream (
     OLB_PRECONDITION(z0>=0 && z1<nz);
     OLB_PRECONDITION(z1>=z0);
 
-    #ifdef PARALLEL_MODE_OMP
-        if (omp.get_size() <= x1-x0+1) {
-            #pragma omp parallel
-                {
-                loadBalancer loadbalance(omp.get_rank(), omp.get_size(), x1-x0+1, x0);
-                int iX, iY, iZ, iPop;
-
-                iX=loadbalance.get_firstGlobNum();
-                for (int iY=y0; iY<=y1; ++iY) {
-                    for (int iZ=z0; iZ<=z1; ++iZ) {
-                        grid[iX][iY][iZ].collide();
-                        grid[iX][iY][iZ].revert();
-                        }
-                }
-
-                for (iX=loadbalance.get_firstGlobNum()+1; iX<=loadbalance.get_lastGlobNum(); ++iX) {
-                    for (iY=y0; iY<=y1; ++iY) {
-                        for (iZ=z0; iZ<=z1; ++iZ) {
-                            grid[iX][iY][iZ].collide();
-                            /** The method beneath doesnt work with Intel compiler 9.1044 and 9.1046 for Itanium prozessors
-                             *    lbHelpers<T,Lattice>::swapAndStream3D(grid, iX, iY, iZ);
-                             *  Therefore we use:
-                             */
-                                int half = Lattice<T>::q/2;
-                                for (int iPop=1; iPop<=half; ++iPop) {
-                                    int nextX = iX + Lattice<T>::c[iPop][0];
-                                    int nextY = iY + Lattice<T>::c[iPop][1];
-                                    int nextZ = iZ + Lattice<T>::c[iPop][2];
-                                    T fTmp                          = grid[iX][iY][iZ][iPop];
-                                    grid[iX][iY][iZ][iPop]          = grid[iX][iY][iZ][iPop+half];
-                                    grid[iX][iY][iZ][iPop+half]     = grid[nextX][nextY][nextZ][iPop];
-                                    grid[nextX][nextY][nextZ][iPop] = fTmp;
-                                }
-                        }
-                    }
-                }
-
-                #pragma omp barrier
-
-                iX=loadbalance.get_firstGlobNum();
-                for (iY=y0; iY<=y1; ++iY) {
-                    for (iZ=z0; iZ<=z1; ++iZ) {
-                        for (iPop=1; iPop<=Lattice<T>::q/2; ++iPop) {
-                            int nextX = iX + Lattice<T>::c[iPop][0];
-                            int nextY = iY + Lattice<T>::c[iPop][1];
-                            int nextZ = iZ + Lattice<T>::c[iPop][2];
-                            std::swap(grid[iX][iY][iZ][iPop+Lattice<T>::q/2],
-                                grid[nextX][nextY][nextZ][iPop]);
-                        }
-                    }
-                }
-                }
+    for (int iX=x0; iX<=x1; ++iX) {
+        for (int iY=y0; iY<=y1; ++iY) {
+            for (int iZ=z0; iZ<=z1; ++iZ) {
+                grid[iX][iY][iZ].collide();
+                lbHelpers<T,Lattice>::swapAndStream3D(grid, iX, iY, iZ);
             }
-        else {
-            for (int iX=x0; iX<=x1; ++iX) {
-                for (int iY=y0; iY<=y1; ++iY) {
-                    for (int iZ=z0; iZ<=z1; ++iZ) {
-                        grid[iX][iY][iZ].collide();
-                        lbHelpers<T,Lattice>::swapAndStream3D(grid, iX, iY, iZ);
+        }
+    }
+}
+#endif  // not defined PARALLEL_MODE_OMP
+
+template<typename T, template<typename U> class Lattice>
+void BlockLattice3D<T,Lattice>::makePeriodic() {
+    int maxX = getNx()-1;
+    int maxY = getNy()-1;
+    int maxZ = getNz()-1;
+    periodicSurface(0,      0,      0,    maxY,   0,    maxZ);
+    periodicSurface(maxX,   maxX,   0,    maxY,   0,    maxZ);
+    periodicSurface(1,      maxX-1, 0,    0,      0,    maxZ);
+    periodicSurface(1,      maxX-1, maxY, maxY,   0,    maxZ);
+    periodicSurface(1,      maxX-1, 1,    maxY-1, 0,    0);
+    periodicSurface(1,      maxX-1, 1,    maxY-1, maxZ, maxZ);
+}
+
+template<typename T, template<typename U> class Lattice>
+void BlockLattice3D<T,Lattice>::periodicSurface (
+        int x0, int x1, int y0, int y1, int z0, int z1)
+{
+    for (int iX=x0; iX<=x1; ++iX) {
+        for (int iY=y0; iY<=y1; ++iY) {
+            for (int iZ=z0; iZ<=z1; ++iZ) {
+                for (int iPop=1; iPop<=Lattice<T>::q/2; ++iPop) {
+                    int nextX = iX + Lattice<T>::c[iPop][0];
+                    int nextY = iY + Lattice<T>::c[iPop][1];
+                    int nextZ = iZ + Lattice<T>::c[iPop][2];
+                    if ( nextX<0 || nextX>=getNx() ||
+                         nextY<0 || nextY>=getNy() ||
+                         nextZ<0 || nextZ>=getNz() )
+                    {
+                        nextX = (nextX+getNx())%getNx();
+                        nextY = (nextY+getNy())%getNy();
+                        nextZ = (nextZ+getNz())%getNz();
+                        std::swap (
+                            grid[iX][iY][iZ]         [iPop+Lattice<T>::q/2],
+                            grid[nextX][nextY][nextZ][iPop] );
                     }
                 }
             }
         }
-    #else
+    }
+}
+
+//// OpenMP implementation of the method bulkCollideAndStream,
+//   by Mathias Krause                                         ////
+#ifdef PARALLEL_MODE_OMP
+template<typename T, template<typename U> class Lattice>
+void BlockLattice3D<T,Lattice>::bulkCollideAndStream (
+    int x0, int x1, int y0, int y1, int z0, int z1 )
+{
+    OLB_PRECONDITION(x0>=0 && x1<nx);
+    OLB_PRECONDITION(x1>=x0);
+    OLB_PRECONDITION(y0>=0 && y1<ny);
+    OLB_PRECONDITION(y1>=y0);
+    OLB_PRECONDITION(z0>=0 && z1<nz);
+    OLB_PRECONDITION(z1>=z0);
+
+    if (omp.get_size() <= x1-x0+1) {
+        #pragma omp parallel
+            {
+            loadBalancer loadbalance(omp.get_rank(), omp.get_size(), x1-x0+1, x0);
+            int iX, iY, iZ, iPop;
+
+            iX=loadbalance.get_firstGlobNum();
+            for (int iY=y0; iY<=y1; ++iY) {
+                for (int iZ=z0; iZ<=z1; ++iZ) {
+                    grid[iX][iY][iZ].collide();
+                    grid[iX][iY][iZ].revert();
+                    }
+            }
+
+            for (iX=loadbalance.get_firstGlobNum()+1; iX<=loadbalance.get_lastGlobNum(); ++iX) {
+                for (iY=y0; iY<=y1; ++iY) {
+                    for (iZ=z0; iZ<=z1; ++iZ) {
+                        grid[iX][iY][iZ].collide();
+                        /** The method beneath doesnt work with Intel
+                         *  compiler 9.1044 and 9.1046 for Itanium prozessors
+                         *    lbHelpers<T,Lattice>::swapAndStream3D(grid, iX, iY, iZ);
+                         *  Therefore we use:
+                         */
+                        int half = Lattice<T>::q/2;
+                        for (int iPop=1; iPop<=half; ++iPop) {
+                            int nextX = iX + Lattice<T>::c[iPop][0];
+                            int nextY = iY + Lattice<T>::c[iPop][1];
+                            int nextZ = iZ + Lattice<T>::c[iPop][2];
+                            T fTmp                          = grid[iX][iY][iZ][iPop];
+                            grid[iX][iY][iZ][iPop]          = grid[iX][iY][iZ][iPop+half];
+                            grid[iX][iY][iZ][iPop+half]     = grid[nextX][nextY][nextZ][iPop];
+                            grid[nextX][nextY][nextZ][iPop] = fTmp;
+                        }
+                    }
+                }
+            }
+
+            #pragma omp barrier
+            iX=loadbalance.get_firstGlobNum();
+            for (iY=y0; iY<=y1; ++iY) {
+                for (iZ=z0; iZ<=z1; ++iZ) {
+                    for (iPop=1; iPop<=Lattice<T>::q/2; ++iPop) {
+                        int nextX = iX + Lattice<T>::c[iPop][0];
+                        int nextY = iY + Lattice<T>::c[iPop][1];
+                        int nextZ = iZ + Lattice<T>::c[iPop][2];
+                        std::swap(grid[iX][iY][iZ][iPop+Lattice<T>::q/2],
+                            grid[nextX][nextY][nextZ][iPop]);
+                    }
+                }
+            }
+        }
+    }
+    else {
         for (int iX=x0; iX<=x1; ++iX) {
             for (int iY=y0; iY<=y1; ++iY) {
                 for (int iZ=z0; iZ<=z1; ++iZ) {
@@ -620,134 +687,10 @@ void BlockLattice3D<T,Lattice>::bulkCollideAndStream (
                 }
             }
         }
-    #endif
-}
-
-template<typename T, template<typename U> class Lattice>
-void BlockLattice3D<T,Lattice>::makePeriodic()
-{
-    for (int iX = 0; iX < getNx(); ++iX)
-    {
-        for (int iY = 0; iY < getNy(); ++iY)
-        {
-            for (int iPop=1; iPop<=Lattice<T>::q/2; ++iPop)
-            {
-                int nextX = iX + Lattice<T>::c[iPop][0];
-                int nextY = iY + Lattice<T>::c[iPop][1];
-
-                int nextZ = Lattice<T>::c[iPop][2];
-                if ( nextX<0 || nextX>=getNx() ||
-                     nextY<0 || nextY>=getNy() ||
-                     nextZ<0 || nextZ>=getNz() )
-                {
-                    nextX = (nextX+getNx())%getNx();
-                    nextY = (nextY+getNy())%getNy();
-                    nextZ = (nextZ+getNz())%getNz();
-                    std::swap (
-                        grid[iX]   [iY]   [0]    [iPop+Lattice<T>::q/2],
-                        grid[nextX][nextY][nextZ][iPop] );
-                }
-
-                nextX = iX + Lattice<T>::c[iPop][0];
-                nextY = iY + Lattice<T>::c[iPop][1];
-                nextZ = getNz()-1 + Lattice<T>::c[iPop][2];
-                if ( nextX<0 || nextX>=getNx() ||
-                     nextY<0 || nextY>=getNy() ||
-                     nextZ<0 || nextZ>=getNz() )
-                {
-                    nextX = (nextX+getNx())%getNx();
-                    nextY = (nextY+getNy())%getNy();
-                    nextZ = (nextZ+getNz())%getNz();
-                    std::swap (
-                        grid[iX]   [iY]   [getNz()-1][iPop+Lattice<T>::q/2],
-                        grid[nextX][nextY][nextZ]    [iPop] );
-                }
-            }
-        }
-    }
-
-    for (int iX = 0; iX < getNx(); ++iX)
-    {
-        for (int iZ = 0; iZ < getNz(); ++iZ)
-        {
-            for (int iPop=1; iPop<=Lattice<T>::q/2; ++iPop)
-            {
-                int nextX = iX + Lattice<T>::c[iPop][0];
-                int nextZ = iZ + Lattice<T>::c[iPop][2];
-
-                int nextY = Lattice<T>::c[iPop][1];
-                if ( nextX<0 || nextX>=getNx() ||
-                     nextY<0 || nextY>=getNy() ||
-                     nextZ<0 || nextZ>=getNz() )
-                {
-                    nextX = (nextX+getNx())%getNx();
-                    nextY = (nextY+getNy())%getNy();
-                    nextZ = (nextZ+getNz())%getNz();
-                    std::swap (
-                        grid[iX]   [0]    [iZ]   [iPop+Lattice<T>::q/2],
-                        grid[nextX][nextY][nextZ][iPop] );
-                }
-
-                nextX = iX + Lattice<T>::c[iPop][0];
-                nextZ = iZ + Lattice<T>::c[iPop][2];
-
-                nextY = getNy() - 1 + Lattice<T>::c[iPop][1];
-                if ( nextX<0 || nextX>=getNx() ||
-                     nextY<0 || nextY>=getNy() ||
-                     nextZ<0 || nextZ>=getNz() )
-                {
-                    nextX = (nextX+getNx())%getNx();
-                    nextY = (nextY+getNy())%getNy();
-                    nextZ = (nextZ+getNz())%getNz();
-                    std::swap (
-                        grid[iX]   [getNy()-1][iZ]   [iPop+Lattice<T>::q/2],
-                        grid[nextX][nextY]    [nextZ][iPop] );
-                }
-            }
-        }
-    }
-
-    for (int iY = 0; iY < getNy(); ++iY)
-    {
-        for (int iZ = 0; iZ < getNz(); ++iZ)
-        {
-            for (int iPop=1; iPop<=Lattice<T>::q/2; ++iPop)
-            {
-                int nextY = iY + Lattice<T>::c[iPop][1];
-                int nextZ = iZ + Lattice<T>::c[iPop][2];
-
-                int nextX = Lattice<T>::c[iPop][0];
-                if ( nextX<0 || nextX>=getNx() ||
-                     nextY<0 || nextY>=getNy() ||
-                     nextZ<0 || nextZ>=getNz() )
-                {
-                    nextX = (nextX+getNx())%getNx();
-                    nextY = (nextY+getNy())%getNy();
-                    nextZ = (nextZ+getNz())%getNz();
-                    std::swap (
-                        grid[0]    [iY]   [iZ]   [iPop+Lattice<T>::q/2],
-                        grid[nextX][nextY][nextZ][iPop] );
-                }
-
-                nextY = iY + Lattice<T>::c[iPop][1];
-                nextZ = iZ + Lattice<T>::c[iPop][2];
-
-                nextX = getNx() - 1 + Lattice<T>::c[iPop][0];
-                if ( nextX<0 || nextX>=getNx() ||
-                     nextY<0 || nextY>=getNy() ||
-                     nextZ<0 || nextZ>=getNz() )
-                {
-                    nextX = (nextX+getNx())%getNx();
-                    nextY = (nextY+getNy())%getNy();
-                    nextZ = (nextZ+getNz())%getNz();
-                    std::swap (
-                        grid[getNx()-1][iY]   [iZ]   [iPop+Lattice<T>::q/2],
-                        grid[nextX]    [nextY][nextZ][iPop] );
-                }
-            }
-        }
     }
 }
+
+#endif // defined PARALLEL_MODE_OMP
 
 }  // namespace olb
 

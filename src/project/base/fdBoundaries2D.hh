@@ -113,8 +113,8 @@ template<typename T, template<typename U> class Lattice, typename Dynamics,
          class HydroBM,
          int direction, int orientation>
 void StraightFdBoundary2D<T,Lattice,Dynamics,HydroBM,direction,orientation>::
-    process(BlockLattice2D<T,Lattice>& blockLattice,
-            int x0_, int x1_, int y0_, int y1_)
+    processSubDomain(BlockLattice2D<T,Lattice>& blockLattice,
+                     int x0_, int x1_, int y0_, int y1_)
 {
     using namespace olb::util::tensorIndices2D;
 
@@ -173,7 +173,7 @@ template<typename T, template<typename U> class Lattice, typename Dynamics,
 void StraightFdBoundary2D<T,Lattice,Dynamics,HydroBM,direction,orientation>::
     process(BlockLattice2D<T,Lattice>& blockLattice)
 {
-    process(blockLattice, x0, x1, y0, y1);
+    processSubDomain(blockLattice, x0, x1, y0, y1);
 }
 
 template<typename T, template<typename U> class Lattice, typename Dynamics,
@@ -404,8 +404,8 @@ void ConvexVelocityCorner2D<T, Lattice, Dynamics, xNormal, yNormal>::
 template<typename T, template<typename U> class Lattice, typename Dynamics,
          int xNormal, int yNormal>
 void ConvexVelocityCorner2D<T, Lattice, Dynamics, xNormal, yNormal>::
-    process(BlockLattice2D<T,Lattice>& blockLattice,
-            int x0_, int x1_, int y0_, int y1_ )
+    processSubDomain(BlockLattice2D<T,Lattice>& blockLattice,
+                     int x0_, int x1_, int y0_, int y1_ )
 {
     if (util::contained(x, y, x0_, x1_, y0_, y1_)) {
         process(blockLattice);

@@ -85,7 +85,7 @@ void iniPressure3D(BlockLatticeView3D<T,Lattice> lattice, T epsilon, T lambda) {
     T maxResidue = (T)1;
     do {
         for (int iX=1; iX<lx-1; ++iX) {
-            for (int iY=1; iY<ly-1; ++iX) {
+            for (int iY=1; iY<ly-1; ++iY) {
                 pressure.get(iX,iY,0)    = pressure.get(iX,iY,1);
                 pressure.get(iX,iY,lz-1) = pressure.get(iX,iY,lz-2);
             }

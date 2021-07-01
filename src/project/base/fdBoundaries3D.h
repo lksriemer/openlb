@@ -62,9 +62,9 @@ public:
     virtual int extent() const { return 1; }
     virtual int extent(int whichDirection) const { return 1; }
     virtual void process(BlockLattice3D<T,Lattice>& blockLattice);
-    virtual void process(BlockLattice3D<T,Lattice>& blockLattice,
-                         int x0_, int x1_, int y0_, int y1_,
-                         int z0_, int z1_ );
+    virtual void processSubDomain(BlockLattice3D<T,Lattice>& blockLattice,
+                                  int x0_, int x1_, int y0_, int y1_,
+                                  int z0_, int z1_ );
 private:
     void initialize(BlockLattice3D<T,Lattice>& blockLattice);
     template<int deriveDirection>
@@ -117,9 +117,9 @@ public:
     virtual int extent() const { return 2; }
     virtual int extent(int whichDirection) const { return 2; }
     virtual void process(BlockLattice3D<T,Lattice>& blockLattice);
-    virtual void process(BlockLattice3D<T,Lattice>& blockLattice,
-                         int x0_, int x1_, int y0_, int y1_,
-                         int z0_, int z1_ );
+    virtual void processSubDomain(BlockLattice3D<T,Lattice>& blockLattice,
+                                  int x0_, int x1_, int y0_, int y1_,
+                                  int z0_, int z1_ );
 private:
     void initialize(BlockLattice3D<T,Lattice>& blockLattice);
     T getNeighborRho(int x, int y, int z, int step1, int step2,
@@ -161,9 +161,9 @@ public:
     virtual int extent() const { return 2; }
     virtual int extent(int whichDirection) const { return 2; }
     virtual void process(BlockLattice3D<T,Lattice>& blockLattice);
-    virtual void process(BlockLattice3D<T,Lattice>& blockLattice,
-                         int x0_, int x1_, int y0_, int y1_,
-                         int z0_, int z1_ );
+    virtual void processSubDomain(BlockLattice3D<T,Lattice>& blockLattice,
+                                  int x0_, int x1_, int y0_, int y1_,
+                                  int z0_, int z1_ );
 private:
     void initialize(BlockLattice3D<T,Lattice>& blockLattice);
     int x,y,z;

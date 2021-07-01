@@ -223,7 +223,7 @@ private:
 private:
     fPop                 f;         ///< distribution functions
     External             external;  ///< external scalars
-    bool                 takesStat; ///< are statistics taken?
+    bool                 takesStat; ///< is statistics taken?
     Dynamics<T,Lattice>* dynamics;  ///< local LB dynamics
 };
 

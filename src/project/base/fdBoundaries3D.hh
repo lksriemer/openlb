@@ -128,8 +128,8 @@ template<typename T, template<typename U> class Lattice, typename Dynamics,
          class HydroBM,
          int direction, int orientation>
 void PlaneFdBoundary3D<T,Lattice,Dynamics,HydroBM,direction,orientation>::
-    process(BlockLattice3D<T,Lattice>& blockLattice,
-            int x0_, int x1_, int y0_, int y1_, int z0_, int z1_)
+    processSubDomain(BlockLattice3D<T,Lattice>& blockLattice,
+                     int x0_, int x1_, int y0_, int y1_, int z0_, int z1_)
 {
     using namespace olb::util::tensorIndices3D;
 
@@ -206,7 +206,7 @@ template<typename T, template<typename U> class Lattice, typename Dynamics,
 void PlaneFdBoundary3D<T,Lattice,Dynamics,HydroBM,direction,orientation>::
     process(BlockLattice3D<T,Lattice>& blockLattice)
 {
-    process(blockLattice, x0, x1, y0, y1, z0, z1);
+    processSubDomain(blockLattice, x0, x1, y0, y1, z0, z1);
 }
 
 
@@ -354,8 +354,8 @@ void ConvexVelocityEdge3D<T,Lattice,Dynamics, plane, normal1,normal2>::
 template<typename T, template<typename U> class Lattice, typename Dynamics,
          int plane, int normal1, int normal2>
 void ConvexVelocityEdge3D<T,Lattice,Dynamics, plane, normal1,normal2>::
-    process(BlockLattice3D<T,Lattice>& blockLattice,
-            int x0_, int x1_, int y0_, int y1_, int z0_, int z1_)
+    processSubDomain(BlockLattice3D<T,Lattice>& blockLattice,
+                     int x0_, int x1_, int y0_, int y1_, int z0_, int z1_)
 {
     using namespace olb::util::tensorIndices3D;
 
@@ -430,7 +430,7 @@ template<typename T, template<typename U> class Lattice, typename Dynamics,
 void ConvexVelocityEdge3D<T,Lattice,Dynamics, plane, normal1,normal2>::
     process(BlockLattice3D<T,Lattice>& blockLattice)
 {
-    process(blockLattice, x0, x1, y0, y1, z0, z1);
+    processSubDomain(blockLattice, x0, x1, y0, y1, z0, z1);
 }
 
 
@@ -690,8 +690,8 @@ void ConvexVelocityCorner3D<T, Lattice,Dynamics, xNormal, yNormal, zNormal>::
 template<typename T, template<typename U> class Lattice, typename Dynamics,
          int xNormal, int yNormal, int zNormal>
 void ConvexVelocityCorner3D<T, Lattice,Dynamics, xNormal, yNormal, zNormal>::
-    process(BlockLattice3D<T,Lattice>& blockLattice,
-            int x0_, int x1_, int y0_, int y1_, int z0_, int z1_)
+    processSubDomain(BlockLattice3D<T,Lattice>& blockLattice,
+                     int x0_, int x1_, int y0_, int y1_, int z0_, int z1_)
 {
     if (util::contained(x, y, z, x0_, x1_, y0_, y1_, z0_, z1_)) {
         process(blockLattice);

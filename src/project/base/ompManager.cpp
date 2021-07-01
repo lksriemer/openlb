@@ -44,11 +44,7 @@
             omp_set_dynamic(dynamicThreads);
         }
 
-        ompManager& omp() {
-            static ompManager ompInstance;
-            #pragma omp threadprivate (ompInstance)
-            return ompInstance;
-        }
+        ompManager omp;
 
     #endif
 

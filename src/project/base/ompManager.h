@@ -36,6 +36,9 @@
                 void set_dynamic(int dynamicThreads); 
         };
 
+        extern ompManager omp;
+        #pragma omp threadprivate (omp)
+
     #endif
 
 #endif

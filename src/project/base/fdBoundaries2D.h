@@ -61,8 +61,8 @@ public:
     virtual int extent() const { return 1; }
     virtual int extent(int whichDirection) const { return 1; }
     virtual void process(BlockLattice2D<T,Lattice>& blockLattice);
-    virtual void process(BlockLattice2D<T,Lattice>& blockLattice,
-                         int x0_, int x1_, int y0_, int y1_ );
+    virtual void processSubDomain(BlockLattice2D<T,Lattice>& blockLattice,
+                                  int x0_, int x1_, int y0_, int y1_ );
 private:
     void initialize(BlockLattice2D<T,Lattice>& blockLattice);
     template<int deriveDirection>
@@ -112,8 +112,8 @@ public:
     virtual int extent() const { return 2; }
     virtual int extent(int whichDirection) const { return 2; }
     virtual void process(BlockLattice2D<T,Lattice>& blockLattice);
-    virtual void process(BlockLattice2D<T,Lattice>& blockLattice,
-                         int x0_, int x1_, int y0_, int y1_ );
+    virtual void processSubDomain(BlockLattice2D<T,Lattice>& blockLattice,
+                                  int x0_, int x1_, int y0_, int y1_ );
 private:
     void initialize(BlockLattice2D<T,Lattice>& blockLattice);
 private:

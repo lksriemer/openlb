@@ -149,7 +149,7 @@ private:
     Cell<T,Lattice>      *rawData;
     Cell<T,Lattice>      **grid;
     PostProcVector       postProcessors;
-    LatticeStatistics<T> statistics;
+    LatticeStatistics<T> *statistics;
 };
 
 }  // namespace olb

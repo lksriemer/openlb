@@ -1,7 +1,6 @@
 # This file is part of the OpenLB library
 #
-# Copyright (C) 2006, 2007 Jonas Latt
-# OMP parallelization Copyright (C) 2007 Mathias Krause
+# Copyright (C) 2006, 2007 Mathias Krause, Jonas Latt, Vincent Heuveline
 # Address: Rue General Dufour 24,  1211 Geneva 4, Switzerland 
 # E-mail: Jonas.Latt@cui.unige.ch
 #
@@ -20,14 +19,16 @@
 # Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
 # Boston, MA  02110-1301, USA.
 
-## Makefile for cavity3d.cpp, precompiled version.
-## In this version, all OpenLB source code is compiled only once,
-## and instantiated for the D3Q19 lattice. For this to work,
-## the source file must #include the file olb3D.h, but not olb3D.hh.
-## If you want to use another type of lattice, use the generic Makefile.
+## Makefile for cavity3d.cpp, generic version.
+## In this version, all OpenLB source code is recompiled when
+## the source cavity3d.cpp is changed. For this to work, the source file
+## must #include the file olb2D.h, as well as olb2D.hh.
+## If you want to restrict yourself to the D3Q19 lattice and speed up
+## the compilation process, use the other Makefile, the one for
+## precompiled code.
 
 
-default: cavity3d
+default: cavity2d
 
 CXX      = icpc
 OPTIM    = -O3
@@ -54,16 +55,16 @@ ifeq ($(PARALLEL_MODE), OMP)
 	CXXFLAGS = -openmp -DPARALLEL_MODE_OMP -I$(OLB_BASE_PATH) -I$(OLB_ADDON_PATH) $(COMPFLAGS)
 endif
 
-OBJECTS = $(BASIC_OBJECTS) $(OBJECTS_3D) $(ADDON_OBJECTS_3D)
+OBJECTS = $(BASIC_OBJECTS) $(OBJECTS_2D) $(ADDON_OBJECTS_2D)
 
-cavity3d: cavity3d.o $(OBJECTS)
-	$(CXX) $(CXXFLAGS) $(LOPT) -o cavity3d cavity3d.o $(OBJECTS)
+cavity2d: cavity2d.o $(OBJECTS)
+	$(CXX) $(CXXFLAGS) $(LOPT) -o cavity2d cavity2d.o $(OBJECTS)
 
-cavity3d.o: cavity3d.cpp $(DEP__OLB_3D_H)
+cavity2d.o: cavity2d.cpp $(DEP__OLB_2D_H)
 
 
 clean:
-	rm -f *~ *.o *.exe cavity3d; $(MAKE) clean_addon; $(MAKE) clean_base
+	rm -f *~ *.o *.exe cavity2d; $(MAKE) clean_addon; $(MAKE) clean_base
 
 clean_addon:
 	cd $(OLB_ADDON_PATH); $(MAKE) clean;

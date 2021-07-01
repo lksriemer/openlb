@@ -1,8 +1,8 @@
 /*  This file is part of the OpenLB library
  *
- *  Copyright (C) 2006 Jonas Latt
+ *  Copyright (C) 2006, 2007 Mathias Krause, Jonas Latt, Vincent Heuveline
  *  Address: Rue General Dufour 24,  1211 Geneva 4, Switzerland 
- *  E-mail: jonas.latt@gmail.com
+ *  E-mail: Jonas.Latt@cui.unige.ch
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
@@ -25,7 +25,6 @@
 #include <iostream>
 #include <fstream>
 #include "olb3D.h"
-//#include "olb3D.hh"
 
 using namespace olb;
 using namespace olb::descriptors;
@@ -78,6 +77,7 @@ void iniGeometry( BlockLattice3D<T,D3Q19Descriptor>& lattice,
     bc.addExternalVelocityCornerPPN(nx-1,ny-1,   0, omega);
     bc.addExternalVelocityCornerPPP(nx-1,ny-1,nz-1, omega);
 
+
     for (int iX=0; iX<nx; ++iX) {
         for (int iY=0; iY<ny; ++iY) {
             for (int iZ=0; iZ<nz; ++iZ) {
@@ -90,8 +90,8 @@ void iniGeometry( BlockLattice3D<T,D3Q19Descriptor>& lattice,
 
     for (int iX=0; iX<nx; ++iX) {
         for (int iZ=0; iZ<nz; ++iZ) {
-            T u = sqrt((T)2)/(T)2 * converter.getU();
-            T vel[] = { u, T(), u };
+            T u = converter.getU();
+            T vel[] = { u, T(), T() };
             lattice.get(iX,ny-1,iZ).defineRhoU((T)1, vel);
             lattice.get(iX,ny-1,iZ).iniEquilibrium((T)1, vel);
         }
@@ -122,27 +122,34 @@ void writeVTK(BlockStatistics3D<T,D3Q19Descriptor>& statistics,
             "Vorticity", statistics.getVorticityNorm(),
             "Velocity", statistics.getVelocity(),
             converter.getDeltaX(), converter.getDeltaT() );
-    statistics.reset();
+   statistics.reset();
 }
 
+
 int main() {
+
+    #ifdef PARALLEL_MODE_OMP
+        #pragma omp parallel
+            omp.init();
+    #endif
+
     singleton::directories().setOlbDir("../../../../");
     singleton::directories().setOutputDir("./tmp/");
 
     UnitConverter<T> converter(
-            (T) 1e-2,  // uMax
-            (T) 100.,  // Re
-            60,        // N
-            1.,        // lx
-            1.,        // ly
-            1.         // lz
+            (T) 1e-2,   // uMax
+            (T) 1000.,  // Re
+            100,        // N
+            1.,         // lx
+            1.,         // ly
+            2.          // lz
     );
-    const T logT     = (T)1/(T)100;
-    const T imSave   = (T)1/(T)40;
+    const T logT     = (T)0.001;
+    const T imSave   = (T)1.;
     const T vtkSave  = (T)1.;
-    const T maxT     = (T)10.1;
+    const T maxT     = (T)12.;
 
-    writeLogFile(converter, "3D diagonal cavity");
+    writeLogFile(converter, "3D cavity");
 
     BlockLattice3D<T, D3Q19Descriptor> lattice(converter.getNx(),
                                                converter.getNy(),
@@ -160,6 +167,7 @@ int main() {
     iniGeometry(lattice, converter, bulkDynamics, *boundaryCondition);
 
     BlockStatistics3D<T,D3Q19Descriptor> statistics(lattice);
+
 
     int iT=0;
     for (iT=0; iT*converter.getDeltaT()<maxT; ++iT) {
@@ -183,8 +191,14 @@ int main() {
         }
 
         lattice.collideAndStream();
+
+        // lattice.collide();
+        // lattice.stream();
+
     }
     cout << iT << endl;
 
     delete boundaryCondition;
+
+   return 0;
 }

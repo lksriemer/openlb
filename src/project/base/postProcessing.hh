@@ -27,6 +27,7 @@
 #include "blockLattice2D.h"
 #include "blockLattice3D.h"
 #include "util.h"
+#include "ompManager.h"
 
 namespace olb {
 
@@ -56,7 +57,7 @@ void LatticeStatistics<T>::reset() {
             if (OMPmax_uSqr[i] > max_uSqr) {
                 max_uSqr = OMPmax_uSqr[i];
             }
-            numCells += OMPnumCells[i];
+            sum_nCells += OMPnumCells[i];
             OMPsum_rho[i]  = T();
             OMPsum_uSqr[i] = T();
             OMPmax_uSqr[i] = T();

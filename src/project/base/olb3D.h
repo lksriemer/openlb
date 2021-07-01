@@ -40,4 +40,6 @@
 #include "dynamicsHelpers3D.h"
 #include "simulationSetup3D.h"
 #include "imageCreator.h"
+#include "ompManager.h"
+#include "loadBalancer.h"
 #include "olbAddOn3D.h"

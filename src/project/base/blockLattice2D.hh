@@ -51,6 +51,7 @@ BlockLattice2D<T,Lattice>::
 {
     allocateMemory();
     resetPostProcessors();
+    statistics = new LatticeStatistics<T>;
 }
 
 /** During destruction, the memory for the lattice and the contained
@@ -62,10 +63,13 @@ BlockLattice2D<T,Lattice>::~BlockLattice2D()
 {
     releaseMemory();
     clearPostProcessors();
+    delete statistics;
 }
 
-/** The whole lattice is duplicated, but not the dynamics objects
- * pointed to by the cells.
+/** The whole data of the lattice is duplicated. This includes
+ * both particle distribution function and external fields.
+ * \warning The dynamics objects and postProcessors are not copied
+ * \param rhs the lattice to be duplicated
  */
 template<typename T, template<typename U> class Lattice>
 BlockLattice2D<T,Lattice>::BlockLattice2D (
@@ -74,15 +78,19 @@ BlockLattice2D<T,Lattice>::BlockLattice2D (
     nx = rhs.nx;
     ny = rhs.ny;
     allocateMemory();
+    resetPostProcessors();
     for (int iX=0; iX<nx; ++iX) {
         for (int iY=0; iY<ny; ++iY) {
             grid[iX][iY] = rhs.grid[iX][iY];
         }
     }
+    statistics = new LatticeStatistics<T> (*rhs.statistics);
 }
 
 /** The current lattice is deallocated, then the lattice from the rhs
- * is duplicated.
+ * is duplicated. This includes both particle distribution function
+ * and external fields. 
+ * \warning The dynamics objects and postProcessors are not copied
  * \param rhs the lattice to be duplicated
  */
 template<typename T, template<typename U> class Lattice>
@@ -103,6 +111,8 @@ void BlockLattice2D<T,Lattice>::swap(BlockLattice2D& rhs) {
     std::swap(ny, rhs.ny);
     std::swap(rawData, rhs.rawData);
     std::swap(grid, rhs.grid);
+    postProcessors.swap(rhs.postProcessors);
+    std::swap(statistics, rhs.statistics);
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -370,7 +380,7 @@ void BlockLattice2D<T,Lattice>::postProcess (
             int x0_, int x1_, int y0_, int y1_ )
 {
     for (unsigned iPr=0; iPr<postProcessors.size(); ++iPr) {
-        postProcessors[iPr] -> process(*this, x0_, x1_, y0_, y1_);
+        postProcessors[iPr] -> processSubDomain(*this, x0_, x1_, y0_, y1_);
     }
 }
 
@@ -384,14 +394,14 @@ void BlockLattice2D<T,Lattice>::subscribeReductions(Reductor<T>& reductor) {
 template<typename T, template<typename U> class Lattice>
 LatticeStatistics<T>& BlockLattice2D<T,Lattice>::getStatistics()
 {
-    return statistics;
+    return *statistics;
 }
 
 template<typename T, template<typename U> class Lattice>
 LatticeStatistics<T> const&
     BlockLattice2D<T,Lattice>::getStatistics() const
 {
-    return statistics;
+    return *statistics;
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -430,15 +440,14 @@ void BlockLattice2D<T,Lattice>::boundaryStream (
     OLB_PRECONDITION(y0>=lim_y0 && y1<=lim_y1);
     OLB_PRECONDITION(y1>=y0);
 
-    int iX, iY;
+    int iX, iY, iPop;
 
     #ifdef PARALLEL_MODE_OMP
     #pragma omp parallel for private(iY,iPop)
     #endif
-
     for (iX=x0; iX<=x1; ++iX) {
         for (iY=y0; iY<=y1; ++iY) {
-            for (int iPop=1; iPop<=Lattice<T>::q/2; ++iPop) {
+            for (iPop=1; iPop<=Lattice<T>::q/2; ++iPop) {
                 int nextX = iX + Lattice<T>::c[iPop][0];
                 int nextY = iY + Lattice<T>::c[iPop][1];
                 if (nextX>=lim_x0 && nextY>=lim_y0 && nextY<=lim_y1) {
@@ -480,6 +489,8 @@ void BlockLattice2D<T,Lattice>::bulkStream (
     }
 }
 
+#ifndef PARALLEL_MODE_OMP  // OpenMP parallel version is and the
+                           // end of this file
 /** This method is fast, but it is erroneous when applied to boundary
  * cells.
  * \sa collideAndStream(int,int,int,int)
@@ -494,68 +505,14 @@ void BlockLattice2D<T,Lattice>::bulkCollideAndStream (
     OLB_PRECONDITION(y0>=0 && y1<ny);
     OLB_PRECONDITION(y1>=y0);
 
-    #ifdef PARALLEL_MODE_OMP
-        if (omp.get_size() <= x1-x0+1) {
-            #pragma omp parallel
-                {
-                loadBalancer loadbalance(omp.get_rank(), omp.get_size(), x1-x0+1, x0);
-                int iX, iY, iPop;
-
-                iX=loadbalance.get_firstGlobNum();
-                for (int iY=y0; iY<=y1; ++iY) {
-                    grid[iX][iY].collide();
-                    grid[iX][iY].revert();
-                }
-
-                for (iX=loadbalance.get_firstGlobNum()+1; iX<=loadbalance.get_lastGlobNum(); ++iX) {
-                    for (iY=y0; iY<=y1; ++iY) {
-                        grid[iX][iY].collide();
-                        /** The method beneath doesnt work with Intel compiler 9.1044 and 9.1046 for Itanium prozessors
-                         *    lbHelpers<T,Lattice>::swapAndStream2D(grid, iX, iY);
-                         *  Therefore we use:
-                         */
-                            int half = Lattice<T>::q/2;
-                            for (int iPop=1; iPop<=half; ++iPop) {
-                                int nextX = iX + Lattice<T>::c[iPop][0];
-                                int nextY = iY + Lattice<T>::c[iPop][1];
-                                T fTmp                   = grid[iX][iY][iPop];
-                                grid[iX][iY][iPop]       = grid[iX][iY][iPop+half];
-                                grid[iX][iY][iPop+half]  = grid[nextX][nextY][iPop];
-                                grid[nextX][nextY][iPop] = fTmp;
-                            }
-                    }
-                }
-
-                #pragma omp barrier
-
-                iX=loadbalance.get_firstGlobNum();
-                for (iY=y0; iY<=y1; ++iY) {
-                    for (iPop=1; iPop<=Lattice<T>::q/2; ++iPop) {
-                        int nextX = iX + Lattice<T>::c[iPop][0];
-                        int nextY = iY + Lattice<T>::c[iPop][1];
-                        std::swap(grid[iX][iY][iPop+Lattice<T>::q/2],
-                            grid[nextX][nextY][iPop]);
-                    }
-                }
-                }
-            }
-        else {
-            for (int iX=x0; iX<=x1; ++iX) {
-                for (int iY=y0; iY<=y1; ++iY) {
-                    grid[iX][iY].collide();
-	            lbHelpers<T,Lattice>::swapAndStream2D(grid, iX, iY);
-                }
-            }
+    for (int iX=x0; iX<=x1; ++iX) {
+        for (int iY=y0; iY<=y1; ++iY) {
+            grid[iX][iY].collide();
+            lbHelpers<T,Lattice>::swapAndStream2D(grid, iX, iY);
         }
-    #else
-        for (int iX=x0; iX<=x1; ++iX) {
-            for (int iY=y0; iY<=y1; ++iY) {
-                grid[iX][iY].collide();
-                lbHelpers<T,Lattice>::swapAndStream2D(grid, iX, iY);
-            }
-        }
-    #endif
+    }
 }
+#endif // not defined PARALLEL_MODE_OMP
 
 template<typename T, template<typename U> class Lattice>
 template<int normalX, int normalY>
@@ -594,6 +551,75 @@ void BlockLattice2D<T,Lattice>::makePeriodic() {
     periodicEdge< 0,-1>(1, getNx()-2);
     periodicEdge< 0, 1>(1, getNx()-2);
 }
+
+//// OpenMP implementation of the method bulkCollideAndStream,
+//   by Mathias Krause                                         ////
+
+#ifdef PARALLEL_MODE_OMP
+template<typename T, template<typename U> class Lattice>
+void BlockLattice2D<T,Lattice>::bulkCollideAndStream (
+    int x0, int x1, int y0, int y1 )
+{
+    OLB_PRECONDITION(x0>=0 && x1<nx);
+    OLB_PRECONDITION(x1>=x0);
+    OLB_PRECONDITION(y0>=0 && y1<ny);
+    OLB_PRECONDITION(y1>=y0);
+
+    if (omp.get_size() <= x1-x0+1) {
+        #pragma omp parallel
+        {
+            loadBalancer loadbalance(omp.get_rank(), omp.get_size(), x1-x0+1, x0);
+            int iX, iY, iPop;
+
+            iX=loadbalance.get_firstGlobNum();
+            for (int iY=y0; iY<=y1; ++iY) {
+                grid[iX][iY].collide();
+                grid[iX][iY].revert();
+            }
+
+            for (iX=loadbalance.get_firstGlobNum()+1; iX<=loadbalance.get_lastGlobNum(); ++iX) {
+                for (iY=y0; iY<=y1; ++iY) {
+                    grid[iX][iY].collide();
+                    /** The method beneath doesnt work with Intel compiler 9.1044 and 9.1046 for Itanium prozessors
+                     *    lbHelpers<T,Lattice>::swapAndStream2D(grid, iX, iY);
+                     *  Therefore we use:
+                     */
+                        int half = Lattice<T>::q/2;
+                        for (int iPop=1; iPop<=half; ++iPop) {
+                            int nextX = iX + Lattice<T>::c[iPop][0];
+                            int nextY = iY + Lattice<T>::c[iPop][1];
+                            T fTmp                   = grid[iX][iY][iPop];
+                            grid[iX][iY][iPop]       = grid[iX][iY][iPop+half];
+                            grid[iX][iY][iPop+half]  = grid[nextX][nextY][iPop];
+                            grid[nextX][nextY][iPop] = fTmp;
+                        }
+                }
+            }
+
+            #pragma omp barrier
+
+            iX=loadbalance.get_firstGlobNum();
+            for (iY=y0; iY<=y1; ++iY) {
+                for (iPop=1; iPop<=Lattice<T>::q/2; ++iPop) {
+                    int nextX = iX + Lattice<T>::c[iPop][0];
+                    int nextY = iY + Lattice<T>::c[iPop][1];
+                    std::swap(grid[iX][iY][iPop+Lattice<T>::q/2],
+                        grid[nextX][nextY][iPop]);
+                }
+            }
+        }
+    }
+    else {
+        for (int iX=x0; iX<=x1; ++iX) {
+            for (int iY=y0; iY<=y1; ++iY) {
+                grid[iX][iY].collide();
+            lbHelpers<T,Lattice>::swapAndStream2D(grid, iX, iY);
+            }
+        }
+    }
+}
+#endif // defined PARALLEL_MODE_OMP
+
 
 }  // namespace olb
 

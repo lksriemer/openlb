@@ -40,4 +40,6 @@
 #include "dynamicsHelpers2D.h"
 #include "simulationSetup2D.h"
 #include "imageCreator.h"
+#include "ompManager.h"
+#include "loadBalancer.h"
 #include "olbAddOn2D.h"

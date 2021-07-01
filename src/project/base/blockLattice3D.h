@@ -153,11 +153,13 @@ private:
 	/// Make the lattice periodic in all directions
     void makePeriodic();
 private:
+    void periodicSurface(int x0, int x1, int y0, int y1, int z0, int z1);
+private:
     int                  nx, ny, nz;
     Cell<T,Lattice>      *rawData;
     Cell<T,Lattice>      ***grid;
     PostProcVector       postProcessors;
-    LatticeStatistics<T> statistics;
+    LatticeStatistics<T> *statistics;
 };
 
 }  // namespace olb

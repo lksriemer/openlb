@@ -705,7 +705,7 @@ void BlockStatistics3D<T,Lattice>::computeStrainRateField() const {
 
     int nx = vortField.getNx();
     int ny = vortField.getNy();
-    int nz = vortField.getNy();
+    int nz = vortField.getNz();
 
     int iPi = 0;
     for (int iAlpha=0; iAlpha<3; ++iAlpha) {

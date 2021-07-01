@@ -27,6 +27,7 @@
 #define POST_PROCESSING_H
 
 #include <vector>
+#include "ompManager.h"
 
 namespace olb {
 
@@ -62,8 +63,8 @@ struct PostProcessor2D {
     /// Execute post-processing step
     virtual void process(BlockLattice2D<T,Lattice>& blockLattice) =0;
     /// Execute post-processing step on a sublattice
-    virtual void process(BlockLattice2D<T,Lattice>& blockLattice,
-                         int x0_, int x1_, int y0_, int y1_) =0;
+    virtual void processSubDomain(BlockLattice2D<T,Lattice>& blockLattice,
+                                  int x0_, int x1_, int y0_, int y1_) =0;
     /// Extent of application area (0 for purely local operations)
     virtual int extent() const =0;
     /// Extent of application area along a direction (0 or 1)
@@ -100,8 +101,8 @@ template<typename T, template<typename U> class Lattice>
 struct GlobalPostProcessor2D : public PostProcessor2D<T,Lattice> {
     virtual bool hasReductions() const { return true; }
     virtual void process(BlockLattice2D<T,Lattice>& blockLattice) =0;
-    virtual void process(BlockLattice2D<T,Lattice>& blockLattice,
-                         int x0_, int x1_, int y0_, int y1_ )
+    virtual void processSubDomain(BlockLattice2D<T,Lattice>& blockLattice,
+                                  int x0_, int x1_, int y0_, int y1_ )
     {
         this -> process(blockLattice);
     }
@@ -122,8 +123,8 @@ struct PostProcessor3D {
     /// Execute post-processing step
     virtual void process(BlockLattice3D<T,Lattice>& blockLattice) =0;
         /// Execute post-processing step on a sublattice
-    virtual void process(BlockLattice3D<T,Lattice>& blockLattice,
-                         int x0_, int x1_, int y0_, int y1_,
+    virtual void processSubDomain(BlockLattice3D<T,Lattice>& blockLattice,
+                                  int x0_, int x1_, int y0_, int y1_,
                          int z0_, int z1_ ) =0;
     /// Extent of application area (0 for purely local operations)
     virtual int extent() const =0;
@@ -162,9 +163,9 @@ template<typename T, template<typename U> class Lattice>
 struct GlobalPostProcessor3D : public PostProcessor3D<T,Lattice> {
     virtual bool hasReductions() const { return true; }
     virtual void process(BlockLattice3D<T,Lattice>& blockLattice) =0;
-    virtual void process(BlockLattice3D<T,Lattice>& blockLattice,
-                         int x0_, int x1_, int y0_, int y1_,
-                         int z0_, int z1_ )
+    virtual void processSubDomain(BlockLattice3D<T,Lattice>& blockLattice,
+                                  int x0_, int x1_, int y0_, int y1_,
+                                  int z0_, int z1_ )
     {
         this -> process(blockLattice);
     }
@@ -205,14 +206,14 @@ public:
             ++sum_nCells;
         #endif
     }
-    T getAverageRho()    const { return average_rho; }
-    T getAverageEnergy() const { return average_energy; }
-    T getMaxU()          const { return maxU; }
+    T getAverageRho()        const { return average_rho;}
+    T getAverageEnergy()     const { return average_energy;}
+    T getMaxU()              const { return maxU;}
     int const& getNumCells() const { return numCells; }
 
-    T& getAverageRho()    { return average_rho; }
-    T& getAverageEnergy() { return average_energy; }
-    T& getMaxU()          { return maxU; }
+    T& getAverageRho()    { return average_rho;}
+    T& getAverageEnergy() { return average_energy;}
+    T& getMaxU()          { return maxU;}
 private:
     void initialize();
 private:

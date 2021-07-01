@@ -24,6 +24,7 @@
 #ifdef PARALLEL_MODE_OMP
 
     #include "loadBalancer.h"
+    #include "olbDebug.h"
 
     loadBalancer::loadBalancer(int rank, int size, int globChunkSize, int offset) { 
 
