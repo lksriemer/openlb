@@ -6,3 +6,4 @@
 #include <utilities/utilities2D.h>
 #include <complexGrids/cuboidStructure/cuboidStructure2D.h>
 #include <complexGrids/multiBlockStructure/multiBlockStructure2D.h>
+#include <functors/functors2D.h>

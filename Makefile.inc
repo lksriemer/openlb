@@ -8,7 +8,6 @@
 #  This program is free software; you can redistribute it and/or
 #  modify it under the terms of the GNU General Public License
 #  as published by the Free Software Foundation; either version 2
-#  of the License, or (at your option) any later version.
 #
 #  This program is distributed in the hope that it will be useful,
 #  but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -27,12 +26,16 @@
 CXX             := g++
 #CXX             := icpc -D__aligned__=ignored
 #CXX             := mpiCC
+#CXX             := mpic++
 
 OPTIM           := -O3 -Wall
 DEBUG           := -g -DOLB_DEBUG
 
 CXXFLAGS        := $(OPTIM)
 #CXXFLAGS        := $(DEBUG)
+
+ARPRG           := ar
+#ARPRG           := xiar                  # mandatory for intel compiler
 
 LDFLAGS         :=
 
@@ -86,17 +89,19 @@ LIB             := olb
 ###########################################################################
 ## search directories
 
-SUBDIRS         := src/core \
-                   src/boundaryConditions \
+SUBDIRS         := src/boundaryConditions \
                    src/complexDynamics \
-                   src/complexGrids/mpiManager \
                    src/complexGrids/cuboidStructure \
+                   src/complexGrids/mpiManager \
                    src/complexGrids/multiBlockStructure \
-                   src/utilities \
+                   src/core \
+                   src/external/tinyxml \
+                   src/functors \
                    src/io \
-                   src/external/tinyxml
+                   src/utilities
 
-EXAMPLEDIRS     := examples/bstep2d \
+EXAMPLEDIRS     := examples/aorta3d \
+                   examples/bstep2d \
                    examples/bstep3d \
                    examples/cavity2d \
                    examples/cavity3d \

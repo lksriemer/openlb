@@ -34,6 +34,7 @@ void AnalysisFlags3D::reset() {
   velNormFieldComputed = false;
   vortFieldComputed = false;
   vortNormFieldComputed = false;
+  qCritFieldComputed = false;
   strainRateFieldComputed = false;
   stressFieldComputed = false;
   divRhoUFieldComputed = false;

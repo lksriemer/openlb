@@ -31,6 +31,7 @@
 #include "latticeDescriptors.h"
 #include "util.h"
 #include "postProcessing.h"
+#include "latticeStatistics.h"
 
 namespace olb {
 
@@ -120,6 +121,13 @@ struct Dynamics {
    */
   virtual void defineU(Cell<T,Lattice>& cell,
                        const T u[Lattice<T>::d]) =0;
+  /// Functions for offLattice Velocity boundary conditions
+  virtual void setBoundaryIntersection(int iPop, T distance);
+  virtual bool getBoundaryIntersection(int iPop, T point[Lattice<T>::d]);
+  virtual void defineU(const T u[Lattice<T>::d]);
+  virtual void defineU(int iPop, const T u[Lattice<T>::d]);
+  virtual T    getVelocityCoefficient(int iPop);
+
   /// Define fluid velocity and particle density on the cell.
   /** \param rho particle density
    *  \param u fluid velocity
@@ -412,7 +420,7 @@ public:
   virtual T getOmega() const;
   /// Set local relaxation parameter of the dynamics
   virtual void setOmega(T omega_);
-private:
+protected:
   T omega;  ///< relaxation parameter
   static const int forceBeginsAt = Lattice<T>::ExternalField::forceBeginsAt;
   static const int sizeOfForce   = Lattice<T>::ExternalField::sizeOfForce;
@@ -547,8 +555,10 @@ struct ExternalVelocityMomenta : public Momenta<T,Lattice> {
 template<typename T, template<typename U> class Lattice>
 class BounceBack : public Dynamics<T,Lattice> {
 public:
-  /// You may fix a fictitious density value on bounce-back nodes via the constructor.
-  BounceBack(T rho_=T());
+  /// A fictitious density value on bounce-back in not fixed on nodes via this constructor.
+  BounceBack();
+  /// You may fix a fictitious density value on bounce-back nodes via this constructor.
+  BounceBack(T rho_);
   /// Clone the object on its dynamic type.
   virtual BounceBack<T,Lattice>* clone() const;
   /// Yields 0;
@@ -602,6 +612,7 @@ public:
   virtual void setOmega(T omega_);
 private:
   T rho;
+  bool rhoFixed;
 };
 
 /// Implementation of a "dead cell" that does nothing
@@ -659,6 +670,36 @@ public:
   virtual T getOmega() const;
   /// Does nothing
   virtual void setOmega(T omega_);
+};
+
+/// Dynamics for offLattice boundary conditions
+/// OffDynamics are basically NoDynamics with the additional functionality
+/// to store given velocities exactly at boundary links.
+template<typename T, template<typename U> class Lattice>
+class OffDynamics : public NoDynamics<T,Lattice> {
+public:
+  /// Constructor
+  OffDynamics(const T _location[Lattice<T>::d]);
+  /// Constructor
+  OffDynamics(const T _location[Lattice<T>::d], T _distances[Lattice<T>::q]);
+  /// Set Intersection of the link and the boundary
+  virtual void setBoundaryIntersection(int iPop, T distance);
+  /// Get Intersection of the link and the boundary
+  virtual bool getBoundaryIntersection(int iPop, T intersection[Lattice<T>::d]);
+  /// Set fluid velocity on the cell.
+  virtual void defineU(Cell<T,Lattice>& cell, const T u[Lattice<T>::d]);
+  /// Set constant velocity
+  virtual void defineU(const T u[Lattice<T>::d]);
+  /// Set single velocity
+  virtual void defineU(int iPop, const T u[Lattice<T>::d]);
+  /// Get VelocitySummand for Bouzidi-Boundary Condition
+  virtual T    getVelocityCoefficient(int iPop);
+
+private:
+  T location[Lattice<T>::d];
+  T distances[Lattice<T>::q];
+  T boundaryIntersection[Lattice<T>::q][Lattice<T>::d];
+  T velocityCoefficient[Lattice<T>::q];
 };
 
 namespace instances {

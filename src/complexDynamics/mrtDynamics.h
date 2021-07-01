@@ -60,13 +60,23 @@ public:
   T getLambda() const;
   /// Set local relaxation parameter of the dynamics
   void setLambda(T lambda_);
-private:
+protected:
   T invM_S[Lattice<T>::q][Lattice<T>::q]; // relaxation times matrix.
   T omega; // the shear viscosity relaxatin time
   T lambda;// the bulk viscosity relaxatin time
 };
 
+/// Implementation of the entropic collision step
+template<typename T, template<typename U> class Lattice>
+class ForcedMRTdynamics : public MRTdynamics<T,Lattice> {
+public:
+  /// Constructor
+  ForcedMRTdynamics(T omega_, Momenta<T,Lattice>& momenta_);
+  /// Clone the object on its dynamic type.
+  virtual void collide(Cell<T,Lattice>& cell,
+                       LatticeStatistics<T>& statistics_);
 
+};
 
 }
 

@@ -51,12 +51,18 @@ CuboidGeometry2D<T>::CuboidGeometry2D(T globPosX, T globPosY, T delta,
   : clout(std::cout,"CuboidGeometry2D")
 {
   //_cuboids.reserve(10000);
+  reInit(globPosX, globPosY, delta, nX, nY, nC);
+}
+
+template<typename T>
+void CuboidGeometry2D<T>::reInit(T globPosX, T globPosY, 
+                                      T delta, int nX, int nY, int nC) {
+  _cuboids.clear();
   _motherCuboid = Cuboid2D<T>(globPosX, globPosY, delta, nX, nY);
   Cuboid2D<T> cuboid(0, 0, 1, nX, nY);
   add(cuboid);
   split(0, nC);
 }
-
 
 template<typename T>
 Cuboid2D<T>& CuboidGeometry2D<T>::get_cuboid(int i) {
@@ -301,6 +307,44 @@ void CuboidGeometry2D<T>::get_cuboidNeighbourhood(int cuboid, std::vector<int> n
   }
 }
 
+template<typename T>
+void CuboidGeometry2D<T>::refineArea(T x0, T x1, T y0, T y1, int coarse_level) {
+	
+	for (int iC=0; iC<get_nC(); iC++) {
+		if(get_cuboid(iC).get_refinementLevel() != coarse_level) continue;
+		int locX0, locX1, locY0, locY1;
+		bool inter = get_cuboid(iC).checkInters(x0, y1, y0, y1, locX0, locX1, locY0, locY1, 0);
+		if(!inter) continue;
+		
+		T globX = get_cuboid(iC).get_globPosX();
+		T globY = get_cuboid(iC).get_globPosY();
+		T delta = get_cuboid(iC).get_delta();
+		int nx = get_cuboid(iC).get_nX();
+		int ny = get_cuboid(iC).get_nY();
+		
+		if (locX0 != 0) {
+			Cuboid2D<T> right_side(globX, globY, delta, locX0, ny, coarse_level);
+			add(right_side);
+		}
+		
+		if(locY0 != 0) {
+			Cuboid2D<T> down_side(globX+locX0*delta, globY, delta, nx-locX0, locY0, coarse_level);
+			add(down_side);
+		}
+		
+		if(locX1 != get_cuboid(iC).get_nX()-1) {
+			Cuboid2D<T> left_side(globX+(locX1+1)*delta, globY+locY0*delta, delta, nx-locX1-1, ny-locY0, coarse_level);
+			add(left_side);
+		}
+
+		if(locY1 != get_cuboid(iC).get_nY()-1) {
+			Cuboid2D<T> top_side(globX+locX0*delta, globY+(locY1+1)*delta, delta, locX1-locX0+1, ny-locY1-1, coarse_level);
+			add(top_side);			
+		}
+		get_cuboid(iC).init(globX+locX0*delta, globY+locY0*delta, delta, locX1-locX0+1, locY1-locY0+1, coarse_level);
+		get_cuboid(iC).refineIncrease();
+	}
+}
 
 }  // namespace olb
 

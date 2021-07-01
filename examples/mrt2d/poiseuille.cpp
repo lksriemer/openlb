@@ -1,4 +1,5 @@
-/*  This file is part of the OpenLB library
+/*  Lattice Boltzmann sample, written in C++, using the OpenLB
+ *  library
  *
  *  Copyright (C) 2007, 2012 Orestis Malaspinas, Jonas Latt,
  *  Mathias J. Krause
@@ -20,17 +21,15 @@
  *  License along with this program; if not, write to the Free
  *  Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  *  Boston, MA  02110-1301, USA.
-*/
+ */
 
+#include "olb2D.h"
+#include "olb2D.hh"   // Use only generic version!
 #include <vector>
 #include <cmath>
 #include <iostream>
 #include <iomanip>
 #include <fstream>
-#include "olb2D.h"
-#include "olb2D.hh"   // Use only generic version!
-
-#define DESCRIPTOR MRTD2Q9Descriptor
 
 using namespace olb;
 using namespace olb::descriptors;
@@ -40,6 +39,7 @@ using namespace std;
 typedef enum {velocity, pressure} BoundaryType;
 
 typedef double T;
+#define DESCRIPTOR MRTD2Q9Descriptor
 
 T poiseuilleVelocity(int iY, LBconverter<T> const& converter) {
   T y = converter.physLength(iY);
@@ -53,17 +53,20 @@ T poiseuillePressure(int iX, LBconverter<T> const& converter) {
 }
 
 
-void iniGeometry( BlockStructure2D<T, DESCRIPTOR>& lattice,
-                  LBconverter<T> const& converter,
-                  Dynamics<T, DESCRIPTOR>& bulkDynamics,
-                  OnLatticeBoundaryCondition2D<T,DESCRIPTOR>& boundaryCondition,
-                  BoundaryType boundaryType )
-{
+void prepareLattice(LBconverter<T> const& converter,
+                    BlockStructure2D<T, DESCRIPTOR>& lattice,
+                    Dynamics<T, DESCRIPTOR>& bulkDynamics,
+                    OnLatticeBoundaryCondition2D<T,DESCRIPTOR>& boundaryCondition,
+                    BoundaryType boundaryType ){
+
   int nx = lattice.getNx();
   int ny = lattice.getNy();
   T   omega = converter.getOmega();
+
+  /// define lattice Dynamics
   lattice.defineDynamics(0,nx-1, 0,ny-1, &bulkDynamics);
 
+  /// sets boundary
   boundaryCondition.addVelocityBoundary1P(1,nx-2,ny-1,ny-1, omega);
   boundaryCondition.addVelocityBoundary1N(1,nx-2,   0,   0, omega);
 
@@ -76,78 +79,94 @@ void iniGeometry( BlockStructure2D<T, DESCRIPTOR>& lattice,
     boundaryCondition.addPressureBoundary0P(nx-1,nx-1, 1, ny-2, omega);
   }
 
+  /// set Velocity
   boundaryCondition.addExternalVelocityCornerNN(0,0, omega);
   boundaryCondition.addExternalVelocityCornerNP(0,ny-1, omega);
   boundaryCondition.addExternalVelocityCornerPN(nx-1,0, omega);
   boundaryCondition.addExternalVelocityCornerPP(nx-1,ny-1, omega);
+}
 
-  for (int iX=0; iX<nx; ++iX) {
-    for (int iY=0; iY<ny; ++iY) {
-      T u[2] = {poiseuilleVelocity(iY, converter),0.};
-      T rho = (T)1 + poiseuillePressure(iX, converter) * DESCRIPTOR<T>::invCs2;
-      lattice.get(iX,iY).defineRhoU(rho, u);
-      lattice.get(iX,iY).iniEquilibrium(rho, u);
+void setBoundaryValues(LBconverter<T> const&converter,
+                       BlockStructure2D<T,DESCRIPTOR>& lattice, int iT){
+
+  int nx = lattice.getNx();
+  int ny = lattice.getNy();
+
+  if(iT==0){
+    for (int iX=0; iX<nx; ++iX) {
+      for (int iY=0; iY<ny; ++iY) {
+        T u[2] = {poiseuilleVelocity(iY, converter),0.};
+        T rho = (T)1 + poiseuillePressure(iX, converter) * DESCRIPTOR<T>::invCs2;
+        lattice.get(iX,iY).defineRhoU(rho, u);
+        lattice.get(iX,iY).iniEquilibrium(rho, u);
+      }
     }
+    /// Make the lattice ready for simulation
+    lattice.initialize();
   }
-
-  lattice.initialize();
 }
 
-void plotStatistics(int                              iT,
-                    BlockStructure2D<T, DESCRIPTOR>& lattice,
-                    LBconverter<T>&                  converter,
-                    T                                middleU)
-{
-  OstreamManager cout(std::cout,"plotStatistics");
-  T dx = converter.getDeltaX();
-  T dt = converter.getDeltaT();
-  cout << "iteration=" << setw(5) << iT;
-  cout << "; t=" << setprecision(3) << setw(6)
-       << iT*converter.getDeltaT();
-  cout << "; E=" << setprecision(10) << setw(15)
-       << lattice.getStatistics().getAverageEnergy()*dx*dx/dt/dt;
-  cout << "; rho=" << setprecision(8) << setw(11)
-       << lattice.getStatistics().getAverageRho();
-  cout << "; uMax= " << setprecision(8) << setw(11)
-       << middleU*dx/dt;
-  cout << endl;
-}
+void getResults(BlockStructure2D<T,DESCRIPTOR>& lattice,
+                LBconverter<T>& converter, int iT) {
 
-void produceGif(int iT, BlockStructure2D<T, DESCRIPTOR>& lattice) {
+  const T lx   = 2.;
+  const T ly   = 1.;
+
+  const int saveIter = 2000;
+  const int statIter = 100;
+
   const int imSize = 400;
-  DataAnalysisBase2D<T,DESCRIPTOR> const& analysis = lattice.getDataAnalysis();
 
-  ImageWriter<T> imageWriter("leeloo");
-  imageWriter.writeScaledGif(createFileName("p", iT, 6),
-                             analysis.getPressure(), imSize, imSize);
-  imageWriter.writeScaledGif(createFileName("u", iT, 6),
-                             analysis.getVelocityNorm(), imSize, imSize);
-}
-
-void writeProfile ( string fName,
-                    BlockStructure2D<T, DESCRIPTOR>& lattice,
-                    LBconverter<T>& converter )
-{
-  ofstream *ofile = 0;
-  if (singleton::mpi().isMainProcessor()) {
-    ofile = new ofstream((singleton::directories().getLogOutDir()+fName).c_str());
-  }
-  for (int iY=0; iY<lattice.getNy(); ++iY) {
+  if (iT%statIter==0) {
+    T middleU[2];
+    lattice.get(converter.numNodes(lx)/2, converter.numNodes(ly)/2).computeU(middleU);
+    OstreamManager cout(std::cout,"plotStatistics");
     T dx = converter.getDeltaX();
     T dt = converter.getDeltaT();
-    T analytical = poiseuilleVelocity(iY, converter);
-    T numerical[2];
-    lattice.get(lattice.getNx()/2, iY).computeU(numerical);
-
-    if (singleton::mpi().isMainProcessor()) {
-      *ofile << iY*dx << " " << analytical*dx/dt
-             << " " << numerical[0]*dx/dt << "\n";
-    }
+    cout << "iteration=" << setw(5) << iT;
+    cout << "; t=" << setprecision(3) << setw(6)
+         << iT*converter.getDeltaT();
+    cout << "; E=" << setprecision(10) << setw(15)
+         << lattice.getStatistics().getAverageEnergy()*dx*dx/dt/dt;
+    cout << "; rho=" << setprecision(8) << setw(11)
+         << lattice.getStatistics().getAverageRho();
+    cout << "; uMax= " << setprecision(8) << setw(11)
+         << middleU[0]*dx/dt;
+    cout << endl;
   }
-  delete ofile;
+
+  if (iT%saveIter==0) {
+    DataAnalysisBase2D<T,DESCRIPTOR> const& analysis = lattice.getDataAnalysis();
+
+    ImageWriter<T> imageWriter("leeloo");
+    imageWriter.writeScaledGif(createFileName("p", iT, 6),
+                               analysis.getPressure(), imSize, imSize);
+    imageWriter.writeScaledGif(createFileName("u", iT, 6),
+                               analysis.getVelocityNorm(), imSize, imSize);
+    ofstream *ofile = 0;
+    if (singleton::mpi().isMainProcessor()) {
+      ofile = new ofstream((singleton::directories().getLogOutDir()+"centerVel.dat").c_str());
+    }
+    for (int iY=0; iY<lattice.getNy(); ++iY) {
+      T dx = converter.getDeltaX();
+      T dt = converter.getDeltaT();
+      T analytical = poiseuilleVelocity(iY, converter);
+      T numerical[2];
+      lattice.get(lattice.getNx()/2, iY).computeU(numerical);
+
+      if (singleton::mpi().isMainProcessor()) {
+        *ofile << iY*dx << " " << analytical*dx/dt
+               << " " << numerical[0]*dx/dt << "\n";
+      }
+    }
+    delete ofile;
+  }
 }
 
+
 int main(int argc, char* argv[]) {
+
+  /// === 1st Step: Initialization ===
   olbInit(&argc, &argv);
   singleton::directories().setOutputDir("./tmp/");
 
@@ -160,8 +179,7 @@ int main(int argc, char* argv[]) {
   const T ly   = 1.;
 
   const int maxIter  = 20000;
-  const int saveIter = 2000;
-  const int statIter = 100;
+
 
   LBconverter<T> converter(
     (int) 2,                               // dim
@@ -171,6 +189,8 @@ int main(int argc, char* argv[]) {
     (T)   1.                               // charL_ = 1,
   );
   writeLogFile(converter, "poiseuille2d");
+
+  /// === 3rd Step: Prepare Lattice ===
 
 #ifndef PARALLEL_MODE_MPI  // sequential program execution
   BlockLattice2D<T, DESCRIPTOR> lattice(converter.numNodes(lx), converter.numNodes(ly) );
@@ -190,21 +210,20 @@ int main(int argc, char* argv[]) {
     instances::getBulkMomenta<T,DESCRIPTOR>()
   );
 
-  iniGeometry(lattice, converter, bulkDynamics, *boundaryCondition, boundaryType);
+  prepareLattice(converter, lattice, bulkDynamics, *boundaryCondition, boundaryType);
+
+  /// === 4th Step: Main Loop with Timer ===
 
   for (int iT=0; iT<maxIter; ++iT) {
-    if (iT%statIter==0) {
-      T middleU[2];
-      lattice.get(converter.numNodes(lx)/2, converter.numNodes(ly)/2).computeU(middleU);
-      plotStatistics(iT, lattice, converter, middleU[0]);
-    }
+    
+    /// === 5th Step: Definition of Initial and Boundary Conditions ===
+    setBoundaryValues(converter, lattice, iT);
 
-    if (iT%saveIter==0) {
-      produceGif(iT, lattice);
-      writeProfile("centerVel.dat", lattice, converter);
-    }
-
+    /// === 6th Step: Collide and Stream Execution ===
     lattice.collideAndStream();
+
+    /// === 7th Step: Computation and Output of the Results ===
+    getResults(lattice, converter, iT);
   }
 
   delete boundaryCondition;

@@ -116,14 +116,13 @@ void createLocalBoundaryCondition2D(sOnLatticeBoundaryCondition2D<T,Lattice>& sB
 template<typename T, template<typename U> class Lattice, typename MixinDynamics>
 void createInterpBoundaryCondition2D(sOnLatticeBoundaryCondition2D<T,Lattice>& sBC);
 
-
 template<typename T, template<typename U> class Lattice>
 void createLocalBoundaryCondition2D(sOnLatticeBoundaryCondition2D<T,Lattice>& sBC) {
-  createLocalBoundaryCondition2D<T,Lattice,BGKdynamics<T,Lattice> > (sBC);
+  createLocalBoundaryCondition2D<T,Lattice,RLBdynamics<T,Lattice> > (sBC);
 }
 template<typename T, template<typename U> class Lattice>
 void createInterpBoundaryCondition2D(sOnLatticeBoundaryCondition2D<T,Lattice>& sBC) {
-  createInterpBoundaryCondition2D<T,Lattice,RLBdynamics<T,Lattice> > (sBC);
+  createInterpBoundaryCondition2D<T,Lattice,BGKdynamics<T,Lattice> > (sBC);
 }
 
 }  // namespace olb

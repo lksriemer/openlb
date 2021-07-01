@@ -35,6 +35,7 @@ namespace olb {
 using namespace descriptors;
 
 template class ScalarField3D<double>;
+template class ScalarField3D<unsigned short>;
 template class SequentialScalarFieldSerializer3D<double>;
 template class SequentialScalarFieldUnSerializer3D<double>;
 

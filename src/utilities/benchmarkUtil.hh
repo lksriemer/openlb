@@ -71,7 +71,7 @@ bool ValueTracer<T>::hasConverged() const {
   else {
     T average = computeAverage();
     T stdDev = computeStdDev(average);
-    if (!isnan(stdDev/average))
+    if (!std::isnan(stdDev/average))
       return stdDev/average < epsilon;
     else {
       clout << "simulation diverged." << std::endl;

@@ -46,6 +46,13 @@ CuboidGeometry3D<T>::CuboidGeometry3D(T globPosX, T globPosY, T globPosZ,
                                       T delta, int nX, int nY, int nZ, int nC)
   : clout(std::cout,"CuboidGeometry3D") {
   //_cuboids.reserve(10000);
+  reInit(globPosX, globPosY, globPosZ, delta, nX, nY, nZ, nC);
+}
+
+template<typename T>
+void CuboidGeometry3D<T>::reInit(T globPosX, T globPosY, T globPosZ,
+                                      T delta, int nX, int nY, int nZ, int nC) {
+  _cuboids.clear();
   _motherCuboid = Cuboid3D<T>(globPosX, globPosY, globPosZ, delta, nX, nY, nZ);
   Cuboid3D<T> cuboid(0, 0, 0, 1, nX, nY, nZ);
   add(cuboid);
@@ -382,6 +389,109 @@ void CuboidGeometry3D<T>::shrink(olb::BlockGeometry3D& blockGeometry) {
   }
 }
 
+template<typename T>
+void CuboidGeometry3D<T>::remove(olb::SuperGeometry3D& superGeometry) {
+
+  std::vector<Cuboid3D<T> > cuboids;
+  unsigned size = _cuboids.size();
+
+  std::vector<bool> allZero;
+  for (unsigned i=0; i < size; i++) {
+    allZero.push_back(1);
+    for (int iX=0; iX<_cuboids[i].get_nX(); iX++) {
+      for (int iY=0; iY<_cuboids[i].get_nY(); iY++) {
+        for (int iZ=0; iZ<_cuboids[i].get_nZ(); iZ++) {
+          if (superGeometry.getMaterial(_cuboids[i].get_globPosX()+iX,
+                                        _cuboids[i].get_globPosY()+iY,_cuboids[i].get_globPosZ()+iZ)!=0 ) allZero[i] = 0;
+        }
+      }
+    }
+  }
+  for (unsigned i=0; i<size; i++) {
+    if (!allZero[i] ) cuboids.push_back(_cuboids[i]);
+  }
+  _cuboids.clear();
+  for (unsigned i=0; i<cuboids.size(); i++) {
+    _cuboids.push_back(cuboids[i]);
+  }
+}
+
+template<typename T>
+void CuboidGeometry3D<T>::shrink(olb::SuperGeometry3D& superGeometry) {
+  unsigned i;
+  int iX,iY,iZ,newX,newY,newZ,maxX,maxY,maxZ;
+  bool planeEmpty=true;
+  for (i=0; i<_cuboids.size(); i++) {
+    // check each of the planes of the cuboid iteratively, if it is empty
+    planeEmpty=true;
+    for(iX=0; iX<_cuboids[i].get_nX() && planeEmpty; iX++) {
+      for(iY=0; iY<_cuboids[i].get_nY() && planeEmpty; iY++) {
+        for(iZ=0; iZ<_cuboids[i].get_nZ() && planeEmpty; iZ++) {
+          if (superGeometry.getMaterial(_cuboids[i].get_globPosX()+iX,
+                                        _cuboids[i].get_globPosY()+iY,_cuboids[i].get_globPosZ()+iZ)!=0 ) planeEmpty=false;
+        }
+      }
+    }
+    newX = iX-1;
+
+    planeEmpty=true;
+    for(iY=0; iY<_cuboids[i].get_nY() && planeEmpty; iY++) {
+      for(iX=0; iX<_cuboids[i].get_nX() && planeEmpty; iX++) {
+        for(iZ=0; iZ<_cuboids[i].get_nZ() && planeEmpty; iZ++) {
+          if (superGeometry.getMaterial(_cuboids[i].get_globPosX()+iX,
+                                        _cuboids[i].get_globPosY()+iY,_cuboids[i].get_globPosZ()+iZ)!=0 ) planeEmpty=false;
+        }
+      }
+    }
+    newY = iY-1;
+
+    planeEmpty=true;
+    for(iZ=0; iZ<_cuboids[i].get_nZ() && planeEmpty; iZ++) {
+      for(iY=0; iY<_cuboids[i].get_nY() && planeEmpty; iY++) {
+        for(iX=0; iX<_cuboids[i].get_nX() && planeEmpty; iX++) {
+          if (superGeometry.getMaterial(_cuboids[i].get_globPosX()+iX,
+                                        _cuboids[i].get_globPosY()+iY,_cuboids[i].get_globPosZ()+iZ)!=0 ) planeEmpty=false;
+        }
+      }
+    }
+    newZ = iZ-1;
+
+    planeEmpty=true;
+    for(iX=_cuboids[i].get_nX() - 1 ; iX>=0 && planeEmpty; iX--) {
+      for(iY=_cuboids[i].get_nY() - 1; iY>=0 && planeEmpty; iY--) {
+        for(iZ=_cuboids[i].get_nZ() - 1 ; iZ>=0 && planeEmpty; iZ--) {
+          if (superGeometry.getMaterial(_cuboids[i].get_globPosX()+iX,
+                                        _cuboids[i].get_globPosY()+iY,_cuboids[i].get_globPosZ()+iZ)!=0 ) planeEmpty=false;
+        }
+      }
+    }
+    maxX = iX+1;
+
+    planeEmpty=true;
+    for(iY=_cuboids[i].get_nY() - 1; iY>=0 && planeEmpty; iY--) {
+      for(iX=_cuboids[i].get_nX() - 1; iX>=0 && planeEmpty; iX--) {
+        for(iZ=_cuboids[i].get_nZ() - 1; iZ>=0 && planeEmpty; iZ--) {
+          if (superGeometry.getMaterial(_cuboids[i].get_globPosX()+iX,
+                                        _cuboids[i].get_globPosY()+iY,_cuboids[i].get_globPosZ()+iZ)!=0 ) planeEmpty=false;
+        }
+      }
+    }
+    maxY = iY+1;
+
+    planeEmpty=true;
+    for(iZ=_cuboids[i].get_nZ() -1; iZ>=0 && planeEmpty; iZ--) {
+      for(iY=_cuboids[i].get_nY() + 1; iY>=0 && planeEmpty; iY--) {
+        for(iX=_cuboids[i].get_nX() + 1; iX>=0 && planeEmpty; iX--) {
+          if (superGeometry.getMaterial(_cuboids[i].get_globPosX()+iX,
+                                        _cuboids[i].get_globPosY()+iY,_cuboids[i].get_globPosZ()+iZ)!=0 ) planeEmpty=false;
+        }
+      }
+    }
+    maxZ = iZ+1;
+
+    _cuboids[i].resize(newX, newY, newZ, maxX-newX+1, maxY-newY+1, maxZ-newZ+1);
+  }
+}
 
 
 template<typename T>
@@ -395,7 +505,7 @@ void CuboidGeometry3D<T>::split(int iC, int p) {
 }
 
 template<typename T>
-void CuboidGeometry3D<T>::get_cuboidNeighbourhood(int cuboid, std::vector<int> neighbours, int offset) {
+void CuboidGeometry3D<T>::get_cuboidNeighbourhood(int cuboid, std::vector<int>& neighbours, int offset) {
   for (int iC=0; iC<get_nC(); iC++) {
     if(cuboid == iC) continue;
     T globX = get_cuboid(iC).get_globPosX();

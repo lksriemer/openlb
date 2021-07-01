@@ -1,4 +1,5 @@
-/*  This file is part of the OpenLB library
+/*  Lattice Boltzmann sample, written in C++, using the OpenLB
+ *  library
  *
  *  Copyright (C) 2006, 2007, 2012 Jonas Latt, Mathias J. Krause
  *  Vincent Heuveline
@@ -20,14 +21,13 @@
  *  License along with this program; if not, write to the Free
  *  Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  *  Boston, MA  02110-1301, USA.
-*/
+ */
 
 
 #include "olb3D.h"
 #ifndef OLB_PRECOMPILED // Unless precompiled version is used,
 #include "olb3D.hh"   // include full template code
 #endif
-
 #include <vector>
 #include <cmath>
 #include <iostream>
@@ -41,26 +41,29 @@ using namespace olb::util;
 using namespace std;
 
 typedef double T;
+#define DESCRIPTOR D3Q19Descriptor
 
-void iniGeometry( SuperLattice3D<T,D3Q19Descriptor>& lattice,
-                  LBconverter<T> const& converter,
-                  Dynamics<T, D3Q19Descriptor>& bulkDynamics,
-                  sOnLatticeBoundaryCondition3D<T,D3Q19Descriptor>& bc )
-{
+void prepareLattice(LBconverter<T> const& converter,
+		  SuperLattice3D<T,DESCRIPTOR>& lattice,
+                  Dynamics<T, DESCRIPTOR>& bulkDynamics,
+                  sOnLatticeBoundaryCondition3D<T,DESCRIPTOR>& bc ) {
   const int nx = converter.numNodes(1);
   const int ny = converter.numNodes(1);
   const int nz = converter.numNodes(1);
-
   const T omega = converter.getOmega();
 
+  /// define lattice Dynamics
   lattice.defineDynamics(0,nx-1, 0,ny-1, 0,nz-1, &bulkDynamics);
 
+  /// sets boundary
   bc.addVelocityBoundary0N(   0,   0,   1,ny-2,   1,nz-2, omega);
   bc.addVelocityBoundary0P(nx-1,nx-1,   1,ny-2,   1,nz-2, omega);
   bc.addVelocityBoundary1N(   1,nx-2,   0,   0,   1,nz-2, omega);
   bc.addVelocityBoundary1P(   1,nx-2,ny-1,ny-1,   1,nz-2, omega);
   bc.addVelocityBoundary2N(   1,nx-2,   1,ny-2,   0,   0, omega);
   bc.addVelocityBoundary2P(   1,nx-2,   1,ny-2,nz-1,nz-1, omega);
+
+  /// set Velocity
 
   bc.addExternalVelocityEdge0NN(   1,nx-2,   0,   0,   0,   0, omega);
   bc.addExternalVelocityEdge0NP(   1,nx-2,   0,   0,nz-1,nz-1, omega);
@@ -85,48 +88,87 @@ void iniGeometry( SuperLattice3D<T,D3Q19Descriptor>& lattice,
   bc.addExternalVelocityCornerPNP(nx-1,   0,nz-1, omega);
   bc.addExternalVelocityCornerPPN(nx-1,ny-1,   0, omega);
   bc.addExternalVelocityCornerPPP(nx-1,ny-1,nz-1, omega);
-
-
-  T vel_a[] = { T(), T(), T()};
-
-  lattice.defineRhoU    (0, nx-1, 0, ny-1, 0, nz-1, (T)1, vel_a);
-  lattice.iniEquilibrium(0, nx-1, 0, ny-1, 0, nz-1, (T)1, vel_a);
-
-  T u = converter.getLatticeU();
-  T vel_b[] = { u, T(), T()};
-
-  lattice.defineRhoU    (0, nx-1, ny-1, ny-1, 0, nz-1, (T)1, vel_b);
-  lattice.iniEquilibrium(0, nx-1, ny-1, ny-1, 0, nz-1, (T)1, vel_b);
-
-  lattice.initialize();
 }
 
-void writeVTK(SuperLattice3D<T,D3Q19Descriptor>& sLattice,
-              LBconverter<T> const& converter, int iter) {
+void setBoundaryValues(LBconverter<T> const&converter,
+                       SuperLattice3D<T,DESCRIPTOR>& lattice, int iT){
 
-  vector<const ScalarFieldBase3D<T>* > scalar;
-  vector<const TensorFieldBase3D<T,3>* > tensor;
+  if(iT==0){
+    const int nx = converter.numNodes(1);
+    const int ny = converter.numNodes(1);
+    const int nz = converter.numNodes(1);
+    /// for each point set the defineRhou and the Equilibrium
 
-  for (int iC=0; iC<sLattice.get_load().size(); iC++) {
-    const TensorFieldBase3D<T,3>* velocity = &sLattice.get_lattice(iC).getDataAnalysis().getVelocity();
-    const ScalarFieldBase3D<T>* pressure = &sLattice.get_lattice(iC).getDataAnalysis().getPressure();
-    scalar.push_back( pressure );
-    tensor.push_back( velocity );
+    T vel_a[] = { T(), T(), T()};
+
+    lattice.defineRhoU    (0, nx-1, 0, ny-1, 0, nz-1, (T)1, vel_a);
+    lattice.iniEquilibrium(0, nx-1, 0, ny-1, 0, nz-1, (T)1, vel_a);
+
+    T u = converter.getLatticeU();
+    T vel_b[] = { u, T(), T()};
+
+    lattice.defineRhoU    (0, nx-1, ny-1, ny-1, 0, nz-1, (T)1, vel_b);
+    lattice.iniEquilibrium(0, nx-1, ny-1, ny-1, 0, nz-1, (T)1, vel_b);
+
+    /// Make the lattice ready for simulation
+
+    lattice.initialize();
+
   }
 
-  CuboidVTKout3D<T>::writeFlowField (
-    createFileName("vtk", iter, 6),
-    "Pressure", scalar,
-    "Velocity", tensor,
-    sLattice.get_cGeometry(), sLattice.get_load(), converter.getDeltaT());
 }
+
+
+void getResults(SuperLattice3D<T,DESCRIPTOR>& sLattice,
+                LBconverter<T> const& converter, int iT, Timer<double>& timer,
+                const T maxT) {
+
+  const T logT     = (T)1.;
+  const T vtkSave  = (T)1.;
+
+
+
+  /// Get statistics
+  if (iT%converter.numTimeSteps(logT)==0 && iT>0) {
+    timer.update(iT);
+    timer.printStep(2);
+    sLattice.getStatistics().print(iT,iT*converter.getDeltaT());
+  }
+
+  /// Writes the VTK files
+  if (iT%converter.numTimeSteps(vtkSave)==0 && iT>0) {
+    vector<const ScalarFieldBase3D<T>* > scalar;
+    vector<const TensorFieldBase3D<T,3>* > tensor;
+
+    for (int iC=0; iC<sLattice.get_load().size(); iC++) {
+      const TensorFieldBase3D<T,3>* velocity = &sLattice.get_lattice(iC).getDataAnalysis().getVelocity();
+      const ScalarFieldBase3D<T>* pressure = &sLattice.get_lattice(iC).getDataAnalysis().getPressure();
+      scalar.push_back( pressure );
+      tensor.push_back( velocity );
+    }
+
+    CuboidVTKout3D<T>::writeFlowField (
+      createFileName("vtk", iT, 6),
+      "Pressure", scalar,
+      "Velocity", tensor,
+      sLattice.get_cGeometry(), sLattice.get_load(), converter.physVelocity(), converter.physPressure());
+  }
+
+  if (iT == converter.numTimeSteps(maxT)-1 ){
+    timer.stop();
+    timer.printSummary();
+  }
+
+}
+
+
 
 int main(int argc, char **argv) {
 
+    /// === 1st Step: Initialization ===
+
   olbInit(&argc, &argv);
-
   singleton::directories().setOutputDir("./tmp/");
-
   OstreamManager clout(std::cout,"main");
 
   LBconverter<T> converter(
@@ -136,10 +178,11 @@ int main(int argc, char **argv) {
     (T)   1./1000.,                        // charNu_
     (T)   1.                               // charL_ = 1,
   );
+
   writeLogFile(converter, "cavity3d");
 
-  const T logT     = (T)1.;
-  const T vtkSave  = (T)1.;
+/// === 3rd Step: Prepare Lattice ===
+ 
   const T maxT     = (T)20.;
 
 #ifdef PARALLEL_MODE_MPI
@@ -152,40 +195,41 @@ int main(int argc, char **argv) {
 
   cGeometry.printStatistics();
 
-  SuperLattice3D<T, D3Q19Descriptor> sLattice(cGeometry,1);
+  SuperLattice3D<T, DESCRIPTOR> sLattice(cGeometry,2);
 
 
-  ConstRhoBGKdynamics<T, D3Q19Descriptor> bulkDynamics (
+  ConstRhoBGKdynamics<T, DESCRIPTOR> bulkDynamics (
     converter.getOmega(), instances::getBulkMomenta<T,D3Q19Descriptor>());
 
 
-  sOnLatticeBoundaryCondition3D<T,D3Q19Descriptor> sBoundaryCondition(sLattice);
-  createInterpBoundaryCondition3D<T,D3Q19Descriptor>(sBoundaryCondition);
+  sOnLatticeBoundaryCondition3D<T,DESCRIPTOR> sBoundaryCondition(sLattice);
+  createInterpBoundaryCondition3D<T,DESCRIPTOR>(sBoundaryCondition);
 
-  iniGeometry(sLattice, converter, bulkDynamics, sBoundaryCondition);
+  prepareLattice(converter, sLattice, bulkDynamics, sBoundaryCondition);
+
+
+    /// === 4th Step: Main Loop with Timer ===
 
   Timer<double> timer(converter.numTimeSteps(maxT), converter.numNodes(1)*converter.numNodes(1)*converter.numNodes(1) );
   timer.start();
-
   int iT;
+
   for (iT=0; iT < converter.numTimeSteps(maxT); ++iT) {
-    if (iT%converter.numTimeSteps(logT)==0 && iT>0) {
-      sLattice.getStatistics().print(iT,iT*converter.getDeltaT());
-      timer.update(iT);
-      timer.printStep(2);
-    }
 
-    if (iT%converter.numTimeSteps(vtkSave)==0 && iT>0) {
-      clout << "Saving VTK file ..." << endl;
-      writeVTK(sLattice, converter, iT);
-    }
+    /// === 5th Step: Definition of Initial and Boundary Conditions ===
+    setBoundaryValues(converter, sLattice, iT);
 
+
+    /// === 6th Step: Collide and Stream Execution ===
     sLattice.collideAndStream();
+
+    /// === 7th Step: Computation and Output of the Results ===
+    getResults(sLattice, converter, iT, timer, maxT);
+
   }
   clout << iT << endl;
 
-  timer.stop();
-  timer.printSummary();
+
 
   return 0;
 }

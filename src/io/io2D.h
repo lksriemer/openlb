@@ -32,3 +32,4 @@
 #include "imageWriter.h"
 #include "xmlReader.h"
 #include "ostreamManager.h"
+#include "vtiReader.h"

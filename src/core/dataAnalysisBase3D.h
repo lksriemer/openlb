@@ -45,6 +45,7 @@ public:
   virtual TensorFieldBase3D<T,3> const& getVorticity() const =0;
   virtual ScalarFieldBase3D<T> const& getVelocityNorm() const =0;
   virtual ScalarFieldBase3D<T> const& getVorticityNorm() const=0;
+  virtual ScalarFieldBase3D<T> const& getQCrit() const =0;
   // Compute strain rate using finite differences
   virtual TensorFieldBase3D<T,6> const& getStrainRate() const =0;
   // Compute strain rate from the stress (using the local particle populations)

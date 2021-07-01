@@ -356,7 +356,7 @@ void PressureBM<T,Lattice,direction,orientation>::defineAllMomenta (
   T rho_, const T u_[Lattice<T>::d],
   const T pi_[util::TensorVal<Lattice<T> >::n] )
 {
-  defineRhoU(cell, rho_, u_);
+  this->defineRhoU(cell, rho_, u_);
 }
 
 ////////  FreeStressBM //////////////////////////////////////////////

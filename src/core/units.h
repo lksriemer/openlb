@@ -117,7 +117,7 @@ public:
    */
   LBconverter(int dim_, T latticeL_, T latticeU_,
               T charNu_, T charL_ = 1, T charU_ = 1, T charRho_ = 1, T pressureLevel_ = 0 )
-    : dim(dim_), latticeL(latticeL_), latticeU(latticeU_), charNu(charNu_),
+    : clout(std::cout,"LBconverter"), dim(dim_), latticeL(latticeL_), latticeU(latticeU_), charNu(charNu_),
       charL(charL_), charU(charU_), charRho(charRho_), pressureLevel(pressureLevel_)
   { }
   /// dimension of the domain (2D or 3D)
@@ -138,6 +138,9 @@ public:
   /// kinematic viscosity in m^2/s
   T getCharNu() const
   { return charNu; }
+  /// dynamic viscosity in N*s/m^2
+  T getDynamicViscosity() const
+  { return charNu * charRho; }
   /// density factor in kg/m^d
   T getCharRho(T dRho = 1) const
   { return charRho * dRho; }
@@ -210,9 +213,13 @@ public:
   /// default: get conversion factor -> lattice to physical massless force
   T physMasslessForce(T latticeForce = 1) const
   { return physForce(latticeForce) / physMass(); }
+  /// convert: lattice to physical pressure in Pa
+  /// physicalPressure = (rho-1)/3)*pressureFactor
+  T physPressure(T latticePressure = 1) const
+  { return latticePressure*physForce() / (pow(physLength(),dim-1)) + pressureLevel; }
   /// convert: lattice rho to physical pressure in Pa
   /// physicalPressure = (rho-1)/3)*pressureFactor
-  T physPressure(T rho) const
+  T physPressureFromRho(T rho) const
   { return ((rho - 1) / 3.)*physForce() / (pow(physLength(),dim-1)) + pressureLevel; }
 
   /// convert: physical length to lattice length
@@ -224,22 +231,43 @@ public:
   /// returns number of lattice cells within a length l
   int numCells(T physicalLength = -1) const {
     if (physicalLength == -1) physicalLength = charL;
-    return (int)(physicalLength / physLength()+0.5);
+    return (int)(physicalLength / physLength()+T(0.5) );
   }
   /// returns number of lattice nodes of a physical length l
   int numNodes(T physicalLength = -1) const {
     if (physicalLength == -1) physicalLength = charL;
-    return (int)(physicalLength / physLength()+1.5);
+    return (int)(physicalLength / physLength()+(1.5));
   }
   /// returns number of lattice time steps within a period physicalT
   int numTimeSteps(T physicalTime) const
-  { return (int)(physicalTime / physTime()+0.5); }
+  { return (int)(physicalTime / physTime()+T(0.5)); }
   /// convert physical to lattice pressure
   /// default: get conversion factor -> physical to lattice pressure
   T latticePressure(T physicalPressure = 1) const
   { return (physicalPressure - pressureLevel) * (pow(physLength(),dim-1))/physForce();}
+  /// convert: physical pressure in Pa to lattice density
+  /// latticeRho = physical pressure / pressureFactor * 3 -1
+  T rhoFromPhysicalPressure(T physicalPressure = 0) const
+  { return (physicalPressure - pressureLevel) * (pow(physLength(),dim-1))/physForce() *T(3) + T(1);}
+
+  /// convert physical to lattice force
+  /// default: get conversion factor -> physical to lattice force
+  T latticeForce(T physicalForce = 1) const
+  { return physicalForce / physForce(); }
+
+  /// converts a physical permeability K to a velocity scaling factor d, needs PorousBGKdynamics
+  T latticePermeability(T K) const
+  { return 1 - latticeForce(getLatticeNu() / K * getTau()); }
+
+  /// converts a velocity scaling factor d to a physical permeability K, needs PorousBGKdynamics
+  T physPermeability(T d) const
+  { return getLatticeNu() * getTau() / physForce(1-d); }
+
+  /// print converter information
+  void print() const;
 
 private:
+  mutable OstreamManager clout;
   int dim;
   T latticeL, latticeU, charNu, charL, charU, charRho, pressureLevel;
 };

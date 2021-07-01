@@ -31,7 +31,8 @@
 #include "cuboidNeighbourhood2D.h"
 #include "communicator2D.h"
 #include "superBoundaryCondition2D.h"
+#include "superOffBoundaryCondition2D.h"
 #include "superLattice2D.h"
-#include "cuboidVTKout.h"
+#include "cuboidVTKout2D.h"
 
 #endif

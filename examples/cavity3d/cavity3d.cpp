@@ -1,4 +1,5 @@
-/*  This file is part of the OpenLB library
+/*  Lattice Boltzmann sample, written in C++, using the OpenLB
+ *  library
  *
  *  Copyright (C) 2006, 2012 Jonas Latt, Mathias J. Krause
  *  E-mail contact: info@openlb.net
@@ -19,7 +20,7 @@
  *  License along with this program; if not, write to the Free
  *  Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  *  Boston, MA  02110-1301, USA.
-*/
+ */
 
 #include "olb3D.h"
 #ifndef OLB_PRECOMPILED // Unless precompiled version is used,
@@ -39,19 +40,20 @@ using namespace std;
 typedef double T;
 #define DESCRIPTOR D3Q19Descriptor
 
-void iniGeometry( BlockStructure3D<T,DESCRIPTOR>& lattice,
-                  LBconverter<T> const& converter,
+
+void prepareLattice(LBconverter<T> const& converter,
+                  BlockStructure3D<T,DESCRIPTOR>& lattice,
                   Dynamics<T, DESCRIPTOR>& bulkDynamics,
-                  OnLatticeBoundaryCondition3D<T,DESCRIPTOR>& bc )
-{
+                  OnLatticeBoundaryCondition3D<T,DESCRIPTOR>& bc ) {
   const int nx = lattice.getNx();
   const int ny = lattice.getNy();
   const int nz = lattice.getNz();
-
   const T omega = converter.getOmega();
-
+    
+  /// define lattice Dynamics
   lattice.defineDynamics(0,nx-1, 0,ny-1, 0,nz-1, &bulkDynamics);
 
+  /// sets boundary
   bc.addVelocityBoundary0N(   0,   0,   1,ny-2,   1,nz-2, omega);
   bc.addVelocityBoundary0P(nx-1,nx-1,   1,ny-2,   1,nz-2, omega);
   bc.addVelocityBoundary1N(   1,nx-2,   0,   0,   1,nz-2, omega);
@@ -59,6 +61,8 @@ void iniGeometry( BlockStructure3D<T,DESCRIPTOR>& lattice,
   bc.addVelocityBoundary2N(   1,nx-2,   1,ny-2,   0,   0, omega);
   bc.addVelocityBoundary2P(   1,nx-2,   1,ny-2,nz-1,nz-1, omega);
 
+  /// set Velocity
+    
   bc.addExternalVelocityEdge0NN(   1,nx-2,   0,   0,   0,   0, omega);
   bc.addExternalVelocityEdge0NP(   1,nx-2,   0,   0,nz-1,nz-1, omega);
   bc.addExternalVelocityEdge0PN(   1,nx-2,ny-1,ny-1,   0,   0, omega);
@@ -83,58 +87,98 @@ void iniGeometry( BlockStructure3D<T,DESCRIPTOR>& lattice,
   bc.addExternalVelocityCornerPPN(nx-1,ny-1,   0, omega);
   bc.addExternalVelocityCornerPPP(nx-1,ny-1,nz-1, omega);
 
-  for (int iX=0; iX<nx; ++iX) {
-    for (int iY=0; iY<ny; ++iY) {
-      for (int iZ=0; iZ<nz; ++iZ) {
-        T vel[] = { T(), T(), T() };
-        lattice.get(iX,iY,iZ).defineRhoU((T)1, vel);
-        lattice.get(iX,iY,iZ).iniEquilibrium((T)1, vel);
+}
+
+
+void setBoundaryValues(LBconverter<T> const& converter,
+                       BlockStructure3D<T,DESCRIPTOR>& lattice, int iT){
+    
+    
+  if(iT==0){  
+    const int nx = lattice.getNx();
+    const int ny = lattice.getNy();
+    const int nz = lattice.getNz();
+    /// for each point set the defineRhou and the Equilibrium ( initial states )
+    for (int iX=0; iX<nx; ++iX) {
+      for (int iY=0; iY<ny; ++iY) {
+        for (int iZ=0; iZ<nz; ++iZ) {
+          T vel[] = { T(), T(), T() };
+          lattice.get(iX,iY,iZ).defineRhoU((T)1, vel);
+          lattice.get(iX,iY,iZ).iniEquilibrium((T)1, vel);
+          }
       }
     }
-  }
-
-  for (int iX=0; iX<nx; ++iX) {
-    for (int iZ=0; iZ<nz; ++iZ) {
-      T u = sqrt((T)2)/(T)2 * converter.getLatticeU();
-      T vel[] = { u, T(), u };
-      lattice.get(iX,ny-1,iZ).defineRhoU((T)1, vel);
-      lattice.get(iX,ny-1,iZ).iniEquilibrium((T)1, vel);
+    
+    for (int iX=0; iX<nx; ++iX) {
+      for (int iZ=0; iZ<nz; ++iZ) {
+          T u = sqrt((T)2)/(T)2 * converter.getLatticeU();
+          T vel[] = { u, T(), u };
+          lattice.get(iX,ny-1,iZ).defineRhoU((T)1, vel);
+          lattice.get(iX,ny-1,iZ).iniEquilibrium((T)1, vel);
+      }
     }
+
+      /// Make the lattice ready for simulation
+    lattice.initialize();
   }
-
-  lattice.initialize();
 }
 
-void writeGifs(BlockStructure3D<T,DESCRIPTOR>& lattice,
-               LBconverter<T> const& converter, int iter)
-{
+
+void getResults(BlockStructure3D<T,DESCRIPTOR>& lattice,
+                LBconverter<T> const& converter, int iT, Timer<double>& timer, const T maxT) {
+    
+  const T logT     = (T)1/(T)100;
+  const T imSave   = (T)1/(T)40;
+  const T vtkSave  = (T)1.;
   const int imSize = 600;
-  int nz = converter.numNodes(1);;
-
-  ImageWriter<T> imageWriter("leeloo");
-  DataAnalysisBase3D<T,DESCRIPTOR> const& analysis = lattice.getDataAnalysis();
-  imageWriter.writeScaledGif(createFileName("uz", iter, 6),
-                             analysis.getVelocityNorm().sliceZ(nz/2),
-                             imSize, imSize );
-}
-
-void writeVTK(BlockStructure3D<T,DESCRIPTOR>& lattice,
-              LBconverter<T> const& converter, int iter)
-{
-  DataAnalysisBase3D<T,DESCRIPTOR> const& analysis = lattice.getDataAnalysis();
-  T dx = converter.getDeltaX();
-  T dt = converter.getDeltaT();
-  VtkImageOutput3D<T> vtkOut(createFileName("vtk", iter, 6), dx);
-  vtkOut.writeData<T,float>(analysis.getVorticityNorm(), "vorticityNorm", (T)1/dt);
-  vtkOut.writeData<3,T,float>(analysis.getVelocity(), "velocity", dx/dt);
+  int nz = converter.numNodes(1);
+    
+  
+  /// Get statistics
+  if (iT%converter.numTimeSteps(logT)==0 && iT>0) {
+            
+    timer.print(iT);
+    lattice.getStatistics().print(iT,iT*converter.getDeltaT());
+    
+  }
+    
+  /// Writes the Gif files
+  if (iT%converter.numTimeSteps(imSave)==0 && iT>0) {
+        
+    ImageWriter<T> imageWriter("leeloo");
+    DataAnalysisBase3D<T,DESCRIPTOR> const& analysis = lattice.getDataAnalysis();
+    imageWriter.writeScaledGif(createFileName("uz", iT, 6),analysis.getVelocityNorm().sliceZ(nz/2),imSize, imSize );
+  }
+    
+  /// Writes the VTK files
+  if (iT%converter.numTimeSteps(vtkSave)==0 && iT>0) {
+        
+    DataAnalysisBase3D<T,DESCRIPTOR> const& analysis = lattice.getDataAnalysis();
+    T dx = converter.getDeltaX();
+    T dt = converter.getDeltaT();
+    VtkImageOutput3D<T> vtkOut(createFileName("vtk", iT, 6), dx);
+    vtkOut.writeData<T,float>(analysis.getVorticityNorm(), "vorticityNorm", (T)1/dt);
+    vtkOut.writeData<3,T,float>(analysis.getVelocity(), "velocity", dx/dt);
+        
+  }
+        
+  if(iT == converter.numTimeSteps(maxT)-1) {
+    timer.stop();
+    timer.printSummary();
+  }
+            
+  
 }
 
 int main(int argc, char* argv[]) {
+    
+    /// === 1st Step: Initialization ===
+    
   olbInit(&argc, &argv);
   singleton::directories().setOutputDir("./tmp/");
-
   OstreamManager clout(std::cout,"main");
 
+    
   LBconverter<T> converter(
     (int) 3,                               // dim
     (T)   1./60.,                          // latticeL_
@@ -142,11 +186,11 @@ int main(int argc, char* argv[]) {
     (T)   1./100.,                         // charNu_
     (T)   1.                               // charL_ = 1,
   );
+    
   writeLogFile(converter, "diagonalCavity3d");
 
-  const T logT     = (T)1/(T)100;
-  const T imSave   = (T)1/(T)40;
-  const T vtkSave  = (T)1.;
+/// === 3rd Step: Prepare Lattice ===
+
   const T maxT     = (T)10.1;
 
 #ifndef PARALLEL_MODE_MPI  // sequential program execution
@@ -156,7 +200,7 @@ int main(int argc, char* argv[]) {
     createRegularDataDistribution( converter.numNodes(1), converter.numNodes(1), converter.numNodes(1) ) );
 #endif
 
-  ConstRhoBGKdynamics<T, DESCRIPTOR> bulkDynamics (
+  BGKdynamics<T, DESCRIPTOR> bulkDynamics (
     converter.getOmega(),
     instances::getBulkMomenta<T,DESCRIPTOR>()
   );
@@ -164,34 +208,32 @@ int main(int argc, char* argv[]) {
   OnLatticeBoundaryCondition3D<T,DESCRIPTOR>* boundaryCondition
   = createInterpBoundaryCondition3D(lattice);
 
-  iniGeometry(lattice, converter, bulkDynamics, *boundaryCondition);
+  prepareLattice(converter, lattice, bulkDynamics, *boundaryCondition);
+  
 
+
+    /// === 4th Step: Main Loop with Timer ===
+    
   Timer<double> timer(converter.numTimeSteps(maxT), converter.numNodes(1)*converter.numNodes(1)*converter.numNodes(1) );
+
   timer.start();
-
-  int iT=0;
+  int iT;
+    
   for (iT=0; iT < converter.numTimeSteps(maxT); ++iT) {
-    if (iT%converter.numTimeSteps(logT)==0 && iT>0) {
-      lattice.getStatistics().print(iT,iT*converter.getDeltaT());
-      timer.print(iT);
-    }
 
-    if (iT%converter.numTimeSteps(imSave)==0 && iT>0) {
-      clout << "Saving Gif ..." << endl;
-      writeGifs(lattice, converter, iT);
-    }
-
-    if (iT%converter.numTimeSteps(vtkSave)==0 && iT>0) {
-      clout << "Saving VTK file ..." << endl;
-      writeVTK(lattice, converter, iT);
-    }
-
+    /// === 5th Step: Definition of Initial and Boundary Conditions ===
+    setBoundaryValues(converter, lattice, iT);
+  
+    /// === 6th Step: Collide and Stream Execution ===
     lattice.collideAndStream(false);
+
+    /// === 7th Step: Computation and Output of the Results ===
+    getResults(lattice, converter, iT, timer, maxT);
+    
   }
   clout << iT << endl;
 
-  timer.stop();
-  timer.printSummary();
+  
 
   delete boundaryCondition;
 }

@@ -30,7 +30,6 @@
 #include "superLattice3D.h"
 #include "superLattice3D.hh"
 #include "core/latticeDescriptors.h"
-#include "core/latticeDescriptors.hh"
 
 
 namespace olb {

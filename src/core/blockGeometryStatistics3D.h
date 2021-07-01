@@ -32,14 +32,11 @@
 #include <map>
 #include <string>
 
-//#include "olb3D.h"
-//#include "olb3D.hh"
 
-#include "blockGeometry3D.h"
+//#include "blockGeometry3D.h"
 #include "io/ostreamManager.h"
 
 //#include "core/dataFields3D.h"
-
 
 /// All OpenLB code is contained in this namespace.
 namespace olb {
@@ -57,6 +54,8 @@ namespace olb {
  *
  * This class is not intended to be derived from.
  */
+
+class BlockGeometry3D;
 
 class BlockGeometryStatistics3D {
 
@@ -82,6 +81,9 @@ private:
 
 public:
   /// Constructor
+  BlockGeometryStatistics3D() : clout(std::cout,"BlockGeometryStatistics3D") { };
+
+  /// Constructor
   BlockGeometryStatistics3D(BlockGeometry3D* blockGeometry)
     : clout(std::cout,"BlockGeometryStatistics3D") {
     reInit(blockGeometry);
@@ -93,24 +95,7 @@ public:
   ;
 
   /// reinitializes the blockGeometryStatistics (without checking the offset!!!!!!!)
-  void reInit(BlockGeometry3D* blockGeometry) {
-    _blockGeometry = blockGeometry;
-    _material2n = std::map<unsigned short, int>();
-    _nX = blockGeometry->getNx();
-    _nY = blockGeometry->getNy();
-    _nZ = blockGeometry->getNz();
-    _h = blockGeometry->getSpacing();
-    _offset = blockGeometry->getOffset();
-
-    for (int iX = 0; iX < _nX; ++iX) {
-      for (int iY = 0; iY < _nY; ++iY) {
-        for (int iZ = 0; iZ < _nZ; ++iZ) {
-          takeStatistics(iX, iY, iZ);
-        }
-      }
-    }
-  }
-  ;
+  void reInit(BlockGeometry3D* blockGeometry);
 
   void takeStatistics(int iX, int iY, int iZ);
 
@@ -122,6 +107,9 @@ public:
 
   /// returns the number of voxels for a boundary condition type
   int getNVoxel(int bcType);
+
+  /// returns the number of voxels with material!=0
+  int getNVoxel();
 
   std::vector<int> getMin(unsigned short material);
 
@@ -142,8 +130,10 @@ public:
   void regionGrowing(unsigned short material, int seedX, int seedY, int seedZ, int offsetX, int offsetY, int offsetZ, std::map<std::vector<int>, int >& tmp);
 
 
+ 
 
 
+  // Returns true if at (iX,iY,iZ) and in a neighbourhood of size (offsetX,offsetY,offsetZ) only voxels with material no material are there 
   bool check(unsigned short material, int iX, int iY, int iZ, unsigned offsetX, unsigned offsetY, unsigned offsetZ);
 
   bool find(unsigned short material, unsigned offsetX, unsigned offsetY, unsigned offsetZ, int& iX, int& iY, int& iZ);

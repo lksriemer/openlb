@@ -19,7 +19,7 @@
   </Application>
   <Output>
     <OutputDir>./tmp/</OutputDir>
-    <MultiOutput>0</MultiOutput>
+    <MultiOutput>false</MultiOutput>
     <Log>
       <Filename>cavity2d.log</Filename>
       <SaveTime>0.1</SaveTime>
@@ -34,9 +34,9 @@
     </VisualizationImages>
     <Timer>
       <PrintMode>0</PrintMode>
-      <SkipType>physical time</SkipType>
+      <SkipType>0</SkipType>
       <PhysTime>.1</PhysTime>
-      <PrintSummary>1</PrintSummary>
+      <PrintSummary>true</PrintSummary>
     </Timer>
   </Output>
 </Param>

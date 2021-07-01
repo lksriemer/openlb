@@ -26,10 +26,13 @@
 #define BOUNDARY_INSTANTIATOR_3D_H
 
 #include "boundaryCondition3D.h"
+#include "blockGeometry3D.h"
 #include "blockGeometryStatistics3D.h"
 #include "io/ostreamManager.h"
 
 namespace olb {
+
+class BlockGeometryStatistics3D;
 
 template<typename T, template<typename U> class Lattice, class BoundaryManager>
 class BoundaryConditionInstantiator3D : public OnLatticeBoundaryCondition3D<T,Lattice> {
@@ -293,6 +296,9 @@ addExternalVelocityCorner(int x, int y, int z, T omega)
 
   this->getBlock().defineDynamics(x,x,y,y,z,z, dynamics);
 
+  momentaVector.push_back(momenta);
+  dynamicsVector.push_back(dynamics);
+
   PostProcessorGenerator3D<T,Lattice>* postProcessor
   = BoundaryManager::template getExternalVelocityCornerProcessor<xNormal,yNormal,zNormal>(x, y, z);
   if (postProcessor) {
@@ -314,6 +320,9 @@ addInternalVelocityCorner(int x, int y, int z, T omega)
   = BoundaryManager::template getInternalVelocityCornerDynamics<xNormal,yNormal,zNormal>(omega, *momenta);
 
   this->getBlock().defineDynamics(x,x,y,y,z,z, dynamics);
+
+  momentaVector.push_back(momenta);
+  dynamicsVector.push_back(dynamics);
 
   PostProcessorGenerator3D<T,Lattice>* postProcessor
   = BoundaryManager::template getInternalVelocityCornerProcessor<xNormal,yNormal,zNormal>(x, y, z);

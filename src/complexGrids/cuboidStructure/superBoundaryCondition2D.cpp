@@ -41,7 +41,7 @@ template class sOnLatticeBoundaryCondition2D
 
 template void createLocalBoundaryCondition2D
 <double,descriptors::D2Q9Descriptor,
-BGKdynamics<double,descriptors::D2Q9Descriptor> >
+RLBdynamics<double,descriptors::D2Q9Descriptor> >
 (sOnLatticeBoundaryCondition2D<double,descriptors::D2Q9Descriptor>& sBC);
 template void createLocalBoundaryCondition2D
 <double,descriptors::D2Q9Descriptor>
@@ -49,7 +49,7 @@ template void createLocalBoundaryCondition2D
 
 template void createInterpBoundaryCondition2D
 <double,descriptors::D2Q9Descriptor,
-RLBdynamics<double,descriptors::D2Q9Descriptor> >
+BGKdynamics<double,descriptors::D2Q9Descriptor> >
 (sOnLatticeBoundaryCondition2D<double,descriptors::D2Q9Descriptor>& sBC);
 template void createInterpBoundaryCondition2D
 <double,descriptors::D2Q9Descriptor>

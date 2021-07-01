@@ -1,8 +1,10 @@
-/*  This file is part of the OpenLB library
+/*  Lattice Boltzmann sample, written in C++, using the OpenLB
+ *  library
  *
  *  Copyright (C) 2008 Orestis Malaspinas
- *  Address: EPFL-STI-LIN Station 9, 1015 Lausanne, Switzerland
- *  E-mail: orestis.malaspinas@epfl.ch
+ *  E-mail contact: info@openlb.net
+ *  The most recent release of OpenLB can be downloaded at
+ *  <http://www.openlb.net/>
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
@@ -18,7 +20,7 @@
  *  License along with this program; if not, write to the Free
  *  Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  *  Boston, MA  02110-1301, USA.
-*/
+ */
 
 #include "olb2D.h"
 #include "olb2D.hh"
@@ -42,75 +44,89 @@ typedef double T;
 const int maxIter  = 1000000000;
 const int saveIter = 2500;
 
-void iniGeometry( BlockStructure2D<T, NSDESCRIPTOR>& NSlattice,
-                  BlockStructure2D<T, TDESCRIPTOR>& ADlattice,
-                  ForcedBGKdynamics<T, NSDESCRIPTOR> &bulkDynamics,
-                  Dynamics<T, TDESCRIPTOR>& advectionDiffusionBulkDynamics,
-                  OnLatticeBoundaryCondition2D<T,NSDESCRIPTOR>& NSboundaryCondition,
-                  OnLatticeAdvectionDiffusionBoundaryCondition2D<T,TDESCRIPTOR>& TboundaryCondition,
-                  AdvectionDiffusionUnitLB<T,NSDESCRIPTOR,TDESCRIPTOR> &converter
-                )
-{
-  OstreamManager cout(std::cout,"iniGeometry");
+void prepareLattice( AdvectionDiffusionUnitLB<T,NSDESCRIPTOR,TDESCRIPTOR> &converter,
+                     BlockStructure2D<T, NSDESCRIPTOR>& NSlattice,
+                     BlockStructure2D<T, TDESCRIPTOR>& ADlattice,
+                     ForcedBGKdynamics<T, NSDESCRIPTOR> &bulkDynamics,
+                     Dynamics<T, TDESCRIPTOR>& advectionDiffusionBulkDynamics,
+                     OnLatticeBoundaryCondition2D<T,NSDESCRIPTOR>& NSboundaryCondition,
+                     OnLatticeAdvectionDiffusionBoundaryCondition2D<T,TDESCRIPTOR>& TboundaryCondition ){
 
-  typedef advectionDiffusionLbHelpers<T,TDESCRIPTOR> TlbH;
+  OstreamManager cout(std::cout,"prepareLattice");
+
   int nx = ADlattice.getNx();
   int ny = ADlattice.getNy();
-
   double Tomega  = converter.getOmegaT();
   double NSomega = converter.getOmegaNS();
+
+  /// define lattice Dynamics
   cout << "defining dynamics" << endl;
 
   ADlattice.defineDynamics(0,nx-1, 0,ny-1, &advectionDiffusionBulkDynamics);
   NSlattice.defineDynamics(0,nx-1, 0,ny-1, &bulkDynamics);
 
+  /// sets boundary
   NSboundaryCondition.addVelocityBoundary1P(0,nx-1,ny-1,ny-1, NSomega);
   NSboundaryCondition.addVelocityBoundary1N(0,nx-1,   0,   0, NSomega);
 
   TboundaryCondition.addTemperatureBoundary1P(0,nx-1,ny-1,ny-1, Tomega);
   TboundaryCondition.addTemperatureBoundary1N(0,nx-1,   0,   0, Tomega);
+}
 
-  for (int iX=0; iX<nx; ++iX) {
-    for (int iY=0; iY<ny; ++iY) {
-      T u[2] = {0.,0.};
-      T rho = (T)1;
-      NSlattice.get(iX,iY).defineRhoU(rho, u);
-      NSlattice.get(iX,iY).iniEquilibrium(rho, u);
-      T force[2] = {T(), T()};
-      NSlattice.get(iX,iY).defineExternalField (
-        NSDESCRIPTOR<T>::ExternalField::forceBeginsAt,
-        NSDESCRIPTOR<T>::ExternalField::sizeOfForce,
-        force );
-    }
-  }
+void setBoundaryValues(AdvectionDiffusionUnitLB<T,NSDESCRIPTOR,TDESCRIPTOR> &converter,
+                       BlockStructure2D<T, NSDESCRIPTOR>& NSlattice,
+                       BlockStructure2D<T, TDESCRIPTOR>& ADlattice,
+                       int iT){
 
-  T Tcold = converter.getTcold();
-  T Thot  = converter.getThot();
+  if(iT==0){
+    int nx = ADlattice.getNx();
+    int ny = ADlattice.getNy();
+    typedef advectionDiffusionLbHelpers<T,TDESCRIPTOR> TlbH;
 
-  for (int iX=0; iX<nx; ++iX) {
-    for (int iY=0; iY<ny; ++iY) {
-      T u[2] = {0.,0.};
-      T temperature =Tcold;
-      if (iY==0)
-        temperature = Thot;
-
-      ADlattice.get(iX,iY).defineRho(temperature);
-      T tEq[TDESCRIPTOR<T>::q];
-      for (int iPop = 0; iPop < TDESCRIPTOR<T>::q; ++iPop) {
-        tEq[iPop] = TlbH::equilibrium(iPop,temperature,u);
+    /// for each point set the defineRhou and the Equilibrium
+    for (int iX=0; iX<nx; ++iX) {
+      for (int iY=0; iY<ny; ++iY) {
+        T u[2] = {0.,0.};
+        T rho = (T)1;
+        NSlattice.get(iX,iY).defineRhoU(rho, u);
+        NSlattice.get(iX,iY).iniEquilibrium(rho, u);
+        T force[2] = {T(), T()};
+        NSlattice.get(iX,iY).defineExternalField (
+          NSDESCRIPTOR<T>::ExternalField::forceBeginsAt,
+          NSDESCRIPTOR<T>::ExternalField::sizeOfForce,
+          force );
       }
-      ADlattice.get(iX,iY).definePopulations(tEq);
-      ADlattice.get(iX,iY).defineExternalField (
-        TDESCRIPTOR<T>::ExternalField::velocityBeginsAt,
-        TDESCRIPTOR<T>::ExternalField::sizeOfVelocity,
-        u );
     }
+
+    T Tcold = converter.getTcold();
+    T Thot  = converter.getThot();
+
+    for (int iX=0; iX<nx; ++iX) {
+      for (int iY=0; iY<ny; ++iY) {
+        T u[2] = {0.,0.};
+        T temperature =Tcold;
+        if (iY==0)
+          temperature = Thot;
+
+        ADlattice.get(iX,iY).defineRho(temperature);
+        T tEq[TDESCRIPTOR<T>::q];
+        for (int iPop = 0; iPop < TDESCRIPTOR<T>::q; ++iPop) {
+          tEq[iPop] = TlbH::equilibrium(iPop,temperature,u);
+        }
+        ADlattice.get(iX,iY).definePopulations(tEq);
+        ADlattice.get(iX,iY).defineExternalField (
+          TDESCRIPTOR<T>::ExternalField::velocityBeginsAt,
+          TDESCRIPTOR<T>::ExternalField::sizeOfVelocity,
+          u );
+      }
+    }
+
+    ADlattice.get(nx/2,1).defineRho(Thot+Thot/(T)5);
+
+    /// Make the lattice ready for simulation
+    NSlattice.initialize();
+    ADlattice.initialize();
   }
-
-  ADlattice.get(nx/2,1).defineRho(Thot+Thot/(T)5);
-
-  NSlattice.initialize();
-  ADlattice.initialize();
 }
 
 void couplingBetweenNavierStokesAndAdvectionDiffusion(
@@ -142,20 +158,26 @@ void couplingBetweenNavierStokesAndAdvectionDiffusion(
   NSlattice.addLatticeCoupling(coupling,partnerForNavierStokes);
 }
 
-void plotStatistics(BlockStructure2D<T, NSDESCRIPTOR>&    NSlattice,
-                    BlockStructure2D<T, TDESCRIPTOR>&    ADlattice, int iT)
-{
-  OstreamManager cout(std::cout,"plotStatistics");
+void getResults(BlockStructure2D<T, NSDESCRIPTOR>&    NSlattice,
+                    BlockStructure2D<T, TDESCRIPTOR>&    ADlattice, int iT){
 
-  cout << "Writing Gif..." << std::endl;
-  ImageWriter<T> imageCreator("leeloo.map");
+  OstreamManager cout(std::cout,"getResults");
 
-  imageCreator.writeScaledGif(createFileName("t", iT, 7),
-                              ADlattice.getDataAnalysis().getPressure(),
-                              600,300);
-  imageCreator.writeScaledGif(createFileName("uy", iT, 6),
-                              NSlattice.getDataAnalysis().getVelocityNorm(),
-                              600,300);
+  /// Get statistics and write Gif files
+  if (iT%saveIter==0) {
+    cout << "Writing stats at time " << iT << "." << std::endl;
+    cout << ADlattice.getStatistics().getAverageEnergy() << endl;
+    cout << "Writing Gif..." << std::endl;
+    ImageWriter<T> imageCreator("leeloo.map");
+
+    imageCreator.writeScaledGif(createFileName("t", iT, 7),
+                                ADlattice.getDataAnalysis().getPressure(),
+                                600,300);
+    imageCreator.writeScaledGif(createFileName("uy", iT, 6),
+                                NSlattice.getDataAnalysis().getVelocityNorm(),
+                                600,300);
+  }
+
 }
 
 T computeNusselt(BlockStructure2D<T, NSDESCRIPTOR>& NSlattice,
@@ -182,28 +204,34 @@ T computeNusselt(BlockStructure2D<T, NSDESCRIPTOR>& NSlattice,
   return nusselt;
 }
 
-int main(int argc, char *argv[])
-{
-  OstreamManager clout(std::cout,"main");
+int main(int argc, char *argv[]) {
 
+    /// === 1st Step: Initialization ===
+  OstreamManager clout(std::cout,"main");
   olbInit(&argc, &argv);
   singleton::directories().setOutputDir("./tmp/");
 
-  if (argc != 5)
-  {
-    clout << "Error : Wrong parameters specified." << endl;
-    clout << "1 : Rayleigh." << endl;
-    clout << "2 : Prandtl." << endl;
-    clout << "3 : N." << endl;
-    clout << "4 : Delta t." << endl;
-    exit(1);
+  double Ra    = 10000;
+  double Pr    = 1;
+  int N        = 50;
+  double dt    = 0.001;
+
+  if (argc == 5) {
+    Ra    = atof(argv[1]);
+    Pr    = atof(argv[2]);
+    N     = atoi(argv[3]);
+    dt    = atof(argv[4]);
+  }
+  else {
+    clout << "Warning : Wrong number of parameters specified." << endl;
+    clout << "1 : Rayleigh.    default: " << Ra << endl;
+    clout << "2 : Prandtl.     default: " << Pr << endl;
+    clout << "3 : N.           default: " << N << endl;
+    clout << "4 : Delta t.     default: " << dt << endl;
+    clout << "Now using default values instead.";
   }
 
-  const double Ra    = atof(argv[1]);
-  const double Pr    = atof(argv[2]);
-  const int N        = atoi(argv[3]);
-  const double dt    = atof(argv[4]);
-
+  clout << "Starting simulation with parameters Ra=" << Ra << " Pr=" << Pr << " N=" << N << " dt=" << dt << endl;
 
   AdvectionDiffusionUnitLB<T,NSDESCRIPTOR,TDESCRIPTOR> converter(
     Ra,   // Ra
@@ -229,6 +257,7 @@ int main(int argc, char *argv[])
   int nx = converter.getNx();
   int ny = converter.getNy();
 
+  /// === 3rd Step: Prepare Lattice ===
 
 #ifndef PARALLEL_MODE_MPI  // sequential program execution
   MultiDataDistribution2D distribution = createRegularDataDistribution( nx, ny, 1, 1, 1 );
@@ -256,30 +285,27 @@ int main(int argc, char *argv[])
 
   couplingBetweenNavierStokesAndAdvectionDiffusion(ADlattice, NSlattice, converter);
 
-  iniGeometry(NSlattice, ADlattice,
-              NSbulkDynamics, TbulkDynamics,
-              *NSboundaryCondition, *TboundaryCondition,
-              converter );
+  prepareLattice(converter,
+                 NSlattice, ADlattice,
+                 NSbulkDynamics, TbulkDynamics,
+                 *NSboundaryCondition, *TboundaryCondition );
+
+    /// === 4th Step: Main Loop with Timer ===
 
   util::ValueTracer<T> converge(0.01,(T)ny,1.0e-5);
   int iT = 0;
   clout << "starting simulation" << endl;
-  for (iT=0; iT<maxIter; ++iT)
-  {
+  for (iT=0; iT<maxIter; ++iT) {
 
-    if (converge.hasConverged())
-    {
+    if (converge.hasConverged()) {
       clout << "FINAL CONVERGENCE!!! " << endl;
       break;
     }
 
-    if (iT%saveIter==0)
-    {
-      clout << "Writing stats at time " << iT << "." << std::endl;
-      clout << ADlattice.getStatistics().getAverageEnergy() << endl;
-      plotStatistics(NSlattice, ADlattice, iT );
-    }
+    /// === 5th Step: Definition of Initial and Boundary Conditions ===
+    setBoundaryValues(converter, NSlattice, ADlattice, iT);
 
+    /// === 6th Step: Collide and Stream Execution ===
     ADlattice.collideAndStream(true);
     NSlattice.collideAndStream(true);
 
@@ -287,6 +313,9 @@ int main(int argc, char *argv[])
 
     NSlattice.executeCoupling();
     ADlattice.executeCoupling();
+
+    /// === 7th Step: Computation and Output of the Results ===
+    getResults(NSlattice, ADlattice, iT);
   }
 
   clout << "Time " << iT << "." << std::endl;

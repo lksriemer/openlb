@@ -625,7 +625,7 @@ void createInterpBoundaryCondition2D(sOnLatticeBoundaryCondition2D<T,Lattice>& s
   sBC.set_overlap(1);
   for (int iC=0; iC<nC; iC++) {
     OnLatticeBoundaryCondition2D<T,Lattice>* blockBC
-    = createInterpBoundaryCondition2D(sBC.get_sLattice().get_blockLattice(iC));
+    = createInterpBoundaryCondition2D<T,Lattice,MixinDynamics>(sBC.get_sLattice().get_blockLattice(iC));
     sBC.get_blockBCs().push_back(blockBC);
   }
 }

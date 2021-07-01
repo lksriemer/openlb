@@ -37,3 +37,8 @@
 #include "advectionDiffusionMomenta.h"
 #include "advectionDiffusionUnits.h"
 #include "forcedShanChenCouplingPostProcessor2D.h"
+#include "smagorinskyBGKdynamics.h"
+#include "smagorinskyMRTdynamics.h"
+#include "powerLawBGKdynamics.h"
+#include "porousBGKdynamics.h"
+#include "porousBGKdynamicsDescriptors.h"

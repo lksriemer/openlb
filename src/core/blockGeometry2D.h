@@ -35,8 +35,9 @@
 #include <fstream>
 #include <string>
 
-#include "../src/core/dataFields2D.h"
-#include "../src/io/ostreamManager.h"
+#include "dataFields2D.h"
+#include "io/vtkDataOutput.h"
+#include "io/ostreamManager.h"
 
 /// All OpenLB code is contained in this namespace.
 namespace olb {
@@ -89,9 +90,15 @@ public:
   ;
 
   /// Copy assignment
-  BlockGeometry2D operator=(BlockGeometry2D rhs) {
-    BlockGeometry2D tmp(rhs);
-    return tmp;
+  BlockGeometry2D& operator=(BlockGeometry2D& rhs) {
+    _x0 = rhs._x0;
+    _y0 = rhs._y0;
+    _h = rhs._h;
+    _nx = rhs._nx;
+    _ny = rhs._ny;
+    _offset = rhs._offset;
+    _geometryData.swap(rhs._geometryData);
+    return *this;
   }
   ;
 
@@ -136,6 +143,7 @@ public:
   /// sets the (iX,iY) entry in the 2D scalar field
   void setMaterial(int iX, int iY, unsigned short material);
 
+  /// returns the raw data field
   olb::ScalarField2D<unsigned short>* getRawData();
 
   /// outer cleaning

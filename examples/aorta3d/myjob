@@ -1,0 +1,2 @@
+#!/bin/bash
+mpirun ./aorta3d 140

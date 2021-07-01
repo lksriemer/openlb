@@ -25,6 +25,7 @@
  * Groups all the generic implementation files for basic 3D dynamics.
  */
 #include "latticeDescriptors.hh"
+#include "latticeStatistics.hh"
 #include "cell.hh"
 #include "dynamics.hh"
 #include "momentaOnBoundaries.hh"
@@ -34,9 +35,11 @@
 #include "dataFields3D.hh"
 #include "serializer.hh"
 #include "boundaryPostProcessors3D.hh"
+#include "offBoundaryPostProcessors3D.hh"
 #include "blockLattice3D.hh"
 #include "blockLatticeView3D.hh"
 #include "boundaryCondition3D.hh"
+#include "offBoundaryCondition3D.hh"
 #include "simulationSetup3D.hh"
 #include "dataAnalysis3D.hh"
 #include "dataReductions.hh"

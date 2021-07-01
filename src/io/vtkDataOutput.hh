@@ -27,6 +27,7 @@
 #include "vtkDataOutput.h"
 #include "serializerIO.h"
 #include "core/singleton.h"
+#include "core/olbDebug.h"
 
 #include <iostream>
 #include <iomanip>
@@ -113,8 +114,8 @@ VtkImageOutput2D<T>::~VtkImageOutput2D() {
 template<typename T>
 void VtkImageOutput2D<T>::writeHeader(int nx_, int ny_) {
   if (headerWritten) {
-    OLB_PRECONDITION(nx == nx_);
-    OLB_PRECONDITION(ny == ny_);
+    OLB_PRECONDITION( nx == nx_);
+    OLB_PRECONDITION( ny == ny_);
   }
   else {
     nx = nx_;
@@ -175,9 +176,9 @@ VtkImageOutput3D<T>::~VtkImageOutput3D() {
 template<typename T>
 void VtkImageOutput3D<T>::writeHeader(int nx_, int ny_, int nz_) {
   if (headerWritten) {
-    OLB_PRECONDITION(nx == nx_);
-    OLB_PRECONDITION(ny == ny_);
-    OLB_PRECONDITION(nz == nz_);
+    OLB_PRECONDITION( nx == nx_);
+    OLB_PRECONDITION( ny == ny_);
+    OLB_PRECONDITION( nz == nz_);
   }
   else {
     nx = nx_;

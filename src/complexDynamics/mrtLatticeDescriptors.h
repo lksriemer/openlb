@@ -90,6 +90,15 @@ struct MRTD3Q19Descriptor
     : public MRTD3Q19DescriptorBase<T>, public NoExternalFieldBase
   { };
 
+template <typename T>
+struct ForcedMRTD2Q9Descriptor
+    : public MRTD2Q9DescriptorBase<T>, public Force2dDescriptorBase
+  { };
+
+template <typename T>
+struct ForcedMRTD3Q19Descriptor
+    : public MRTD3Q19DescriptorBase<T>, public Force3dDescriptorBase
+  { };
 
 }  // namespace descriptors
 

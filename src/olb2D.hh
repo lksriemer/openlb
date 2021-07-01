@@ -5,3 +5,4 @@
 #include <utilities/utilities2D.hh>
 #include <complexGrids/cuboidStructure/cuboidStructure2D.hh>
 #include <complexGrids/multiBlockStructure/multiBlockStructure2D.hh>
+#include <functors/functors2D.hh>

@@ -54,16 +54,16 @@ private:
   T   _globPosX, _globPosY;
   /// Distance to the next node
   T   _delta;
-  /// Number of nodes in the direction x and y
-  int _nX, _nY;
+  /// Number of nodes in the direction x and y and the refinement Level
+  int _nX, _nY, _refinementLevel;
   mutable OstreamManager clout;
 public:
   /// Constructor
   Cuboid2D() : clout(std::cout,"Cuboid2D") {};
   /// Construction of a cuboid
-  Cuboid2D(T globPosX, T globPosY, T delta, int nX, int nY);
+  Cuboid2D(T globPosX, T globPosY, T delta, int nX, int nY, int refinementLevel=0);
   /// Initializes the cuboid
-  void init(T globPosX, T globPosY, T delta, int nX, int nY);
+  void init(T globPosX, T globPosY, T delta, int nX, int nY, int refinementLevel=0);
 
   /// Read access to left lower corner coordinates
   T get_globPosX() const;
@@ -107,6 +107,15 @@ public:
   void divide(int p, int q, std::vector<Cuboid2D<T> > &childrenC) const;
   /// Divides the cuboid in p cuboids and add them to the given vector
   void divide(int p, std::vector<Cuboid2D<T> > &childrenC) const;
+
+  /// Refines the cuboid with given refinement level
+  void refineToLevel(unsigned int level);
+  /// Refines one more level
+  void refineIncrease();
+  /// Refines one less level
+  void refineDecrease();
+  
+  int get_refinementLevel() const;
 };
 
 }  // namespace olb

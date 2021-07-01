@@ -34,3 +34,4 @@
 #include "stlReader.h"
 #include "nastranReader3D.h"
 #include "ostreamManager.h"
+#include "vtiReader.h"

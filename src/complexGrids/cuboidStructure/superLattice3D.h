@@ -36,6 +36,8 @@
 #include "cuboidGeometry3D.h"
 #include "core/loadBalancer.h"
 #include "core/postProcessing.h"
+#include "functors/analyticalF.h"
+#include "functors/superLatticeBaseF3D.h"
 
 /// All OpenLB code is contained in this namespace.
 namespace olb {
@@ -62,6 +64,9 @@ namespace olb {
  */
 
 template<typename T, template<typename U> class Lattice> class Communicator3D;
+
+template<typename T, template<typename U> class Lattice> class SuperLatticeF3D;
+
 
 template<typename T, template<typename U> class Lattice>
 class SuperLattice3D {
@@ -91,30 +96,33 @@ private:
   /// Specifies if there is statistic calculated. It is always
   /// needed for the ConstRhoBGK dynamics. (default =true)
   bool _statistics_on;
+  /// Specifies if there has been some data updated which requires 
+  /// communication
+  bool _communicationNeeded;
 public:
   /// Construction of a super structure
   SuperLattice3D(CuboidGeometry3D<T>& cGeometry, int overlapBC = 0,
                  loadBalancer *lb = NULL);
 
   /// Read and write access to a block lattice
-  BlockLattice3D<T, Lattice>& get_blockLattice(int i) {
-    return _blockLattices[i];
+  BlockLattice3D<T, Lattice>& get_blockLattice(int locIC) {
+    return _blockLattices[locIC];
   }
   ;
   /// Read only access to a block lattice
-  BlockLattice3D<T, Lattice> const& get_blockLattice(int i) const {
-    return _blockLattices[i];
+  BlockLattice3D<T, Lattice> const& get_blockLattice(int locIC) const {
+    return _blockLattices[locIC];
   }
   ;
   /// Read and write access to a lattice (block lattice view, one
   /// without overlap).
-  BlockLatticeView3D<T, Lattice>& get_lattice(int i) {
-    return _lattices[i];
+  BlockLatticeView3D<T, Lattice>& get_lattice(int locIC) {
+    return _lattices[locIC];
   }
   ;
   /// Read only access to a lattice
-  BlockLatticeView3D<T, Lattice> const& get_lattice(int i) const {
-    return _lattices[i];
+  BlockLatticeView3D<T, Lattice> const& get_lattice(int locIC) const {
+    return _lattices[locIC];
   }
   ;
   /// Read and write access to a block lattice
@@ -162,41 +170,57 @@ public:
     return *_load;
   }
   ;
+
   /// Return a handle to the LatticeStatistics object
   LatticeStatistics<T>& getStatistics();
   /// Return a constant handle to the LatticeStatistics object
   LatticeStatistics<T> const& getStatistics() const;
 
+  /// Executes the stream communicator
+  void communicate();
   /// Write access to lattice cells that returns false if
   /// (iX/iY/iZ) is not in any of the cuboids
   bool set(T iX, T iY, T iZ, Cell<T, Lattice> const& cell);
   /// Read only access to lattice cells that returns false if
   /// (iX/iY/iZ) is not in any of the cuboids
   bool get(T iX, T iY, T iZ, Cell<T, Lattice>& cell) const;
+  /// Read only access to lattice cells over the cuboid number 
+  /// and local coordinates   WARNING!!! NO ERROR HANDLING IMPLEMENTED!!!
+  Cell<T,Lattice> get(int iC, T locX, T locY, T locZ) const;
   /// Initialize all lattice cells to become ready for simulation
   void initialize();
   /// Defines the dynamics on a rectangular domain
   void defineDynamics(T x0, T x1, T y0, T y1, T z0, T z1,
                       Dynamics<T, Lattice>* dynamics);
-  /// Defines the dynamics on a rectangular domain by material
-  void defineDynamics(BlockGeometryStatistics3D* blockGeoSta, T x0, T x1,
-                      T y0, T y1, T z0, T z1, Dynamics<T, Lattice>* dynamics,
-                      int material);
-  /// Defines the dynamics by material
-  void defineDynamics(BlockGeometryStatistics3D* blockGeoSta, Dynamics<T,
-                      Lattice>* dynamics, int material);
+  /// Defines the dynamics on a domain with a particular material number
+  void defineDynamics(SuperGeometry3D& sGeometry, int material,
+                      Dynamics<T, Lattice>* dynamics);
   /// Defines rho on a rectangular domain
   void defineRhoU(T x0, T x1, T y0, T y1, T z0, T z1, T rho,
                   const T u[Lattice<T>::d]);
   /// Defines rho on a rectangular domain
-  void defineRho (T x0, T x1, T y0, T y1, T z0, T z1, T rho );
+  void defineRho(T x0, T x1, T y0, T y1, T z0, T z1, T rho );
+  /// Defines rho on a domain with a particular material number
+  void defineRho(SuperGeometry3D& sGeometry, int material,AnalyticalF3D<T,T>& rho);
   /// Defines u on a rectangular domain
-  void defineU (T x0, T x1, T y0, T y1, T z0, T z1, const T u[Lattice<T>::d] );
+  void defineU(T x0, T x1, T y0, T y1, T z0, T z1, const T u[Lattice<T>::d] );
+  /// Defines u on a domain with a particular material number
+  void defineU(SuperGeometry3D& sGeometry, int material, AnalyticalF3D<T,T>& u);
   /// Defines an external field on a rectangular domain
   void defineExternalField (T x0, T x1, T y0, T y1, T z0, T z1, int fieldBeginsAt, int sizeOfField, T* field );
-  /// Initializes the equilibrium
+  /// Defines an external field on a domain with a particular material number
+  void defineExternalField(SuperGeometry3D& sGeometry, int material,
+    int fieldBeginsAt, int sizeOfField, AnalyticalF3D<T,T>& field);
+  /// Defines an external field on a domain with a particular material number
+  void defineExternalField(SuperGeometry3D& sGeometry, int material,
+    int fieldBeginsAt, int sizeOfField, SuperLatticeF3D<T,Lattice>& field);
+
+  /// Initializes by equilibrium on a rectangular domain
   void iniEquilibrium(T x0, T x1, T y0, T y1, T z0, T z1, T rho,
                       const T u[Lattice<T>::d]);
+  /// Initializes by equilibrium on a domain with a particular material number
+  void iniEquilibrium(SuperGeometry3D& sGeometry, int material,
+    AnalyticalF3D<T,T>& rho , AnalyticalF3D<T,T>& u);
 
   /// Apply collision step to a rectangular domain
   void collide(T x0, T x1, T y0, T y1, T z0, T z1);
@@ -227,14 +251,25 @@ public:
   /// Switches Statistics on (default on)
   void statisticsOn() {
     _statistics_on = true;
-  }
-  ;
+  };
   /// Switches Statistics off (default on). That speeds up
   /// the execution time.
   void statisticsOff() {
     _statistics_on = false;
-  }
-  ;
+  };
+
+  /// Adds a coupling generator for one partner superLattice
+  void addLatticeCoupling(SuperGeometry3D& sGeometry, int material, LatticeCouplingGenerator3D<T, Lattice> const& lcGen, 
+    SuperLattice3D<T,Lattice>& partnerLattice );
+  /// Executes coupling generatur for one partner superLattice
+  void executeCoupling();
+
+  /// TO BE DONE: Development of a general IO concept!
+  /// Save Data to files fName
+  void save(std::string fName, bool enforceUint = false);
+  /// Load Data from files fName
+  void load(std::string fName, bool enforceUint = false);
+
 
 private:
   /// Resets and reduce the statistics

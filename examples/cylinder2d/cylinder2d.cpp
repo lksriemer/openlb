@@ -1,7 +1,7 @@
 /*  Lattice Boltzmann sample, written in C++, using the OpenLB
  *  library
  *
- *  Copyright (C) 2006 Jonas Latt
+ *  Copyright (C) 2006 Jonas Latt, 2012 Tim Dornieden
  *  E-mail contact: info@openlb.net
  *  The most recent release of OpenLB can be downloaded at
  *  <http://www.openlb.net/>
@@ -20,7 +20,7 @@
  *  License along with this program; if not, write to the Free
  *  Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  *  Boston, MA  02110-1301, USA.
-*/
+ */
 
 /* cylinder2d.cpp:
  * This example examines an unsteady flow past a cylinder placed in a channel.
@@ -59,76 +59,128 @@ const int obst_y = ny/2-1;
 const int obst_r = ny/10+1;
 const T nu       = uMax * 2.*obst_r / Re;
 const T omega    = 1. / (3.*nu+1./2.);
-const int maxT   = 50000;
+const int maxT   = 100000;
 const int tSave  = 100;
+const int itStart = 10000;
 
-// Computation of a Poiseuille velocity profile
-T poiseuilleVelocity(int iY) {
-  T y = (T)iY;
-  T L = (T)(ny-1);
-  return 4.*uMax / (L*L) * (L*y-y*y);
-}
-
-// Computation of a Poiseuille pressure profile
-T poiseuillePressure(int iX) {
-  T x = (T)iX;
-  T Lx = (T)(nx-1);
-  T Ly = (T)(ny-1);
-  return 8.*nu*uMax / (Ly*Ly) * (Lx/2.-x);
-}
 
 // Set up the geometry of the simulation
-void iniGeometry( BlockStructure2D<T,DESCRIPTOR>& lattice,
-                  Dynamics<T, DESCRIPTOR>& bulkDynamics,
-                  OnLatticeBoundaryCondition2D<T,DESCRIPTOR>& boundaryCondition )
-{
+void prepareLattice(BlockStructure2D<T,DESCRIPTOR>& lattice,
+                    Dynamics<T, DESCRIPTOR>& bulkDynamics,
+                    OnLatticeBoundaryCondition2D<T,DESCRIPTOR>& boundaryCondition ){
 
-  // Bulk dynamics
+  // Set bulk dynamics
   lattice.defineDynamics(0,nx-1,0,ny-1,    &bulkDynamics);
 
-  // top boundary
+  // Set top boundary condition
   boundaryCondition.addVelocityBoundary1P(1,nx-2,ny-1,ny-1, omega);
-  // bottom boundary
+  // Set bottom boundary condition
   boundaryCondition.addVelocityBoundary1N(1,nx-2,   0,   0, omega);
-  // left boundary
+  // Set left boundary condition
   boundaryCondition.addVelocityBoundary0N(0,0, 1, ny-2, omega);
-  // right boundary
+  // Set right boundary condition
   boundaryCondition.addPressureBoundary0P(nx-1,nx-1, 1, ny-2, omega);
 
-  // Corner nodes
+  // Set corner nodes condition
   boundaryCondition.addExternalVelocityCornerNN(0,0, omega);
   boundaryCondition.addExternalVelocityCornerNP(0,ny-1, omega);
   boundaryCondition.addExternalVelocityCornerPN(nx-1,0, omega);
   boundaryCondition.addExternalVelocityCornerPP(nx-1,ny-1, omega);
-
-  // Definition of the obstacle (bounce-back nodes)
-  for (int iX=0; iX<nx; ++iX) {
-    for (int iY=0; iY<ny; ++iY) {
-      T u[2] = {poiseuilleVelocity(iY),0.};
-      T rho = (T)1 + poiseuillePressure(iX) *
-              DESCRIPTOR<T>::invCs2;
-      if ( (iX-obst_x)*(iX-obst_x) +
-           (iY-obst_y)*(iY-obst_y) <= obst_r*obst_r )
-      {
-        lattice.defineDynamics( iX,iX,iY,iY,
-                                &instances::getBounceBack<T,DESCRIPTOR>() );
-      }
-      else {
-        lattice.get(iX,iY).defineRhoU(rho, u);
-        lattice.get(iX,iY).iniEquilibrium(rho, u);
-      }
-    }
-  }
-
-  // Make the lattice ready for simulation
-  lattice.initialize();
 }
 
+
+
+
+void setBoundaryValues(BlockStructure2D<T, DESCRIPTOR>& lattice,
+                       int iT){
+  OstreamManager clout(std::cout,"setBoundaryValues");
+
+  // Definition of the obstacle (bounce-back nodes) 
+  // Set initial condition
+  if(iT==0){ 
+    for (int iX=0; iX<nx; ++iX) {
+      for (int iY=0; iY<ny; ++iY) {
+        T u[2] = {0.,0.};
+        T rho = (T)1;
+        if ( (iX-obst_x)*(iX-obst_x) +
+             (iY-obst_y)*(iY-obst_y) <= obst_r*obst_r )
+        {
+          lattice.defineDynamics( iX,iX,iY,iY,
+                                  &instances::getBounceBack<T,DESCRIPTOR>() );
+        }
+        else {
+          lattice.get(iX,iY).defineRhoU(rho, u);
+          lattice.get(iX,iY).iniEquilibrium(rho, u);
+        }
+      }
+    }
+  // Make the lattice ready for simulation
+  lattice.initialize();
+  }
+
+  if (iT <= itStart) {
+    const int ny = lattice.getNy();
+  
+    // Smooth start curve, sinus
+    // SinusStartScale<T,int> nSinusStartScale(itStart, (T)1);
+    // T frac = nSinusStartScale(iT);
+
+    // Smooth start curve, polynomial
+    PolynomialStartScale<T,int> nPolynomialStartScale(itStart, T(1));
+    std::vector<int> help; help.push_back(iT);
+    T frac = nPolynomialStartScale(help)[0];
+
+    SquareAnalyticalF<T,T> nPoiseuilleVelocity((ny-1.)/2., (ny-1.)/2., uMax);
+    T p0 =8.*nu*uMax*(nx-1)/(2.*(ny-1)*(ny-1));
+    LinearAnalyticalF1D<T,T> nPoiseuillePressure(0 , p0 , nx-1 , -p0 );
+  
+    for (int iY = 0; iY < ny; ++iY) {  
+      std::vector<T> help2;
+      help2.push_back((T)iY);
+      T u[2] = {frac * nPoiseuilleVelocity(help2)[0],0.};
+      help2[0] = T();
+      T rho = (T)1 + nPoiseuillePressure(help2)[0] * DESCRIPTOR<T>::invCs2;
+      lattice.get(0,iY).defineRhoU(rho, u);  
+    }
+  }
+}
+
+void getResults(BlockStructure2D<T, DESCRIPTOR>& lattice, int iT){
+  if (iT%tSave==0 && iT !=0) {
+    OstreamManager clout(std::cout,"main");
+    clout.setMultiOutput(false);
+    /// Get statistics
+    clout << "step=" << iT
+          << "; avEnergy="
+          << lattice.getStatistics().getAverageEnergy()
+          << "; avRho="
+          << lattice.getStatistics().getAverageRho()
+          << "; uMax="
+          << lattice.getStatistics().getMaxU() << endl;
+
+    DataAnalysisBase2D<T,DESCRIPTOR> const& analysis = lattice.getDataAnalysis();
+    // Creation of images representing intermediate simulation results
+    ImageWriter<T> imageWriter("leeloo");
+    // Creation of gif images. This works only on systems on
+    // which ImageMagick is installed. If you have the
+    // program gifmerge, you can create an animation with the help
+    // of a command of the kind "gifmerge -5 u*.gif > anim_u"
+
+    imageWriter.writeScaledGif(createFileName("p", iT, 6),
+                               analysis.getPressure());
+    imageWriter.writeScaledGif(createFileName("u", iT, 6),
+                               analysis.getVelocityNorm());
+  }
+}
+
+
 int main(int argc, char* argv[]) {
+
+  /// === 1st Step: Initialization ===
   olbInit(&argc, &argv);
   singleton::directories().setOutputDir("./tmp/");
-  OstreamManager clout(std::cout,"main");
 
+  /// === 3rd Step: Prepare Lattice ===
 #ifndef PARALLEL_MODE_MPI  // sequential program execution
   BlockLattice2D<T, DESCRIPTOR> lattice( nx, ny );
 #else                      // parallel program execution
@@ -136,7 +188,7 @@ int main(int argc, char* argv[]) {
     createRegularDataDistribution( nx, ny ) );
 #endif
 
-  ConstRhoBGKdynamics<T, DESCRIPTOR> bulkDynamics (
+  BGKdynamics<T, DESCRIPTOR> bulkDynamics (
     omega,
     instances::getBulkMomenta<T,DESCRIPTOR>()
   );
@@ -151,34 +203,22 @@ int main(int argc, char* argv[]) {
   // boundaryCondition = createInterpBoundaryCondition2D(lattice);
   boundaryCondition = createLocalBoundaryCondition2D(lattice);
 
-  iniGeometry(lattice, bulkDynamics, *boundaryCondition);
+  prepareLattice(lattice, bulkDynamics, *boundaryCondition);
 
-  // Creation of images representing intermediate simulation results
-  ImageWriter<T> imageWriter("leeloo");
 
-  // Main loop over time
+
+
+  /// === 4th Step: Main Loop with Timer ===
   for (int iT=0; iT<maxT; ++iT) {
-    if (iT%tSave==0 && iT !=0) {
-      clout << "step=" << iT
-            << "; avEnergy="
-            << lattice.getStatistics().getAverageEnergy()
-            << "; avRho="
-            << lattice.getStatistics().getAverageRho()
-            << "; uMax="
-            << lattice.getStatistics().getMaxU() << endl;
 
-      DataAnalysisBase2D<T,DESCRIPTOR> const& analysis = lattice.getDataAnalysis();
-      // Creation of gif images. This works only on systems on
-      // which ImageMagick is installed. If you have the
-      // program gifmerge, you can create an animation with the help
-      // of a command of the kind "gifmerge -5 u*.gif > anim_u"
-      imageWriter.writeScaledGif(createFileName("p", iT, 6),
-                                 analysis.getPressure());
-      imageWriter.writeScaledGif(createFileName("u", iT, 6),
-                                 analysis.getVelocityNorm());
-    }
+    /// === 5th Step: Definition of Initial and Boundary Conditions ===
+    setBoundaryValues(lattice, iT);
 
+    /// === 6th Step: Collide and Stream Execution ===
     lattice.collideAndStream();
+
+    /// === 7th Step: Computation and Output of the Results ===
+    getResults(lattice, iT);
 
   }
 

@@ -21,18 +21,24 @@
 #  Boston, MA  02110-1301, USA.
 
 
-generic        :=
+generic        := superGeometry3D \
+                  superGeometryStatistics3D
 
 precompiled    := communicator2D \
                   cuboid2D \
                   cuboidGeometry2D \
                   cuboidNeighbourhood2D \
                   superBoundaryCondition2D \
+                  superOffBoundaryCondition2D \
                   superLattice2D \
+                  cuboidVTKout2D \
                   communicator3D \
                   cuboid3D \
                   cuboidGeometry3D \
                   cuboidNeighbourhood3D \
                   superBoundaryCondition3D \
+                  superGeometry3D \
+                  superGeometryStatistics3D \
+                  superOffBoundaryCondition3D \
                   superLattice3D \
-                  cuboidVTKout
+                  cuboidVTKout3D

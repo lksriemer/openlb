@@ -103,7 +103,7 @@ cleansamples:
 lib: depend compile $(LIBDIR)/lib$(LIB).a
 $(LIBDIR)/lib$(LIB).a: $(wildcard $(OBJDIR)/*.o)
 	@echo Build lib$(LIB).a:
-	@ar -rusv $(LIBDIR)/lib$(LIB).a $(OBJDIR)/*.o
+	@$(ARPRG) -rusv $(LIBDIR)/lib$(LIB).a $(OBJDIR)/*.o
 
 ###########################################################################
 ## examples

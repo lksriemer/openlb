@@ -28,6 +28,8 @@
 #ifndef SUPER_LATTICE_3D_HH
 #define SUPER_LATTICE_3D_HH
 
+#include<limits>
+
 #include "complexGrids/mpiManager/mpiManager.h"
 #include "core/blockLattice3D.h"
 #include "core/cell.h"
@@ -36,6 +38,10 @@
 #include "core/loadBalancer.h"
 #include "core/postProcessing.h"
 #include "superLattice3D.h"
+#include "io/base64.h"
+#include "functors/analyticalF.h"
+#include "functors/superLatticeBaseF3D.h"
+
 
 namespace olb {
 
@@ -92,6 +98,20 @@ SuperLattice3D<T, Lattice>::SuperLattice3D(CuboidGeometry3D<T>& cGeometry,
 
   if (_commBC_on)
     _commBC.init_nh();
+
+  _communicationNeeded=true;
+}
+
+template<typename T, template<typename U> class Lattice>
+void SuperLattice3D<T, Lattice>::communicate() {
+  if(_communicationNeeded) {
+    //std::cout << "Cummunicate ..." << std::endl;
+    _commStream.send();
+    _commStream.receive();
+    _commStream.write();
+    _communicationNeeded = false;
+    //std::cout << "Cummunicate ...ok" << std::endl;
+  }
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -107,9 +127,11 @@ bool SuperLattice3D<T, Lattice>::set(T iX, T iY, T iZ,
       found = true;
     }
   }
+  _communicationNeeded = true;
   return found;
 }
 
+// Note: The dynamics of the cell are not communicated here
 template<typename T, template<typename U> class Lattice>
 bool SuperLattice3D<T, Lattice>::get(T iX, T iY, T iZ, Cell<T, Lattice>& cell) const {
 
@@ -146,6 +168,28 @@ bool SuperLattice3D<T, Lattice>::get(T iX, T iY, T iZ, Cell<T, Lattice>& cell) c
 }
 
 template<typename T, template<typename U> class Lattice>
+Cell<T,Lattice> SuperLattice3D<T,Lattice>::get(int iC, T locX, 
+                                               T locY, T locZ) const {
+  Cell<T,Lattice> cell;
+#ifdef PARALLEL_MODE_MPI
+  const int sizeOfCell = Lattice<T>::q + Lattice<T>::ExternalField::numScalars;
+  T* cellData = new T[sizeOfCell];
+
+  if (_load->rank(iC)==singleton::mpi().getRank()) {
+    _lattices[_load->loc(iC)].get(locX,locY,locZ).serialize(cellData);
+  }
+  singleton::mpi().bCast(cellData, sizeOfCell, _load->rank(iC));
+  cell.unSerialize(cellData);
+
+  delete [] cellData;
+#else
+  cell = _lattices[_load->loc(iC)].get(locX,locY,locZ);
+#endif
+  return cell;
+}
+
+
+template<typename T, template<typename U> class Lattice>
 void SuperLattice3D<T, Lattice>::initialize() {
 
   if (_commBC_on) {
@@ -156,6 +200,7 @@ void SuperLattice3D<T, Lattice>::initialize() {
     //_lattices[iC].initialize();
     _lattices[iC].postProcess();
   }
+  _communicationNeeded = true;
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -173,40 +218,34 @@ void SuperLattice3D<T, Lattice>::defineDynamics(T x0, T x1, T y0, T y1, T z0,
 }
 
 template<typename T, template<typename U> class Lattice> void SuperLattice3D<T,
-         Lattice>::defineDynamics(BlockGeometryStatistics3D* blockGeoSta, T x0,
-                                  T x1, T y0, T y1, T z0, T z1, Dynamics<T, Lattice>* dynamics,
-int material) {
-  int locX, locY, locZ;
-  for (int iX = x0; iX <= x1; ++iX) {
-    for (int iY = y0; iY <= y1; ++iY) {
-      for (int iZ = z0; iZ <= z1; ++iZ) {
+         Lattice>::defineDynamics(SuperGeometry3D& sGeometry, int material, Dynamics<T, Lattice>* dynamics)
+{
+  if (sGeometry.getStatistics().getNVoxel(material)!=0) {
 
-        if (blockGeoSta->getBlockGeometry()->getMaterial(iX, iY, iZ)
-        == material) {
-          for (int iC = 0; iC < _load->size(); iC++) {
-            if (_cGeometry.get_cuboid(_load->glob(iC)).checkPoint(
-            iX, iY, iZ, locX, locY, locZ, _overlap)) {
-              _blockLattices[iC].defineDynamics(locX, locX, locY,
-                                                locY, locZ, locZ, dynamics);
+    const int x0 = sGeometry.getStatistics().getMin(material)[0]-_overlap;
+    const int y0 = sGeometry.getStatistics().getMin(material)[1]-_overlap;
+    const int z0 = sGeometry.getStatistics().getMin(material)[2]-_overlap;
+    const int x1 = sGeometry.getStatistics().getMax(material)[0]+_overlap;
+    const int y1 = sGeometry.getStatistics().getMax(material)[1]+_overlap;
+    const int z1 = sGeometry.getStatistics().getMax(material)[2]+_overlap;
+
+    for (int iX = x0; iX <= x1; iX++) {
+      for (int iY = y0; iY <= y1; iY++) { 
+        for (int iZ = z0; iZ <= z1; iZ++) {
+          if (sGeometry.getMaterial(iX, iY, iZ) == material) {
+            int locX, locY, locZ;
+            for (int iC = 0; iC < _load->size(); iC++) {
+              if (_cGeometry.get_cuboid(_load->glob(iC)).checkPoint(
+                  iX, iY, iZ, locX, locY, locZ, _overlap)) {
+                _blockLattices[iC].defineDynamics(locX, locX, locY,
+                                                    locY, locZ, locZ, dynamics);
+              }
             }
           }
         }
       }
     }
   }
-}
-
-template<typename T, template<typename U> class Lattice>
-void SuperLattice3D<T, Lattice>::defineDynamics(
-  BlockGeometryStatistics3D* blockGeoSta, Dynamics<T, Lattice>* dynamics,
-  int material) {
-
-  defineDynamics(blockGeoSta,
-                 -_overlap, blockGeoSta->getBlockGeometry()->getNx() - 1+_overlap,
-                 -_overlap, blockGeoSta->getBlockGeometry()->getNy() - 1+_overlap,
-                 -_overlap, blockGeoSta->getBlockGeometry()->getNz() - 1+_overlap,
-                 dynamics, material);
-
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -225,6 +264,7 @@ void SuperLattice3D<T, Lattice>::defineRhoU(T x0, T x1, T y0, T y1, T z0, T z1,
       }
     }
   }
+  _communicationNeeded = true;
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -244,7 +284,38 @@ void SuperLattice3D<T,Lattice>::defineRho (
       }
     }
   }
+  _communicationNeeded = true;
 }
+
+
+template<typename T, template<typename U> class Lattice> void SuperLattice3D<T,
+         Lattice>::defineRho(SuperGeometry3D& sGeometry, int material, AnalyticalF3D<T,T>& rho)
+{
+  if (sGeometry.getStatistics().getNVoxel(material)!=0) {
+    const int x0 = sGeometry.getStatistics().getMin(material)[0]-_overlap;
+    const int y0 = sGeometry.getStatistics().getMin(material)[1]-_overlap;
+    const int z0 = sGeometry.getStatistics().getMin(material)[2]-_overlap;
+    const int x1 = sGeometry.getStatistics().getMax(material)[0]+_overlap;
+    const int y1 = sGeometry.getStatistics().getMax(material)[1]+_overlap;
+    const int z1 = sGeometry.getStatistics().getMax(material)[2]+_overlap;
+
+    for (int iX = x0; iX <= x1; iX++) {
+      for (int iY = y0; iY <= y1; iY++) { 
+        for (int iZ = z0; iZ <= z1; iZ++) {
+          if (sGeometry.getMaterial(iX, iY, iZ) == material) {
+            std::vector<T> physCoordinate;
+            physCoordinate.push_back(sGeometry.physCoordX(iX) );
+            physCoordinate.push_back(sGeometry.physCoordY(iY) );
+            physCoordinate.push_back(sGeometry.physCoordZ(iZ) );
+            defineRho(iX,iX,iY,iY,iZ,iZ,rho(physCoordinate)[0]);
+          }
+        }
+      }
+    }
+  }
+  _communicationNeeded = true;
+}
+
 
 template<typename T, template<typename U> class Lattice>
 void SuperLattice3D<T,Lattice>::defineU (
@@ -263,6 +334,37 @@ void SuperLattice3D<T,Lattice>::defineU (
       }
     }
   }
+  _communicationNeeded = true;
+}
+
+
+template<typename T, template<typename U> class Lattice> void SuperLattice3D<T,
+         Lattice>::defineU(SuperGeometry3D& sGeometry, int material, AnalyticalF3D<T,T>& u)
+{
+  if (sGeometry.getStatistics().getNVoxel(material)!=0) {
+    const int x0 = sGeometry.getStatistics().getMin(material)[0]-_overlap;
+    const int y0 = sGeometry.getStatistics().getMin(material)[1]-_overlap;
+    const int z0 = sGeometry.getStatistics().getMin(material)[2]-_overlap;
+    const int x1 = sGeometry.getStatistics().getMax(material)[0]+_overlap;
+    const int y1 = sGeometry.getStatistics().getMax(material)[1]+_overlap;
+    const int z1 = sGeometry.getStatistics().getMax(material)[2]+_overlap;
+
+    for (int iX = x0; iX <= x1; iX++) {
+      for (int iY = y0; iY <= y1; iY++) { 
+        for (int iZ = z0; iZ <= z1; iZ++) {
+          if (sGeometry.getMaterial(iX, iY, iZ) == material) {
+            std::vector<T> physCoordinate;
+            physCoordinate.push_back(sGeometry.physCoordX(iX) );
+            physCoordinate.push_back(sGeometry.physCoordY(iY) );
+            physCoordinate.push_back(sGeometry.physCoordZ(iZ) );
+            T uTmp[] = {u(physCoordinate)[0],u(physCoordinate)[1],u(physCoordinate)[2]};
+            defineU(iX,iX,iY,iY,iZ,iZ,uTmp);
+          }
+        }
+      }
+    }
+  }
+  _communicationNeeded = true;
 }
 
 
@@ -285,6 +387,88 @@ void SuperLattice3D<T,Lattice>::defineExternalField (
       }
     }
   }
+  _communicationNeeded = true;
+}
+
+
+template<typename T, template<typename U> class Lattice>
+void SuperLattice3D<T,Lattice>::defineExternalField(
+  SuperGeometry3D& sGeometry, int material,
+  int fieldBeginsAt, int sizeOfField, AnalyticalF3D<T,T>& field)
+{
+  if (sGeometry.getStatistics().getNVoxel(material)!=0) {
+    const int x0 = sGeometry.getStatistics().getMin(material)[0]-_overlap;
+    const int y0 = sGeometry.getStatistics().getMin(material)[1]-_overlap;
+    const int z0 = sGeometry.getStatistics().getMin(material)[2]-_overlap;
+    const int x1 = sGeometry.getStatistics().getMax(material)[0]+_overlap;
+    const int y1 = sGeometry.getStatistics().getMax(material)[1]+_overlap;
+    const int z1 = sGeometry.getStatistics().getMax(material)[2]+_overlap;
+
+    T* fieldTmp = new T [sizeOfField];
+
+    for (int iX = x0; iX <= x1; iX++) {
+      for (int iY = y0; iY <= y1; iY++) { 
+        for (int iZ = z0; iZ <= z1; iZ++) {
+          if (sGeometry.getMaterial(iX, iY, iZ) == material) {
+            std::vector<T> physCoordinate;
+            physCoordinate.push_back(sGeometry.physCoordX(iX) );
+            physCoordinate.push_back(sGeometry.physCoordY(iY) );
+            physCoordinate.push_back(sGeometry.physCoordZ(iZ) );
+            for (int i=0;i<sizeOfField;i++) {
+              fieldTmp[i] = field(physCoordinate)[i];
+            }
+            defineExternalField(iX,iX,iY,iY,iZ,iZ,fieldBeginsAt,sizeOfField, fieldTmp);
+          }
+        }
+      }
+    }
+    delete fieldTmp; 
+  }
+  _communicationNeeded = true;
+}
+
+
+template<typename T, template<typename U> class Lattice>
+void SuperLattice3D<T,Lattice>::defineExternalField(
+  SuperGeometry3D& sGeometry, int material,
+  int fieldBeginsAt, int sizeOfField, SuperLatticeF3D<T,Lattice>& field)
+{
+  if (sGeometry.getStatistics().getNVoxel(material)!=0) {
+    const int x0 = sGeometry.getStatistics().getMin(material)[0]-_overlap;
+    const int y0 = sGeometry.getStatistics().getMin(material)[1]-_overlap;
+    const int z0 = sGeometry.getStatistics().getMin(material)[2]-_overlap;
+    const int x1 = sGeometry.getStatistics().getMax(material)[0]+_overlap;
+    const int y1 = sGeometry.getStatistics().getMax(material)[1]+_overlap;
+    const int z1 = sGeometry.getStatistics().getMax(material)[2]+_overlap;
+
+    T* fieldTmp = new T [sizeOfField];
+
+    int locX0, locX1, locY0, locY1, locZ0, locZ1;
+    for (int iC=0; iC<_load->size(); iC++) {
+      if (_cGeometry.get_cuboid(_load->glob(iC)).checkInters( x0, x1, y0, y1, z0, z1,
+        locX0, locX1, locY0, locY1, locZ0, locZ1)) {
+        for (int iX=locX0; iX<=locX1; iX++) {
+          for (int iY=locY0; iY<=locY1; iY++) {
+            for (int iZ=locZ0; iZ<=locZ1; iZ++) {
+
+              int iXglob = iX+_cGeometry.get_cuboid(_load->glob(iC)).get_globPosX();
+              int iYglob = iY+_cGeometry.get_cuboid(_load->glob(iC)).get_globPosY();
+              int iZglob = iZ+_cGeometry.get_cuboid(_load->glob(iC)).get_globPosZ();
+
+              if (sGeometry.getMaterial(iXglob, iYglob, iZglob) == material) {
+                for (int i=0;i<sizeOfField;i++) {
+                  fieldTmp[i] = field(_load->glob(iC),iX,iY,iZ)[i];
+                  _lattices[iC].get(iX,iY,iZ).defineExternalField(fieldBeginsAt,sizeOfField, fieldTmp);
+                } 
+              }
+            }
+          }
+        }
+      }
+    }
+    delete fieldTmp; 
+  }
+  _communicationNeeded = true;
 }
 
 
@@ -305,6 +489,38 @@ void SuperLattice3D<T, Lattice>::iniEquilibrium(T x0, T x1, T y0, T y1, T z0,
       }
     }
   }
+  _communicationNeeded = true;
+}
+
+template<typename T, template<typename U> class Lattice>
+void SuperLattice3D<T,Lattice>::iniEquilibrium(
+  SuperGeometry3D& sGeometry, int material, AnalyticalF3D<T,T>& rho, AnalyticalF3D<T,T>& u)
+
+{
+  if (sGeometry.getStatistics().getNVoxel(material)!=0) {
+    const int x0 = sGeometry.getStatistics().getMin(material)[0]-_overlap;
+    const int y0 = sGeometry.getStatistics().getMin(material)[1]-_overlap;
+    const int z0 = sGeometry.getStatistics().getMin(material)[2]-_overlap;
+    const int x1 = sGeometry.getStatistics().getMax(material)[0]+_overlap;
+    const int y1 = sGeometry.getStatistics().getMax(material)[1]+_overlap;
+    const int z1 = sGeometry.getStatistics().getMax(material)[2]+_overlap;
+
+    for (int iX = x0; iX <= x1; iX++) {
+      for (int iY = y0; iY <= y1; iY++) { 
+        for (int iZ = z0; iZ <= z1; iZ++) {
+          if (sGeometry.getMaterial(iX, iY, iZ) == material) {
+            std::vector<T> physCoordinate;
+            physCoordinate.push_back(sGeometry.physCoordX(iX) );
+            physCoordinate.push_back(sGeometry.physCoordY(iY) );
+            physCoordinate.push_back(sGeometry.physCoordZ(iZ) );
+            T uTmp[] = {u(physCoordinate)[0],u(physCoordinate)[1],u(physCoordinate)[2]};
+            iniEquilibrium(iX,iX,iY,iY,iZ,iZ,rho(physCoordinate)[0],uTmp);
+          }
+        }
+      }
+    }
+  }
+  _communicationNeeded = true;
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -313,6 +529,7 @@ void SuperLattice3D<T, Lattice>::collide() {
   for (int iC = 0; iC < _load->size(); iC++) {
     _lattices[iC].collide();
   }
+  _communicationNeeded = true;
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -325,6 +542,7 @@ void SuperLattice3D<T, Lattice>::collide(T x0, T x1, T y0, T y1, T z0, T z1) {
       _lattices[iC].collide(locX0, locX1, locY0, locY1, locZ0, locZ1);
     }
   }
+  _communicationNeeded = true;
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -351,6 +569,7 @@ void SuperLattice3D<T, Lattice>::stream() {
   }
   if (_statistics_on)
     reset_statistics();
+  _communicationNeeded = true;
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -378,6 +597,7 @@ void SuperLattice3D<T, Lattice>::stream(T x0, T x1, T y0, T y1, T z0, T z1) {
   }
   if (_statistics_on)
     reset_statistics();
+  _communicationNeeded = true;
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -446,6 +666,7 @@ void SuperLattice3D<T, Lattice>::collideAndStream() {
   }
   if (_statistics_on)
     reset_statistics();
+  _communicationNeeded = true;
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -461,6 +682,7 @@ void SuperLattice3D<T,Lattice>::stripeOffDensityOffset (
           locZ0, locZ1, offset);
     }
   }
+  _communicationNeeded = true;
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -469,6 +691,7 @@ void SuperLattice3D<T,Lattice>::stripeOffDensityOffset(T offset) {
   for (int iC = 0; iC < _load->size(); iC++) {
     _blockLattices[iC].stripeOffDensityOffset(offset);
   }
+  _communicationNeeded = true;
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -483,6 +706,7 @@ SuperLattice3D<T, Lattice>::getStatistics() const {
 
   return *_statistics;
 }
+
 
 template<typename T, template<typename U> class Lattice>
 void SuperLattice3D<T, Lattice>::reset_statistics() {
@@ -525,6 +749,139 @@ void SuperLattice3D<T, Lattice>::reset_statistics() {
     _blockLattices[iC].getStatistics().reset(average_rho, average_energy,
         maxU * delta, (int) sum_weight);
   }
+}
+
+
+template<typename T, template<typename U> class Lattice>
+void SuperLattice3D<T, Lattice>::addLatticeCoupling(
+  SuperGeometry3D& sGeometry, int material,
+  LatticeCouplingGenerator3D<T, Lattice> const& lcGen, 
+  SuperLattice3D<T,Lattice>& partnerLattice)
+{
+  for (int iC = 0; iC < _load->size(); iC++) {
+    std::vector< SpatiallyExtendedObject3D* > partnerOne;
+    partnerOne.push_back(&partnerLattice.get_blockLattice(iC));
+
+    int nx = _blockLattices[iC].getNx();
+    int ny = _blockLattices[iC].getNy();
+    int nz = _blockLattices[iC].getNz();
+
+//    for (int iX = _overlap; iX < nx-_overlap; iX++) {
+//      for (int iY = _overlap; iY < ny-_overlap; iY++) {
+//        for (int iZ = _overlap; iZ < nz-_overlap; iZ++) {
+    for (int iX = 1; iX < nx-1; iX++) {
+      for (int iY = 1; iY < ny-1; iY++) {
+        for (int iZ = 1; iZ < nz-1; iZ++) {
+
+          LatticeCouplingGenerator3D<T, Lattice> *extractedLcGen = lcGen.clone();  
+
+          int iXglob = iX-_overlap+_cGeometry.get_cuboid(_load->glob(iC)).get_globPosX();
+          int iYglob = iY-_overlap+_cGeometry.get_cuboid(_load->glob(iC)).get_globPosY();
+          int iZglob = iZ-_overlap+_cGeometry.get_cuboid(_load->glob(iC)).get_globPosZ();
+          if (extractedLcGen->extract(iXglob, iXglob, iYglob, iYglob, iZglob, iZglob) ) {
+            if (sGeometry.getMaterial(iXglob, iYglob, iZglob) == material) {
+              extractedLcGen->shift(iX-iXglob, iY-iYglob, iZ-iZglob);
+              _blockLattices[iC].addLatticeCoupling(*extractedLcGen, partnerOne );
+            }
+          }
+          delete extractedLcGen;
+        }
+      }
+    }
+  }
+  return;
+}
+
+
+template<typename T, template<typename U> class Lattice>
+void SuperLattice3D<T, Lattice>::executeCoupling() {
+  for (int iC = 0; iC < _load->size(); iC++) {
+    _blockLattices[iC].executeCoupling();
+  }
+  _communicationNeeded = true;
+  return;
+}
+
+
+template<typename T, template<typename U> class Lattice>
+void SuperLattice3D<T,Lattice>::save(std::string fName, bool enforceUint) {
+  for (int block = 0; block < _cGeometry.get_nC(); ++block){
+    std::ofstream* ostr = 0;
+    if (singleton::mpi().getRank() == _load->rank(block)) {
+      std::stringstream ss;
+      ss << fName << block;
+      ostr = new std::ofstream(ss.str().c_str());
+      OLB_PRECONDITION( *ostr );
+    }
+    DataSerializer<T> const& serializer = _blockLattices[_load->loc(block)].getSerializer(IndexOrdering::memorySaving);
+
+    size_t fullSize = 0;
+    if (singleton::mpi().getRank() == _load->rank(block)) {
+      fullSize = serializer.getSize();
+      size_t binarySize = (size_t) (fullSize * sizeof(T));
+      if (enforceUint) {
+        Base64Encoder<unsigned int> sizeEncoder(*ostr, 1);
+        OLB_PRECONDITION(binarySize <= std::numeric_limits<unsigned int>::max());
+        unsigned int uintBinarySize = (unsigned int)binarySize;
+        sizeEncoder.encode(&uintBinarySize, 1);
+      }
+      else {
+        Base64Encoder<size_t> sizeEncoder(*ostr, 1);
+        sizeEncoder.encode(&binarySize, 1);
+      }
+    }
+    Base64Encoder<T>* dataEncoder = 0;
+    if (singleton::mpi().getRank() == _load->rank(block)) {
+      dataEncoder = new Base64Encoder<T>(*ostr, fullSize);
+    }
+    while (!serializer.isEmpty()) {
+      size_t bufferSize;
+      const T* dataBuffer = serializer.getNextDataBuffer(bufferSize);
+      if (singleton::mpi().getRank() == _load->rank(block)) {
+        dataEncoder->encode(dataBuffer, bufferSize);
+      }
+    }
+    delete dataEncoder;
+    delete ostr;
+  }
+}
+
+
+template<typename T, template<typename U> class Lattice>
+void SuperLattice3D<T,Lattice>::load(std::string fName, bool enforceUint) {
+  for (int block = 0; block < _cGeometry.get_nC(); ++block){
+    if (singleton::mpi().getRank() == _load->rank(block)) {
+      std::ifstream* istr = 0;
+      std::stringstream ss;
+      ss << fName << block;
+      istr = new std::ifstream(ss.str().c_str());
+      OLB_PRECONDITION( *istr );
+      DataUnSerializer<T>& unSerializer = _blockLattices[_load->loc(block)].getUnSerializer(IndexOrdering::memorySaving);
+      size_t binarySize;
+      if (enforceUint) {
+        unsigned int uintBinarySize;
+        Base64Decoder<unsigned int> sizeDecoder(*istr, 1);
+        sizeDecoder.decode(&uintBinarySize, 1);
+        binarySize = uintBinarySize;
+      }
+      else {
+        Base64Decoder<size_t> sizeDecoder(*istr, 1);
+        sizeDecoder.decode(&binarySize, 1);
+      }
+      OLB_PRECONDITION(binarySize / sizeof(T) == unSerializer.getSize());
+      Base64Decoder<T>* dataDecoder = 0;
+      dataDecoder = new Base64Decoder<T>(*istr, unSerializer.getSize());
+      while (!unSerializer.isFull()) {
+        size_t bufferSize = 0;
+        T* dataBuffer = unSerializer.getNextDataBuffer(bufferSize);
+        dataDecoder->decode(dataBuffer, bufferSize);
+        unSerializer.commitData();
+      }
+      delete dataDecoder;
+      delete istr;
+    }
+  }
+  _communicationNeeded = true;
 }
 
 } // namespace olb

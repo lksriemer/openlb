@@ -41,7 +41,7 @@ template class sOnLatticeBoundaryCondition3D
 
 template void createLocalBoundaryCondition3D
 <double,descriptors::D3Q19Descriptor,
-BGKdynamics<double,descriptors::D3Q19Descriptor> >
+RLBdynamics<double,descriptors::D3Q19Descriptor> >
 (sOnLatticeBoundaryCondition3D<double,descriptors::D3Q19Descriptor>& sBC);
 template void createLocalBoundaryCondition3D
 <double,descriptors::D3Q19Descriptor>
@@ -49,7 +49,7 @@ template void createLocalBoundaryCondition3D
 
 template void createInterpBoundaryCondition3D
 <double,descriptors::D3Q19Descriptor,
-RLBdynamics<double,descriptors::D3Q19Descriptor> >
+BGKdynamics<double,descriptors::D3Q19Descriptor> >
 (sOnLatticeBoundaryCondition3D<double,descriptors::D3Q19Descriptor>& sBC);
 template void createInterpBoundaryCondition3D
 <double,descriptors::D3Q19Descriptor>

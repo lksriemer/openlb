@@ -28,8 +28,6 @@
 
 namespace olb {
 
-template class LatticeStatistics<double>;
-
 template struct
 StatisticsPostProcessor2D<double, descriptors::D2Q9Descriptor>;
 

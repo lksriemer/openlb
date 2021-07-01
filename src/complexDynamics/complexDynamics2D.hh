@@ -34,3 +34,7 @@
 #include "advectionDiffusionBoundaryCondition2D.hh"
 #include "advectionDiffusionMomenta.hh"
 #include "forcedShanChenCouplingPostProcessor2D.hh"
+#include "smagorinskyBGKdynamics.hh"
+#include "smagorinskyMRTdynamics.hh"
+#include "powerLawBGKdynamics.hh"
+#include "porousBGKdynamics.hh"

@@ -29,3 +29,4 @@
 #include "vtkDataOutput.hh"
 #include "colormaps.hh"
 #include "imageWriter.hh"
+#include "vtiReader.hh"

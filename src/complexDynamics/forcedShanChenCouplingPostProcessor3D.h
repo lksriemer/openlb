@@ -42,7 +42,7 @@ template<typename T, template<typename U> class Lattice>
 class ForcedShanChenCouplingPostProcessor3D : public LocalPostProcessor3D<T,Lattice> {
 public:
   ForcedShanChenCouplingPostProcessor3D (
-    int x0_, int x1_, int y0_, int y1_, int z0_, int z1_, T G_,
+    int x0_, int x1_, int y0_, int y1_, int z0_, int z1_, T G_, std::vector<T> rho0_,
     std::vector<SpatiallyExtendedObject3D*> partners_);
   virtual int extent() const { return 1; }
   virtual int extent(int whichDirection) const { return 1; }
@@ -52,17 +52,19 @@ public:
 private:
   int x0, x1, y0, y1, z0, z1;
   T G;
+  std::vector<T> rho0;
   std::vector<SpatiallyExtendedObject3D*> partners;
 };
 
 template<typename T, template<typename U> class Lattice>
 class ForcedShanChenCouplingGenerator3D : public LatticeCouplingGenerator3D<T,Lattice> {
 public:
-  ForcedShanChenCouplingGenerator3D(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_, T G_);
+  ForcedShanChenCouplingGenerator3D(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_, T G_, std::vector<T> rho0_);
   virtual PostProcessor3D<T,Lattice>* generate(std::vector<SpatiallyExtendedObject3D*> partners) const;
   virtual LatticeCouplingGenerator3D<T,Lattice>* clone() const;
 private:
   T G;
+  std::vector<T> rho0;
 };
 
 }

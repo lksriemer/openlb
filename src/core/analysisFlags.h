@@ -33,6 +33,7 @@ struct AnalysisFlags3D {
   bool velNormFieldComputed;
   bool vortFieldComputed;
   bool vortNormFieldComputed;
+  bool qCritFieldComputed;
   bool strainRateFieldComputed;
   bool stressFieldComputed;
   bool divRhoUFieldComputed;

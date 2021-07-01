@@ -29,6 +29,8 @@
 #ifndef SUPER_LATTICE_2D_HH
 #define SUPER_LATTICE_2D_HH
 
+#include<limits>
+
 #include "complexGrids/mpiManager/mpiManager.h"
 #include "core/blockLattice2D.h"
 #include "core/cell.h"
@@ -37,6 +39,7 @@
 #include "core/loadBalancer.h"
 #include "core/postProcessing.h"
 #include "superLattice2D.h"
+#include "io/base64.h"
 
 
 namespace olb {
@@ -47,8 +50,8 @@ namespace olb {
 
 template<typename T, template<typename U> class Lattice>
 SuperLattice2D<T,Lattice>::SuperLattice2D (
-  CuboidGeometry2D<T>& cGeometry, int overlapBC)
-  :_cGeometry(cGeometry),_commStream(*this),_commBC(*this) {
+  CuboidGeometry2D<T>& cGeometry, int overlapBC, int overlapRefinement)
+  :_cGeometry(cGeometry),_overlapRefinement(overlapRefinement),_commStream(*this),_commBC(*this) {
 
   if (overlapBC >= 1) {
     _commBC_on = true;
@@ -70,6 +73,10 @@ SuperLattice2D<T,Lattice>::SuperLattice2D (
   for (int iC=0; iC<_load.size(); iC++) {
     int nX = _cGeometry.get_cuboid(_load.glob(iC)).get_nX() + 2*_overlap;
     int nY = _cGeometry.get_cuboid(_load.glob(iC)).get_nY() + 2*_overlap;
+    if(_cGeometry.get_cuboid(_load.glob(iC)).get_refinementLevel() > 0) {
+	    nX += 2*_overlapRefinement-1;
+	    nY += 2*_overlapRefinement-1;
+    }
 
     BlockLattice2D<T, Lattice> tmp(0, 0);
     _blockLattices.push_back(tmp);
@@ -119,6 +126,7 @@ bool SuperLattice2D<T,Lattice>::get(T iX, T iY, Cell<T,Lattice>& cell) const {
     if(_cGeometry.get_cuboid(iC).checkPoint(iX, iY, locX, locY)) {
       found = true;
       foundIC = iC;
+      break;
     }
   }
 
@@ -144,6 +152,26 @@ bool SuperLattice2D<T,Lattice>::get(T iX, T iY, Cell<T,Lattice>& cell) const {
 }
 
 template<typename T, template<typename U> class Lattice>
+Cell<T,Lattice> SuperLattice2D<T,Lattice>::get(int iC, T locX, T locY) const {
+  Cell<T,Lattice> cell;
+#ifdef PARALLEL_MODE_MPI
+  const int sizeOfCell = Lattice<T>::q + Lattice<T>::ExternalField::numScalars;
+  T* cellData = new T[sizeOfCell];
+
+  if (_load.rank(iC)==singleton::mpi().getRank()) {
+    _lattices[_load.loc(iC)].get(locX,locY).serialize(cellData);
+  }
+  singleton::mpi().bCast(cellData, sizeOfCell, _load.rank(iC));
+  cell.unSerialize(cellData);
+
+  delete [] cellData;
+#else
+  cell = _lattices[_load.loc(iC)].get(locX,locY);
+#endif
+  return cell;
+}
+
+template<typename T, template<typename U> class Lattice>
 void SuperLattice2D<T,Lattice>::initialize() {
 
   if (_commBC_on) {
@@ -152,7 +180,7 @@ void SuperLattice2D<T,Lattice>::initialize() {
   for (int iC=0; iC<_load.size(); iC++) {
     //AENDERN VON INI in BLOCKLATTICEVIEW!!!!
     //_lattices[iC].initialize();
-    _lattices[iC].postProcess();
+    //_lattices[iC].postProcess();
   }
 }
 
@@ -383,9 +411,12 @@ void SuperLattice2D<T,Lattice>::collideAndStream () {
 
 
   if (_commBC_on) {
-    _commBC.send();
-    _commBC.receive();
-    _commBC.write();
+    _commStream.send();
+    _commStream.receive();
+    _commStream.write();
+    //_commBC.send();
+    //_commBC.receive();
+    //_commBC.write();
   }
 
   for (int iC=0; iC<_load.size(); iC++) {
@@ -414,6 +445,86 @@ void SuperLattice2D<T,Lattice>::stripeOffDensityOffset(T offset) {
 
   for (int iC = 0; iC < _load.size(); iC++) {
     _blockLattices[iC].stripeOffDensityOffset(offset);
+  }
+}
+
+template<typename T, template<typename U> class Lattice>
+void SuperLattice2D<T,Lattice>::save(std::string fName, bool enforceUint) {
+  for (int block = 0; block < _cGeometry.get_nC(); ++block){
+    std::ofstream* ostr = 0;
+    if (singleton::mpi().getRank() == _load.rank(block)) {
+      std::stringstream ss;
+      ss << fName << block;
+      ostr = new std::ofstream(ss.str().c_str());
+      OLB_PRECONDITION( *ostr );
+    }
+    DataSerializer<T> const& serializer = _blockLattices[_load.loc(block)].getSerializer(IndexOrdering::memorySaving);
+
+    size_t fullSize = 0;
+    if (singleton::mpi().getRank() == _load.rank(block)) {
+      fullSize = serializer.getSize();
+      size_t binarySize = (size_t) (fullSize * sizeof(T));
+      if (enforceUint) {
+        Base64Encoder<unsigned int> sizeEncoder(*ostr, 1);
+        OLB_PRECONDITION(binarySize <= std::numeric_limits<unsigned int>::max());
+        unsigned int uintBinarySize = (unsigned int)binarySize;
+        sizeEncoder.encode(&uintBinarySize, 1);
+      }
+      else {
+        Base64Encoder<size_t> sizeEncoder(*ostr, 1);
+        sizeEncoder.encode(&binarySize, 1);
+      }
+    }
+    Base64Encoder<T>* dataEncoder = 0;
+    if (singleton::mpi().getRank() == _load.rank(block)) {
+      dataEncoder = new Base64Encoder<T>(*ostr, fullSize);
+    }
+    while (!serializer.isEmpty()) {
+      size_t bufferSize;
+      const T* dataBuffer = serializer.getNextDataBuffer(bufferSize);
+      if (singleton::mpi().getRank() == _load.rank(block)) {
+        dataEncoder->encode(dataBuffer, bufferSize);
+      }
+    }
+    delete dataEncoder;
+    delete ostr;
+  }
+}
+
+template<typename T, template<typename U> class Lattice>
+void SuperLattice2D<T,Lattice>::load(std::string fName, bool enforceUint) {
+  for (int block = 0; block < _cGeometry.get_nC(); ++block){
+    if (singleton::mpi().getRank() == _load.rank(block)) {
+      std::ifstream* istr = 0;
+      std::stringstream ss;
+      ss << fName << block;
+      istr = new std::ifstream(ss.str().c_str());
+      OLB_PRECONDITION( *istr );
+      DataUnSerializer<T>& unSerializer = _blockLattices[_load.loc(block)].getUnSerializer(IndexOrdering::memorySaving);
+      size_t binarySize;
+      if (enforceUint) {
+        unsigned int uintBinarySize;
+        Base64Decoder<unsigned int> sizeDecoder(*istr, 1);
+        sizeDecoder.decode(&uintBinarySize, 1);
+        binarySize = uintBinarySize;
+      }
+      else {
+        Base64Decoder<size_t> sizeDecoder(*istr, 1);
+        sizeDecoder.decode(&binarySize, 1);
+      }
+      size_t fullSize = binarySize / sizeof(T);
+      OLB_PRECONDITION(fullSize == unSerializer.getSize());
+      Base64Decoder<T>* dataDecoder = 0;
+      dataDecoder = new Base64Decoder<T>(*istr, unSerializer.getSize());
+      while (!unSerializer.isFull()) {
+        size_t bufferSize = 0;
+        T* dataBuffer = unSerializer.getNextDataBuffer(bufferSize);
+        dataDecoder->decode(dataBuffer, bufferSize);
+        unSerializer.commitData();
+      }
+      delete dataDecoder;
+      delete istr;
+    }
   }
 }
 

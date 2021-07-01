@@ -33,6 +33,7 @@
 #include "multiBlockStatistics.h"
 #include "multiBlockHandler3D.h"
 #include "multiSerializer3D.h"
+#include "core/blockGeometry3D.h"
 #include "core/dataAnalysisBase3D.h"
 #include <vector>
 
@@ -79,11 +80,11 @@ public:
                               int z1_, Dynamics<T, Lattice>* dynamics);
   virtual void defineDynamics(int iX, int iY, int iZ,
                               Dynamics<T, Lattice>* dynamics);
-  virtual void defineDynamics(BlockGeometryStatistics3D* blockGeoSta,
+  virtual void defineDynamics(BlockGeometry3D& blockGeometry, int material,
                               int x0_, int x1_, int y0_, int y1_, int z0_, int z1_, Dynamics<T,
-                              Lattice>* dynamics, int material);
-  virtual void defineDynamics(BlockGeometryStatistics3D* blockGeoSta,
-                              Dynamics<T, Lattice>* dynamics, int material);
+                              Lattice>* dynamics);
+  virtual void defineDynamics(BlockGeometry3D& blockGeometry, int material,
+                              Dynamics<T, Lattice>* dynamics);
 
   virtual void specifyStatisticsStatus(int x0_, int x1_, int y0_, int y1_,
                                        int z0_, int z1_, bool status);

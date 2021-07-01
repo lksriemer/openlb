@@ -27,6 +27,7 @@
 #include "ostreamManager.h"
 
 #include "complexGrids/mpiManager/mpiManager.h"
+#include "core/ompManager.h"
 
 namespace olb {
 
@@ -69,6 +70,16 @@ int OMBuf::sync() {
             << "] " << str();
   } else {  // multiOutput==false
     if (singleton::mpi().getRank()==0) {
+      *output << "[" << text << "] " << str();
+    }
+  }
+#elif PARALLEL_MODE_OMP
+  if (multiOutput==true) {
+    *output << "["
+            << text << ":" << omp.get_rank()
+            << "] " << str();
+  } else {  // multiOutput==false
+    if (omp.get_rank()==0) {
       *output << "[" << text << "] " << str();
     }
   }

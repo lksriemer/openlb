@@ -26,7 +26,8 @@
 #define BOUNDARY_INSTANTIATOR_2D_H
 
 #include "boundaryCondition2D.h"
-#include "blockGeometryStatistics3D.h"
+#include "blockGeometry2D.h"
+#include "blockGeometryStatistics2D.h"
 #include "io/ostreamManager.h"
 
 namespace olb {
@@ -181,6 +182,8 @@ void BoundaryConditionInstantiator2D<T, Lattice, BoundaryManager>::addExternalVe
     xNormal, yNormal>(omega, *momenta);
 
   this->getBlock().defineDynamics(x, x, y, y, dynamics);
+  momentaVector.push_back(momenta);
+  dynamicsVector.push_back(dynamics);
 
   PostProcessorGenerator2D<T, Lattice>* postProcessor =
     BoundaryManager::template getExternalVelocityCornerProcessor<
@@ -205,6 +208,8 @@ void BoundaryConditionInstantiator2D<T, Lattice, BoundaryManager>::addInternalVe
     xNormal, yNormal>(omega, *momenta);
 
   this->getBlock().defineDynamics(x, x, y, y, dynamics);
+  momentaVector.push_back(momenta);
+  dynamicsVector.push_back(dynamics);
 
   PostProcessorGenerator2D<T, Lattice>* postProcessor =
     BoundaryManager::template getInternalVelocityCornerProcessor<

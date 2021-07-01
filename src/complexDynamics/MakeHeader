@@ -25,4 +25,8 @@ generic        :=
 
 precompiled    :=  mrtDynamics \
                    entropicDynamics \
-                   chopardDynamics
+                   chopardDynamics \
+                   smagorinskyBGKdynamics \
+                   smagorinskyMRTdynamics \
+                   powerLawBGKdynamics \
+                   porousBGKdynamics

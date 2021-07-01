@@ -32,6 +32,7 @@
 #include <istream>
 #include <ostream>
 #include <fstream>
+#include <sstream>
 
 namespace olb {
 

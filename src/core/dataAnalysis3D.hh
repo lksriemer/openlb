@@ -33,7 +33,7 @@
 #include "cell.h"
 #include "finiteDifference.h"
 #include "util.h"
-
+using namespace std;
 namespace olb {
 
 /////// Struct AnalysisFieldsImpl3D  ///////////////////////
@@ -46,6 +46,7 @@ AnalysisFieldsImpl3D<T,Lattice>::AnalysisFieldsImpl3D(int nx, int ny, int nz)
     velNormField(nx, ny, nz),
     vortField(nx, ny, nz),
     vortNormField(nx, ny, nz),
+    qCritField(nx, ny, nz),
     strainRateField(nx, ny, nz),
     stressField(nx, ny, nz),
     divRhoUField(nx, ny, nz),
@@ -64,6 +65,7 @@ AnalysisFields3D<T,Lattice>::AnalysisFields3D (
   ScalarField3D<T>&   velNormField_,
   TensorField3D<T,3>& vortField_,
   ScalarField3D<T>&   vortNormField_,
+  ScalarField3D<T>&   qCritField_,
   TensorField3D<T,6>& strainRateField_,
   TensorField3D<T,6>& stressField_,
   ScalarField3D<T>&   divRhoUField_,
@@ -76,6 +78,7 @@ AnalysisFields3D<T,Lattice>::AnalysisFields3D (
   velNormField(velNormField_),
   vortField(vortField_),
   vortNormField(vortNormField_),
+  qCritField(qCritField_),
   strainRateField(strainRateField_),
   stressField(stressField_),
   divRhoUField(divRhoUField_),
@@ -92,6 +95,7 @@ AnalysisFields3D<T,Lattice>::AnalysisFields3D(AnalysisFieldsImpl3D<T,Lattice>& i
   velNormField(impl.velNormField),
   vortField(impl.vortField),
   vortNormField(impl.vortNormField),
+  qCritField(impl.qCritField),
   strainRateField(impl.strainRateField),
   stressField(impl.stressField),
   divRhoUField(impl.divRhoUField),
@@ -187,6 +191,15 @@ DataAnalysis3D<T,Lattice>::getVorticityNorm() const
   computeVorticityNormField();
   return fields.vortNormField;
 }
+
+template<typename T, template<typename U> class Lattice>
+ScalarFieldBase3D<T> const&
+DataAnalysis3D<T,Lattice>::getQCrit() const
+{
+  computeQCritField();
+  return fields.qCritField;
+}
+
 
 template<typename T, template<typename U> class Lattice>
 TensorFieldBase3D<T,6> const&
@@ -308,6 +321,136 @@ T DataAnalysis3D<T,Lattice>::computeMeanEnstrophy() const {
 }
 
 template<typename T, template<typename U> class Lattice>
+void DataAnalysis3D<T,Lattice>::computeQCritField() const {
+  if (flags.qCritFieldComputed) return;
+  fields.qCritField.construct();
+ for (int iX=0; iX<fields.qCritField.getNx()-1; ++iX) {
+   for (int iY=0; iY<fields.qCritField.getNy()-1; ++iY) {
+     for (int iZ=0; iZ<fields.qCritField.getNz()-1; ++iZ) {
+        //cout << "test "<< iX<<" "<<iY<<" "<<iZ<< endl;
+        fields.qCritField.get(iX,iY,iZ) =qCriterion(iX, iY, iZ);
+          
+      //for (size_t iEl=0; iEl<fields.qCritField.getSize(); ++iEl) {
+      //  fields.qCritField.get(iX,iY,iZ) = -1./2.*qCriterion();
+        //fields.qCritField[iEl] =-1./2.*fields.qCritField[iEl];
+      // }
+    }
+   }
+  }
+  flags.qCritFieldComputed = true;
+}
+
+template<typename T, template<typename U> class Lattice>
+T DataAnalysis3D<T,Lattice>::qCriterion(int iX, int iY, int iZ) const {
+  computeVelocityField();
+  //int nx = fields.velField.getNx()-1;
+  //int ny = fields.velField.getNy()-1;
+  //int nz = fields.velField.getNz()-1;
+
+  T qCrit = T();
+  // for (int iX=0; iX<nx; ++iX) {
+  //   for (int iY=0; iY<ny; ++iY) {
+  //     for (int iZ=0; iZ<nz; ++iZ) {
+
+        T dxux = (
+                   fields.velField.get(iX+1,iY+1,iZ  )[0]
+                   + fields.velField.get(iX+1,iY  ,iZ  )[0]
+                   + fields.velField.get(iX+1,iY+1,iZ+1)[0]
+                   + fields.velField.get(iX+1,iY  ,iZ+1)[0]
+                   - fields.velField.get(iX  ,iY+1,iZ  )[0]
+                   - fields.velField.get(iX  ,iY  ,iZ  )[0]
+                   - fields.velField.get(iX  ,iY+1,iZ+1)[0]
+                   - fields.velField.get(iX  ,iY  ,iZ+1)[0] ) / (T)4;
+        T dxuy = (
+                   fields.velField.get(iX+1,iY+1,iZ  )[1]
+                   + fields.velField.get(iX+1,iY  ,iZ  )[1]
+                   + fields.velField.get(iX+1,iY+1,iZ+1)[1]
+                   + fields.velField.get(iX+1,iY  ,iZ+1)[1]
+                   - fields.velField.get(iX  ,iY+1,iZ  )[1]
+                   - fields.velField.get(iX  ,iY  ,iZ  )[1]
+                   - fields.velField.get(iX  ,iY+1,iZ+1)[1]
+                   - fields.velField.get(iX  ,iY  ,iZ+1)[1] ) / (T)4;
+        T dxuz = (
+                   fields.velField.get(iX+1,iY+1,iZ  )[2]
+                   + fields.velField.get(iX+1,iY  ,iZ  )[2]
+                   + fields.velField.get(iX+1,iY+1,iZ+1)[2]
+                   + fields.velField.get(iX+1,iY  ,iZ+1)[2]
+                   - fields.velField.get(iX  ,iY+1,iZ  )[2]
+                   - fields.velField.get(iX  ,iY  ,iZ  )[2]
+                   - fields.velField.get(iX  ,iY+1,iZ+1)[2]
+                   - fields.velField.get(iX  ,iY  ,iZ+1)[2] ) / (T)4;
+        T dyux = (
+                   fields.velField.get(iX  ,iY+1,iZ  )[0]
+                   + fields.velField.get(iX+1,iY+1,iZ  )[0]
+                   + fields.velField.get(iX  ,iY+1,iZ+1)[0]
+                   + fields.velField.get(iX+1,iY+1,iZ+1)[0]
+                   - fields.velField.get(iX  ,iY  ,iZ  )[0]
+                   - fields.velField.get(iX+1,iY  ,iZ  )[0]
+                   - fields.velField.get(iX  ,iY  ,iZ+1)[0]
+                   - fields.velField.get(iX+1,iY  ,iZ+1)[0] ) / (T)4;
+        T dyuy = (
+                   fields.velField.get(iX  ,iY+1,iZ  )[1]
+                   + fields.velField.get(iX+1,iY+1,iZ  )[1]
+                   + fields.velField.get(iX  ,iY+1,iZ+1)[1]
+                   + fields.velField.get(iX+1,iY+1,iZ+1)[1]
+                   - fields.velField.get(iX  ,iY  ,iZ  )[1]
+                   - fields.velField.get(iX+1,iY  ,iZ  )[1]
+                   - fields.velField.get(iX  ,iY  ,iZ+1)[1]
+                   - fields.velField.get(iX+1,iY  ,iZ+1)[1] ) / (T)4;
+        T dyuz = (
+                   fields.velField.get(iX  ,iY+1,iZ  )[2]
+                   + fields.velField.get(iX+1,iY+1,iZ  )[2]
+                   + fields.velField.get(iX  ,iY+1,iZ+1)[2]
+                   + fields.velField.get(iX+1,iY+1,iZ+1)[2]
+                   - fields.velField.get(iX  ,iY  ,iZ  )[2]
+                   - fields.velField.get(iX+1,iY  ,iZ  )[2]
+                   - fields.velField.get(iX  ,iY  ,iZ+1)[2]
+                   - fields.velField.get(iX+1,iY  ,iZ+1)[2] ) / (T)4;
+        T dzux = (
+                   fields.velField.get(iX  ,iY  ,iZ+1)[0]
+                   + fields.velField.get(iX+1,iY+1,iZ+1)[0]
+                   + fields.velField.get(iX  ,iY+1,iZ+1)[0]
+                   + fields.velField.get(iX+1,iY  ,iZ+1)[0]
+                   - fields.velField.get(iX  ,iY  ,iZ  )[0]
+                   - fields.velField.get(iX+1,iY  ,iZ  )[0]
+                   - fields.velField.get(iX  ,iY+1,iZ  )[0]
+                   - fields.velField.get(iX+1,iY+1,iZ  )[0] ) / (T)4;
+        T dzuy = (
+                   fields.velField.get(iX  ,iY  ,iZ+1)[1]
+                   + fields.velField.get(iX+1,iY+1,iZ+1)[1]
+                   + fields.velField.get(iX  ,iY+1,iZ+1)[1]
+                   + fields.velField.get(iX+1,iY  ,iZ+1)[1]
+                   - fields.velField.get(iX  ,iY  ,iZ  )[1]
+                   - fields.velField.get(iX+1,iY  ,iZ  )[1]
+                   - fields.velField.get(iX  ,iY+1,iZ  )[1]
+                   - fields.velField.get(iX+1,iY+1,iZ  )[1] ) / (T)4;
+        T dzuz = (
+                   fields.velField.get(iX  ,iY  ,iZ+1)[2]
+                   + fields.velField.get(iX+1,iY+1,iZ+1)[2]
+                   + fields.velField.get(iX  ,iY+1,iZ+1)[2]
+                   + fields.velField.get(iX+1,iY  ,iZ+1)[2]
+                   - fields.velField.get(iX  ,iY  ,iZ  )[2]
+                   - fields.velField.get(iX+1,iY  ,iZ  )[2]
+                   - fields.velField.get(iX  ,iY+1,iZ  )[2]
+                   - fields.velField.get(iX+1,iY+1,iZ  )[2] ) / (T)4;
+
+
+        qCrit = dxux*dxux+dyux*dxuy+dzux*dxuz
+               +dxuy*dyux+dyuy*dyuy+dzuy*dyuz
+               +dxuz*dzux+dyuz*dzuy+dzuz*dzuz;
+ //       cout << qCrit<<endl;
+        qCrit *= (-1./2.);
+  //     }
+  //   }
+  // }
+ 
+  return qCrit;
+}
+
+
+
+
+template<typename T, template<typename U> class Lattice>
 void DataAnalysis3D<T,Lattice>::computeVelocityField() const {
   if (flags.velFieldComputed) return;
   fields.velField.construct();
@@ -378,6 +521,22 @@ void DataAnalysis3D<T,Lattice>::computeVorticityNormField() const {
   }
   flags.vortNormFieldComputed = true;
 }
+
+
+
+// template<typename T, template<typename U> class Lattice>
+// void DataAnalysis3D<T,Lattice>::computeQCritField() const {
+//   if (flags.qCritFieldComputed) return;
+//   fields.qCritField.construct();
+  
+
+//   for (size_t iEl=0; iEl<fields.qCritField.getSize(); ++iEl) {
+//     fields.qCritField[iEl] = -1./2.*fields.strainRateField[iEl];
+//   }
+//   flags.qCritFieldComputed = true;
+// }
+
+
 
 template<typename T, template<typename U> class Lattice>
 T DataAnalysis3D<T,Lattice>::bulkVorticityX(int iX, int iY, int iZ) const {
@@ -816,6 +975,9 @@ void DataAnalysis3D<T,Lattice>::computeStrainRateField() const {
 
   flags.strainRateFieldComputed = true;
 }
+
+
+
 
 template<typename T, template<typename U> class Lattice>
 void DataAnalysis3D<T,Lattice>::computeStrainRateFieldFromStress() const {

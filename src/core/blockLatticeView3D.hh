@@ -145,25 +145,25 @@ void BlockLatticeView3D<T,Lattice>::defineDynamics (
 
 template<typename T, template<typename U> class Lattice>
 void BlockLatticeView3D<T,Lattice>::defineDynamics (
-  BlockGeometryStatistics3D* blockGeoSta, Dynamics<T,Lattice>* dynamics, int material )
+  BlockGeometry3D& blockGeometry, int material, Dynamics<T,Lattice>* dynamics)
 {
 
   originalLattice->defineDynamics (
-    blockGeoSta,
+    blockGeometry, material,
     x0, x0+nx-1, y0, y0+ny-1, z0, z0+nz-1,
-    dynamics, material );
+    dynamics );
 }
 
 template<typename T, template<typename U> class Lattice>
 void BlockLatticeView3D<T,Lattice>::defineDynamics (
-  BlockGeometryStatistics3D* blockGeoSta,
+  BlockGeometry3D& blockGeometry, int material,
   int x0_, int x1_, int y0_, int y1_, int z0_, int z1_,
-  Dynamics<T,Lattice>* dynamics, int material )
+  Dynamics<T,Lattice>* dynamics)
 {
   originalLattice->defineDynamics (
-    blockGeoSta,
+    blockGeometry, material,
     x0_+x0, x1_+x0, y0_+y0, y1_+y0, z0_+z0, z1_+z0,
-    dynamics, material );
+    dynamics);
 }
 
 template<typename T, template<typename U> class Lattice>

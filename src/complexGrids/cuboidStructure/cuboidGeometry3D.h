@@ -32,6 +32,7 @@
 #include <vector>
 #include "cuboid3D.h"
 #include "core/blockGeometry3D.h"
+#include "superGeometry3D.h"
 #include "io/ostreamManager.h"
 
 
@@ -71,6 +72,10 @@ public:
   CuboidGeometry3D(T globPosX, T globPosY, T globPosZ,
                    T delta, int nX, int nY, int nZ, int nC=1);
 
+
+  /// Re init
+  void reInit(T globPosX, T globPosY, T globPosZ,
+                   T delta, int nX, int nY, int nZ, int nC=1);
   /// Read and write access to the cuboids
   Cuboid3D<T>& get_cuboid(int i);
   /// Read access to the cuboids
@@ -120,10 +125,14 @@ public:
   /// Shrink all cuboids so that no empty planes are left
   void shrink(olb::BlockGeometry3D& blockGeometry);
   /// Splits cuboid iC, removes it and adds p cuboids
+  void remove(olb::SuperGeometry3D& superGeometry);
+  /// Shrink all cuboids so that no empty planes are left
+  void shrink(olb::SuperGeometry3D& superGeometry);
+  /// Splits cuboid iC, removes it and adds p cuboids
   void split(int iC, int p);
 
   /// stores the neighbouring cuboids in array neighbours;
-  void get_cuboidNeighbourhood(int cuboid, std::vector<int> neighbours, int offset = 0);
+  void get_cuboidNeighbourhood(int cuboid, std::vector<int>& neighbours, int offset = 0);
 };
 
 }  // namespace olb

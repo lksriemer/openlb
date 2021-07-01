@@ -31,6 +31,10 @@
 #endif
 #include <string>
 #include "io/ostreamManager.h"
+#ifdef ADT
+  #include "opti/aDiff.h"
+#endif
+
 
 
 namespace olb {
@@ -96,10 +100,16 @@ public:
   /// Sends data at *buf, blocking
   template <typename T>
   void send(T *buf, int count, int dest, int tag = 0, MPI_Comm comm = MPI_COMM_WORLD);
+#ifdef ADT
+  template <typename T,unsigned DIM> void send(ADf<T,DIM> *buf, int count, int dest, int tag = 0, MPI_Comm comm = MPI_COMM_WORLD);
+#endif
 
   /// Sends data at *buf, non blocking
   template <typename T>
   void iSend(T *buf, int count, int dest, MPI_Request* request, int tag = 0, MPI_Comm comm = MPI_COMM_WORLD);
+#ifdef ADT
+  template <typename T,unsigned DIM> void iSend(ADf<T,DIM> *buf, int count, int dest, MPI_Request* request, int tag = 0, MPI_Comm comm = MPI_COMM_WORLD);
+#endif
 
   /// Sends data at *buf, non blocking and request free
   template <typename T>
@@ -108,10 +118,16 @@ public:
   /// Receives data at *buf, blocking
   template <typename T>
   void receive(T *buf, int count, int source, int tag = 0, MPI_Comm comm = MPI_COMM_WORLD);
+#ifdef ADT
+  template <typename T,unsigned DIM> void receive(ADf<T,DIM> *buf, int count, int source, int tag = 0, MPI_Comm comm = MPI_COMM_WORLD);
+#endif
 
   /// Receives data at *buf, non blocking
   template <typename T>
   void iRecv(T *buf, int count, int source, MPI_Request* request, int tag = 0, MPI_Comm comm = MPI_COMM_WORLD);
+#ifdef ADT
+  template <typename T,unsigned DIM> void iRecv(ADf<T,DIM> *buf, int count, int source, MPI_Request* request, int tag = 0, MPI_Comm comm = MPI_COMM_WORLD);
+#endif
 
   /// Send and receive data between two partners
   template <typename T>
@@ -134,10 +150,16 @@ public:
   /// Broadcast data from one processor to multiple processors
   template <typename T>
   void bCast(T* sendBuf, int sendCount, int root = 0, MPI_Comm comm = MPI_COMM_WORLD);
+#ifdef ADT
+  template <typename T,unsigned DIM> void bCast(ADf<T,DIM>* sendBuf, int sendCount, int root = 0, MPI_Comm comm = MPI_COMM_WORLD);
+#endif
 
   /// Broadcast data when root is unknown to other processors
   template <typename T>
   void bCastThroughMaster(T* sendBuf, int sendCount, bool iAmRoot, MPI_Comm comm = MPI_COMM_WORLD);
+#ifdef ADT
+  template <typename T,unsigned DIM> void bCastThroughMaster(ADf<T,DIM>* sendBuf, int sendCount, bool iAmRoot, MPI_Comm comm = MPI_COMM_WORLD);
+#endif
 
   /// Special case for broadcasting strings. Memory handling is automatic.
   void bCast( std::string& message, int root = 0 );
@@ -145,6 +167,9 @@ public:
   /// Reduction operation toward one processor
   template <typename T>
   void reduce(T sendVal, T& recvVal, MPI_Op op, int root = 0, MPI_Comm = MPI_COMM_WORLD);
+#ifdef ADT
+  template <typename T,unsigned DIM> void reduce(ADf<T,DIM> sendVal, ADf<T,DIM>& recvVal, MPI_Op op, int root = 0, MPI_Comm = MPI_COMM_WORLD);
+#endif
 
   /// Element-per-element reduction of a vector of data
   template <typename T>
@@ -154,6 +179,9 @@ public:
   /// Reduction operation, followed by a broadcast
   template <typename T>
   void reduceAndBcast(T& reductVal, MPI_Op op, int root = 0, MPI_Comm comm = MPI_COMM_WORLD);
+#ifdef ADT
+  template <typename T,unsigned DIM> void reduceAndBcast(ADf<T,DIM>& reductVal, MPI_Op op, int root = 0, MPI_Comm comm = MPI_COMM_WORLD);
+#endif
 
   /// Complete a non-blocking MPI operation
   void wait(MPI_Request* request, MPI_Status* status);

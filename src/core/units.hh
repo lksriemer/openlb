@@ -68,6 +68,7 @@ void writeLogFile(LBconverter<T> const& converter,
   ofile << "Characterestical pressure(Pa):    charPressure="     << converter.getCharPressure()     << "\n";
   ofile << "Pressure level(Pa):               pressureLevel="    << converter.getPressureLevel()    << "\n";
   ofile << "Phys. kinematic viscosity(m^2/s): charNu="           << converter.getCharNu()           << "\n";
+  ofile << "Phys. dynamic viscosity(N*s/m^2): dynVisco="         << converter.getDynamicViscosity() << "\n";
   ofile << "======================================================================\n\n";
   ofile << "lattice values\n";
   ofile << "----------------------------------------------------------------------\n";
@@ -89,50 +90,47 @@ void writeLogFile(LBconverter<T> const& converter,
   ofile << "Mass factor(kg):                  physMass="         << converter.physMass()            << "\n";
   ofile << "Force factor(N):                  physForce="        << converter.physForce()           << "\n";
   ofile << "Force factor massless(N/kg):      physMasslessForce="<< converter.physMasslessForce()   << "\n";
-  ofile << "Pressure factor(Pa):              physPressure="     << converter.physPressure(4)       << "\n";
+  ofile << "Pressure factor(Pa):              physPressure="     << converter.physPressure()        << "\n";
   ofile << "latticePressure:                  latticeP="         << converter.latticePressure()     << "\n";
 
 }
 
 template<typename T>
-void write(LBconverter<T> const& converter)
+void LBconverter<T>::print() const
 {
-  OstreamManager clout(std::cout,"ConvLog");
-
   clout << "LBconverter information" << std::endl;
   clout << "characteristical values" << std::endl;
-  clout << "Dimension(d):                     dim="              << converter.getDim()              << std::endl;
-  clout << "Characteristical length(m):       charL="            << converter.getCharL()            << std::endl;
-  clout << "Characteristical speed(m/s):      charU="            << converter.getCharU()            << std::endl;
-  clout << "Characteristical time(s):         charT="            << converter.getCharTime()         << std::endl;
-  clout << "Density factor(kg/m^d):           charRho="          << converter.getCharRho()          << std::endl;
-  clout << "Characterestical mass(kg):        charMass="         << converter.getCharMass()         << std::endl;
-  clout << "Characterestical force(N):        charForce="        << converter.getCharForce()        << std::endl;
-  clout << "Characterestical pressure(Pa):    charPressure="     << converter.getCharPressure()     << std::endl;
-  clout << "Pressure level(Pa):               pressureLevel="    << converter.getPressureLevel()    << std::endl;
-  clout << "Phys. kinematic viscosity(m^2/s): charNu="           << converter.getCharNu()           << std::endl;
+  clout << "Dimension(d):                     dim="              << getDim()              << std::endl;
+  clout << "Characteristical length(m):       charL="            << getCharL()            << std::endl;
+  clout << "Characteristical speed(m/s):      charU="            << getCharU()            << std::endl;
+  clout << "Characteristical time(s):         charT="            << getCharTime()         << std::endl;
+  clout << "Density factor(kg/m^d):           charRho="          << getCharRho()          << std::endl;
+  clout << "Characterestical mass(kg):        charMass="         << getCharMass()         << std::endl;
+  clout << "Characterestical force(N):        charForce="        << getCharForce()        << std::endl;
+  clout << "Characterestical pressure(Pa):    charPressure="     << getCharPressure()     << std::endl;
+  clout << "Pressure level(Pa):               pressureLevel="    << getPressureLevel()    << std::endl;
+  clout << "Phys. kinematic viscosity(m^2/s): charNu="           << getCharNu()           << std::endl;
 
   clout << "lattice values" << std::endl;
-  clout << "DeltaX:                           deltaX="           << converter.getDeltaX()           << std::endl;
-  clout << "Lattice velocity:                 latticeU="         << converter.getLatticeU()         << std::endl;
-  clout << "DeltaT:                           deltaT="           << converter.getDeltaT()           << std::endl;
-  clout << "Reynolds number:                  Re="               << converter.getRe()               << std::endl;
-  clout << "DimlessNu:                        dNu="              << converter.getDimlessNu()        << std::endl;
-  clout << "Viscosity for computation:        latticeNu="        << converter.getLatticeNu()        << std::endl;
-  clout << "Relaxation time:                  tau="              << converter.getTau()              << std::endl;
-  clout << "Relaxation frequency:             omega="            << converter.getOmega()            << std::endl;
-
+  clout << "DeltaX:                           deltaX="           << getDeltaX()           << std::endl;
+  clout << "Lattice velocity:                 latticeU="         << getLatticeU()         << std::endl;
+  clout << "DeltaT:                           deltaT="           << getDeltaT()           << std::endl;
+  clout << "Reynolds number:                  Re="               << getRe()               << std::endl;
+  clout << "DimlessNu:                        dNu="              << getDimlessNu()        << std::endl;
+  clout << "Viscosity for computation:        latticeNu="        << getLatticeNu()        << std::endl;
+  clout << "Relaxation time:                  tau="              << getTau()              << std::endl;
+  clout << "Relaxation frequency:             omega="            << getOmega()            << std::endl;
 
   clout << "conversion factors" << std::endl;
-  clout << "latticeL(m):                      latticeL="         << converter.getLatticeL()         << std::endl;
-  clout << "Time step (s):                    physTime="         << converter.physTime()            << std::endl;
-  clout << "Velocity factor(m/s):             physVelocity="     << converter.physVelocity()        << std::endl;
-  clout << "FlowRate factor(m^d/s):           physFlowRate="     << converter.physFlowRate()        << std::endl;
-  clout << "Mass factor(kg):                  physMass="         << converter.physMass()            << std::endl;
-  clout << "Force factor(N):                  physForce="        << converter.physForce()           << std::endl;
-  clout << "Force factor massless(N/kg):      physMasslessForce="<< converter.physMasslessForce()   << std::endl;
-  clout << "Pressure factor(Pa):              physPressure="     << converter.physPressure(4)       << std::endl;
-  clout << "latticePressure:                  latticeP="         << converter.latticePressure()     << std::endl;
+  clout << "latticeL(m):                      latticeL="         << getLatticeL()         << std::endl;
+  clout << "Time step (s):                    physTime="         << physTime()            << std::endl;
+  clout << "Velocity factor(m/s):             physVelocity="     << physVelocity()        << std::endl;
+  clout << "FlowRate factor(m^d/s):           physFlowRate="     << physFlowRate()        << std::endl;
+  clout << "Mass factor(kg):                  physMass="         << physMass()            << std::endl;
+  clout << "Force factor(N):                  physForce="        << physForce()           << std::endl;
+  clout << "Force factor massless(N/kg):      physMasslessForce="<< physMasslessForce()   << std::endl;
+  clout << "Pressure factor(Pa):              physPressure="     << physPressure(4)       << std::endl;
+  clout << "latticePressure:                  latticeP="         << latticePressure()     << std::endl;
 
 }
 
@@ -141,41 +139,38 @@ LBconverter<T>* createLBconverter(XMLreader const& params)
 {
   OstreamManager clout(std::cout,"createLBconverter");
 
-  int dim;
-  T latticeL;
-  T deltaX;
-  int N;
-  T latticeU;
-  T charNu;
-  T Re;
+  int dim = 0;
+  T latticeL = T(0);
+  T deltaX = T(0);
+  int N = 0;
+  T latticeU = T(0);
+  T charNu = T(0);
+  T Re = T(0);
   T charL = T(1);
   T charU = T(1);
   T charRho = T(1);
   T pressureLevel = T(0);
-
+  bool verbose = false;
+  params.setWarningsOn(false);
   // params[parameter].read(value) sets the value or returns false if the parameter can not be found
 
-  if (!params["dim"].read<int>(dim)) {
-    clout << "Error: Cannot read parameter: dim" << std::endl;
+  if (!params["Application"]["dim"].read<int>(dim, verbose)) {
+    clout << "Error: Cannot read parameter from Xml-file: dim" << std::endl;
     exit (1);
   }
-  if (!params["DiscParam"]["latticeU"].read(latticeU)) {
-    clout << "Error: Cannot read parameter: latticeU"
+  if (!params["Application"]["DiscParam"]["latticeU"].read(latticeU, verbose)) {
+    clout << "Error: Cannot read parameter from Xml-file: latticeU"
           << std::endl;
     exit (1);
   }
-  if (!params["PhysParam"]["charL"].read(charL)) {
-    clout << "Parameter charL not found. Set default: charL = 1."
+  if (!params["Application"]["PhysParam"]["charL"].read(charL, verbose)) {
+    clout << "Parameter charL not found in Xml-file. Set default: charL = 1."
           << std::endl;
   }
-  if (!params["DiscParam"]["latticeL"].read(latticeL)) {
-    clout << "Parameter latticeL not found. Use deltaX instead."
-          << std::endl;
-    if (!params["DiscParam"]["deltaX"].read(deltaX)) {
-      clout << "Parameter deltaX not found. Use resolution instead."
-            << std::endl;
-      if (!params["DiscParam"]["resolution"].read(N)) {
-        clout << "Error: Cannot read any of the parameters: "
+  if (!params["Application"]["DiscParam"]["latticeL"].read(latticeL, verbose)) {
+    if (!params["Application"]["DiscParam"]["deltaX"].read(deltaX, verbose)) {
+      if (!params["Application"]["DiscParam"]["resolution"].read(N, verbose)) {
+        clout << "Error: Cannot read any of the parameters from Xml-file: "
               << "latticeL, deltaX, resolution"
               << std::endl;
         exit (1);
@@ -184,28 +179,27 @@ LBconverter<T>* createLBconverter(XMLreader const& params)
     }
     latticeL = deltaX * charL;
   }
-  if (!params["PhysParam"]["charU"].read(charU)) {
-    clout << "Parameter charU not found. Set default: charU = 1."
+  if (!params["Application"]["PhysParam"]["charU"].read(charU, verbose)) {
+    clout << "Parameter charU not found in Xml-file. Set default: charU = 1."
           << std::endl;
   }
-  if (!params["PhysParam"]["charRho"].read(charRho)) {
-    clout << "Parameter charRho not found. Set default: charRho = 1."
+  if (!params["Application"]["PhysParam"]["charRho"].read(charRho, verbose)) {
+    clout << "Parameter charRho not found in Xml-file. Set default: charRho = 1."
           << std::endl;
   }
-  if (!params["PhysParam"]["charPressure"].read(pressureLevel)) {
-    clout << "Parameter charPressure not found. Set default: charPressure = 0."
+  if (!params["Application"]["PhysParam"]["charPressure"].read(pressureLevel, verbose)) {
+    clout << "Parameter charPressure not found in Xml-file. Set default: charPressure = 0."
           << std::endl;
   }
-  if (!params["PhysParam"]["charNu"].read(charNu)) {
-    if (!params["PhysParam"]["Re"].read(Re)) {
-      clout << "Error: Cannot read neither charNu nor Re"
+  if (!params["Application"]["PhysParam"]["charNu"].read(charNu, verbose)) {
+    if (!params["Application"]["PhysParam"]["Re"].read(Re, verbose)) {
+      clout << "Error: Cannot read neither charNu nor Re from Xml-file."
             << std::endl;
       exit (1);
     }
-    clout << "Parameter charNu not found. Use Re instead."
-          << std::endl;
     charNu = charL*charU / Re;
   }
+  params.setWarningsOn(true);
 
   return new LBconverter<T>(dim, latticeL, latticeU, charNu, charL, charU,
                             charRho, pressureLevel);

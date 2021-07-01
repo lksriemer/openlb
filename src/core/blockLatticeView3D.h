@@ -63,9 +63,9 @@ public:
     Dynamics<T,Lattice>* dynamics );
   virtual void defineDynamics(int iX, int iY, int iZ, Dynamics<T,Lattice>* dynamics);
   /// Define the dynamics by material
-  virtual void defineDynamics(BlockGeometryStatistics3D* blockGeoSta, Dynamics<T,Lattice>* dynamics, int material);
+  virtual void defineDynamics(BlockGeometry3D& blockGeometry, int material, Dynamics<T,Lattice>* dynamics);
   /// Define the dynamics by material on a 3D sub-box
-  virtual void defineDynamics(BlockGeometryStatistics3D* blockGeoSta, int x0_, int x1_, int y0_, int y1_, int z0_, int z1_, Dynamics<T,Lattice>* dynamics, int material);
+  virtual void defineDynamics(BlockGeometry3D& blockGeometry, int material, int x0_, int x1_, int y0_, int y1_, int z0_, int z1_, Dynamics<T,Lattice>* dynamics);
   virtual void specifyStatisticsStatus (
     int x0_, int x1_, int y0_, int y1_,
     int z0_, int z1_, bool status );

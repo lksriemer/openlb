@@ -239,13 +239,13 @@ void MultiBlockLattice3D<T, Lattice>::defineDynamics(int iX, int iY, int iZ,
 
 template<typename T, template<typename U> class Lattice>
 void MultiBlockLattice3D<T, Lattice>::defineDynamics(
-  BlockGeometryStatistics3D* blockGeoSta, int x0_, int x1_, int y0_,
-  int y1_, int z0_, int z1_, Dynamics<T, Lattice>* dynamics, int material) {
+  BlockGeometry3D& blockGeometry, int material, int x0_, int x1_, int y0_,
+  int y1_, int z0_, int z1_, Dynamics<T, Lattice>* dynamics) {
 
   for (int iX = x0_; iX <= x1_; ++iX) {
     for (int iY = y0_; iY <= y1_; ++iY) {
       for (int iZ = z0_; iZ <= z1_; ++iZ) {
-        if (blockGeoSta->getBlockGeometry()->getMaterial(iX,iY,iZ) == material) {
+        if (blockGeometry.getMaterial(iX,iY,iZ) == material) {
           BlockCoordinates3D domain(iX, iX, iY, iY, iZ, iZ), inters;
           std::vector<int> const& relevantBlocks = getRelevantBlocks();
           for (int rBlock = 0; rBlock < getNumRelevantBlocks(); ++rBlock) {
@@ -282,12 +282,12 @@ void MultiBlockLattice3D<T, Lattice>::defineDynamics(
 
 template<typename T, template<typename U> class Lattice>
 void MultiBlockLattice3D<T, Lattice>::defineDynamics(
-  BlockGeometryStatistics3D* blockGeoSta, Dynamics<T, Lattice>* dynamics,
-  int material) {
-  defineDynamics(blockGeoSta, 0,
-                 blockGeoSta->getBlockGeometry()->getNx() - 1, 0,
-                 blockGeoSta->getBlockGeometry()->getNy() - 1, 0,
-                 blockGeoSta->getBlockGeometry()->getNz() - 1, dynamics, material);
+  BlockGeometry3D& blockGeometry, int material, Dynamics<T, Lattice>* dynamics)
+{
+  defineDynamics(blockGeometry, material, 0,
+                 blockGeometry.getNx() - 1, 0,
+                 blockGeometry.getNy() - 1, 0,
+                 blockGeometry.getNz() - 1, dynamics);
 }
 
 template<typename T, template<typename U> class Lattice>

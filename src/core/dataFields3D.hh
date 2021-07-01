@@ -91,7 +91,7 @@ void ScalarField3D<T>::deConstruct() {
 template<typename T>
 void ScalarField3D<T>::reset() {
   OLB_PRECONDITION(isConstructed());
-  for (int index=0; index<nx*ny; ++index) {
+  for (int index=0; index<nx*ny*nz; ++index) {
     (*this)[index] = T();
   }
 }

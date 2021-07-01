@@ -43,10 +43,11 @@
 #include "dataFields2D.hh"
 #include "serializer.h"
 #include "serializer.hh"
-#include "../io/serializerIO.h"
-#include "../io/serializerIO.hh"
-#include "../io/base64.h"
-#include "../io/base64.hh"
+#include "io/serializerIO.h"
+#include "io/serializerIO.hh"
+#include "io/base64.h"
+#include "io/base64.hh"
+#include "io/ostreamManager.h"
 
 
 
@@ -160,6 +161,7 @@ unsigned short BlockGeometry3D::getMaterial(int iX, int iY, int iZ) {
 void BlockGeometry3D::setMaterial(int iX, int iY, int iZ,
                                   unsigned short material) {
   _geometryData.get(iX + _offset, iY + _offset, iZ + _offset) = material;
+  _statisticsUpdateNeeded = true;
 }
 
 olb::ScalarField3D<unsigned short>* BlockGeometry3D::getRawData() {
@@ -215,6 +217,50 @@ void BlockGeometry3D::clean() {
   clout << "cleaned "<< counter << " outer boundary voxel(s)" << std::endl;
 }
 
+void BlockGeometry3D::outerClean() {
+  int counter=0;
+  for (int iX = -_offset; iX < _nx + _offset; iX++) {
+    for (int iY = -_offset; iY < _ny + _offset; iY++) {
+      for (int iZ = -_offset; iZ < _nz + _offset; iZ++) {
+
+        if (getMaterial(iX, iY, iZ) == 1) {
+          if (   getMaterial(iX - 1, iY,     iZ    ) == 0
+              || getMaterial(iX,     iY - 1, iZ    ) == 0
+              || getMaterial(iX,     iY,     iZ - 1) == 0
+              || getMaterial(iX - 1, iY - 1, iZ    ) == 0
+              || getMaterial(iX,     iY - 1, iZ - 1) == 0
+              || getMaterial(iX - 1, iY,     iZ - 1) == 0
+              || getMaterial(iX - 1, iY - 1, iZ - 1) == 0
+              || getMaterial(iX + 1, iY,     iZ    ) == 0
+              || getMaterial(iX,     iY + 1, iZ    ) == 0
+              || getMaterial(iX,     iY,     iZ + 1) == 0
+              || getMaterial(iX + 1, iY + 1, iZ    ) == 0
+              || getMaterial(iX,     iY + 1, iZ + 1) == 0
+              || getMaterial(iX + 1, iY,     iZ + 1) == 0
+              || getMaterial(iX + 1, iY + 1, iZ + 1) == 0
+              || getMaterial(iX - 1, iY + 1, iZ    ) == 0
+              || getMaterial(iX + 1, iY - 1, iZ    ) == 0
+              || getMaterial(iX,     iY - 1, iZ + 1) == 0
+              || getMaterial(iX,     iY + 1, iZ - 1) == 0
+              || getMaterial(iX - 1, iY,     iZ + 1) == 0
+              || getMaterial(iX + 1, iY,     iZ - 1) == 0
+              || getMaterial(iX + 1, iY + 1, iZ - 1) == 0
+              || getMaterial(iX + 1, iY - 1, iZ - 1) == 0
+              || getMaterial(iX + 1, iY - 1, iZ + 1) == 0
+              || getMaterial(iX - 1, iY + 1, iZ + 1) == 0
+              || getMaterial(iX - 1, iY - 1, iZ + 1) == 0
+              || getMaterial(iX - 1, iY + 1, iZ - 1) == 0) {
+            setMaterial(iX, iY, iZ, 0);
+            counter++;
+          }
+        }
+      }
+    }
+  }
+  clout << "cleaned "<< counter << " outer fluid voxel(s)" << std::endl;
+}
+
+
 void BlockGeometry3D::innerClean() {
   int count = 0;
   int count2 = 0;
@@ -223,8 +269,7 @@ void BlockGeometry3D::innerClean() {
     for (int iY = 0; iY < _ny; iY++) {
       for (int iZ = 0; iZ < _nz; iZ++) {
 
-        if (getMaterial(iX, iY, iZ) != 1 && getMaterial(iX, iY, iZ)
-            != 0) {
+        if (getMaterial(iX, iY, iZ) != 1 && getMaterial(iX, iY, iZ) != 0) {
           count++;
 
           if (getMaterial(iX - 1, iY, iZ) == 1) {
@@ -266,11 +311,63 @@ void BlockGeometry3D::innerClean() {
   clout << "cleaned "<< count2 << " inner boundary voxel(s)" << std::endl;
 }
 
+void BlockGeometry3D::innerClean(int bcType) {
+  int count = 0;
+  int count2 = 0;
+
+  for (int iX = 0; iX < _nx; iX++) {
+    for (int iY = 0; iY < _ny; iY++) {
+      for (int iZ = 0; iZ < _nz; iZ++) {
+
+        if (getMaterial(iX, iY, iZ) != 1 && getMaterial(iX, iY, iZ)
+            != 0 && getMaterial(iX, iY, iZ) == bcType) {
+          count++;
+
+          if (getMaterial(iX - 1, iY, iZ) == 1) {
+            if (getMaterial(iX, iY + 1, iZ) == 1) {
+              if (getMaterial(iX, iY - 1, iZ) == 1) {
+                setMaterial(iX, iY, iZ, 1);
+                count2++;
+              }
+            }
+          }
+          if (getMaterial(iX + 1, iY, iZ) == 1) {
+            if (getMaterial(iX, iY + 1, iZ) == 1) {
+              if (getMaterial(iX, iY - 1, iZ) == 1) {
+                setMaterial(iX, iY, iZ, 1);
+                count2++;
+              }
+            }
+          }
+          if (getMaterial(iX, iY + 1, iZ) == 1) {
+            if (getMaterial(iX + 1, iY, iZ) == 1) {
+              if (getMaterial(iX - 1, iY, iZ) == 1) {
+                setMaterial(iX, iY, iZ, 1);
+                count2++;
+              }
+            }
+          }
+          if (getMaterial(iX, iY - 1, iZ) == 1) {
+            if (getMaterial(iX + 1, iY, iZ) == 1) {
+              if (getMaterial(iX - 1, iY, iZ) == 1) {
+                setMaterial(iX, iY, iZ, 1);
+                count2++;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  clout << "cleaned "<< count2
+        << " inner boundary voxel(s) of Type " << bcType << std::endl;
+}
+
 void BlockGeometry3D::rename(unsigned short fromM, unsigned short toM) {
 
-  for (int iX = _offset; iX < _nx + _offset; iX++) {
-    for (int iY = _offset; iY < _ny + _offset; iY++) {
-      for (int iZ = _offset; iZ < _nz + _offset; iZ++) {
+  for (int iX = 0; iX < _nx + 2*_offset; iX++) {
+    for (int iY = 0; iY < _ny + 2*_offset; iY++) {
+      for (int iZ = 0; iZ < _nz + 2*_offset; iZ++) {
         if (_geometryData.get(iX, iY, iZ) == fromM)
           _geometryData.get(iX, iY, iZ) = toM;
       }
@@ -278,44 +375,165 @@ void BlockGeometry3D::rename(unsigned short fromM, unsigned short toM) {
   }
 }
 
+void BlockGeometry3D::rename(unsigned short fromM, unsigned short toM, AnalyticalF3D<bool,double>& condition) {
+
+  for (int iX = 0; iX < _nx + 2*_offset; iX++) {
+    for (int iY = 0; iY < _ny + 2*_offset; iY++) {
+      for (int iZ = 0; iZ < _nz + 2*_offset; iZ++) {
+        if (_geometryData.get(iX, iY, iZ) == fromM && condition(physCoords(iX-_offset,iY-_offset,iZ-_offset))[0] ) {
+          _geometryData.get(iX, iY, iZ) = toM;
+        }
+      }
+    }
+  }
+}
+
+void BlockGeometry3D::rename(unsigned short fromM, unsigned short toM, unsigned offsetX, unsigned offsetY, unsigned offsetZ) {
+
+  for (int iX = 0; iX < _nx + 2*_offset; iX++) {
+    for (int iY = 0; iY < _ny + 2*_offset; iY++) {
+      for (int iZ = 0; iZ < _nz + 2*_offset; iZ++) {
+        if (getMaterial(iX, iY, iZ) == fromM) {
+          bool found = true;
+          for (int iOffsetX = -offsetX; iOffsetX <= (int) offsetX; ++iOffsetX) {
+            for (int iOffsetY = -offsetY; iOffsetY <= (int) offsetY; ++iOffsetY) {
+              for (int iOffsetZ = -offsetZ; iOffsetZ <= (int) offsetZ; ++iOffsetZ) {
+                if (getMaterial(iX + iOffsetX, iY + iOffsetY, iZ + iOffsetZ) != fromM) {
+                  if (getMaterial(iX + iOffsetX, iY + iOffsetY, iZ + iOffsetZ) != 1245) {
+                    found = false;
+                  }
+                }
+              }
+            }
+          }
+          if (found) {
+            setMaterial(iX, iY, iZ, 1245);
+          }
+        }
+      }
+    }
+  }
+  rename(1245,toM);
+}
+
+
+bool BlockGeometry3D::check(unsigned short material, int iX, int iY,
+                                      int iZ, unsigned offsetX, unsigned offsetY, unsigned offsetZ) {
+
+  bool found = true;
+  for (int iOffsetX = -offsetX; iOffsetX <= (int) offsetX; ++iOffsetX) {
+    for (int iOffsetY = -offsetY; iOffsetY <= (int) offsetY; ++iOffsetY) {
+      for (int iOffsetZ = -offsetZ; iOffsetZ <= (int) offsetZ; ++iOffsetZ) {
+        if (getMaterial(iX + iOffsetX, iY + iOffsetY,
+                                        iZ + iOffsetZ) != material)
+          found = false;
+      }
+    }
+  }
+  return found;
+}
+
+bool BlockGeometry3D::find(unsigned short material, unsigned offsetX,
+                                     unsigned offsetY, unsigned offsetZ, int& foundX, int& foundY,
+                                     int& foundZ) {
+
+  bool found = false;
+  for (foundX = 0; foundX < _nx; foundX++) {
+    for (foundY = 0; foundY < _ny; foundY++) {
+      for (foundZ = 0; foundZ < _nz; foundZ++) {
+        found = check(material, foundX, foundY, foundZ, offsetX,
+                      offsetY, offsetZ);
+        if (found)
+          return found;
+      }
+    }
+  }
+  return found;
+}
+
+void BlockGeometry3D::regionGrowing(unsigned short fromM, unsigned short toM,
+    int seedX, int seedY, int seedZ, int offsetX, int offsetY, int offsetZ,
+    std::map<std::vector<int>, int>* tmp) {
+
+  std::map<std::vector<int>, int> tmp2;
+  bool firstCall = false;
+  if (tmp == NULL) {
+    tmp = &tmp2;
+    firstCall = true;
+  }
+
+  if (getMaterial(seedX, seedY, seedZ) == fromM) {
+    std::vector<int> found;
+    found.push_back(seedX);
+    found.push_back(seedY);
+    found.push_back(seedZ);
+    if (tmp->count(found) == 0) {
+      (*tmp)[found] = 2;
+      if (offsetX != 0) {
+        regionGrowing(fromM, toM, seedX + 1, seedY, seedZ, offsetX,
+                      offsetY, offsetZ, tmp);
+        regionGrowing(fromM, toM, seedX - 1, seedY, seedZ, offsetX,
+                      offsetY, offsetZ, tmp);
+      }
+      if (offsetY != 0) {
+        regionGrowing(fromM, toM, seedX, seedY + 1, seedZ, offsetX,
+                      offsetY, offsetZ, tmp);
+        regionGrowing(fromM, toM, seedX, seedY - 1, seedZ, offsetX,
+                      offsetY, offsetZ, tmp);
+      }
+      if (offsetZ != 0) {
+        regionGrowing(fromM, toM, seedX, seedY, seedZ + 1, offsetX,
+                      offsetY, offsetZ, tmp);
+        regionGrowing(fromM, toM, seedX, seedY, seedZ - 1, offsetX,
+                      offsetY, offsetZ, tmp);
+      }
+    }
+  }
+  if (firstCall) {
+    std::map<std::vector<int>, int>::iterator iter;
+    for (iter = tmp->begin(); iter != tmp->end(); iter++) {
+      setMaterial((iter->first)[0],(iter->first)[1],(iter->first)[2],toM);
+     }
+  }
+  return;
+}
+
+
+
+
 void BlockGeometry3D::checkForErrors() {
   bool Error = false;
 
   for (int iX = 0; iX < _nx; iX++) {
     for (int iY = 0; iY < _ny; iY++) {
       for (int iZ = 0; iZ < _nz; iZ++) {
-
         if (getMaterial(iX, iY, iZ) == 0) {
-
-          if (getMaterial(iX - 1, iY, iZ) == 1 || getMaterial(iX, iY
-              - 1, iZ) == 1 || getMaterial(iX, iY, iZ - 1) == 1
-              || getMaterial(iX - 1, iY - 1, iZ) == 1 ||
-
-              getMaterial(iX, iY - 1, iZ - 1) == 1 || getMaterial(iX - 1,
-                  iY, iZ - 1) == 1 || getMaterial(iX - 1, iY - 1, iZ
-                                                  - 1) == 1 || getMaterial(iX + 1, iY, iZ) == 1 ||
-
-              getMaterial(iX, iY + 1, iZ) == 1 || getMaterial(iX, iY, iZ
-                  + 1) == 1 || getMaterial(iX + 1, iY + 1, iZ) == 1
-              || getMaterial(iX, iY + 1, iZ + 1) == 1 ||
-
-              getMaterial(iX + 1, iY, iZ + 1) == 1 || getMaterial(iX + 1,
-                  iY + 1, iZ + 1) == 1 || getMaterial(iX - 1, iY + 1,
-                      iZ) == 1 || getMaterial(iX + 1, iY - 1, iZ) == 1 ||
-
-              getMaterial(iX, iY - 1, iZ + 1) == 1 || getMaterial(iX, iY
-                  + 1, iZ - 1) == 1
-              || getMaterial(iX - 1, iY, iZ + 1) == 1
-              || getMaterial(iX + 1, iY, iZ - 1) == 1 ||
-
-              getMaterial(iX + 1, iY + 1, iZ - 1) == 1 || getMaterial(iX
-                  + 1, iY - 1, iZ - 1) == 1 || getMaterial(iX + 1, iY
-                      - 1, iZ + 1) == 1 || getMaterial(iX - 1, iY + 1, iZ
-                          + 1) == 1 ||
-
-              getMaterial(iX - 1, iY - 1, iZ + 1) == 1 || getMaterial(iX
-                  - 1, iY + 1, iZ - 1) == 1) {
-
+          if (   getMaterial(iX - 1, iY,     iZ    ) == 1
+              || getMaterial(iX,     iY - 1, iZ    ) == 1
+              || getMaterial(iX,     iY,     iZ - 1) == 1
+              || getMaterial(iX - 1, iY - 1, iZ    ) == 1
+              || getMaterial(iX,     iY - 1, iZ - 1) == 1
+              || getMaterial(iX - 1, iY,     iZ - 1) == 1
+              || getMaterial(iX - 1, iY - 1, iZ - 1) == 1
+              || getMaterial(iX + 1, iY,     iZ    ) == 1
+              || getMaterial(iX,     iY + 1, iZ    ) == 1
+              || getMaterial(iX,     iY,     iZ + 1) == 1
+              || getMaterial(iX + 1, iY + 1, iZ    ) == 1
+              || getMaterial(iX,     iY + 1, iZ + 1) == 1
+              || getMaterial(iX + 1, iY,     iZ + 1) == 1
+              || getMaterial(iX + 1, iY + 1, iZ + 1) == 1
+              || getMaterial(iX - 1, iY + 1, iZ    ) == 1
+              || getMaterial(iX + 1, iY - 1, iZ    ) == 1
+              || getMaterial(iX,     iY - 1, iZ + 1) == 1
+              || getMaterial(iX,     iY + 1, iZ - 1) == 1
+              || getMaterial(iX - 1, iY,     iZ + 1) == 1
+              || getMaterial(iX + 1, iY,     iZ - 1) == 1
+              || getMaterial(iX + 1, iY + 1, iZ - 1) == 1
+              || getMaterial(iX + 1, iY - 1, iZ - 1) == 1
+              || getMaterial(iX + 1, iY - 1, iZ + 1) == 1
+              || getMaterial(iX - 1, iY + 1, iZ + 1) == 1
+              || getMaterial(iX - 1, iY - 1, iZ + 1) == 1
+              || getMaterial(iX - 1, iY + 1, iZ - 1) == 1) {
             Error = true;
           }
         }

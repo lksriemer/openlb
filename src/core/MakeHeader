@@ -35,14 +35,19 @@ precompiled    := blockLattice2D \
                   blockLatticeView2D \
                   blockLatticeView3D \
                   boundaryCondition2D \
+                  offBoundaryCondition2D \
                   boundaryCondition3D \
+                  offBoundaryCondition3D \
                   boundaryPostProcessors2D \
+                  offBoundaryPostProcessors2D \
                   boundaryPostProcessors3D \
+                  offBoundaryPostProcessors3D \
                   cell \
                   dataFields2D \
                   dataFields3D \
                   dynamics \
                   latticeDescriptors \
+                  latticeStatistics \
                   loadBalancer \
                   heuristicLoadBalancer \
                   momentaOnBoundaries2D \

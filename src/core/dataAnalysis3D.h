@@ -44,6 +44,7 @@ struct AnalysisFieldsImpl3D {
   ScalarField3D<T>   velNormField;
   TensorField3D<T,3> vortField;
   ScalarField3D<T>   vortNormField;
+  ScalarField3D<T>   qCritField;
   TensorField3D<T,6> strainRateField;
   TensorField3D<T,6> stressField;
   ScalarField3D<T>   divRhoUField;
@@ -60,6 +61,7 @@ struct AnalysisFields3D {
     ScalarField3D<T>&   velNormField_,
     TensorField3D<T,3>& vortField_,
     ScalarField3D<T>&   vortNormField_,
+    ScalarField3D<T>&   qCritField_,
     TensorField3D<T,6>& strainRateField_,
     TensorField3D<T,6>& stressField_,
     ScalarField3D<T>&   divRhoUField_,
@@ -74,6 +76,7 @@ struct AnalysisFields3D {
   ScalarField3D<T>&   velNormField;
   TensorField3D<T,3>& vortField;
   ScalarField3D<T>&   vortNormField;
+  ScalarField3D<T>&   qCritField;
   TensorField3D<T,6>& strainRateField;
   TensorField3D<T,6>& stressField;
   ScalarField3D<T>&   divRhoUField;
@@ -98,6 +101,7 @@ public:
   virtual TensorFieldBase3D<T,3> const& getVorticity() const;
   virtual ScalarFieldBase3D<T> const& getVelocityNorm() const;
   virtual ScalarFieldBase3D<T> const& getVorticityNorm() const;
+  virtual ScalarFieldBase3D<T> const& getQCrit() const;
   virtual TensorFieldBase3D<T,6> const& getStrainRate() const;
   virtual TensorFieldBase3D<T,6> const& getStrainRateFromStress() const;
   virtual ScalarFieldBase3D<T> const& getDivRhoU() const;
@@ -105,6 +109,7 @@ public:
   virtual TensorFieldBase3D<T,Lattice<T>::q > const& getPopulations() const;
 
   virtual T computeMeanEnstrophy() const;
+ // virtual T computeQCritField() const;
 
   virtual int getNx() const { return block.getNx(); }
   virtual int getNy() const { return block.getNy(); }
@@ -115,6 +120,7 @@ private:
   void computePressureField() const;
   void computeVelocityNormField() const;
   void computeVorticityNormField() const;
+  void computeQCritField() const;
   void computeVorticityField() const;
   void computeStrainRateField() const;
   void computeStrainRateFieldFromStress() const;
@@ -141,6 +147,7 @@ private:
   T boundaryStrain(int iX, int iY, int iZ, int iAlpha, int iBeta) const;
   T boundaryDivRhoU(int iX, int iY, int iZ) const;
   T boundaryPoisson(int iX, int iY, int iZ) const;
+  T qCriterion(int iX, int iY, int iZ) const;
 private:
   BlockStructure3D<T,Lattice> const& block;
   bool pointsToDefaultFields;

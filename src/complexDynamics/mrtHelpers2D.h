@@ -153,6 +153,76 @@ struct mrtHelpers<T, descriptors::MRTD2Q9Descriptor>
     return uSqr;
   }
 
+  /// MRT collision step
+  static T mrtSGSCollision( Cell<T,MRTD2Q9Descriptor>& cell,
+                         T rho, const T u[2], T omega,
+                         T invM_S_SGS[9][9] )
+  {
+    typedef MRTD2Q9Descriptor<T> L;
+    T uSqr = util::normSqr<T,2>(u);
+    T momenta[9];
+    T momentaEq[9];
+
+    computeMomenta(momenta,cell);
+    computeEquilibrium(momentaEq,rho,u,uSqr);
+
+    T mom1 = momenta[1] - momentaEq[1];
+    T mom2 = momenta[2] - momentaEq[2];
+    T mom4 = momenta[4] - momentaEq[4];
+    T mom6 = momenta[6] - momentaEq[6];
+    T mom7 = momenta[7] - momentaEq[7];
+    T mom8 = momenta[8] - momentaEq[8];
+
+    cell[0] -= invM_S_SGS[0][1]*mom1 +
+               invM_S_SGS[0][2]*mom2;
+
+    cell[1] -= invM_S_SGS[1][1]*mom1/ +
+               invM_S_SGS[1][2]*mom2 +
+               invM_S_SGS[1][4]*mom4 +
+               invM_S_SGS[1][6]*mom6 +
+               invM_S_SGS[1][8]*mom8;
+
+    cell[2] -= invM_S_SGS[2][1]*mom1 +
+               invM_S_SGS[2][2]*mom2 +
+               invM_S_SGS[2][4]*mom4 +
+               invM_S_SGS[2][7]*mom7;
+
+    cell[3] -= invM_S_SGS[3][1]*mom1 +
+               invM_S_SGS[3][2]*mom2 +
+               invM_S_SGS[3][4]*mom4 +
+               invM_S_SGS[3][6]*mom6 +
+               invM_S_SGS[3][8]*mom8;
+
+    cell[4] -= invM_S_SGS[4][1]*mom1 +
+               invM_S_SGS[4][2]*mom2 +
+               invM_S_SGS[4][6]*mom6 +
+               invM_S_SGS[4][7]*mom7;
+
+    cell[5] -= invM_S_SGS[5][1]*mom1 +
+               invM_S_SGS[5][2]*mom2 +
+               invM_S_SGS[5][4]*mom4 +
+               invM_S_SGS[5][6]*mom6 +
+               invM_S_SGS[5][8]*mom8;
+
+    cell[6] -= invM_S_SGS[6][1]*mom1 +
+               invM_S_SGS[6][2]*mom2 +
+               invM_S_SGS[6][4]*mom4 +
+               invM_S_SGS[6][7]*mom7;
+
+    cell[7] -= invM_S_SGS[7][1]*mom1 +
+               invM_S_SGS[7][2]*mom2 +
+               invM_S_SGS[7][4]*mom4 +
+               invM_S_SGS[7][6]*mom6 +
+               invM_S_SGS[7][8]*mom8;
+
+    cell[8] -= invM_S_SGS[8][1]*mom1 +
+               invM_S_SGS[8][2]*mom2 +
+               invM_S_SGS[8][6]*mom6 +
+               invM_S_SGS[8][7]*mom7;
+
+    return uSqr;
+  }
+
 };
 
 

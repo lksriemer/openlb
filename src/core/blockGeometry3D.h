@@ -35,9 +35,11 @@
 #include <fstream>
 #include <string>
 
-#include "core/dataFields3D.h"
+#include "blockGeometryStatistics3D.h"
+#include "dataFields3D.h"
 #include "io/vtkDataOutput.h"
-#include "../src/io/ostreamManager.h"
+#include "io/ostreamManager.h"
+#include "functors/analyticalF.h"
 
 /// All OpenLB code is contained in this namespace.
 namespace olb {
@@ -55,6 +57,10 @@ private:
   int _offset;
   /// Matrix of voxels with material number / boundary number
   olb::ScalarField3D<unsigned short> _geometryData;
+  /// Statistic class
+  BlockGeometryStatistics3D _statistics;
+  /// Statistic class
+  bool _statisticsUpdateNeeded;
   /// class specific output stream
   mutable OstreamManager clout;
 
@@ -65,6 +71,7 @@ public:
     clout(std::cout,"BlockGeometry3D")
   {
     this->reInit(0, 0, 0, 0, 0, 0, 0, 0);
+    _statisticsUpdateNeeded = true;
   }
   ;
   /// Constructor
@@ -74,6 +81,7 @@ public:
     clout(std::cout,"BlockGeometry3D")
   {
     this->reInit(x0, y0, z0, h, nX, nY, nZ, offset);
+    _statisticsUpdateNeeded = true;
   }
   ;
 
@@ -91,15 +99,25 @@ public:
     _nz = rhs._nz;
     _offset = rhs._offset;
     _geometryData.swap(rhs._geometryData);
+    _statisticsUpdateNeeded = true;
   }
   ;
 
   /// Copy assignment
   BlockGeometry3D operator=(BlockGeometry3D rhs) {
     BlockGeometry3D tmp(rhs);
+    _statisticsUpdateNeeded = true;
     return tmp;
-  }
-  ;
+  };
+
+  /// Returns a statistics object
+  BlockGeometryStatistics3D& getStatistics() {
+    if (_statisticsUpdateNeeded) {
+      _statistics.reInit(this);
+      _statisticsUpdateNeeded = false;
+    }
+    return _statistics;
+  };
 
   /// returns the x-position of voxel (0/0/0)
   double getPositionX();
@@ -150,6 +168,7 @@ public:
   /// sets the (iX,iY,iZ) entry in the 3D scalar field
   void setMaterial(int iX, int iY, int iZ, unsigned short material);
 
+  /// returns the raw data field
   olb::ScalarField3D<unsigned short>* getRawData();
 
   /// new functions
@@ -157,11 +176,57 @@ public:
   /// outer cleaning
   void clean();
 
-  /// inner cleaning
+  /// remove fluid fluids from the outer domain
+  void outerClean();
+
+  /// inner cleaning for all boundary types
   void innerClean();
+
+  /// inner cleaning for specific boundary types
+  void innerClean(int bcType);
 
   /// replace one material with another
   void rename(unsigned short fromM, unsigned short toM);
+
+  /// replace one material that fulfills an indicator functor condition with another
+  void rename(unsigned short fromM, unsigned short toM,
+              AnalyticalF3D<bool,double>& condition);
+
+  /// replace one material with another respecting an offset (overlap)
+  void rename(unsigned short fromM, unsigned short toM,
+              unsigned offsetX, unsigned offsetY, unsigned offsetZ);
+
+
+
+  /// rename several voxels with a new material number using a seed point and directions indicated by offsetX,Y,Z != 0
+  void regionGrowing(unsigned short fromM, unsigned short toM,
+                     int seedX, int seedY, int seedZ,
+                     int offsetX, int offsetY, int offsetZ,
+                     std::map<std::vector<int>, int >* tmp=NULL);
+
+
+ 
+
+
+  /// returns true if at (iX,iY,iZ) and in a neighbourhood of size (offsetX,offsetY,offsetZ) only voxels with material no material are there
+  bool check(unsigned short material, int iX, int iY, int iZ,
+             unsigned offsetX, unsigned offsetY, unsigned offsetZ);
+
+  /// returns the coordinates of a voxel with material
+  bool find(unsigned short material,
+            unsigned offsetX, unsigned offsetY, unsigned offsetZ,
+            int& iX, int& iY, int& iZ);
+
+
+
+
+
+
+
+
+
+
+
 
   /// check for errors (searches for all outer voxels (=0) with an inner voxel (=1) as a direct neighbour)
   void checkForErrors();
@@ -174,6 +239,7 @@ public:
 
   /// removes offset
   void removeOffset();
+
 
   /// prints the chosen part of the Geometry
   void printLayer(int x0, int x1, int y0, int y1, int z0, int z1,

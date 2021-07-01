@@ -34,6 +34,7 @@ namespace olb {
 using namespace descriptors;
 
 template class ScalarField2D<double>;
+template class ScalarField2D<unsigned short>;
 template class SequentialScalarFieldSerializer2D<double>;
 template class SequentialScalarFieldUnSerializer2D<double>;
 
@@ -46,8 +47,14 @@ template class SequentialTensorFieldUnSerializer2D<double, 3>;
 template class TensorField2D<double, 4>; // for non-symmetric tensors
 template class SequentialTensorFieldSerializer2D<double, 4>;
 template class SequentialTensorFieldUnSerializer2D<double, 4>;
+template class TensorField2D<double, 6>; // for full populations
+template class SequentialTensorFieldSerializer2D<double, 6>;
+template class SequentialTensorFieldUnSerializer2D<double, 6>;
 template class TensorField2D<double, 9>; // for full populations
 template class SequentialTensorFieldSerializer2D<double, 9>;
 template class SequentialTensorFieldUnSerializer2D<double, 9>;
+template class TensorField2D<double, 19>; // for full populations
+template class SequentialTensorFieldSerializer2D<double, 19>;
+template class SequentialTensorFieldUnSerializer2D<double, 19>;
 
 }  // namespace olb

@@ -206,19 +206,19 @@ void BlockLattice3D<T,Lattice>::defineDynamics (
 
 template<typename T, template<typename U> class Lattice>
 void BlockLattice3D<T,Lattice>::defineDynamics (
-  BlockGeometryStatistics3D* blockGeoSta, Dynamics<T,Lattice>* dynamics, int material )
+  BlockGeometry3D& blockGeometry, int material, Dynamics<T,Lattice>* dynamics)
 {
   defineDynamics (
-    blockGeoSta,
-    0, blockGeoSta->getBlockGeometry()->getNx()-1, 0, blockGeoSta->getBlockGeometry()->getNy()-1, 0, blockGeoSta->getBlockGeometry()->getNz()-1,
-    dynamics, material );
+    blockGeometry, material,
+    0, blockGeometry.getNx()-1, 0, blockGeometry.getNy()-1, 0, blockGeometry.getNz()-1,
+    dynamics);
 }
 
 template<typename T, template<typename U> class Lattice>
 void BlockLattice3D<T,Lattice>::defineDynamics (
-  BlockGeometryStatistics3D* blockGeoSta,
+  BlockGeometry3D& blockGeometry, int material,
   int x0, int x1, int y0, int y1, int z0, int z1,
-  Dynamics<T,Lattice>* dynamics, int material )
+  Dynamics<T,Lattice>* dynamics)
 {
   OLB_PRECONDITION(x0>=0 && x1<nx);
   OLB_PRECONDITION(x1>=x0);
@@ -230,7 +230,7 @@ void BlockLattice3D<T,Lattice>::defineDynamics (
     for (int iY=y0; iY<=y1; ++iY) {
       for (int iZ=z0; iZ<=z1; ++iZ) {
 
-        if(blockGeoSta->getBlockGeometry()->getMaterial(iX, iY, iZ)==material) {
+        if(blockGeometry.getMaterial(iX, iY, iZ)==material) {
 
           grid[iX][iY][iZ].defineDynamics(dynamics);
         }

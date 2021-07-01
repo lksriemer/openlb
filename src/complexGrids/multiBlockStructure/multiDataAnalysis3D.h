@@ -40,6 +40,7 @@ struct MultiAnalysisFieldsImpl3D {
   MultiScalarField3D<T>   velNormField;
   MultiTensorField3D<T,3> vortField;
   MultiScalarField3D<T>   vortNormField;
+  MultiScalarField3D<T>   qCritField;
   MultiTensorField3D<T,6> strainRateField;
   MultiTensorField3D<T,6> stressField;
   MultiScalarField3D<T>   divRhoUField;
@@ -64,6 +65,7 @@ public:
   virtual TensorFieldBase3D<T,3> const& getVorticity() const;
   virtual ScalarFieldBase3D<T> const& getVelocityNorm() const;
   virtual ScalarFieldBase3D<T> const& getVorticityNorm() const;
+  virtual ScalarFieldBase3D<T> const& getQCrit() const;
   virtual TensorFieldBase3D<T,6> const& getStrainRate() const;
   virtual TensorFieldBase3D<T,6> const& getStrainRateFromStress() const;
   virtual ScalarFieldBase3D<T> const& getDivRhoU() const;

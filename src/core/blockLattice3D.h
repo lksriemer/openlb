@@ -33,8 +33,10 @@
 #include "dataFields3D.h"
 #include "blockStructure3D.h"
 #include "dataAnalysisBase3D.h"
-#include "blockGeometryStatistics3D.h"
+#include "blockGeometry3D.h"
 #include "multiPhysics.h"
+#include "latticeStatistics.h"
+
 
 /// All OpenLB code is contained in this namespace.
 namespace olb {
@@ -98,9 +100,9 @@ public:
   /// Define the dynamics on a lattice site
   virtual void defineDynamics(int iX, int iY, int iZ, Dynamics<T,Lattice>* dynamics);
   /// Define the dynamics by material
-  virtual void defineDynamics(BlockGeometryStatistics3D* blockGeoSta, Dynamics<T,Lattice>* dynamics, int material);
+  virtual void defineDynamics(BlockGeometry3D& blockGeometry, int material, Dynamics<T,Lattice>* dynamics);
   /// Define the dynamics by material on a 3D sub-box
-  virtual void defineDynamics(BlockGeometryStatistics3D* blockGeoSta, int x0_, int x1_, int y0_, int y1_, int z0_, int z1_, Dynamics<T,Lattice>* dynamics, int material);
+  virtual void defineDynamics(BlockGeometry3D& blockGeometry, int material, int x0_, int x1_, int y0_, int y1_, int z0_, int z1_, Dynamics<T,Lattice>* dynamics);
   /// Specify whether statistics measurements are done on a rect. domain
   virtual void specifyStatisticsStatus (
     int x0_, int x1_, int y0_, int y1_, int z0_, int z1_, bool status );

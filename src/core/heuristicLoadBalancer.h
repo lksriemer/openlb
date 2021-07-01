@@ -44,8 +44,9 @@ private:
 #ifdef PARALLEL_MODE_MPI
   singleton::MpiNonBlockingHelper _mpiNbHelper;
 #endif
-  CuboidGeometry3D<T> _cGeometry;
-  BlockGeometry3D * const _blockGeometry;
+  CuboidGeometry3D<T>* _cGeometry;
+  BlockGeometry3D* _blockGeometry;
+  SuperGeometry3D* _superGeometry;
 
 public:
   /*
@@ -57,7 +58,15 @@ public:
    * \param ratioFullEmpty: Time it takes for full cells in relation to
    *              empty cells
    */
-  heuristicLoadBalancer(CuboidGeometry3D<T> &cGeometry, BlockGeometry3D * const blockGeometry = NULL, const double ratioFullEmpty=3.7);
+  heuristicLoadBalancer() {};
+
+  heuristicLoadBalancer(CuboidGeometry3D<T>& cGeometry, BlockGeometry3D& blockGeometry, const double ratioFullEmpty=3.7);
+
+  void reInit(CuboidGeometry3D<T>& cGeometry, BlockGeometry3D& blockGeometry, const double ratioFullEmpty=3.7);
+
+  heuristicLoadBalancer(CuboidGeometry3D<T>& cGeometry, SuperGeometry3D& superGeometry, const double ratioFullEmpty=3.7);
+
+  void reInit(CuboidGeometry3D<T>& cGeometry, SuperGeometry3D& superGeometry, const double ratioFullEmpty=3.7);
 
 };
 }  // namespace olb

@@ -41,6 +41,7 @@ MultiAnalysisFieldsImpl3D<T,Lattice>::MultiAnalysisFieldsImpl3D (
     velNormField(distribution),
     vortField(distribution),
     vortNormField(distribution),
+    qCritField(distribution),
     strainRateField(distribution),
     stressField(distribution),
     divRhoUField(distribution),
@@ -67,6 +68,7 @@ MultiDataAnalysis3D<T,Lattice>::MultiDataAnalysis3D (
         *fields.velNormField.getScalarFields()[iBlock],
         *fields.vortField.getTensorFields()[iBlock],
         *fields.vortNormField.getScalarFields()[iBlock],
+        *fields.qCritField.getScalarFields()[iBlock],
         *fields.strainRateField.getTensorFields()[iBlock],
         *fields.stressField.getTensorFields()[iBlock],
         *fields.divRhoUField.getScalarFields()[iBlock],
@@ -162,6 +164,17 @@ ScalarFieldBase3D<T> const& MultiDataAnalysis3D<T,Lattice>::getVorticityNorm() c
     }
   }
   return fields.vortNormField;
+}
+
+template<typename T, template<typename U> class Lattice>
+ScalarFieldBase3D<T> const& MultiDataAnalysis3D<T,Lattice>::getQCrit() const {
+  fields.qCritField.construct();
+  for (unsigned iBlock=0; iBlock<perBlockAnalysis.size(); ++iBlock) {
+    if (perBlockAnalysis[iBlock]) {
+      perBlockAnalysis[iBlock] -> getQCrit();
+    }
+  }
+  return fields.qCritField;
 }
 
 template<typename T, template<typename U> class Lattice>

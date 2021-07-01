@@ -30,3 +30,4 @@
 #include "colormaps.hh"
 #include "imageWriter.hh"
 #include "stlReader.hh"
+#include "vtiReader.hh"

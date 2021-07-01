@@ -34,6 +34,8 @@
 #include "dataAnalysisBase3D.h"
 #include "spatiallyExtendedObject3D.h"
 #include "blockGeometryStatistics3D.h"
+#include "latticeStatistics.h"
+
 
 namespace olb {
 
@@ -56,11 +58,11 @@ public:
     int x0_, int x1_, int y0_, int y1_, int z0_ , int z1_,
     Dynamics<T,Lattice>* dynamics ) =0;
   virtual void defineDynamics(int iX, int iY, int iZ, Dynamics<T,Lattice>* dynamics ) =0;
-  virtual void defineDynamics(BlockGeometryStatistics3D* blockGeoSta,
-                              Dynamics<T,Lattice>* dynamics, int material)=0;
-  virtual void defineDynamics(BlockGeometryStatistics3D* blockGeoSta,
+  virtual void defineDynamics(BlockGeometry3D& blockGeometry, int material,
+                              Dynamics<T,Lattice>* dynamics)=0;
+  virtual void defineDynamics(BlockGeometry3D& blockGeometry, int material,
                               int x0_, int x1_, int y0_, int y1_, int z0_, int z1_,
-                              Dynamics<T,Lattice>* dynamics, int material)=0;
+                              Dynamics<T,Lattice>* dynamics)=0;
   virtual void specifyStatisticsStatus (
     int x0_, int x1_, int y0_, int y1_, int z0_, int z1_,
     bool status ) =0;

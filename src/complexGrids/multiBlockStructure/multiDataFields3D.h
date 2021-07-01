@@ -38,6 +38,7 @@
 
 namespace olb {
 
+template<typename T> class ScalarField2D;
 template<typename T> class ParallelScalarFieldSerializerPolicy3D;
 template<typename T> class ParallelScalarFieldUnSerializerPolicy3D;
 

@@ -30,7 +30,7 @@
 
 #include <vector>
 #include "core/boundaryCondition3D.h"
-#include "core/blockGeometryStatistics3D.h"
+#include "superGeometryStatistics3D.h"
 #include "superLattice3D.h"
 #include "io/ostreamManager.h"
 
@@ -117,14 +117,12 @@ public:
   void addInternalVelocityCornerPPN(T x, T y, T z, T omega);
   void addInternalVelocityCornerPPP(T x, T y, T z, T omega);
 
-  void addVelocityBoundary(BlockGeometryStatistics3D* blockGeoSta, int x0,
-                           int x1, int y0, int y1, int z0, int z1, T omega, int material);
-  void addVelocityBoundary(BlockGeometryStatistics3D* blockGeoSta, T omega,
-                           int material);
-  void addPressureBoundary(BlockGeometryStatistics3D* blockGeoSta, int x0,
-                           int x1, int y0, int y1, int z0, int z1, T omega, int material);
-  void addPressureBoundary(BlockGeometryStatistics3D* blockGeoSta, T omega,
-                           int material);
+  void addVelocityBoundary(SuperGeometry3D& superGeometry, int material, int x0,
+                           int x1, int y0, int y1, int z0, int z1, T omega);
+  void addVelocityBoundary(SuperGeometry3D& superGeometry, int material, T omega);
+  void addPressureBoundary(SuperGeometry3D& superGeometry, int material, int x0,
+                           int x1, int y0, int y1, int z0, int z1, T omega);
+  void addPressureBoundary(SuperGeometry3D& superGeometry, int material, T omega);
 
   /// Adds needed Cells to the Communicator _commBC in SuperLattice
   void addPoints2CommBC(int x0, int x1, int y0, int y1, int z0, int z1,
@@ -169,12 +167,12 @@ void createInterpBoundaryCondition3D(
 template<typename T, template<typename U> class Lattice>
 void createLocalBoundaryCondition3D(
   sOnLatticeBoundaryCondition3D<T, Lattice>& sBC) {
-  createLocalBoundaryCondition3D<T, Lattice, BGKdynamics<T, Lattice> > (sBC);
+  createLocalBoundaryCondition3D<T, Lattice, RLBdynamics<T, Lattice> > (sBC);
 }
 template<typename T, template<typename U> class Lattice>
 void createInterpBoundaryCondition3D(
   sOnLatticeBoundaryCondition3D<T, Lattice>& sBC) {
-  createInterpBoundaryCondition3D<T, Lattice, RLBdynamics<T, Lattice> > (sBC);
+  createInterpBoundaryCondition3D<T, Lattice, BGKdynamics<T, Lattice> > (sBC);
 }
 
 } // namespace olb

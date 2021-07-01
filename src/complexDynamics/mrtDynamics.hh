@@ -110,9 +110,13 @@ void MRTdynamics<T,Lattice>::staticCollide (
   LatticeStatistics<T>& statistics )
 {
   typedef Lattice<T> L;
-  typedef lbHelpers<T,Lattice> lbH;
+  typedef mrtHelpers<T,Lattice> mrtH;
 
-  assert(false);
+  T rho = T(1);
+  T uSqr = mrtH::mrtCollision(cell, rho, u, invM_S);
+  if (cell.takesStatistics()) {
+    statistics.incrementStats(rho, uSqr);
+  }
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -139,7 +143,33 @@ void MRTdynamics<T,Lattice>::setLambda(T lambda_)
   lambda = lambda_;
 }
 
+template<typename T, template<typename U> class Lattice>
+ForcedMRTdynamics<T,Lattice>::ForcedMRTdynamics (
+    T omega_, Momenta<T,Lattice>& momenta_ )
+ : MRTdynamics<T,Lattice>(omega_, momenta_)
+{
 }
+
+template<typename T, template<typename U> class Lattice>
+void ForcedMRTdynamics<T,Lattice>::collide (
+  Cell<T,Lattice>& cell,
+  LatticeStatistics<T>& statistics )
+{
+  typedef Lattice<T> L;
+  typedef mrtHelpers<T,Lattice> mrtH;
+
+  T rho, u[L::d];
+  this->momenta.computeRhoU(cell, rho, u);
+
+  T uSqr = mrtH::mrtCollision(cell,rho,u,this->invM_S);
+  mrtH::addExternalForce(cell, rho, u, this->invM_S);
+
+  if (cell.takesStatistics()) {
+    statistics.incrementStats(rho, uSqr);
+  }
+}
+
+} // end namespace
 
 #endif
 

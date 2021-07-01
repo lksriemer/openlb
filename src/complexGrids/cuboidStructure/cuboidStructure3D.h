@@ -31,7 +31,10 @@
 #include "cuboidNeighbourhood3D.h"
 #include "communicator3D.h"
 #include "superBoundaryCondition3D.h"
+#include "superOffBoundaryCondition3D.h"
+#include "superGeometry3D.h"
+#include "superGeometryStatistics3D.h"
 #include "superLattice3D.h"
-#include "cuboidVTKout.h"
+#include "cuboidVTKout3D.h"
 
 #endif

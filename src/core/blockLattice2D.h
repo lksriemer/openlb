@@ -35,6 +35,8 @@
 #include "dataAnalysisBase2D.h"
 #include "multiPhysics.h"
 #include "blockGeometryStatistics2D.h"
+#include "latticeStatistics.h"
+
 
 
 /// All OpenLB code is contained in this namespace.

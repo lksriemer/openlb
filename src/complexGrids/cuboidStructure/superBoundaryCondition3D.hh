@@ -1358,16 +1358,17 @@ void sOnLatticeBoundaryCondition3D<T, Lattice>::addInternalVelocityCornerPPP(
 
 template<typename T, template<typename U> class Lattice>
 void sOnLatticeBoundaryCondition3D<T, Lattice>::addVelocityBoundary(
-  BlockGeometryStatistics3D* blockGeoSta, int x0, int x1, int y0, int y1,
-  int z0, int z1, T omega, int material) {
+  SuperGeometry3D& superGeometry, int material, int x0, int x1, int y0, int y1,
+  int z0, int z1, T omega) {
   std::vector<int> discreteNormal(4, 0);
+
   for (int iX = x0; iX <= x1; iX++) {
     for (int iY = y0; iY <= y1; iY++) {
       for (int iZ = z0; iZ <= z1; iZ++) {
 
-        if (blockGeoSta->getBlockGeometry()->getMaterial(iX, iY, iZ)
+        if (superGeometry.getMaterial(iX, iY, iZ)
             == material) {
-          discreteNormal = blockGeoSta->getType(iX, iY, iZ);
+          discreteNormal = superGeometry.getStatistics().getType(iX, iY, iZ);
           if (discreteNormal[0] == 0) {
 
             if (discreteNormal[1] != 0 && discreteNormal[1] == -1) {
@@ -1737,29 +1738,29 @@ void sOnLatticeBoundaryCondition3D<T, Lattice>::addVelocityBoundary(
 
 template<typename T, template<typename U> class Lattice>
 void sOnLatticeBoundaryCondition3D<T, Lattice>::addVelocityBoundary(
-  BlockGeometryStatistics3D* blockGeoSta, T omega, int material) {
+  SuperGeometry3D& superGeometry, int material, T omega) {
 
-  addVelocityBoundary(blockGeoSta, 0,
-                      blockGeoSta->getBlockGeometry()->getNx(), 0,
-                      blockGeoSta->getBlockGeometry()->getNy(), 0,
-                      blockGeoSta->getBlockGeometry()->getNz(), omega, material);
+  addVelocityBoundary(superGeometry, material, 0,
+                      superGeometry.getNx(), 0,
+                      superGeometry.getNy(), 0,
+                      superGeometry.getNz(), omega);
 
 }
 
 template<typename T, template<typename U> class Lattice>
 void sOnLatticeBoundaryCondition3D<T, Lattice>::addPressureBoundary(
-  BlockGeometryStatistics3D* blockGeoSta, int x0, int x1, int y0, int y1,
-  int z0, int z1, T omega, int material) {
+  SuperGeometry3D& superGeometry, int material, int x0, int x1, int y0, int y1,
+  int z0, int z1, T omega) {
   std::vector<int> discreteNormal(4, 0);
 
   for (int iX = x0; iX <= x1; iX++) {
     for (int iY = y0; iY <= y1; iY++) {
       for (int iZ = z0; iZ <= z1; iZ++) {
 
-        if (blockGeoSta->getBlockGeometry()->getMaterial(iX, iY, iZ)
+        if (superGeometry.getMaterial(iX, iY, iZ)
             == material) {
 
-          discreteNormal = blockGeoSta->getType(iX, iY, iZ);
+          discreteNormal = superGeometry.getStatistics().getType(iX, iY, iZ);
 
           if (discreteNormal[0] == 0) {
 
@@ -1812,12 +1813,12 @@ void sOnLatticeBoundaryCondition3D<T, Lattice>::addPressureBoundary(
 
 template<typename T, template<typename U> class Lattice>
 void sOnLatticeBoundaryCondition3D<T, Lattice>::addPressureBoundary(
-  BlockGeometryStatistics3D* blockGeoSta, T omega, int material) {
+  SuperGeometry3D& superGeometry, int material, T omega) {
 
-  addPressureBoundary(blockGeoSta, 0,
-                      blockGeoSta->getBlockGeometry()->getNx(), 0,
-                      blockGeoSta->getBlockGeometry()->getNy(), 0,
-                      blockGeoSta->getBlockGeometry()->getNz(), omega, material);
+  addPressureBoundary(superGeometry, material, 0,
+                      superGeometry.getNx(), 0,
+                      superGeometry.getNy(), 0,
+                      superGeometry.getNz(), omega);
 
 }
 
@@ -1880,7 +1881,7 @@ void createInterpBoundaryCondition3D(
   sBC.set_overlap(1);
   for (int iC = 0; iC < nC; iC++) {
     OnLatticeBoundaryCondition3D<T, Lattice>* blockBC =
-      createInterpBoundaryCondition3D(
+      createInterpBoundaryCondition3D<T,Lattice,MixinDynamics>(
         sBC.get_sLattice().get_blockLattice(iC));
     sBC.get_blockBCs().push_back(blockBC);
   }

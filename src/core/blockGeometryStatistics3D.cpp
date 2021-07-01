@@ -36,6 +36,25 @@
 
 namespace olb {
 
+
+void BlockGeometryStatistics3D::reInit(BlockGeometry3D* blockGeometry) {
+  _blockGeometry = blockGeometry;
+  _material2n = std::map<unsigned short, int>();
+  _nX = blockGeometry->getNx();
+  _nY = blockGeometry->getNy();
+  _nZ = blockGeometry->getNz();
+  _h = blockGeometry->getSpacing();
+  _offset = blockGeometry->getOffset();
+
+  for (int iX = 0; iX < _nX; ++iX) {
+    for (int iY = 0; iY < _nY; ++iY) {
+      for (int iZ = 0; iZ < _nZ; ++iZ) {
+        takeStatistics(iX, iY, iZ);
+      }
+    }
+  }
+}
+
 void BlockGeometryStatistics3D::takeStatistics(int iX, int iY, int iZ) {
   unsigned short type = _blockGeometry->getMaterial(iX, iY, iZ);
   if (_material2n.count(type) == 0) {
@@ -113,6 +132,16 @@ std::vector<int> BlockGeometryStatistics3D::computeNormal(int iX, int iY,
 
 int BlockGeometryStatistics3D::getNVoxel(int bcType) {
   return _material2n[bcType];
+}
+
+int BlockGeometryStatistics3D::getNVoxel() {
+  int total = 0;
+  std::map<unsigned short, int>::iterator iter;
+  for (iter = _material2n.begin(); iter != _material2n.end(); iter++) {
+    if(iter->first!=0)
+      total+=iter->second;
+  }
+  return total;
 }
 
 std::vector<int> BlockGeometryStatistics3D::getMin(unsigned short material) {

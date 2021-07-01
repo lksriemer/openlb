@@ -99,6 +99,26 @@ void Dynamics<T,Lattice>::setParameter(int whichParameter, T value) {
   }
 }
 
+template<typename T, template<typename U> class Lattice>
+void Dynamics<T,Lattice>::setBoundaryIntersection(int iPop, T distance)
+{ }
+
+template<typename T, template<typename U> class Lattice>
+bool Dynamics<T,Lattice>::getBoundaryIntersection(int iPop, T point[Lattice<T>::d])
+{ return 0; }
+
+template<typename T, template<typename U> class Lattice>
+void Dynamics<T,Lattice>::defineU(const T u[Lattice<T>::d])
+{ }
+
+template<typename T, template<typename U> class Lattice>
+void Dynamics<T,Lattice>::defineU(int iPop, const T u[Lattice<T>::d])
+{ }
+
+template<typename T, template<typename U> class Lattice>
+T Dynamics<T,Lattice>::getVelocityCoefficient(int iPop)
+{ return 0; }
+
 ////////////////////// Class BasicDynamics ////////////////////////
 
 template<typename T, template<typename U> class Lattice>
@@ -151,7 +171,8 @@ void BasicDynamics<T,Lattice>::computeAllMomenta (
   T& rho, T u[Lattice<T>::d],
   T pi[util::TensorVal<Lattice<T> >::n] ) const
 {
-  momenta.computeAllMomenta(cell, rho, u, pi);
+  this->computeRhoU(cell, rho, u);
+  this->computeStress(cell, rho, u, pi);
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -743,7 +764,8 @@ void BulkMomenta<T,Lattice>::computeAllMomenta (
   T& rho, T u[Lattice<T>::d],
   T pi[util::TensorVal<Lattice<T> >::n] ) const
 {
-  lbHelpers<T,Lattice>::computeAllMomenta(cell, rho, u, pi);
+  this->computeRhoU(cell, rho, u);
+  this->computeStress(cell, rho, u, pi);
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -910,9 +932,17 @@ void ExternalVelocityMomenta<T,Lattice>::defineAllMomenta (
 ////////////////////// Class BounceBack ///////////////////////////
 
 template<typename T, template<typename U> class Lattice>
+BounceBack<T,Lattice>::BounceBack()
+{ 
+  rhoFixed=false;
+}
+
+template<typename T, template<typename U> class Lattice>
 BounceBack<T,Lattice>::BounceBack(T rho_)
   :rho(rho_)
-{ }
+{ 
+  rhoFixed=true;
+}
 
 template<typename T, template<typename U> class Lattice>
 BounceBack<T,Lattice>* BounceBack<T,Lattice>::clone() const {
@@ -946,6 +976,9 @@ void BounceBack<T,Lattice>::staticCollide (
 
 template<typename T, template<typename U> class Lattice>
 T BounceBack<T,Lattice>::computeRho(Cell<T,Lattice> const& cell) const {
+ 
+  if (rhoFixed)
+    return rho;
   return lbHelpers<T,Lattice>::computeRho(cell);
 }
 
@@ -976,7 +1009,7 @@ void BounceBack<T,Lattice>::computeStress (
   T pi[util::TensorVal<Lattice<T> >::n] ) const
 {
   for (int iPi=0; iPi<util::TensorVal<Lattice<T> >::n; ++iPi) {
-    pi[iPi] = std::numeric_limits<T>::signaling_NaN();
+    pi[iPi] = T();//std::numeric_limits<T>::signaling_NaN();
   }
 }
 
@@ -1024,7 +1057,7 @@ void BounceBack<T,Lattice>::defineAllMomenta (
 
 template<typename T, template<typename U> class Lattice>
 T BounceBack<T,Lattice>::getOmega() const {
-  return std::numeric_limits<T>::signaling_NaN();
+  return T();//std::numeric_limits<T>::signaling_NaN();
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -1060,7 +1093,7 @@ void NoDynamics<T,Lattice>::staticCollide (
 template<typename T, template<typename U> class Lattice>
 T NoDynamics<T,Lattice>::computeRho(Cell<T,Lattice> const& cell) const
 {
-  return (T)1;
+  return (T)0;
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -1090,7 +1123,7 @@ void NoDynamics<T,Lattice>::computeStress (
   T pi[util::TensorVal<Lattice<T> >::n] ) const
 {
   for (int iPi=0; iPi<util::TensorVal<Lattice<T> >::n; ++iPi) {
-    pi[iPi] = std::numeric_limits<T>::signaling_NaN();
+    pi[iPi] = T();//std::numeric_limits<T>::signaling_NaN();
   }
 }
 
@@ -1138,13 +1171,115 @@ void NoDynamics<T,Lattice>::defineAllMomenta (
 
 template<typename T, template<typename U> class Lattice>
 T NoDynamics<T,Lattice>::getOmega() const {
-  return std::numeric_limits<T>::signaling_NaN();
+  return T();//std::numeric_limits<T>::signaling_NaN();
 }
 
 template<typename T, template<typename U> class Lattice>
 void NoDynamics<T,Lattice>::setOmega(T omega_)
 { }
 
+////////////////////// Class offDynamics ///////////////////////////
+template<typename T, template<typename U> class Lattice>
+OffDynamics<T,Lattice>::OffDynamics(
+  const T _location[Lattice<T>::d])
+{
+  typedef Lattice<T> L;
+  for (int iD = 0; iD < L::d; iD++)
+    location[iD] = _location[iD];
+  for (int iPop = 0; iPop < L::q; iPop++){
+    distances[iPop] = -1;
+    velocityCoefficient[iPop] = 0;
+    for (int iD = 0; iD < L::d; iD++)
+      boundaryIntersection[iPop][iD] = _location[iD];
+  }
+}
+
+template<typename T, template<typename U> class Lattice>
+OffDynamics<T,Lattice>::OffDynamics(
+  const T _location[Lattice<T>::d], T _distances[Lattice<T>::q])
+{
+  typedef Lattice<T> L;
+  for (int iD = 0; iD < L::d; iD++)
+    location[iD] = _location[iD];
+  for (int iPop = 0; iPop < L::q; iPop++){
+    distances[iPop] = _distances[iPop];
+    velocityCoefficient[iPop] = 0;
+    const int* c = L::c[iPop];
+    for (int iD = 0; iD < L::d; iD++)
+      boundaryIntersection[iPop][iD] = _location[iD] - _distances[iPop]*c[iD];
+  }
+}
+
+template<typename T, template<typename U> class Lattice>
+void OffDynamics<T,Lattice>::setBoundaryIntersection(int iPop, T distance)
+{
+  /// direction points from the fluid node into the solid domain
+  /// distance is the distance from the fluid node to the solid wall
+  typedef Lattice<T> L;
+  distances[iPop] = distance;
+  const int* c = L::c[iPop];
+  for (int iD = 0; iD < L::d; iD++)
+    boundaryIntersection[iPop][iD] = location[iD] - distance*c[iD];
+}
+
+template<typename T, template<typename U> class Lattice>
+bool OffDynamics<T,Lattice>::getBoundaryIntersection(int iPop, T intersection[Lattice<T>::d])
+{
+  typedef Lattice<T> L;
+  if (distances[iPop] != -1){
+    for (int iD = 0; iD < L::d; iD++){
+      intersection[iD] = boundaryIntersection[iPop][iD];
+    }
+    return true;
+  }
+  return false;
+}
+
+template<typename T, template<typename U> class Lattice>
+void OffDynamics<T,Lattice>::defineU (
+  Cell<T,Lattice>& cell,
+  const T u[Lattice<T>::d])
+{
+  defineU(u);
+}
+
+template<typename T, template<typename U> class Lattice>
+void OffDynamics<T,Lattice>::defineU(const T u[Lattice<T>::d])
+{
+  typedef Lattice<T> L;
+  for (int iPop = 0; iPop < L::q; iPop++){
+    if (distances[iPop] != -1){
+      defineU(iPop, u);
+    }
+  }
+}
+
+/// Bouzidi velocity boundary condition formulas for the Coefficients:
+/** 2*     invCs2*weight*(c,u)  for dist < 1/2
+ *  1/dist*invCs2*weight*(c,u)  for dist >= 1/2
+ */
+
+template<typename T, template<typename U> class Lattice>
+void OffDynamics<T,Lattice>::defineU(
+  int iPop, const T u[Lattice<T>::d])
+{
+  OLB_PRECONDITION(distances[iPop] != -1)
+  typedef Lattice<T> L;
+  const int* c = L::c[iPop];
+  velocityCoefficient[iPop] = 0;
+  // scalar product of c(iPop) and u
+  for (int sum = 0; sum < L::d; sum++)  // +/- problem because of first stream than postprocess 
+    velocityCoefficient[iPop] -= c[sum]*u[sum];
+  // compute summand for boundary condition
+  velocityCoefficient[iPop] *= 2*L::invCs2 * L::t[iPop];
+
+}
+
+template<typename T, template<typename U> class Lattice>
+T OffDynamics<T,Lattice>::getVelocityCoefficient(int iPop)
+{
+  return velocityCoefficient[iPop];
+}
 
 /////////////// Singletons //////////////////////////////////
 

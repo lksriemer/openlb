@@ -34,6 +34,8 @@
 #include "dataAnalysisBase2D.h"
 #include "spatiallyExtendedObject2D.h"
 #include "blockGeometryStatistics2D.h"
+#include "latticeStatistics.h"
+
 
 namespace olb {
 

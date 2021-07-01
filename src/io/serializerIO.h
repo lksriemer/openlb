@@ -25,10 +25,6 @@
 #define SERIALIZER_IO_H
 
 #include "core/serializer.h"
-#include "core/dataFieldBase2D.h"
-#include "core/dataFieldBase3D.h"
-#include "core/blockStructure2D.h"
-#include "core/blockStructure3D.h"
 
 namespace olb {
 

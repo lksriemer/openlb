@@ -66,4 +66,5 @@ createInterpBoundaryCondition2D < double,descriptors::D2Q9Descriptor,
                                 (
                                   BlockStructure2D<double,descriptors::D2Q9Descriptor>& block
                                 );
+
 }

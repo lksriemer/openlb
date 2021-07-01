@@ -33,6 +33,7 @@ template <class T, unsigned DIM> class ADf;
 #include <vector>
 #include <iostream>
 #include <sstream>
+#include <map>
 #define TIXML_USE_STL
 #include "external/tinyxml/tinyxml.h"
 #include "complexGrids/mpiManager/mpiManager.h"
@@ -69,13 +70,14 @@ public:
    * \param reference to return the value
    * \return returns the value
    */
-  template <typename T> bool read(T& value) const;
+  //bool read(bool& value, bool verbose = true) const;
+  template <typename T> bool read(T& value, bool verboseOn = true) const;
 #ifdef ADT
-  template <typename T,unsigned DIM> bool read(ADf<T,DIM>& value) const;
+  template <typename T,unsigned DIM> bool read(ADf<T,DIM>& value, bool verboseOn = true) const;
 #endif
-  template <typename T> bool read(std::vector<T>& value) const;
+  template <typename T> bool read(std::vector<T>& value, bool verboseOn = true) const;
 
-  template <typename T> T get() const;
+  template <typename T> T get(bool verboseOn = true) const;
 
   /**
    * Return a Subtree placed at name
@@ -94,40 +96,46 @@ public:
   std::vector<XMLreader*>::const_iterator end() const;
 
   /**
+   * switch warnings on/off
+   */
+  void setWarningsOn(bool warnings) const;
+
+  /**
    * return the name of the element
    */
   std::string getName() const;
+
+
+  /**
+   * return the value of attribute
+   */
+  std::string getAttribute(const std::string& aName) const;
+
+
 private:
   void mainProcessorIni(TiXmlNode* pParent);
   void slaveProcessorIni();
   XMLreader();
 private:
-  mutable OstreamManager clout;
-  std::string name;
+  mutable bool warningsOn;
   std::string text;
-  std::vector<XMLreader*> children;
+  std::string name;
   static XMLreader notFound;
+protected:
+  mutable OstreamManager clout;
+  std::map<std::string, std::string> attributes;
+  std::vector<XMLreader*> children;
 };
-
-template <typename T>
-bool XMLreader::read(T& value) const {
-  std::stringstream valueStr(text);
-  T tmp = T();
-  if (!(valueStr >> tmp)) {
-    clout << std::string("Error: cannot read value from XML element ") << name << std::endl;
-    return false;
-  }
-  value = tmp;
-  return true;
-}
 
 #ifdef ADT
 template <typename T, unsigned DIM>
-bool XMLreader::read(ADf<T,DIM>& value) const {
+bool XMLreader::read(ADf<T,DIM>& value, bool verboseOn) const {
   std::stringstream valueStr(text);
   T tmp = T();
   if (!(valueStr >> tmp)) {
-    clout << std::string("Error: cannot read value from XML element ") << name << std::endl;
+    if ( verboseOn ) {
+      clout << std::string("Error: cannot read value from XML element ") << name << std::endl;
+    }
     return false;
   }
   value = ADf<T,DIM>(tmp);
@@ -136,7 +144,7 @@ bool XMLreader::read(ADf<T,DIM>& value) const {
 #endif
 
 template <typename T>
-bool XMLreader::read(std::vector<T>& values) const {
+bool XMLreader::read(std::vector<T>& values, bool verboseOn) const {
   std::stringstream multiValueStr(text);
   std::string word;
   std::vector<T> tmp(values);
@@ -144,7 +152,9 @@ bool XMLreader::read(std::vector<T>& values) const {
     std::stringstream valueStr(word);
     T value;
     if (!(valueStr >> value)) {
-      clout << std::string("Error: cannot read value array from XML element ") << name << std::endl;
+      if ( verboseOn ) {
+        clout << std::string("Error: cannot read value array from XML element ") << name << std::endl;
+      }
       return false;
     }
     tmp.push_back(value);
@@ -154,11 +164,13 @@ bool XMLreader::read(std::vector<T>& values) const {
 }
 
 template <typename T>
-T XMLreader::get() const {
+T XMLreader::get(bool verboseOn) const {
   std::stringstream valueStr(text);
   T tmp = T();
   if (!(valueStr >> tmp)) {
-    clout << "Error: cannot read value from XML element " << name << std::endl;
+    if ( verboseOn ) {
+      clout << "Error: cannot read value from XML element " << name << std::endl;
+    }
   }
   return tmp;
 }

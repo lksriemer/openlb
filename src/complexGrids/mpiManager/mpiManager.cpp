@@ -47,7 +47,7 @@ void MpiManager::init(int *argc, char ***argv) {
   int ok2 = MPI_Comm_rank(MPI_COMM_WORLD,&taskId);
   int ok3 = MPI_Comm_size(MPI_COMM_WORLD,&numTasks);
   ok = (ok1==0 && ok2==0 && ok3==0);
-  clout << "sucessfully initialized, numThreads=" << getSize() << std::endl;
+  clout << "Sucessfully initialized, numThreads=" << getSize() << std::endl;
 }
 
 int MpiManager::getSize() const {

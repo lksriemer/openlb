@@ -46,6 +46,7 @@ template class CombinedRLBdynamics<double, descriptors::D2Q9Descriptor,
 template class BulkMomenta<double, descriptors::D2Q9Descriptor>;
 template class BounceBack<double, descriptors::D2Q9Descriptor>;
 template class NoDynamics<double, descriptors::D2Q9Descriptor>;
+template class OffDynamics<double, descriptors::D2Q9Descriptor>;
 
 template class Dynamics<double, descriptors::D3Q19Descriptor>;
 template class Momenta<double, descriptors::D3Q19Descriptor>;
@@ -61,6 +62,7 @@ template class CombinedRLBdynamics<double, descriptors::D3Q19Descriptor,
 template class BulkMomenta<double, descriptors::D3Q19Descriptor>;
 template class BounceBack<double, descriptors::D3Q19Descriptor>;
 template class NoDynamics<double, descriptors::D3Q19Descriptor>;
+template class OffDynamics<double, descriptors::D3Q19Descriptor>;
 
 namespace instances {
 

@@ -69,6 +69,9 @@ public:
   /// of size nX times nY that consits of nC cuboids
   CuboidGeometry2D(T globPosX, T globPosY, T delta, int nX, int nY, int nC=1);
 
+  /// Re init
+  void reInit(T globPosX, T globPosY,
+                   T delta, int nX, int nY, int nC=1);
   /// Read and write access to the cuboids
   Cuboid2D<T>& get_cuboid(int i);
   /// Read access to the cuboids
@@ -115,6 +118,8 @@ public:
 
   /// stores the neighbouring cuboids in array neighbours;
   void get_cuboidNeighbourhood(int cuboid, std::vector<int> neighbours, int offset = 0);
+  
+  void refineArea(T x0, T x1, T y0, T y1, int coarse_level);
 };
 
 }  // namespace olb

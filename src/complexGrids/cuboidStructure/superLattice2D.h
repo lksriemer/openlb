@@ -80,6 +80,8 @@ private:
   /// Size of ghost cell layer (must be greater than 1 and
   /// greater_overlapBC, default =1)
   int                                         _overlap;
+  // Size of the refinement overlap
+  int                                         _overlapRefinement;
   /// This communicator handels the communication for the streaming
   Communicator2D<T,Lattice>                   _commStream;
   /// This communicator handels the communication for the postprocessors
@@ -97,21 +99,21 @@ private:
   bool                                        _statistics_on;
 public:
   /// Construction of a super structure
-  SuperLattice2D(CuboidGeometry2D<T>& cGeometry, int overlapBC = 0);
+  SuperLattice2D(CuboidGeometry2D<T>& cGeometry, int overlapBC = 0, int overlapRefinement = 0);
 
   /// Read and write access to a block lattice
-  BlockLattice2D<T,Lattice>& get_blockLattice(int i)
-  { return _blockLattices[i]; };
+  BlockLattice2D<T,Lattice>& get_blockLattice(int locIC)
+  { return _blockLattices[locIC]; };
   /// Read only access to a block lattice
-  BlockLattice2D<T,Lattice> const& get_blockLattice(int i) const
-  { return _blockLattices[i]; };
+  BlockLattice2D<T,Lattice> const& get_blockLattice(int locIC) const
+  { return _blockLattices[locIC]; };
   /// Read and write access to a lattice (block lattice view, one
   /// without overlap).
-  BlockLatticeView2D<T,Lattice>& get_lattice(int i)
-  { return _lattices[i]; };
+  BlockLatticeView2D<T,Lattice>& get_lattice(int locIC)
+  { return _lattices[locIC]; };
   /// Read only access to a lattice
-  BlockLatticeView2D<T,Lattice> const& get_lattice(int i) const
-  { return _lattices[i]; };
+  BlockLatticeView2D<T,Lattice> const& get_lattice(int locIC) const
+  { return _lattices[locIC]; };
   /// Read and write access to a block lattice
   CuboidGeometry2D<T>& get_cGeometry()
   { return _cGeometry; };
@@ -150,6 +152,9 @@ public:
   /// Read only access to lattice cells that returns false if
   /// iX/iY is not in any of the cuboids
   bool get(T iX, T iY, Cell<T,Lattice>& cell) const;
+  /// Read only access to lattice cells over the cuboid number 
+  /// and local coordinates   WARNING!!! NO ERROR HANDLING IMPLEMENTED!!!
+  Cell<T,Lattice> get(int iC, T locX, T locY) const;
   /// Initialize all lattice cells to become ready for simulation
   void initialize();
   /// Defines the dynamics on a rectangular domain
@@ -213,6 +218,11 @@ public:
   /// Switches Statistics off (default on). That speeds up
   /// the execution time.
   void statisticsOff() {_statistics_on = false;};
+  /// TO BE DONE: Development of a general IO concept!
+  /// Save Data to files fName
+  void save(std::string fName, bool enforceUint = false);
+  /// Load Data from files fName
+  void load(std::string fName, bool enforceUint = false);
 
 private:
   /// Resets and reduce the statistics

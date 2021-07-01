@@ -34,6 +34,7 @@
 #include <vector>
 #include "cuboid2D.h"
 #include "core/lbHelpers.h"
+#include "io/ostreamManager.h"
 
 
 namespace olb {
@@ -41,17 +42,18 @@ namespace olb {
 ////////////////////// Class Cuboid2D /////////////////////////
 
 template<typename T>
-Cuboid2D<T>::Cuboid2D(T globPosX, T globPosY, T delta ,int nX, int nY) : clout(std::cout,"Cuboid2D") {
-  init(globPosX, globPosY, delta, nX, nY);
+Cuboid2D<T>::Cuboid2D(T globPosX, T globPosY, T delta ,int nX, int nY, int refinementLevel) : clout(std::cout,"Cuboid2D") {
+  init(globPosX, globPosY, delta, nX, nY, refinementLevel);
 }
 
 template<typename T>
-void Cuboid2D<T>::init(T globPosX, T globPosY, T delta, int nX, int nY) {
+void Cuboid2D<T>::init(T globPosX, T globPosY, T delta, int nX, int nY, int refinementLevel) {
   _globPosX = globPosX;
   _globPosY = globPosY;
   _delta    = delta;
   _nX       = nX;
   _nY       = nY;
+  _refinementLevel = refinementLevel;
 }
 
 
@@ -129,10 +131,10 @@ bool Cuboid2D<T>::checkPoint(T globX, T globY, int &locX, int &locY, int overlap
 template<typename T>
 bool Cuboid2D<T>::checkInters(T globX0, T globX1, T globY0, T globY1, int overlap) const {
 
-  double locX0d = std::max(_globPosX-overlap*_delta,globX0);
-  double locY0d = std::max(_globPosY-overlap*_delta,globY0);
-  double locX1d = std::min(_globPosX+(_nX+overlap-1)*_delta,globX1);
-  double locY1d = std::min(_globPosY+(_nY+overlap-1)*_delta,globY1);
+  T locX0d = std::max(_globPosX-overlap*_delta,globX0);
+  T locY0d = std::max(_globPosY-overlap*_delta,globY0);
+  T locX1d = std::min(_globPosX+(_nX+overlap-1)*_delta,globX1);
+  T locY1d = std::min(_globPosY+(_nY+overlap-1)*_delta,globY1);
 
   if (!(locX1d>=locX0d && locY1d>=locY0d)) return false;
   return true;
@@ -179,7 +181,7 @@ void Cuboid2D<T>::divide(int nX, int nY, std::vector<Cuboid2D<T> > &childrenC) c
     for (int iY=0; iY<nY; iY++) {
       xN_child       = (_nX+nX-iX-1)/nX;
       yN_child       = (_nY+nY-iY-1)/nY;
-      Cuboid2D<T> child(globPosX_child, globPosY_child, _delta, xN_child, yN_child);
+      Cuboid2D<T> child(globPosX_child, globPosY_child, _delta, xN_child, yN_child, _refinementLevel);
       childrenC.push_back(child);
       globPosY_child += yN_child*_delta;
     }
@@ -223,8 +225,8 @@ void Cuboid2D<T>::divide(int p, std::vector<Cuboid2D<T> > &childrenC) const {
     int xN_QNoInsertions = _nX;
     int yN_QInsertions = _nY-yN_QNoInsertions;
     int xN_QInsertions = _nX;
-    Cuboid2D<T> firstChildQ(_globPosX, _globPosY, _delta, xN_QNoInsertions, yN_QNoInsertions);
-    Cuboid2D<T> secondChildQ(_globPosX, _globPosY+yN_QNoInsertions*_delta, _delta, xN_QInsertions, yN_QInsertions);
+    Cuboid2D<T> firstChildQ(_globPosX, _globPosY, _delta, xN_QNoInsertions, yN_QNoInsertions, _refinementLevel);
+    Cuboid2D<T> secondChildQ(_globPosX, _globPosY+yN_QNoInsertions*_delta, _delta, xN_QInsertions, yN_QInsertions, _refinementLevel);
 
     firstChildQ.divide(nX, nY-rest, childrenC);
     secondChildQ.divide(nX+1,rest, childrenC);
@@ -236,13 +238,43 @@ void Cuboid2D<T>::divide(int p, std::vector<Cuboid2D<T> > &childrenC) const {
     int yN_QNoInsertions = _nY;
     int xN_QInsertions = _nX-xN_QNoInsertions;
     int yN_QInsertions = _nY;
-    Cuboid2D<T> firstChildQ(_globPosX, _globPosY, _delta, xN_QNoInsertions, yN_QNoInsertions);
-    Cuboid2D<T> secondChildQ(_globPosX+xN_QNoInsertions*_delta, _globPosY, _delta, xN_QInsertions, yN_QInsertions);
+    Cuboid2D<T> firstChildQ(_globPosX, _globPosY, _delta, xN_QNoInsertions, yN_QNoInsertions, _refinementLevel);
+    Cuboid2D<T> secondChildQ(_globPosX+xN_QNoInsertions*_delta, _globPosY, _delta, xN_QInsertions, yN_QInsertions, _refinementLevel);
 
     firstChildQ.divide(nX-rest, nY, childrenC);
     secondChildQ.divide(rest,nY+1, childrenC);
   }
 }
+
+template<typename T>
+void Cuboid2D<T>::refineToLevel(unsigned int level) {
+	double leveldiffabs = pow(2, level - _refinementLevel);
+	_delta /= (T)(leveldiffabs);
+	_nX *= leveldiffabs;
+	_nY *= leveldiffabs;
+	_refinementLevel = level;
+}
+
+template<typename T>
+void Cuboid2D<T>::refineIncrease() {
+	_delta /= (T)2;
+	_nX = _nX*2;
+	_nY = _nY*2;
+	_refinementLevel++;
+}
+
+template<typename T>
+void Cuboid2D<T>::refineDecrease() {
+	if(_refinementLevel == 0) return;
+	_delta *= (T)2;
+	_nX = (_nX)/2;
+	_nY = (_nY)/2;
+	_refinementLevel--;
+}
+
+template<typename T>
+int Cuboid2D<T>::get_refinementLevel() const { return _refinementLevel; }
+
 
 }  // namespace olb
 

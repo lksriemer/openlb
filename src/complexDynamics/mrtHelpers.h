@@ -1,6 +1,6 @@
 /*  This file is part of the OpenLB library
  *
- *  Copyright (C) 2006, 2007 Jonas Latt
+ *  Copyright (C) 2006, 2007, 2013 Jonas Latt, Mathias J. Krause, Geng Liu
  *  E-mail contact: info@openlb.net
  *  The most recent release of OpenLB can be downloaded at
  *  <http://www.openlb.net/>
@@ -109,6 +109,86 @@ struct mrtHelpers {
     }
 
     return uSqr;
+  }
+
+  /// MRT SGS collision step
+  static T mrtSGSCollision( Cell<T,Lattice>& cell,
+                         T rho, const T u[Lattice<T>::d],
+                         T omega,
+                         T invM_S_SGS[Lattice<T>::q][Lattice<T>::q])
+  {
+    T uSqr = util::normSqr<T,Lattice<T>::d>(u);
+    T momenta[Lattice<T>::q];
+    T momentaEq[Lattice<T>::q];
+    
+    
+    computeMomenta(momenta,cell);
+    computeEquilibrium(momentaEq,rho,u,uSqr);
+
+    for (int iPop=0; iPop < Lattice<T>::q; ++iPop)
+    {
+      T collisionTerm = T();
+      for (int jPop = 0; jPop < Lattice<T>::q; ++jPop)
+        {
+        
+       // cout << "wert_in helpers"<<iPop <<jPop << "= "<<  invM_S_SGS[iPop][jPop]<< endl;
+      collisionTerm += invM_S_SGS[iPop][jPop] *
+                               (momenta[jPop] - momentaEq[jPop]);
+      
+      
+      
+//      if (iPop==jPop && (iPop==Lattice<T>::shearViscIndexes[iPop]))
+//      {
+//        collisionTerm += invM_S_SGS[iPop][jPop] /(invM_S_SGS[iPop][jPop])*omega*(Lattice<T>::invM[iPop][jPop])*
+//                                 (momenta[jPop] - momentaEq[jPop]);
+//        cout << "omege: " << omega<< endl;
+//      }
+//      else
+//      {
+//        collisionTerm += invM_S_SGS[iPop][jPop] *
+//                                 (momenta[jPop] - momentaEq[jPop]);
+//      }
+
+      }
+      cell[iPop] -= collisionTerm;
+    }
+
+    return uSqr;
+  }
+  
+
+  /// Ladd-Verberg-I body force model for MRT
+  /// A.Ladd, R. Verberg, Lattice-Boltzmann simulations of particle-fluid suspensions, Journal of Statistical Physics 104(2001)
+  static void addExternalForce( Cell<T,Lattice>& cell,
+                         T rho,
+                         const T u[Lattice<T>::d],
+                         T invM_S[Lattice<T>::q][Lattice<T>::q])
+  {
+    static const int forceBeginsAt = Lattice<T>::ExternalField::forceBeginsAt;
+    T* force = cell.getExternal(forceBeginsAt);
+    T f_u = T();
+    for (int iD=0; iD < Lattice<T>::d; ++iD) {
+      f_u += force[iD]*u[iD];
+    }
+
+    for (int iPop=0; iPop < Lattice<T>::q; ++iPop){
+      T c_u = T();
+      T c_f = T();
+      for (int iD=0; iD < Lattice<T>::d; ++iD) {
+        c_u += Lattice<T>::c[iPop][iD]*u[iD];
+        c_f += Lattice<T>::c[iPop][iD]*force[iD];
+      }
+      T f1 = Lattice<T>::t[iPop]*rho*c_f*Lattice<T>::invCs2;
+      T f2 = Lattice<T>::t[iPop]*rho*(c_u*c_f*Lattice<T>::invCs2-f_u)*Lattice<T>::invCs2;
+
+      T invMsM = T();
+      for (int jPop=0; jPop < Lattice<T>::q; ++jPop){
+        invMsM += invM_S[iPop][jPop]*Lattice<T>::M[jPop][iPop]; 
+      }
+      cell[iPop] += f1 + f2 - invMsM*f2/2.;
+    }
+
+    return;
   }
 
 };  // struct mrtHelpers
