@@ -47,11 +47,17 @@ InamuroAnalyticalDynamics<T,Lattice,Dynamics,direction,orientation>* InamuroAnal
 }
 
 template<typename T, template<typename U> class Lattice, typename Dynamics, int direction, int orientation>
+T InamuroAnalyticalDynamics<T,Lattice, Dynamics, direction, orientation>::
+    computeEquilibrium(int iPop, T rho, const T u[Lattice<T>::d], T uSqr) const
+{
+    return boundaryDynamics.computeEquilibrium(iPop, rho, u, uSqr);
+}
+
+template<typename T, template<typename U> class Lattice, typename Dynamics, int direction, int orientation>
 void InamuroAnalyticalDynamics<T,Lattice,Dynamics,direction,orientation>::collide (
         Cell<T,Lattice>& cell,
         LatticeStatistics<T>& statistics )
 {
-    typedef lbHelpers<T,Lattice> lbH;
     typedef Lattice<T> L;
 
     // Along all the commented parts of this code there will be an example based
@@ -136,7 +142,7 @@ void InamuroAnalyticalDynamics<T,Lattice,Dynamics,direction,orientation>::collid
     T uSqr = util::normSqr<T,L::d>(uCs);
 
     for (unsigned iPop = 0; iPop < missInd.size(); ++iPop)
-        cell[missInd[iPop]] = lbH::equilibrium(missInd[iPop], rhoCs, uCs, uSqr);
+        cell[missInd[iPop]] = computeEquilibrium(missInd[iPop], rhoCs, uCs, uSqr);
 
     boundaryDynamics.collide(cell, statistics);
 }
@@ -147,7 +153,6 @@ void InamuroAnalyticalDynamics<T,Lattice,Dynamics,direction,orientation>::static
         const T u[Lattice<T>::d],
         LatticeStatistics<T>& statistics )
 {
-    typedef lbHelpers<T,Lattice> lbH;
     typedef Lattice<T> L;
     
     // Find all the missing populations
@@ -226,7 +231,7 @@ void InamuroAnalyticalDynamics<T,Lattice,Dynamics,direction,orientation>::static
     T uSqr = util::normSqr<T,L::d>(uCs);
 
     for (unsigned iPop = 0; iPop < missInd.size(); ++iPop)
-        cell[missInd[iPop]] = lbH::equilibrium(missInd[iPop], rhoCs, uCs, uSqr);
+        cell[missInd[iPop]] = computeEquilibrium(missInd[iPop], rhoCs, uCs, uSqr);
 
     boundaryDynamics.staticCollide(cell, u, statistics);
 }
@@ -242,6 +247,19 @@ void InamuroAnalyticalDynamics<T,Lattice,Dynamics,direction,orientation>::setOme
 {
     boundaryDynamics.setOmega(omega_);
 }
+
+template<typename T, template<typename U> class Lattice, typename Dynamics, int direction, int orientation>
+T InamuroAnalyticalDynamics<T,Lattice,Dynamics,direction,orientation>::getParameter(int whichParameter) const 
+{
+    return boundaryDynamics.getParameter(whichParameter);
+}
+
+template<typename T, template<typename U> class Lattice, typename Dynamics, int direction, int orientation>
+void InamuroAnalyticalDynamics<T,Lattice,Dynamics,direction,orientation>::setParameter(int whichParameter, T value)
+{
+    boundaryDynamics.setParameter(whichParameter, value);
+}
+
 
 }  // namespace olb
 

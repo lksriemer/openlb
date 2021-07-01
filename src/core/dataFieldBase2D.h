@@ -29,12 +29,13 @@
 
 #include "serializer.h"
 #include "dataReductions.h"
+#include "spatiallyExtendedObject2D.h"
 
 namespace olb {
 
 /// Interface for the variants of 2D scalar, vector and tensor fields.
 template<typename T>
-class ScalarFieldBase2D : public Serializable<T> {
+class ScalarFieldBase2D : public Serializable<T>, public SpatiallyExtendedObject2D {
 public:
     virtual ~ScalarFieldBase2D() { }
 public:
@@ -57,7 +58,7 @@ public:
 };
 
 template<typename T, int nDim>
-class TensorFieldBase2D : public Serializable<T> {
+class TensorFieldBase2D : public Serializable<T>, public SpatiallyExtendedObject2D {
 public:
     typedef T Tensor[nDim];
 public:

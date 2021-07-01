@@ -31,6 +31,7 @@
 #include "dataFields2D.h"
 #include "serializer.h"
 #include "dataAnalysisBase2D.h"
+#include "spatiallyExtendedObject2D.h"
 
 
 namespace olb {
@@ -40,7 +41,7 @@ template<typename T, template<typename U> class Lattice> class Cell;
 
 /// An interface to all the variants of (more or less) regular lattices.
 template<typename T, template<typename U> class Lattice>
-class BlockStructure2D : public Serializable<T> {
+class BlockStructure2D : public Serializable<T>, public SpatiallyExtendedObject2D {
 public:
     virtual ~BlockStructure2D() { }
 public:
@@ -72,7 +73,7 @@ public:
                      PostProcessorGenerator2D<T,Lattice> const& ppGen) =0;
     virtual void addLatticeCoupling (
                      LatticeCouplingGenerator2D<T,Lattice> const& lcGen,
-                     std::vector<BlockStructure2D<T,Lattice>*> partners ) =0;
+                     std::vector<SpatiallyExtendedObject2D*> partners ) =0;
     virtual void resetPostProcessors() =0;
     virtual void postProcess(int x0_, int x1_, int y0_, int y1_) =0;
     virtual void postProcess() =0;

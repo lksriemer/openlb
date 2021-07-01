@@ -83,6 +83,7 @@ class DataAnalysis2D : public DataAnalysisBase2D<T,Lattice> {
 public:
     DataAnalysis2D(BlockStructure2D<T,Lattice> const& block_);
     DataAnalysis2D(BlockStructure2D<T,Lattice> const& block_, AnalysisFields2D<T,Lattice>& fields_ );
+    DataAnalysis2D(DataAnalysis2D<T,Lattice> const& rhs);
     ~DataAnalysis2D();
 public:
     virtual void reset() const;
@@ -93,7 +94,7 @@ public:
     virtual ScalarFieldBase2D<T> const& getVorticity() const;
     virtual ScalarFieldBase2D<T> const& getVelocityNorm() const;
     virtual TensorFieldBase2D<T,3> const& getStrainRate() const;
-    virtual TensorFieldBase2D<T,3> const& getStress() const;
+    virtual TensorFieldBase2D<T,3> const& getStrainRateFromStress() const;
     virtual ScalarFieldBase2D<T> const& getDivRhoU() const;
     virtual ScalarFieldBase2D<T> const& getPoissonTerm() const;
     virtual TensorFieldBase2D<T,Lattice<T>::q > const& getPopulations() const;
@@ -130,6 +131,7 @@ private:
     T boundaryPoisson(int iX, int iY) const;
 private:
     BlockStructure2D<T,Lattice> const& block;
+    bool pointsToDefaultFields;
     mutable AnalysisFieldsImpl2D<T,Lattice> defaultFields;
     mutable AnalysisFields2D<T,Lattice>     fields;
     mutable AnalysisFlags2D                 flags;

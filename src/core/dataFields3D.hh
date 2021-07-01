@@ -188,6 +188,29 @@ T ScalarField3D<T>::computeReduction(DataReduction<T>& reduction) const
 }
 
 template<typename T>
+MultiDataDistribution3D ScalarField3D<T>::getDataDistribution() const {
+    return MultiDataDistribution3D(getNx(), getNy(), getNz());
+}
+
+template<typename T>
+SpatiallyExtendedObject3D* ScalarField3D<T>::getComponent(int iBlock) {
+    OLB_PRECONDITION( iBlock==0 );
+    return this;
+}
+
+template<typename T>
+SpatiallyExtendedObject3D const* ScalarField3D<T>::getComponent(int iBlock) const {
+    OLB_PRECONDITION( iBlock==0 );
+    return this;
+}
+
+template<typename T>
+multiPhysics::MultiPhysicsId ScalarField3D<T>::getMultiPhysicsId() const {
+    return multiPhysics::getMultiPhysicsScalarId<T>();
+}
+
+
+template<typename T>
 void ScalarField3D<T>::allocateMemory() {
     rawData = new T [nx*ny*nz];
     field   = new T** [nx];
@@ -517,6 +540,28 @@ DataUnSerializer<T>& TensorField3D<T,nDim>::getSubUnSerializer (
     unSerializer = new SequentialTensorFieldUnSerializer3D<T, nDim> (
             *this, x0_, x1_, y0_, y1_, z0_, z1_, ordering );
     return *unSerializer;
+}
+
+template<typename T, int nDim>
+MultiDataDistribution3D TensorField3D<T,nDim>::getDataDistribution() const {
+    return MultiDataDistribution3D(getNx(), getNy(), getNz());
+}
+
+template<typename T, int nDim>
+SpatiallyExtendedObject3D* TensorField3D<T,nDim>::getComponent(int iBlock) {
+    OLB_PRECONDITION( iBlock==0 );
+    return this;
+}
+
+template<typename T, int nDim>
+SpatiallyExtendedObject3D const* TensorField3D<T,nDim>::getComponent(int iBlock) const {
+    OLB_PRECONDITION( iBlock==0 );
+    return this;
+}
+
+template<typename T, int nDim>
+multiPhysics::MultiPhysicsId TensorField3D<T,nDim>::getMultiPhysicsId() const {
+    return multiPhysics::getMultiPhysicsTensorId<T,nDim>();
 }
 
 template<typename T, int nDim>

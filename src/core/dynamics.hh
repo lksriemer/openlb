@@ -47,6 +47,14 @@ void Dynamics<T,Lattice>::computePopulations(Cell<T,Lattice> const& cell, T* f) 
 }
 
 template<typename T, template<typename U> class Lattice>
+void Dynamics<T,Lattice>::iniEquilibrium(Cell<T,Lattice>& cell, T rho, const T u[Lattice<T>::d]) {
+    T uSqr = util::normSqr<T,Lattice<T>::d>(u);
+    for (int iPop=0; iPop<Lattice<T>::q; ++iPop) {
+        cell[iPop] = computeEquilibrium(iPop, rho, u, uSqr);
+    }
+}
+
+template<typename T, template<typename U> class Lattice>
 void Dynamics<T,Lattice>::computeExternalField (
         Cell<T,Lattice> const& cell, int pos, int size, T* ext) const {
     OLB_PRECONDITION(pos+size <= Lattice<T>::ExternalField::numScalars);
@@ -76,14 +84,20 @@ void Dynamics<T,Lattice>::defineExternalField (
 }
 
 template<typename T, template<typename U> class Lattice>
-void Dynamics<T,Lattice>::iniEquilibrium (Cell<T,Lattice>& cell,
-                                          T rho, const T u[Lattice<T>::d])
-{
-    for (int iPop=0; iPop<Lattice<T>::q; ++iPop) {
-        T uSqr = util::normSqr<T,Lattice<T>::d>(u);
-        cell[iPop] = lbHelpers<T,Lattice>::equilibrium(iPop, rho, u, uSqr);
+T Dynamics<T,Lattice>::getParameter(int whichParameter) const {
+    if (whichParameter == dynamicParams::omega_shear) {
+        return getOmega();
+    }
+    return 0.;
+}
+
+template<typename T, template<typename U> class Lattice>
+void Dynamics<T,Lattice>::setParameter(int whichParameter, T value) {
+    if (whichParameter == dynamicParams::omega_shear) {
+        setOmega(value);
     }
 }
+
 ////////////////////// Class BasicDynamics ////////////////////////
 
 template<typename T, template<typename U> class Lattice>
@@ -186,7 +200,13 @@ template<typename T, template<typename U> class Lattice>
 BGKdynamics<T,Lattice>* BGKdynamics<T,Lattice>::clone() const {
     return new BGKdynamics<T,Lattice>(*this);
 }
- 
+
+template<typename T, template<typename U> class Lattice>
+T BGKdynamics<T,Lattice>::computeEquilibrium(int iPop, T rho, const T u[Lattice<T>::d], T uSqr) const
+{
+    return lbHelpers<T,Lattice>::equilibrium(iPop, rho, u, uSqr);
+}
+
 template<typename T, template<typename U> class Lattice>
 void BGKdynamics<T,Lattice>::collide (
         Cell<T,Lattice>& cell,
@@ -243,7 +263,13 @@ ConstRhoBGKdynamics<T,Lattice>* ConstRhoBGKdynamics<T,Lattice>::clone()
 {
     return new ConstRhoBGKdynamics<T,Lattice>(*this);
 }
- 
+
+template<typename T, template<typename U> class Lattice>
+T ConstRhoBGKdynamics<T,Lattice>::computeEquilibrium(int iPop, T rho, const T u[Lattice<T>::d], T uSqr) const
+{
+    return lbHelpers<T,Lattice>::equilibrium(iPop, rho, u, uSqr);
+}
+
 template<typename T, template<typename U> class Lattice>
 void ConstRhoBGKdynamics<T,Lattice>::collide (
         Cell<T,Lattice>& cell,
@@ -301,7 +327,13 @@ template<typename T, template<typename U> class Lattice>
 IncBGKdynamics<T,Lattice>* IncBGKdynamics<T,Lattice>::clone() const {
     return new IncBGKdynamics<T,Lattice>(*this);
 }
- 
+
+template<typename T, template<typename U> class Lattice>
+T IncBGKdynamics<T,Lattice>::computeEquilibrium(int iPop, T rho, const T u[Lattice<T>::d], T uSqr) const
+{
+    return lbHelpers<T,Lattice>::equilibrium(iPop, rho, u, uSqr);
+}
+
 template<typename T, template<typename U> class Lattice>
 void IncBGKdynamics<T,Lattice>::collide (
         Cell<T,Lattice>& cell,
@@ -360,6 +392,11 @@ RLBdynamics<T,Lattice>* RLBdynamics<T,Lattice>::clone() const {
     return new RLBdynamics<T,Lattice>(*this);
 }
 
+template<typename T, template<typename U> class Lattice>
+T RLBdynamics<T,Lattice>::computeEquilibrium(int iPop, T rho, const T u[Lattice<T>::d], T uSqr) const
+{
+    return lbHelpers<T,Lattice>::equilibrium(iPop, rho, u, uSqr);
+}
 
 template<typename T, template<typename U> class Lattice>
 void RLBdynamics<T,Lattice>::collide (
@@ -416,11 +453,17 @@ CombinedRLBdynamics<T,Lattice,Dynamics>*
 }
  
 template<typename T, template<typename U> class Lattice, typename Dynamics>
+T CombinedRLBdynamics<T,Lattice,Dynamics>::
+    computeEquilibrium(int iPop, T rho, const T u[Lattice<T>::d], T uSqr) const
+{
+    return boundaryDynamics.computeEquilibrium(iPop, rho, u, uSqr);
+}
+
+template<typename T, template<typename U> class Lattice, typename Dynamics>
 void CombinedRLBdynamics<T,Lattice,Dynamics>::collide (
         Cell<T,Lattice>& cell,
         LatticeStatistics<T>& statistics )
 {
-    typedef lbHelpers<T,Lattice> Helpers;
     typedef Lattice<T> L;
 
     T rho, u[L::d], pi[util::TensorVal<Lattice<T> >::n];
@@ -430,7 +473,7 @@ void CombinedRLBdynamics<T,Lattice,Dynamics>::collide (
 
     for (int iPop = 0; iPop < L::q; ++iPop)
     {
-        cell[iPop] = Helpers::equilibrium(iPop,rho,u,uSqr) +
+        cell[iPop] = computeEquilibrium(iPop,rho,u,uSqr) +
                      firstOrderLbHelpers<T,Lattice>::fromPiToFneq(iPop, pi);
     }
 
@@ -443,7 +486,6 @@ void CombinedRLBdynamics<T,Lattice,Dynamics>::staticCollide (
         const T u[Lattice<T>::d],
         LatticeStatistics<T>& statistics )
 {
-    typedef lbHelpers<T,Lattice> Helpers;
     typedef Lattice<T> L;
 
     T rho, falseU[L::d], pi[util::TensorVal<Lattice<T> >::n];
@@ -453,7 +495,7 @@ void CombinedRLBdynamics<T,Lattice,Dynamics>::staticCollide (
 
     for (int iPop = 0; iPop < L::q; ++iPop)
     {
-        cell[iPop] = Helpers::equilibrium(iPop,rho,u,uSqr) +
+        cell[iPop] = computeEquilibrium(iPop,rho,u,uSqr) +
                      firstOrderLbHelpers<T,Lattice>::fromPiToFneq(iPop, pi);
     }
 
@@ -470,6 +512,16 @@ template<typename T, template<typename U> class Lattice, typename Dynamics>
 void CombinedRLBdynamics<T,Lattice,Dynamics>::setOmega(T omega_)
 {
     boundaryDynamics.setOmega(omega_);
+}
+
+template<typename T, template<typename U> class Lattice, typename Dynamics>
+T CombinedRLBdynamics<T,Lattice,Dynamics>::getParameter(int whichParameter) const {
+    return boundaryDynamics.getParameter(whichParameter);
+}
+
+template<typename T, template<typename U> class Lattice, typename Dynamics>
+void CombinedRLBdynamics<T,Lattice,Dynamics>::setParameter(int whichParameter, T value) {
+    boundaryDynamics.setParameter(whichParameter, value);
 }
 
 
@@ -494,6 +546,12 @@ ForcedBGKdynamics<T,Lattice>* ForcedBGKdynamics<T,Lattice>::clone() const {
     return new ForcedBGKdynamics<T,Lattice>(*this);
 }
  
+template<typename T, template<typename U> class Lattice>
+T ForcedBGKdynamics<T,Lattice>::computeEquilibrium(int iPop, T rho, const T u[Lattice<T>::d], T uSqr) const
+{
+    return lbHelpers<T,Lattice>::equilibrium(iPop, rho, u, uSqr);
+}
+
 template<typename T, template<typename U> class Lattice>
 void ForcedBGKdynamics<T,Lattice>::collide (
         Cell<T,Lattice>& cell,
@@ -557,6 +615,18 @@ D3Q13dynamics<T,Lattice>* D3Q13dynamics<T,Lattice>::clone() const {
     return new D3Q13dynamics<T,Lattice>(*this);
 }
 
+template<typename T, template<typename U> class Lattice>
+T D3Q13dynamics<T,Lattice>::computeEquilibrium(int iPop, T rho, const T u[Lattice<T>::d], T uSqr) const
+{
+    // To get at the equilibrium, execute collision with relaxation parameters 1
+    Cell<T,Lattice> tmp[Lattice<T>::q];
+    for (int pop=0; pop<Lattice<T>::q; ++pop) {
+        tmp[pop] = Lattice<T>::t[pop];
+    }
+    d3q13Helpers<T>::collision(tmp, rho, u, (T)1, (T)1);
+    return tmp[iPop];
+}
+
 
 template<typename T, template<typename U> class Lattice>
 void D3Q13dynamics<T,Lattice>::collide (
@@ -578,8 +648,12 @@ void D3Q13dynamics<T,Lattice>::staticCollide (
         const T u[Lattice<T>::d],
         LatticeStatistics<T>& statistics )
 {
-    // NOT YET IMPLEMENTED
-    OLB_ASSERT( false, "Not yet implemented" );
+    T rho = this->momenta.computeRho(cell);
+    T uSqr = d3q13Helpers<T>::collision (
+                 cell, rho, u, lambda_nu, lambda_nu_prime );
+    if (cell.takesStatistics()) {
+        statistics.gatherStats(rho, uSqr);
+    }
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -739,6 +813,12 @@ BounceBack<T,Lattice>* BounceBack<T,Lattice>::clone() const {
 }
  
 template<typename T, template<typename U> class Lattice>
+T BounceBack<T,Lattice>::computeEquilibrium(int iPop, T rho, const T u[Lattice<T>::d], T uSqr) const
+{
+    return T();
+}
+
+template<typename T, template<typename U> class Lattice>
 void BounceBack<T,Lattice>::collide (
         Cell<T,Lattice>& cell,
         LatticeStatistics<T>& statistics )
@@ -854,6 +934,12 @@ NoDynamics<T,Lattice>* NoDynamics<T,Lattice>::clone() const {
     return new NoDynamics<T,Lattice>();
 }
  
+template<typename T, template<typename U> class Lattice>
+T NoDynamics<T,Lattice>::computeEquilibrium(int iPop, T rho, const T u[Lattice<T>::d], T uSqr) const
+{
+    return T();
+}
+
 template<typename T, template<typename U> class Lattice>
 void NoDynamics<T,Lattice>::collide (
         Cell<T,Lattice>& cell,

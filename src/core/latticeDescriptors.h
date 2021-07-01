@@ -51,6 +51,8 @@ namespace descriptors {
     struct NoExternalField {
         static const int numScalars = 0;
         static const int numSpecies = 0;
+        static const int forceBeginsAt = 0;
+        static const int sizeOfForce   = 0;
     };
 
     struct Force2dDescriptor {

@@ -135,7 +135,7 @@ TensorField3D<T,6> const&
 
 template<typename T, template<typename U> class Lattice>
 TensorField3D<T,6> const&
-    BlockStatistics3D<T,Lattice>::getStress() const
+    BlockStatistics3D<T,Lattice>::getStrainRateFromStress() const
 {
     computeStrainRateFieldFromStress();
     return stressField;

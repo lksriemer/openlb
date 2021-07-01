@@ -99,6 +99,7 @@ AnalysisFields2D<T,Lattice>::AnalysisFields2D(AnalysisFieldsImpl2D<T,Lattice>& i
 template<typename T, template<typename U> class Lattice>
 DataAnalysis2D<T,Lattice>::DataAnalysis2D(BlockStructure2D<T,Lattice> const& block_)
     : block(block_),
+      pointsToDefaultFields(true),
       defaultFields(block.getNx(), block.getNy()),
       fields(defaultFields)
 {
@@ -109,11 +110,20 @@ template<typename T, template<typename U> class Lattice>
 DataAnalysis2D<T,Lattice>::DataAnalysis2D(BlockStructure2D<T,Lattice> const& block_,
                                           AnalysisFields2D<T,Lattice>& fields_ )
     : block(block_),
+      pointsToDefaultFields(false),
       defaultFields(block.getNx(), block.getNy()),
       fields(fields_ )
 {
     flags.reset();
 }
+
+template<typename T, template<typename U> class Lattice>
+DataAnalysis2D<T,Lattice>::DataAnalysis2D(DataAnalysis2D<T,Lattice> const& rhs)
+    : block(rhs.block),
+      pointsToDefaultFields(rhs.pointsToDefaultFields),
+      defaultFields(rhs.defaultFields),
+      fields( pointsToDefaultFields ? defaultFields : rhs.fields )
+{ }
 
 template<typename T, template<typename U> class Lattice>
 DataAnalysis2D<T,Lattice>::~DataAnalysis2D() { }
@@ -173,7 +183,7 @@ TensorFieldBase2D<T,3> const&
 
 template<typename T, template<typename U> class Lattice>
 TensorFieldBase2D<T,3> const&
-    DataAnalysis2D<T,Lattice>::getStress() const
+    DataAnalysis2D<T,Lattice>::getStrainRateFromStress() const
 {
     computeStrainRateFieldFromStress();
     return fields.stressField;

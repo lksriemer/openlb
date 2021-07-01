@@ -57,67 +57,6 @@ std::string VtkTypeNames<T>::getName() {
     return tName;
 }
 
-template<>
-std::string VtkTypeNames<bool>::getBaseName() {
-    return "Int";
-}
-
-template<>
-std::string VtkTypeNames<char>::getBaseName() {
-    return "Int";
-}
-
-template<>
-std::string VtkTypeNames<unsigned char>::getBaseName() {
-    return "UInt";
-}
-
-template<>
-std::string VtkTypeNames<short int>::getBaseName() {
-    return "Int";
-}
-
-template<>
-std::string VtkTypeNames<unsigned short int>::getBaseName() {
-    return "UInt";
-}
-
-template<>
-std::string VtkTypeNames<int>::getBaseName() {
-    return "Int";
-}
-
-template<>
-std::string VtkTypeNames<unsigned int>::getBaseName() {
-    return "UInt";
-}
-
-template<>
-std::string VtkTypeNames<long int>::getBaseName() {
-    return "Int";
-}
-
-template<>
-std::string VtkTypeNames<unsigned long int>::getBaseName() {
-    return "UInt";
-}
-
-template<>
-std::string VtkTypeNames<float>::getBaseName() {
-    return "Float";
-}
-
-template<>
-std::string VtkTypeNames<double>::getBaseName() {
-    return "Float";
-}
-
-template<>
-std::string VtkTypeNames<long double>::getBaseName() {
-    return "Float";
-}
-
-
 ////////// class VtkDataWriter3D ////////////////////////////////////////
 
 template<typename T>

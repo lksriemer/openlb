@@ -30,20 +30,17 @@ CXX             := g++
 OPTIM           := -O3 -Wall
 DEBUG           := -g -DOLB_DEBUG
 
-COMPFLAGS       := $(OPTIM)
-#COMPFLAGS       := $(DEBUG)
+CXXFLAGS        := $(OPTIM)
+#CXXFLAGS        := $(DEBUG)
 
-LOPT            := #$(DEBUG)
+LDFLAGS         :=
 
 PARALLEL_MODE   := OFF
 #PARALLEL_MODE   := MPI
 #PARALLEL_MODE   := OMP
 
-MPIFLAGS       :=
-OMPFLAGS       := -openmp
-
-CXXFLAGS        := $(COMPFLAGS)
-
+MPIFLAGS        :=
+OMPFLAGS        := -openmp
 
 #BUILDTYPE       := precompiled
 BUILDTYPE       := generic
@@ -62,6 +59,7 @@ endif
 
 ifeq ($(PARALLEL_MODE), OMP)
    CXXFLAGS := -DPARALLEL_MODE_OMP $(OMPFLAGS) $(CXXFLAGS)
+   LDFLAGS  := $(OMPFLAGS) $(LDFLAGS)
 endif
 
 ###########################################################################
@@ -87,8 +85,7 @@ SUBDIRS         := src/core \
                    src/complexGrids/cuboidStructure \
                    src/complexGrids/multiBlockStructure \
                    src/utilities \
-                   src/io \
-                   src/contrib
+                   src/io
 
 EXAMPLEDIRS     := examples/bstep2d \
                    examples/bstep3d \

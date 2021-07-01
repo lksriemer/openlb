@@ -30,12 +30,13 @@
 #include "dataFieldBase2D.h"
 #include "serializer.h"
 #include "dataReductions.h"
+#include "spatiallyExtendedObject3D.h"
 
 namespace olb {
 
 /// Interface for the variants of 3D scalar, vector and tensor fields.
 template<typename T>
-class ScalarFieldBase3D : public Serializable<T> {
+class ScalarFieldBase3D : public Serializable<T>, public SpatiallyExtendedObject3D {
 public:
     virtual ~ScalarFieldBase3D() { }
 public:
@@ -62,7 +63,7 @@ public:
 };
 
 template<typename T, int nDim>
-class TensorFieldBase3D : public Serializable<T> {
+class TensorFieldBase3D : public Serializable<T>, public SpatiallyExtendedObject3D {
 public:
     typedef T Tensor[nDim];
 public:

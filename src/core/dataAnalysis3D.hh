@@ -105,6 +105,7 @@ template<typename T, template<typename U> class Lattice>
 DataAnalysis3D<T,Lattice>::DataAnalysis3D (
     BlockStructure3D<T,Lattice> const& block_ )
     : block(block_),
+      pointsToDefaultFields(true),
       defaultFields(block.getNx(), block.getNy(), block.getNz()),
       fields(defaultFields)
 {
@@ -115,11 +116,20 @@ template<typename T, template<typename U> class Lattice>
 DataAnalysis3D<T,Lattice>::DataAnalysis3D(BlockStructure3D<T,Lattice> const& block_,
                                           AnalysisFields3D<T,Lattice>& fields_ )
     : block(block_),
+      pointsToDefaultFields(false),
       defaultFields(block.getNx(), block.getNy(), block.getNz()),
       fields(fields_ )
 {
     flags.reset();
 }
+
+template<typename T, template<typename U> class Lattice>
+DataAnalysis3D<T,Lattice>::DataAnalysis3D(DataAnalysis3D<T,Lattice> const& rhs)
+    : block(rhs.block),
+      pointsToDefaultFields(rhs.pointsToDefaultFields),
+      defaultFields(rhs.defaultFields),
+      fields( pointsToDefaultFields ? defaultFields : rhs.fields )
+{ }
 
 
 template<typename T, template<typename U> class Lattice>
@@ -187,7 +197,7 @@ TensorFieldBase3D<T,6> const&
 
 template<typename T, template<typename U> class Lattice>
 TensorFieldBase3D<T,6> const&
-    DataAnalysis3D<T,Lattice>::getStress() const
+    DataAnalysis3D<T,Lattice>::getStrainRateFromStress() const
 {
     computeStrainRateFieldFromStress();
     return fields.stressField;

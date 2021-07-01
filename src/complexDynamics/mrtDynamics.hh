@@ -79,6 +79,12 @@ MRTdynamics<T,Lattice>* MRTdynamics<T,Lattice>::clone() const
 }
  
 template<typename T, template<typename U> class Lattice>
+T MRTdynamics<T,Lattice>::computeEquilibrium(int iPop, T rho, const T u[Lattice<T>::d], T uSqr) const
+{
+    return lbHelpers<T,Lattice>::equilibrium(iPop, rho, u, uSqr);
+}
+
+template<typename T, template<typename U> class Lattice>
 void MRTdynamics<T,Lattice>::collide (
         Cell<T,Lattice>& cell,
         LatticeStatistics<T>& statistics )

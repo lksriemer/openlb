@@ -43,7 +43,7 @@ public:
     ScalarField2D<T> const& getVelocityNorm() const;
     ScalarField2D<T> const& getVorticity() const;
     TensorField2D<T,3> const& getStrainRate() const;
-    TensorField2D<T,3> const& getStress() const;
+    TensorField2D<T,3> const& getStrainRateFromStress() const;
     ScalarField2D<T> const& getDivRhoU() const;
     ScalarField2D<T> const& getPoissonTerm() const;
     TensorField2D<T,Lattice<T>::q > const& getPopulations() const;

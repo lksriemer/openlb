@@ -86,6 +86,7 @@ class DataAnalysis3D : public DataAnalysisBase3D<T,Lattice> {
 public:
     DataAnalysis3D(BlockStructure3D<T,Lattice> const& block_);
     DataAnalysis3D(BlockStructure3D<T,Lattice> const& block_, AnalysisFields3D<T,Lattice>& fields_ );
+    DataAnalysis3D(DataAnalysis3D<T,Lattice> const& rhs);
     ~DataAnalysis3D();
 public:
     virtual void reset() const;
@@ -97,7 +98,7 @@ public:
     virtual ScalarFieldBase3D<T> const& getVelocityNorm() const;
     virtual ScalarFieldBase3D<T> const& getVorticityNorm() const;
     virtual TensorFieldBase3D<T,6> const& getStrainRate() const;
-    virtual TensorFieldBase3D<T,6> const& getStress() const;
+    virtual TensorFieldBase3D<T,6> const& getStrainRateFromStress() const;
     virtual ScalarFieldBase3D<T> const& getDivRhoU() const;
     virtual ScalarFieldBase3D<T> const& getPoissonTerm() const;
     virtual TensorFieldBase3D<T,Lattice<T>::q > const& getPopulations() const;
@@ -141,6 +142,7 @@ private:
     T boundaryPoisson(int iX, int iY, int iZ) const;
 private:
     BlockStructure3D<T,Lattice> const& block;
+    bool pointsToDefaultFields;
     mutable AnalysisFieldsImpl3D<T,Lattice> defaultFields;
     mutable AnalysisFields3D<T,Lattice>     fields;
     mutable AnalysisFlags3D                 flags;

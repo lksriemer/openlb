@@ -38,5 +38,6 @@
 #include "blockStatistics3D.hh"
 #include "boundaryCondition3D.hh"
 #include "simulationSetup3D.hh"
+#include "imageCreator.hh"
 #include "dataAnalysis3D.hh"
 #include "dataReductions.hh"

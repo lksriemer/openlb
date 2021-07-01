@@ -61,22 +61,6 @@ const T omega    = 1. / (3.*nu+1./2.);
 const int maxT   = 50000;
 const int tSave  = 100;
 
-// Initialize a nx-by-ny lattice
-#ifndef PARALLEL_MODE_MPI  // sequential program execution
-    BlockLattice2D<T, DESCRIPTOR> lattice(nx,ny);
-#else                      // parallel program execution
-    MultiBlockLattice2D<T, DESCRIPTOR> lattice (
-        createRegularDataDistribution(nx,ny) );
-#endif
-
-
-// Initialize an object that describes the BGK
-// dynamics in the bulk
-ConstRhoBGKdynamics<T, DESCRIPTOR> bulkDynamics (
-                  omega,
-                  instances::getBulkMomenta<T,DESCRIPTOR>()
-);
-
 // Computation of a Poiseuille velocity profile
 T poiseuilleVelocity(int iY) {
     T y = (T)iY;
@@ -93,7 +77,11 @@ T poiseuillePressure(int iX) {
 }
 
 // Set up the geometry of the simulation
-void iniGeometry(OnLatticeBoundaryCondition2D<T,DESCRIPTOR>& boundaryCondition) {
+void iniGeometry( BlockStructure2D<T,DESCRIPTOR>& lattice,
+                  Dynamics<T, DESCRIPTOR>& bulkDynamics,
+                  OnLatticeBoundaryCondition2D<T,DESCRIPTOR>& boundaryCondition )
+{
+
     // Bulk dynamics
     lattice.defineDynamics(0,nx-1,0,ny-1,    &bulkDynamics);
 
@@ -139,6 +127,18 @@ int main(int argc, char* argv[]) {
     olbInit(&argc, &argv);
     singleton::directories().setOutputDir("./tmp/");
 
+#ifndef PARALLEL_MODE_MPI  // sequential program execution
+    BlockLattice2D<T, DESCRIPTOR> lattice( nx, ny );
+#else                      // parallel program execution
+    MultiBlockLattice2D<T, DESCRIPTOR> lattice (
+        createRegularDataDistribution( nx, ny ) );
+#endif
+
+    ConstRhoBGKdynamics<T, DESCRIPTOR> bulkDynamics (
+                      omega,
+                      instances::getBulkMomenta<T,DESCRIPTOR>()
+    );
+
     // Initialize an object that produces the boundary condition.
     // createLocalBoundaryCondition2D: local, regularized boundary condition
     // createInterpBoundaryCondition2D: non-local boundary, based on an
@@ -149,7 +149,7 @@ int main(int argc, char* argv[]) {
         // boundaryCondition = createInterpBoundaryCondition2D(lattice);
         boundaryCondition = createLocalBoundaryCondition2D(lattice);
 
-    iniGeometry(*boundaryCondition);
+    iniGeometry(lattice, bulkDynamics, *boundaryCondition);
 
     // Computation of simulation results (e.g. the velocity field)
     BlockStatistics2D<T,DESCRIPTOR> statistics(lattice);

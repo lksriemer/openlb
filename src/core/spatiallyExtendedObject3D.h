@@ -1,6 +1,8 @@
 /*  This file is part of the OpenLB library
  *
- *  Copyright (C) 2007 the OpenLB project
+ *  Copyright (C) 2008 Jonas Latt, Orestis Malaspinas
+ *  Address: Rue General Dufour 24,  1211 Geneva 4, Switzerland 
+ *  E-mail: jonas.latt@gmail.com
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
@@ -18,12 +20,23 @@
  *  Boston, MA  02110-1301, USA.
 */
 
-/** \file
- * Groups all the 2D include files in the contrib directory.
- */
 
-#include "keepIncomingBoundary2D.h"
-#include "keepIncomingDynamics.h"
-#include "twoBlockLatticePostProcessing.h"
-#include "straightBouzidiBoundary2D.h"
-#include "straightBouzidiDynamics.h"
+#ifndef SPATIALLY_EXTENDED_OBJECT_3D_H
+#define SPATIALLY_EXTENDED_OBJECT_3D_H
+
+#include "complexGrids/multiBlockStructure/multiDataGeometry3D.h"
+#include "multiPhysics.h"
+
+namespace olb {
+
+struct SpatiallyExtendedObject3D {
+    virtual ~SpatiallyExtendedObject3D() { }
+    virtual MultiDataDistribution3D getDataDistribution() const =0;
+    virtual SpatiallyExtendedObject3D* getComponent(int iBlock) =0;
+    virtual const SpatiallyExtendedObject3D* getComponent(int iBlock) const =0;
+    virtual multiPhysics::MultiPhysicsId getMultiPhysicsId() const =0;
+};
+
+} // namespace olb
+
+#endif

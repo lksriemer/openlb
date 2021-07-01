@@ -37,5 +37,6 @@
 #include "blockStatistics2D.hh"
 #include "boundaryCondition2D.hh"
 #include "simulationSetup2D.hh"
+#include "imageCreator.hh"
 #include "dataAnalysis2D.hh"
 #include "dataReductions.hh"

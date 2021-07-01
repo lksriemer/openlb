@@ -120,6 +120,7 @@ public:
     Overlap2D   const& getNormalOverlap(int whichOverlap) const;
     Overlap2D const& getPeriodicOverlap(int whichOverlap) const;
     int locate(int iX, int iY, int guess=0) const;
+    int locateInEnvelopes(int iX, int iY, std::vector<int>& foundId, int guess=0) const;
     int getNumAllocatedBulkCells() const;
     bool getNextChunkX(int iX, int iY, int& nextLattice, int& nextChunkSize) const;
     bool getNextChunkY(int iX, int iY, int& nextLattice, int& nextChunkSize) const;
@@ -131,6 +132,7 @@ private:
     std::vector<BlockParameters2D> blocks;
     std::vector<Overlap2D> normalOverlaps;
     std::vector<Overlap2D> periodicOverlaps;
+    std::vector<std::vector<int> > neighbors;
 };
 
 }  // namespace olb

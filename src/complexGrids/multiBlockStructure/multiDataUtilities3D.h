@@ -42,8 +42,8 @@ MultiDataDistribution3D createRegularDataDistribution (
         int nx, int ny, int nz, int numBlocksX, int numBlocksY, int numBlocksZ,
         int envelopeWidth );
 
-/// Create a (# processors)-by-ny-by-1 data distribution
-MultiDataDistribution3D createRegularDataDistribution(int nx, int ny, int nz,int envelopeWidth=1);
+/// Create a data distribution with regular blocks, as evenly distributed as possible
+MultiDataDistribution3D createRegularDataDistribution(int nx, int ny, int nz, int envelopeWidth=1);
 
 /// Create a data distribution by slicing the domain (a block of nX*nY*nZ cells
 /// as defined by cellTypeField) into numBlocks blocks along the x-direction. 
@@ -65,6 +65,19 @@ MultiDataDistribution3D createZSlicedDataDistribution3D (
         CellTypeField3D const& cellTypeField,
         int numBlocks,
         int envelopeWidth );
+
+/// Create x-sliced data distribution, balancing the number of active cells between blocks,
+/// implicitly setting numBlocks = #processors
+MultiDataDistribution3D createXSlicedDataDistribution3D (
+        CellTypeField3D const& cellTypeField, int envelopeWidth=1);
+
+/// cf above
+MultiDataDistribution3D createYSlicedDataDistribution3D (
+        CellTypeField3D const& cellTypeField, int envelopeWidth=1);
+
+/// cf above
+MultiDataDistribution3D createZSlicedDataDistribution3D (
+        CellTypeField3D const& cellTypeField, int envelopeWidth=1);
 
 }  // namespace olb
 

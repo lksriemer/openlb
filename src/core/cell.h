@@ -135,11 +135,14 @@ public:
         OLB_PRECONDITION( dynamics );
         dynamics->staticCollide(*this, u, statistics);
     }
-    /// Initialize all f values to their local equilibrium
-    void iniEquilibrium(T rho, const T u[Lattice<T>::d]) {
+
+    /// Compute equilibrium distribution function
+    T computeEquilibrium(int iPop, T rho, const T u[Lattice<T>::d], T uSqr) const
+    {
         OLB_PRECONDITION( dynamics );
-        dynamics->iniEquilibrium(*this, rho, u);
+        return dynamics->computeEquilibrium(iPop, rho, u, uSqr);
     }
+
     /// Compute particle density on the cell.
     /** \return particle density
      */
@@ -267,6 +270,11 @@ public:
     void defineExternalField(int pos, int size, const T* ext) {
         OLB_PRECONDITION( dynamics );
         dynamics->defineExternalField(*this, pos, size, ext);
+    }
+    /// Initialize all f values to their local equilibrium
+    void iniEquilibrium(T rho, const T u[Lattice<T>::d]) {
+        OLB_PRECONDITION( dynamics );
+        dynamics->iniEquilibrium(*this, rho, u);
     }
     /// Revert ("bounce-back") the distribution functions.
     void revert();

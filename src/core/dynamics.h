@@ -33,6 +33,17 @@
 
 namespace olb {
 
+namespace dynamicParams {
+    // Use 0-99 for relaxation parameters
+    const int omega_shear = 0;
+    const int omega_bulk  = 1;
+
+    // Use 100-199 for material constants
+    const int sqrSpeedOfSound = 100; // Speed of sound squared
+
+    // Use 1000 and higher for custom user-defined constants
+}
+
 template<typename T, template<typename U> class Lattice> class Cell;
 
 /// Interface for the dynamics classes
@@ -49,10 +60,10 @@ struct Dynamics {
     virtual void staticCollide(Cell<T,Lattice>& cell,
                                const T u[Lattice<T>::d],
                                LatticeStatistics<T>& statistics_) =0;
-
-    /// Initialize at equilibrium distribution
-    virtual void iniEquilibrium(Cell<T,Lattice>& cell,
-                                T rho, const T u[Lattice<T>::d]);
+    /// Compute equilibrium distribution function
+    virtual T computeEquilibrium(int iPop, T rho, const T u[Lattice<T>::d], T uSqr) const =0;
+    /// Initialize cell at equilibrium distribution
+    virtual void iniEquilibrium(Cell<T,Lattice>& cell, T rho, const T u[Lattice<T>::d]);
     /// Compute particle density on the cell.
     /** \return particle density
      */
@@ -136,6 +147,10 @@ struct Dynamics {
     virtual T getOmega() const =0;
     /// Set local relaxation parameter of the dynamics
     virtual void setOmega(T omega_) =0;
+    /// Get local value of any parameter
+    virtual T getParameter(int whichParameter) const;
+    /// Set local value of any parameter
+    virtual void setParameter(int whichParameter, T value);
 };
 
 /// Interface for classes that compute velocity momenta
@@ -246,6 +261,8 @@ public:
     BGKdynamics(T omega_, Momenta<T,Lattice>& momenta_);
     /// Clone the object on its dynamic type.
     virtual BGKdynamics<T,Lattice>* clone() const;
+    /// Compute equilibrium distribution function
+    virtual T computeEquilibrium(int iPop, T rho, const T u[Lattice<T>::d], T uSqr) const;
     /// Collision step
     virtual void collide(Cell<T,Lattice>& cell,
                          LatticeStatistics<T>& statistics_);
@@ -269,6 +286,8 @@ public:
     ConstRhoBGKdynamics(T omega_, Momenta<T,Lattice>& momenta_);
     /// Clone the object on its dynamic type.
     virtual ConstRhoBGKdynamics<T,Lattice>* clone() const;
+    /// Compute equilibrium distribution function
+    virtual T computeEquilibrium(int iPop, T rho, const T u[Lattice<T>::d], T uSqr) const;
     /// Collision step
     virtual void collide(Cell<T,Lattice>& cell,
                          LatticeStatistics<T>& statistics_);
@@ -292,6 +311,8 @@ public:
     IncBGKdynamics(T omega_, Momenta<T,Lattice>& momenta_);
     /// Clone the object on its dynamic type.
     virtual IncBGKdynamics<T,Lattice>* clone() const;
+    /// Compute equilibrium distribution function
+    virtual T computeEquilibrium(int iPop, T rho, const T u[Lattice<T>::d], T uSqr) const;
     /// Collision step
     virtual void collide(Cell<T,Lattice>& cell,
                          LatticeStatistics<T>& statistics_);
@@ -321,6 +342,8 @@ public:
     RLBdynamics(T omega_, Momenta<T,Lattice>& momenta_);
     /// Clone the object on its dynamic type.
     virtual RLBdynamics<T,Lattice>* clone() const;
+    /// Compute equilibrium distribution function
+    virtual T computeEquilibrium(int iPop, T rho, const T u[Lattice<T>::d], T uSqr) const;
     /// Collision step
     virtual void collide(Cell<T,Lattice>& cell,
                          LatticeStatistics<T>& statistics_);
@@ -345,6 +368,8 @@ public:
     CombinedRLBdynamics(T omega_, Momenta<T,Lattice>& momenta_);
     /// Clone the object on its dynamic type.
     virtual CombinedRLBdynamics<T, Lattice, Dynamics>* clone() const;
+    /// Compute equilibrium distribution function
+    virtual T computeEquilibrium(int iPop, T rho, const T u[Lattice<T>::d], T uSqr) const;
     /// Collision step
     virtual void collide(Cell<T,Lattice>& cell,
                          LatticeStatistics<T>& statistics_);
@@ -356,6 +381,10 @@ public:
     virtual T getOmega() const;
     /// Set local relaxation parameter of the dynamics
     virtual void setOmega(T omega_);
+    /// Get local value of any parameter
+    virtual T getParameter(int whichParameter) const;
+    /// Set local value of any parameter
+    virtual void setParameter(int whichParameter, T value);
 private:
     Dynamics boundaryDynamics;
 };
@@ -368,6 +397,8 @@ public:
     ForcedBGKdynamics(T omega_, Momenta<T,Lattice>& momenta_);
     /// Clone the object on its dynamic type.
     virtual ForcedBGKdynamics<T,Lattice>* clone() const;
+    /// Compute equilibrium distribution function
+    virtual T computeEquilibrium(int iPop, T rho, const T u[Lattice<T>::d], T uSqr) const;
     /// Collision step
     virtual void collide(Cell<T,Lattice>& cell,
                          LatticeStatistics<T>& statistics_);
@@ -399,6 +430,8 @@ public:
     D3Q13dynamics(T omega_, Momenta<T,Lattice>& momenta_);
     /// Clone the object on its dynamic type.
     virtual D3Q13dynamics<T,Lattice>* clone() const;
+    /// Compute equilibrium distribution function
+    virtual T computeEquilibrium(int iPop, T rho, const T u[Lattice<T>::d], T uSqr) const;
     /// Collision step
     virtual void collide(Cell<T,Lattice>& cell,
                          LatticeStatistics<T>& statistics_);
@@ -471,6 +504,8 @@ class BounceBack : public Dynamics<T,Lattice> {
 public:
     /// Clone the object on its dynamic type.
     virtual BounceBack<T,Lattice>* clone() const;
+    /// Yields 0;
+    virtual T computeEquilibrium(int iPop, T rho, const T u[Lattice<T>::d], T uSqr) const;
     /// Collision step
     virtual void collide(Cell<T,Lattice>& cell,
                          LatticeStatistics<T>& statistics_);
@@ -526,6 +561,8 @@ class NoDynamics : public Dynamics<T,Lattice> {
 public:
     /// Clone the object on its dynamic type.
     virtual NoDynamics<T,Lattice>* clone() const;
+    /// Yields 0;
+    virtual T computeEquilibrium(int iPop, T rho, const T u[Lattice<T>::d], T uSqr) const;
     /// Collision step
     virtual void collide(Cell<T,Lattice>& cell,
                          LatticeStatistics<T>& statistics_);

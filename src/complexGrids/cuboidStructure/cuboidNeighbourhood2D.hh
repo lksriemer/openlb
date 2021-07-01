@@ -229,6 +229,9 @@ void CuboidNeighbourhood2D<T,Lattice>::init_outCN() {
         }
         else _outData[i] = NULL;
     }
+    #ifdef PARALLEL_MODE_MPI
+        _mpiNbHelper.allocate(_outC.size());
+    #endif
     _initOutCNdone = true;
 }
 
@@ -259,7 +262,8 @@ void CuboidNeighbourhood2D<T,Lattice>::send_outData() {
     #ifdef PARALLEL_MODE_MPI
         for (unsigned iC=0; iC<_outC.size(); iC++) {
             int dRank = _sLattice.get_load().rank(_outC[iC]);
-            singleton::mpi().iSendRequestFree(_outData[_outC[iC]], _outN[iC]*Lattice<T>::q, dRank, _iC);
+            singleton::mpi().iSend( _outData[_outC[iC]],
+                _outN[iC]*Lattice<T>::q, dRank, &_mpiNbHelper.get_mpiRequest()[iC], _iC);
        }
     #endif
 }
@@ -271,6 +275,7 @@ void CuboidNeighbourhood2D<T,Lattice>::receive_inData() {
             int sRank = _sLattice.get_load().rank(_inC[iC]);
             singleton::mpi().receive(_inData[_inC[iC]], _inN[iC]*Lattice<T>::q, sRank, _inC[iC]);
         }
+        singleton::mpi().waitAll(_mpiNbHelper);
     #endif
 }
 
@@ -313,6 +318,9 @@ void CuboidNeighbourhood2D<T,Lattice>::reset() {
             delete [] _outData[iC];
         }
         delete [] _outData;
+        #ifdef PARALLEL_MODE_MPI
+            _mpiNbHelper.free();
+        #endif
         _initOutCNdone = false;
     }
     _inCells.clear();

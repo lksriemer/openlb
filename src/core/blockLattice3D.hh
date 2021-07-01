@@ -384,7 +384,7 @@ void BlockLattice3D<T,Lattice>::addPostProcessor (
 template<typename T, template<typename U> class Lattice>
 void BlockLattice3D<T,Lattice>::addLatticeCoupling (
     LatticeCouplingGenerator3D<T,Lattice> const& lcGen,
-    std::vector<BlockStructure3D<T,Lattice>*> partners )
+    std::vector<SpatiallyExtendedObject3D*> partners )
 {
     postProcessors.push_back(lcGen.generate(partners));
 }
@@ -657,6 +657,29 @@ DataUnSerializer<T>& BlockLattice3D<T,Lattice>::getSubUnSerializer (
     return *unSerializer;
 }
 
+template<typename T, template<typename U> class Lattice>
+MultiDataDistribution3D BlockLattice3D<T,Lattice>::getDataDistribution() const {
+    return MultiDataDistribution3D(getNx(), getNy(), getNz());
+}
+
+template<typename T, template<typename U> class Lattice>
+SpatiallyExtendedObject3D* BlockLattice3D<T,Lattice>::getComponent(int iBlock) {
+    OLB_PRECONDITION( iBlock==0 );
+    return this;
+}
+
+template<typename T, template<typename U> class Lattice>
+SpatiallyExtendedObject3D const* BlockLattice3D<T,Lattice>::getComponent(int iBlock) const {
+    OLB_PRECONDITION( iBlock==0 );
+    return this;
+}
+
+template<typename T, template<typename U> class Lattice>
+multiPhysics::MultiPhysicsId BlockLattice3D<T,Lattice>::getMultiPhysicsId() const {
+    return multiPhysics::getMultiPhysicsBlockId<T,Lattice>();
+}
+
+
 
 ////////// class BlockLatticeSerializer3D ////////////////////////////
 
@@ -724,6 +747,8 @@ bool BlockLatticeSerializer3D<T,Lattice>::isEmpty() const {
         return iZ > z1;
     }
 }
+
+
 
 ////////// class BlockLatticeUnSerializer3D ////////////////////////////
 

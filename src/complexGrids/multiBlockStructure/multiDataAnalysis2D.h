@@ -64,7 +64,7 @@ public:
     virtual ScalarFieldBase2D<T> const& getVorticity() const;
     virtual ScalarFieldBase2D<T> const& getVelocityNorm() const;
     virtual TensorFieldBase2D<T,3> const& getStrainRate() const;
-    virtual TensorFieldBase2D<T,3> const& getStress() const;
+    virtual TensorFieldBase2D<T,3> const& getStrainRateFromStress() const;
     virtual ScalarFieldBase2D<T> const& getDivRhoU() const;
     virtual ScalarFieldBase2D<T> const& getPoissonTerm() const;
     virtual TensorFieldBase2D<T,Lattice<T>::q > const& getPopulations() const;

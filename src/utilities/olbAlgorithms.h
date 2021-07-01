@@ -1,6 +1,8 @@
 /*  This file is part of the OpenLB library
  *
- *  Copyright (C) 2007 the OpenLB project
+ *  Copyright (C) 2008 Jonas Latt
+ *  Address: Rue General Dufour 24,  1211 Geneva 4, Switzerland 
+ *  E-mail: jonas.latt@gmail.com
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
@@ -18,10 +20,21 @@
  *  Boston, MA  02110-1301, USA.
 */
 
-/** \file
- * Groups all the generic 3D template files in the contrib directory.
- */
+#ifndef OLB_ALGORITHMS_H
+#define OLB_ALGORITHMS_H
 
-#include "keepIncomingDynamics.hh"
-#include "straightBouzidiDynamics.hh"
-#include "twoBlockLatticePostProcessing.hh"
+#include <vector>
+
+namespace olb {
+
+namespace algorithm {
+
+std::vector<int> primeFactor(int value);
+
+std::vector<int> evenRepartition(int value, int d);
+
+} // namespace algorithm
+
+} // namespace olb
+
+#endif

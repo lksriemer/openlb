@@ -25,3 +25,4 @@
 #include "entropicDynamics.hh"
 #include "mrtDynamics.hh"
 #include "mrtLatticeDescriptors.hh"
+#include "chopardDynamics.hh"

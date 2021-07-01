@@ -31,6 +31,7 @@
 #include "dataFields3D.h"
 #include "serializer.h"
 #include "dataAnalysisBase3D.h"
+#include "spatiallyExtendedObject3D.h"
 
 namespace olb {
 
@@ -38,7 +39,7 @@ template<typename T, template<typename U> class Lattice> struct Dynamics;
 template<typename T, template<typename U> class Lattice> class Cell;
 
 template<typename T, template<typename U> class Lattice>
-class BlockStructure3D : public Serializable<T> {
+class BlockStructure3D : public Serializable<T>, public SpatiallyExtendedObject3D {
 public:
     virtual ~BlockStructure3D() { }
 public:
@@ -76,7 +77,7 @@ public:
             PostProcessorGenerator3D<T,Lattice> const& ppGen ) =0;
     virtual void addLatticeCoupling (
             LatticeCouplingGenerator3D<T,Lattice> const& lcGen,
-            std::vector<BlockStructure3D<T,Lattice>*> partners ) =0;
+            std::vector<SpatiallyExtendedObject3D*> partners ) =0;
     virtual void resetPostProcessors() =0;
     virtual void postProcess(int x0_, int x1_, int y0_, int y1_,
                              int z0_, int z1_) =0;

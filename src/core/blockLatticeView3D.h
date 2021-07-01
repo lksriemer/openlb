@@ -83,7 +83,7 @@ public:
                      PostProcessorGenerator3D<T,Lattice> const& ppGen);
     virtual void addLatticeCoupling (
             LatticeCouplingGenerator3D<T,Lattice> const& lcGen,
-            std::vector<BlockStructure3D<T,Lattice>*> partners );
+            std::vector<SpatiallyExtendedObject3D*> partners );
     virtual void resetPostProcessors();
     virtual void postProcess(int x0_, int x1_, int y0_, int y1_,
                              int z0_, int z1_);
@@ -100,6 +100,10 @@ public:
     virtual DataUnSerializer<T>& getSubUnSerializer (
             int x0_, int x1_, int y0_, int y1_, int z0_, int z1_,
             IndexOrdering::OrderingT ordering );
+    virtual MultiDataDistribution3D getDataDistribution() const;
+    virtual SpatiallyExtendedObject3D* getComponent(int iBlock);
+    virtual SpatiallyExtendedObject3D const* getComponent(int iBlock) const;
+    virtual multiPhysics::MultiPhysicsId getMultiPhysicsId() const;
 private:
     BlockStructure3D<T,Lattice>  *originalLattice;
     int                          x0, y0, z0;

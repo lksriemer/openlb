@@ -1,6 +1,8 @@
 /*  This file is part of the OpenLB library
  *
- *  Copyright (C) 2007 The OpenLB project
+ *  Copyright (C) 2008 Jonas Latt, Orestis Malaspinas
+ *  Address: Rue General Dufour 24,  1211 Geneva 4, Switzerland 
+ *  E-mail: jonas.latt@gmail.com
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
@@ -18,22 +20,23 @@
  *  Boston, MA  02110-1301, USA.
 */
 
-/** \file
- * Wrapper functions that simplify the use of MPI, generic template code
- */
 
-#ifndef MPI_MANAGER_HH
-#define MPI_MANAGER_HH
+#ifndef SPATIALLY_EXTENDED_OBJECT_2D_H
+#define SPATIALLY_EXTENDED_OBJECT_2D_H
 
-#ifdef PARALLEL_MODE_MPI
-
-#include "mpiManager.h"
-#include <iostream>
+#include "complexGrids/multiBlockStructure/multiDataGeometry2D.h"
+#include "multiPhysics.h"
 
 namespace olb {
 
-}  // namespace olb
+struct SpatiallyExtendedObject2D {
+    virtual ~SpatiallyExtendedObject2D() { }
+    virtual MultiDataDistribution2D getDataDistribution() const =0;
+    virtual SpatiallyExtendedObject2D* getComponent(int iBlock) =0;
+    virtual SpatiallyExtendedObject2D const* getComponent(int iBlock) const =0;
+    virtual multiPhysics::MultiPhysicsId getMultiPhysicsId() const =0;
+};
 
-#endif  // PARALLEL_MODE_MPI
+} // namespace olb
 
-#endif  // MPI_MANAGER_HH
+#endif

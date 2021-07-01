@@ -39,6 +39,7 @@ template<typename T, template<typename U> class Lattice>
 MultiBlockLattice3D<T,Lattice>::MultiBlockLattice3D(MultiDataDistribution3D const& dataDistribution_)
     : locatedBlock(0),
       statisticsOn(true),
+      periodicCommunicationOn(true),
       dummyCell(&dummyDynamics),
       serializer(0), unSerializer(0),
       serializerPolicy(*this), unSerializerPolicy(*this),
@@ -77,6 +78,7 @@ template<typename T, template<typename U> class Lattice>
 MultiBlockLattice3D<T,Lattice>::MultiBlockLattice3D(MultiBlockLattice3D<T,Lattice> const& rhs)
     : locatedBlock(rhs.locatedBlock),
       statisticsOn(rhs.statisticsOn),
+      periodicCommunicationOn(rhs.periodicCommunicationOn),
       dummyCell(&dummyDynamics),
       serializer(0), unSerializer(0),
       serializerPolicy(*this), unSerializerPolicy(*this),
@@ -123,6 +125,7 @@ void MultiBlockLattice3D<T,Lattice>::swap (
     blockLattices.swap(rhs.blockLattices);
     std::swap(statistics, rhs.statistics);
     std::swap(statisticsOn, rhs.statisticsOn);
+    std::swap(periodicCommunicationOn, rhs.periodicCommunicationOn);
     std::swap(reductor, rhs.reductor);
     std::swap(serializer, rhs.serializer);
     std::swap(unSerializer, rhs.unSerializer);
@@ -131,35 +134,54 @@ void MultiBlockLattice3D<T,Lattice>::swap (
 
 template<typename T, template<typename U> class Lattice>
 Cell<T,Lattice>& MultiBlockLattice3D<T,Lattice>::get(int iX, int iY, int iZ) {
-    locatedBlock = getMultiData().locate(iX, iY, iZ, locatedBlock);
-    if (locatedBlock == -1) { 
-        locatedBlock = 0;
+    std::vector<int> foundId;
+    locatedBlock = multiBlockHandler -> locateLocally(iX, iY, iZ, foundId, locatedBlock);
+    if (foundId.empty()) {
         return dummyCell;
     }
-    Cell<T,Lattice>* returnCell =0;
-    if (blockLattices[locatedBlock]) {
-        returnCell = &blockLattices[locatedBlock] -> get ( getParameters(locatedBlock).toLocalX(iX),
-                                                           getParameters(locatedBlock).toLocalY(iY),
-                                                           getParameters(locatedBlock).toLocalZ(iZ) );
+    returnCells.clear();
+    for (unsigned iBlock=0; iBlock<foundId.size(); ++iBlock) {
+        int foundBlock = foundId[iBlock];
+        if (blockLattices[foundBlock]) {
+            BlockParameters3D const& param = getParameters(foundBlock);
+            returnCells.push_back (
+                         &blockLattices[foundBlock] -> get ( param.toLocalX(iX),
+                                                             param.toLocalY(iY),
+                                                             param.toLocalZ(iZ) )
+            );
+        }
+        else {
+            returnCells.push_back(0);
+        }
     }
-    return multiBlockHandler -> getDistributedCell(returnCell, locatedBlock);
+    return multiBlockHandler -> getDistributedCell(returnCells);
 }
 
 template<typename T, template<typename U> class Lattice>
 Cell<T,Lattice> const& MultiBlockLattice3D<T,Lattice>::get(int iX, int iY, int iZ) const {
-    locatedBlock = getMultiData().locate(iX, iY, iZ, locatedBlock);
-    if (locatedBlock == -1) { 
-        locatedBlock = 0;
+    std::vector<int> foundId;
+    locatedBlock = multiBlockHandler -> locateLocally(iX, iY, iZ, foundId, locatedBlock);
+    if (foundId.empty()) {
         return dummyCell;
     }
-    Cell<T,Lattice> const* returnCell =0;
-    if (blockLattices[locatedBlock]) {
-        returnCell = &blockLattices[locatedBlock] -> get ( getParameters(locatedBlock).toLocalX(iX),
-                                                           getParameters(locatedBlock).toLocalY(iY),
-                                                           getParameters(locatedBlock).toLocalZ(iZ) );
+    constReturnCells.clear();
+    for (unsigned iBlock=0; iBlock<foundId.size(); ++iBlock) {
+        int foundBlock = foundId[iBlock];
+        if (blockLattices[foundBlock]) {
+            BlockParameters3D const& param = getParameters(foundBlock);
+            constReturnCells.push_back(
+                         &blockLattices[foundBlock] -> get ( param.toLocalX(iX),
+                                                             param.toLocalY(iY),
+                                                             param.toLocalZ(iZ) )
+            );
+        }
+        else {
+            returnCells.push_back(0);
+        }
     }
-    return multiBlockHandler -> getDistributedCell(returnCell, locatedBlock);
+    return multiBlockHandler -> getDistributedCell(returnCells);
 }
+
 
 template<typename T, template<typename U> class Lattice>
 void MultiBlockLattice3D<T,Lattice>::initialize() {
@@ -320,7 +342,8 @@ void MultiBlockLattice3D<T,Lattice>::collideAndStream(bool periodic) {
             if (blockLattices[iBlock]) {
                 BlockParameters3D const& params = getParameters(iBlock);
                 BlockCoordinates3D npEnv = params.toLocal(params.getNonPeriodicEnvelope());
-                blockLattices[iBlock] -> collideAndStream(npEnv.x0, npEnv.x1, npEnv.y0, npEnv.y1, npEnv.z0, npEnv.z1);
+                blockLattices[iBlock] ->
+                    collideAndStream(npEnv.x0, npEnv.x1, npEnv.y0, npEnv.y1, npEnv.z0, npEnv.z1);
                 blockLattices[iBlock] -> postProcess();
             }
         }
@@ -373,18 +396,6 @@ void MultiBlockLattice3D<T,Lattice>::stripeOffDensityOffset (
             }
         }
     }
-    for (int iOverlap=0; iOverlap < getNumPeriodicOverlaps(); ++iOverlap) {
-        Overlap3D const& overlap = getPeriodicOverlap(iOverlap);
-        int overlapId  = overlap.getOverlapId();
-        if (blockLattices[overlapId]) {
-            if (util::intersect(domain, overlap.getOriginalCoordinates(), inters ) ) {
-                inters = inters.shift( -overlap.getShiftX(), -overlap.getShiftY(), -overlap.getShiftZ() );
-                inters = getParameters(overlapId).toLocal(inters);
-                blockLattices[overlapId] -> stripeOffDensityOffset (
-                        inters.x0, inters.x1, inters.y0, inters.y1, inters.z0, inters.z1, offset );
-            }
-        }
-    }
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -413,7 +424,7 @@ void MultiBlockLattice3D<T,Lattice>::addPostProcessor(PostProcessorGenerator3D<T
 template<typename T, template<typename U> class Lattice>
 void MultiBlockLattice3D<T,Lattice>::addLatticeCoupling (
                      LatticeCouplingGenerator3D<T,Lattice> const& lcGen,
-                     std::vector<BlockStructure3D<T,Lattice>*> partners )
+                     std::vector<SpatiallyExtendedObject3D*> partners )
 {
     OLB_ASSERT(false, "not yet implemented");
 }
@@ -534,7 +545,7 @@ void MultiBlockLattice3D<T,Lattice>::postProcessMultiBlock() {
     if (statisticsOn) {
         reduceStatistics();
     }
-    connectBoundaries();
+    multiBlockHandler -> connectBoundaries(blockLattices, periodicCommunicationOn);
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -564,16 +575,6 @@ void MultiBlockLattice3D<T,Lattice>::reduceStatistics() {
 }
 
 template<typename T, template<typename U> class Lattice>
-void MultiBlockLattice3D<T,Lattice>::connectBoundaries() {
-    for (int iOverlap=0; iOverlap<getNumNormalOverlaps(); ++iOverlap) {
-        multiBlockHandler -> copyOverlap(getNormalOverlap(iOverlap), blockLattices);
-    }
-    for (int iOverlap=0; iOverlap<getNumPeriodicOverlaps(); ++iOverlap) {
-        multiBlockHandler -> copyOverlap(getPeriodicOverlap(iOverlap), blockLattices);
-    }
-}
-
-template<typename T, template<typename U> class Lattice>
 void MultiBlockLattice3D<T,Lattice>::eliminateStatisticsInEnvelope() {
     for (int iBlock=0; iBlock<getNumBlocks(); ++iBlock) {
         if (blockLattices[iBlock]) {
@@ -599,8 +600,18 @@ void MultiBlockLattice3D<T,Lattice>::toggleInternalStatistics(bool statisticsOn_
 }
 
 template<typename T, template<typename U> class Lattice>
+void MultiBlockLattice3D<T,Lattice>::togglePeriodicCommunication(bool periodicCommunicationOn_) {
+    periodicCommunicationOn = periodicCommunicationOn_;
+}
+
+template<typename T, template<typename U> class Lattice>
 bool MultiBlockLattice3D<T,Lattice>::isInternalStatisticsOn() const {
     return statisticsOn;
+}
+
+template<typename T, template<typename U> class Lattice>
+bool MultiBlockLattice3D<T,Lattice>::isPeriodicCommunicationOn() const {
+    return periodicCommunicationOn;
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -646,6 +657,28 @@ int MultiBlockLattice3D<T,Lattice>::getNumNormalOverlaps() const {
 template<typename T, template<typename U> class Lattice>
 int MultiBlockLattice3D<T,Lattice>::getNumPeriodicOverlaps() const {
     return getMultiData().getNumPeriodicOverlaps();
+}
+
+template<typename T, template<typename U> class Lattice>
+MultiDataDistribution3D MultiBlockLattice3D<T,Lattice>::getDataDistribution() const {
+    return getMultiData();
+}
+
+template<typename T, template<typename U> class Lattice>
+SpatiallyExtendedObject3D* MultiBlockLattice3D<T,Lattice>::getComponent(int iBlock) {
+    OLB_PRECONDITION( iBlock<getBlockLattices().size() );
+    return getBlockLattices()[iBlock];
+}
+
+template<typename T, template<typename U> class Lattice>
+SpatiallyExtendedObject3D const* MultiBlockLattice3D<T,Lattice>::getComponent(int iBlock) const {
+    OLB_PRECONDITION( iBlock<getBlockLattices().size() );
+    return getBlockLattices()[iBlock];
+}
+
+template<typename T, template<typename U> class Lattice>
+multiPhysics::MultiPhysicsId MultiBlockLattice3D<T,Lattice>::getMultiPhysicsId() const {
+    return multiPhysics::getMultiPhysicsBlockId<T,Lattice>();
 }
 
 

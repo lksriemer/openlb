@@ -1,6 +1,6 @@
 /*  This file is part of the OpenLB library
  *
- *  Copyright (C) 2007 Jonas Latt
+ *  Copyright (C) 2007, 2008 Jonas Latt
  *  Address: Rue General Dufour 24,  1211 Geneva 4, Switzerland 
  *  E-mail: jonas.latt@gmail.com
  *
@@ -86,7 +86,7 @@ public:
                 PostProcessorGenerator2D<T,Lattice> const& ppGen );
     virtual void addLatticeCoupling (
                      LatticeCouplingGenerator2D<T,Lattice> const& lcGen,
-                     std::vector<BlockStructure2D<T,Lattice>*> partners );
+                     std::vector<SpatiallyExtendedObject2D*> partners );
     virtual void resetPostProcessors();
     virtual void postProcess(int x0_, int x1_, int y0_, int y1_);
     void postProcess();
@@ -102,9 +102,15 @@ public:
     virtual DataUnSerializer<T>& getSubUnSerializer (
             int x0_, int x1_, int y0_, int y1_,
             IndexOrdering::OrderingT ordering );
+    virtual MultiDataDistribution2D getDataDistribution() const;
+    virtual SpatiallyExtendedObject2D* getComponent(int iBlock);
+    virtual SpatiallyExtendedObject2D const* getComponent(int iBlock) const;
+    virtual multiPhysics::MultiPhysicsId getMultiPhysicsId() const;
 public:
     void toggleInternalStatistics(bool statisticsOn_);
+    void togglePeriodicCommunication(bool periodicCommunicationOn_);
     bool isInternalStatisticsOn() const;
+    bool isPeriodicCommunicationOn() const;
 public:
     MultiDataDistribution2D const& getMultiData() const;
     std::vector<BlockLattice2D<T,Lattice>*> getBlockLattices();
@@ -113,7 +119,6 @@ private:
     void allocateBlocks();
     void postProcessMultiBlock();
     void reduceStatistics();
-    void connectBoundaries();
     void eliminateStatisticsInEnvelope();
 private:
     BlockParameters2D const& getParameters(int iParam) const;
@@ -128,9 +133,12 @@ private:
     std::vector<BlockLattice2D<T,Lattice>*> blockLattices;
     LatticeStatistics<T>* statistics;
     bool statisticsOn;
+    bool periodicCommunicationOn;
     MultiBlockReductor<T> reductor;
     NoDynamics<T,Lattice> dummyDynamics;
     mutable Cell<T,Lattice> dummyCell;
+    mutable std::vector<Cell<T,Lattice>*> returnCells;
+    mutable std::vector<Cell<T,Lattice> const*> constReturnCells;
     mutable MultiSerializer2D<T>* serializer;
     mutable MultiUnSerializer2D<T>* unSerializer;
     MultiBlockSerializerPolicy2D<T,Lattice> serializerPolicy;

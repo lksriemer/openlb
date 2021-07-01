@@ -137,7 +137,7 @@ bool ParallelMultiDataFieldHandler3D<T>::getLocalEnvelope(int iBlock, int& lx, i
     if ( parameters.getProcId() == singleton::mpi().getRank() ) {
         lx = parameters.getEnvelopeLx();
         ly = parameters.getEnvelopeLy();
-        lz = parameters.getEnvelopeLy();
+        lz = parameters.getEnvelopeLz();
         return true;
     }
     else {

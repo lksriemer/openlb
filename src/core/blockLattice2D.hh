@@ -352,7 +352,7 @@ void BlockLattice2D<T,Lattice>::addPostProcessor (
 template<typename T, template<typename U> class Lattice>
 void BlockLattice2D<T,Lattice>::addLatticeCoupling (
     LatticeCouplingGenerator2D<T,Lattice> const& lcGen,
-    std::vector<BlockStructure2D<T,Lattice>*> partners )
+    std::vector<SpatiallyExtendedObject2D*> partners )
 {
     postProcessors.push_back(lcGen.generate(partners));
 }
@@ -455,7 +455,7 @@ void BlockLattice2D<T,Lattice>::boundaryStream (
             for (iPop=1; iPop<=Lattice<T>::q/2; ++iPop) {
                 int nextX = iX + Lattice<T>::c[iPop][0];
                 int nextY = iY + Lattice<T>::c[iPop][1];
-                if (nextX>=lim_x0 && nextY>=lim_y0 && nextY<=lim_y1) {
+                if (nextX>=lim_x0 && nextX<=lim_x1 && nextY>=lim_y0 && nextY<=lim_y1) {
                     std::swap(grid[iX][iY][iPop+Lattice<T>::q/2],
                               grid[nextX][nextY][iPop]);
                 }
@@ -597,6 +597,29 @@ DataUnSerializer<T>& BlockLattice2D<T,Lattice>::getSubUnSerializer (
             *this, x0_, x1_, y0_, y1_, ordering );
     return *unSerializer;
 }
+
+template<typename T, template<typename U> class Lattice>
+MultiDataDistribution2D BlockLattice2D<T,Lattice>::getDataDistribution() const {
+    return MultiDataDistribution2D(getNx(), getNy());
+}
+
+template<typename T, template<typename U> class Lattice>
+SpatiallyExtendedObject2D* BlockLattice2D<T,Lattice>::getComponent(int iBlock) {
+    OLB_PRECONDITION( iBlock==0 );
+    return this;
+}
+
+template<typename T, template<typename U> class Lattice>
+SpatiallyExtendedObject2D const* BlockLattice2D<T,Lattice>::getComponent(int iBlock) const {
+    OLB_PRECONDITION( iBlock==0 );
+    return this;
+}
+
+template<typename T, template<typename U> class Lattice>
+multiPhysics::MultiPhysicsId BlockLattice2D<T,Lattice>::getMultiPhysicsId() const {
+    return multiPhysics::getMultiPhysicsBlockId<T,Lattice>();
+}
+
 
 
 ////////// class BlockLatticeSerializer2D ////////////////////////////

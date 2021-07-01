@@ -22,7 +22,8 @@
 
 generic        := loadBalancer \
                   ompManager \
-                  analysisFlags
+                  analysisFlags \
+                  multiPhysics
 
 precompiled    := blockLattice2D \
                   blockLattice3D \
@@ -38,6 +39,7 @@ precompiled    := blockLattice2D \
                   dataFields2D \
                   dataFields3D \
                   dynamics \
+                  imageCreator \
                   latticeDescriptors \
                   loadBalancer \
                   momentaOnBoundaries2D \
@@ -51,4 +53,5 @@ precompiled    := blockLattice2D \
                   dataAnalysis2D \
                   dataAnalysis3D \
                   analysisFlags \
-                  dataReductions
+                  dataReductions \
+                  multiPhysics

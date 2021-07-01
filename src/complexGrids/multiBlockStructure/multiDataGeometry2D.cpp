@@ -103,32 +103,50 @@ int MultiDataDistribution2D::locate(int x, int y, int guess) const {
     OLB_PRECONDITION( y>=0 && y < ny );
     OLB_PRECONDITION( guess < getNumBlocks() );
 
-    // Check first whether (x,y) is contained in the guessed block
-    BlockCoordinates2D const& guessCoord = blocks[guess].getBulk();
-    if (util::contained(x, y, guessCoord.x0, guessCoord.x1, guessCoord.y0, guessCoord.y1)) {
-        return guess;
-    }
-    // If not, try all the blocks
-    for (int iBlock=0; iBlock<(int)blocks.size(); ++iBlock) {
-        if (iBlock != guess) {
-            BlockCoordinates2D const& coord = blocks[iBlock].getBulk();
-            if (util::contained(x, y, coord.x0, coord.x1, coord.y0, coord.y1)) {
-                return iBlock;
-            }
+    for (int iBlock=0; iBlock<(int)blocks.size(); ++iBlock, guess = (guess+1)%blocks.size()) {
+        BlockCoordinates2D const& coord = blocks[guess].getBulk();
+        if (util::contained(x, y, coord.x0, coord.x1, coord.y0, coord.y1)) {
+            return guess;
         }
     }
     return -1;
 }
 
+int MultiDataDistribution2D::locateInEnvelopes(int x, int y,
+                                               std::vector<int>& foundId, int guess) const
+{
+    OLB_PRECONDITION( x>=0 && x < nx );
+    OLB_PRECONDITION( y>=0 && y < ny );
+
+    int found = locate(x,y, guess);
+    if (found == -1) {
+        found = 0;
+    }
+    else {
+        foundId.push_back(found);
+        for (int iNeighbor=0; iNeighbor < (int)neighbors[found].size(); ++iNeighbor) {
+            int nextNeighbor = neighbors[found][iNeighbor];
+            BlockCoordinates2D const& coord = blocks[nextNeighbor].getEnvelope();
+            if (util::contained(x, y, coord.x0, coord.x1, coord.y0, coord.y1)) {
+                foundId.push_back(nextNeighbor);
+            }
+        }
+    }
+    return found;
+}
+
 void MultiDataDistribution2D::computeNormalOverlaps(BlockParameters2D const& newBlock) {
+    neighbors.resize(getNumBlocks()+1);
     BlockCoordinates2D intersection;
     int iNew = getNumBlocks();
     for (int iBlock=0; iBlock<getNumBlocks(); ++iBlock) {
         if (util::intersect(blocks[iBlock].getBulk(), newBlock.getNonPeriodicEnvelope(), intersection)) {
             normalOverlaps.push_back(Overlap2D(iBlock, iNew, intersection));
+            neighbors[iBlock].push_back(iNew);
         }
         if (util::intersect(newBlock.getBulk(), blocks[iBlock].getNonPeriodicEnvelope(), intersection)) {
             normalOverlaps.push_back(Overlap2D(iNew, iBlock, intersection));
+            neighbors[iNew].push_back(iBlock);
         }
     }
 }
@@ -147,12 +165,14 @@ void MultiDataDistribution2D::computePeriodicOverlaps() {
                 for (int iBlock=0; iBlock<getNumBlocks(); ++iBlock) {
                     if (util::intersect(blocks[iBlock].getBulk(), newEnvelope, intersection)) {
                         periodicOverlaps.push_back( Overlap2D(iBlock, iNew, intersection, shiftX, shiftY) );
+                        neighbors[iBlock].push_back(iNew);
                     }
                     if (!(iBlock==iNew) &&
                         util::intersect(newBulk, blocks[iBlock].getEnvelope(), intersection))
                     {
                         intersection = intersection.shift(-shiftX,-shiftY);
                         periodicOverlaps.push_back( Overlap2D(iNew, iBlock, intersection, -shiftX, -shiftY) );
+                        neighbors[iNew].push_back(iBlock);
                     }
                 }
             }

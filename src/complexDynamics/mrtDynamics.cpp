@@ -25,8 +25,8 @@
  * can be instantiated -- template instantiation.
  */
  
-#include "../core/dynamics.h"
-#include "../core/dynamics.hh"
+#include "core/dynamics.h"
+#include "core/dynamics.hh"
 #include "mrtDynamics.h"
 #include "mrtDynamics.hh"
 #include "mrtLatticeDescriptors.h"

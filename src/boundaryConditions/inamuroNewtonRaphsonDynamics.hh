@@ -55,11 +55,17 @@ InamuroNewtonRaphsonDynamics<T,Lattice,Dynamics,direction,orientation>*
 }
 
 template<typename T, template<typename U> class Lattice, typename Dynamics, int direction, int orientation>
+T InamuroNewtonRaphsonDynamics<T,Lattice, Dynamics, direction, orientation>::
+    computeEquilibrium(int iPop, T rho, const T u[Lattice<T>::d], T uSqr) const
+{
+    return boundaryDynamics.computeEquilibrium(iPop, rho, u, uSqr);
+}
+
+template<typename T, template<typename U> class Lattice, typename Dynamics, int direction, int orientation>
 void InamuroNewtonRaphsonDynamics<T,Lattice,Dynamics,direction,orientation>::collide (
         Cell<T,Lattice>& cell,
         LatticeStatistics<T>& statistics )
 {
-    typedef lbHelpers<T,Lattice> lbH;
     typedef Lattice<T> L;
 
     T rho, u[L::d];
@@ -151,7 +157,7 @@ void InamuroNewtonRaphsonDynamics<T,Lattice,Dynamics,direction,orientation>::col
 
     for (unsigned iPop = 0; iPop < missingIndexes.size(); ++iPop)
     {
-        cell[missingIndexes[iPop]] = lbH::equilibrium(missingIndexes[iPop],xi[0],uCs,uCsSqr);
+        cell[missingIndexes[iPop]] = computeEquilibrium(missingIndexes[iPop],xi[0],uCs,uCsSqr);
     }
 
     boundaryDynamics.collide(cell, statistics);
@@ -163,7 +169,6 @@ void InamuroNewtonRaphsonDynamics<T,Lattice,Dynamics,direction,orientation>::sta
         const T u[Lattice<T>::d],
         LatticeStatistics<T>& statistics )
 {
-    typedef lbHelpers<T,Lattice> lbH;
     typedef Lattice<T> L;
     
     T rho = this->momenta.computeRho(cell);
@@ -254,7 +259,7 @@ void InamuroNewtonRaphsonDynamics<T,Lattice,Dynamics,direction,orientation>::sta
 
     for (unsigned iPop = 0; iPop < missingIndexes.size(); ++iPop)
     {
-        cell[missingIndexes[iPop]] = lbH::equilibrium(missingIndexes[iPop],xi[0],uCs,uCsSqr);
+        cell[missingIndexes[iPop]] = computeEquilibrium(missingIndexes[iPop],xi[0],uCs,uCsSqr);
     }
 
     boundaryDynamics.staticCollide(cell, u, statistics);
@@ -274,13 +279,25 @@ void InamuroNewtonRaphsonDynamics<T,Lattice,Dynamics,direction,orientation>::set
 }
 
 template<typename T, template<typename U> class Lattice, typename Dynamics, int direction, int orientation>
+T InamuroNewtonRaphsonDynamics<T,Lattice,Dynamics,direction,orientation>::getParameter(int whichParameter) const 
+{
+    return boundaryDynamics.getParameter(whichParameter);
+}
+
+template<typename T, template<typename U> class Lattice, typename Dynamics, int direction, int orientation>
+void InamuroNewtonRaphsonDynamics<T,Lattice,Dynamics,direction,orientation>::setParameter(int whichParameter, T value)
+{
+    boundaryDynamics.setParameter(whichParameter, value);
+}
+
+
+template<typename T, template<typename U> class Lattice, typename Dynamics, int direction, int orientation>
 void InamuroNewtonRaphsonDynamics<T,Lattice,Dynamics,direction,orientation>::
     computeApproxMomentum(T approxMomentum[Lattice<T>::d],const Cell<T,Lattice> &cell,
         const T &rho, const T u[Lattice<T>::d], const T xi[Lattice<T>::d],
         const std::vector<int> knownIndexes,const std::vector<int> missingIndexes)
 {
     typedef Lattice<T> L;
-    typedef lbHelpers<T,Lattice> lbH;
 
     T csVel[L::d];
     int counter = 0;
@@ -310,7 +327,7 @@ void InamuroNewtonRaphsonDynamics<T,Lattice,Dynamics,direction,orientation>::
         for (unsigned iPop = 0; iPop < missingIndexes.size(); ++iPop)
         {
             approxMomentum[iDim] += L::c[missingIndexes[iPop]][iDim] *
-                lbH::equilibrium(missingIndexes[iPop],xi[0],csVel,csVelSqr);
+                computeEquilibrium(missingIndexes[iPop],xi[0],csVel,csVelSqr);
         }
     }
 }
@@ -337,7 +354,6 @@ void InamuroNewtonRaphsonDynamics<T,Lattice,Dynamics,direction,orientation>::com
         const std::vector<int> missingIndexes)
 {
     typedef Lattice<T> L;
-    typedef lbHelpers<T,Lattice> lbH;
     
     T csVel[L::d];
     int counter = 0;
@@ -522,7 +538,6 @@ bool InamuroNewtonRaphsonDynamics<T,Lattice,Dynamics,direction,orientation>::
         const T gradGradError[Lattice<T>::d][Lattice<T>::d])
 {
     typedef Lattice<T> L;
-    typedef lbHelpers<T,Lattice> lbH;
 
     T invGradGradError[L::d][L::d];
     bool inversion = invert(gradGradError,invGradGradError);

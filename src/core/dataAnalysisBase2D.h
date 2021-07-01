@@ -44,8 +44,10 @@ public:
     virtual ScalarFieldBase2D<T> const& getPressure() const =0;
     virtual ScalarFieldBase2D<T> const& getVorticity() const =0;
     virtual ScalarFieldBase2D<T> const& getVelocityNorm() const =0;
+    // Compute strain rate using finite differences
     virtual TensorFieldBase2D<T,3> const& getStrainRate() const =0;
-    virtual TensorFieldBase2D<T,3> const& getStress() const =0;
+    // Compute strain rate from the stress (using the local particle populations)
+    virtual TensorFieldBase2D<T,3> const& getStrainRateFromStress() const =0;
     virtual ScalarFieldBase2D<T> const& getDivRhoU() const =0;
     virtual ScalarFieldBase2D<T> const& getPoissonTerm() const =0;
     virtual TensorFieldBase2D<T,Lattice<T>::q > const& getPopulations() const =0;

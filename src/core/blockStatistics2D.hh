@@ -125,7 +125,7 @@ TensorField2D<T,3> const&
 
 template<typename T, template<typename U> class Lattice>
 TensorField2D<T,3> const&
-    BlockStatistics2D<T,Lattice>::getStress() const
+    BlockStatistics2D<T,Lattice>::getStrainRateFromStress() const
 {
     computeStrainRateFieldFromStress();
     return stressField;

@@ -53,7 +53,7 @@ T poiseuilleForce(LBunits<T> const& converter) {
     return 8.*converter.getLatticeNu()*converter.getLatticeU() / (Ly*Ly);
 }
 
-void iniGeometry( BlockLattice2D<T, DESCRIPTOR>& lattice,
+void iniGeometry( BlockStructure2D<T, DESCRIPTOR>& lattice,
                   LBunits<T> const& converter,
                   Dynamics<T, DESCRIPTOR>& bulkDynamics,
                   OnLatticeBoundaryCondition2D<T,DESCRIPTOR>& boundaryCondition )

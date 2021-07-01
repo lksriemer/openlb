@@ -42,6 +42,8 @@ public:
     InamuroAnalyticalDynamics(T omega_, Momenta<T,Lattice>& momenta_);
     /// Clone the object on its dynamic type.
     virtual InamuroAnalyticalDynamics<T, Lattice, Dynamics, direction, orientation>* clone() const;
+    /// Compute equilibrium distribution function
+    virtual T computeEquilibrium(int iPop, T rho, const T u[Lattice<T>::d], T uSqr) const;
     /// Collision step
     virtual void collide(Cell<T,Lattice>& cell, LatticeStatistics<T>& statistics);
     /// Collide with fixed velocity
@@ -52,6 +54,10 @@ public:
     virtual T getOmega() const;
     /// Set local relaxation parameter of the dynamics
     virtual void setOmega(T omega_);
+    /// Get local value of any parameter
+    virtual T getParameter(int whichParameter) const;
+    /// Set local value of any parameter
+    virtual void setParameter(int whichParameter, T value);
 private:
     Dynamics boundaryDynamics;
 };

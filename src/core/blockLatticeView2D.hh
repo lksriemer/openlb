@@ -1,6 +1,6 @@
 /*  This file is part of the OpenLB library
  *
- *  Copyright (C) 2006, 2007 Jonas Latt
+ *  Copyright (C) 2006, 2007, 2008 Jonas Latt
  *  Address: Rue General Dufour 24,  1211 Geneva 4, Switzerland 
  *  E-mail: jonas.latt@gmail.com
  *
@@ -68,13 +68,12 @@ BlockLatticeView2D<T,Lattice>::~BlockLatticeView2D()
 
 
 template<typename T, template<typename U> class Lattice>
-BlockLatticeView2D<T,Lattice>::BlockLatticeView2D(BlockLatticeView2D<T,Lattice> const& rhs) {
-    nx = rhs.nx;
-    ny = rhs.ny;
-    x0 = rhs.x0;
-    y0 = rhs.y0;
-    originalLattice = rhs.originalLattice;
-}
+BlockLatticeView2D<T,Lattice>::BlockLatticeView2D(BlockLatticeView2D<T,Lattice> const& rhs)
+    : originalLattice(rhs.originalLattice),
+      x0(rhs.x0), y0(rhs.y0),
+      nx(rhs.nx), ny(rhs.ny),
+      dataAnalysis( new DataAnalysis2D<T,Lattice>(*this) )
+{ }
 
 template<typename T, template<typename U> class Lattice>
 BlockLatticeView2D<T,Lattice>& BlockLatticeView2D<T,Lattice>::operator= (
@@ -232,7 +231,7 @@ void BlockLatticeView2D<T,Lattice>::addPostProcessor (
 template<typename T, template<typename U> class Lattice>
 void BlockLatticeView2D<T,Lattice>::addLatticeCoupling (
          LatticeCouplingGenerator2D<T,Lattice> const& lcGen,
-         std::vector<BlockStructure2D<T,Lattice>*> partners )
+         std::vector<SpatiallyExtendedObject2D*> partners )
 {
     LatticeCouplingGenerator2D<T,Lattice>* shiftedGen = lcGen.clone();
     shiftedGen->shift(x0,y0);
@@ -307,6 +306,27 @@ DataUnSerializer<T>& BlockLatticeView2D<T,Lattice>::getSubUnSerializer (
     return originalLattice -> getSubUnSerializer(x0_+x0, x1_+x0, y0_+y0, y1_+y0, ordering);
 }
 
+template<typename T, template<typename U> class Lattice>
+MultiDataDistribution2D BlockLatticeView2D<T,Lattice>::getDataDistribution() const {
+    return MultiDataDistribution2D(getNx(), getNy());
+}
+
+template<typename T, template<typename U> class Lattice>
+SpatiallyExtendedObject2D* BlockLatticeView2D<T,Lattice>::getComponent(int iBlock) {
+    OLB_PRECONDITION( iBlock==0 );
+    return this;
+}
+
+template<typename T, template<typename U> class Lattice>
+SpatiallyExtendedObject2D const* BlockLatticeView2D<T,Lattice>::getComponent(int iBlock) const {
+    OLB_PRECONDITION( iBlock==0 );
+    return this;
+}
+
+template<typename T, template<typename U> class Lattice>
+multiPhysics::MultiPhysicsId BlockLatticeView2D<T,Lattice>::getMultiPhysicsId() const {
+    return multiPhysics::getMultiPhysicsBlockId<T,Lattice>();
+}
 
 }  // namespace olb
 

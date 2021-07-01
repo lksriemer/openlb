@@ -1,6 +1,4 @@
-#include <complexGrids/mpiManager/mpiManager.hh>
 #include <core/core2D.hh>
-#include <contrib/contrib2D.hh>
 #include <boundaryConditions/boundaryConditions2D.hh>
 #include <complexDynamics/complexDynamics2D.hh>
 #include <io/io2D.hh>

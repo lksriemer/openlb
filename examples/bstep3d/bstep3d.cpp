@@ -49,8 +49,8 @@ void iniGeometry( BlockStructure3D<T,DESCRIPTOR>& lattice,
     const int nx = converter.getNx();
     const int ny = converter.getNy();
     const int nz = converter.getNz();
-    const int nx1 = converter.nCell(lx1);
-    const int ny1 = converter.nCell(ly1);
+    const int nx1 = converter.nCell(lx1)-2;
+    const int ny1 = converter.nCell(ly1)-2;
 
     lattice.defineDynamics(0,nx-1, 0,ny-1, 0,nz-1, &bulkDynamics);
     lattice.defineDynamics(0,nx1-1,0,ny1-1,0,nz-1,

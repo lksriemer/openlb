@@ -32,6 +32,7 @@ namespace olb {
     template struct
         StatisticsPostProcessor2D<double, descriptors::D2Q9Descriptor>;
 
+    template class LatticeCouplingGenerator2D<double, descriptors::D2Q9Descriptor>;
     template class PostProcessorGenerator2D<double, descriptors::D2Q9Descriptor>;
     template class StatPPGenerator2D<double, descriptors::D2Q9Descriptor>;
 

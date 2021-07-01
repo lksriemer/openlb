@@ -32,6 +32,7 @@
 #include "dataFields3D.h"
 #include "blockStructure3D.h"
 #include "dataAnalysisBase3D.h"
+#include "multiPhysics.h"
 
 /// All OpenLB code is contained in this namespace.
 namespace olb {
@@ -129,7 +130,7 @@ public:
     /// Add a non-local post-processing step
     virtual void addLatticeCoupling (
                      LatticeCouplingGenerator3D<T,Lattice> const& lcGen,
-                     std::vector<BlockStructure3D<T,Lattice>*> partners );
+                     std::vector<SpatiallyExtendedObject3D*> partners );
     /// Clean up all non-local post-processing steps
     virtual void resetPostProcessors();
     /// Execute post-processing on a sub-lattice
@@ -156,6 +157,10 @@ public:
     virtual DataUnSerializer<T>& getSubUnSerializer (
             int x0_, int x1_, int y0_, int y1_, int z0_, int z1_,
             IndexOrdering::OrderingT ordering );
+    virtual MultiDataDistribution3D getDataDistribution() const;
+    virtual SpatiallyExtendedObject3D* getComponent(int iBlock);
+    virtual SpatiallyExtendedObject3D const* getComponent(int iBlock) const;
+    virtual multiPhysics::MultiPhysicsId getMultiPhysicsId() const;
 public:
     /// Apply streaming step to bulk (non-boundary) cells
     void bulkStream(int x0, int x1, int y0, int y1, int z0, int z1);

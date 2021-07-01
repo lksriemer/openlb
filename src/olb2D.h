@@ -1,6 +1,5 @@
 #include <complexGrids/mpiManager/mpiManager.h>
 #include <core/core2D.h>
-#include <contrib/contrib2D.h>
 #include <boundaryConditions/boundaryConditions2D.h>
 #include <complexDynamics/complexDynamics2D.h>
 #include <io/io2D.h>

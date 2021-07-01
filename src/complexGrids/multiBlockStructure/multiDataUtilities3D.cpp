@@ -27,6 +27,7 @@
 #include "complexGrids/mpiManager/mpiManager.h"
 #include "multiDataUtilities3D.h"
 #include "core/dataFields3D.hh" // neded for template instantiation
+#include "utilities/olbAlgorithms.h"
 
 namespace olb {
 
@@ -62,7 +63,10 @@ MultiDataDistribution3D createRegularDataDistribution (
 }
 
 MultiDataDistribution3D createRegularDataDistribution(int nx, int ny, int nz, int envelopeWidth) {
-    return createRegularDataDistribution(nx, ny, nz, singleton::mpi().getSize(), 1, 1, envelopeWidth);
+    std::vector<int> repartition = algorithm::evenRepartition(singleton::mpi().getSize(), 3);
+    return createRegularDataDistribution ( nx, ny, nz,
+                                           repartition[0], repartition[1], repartition[2],
+                                           envelopeWidth );
 }
 
    
@@ -181,6 +185,24 @@ MultiDataDistribution3D createZSlicedDataDistribution3D (
         dataDistribution.addBlock( 0, nX-1, 0, nY-1, posZ, iZ-1, envelopeWidth, iBlock);
     }
     return dataDistribution;
+}
+
+MultiDataDistribution3D createXSlicedDataDistribution3D (
+        CellTypeField3D const& cellTypeField, int envelopeWidth)
+{
+	return createXSlicedDataDistribution3D(cellTypeField, singleton::mpi().getSize(), envelopeWidth);
+}
+
+MultiDataDistribution3D createYSlicedDataDistribution3D (
+        CellTypeField3D const& cellTypeField, int envelopeWidth)
+{
+	return createYSlicedDataDistribution3D(cellTypeField, singleton::mpi().getSize(), envelopeWidth);
+}
+
+MultiDataDistribution3D createZSlicedDataDistribution3D (
+        CellTypeField3D const& cellTypeField, int envelopeWidth)
+{
+	return createZSlicedDataDistribution3D(cellTypeField, singleton::mpi().getSize(), envelopeWidth);
 }
 
 }  // namespace olb

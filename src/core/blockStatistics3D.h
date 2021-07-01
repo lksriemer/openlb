@@ -44,7 +44,7 @@ public:
     ScalarField3D<T>   const& getVelocityNorm() const;
     ScalarField3D<T>   const& getVorticityNorm() const;
     TensorField3D<T,6> const& getStrainRate() const;
-    TensorField3D<T,6> const& getStress() const;
+    TensorField3D<T,6> const& getStrainRateFromStress() const;
     ScalarField3D<T>   const& getDivRhoU() const;
     ScalarField3D<T>   const& getPoissonTerm() const;
     TensorField3D<T,Lattice<T>::q > const& getPopulations() const;

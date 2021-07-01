@@ -29,7 +29,7 @@
 #ifndef MRT_HELPERS_H
 #define MRT_HELPERS_H
 
-#include "../core/lbHelpers.h"
+#include "core/lbHelpers.h"
 #include "mrtLatticeDescriptors.h"
 
 namespace olb {

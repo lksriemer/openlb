@@ -42,9 +42,17 @@ ZouHeDynamics<T,Lattice,Dynamics,direction,orientation>::ZouHeDynamics (
 { }
 
 template<typename T, template<typename U> class Lattice, typename Dynamics, int direction, int orientation>
-ZouHeDynamics<T,Lattice,Dynamics,direction,orientation>* ZouHeDynamics<T,Lattice, Dynamics, direction, orientation>::clone() const
+ZouHeDynamics<T,Lattice,Dynamics,direction,orientation>*
+    ZouHeDynamics<T,Lattice, Dynamics, direction, orientation>::clone() const
 {
     return new ZouHeDynamics<T,Lattice,Dynamics,direction,orientation>(*this);
+}
+
+template<typename T, template<typename U> class Lattice, typename Dynamics, int direction, int orientation>
+T ZouHeDynamics<T,Lattice, Dynamics, direction, orientation>::
+    computeEquilibrium(int iPop, T rho, const T u[Lattice<T>::d], T uSqr) const
+{
+    return boundaryDynamics.computeEquilibrium(iPop, rho, u, uSqr);
 }
 
 template<typename T, template<typename U> class Lattice, typename Dynamics, int direction, int orientation>
@@ -86,19 +94,18 @@ void ZouHeDynamics<T,Lattice,Dynamics,direction,orientation>::collide (
 
     T uSqr = util::normSqr<T,L::d>(u);
 
-    // The unknown non equilibrium populations are bouced back
+    // The unknown non equilibrium populations are bounced back
     // (f[3] = feq[3] + fneq[7], f[4] = feq[4] + fneq[8], 
     //  f[5] = feq[5] + fneq[1])
     for (unsigned iPop = 0; iPop < missingIndexes.size(); ++iPop)
     {
         cell[missingIndexes[iPop]] = cell[util::opposite<L>(missingIndexes[iPop])]
-                            - lbH::equilibrium(util::opposite<L>(missingIndexes[iPop]), rho, u, uSqr)
-                            +  lbH::equilibrium(missingIndexes[iPop], rho, u, uSqr);
-
+            - computeEquilibrium(util::opposite<L>(missingIndexes[iPop]), rho, u, uSqr)
+            + computeEquilibrium(missingIndexes[iPop], rho, u, uSqr);
     }
 
-    // We recompute rho and u in order to have the new impulsion and density. Since
-    // the impulsion is not conserved from this scheme, we will corect it. By adding
+    // We recompute rho and u in order to have the new momentum and density. Since
+    // the momentum is not conserved from this scheme, we will corect it. By adding
     // a contribution to the missingDiagonalVelocities.
     lbH::computeRhoU(cell,falseRho,falseU);
 
@@ -152,9 +159,8 @@ void ZouHeDynamics<T,Lattice,Dynamics,direction,orientation>::staticCollide (
     for (unsigned iPop = 0; iPop < missingIndexes.size(); ++iPop)
     {
         cell[missingIndexes[iPop]] = cell[util::opposite<L>(missingIndexes[iPop])]
-                            - lbH::equilibrium(util::opposite<L>(missingIndexes[iPop]), rho, u, uSqr)
-                            +  lbH::equilibrium(missingIndexes[iPop], rho, u, uSqr);
-
+            - computeEquilibrium(util::opposite<L>(missingIndexes[iPop]), rho, u, uSqr)
+            + computeEquilibrium(missingIndexes[iPop], rho, u, uSqr);
     }
 
     T falseRho, falseU[L::d];
@@ -186,6 +192,18 @@ template<typename T, template<typename U> class Lattice, typename Dynamics, int 
 void ZouHeDynamics<T,Lattice,Dynamics,direction,orientation>::setOmega(T omega_)
 {
     boundaryDynamics.setOmega(omega_);
+}
+
+template<typename T, template<typename U> class Lattice, typename Dynamics, int direction, int orientation>
+T ZouHeDynamics<T,Lattice,Dynamics,direction,orientation>::getParameter(int whichParameter) const 
+{
+    return boundaryDynamics.getParameter(whichParameter);
+}
+
+template<typename T, template<typename U> class Lattice, typename Dynamics, int direction, int orientation>
+void ZouHeDynamics<T,Lattice,Dynamics,direction,orientation>::setParameter(int whichParameter, T value)
+{
+    boundaryDynamics.setParameter(whichParameter, value);
 }
 
 

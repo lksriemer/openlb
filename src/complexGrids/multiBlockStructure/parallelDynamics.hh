@@ -38,22 +38,43 @@ namespace olb {
 ////////////////////// Class ParallelDynamics /////////////////////////////
 
 template<typename T, template<typename U> class Lattice>
-ParallelDynamics<T,Lattice>::ParallelDynamics(Cell<T,Lattice>* baseCell_, int onProcessor_)
-    : baseCell(baseCell_),
-      onProcessor(onProcessor_)
+ParallelDynamics<T,Lattice>::ParallelDynamics(std::vector<Cell<T,Lattice>*>& baseCell_)
+    : baseCell(baseCell_)
 { }
 
 template<typename T, template<typename U> class Lattice>
 Dynamics<T,Lattice>* ParallelDynamics<T,Lattice>::clone() const {
-    return new ParallelDynamics(baseCell, onProcessor);
+    return new ParallelDynamics(baseCell);
+}
+
+template<typename T, template<typename U> class Lattice>
+T ParallelDynamics<T,Lattice>::computeEquilibrium(int iPop, T rho, const T u[Lattice<T>::d], T uSqr) const
+{
+    T eq = T();
+    if (baseCell[0]) {
+        eq = baseCell[0] -> computeEquilibrium(iPop, rho, u, uSqr);
+    }
+    singleton::mpi().sendToMaster(&eq, 1, baseCell[0]);
+    return eq;
+}
+
+template<typename T, template<typename U> class Lattice>
+void ParallelDynamics<T,Lattice>::iniEquilibrium(Cell<T,Lattice>& cell, T rho, const T u[Lattice<T>::d]) {
+    for (unsigned iCell=0; iCell<baseCell.size(); ++iCell) {
+        if (baseCell[iCell]) {
+            baseCell[iCell] -> getDynamics() -> iniEquilibrium(*baseCell[iCell], rho, u);
+        }
+    }
 }
 
 template<typename T, template<typename U> class Lattice>
 void ParallelDynamics<T,Lattice>::collide(Cell<T,Lattice>& cell,
-                                             LatticeStatistics<T>& statistics_)
+                                          LatticeStatistics<T>& statistics_)
 {
-    if (baseCell) {
-        baseCell -> collide(statistics_);
+    for (unsigned iCell=0; iCell<baseCell.size(); ++iCell) {
+        if (baseCell[iCell]) {
+            baseCell[iCell] -> collide(statistics_);
+        }
     }
 }
 
@@ -62,46 +83,39 @@ void ParallelDynamics<T,Lattice>::staticCollide (
         Cell<T,Lattice>& cell, const T u[Lattice<T>::d],
         LatticeStatistics<T>& statistics_ )
 {
-    if (baseCell) {
-        baseCell -> staticCollide(u, statistics_);
-    }
-}
-
-template<typename T, template<typename U> class Lattice>
-void ParallelDynamics<T,Lattice>::iniEquilibrium (
-        Cell<T,Lattice>& cell, T rho, const T u[Lattice<T>::d] )
-{
-    if (baseCell) {
-        baseCell -> iniEquilibrium(rho, u);
+    for (unsigned iCell=0; iCell<baseCell.size(); ++iCell) {
+        if (baseCell[iCell]) {
+            baseCell[iCell] -> staticCollide(u, statistics_);
+        }
     }
 }
 
 template<typename T, template<typename U> class Lattice>
 T ParallelDynamics<T,Lattice>::computeRho(Cell<T,Lattice> const& cell) const {
-    T rho;
-    if (baseCell) {
-        rho = baseCell -> computeRho();
+    T rho = T();
+    if (baseCell[0]) {
+        rho = baseCell[0] -> computeRho();
     }
-    singleton::mpi().bCast(&rho, 1, onProcessor);
+    singleton::mpi().sendToMaster(&rho, 1, baseCell[0]);
     return rho;
 }
 
 template<typename T, template<typename U> class Lattice>
 void ParallelDynamics<T,Lattice>::computeU(Cell<T,Lattice> const& cell, T u[Lattice<T>::d] ) const
 {
-    if (baseCell) {
-        baseCell -> computeU(u);
+    if (baseCell[0]) {
+        baseCell[0] -> computeU(u);
     }
-    singleton::mpi().bCast(u, Lattice<T>::d, onProcessor);
+    singleton::mpi().sendToMaster(u, Lattice<T>::d, baseCell[0]);
 }
 
 template<typename T, template<typename U> class Lattice>
 void ParallelDynamics<T,Lattice>::computeJ(Cell<T,Lattice> const& cell, T j[Lattice<T>::d] ) const
 {
-    if (baseCell) {
-        baseCell -> getDynamics() -> computeJ(*baseCell, j);
+    if (baseCell[0]) {
+        baseCell[0] -> getDynamics() -> computeJ(*baseCell[0], j);
     }
-    singleton::mpi().bCast(j, Lattice<T>::d, onProcessor);
+    singleton::mpi().sendToMaster(j, Lattice<T>::d, baseCell[0]);
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -109,21 +123,21 @@ void ParallelDynamics<T,Lattice>::computeStress (
         Cell<T,Lattice> const& cell, T rho, const T u[Lattice<T>::d],
         T pi[util::TensorVal<Lattice<T> >::n] ) const
 {
-    if (baseCell) {
-        baseCell -> getDynamics() -> computeStress(*baseCell, rho, u, pi);
+    if (baseCell[0]) {
+        baseCell[0] -> getDynamics() -> computeStress(*baseCell[0], rho, u, pi);
     }
-    singleton::mpi().bCast(pi, util::TensorVal<Lattice<T> >::n, onProcessor);
+    singleton::mpi().sendToMaster(pi, util::TensorVal<Lattice<T> >::n, baseCell[0]);
 }
 
 template<typename T, template<typename U> class Lattice>
 void ParallelDynamics<T,Lattice>::computeRhoU (
         Cell<T,Lattice> const& cell, T& rho, T u[Lattice<T>::d] ) const
 {
-    if (baseCell) {
-        baseCell -> getDynamics() -> computeRhoU(*baseCell, rho, u);
+    if (baseCell[0]) {
+        baseCell[0] -> computeRhoU(rho, u);
     }
-    singleton::mpi().bCast(&rho, 1, onProcessor);
-    singleton::mpi().bCast(u, Lattice<T>::d, onProcessor);
+    singleton::mpi().sendToMaster(&rho, 1, baseCell[0]);
+    singleton::mpi().sendToMaster(u, Lattice<T>::d, baseCell[0]);
 }
 
 
@@ -132,51 +146,57 @@ void ParallelDynamics<T,Lattice>::computeAllMomenta (
         Cell<T,Lattice> const& cell, T& rho, T u[Lattice<T>::d],
         T pi[util::TensorVal<Lattice<T> >::n] ) const
 {
-    if (baseCell) {
-        baseCell -> computeAllMomenta(rho, u, pi);
+    if (baseCell[0]) {
+        baseCell[0] -> computeAllMomenta(rho, u, pi);
     }
-    singleton::mpi().bCast(&rho, 1, onProcessor);
-    singleton::mpi().bCast(u, Lattice<T>::d, onProcessor);
-    singleton::mpi().bCast(pi, util::TensorVal<Lattice<T> >::n, onProcessor);
+    singleton::mpi().sendToMaster(&rho, 1, baseCell[0]);
+    singleton::mpi().sendToMaster(u, Lattice<T>::d, baseCell[0]);
+    singleton::mpi().sendToMaster(pi, util::TensorVal<Lattice<T> >::n, baseCell[0]);
 }
 
 template<typename T, template<typename U> class Lattice>
 void ParallelDynamics<T,Lattice>::computePopulations(Cell<T,Lattice> const& cell, T* f) const
 {
-    if (baseCell) {
-        baseCell -> computePopulations(f);
+    if (baseCell[0]) {
+        baseCell[0] -> computePopulations(f);
     }
-    singleton::mpi().bCast(f, Lattice<T>::q, onProcessor);
+    singleton::mpi().sendToMaster(f, Lattice<T>::q, baseCell[0]);
 }
 
 template<typename T, template<typename U> class Lattice>
 void ParallelDynamics<T,Lattice>::computeExternalField (
         Cell<T,Lattice> const& cell, int pos, int size, T* ext ) const
 {
-    if (baseCell) {
-        baseCell -> computeExternalField(pos, size, ext);
+    if (baseCell[0]) {
+        baseCell[0] -> computeExternalField(pos, size, ext);
     }
-    singleton::mpi().bCast(ext, Lattice<T>::ExternalField::numScalars, onProcessor);
+    singleton::mpi().sendToMaster(ext, Lattice<T>::ExternalField::numScalars, baseCell[0]);
 }
 
 template<typename T, template<typename U> class Lattice>
 void ParallelDynamics<T,Lattice>::defineRho(Cell<T,Lattice>& cell, T rho) {
-    if (baseCell) {
-        baseCell -> defineRho(rho);
+    for (unsigned iCell=0; iCell<baseCell.size(); ++iCell) {
+        if (baseCell[iCell]) {
+            baseCell[iCell] -> defineRho(rho);
+        }
     }
 }
 
 template<typename T, template<typename U> class Lattice>
 void ParallelDynamics<T,Lattice>::defineU(Cell<T,Lattice>& cell, const T u[Lattice<T>::d]) {
-    if (baseCell) {
-        baseCell -> defineU(u);
+    for (unsigned iCell=0; iCell<baseCell.size(); ++iCell) {
+        if (baseCell[iCell]) {
+            baseCell[iCell] -> defineU(u);
+        }
     }
 }
 
 template<typename T, template<typename U> class Lattice>
 void ParallelDynamics<T,Lattice>::defineRhoU(Cell<T,Lattice>& cell, T rho, const T u[Lattice<T>::d]) {
-    if (baseCell) {
-        baseCell -> defineRhoU(rho, u);
+    for (unsigned iCell=0; iCell<baseCell.size(); ++iCell) {
+        if (baseCell[iCell]) {
+            baseCell[iCell] -> defineU(u);
+        }
     }
 }
 
@@ -185,16 +205,20 @@ void ParallelDynamics<T,Lattice>::defineAllMomenta (
         Cell<T,Lattice>& cell, T rho, const T u[Lattice<T>::d],
         const T pi[util::TensorVal<Lattice<T> >::n] )
 {
-    if (baseCell) {
-        baseCell -> defineAllMomenta(rho, u, pi);
+    for (unsigned iCell=0; iCell<baseCell.size(); ++iCell) {
+        if (baseCell[iCell]) {
+            baseCell[iCell] -> defineAllMomenta(rho, u, pi);
+        }
     }
 }
 
 template<typename T, template<typename U> class Lattice>
 void ParallelDynamics<T,Lattice>::definePopulations(Cell<T,Lattice>& cell, const T* f)
 {
-    if (baseCell) {
-        baseCell -> definePopulations(f);
+    for (unsigned iCell=0; iCell<baseCell.size(); ++iCell) {
+        if (baseCell[iCell]) {
+            baseCell[iCell] -> definePopulations(f);
+        }
     }
 }
 
@@ -202,45 +226,62 @@ template<typename T, template<typename U> class Lattice>
 void ParallelDynamics<T,Lattice>::defineExternalField (
         Cell<T,Lattice>& cell, int pos, int size, const T* ext )
 {
-    if (baseCell) {
-        baseCell -> defineExternalField(pos, size, ext);
+    for (unsigned iCell=0; iCell<baseCell.size(); ++iCell) {
+        if (baseCell[iCell]) {
+            baseCell[iCell] -> defineExternalField(pos, size, ext);
+        }
     }
 }
 
 template<typename T, template<typename U> class Lattice>
 T ParallelDynamics<T,Lattice>::getOmega() const {
     T omega;
-    if (baseCell) {
-        omega = baseCell -> getDynamics() -> getOmega();
+    if (baseCell[0]) {
+        omega = baseCell[0] -> getDynamics() -> getOmega();
     }
-    singleton::mpi().bCast(&omega, 1, onProcessor);
+    singleton::mpi().sendToMaster(&omega, 1, baseCell[0]);
     return omega;
 }
 
 template<typename T, template<typename U> class Lattice>
 void ParallelDynamics<T,Lattice>::setOmega(T omega_) {
-    if (baseCell) {
-        baseCell -> getDynamics() -> setOmega(omega_);
+    for (unsigned iCell=0; iCell<baseCell.size(); ++iCell) {
+        if (baseCell[iCell]) {
+            baseCell[iCell] -> getDynamics() -> setOmega(omega_);
+        }
     }
 }
 
 ////////////////// Class ConstParallelDynamics /////////////////////////
 
 template<typename T, template<typename U> class Lattice>
-ConstParallelDynamics<T,Lattice>::ConstParallelDynamics (
-        Cell<T,Lattice> const* baseCell_, int onProcessor_ )
-    : baseCell(baseCell_),
-      onProcessor(onProcessor_)
+ConstParallelDynamics<T,Lattice>::ConstParallelDynamics(std::vector<Cell<T,Lattice> const*>& baseCell_)
+    : baseCell(baseCell_)
 { }
 
 template<typename T, template<typename U> class Lattice>
 Dynamics<T,Lattice>* ConstParallelDynamics<T,Lattice>::clone() const {
-    return new ConstParallelDynamics(baseCell, onProcessor);
+    return new ConstParallelDynamics(baseCell);
 }
 
 template<typename T, template<typename U> class Lattice>
+T ConstParallelDynamics<T,Lattice>::computeEquilibrium(int iPop, T rho, const T u[Lattice<T>::d], T uSqr) const
+{
+    T eq = T();
+    if (baseCell[0]) {
+        eq = baseCell[0] -> computeEquilibrium(iPop, rho, u, uSqr);
+    }
+    singleton::mpi().sendToMaster(&eq, 1, baseCell[0]);
+    return eq;
+}
+
+template<typename T, template<typename U> class Lattice>
+void ConstParallelDynamics<T,Lattice>::iniEquilibrium(Cell<T,Lattice>& cell, T rho, const T u[Lattice<T>::d])
+{ }
+
+template<typename T, template<typename U> class Lattice>
 void ConstParallelDynamics<T,Lattice>::collide(Cell<T,Lattice>& cell,
-                                                  LatticeStatistics<T>& statistics_)
+                                               LatticeStatistics<T>& statistics_)
 { }
 
 template<typename T, template<typename U> class Lattice>
@@ -252,29 +293,29 @@ void ConstParallelDynamics<T,Lattice>::staticCollide (
 template<typename T, template<typename U> class Lattice>
 T ConstParallelDynamics<T,Lattice>::computeRho(Cell<T,Lattice> const& cell) const {
     T rho;
-    if (baseCell) {
-        rho = baseCell -> computeRho();
+    if (baseCell[0]) {
+        rho = baseCell[0] -> computeRho();
     }
-    singleton::mpi().bCast(&rho, 1, onProcessor);
+    singleton::mpi().sendToMaster(&rho, 1, baseCell[0]);
     return rho;
 }
 
 template<typename T, template<typename U> class Lattice>
 void ConstParallelDynamics<T,Lattice>::computeU(Cell<T,Lattice> const& cell, T u[Lattice<T>::d] ) const
 {
-    if (baseCell) {
-        baseCell -> computeU(u);
+    if (baseCell[0]) {
+        baseCell[0] -> computeU(u);
     }
-    singleton::mpi().bCast(u, Lattice<T>::d, onProcessor);
+    singleton::mpi().sendToMaster(u, Lattice<T>::d, baseCell[0]);
 }
 
 template<typename T, template<typename U> class Lattice>
 void ConstParallelDynamics<T,Lattice>::computeJ(Cell<T,Lattice> const& cell, T j[Lattice<T>::d] ) const
 {
-    if (baseCell) {
-        baseCell -> getDynamics() -> computeJ(*baseCell, j);
+    if (baseCell[0]) {
+        baseCell[0] -> getDynamics() -> computeJ(*baseCell[0], j);
     }
-    singleton::mpi().bCast(j, Lattice<T>::d, onProcessor);
+    singleton::mpi().sendToMaster(j, Lattice<T>::d, baseCell[0]);
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -282,21 +323,21 @@ void ConstParallelDynamics<T,Lattice>::computeStress (
         Cell<T,Lattice> const& cell, T rho, const T u[Lattice<T>::d],
         T pi[util::TensorVal<Lattice<T> >::n] ) const
 {
-    if (baseCell) {
-        baseCell -> getDynamics() -> computeStress(*baseCell, rho, u, pi);
+    if (baseCell[0]) {
+        baseCell[0] -> getDynamics() -> computeStress(*baseCell[0], rho, u, pi);
     }
-    singleton::mpi().bCast(pi, util::TensorVal<Lattice<T> >::n, onProcessor);
+    singleton::mpi().sendToMaster(pi, util::TensorVal<Lattice<T> >::n, baseCell[0]);
 }
 
 template<typename T, template<typename U> class Lattice>
 void ConstParallelDynamics<T,Lattice>::computeRhoU (
         Cell<T,Lattice> const& cell, T& rho, T u[Lattice<T>::d] ) const
 {
-    if (baseCell) {
-        baseCell -> getDynamics() -> computeRhoU(*baseCell, rho, u);
+    if (baseCell[0]) {
+        baseCell[0] -> computeRhoU(rho, u);
     }
-    singleton::mpi().bCast(&rho, 1, onProcessor);
-    singleton::mpi().bCast(u, Lattice<T>::d, onProcessor);
+    singleton::mpi().sendToMaster(&rho, 1, baseCell[0]);
+    singleton::mpi().sendToMaster(u, Lattice<T>::d, baseCell[0]);
 }
 
 
@@ -305,32 +346,32 @@ void ConstParallelDynamics<T,Lattice>::computeAllMomenta (
         Cell<T,Lattice> const& cell, T& rho, T u[Lattice<T>::d],
         T pi[util::TensorVal<Lattice<T> >::n] ) const
 {
-    if (baseCell) {
-        baseCell -> getDynamics() -> computeAllMomenta(*baseCell, rho, u, pi);
+    if (baseCell[0]) {
+        baseCell[0] -> computeAllMomenta(rho, u, pi);
     }
-    singleton::mpi().bCast(&rho, 1, onProcessor);
-    singleton::mpi().bCast(u, Lattice<T>::d, onProcessor);
-    singleton::mpi().bCast(pi, util::TensorVal<Lattice<T> >::n, onProcessor);
+    singleton::mpi().sendToMaster(&rho, 1, baseCell[0]);
+    singleton::mpi().sendToMaster(u, Lattice<T>::d, baseCell[0]);
+    singleton::mpi().sendToMaster(pi, util::TensorVal<Lattice<T> >::n, baseCell[0]);
 }
 
 template<typename T, template<typename U> class Lattice>
 void ConstParallelDynamics<T,Lattice>::computePopulations (
         Cell<T,Lattice> const& cell, T* f ) const
 {
-    if (baseCell) {
-        baseCell -> computePopulations(f);
+    if (baseCell[0]) {
+        baseCell[0] -> computePopulations(f);
     }
-    singleton::mpi().bCast(f, Lattice<T>::q, onProcessor);
+    singleton::mpi().sendToMaster(f, Lattice<T>::q, baseCell[0]);
 }
 
 template<typename T, template<typename U> class Lattice>
 void ConstParallelDynamics<T,Lattice>::computeExternalField (
         Cell<T,Lattice> const& cell, int pos, int size, T* ext ) const
 {
-    if (baseCell) {
-        baseCell -> computeExternalField(pos, size, ext);
+    if (baseCell[0]) {
+        baseCell[0] -> computeExternalField(pos, size, ext);
     }
-    singleton::mpi().bCast(ext, Lattice<T>::ExternalField::numScalars, onProcessor);
+    singleton::mpi().sendToMaster(ext, Lattice<T>::ExternalField::numScalars, baseCell[0]);
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -364,10 +405,10 @@ void ConstParallelDynamics<T,Lattice>::defineExternalField (
 template<typename T, template<typename U> class Lattice>
 T ConstParallelDynamics<T,Lattice>::getOmega() const {
     T omega;
-    if (baseCell) {
-        omega = baseCell -> getDynamics() -> getOmega();
+    if (baseCell[0]) {
+        omega = baseCell[0] -> getDynamics() -> getOmega();
     }
-    singleton::mpi().bCast(&omega, 1, onProcessor);
+    singleton::mpi().sendToMaster(&omega, 1, baseCell[0]);
     return omega;
 }
 

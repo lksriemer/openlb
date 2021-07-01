@@ -25,7 +25,6 @@
 #ifdef PARALLEL_MODE_MPI
 
 #include "mpiManager.h"
-#include "mpiManager.hh"
 
 namespace olb {
 
@@ -45,9 +44,10 @@ void MpiManager::init(int *argc, char ***argv, bool verbous) {
     if (verbous) {
         std::cerr << "Constructing an MPI thread" << std::endl;
     }
-    ok =  MPI_Init(argc, argv)
-        | MPI_Comm_rank(MPI_COMM_WORLD,&taskId)
-        | MPI_Comm_size(MPI_COMM_WORLD,&numTasks) == 0;
+    int ok1 = MPI_Init(argc, argv);
+    int ok2 = MPI_Comm_rank(MPI_COMM_WORLD,&taskId);
+    int ok3 = MPI_Comm_size(MPI_COMM_WORLD,&numTasks);
+    ok = (ok1==0 && ok2==0 && ok3==0);
 }
 
 int MpiManager::getSize() const {
@@ -67,10 +67,12 @@ bool MpiManager::isMainProcessor() const {
 }
 
 double MpiManager::getTime() const {
+    if (!ok) return 0.;
     return MPI_Wtime();
 }
 
 void MpiManager::barrier(MPI_Comm comm) {
+    if (!ok) return;
     MPI_Barrier(comm);
 }
 
@@ -99,47 +101,39 @@ void MpiManager::send<double>(double *buf, int count, int dest, int tag, MPI_Com
 }
 
 template <>
-MPI_Request MpiManager::iSend<char>
-    (char *buf, int count, int dest, int tag, MPI_Comm comm)
+void MpiManager::iSend<char>
+    (char *buf, int count, int dest, MPI_Request* request, int tag, MPI_Comm comm)
 {
-    MPI_Request request;
     if (ok) {
-        MPI_Isend(static_cast<void*>(buf), count, MPI_CHAR, dest, tag, comm, &request);
+        MPI_Isend(static_cast<void*>(buf), count, MPI_CHAR, dest, tag, comm, request);
     }
-    return request;
 }
 
 template <>
-MPI_Request MpiManager::iSend<int>
-    (int *buf, int count, int dest, int tag, MPI_Comm comm)
+void MpiManager::iSend<int>
+    (int *buf, int count, int dest, MPI_Request* request, int tag, MPI_Comm comm)
 {
-    MPI_Request request;
     if (ok) {
-        MPI_Isend(static_cast<void*>(buf), count, MPI_INT, dest, tag, comm, &request);
+        MPI_Isend(static_cast<void*>(buf), count, MPI_INT, dest, tag, comm, request);
     }
-    return request;
 }
 
 template <>
-MPI_Request MpiManager::iSend<float>
-    (float *buf, int count, int dest, int tag, MPI_Comm comm)
+void MpiManager::iSend<float>
+    (float *buf, int count, int dest, MPI_Request* request, int tag, MPI_Comm comm)
 {
-    MPI_Request request;
     if (ok) {
-        MPI_Isend(static_cast<void*>(buf), count, MPI_FLOAT, dest, tag, comm, &request);
+        MPI_Isend(static_cast<void*>(buf), count, MPI_FLOAT, dest, tag, comm, request);
     }
-    return request;
 }
 
 template <>
-MPI_Request MpiManager::iSend<double>
-    (double *buf, int count, int dest, int tag, MPI_Comm comm)
+void MpiManager::iSend<double>
+    (double *buf, int count, int dest, MPI_Request* request, int tag, MPI_Comm comm)
 {
-    MPI_Request request;
     if (ok) {
-        MPI_Isend(static_cast<void*>(buf), count, MPI_DOUBLE, dest, tag, comm, &request);
+        MPI_Isend(static_cast<void*>(buf), count, MPI_DOUBLE, dest, tag, comm, request);
     }
-    return request;
 }
 
 template <>
@@ -186,7 +180,6 @@ void MpiManager::iSendRequestFree<double>
     MPI_Request_free(&request);
 }
 
-
 template <>
 void MpiManager::receive<char>(char *buf, int count, int source, int tag, MPI_Comm comm)
 {
@@ -220,43 +213,84 @@ void MpiManager::receive<double>(double *buf, int count, int source, int tag, MP
 }
 
 template <>
-MPI_Request MpiManager::iRecv<char>(char *buf, int count, int source, int tag, MPI_Comm comm)
+void MpiManager::sendToMaster<char>(char* sendBuf, int sendCount, bool iAmRoot, MPI_Comm comm)
 {
-    MPI_Request request;
-    if (ok) {
-      MPI_Irecv(static_cast<void*>(buf), count, MPI_CHAR, source, tag, comm, &request);
+    if (!ok) return;
+    if (iAmRoot && !isMainProcessor()) {
+        send(sendBuf, sendCount, 0);
     }
-    return request;
+    if (isMainProcessor() && !iAmRoot) {
+        receive(sendBuf, sendCount, MPI_ANY_SOURCE);
+    }
 }
 
 template <>
-MPI_Request MpiManager::iRecv<int>(int *buf, int count, int source, int tag, MPI_Comm comm)
+void MpiManager::sendToMaster<int>(int* sendBuf, int sendCount, bool iAmRoot, MPI_Comm comm)
 {
-    MPI_Request request;
-    if (ok) {
-      MPI_Irecv(static_cast<void*>(buf), count, MPI_INT, source, tag, comm, &request);
+    if (!ok) return;
+    if (iAmRoot && !isMainProcessor()) {
+        send(sendBuf, sendCount, 0);
     }
-    return request;
+    if (isMainProcessor() && !iAmRoot) {
+        receive(sendBuf, sendCount, MPI_ANY_SOURCE);
+    }
 }
 
 template <>
-MPI_Request MpiManager::iRecv<float>(float *buf, int count, int source, int tag, MPI_Comm comm)
+void MpiManager::sendToMaster<float>(float* sendBuf, int sendCount, bool iAmRoot, MPI_Comm comm)
 {
-    MPI_Request request;
-    if (ok) {
-      MPI_Irecv(static_cast<void*>(buf), count, MPI_FLOAT, source, tag, comm, &request);
+    if (!ok) return;
+    if (iAmRoot && !isMainProcessor()) {
+        send(sendBuf, sendCount, 0);
     }
-    return request;
+    if (isMainProcessor() && !iAmRoot) {
+        receive(sendBuf, sendCount, MPI_ANY_SOURCE);
+    }
 }
 
 template <>
-MPI_Request MpiManager::iRecv<double>(double *buf, int count, int source, int tag, MPI_Comm comm)
+void MpiManager::sendToMaster<double>(double* sendBuf, int sendCount, bool iAmRoot, MPI_Comm comm)
 {
-    MPI_Request request;
-    if (ok) {
-      MPI_Irecv(static_cast<void*>(buf), count, MPI_DOUBLE, source, tag, comm, &request);
+    if (!ok) return;
+    if (iAmRoot && !isMainProcessor()) {
+        send(sendBuf, sendCount, 0);
     }
-    return request;
+    if (isMainProcessor() && !iAmRoot) {
+        receive(sendBuf, sendCount, MPI_ANY_SOURCE);
+    }
+}
+
+
+template <>
+void MpiManager::iRecv<char>(char *buf, int count, int source, MPI_Request* request, int tag, MPI_Comm comm)
+{
+    if (ok) {
+      MPI_Irecv(static_cast<void*>(buf), count, MPI_CHAR, source, tag, comm, request);
+    }
+}
+
+template <>
+void MpiManager::iRecv<int>(int *buf, int count, int source, MPI_Request* request, int tag, MPI_Comm comm)
+{
+    if (ok) {
+      MPI_Irecv(static_cast<void*>(buf), count, MPI_INT, source, tag, comm, request);
+    }
+}
+
+template <>
+void MpiManager::iRecv<float>(float *buf, int count, int source, MPI_Request* request, int tag, MPI_Comm comm)
+{
+    if (ok) {
+      MPI_Irecv(static_cast<void*>(buf), count, MPI_FLOAT, source, tag, comm, request);
+    }
+}
+
+template <>
+void MpiManager::iRecv<double>(double *buf, int count, int source, MPI_Request* request, int tag, MPI_Comm comm)
+{
+    if (ok) {
+      MPI_Irecv(static_cast<void*>(buf), count, MPI_DOUBLE, source, tag, comm, request);
+    }
 }
 
 template <>
@@ -319,6 +353,7 @@ template <>
 void MpiManager::scatterv_impl<char>(char* sendBuf, int* sendCounts, int* displs,
                                      char* recvBuf, int recvCount, int root, MPI_Comm comm)
 {
+    if (!ok) return;
     MPI_Scatterv(static_cast<void*>(sendBuf),
                  sendCounts, displs, MPI_CHAR,
                  static_cast<void*>(recvBuf),
@@ -329,6 +364,7 @@ template <>
 void MpiManager::scatterv_impl<int>(int *sendBuf, int* sendCounts, int* displs,
                                 int* recvBuf, int recvCount, int root, MPI_Comm comm)
 {
+    if (!ok) return;
     MPI_Scatterv(static_cast<void*>(sendBuf),
                  sendCounts, displs, MPI_INT,
                  static_cast<void*>(recvBuf),
@@ -339,6 +375,7 @@ template <>
 void MpiManager::scatterv_impl<float>(float *sendBuf, int* sendCounts, int* displs,
                                   float* recvBuf, int recvCount, int root, MPI_Comm comm)
 {
+    if (!ok) return;
     MPI_Scatterv(static_cast<void*>(sendBuf),
                  sendCounts, displs, MPI_FLOAT,
                  static_cast<void*>(recvBuf),
@@ -349,6 +386,7 @@ template <>
 void MpiManager::scatterv_impl<double>(double *sendBuf, int* sendCounts, int* displs,
                                    double* recvBuf, int recvCount, int root, MPI_Comm comm)
 {
+    if (!ok) return;
     MPI_Scatterv(static_cast<void*>(sendBuf),
                  sendCounts, displs, MPI_DOUBLE,
                  static_cast<void*>(recvBuf),
@@ -360,6 +398,7 @@ void MpiManager::gatherv_impl<char>(char* sendBuf, int sendCount,
                                char* recvBuf, int* recvCounts, int* displs,
                                int root, MPI_Comm comm)
 {
+    if (!ok) return;
     MPI_Gatherv(static_cast<void*>(sendBuf), sendCount, MPI_CHAR,
                 static_cast<void*>(recvBuf), recvCounts, displs, MPI_CHAR,
                 root, comm);
@@ -370,6 +409,7 @@ void MpiManager::gatherv_impl<int>(int* sendBuf, int sendCount,
                                int* recvBuf, int* recvCounts, int* displs,
                                int root, MPI_Comm comm)
 {
+    if (!ok) return;
     MPI_Gatherv(static_cast<void*>(sendBuf), sendCount, MPI_INT,
                 static_cast<void*>(recvBuf), recvCounts, displs, MPI_INT,
                 root, comm);
@@ -380,6 +420,7 @@ void MpiManager::gatherv_impl<float>(float* sendBuf, int sendCount,
                                  float* recvBuf, int* recvCounts, int* displs,
                                  int root, MPI_Comm comm)
 {
+    if (!ok) return;
     MPI_Gatherv(static_cast<void*>(sendBuf), sendCount, MPI_FLOAT,
                 static_cast<void*>(recvBuf), recvCounts, displs, MPI_FLOAT,
                 root, comm);
@@ -390,6 +431,7 @@ void MpiManager::gatherv_impl<double>(double* sendBuf, int sendCount,
                                   double* recvBuf, int* recvCounts, int* displs,
                                   int root, MPI_Comm comm)
 {
+    if (!ok) return;
     MPI_Gatherv(static_cast<void*>(sendBuf), sendCount, MPI_DOUBLE,
                 static_cast<void*>(recvBuf), recvCounts, displs, MPI_DOUBLE,
                 root, comm);
@@ -425,6 +467,58 @@ void MpiManager::bCast<double>(double* sendBuf, int sendCount, int root, MPI_Com
     if (!ok) return;
     MPI_Bcast(static_cast<void*>(sendBuf),
               sendCount, MPI_DOUBLE, root, comm);
+}
+
+template <>
+void MpiManager::bCastThroughMaster<char>(char* sendBuf, int sendCount, bool iAmRoot, MPI_Comm comm)
+{
+    if (!ok) return;
+    if (iAmRoot && !isMainProcessor()) {
+        send(sendBuf, sendCount, 0);
+    }
+    if (isMainProcessor() && !iAmRoot) {
+        receive(sendBuf, sendCount, MPI_ANY_SOURCE);
+    }
+    bCast(sendBuf, sendCount, 0);
+}
+
+template <>
+void MpiManager::bCastThroughMaster<int>(int* sendBuf, int sendCount, bool iAmRoot, MPI_Comm comm)
+{
+    if (!ok) return;
+    if (iAmRoot && !isMainProcessor()) {
+        send(sendBuf, sendCount, 0);
+    }
+    if (isMainProcessor() && !iAmRoot) {
+        receive(sendBuf, sendCount, MPI_ANY_SOURCE);
+    }
+    bCast(sendBuf, sendCount, 0);
+}
+
+template <>
+void MpiManager::bCastThroughMaster<float>(float* sendBuf, int sendCount, bool iAmRoot, MPI_Comm comm)
+{
+    if (!ok) return;
+    if (iAmRoot && !isMainProcessor()) {
+        send(sendBuf, sendCount, 0);
+    }
+    if (isMainProcessor() && !iAmRoot) {
+        receive(sendBuf, sendCount, MPI_ANY_SOURCE);
+    }
+    bCast(sendBuf, sendCount, 0);
+}
+
+template <>
+void MpiManager::bCastThroughMaster<double>(double* sendBuf, int sendCount, bool iAmRoot, MPI_Comm comm)
+{
+    if (!ok) return;
+    if (iAmRoot && !isMainProcessor()) {
+        send(sendBuf, sendCount, 0);
+    }
+    if (isMainProcessor() && !iAmRoot) {
+        receive(sendBuf, sendCount, MPI_ANY_SOURCE);
+    }
+    bCast(sendBuf, sendCount, 0);
 }
 
 template <>
@@ -542,6 +636,75 @@ void MpiManager::reduceAndBcast<double>(double& reductVal, MPI_Op op, int root, 
     MPI_Bcast(&reductVal, 1, MPI_DOUBLE, root, comm);
 
 }
+
+void MpiManager::waitAll(MpiNonBlockingHelper& mpiNbHelper)
+{
+    if (!ok) return;
+    MPI_Waitall(mpiNbHelper.get_size(), mpiNbHelper.get_mpiRequest(), mpiNbHelper.get_mpiStatus());
+}
+
+
+MpiNonBlockingHelper::MpiNonBlockingHelper()
+{
+    _size = 0;
+}
+
+MpiNonBlockingHelper::MpiNonBlockingHelper(
+        MpiNonBlockingHelper const& rhs )
+{
+    _size          = rhs._size;
+    if (_size!=0) {
+        allocate(_size);
+        for (unsigned i=0; i<_size; i++) {
+            _mpiRequest[i] = rhs._mpiRequest[i];
+            _mpiStatus[i]  = rhs._mpiStatus[i];
+        }
+    }
+}
+
+MpiNonBlockingHelper MpiNonBlockingHelper::operator= (
+                        MpiNonBlockingHelper rhs )  {
+    MpiNonBlockingHelper tmp(rhs);
+    return tmp;
+}
+
+MpiNonBlockingHelper::~MpiNonBlockingHelper()
+{
+    free();
+}
+
+void MpiNonBlockingHelper::allocate(unsigned i)
+{
+    free();
+    _size = i;
+    _mpiRequest = new MPI_Request [i];
+    _mpiStatus  = new MPI_Status [i];
+}
+
+void MpiNonBlockingHelper::free()
+{
+    if (_size!=0) {
+        delete [] _mpiRequest;
+        delete [] _mpiStatus;
+        _size = 0;
+    }
+}
+
+unsigned const& MpiNonBlockingHelper::get_size() const
+{
+    return _size;
+}
+
+MPI_Request* MpiNonBlockingHelper::get_mpiRequest() const
+{
+    return _mpiRequest;
+}
+
+MPI_Status* MpiNonBlockingHelper::get_mpiStatus() const
+{
+    return _mpiStatus;
+}
+
 
 }  // namespace singleton
 

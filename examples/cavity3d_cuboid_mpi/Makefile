@@ -98,7 +98,7 @@ link: $(OUTPUT)
 
 $(OUTPUT): $(OBJECTS) $(ROOT)/$(LIBDIR)/lib$(LIB).a
 	@echo Link $@
-	$(CXX) $(foreach file, $(SRC), $(file).o) $@.o -L$(ROOT)/$(LIBDIR) -l$(LIB) -lm -o $@
+	$(CXX) $(foreach file, $(SRC), $(file).o) $@.o $(LDFLAGS) -L$(ROOT)/$(LIBDIR) -l$(LIB) -o $@
 
 ###########################################################################
 ## include dependencies

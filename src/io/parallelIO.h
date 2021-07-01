@@ -54,12 +54,12 @@ private:
   Modes      mode;
 };
 
-class vofstream : public std::ostream {
+class olb_ofstream : public std::ostream {
 public:
-  vofstream();
-  explicit vofstream(const char * filename,
+  olb_ofstream();
+  explicit olb_ofstream(const char * filename,
                      openmode mode = out | trunc );
-  ~vofstream();
+  ~olb_ofstream();
 
   std::streambuf* rdbuf() const;
   bool is_open();
@@ -70,12 +70,12 @@ private:
   ParBuf  mybuf;
 };
 
-class vifstream : public std::istream {
+class olb_ifstream : public std::istream {
 public:
-  vifstream();
-  explicit vifstream(const char * filename,
+  olb_ifstream();
+  explicit olb_ifstream(const char * filename,
                      openmode mode = in );
-  ~vifstream();
+  ~olb_ifstream();
 
   std::streambuf* rdbuf() const;
   bool is_open();
@@ -86,12 +86,12 @@ private:
   ParBuf  mybuf;
 };
 
-class vfstream : public std::iostream {
+class olb_fstream : public std::iostream {
 public:
-  vfstream();
-  explicit vfstream(const char * filename,
+  olb_fstream();
+  explicit olb_fstream(const char * filename,
                     openmode mode = in | out );
-  ~vfstream();
+  ~olb_fstream();
 
   std::streambuf* rdbuf() const;
   bool is_open();

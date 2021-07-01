@@ -58,6 +58,8 @@ void StraightFdBoundaryProcessor2D<T,Lattice,direction,orientation>::
         for (int iX=newX0; iX<=newX1; ++iX) {
             for (int iY=newY0; iY<=newY1; ++iY) {
                 Cell<T,Lattice>& cell = blockLattice.get(iX,iY);
+                Dynamics<T,Lattice>* dynamics = cell.getDynamics();
+
                 T rho, u[Lattice<T>::d];
                 cell.computeRhoU(rho,u);
 
@@ -79,7 +81,7 @@ void StraightFdBoundaryProcessor2D<T,Lattice,direction,orientation>::
 
                 T uSqr = util::normSqr<T,2>(u);
                 for (int iPop = 0; iPop < Lattice<T>::q; ++iPop) {
-                    cell[iPop] = lbHelpers<T,Lattice>::equilibrium(iPop,rho,u,uSqr) +
+                    cell[iPop] = dynamics -> computeEquilibrium(iPop,rho,u,uSqr) +
                                  firstOrderLbHelpers<T,Lattice>::fromPiToFneq(iPop, pi);
                 }
             }
@@ -158,7 +160,10 @@ void OuterVelocityCornerProcessor2D<T, Lattice, xNormal, yNormal>::
     T dx_uy = dx_u[1];
     T dy_uy = dy_u[1];
 
-    T omega = blockLattice.get(x,y).getDynamics() -> getOmega();
+    Cell<T,Lattice>& cell = blockLattice.get(x,y);
+    Dynamics<T,Lattice>* dynamics = cell.getDynamics();
+    T omega = dynamics -> getOmega();
+
     T sToPi = - rho / Lattice<T>::invCs2 / omega;
     T pi[util::TensorVal<Lattice<T> >::n];
     pi[xx] = (T)2 * dx_ux * sToPi;
@@ -172,8 +177,8 @@ void OuterVelocityCornerProcessor2D<T, Lattice, xNormal, yNormal>::
 
     T uSqr = util::normSqr<T,2>(u);
     for (int iPop = 0; iPop < Lattice<T>::q; ++iPop) {
-        blockLattice.get(x,y)[iPop] =
-            lbHelpers<T,Lattice>::equilibrium(iPop,rho,u,uSqr) +
+        cell[iPop] =
+            dynamics -> computeEquilibrium(iPop,rho,u,uSqr) +
             firstOrderLbHelpers<T,Lattice>::fromPiToFneq(iPop, pi);
     }
 }

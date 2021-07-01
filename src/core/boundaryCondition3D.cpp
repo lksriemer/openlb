@@ -22,6 +22,8 @@
 
 #include "boundaryCondition3D.h"
 #include "boundaryCondition3D.hh"
+#include "momentaOnBoundaries.h"
+#include "momentaOnBoundaries.hh"
 #include "momentaOnBoundaries3D.h"
 #include "momentaOnBoundaries3D.hh"
 #include "latticeDescriptors.h"

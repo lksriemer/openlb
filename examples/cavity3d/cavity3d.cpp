@@ -20,14 +20,14 @@
  *  Boston, MA  02110-1301, USA.
 */
 
-#include <vector>
-#include <cmath>
-#include <iostream>
-#include <fstream>
 #include "olb3D.h"
 #ifndef OLB_PRECOMPILED // Unless precompiled version is used,
   #include "olb3D.hh"   // include full template code
 #endif
+#include <vector>
+#include <cmath>
+#include <iostream>
+#include <fstream>
 
 using namespace olb;
 using namespace olb::descriptors;
@@ -37,7 +37,7 @@ using namespace std;
 typedef double T;
 #define DESCRIPTOR D3Q19Descriptor
 
-void iniGeometry( BlockLattice3D<T,DESCRIPTOR>& lattice,
+void iniGeometry( BlockStructure3D<T,DESCRIPTOR>& lattice,
                   LBunits<T> const& converter,
                   Dynamics<T, DESCRIPTOR>& bulkDynamics,
                   OnLatticeBoundaryCondition3D<T,DESCRIPTOR>& bc )
@@ -103,7 +103,7 @@ void iniGeometry( BlockLattice3D<T,DESCRIPTOR>& lattice,
     lattice.initialize();
 }
 
-void writeGifs(BlockLattice3D<T,DESCRIPTOR>& lattice,
+void writeGifs(BlockStructure3D<T,DESCRIPTOR>& lattice,
                LBunits<T> const& converter, int iter)
 {
     const int imSize = 600;
@@ -117,7 +117,7 @@ void writeGifs(BlockLattice3D<T,DESCRIPTOR>& lattice,
     analysis.reset();
 }
 
-void writeVTK(BlockLattice3D<T,DESCRIPTOR>& lattice,
+void writeVTK(BlockStructure3D<T,DESCRIPTOR>& lattice,
               LBunits<T> const& converter, int iter)
 {
     DataAnalysisBase3D<T,DESCRIPTOR> const& analysis = lattice.getDataAnalysis();
@@ -166,7 +166,7 @@ int main(int argc, char* argv[]) {
     iniGeometry(lattice, converter, bulkDynamics, *boundaryCondition);
 
     int iT=0;
-    for (iT=0; iT*converter.getDeltaT()<maxT; ++iT) {
+    for (iT=0; iT<converter.nStep(maxT); ++iT) {
         if (iT%converter.nStep(logT)==0) {
             cout << "step " << iT
                  << "; t=" << iT*converter.getDeltaT()
@@ -186,7 +186,7 @@ int main(int argc, char* argv[]) {
             writeVTK(lattice, converter, iT);
         }
 
-        lattice.collideAndStream();
+        lattice.collideAndStream(false);
     }
     cout << iT << endl;
 

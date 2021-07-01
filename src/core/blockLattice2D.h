@@ -32,6 +32,7 @@
 #include "dataFields2D.h"
 #include "blockStructure2D.h"
 #include "dataAnalysisBase2D.h"
+#include "multiPhysics.h"
 
 
 /// All OpenLB code is contained in this namespace.
@@ -123,7 +124,7 @@ public:
     /// Add a non-local post-processing step which couples together lattices
     virtual void addLatticeCoupling (
                 LatticeCouplingGenerator2D<T,Lattice> const& lcGen,
-                std::vector<BlockStructure2D<T,Lattice>*> partners );
+                std::vector<SpatiallyExtendedObject2D*> partners );
     /// Clean up all non-local post-processing steps
     virtual void resetPostProcessors();
     /// Execute post-processing on a sub-lattice
@@ -150,6 +151,10 @@ public:
     virtual DataUnSerializer<T>& getSubUnSerializer (
             int x0_, int x1_, int y0_, int y1_,
             IndexOrdering::OrderingT ordering );
+    virtual MultiDataDistribution2D getDataDistribution() const;
+    virtual SpatiallyExtendedObject2D* getComponent(int iBlock);
+    virtual SpatiallyExtendedObject2D const* getComponent(int iBlock) const;
+    virtual multiPhysics::MultiPhysicsId getMultiPhysicsId() const;
 public:
     /// Apply streaming step to bulk (non-boundary) cells
     void bulkStream(int x0, int x1, int y0, int y1);

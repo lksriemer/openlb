@@ -1,6 +1,6 @@
 /*  This file is part of the OpenLB library
  *
- *  Copyright (C) 2007 Jonas Latt
+ *  Copyright (C) 2008 Jonas Latt
  *  Address: Rue General Dufour 24,  1211 Geneva 4, Switzerland 
  *  E-mail: jonas.latt@gmail.com
  *
@@ -20,22 +20,41 @@
  *  Boston, MA  02110-1301, USA.
 */
 
-/** \file
- * A 2D multiblock lattice -- template instantiation.
- */
-
-#include "complexGrids/mpiManager/mpiManager.h"
-#include "multiDataHandler2D.h"
-#include "multiDataHandler2D.hh"
-#include "core/latticeDescriptors.h"
-#include "core/latticeDescriptors.hh"
+#include "olbAlgorithms.h"
 
 namespace olb {
 
-    template class SerialDataHandler2D<double, descriptors::D2Q9Descriptor>;
+namespace algorithm {
 
-#ifdef PARALLEL_MODE_MPI
-    template class ParallelDataHandler2D<double, descriptors::D2Q9Descriptor>;
-#endif
+std::vector<int> primeFactor(int value) {
+    std::vector<int> primeFactors;
+    int testFactor = 2;
+    while (testFactor <= value) {
+        if (value%testFactor==0) {
+            value /= testFactor;
+            primeFactors.push_back(testFactor);
+        }
+        else {
+            ++testFactor;
+        }
+    }
+    return primeFactors;
+}
+
+std::vector<int> evenRepartition(int value, int d) {
+    std::vector<int> primeFactors = primeFactor(value);
+    std::vector<int> repartition(d);
+    for (int iRep=0; iRep<d; ++iRep) {
+        repartition[iRep] = 1;
+    }
+    int iDim=0;
+    for (int iPrime=(int)(primeFactors.size()-1); iPrime>=0; --iPrime) {
+        repartition[iDim] *= primeFactors[iPrime];
+        iDim = (iDim+1)%d;
+    }
+    return repartition;
+}
+
+}
 
 }

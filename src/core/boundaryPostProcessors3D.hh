@@ -60,6 +60,7 @@ void PlaneFdBoundaryProcessor3D<T,Lattice,direction,orientation>::
             for (int iY=newY0; iY<=newY1; ++iY) {
                 for (int iZ=newZ0; iZ<=newZ1; ++iZ) {
                     Cell<T,Lattice>& cell = blockLattice.get(iX,iY,iZ);
+                    Dynamics<T,Lattice>* dynamics = cell.getDynamics();
                     T rho, u[Lattice<T>:: d];
                     cell.computeRhoU(rho,u);
 
@@ -89,7 +90,7 @@ void PlaneFdBoundaryProcessor3D<T,Lattice,direction,orientation>::
                     // according to the regularized formula
                     T uSqr = util::normSqr<T,Lattice<T>::d>(u);
                     for (int iPop = 0; iPop < Lattice<T>::q; ++iPop)
-                        cell[iPop] = lbHelpers<T,Lattice>::equilibrium(iPop,rho,u,uSqr) +
+                        cell[iPop] = dynamics -> computeEquilibrium(iPop,rho,u,uSqr) +
                                      firstOrderLbHelpers<T,Lattice>::fromPiToFneq(iPop, pi);
                 }
             }
@@ -171,6 +172,7 @@ void OuterVelocityEdgeProcessor3D<T,Lattice, plane,normal1,normal2>::
             for (int iY=newY0; iY<=newY1; ++iY) {
                 for (int iZ=newZ0; iZ<=newZ1; ++iZ) {
                     Cell<T,Lattice>& cell = blockLattice.get(iX,iY,iZ);
+                    Dynamics<T,Lattice>* dynamics = cell.getDynamics();
 
                     T rho10 = getNeighborRho(iX,iY,iZ,1,0, blockLattice);
                     T rho01 = getNeighborRho(iX,iY,iZ,0,1, blockLattice);
@@ -188,7 +190,7 @@ void OuterVelocityEdgeProcessor3D<T,Lattice, plane,normal1,normal2>::
                         dA_uB[direction1][iBeta] = dA_uB_[1][iBeta];
                         dA_uB[direction2][iBeta] = dA_uB_[2][iBeta];
                     }
-                    T omega = cell.getDynamics() -> getOmega();
+                    T omega = dynamics -> getOmega();
                     T sToPi = - rho / Lattice<T>::invCs2 / omega;
                     T pi[util::TensorVal<Lattice<T> >::n];
                     pi[xx] = (T)2 * dA_uB[0][0] * sToPi;
@@ -205,7 +207,7 @@ void OuterVelocityEdgeProcessor3D<T,Lattice, plane,normal1,normal2>::
                     T uSqr = util::normSqr<T,Lattice<T>::d>(u);
 
                     for (int iPop = 0; iPop < Lattice<T>::q; ++iPop) {
-                        cell[iPop] = lbHelpers<T,Lattice>::equilibrium(iPop,rho,u,uSqr) +
+                        cell[iPop] = dynamics -> computeEquilibrium(iPop,rho,u,uSqr) +
                                      firstOrderLbHelpers<T,Lattice>::fromPiToFneq(iPop, pi);
                     }
                 }
@@ -281,6 +283,7 @@ void OuterVelocityCornerProcessor3D<T, Lattice, xNormal, yNormal, zNormal>::
 {
     using namespace olb::util::tensorIndices3D;
     Cell<T,Lattice>& cell = blockLattice.get(x,y,z);
+    Dynamics<T,Lattice>* dynamics = cell.getDynamics();
 
     T rho100 = blockLattice.get(x - 1*xNormal, y - 0*yNormal, z - 0*zNormal).computeRho();
     T rho010 = blockLattice.get(x - 0*xNormal, y - 1*yNormal, z - 0*zNormal).computeRho();
@@ -304,7 +307,7 @@ void OuterVelocityCornerProcessor3D<T, Lattice, xNormal, yNormal, zNormal>::
     T dx_uz = dx_u[2];
     T dy_uz = dy_u[2];
     T dz_uz = dz_u[2];
-    T omega = cell.getDynamics() -> getOmega();
+    T omega = dynamics -> getOmega();
     T sToPi = - rho / Lattice<T>::invCs2 / omega;
     T pi[util::TensorVal<Lattice<T> >::n];
     pi[xx] = (T)2 * dx_ux * sToPi;
@@ -321,7 +324,7 @@ void OuterVelocityCornerProcessor3D<T, Lattice, xNormal, yNormal, zNormal>::
     T uSqr = util::normSqr<T,Lattice<T>::d>(u);
 
     for (int iPop = 0; iPop < Lattice<T>::q; ++iPop) {
-        cell[iPop] = lbHelpers<T,Lattice>::equilibrium(iPop,rho,u,uSqr) +
+        cell[iPop] = dynamics -> computeEquilibrium(iPop,rho,u,uSqr) +
                      firstOrderLbHelpers<T,Lattice>::fromPiToFneq(iPop, pi);
     }
 

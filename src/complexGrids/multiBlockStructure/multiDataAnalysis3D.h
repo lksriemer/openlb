@@ -64,7 +64,7 @@ public:
     virtual ScalarFieldBase3D<T> const& getVelocityNorm() const;
     virtual ScalarFieldBase3D<T> const& getVorticityNorm() const;
     virtual TensorFieldBase3D<T,6> const& getStrainRate() const;
-    virtual TensorFieldBase3D<T,6> const& getStress() const;
+    virtual TensorFieldBase3D<T,6> const& getStrainRateFromStress() const;
     virtual ScalarFieldBase3D<T> const& getDivRhoU() const;
     virtual ScalarFieldBase3D<T> const& getPoissonTerm() const;
     virtual TensorFieldBase3D<T,Lattice<T>::q > const& getPopulations() const;

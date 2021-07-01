@@ -1,8 +1,8 @@
 /*  This file is part of the OpenLB library
  *
- *  Copyright (C) 2006, 2007 Jonas Latt
- *  Address: Rue General Dufour 24,  1211 Geneva 4, Switzerland 
- *  E-mail: jonas.latt@gmail.com
+ *  Copyright (C) 2006, 2007 Orestis Malaspinas, Jonas Latt
+ *  Address: EPFL-STI-LIN Station 9 1015 Lausanne
+ *  E-mail: orestis.malaspinas@epfl.ch
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
@@ -27,7 +27,7 @@
 #ifndef ENTROPIC_LB_DYNAMICS_H
 #define ENTROPIC_LB_DYNAMICS_H
 
-#include "../core/dynamics.h"
+#include "core/dynamics.h"
 
 namespace olb {
 
@@ -43,6 +43,8 @@ public:
     EntropicDynamics(T omega_, Momenta<T,Lattice>& momenta_);
     /// Clone the object on its dynamic type.
     virtual EntropicDynamics<T,Lattice>* clone() const;
+    /// Compute equilibrium distribution function
+    virtual T computeEquilibrium(int iPop, T rho, const T u[Lattice<T>::d], T uSqr) const;
     /// Collision step
     virtual void collide(Cell<T,Lattice>& cell,
                          LatticeStatistics<T>& statistics_);
@@ -76,6 +78,8 @@ public:
     ForcedEntropicDynamics(T omega_, Momenta<T,Lattice>& momenta_);
     /// Clone the object on its dynamic type.
     virtual ForcedEntropicDynamics<T,Lattice>* clone() const;
+    /// Compute equilibrium distribution function
+    virtual T computeEquilibrium(int iPop, T rho, const T u[Lattice<T>::d], T uSqr) const;
     /// Collision step
     virtual void collide(Cell<T,Lattice>& cell,
                          LatticeStatistics<T>& statistics_);

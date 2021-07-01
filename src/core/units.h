@@ -24,6 +24,7 @@
 #define UNITS_H
 
 #include "complexGrids/mpiManager/mpiManager.h"
+#include "io/parallelIO.h"
 #include <string>
 #include <fstream>
 #include "singleton.h"
@@ -159,19 +160,17 @@ template<typename T>
 void writeLogFile(LBunits<T> const& converter,
                   std::string const& title)
 {
-    if (singleton::mpi().isMainProcessor()) {
-        std::string fullName = singleton::directories().getLogOutDir() + "olbLog.dat";
-        std::ofstream ofile(fullName.c_str());
-        ofile << title << "\n\n";
-        ofile << "Velocity in lattice units: u=" << converter.getLatticeU() << "\n";
-        ofile << "Reynolds number:           Re=" << converter.getRe() << "\n";
-        ofile << "Lattice resolution:        N=" << converter.getResolution() << "\n";
-        ofile << "Extent of the system:      lx=" << converter.getLx() << "\n";
-        ofile << "Extent of the system:      ly=" << converter.getLy() << "\n";
-        ofile << "Extent of the system:      lz=" << converter.getLz() << "\n";
-        ofile << "Grid spacing deltaX:       dx=" << converter.getDeltaX() << "\n";
-        ofile << "Time step deltaT:          dt=" << converter.getDeltaT() << "\n";
-    }
+    std::string fullName = singleton::directories().getLogOutDir() + "olbLog.dat";
+    olb_ofstream ofile(fullName.c_str());
+    ofile << title << "\n\n";
+    ofile << "Velocity in lattice units: u=" << converter.getLatticeU() << "\n";
+    ofile << "Reynolds number:           Re=" << converter.getRe() << "\n";
+    ofile << "Lattice resolution:        N=" << converter.getResolution() << "\n";
+    ofile << "Extent of the system:      lx=" << converter.getLx() << "\n";
+    ofile << "Extent of the system:      ly=" << converter.getLy() << "\n";
+    ofile << "Extent of the system:      lz=" << converter.getLz() << "\n";
+    ofile << "Grid spacing deltaX:       dx=" << converter.getDeltaX() << "\n";
+    ofile << "Time step deltaT:          dt=" << converter.getDeltaT() << "\n";
 }
 
 }  // namespace olb

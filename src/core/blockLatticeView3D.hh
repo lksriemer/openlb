@@ -1,6 +1,6 @@
 /*  This file is part of the OpenLB library
  *
- *  Copyright (C) 2006, 2007 Jonas Latt
+ *  Copyright (C) 2006, 2007, 2008 Jonas Latt
  *  Address: Rue General Dufour 24,  1211 Geneva 4, Switzerland 
  *  E-mail: jonas.latt@gmail.com
  *
@@ -70,15 +70,12 @@ BlockLatticeView3D<T,Lattice>::~BlockLatticeView3D()
 }
 
 template<typename T, template<typename U> class Lattice>
-BlockLatticeView3D<T,Lattice>::BlockLatticeView3D(BlockLatticeView3D<T,Lattice> const& rhs) {
-    nx = rhs.nx;
-    ny = rhs.ny;
-    nz = rhs.nz;
-    x0 = rhs.x0;
-    y0 = rhs.y0;
-    z0 = rhs.z0;
-    originalLattice = rhs.originalLattice;
-}
+BlockLatticeView3D<T,Lattice>::BlockLatticeView3D(BlockLatticeView3D<T,Lattice> const& rhs)
+    : originalLattice(rhs.originalLattice),
+      x0(rhs.x0), y0(rhs.y0), z0(rhs.z0),
+      nx(rhs.nx), ny(rhs.ny), nz(rhs.nz),
+      dataAnalysis( new DataAnalysis3D<T,Lattice>(*this) )
+{ }
 
 template<typename T, template<typename U> class Lattice>
 BlockLatticeView3D<T,Lattice>& BlockLatticeView3D<T,Lattice>::operator= (
@@ -257,7 +254,7 @@ void BlockLatticeView3D<T,Lattice>::addPostProcessor (
 template<typename T, template<typename U> class Lattice>
 void BlockLatticeView3D<T,Lattice>::addLatticeCoupling (
          LatticeCouplingGenerator3D<T,Lattice> const& lcGen,
-         std::vector<BlockStructure3D<T,Lattice>*> partners )
+         std::vector<SpatiallyExtendedObject3D*> partners )
 {
     LatticeCouplingGenerator3D<T,Lattice>* shiftedGen = lcGen.clone();
     shiftedGen->shift(x0,y0,z0);
@@ -337,6 +334,29 @@ DataUnSerializer<T>& BlockLatticeView3D<T,Lattice>::getSubUnSerializer (
 {
     return originalLattice -> getSubUnSerializer(x0_+x0, x1_+x0, y0_+y0, y1_+y0, z0_+z0, z1_+z0, ordering);
 }
+
+template<typename T, template<typename U> class Lattice>
+MultiDataDistribution3D BlockLatticeView3D<T,Lattice>::getDataDistribution() const {
+    return MultiDataDistribution3D(getNx(), getNy(), getNz());
+}
+
+template<typename T, template<typename U> class Lattice>
+SpatiallyExtendedObject3D* BlockLatticeView3D<T,Lattice>::getComponent(int iBlock) {
+    OLB_PRECONDITION( iBlock==0 );
+    return this;
+}
+
+template<typename T, template<typename U> class Lattice>
+SpatiallyExtendedObject3D const* BlockLatticeView3D<T,Lattice>::getComponent(int iBlock) const {
+    OLB_PRECONDITION( iBlock==0 );
+    return this;
+}
+
+template<typename T, template<typename U> class Lattice>
+multiPhysics::MultiPhysicsId BlockLatticeView3D<T,Lattice>::getMultiPhysicsId() const {
+    return multiPhysics::getMultiPhysicsBlockId<T,Lattice>();
+}
+
 
 }  // namespace olb
 

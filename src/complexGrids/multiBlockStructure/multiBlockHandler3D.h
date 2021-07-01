@@ -1,6 +1,6 @@
 /*  This file is part of the OpenLB library
  *
- *  Copyright (C) 2007 Jonas Latt
+ *  Copyright (C) 2007, 2008 Jonas Latt
  *  Address: Rue General Dufour 24,  1211 Geneva 4, Switzerland 
  *  E-mail: jonas.latt@gmail.com
  *
@@ -51,9 +51,10 @@ struct MultiBlockHandler3D {
     virtual void broadCastCell(Cell<T,Lattice>& cell, int fromBlock) const =0;
     virtual void broadCastScalar(T& scalar, int fromBlock) const =0;
     virtual void broadCastVector(T vect[Lattice<T>::d], int fromBlock) const =0;
-    virtual void copyOverlap(Overlap3D const& overlap, BlockVector3D& lattices) const =0;
-    virtual Cell<T,Lattice>& getDistributedCell(Cell<T,Lattice>* baseCell, int onBlock) const =0;
-    virtual Cell<T,Lattice> const& getDistributedCell(Cell<T,Lattice> const* baseCell, int onBlock) const =0;
+    virtual void connectBoundaries(BlockVector3D& lattices, bool periodicCommunication) const =0;
+    virtual Cell<T,Lattice>& getDistributedCell(std::vector<Cell<T,Lattice>*>& baseCell) const =0;
+    virtual Cell<T,Lattice> const& getDistributedCell(std::vector<Cell<T,Lattice> const*>& baseCell) const =0;
+    virtual int locateLocally(int iX, int iY, int iZ, std::vector<int>& foundId, int guess=0) const =0;
 };
 
 template<typename T, template<typename U> class Lattice>
@@ -74,21 +75,44 @@ public:
     virtual void broadCastCell(Cell<T,Lattice>& cell, int fromBlock) const;
     virtual void broadCastScalar(T& scalar, int fromBlock) const;
     virtual void broadCastVector(T vect[Lattice<T>::d], int fromBlock) const;
-    virtual void copyOverlap(Overlap3D const& overlap, BlockVector3D& lattices) const;
-    virtual Cell<T,Lattice>& getDistributedCell(Cell<T,Lattice>* baseCell, int onBlock) const;
-    virtual Cell<T,Lattice> const& getDistributedCell(Cell<T,Lattice> const* baseCell, int onBlock) const;
+    virtual void connectBoundaries(BlockVector3D& lattices, bool periodicCommunication) const;
+    virtual Cell<T,Lattice>& getDistributedCell(std::vector<Cell<T,Lattice>*>& baseCell) const;
+    virtual Cell<T,Lattice> const& getDistributedCell(std::vector<Cell<T,Lattice> const*>& baseCell) const;
+    virtual int locateLocally(int iX, int iY, int iZ, std::vector<int>& foundId, int guess=0) const;
+private:
+    void copyOverlap(Overlap3D const& overlap, BlockVector3D& lattices) const;
 private:
     MultiDataDistribution3D dataDistribution;
 };
 
 
 #ifdef PARALLEL_MODE_MPI
+
+template<typename T, template<typename U> class Lattice>
+class DataTransmittor3D {
+public:
+    typedef std::vector<BlockLattice3D<T,Lattice>*> BlockVector3D;
+public:
+    DataTransmittor3D(Overlap3D const& overlap, MultiDataDistribution3D const& dataDistribution);
+    void prepareTransmission(BlockVector3D& lattices);
+    void executeTransmission(BlockVector3D& lattices);
+    void finalizeTransmission(BlockVector3D& lattices);
+private:
+    std::vector<T> buffer;
+    int originalId, overlapId;
+    int originalProc, overlapProc;
+    BlockCoordinates3D originalCoords, overlapCoords;
+    int sizeOfCell, bufferSize;
+    enum {sender, receiver, senderAndReceiver, nothing} myRole;
+};
+
 template<typename T, template<typename U> class Lattice>
 class ParallelMultiBlockHandler3D : public MultiBlockHandler3D<T,Lattice> {
 public:
     typedef std::vector<BlockLattice3D<T,Lattice>*> BlockVector3D;
 public:
     ParallelMultiBlockHandler3D(MultiDataDistribution3D const& dataDistribution_);
+    ~ParallelMultiBlockHandler3D();
     virtual int getNx() const;
     virtual int getNy() const;
     virtual int getNz() const;
@@ -101,11 +125,21 @@ public:
     virtual void broadCastCell(Cell<T,Lattice>& cell, int fromBlock) const;
     virtual void broadCastScalar(T& scalar, int fromBlock) const;
     virtual void broadCastVector(T vect[Lattice<T>::d], int fromBlock) const;
-    virtual void copyOverlap(Overlap3D const& overlap, BlockVector3D& lattices) const;
-    virtual Cell<T,Lattice>& getDistributedCell(Cell<T,Lattice>* baseCell, int onBlock) const;
-    virtual Cell<T,Lattice> const& getDistributedCell(Cell<T,Lattice> const* baseCell, int onBlock) const;
+    virtual void connectBoundaries(BlockVector3D& lattices, bool periodicCommunication) const;
+    virtual Cell<T,Lattice>& getDistributedCell(std::vector<Cell<T,Lattice>*>& baseCell) const;
+    virtual Cell<T,Lattice> const& getDistributedCell(std::vector<Cell<T,Lattice> const*>& baseCell) const;
+    virtual int locateLocally(int iX, int iY, int iZ, std::vector<int>& foundId, int guess=0) const;
+private:
+    void computeLocallyRelevantBlocks();
 private:
     MultiDataDistribution3D dataDistribution;
+    std::vector<int> myBlocks;
+    std::vector<int> nearbyBlocks;
+    std::vector<int> relevantNormalOverlaps;
+    std::vector<int> relevantPeriodicOverlaps;
+    BlockCoordinates3D boundingBox;
+    std::vector<DataTransmittor3D<T,Lattice>*> normalTransmittors;
+    std::vector<DataTransmittor3D<T,Lattice>*> periodicTransmittors;
     mutable Cell<T,Lattice> distributedCell;
     mutable Dynamics<T,Lattice>* parallelDynamics;
 };

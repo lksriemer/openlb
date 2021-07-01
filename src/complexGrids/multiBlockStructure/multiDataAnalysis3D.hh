@@ -168,10 +168,10 @@ TensorFieldBase3D<T,6> const& MultiDataAnalysis3D<T,Lattice>::getStrainRate() co
 }
 
 template<typename T, template<typename U> class Lattice>
-TensorFieldBase3D<T,6> const& MultiDataAnalysis3D<T,Lattice>::getStress() const {
+TensorFieldBase3D<T,6> const& MultiDataAnalysis3D<T,Lattice>::getStrainRateFromStress() const {
     for (unsigned iBlock=0; iBlock<perBlockAnalysis.size(); ++iBlock) {
         if (perBlockAnalysis[iBlock]) {
-            perBlockAnalysis[iBlock] -> getStress();
+            perBlockAnalysis[iBlock] -> getStrainRateFromStress();
         }
     }
     return fields.stressField;

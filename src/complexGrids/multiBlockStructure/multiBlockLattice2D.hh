@@ -1,6 +1,6 @@
 /*  This file is part of the OpenLB library
  *
- *  Copyright (C) 2007 Jonas Latt
+ *  Copyright (C) 2007, 2008 Jonas Latt
  *  Address: Rue General Dufour 24,  1211 Geneva 4, Switzerland 
  *  E-mail: jonas.latt@gmail.com
  *
@@ -39,6 +39,7 @@ template<typename T, template<typename U> class Lattice>
 MultiBlockLattice2D<T,Lattice>::MultiBlockLattice2D(MultiDataDistribution2D const& dataDistribution_)
     : locatedBlock(0),
       statisticsOn(true),
+      periodicCommunicationOn(true),
       dummyCell(&dummyDynamics),
       serializer(0), unSerializer(0),
       serializerPolicy(*this), unSerializerPolicy(*this),
@@ -77,6 +78,7 @@ template<typename T, template<typename U> class Lattice>
 MultiBlockLattice2D<T,Lattice>::MultiBlockLattice2D(MultiBlockLattice2D<T,Lattice> const& rhs)
     : locatedBlock(rhs.locatedBlock),
       statisticsOn(rhs.statisticsOn),
+      periodicCommunicationOn(rhs.periodicCommunicationOn),
       dummyCell(&dummyDynamics),
       serializer(0), unSerializer(0),
       serializerPolicy(*this), unSerializerPolicy(*this),
@@ -121,6 +123,7 @@ void MultiBlockLattice2D<T,Lattice>::swap(MultiBlockLattice2D<T,Lattice>& rhs) {
     blockLattices.swap(rhs.blockLattices);
     std::swap(statistics, rhs.statistics);
     std::swap(statisticsOn, rhs.statisticsOn);
+    std::swap(periodicCommunicationOn, rhs.periodicCommunicationOn);
     std::swap(reductor, rhs.reductor);
     std::swap(serializer, rhs.serializer);
     std::swap(unSerializer, rhs.unSerializer);
@@ -129,32 +132,50 @@ void MultiBlockLattice2D<T,Lattice>::swap(MultiBlockLattice2D<T,Lattice>& rhs) {
 
 template<typename T, template<typename U> class Lattice>
 Cell<T,Lattice>& MultiBlockLattice2D<T,Lattice>::get(int iX, int iY) {
-    locatedBlock = getMultiData().locate(iX, iY, locatedBlock);
-    if (locatedBlock == -1) { 
-        locatedBlock = 0;
+    std::vector<int> foundId;
+    locatedBlock = multiBlockHandler -> locateLocally(iX, iY, foundId, locatedBlock);
+    if (foundId.empty()) { 
         return dummyCell;
     }
-    Cell<T,Lattice>* returnCell =0;
-    if (blockLattices[locatedBlock]) {
-        returnCell = &blockLattices[locatedBlock] -> get ( getParameters(locatedBlock).toLocalX(iX),
-                                                           getParameters(locatedBlock).toLocalY(iY) );
+    returnCells.clear();
+    for (unsigned iBlock=0; iBlock<foundId.size(); ++iBlock) {
+        int foundBlock = foundId[iBlock];
+        if (blockLattices[foundBlock]) {
+            BlockParameters2D const& param = getParameters(foundBlock);
+            returnCells.push_back (
+                         &blockLattices[foundBlock] -> get ( param.toLocalX(iX),
+                                                             param.toLocalY(iY) )
+            );
+        }
+        else {
+            returnCells.push_back(0);
+        }
     }
-    return multiBlockHandler -> getDistributedCell(returnCell, locatedBlock);
+    return multiBlockHandler -> getDistributedCell(returnCells);
 }
 
 template<typename T, template<typename U> class Lattice>
 Cell<T,Lattice> const& MultiBlockLattice2D<T,Lattice>::get(int iX, int iY) const {
-    locatedBlock = getMultiData().locate(iX, iY, locatedBlock);
-    if (locatedBlock == -1) { 
-        locatedBlock = 0;
+    std::vector<int> foundId;
+    locatedBlock = multiBlockHandler -> locateLocally(iX, iY, foundId, locatedBlock);
+    if (foundId.empty()) { 
         return dummyCell;
     }
-    Cell<T,Lattice> const* returnCell =0;
-    if (blockLattices[locatedBlock]) {
-        returnCell = &blockLattices[locatedBlock] -> get ( getParameters(locatedBlock).toLocalX(iX),
-                                                           getParameters(locatedBlock).toLocalY(iY) );
+    constReturnCells.clear();
+    for (unsigned iBlock=0; iBlock<foundId.size(); ++iBlock) {
+        int foundBlock = foundId[iBlock];
+        if (blockLattices[foundBlock]) {
+            BlockParameters2D const& param = getParameters(foundBlock);
+            constReturnCells.push_back(
+                         &blockLattices[foundBlock] -> get ( param.toLocalX(iX),
+                                                             param.toLocalY(iY) )
+            );
+        }
+        else {
+            returnCells.push_back(0);
+        }
     }
-    return multiBlockHandler -> getDistributedCell(returnCell, locatedBlock);
+    return multiBlockHandler -> getDistributedCell(returnCells);
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -366,18 +387,6 @@ void MultiBlockLattice2D<T,Lattice>::stripeOffDensityOffset(int x0_, int x1_, in
             }
         }
     }
-    for (int iOverlap=0; iOverlap < getNumPeriodicOverlaps(); ++iOverlap) {
-        Overlap2D const& overlap = getPeriodicOverlap(iOverlap);
-        int overlapId  = overlap.getOverlapId();
-        if (blockLattices[overlapId]) {
-            if (util::intersect(domain, overlap.getOriginalCoordinates(), inters ) ) {
-                inters = inters.shift( -overlap.getShiftX(), -overlap.getShiftY() );
-                inters = getParameters(overlapId).toLocal(inters);
-                blockLattices[overlapId] -> stripeOffDensityOffset (
-                        inters.x0, inters.x1, inters.y0, inters.y1, offset );
-            }
-        }
-    }
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -406,9 +415,25 @@ void MultiBlockLattice2D<T,Lattice>::addPostProcessor(PostProcessorGenerator2D<T
 template<typename T, template<typename U> class Lattice>
 void MultiBlockLattice2D<T,Lattice>::addLatticeCoupling (
                      LatticeCouplingGenerator2D<T,Lattice> const& lcGen,
-                     std::vector<BlockStructure2D<T,Lattice>*> partners )
+                     std::vector<SpatiallyExtendedObject2D*> partners )
 {
-    OLB_ASSERT(false, "not yet implemented");
+    for (int iBlock=0; iBlock < getNumBlocks(); ++iBlock) {
+        if (blockLattices[iBlock]) {
+            std::vector<SpatiallyExtendedObject2D*> extractedPartners(partners.size());
+            for (unsigned iP=0; iP<extractedPartners.size(); ++iP) {
+                extractedPartners[iP] = partners[iP]->getComponent(iBlock);
+            }
+            BlockParameters2D const& params = getParameters(iBlock);
+            BlockCoordinates2D const& bulk = params.getBulk();
+            LatticeCouplingGenerator2D<T,Lattice> *extractedLcGen = lcGen.clone();
+            if (extractedLcGen->extract( bulk.x0, bulk.x1, bulk.y0, bulk.y1 ) ) {
+                BlockCoordinates2D const& envelope = params.getEnvelope();
+                extractedLcGen->shift(-envelope.x0, -envelope.y0);
+                blockLattices[iBlock] -> addLatticeCoupling (*extractedLcGen, extractedPartners);
+            }
+            delete extractedLcGen;
+        }
+    }
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -528,7 +553,7 @@ void MultiBlockLattice2D<T,Lattice>::postProcessMultiBlock() {
     if (statisticsOn) {
         reduceStatistics();
     }
-    connectBoundaries();
+    multiBlockHandler -> connectBoundaries(blockLattices, periodicCommunicationOn);
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -558,16 +583,6 @@ void MultiBlockLattice2D<T,Lattice>::reduceStatistics() {
 }
 
 template<typename T, template<typename U> class Lattice>
-void MultiBlockLattice2D<T,Lattice>::connectBoundaries() {
-    for (int iOverlap=0; iOverlap<getNumNormalOverlaps(); ++iOverlap) {
-        multiBlockHandler -> copyOverlap(getNormalOverlap(iOverlap), blockLattices);
-    }
-    for (int iOverlap=0; iOverlap<getNumPeriodicOverlaps(); ++iOverlap) {
-        multiBlockHandler -> copyOverlap(getPeriodicOverlap(iOverlap), blockLattices);
-    }
-}
-
-template<typename T, template<typename U> class Lattice>
 void MultiBlockLattice2D<T,Lattice>::eliminateStatisticsInEnvelope() {
     for (int iBlock=0; iBlock<getNumBlocks(); ++iBlock) {
         if (blockLattices[iBlock]) {
@@ -590,8 +605,18 @@ void MultiBlockLattice2D<T,Lattice>::toggleInternalStatistics(bool statisticsOn_
 }
 
 template<typename T, template<typename U> class Lattice>
+void MultiBlockLattice2D<T,Lattice>::togglePeriodicCommunication(bool periodicCommunicationOn_) {
+    periodicCommunicationOn = periodicCommunicationOn_;
+}
+
+template<typename T, template<typename U> class Lattice>
 bool MultiBlockLattice2D<T,Lattice>::isInternalStatisticsOn() const {
     return statisticsOn;
+}
+
+template<typename T, template<typename U> class Lattice>
+bool MultiBlockLattice2D<T,Lattice>::isPeriodicCommunicationOn() const {
+    return periodicCommunicationOn;
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -638,6 +663,29 @@ template<typename T, template<typename U> class Lattice>
 int MultiBlockLattice2D<T,Lattice>::getNumPeriodicOverlaps() const {
     return getMultiData().getNumPeriodicOverlaps();
 }
+
+template<typename T, template<typename U> class Lattice>
+MultiDataDistribution2D MultiBlockLattice2D<T,Lattice>::getDataDistribution() const {
+    return getMultiData();
+}
+
+template<typename T, template<typename U> class Lattice>
+SpatiallyExtendedObject2D* MultiBlockLattice2D<T,Lattice>::getComponent(int iBlock) {
+    OLB_PRECONDITION( iBlock<getBlockLattices().size() );
+    return getBlockLattices()[iBlock];
+}
+
+template<typename T, template<typename U> class Lattice>
+SpatiallyExtendedObject2D const* MultiBlockLattice2D<T,Lattice>::getComponent(int iBlock) const {
+    OLB_PRECONDITION( iBlock<getBlockLattices().size() );
+    return getBlockLattices()[iBlock];
+}
+
+template<typename T, template<typename U> class Lattice>
+multiPhysics::MultiPhysicsId MultiBlockLattice2D<T,Lattice>::getMultiPhysicsId() const {
+    return multiPhysics::getMultiPhysicsBlockId<T,Lattice>();
+}
+
 
 
 ////////// class MultiBlockSerializerPolicy2D ////////////////////////////
@@ -704,6 +752,7 @@ bool MultiBlockUnSerializerPolicy2D<T,Lattice>::isAllocated(int block) const
 {
     return lattice.getBlockLattices()[block];
 }
+
 
 }  // namespace olb
 

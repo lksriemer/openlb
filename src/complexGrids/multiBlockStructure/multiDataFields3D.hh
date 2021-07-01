@@ -27,10 +27,10 @@
 #ifndef MULTI_DATA_FIELDS_3D_HH
 #define MULTI_DATA_FIELDS_3D_HH
 
-#include <algorithm>
-#include <limits>
 #include "multiDataFields3D.h"
 #include "complexGrids/multiBlockStructure/multiDataGeometry3D.h"
+#include <algorithm>
+#include <limits>
 
 namespace olb {
 
@@ -316,6 +316,28 @@ BlockParameters3D const& MultiScalarField3D<T>::getParameters(int iParam) const 
 template<typename T>
 int MultiScalarField3D<T>::getNumBlocks() const {
     return getMultiData().getNumBlocks();
+}
+
+template<typename T>
+MultiDataDistribution3D MultiScalarField3D<T>::getDataDistribution() const {
+    return getMultiData();
+}
+
+template<typename T>
+SpatiallyExtendedObject3D* MultiScalarField3D<T>::getComponent(int iBlock) {
+    OLB_PRECONDITION( iBlock<getScalarFields().size() );
+    return getScalarFields()[iBlock];
+}
+
+template<typename T>
+SpatiallyExtendedObject3D const* MultiScalarField3D<T>::getComponent(int iBlock) const {
+    OLB_PRECONDITION( iBlock<getScalarFields().size() );
+    return getScalarFields()[iBlock];
+}
+
+template<typename T>
+multiPhysics::MultiPhysicsId MultiScalarField3D<T>::getMultiPhysicsId() const {
+    return multiPhysics::getMultiPhysicsScalarId<T>();
 }
 
 
@@ -621,6 +643,28 @@ MultiScalarField3D<T> const& MultiTensorField3D<T,nDim>::extractComponent(int wh
         }
     }
     return *components[whichDim];
+}
+
+template<typename T, int nDim>
+MultiDataDistribution3D MultiTensorField3D<T,nDim>::getDataDistribution() const {
+    return getMultiData();
+}
+
+template<typename T, int nDim>
+SpatiallyExtendedObject3D* MultiTensorField3D<T,nDim>::getComponent(int iBlock) {
+    OLB_PRECONDITION( iBlock<getTensorFields().size() );
+    return getTensorFields()[iBlock];
+}
+
+template<typename T, int nDim>
+SpatiallyExtendedObject3D const* MultiTensorField3D<T,nDim>::getComponent(int iBlock) const {
+    OLB_PRECONDITION( iBlock<getTensorFields().size() );
+    return getTensorFields()[iBlock];
+}
+
+template<typename T, int nDim>
+multiPhysics::MultiPhysicsId MultiTensorField3D<T,nDim>::getMultiPhysicsId() const {
+    return multiPhysics::getMultiPhysicsTensorId<T,nDim>();
 }
 
 

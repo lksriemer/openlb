@@ -71,7 +71,7 @@ struct lbHelpers {
 
     static void computeFneq (
             Cell<T,Lattice> const& cell,
-            T fNeq[Lattice<T>::d], T rho, const T u[Lattice<T>::d] )
+            T fNeq[Lattice<T>::q], T rho, const T u[Lattice<T>::d] )
     {
         const T uSqr = util::normSqr<T,Lattice<T>::d>(u);
         for (int iPop=0; iPop < Lattice<T>::q; ++iPop) {

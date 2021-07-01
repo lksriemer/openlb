@@ -28,6 +28,8 @@
 
 #include <vector>
 #include "ompManager.h"
+#include "spatiallyExtendedObject2D.h"
+#include "spatiallyExtendedObject3D.h"
 
 namespace olb {
 
@@ -98,7 +100,7 @@ public:
     virtual ~LatticeCouplingGenerator2D() { }
     void shift(int deltaX, int deltaY);
     bool extract(int x0_, int x1_, int y0_, int y1_);
-    virtual PostProcessor2D<T,Lattice>* generate(std::vector<BlockStructure2D<T,Lattice>*> partners) const =0;
+    virtual PostProcessor2D<T,Lattice>* generate(std::vector<SpatiallyExtendedObject2D*> partners) const =0;
     virtual LatticeCouplingGenerator2D<T,Lattice>* clone() const =0;
 protected:
     int x0, x1, y0, y1;
@@ -174,7 +176,7 @@ public:
     virtual ~LatticeCouplingGenerator3D() { }
     void shift(int deltaX, int deltaY, int deltaZ);
     bool extract(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_);
-    virtual PostProcessor3D<T,Lattice>* generate(std::vector<BlockStructure3D<T,Lattice>*> partners) const =0;
+    virtual PostProcessor3D<T,Lattice>* generate(std::vector<SpatiallyExtendedObject3D*> partners) const =0;
     virtual LatticeCouplingGenerator3D<T,Lattice>* clone() const =0;
 protected:
     int x0, x1, y0, y1, z0, z1;

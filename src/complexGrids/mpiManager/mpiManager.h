@@ -39,6 +39,41 @@ namespace singleton {
 
 #ifdef PARALLEL_MODE_MPI
 
+/// Helper class for non blocking MPI communication
+
+class MpiNonBlockingHelper {
+private:
+    /// Size of the vector _mpiRequest/_mpiStatus
+    unsigned _size;
+    /// vector of MPI_Request
+    MPI_Request *_mpiRequest;
+    /// vector of MPI_Status
+    MPI_Status *_mpiStatus;
+public:
+    /// Constructor
+    MpiNonBlockingHelper();
+    /// Copy construction
+    MpiNonBlockingHelper(MpiNonBlockingHelper const& rhs);
+    /// Copy assignment
+    MpiNonBlockingHelper operator=(MpiNonBlockingHelper rhs);
+    /// Destructor
+    ~MpiNonBlockingHelper();
+
+    /// Allocates memory
+    void allocate(unsigned i);
+    /// Frees memory
+    void free();
+
+    /// Returns the size of the vector _mpiRequest/_mpiStatus
+    unsigned const& get_size() const;
+    /// Read and write access _mpiRequest
+    MPI_Request* get_mpiRequest() const;
+    /// Read and write access _mpiStatus
+    MPI_Status* get_mpiStatus() const;
+};
+
+/// Wrapper functions that simplify the use of MPI
+
 class MpiManager {
 public:
     /// Initializes the mpi manager
@@ -63,7 +98,7 @@ public:
 
     /// Sends data at *buf, non blocking
     template <typename T>
-    MPI_Request iSend(T *buf, int count, int dest, int tag = 0, MPI_Comm comm = MPI_COMM_WORLD);
+    void iSend(T *buf, int count, int dest, MPI_Request* request, int tag = 0, MPI_Comm comm = MPI_COMM_WORLD);
 
     /// Sends data at *buf, non blocking and request free
     template <typename T>
@@ -75,12 +110,16 @@ public:
 
     /// Receives data at *buf, non blocking
     template <typename T>
-    MPI_Request iRecv(T *buf, int count, int source, int tag = 0, MPI_Comm comm = MPI_COMM_WORLD);
+    void iRecv(T *buf, int count, int source, MPI_Request* request, int tag = 0, MPI_Comm comm = MPI_COMM_WORLD);
 
     /// Send and receive data between two partners
     template <typename T>
     void sendRecv(T *sendBuf, T *recvBuf, int count, int dest, int source, int tag = 0,
                   MPI_Comm comm = MPI_COMM_WORLD);
+
+    /// Sends data to master processor
+    template <typename T>
+    void sendToMaster(T* sendBuf, int sendCount, bool iAmRoot, MPI_Comm comm = MPI_COMM_WORLD);
 
     /// Scatter data from one processor over multiple processors
     template <typename T>
@@ -94,6 +133,10 @@ public:
     /// Broadcast data from one processor to multiple processors
     template <typename T>
     void bCast(T* sendBuf, int sendCount, int root = 0, MPI_Comm comm = MPI_COMM_WORLD);
+
+    /// Broadcast data when root is unknown to other processors
+    template <typename T>
+    void bCastThroughMaster(T* sendBuf, int sendCount, bool iAmRoot, MPI_Comm comm = MPI_COMM_WORLD);
 
     /// Reduction operation toward one processor
     template <typename T>
@@ -109,7 +152,7 @@ public:
     void reduceAndBcast(T& reductVal, MPI_Op op, int root = 0, MPI_Comm comm = MPI_COMM_WORLD);
 
     /// Complete a non-blocking MPI operation
-    void complete(std::vector<MPI_Request>& requests);
+    void waitAll(MpiNonBlockingHelper& mpiNbHelper);
 
 private:
     /// Implementation code for Scatter

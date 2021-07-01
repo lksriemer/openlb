@@ -1,8 +1,8 @@
 /*  This file is part of the OpenLB library
  *
- *  Copyright (C) 2006, 2007 Jonas Latt
- *  Address: Rue General Dufour 24,  1211 Geneva 4, Switzerland 
- *  E-mail: jonas.latt@gmail.com
+ *  Copyright (C) 2006, 2007 Orestis Malaspinas, Jonas Latt
+ *  Address: EPFL-STI-LIN Station 9 1015 Lausanne
+ *  E-mail: orestis.malaspinas@epfl.ch
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
@@ -29,7 +29,7 @@
 
 #include <algorithm>
 #include <limits>
-#include "../core/lbHelpers.h"
+#include "core/lbHelpers.h"
 #include "entropicDynamics.h"
 #include "entropicLbHelpers.h"
 
@@ -52,7 +52,13 @@ template<typename T, template<typename U> class Lattice>
 EntropicDynamics<T,Lattice>* EntropicDynamics<T,Lattice>::clone() const {
     return new EntropicDynamics<T,Lattice>(*this);
 }
- 
+
+template<typename T, template<typename U> class Lattice>
+T EntropicDynamics<T,Lattice>::computeEquilibrium(int iPop, T rho, const T u[Lattice<T>::d], T uSqr) const
+{
+    return entropicLbHelpers<T,Lattice>::equilibrium(iPop,rho,u);
+}
+
 template<typename T, template<typename U> class Lattice>
 void EntropicDynamics<T,Lattice>::collide (
         Cell<T,Lattice>& cell,
@@ -242,7 +248,14 @@ template<typename T, template<typename U> class Lattice>
 ForcedEntropicDynamics<T,Lattice>* ForcedEntropicDynamics<T,Lattice>::clone() const {
     return new ForcedEntropicDynamics<T,Lattice>(*this);
 }
- 
+
+template<typename T, template<typename U> class Lattice>
+T ForcedEntropicDynamics<T,Lattice>::computeEquilibrium(int iPop, T rho, const T u[Lattice<T>::d], T uSqr) const
+{
+    return entropicLbHelpers<T,Lattice>::equilibrium(iPop,rho,u);
+}
+
+
 template<typename T, template<typename U> class Lattice>
 void ForcedEntropicDynamics<T,Lattice>::collide (
         Cell<T,Lattice>& cell,

@@ -20,7 +20,8 @@
 #  Boston, MA  02110-1301, USA.
 
 
-generic        := parallelIO
+generic        := parallelIO \
+                  vtkDataOutput
 
 precompiled    :=  serializerIO \
                    vtkDataOutput \

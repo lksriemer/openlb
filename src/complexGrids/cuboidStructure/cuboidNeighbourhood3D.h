@@ -28,6 +28,7 @@
 #ifndef CUBOID_NEIGHBOURHOOD_3D_H
 #define CUBOID_NEIGHBOURHOOD_3D_H
 
+#include "complexGrids/mpiManager/mpiManager.h"
 #include <vector>
 #include "superLattice3D.h"
 
@@ -90,6 +91,10 @@ class CuboidNeighbourhood3D {
         bool _initInCNdone;
         /// Indecates if there was an initialization done
         bool _initOutCNdone;
+        /// Handels the MPI communication
+        #ifdef PARALLEL_MODE_MPI
+            singleton::MpiNonBlockingHelper _mpiNbHelper;
+        #endif
     public:
         /// Constructor
         //CuboidNeighbourhood2D() {};

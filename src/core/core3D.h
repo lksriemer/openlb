@@ -23,6 +23,7 @@
 /** \file
  * Groups all the include files for basic 3D dynamics.
  */
+#include "multiPhysics.h"
 #include "singleton.h"
 #include "units.h"
 #include "latticeDescriptors.h"
@@ -41,6 +42,7 @@
 #include "blockStatistics3D.h"
 #include "boundaryCondition3D.h"
 #include "simulationSetup3D.h"
+#include "imageCreator.h"
 #include "ompManager.h"
 #include "loadBalancer.h"
 #include "analysisFlags.h"

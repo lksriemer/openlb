@@ -1,6 +1,6 @@
 /*  This file is part of the OpenLB library
  *
- *  Copyright (C) 2007 Jonas Latt and Bernd Stahl
+ *  Copyright (C) 2007, 2008 Jonas Latt and Bernd Stahl
  *  Address: Rue General Dufour 24,  1211 Geneva 4, Switzerland 
  *  E-mail: jonas.latt@gmail.com
  *
@@ -127,6 +127,7 @@ public:
     Overlap3D   const& getNormalOverlap(int whichOverlap) const;
     Overlap3D const& getPeriodicOverlap(int whichOverlap) const;
     int locate(int iX, int iY, int iZ, int guess=0) const;
+    int locateInEnvelopes(int iX, int iY, int iZ, std::vector<int>& foundId, int guess=0) const;
     int getNumAllocatedBulkCells() const;
     bool getNextChunkX(int iX, int iY, int iZ, int& nextLattice, int& nextChunkSize) const;
     bool getNextChunkY(int iX, int iY, int iZ, int& nextLattice, int& nextChunkSize) const;
@@ -139,6 +140,7 @@ private:
     std::vector<BlockParameters3D> blocks;
     std::vector<Overlap3D> normalOverlaps;
     std::vector<Overlap3D> periodicOverlaps;
+    std::vector<std::vector<int> > neighbors;
 };
 
 }  // namespace olb

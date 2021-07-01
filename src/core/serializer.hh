@@ -79,8 +79,8 @@ void copySerializedData(DataSerializer<T> const& serializer, DataUnSerializer<T>
         int remainToRead = serializerBufferSize - readPos;
         int remainToWrite = unSerializerBufferSize - writePos;
         int nextChunk = std::min(remainToRead, remainToWrite);
-        if (singleton::mpi().isMainProcessor()) {
-            for (int iChunk=0; iChunk<nextChunk; ++iChunk, ++readPos, ++writePos) {
+        for (int iChunk=0; iChunk<nextChunk; ++iChunk, ++readPos, ++writePos) {
+            if (singleton::mpi().isMainProcessor()) {
                 unSerializerBuffer[writePos] = serializerBuffer[readPos];
             }
         }

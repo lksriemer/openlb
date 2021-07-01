@@ -23,6 +23,10 @@
 #include "complexGrids/mpiManager/mpiManager.h"
 #include "vtkDataOutput.h"
 #include "vtkDataOutput.hh"
+#include "serializerIO.h"
+#include "serializerIO.hh"
+#include "base64.h"
+#include "base64.hh"
 
 namespace olb {
 
@@ -35,5 +39,65 @@ template void writeVTKData3D<double> (
         std::string const& vectorFieldName,
         TensorFieldBase3D<double,3> const& vectorField,
         double deltaX, double deltaT );
+
+template<>
+std::string VtkTypeNames<bool>::getBaseName() {
+    return "Int";
+}
+
+template<>
+std::string VtkTypeNames<char>::getBaseName() {
+    return "Int";
+}
+
+template<>
+std::string VtkTypeNames<unsigned char>::getBaseName() {
+    return "UInt";
+}
+
+template<>
+std::string VtkTypeNames<short int>::getBaseName() {
+    return "Int";
+}
+
+template<>
+std::string VtkTypeNames<unsigned short int>::getBaseName() {
+    return "UInt";
+}
+
+template<>
+std::string VtkTypeNames<int>::getBaseName() {
+    return "Int";
+}
+
+template<>
+std::string VtkTypeNames<unsigned int>::getBaseName() {
+    return "UInt";
+}
+
+template<>
+std::string VtkTypeNames<long int>::getBaseName() {
+    return "Int";
+}
+
+template<>
+std::string VtkTypeNames<unsigned long int>::getBaseName() {
+    return "UInt";
+}
+
+template<>
+std::string VtkTypeNames<float>::getBaseName() {
+    return "Float";
+}
+
+template<>
+std::string VtkTypeNames<double>::getBaseName() {
+    return "Float";
+}
+
+template<>
+std::string VtkTypeNames<long double>::getBaseName() {
+    return "Float";
+}
 
 }

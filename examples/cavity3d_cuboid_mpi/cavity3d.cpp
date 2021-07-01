@@ -119,12 +119,8 @@ void writeVTK(SuperLattice3D<T,D3Q19Descriptor>& sLattice,
 }
 
 int main(int argc, char **argv) {
-    olbInit(&argc, &argv);
 
-    int rank = 0;
-    #ifdef PARALLEL_MODE_MPI
-        rank = singleton::mpi().getRank();
-    #endif
+    olbInit(&argc, &argv);
 
     singleton::directories().setOutputDir("./tmp/");
 
@@ -150,7 +146,7 @@ int main(int argc, char **argv) {
             converter.getNy(), converter.getNz(), 7);
     #endif
 
-    if (rank==0) cGeometry.printStatistics();
+    cGeometry.printStatistics();
 
     SuperLattice3D<T, D3Q19Descriptor> sLattice(cGeometry,1);
 
@@ -167,7 +163,7 @@ int main(int argc, char **argv) {
     int iT;
     for (iT=0; iT*converter.getDeltaT()<maxT; ++iT) {
 
-        if (iT%converter.nStep(logT)==0 && rank==0) {
+        if (iT%converter.nStep(logT)==0) {
             cout << "step " << iT
                  << "; t=" << iT*converter.getDeltaT()
                  << "; av energy="

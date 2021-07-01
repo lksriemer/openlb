@@ -1,6 +1,6 @@
 /*  This file is part of the OpenLB library
  *
- *  Copyright (C) 2007 Jonas Latt and Bernd Stahl
+ *  Copyright (C) 2007, 2008 Jonas Latt and Bernd Stahl
  *  Address: Rue General Dufour 24,  1211 Geneva 4, Switzerland 
  *  E-mail: jonas.latt@gmail.com
  *
@@ -24,6 +24,7 @@
  * Geometry specifications for 3D multiblocks -- implementation.
  */
 
+#include "complexGrids/mpiManager/mpiManager.h"
 #include "multiDataGeometry3D.h"
 #include "core/olbDebug.h"
 
@@ -39,7 +40,8 @@ BlockParameters3D::BlockParameters3D(int x0_, int x1_, int y0_, int y1_, int z0_
     : envelopeWidth(envelopeWidth_),
       procId(procId_),
       bulk(x0_, x1_, y0_, y1_, z0_, z1_),
-      envelope(x0_-envelopeWidth, x1_+envelopeWidth, y0_-envelopeWidth, y1_+envelopeWidth, z0_-envelopeWidth, z1_+envelopeWidth),
+      envelope(x0_-envelopeWidth, x1_+envelopeWidth, y0_-envelopeWidth,
+               y1_+envelopeWidth, z0_-envelopeWidth, z1_+envelopeWidth),
       nonPeriodicEnvelope(envelope)
 {
     if (leftX) {
@@ -94,13 +96,16 @@ Overlap3D const& MultiDataDistribution3D::getPeriodicOverlap(int whichOverlap) c
     return periodicOverlaps[whichOverlap];
 }
 
-void MultiDataDistribution3D::addBlock(int x0, int x1, int y0, int y1, int z0, int z1, int envelopeWidth, int procId) {
+void MultiDataDistribution3D::addBlock(int x0, int x1, int y0, int y1, int z0, int z1,
+                                       int envelopeWidth, int procId)
+{
     OLB_PRECONDITION( x0>=0 && y0>=0 && z0>=0);
     OLB_PRECONDITION( x1<nx && y1<ny && z1<nz);
     OLB_PRECONDITION( x0 <= x1 && y0 <= y1 && z0 <= z1);
 
     BlockParameters3D newBlock(x0, x1, y0, y1, z0, z1, envelopeWidth, procId,
                                x0==0, x1==nx-1, y0==0, y1==ny-1, z0==0, z1==nz-1);
+
     computeNormalOverlaps(newBlock);
     blocks.push_back(newBlock);
     computePeriodicOverlaps();
@@ -110,34 +115,51 @@ int MultiDataDistribution3D::locate(int x, int y, int z, int guess) const {
     OLB_PRECONDITION( x>=0 && x < nx );
     OLB_PRECONDITION( y>=0 && y < ny );
     OLB_PRECONDITION( z>=0 && z < nz );
-    OLB_PRECONDITION( guess < getNumBlocks() );
 
-    // Check first whether (x,y,z) is contained in the guessed block
-    BlockCoordinates3D const& guessCoord = blocks[guess].getBulk();
-    if (util::contained(x, y, z, guessCoord.x0, guessCoord.x1, guessCoord.y0, guessCoord.y1, guessCoord.z0, guessCoord.z1)) {
-        return guess;
-    }
-    // If not, try all the blocks
-    for (int iBlock=0; iBlock<(int)blocks.size(); ++iBlock) {
-        if (iBlock != guess) {
-            BlockCoordinates3D const& coord = blocks[iBlock].getBulk();
-            if (util::contained(x, y, z, coord.x0, coord.x1, coord.y0, coord.y1, coord.z0, coord.z1)) {
-                return iBlock;
-            }
+    for (int iBlock=0; iBlock<(int)getNumBlocks(); ++iBlock, guess = (guess+1)%blocks.size()) {
+        BlockCoordinates3D const& coord = blocks[guess].getBulk();
+        if (util::contained(x, y, z, coord.x0, coord.x1, coord.y0, coord.y1, coord.z0, coord.z1)) {
+            return guess;
         }
     }
     return -1;
 }
-//// MODIF COMPLETE UNTIL HERE
+
+int MultiDataDistribution3D::locateInEnvelopes(int x, int y, int z,
+                                               std::vector<int>& foundId, int guess) const {
+    OLB_PRECONDITION( x>=0 && x < nx );
+    OLB_PRECONDITION( y>=0 && y < ny );
+    OLB_PRECONDITION( z>=0 && z < nz );
+
+    int found = locate(x,y,z, guess);
+    if (found == -1) {
+        found = 0;
+    }
+    else {
+        foundId.push_back(found);
+        for (int iNeighbor=0; iNeighbor < (int)neighbors[found].size(); ++iNeighbor) {
+            int nextNeighbor = neighbors[found][iNeighbor];
+            BlockCoordinates3D const& coord = blocks[nextNeighbor].getEnvelope();
+            if (util::contained(x, y, z, coord.x0, coord.x1, coord.y0, coord.y1, coord.z0, coord.z1)) {
+                foundId.push_back(nextNeighbor);
+            }
+        }
+    }
+    return found;
+}
+
 void MultiDataDistribution3D::computeNormalOverlaps(BlockParameters3D const& newBlock) {
+    neighbors.resize(getNumBlocks()+1);
     BlockCoordinates3D intersection;
     int iNew = getNumBlocks();
     for (int iBlock=0; iBlock<getNumBlocks(); ++iBlock) {
         if (util::intersect(blocks[iBlock].getBulk(), newBlock.getNonPeriodicEnvelope(), intersection)) {
             normalOverlaps.push_back(Overlap3D(iBlock, iNew, intersection));
+            neighbors[iBlock].push_back(iNew);
         }
         if (util::intersect(newBlock.getBulk(), blocks[iBlock].getNonPeriodicEnvelope(), intersection)) {
             normalOverlaps.push_back(Overlap3D(iNew, iBlock, intersection));
+            neighbors[iNew].push_back(iBlock);
         }
     }
 }
@@ -157,13 +179,17 @@ void MultiDataDistribution3D::computePeriodicOverlaps() {
                     BlockCoordinates3D newEnvelope(newBlock.getEnvelope().shift(shiftX,shiftY,shiftZ));
                     for (int iBlock=0; iBlock<getNumBlocks(); ++iBlock) {
                         if (util::intersect(blocks[iBlock].getBulk(), newEnvelope, intersection)) {
-                            periodicOverlaps.push_back( Overlap3D(iBlock, iNew, intersection, shiftX, shiftY, shiftZ) );
+                            periodicOverlaps.push_back( Overlap3D(iBlock, iNew, intersection,
+                                                                  shiftX, shiftY, shiftZ) );
+                            neighbors[iBlock].push_back(iNew);
                         }
                         if (!(iBlock==iNew) &&
                             util::intersect(newBulk, blocks[iBlock].getEnvelope(), intersection))
                         {
                             intersection = intersection.shift(-shiftX,-shiftY, -shiftZ);
-                            periodicOverlaps.push_back( Overlap3D(iNew, iBlock, intersection, -shiftX, -shiftY, -shiftZ) );
+                            periodicOverlaps.push_back( Overlap3D(iNew, iBlock, intersection,
+                                                                  -shiftX, -shiftY, -shiftZ) );
+                            neighbors[iNew].push_back(iBlock);
                         }
                     }
                 }

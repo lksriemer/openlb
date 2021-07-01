@@ -39,15 +39,15 @@ namespace olb {
 template<typename T, template<typename U> class Lattice>
 class ParallelDynamics : public Dynamics<T,Lattice> {
 public:
-    ParallelDynamics(Cell<T,Lattice>* baseCell_, int onProcessor_);
+    ParallelDynamics(std::vector<Cell<T,Lattice>*>& baseCell_);
     virtual Dynamics<T,Lattice>* clone() const;
+    virtual T computeEquilibrium(int iPop, T rho, const T u[Lattice<T>::d], T uSqr) const;
+    virtual void iniEquilibrium(Cell<T,Lattice>& cell, T rho, const T u[Lattice<T>::d]);
     virtual void collide(Cell<T,Lattice>& cell,
                          LatticeStatistics<T>& statistics_);
     virtual void staticCollide(Cell<T,Lattice>& cell,
                                const T u[Lattice<T>::d],
                                LatticeStatistics<T>& statistics_);
-    virtual void iniEquilibrium(Cell<T,Lattice>& cell,
-                                T rho, const T u[Lattice<T>::d]);
     virtual T computeRho(Cell<T,Lattice> const& cell) const;
     virtual void computeU( Cell<T,Lattice> const& cell,
                            T u[Lattice<T>::d] ) const;
@@ -77,15 +77,16 @@ public:
     virtual T getOmega() const;
     virtual void setOmega(T omega_);
 private:
-    Cell<T,Lattice>* baseCell;
-    int              onProcessor;
+    std::vector<Cell<T,Lattice>*>& baseCell;
 };
 
 template<typename T, template<typename U> class Lattice>
 class ConstParallelDynamics : public Dynamics<T,Lattice> {
 public:
-    ConstParallelDynamics(Cell<T,Lattice> const* baseCell_, int onProcessor_);
+    ConstParallelDynamics(std::vector<Cell<T,Lattice> const*>& baseCell_);
     virtual Dynamics<T,Lattice>* clone() const;
+    virtual T computeEquilibrium(int iPop, T rho, const T u[Lattice<T>::d], T uSqr) const;
+    virtual void iniEquilibrium(Cell<T,Lattice>& cell, T rho, const T u[Lattice<T>::d]);
     virtual void collide(Cell<T,Lattice>& cell,
                          LatticeStatistics<T>& statistics_);
     virtual void staticCollide(Cell<T,Lattice>& cell,
@@ -121,8 +122,7 @@ public:
     virtual T getOmega() const;
     virtual void setOmega(T omega_);
 private:
-    Cell<T,Lattice> const* baseCell;
-    int                    onProcessor;
+    std::vector<Cell<T,Lattice> const*>& baseCell;
 };
 
 #endif // PARALLEL_MODE_MPI

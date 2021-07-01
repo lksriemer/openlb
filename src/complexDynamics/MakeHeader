@@ -23,4 +23,5 @@
 generic        := 
 
 precompiled    :=  mrtDynamics \
-                   entropicDynamics
+                   entropicDynamics \
+                   chopardDynamics

@@ -1,6 +1,6 @@
 /*  This file is part of the OpenLB library
  *
- *  Copyright (C) 2006, 2007 Orestis Malaspinas, Jonas Latt
+ *  Copyright (C) 2008 Jonas Latt
  *  Address: Rue General Dufour 24,  1211 Geneva 4, Switzerland 
  *  E-mail: jonas.latt@gmail.com
  *
@@ -21,28 +21,29 @@
 */
 
 /** \file
- * A collection of dynamics classes (e.g. BGK) with which a Cell object
- * can be instantiated -- header file.
+ * BGK Dynamics with adjustable speed of sound -- header file.
  */
-#ifndef VISCO_OLDROYD_B_DYNAMICS_H
-#define VISCO_OLDROYD_B_DYNAMICS_H
+#ifndef CHOPARD_DYNAMICS_H
+#define CHOPARD_DYNAMICS_H
 
-#include "../core/dynamics.h"
+#include "core/dynamics.h"
+#include "core/cell.h"
 
 namespace olb {
 
-template<typename T, template<typename U> class Lattice> class Cell;
-
-
-/// Implementation of the entropic collision step
+/// Implementation of the BGK collision step
 template<typename T, template<typename U> class Lattice>
-class ViscoOldroydBdynamics : public BasicDynamics<T,Lattice> 
-{
+class ChopardDynamics : public BasicDynamics<T,Lattice> {
 public:
     /// Constructor
-    ViscoOldroydBdynamics(T omega_, Momenta<T,Lattice>& momenta_);
+    ChopardDynamics(T vs2_, T omega_, Momenta<T,Lattice>& momenta_);
+    ChopardDynamics(T omega_, Momenta<T,Lattice>& momenta_);
     /// Clone the object on its dynamic type.
-    virtual ViscoOldroydBdynamics<T,Lattice>* clone() const;
+    virtual ChopardDynamics<T,Lattice>* clone() const;
+    /// Compute equilibrium distribution function
+    virtual T computeEquilibrium(int iPop, T rho, const T u[Lattice<T>::d], T uSqr) const;
+    /// Initialize cell at equilibrium distribution
+    virtual void iniEquilibrium(Cell<T,Lattice>& cell, T rho, const T u[Lattice<T>::d]);
     /// Collision step
     virtual void collide(Cell<T,Lattice>& cell,
                          LatticeStatistics<T>& statistics_);
@@ -54,10 +55,22 @@ public:
     virtual T getOmega() const;
     /// Set local relaxation parameter of the dynamics
     virtual void setOmega(T omega_);
+    /// Get local value of any parameter
+    virtual T getParameter(int whichParameter) const;
+    /// Set local value of any parameter
+    virtual void setParameter(int whichParameter, T value);
+    /// Set local speed of sound
+    void setVs2(T vs2_);
+    /// Get local speed of sound
+    T    getVs2() const;
+public:
+    static T chopardBgkCollision (
+            Cell<T,Lattice>& cell, T rho, const T u[Lattice<T>::d], T vs2, T omega);
+    static T chopardEquilibrium (
+        int iPop, T rho, const T u[Lattice<T>::d], T uSqr, T vs2 );
 private:
+    T vs2;    ///< speed of sound
     T omega;  ///< relaxation parameter
-	std::vector<T> diagIndex; // indexes along the diagonal of the lattice
-	std::vector<T> normIndex; // indexes along the principal axis of the lattice
 };
 
 }

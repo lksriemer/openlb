@@ -83,7 +83,7 @@ public:
                      PostProcessorGenerator2D<T,Lattice> const& ppGen);
     virtual void addLatticeCoupling (
                      LatticeCouplingGenerator2D<T,Lattice> const& lcGen,
-                     std::vector<BlockStructure2D<T,Lattice>*> partners );
+                     std::vector<SpatiallyExtendedObject2D*> partners );
     virtual void resetPostProcessors();
     virtual void postProcess(int x0_, int x1_, int y0_, int y1_);
     virtual void postProcess();
@@ -99,6 +99,10 @@ public:
     virtual DataUnSerializer<T>& getSubUnSerializer (
             int x0_, int x1_, int y0_, int y1_,
             IndexOrdering::OrderingT ordering );
+    virtual MultiDataDistribution2D getDataDistribution() const;
+    virtual SpatiallyExtendedObject2D* getComponent(int iBlock);
+    virtual SpatiallyExtendedObject2D const* getComponent(int iBlock) const;
+    virtual multiPhysics::MultiPhysicsId getMultiPhysicsId() const;
 private:
     BlockStructure2D<T,Lattice>  *originalLattice;
     int                          x0, y0;

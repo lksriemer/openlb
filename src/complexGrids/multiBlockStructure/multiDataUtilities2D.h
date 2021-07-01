@@ -42,7 +42,7 @@ MultiDataDistribution2D createRegularDataDistribution (
         int nx, int ny, int numBlocksX, int numBlocksY,
         int envelopeWidth );
 
-/// Create a (# processors)-by-1 data distribution
+/// Create a data distribution with regular blocks, as evenly distributed as possible
 MultiDataDistribution2D createRegularDataDistribution(int nx, int ny, int envelopeWidth=1);
 
 /// Create a data distribution by slicing the domain (a block of nX*nY cells
@@ -59,6 +59,15 @@ MultiDataDistribution2D createYSlicedDataDistribution2D (
         CellTypeField2D const& cellTypeField,
         int numBlocks,
         int envelopeWidth );
+
+/// Create x-sliced data distribution, balancing the number of active cells between blocks,
+/// implicitly setting numBlocks = #processors
+MultiDataDistribution2D createXSlicedDataDistribution2D (
+        CellTypeField2D const& cellTypeField, int envelopeWidth=1);
+
+/// cf above
+MultiDataDistribution2D createYSlicedDataDistribution2D (
+        CellTypeField2D const& cellTypeField, int envelopeWidth=1);
 
 }  // namespace olb
 

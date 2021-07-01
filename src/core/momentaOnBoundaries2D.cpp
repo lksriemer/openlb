@@ -62,13 +62,13 @@ namespace olb {
     template class InnerCornerVelBM2D<double, descriptors::D2Q9Descriptor, -1, 1>;
     template class InnerCornerVelBM2D<double, descriptors::D2Q9Descriptor, -1, -1>;
 
+    template class BasicDirichletBM<double, descriptors::D2Q9Descriptor, VelocityBM, 0, 1>;
+    template class BasicDirichletBM<double, descriptors::D2Q9Descriptor, VelocityBM, 0, -1>;
     template class BasicDirichletBM<double, descriptors::D2Q9Descriptor, VelocityBM, 1, 1>;
     template class BasicDirichletBM<double, descriptors::D2Q9Descriptor, VelocityBM, 1, -1>;
-    template class BasicDirichletBM<double, descriptors::D2Q9Descriptor, VelocityBM, -1, 1>;
-    template class BasicDirichletBM<double, descriptors::D2Q9Descriptor, VelocityBM, -1, -1>;
 
+    template class BasicDirichletBM<double, descriptors::D2Q9Descriptor, PressureBM, 0, 1>;
+    template class BasicDirichletBM<double, descriptors::D2Q9Descriptor, PressureBM, 0, -1>;
     template class BasicDirichletBM<double, descriptors::D2Q9Descriptor, PressureBM, 1, 1>;
     template class BasicDirichletBM<double, descriptors::D2Q9Descriptor, PressureBM, 1, -1>;
-    template class BasicDirichletBM<double, descriptors::D2Q9Descriptor, PressureBM, -1, 1>;
-    template class BasicDirichletBM<double, descriptors::D2Q9Descriptor, PressureBM, -1, -1>;
 }

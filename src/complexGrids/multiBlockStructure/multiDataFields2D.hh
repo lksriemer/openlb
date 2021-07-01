@@ -277,6 +277,27 @@ int MultiScalarField2D<T>::getNumBlocks() const {
     return getMultiData().getNumBlocks();
 }
 
+template<typename T>
+MultiDataDistribution2D MultiScalarField2D<T>::getDataDistribution() const {
+    return getMultiData();
+}
+
+template<typename T>
+SpatiallyExtendedObject2D* MultiScalarField2D<T>::getComponent(int iBlock) {
+    OLB_PRECONDITION( iBlock<getScalarFields().size() );
+    return getScalarFields()[iBlock];
+}
+
+template<typename T>
+SpatiallyExtendedObject2D const* MultiScalarField2D<T>::getComponent(int iBlock) const {
+    OLB_PRECONDITION( iBlock<getScalarFields().size() );
+    return getScalarFields()[iBlock];
+}
+
+template<typename T>
+multiPhysics::MultiPhysicsId MultiScalarField2D<T>::getMultiPhysicsId() const {
+    return multiPhysics::getMultiPhysicsScalarId<T>();
+}
 
 
 //////// Class MultiTensorField2D //////////////////////////////////
@@ -544,6 +565,28 @@ MultiScalarField2D<T> const& MultiTensorField2D<T,nDim>::extractComponent(int wh
         }
     }
     return *components[whichDim];
+}
+
+template<typename T, int nDim>
+MultiDataDistribution2D MultiTensorField2D<T,nDim>::getDataDistribution() const {
+    return getMultiData();
+}
+
+template<typename T, int nDim>
+SpatiallyExtendedObject2D* MultiTensorField2D<T,nDim>::getComponent(int iBlock) {
+    OLB_PRECONDITION( iBlock<getTensorFields().size() );
+    return getTensorFields()[iBlock];
+}
+
+template<typename T, int nDim>
+SpatiallyExtendedObject2D const* MultiTensorField2D<T,nDim>::getComponent(int iBlock) const {
+    OLB_PRECONDITION( iBlock<getTensorFields().size() );
+    return getTensorFields()[iBlock];
+}
+
+template<typename T, int nDim>
+multiPhysics::MultiPhysicsId MultiTensorField2D<T,nDim>::getMultiPhysicsId() const {
+    return multiPhysics::getMultiPhysicsTensorId<T,nDim>();
 }
 
 

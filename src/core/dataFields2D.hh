@@ -145,6 +145,27 @@ DataUnSerializer<T>& ScalarField2D<T>::getSubUnSerializer (
     return *unSerializer;
 }
 
+template<typename T>
+MultiDataDistribution2D ScalarField2D<T>::getDataDistribution() const {
+    return MultiDataDistribution2D(getNx(), getNy());
+}
+
+template<typename T>
+SpatiallyExtendedObject2D* ScalarField2D<T>::getComponent(int iBlock) {
+    OLB_PRECONDITION( iBlock==0 );
+    return this;
+}
+
+template<typename T>
+SpatiallyExtendedObject2D const* ScalarField2D<T>::getComponent(int iBlock) const {
+    OLB_PRECONDITION( iBlock==0 );
+    return this;
+}
+
+template<typename T>
+multiPhysics::MultiPhysicsId ScalarField2D<T>::getMultiPhysicsId() const {
+    return multiPhysics::getMultiPhysicsScalarId<T>();
+}
 
 template<typename T>
 T ScalarField2D<T>::computeReduction(DataReduction<T>& reduction) const 
@@ -425,6 +446,27 @@ DataUnSerializer<T>& TensorField2D<T,nDim>::getSubUnSerializer (
     return *unSerializer;
 }
 
+template<typename T, int nDim>
+MultiDataDistribution2D TensorField2D<T,nDim>::getDataDistribution() const {
+    return MultiDataDistribution2D(getNx(), getNy());
+}
+
+template<typename T, int nDim>
+SpatiallyExtendedObject2D* TensorField2D<T,nDim>::getComponent(int iBlock) {
+    OLB_PRECONDITION( iBlock==0 );
+    return this;
+}
+
+template<typename T, int nDim>
+SpatiallyExtendedObject2D const* TensorField2D<T,nDim>::getComponent(int iBlock) const {
+    OLB_PRECONDITION( iBlock==0 );
+    return this;
+}
+
+template<typename T, int nDim>
+multiPhysics::MultiPhysicsId TensorField2D<T,nDim>::getMultiPhysicsId() const {
+    return multiPhysics::getMultiPhysicsTensorId<T,nDim>();
+}
 
 template<typename T, int nDim>
 void TensorField2D<T,nDim>::allocateMemory() {

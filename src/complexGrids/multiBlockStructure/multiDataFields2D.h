@@ -68,6 +68,10 @@ public:
             int x0_, int x1_, int y0_, int y1_,
             IndexOrdering::OrderingT ordering );
     virtual T computeReduction(DataReduction<T>& reduction) const;
+    virtual MultiDataDistribution2D getDataDistribution() const;
+    virtual SpatiallyExtendedObject2D* getComponent(int iBlock);
+    virtual SpatiallyExtendedObject2D const* getComponent(int iBlock) const;
+    virtual multiPhysics::MultiPhysicsId getMultiPhysicsId() const;
 public:
     MultiDataDistribution2D const& getMultiData() const;
     std::vector<ScalarField2D<T>*> getScalarFields() { return fields; }
@@ -122,6 +126,10 @@ public:
     virtual DataUnSerializer<T>& getSubUnSerializer (
             int x0_, int x1_, int y0_, int y1_,
             IndexOrdering::OrderingT ordering );
+    virtual MultiDataDistribution2D getDataDistribution() const;
+    virtual SpatiallyExtendedObject2D* getComponent(int iBlock);
+    virtual SpatiallyExtendedObject2D const* getComponent(int iBlock) const;
+    virtual multiPhysics::MultiPhysicsId getMultiPhysicsId() const;
 public:
     MultiDataDistribution2D const& getMultiData() const;
     std::vector<TensorField2D<T,nDim>*> getTensorFields() { return fields; }

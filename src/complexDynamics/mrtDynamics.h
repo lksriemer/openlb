@@ -27,7 +27,7 @@
 #ifndef MRT_DYNAMICS_H
 #define MRT_DYNAMICS_H
 
-#include "../core/dynamics.h"
+#include "core/dynamics.h"
 
 namespace olb {
 
@@ -42,6 +42,8 @@ public:
     MRTdynamics(T omega_, Momenta<T,Lattice>& momenta_);
     /// Clone the object on its dynamic type.
     virtual MRTdynamics<T,Lattice>* clone() const;
+    /// Compute equilibrium distribution function
+    virtual T computeEquilibrium(int iPop, T rho, const T u[Lattice<T>::d], T uSqr) const;
     /// Collision step
     virtual void collide(Cell<T,Lattice>& cell,
                          LatticeStatistics<T>& statistics_);

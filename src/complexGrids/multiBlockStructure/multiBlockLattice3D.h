@@ -1,6 +1,6 @@
 /*  This file is part of the OpenLB library
  *
- *  Copyright (C) 2007 Jonas Latt and Bernd Stahl
+ *  Copyright (C) 2007, 2008 Jonas Latt and Bernd Stahl
  *  Address: Rue General Dufour 24,  1211 Geneva 4, Switzerland 
  *  E-mail: jonas.latt@gmail.com
  *
@@ -42,7 +42,7 @@ template<typename T, template<typename U> class Lattice> class MultiDataAnalysis
 template<typename T, template<typename U> class Lattice> class MultiBlockSerializerPolicy3D;
 template<typename T, template<typename U> class Lattice> class MultiBlockUnSerializerPolicy3D;
 
-    /// A complex BlockStructure, itself decomposed into smaller components.
+/// A complex BlockStructure, itself decomposed into smaller components.
 /** This extensible class can be used for example for cache-optimized
  * lattices, irregular domains (no memory allocation in areas exterior to
  * the domain) and parallel lattices. The actual behavior of the lattice
@@ -86,7 +86,7 @@ public:
                 PostProcessorGenerator3D<T,Lattice> const& ppGen );
     virtual void addLatticeCoupling (
                      LatticeCouplingGenerator3D<T,Lattice> const& lcGen,
-                     std::vector<BlockStructure3D<T,Lattice>*> partners );
+                     std::vector<SpatiallyExtendedObject3D*> partners );
     virtual void resetPostProcessors();
     virtual void postProcess(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_);
     void postProcess();
@@ -102,9 +102,15 @@ public:
     virtual DataUnSerializer<T>& getSubUnSerializer (
             int x0_, int x1_, int y0_, int y1_, int z0_, int z1_,
             IndexOrdering::OrderingT ordering );
+    virtual MultiDataDistribution3D getDataDistribution() const;
+    virtual SpatiallyExtendedObject3D* getComponent(int iBlock);
+    virtual SpatiallyExtendedObject3D const* getComponent(int iBlock) const;
+    virtual multiPhysics::MultiPhysicsId getMultiPhysicsId() const;
 public:
     void toggleInternalStatistics(bool statisticsOn_);
+    void togglePeriodicCommunication(bool periodicCommunicationOn_);
     bool isInternalStatisticsOn() const;
+    bool isPeriodicCommunicationOn() const;
 public:
     MultiDataDistribution3D const& getMultiData() const;
     std::vector<BlockLattice3D<T,Lattice>*> getBlockLattices();
@@ -113,7 +119,6 @@ private:
     void allocateBlocks();
     void postProcessMultiBlock();
     void reduceStatistics();
-    void connectBoundaries();
     void eliminateStatisticsInEnvelope();
 private:
     BlockParameters3D const& getParameters(int iParam) const;
@@ -128,9 +133,12 @@ private:
     std::vector<BlockLattice3D<T,Lattice>*> blockLattices;
     LatticeStatistics<T>* statistics;
     bool statisticsOn;
+    bool periodicCommunicationOn;
     MultiBlockReductor<T> reductor;
     NoDynamics<T,Lattice> dummyDynamics;
     mutable Cell<T,Lattice> dummyCell;
+    mutable std::vector<Cell<T,Lattice>*> returnCells;
+    mutable std::vector<Cell<T,Lattice> const*> constReturnCells;
     mutable MultiSerializer3D<T>* serializer;
     mutable MultiUnSerializer3D<T>* unSerializer;
     MultiBlockSerializerPolicy3D<T,Lattice> serializerPolicy;

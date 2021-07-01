@@ -27,6 +27,7 @@
 #include "complexGrids/mpiManager/mpiManager.h"
 #include "multiDataUtilities2D.h"
 #include "core/dataFields2D.hh" // neded for template instantiation
+#include "utilities/olbAlgorithms.h"
 
 namespace olb {
 
@@ -56,7 +57,8 @@ MultiDataDistribution2D createRegularDataDistribution (
 }
 
 MultiDataDistribution2D createRegularDataDistribution(int nx, int ny, int envelopeWidth) {
-    return createRegularDataDistribution(nx, ny, singleton::mpi().getSize(), 1, envelopeWidth);
+    std::vector<int> repartition = algorithm::evenRepartition(singleton::mpi().getSize(), 2);
+    return createRegularDataDistribution(nx, ny, repartition[0], repartition[1], envelopeWidth);
 }
 
 // template instantiation for CellTypeField2D
@@ -130,6 +132,18 @@ MultiDataDistribution2D createYSlicedDataDistribution2D (
         dataDistribution.addBlock( 0, nX-1, posY, iY-1, envelopeWidth, iBlock);
     }
     return dataDistribution;
+}
+
+MultiDataDistribution2D createXSlicedDataDistribution2D (
+        CellTypeField2D const& cellTypeField, int envelopeWidth)
+{
+	return createXSlicedDataDistribution2D(cellTypeField, singleton::mpi().getSize(), envelopeWidth);
+}
+
+MultiDataDistribution2D createYSlicedDataDistribution2D (
+        CellTypeField2D const& cellTypeField, int envelopeWidth)
+{
+	return createYSlicedDataDistribution2D(cellTypeField, singleton::mpi().getSize(), envelopeWidth);
 }
 
 }  // namespace olb

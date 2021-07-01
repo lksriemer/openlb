@@ -21,7 +21,6 @@
 */
 
 #include "complexGrids/mpiManager/mpiManager.h"
-#include "complexGrids/mpiManager/mpiManager.hh"
 #include "parallelIO.h"
 
 namespace olb {
@@ -110,7 +109,7 @@ ParBuf::underflow() {
 
 std::streamsize
 ParBuf::xsgetn (char* s, std::streamsize num) {
-    std::streamsize sizeRead;
+    std::streamsize sizeRead=0;
 #ifdef PARALLEL_MODE_MPI
   if (singleton::mpi().isMainProcessor()) {
 #endif
@@ -128,35 +127,35 @@ ParBuf::xsgetn (char* s, std::streamsize num) {
 }
 
 ///////////////////////////////////////////////////////////////////
-// Class vofstream
+// Class olb_ofstream
 ///////////////////////////////////////////////////////////////////
 
-vofstream::vofstream() : std::ostream(NULL), fbuf(), mybuf(&fbuf) {
+olb_ofstream::olb_ofstream() : std::ostream(NULL), fbuf(), mybuf(&fbuf) {
   this->init(&mybuf);
 }
 
-vofstream::vofstream(const char * filename, openmode mode)
+olb_ofstream::olb_ofstream(const char * filename, openmode mode)
   : std::ostream(NULL), fbuf(), mybuf(&fbuf)
 { 
   init(&mybuf);
   open(filename, mode);
 }
 
-vofstream::~vofstream()
+olb_ofstream::~olb_ofstream()
 { }
 
 std::streambuf*
-vofstream::rdbuf() const {
+olb_ofstream::rdbuf() const {
   return const_cast<ParBuf*>(&mybuf);
 }
 
 bool
-vofstream::is_open() {
+olb_ofstream::is_open() {
   return fbuf.is_open();
 }
 
 void
-vofstream::open(const char* filename, openmode mode) {
+olb_ofstream::open(const char* filename, openmode mode) {
   int ok;
 #ifdef PARALLEL_MODE_MPI
   if (singleton::mpi().isMainProcessor()) {
@@ -172,7 +171,7 @@ vofstream::open(const char* filename, openmode mode) {
 }
 
 void
-vofstream::close() {
+olb_ofstream::close() {
   int ok;
 #ifdef PARALLEL_MODE_MPI
   if (singleton::mpi().isMainProcessor()) {
@@ -190,36 +189,36 @@ vofstream::close() {
 
 
 ///////////////////////////////////////////////////////////////////
-// Class vifstream
+// Class olb_ifstream
 ///////////////////////////////////////////////////////////////////
 
-vifstream::vifstream() : std::istream(NULL), fbuf(), mybuf(&fbuf) {
+olb_ifstream::olb_ifstream() : std::istream(NULL), fbuf(), mybuf(&fbuf) {
   init(&mybuf);
 }
 
-vifstream::vifstream(const char * filename, openmode mode)
+olb_ifstream::olb_ifstream(const char * filename, openmode mode)
   : std::istream(NULL), fbuf(), mybuf(&fbuf)
 { 
   init(&mybuf);
   open(filename, mode);
 }
 
-vifstream::~vifstream()
+olb_ifstream::~olb_ifstream()
 { }
 
 std::streambuf*
-vifstream::rdbuf() const {
+olb_ifstream::rdbuf() const {
   return const_cast<ParBuf*>(&mybuf);
 }
 
 bool
-vifstream::is_open() {
+olb_ifstream::is_open() {
   return fbuf.is_open();
 }
 
 
 void
-vifstream::open(const char* filename, openmode mode) {
+olb_ifstream::open(const char* filename, openmode mode) {
   int ok;
 #ifdef PARALLEL_MODE_MPI
   if (singleton::mpi().isMainProcessor()) {
@@ -235,7 +234,7 @@ vifstream::open(const char* filename, openmode mode) {
 }
 
 void
-vifstream::close() {
+olb_ifstream::close() {
   int ok;
 #ifdef PARALLEL_MODE_MPI
   if (singleton::mpi().isMainProcessor()) {
@@ -252,35 +251,35 @@ vifstream::close() {
 
 
 ///////////////////////////////////////////////////////////////////
-// Class vfstream
+// Class olb_fstream
 ///////////////////////////////////////////////////////////////////
 
-vfstream::vfstream() : std::iostream(NULL), fbuf(), mybuf(&fbuf) {
+olb_fstream::olb_fstream() : std::iostream(NULL), fbuf(), mybuf(&fbuf) {
   this->init(&mybuf);
 }
 
-vfstream::vfstream(const char * filename, openmode mode)
+olb_fstream::olb_fstream(const char * filename, openmode mode)
   : std::iostream(NULL), fbuf(), mybuf(&fbuf)
 { 
   init(&mybuf);
   open(filename, mode);
 }
 
-vfstream::~vfstream()
+olb_fstream::~olb_fstream()
 { }
 
 std::streambuf*
-vfstream::rdbuf() const {
+olb_fstream::rdbuf() const {
   return const_cast<ParBuf*>(&mybuf);
 }
 
 bool
-vfstream::is_open() {
+olb_fstream::is_open() {
   return fbuf.is_open();
 }
 
 void
-vfstream::open(const char* filename, openmode mode) {
+olb_fstream::open(const char* filename, openmode mode) {
   int ok;
 #ifdef PARALLEL_MODE_MPI
   if (singleton::mpi().isMainProcessor()) {
@@ -296,7 +295,7 @@ vfstream::open(const char* filename, openmode mode) {
 }
 
 void
-vfstream::close() {
+olb_fstream::close() {
   int ok;
 #ifdef PARALLEL_MODE_MPI
   if (singleton::mpi().isMainProcessor()) {

@@ -1,6 +1,8 @@
 /*  This file is part of the OpenLB library
  *
- *  Copyright (C) 2007 the OpenLB project
+ *  Copyright (C) 2006, 2007 Jonas Latt
+ *  Address: Rue General Dufour 24,  1211 Geneva 4, Switzerland 
+ *  E-mail: jonas.latt@gmail.com
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
@@ -18,10 +20,18 @@
  *  Boston, MA  02110-1301, USA.
 */
 
-/** \file
- * Groups all the 3D include files in the contrib directory.
-*/
+#include "complexGrids/mpiManager/mpiManager.h"
+#include "imageCreator.h"
+#include "imageCreator.hh"
+#include "latticeDescriptors.h"
+#include "latticeDescriptors.hh"
 
-#include "keepIncomingDynamics.h"
-#include "twoBlockLatticePostProcessing.h"
-#include "straightBouzidiDynamics.h"
+namespace olb {
+
+namespace graphics {
+
+    template class ImageCreator<double>;
+
+}
+
+}

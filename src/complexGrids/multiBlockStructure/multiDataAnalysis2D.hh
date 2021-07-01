@@ -153,10 +153,10 @@ TensorFieldBase2D<T,3> const& MultiDataAnalysis2D<T,Lattice>::getStrainRate() co
 }
 
 template<typename T, template<typename U> class Lattice>
-TensorFieldBase2D<T,3> const& MultiDataAnalysis2D<T,Lattice>::getStress() const {
+TensorFieldBase2D<T,3> const& MultiDataAnalysis2D<T,Lattice>::getStrainRateFromStress() const {
     for (unsigned iBlock=0; iBlock<perBlockAnalysis.size(); ++iBlock) {
         if (perBlockAnalysis[iBlock]) {
-            perBlockAnalysis[iBlock] -> getStress();
+            perBlockAnalysis[iBlock] -> getStrainRateFromStress();
         }
     }
     return fields.stressField;

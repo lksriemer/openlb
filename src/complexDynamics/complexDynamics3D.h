@@ -27,3 +27,4 @@
 #include "entropicLbHelpers.h"
 #include "mrtDynamics.h"
 #include "mrtLatticeDescriptors.h"
+#include "chopardDynamics.h"

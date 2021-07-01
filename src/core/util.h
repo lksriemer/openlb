@@ -223,9 +223,9 @@ namespace util {
         friend std::vector<int> const& subIndexOutgoingCorner2D();
     };
 
-    template <typename Descriptor, int direction, int orientation>
+    template <typename Descriptor, int xNormal, int yNormal>
     std::vector<int> const& subIndexOutgoingCorner2D() {
-        static SubIndexOutgoingCorner2D<Descriptor, direction, orientation> subIndexOutgoingCorner2DSingleton;
+        static SubIndexOutgoingCorner2D<Descriptor, xNormal, yNormal> subIndexOutgoingCorner2DSingleton;
         return subIndexOutgoingCorner2DSingleton.indices;
     }
 
