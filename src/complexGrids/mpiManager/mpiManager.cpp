@@ -41,8 +41,8 @@ MpiManager::~MpiManager() {
     }
 }
 
-void MpiManager::init(int *argc, char ***argv, bool verbous) {
-    if (verbous) {
+void MpiManager::init(int *argc, char ***argv, bool verbose) {
+    if (verbose) {
         std::cerr << "Constructing an MPI thread" << std::endl;
     }
     int ok1 = MPI_Init(argc, argv);
@@ -468,6 +468,23 @@ void MpiManager::bCast<double>(double* sendBuf, int sendCount, int root, MPI_Com
     if (!ok) return;
     MPI_Bcast(static_cast<void*>(sendBuf),
               sendCount, MPI_DOUBLE, root, comm);
+}
+
+template <>
+void MpiManager::bCast<std::string>(std::string* sendBuf, int sendCount, int root, MPI_Comm comm)
+{
+    if (!ok) return;
+    int length = (int) sendBuf->size();
+    MPI_Bcast(static_cast<void*>(&length), 1, MPI_INT, root, comm);
+    char* buffer = new char[length+1];
+    if (getRank()==root) {
+        std::copy(sendBuf->c_str(), sendBuf->c_str()+length+1, buffer);
+    }
+    MPI_Bcast(static_cast<void*>(buffer), length+1, MPI_CHAR, root, comm);
+    if (getRank()!=root) {
+        *sendBuf = buffer;
+    }
+    delete [] buffer;
 }
 
 template <>

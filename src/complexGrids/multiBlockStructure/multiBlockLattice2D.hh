@@ -1,8 +1,9 @@
 /*  This file is part of the OpenLB library
  *
  *  Copyright (C) 2007, 2008 Jonas Latt
- *  Address: Rue General Dufour 24,  1211 Geneva 4, Switzerland 
- *  E-mail: jonas.latt@gmail.com
+ *  E-mail contact: info@openlb.net
+ *  The most recent release of OpenLB can be downloaded at
+ *  <http://www.openlb.net/>
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
@@ -232,6 +233,61 @@ void MultiBlockLattice2D<T,Lattice>::defineDynamics (
         }
     }
 }
+
+template<typename T, template<typename U> class Lattice>
+void MultiBlockLattice2D<T, Lattice>::defineDynamics(
+        BlockGeometryStatistics2D* blockGeoSta, int x0_, int x1_, int y0_,
+        int y1_, Dynamics<T, Lattice>* dynamics, int material) {
+
+    for (int iX = x0_; iX <= x1_; ++iX) {
+        for (int iY = y0_; iY <= y1_; ++iY) {
+
+            if (blockGeoSta->getBlockGeometry()->getMaterial(iX, iY)
+                    == material) {
+                BlockCoordinates2D domain(iX, iX, iY, iY), inters;
+                std::vector<int> const& relevantBlocks = getRelevantBlocks();
+                for (int rBlock = 0; rBlock < getNumRelevantBlocks(); ++rBlock) {
+                    int iBlock = relevantBlocks[rBlock];
+                    BlockParameters2D const& params = getParameters(iBlock);
+                    if (util::intersect(domain,
+                            params.getNonPeriodicEnvelope(), inters)) {
+                        inters = params.toLocal(inters);
+                        blockLattices[iBlock] -> defineDynamics(inters.x0,
+                                inters.x1, inters.y0, inters.y1, dynamics);
+                    }
+                }
+
+                std::vector<int> const
+                        & periodicOverlapWithMe =
+                                multiBlockHandler->getRelevantIndexes().getPeriodicOverlapWithMe();
+                for (unsigned rOverlap = 0; rOverlap
+                        < periodicOverlapWithMe.size(); ++rOverlap) {
+                    int iOverlap = periodicOverlapWithMe[rOverlap];
+                    Overlap2D const& overlap = getPeriodicOverlap(iOverlap);
+                    int overlapId = overlap.getOverlapId();
+                    if (util::intersect(domain,
+                            overlap.getOriginalCoordinates(), inters)) {
+                        inters = inters.shift(-overlap.getShiftX(),
+                                -overlap.getShiftY());
+                        inters = getParameters(overlapId).toLocal(inters);
+                        blockLattices[overlapId] -> defineDynamics(inters.x0,
+                                inters.x1, inters.y0, inters.y1, dynamics);
+                    }
+                }
+            }
+        }
+    }
+}
+
+template<typename T, template<typename U> class Lattice>
+void MultiBlockLattice2D<T, Lattice>::defineDynamics(
+        BlockGeometryStatistics2D* blockGeoSta, Dynamics<T, Lattice>* dynamics,
+        int material) {
+    defineDynamics(blockGeoSta,
+            0, blockGeoSta->getBlockGeometry()->getNx() - 1,
+            0, blockGeoSta->getBlockGeometry()->getNy() - 1, dynamics, material);
+}
+
 
 template<typename T, template<typename U> class Lattice>
 void MultiBlockLattice2D<T,Lattice>::specifyStatisticsStatus (

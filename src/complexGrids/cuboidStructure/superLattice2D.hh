@@ -1,8 +1,9 @@
 /*  This file is part of the OpenLB library
  *
  *  Copyright (C) 2007 Mathias J. Krause
- *  Address: Wilhelm-Maybach-Str. 24, 68766 Hockenheim, Germany 
- *  E-mail: mathias.j.krause@gmx.de
+ *  E-mail contact: info@openlb.net
+ *  The most recent release of OpenLB can be downloaded at
+ *  <http://www.openlb.net/>
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
@@ -70,8 +71,11 @@ SuperLattice2D<T,Lattice>::SuperLattice2D (
         int nX = _cGeometry.get_cuboid(_load.glob(iC)).get_nX() + 2*_overlap;
         int nY = _cGeometry.get_cuboid(_load.glob(iC)).get_nY() + 2*_overlap;
 
-        BlockLattice2D<T,Lattice>blockLattice(nX, nY);
-        _blockLattices.push_back(blockLattice);
+        BlockLattice2D<T, Lattice> tmp(0, 0);
+        _blockLattices.push_back(tmp);
+        BlockLattice2D<T, Lattice> blockLattice(nX, nY);
+        _blockLattices.back().swap(blockLattice);
+
     }
     for (int iC=0; iC<_load.size(); iC++) {
         BlockLatticeView2D<T,Lattice>lattice( _blockLattices[iC], 
@@ -165,6 +169,40 @@ void SuperLattice2D<T,Lattice>::defineDynamics (
 }
 
 template<typename T, template<typename U> class Lattice>
+void SuperLattice2D<T, Lattice>::defineDynamics(BlockGeometryStatistics2D* blockGeoSta,
+        T x0, T x1, T y0, T y1,
+        Dynamics<T, Lattice>* dynamics,
+        int material) {
+    int locX, locY;
+    for (int iX = x0; iX <= x1; ++iX) {
+        for (int iY = y0; iY <= y1; ++iY) {
+            if (blockGeoSta->getBlockGeometry()->getMaterial(iX, iY)
+                    == material) {
+                for (int iC = 0; iC < _load.size(); iC++) {
+                    if (_cGeometry.get_cuboid(_load.glob(iC)).checkPoint(
+                            iX, iY, locX, locY, _overlap)) {
+                        _blockLattices[iC].defineDynamics(locX, locX, locY,
+                                locY, dynamics);
+                    }
+                }
+            }
+        }
+    }
+}
+
+template<typename T, template<typename U> class Lattice>
+void SuperLattice2D<T, Lattice>::defineDynamics(
+        BlockGeometryStatistics2D* blockGeoSta,
+        Dynamics<T, Lattice>* dynamics,
+        int material) {
+
+    defineDynamics(blockGeoSta,
+            0, blockGeoSta->getBlockGeometry()->getNx() - 1,
+            0, blockGeoSta->getBlockGeometry()->getNy() - 1,
+            dynamics, material);
+}
+
+template<typename T, template<typename U> class Lattice>
 void SuperLattice2D<T,Lattice>::defineRhoU (
          T x0, T x1, T y0, T y1, T rho, const T u[Lattice<T>::d] ) {
 
@@ -174,6 +212,40 @@ void SuperLattice2D<T,Lattice>::defineRhoU (
             for (int iX=locX0; iX<=locX1; iX++) {
                 for (int iY=locY0; iY<=locY1; iY++) {
                     _blockLattices[iC].get(iX,iY).defineRhoU(rho, u);
+                }
+            }
+        }
+    }
+}
+
+template<typename T, template<typename U> class Lattice>
+void SuperLattice2D<T,Lattice>::defineRho (
+         T x0, T x1, T y0, T y1, T rho ) {
+
+    int locX0, locX1, locY0, locY1;
+    for (int iC=0; iC<_load.size(); iC++) {
+        if (_cGeometry.get_cuboid(_load.glob(iC)).checkInters( x0, x1, y0, y1,
+              locX0, locX1, locY0, locY1, _overlap)) {
+            for (int iX=locX0; iX<=locX1; iX++) {
+                for (int iY=locY0; iY<=locY1; iY++) {
+                    _blockLattices[iC].get(iX,iY).defineRho(rho);
+                }
+            }
+        }
+    }
+}
+
+template<typename T, template<typename U> class Lattice>
+void SuperLattice2D<T,Lattice>::defineU (
+         T x0, T x1, T y0, T y1, const T u[Lattice<T>::d] ) {
+
+    int locX0, locX1, locY0, locY1;
+    for (int iC=0; iC<_load.size(); iC++) {
+        if (_cGeometry.get_cuboid(_load.glob(iC)).checkInters( x0, x1, y0, y1,
+              locX0, locX1, locY0, locY1, _overlap)) {
+            for (int iX=locX0; iX<=locX1; iX++) {
+                for (int iY=locY0; iY<=locY1; iY++) {
+                        _blockLattices[iC].get(iX,iY).defineU(u);
                 }
             }
         }

@@ -96,10 +96,12 @@ void VtkDataWriter3D::writeDataField(DataSerializer<T> const& serializer,
 ////////// class VtkImageOutput2D ////////////////////////////////////
 
 template<typename T>
-VtkImageOutput2D<T>::VtkImageOutput2D(std::string fName, T deltaX_)
+VtkImageOutput2D<T>::VtkImageOutput2D(std::string fName, T deltaX_, T originX_, T originY_)
     : fullName ( singleton::directories().getVtkOutDir() + fName+".vti" ),
       vtiOut( fullName ),
       deltaX(deltaX_),
+      originX(originX_),
+      originY(originY_),      
       headerWritten( false )
 { }
 
@@ -117,7 +119,7 @@ void VtkImageOutput2D<T>::writeHeader(int nx_, int ny_) {
     else {
         nx = nx_;
         ny = ny_;
-        vtiOut.writeHeader(0,nx-1,0,ny-1,0,0, 0,0,0,deltaX);
+        vtiOut.writeHeader(0,nx-1,0,ny-1,0,0, originX,originY,0,deltaX);
         vtiOut.startPiece(0,nx-1,0,ny-1,0,0);
         headerWritten = true;
     }
@@ -133,32 +135,35 @@ void VtkImageOutput2D<T>::writeFooter() {
 }
 
 template<typename T>
-template<typename TConv>
-void VtkImageOutput2D<T>::writeData( ScalarFieldBase2D<T> const& scalarField,
+template<typename S, typename TConv>
+void VtkImageOutput2D<T>::writeData( ScalarFieldBase2D<S> const& scalarField,
                                      std::string scalarFieldName, TConv scalingFactor )
 {
     writeHeader(scalarField.getNx(), scalarField.getNy());
-    TypeConversionSerializer<T,TConv> convSerializer(scalarField.getSerializer(IndexOrdering::backward) );
+    TypeConversionSerializer<S,TConv> convSerializer(scalarField.getSerializer(IndexOrdering::backward) );
     vtiOut.writeDataField( convSerializer, scalarFieldName, scalingFactor, 1);
 }
 
 template<typename T>
-template<int n, typename TConv>
-void VtkImageOutput2D<T>::writeData( TensorFieldBase2D<T,n> const& tensorField,
+template<int n, typename S, typename TConv>
+void VtkImageOutput2D<T>::writeData( TensorFieldBase2D<S,n> const& tensorField,
                                      std::string tensorFieldName, TConv scalingFactor )
 {
     writeHeader(tensorField.getNx(), tensorField.getNy());
-    TypeConversionSerializer<T,TConv> convSerializer(tensorField.getSerializer(IndexOrdering::backward) );
+    TypeConversionSerializer<S,TConv> convSerializer(tensorField.getSerializer(IndexOrdering::backward) );
     vtiOut.writeDataField(convSerializer, tensorFieldName, scalingFactor, n);
 }
 
 ////////// class VtkImageOutput3D ////////////////////////////////////
 
 template<typename T>
-VtkImageOutput3D<T>::VtkImageOutput3D(std::string fName, T deltaX_)
+VtkImageOutput3D<T>::VtkImageOutput3D(std::string fName, T deltaX_, T originX_, T originY_, T originZ_)
     : fullName ( singleton::directories().getVtkOutDir() + fName+".vti" ),
       vtiOut( fullName ),
       deltaX(deltaX_),
+      originX(originX_),
+      originY(originY_),      
+      originZ(originZ_),
       headerWritten( false )
 { }
 
@@ -178,7 +183,7 @@ void VtkImageOutput3D<T>::writeHeader(int nx_, int ny_, int nz_) {
         nx = nx_;
         ny = ny_;
         nz = nz_;
-        vtiOut.writeHeader(0,nx-1,0,ny-1,0,nz-1,0,0,0,deltaX);
+        vtiOut.writeHeader(0,nx-1,0,ny-1,0,nz-1,originX,originY,originZ,deltaX);
         vtiOut.startPiece(0,nx-1,0,ny-1,0,nz-1);
         headerWritten = true;
     }
@@ -194,22 +199,22 @@ void VtkImageOutput3D<T>::writeFooter() {
 }
 
 template<typename T>
-template<typename TConv>
-void VtkImageOutput3D<T>::writeData( ScalarFieldBase3D<T> const& scalarField,
+template<typename S, typename TConv>
+void VtkImageOutput3D<T>::writeData( ScalarFieldBase3D<S> const& scalarField,
                                      std::string scalarFieldName, TConv scalingFactor )
 {
     writeHeader(scalarField.getNx(), scalarField.getNy(), scalarField.getNz());
-    TypeConversionSerializer<T,TConv> convSerializer(scalarField.getSerializer(IndexOrdering::backward) );
+    TypeConversionSerializer<S,TConv> convSerializer(scalarField.getSerializer(IndexOrdering::backward) );
     vtiOut.writeDataField( convSerializer, scalarFieldName, scalingFactor, 1);
 }
 
 template<typename T>
-template<int n, typename TConv>
-void VtkImageOutput3D<T>::writeData( TensorFieldBase3D<T,n> const& tensorField,
+template<int n, typename S, typename TConv>
+void VtkImageOutput3D<T>::writeData( TensorFieldBase3D<S,n> const& tensorField,
                                      std::string tensorFieldName, TConv scalingFactor )
 {
     writeHeader(tensorField.getNx(), tensorField.getNy(), tensorField.getNz());
-    TypeConversionSerializer<T,TConv> convSerializer(tensorField.getSerializer(IndexOrdering::backward) );
+    TypeConversionSerializer<S,TConv> convSerializer(tensorField.getSerializer(IndexOrdering::backward) );
     vtiOut.writeDataField(convSerializer, tensorFieldName, scalingFactor, n);
 }
 

@@ -1,8 +1,9 @@
 /*  This file is part of the OpenLB library
  *
  *  Copyright (C) 2007 Mathias J. Krause
- *  Address: Wilhelm-Maybach-Str. 24, 68766 Hockenheim, Germany 
- *  E-mail: mathias.j.krause@gmx.de
+ *  E-mail contact: info@openlb.net
+ *  The most recent release of OpenLB can be downloaded at
+ *  <http://www.openlb.net/>
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
@@ -72,7 +73,7 @@ class SuperLattice2D {
     private:
         /// Lattices with ghost cell layer of size overlap
         std::vector<BlockLattice2D<T,Lattice> >     _blockLattices;
-	/// View of the lattices without overlap
+        /// View of the lattices without overlap
         std::vector<BlockLatticeView2D<T,Lattice> > _lattices;
         /// The grid structure is stored here 
         CuboidGeometry2D<T>&                        _cGeometry;
@@ -152,11 +153,28 @@ class SuperLattice2D {
         /// Initialize all lattice cells to become ready for simulation
         void initialize();
         /// Defines the dynamics on a rectangular domain
+
         void defineDynamics (T x0, T x1, T y0, T y1, 
                              Dynamics<T,Lattice>* dynamics );
+
+        /// Defines the dynamics on a rectangular domain by material
+        void defineDynamics(BlockGeometryStatistics2D* blockGeoSta, T x0, T x1,
+                T y0, T y1, Dynamics<T, Lattice>* dynamics,
+                int material);
+
+        /// Defines the dynamics by material
+        void defineDynamics(BlockGeometryStatistics2D* blockGeoSta, Dynamics<T,
+                Lattice>* dynamics, int material);
+
         /// Defines rho on a rectangular domain
         void defineRhoU (T x0, T x1, T y0, T y1,
                              T rho, const T u[Lattice<T>::d] );
+        /// Defines rho on a rectangular domain
+        void defineRho (T x0, T x1, T y0, T y1,
+                             T rho );
+        /// Defines u on a rectangular domain
+        void defineU (T x0, T x1, T y0, T y1,
+                             const T u[Lattice<T>::d] );
         /// Initializes the equilibrium
         void iniEquilibrium (T x0, T x1, T y0, T y1, 
                              T rho, const T u[Lattice<T>::d] );

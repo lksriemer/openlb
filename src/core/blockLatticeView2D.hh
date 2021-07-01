@@ -1,8 +1,9 @@
 /*  This file is part of the OpenLB library
  *
  *  Copyright (C) 2006, 2007, 2008 Jonas Latt
- *  Address: Rue General Dufour 24,  1211 Geneva 4, Switzerland 
- *  E-mail: jonas.latt@gmail.com
+ *  E-mail contact: info@openlb.net
+ *  The most recent release of OpenLB can be downloaded at
+ *  <http://www.openlb.net/>
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
@@ -133,6 +134,29 @@ void BlockLatticeView2D<T,Lattice>::defineDynamics (
         int iX, int iY, Dynamics<T,Lattice>* dynamics )
 {
     originalLattice->defineDynamics( iX+x0, iY+y0, dynamics );
+}
+
+template<typename T, template<typename U> class Lattice>
+void BlockLatticeView2D<T,Lattice>::defineDynamics (
+        BlockGeometryStatistics2D* blockGeoSta, Dynamics<T,Lattice>* dynamics, int material )
+{
+
+    originalLattice->defineDynamics (
+        blockGeoSta,
+        x0, x0+nx-1, y0, y0+ny-1,
+        dynamics, material );
+}
+
+template<typename T, template<typename U> class Lattice>
+void BlockLatticeView2D<T,Lattice>::defineDynamics (
+        BlockGeometryStatistics2D* blockGeoSta,
+        int x0_, int x1_, int y0_, int y1_,
+        Dynamics<T,Lattice>* dynamics, int material )
+{
+    originalLattice->defineDynamics (
+        blockGeoSta,
+        x0_+x0, x1_+x0, y0_+y0, y1_+y0,
+        dynamics, material );
 }
 
 template<typename T, template<typename U> class Lattice>

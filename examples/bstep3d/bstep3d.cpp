@@ -1,8 +1,9 @@
 /*  This file is part of the OpenLB library
  *
  *  Copyright (C) 2006, 2007 Jonas Latt
- *  Address: Rue General Dufour 24,  1211 Geneva 4, Switzerland 
- *  E-mail: jonas.latt@gmail.com
+ *  E-mail contact: info@openlb.net
+ *  The most recent release of OpenLB can be downloaded at
+ *  <http://www.openlb.net/>
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
@@ -158,8 +159,8 @@ void writeVTK(BlockStructure3D<T,DESCRIPTOR>& lattice,
     T dt = converter.getDeltaT();
     DataAnalysisBase3D<T,DESCRIPTOR> const& analysis = lattice.getDataAnalysis();
     VtkImageOutput3D<T> vtkOut(createFileName("vtk", iter, 6), dx);
-    vtkOut.writeData<float>(analysis.getVorticityNorm(), "vorticityNorm", (T)1/dt);
-    vtkOut.writeData<3,float>(analysis.getVelocity(), "velocity", dx/dt);
+    vtkOut.writeData<T,float>(analysis.getVorticityNorm(), "vorticityNorm", (T)1/dt);
+    vtkOut.writeData<3,T,float>(analysis.getVelocity(), "velocity", dx/dt);
 }
 
 int main(int argc, char* argv[]) {

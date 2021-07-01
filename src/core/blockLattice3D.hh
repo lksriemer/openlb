@@ -2,8 +2,9 @@
  *
  *  Copyright (C) 2006-2008 Jonas Latt
  *  OMP parallel code by Mathias Krause, Copyright (C) 2007
- *  Address: Rue General Dufour 24,  1211 Geneva 4, Switzerland 
- *  E-mail: jonas.latt@gmail.com
+ *  E-mail contact: info@openlb.net
+ *  The most recent release of OpenLB can be downloaded at
+ *  <http://www.openlb.net/>
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
@@ -204,6 +205,41 @@ void BlockLattice3D<T,Lattice>::defineDynamics (
 }
 
 template<typename T, template<typename U> class Lattice>
+void BlockLattice3D<T,Lattice>::defineDynamics (
+        BlockGeometryStatistics3D* blockGeoSta, Dynamics<T,Lattice>* dynamics, int material )
+{
+    defineDynamics (
+        blockGeoSta,
+        0, blockGeoSta->getBlockGeometry()->getNx()-1, 0, blockGeoSta->getBlockGeometry()->getNy()-1, 0, blockGeoSta->getBlockGeometry()->getNz()-1,
+        dynamics, material );
+}
+
+template<typename T, template<typename U> class Lattice>
+void BlockLattice3D<T,Lattice>::defineDynamics (
+        BlockGeometryStatistics3D* blockGeoSta,
+        int x0, int x1, int y0, int y1, int z0, int z1,
+        Dynamics<T,Lattice>* dynamics, int material )
+{
+    OLB_PRECONDITION(x0>=0 && x1<nx);
+    OLB_PRECONDITION(x1>=x0);
+    OLB_PRECONDITION(y0>=0 && y1<ny);
+    OLB_PRECONDITION(y1>=y0);
+    OLB_PRECONDITION(z0>=0 && z1<nz);
+    OLB_PRECONDITION(z1>=z0);
+    for (int iX=x0; iX<=x1; ++iX) {
+        for (int iY=y0; iY<=y1; ++iY) {
+            for (int iZ=z0; iZ<=z1; ++iZ) {
+
+                if(blockGeoSta->getBlockGeometry()->getMaterial(iX, iY, iZ)==material){
+
+                    grid[iX][iY][iZ].defineDynamics(dynamics);
+                }
+            }
+        }
+    }
+}
+
+template<typename T, template<typename U> class Lattice>
 void BlockLattice3D<T,Lattice>::specifyStatisticsStatus (
         int x0, int x1, int y0, int y1, int z0, int z1, bool status)
 {
@@ -312,7 +348,7 @@ void BlockLattice3D<T,Lattice>::stream(int x0, int x1, int y0, int y1, int z0, i
     bulkStream(x0+vicinity,x1-vicinity, y0+vicinity,y1-vicinity, z0+vicinity,z1-vicinity);
 
     boundaryStream(x0,x1,y0,y1,z0,z1, x0,x0+vicinity-1, y0,y1, z0,z1);
-    boundaryStream(x0,x1,y0,y1,z0,z1, x1-vicinity-1,x1, y0,y1, z0,z1);
+    boundaryStream(x0,x1,y0,y1,z0,z1, x1-vicinity+1,x1, y0,y1, z0,z1);
     boundaryStream(x0,x1,y0,y1,z0,z1, x0+vicinity,x1-vicinity, y0,y0+vicinity-1, z0,z1);
     boundaryStream(x0,x1,y0,y1,z0,z1, x0+vicinity,x1-vicinity, y1-vicinity+1,y1, z0,z1);
     boundaryStream(x0,x1,y0,y1,z0,z1, x0+vicinity,x1-vicinity, y0+vicinity,y1-vicinity, z0,z0+vicinity-1);

@@ -1,7 +1,6 @@
 /*  This file is part of the OpenLB library
  *
  *  Copyright (C) 2006, 2007, 2008 Jonas Latt, Orestis Malaspina, Andrea Parmigiani
- *  Address: Rue General Dufour 24,  1211 Geneva 4, Switzerland 
  *  E-mail: Jonas.Latt@cui.unige.ch
  *
  *  This program is free software; you can redistribute it and/or

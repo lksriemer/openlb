@@ -1,8 +1,9 @@
 /*  This file is part of the OpenLB library
  *
  *  Copyright (C) 2007 Mathias J. Krause
- *  Address: Wilhelm-Maybach-Str. 24, 68766 Hockenheim, Germany 
- *  E-mail: mathias.j.krause@gmx.de
+ *  E-mail contact: info@openlb.net
+ *  The most recent release of OpenLB can be downloaded at
+ *  <http://www.openlb.net/>
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
@@ -44,7 +45,7 @@ namespace olb {
  * WARNING:
  * At the moment there are only cuboids with a constant delta possible
  * and the distance between two neighbooring cuboids must be delta
- * since an interpolation operator in time and spance is missing in
+ * since an interpolation operator in time and space is missing in
  * cuboidNeigbourhood and superLattice.
  *
  * This class is not intended to be derived from.
@@ -56,6 +57,8 @@ class CuboidGeometry2D {
     private:
         /// Vector of the cuboids
         std::vector<Cuboid2D<T> > _cuboids;
+        /// Cuboid which contains all other cuboids
+        Cuboid2D<T> _motherCuboid;
     public:
         /// Constructor
         CuboidGeometry2D() {};
@@ -88,7 +91,7 @@ class CuboidGeometry2D {
         /// Prints cuboid structure details
         void printStatistics() const;
 
-        /// Gives for a given point (globX/globY) the related cuboidID
+        /// for a given point (globX/globY), returns the related cuboidID
         /// and _p if the point is not in any of the cuboid _childrenQ
         int get_iC(T globX, T globY) const;
         /// This function checks if the points (globX/globY) and 

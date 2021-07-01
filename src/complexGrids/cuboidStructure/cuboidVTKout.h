@@ -1,8 +1,9 @@
 /*  This file is part of the OpenLB library
  *
  *  Copyright (C) 2006, 2007, 2009 Mathias J. Krause, Jonas Latt
- *  Address: Wilhelm-Maybach-Str. 24, 68766 Hockenheim, Germany 
- *  E-mail: mathias.j.krause@gmx.de
+ *  E-mail contact: info@openlb.net
+ *  The most recent release of OpenLB can be downloaded at
+ *  <http://www.openlb.net/>
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
@@ -50,16 +51,16 @@ class CuboidVTKout2D {
             std::string const& vectorFieldName,
             std::vector<const TensorFieldBase2D<T,2>* > const& vectorField,
             CuboidGeometry2D<T> const& cGeometry, 
-            loadBalancer& load, T deltaT );
+            loadBalancer& load, T frac );
     private:
-        static void writePreamble(std::string& fullName, int nx, int ny, T deltaX);
+        static void writePreamble(std::string& fullName, int nx, int ny, T originX, T originY, T delta);
         static void writePiece(
             std::string& fullName,
             std::string const& scalarFieldName,
             const ScalarFieldBase2D<T>* scalarField,
             std::string const& vectorFieldName,
             const TensorFieldBase2D<T,2>* vectorField,
-            T deltaX, T deltaT,
+            T deltaX, T frac,
             int originX=0, int originY=0 );
         static void writePostScript(std::string& fullName);
 };
@@ -75,16 +76,16 @@ class CuboidVTKout3D {
             std::string const& vectorFieldName,
             std::vector<const TensorFieldBase3D<T,3>* > vectorField,
             CuboidGeometry3D<T> const& cGeometry, 
-            loadBalancer& load, T deltaT, int offset=1 );
+            loadBalancer& load, T frac, int offset=1 );
     private:
-        static void writePreamble(std::string& fullName, int nx, int ny, int nz, T deltaX);
+        static void writePreamble(std::string& fullName, int nx, int ny, int nz, T originX, T originY, T originZ, T delta);
         static void writePiece(
             std::string& fullName,
             std::string const& scalarFieldName,
             const ScalarFieldBase3D<T>* scalarField,
             std::string const& vectorFieldName,
             const TensorFieldBase3D<T,3>* vectorField,
-            T deltaX, T deltaT, int offset=1,
+            T deltaX, T frac, int offset=1,
             int originX=0, int originY=0, int origin=0 );
         static void writePostScript(std::string& fullName);
 };

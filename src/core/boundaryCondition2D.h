@@ -1,8 +1,9 @@
 /*  This file is part of the OpenLB library
  *
  *  Copyright (C) 2007 Jonas Latt
- *  Address: Rue General Dufour 24,  1211 Geneva 4, Switzerland 
- *  E-mail: jonas.latt@gmail.com
+ *  E-mail contact: info@openlb.net
+ *  The most recent release of OpenLB can be downloaded at
+ *  <http://www.openlb.net/>
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
@@ -29,7 +30,7 @@
 #include "momentaOnBoundaries2D.h"
 #include "boundaryPostProcessors2D.h"
 #include "dynamics.h"
-
+#include "blockGeometryStatistics2D.h"
 namespace olb {
 
 template<typename T, template<typename U> class Lattice>
@@ -57,8 +58,17 @@ public:
     virtual void addInternalVelocityCornerPN(int x, int y, T omega) =0;
     virtual void addInternalVelocityCornerPP(int x, int y, T omega) =0;
 
+    /// adds a pressure or velocity boundary for one material and a range (x0-x1, y0-y1, z0-z1) or the whole geometry
+    virtual void addVelocityBoundary(BlockGeometryStatistics2D* blockGeoSta, int x0, int x1, int y0, int y1, T omega, int material) =0;
+    virtual void addVelocityBoundary(BlockGeometryStatistics2D* blockGeoSta, T omega, int material) =0;
+    virtual void addPressureBoundary(BlockGeometryStatistics2D* blockGeoSta, int x0, int x1, int y0, int y1, T omega, int material) =0;
+    virtual void addPressureBoundary(BlockGeometryStatistics2D* blockGeoSta, T omega, int material) =0;
+
     virtual BlockStructure2D<T,Lattice>& getBlock() =0;
     virtual BlockStructure2D<T,Lattice> const& getBlock() const =0;
+
+    virtual void outputOn() =0;
+    virtual void outputOff() =0;
 };
 
 ////////// Factory functions //////////////////////////////////////////////////

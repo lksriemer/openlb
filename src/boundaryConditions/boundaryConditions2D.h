@@ -1,6 +1,9 @@
 /*  This file is part of the OpenLB library
  *
  *  Copyright (C) 2007 the OpenLB project
+ *  E-mail contact: info@openlb.net
+ *  The most recent release of OpenLB can be downloaded at
+ *  <http://www.openlb.net/>
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License

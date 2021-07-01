@@ -1,8 +1,9 @@
 /*  This file is part of the OpenLB library
  *
  *  Copyright (C) 2007 Mathias J. Krause
- *  Address: Wilhelm-Maybach-Str. 24, 68766 Hockenheim, Germany 
- *  E-mail: mathias.j.krause@gmx.de
+ *  E-mail contact: info@openlb.net
+ *  The most recent release of OpenLB can be downloaded at
+ *  <http://www.openlb.net/>
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
@@ -43,7 +44,8 @@ template<typename T>
 CuboidGeometry2D<T>::CuboidGeometry2D(T globPosX, T globPosY, T delta,
                                             int nX, int nY, int nC) {
     //_cuboids.reserve(10000);
-    Cuboid2D<T> cuboid(globPosX, globPosY, delta, nX, nY);
+    _motherCuboid = Cuboid2D<T>(globPosX, globPosY, delta, nX, nY);
+    Cuboid2D<T> cuboid(0, 0, 1, nX, nY);
     add(cuboid);
     split(0, nC);
 }
@@ -154,7 +156,7 @@ T CuboidGeometry2D<T>::get_maxDelta() const {
 template<typename T>
 Cuboid2D<T> CuboidGeometry2D<T>::get_motherC() const {
 
-    Cuboid2D<T> found;
+    /*Cuboid2D<T> found;
     if(_cuboids.size()==0) {
         found.init(0, 0, 0, 0, 0);
         return found;
@@ -192,7 +194,8 @@ Cuboid2D<T> CuboidGeometry2D<T>::get_motherC() const {
 
     found.init(globPosXmin, globPosYmin, delta, nX, nY); 
 
-    return found;
+    return found;*/
+    return _motherCuboid;
 }
 
 template<typename T>

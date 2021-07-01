@@ -1,8 +1,9 @@
 /*  This file is part of the OpenLB library
  *
  *  Copyright (C) 2007 Mathias J. Krause
- *  Address: Wilhelm-Maybach-Str. 24, 68766 Hockenheim, Germany 
- *  E-mail: mathias.j.krause@gmx.de
+ *  E-mail contact: info@openlb.net
+ *  The most recent release of OpenLB can be downloaded at
+ *  <http://www.openlb.net/>
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
@@ -37,10 +38,10 @@
 /// All OpenLB code is contained in this namespace.
 namespace olb {
 
-/// A communincator provides a cuboids with data of other 
+/// A communicator provides a cuboid with data of other 
 /// cuboids.
-/** For each cuboid is a cuboid neighbourhood devined. A communicator
- * coordinates the communication of the single cuboids there the data
+/** For each cuboid a cuboid neighbourhood is defined. A communicator
+ * coordinates the communication of the single cuboids, in which the data
  * is stored locally.
  *
  * There are methods to add needed cells, send, receive and write
@@ -58,13 +59,13 @@ template<typename T, template<typename U> class Lattice>
 class Communicator3D {
 
     private:
-        /// Stores the single cuboid neighbourhoods information
+        /// Stores neighbourhoods information for a single cuboid
         std::vector<CuboidNeighbourhood3D<T,Lattice> > _nh;
-        /// Reference to the super strucrture
+        /// Reference to the super structure
         SuperLattice3D<T,Lattice>& _sLattice;
-        /// Number of coboids in the structure
+        /// Number of cuboids in the structure
         int _nC;
-        /// Indecates if there was an initialization done
+        /// Indicates if there was an initialization done
         bool _initDone;
     public:
         /// Constructor
@@ -75,7 +76,7 @@ class Communicator3D {
         /// Adds a cell (globX/globY/globZ) to the cuboid neigbourhood iC 
         /// that is then able to get data of the cell
         void add_cell(int iC, T globX, T globY, T globZ);
-        /// Adds all cells of the overlaps to its accociated cuboid
+        /// Adds all cells of the overlaps to its associated cuboid
         /// neigbourhood 
         void add_cells(int overlap);
         /// Initializes the communicator

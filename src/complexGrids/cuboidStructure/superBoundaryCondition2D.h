@@ -1,8 +1,9 @@
 /*  This file is part of the OpenLB library
  *
  *  Copyright (C) 2007 Mathias J. Krause
- *  Address: Wilhelm-Maybach-Str. 24, 68766 Hockenheim, Germany 
- *  E-mail: mathias.j.krause@gmx.de
+ *  E-mail contact: info@openlb.net
+ *  The most recent release of OpenLB can be downloaded at
+ *  <http://www.openlb.net/>
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
@@ -30,6 +31,7 @@
 
 #include <vector>
 #include "core/boundaryCondition2D.h"
+#include "core/blockGeometryStatistics2D.h"
 #include "superLattice2D.h"
 
 
@@ -78,6 +80,15 @@ class sOnLatticeBoundaryCondition2D {
         void addInternalVelocityCornerPN(T x, T y, T omega);
         void addInternalVelocityCornerPP(T x, T y, T omega);
 
+        void addVelocityBoundary(BlockGeometryStatistics2D* blockGeoSta, int x0,
+            int x1, int y0, int y1, T omega, int material);
+        void addVelocityBoundary(BlockGeometryStatistics2D* blockGeoSta, T omega,
+            int material);
+        void addPressureBoundary(BlockGeometryStatistics2D* blockGeoSta, int x0,
+            int x1, int y0, int y1, T omega, int material);
+        void addPressureBoundary(BlockGeometryStatistics2D* blockGeoSta, T omega,
+            int material);
+
         /// Adds needed Cells to the Communicator _commBC in SuperLattice
         void addPoints2CommBC(int x0, int x1, int y0, int y1, int iCglob);
 
@@ -86,10 +97,14 @@ class sOnLatticeBoundaryCondition2D {
         int get_overlap() {return _overlap; };
         void set_overlap(int overlap) {_overlap = overlap; };
 
+        void outputOn();
+        void outputOff();
+
     private:
         SuperLattice2D<T,Lattice>& _sLattice;
         std::vector<OnLatticeBoundaryCondition2D<T,Lattice>* > _blockBCs;
         int _overlap;
+        bool _output;
 };
 
 

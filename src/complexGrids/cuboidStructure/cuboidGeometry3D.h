@@ -1,8 +1,9 @@
 /*  This file is part of the OpenLB library
  *
  *  Copyright (C) 2007 Mathias J. Krause
- *  Address: Wilhelm-Maybach-Str. 24, 68766 Hockenheim, Germany 
- *  E-mail: mathias.j.krause@gmx.de
+ *  E-mail contact: info@openlb.net
+ *  The most recent release of OpenLB can be downloaded at
+ *  <http://www.openlb.net/>
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
@@ -30,7 +31,7 @@
 
 #include <vector>
 #include "cuboid3D.h"
-#include "core/dataFields3D.h"
+#include "core/blockGeometry3D.h"
 
 
 /// All OpenLB code is contained in this namespace.
@@ -42,9 +43,9 @@ namespace olb {
  * neighbooring cuboids is less than the smallest delta of them.
  * 
  * WARNING:
- * At the moment there are only cuboids with a constant delta possible
+ * At the moment only cuboids with a constant delta are possible
  * and the distance between two neighbooring cuboids must be delta
- * since an interpolation operator in time and spance is missing in
+ * since an interpolation operator in time and space is missing in
  * cuboidNeigbourhood and superLattice.
  *
  * This class is not intended to be derived from.
@@ -56,6 +57,9 @@ class CuboidGeometry3D {
     private:
         /// Vector of the cuboids
         std::vector<Cuboid3D<T> > _cuboids;
+        /// Cuboid which contains all other cuboids
+        Cuboid3D<T> _motherCuboid;
+
     public:
         /// Constructor
         CuboidGeometry3D() {};
@@ -80,7 +84,7 @@ class CuboidGeometry3D {
         /// Returns the maximum/minimum number of nodes in the structure
         int get_minNodes() const;
         int get_maxNodes() const;
-        /// Returns the maximum/minimum delata in the structure
+        /// Returns the maximum/minimum delta in the structure
         T get_minDelta() const;
         T get_maxDelta() const;
         /// Returns the smallest cuboid that includes all cuboids of 
@@ -93,11 +97,11 @@ class CuboidGeometry3D {
         /// and _p if the point is not in any of the cuboid _childrenQ
         int get_iC(T globX, T globY, T globZ) const;
         /// This function checks if the points (globX/globY/globZ) and 
-        /// (globX + orientationX/delta /globY + orientationY/delta / 
+        /// (globX + orientationX/delta/globY + orientationY/delta/ 
         /// globZ + orientationZ/delta) is in a cuboid. 
         /// It gives the related cuboidID and _p if the points are
         /// not in any of the cuboids.
-        /// abs(orientationX) = abs(orientationY) )= abs(orientationY) = 1
+        /// abs(orientationX) = abs(orientationY) = abs(orientationY) = 1
         /// must be satisfied
         int get_iC(T globX, T globY, T globZ, 
                    int orientationX, int orientationY, int orientationZ) const;
@@ -107,8 +111,8 @@ class CuboidGeometry3D {
         /// Removes the cuboid iC
         void remove(int iC);
         /// Removes all cuboids where geometryData = 0
-        void remove(olb::ScalarField3D<int>* geometryData);
-        /// Splits cuboid iC, removes it and add p cuboids
+        void remove(olb::BlockGeometry3D& blockGeometry);
+        /// Splits cuboid iC, removes it and adds p cuboids
         void split(int iC, int p);
 };
 

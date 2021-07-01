@@ -1,8 +1,9 @@
 /*  This file is part of the OpenLB library
  *
  *  Copyright (C) 2007 Mathias J. Krause
- *  Address: Wilhelm-Maybach-Str. 24, 68766 Hockenheim, Germany 
- *  E-mail: mathias.j.krause@gmx.de
+ *  E-mail contact: info@openlb.net
+ *  The most recent release of OpenLB can be downloaded at
+ *  <http://www.openlb.net/>
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
@@ -37,7 +38,7 @@ namespace olb {
 /// structure which defines the grid.
 /** A cuboid is given with its left lower corner, the number of nodes 
  * in the direction x and y and the distance between two nodes.
- * Among after useful methods a cuboid can divide itself in a given 
+ * Among other useful methods, a cuboid can divide itself in a given 
  * number of disjoint subcuboids. The number of nodes at the boundary 
  * is minimized.
  *
@@ -81,7 +82,7 @@ class Cuboid2D {
         /// Prints cuboid details
         void print() const;
 
-        /// Checks whether a point (globX/gloxY) is contained in the cuboid
+        /// Checks whether a point (globX/globY) is contained in the cuboid
         /// extended with an layer of size overlap*delta
         bool checkPoint(T globX, T globY, int overlap = 0) const;
         /// Checks whether a point (globX/gloxY) is contained and is a node 
@@ -99,9 +100,9 @@ class Cuboid2D {
                    int &locX0, int &locX1, int &locY0, int &locY1,
                    int overlap = 0) const;
 
-        /// Divides the cuboid in p*q cuboids and add the to the given vector
+        /// Divides the cuboid in p*q cuboids and adds them to the given vector
         void divide(int p, int q, std::vector<Cuboid2D<T> > &childrenC) const;
-        /// Divides the cuboid in p cuboids and add the to the given vector
+        /// Divides the cuboid in p cuboids and add them to the given vector
         void divide(int p, std::vector<Cuboid2D<T> > &childrenC) const;
 };
 

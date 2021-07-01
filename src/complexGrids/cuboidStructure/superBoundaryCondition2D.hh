@@ -1,8 +1,9 @@
 /*  This file is part of the OpenLB library
  *
  *  Copyright (C) 2007 Mathias J. Krause
- *  Address: Wilhelm-Maybach-Str. 24, 68766 Hockenheim, Germany 
- *  E-mail: mathias.j.krause@gmx.de
+ *  E-mail contact: info@openlb.net
+ *  The most recent release of OpenLB can be downloaded at
+ *  <http://www.openlb.net/>
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
@@ -41,12 +42,12 @@ namespace olb {
 
 template<typename T, template<typename U> class Lattice>
 sOnLatticeBoundaryCondition2D<T,Lattice>::
-    sOnLatticeBoundaryCondition2D (SuperLattice2D<T,Lattice>& sLattice ):_sLattice(sLattice) {
+    sOnLatticeBoundaryCondition2D (SuperLattice2D<T,Lattice>& sLattice ):_sLattice(sLattice), _output(false) {
 }
 
 template<typename T, template<typename U> class Lattice>
 sOnLatticeBoundaryCondition2D<T,Lattice>::
-    sOnLatticeBoundaryCondition2D(sOnLatticeBoundaryCondition2D<T,Lattice> const& rhs):_sLattice(rhs._sLattice) {
+    sOnLatticeBoundaryCondition2D(sOnLatticeBoundaryCondition2D<T,Lattice> const& rhs):_sLattice(rhs._sLattice), _output(false) {
 
     _blockBCs = rhs._blockBCs;
     _overlap = rhs._overlap;
@@ -88,6 +89,9 @@ void sOnLatticeBoundaryCondition2D<T,Lattice>::
             addPoints2CommBC(locX0, locX1, locY0, locY1, iCglob);
         }
     }
+    if (_output) {
+        std::cout << "addVelocityBoundary0N(" << x0 << ", " << x1 << ", "<< y0 << ", " << y1 << ", " << omega << " )" << std::endl;
+    }
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -107,6 +111,9 @@ void sOnLatticeBoundaryCondition2D<T,Lattice>::
                                    locX0, locX1, locY0, locY1)) {
             addPoints2CommBC(locX0, locX1, locY0, locY1, iCglob);
         }
+    }
+    if (_output) {
+        std::cout << "addVelocityBoundary0P(" << x0 << ", " << x1 << ", "<< y0 << ", " << y1 << ", " << omega << " )" << std::endl;
     }
 }
 
@@ -128,6 +135,9 @@ void sOnLatticeBoundaryCondition2D<T,Lattice>::
             addPoints2CommBC(locX0, locX1, locY0, locY1, iCglob);
         }
     }
+    if (_output) {
+        std::cout << "addVelocityBoundary1N(" << x0 << ", " << x1 << ", "<< y0 << ", " << y1 << ", " << omega << " )" << std::endl;
+    }
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -147,6 +157,9 @@ void sOnLatticeBoundaryCondition2D<T,Lattice>::
                                    locX0, locX1, locY0, locY1)) {
             addPoints2CommBC(locX0, locX1, locY0, locY1, iCglob);
         }
+    }
+    if (_output) {
+        std::cout << "addVelocityBoundary1P(" << x0 << ", " << x1 << ", "<< y0 << ", " << y1 << ", " << omega << " )" << std::endl;
     }
 }
 
@@ -168,6 +181,9 @@ void sOnLatticeBoundaryCondition2D<T,Lattice>::
             addPoints2CommBC(locX0, locX1, locY0, locY1, iCglob);
         }
     }
+    if (_output) {
+        std::cout << "addPressureBoundary0N(" << x0 << ", " << x1 << ", "<< y0 << ", " << y1 << ", " << omega << " )" << std::endl;
+    }
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -187,6 +203,9 @@ void sOnLatticeBoundaryCondition2D<T,Lattice>::
                                    locX0, locX1, locY0, locY1)) {
             addPoints2CommBC(locX0, locX1, locY0, locY1, iCglob);
         }
+    }
+    if (_output) {
+        std::cout << "addPressureBoundary0P(" << x0 << ", " << x1 << ", "<< y0 << ", " << y1 << ", " << omega << " )" << std::endl;
     }
 }
 
@@ -208,6 +227,9 @@ void sOnLatticeBoundaryCondition2D<T,Lattice>::
             addPoints2CommBC(locX0, locX1, locY0, locY1, iCglob);
         }
     }
+    if (_output) {
+        std::cout << "addPressureBoundary1N(" << x0 << ", " << x1 << ", "<< y0 << ", " << y1 << ", " << omega << " )" << std::endl;
+    }
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -227,6 +249,9 @@ void sOnLatticeBoundaryCondition2D<T,Lattice>::
                                    locX0, locX1, locY0, locY1)) {
             addPoints2CommBC(locX0, locX1, locY0, locY1, iCglob);
         }
+    }
+    if (_output) {
+        std::cout << "addPressureBoundary1P(" << x0 << ", " << x1 << ", "<< y0 << ", " << y1 << ", " << omega << " )" << std::endl;
     }
 }
 
@@ -249,6 +274,9 @@ void sOnLatticeBoundaryCondition2D<T,Lattice>::
             addPoints2CommBC(locX, locX, locY, locY, iCglob);
         }
     }
+    if (_output) {
+        std::cout << "addExternalVelocityCornerNN(" << x << ", " << y << ", " << omega << " )" << std::endl;
+    }
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -269,6 +297,9 @@ void sOnLatticeBoundaryCondition2D<T,Lattice>::
                                    locX, locY)) {
             addPoints2CommBC(locX, locX, locY, locY, iCglob);
         }
+    }
+    if (_output) {
+        std::cout << "addExternalVelocityCornerNP(" << x << ", " << y << ", " << omega << " )" << std::endl;
     }
 }
 
@@ -291,6 +322,9 @@ void sOnLatticeBoundaryCondition2D<T,Lattice>::
             addPoints2CommBC(locX, locX, locY, locY, iCglob);
         }
     }
+    if (_output) {
+        std::cout << "addExternalVelocityCornerPN(" << x << ", " << y << ", " << omega << " )" << std::endl;
+    }
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -311,6 +345,9 @@ void sOnLatticeBoundaryCondition2D<T,Lattice>::
                                    locX, locY)) {
             addPoints2CommBC(locX, locX, locY, locY, iCglob);
         }
+    }
+    if (_output) {
+        std::cout << "addExternalVelocityCornerPP(" << x << ", " << y << ", " << omega << " )" << std::endl;
     }
 }
 
@@ -333,6 +370,9 @@ void sOnLatticeBoundaryCondition2D<T,Lattice>::
             addPoints2CommBC(locX, locX, locY, locY, iCglob);
         }
     }
+    if (_output) {
+        std::cout << "addInternalVelocityCornerNN(" << x << ", " << y << ", " << omega << " )" << std::endl;
+    }
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -353,6 +393,9 @@ void sOnLatticeBoundaryCondition2D<T,Lattice>::
                                    locX, locY)) {
             addPoints2CommBC(locX, locX, locY, locY, iCglob);
         }
+    }
+    if (_output) {
+        std::cout << "addInternalVelocityCornerNP(" << x << ", " << y << ", " << omega << " )" << std::endl;
     }
 }
 
@@ -375,6 +418,9 @@ void sOnLatticeBoundaryCondition2D<T,Lattice>::
             addPoints2CommBC(locX, locX, locY, locY, iCglob);
         }
     }
+    if (_output) {
+        std::cout << "addInternalVelocityCornerPN(" << x << ", " << y << ", " << omega << " )" << std::endl;
+    }
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -395,6 +441,9 @@ void sOnLatticeBoundaryCondition2D<T,Lattice>::
                                    locX, locY)) {
             addPoints2CommBC(locX, locX, locY, locY, iCglob);
         }
+    }
+    if (_output) {
+        std::cout << "addInternalVelocityCornerPP(" << x << ", " << y << ", " << omega << " )" << std::endl;
     }
 }
 
@@ -424,6 +473,129 @@ void sOnLatticeBoundaryCondition2D<T,Lattice>::
             }
         }
     }
+}
+
+template<typename T, template<typename U> class Lattice>
+void sOnLatticeBoundaryCondition2D<T, Lattice>::addVelocityBoundary(
+        BlockGeometryStatistics2D* blockGeoSta, int x0, int x1, int y0, int y1,
+        T omega, int material) {
+    std::vector<int> discreteNormal(3, 0);
+    for (int iX = x0; iX <= x1; iX++) {
+        for (int iY = y0; iY <= y1; iY++) {
+
+            if (blockGeoSta->getBlockGeometry()->getMaterial(iX, iY)
+                    == material) {
+                discreteNormal = blockGeoSta->getType(iX, iY);
+                if (discreteNormal[0] == 0) {
+
+                    if (discreteNormal[1] == 1) {
+                        addVelocityBoundary0P(iX, iX, iY, iY, omega);
+                    } else if (discreteNormal[1] == -1) {
+                        addVelocityBoundary0N(iX, iX, iY, iY, omega);
+                    } else if (discreteNormal[2] == 1) {
+                        addVelocityBoundary1P(iX, iX, iY, iY, omega);
+                    } else if (discreteNormal[2] == -1) {
+                        addVelocityBoundary1N(iX, iX, iY, iY, omega);
+                    } else {
+                        std::cout << "Could not addVelocityBoundary (" << iX
+                                << ", " << iY << ")" << std::endl;
+                    }
+                } else if (discreteNormal[0] == 1) {
+                    if (discreteNormal[1] == 1) {
+                        if (discreteNormal[2] == 1) {
+                            addExternalVelocityCornerPP(iX, iY, omega);
+                        } else if (discreteNormal[2] == -1) {
+                            addExternalVelocityCornerPN(iX, iY, omega);
+                        } else {
+                            std::cout << "Could not addVelocityBoundary ("
+                                    << iX << ", " << iY << ")" << std::endl;
+                        }
+                    } else if (discreteNormal[1] == -1) {
+                        if (discreteNormal[2] == 1) {
+                            addExternalVelocityCornerNP(iX, iY, omega);
+                        } else if (discreteNormal[2] == -1) {
+                            addExternalVelocityCornerNN(iX, iY, omega);
+                        } else {
+                            std::cout << "Could not addVelocityBoundary ("
+                                    << iX << ", " << iY << ")" << std::endl;
+                        }
+                    }
+                } else if (discreteNormal[0] == 2) {
+                    if (discreteNormal[1] == 1) {
+                        if (discreteNormal[2] == 1) {
+                            addInternalVelocityCornerPP(iX, iY, omega);
+                        } else if (discreteNormal[2] == -1) {
+                            addInternalVelocityCornerPN(iX, iY, omega);
+                        } else {
+                            std::cout << "Could not addVelocityBoundary ("
+                                    << iX << ", " << iY << ")" << std::endl;
+                        }
+                    } else if (discreteNormal[1] == -1) {
+                        if (discreteNormal[2] == 1) {
+                            addInternalVelocityCornerNP(iX, iY, omega);
+                        } else if (discreteNormal[2] == -1) {
+                            addInternalVelocityCornerNN(iX, iY, omega);
+                        } else {
+                            std::cout << "Could not addVelocityBoundary ("
+                                    << iX << ", " << iY << ")" << std::endl;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+template<typename T, template<typename U> class Lattice>
+void sOnLatticeBoundaryCondition2D<T, Lattice>::addVelocityBoundary(
+        BlockGeometryStatistics2D* blockGeoSta, T omega, int material) {
+    addVelocityBoundary(blockGeoSta, 0,
+            blockGeoSta->getBlockGeometry()->getNx(), 0,
+            blockGeoSta->getBlockGeometry()->getNy(), omega, material);
+}
+
+template<typename T, template<typename U> class Lattice>
+void sOnLatticeBoundaryCondition2D<T, Lattice>::addPressureBoundary(
+        BlockGeometryStatistics2D* blockGeoSta, int x0, int x1, int y0, int y1,
+        T omega, int material) {
+    std::vector<int> discreteNormal(3, 0);
+    for (int iX = x0; iX <= x1; iX++) {
+        for (int iY = y0; iY <= y1; iY++) {
+            if (blockGeoSta->getBlockGeometry()->getMaterial(iX, iY) == material) {
+                discreteNormal = blockGeoSta->getType(iX, iY);
+                if (discreteNormal[0] == 0) {
+                    if (discreteNormal[1] == -1) {
+                        addPressureBoundary0N (iX, iX, iY, iY, omega);
+                    } else if (discreteNormal[1] == 1) {
+                        addPressureBoundary0P (iX, iX, iY, iY, omega);
+                    } else if (discreteNormal[2] == -1) {
+                        addPressureBoundary1N (iX, iX, iY, iY, omega);
+                    } else if (discreteNormal[2] == 1) {
+                        addPressureBoundary1P (iX, iX, iY, iY, omega);
+                    }
+                }
+            }
+        }
+    }
+}
+
+template<typename T, template<typename U> class Lattice>
+void sOnLatticeBoundaryCondition2D<T, Lattice>::addPressureBoundary(
+        BlockGeometryStatistics2D* blockGeoSta, T omega, int material) {
+    addPressureBoundary(blockGeoSta,
+            0, blockGeoSta->getBlockGeometry()->getNx(),
+            0, blockGeoSta->getBlockGeometry()->getNy(),
+            omega, material);
+}
+
+template<typename T, template<typename U> class Lattice>
+void sOnLatticeBoundaryCondition2D<T,Lattice>::outputOn() {
+    _output = true;
+}
+
+template<typename T, template<typename U> class Lattice>
+void sOnLatticeBoundaryCondition2D<T,Lattice>::outputOff() {
+    _output = false;
 }
 
 ////////////////// Factory functions //////////////////////////////////

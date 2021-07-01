@@ -1,0 +1,208 @@
+<?xml version="1.0"?>
+
+<description xmlns="http://numhpc.math.kit.edu">
+    <version>0.1</version>
+    <block>
+        <name>Mesh</name>
+        <enabled>true</enabled>
+        <key>
+            <name>lx</name>
+            <enabled>true</enabled>
+            <type>spinbox</type>
+            <default>1</default>
+            <info>No info</info>
+        </key>
+        <key>
+            <name>ly</name>
+            <enabled>true</enabled>
+            <type>spinbox</type>
+            <default>1</default>
+            <info>No info</info>
+        </key>
+        <key>
+            <name>lz</name>
+            <enabled>false</enabled>
+            <type>spinbox</type>
+            <default>1</default>
+            <info>No info</info>
+        </key>
+        <key>
+            <name>Refinement</name>
+            <enabled>true</enabled>
+            <type>spinbox</type>
+            <default>8</default>
+            <info>No info</info>
+        </key>
+    </block>
+    <block>
+        <name>Solver</name>
+        <enabled>true</enabled>
+        <key>
+            <name>Type</name>
+            <enabled>true</enabled>
+            <type>combobox</type>
+            <defaultlist>
+                <item value="instationary">Instationary</item>
+                <item value="stationary">Stationary</item>
+            </defaultlist>
+            <default>stationary</default>
+            <info>No info</info>
+        </key>
+        <key>
+            <name>PressureFilter</name>
+            <enabled>true</enabled>
+            <type>combobox</type>
+            <defaultlist>
+                <item>True</item>
+                <item>False</item>
+            </defaultlist>
+            <default>True</default>
+            <info>No info</info>
+        </key>
+        <key>
+            <name>Tolerance</name>
+            <enabled>true</enabled>
+            <type>text</type>
+            <default>1.e-10</default>
+            <info>No info</info>
+        </key>
+    </block>
+    <block>
+        <name>VisualizationVTK</name>
+        <enabled>true</enabled>
+        <key>
+            <name>Filename</name>
+            <enabled>true</enabled>
+            <type>file</type>
+            <default>Choose a file...</default>
+            <info>No info</info>
+        </key>
+        <key>
+            <name>SaveTime</name>
+            <enabled>true</enabled>
+            <type>text</type>
+            <default>40000.</default>
+            <info>No info</info>
+        </key>
+        <key>
+            <name>Vector</name>
+            <enabled>true</enabled>
+            <type>text</type>
+            <default>Velocity</default>
+            <info>No info</info>
+        </key>
+        <key>
+            <name>Scalar</name>
+            <enabled>true</enabled>
+            <type>text</type>
+            <default>Pressure</default>
+            <info>No info</info>
+        </key>
+    </block>
+    <block>
+        <name>VisualizationImages</name>
+        <enabled>true</enabled>
+        <key>
+            <name>Filename</name>
+            <enabled>true</enabled>
+            <type>file</type>
+            <default>Choose a file...</default>
+            <info>No info</info>
+        </key>
+        <key>
+            <name>SaveTime</name>
+            <enabled>true</enabled>
+            <type>text</type>
+            <default>40000.</default>
+            <info>No info</info>
+        </key>
+        <key>
+            <name>Scalar</name>
+            <enabled>true</enabled>
+            <type>text</type>
+            <default>Pressure</default>
+            <info>No info</info>
+        </key>
+    </block>
+    <block>
+        <name>Log</name>
+        <displayname>Logging</displayname>
+        <enabled>true</enabled>
+        <key>
+            <name>Filename</name>
+            <enabled>true</enabled>
+            <type>file</type>
+            <default>Choose a file...</default>
+            <info>No info</info>
+        </key>
+        <key>
+            <name>SaveTime</name>
+            <enabled>true</enabled>
+            <type>text</type>
+            <default>10000000.</default>
+            <info>No info</info>
+        </key>
+        <key>
+            <name>Scalar</name>
+            <enabled>true</enabled>
+            <type>text</type>
+            <default>Pressure</default>
+            <info>No info</info>
+        </key>
+    </block>
+    <block>
+        <name>Application</name>
+        <enabled>true</enabled>
+        <key>
+            <name>Name</name>
+            <enabled>true</enabled>
+            <type>text</type>
+            <default>cavity2d</default>
+            <info>No info</info>
+        </key>
+        <key>
+            <name>OlbDir</name>
+            <enabled>true</enabled>
+            <type>file</type>
+            <default>../../../../</default>
+            <info>No info</info>
+        </key>
+        <key>
+            <name>OutputDir</name>
+            <enabled>true</enabled>
+            <type>file</type>
+            <default>./tmp/</default>
+            <info>No info</info>
+        </key>
+        <key>
+            <name>Dimension</name>
+            <enabled>true</enabled>
+            <type>spinbox</type>
+            <default>3</default>
+            <info>No info</info>
+        </key>
+        <key>
+            <name>MaxTime</name>
+            <enabled>true</enabled>
+            <type>text</type>
+            <default>10.</default>
+            <info>No info</info>
+        </key>
+        <key>
+            <name>MaxU</name>
+            <enabled>true</enabled>
+            <type>text</type>
+            <default>1.0e-02</default>
+            <info>No info</info>
+        </key>
+        <key>
+            <name>Re</name>
+            <enabled>true</enabled>
+            <type>text</type>
+            <default>10.</default>
+            <info>No info</info>
+        </key>
+    </block>
+</description>
+
+

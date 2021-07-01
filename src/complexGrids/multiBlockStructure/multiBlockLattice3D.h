@@ -1,8 +1,9 @@
 /*  This file is part of the OpenLB library
  *
  *  Copyright (C) 2007, 2008 Jonas Latt and Bernd Stahl
- *  Address: Rue General Dufour 24,  1211 Geneva 4, Switzerland 
- *  E-mail: jonas.latt@gmail.com
+ *  E-mail contact: info@openlb.net
+ *  The most recent release of OpenLB can be downloaded at
+ *  <http://www.openlb.net/>
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
@@ -18,7 +19,7 @@
  *  License along with this program; if not, write to the Free 
  *  Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  *  Boston, MA  02110-1301, USA.
-*/
+ */
 
 /** \file
  * A 3D multiblock lattice -- header file.
@@ -53,63 +54,83 @@ template<typename T, template<typename U> class Lattice> class MultiBlockUnSeria
  * Processors are delegated to the respective BlockStructures.
  */
 template<typename T, template<typename U> class Lattice>
-class MultiBlockLattice3D : public BlockStructure3D<T,Lattice> {
+class MultiBlockLattice3D: public BlockStructure3D<T, Lattice> {
 public:
     MultiBlockLattice3D(MultiDataDistribution3D const& dataDistribution_);
     ~MultiBlockLattice3D();
     MultiBlockLattice3D(MultiBlockLattice3D const& rhs);
-    MultiBlockLattice3D<T,Lattice>& operator=(MultiBlockLattice3D<T,Lattice> const& rhs);
-    void swap(MultiBlockLattice3D<T,Lattice>& rhs);
+    MultiBlockLattice3D<T, Lattice>& operator=(
+            MultiBlockLattice3D<T, Lattice> const& rhs);
+    void swap(MultiBlockLattice3D<T, Lattice>& rhs);
 
-    virtual int getNx() const { return multiBlockHandler->getNx(); }
-    virtual int getNy() const { return multiBlockHandler->getNy(); }
-    virtual int getNz() const { return multiBlockHandler->getNz(); }
-    virtual Cell<T,Lattice>& get(int iX, int iY, int iZ);
-    virtual Cell<T,Lattice> const& get(int iX, int iY, int iZ) const;
+    virtual int getNx() const {
+        return multiBlockHandler->getNx();
+    }
+    virtual int getNy() const {
+        return multiBlockHandler->getNy();
+    }
+    virtual int getNz() const {
+        return multiBlockHandler->getNz();
+    }
+    virtual Cell<T, Lattice>& get(int iX, int iY, int iZ);
+    virtual Cell<T, Lattice> const& get(int iX, int iY, int iZ) const;
     virtual void initialize();
-    virtual void defineDynamics(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_,
-                                Dynamics<T,Lattice>* dynamics);
-    virtual void defineDynamics(int iX, int iY, int iZ, Dynamics<T,Lattice>* dynamics);
-    virtual void specifyStatisticsStatus(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_, bool status);
+    virtual void defineDynamics(int x0_, int x1_, int y0_, int y1_, int z0_,
+            int z1_, Dynamics<T, Lattice>* dynamics);
+    virtual void defineDynamics(int iX, int iY, int iZ,
+            Dynamics<T, Lattice>* dynamics);
+    virtual void defineDynamics(BlockGeometryStatistics3D* blockGeoSta,
+            int x0_, int x1_, int y0_, int y1_, int z0_, int z1_, Dynamics<T,
+                    Lattice>* dynamics, int material);
+    virtual void defineDynamics(BlockGeometryStatistics3D* blockGeoSta,
+            Dynamics<T, Lattice>* dynamics, int material);
+
+    virtual void specifyStatisticsStatus(int x0_, int x1_, int y0_, int y1_,
+            int z0_, int z1_, bool status);
     virtual void collide(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_);
     virtual void collide();
-    virtual void staticCollide (int x0, int x1, int y0, int y1, int z0_, int z1_,
-                                TensorFieldBase3D<T,3> const& u);
-    virtual void staticCollide (TensorFieldBase3D<T,3> const& u);
+    virtual void staticCollide(int x0, int x1, int y0, int y1, int z0_,
+            int z1_, TensorFieldBase3D<T, 3> const& u);
+    virtual void staticCollide(TensorFieldBase3D<T, 3> const& u);
     virtual void stream(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_);
-    virtual void stream(bool periodic=false);
-    virtual void collideAndStream(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_);
-    virtual void collideAndStream(bool periodic=false);
-    virtual T computeAverageDensity(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_) const;
+    virtual void stream(bool periodic = false);
+    virtual void collideAndStream(int x0_, int x1_, int y0_, int y1_, int z0_,
+            int z1_);
+    virtual void collideAndStream(bool periodic = false);
+    virtual T computeAverageDensity(int x0_, int x1_, int y0_, int y1_,
+            int z0_, int z1_) const;
     virtual T computeAverageDensity() const;
-    virtual void stripeOffDensityOffset (
-            int x0_, int x1_, int y0_, int y1_, int z0_, int z1_, T offset );
+    virtual void stripeOffDensityOffset(int x0_, int x1_, int y0_, int y1_,
+            int z0_, int z1_, T offset);
     virtual void stripeOffDensityOffset(T offset);
     virtual void forAll(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_,
-                        WriteCellFunctional<T,Lattice> const& application);
-    virtual void forAll(WriteCellFunctional<T,Lattice> const& application);
-    virtual void addPostProcessor (
-                PostProcessorGenerator3D<T,Lattice> const& ppGen );
+            WriteCellFunctional<T, Lattice> const& application);
+    virtual void forAll(WriteCellFunctional<T, Lattice> const& application);
+    virtual void addPostProcessor(
+            PostProcessorGenerator3D<T, Lattice> const& ppGen);
     virtual void resetPostProcessors();
-    virtual void postProcess(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_);
+    virtual void postProcess(int x0_, int x1_, int y0_, int y1_, int z0_,
+            int z1_);
     virtual void postProcess();
-    virtual void addLatticeCoupling (
-                     LatticeCouplingGenerator3D<T,Lattice> const& lcGen,
-                     std::vector<SpatiallyExtendedObject3D*> partners );
-    virtual void executeCoupling(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_);
+    virtual void addLatticeCoupling(
+            LatticeCouplingGenerator3D<T, Lattice> const& lcGen, std::vector<
+                    SpatiallyExtendedObject3D*> partners);
+    virtual void executeCoupling(int x0_, int x1_, int y0_, int y1_, int z0_,
+            int z1_);
     virtual void executeCoupling();
     virtual void subscribeReductions(Reductor<T>& reductor);
     virtual LatticeStatistics<T>& getStatistics();
     virtual LatticeStatistics<T> const& getStatistics() const;
-    virtual DataAnalysisBase3D<T,Lattice> const& getDataAnalysis() const;
-    virtual DataSerializer<T> const& getSerializer(IndexOrdering::OrderingT ordering) const;
-    virtual DataUnSerializer<T>& getUnSerializer(IndexOrdering::OrderingT ordering);
-    virtual DataSerializer<T> const& getSubSerializer (
-            int x0_, int x1_, int y0_, int y1_, int z0_, int z1_,
-            IndexOrdering::OrderingT ordering ) const;
-    virtual DataUnSerializer<T>& getSubUnSerializer (
-            int x0_, int x1_, int y0_, int y1_, int z0_, int z1_,
-            IndexOrdering::OrderingT ordering );
+    virtual DataAnalysisBase3D<T, Lattice> const& getDataAnalysis() const;
+    virtual DataSerializer<T> const& getSerializer(
+            IndexOrdering::OrderingT ordering) const;
+    virtual DataUnSerializer<T>& getUnSerializer(
+            IndexOrdering::OrderingT ordering);
+    virtual DataSerializer<T> const& getSubSerializer(int x0_, int x1_,
+            int y0_, int y1_, int z0_, int z1_,
+            IndexOrdering::OrderingT ordering) const;
+    virtual DataUnSerializer<T>& getSubUnSerializer(int x0_, int x1_, int y0_,
+            int y1_, int z0_, int z1_, IndexOrdering::OrderingT ordering);
     virtual MultiDataDistribution3D getDataDistribution() const;
     virtual SpatiallyExtendedObject3D* getComponent(int iBlock);
     virtual SpatiallyExtendedObject3D const* getComponent(int iBlock) const;
@@ -123,8 +144,8 @@ public:
     bool isPeriodicCommunicationOn() const;
 public:
     MultiDataDistribution3D const& getMultiData() const;
-    std::vector<BlockLattice3D<T,Lattice>*> getBlockLattices();
-    const std::vector<BlockLattice3D<T,Lattice>*> getBlockLattices() const;
+    std::vector<BlockLattice3D<T, Lattice>*> getBlockLattices();
+    const std::vector<BlockLattice3D<T, Lattice>*> getBlockLattices() const;
 private:
     void allocateBlocks();
     void postProcessMultiBlock();
@@ -137,46 +158,49 @@ private:
     int getNumRelevantBlocks() const;
 private:
     mutable int locatedBlock; ///< for optimization, keep the last index found
-    MultiBlockHandler3D<T,Lattice>* multiBlockHandler;
-    std::vector<BlockLattice3D<T,Lattice>*> blockLattices;
+    MultiBlockHandler3D<T, Lattice>* multiBlockHandler;
+    std::vector<BlockLattice3D<T, Lattice>*> blockLattices;
     LatticeStatistics<T>* statistics;
     bool statisticsOn;
     bool periodicCommunicationOn;
     MultiBlockReductor<T> reductor;
-    NoDynamics<T,Lattice> dummyDynamics;
-    mutable std::vector<Cell<T,Lattice>*> returnCells;
-    mutable std::vector<Cell<T,Lattice> const*> constReturnCells;
+    NoDynamics<T, Lattice> dummyDynamics;
+    mutable std::vector<Cell<T, Lattice>*> returnCells;
+    mutable std::vector<Cell<T, Lattice> const*> constReturnCells;
     mutable MultiSerializer3D<T>* serializer;
     mutable MultiUnSerializer3D<T>* unSerializer;
-    MultiBlockSerializerPolicy3D<T,Lattice> serializerPolicy;
-    MultiBlockUnSerializerPolicy3D<T,Lattice> unSerializerPolicy;
-    MultiDataAnalysis3D<T,Lattice> *dataAnalysis;
+    MultiBlockSerializerPolicy3D<T, Lattice> serializerPolicy;
+    MultiBlockUnSerializerPolicy3D<T, Lattice> unSerializerPolicy;
+    MultiDataAnalysis3D<T, Lattice> *dataAnalysis;
 };
 
 template<typename T, template<typename U> class Lattice>
-class MultiBlockSerializerPolicy3D : public MultiSerializerPolicy3D<T> {
+class MultiBlockSerializerPolicy3D: public MultiSerializerPolicy3D<T> {
 public:
-    MultiBlockSerializerPolicy3D(MultiBlockLattice3D<T,Lattice> const& lattice_);
+    MultiBlockSerializerPolicy3D(
+            MultiBlockLattice3D<T, Lattice> const& lattice_);
     virtual int getElementSize() const;
-    virtual void serializeElement(int block, int localX, int localY, int localZ, T* buffer) const;
+    virtual void serializeElement(int block, int localX, int localY,
+            int localZ, T* buffer) const;
     virtual MultiDataDistribution3D const& getMultiData() const;
     virtual bool isAllocated(int block) const;
 private:
-    MultiBlockLattice3D<T,Lattice> const& lattice;
+    MultiBlockLattice3D<T, Lattice> const& lattice;
 };
 
 template<typename T, template<typename U> class Lattice>
-class MultiBlockUnSerializerPolicy3D : public MultiUnSerializerPolicy3D<T> {
+class MultiBlockUnSerializerPolicy3D: public MultiUnSerializerPolicy3D<T> {
 public:
-    MultiBlockUnSerializerPolicy3D(MultiBlockLattice3D<T,Lattice>& lattice_);
+    MultiBlockUnSerializerPolicy3D(MultiBlockLattice3D<T, Lattice>& lattice_);
     virtual int getElementSize() const;
-    virtual void unSerializeElement(int block, int localX, int localY, int localZ, T const* buffer);
+    virtual void unSerializeElement(int block, int localX, int localY,
+            int localZ, T const* buffer);
     virtual MultiDataDistribution3D const& getMultiData() const;
     virtual bool isAllocated(int block) const;
 private:
-    MultiBlockLattice3D<T,Lattice>& lattice;
+    MultiBlockLattice3D<T, Lattice>& lattice;
 };
 
-}  // namespace olb
+} // namespace olb
 
 #endif

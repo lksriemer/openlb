@@ -1,8 +1,9 @@
 /*  This file is part of the OpenLB library
  *
  *  Copyright (C) 2007 Mathias J. Krause
- *  Address: Wilhelm-Maybach-Str. 24, 68766 Hockenheim, Germany 
- *  E-mail: mathias.j.krause@gmx.de
+ *  E-mail contact: info@openlb.net
+ *  The most recent release of OpenLB can be downloaded at
+ *  <http://www.openlb.net/>
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
@@ -57,6 +58,10 @@ struct Cell2D {
     T globX;
     T globY; 
     int iC;
+
+    bool operator==(Cell2D const& rhs) const {
+        return globX==rhs.globX && globY==rhs.globY && iC==rhs.iC;
+    };
 };
 
 

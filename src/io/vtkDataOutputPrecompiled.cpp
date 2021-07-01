@@ -97,54 +97,54 @@ template void writeVTKData3D<double> (
 
 template class VtkImageOutput2D<double>;
 
-template void VtkImageOutput2D<double>::writeData<double> (
+template void VtkImageOutput2D<double>::writeData<double,double> (
         ScalarFieldBase2D<double> const& scalarField,
         std::string scalarFieldName, double scalingFactor );
 
-template void VtkImageOutput2D<double>::writeData<float> (
+template void VtkImageOutput2D<double>::writeData<double,float> (
         ScalarFieldBase2D<double> const& scalarField,
         std::string scalarFieldName, float scalingFactor );
 
-template void VtkImageOutput2D<double>::writeData<2, double> (
+template void VtkImageOutput2D<double>::writeData<2, double,double> (
         TensorFieldBase2D<double,2> const& tensorField,
         std::string tensorFieldName, double scalingFactor );
 
-template void VtkImageOutput2D<double>::writeData<2, float> (
+template void VtkImageOutput2D<double>::writeData<2, double,float> (
         TensorFieldBase2D<double,2> const& tensorField,
         std::string tensorFieldName, float scalingFactor );
 
-template void VtkImageOutput2D<double>::writeData<9, double> (
+template void VtkImageOutput2D<double>::writeData<9, double,double> (
         TensorFieldBase2D<double,9> const& tensorField,
         std::string tensorFieldName, double scalingFactor );
 
-template void VtkImageOutput2D<double>::writeData<9, float> (
+template void VtkImageOutput2D<double>::writeData<9, double,float> (
         TensorFieldBase2D<double,9> const& tensorField,
         std::string tensorFieldName, float scalingFactor );
 
 
 template class VtkImageOutput3D<double>;
 
-template void VtkImageOutput3D<double>::writeData<double> (
+template void VtkImageOutput3D<double>::writeData<double,double> (
         ScalarFieldBase3D<double> const& scalarField,
         std::string scalarFieldName, double scalingFactor );
 
-template void VtkImageOutput3D<double>::writeData<float> (
+template void VtkImageOutput3D<double>::writeData<double,float> (
         ScalarFieldBase3D<double> const& scalarField,
         std::string scalarFieldName, float scalingFactor );
 
-template void VtkImageOutput3D<double>::writeData<3, double> (
+template void VtkImageOutput3D<double>::writeData<3, double,double> (
         TensorFieldBase3D<double,3> const& tensorField,
         std::string tensorFieldName, double scalingFactor );
 
-template void VtkImageOutput3D<double>::writeData<3, float> (
+template void VtkImageOutput3D<double>::writeData<3, double,float> (
         TensorFieldBase3D<double,3> const& tensorField,
         std::string tensorFieldName, float scalingFactor );
 
-template void VtkImageOutput3D<double>::writeData<19, double> (
+template void VtkImageOutput3D<double>::writeData<19, double,double> (
         TensorFieldBase3D<double,19> const& tensorField,
         std::string tensorFieldName, double scalingFactor );
 
-template void VtkImageOutput3D<double>::writeData<19, float> (
+template void VtkImageOutput3D<double>::writeData<19, double,float> (
         TensorFieldBase3D<double,19> const& tensorField,
         std::string tensorFieldName, float scalingFactor );
 

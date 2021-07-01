@@ -1,8 +1,9 @@
 /*  This file is part of the OpenLB library
  *
  *  Copyright (C) 2006-2008 Jonas Latt
- *  Address: Rue General Dufour 24,  1211 Geneva 4, Switzerland 
- *  E-mail: jonas.latt@gmail.com
+ *  E-mail contact: info@openlb.net
+ *  The most recent release of OpenLB can be downloaded at
+ *  <http://www.openlb.net/>
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
@@ -32,6 +33,7 @@
 #include "serializer.h"
 #include "dataAnalysisBase3D.h"
 #include "spatiallyExtendedObject3D.h"
+#include "blockGeometryStatistics3D.h"
 
 namespace olb {
 
@@ -54,6 +56,11 @@ public:
         int x0_, int x1_, int y0_, int y1_, int z0_ , int z1_,
         Dynamics<T,Lattice>* dynamics ) =0;
     virtual void defineDynamics(int iX, int iY, int iZ, Dynamics<T,Lattice>* dynamics ) =0;
+    virtual void defineDynamics(BlockGeometryStatistics3D* blockGeoSta,
+        Dynamics<T,Lattice>* dynamics, int material)=0;
+    virtual void defineDynamics(BlockGeometryStatistics3D* blockGeoSta,
+        int x0_, int x1_, int y0_, int y1_, int z0_, int z1_,
+        Dynamics<T,Lattice>* dynamics, int material)=0;
     virtual void specifyStatisticsStatus (
                 int x0_, int x1_, int y0_, int y1_, int z0_, int z1_,
                 bool status ) =0;

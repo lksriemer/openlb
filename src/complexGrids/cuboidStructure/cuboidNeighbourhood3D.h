@@ -1,8 +1,9 @@
 /*  This file is part of the OpenLB library
  *
  *  Copyright (C) 2007 Mathias J. Krause
- *  Address: Wilhelm-Maybach-Str. 24, 68766 Hockenheim, Germany 
- *  E-mail: mathias.j.krause@gmx.de
+ *  E-mail contact: info@openlb.net
+ *  The most recent release of OpenLB can be downloaded at
+ *  <http://www.openlb.net/>
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
@@ -38,12 +39,12 @@ namespace olb {
 
 /// Single 3D cuboid neighbourhoods are the basic component of a
 /// 3D communicator
-/** For each cuboid is a cuboid neighbourhood devined. It stores the 
- * needed cell coordinates (Cell3D) of other cuboids. Futher more this
- * Class provides basic initialization and communication methods 
+/** For each cuboid a cuboid neighbourhood is defined. It stores the 
+ * needed cell coordinates (Cell3D) of other cuboids. Futhermore this
+ * class provides basic initialization and communication methods 
  * for the class Communicator3D.
  *
- * WARNING: For unstructured grids there is an iterpolation needed
+ * WARNING: For unstructured grids there is an interpolation needed
  * for the method buffer_outData which is not yet implemented!
  *
  * This class is not intended to be derived from.
@@ -54,10 +55,15 @@ template<typename T, template<typename U> class Lattice> class SuperLattice3D;
 
 template<typename T>
 struct Cell3D {
+
     T globX;
     T globY; 
     T globZ; 
     int iC;
+
+    bool operator==(Cell3D const& rhs) const {
+        return globX==rhs.globX && globY==rhs.globY && globZ==rhs.globZ && iC==rhs.iC;
+    };
 };
 
 

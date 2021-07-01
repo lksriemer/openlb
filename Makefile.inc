@@ -1,8 +1,9 @@
 #  This file is part of the OpenLB library
 #
 #  Copyright (C) 2007 Mathias Krause
-#  Address: Wilhelm-Maybach-Str. 24, 68766 Hockenheim, Germany 
-#  E-mail: mathias.j.krause@gmx.de
+#  E-mail contact: info@openlb.net
+#  The most recent release of OpenLB can be downloaded at
+#  <http://www.openlb.net/>
 #
 #  This program is free software; you can redistribute it and/or
 #  modify it under the terms of the GNU General Public License
@@ -19,12 +20,12 @@
 #  Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
 #  Boston, MA  02110-1301, USA.
 
-
 ###########################################################################
 ###########################################################################
 ## DEFINITIONS TO BE CHANGED
 
 CXX             := g++
+#CXX             := icpc -D__aligned__=ignored
 #CXX             := mpiCC
 
 OPTIM           := -O3 -Wall
@@ -41,10 +42,11 @@ PARALLEL_MODE   := OFF
 #PARALLEL_MODE   := HYBRID
 
 MPIFLAGS        :=
-OMPFLAGS        := -openmp
+OMPFLAGS        := -fopenmp
 
-#BUILDTYPE       := precompiled
-BUILDTYPE       := generic
+
+BUILDTYPE       := precompiled
+#BUILDTYPE       := generic
 
 
 ###########################################################################
@@ -91,24 +93,35 @@ SUBDIRS         := src/core \
                    src/complexGrids/cuboidStructure \
                    src/complexGrids/multiBlockStructure \
                    src/utilities \
-                   src/io
+                   src/io \
+                   src/external/tinyxml
 
 EXAMPLEDIRS     := examples/bstep2d \
                    examples/bstep3d \
-                   examples/cavity2d_mpi \
-                   examples/cavity2d_omp \
+                   examples/cavity2d \
                    examples/cavity3d \
-                   examples/cavity3d_omp \
+                   examples/cavity3d_cuboid_mpi \
                    examples/cylinder2d \
-                   examples/d3q13cavity \
+                   examples/cylinder3d \
                    examples/forcedPoiseuille2d \
-                   examples/poiseuille2d
+                   examples/mrt2d \
+                   examples/multiComponent2d \
+                   examples/multiComponent3d \
+                   examples/poiseuille2d \
+                   examples/thermal2d \
+                   examples/thermal3d
+
+INCLUDEDIRS     := src \
+				   src/external \
+                   src/external/cvmlcpp \
+				   src/external/boost
 
 BUILDTYPEDIRS   := build/precompiled \
                    build/generic
 
 SUBDIRSH        := $(foreach d,$(SUBDIRS),$(ROOT)/$(d))
-IDIR            := -I$(ROOT)/src
+IDIR            := $(foreach d,$(INCLUDEDIRS),-I$(ROOT)/$(d))
+
 
 ###########################################################################
 ###########################################################################

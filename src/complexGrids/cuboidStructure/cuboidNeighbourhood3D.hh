@@ -1,8 +1,9 @@
 /*  This file is part of the OpenLB library
  *
  *  Copyright (C) 2007 Mathias J. Krause
- *  Address: Wilhelm-Maybach-Str. 24, 68766 Hockenheim, Germany 
- *  E-mail: mathias.j.krause@gmx.de
+ *  E-mail contact: info@openlb.net
+ *  The most recent release of OpenLB can be downloaded at
+ *  <http://www.openlb.net/>
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
@@ -130,6 +131,9 @@ void CuboidNeighbourhood3D<T,Lattice>::add_inCell(T globX, T globY, T globZ) {
     if(iC!=_sLattice.get_cGeometry().get_nC()){
         found.globX = globX; found.globY = globY; found.globZ = globZ;
         found.iC = iC;
+        for (unsigned i=0; i<_inCells.size(); i++) {
+            if(_inCells[i]==found) return; 
+        }
         _inCells.push_back(found);
     }
 }
@@ -172,9 +176,10 @@ void CuboidNeighbourhood3D<T,Lattice>::init_inCN() {
 
     _inC.clear();
     _inN.clear();
+
     _inData = new T* [_nC];
     _tempInCN = new int [_nC];
-    for (unsigned i=0; i<_nC; i++) {
+    for (int i=0; i<_nC; i++) {
         _tempInCN[i]=0;
     }
 
@@ -195,10 +200,20 @@ void CuboidNeighbourhood3D<T,Lattice>::init_inCN() {
     }
 
     #ifdef PARALLEL_MODE_MPI
-        _mpiNbHelper.allocate(_nC);
+        int counter=0;
         for (int i=0; i<_nC; i++) {
             int dRank = _sLattice.get_load().rank(i);
-            singleton::mpi().iSend(&_tempInCN[i] , 1, dRank, &_mpiNbHelper.get_mpiRequest()[i], i*_nC+_iC);
+            if ( singleton::mpi().getRank() != dRank )
+                counter++;
+        }
+        _mpiNbHelper.allocate(counter);
+        counter=0;
+        for (int i=0; i<_nC; i++) {
+            int dRank = _sLattice.get_load().rank(i);
+           if ( singleton::mpi().getRank() != dRank ) {       
+                singleton::mpi().iSend(&_tempInCN[i] , 1, dRank, &_mpiNbHelper.get_mpiRequest()[counter], i*_nC+_iC);
+                counter++;
+            }
         }
     #endif
 
@@ -213,22 +228,23 @@ void CuboidNeighbourhood3D<T,Lattice>::init_outCN() {
     _outData = new T* [_nC];
 
     std::vector<int> temp(_nC,0);
-    #ifndef PARALLEL_MODE_MPI
-        for (unsigned i=0; i<_outCells.size(); i++) {
-            temp[_outCells[i].iC]++;
-        }
-    #endif
+
+    for (unsigned i=0; i<_outCells.size(); i++) {
+        temp[_outCells[i].iC]++;
+    }
+
     for (int i=0; i<_nC; i++) {
         #ifdef PARALLEL_MODE_MPI
             int sRank = _sLattice.get_load().rank(i);
-            singleton::mpi().receive(&temp[i], 1, sRank, _iC*_nC+i);
+            if ( singleton::mpi().getRank() != sRank ) {
+                singleton::mpi().receive(&temp[i], 1, sRank, _iC*_nC+i);
+            }
         #endif
         if (temp[i]!=0) {
             _outC.push_back(i);
             _outN.push_back(temp[i]);
-            _outData[i] = new T [temp[i]*Lattice<T>::q];
         }
-        else _outData[i] = NULL;
+        _outData[i] = new T [temp[i]*Lattice<T>::q];
     }
 
     _initOutCNdone = true;
@@ -239,16 +255,19 @@ void CuboidNeighbourhood3D<T,Lattice>::bufSend_inCells() {
 
     #ifdef PARALLEL_MODE_MPI
         _mpiNbHelper.free();
-        _mpiNbHelper.allocate(_inC.size());
 
         std::vector<int> temp(_nC,0);
         for (unsigned i=0; i<_inCells.size(); i++) {
             int iC = _inCells[i].iC;
-            _inData[iC][3*temp[iC]] = _inCells[i].globX;
-            _inData[iC][3*temp[iC]+1] = _inCells[i].globY;
-            _inData[iC][3*temp[iC]+2] = _inCells[i].globZ;
-            temp[iC]++;
+            if (singleton::mpi().getRank() != _sLattice.get_load().rank(iC)) {
+                _inData[iC][3*temp[iC]] = _inCells[i].globX;
+                _inData[iC][3*temp[iC]+1] = _inCells[i].globY;
+                _inData[iC][3*temp[iC]+2] = _inCells[i].globZ;
+                temp[iC]++;
+            }
         }
+
+        _mpiNbHelper.allocate(_inC.size());
         for (unsigned iC=0; iC<_inC.size(); iC++) {
             int dRank = _sLattice.get_load().rank(_inC[iC]);
             singleton::mpi().iSend( _inData[_inC[iC]],
@@ -263,15 +282,17 @@ void CuboidNeighbourhood3D<T,Lattice>::recWrite_outCells() {
     #ifdef PARALLEL_MODE_MPI
         for (unsigned iC=0; iC<_outC.size(); iC++) {
             int sRank = _sLattice.get_load().rank(_outC[iC]);
-            singleton::mpi().receive(_outData[_outC[iC]], _outN[iC]*3, sRank, _iC*_nC+_outC[iC]);
-            Cell3D<T> found;
-            found.iC = _outC[iC];
-            for (int i=0; i<_outN[iC]; i++) {
-                found.globX = _outData[_outC[iC]][3*i];
-                found.globY = _outData[_outC[iC]][3*i+1];
-                found.globZ = _outData[_outC[iC]][3*i+2];
-                _outCells.push_back(found);
-            }
+                singleton::mpi().receive(_outData[_outC[iC]], _outN[iC]*3, sRank, _iC*_nC+_outC[iC]);
+                if ( singleton::mpi().getRank() != sRank ) {
+                    Cell3D<T> found;
+                    found.iC = _outC[iC];
+                    for (int i=0; i<_outN[iC]; i++) {
+                        found.globX = _outData[_outC[iC]][3*i];
+                        found.globY = _outData[_outC[iC]][3*i+1];
+                        found.globZ = _outData[_outC[iC]][3*i+2];
+                       _outCells.push_back(found);
+                    }
+                }
         }
     #endif
 }
@@ -282,6 +303,7 @@ void CuboidNeighbourhood3D<T,Lattice>::finish_comm() {
     #ifdef PARALLEL_MODE_MPI
         singleton::mpi().waitAll(_mpiNbHelper);
     #endif
+
 }
 
 template<typename T, template<typename U> class Lattice>

@@ -1,8 +1,9 @@
 /*  This file is part of the OpenLB library
  *
  *  Copyright (C) 2006-2008 Jonas Latt
- *  Address: Rue General Dufour 24,  1211 Geneva 4, Switzerland 
- *  E-mail: jonas.latt@gmail.com
+ *  E-mail contact: info@openlb.net
+ *  The most recent release of OpenLB can be downloaded at
+ *  <http://www.openlb.net/>
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
@@ -33,6 +34,7 @@
 #include "blockStructure2D.h"
 #include "dataAnalysisBase2D.h"
 #include "multiPhysics.h"
+#include "blockGeometryStatistics2D.h"
 
 
 /// All OpenLB code is contained in this namespace.
@@ -91,7 +93,11 @@ public:
                                  Dynamics<T,Lattice>* dynamics );
     /// Define the dynamics on a lattice site
     virtual void defineDynamics(int iX, int iY, Dynamics<T,Lattice>* dynamics);
-    /// Specify wheter statistics measurements are done on given rect. domain
+    /// Define the dynamics by material
+    virtual void defineDynamics(BlockGeometryStatistics2D* blockGeoSta, Dynamics<T,Lattice>* dynamics, int material);
+    /// Define the dynamics by material on a 2D sub-box
+    virtual void defineDynamics(BlockGeometryStatistics2D* blockGeoSta, int x0_, int x1_, int y0_, int y1_, Dynamics<T,Lattice>* dynamics, int material);
+    /// Specify whether statistics measurements are done on given rect. domain
     virtual void specifyStatisticsStatus (int x0, int x1, int y0, int y1,
                                           bool status );
     /// Apply collision step to a rectangular domain

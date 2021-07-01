@@ -1,8 +1,9 @@
 /*  This file is part of the OpenLB library
  *
  *  Copyright (C) 2007 Mathias J. Krause
- *  Address: Wilhelm-Maybach-Str. 24, 68766 Hockenheim, Germany 
- *  E-mail: mathias.j.krause@gmx.de
+ *  E-mail contact: info@openlb.net
+ *  The most recent release of OpenLB can be downloaded at
+ *  <http://www.openlb.net/>
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
@@ -43,7 +44,8 @@ template<typename T>
 CuboidGeometry3D<T>::CuboidGeometry3D(T globPosX, T globPosY, T globPosZ, 
                              T delta, int nX, int nY, int nZ, int nC) {
     //_cuboids.reserve(10000);
-    Cuboid3D<T> cuboid(globPosX, globPosY, globPosZ, delta, nX, nY, nZ);
+    _motherCuboid = Cuboid3D<T>(globPosX, globPosY, globPosZ, delta, nX, nY, nZ);
+    Cuboid3D<T> cuboid(0, 0, 0, 1, nX, nY, nZ);
     add(cuboid);
     split(0, nC);
 }
@@ -166,7 +168,7 @@ T CuboidGeometry3D<T>::get_maxDelta() const {
 template<typename T>
 Cuboid3D<T> CuboidGeometry3D<T>::get_motherC() const {
 
-    Cuboid3D<T> found;
+    /*Cuboid3D<T> found;
     if(_cuboids.size()==0) {
         found.init(0, 0, 0, 0, 0, 0, 0);
         return found;
@@ -216,7 +218,8 @@ Cuboid3D<T> CuboidGeometry3D<T>::get_motherC() const {
 
     found.init(globPosXmin, globPosYmin, globPosZmin, delta, nX, nY, nZ); 
 
-    return found;
+    return found;*/
+    return _motherCuboid;
 }
 
 template<typename T>
@@ -271,7 +274,7 @@ void CuboidGeometry3D<T>::remove(int iC) {
 }
 
 template<typename T>
-void CuboidGeometry3D<T>::remove(olb::ScalarField3D<int>* geometryData) {
+void CuboidGeometry3D<T>::remove(olb::BlockGeometry3D& blockGeometry) {
 
     std::vector<Cuboid3D<T> > cuboids;
     unsigned size = _cuboids.size();
@@ -282,7 +285,7 @@ void CuboidGeometry3D<T>::remove(olb::ScalarField3D<int>* geometryData) {
         for (int iX=0; iX<_cuboids[i].get_nX(); iX++) {
             for (int iY=0; iY<_cuboids[i].get_nY(); iY++) {
                 for (int iZ=0; iZ<_cuboids[i].get_nZ(); iZ++) {
-                    if (geometryData->get(_cuboids[i].get_globPosX()+iX,
+                    if (blockGeometry.getMaterial(_cuboids[i].get_globPosX()+iX,
                      _cuboids[i].get_globPosY()+iY,_cuboids[i].get_globPosZ()+iZ)!=0 ) allZero[i] = 0;
                 }
             }

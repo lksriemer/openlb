@@ -1,0 +1,239 @@
+/***************************************************************************
+ *   Copyright (C) 2007 by BEEKHOF, Fokko                                  *
+ *   fpbeekhof@gmail.com                                                   *
+ *                                                                         *
+ *   This program is free software; you can redistribute it and/or modify  *
+ *   it under the terms of the GNU General Public License as published by  *
+ *   the Free Software Foundation; either version 2 of the License, or     *
+ *   (at your option) any later version.                                   *
+ *                                                                         *
+ *   This program is distributed in the hope that it will be useful,       *
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ *   GNU General Public License for more details.                          *
+ *                                                                         *
+ *   You should have received a copy of the GNU General Public License     *
+ *   along with this program; if not, write to the                         *
+ *   Free Software Foundation, Inc.,                                       *
+ *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ ***************************************************************************/
+
+#ifndef CVMLCPP_DIRECTORY_TOKENIZER
+#define CVMLCPP_DIRECTORY_TOKENIZER 1
+
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+
+#include <dirent.h>
+
+#include <cassert>
+#include <cstdio>
+#include <algorithm>
+#include <string>
+#include <cstring>
+#include <vector>
+
+namespace cvmlcpp
+{
+
+template <std::size_t N>
+class _StringStack
+{
+	public:
+		_StringStack()
+		{
+			_end.push_back(0u);
+			_str[0] = 0;
+		}
+
+		void pop()
+		{
+			assert(_end.size() > 1u);
+			_end.pop_back();
+			_str[_end.back()] = 0;
+		}
+
+		bool push(const char * const buf)
+		{
+			const std::size_t n = _end.back();
+			std::size_t l = N - n;
+			if (l == 0)
+				return false;
+
+			char *p = _str + n;
+			const char *q = buf;
+			while (*q)
+			{
+				*p = *q;
+				++q;
+				++p;
+				if (--l == 0u)
+					return false;
+			}
+			*p = 0; // zero-terminate
+			_end.push_back(n + (q - buf) );
+			return true;
+		}
+
+		const char * c_str() const { return _str; }
+
+		std::size_t depth() const { return _end.size() - 1u; }
+
+	private:
+		char _str[N];
+		std::vector<std::size_t> _end;
+		std::size_t _length;
+};
+
+class DirectoryTokenizer
+{
+	public:
+		DirectoryTokenizer(std::string rootDirectory,
+				   std::size_t maxDepth = 255u) :
+			 _maxDepth(maxDepth), _ok(false), _complete(false)
+		{
+			DIR * parent = opendir(rootDirectory.c_str());
+
+			_ok = static_cast<bool>(parent);
+
+			if (_ok)
+			{
+				_prefix.push(rootDirectory.c_str());
+				_prefix.push("/");
+
+				_directories.push_back(parent);
+				_entries.push_back(0);
+			}
+
+		}
+
+		~DirectoryTokenizer()
+		{
+			std::for_each(_directories.begin(), _directories.end(),
+					std::ptr_fun(closedir));
+		}
+
+		bool next(std::string &fileName)
+		{
+			fileName.clear();
+
+			if ( (!_ok) || (_complete) )
+				return false;
+
+			assert(!_entries.empty());
+			const bool foundFile = this->findNextFile();
+			if (foundFile)
+				fileName.assign(_entries.back()->d_name);
+
+			_complete = !foundFile;
+
+			return foundFile;
+		}
+
+		bool ok() const { return _ok; }
+
+		bool complete() const { return _complete; }
+
+	private:
+	const std::size_t _maxDepth;
+	bool _ok, _complete;
+	std::vector<struct dirent *> _entries;
+	std::vector<DIR *> _directories;
+	_StringStack<16384u> _prefix;
+
+	bool findNextFile()
+	{
+		assert(_entries.size() == _directories.size());
+		assert(_prefix.depth() == 2u * _entries.size());
+		assert(!_directories.empty());
+		assert(_ok);
+
+		// Prepare next entry
+		while (!_directories.empty())
+		{
+			assert(_entries.size() == _directories.size());
+			assert(_prefix.depth() == 2u * _entries.size());
+			assert(!_directories.empty());
+			assert(_ok);
+// printf("PREFIX: %s (%u %u)\n", _prefix.c_str(),
+// 		_prefix.depth(), _entries.size());
+
+			_entries.back() = readdir(_directories.back());
+			if (!_entries.back())
+			{
+				// RV non-zero - end of dir or error.
+				closedir(_directories.back());
+				_directories.pop_back();
+				_entries.pop_back();
+				_prefix.pop(); // slash
+				_prefix.pop(); // name
+// printf("POP: %s\n", _prefix.c_str());
+				continue;
+			}
+
+// printf("NAME: %s\n", _entries.back()->d_name);
+			// Only do _deeper_ in the tree
+			if (!std::strcmp(_entries.back()->d_name, ".") ||
+			    !std::strcmp(_entries.back()->d_name, ".."))
+			{
+// printf("SKIP\n");
+				continue;
+			}
+
+			bool isDir = false; // Just an initial value
+#if defined _DIRENT_HAVE_D_TYPE && defined DT_DIR && defined DT_UNKNOWN
+			if (_entries.back()->d_type == DT_DIR)
+				isDir = true;
+			else if (_entries.back()->d_type == DT_UNKNOWN)
+#endif
+			{
+// printf("STAT: dirtype was %d\n", _entries.back()->d_type);
+
+				_prefix.push(_entries.back()->d_name);
+
+				struct stat entryInfo;
+				if (stat(_prefix.c_str(), &entryInfo) != 0)
+				{
+					std::perror("stat");
+// printf("STAT FAILED: %s\n", _prefix.c_str());
+					_prefix.pop();
+					continue;
+				}
+				_prefix.pop();
+				isDir = S_ISDIR(entryInfo.st_mode);
+			}
+
+			if (isDir)
+			{
+				if (_directories.size() < _maxDepth)
+				{
+					_prefix.push(_entries.back()->d_name);
+
+					// Found directory - Enter it
+					DIR * child = opendir(_prefix.c_str());
+
+					if (child)
+					{
+						_directories.push_back(child);
+						_entries.push_back(0);
+						_prefix.push("/");
+// printf("PUSH: %s\n", _prefix.c_str());
+					}
+				}
+ 			}
+			else
+			{
+// printf("FOUND: %s\n", _entries.back()->d_name);
+				// Found a file!
+				return true;
+			}
+		}
+
+		return false; // No files left
+	}
+};
+
+} // namespace
+
+#endif

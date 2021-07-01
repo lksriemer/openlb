@@ -1,0 +1,85 @@
+/***************************************************************************
+ *   Copyright (C) 2005, 2006, 2007 by BEEKHOF, Fokko                      *
+ *   fpbeekhof@gmail.com                                                   *
+ *                                                                         *
+ *   This program is free software; you can redistribute it and/or modify  *
+ *   it under the terms of the GNU General Public License as published by  *
+ *   the Free Software Foundation; either version 2 of the License, or     *
+ *   (at your option) any later version.                                   *
+ *                                                                         *
+ *   This program is distributed in the hope that it will be useful,       *
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ *   GNU General Public License for more details.                          *
+ *                                                                         *
+ *   You should have received a copy of the GNU General Public License     *
+ *   along with this program; if not, write to the                         *
+ *   Free Software Foundation, Inc.,                                       *
+ *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ ***************************************************************************/
+
+#pragma once
+
+#ifndef CVMLCPP_FACET
+#define CVMLCPP_FACET 1
+
+#include <cvmlcpp/math/Euclid>
+
+namespace cvmlcpp
+{
+
+// With normal vector included
+template <class Triangle, typename T>
+class Facet : public Triangle
+{
+	public:
+		typedef T		value_type;
+		typedef Triangle	triange_type;
+		typedef Point3D<T>	normal_type;
+
+		typedef typename Triangle::const_iterator
+						const_triangle_iterator;
+		typedef typename normal_type::iterator normal_iterator;
+		typedef typename normal_type::const_iterator
+							const_normal_iterator;
+
+		Facet() {}
+
+		Facet(	const const_triangle_iterator first,
+			const const_triangle_iterator last) :
+				triange_type(first, last)
+		{
+			std::fill(_norm.begin(), _norm.end(), 0);
+		}
+
+		Facet(	const const_triangle_iterator first,
+			const const_triangle_iterator last,
+			const normal_type &normal) :
+				triange_type(first, last), _norm(normal)
+		{ }
+
+		Facet(	const const_triangle_iterator first,
+			const const_triangle_iterator last,
+			  const_normal_iterator normalFirst,
+			  const_normal_iterator normalLast) :
+				triange_type(first, last),
+				_norm(normalFirst, normalLast)
+		{ }
+
+		template <typename It, class Vect>
+		void set(It first, It last, const Vect &normal)
+		{
+			triange_type::set(first, last);
+			_norm.load(normal.begin(), normal.end());
+		}
+
+		const normal_type &normal() const { return _norm; }
+		normal_type &normal() { return _norm; }
+
+	private:
+		normal_type _norm;
+};
+
+} // namespace
+
+#endif

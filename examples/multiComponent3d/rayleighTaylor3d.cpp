@@ -114,7 +114,7 @@ void produceVTK(BlockStructure3D<T, DESCRIPTOR>& latticeOne, int iT) {
 	cout << "Writing VTK\n";
 
     VtkImageOutput3D<T> vtkOut(createFileName("tmp/vtk", iT, 7), (T)1);
-    vtkOut.writeData<float>(latticeOne.getDataAnalysis().getPressure(),
+    vtkOut.writeData<T,float>(latticeOne.getDataAnalysis().getPressure(),
                             "p", (T)1);
 }
 

@@ -56,14 +56,14 @@ private:
 template<typename T>
 class VtkImageOutput2D {
 public:
-    VtkImageOutput2D(std::string fName, T deltaX_=(T)1);
+    VtkImageOutput2D(std::string fName, T deltaX_=(T)1, T originX_=(T)0, T originY_=(T)0);
     ~VtkImageOutput2D();
-    template<typename TConv>
-    void writeData(ScalarFieldBase2D<T> const& scalarField,
-                   std::string scalarFieldName, TConv scalingFactor=(T)1);
-    template<int n, typename TConv>
-    void writeData(TensorFieldBase2D<T,n> const& tensorField,
-                   std::string tensorFieldName, TConv scalingFactor=(T)1);
+    template<typename S, typename TConv>
+    void writeData(ScalarFieldBase2D<S> const& scalarField,
+                   std::string scalarFieldName, TConv scalingFactor=(S)1);
+    template<int n, typename S, typename TConv>
+    void writeData(TensorFieldBase2D<S,n> const& tensorField,
+                   std::string tensorFieldName, TConv scalingFactor=(S)1);
 private:
     void writeHeader(int nx_, int ny_);
     void writeFooter();
@@ -71,6 +71,7 @@ private:
     std::string fullName;
     VtkDataWriter3D vtiOut;
     T deltaX;
+    T originX, originY;
     bool headerWritten;
     int nx, ny;
 };
@@ -78,14 +79,14 @@ private:
 template<typename T>
 class VtkImageOutput3D {
 public:
-    VtkImageOutput3D(std::string fName, T deltaX_=(T)1);
+    VtkImageOutput3D(std::string fName, T deltaX_=(T)1, T originX_=(T)0, T originY_=(T)0, T originZ_=(T)0);
     ~VtkImageOutput3D();
-    template<typename TConv>
-    void writeData(ScalarFieldBase3D<T> const& scalarField,
-                   std::string scalarFieldName, TConv scalingFactor=(T)1);
-    template<int n, typename TConv>
-    void writeData(TensorFieldBase3D<T,n> const& tensorField,
-                   std::string tensorFieldName, TConv scalingFactor=(T)1);
+    template<typename S, typename TConv>
+    void writeData(ScalarFieldBase3D<S> const& scalarField,
+                   std::string scalarFieldName, TConv scalingFactor=(S)1);
+    template<int n, typename S, typename TConv>
+    void writeData(TensorFieldBase3D<S,n> const& tensorField,
+                   std::string tensorFieldName, TConv scalingFactor=(S)1);
 private:
     void writeHeader(int nx_, int ny_, int nz_);
     void writeFooter();
@@ -93,6 +94,7 @@ private:
     std::string fullName;
     VtkDataWriter3D vtiOut;
     T deltaX;
+    T originX, originY, originZ;
     bool headerWritten;
     int nx, ny, nz;
 };

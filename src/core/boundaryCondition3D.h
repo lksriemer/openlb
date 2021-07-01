@@ -1,8 +1,9 @@
 /*  This file is part of the OpenLB library
  *
  *  Copyright (C) 2007 Jonas Latt
- *  Address: Rue General Dufour 24,  1211 Geneva 4, Switzerland 
- *  E-mail: jonas.latt@gmail.com
+ *  E-mail contact: info@openlb.net
+ *  The most recent release of OpenLB can be downloaded at
+ *  <http://www.openlb.net/>
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
@@ -29,6 +30,7 @@
 #include "momentaOnBoundaries3D.h"
 #include "boundaryPostProcessors3D.h"
 #include "dynamics.h"
+#include "blockGeometryStatistics3D.h"
 
 namespace olb {
 
@@ -97,6 +99,16 @@ public:
 
     virtual BlockStructure3D<T,Lattice>& getBlock() =0;
     virtual BlockStructure3D<T,Lattice> const& getBlock() const =0;
+
+    /// adds a pressure or velocity boundary for one material and a range (x0-x1, y0-y1, z0-z1) or the whole geometry
+    virtual void addVelocityBoundary(BlockGeometryStatistics3D* blockGeoSta, int x0, int x1, int y0, int y1, int z0, int z1, T omega, int material) =0;
+    virtual void addVelocityBoundary(BlockGeometryStatistics3D* blockGeoSta, T omega, int material) =0;
+    virtual void addPressureBoundary(BlockGeometryStatistics3D* blockGeoSta, int x0, int x1, int y0, int y1, int z0, int z1, T omega, int material) =0;
+    virtual void addPressureBoundary(BlockGeometryStatistics3D* blockGeoSta, T omega, int material) =0;
+
+    virtual void outputOn() =0;
+    virtual void outputOff() =0;
+
 };
 
 

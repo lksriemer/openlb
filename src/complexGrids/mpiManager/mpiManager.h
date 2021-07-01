@@ -29,6 +29,7 @@
 #include "mpi.h"
 #include <vector>
 #endif
+#include <string>
 
 
 namespace olb {
@@ -76,7 +77,7 @@ public:
 class MpiManager {
 public:
     /// Initializes the mpi manager
-    void init(int *argc, char ***argv, bool verbous=false);
+    void init(int *argc, char ***argv, bool verbose=false);
     /// Returns the number of processes
     int getSize() const;
     /// Returns the process ID
@@ -137,6 +138,9 @@ public:
     template <typename T>
     void bCastThroughMaster(T* sendBuf, int sendCount, bool iAmRoot, MPI_Comm comm = MPI_COMM_WORLD);
 
+	/// Special case for broadcasting strings. Memory handling is automatic. 
+	void bCast( std::string& message, int root = 0 ); 
+
     /// Reduction operation toward one processor
     template <typename T>
     void reduce(T sendVal, T& recvVal, MPI_Op op, int root = 0, MPI_Comm = MPI_COMM_WORLD);
@@ -181,7 +185,7 @@ friend MpiManager& mpi();
 class MpiManager {
 public:
     /// Initializes the mpi manager
-    void init(int *argc, char ***argv, bool verbous=false) { }
+    void init(int *argc, char ***argv, bool verbose=false) { }
     /// Returns the number of processes
     int getSize() const { return 1; }
     /// Returns the process ID

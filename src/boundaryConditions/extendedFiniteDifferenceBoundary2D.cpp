@@ -1,8 +1,9 @@
 /*  This file is part of the OpenLB library
  *
  *  Copyright (C) 2007 Orestis Malaspinas, Jonas Latt
- *  Address: Rue General Dufour 24,  1211 Geneva 4, Switzerland 
- *  E-mail: jonas.latt@gmail.com
+ *  E-mail contact: info@openlb.net
+ *  The most recent release of OpenLB can be downloaded at
+ *  <http://www.openlb.net/>
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
@@ -24,8 +25,6 @@
 #include "extendedFiniteDifferenceBoundary2D.hh"
 #include "core/boundaryPostProcessors2D.h"
 #include "core/boundaryPostProcessors2D.hh"
-#include "core/postProcessing.h"
-#include "core/postProcessing.hh"
 #include "core/latticeDescriptors.h"
 #include "core/latticeDescriptors.hh"
 

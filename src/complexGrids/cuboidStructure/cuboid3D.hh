@@ -1,8 +1,9 @@
 /*  This file is part of the OpenLB library
  *
  *  Copyright (C) 2007 Mathias J. Krause
- *  Address: Wilhelm-Maybach-Str. 24, 68766 Hockenheim, Germany 
- *  E-mail: mathias.j.krause@gmx.de
+ *  E-mail contact: info@openlb.net
+ *  The most recent release of OpenLB can be downloaded at
+ *  <http://www.openlb.net/>
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
@@ -449,7 +450,6 @@ void Cuboid3D<T>::divide(int p, std::vector<Cuboid3D<T> > &childrenC) const {
 
             for (int iX=0; iX<restX; iX++) {
                 xN_child         = (splited_nX+restX-iX-1)/restX;
-                std::cout <<"1:"<<xN_child<<std::endl;
                 for (int iC=0; iC<helpG0.get_nC(); iC++) {
                     int zN_child     = helpG0.get_cuboid(iC).get_nX();
                     int yN_child     = helpG0.get_cuboid(iC).get_nY();
@@ -470,7 +470,6 @@ void Cuboid3D<T>::divide(int p, std::vector<Cuboid3D<T> > &childrenC) const {
 
             for (int iX=0; iX<bestIx-restX; iX++) {
                 xN_child         = (splited_nX+bestIx-restX-iX-1)/(bestIx-restX);
-                std::cout <<"2:"<<xN_child<<std::endl;
                 for (int iC=0; iC<helpG1.get_nC(); iC++) {
                     int zN_child     = helpG1.get_cuboid(iC).get_nX();
                     int yN_child     = helpG1.get_cuboid(iC).get_nY();

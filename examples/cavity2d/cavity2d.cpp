@@ -1,8 +1,9 @@
 /*  This file is part of the OpenLB library
  *
- *  Copyright (C) 2006, 2007 Mathias Krause, Jonas Latt, Vincent Heuveline
- *  Address: Rue General Dufour 24,  1211 Geneva 4, Switzerland 
- *  E-mail: jonas.latt@gmail.com
+ *  Copyright (C) 2006 - 2011 Mathias J. Krause, Jonas Fietz, Jonas Latt
+ *  E-mail contact: info@openlb.net
+ *  The most recent release of OpenLB can be downloaded at
+ *  <http://www.openlb.net/>
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
@@ -14,11 +15,12 @@
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
  *
- *  You should have received a copy of the GNU General Public 
- *  License along with this program; if not, write to the Free 
+ *  You should have received a copy of the GNU General Public
+ *  License along with this program; if not, write to the Free
  *  Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  *  Boston, MA  02110-1301, USA.
-*/
+ */
+
 
 #include "olb2D.h"
 #ifndef OLB_PRECOMPILED // Unless precompiled version is used,
@@ -27,6 +29,7 @@
 #include <vector>
 #include <cmath>
 #include <iostream>
+#include <io/xmlReader.h>
 
 using namespace olb;
 using namespace olb::descriptors;
@@ -35,6 +38,7 @@ using namespace std;
 
 typedef double T;
 #define DESCRIPTOR D2Q9Descriptor
+
 
 void iniGeometry( BlockStructure2D<T,DESCRIPTOR>& lattice,
                   LBunits<T> const& converter,
@@ -76,7 +80,7 @@ void iniGeometry( BlockStructure2D<T,DESCRIPTOR>& lattice,
     lattice.initialize();
 }
 
-void writeGifs(BlockLattice2D<T,DESCRIPTOR>& lattice,
+void writeGifs(std::string filename, BlockStructure2D<T,DESCRIPTOR>& lattice,
                LBunits<T> const& converter, int iter)
 {
     const int imSize = 600;
@@ -84,19 +88,19 @@ void writeGifs(BlockLattice2D<T,DESCRIPTOR>& lattice,
     DataAnalysisBase2D<T,DESCRIPTOR> const& analysis = lattice.getDataAnalysis();
 
     ImageWriter<T> imageWriter("leeloo");
-    imageWriter.writeScaledGif(createFileName("uz", iter, 6),
+    imageWriter.writeScaledGif(createFileName(filename, iter, 6),
                                analysis.getVelocityNorm(),
                                imSize, imSize );
 }
 
-void writeVTK(BlockStructure2D<T,DESCRIPTOR>& lattice,
+void writeVTK(std::string filename, BlockStructure2D<T,DESCRIPTOR>& lattice,
               LBunits<T> const& converter, int iter)
 {
     DataAnalysisBase2D<T,DESCRIPTOR> const& analysis = lattice.getDataAnalysis();
 
     T dx = converter.getDeltaX();
     T dt = converter.getDeltaT();
-    VtkImageOutput2D<T> vtkOut(createFileName("vtk", iter, 6), dx);
+    VtkImageOutput2D<T> vtkOut(createFileName(filename, iter, 6), dx);
     vtkOut.writeData<double>(analysis.getVorticity(), "vorticity", (T)1/dt);
     vtkOut.writeData<2,double>(analysis.getVelocity(), "velocity", dx/dt);
 }
@@ -105,34 +109,48 @@ void writeVTK(BlockStructure2D<T,DESCRIPTOR>& lattice,
 int main(int argc, char* argv[]) {
     olbInit(&argc, &argv);
 
-    singleton::directories().setOlbDir("../../");
-    singleton::directories().setOutputDir("./tmp/");
+    string fName("demo.xml");
+    XMLreader config(fName);
+
+    std::string olbdir, outputdir;
+    config["Application"]["OlbDir"].read(olbdir);
+    config["Application"]["OutputDir"].read(outputdir);
+    singleton::directories().setOlbDir(olbdir);
+    singleton::directories().setOutputDir(outputdir);
 
     LBunits<T> converter(
-            (T) 1e-2,  // uMax
-            (T) 100.,  // Re
-            128,        // N
-            1.,        // lx
-            1.         // ly 
+    	config["Application"]["MaxU"].get<T>(),
+    	config["Application"]["Re"].get<T>(), 
+    	config["Mesh"]["Refinement"].get<int>(),
+        config["Mesh"]["lx"].get<T>(),
+        config["Mesh"]["ly"].get<T>()
     );
-    const T logT     = (T)0.1;
-    const T imSave   = (T)1.;
-    const T vtkSave  = (T)1.;
-    const T maxT     = (T)20.0;
 
-    writeLogFile(converter, "2D cavity");
+    T logT;
+    T imSave;
+    T vtkSave;
+    T maxT;
+
+    config["Log"]["SaveTime"].read(logT);
+    config["VisualizationImages"]["SaveTime"].read(imSave);
+    config["VisualizationVTK"]["SaveTime"].read(vtkSave);
+    config["Application"]["MaxTime"].read(maxT);
+
+
+    writeLogFile(converter, config["Log"]["Filename"].get<std::string>()); 
+
 
 #ifndef PARALLEL_MODE_MPI  // sequential program execution
     BlockLattice2D<T, DESCRIPTOR> lattice(converter.getNx(), converter.getNy() );
 #else                      // parallel program execution
     MultiBlockLattice2D<T, DESCRIPTOR> lattice (
-        createRegularDataDistribution( converter.getNx(), converter.getNy() ) );
+            createRegularDataDistribution( converter.getNx(), converter.getNy() ) );
 #endif
 
     ConstRhoBGKdynamics<T, DESCRIPTOR> bulkDynamics (
-                      converter.getOmega(),
-                      instances::getBulkMomenta<T,DESCRIPTOR>()
-    );
+            converter.getOmega(),
+            instances::getBulkMomenta<T,DESCRIPTOR>()
+            );
 
     OnLatticeBoundaryCondition2D<T,DESCRIPTOR>*
         boundaryCondition = createInterpBoundaryCondition2D(lattice);
@@ -143,21 +161,21 @@ int main(int argc, char* argv[]) {
     for (iT=0; iT*converter.getDeltaT()<maxT; ++iT) {
         if (iT%converter.nStep(logT)==0) {
             cout << "step " << iT
-                 << "; lattice time=" << lattice.getStatistics().getTime()
-                 << "; t=" << iT*converter.getDeltaT()
-                 << "; av energy="
-                 << lattice.getStatistics().getAverageEnergy()
-                 << "; av rho="
-                 << lattice.getStatistics().getAverageRho() << endl;
+                << "; lattice time=" << lattice.getStatistics().getTime()
+                << "; t=" << iT*converter.getDeltaT()
+                << "; av energy="
+                << lattice.getStatistics().getAverageEnergy()
+                << "; av rho="
+                << lattice.getStatistics().getAverageRho() << endl;
         }
 
         if (iT%converter.nStep(imSave)==0 && iT>0) {
             cout << "Saving Gif ..." << endl;
-            writeGifs(lattice, converter, iT);
+            writeGifs(config["VisualizationImages"]["Filename"].get<std::string>(), lattice, converter, iT);
         }
         if (iT%converter.nStep(vtkSave)==0 && iT>0) {
             cout << "Saving VTK file ..." << endl;
-            writeVTK(lattice, converter, iT);
+            writeVTK(config["VisualizationVTK"]["Filename"].get<std::string>(), lattice, converter, iT);
         }
 
         lattice.collideAndStream();

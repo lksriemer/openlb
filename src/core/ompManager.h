@@ -1,8 +1,9 @@
 /*  This file is part of the OpenLB library
  *
  *  Copyright (C) 2007 Mathias Krause
- *  Address: Rue General Dufour 24,  1211 Geneva 4, Switzerland 
- *  E-mail: jonas.latt@gmail.com
+ *  E-mail contact: info@openlb.net
+ *  The most recent release of OpenLB can be downloaded at
+ *  <http://www.openlb.net/>
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
@@ -26,7 +27,11 @@
     #ifdef PARALLEL_MODE_OMP
 
         class ompManager {
-            private:
+
+            // This must be "public" since gcc "threadprived"
+	    // requires that the class ompManager is of pod-type,
+            // hence "privat" is not allowed. That is a bug in gcc.
+            public:  
                 int size;
                 int rank;
             public:

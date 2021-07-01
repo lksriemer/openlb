@@ -1,8 +1,9 @@
 /*  This file is part of the OpenLB library
  *
  *  Copyright (C) 2007 Mathias J. Krause
- *  Address: Wilhelm-Maybach-Str. 24, 68766 Hockenheim, Germany 
- *  E-mail: mathias.j.krause@gmx.de
+ *  E-mail contact: info@openlb.net
+ *  The most recent release of OpenLB can be downloaded at
+ *  <http://www.openlb.net/>
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
@@ -84,16 +85,19 @@ void Communicator2D<T,Lattice>::init() {
     reset();
     for (int iC=0; iC<_sLattice.get_load().size(); iC++) {
         _nh[iC].init_inCN();
-        #ifndef PARALLEL_MODE_MPI
-            for (int i=0; i<_nh[iC].get_inCellsSize(); i++) {
-                Cell2D<T> temp;
-                temp.globX = _nh[iC].get_inCell(i).globX; 
-                temp.globY = _nh[iC].get_inCell(i).globY;
-                temp.iC    = iC;
-                int ID = _nh[iC].get_inCell(i).iC;
-                _nh[ID].add_outCell(temp);
-            }
-        #endif
+        for (int i=0; i<_nh[iC].get_inCellsSize(); i++) {
+            int ID = _nh[iC].get_inCell(i).iC;
+            #ifdef PARALLEL_MODE_MPI
+                if ( singleton::mpi().getRank() ==_sLattice.get_load().rank(ID) )
+            #endif
+                   {
+		   Cell2D<T> temp;
+                   temp.globX = _nh[iC].get_inCell(i).globX; 
+                   temp.globY = _nh[iC].get_inCell(i).globY;
+                     temp.iC    = _sLattice.get_load().glob(iC);
+                   _nh[_sLattice.get_load().loc(ID)].add_outCell(temp);
+                   }
+        }
     }
     for (int iC=0; iC<_sLattice.get_load().size(); iC++) {
         _nh[iC].init_outCN();

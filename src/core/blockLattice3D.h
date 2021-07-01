@@ -1,8 +1,9 @@
 /*  This file is part of the OpenLB library
  *
  *  Copyright (C) 2006-2008 Jonas Latt
- *  Address: Rue General Dufour 24,  1211 Geneva 4, Switzerland 
- *  E-mail: jonas.latt@gmail.com
+ *  E-mail contact: info@openlb.net
+ *  The most recent release of OpenLB can be downloaded at
+ *  <http://www.openlb.net/>
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
@@ -32,6 +33,7 @@
 #include "dataFields3D.h"
 #include "blockStructure3D.h"
 #include "dataAnalysisBase3D.h"
+#include "blockGeometryStatistics3D.h"
 #include "multiPhysics.h"
 
 /// All OpenLB code is contained in this namespace.
@@ -95,7 +97,11 @@ public:
         Dynamics<T,Lattice>* dynamics );
     /// Define the dynamics on a lattice site
     virtual void defineDynamics(int iX, int iY, int iZ, Dynamics<T,Lattice>* dynamics);
-    /// Specify wheter statistics measurements are done on a rect. domain
+    /// Define the dynamics by material
+    virtual void defineDynamics(BlockGeometryStatistics3D* blockGeoSta, Dynamics<T,Lattice>* dynamics, int material);
+    /// Define the dynamics by material on a 3D sub-box
+    virtual void defineDynamics(BlockGeometryStatistics3D* blockGeoSta, int x0_, int x1_, int y0_, int y1_, int z0_, int z1_, Dynamics<T,Lattice>* dynamics, int material);
+    /// Specify whether statistics measurements are done on a rect. domain
     virtual void specifyStatisticsStatus (
         int x0_, int x1_, int y0_, int y1_, int z0_, int z1_, bool status );
     /// Apply collision step to a 3D sub-box

@@ -1,8 +1,9 @@
 /*  This file is part of the OpenLB library
  *
  *  Copyright (C) 2007, 2008 Jonas Latt
- *  Address: Rue General Dufour 24,  1211 Geneva 4, Switzerland 
- *  E-mail: jonas.latt@gmail.com
+ *  E-mail contact: info@openlb.net
+ *  The most recent release of OpenLB can be downloaded at
+ *  <http://www.openlb.net/>
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
@@ -69,6 +70,11 @@ public:
     virtual void initialize();
     virtual void defineDynamics(int x0_, int x1_, int y0_, int y1_, Dynamics<T,Lattice>* dynamics);
     virtual void defineDynamics(int iX, int iY, Dynamics<T,Lattice>* dynamics);
+    virtual void defineDynamics(BlockGeometryStatistics2D* blockGeoSta,
+            int x0_, int x1_, int y0_, int y1_, Dynamics<T,Lattice>* dynamics, int material);
+    virtual void defineDynamics(BlockGeometryStatistics2D* blockGeoSta,
+            Dynamics<T, Lattice>* dynamics, int material);
+
     virtual void specifyStatisticsStatus(int x0_, int x1_, int y0_, int y1_, bool status);
     virtual void collide(int x0_, int x1_, int y0_, int y1_);
     virtual void collide();
