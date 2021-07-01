@@ -1,6 +1,6 @@
 /*  This file is part of the OpenLB library
  *
- *  Copyright (C) 2006, 2007 Mathias J. Krause, Jonas Latt
+ *  Copyright (C) 2006, 2007, 2009 Mathias J. Krause, Jonas Latt
  *  Address: Wilhelm-Maybach-Str. 24, 68766 Hockenheim, Germany 
  *  E-mail: mathias.j.krause@gmx.de
  *
@@ -46,9 +46,9 @@ class CuboidVTKout2D {
         static void writeFlowField (
             std::string const& fName,
             std::string const& scalarFieldName,
-            std::vector<ScalarField2D<T> > const& scalarField,
+            std::vector<const ScalarFieldBase2D<T>* > const& scalarField,
             std::string const& vectorFieldName,
-            std::vector<TensorField2D<T,2> > const& vectorField,
+            std::vector<const TensorFieldBase2D<T,2>* > const& vectorField,
             CuboidGeometry2D<T> const& cGeometry, 
             loadBalancer& load, T deltaT );
     private:
@@ -56,9 +56,9 @@ class CuboidVTKout2D {
         static void writePiece(
             std::string& fullName,
             std::string const& scalarFieldName,
-            ScalarField2D<T> const& scalarField,
+            const ScalarFieldBase2D<T>* scalarField,
             std::string const& vectorFieldName,
-            TensorField2D<T,2> const& vectorField,
+            const TensorFieldBase2D<T,2>* vectorField,
             T deltaX, T deltaT,
             int originX=0, int originY=0 );
         static void writePostScript(std::string& fullName);
@@ -71,20 +71,20 @@ class CuboidVTKout3D {
         static void writeFlowField (
             std::string const& fName,
             std::string const& scalarFieldName,
-            std::vector<ScalarField3D<T> > const& scalarField,
+            std::vector<const ScalarFieldBase3D<T>* > scalarField,
             std::string const& vectorFieldName,
-            std::vector<TensorField3D<T,3> > const& vectorField,
+            std::vector<const TensorFieldBase3D<T,3>* > vectorField,
             CuboidGeometry3D<T> const& cGeometry, 
-            loadBalancer& load, T deltaT );
+            loadBalancer& load, T deltaT, int offset=1 );
     private:
         static void writePreamble(std::string& fullName, int nx, int ny, int nz, T deltaX);
         static void writePiece(
             std::string& fullName,
             std::string const& scalarFieldName,
-            ScalarField3D<T> const& scalarField,
+            const ScalarFieldBase3D<T>* scalarField,
             std::string const& vectorFieldName,
-            TensorField3D<T,3> const& vectorField,
-            T deltaX, T deltaT,
+            const TensorFieldBase3D<T,3>* vectorField,
+            T deltaX, T deltaT, int offset=1,
             int originX=0, int originY=0, int origin=0 );
         static void writePostScript(std::string& fullName);
 };

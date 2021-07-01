@@ -279,12 +279,14 @@ void BlockLattice2D<T,Lattice>::stream(int x0, int x1, int y0, int y1) {
     OLB_PRECONDITION(y0>=0 && y1<ny);
     OLB_PRECONDITION(y1>=y0);
 
-    bulkStream(x0+1,x1-1,y0+1,y1-1);
+    static const int vicinity = Lattice<T>::vicinity;
 
-    boundaryStream(x0,x1,y0,y1, x0,x0,y0,y1);
-    boundaryStream(x0,x1,y0,y1, x1,x1, y0,y1);
-    boundaryStream(x0,x1,y0,y1, x0+1,x1-1, y0,y0);
-    boundaryStream(x0,x1,y0,y1, x0+1,x1-1, y1,y1);
+    bulkStream(x0+vicinity,x1-vicinity,y0+vicinity,y1-vicinity);
+
+    boundaryStream(x0,x1,y0,y1, x0,x0+vicinity-1, y0,y1);
+    boundaryStream(x0,x1,y0,y1, x1-vicinity+1,x1, y0,y1);
+    boundaryStream(x0,x1,y0,y1, x0+vicinity,x1-vicinity, y0,y0+vicinity-1);
+    boundaryStream(x0,x1,y0,y1, x0+vicinity,x1-vicinity, y1-vicinity+1,y1);
 }
 
 /** At the end of this method, the post-processing steps are automatically
@@ -300,6 +302,7 @@ void BlockLattice2D<T,Lattice>::stream(bool periodic) {
     }
 
     postProcess();
+    getStatistics().incrementTime();
 }
 
 /** This operation is more efficient than a successive application of
@@ -318,17 +321,27 @@ void BlockLattice2D<T,Lattice>::collideAndStream(int x0, int x1, int y0, int y1)
     OLB_PRECONDITION(y0>=0 && y1<ny);
     OLB_PRECONDITION(y1>=y0);
 
-    collide(x0,x0, y0,y1);
-    collide(x1,x1, y0,y1);
-    collide(x0+1,x1-1, y0,y0);
-    collide(x0+1,x1-1, y1,y1);
+    static const int vicinity = Lattice<T>::vicinity;
 
-    bulkCollideAndStream(x0+1,x1-1,y0+1,y1-1);
+    // First, do the collision on cells within a boundary envelope of width
+    // equal to the range of the lattice vectors (e.g. 1 for D2Q9)
+    collide(x0,x0+vicinity-1, y0,y1);
+    collide(x1-vicinity+1,x1, y0,y1);
+    collide(x0+vicinity,x1-vicinity, y0,y0+vicinity-1);
+    collide(x0+vicinity,x1-vicinity, y1-vicinity+1,y1);
 
-    boundaryStream(x0,x1,y0,y1, x0,x0,y0,y1);
-    boundaryStream(x0,x1,y0,y1, x1,x1,y0,y1);
-    boundaryStream(x0,x1,y0,y1, x0+1,x1-1,y0,y0);
-    boundaryStream(x0,x1,y0,y1, x0+1,x1-1,y1,y1);
+    // Then, do the efficient collideAndStream algorithm in the bulk,
+    // excluding the envelope (this is efficient because there is no
+    // if-then-else statement within the loop, given that the boundary
+    // region is excluded)
+    bulkCollideAndStream(x0+vicinity,x1-vicinity,y0+vicinity,y1-vicinity);
+
+    // Finally, do streaming in the boundary envelope to conclude the
+    // collision-stream cycle
+    boundaryStream(x0,x1,y0,y1, x0,x0+vicinity-1,y0,y1);
+    boundaryStream(x0,x1,y0,y1, x1-vicinity+1,x1,y0,y1);
+    boundaryStream(x0,x1,y0,y1, x0+vicinity,x1-vicinity, y0,y0+vicinity-1);
+    boundaryStream(x0,x1,y0,y1, x0+vicinity,x1-vicinity, y1-vicinity+1,y1);
 }
 
 /** At the end of this method, the post-processing steps are automatically
@@ -343,6 +356,7 @@ void BlockLattice2D<T,Lattice>::collideAndStream(bool periodic) {
     }
 
     postProcess();
+    getStatistics().incrementTime();
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -583,7 +597,7 @@ void BlockLattice2D<T,Lattice>::bulkStream (
     }
 }
 
-#ifndef PARALLEL_MODE_OMP  // OpenMP parallel version is and the
+#ifndef PARALLEL_MODE_OMP  // OpenMP parallel version is at the
                            // end of this file
 /** This method is fast, but it is erroneous when applied to boundary
  * cells.
@@ -609,41 +623,36 @@ void BlockLattice2D<T,Lattice>::bulkCollideAndStream (
 #endif // not defined PARALLEL_MODE_OMP
 
 template<typename T, template<typename U> class Lattice>
-template<int normalX, int normalY>
-void BlockLattice2D<T,Lattice>::periodicEdge(int from, int to) {
-    int x0 = (normalX==1) * (getNx()-1);
-    int y0 = (normalY==1) * (getNy()-1);
-
-    int xStep = (normalX==0);
-    int yStep = (normalY==0);
-
-    int x = x0 + xStep*from;
-    int y = y0 + yStep*from;
-    for (; from <= to; ++from) {
-        for (int iPop=1; iPop<=Lattice<T>::q/2; ++iPop) {
-            int nextX = x + Lattice<T>::c[iPop][0];
-            int nextY = y + Lattice<T>::c[iPop][1];
-            if ( nextX<0 || nextX>=getNx() ||
-                 nextY<0 || nextY>=getNy() )
-            {
-                nextX = (nextX+getNx())%getNx();
-                nextY = (nextY+getNy())%getNy();
-                std::swap (
-                    grid[x][y]        [iPop+Lattice<T>::q/2],
-                    grid[nextX][nextY][iPop] );
+void BlockLattice2D<T,Lattice>::periodicEdge(int x0, int x1, int y0, int y1)
+{
+    for (int iX=x0; iX<=x1; ++iX) {
+        for (int iY=y0; iY<=y1; ++iY) {
+            for (int iPop=1; iPop<=Lattice<T>::q/2; ++iPop) {
+                int nextX = iX + Lattice<T>::c[iPop][0];
+                int nextY = iY + Lattice<T>::c[iPop][1];
+                if ( nextX<0 || nextX>=getNx() ||
+                     nextY<0 || nextY>=getNy() )
+                {
+                    nextX = (nextX+getNx())%getNx();
+                    nextY = (nextY+getNy())%getNy();
+                    std::swap (
+                        grid[iX][iY]        [iPop+Lattice<T>::q/2],
+                        grid[nextX][nextY][iPop] );
+                }
             }
         }
-        x += xStep;
-        y += yStep;
     }
 }
 
 template<typename T, template<typename U> class Lattice>
 void BlockLattice2D<T,Lattice>::makePeriodic() {
-    periodicEdge<-1, 0>(0, getNy()-1);
-    periodicEdge< 1, 0>(0, getNy()-1);
-    periodicEdge< 0,-1>(1, getNx()-2);
-    periodicEdge< 0, 1>(1, getNx()-2);
+    static const int vicinity = Lattice<T>::vicinity;
+    int maxX = getNx()-1;
+    int maxY = getNy()-1;
+    periodicEdge(0,vicinity-1, 0,maxY);
+    periodicEdge(maxX-vicinity+1,maxX, 0,maxY);
+    periodicEdge(vicinity,maxX-vicinity, 0,vicinity-1);
+    periodicEdge(vicinity,maxX-vicinity, maxY-vicinity+1,maxY);
 }
 
 template<typename T, template<typename U> class Lattice>

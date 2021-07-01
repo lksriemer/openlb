@@ -72,8 +72,8 @@ template<typename T, template<typename U> class Lattice>
 void Communicator2D<T,Lattice>::add_cells(int overlap) {
 
     for (int iC=0; iC<_sLattice.get_load().size(); iC++) {
-        for (int i=0; i<=overlap; i++) {
-            _nh[iC].add_inCells(overlap);
+        for (int i=1; i<=overlap; i++) {
+            _nh[iC].add_inCells(i);
         }
     }
 }

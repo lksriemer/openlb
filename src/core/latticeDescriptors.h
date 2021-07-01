@@ -117,6 +117,7 @@ namespace descriptors {
     {
         typedef D2Q9DescriptorBase<T> BaseDescriptor;
         enum { d = 2, q = 9 };      ///< number of dimensions/distr. functions
+        static const int vicinity;  ///< size of neighborhood
         static const int c[q][d];   ///< lattice directions
         static const T t[q];        ///< lattice weights
         static const T invCs2;      ///< inverse square of speed of sound
@@ -127,6 +128,7 @@ namespace descriptors {
     {
         typedef D3Q13DescriptorBase<T> BaseDescriptor;
         enum { d = 3, q = 13 };     ///< number of dimensions/distr. functions
+        static const int vicinity;  ///< size of neighborhood
         static const int c[q][d];   ///< lattice directions
         static const T t[q];        ///< lattice weights
         static const T invCs2;      ///< inverse square of speed of sound
@@ -139,6 +141,7 @@ namespace descriptors {
     {
         typedef D3Q15DescriptorBase<T> BaseDescriptor;
         enum { d = 3, q = 15 };     ///< number of dimensions/distr. functions
+        static const int vicinity;  ///< size of neighborhood
         static const int c[q][d];   ///< lattice directions
         static const T t[q];        ///< lattice weights
         static const T invCs2;      ///< inverse square of speed of sound
@@ -149,6 +152,7 @@ namespace descriptors {
     {
         typedef D3Q19DescriptorBase<T> BaseDescriptor;
         enum { d = 3, q = 19 };     ///< number of dimensions/distr. functions
+        static const int vicinity;  ///< size of neighborhood
         static const int c[q][d];   ///< lattice directions
         static const T t[q];        ///< lattice weights
         static const T invCs2;      ///< inverse square of speed of sound
@@ -159,6 +163,7 @@ namespace descriptors {
     {
         typedef D3Q27DescriptorBase<T> BaseDescriptor;
         enum { d = 3, q = 27 };     ///< number of dimensions/distr. functions
+        static const int vicinity;  ///< size of neighborhood
         static const int c[q][d];   ///< lattice directions
         static const T t[q];        ///< lattice weights
         static const T invCs2;      ///< inverse square of speed of sound

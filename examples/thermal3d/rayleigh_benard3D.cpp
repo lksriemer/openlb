@@ -20,13 +20,13 @@
  *  Boston, MA  02110-1301, USA.
 */
 
+#include "olb3D.h"
+#include "olb3D.hh"
 #include <vector>
 #include <cmath>
 #include <iostream>
 #include <iomanip>
 #include <fstream>
-#include "olb3D.h"
-#include "olb3D.hh"
 
 #define TDESCRIPTOR AdvectionDiffusionD3Q7Descriptor
 #define NSDESCRIPTOR ForcedD3Q19Descriptor

@@ -102,20 +102,21 @@ void iniGeometry( SuperLattice3D<T,D3Q19Descriptor>& lattice,
 void writeVTK(SuperLattice3D<T,D3Q19Descriptor>& sLattice,
               LBunits<T> const& converter, int iter) {
 
-    vector<ScalarField3D<T> > scalar;
-    vector<TensorField3D<T,3> > tensor;
+    vector<const ScalarFieldBase3D<T>* > scalar;
+    vector<const TensorFieldBase3D<T,3>* > tensor;
 
     for (int iC=0; iC<sLattice.get_load().size(); iC++) {
-        BlockStatistics3D<T,D3Q19Descriptor> statistics(sLattice.get_lattice(iC));
-        scalar.push_back(statistics.getPressure() );
-        tensor.push_back(statistics.getVelocity() );
+        const TensorFieldBase3D<T,3>* velocity = &sLattice.get_lattice(iC).getDataAnalysis().getVelocity();
+        const ScalarFieldBase3D<T>* pressure = &sLattice.get_lattice(iC).getDataAnalysis().getPressure();
+        scalar.push_back( pressure );
+        tensor.push_back( velocity );
     }
 
     CuboidVTKout3D<T>::writeFlowField (
             createFileName("vtk", iter, 6),
             "Pressure", scalar,
             "Velocity", tensor,
-            sLattice.get_cGeometry(), sLattice.get_load(), converter.getDeltaT() );
+            sLattice.get_cGeometry(), sLattice.get_load(), converter.getDeltaT());
 }
 
 int main(int argc, char **argv) {
@@ -127,7 +128,7 @@ int main(int argc, char **argv) {
     LBunits<T> converter(
             (T) 1e-1,   // uMax
             (T) 1000.,  // Re
-            100,        // N
+            30,//100,        // N
             1.,         // lx
             1.,         // ly
             1.          // lz
@@ -177,10 +178,10 @@ int main(int argc, char **argv) {
             writeVTK(sLattice, converter, iT);
         }
 
-        sLattice.collide();
-        sLattice.stream();
+        //sLattice.collide();
+        //sLattice.stream();
 
-        //sLattice.collideAndStream();
+        sLattice.collideAndStream();
     }
     cout << iT << endl;
 

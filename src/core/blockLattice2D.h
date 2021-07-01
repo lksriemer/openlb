@@ -184,7 +184,7 @@ private:
     void clearPostProcessors();
     /// Release memory for lattice couplings
     void clearLatticeCouplings();
-    template<int normalX, int normalY> void periodicEdge(int from, int to);
+    void periodicEdge(int x0, int x1, int y0, int y1);
     void makePeriodic();
 private:
     int                  nx, ny;

@@ -124,7 +124,7 @@ void ZouHeDynamics<T,Lattice,Dynamics,direction,orientation>::collide (
 
     boundaryDynamics.collide(cell, statistics);
 
-    statistics.gatherStats(rho, uSqr);
+    statistics.incrementStats(rho, uSqr);
 }
 
 template<typename T, template<typename U> class Lattice, typename Dynamics, int direction, int orientation>

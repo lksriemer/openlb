@@ -74,7 +74,7 @@ void AdvectionDiffusionRLBdynamics<T,Lattice>::collide(Cell<T,Lattice>& cell, La
             rlbCollision(cell, temperature, u, omega);
     
     if (cell.takesStatistics()) {
-        statistics.gatherStats(temperature, uSqr);
+        statistics.incrementStats(temperature, uSqr);
     }
 }
 
@@ -131,7 +131,7 @@ void AdvectionDiffusionBGKdynamics<T,Lattice>::collide(Cell<T,Lattice>& cell, La
             bgkCollision(cell, temperature, u, omega);
     
     if (cell.takesStatistics()) {
-        statistics.gatherStats(temperature, uSqr);
+        statistics.incrementStats(temperature, uSqr);
     }
 }
 

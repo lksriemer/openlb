@@ -30,6 +30,7 @@
 
 #include <vector>
 #include "cuboid2D.h"
+#include "core/dataFields2D.h"
 
 
 /// All OpenLB code is contained in this namespace.
@@ -101,6 +102,8 @@ class CuboidGeometry2D {
         void add(Cuboid2D<T> cuboid);
         /// Removes the cuboid iC
         void remove(int iC);
+        /// Removes all cuboids where geometryData = 0
+        void remove(olb::ScalarField2D<int>* geometryData);
         /// Splits cuboid iC, removes it and add p cuboids 
         void split(int iC, int p);
 };

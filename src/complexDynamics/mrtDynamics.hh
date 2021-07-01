@@ -98,7 +98,7 @@ void MRTdynamics<T,Lattice>::collide (
     T uSqr = mrtH::mrtCollision(cell,rho,u,invM_S);
     
     if (cell.takesStatistics()) {
-        statistics.gatherStats(rho, uSqr);
+        statistics.incrementStats(rho, uSqr);
     }
 }
 

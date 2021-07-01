@@ -113,7 +113,6 @@ bool SuperLattice3D<T,Lattice>::get(T iX, T iY, T iZ, Cell<T,Lattice>& cell) con
     int locX, locY, locZ;
     bool found = false;
     int foundIC = 0;
-    Cell<T,Lattice> foundCell;
 
     for (int iC=0; iC<_cGeometry.get_nC(); iC++) {
         if(_cGeometry.get_cuboid(iC).checkPoint(
@@ -132,12 +131,12 @@ bool SuperLattice3D<T,Lattice>::get(T iX, T iY, T iZ, Cell<T,Lattice>& cell) con
                 _lattices[_load.loc(foundIC)].get(locX,locY,locZ).serialize(cellData);
             }
             singleton::mpi().bCast(cellData, sizeOfCell, _load.rank(foundIC));
-            foundCell.unSerialize(cellData);
+            cell.unSerialize(cellData);
             delete [] cellData;
         }
     #else
         if (found) {
-            foundCell = _lattices[_load.loc(foundIC)].get(locX,locY,locZ);
+            cell = _lattices[_load.loc(foundIC)].get(locX,locY,locZ);
         }
     #endif
 

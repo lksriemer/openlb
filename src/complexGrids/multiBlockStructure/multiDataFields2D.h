@@ -1,6 +1,6 @@
 /*  This file is part of the OpenLB library
  *
- *  Copyright (C) 2007 Bernd Stahl and Jonas Latt
+ *  Copyright (C) 2007, 2008 Bernd Stahl and Jonas Latt
  *  Address: Battelle Batiment A, Route de Drize 7, 1227 Carouge, Switzerland
  *  E-mail: bernd.stahl@cui.unige.ch
  *

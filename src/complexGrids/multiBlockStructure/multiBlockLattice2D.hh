@@ -322,6 +322,7 @@ void MultiBlockLattice2D<T,Lattice>::stream(bool periodic) {
         }
     }
     postProcessMultiBlock();
+    getStatistics().incrementTime();
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -357,6 +358,7 @@ void MultiBlockLattice2D<T,Lattice>::collideAndStream(bool periodic) {
         }
     }
     postProcessMultiBlock();
+    getStatistics().incrementTime();
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -591,10 +593,22 @@ void MultiBlockLattice2D<T,Lattice>::executeCoupling() {
 template<typename T, template<typename U> class Lattice>
 void MultiBlockLattice2D<T,Lattice>::subscribeReductions(Reductor<T>& reductor)
 {
-    //TODO: this should be generalized to any statistics object
-    reductor.subscribeAverage(statistics->getNumCells(), statistics->getAverageRho());
-    reductor.subscribeAverage(statistics->getNumCells(), statistics->getAverageEnergy());
-    reductor.subscribeMax(statistics->getMaxU());
+    std::vector<T>& averageVect = statistics->getAverageVect();
+    for (size_t iVect=0; iVect<averageVect.size(); ++iVect) {
+        reductor.subscribeAverage(statistics->getNumCells(), averageVect[iVect]);
+    }
+    std::vector<T>& sumVect = statistics->getSumVect();
+    for (size_t iVect=0; iVect<sumVect.size(); ++iVect) {
+        reductor.subscribeSum(sumVect[iVect]);
+    }
+    std::vector<T>& minVect = statistics->getMinVect();
+    for (size_t iVect=0; iVect<minVect.size(); ++iVect) {
+        reductor.subscribeMin(minVect[iVect]);
+    }
+    std::vector<T>& maxVect = statistics->getMaxVect();
+    for (size_t iVect=0; iVect<maxVect.size(); ++iVect) {
+        reductor.subscribeMax(maxVect[iVect]);
+    }
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -621,24 +635,30 @@ void MultiBlockLattice2D<T,Lattice>::postProcessMultiBlock() {
 template<typename T, template<typename U> class Lattice>
 void MultiBlockLattice2D<T,Lattice>::reduceStatistics() {
     std::vector<T> averageElements, averageWeights, sumElements, minElements, maxElements;
+    // Reduce averages
     reductor.getAverages(averageElements, averageWeights);
     for (unsigned iEl=0; iEl<averageElements.size(); ++iEl) {
         averageElements[iEl] =
             multiBlockHandler -> reduceAverage(averageElements[iEl], averageWeights[iEl]);
     }
+    // Reduce sums
     reductor.getSums(sumElements);
     for (unsigned iEl=0; iEl<sumElements.size(); ++iEl) {
         sumElements[iEl] = multiBlockHandler -> reduceSum(sumElements[iEl]);
     }
+    // Reduce minima
     reductor.getMins(minElements);
     for (unsigned iEl=0; iEl<minElements.size(); ++iEl) {
         minElements[iEl] = multiBlockHandler -> reduceMin(minElements[iEl]);
     }
+    // Reduce maxima
     reductor.getMaxs(maxElements);
     for (unsigned iEl=0; iEl<maxElements.size(); ++iEl) {
         maxElements[iEl] = multiBlockHandler -> reduceMax(maxElements[iEl]);
     }
+    // Write reductions back to the individual lattices
     reductor.saveGlobalReductions(averageElements, sumElements, minElements, maxElements);
+    // Write reductions back to the MultiBlockLattice
     MultiBlockReductor<T> myReductor; 
     myReductor.startNewSubscription(); this -> subscribeReductions(myReductor);
     myReductor.saveGlobalReductions(averageElements, sumElements, minElements, maxElements);

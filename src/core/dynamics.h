@@ -40,6 +40,7 @@ namespace dynamicParams {
 
     // Use 100-199 for material constants
     const int sqrSpeedOfSound = 100; // Speed of sound squared
+	const int sqrInvSpeedOfSound = 101; // Inverse speed of sound squared
 
     // Use 1000 and higher for custom user-defined constants
 }

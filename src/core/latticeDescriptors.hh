@@ -38,6 +38,9 @@ namespace descriptors {
     // D2Q9 ////////////////////////////////////////////////////////////
 
     template<typename T>
+    const int D2Q9DescriptorBase<T>::vicinity = 1;
+
+    template<typename T>
     const int D2Q9DescriptorBase<T>::c
         [D2Q9DescriptorBase<T>::q][D2Q9DescriptorBase<T>::d] =
         {
@@ -57,6 +60,9 @@ namespace descriptors {
     const T D2Q9DescriptorBase<T>::invCs2 = (T)3;
 
     // D3Q13 ///////////////////////////////////////////////////////////
+
+    template<typename T>
+    const int D3Q13DescriptorBase<T>::vicinity = 1;
 
     template<typename T>
     const int D3Q13DescriptorBase<T>::c
@@ -100,6 +106,9 @@ namespace descriptors {
     // D3Q15 ///////////////////////////////////////////////////////////
 
     template<typename T>
+    const int D3Q15DescriptorBase<T>::vicinity = 1;
+
+    template<typename T>
     const int D3Q15DescriptorBase<T>::c
         [D3Q15DescriptorBase<T>::q][D3Q15DescriptorBase<T>::d] =
         {
@@ -130,6 +139,9 @@ namespace descriptors {
 
 
     // D3Q19 ///////////////////////////////////////////////////////////
+
+    template<typename T>
+    const int D3Q19DescriptorBase<T>::vicinity = 1;
 
     template<typename T>
     const int D3Q19DescriptorBase<T>::c
@@ -165,6 +177,9 @@ namespace descriptors {
 
 
     // D3Q27 ///////////////////////////////////////////////////////////
+
+    template<typename T>
+    const int D3Q27DescriptorBase<T>::vicinity = 1;
 
     template<typename T>
     const int D3Q27DescriptorBase<T>::c

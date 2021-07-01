@@ -1,4 +1,5 @@
 #include <core/core3D.hh>
+//#include <contrib/contrib3D.hh>
 #include <boundaryConditions/boundaryConditions3D.hh>
 #include <complexDynamics/complexDynamics3D.hh>
 #include <io/io3D.hh>

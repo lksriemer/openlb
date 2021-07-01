@@ -53,7 +53,7 @@ template<typename T>
 struct Reductor {
     virtual ~Reductor() { } 
     virtual void subscribeSum(T& element) =0;
-    virtual void subscribeAverage(int const& weight, T& element) =0;
+    virtual void subscribeAverage(size_t const& weight, T& element) =0;
     virtual void subscribeMin(T& element) =0;
     virtual void subscribeMax(T& element) =0;
 };
@@ -215,36 +215,60 @@ struct GlobalPostProcessor3D : public PostProcessor3D<T,Lattice> {
 template<typename T>
 class LatticeStatistics {
 public:
+    enum { avRho=0, avEnergy=1 } AverageT;
+    enum { maxU=0 } MaxT;
+public:
     LatticeStatistics();
     ~LatticeStatistics();
     void reset();
-    void reset(T average_rho_, T average_energy_, T maxU_, int numCells_);
-    void gatherStats(T rho, T uSqr) {
-        sum_rho += rho;
-        sum_uSqr += uSqr;
-        if (uSqr > max_uSqr) {
-            max_uSqr = uSqr;
-        }
-        ++sum_nCells;
-    }
-    T getAverageRho()        const { return average_rho;}
-    T getAverageEnergy()     const { return average_energy;}
-    T getMaxU()              const { return maxU;}
-    int const& getNumCells() const { return numCells; }
+    void reset(T average_rho_, T average_energy_, T maxU_, size_t numCells_);
 
-    T& getAverageRho()    { return average_rho;}
-    T& getAverageEnergy() { return average_energy;}
-    T& getMaxU()          { return maxU;}
+    int subscribeAverage();
+    int subscribeSum();
+    int subscribeMin();
+    int subscribeMax();
+
+    void incrementStats(T rho, T uSqr) {
+        tmpAv[avRho]    += rho;
+        tmpAv[avEnergy] += uSqr;
+        if (uSqr > tmpMax[maxU]) {
+            tmpMax[maxU] = uSqr;
+        }
+        ++tmpNumCells;
+    }
+    void gatherAverage(int whichAverage, T value);
+    void gatherSum(int whichSum, T value);
+    void gatherMin(int whichMin, T value);
+    void gatherMax(int whichMax, T value);
+    void incrementStats();
+    T getAverageRho()        const { return averageVect[avRho]; }
+    T getAverageEnergy()     const { return averageVect[avEnergy]; }
+    T getMaxU()              const { return maxVect[maxU]; }
+    size_t const& getNumCells() const { return numCells; }
+
+    T getAverage(int whichAverage) const;
+    T getSum(int whichSum) const;
+    T getMin(int whichMin) const;
+    T getMax(int whichMax) const;
+
+    std::vector<T>& getAverageVect() { return averageVect; }
+    std::vector<T>& getSumVect() { return sumVect; }
+    std::vector<T>& getMinVect() { return minVect; }
+    std::vector<T>& getMaxVect() { return maxVect; }
+
+    void incrementTime() { ++latticeTime; };
+    void resetTime(size_t value=0) { latticeTime=value; } ;
+    size_t getTime() const { return latticeTime; };
 private:
     void initialize();
 private:
     // variables for internal computations
-    T sum_rho, sum_uSqr, max_uSqr;
-    int sum_nCells;
+    std::vector<T> tmpAv, tmpSum, tmpMin, tmpMax;
+    size_t tmpNumCells;
     // variables containing the public result
-    T average_rho, average_energy, maxU;
-    int numCells;
-    // helper variable: proper initial value of the density
+    std::vector<T> averageVect, sumVect, minVect, maxVect;
+    size_t numCells;
+    size_t latticeTime;
     bool firstCall;
 };
 

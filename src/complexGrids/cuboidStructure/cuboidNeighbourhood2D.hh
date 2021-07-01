@@ -188,17 +188,20 @@ void CuboidNeighbourhood2D<T,Lattice>::init_inCN() {
     _inC.clear();
     _inN.clear();
     _inData = new T* [_nC];
+    _tempInCN = new int [_nC];
+    for (unsigned i=0; i<_nC; i++) {
+        _tempInCN[i]=0;
+    }
 
-    std::vector<int> temp(_nC,0);
     for (unsigned i=0; i<_inCells.size(); i++) {
-        temp[_inCells[i].iC]++;
+        _tempInCN[_inCells[i].iC]++;
     }
     for (int i=0; i<_nC; i++) {
-        if (temp[i]!=0) { 
+        if (_tempInCN[i]!=0) { 
             _inC.push_back(i);
-            _inN.push_back(temp[i]);
+            _inN.push_back(_tempInCN[i]);
             #ifdef PARALLEL_MODE_MPI
-                _inData[i] = new T [temp[i]*Lattice<T>::q];
+                _inData[i] = new T [_tempInCN[i]*Lattice<T>::q];
             #endif
         }
         #ifdef PARALLEL_MODE_MPI
@@ -210,7 +213,7 @@ void CuboidNeighbourhood2D<T,Lattice>::init_inCN() {
         _mpiNbHelper.allocate(_nC);
         for (int i=0; i<_nC; i++) {
             int dRank = _sLattice.get_load().rank(i);
-            singleton::mpi().iSend(&temp[i] , 1, dRank, &_mpiNbHelper.get_mpiRequest()[i], i*_nC+_iC);
+            singleton::mpi().iSend(&_tempInCN[i] , 1, dRank, &_mpiNbHelper.get_mpiRequest()[i], i*_nC+_iC);
         }
     #endif
 
@@ -368,6 +371,7 @@ void CuboidNeighbourhood2D<T,Lattice>::reset() {
             }
         #endif
         delete [] _inData;
+        delete _tempInCN;
         _initInCNdone = false;
     }
 

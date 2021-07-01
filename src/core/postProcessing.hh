@@ -1,6 +1,6 @@
 /*  This file is part of the OpenLB library
  *
- *  Copyright (C) 2006, 2007 Jonas Latt
+ *  Copyright (C) 2006, 2007, 2008 Jonas Latt
  *  Address: Rue General Dufour 24,  1211 Geneva 4, Switzerland 
  *  E-mail: jonas.latt@gmail.com
  *
@@ -23,9 +23,10 @@
 #ifndef POST_PROCESSING_HH
 #define POST_PROCESSING_HH
 
-#include <cmath>
 #include "blockLattice2D.h"
 #include "blockLattice3D.h"
+#include <cmath>
+#include <numeric>
 #include "util.h"
 
 namespace olb {
@@ -44,64 +45,191 @@ LatticeStatistics<T>::~LatticeStatistics() {
 template<typename T>
 void LatticeStatistics<T>::reset() {
     // avoid division by zero
-    if (sum_nCells == 0) {
-        average_rho = T();
-        average_energy = T();
-        maxU = T();
+    if (tmpNumCells == 0) {
+        for (unsigned iVect=0; iVect<averageVect.size(); ++iVect) {
+            averageVect[iVect] = T();
+        }
+        for (unsigned iVect=0; iVect<sumVect.size(); ++iVect) {
+            sumVect[iVect] = T();
+        }
+        for (unsigned iVect=0; iVect<minVect.size(); ++iVect) {
+            minVect[iVect] = T();
+        }
+        for (unsigned iVect=0; iVect<maxVect.size(); ++iVect) {
+            maxVect[iVect] = T();
+        }
         numCells = 0;
-        if (firstCall) firstCall = false;
+        firstCall = false;
     }
     else {
         // The average density is actually used in the "ConstRhoBgk" model.
         // Depending on the simulation setup, it is possible that it has
-        // a nonsensical value before the simulation is started. Therefore,
-        // it is initialized at 1.
+        // a nonsensical value before the simulation is started. For this
+        // and similar cases, averages are initialized to 1.
         if (firstCall) {
-            average_rho = (T)1;
+            for (unsigned iVect=0; iVect<averageVect.size(); ++iVect) {
+                averageVect[iVect] = (T)1;
+            }
             firstCall = false;
         }
         else {
-            average_rho = sum_rho / (T)sum_nCells;
+            for (unsigned iVect=0; iVect<averageVect.size(); ++iVect) {
+                averageVect[iVect] = tmpAv[iVect] / (T)tmpNumCells;
+            }
         }
-        average_energy = (T)0.5 * sum_uSqr / (T)sum_nCells;
-        maxU           = sqrt(max_uSqr);
-        numCells       = sum_nCells;
+        for (unsigned iVect=0; iVect<sumVect.size(); ++iVect) {
+            sumVect[iVect] = tmpSum[iVect];
+        }
+        for (unsigned iVect=0; iVect<minVect.size(); ++iVect) {
+            minVect[iVect] = tmpMin[iVect];
+        }
+        for (unsigned iVect=0; iVect<maxVect.size(); ++iVect) {
+            maxVect[iVect] = tmpMax[iVect];
+        }
+        averageVect[avEnergy] *= (T)0.5; // energy is 0.5 *uSqr
+        maxVect[maxU]         = sqrt(maxVect[maxU]); // u is sqrt(uSqr)
+        numCells              = tmpNumCells;
     }
 
-    sum_rho  = T();
-    sum_uSqr = T();
-    max_uSqr = T();
-    sum_nCells = 0;
+    for (unsigned iVect=0; iVect<averageVect.size(); ++iVect) {
+        tmpAv[iVect]    = T();
+    }
+    for (unsigned iVect=0; iVect<sumVect.size(); ++iVect) {
+        tmpSum[iVect]   = T();
+    }
+    for (unsigned iVect=0; iVect<minVect.size(); ++iVect) {
+        tmpMin[iVect]   = std::numeric_limits<T>::max();
+    }
+    for (unsigned iVect=0; iVect<maxVect.size(); ++iVect) {
+        tmpMax[iVect]   = std::numeric_limits<T>::min();
+    }
+
+    tmpNumCells     = 0;
 }
 
 template<typename T>
 void LatticeStatistics<T>::reset (
-        T average_rho_, T average_energy_, T maxU_, int numCells_ )
+        T average_rho_, T average_energy_, T maxU_, size_t numCells_ )
 {
-    average_rho    = average_rho_;
-    average_energy = average_energy_;
-    maxU           = maxU_;
-    numCells       = numCells_;
+    averageVect[avRho]    = average_rho_;
+    averageVect[avEnergy] = average_energy_;
+    maxVect[maxU]         = maxU_;
+    numCells              = numCells_;
 
-    sum_rho  = T();
-    sum_uSqr = T();
-    max_uSqr = T();
-    sum_nCells = 0;
+    tmpAv[avRho]    = T();
+    tmpAv[avEnergy] = T();
+    tmpMax[maxU]    = T();
+    tmpNumCells     = 0;
 }
 
 template<typename T>
 void LatticeStatistics<T>::initialize() {
+    tmpAv.resize(2);
+    averageVect.resize(2);
+    tmpMax.resize(1);
+    maxVect.resize(1);
 
-    sum_rho  = T();
-    sum_uSqr = T();
-    max_uSqr = T();
-    sum_nCells = 0;
+    tmpAv[avRho]    = T();
+    tmpAv[avEnergy] = T();
+    tmpMax[maxU]    = T();
+    tmpNumCells     = 0;
 
-    average_rho    = (T)1;
-    average_energy = T();
-    maxU           = T();
+    averageVect[avRho]    = (T)1;
+    averageVect[avEnergy] = T();
+    maxVect[maxU]         = T();
 
     firstCall = true;
+
+    resetTime();
+}
+
+template<typename T>
+int LatticeStatistics<T>::subscribeAverage() {
+    int newSize = tmpAv.size()+1;
+    tmpAv.resize(newSize);
+    averageVect.resize(newSize);
+    return newSize-1;
+}
+
+template<typename T>
+int LatticeStatistics<T>::subscribeSum() {
+    int newSize = tmpSum.size()+1;
+    tmpSum.resize(newSize);
+    sumVect.resize(newSize);
+    return newSize-1;
+}
+
+template<typename T>
+int LatticeStatistics<T>::subscribeMin() {
+    int newSize = tmpMin.size()+1;
+    tmpMin.resize(newSize);
+    minVect.resize(newSize);
+    return newSize-1;
+}
+
+template<typename T>
+int LatticeStatistics<T>::subscribeMax() {
+    int newSize = tmpMax.size()+1;
+    tmpMax.resize(newSize);
+    maxVect.resize(newSize);
+    return newSize-1;
+}
+
+template<typename T>
+void LatticeStatistics<T>::gatherAverage(int whichAverage, T value) {
+    OLB_PRECONDITION( whichAverage < (int) tmpAv.size() );
+    tmpAv[whichAverage] += value;
+}
+
+template<typename T>
+void LatticeStatistics<T>::gatherSum(int whichSum, T value) {
+    OLB_PRECONDITION( whichSum < (int) tmpSum.size() );
+    tmpSum[whichSum] += value;
+}
+
+template<typename T>
+void LatticeStatistics<T>::gatherMin(int whichMin, T value) {
+    OLB_PRECONDITION( whichMin < (int) tmpMin.size() );
+    if (value < tmpMin[whichMin]) {
+        tmpMin[whichMin] = value;
+    }
+}
+
+template<typename T>
+void LatticeStatistics<T>::gatherMax(int whichMax, T value) {
+    OLB_PRECONDITION( whichMax < (int) tmpMax.size() );
+    if (value > tmpMax[whichMax]) {
+        tmpMax[whichMax] = value;
+    }
+}
+
+template<typename T>
+void LatticeStatistics<T>::incrementStats() {
+    ++tmpNumCells;
+}
+
+template<typename T>
+T LatticeStatistics<T>::getAverage(int whichAverage) const {
+    OLB_PRECONDITION( whichAverage < (int) tmpAv.size() );
+    return averageVect[whichAverage];
+}
+
+template<typename T>
+T LatticeStatistics<T>::getSum(int whichSum) const {
+    OLB_PRECONDITION( whichSum < (int) tmpSum.size() );
+    return sumVect[whichSum];
+}
+
+template<typename T>
+T LatticeStatistics<T>::getMin(int whichMin) const {
+    OLB_PRECONDITION( whichMin < (int) tmpMin.size() );
+    return minVect[whichMin];
+}
+
+template<typename T>
+T LatticeStatistics<T>::getMax(int whichMax) const {
+    OLB_PRECONDITION( whichMax < (int) tmpMax.size() );
+    return maxVect[whichMax];
 }
 
 
@@ -204,37 +332,38 @@ void StatisticsPostProcessor2D<T,Lattice>::process (
         #pragma omp parallel
             blockLattice.getStatistics().reset();
 
+
         int numCells     = 0;
-        T average_rho    = T();
-        T average_energy = T();
-        T maxU           = T();
+        T avRho    = T();
+        T avEnergy = T();
+        T maxU     = T();
 
         #pragma omp parallel
         {
             #pragma omp critical
             {
                 numCells       += blockLattice.getStatistics().getNumCells();
-                average_rho    += blockLattice.getStatistics().getAverageRho()
+                avRho          += blockLattice.getStatistics().getAverageRho()
                                 *blockLattice.getStatistics().getNumCells();
-                average_energy += blockLattice.getStatistics().getAverageEnergy()
+                avEnergy       += blockLattice.getStatistics().getAverageEnergy()
                                 *blockLattice.getStatistics().getNumCells();
-                if (maxU<blockLattice.getStatistics().getMaxU())
+                if (maxU<blockLattice.getStatistics().getMaxU() )
                     maxU        = blockLattice.getStatistics().getMaxU();
             }
         }
         if (numCells==0) {
             // avoid division by zero
-            average_rho = T();
-            average_energy = T();
+            avRho = T();
+            avEnergy = T();
             maxU = T();
             numCells = 0;
         }
         else {
-            average_rho    = average_rho / numCells;
-            average_energy = average_energy / numCells;
+            avRho    = avRho / numCells;
+            avEnergy = avEnergy / numCells;
         }
         #pragma omp parallel
-            blockLattice.getStatistics().reset(average_rho,average_energy, maxU, numCells);
+            blockLattice.getStatistics().reset(avRho,avEnergy, maxU, numCells);
 }
 #endif
 
@@ -242,13 +371,22 @@ template<typename T, template<typename U> class Lattice>
 void StatisticsPostProcessor2D<T,Lattice>::
     subscribeReductions(BlockLattice2D<T,Lattice>& blockLattice, Reductor<T>* reductor)
 {
-    reductor -> subscribeAverage (
-                    blockLattice.getStatistics().getNumCells(),
-                    blockLattice.getStatistics().getAverageRho() );
-    reductor -> subscribeAverage (
-                    blockLattice.getStatistics().getNumCells(),
-                    blockLattice.getStatistics().getAverageEnergy() );
-    reductor -> subscribeMax( blockLattice.getStatistics().getMaxU() );
+    std::vector<T>& averageVect = blockLattice.getStatistics().getAverageVect();
+    for (size_t iVect=0; iVect<averageVect.size(); ++iVect) {
+        reductor->subscribeAverage(blockLattice.getStatistics().getNumCells(), averageVect[iVect]);
+    }
+    std::vector<T>& sumVect = blockLattice.getStatistics().getSumVect();
+    for (size_t iVect=0; iVect<sumVect.size(); ++iVect) {
+        reductor->subscribeSum(sumVect[iVect]);
+    }
+    std::vector<T>& minVect = blockLattice.getStatistics().getMinVect();
+    for (size_t iVect=0; iVect<minVect.size(); ++iVect) {
+        reductor->subscribeMin(minVect[iVect]);
+    }
+    std::vector<T>& maxVect = blockLattice.getStatistics().getMaxVect();
+    for (size_t iVect=0; iVect<maxVect.size(); ++iVect) {
+        reductor->subscribeMax(maxVect[iVect]);
+    }
 }
 
 
@@ -375,7 +513,6 @@ void StatisticsPostProcessor3D<T,Lattice>::process (
     blockLattice.getStatistics().reset();
 }
 #endif
-
 #ifdef PARALLEL_MODE_OMP
 template<typename T, template<typename U> class Lattice>
 void StatisticsPostProcessor3D<T,Lattice>::process (
@@ -384,51 +521,62 @@ void StatisticsPostProcessor3D<T,Lattice>::process (
         #pragma omp parallel
             blockLattice.getStatistics().reset();
 
+
         int numCells     = 0;
-        T average_rho    = T();
-        T average_energy = T();
-        T maxU           = T();
+        T avRho    = T();
+        T avEnergy = T();
+        T maxU     = T();
 
         #pragma omp parallel
         {
             #pragma omp critical
             {
                 numCells       += blockLattice.getStatistics().getNumCells();
-                average_rho    += blockLattice.getStatistics().getAverageRho()
+                avRho          += blockLattice.getStatistics().getAverageRho()
                                 *blockLattice.getStatistics().getNumCells();
-                average_energy += blockLattice.getStatistics().getAverageEnergy()
+                avEnergy       += blockLattice.getStatistics().getAverageEnergy()
                                 *blockLattice.getStatistics().getNumCells();
-                if (maxU<blockLattice.getStatistics().getMaxU())
+                if (maxU<blockLattice.getStatistics().getMaxU() )
                     maxU        = blockLattice.getStatistics().getMaxU();
             }
         }
         if (numCells==0) {
             // avoid division by zero
-            average_rho = T();
-            average_energy = T();
+            avRho = T();
+            avEnergy = T();
             maxU = T();
             numCells = 0;
         }
         else {
-            average_rho    = average_rho / numCells;
-            average_energy = average_energy / numCells;
+            avRho    = avRho / numCells;
+            avEnergy = avEnergy / numCells;
         }
         #pragma omp parallel
-            blockLattice.getStatistics().reset(average_rho,average_energy, maxU, numCells);
+            blockLattice.getStatistics().reset(avRho,avEnergy, maxU, numCells);
 }
 #endif
+
 
 template<typename T, template<typename U> class Lattice>
 void StatisticsPostProcessor3D<T,Lattice>::
     subscribeReductions(BlockLattice3D<T,Lattice>& blockLattice, Reductor<T>* reductor)
 {
-    reductor -> subscribeAverage (
-                    blockLattice.getStatistics().getNumCells(),
-                    blockLattice.getStatistics().getAverageRho() );
-    reductor -> subscribeAverage (
-                    blockLattice.getStatistics().getNumCells(),
-                    blockLattice.getStatistics().getAverageEnergy() );
-    reductor -> subscribeMax( blockLattice.getStatistics().getMaxU() );
+    std::vector<T>& averageVect = blockLattice.getStatistics().getAverageVect();
+    for (size_t iVect=0; iVect<averageVect.size(); ++iVect) {
+        reductor->subscribeAverage(blockLattice.getStatistics().getNumCells(), averageVect[iVect]);
+    }
+    std::vector<T>& sumVect = blockLattice.getStatistics().getSumVect();
+    for (size_t iVect=0; iVect<sumVect.size(); ++iVect) {
+        reductor->subscribeSum(sumVect[iVect]);
+    }
+    std::vector<T>& minVect = blockLattice.getStatistics().getMinVect();
+    for (size_t iVect=0; iVect<minVect.size(); ++iVect) {
+        reductor->subscribeMin(minVect[iVect]);
+    }
+    std::vector<T>& maxVect = blockLattice.getStatistics().getMaxVect();
+    for (size_t iVect=0; iVect<maxVect.size(); ++iVect) {
+        reductor->subscribeMax(maxVect[iVect]);
+    }
 }
 
 

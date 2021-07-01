@@ -197,7 +197,7 @@ int main(int argc, char *argv[])
 	const double Ra    = atof(argv[1]);
     const double Pr    = atof(argv[2]);
     const int N        = atoi(argv[3]);
-    const double dt = atof(argv[4]);
+    const double dt    = atof(argv[4]);
 
     
     AdvectionDiffusionUnitLB<T,NSDESCRIPTOR,TDESCRIPTOR> converter(

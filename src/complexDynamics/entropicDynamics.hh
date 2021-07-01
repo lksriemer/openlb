@@ -101,7 +101,7 @@ void EntropicDynamics<T,Lattice>::collide (
     }
     
     if (cell.takesStatistics()) {
-        statistics.gatherStats(rho, uSqr);
+        statistics.incrementStats(rho, uSqr);
     }
 }
 
@@ -147,7 +147,7 @@ void EntropicDynamics<T,Lattice>::staticCollide (
     }
     
     if (cell.takesStatistics()) {
-        statistics.gatherStats(rho, uSqr);
+        statistics.incrementStats(rho, uSqr);
     }
 }
 
@@ -306,7 +306,7 @@ void ForcedEntropicDynamics<T,Lattice>::collide (
     
     if (cell.takesStatistics())
     {
-        statistics.gatherStats(rho, uSqr);
+        statistics.incrementStats(rho, uSqr);
     }
 }
 
@@ -354,7 +354,7 @@ void ForcedEntropicDynamics<T,Lattice>::staticCollide (
     lbHelpers<T,Lattice>::addExternalForce(cell, u, omegaTot);
     
     if (cell.takesStatistics()) {
-        statistics.gatherStats(rho, uSqr);
+        statistics.incrementStats(rho, uSqr);
     }
 }
 

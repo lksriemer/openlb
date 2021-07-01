@@ -1,6 +1,6 @@
 /*  This file is part of the OpenLB library
  *
- *  Copyright (C) 2007 Jonas Latt
+ *  Copyright (C) 2007, 2008 Jonas Latt
  *  Address: Rue General Dufour 24,  1211 Geneva 4, Switzerland 
  *  E-mail: jonas.latt@gmail.com
  *
@@ -35,7 +35,7 @@ template<typename T>
 class MultiBlockReductor : public Reductor<T> {
 public:
     virtual void subscribeSum(T& element);
-    virtual void subscribeAverage(int const& weight, T& element);
+    virtual void subscribeAverage(size_t const& weight, T& element);
     virtual void subscribeMin(T& element);
     virtual void subscribeMax(T& element);
 public:
@@ -49,13 +49,13 @@ public:
     void getMaxs(std::vector<T>& elements);
 private:
     std::vector<std::vector<T*> >  averageElements;
-    std::vector<std::vector<int const*> > averageWeights;
+    std::vector<std::vector<size_t const*> > averageWeights;
     std::vector<std::vector<T*> >  sumElements;
     std::vector<std::vector<T*> >  minElements;
     std::vector<std::vector<T*> >  maxElements;
     int newSubscriptions;
     bool firstSubscription;
-    int iSumElements, iAverageElements, iMinElements, iMaxElements;
+    size_t iSumElements, iAverageElements, iMinElements, iMaxElements;
 };
 
 }

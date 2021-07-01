@@ -40,7 +40,7 @@ void istr2unSerializer(DataUnSerializer<T>& unSerializer, std::istream* istr, bo
 template<typename T>
 void saveData(Serializable<T> const& object, std::string fName, bool enforceUint=false);
 
-template<typename T>
+template<typename T, typename SizeType>
 void loadData(Serializable<T>& object, std::string fName, bool enforceUint=false);
 
 template<typename T>

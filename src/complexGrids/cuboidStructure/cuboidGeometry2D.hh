@@ -246,6 +246,31 @@ void CuboidGeometry2D<T>::remove(int iC) {
 }
 
 template<typename T>
+void CuboidGeometry2D<T>::remove(olb::ScalarField2D<int>* geometryData) {
+
+    std::vector<Cuboid2D<T> > cuboids;
+    unsigned size = _cuboids.size();
+
+    std::vector<bool> allZero;
+    for (unsigned i=0; i < size; i++) {
+        allZero.push_back(1);
+        for (int iX=0; iX<_cuboids[i].get_nX(); iX++) {
+            for (int iY=0; iY<_cuboids[i].get_nY(); iY++) {
+                if (geometryData->get(_cuboids[i].get_globPosX()+iX,
+                 _cuboids[i].get_globPosY()+iY)!=0 ) allZero[i] = 0;
+            }
+        }
+    }
+    for (unsigned i=0;i<size;i++) {
+        if (!allZero[i] ) cuboids.push_back(_cuboids[i]);
+    }
+    _cuboids.clear();
+    for (unsigned i=0;i<cuboids.size();i++) {
+        _cuboids.push_back(cuboids[i]);
+    }
+}
+
+template<typename T>
 void CuboidGeometry2D<T>::split(int iC, int p) {
 
     Cuboid2D<T> temp(_cuboids[iC].get_globPosX(),_cuboids[iC].get_globPosY(),

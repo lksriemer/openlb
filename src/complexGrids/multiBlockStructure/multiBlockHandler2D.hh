@@ -1,6 +1,6 @@
 /*  This file is part of the OpenLB library
  *
- *  Copyright (C) 2007 Jonas Latt and Bernd Stahl
+ *  Copyright (C) 2007, 2008 Jonas Latt and Bernd Stahl
  *  Address: Rue General Dufour 24,  1211 Geneva 4, Switzerland 
  *  E-mail: jonas.latt@gmail.com
  *
@@ -113,7 +113,7 @@ void SerialMultiBlockHandler2D<T,Lattice>::broadCastVector(T vect[Lattice<T>::d]
 
 template<typename T, template<typename U> class Lattice>
 void SerialMultiBlockHandler2D<T,Lattice>::copyOverlap (
-        Overlap2D const& overlap, SerialMultiBlockHandler2D<T,Lattice>::BlockVector2D& lattices ) const
+        Overlap2D const& overlap, BlockVector2D& lattices ) const
 {
     int originalId = overlap.getOriginalId();
     int overlapId  = overlap.getOverlapId();
@@ -140,7 +140,7 @@ void SerialMultiBlockHandler2D<T,Lattice>::copyOverlap (
 
 template<typename T, template<typename U> class Lattice>
 void SerialMultiBlockHandler2D<T,Lattice>::connectBoundaries (
-        SerialMultiBlockHandler2D<T,Lattice>::BlockVector2D& lattices, bool periodicCommunication ) const
+        BlockVector2D& lattices, bool periodicCommunication ) const
 {
     for (int iOverlap=0; iOverlap<dataDistribution.getNumNormalOverlaps(); ++iOverlap) {
         copyOverlap(dataDistribution.getNormalOverlap(iOverlap), lattices);
@@ -550,7 +550,7 @@ void ParallelMultiBlockHandler2D<T,Lattice>::broadCastVector(T vect[Lattice<T>::
 
 template<typename T, template<typename U> class Lattice>
 void ParallelMultiBlockHandler2D<T,Lattice>::connectBoundaries (
-        ParallelMultiBlockHandler2D<T,Lattice>::BlockVector2D& lattices, bool periodicCommunication ) const
+        BlockVector2D& lattices, bool periodicCommunication ) const
 {
     for (unsigned iRelevant=0; iRelevant<relevantIndexes.getNormalOverlaps().size(); ++iRelevant) {
         normalTransmittors[iRelevant]->prepareTransmission(lattices);

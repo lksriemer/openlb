@@ -216,7 +216,7 @@ void BGKdynamics<T,Lattice>::collide (
     this->momenta.computeRhoU(cell, rho, u);
     T uSqr = lbHelpers<T,Lattice>::bgkCollision(cell, rho, u, omega);
     if (cell.takesStatistics()) {
-        statistics.gatherStats(rho, uSqr);
+        statistics.incrementStats(rho, uSqr);
     }
 }
 
@@ -230,7 +230,7 @@ void BGKdynamics<T,Lattice>::staticCollide (
     rho = this->momenta.computeRho(cell);
     T uSqr = lbHelpers<T,Lattice>::bgkCollision(cell, rho, u, omega);
     if (cell.takesStatistics()) {
-        statistics.gatherStats(rho, uSqr);
+        statistics.incrementStats(rho, uSqr);
     }
 }
 
@@ -284,7 +284,7 @@ void ConstRhoBGKdynamics<T,Lattice>::collide (
     T uSqr = lbHelpers<T,Lattice>::constRhoBgkCollision (
                 cell, rho, u, ratioRho, omega );
     if (cell.takesStatistics()) {
-        statistics.gatherStats(rho+deltaRho, uSqr);
+        statistics.incrementStats(rho+deltaRho, uSqr);
     }
 }
 
@@ -297,7 +297,7 @@ void ConstRhoBGKdynamics<T,Lattice>::staticCollide (
     T rho = this->momenta.computeRho(cell);
     T uSqr = lbHelpers<T,Lattice>::bgkCollision(cell, rho, u, omega);
     if (cell.takesStatistics()) {
-        statistics.gatherStats(rho, uSqr);
+        statistics.incrementStats(rho, uSqr);
     }
 }
 
@@ -345,7 +345,7 @@ void IncBGKdynamics<T,Lattice>::collide (
     this->momenta.computeJ(cell, j);
     T uSqr = lbHelpers<T,Lattice>::incBgkCollision(cell, p, j, omega);
     if (cell.takesStatistics()) {
-        statistics.gatherStats(rho, uSqr);
+        statistics.incrementStats(rho, uSqr);
     }
 }
 
@@ -359,7 +359,7 @@ void IncBGKdynamics<T,Lattice>::staticCollide (
     T p = rho / Lattice<T>::invCs2;
     T uSqr = lbHelpers<T,Lattice>::incBgkCollision(cell, p, j, omega);
     if (cell.takesStatistics()) {
-        statistics.gatherStats(rho, uSqr);
+        statistics.incrementStats(rho, uSqr);
     }
 }
 
@@ -407,7 +407,7 @@ void RLBdynamics<T,Lattice>::collide (
     this->momenta.computeAllMomenta(cell, rho, u, pi);
     T uSqr = rlbHelpers<T,Lattice>::rlbCollision(cell, rho, u, pi, omega);
     if (cell.takesStatistics()) {
-        statistics.gatherStats(rho, uSqr);
+        statistics.incrementStats(rho, uSqr);
     }
 }
 
@@ -421,7 +421,7 @@ void RLBdynamics<T,Lattice>::staticCollide (
     this->momenta.computeAllMomenta(cell, rho, uDummy, pi);
     T uSqr = rlbHelpers<T,Lattice>::rlbCollision(cell, rho, u, pi, omega);
     if (cell.takesStatistics()) {
-        statistics.gatherStats(rho, uSqr);
+        statistics.incrementStats(rho, uSqr);
     }
 }
 
@@ -566,7 +566,7 @@ void ForcedBGKdynamics<T,Lattice>::collide (
     T uSqr = lbHelpers<T,Lattice>::bgkCollision(cell, rho, u, omega);
     lbHelpers<T,Lattice>::addExternalForce(cell, u, omega);
     if (cell.takesStatistics()) {
-        statistics.gatherStats(rho, uSqr);
+        statistics.incrementStats(rho, uSqr);
     }
 }
 
@@ -581,7 +581,7 @@ void ForcedBGKdynamics<T,Lattice>::staticCollide (
     T uSqr = lbHelpers<T,Lattice>::bgkCollision(cell, rho, u, omega);
     lbHelpers<T,Lattice>::addExternalForce(cell, u, omega);
     if (cell.takesStatistics()) {
-        statistics.gatherStats(rho, uSqr);
+        statistics.incrementStats(rho, uSqr);
     }
 }
 
@@ -638,7 +638,7 @@ void D3Q13dynamics<T,Lattice>::collide (
     T uSqr = d3q13Helpers<T>::collision (
                  cell, rho, u, lambda_nu, lambda_nu_prime );
     if (cell.takesStatistics()) {
-        statistics.gatherStats(rho, uSqr);
+        statistics.incrementStats(rho, uSqr);
     }
 }
 
@@ -652,7 +652,7 @@ void D3Q13dynamics<T,Lattice>::staticCollide (
     T uSqr = d3q13Helpers<T>::collision (
                  cell, rho, u, lambda_nu, lambda_nu_prime );
     if (cell.takesStatistics()) {
-        statistics.gatherStats(rho, uSqr);
+        statistics.incrementStats(rho, uSqr);
     }
 }
 

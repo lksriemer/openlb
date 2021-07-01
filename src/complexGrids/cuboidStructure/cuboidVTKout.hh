@@ -1,6 +1,6 @@
 /*  This file is part of the OpenLB library
  *
- *  Copyright (C) 2006, 2007 Mathias J. Krause, Jonas Latt 
+ *  Copyright (C) 2006, 2007, 2009 Mathias J. Krause, Jonas Latt 
  *  Address: Wilhelm-Maybach-Str. 24, 68766 Hockenheim, Germany 
  *  E-mail: mathias.j.krause@gmx.de
  *
@@ -50,9 +50,9 @@ template<typename T>
 void CuboidVTKout2D<T>::writeFlowField (
         std::string const& fName,
         std::string const& scalarFieldName,
-        std::vector<ScalarField2D<T> > const& scalarField,
+        std::vector<const ScalarFieldBase2D<T>* > const& scalarField,
         std::string const& vectorFieldName,
-        std::vector<TensorField2D<T,2> > const& vectorField,
+        std::vector<const TensorFieldBase2D<T,2>* > const& vectorField,
         CuboidGeometry2D<T> const& cGeometry, 
         loadBalancer& load, T deltaT )
 {
@@ -110,17 +110,17 @@ void CuboidVTKout2D<T>::writeFlowField (
 template<typename T>
 void CuboidVTKout2D<T>::writePiece(std::string& fullName,
         std::string const& scalarFieldName,
-        ScalarField2D<T> const& scalarField,
+        const ScalarFieldBase2D<T>* scalarField,
         std::string const& vectorFieldName,
-        TensorField2D<T,2> const& vectorField,
+        const TensorFieldBase2D<T,2>* vectorField,
         T deltaX, T deltaT,
         int originX, int originY ) {
 
     std::ofstream fout(fullName.c_str(), std::ios::app );
     if (!fout) std::cout << "could not open " << fullName << std::endl;
 
-    int nx = scalarField.getNx();
-    int ny = scalarField.getNy();
+    int nx = scalarField->getNx();
+    int ny = scalarField->getNy();
 
 
     fout << "<Piece Extent=\""
@@ -136,7 +136,7 @@ void CuboidVTKout2D<T>::writePiece(std::string& fullName,
          << scalarFieldName << "\">\n";
     for (int iY=0; iY<ny; ++iY) {
         for (int iX=0; iX<nx; ++iX) {
-            fout << scalarField.get(iX,iY)/deltaT << " ";
+            fout << scalarField->get(iX,iY)/deltaT << " ";
         }
         fout << "\n";
     }
@@ -147,8 +147,8 @@ void CuboidVTKout2D<T>::writePiece(std::string& fullName,
          << "NumberOfComponents=\"3\">\n";
     for (int iY=0; iY<ny; ++iY) {
         for (int iX=0; iX<nx; ++iX) {
-            fout << vectorField.get(iX,iY)[0]*deltaX/deltaT << " ";
-            fout << vectorField.get(iX,iY)[1]*deltaX/deltaT << " 0 ";
+            fout << vectorField->get(iX,iY)[0]*deltaX/deltaT << " ";
+            fout << vectorField->get(iX,iY)[1]*deltaX/deltaT << " 0 ";
         }
         fout << "\n";
     }
@@ -197,11 +197,11 @@ template<typename T>
 void CuboidVTKout3D<T>::writeFlowField (
         std::string const& fName,
         std::string const& scalarFieldName,
-        std::vector<ScalarField3D<T> > const& scalarField,
+        std::vector<const ScalarFieldBase3D<T>* > scalarField,
         std::string const& vectorFieldName,
-        std::vector<TensorField3D<T,3> > const& vectorField,
+        std::vector<const TensorFieldBase3D<T,3>* > vectorField,
         CuboidGeometry3D<T> const& cGeometry, 
-        loadBalancer& load, T deltaT )
+        loadBalancer& load, T deltaT, int offset )
 {
 
     int rank = 0;
@@ -222,8 +222,11 @@ void CuboidVTKout3D<T>::writeFlowField (
     int nz     = cGeometry.get_motherC().get_nZ()-1; 
     T deltaX = cGeometry.get_motherC().get_delta();
 
+    #ifdef PARALLEL_MODE_MPI
+        singleton::mpi().barrier();
+    #endif
     if(rank==0) {
-        writePreamble(fullName, nx, ny, nz, deltaX);
+        writePreamble(fullName, nx/offset, ny/offset, nz/offset, deltaX*offset);
     }
     #ifdef PARALLEL_MODE_MPI
         singleton::mpi().barrier();
@@ -244,7 +247,7 @@ void CuboidVTKout3D<T>::writeFlowField (
                 }
                 writePiece(fullName, scalarFieldName, scalarField[iC],
                               vectorFieldName, vectorField[iC], 
-                              deltaX, deltaT, originX, originY, originZ);
+                              deltaX, deltaT, offset, originX, originY, originZ);
             }
         }
         #ifdef PARALLEL_MODE_MPI
@@ -261,23 +264,30 @@ void CuboidVTKout3D<T>::writeFlowField (
 template<typename T>
 void CuboidVTKout3D<T>::writePiece(std::string& fullName,
         std::string const& scalarFieldName,
-        ScalarField3D<T> const& scalarField,
+        const ScalarFieldBase3D<T>* scalarField,
         std::string const& vectorFieldName,
-        TensorField3D<T,3> const& vectorField,
-        T deltaX, T deltaT,
+        const TensorFieldBase3D<T,3>* vectorField,
+        T deltaX, T deltaT, int offset,
         int originX, int originY, int originZ) {
 
     std::ofstream fout(fullName.c_str(), std::ios::app );
     if (!fout) std::cout << "could not open " << fullName << std::endl;
 
-    int nx = scalarField.getNx();
-    int ny = scalarField.getNy();
-    int nz = scalarField.getNz();
+    int nx = scalarField->getNx();
+    int ny = scalarField->getNy();
+    int nz = scalarField->getNz();
+
+    int x0 = originX/offset; if (originX%offset!=0) x0++;
+    int y0 = originY/offset; if (originY%offset!=0) y0++;
+    int z0 = originZ/offset; if (originZ%offset!=0) z0++;
+    int x1 = (originX + nx-1)/offset;
+    int y1 = (originY + ny-1)/offset;
+    int z1 = (originZ + nz-1)/offset;
 
     fout << "<Piece Extent=\""
-         << originX <<" "<< originX + nx-1 <<" "
-         << originY <<" "<< originY + ny-1 <<" "
-         << originZ <<" "<< originZ + nz-1 <<"\">\n";
+         << x0 <<" "<< x1 <<" "
+         << y0 <<" "<< y1 <<" "
+         << z0 <<" "<< z1 <<"\">\n";
 
     fout << "<PointData Scalars=\""
          << scalarFieldName << "\" "
@@ -289,8 +299,9 @@ void CuboidVTKout3D<T>::writePiece(std::string& fullName,
     for (int iZ=0; iZ<nz; ++iZ) {
         for (int iY=0; iY<ny; ++iY) {
             for (int iX=0; iX<nx; ++iX) {
-
-                fout << scalarField.get(iX,iY,iZ)/deltaT << " ";
+                if ((iZ+originZ)%offset == 0 && (iY+originY)%offset == 0 && (iX+originX)%offset == 0 )
+                    fout << scalarField->get(iX,iY,iZ)/deltaT << " ";
+                    //fout << singleton::mpi().getRank()+1 << " ";
             }
         }
         fout << "\n";
@@ -304,10 +315,11 @@ void CuboidVTKout3D<T>::writePiece(std::string& fullName,
     for (int iZ=0; iZ<nz; ++iZ) {
         for (int iY=0; iY<ny; ++iY) {
             for (int iX=0; iX<nx; ++iX) {
-
-                fout << vectorField.get(iX,iY,iZ)[0]*deltaX/deltaT << " ";
-                fout << vectorField.get(iX,iY,iZ)[1]*deltaX/deltaT << " ";
-                fout << vectorField.get(iX,iY,iZ)[2]*deltaX/deltaT << " ";
+                if ((iZ+originZ)%offset == 0 && (iY+originY)%offset == 0 && (iX+originX)%offset == 0 ) {
+                    fout << vectorField->get(iX,iY,iZ)[0]*deltaX/deltaT << " ";
+                    fout << vectorField->get(iX,iY,iZ)[1]*deltaX/deltaT << " ";
+                    fout << vectorField->get(iX,iY,iZ)[2]*deltaX/deltaT << " ";
+                }
             }
         }
         fout << "\n";

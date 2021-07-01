@@ -43,6 +43,9 @@ namespace descriptors {
             { 0, 0},
             {-1, 0}, {0, -1}, {1,0}, { 0,1}
         };
+		
+	template<typename T>
+    const int D2Q5DescriptorBase<T>::vicinity = 1;
 
     template<typename T>
     const T D2Q5DescriptorBase<T>::invCs2 = (T)3;
@@ -68,6 +71,9 @@ namespace descriptors {
             { 0, 1, 0}, {0, 0, 1},
         }; 
 
+	template<typename T>
+    const int D3Q7DescriptorBase<T>::vicinity = 1;
+	
     template<typename T>
     const T D3Q7DescriptorBase<T>::invCs2 = (T)4;
 

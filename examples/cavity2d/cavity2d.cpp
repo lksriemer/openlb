@@ -143,6 +143,7 @@ int main(int argc, char* argv[]) {
     for (iT=0; iT*converter.getDeltaT()<maxT; ++iT) {
         if (iT%converter.nStep(logT)==0) {
             cout << "step " << iT
+                 << "; lattice time=" << lattice.getStatistics().getTime()
                  << "; t=" << iT*converter.getDeltaT()
                  << "; av energy="
                  << lattice.getStatistics().getAverageEnergy()
@@ -160,7 +161,6 @@ int main(int argc, char* argv[]) {
         }
 
         lattice.collideAndStream();
-
     }
     cout << iT << endl;
     cout << lattice.getStatistics().getAverageEnergy() << endl;

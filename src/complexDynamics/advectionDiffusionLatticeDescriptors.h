@@ -57,6 +57,7 @@ namespace descriptors
     {
         typedef D2Q5DescriptorBase<T> BaseDescriptor;
         enum { d = 2, q = 5 };      ///< number of dimensions/distr. functions
+		static const int vicinity;  ///< size of neighborhood
         static const int c[q][d];   ///< lattice directions
         static const T t[q];        ///< lattice weights
         static const T invCs2;      ///< inverse square of speed of sound
@@ -93,6 +94,7 @@ namespace descriptors
     template <typename T> struct D3Q7DescriptorBase {
         typedef D3Q7DescriptorBase<T> BaseDescriptor;
         enum { d = 3, q = 7 };     ///< number of dimensions/distr. functions
+		static const int vicinity;  ///< size of neighborhood
         static const int c[q][d];   ///< lattice directions
         static const T t[q];        ///< lattice weights
         static const T invCs2;      ///< inverse square of speed of sound

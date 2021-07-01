@@ -89,6 +89,7 @@ class CuboidNeighbourhood3D {
         T **_outData;
         /// Indecates if there was an initialization done
         bool _initInCNdone;
+        int* _tempInCN;
         /// Indecates if there was an initialization done
         bool _initOutCNdone;
         /// Handels the MPI communication

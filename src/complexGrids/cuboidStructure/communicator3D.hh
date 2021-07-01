@@ -72,8 +72,8 @@ template<typename T, template<typename U> class Lattice>
 void Communicator3D<T,Lattice>::add_cells(int overlap) {
 
     for (int iC=0; iC<_sLattice.get_load().size(); iC++) {
-        for (int i=0; i<=overlap; i++) {
-            _nh[iC].add_inCells(overlap);
+        for (int i=1; i<=overlap; i++) {
+            _nh[iC].add_inCells(i);
         }
     }
 }
@@ -96,9 +96,11 @@ void Communicator3D<T,Lattice>::init() {
             }
         #endif
     }
+
     for (int iC=0; iC<_sLattice.get_load().size(); iC++) {
         _nh[iC].init_outCN();
     }
+
     #ifdef PARALLEL_MODE_MPI
         for (int iC=0; iC<_sLattice.get_load().size(); iC++) {
             _nh[iC].finish_comm();

@@ -119,7 +119,7 @@ void SerialMultiBlockHandler3D<T,Lattice>::broadCastVector(T vect[Lattice<T>::d]
 
 template<typename T, template<typename U> class Lattice>
 void SerialMultiBlockHandler3D<T,Lattice>::copyOverlap (
-        Overlap3D const& overlap, SerialMultiBlockHandler3D<T,Lattice>::BlockVector3D& lattices ) const
+        Overlap3D const& overlap, BlockVector3D& lattices ) const
 {
     int originalId = overlap.getOriginalId();
     int overlapId  = overlap.getOverlapId();
@@ -151,7 +151,7 @@ void SerialMultiBlockHandler3D<T,Lattice>::copyOverlap (
 
 template<typename T, template<typename U> class Lattice>
 void SerialMultiBlockHandler3D<T,Lattice>::connectBoundaries (
-        SerialMultiBlockHandler3D<T,Lattice>::BlockVector3D& lattices, bool periodicCommunication ) const
+        BlockVector3D& lattices, bool periodicCommunication ) const
 {
     for (int iOverlap=0; iOverlap<dataDistribution.getNumNormalOverlaps(); ++iOverlap) {
         copyOverlap(dataDistribution.getNormalOverlap(iOverlap), lattices);
@@ -591,7 +591,7 @@ void ParallelMultiBlockHandler3D<T,Lattice>::broadCastVector(T vect[Lattice<T>::
 
 template<typename T, template<typename U> class Lattice>
 void ParallelMultiBlockHandler3D<T,Lattice>::connectBoundaries (
-        ParallelMultiBlockHandler3D<T,Lattice>::BlockVector3D& lattices, bool periodicCommunication ) const
+        BlockVector3D& lattices, bool periodicCommunication ) const
 {
     for (unsigned iRelevant=0; iRelevant<relevantIndexes.getNormalOverlaps().size(); ++iRelevant) {
         normalTransmittors[iRelevant]->prepareTransmission(lattices);

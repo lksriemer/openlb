@@ -1,6 +1,6 @@
 /*  This file is part of the OpenLB library
  *
- *  Copyright (C) 2007 Jonas Latt
+ *  Copyright (C) 2007, 2008 Jonas Latt
  *  Address: Rue General Dufour 24,  1211 Geneva 4, Switzerland 
  *  E-mail: jonas.latt@gmail.com
  *
@@ -56,13 +56,13 @@ void MultiBlockReductor<T>::subscribeSum(T& element) {
 }
 
 template<typename T>
-void MultiBlockReductor<T>::subscribeAverage(int const& weight, T& element) {
+void MultiBlockReductor<T>::subscribeAverage(size_t const& weight, T& element) {
     if (firstSubscription) {
         std::vector<T*> newAverages(1);
         newAverages[0] = &element;
         averageElements.push_back(newAverages);
 
-        std::vector<int const*> newWeights(1);
+        std::vector<size_t const*> newWeights(1);
         newWeights[0] = &weight;
         averageWeights.push_back(newWeights);
     }
@@ -145,8 +145,7 @@ void MultiBlockReductor<T>::getAverages(std::vector<T>& elements, std::vector<T>
         T averageElement = T();
         for (unsigned i2Average=0; i2Average<averageElements[i1Average].size(); ++i2Average) {
             T newElement = *averageElements[i1Average][i2Average];
-            T newWeight = (T)*averageWeights[i1Average][i2Average] /
-                          (T)std::numeric_limits<int>::max();
+            T newWeight = (T)*averageWeights[i1Average][i2Average];
             averageElement += newWeight * newElement;
             sumWeights += newWeight;
         }

@@ -307,14 +307,16 @@ void BlockLattice3D<T,Lattice>::stream(int x0, int x1, int y0, int y1, int z0, i
     OLB_PRECONDITION(z0>=0 && z1<nz);
     OLB_PRECONDITION(z1>=z0);
 
-    bulkStream(x0+1,x1-1, y0+1,y1-1, z0+1,z1-1);
+    static const int vicinity = Lattice<T>::vicinity;
 
-    boundaryStream(x0,x1,y0,y1,z0,z1, x0,x0, y0,y1, z0,z1);
-    boundaryStream(x0,x1,y0,y1,z0,z1, x1,x1, y0,y1, z0,z1);
-    boundaryStream(x0,x1,y0,y1,z0,z1, x0+1,x1-1, y0,y0, z0,z1);
-    boundaryStream(x0,x1,y0,y1,z0,z1, x0+1,x1-1, y1,y1, z0,z1);
-    boundaryStream(x0,x1,y0,y1,z0,z1, x0+1,x1-1, y0+1,y1-1, z0,z0);
-    boundaryStream(x0,x1,y0,y1,z0,z1, x0+1,x1-1, y0+1,y1-1, z1,z1);
+    bulkStream(x0+vicinity,x1-vicinity, y0+vicinity,y1-vicinity, z0+vicinity,z1-vicinity);
+
+    boundaryStream(x0,x1,y0,y1,z0,z1, x0,x0+vicinity-1, y0,y1, z0,z1);
+    boundaryStream(x0,x1,y0,y1,z0,z1, x1-vicinity-1,x1, y0,y1, z0,z1);
+    boundaryStream(x0,x1,y0,y1,z0,z1, x0+vicinity,x1-vicinity, y0,y0+vicinity-1, z0,z1);
+    boundaryStream(x0,x1,y0,y1,z0,z1, x0+vicinity,x1-vicinity, y1-vicinity+1,y1, z0,z1);
+    boundaryStream(x0,x1,y0,y1,z0,z1, x0+vicinity,x1-vicinity, y0+vicinity,y1-vicinity, z0,z0+vicinity-1);
+    boundaryStream(x0,x1,y0,y1,z0,z1, x0+vicinity,x1-vicinity, y0+vicinity,y1-vicinity, z1-vicinity+1,z1);
 }
 
 /** Post-processing steps are called at the end of this method.
@@ -328,6 +330,7 @@ void BlockLattice3D<T,Lattice>::stream(bool periodic) {
     }
 
     postProcess();
+    getStatistics().incrementTime();
 }
 
 /** This operation is more efficient than a successive application of
@@ -343,21 +346,23 @@ void BlockLattice3D<T,Lattice>::collideAndStream(int x0, int x1, int y0, int y1,
     OLB_PRECONDITION(z0>=0 && z1<nz);
     OLB_PRECONDITION(z1>=z0);
 
-    collide(x0,x0, y0,y1, z0,z1);
-    collide(x1,x1, y0,y1, z0,z1);
-    collide(x0+1,x1-1, y0,y0, z0,z1);
-    collide(x0+1,x1-1, y1,y1, z0,z1);
-    collide(x0+1,x1-1, y0+1,y1-1, z0,z0);
-    collide(x0+1,x1-1, y0+1,y1-1, z1,z1);
+    static const int vicinity = Lattice<T>::vicinity;
 
-    bulkCollideAndStream(x0+1,x1-1, y0+1,y1-1, z0+1,z1-1);
+    collide(x0,x0+vicinity-1, y0,y1, z0,z1);
+    collide(x1-vicinity+1,x1, y0,y1, z0,z1);
+    collide(x0+vicinity,x1-vicinity, y0,y0+vicinity-1, z0,z1);
+    collide(x0+vicinity,x1-vicinity, y1-vicinity+1,y1, z0,z1);
+    collide(x0+vicinity,x1-vicinity, y0+vicinity,y1-vicinity, z0,z0+vicinity-1);
+    collide(x0+vicinity,x1-vicinity, y0+vicinity,y1-vicinity, z1-vicinity+1,z1);
 
-    boundaryStream(x0,x1,y0,y1,z0,z1, x0,x0, y0,y1, z0,z1);
-    boundaryStream(x0,x1,y0,y1,z0,z1, x1,x1, y0,y1, z0,z1);
-    boundaryStream(x0,x1,y0,y1,z0,z1, x0+1,x1-1, y0,y0, z0,z1);
-    boundaryStream(x0,x1,y0,y1,z0,z1, x0+1,x1-1, y1,y1, z0,z1);
-    boundaryStream(x0,x1,y0,y1,z0,z1, x0+1,x1-1, y0+1,y1-1, z0,z0);
-    boundaryStream(x0,x1,y0,y1,z0,z1, x0+1,x1-1, y0+1,y1-1, z1,z1);
+    bulkCollideAndStream(x0+vicinity,x1-vicinity, y0+vicinity,y1-vicinity, z0+vicinity,z1-vicinity);
+
+    boundaryStream(x0,x1,y0,y1,z0,z1, x0,x0+vicinity-1, y0,y1, z0,z1);
+    boundaryStream(x0,x1,y0,y1,z0,z1, x1-vicinity+1,x1, y0,y1, z0,z1);
+    boundaryStream(x0,x1,y0,y1,z0,z1, x0+vicinity,x1-vicinity, y0,y0+vicinity-1, z0,z1);
+    boundaryStream(x0,x1,y0,y1,z0,z1, x0+vicinity,x1-vicinity, y1-vicinity+1,y1, z0,z1);
+    boundaryStream(x0,x1,y0,y1,z0,z1, x0+vicinity,x1-vicinity, y0+vicinity,y1-vicinity, z0,z0+vicinity-1);
+    boundaryStream(x0,x1,y0,y1,z0,z1, x0+vicinity,x1-vicinity, y0+vicinity,y1-vicinity, z1-vicinity+1,z1);
 }
 
 /** Post-processing steps are called at the end of this method.
@@ -371,6 +376,7 @@ void BlockLattice3D<T,Lattice>::collideAndStream(bool periodic) {
     }
 
     postProcess();
+    getStatistics().incrementTime();
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -674,15 +680,16 @@ void BlockLattice3D<T,Lattice>::bulkCollideAndStream (
 
 template<typename T, template<typename U> class Lattice>
 void BlockLattice3D<T,Lattice>::makePeriodic() {
+    static const int vicinity = Lattice<T>::vicinity;
     int maxX = getNx()-1;
     int maxY = getNy()-1;
     int maxZ = getNz()-1;
-    periodicSurface(0,      0,      0,    maxY,   0,    maxZ);
-    periodicSurface(maxX,   maxX,   0,    maxY,   0,    maxZ);
-    periodicSurface(1,      maxX-1, 0,    0,      0,    maxZ);
-    periodicSurface(1,      maxX-1, maxY, maxY,   0,    maxZ);
-    periodicSurface(1,      maxX-1, 1,    maxY-1, 0,    0);
-    periodicSurface(1,      maxX-1, 1,    maxY-1, maxZ, maxZ);
+    periodicSurface(0,             vicinity-1,    0,    maxY,              0,       maxZ);
+    periodicSurface(maxX-vicinity+1,     maxX,    0,    maxY,              0,       maxZ);
+    periodicSurface(vicinity,      maxX-vicinity, 0,    vicinity-1,        0,       maxZ);
+    periodicSurface(vicinity,      maxX-vicinity, maxY-vicinity+1, maxY,   0,       maxZ);
+    periodicSurface(vicinity,      maxX-vicinity, vicinity, maxY-vicinity, 0, vicinity-1);
+    periodicSurface(vicinity,      maxX-vicinity, vicinity, maxY-vicinity, maxZ-vicinity+1, maxZ);
 }
 
 template<typename T, template<typename U> class Lattice>

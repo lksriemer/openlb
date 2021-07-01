@@ -27,7 +27,7 @@
 #include "serializerIO.h"
 #include "base64.h"
 #include "core/olbDebug.h"
-#include <numeric>
+#include <limits>
 #include <istream>
 #include <ostream>
 #include <fstream>
@@ -42,7 +42,7 @@ void serializer2ostr(DataSerializer<T> const& serializer, std::ostream* ostr, bo
         size_t binarySize = (size_t) (fullSize * sizeof(T));
         if (enforceUint) {
             Base64Encoder<unsigned int> sizeEncoder(*ostr, 1);
-            OLB_PRECONDITION(binarySize <= numeric_limits<unsigned int>::max());
+            OLB_PRECONDITION(binarySize <= std::numeric_limits<unsigned int>::max());
             unsigned int uintBinarySize = (unsigned int)binarySize;
             sizeEncoder.encode(&uintBinarySize, 1);
         }

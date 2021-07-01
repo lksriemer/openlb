@@ -110,7 +110,6 @@ bool SuperLattice2D<T,Lattice>::get(T iX, T iY, Cell<T,Lattice>& cell) const {
     int locX, locY;
     bool found = false;
     int foundIC = 0;
-    Cell<T,Lattice> foundCell;
 
     for (int iC=0; iC<_cGeometry.get_nC(); iC++) {
         if(_cGeometry.get_cuboid(iC).checkPoint(iX, iY, locX, locY)) {
@@ -128,12 +127,12 @@ bool SuperLattice2D<T,Lattice>::get(T iX, T iY, Cell<T,Lattice>& cell) const {
                 _lattices[_load.loc(foundIC)].get(locX,locY).serialize(cellData);
             }
             singleton::mpi().bCast(cellData, sizeOfCell, _load.rank(foundIC));
-            foundCell.unSerialize(cellData);
+            cell.unSerialize(cellData);
             delete [] cellData;
         }
     #else
         if (found) {
-            foundCell = _lattices[_load.loc(foundIC)].get(locX,locY);
+            cell = _lattices[_load.loc(foundIC)].get(locX,locY);
         }
     #endif
 

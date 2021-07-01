@@ -79,13 +79,14 @@ void iniGeometry( SuperLattice2D<T,D2Q9Descriptor>& lattice,
 void writeVTK(SuperLattice2D<T,D2Q9Descriptor>& sLattice,
               LBunits<T> const& converter, int iter)
 {
-    vector<ScalarField2D<T> > scalar;
-    vector<TensorField2D<T,2> > tensor;
+    vector<const ScalarFieldBase2D<T>* > scalar;
+    vector<const TensorFieldBase2D<T,2>* > tensor;
 
     for (int iC=0; iC<sLattice.get_load().size(); iC++) {
-        BlockStatistics2D<T,D2Q9Descriptor> statistics(sLattice.get_lattice(iC));
-        scalar.push_back(statistics.getPressure() );
-        tensor.push_back(statistics.getVelocity() );
+        const TensorFieldBase2D<T,2>* velocity = &sLattice.get_lattice(iC).getDataAnalysis().getVelocity();
+        const ScalarFieldBase2D<T>* pressure = &sLattice.get_lattice(iC).getDataAnalysis().getPressure();
+        scalar.push_back( pressure );
+        tensor.push_back( velocity );
     }
 
     CuboidVTKout2D<T>::writeFlowField (

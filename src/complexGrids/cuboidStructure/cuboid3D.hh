@@ -261,8 +261,8 @@ void Cuboid3D<T>::divide(int p, std::vector<Cuboid3D<T> > &childrenC) const {
 
         // add in z than in y direction
         if (nZ>nY && nZ>nX) {
-        int restY = rest%bestIy;
 
+        int restY = rest%bestIy;
             // split in two cuboid
             if (restY==0) {
                 int restX = rest/bestIy;
@@ -337,7 +337,6 @@ void Cuboid3D<T>::divide(int p, std::vector<Cuboid3D<T> > &childrenC) const {
         // add in x than in y direction
         else if (nX>nY && nX>nZ) {
         int restY = rest%bestIy;
-
             // split in two cuboid
             if (restY==0) {
                 int restZ = rest/bestIy;
@@ -414,7 +413,6 @@ void Cuboid3D<T>::divide(int p, std::vector<Cuboid3D<T> > &childrenC) const {
         // add in y than in x direction
         else {
             int restX = rest%bestIx;
-
             // split in two cuboid
             if (restX==0) {
                 int restZ = rest/bestIx;
@@ -432,8 +430,8 @@ void Cuboid3D<T>::divide(int p, std::vector<Cuboid3D<T> > &childrenC) const {
                         T globPosZ_child = helpG.get_cuboid(iC).get_globPosX();
                         T globPosY_child = helpG.get_cuboid(iC).get_globPosY();
 
-                        Cuboid3D<T> child(globPosZ_child, globPosX_child, globPosY_child,
-                                   _delta, zN_child, xN_child, yN_child);
+                        Cuboid3D<T> child(globPosX_child, globPosY_child, globPosZ_child,
+                                   _delta, xN_child, yN_child, zN_child);
                         childrenC.push_back(child);
                     }
                     globPosX_child += xN_child*_delta;
@@ -451,14 +449,15 @@ void Cuboid3D<T>::divide(int p, std::vector<Cuboid3D<T> > &childrenC) const {
 
             for (int iX=0; iX<restX; iX++) {
                 xN_child         = (splited_nX+restX-iX-1)/restX;
+                std::cout <<"1:"<<xN_child<<std::endl;
                 for (int iC=0; iC<helpG0.get_nC(); iC++) {
                     int zN_child     = helpG0.get_cuboid(iC).get_nX();
                     int yN_child     = helpG0.get_cuboid(iC).get_nY();
                     T globPosZ_child = helpG0.get_cuboid(iC).get_globPosX();
                     T globPosY_child = helpG0.get_cuboid(iC).get_globPosY();
 
-                    Cuboid3D<T> child(globPosZ_child, globPosX_child, globPosY_child,
-                                   _delta, zN_child, xN_child, yN_child);
+                    Cuboid3D<T> child(globPosX_child, globPosY_child, globPosZ_child,
+                                   _delta, xN_child, yN_child, zN_child);
                     childrenC.push_back(child);
                 }
                 globPosX_child += xN_child*_delta;
@@ -471,14 +470,15 @@ void Cuboid3D<T>::divide(int p, std::vector<Cuboid3D<T> > &childrenC) const {
 
             for (int iX=0; iX<bestIx-restX; iX++) {
                 xN_child         = (splited_nX+bestIx-restX-iX-1)/(bestIx-restX);
+                std::cout <<"2:"<<xN_child<<std::endl;
                 for (int iC=0; iC<helpG1.get_nC(); iC++) {
                     int zN_child     = helpG1.get_cuboid(iC).get_nX();
                     int yN_child     = helpG1.get_cuboid(iC).get_nY();
                     T globPosZ_child = helpG1.get_cuboid(iC).get_globPosX();
                     T globPosY_child = helpG1.get_cuboid(iC).get_globPosY();
 
-                    Cuboid3D<T> child(globPosZ_child, globPosX_child, globPosY_child,
-                               _delta, zN_child, xN_child, yN_child);
+                    Cuboid3D<T> child(globPosX_child, globPosY_child, globPosZ_child,
+                                   _delta, xN_child, yN_child, zN_child);
                     childrenC.push_back(child);
                 }
                 globPosX_child += xN_child*_delta;

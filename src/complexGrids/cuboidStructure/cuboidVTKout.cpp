@@ -1,6 +1,6 @@
 /*  This file is part of the OpenLB library
  *
- *  Copyright (C) 2007 Mathias J. Krause, Jonas Latt
+ *  Copyright (C) 2007, 2009 Mathias J. Krause, Jonas Latt
  *  Address: Wilhelm-Maybach-Str. 24, 68766 Hockenheim, Germany 
  *  E-mail: mathias.j.krause@gmx.de
  *
