@@ -35,5 +35,4 @@
 namespace olb {
 
 template class SuperLattice3D<double, descriptors::D3Q19Descriptor>;
-
 }

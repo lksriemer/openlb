@@ -34,6 +34,7 @@ template <class T, unsigned DIM> class ADf;
 #include <iostream>
 #include <sstream>
 #include <map>
+#include <typeinfo>
 #define TIXML_USE_STL
 #include "external/tinyxml/tinyxml.h"
 #include "io/ostreamManager.h"
@@ -85,12 +86,14 @@ public:
   XMLreader const& operator[] (std::string name) const;
 
   /**
-   * Return an iterator for this level at the tree
+   * Returns an iterator.begin() of the child XMLreader
+   * This means an iterator to the next level on an XML tree.
    */
   std::vector<XMLreader*>::const_iterator begin() const;
 
   /**
-   * Return an iterator end element
+   * Returns an iterator.end() of the child XMLreader
+   * This means an iterator to the next level on an XML tree.
    */
   std::vector<XMLreader*>::const_iterator end() const;
 
@@ -111,30 +114,38 @@ public:
   std::string getAttribute(const std::string& aName) const;
 
 
+  /// print warning if verbose mode is on
+  void printWarning(std::string typeName, std::string value, bool verboseOn) const;
+
+
 private:
   void mainProcessorIni(TiXmlNode* pParent);
   void slaveProcessorIni();
   XMLreader();
 private:
-  mutable bool warningsOn;
-  std::string text;
-  std::string name;
-  static XMLreader notFound;
+  mutable bool _warningsOn;
+  std::string _text;
+  std::string _name;
+  static XMLreader _notFound;
 protected:
   mutable OstreamManager clout;
-  std::map<std::string, std::string> attributes;
-  std::vector<XMLreader*> children;
+  std::map<std::string, std::string> _attributes;
+  std::vector<XMLreader*> _children;
 };
+
+// methods with template
 
 #ifdef ADT
 template <typename T, unsigned DIM>
-bool XMLreader::read(ADf<T,DIM>& value, bool verboseOn) const {
-  std::stringstream valueStr(text);
+bool XMLreader::read(ADf<T,DIM>& value, bool verboseOn) const
+{
+  std::stringstream valueStr(_text);
   T tmp = T();
   if (!(valueStr >> tmp)) {
-    if ( verboseOn ) {
-      clout << std::string("Error: cannot read value from XML element ") << name << std::endl;
-    }
+//    if ( _verboseOn ) {
+//      clout << std::string("Error: cannot read value from XML element ") << _name << std::endl;
+//    }
+    printWarning("ADf vector", "", verboseOn);
     return false;
   }
   value = ADf<T,DIM>(tmp);
@@ -143,17 +154,19 @@ bool XMLreader::read(ADf<T,DIM>& value, bool verboseOn) const {
 #endif
 
 template <typename T>
-bool XMLreader::read(std::vector<T>& values, bool verboseOn) const {
-  std::stringstream multiValueStr(text);
+bool XMLreader::read(std::vector<T>& values, bool verboseOn) const
+{
+  std::stringstream multiValueStr(_text);
   std::string word;
   std::vector<T> tmp(values);
   while (multiValueStr>>word) {
     std::stringstream valueStr(word);
     T value;
     if (!(valueStr >> value)) {
-      if ( verboseOn ) {
-        clout << std::string("Error: cannot read value array from XML element ") << name << std::endl;
-      }
+//      if ( verboseOn ) {
+//        clout << std::string("Error: cannot read value array from XML element ") << _name << std::endl;
+//      }
+      printWarning("std::vector", "", verboseOn);
       return false;
     }
     tmp.push_back(value);
@@ -163,13 +176,15 @@ bool XMLreader::read(std::vector<T>& values, bool verboseOn) const {
 }
 
 template <typename T>
-T XMLreader::get(bool verboseOn) const {
-  std::stringstream valueStr(text);
+T XMLreader::get(bool verboseOn) const
+{
+  std::stringstream valueStr(_text);
   T tmp = T();
   if (!(valueStr >> tmp)) {
-    if ( verboseOn ) {
-      clout << "Error: cannot read value from XML element " << name << std::endl;
-    }
+//    if ( verboseOn ) {
+//      clout << "Error: cannot read value from XML element " << _name << std::endl;
+//    }
+    printWarning(typeid(T).name(), "", verboseOn);
   }
   return tmp;
 }

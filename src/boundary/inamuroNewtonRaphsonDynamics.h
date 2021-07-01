@@ -37,8 +37,7 @@ namespace olb {
  * implement these boundary conditions.
 */
 template<typename T, template<typename U> class Lattice, typename Dynamics, int direction, int orientation>
-class InamuroNewtonRaphsonDynamics : public BasicDynamics<T,Lattice>
-{
+class InamuroNewtonRaphsonDynamics : public BasicDynamics<T,Lattice> {
 public:
   /// Constructor
   InamuroNewtonRaphsonDynamics(T omega_, Momenta<T,Lattice>& momenta_);

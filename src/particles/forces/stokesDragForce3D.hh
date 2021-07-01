@@ -1,0 +1,102 @@
+/*  This file is part of the OpenLB library
+ *
+ *  Copyright (C) 2016 Thomas Henn
+ *  E-mail contact: info@openlb.net
+ *  The most recent release of OpenLB can be downloaded at
+ *  <http://www.openlb.net/>
+ *
+ *  This program is free software; you can redistribute it and/or
+ *  modify it under the terms of the GNU General Public License
+ *  as published by the Free Software Foundation; either version 2
+ *  of the License, or (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public
+ *  License along with this program; if not, write to the Free
+ *  Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+ *  Boston, MA  02110-1301, USA.
+ */
+
+#ifndef STOKESDRAGFORCE_3D_HH
+#define STOKESDRAGFORCE_3D_HH
+
+#include<cmath>
+#include "stokesDragForce3D.h"
+
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+
+namespace olb {
+
+template<typename T, template<typename U> class PARTICLETYPE, template<typename W> class DESCRIPTOR>
+StokesDragForce3D<T, PARTICLETYPE, DESCRIPTOR>::StokesDragForce3D(SuperLatticeInterpPhysVelocity3D<T, DESCRIPTOR>& getVel, T dT, T mu)
+  : Force3D<T, PARTICLETYPE>(),
+    _getVel(getVel),
+    _mu(mu)
+{
+  _C1 = 6. * M_PI * _mu * dT;
+  _dTinv = 1. / dT;
+}
+
+template<typename T, template<typename U> class PARTICLETYPE, template<typename W> class DESCRIPTOR>
+StokesDragForce3D<T, PARTICLETYPE, DESCRIPTOR>::StokesDragForce3D(SuperLatticeInterpPhysVelocity3D<T, DESCRIPTOR>& getVel, LBconverter<T> const& converter)
+  : Force3D<T, PARTICLETYPE>(),
+    _getVel(getVel)
+{
+  _C1 = 6. * M_PI * converter.getDynamicViscosity() * converter.physTime();
+  _dTinv = 1. / converter.physTime();
+}
+
+/// 6 Pi r mu U_rel
+template<typename T, template<typename U> class PARTICLETYPE, template<typename W> class DESCRIPTOR>
+void StokesDragForce3D<T, PARTICLETYPE, DESCRIPTOR>::applyForce(
+  typename std::deque<PARTICLETYPE<T> >::iterator p, int pInt,
+  ParticleSystem3D<T, PARTICLETYPE>& psSys)
+{
+  T fluidVel[3] = {0.,0.,0.};
+
+  _getVel(fluidVel, &p->getPos()[0], p->getCuboid());
+
+  T c = _C1 * p->getRad() * p->getInvMass();
+  T C2 = 1. / (1. + c);
+
+  // p->getVel() is particle velocity of the last time step
+  // formulation of new force with particle velocity of the last time step with
+  // implicit Euler
+  p->getForce()[0] += p->getMass() * _dTinv
+                      * ((c * fluidVel[0] + p->getVel()[0]) * C2 - p->getVel()[0]);
+  p->getForce()[1] += p->getMass() * _dTinv
+                      * ((c * fluidVel[1] + p->getVel()[1]) * C2 - p->getVel()[1]);
+  p->getForce()[2] += p->getMass() * _dTinv
+                      * ((c * fluidVel[2] + p->getVel()[2]) * C2 - p->getVel()[2]);
+
+}
+
+template<typename T, template<typename U> class PARTICLETYPE, template<typename W> class DESCRIPTOR>
+void StokesDragForce3D<T, PARTICLETYPE, DESCRIPTOR>::computeForce(
+  int pInt, ParticleSystem3D<T, PARTICLETYPE>& psSys, T force[3])
+{
+  T fluidVel[3] = {0.,0.,0.};
+
+  _getVel(fluidVel, &psSys[pInt].getPos()[0], psSys[pInt].getCuboid());
+
+  T c = _C1 * psSys[pInt].getRad() * psSys[pInt].getInvMass();
+  T C2 = 1. / (1. + c);
+  force[0] = psSys[pInt].getMass() * _dTinv
+             * ((c * fluidVel[0] + psSys[pInt].getVel()[0]) * C2
+                - psSys[pInt].getVel()[0]);
+  force[1] = psSys[pInt].getMass() * _dTinv
+             * ((c * fluidVel[1] + psSys[pInt].getVel()[1]) * C2
+                - psSys[pInt].getVel()[1]);
+  force[2] = psSys[pInt].getMass() * _dTinv
+             * ((c * fluidVel[2] + psSys[pInt].getVel()[2]) * C2
+                - psSys[pInt].getVel()[2]);
+}
+
+}
+#endif /* STOKESDRAGFORCE_3D_HH */

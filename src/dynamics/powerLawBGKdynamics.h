@@ -40,7 +40,8 @@ template<typename T, template<typename U> class Lattice>
 class PowerLawBGKdynamics : public BGKdynamics<T,Lattice> {
 public:
   /// Constructor
-  PowerLawBGKdynamics(T omega_, Momenta<T,Lattice>& momenta_, T m_=0.1, T n_=.5, T dt_=T(0.0016/*0.0016/4.*/));
+  /// m,n...parameter in the power law model, dt...the explizit typed time step from LBM model
+  PowerLawBGKdynamics(T omega_, Momenta<T,Lattice>& momenta_, T m_=0.1, T n_=.5, T dt_=T(0.0016));
 
   /// Collision step
   virtual void collide(Cell<T,Lattice>& cell,
@@ -75,7 +76,8 @@ template<typename T, template<typename U> class Lattice>
 class PowerLawForcedBGKdynamics : public BGKdynamics<T,Lattice> {
 public:
   /// Constructor
-  PowerLawForcedBGKdynamics(T omega_, Momenta<T,Lattice>& momenta_, T m_=0.1, T n_=.5, T dt_=T(0.0004));
+  /// m,n...parameter in the power law model, dt...the explizit typed time step from LBM model
+  PowerLawForcedBGKdynamics(T omega_, Momenta<T,Lattice>& momenta_, T m_=0.1, T n_=.5, T dt_=T(0.0016));
 
   /// Collision step
   virtual void collide(Cell<T,Lattice>& cell,

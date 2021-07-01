@@ -25,59 +25,135 @@
 #ifndef LOAD_BALANCER_HH
 #define LOAD_BALANCER_HH
 
-#include <vector>
-#include <map>
 #include "communication/loadBalancer.h"
-#include "core/olbDebug.h"
 
 namespace olb {
 
+
 template<typename T>
-int LoadBalancer<T>::loc(const int& glob) {
+LoadBalancer<T>::LoadBalancer(int size) : _size(size)
+{}
+
+template<typename T>
+LoadBalancer<T>::LoadBalancer(int size, std::map<int,int>& loc, std::vector<int>& glob, std::map<int,int>& rank)
+  : _size(size), _loc(loc), _glob(glob), _rank(rank)
+{}
+
+template<typename T>
+LoadBalancer<T>::~LoadBalancer()
+{}
+
+template<typename T>
+void LoadBalancer<T>::swap(LoadBalancer<T>& loadBalancer)
+{
+  std::swap(_size, loadBalancer._size);
+  _loc.swap(loadBalancer._loc);
+  _glob.swap(loadBalancer._glob);
+  _rank.swap(loadBalancer._rank);
+}
+
+template<typename T>
+int LoadBalancer<T>::loc(const int& glob)
+{
   return _loc[glob];
 }
 
 template<typename T>
-int LoadBalancer<T>::loc(int glob) const {
+int LoadBalancer<T>::loc(int glob) const
+{
   std::map<int,int>::const_iterator iter = _loc.find(glob);
   return iter->second;
 }
 
 template<typename T>
-int LoadBalancer<T>::glob(int loc) const {
+int LoadBalancer<T>::glob(int loc) const
+{
   return _glob[loc];
 }
 
 template<typename T>
-int LoadBalancer<T>::rank(const int& glob) {
+int LoadBalancer<T>::rank(const int& glob)
+{
   return _rank[glob];
 }
 
 template<typename T>
-int LoadBalancer<T>::rank(int glob) const {
+int LoadBalancer<T>::rank(int glob) const
+{
   std::map<int,int>::const_iterator iter = _rank.find(glob);
   return iter->second;
 }
 
 template<typename T>
-int LoadBalancer<T>::size() const {
+int LoadBalancer<T>::size() const
+{
   return _size;
 }
 
 template<typename T>
-void LoadBalancer<T>::print() const {
+bool LoadBalancer<T>::operator==(const LoadBalancer<T>& rhs) const
+{
+  return _size == rhs._size &&
+         _loc == rhs._loc &&
+         _glob == rhs._glob &&
+         _rank == rhs._rank;
+}
+
+
+template<typename T>
+size_t LoadBalancer<T>::getNblock() const
+{
+  return   4     // _size, plus vector length of _loc, _glob and _rank
+           + _loc.size()
+           + _rank.size()
+           + _glob.size();
+}
+
+
+template<typename T>
+size_t LoadBalancer<T>::getSerializableSize() const
+{
+  return   sizeof(int)         // _size
+           + 3 * sizeof(size_t)  // vector length of _loc, _glob and _rank
+           + _loc.size() * sizeof(std::pair<int, int>)
+           + _rank.size() * sizeof(std::pair<int, int>)
+           + _glob.size() * sizeof(int);
+}
+
+
+template<typename T>
+bool* LoadBalancer<T>::getBlock(std::size_t iBlock, std::size_t& sizeBlock, bool loadingMode)
+{
+  std::size_t currentBlock = 0;
+  size_t sizeBufferIndex = 0;
+  bool* dataPtr = nullptr;
+
+  this->registerVar<int>            (iBlock, sizeBlock, currentBlock, dataPtr, _size);
+  this->registerMap<int, int>       (iBlock, sizeBlock, currentBlock, sizeBufferIndex, dataPtr, _loc, loadingMode);
+  this->registerStdVectorOfVars<int>(iBlock, sizeBlock, currentBlock, sizeBufferIndex, dataPtr, _glob, loadingMode);
+  this->registerMap<int, int>       (iBlock, sizeBlock, currentBlock, sizeBufferIndex, dataPtr, _rank, loadingMode);
+
+  return dataPtr;
+}
+
+
+template<typename T>
+void LoadBalancer<T>::print(bool multiOutput) const
+{
   OstreamManager clout(std::cout,"LoadBalancer");
-  for(unsigned i = 0; i < this->_glob.size(); i++) {
+  clout.setMultiOutput(multiOutput);
+  for (unsigned i = 0; i < this->_glob.size(); i++) {
     clout << "glob[" << i << "]=" << this->_glob[i] << std::endl;
   }
-  for(std::map<int,int>::const_iterator it = this->_loc.begin(); it != this->_loc.end();
-      it++) {
+  for (auto it = this->_loc.cbegin(); it != this->_loc.cend();
+       it++) {
     clout << "loc[" << (*it).first << "]=" << (*it).second << std::endl;
   }
-  for(std::map<int,int>::const_iterator it = this->_rank.begin(); it != this->_rank.end();
-      it++) {
+  for (auto it = this->_rank.cbegin(); it != this->_rank.cend();
+       it++) {
     clout << "rank[" << (*it).first << "]=" << (*it).second << std::endl;
   }
+  clout.setMultiOutput(false);
 }
 
 

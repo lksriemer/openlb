@@ -32,10 +32,15 @@
 
 namespace olb {
 namespace descriptors {
-template class D2Q9DescriptorBase<double>;
-template class D2Q9Descriptor<double>;
-template class D3Q19DescriptorBase<double>;
-template class D3Q19Descriptor<double>;
+//template class DescriptorBase<1>;
+//template class DescriptorBase<2>;
+//template class DescriptorBase<3>;
+//template class DescriptorBase<9>;
+//template class DescriptorBase<19>;
+template struct D2Q9DescriptorBase<double>;
+template struct D2Q9Descriptor<double>;
+template struct D3Q19DescriptorBase<double>;
+template struct D3Q19Descriptor<double>;
 }
 }
 

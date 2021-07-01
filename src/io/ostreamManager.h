@@ -78,8 +78,7 @@ A call of the function showOutput() will show in terminal:
 </pre>
 Please note, that the control character <b>\\n</b> - in contrast to std::endl - will not force a flush of the outstream. As consequence, the new line won't be prefixed with a user specified text. Other control character might not work either (untested).
 */
-class OstreamManager : public std::ostream
-{
+class OstreamManager : public std::ostream {
 private:
   // OstreamManager clout should use it's own special buffer
   /// special, overloaded buffer

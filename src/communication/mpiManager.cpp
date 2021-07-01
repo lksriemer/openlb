@@ -25,7 +25,9 @@
 #ifdef PARALLEL_MODE_MPI
 
 #include "communication/mpiManager.h"
+#include "core/blockData2D.h"
 #include <iostream>
+#include <algorithm>
 
 namespace olb {
 
@@ -34,14 +36,16 @@ namespace singleton {
 MpiManager::MpiManager() : ok(false), clout(std::cout,"MpiManager")
 { }
 
-MpiManager::~MpiManager() {
+MpiManager::~MpiManager()
+{
   if (ok) {
     MPI_Finalize();
     ok = false;
   }
 }
 
-void MpiManager::init(int *argc, char ***argv) {
+void MpiManager::init(int *argc, char ***argv)
+{
 
   int ok1 = MPI_Init(argc, argv);
   int ok2 = MPI_Comm_rank(MPI_COMM_WORLD,&taskId);
@@ -50,59 +54,84 @@ void MpiManager::init(int *argc, char ***argv) {
   clout << "Sucessfully initialized, numThreads=" << getSize() << std::endl;
 }
 
-int MpiManager::getSize() const {
+int MpiManager::getSize() const
+{
   return numTasks;
 }
 
-int MpiManager::getRank() const {
+int MpiManager::getRank() const
+{
   return taskId;
 }
 
-int MpiManager::bossId() const {
+int MpiManager::bossId() const
+{
   return 0;
 }
 
-bool MpiManager::isMainProcessor() const {
+bool MpiManager::isMainProcessor() const
+{
   return bossId() == getRank();
 }
 
-double MpiManager::getTime() const {
-  if (!ok) return 0.;
+double MpiManager::getTime() const
+{
+  if (!ok) {
+    return 0.;
+  }
   return MPI_Wtime();
 }
 
-void MpiManager::barrier(MPI_Comm comm) {
-  if (!ok) return;
+void MpiManager::barrier(MPI_Comm comm)
+{
+  if (!ok) {
+    return;
+  }
   MPI_Barrier(comm);
 }
 
 template <>
-void MpiManager::send<bool>(bool *buf, int count, int dest, int tag, MPI_Comm comm) {
-  if (!ok) return;
+void MpiManager::send<bool>(bool *buf, int count, int dest, int tag, MPI_Comm comm)
+{
+  if (!ok) {
+    return;
+  }
   MPI_Send(static_cast<void*>(buf), count, MPI_BYTE, dest, tag, comm);
 }
 
 template <>
-void MpiManager::send<char>(char *buf, int count, int dest, int tag, MPI_Comm comm) {
-  if (!ok) return;
+void MpiManager::send<char>(char *buf, int count, int dest, int tag, MPI_Comm comm)
+{
+  if (!ok) {
+    return;
+  }
   MPI_Send(static_cast<void*>(buf), count, MPI_CHAR, dest, tag, comm);
 }
 
 template <>
-void MpiManager::send<int>(int *buf, int count, int dest, int tag, MPI_Comm comm) {
-  if (!ok) return;
+void MpiManager::send<int>(int *buf, int count, int dest, int tag, MPI_Comm comm)
+{
+  if (!ok) {
+    return;
+  }
   MPI_Send(static_cast<void*>(buf), count, MPI_INT, dest, tag, comm);
 }
 
 template <>
-void MpiManager::send<float>(float *buf, int count, int dest, int tag, MPI_Comm comm) {
-  if (!ok) return;
+void MpiManager::send<float>(float *buf, int count, int dest, int tag, MPI_Comm comm)
+{
+  if (!ok) {
+    return;
+  }
   MPI_Send(static_cast<void*>(buf), count, MPI_FLOAT, dest, tag, comm);
 }
 
 template <>
-void MpiManager::send<double>(double *buf, int count, int dest, int tag, MPI_Comm comm) {
-  if (!ok) return;
+void MpiManager::send<double>(double *buf, int count, int dest, int tag, MPI_Comm comm)
+{
+  if (!ok) {
+    return;
+  }
   MPI_Send(static_cast<void*>(buf), count, MPI_DOUBLE, dest, tag, comm);
 }
 
@@ -150,6 +179,53 @@ void MpiManager::iSend<double>
     MPI_Isend(static_cast<void*>(buf), count, MPI_DOUBLE, dest, tag, comm, request);
   }
 }
+
+
+template <>
+void MpiManager::ibSend<bool>
+(bool *buf, int count, int dest, MPI_Request* request, int tag, MPI_Comm comm)
+{
+  if (ok) {
+    MPI_Ibsend(static_cast<void*>(buf), count, MPI_BYTE, dest, tag, comm, request);
+  }
+}
+
+template <>
+void MpiManager::ibSend<char>
+(char *buf, int count, int dest, MPI_Request* request, int tag, MPI_Comm comm)
+{
+  if (ok) {
+    MPI_Ibsend(static_cast<void*>(buf), count, MPI_CHAR, dest, tag, comm, request);
+  }
+}
+
+template <>
+void MpiManager::ibSend<int>
+(int *buf, int count, int dest, MPI_Request* request, int tag, MPI_Comm comm)
+{
+  if (ok) {
+    MPI_Ibsend(static_cast<void*>(buf), count, MPI_INT, dest, tag, comm, request);
+  }
+}
+
+template <>
+void MpiManager::ibSend<float>
+(float *buf, int count, int dest, MPI_Request* request, int tag, MPI_Comm comm)
+{
+  if (ok) {
+    MPI_Ibsend(static_cast<void*>(buf), count, MPI_FLOAT, dest, tag, comm, request);
+  }
+}
+
+template <>
+void MpiManager::ibSend<double>
+(double *buf, int count, int dest, MPI_Request* request, int tag, MPI_Comm comm)
+{
+  if (ok) {
+    MPI_Ibsend(static_cast<void*>(buf), count, MPI_DOUBLE, dest, tag, comm, request);
+  }
+}
+
 
 template <>
 void MpiManager::iSendRequestFree<bool>
@@ -209,7 +285,9 @@ void MpiManager::iSendRequestFree<double>
 template <>
 void MpiManager::receive<bool>(bool *buf, int count, int source, int tag, MPI_Comm comm)
 {
-  if (!ok) return;
+  if (!ok) {
+    return;
+  }
   MPI_Status status;
   MPI_Recv(static_cast<void*>(buf), count, MPI_BYTE, source, tag, comm, &status);
 }
@@ -218,7 +296,9 @@ void MpiManager::receive<bool>(bool *buf, int count, int source, int tag, MPI_Co
 template <>
 void MpiManager::receive<char>(char *buf, int count, int source, int tag, MPI_Comm comm)
 {
-  if (!ok) return;
+  if (!ok) {
+    return;
+  }
   MPI_Status status;
   MPI_Recv(static_cast<void*>(buf), count, MPI_CHAR, source, tag, comm, &status);
 }
@@ -226,7 +306,9 @@ void MpiManager::receive<char>(char *buf, int count, int source, int tag, MPI_Co
 template <>
 void MpiManager::receive<int>(int *buf, int count, int source, int tag, MPI_Comm comm)
 {
-  if (!ok) return;
+  if (!ok) {
+    return;
+  }
   MPI_Status status;
   MPI_Recv(static_cast<void*>(buf), count, MPI_INT, source, tag, comm, &status);
 }
@@ -234,7 +316,9 @@ void MpiManager::receive<int>(int *buf, int count, int source, int tag, MPI_Comm
 template <>
 void MpiManager::receive<float>(float *buf, int count, int source, int tag, MPI_Comm comm)
 {
-  if (!ok) return;
+  if (!ok) {
+    return;
+  }
   MPI_Status status;
   MPI_Recv(static_cast<void*>(buf), count, MPI_FLOAT, source, tag, comm, &status);
 }
@@ -242,7 +326,9 @@ void MpiManager::receive<float>(float *buf, int count, int source, int tag, MPI_
 template <>
 void MpiManager::receive<double>(double *buf, int count, int source, int tag, MPI_Comm comm)
 {
-  if (!ok) return;
+  if (!ok) {
+    return;
+  }
   MPI_Status status;
   MPI_Recv(static_cast<void*>(buf), count, MPI_DOUBLE, source, tag, comm, &status);
 }
@@ -250,7 +336,9 @@ void MpiManager::receive<double>(double *buf, int count, int source, int tag, MP
 template <>
 void MpiManager::sendToMaster<bool>(bool* sendBuf, int sendCount, bool iAmRoot, MPI_Comm comm)
 {
-  if (!ok) return;
+  if (!ok) {
+    return;
+  }
   if (iAmRoot && !isMainProcessor()) {
     send(sendBuf, sendCount, 0);
   }
@@ -262,7 +350,9 @@ void MpiManager::sendToMaster<bool>(bool* sendBuf, int sendCount, bool iAmRoot, 
 template <>
 void MpiManager::sendToMaster<char>(char* sendBuf, int sendCount, bool iAmRoot, MPI_Comm comm)
 {
-  if (!ok) return;
+  if (!ok) {
+    return;
+  }
   if (iAmRoot && !isMainProcessor()) {
     send(sendBuf, sendCount, 0);
   }
@@ -274,7 +364,9 @@ void MpiManager::sendToMaster<char>(char* sendBuf, int sendCount, bool iAmRoot, 
 template <>
 void MpiManager::sendToMaster<int>(int* sendBuf, int sendCount, bool iAmRoot, MPI_Comm comm)
 {
-  if (!ok) return;
+  if (!ok) {
+    return;
+  }
   if (iAmRoot && !isMainProcessor()) {
     send(sendBuf, sendCount, 0);
   }
@@ -286,7 +378,9 @@ void MpiManager::sendToMaster<int>(int* sendBuf, int sendCount, bool iAmRoot, MP
 template <>
 void MpiManager::sendToMaster<float>(float* sendBuf, int sendCount, bool iAmRoot, MPI_Comm comm)
 {
-  if (!ok) return;
+  if (!ok) {
+    return;
+  }
   if (iAmRoot && !isMainProcessor()) {
     send(sendBuf, sendCount, 0);
   }
@@ -298,7 +392,9 @@ void MpiManager::sendToMaster<float>(float* sendBuf, int sendCount, bool iAmRoot
 template <>
 void MpiManager::sendToMaster<double>(double* sendBuf, int sendCount, bool iAmRoot, MPI_Comm comm)
 {
-  if (!ok) return;
+  if (!ok) {
+    return;
+  }
   if (iAmRoot && !isMainProcessor()) {
     send(sendBuf, sendCount, 0);
   }
@@ -351,7 +447,9 @@ template <>
 void MpiManager::sendRecv<bool>
 (bool *sendBuf, bool *recvBuf, int count, int dest, int source, int tag, MPI_Comm comm)
 {
-  if (!ok) return;
+  if (!ok) {
+    return;
+  }
   MPI_Status status;
   MPI_Sendrecv(static_cast<void*>(sendBuf),
                count,
@@ -365,7 +463,9 @@ template <>
 void MpiManager::sendRecv<char>
 (char *sendBuf, char *recvBuf, int count, int dest, int source, int tag, MPI_Comm comm)
 {
-  if (!ok) return;
+  if (!ok) {
+    return;
+  }
   MPI_Status status;
   MPI_Sendrecv(static_cast<void*>(sendBuf),
                count,
@@ -379,7 +479,9 @@ template <>
 void MpiManager::sendRecv<int>
 (int *sendBuf, int *recvBuf, int count, int dest, int source, int tag, MPI_Comm comm)
 {
-  if (!ok) return;
+  if (!ok) {
+    return;
+  }
   MPI_Status status;
   MPI_Sendrecv(static_cast<void*>(sendBuf),
                count,
@@ -393,7 +495,9 @@ template <>
 void MpiManager::sendRecv<float>
 (float *sendBuf, float *recvBuf, int count, int dest, int source, int tag, MPI_Comm comm)
 {
-  if (!ok) return;
+  if (!ok) {
+    return;
+  }
   MPI_Status status;
   MPI_Sendrecv(static_cast<void*>(sendBuf),
                count,
@@ -407,7 +511,9 @@ template <>
 void MpiManager::sendRecv<double>
 (double *sendBuf, double *recvBuf, int count, int dest, int source, int tag, MPI_Comm comm)
 {
-  if (!ok) return;
+  if (!ok) {
+    return;
+  }
   MPI_Status status;
   MPI_Sendrecv(static_cast<void*>(sendBuf),
                count,
@@ -421,7 +527,9 @@ template <>
 void MpiManager::scatterv_impl<bool>(bool* sendBuf, int* sendCounts, int* displs,
                                      bool* recvBuf, int recvCount, int root, MPI_Comm comm)
 {
-  if (!ok) return;
+  if (!ok) {
+    return;
+  }
   MPI_Scatterv(static_cast<void*>(sendBuf),
                sendCounts, displs, MPI_BYTE,
                static_cast<void*>(recvBuf),
@@ -432,7 +540,9 @@ template <>
 void MpiManager::scatterv_impl<char>(char* sendBuf, int* sendCounts, int* displs,
                                      char* recvBuf, int recvCount, int root, MPI_Comm comm)
 {
-  if (!ok) return;
+  if (!ok) {
+    return;
+  }
   MPI_Scatterv(static_cast<void*>(sendBuf),
                sendCounts, displs, MPI_CHAR,
                static_cast<void*>(recvBuf),
@@ -443,7 +553,9 @@ template <>
 void MpiManager::scatterv_impl<int>(int *sendBuf, int* sendCounts, int* displs,
                                     int* recvBuf, int recvCount, int root, MPI_Comm comm)
 {
-  if (!ok) return;
+  if (!ok) {
+    return;
+  }
   MPI_Scatterv(static_cast<void*>(sendBuf),
                sendCounts, displs, MPI_INT,
                static_cast<void*>(recvBuf),
@@ -454,7 +566,9 @@ template <>
 void MpiManager::scatterv_impl<float>(float *sendBuf, int* sendCounts, int* displs,
                                       float* recvBuf, int recvCount, int root, MPI_Comm comm)
 {
-  if (!ok) return;
+  if (!ok) {
+    return;
+  }
   MPI_Scatterv(static_cast<void*>(sendBuf),
                sendCounts, displs, MPI_FLOAT,
                static_cast<void*>(recvBuf),
@@ -465,7 +579,9 @@ template <>
 void MpiManager::scatterv_impl<double>(double *sendBuf, int* sendCounts, int* displs,
                                        double* recvBuf, int recvCount, int root, MPI_Comm comm)
 {
-  if (!ok) return;
+  if (!ok) {
+    return;
+  }
   MPI_Scatterv(static_cast<void*>(sendBuf),
                sendCounts, displs, MPI_DOUBLE,
                static_cast<void*>(recvBuf),
@@ -477,7 +593,9 @@ void MpiManager::gatherv_impl<bool>(bool* sendBuf, int sendCount,
                                     bool* recvBuf, int* recvCounts, int* displs,
                                     int root, MPI_Comm comm)
 {
-  if (!ok) return;
+  if (!ok) {
+    return;
+  }
   MPI_Gatherv(static_cast<void*>(sendBuf), sendCount, MPI_BYTE,
               static_cast<void*>(recvBuf), recvCounts, displs, MPI_BYTE,
               root, comm);
@@ -488,7 +606,9 @@ void MpiManager::gatherv_impl<char>(char* sendBuf, int sendCount,
                                     char* recvBuf, int* recvCounts, int* displs,
                                     int root, MPI_Comm comm)
 {
-  if (!ok) return;
+  if (!ok) {
+    return;
+  }
   MPI_Gatherv(static_cast<void*>(sendBuf), sendCount, MPI_CHAR,
               static_cast<void*>(recvBuf), recvCounts, displs, MPI_CHAR,
               root, comm);
@@ -499,7 +619,9 @@ void MpiManager::gatherv_impl<int>(int* sendBuf, int sendCount,
                                    int* recvBuf, int* recvCounts, int* displs,
                                    int root, MPI_Comm comm)
 {
-  if (!ok) return;
+  if (!ok) {
+    return;
+  }
   MPI_Gatherv(static_cast<void*>(sendBuf), sendCount, MPI_INT,
               static_cast<void*>(recvBuf), recvCounts, displs, MPI_INT,
               root, comm);
@@ -510,7 +632,9 @@ void MpiManager::gatherv_impl<float>(float* sendBuf, int sendCount,
                                      float* recvBuf, int* recvCounts, int* displs,
                                      int root, MPI_Comm comm)
 {
-  if (!ok) return;
+  if (!ok) {
+    return;
+  }
   MPI_Gatherv(static_cast<void*>(sendBuf), sendCount, MPI_FLOAT,
               static_cast<void*>(recvBuf), recvCounts, displs, MPI_FLOAT,
               root, comm);
@@ -521,7 +645,9 @@ void MpiManager::gatherv_impl<double>(double* sendBuf, int sendCount,
                                       double* recvBuf, int* recvCounts, int* displs,
                                       int root, MPI_Comm comm)
 {
-  if (!ok) return;
+  if (!ok) {
+    return;
+  }
   MPI_Gatherv(static_cast<void*>(sendBuf), sendCount, MPI_DOUBLE,
               static_cast<void*>(recvBuf), recvCounts, displs, MPI_DOUBLE,
               root, comm);
@@ -530,7 +656,9 @@ void MpiManager::gatherv_impl<double>(double* sendBuf, int sendCount,
 template <>
 void MpiManager::bCast<bool>(bool* sendBuf, int sendCount, int root, MPI_Comm comm)
 {
-  if (!ok) return;
+  if (!ok) {
+    return;
+  }
   MPI_Bcast(static_cast<void*>(sendBuf),
             sendCount, MPI_BYTE, root, comm);
 }
@@ -538,7 +666,9 @@ void MpiManager::bCast<bool>(bool* sendBuf, int sendCount, int root, MPI_Comm co
 template <>
 void MpiManager::bCast<char>(char* sendBuf, int sendCount, int root, MPI_Comm comm)
 {
-  if (!ok) return;
+  if (!ok) {
+    return;
+  }
   MPI_Bcast(static_cast<void*>(sendBuf),
             sendCount, MPI_CHAR, root, comm);
 }
@@ -546,7 +676,9 @@ void MpiManager::bCast<char>(char* sendBuf, int sendCount, int root, MPI_Comm co
 template <>
 void MpiManager::bCast<int>(int* sendBuf, int sendCount, int root, MPI_Comm comm)
 {
-  if (!ok) return;
+  if (!ok) {
+    return;
+  }
   MPI_Bcast(static_cast<void*>(sendBuf),
             sendCount, MPI_INT, root, comm);
 }
@@ -554,7 +686,9 @@ void MpiManager::bCast<int>(int* sendBuf, int sendCount, int root, MPI_Comm comm
 template <>
 void MpiManager::bCast<float>(float* sendBuf, int sendCount, int root, MPI_Comm comm)
 {
-  if (!ok) return;
+  if (!ok) {
+    return;
+  }
   MPI_Bcast(static_cast<void*>(sendBuf),
             sendCount, MPI_FLOAT, root, comm);
 }
@@ -562,7 +696,9 @@ void MpiManager::bCast<float>(float* sendBuf, int sendCount, int root, MPI_Comm 
 template <>
 void MpiManager::bCast<double>(double* sendBuf, int sendCount, int root, MPI_Comm comm)
 {
-  if (!ok) return;
+  if (!ok) {
+    return;
+  }
   MPI_Bcast(static_cast<void*>(sendBuf),
             sendCount, MPI_DOUBLE, root, comm);
 }
@@ -570,7 +706,9 @@ void MpiManager::bCast<double>(double* sendBuf, int sendCount, int root, MPI_Com
 template <>
 void MpiManager::bCast<std::string>(std::string* sendBuf, int sendCount, int root, MPI_Comm comm)
 {
-  if (!ok) return;
+  if (!ok) {
+    return;
+  }
   int length = (int) sendBuf->size();
   MPI_Bcast(static_cast<void*>(&length), 1, MPI_INT, root, comm);
   char* buffer = new char[length+1];
@@ -587,7 +725,9 @@ void MpiManager::bCast<std::string>(std::string* sendBuf, int sendCount, int roo
 template <>
 void MpiManager::bCastThroughMaster<bool>(bool* sendBuf, int sendCount, bool iAmRoot, MPI_Comm comm)
 {
-  if (!ok) return;
+  if (!ok) {
+    return;
+  }
   if (iAmRoot && !isMainProcessor()) {
     send(sendBuf, sendCount, 0);
   }
@@ -600,7 +740,9 @@ void MpiManager::bCastThroughMaster<bool>(bool* sendBuf, int sendCount, bool iAm
 template <>
 void MpiManager::bCastThroughMaster<char>(char* sendBuf, int sendCount, bool iAmRoot, MPI_Comm comm)
 {
-  if (!ok) return;
+  if (!ok) {
+    return;
+  }
   if (iAmRoot && !isMainProcessor()) {
     send(sendBuf, sendCount, 0);
   }
@@ -613,7 +755,9 @@ void MpiManager::bCastThroughMaster<char>(char* sendBuf, int sendCount, bool iAm
 template <>
 void MpiManager::bCastThroughMaster<int>(int* sendBuf, int sendCount, bool iAmRoot, MPI_Comm comm)
 {
-  if (!ok) return;
+  if (!ok) {
+    return;
+  }
   if (iAmRoot && !isMainProcessor()) {
     send(sendBuf, sendCount, 0);
   }
@@ -626,7 +770,9 @@ void MpiManager::bCastThroughMaster<int>(int* sendBuf, int sendCount, bool iAmRo
 template <>
 void MpiManager::bCastThroughMaster<float>(float* sendBuf, int sendCount, bool iAmRoot, MPI_Comm comm)
 {
-  if (!ok) return;
+  if (!ok) {
+    return;
+  }
   if (iAmRoot && !isMainProcessor()) {
     send(sendBuf, sendCount, 0);
   }
@@ -639,7 +785,9 @@ void MpiManager::bCastThroughMaster<float>(float* sendBuf, int sendCount, bool i
 template <>
 void MpiManager::bCastThroughMaster<double>(double* sendBuf, int sendCount, bool iAmRoot, MPI_Comm comm)
 {
-  if (!ok) return;
+  if (!ok) {
+    return;
+  }
   if (iAmRoot && !isMainProcessor()) {
     send(sendBuf, sendCount, 0);
   }
@@ -650,43 +798,93 @@ void MpiManager::bCastThroughMaster<double>(double* sendBuf, int sendCount, bool
 }
 
 template <>
-void MpiManager::reduce<bool>(bool sendVal, bool& recvVal,  MPI_Op op, int root, MPI_Comm comm)
+void MpiManager::reduce<bool>(bool& sendVal, bool& recvVal,  MPI_Op op, int root, MPI_Comm comm)
 {
-  if (!ok) return;
+  if (!ok) {
+    return;
+  }
   MPI_Reduce(static_cast<void*>(&sendVal),
              static_cast<void*>(&recvVal), 1, MPI_BYTE, op, root, comm);
 }
 
 template <>
-void MpiManager::reduce<char>(char sendVal, char& recvVal,  MPI_Op op, int root, MPI_Comm comm)
+void MpiManager::reduce<char>(char& sendVal, char& recvVal,  MPI_Op op, int root, MPI_Comm comm)
 {
-  if (!ok) return;
+  if (!ok) {
+    return;
+  }
   MPI_Reduce(static_cast<void*>(&sendVal),
              static_cast<void*>(&recvVal), 1, MPI_CHAR, op, root, comm);
 }
 
 template <>
-void MpiManager::reduce<int>(int sendVal, int& recvVal,  MPI_Op op, int root, MPI_Comm comm)
+void MpiManager::reduce<int>(int& sendVal, int& recvVal,  MPI_Op op, int root, MPI_Comm comm)
 {
-  if (!ok) return;
+  if (!ok) {
+    return;
+  }
   MPI_Reduce(static_cast<void*>(&sendVal),
              static_cast<void*>(&recvVal), 1, MPI_INT, op, root, comm);
 }
 
 template <>
-void MpiManager::reduce<float>(float sendVal, float& recvVal,  MPI_Op op, int root, MPI_Comm comm)
+void MpiManager::reduce<float>(float& sendVal, float& recvVal,  MPI_Op op, int root, MPI_Comm comm)
 {
-  if (!ok) return;
+  if (!ok) {
+    return;
+  }
   MPI_Reduce(static_cast<void*>(&sendVal),
              static_cast<void*>(&recvVal), 1, MPI_FLOAT, op, root, comm);
 }
 
 template <>
-void MpiManager::reduce<double>(double sendVal, double& recvVal,  MPI_Op op, int root, MPI_Comm comm)
+void MpiManager::reduce<double>(double& sendVal, double& recvVal,  MPI_Op op, int root, MPI_Comm comm)
 {
-  if (!ok) return;
+  if (!ok) {
+    return;
+  }
   MPI_Reduce(static_cast<void*>(&sendVal),
              static_cast<void*>(&recvVal), 1, MPI_DOUBLE, op, root, comm);
+}
+
+template <>
+void MpiManager::reduce<BlockData2D<int,int> >(BlockData2D<int,int>& sendVal, BlockData2D<int,int>& recvVal,  MPI_Op op, int root, MPI_Comm comm)
+{
+  if (!ok) {
+    return;
+  }
+  MPI_Reduce(static_cast<void*>(&(sendVal.get(0,0)) ),
+             static_cast<void*>(&(recvVal.get(0,0)) ), sendVal.getDataSize(), MPI_INT, op, root, comm);
+}
+
+template <>
+void MpiManager::reduce<BlockData2D<int,double> >(BlockData2D<int,double>& sendVal, BlockData2D<int,double>& recvVal,  MPI_Op op, int root, MPI_Comm comm)
+{
+  if (!ok) {
+    return;
+  }
+  MPI_Reduce(static_cast<void*>(&(sendVal.get(0,0)) ),
+             static_cast<void*>(&(recvVal.get(0,0)) ), sendVal.getDataSize(), MPI_INT, op, root, comm);
+}
+
+template <>
+void MpiManager::reduce<BlockData2D<double,int> >(BlockData2D<double,int>& sendVal, BlockData2D<double,int>& recvVal,  MPI_Op op, int root, MPI_Comm comm)
+{
+  if (!ok) {
+    return;
+  }
+  MPI_Reduce(static_cast<void*>(&(sendVal.get(0,0)) ),
+             static_cast<void*>(&(recvVal.get(0,0)) ), sendVal.getDataSize(), MPI_DOUBLE, op, root, comm);
+}
+
+template <>
+void MpiManager::reduce<BlockData2D<double,double> >(BlockData2D<double,double>& sendVal, BlockData2D<double,double>& recvVal,  MPI_Op op, int root, MPI_Comm comm)
+{
+  if (!ok) {
+    return;
+  }
+  MPI_Reduce(static_cast<void*>(&(sendVal.get(0,0)) ),
+             static_cast<void*>(&(recvVal.get(0,0)) ), sendVal.getDataSize(), MPI_DOUBLE, op, root, comm);
 }
 
 /*template <>
@@ -703,7 +901,9 @@ template <>
 void MpiManager::reduceVect<char>(std::vector<char>& sendVal, std::vector<char>& recvVal,
                                   MPI_Op op, int root, MPI_Comm comm)
 {
-  if (!ok) return;
+  if (!ok) {
+    return;
+  }
   MPI_Reduce(static_cast<void*>(&(sendVal[0])),
              static_cast<void*>(&(recvVal[0])),
              sendVal.size(), MPI_CHAR, op, root, comm);
@@ -713,7 +913,9 @@ template <>
 void MpiManager::reduceVect<int>(std::vector<int>& sendVal, std::vector<int>& recvVal,
                                  MPI_Op op, int root, MPI_Comm comm)
 {
-  if (!ok) return;
+  if (!ok) {
+    return;
+  }
   MPI_Reduce(static_cast<void*>(&(sendVal[0])),
              static_cast<void*>(&(recvVal[0])),
              sendVal.size(), MPI_INT, op, root, comm);
@@ -723,7 +925,9 @@ template <>
 void MpiManager::reduceVect<float>(std::vector<float>& sendVal, std::vector<float>& recvVal,
                                    MPI_Op op, int root, MPI_Comm comm)
 {
-  if (!ok) return;
+  if (!ok) {
+    return;
+  }
   MPI_Reduce(static_cast<void*>(&(sendVal[0])),
              static_cast<void*>(&(recvVal[0])),
              sendVal.size(), MPI_FLOAT, op, root, comm);
@@ -733,7 +937,9 @@ template <>
 void MpiManager::reduceVect<double>(std::vector<double>& sendVal, std::vector<double>& recvVal,
                                     MPI_Op op, int root, MPI_Comm comm)
 {
-  if (!ok) return;
+  if (!ok) {
+    return;
+  }
   MPI_Reduce(static_cast<void*>(&(sendVal[0])),
              static_cast<void*>(&(recvVal[0])),
              sendVal.size(), MPI_DOUBLE, op, root, comm);
@@ -742,7 +948,9 @@ void MpiManager::reduceVect<double>(std::vector<double>& sendVal, std::vector<do
 template <>
 void MpiManager::reduceAndBcast<bool>(bool& reductVal, MPI_Op op, int root, MPI_Comm comm)
 {
-  if (!ok) return;
+  if (!ok) {
+    return;
+  }
   char recvVal;
   MPI_Reduce(&reductVal, &recvVal, 1, MPI::BOOL, op, root, comm);
   reductVal = recvVal;
@@ -753,7 +961,9 @@ void MpiManager::reduceAndBcast<bool>(bool& reductVal, MPI_Op op, int root, MPI_
 template <>
 void MpiManager::reduceAndBcast<char>(char& reductVal, MPI_Op op, int root, MPI_Comm comm)
 {
-  if (!ok) return;
+  if (!ok) {
+    return;
+  }
   char recvVal;
   MPI_Reduce(&reductVal, &recvVal, 1, MPI_CHAR, op, root, comm);
   reductVal = recvVal;
@@ -764,7 +974,9 @@ void MpiManager::reduceAndBcast<char>(char& reductVal, MPI_Op op, int root, MPI_
 template <>
 void MpiManager::reduceAndBcast<int>(int& reductVal, MPI_Op op, int root, MPI_Comm comm)
 {
-  if (!ok) return;
+  if (!ok) {
+    return;
+  }
   int recvVal;
   MPI_Reduce(&reductVal, &recvVal, 1, MPI_INT, op, root, comm);
   reductVal = recvVal;
@@ -775,7 +987,9 @@ void MpiManager::reduceAndBcast<int>(int& reductVal, MPI_Op op, int root, MPI_Co
 template <>
 void MpiManager::reduceAndBcast<float>(float& reductVal, MPI_Op op, int root, MPI_Comm comm)
 {
-  if (!ok) return;
+  if (!ok) {
+    return;
+  }
   float recvVal;
   MPI_Reduce(&reductVal, &recvVal, 1, MPI_FLOAT, op, root, comm);
   reductVal = recvVal;
@@ -786,7 +1000,9 @@ void MpiManager::reduceAndBcast<float>(float& reductVal, MPI_Op op, int root, MP
 template <>
 void MpiManager::reduceAndBcast<double>(double& reductVal, MPI_Op op, int root, MPI_Comm comm)
 {
-  if (!ok) return;
+  if (!ok) {
+    return;
+  }
   double recvVal;
   MPI_Reduce(&reductVal, &recvVal, 1, MPI_DOUBLE, op, root, comm);
   reductVal = recvVal;
@@ -797,7 +1013,9 @@ void MpiManager::reduceAndBcast<double>(double& reductVal, MPI_Op op, int root, 
 template <>
 void MpiManager::reduceAndBcast<long>(long& reductVal, MPI_Op op, int root, MPI_Comm comm)
 {
-  if (!ok) return;
+  if (!ok) {
+    return;
+  }
   double recvVal;
   MPI_Reduce(&reductVal, &recvVal, 1, MPI_LONG, op, root, comm);
   reductVal = recvVal;
@@ -807,13 +1025,17 @@ void MpiManager::reduceAndBcast<long>(long& reductVal, MPI_Op op, int root, MPI_
 
 void MpiManager::wait(MPI_Request* request, MPI_Status* status)
 {
-  if (!ok) return;
+  if (!ok) {
+    return;
+  }
   MPI_Wait(request, status);
 }
 
 void MpiManager::waitAll(MpiNonBlockingHelper& mpiNbHelper)
 {
-  if (!ok) return;
+  if (!ok) {
+    return;
+  }
   MPI_Waitall(mpiNbHelper.get_size(), mpiNbHelper.get_mpiRequest(), mpiNbHelper.get_mpiStatus());
 }
 
@@ -837,9 +1059,17 @@ MpiNonBlockingHelper::MpiNonBlockingHelper(
 }
 
 MpiNonBlockingHelper MpiNonBlockingHelper::operator= (
-  MpiNonBlockingHelper rhs )  {
+  MpiNonBlockingHelper rhs )
+{
   MpiNonBlockingHelper tmp(rhs);
   return tmp;
+}
+
+void MpiNonBlockingHelper::swap ( MpiNonBlockingHelper& rhs )
+{
+  std::swap(_size, rhs._size);
+  std::swap(_mpiRequest, rhs._mpiRequest);
+  std::swap(_mpiStatus, rhs._mpiStatus);
 }
 
 MpiNonBlockingHelper::~MpiNonBlockingHelper()

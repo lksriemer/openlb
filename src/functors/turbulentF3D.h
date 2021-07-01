@@ -24,15 +24,13 @@
 #ifndef TURBULENT_F_3D_H
 #define TURBULENT_F_3D_H
 
-#include<vector>
-#include<cmath>
 
-#include "functors/blockLatticeBaseF3D.h"
-#include "functors/superLatticeBaseF3D.h"
-#include "functors/indicatorBaseF.h"
+#include "functors/blockBaseF3D.h"
+#include "functors/superBaseF3D.h"
+#include "functors/indicator/indicatorBaseF3D.h"
 
 
-/** These are functors used for turbulent flows. Some like AMD have an execute member 
+/** These are functors used for turbulent flows. Some like AMD have an execute member
  *  function which writes the data into the external field of a lattice descriptor.
  */
 
@@ -43,13 +41,13 @@ template <typename T, template <typename U> class DESCRIPTOR>
 class SuperLatticeYplus3D : public SuperLatticePhysF3D<T,DESCRIPTOR> {
 private:
   SuperGeometry3D<T>& _superGeometry;
-  IndicatorF3D<bool,T>&    _indicator;
+  IndicatorF3D<T>&    _indicator;
   const int           _material;
 public:
   SuperLatticeYplus3D(SuperLattice3D<T,DESCRIPTOR>& sLattice, const LBconverter<T>& converter,
-                      SuperGeometry3D<T>& superGeometry, IndicatorF3D<bool,T>& indicator,
+                      SuperGeometry3D<T>& superGeometry, IndicatorF3D<T>& indicator,
                       const int material );
-  std::vector<T> operator() (std::vector<int> input);
+  bool operator() (T output[], const int input[]);
 };
 
 /// functor to get pointwise explicit filtering on local lattice, if globIC is not on
@@ -61,8 +59,8 @@ protected:
   int _order;
 public:
   BlockLatticeADM3D(BlockLatticeStructure3D<T,DESCRIPTOR>& blockLattice, T sigma, int order);
-  std::vector<T> operator() (std::vector<int> input);
-  void execute(std::vector<int> input);
+  bool operator() (T output[], const int input[]);
+  void execute(const int input[]);
   void execute();
 };
 
@@ -75,7 +73,7 @@ protected:
   int _order;
 public:
   SuperLatticeADM3D(SuperLattice3D<T,DESCRIPTOR>& sLattice, T sigma, int order);
-  std::vector<T> operator() (std::vector<int> input);
+  bool operator() (T output[], const int input[]);
   void execute(SuperGeometry3D<T>& superGeometry, const int material);
 };
 

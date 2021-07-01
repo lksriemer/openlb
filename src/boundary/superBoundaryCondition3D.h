@@ -65,7 +65,10 @@ public:
   void addVelocityBoundary(SuperGeometry3D<T>& superGeometry, int material, T omega);
   void addPressureBoundary(SuperGeometry3D<T>& superGeometry, int material, T omega);
   void addConvectionBoundary(SuperGeometry3D<T>& superGeometry, int material, T omega, T* uAv=NULL);
-  void addTemperatureBoundary(SuperGeometry3D<T>& superGeometry, int material, T omega); 				// -> for AdvectionDiffusion
+  void addTemperatureBoundary(SuperGeometry3D<T>& superGeometry, int material, T omega);
+  void addConvectionBoundary(SuperGeometry3D<T>& superGeometry, int material);
+  void addExtFieldBoundary(SuperGeometry3D<T>& superGeometry, int material, int offset);
+  void addZeroDistributionBoundary(SuperGeometry3D<T>& superGeometry, int material);
 
   /// Adds needed Cells to the Communicator _commBC in SuperLattice
   void addPoints2CommBC(SuperGeometry3D<T>& superGeometry, int material);
@@ -78,7 +81,7 @@ public:
     return _blockBCs;
   };
 
-  std::vector<OnLatticeAdvectionDiffusionBoundaryCondition3D<T, Lattice>*>& getADblockBCs() {			// -> for AdvectionDiffusion
+  std::vector<OnLatticeAdvectionDiffusionBoundaryCondition3D<T, Lattice>*>& getADblockBCs() {
     return _ADblockBCs;
   };
 
@@ -98,7 +101,7 @@ private:
   mutable OstreamManager clout;
   SuperLattice3D<T, Lattice>& _sLattice;
   std::vector<OnLatticeBoundaryCondition3D<T, Lattice>*> _blockBCs;
-  std::vector<OnLatticeAdvectionDiffusionBoundaryCondition3D<T, Lattice>*> _ADblockBCs;				// -> for AdvectionDiffusion
+  std::vector<OnLatticeAdvectionDiffusionBoundaryCondition3D<T, Lattice>*> _ADblockBCs;
   int _overlap;
   bool _output;
 };
@@ -118,17 +121,20 @@ void createExtFdBoundaryCondition3D(
 
 template<typename T, template<typename U> class Lattice>
 void createLocalBoundaryCondition3D(
-  sOnLatticeBoundaryCondition3D<T, Lattice>& sBC) {
+  sOnLatticeBoundaryCondition3D<T, Lattice>& sBC)
+{
   createLocalBoundaryCondition3D<T, Lattice, RLBdynamics<T, Lattice> > (sBC);
 }
 template<typename T, template<typename U> class Lattice>
 void createInterpBoundaryCondition3D(
-  sOnLatticeBoundaryCondition3D<T, Lattice>& sBC) {
+  sOnLatticeBoundaryCondition3D<T, Lattice>& sBC)
+{
   createInterpBoundaryCondition3D<T, Lattice, BGKdynamics<T, Lattice> > (sBC);
 }
 template<typename T, template<typename U> class Lattice>
 void createExtFdBoundaryCondition3D(
-  sOnLatticeBoundaryCondition3D<T, Lattice>& sBC) {
+  sOnLatticeBoundaryCondition3D<T, Lattice>& sBC)
+{
   createInterpBoundaryCondition3D<T, Lattice, BGKdynamics<T, Lattice> > (sBC);
 }
 

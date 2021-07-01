@@ -75,6 +75,9 @@ public:
   MPI_Request* get_mpiRequest() const;
   /// Read and write access _mpiStatus
   MPI_Status* get_mpiStatus() const;
+
+  /// Swap method
+  void swap(MpiNonBlockingHelper& rhs);
 };
 
 /// Wrapper functions that simplify the use of MPI
@@ -109,6 +112,13 @@ public:
   void iSend(T *buf, int count, int dest, MPI_Request* request, int tag = 0, MPI_Comm comm = MPI_COMM_WORLD);
 #ifdef ADT
   template <typename T,unsigned DIM> void iSend(ADf<T,DIM> *buf, int count, int dest, MPI_Request* request, int tag = 0, MPI_Comm comm = MPI_COMM_WORLD);
+#endif
+
+  /// Sends data at *buf, non blocking and buffered
+  template <typename T>
+  void ibSend(T *buf, int count, int dest, MPI_Request* request, int tag = 0, MPI_Comm comm = MPI_COMM_WORLD);
+#ifdef ADT
+  template <typename T,unsigned DIM> void ibSend(ADf<T,DIM> *buf, int count, int dest, MPI_Request* request, int tag = 0, MPI_Comm comm = MPI_COMM_WORLD);
 #endif
 
   /// Sends data at *buf, non blocking and request free
@@ -166,9 +176,9 @@ public:
 
   /// Reduction operation toward one processor
   template <typename T>
-  void reduce(T sendVal, T& recvVal, MPI_Op op, int root = 0, MPI_Comm = MPI_COMM_WORLD);
+  void reduce(T& sendVal, T& recvVal, MPI_Op op, int root = 0, MPI_Comm = MPI_COMM_WORLD);
 #ifdef ADT
-  template <typename T,unsigned DIM> void reduce(ADf<T,DIM> sendVal, ADf<T,DIM>& recvVal, MPI_Op op, int root = 0, MPI_Comm = MPI_COMM_WORLD);
+  template <typename T,unsigned DIM> void reduce(ADf<T,DIM>& sendVal, ADf<T,DIM>& recvVal, MPI_Op op, int root = 0, MPI_Comm = MPI_COMM_WORLD);
 #endif
 
   /// Element-per-element reduction of a vector of data
@@ -217,20 +227,32 @@ public:
   /// Initializes the mpi manager
   void init(int *argc, char ***argv, bool verbose=false) { }
   /// Returns the number of processes
-  int getSize() const { return 1; }
+  int getSize() const {
+    return 1;
+  }
   /// Returns the process ID
-  int getRank() const { return 0; }
+  int getRank() const {
+    return 0;
+  }
   /// Returns process ID of main processor
-  int bossId() const { return 0; }
+  int bossId() const {
+    return 0;
+  }
   /// Tells whether current processor is main processor
-  bool isMainProcessor() const { return true; }
+  bool isMainProcessor() const {
+    return true;
+  }
+
+  /// Synchronizes the processes
+  void barrier() const {};
 
   friend MpiManager& mpi();
 };
 
 #endif  // PARALLEL_MODE_MPI
 
-inline MpiManager& mpi() {
+inline MpiManager& mpi()
+{
   static MpiManager instance;
   return instance;
 }

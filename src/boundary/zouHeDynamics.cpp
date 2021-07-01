@@ -29,43 +29,43 @@
 
 namespace olb {
 
-    template<>
+template<>
 class ZouHeDynamics <
     double, descriptors::D2Q9Descriptor, BGKdynamics<double,descriptors::D2Q9Descriptor>, 0, 1 >;
-    
-    template<>
+
+template<>
 class ZouHeDynamics <
     double, descriptors::D2Q9Descriptor, BGKdynamics<double,descriptors::D2Q9Descriptor>, 0, -1 >;
-    
-    template<>
+
+template<>
 class ZouHeDynamics <
     double, descriptors::D2Q9Descriptor, BGKdynamics<double,descriptors::D2Q9Descriptor>, 1, 1 >;
-    
-    template<>
+
+template<>
 class ZouHeDynamics <
     double, descriptors::D2Q9Descriptor, BGKdynamics<double,descriptors::D2Q9Descriptor>, 1, -1 >;
 
 template<>
 class ZouHeDynamics <
     double, descriptors::D3Q19Descriptor, BGKdynamics<double,descriptors::D3Q19Descriptor>, 0, 1 >;
-    
-    template<>
+
+template<>
 class ZouHeDynamics <
     double, descriptors::D3Q19Descriptor, BGKdynamics<double,descriptors::D3Q19Descriptor>, 0, -1 >;
-    
-    template<>
+
+template<>
 class ZouHeDynamics <
     double, descriptors::D3Q19Descriptor, BGKdynamics<double,descriptors::D3Q19Descriptor>, 1, 1 >;
-    
-    template<>
+
+template<>
 class ZouHeDynamics <
     double, descriptors::D3Q19Descriptor, BGKdynamics<double,descriptors::D3Q19Descriptor>, 1, -1 >;
-    
-    template<>
+
+template<>
 class ZouHeDynamics <
     double, descriptors::D3Q19Descriptor, BGKdynamics<double,descriptors::D3Q19Descriptor>, 2, 1 >;
-    
-    template<>
+
+template<>
 class ZouHeDynamics <
     double, descriptors::D3Q19Descriptor, BGKdynamics<double,descriptors::D3Q19Descriptor>, 2, -1 >;
 

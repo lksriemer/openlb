@@ -25,12 +25,14 @@
  * Groups all the 2D include files for the directory io.
  */
 #include "base64.h"
-#include "serializerIO.h"
-#include "parallelIO.h"
-#include "colormaps.h"
-#include "imageWriter.h"
-#include "xmlReader.h"
-#include "ostreamManager.h"
-#include "vtiReader.h"
-#include "superVtkWriter2D.h"
+#include "blockGifWriter.h"
 #include "blockVtkWriter2D.h"
+#include "colormaps.h"
+#include "fileName.h"
+#include "ostreamManager.h"
+#include "parallelIO.h"
+#include "serializerIO.h"
+#include "superVtkWriter2D.h"
+#include "vtiReader.h"
+#include "xmlReader.h"
+

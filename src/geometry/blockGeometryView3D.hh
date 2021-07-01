@@ -37,18 +37,18 @@ namespace olb {
 
 template<typename T>
 BlockGeometryView3D<T>::BlockGeometryView3D
-  (BlockGeometryStructure3D<T>& originalBlockGeometry, int x0, int x1, int y0,
-  int y1, int z0, int z1)
+(BlockGeometryStructure3D<T>& originalBlockGeometry, int x0, int x1, int y0,
+ int y1, int z0, int z1)
   : BlockGeometryStructure3D<T>(originalBlockGeometry.getIcGlob()),
     _originalBlockGeometry(&originalBlockGeometry), _x0(x0), _y0(y0), _z0(z0),
     _nx(x1-x0+1), _ny(y1-y0+1), _nz(z1-z0+1)
-{ 
+{
   this->_statistics = BlockGeometryStatistics3D<T>(this);
   addToStatisticsList( &(this->_statistics.getStatisticsStatus()) );
 }
 
 template<typename T>
-BlockGeometryView3D<T>::BlockGeometryView3D(BlockGeometryView3D const& rhs) 
+BlockGeometryView3D<T>::BlockGeometryView3D(BlockGeometryView3D const& rhs) : BlockGeometryStructure3D<T>(rhs)
 {
   _originalBlockGeometry = rhs._originalBlockGeometry;
   _x0 = rhs._x0;
@@ -98,12 +98,12 @@ BlockGeometryStatistics3D<T> const& BlockGeometryView3D<T>::getStatistics(bool v
 }
 
 template<typename T>
-std::vector<T> const BlockGeometryView3D<T>::getOrigin() const
+Vector<T,3> const BlockGeometryView3D<T>::getOrigin() const
 {
-  std::vector<T> origin(_originalBlockGeometry->getOrigin());
-  origin[0] += _x0*getDeltaR();
-  origin[1] += _y0*getDeltaR();
-  origin[2] += _z0*getDeltaR();
+  Vector<T,3> origin(_originalBlockGeometry->getOrigin());
+  origin[0] += _x0 * getDeltaR();
+  origin[1] += _y0 * getDeltaR();
+  origin[2] += _z0 * getDeltaR();
   return origin;
 }
 
@@ -152,9 +152,10 @@ int BlockGeometryView3D<T>::getMaterial(int iX, int iY, int iZ) const
 
 
 template<typename T>
-std::vector<T> BlockGeometryView3D<T>::getPhysR(int iX, int iY, int iZ) const
+void BlockGeometryView3D<T>::getPhysR(T physR[3], const int& iX, const int& iY, const int& iZ) const
 {
-  return _originalBlockGeometry->getPhysR(_x0 + iX, _y0 + iY, _z0 + iZ);
+  _originalBlockGeometry->getPhysR(physR, _x0 + iX, _y0 + iY, _z0 + iZ);
+  return;
 }
 
 
@@ -165,7 +166,7 @@ void BlockGeometryView3D<T>::addToStatisticsList(bool* statisticStatus)
 }
 
 template<typename T>
-void BlockGeometryView3D<T>::removeFromStatisticsList(bool* statisticStatus) 
+void BlockGeometryView3D<T>::removeFromStatisticsList(bool* statisticStatus)
 {
   _originalBlockGeometry->removeFromStatisticsList(statisticStatus);
 }

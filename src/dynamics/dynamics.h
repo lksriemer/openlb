@@ -151,8 +151,17 @@ struct Dynamics {
   /// Define external fields through the dynamics object.
   /** Default implementation: access cell directly.
    */
-  virtual void defineExternalField (
-    Cell<T,Lattice>& cell, int pos, int size, const T* ext);
+  virtual void defineExternalField(Cell<T,Lattice>& cell, int pos, int size, const T* ext);
+  /// Add external fields through the dynamics object.
+  /** Similar to defineExternalField(),but instead of replacing existing values
+   *  ext is added to existing values.
+   */
+  virtual void addExternalField(Cell<T,Lattice>& cell, int pos, int size, const T* ext);
+  /// Add external fields through the dynamics object.
+  /** Similar to defineExternalField(),but instead of replacing existing values
+   *  ext is multiplied to existing values.
+   */
+  virtual void multiplyExternalField(Cell<T,Lattice>& cell, int pos, int size, const T* ext);
   /// Get local relaxation parameter of the dynamics
   virtual T getOmega() const =0;
   /// Set local relaxation parameter of the dynamics
@@ -371,8 +380,7 @@ private:
 
 /// Implementation of Regularized BGK collision, followed by any Dynamics
 template<typename T, template<typename U> class Lattice, typename Dynamics>
-class CombinedRLBdynamics : public BasicDynamics<T,Lattice>
-{
+class CombinedRLBdynamics : public BasicDynamics<T,Lattice> {
 public:
   /// Constructor
   CombinedRLBdynamics(T omega_, Momenta<T,Lattice>& momenta_);
@@ -407,6 +415,14 @@ public:
   ForcedBGKdynamics(T omega_, Momenta<T,Lattice>& momenta_);
   /// Clone the object on its dynamic type.
   virtual ForcedBGKdynamics<T,Lattice>* clone() const;
+  ///  Compute fluid velocity on the cell.
+  virtual void computeU (
+    Cell<T,Lattice> const& cell,
+    T u[Lattice<T>::d] ) const;
+  /// Compute fluid velocity and particle density on the cell.
+  virtual void computeRhoU (
+    Cell<T,Lattice> const& cell,
+    T& rho, T u[Lattice<T>::d]) const;
   /// Compute equilibrium distribution function
   virtual T computeEquilibrium(int iPop, T rho, const T u[Lattice<T>::d], T uSqr) const;
   /// Collision step
@@ -426,7 +442,24 @@ protected:
   static const int sizeOfForce   = Lattice<T>::ExternalField::sizeOfForce;
 };
 
-
+/// Other Implementation of the BGK collision step with external force
+template<typename T, template<typename U> class Lattice>
+class ForcedShanChenBGKdynamics : public ForcedBGKdynamics<T,Lattice> {
+public:
+  /// Constructor
+  ForcedShanChenBGKdynamics(T omega_, Momenta<T,Lattice>& momenta_);
+  ///  Compute fluid velocity on the cell.
+  virtual void computeU (
+    Cell<T,Lattice> const& cell,
+    T u[Lattice<T>::d] ) const;
+  /// Compute fluid velocity and particle density on the cell.
+  virtual void computeRhoU (
+    Cell<T,Lattice> const& cell,
+    T& rho, T u[Lattice<T>::d]) const;
+  /// Collision step
+  virtual void collide(Cell<T,Lattice>& cell,
+                       LatticeStatistics<T>& statistics_);
+};
 
 /// Implementation of the 3D D3Q13 dynamics
 /** This is (so far) the minimal existing 3D model, with only 13
@@ -619,6 +652,8 @@ private:
 template<typename T, template<typename U> class Lattice>
 class NoDynamics : public Dynamics<T,Lattice> {
 public:
+  /// You may fix a fictitious density value on no dynamics node via this constructor.
+  NoDynamics(T rho = T(1) );
   /// Clone the object on its dynamic type.
   virtual NoDynamics<T,Lattice>* clone() const;
   /// Yields 0;
@@ -670,6 +705,10 @@ public:
   virtual T getOmega() const;
   /// Does nothing
   virtual void setOmega(T omega_);
+
+private:
+  /// Default rho=1
+  T _rho;
 };
 
 /// Dynamics for offLattice boundary conditions
@@ -710,6 +749,22 @@ private:
   T velocityCoefficient[Lattice<T>::q];
 };
 
+/// Implementation of density sink by setting a zero distributio on the cell
+template<typename T, template<typename U> class Lattice>
+class ZeroDistributionDynamics : public NoDynamics<T,Lattice> {
+public:
+  /// Constructor.
+  ZeroDistributionDynamics();
+  /// Clone the object on its dynamic type.
+  virtual ZeroDistributionDynamics<T,Lattice>* clone() const;
+  /// Collision step
+  virtual void collide(Cell<T,Lattice>& cell,
+                       LatticeStatistics<T>& statistics_);
+  /// Yields 1
+  virtual T computeRho(Cell<T,Lattice> const& cell) const;
+};
+
+
 namespace instances {
 
 template<typename T, template<typename U> class Lattice>
@@ -722,7 +777,10 @@ template<typename T, template<typename U> class Lattice>
 BounceBack<T,Lattice>& getBounceBack();
 
 template<typename T, template<typename U> class Lattice>
-NoDynamics<T,Lattice>& getNoDynamics();
+NoDynamics<T,Lattice>& getNoDynamics(T rho = T(1) );
+
+template<typename T, template<typename U> class Lattice>
+ZeroDistributionDynamics<T,Lattice>& getZeroDistributionDynamics();
 
 }
 

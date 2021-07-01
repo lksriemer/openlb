@@ -332,14 +332,16 @@ InterpolationBoundaryManager2D<T,Lattice,MixinDynamics>::getInternalVelocityCorn
 ////////// Factory functions //////////////////////////////////////////////////
 
 template<typename T, template<typename U> class Lattice, typename MixinDynamics>
-OnLatticeBoundaryCondition2D<T,Lattice>* createLocalBoundaryCondition2D(BlockLatticeStructure2D<T,Lattice>& block) {
+OnLatticeBoundaryCondition2D<T,Lattice>* createLocalBoundaryCondition2D(BlockLatticeStructure2D<T,Lattice>& block)
+{
   return new BoundaryConditionInstantiator2D <
          T, Lattice,
          RegularizedBoundaryManager2D<T,Lattice, MixinDynamics> > (block);
 }
 
 template<typename T, template<typename U> class Lattice, typename MixinDynamics>
-OnLatticeBoundaryCondition2D<T,Lattice>* createInterpBoundaryCondition2D(BlockLatticeStructure2D<T,Lattice>& block) {
+OnLatticeBoundaryCondition2D<T,Lattice>* createInterpBoundaryCondition2D(BlockLatticeStructure2D<T,Lattice>& block)
+{
   return new BoundaryConditionInstantiator2D <
          T, Lattice,
          InterpolationBoundaryManager2D<T,Lattice, MixinDynamics> > (block);

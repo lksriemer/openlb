@@ -74,7 +74,7 @@ OnLatticeAdvectionDiffusionBoundaryCondition2D<T,Lattice>*
 createAdvectionDiffusionBoundaryCondition2D(BlockLatticeStructure2D<T,Lattice>& block)
 {
   return createAdvectionDiffusionBoundaryCondition2D<T,Lattice,
-           AdvectionDiffusionRLBdynamics<T,Lattice> >(block);
+         AdvectionDiffusionRLBdynamics<T,Lattice> >(block);
 }
 
 /// superLattice creator, calls createAdvectionDiffusionBoundaryCondidtion3D from above.
@@ -86,7 +86,7 @@ template<typename T, template<typename U> class Lattice>
 void createAdvectionDiffusionBoundaryCondition2D(sOnLatticeBoundaryCondition2D<T, Lattice>& sBC)
 {
   return createAdvectionDiffusionBoundaryCondition2D<T,Lattice,
-           AdvectionDiffusionRLBdynamics<T,Lattice> >(sBC);
+         AdvectionDiffusionRLBdynamics<T,Lattice> >(sBC);
 }
 
 

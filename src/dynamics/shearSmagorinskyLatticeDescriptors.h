@@ -45,8 +45,8 @@ struct ShearSmagorinsky2dDescriptorBase {
 };
 
 template <typename T> struct ShearSmagorinskyD2Q9Descriptor
-    : public D2Q9DescriptorBase<T>, public ShearSmagorinsky2dDescriptorBase
-  { };
+    : public D2Q9DescriptorBase<T>, public ShearSmagorinsky2dDescriptorBase {
+};
 
 
 /////////////////////////////////////////////////////////////////////////////////
@@ -64,8 +64,29 @@ struct ShearSmagorinsky3dDescriptorBase {
 };
 
 template <typename T> struct ShearSmagorinskyD3Q19Descriptor
-    : public D3Q19DescriptorBase<T>, public ShearSmagorinsky3dDescriptorBase
-  { };
+    : public D3Q19DescriptorBase<T>, public ShearSmagorinsky3dDescriptorBase {
+};
+
+
+/////////////////////////////////////////////////////////////////////////////////
+// 3D Descriptors for flow with Forced Shear-Improved Smagorinsky
+
+struct ForcedShearSmagorinsky3dDescriptor {
+  static const int numScalars = 4;
+  static const int numSpecies = 2;
+  static const int avShearIsAt = 0;
+  static const int sizeOfAvShear = 1;
+  static const int forceBeginsAt    = 1;
+  static const int sizeOfForce      = 3;
+};
+
+struct ForcedShearSmagorinsky3dDescriptorBase {
+  typedef ForcedShearSmagorinsky3dDescriptor ExternalField;
+};
+
+template <typename T> struct ForcedShearSmagorinskyD3Q19Descriptor
+    : public D3Q19DescriptorBase<T>, public ForcedShearSmagorinsky3dDescriptorBase {
+};
 
 
 } // namespace descriptors

@@ -1,6 +1,7 @@
 /*  This file is part of the OpenLB library
  *
- *  Copyright (C) 2013 Gilles Zahnd, Mathias J. Krause, Lukas Baron
+ *  Copyright (C) 2013, 2015 Gilles Zahnd, Mathias J. Krause,
+ *  Lukas Baron, Marie-Luise Maier
  *  E-mail contact: info@openlb.net
  *  The most recent release of OpenLB can be downloaded at
  *  <http://www.openlb.net/>
@@ -33,5 +34,20 @@ template class RotatingForceField3D<double,descriptors::D3Q19Descriptor>;
 template class CirclePoiseuille3D<double>;
 template class RectanglePoiseuille3D<double>;
 template class EllipticPoiseuille3D<double>;
+
+template class AngleBetweenVectors3D<double,double>;
+
+template class RotationRoundAxis3D<double,double>;
+
+template class CylinderToCartesian3D<double,double>;
+
+template class CartesianToCylinder3D<double,double>;
+
+template class SphericalToCartesian3D<double,double>;
+
+template class CartesianToSpherical3D<double,double>;
+
+template class MagneticForceFromCylinder3D<double,double>;
+
 
 }

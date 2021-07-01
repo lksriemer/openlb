@@ -29,19 +29,21 @@
 #ifndef SUPER_EXTERNAL_3D_H
 #define SUPER_EXTERNAL_3D_H
 
-#include <vector>
+
 #include "superLattice3D.h"
 
 
 /// All OpenLB code is contained in this namespace.
 namespace olb {
 
-/// A super external field is needed to communicate values of the external field
+
 
 template<typename T> class Communicator3D;
 template<typename T, template<typename U> class Lattice> class SuperLatticeF3D;
-template<typename T> class SuperStructure3D;
+template<typename T> class Communicator3D;
+template<typename T> class SuperGeometry3D;
 
+/// A super external field is needed to communicate values of the external field
 template<typename T, template<typename U> class Lattice>
 class SuperExternal3D : public SuperStructure3D<T> {
 
@@ -53,14 +55,23 @@ private:
 
 public:
   /// Construction of a super external field
-  SuperExternal3D(SuperGeometry3D<T>& superGeometry, SuperLattice3D<T, Lattice>& sLattice, int offset, int size, int overlap);
+  SuperExternal3D(SuperGeometry3D<T>& superGeometry, SuperLattice3D<T,Lattice>& sLattice,
+                  int offset, int size, int overlap);
   void communicate(bool verbose=true);
   /// Write access to the memory of the data of the super structure
-  virtual bool* operator() (int iCloc, int iX, int iY, int iZ ,int iData) { return (bool*)_sLattice.getExtendedBlockLattice(iCloc).get(iX+_overlap, iY+_overlap, iZ+_overlap).getExternal(_offset); };
+  virtual bool* operator() (int iCloc, int iX, int iY, int iZ ,int iData) {
+    return (bool*)_sLattice.getExtendedBlockLattice(iCloc).get(iX+_overlap,
+           iY+_overlap,
+           iZ+_overlap).getExternal(_offset);
+  };
   /// Read only access to the dim of the data of the super structure
-  virtual int getDataSize() const {return _size;};
+  virtual int getDataSize() const {
+    return _size;
+  };
   /// Read only access to the data type dim of the data of the super structure
-  virtual int getDataTypeSize() const {return sizeof(T);};
+  virtual int getDataTypeSize() const {
+    return sizeof(T);
+  };
 
 };
 

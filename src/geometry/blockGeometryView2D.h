@@ -36,14 +36,14 @@
 /// All OpenLB code is contained in this namespace.
 namespace olb {
 
-/// Representation of a block geometry view  
-/** This class is derived from block geometry structure. It 
- * holds a poniter to another block geometry structure. It operates 
+/// Representation of a block geometry view
+/** This class is derived from block geometry structure. It
+ * holds a poniter to another block geometry structure. It operates
  * as a structure on a smaller intersection of teh greater structure.
- * It presents a volume of voxels where different types are 
+ * It presents a volume of voxels where different types are
  * given my material numbers which is imporant e.g. to work
  * with different boundaries (like for inflow/output regions).
- * 
+ *
  * This class is not intended to be derived from.
  */
 
@@ -54,11 +54,11 @@ template<typename T>
 class BlockGeometryView2D : public BlockGeometryStructure2D<T> {
 
 private:
-  // Points to the structure where this view class is viewing at 
+  // Points to the structure where this view class is viewing at
   BlockGeometryStructure2D<T>* _originalBlockGeometry;
-  // Offset of the data field with respect to the data of the original geometry    
+  // Offset of the data field with respect to the data of the original geometry
   int _x0, _y0;
-  // Dimension of the view cuboid 
+  // Dimension of the view cuboid
   int _nx, _ny;
 
 public:
@@ -71,7 +71,7 @@ public:
   /// Destructor
   ~BlockGeometryView2D();
 
-  /// Write access to the associated block statistic 
+  /// Write access to the associated block statistic
   BlockGeometryStatistics2D<T>& getStatistics(bool verbose=true);
   /// Read only access to the associated block statistic
   BlockGeometryStatistics2D<T> const& getStatistics(bool verbose=true) const;
@@ -93,7 +93,7 @@ public:
   int getMaterial(int iX, int iY) const; // TODO old
 
   /// Transforms lattice to physical coordinates (wrapped from cuboid geometry)
-  std::vector<T> getPhysR(int iX, int iY) const;
+  void getPhysR(T physR[2], const int& iX, const int& iY) const;
 
   /// Adds a pointer to the list of dependent statistic classes
   void addToStatisticsList(bool* statisticStatus);

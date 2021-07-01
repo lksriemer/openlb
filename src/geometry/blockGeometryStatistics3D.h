@@ -56,18 +56,18 @@ private:
 
   /// Points to the underlying data from which the statistics is taken
   BlockGeometryStructure3D<T>* _blockGeometry;
-  /// Specifies if an update is needed 
+  /// Specifies if an update is needed
   bool _statisticsUpdateNeeded;
   /// Number of voxels in each direction
   int _nX, _nY, _nZ;
   /// Spacing
   T _h;
 
-  /// Number of different material numbers 
+  /// Number of different material numbers
   int _nMaterials;
-  /// Mapping a material number to the number of this kind found in the super geometry 
+  /// Mapping a material number to the number of this kind found in the super geometry
   std::map<int, int> _material2n;
-  /// Mapping a material number to the min. lattice position in each space direction 
+  /// Mapping a material number to the min. lattice position in each space direction
   std::map<int, std::vector<int> > _material2min;
   /// Mapping a material number to the max. lattice position in each space direction
   std::map<int, std::vector<int> > _material2max;
@@ -80,7 +80,7 @@ public:
   /// Constructor
   BlockGeometryStatistics3D(BlockGeometryStructure3D<T>* blockGeometry);
 
-  /// Read and write access to a flag, which indicates if an uptate is needed (=true) 
+  /// Read and write access to a flag, which indicates if an uptate is needed (=true)
   bool& getStatisticsStatus();
   /// Read only access to a flag, which indicates if an uptate is needed (=true)
   bool const & getStatisticsStatus() const;
@@ -92,7 +92,7 @@ public:
 
   /// Returns the number of different materials
   int getNmaterials();
-  /// Returns the number of voxels for a given material number 
+  /// Returns the number of voxels for a given material number
   int getNvoxel(int material);
   /// Returns the number of voxels with material!=0
   int getNvoxel();
@@ -112,7 +112,7 @@ public:
   std::vector<T> getPhysRadius(int material);
   /// Returns the center position
   std::vector<T> getCenterPhysR(int material);
-  /// Returns the boundary type which is characterized by a discrte normal (c.f. Zimny) 
+  /// Returns the boundary type which is characterized by a discrte normal (c.f. Zimny)
   std::vector<int> getType(int iX, int iY, int iZ);
 
   /// Returns normal that points into the fluid for paraxial surfaces
@@ -122,10 +122,10 @@ public:
   /// Returns discrete normal with norm maxNorm that points into the fluid for paraxial surfaces
   /// maxNorm=1.1 implies only normals parallel to the axises
   std::vector<int> computeDiscreteNormal (int material, T maxNorm = 1.1);
- 
+
   // Returns true if at position (iX,iY,iZ) and in a neighbourhood of size (offsetX,offsetY,offsetZ) only voxels of the given material are found
   bool check(int material, int iX, int iY, int iZ, unsigned offsetX, unsigned offsetY, unsigned offsetZ);
-  // Returns true and a position (iX,iY,iZ) if there is a neighbourhood of size (offsetX,offsetY,offsetZ) around (iX,iY,iZ) with only voxels of the given material 
+  // Returns true and a position (iX,iY,iZ) if there is a neighbourhood of size (offsetX,offsetY,offsetZ) around (iX,iY,iZ) with only voxels of the given material
   bool find(int material, unsigned offsetX, unsigned offsetY, unsigned offsetZ, int& iX, int& iY, int& iZ);
 
   /// Prints some statistic information, i.e. the number of voxels and min. max. physical position for each different material
@@ -133,9 +133,9 @@ public:
 
 private:
 
-  /// Helper function to simplify the implementation 
+  /// Helper function to simplify the implementation
   void takeStatistics(int iX, int iY, int iZ);
-  /// Helper function for get type (c.f. Zimny) 
+  /// Helper function for get type (c.f. Zimny)
   std::vector<int> checkExtraBoundary(std::vector<int> discreteNormal,
                                       std::vector<int> discreteNormal2);
 };

@@ -26,7 +26,7 @@
 /* venturi3d.cpp:
  * This example examines a steady flow in a venturi tube. At the
  * main inlet, a Poiseuille profile is imposed as Dirichlet velocity
- * boundary condition, whereas at the outlet and the minor inlet 
+ * boundary condition, whereas at the outlet and the minor inlet
  * a Dirichlet pressure condition is set by p=0 (i.e. rho=1).
  *
  * The example shows the usage of the Indicator functors to
@@ -52,7 +52,9 @@ using namespace std;
 typedef double T;
 #define DESCRIPTOR D3Q19Descriptor
 
-int N = 1; // resolution of the model
+const int N = 1;    // resolution of the model
+const int M = 1;    // time discretization refinement
+T maxPhysT = 200.0; // max. simulation time in s, SI unit
 
 SuperGeometry3D<T> prepareGeometry( LBconverter<T> const& converter) {
 
@@ -60,84 +62,43 @@ SuperGeometry3D<T> prepareGeometry( LBconverter<T> const& converter) {
   clout << "Prepare Geometry ..." << std::endl;
 
   /// Definition of the geometry of the venturi
-  std::vector<T> C0;
-  int dummy00[] = {0,50,50};
-  C0.insert(C0.begin(),dummy00, dummy00 +3);
-
-  std::vector<T> C1;
-  int dummy0[] = {5,50,50};
-  C1.insert(C1.begin(),dummy0, dummy0 +3);
-
-  std::vector<T> C2;
-  int dummy1[] = {40,50,50};
-  C2.insert(C2.begin(),dummy1, dummy1 +3);
-
-  std::vector<T> C3;
-  int dummy2[] = {80,50,50};
-  C3.insert(C3.begin(),dummy2, dummy2 +3);
-
-  std::vector<T> C4;
-  int dummy3[] = {120,50,50};
-  C4.insert(C4.begin(),dummy3, dummy3 +3);
-
-  std::vector<T> C5;
-  int dummy4[] = {160,50,50};
-  C5.insert(C5.begin(),dummy4, dummy4 +3);
-
-  std::vector<T> C6;
-  int dummy5[] = {195,50,50};
-  C6.insert(C6.begin(),dummy5, dummy5 +3);
-
-  std::vector<T> C7;
-  int dummy6[] = {200,50,50};
-  C7.insert(C7.begin(),dummy6, dummy6 +3);
-
-  std::vector<T> C8;
-  int dummy7[] = {190,50,50};
-  C8.insert(C8.begin(),dummy7, dummy7 +3);
-
-  std::vector<T> C9;
-  int dummy8[] = {115,50,50};
-  C9.insert(C9.begin(),dummy8, dummy8 +3);
-
-  std::vector<T> C10;
-  int dummy9[] = {115,25,50};
-  C10.insert(C10.begin(),dummy9, dummy9 +3);
-
-  std::vector<T> C11;
-  int dummy10[] = {115,5,50};
-  C11.insert(C11.begin(),dummy10, dummy10 +3);
-
-  std::vector<T> C12;
-  int dummy12[] = {115,3,50};
-  C12.insert(C12.begin(),dummy12, dummy12 +3);
-
-  std::vector<T> C13;
-  int dummy13[] = {115,7,50};
-  C13.insert(C13.begin(),dummy13, dummy13 +3);
+  Vector<T,3> C0(0,50,50);
+  Vector<T,3> C1(5,50,50);
+  Vector<T,3> C2(40,50,50);
+  Vector<T,3> C3(80,50,50);
+  Vector<T,3> C4(120,50,50);
+  Vector<T,3> C5(160,50,50);
+  Vector<T,3> C6(195,50,50);
+  Vector<T,3> C7(200,50,50);
+  Vector<T,3> C8(190,50,50);
+  Vector<T,3> C9(115,50,50);
+  Vector<T,3> C10(115,25,50);
+  Vector<T,3> C11(115,5,50);
+  Vector<T,3> C12(115,3,50);
+  Vector<T,3> C13(115,7,50);
 
   T radius1 = 10 ;  // radius of the tightest part
   T radius2 = 20 ;  // radius of the widest part
   T radius3 = 4 ;   // radius of the small exit
 
-  IndicatorCylinder3D<bool,T> inflow(C0, C1, radius2);
-  IndicatorCylinder3D<bool,T> cyl1(C1, C2, radius2);
-  IndicatorCone3D<bool,T> co1(C2, C3, radius2, radius1);
-  IndicatorCylinder3D<bool,T> cyl2(C3, C4, radius1);
-  IndicatorCone3D<bool,T> co2(C4, C5, radius1, radius2);
-  IndicatorCylinder3D<bool,T> cyl3(C5, C6, radius2);
-  IndicatorCylinder3D<bool,T> outflow0(C7, C8, radius2);
-  IndicatorCylinder3D<bool,T> cyl4(C9, C10, radius3);
-  IndicatorCone3D<bool,T> co3(C10, C11, radius3, radius1);
-  IndicatorCylinder3D<bool,T> outflow1(C12, C13, radius1);
+  IndicatorCylinder3D<T> inflow(C0, C1, radius2);
+  IndicatorCylinder3D<T> cyl1(C1, C2, radius2);
+  IndicatorCone3D<T> co1(C2, C3, radius2, radius1);
+  IndicatorCylinder3D<T> cyl2(C3, C4, radius1);
+  IndicatorCone3D<T> co2(C4, C5, radius1, radius2);
+  IndicatorCylinder3D<T> cyl3(C5, C6, radius2);
+  IndicatorCylinder3D<T> outflow0(C7, C8, radius2);
+  IndicatorCylinder3D<T> cyl4(C9, C10, radius3);
+  IndicatorCone3D<T> co3(C10, C11, radius3, radius1);
+  IndicatorCylinder3D<T> outflow1(C12, C13, radius1);
 
-  IndicatorIdentity3D<bool,T> venturi(cyl1 + cyl2 + cyl3 + cyl4 + co1 + co2 + co3);
+  IndicatorIdentity3D<T> venturi(cyl1 + cyl2 + cyl3 + cyl4 + co1 + co2 + co3);
 
 
-  /// Build CoboidGeometry from IndicatorF (weights are set, remove and shrink is done)   
+  /// Build CoboidGeometry from IndicatorF (weights are set, remove and shrink is done)
   CuboidGeometry3D<T>* cuboidGeometry = new CuboidGeometry3D<T>(venturi, 1./N, 20*singleton::mpi().getSize() );
 
-  /// Build LoadBalancer from CuboidGeometry (weights are respected) 
+  /// Build LoadBalancer from CuboidGeometry (weights are respected)
   HeuristicLoadBalancer<T>* loadBalancer = new HeuristicLoadBalancer<T>(*cuboidGeometry);
 
   /// Default instantiation of superGeometry
@@ -228,8 +189,9 @@ void setBoundaryValues(SuperLattice3D<T, DESCRIPTOR>& sLattice,
 
     //SinusStartScale<T,int> startScale(iTmaxStart, (T) 1);
     PolynomialStartScale<T,int> startScale(iTmaxStart, T(1));
-    std::vector<int> iTvec(1,iT);
-    T frac = startScale(iTvec)[0];
+    int iTvec[1]={iT};
+    T frac = T();
+    startScale(&frac,iTvec);
 
     // Creates and sets the Poiseuille inflow profile using functors
     std::vector<T> maxVelocity(3,0);
@@ -245,10 +207,10 @@ void setBoundaryValues(SuperLattice3D<T, DESCRIPTOR>& sLattice,
 
 void getResults(SuperLattice3D<T, DESCRIPTOR>& sLattice,
                 LBconverter<T>& converter, int iT,
-                SuperGeometry3D<T>& superGeometry, Timer<double>& timer) {
+                SuperGeometry3D<T>& superGeometry, Timer<T>& timer) {
 
   OstreamManager clout(std::cout,"getResults");
-  SuperVTKwriter3D<T,DESCRIPTOR> vtkWriter("venturi3d");
+  SuperVTKwriter3D<T> vtkWriter("venturi3d");
 
   if (iT==0) {
     /// Writes the converter log file
@@ -271,6 +233,11 @@ void getResults(SuperLattice3D<T, DESCRIPTOR>& sLattice,
     vtkWriter.addFunctor( velocity );
     vtkWriter.addFunctor( pressure );
     vtkWriter.write(iT);
+
+    SuperEuklidNorm3D<T, DESCRIPTOR> normVel( velocity );
+    BlockLatticeReduction3D<T, DESCRIPTOR> planeReduction( normVel, 0, 0, -1 );
+    BlockGifWriter<T> gifWriter;
+    gifWriter.write( planeReduction, iT, "vel" ); // scaled
   }
 
   /// Writes output on the console
@@ -297,12 +264,11 @@ int main(int argc, char* argv[]) {
   LBconverter<T> converter(
     (int) 3,                               // dim
     (T)   1./N,                            // latticeL_
-    (T)   0.02,                            // latticeU_
+    (T)   0.02/M,                          // latticeU_
     (T)   0.1,                             // charNu_
     (T)   0.1,                             // charL_ = 1
     (T)   2.                               // charU_ = 1
   );
-  T maxPhysT = 200.0;                      // max. simulation time in s, SI unit
 
   /// === 2nd Step: Prepare Geometry ===
 
@@ -322,7 +288,7 @@ int main(int argc, char* argv[]) {
 
   prepareLattice(sLattice, converter, bulkDynamics, sBoundaryCondition, sOffBoundaryCondition, superGeometry);
 
-  Timer<double> timer(converter.numTimeSteps(maxPhysT), superGeometry.getStatistics().getNvoxel() );
+  Timer<T> timer(converter.numTimeSteps(maxPhysT), superGeometry.getStatistics().getNvoxel() );
   timer.start();
   getResults(sLattice, converter, 0, superGeometry, timer);
 

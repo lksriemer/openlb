@@ -37,8 +37,7 @@ template<typename T, template<typename U> class Lattice> class Cell;
 
 /// Implementation of the entropic collision step
 template<typename T, template<typename U> class Lattice>
-class EntropicDynamics : public BasicDynamics<T,Lattice>
-{
+class EntropicDynamics : public BasicDynamics<T,Lattice> {
 public:
   /// Constructor
   EntropicDynamics(T omega_, Momenta<T,Lattice>& momenta_);

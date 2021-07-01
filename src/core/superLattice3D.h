@@ -29,52 +29,52 @@
 #define SUPER_LATTICE_3D_H
 
 #include <vector>
-
 #include "blockLattice3D.h"
 #include "blockLatticeView3D.h"
 #include "communication/communicator3D.h"
-#include "geometry/cuboidGeometry3D.h"
-#include "geometry/superGeometry3D.h"
-#include "communication/loadBalancer.h"
-#include "communication/blockLoadBalancer.h"
 #include "postProcessing.h"
-#include "functors/analyticalF.h"
-#include "functors/superLatticeBaseF3D.h"
+#include "serializer.h"
 #include "communication/superStructure3D.h"
+
 
 /// All OpenLB code is contained in this namespace.
 namespace olb {
 
+
+
+
+template<typename T, template<typename U> class Lattice> class SuperLatticeF3D;
+template<typename T, typename S> class AnalyticalF3D;
+template<typename T> class SuperGeometry3D;
+template<typename T> class LoadBalancer;
+template<typename T> class CuboidGeometry3D;
+template <typename T> class IndicatorSphere3D;
+template<typename T> class Communicator3D;
+template<typename T, template<typename U> class Lattice> class BlockLatticeView3D;
+
+
 /// A super lattice combines a number of block lattices that are ordered
 /// in a cuboid geometry.
 /** The communication between the block lattices is done by two
- * communicators. One (_commStream) is responible to provide the data for
+ * communicators. One (_commStream) is responsible to provide the data for
  * the streaming the other (_commBC) for the non-local boundary conditions.
  * To simplify the code structure ghost cells in an overlap of size
- * (_overlap) is indrocuced. It depends on the non-locality of the
+ * (_overlap) is introduced. It depends on the non-locality of the
  * boundary conditions but is at least one because of the streaming
  *
  * The algorithm is parallelized with mpi. The load balancer (_loadBalancer)
  * distributes the block lattices to processes.
  *
- * WARNING: For unstructured grids there is an iterpolation needed
- * for the method buffer_outData in coboidNeighbourhood which is not
- * yet implemented! Moreover this class needs to be chanced
+ * WARNING: For unstructured grids there is an interpolation needed
+ * for the method buffer_outData in cuboidNeighbourhood which is not
+ * yet implemented! Moreover this class needs to be changed so
  * that the number of times steps for the collision and streaming is
  * is dependent of the refinement level.
  *
  * This class is not intended to be derived from.
  */
-
-template<typename T> class Communicator3D;
-
-template<typename T, template<typename U> class Lattice> class SuperLatticeF3D;
-
-template<typename T> class SuperStructure3D;
-
-
 template<typename T, template<typename U> class Lattice>
-class SuperLattice3D : public SuperStructure3D<T> {
+class SuperLattice3D : public SuperStructure3D<T>, public BufferSerializable {
 
 private:
   /// Lattices with ghost cell layer of size overlap
@@ -82,13 +82,13 @@ private:
   /// View of the lattices without overlap
   std::vector<BlockLatticeView3D<T, Lattice> > _blockLattices;
 
-  /// This communicator handels the communication for the streaming
+  /// This communicator handles the communication for the streaming
   Communicator3D<T> _commStream;
-  /// This communicator handels the communication for the postprocessors
+  /// This communicator handles the communication for the postprocessors
   Communicator3D<T> _commBC;
   /// Specifies if there is communication for non local boundary conditions
-  /// needed. It is automatically swichted on if overlapBC >= 1 by the
-  /// calling the constructer. (default =false)
+  /// needed. It is automatically switched on if overlapBC >= 1 by
+  /// calling the constructor. (default =false)
   bool _commBC_on;
   /// Statistic of the super structure
   LatticeStatistics<T> *_statistics;
@@ -102,7 +102,7 @@ public:
                  LoadBalancer<T>& lb, int overlapBC = 0);
 
   SuperLattice3D(SuperGeometry3D<T>& superGeometry);
-
+  ~SuperLattice3D();
   /// Read and write access to a block lattice
   BlockLattice3D<T, Lattice>& getExtendedBlockLattice(int locIC) {
     return _extendedBlockLattices[locIC];
@@ -153,11 +153,17 @@ public:
   Cell<T,Lattice> get(std::vector<int> latticeR) const;
 
   /// Write access to the memory of the data of the super structure
-  virtual bool* operator() (int iCloc, int iX, int iY, int iZ, int iData) {return (bool*)&getExtendedBlockLattice(iCloc).get(iX+this->_overlap, iY+this->_overlap, iZ+this->_overlap)[iData]; };
+  virtual bool* operator() (int iCloc, int iX, int iY, int iZ, int iData) {
+    return (bool*)&getExtendedBlockLattice(iCloc).get(iX+this->_overlap, iY+this->_overlap, iZ+this->_overlap)[iData];
+  };
   /// Read only access to the dim of the data of the super structure
-  virtual int getDataSize() const {return Lattice<T>::q;};
+  virtual int getDataSize() const {
+    return Lattice<T>::q;
+  };
   /// Read only access to the data type dim of the data of the super structure
-  virtual int getDataTypeSize() const {return sizeof(T);};
+  virtual int getDataTypeSize() const {
+    return sizeof(T);
+  };
 
   /// Initialize all lattice cells to become ready for simulation
   void initialize();
@@ -174,6 +180,9 @@ public:
   void definePopulations(SuperGeometry3D<T>& sGeometry, int material, AnalyticalF3D<T,T>& Pop);
   /// Defines an external field on a domain with a particular material number
   void defineExternalField(SuperGeometry3D<T>& sGeometry, int material,
+                           int fieldBeginsAt, int sizeOfField, AnalyticalF3D<T,T>& field);
+  /// Defines an external field on a IndicatorCircle domain
+  void defineExternalField(SuperGeometry3D<T>& sGeometry, IndicatorSphere3D<T>& indicator,
                            int fieldBeginsAt, int sizeOfField, AnalyticalF3D<T,T>& field);
   /// Defines an external field on a domain with a particular material number
   void defineExternalField(SuperGeometry3D<T>& sGeometry, int material,
@@ -221,17 +230,18 @@ public:
 
   /// Adds a coupling generator for one partner superLattice
   template<template<typename U> class Slattice>
-  void addLatticeCoupling(SuperGeometry3D<T>& sGeometry, int material, LatticeCouplingGenerator3D<T, Lattice> const& lcGen,
+  void addLatticeCoupling(SuperGeometry3D<T>& sGeometry, int material,
+                          LatticeCouplingGenerator3D<T, Lattice> const& lcGen,
                           SuperLattice3D<T,Slattice>& partnerLattice );
   /// Executes coupling generator for one partner superLattice
   void executeCoupling();
 
-  /// TO BE DONE: Development of a general IO concept!
-  /// Save Data to files fName
-  void save(std::string fName, bool enforceUint = false);
-  /// Load Data from files fName
-  void load(std::string fName, bool enforceUint = false);
-
+  /// Number of data blocks for the serializable interface
+  virtual std::size_t getNblock() const;
+  /// Binary size for the serializer
+  virtual std::size_t getSerializableSize() const;
+  /// Return a pointer to the memory of the current block and its size for the serializable interface
+  virtual bool* getBlock(std::size_t iBlock, std::size_t& sizeBlock, bool loadingMode);
 
 private:
   /// Resets and reduce the statistics

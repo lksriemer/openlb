@@ -38,10 +38,12 @@ template class BlockLatticePhysVelocity3D<double,descriptors::D3Q19Descriptor>;
 template class BlockLatticeStrainRate3D<double,descriptors::D3Q19Descriptor>;
 template class BlockLatticePhysBoundaryForce3D<double,descriptors::D3Q19Descriptor>;
 template class BlockLatticePhysCorrBoundaryForce3D<double,descriptors::D3Q19Descriptor>;
+template class BlockLatticeExternalField3D<double,descriptors::D3Q19Descriptor>;
 template class BlockLatticePorosity3D<double,descriptors::D3Q19Descriptor>;
 template class BlockLatticePhysPermeability3D<double,descriptors::D3Q19Descriptor>;
 template class BlockLatticePhysDarcyForce3D<double,descriptors::D3Q19Descriptor>;
 template class BlockLatticeAverage3D<double,descriptors::D3Q19Descriptor>;
-template class BlockL2Norm3D<double,descriptors::D3Q19Descriptor>;
+template class BlockEuklidNorm3D<double,descriptors::D3Q19Descriptor>;
+template class BlockLatticeInterpPhysVelocity3D<double,descriptors::D3Q19Descriptor>;
 
 } // end namespace olb

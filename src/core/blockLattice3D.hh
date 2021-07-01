@@ -31,13 +31,10 @@
 #include <algorithm>
 #include "blockLattice3D.h"
 #include "dynamics/dynamics.h"
-#include "cell.h"
 #include "dynamics/lbHelpers.h"
 #include "util.h"
-#include "communication/ompManager.h"
 #include "communication/loadBalancer.h"
 #include "communication/blockLoadBalancer.h"
-#include "dataAnalysis3D.h"
 
 
 namespace olb {
@@ -49,26 +46,25 @@ namespace olb {
  *  \param nz_ lattice depth (third index)
  */
 template<typename T, template<typename U> class Lattice>
-BlockLattice3D<T,Lattice>::BlockLattice3D(int nx_, int ny_, int nz_)
-  : nx(nx_), ny(ny_), nz(nz_),
-    serializer(0), unSerializer(0),
-    dataAnalysis(new DataAnalysis3D<T,Lattice>(*this) )
+BlockLattice3D<T,Lattice>::BlockLattice3D(int nx, int ny, int nz)
+  : BlockLatticeStructure3D<T,Lattice>(nx,ny,nz)
 {
   allocateMemory();
   resetPostProcessors();
 #ifdef PARALLEL_MODE_OMP
   statistics = new LatticeStatistics<T>* [3*omp.get_size()];
   #pragma omp parallel
-  { statistics[omp.get_rank() + omp.get_size()]
-    = new LatticeStatistics<T>;
+  {
+    statistics[omp.get_rank() + omp.get_size()]
+      = new LatticeStatistics<T>;
     statistics[omp.get_rank()] = new LatticeStatistics<T>;
     statistics[omp.get_rank() + 2*omp.get_size()]
-    = new LatticeStatistics<T>;
+      = new LatticeStatistics<T>;
   }
 #else
   statistics = new LatticeStatistics<T>;
-#endif
   statistics->initialize();
+#endif
 }
 
 /** During destruction, the memory for the lattice and the contained
@@ -90,9 +86,6 @@ BlockLattice3D<T,Lattice>::~BlockLattice3D()
 #else
   delete statistics;
 #endif
-  delete serializer;
-  delete unSerializer;
-  delete dataAnalysis;
 }
 
 /** The whole data of the lattice is duplicated. This includes
@@ -102,17 +95,13 @@ BlockLattice3D<T,Lattice>::~BlockLattice3D()
  */
 template<typename T, template<typename U> class Lattice>
 BlockLattice3D<T,Lattice>::BlockLattice3D(BlockLattice3D<T,Lattice> const& rhs)
-  :  serializer(0), unSerializer(0),
-     dataAnalysis(new DataAnalysis3D<T,Lattice>(*this) )
+  :  BlockLatticeStructure3D<T,Lattice>(rhs._nx,rhs._ny,rhs._nz)
 {
-  nx = rhs.nx;
-  ny = rhs.ny;
-  nz = rhs.nz;
   allocateMemory();
   resetPostProcessors();
-  for (int iX=0; iX<nx; ++iX) {
-    for (int iY=0; iY<ny; ++iY) {
-      for (int iZ=0; iZ<nz; ++iZ) {
+  for (int iX=0; iX<this->_nx; ++iX) {
+    for (int iY=0; iY<this->_ny; ++iY) {
+      for (int iZ=0; iZ<this->_nz; ++iZ) {
         grid[iX][iY][iZ] = rhs.grid[iX][iY][iZ];
       }
     }
@@ -120,16 +109,17 @@ BlockLattice3D<T,Lattice>::BlockLattice3D(BlockLattice3D<T,Lattice> const& rhs)
 #ifdef PARALLEL_MODE_OMP
   statistics = new LatticeStatistics<T>* [3*omp.get_size()];
   #pragma omp parallel
-  { statistics[omp.get_rank() + omp.get_size()]
-    = new LatticeStatistics<T>;
+  {
+    statistics[omp.get_rank() + omp.get_size()]
+      = new LatticeStatistics<T>;
     statistics[omp.get_rank()] = new LatticeStatistics<T> (**rhs.statistics);
     statistics[omp.get_rank() + 2*omp.get_size()]
-    = new LatticeStatistics<T>;
+      = new LatticeStatistics<T>;
   }
 #else
   statistics = new LatticeStatistics<T> (*rhs.statistics);
-#endif
   statistics->initialize();
+#endif
 }
 
 /** The current lattice is deallocated, then the lattice from the rhs
@@ -151,21 +141,20 @@ BlockLattice3D<T,Lattice>& BlockLattice3D<T,Lattice>::operator= (
  * lattice are copied, and not the lattice itself.
  */
 template<typename T, template<typename U> class Lattice>
-void BlockLattice3D<T,Lattice>::swap(BlockLattice3D& rhs) {
-  std::swap(nx, rhs.nx);
-  std::swap(ny, rhs.ny);
-  std::swap(nz, rhs.nz);
+void BlockLattice3D<T,Lattice>::swap(BlockLattice3D& rhs)
+{
+  std::swap(this->_nx, rhs._nx);
+  std::swap(this->_ny, rhs._ny);
+  std::swap(this->_nz, rhs._nz);
   std::swap(rawData, rhs.rawData);
   std::swap(grid, rhs.grid);
   postProcessors.swap(rhs.postProcessors);
   std::swap(statistics, rhs.statistics);
-  std::swap(serializer, rhs.serializer);
-  std::swap(unSerializer, rhs.unSerializer);
-  std::swap(dataAnalysis, rhs.dataAnalysis);
 }
 
 template<typename T, template<typename U> class Lattice>
-void BlockLattice3D<T,Lattice>::initialize() {
+void BlockLattice3D<T,Lattice>::initialize()
+{
   postProcess();
 }
 
@@ -180,11 +169,11 @@ void BlockLattice3D<T,Lattice>::defineDynamics (
   int x0, int x1, int y0, int y1, int z0, int z1,
   Dynamics<T,Lattice>* dynamics )
 {
-  OLB_PRECONDITION(x0>=0 && x1<nx);
+  OLB_PRECONDITION(x0>=0 && x1<this->_nx);
   OLB_PRECONDITION(x1>=x0);
-  OLB_PRECONDITION(y0>=0 && y1<ny);
+  OLB_PRECONDITION(y0>=0 && y1<this->_ny);
   OLB_PRECONDITION(y1>=y0);
-  OLB_PRECONDITION(z0>=0 && z1<nz);
+  OLB_PRECONDITION(z0>=0 && z1<this->_nz);
   OLB_PRECONDITION(z1>=z0);
 
   for (int iX=x0; iX<=x1; ++iX) {
@@ -200,9 +189,9 @@ template<typename T, template<typename U> class Lattice>
 void BlockLattice3D<T,Lattice>::defineDynamics (
   int iX, int iY, int iZ, Dynamics<T,Lattice>* dynamics )
 {
-  OLB_PRECONDITION(iX>=0 && iX<nx);
-  OLB_PRECONDITION(iY>=0 && iY<ny);
-  OLB_PRECONDITION(iZ>=0 && iZ<nz);
+  OLB_PRECONDITION(iX>=0 && iX<this->_nx);
+  OLB_PRECONDITION(iY>=0 && iY<this->_ny);
+  OLB_PRECONDITION(iZ>=0 && iZ<this->_nz);
 
   grid[iX][iY][iZ].defineDynamics(dynamics);
 }
@@ -211,14 +200,14 @@ template<typename T, template<typename U> class Lattice>
 void BlockLattice3D<T,Lattice>::defineDynamics (
   BlockGeometryStructure3D<T>& blockGeometry, int material, Dynamics<T,Lattice>* dynamics)
 {
-  for (int iX=0; iX<nx; ++iX) {
-    for (int iY=0; iY<ny; ++iY) {
-      for (int iZ=0; iZ<nz; ++iZ) {
-        if(blockGeometry.getMaterial(iX, iY, iZ)==material) {
+  for (int iX=0; iX<this->_nx; ++iX) {
+    for (int iY=0; iY<this->_ny; ++iY) {
+      for (int iZ=0; iZ<this->_nz; ++iZ) {
+        if (blockGeometry.getMaterial(iX, iY, iZ)==material) {
           grid[iX][iY][iZ].defineDynamics(dynamics);
         }
       }
-    } 
+    }
   }
 }
 
@@ -226,11 +215,11 @@ template<typename T, template<typename U> class Lattice>
 void BlockLattice3D<T,Lattice>::specifyStatisticsStatus (
   int x0, int x1, int y0, int y1, int z0, int z1, bool status)
 {
-  OLB_PRECONDITION(x0>=0 && x1<nx);
+  OLB_PRECONDITION(x0>=0 && x1<this->_nx);
   OLB_PRECONDITION(x1>=x0);
-  OLB_PRECONDITION(y0>=0 && y1<ny);
+  OLB_PRECONDITION(y0>=0 && y1<this->_ny);
   OLB_PRECONDITION(y1>=y0);
-  OLB_PRECONDITION(z0>=0 && z1<nz);
+  OLB_PRECONDITION(z0>=0 && z1<this->_nz);
   OLB_PRECONDITION(z1>=z0);
 
   for (int iX=x0; iX<=x1; ++iX) {
@@ -250,11 +239,11 @@ template<typename T, template<typename U> class Lattice>
 void BlockLattice3D<T,Lattice>::collide (
   int x0, int x1, int y0, int y1, int z0, int z1)
 {
-  OLB_PRECONDITION(x0>=0 && x1<nx);
+  OLB_PRECONDITION(x0>=0 && x1<this->_nx);
   OLB_PRECONDITION(x1>=x0);
-  OLB_PRECONDITION(y0>=0 && y1<ny);
+  OLB_PRECONDITION(y0>=0 && y1<this->_ny);
   OLB_PRECONDITION(y1>=y0);
-  OLB_PRECONDITION(z0>=0 && z1<nz);
+  OLB_PRECONDITION(z0>=0 && z1<this->_nz);
   OLB_PRECONDITION(z1>=z0);
 
   int iX;
@@ -273,24 +262,26 @@ void BlockLattice3D<T,Lattice>::collide (
 
 /** \sa collide(int,int,int,int) */
 template<typename T, template<typename U> class Lattice>
-void BlockLattice3D<T,Lattice>::collide() {
-  collide(0, nx-1, 0, ny-1, 0, nz-1);
+void BlockLattice3D<T,Lattice>::collide()
+{
+  collide(0, this->_nx-1, 0, this->_ny-1, 0, this->_nz-1);
 }
 
 /**
  * A useful method for initializing the flow field to a given velocity
  * profile.
  */
+/*
 template<typename T, template<typename U> class Lattice>
 void BlockLattice3D<T,Lattice>::staticCollide (
   int x0, int x1, int y0, int y1, int z0, int z1,
   TensorFieldBase3D<T,3> const& u )
 {
-  OLB_PRECONDITION(x0>=0 && x1<nx);
+  OLB_PRECONDITION(x0>=0 && x1<this->_nx);
   OLB_PRECONDITION(x1>=x0);
-  OLB_PRECONDITION(y0>=0 && y1<ny);
+  OLB_PRECONDITION(y0>=0 && y1<this->_ny);
   OLB_PRECONDITION(y1>=y0);
-  OLB_PRECONDITION(z0>=0 && z1<nz);
+  OLB_PRECONDITION(z0>=0 && z1<this->_nz);
   OLB_PRECONDITION(z1>=z0);
 
   int iX;
@@ -306,24 +297,28 @@ void BlockLattice3D<T,Lattice>::staticCollide (
     }
   }
 }
+*/
 
 /** \sa collide(int,int,int,int) */
+/*
 template<typename T, template<typename U> class Lattice>
 void BlockLattice3D<T,Lattice>::staticCollide(TensorFieldBase3D<T,3> const& u) {
-  staticCollide(0, nx-1, 0, ny-1, 0, nz-1, u);
+  staticCollide(0, this->_nx-1, 0, this->_ny-1, 0, this->_nz-1, u);
 }
+*/
 
 /** The distribution function never leave the rectangular domain. On the
  * domain boundaries, the (outgoing) distribution functions that should
  * be streamed outside are simply left untouched.
  */
 template<typename T, template<typename U> class Lattice>
-void BlockLattice3D<T,Lattice>::stream(int x0, int x1, int y0, int y1, int z0, int z1) {
-  OLB_PRECONDITION(x0>=0 && x1<nx);
+void BlockLattice3D<T,Lattice>::stream(int x0, int x1, int y0, int y1, int z0, int z1)
+{
+  OLB_PRECONDITION(x0>=0 && x1<this->_nx);
   OLB_PRECONDITION(x1>=x0);
-  OLB_PRECONDITION(y0>=0 && y1<ny);
+  OLB_PRECONDITION(y0>=0 && y1<this->_ny);
   OLB_PRECONDITION(y1>=y0);
-  OLB_PRECONDITION(z0>=0 && z1<nz);
+  OLB_PRECONDITION(z0>=0 && z1<this->_nz);
   OLB_PRECONDITION(z1>=z0);
 
   static const int vicinity = Lattice<T>::vicinity;
@@ -341,8 +336,9 @@ void BlockLattice3D<T,Lattice>::stream(int x0, int x1, int y0, int y1, int z0, i
 /** Post-processing steps are called at the end of this method.
  * \sa stream(int,int,int,int,int,int) */
 template<typename T, template<typename U> class Lattice>
-void BlockLattice3D<T,Lattice>::stream(bool periodic) {
-  stream(0, nx-1, 0, ny-1, 0, nz-1);
+void BlockLattice3D<T,Lattice>::stream(bool periodic)
+{
+  stream(0, this->_nx-1, 0, this->_ny-1, 0, this->_nz-1);
 
   if (periodic) {
     makePeriodic();
@@ -357,12 +353,13 @@ void BlockLattice3D<T,Lattice>::stream(bool periodic) {
  * because memory is traversed only once instead of twice.
  */
 template<typename T, template<typename U> class Lattice>
-void BlockLattice3D<T,Lattice>::collideAndStream(int x0, int x1, int y0, int y1, int z0, int z1) {
-  OLB_PRECONDITION(x0>=0 && x1<nx);
+void BlockLattice3D<T,Lattice>::collideAndStream(int x0, int x1, int y0, int y1, int z0, int z1)
+{
+  OLB_PRECONDITION(x0>=0 && x1<this->_nx);
   OLB_PRECONDITION(x1>=x0);
-  OLB_PRECONDITION(y0>=0 && y1<ny);
+  OLB_PRECONDITION(y0>=0 && y1<this->_ny);
   OLB_PRECONDITION(y1>=y0);
-  OLB_PRECONDITION(z0>=0 && z1<nz);
+  OLB_PRECONDITION(z0>=0 && z1<this->_nz);
   OLB_PRECONDITION(z1>=z0);
 
   static const int vicinity = Lattice<T>::vicinity;
@@ -387,8 +384,9 @@ void BlockLattice3D<T,Lattice>::collideAndStream(int x0, int x1, int y0, int y1,
 /** Post-processing steps are called at the end of this method.
  * \sa collideAndStream(int,int,int,int,int,int) */
 template<typename T, template<typename U> class Lattice>
-void BlockLattice3D<T,Lattice>::collideAndStream(bool periodic) {
-  collideAndStream(0, nx-1, 0, ny-1, 0, nz-1);
+void BlockLattice3D<T,Lattice>::collideAndStream(bool periodic)
+{
+  collideAndStream(0, this->_nx-1, 0, this->_ny-1, 0, this->_nz-1);
 
   if (periodic) {
     makePeriodic();
@@ -416,8 +414,9 @@ T BlockLattice3D<T,Lattice>::computeAverageDensity (
 }
 
 template<typename T, template<typename U> class Lattice>
-T BlockLattice3D<T,Lattice>::computeAverageDensity() const {
-  return computeAverageDensity(0, nx-1, 0, ny-1, 0, nz-1);
+T BlockLattice3D<T,Lattice>::computeAverageDensity() const
+{
+  return computeAverageDensity(0, this->_nx-1, 0, this->_ny-1, 0, this->_nz-1);
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -427,20 +426,34 @@ void BlockLattice3D<T,Lattice>::stripeOffDensityOffset (
   for (int iX=x0; iX<=x1; ++iX) {
     for (int iY=y0; iY<=y1; ++iY) {
       for (int iZ=z0; iZ<=z1; ++iZ) {
+        //if (offset<-42000.) {
+        //T rho = get(iX,iY,iZ).computeRho();
+        // if (rho<0) {
+        //for (int iPop=0; iPop<Lattice<T>::q; ++iPop) {
+        //  if (get(iX,iY,iZ)[iPop] + Lattice<T>::t[iPop] < T() ) {
+        //    get(iX,iY,iZ)[iPop] = -Lattice<T>::t[iPop]+0.0000001;
+        //  }
+        //  else if(rho>1.)
+        // get(iX,iY,iZ)[iPop] -= Lattice<T>::t[iPop] * (rho-1.);
+        //}
+        //}
+        //}
+        //else {
         // only stripe off if rho stays positive
         //if (get(iX,iY,iZ).computeRho()>offset) {
-          for (int iPop=0; iPop<Lattice<T>::q; ++iPop) {
-            get(iX,iY,iZ)[iPop] -= Lattice<T>::t[iPop] * offset;
-          }
-        //}
+        for (int iPop=0; iPop<Lattice<T>::q; ++iPop) {
+          get(iX,iY,iZ)[iPop] -= Lattice<T>::t[iPop] * offset;
+        }
+        // }
       }
     }
   }
 }
 
 template<typename T, template<typename U> class Lattice>
-void BlockLattice3D<T,Lattice>::stripeOffDensityOffset(T offset) {
-  stripeOffDensityOffset(0, nx-1, 0, ny-1, 0, nz-1, offset);
+void BlockLattice3D<T,Lattice>::stripeOffDensityOffset(T offset)
+{
+  stripeOffDensityOffset(0, this->_nx-1, 0, this->_ny-1, 0, this->_nz-1, offset);
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -458,8 +471,9 @@ void BlockLattice3D<T,Lattice>::forAll (
 }
 
 template<typename T, template<typename U> class Lattice>
-void BlockLattice3D<T,Lattice>::forAll(WriteCellFunctional<T,Lattice> const& application) {
-  forAll(0, nx-1, 0, ny-1, 0, nz-1, application);
+void BlockLattice3D<T,Lattice>::forAll(WriteCellFunctional<T,Lattice> const& application)
+{
+  forAll(0, this->_nx-1, 0, this->_ny-1, 0, this->_nz-1, application);
 }
 
 
@@ -471,14 +485,16 @@ void BlockLattice3D<T,Lattice>::addPostProcessor (
 }
 
 template<typename T, template<typename U> class Lattice>
-void BlockLattice3D<T,Lattice>::resetPostProcessors() {
+void BlockLattice3D<T,Lattice>::resetPostProcessors()
+{
   clearPostProcessors();
   StatPPGenerator3D<T,Lattice> statPPGenerator;
   addPostProcessor(statPPGenerator);
 }
 
 template<typename T, template<typename U> class Lattice>
-void BlockLattice3D<T,Lattice>::clearPostProcessors() {
+void BlockLattice3D<T,Lattice>::clearPostProcessors()
+{
   typename std::vector<PostProcessor3D<T,Lattice>*>::iterator ppIt = postProcessors.begin();
   for (; ppIt != postProcessors.end(); ++ppIt) {
     delete *ppIt;
@@ -487,7 +503,8 @@ void BlockLattice3D<T,Lattice>::clearPostProcessors() {
 }
 
 template<typename T, template<typename U> class Lattice>
-void BlockLattice3D<T,Lattice>::postProcess() {
+void BlockLattice3D<T,Lattice>::postProcess()
+{
   for (unsigned iPr=0; iPr<postProcessors.size(); ++iPr) {
     postProcessors[iPr] -> process(*this);
   }
@@ -511,7 +528,8 @@ void BlockLattice3D<T,Lattice>::addLatticeCoupling (
 }
 
 template<typename T, template<typename U> class Lattice>
-void BlockLattice3D<T,Lattice>::executeCoupling() {
+void BlockLattice3D<T,Lattice>::executeCoupling()
+{
   for (unsigned iPr=0; iPr<latticeCouplings.size(); ++iPr) {
     latticeCouplings[iPr] -> process(*this);
   }
@@ -527,7 +545,8 @@ void BlockLattice3D<T,Lattice>::executeCoupling (
 }
 
 template<typename T, template<typename U> class Lattice>
-void BlockLattice3D<T,Lattice>::clearLatticeCouplings() {
+void BlockLattice3D<T,Lattice>::clearLatticeCouplings()
+{
   typename std::vector<PostProcessor3D<T,Lattice>*>::iterator ppIt = latticeCouplings.begin();
   for (; ppIt != latticeCouplings.end(); ++ppIt) {
     delete *ppIt;
@@ -536,14 +555,16 @@ void BlockLattice3D<T,Lattice>::clearLatticeCouplings() {
 }
 
 template<typename T, template<typename U> class Lattice>
-void BlockLattice3D<T,Lattice>::subscribeReductions(Reductor<T>& reductor) {
+void BlockLattice3D<T,Lattice>::subscribeReductions(Reductor<T>& reductor)
+{
   for (unsigned iPr=0; iPr<postProcessors.size(); ++iPr) {
     postProcessors[iPr] -> subscribeReductions(*this, &reductor);
   }
 }
 
 template<typename T, template<typename U> class Lattice>
-LatticeStatistics<T>& BlockLattice3D<T,Lattice>::getStatistics() {
+LatticeStatistics<T>& BlockLattice3D<T,Lattice>::getStatistics()
+{
 #ifdef PARALLEL_MODE_OMP
   return *statistics[omp.get_rank()];
 #else
@@ -563,24 +584,26 @@ BlockLattice3D<T,Lattice>::getStatistics() const
 }
 
 template<typename T, template<typename U> class Lattice>
-void BlockLattice3D<T,Lattice>::allocateMemory() {
+void BlockLattice3D<T,Lattice>::allocateMemory()
+{
   // The conversions to size_t ensure 64-bit compatibility. Note that
   //   nx, ny and nz are of type int, which might by 32-bit types, even on
   //   64-bit platforms. Therefore, nx*ny*nz may lead to a type overflow.
-  rawData = new Cell<T,Lattice> [(size_t)nx*(size_t)ny*(size_t)nz];
-  grid    = new Cell<T,Lattice>** [(size_t)nx];
-  for (int iX=0; iX<nx; ++iX) {
-    grid[iX] = new Cell<T,Lattice>* [(size_t)ny];
-    for (int iY=0; iY<ny; ++iY) {
-      grid[iX][iY] = rawData + (size_t)nz*((size_t)iY+(size_t)ny*(size_t)iX);
+  rawData = new Cell<T,Lattice> [(size_t)this->_nx*(size_t)this->_ny*(size_t)this->_nz];
+  grid    = new Cell<T,Lattice>** [(size_t)this->_nx];
+  for (int iX=0; iX<this->_nx; ++iX) {
+    grid[iX] = new Cell<T,Lattice>* [(size_t)this->_ny];
+    for (int iY=0; iY<this->_ny; ++iY) {
+      grid[iX][iY] = rawData + (size_t)this->_nz*((size_t)iY+(size_t)this->_ny*(size_t)iX);
     }
   }
 }
 
 template<typename T, template<typename U> class Lattice>
-void BlockLattice3D<T,Lattice>::releaseMemory() {
+void BlockLattice3D<T,Lattice>::releaseMemory()
+{
   delete [] rawData;
-  for (int iX=0; iX<nx; ++iX) {
+  for (int iX=0; iX<this->_nx; ++iX) {
     delete [] grid[iX];
   }
   delete [] grid;
@@ -597,11 +620,11 @@ void BlockLattice3D<T,Lattice>::boundaryStream (
   int lim_x0, int lim_x1, int lim_y0, int lim_y1, int lim_z0, int lim_z1,
   int x0, int x1, int y0, int y1, int z0, int z1 )
 {
-  OLB_PRECONDITION(lim_x0>=0 && lim_x1<nx);
+  OLB_PRECONDITION(lim_x0>=0 && lim_x1<this->_nx);
   OLB_PRECONDITION(lim_x1>=lim_x0);
-  OLB_PRECONDITION(lim_y0>=0 && lim_y1<ny);
+  OLB_PRECONDITION(lim_y0>=0 && lim_y1<this->_ny);
   OLB_PRECONDITION(lim_y1>=lim_y0);
-  OLB_PRECONDITION(lim_z0>=0 && lim_z1<nz);
+  OLB_PRECONDITION(lim_z0>=0 && lim_z1<this->_nz);
   OLB_PRECONDITION(lim_z1>=lim_z0);
 
   OLB_PRECONDITION(x0>=lim_x0 && x1<=lim_x1);
@@ -625,8 +648,7 @@ void BlockLattice3D<T,Lattice>::boundaryStream (
           int nextZ = iZ + Lattice<T>::c[iPop][2];
           if ( nextX>=lim_x0 && nextX<=lim_x1 &&
                nextY>=lim_y0 && nextY<=lim_y1 &&
-               nextZ>=lim_z0 && nextZ<=lim_z1 )
-          {
+               nextZ>=lim_z0 && nextZ<=lim_z1 ) {
             std::swap(grid[iX][iY][iZ][iPop+Lattice<T>::q/2],
                       grid[nextX][nextY][nextZ][iPop]);
           }
@@ -645,11 +667,11 @@ template<typename T, template<typename U> class Lattice>
 void BlockLattice3D<T,Lattice>::bulkStream (
   int x0, int x1, int y0, int y1, int z0, int z1 )
 {
-  OLB_PRECONDITION(x0>=0 && x1<nx);
+  OLB_PRECONDITION(x0>=0 && x1<this->_nx);
   OLB_PRECONDITION(x1>=x0);
-  OLB_PRECONDITION(y0>=0 && y1<ny);
+  OLB_PRECONDITION(y0>=0 && y1<this->_ny);
   OLB_PRECONDITION(y1>=y0);
-  OLB_PRECONDITION(z0>=0 && z1<nz);
+  OLB_PRECONDITION(z0>=0 && z1<this->_nz);
   OLB_PRECONDITION(z1>=z0);
 
   int iX;
@@ -682,11 +704,11 @@ template<typename T, template<typename U> class Lattice>
 void BlockLattice3D<T,Lattice>::bulkCollideAndStream (
   int x0, int x1, int y0, int y1, int z0, int z1 )
 {
-  OLB_PRECONDITION(x0>=0 && x1<nx);
+  OLB_PRECONDITION(x0>=0 && x1<this->_nx);
   OLB_PRECONDITION(x1>=x0);
-  OLB_PRECONDITION(y0>=0 && y1<ny);
+  OLB_PRECONDITION(y0>=0 && y1<this->_ny);
   OLB_PRECONDITION(y1>=y0);
-  OLB_PRECONDITION(z0>=0 && z1<nz);
+  OLB_PRECONDITION(z0>=0 && z1<this->_nz);
   OLB_PRECONDITION(z1>=z0);
 
   for (int iX=x0; iX<=x1; ++iX) {
@@ -701,11 +723,12 @@ void BlockLattice3D<T,Lattice>::bulkCollideAndStream (
 #endif  // not defined PARALLEL_MODE_OMP
 
 template<typename T, template<typename U> class Lattice>
-void BlockLattice3D<T,Lattice>::makePeriodic() {
+void BlockLattice3D<T,Lattice>::makePeriodic()
+{
   static const int vicinity = Lattice<T>::vicinity;
-  int maxX = getNx()-1;
-  int maxY = getNy()-1;
-  int maxZ = getNz()-1;
+  int maxX = this->getNx()-1;
+  int maxY = this->getNy()-1;
+  int maxZ = this->getNz()-1;
   periodicSurface(0,             vicinity-1,    0,    maxY,              0,       maxZ);
   periodicSurface(maxX-vicinity+1,     maxX,    0,    maxY,              0,       maxZ);
   periodicSurface(vicinity,      maxX-vicinity, 0,    vicinity-1,        0,       maxZ);
@@ -725,13 +748,12 @@ void BlockLattice3D<T,Lattice>::periodicSurface (
           int nextX = iX + Lattice<T>::c[iPop][0];
           int nextY = iY + Lattice<T>::c[iPop][1];
           int nextZ = iZ + Lattice<T>::c[iPop][2];
-          if ( nextX<0 || nextX>=getNx() ||
-               nextY<0 || nextY>=getNy() ||
-               nextZ<0 || nextZ>=getNz() )
-          {
-            nextX = (nextX+getNx())%getNx();
-            nextY = (nextY+getNy())%getNy();
-            nextZ = (nextZ+getNz())%getNz();
+          if ( nextX<0 || nextX>=this->getNx() ||
+               nextY<0 || nextY>=this->getNy() ||
+               nextZ<0 || nextZ>=this->getNz() ) {
+            nextX = (nextX+this->getNx())%this->getNx();
+            nextY = (nextY+this->getNy())%this->getNy();
+            nextZ = (nextZ+this->getNz())%this->getNz();
             std::swap (
               grid[iX][iY][iZ]         [iPop+Lattice<T>::q/2],
               grid[nextX][nextY][nextZ][iPop] );
@@ -743,211 +765,54 @@ void BlockLattice3D<T,Lattice>::periodicSurface (
 }
 
 template<typename T, template<typename U> class Lattice>
-DataAnalysisBase3D<T,Lattice> const& BlockLattice3D<T,Lattice>::getDataAnalysis() const {
-  dataAnalysis -> reset();
-  return *dataAnalysis;
-}
-
-template<typename T, template<typename U> class Lattice>
-DataSerializer<T> const& BlockLattice3D<T,Lattice>::getSerializer(IndexOrdering::OrderingT ordering) const {
-  delete serializer;
-  serializer = new BlockLatticeSerializer3D<T,Lattice>(*this, ordering);
-  return *serializer;
-}
-
-template<typename T, template<typename U> class Lattice>
-DataUnSerializer<T>& BlockLattice3D<T,Lattice>::getUnSerializer(IndexOrdering::OrderingT ordering) {
-  delete unSerializer;
-  unSerializer = new BlockLatticeUnSerializer3D<T,Lattice>(*this, ordering);
-  return *unSerializer;
-}
-
-template<typename T, template<typename U> class Lattice>
-DataSerializer<T> const& BlockLattice3D<T,Lattice>::getSubSerializer (
-  int x0_, int x1_, int y0_, int y1_, int z0_, int z1_,
-  IndexOrdering::OrderingT ordering ) const
+SpatiallyExtendedObject3D* BlockLattice3D<T,Lattice>::getComponent(int iBlock)
 {
-  delete serializer;
-  serializer = new BlockLatticeSerializer3D<T,Lattice> (
-    *this, x0_, x1_, y0_, y1_, z0_, z1_, ordering );
-  return *serializer;
-}
-
-template<typename T, template<typename U> class Lattice>
-DataUnSerializer<T>& BlockLattice3D<T,Lattice>::getSubUnSerializer (
-  int x0_, int x1_, int y0_, int y1_, int z0_, int z1_,
-  IndexOrdering::OrderingT ordering )
-{
-  delete unSerializer;
-  unSerializer = new BlockLatticeUnSerializer3D<T,Lattice> (
-    *this, x0_, x1_, y0_, y1_, z0_, z1_, ordering );
-  return *unSerializer;
-}
-
-template<typename T, template<typename U> class Lattice>
-SpatiallyExtendedObject3D* BlockLattice3D<T,Lattice>::getComponent(int iBlock) {
   OLB_PRECONDITION( iBlock==0 );
   return this;
 }
 
 template<typename T, template<typename U> class Lattice>
-SpatiallyExtendedObject3D const* BlockLattice3D<T,Lattice>::getComponent(int iBlock) const {
+SpatiallyExtendedObject3D const* BlockLattice3D<T,Lattice>::getComponent(int iBlock) const
+{
   OLB_PRECONDITION( iBlock==0 );
   return this;
 }
 
 template<typename T, template<typename U> class Lattice>
-multiPhysics::MultiPhysicsId BlockLattice3D<T,Lattice>::getMultiPhysicsId() const {
+multiPhysics::MultiPhysicsId BlockLattice3D<T,Lattice>::getMultiPhysicsId() const
+{
   return multiPhysics::getMultiPhysicsBlockId<T,Lattice>();
 }
 
 
-
-////////// class BlockLatticeSerializer3D ////////////////////////////
-
 template<typename T, template<typename U> class Lattice>
-BlockLatticeSerializer3D<T,Lattice>::BlockLatticeSerializer3D (
-  BlockLattice3D<T,Lattice> const& blockLattice_, IndexOrdering::OrderingT ordering_ )
-  : blockLattice(blockLattice_), ordering(ordering_),
-    x0(0), x1(blockLattice.getNx()-1), y0(0), y1(blockLattice.getNy()-1), z0(0), z1(blockLattice.getNz()-1),
-    iX(x0), iY(y0), iZ(z0),
-    sizeOfCell(Lattice<T>::q + Lattice<T>::ExternalField::numScalars)
-{ }
-
-template<typename T, template<typename U> class Lattice>
-BlockLatticeSerializer3D<T,Lattice>::BlockLatticeSerializer3D (
-  BlockLattice3D<T,Lattice> const& blockLattice_,
-  int x0_, int x1_, int y0_, int y1_, int z0_, int z1_,
-  IndexOrdering::OrderingT ordering_ )
-  : blockLattice(blockLattice_), ordering(ordering_),
-    x0(x0_), x1(x1_), y0(y0_), y1(y1_), z0(z0_), z1(z1_),
-    iX(x0), iY(y0), iZ(z0),
-    sizeOfCell(Lattice<T>::q + Lattice<T>::ExternalField::numScalars)
-{ }
-
-template<typename T, template<typename U> class Lattice>
-size_t BlockLatticeSerializer3D<T,Lattice>::getSize() const {
-  return (size_t)(x1-x0+1) * (size_t)(y1-y0+1) * (size_t)(z1-z0+1) * (size_t)sizeOfCell;
-}
-
-template<typename T, template<typename U> class Lattice>
-const T* BlockLatticeSerializer3D<T,Lattice>::getNextDataBuffer(size_t& bufferSize) const {
-  OLB_PRECONDITION( !isEmpty() );
-  if (ordering==IndexOrdering::forward || ordering==IndexOrdering::memorySaving) {
-    bufferSize = (size_t)(z1-z0+1)*(size_t)sizeOfCell;
-    buffer.resize(bufferSize);
-    for (iZ=z0; iZ<=z1; ++iZ) {
-      blockLattice.get(iX,iY,iZ).serialize(&buffer[(size_t)(iZ-z0)*(size_t)sizeOfCell]);
-    }
-    ++iY;
-    if (iY > y1) {
-      iY = 0;
-      ++iX;
-    }
-  }
-  else {
-    bufferSize = (size_t)(x1-x0+1)*(size_t)sizeOfCell;
-    buffer.resize(bufferSize);
-    for (iX=x0; iX<=x1; ++iX) {
-      blockLattice.get(iX,iY,iZ).serialize(&buffer[(size_t)(iX-x0)*(size_t)sizeOfCell]);
-    }
-    ++iY;
-    if (iY > y1) {
-      iY = 0;
-      ++iZ;
-    }
-  }
-  return &buffer[0];
-}
-
-template<typename T, template<typename U> class Lattice>
-bool BlockLatticeSerializer3D<T,Lattice>::isEmpty() const {
-  if (ordering==IndexOrdering::forward || ordering==IndexOrdering::memorySaving) {
-    return iX > x1;
-  }
-  else {
-    return iZ > z1;
-  }
+std::size_t BlockLattice3D<T,Lattice>::getNblock() const
+{
+  return 3 + rawData[0].getNblock() * this->_nx * this->_ny * this->_nz;
 }
 
 
-
-////////// class BlockLatticeUnSerializer3D ////////////////////////////
-
 template<typename T, template<typename U> class Lattice>
-BlockLatticeUnSerializer3D<T,Lattice>::BlockLatticeUnSerializer3D (
-  BlockLattice3D<T,Lattice>& blockLattice_, IndexOrdering::OrderingT ordering_ )
-  : blockLattice(blockLattice_), ordering(ordering_),
-    x0(0), x1(blockLattice.getNx()-1), y0(0), y1(blockLattice.getNy()-1), z0(0), z1(blockLattice.getNz()-1),
-    iX(x0), iY(y0), iZ(z0),
-    sizeOfCell(Lattice<T>::q + Lattice<T>::ExternalField::numScalars)
-{ }
-
-template<typename T, template<typename U> class Lattice>
-BlockLatticeUnSerializer3D<T,Lattice>::BlockLatticeUnSerializer3D (
-  BlockLattice3D<T,Lattice>& blockLattice_,
-  int x0_, int x1_, int y0_, int y1_, int z0_, int z1_,
-  IndexOrdering::OrderingT ordering_ )
-  : blockLattice(blockLattice_), ordering(ordering_),
-    x0(x0_), x1(x1_), y0(y0_), y1(y1_), z0(z0_), z1(z1_),
-    iX(x0), iY(y0), iZ(z0),
-    sizeOfCell(Lattice<T>::q + Lattice<T>::ExternalField::numScalars)
-{ }
-
-template<typename T, template<typename U> class Lattice>
-size_t BlockLatticeUnSerializer3D<T,Lattice>::getSize() const {
-  return (size_t)(x1-x0+1) * (size_t)(y1-y0+1) * (size_t)(z1-z0+1) * (size_t)sizeOfCell;
-}
-
-template<typename T, template<typename U> class Lattice>
-T* BlockLatticeUnSerializer3D<T,Lattice>::getNextDataBuffer(size_t& bufferSize) {
-  OLB_PRECONDITION( !isFull() );
-  if (ordering==IndexOrdering::forward || ordering==IndexOrdering::memorySaving) {
-    bufferSize = (size_t)(z1-z0+1)*(size_t)sizeOfCell;
-  }
-  else {
-    bufferSize = (size_t)(x1-x0+1)*(size_t)sizeOfCell;
-  }
-  buffer.resize(bufferSize);
-  return &buffer[0];
-}
-
-template<typename T, template<typename U> class Lattice>
-void BlockLatticeUnSerializer3D<T,Lattice>::commitData() {
-  OLB_PRECONDITION( !isFull() );
-  if (ordering==IndexOrdering::forward || ordering==IndexOrdering::memorySaving) {
-    for (iZ=z0; iZ<=z1; ++iZ) {
-      blockLattice.get(iX,iY,iZ).unSerialize(&buffer[(iZ-z0)*sizeOfCell]);
-    }
-    ++iY;
-    if (iY > y1) {
-      iY = 0;
-      ++iX;
-    }
-  }
-  else {
-    for (iX=x0; iX<=x1; ++iX) {
-      blockLattice.get(iX,iY,iZ).unSerialize(&buffer[(iX-x0)*sizeOfCell]);
-    }
-    ++iY;
-    if (iY > y1) {
-      iY = 0;
-      ++iZ;
-    }
-  }
-}
-
-template<typename T, template<typename U> class Lattice>
-bool BlockLatticeUnSerializer3D<T,Lattice>::isFull() const {
-  if (ordering==IndexOrdering::forward || ordering==IndexOrdering::memorySaving) {
-    return iX > x1;
-  }
-  else {
-    return iZ > z1;
-  }
+std::size_t BlockLattice3D<T,Lattice>::getSerializableSize() const
+{
+  return 3 * sizeof(int) + rawData[0].getSerializableSize() * this->_nx * this->_ny * this->_nz;
 }
 
 
+template<typename T, template<typename U> class Lattice>
+bool* BlockLattice3D<T,Lattice>::getBlock(std::size_t iBlock, std::size_t& sizeBlock, bool loadingMode)
+{
+  std::size_t currentBlock = 0;
+  bool* dataPtr = nullptr;
+
+  registerVar                      (iBlock, sizeBlock, currentBlock, dataPtr, this->_nx);
+  registerVar                      (iBlock, sizeBlock, currentBlock, dataPtr, this->_ny);
+  registerVar                      (iBlock, sizeBlock, currentBlock, dataPtr, this->_nz);
+  registerSerializablesOfConstSize (iBlock, sizeBlock, currentBlock, dataPtr, rawData,
+                                    (size_t) this->_nx * this->_ny * this->_nz, loadingMode);
+
+  return dataPtr;
+}
 
 //// OpenMP implementation of the method bulkCollideAndStream,
 //   by Mathias Krause                                         ////
@@ -956,11 +821,11 @@ template<typename T, template<typename U> class Lattice>
 void BlockLattice3D<T,Lattice>::bulkCollideAndStream (
   int x0, int x1, int y0, int y1, int z0, int z1 )
 {
-  OLB_PRECONDITION(x0>=0 && x1<nx);
+  OLB_PRECONDITION(x0>=0 && x1<this->_nx);
   OLB_PRECONDITION(x1>=x0);
-  OLB_PRECONDITION(y0>=0 && y1<ny);
+  OLB_PRECONDITION(y0>=0 && y1<this->_ny);
   OLB_PRECONDITION(y1>=y0);
-  OLB_PRECONDITION(z0>=0 && z1<nz);
+  OLB_PRECONDITION(z0>=0 && z1<this->_nz);
   OLB_PRECONDITION(z1>=z0);
 
   if (omp.get_size() <= x1-x0+1) {
@@ -1014,8 +879,7 @@ void BlockLattice3D<T,Lattice>::bulkCollideAndStream (
         }
       }
     }
-  }
-  else {
+  } else {
     for (int iX=x0; iX<=x1; ++iX) {
       for (int iY=y0; iY<=y1; ++iY) {
         for (int iZ=z0; iZ<=z1; ++iZ) {

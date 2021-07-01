@@ -39,12 +39,15 @@ namespace olb {
 * equilibrium distributions (i.e. only the Q_i : Pi term)
 */
 template<typename T, template<typename U> class Lattice, int direction, int orientation>
-class PlaneFdBoundaryProcessor3D : public LocalPostProcessor3D<T,Lattice>
-{
+class PlaneFdBoundaryProcessor3D : public LocalPostProcessor3D<T,Lattice> {
 public:
   PlaneFdBoundaryProcessor3D (int x0_, int x1_, int y0_, int y1_, int z0_, int z1_);
-  virtual int extent() const { return 1; }
-  virtual int extent(int whichDirection) const { return 1; }
+  virtual int extent() const {
+    return 1;
+  }
+  virtual int extent(int whichDirection) const {
+    return 1;
+  }
   virtual void process(BlockLattice3D<T,Lattice>& blockLattice);
   virtual void processSubDomain(BlockLattice3D<T,Lattice>& blockLattice,
                                 int x0_, int x1_, int y0_, int y1_, int z0_, int z1_ );
@@ -58,8 +61,7 @@ private:
 };
 
 template<typename T, template<typename U> class Lattice, int direction, int orientation>
-class PlaneFdBoundaryProcessorGenerator3D : public PostProcessorGenerator3D<T,Lattice>
-{
+class PlaneFdBoundaryProcessorGenerator3D : public PostProcessorGenerator3D<T,Lattice> {
 public:
   PlaneFdBoundaryProcessorGenerator3D(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_);
   virtual PostProcessor3D<T,Lattice>* generate() const;
@@ -71,13 +73,16 @@ public:
 * This class computes a convection BC on a flat wall in 2D
 */
 template<typename T, template<typename U> class Lattice, int direction, int orientation>
-class StraightConvectionBoundaryProcessor3D : public LocalPostProcessor3D<T,Lattice>
-{
+class StraightConvectionBoundaryProcessor3D : public LocalPostProcessor3D<T,Lattice> {
 public:
   StraightConvectionBoundaryProcessor3D(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_, T* uAv_ = NULL);
   ~StraightConvectionBoundaryProcessor3D();
-  virtual int extent() const { return 1; }
-  virtual int extent(int whichDirection) const { return 1; }
+  virtual int extent() const {
+    return 1;
+  }
+  virtual int extent(int whichDirection) const {
+    return 1;
+  }
   virtual void process(BlockLattice3D<T,Lattice>& blockLattice);
   virtual void processSubDomain ( BlockLattice3D<T,Lattice>& blockLattice,
                                   int x0_, int x1_, int y0_, int y1_ , int z0_, int z1_);
@@ -88,8 +93,7 @@ private:
 };
 
 template<typename T, template<typename U> class Lattice, int direction, int orientation>
-class StraightConvectionBoundaryProcessorGenerator3D : public PostProcessorGenerator3D<T,Lattice>
-{
+class StraightConvectionBoundaryProcessorGenerator3D : public PostProcessorGenerator3D<T,Lattice> {
 public:
   StraightConvectionBoundaryProcessorGenerator3D(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_, T* uAv_ = NULL);
   virtual PostProcessor3D<T,Lattice>* generate() const;
@@ -111,8 +115,12 @@ public:
 public:
   OuterVelocityEdgeProcessor3D (
     int x0_, int x1_, int y0_, int y1_, int z0_, int z1_ );
-  virtual int extent() const { return 2; }
-  virtual int extent(int whichDirection) const { return 2; }
+  virtual int extent() const {
+    return 2;
+  }
+  virtual int extent(int whichDirection) const {
+    return 2;
+  }
   virtual void process(BlockLattice3D<T,Lattice>& blockLattice);
   virtual void processSubDomain(BlockLattice3D<T,Lattice>& blockLattice,
                                 int x0_, int x1_, int y0_, int y1_,
@@ -131,8 +139,7 @@ private:
 template<typename T, template<typename U> class Lattice,
          int plane, int normal1, int normal2>
 class OuterVelocityEdgeProcessorGenerator3D
-  : public PostProcessorGenerator3D<T,Lattice>
-{
+    : public PostProcessorGenerator3D<T,Lattice> {
 public:
   OuterVelocityEdgeProcessorGenerator3D(int x0_, int x1_, int y0_, int y1_,
                                         int z0_, int z1_);
@@ -146,8 +153,12 @@ template<typename T, template<typename U> class Lattice,
 class OuterVelocityCornerProcessor3D : public LocalPostProcessor3D<T,Lattice> {
 public:
   OuterVelocityCornerProcessor3D(int x_, int y_, int z_);
-  virtual int extent() const { return 2; }
-  virtual int extent(int whichDirection) const { return 2; }
+  virtual int extent() const {
+    return 2;
+  }
+  virtual int extent(int whichDirection) const {
+    return 2;
+  }
   virtual void process(BlockLattice3D<T,Lattice>& blockLattice);
   virtual void processSubDomain(BlockLattice3D<T,Lattice>& blockLattice,
                                 int x0_, int x1_, int y0_, int y1_,
@@ -159,8 +170,7 @@ private:
 template<typename T, template<typename U> class Lattice,
          int xNormal, int yNormal, int zNormal>
 class OuterVelocityCornerProcessorGenerator3D
-  : public PostProcessorGenerator3D<T,Lattice>
-{
+    : public PostProcessorGenerator3D<T,Lattice> {
 public:
   OuterVelocityCornerProcessorGenerator3D(int x_, int y_, int z_);
   virtual PostProcessor3D<T,Lattice>* generate() const;

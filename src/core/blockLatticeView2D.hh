@@ -29,7 +29,6 @@
 
 #include "blockLatticeView2D.h"
 #include "cell.h"
-#include "dataAnalysis2D.h"
 
 namespace olb {
 
@@ -38,22 +37,16 @@ namespace olb {
 template<typename T, template<typename U> class Lattice>
 BlockLatticeView2D<T,Lattice>::BlockLatticeView2D (
   BlockLatticeStructure2D<T,Lattice>& originalLattice_ )
-  : originalLattice(&originalLattice_),
-    x0(0), y0(0),
-    nx( originalLattice->getNx() ),
-    ny( originalLattice->getNy() ),
-    dataAnalysis( new DataAnalysis2D<T,Lattice>(*this) )
+  : BlockLatticeStructure2D<T,Lattice>(originalLattice_.getNx(),originalLattice_.getNy()), originalLattice(&originalLattice_),
+    x0(0), y0(0)
 { }
 
 template<typename T, template<typename U> class Lattice>
 BlockLatticeView2D<T,Lattice>::BlockLatticeView2D (
   BlockLatticeStructure2D<T,Lattice>& originalLattice_,
   int x0_, int x1_, int y0_, int y1_ )
-  : originalLattice(&originalLattice_),
-    x0(x0_), y0(y0_),
-    nx(x1_-x0_+1),
-    ny(y1_-y0_+1),
-    dataAnalysis( new DataAnalysis2D<T,Lattice>(*this) )
+  : BlockLatticeStructure2D<T,Lattice>(x1_-x0_+1,y1_-y0_+1), originalLattice(&originalLattice_),
+    x0(x0_), y0(y0_)
 {
   OLB_PRECONDITION(x1_ < originalLattice->getNx());
   OLB_PRECONDITION(x0_ <= x1_);
@@ -64,16 +57,13 @@ BlockLatticeView2D<T,Lattice>::BlockLatticeView2D (
 template<typename T, template<typename U> class Lattice>
 BlockLatticeView2D<T,Lattice>::~BlockLatticeView2D()
 {
-  delete dataAnalysis;
 }
 
 
 template<typename T, template<typename U> class Lattice>
 BlockLatticeView2D<T,Lattice>::BlockLatticeView2D(BlockLatticeView2D<T,Lattice> const& rhs)
-  : originalLattice(rhs.originalLattice),
-    x0(rhs.x0), y0(rhs.y0),
-    nx(rhs.nx), ny(rhs.ny),
-    dataAnalysis( new DataAnalysis2D<T,Lattice>(*this) )
+  : BlockLatticeStructure2D<T,Lattice>(rhs._nx,rhs._ny), originalLattice(rhs.originalLattice),
+    x0(rhs.x0), y0(rhs.y0)
 { }
 
 template<typename T, template<typename U> class Lattice>
@@ -89,18 +79,18 @@ template<typename T, template<typename U> class Lattice>
 void BlockLatticeView2D<T,Lattice>::swap (
   BlockLatticeView2D<T,Lattice>& rhs)
 {
-  std::swap(nx, rhs.nx);
-  std::swap(ny, rhs.ny);
+  std::swap(this->_nx, rhs._nx);
+  std::swap(this->_ny, rhs._ny);
   std::swap(x0, rhs.x0);
   std::swap(y0, rhs.y0);
   std::swap(originalLattice, rhs.originalLattice);
-  std::swap(dataAnalysis, rhs.dataAnalysis);
 }
 
 template<typename T, template<typename U> class Lattice>
-Cell<T,Lattice>& BlockLatticeView2D<T,Lattice>::get(int iX, int iY) {
-  OLB_PRECONDITION(iX<nx);
-  OLB_PRECONDITION(iY<ny);
+Cell<T,Lattice>& BlockLatticeView2D<T,Lattice>::get(int iX, int iY)
+{
+  OLB_PRECONDITION(iX<this->_nx);
+  OLB_PRECONDITION(iY<this->_ny);
   return originalLattice->get(iX+x0, iY+y0);
 }
 
@@ -108,13 +98,14 @@ template<typename T, template<typename U> class Lattice>
 Cell<T,Lattice> const& BlockLatticeView2D<T,Lattice>::get (
   int iX, int iY ) const
 {
-  OLB_PRECONDITION(iX<nx);
-  OLB_PRECONDITION(iY<ny);
+  OLB_PRECONDITION(iX<this->_nx);
+  OLB_PRECONDITION(iY<this->_ny);
   return originalLattice->get(iX+x0, iY+y0);
 }
 
 template<typename T, template<typename U> class Lattice>
-void BlockLatticeView2D<T,Lattice>::initialize() {
+void BlockLatticeView2D<T,Lattice>::initialize()
+{
   originalLattice->initialize();
 }
 
@@ -155,10 +146,11 @@ void BlockLatticeView2D<T,Lattice>::collide (
 }
 
 template<typename T, template<typename U> class Lattice>
-void BlockLatticeView2D<T,Lattice>::collide() {
-  originalLattice->collide( x0, x0+nx-1, y0, y0+ny-1);
+void BlockLatticeView2D<T,Lattice>::collide()
+{
+  originalLattice->collide( x0, x0+this->_nx-1, y0, y0+this->_ny-1);
 }
-
+/*
 template<typename T, template<typename U> class Lattice>
 void BlockLatticeView2D<T,Lattice>::staticCollide (
   int x0_, int x1_, int y0_, int y1_,
@@ -172,8 +164,9 @@ template<typename T, template<typename U> class Lattice>
 void BlockLatticeView2D<T,Lattice>::staticCollide (
   TensorFieldBase2D<T,2> const& u )
 {
-  originalLattice->staticCollide( x0, x0+nx-1, y0, y0+ny-1, u);
+  originalLattice->staticCollide( x0, x0+this->_nx-1, y0, y0+this->_ny-1, u);
 }
+*/
 
 template<typename T, template<typename U> class Lattice>
 void BlockLatticeView2D<T,Lattice>::stream(int x0_, int x1_, int y0_, int y1_)
@@ -182,21 +175,24 @@ void BlockLatticeView2D<T,Lattice>::stream(int x0_, int x1_, int y0_, int y1_)
 }
 
 template<typename T, template<typename U> class Lattice>
-void BlockLatticeView2D<T,Lattice>::stream(bool periodic) {
+void BlockLatticeView2D<T,Lattice>::stream(bool periodic)
+{
   OLB_PRECONDITION(!periodic);
-  originalLattice->stream( x0, x0+nx-1, y0, y0+ny-1);
+  originalLattice->stream( x0, x0+this->_nx-1, y0, y0+this->_ny-1);
   postProcess();
 }
 
 template<typename T, template<typename U> class Lattice>
-void BlockLatticeView2D<T,Lattice>::collideAndStream(int x0_, int x1_, int y0_, int y1_) {
+void BlockLatticeView2D<T,Lattice>::collideAndStream(int x0_, int x1_, int y0_, int y1_)
+{
   originalLattice->collideAndStream(x0_+x0, x1_+x0, y0_+y0, y1_+y0);
 }
 
 template<typename T, template<typename U> class Lattice>
-void BlockLatticeView2D<T,Lattice>::collideAndStream(bool periodic) {
+void BlockLatticeView2D<T,Lattice>::collideAndStream(bool periodic)
+{
   OLB_PRECONDITION(!periodic);
-  originalLattice->collideAndStream( x0, x0+nx-1, y0, y0+ny-1);
+  originalLattice->collideAndStream( x0, x0+this->_nx-1, y0, y0+this->_ny-1);
   postProcess();
 }
 
@@ -209,8 +205,9 @@ T BlockLatticeView2D<T,Lattice>::computeAverageDensity (
 }
 
 template<typename T, template<typename U> class Lattice>
-T BlockLatticeView2D<T,Lattice>::computeAverageDensity() const {
-  return originalLattice->computeAverageDensity( x0, x0+nx-1, y0, y0+ny-1);
+T BlockLatticeView2D<T,Lattice>::computeAverageDensity() const
+{
+  return originalLattice->computeAverageDensity( x0, x0+this->_nx-1, y0, y0+this->_ny-1);
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -222,8 +219,9 @@ void BlockLatticeView2D<T,Lattice>::stripeOffDensityOffset (
 }
 
 template<typename T, template<typename U> class Lattice>
-void BlockLatticeView2D<T,Lattice>::stripeOffDensityOffset(T offset) {
-  originalLattice->stripeOffDensityOffset(x0, x0+nx-1, y0, y0+ny-1, offset);
+void BlockLatticeView2D<T,Lattice>::stripeOffDensityOffset(T offset)
+{
+  originalLattice->stripeOffDensityOffset(x0, x0+this->_nx-1, y0, y0+this->_ny-1, offset);
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -236,7 +234,7 @@ void BlockLatticeView2D<T,Lattice>::forAll (
 template<typename T, template<typename U> class Lattice>
 void BlockLatticeView2D<T,Lattice>::forAll(WriteCellFunctional<T,Lattice> const& application)
 {
-  originalLattice->forAll(x0, x0+nx-1, y0, y0+ny-1, application);
+  originalLattice->forAll(x0, x0+this->_nx-1, y0, y0+this->_ny-1, application);
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -250,13 +248,15 @@ void BlockLatticeView2D<T,Lattice>::addPostProcessor (
 }
 
 template<typename T, template<typename U> class Lattice>
-void BlockLatticeView2D<T,Lattice>::resetPostProcessors() {
+void BlockLatticeView2D<T,Lattice>::resetPostProcessors()
+{
   originalLattice->resetPostProcessors();
 }
 
 template<typename T, template<typename U> class Lattice>
-void BlockLatticeView2D<T,Lattice>::postProcess() {
-  originalLattice -> postProcess(x0, x0+nx-1, y0, y0+ny-1);
+void BlockLatticeView2D<T,Lattice>::postProcess()
+{
+  originalLattice -> postProcess(x0, x0+this->_nx-1, y0, y0+this->_ny-1);
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -278,8 +278,9 @@ void BlockLatticeView2D<T,Lattice>::addLatticeCoupling (
 }
 
 template<typename T, template<typename U> class Lattice>
-void BlockLatticeView2D<T,Lattice>::executeCoupling() {
-  originalLattice -> executeCoupling(x0, x0+nx-1, y0, y0+ny-1);
+void BlockLatticeView2D<T,Lattice>::executeCoupling()
+{
+  originalLattice -> executeCoupling(x0, x0+this->_nx-1, y0, y0+this->_ny-1);
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -309,51 +310,22 @@ LatticeStatistics<T> const& BlockLatticeView2D<T,Lattice>::getStatistics() const
 }
 
 template<typename T, template<typename U> class Lattice>
-DataAnalysisBase2D<T,Lattice> const& BlockLatticeView2D<T,Lattice>::getDataAnalysis() const {
-  dataAnalysis->reset();
-  return *dataAnalysis;
-}
-
-template<typename T, template<typename U> class Lattice>
-DataSerializer<T> const& BlockLatticeView2D<T,Lattice>::getSerializer(IndexOrdering::OrderingT ordering) const {
-  return originalLattice -> getSubSerializer(x0, x0+nx-1, y0, y0+ny-1, ordering);
-}
-
-template<typename T, template<typename U> class Lattice>
-DataUnSerializer<T>& BlockLatticeView2D<T,Lattice>::getUnSerializer(IndexOrdering::OrderingT ordering) {
-  return originalLattice -> getSubUnSerializer(x0, x0+nx-1, y0, y0+ny-1, ordering);
-}
-
-template<typename T, template<typename U> class Lattice>
-DataSerializer<T> const& BlockLatticeView2D<T,Lattice>::getSubSerializer (
-  int x0_, int x1_, int y0_, int y1_,
-  IndexOrdering::OrderingT ordering ) const
+SpatiallyExtendedObject2D* BlockLatticeView2D<T,Lattice>::getComponent(int iBlock)
 {
-  return originalLattice -> getSubSerializer(x0_+x0, x1_+x0, y0_+y0, y1_+y0, ordering);
-}
-
-template<typename T, template<typename U> class Lattice>
-DataUnSerializer<T>& BlockLatticeView2D<T,Lattice>::getSubUnSerializer (
-  int x0_, int x1_, int y0_, int y1_,
-  IndexOrdering::OrderingT ordering )
-{
-  return originalLattice -> getSubUnSerializer(x0_+x0, x1_+x0, y0_+y0, y1_+y0, ordering);
-}
-
-template<typename T, template<typename U> class Lattice>
-SpatiallyExtendedObject2D* BlockLatticeView2D<T,Lattice>::getComponent(int iBlock) {
   OLB_PRECONDITION( iBlock==0 );
   return this;
 }
 
 template<typename T, template<typename U> class Lattice>
-SpatiallyExtendedObject2D const* BlockLatticeView2D<T,Lattice>::getComponent(int iBlock) const {
+SpatiallyExtendedObject2D const* BlockLatticeView2D<T,Lattice>::getComponent(int iBlock) const
+{
   OLB_PRECONDITION( iBlock==0 );
   return this;
 }
 
 template<typename T, template<typename U> class Lattice>
-multiPhysics::MultiPhysicsId BlockLatticeView2D<T,Lattice>::getMultiPhysicsId() const {
+multiPhysics::MultiPhysicsId BlockLatticeView2D<T,Lattice>::getMultiPhysicsId() const
+{
   return multiPhysics::getMultiPhysicsBlockId<T,Lattice>();
 }
 

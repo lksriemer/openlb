@@ -133,13 +133,15 @@ createInterpBoundaryCondition3D(BlockLatticeStructure3D<T,Lattice>& block);
 
 template<typename T, template<typename U> class Lattice>
 OnLatticeBoundaryCondition3D<T,Lattice>*
-createLocalBoundaryCondition3D(BlockLatticeStructure3D<T,Lattice>& block) {
+createLocalBoundaryCondition3D(BlockLatticeStructure3D<T,Lattice>& block)
+{
   return createLocalBoundaryCondition3D<T,Lattice,RLBdynamics<T,Lattice> >(block);
 }
 
 template<typename T, template<typename U> class Lattice>
 OnLatticeBoundaryCondition3D<T,Lattice>*
-createInterpBoundaryCondition3D(BlockLatticeStructure3D<T,Lattice>& block) {
+createInterpBoundaryCondition3D(BlockLatticeStructure3D<T,Lattice>& block)
+{
   return createInterpBoundaryCondition3D<T,Lattice,BGKdynamics<T,Lattice> >(block);
 }
 

@@ -120,13 +120,15 @@ void SmagorinskyMRTdynamics<T,Lattice>::staticCollide(
 }
 
 template<typename T, template<typename U> class Lattice>
-void SmagorinskyMRTdynamics<T,Lattice>::setOmega(T omega) {
+void SmagorinskyMRTdynamics<T,Lattice>::setOmega(T omega)
+{
   this->setOmega(omega);
   preFactor = computePreFactor(omega, smagoConst, dx, dt);
 }
 
 template<typename T, template<typename U> class Lattice>
-T SmagorinskyMRTdynamics<T,Lattice>::getSmagorinskyOmega(Cell<T,Lattice>& cell ) {
+T SmagorinskyMRTdynamics<T,Lattice>::getSmagorinskyOmega(Cell<T,Lattice>& cell )
+{
   T rho, uTemp[Lattice<T>::d], pi[util::TensorVal<Lattice<T> >::n];
   this->momenta.computeAllMomenta(cell, rho, uTemp, pi);
   T newOmega = computeOmega(this->getOmega(), preFactor, rho, pi);
@@ -134,16 +136,19 @@ T SmagorinskyMRTdynamics<T,Lattice>::getSmagorinskyOmega(Cell<T,Lattice>& cell )
 }
 
 template<typename T, template<typename U> class Lattice>
-T SmagorinskyMRTdynamics<T,Lattice>::computePreFactor(T omega, T smagoConst, T dx, T dt) {
+T SmagorinskyMRTdynamics<T,Lattice>::computePreFactor(T omega, T smagoConst, T dx, T dt)
+{
   return (T)(smagoConst*smagoConst*dx*dx)*Lattice<T>::invCs2/dt*4*sqrt(2);
 }
 
 template<typename T, template<typename U> class Lattice>
-T SmagorinskyMRTdynamics<T,Lattice>::computeOmega(T omega0, T preFactor, T rho, T pi[util::TensorVal<Lattice<T> >::n] ) {
+T SmagorinskyMRTdynamics<T,Lattice>::computeOmega(T omega0, T preFactor, T rho, T pi[util::TensorVal<Lattice<T> >::n] )
+{
 
   T PiNeqNormSqr = pi[0]*pi[0] + 2.0*pi[1]*pi[1] + pi[2]*pi[2];
-  if (util::TensorVal<Lattice<T> >::n == 6)
+  if (util::TensorVal<Lattice<T> >::n == 6) {
     PiNeqNormSqr += pi[2]*pi[2] + pi[3]*pi[3] + 2*pi[4]*pi[4] +pi[5]*pi[5];
+  }
   T PiNeqNorm    = sqrt(PiNeqNormSqr);
   /// Molecular realaxation time
   T tau_mol = 1. /omega0;

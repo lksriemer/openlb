@@ -39,8 +39,7 @@ namespace descriptors {
 
 template<typename T>
 const int D2Q5DescriptorBase<T>::c
-[D2Q5DescriptorBase<T>::q][D2Q5DescriptorBase<T>::d] =
-{
+[D2Q5DescriptorBase<T>::q][D2Q5DescriptorBase<T>::d] = {
   { 0, 0},
   {-1, 0}, {0, -1}, {1,0}, { 0,1}
 };
@@ -52,8 +51,7 @@ template<typename T>
 const T D2Q5DescriptorBase<T>::invCs2 = (T)3;
 
 template<typename T>
-const T D2Q5DescriptorBase<T>::t[D2Q5DescriptorBase<T>::q] =
-{
+const T D2Q5DescriptorBase<T>::t[D2Q5DescriptorBase<T>::q] = {
   (T)1-(T)2/invCs2,
   (T)1/(invCs2*(T)2), (T)1/(invCs2*(T)2),
   (T)1/(invCs2*(T)2), (T)1/(invCs2*(T)2)
@@ -63,8 +61,7 @@ const T D2Q5DescriptorBase<T>::t[D2Q5DescriptorBase<T>::q] =
 
 template<typename T>
 const int D3Q7DescriptorBase<T>::c
-[D3Q7DescriptorBase<T>::q][D3Q7DescriptorBase<T>::d] =
-{
+[D3Q7DescriptorBase<T>::q][D3Q7DescriptorBase<T>::d] = {
   { 0, 0, 0},
 
   {-1, 0, 0}, {0,-1, 0},
@@ -79,8 +76,7 @@ template<typename T>
 const T D3Q7DescriptorBase<T>::invCs2 = (T)4;
 
 template<typename T>
-const T D3Q7DescriptorBase<T>::t[D3Q7DescriptorBase<T>::q] =
-{
+const T D3Q7DescriptorBase<T>::t[D3Q7DescriptorBase<T>::q] = {
   (T)1-(T)3 / invCs2,
 
   (T)1/(invCs2*(T)2), (T)1/(invCs2*(T)2), (T)1/(invCs2*(T)2),

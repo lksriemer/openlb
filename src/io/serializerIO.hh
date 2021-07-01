@@ -1,6 +1,6 @@
 /*  This file is part of the OpenLB library
  *
- *  Copyright (C) 2007 Jonas Latt
+ *  Copyright (C) 2006-2016 Jonas Latt, Mathias J. Krause
  *  E-mail contact: info@openlb.net
  *  The most recent release of OpenLB can be downloaded at
  *  <http://www.openlb.net/>
@@ -24,8 +24,6 @@
 #ifndef SERIALIZER_IO_HH
 #define SERIALIZER_IO_HH
 
-#include "communication/mpiManager.h"
-#include "core/singleton.h"
 #include "serializerIO.h"
 #include "base64.h"
 #include "core/olbDebug.h"
@@ -37,108 +35,58 @@
 
 namespace olb {
 
-template<typename T>
-void serializer2ostr(DataSerializer<T> const& serializer, std::ostream* ostr, bool enforceUint) {
-  size_t fullSize = 0;
-  if (singleton::mpi().isMainProcessor()) {
-    fullSize = serializer.getSize();
-    size_t binarySize = (size_t) (fullSize * sizeof(T));
-    if (enforceUint) {
-      Base64Encoder<unsigned int> sizeEncoder(*ostr, 1);
-      OLB_PRECONDITION(binarySize <= std::numeric_limits<unsigned int>::max());
-      unsigned int uintBinarySize = (unsigned int)binarySize;
-      sizeEncoder.encode(&uintBinarySize, 1);
-    }
-    else {
-      Base64Encoder<size_t> sizeEncoder(*ostr, 1);
-      sizeEncoder.encode(&binarySize, 1);
-    }
+void serializer2ostr(Serializer& serializer, std::ostream& ostr, bool enforceUint)
+{
+  serializer.resetCounter();
+  // write binary size into first integer of stream
+  size_t binarySize = serializer.getSize();
+  if (enforceUint) {
+    Base64Encoder<unsigned int> sizeEncoder(ostr, 1);
+    OLB_PRECONDITION(binarySize <= std::numeric_limits<unsigned int>::max());
+    unsigned int uintBinarySize = (unsigned int)binarySize;
+    sizeEncoder.encode(&uintBinarySize, 1);
+  } else {
+    Base64Encoder<size_t> sizeEncoder(ostr, 1);
+    sizeEncoder.encode(&binarySize, 1);
   }
-  Base64Encoder<T>* dataEncoder = 0;
-  if (singleton::mpi().isMainProcessor()) {
-    dataEncoder = new Base64Encoder<T>(*ostr, fullSize);
+
+  Base64Encoder<bool> dataEncoder (ostr, binarySize);
+
+  size_t blockSize;
+  const bool* dataBuffer = nullptr;
+  while (dataBuffer = serializer.getNextBlock(blockSize, false), dataBuffer != nullptr) {
+    dataEncoder.encode(dataBuffer, blockSize);
   }
-  while (!serializer.isEmpty()) {
-    size_t bufferSize;
-    const T* dataBuffer = serializer.getNextDataBuffer(bufferSize);
-    if (singleton::mpi().isMainProcessor()) {
-      dataEncoder->encode(dataBuffer, bufferSize);
-    }
-  }
-  delete dataEncoder;
+  serializer.resetCounter();
 }
 
-template<typename T>
-void saveData(Serializable<T> const& object, std::string fName, bool enforceUint) {
-  std::ofstream* ostr = 0;
-  if (singleton::mpi().isMainProcessor()) {
-    ostr = new std::ofstream(fName.c_str());
-    OLB_PRECONDITION( *ostr );
-  }
-  serializer2ostr<T>(object.getSerializer(IndexOrdering::memorySaving), ostr, enforceUint);
-  delete ostr;
-}
+void istr2serializer(Serializer& serializer, std::istream& istr, bool enforceUint)
+{
+  //size_t binarySize = serializer.getSize();
+  serializer.resetCounter();
 
-template<typename T>
-void istr2unSerializer(DataUnSerializer<T>& unSerializer, std::istream* istr, bool enforceUint) {
-  if (singleton::mpi().isMainProcessor()) {
-    size_t binarySize;
-    if (enforceUint) {
-      unsigned int uintBinarySize;
-      Base64Decoder<unsigned int> sizeDecoder(*istr, 1);
-      sizeDecoder.decode(&uintBinarySize, 1);
-      binarySize = uintBinarySize;
-    }
-    else {
-      Base64Decoder<size_t> sizeDecoder(*istr, 1);
-      sizeDecoder.decode(&binarySize, 1);
-    }
-    OLB_PRECONDITION(binarySize/sizeof(T) == unSerializer.getSize());
+  // read binary size from first integer of stream
+  size_t binarySize;
+  if (enforceUint) {
+    unsigned int uintBinarySize;
+    Base64Decoder<unsigned int> sizeDecoder(istr, 1);
+    sizeDecoder.decode(&uintBinarySize, 1);
+    binarySize = uintBinarySize;
+  } else {
+    Base64Decoder<size_t> sizeDecoder(istr, 1);
+    sizeDecoder.decode(&binarySize, 1);
   }
-  Base64Decoder<T>* dataDecoder = 0;
-  if (singleton::mpi().isMainProcessor()) {
-    dataDecoder = new Base64Decoder<T>(*istr, unSerializer.getSize());
-  }
-  while (!unSerializer.isFull()) {
-    size_t bufferSize = 0;
-    T* dataBuffer = unSerializer.getNextDataBuffer(bufferSize);
-    if (singleton::mpi().isMainProcessor()) {
-      dataDecoder->decode(dataBuffer, bufferSize);
-    }
-    unSerializer.commitData();
-  }
-  delete dataDecoder;
-}
+  //OLB_PRECONDITION(binarySize == serializer.getSize());
 
-template<typename T>
-void loadData(Serializable<T>& object, std::string fName, bool enforceUint) {
-  std::ifstream* istr = 0;
-  if (singleton::mpi().isMainProcessor()) {
-    istr = new std::ifstream(fName.c_str());
-    OLB_PRECONDITION( *istr );
-  }
-  istr2unSerializer<T>(object.getUnSerializer(IndexOrdering::memorySaving), istr, enforceUint);
-  delete istr;
-}
 
-template<typename T>
-void saveAsciiData(Serializable<T> const& object, std::string fName) {
-  std::ofstream* ostr = 0;
-  if (singleton::mpi().isMainProcessor()) {
-    ostr = new std::ofstream(fName.c_str());
-    OLB_PRECONDITION( *ostr );
+  Base64Decoder<bool> dataDecoder(istr, binarySize);
+
+  size_t blockSize;
+  bool* dataBuffer = nullptr;
+  while (dataBuffer = serializer.getNextBlock(blockSize, true), dataBuffer != nullptr) {
+    dataDecoder.decode(dataBuffer, blockSize);
   }
-  DataSerializer<T> const& serializer = object.getSerializer(IndexOrdering::memorySaving);
-  while (!serializer.isEmpty()) {
-    size_t bufferSize;
-    const T* dataBuffer = serializer.getNextDataBuffer(bufferSize);
-    if (singleton::mpi().isMainProcessor()) {
-      for (size_t iData=0; iData<bufferSize; ++iData) {
-        *ostr << dataBuffer[iData] << " ";
-      }
-    }
-  }
-  delete ostr;
+  serializer.resetCounter();
 }
 
 } // namespace olb

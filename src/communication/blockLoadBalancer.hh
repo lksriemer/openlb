@@ -26,28 +26,35 @@
 
 #include <vector>
 #include <map>
+#include "communication/mpiManager.h"
 #include "communication/blockLoadBalancer.h"
+#include "geometry/cuboidGeometry2D.h"
+#include "geometry/cuboidGeometry3D.h"
 #include "core/olbDebug.h"
 
 namespace olb {
 
 template<typename T>
-BlockLoadBalancer<T>::BlockLoadBalancer(int rank, int size, int globChunkSize, int offset) {
+BlockLoadBalancer<T>::BlockLoadBalancer(int rank, int size, int globChunkSize, int offset)
+{
   init_chunkD(rank, size, globChunkSize, offset);
 }
 
 template<typename T>
-BlockLoadBalancer<T>::BlockLoadBalancer(CuboidGeometry3D<T>& cGeometry) {
+BlockLoadBalancer<T>::BlockLoadBalancer(CuboidGeometry3D<T>& cGeometry)
+{
   init_chunkD(singleton::mpi().getRank(), singleton::mpi().getSize(), cGeometry.getNc(), 0);
 }
 
 template<typename T>
-BlockLoadBalancer<T>::BlockLoadBalancer(CuboidGeometry2D<T>& cGeometry) {
+BlockLoadBalancer<T>::BlockLoadBalancer(CuboidGeometry2D<T>& cGeometry)
+{
   init_chunkD(singleton::mpi().getRank(), singleton::mpi().getSize(), cGeometry.getNc(), 0);
 }
 
 template<typename T>
-void BlockLoadBalancer<T>::init_chunkD(int rank, int size, int globChunkSize, int offset) {
+void BlockLoadBalancer<T>::init_chunkD(int rank, int size, int globChunkSize, int offset)
+{
 
   OLB_PRECONDITION(rank>=0 && size>=1 && offset>=0)
   OLB_PRECONDITION(size<=globChunkSize &&  rank<size);
@@ -58,8 +65,7 @@ void BlockLoadBalancer<T>::init_chunkD(int rank, int size, int globChunkSize, in
   if (rank+1 <= globChunkSize-(globChunkSize/size)*size) {
     this->_firstGlobNum = globChunkSize/size * rank + rank + offset;
     this->_lastGlobNum  = this->_firstGlobNum + this->_locChunkSize - 1;
-  }
-  else {
+  } else {
     this->_firstGlobNum = globChunkSize/size * rank + globChunkSize - (globChunkSize/size)*size + offset;
     this->_lastGlobNum  = this->_firstGlobNum + this->_locChunkSize - 1;
   }
@@ -78,17 +84,20 @@ void BlockLoadBalancer<T>::init_chunkD(int rank, int size, int globChunkSize, in
 }
 
 template<typename T>
-int BlockLoadBalancer<T>::locChunkSize() const {
+int BlockLoadBalancer<T>::locChunkSize() const
+{
   return _locChunkSize;
 }
 
 template<typename T>
-int BlockLoadBalancer<T>::firstGlobNum() const {
+int BlockLoadBalancer<T>::firstGlobNum() const
+{
   return _firstGlobNum;
 }
 
 template<typename T>
-int BlockLoadBalancer<T>::lastGlobNum() const {
+int BlockLoadBalancer<T>::lastGlobNum() const
+{
   return _lastGlobNum;
 }
 

@@ -55,9 +55,11 @@ void prepareGeometry(LBconverter<T> const* converter,
   clout << "Prepare Geometry ..." << std::endl;
 
   int N = converter->numNodes();
-  std::vector<T> extend(2,T()); extend[0] = (N-1)*converter->getLatticeL();
-  std::vector<T> origin(2,T()); origin[1] = (N-1)*converter->getLatticeL();
-  IndicatorCuboid2D<bool,T> lid(extend, origin);
+  std::vector<T> extend(2,T());
+  extend[0] = (N-1)*converter->getLatticeL();
+  std::vector<T> origin(2,T());
+  origin[1] = (N-1)*converter->getLatticeL();
+  IndicatorCuboid2D<T> lid(extend, origin);
 
   superGeometry.rename(0,2);
 
@@ -96,7 +98,7 @@ void prepareLattice(LBconverter<T> const* converter,
   /// Material=1 -->bulk dynamics
   sLattice.defineDynamics(superGeometry, 1, &bulkDynamics);
 
-  /// Material=2,3 -->bulk dynamics, velocity boundary 
+  /// Material=2,3 -->bulk dynamics, velocity boundary
   sLattice.defineDynamics(superGeometry, 2, &bulkDynamics);
   sLattice.defineDynamics(superGeometry, 3, &bulkDynamics);
   sBoundaryCondition.addVelocityBoundary(superGeometry, 2, omega);
@@ -136,7 +138,7 @@ void setBoundaryValues(LBconverter<T> const* converter,
 }
 
 void getResults(SuperLattice2D<T, DESCRIPTOR>& sLattice,
-                LBconverter<T> const* converter, int iT, Timer<double>* timer,
+                LBconverter<T> const* converter, int iT, Timer<T>* timer,
                 const T logT, const T imSave, const T vtkSave, const T maxT,
                 std::string filenameGif, std::string filenameVtk,
                 const bool timerPrintSum, const int timerPrintMode,
@@ -144,7 +146,7 @@ void getResults(SuperLattice2D<T, DESCRIPTOR>& sLattice,
 
   OstreamManager clout(std::cout,"getResults");
 
-  SuperVTKwriter2D<T,DESCRIPTOR> vtkWriter("cavity2d");
+  SuperVTKwriter2D<T> vtkWriter("cavity2d");
   SuperLatticePhysVelocity2D<T,DESCRIPTOR> velocity(sLattice, *converter);
   SuperLatticePhysPressure2D<T,DESCRIPTOR> pressure(sLattice, *converter);
   vtkWriter.addFunctor(velocity);
@@ -175,10 +177,20 @@ void getResults(SuperLattice2D<T, DESCRIPTOR>& sLattice,
     vtkWriter.write(iT);
   }
 
+  /// Writes the Gif files
+  if (iT%converter->numTimeSteps(imSave)==0 && iT>0) {
+    SuperEuklidNorm2D<T,DESCRIPTOR> normVel(velocity);
+    BlockLatticeReduction2D<T, DESCRIPTOR> planeReduction(normVel);
+    BlockGifWriter<T> gifWriter;
+//    gifWriter.write(planeReduction, 0, 1, iT, "artefacts");
+    gifWriter.write(planeReduction, iT, "vel");
+  }
+
   if (iT == converter->numTimeSteps(maxT)-1 ) {
     timer->stop();
-    if (timerPrintSum==true)
+    if (timerPrintSum==true) {
       timer->printSummary();
+    }
   }
 
 }
@@ -205,7 +217,7 @@ int main(int argc, char* argv[]) {
   singleton::directories().setOlbDir(olbdir);
   singleton::directories().setOutputDir(outputdir);
 
-// call creator functions using xml data
+  // call creator functions using xml data
   LBconverter<T>* converter = createLBconverter<T>(config);
   int N = converter->numNodes();
   Timer<T>* timer           = createTimer<T>(config, *converter, N*N);
@@ -242,15 +254,17 @@ int main(int argc, char* argv[]) {
   /// === 2rd Step: Prepare Geometry ===
   /// Instantiation of a cuboidGeometry with weights
 
-  std::vector<T> extend(2,T()); extend[0] = (N-1)*converter->getLatticeL(); extend[1] = (N-1)*converter->getLatticeL();
+  std::vector<T> extend(2,T());
+  extend[0] = (N-1)*converter->getLatticeL();
+  extend[1] = (N-1)*converter->getLatticeL();
   std::vector<T> origin(2,T());
-  IndicatorCuboid2D<bool,T> cuboid(extend, origin);
+  IndicatorCuboid2D<T> cuboid(extend, origin);
 
-  #ifdef PARALLEL_MODE_MPI
-    CuboidGeometry2D<T> cuboidGeometry(cuboid, converter->getLatticeL(), singleton::mpi().getSize());
-  #else
-    CuboidGeometry2D<T> cuboidGeometry(cuboid, converter->getLatticeL(), 7);
-  #endif
+#ifdef PARALLEL_MODE_MPI
+  CuboidGeometry2D<T> cuboidGeometry(cuboid, converter->getLatticeL(), singleton::mpi().getSize());
+#else
+  CuboidGeometry2D<T> cuboidGeometry(cuboid, converter->getLatticeL(), 7);
+#endif
 
   cuboidGeometry.print();
 

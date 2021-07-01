@@ -39,12 +39,15 @@ namespace olb {
 * equilibrium distributions (i.e. only the Q_i : Pi term)
 */
 template<typename T, template<typename U> class Lattice, int direction, int orientation>
-class StraightFdBoundaryProcessor2D : public LocalPostProcessor2D<T,Lattice>
-{
+class StraightFdBoundaryProcessor2D : public LocalPostProcessor2D<T,Lattice> {
 public:
   StraightFdBoundaryProcessor2D(int x0_, int x1_, int y0_, int y1_);
-  virtual int extent() const { return 1; }
-  virtual int extent(int whichDirection) const { return 1; }
+  virtual int extent() const {
+    return 1;
+  }
+  virtual int extent(int whichDirection) const {
+    return 1;
+  }
   virtual void process(BlockLattice2D<T,Lattice>& blockLattice);
   virtual void processSubDomain ( BlockLattice2D<T,Lattice>& blockLattice,
                                   int x0_, int x1_, int y0_, int y1_ );
@@ -58,8 +61,7 @@ private:
 };
 
 template<typename T, template<typename U> class Lattice, int direction, int orientation>
-class StraightFdBoundaryProcessorGenerator2D : public PostProcessorGenerator2D<T,Lattice>
-{
+class StraightFdBoundaryProcessorGenerator2D : public PostProcessorGenerator2D<T,Lattice> {
 public:
   StraightFdBoundaryProcessorGenerator2D(int x0_, int x1_, int y0_, int y1_);
   virtual PostProcessor2D<T,Lattice>* generate() const;
@@ -70,13 +72,16 @@ public:
 * This class computes a convection BC on a flat wall in 2D
 */
 template<typename T, template<typename U> class Lattice, int direction, int orientation>
-class StraightConvectionBoundaryProcessor2D : public LocalPostProcessor2D<T,Lattice>
-{
+class StraightConvectionBoundaryProcessor2D : public LocalPostProcessor2D<T,Lattice> {
 public:
   StraightConvectionBoundaryProcessor2D(int x0_, int x1_, int y0_, int y1_, T* uAv_ = NULL);
   ~StraightConvectionBoundaryProcessor2D();
-  virtual int extent() const { return 1; }
-  virtual int extent(int whichDirection) const { return 1; }
+  virtual int extent() const {
+    return 1;
+  }
+  virtual int extent(int whichDirection) const {
+    return 1;
+  }
   virtual void process(BlockLattice2D<T,Lattice>& blockLattice);
   virtual void processSubDomain ( BlockLattice2D<T,Lattice>& blockLattice,
                                   int x0_, int x1_, int y0_, int y1_ );
@@ -87,14 +92,47 @@ private:
 };
 
 template<typename T, template<typename U> class Lattice, int direction, int orientation>
-class StraightConvectionBoundaryProcessorGenerator2D : public PostProcessorGenerator2D<T,Lattice>
-{
+class StraightConvectionBoundaryProcessorGenerator2D : public PostProcessorGenerator2D<T,Lattice> {
 public:
   StraightConvectionBoundaryProcessorGenerator2D(int x0_, int x1_, int y0_, int y1_, T* uAv_ = NULL);
   virtual PostProcessor2D<T,Lattice>* generate() const;
   virtual PostProcessorGenerator2D<T,Lattice>*  clone() const;
 private:
   T* uAv;
+};
+
+/**
+* This class computes a slip BC in 2D
+*/
+
+template<typename T, template<typename U> class Lattice>
+class SlipBoundaryProcessor2D : public LocalPostProcessor2D<T,Lattice> {
+public:
+  SlipBoundaryProcessor2D(int x0_, int x1_, int y0_, int y1_, int discreteNormalX_, int discreteNormalY_);
+  virtual int extent() const {
+    return 0;
+  }
+  virtual int extent(int whichDirection) const {
+    return 0;
+  }
+  virtual void process(BlockLattice2D<T,Lattice>& blockLattice);
+  virtual void processSubDomain ( BlockLattice2D<T,Lattice>& blockLattice,
+                                  int x0_, int x1_, int y0_, int y1_ );
+private:
+  int reflectionPop[Lattice<T>::q];
+  int x0, x1, y0, y1;
+};
+
+
+template<typename T, template<typename U> class Lattice>
+class SlipBoundaryProcessorGenerator2D : public PostProcessorGenerator2D<T,Lattice> {
+public:
+  SlipBoundaryProcessorGenerator2D(int x0_, int x1_, int y0_, int y1_, int discreteNormalX_, int discreteNormalY_);
+  virtual PostProcessor2D<T,Lattice>* generate() const;
+  virtual PostProcessorGenerator2D<T,Lattice>*  clone() const;
+private:
+  int discreteNormalX;
+  int discreteNormalY;
 };
 
 /**
@@ -106,8 +144,12 @@ template<typename T, template<typename U> class Lattice, int xNormal,int yNormal
 class OuterVelocityCornerProcessor2D : public LocalPostProcessor2D<T, Lattice> {
 public:
   OuterVelocityCornerProcessor2D(int x_, int y_);
-  virtual int extent() const { return 2; }
-  virtual int extent(int whichDirection) const { return 2; }
+  virtual int extent() const {
+    return 2;
+  }
+  virtual int extent(int whichDirection) const {
+    return 2;
+  }
   virtual void process(BlockLattice2D<T,Lattice>& blockLattice);
   virtual void processSubDomain(BlockLattice2D<T,Lattice>& blockLattice,
                                 int x0_,int x1_,int y0_,int y1_ );
@@ -116,8 +158,7 @@ private:
 };
 
 template<typename T, template<typename U> class Lattice, int xNormal,int yNormal>
-class OuterVelocityCornerProcessorGenerator2D : public PostProcessorGenerator2D<T, Lattice>
-{
+class OuterVelocityCornerProcessorGenerator2D : public PostProcessorGenerator2D<T, Lattice> {
 public:
   OuterVelocityCornerProcessorGenerator2D(int x_, int y_);
   virtual PostProcessor2D<T,Lattice>* generate() const;

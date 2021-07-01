@@ -51,14 +51,14 @@ struct lbDynamicsHelpers<T, descriptors::D2Q9DescriptorBase<T> > {
            - L::t[iPop];
   }
 
-  static void computeFneq ( T const* cell, T fNeq[9], T rho, const T u[2] ) {
+  static void computeFneq ( CellBase<T,descriptors::D2Q9DescriptorBase<T> > const& cell, T fNeq[9], T rho, const T u[2] ) {
     const T uSqr = u[0]*u[0] + u[1]*u[1];
     for (int iPop=0; iPop < 9; ++iPop) {
       fNeq[iPop] = cell[iPop] - equilibrium(iPop, rho, u, uSqr);
     }
   }
 
-  static T bgkCollision ( T* cell, T rho, const T u[2], T omega) {
+  static T bgkCollision ( CellBase<T,descriptors::D2Q9DescriptorBase<T> >& cell, T const& rho, const T u[2], T const& omega) {
     T uxSqr = u[0]*u[0];
     T uySqr = u[1]*u[1];
 
@@ -107,7 +107,7 @@ struct lbDynamicsHelpers<T, descriptors::D2Q9DescriptorBase<T> > {
     return uxSqr + uySqr;
   }
 
-  static T incBgkCollision ( T* cell, T pressure, const T j[2], T omega) {
+  static T incBgkCollision (CellBase<T,descriptors::D2Q9DescriptorBase<T> >& cell, T pressure, const T j[2], T omega) {
     const T jSqr = util::normSqr<T,descriptors::D2Q9DescriptorBase<T>::d>(j);
     for (int iPop=0; iPop < descriptors::D2Q9DescriptorBase<T>::q; ++iPop) {
       cell[iPop] *= (T)1-omega;
@@ -117,7 +117,7 @@ struct lbDynamicsHelpers<T, descriptors::D2Q9DescriptorBase<T> > {
     return jSqr;
   }
 
-  static T constRhoBgkCollision(T* cell, T rho, const T u[2], T ratioRho, T omega) {
+  static T constRhoBgkCollision(CellBase<T,descriptors::D2Q9DescriptorBase<T> >& cell, T rho, const T u[2], T ratioRho, T omega) {
     const T uSqr = util::normSqr<T,descriptors::D2Q9DescriptorBase<T>::d>(u);
     for (int iPop=0; iPop < descriptors::D2Q9DescriptorBase<T>::q; ++iPop) {
       T feq = lbHelpers<T,descriptors::D2Q9DescriptorBase>::equilibrium(iPop, rho, u, uSqr );
@@ -129,9 +129,8 @@ struct lbDynamicsHelpers<T, descriptors::D2Q9DescriptorBase<T> > {
   }
 
 
-  static void partial_rho ( T const* cell,
-                            T& lineX_P1, T& lineX_0, T& lineX_M1, T& lineY_P1, T& lineY_M1 )
-  {
+  static void partial_rho ( CellBase<T,descriptors::D2Q9DescriptorBase<T> > const& cell,
+                            T& lineX_P1, T& lineX_0, T& lineX_M1, T& lineY_P1, T& lineY_M1 ) {
     lineX_P1  = cell[5] + cell[6] + cell[7];
     lineX_0   = cell[0] + cell[4] + cell[8];
     lineX_M1  = cell[1] + cell[2] + cell[3];
@@ -140,13 +139,13 @@ struct lbDynamicsHelpers<T, descriptors::D2Q9DescriptorBase<T> > {
     lineY_M1  = cell[3] + cell[4] + cell[5];
   }
 
-  static T computeRho(T const* cell) {
+  static T computeRho(CellBase<T,descriptors::D2Q9DescriptorBase<T> > const& cell) {
     T rho = cell[0] + cell[1] + cell[2] + cell[3] + cell[4]
             + cell[5] + cell[6] + cell[7] + cell[8] + (T)1;
     return rho;
   }
 
-  static void computeRhoU(T const* cell, T& rho, T u[2]) {
+  static void computeRhoU(CellBase<T,descriptors::D2Q9DescriptorBase<T> > const& cell, T& rho, T u[2]) {
     T lineX_P1, lineX_0, lineX_M1, lineY_P1, lineY_M1;
     partial_rho(cell, lineX_P1, lineX_0, lineX_M1, lineY_P1, lineY_M1);
 
@@ -155,7 +154,7 @@ struct lbDynamicsHelpers<T, descriptors::D2Q9DescriptorBase<T> > {
     u[1]  = (lineY_P1 - lineY_M1)/rho;
   }
 
-  static void computeRhoJ(T const* cell, T& rho, T j[2]) {
+  static void computeRhoJ(CellBase<T,descriptors::D2Q9DescriptorBase<T> > const& cell, T& rho, T j[2]) {
     T lineX_P1, lineX_0, lineX_M1, lineY_P1, lineY_M1;
     partial_rho(cell, lineX_P1, lineX_0, lineX_M1, lineY_P1, lineY_M1);
 
@@ -164,7 +163,7 @@ struct lbDynamicsHelpers<T, descriptors::D2Q9DescriptorBase<T> > {
     j[1]  = (lineY_P1 - lineY_M1);
   }
 
-  static void computeJ(T const* cell, T j[2] ) {
+  static void computeJ(CellBase<T,descriptors::D2Q9DescriptorBase<T> > const& cell, T j[2] ) {
     T lineX_P1, lineX_M1, lineY_P1, lineY_M1;
 
     lineX_P1  = cell[5] + cell[6] + cell[7];
@@ -176,7 +175,7 @@ struct lbDynamicsHelpers<T, descriptors::D2Q9DescriptorBase<T> > {
     j[1]  = (lineY_P1 - lineY_M1);
   }
 
-  static void computeStress(T const* cell, T rho, const T u[2], T pi[3]) {
+  static void computeStress(CellBase<T,descriptors::D2Q9DescriptorBase<T> > const& cell, T rho, const T u[2], T pi[3]) {
     typedef descriptors::D2Q9DescriptorBase<T> L;
     // Workaround for Intel(r) compiler 9.1;
     // "using namespace util::tensorIndices2D" is not sufficient
@@ -192,7 +191,7 @@ struct lbDynamicsHelpers<T, descriptors::D2Q9DescriptorBase<T> > {
     pi[xy] = -cell[1] + cell[3] - cell[5] + cell[7]   - rho*u[0]*u[1];
   }
 
-  static void computeAllMomenta(T const* cell, T& rho, T u[2], T pi[3] ) {
+  static void computeAllMomenta(CellBase<T,descriptors::D2Q9DescriptorBase<T> > const& cell, T& rho, T u[2], T pi[3] ) {
     typedef descriptors::D2Q9DescriptorBase<T> L;
     // Workaround for Intel(r) compiler 9.1;
     // "using namespace util::tensorIndices2D" is not sufficient
@@ -215,7 +214,7 @@ struct lbDynamicsHelpers<T, descriptors::D2Q9DescriptorBase<T> > {
     pi[xy] = -cell[1] + cell[3] - cell[5] + cell[7]        - rhoU0*u[1];
   }
 
-  static void modifyVelocity(T* cell, const T newU[2]) {
+  static void modifyVelocity(CellBase<T,descriptors::D2Q9DescriptorBase<T> > const& cell, const T newU[2]) {
     T rho, oldU[2];
     computeRhoU(cell, rho, oldU);
     const T oldUSqr = util::normSqr<T,2>(oldU);
@@ -235,10 +234,9 @@ struct lbExternalHelpers<T, descriptors::ForcedD2Q9Descriptor> {
 
   static void addExternalForce(
     Cell<T,descriptors::ForcedD2Q9Descriptor>& cell,
-    const T u[descriptors::ForcedD2Q9Descriptor<T>::d], T omega, T amplitude)
-  {
+    const T u[descriptors::ForcedD2Q9Descriptor<T>::d], T omega, T amplitude) {
     static const int forceBeginsAt
-    = descriptors::ForcedD2Q9Descriptor<T>::ExternalField::forceBeginsAt;
+      = descriptors::ForcedD2Q9Descriptor<T>::ExternalField::forceBeginsAt;
     T* force = cell.getExternal(forceBeginsAt);
     T mu = amplitude*((T)1-omega/(T)2);
 
@@ -248,16 +246,16 @@ struct lbExternalHelpers<T, descriptors::ForcedD2Q9Descriptor> {
                                  force[1] * (-3*u[0] + 2*u[1] + 1)   );
     cell[2] += mu *(T)1/(T)3  *( force[0] * ( 2*u[0]          - 1) +
                                  force[1] * (        -   u[1]    )   );
-    cell[3] += mu *(T)1/(T)12 *( force[0] * ( 2*u[0] + 1*u[1] - 1) +
-                                 force[1] * (   u[0] + 2*u[1] - 1)   );
+    cell[3] += mu *(T)1/(T)12 *( force[0] * ( 2*u[0] + 3*u[1] - 1) +
+                                 force[1] * ( 3*u[0] + 2*u[1] - 1)   );
     cell[4] += mu *(T)1/(T)3  *( force[0] * (-  u[0]             ) +
                                  force[1] * (        + 2*u[1] - 1)   );
-    cell[5] += mu *(T)1/(T)12 *( force[0] * ( 2*u[0] -   u[1] + 1) +
-                                 force[1] * (-1*u[0] + 2*u[1] - 1)   );
+    cell[5] += mu *(T)1/(T)12 *( force[0] * ( 2*u[0] - 3*u[1] + 1) +
+                                 force[1] * (-3*u[0] + 2*u[1] - 1)   );
     cell[6] += mu *(T)1/(T)3  *( force[0] * ( 2*u[0]          + 1) +
-                                 force[1] * (   u[0] -   u[1]    )   );
-    cell[7] += mu *(T)1/(T)12 *( force[0] * ( 2*u[0] +   u[1] + 1) +
-                                 force[1] * (   u[0] + 2*u[1] + 1)   );
+                                 force[1] * (        -   u[1]    )   );
+    cell[7] += mu *(T)1/(T)12 *( force[0] * ( 2*u[0] + 3*u[1] + 1) +
+                                 force[1] * ( 3*u[0] + 2*u[1] + 1)   );
     cell[8] += mu *(T)1/(T)3  *( force[0] * (-  u[0]             ) +
                                  force[1] * (        + 2*u[1] + 1)   );
   }
@@ -271,8 +269,7 @@ struct lbLatticeHelpers<T, descriptors::D2Q9Descriptor> {
 
   static void swapAndStreamCell (
     Cell<T,descriptors::D2Q9Descriptor> **grid,
-    int iX, int iY, int nX, int nY, int iPop, T& fTmp )
-  {
+    int iX, int iY, int nX, int nY, int iPop, T& fTmp ) {
     fTmp                 = grid[iX][iY][iPop];
     grid[iX][iY][iPop]   = grid[iX][iY][iPop+4];
     grid[iX][iY][iPop+4] = grid[nX][nY][iPop];
@@ -280,8 +277,7 @@ struct lbLatticeHelpers<T, descriptors::D2Q9Descriptor> {
   }
 
   static void swapAndStream2D (
-    Cell<T,descriptors::D2Q9Descriptor> **grid, int iX, int iY )
-  {
+    Cell<T,descriptors::D2Q9Descriptor> **grid, int iX, int iY ) {
     T fTmp;
     swapAndStreamCell(grid, iX, iY, iX-1, iY+1, 1, fTmp);
     swapAndStreamCell(grid, iX, iY, iX-1, iY,   2, fTmp);
@@ -295,8 +291,7 @@ struct lbLatticeHelpers<T, descriptors::ForcedD2Q9Descriptor> {
 
   static void swapAndStreamCell (
     Cell<T,descriptors::ForcedD2Q9Descriptor> **grid,
-    int iX, int iY, int nX, int nY, int iPop, T& fTmp )
-  {
+    int iX, int iY, int nX, int nY, int iPop, T& fTmp ) {
     fTmp                 = grid[iX][iY][iPop];
     grid[iX][iY][iPop]   = grid[iX][iY][iPop+4];
     grid[iX][iY][iPop+4] = grid[nX][nY][iPop];
@@ -304,8 +299,7 @@ struct lbLatticeHelpers<T, descriptors::ForcedD2Q9Descriptor> {
   }
 
   static void swapAndStream2D (
-    Cell<T,descriptors::ForcedD2Q9Descriptor> **grid, int iX, int iY )
-  {
+    Cell<T,descriptors::ForcedD2Q9Descriptor> **grid, int iX, int iY ) {
     T fTmp;
     swapAndStreamCell(grid, iX, iY, iX-1, iY+1, 1, fTmp);
     swapAndStreamCell(grid, iX, iY, iX-1, iY,   2, fTmp);

@@ -35,30 +35,27 @@ using namespace descriptors;
 
 // Efficient specialization for D2Q9 lattice
 template<typename T>
-struct mrtHelpers<T, descriptors::MRTD2Q9Descriptor>
-{
+struct mrtHelpers<T, descriptors::MRTD2Q9Descriptor> {
 
   /// Computation of all equilibrium distribution (in momenta space)
   static void computeEquilibrium( T momentaEq[9],
                                   T rho, const T u[2],
-                                  const T uSqr )
-  {
-//         momentaEq[0] = T();
+                                  const T uSqr ) {
+    //         momentaEq[0] = T();
     momentaEq[1] = -(T)2*rho + (T)3*uSqr;
     momentaEq[2] = rho - (T)3*uSqr;
-//         momentaEq[3] = T();
+    //         momentaEq[3] = T();
     momentaEq[4] = -u[0];
-//         momentaEq[5] = T();
+    //         momentaEq[5] = T();
     momentaEq[6] = -u[1];
     momentaEq[7] = u[0]*u[0] - u[1]*u[1];
     momentaEq[8] = u[0]*u[1];
   }
 
   /// Computation of all momenta (specialized for d2q9)
-  static void computeMomenta(T momenta[9], Cell<T,MRTD2Q9Descriptor> &cell)
-  {
-//         momenta[0] = cell[0] + cell[1] + cell[2] + cell[3] +
-//                 cell[4] + cell[5] + cell[6] + cell[7] + cell[8] + (T)1;
+  static void computeMomenta(T momenta[9], Cell<T,MRTD2Q9Descriptor> &cell) {
+    //         momenta[0] = cell[0] + cell[1] + cell[2] + cell[3] +
+    //                 cell[4] + cell[5] + cell[6] + cell[7] + cell[8] + (T)1;
 
     momenta[1] = -(T)4*cell[0] +(T)2*cell[1] - cell[2] + (T)2*cell[3] - cell[4] +
                  (T)2*cell[5] - cell[6] + (T)2*cell[7] - cell[8] - (T)2;
@@ -66,14 +63,14 @@ struct mrtHelpers<T, descriptors::MRTD2Q9Descriptor>
     momenta[2] = (T)4*cell[0] + cell[1] - (T)2*cell[2] + cell[3] - (T)2*cell[4] +
                  cell[5] - (T)2*cell[6] + cell[7] - (T)2*cell[8] + (T)1;
 
-//         momenta[3] = - cell[1] - cell[2] - cell[3] +
-//                 cell[5] + cell[6] + cell[7];
+    //         momenta[3] = - cell[1] - cell[2] - cell[3] +
+    //                 cell[5] + cell[6] + cell[7];
 
     momenta[4] = - cell[1] + (T)2*cell[2] - cell[3] +
                  cell[5] - (T)2*cell[6] + cell[7];
 
-//         momenta[5] = cell[1] - cell[3] - cell[4] -
-//                 cell[5] + cell[7] + cell[8];
+    //         momenta[5] = cell[1] - cell[3] - cell[4] -
+    //                 cell[5] + cell[7] + cell[8];
 
     momenta[6] = cell[1] - cell[3] + (T)2*cell[4] -
                  cell[5] + cell[7] - (T)2*cell[8];
@@ -86,8 +83,7 @@ struct mrtHelpers<T, descriptors::MRTD2Q9Descriptor>
   /// MRT collision step
   static T mrtCollision( Cell<T,MRTD2Q9Descriptor>& cell,
                          T rho, const T u[2],
-                         T invM_S[9][9] )
-  {
+                         T invM_S[9][9] ) {
     T uSqr = util::normSqr<T,2>(u);
     T momenta[9];
     T momentaEq[9];
@@ -155,8 +151,7 @@ struct mrtHelpers<T, descriptors::MRTD2Q9Descriptor>
   /// MRT collision step
   static T mrtSGSCollision( Cell<T,MRTD2Q9Descriptor>& cell,
                             T rho, const T u[2], T omega,
-                            T invM_S_SGS[9][9] )
-  {
+                            T invM_S_SGS[9][9] ) {
     T uSqr = util::normSqr<T,2>(u);
     T momenta[9];
     T momentaEq[9];

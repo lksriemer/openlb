@@ -30,7 +30,8 @@
 
 namespace olb {
 
-template class AnalyticalFfromSuperLatticeF3D<double,descriptors::D3Q19Descriptor>;
+template class AnalyticalFfromBlockF3D<double>;
+template class AnalyticalFfromSuperF3D<double>;
 template class SuperLatticeFfromAnalyticalF3D<double,descriptors::D3Q19Descriptor>;
 
 template class BlockLatticeFfromAnalyticalF3D<double,descriptors::D3Q19Descriptor>;

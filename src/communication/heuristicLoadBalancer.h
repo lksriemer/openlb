@@ -25,21 +25,25 @@
 #ifndef HEURISTIC_LOAD_BALANCER_H
 #define HEURISTIC_LOAD_BALANCER_H
 
+
 #include "communication/mpiManager.h"
 #include "geometry/cuboidGeometry2D.h"
-#include "communication/cuboidNeighbourhood2D.h"
+#include "geometry/cuboid3D.h"
+#include "geometry/cuboid3D.hh"
 #include "geometry/cuboidGeometry3D.h"
-#include "communication/cuboidNeighbourhood3D.h"
+#include "geometry/cuboidGeometry3D.hh"
 #include "communication/loadBalancer.h"
-#include "io/ostreamManager.h"
+
 
 
 
 namespace olb {
 
-template <typename T> class CuboidGeometry2D;
-template <typename T> class CuboidGeometry3D;
-
+/** Constructs a load balancer from a given cuboid geometry using a heurist.
+ * \param cGeometry     cuboid geometry to base the load balance on
+ * \param blockGeometry used to determine number of full and empty cells if given
+ * \param ratioFullEmpty time it takes for full cells in relation to empty cells
+ */
 template<typename T>
 class HeuristicLoadBalancer : public LoadBalancer<T> {
 private:
@@ -50,17 +54,12 @@ private:
   CuboidGeometry3D<T>* _cGeometry3d;
   CuboidGeometry2D<T>* _cGeometry2d;
 
+  double _ratioFullEmpty;
+
 public:
-  /*
-   * Constructs a load balancer from a given cuboid geometry
-   * using a heurist
-   * \param cGeometry: The cuboid geometry to base the load balance on
-   * \param blockGeometry: Used to determine number of full and empty cells
-   *             if given
-   * \param ratioFullEmpty: Time it takes for full cells in relation to
-   *              empty cells
-   */
   HeuristicLoadBalancer() {};
+
+  virtual ~HeuristicLoadBalancer();
 
   HeuristicLoadBalancer(CuboidGeometry3D<T>& cGeometry3d, const double ratioFullEmpty=3.7);
 
@@ -69,6 +68,14 @@ public:
   virtual void reInit(CuboidGeometry3D<T>& cGeometry3d, const double ratioFullEmpty=3.7);
 
   virtual void reInit(CuboidGeometry2D<T>& cGeometry2d, const double ratioFullEmpty=3.7);
+
+  /// Swap method
+  void swap(HeuristicLoadBalancer<T>& loadBalancer);
+
+  /// Write itself into Stringstream
+  void writeToStream(std::ostream& stream);
+  /// Write itself into File
+  void writeToFile(std::string fileName);
 };
 }  // namespace olb
 

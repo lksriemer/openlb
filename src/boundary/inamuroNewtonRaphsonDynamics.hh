@@ -43,8 +43,7 @@ InamuroNewtonRaphsonDynamics<T,Lattice,Dynamics,direction,orientation>::InamuroN
     clout(std::cout,"InamuroNewtonRaphsonDynamics")
 {
   xi[0] = (T)1;
-  for (int iDim = 1; iDim < Lattice<T>::d; ++iDim)
-  {
+  for (int iDim = 1; iDim < Lattice<T>::d; ++iDim) {
     xi[iDim] = T();
   }
 }
@@ -76,19 +75,15 @@ void InamuroNewtonRaphsonDynamics<T,Lattice,Dynamics,direction,orientation>::col
   std::vector<int> missingIndexes = util::subIndexOutgoing<L,direction,orientation>();
   std::vector<int> knownIndexes;
   bool test[L::q];
-  for (int iPop = 0; iPop < L::q; ++iPop)
-  {
+  for (int iPop = 0; iPop < L::q; ++iPop) {
     test[iPop] = true;
   }
 
-  for (unsigned iPop = 0; iPop < missingIndexes.size(); ++iPop)
-  {
+  for (unsigned iPop = 0; iPop < missingIndexes.size(); ++iPop) {
     test[missingIndexes[iPop]] = false;
   }
-  for (int iPop = 0; iPop < L::q; ++iPop)
-  {
-    if (test[iPop])
-    {
+  for (int iPop = 0; iPop < L::q; ++iPop) {
+    if (test[iPop]) {
       knownIndexes.push_back(iPop);
     }
   }
@@ -100,16 +95,14 @@ void InamuroNewtonRaphsonDynamics<T,Lattice,Dynamics,direction,orientation>::col
   T error = computeError(rho, u,approxMomentum);
   int counter = 0;
 
-  while (error > 1.0e-15)
-  {
+  while (error > 1.0e-15) {
     ++counter;
 
     T gradError[L::d], gradGradError[L::d][L::d];
     computeGradGradError(gradGradError,gradError,rho,u,xi,approxMomentum,missingIndexes);
 
     bool everythingWentFine = newtonRaphson(xi,gradError,gradGradError);
-    if ((counter > 100000) || everythingWentFine == false)
-    {
+    if ((counter > 100000) || everythingWentFine == false) {
       // if we need more that 100000 iterations or
       // if we have a problem with the inversion of the
       // jacobian matrix, we stop the program and
@@ -142,23 +135,18 @@ void InamuroNewtonRaphsonDynamics<T,Lattice,Dynamics,direction,orientation>::col
 
   T uCs[L::d];
   int counterDim = 0;
-  for (int iDim = 0; iDim < L::d; ++iDim)
-  {
-    if (direction == iDim)
-    {
+  for (int iDim = 0; iDim < L::d; ++iDim) {
+    if (direction == iDim) {
       ++counterDim;
       uCs[iDim] = u[iDim];
-    }
-    else
-    {
+    } else {
       uCs[iDim] = u[iDim] + xi[iDim+1-counterDim];
     }
   }
 
   T uCsSqr = util::normSqr<T,L::d>(uCs);
 
-  for (unsigned iPop = 0; iPop < missingIndexes.size(); ++iPop)
-  {
+  for (unsigned iPop = 0; iPop < missingIndexes.size(); ++iPop) {
     cell[missingIndexes[iPop]] = computeEquilibrium(missingIndexes[iPop],xi[0],uCs,uCsSqr);
   }
 
@@ -178,19 +166,15 @@ void InamuroNewtonRaphsonDynamics<T,Lattice,Dynamics,direction,orientation>::sta
   std::vector<int> missingIndexes = util::subIndexOutgoing<L,direction,orientation>();
   std::vector<int> knownIndexes;
   bool test[L::q];
-  for (int iPop = 0; iPop < L::q; ++iPop)
-  {
+  for (int iPop = 0; iPop < L::q; ++iPop) {
     test[iPop] = true;
   }
 
-  for (unsigned iPop = 0; iPop < missingIndexes.size(); ++iPop)
-  {
+  for (unsigned iPop = 0; iPop < missingIndexes.size(); ++iPop) {
     test[missingIndexes[iPop]] = false;
   }
-  for (int iPop = 0; iPop < L::q; ++iPop)
-  {
-    if (test[iPop])
-    {
+  for (int iPop = 0; iPop < L::q; ++iPop) {
+    if (test[iPop]) {
       knownIndexes.push_back(iPop);
     }
   }
@@ -202,16 +186,14 @@ void InamuroNewtonRaphsonDynamics<T,Lattice,Dynamics,direction,orientation>::sta
   T error = computeError(rho, u,approxMomentum);
   int counter = 0;
 
-  while (error > 1.0e-15)
-  {
+  while (error > 1.0e-15) {
     ++counter;
 
     T gradError[L::d], gradGradError[L::d][L::d];
     computeGradGradError(gradGradError,gradError,rho,u,xi,approxMomentum,missingIndexes);
 
     bool everythingWentFine = newtonRaphson(xi,gradError,gradGradError);
-    if ((counter > 100000) || everythingWentFine == false)
-    {
+    if ((counter > 100000) || everythingWentFine == false) {
       // if we need more that 100000 iterations or
       // if we have a problem with the inversion of the
       // jacobian matrix, we stop the program and
@@ -244,23 +226,18 @@ void InamuroNewtonRaphsonDynamics<T,Lattice,Dynamics,direction,orientation>::sta
 
   T uCs[L::d];
   int counterDim = 0;
-  for (int iDim = 0; iDim < L::d; ++iDim)
-  {
-    if (direction == iDim)
-    {
+  for (int iDim = 0; iDim < L::d; ++iDim) {
+    if (direction == iDim) {
       ++counterDim;
       uCs[iDim] = u[iDim];
-    }
-    else
-    {
+    } else {
       uCs[iDim] = u[iDim] + xi[iDim+1-counterDim];
     }
   }
 
   T uCsSqr = util::normSqr<T,L::d>(uCs);
 
-  for (unsigned iPop = 0; iPop < missingIndexes.size(); ++iPop)
-  {
+  for (unsigned iPop = 0; iPop < missingIndexes.size(); ++iPop) {
     cell[missingIndexes[iPop]] = computeEquilibrium(missingIndexes[iPop],xi[0],uCs,uCsSqr);
   }
 
@@ -303,31 +280,24 @@ computeApproxMomentum(T approxMomentum[Lattice<T>::d],const Cell<T,Lattice> &cel
 
   T csVel[L::d];
   int counter = 0;
-  for (int iDim = 0; iDim < L::d; ++iDim)
-  {
-    if (direction == iDim)
-    {
+  for (int iDim = 0; iDim < L::d; ++iDim) {
+    if (direction == iDim) {
       ++counter;
       csVel[iDim] = u[iDim];
-    }
-    else
-    {
+    } else {
       csVel[iDim] = u[iDim] + xi[iDim+1-counter];
     }
   }
 
   T csVelSqr = util::normSqr<T,L::d>(csVel);
 
-  for (int iDim = 0; iDim < L::d; ++iDim)
-  {
+  for (int iDim = 0; iDim < L::d; ++iDim) {
     approxMomentum[iDim] = T();
-    for (unsigned iPop = 0; iPop < knownIndexes.size(); ++iPop)
-    {
+    for (unsigned iPop = 0; iPop < knownIndexes.size(); ++iPop) {
       approxMomentum[iDim] += L::c[knownIndexes[iPop]][iDim] *
                               cell[knownIndexes[iPop]];
     }
-    for (unsigned iPop = 0; iPop < missingIndexes.size(); ++iPop)
-    {
+    for (unsigned iPop = 0; iPop < missingIndexes.size(); ++iPop) {
       approxMomentum[iDim] += L::c[missingIndexes[iPop]][iDim] *
                               computeEquilibrium(missingIndexes[iPop],xi[0],csVel,csVelSqr);
     }
@@ -341,8 +311,7 @@ computeError(const T &rho, const T u[Lattice<T>::d], const T approxMomentum[Latt
   typedef Lattice<T> L;
 
   T err = T();
-  for (int iDim = 0; iDim < L::d; ++iDim)
-  {
+  for (int iDim = 0; iDim < L::d; ++iDim) {
     err += (rho * u[iDim]-approxMomentum[iDim]) * (rho * u[iDim]-approxMomentum[iDim]);
   }
   return sqrt(err);
@@ -359,15 +328,11 @@ void InamuroNewtonRaphsonDynamics<T,Lattice,Dynamics,direction,orientation>::com
 
   T csVel[L::d];
   int counter = 0;
-  for (int iDim = 0; iDim < L::d; ++iDim)
-  {
-    if (direction == iDim)
-    {
+  for (int iDim = 0; iDim < L::d; ++iDim) {
+    if (direction == iDim) {
       ++counter;
       csVel[iDim] = u[iDim];
-    }
-    else
-    {
+    } else {
       csVel[iDim] = u[iDim] + xi[iDim+1-counter];
     }
   }
@@ -375,21 +340,17 @@ void InamuroNewtonRaphsonDynamics<T,Lattice,Dynamics,direction,orientation>::com
 
   std::vector<T> df[L::d];
 
-  for (int iXi = 0; iXi < L::d; ++iXi)
-  {
-    for (unsigned iPop = 0; iPop < missingIndexes.size(); ++iPop)
-    {
+  for (int iXi = 0; iXi < L::d; ++iXi) {
+    for (unsigned iPop = 0; iPop < missingIndexes.size(); ++iPop) {
       df[iXi].push_back(T());
     }
   }
 
   // all the null terms are allready contained in df (no need for else in the ifs)
 
-  for (unsigned iPop = 0; iPop < missingIndexes.size(); ++iPop)
-  {
+  for (unsigned iPop = 0; iPop < missingIndexes.size(); ++iPop) {
     T cu = T();
-    for (int iDim = 0; iDim < L::d; ++iDim)
-    {
+    for (int iDim = 0; iDim < L::d; ++iDim) {
       cu += L::c[missingIndexes[iPop]][iDim] * csVel[iDim];
     }
     df[0][iPop] = L::t[missingIndexes[iPop]]
@@ -399,19 +360,13 @@ void InamuroNewtonRaphsonDynamics<T,Lattice,Dynamics,direction,orientation>::com
   }
 
   counter = 0;
-  for (int iDim = 0; iDim < L::d; ++iDim)
-  {
-    if (direction == iDim)
-    {
+  for (int iDim = 0; iDim < L::d; ++iDim) {
+    if (direction == iDim) {
       ++counter;
-    }
-    else
-    {
-      for (unsigned iPop = 0; iPop < missingIndexes.size(); ++iPop)
-      {
+    } else {
+      for (unsigned iPop = 0; iPop < missingIndexes.size(); ++iPop) {
         T temp = T();
-        for (int jDim = 0; jDim < L::d; ++jDim)
-        {
+        for (int jDim = 0; jDim < L::d; ++jDim) {
           temp += L::c[missingIndexes[iPop]][jDim] * csVel[jDim];
         }
 
@@ -425,12 +380,9 @@ void InamuroNewtonRaphsonDynamics<T,Lattice,Dynamics,direction,orientation>::com
 
   std::vector<T> ddf[L::d][L::d];
 
-  for (int iAlpha = 0; iAlpha < L::d; ++iAlpha)
-  {
-    for (int iBeta = 0; iBeta < L::d; ++iBeta)
-    {
-      for (unsigned iPop = 0; iPop < missingIndexes.size(); ++iPop)
-      {
+  for (int iAlpha = 0; iAlpha < L::d; ++iAlpha) {
+    for (int iBeta = 0; iBeta < L::d; ++iBeta) {
+      for (unsigned iPop = 0; iPop < missingIndexes.size(); ++iPop) {
         ddf[iAlpha][iBeta].push_back(T());
       }
     }
@@ -439,19 +391,13 @@ void InamuroNewtonRaphsonDynamics<T,Lattice,Dynamics,direction,orientation>::com
   // ddf contains allready all the zero terms
 
   counter = 0;
-  for (int iDim = 0; iDim < L::d; ++iDim)
-  {
-    if (direction == iDim)
-    {
+  for (int iDim = 0; iDim < L::d; ++iDim) {
+    if (direction == iDim) {
       ++counter;
-    }
-    else
-    {
-      for (unsigned iPop = 0; iPop < missingIndexes.size(); ++iPop)
-      {
+    } else {
+      for (unsigned iPop = 0; iPop < missingIndexes.size(); ++iPop) {
         T temp = T();
-        for (int jDim = 0; jDim < L::d; ++jDim)
-        {
+        for (int jDim = 0; jDim < L::d; ++jDim) {
           temp += L::c[missingIndexes[iPop]][jDim] * csVel[jDim];
         }
 
@@ -466,31 +412,26 @@ void InamuroNewtonRaphsonDynamics<T,Lattice,Dynamics,direction,orientation>::com
     }
   }
 
-  for (int iAlpha = 1; iAlpha < L::d; ++iAlpha)
-  {
-    for (int iBeta = 1; iBeta < L::d; ++iBeta)
-    {
-      for (unsigned iPop = 0; iPop < missingIndexes.size(); ++iPop)
-      {
+  for (int iAlpha = 1; iAlpha < L::d; ++iAlpha) {
+    for (int iBeta = 1; iBeta < L::d; ++iBeta) {
+      for (unsigned iPop = 0; iPop < missingIndexes.size(); ++iPop) {
         ddf[iAlpha][iBeta][iPop] = L::t[missingIndexes[iPop]]*xi[0] *
                                    L::invCs2*L::invCs2*L::c[missingIndexes[iPop]][iAlpha]*L::c[missingIndexes[iPop]][iBeta];
-        if (iAlpha == iBeta)
+        if (iAlpha == iBeta) {
           ddf[iAlpha][iBeta][iPop] -= L::t[missingIndexes[iPop]]*xi[0] * L::invCs2;
+        }
       }
     }
   }
 
   // computation of the vector gradError
   counter = 0;
-  for (int iDim = 0; iDim < L::d; ++iDim)
-  {
+  for (int iDim = 0; iDim < L::d; ++iDim) {
     T du[L::d];
     gradError[iDim] = T();
-    for (int jDim = 0; jDim < L::d; ++jDim)
-    {
+    for (int jDim = 0; jDim < L::d; ++jDim) {
       du[jDim] = T();
-      for (unsigned iPop = 0; iPop < missingIndexes.size(); ++iPop)
-      {
+      for (unsigned iPop = 0; iPop < missingIndexes.size(); ++iPop) {
         du[jDim] += L::c[missingIndexes[iPop]][jDim] * df[iDim][iPop];
       }
       gradError[iDim] += (approxMomentum[jDim]- rho * u[jDim]) * du[jDim];
@@ -500,20 +441,16 @@ void InamuroNewtonRaphsonDynamics<T,Lattice,Dynamics,direction,orientation>::com
 
   // computation of the matrix gradGradError
 
-  for (int iAlpha = 0; iAlpha < L::d; ++iAlpha)
-  {
-    for (int iBeta = 0; iBeta < L::d; ++iBeta)
-    {
+  for (int iAlpha = 0; iAlpha < L::d; ++iAlpha) {
+    for (int iBeta = 0; iBeta < L::d; ++iBeta) {
       gradGradError[iAlpha][iBeta] = T();
 
       T duAlpha[L::d], duBeta[L::d], ddu[L::d];
-      for (int iDim = 0; iDim < L::d; ++iDim)
-      {
+      for (int iDim = 0; iDim < L::d; ++iDim) {
         duAlpha[iDim] = T();
         duBeta[iDim] = T();
         ddu[iDim] = T();
-        for (unsigned iPop = 0; iPop < missingIndexes.size(); ++iPop)
-        {
+        for (unsigned iPop = 0; iPop < missingIndexes.size(); ++iPop) {
           duAlpha[iDim] += L::c[missingIndexes[iPop]][iDim]
                            * df[iAlpha][iPop];
 
@@ -527,8 +464,8 @@ void InamuroNewtonRaphsonDynamics<T,Lattice,Dynamics,direction,orientation>::com
                                         + (approxMomentum[iDim]-rho * u[iDim]) * ddu[iDim];
       }
       gradGradError[iAlpha][iBeta] *= (T)2;
-// gradGradError = 2*sum_alpha(du_alpha/dxi_beta*du_alpha/dxi_gamma +
-//                  approxMomentum_alpha-u_alpha*d^2u_alpha/(dxi_gamma*dxi_beta))
+      // gradGradError = 2*sum_alpha(du_alpha/dxi_beta*du_alpha/dxi_gamma +
+      //                  approxMomentum_alpha-u_alpha*d^2u_alpha/(dxi_gamma*dxi_beta))
     }
   }
 }
@@ -544,11 +481,11 @@ newtonRaphson(T xi[Lattice<T>::d],
   T invGradGradError[L::d][L::d];
   bool inversion = invert(gradGradError,invGradGradError);
 
-  for (int iXi = 0; iXi < L::d; ++iXi)
-  {
+  for (int iXi = 0; iXi < L::d; ++iXi) {
     T correction = T();
-    for (int iAlpha = 0; iAlpha < L::d; ++iAlpha)
+    for (int iAlpha = 0; iAlpha < L::d; ++iAlpha) {
       correction += invGradGradError[iXi][iAlpha] * gradError[iAlpha];
+    }
 
     xi[iXi] -= correction;
   }
@@ -562,31 +499,24 @@ invert(const T a[2][2],T invA[2][2])
 {
   T detA = a[0][0]*a[1][1] - a[0][1]*a[1][0];
 
-  if (fabs(detA) < 1.0e-13)
-  {
+  if (fabs(detA) < 1.0e-13) {
     clout << "error detA too small! = " << detA << std::endl;
-    for (int iAlpha = 0; iAlpha < 2; ++iAlpha)
-    {
-      for (int iBeta = 0; iBeta < 2; ++iBeta)
-      {
+    for (int iAlpha = 0; iAlpha < 2; ++iAlpha) {
+      for (int iBeta = 0; iBeta < 2; ++iBeta) {
         clout << a[iAlpha][iBeta] << "\t";
       }
       clout << std::endl;
     }
     return false;
-  }
-  else
-  {
+  } else {
     invA[0][0] = a[1][1];
     invA[1][1] = a[0][0];
 
     invA[0][1] = -a[1][0];
     invA[1][0] = -a[0][1];
 
-    for (int iPop = 0; iPop < 2; ++iPop)
-    {
-      for (int jPop = 0; jPop < 2; ++jPop)
-      {
+    for (int iPop = 0; iPop < 2; ++iPop) {
+      for (int jPop = 0; jPop < 2; ++jPop) {
         invA[iPop][jPop] /= detA;
       }
     }
@@ -601,21 +531,16 @@ bool InamuroNewtonRaphsonDynamics<T,Lattice,Dynamics,direction,orientation>::inv
            - a[0][0]*a[2][1]*a[1][2] - a[2][0]*a[1][1]*a[0][2] - a[1][0]*a[0][1]*a[2][2];
 
 
-  if (fabs(detA) < 1.0e-13)
-  {
+  if (fabs(detA) < 1.0e-13) {
     clout << "Error: detA too small! = " << detA << std::endl;
-    for (int iAlpha = 0; iAlpha < 3; ++iAlpha)
-    {
-      for (int iBeta = 0; iBeta < 3; ++iBeta)
-      {
+    for (int iAlpha = 0; iAlpha < 3; ++iAlpha) {
+      for (int iBeta = 0; iBeta < 3; ++iBeta) {
         clout << a[iAlpha][iBeta] << "\t";
       }
       clout << std::endl;
     }
     return false;
-  }
-  else
-  {
+  } else {
     invA[0][0] = a[1][1]*a[2][2]-a[1][2]*a[2][1];
     invA[0][1] = a[0][2]*a[2][1]-a[0][1]*a[2][2];
     invA[0][2] = a[0][1]*a[1][2]-a[0][2]*a[1][1];
@@ -628,10 +553,8 @@ bool InamuroNewtonRaphsonDynamics<T,Lattice,Dynamics,direction,orientation>::inv
     invA[2][1] = a[0][1]*a[2][0]-a[0][0]*a[2][1];
     invA[2][2] = a[0][0]*a[1][1]-a[0][1]*a[1][0];
 
-    for (int iPop = 0; iPop < 3; ++iPop)
-    {
-      for (int jPop = 0; jPop < 3; ++jPop)
-      {
+    for (int iPop = 0; iPop < 3; ++iPop) {
+      for (int jPop = 0; jPop < 3; ++jPop) {
         invA[iPop][jPop] /= detA;
       }
     }

@@ -37,12 +37,14 @@ LinearFunction<T>::LinearFunction(T x1_, T x2_, T y1_, T y2_)
 { }
 
 template <typename T>
-T LinearFunction<T>::operator() (T x) const {
+T LinearFunction<T>::operator() (T x) const
+{
   return ( (y2-y1) * x + x2*y1-x1*y2 )/(x2-x1);
 }
 
 template <typename T>
-LinearFunction<T>* LinearFunction<T>::clone() const {
+LinearFunction<T>* LinearFunction<T>::clone() const
+{
   return new LinearFunction(*this);
 }
 
@@ -52,12 +54,14 @@ PowerLawFunction<T>::PowerLawFunction(T x1_, T x2_, T y1_, T y2_, T b_)
 { }
 
 template <typename T>
-T PowerLawFunction<T>::operator() (T x) const {
+T PowerLawFunction<T>::operator() (T x) const
+{
   return ( (y2-y1) * std::pow(x,b) + x2*y1-x1*y2 )/(x2-x1);
 }
 
 template <typename T>
-PowerLawFunction<T>* PowerLawFunction<T>::clone() const {
+PowerLawFunction<T>* PowerLawFunction<T>::clone() const
+{
   return new PowerLawFunction(*this);
 }
 
@@ -73,26 +77,30 @@ PiecewiseFunction<T>::PiecewiseFunction(PiecewiseFunction<T> const& rhs)
 }
 
 template <typename T>
-PiecewiseFunction<T>& PiecewiseFunction<T>::operator=(PiecewiseFunction<T> const& rhs) {
+PiecewiseFunction<T>& PiecewiseFunction<T>::operator=(PiecewiseFunction<T> const& rhs)
+{
   PiecewiseFunction<T>(rhs).swap(*this);
   return *this;
 }
 
 template <typename T>
-PiecewiseFunction<T>::~PiecewiseFunction() {
+PiecewiseFunction<T>::~PiecewiseFunction()
+{
   for (unsigned iF=0; iF<functions.size(); ++iF) {
     delete functions[iF];
   }
 }
 
 template <typename T>
-void PiecewiseFunction<T>::swap(PiecewiseFunction<T>& rhs) {
+void PiecewiseFunction<T>::swap(PiecewiseFunction<T>& rhs)
+{
   pieces.swap(rhs.pieces);
   functions.swap(rhs.functions);
 }
 
 template <typename T>
-void PiecewiseFunction<T>::addPiece(Piece<T> piece, ScalarFunction<T>* f) {
+void PiecewiseFunction<T>::addPiece(Piece<T> piece, ScalarFunction<T>* f)
+{
   typename std::vector<Piece<T> >::iterator pieceIt = pieces.begin();
   typename std::vector<ScalarFunction<T>*>::iterator fIt = functions.begin();
   while (pieceIt != pieces.end() && piece.closedBegin >= pieceIt->closedBegin) {
@@ -104,7 +112,8 @@ void PiecewiseFunction<T>::addPiece(Piece<T> piece, ScalarFunction<T>* f) {
 }
 
 template <typename T>
-T PiecewiseFunction<T>::operator() (T x) const {
+T PiecewiseFunction<T>::operator() (T x) const
+{
   if (pieces.empty() || x<pieces[0].closedBegin) {
     return T();
   }
@@ -119,7 +128,8 @@ T PiecewiseFunction<T>::operator() (T x) const {
 }
 
 template <typename T>
-PiecewiseFunction<T>* PiecewiseFunction<T>::clone() const {
+PiecewiseFunction<T>* PiecewiseFunction<T>::clone() const
+{
   return new PiecewiseFunction(*this);
 }
 
@@ -131,14 +141,16 @@ ColorMap<T>::ColorMap(PiecewiseFunction<T> const& red_,
 { }
 
 template <typename T>
-rgb<T> ColorMap<T>::get(T x) const {
+rgb<T> ColorMap<T>::get(T x) const
+{
   return rgb<T>( red(x), green(x), blue(x) );
 }
 
 namespace mapGenerators {
 
 template <typename T>
-PiecewiseFunction<T> generateEarthRed() {
+PiecewiseFunction<T> generateEarthRed()
+{
   T p0  = (T) 0.;
   T p1  = (T) 3./8.;
   T p2  = (T) 6./8.;
@@ -153,7 +165,8 @@ PiecewiseFunction<T> generateEarthRed() {
 }
 
 template <typename T>
-PiecewiseFunction<T> generateEarthGreen() {
+PiecewiseFunction<T> generateEarthGreen()
+{
   T p0  = (T) 0.;
   T p1  = (T) 3./8.;
   T p2  = (T) 6./8.;
@@ -168,7 +181,8 @@ PiecewiseFunction<T> generateEarthGreen() {
 }
 
 template <typename T>
-PiecewiseFunction<T> generateEarthBlue() {
+PiecewiseFunction<T> generateEarthBlue()
+{
   T p0  = (T) 0.;
   T p1  = (T) 3./8.;
   T p2  = (T) 6./8.;
@@ -183,7 +197,8 @@ PiecewiseFunction<T> generateEarthBlue() {
 }
 
 template <typename T>
-PiecewiseFunction<T> generateWaterRed() {
+PiecewiseFunction<T> generateWaterRed()
+{
   T p0  = (T) 0.;
   T p1  = (T) 3./8.;
   T p2  = (T) 6./8.;
@@ -198,7 +213,8 @@ PiecewiseFunction<T> generateWaterRed() {
 }
 
 template <typename T>
-PiecewiseFunction<T> generateWaterGreen() {
+PiecewiseFunction<T> generateWaterGreen()
+{
   T p0  = (T) 0.;
   T p1  = (T) 3./8.;
   T p2  = (T) 6./8.;
@@ -213,7 +229,8 @@ PiecewiseFunction<T> generateWaterGreen() {
 }
 
 template <typename T>
-PiecewiseFunction<T> generateWaterBlue() {
+PiecewiseFunction<T> generateWaterBlue()
+{
   T p0  = (T) 0.;
   T p1  = (T) 3./8.;
   T p2  = (T) 6./8.;
@@ -228,7 +245,8 @@ PiecewiseFunction<T> generateWaterBlue() {
 }
 
 template <typename T>
-PiecewiseFunction<T> generateAirRed() {
+PiecewiseFunction<T> generateAirRed()
+{
   T p0  = (T) 0.;
   T p1  = (T) 1.;
 
@@ -239,7 +257,8 @@ PiecewiseFunction<T> generateAirRed() {
 }
 
 template <typename T>
-PiecewiseFunction<T> generateAirGreen() {
+PiecewiseFunction<T> generateAirGreen()
+{
   T p0  = (T) 0.;
   T p1  = (T) 1.;
 
@@ -250,7 +269,8 @@ PiecewiseFunction<T> generateAirGreen() {
 }
 
 template <typename T>
-PiecewiseFunction<T> generateAirBlue() {
+PiecewiseFunction<T> generateAirBlue()
+{
   T p0  = (T) 0.;
   T p1  = (T) 1.;
 
@@ -262,7 +282,8 @@ PiecewiseFunction<T> generateAirBlue() {
 
 
 template <typename T>
-PiecewiseFunction<T> generateFireRed() {
+PiecewiseFunction<T> generateFireRed()
+{
   T p0  = (T) 0.;
   T p1  = (T) 0.36;
   T p3  = (T) 1.;
@@ -275,7 +296,8 @@ PiecewiseFunction<T> generateFireRed() {
 }
 
 template <typename T>
-PiecewiseFunction<T> generateFireGreen() {
+PiecewiseFunction<T> generateFireGreen()
+{
   T p0  = (T) 0.;
   T p1  = (T) 0.36;
   T p2  = (T) 0.75;
@@ -290,7 +312,8 @@ PiecewiseFunction<T> generateFireGreen() {
 }
 
 template <typename T>
-PiecewiseFunction<T> generateFireBlue() {
+PiecewiseFunction<T> generateFireBlue()
+{
   T p0  = (T) 0.;
   T p2  = (T) 0.75;
   T p3  = (T) 1.;
@@ -304,7 +327,8 @@ PiecewiseFunction<T> generateFireBlue() {
 
 
 template <typename T>
-PiecewiseFunction<T> generateLeeLooRed() {
+PiecewiseFunction<T> generateLeeLooRed()
+{
   T p0  = (T) 0.;
   T p2  = (T) 3./8.;
   T p3  = (T) 5./8.;
@@ -323,7 +347,8 @@ PiecewiseFunction<T> generateLeeLooRed() {
 }
 
 template <typename T>
-PiecewiseFunction<T> generateLeeLooGreen() {
+PiecewiseFunction<T> generateLeeLooGreen()
+{
   T p0  = (T) 0.;
   T p1  = (T) 1./8.;
   T p2  = (T) 3./8.;
@@ -344,7 +369,8 @@ PiecewiseFunction<T> generateLeeLooGreen() {
 }
 
 template <typename T>
-PiecewiseFunction<T> generateLeeLooBlue() {
+PiecewiseFunction<T> generateLeeLooBlue()
+{
   T pm1 = (T) -1./8.;
   T p0  = (T) 0.;
   T p1  = (T) 1./8.;
@@ -363,32 +389,29 @@ PiecewiseFunction<T> generateLeeLooBlue() {
 }
 
 template <typename T>
-ColorMap<T> generateMap(std::string mapName) {
+ColorMap<T> generateMap(std::string mapName)
+{
   if (mapName == "earth") {
     return ColorMap<T> (
              generateEarthRed<T>(),
              generateEarthGreen<T>(),
              generateEarthBlue<T>() );
-  }
-  else if (mapName == "water") {
+  } else if (mapName == "water") {
     return ColorMap<T> (
              generateWaterRed<T>(),
              generateWaterGreen<T>(),
              generateWaterBlue<T>() );
-  }
-  else if (mapName == "air") {
+  } else if (mapName == "air") {
     return ColorMap<T> (
              generateAirRed<T>(),
              generateAirGreen<T>(),
              generateAirBlue<T>() );
-  }
-  else if (mapName == "fire") {
+  } else if (mapName == "fire") {
     return ColorMap<T> (
              generateFireRed<T>(),
              generateFireGreen<T>(),
              generateFireBlue<T>() );
-  }
-  else if (mapName == "leeloo") {
+  } else if (mapName == "leeloo") {
     return ColorMap<T> (
              generateLeeLooRed<T>(),
              generateLeeLooGreen<T>(),

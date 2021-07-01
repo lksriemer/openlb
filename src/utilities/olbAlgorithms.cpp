@@ -27,22 +27,23 @@ namespace olb {
 
 namespace algorithm {
 
-std::vector<int> primeFactor(int value) {
+std::vector<int> primeFactor(int value)
+{
   std::vector<int> primeFactors;
   int testFactor = 2;
   while (testFactor <= value) {
     if (value%testFactor==0) {
       value /= testFactor;
       primeFactors.push_back(testFactor);
-    }
-    else {
+    } else {
       ++testFactor;
     }
   }
   return primeFactors;
 }
 
-std::vector<int> evenRepartition(int value, int d) {
+std::vector<int> evenRepartition(int value, int d)
+{
   std::vector<int> primeFactors = primeFactor(value);
   std::vector<int> repartition(d);
   for (int iRep=0; iRep<d; ++iRep) {

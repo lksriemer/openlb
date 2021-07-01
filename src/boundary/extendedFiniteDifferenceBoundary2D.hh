@@ -59,8 +59,7 @@ processSubDomain(BlockLattice2D<T,Lattice>& blockLattice, int x0_, int x1_, int 
   if ( util::intersect (
          x0, x1, y0, y1,
          x0_, x1_, y0_, y1_,
-         newX0, newX1, newY0, newY1 ) )
-  {
+         newX0, newX1, newY0, newY1 ) ) {
     for (int iX=newX0; iX<=newX1; ++iX) {
       for (int iY=newY0; iY<=newY1; ++iY) {
         Cell<T,Lattice>& cell = blockLattice.get(iX,iY);
@@ -96,8 +95,7 @@ processSubDomain(BlockLattice2D<T,Lattice>& blockLattice, int x0_, int x1_, int 
         interpolateGradients<1>(blockLattice, dy_rho, iX, iY);
         for (int iPop = 0; iPop < L::q; ++iPop) {
           T cGradRhoUU = T();
-          for (int iAlpha=0; iAlpha < L::d; ++iAlpha)
-          {
+          for (int iAlpha=0; iAlpha < L::d; ++iAlpha) {
             cGradRhoUU += L::c[iPop][iAlpha] * (
                             dx_rho*u[iAlpha]*u[x] +
                             dx_U[iAlpha]*rho*u[x] +
@@ -110,10 +108,8 @@ processSubDomain(BlockLattice2D<T,Lattice>& blockLattice, int x0_, int x1_, int 
           // then we compute the term
           // c_{i\gamma}\nabla_{\gamma}(\rho*u_\alpha * u_\beta)
           T cDivRhoUU[L::d][L::d]; //first step towards QcdivRhoUU
-          for (int iAlpha = 0; iAlpha < L::d; ++iAlpha)
-          {
-            for (int iBeta = 0; iBeta < L::d; ++iBeta)
-            {
+          for (int iAlpha = 0; iAlpha < L::d; ++iAlpha) {
+            for (int iBeta = 0; iBeta < L::d; ++iBeta) {
               cDivRhoUU[iAlpha][iBeta] = L::c[iPop][x] *
                                          (dx_rho*u[iAlpha]*u[iBeta] +
                                           dx_U[iAlpha]*rho*u[iBeta] +

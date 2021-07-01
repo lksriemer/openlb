@@ -51,6 +51,9 @@ template class StraightConvectionBoundaryProcessorGenerator2D<double, descriptor
 template class StraightConvectionBoundaryProcessor2D<double, descriptors::D2Q9Descriptor,          1,-1>;
 template class StraightConvectionBoundaryProcessorGenerator2D<double, descriptors::D2Q9Descriptor, 1,-1>;
 
+template class SlipBoundaryProcessor2D<double, descriptors::D2Q9Descriptor>;
+template class SlipBoundaryProcessorGenerator2D<double, descriptors::D2Q9Descriptor>;
+
 template class OuterVelocityCornerProcessor2D          <double, descriptors::D2Q9Descriptor, 1,1>;
 template class OuterVelocityCornerProcessorGenerator2D <double, descriptors::D2Q9Descriptor, 1,1>;
 template class OuterVelocityCornerProcessor2D          <double, descriptors::D2Q9Descriptor, 1,-1>;

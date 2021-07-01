@@ -21,23 +21,25 @@
 #  Boston, MA  02110-1301, USA.
 
 
-generic        := parallelIO \
-                  xmlReader \
-                  ostreamManager
+generic        := fileName \
+                  ostreamManager \
+                  parallelIO \
+                  vtiReader \
+                  vtiWriter \
+                  xmlReader
 
 precompiled    :=  base64 \
-                   blockGifWriter3D \
+                   blockGifWriter \
                    blockVtkWriter2D \
                    blockVtkWriter3D \
                    colormaps \
-                   imageWriter \
+                   fileName \
                    ostreamManager \
                    parallelIO \
                    serializerIO \
                    stlReader \
-                   superGifWriter3D \
                    superVtkWriter2D \
                    superVtkWriter3D \
+                   vtiReader \
+                   vtiWriter \
                    xmlReader
-
-

@@ -27,8 +27,9 @@
 
 #include<vector>
 
-#include "functors/superLatticeBaseF3D.h"
-#include "functors/superLatticeCalcF3D.h"
+#include "functors/superBaseF3D.h"
+#include "functors/superCalcF3D.h"
+#include "functors/blockLatticeLocalF3D.h"
 #include "core/superLattice3D.h"
 
 /** Note: Throughout the whole source code directory genericFunctions, the
@@ -48,7 +49,7 @@ template <typename T, template <typename U> class DESCRIPTOR>
 class SuperLatticeFpop3D : public SuperLatticeF3D<T,DESCRIPTOR> {
 public:
   SuperLatticeFpop3D(SuperLattice3D<T,DESCRIPTOR>& sLattice);
-  std::vector<T> operator() (std::vector<int> input);
+  bool operator() (T output[], const int input[]);
 };
 
 /// functor to get pointwise dissipation density on local lattices
@@ -59,7 +60,7 @@ private:
 public:
   SuperLatticeDissipation3D(SuperLattice3D<T,DESCRIPTOR>& sLattice,
                             const LBconverter<T>& converter);
-  std::vector<T> operator() (std::vector<int> input);
+  bool operator() (T output[], const int input[]);
 };
 
 /// functor to get pointwise dissipation density on local lattices
@@ -68,7 +69,7 @@ class SuperLatticePhysDissipation3D : public SuperLatticePhysF3D<T,DESCRIPTOR> {
 public:
   SuperLatticePhysDissipation3D(SuperLattice3D<T,DESCRIPTOR>& sLattice,
                                 const LBconverter<T>& converter);
-  std::vector<T> operator() (std::vector<int> input);
+  bool operator() (T output[], const int input[]);
 };
 
 /// functor to get pointwise density rho on local lattices
@@ -76,7 +77,7 @@ template <typename T, template <typename U> class DESCRIPTOR>
 class SuperLatticeDensity3D : public SuperLatticeF3D<T,DESCRIPTOR> {
 public:
   SuperLatticeDensity3D(SuperLattice3D<T,DESCRIPTOR>& sLattice);
-  std::vector<T> operator() (std::vector<int> input);
+  bool operator() (T output[], const int input[]);
 };
 
 
@@ -85,7 +86,7 @@ template <typename T, template <typename U> class DESCRIPTOR>
 class SuperLatticeVelocity3D : public SuperLatticeF3D<T,DESCRIPTOR> {
 public:
   SuperLatticeVelocity3D(SuperLattice3D<T,DESCRIPTOR>& sLattice);
-  std::vector<T> operator() (std::vector<int> input);
+  bool operator() (T output[], const int input[]);
 };
 
 /// functor to get pointwise strain rate on local lattice
@@ -96,8 +97,8 @@ private:
   const LBconverter<T>& _converter;
 public:
   SuperLatticeStrainRate3D(SuperLattice3D<T,DESCRIPTOR>& sLattice,
-                       const LBconverter<T>& converter);
-  std::vector<T> operator() (std::vector<int> input);
+                           const LBconverter<T>& converter);
+  bool operator() (T output[], const int input[]);
 };
 
 /// functor to get pointwise phys strain rate on local lattice
@@ -106,8 +107,8 @@ template <typename T, template <typename U> class DESCRIPTOR>
 class SuperLatticePhysStrainRate3D : public SuperLatticePhysF3D<T,DESCRIPTOR> {
 public:
   SuperLatticePhysStrainRate3D(SuperLattice3D<T,DESCRIPTOR>& sLattice,
-                           const LBconverter<T>& converter);
-  std::vector<T> operator() (std::vector<int> input);
+                               const LBconverter<T>& converter);
+  bool operator() (T output[], const int input[]);
 };
 
 /// functor to get pointwise the material no. presenting the geometry on local lattice
@@ -119,7 +120,7 @@ private:
 public:
   SuperLatticeGeometry3D(SuperLattice3D<T,DESCRIPTOR>& sLattice,
                          SuperGeometry3D<T>& superGeometry, const int material = -1);
-  std::vector<T> operator() (std::vector<int> input);
+  bool operator() (T output[], const int input[]);
 };
 
 
@@ -128,7 +129,7 @@ template <typename T, template <typename U> class DESCRIPTOR>
 class SuperLatticeRank3D : public SuperLatticeF3D<T,DESCRIPTOR> {
 public:
   SuperLatticeRank3D(SuperLattice3D<T,DESCRIPTOR>& sLattice);
-  std::vector<T> operator() (std::vector<int> input);
+  bool operator() (T output[], const int input[]);
 };
 
 
@@ -137,7 +138,7 @@ template <typename T, template <typename U> class DESCRIPTOR>
 class SuperLatticeCuboid3D : public SuperLatticeF3D<T,DESCRIPTOR> {
 public:
   SuperLatticeCuboid3D(SuperLattice3D<T,DESCRIPTOR>& sLattice);
-  std::vector<T> operator() (std::vector<int> input);
+  bool operator() (T output[], const int input[]);
 };
 
 
@@ -147,7 +148,7 @@ class SuperLatticePhysPressure3D : public SuperLatticePhysF3D<T,DESCRIPTOR> {
 public:
   SuperLatticePhysPressure3D(SuperLattice3D<T,DESCRIPTOR>& sLattice,
                              const LBconverter<T>& converter);
-  std::vector<T> operator() (std::vector<int> input);
+  bool operator() (T output[], const int input[]);
 };
 
 
@@ -157,11 +158,19 @@ class SuperLatticePhysVelocity3D : public SuperLatticePhysF3D<T,DESCRIPTOR> {
 public:
   SuperLatticePhysVelocity3D(SuperLattice3D<T,DESCRIPTOR>& sLattice,
                              const LBconverter<T>& converter, bool print=false);
-  std::vector<T> operator() (std::vector<int> input);
+  bool operator() (T output[], const int input[]);
 private:
   bool _print;
 };
 
+
+template <typename T, template <typename U> class DESCRIPTOR>
+class SuperLatticePhysExternal3D : public SuperLatticePhysF3D<T,DESCRIPTOR> {
+public:
+  SuperLatticePhysExternal3D(SuperLattice3D<T,DESCRIPTOR>& sLattice,
+                             const LBconverter<T>& converter);
+  bool operator() (T output[], const int input[]);
+};
 
 /// functor to get pointwise phys force acting on a boundary with a given material on local lattice
 template <typename T, template <typename U> class DESCRIPTOR>
@@ -173,7 +182,35 @@ public:
   SuperLatticePhysBoundaryForce3D(SuperLattice3D<T,DESCRIPTOR>& sLattice,
                                   SuperGeometry3D<T>& superGeometry, const int material,
                                   const LBconverter<T>& converter);
-  std::vector<T> operator() (std::vector<int> input);
+  bool operator() (T output[], const int input[]);
+};
+
+/// functor to get pointwise phys force acting on a boundary with a given indicator on local lattice
+template <typename T, template <typename U> class DESCRIPTOR>
+class SuperLatticePhysBoundaryForceIndicator3D : public SuperLatticePhysF3D<T,DESCRIPTOR> {
+private:
+  SuperGeometry3D<T>& _superGeometry;
+  SmoothIndicatorSphere3D<T,T>& _indicator;
+public:
+  SuperLatticePhysBoundaryForceIndicator3D(SuperLattice3D<T,DESCRIPTOR>& sLattice,
+      SuperGeometry3D<T>& superGeometry,
+      SmoothIndicatorSphere3D<T,T>& indicator,
+      const LBconverter<T>& converter);
+  bool operator() (T output[], const int input[]);
+};
+
+/// functor to get pointwise phys torque acting on a boundary with a given indicator on local lattice
+template <typename T, template <typename U> class DESCRIPTOR>
+class SuperLatticePhysBoundaryTorqueIndicator3D : public SuperLatticePhysF3D<T,DESCRIPTOR> {
+private:
+  SuperGeometry3D<T>& _superGeometry;
+  SmoothIndicatorSphere3D<T,T>& _indicator;
+public:
+  SuperLatticePhysBoundaryTorqueIndicator3D(SuperLattice3D<T,DESCRIPTOR>& sLattice,
+      SuperGeometry3D<T>& superGeometry,
+      SmoothIndicatorSphere3D<T,T>& indicator,
+      const LBconverter<T>& converter);
+  bool operator() (T output[], const int input[]);
 };
 
 
@@ -188,9 +225,20 @@ public:
   SuperLatticePhysCorrBoundaryForce3D(SuperLattice3D<T,DESCRIPTOR>& sLattice,
                                       SuperGeometry3D<T>& superGeometry,
                                       const int material, const LBconverter<T>& converter);
-  std::vector<T> operator() (std::vector<int> input);
+  bool operator() (T output[], const int input[]);
 };
 
+
+/// functor to get pointwise, lattice-dependent external field
+template <typename T, template <typename U> class DESCRIPTOR>
+class SuperLatticeExternalField3D : public SuperLatticeF3D<T,DESCRIPTOR> {
+private:
+  int _beginsAt;
+  int _sizeOf;
+public:
+  SuperLatticeExternalField3D(SuperLattice3D<T,DESCRIPTOR>& sLattice, int beginsAt, int sizeOf);
+  bool operator() (T output[], const int input[]);
+};
 
 /// functor to get pointwise, lattice-dependent porosity values in [0,1]
 /// in combination with (Extended)PorousBGKdynamics: 0->solid, 1->fluid
@@ -199,9 +247,8 @@ class SuperLatticePorosity3D : public SuperLatticeF3D<T,DESCRIPTOR> {
 private:
 public:
   SuperLatticePorosity3D(SuperLattice3D<T,DESCRIPTOR>& sLattice);
-  std::vector<T> operator()(std::vector<int> input);
+  bool operator() (T output[], const int input[]);
 };
-
 
 /// functor to get pointwise mesh-independent permeability values in (0,inf) in combination with (Extended)PorousBGKdynamics
 /// note: result is cropped to 999999
@@ -214,7 +261,7 @@ public:
   SuperLatticePhysPermeability3D(SuperLattice3D<T,DESCRIPTOR>& sLattice,
                                  SuperGeometry3D<T>& superGeometry,
                                  const int material, const LBconverter<T>& converter);
-  std::vector<T> operator()(std::vector<int> input);
+  bool operator() (T output[], const int input[]);
 };
 
 
@@ -228,7 +275,7 @@ public:
   SuperLatticePhysDarcyForce3D(SuperLattice3D<T,DESCRIPTOR>& sLattice,
                                SuperGeometry3D<T>& superGeometry,
                                const int material, const LBconverter<T>& converter);
-  std::vector<T> operator()(std::vector<int> input);
+  bool operator() (T output[], const int input[]);
 };
 
 
@@ -244,7 +291,7 @@ private:
 public:
   SuperLatticeAverage3D(SuperLatticeF3D<T,DESCRIPTOR>& f,
                         SuperGeometry3D<T>& superGeometry, const int material, T radius);
-  std::vector<T> operator() (std::vector<int> input);
+  bool operator() (T output[], const int input[]);
 };
 
 
@@ -255,10 +302,20 @@ private:
   SuperLatticeF3D<T,DESCRIPTOR>& _f;
 public:
   SuperEuklidNorm3D(SuperLatticeF3D<T,DESCRIPTOR>& f);
-  std::vector<T> operator() (std::vector<int> input);
+  bool operator() (T output[], const int input[]);
 };
 
-
+template <typename T, template <typename U> class DESCRIPTOR>
+class SuperLatticeInterpPhysVelocity3D: public SuperLatticeF3D<T,DESCRIPTOR> {
+private:
+  std::vector<BlockLatticeInterpPhysVelocity3D<T,DESCRIPTOR>* > bLattices;
+public:
+  SuperLatticeInterpPhysVelocity3D(SuperLattice3D<T,DESCRIPTOR>& sLattice, LBconverter<T>& conv);
+  bool operator() (T output[], const int input[]) {
+    return 0;
+  }
+  void operator()(T output[], const T input[], const int iC);
+};
 
 } // end namespace olb
 

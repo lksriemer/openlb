@@ -24,11 +24,36 @@
 #ifndef ANALYTICAL_BASE_F_HH
 #define ANALYTICAL_BASE_F_HH
 
-#include<vector>
-
 #include "analyticalBaseF.h"
 
 namespace olb {
+
+
+template <typename T, typename S>
+AnalyticalF1D<T,S>::AnalyticalF1D(int n) : GenericF<T,S>(n,1) { }
+
+template <typename T, typename S>
+AnalyticalF2D<T,S>::AnalyticalF2D(int n) : GenericF<T,S>(n,2) { }
+
+template <typename T, typename S>
+AnalyticalF3D<T,S>::AnalyticalF3D(int n) : GenericF<T,S>(n,3) { }
+
+
+// identity to "store results"
+template <typename T, typename S>
+AnalyticalIdentity1D<T,S>::AnalyticalIdentity1D(AnalyticalF1D<T,S>& f)
+  : AnalyticalF1D<T,S>(f.getTargetDim()), _f(f)
+{
+  this->getName() = _f.getName();
+  std::swap( _f._ptrCalcC, this->_ptrCalcC );
+}
+
+template <typename T, typename S>
+bool AnalyticalIdentity1D<T,S>::operator()(T output[], const S input[])
+{
+  _f(output,input);
+  return true;
+}
 
 
 // identity to "store results"
@@ -36,49 +61,33 @@ template <typename T, typename S>
 AnalyticalIdentity2D<T,S>::AnalyticalIdentity2D(AnalyticalF2D<T,S>& f)
   : AnalyticalF2D<T,S>(f.getTargetDim()), _f(f)
 {
-  this->_name = _f.getName();
-  // add 'this' to father's child list to prevent father from being deleted
-  _f.addChild(this);
+  this->getName() = _f.getName();
+  // pass through the shared_ptr from _f, e.g. an arithemticClass, to the identity
+  std::swap( _f._ptrCalcC, this->_ptrCalcC );
 }
 
 template <typename T, typename S>
-AnalyticalIdentity2D<T,S>::~AnalyticalIdentity2D()
+bool AnalyticalIdentity2D<T,S>::operator()(T output[], const S input[])
 {
-  // remove 'this' from father's child list
-  _f.removeChild(this);
-  // delete father from grandfather's child list
-  _f.myErase(NULL);
+  _f(output,input);
+  return true;
 }
 
-template <typename T, typename S>
-std::vector<T> AnalyticalIdentity2D<T,S>::operator()(std::vector<S> input) 
-{
-  return _f(input);
-}
 
 // identity to "store results"
 template <typename T, typename S>
 AnalyticalIdentity3D<T,S>::AnalyticalIdentity3D(AnalyticalF3D<T,S>& f)
   : AnalyticalF3D<T,S>(f.getTargetDim()), _f(f)
 {
-  this->_name = _f.getName();
-  // add 'this' to father's child list to prevent father from being deleted
-  _f.addChild(this);
+  this->getName() = _f.getName();
+  std::swap( _f._ptrCalcC, this->_ptrCalcC );
 }
 
 template <typename T, typename S>
-AnalyticalIdentity3D<T,S>::~AnalyticalIdentity3D()
+bool AnalyticalIdentity3D<T,S>::operator()(T output[], const S input[])
 {
-  // remove 'this' from father's child list
-  _f.removeChild(this);
-  // delete father from grandfather's child list
-  _f.myErase(NULL);
-}
-
-template <typename T, typename S>
-std::vector<T> AnalyticalIdentity3D<T,S>::operator()(std::vector<S> input) 
-{
-  return _f(input);
+  _f(output,input);
+  return true;
 }
 
 

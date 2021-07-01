@@ -21,10 +21,15 @@
 #  Boston, MA  02110-1301, USA.
 
 
-generic        := analysisFlags \
-                  multiPhysics 
+generic        := blockStructure2D \
+                  blockStructure3D \
+                  multiPhysics
 
-precompiled    := analysisFlags \
+
+precompiled    := blockStructure2D \
+                  blockStructure3D \
+                  blockData2D \
+                  blockData3D \
                   blockLattice2D \
                   blockLattice3D \
                   blockLatticeStructure2D \
@@ -32,18 +37,13 @@ precompiled    := analysisFlags \
                   blockLatticeView2D \
                   blockLatticeView3D \
                   cell \
-                  dataAnalysis2D \
-                  dataAnalysis3D \
-                  dataFields2D \
-                  dataFields3D \
-                  dataReductions \
                   latticeStatistics \
                   multiPhysics \
                   postProcessing2D \
                   postProcessing3D \
                   serializer \
-                  simulationSetup2D \
-                  simulationSetup3D \
+                  superData2D \
+                  superData3D \
                   superExternal2D \
                   superExternal3D \
                   superLattice2D \

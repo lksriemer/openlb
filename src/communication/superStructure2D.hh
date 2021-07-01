@@ -31,53 +31,74 @@
 #include "geometry/cuboidGeometry2D.h"
 #include "communication/loadBalancer.h"
 #include "communication/superStructure2D.h"
+#include "io/ostreamManager.h"
 
 namespace olb {
 
 template<typename T>
-SuperStructure2D<T>::SuperStructure2D(CuboidGeometry2D<T>& cuboidGeometry, LoadBalancer<T>& loadBalancer, int overlap) :
-  _cuboidGeometry(cuboidGeometry), _loadBalancer(loadBalancer), _overlap(overlap),  _communicator(*this), _communicationNeeded(true), clout(std::cout,"SuperGeometry2D") {
+SuperStructure2D<T>::SuperStructure2D(CuboidGeometry2D<T>& cuboidGeometry,
+                                      LoadBalancer<T>& loadBalancer, int overlap)
+  : _cuboidGeometry(cuboidGeometry), _loadBalancer(loadBalancer), _overlap(overlap),
+    _communicator(*this), _communicationNeeded(true), clout(std::cout,"SuperGeometry2D")
+{
 }
 
 template<typename T>
-CuboidGeometry2D<T>& SuperStructure2D<T>::getCuboidGeometry() {
+SuperStructure2D<T>::SuperStructure2D(int overlap)
+  : SuperStructure2D( *(new CuboidGeometry2D<T> ()), *(new LoadBalancer<T> ()), overlap)
+{
+}
+
+template<typename T>
+CuboidGeometry2D<T>& SuperStructure2D<T>::getCuboidGeometry()
+{
   return _cuboidGeometry;
 }
 
 template<typename T>
-CuboidGeometry2D<T> const& SuperStructure2D<T>::getCuboidGeometry() const {
+CuboidGeometry2D<T> const& SuperStructure2D<T>::getCuboidGeometry() const
+{
   return _cuboidGeometry;
 }
 
 template<typename T>
-int SuperStructure2D<T>::getOverlap() {
+int SuperStructure2D<T>::getOverlap()
+{
   return _overlap;
 }
 
 template<typename T>
-int SuperStructure2D<T>::getOverlap() const {
+int SuperStructure2D<T>::getOverlap() const
+{
   return _overlap;
 }
 
 template<typename T>
-LoadBalancer<T>& SuperStructure2D<T>::getLoadBalancer() {
+LoadBalancer<T>& SuperStructure2D<T>::getLoadBalancer()
+{
   return _loadBalancer;
 }
 
 template<typename T>
-LoadBalancer<T> const& SuperStructure2D<T>::getLoadBalancer() const {
+LoadBalancer<T> const& SuperStructure2D<T>::getLoadBalancer() const
+{
   return _loadBalancer;
 }
 
 template<typename T>
-void SuperStructure2D<T>::communicate(bool verbose) {
-  if(_communicationNeeded) {
-    if(verbose) std::cout << "Cummunicate ..." << std::endl;
-      _communicator.send();
-      _communicator.receive();
-      _communicator.write();
-      _communicationNeeded = false;
-    if(verbose) std::cout << "Cummunicate ...ok" << std::endl;
+void SuperStructure2D<T>::communicate(bool verbose)
+{
+  if (_communicationNeeded) {
+    if (verbose) {
+      std::cout << "Communicate ..." << std::endl;
+    }
+    _communicator.send();
+    _communicator.receive();
+    _communicator.write();
+    _communicationNeeded = false;
+    if (verbose) {
+      std::cout << "Communicate ...ok" << std::endl;
+    }
   }
 }
 

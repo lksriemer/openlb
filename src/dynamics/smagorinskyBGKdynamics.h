@@ -108,7 +108,7 @@ class ConStrainSmagorinskyBGKdynamics : public BGKdynamics<T,Lattice> {
 public:
   /// Constructor
   ConStrainSmagorinskyBGKdynamics(T omega_, Momenta<T,Lattice>& momenta_,
-                                  T smagoConst_, T dx_, T dt_);
+                                  T smagoConst_=T(.1), T dx_=T(1), T dt_=T(1));
   /// Collision step
   virtual void collide(Cell<T,Lattice>& cell, LatticeStatistics<T>& statistics_);
   /// Collide with fixed velocity
@@ -165,7 +165,12 @@ private:
 };
 
 
-/// Implementation of a the dynamic Smarorinsky BGK collision step
+/// Implementation of a Shear Smarorinsky BGK collision step
+/// Shown good results for wall-bounded flows
+/// Leveque et al.: Shear-Improved Smagorinsky Model for Large-Eddy Simulation
+/// of Wall-Bounded Turbulent Flows
+/// DOI: http://dx.doi.org/10.1017/S0022112006003429
+
 template<typename T, template<typename U> class Lattice>
 class ShearSmagorinskyBGKdynamics : public BGKdynamics<T,Lattice> {
 public:
@@ -184,21 +189,55 @@ public:
   virtual T getSmagorinskyOmega(Cell<T,Lattice>& cell_, int iT);
 
 private:
-  /// Computes a constant prefactor in order to speed up the computation
-  T computePreFactor(T omega_, T smagoConst_, T dx_, T dt_);
 
   /// Computes the local smagorinsky relaxation parameter
-  T computeOmega(T omega0_, T preFactor_, T rho_, T pi_[util::TensorVal<Lattice<T> >::n],
+  T computeOmega(T omega0_, T rho_, T pi_[util::TensorVal<Lattice<T> >::n],
                  Cell<T,Lattice>& cell, int iT);
 
   /// effective collision time based upon Smagorisnky approach
   T tau_eff;
   /// Smagorinsky constant
   T smagoConst;
+  /// Pre factor speeds up the collision step
+  T preFactor;
   T dx;
   T dt;
-  const static T avShearIsAt = Lattice<T>::ExternalField::avShearIsAt;
+  const static int avShearIsAt = Lattice<T>::ExternalField::avShearIsAt;
 };
+
+/// Implementation of the ForcedBGK collision step
+template<typename T, template<typename U> class Lattice>
+class ShearSmagorinskyForcedBGKdynamics : public ForcedBGKdynamics<T,Lattice> {
+public:
+  /// Constructor
+  ShearSmagorinskyForcedBGKdynamics(T omega_, Momenta<T,Lattice>& momenta_,
+                                    T smagoConst_, T dx_, T dt_);
+  ///collids
+  virtual void collide(Cell<T,Lattice>& cell, LatticeStatistics<T>& statistics_);
+
+  /// Set local relaxation parameter of the dynamics
+  virtual void setOmega(T omega_);
+
+  /// Get local smagorinsky relaxation parameter of the dynamics
+  virtual T getSmagorinskyOmega(Cell<T,Lattice>& cell_, int iT);
+
+private:
+
+  /// Computes the local smagorinsky relaxation parameter
+  T computeOmega(T omega0_, T rho_, T pi_[util::TensorVal<Lattice<T> >::n],
+                 Cell<T,Lattice>& cell, int iT);
+
+  /// effective collision time based upon Smagorisnky approach
+  T tau_eff;
+  /// Smagorinsky constant
+  T smagoConst;
+  /// Pre factor speeds up the collision step
+  T preFactor;
+  T dx;
+  T dt;
+  const static int avShearIsAt = Lattice<T>::ExternalField::avShearIsAt;
+};
+
 
 /// Implementation of the BGK collision step
 template<typename T, template<typename U> class Lattice>
@@ -270,9 +309,72 @@ private:
 };
 
 
+/// Implementation of the ForcedBGK collision step
+template<typename T, template<typename U> class Lattice>
+class SmagorinskyLinearVelocityForcedBGKdynamics : public ForcedBGKdynamics<T,Lattice> {
+public:
+  /// Constructor
+  SmagorinskyLinearVelocityForcedBGKdynamics(T omega_, Momenta<T,Lattice>& momenta_,
+      T smagoConst_, T dx_, T dt_);
+  /// Collision step
+  virtual void collide(Cell<T,Lattice>& cell, LatticeStatistics<T>& statistics_);
+  /// Collide with fixed velocity
+  virtual void staticCollide(Cell<T,Lattice>& cell, const T u[Lattice<T>::d],
+                             LatticeStatistics<T>& statistics_);
+  /// Set local relaxation parameter of the dynamics
+  virtual void setOmega(T omega_);
+  /// Get local smagorinsky relaxation parameter of the dynamics
+  virtual T getSmagorinskyOmega(Cell<T,Lattice>& cell_);
 
+private:
+  /// Computes a constant prefactor in order to speed up the computation
+  T computePreFactor(T omega_, T smagoConst_, T dx_, T dt_);
+  /// Computes the local smagorinsky relaxation parameter
+  T computeOmega(T omega0_, T preFactor_, T rho_,
+                 T pi_[util::TensorVal<Lattice<T> >::n]);
 
+  /// effective collision time based upon Smagorisnky approach
+  T tau_eff;
+  /// Smagorinsky constant
+  T smagoConst;
+  /// Precomputed constant which speeeds up the computation
+  T preFactor;
+  T dx;
+  T dt;
+};
 
+/// Implementation of the BGK collision step
+template<typename T, template<typename U> class Lattice>
+class KrauseBGKdynamics : public BGKdynamics<T,Lattice> {
+public:
+  /// Constructor
+  KrauseBGKdynamics(T omega_, Momenta<T,Lattice>& momenta_, T smagoConst_,
+                    T dx_, T dt_);
+  /// Collision step
+  virtual void collide(Cell<T,Lattice>& cell, LatticeStatistics<T>& statistics_);
+  /// Collide with fixed velocity
+  virtual void staticCollide(Cell<T,Lattice>& cell, const T u[Lattice<T>::d],
+                             LatticeStatistics<T>& statistics_);
+  /// Set local relaxation parameter of the dynamics
+  virtual void setOmega(T omega_);
+
+private:
+  /// Computes a constant prefactor in order to speed up the computation
+  T computePreFactor(T omega_, T smagoConst_, T dx_, T dt_);
+  /// Computes the local smagorinsky relaxation parameter
+  void computeOmega(T omega0_, Cell<T,Lattice>& cell, T preFactor_, T rho_,
+                    T u[Lattice<T>::d],
+                    T newOmega[Lattice<T>::q] );
+
+  /// effective collision time based upon Smagorisnky approach
+  T tau_eff;
+  /// Smagorinsky constant
+  T smagoConst;
+  /// Precomputed constant which speeeds up the computation
+  T preFactor;
+  T dx;
+  T dt;
+};
 
 
 }

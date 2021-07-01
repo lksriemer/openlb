@@ -34,9 +34,10 @@
 
 namespace olb {
 
-inline void olbInit(int *argc, char ***argv, bool verbose=false) {
+inline void olbInit(int *argc, char ***argv, bool verbose=false)
+{
 
-// create an OstreamManager object in order to enable multi output
+  // create an OstreamManager object in order to enable multi output
   olb::OstreamManager clout(std::cout,"olbInit");
   clout.setMultiOutput(verbose);
   singleton::mpi().init(argc, argv);

@@ -49,6 +49,34 @@ namespace olb {
 */
 namespace descriptors {
 
+/// descriptor base
+/*template <unsigned Size> class DescriptorBase
+{
+  enum { size = Size };       ///< number of dimensions
+};
+
+template <typename T, unsigned Size> class Vector
+    : public DescriptorBase<Size>
+{
+    T data[Size];  ///< number of dimensions
+};
+
+template <typename T> class Scalar
+    : public Vector<T,1>
+{
+};
+
+template <typename T> class Vector2D
+    : public Vector<T,2>
+{
+};
+
+template <typename T> class Vector3D
+    : public Vector<T,1>
+{
+};*/
+
+
 struct NoExternalField {
   static const int numScalars = 0;
   static const int numSpecies = 0;
@@ -80,6 +108,32 @@ struct Force3dDescriptor {
 
 struct Force3dDescriptorBase {
   typedef Force3dDescriptor ExternalField;
+};
+
+struct V6Force2dDescriptor {
+  static const int numScalars = 8;
+  static const int numSpecies = 2;
+  static const int forceBeginsAt = 0;
+  static const int sizeOfForce   = 2;
+  static const int vBeginsAt = 2;
+  static const int sizeOfV   = 6;
+};
+
+struct V6Force2dDescriptorBase {
+  typedef V6Force2dDescriptor ExternalField;
+};
+
+struct V12Force3dDescriptor {
+  static const int numScalars = 15;
+  static const int numSpecies = 2;
+  static const int forceBeginsAt = 0;
+  static const int sizeOfForce   = 3;
+  static const int vBeginsAt = 3;
+  static const int sizeOfV   = 12;
+};
+
+struct V12Force3dDescriptorBase {
+  typedef V12Force3dDescriptor ExternalField;
 };
 
 template<typename T, typename ExternalField>
@@ -114,8 +168,7 @@ public:
 
 
 /// D2Q9 lattice
-template <typename T> struct D2Q9DescriptorBase
-{
+template <typename T> struct D2Q9DescriptorBase {
   typedef D2Q9DescriptorBase<T> BaseDescriptor;
   enum { d = 2, q = 9 };      ///< number of dimensions/distr. functions
   static const int vicinity;  ///< size of neighborhood
@@ -125,8 +178,7 @@ template <typename T> struct D2Q9DescriptorBase
 };
 
 /// D3Q13 lattice
-template <typename T> struct D3Q13DescriptorBase
-{
+template <typename T> struct D3Q13DescriptorBase {
   typedef D3Q13DescriptorBase<T> BaseDescriptor;
   enum { d = 3, q = 13 };     ///< number of dimensions/distr. functions
   static const int vicinity;  ///< size of neighborhood
@@ -138,8 +190,7 @@ template <typename T> struct D3Q13DescriptorBase
 };
 
 /// D3Q15 lattice
-template <typename T> struct D3Q15DescriptorBase
-{
+template <typename T> struct D3Q15DescriptorBase {
   typedef D3Q15DescriptorBase<T> BaseDescriptor;
   enum { d = 3, q = 15 };     ///< number of dimensions/distr. functions
   static const int vicinity;  ///< size of neighborhood
@@ -149,8 +200,7 @@ template <typename T> struct D3Q15DescriptorBase
 };
 
 /// D3Q19 lattice
-template <typename T> struct D3Q19DescriptorBase
-{
+template <typename T> struct D3Q19DescriptorBase {
   typedef D3Q19DescriptorBase<T> BaseDescriptor;
   enum { d = 3, q = 19 };     ///< number of dimensions/distr. functions
   static const int vicinity;  ///< size of neighborhood
@@ -160,8 +210,7 @@ template <typename T> struct D3Q19DescriptorBase
 };
 
 /// D3Q27 lattice
-template <typename T> struct D3Q27DescriptorBase
-{
+template <typename T> struct D3Q27DescriptorBase {
   typedef D3Q27DescriptorBase<T> BaseDescriptor;
   enum { d = 3, q = 27 };     ///< number of dimensions/distr. functions
   static const int vicinity;  ///< size of neighborhood
@@ -171,44 +220,52 @@ template <typename T> struct D3Q27DescriptorBase
 };
 
 template <typename T> struct D2Q9Descriptor
-    : public D2Q9DescriptorBase<T>, public NoExternalFieldBase
-  { };
+    : public D2Q9DescriptorBase<T>, public NoExternalFieldBase {
+};
 
 template <typename T> struct ForcedD2Q9Descriptor
-    : public D2Q9DescriptorBase<T>, public Force2dDescriptorBase
-  { };
+    : public D2Q9DescriptorBase<T>, public Force2dDescriptorBase {
+};
+
+template <typename T> struct V6ForcedD2Q9Descriptor
+    : public D2Q9DescriptorBase<T>, public V6Force2dDescriptorBase {
+};
 
 template <typename T> struct D3Q13Descriptor
-    : public D3Q13DescriptorBase<T>, public NoExternalFieldBase
-  { };
+    : public D3Q13DescriptorBase<T>, public NoExternalFieldBase {
+};
 
 template <typename T> struct ForcedD3Q13Descriptor
-    : public D3Q13DescriptorBase<T>, public Force3dDescriptorBase
-  { };
+    : public D3Q13DescriptorBase<T>, public Force3dDescriptorBase {
+};
 
 template <typename T> struct D3Q15Descriptor
-    : public D3Q15DescriptorBase<T>, public NoExternalFieldBase
-  { };
+    : public D3Q15DescriptorBase<T>, public NoExternalFieldBase {
+};
 
 template <typename T> struct ForcedD3Q15Descriptor
-    : public D3Q15DescriptorBase<T>, public Force3dDescriptorBase
-  { };
+    : public D3Q15DescriptorBase<T>, public Force3dDescriptorBase {
+};
 
 template <typename T> struct D3Q19Descriptor
-    : public D3Q19DescriptorBase<T>, public NoExternalFieldBase
-  { };
+    : public D3Q19DescriptorBase<T>, public NoExternalFieldBase {
+};
 
 template <typename T> struct ForcedD3Q19Descriptor
-    : public D3Q19DescriptorBase<T>, public Force3dDescriptorBase
-  { };
+    : public D3Q19DescriptorBase<T>, public Force3dDescriptorBase {
+};
+
+template <typename T> struct V12ForcedD3Q19Descriptor
+    : public D3Q19DescriptorBase<T>, public V12Force3dDescriptorBase {
+};
 
 template <typename T> struct D3Q27Descriptor
-    : public D3Q27DescriptorBase<T>, public NoExternalFieldBase
-  { };
+    : public D3Q27DescriptorBase<T>, public NoExternalFieldBase {
+};
 
 template <typename T> struct ForcedD3Q27Descriptor
-    : public D3Q27DescriptorBase<T>, public Force3dDescriptorBase
-  { };
+    : public D3Q27DescriptorBase<T>, public Force3dDescriptorBase {
+};
 
 }  // namespace descriptors
 

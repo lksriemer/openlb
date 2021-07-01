@@ -24,18 +24,17 @@
 /** \file
  * Groups all the generic implementation files for basic 3D dynamics.
  */
+
+#include "blockData2D.hh"
+#include "blockData3D.hh"
 #include "blockLattice3D.hh"
 #include "blockLatticeStructure3D.hh"
 #include "blockLatticeView3D.hh"
 #include "cell.hh"
-#include "dataAnalysis3D.hh"
-#include "dataFields2D.hh"
-#include "dataFields3D.hh"
-#include "dataReductions.hh"
 #include "latticeStatistics.hh"
 #include "postProcessing.hh"
 #include "serializer.hh"
-#include "simulationSetup3D.hh"
+#include "superData3D.hh"
 #include "superLattice3D.hh"
 #include "superExternal3D.hh"
 #include "units.hh"

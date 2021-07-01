@@ -24,231 +24,249 @@
 #ifndef BLOCK_LATTICE_INTEGRAL_F_2D_HH
 #define BLOCK_LATTICE_INTEGRAL_F_2D_HH
 
-#include<vector>
-#include<cmath>
 
+#include<cmath>
+#include<vector>
 #include "functors/blockLatticeIntegralF2D.h"
 #include "functors/blockLatticeLocalF2D.h"
-#include "functors/blockLatticeCalcF2D.h" // for IdentityF
-#include "geometry/cuboidGeometry2D.h"
-#include "communication/loadBalancer.h"
+#include "functors/blockCalcF2D.h" // for IdentityF
+
 
 namespace olb {
 
 
 template <typename T, template <typename U> class DESCRIPTOR>
 BlockMax2D<T,DESCRIPTOR>::BlockMax2D(BlockLatticeF2D<T,DESCRIPTOR>& f,
-  BlockGeometry2D<T>& blockGeometry, int material)
-  : BlockLatticeF2D<T,DESCRIPTOR>(f.getBlockLattice2D(), f.getTargetDim()),
+                                     BlockGeometry2D<T>& blockGeometry, int material)
+  : BlockLatticeF2D<T,DESCRIPTOR>(f.getBlockLattice(), f.getTargetDim()),
     _f(f), _blockGeometry(blockGeometry), _material(material)
-{ this->_name = "Max("+_f.getName()+")"; }
+{
+  this->getName() = "Max("+_f.getName()+")";
+}
 
 template <typename T, template <typename U> class DESCRIPTOR>
-std::vector<T> BlockMax2D<T,DESCRIPTOR>::operator() (std::vector<int> input) {
+bool BlockMax2D<T,DESCRIPTOR>::operator() (T output[], const int input[])
+{
 
-//  f.getBlockLattice2D().communicate();
-//  CuboidGeometry2D<T><T>& cGeometry = f.getBlockLattice2D().get_cGeometry();
-//  loadBalancer& load = f.getBlockLattice2D().get_load();
+  //  f.getBlockLattice2D().communicate();
+  //  CuboidGeometry2D<T><T>& cGeometry = f.getBlockLattice2D().get_cGeometry();
+  //  loadBalancer& load = f.getBlockLattice2D().get_load();
 
-  std::vector<T> tmp( this->getTargetDim(), T() );
-//  for (int i=0; i<this->getTargetDim(); i++) {
+  for (int i=0; i<this->getTargetDim(); ++i) {
+    output[i]=T();
+    //    for (int iC=0; iC<load.size(); iC++) {
+    //      int nX = cGeometry.get(load.glob(iC)).getNx();
+    //      int nY = cGeometry.get(load.glob(iC)).getNy();
+    //      int nZ = cGeometry.get(load.glob(iC)).getNz();
+    //      for (int iX=0; iX<nX; iX++) {
+    //        for (int iY=0; iY<nY; iY++) {
+    //          for (int iZ=0; iZ<nZ; iZ++) {
+    //            int globX = (int)cGeometry.get(load.glob(iC)).get_globPosX() + iX;
+    //            int globY = (int)cGeometry.get(load.glob(iC)).get_globPosY() + iY;
+    //            int globZ = (int)cGeometry.get(load.glob(iC)).get_globPosZ() + iZ;
+    //            if (BlockGeometry.getMaterial(globX, globY, globZ) == material) {
+    //              if (fabs(f(load.glob(iC),iX,iY,iZ)[i]) > tmp[i]) {
+    //                tmp[i]=fabs(f(load.glob(iC),iX,iY,iZ)[i]);
+    //              }
+    //            }
+    //          }
+    //        }
+    //      }
+    //    }
+    //#ifdef PARALLEL_MODE_MPI
+    //    singleton::mpi().reduceAndBcast(tmp[i], MPI_MAX);
+    //#endif
+  }
+  return true;
 
-//    for (int iC=0; iC<load.size(); iC++) {
-//      int nX = cGeometry.get(load.glob(iC)).getNx();
-//      int nY = cGeometry.get(load.glob(iC)).getNy();
-//      int nZ = cGeometry.get(load.glob(iC)).getNz();
-//      for (int iX=0; iX<nX; iX++) {
-//        for (int iY=0; iY<nY; iY++) {
-//          for (int iZ=0; iZ<nZ; iZ++) {
-//            int globX = (int)cGeometry.get(load.glob(iC)).get_globPosX() + iX;
-//            int globY = (int)cGeometry.get(load.glob(iC)).get_globPosY() + iY;
-//            int globZ = (int)cGeometry.get(load.glob(iC)).get_globPosZ() + iZ;
-//            if (BlockGeometry.getMaterial(globX, globY, globZ) == material) {
-//              if (fabs(f(load.glob(iC),iX,iY,iZ)[i]) > tmp[i]) {
-//                tmp[i]=fabs(f(load.glob(iC),iX,iY,iZ)[i]);
-//              }
-//            }
-//          }
-//        }
-//      }
-//    }
-//#ifdef PARALLEL_MODE_MPI
-//    singleton::mpi().reduceAndBcast(tmp[i], MPI_MAX);
-//#endif
-//  }
-  return tmp;
-  
-  
+
 }
 
 template <typename T, template <typename U> class DESCRIPTOR>
 BlockSum2D<T,DESCRIPTOR>::BlockSum2D(BlockLatticeF2D<T,DESCRIPTOR>& f,
-  BlockGeometry2D<T>& blockGeometry, int material)
-  : BlockLatticeF2D<T,DESCRIPTOR>(f.getBlockLattice2D(),f.getTargetDim()),
+                                     BlockGeometry2D<T>& blockGeometry, int material)
+  : BlockLatticeF2D<T,DESCRIPTOR>(f.getBlockLattice(),f.getTargetDim()),
     _f(f), _blockGeometry(blockGeometry), _material(material)
-{ this->_name = "Sum("+_f.getName()+")"; }
+{
+  this->getName() = "Sum("+_f.getName()+")";
+}
 
 template <typename T, template <typename U> class DESCRIPTOR>
-std::vector<T> BlockSum2D<T,DESCRIPTOR>::operator() (std::vector<int> input) {
-  BlockLatticeIdentity2D<T,DESCRIPTOR> ff(_f); // exists only to prevent f from being deleted
-  std::vector<T> tmp(this->getTargetDim(), T() );
-//  for (int i=0; i<this->getTargetDim(); i++) {
-//    int nX = f.getBlockLattice2D().getNx();
-//    int nY = f.getBlockLattice2D().getNy();
-//    int nZ = f.getBlockLattice2D().getNz();
-//    for (int iX=0; iX<nX; iX++) {
-//      for (int iY=0; iY<nY; iY++) {
-//        for (int iZ=0; iZ<nZ; iZ++) {
-//          if (this->BlockGeometry.getMaterial(iX, iY, iZ) == material) {
-//            tmp[i]+=f(iX,iY,iZ)[i];
-//          }
-//        }
-//      }
-//    }
-//  }
-  return tmp;
+bool BlockSum2D<T,DESCRIPTOR>::operator() (T output[], const int input[])
+{
+  BlockIdentity2D<T> ff(_f); // exists only to prevent f from being deleted
+
+  for (int i=0; i<this->getTargetDim(); ++i) {
+    output[i]=T();
+    //    int nX = f.getBlockLattice2D().getNx();
+    //    int nY = f.getBlockLattice2D().getNy();
+    //    int nZ = f.getBlockLattice2D().getNz();
+    //    for (int iX=0; iX<nX; iX++) {
+    //      for (int iY=0; iY<nY; iY++) {
+    //        for (int iZ=0; iZ<nZ; iZ++) {
+    //          if (this->BlockGeometry.getMaterial(iX, iY, iZ) == material) {
+    //            tmp[i]+=f(iX,iY,iZ)[i];
+    //          }
+    //        }
+    //      }
+    //    }
+  }
+  return true;
 }
 
 
 template <typename T, template <typename U> class DESCRIPTOR>
 BlockIntegral2D<T,DESCRIPTOR>::BlockIntegral2D(BlockLatticeF2D<T,DESCRIPTOR>& f,
-  BlockGeometry2D<T>& blockGeometry, int material)
-  : BlockLatticeF2D<T,DESCRIPTOR>(f.getBlockLattice2D(),f.getTargetDim()),
+    BlockGeometry2D<T>& blockGeometry, int material)
+  : BlockLatticeF2D<T,DESCRIPTOR>(f.getBlockLattice(),f.getTargetDim()),
     _f(f), _blockGeometry(blockGeometry), _material(material)
-{ this->_name = "Integral("+_f.getName()+")"; }
+{
+  this->getName() = "Integral("+_f.getName()+")";
+}
 
 template <typename T, template <typename U> class DESCRIPTOR>
-std::vector<T> BlockIntegral2D<T,DESCRIPTOR>::operator() (std::vector<int> input) {
+bool BlockIntegral2D<T,DESCRIPTOR>::operator() (T output[], const int input[])
+{
 
-//  f.getBlockLattice2D().communicate();
-//  CuboidGeometry2D<T><T>& cGeometry = f.getBlockLattice2D().get_cGeometry();
-//  loadBalancer& load = f.getBlockLattice2D().get_load();
+  //  f.getBlockLattice2D().communicate();
+  //  CuboidGeometry2D<T><T>& cGeometry = f.getBlockLattice2D().get_cGeometry();
+  //  loadBalancer& load = f.getBlockLattice2D().get_load();
 
-  std::vector<T> tmp(this->_n, T() );
-//  for (int i=0; i<this->n; i++) {
-//    for (int iC=0; iC<load.size(); iC++) {
-//      int nX = cGeometry.get(load.glob(iC)).getNx();
-//      int nY = cGeometry.get(load.glob(iC)).getNy();
-//      int nZ = cGeometry.get(load.glob(iC)).getNz();
-//      T weight = pow(this->BlockGeometry.getDeltaR(),3);
-//      for (int iX=0; iX<nX; iX++) {
-//        for (int iY=0; iY<nY; iY++) {
-//          for (int iZ=0; iZ<nZ; iZ++) {
-//            int globX = (int)cGeometry.get(load.glob(iC)).get_globPosX() + iX;
-//            int globY = (int)cGeometry.get(load.glob(iC)).get_globPosY() + iY;
-//            int globZ = (int)cGeometry.get(load.glob(iC)).get_globPosZ() + iZ;
-//            if (this->BlockGeometry.getMaterial(globX, globY, globZ) == material) {
-//              tmp[i]+=f(load.glob(iC),iX,iY,iZ)[i]*weight;
-//            }
-//          }
-//        }
-//      }
-//    }
-//#ifdef PARALLEL_MODE_MPI
-//    singleton::mpi().reduceAndBcast(tmp[i], MPI_SUM);
-//#endif
-//  }
-  return tmp;
+  output[0]=T();
+  //  for (int i=0; i<this->n; i++) {
+  //    for (int iC=0; iC<load.size(); iC++) {
+  //      int nX = cGeometry.get(load.glob(iC)).getNx();
+  //      int nY = cGeometry.get(load.glob(iC)).getNy();
+  //      int nZ = cGeometry.get(load.glob(iC)).getNz();
+  //      T weight = pow(this->BlockGeometry.getDeltaR(),3);
+  //      for (int iX=0; iX<nX; iX++) {
+  //        for (int iY=0; iY<nY; iY++) {
+  //          for (int iZ=0; iZ<nZ; iZ++) {
+  //            int globX = (int)cGeometry.get(load.glob(iC)).get_globPosX() + iX;
+  //            int globY = (int)cGeometry.get(load.glob(iC)).get_globPosY() + iY;
+  //            int globZ = (int)cGeometry.get(load.glob(iC)).get_globPosZ() + iZ;
+  //            if (this->BlockGeometry.getMaterial(globX, globY, globZ) == material) {
+  //              tmp[i]+=f(load.glob(iC),iX,iY,iZ)[i]*weight;
+  //            }
+  //          }
+  //        }
+  //      }
+  //    }
+  //#ifdef PARALLEL_MODE_MPI
+  //    singleton::mpi().reduceAndBcast(tmp[i], MPI_SUM);
+  //#endif
+  //  }
+  return true;
 }
 
 template <typename T, template <typename U> class DESCRIPTOR>
 BlockL1Norm2D<T,DESCRIPTOR>::BlockL1Norm2D(BlockLatticeF2D<T,DESCRIPTOR>& f,
-  BlockGeometry2D<T>& blockGeometry, int material)
-  : BlockLatticeF2D<T,DESCRIPTOR>(f.getBlockLattice2D(),f.getTargetDim()),
+    BlockGeometry2D<T>& blockGeometry, int material)
+  : BlockLatticeF2D<T,DESCRIPTOR>(f.getBlockLattice(),f.getTargetDim()),
     _f(f), _blockGeometry(blockGeometry), _material(material)
-{ this->_name = "L1("+_f.getName()+")"; }
+{
+  this->getName() = "L1("+_f.getName()+")";
+}
 
 template <typename T, template <typename U> class DESCRIPTOR>
-std::vector<T> BlockL1Norm2D<T,DESCRIPTOR>::operator() (std::vector<int> input) {
+bool BlockL1Norm2D<T,DESCRIPTOR>::operator() (T output[], const int input[])
+{
 
-//  f.getBlockLattice2D().communicate();
-//  CuboidGeometry2D<T><T>& cGeometry = f.getBlockLattice2D().get_cGeometry();
-//  loadBalancer& load = f.getBlockLattice2D().get_load();
+  //  f.getBlockLattice2D().communicate();
+  //  CuboidGeometry2D<T><T>& cGeometry = f.getBlockLattice2D().get_cGeometry();
+  //  loadBalancer& load = f.getBlockLattice2D().get_load();
 
-//  int numVoxels(0);
-  std::vector<T> tmp(this->_n, T() );
-//  for (int i=0; i<this->n; i++) {
+  //  int numVoxels(0);
+  output[0]=T();
+  //  for (int i=0; i<this->n; i++) {
 
-//    for (int iC=0; iC<load.size(); iC++) {
-//      int nX = cGeometry.get(load.glob(iC)).getNx();
-//      int nY = cGeometry.get(load.glob(iC)).getNy();
-//      int nZ = cGeometry.get(load.glob(iC)).getNz();
-//      for (int iX=0; iX<nX; iX++) {
-//        for (int iY=0; iY<nY; iY++) {
-//          for (int iZ=0; iZ<nZ; iZ++) {
-//            int globX = (int)cGeometry.get(load.glob(iC)).get_globPosX() + iX;
-//            int globY = (int)cGeometry.get(load.glob(iC)).get_globPosY() + iY;
-//            int globZ = (int)cGeometry.get(load.glob(iC)).get_globPosZ() + iZ;
-//            if (this->BlockGeometry.getMaterial(globX, globY, globZ) == material) {
-//              tmp[i]+=fabs(f(load.glob(iC),iX,iY,iZ)[i]);
-//              numVoxels++;
-//            }
-//          }
-//        }
-//      }
-//    }
-//#ifdef PARALLEL_MODE_MPI
-//    singleton::mpi().reduceAndBcast(tmp[i], MPI_SUM);
-//#endif
-//  }
-//#ifdef PARALLEL_MODE_MPI
-//  singleton::mpi().reduceAndBcast(numVoxels, MPI_SUM);
-//#endif
-  return tmp;
+  //    for (int iC=0; iC<load.size(); iC++) {
+  //      int nX = cGeometry.get(load.glob(iC)).getNx();
+  //      int nY = cGeometry.get(load.glob(iC)).getNy();
+  //      int nZ = cGeometry.get(load.glob(iC)).getNz();
+  //      for (int iX=0; iX<nX; iX++) {
+  //        for (int iY=0; iY<nY; iY++) {
+  //          for (int iZ=0; iZ<nZ; iZ++) {
+  //            int globX = (int)cGeometry.get(load.glob(iC)).get_globPosX() + iX;
+  //            int globY = (int)cGeometry.get(load.glob(iC)).get_globPosY() + iY;
+  //            int globZ = (int)cGeometry.get(load.glob(iC)).get_globPosZ() + iZ;
+  //            if (this->BlockGeometry.getMaterial(globX, globY, globZ) == material) {
+  //              tmp[i]+=fabs(f(load.glob(iC),iX,iY,iZ)[i]);
+  //              numVoxels++;
+  //            }
+  //          }
+  //        }
+  //      }
+  //    }
+  //#ifdef PARALLEL_MODE_MPI
+  //    singleton::mpi().reduceAndBcast(tmp[i], MPI_SUM);
+  //#endif
+  //  }
+  //#ifdef PARALLEL_MODE_MPI
+  //  singleton::mpi().reduceAndBcast(numVoxels, MPI_SUM);
+  //#endif
+  return true;
 }
 
 
 template <typename T, template <typename U> class DESCRIPTOR>
 BlockL222D<T,DESCRIPTOR>::BlockL222D(BlockLatticeF2D<T,DESCRIPTOR>& f,
-  BlockGeometry2D<T>& blockGeometry, int material)
-  : BlockLatticeF2D<T,DESCRIPTOR>(f.getBlockLattice2D(),f.getTargetDim()),
+                                     BlockGeometry2D<T>& blockGeometry, int material)
+  : BlockLatticeF2D<T,DESCRIPTOR>(f.getBlockLattice(),f.getTargetDim()),
     _f(f), _blockGeometry(blockGeometry), _material(material)
-{ this->_name = "L22("+_f.getName()+")"; }
+{
+  this->getName() = "L22("+_f.getName()+")";
+}
 
 template <typename T, template <typename U> class DESCRIPTOR>
-std::vector<T> BlockL222D<T,DESCRIPTOR>::operator() (std::vector<int> input) {
+bool BlockL222D<T,DESCRIPTOR>::operator() (T output[], const int input[])
+{
 
-//  f.getBlockLattice2D().communicate();
-//  CuboidGeometry2D<T><T>& cGeometry = f.getBlockLattice2D().get_cGeometry();
-//  loadBalancer& load = f.getBlockLattice2D().get_load();
+  //  f.getBlockLattice2D().communicate();
+  //  CuboidGeometry2D<T><T>& cGeometry = f.getBlockLattice2D().get_cGeometry();
+  //  loadBalancer& load = f.getBlockLattice2D().get_load();
 
-  std::vector<T> tmp(this->_n, T() );
-//  for (int i=0; i<this->n; i++) {
+  output[0]=T();
+  //  for (int i=0; i<this->n; i++) {
 
-//    for (int iC=0; iC<load.size(); iC++) {
-//      int nX = cGeometry.get(load.glob(iC)).getNx();
-//      int nY = cGeometry.get(load.glob(iC)).getNy();
-//      int nZ = cGeometry.get(load.glob(iC)).getNz();
-//      T weight = pow(this->BlockGeometry.getDeltaR(),3);
-//      for (int iX=0; iX<nX; iX++) {
-//        for (int iY=0; iY<nY; iY++) {
-//          for (int iZ=0; iZ<nZ; iZ++) {
-//            int globX = (int)cGeometry.get(load.glob(iC)).get_globPosX() + iX;
-//            int globY = (int)cGeometry.get(load.glob(iC)).get_globPosY() + iY;
-//            int globZ = (int)cGeometry.get(load.glob(iC)).get_globPosZ() + iZ;
-//            if (this->BlockGeometry.getMaterial(globX, globY, globZ) == material) {
-//              tmp[i]+=f(load.glob(iC),iX,iY,iZ)[i]*f(load.glob(iC),iX,iY,iZ)[i]*weight;
-//            }
-//          }
-//        }
-//      }
-//    }
-//#ifdef PARALLEL_MODE_MPI
-//    singleton::mpi().reduceAndBcast(tmp[i], MPI_SUM);
-//#endif
-//  }
-  return tmp;
+  //    for (int iC=0; iC<load.size(); iC++) {
+  //      int nX = cGeometry.get(load.glob(iC)).getNx();
+  //      int nY = cGeometry.get(load.glob(iC)).getNy();
+  //      int nZ = cGeometry.get(load.glob(iC)).getNz();
+  //      T weight = pow(this->BlockGeometry.getDeltaR(),3);
+  //      for (int iX=0; iX<nX; iX++) {
+  //        for (int iY=0; iY<nY; iY++) {
+  //          for (int iZ=0; iZ<nZ; iZ++) {
+  //            int globX = (int)cGeometry.get(load.glob(iC)).get_globPosX() + iX;
+  //            int globY = (int)cGeometry.get(load.glob(iC)).get_globPosY() + iY;
+  //            int globZ = (int)cGeometry.get(load.glob(iC)).get_globPosZ() + iZ;
+  //            if (this->BlockGeometry.getMaterial(globX, globY, globZ) == material) {
+  //              tmp[i]+=f(load.glob(iC),iX,iY,iZ)[i]*f(load.glob(iC),iX,iY,iZ)[i]*weight;
+  //            }
+  //          }
+  //        }
+  //      }
+  //    }
+  //#ifdef PARALLEL_MODE_MPI
+  //    singleton::mpi().reduceAndBcast(tmp[i], MPI_SUM);
+  //#endif
+  //  }
+  return true;
 }
 
 
 template <typename T>
 BlockGeometryFaces2D<T>::BlockGeometryFaces2D(BlockGeometryStructure2D<T>& blockGeometry,
-  int material, const LBconverter<T>& converter)
+    int material, const LBconverter<T>& converter)
   : GenericF<T,int>(7,4), _blockGeometry(blockGeometry), _material(material),
-    _converter(converter) { this->_name = "faces"; }
+    _converter(converter)
+{
+  this->getName() = "faces";
+}
 
 template <typename T>
-std::vector<T> BlockGeometryFaces2D<T>::operator() (std::vector<int> input) {
+bool BlockGeometryFaces2D<T>::operator() (T output[], const int input[])
+{
   int counter[] = {0,0,0,0,0,0,0};
   if (_blockGeometry.getStatistics().getNvoxel(_material)!=0) {
     const int x0 = _blockGeometry.getStatistics().getMinLatticeR(_material)[0];
@@ -257,8 +275,8 @@ std::vector<T> BlockGeometryFaces2D<T>::operator() (std::vector<int> input) {
     const int y1 = _blockGeometry.getStatistics().getMaxLatticeR(_material)[1];
 
     // Iterate over all cells and count the cells of the face
-    for (int iX = x0; iX <= x1; iX++) {
-      for (int iY = y0; iY <= y1; iY++) {
+    for (int iX = x0; iX <= x1; ++iX) {
+      for (int iY = y0; iY <= y1; ++iY) {
         // Lock at solid nodes only
         if (_blockGeometry.getMaterial(iX, iY) == _material) {
           if (_blockGeometry.getMaterial(iX-1, iY) == 1) {
@@ -278,69 +296,155 @@ std::vector<T> BlockGeometryFaces2D<T>::operator() (std::vector<int> input) {
     }
 
     T dx = _converter.getLatticeL();
-    std::vector<T> output;
     T total = T();
-    for (int i=0; i<6; i++) {
-      output.push_back((T) counter[i] * dx);
+    for (int i=0; i<6; ++i) {
+      output[i]=(T) counter[i] * dx;
       total+=(T) counter[i] * dx;
     }
-    output.push_back(total);
-    return output;
+    output[6]=total;
+    return true;
+  } else {
+    for (int i=0; i<7; ++i) {
+      output[i]=T();
+    }
+    return true;
   }
-  else {
-    return std::vector<T>(7,T());
+  return false;
+}
+
+
+template <typename T>
+BlockGeometryFacesIndicator2D<T>::BlockGeometryFacesIndicator2D(BlockGeometryStructure2D<T>& blockGeometry,
+    SmoothIndicatorCircle2D<T,T>& indicator, int material, const LBconverter<T>& converter)
+  : GenericF<T,int>(7,4), _blockGeometry(blockGeometry), _indicator(indicator), _material(material),
+    _converter(converter)
+{
+  this->getName() = "facesInd";
+}
+
+template <typename T>
+bool BlockGeometryFacesIndicator2D<T>::operator() (T output[], const int input[])
+{
+  int counter[] = {0,0,0,0,0,0,0};
+  T inside[1];
+  T physR[2];
+  if (_blockGeometry.getStatistics().getNvoxel(_material)!=0) {
+    const int x0 = _blockGeometry.getStatistics().getMinLatticeR(_material)[0];
+    const int y0 = _blockGeometry.getStatistics().getMinLatticeR(_material)[1];
+    const int x1 = _blockGeometry.getStatistics().getMaxLatticeR(_material)[0];
+    const int y1 = _blockGeometry.getStatistics().getMaxLatticeR(_material)[1];
+
+    // Iterate over all cells and count the cells of the face
+    for (int iX = x0; iX <= x1; ++iX) {
+      for (int iY = y0; iY <= y1; ++iY) {
+        // Look at solid nodes only
+        _blockGeometry.getPhysR(physR, iX, iY);
+        _indicator(inside, physR);
+        if (!inside[0]) {
+          _blockGeometry.getPhysR(physR, iX-1, iY);
+          _indicator(inside, physR);
+          if (!inside[0]) {
+            counter[0]++;
+          }
+          _blockGeometry.getPhysR(physR, iX, iY-1);
+          _indicator(inside, physR);
+          if (!inside[0]) {
+            counter[1]++;
+          }
+          _blockGeometry.getPhysR(physR, iX+1, iY);
+          _indicator(inside, physR);
+          if (!inside[0]) {
+            counter[3]++;
+          }
+          _blockGeometry.getPhysR(physR, iX, iY+1);
+          _indicator(inside, physR);
+          if (!inside[0]) {
+            counter[4]++;
+          }
+        }
+      }
+    }
+
+    T dx = _converter.getLatticeL();
+    std::vector<T> output;
+    T total = T();
+    for (int i=0; i<6; ++i) {
+      output[i]=(T) counter[i] * dx;
+      total+=(T) counter[i] * dx;
+    }
+    output[6]=total;
+    return true;
+  } else {
+    for (int i=0; i<7; ++i) {
+      output[i]=T();
+    }
+    return true;
   }
-  return std::vector<T>();
+  return false;
 }
 
 
 template <typename T, template <typename U> class DESCRIPTOR>
 BlockLatticePhysDrag2D<T,DESCRIPTOR>::BlockLatticePhysDrag2D
-  (BlockLattice2D<T,DESCRIPTOR>& blockLattice, BlockGeometry2D<T>& blockGeometry,
-  int material, const LBconverter<T>& converter)
+(BlockLattice2D<T,DESCRIPTOR>& blockLattice, BlockGeometry2D<T>& blockGeometry,
+ int material, const LBconverter<T>& converter)
   : BlockLatticePhysF2D<T,DESCRIPTOR>(blockLattice,converter,2),
     _blockGeometry(blockGeometry), _material(material)
-{ this->_name = "physDrag"; }
+{
+  this->getName() = "physDrag";
+}
 
 template <typename T, template <typename U> class DESCRIPTOR>
-std::vector<T> BlockLatticePhysDrag2D<T,DESCRIPTOR>::operator() (std::vector<int> input)
+bool BlockLatticePhysDrag2D<T,DESCRIPTOR>::operator() (T output[], const int input[])
 {
   BlockGeometryFaces2D<T> faces(_blockGeometry, _material, this->_converter);
   BlockLatticePhysBoundaryForce2D<T,DESCRIPTOR> fTemp(this->_blockLattice, _blockGeometry,
-                                                      _material, this->_converter);
+      _material, this->_converter);
   BlockSum2D<T,DESCRIPTOR> sumF(fTemp, _blockGeometry, _material);
 
   T factor = 2. / (this->_converter.getCharRho() * this->_converter.getCharU() * this->_converter.getCharU());
 
-  std::vector<T> drag(2,T());
-  drag[0] = factor * sumF(input)[0] / faces(input)[0];
-  drag[1] = factor * sumF(input)[1] / faces(input)[1];
-  return drag;
+  T outputSumF[2] = { T() };
+  sumF(outputSumF,input);
+  T outputFaces[2] = { T() };
+  faces(outputFaces,input);
+
+  output[0] = factor * outputSumF[0] / outputFaces[0];
+  output[1] = factor * outputSumF[1] / outputFaces[1];
+
+  return true;
 }
 
 
 template <typename T, template <typename U> class DESCRIPTOR>
 BlockLatticePhysCorrDrag2D<T,DESCRIPTOR>::BlockLatticePhysCorrDrag2D
-  (BlockLattice2D<T,DESCRIPTOR>& blockLattice, BlockGeometry2D<T>& blockGeometry,
-  int material, const LBconverter<T>& converter)
+(BlockLattice2D<T,DESCRIPTOR>& blockLattice, BlockGeometry2D<T>& blockGeometry,
+ int material, const LBconverter<T>& converter)
   : BlockLatticePhysF2D<T,DESCRIPTOR>(blockLattice,converter,2),
     _blockGeometry(blockGeometry), _material(material)
-{ this->_name = "physCorrDrag"; }
+{
+  this->getName() = "physCorrDrag";
+}
 
 template <typename T, template <typename U> class DESCRIPTOR>
-std::vector<T> BlockLatticePhysCorrDrag2D<T,DESCRIPTOR>::operator() (std::vector<int> input)
+bool BlockLatticePhysCorrDrag2D<T,DESCRIPTOR>::operator() (T output[], const int input[])
 {
   BlockGeometryFaces2D<T> faces(_blockGeometry, _material, this->_converter);
   BlockLatticePhysCorrBoundaryForce2D<T,DESCRIPTOR> tTemp(this->_blockLattice, _blockGeometry,
-                                                          _material, this->_converter);
+      _material, this->_converter);
   BlockSum2D<T,DESCRIPTOR> sumF(tTemp, _blockGeometry, _material);
 
   T factor = 2. / (this->_converter.getCharRho() * this->_converter.getCharU() * this->_converter.getCharU());
 
-  std::vector<T> drag(2,T());
-  drag[0] = factor * sumF(input)[0] / faces(input)[0];
-  drag[1] = factor * sumF(input)[1] / faces(input)[1];
-  return drag;
+  T outputSumF[2] = { T() };
+  sumF(outputSumF,input);
+  T outputFaces[2] = { T() };
+  faces(outputFaces,input);
+
+  output[0] = factor * outputSumF[0] / outputFaces[0];
+  output[1] = factor * outputSumF[1] / outputFaces[1];
+
+  return true;
 }
 
 

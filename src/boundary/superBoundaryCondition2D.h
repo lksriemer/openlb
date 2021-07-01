@@ -31,7 +31,7 @@
 
 #include <vector>
 #include "boundaryCondition2D.h"
-#include "dynamics/advectionDiffusionBoundaryCondition2D.h"			// -> for AdvectionDiffusion
+#include "dynamics/advectionDiffusionBoundaryCondition2D.h"     // -> for AdvectionDiffusion
 #include "geometry/blockGeometryStatistics2D.h"
 #include "core/superLattice2D.h"
 #include "io/ostreamManager.h"
@@ -65,18 +65,29 @@ public:
   ~sOnLatticeBoundaryCondition2D();
 
   void addVelocityBoundary(SuperGeometry2D<T>& superGeometry, int material, T omega);
+  void addSlipBoundary(SuperGeometry2D<T>& superGeometry, int material);
   void addPressureBoundary(SuperGeometry2D<T>& superGeometry, int material, T omega);
   void addConvectionBoundary(SuperGeometry2D<T>& superGeometry, int material, T omega, T* uAv=NULL);
-  void addTemperatureBoundary(SuperGeometry2D<T>& superGeometry, int material, T omega);			// -> for AdvectionDiffusion
+  void addTemperatureBoundary(SuperGeometry2D<T>& superGeometry, int material, T omega);
 
   /// Adds needed Cells to the Communicator _commBC in SuperLattice
   void addPoints2CommBC(SuperGeometry2D<T>& superGeometry, int material);
 
-  SuperLattice2D<T,Lattice>& getSuperLattice() {return _sLattice; };
-  std::vector<OnLatticeBoundaryCondition2D<T,Lattice>* >& getBlockBCs() {return _blockBCs; };
-  std::vector<OnLatticeAdvectionDiffusionBoundaryCondition2D<T, Lattice>*>& getADblockBCs() { return _ADblockBCs; };			// -> for AdvectionDiffusion
-  int getOverlap() {return _overlap; };
-  void setOverlap(int overlap) {_overlap = overlap; };
+  SuperLattice2D<T,Lattice>& getSuperLattice() {
+    return _sLattice;
+  };
+  std::vector<OnLatticeBoundaryCondition2D<T,Lattice>* >& getBlockBCs() {
+    return _blockBCs;
+  };
+  std::vector<OnLatticeAdvectionDiffusionBoundaryCondition2D<T, Lattice>*>& getADblockBCs() {
+    return _ADblockBCs;
+  };
+  int getOverlap() {
+    return _overlap;
+  };
+  void setOverlap(int overlap) {
+    _overlap = overlap;
+  };
 
   void outputOn();
   void outputOff();
@@ -85,7 +96,7 @@ private:
   mutable OstreamManager clout;
   SuperLattice2D<T,Lattice>& _sLattice;
   std::vector<OnLatticeBoundaryCondition2D<T,Lattice>* > _blockBCs;
-  std::vector<OnLatticeAdvectionDiffusionBoundaryCondition2D<T, Lattice>*> _ADblockBCs;				// -> for AdvectionDiffusion
+  std::vector<OnLatticeAdvectionDiffusionBoundaryCondition2D<T, Lattice>*> _ADblockBCs;       // -> for AdvectionDiffusion
   int _overlap;
   bool _output;
 };
@@ -98,11 +109,13 @@ template<typename T, template<typename U> class Lattice, typename MixinDynamics>
 void createInterpBoundaryCondition2D(sOnLatticeBoundaryCondition2D<T,Lattice>& sBC);
 
 template<typename T, template<typename U> class Lattice>
-void createLocalBoundaryCondition2D(sOnLatticeBoundaryCondition2D<T,Lattice>& sBC) {
+void createLocalBoundaryCondition2D(sOnLatticeBoundaryCondition2D<T,Lattice>& sBC)
+{
   createLocalBoundaryCondition2D<T,Lattice,RLBdynamics<T,Lattice> > (sBC);
 }
 template<typename T, template<typename U> class Lattice>
-void createInterpBoundaryCondition2D(sOnLatticeBoundaryCondition2D<T,Lattice>& sBC) {
+void createInterpBoundaryCondition2D(sOnLatticeBoundaryCondition2D<T,Lattice>& sBC)
+{
   createInterpBoundaryCondition2D<T,Lattice,BGKdynamics<T,Lattice> > (sBC);
 }
 

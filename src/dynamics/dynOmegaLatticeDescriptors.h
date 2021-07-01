@@ -22,7 +22,7 @@
 */
 
 /** \file
- * Descriptor for 2D and 3D lattices with dynamic omega. In principle, 
+ * Descriptor for 2D and 3D lattices with dynamic omega. In principle,
  * thanks to the fact that the OpenLB code is generic, it is sufficient
  * to write a new descriptor when a new type of lattice is to be used.
  *  -- header file
@@ -36,7 +36,7 @@
 namespace olb {
 
 /// Descriptors for 2D and 3D lattices with variable omega.
-/** The implementation is to be extended by combination with other 
+/** The implementation is to be extended by combination with other
  * lattice descriptors.
  */
 
@@ -54,7 +54,7 @@ struct DynOmegaDescriptorBase {
 };
 
 
-/// 2D Descriptors for modells with variable omega 
+/// 2D Descriptors for modells with variable omega
 
 struct ForcedDynOmega2dDescriptor {
   static const int numScalars = 3;
@@ -72,16 +72,16 @@ struct ForcedDynOmega2dDescriptorBase {
 
 template <typename T>
 struct DynOmegaD2Q9Descriptor
-    : public D2Q9DescriptorBase<T>, public DynOmegaDescriptorBase
-  { };
+    : public D2Q9DescriptorBase<T>, public DynOmegaDescriptorBase {
+};
 
 template <typename T>
 struct ForcedDynOmegaD2Q9Descriptor
-    : public D2Q9DescriptorBase<T>, public ForcedDynOmega2dDescriptorBase
-  { };
+    : public D2Q9DescriptorBase<T>, public ForcedDynOmega2dDescriptorBase {
+};
 
 
-/// 3D Descriptors for modells with variable omega 
+/// 3D Descriptors for modells with variable omega
 
 struct ForcedDynOmega3dDescriptor {
   static const int numScalars = 4;
@@ -96,15 +96,15 @@ struct ForcedDynOmega3dDescriptorBase {
   typedef ForcedDynOmega3dDescriptor ExternalField;
 };
 
-template <typename T> 
+template <typename T>
 struct DynOmegaD3Q19Descriptor
-    : public D3Q19DescriptorBase<T>, public DynOmegaDescriptorBase
-  { };
+    : public D3Q19DescriptorBase<T>, public DynOmegaDescriptorBase {
+};
 
 template <typename T>
 struct ForcedDynOmegaD3Q19Descriptor
-    : public D3Q19DescriptorBase<T>, public ForcedDynOmega3dDescriptorBase
-  { };
+    : public D3Q19DescriptorBase<T>, public ForcedDynOmega3dDescriptorBase {
+};
 
 
 } // namespace descriptors

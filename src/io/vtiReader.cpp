@@ -1,6 +1,6 @@
 /*  This file is part of the OpenLB library
  *
- *  Copyright (C) 2010 Mathias J. Krause, Thomas Henn
+ *  Copyright (C) 2015 Mathias J. Krause, Benjamin Förster
  *  E-mail contact: info@openlb.net
  *  The most recent release of OpenLB can be downloaded at
  *  <http://www.openlb.net/>
@@ -22,14 +22,23 @@
  */
 
 /** \file
- * The dynamics of a 2D block lattice -- template instantiation.
+ * Reader Class for VTI Data -- template instantiation.
  */
 #include "vtiReader.h"
 #include "vtiReader.hh"
 
 namespace olb {
 
-//template class VTIreader2D<double>;
-//template class VTIreader3D<double>;
+template class BaseVTIreader<double>;
+template class BaseVTIreader<int>;
+
+template class BaseVTIreader3D<double,double>;
+template class BaseVTIreader3D<double,int>;
+
+template class BlockVTIreader3D<double,double>;
+template class BlockVTIreader3D<double,int>;
+
+template class SuperVTIreader3D<double,double>;
+template class SuperVTIreader3D<double,int>;
 
 }

@@ -134,8 +134,7 @@ private:
 
 /// Here, the stress is computed from the particle distribution functions
 template<typename T, template<typename U> class Lattice>
-class FreeStressBM : virtual public DirichletBoundaryMomenta<T,Lattice>
-{
+class FreeStressBM : virtual public DirichletBoundaryMomenta<T,Lattice> {
 public:
   virtual void computeStress (
     Cell<T,Lattice> const& cell,
@@ -152,8 +151,8 @@ template<typename T, template<typename U> class Lattice,
          int direction, int orientation>
 class BasicDirichletBM
   : public FreeStressBM<T, Lattice>,
-  public HydroBM<T,Lattice,direction,orientation>
-{ };
+    public HydroBM<T,Lattice,direction,orientation> {
+};
 
 /// Computation of the stress tensor for regularized boundary
 template<typename T, template<typename U> class Lattice,
@@ -172,13 +171,12 @@ template<typename T, template<typename U> class Lattice,
          int direction, int orientation>
 class RegularizedVelocityBM
   : public RegularizedBM<T,Lattice,direction,orientation>,
-  public VelocityBM<T,Lattice,direction,orientation>
-{
+    public VelocityBM<T,Lattice,direction,orientation> {
 public:
   RegularizedVelocityBM() { }
   RegularizedVelocityBM(const T u_[Lattice<T>::d])
-    : VelocityBM<T,Lattice,direction,orientation>(u_)
-  { }
+    : VelocityBM<T,Lattice,direction,orientation>(u_) {
+  }
 };
 
 /// Regularized pressure boundary node
@@ -186,13 +184,12 @@ template<typename T, template<typename U> class Lattice,
          int direction, int orientation>
 class RegularizedPressureBM
   : public RegularizedBM<T,Lattice,direction,orientation>,
-  public PressureBM<T,Lattice,direction,orientation>
-{
+    public PressureBM<T,Lattice,direction,orientation> {
 public:
   RegularizedPressureBM() { }
   RegularizedPressureBM(const T values_[Lattice<T>::d])
-    : PressureBM<T,Lattice,direction,orientation>(values_)
-  { }
+    : PressureBM<T,Lattice,direction,orientation>(values_) {
+  }
 };
 
 /// In this class, the velocity is fixed

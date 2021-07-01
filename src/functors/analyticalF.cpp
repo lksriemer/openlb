@@ -23,7 +23,6 @@
 
 #include "functors/analyticalF.h"
 #include "functors/analyticalF.hh"
-#include "functors/superLatticeCalcF2D.hh"
 
 namespace olb {
 
@@ -61,6 +60,8 @@ template class AnalyticalLinear2D<double,double>;
 template class AnalyticalRandom2D<double,int>;
 template class AnalyticalRandom2D<double,double>;
 
+//template class ParticleU2D<double,double>;
+
 
 
 template class AnalyticalComposed3D<double,int>;
@@ -77,6 +78,8 @@ template class AnalyticalRandom3D<double,double>;
 
 template class AnalyticalScaled3D<double,int>;
 template class AnalyticalScaled3D<double,double>;
+
+//template class ParticleU3D<double,double>;
 
 }
 

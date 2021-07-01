@@ -35,27 +35,32 @@ namespace neqPiD2Q9 {
 using namespace olb::util::tensorIndices2D;
 
 template<typename T>
-T fromPiToFneq0(const T pi[3]) {
+T fromPiToFneq0(const T pi[3])
+{
   return (T)2 * (-(T)1/(T)3*pi[xx] - (T)1/(T)3*pi[yy]);
 }
 
 template<typename T>
-T fromPiToFneq1(const T pi[3]) {
+T fromPiToFneq1(const T pi[3])
+{
   return (T)1/(T)4 * ((T)1/(T)3*pi[xx] + (T)1/(T)3*pi[yy] - pi[xy]);
 }
 
 template<typename T>
-T fromPiToFneq2(const T pi[3]) {
+T fromPiToFneq2(const T pi[3])
+{
   return (T)1/(T)2 * ((T)2/(T)3*pi[xx] - (T)1/(T)3*pi[yy]);
 }
 
 template<typename T>
-T fromPiToFneq3(const T pi[3]) {
+T fromPiToFneq3(const T pi[3])
+{
   return (T)1/(T)4 * ((T)1/(T)3*pi[xx] + (T)1/(T)3*pi[yy] + pi[xy]);
 }
 
 template<typename T>
-T fromPiToFneq4(const T pi[3]) {
+T fromPiToFneq4(const T pi[3])
+{
   return (T)1/(T)2 * (-(T)1/(T)3*pi[xx] + (T)2/(T)3*pi[yy]);
 }
 
@@ -66,8 +71,7 @@ struct rlbHelpers<T, descriptors::D2Q9Descriptor> {
 
   static T rlbCollision (
     Cell<T,descriptors::D2Q9Descriptor>& cell,
-    T rho, const T u[2], const T pi[3], T omega )
-  {
+    T rho, const T u[2], const T pi[3], T omega ) {
     typedef lbHelpers<T, descriptors::D2Q9Descriptor> LH;
     const T uSqr = u[0]*u[0] + u[1]*u[1];
 

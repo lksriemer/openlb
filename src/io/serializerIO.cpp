@@ -1,6 +1,6 @@
 /*  This file is part of the OpenLB library
  *
- *  Copyright (C) 2007 Jonas Latt
+ *  Copyright (C) 2006-2016 Jonas Latt, Mathias J. Krause
  *  E-mail contact: info@openlb.net
  *  The most recent release of OpenLB can be downloaded at
  *  <http://www.openlb.net/>
@@ -21,18 +21,13 @@
  *  Boston, MA  02110-1301, USA.
 */
 
-//#include "communication/mpiManager.h"
+
 #include "serializerIO.h"
 #include "serializerIO.hh"
 
 namespace olb {
 
-template void serializer2ostr<double>(DataSerializer<double> const& serializer,
-                                      std::ostream* ostr, bool enforceUint);
-template void istr2unSerializer<double>(DataUnSerializer<double>& unSerializer,
-                                        std::istream* istr, bool enforceUint);
-template void saveData<double>(Serializable<double> const& object, std::string fName, bool enforceUint);
-template void loadData<double>(Serializable<double>& object, std::string fName, bool enforceUint);
-template void saveAsciiData<double>(Serializable<double> const& object, std::string fName);
+void serializer2ostr(Serializer& serializer, std::ostream* ostr, bool enforceUint);
+void istr2serializer(Serializer& serializer, std::istream* istr, bool enforceUint);
 
 }

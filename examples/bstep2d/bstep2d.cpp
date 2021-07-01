@@ -51,8 +51,11 @@ typedef double T;
 // Parameters for the simulation setup
 const T lx1   = 5.0;    // length of step
 const T ly1   = 0.75;   // height of step
+const T lx0   = 20.0;   // length of channel
+const T ly0   = 1.5;    // height of channel
 const int N = 1;        // resolution of the model
-const T maxPhysT = 20.; // max. simulation time in s, SI unit
+const int M = 1;        // time discretization refinement
+const T maxPhysT = 40.; // max. simulation time in s, SI unit
 
 
 /// Stores geometry information in form of material numbers
@@ -66,18 +69,20 @@ void prepareGeometry(LBconverter<T> const& converter,
 
   superGeometry.rename(2,1,1,1);
 
-  std::vector<T> extend(2,T()); extend[0] = lx1; extend[1] = ly1;
-  std::vector<T> origin(2,T());
-  IndicatorCuboid2D<bool,T> cuboid2(extend, origin);
+  Vector<T,2> extend(lx1,ly1);
+  Vector<T,2> origin;
+  IndicatorCuboid2D<T> cuboid2(extend, origin);
 
   superGeometry.rename(1,2,cuboid2);
 
   /// Set material number for inflow
-  extend[0] = 0; extend[1] = 1.5; IndicatorCuboid2D<bool,T> inflow(extend, origin);
+  extend = {0,ly0};
+  IndicatorCuboid2D<T> inflow(extend, origin);
   superGeometry.rename(2,3,1,inflow);
 
   /// Set material number for outflow
-  origin[0] = 20; IndicatorCuboid2D<bool,T> outflow(extend, origin);
+  origin[0] = lx0;
+  IndicatorCuboid2D<T> outflow(extend, origin);
   superGeometry.rename(2,4,1,outflow);
 
   /// Removes all not needed boundary voxels outside the surface
@@ -110,7 +115,7 @@ void prepareLattice(LBconverter<T> const& converter,
   sLattice.defineDynamics(superGeometry, 1, &bulkDynamics);
 
   /// Material=2 -->bounce back
-  sLattice.defineDynamics(superGeometry, 2, &bulkDynamics);
+  sLattice.defineDynamics(superGeometry, 2, &instances::getBounceBack<T, DESCRIPTOR>());
 
   /// Material=3 -->bulk dynamics (inflow)
   sLattice.defineDynamics(superGeometry, 3, &bulkDynamics);
@@ -119,7 +124,6 @@ void prepareLattice(LBconverter<T> const& converter,
   sLattice.defineDynamics(superGeometry, 4, &bulkDynamics);
 
   /// Setting of the boundary conditions
-  bc.addVelocityBoundary(superGeometry, 2, omega);
   bc.addVelocityBoundary(superGeometry, 3, omega);
   bc.addPressureBoundary(superGeometry, 4, omega);
 
@@ -132,12 +136,10 @@ void prepareLattice(LBconverter<T> const& converter,
   //Initialize all values of distribution functions to their local equilibrium
   sLattice.defineRhoU(superGeometry, 1, rho, u);
   sLattice.iniEquilibrium(superGeometry, 1, rho, u);
-  sLattice.defineRhoU(superGeometry, 2, rho, u);
-  sLattice.iniEquilibrium(superGeometry, 2, rho, u);
   sLattice.defineRhoU(superGeometry, 3, rho, u);
-  sLattice.iniEquilibrium(superGeometry, 3, rho, u);     
+  sLattice.iniEquilibrium(superGeometry, 3, rho, u);
   sLattice.defineRhoU(superGeometry, 4, rho, u);
-  sLattice.iniEquilibrium(superGeometry, 4, rho, u);   
+  sLattice.iniEquilibrium(superGeometry, 4, rho, u);
 
   // Make the lattice ready for simulation
   sLattice.initialize();
@@ -154,20 +156,21 @@ void setBoundaryValues(LBconverter<T> const& converter,
 
   // No of time steps for smooth start-up
   int iTmaxStart = converter.numTimeSteps(maxPhysT*0.2);
-  int iTupdate = 50;
+  int iTupdate = 5;
 
   if (iT%iTupdate==0 && iT<= iTmaxStart) {
     // Smooth start curve, sinus
     // SinusStartScale<T,int> StartScale(iTmaxStart, T(1));
 
     // Smooth start curve, polynomial
-    PolynomialStartScale<T,T> StartScale(iTmaxStart, T(1));
+    PolynomialStartScale<T,int> StartScale(iTmaxStart, T(1));
 
 
     // Creates and sets the Poiseuille inflow profile using functors
-    std::vector<T> iTvec(1,T(iT));
-    T frac = StartScale(iTvec)[0];
-    T maxVelocity = converter.getLatticeU()*3./2.*frac;
+    int iTvec[1]={iT};
+    T frac[1]={};
+    StartScale(frac,iTvec);
+    T maxVelocity = converter.getLatticeU()*3./2.*frac[0];
     T distance2Wall = converter.getLatticeL()/2.;
     Poiseuille2D<T> poiseuilleU(superGeometry, 3, maxVelocity, distance2Wall);
 
@@ -178,11 +181,11 @@ void setBoundaryValues(LBconverter<T> const& converter,
 /// Output to console and files
 void getResults(SuperLattice2D<T,DESCRIPTOR>& sLattice,
                 LBconverter<T> const& converter, int iT,
-                SuperGeometry2D<T>& superGeometry, Timer<double>& timer) {
+                SuperGeometry2D<T>& superGeometry, Timer<T>& timer) {
 
   OstreamManager clout(std::cout,"getResults");
 
-  SuperVTKwriter2D<T,DESCRIPTOR> vtkWriter("bstep2d");
+  SuperVTKwriter2D<T> vtkWriter("bstep2d");
   SuperLatticePhysVelocity2D<T, DESCRIPTOR> velocity(sLattice, converter);
   SuperLatticePhysPressure2D<T, DESCRIPTOR> pressure(sLattice, converter);
   vtkWriter.addFunctor( velocity );
@@ -209,6 +212,11 @@ void getResults(SuperLattice2D<T,DESCRIPTOR>& sLattice,
   /// Writes the vtk files
   if (iT%vtkIter==0) {
     vtkWriter.write(iT);
+    sLattice.communicate();
+    SuperEuklidNorm2D<T, DESCRIPTOR> normVel(velocity);
+    BlockLatticeReduction2D<T, DESCRIPTOR> planeReduction(normVel);
+    BlockGifWriter<T> gifWriter;
+    gifWriter.write(planeReduction, iT, "vel");
   }
 
   /// Writes output on the console
@@ -243,23 +251,23 @@ int main(int argc, char* argv[]) {
   LBconverter<T> converter(
     (int) 2,                               // dim
     (T)   1./60./N,                        // latticeL_
-    (T)   2e-2,                            // latticeU_
+    (T)   2e-2/M,                          // latticeU_
     (T)   1./500.,                         // charNu_
     (T)   1.                               // charL_ = 1,
   );
   converter.print();
 
   /// === 2nd Step: Prepare Geometry ===
-  std::vector<T> extend(2,T()); extend[0] = 20; extend[1] = 1.5;
-  std::vector<T> origin(2,T());
-  IndicatorCuboid2D<bool,T> cuboid(extend, origin);
+  Vector<T,2> extend(lx0,ly0);
+  Vector<T,2> origin;
+  IndicatorCuboid2D<T> cuboid(extend, origin);
 
   /// Instantiation of a cuboidGeometry with weights
-  #ifdef PARALLEL_MODE_MPI
-    const int noOfCuboids = singleton::mpi().getSize();
-  #else
-    const int noOfCuboids = 7;
-  #endif
+#ifdef PARALLEL_MODE_MPI
+  const int noOfCuboids = singleton::mpi().getSize();
+#else
+  const int noOfCuboids = 7;
+#endif
   CuboidGeometry2D<T> cuboidGeometry(cuboid, converter.getLatticeL(), noOfCuboids);
 
   /// Instantiation of a loadBalancer

@@ -31,6 +31,7 @@ namespace olb {
 template class SuperMin3D<double,descriptors::D3Q19Descriptor>;
 template class SuperMax3D<double,descriptors::D3Q19Descriptor>;
 template class SuperSum3D<double,descriptors::D3Q19Descriptor>;
+template class SuperSumIndicator3D<double,descriptors::D3Q19Descriptor>;
 template class SuperAverage3D<double,descriptors::D3Q19Descriptor>;
 template class SuperIntegral3D<double,descriptors::D3Q19Descriptor>;
 template class SuperL1Norm3D<double,descriptors::D3Q19Descriptor>;
@@ -39,6 +40,7 @@ template class SuperLpNorm3D<double,descriptors::D3Q19Descriptor>;
 template class SuperLinfNorm3D<double,descriptors::D3Q19Descriptor>;
 template class SuperGeometryFaces3D<double>;
 template class SuperLatticePhysDrag3D<double,descriptors::D3Q19Descriptor>;
+template class SuperLatticePhysDragIndicator3D<double,descriptors::D3Q19Descriptor>;
 template class SuperLatticePhysCorrDrag3D<double,descriptors::D3Q19Descriptor>;
 template class SuperLatticeFlux3D<double,descriptors::D3Q19Descriptor>;
 template class SuperLatticePhysPressureFlux3D<double,descriptors::D3Q19Descriptor>;

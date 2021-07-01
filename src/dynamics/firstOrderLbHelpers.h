@@ -56,8 +56,7 @@ struct firstOrderLbHelpers {
    *         = \sum c_i c_i f_i - \rho u u - c_s^2 \rho\ Id \f]
    */
   static T fromPiToFneq (
-    int iPop, const T pi[util::TensorVal<Lattice<T> >::n] )
-  {
+    int iPop, const T pi[util::TensorVal<Lattice<T> >::n] ) {
     typedef Lattice<T> L;
     T fNeq = T();
     int iPi = 0;
@@ -68,8 +67,7 @@ struct firstOrderLbHelpers {
         T toAdd = L::c[iPop][iAlpha]*L::c[iPop][iBeta];
         if (iAlpha==iBeta) {
           toAdd -= 1./L::invCs2;
-        }
-        else {
+        } else {
           toAdd *= (T)2; // multiply off-diagonal elements by 2
         }                  // because the Q tensor is symmetric
         toAdd *= pi[iPi++];
@@ -89,8 +87,7 @@ struct firstOrderLbHelpers {
    *     \partial_\alpha(\rho u_\beta) + \partial_\beta(\rho u_\alpha) ) \f]
    */
   static T fromStrainToFneq (
-    int iPop, const T S[util::TensorVal<Lattice<T> >::n], T omega )
-  {
+    int iPop, const T S[util::TensorVal<Lattice<T> >::n], T omega ) {
     typedef Lattice<T> L;
     T fNeq = fromPiToFneq(iPop,S) * (-(T)2 / L::invCs2 / omega);
     return fNeq;
@@ -104,8 +101,7 @@ struct rlbHelpers {
   /// Renormalized Lattice Boltzmann collision operator, fIn --> fOut
   static T rlbCollision (
     Cell<T,Lattice>& cell, T rho, const T u[Lattice<T>::d],
-    const T pi[util::TensorVal<Lattice<T> >::n], T omega )
-  {
+    const T pi[util::TensorVal<Lattice<T> >::n], T omega ) {
     typedef Lattice<T> L;
     const T uSqr = util::normSqr<T,L::d>(u);
     cell[0] = lbHelpers<T,Lattice>::equilibrium(0, rho, u, uSqr)

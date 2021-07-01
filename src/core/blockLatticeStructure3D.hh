@@ -38,12 +38,13 @@ void BlockLatticeStructure3D<T,Lattice>::defineRho(
   BlockGeometryStructure3D<T>& blockGeometry, int material, AnalyticalF3D<T,T>& rho)
 {
   T rhoTmp;
+  T physR[3]= {T(),T(),T()};
   for (int iX = 0; iX < getNx(); iX++) {
     for (int iY = 0; iY < getNy(); iY++) {
       for (int iZ = 0; iZ < getNz(); iZ++) {
         if (blockGeometry.getMaterial(iX, iY, iZ) == material) {
-          std::vector<T> physCoordinate = blockGeometry.getPhysR(iX,iY,iZ);
-          rhoTmp = rho(physCoordinate)[0];
+          blockGeometry.getPhysR(physR, iX,iY,iZ);
+          rho(&rhoTmp,physR);
           get(iX,iY,iZ).defineRho(rhoTmp);
         }
       }
@@ -56,14 +57,13 @@ void BlockLatticeStructure3D<T,Lattice>::defineU(
   BlockGeometryStructure3D<T>& blockGeometry, int material, AnalyticalF3D<T,T>& u)
 {
   T uTmp[3];
+  T physR[3]= {T(),T(),T()};
   for (int iX = 0; iX < getNx(); iX++) {
     for (int iY = 0; iY < getNy(); iY++) {
       for (int iZ = 0; iZ < getNz(); iZ++) {
         if (blockGeometry.getMaterial(iX, iY, iZ) == material) {
-          std::vector<T> physCoordinate = blockGeometry.getPhysR(iX,iY,iZ);
-          for (int i=0; i<3; i++) {
-            uTmp[i] = u(physCoordinate)[i];
-          }
+          blockGeometry.getPhysR(physR, iX,iY,iZ);
+          u(uTmp,physR);
           get(iX,iY,iZ).defineU(uTmp);
         }
       }
@@ -78,15 +78,14 @@ void BlockLatticeStructure3D<T,Lattice>::defineRhoU(
 {
   T rhoTmp;
   T uTmp[3];
+  T physR[3]= {T(),T(),T()};
   for (int iX = 0; iX < getNx(); iX++) {
     for (int iY = 0; iY < getNy(); iY++) {
       for (int iZ = 0; iZ < getNz(); iZ++) {
         if (blockGeometry.getMaterial(iX, iY, iZ) == material) {
-          std::vector<T> physCoordinate = blockGeometry.getPhysR(iX,iY,iZ);
-          rhoTmp = rho(physCoordinate)[0];
-          for (int i=0; i<3; i++) {
-            uTmp[i] = u(physCoordinate)[i];
-          }
+          blockGeometry.getPhysR(physR, iX,iY,iZ);
+          rho(&rhoTmp,physR);
+          u(uTmp,physR);
           get(iX,iY,iZ).defineRhoU(rhoTmp,uTmp);
         }
       }
@@ -98,15 +97,14 @@ template<typename T, template<typename U> class Lattice>
 void BlockLatticeStructure3D<T,Lattice>::definePopulations(
   BlockGeometryStructure3D<T>& blockGeometry, int material, AnalyticalF3D<T,T>& Pop)
 {
+  T physR[3]= {T(),T(),T()};
   T PopTmp[Lattice<T>::q];
   for (int iX = 0; iX < getNx(); iX++) {
     for (int iY = 0; iY < getNy(); iY++) {
       for (int iZ = 0; iZ < getNz(); iZ++) {
         if (blockGeometry.getMaterial(iX, iY, iZ) == material) {
-          std::vector<T> physCoordinate = blockGeometry.getPhysR(iX,iY,iZ);
-          for (int i=0; i<Lattice<T>::q; i++) {
-            PopTmp[i] = Pop(physCoordinate)[i];
-          }
+          blockGeometry.getPhysR(physR, iX,iY,iZ);
+          Pop(PopTmp,physR);
           get(iX,iY,iZ).definePopulations(PopTmp);
         }
       }
@@ -119,15 +117,38 @@ void BlockLatticeStructure3D<T,Lattice>::defineExternalField(
   BlockGeometryStructure3D<T>& blockGeometry, int material, int fieldBeginsAt,
   int sizeOfField, AnalyticalF3D<T,T>& field)
 {
+  T physR[3]= {T(),T(),T()};
   T* fieldTmp = new T [sizeOfField];
   for (int iX = 0; iX < getNx(); iX++) {
     for (int iY = 0; iY < getNy(); iY++) {
       for (int iZ = 0; iZ < getNz(); iZ++) {
         if (blockGeometry.getMaterial(iX, iY, iZ) == material) {
-          std::vector<T> physCoordinate = blockGeometry.getPhysR(iX,iY,iZ);
-          for (int i=0; i<sizeOfField; i++) {
-            fieldTmp[i] = field(physCoordinate)[i];
-          }
+          blockGeometry.getPhysR(physR, iX,iY,iZ);
+          field(fieldTmp,physR);
+          get(iX,iY,iZ).defineExternalField(fieldBeginsAt,sizeOfField, fieldTmp);
+        }
+      }
+    }
+  }
+  delete[] fieldTmp;
+}
+
+
+template<typename T, template<typename U> class Lattice>
+void BlockLatticeStructure3D<T,Lattice>::defineExternalField(
+  BlockGeometryStructure3D<T>& blockGeometry, IndicatorSphere3D<T>& indicator, int fieldBeginsAt,
+  int sizeOfField, AnalyticalF3D<T,T>& field)
+{
+  bool inside;
+  T physR[3]= {T(),T(),T()};
+  T* fieldTmp = new T [sizeOfField];
+  for (int iX = 0; iX < getNx(); iX++) {
+    for (int iY = 0; iY < getNy(); iY++) {
+      for (int iZ = 0; iZ < getNz(); iZ++) {
+        blockGeometry.getPhysR(physR, iX,iY,iZ);
+        indicator(&inside, physR);
+        if (inside) {
+          field(fieldTmp,physR);
           get(iX,iY,iZ).defineExternalField(fieldBeginsAt,sizeOfField, fieldTmp);
         }
       }
@@ -141,13 +162,17 @@ void BlockLatticeStructure3D<T,Lattice>::iniEquilibrium(
   BlockGeometryStructure3D<T>& blockGeometry, int material,
   AnalyticalF3D<T,T>& rho , AnalyticalF3D<T,T>& u)
 {
+  T physR[3]= {T(),T(),T()};
+  T uTmp[3]= {T(),T(),T()};
+  T rhoTmp=T();
   for (int iX = 0; iX < getNx(); iX++) {
     for (int iY = 0; iY < getNy(); iY++) {
       for (int iZ = 0; iZ < getNz(); iZ++) {
         if (blockGeometry.getMaterial(iX, iY, iZ) == material) {
-          std::vector<T> physCoordinate = blockGeometry.getPhysR(iX,iY,iZ);
-          T uTmp[] = {u(physCoordinate)[0],u(physCoordinate)[1],u(physCoordinate)[2]};
-          get(iX,iY,iZ).iniEquilibrium(rho(physCoordinate)[0],uTmp);
+          blockGeometry.getPhysR(physR,iX,iY,iZ);
+          u(uTmp,physR);
+          rho(&rhoTmp,physR);
+          get(iX,iY,iZ).iniEquilibrium(rhoTmp,uTmp);
         }
       }
     }

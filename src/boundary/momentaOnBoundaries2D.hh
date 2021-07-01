@@ -50,8 +50,7 @@ InnerCornerVelBM2D<T,Lattice,normalX,normalY>::InnerCornerVelBM2D (
 template<typename T, template<typename U> class Lattice,
          int normalX, int normalY>
 T InnerCornerVelBM2D<T,Lattice,normalX,normalY>::computeRho (
-  Cell<T,Lattice> const& cell ) const
-{
+  Cell<T,Lattice> const& cell ) const {
   return (xMomenta.computeRho(cell) + yMomenta.computeRho(cell)) / (T)2;
 }
 
@@ -59,8 +58,7 @@ template<typename T, template<typename U> class Lattice,
          int normalX, int normalY>
 void InnerCornerVelBM2D<T,Lattice,normalX,normalY>::computeU (
   Cell<T,Lattice> const& cell,
-  T u[Lattice<T>::d] ) const
-{
+  T u[Lattice<T>::d] ) const {
   xMomenta.computeU(cell, u);
 }
 
@@ -68,8 +66,7 @@ template<typename T, template<typename U> class Lattice,
          int normalX, int normalY>
 void InnerCornerVelBM2D<T,Lattice,normalX,normalY>::computeJ (
   Cell<T,Lattice> const& cell,
-  T j[Lattice<T>::d] ) const
-{
+  T j[Lattice<T>::d] ) const {
   computeU(cell, j);
   T rho = computeRho(cell);
   for (int iD=0; iD<Lattice<T>::d; ++iD) {
@@ -80,8 +77,7 @@ void InnerCornerVelBM2D<T,Lattice,normalX,normalY>::computeJ (
 template<typename T, template<typename U> class Lattice,
          int normalX, int normalY>
 void InnerCornerVelBM2D<T,Lattice,normalX,normalY>::computeU (
-  T u[Lattice<T>::d] ) const
-{
+  T u[Lattice<T>::d] ) const {
   xMomenta.computeU(u);
 }
 
@@ -126,8 +122,7 @@ template<typename T, template<typename U> class Lattice,
 void InnerCornerVelBM2D<T,Lattice,normalX,normalY>::computeStress (
   Cell<T,Lattice> const& cell,
   T rho, const T u[Lattice<T>::d],
-  T pi[util::TensorVal<Lattice<T> >::n] ) const
-{
+  T pi[util::TensorVal<Lattice<T> >::n] ) const {
   typedef lbHelpers<T,Lattice> lbH;
   Cell<T,Lattice> newCell(cell);
   int v[Lattice<T>::d] = { -normalX, -normalY };

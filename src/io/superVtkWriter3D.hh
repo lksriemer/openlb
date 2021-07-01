@@ -30,47 +30,28 @@
 #define SUPER_VTK_WRITER_3D_HH
 
 #include <fstream>
-//#include <cstdlib>    // for creating folders
 #include <iostream>
-#include <sstream>
+#include <iomanip>
 #include <string>
-#include <vector>
 #include "core/singleton.h"
 #include "communication/loadBalancer.h"
 #include "geometry/cuboidGeometry3D.h"
 #include "communication/mpiManager.h"
-#include "functors/superLatticeCalcF3D.h" // for IdentityF
-#include "io/imageWriter.h"
+#include "io/fileName.h"
 #include "io/superVtkWriter3D.h"
 #include "io/base64.h"
 
-using namespace std;
+
 namespace olb {
 
-template<typename T, template<typename U> class DESCRIPTOR>
-class SuperLatticeF3D;
 
+template<typename T>
+SuperVTKwriter3D<T>::SuperVTKwriter3D( std::string name, bool binary )
+  : clout( std::cout,"SuperVTKwriter3D" ), _createFile(false), _name(name), _binary(binary)
+{}
 
-//////////////// class SuperVTKwriter3D ////////////////////////////////////////
-
-//////////////////////public member functions///////////////////////////////////
-template<typename T, template <typename U> class DESCRIPTOR>
-SuperVTKwriter3D<T,DESCRIPTOR>::SuperVTKwriter3D
-  ( std::string name, bool binary ) : clout( std::cout,"SuperVTKwriter3D" )
-{ 
-  _name = name;
-  _binary = binary;
-  _createFile = false;  // true if createMasterFile() has been called
-
-//  std::string consoleCommand = std::string("mkdir -p ") + std::string("tmp/data");
-//  if( !system(consoleCommand.c_str()) )
-//  {
-//    std::cout << "smth went wrong, exists tmp/data ??" << std::endl;
-//  }
-}
-
-template<typename T, template <typename U> class DESCRIPTOR>
-void SuperVTKwriter3D<T,DESCRIPTOR>::write(int iT)
+template<typename T>
+void SuperVTKwriter3D<T>::write(int iT)
 {
   int rank = 0;
 #ifdef PARALLEL_MODE_MPI
@@ -78,37 +59,34 @@ void SuperVTKwriter3D<T,DESCRIPTOR>::write(int iT)
 #endif
 
   //  !!!!!!!!!!! check whether _pointerVec is empty
-  if( _pointerVec.empty() ) {
+  if ( _pointerVec.empty() ) {
     clout << "Error: Did you add a Functor ?";
-  } else
-  { // DO WORK 
+  } else {
+    // DO WORK
     //  auto it = _pointerVec.begin();
     // to get first element _pointerVec
-    // problem if functors with different SuperLattice are stored
+    // problem if functors with different SuperStructure are stored
     // since till now, there is only one origin
-    typename std::vector<SuperLatticeF3D<T,DESCRIPTOR>* >::iterator it;
-    it = _pointerVec.begin();
-    SuperLatticeIdentity3D<T,DESCRIPTOR> f( **it );
-    CuboidGeometry3D<T> const& cGeometry = f.getSuperLattice3D().getCuboidGeometry();
+    auto it = _pointerVec.cbegin();
+    CuboidGeometry3D<T> const& cGeometry = (**it).getSuperStructure().getCuboidGeometry();
     // no gaps between vti files (cuboids)
-    f.getSuperLattice3D().communicate();
-    LoadBalancer<T>& load = f.getSuperLattice3D().getLoadBalancer();
+    (**it).getSuperStructure().communicate();
+    LoadBalancer<T>& load = (**it).getSuperStructure().getLoadBalancer();
 
     //-------------------------------------
     // PVD
     // master.pvd owns all
     //-------------------------------------
-    if( rank == 0 )
-    { // master only
-      std::string fullNamePVDmaster = singleton::directories().getVtkOutDir() 
-                                      + graphics::createFileName( _name ) + ".pvd";    
+    if ( rank == 0 ) {
+      // master only
+      std::string fullNamePVDmaster = singleton::directories().getVtkOutDir()
+                                      + createFileName( _name ) + ".pvd";
       std::string fullNamePVD = singleton::directories().getVtkOutDir()
-                                + "data/" + graphics::createFileName( _name, iT ) + ".pvd";
+                                + "data/" + createFileName( _name, iT ) + ".pvd";
       preamblePVD(fullNamePVD);
-      for (int iC=0; iC<cGeometry.getNc(); iC++) 
-      {
-        std::string namePieceData = "data/" + graphics::createFileName( _name, iT, iC) + ".vti";
-        std::string namePiece = graphics::createFileName( _name, iT, iC) + ".vti";
+      for (int iC = 0; iC < cGeometry.getNc(); iC++) {
+        std::string namePieceData = "data/" + createFileName( _name, iT, iC) + ".vti";
+        std::string namePiece = createFileName( _name, iT, iC) + ".vti";
 
         // puts name of .vti piece to a .pvd file [fullNamePVD]
         dataPVD( iT, iC, fullNamePVD, namePiece );
@@ -125,8 +103,9 @@ void SuperVTKwriter3D<T,DESCRIPTOR>::write(int iT)
     // VTI
     // each process writes his cuboids
     //-------------------------------------
-    for (int iCloc=0; iCloc<load.size(); iCloc++)
-    { // cuboid
+    int originLatticeR[4] = {int()};
+    for (int iCloc = 0; iCloc < load.size(); iCloc++) {
+      // cuboid
       int nx = cGeometry.get(load.glob(iCloc)).getNx();
       int ny = cGeometry.get(load.glob(iCloc)).getNy();
       int nz = cGeometry.get(load.glob(iCloc)).getNz();
@@ -135,31 +114,23 @@ void SuperVTKwriter3D<T,DESCRIPTOR>::write(int iT)
       T delta = cGeometry.getMotherCuboid().getDeltaR();
 
       std::string fullNameVTI = singleton::directories().getVtkOutDir() + "data/"
-                  + graphics::createFileName( _name, iT, load.glob(iCloc) ) + ".vti";
+                                + createFileName( _name, iT, load.glob(iCloc) ) + ".vti";
 
       // get dimension/extent for each cuboid
-      std::vector<int> originLatticeR(4,int());
-      originLatticeR[0]=load.glob(iCloc);
-      std::vector<T> originPhysR = cGeometry.getPhysR(originLatticeR);
+      originLatticeR[0] = load.glob(iCloc);
+      T originPhysR[3] = {T()};
+      cGeometry.getPhysR(originPhysR,originLatticeR);
 
       preambleVTI(fullNameVTI, -1,-1,-1,nx,ny,nz,
                   originPhysR[0],originPhysR[1],originPhysR[2], delta);
-      pointData(fullNameVTI);
-
-      typename std::vector<SuperLatticeF3D<T,DESCRIPTOR>* >::iterator it;
-      for( it = _pointerVec.begin(); it != _pointerVec.end(); it++)
-      {
-        // get functor and prevent deleting with use of Identity
-        SuperLatticeIdentity3D<T,DESCRIPTOR> f( **it );
+      for ( auto it = _pointerVec.cbegin(); it != _pointerVec.cend(); ++it) {
         // write <DataArray ..../> for functor, e.g. velocity, pressure, ...
-        if( _binary ) {
-          dataArrayBinary(fullNameVTI, f, load.glob(iCloc), nx+1,ny+1,nz+1);
+        if ( _binary ) {
+          dataArrayBinary(fullNameVTI, (**it), load.glob(iCloc), nx,ny,nz);
         } else {
-          dataArray(fullNameVTI, f, load.glob(iCloc), nx+1,ny+1,nz+1);
+          dataArray(fullNameVTI, (**it), load.glob(iCloc), nx,ny,nz);
         }
       }
-
-      closePointData(fullNameVTI);
       closePiece(fullNameVTI);
       closeVTI(fullNameVTI);
     } // cuboid
@@ -167,13 +138,14 @@ void SuperVTKwriter3D<T,DESCRIPTOR>::write(int iT)
   ////-------------------------------------
 }
 
-template<typename T, template <typename U> class DESCRIPTOR>
-void SuperVTKwriter3D<T,DESCRIPTOR>::write(SuperLatticeF3D<T,DESCRIPTOR>& f, int iT)
+template<typename T>
+void SuperVTKwriter3D<T>::write(SuperF3D<T>& f, int iT)
 {
-  CuboidGeometry3D<T> const& cGeometry = f.getSuperLattice3D().getCuboidGeometry();
-  LoadBalancer<T>& load = f.getSuperLattice3D().getLoadBalancer();
+  CuboidGeometry3D<T> const& cGeometry = f.getSuperStructure().getCuboidGeometry();
+  LoadBalancer<T>& load = f.getSuperStructure().getLoadBalancer();
   // no gaps between vti files (cuboids)
-  f.getSuperLattice3D().communicate();
+  f.getSuperStructure().communicate();
+  T delta = cGeometry.getMotherCuboid().getDeltaR();
 
   int rank = 0;
 #ifdef PARALLEL_MODE_MPI
@@ -182,251 +154,248 @@ void SuperVTKwriter3D<T,DESCRIPTOR>::write(SuperLatticeF3D<T,DESCRIPTOR>& f, int
 
   // write a pvd file, which links all vti files
   // each vti file is written by one thread, which may own severals cuboids
-  if( rank == 0 )
-  { // master only
-    std::string namePVD = singleton::directories().getVtkOutDir() + 
-                          graphics::createFileName( _name, f.getName(), iT )  + ".pvd";
+  if ( rank == 0 ) {
+    // master only
+    std::string namePVD = singleton::directories().getVtkOutDir()
+                          + createFileName( f.getName(), iT )  + ".pvd";
 
     preamblePVD(namePVD);
-    for (int iC=0; iC<cGeometry.getNc(); iC++) 
-    {
-      std::string nameVTI = "data/" + graphics::createFileName( _name, f.getName(), iT, iC)
-                            + ".vti";
+    for (int iC = 0; iC < cGeometry.getNc(); iC++) {
+      std::string nameVTI = "data/" + createFileName( f.getName(), iT, iC) + ".vti";
       // puts name of .vti piece to a .pvd file [fullNamePVD]
       dataPVD( iT, iC, namePVD, nameVTI );
     }
     closePVD(namePVD);
   } // master only
 
-  for (int iCloc=0; iCloc<load.size(); iCloc++)
-  { // cuboid
+  int originLatticeR[4] = {int()};
+  for (int iCloc = 0; iCloc < load.size(); iCloc++) {
+    // cuboid
     int nx = cGeometry.get(load.glob(iCloc)).getNx();
     int ny = cGeometry.get(load.glob(iCloc)).getNy();
     int nz = cGeometry.get(load.glob(iCloc)).getNz();
     // to be changed into the following line once local refinement has been implemented
     // double deltaX = cGeometry.get(load.glob(iCloc)).getDeltaR();
-    T delta = cGeometry.getMotherCuboid().getDeltaR();
 
     std::string fullNameVTI = singleton::directories().getVtkOutDir() + "data/"
-                + graphics::createFileName( _name, f.getName(), iT, load.glob(iCloc) ) + ".vti";
+                              + createFileName( f.getName(), iT, load.glob(iCloc) ) + ".vti";
 
     // get dimension/extent for each cuboid
-    std::vector<int> originLatticeR(4,int());
-    originLatticeR[0]=load.glob(iCloc);
-    std::vector<T> originPhysR = cGeometry.getPhysR(originLatticeR);
+    originLatticeR[0] = load.glob(iCloc);
+    T originPhysR[3] = {T()};
+    cGeometry.getPhysR(originPhysR,originLatticeR);
 
     preambleVTI(fullNameVTI, -1,-1,-1, nx,ny,nz,
                 originPhysR[0],originPhysR[1],originPhysR[2], delta);
-    pointData(fullNameVTI);
-    if( _binary ) {
-      dataArrayBinary(fullNameVTI, f,  load.glob(iCloc), nx+1,ny+1,nz+1);
-    } else {
-      dataArray(fullNameVTI, f, load.glob(iCloc), nx+1,ny+1,nz+1);
-    }
 
-    closePointData(fullNameVTI);
+    if ( _binary ) {
+      dataArrayBinary(fullNameVTI, f, load.glob(iCloc), nx,ny,nz);
+    } else {
+      dataArray(fullNameVTI, f, load.glob(iCloc), nx,ny,nz);
+    }
     closePiece(fullNameVTI);
     closeVTI(fullNameVTI);
   } // cuboid
 }
 
-template<typename T, template <typename U> class DESCRIPTOR>
-void SuperVTKwriter3D<T,DESCRIPTOR>::createMasterFile()
+template<typename T>
+void SuperVTKwriter3D<T>::createMasterFile()
 {
   int rank = 0;
 #ifdef PARALLEL_MODE_MPI
   rank = singleton::mpi().getRank();
 #endif
-  if( rank == 0 ) {
-    std::string fullNamePVDmaster = singleton::directories().getVtkOutDir() 
-                + graphics::createFileName( _name ) + ".pvd"; 
+  if ( rank == 0 ) {
+    std::string fullNamePVDmaster = singleton::directories().getVtkOutDir()
+                                    + createFileName( _name ) + ".pvd";
     preamblePVD(fullNamePVDmaster);
     closePVD(fullNamePVDmaster);
     _createFile = true;
   }
 }
 
-template<typename T, template <typename U> class DESCRIPTOR>
-void SuperVTKwriter3D<T,DESCRIPTOR>::addFunctor(SuperLatticeF3D<T,DESCRIPTOR>& f)
-{ _pointerVec.push_back(&f); }
+template<typename T>
+void SuperVTKwriter3D<T>::addFunctor(SuperF3D<T>& f)
+{
+  _pointerVec.push_back(&f);
+}
 
-template<typename T, template <typename U> class DESCRIPTOR>
-void SuperVTKwriter3D<T,DESCRIPTOR>::clearAddedFunctors()
-{ _pointerVec.clear(); }
+template<typename T>
+void SuperVTKwriter3D<T>::clearAddedFunctors()
+{
+  _pointerVec.clear();
+}
 
 
 
 
 ////////////////////private member functions///////////////////////////////////
-template<typename T, template <typename U> class DESCRIPTOR>
-void SuperVTKwriter3D<T,DESCRIPTOR>::preambleVTI (const std::string& fullName,
-  int x0,int y0,int z0,int x1,int y1,int z1, T originX,T originY,T originZ, T delta)
+template<typename T>
+void SuperVTKwriter3D<T>::preambleVTI (const std::string& fullName, int x0,int y0,int z0,int x1,int y1,int z1, T originX,T originY,T originZ, T delta)
 {
   std::ofstream fout(fullName.c_str(), std::ios::trunc);
-  if (!fout) clout << "Error: could not open " << fullName << std::endl;
+  if (!fout) {
+    clout << "Error: could not open " << fullName << std::endl;
+  }
 
   fout << "<?xml version=\"1.0\"?>\n";
   fout << "<VTKFile type=\"ImageData\" version=\"0.1\" "
-          << "byte_order=\"LittleEndian\">\n";
+       << "byte_order=\"LittleEndian\">\n";
   fout << "<ImageData WholeExtent=\""
-          << x0 <<" "<< x1 <<" "
-          << y0 <<" "<< y1 <<" "
-          << z0 <<" "<< z1 
+       << x0 <<" "<< x1 <<" "
+       << y0 <<" "<< y1 <<" "
+       << z0 <<" "<< z1
        << "\" Origin=\"" << originX << " " << originY << " " << originZ
        << "\" Spacing=\"" << delta << " " << delta << " " << delta << "\">\n";
-  fout << "<Piece Extent=\"" 
-          << x0 <<" "<< x1 <<" "
-          << y0 <<" "<< y1 <<" "
-          << z0 <<" "<< z1 <<"\">\n";
+  fout << "<Piece Extent=\""
+       << x0 <<" "<< x1 <<" "
+       << y0 <<" "<< y1 <<" "
+       << z0 <<" "<< z1 <<"\">\n";
+  fout << "<PointData>\n";
   fout.close();
 }
 
-template<typename T, template <typename U> class DESCRIPTOR>
-void SuperVTKwriter3D<T,DESCRIPTOR>::closeVTI(const std::string& fullNamePiece)
+template<typename T>
+void SuperVTKwriter3D<T>::closeVTI(const std::string& fullNamePiece)
 {
   std::ofstream fout(fullNamePiece.c_str(), std::ios::app );
-  if (!fout) clout << "Error: could not open " << fullNamePiece << std::endl;
+  if (!fout) {
+    clout << "Error: could not open " << fullNamePiece << std::endl;
+  }
   fout << "</ImageData>\n";
   fout << "</VTKFile>\n";
   fout.close();
 }
 
-template<typename T, template <typename U> class DESCRIPTOR>
-void SuperVTKwriter3D<T,DESCRIPTOR>::preamblePVD(const std::string& fullNamePVD)
+template<typename T>
+void SuperVTKwriter3D<T>::preamblePVD(const std::string& fullNamePVD)
 {
   std::ofstream fout(fullNamePVD.c_str(), std::ios::trunc);
-  if (!fout) clout << "Error: could not open " << fullNamePVD << std::endl;
+  if (!fout) {
+    clout << "Error: could not open " << fullNamePVD << std::endl;
+  }
 
   fout << "<?xml version=\"1.0\"?>\n";
-  fout << "<VTKFile type=\"Collection\" version=\"0.1\" " 
-          << "byte_order=\"LittleEndian\">\n"
+  fout << "<VTKFile type=\"Collection\" version=\"0.1\" "
+       << "byte_order=\"LittleEndian\">\n"
        << "<Collection>\n";
   fout.close();
 }
 
-template<typename T, template <typename U> class DESCRIPTOR>
-void SuperVTKwriter3D<T,DESCRIPTOR>::closePVD(const std::string& fullNamePVD)
+template<typename T>
+void SuperVTKwriter3D<T>::closePVD(const std::string& fullNamePVD)
 {
   std::ofstream fout(fullNamePVD.c_str(), std::ios::app );
-  if (!fout) clout << "Error: could not open " << fullNamePVD << std::endl;
+  if (!fout) {
+    clout << "Error: could not open " << fullNamePVD << std::endl;
+  }
   fout << "</Collection>\n";
   fout << "</VTKFile>\n";
   fout.close();
 }
 
-template<typename T, template <typename U> class DESCRIPTOR>
-void SuperVTKwriter3D<T,DESCRIPTOR>::pointData(const std::string& fullName)
-{
-  std::ofstream fout(fullName.c_str(), std::ios::app);
-  if (!fout) clout << "Error: could not open " << fullName << std::endl;
-
-  fout << "<PointData>\n";
-  fout.close();
-}
-
-template<typename T, template <typename U> class DESCRIPTOR>
-void SuperVTKwriter3D<T,DESCRIPTOR>::closePointData(const std::string& fullName)
-{
-  std::ofstream fout(fullName.c_str(), std::ios::app);
-  if (!fout) clout << "Error: could not open " << fullName << std::endl;
-  fout << "</PointData>\n";
-  fout.close();
-}
-
-template<typename T, template <typename U> class DESCRIPTOR>
-void SuperVTKwriter3D<T,DESCRIPTOR>::dataPVD(int iT, int iC,
-  const std::string& fullNamePVD, const std::string& namePiece)
+template<typename T>
+void SuperVTKwriter3D<T>::dataPVD(int iT, int iC,
+                                  const std::string& fullNamePVD, const std::string& namePiece)
 {
   std::ofstream fout(fullNamePVD.c_str(), std::ios::app);
-  if (!fout) clout << "Error: could not open " << fullNamePVD << std::endl;
+  if (!fout) {
+    clout << "Error: could not open " << fullNamePVD << std::endl;
+  }
 
   fout << "<DataSet timestep=\"" << iT << "\" "
-          << "group=\"\" part=\" " <<  iC << "\" "
-          << "file=\"" << namePiece << "\"/>\n";
+       << "group=\"\" part=\" " <<  iC << "\" "
+       << "file=\"" << namePiece << "\"/>\n";
   fout.close();
 }
 
-template<typename T, template <typename U> class DESCRIPTOR>
-void SuperVTKwriter3D<T,DESCRIPTOR>::dataPVDmaster(int iT, int iC,
-  const std::string& fullNamePVDMaster, const std::string& namePiece)
+template<typename T>
+void SuperVTKwriter3D<T>::dataPVDmaster(int iT, int iC,
+                                        const std::string& fullNamePVDMaster, const std::string& namePiece)
 {
   std::ofstream fout(fullNamePVDMaster.c_str(), std::ios::in | std::ios::out | std::ios::ate);
   if (fout) {
     fout.seekp(-25,std::ios::end);    // jump -25 form the end of file to overwrite closePVD
 
     fout << "<DataSet timestep=\"" << iT << "\" "
-            << "group=\"\" part=\" " <<  iC << "\" "
-            << "file=\"" << namePiece << "\"/>\n";
+         << "group=\"\" part=\" " <<  iC << "\" "
+         << "file=\"" << namePiece << "\"/>\n";
     fout.close();
     closePVD(fullNamePVDMaster);
+  } else {
+    clout << "Error: could not open " << fullNamePVDMaster << std::endl;
   }
-  else { clout << "Error: could not open " << fullNamePVDMaster << std::endl; }
 }
 
-template<typename T, template <typename U> class DESCRIPTOR>
-void SuperVTKwriter3D<T,DESCRIPTOR>::dataArray( const std::string& fullName,
-  SuperLatticeF3D<T,DESCRIPTOR>& f, int iC, int nx, int ny, int nz)
+template<typename T>
+void SuperVTKwriter3D<T>::dataArray( const std::string& fullName,
+                                     SuperF3D<T>& f, int iC, int nx, int ny, int nz)
 {
   std::ofstream fout(fullName.c_str(), std::ios::app);
-  if (!fout) clout << "Error: could not open " << fullName << std::endl;
-
-  int dim = f.getTargetDim();
-  fout << "<DataArray " ;
-  if (dim == 1) {
-    fout << "type=\"Float32\" Name=\"" << f.getName() <<"\">\n";
+  if (!fout) {
+    clout << "Error: could not open " << fullName << std::endl;
   }
-  if (dim != 1) {
+
+  fout << "<DataArray " ;
+  if (f.getTargetDim() == 1) {
+    fout << "type=\"Float32\" Name=\"" << f.getName() << "\">\n";
+  } else {
     fout << "type=\"Float32\" Name=\"" << f.getName() << "\" "
-         << "NumberOfComponents=\"" << dim <<"\">\n";
+         << "NumberOfComponents=\"" << f.getTargetDim() << "\">\n";
   }
 
   // since cuboid has been blowed up by 1 [every dimension]
   // looping from -1 to nz (= nz+1, as passed)
-  std::vector<int> tmpVec( 4,int(0) );
-  for (int iZ=-1; iZ<nz; ++iZ) {
-    for (int iY=-1; iY<ny; ++iY) {
-      for (int iX=-1; iX<nx; ++iX) {
-        for (int iDim=0; iDim<dim; ++iDim) {
-          tmpVec[0]=iC; tmpVec[1]=iX; tmpVec[2]=iY; tmpVec[3]=iZ;
-          //  tmpVec = {iC,iX,iY,iZ};  // std=c++11 
-          fout <<  f(tmpVec)[iDim] << " ";
+  int i[4] = {int()};
+  i[0] = iC;
+  T evaluated[f.getTargetDim()];
+  for (int iDim = 0; iDim < f.getTargetDim(); ++iDim) {
+    evaluated[iDim] = T();
+  }
+  for (i[3] = -1; i[3] < nz+1; ++i[3]) {
+    for (i[2] = -1; i[2] < ny+1; ++i[2]) {
+      for (i[1] = -1; i[1] < nx+1; ++i[1]) {
+        f(evaluated,i);
+        for (int iDim = 0; iDim < f.getTargetDim(); ++iDim) {
+          fout <<  evaluated[iDim] << " ";
         }
       }
     }
   }
-  fout << "</DataArray>\n";
+  fout << "\n</DataArray>\n";
 
   fout.close();
 }
 
-template<typename T, template <typename U> class DESCRIPTOR>
-void SuperVTKwriter3D<T,DESCRIPTOR>::dataArrayBinary(const std::string& fullName,
-  SuperLatticeF3D<T,DESCRIPTOR>& f, int iC, int nx, int ny, int nz)
+template<typename T>
+void SuperVTKwriter3D<T>::dataArrayBinary(const std::string& fullName,
+    SuperF3D<T>& f, int iC, int nx, int ny, int nz)
 {
   const char* fileName = fullName.c_str();
 
   std::ofstream fout( fileName, std::ios::out | std::ios::app );
-  if (!fout) clout << "Error: could not open " << fileName << std::endl;
-
-  int dim = f.getTargetDim();
-  fout << "<DataArray ";
-  if (dim == 1) {
-    fout << "type=\"Float32\" Name=\"" << f.getName() << "\" " 
-         << "format=\"binary\" encoding=\"base64\">";
+  if (!fout) {
+    clout << "Error: could not open " << fileName << std::endl;
   }
-  if (dim != 1) {
+
+  fout << "<DataArray ";
+  if (f.getTargetDim() == 1) {
+    fout << "type=\"Float32\" Name=\"" << f.getName() << "\" "
+         << "format=\"binary\" encoding=\"base64\">\n";
+  } else {
     fout << "type=\"Float32\" Name=\"" << f.getName() << "\" "
          << "format=\"binary\" encoding=\"base64\" "
-         << "NumberOfComponents=\"" << dim 
-         <<"\">\n";
+         << "NumberOfComponents=\"" << f.getTargetDim() <<"\">\n";
   }
   fout.close();
 
   std::ofstream* ofstr;   // only used for binary output // passed to Base64Encoder
   ofstr = new std::ofstream( fileName, std::ios::out | std::ios::app | std::ios::binary );
-  if (!ofstr) clout << "Error: could not open " << fileName << std::endl;
+  if (!ofstr) {
+    clout << "Error: could not open " << fileName << std::endl;
+  }
 
-  size_t fullSize = dim * (nx+1) * (ny+1) * (nz+1);    //  how many numbers to write
+  size_t fullSize = f.getTargetDim() * (nx+2) * (ny+2) * (nz+2);    //  how many numbers to write
   size_t binarySize = size_t( fullSize*sizeof(float) );
   // writes first number, which have to be the size(byte) of the following data
   Base64Encoder<unsigned int> sizeEncoder(*ofstr, 1);
@@ -434,32 +403,44 @@ void SuperVTKwriter3D<T,DESCRIPTOR>::dataArrayBinary(const std::string& fullName
   sizeEncoder.encode(&uintBinarySize, 1);
   //  write numbers from functor
   Base64Encoder<float>* dataEncoder = new Base64Encoder<float>( *ofstr, fullSize );
-  std::vector<int> tmpVec( 4,int(0) );
-  for (int iZ=-1; iZ<nz; ++iZ) {
-    for (int iY=-1; iY<ny; ++iY) {
-      for (int iX=-1; iX<nx; ++iX) {
-        for (int iDim=0; iDim<dim; ++iDim) {
-          tmpVec[0] = iC; tmpVec[1] = iX; tmpVec[2] = iY; tmpVec[3] = iZ;
-          const float tmp = float( f(tmpVec)[iDim] );
-          dataEncoder->encode( &tmp, 1 );
+
+  int i[4] = {int()};
+  i[0] = iC;
+  T evaluated[f.getTargetDim()];
+  for (int iDim = 0; iDim < f.getTargetDim(); ++iDim) {
+    evaluated[iDim] = T();
+  }
+  for (i[3] = -1; i[3] < nz+1; ++i[3]) {
+    for (i[2] = -1; i[2] < ny+1; ++i[2]) {
+      for (i[1] = -1; i[1] < nx+1; ++i[1]) {
+        f(evaluated,i);
+        for (int iDim = 0; iDim < f.getTargetDim(); ++iDim) {
+          const float tmp2 = float( evaluated[iDim] );
+          dataEncoder->encode( &tmp2, 1 );
         }
       }
     }
   }
   ofstr->close();
-  
-  std::ofstream ffout( fileName,  std::ios::out | std::ios::app );
-  if (!ffout) clout << "Error: could not open " << fileName << std::endl;
-  ffout << "</DataArray>\n";
-  ffout.close();
+  delete ofstr;
 
+  std::ofstream ffout( fileName,  std::ios::out | std::ios::app );
+  if (!ffout) {
+    clout << "Error: could not open " << fileName << std::endl;
+  }
+  ffout << "\n</DataArray>\n";
+  ffout.close();
+  delete dataEncoder;
 }
 
-template<typename T, template <typename U> class DESCRIPTOR>
-void SuperVTKwriter3D<T,DESCRIPTOR>::closePiece(const std::string& fullNamePiece)
+template<typename T>
+void SuperVTKwriter3D<T>::closePiece(const std::string& fullNamePiece)
 {
   std::ofstream fout(fullNamePiece.c_str(), std::ios::app );
-  if (!fout) clout << "Error: could not open " << fullNamePiece << std::endl;
+  if (!fout) {
+    clout << "Error: could not open " << fullNamePiece << std::endl;
+  }
+  fout << "</PointData>\n";
   fout << "</Piece>\n";
   fout.close();
 }

@@ -42,7 +42,7 @@ public:
   StochasticSGSdynamics(T omega_, Momenta<T,Lattice>& momenta_, T turbulenceInt_, T charU_, T smagoConst_, T dx_, T dt_ );
 
 
-// Collide
+  // Collide
   virtual void collide(Cell<T,Lattice>& cell,
                        LatticeStatistics<T>& statistics_);
 
@@ -59,11 +59,11 @@ public:
   /// Get local smagorinsky relaxation parameter of the dynamics
   virtual T getSmagorinskyOmega(Cell<T,Lattice>& cell_, T X_lang_n_);
 
-/// Get local Random number of BoxMüllertransform -> returns randBM
+  /// Get local Random number of BoxMüllertransform -> returns randBM
   virtual T getRandBMTrans(Cell<T,Lattice>& cell_,  T turbulenceInt_, T charU_);
 
   /// Get local Random number of BoxMüllertransform -> returns randBM
-// virtual void setRandomWalk(Cell<T,Lattice>& cell_, T CharU, T drift_, T result_ );
+  // virtual void setRandomWalk(Cell<T,Lattice>& cell_, T CharU, T drift_, T result_ );
   virtual T getRandomWalk(Cell<T,Lattice>& cell_, T drift_, T result_);
 
 
@@ -76,7 +76,7 @@ private:
 
   /// Computes the local time scale from SGS dissipation rate for BMtransform
   T computeTimeScale(T preFactor_, T rho_, T pi_[util::TensorVal<Lattice<T> >::n], T smagoConst_, T X_lang_n_);
-// virtual void setTimeScale(T preFactor_, T rho_, T pi_[util::TensorVal<Lattice<T> >::n], T smagoConst_ ,T X_lang_n_);
+  // virtual void setTimeScale(T preFactor_, T rho_, T pi_[util::TensorVal<Lattice<T> >::n], T smagoConst_ ,T X_lang_n_);
 
 private:
   /// effective collision time based upon Smagorisnky approach

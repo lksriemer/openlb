@@ -43,7 +43,8 @@ sOnLatticeBoundaryCondition3D<T, Lattice>::sOnLatticeBoundaryCondition3D(
   SuperLattice3D<T, Lattice>& sLattice) :
   clout(std::cout,"sOnLatticeBoundaryCondition3D"),
   _sLattice(sLattice),
-  _output(false) {
+  _output(false)
+{
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -51,7 +52,8 @@ sOnLatticeBoundaryCondition3D<T, Lattice>::sOnLatticeBoundaryCondition3D(
   sOnLatticeBoundaryCondition3D<T, Lattice> const& rhs) :
   clout(std::cout,"sOnLatticeBoundaryCondition3D"),
   _sLattice(rhs._sLattice),
-  _output(false) {
+  _output(false)
+{
 
   _blockBCs = rhs._blockBCs;
   _overlap = rhs._overlap;
@@ -59,14 +61,16 @@ sOnLatticeBoundaryCondition3D<T, Lattice>::sOnLatticeBoundaryCondition3D(
 
 template<typename T, template<typename U> class Lattice>
 sOnLatticeBoundaryCondition3D<T, Lattice> sOnLatticeBoundaryCondition3D<T,
-Lattice>::operator=(sOnLatticeBoundaryCondition3D<T, Lattice> rhs) {
+                              Lattice>::operator=(sOnLatticeBoundaryCondition3D<T, Lattice> rhs)
+{
 
   sOnLatticeBoundaryCondition3D<T, Lattice> tmp(rhs);
   return tmp;
 }
 
 template<typename T, template<typename U> class Lattice>
-sOnLatticeBoundaryCondition3D<T, Lattice>::~sOnLatticeBoundaryCondition3D() {
+sOnLatticeBoundaryCondition3D<T, Lattice>::~sOnLatticeBoundaryCondition3D()
+{
 
   for (unsigned iC = 0; iC < _blockBCs.size(); iC++) {
     delete _blockBCs[iC];
@@ -76,7 +80,8 @@ sOnLatticeBoundaryCondition3D<T, Lattice>::~sOnLatticeBoundaryCondition3D() {
 
 template<typename T, template<typename U> class Lattice>
 void sOnLatticeBoundaryCondition3D<T, Lattice>::addVelocityBoundary(
-  SuperGeometry3D<T>& superGeometry, int material, T omega) {
+  SuperGeometry3D<T>& superGeometry, int material, T omega)
+{
 
   int nC = _sLattice.getLoadBalancer().size();
   for (int iCloc = 0; iCloc < nC; iCloc++) {
@@ -87,7 +92,8 @@ void sOnLatticeBoundaryCondition3D<T, Lattice>::addVelocityBoundary(
 
 template<typename T, template<typename U> class Lattice>
 void sOnLatticeBoundaryCondition3D<T, Lattice>::addTemperatureBoundary(
-  SuperGeometry3D<T>& superGeometry, int material, T omega) {
+  SuperGeometry3D<T>& superGeometry, int material, T omega)
+{
 
   int nC = _sLattice.getLoadBalancer().size();
   for (int iCloc = 0; iCloc < nC; iCloc++) {
@@ -96,10 +102,43 @@ void sOnLatticeBoundaryCondition3D<T, Lattice>::addTemperatureBoundary(
   addPoints2CommBC(superGeometry, material);
 }
 
+template<typename T, template<typename U> class Lattice>
+void sOnLatticeBoundaryCondition3D<T, Lattice>::addConvectionBoundary(
+  SuperGeometry3D<T>& superGeometry, int material)
+{
+  int nC = _sLattice.getLoadBalancer().size();
+  for (int iCloc = 0; iCloc < nC; iCloc++) {
+    _ADblockBCs[iCloc]->addConvectionBoundary(superGeometry.getExtendedBlockGeometry(iCloc), material);
+  }
+  addPoints2CommBC(superGeometry, material);
+}
+
+template<typename T, template<typename U> class Lattice>
+void sOnLatticeBoundaryCondition3D<T, Lattice>::addZeroDistributionBoundary(
+  SuperGeometry3D<T>& superGeometry, int material)
+{
+  int nC = _sLattice.getLoadBalancer().size();
+  for (int iCloc = 0; iCloc < nC; iCloc++) {
+    _ADblockBCs[iCloc]->addZeroDistributionBoundary(superGeometry.getExtendedBlockGeometry(iCloc), material);
+  }
+  addPoints2CommBC(superGeometry, material);
+}
+
+template<typename T, template<typename U> class Lattice>
+void sOnLatticeBoundaryCondition3D<T, Lattice>::addExtFieldBoundary(
+  SuperGeometry3D<T>& superGeometry, int material, int offset)
+{
+  int nC = _sLattice.getLoadBalancer().size();
+  for (int iCloc = 0; iCloc < nC; iCloc++) {
+    _ADblockBCs[iCloc]->addExtFieldBoundary(superGeometry.getExtendedBlockGeometry(iCloc), material, offset);
+  }
+  addPoints2CommBC(superGeometry, material);
+}
 
 template<typename T, template<typename U> class Lattice>
 void sOnLatticeBoundaryCondition3D<T, Lattice>::addPressureBoundary(
-  SuperGeometry3D<T>& superGeometry, int material, T omega) {
+  SuperGeometry3D<T>& superGeometry, int material, T omega)
+{
 
   int nC = _sLattice.getLoadBalancer().size();
   for (int iCloc = 0; iCloc < nC; iCloc++) {
@@ -110,7 +149,8 @@ void sOnLatticeBoundaryCondition3D<T, Lattice>::addPressureBoundary(
 
 template<typename T, template<typename U> class Lattice>
 void sOnLatticeBoundaryCondition3D<T, Lattice>::addConvectionBoundary(
-  SuperGeometry3D<T>& superGeometry, int material, T omega, T* uAv) {
+  SuperGeometry3D<T>& superGeometry, int material, T omega, T* uAv)
+{
 
   int nC = _sLattice.getLoadBalancer().size();
   for (int iCloc = 0; iCloc < nC; iCloc++) {
@@ -121,7 +161,8 @@ void sOnLatticeBoundaryCondition3D<T, Lattice>::addConvectionBoundary(
 
 
 template<typename T, template<typename U> class Lattice>
-void sOnLatticeBoundaryCondition3D<T, Lattice>::addPoints2CommBC(SuperGeometry3D<T>& superGeometry, int material) {
+void sOnLatticeBoundaryCondition3D<T, Lattice>::addPoints2CommBC(SuperGeometry3D<T>& superGeometry, int material)
+{
 
   if (_overlap != 0) {
     int nC = _sLattice.getLoadBalancer().size();
@@ -137,23 +178,29 @@ void sOnLatticeBoundaryCondition3D<T, Lattice>::addPoints2CommBC(SuperGeometry3D
                 iY < 0 || iY > nY - 1 ||
                 iZ < 0 || iZ > nZ - 1 ) {
               int found = false;
-              if(superGeometry.getBlockGeometry(iCloc).getMaterial(iX,iY,iZ)!=0) {
+              if (superGeometry.getBlockGeometry(iCloc).getMaterial(iX,iY,iZ)!=0) {
                 for (int iXo=-_overlap; iXo<=_overlap; iXo++) {
                   for (int iYo=-_overlap; iYo<=_overlap; iYo++) {
                     for (int iZo=-_overlap; iZo<=_overlap; iZo++) {
                       int nextX = iXo + iX;
                       int nextY = iYo + iY;
                       int nextZ = iZo + iZ;
-                      if(superGeometry.getBlockGeometry(iCloc).getMaterial(nextX,nextY,nextZ)==material && nextX>=-_overlap && nextY>=-_overlap && nextZ>=-_overlap && nextX<nX+_overlap && nextY<nY+_overlap && nextZ<nZ+_overlap) {
+                      if (superGeometry.getBlockGeometry(iCloc).getMaterial(nextX,nextY,nextZ)==material && nextX>=-_overlap && nextY>=-_overlap && nextZ>=-_overlap && nextX<nX+_overlap && nextY<nY+_overlap && nextZ<nZ+_overlap) {
                         _sLattice.get_commBC().add_cell(iCloc, iX, iY, iZ);
                         //std::cout << "found:" <<iX<<"/"<<iY<<"/"<<iZ<<"::"<<nX<<"/"<<nY<<"/"<<nZ<<std::endl;
                         found = true;
                       }
-                    if (found) break;
+                      if (found) {
+                        break;
+                      }
                     }
-                  if (found) break;
+                    if (found) {
+                      break;
+                    }
                   }
-                if (found) break;
+                  if (found) {
+                    break;
+                  }
                 }
               }
             }
@@ -168,7 +215,8 @@ void sOnLatticeBoundaryCondition3D<T, Lattice>::addPoints2CommBC(SuperGeometry3D
 
 template<typename T, template<typename U> class Lattice, typename MixinDynamics>
 void createLocalBoundaryCondition3D(
-  sOnLatticeBoundaryCondition3D<T, Lattice>& sBC) {
+  sOnLatticeBoundaryCondition3D<T, Lattice>& sBC)
+{
 
   int nC = sBC.getSuperLattice().getLoadBalancer().size();
   sBC.setOverlap(0);
@@ -182,7 +230,8 @@ void createLocalBoundaryCondition3D(
 
 template<typename T, template<typename U> class Lattice, typename MixinDynamics>
 void createInterpBoundaryCondition3D(
-  sOnLatticeBoundaryCondition3D<T, Lattice>& sBC) {
+  sOnLatticeBoundaryCondition3D<T, Lattice>& sBC)
+{
 
   int nC = sBC.getSuperLattice().getLoadBalancer().size();
   sBC.setOverlap(1);
@@ -196,7 +245,8 @@ void createInterpBoundaryCondition3D(
 
 template<typename T, template<typename U> class Lattice, typename MixinDynamics>
 void createExtFdBoundaryCondition3D(
-  sOnLatticeBoundaryCondition3D<T, Lattice>& sBC) {
+  sOnLatticeBoundaryCondition3D<T, Lattice>& sBC)
+{
 
   int nC = sBC.getSuperLattice().getLoadBalancer().size();
   sBC.setOverlap(1);
@@ -210,7 +260,8 @@ void createExtFdBoundaryCondition3D(
 
 //////////////// Output functions //////////////////////////////////
 template<typename T, template<typename U> class Lattice>
-void sOnLatticeBoundaryCondition3D<T, Lattice>::outputOn() {
+void sOnLatticeBoundaryCondition3D<T, Lattice>::outputOn()
+{
   _output = true;
   int nC = _sLattice.getLoadBalancer().size();
   for (int iCloc = 0; iCloc < nC; iCloc++) {
@@ -219,7 +270,8 @@ void sOnLatticeBoundaryCondition3D<T, Lattice>::outputOn() {
 }
 
 template<typename T, template<typename U> class Lattice>
-void sOnLatticeBoundaryCondition3D<T, Lattice>::outputOff() {
+void sOnLatticeBoundaryCondition3D<T, Lattice>::outputOff()
+{
   _output = false;
   int nC = _sLattice.getLoadBalancer().size();
   for (int iCloc = 0; iCloc < nC; iCloc++) {

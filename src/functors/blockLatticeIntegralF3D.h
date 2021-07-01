@@ -24,11 +24,9 @@
 #ifndef BLOCK_LATTICE_INTEGRAL_F_3D_H
 #define BLOCK_LATTICE_INTEGRAL_F_3D_H
 
-#include<vector>
 
 #include "functors/genericF.h"
-#include "functors/blockLatticeBaseF3D.h"
-#include "core/blockLattice3D.h"
+#include "functors/blockBaseF3D.h"
 #include "geometry/blockGeometry3D.h"
 
 /** Note: Throughout the whole source code directory genericFunctions, the
@@ -38,6 +36,8 @@
 
 namespace olb {
 
+
+template<typename T, template<typename U> class Lattice> class BlockLattice3D;
 
 /// BlockMax3D returns the max in each component of all points of a certain material
 template <typename T, template <typename U> class DESCRIPTOR>
@@ -49,7 +49,7 @@ protected:
 public:
   BlockMax3D(BlockLatticeF3D<T,DESCRIPTOR>& f, BlockGeometry3D<T>& blockGeometry,
              int material);
-  std::vector<T> operator() (std::vector<int> input);
+  bool operator() (T output[], const int input[]);
 };
 
 
@@ -63,7 +63,7 @@ protected:
 public:
   BlockSum3D(BlockLatticeF3D<T,DESCRIPTOR>& f, BlockGeometry3D<T>& blockGeometry,
              int material);
-  std::vector<T> operator() (std::vector<int> input);
+  bool operator() (T output[], const int input[]);
 };
 
 
@@ -77,7 +77,7 @@ protected:
 public:
   BlockIntegral3D(BlockLatticeF3D<T,DESCRIPTOR>& f,
                   BlockGeometry3D<T>& blockGeometry, int material);
-  std::vector<T> operator() (std::vector<int> input);
+  bool operator() (T output[], const int input[]);
 };
 
 
@@ -90,7 +90,7 @@ protected:
   int _material;
 public:
   BlockL1Norm3D(BlockLatticeF3D<T,DESCRIPTOR>& f, BlockGeometry3D<T>& blockGeometry, int material);
-  std::vector<T> operator() (std::vector<int> input);
+  bool operator() (T output[], const int input[]);
 };
 
 
@@ -105,7 +105,7 @@ public:
   BlockL223D(BlockLatticeF3D<T,DESCRIPTOR>& f,
              BlockGeometry3D<T>& blockGeometry,
              int material);
-  std::vector<T> operator() (std::vector<int> input);
+  bool operator() (T output[], const int input[]);
 };
 
 
@@ -119,7 +119,7 @@ private:
 public:
   BlockGeometryFaces3D(BlockGeometryStructure3D<T>& blockGeometry, int material,
                        const LBconverter<T>& converter);
-  std::vector<T> operator() (std::vector<int> input);
+  bool operator() (T output[], const int input[]);
 };
 
 
@@ -136,7 +136,7 @@ public:
   BlockLatticePhysDrag3D(BlockLattice3D<T,DESCRIPTOR>& blockLattice,
                          BlockGeometry3D<T>& blockGeometry, int material,
                          const LBconverter<T>& converter);
-  std::vector<T> operator() (std::vector<int> input);
+  bool operator() (T output[], const int input[]);
 };
 
 
@@ -154,7 +154,7 @@ public:
   BlockLatticePhysCorrDrag3D(BlockLattice3D<T,DESCRIPTOR>& blockLattice,
                              BlockGeometry3D<T>& blockGeometry, int material,
                              const LBconverter<T>& converter);
-  std::vector<T> operator() (std::vector<int> input);
+  bool operator() (T output[], const int input[]);
 };
 
 

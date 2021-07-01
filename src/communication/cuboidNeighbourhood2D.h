@@ -56,7 +56,10 @@ template<typename T> class SuperStructure2D;
 template<typename T>
 struct Cell2D {
 
-  Cell2D() {latticeR.resize(3); physR.resize(2); };
+  Cell2D() {
+    latticeR.resize(3);
+    physR.resize(2);
+  };
 
   // local position latticeR
   std::vector<int> latticeR;
@@ -69,8 +72,7 @@ struct Cell2D {
     return latticeR[0]==rhs.latticeR[0] && latticeR[1]==rhs.latticeR[1] && latticeR[2]==rhs.latticeR[2];
   };
 
-  Cell2D(Cell2D const& rhs)
-  {
+  Cell2D(Cell2D const& rhs) {
     latticeR = rhs.latticeR;
     physR  = rhs.physR;
   }
@@ -160,7 +162,7 @@ public:
   /// Adds a cell to the vector _outCells
   void add_outCell(Cell2D<T> cell);
   /// Adds a cell to the vector _inCells
-  ///  if the cell is not already there and 
+  ///  if the cell is not already there and
   ///  if there is another cuboid which can deliver the information
   void add_inCell(int iX, int iY);
   /// Adds all cells with the distance overlap*_delta to

@@ -26,31 +26,43 @@
 #define INTERPOLATION_F_3D_H
 
 
-#include<vector>
-
 #include "functors/analyticalF.h"
-#include "functors/blockLatticeBaseF3D.h"
-#include "core/superLattice3D.h"
-#include "geometry/superGeometry3D.h"
+#include "functors/blockBaseF3D.h"
+#include "functors/superBaseF3D.h"
 #include "geometry/cuboidGeometry3D.h"
-#include "core/blockLattice3D.h"
+#include "geometry/blockGeometry3D.h"
+
 
 
 namespace olb {
 
+template< typename T, template <typename U> class DESCRIPTOR> class BlockLattice3D;
+template< typename T, template <typename U> class DESCRIPTOR> class SuperLattice3D;
 
-/// a class used to convert lattice functions to analytical functions
-template <typename T, template <typename U> class DESCRIPTOR>
-class AnalyticalFfromSuperLatticeF3D : public AnalyticalF3D<T,T> {
+/// a class used to convert a block functior to analytical functor
+template <typename T>
+class AnalyticalFfromBlockF3D : public AnalyticalF3D<T,T> {
 protected:
-  SuperLatticeF3D<T,DESCRIPTOR>&  _f;
-  CuboidGeometry3D<T>&            _cuboidGeometry;
-  bool                            _communicateToAll;
-  int                             _overlap;
+  BlockF3D<T>& _f;
+  Cuboid3D<T>& _cuboid;
 public:
-  AnalyticalFfromSuperLatticeF3D(SuperLatticeF3D<T,DESCRIPTOR>& f,
-                                 bool communicateToAll=false, int overlap=2);
-  std::vector<T> operator() (std::vector<T> physC);
+  AnalyticalFfromBlockF3D(BlockF3D<T>& f, Cuboid3D<T>& cuboid);
+  bool operator() (T output[], const T physC[]);
+};
+
+/// a class used to convert super lattice functions to analytical functions
+template <typename T>
+class AnalyticalFfromSuperF3D : public AnalyticalF3D<T,T> {
+protected:
+  SuperF3D<T>&                              _f;
+  CuboidGeometry3D<T>&                      _cuboidGeometry;
+  bool                                      _communicateToAll;
+  int                                       _overlap;
+  std::vector<AnalyticalFfromBlockF3D<T>* > _analyticalFfromBlockF;
+public:
+  AnalyticalFfromSuperF3D(SuperF3D<T>& f, bool communicateToAll=false, int overlap=-1);
+  virtual ~AnalyticalFfromSuperF3D();
+  bool operator() (T output[], const T physC[]);
 };
 
 
@@ -64,9 +76,9 @@ class SuperLatticeFfromAnalyticalF3D : public SuperLatticeF3D<T,DESCRIPTOR> {
 protected:
   AnalyticalF3D<T,T>& _f;
 public:
-  SuperLatticeFfromAnalyticalF3D(AnalyticalF3D<T,T>& f, 
+  SuperLatticeFfromAnalyticalF3D(AnalyticalF3D<T,T>& f,
                                  SuperLattice3D<T,DESCRIPTOR>& sLattice);
-  std::vector<T> operator() (std::vector<int> input);
+  bool operator() (T output[], const int input[]);
 };
 
 
@@ -74,16 +86,16 @@ public:
 ////////////////////////////////////////////////
 template <typename T, template <typename U> class DESCRIPTOR>
 class BlockLatticeFfromAnalyticalF3D : public BlockLatticeF3D<T,DESCRIPTOR> {
-  protected:
-    AnalyticalF3D<T,T>&  _f;
-    BlockGeometry3D<T>&  _superGeometry;
-    CuboidGeometry3D<T>& _cuboidGeometry;
-  public:
-    BlockLatticeFfromAnalyticalF3D(AnalyticalF3D<T,T>& f,
-                                   BlockLattice3D<T,DESCRIPTOR>& sLattice,
-                                   BlockGeometry3D<T>& superGeometry,
-                                   CuboidGeometry3D<T>& cuboidGeometry);
-    std::vector<T> operator() (std::vector<int> input);
+protected:
+  AnalyticalF3D<T,T>&  _f;
+  BlockGeometry3D<T>&  _superGeometry;
+  CuboidGeometry3D<T>& _cuboidGeometry;
+public:
+  BlockLatticeFfromAnalyticalF3D(AnalyticalF3D<T,T>& f,
+                                 BlockLattice3D<T,DESCRIPTOR>& sLattice,
+                                 BlockGeometry3D<T>& superGeometry,
+                                 CuboidGeometry3D<T>& cuboidGeometry);
+  bool operator() (T output[], const int input[]);
 };
 
 

@@ -42,21 +42,44 @@ namespace olb {
 ////////////////////// Class Cuboid2D /////////////////////////
 
 template<typename T>
-Cuboid2D<T>::Cuboid2D(T globPosX, T globPosY, T delta ,int nX, int nY, int refinementLevel) 
-  : clout(std::cout,"Cuboid2D") {
+Cuboid2D<T>::Cuboid2D(T globPosX, T globPosY, T delta ,int nX, int nY, int refinementLevel)
+  : clout(std::cout,"Cuboid2D")
+{
   _weight = -1;
   init(globPosX, globPosY, delta, nX, nY, refinementLevel);
 }
 
 template<typename T>
 Cuboid2D<T>::Cuboid2D(std::vector<T> origin, T delta, std::vector<int> extend, int refinementLevel)
-  : clout(std::cout,"Cuboid2D") {
+  : clout(std::cout,"Cuboid2D")
+{
   _weight = -1;
   this->init(origin[0], origin[1], delta, extend[0], extend[1], refinementLevel);
 }
 
+// copy constructor
 template<typename T>
-void Cuboid2D<T>::init(T globPosX, T globPosY, T delta, int nX, int nY, int refinementLevel) {
+Cuboid2D<T>::Cuboid2D(Cuboid2D<T> const& rhs, int overlap) : clout(std::cout,"Cuboid2D")
+{
+  this->init(rhs._globPosX - rhs._delta*overlap, rhs._globPosY - rhs._delta*overlap,
+             rhs._delta, rhs._nX + 2*overlap, rhs._nY + 2*overlap);
+  _weight = rhs._weight;
+  _refinementLevel = rhs._refinementLevel;
+}
+
+// copy assignment
+template<typename T>
+Cuboid2D<T>& Cuboid2D<T>::operator=(Cuboid2D<T> const& rhs)
+{
+  this->init(rhs._globPosX, rhs._globPosY, rhs._delta, rhs._nX, rhs._nY);
+  _weight = rhs._weight;
+  _refinementLevel = rhs._refinementLevel;
+  return *this;
+}
+
+template<typename T>
+void Cuboid2D<T>::init(T globPosX, T globPosY, T delta, int nX, int nY, int refinementLevel)
+{
   _globPosX = globPosX;
   _globPosY = globPosY;
   _delta    = delta;
@@ -67,34 +90,80 @@ void Cuboid2D<T>::init(T globPosX, T globPosY, T delta, int nX, int nY, int refi
 
 
 template<typename T>
-T Cuboid2D<T>::get_globPosX() const { return _globPosX; }
+T Cuboid2D<T>::get_globPosX() const
+{
+  return _globPosX;
+}
 
 template<typename T>
-T Cuboid2D<T>::get_globPosY() const { return _globPosY; }
+T Cuboid2D<T>::get_globPosY() const
+{
+  return _globPosY;
+}
 
 template<typename T>
-T Cuboid2D<T>::getDeltaR() const { return _delta; }
+std::vector<T> const Cuboid2D<T>::getOrigin() const
+{
+  std::vector<T> origin(2,T());
+  origin[0] = _globPosX;
+  origin[1] = _globPosY;
+  return origin;
+}
 
 template<typename T>
-int Cuboid2D<T>::getNx() const { return _nX; }
+T Cuboid2D<T>::getDeltaR() const
+{
+  return _delta;
+}
 
 template<typename T>
-int Cuboid2D<T>::getNy() const { return _nY; }
+int Cuboid2D<T>::getNx() const
+{
+  return _nX;
+}
 
 template<typename T>
-T Cuboid2D<T>::getPhysVolume() const { return _nY*_nX*_delta*_delta; }
+int Cuboid2D<T>::getNy() const
+{
+  return _nY;
+}
 
 template<typename T>
-int Cuboid2D<T>::getLatticeVolume() const { return _nY*_nX; }
+std::vector<int> const Cuboid2D<T>::getExtend() const
+{
+  std::vector<int> extend(2,T());
+  extend[0] = _nX;
+  extend[1] = _nY;
+  return extend;
+}
 
 template<typename T>
-T Cuboid2D<T>::getPhysPerimeter() const { return 2*_nY*_delta + 2*_nX*_delta; }
+T Cuboid2D<T>::getPhysVolume() const
+{
+  return _nY*_nX*_delta*_delta;
+}
 
 template<typename T>
-int Cuboid2D<T>::getLatticePerimeter() const { return 2*_nY + 2*_nX -4; }
+int Cuboid2D<T>::getLatticeVolume() const
+{
+  return _nY*_nX;
+}
 
 template<typename T>
-void Cuboid2D<T>::print() const {
+T Cuboid2D<T>::getPhysPerimeter() const
+{
+  return 2*_nY*_delta + 2*_nX*_delta;
+}
+
+template<typename T>
+int Cuboid2D<T>::getLatticePerimeter() const
+{
+  return 2*_nY + 2*_nX -4;
+}
+
+template<typename T>
+void Cuboid2D<T>::print() const
+{
   clout << "--------Cuboid Details----------" << std::endl;
   clout << " Left Corner (x/y): " << "\t" << "(" << this->get_globPosX() << "/" << this->get_globPosY() << ")" << std::endl;
   clout << " Delta: " << "\t" << "\t" << this->getDeltaR() << std::endl;
@@ -106,73 +175,102 @@ void Cuboid2D<T>::print() const {
   clout << "--------------------------------" << std::endl;
 }
 
-
 template<typename T>
-bool Cuboid2D<T>::checkPoint(T globX, T globY, int overlap) const {
-
-  if (_globPosX - T(0.5 + overlap)*_delta <= globX && _globPosX + T(_nX-0.5+overlap)*_delta  > globX &&
-      _globPosY - T(0.5 + overlap)*_delta <= globY && _globPosY + T(_nY-0.5+overlap)*_delta  > globY ) {
-    return true;
-  }
-  else return false;
+void Cuboid2D<T>::getPhysR(T physR[2], const int latticeR[2]) const
+{
+  physR[0] = _globPosX + latticeR[0]*_delta;
+  physR[1] = _globPosY + latticeR[1]*_delta;
 }
 
 template<typename T>
-bool Cuboid2D<T>::checkPoint(T globX, T globY, int &locX, int &locY, int overlap) const {
+void Cuboid2D<T>::getPhysR(T physR[2], const int& iX, const int& iY) const
+{
+  physR[0] = _globPosX + iX*_delta;
+  physR[1] = _globPosY + iY*_delta;
+}
+
+
+template<typename T>
+bool Cuboid2D<T>::checkPoint(T globX, T globY, int overlap) const
+{
+
+  if (_globPosX - T(0.5 + overlap)*_delta <= globX &&
+      _globPosX + T(_nX-0.5+overlap)*_delta  > globX &&
+      _globPosY - T(0.5 + overlap)*_delta <= globY &&
+      _globPosY + T(_nY-0.5+overlap)*_delta  > globY ) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
+template<typename T>
+bool Cuboid2D<T>::checkPoint(T globX, T globY, int &locX, int &locY, int overlap) const
+{
   if (overlap!=0) {
     Cuboid2D tmp(_globPosX - overlap*_delta, _globPosY - overlap*_delta, _delta , _nX + overlap*2, _nY + overlap*2);
     return tmp.checkPoint(globX, globY, locX, locY);
-  }
-  else if (!checkPoint(globX, globY)) return false;
-  else {
-    locX = (int)((globX - (T)_globPosX)/_delta);
-    locY = (int)((globY - (T)_globPosY)/_delta);
+  } else if (!checkPoint(globX, globY)) {
+    return false;
+  } else {
+    locX = (int)floor((globX - (T)_globPosX)/_delta + .5);
+    locY = (int)floor((globY - (T)_globPosY)/_delta + .5);
     return true;
   }
 }
 
 template<typename T>
-bool Cuboid2D<T>::checkInters(T globX0, T globX1, T globY0, T globY1, int overlap) const {
+bool Cuboid2D<T>::checkInters(T globX0, T globX1, T globY0, T globY1, int overlap) const
+{
 
   T locX0d = std::max(_globPosX-overlap*_delta,globX0);
   T locY0d = std::max(_globPosY-overlap*_delta,globY0);
   T locX1d = std::min(_globPosX+(_nX+overlap-1)*_delta,globX1);
   T locY1d = std::min(_globPosY+(_nY+overlap-1)*_delta,globY1);
 
-  if (!(locX1d>=locX0d && locY1d>=locY0d)) return false;
+  if (!(locX1d>=locX0d && locY1d>=locY0d)) {
+    return false;
+  }
   return true;
 }
 
 template<typename T>
 bool Cuboid2D<T>::checkInters(T globX0, T globX1, T globY0, T globY1,
-                              int &locX0, int &locX1, int &locY0, int &locY1, int overlap) const {
+                              int &locX0, int &locX1, int &locY0, int &locY1, int overlap) const
+{
   if (overlap!=0) {
-    Cuboid2D tmp(_globPosX - overlap*_delta, _globPosY - overlap*_delta, _delta , _nX + overlap*2, _nY + overlap*2);
-    return tmp.checkInters(globX0, globX1, globY0, globY1,
-                           locX0, locX1, locY0, locY1);
-  }
-  else if (!checkInters(globX0, globX1, globY0, globY1)) {
+    Cuboid2D tmp(_globPosX - overlap*_delta, _globPosY - overlap*_delta, _delta, _nX + overlap*2, _nY + overlap*2);
+    return tmp.checkInters(globX0, globX1, globY0, globY1, locX0, locX1, locY0, locY1);
+  } else if (!checkInters(globX0, globX1, globY0, globY1)) {
     locX0 = 1;
     locX1 = 0;
     locY0 = 1;
     locY1 = 0;
     return false;
-  }
-  else {
+  } else {
     locX0 = 0;
-    for (int i=0; _globPosX + i*_delta < globX0; i++) {locX0 = i+1;}
+    for (int i=0; _globPosX + i*_delta < globX0; i++) {
+      locX0 = i+1;
+    }
     locX1 = _nX-1;
-    for (int i=_nX-1; _globPosX + i*_delta > globX1; i--) {locX1 = i-1;}
+    for (int i=_nX-1; _globPosX + i*_delta > globX1; i--) {
+      locX1 = i-1;
+    }
     locY0 = 0;
-    for (int i=0; _globPosY + i*_delta < globY0; i++) {locY0 = i+1;}
+    for (int i=0; _globPosY + i*_delta < globY0; i++) {
+      locY0 = i+1;
+    }
     locY1 = _nY-1;
-    for (int i=_nY-1; _globPosY + i*_delta > globY1; i--) {locY1 = i-1;}
+    for (int i=_nY-1; _globPosY + i*_delta > globY1; i--) {
+      locY1 = i-1;
+    }
     return true;
   }
 }
 
 template<typename T>
-void Cuboid2D<T>::divide(int nX, int nY, std::vector<Cuboid2D<T> > &childrenC) const {
+void Cuboid2D<T>::divide(int nX, int nY, std::vector<Cuboid2D<T> > &childrenC) const
+{
   T globPosX_child, globPosY_child;
   int xN_child = 0;
   int yN_child = 0;
@@ -194,7 +292,8 @@ void Cuboid2D<T>::divide(int nX, int nY, std::vector<Cuboid2D<T> > &childrenC) c
 }
 
 template<typename T>
-void Cuboid2D<T>::divide(int p, std::vector<Cuboid2D<T> > &childrenC) const {
+void Cuboid2D<T>::divide(int p, std::vector<Cuboid2D<T> > &childrenC) const
+{
 
   OLB_PRECONDITION(p>0);
   int nX = 0;
@@ -205,7 +304,7 @@ void Cuboid2D<T>::divide(int p, std::vector<Cuboid2D<T> > &childrenC) const {
   for (int i=1; i<= p; i++) {
     int j = p / i;
     if (i*j<=p) {
-      if( fabs(bestRatio - (T)i/(T)j) <= difRatio) {
+      if ( fabs(bestRatio - (T)i/(T)j) <= difRatio) {
         difRatio = fabs(bestRatio - (T)i/(T)j);
         nX = i;
         nY = j;
@@ -232,8 +331,7 @@ void Cuboid2D<T>::divide(int p, std::vector<Cuboid2D<T> > &childrenC) const {
     Cuboid2D<T> secondChildQ(_globPosX, _globPosY+yN_QNoInsertions*_delta, _delta, xN_QInsertions, yN_QInsertions, _refinementLevel);
     firstChildQ.divide(nX, nY-rest, childrenC);
     secondChildQ.divide(nX+1,rest, childrenC);
-  }
-  else {
+  } else {
     int n_QNoInsertions = nY*(nX-rest);
     T bestVolume_QNoInsertions = (T)_nX*_nY * n_QNoInsertions/(T)p;
     int xN_QNoInsertions = (int)(bestVolume_QNoInsertions / (T)_nY + 0.9999);
@@ -247,9 +345,20 @@ void Cuboid2D<T>::divide(int p, std::vector<Cuboid2D<T> > &childrenC) const {
   }
 }
 
+
 template<typename T>
-void Cuboid2D<T>::refineToLevel(unsigned int level) {
-  double leveldiffabs = pow(2, level - _refinementLevel);
+void Cuboid2D<T>::resize(int iX, int iY, int nX, int nY)
+{
+  _globPosX = _globPosX+iX*_delta;
+  _globPosY = _globPosY+iY*_delta;
+  _nX = nX;
+  _nY = nY;
+}
+
+template<typename T>
+void Cuboid2D<T>::refineToLevel(unsigned int level)
+{
+  T leveldiffabs = pow(2, (int)(level - _refinementLevel) );
   _delta /= (T)(leveldiffabs);
   _nX *= leveldiffabs;
   _nY *= leveldiffabs;
@@ -257,7 +366,8 @@ void Cuboid2D<T>::refineToLevel(unsigned int level) {
 }
 
 template<typename T>
-void Cuboid2D<T>::refineIncrease() {
+void Cuboid2D<T>::refineIncrease()
+{
   _delta /= (T)2;
   _nX = _nX*2;
   _nY = _nY*2;
@@ -265,8 +375,11 @@ void Cuboid2D<T>::refineIncrease() {
 }
 
 template<typename T>
-void Cuboid2D<T>::refineDecrease() {
-  if(_refinementLevel == 0) return;
+void Cuboid2D<T>::refineDecrease()
+{
+  if (_refinementLevel == 0) {
+    return;
+  }
   _delta *= (T)2;
   _nX = (_nX)/2;
   _nY = (_nY)/2;
@@ -274,7 +387,10 @@ void Cuboid2D<T>::refineDecrease() {
 }
 
 template<typename T>
-int Cuboid2D<T>::get_refinementLevel() const { return _refinementLevel; }
+int Cuboid2D<T>::get_refinementLevel() const
+{
+  return _refinementLevel;
+}
 
 
 }  // namespace olb

@@ -112,7 +112,7 @@ public:
                            T omega);
   void addPressureBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int material, T omega);
   void addConvectionBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int material, int x0, int x1, int y0, int y1, int z0, int z1,
-                           T omega, T* uAv=NULL);
+                             T omega, T* uAv=NULL);
   void addConvectionBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int material, T omega, T* uAv=NULL);
 
   BlockLatticeStructure3D<T,Lattice>& getBlock();
@@ -154,7 +154,8 @@ BoundaryConditionInstantiator3D<T,Lattice,BoundaryManager>::BoundaryConditionIns
 { }
 
 template<typename T, template<typename U> class Lattice, class BoundaryManager>
-BoundaryConditionInstantiator3D<T,Lattice,BoundaryManager>::~BoundaryConditionInstantiator3D() {
+BoundaryConditionInstantiator3D<T,Lattice,BoundaryManager>::~BoundaryConditionInstantiator3D()
+{
   for (unsigned iDynamics=0; iDynamics<dynamicsVector.size(); ++iDynamics) {
     delete dynamicsVector[iDynamics];
   }
@@ -174,9 +175,9 @@ addVelocityBoundary(int x0, int x1, int y0, int y1, int z0, int z1, T omega)
     for (int iY=y0; iY<=y1; ++iY) {
       for (int iZ=z0; iZ<=z1; ++iZ) {
         Momenta<T,Lattice>* momenta
-        = BoundaryManager::template getVelocityBoundaryMomenta<direction,orientation>();
+          = BoundaryManager::template getVelocityBoundaryMomenta<direction,orientation>();
         Dynamics<T,Lattice>* dynamics
-        = BoundaryManager::template getVelocityBoundaryDynamics<direction,orientation>(omega, *momenta);
+          = BoundaryManager::template getVelocityBoundaryDynamics<direction,orientation>(omega, *momenta);
         this->getBlock().defineDynamics(iX,iX,iY,iY,iZ,iZ, dynamics);
         momentaVector.push_back(momenta);
         dynamicsVector.push_back(dynamics);
@@ -188,7 +189,7 @@ addVelocityBoundary(int x0, int x1, int y0, int y1, int z0, int z1, T omega)
   }
 
   PostProcessorGenerator3D<T,Lattice>* postProcessor
-  = BoundaryManager::template getVelocityBoundaryProcessor<direction,orientation>(x0,x1, y0,y1, z0,z1);
+    = BoundaryManager::template getVelocityBoundaryProcessor<direction,orientation>(x0,x1, y0,y1, z0,z1);
   if (postProcessor) {
     this->getBlock().addPostProcessor(*postProcessor);
   }
@@ -206,9 +207,9 @@ addPressureBoundary(int x0, int x1, int y0, int y1, int z0, int z1, T omega)
     for (int iY=y0; iY<=y1; ++iY) {
       for (int iZ=z0; iZ<=z1; ++iZ) {
         Momenta<T,Lattice>* momenta
-        = BoundaryManager::template getPressureBoundaryMomenta<direction,orientation>();
+          = BoundaryManager::template getPressureBoundaryMomenta<direction,orientation>();
         Dynamics<T,Lattice>* dynamics
-        = BoundaryManager::template getPressureBoundaryDynamics<direction,orientation>(omega, *momenta);
+          = BoundaryManager::template getPressureBoundaryDynamics<direction,orientation>(omega, *momenta);
         this->getBlock().defineDynamics(iX,iX,iY,iY,iZ,iZ, dynamics);
         momentaVector.push_back(momenta);
         dynamicsVector.push_back(dynamics);
@@ -220,7 +221,7 @@ addPressureBoundary(int x0, int x1, int y0, int y1, int z0, int z1, T omega)
   }
 
   PostProcessorGenerator3D<T,Lattice>* postProcessor
-  = BoundaryManager::template getPressureBoundaryProcessor<direction,orientation>(x0,x1, y0,y1, z0,z1);
+    = BoundaryManager::template getPressureBoundaryProcessor<direction,orientation>(x0,x1, y0,y1, z0,z1);
   if (postProcessor) {
     this->getBlock().addPostProcessor(*postProcessor);
   }
@@ -246,7 +247,7 @@ addConvectionBoundary(int x0, int x1, int y0, int y1, int z0, int z1, T omega, T
   }
 
   PostProcessorGenerator3D<T,Lattice>* postProcessor
-  = BoundaryManager::template getConvectionBoundaryProcessor<direction,orientation>(x0,x1, y0,y1, z0,z1, uAv);
+    = BoundaryManager::template getConvectionBoundaryProcessor<direction,orientation>(x0,x1, y0,y1, z0,z1, uAv);
   if (postProcessor) {
     this->getBlock().addPostProcessor(*postProcessor);
   }
@@ -266,9 +267,9 @@ addExternalVelocityEdge(int x0, int x1, int y0, int y1, int z0, int z1, T omega)
     for (int iY=y0; iY<=y1; ++iY) {
       for (int iZ=z0; iZ<=z1; ++iZ) {
         Momenta<T,Lattice>* momenta
-        = BoundaryManager::template getExternalVelocityEdgeMomenta<plane,normal1,normal2>();
+          = BoundaryManager::template getExternalVelocityEdgeMomenta<plane,normal1,normal2>();
         Dynamics<T,Lattice>* dynamics
-        = BoundaryManager::template getExternalVelocityEdgeDynamics<plane,normal1,normal2>(omega, *momenta);
+          = BoundaryManager::template getExternalVelocityEdgeDynamics<plane,normal1,normal2>(omega, *momenta);
         this->getBlock().defineDynamics(iX,iX,iY,iY,iZ,iZ, dynamics);
         momentaVector.push_back(momenta);
         dynamicsVector.push_back(dynamics);
@@ -280,7 +281,7 @@ addExternalVelocityEdge(int x0, int x1, int y0, int y1, int z0, int z1, T omega)
   }
 
   PostProcessorGenerator3D<T,Lattice>* postProcessor
-  = BoundaryManager::template getExternalVelocityEdgeProcessor<plane,normal1,normal2>(x0,x1, y0,y1, z0,z1);
+    = BoundaryManager::template getExternalVelocityEdgeProcessor<plane,normal1,normal2>(x0,x1, y0,y1, z0,z1);
   if (postProcessor) {
     this->getBlock().addPostProcessor(*postProcessor);
   }
@@ -293,7 +294,9 @@ addInternalVelocityEdge(int x0, int x1, int y0, int y1, int z0, int z1, T omega)
 {
   if (!(( x0==x1 && y0==y1 ) ||
         ( x0==x1 && z0==z1 ) ||
-        ( y0==y1 && z0==z1 ) )) clout << x0 <<" "<< x1 <<" "<< y0 <<" "<< y1 <<" "<< z0 <<" "<< z1 << std::endl;
+        ( y0==y1 && z0==z1 ) )) {
+    clout << x0 <<" "<< x1 <<" "<< y0 <<" "<< y1 <<" "<< z0 <<" "<< z1 << std::endl;
+  }
 
   OLB_PRECONDITION(
     ( x0==x1 && y0==y1 ) ||
@@ -304,9 +307,9 @@ addInternalVelocityEdge(int x0, int x1, int y0, int y1, int z0, int z1, T omega)
     for (int iY=y0; iY<=y1; ++iY) {
       for (int iZ=z0; iZ<=z1; ++iZ) {
         Momenta<T,Lattice>* momenta
-        = BoundaryManager::template getInternalVelocityEdgeMomenta<plane,normal1,normal2>();
+          = BoundaryManager::template getInternalVelocityEdgeMomenta<plane,normal1,normal2>();
         Dynamics<T,Lattice>* dynamics
-        = BoundaryManager::template getInternalVelocityEdgeDynamics<plane,normal1,normal2>(omega, *momenta);
+          = BoundaryManager::template getInternalVelocityEdgeDynamics<plane,normal1,normal2>(omega, *momenta);
         this->getBlock().defineDynamics(iX,iX,iY,iY,iZ,iZ, dynamics);
         momentaVector.push_back(momenta);
         dynamicsVector.push_back(dynamics);
@@ -318,7 +321,7 @@ addInternalVelocityEdge(int x0, int x1, int y0, int y1, int z0, int z1, T omega)
   }
 
   PostProcessorGenerator3D<T,Lattice>* postProcessor
-  = BoundaryManager::template getInternalVelocityEdgeProcessor<plane,normal1,normal2>(x0,x1, y0,y1, z0,z1);
+    = BoundaryManager::template getInternalVelocityEdgeProcessor<plane,normal1,normal2>(x0,x1, y0,y1, z0,z1);
   if (postProcessor) {
     this->getBlock().addPostProcessor(*postProcessor);
   }
@@ -331,9 +334,9 @@ void BoundaryConditionInstantiator3D<T,Lattice,BoundaryManager>::
 addExternalVelocityCorner(int x, int y, int z, T omega)
 {
   Momenta<T,Lattice>* momenta
-  = BoundaryManager::template getExternalVelocityCornerMomenta<xNormal,yNormal,zNormal>();
+    = BoundaryManager::template getExternalVelocityCornerMomenta<xNormal,yNormal,zNormal>();
   Dynamics<T,Lattice>* dynamics
-  = BoundaryManager::template getExternalVelocityCornerDynamics<xNormal,yNormal,zNormal>(omega, *momenta);
+    = BoundaryManager::template getExternalVelocityCornerDynamics<xNormal,yNormal,zNormal>(omega, *momenta);
 
   this->getBlock().defineDynamics(x,x,y,y,z,z, dynamics);
 
@@ -341,7 +344,7 @@ addExternalVelocityCorner(int x, int y, int z, T omega)
   dynamicsVector.push_back(dynamics);
 
   PostProcessorGenerator3D<T,Lattice>* postProcessor
-  = BoundaryManager::template getExternalVelocityCornerProcessor<xNormal,yNormal,zNormal>(x, y, z);
+    = BoundaryManager::template getExternalVelocityCornerProcessor<xNormal,yNormal,zNormal>(x, y, z);
   if (postProcessor) {
     this->getBlock().addPostProcessor(*postProcessor);
   }
@@ -356,9 +359,9 @@ void BoundaryConditionInstantiator3D<T,Lattice,BoundaryManager>::
 addInternalVelocityCorner(int x, int y, int z, T omega)
 {
   Momenta<T,Lattice>* momenta
-  = BoundaryManager::template getInternalVelocityCornerMomenta<xNormal,yNormal,zNormal>();
+    = BoundaryManager::template getInternalVelocityCornerMomenta<xNormal,yNormal,zNormal>();
   Dynamics<T,Lattice>* dynamics
-  = BoundaryManager::template getInternalVelocityCornerDynamics<xNormal,yNormal,zNormal>(omega, *momenta);
+    = BoundaryManager::template getInternalVelocityCornerDynamics<xNormal,yNormal,zNormal>(omega, *momenta);
 
   this->getBlock().defineDynamics(x,x,y,y,z,z, dynamics);
 
@@ -366,7 +369,7 @@ addInternalVelocityCorner(int x, int y, int z, T omega)
   dynamicsVector.push_back(dynamics);
 
   PostProcessorGenerator3D<T,Lattice>* postProcessor
-  = BoundaryManager::template getInternalVelocityCornerProcessor<xNormal,yNormal,zNormal>(x, y, z);
+    = BoundaryManager::template getInternalVelocityCornerProcessor<xNormal,yNormal,zNormal>(x, y, z);
   if (postProcessor) {
     this->getBlock().addPostProcessor(*postProcessor);
   }
@@ -380,300 +383,300 @@ void BoundaryConditionInstantiator3D<T,Lattice,BoundaryManager>::
 addVelocityBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int material, int x0, int x1, int y0, int y1, int z0, int z1, T omega)
 {
   std::vector<int> discreteNormal(4,0);
-  for(int iX = x0; iX <= x1; iX++) {
-    for(int iY = y0; iY <= y1; iY++) {
-      for(int iZ = z0; iZ <= z1; iZ++) {
+  for (int iX = x0; iX <= x1; iX++) {
+    for (int iY = y0; iY <= y1; iY++) {
+      for (int iZ = z0; iZ <= z1; iZ++) {
 
-        if(blockGeometryStructure.getMaterial(iX, iY, iZ)==material) {
+        if (blockGeometryStructure.getMaterial(iX, iY, iZ)==material) {
           discreteNormal = blockGeometryStructure.getStatistics().getType(iX,iY,iZ);
-          if(discreteNormal[0] == 0) {
+          if (discreteNormal[0] == 0) {
 
-            if(discreteNormal[1] != 0 && discreteNormal[1] == -1) {
+            if (discreteNormal[1] != 0 && discreteNormal[1] == -1) {
 
               addVelocityBoundary<0,-1>(iX,iX,iY,iY,iZ,iZ, omega);
 
             }
 
-            else if(discreteNormal[1] != 0 && discreteNormal[1] == 1) {
+            else if (discreteNormal[1] != 0 && discreteNormal[1] == 1) {
 
               addVelocityBoundary<0,1>(iX,iX,iY,iY,iZ,iZ, omega);
 
             }
 
-            else if(discreteNormal[2] != 0 && discreteNormal[2] == -1) {
+            else if (discreteNormal[2] != 0 && discreteNormal[2] == -1) {
 
               addVelocityBoundary<1,-1>(iX,iX,iY,iY,iZ,iZ, omega);
 
             }
 
-            else if(discreteNormal[2] != 0 && discreteNormal[2] == 1) {
+            else if (discreteNormal[2] != 0 && discreteNormal[2] == 1) {
 
               addVelocityBoundary<1,1>(iX,iX,iY,iY,iZ,iZ, omega);
 
             }
 
 
-            else if(discreteNormal[3] != 0 && discreteNormal[3] == -1) {
+            else if (discreteNormal[3] != 0 && discreteNormal[3] == -1) {
 
               addVelocityBoundary<2,-1>(iX,iX,iY,iY,iZ,iZ, omega);
 
             }
 
-            else if(discreteNormal[3] != 0 && discreteNormal[3] == 1) {
+            else if (discreteNormal[3] != 0 && discreteNormal[3] == 1) {
 
               addVelocityBoundary<2,1>(iX,iX,iY,iY,iZ,iZ, omega);
 
             }
           }
 
-          else if(discreteNormal[0] == 1) {
+          else if (discreteNormal[0] == 1) {
 
-            if(discreteNormal[1] == 1 && discreteNormal[2] == 1 && discreteNormal[3] == 1) {
+            if (discreteNormal[1] == 1 && discreteNormal[2] == 1 && discreteNormal[3] == 1) {
 
               addExternalVelocityCorner<1,1,1>(iX,iY,iZ, omega);
 
             }
 
-            else if(discreteNormal[1] == 1 && discreteNormal[2] == -1 && discreteNormal[3] == 1) {
+            else if (discreteNormal[1] == 1 && discreteNormal[2] == -1 && discreteNormal[3] == 1) {
 
               addExternalVelocityCorner<1,-1,1>(iX,iY,iZ, omega);
 
             }
 
-            else if(discreteNormal[1] == 1 && discreteNormal[2] == 1 && discreteNormal[3] == -1) {
+            else if (discreteNormal[1] == 1 && discreteNormal[2] == 1 && discreteNormal[3] == -1) {
 
               addExternalVelocityCorner<1,1,-1>(iX,iY,iZ, omega);
 
             }
 
-            else if(discreteNormal[1] == 1 && discreteNormal[2] == -1 && discreteNormal[3] == -1) {
+            else if (discreteNormal[1] == 1 && discreteNormal[2] == -1 && discreteNormal[3] == -1) {
 
               addExternalVelocityCorner<1,-1,-1>(iX,iY,iZ, omega);
 
             }
 
-            else if(discreteNormal[1] == -1 && discreteNormal[2] == 1 && discreteNormal[3] == 1) {
+            else if (discreteNormal[1] == -1 && discreteNormal[2] == 1 && discreteNormal[3] == 1) {
 
               addExternalVelocityCorner<-1,1,1>(iX,iY,iZ, omega);
 
             }
 
-            else if(discreteNormal[1] == -1 && discreteNormal[2] == -1 && discreteNormal[3] == 1) {
+            else if (discreteNormal[1] == -1 && discreteNormal[2] == -1 && discreteNormal[3] == 1) {
 
               addExternalVelocityCorner<-1,-1,1>(iX,iY,iZ, omega);
 
             }
 
-            else if(discreteNormal[1] == -1 && discreteNormal[2] == 1 && discreteNormal[3] == -1) {
+            else if (discreteNormal[1] == -1 && discreteNormal[2] == 1 && discreteNormal[3] == -1) {
 
               addExternalVelocityCorner<-1,1,-1>(iX,iY,iZ, omega);
 
             }
 
-            else if(discreteNormal[1] == -1 && discreteNormal[2] == -1 && discreteNormal[3] == -1) {
+            else if (discreteNormal[1] == -1 && discreteNormal[2] == -1 && discreteNormal[3] == -1) {
 
               addExternalVelocityCorner<-1,-1,-1>(iX,iY,iZ, omega);
 
             }
-///                     addExternalVelocityCorner<discreteNormal[1],discreteNormal[2],discreteNormal[3]>(iX,iY,iZ, omega);
+            ///                     addExternalVelocityCorner<discreteNormal[1],discreteNormal[2],discreteNormal[3]>(iX,iY,iZ, omega);
           }
 
-          else if(discreteNormal[0] == 2) {
+          else if (discreteNormal[0] == 2) {
 
-            if(discreteNormal[1] == 1 && discreteNormal[2] == 1 && discreteNormal[3] == 1) {
+            if (discreteNormal[1] == 1 && discreteNormal[2] == 1 && discreteNormal[3] == 1) {
 
               addInternalVelocityCorner<1,1,1>(iX,iY,iZ, omega);
 
             }
 
-            else if(discreteNormal[1] == 1 && discreteNormal[2] == -1 && discreteNormal[3] == 1) {
+            else if (discreteNormal[1] == 1 && discreteNormal[2] == -1 && discreteNormal[3] == 1) {
 
               addExternalVelocityCorner<1,-1,1>(iX,iY,iZ, omega);
 
             }
 
-            else if(discreteNormal[1] == 1 && discreteNormal[2] == 1 && discreteNormal[3] == -1) {
+            else if (discreteNormal[1] == 1 && discreteNormal[2] == 1 && discreteNormal[3] == -1) {
 
               addInternalVelocityCorner<1,1,-1>(iX,iY,iZ, omega);
 
             }
 
-            else if(discreteNormal[1] == 1 && discreteNormal[2] == -1 && discreteNormal[3] == -1) {
+            else if (discreteNormal[1] == 1 && discreteNormal[2] == -1 && discreteNormal[3] == -1) {
 
               addInternalVelocityCorner<1,-1,-1>(iX,iY,iZ, omega);
 
             }
 
-            else if(discreteNormal[1] == -1 && discreteNormal[2] == 1 && discreteNormal[3] == 1) {
+            else if (discreteNormal[1] == -1 && discreteNormal[2] == 1 && discreteNormal[3] == 1) {
 
               addInternalVelocityCorner<-1,1,1>(iX,iY,iZ, omega);
 
             }
 
-            else if(discreteNormal[1] == -1 && discreteNormal[2] == -1 && discreteNormal[3] == 1) {
+            else if (discreteNormal[1] == -1 && discreteNormal[2] == -1 && discreteNormal[3] == 1) {
 
               addInternalVelocityCorner<-1,-1,1>(iX,iY,iZ, omega);
 
             }
 
-            else if(discreteNormal[1] == -1 && discreteNormal[2] == 1 && discreteNormal[3] == -1) {
+            else if (discreteNormal[1] == -1 && discreteNormal[2] == 1 && discreteNormal[3] == -1) {
 
               addInternalVelocityCorner<-1,1,-1>(iX,iY,iZ, omega);
 
             }
 
-            else if(discreteNormal[1] == -1 && discreteNormal[2] == -1 && discreteNormal[3] == -1) {
+            else if (discreteNormal[1] == -1 && discreteNormal[2] == -1 && discreteNormal[3] == -1) {
 
               addInternalVelocityCorner<-1,-1,-1>(iX,iY,iZ, omega);
 
             }
-///                     addInternalVelocityCorner<discreteNormal[1],discreteNormal[2],discreteNormal[3]>(iX,iY,iZ, omega);
+            ///                     addInternalVelocityCorner<discreteNormal[1],discreteNormal[2],discreteNormal[3]>(iX,iY,iZ, omega);
           }
 
-          else if(discreteNormal[0] == 3) {
+          else if (discreteNormal[0] == 3) {
 
-            if(discreteNormal[1] == 0 && discreteNormal[2] == 1 && discreteNormal[3] == 1) {
+            if (discreteNormal[1] == 0 && discreteNormal[2] == 1 && discreteNormal[3] == 1) {
 
               addExternalVelocityEdge<0,1,1>(iX,iX,iY,iY,iZ,iZ, omega);
 
             }
 
-            else if(discreteNormal[1] == 0 && discreteNormal[2] == -1 && discreteNormal[3] == 1) {
+            else if (discreteNormal[1] == 0 && discreteNormal[2] == -1 && discreteNormal[3] == 1) {
 
               addExternalVelocityEdge<0,-1,1>(iX,iX,iY,iY,iZ,iZ, omega);
 
             }
 
-            else if(discreteNormal[1] == 0 && discreteNormal[2] == 1 && discreteNormal[3] == -1) {
+            else if (discreteNormal[1] == 0 && discreteNormal[2] == 1 && discreteNormal[3] == -1) {
 
               addExternalVelocityEdge<0,1,-1>(iX,iX,iY,iY,iZ,iZ, omega);
 
             }
 
-            else if(discreteNormal[1] == 0 && discreteNormal[2] == -1 && discreteNormal[3] == -1) {
+            else if (discreteNormal[1] == 0 && discreteNormal[2] == -1 && discreteNormal[3] == -1) {
 
               addExternalVelocityEdge<0,-1,-1>(iX,iX,iY,iY,iZ,iZ, omega);
 
             }
 
-            else if(discreteNormal[1] == 1 && discreteNormal[2] == 0 && discreteNormal[3] == 1) {
+            else if (discreteNormal[1] == 1 && discreteNormal[2] == 0 && discreteNormal[3] == 1) {
 
               addExternalVelocityEdge<1,1,1>(iX,iX,iY,iY,iZ,iZ, omega);
 
             }
 
-            else if(discreteNormal[1] == -1 && discreteNormal[2] == 0 && discreteNormal[3] == 1) {
+            else if (discreteNormal[1] == -1 && discreteNormal[2] == 0 && discreteNormal[3] == 1) {
 
               addExternalVelocityEdge<1,1,-1>(iX,iX,iY,iY,iZ,iZ, omega);
 
             }
 
-            else if(discreteNormal[1] == 1 && discreteNormal[2] == 0 && discreteNormal[3] == -1) {
+            else if (discreteNormal[1] == 1 && discreteNormal[2] == 0 && discreteNormal[3] == -1) {
 
               addExternalVelocityEdge<1,-1,1>(iX,iX,iY,iY,iZ,iZ, omega);
 
             }
 
-            else if(discreteNormal[1] == -1 && discreteNormal[2] == 0 && discreteNormal[3] == -1) {
+            else if (discreteNormal[1] == -1 && discreteNormal[2] == 0 && discreteNormal[3] == -1) {
 
               addExternalVelocityEdge<1,-1,-1>(iX,iX,iY,iY,iZ,iZ, omega);
 
             }
 
-            else if(discreteNormal[1] == 1 && discreteNormal[2] == 1 && discreteNormal[3] == 0) {
+            else if (discreteNormal[1] == 1 && discreteNormal[2] == 1 && discreteNormal[3] == 0) {
 
               addExternalVelocityEdge<2,1,1>(iX,iX,iY,iY,iZ,iZ, omega);
 
             }
 
-            else if(discreteNormal[1] == -1 && discreteNormal[2] == 1 && discreteNormal[3] == 0) {
+            else if (discreteNormal[1] == -1 && discreteNormal[2] == 1 && discreteNormal[3] == 0) {
 
               addExternalVelocityEdge<2,-1,1>(iX,iX,iY,iY,iZ,iZ, omega);
 
             }
 
-            else if(discreteNormal[1] == 1 && discreteNormal[2] == -1 && discreteNormal[3] == 0) {
+            else if (discreteNormal[1] == 1 && discreteNormal[2] == -1 && discreteNormal[3] == 0) {
 
               addExternalVelocityEdge<2,1,-1>(iX,iX,iY,iY,iZ,iZ, omega);
 
             }
 
-            else if(discreteNormal[1] == -1 && discreteNormal[2] == -1 && discreteNormal[3] == 0) {
+            else if (discreteNormal[1] == -1 && discreteNormal[2] == -1 && discreteNormal[3] == 0) {
 
               addExternalVelocityEdge<2,-1,-1>(iX,iX,iY,iY,iZ,iZ, omega);
 
             }
           }
 
-          else if(discreteNormal[0] == 4) {
+          else if (discreteNormal[0] == 4) {
 
-            if(discreteNormal[1] == 0 && discreteNormal[2] == 1 && discreteNormal[3] == 1) {
+            if (discreteNormal[1] == 0 && discreteNormal[2] == 1 && discreteNormal[3] == 1) {
 
               addInternalVelocityEdge<0,1,1>(iX,iX,iY,iY,iZ,iZ, omega);
 
             }
 
-            else if(discreteNormal[1] == 0 && discreteNormal[2] == -1 && discreteNormal[3] == 1) {
+            else if (discreteNormal[1] == 0 && discreteNormal[2] == -1 && discreteNormal[3] == 1) {
 
               addInternalVelocityEdge<0,-1,1>(iX,iX,iY,iY,iZ,iZ, omega);
 
             }
 
-            else if(discreteNormal[1] == 0 && discreteNormal[2] == 1 && discreteNormal[3] == -1) {
+            else if (discreteNormal[1] == 0 && discreteNormal[2] == 1 && discreteNormal[3] == -1) {
 
               addInternalVelocityEdge<0,1,-1>(iX,iX,iY,iY,iZ,iZ, omega);
 
             }
 
-            else if(discreteNormal[1] == 0 && discreteNormal[2] == -1 && discreteNormal[3] == -1) {
+            else if (discreteNormal[1] == 0 && discreteNormal[2] == -1 && discreteNormal[3] == -1) {
 
               addInternalVelocityEdge<0,-1,-1>(iX,iX,iY,iY,iZ,iZ, omega);
 
             }
 
-            else if(discreteNormal[1] == 1 && discreteNormal[2] == 0 && discreteNormal[3] == 1) {
+            else if (discreteNormal[1] == 1 && discreteNormal[2] == 0 && discreteNormal[3] == 1) {
 
               addInternalVelocityEdge<1,1,1>(iX,iX,iY,iY,iZ,iZ, omega);
 
             }
 
-            else if(discreteNormal[1] == -1 && discreteNormal[2] == 0 && discreteNormal[3] == 1) {
+            else if (discreteNormal[1] == -1 && discreteNormal[2] == 0 && discreteNormal[3] == 1) {
 
               addInternalVelocityEdge<1,1,-1>(iX,iX,iY,iY,iZ,iZ, omega);
 
             }
 
-            else if(discreteNormal[1] == 1 && discreteNormal[2] == 0 && discreteNormal[3] == -1) {
+            else if (discreteNormal[1] == 1 && discreteNormal[2] == 0 && discreteNormal[3] == -1) {
 
               addInternalVelocityEdge<1,-1,1>(iX,iX,iY,iY,iZ,iZ, omega);
 
             }
 
-            else if(discreteNormal[1] == -1 && discreteNormal[2] == 0 && discreteNormal[3] == -1) {
+            else if (discreteNormal[1] == -1 && discreteNormal[2] == 0 && discreteNormal[3] == -1) {
 
               addInternalVelocityEdge<1,-1,-1>(iX,iX,iY,iY,iZ,iZ, omega);
 
             }
 
-            else if(discreteNormal[1] == 1 && discreteNormal[2] == 1 && discreteNormal[3] == 0) {
+            else if (discreteNormal[1] == 1 && discreteNormal[2] == 1 && discreteNormal[3] == 0) {
 
               addInternalVelocityEdge<2,1,1>(iX,iX,iY,iY,iZ,iZ, omega);
 
             }
 
-            else if(discreteNormal[1] == -1 && discreteNormal[2] == 1 && discreteNormal[3] == 0) {
+            else if (discreteNormal[1] == -1 && discreteNormal[2] == 1 && discreteNormal[3] == 0) {
 
               addInternalVelocityEdge<2,-1,1>(iX,iX,iY,iY,iZ,iZ, omega);
 
             }
 
-            else if(discreteNormal[1] == 1 && discreteNormal[2] == -1 && discreteNormal[3] == 0) {
+            else if (discreteNormal[1] == 1 && discreteNormal[2] == -1 && discreteNormal[3] == 0) {
 
               addInternalVelocityEdge<2,1,-1>(iX,iX,iY,iY,iZ,iZ, omega);
 
             }
 
-            else if(discreteNormal[1] == -1 && discreteNormal[2] == -1 && discreteNormal[3] == 0) {
+            else if (discreteNormal[1] == -1 && discreteNormal[2] == -1 && discreteNormal[3] == 0) {
 
               addInternalVelocityEdge<2,-1,-1>(iX,iX,iY,iY,iZ,iZ, omega);
 
@@ -701,48 +704,48 @@ void BoundaryConditionInstantiator3D<T,Lattice,BoundaryManager>::
 addPressureBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int material, int x0, int x1, int y0, int y1, int z0, int z1, T omega)
 {
   std::vector<int> discreteNormal(4,0);
-  for(int iX = x0; iX <= x1; iX++) {
-    for(int iY = y0; iY <= y1; iY++) {
-      for(int iZ = z0; iZ <= z1; iZ++) {
+  for (int iX = x0; iX <= x1; iX++) {
+    for (int iY = y0; iY <= y1; iY++) {
+      for (int iZ = z0; iZ <= z1; iZ++) {
 
-        if(blockGeometryStructure.getMaterial(iX, iY, iZ)==material) {
+        if (blockGeometryStructure.getMaterial(iX, iY, iZ)==material) {
 
           discreteNormal = blockGeometryStructure.getStatistics().getType(iX,iY,iZ);
 
-          if(discreteNormal[0] == 0) {
+          if (discreteNormal[0] == 0) {
 
-            if(discreteNormal[1] != 0 && discreteNormal[1] == -1) {
+            if (discreteNormal[1] != 0 && discreteNormal[1] == -1) {
 
               addPressureBoundary<0,-1>(iX,iX,iY,iY,iZ,iZ, omega);
 
             }
 
-            else if(discreteNormal[1] != 0 && discreteNormal[1] == 1) {
+            else if (discreteNormal[1] != 0 && discreteNormal[1] == 1) {
 
               addPressureBoundary<0,1>(iX,iX,iY,iY,iZ,iZ, omega);
 
             }
 
-            else if(discreteNormal[2] != 0 && discreteNormal[2] == -1) {
+            else if (discreteNormal[2] != 0 && discreteNormal[2] == -1) {
 
               addPressureBoundary<1,-1>(iX,iX,iY,iY,iZ,iZ, omega);
 
             }
 
-            else if(discreteNormal[2] != 0 && discreteNormal[2] == 1) {
+            else if (discreteNormal[2] != 0 && discreteNormal[2] == 1) {
 
               addPressureBoundary<1,1>(iX,iX,iY,iY,iZ,iZ, omega);
 
             }
 
 
-            else if(discreteNormal[3] != 0 && discreteNormal[3] == -1) {
+            else if (discreteNormal[3] != 0 && discreteNormal[3] == -1) {
 
               addPressureBoundary<2,-1>(iX,iX,iY,iY,iZ,iZ, omega);
 
             }
 
-            else if(discreteNormal[3] != 0 && discreteNormal[3] == 1) {
+            else if (discreteNormal[3] != 0 && discreteNormal[3] == 1) {
 
               addPressureBoundary<2,1>(iX,iX,iY,iY,iZ,iZ, omega);
 
@@ -770,48 +773,48 @@ void BoundaryConditionInstantiator3D<T,Lattice,BoundaryManager>::
 addConvectionBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int material, int x0, int x1, int y0, int y1, int z0, int z1, T omega, T* uAv)
 {
   std::vector<int> discreteNormal(4,0);
-  for(int iX = x0; iX <= x1; iX++) {
-    for(int iY = y0; iY <= y1; iY++) {
-      for(int iZ = z0; iZ <= z1; iZ++) {
+  for (int iX = x0; iX <= x1; iX++) {
+    for (int iY = y0; iY <= y1; iY++) {
+      for (int iZ = z0; iZ <= z1; iZ++) {
 
-        if(blockGeometryStructure.getMaterial(iX, iY, iZ)==material) {
+        if (blockGeometryStructure.getMaterial(iX, iY, iZ)==material) {
 
           discreteNormal = blockGeometryStructure.getStatistics().getType(iX,iY,iZ);
 
-          if(discreteNormal[0] == 0) {
+          if (discreteNormal[0] == 0) {
 
-            if(discreteNormal[1] != 0 && discreteNormal[1] == -1) {
+            if (discreteNormal[1] != 0 && discreteNormal[1] == -1) {
 
               addConvectionBoundary<0,-1>(iX,iX,iY,iY,iZ,iZ, omega, uAv);
 
             }
 
-            else if(discreteNormal[1] != 0 && discreteNormal[1] == 1) {
+            else if (discreteNormal[1] != 0 && discreteNormal[1] == 1) {
 
               addConvectionBoundary<0,1>(iX,iX,iY,iY,iZ,iZ, omega, uAv);
 
             }
 
-            else if(discreteNormal[2] != 0 && discreteNormal[2] == -1) {
+            else if (discreteNormal[2] != 0 && discreteNormal[2] == -1) {
 
               addConvectionBoundary<1,-1>(iX,iX,iY,iY,iZ,iZ, omega, uAv);
 
             }
 
-            else if(discreteNormal[2] != 0 && discreteNormal[2] == 1) {
+            else if (discreteNormal[2] != 0 && discreteNormal[2] == 1) {
 
               addConvectionBoundary<1,1>(iX,iX,iY,iY,iZ,iZ, omega, uAv);
 
             }
 
 
-            else if(discreteNormal[3] != 0 && discreteNormal[3] == -1) {
+            else if (discreteNormal[3] != 0 && discreteNormal[3] == -1) {
 
               addConvectionBoundary<2,-1>(iX,iX,iY,iY,iZ,iZ, omega, uAv);
 
             }
 
-            else if(discreteNormal[3] != 0 && discreteNormal[3] == 1) {
+            else if (discreteNormal[3] != 0 && discreteNormal[3] == 1) {
 
               addConvectionBoundary<2,1>(iX,iX,iY,iY,iZ,iZ, omega, uAv);
 
@@ -1264,12 +1267,14 @@ BlockLatticeStructure3D<T,Lattice> const& BoundaryConditionInstantiator3D<T,Latt
 }
 
 template<typename T, template<typename U> class Lattice, class BoundaryManager>
-void BoundaryConditionInstantiator3D<T,Lattice,BoundaryManager>::outputOn() {
+void BoundaryConditionInstantiator3D<T,Lattice,BoundaryManager>::outputOn()
+{
   _output = true;
 }
 
 template<typename T, template<typename U> class Lattice, class BoundaryManager>
-void BoundaryConditionInstantiator3D<T,Lattice,BoundaryManager>::outputOff() {
+void BoundaryConditionInstantiator3D<T,Lattice,BoundaryManager>::outputOff()
+{
   _output = false;
 }
 

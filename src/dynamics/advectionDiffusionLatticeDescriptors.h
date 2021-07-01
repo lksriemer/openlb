@@ -47,15 +47,13 @@ namespace olb {
  * aformentioned relations are taken as given to enable a few
  * optimizations.
 */
-namespace descriptors
-{
+namespace descriptors {
 //===========================================================================//
 //=================== AdvectionDiffusion Lattice Descriptors=================//
 //===========================================================================//
 
 /// D2Q5 lattice
-template <typename T> struct D2Q5DescriptorBase
-{
+template <typename T> struct D2Q5DescriptorBase {
   typedef D2Q5DescriptorBase<T> BaseDescriptor;
   enum { d = 2, q = 5 };      ///< number of dimensions/distr. functions
   static const int vicinity;  ///< size of neighborhood
@@ -86,10 +84,23 @@ struct Velocity3dBase {
   typedef Velocity3dDescriptor ExternalField;
 };
 
+struct StokesDragAdvectionDiffusion3dDescriptor {
+  static const int numScalars = 6;
+  static const int numSpecies = 2;
+  static const int velocityBeginsAt = 0;
+  static const int sizeOfVelocity   = 3;
+  static const int velocity2BeginsAt = 3;
+  static const int sizeOfVelocity2   = 3;
+};
+
+struct StokesDragAdvectionDiffusion3dDescriptorBase {
+  typedef StokesDragAdvectionDiffusion3dDescriptor ExternalField;
+};
+
 /// AD D2Q5 lattice
 template <typename T> struct AdvectionDiffusionD2Q5Descriptor
-    : public D2Q5DescriptorBase<T>, public Velocity2dBase
-  {  };
+    : public D2Q5DescriptorBase<T>, public Velocity2dBase {
+};
 
 /// D3Q7 lattice
 template <typename T> struct D3Q7DescriptorBase {
@@ -102,8 +113,12 @@ template <typename T> struct D3Q7DescriptorBase {
 };
 
 template <typename T> struct AdvectionDiffusionD3Q7Descriptor
-    : public D3Q7DescriptorBase<T>, public Velocity3dBase
-  {  };
+    : public D3Q7DescriptorBase<T>, public Velocity3dBase {
+};
+
+template <typename T> struct StokesDragAdvectionDiffusionD3Q7Descriptor
+    : public D3Q7DescriptorBase<T>, public StokesDragAdvectionDiffusion3dDescriptorBase {
+};
 
 }  // namespace descriptors
 

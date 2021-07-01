@@ -28,6 +28,7 @@
 namespace olb {
 
 template class SuperLatticeDissipation2D<double,descriptors::D2Q9Descriptor>;
+template class SuperLatticePhysDissipation2D<double,descriptors::D2Q9Descriptor>;
 template class SuperLatticeDensity2D<double,descriptors::D2Q9Descriptor>;
 template class SuperLatticeVelocity2D<double,descriptors::D2Q9Descriptor>;
 template class SuperLatticePhysStrainRate2D<double,descriptors::D2Q9Descriptor>;
@@ -37,6 +38,8 @@ template class SuperLatticeCuboid2D<double,descriptors::D2Q9Descriptor>;
 template class SuperLatticePhysPressure2D<double,descriptors::D2Q9Descriptor>;
 template class SuperLatticePhysVelocity2D<double,descriptors::D2Q9Descriptor>;
 template class SuperLatticePhysBoundaryForce2D<double,descriptors::D2Q9Descriptor>;
+template class SuperLatticePhysBoundaryForceIndicator2D<double,descriptors::D2Q9Descriptor>;
+//template class SuperLatticePhysBoundaryTorqueIndicator2D<double,descriptors::D2Q9Descriptor>;
 template class SuperLatticePhysCorrBoundaryForce2D<double,descriptors::D2Q9Descriptor>;
 template class SuperLatticePorosity2D<double,descriptors::D2Q9Descriptor>;
 template class SuperLatticePhysPermeability2D<double,descriptors::D2Q9Descriptor>;

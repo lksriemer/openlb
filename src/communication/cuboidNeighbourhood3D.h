@@ -37,6 +37,9 @@
 /// All OpenLB code is contained in this namespace.
 namespace olb {
 
+template<typename T> class SuperStructure3D;
+
+
 /// Single 3D cuboid neighbourhoods are the basic component of a
 /// 3D communicator
 /** For each cuboid a cuboid neighbourhood is defined. It stores the
@@ -49,37 +52,39 @@ namespace olb {
  *
  * This class is not intended to be derived from.
  */
-
-
-template<typename T> class SuperStructure3D;
-
 template<typename T>
 struct Cell3D {
-
-  Cell3D() {latticeR.resize(4); physR.resize(3); };
-
-  // local position latticeR
-  std::vector<int> latticeR;
-  //int iC, iX, iY, iZ;
-  // global position physR
-  //T x, y, z;
-  std::vector<T> physR;
+  Cell3D() : latticeR {0,0,0,0} {};
+  // local position latticeR: iC, iX, iY, iZ;
+  int latticeR[4];
+  // global position physR: x, y, z;
+  T physR[3];
 
   bool operator==(Cell3D const& rhs) const {
     return latticeR[0]==rhs.latticeR[0] && latticeR[1]==rhs.latticeR[1] && latticeR[2]==rhs.latticeR[2] && latticeR[3]==rhs.latticeR[3];
   };
 
-  Cell3D(Cell3D const& rhs)
-  {
-    latticeR = rhs.latticeR;
-    physR  = rhs.physR;
+  /// Copy constructor
+  Cell3D(Cell3D const& rhs) {
+    latticeR[0] = rhs.latticeR[0];
+    latticeR[1] = rhs.latticeR[1];
+    latticeR[2] = rhs.latticeR[2];
+    latticeR[3] = rhs.latticeR[3];
+    physR[0] = rhs.physR[0];
+    physR[1] = rhs.physR[1];
+    physR[2] = rhs.physR[2];
   }
   ;
 
   /// Copy assignment
   Cell3D& operator=(Cell3D const& rhs) {
-    latticeR = rhs.latticeR;
-    physR = rhs.physR;
+    latticeR[0] = rhs.latticeR[0];
+    latticeR[1] = rhs.latticeR[1];
+    latticeR[2] = rhs.latticeR[2];
+    latticeR[3] = rhs.latticeR[3];
+    physR[0] = rhs.physR[0];
+    physR[1] = rhs.physR[1];
+    physR[2] = rhs.physR[2];
     return *this;
   };
 
@@ -160,7 +165,7 @@ public:
   /// Adds a cell to the vector _outCells
   void add_outCell(Cell3D<T> cell);
   /// Adds a cell to the vector _inCells
-  ///  if the cell is not already there and 
+  ///  if the cell is not already there and
   ///  if there is another cuboid which can deliver the information
   void add_inCell(int iX, int iY, int iZ);
   /// Adds all cells with the distance overlap*_delta to

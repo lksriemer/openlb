@@ -28,6 +28,14 @@
 #define SINGLETON_H
 
 #include <string>
+#include <stdlib.h>
+#include "io/ostreamManager.h"
+#include "communication/mpiManager.h"
+#ifdef _WIN32
+#include <direct.h>
+#else //f defined __linux__
+#include <sys/stat.h>
+#endif
 
 namespace olb {
 
@@ -36,20 +44,25 @@ namespace singleton {
 class Directories {
 public:
   void setOlbDir(std::string olbDir_) {
+    createDirectory(olbDir_);
     olbDir = olbDir_;
   }
   void setOutputDir(std::string outputDir) {
     setLogOutDir(outputDir);
-    setImageOutDir(outputDir);
-    setVtkOutDir(outputDir);
+    setImageOutDir(outputDir + "imageData/");
+    setVtkOutDir(outputDir + "vtkData/");
   }
   void setLogOutDir(std::string logOutDir_) {
+    createDirectory(logOutDir_);
     logOutDir = logOutDir_;
   }
   void setImageOutDir(std::string imageOutDir_) {
+    createDirectory(imageOutDir_);
     imageOutDir = imageOutDir_;
   }
   void setVtkOutDir(std::string vtkOutDir_) {
+    createDirectory(vtkOutDir_);
+    createDirectory(vtkOutDir_+"data/");
     vtkOutDir = vtkOutDir_;
   }
   std::string getOlbDir() const {
@@ -65,12 +78,38 @@ public:
     return vtkOutDir;
   }
 private:
-  Directories() {
+  Directories() : clout(std::cout,"Directories") {
     setOlbDir("");
-    setOutputDir("");
+    setLogOutDir("./tmp/");
+    setImageOutDir("./tmp/imageData/");
+    setVtkOutDir("./tmp/vtkData/");
   }
   ~Directories() { }
+
+  void createDirectory(std::string path) {
+    int rank = 0;
+#ifdef PARALLEL_MODE_MPI
+    rank = singleton::mpi().getRank();
+#endif
+    if (rank == 0) {
+      struct stat statbuf;
+      if (stat(path.c_str(), &statbuf) != 0) {
+#ifdef _WIN32
+        mkdir(path.c_str());
+#else  /* Unix */
+        if (mkdir(path.c_str(), 0775) == 0) {
+          clout << "Directory " << path << " created." << std::endl;
+        }
+        //else
+        //  clout << "Directory " << path << " failed." << std::endl;
+#endif
+      }
+    }
+  }
+
 private:
+  mutable OstreamManager clout;
+
   std::string olbDir;
   std::string logOutDir;
   std::string imageOutDir;
@@ -79,9 +118,18 @@ private:
   friend Directories& directories();
 };
 
-inline Directories& directories() {
+inline Directories& directories()
+{
   static Directories singleton;
   return singleton;
+}
+
+inline void checkValue(double input)
+{
+  if (280877.9 < input && input < 280878.1) {
+    std::cout << "Error: stop simulation due to 280878" << std::endl;
+    exit(-1);
+  }
 }
 
 }  // namespace singleton

@@ -25,7 +25,7 @@
 #define SUPER_LATTICE_LOCAL_F_2D_H
 
 #include<vector>
-#include "functors/superLatticeBaseF2D.h"
+#include "functors/superBaseF2D.h"
 #include "core/superLattice2D.h"
 
 /** Note: Throughout the whole source code directory genericFunctions, the
@@ -51,7 +51,7 @@ private:
 public:
   SuperLatticeDissipation2D(SuperLattice2D<T,DESCRIPTOR>& sLattice,
                             const LBconverter<T>& converter);
-  std::vector<T> operator() (std::vector<int> input);
+  bool operator() (T output[], const int input[]);
 };
 
 /// functor to get pointwise dissipation density on local lattices
@@ -60,7 +60,7 @@ class SuperLatticePhysDissipation2D : public SuperLatticePhysF2D<T,DESCRIPTOR> {
 public:
   SuperLatticePhysDissipation2D(SuperLattice2D<T,DESCRIPTOR>& sLattice,
                                 const LBconverter<T>& converter);
-  std::vector<T> operator() (std::vector<int> input);
+  bool operator() (T output[], const int input[]);
 };
 
 /// functor to get pointwise density rho on local lattices
@@ -68,7 +68,7 @@ template <typename T, template <typename U> class DESCRIPTOR>
 class SuperLatticeDensity2D : public SuperLatticeF2D<T,DESCRIPTOR> {
 public:
   SuperLatticeDensity2D(SuperLattice2D<T,DESCRIPTOR>& sLattice);
-  std::vector<T> operator() (std::vector<int> input);
+  bool operator() (T output[], const int input[]);
 };
 
 
@@ -77,7 +77,7 @@ template <typename T, template <typename U> class DESCRIPTOR>
 class SuperLatticeVelocity2D : public SuperLatticeF2D<T,DESCRIPTOR> {
 public:
   SuperLatticeVelocity2D(SuperLattice2D<T,DESCRIPTOR>& sLattice);
-  std::vector<T> operator() (std::vector<int> input);
+  bool operator() (T output[], const int input[]);
 };
 
 /// functor to get pointwise phys strain rate on local lattice
@@ -86,8 +86,8 @@ template <typename T, template <typename U> class DESCRIPTOR>
 class SuperLatticePhysStrainRate2D : public SuperLatticePhysF2D<T,DESCRIPTOR> {
 public:
   SuperLatticePhysStrainRate2D(SuperLattice2D<T,DESCRIPTOR>& sLattice,
-                           const LBconverter<T>& converter);
-  std::vector<T> operator() (std::vector<int> input);
+                               const LBconverter<T>& converter);
+  bool operator() (T output[], const int input[]);
 };
 
 
@@ -100,7 +100,7 @@ private:
 public:
   SuperLatticeGeometry2D(SuperLattice2D<T,DESCRIPTOR>& sLattice,
                          SuperGeometry2D<T>& superGeometry, const int material = -1);
-  std::vector<T> operator() (std::vector<int> input);
+  bool operator() (T output[], const int input[]);
 };
 
 
@@ -109,7 +109,7 @@ template <typename T, template <typename U> class DESCRIPTOR>
 class SuperLatticeRank2D : public SuperLatticeF2D<T,DESCRIPTOR> {
 public:
   SuperLatticeRank2D(SuperLattice2D<T,DESCRIPTOR>& sLattice);
-  std::vector<T> operator() (std::vector<int> input);
+  bool operator() (T output[], const int input[]);
 };
 
 
@@ -118,7 +118,7 @@ template <typename T, template <typename U> class DESCRIPTOR>
 class SuperLatticeCuboid2D : public SuperLatticeF2D<T,DESCRIPTOR> {
 public:
   SuperLatticeCuboid2D(SuperLattice2D<T,DESCRIPTOR>& sLattice);
-  std::vector<T> operator() (std::vector<int> input);
+  bool operator() (T output[], const int input[]);
 };
 
 
@@ -128,7 +128,7 @@ class SuperLatticePhysPressure2D : public SuperLatticePhysF2D<T,DESCRIPTOR> {
 public:
   SuperLatticePhysPressure2D(SuperLattice2D<T,DESCRIPTOR>& sLattice,
                              const LBconverter<T>& converter);
-  std::vector<T> operator() (std::vector<int> input);
+  bool operator() (T output[], const int input[]);
 };
 
 
@@ -138,9 +138,32 @@ class SuperLatticePhysVelocity2D : public SuperLatticePhysF2D<T,DESCRIPTOR> {
 public:
   SuperLatticePhysVelocity2D(SuperLattice2D<T,DESCRIPTOR>& sLattice,
                              const LBconverter<T>& converter);
-  std::vector<T> operator() (std::vector<int> input);
+  bool operator() (T output[], const int input[]);
 };
 
+template <typename T, template <typename U> class DESCRIPTOR>
+class SuperLatticePhysExternalPorosity2D : public SuperLatticePhysF2D<T,DESCRIPTOR> {
+public:
+  SuperLatticePhysExternalPorosity2D(SuperLattice2D<T,DESCRIPTOR>& sLattice,
+                                     const LBconverter<T>& converter);
+  bool operator() (T output[], const int input[]);
+};
+
+template <typename T, template <typename U> class DESCRIPTOR>
+class SuperLatticePhysExternalVelocity2D : public SuperLatticePhysF2D<T,DESCRIPTOR> {
+public:
+  SuperLatticePhysExternalVelocity2D(SuperLattice2D<T,DESCRIPTOR>& sLattice,
+                                     const LBconverter<T>& converter);
+  bool operator() (T output[], const int input[]);
+};
+
+template <typename T, template <typename U> class DESCRIPTOR>
+class SuperLatticePhysExternalParticleVelocity2D : public SuperLatticePhysF2D<T,DESCRIPTOR> {
+public:
+  SuperLatticePhysExternalParticleVelocity2D(SuperLattice2D<T,DESCRIPTOR>& sLattice,
+      const LBconverter<T>& converter);
+  bool operator() (T output[], const int input[]);
+};
 
 /// functor to get pointwise phys force acting on a boundary with a given material on local lattice
 template <typename T, template <typename U> class DESCRIPTOR>
@@ -152,9 +175,37 @@ public:
   SuperLatticePhysBoundaryForce2D(SuperLattice2D<T,DESCRIPTOR>& sLattice,
                                   SuperGeometry2D<T>& superGeometry, const int material,
                                   const LBconverter<T>& converter);
-  std::vector<T> operator() (std::vector<int> input);
+  bool operator() (T output[], const int input[]);
 };
 
+
+/// functor to get pointwise phys force acting on a boundary with a given indicator on local lattice
+template <typename T, template <typename U> class DESCRIPTOR>
+class SuperLatticePhysBoundaryForceIndicator2D : public SuperLatticePhysF2D<T,DESCRIPTOR> {
+private:
+  SuperGeometry2D<T>& _superGeometry;
+  SmoothIndicatorF2D<T,T>& _indicator;
+public:
+  SuperLatticePhysBoundaryForceIndicator2D(SuperLattice2D<T,DESCRIPTOR>& sLattice,
+      SuperGeometry2D<T>& superGeometry,
+      SmoothIndicatorF2D<T,T>& indicator,
+      const LBconverter<T>& converter);
+  bool operator() (T output[], const int input[]);
+};
+
+/// functor to get pointwise phys force acting on a boundary with a given indicator on local lattice
+template <typename T, template <typename U> class DESCRIPTOR>
+class SuperLatticePhysVolumeForceIndicator2D : public SuperLatticePhysF2D<T,DESCRIPTOR> {
+private:
+  SuperGeometry2D<T>& _superGeometry;
+  SmoothIndicatorF2D<T,T>& _indicator;
+public:
+  SuperLatticePhysVolumeForceIndicator2D(SuperLattice2D<T,DESCRIPTOR>& sLattice,
+                                         SuperGeometry2D<T>& superGeometry,
+                                         SmoothIndicatorF2D<T,T>& indicator,
+                                         const LBconverter<T>& converter);
+  bool operator() (T output[], const int input[]);
+};
 
 /// functor to get pointwise phys force acting on a boundary with a given material on local lattice
 /// see: Caiazzo, Junk: Boundary Forces in lattice Boltzmann: Analysis of MEA
@@ -167,9 +218,8 @@ public:
   SuperLatticePhysCorrBoundaryForce2D(SuperLattice2D<T,DESCRIPTOR>& sLattice,
                                       SuperGeometry2D<T>& superGeometry, const int material,
                                       const LBconverter<T>& converter);
-  std::vector<T> operator() (std::vector<int> input);
+  bool operator() (T output[], const int input[]);
 };
-
 
 /// functor to get pointwise, lattice-dependent porosity values in [0,1]
 /// in combination with (Extended)PorousBGKdynamics: 0->solid, 1->fluid
@@ -182,7 +232,7 @@ public:
   SuperLatticePorosity2D(SuperLattice2D<T,DESCRIPTOR>& sLattice,
                          SuperGeometry2D<T>& superGeometry, const int material,
                          const LBconverter<T>& converter);
-  std::vector<T> operator()(std::vector<int> input);
+  bool operator() (T output[], const int input[]);
 };
 
 
@@ -197,7 +247,7 @@ public:
   SuperLatticePhysPermeability2D(SuperLattice2D<T,DESCRIPTOR>& sLattice,
                                  SuperGeometry2D<T>& superGeometry,
                                  const int material, const LBconverter<T>& converter);
-  std::vector<T> operator()(std::vector<int> input);
+  bool operator() (T output[], const int input[]);
 };
 
 
@@ -211,7 +261,7 @@ public:
   SuperLatticePhysDarcyForce2D(SuperLattice2D<T,DESCRIPTOR>& sLattice,
                                SuperGeometry2D<T>& superGeometry, const int material,
                                const LBconverter<T>& converter);
-  std::vector<T> operator()(std::vector<int> input);
+  bool operator() (T output[], const int input[]);
 };
 
 
@@ -227,7 +277,7 @@ private:
 public:
   SuperLatticeAverage2D(SuperLatticeF2D<T,DESCRIPTOR>& f,
                         SuperGeometry2D<T>& superGeometry, const int material, T _radius);
-  std::vector<T> operator() (std::vector<int> input);
+  bool operator() (T output[], const int input[]);
 };
 
 
@@ -238,7 +288,7 @@ private:
   SuperLatticeF2D<T,DESCRIPTOR>& _f;
 public:
   SuperEuklidNorm2D(SuperLatticeF2D<T,DESCRIPTOR>& f);
-  std::vector<T> operator() (std::vector<int> input);
+  bool operator() (T output[], const int input[]);
 };
 
 

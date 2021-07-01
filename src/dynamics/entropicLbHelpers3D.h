@@ -33,12 +33,10 @@
 namespace olb {
 
 template<typename T>
-struct entropicLbHelpers<T, descriptors::D3Q19Descriptor>
-{
+struct entropicLbHelpers<T, descriptors::D3Q19Descriptor> {
   /// Computation of equilibrium distribution with an expansion
   /// with respect to a small velocity u
-  static T equilibrium( int iPop, T rho, const T u[3])
-  {
+  static T equilibrium( int iPop, T rho, const T u[3]) {
     typedef descriptors::D3Q19Descriptor<T> L;
 
     T c_u = L::c[iPop][0]*u[0] + L::c[iPop][1]*u[1] + L::c[iPop][2]*u[2];;

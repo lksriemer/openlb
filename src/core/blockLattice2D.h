@@ -30,40 +30,46 @@
 #include <vector>
 #include "olbDebug.h"
 #include "postProcessing.h"
-#include "dataFields2D.h"
 #include "blockLatticeStructure2D.h"
-#include "dataAnalysisBase2D.h"
 #include "multiPhysics.h"
-#include "geometry/blockGeometry2D.h"
-#include "geometry/blockGeometryStatistics2D.h"
+#include "core/cell.h"
 #include "latticeStatistics.h"
+#include "serializer.h"
 
 
 
 /// All OpenLB code is contained in this namespace.
 namespace olb {
 
+template<typename T> class BlockGeometryStructure2D;
 template<typename T, template<typename U> class Lattice> struct Dynamics;
-template<typename T, template<typename U> class Lattice> class Cell;
 
-template<typename T, template<typename U> class Lattice> class DataAnalysis2D;
 
-template<typename T, template<typename U> class Lattice> class BlockLatticeSerializer2D;
-template<typename T, template<typename U> class Lattice> class BlockLatticeUnSerializer2D;
-
-/// A regular lattice for highly efficient 2D LB dynamics.
-/** A block lattice contains a regular array of Cell objects and
+/** A regular lattice for highly efficient 2D LB dynamics.
+ * A block lattice contains a regular array of Cell objects and
  * some useful methods to execute the LB dynamics on the lattice.
  *
  * This class is not intended to be derived from.
  */
 template<typename T, template<typename U> class Lattice>
-class BlockLattice2D : public BlockLatticeStructure2D<T,Lattice> {
+class BlockLattice2D : public BlockLatticeStructure2D<T,Lattice>, public Serializable {
 public:
   typedef std::vector<PostProcessor2D<T,Lattice>*> PostProcVector;
+private:
+  /// Actual data array
+  Cell<T,Lattice>      *rawData;
+  /// 3D-Array pointing to rawData; grid[iX] points to beginning of y-array in rawData
+  Cell<T,Lattice>      **grid;
+  PostProcVector       postProcessors, latticeCouplings;
+#ifdef PARALLEL_MODE_OMP
+  LatticeStatistics<T> **statistics;
+#else
+  LatticeStatistics<T> *statistics;
+#endif
+
 public:
   /// Construction of an nx_ by ny_ lattice
-  BlockLattice2D(int nx_, int ny_);
+  BlockLattice2D(int nx, int ny);
   /// Destruction of the lattice
   ~BlockLattice2D();
   /// Copy construction
@@ -73,20 +79,16 @@ public:
   /// Swap the content of two BlockLattices
   void swap(BlockLattice2D& rhs);
 public:
-  /// Read access to lattice width
-  virtual int getNx() const { return nx; }
-  /// Read access to lattice height
-  virtual int getNy() const { return ny; }
   /// Read/write access to lattice cells
   virtual Cell<T,Lattice>& get(int iX, int iY) {
-    OLB_PRECONDITION(iX<nx);
-    OLB_PRECONDITION(iY<ny);
+    OLB_PRECONDITION(iX<this->_nx);
+    OLB_PRECONDITION(iY<this->_ny);
     return grid[iX][iY];
   }
   /// Read only access to lattice cells
   virtual Cell<T,Lattice> const& get(int iX, int iY) const {
-    OLB_PRECONDITION(iX<nx);
-    OLB_PRECONDITION(iY<ny);
+    OLB_PRECONDITION(iX<this->_nx);
+    OLB_PRECONDITION(iY<this->_ny);
     return grid[iX][iY];
   }
   /// Initialize the lattice cells to become ready for simulation
@@ -95,30 +97,20 @@ public:
   virtual void defineDynamics (int x0, int x1, int y0, int y1,
                                Dynamics<T,Lattice>* dynamics );
   virtual void defineDynamics(BlockGeometryStructure2D<T>& blockGeometry, int material,
-                              Dynamics<T,Lattice>* dynamics) {
-    for (int iX = 0; iX < getNx(); iX++) {
-      for (int iY = 0; iY < getNy(); iY++) {
-        if (blockGeometry.getMaterial(iX, iY) == material) {
-          get(iX,iY).defineDynamics(dynamics);
-        }
-      }
-    }
-  };
-
+                              Dynamics<T,Lattice>* dynamics);
   /// Define the dynamics on a lattice site
   virtual void defineDynamics(int iX, int iY, Dynamics<T,Lattice>* dynamics);
   /// Specify whether statistics measurements are done on given rect. domain
-  virtual void specifyStatisticsStatus (int x0, int x1, int y0, int y1,
-                                        bool status );
+  virtual void specifyStatisticsStatus (int x0, int x1, int y0, int y1, bool status);
   /// Apply collision step to a rectangular domain
   virtual void collide(int x0, int x1, int y0, int y1);
   /// Apply collision step to the whole domain
   virtual void collide();
   /// Apply collision step to a rectangular domain, with fixed velocity
-  virtual void staticCollide (int x0, int x1, int y0, int y1,
+  /*virtual void staticCollide (int x0, int x1, int y0, int y1,
                               TensorFieldBase2D<T,2> const& u);
   /// Apply collision step to the whole domain, with fixed velocity
-  virtual void staticCollide(TensorFieldBase2D<T,2> const& u);
+  virtual void staticCollide(TensorFieldBase2D<T,2> const& u);*/
   /// Apply streaming step to a rectangular domain
   virtual void stream(int x0, int x1, int y0, int y1);
   /// Apply streaming step to the whole domain
@@ -142,8 +134,7 @@ public:
   /// Apply an operation to all cells
   virtual void forAll(WriteCellFunctional<T,Lattice> const& application);
   /// Add a non-local post-processing step
-  virtual void addPostProcessor (
-    PostProcessorGenerator2D<T,Lattice> const& ppGen );
+  virtual void addPostProcessor (    PostProcessorGenerator2D<T,Lattice> const& ppGen );
   /// Clean up all non-local post-processing steps
   virtual void resetPostProcessors();
   /// Execute post-processing on a sub-lattice
@@ -151,9 +142,8 @@ public:
   /// Execute post-processing steps
   virtual void postProcess();
   /// Add a non-local post-processing step which couples together lattices
-  virtual void addLatticeCoupling (
-    LatticeCouplingGenerator2D<T,Lattice> const& lcGen,
-    std::vector<SpatiallyExtendedObject2D*> partners );
+  virtual void addLatticeCoupling( LatticeCouplingGenerator2D<T,Lattice> const& lcGen,
+                                   std::vector<SpatiallyExtendedObject2D*> partners );
   /// Execute couplings on a sub-lattice
   virtual void executeCoupling(int x0_, int x1_, int y0_, int y1_);
   /// Execute couplings
@@ -164,20 +154,7 @@ public:
   virtual LatticeStatistics<T>& getStatistics();
   /// Return a constant handle to the LatticeStatistics object
   virtual LatticeStatistics<T> const& getStatistics() const;
-  /// Return a class for analysis of the numerical data
-  virtual DataAnalysisBase2D<T,Lattice> const& getDataAnalysis() const;
-  /// Get a serializer to flush the full lattice content
-  virtual DataSerializer<T> const& getSerializer(IndexOrdering::OrderingT ordering) const;
-  /// Get an UnSerializer to read the full lattice content
-  virtual DataUnSerializer<T>& getUnSerializer(IndexOrdering::OrderingT ordering);
-  /// Get a serializer to flush a sub-domain of the lattice
-  virtual DataSerializer<T> const& getSubSerializer (
-    int x0_, int x1_, int y0_, int y1_,
-    IndexOrdering::OrderingT ordering ) const;
-  /// Get a serializer to read a sub-domain of the lattice
-  virtual DataUnSerializer<T>& getSubUnSerializer (
-    int x0_, int x1_, int y0_, int y1_,
-    IndexOrdering::OrderingT ordering );
+
   virtual SpatiallyExtendedObject2D* getComponent(int iBlock);
   virtual SpatiallyExtendedObject2D const* getComponent(int iBlock) const;
   virtual multiPhysics::MultiPhysicsId getMultiPhysicsId() const;
@@ -185,11 +162,19 @@ public:
   /// Apply streaming step to bulk (non-boundary) cells
   void bulkStream(int x0, int x1, int y0, int y1);
   /// Apply streaming step to boundary cells
-  void boundaryStream (
-    int lim_x0, int lim_x1, int lim_y0, int lim_y1,
-    int x0, int x1, int y0, int y1 );
+  void boundaryStream ( int lim_x0, int lim_x1, int lim_y0, int lim_y1, int x0,
+                        int x1, int y0, int y1 );
   /// Apply collision and streaming step to bulk (non-boundary) cells
   void bulkCollideAndStream(int x0, int x1, int y0, int y1);
+
+
+  /// Number of data blocks for the serializable interface
+  virtual std::size_t getNblock() const;
+  /// Binary size for the serializer
+  virtual std::size_t getSerializableSize() const;
+  /// Return a pointer to the memory of the current block and its size for the serializable interface
+  virtual bool* getBlock(std::size_t iBlock, std::size_t& sizeBlock, bool loadingMode);
+
 private:
   /// Helper method for memory allocation
   void allocateMemory();
@@ -201,62 +186,8 @@ private:
   void clearLatticeCouplings();
   void periodicEdge(int x0, int x1, int y0, int y1);
   void makePeriodic();
-private:
-  int                  nx, ny;
-  Cell<T,Lattice>      *rawData;
-  Cell<T,Lattice>      **grid;
-  PostProcVector       postProcessors, latticeCouplings;
-#ifdef PARALLEL_MODE_OMP
-  LatticeStatistics<T> **statistics;
-#else
-  LatticeStatistics<T> *statistics;
-#endif
-  mutable BlockLatticeSerializer2D<T,Lattice>* serializer;
-  mutable BlockLatticeUnSerializer2D<T,Lattice>* unSerializer;
-  DataAnalysis2D<T,Lattice> *dataAnalysis;
 };
 
-
-template<typename T, template<typename U> class Lattice>
-class BlockLatticeSerializer2D : public DataSerializer<T> {
-public:
-  BlockLatticeSerializer2D(BlockLattice2D<T,Lattice> const& blockLattice_,
-                           IndexOrdering::OrderingT ordering_);
-  BlockLatticeSerializer2D(BlockLattice2D<T,Lattice> const& blockLattice_,
-                           int x0_, int x1_, int y0_, int y1_,
-                           IndexOrdering::OrderingT ordering_);
-  virtual size_t getSize() const;
-  virtual const T* getNextDataBuffer(size_t& bufferSize) const;
-  virtual bool isEmpty() const;
-private:
-  BlockLattice2D<T,Lattice> const& blockLattice;
-  IndexOrdering::OrderingT ordering;
-  int x0, x1, y0, y1;
-  mutable std::vector<T> buffer;
-  mutable int iX, iY;
-  int sizeOfCell;
-};
-
-template<typename T, template<typename U> class Lattice>
-class BlockLatticeUnSerializer2D : public DataUnSerializer<T> {
-public:
-  BlockLatticeUnSerializer2D(BlockLattice2D<T,Lattice>& blockLattice_,
-                             IndexOrdering::OrderingT ordering_);
-  BlockLatticeUnSerializer2D(BlockLattice2D<T,Lattice>& blockLattice_,
-                             int x0_, int x1_, int y0_, int y1_,
-                             IndexOrdering::OrderingT ordering_);
-  virtual size_t getSize() const;
-  virtual T* getNextDataBuffer(size_t& bufferSize);
-  virtual void commitData();
-  virtual bool isFull() const;
-private:
-  BlockLattice2D<T,Lattice>& blockLattice;
-  IndexOrdering::OrderingT ordering;
-  int x0, x1, y0, y1;
-  mutable std::vector<T> buffer;
-  mutable int iX, iY;
-  int sizeOfCell;
-};
 
 }  // namespace olb
 

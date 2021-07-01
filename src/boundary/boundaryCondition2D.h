@@ -66,6 +66,8 @@ public:
   /// adds a pressure or velocity boundary for one material and a range (x0-x1, y0-y1, z0-z1) or the whole geometry
   virtual void addVelocityBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int material, int x0, int x1, int y0, int y1, T omega) =0;
   virtual void addVelocityBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int material, T omega) =0;
+  virtual void addSlipBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int material, int x0, int x1, int y0, int y1) =0;
+  virtual void addSlipBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int material) =0;
   virtual void addPressureBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int material, int x0, int x1, int y0, int y1, T omega) =0;
   virtual void addPressureBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int material, T omega) =0;
   virtual void addConvectionBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int material, int x0, int x1, int y0, int y1, T omega, T* uAv=NULL) =0;
@@ -90,13 +92,15 @@ createInterpBoundaryCondition2D(BlockLatticeStructure2D<T,Lattice>& block);
 
 template<typename T, template<typename U> class Lattice>
 OnLatticeBoundaryCondition2D<T,Lattice>*
-createLocalBoundaryCondition2D(BlockLatticeStructure2D<T,Lattice>& block) {
+createLocalBoundaryCondition2D(BlockLatticeStructure2D<T,Lattice>& block)
+{
   return createLocalBoundaryCondition2D<T,Lattice,RLBdynamics<T,Lattice> >(block);
 }
 
 template<typename T, template<typename U> class Lattice>
 OnLatticeBoundaryCondition2D<T,Lattice>*
-createInterpBoundaryCondition2D(BlockLatticeStructure2D<T,Lattice>& block) {
+createInterpBoundaryCondition2D(BlockLatticeStructure2D<T,Lattice>& block)
+{
   return createInterpBoundaryCondition2D<T,Lattice,BGKdynamics<T,Lattice> >(block);
 }
 

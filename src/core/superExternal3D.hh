@@ -29,26 +29,29 @@
 #ifndef SUPER_EXTERNAL_3D_HH
 #define SUPER_EXTERNAL_3D_HH
 
-#include<limits>
+
+#include "superExternal3D.h"
+#include "geometry/superGeometry3D.h"
+
 
 
 namespace olb {
 
 
-////////////////////// Class SuperExternal3D /////////////////////////
-
-
 template<typename T, template<typename U> class Lattice>
-SuperExternal3D<T, Lattice>::SuperExternal3D(SuperGeometry3D<T>& superGeometry, SuperLattice3D<T, Lattice>& sLattice, int offset, int size, int overlap)
-: SuperStructure3D<T>(superGeometry.getCuboidGeometry(), superGeometry.getLoadBalancer()), _offset(offset), _size(size), _overlap(overlap), _sLattice(sLattice) {
-
+SuperExternal3D<T, Lattice>::SuperExternal3D(SuperGeometry3D<T>& superGeometry,
+    SuperLattice3D<T, Lattice>& sLattice, int offset, int size, int overlap)
+  : SuperStructure3D<T>(superGeometry.getCuboidGeometry(), superGeometry.getLoadBalancer()),
+    _offset(offset), _size(size), _overlap(overlap), _sLattice(sLattice)
+{
   this->_communicator.init_nh();
   this->_communicator.add_cells(this->_overlap);
   this->_communicator.init();
 }
 
 template<typename T, template<typename U> class Lattice>
-void SuperExternal3D<T,Lattice>::communicate(bool verbose) {
+void SuperExternal3D<T,Lattice>::communicate(bool verbose)
+{
   this->_communicator.send();
   this->_communicator.receive();
   this->_communicator.write();

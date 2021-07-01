@@ -34,12 +34,15 @@ namespace olb {
 */
 
 template<typename T, template<typename U> class Lattice>
-class ZeroVelocityBouzidiLinearPostProcessor2D : public LocalPostProcessor2D<T,Lattice>
-{
+class ZeroVelocityBouzidiLinearPostProcessor2D : public LocalPostProcessor2D<T,Lattice> {
 public:
   ZeroVelocityBouzidiLinearPostProcessor2D(int x_, int y_, int iPop_, T dist_);
-  virtual int extent() const { return 1; }
-  virtual int extent(int whichDirection) const { return 1; }
+  virtual int extent() const {
+    return 1;
+  }
+  virtual int extent(int whichDirection) const {
+    return 1;
+  }
   virtual void process(BlockLattice2D<T,Lattice>& blockLattice);
   virtual void processSubDomain(BlockLattice2D<T,Lattice>& blockLattice,
                                 int x0_, int x1_, int y0_, int y1_ );
@@ -51,12 +54,15 @@ private:
 };
 
 template<typename T, template<typename U> class Lattice>
-class ZeroVelocityBounceBackPostProcessor2D : public LocalPostProcessor2D<T,Lattice>
-{
+class ZeroVelocityBounceBackPostProcessor2D : public LocalPostProcessor2D<T,Lattice> {
 public:
   ZeroVelocityBounceBackPostProcessor2D(int x_, int y_, int iPop_, T dist_);
-  virtual int extent() const { return 1; }
-  virtual int extent(int whichDirection) const { return 1; }
+  virtual int extent() const {
+    return 1;
+  }
+  virtual int extent(int whichDirection) const {
+    return 1;
+  }
   virtual void process(BlockLattice2D<T,Lattice>& blockLattice);
   virtual void processSubDomain(BlockLattice2D<T,Lattice>& blockLattice,
                                 int x0_, int x1_, int y0_, int y1_ );
@@ -68,12 +74,15 @@ private:
 };
 
 template<typename T, template<typename U> class Lattice>
-class VelocityBouzidiLinearPostProcessor2D : public LocalPostProcessor2D<T,Lattice>
-{
+class VelocityBouzidiLinearPostProcessor2D : public LocalPostProcessor2D<T,Lattice> {
 public:
   VelocityBouzidiLinearPostProcessor2D(int x_, int y_, int iPop_, T dist_);
-  virtual int extent() const { return 1; }
-  virtual int extent(int whichDirection) const { return 1; }
+  virtual int extent() const {
+    return 1;
+  }
+  virtual int extent(int whichDirection) const {
+    return 1;
+  }
   virtual void process(BlockLattice2D<T,Lattice>& blockLattice);
   virtual void processSubDomain(BlockLattice2D<T,Lattice>& blockLattice,
                                 int x0_, int x1_, int y0_, int y1_ );
@@ -86,12 +95,15 @@ private:
 };
 
 template<typename T, template<typename U> class Lattice>
-class VelocityBounceBackPostProcessor2D : public LocalPostProcessor2D<T,Lattice>
-{
+class VelocityBounceBackPostProcessor2D : public LocalPostProcessor2D<T,Lattice> {
 public:
   VelocityBounceBackPostProcessor2D(int x_, int y_, int iPop_, T dist_);
-  virtual int extent() const { return 1; }
-  virtual int extent(int whichDirection) const { return 1; }
+  virtual int extent() const {
+    return 1;
+  }
+  virtual int extent(int whichDirection) const {
+    return 1;
+  }
   virtual void process(BlockLattice2D<T,Lattice>& blockLattice);
   virtual void processSubDomain(BlockLattice2D<T,Lattice>& blockLattice,
                                 int x0_, int x1_, int y0_, int y1_ );
@@ -107,8 +119,7 @@ private:
 */
 
 template<typename T, template<typename U> class Lattice>
-class ZeroVelocityBouzidiLinearPostProcessorGenerator2D : public PostProcessorGenerator2D<T,Lattice>
-{
+class ZeroVelocityBouzidiLinearPostProcessorGenerator2D : public PostProcessorGenerator2D<T,Lattice> {
 public:
   ZeroVelocityBouzidiLinearPostProcessorGenerator2D(int x_, int y_, int iPop_, T dist_);
   virtual PostProcessor2D<T,Lattice>* generate() const;
@@ -120,8 +131,7 @@ private:
 };
 
 template<typename T, template<typename U> class Lattice>
-class ZeroVelocityBounceBackPostProcessorGenerator2D : public PostProcessorGenerator2D<T,Lattice>
-{
+class ZeroVelocityBounceBackPostProcessorGenerator2D : public PostProcessorGenerator2D<T,Lattice> {
 public:
   ZeroVelocityBounceBackPostProcessorGenerator2D(int x_, int y_, int iPop_, T dist_);
   virtual PostProcessor2D<T,Lattice>* generate() const;
@@ -133,8 +143,7 @@ private:
 };
 
 template<typename T, template<typename U> class Lattice>
-class VelocityBouzidiLinearPostProcessorGenerator2D : public PostProcessorGenerator2D<T,Lattice>
-{
+class VelocityBouzidiLinearPostProcessorGenerator2D : public PostProcessorGenerator2D<T,Lattice> {
 public:
   VelocityBouzidiLinearPostProcessorGenerator2D(int x_, int y_, int iPop_, T dist_);
   virtual PostProcessor2D<T,Lattice>* generate() const;
@@ -146,8 +155,7 @@ private:
 };
 
 template<typename T, template<typename U> class Lattice>
-class VelocityBounceBackPostProcessorGenerator2D : public PostProcessorGenerator2D<T,Lattice>
-{
+class VelocityBounceBackPostProcessorGenerator2D : public PostProcessorGenerator2D<T,Lattice> {
 public:
   VelocityBounceBackPostProcessorGenerator2D(int x_, int y_, int iPop_, T dist_);
   virtual PostProcessor2D<T,Lattice>* generate() const;

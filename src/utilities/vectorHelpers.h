@@ -31,33 +31,38 @@
 #include<limits>
 
 #include "io/ostreamManager.h"
+#include "core/vector.h"
 
 namespace olb {
 namespace util {
 
 /// return true if a is close to zero
 template <class T>
-inline bool nearZero(const T& a) {
+inline bool nearZero(const T& a)
+{
   T EPSILON = std::numeric_limits<T>::epsilon();
-  if(a > -EPSILON && a < EPSILON)
+  if (a > -EPSILON && a < EPSILON) {
     return true;
-  else
+  } else {
     return false;
+  }
 }
-
+/*
 /// computes a-b
 template <class T>
-inline std::vector<T> operator- (const std::vector<T>& a, const std::vector<T>& b) {
-	std::vector<T> out(a);
+inline std::vector<T> operator- (const std::vector<T>& a, const std::vector<T>& b)
+{
+  std::vector<T> out(a);
   for (unsigned int iDim = 0; iDim<a.size(); iDim++) {
-    out[iDim] -= b[iDim]; 
+    out[iDim] -= b[iDim];
   }
   return out;
 }
 
 template <class T>
-inline std::vector<T> operator- (const std::vector<T>& a, const T& b) {
-	std::vector<T> out(a);
+inline std::vector<T> operator- (const std::vector<T>& a, const T& b)
+{
+  std::vector<T> out(a);
   for (unsigned int iDim = 0; iDim<a.size(); iDim++) {
     out[iDim] -= b;
   }
@@ -65,7 +70,8 @@ inline std::vector<T> operator- (const std::vector<T>& a, const T& b) {
 }
 
 template <class T>
-inline void operator-= (std::vector<T>& a, T b) {
+inline void operator-= (std::vector<T>& a, T b)
+{
   for (int iDim = 0; iDim<a.size(); iDim++) {
     a[iDim] -= b;
   }
@@ -73,68 +79,120 @@ inline void operator-= (std::vector<T>& a, T b) {
 
 /// computes a+b
 template <class T>
-inline std::vector<T> operator+ (const std::vector<T>& a, const std::vector<T>& b) {
-	std::vector<T> out(a);
+inline std::vector<T> operator+ (const std::vector<T>& a, const std::vector<T>& b)
+{
+  std::vector<T> out(a);
   for (unsigned int iDim = 0; iDim<a.size(); iDim++) {
-    out[iDim] += b[iDim]; 
+    out[iDim] += b[iDim];
   }
   return out;
 }
 
 template <class T>
-inline std::vector<T> operator+ (const std::vector<T>& a, const T& b) {
-	std::vector<T> out(a);
+inline std::vector<T> operator+ (const std::vector<T>& a, const T& b)
+{
+  std::vector<T> out(a);
   for (unsigned int iDim = 0; iDim<a.size(); iDim++) {
     out[iDim] += b;
   }
   return out;
 }
-
+*/
 template <class T>
-inline void operator+= (std::vector<T>& a, T b) {
-  for (int iDim = 0; iDim<a.size(); iDim++) {
-    a[iDim] += b;
+inline void copyN(T c[], const T a[], const unsigned dim)
+{
+  for (unsigned i=0; i<dim; i++) {
+    c[i] = a[i];
   }
 }
 
+template <class T>
+inline void copy3(T c[], const T a[])
+{
+  for (unsigned i=0; i<3; i++) {
+    c[i] = a[i];
+  }
+}
+/*
 /// dot product, only valid in 3d
 template <typename T>
-T dotProduct3D(const std::vector<T>& a, const std::vector<T>& b) {
-	return a[0]*b[0] + a[1]*b[1] + a[2]*b[2];
+T dotProduct3D(const std::vector<T>& a, const std::vector<T>& b) // Was commented out
+{
+  return a[0]*b[0] + a[1]*b[1] + a[2]*b[2];
 }
-
-
-template <class T>
-inline std::vector<T> operator* (const std::vector<T>& a, T b) {
-	std::vector<T> out(a);
+*/
+/*
+template <class T, typename S>
+inline std::vector<T> operator* (const std::vector<T>& a, S b)
+{
+  std::vector<T> out(a);
   for (unsigned int iDim = 0; iDim<a.size(); iDim++) {
     out[iDim] *= b;
   }
   return out;
 }
 
-template <class T>
-inline std::vector<T> operator* (T b, const std::vector<T>& a) {
-	std::vector<T> out(a);
+template <class T, typename S>
+inline std::vector<T> operator* (S b, const std::vector<T>& a)
+{
+  std::vector<T> out(a);
   for (unsigned int iDim = 0; iDim<a.size(); iDim++) {
     out[iDim] *= b;
   }
   return out;
 }
-
+*/
+/*
 /// cross product, only valid in 3d
 template <typename T>
-std::vector<T> crossProduct3D(const std::vector<T>& a, const std::vector<T>& b) {
+std::vector<T> crossProduct3D(const std::vector<T>& a, const std::vector<T>& b) // Was commented out
+{
   std::vector<T> v;
   v.push_back(a[1]*b[2] - a[2]*b[1]);
   v.push_back(a[2]*b[0] - a[0]*b[2]);
   v.push_back(a[0]*b[1] - a[1]*b[0]);
   return v;
 }
-
+*/
+/*
+template <typename T, unsigned Size>
+std::vector<T> fromVector(const Vector<T, Size>& vec){
+  std::vector<T> v;
+  for (i=0; i<Size; ++i) v.push_back(vec[i]);
+  return v;
+}
+*/
+template <typename T>
+std::vector<T> fromVector3(const Vector<T, 3>& vec)
+{
+  std::vector<T> v;
+  v.push_back(vec[0]);
+  v.push_back(vec[1]);
+  v.push_back(vec[2]);
+  return v;
+}
+template <typename T>
+std::vector<T> fromVector2(const Vector<T, 2>& vec)
+{
+  std::vector<T> v;
+  v.push_back(vec[0]);
+  v.push_back(vec[1]);
+  return v;
+}
+/*
+/// cross product, only valid in 3d
+template <typename T>
+void crossProduct3D(T c[3], const T a[3], const T b[3])
+{
+  c[0] = (a[1]*b[2] - a[2]*b[1]);
+  c[1] = (a[2]*b[0] - a[0]*b[2]);
+  c[2] = (a[0]*b[1] - a[1]*b[0]);
+}
+*/
 /// l2 norm of a vector of arbitrary length
 template <typename T>
-T norm(const std::vector<T>& a) {
+T norm(const std::vector<T>& a)
+{
   T v(0);
   for (unsigned iD=0; iD<a.size(); iD++) {
     v += a[iD]*a[iD];
@@ -143,9 +201,21 @@ T norm(const std::vector<T>& a) {
   return v;
 }
 
+/// l2 norm to the power of 2 of a vector of arbitrary length
+template <typename T>
+T norm2(const std::vector<T>& a)
+{
+  T v = T();
+  for (unsigned iD=0; iD<a.size(); iD++) {
+    v += a[iD]*a[iD];
+  }
+  return v;
+}
+
 /// returns a normalized vector, works for arbitrary lengths
 template <typename T>
-std::vector<T> normalize(const std::vector<T>& a) {
+std::vector<T> normalize(const std::vector<T>& a)
+{
   std::vector<T> out(a);
   T scale = norm(a);
   assert(scale>0);
@@ -155,10 +225,15 @@ std::vector<T> normalize(const std::vector<T>& a) {
   return out;
 }
 
-/// algorithm by Möller–Trumbore (TODO add ref), implemented by Lucas Cruz and Mathias J. Krause 
-/// returns true if there is an intersection of a triangle given by (point0, point1, point1) and a ray given by its origin and direction and computes the distance 
+/*
+/// algorithm by Möller–Trumbore (TODO add ref), implemented by Lucas Cruz and Mathias J. Krause
+/// returns true if there is an intersection of a triangle given by (point0, point1, point1) and a ray given by its origin and direction and computes the distance
 template <typename T>
-bool triangleIntersectionWithNormalDirection(const std::vector<T>& point0, const std::vector<T>& point1, const std::vector<T>& point2, const std::vector<T>& origin, const std::vector<T>& normalDirection, T& distance) {
+bool triangleIntersectionWithNormalDirection(const std::vector<T>& point0,
+    const std::vector<T>& point1, const std::vector<T>& point2,
+    const std::vector<T>& origin, const std::vector<T>& normalDirection,
+    T& distance)
+{
   T EPSILON = std::numeric_limits<T>::epsilon();
   std::vector<T> e1, e2;
   std::vector<T> P, Q, TT;
@@ -168,19 +243,22 @@ bool triangleIntersectionWithNormalDirection(const std::vector<T>& point0, const
   e2 = point2 - point0;
   P = crossProduct3D(normalDirection, e2);
   det = dotProduct3D(P, e1);
-  if(det > -EPSILON && det < EPSILON)
+  if (det > -EPSILON && det < EPSILON) {
     return false;
+  }
   inv_det = T(1) / det;
   TT = origin - point0;
   u = dotProduct3D(TT, P)*inv_det;
-  if(u < T() || u > T(1))
+  if (u < T() || u > T(1)) {
     return false;
+  }
   Q = crossProduct3D(TT, e1);
   v = dotProduct3D(normalDirection, Q) * inv_det;
-  if(v < T() || u + v  > T(1))
+  if (v < T() || u + v  > T(1)) {
     return false;
+  }
   t = dotProduct3D(e2, Q)*inv_det;
-  if(t > EPSILON) {
+  if (t > EPSILON) {
     distance = t;
     return true;
   }
@@ -188,41 +266,48 @@ bool triangleIntersectionWithNormalDirection(const std::vector<T>& point0, const
 }
 
 template <typename T>
-bool triangleIntersection(const std::vector<T>& point0, const std::vector<T>& point1, const std::vector<T>& point2, const std::vector<T>& origin, const std::vector<T>& direction, T& distance) {
+bool triangleIntersection(const std::vector<T>& point0, const std::vector<T>& point1, const std::vector<T>& point2, const std::vector<T>& origin, const std::vector<T>& direction, T& distance)
+{
   std::vector<T> normalDirection(normalize(direction) );
   return triangleIntersectionWithNormalDirection(point0, point1, point2, origin, normalDirection, distance );
 }
-
+*/
 template <typename T>
-std::vector<T> assign(T a, T b) {
-	std::vector<T> v1;
-	v1.push_back(a);
-	v1.push_back(b);
-	return v1;
+std::vector<T> assign(T a, T b)
+{
+  std::vector<T> v1;
+  v1.push_back(a);
+  v1.push_back(b);
+  return v1;
 }
 
 template <typename T>
-std::vector<T> assign(T a, T b, T c) {
-	std::vector<T> v1;
-	v1.push_back(a);
-	v1.push_back(b);
-	v1.push_back(c);
-	return v1;
+std::vector<T> assign(T a, T b, T c)
+{
+  std::vector<T> v1;
+  v1.push_back(a);
+  v1.push_back(b);
+  v1.push_back(c);
+  return v1;
 }
 
 /// prints a vector of arbitrary length
 template <typename T>
-void print(const T& a, std::string name="", OstreamManager clout = OstreamManager(std::cout,"print")) {
-  if (name != "")
+void print(const T& a, std::string name="", OstreamManager clout = OstreamManager(std::cout,"print"))
+{
+  if (name != "") {
     clout << name << "=";
+  }
   clout << a << std::endl;
 }
 
 /// prints a vector of arbitrary length
 template <typename T>
-void print(const std::vector<T>& a, std::string name="", OstreamManager clout = OstreamManager(std::cout,"print")) {
-  if (name != "")
+void print(const std::vector<T>& a, std::string name="", OstreamManager clout = OstreamManager(std::cout,"print"))
+{
+  if (name != "") {
     clout << name << "=";
+  }
   clout << "(";
   for (unsigned iD=0; iD<a.size()-1; iD++) {
     clout << a[iD] << ",";
@@ -230,7 +315,34 @@ void print(const std::vector<T>& a, std::string name="", OstreamManager clout = 
   clout << a[a.size()-1] << ")" << std::endl;
 }
 
+/// prints a vector of arbitrary length
+template <typename T>
+void print(const T a[2], std::string name="", OstreamManager clout = OstreamManager(std::cout,"print"))
+{
+  if (name != "") {
+    clout << name << "=";
+  }
+  unsigned size = 3;
+  clout << "(";
+  for (unsigned iD=0; iD<size-1; iD++) {
+    clout << a[iD] << ",";
+  }
+  clout << a[size-1] << ")" << std::endl;
+}
 
+/// prints a vector of arbitrary length
+template <typename T>
+void print(const T a[3], const unsigned& size, std::string name="", OstreamManager clout = OstreamManager(std::cout,"print"))
+{
+  if (name != "") {
+    clout << name << "=";
+  }
+  clout << "(";
+  for (unsigned iD=0; iD<size-1; iD++) {
+    clout << a[iD] << ",";
+  }
+  clout << a[size-1] << ")" << std::endl;
+}
 
 } // namespace util
 } // namespace olb

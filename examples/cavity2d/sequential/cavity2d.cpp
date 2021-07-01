@@ -107,14 +107,14 @@ void setBoundaryValues(LBconverter<T> const* converter,
 }
 
 void getResults(BlockLatticeStructure2D<T,DESCRIPTOR>& lattice,
-                LBconverter<T> const* converter, int iT, Timer<double>* timer,
+                LBconverter<T> const* converter, int iT, Timer<T>* timer,
                 const T logT, const T imSave, const T vtkSave, const T maxT,
                 std::string filenameGif, std::string filenameVtk,
                 const bool timerPrintSum, const int timerPrintMode,
                 const int timerTimeSteps)
 {
 
-  const int imSize = 600;
+  //const int imSize = 600;
 
   /// Get statistics
   if (iT%converter->numTimeSteps(logT)==0) {
@@ -125,22 +125,19 @@ void getResults(BlockLatticeStructure2D<T,DESCRIPTOR>& lattice,
     timer->print(iT,timerPrintMode);
   }
 
-  /// Writes the Gif files
-  if (iT%converter->numTimeSteps(imSave)==0 && iT>0) {
-    DataAnalysisBase2D<T,DESCRIPTOR> const& analysis = lattice.getDataAnalysis();
-
-    ImageWriter<T> imageWriter("leeloo");
-    imageWriter.writeScaledGif(createFileName(filenameGif, iT, 6),
-                               analysis.getVelocityNorm(),
-                               imSize, imSize );
-  }
-
-
-  BlockVTKwriter2D<T,DESCRIPTOR> vtkWriter("cavity2d");
+  BlockVTKwriter2D<T> vtkWriter("cavity2d");
   BlockLatticePhysVelocity2D<T,DESCRIPTOR> velocity(lattice,*converter);
   BlockLatticePhysPressure2D<T,DESCRIPTOR> pressure(lattice,*converter);
   vtkWriter.addFunctor(velocity);
   vtkWriter.addFunctor(pressure);
+
+  /// Writes the Gif files
+  if (iT%converter->numTimeSteps(imSave)==0 && iT>0) {
+    BlockL2Norm2D<T,DESCRIPTOR> normVel(velocity);
+    BlockGifWriter<T> gifWriter;
+    gifWriter.write(normVel, 0, 3, iT, "vel");
+//    gifWriter.write(normVel, iT, "vel");
+  }
 
   /// Writes the VTK files
   if (iT%converter->numTimeSteps(imSave)==0 && iT>0) {
@@ -149,8 +146,9 @@ void getResults(BlockLatticeStructure2D<T,DESCRIPTOR>& lattice,
 
   if (iT == converter->numTimeSteps(maxT)-1 ) {
     timer->stop();
-    if (timerPrintSum==true)
+    if (timerPrintSum==true) {
       timer->printSummary();
+    }
   }
 
 }
@@ -177,12 +175,12 @@ int main(int argc, char* argv[]) {
   singleton::directories().setOlbDir(olbdir);
   singleton::directories().setOutputDir(outputdir);
 
-// call creator functions using xml data
+  // call creator functions using xml data
   LBconverter<T>* converter = createLBconverter<T>(config);
   int N = converter->numNodes();
   Timer<T>* timer           = createTimer<T>(config, *converter, N*N);
 
-/// === 3rd Step: Prepare Lattice ===
+  /// === 3rd Step: Prepare Lattice ===
 
   T logT;
   T imSave;

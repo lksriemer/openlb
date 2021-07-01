@@ -72,14 +72,13 @@ void AdvectionDiffusionBoundariesDynamics<T,Lattice,Dynamics,direction,orientati
   std::vector<int> missingDiagonal = util::subIndexOutgoing<L,direction,orientation>();
   std::vector<int> knownIndexes   = util::remainingIndexes<L>(missingDiagonal);
   // here I know all missing and non missing f_i
-  for (unsigned iPop = 0; iPop < missingDiagonal.size(); ++iPop)
-  {
+  for (unsigned iPop = 0; iPop < missingDiagonal.size(); ++iPop) {
     int numOfNonNullComp = 0;
-    for (int iDim = 0; iDim < L:: d; ++iDim)
+    for (int iDim = 0; iDim < L:: d; ++iDim) {
       numOfNonNullComp += abs(L::c[missingDiagonal[iPop]][iDim]);
+    }
 
-    if (numOfNonNullComp == 1)
-    {
+    if (numOfNonNullComp == 1) {
       missingNormal = missingDiagonal[iPop];
       missingDiagonal.erase(missingDiagonal.begin()+iPop);
       break;
@@ -87,8 +86,7 @@ void AdvectionDiffusionBoundariesDynamics<T,Lattice,Dynamics,direction,orientati
   }
 
   T sum = T();
-  for (unsigned iPop = 0; iPop < knownIndexes.size(); ++iPop)
-  {
+  for (unsigned iPop = 0; iPop < knownIndexes.size(); ++iPop) {
     sum += cell[knownIndexes[iPop]];
   }
   cell[missingNormal] = temperature - sum -(T)1;
@@ -159,8 +157,7 @@ void AdvectionDiffusionCornerDynamics2D<T,Lattice,Dynamics,xNormal,yNormal>::col
   // Given the rule f_i_neq = -f_opposite(i)_neq
   // I have the right number of equations for the number of unknowns using these lattices
 
-  for (unsigned iPop = 0; iPop < unknownIndexes.size(); ++iPop)
-  {
+  for (unsigned iPop = 0; iPop < unknownIndexes.size(); ++iPop) {
     cell[unknownIndexes[iPop]] = lbH::equilibrium(unknownIndexes[iPop], temperature, u)
                                  -(cell[util::opposite<L>(unknownIndexes[iPop])]
                                    - lbH::equilibrium(util::opposite<L>(unknownIndexes[iPop]), temperature, u) ) ;
@@ -235,8 +232,7 @@ void AdvectionDiffusionCornerDynamics3D<T,Lattice,Dynamics,xNormal,yNormal,zNorm
   // Given the rule f_i_neq = -f_opposite(i)_neq
   // I have the right number of equations for the number of unknowns using these lattices
 
-  for (unsigned iPop = 0; iPop < unknownIndexes.size(); ++iPop)
-  {
+  for (unsigned iPop = 0; iPop < unknownIndexes.size(); ++iPop) {
     cell[unknownIndexes[iPop]] = lbH::equilibrium(unknownIndexes[iPop], temperature, u)
                                  -(cell[util::opposite<L>(unknownIndexes[iPop])]
                                    - lbH::equilibrium(util::opposite<L>(unknownIndexes[iPop]), temperature, u) ) ;
@@ -309,8 +305,7 @@ void AdvectionDiffusionEdgesDynamics<T,Lattice,Dynamics,plane,normal1, normal2>:
   // Given the rule f_i_neq = -f_opposite(i)_neq
   // I have the right number of equations for the number of unknowns using these lattices
 
-  for (unsigned iPop = 0; iPop < unknownIndexes.size(); ++iPop)
-  {
+  for (unsigned iPop = 0; iPop < unknownIndexes.size(); ++iPop) {
     cell[unknownIndexes[iPop]] = lbH::equilibrium(unknownIndexes[iPop], temperature, u)
                                  -(cell[util::opposite<L>(unknownIndexes[iPop])]
                                    - lbH::equilibrium(util::opposite<L>(unknownIndexes[iPop]), temperature, u) ) ;

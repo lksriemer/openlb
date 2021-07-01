@@ -38,4 +38,7 @@ template class SmagorinskyBGKdynamics<double, descriptors::D3Q19Descriptor>;
 
 template class ConStrainSmagorinskyBGKdynamics<double, descriptors::D2Q9Descriptor>;
 template class ConStrainSmagorinskyBGKdynamics<double, descriptors::D3Q19Descriptor>;
+
+template class KrauseBGKdynamics<double, descriptors::D2Q9Descriptor>;
+template class KrauseBGKdynamics<double, descriptors::D3Q19Descriptor>;
 }

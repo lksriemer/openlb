@@ -64,7 +64,8 @@ sOffLatticeBoundaryCondition3D(sOffLatticeBoundaryCondition3D<T,Lattice> const& 
 
 template<typename T, template<typename U> class Lattice>
 sOffLatticeBoundaryCondition3D<T,Lattice> sOffLatticeBoundaryCondition3D<T,Lattice>::operator=(
-  sOffLatticeBoundaryCondition3D<T,Lattice> rhs) {
+  sOffLatticeBoundaryCondition3D<T,Lattice> rhs)
+{
 
   sOffLatticeBoundaryCondition3D<T,Lattice> tmp(rhs);
   return tmp;
@@ -72,7 +73,8 @@ sOffLatticeBoundaryCondition3D<T,Lattice> sOffLatticeBoundaryCondition3D<T,Latti
 
 template<typename T, template<typename U> class Lattice>
 sOffLatticeBoundaryCondition3D<T,Lattice>::
-~sOffLatticeBoundaryCondition3D() {
+~sOffLatticeBoundaryCondition3D()
+{
 
   for (unsigned iC=0; iC<_blockBCs.size(); iC++) {
     delete _blockBCs[iC];
@@ -80,7 +82,9 @@ sOffLatticeBoundaryCondition3D<T,Lattice>::
 }
 
 template<typename T, template<typename U> class Lattice>
-void sOffLatticeBoundaryCondition3D<T,Lattice>::addZeroVelocityBoundary(SuperGeometry3D<T>& superGeometry, int material, IndicatorF3D<bool,T>& indicator, std::list<int> bulkMaterials) {
+void sOffLatticeBoundaryCondition3D<T,Lattice>::addZeroVelocityBoundary(SuperGeometry3D<T>& superGeometry, int material,
+    IndicatorF3D<T>& indicator, std::list<int> bulkMaterials)
+{
   clout << "epsFraction=" << _epsFraction << std::endl;
   clout.setMultiOutput(true);
   int nCloc = _sLattice.getLoadBalancer().size();
@@ -97,7 +101,8 @@ void sOffLatticeBoundaryCondition3D<T,Lattice>::addZeroVelocityBoundary(SuperGeo
 
 template<typename T, template<typename U> class Lattice>
 void sOffLatticeBoundaryCondition3D<T,Lattice>::
-addVelocityBoundary(SuperGeometry3D<T>& superGeometry, int material, IndicatorF3D<bool,T>& indicator, std::list<int> bulkMaterials) {
+addVelocityBoundary(SuperGeometry3D<T>& superGeometry, int material, IndicatorF3D<T>& indicator, std::list<int> bulkMaterials)
+{
   clout << "epsFraction=" << _epsFraction << std::endl;
   clout.setMultiOutput(true);
   int nC = _sLattice.getLoadBalancer().size();
@@ -115,7 +120,8 @@ addVelocityBoundary(SuperGeometry3D<T>& superGeometry, int material, IndicatorF3
 
 template<typename T, template<typename U> class Lattice>
 void sOffLatticeBoundaryCondition3D<T,Lattice>::
-defineU(SuperGeometry3D<T>& superGeometry, int material, AnalyticalF3D<T,T>& u, std::list<int> bulkMaterials ) {
+defineU(SuperGeometry3D<T>& superGeometry, int material, AnalyticalF3D<T,T>& u, std::list<int> bulkMaterials )
+{
 
   int nC = _sLattice.getLoadBalancer().size();
   for (int iCloc = 0; iCloc < nC; iCloc++) {
@@ -126,7 +132,8 @@ defineU(SuperGeometry3D<T>& superGeometry, int material, AnalyticalF3D<T,T>& u, 
 
 template<typename T, template<typename U> class Lattice>
 void sOffLatticeBoundaryCondition3D<T,Lattice>::
-addPoints2CommBC(SuperGeometry3D<T>& superGeometry, int material) {
+addPoints2CommBC(SuperGeometry3D<T>& superGeometry, int material)
+{
 
   if (_overlap != 0) {
     int nC = _sLattice.getLoadBalancer().size();
@@ -142,23 +149,29 @@ addPoints2CommBC(SuperGeometry3D<T>& superGeometry, int material) {
                 iY < 0 || iY > nY - 1 ||
                 iZ < 0 || iZ > nZ - 1 ) {
               int found = false;
-              if(superGeometry.getBlockGeometry(iCloc).getMaterial(iX,iY,iZ)!=0) {
+              if (superGeometry.getBlockGeometry(iCloc).getMaterial(iX,iY,iZ)!=0) {
                 for (int iXo=-_overlap; iXo<=_overlap; iXo++) {
                   for (int iYo=-_overlap; iYo<=_overlap; iYo++) {
                     for (int iZo=-_overlap; iZo<=_overlap; iZo++) {
                       int nextX = iXo + iX;
                       int nextY = iYo + iY;
                       int nextZ = iZo + iZ;
-                      if(superGeometry.getBlockGeometry(iCloc).getMaterial(nextX,nextY,nextZ)==material) {
+                      if (superGeometry.getBlockGeometry(iCloc).getMaterial(nextX,nextY,nextZ)==material) {
                         _sLattice.get_commBC().add_cell(iCloc, iX, iY, iZ);
                         //std::cout << "found:" <<iX<<"/"<<iY<<"/"<<iZ<<std::endl;
                         found = true;
                       }
-                    if (found) break;
+                      if (found) {
+                        break;
+                      }
                     }
-                  if (found) break;
+                    if (found) {
+                      break;
+                    }
                   }
-                if (found) break;
+                  if (found) {
+                    break;
+                  }
                 }
               }
             }
@@ -170,7 +183,8 @@ addPoints2CommBC(SuperGeometry3D<T>& superGeometry, int material) {
 }
 
 template<typename T, template<typename U> class Lattice>
-void sOffLatticeBoundaryCondition3D<T,Lattice>::outputOn() {
+void sOffLatticeBoundaryCondition3D<T,Lattice>::outputOn()
+{
   _output = true;
   int nC = _sLattice.getLoadBalancer().size();
   for (int iCloc = 0; iCloc < nC; iCloc++) {
@@ -179,7 +193,8 @@ void sOffLatticeBoundaryCondition3D<T,Lattice>::outputOn() {
 }
 
 template<typename T, template<typename U> class Lattice>
-void sOffLatticeBoundaryCondition3D<T,Lattice>::outputOff() {
+void sOffLatticeBoundaryCondition3D<T,Lattice>::outputOff()
+{
   _output = false;
   int nC = _sLattice.getLoadBalancer().size();
   for (int iCloc = 0; iCloc < nC; iCloc++) {
@@ -190,13 +205,14 @@ void sOffLatticeBoundaryCondition3D<T,Lattice>::outputOff() {
 ////////////////// Factory functions //////////////////////////////////
 
 template<typename T, template<typename U> class Lattice, typename MixinDynamics>
-void createBouzidiBoundaryCondition3D(sOffLatticeBoundaryCondition3D<T,Lattice>& sBC) {
+void createBouzidiBoundaryCondition3D(sOffLatticeBoundaryCondition3D<T,Lattice>& sBC)
+{
 
   int nC = sBC.getSuperLattice().getLoadBalancer().size();
   sBC.setOverlap(1);
   for (int iC=0; iC<nC; iC++) {
     OffLatticeBoundaryCondition3D<T,Lattice>* blockBC
-    = createBouzidiBoundaryCondition3D<T,Lattice,MixinDynamics>(sBC.getSuperLattice().getExtendedBlockLattice(iC));
+      = createBouzidiBoundaryCondition3D<T,Lattice,MixinDynamics>(sBC.getSuperLattice().getExtendedBlockLattice(iC));
     sBC.getBlockBCs().push_back(blockBC);
   }
 }

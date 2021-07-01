@@ -29,19 +29,19 @@
 
 namespace olb {
 
-    template<>
+template<>
 class InamuroAnalyticalDynamics <
     double, descriptors::D2Q9Descriptor, BGKdynamics<double,descriptors::D2Q9Descriptor>, 0, 1 >;
-    
-    template<>
+
+template<>
 class InamuroAnalyticalDynamics <
     double, descriptors::D2Q9Descriptor, BGKdynamics<double,descriptors::D2Q9Descriptor>, 0, -1 >;
-    
-    template<>
+
+template<>
 class InamuroAnalyticalDynamics <
     double, descriptors::D2Q9Descriptor, BGKdynamics<double,descriptors::D2Q9Descriptor>, 1, 1 >;
-    
-    template<>
+
+template<>
 class InamuroAnalyticalDynamics <
     double, descriptors::D2Q9Descriptor, BGKdynamics<double,descriptors::D2Q9Descriptor>, 1, -1 >;
 

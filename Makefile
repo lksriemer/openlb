@@ -75,7 +75,12 @@ clean:
 	done
 
 cleanbuild:
+	@echo "-------------------------------------------------------------";
+	@echo "-- Clean object, dependencies and library files in ´"$(BUILDTYPE)"'";
+	@echo "-------------------------------------------------------------";
 	@rm -f $(LIBDIR)/*.a
+	@rm -f $(DEPENDDIR)/*.d
+	@rm -f $(OBJDIR)/*.o
 	@for i in $(SUBDIRS); \
 	do \
 	  (cd $$i; \

@@ -39,8 +39,8 @@
 #include "geometry/superGeometry2D.h"
 #include "communication/superStructure2D.h"
 #include "communication/loadBalancer.h"
-#include "functors/indicatorF.h"
-#include "functors/indicCalcF.h"
+#include "functors/indicator/indicatorF2D.h"
+#include "functors/indicator/indicCalcF2D.h"
 #include "io/ostreamManager.h"
 
 namespace olb {
@@ -54,13 +54,13 @@ SuperGeometry2D<T>::SuperGeometry2D(CuboidGeometry2D<T>& cuboidGeometry, LoadBal
   this->_communicator.init();
   this->_communicationNeeded = true;
 
-  // constructing the block and extended block geometries from the cuboid geometry      
+  // constructing the block and extended block geometries from the cuboid geometry
   _blockGeometries.clear();
 
   for (int iCloc=0; iCloc<this->getLoadBalancer().size(); iCloc++) {
     int iCglob = this->getLoadBalancer().glob(iCloc);
     Cuboid2D<T> extendedCuboid(cuboidGeometry.get(iCglob),overlap);
-    BlockGeometry2D<T> tmp(extendedCuboid,iCglob);  
+    BlockGeometry2D<T> tmp(extendedCuboid,iCglob);
     _extendedBlockGeometries.push_back(tmp);
   }
 
@@ -89,7 +89,8 @@ SuperGeometry2D<T>::SuperGeometry2D(SuperGeometry2D const& rhs) : SuperStructure
 }
 
 template<typename T>
-SuperGeometry2D<T>& SuperGeometry2D<T>::operator=(SuperGeometry2D const& rhs) {
+SuperGeometry2D<T>& SuperGeometry2D<T>::operator=(SuperGeometry2D const& rhs)
+{
 
   // init communicator
   this->_communicator.init_nh();
@@ -108,51 +109,55 @@ SuperGeometry2D<T>& SuperGeometry2D<T>::operator=(SuperGeometry2D const& rhs) {
 }
 
 template<typename T>
-bool* SuperGeometry2D<T>::operator() (int iCloc, int iX, int iY, int iData) {
+bool* SuperGeometry2D<T>::operator() (int iCloc, int iX, int iY, int iData)
+{
   return (bool*)&getExtendedBlockGeometry(iCloc).get(iX+this->_overlap, iY+this->_overlap);
 }
 
 template<typename T>
-int SuperGeometry2D<T>::getDataSize() const {
+int SuperGeometry2D<T>::getDataSize() const
+{
   return 1;
 }
 
 template<typename T>
-int SuperGeometry2D<T>::getDataTypeSize() const {
+int SuperGeometry2D<T>::getDataTypeSize() const
+{
   return sizeof(int);
 }
 
 
 template<typename T>
-int& SuperGeometry2D<T>::set(int iCglob, int iXloc, int iYloc) {
+int& SuperGeometry2D<T>::set(int iCglob, int iXloc, int iYloc)
+{
 
   if ( this->getLoadBalancer().rank(iCglob) == singleton::mpi().getRank() ) {
     std::cout << "warning: read only access to data which is not available in";
     this->_communicationNeeded = true;
     _statistics.getStatisticsStatus() = true;
     return _extendedBlockGeometries[this->getLoadBalancer().loc(iCglob)].get(iXloc+this->_overlap, iYloc+this->_overlap);
-  }
-  else {
-    std::cout << "error: write access to data which is not available in the any block geometry"; 
+  } else {
+    std::cout << "error: write access to data which is not available in the any block geometry";
     exit(-1);
     //return 0;
   }
 }
 
 template<typename T>
-int const& SuperGeometry2D<T>::get(int iCglob, int iXloc, int iYloc) const {
+int const& SuperGeometry2D<T>::get(int iCglob, int iXloc, int iYloc) const
+{
   if ( this->getLoadBalancer().rank(iCglob) == singleton::mpi().getRank() ) {
     return _extendedBlockGeometries[this->getLoadBalancer().loc(iCglob)].get(iXloc+this->_overlap, iYloc+this->_overlap);
-  }
-  else {
-    std::cout << "error: read only access to data which is not available in the any block geometry, returning 0 as default" << std::endl; 
+  } else {
+    std::cout << "error: read only access to data which is not available in the any block geometry, returning 0 as default" << std::endl;
     exit(-1);
     //return 0;
   }
 }
 
 template<typename T>
-int SuperGeometry2D<T>::getAndCommunicate(int iCglob, int iXloc, int iYloc) const {
+int SuperGeometry2D<T>::getAndCommunicate(int iCglob, int iXloc, int iYloc) const
+{
   int material = 0;
   if ( this->getLoadBalancer().rank(iCglob) == singleton::mpi().getRank() ) {
     material = _extendedBlockGeometries[this->getLoadBalancer().loc(iCglob)].get(iXloc+this->_overlap, iYloc+this->_overlap);
@@ -164,56 +169,77 @@ int SuperGeometry2D<T>::getAndCommunicate(int iCglob, int iXloc, int iYloc) cons
 }
 
 template<typename T>
-int& SuperGeometry2D<T>::set(std::vector<int> latticeR) {
+int& SuperGeometry2D<T>::set(std::vector<int> latticeR)
+{
   return set(latticeR[0], latticeR[1], latticeR[2]);
 }
 
 template<typename T>
-int const& SuperGeometry2D<T>::get(std::vector<int> latticeR) const {
+int const& SuperGeometry2D<T>::get(std::vector<int> latticeR) const
+{
   return get(latticeR[0], latticeR[1], latticeR[2]);
 }
 
 template<typename T>
-int SuperGeometry2D<T>::getAndCommunicate(std::vector<int> latticeR) const {
+int SuperGeometry2D<T>::getAndCommunicate(std::vector<int> latticeR) const
+{
   return getAndCommunicate(latticeR[0], latticeR[1], latticeR[2]);
 }
 
 template<typename T>
-std::vector<T> SuperGeometry2D<T>::getPhysR(int iCglob, int iX, int iY) const {
+std::vector<T> SuperGeometry2D<T>::getPhysR(int iCglob, int iX, int iY) const
+{
   return this->_cuboidGeometry.getPhysR(iCglob, iX, iY);
 }
 
 template<typename T>
-std::vector<T> SuperGeometry2D<T>::getPhysR(std::vector<int> latticeR) const {
+std::vector<T> SuperGeometry2D<T>::getPhysR(std::vector<int> latticeR) const
+{
   return this->_cuboidGeometry.getPhysR(latticeR);
 }
 
+template<typename T>
+void SuperGeometry2D<T>::getPhysR(T output[2], const int latticeR[3]) const
+{
+  this->_cuboidGeometry.getPhysR(output, latticeR);
+}
 
 template<typename T>
-BlockGeometryStructure2D<T>& SuperGeometry2D<T>::getExtendedBlockGeometry(int locIC) {
+void SuperGeometry2D<T>::getPhysR(T output[2], const int iCglob, const int iX, const int iY) const
+{
+  this->_cuboidGeometry.getPhysR(output, iCglob, iX, iY);
+}
+
+template<typename T>
+BlockGeometryStructure2D<T>& SuperGeometry2D<T>::getExtendedBlockGeometry(int locIC)
+{
   _statistics.getStatisticsStatus() = true;
   return _extendedBlockGeometries[locIC];
 }
 
 template<typename T>
-BlockGeometryStructure2D<T> const& SuperGeometry2D<T>::getExtendedBlockGeometry(int locIC) const {
+BlockGeometryStructure2D<T> const& SuperGeometry2D<T>::getExtendedBlockGeometry(int locIC) const
+{
   return _extendedBlockGeometries[locIC];
 }
 
 template<typename T>
-BlockGeometryStructure2D<T>& SuperGeometry2D<T>::getBlockGeometry(int locIC) {
+BlockGeometryStructure2D<T>& SuperGeometry2D<T>::getBlockGeometry(int locIC)
+{
   _statistics.getStatisticsStatus() = true;
   return _blockGeometries[locIC];
 }
 
 template<typename T>
-BlockGeometryStructure2D<T> const& SuperGeometry2D<T>::getBlockGeometry(int locIC) const {
+BlockGeometryStructure2D<T> const& SuperGeometry2D<T>::getBlockGeometry(int locIC) const
+{
   return _blockGeometries[locIC];
 }
 
 
 template<typename T>
-SuperGeometryStatistics2D<T>& SuperGeometry2D<T>::getStatistics() {
+SuperGeometryStatistics2D<T>& SuperGeometry2D<T>::getStatistics()
+{
   if (this->_communicationNeeded) {
     this->communicate();
     getStatisticsStatus()=true;
@@ -222,17 +248,20 @@ SuperGeometryStatistics2D<T>& SuperGeometry2D<T>::getStatistics() {
 }
 
 template<typename T>
-bool& SuperGeometry2D<T>::getStatisticsStatus() {
+bool& SuperGeometry2D<T>::getStatisticsStatus()
+{
   return _statistics.getStatisticsStatus();
 }
 
 template<typename T>
-bool const& SuperGeometry2D<T>::getStatisticsStatus() const {
+bool const& SuperGeometry2D<T>::getStatisticsStatus() const
+{
   return _statistics.getStatisticsStatus();
 }
 
 template<typename T>
-void SuperGeometry2D<T>::updateStatistics(bool verbose) {
+void SuperGeometry2D<T>::updateStatistics(bool verbose)
+{
   if (this->_communicationNeeded) {
     this->communicate(verbose);
     getStatisticsStatus()=true;
@@ -244,7 +273,8 @@ void SuperGeometry2D<T>::updateStatistics(bool verbose) {
 }
 
 template<typename T>
-int SuperGeometry2D<T>::clean(bool verbose) {
+int SuperGeometry2D<T>::clean(bool verbose)
+{
   this->communicate();
   int counter=0;
   for (unsigned iC=0; iC<_extendedBlockGeometries.size(); iC++) {
@@ -254,9 +284,10 @@ int SuperGeometry2D<T>::clean(bool verbose) {
   singleton::mpi().reduceAndBcast(counter, MPI_SUM);
 #endif
 
-  if (verbose)
+  if (verbose) {
     clout << "cleaned "<< counter << " outer boundary voxel(s)" << std::endl;
-  if(counter>0) {
+  }
+  if (counter>0) {
     _statistics.getStatisticsStatus() = true;
     this->_communicationNeeded = true;
   }
@@ -264,7 +295,8 @@ int SuperGeometry2D<T>::clean(bool verbose) {
 }
 
 template<typename T>
-int SuperGeometry2D<T>::outerClean(bool verbose) {
+int SuperGeometry2D<T>::outerClean(bool verbose)
+{
   this->communicate();
   int counter=0;
   for (unsigned iC=0; iC<_extendedBlockGeometries.size(); iC++) {
@@ -274,9 +306,10 @@ int SuperGeometry2D<T>::outerClean(bool verbose) {
   singleton::mpi().reduceAndBcast(counter, MPI_SUM);
 #endif
 
-  if (verbose)
+  if (verbose) {
     clout << "cleaned "<< counter << " outer fluid voxel(s)" << std::endl;
-  if(counter>0) {
+  }
+  if (counter>0) {
     _statistics.getStatisticsStatus() = true;
     this->_communicationNeeded = true;
   }
@@ -284,7 +317,8 @@ int SuperGeometry2D<T>::outerClean(bool verbose) {
 }
 
 template<typename T>
-int SuperGeometry2D<T>::innerClean(bool verbose) {
+int SuperGeometry2D<T>::innerClean(bool verbose)
+{
   this->communicate();
   int counter=0;
   for (unsigned iC=0; iC<_extendedBlockGeometries.size(); iC++) {
@@ -295,9 +329,10 @@ int SuperGeometry2D<T>::innerClean(bool verbose) {
   singleton::mpi().reduceAndBcast(counter, MPI_SUM);
 #endif
 
-  if (verbose)
+  if (verbose) {
     clout << "cleaned "<< counter << " inner boundary voxel(s)" << std::endl;
-  if(counter>0) {
+  }
+  if (counter>0) {
     _statistics.getStatisticsStatus() = true;
     this->_communicationNeeded = true;
   }
@@ -305,7 +340,8 @@ int SuperGeometry2D<T>::innerClean(bool verbose) {
 }
 
 template<typename T>
-int SuperGeometry2D<T>::innerClean(int bcType, bool verbose) {
+int SuperGeometry2D<T>::innerClean(int bcType, bool verbose)
+{
   this->communicate();
   int counter=0;
   for (unsigned iC=0; iC<_extendedBlockGeometries.size(); iC++) {
@@ -315,9 +351,10 @@ int SuperGeometry2D<T>::innerClean(int bcType, bool verbose) {
   singleton::mpi().reduceAndBcast(counter, MPI_SUM);
 #endif
 
-  if (verbose)
+  if (verbose) {
     clout << "cleaned "<< counter << " inner boundary voxel(s) of Type " << bcType << std::endl;
-  if(counter>0) {
+  }
+  if (counter>0) {
     _statistics.getStatisticsStatus() = true;
     this->_communicationNeeded = true;
   }
@@ -325,12 +362,14 @@ int SuperGeometry2D<T>::innerClean(int bcType, bool verbose) {
 }
 
 template<typename T>
-bool SuperGeometry2D<T>::checkForErrors(bool verbose) {
+bool SuperGeometry2D<T>::checkForErrors(bool verbose)
+{
   this->communicate();
   bool error = false;
   for (unsigned iC=0; iC<_blockGeometries.size(); iC++) {
-    if (_blockGeometries[iC].checkForErrors(false))
+    if (_blockGeometries[iC].checkForErrors(false)) {
       error = true;
+    }
   }
   if (verbose) {
     if (error) {
@@ -344,7 +383,8 @@ bool SuperGeometry2D<T>::checkForErrors(bool verbose) {
 
 
 template<typename T>
-void SuperGeometry2D<T>::rename(int fromM, int toM) {
+void SuperGeometry2D<T>::rename(int fromM, int toM)
+{
 
   this->communicate();
   for (unsigned iC=0; iC<_extendedBlockGeometries.size(); iC++) {
@@ -355,11 +395,12 @@ void SuperGeometry2D<T>::rename(int fromM, int toM) {
 }
 
 template<typename T>
-void SuperGeometry2D<T>::rename(int fromM, int toM, IndicatorF2D<bool,T>& condition) {
+void SuperGeometry2D<T>::rename(int fromM, int toM, IndicatorF2D<T>& condition)
+{
 
   this->communicate();
   //  call Identity to prevent deleting
-  IndicatorIdentity2D<bool,T> tmpCondition(condition);
+  IndicatorIdentity2D<T> tmpCondition(condition);
 
   for (unsigned iC=0; iC<_extendedBlockGeometries.size(); iC++) {
     _extendedBlockGeometries[iC].rename(fromM,toM,condition);
@@ -368,65 +409,66 @@ void SuperGeometry2D<T>::rename(int fromM, int toM, IndicatorF2D<bool,T>& condit
 }
 
 template<typename T>
-void SuperGeometry2D<T>::rename(int fromM, int toM, unsigned offsetX, unsigned offsetY) {
+void SuperGeometry2D<T>::rename(int fromM, int toM, unsigned offsetX, unsigned offsetY)
+{
 
   if ( offsetX<=unsigned(this->_overlap)
-      && offsetY<=unsigned(this->_overlap) ) {
+       && offsetY<=unsigned(this->_overlap) ) {
     this->communicate();
     for (unsigned iC=0; iC<_blockGeometries.size(); iC++) {
       _blockGeometries[iC].rename(fromM,toM,offsetX, offsetY);
     }
     _statistics.getStatisticsStatus() = true;
     this->_communicationNeeded = true;
-  }
-  else {
+  } else {
     clout << "error rename only implemented for offset<=overlap" << std::endl;
   }
 }
 
 template<typename T>
-void SuperGeometry2D<T>::rename(int fromM, int toM, int testM, std::vector<int> testDirection) {
+void SuperGeometry2D<T>::rename(int fromM, int toM, int testM, std::vector<int> testDirection)
+{
 
   if ( testDirection[0]*testDirection[0]<=(this->_overlap)*(this->_overlap)
-      && testDirection[1]*testDirection[1]<=(this->_overlap)*(this->_overlap) ) {
+       && testDirection[1]*testDirection[1]<=(this->_overlap)*(this->_overlap) ) {
     this->communicate();
     for (unsigned iC=0; iC<_blockGeometries.size(); iC++) {
       _blockGeometries[iC].rename(fromM,toM,testM,testDirection);
     }
     _statistics.getStatisticsStatus() = true;
     this->_communicationNeeded = true;
-  }
-  else {
+  } else {
     clout << "error rename only implemented for |testDirection[i]|<=overlap" << std::endl;
   }
 }
 
 template<typename T>
 void SuperGeometry2D<T>::rename(int fromBcMat, int toBcMat, int fluidMat,
-              IndicatorF2D<bool,T>& condition) {
+                                IndicatorF2D<T>& condition)
+{
   if (this->_overlap>1) {
     this->communicate();
     //  call Identity to prevent deleting
-    IndicatorIdentity2D<bool,T> tmpCondition(condition);
+    IndicatorIdentity2D<T> tmpCondition(condition);
     rename(fromBcMat, toBcMat, condition);
     std::vector<int> testDirection = this->getStatistics().computeDiscreteNormal(toBcMat);
 
     //std::cout << testDirection[0]<<testDirection[1]<<testDirection[2]<<std::endl;
     this->communicate();
     for (unsigned iC=0; iC<_blockGeometries.size(); iC++) {
-     _blockGeometries[iC].rename(fromBcMat,toBcMat,fluidMat,condition,testDirection);
+      _blockGeometries[iC].rename(fromBcMat,toBcMat,fluidMat,condition,testDirection);
     }
     _statistics.getStatisticsStatus() = true;
     this->_communicationNeeded = true;
-  }
-  else {
+  } else {
     clout << "error rename only implemented for overlap>=2" << std::endl;
   }
 }
 
 
 template<typename T>
-void SuperGeometry2D<T>::print() {
+void SuperGeometry2D<T>::print()
+{
   this->_cuboidGeometry.print();
   getStatistics().print();
 }

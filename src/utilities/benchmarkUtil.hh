@@ -28,12 +28,14 @@ ValueTracer<T>::ValueTracer(T u, T L, T _epsilon)
 { }
 
 template<typename T>
-int ValueTracer<T>::getDeltaT() const {
+int ValueTracer<T>::getDeltaT() const
+{
   return deltaT;
 }
 
 template<typename T>
-void ValueTracer<T>::takeValue(T val, bool doPrint) {
+void ValueTracer<T>::takeValue(T val, bool doPrint)
+{
   values.push_back(val);
   if ((int)values.size() > abs(deltaT)) {
     values.erase(values.begin());
@@ -47,7 +49,8 @@ void ValueTracer<T>::takeValue(T val, bool doPrint) {
 }
 
 template<typename T>
-void ValueTracer<T>::resetScale(T u, T L) {
+void ValueTracer<T>::resetScale(T u, T L)
+{
   t = t%deltaT;
   deltaT = (int) (L/u/2.);
   if ( (int)values.size() > abs(deltaT) ) {
@@ -56,7 +59,8 @@ void ValueTracer<T>::resetScale(T u, T L) {
 }
 
 template<typename T>
-void ValueTracer<T>::resetValues() {
+void ValueTracer<T>::resetValues()
+{
   t = 0;
   if ((int)values.size() > 0) {
     values.erase(values.begin(), values.begin() + values.size() );
@@ -64,16 +68,16 @@ void ValueTracer<T>::resetValues() {
 }
 
 template<typename T>
-bool ValueTracer<T>::hasConverged() const {
+bool ValueTracer<T>::hasConverged() const
+{
   if ((int)values.size() < abs(deltaT)) {
     return false;
-  }
-  else {
+  } else {
     T average = computeAverage();
     T stdDev = computeStdDev(average);
-    if (!std::isnan(stdDev/average))
+    if (!std::isnan(stdDev/average)) {
       return stdDev/average < epsilon;
-    else {
+    } else {
       clout << "simulation diverged." << std::endl;
       return true;
     }
@@ -81,11 +85,11 @@ bool ValueTracer<T>::hasConverged() const {
 }
 
 template<typename T>
-bool ValueTracer<T>::hasConvergedMinMax() const {
+bool ValueTracer<T>::hasConvergedMinMax() const
+{
   if ((int)values.size() < abs(deltaT)) {
     return false;
-  }
-  else {
+  } else {
     T minEl = *min_element(values.begin(), values.end());
     T maxEl = *max_element(values.begin(), values.end());
     T average = computeAverage();
@@ -94,12 +98,14 @@ bool ValueTracer<T>::hasConvergedMinMax() const {
 }
 
 template<typename T>
-T ValueTracer<T>::computeAverage() const {
+T ValueTracer<T>::computeAverage() const
+{
   return accumulate(values.begin(), values.end(), 0.) / values.size();
 }
 
 template<typename T>
-T ValueTracer<T>::computeStdDev(T average) const {
+T ValueTracer<T>::computeStdDev(T average) const
+{
   int n = values.size();
   T sqrDev = 0.;
   for (int i=0; i<n; ++i) {
@@ -109,7 +115,8 @@ T ValueTracer<T>::computeStdDev(T average) const {
 }
 
 template<typename T>
-void ValueTracer<T>::setEpsilon(T epsilon_) {
+void ValueTracer<T>::setEpsilon(T epsilon_)
+{
   epsilon = epsilon_;
 }
 
@@ -128,16 +135,16 @@ BisectStepper<T>::BisectStepper(T _iniVal, T _step)
 }
 
 template<typename T>
-T BisectStepper<T>::getVal(bool stable, bool doPrint) {
+T BisectStepper<T>::getVal(bool stable, bool doPrint)
+{
   std::stringstream message;
-  switch(state) {
+  switch (state) {
   case first:
-    if(stable) {
+    if (stable) {
       currentVal = iniVal+step;
       state = up;
       message << "[" << iniVal << ",infty]";
-    }
-    else {
+    } else {
       currentVal = iniVal-step;
       state = down;
       message << "[-infty," << iniVal << "]";
@@ -147,8 +154,7 @@ T BisectStepper<T>::getVal(bool stable, bool doPrint) {
     if (stable) {
       message << "[" << currentVal << ",infty]";
       currentVal += step;
-    }
-    else {
+    } else {
       lowerVal = currentVal-step;
       upperVal = currentVal;
       currentVal = 0.5*(lowerVal+upperVal);
@@ -160,8 +166,7 @@ T BisectStepper<T>::getVal(bool stable, bool doPrint) {
     if (!stable) {
       message << "[-infty," << currentVal << "]";
       currentVal -= step;
-    }
-    else {
+    } else {
       lowerVal = currentVal;
       upperVal = currentVal+step;
       currentVal = 0.5*(lowerVal+upperVal);
@@ -172,8 +177,7 @@ T BisectStepper<T>::getVal(bool stable, bool doPrint) {
   case bisect:
     if (stable) {
       lowerVal = currentVal;
-    }
-    else {
+    } else {
       upperVal = currentVal;
     }
     currentVal = 0.5*(lowerVal+upperVal);
@@ -187,7 +191,8 @@ T BisectStepper<T>::getVal(bool stable, bool doPrint) {
 }
 
 template<typename T>
-bool BisectStepper<T>::hasConverged(T epsilon) const {
+bool BisectStepper<T>::hasConverged(T epsilon) const
+{
   return (state==bisect) && ((upperVal-lowerVal)/lowerVal < epsilon);
 }
 

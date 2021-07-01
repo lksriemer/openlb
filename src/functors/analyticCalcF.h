@@ -24,10 +24,8 @@
 #ifndef ANALYTICAL_CALC_F_H
 #define ANALYTICAL_CALC_F_H
 
-#include<vector>
 
 #include "functors/analyticalBaseF.h"
-#include "functors/genericF.h"
 
 
 namespace olb {
@@ -48,10 +46,7 @@ protected:
   AnalyticalF1D<T,S>& _f;
   AnalyticalF1D<T,S>& _g;
 public:
-  // set dimensions as well
   AnalyticCalc1D(AnalyticalF1D<T,S>& f, AnalyticalF1D<T,S>& g);
-  /// memory management
-  virtual void myErase(GenericF<T,S>* ptr);
 };
 
 /// addition functor
@@ -59,7 +54,7 @@ template <typename T, typename S>
 class AnalyticPlus1D : public AnalyticCalc1D<T,S> {
 public:
   AnalyticPlus1D(AnalyticalF1D<T,S>& f, AnalyticalF1D<T,S>& g);
-  std::vector<T> operator()(std::vector<S> input);
+  bool operator() (T output[], const S input[]);
 };
 
 /// subtraction functor
@@ -67,7 +62,7 @@ template <typename T, typename S>
 class AnalyticMinus1D : public AnalyticCalc1D<T,S> {
 public:
   AnalyticMinus1D(AnalyticalF1D<T,S>& f, AnalyticalF1D<T,S>& g);
-  std::vector<T> operator()(std::vector<S> input);
+  bool operator() (T output[], const S input[]);
 };
 
 /// multiplication functor
@@ -75,7 +70,7 @@ template <typename T, typename S>
 class AnalyticMultiplication1D : public AnalyticCalc1D<T,S> {
 public:
   AnalyticMultiplication1D(AnalyticalF1D<T,S>& f, AnalyticalF1D<T,S>& g);
-  std::vector<T> operator()(std::vector<S> input);
+  bool operator() (T output[], const S input[]);
 };
 
 /// division functor
@@ -83,7 +78,7 @@ template <typename T, typename S>
 class AnalyticDivision1D : public AnalyticCalc1D<T,S> {
 public:
   AnalyticDivision1D(AnalyticalF1D<T,S>& f, AnalyticalF1D<T,S>& g);
-  std::vector<T> operator()(std::vector<S> input);
+  bool operator() (T output[], const S input[]);
 };
 
 
@@ -98,7 +93,6 @@ protected:
   AnalyticalF2D<T,S>& _g;
 public:
   AnalyticCalc2D(AnalyticalF2D<T,S>& f, AnalyticalF2D<T,S>& g);
-  virtual void myErase(GenericF<T,S>* ptr);
 };
 
 /// addition functor
@@ -106,7 +100,7 @@ template <typename T, typename S>
 class AnalyticPlus2D : public AnalyticCalc2D<T,S> {
 public:
   AnalyticPlus2D(AnalyticalF2D<T,S>& f, AnalyticalF2D<T,S>& g);
-  std::vector<T> operator()(std::vector<S> input);
+  bool operator() (T output[], const S input[]);
 };
 
 /// subtraction functor
@@ -114,7 +108,7 @@ template <typename T, typename S>
 class AnalyticMinus2D : public AnalyticCalc2D<T,S> {
 public:
   AnalyticMinus2D(AnalyticalF2D<T,S>& f, AnalyticalF2D<T,S>& g);
-  std::vector<T> operator()(std::vector<S> input);
+  bool operator() (T output[], const S input[]);
 };
 
 /// multiplication functor
@@ -122,7 +116,7 @@ template <typename T, typename S>
 class AnalyticMultiplication2D : public AnalyticCalc2D<T,S> {
 public:
   AnalyticMultiplication2D(AnalyticalF2D<T,S>& f, AnalyticalF2D<T,S>& g);
-  std::vector<T> operator()(std::vector<S> input);
+  bool operator() (T output[], const S input[]);
 };
 
 /// division functor
@@ -130,7 +124,7 @@ template <typename T, typename S>
 class AnalyticDivision2D : public AnalyticCalc2D<T,S> {
 public:
   AnalyticDivision2D(AnalyticalF2D<T,S>& f, AnalyticalF2D<T,S>& g);
-  std::vector<T> operator()(std::vector<S> input);
+  bool operator() (T output[], const S input[]);
 };
 
 
@@ -145,7 +139,6 @@ protected:
   AnalyticalF3D<T,S>& _g;
 public:
   AnalyticCalc3D(AnalyticalF3D<T,S>& f, AnalyticalF3D<T,S>& g);
-  virtual void myErase(GenericF<T,S>* ptr);
 };
 
 /// addition functor
@@ -153,7 +146,7 @@ template <typename T, typename S>
 class AnalyticPlus3D : public AnalyticCalc3D<T,S> {
 public:
   AnalyticPlus3D(AnalyticalF3D<T,S>& f, AnalyticalF3D<T,S>& g);
-  std::vector<T> operator()(std::vector<S> input);
+  bool operator() (T output[], const S input[]);
 };
 
 /// subtraction functor
@@ -161,7 +154,7 @@ template <typename T, typename S>
 class AnalyticMinus3D : public AnalyticCalc3D<T,S> {
 public:
   AnalyticMinus3D(AnalyticalF3D<T,S>& f, AnalyticalF3D<T,S>& g);
-  std::vector<T> operator()(std::vector<S> input);
+  bool operator() (T output[], const S input[]);
 };
 
 /// multiplication functor
@@ -169,7 +162,7 @@ template <typename T, typename S>
 class AnalyticMultiplication3D : public AnalyticCalc3D<T,S> {
 public:
   AnalyticMultiplication3D(AnalyticalF3D<T,S>& f, AnalyticalF3D<T,S>& g);
-  std::vector<T> operator()(std::vector<S> input);
+  bool operator() (T output[], const S input[]);
 };
 
 /// division functor
@@ -177,7 +170,7 @@ template <typename T, typename S>
 class AnalyticDivision3D : public AnalyticCalc3D<T,S> {
 public:
   AnalyticDivision3D(AnalyticalF3D<T,S>& f, AnalyticalF3D<T,S>& g);
-  std::vector<T> operator()(std::vector<S> input);
+  bool operator() (T output[], const S input[]);
 };
 
 

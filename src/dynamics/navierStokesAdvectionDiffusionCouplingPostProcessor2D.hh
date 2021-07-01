@@ -50,13 +50,11 @@ NavierStokesAdvectionDiffusionCouplingPostProcessor2D(int x0_, int x1_, int y0_,
 {
   // we normalize the direction of force vector
   T normDir = T();
-  for (unsigned iD = 0; iD < dir.size(); ++iD)
-  {
+  for (unsigned iD = 0; iD < dir.size(); ++iD) {
     normDir += dir[iD]*dir[iD];
   }
   normDir = sqrt(normDir);
-  for (unsigned iD = 0; iD < dir.size(); ++iD)
-  {
+  for (unsigned iD = 0; iD < dir.size(); ++iD) {
     dir[iD] /= normDir;
   }
 }
@@ -69,7 +67,7 @@ processSubDomain(BlockLattice2D<T,Lattice>& blockLattice,
   typedef Lattice<T> L;
   enum {
     velOffset =
-    AdvectionDiffusionD2Q5Descriptor<T>::ExternalField::velocityBeginsAt,
+      AdvectionDiffusionD2Q5Descriptor<T>::ExternalField::velocityBeginsAt,
     forceOffset = ForcedD2Q9Descriptor<T>::ExternalField::forceBeginsAt
   };
 
@@ -80,13 +78,10 @@ processSubDomain(BlockLattice2D<T,Lattice>& blockLattice,
   if ( util::intersect (
          x0, x1, y0, y1,
          x0_, x1_, y0_, y1_,
-         newX0, newX1, newY0, newY1 ) )
-  {
+         newX0, newX1, newY0, newY1 ) ) {
 
-    for (int iX=newX0; iX<=newX1; ++iX)
-    {
-      for (int iY=newY0; iY<=newY1; ++iY)
-      {
+    for (int iX=newX0; iX<=newX1; ++iX) {
+      for (int iY=newY0; iY<=newY1; ++iY) {
         // Velocity coupling
         T *u = tPartner->get(iX,iY).getExternal(velOffset);
         blockLattice.get(iX,iY).computeU(u);
@@ -96,8 +91,7 @@ processSubDomain(BlockLattice2D<T,Lattice>& blockLattice,
         T *force = blockLattice.get(iX,iY).getExternal(forceOffset);
         T temperature = tPartner->get(iX,iY).computeRho();
         T rho = blockLattice.get(iX,iY).computeRho();
-        for (unsigned iD = 0; iD < L::d; ++iD)
-        {
+        for (unsigned iD = 0; iD < L::d; ++iD) {
           force[iD] = gravity * rho * (temperature - T0) / deltaTemp * dir[iD];
         }
       }
@@ -131,7 +125,8 @@ PostProcessor2D<T,Lattice>* NavierStokesAdvectionDiffusionCouplingGenerator2D<T,
 }
 
 template<typename T, template<typename U> class Lattice>
-LatticeCouplingGenerator2D<T,Lattice>* NavierStokesAdvectionDiffusionCouplingGenerator2D<T,Lattice>::clone() const {
+LatticeCouplingGenerator2D<T,Lattice>* NavierStokesAdvectionDiffusionCouplingGenerator2D<T,Lattice>::clone() const
+{
   return new NavierStokesAdvectionDiffusionCouplingGenerator2D<T,Lattice>(*this);
 }
 

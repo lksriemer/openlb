@@ -24,8 +24,6 @@
 #ifndef ANALYTICAL_BASE_F_H
 #define ANALYTICAL_BASE_F_H
 
-#include<vector>
-
 #include "functors/genericF.h"
 
 /**
@@ -46,32 +44,34 @@ namespace olb {
 template <typename T, typename S>
 class AnalyticalF1D : public GenericF<T,S> {
 protected:
-  // n denotes the targed dimension
-  AnalyticalF1D(int n) : GenericF<T,S>(n,1) { }
+  // n denotes the target dimension
+  AnalyticalF1D(int n);
 public:
   AnalyticalF1D<T,S>& operator-(AnalyticalF1D<T,S>& rhs);
   AnalyticalF1D<T,S>& operator+(AnalyticalF1D<T,S>& rhs);
   AnalyticalF1D<T,S>& operator*(AnalyticalF1D<T,S>& rhs);
   AnalyticalF1D<T,S>& operator/(AnalyticalF1D<T,S>& rhs);
 };
+
 /// AnalyticalF2D are applications from 2D to XD, where X is set by the constructor.
 template <typename T, typename S>
 class AnalyticalF2D : public GenericF<T,S> {
 protected:
-  // n denotes the targed dimension
-  AnalyticalF2D(int n) : GenericF<T,S>(n,2) { }
+  // n denotes the target dimension
+  AnalyticalF2D(int n);
 public:
   AnalyticalF2D<T,S>& operator-(AnalyticalF2D<T,S>& rhs);
   AnalyticalF2D<T,S>& operator+(AnalyticalF2D<T,S>& rhs);
   AnalyticalF2D<T,S>& operator*(AnalyticalF2D<T,S>& rhs);
   AnalyticalF2D<T,S>& operator/(AnalyticalF2D<T,S>& rhs);
 };
+
 /// AnalyticalF3D are applications from 3D to XD, where X is set by the constructor.
 template <typename T, typename S>
 class AnalyticalF3D : public GenericF<T,S> {
 protected:
-  // n denotes the targed dimension
-  AnalyticalF3D(int n) : GenericF<T,S>(n,3) { }
+  // n denotes the target dimension
+  AnalyticalF3D(int n);
 public:
   AnalyticalF3D<T,S>& operator-(AnalyticalF3D<T,S>& rhs);
   AnalyticalF3D<T,S>& operator+(AnalyticalF3D<T,S>& rhs);
@@ -79,28 +79,34 @@ public:
   AnalyticalF3D<T,S>& operator/(AnalyticalF3D<T,S>& rhs);
 };
 
-/// AnalyticalIdentity2D handles memory management
+/// AnalyticalIdentity1D stores vectors, result of addition,multiplication, ...
+template <typename T, typename S>
+class AnalyticalIdentity1D : public AnalyticalF1D<T,S> {
+protected:
+  AnalyticalF1D<T,S>& _f;
+public:
+  AnalyticalIdentity1D(AnalyticalF1D<T,S>& f);
+  bool operator() (T output[], const S input[]);
+};
+
+/// AnalyticalIdentity2D stores vectors, result of addition,multiplication, ...
 template <typename T, typename S>
 class AnalyticalIdentity2D : public AnalyticalF2D<T,S> {
 protected:
   AnalyticalF2D<T,S>& _f;
 public:
-  AnalyticalIdentity2D<T,S>(AnalyticalF2D<T,S>& f);
-  ~AnalyticalIdentity2D<T,S>();
-  // access operator should not delete f, since f still has the identity as child
-  std::vector<T> operator()(std::vector<S> input);
+  AnalyticalIdentity2D(AnalyticalF2D<T,S>& f);
+  bool operator() (T output[], const S input[]);
 };
 
-/// AnalyticalIdentity3D handles memory management
+/// AnalyticalIdentity3D stores vectors, result of addition,multiplication, ...
 template <typename T, typename S>
 class AnalyticalIdentity3D : public AnalyticalF3D<T,S> {
 protected:
   AnalyticalF3D<T,S>& _f;
 public:
-  AnalyticalIdentity3D<T,S>(AnalyticalF3D<T,S>& f);
-  ~AnalyticalIdentity3D<T,S>();
-  // access operator should not delete f, since f still has the identity as child
-  std::vector<T> operator()(std::vector<S> input);
+  AnalyticalIdentity3D(AnalyticalF3D<T,S>& f);
+  bool operator() (T output[], const S input[]);
 };
 
 

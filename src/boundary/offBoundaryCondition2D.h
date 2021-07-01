@@ -61,14 +61,14 @@ public:
 
 
   virtual void addZeroVelocityBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int iX, int iY, int iPop, T dist) =0;
-  virtual void addZeroVelocityBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int material, IndicatorF2D<bool,T>& indicator, std::list<int> bulkMaterials = std::list<int>(1,1)) =0;
+  virtual void addZeroVelocityBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int material, IndicatorF2D<T>& indicator, std::list<int> bulkMaterials = std::list<int>(1,1)) =0;
 
-  //virtual void addZeroVelocityBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int material, IndicatorF2D<bool,T>& indicator) =0;
+  //virtual void addZeroVelocityBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int material, IndicatorF2D<T>& indicator) =0;
 
-//virtual void addVelocityBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int x, int y, int z, int iPop, T dist) =0;
+  //virtual void addVelocityBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int x, int y, int z, int iPop, T dist) =0;
   //virtual void addVelocityBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int x, int y, int z, T distances[Lattice<T>::q]) =0;
-  virtual void addVelocityBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int material, IndicatorF2D<bool,T>& indicator, std::list<int> bulkMaterials = std::list<int>(1,1)) =0;
-  
+  virtual void addVelocityBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int material, IndicatorF2D<T>& indicator, std::list<int> bulkMaterials = std::list<int>(1,1)) =0;
+
   virtual void defineU(int iX, int iY, int iPop, const T u[Lattice<T>::d]) =0;
   virtual void defineU(BlockGeometryStructure2D<T>& blockGeometryStructure, int material, AnalyticalF2D<T,T>& u, std::list<int> bulkMaterials = std::list<int>(1,1) ) =0;
 
@@ -91,7 +91,8 @@ createBouzidiBoundaryCondition2D(BlockLatticeStructure2D<T,Lattice>& block);
 
 template<typename T, template<typename U> class Lattice>
 OffLatticeBoundaryCondition2D<T,Lattice>*
-createBouzidiBoundaryCondition2D(BlockLatticeStructure2D<T,Lattice>& block) {
+createBouzidiBoundaryCondition2D(BlockLatticeStructure2D<T,Lattice>& block)
+{
   return createBouzidiBoundaryCondition2D<T,Lattice,BGKdynamics<T,Lattice> >(block);
 }
 

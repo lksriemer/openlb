@@ -29,13 +29,11 @@
 
 #include <vector>
 #include "cell.h"
+#include "blockStructure3D.h"
 #include "postProcessing.h"
-#include "dataFields3D.h"
 #include "serializer.h"
-#include "dataAnalysisBase3D.h"
 #include "spatiallyExtendedObject3D.h"
-#include "geometry/blockGeometry3D.h"
-#include "geometry/blockGeometryStatistics3D.h"
+#include "geometry/blockGeometryStructure3D.h"
 #include "latticeStatistics.h"
 #include "functors/analyticalF.h"
 
@@ -46,10 +44,13 @@ template<typename T, typename S> class AnalyticalF3D;
 template<typename T, template<typename U> class Lattice> struct Dynamics;
 template<typename T, template<typename U> class Lattice> class Cell;
 template<typename T, template<typename U> class Lattice> struct WriteCellFunctional;
+template <typename T> class IndicatorSphere3D;
+template<typename T> class BlockGeometryStructure3D;
 
 template<typename T, template<typename U> class Lattice>
-class BlockLatticeStructure3D : public Serializable<T>, public SpatiallyExtendedObject3D {
+class BlockLatticeStructure3D : public BlockStructure3D, public SpatiallyExtendedObject3D {
 public:
+  BlockLatticeStructure3D(int nx, int ny, int nz) : BlockStructure3D(nx,ny,nz) {};
   virtual ~BlockLatticeStructure3D() { }
 public:
   virtual void defineRho(BlockGeometryStructure3D<T>& blockGeometry, int material,
@@ -59,16 +60,16 @@ public:
   virtual void defineRhoU(BlockGeometryStructure3D<T>& blockGeometry,
                           int material, AnalyticalF3D<T,T>& rho, AnalyticalF3D<T,T>& u);
   virtual void definePopulations(BlockGeometryStructure3D<T>& blockGeometry, int material,
-          AnalyticalF3D<T,T>& Pop);
+                                 AnalyticalF3D<T,T>& Pop);
   virtual void defineExternalField(BlockGeometryStructure3D<T>& blockGeometry,
                                    int material, int fieldBeginsAt, int sizeOfField,
+                                   AnalyticalF3D<T,T>& field);
+  virtual void defineExternalField(BlockGeometryStructure3D<T>& blockGeometry,
+                                   IndicatorSphere3D<T>& indicator, int fieldBeginsAt, int sizeOfField,
                                    AnalyticalF3D<T,T>& field);
   virtual void iniEquilibrium(BlockGeometryStructure3D<T>& blockGeometry, int material,
                               AnalyticalF3D<T,T>& rho , AnalyticalF3D<T,T>& u);
   // pure virtual member functions
-  virtual int getNx() const =0;
-  virtual int getNy() const =0;
-  virtual int getNz() const =0;
   virtual Cell<T,Lattice>& get(int iX, int iY, int iZ) =0;
   virtual Cell<T,Lattice> const& get(int iX, int iY, int iZ) const =0;
   virtual void initialize() =0;
@@ -81,9 +82,9 @@ public:
                                        int z0_, int z1_, bool status) =0;
   virtual void collide(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_) =0;
   virtual void collide() =0;
-  virtual void staticCollide(int x0_, int x1_, int y0_, int y1_, int z0_,
+  /*virtual void staticCollide(int x0_, int x1_, int y0_, int y1_, int z0_,
                              int z1_, TensorFieldBase3D<T,3> const& u) =0;
-  virtual void staticCollide( TensorFieldBase3D<T,3> const& u) =0;
+  virtual void staticCollide( TensorFieldBase3D<T,3> const& u) =0;*/
   virtual void stream(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_) =0;
   virtual void stream(bool periodic=false) =0;
   virtual void collideAndStream(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_) =0;
@@ -108,13 +109,6 @@ public:
   virtual void subscribeReductions(Reductor<T>& reductor) =0;
   virtual LatticeStatistics<T>& getStatistics() =0;
   virtual LatticeStatistics<T> const& getStatistics() const =0;
-  virtual DataAnalysisBase3D<T,Lattice> const& getDataAnalysis() const =0;
-  virtual DataSerializer<T> const& getSubSerializer(int x0_, int x1_, int y0_,
-                                                    int y1_, int z0_, int z1_,
-                                                    IndexOrdering::OrderingT ordering ) const =0;
-  virtual DataUnSerializer<T>& getSubUnSerializer(int x0_, int x1_, int y0_,
-                                                  int y1_, int z0_, int z1_,
-                                                  IndexOrdering::OrderingT ordering) =0;
 };
 
 }  // namespace olb

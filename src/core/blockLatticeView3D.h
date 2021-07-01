@@ -30,15 +30,9 @@
 
 #include <vector>
 #include "blockLatticeStructure3D.h"
-#include "dataAnalysisBase3D.h"
 #include "geometry/blockGeometryStatistics3D.h"
 
 namespace olb {
-
-template<typename T, template<typename U> class Lattice> class DataAnalysis3D;
-
-template<typename T, template<typename U> class Lattice> class BlockLatticeViewSerializer3D;
-template<typename T, template<typename U> class Lattice> class BlockLatticeViewUnSerializer3D;
 
 template<typename T, template<typename U> class Lattice>
 class BlockLatticeView3D : public BlockLatticeStructure3D<T,Lattice> {
@@ -52,9 +46,6 @@ public:
   (BlockLatticeView3D<T,Lattice> const& rhs);
   void swap(BlockLatticeView3D<T,Lattice>& rhs);
 
-  virtual int getNx() const { return nx; }
-  virtual int getNy() const { return ny; }
-  virtual int getNz() const { return nz; }
   virtual Cell<T,Lattice>& get(int iX, int iY, int iZ);
   virtual Cell<T,Lattice> const& get(int iX, int iY, int iZ) const;
   virtual void initialize();
@@ -70,10 +61,10 @@ public:
   virtual void collide (
     int x0_, int x1_, int y0_, int y1_, int z0_, int z1_ );
   virtual void collide();
-  virtual void staticCollide (int x0, int x1, int y0, int y1,
+  /*virtual void staticCollide (int x0, int x1, int y0, int y1,
                               int z0_, int z1_,
                               TensorFieldBase3D<T,3> const& u);
-  virtual void staticCollide (TensorFieldBase3D<T,3> const& u);
+  virtual void staticCollide (TensorFieldBase3D<T,3> const& u);*/
   virtual void stream(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_);
   virtual void stream(bool periodic=false);
   virtual void collideAndStream(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_);
@@ -100,23 +91,13 @@ public:
   virtual void subscribeReductions(Reductor<T>& reductor);
   virtual LatticeStatistics<T>& getStatistics();
   virtual LatticeStatistics<T> const& getStatistics() const;
-  virtual DataAnalysisBase3D<T,Lattice> const& getDataAnalysis() const;
-  virtual DataSerializer<T> const& getSerializer(IndexOrdering::OrderingT ordering) const;
-  virtual DataUnSerializer<T>& getUnSerializer(IndexOrdering::OrderingT ordering);
-  virtual DataSerializer<T> const& getSubSerializer (
-    int x0_, int x1_, int y0_, int y1_, int z0_, int z1_,
-    IndexOrdering::OrderingT ordering ) const;
-  virtual DataUnSerializer<T>& getSubUnSerializer (
-    int x0_, int x1_, int y0_, int y1_, int z0_, int z1_,
-    IndexOrdering::OrderingT ordering );
+
   virtual SpatiallyExtendedObject3D* getComponent(int iBlock);
   virtual SpatiallyExtendedObject3D const* getComponent(int iBlock) const;
   virtual multiPhysics::MultiPhysicsId getMultiPhysicsId() const;
 private:
   BlockLatticeStructure3D<T,Lattice>  *originalLattice;
   int                          x0, y0, z0;
-  int                          nx,ny,nz;
-  DataAnalysis3D<T,Lattice>    *dataAnalysis;
 };
 
 }  // namespace olb

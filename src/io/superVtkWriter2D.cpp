@@ -28,11 +28,10 @@
 
 #include "io/superVtkWriter2D.h"
 #include "io/superVtkWriter2D.hh"
-#include "dynamics/latticeDescriptors.h"
-#include "dynamics/latticeDescriptors.hh"
+
 namespace olb {
 
-template class SuperVTKwriter2D<double,descriptors::D2Q9Descriptor>;
+template class SuperVTKwriter2D<double>;
 
 } // end namespace olb
 

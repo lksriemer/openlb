@@ -80,6 +80,15 @@ public:
   /// adds a temperature boundary for one material and a range (x0-x1, y0-y1, z0-z1) or the whole geometry
   virtual void addTemperatureBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int material, int x0, int x1, int y0, int y1, int z0, int z1, T omega) =0;
   virtual void addTemperatureBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int material, T omega) =0;
+  /// adds a convection boundary for one material and a range (x0-x1, y0-y1, z0-z1) or the whole geometry
+  virtual void addConvectionBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int material, int x0, int x1, int y0, int y1, int z0, int z1) =0;
+  virtual void addConvectionBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int material) =0;
+  /// adds a boundary on the external field for one material and a range (x0-x1, y0-y1, z0-z1) or the whole geometry
+  virtual void addExtFieldBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int material, int offset, int x0, int x1, int y0, int y1, int z0, int z1) =0;
+  virtual void addExtFieldBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int material, int offset) =0;
+  /// adds a boundary that initializes zero distributions and computes the density that entered the boundary for one material and a range (x0-x1, y0-y1, z0-z1) or the whole geometry
+  virtual void addZeroDistributionBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int material, int x0, int x1, int y0, int y1, int z0, int z1) =0;
+  virtual void addZeroDistributionBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int material) =0;
 };
 
 //////  Factory function for Regularized Thermal BC
@@ -95,7 +104,7 @@ OnLatticeAdvectionDiffusionBoundaryCondition3D<T,Lattice>*
 createAdvectionDiffusionBoundaryCondition3D(BlockLatticeStructure3D<T,Lattice>& block)
 {
   return createAdvectionDiffusionBoundaryCondition3D<T,Lattice,
-           AdvectionDiffusionRLBdynamics<T,Lattice> >(block);
+         AdvectionDiffusionRLBdynamics<T,Lattice> >(block);
 }
 
 /// superLattice creator, calls createAdvectionDiffusionBoundaryCondidtion3D from above.
@@ -107,7 +116,7 @@ template<typename T, template<typename U> class Lattice>
 void createAdvectionDiffusionBoundaryCondition3D(sOnLatticeBoundaryCondition3D<T, Lattice>& sBC)
 {
   return createAdvectionDiffusionBoundaryCondition3D<T,Lattice,
-           AdvectionDiffusionRLBdynamics<T,Lattice> >(sBC);
+         AdvectionDiffusionRLBdynamics<T,Lattice> >(sBC);
 }
 
 

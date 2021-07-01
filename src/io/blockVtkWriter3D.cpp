@@ -28,12 +28,10 @@
 
 #include "io/blockVtkWriter3D.h"
 #include "io/blockVtkWriter3D.hh"
-#include "dynamics/latticeDescriptors.h"
-#include "dynamics/latticeDescriptors.hh"
 
 namespace olb {
 
-template class BlockVTKwriter3D<double,descriptors::D3Q19Descriptor>;
+template class BlockVTKwriter3D<double>;
 
 } // end namespace olb
 

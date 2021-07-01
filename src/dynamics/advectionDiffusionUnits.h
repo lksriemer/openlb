@@ -35,90 +35,139 @@ template<typename T, template<typename NSU> class NSLattice, template<typename A
 class AdvectionDiffusionUnitLB {
 public:
   /// Constructor
-  /** \param Ra_  Raylegh number
-   *  \param Pr_  Prandtl number
-   *  \param Tcold_  minimum temperature
-   *  \param Thot_  maximum temperature
-   *  \param deltaTemperature_ Reynolds number
-   *  \param deltaT_ time discretization number
-   *  \param N_  resolution (a lattice of size 1 has N_+1 cells)
-   *  \param lx_ x-length in dimensionless units (e.g. 1)
-   *  \param ly_ y-length in dimensionless units (e.g. 1)
-   *  \param lz_ z-length in dimensionless units (e.g. 1)
+  /** \param Ra               Raylegh number
+   *  \param Pr               Prandtl number
+   *  \param Tcold            minimum temperature
+   *  \param Thot             maximum temperature
+   *  \param deltaTemperature Reynolds number
+   *  \param deltaT           time discretization number
+   *  \param N                resolution (a lattice of size 1 has N_+1 cells)
+   *  \param lx               x-length in dimensionless units (e.g. 1)
+   *  \param ly               y-length in dimensionless units (e.g. 1)
+   *  \param lz               z-length in dimensionless units (e.g. 1)
    */
-  AdvectionDiffusionUnitLB(T Ra_, T Pr_, T Tcold_, T Thot_, T N_, T deltaT_,
-                           T lx_, T ly_, T lz_=T() )
-    : Ra(Ra_), Pr(Pr_), Tcold(Tcold_), Thot(Thot_),
-      N(N_), deltaT(deltaT_), lx(lx_), ly(ly_), lz(lz_)
-  { }
+  AdvectionDiffusionUnitLB(T Ra, T Pr, T Tcold, T Thot, T N, T deltaT,
+                           T lx, T ly, T lz=T() )
+    : _Ra(Ra), _Pr(Pr), _Tcold(Tcold), _Thot(Thot), _NN(N), _deltaT(deltaT),
+      _lx(lx), _ly(ly), _lz(lz) {
+  }
   /// Rayleigh number
-  T getRa() const      { return Ra; }
+  T getRa() const      {
+    return _Ra;
+  }
   /// Prandlt number
-  T getPr() const      { return Pr; }
+  T getPr() const      {
+    return _Pr;
+  }
   /// minimum temperature
-  T getTcold() const   { return Tcold; }
+  T getTcold() const   {
+    return _Tcold;
+  }
   /// maximum temperature
-  T getThot() const    { return Thot; }
+  T getThot() const    {
+    return _Thot;
+  }
   /// delta temperature number
-  T getDeltaTemperature() const { return (Thot-Tcold); }
+  T getDeltaTemperature() const {
+    return _Thot - _Tcold;
+  }
   /// mid-temperature
-  T getT0() const      { return (Thot+Tcold)/(T)2; }
+  T getT0() const      {
+    return (_Thot + _Tcold)/(T)2;
+  }
   /// resolution (a lattice of size 1 has getN()+1 cells)
-  T getN() const       { return N; }
+  T getN() const       {
+    return _NN;
+  }
   /// x-length in dimensionless units
-  T getLx() const      { return lx; }
+  T getLx() const      {
+    return _lx;
+  }
   /// y-length in dimensionless units
-  T getLy() const      { return ly; }
+  T getLy() const      {
+    return _ly;
+  }
   /// z-length in dimensionless units
-  T getLz() const      { return lz; }
+  T getLz() const      {
+    return _lz;
+  }
   /// lattice spacing in dimensionless units
-  T getDeltaX() const  { return (T)1/N; }
+  T getDeltaX() const  {
+    return (T)1 / _NN;
+  }
   /// time step in dimensionless units
-  T getDeltaT() const  { return deltaT; }
+  T getDeltaT() const  {
+    return _deltaT;
+  }
   /// conversion from dimensionless to lattice units for space coordinate
-  int nCell(T l) const { return (int)(l/getDeltaX()+(T)0.5); }
+  int nCell(T l) const {
+    return (int)(l/getDeltaX()+(T)0.5);
+  }
   /// conversion from dimensionless to lattice units for time coordinate
-  int nStep(T t) const { return (int)(t/getDeltaT()+(T)0.5); }
+  int nStep(T t) const {
+    return (int)(t/getDeltaT()+(T)0.5);
+  }
   /// number of lattice cells in x-direction
-  int getNx() const    { return nCell(lx)+1; }
+  int getNx() const    {
+    return nCell(_lx) + 1;
+  }
   /// number of lattice cells in y-direction
-  int getNy() const    { return nCell(ly)+1; }
+  int getNy() const    {
+    return nCell(_ly) + 1;
+  }
   /// number of lattice cells in z-direction
-  int getNz() const    { return nCell(lz)+1; }
+  int getNz() const    {
+    return nCell(_lz) + 1;
+  }
   /// velocity in lattice units (proportional to Mach number)
-  T getU() const       { return getDeltaT()/getDeltaX()  ; }
+  T getU() const       {
+    return getDeltaT() / getDeltaX()  ;
+  }
   /// viscosity in lattice units
-  T getNu() const      { return sqrt(getPr()/getRa())*getDeltaT()/(getDeltaX()*getDeltaX()); }
+  T getNu() const      {
+    return sqrt(getPr()/getRa()) * getDeltaT() / (getDeltaX()*getDeltaX());
+  }
   /// thermal conductivity in lattice units
-  T getKappa() const   { return sqrt((T)1/(getPr()*getRa()))*getDeltaT()/(getDeltaX()*getDeltaX()); }
+  T getKappa() const   {
+    return sqrt((T)1/(getPr()*getRa()))*getDeltaT()/(getDeltaX()*getDeltaX());
+  }
   /// viscosity in lattice units
-  T getGravity() const { return getDeltaT() * getDeltaT() / getDeltaX(); }
+  T getGravity() const {
+    return getDeltaT() * getDeltaT() / getDeltaX();
+  }
   /// relaxation time
-  T getTauNS() const   { return NSLattice<T>::invCs2*getNu()+(T)0.5; }
+  T getTauNS() const   {
+    return NSLattice<T>::invCs2*getNu()+(T)0.5;
+  }
   /// relaxation frequency
-  T getOmegaNS() const { return (T)1 / getTauNS(); }
+  T getOmegaNS() const {
+    return (T)1 / getTauNS();
+  }
   /// relaxation time
-  T getTauT() const    { return ADLattice<T>::invCs2*getKappa()+(T)0.5; }
+  T getTauT() const    {
+    return ADLattice<T>::invCs2*getKappa() + (T)0.5;
+  }
   /// relaxation frequency
-  T getOmegaT() const  { return (T)1 / getTauT(); }
+  T getOmegaT() const  {
+    return (T)1 / getTauT();
+  }
 private:
-  T Ra, Pr, Tcold, Thot, N, deltaT, lx, ly, lz;
+  T _Ra, _Pr, _Tcold, _Thot, _NN, _deltaT, _lx, _ly, _lz;
 };
 
 template<typename T, template<typename NSU> class NSLattice, template<typename ADU> class ADLattice>
 void writeLogFile(AdvectionDiffusionUnitLB<T,NSLattice,ADLattice> const& converter,
                   std::string const& title)
 {
-  std::string fullName = singleton::directories().getLogOutDir() +
-                         "olbLog.dat";
+  std::string fullName = singleton::directories().getLogOutDir() + "olbLog.dat";
   std::ofstream ofile(fullName.c_str());
   ofile << title << "\n\n";
-  ofile << "Velocity in lattice units: u=" << converter.getU() << "\n";
+  ofile << "Velocity in lattice units: u="  << converter.getU() << "\n";
   ofile << "Raynleigh number:          Ra=" << converter.getRa() << "\n";
   ofile << "Prandlt number:            Pr=" << converter.getPr() << "\n";
   ofile << "Kinematic viscosity:       Nu=" << converter.getNu() << "\n";
   ofile << "AdvectionDiffusion conductivity:      Kappa=" << converter.getKappa() << "\n";
-  ofile << "Lattice resolution:        N=" << converter.getN() << "\n";
+  ofile << "Lattice resolution:        N="  << converter.getN() << "\n";
   ofile << "Extent of the system:      lx=" << converter.getLx() << "\n";
   ofile << "Extent of the system:      ly=" << converter.getLy() << "\n";
   ofile << "Extent of the system:      lz=" << converter.getLz() << "\n";

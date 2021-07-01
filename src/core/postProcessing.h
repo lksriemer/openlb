@@ -110,19 +110,22 @@ protected:
 
 template<typename T, template<typename U> class Lattice>
 struct LocalPostProcessor2D : public PostProcessor2D<T,Lattice> {
-  virtual bool hasReductions() const { return false; }
+  virtual bool hasReductions() const {
+    return false;
+  }
   virtual void subscribeReductions(BlockLattice2D<T,Lattice>& blockLattice,
-                                   Reductor<T>* reductor)
-  { }
+                                   Reductor<T>* reductor) {
+  }
 };
 
 template<typename T, template<typename U> class Lattice>
 struct GlobalPostProcessor2D : public PostProcessor2D<T,Lattice> {
-  virtual bool hasReductions() const { return true; }
+  virtual bool hasReductions() const {
+    return true;
+  }
   virtual void process(BlockLattice2D<T,Lattice>& blockLattice) =0;
   virtual void processSubDomain(BlockLattice2D<T,Lattice>& blockLattice,
-                                int x0_, int x1_, int y0_, int y1_ )
-  {
+                                int x0_, int x1_, int y0_, int y1_ ) {
     this -> process(blockLattice);
   }
   virtual int extent() const {
@@ -186,20 +189,23 @@ protected:
 
 template<typename T, template<typename U> class Lattice>
 struct LocalPostProcessor3D : public PostProcessor3D<T,Lattice> {
-  virtual bool hasReductions() const { return false; }
+  virtual bool hasReductions() const {
+    return false;
+  }
   virtual void subscribeReductions(BlockLattice3D<T,Lattice>& blockLattice,
-                                   Reductor<T>* reductor)
-  { }
+                                   Reductor<T>* reductor) {
+  }
 };
 
 template<typename T, template<typename U> class Lattice>
 struct GlobalPostProcessor3D : public PostProcessor3D<T,Lattice> {
-  virtual bool hasReductions() const { return true; }
+  virtual bool hasReductions() const {
+    return true;
+  }
   virtual void process(BlockLattice3D<T,Lattice>& blockLattice) =0;
   virtual void processSubDomain(BlockLattice3D<T,Lattice>& blockLattice,
                                 int x0_, int x1_, int y0_, int y1_,
-                                int z0_, int z1_ )
-  {
+                                int z0_, int z1_ ) {
     this -> process(blockLattice);
   }
   virtual int extent() const {
@@ -211,8 +217,7 @@ struct GlobalPostProcessor3D : public PostProcessor3D<T,Lattice> {
 };
 
 template<typename T, template<typename U> class Lattice>
-struct StatisticsPostProcessor2D : public GlobalPostProcessor2D<T,Lattice>
-{
+struct StatisticsPostProcessor2D : public GlobalPostProcessor2D<T,Lattice> {
   StatisticsPostProcessor2D();
   virtual void process(BlockLattice2D<T,Lattice>& blockLattice);
   virtual void subscribeReductions(BlockLattice2D<T,Lattice>& blockLattice,
@@ -221,8 +226,7 @@ struct StatisticsPostProcessor2D : public GlobalPostProcessor2D<T,Lattice>
 
 template<typename T, template<typename U> class Lattice>
 class StatPPGenerator2D
-  : public PostProcessorGenerator2D<T,Lattice>
-{
+    : public PostProcessorGenerator2D<T,Lattice> {
 public:
   StatPPGenerator2D();
   virtual PostProcessor2D<T,Lattice>* generate() const;
@@ -230,8 +234,7 @@ public:
 };
 
 template<typename T, template<typename U> class Lattice>
-struct StatisticsPostProcessor3D : public GlobalPostProcessor3D<T,Lattice>
-{
+struct StatisticsPostProcessor3D : public GlobalPostProcessor3D<T,Lattice> {
   StatisticsPostProcessor3D();
   virtual void process(BlockLattice3D<T,Lattice>& blockLattice);
   virtual void subscribeReductions(BlockLattice3D<T,Lattice>& blockLattice,
@@ -240,8 +243,7 @@ struct StatisticsPostProcessor3D : public GlobalPostProcessor3D<T,Lattice>
 
 template<typename T, template<typename U> class Lattice>
 class StatPPGenerator3D
-  : public PostProcessorGenerator3D<T,Lattice>
-{
+    : public PostProcessorGenerator3D<T,Lattice> {
 public:
   StatPPGenerator3D();
   virtual PostProcessor3D<T,Lattice>* generate() const;

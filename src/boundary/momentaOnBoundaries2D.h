@@ -33,8 +33,7 @@ namespace olb {
 
 template<typename T, template<typename U> class Lattice,
          int normalX, int normalY>
-class InnerCornerVelBM2D : public DirichletBoundaryMomenta<T,Lattice>
-{
+class InnerCornerVelBM2D : public DirichletBoundaryMomenta<T,Lattice> {
 public:
   /// Default Constructor: initialization to zero
   InnerCornerVelBM2D();

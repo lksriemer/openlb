@@ -66,18 +66,26 @@ public:
   /// Add offDynamics with initialisation of boundary links and the corresponding post processors
   /// Note: Uses information of the second neighbours of the cell (x,y,z)
   /// Add post processors. Ensure that offDynamics are defined!
-  void addVelocityBoundary(SuperGeometry2D<T>& superGeometry, int material, IndicatorF2D<bool,T>& indicator, std::list<int> bulkMaterials = std::list<int>(1,1));
-  void addZeroVelocityBoundary(SuperGeometry2D<T>& superGeometry, int material, IndicatorF2D<bool,T>& indicator, std::list<int> bulkMaterials = std::list<int>(1,1));
+  void addVelocityBoundary(SuperGeometry2D<T>& superGeometry, int material, IndicatorF2D<T>& indicator, std::list<int> bulkMaterials = std::list<int>(1,1));
+  void addZeroVelocityBoundary(SuperGeometry2D<T>& superGeometry, int material, IndicatorF2D<T>& indicator, std::list<int> bulkMaterials = std::list<int>(1,1));
 
   void defineU(SuperGeometry2D<T>& superGeometry, int material, AnalyticalF2D<T,T>& u, std::list<int> bulkMaterials = std::list<int>(1,1) );
 
   /// Adds needed Cells to the Communicator _commBC in SuperLattice
   void addPoints2CommBC(SuperGeometry2D<T>& superGeometry, int material);
 
-  SuperLattice2D<T,Lattice>& getSuperLattice() {return _sLattice; };
-  std::vector<OffLatticeBoundaryCondition2D<T,Lattice>* >& getBlockBCs() {return _blockBCs; };
-  int getOverlap() {return _overlap; };
-  void setOverlap(int overlap) {_overlap = overlap; };
+  SuperLattice2D<T,Lattice>& getSuperLattice() {
+    return _sLattice;
+  };
+  std::vector<OffLatticeBoundaryCondition2D<T,Lattice>* >& getBlockBCs() {
+    return _blockBCs;
+  };
+  int getOverlap() {
+    return _overlap;
+  };
+  void setOverlap(int overlap) {
+    _overlap = overlap;
+  };
 
   void outputOn();
   void outputOff();
@@ -95,7 +103,8 @@ template<typename T, template<typename U> class Lattice, typename MixinDynamics>
 void createBouzidiBoundaryCondition2D(sOffLatticeBoundaryCondition2D<T,Lattice>& sBC);
 
 template<typename T, template<typename U> class Lattice>
-void createBouzidiBoundaryCondition2D(sOffLatticeBoundaryCondition2D<T,Lattice>& sBC) {
+void createBouzidiBoundaryCondition2D(sOffLatticeBoundaryCondition2D<T,Lattice>& sBC)
+{
   createBouzidiBoundaryCondition2D<T,Lattice,BGKdynamics<T,Lattice> > (sBC);
 }
 

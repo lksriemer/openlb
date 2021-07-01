@@ -44,12 +44,14 @@ namespace olb {
 
 
 template<typename T>
-Communicator2D<T>::Communicator2D(SuperStructure2D<T>& superStructure):_superStructure(superStructure) {
+Communicator2D<T>::Communicator2D(SuperStructure2D<T>& superStructure):_superStructure(superStructure)
+{
   _initDone = false;
 }
 
 template<typename T>
-void Communicator2D<T>::init_nh() {
+void Communicator2D<T>::init_nh()
+{
 
   _nC = _superStructure.getCuboidGeometry().getNc();
 
@@ -60,13 +62,15 @@ void Communicator2D<T>::init_nh() {
 }
 
 template<typename T>
-void Communicator2D<T>::add_cell(int iCloc, int iX, int iY) {
+void Communicator2D<T>::add_cell(int iCloc, int iX, int iY)
+{
 
   _nh[iCloc].add_inCell(iX,iY);
 }
 
 template<typename T>
-void Communicator2D<T>::add_cells(int overlap) {
+void Communicator2D<T>::add_cells(int overlap)
+{
 
   for (int iC=0; iC<_superStructure.getLoadBalancer().size(); iC++) {
     _nh[iC].add_inCells(overlap);
@@ -74,7 +78,8 @@ void Communicator2D<T>::add_cells(int overlap) {
 }
 
 template<typename T>
-void Communicator2D<T>::init() {
+void Communicator2D<T>::init()
+{
 
   reset();
   for (int iC=0; iC<_superStructure.getLoadBalancer().size(); iC++) {
@@ -116,7 +121,8 @@ void Communicator2D<T>::init() {
 }
 
 template<typename T>
-void Communicator2D<T>::reset() {
+void Communicator2D<T>::reset()
+{
 
   if (_initDone) {
     for (int iC=0; iC<_superStructure.getLoadBalancer().size(); iC++) {
@@ -127,7 +133,8 @@ void Communicator2D<T>::reset() {
 }
 
 template<typename T>
-void Communicator2D<T>::send() {
+void Communicator2D<T>::send()
+{
 
   for (int iC=0; iC<_superStructure.getLoadBalancer().size(); iC++) {
     _nh[iC].buffer_outData();
@@ -138,7 +145,8 @@ void Communicator2D<T>::send() {
 }
 
 template<typename T>
-void Communicator2D<T>::receive() {
+void Communicator2D<T>::receive()
+{
 
   for (int iC=0; iC<_superStructure.getLoadBalancer().size(); iC++) {
 #ifdef PARALLEL_MODE_MPI
@@ -158,7 +166,8 @@ void Communicator2D<T>::receive() {
 }
 
 template<typename T>
-void Communicator2D<T>::write() {
+void Communicator2D<T>::write()
+{
 
   for (int iC=0; iC<_superStructure.getLoadBalancer().size(); iC++) {
     _nh[iC].write_inData();

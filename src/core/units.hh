@@ -169,7 +169,7 @@ LBconverter<T>* createLBconverter(XMLreader const& params)
   }
   if (!params["Application"]["DiscParam"]["latticeL"].read(latticeL, verbose)) {
     if (!params["Application"]["DiscParam"]["deltaX"].read(deltaX, verbose)) {
-      if (!params["Application"]["DiscParam"]["resolution"].read(N, verbose)) {
+      if (!params["Application"]["DiscParam"]["resolution"].read<int>(N, verbose)) {
         clout << "Error: Cannot read any of the parameters from Xml-file: "
               << "latticeL, deltaX, resolution"
               << std::endl;

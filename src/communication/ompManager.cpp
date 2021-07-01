@@ -28,7 +28,8 @@
 #include "communication/ompManager.h"
 #include "io/ostreamManager.h"
 
-void ompManager::init() {
+void ompManager::init()
+{
   set_dynamic(0);
   size = omp_get_max_threads();
   rank = omp_get_thread_num();
@@ -36,15 +37,18 @@ void ompManager::init() {
   clout << "Sucessfully initialized, numThreads=" << get_size() << std::endl;
 }
 
-int ompManager::get_size() const {
+int ompManager::get_size() const
+{
   return size;
 }
 
-int ompManager::get_rank() const {
+int ompManager::get_rank() const
+{
   return rank;
 }
 
-void ompManager::set_dynamic(int dynamicThreads) {
+void ompManager::set_dynamic(int dynamicThreads)
+{
   omp_set_dynamic(dynamicThreads);
 }
 

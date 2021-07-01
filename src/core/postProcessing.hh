@@ -42,7 +42,8 @@ PostProcessorGenerator2D<T,Lattice>::PostProcessorGenerator2D (
 { }
 
 template<typename T, template<typename U> class Lattice>
-void PostProcessorGenerator2D<T,Lattice>::shift(int deltaX, int deltaY) {
+void PostProcessorGenerator2D<T,Lattice>::shift(int deltaX, int deltaY)
+{
   x0 += deltaX;
   x1 += deltaX;
   y0 += deltaY;
@@ -57,15 +58,13 @@ extract(int x0_, int x1_, int y0_, int y1_)
   if ( util::intersect (
          x0, x1, y0, y1,
          x0_, x1_, y0_, y1_,
-         newX0, newX1, newY0, newY1 ) )
-  {
+         newX0, newX1, newY0, newY1 ) ) {
     x0 = newX0;
     x1 = newX1;
     y0 = newY0;
     y1 = newY1;
     return true;
-  }
-  else {
+  } else {
     return false;
   }
 }
@@ -80,7 +79,8 @@ LatticeCouplingGenerator2D<T,Lattice>::LatticeCouplingGenerator2D (
 { }
 
 template<typename T, template<typename U> class Lattice>
-void LatticeCouplingGenerator2D<T,Lattice>::shift(int deltaX, int deltaY) {
+void LatticeCouplingGenerator2D<T,Lattice>::shift(int deltaX, int deltaY)
+{
   x0 += deltaX;
   x1 += deltaX;
   y0 += deltaY;
@@ -94,15 +94,13 @@ bool LatticeCouplingGenerator2D<T,Lattice>::extract(int x0_, int x1_, int y0_, i
   if ( util::intersect (
          x0, x1, y0, y1,
          x0_, x1_, y0_, y1_,
-         newX0, newX1, newY0, newY1 ) )
-  {
+         newX0, newX1, newY0, newY1 ) ) {
     x0 = newX0;
     x1 = newX1;
     y0 = newY0;
     y1 = newY1;
     return true;
-  }
-  else {
+  } else {
     return false;
   }
 }
@@ -147,8 +145,9 @@ void StatisticsPostProcessor2D<T,Lattice>::process (
       *blockLattice.getStatistics().getNumCells();
       avEnergy       += blockLattice.getStatistics().getAverageEnergy()
       *blockLattice.getStatistics().getNumCells();
-      if (maxU<blockLattice.getStatistics().getMaxU() )
+      if (maxU<blockLattice.getStatistics().getMaxU() ) {
         maxU        = blockLattice.getStatistics().getMaxU();
+      }
     }
   }
   if (numCells==0) {
@@ -157,8 +156,7 @@ void StatisticsPostProcessor2D<T,Lattice>::process (
     avEnergy = T();
     maxU = T();
     numCells = 0;
-  }
-  else {
+  } else {
     avRho    = avRho / numCells;
     avEnergy = avEnergy / numCells;
   }
@@ -240,8 +238,7 @@ extract(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_)
   if ( util::intersect (
          x0, x1, y0, y1, z0, z1,
          x0_, x1_, y0_, y1_, z0_, z1_,
-         newX0, newX1, newY0, newY1, newZ0, newZ1 ) )
-  {
+         newX0, newX1, newY0, newY1, newZ0, newZ1 ) ) {
     x0 = newX0;
     x1 = newX1;
     y0 = newY0;
@@ -249,8 +246,7 @@ extract(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_)
     z0 = newZ0;
     z1 = newZ1;
     return true;
-  }
-  else {
+  } else {
     return false;
   }
 }
@@ -283,8 +279,7 @@ extract(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_)
   if ( util::intersect (
          x0, x1, y0, y1, z0, z1,
          x0_, x1_, y0_, y1_, z0_, z1_,
-         newX0, newX1, newY0, newY1, newZ0, newZ1 ) )
-  {
+         newX0, newX1, newY0, newY1, newZ0, newZ1 ) ) {
     x0 = newX0;
     x1 = newX1;
     y0 = newY0;
@@ -292,8 +287,7 @@ extract(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_)
     z0 = newZ0;
     z1 = newZ1;
     return true;
-  }
-  else {
+  } else {
     return false;
   }
 }
@@ -336,8 +330,9 @@ void StatisticsPostProcessor3D<T,Lattice>::process (
       *blockLattice.getStatistics().getNumCells();
       avEnergy       += blockLattice.getStatistics().getAverageEnergy()
       *blockLattice.getStatistics().getNumCells();
-      if (maxU<blockLattice.getStatistics().getMaxU() )
+      if (maxU<blockLattice.getStatistics().getMaxU() ) {
         maxU        = blockLattice.getStatistics().getMaxU();
+      }
     }
   }
   if (numCells==0) {
@@ -346,8 +341,7 @@ void StatisticsPostProcessor3D<T,Lattice>::process (
     avEnergy = T();
     maxU = T();
     numCells = 0;
-  }
-  else {
+  } else {
     avRho    = avRho / numCells;
     avEnergy = avEnergy / numCells;
   }
@@ -388,13 +382,15 @@ StatPPGenerator3D<T,Lattice>::StatPPGenerator3D()
 { }
 
 template<typename T, template<typename U> class Lattice>
-PostProcessor3D<T,Lattice>* StatPPGenerator3D<T,Lattice>::generate() const {
+PostProcessor3D<T,Lattice>* StatPPGenerator3D<T,Lattice>::generate() const
+{
   return new StatisticsPostProcessor3D<T,Lattice>;
 }
 
 
 template<typename T, template<typename U> class Lattice>
-PostProcessorGenerator3D<T,Lattice>* StatPPGenerator3D<T,Lattice>::clone() const {
+PostProcessorGenerator3D<T,Lattice>* StatPPGenerator3D<T,Lattice>::clone() const
+{
   return new StatPPGenerator3D;
 }
 

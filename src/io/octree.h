@@ -22,15 +22,18 @@
  */
 
 /** \file
- * Octree - adapted from http://www.flipcode.com/archives/Octree_Implementation.shtml
+ * Octree
  */
 
 #ifndef OCTREE_H
 #define OCTREE_H
 
 #include <iostream>
+#include <set>
 
 #include "core/singleton.h"
+#include "core/vector.h"
+
 
 using namespace olb::util;
 /// All OpenLB code is contained in this namespace.
@@ -43,8 +46,7 @@ template<typename T>
 struct STLtriangle;
 
 template <typename T>
-class Octree
-{
+class Octree {
 public:
   /*
    * Constructs Octree containing triangles of an STLmesh.
@@ -54,75 +56,83 @@ public:
    * \param maxDepth Maximal depth of tree
    * \param overlap Triangles within rad+overlap are added to this Octree
    */
-  Octree(std::vector<T> center, T rad, STLmesh<T>& mesh, int maxDepth, T overlap = 0., Octree<T>* parent=NULL);
-  /// Destructur destructs
-  virtual ~Octree();
-
+  Octree(Vector<T,3> center, T rad, STLmesh<T>* mesh, short maxDepth, T overlap = 0., Octree<T>* parent=NULL);
+  /// Destructor destructs
+  ~Octree();
   /// Find the node containing the first param with remaining maxDepth
-  Octree<T>* find(const std::vector<T>&,const int& maxDepth = 0);
+  Octree<T>* find(const Vector<T,3>&,const int& maxDepth = 0);
   /// Write Octree
-  void write(const std::vector<T>& pt, const std::string no);
+  void write(const Vector<T,3>& pt, const std::string no);
   /// Write Octree
   void write(const int, const std::string);
   /// Write Octree
   void write(const std::string);
   /// Test intersection of ray with all triangles in Octree
-  /// returns number od intersections
-  int testIntersection(const std::vector<T>& pt,const std::vector<T>& dir, bool print = false);
+  /// returns number of intersections
+  int testIntersection(const Vector<T,3>& pt,const Vector<T,3>& dir, bool print = false);
   /// Test intersection of ray with all triangles in Octree
   /// q contains point of closest intersection to pt in direction direction
-  bool closestIntersection(const std::vector<T>& pt, const std::vector<T>& direction, std::vector<T>& q, T& a);
+  bool closestIntersection(const Vector<T,3>& pt, const Vector<T,3>& direction, Vector<T,3>& q, T& a);
   /// Test intersection of ray with all triangles in Octree
   /// q contains point of closest intersection to pt in direction direction
   /// tri contains triangle with closest intersection
-  bool closestIntersection(const std::vector<T>& pt, const std::vector<T>& direction, std::vector<T>& q, T& a, STLtriangle<T>& tri, const T& rad = 0.);
+  bool closestIntersection(const Vector<T,3>& pt, const Vector<T,3>& direction, Vector<T,3>& q, T& a, STLtriangle<T>& tri, const T& rad = 0., bool print = false);
   /// Test intersection of sphere moving along ray with radius rad
   /// q contains point of closest intersection to pt in direction direction
   /// tri contains triangle with closest intersection
-  bool closestIntersectionSphere(const std::vector<T>& pt, const T& rad, const std::vector<T>& direction, std::vector<T>& q, T& a, STLtriangle<T>& tri);
+  bool closestIntersectionSphere(const Vector<T,3>& pt, const T& rad, const Vector<T,3>& direction, Vector<T,3>& q, T& a, STLtriangle<T>& tri);
   /// It's complicated. Computes intersections of a ray with triangles inside this Octree. Sets _inside depending on value of rayInside and changes rayInside depending on the number of intersections. Also takes into account if the intersections happen before or after the center.
-  void checkRay(const std::vector<T>& pt,const std::vector<T>& dir, unsigned short& rayInside);
+  void checkRay(const Vector<T,3>& pt,const Vector<T,3>& dir, unsigned short& rayInside);
   /// Computes intersection of ray with Octree boundaries
-  void intersectRayNode(const std::vector<T>& pt, const std::vector<T>& dir, std::vector<T>& s);
+  void intersectRayNode(const Vector<T,3>& pt, const Vector<T,3>& dir, Vector<T,3>& s);
   /// Computes all centerpoints of Octree
   void getCenterpoints(std::vector<std::vector<T> >& pts);
   /// Collectes all leafs
   void getLeafs(std::vector<Octree<T>* >& pts);
   /// Sets Inside
-  inline void setInside(bool ins) {_inside = ins;};
+  inline void setInside(bool ins) {
+    _inside = ins;
+  };
   /// Gets Inside
-  inline bool getInside() {return _inside;};
+  inline bool getInside() {
+    return _inside;
+  };
   /// Gets Maxdepth
-  inline int getMaxdepth() const {return _maxDepth;};
+  inline int getMaxdepth() const {
+    return _maxDepth;
+  };
   /// Gets numbers of triangles contained by this Octree
-  inline const std::vector<size_t>& getTriangles() const {return _triangles;};
+  inline const std::vector<unsigned int>& getTriangles() const {
+    return _triangles;
+  };
   /// Gets centerpoint
-  inline const std::vector<T>& getCenter() const {return _center;};
+  inline const Vector<T,3>& getCenter() const {
+    return _center;
+  };
   /// Gets radius
-  inline const T getRadius() const {return _radius;};
+  inline const T getRadius() const {
+    return _radius;
+  };
   /// Prints console output
   void print();
+  /// Returns set of indices of all triangles in nodes containing a line.
+  void trianglesOnLine(const Vector<T,3>& pt1, const Vector<T,3>& pt2, std::set<unsigned int>& tris);
+  /// Returns reference to _mesh
+  inline STLmesh<T>* getMesh() {
+    return _mesh;
+  }
 
-  /*
-   * Atraxi: Is this world important?
-   * The Doctor: Important? What's that mean, important? Six billion people live here, is that important? Here's a better question: is this world a threat to the Atraxi? Oh come on, you're monitoring the whole planet! Is this world a threat?
-   * Atraxi: [after looking at a montage of world events] No.
-   * The Doctor: Are the peoples of this world guilty of any crime by the laws of the Atraxi?
-   * Atraxi: [after viewing another montage about earth] No.
-   * The Doctor: Okay. One more, just one: is this world protected?
-   */
 protected:
   ///_vector _triangles contains number of triangles
-  std::vector<size_t> _triangles;
-  std::vector<T> _center;
+  std::vector<unsigned int> _triangles;
+  Vector<T,3> _center;
   T _radius;
-  STLmesh<T>& _mesh;
-  int _maxDepth;
+  STLmesh<T>* _mesh;
+  short _maxDepth;
   bool _isLeaf;
   bool _inside;
   Octree<T> *_parent;
-  Octree<T> *_child[8];
-  mutable OstreamManager clout;
+  Octree<T> **_child;
   void findTriangles(T overlap = 0.);
   bool AABBTri(const STLtriangle<T>& tri, T overlap = 0.);
 };

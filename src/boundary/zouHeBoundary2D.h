@@ -36,7 +36,8 @@ createZouHeBoundaryCondition2D(BlockLatticeStructure2D<T,Lattice>& block);
 
 template<typename T, template<typename U> class Lattice>
 OnLatticeBoundaryCondition2D<T,Lattice>*
-createZouHeBoundaryCondition2D(BlockLatticeStructure2D<T,Lattice>& block) {
+createZouHeBoundaryCondition2D(BlockLatticeStructure2D<T,Lattice>& block)
+{
   return createZouHeBoundaryCondition2D<T,Lattice,BGKdynamics<T,Lattice> >(block);
 }
 

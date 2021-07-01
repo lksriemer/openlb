@@ -1,6 +1,6 @@
 /*  This file is part of the OpenLB library
  *
- *  Copyright (C) 2014 Mathias J. Krause
+ *  Copyright (C) 2014-2015 Mathias J. Krause, Marie-Luise Maier
  *  E-mail contact: info@openlb.net
  *  The most recent release of OpenLB can be downloaded at
  *  <http://www.openlb.net/>
@@ -31,4 +31,7 @@ template class Poiseuille2D<double>;
 
 template class PoiseuilleStrainRate2D<double,double>;
 
+template class PolarToCartesian2D<double,double>;
+
+template class CartesianToPolar2D<double,double>;
 }

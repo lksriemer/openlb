@@ -29,6 +29,7 @@
 #define CUBOID_2D_H
 
 #include <vector>
+#include <math.h>
 #include "io/ostreamManager.h"
 
 /// All OpenLB code is contained in this namespace.
@@ -53,7 +54,7 @@ private:
   /// Distance to the next node
   T   _delta;
   /// Number of nodes in the direction x and y and the refinement Level
-  int _nX, _nY; 
+  int _nX, _nY;
   /// Number of full cells
   int _weight;
   /// refinement level, _delta = _delta0^_refinementLevel
@@ -68,27 +69,16 @@ public:
   /// Construction of a cuboid vector version
   Cuboid2D(std::vector<T> origin, T delta, std::vector<int> extend, int refinementLevel=0);
   /// Copy constructor
-  Cuboid2D(Cuboid2D<T> const& rhs, int overlap=0) : clout(std::cout,"Cuboid2D") {
-    this->init(rhs._globPosX-rhs._delta*overlap, rhs._globPosY-rhs._delta*overlap, rhs._delta, rhs._nX+2*overlap, rhs._nY+2*overlap);
-    _weight = rhs._weight;
-    _refinementLevel = rhs._refinementLevel;
-  };
+  Cuboid2D(Cuboid2D<T> const& rhs, int overlap=0);
   /// Copy assignment
-  Cuboid2D& operator=(Cuboid2D const& rhs) {
-    this->init(rhs._globPosX, rhs._globPosY, rhs._delta, rhs._nX, rhs._nY);
-    _weight = rhs._weight;
-    _refinementLevel = rhs._refinementLevel;
-    return *this;
-  };
-
+  Cuboid2D& operator=(Cuboid2D const& rhs);
   /// Initializes the cuboid
   void init(T globPosX, T globPosY, T delta, int nX, int nY, int refinementLevel=0);
-
   /// Read access to left lower corner coordinates
   T get_globPosX() const;
   T get_globPosY() const;
   /// Read only access to left lower corner coordinates
-  std::vector<T> const getOrigin() const {std::vector<T> origin(2,T()); origin[0] = _globPosX; origin[1] = _globPosY; return origin;};
+  std::vector<T> const getOrigin() const;
   /// Read access to the distance of cuboid nodes
   T getDeltaR() const;
   /// Read access to cuboid width
@@ -96,7 +86,7 @@ public:
   /// Read access to cuboid height
   int getNy() const;
   /// Read only access to the number of voxels in every dimension
-  std::vector<int> const getExtend() const {std::vector<int> extend(2,T()); extend[0] = _nX; extend[1] = _nY; return extend;};
+  std::vector<int> const getExtend() const;
 
   /// Returns the volume of the cuboid
   T getPhysVolume() const;
@@ -109,21 +99,31 @@ public:
   /// Prints cuboid details
   void print() const;
 
-  std::vector<T> getPhysR(int iX, int iY) const {
-    std::vector<T> physR(2,T());
-    physR[0] = _globPosX + iX*_delta;
-    physR[1] = _globPosY + iY*_delta;
-    return physR;
-  };
-  std::vector<T> getPhysR(std::vector<int> latticeR) const {
-    std::vector<T> physR(getPhysR(latticeR[0],latticeR[1]));
-    return physR;
-  };
+  void getPhysR(T physR[2], const int latticeR[2]) const;
+  void getPhysR(T physR[2], const int& iX, const int& iY) const;
+
+  void getLatticeR(int latticeR[2], const T physR[2]) const {
+    latticeR[0] = (int)floor( (physR[0] - _globPosX )/_delta +.5);
+    latticeR[1] = (int)floor( (physR[1] - _globPosY )/_delta +.5);
+  }
+
+  void getFloorLatticeR(const std::vector<T>& physR, std::vector<int>& latticeR) const {
+    getFloorLatticeR(&latticeR[0], &physR[0]);
+  }
+
+  void getFloorLatticeR(int latticeR[2], const T physR[2]) const {
+    latticeR[0] = (int)floor( (physR[0] - _globPosX)/_delta);
+    latticeR[1] = (int)floor( (physR[1] - _globPosY)/_delta);
+  }
 
   /// Returns the number of full cells
-  int getWeight() const {/*TODO*/ return 1;};
+  int getWeight() const {
+    /*TODO*/ return 1;
+  };
   /// Sets the number of full cells
-  void setWeight(int fullCells) {/*TODO*/};
+  void setWeight(int fullCells) {
+    /*TODO*/
+  };
 
   /// Checks whether a point (globX/globY) is contained in the cuboid
   /// extended with an layer of size overlap*delta
@@ -142,11 +142,13 @@ public:
   bool checkInters(T globX0, T globX1, T globY0, T globY1,
                    int &locX0, int &locX1, int &locY0, int &locY1,
                    int overlap = 0) const;
-
   /// Divides the cuboid in p*q cuboids and adds them to the given vector
   void divide(int p, int q, std::vector<Cuboid2D<T> > &childrenC) const;
   /// Divides the cuboid in p cuboids and add them to the given vector
   void divide(int p, std::vector<Cuboid2D<T> > &childrenC) const;
+
+  /// resize the cuboid to the passed size
+  void resize(int X, int Y, int nX, int nY);
 
   /// Refines the cuboid with given refinement level
   void refineToLevel(unsigned int level);

@@ -81,13 +81,15 @@ inline bool contained(int x, int y, int z,
 
 
 template<typename T>
-T sqr(T arg) {
+T sqr(T arg)
+{
   return arg*arg;
 }
 
 /// Compute norm square of a d-dimensional vector
 template<typename T, int d>
-T normSqr(const T u[d]) {
+T normSqr(const T u[d])
+{
   T uSqr = T();
   for (int iD=0; iD<d; ++iD) {
     uSqr += u[iD]*u[iD];
@@ -96,7 +98,8 @@ T normSqr(const T u[d]) {
 }
 
 template<typename T, int d>
-T scalarProduct(const T u1[d], const T u2[d]) {
+T scalarProduct(const T u1[d], const T u2[d])
+{
   T prod = T();
   for (int iD=0; iD<d; ++iD) {
     prod += u1[iD]*u2[iD];
@@ -105,12 +108,13 @@ T scalarProduct(const T u1[d], const T u2[d]) {
 }
 
 template<typename T>
-T scalarProduct(const std::vector<T>& u1, const std::vector<T>& u2) {
+T scalarProduct(const std::vector<T>& u1, const std::vector<T>& u2)
+{
   T prod = T();
   if (u1.size() == u2.size()) {
-	  for (int iD=0; iD<u1.size(); ++iD) {
-		prod += u1[iD]*u2[iD];
-	  }
+    for (int iD=0; iD<u1.size(); ++iD) {
+      prod += u1[iD]*u2[iD];
+    }
   }
   return prod;
 }
@@ -122,9 +126,14 @@ template <typename Descriptor> struct TensorVal {
 };
 
 /// Compute the opposite of a given direction
-template <typename Descriptor> inline int opposite(int iPop) {
-  if (iPop==0) return 0;
-  if (iPop<=Descriptor::q/2) return iPop + Descriptor::q/2;
+template <typename Descriptor> inline int opposite(int iPop)
+{
+  if (iPop==0) {
+    return 0;
+  }
+  if (iPop<=Descriptor::q/2) {
+    return iPop + Descriptor::q/2;
+  }
   return iPop - Descriptor::q/2;
 }
 
@@ -146,13 +155,15 @@ private:
 };
 
 template <typename Descriptor, int index, int value>
-std::vector<int> const& subIndex() {
+std::vector<int> const& subIndex()
+{
   static SubIndex<Descriptor, index, value> subIndexSingleton;
   return subIndexSingleton.indices;
 }
 
 template <typename Descriptor>
-int findVelocity(const int v[Descriptor::d]) {
+int findVelocity(const int v[Descriptor::d])
+{
   for (int iPop=0; iPop<Descriptor::q; ++iPop) {
     bool fit = true;
     for (int iD=0; iD<Descriptor::d; ++iD) {
@@ -161,7 +172,9 @@ int findVelocity(const int v[Descriptor::d]) {
         break;
       }
     }
-    if (fit) return iPop;
+    if (fit) {
+      return iPop;
+    }
   }
   return Descriptor::q;
 }
@@ -174,8 +187,7 @@ int findVelocity(const int v[Descriptor::d]) {
 template <typename Descriptor, int direction, int orientation>
 class SubIndexOutgoing {
 private:
-  SubIndexOutgoing() // finds the indexes outgoing from the walls
-  {
+  SubIndexOutgoing() { // finds the indexes outgoing from the walls
     indices = util::subIndex<Descriptor,direction,orientation>();
 
     for (unsigned iPop = 0; iPop < indices.size(); ++iPop) {
@@ -191,7 +203,8 @@ private:
 };
 
 template <typename Descriptor, int direction, int orientation>
-std::vector<int> const& subIndexOutgoing() {
+std::vector<int> const& subIndexOutgoing()
+{
   static SubIndexOutgoing<Descriptor, direction, orientation> subIndexOutgoingSingleton;
   return subIndexOutgoingSingleton.indices;
 }
@@ -201,18 +214,14 @@ template <typename Descriptor>
 std::vector<int> remainingIndexes(const std::vector<int> &indices)
 {
   std::vector<int> remaining;
-  for (int iPop = 0; iPop < Descriptor::q; ++iPop)
-  {
+  for (int iPop = 0; iPop < Descriptor::q; ++iPop) {
     bool found = false;
-    for (unsigned jPop = 0; jPop < indices.size(); ++jPop)
-    {
-      if (indices[jPop] == iPop)
-      {
+    for (unsigned jPop = 0; jPop < indices.size(); ++jPop) {
+      if (indices[jPop] == iPop) {
         found = true;
       }
     }
-    if (!found)
-    {
+    if (!found) {
       remaining.push_back(iPop);
     }
   }
@@ -223,8 +232,7 @@ std::vector<int> remainingIndexes(const std::vector<int> &indices)
 template <typename Descriptor, int xNormal, int yNormal>
 class SubIndexOutgoingCorner2D {
 private:
-  SubIndexOutgoingCorner2D()
-  {
+  SubIndexOutgoingCorner2D() {
     typedef Descriptor L;
 
     int vect[L::d] = {xNormal, yNormal};
@@ -249,7 +257,8 @@ private:
 };
 
 template <typename Descriptor, int xNormal, int yNormal>
-std::vector<int> const& subIndexOutgoingCorner2D() {
+std::vector<int> const& subIndexOutgoingCorner2D()
+{
   static SubIndexOutgoingCorner2D<Descriptor, xNormal, yNormal> subIndexOutgoingCorner2DSingleton;
   return subIndexOutgoingCorner2DSingleton.indices;
 }

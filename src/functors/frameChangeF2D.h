@@ -1,6 +1,6 @@
 /*  This file is part of the OpenLB library
  *
- *  Copyright (C) 2014 Mathias J. Krause
+ *  Copyright (C) 2014-2015 Mathias J. Krause, Marie-Luise Maier
  *  E-mail contact: info@openlb.net
  *  The most recent release of OpenLB can be downloaded at
  *  <http://www.openlb.net/>
@@ -31,7 +31,7 @@
 
 #include "functors/genericF.h"
 #include "functors/analyticalF.h"
-#include "functors/superLatticeBaseF2D.h"
+#include "functors/superBaseF2D.h"
 #include "functors/superLatticeLocalF2D.h"
 #include "core/superLattice2D.h"
 
@@ -75,21 +75,75 @@ public:
   Poiseuille2D(std::vector<T> axisPoint_, std::vector<T> axisDirection_,  T maxVelocity_, T radius_);
   /// construct from material number, note: untested
   Poiseuille2D(SuperGeometry2D<T>& superGeometry_, int material_, T maxVelocity_, T distance2Wall_);
-  std::vector<T> operator()(std::vector<T> x);
+  bool operator()(T output[], const T x[]);
 };
 
 
 template <typename T, typename S>
 class PoiseuilleStrainRate2D : public AnalyticalF2D<T,S> {
 protected:
-	T lengthY;
+  T lengthY;
   T maxVelocity;
 
 public:
   PoiseuilleStrainRate2D(LBconverter<S> const& converter, T ly);
-  std::vector<T> operator()(std::vector<S> input);
+  bool operator()(T output[], const S input[]);
 };
 
+
+////////// Polar & Cartesian ///////////////
+
+
+/// This class converts polar coordinates of point x (x[0] = radius, x[1] = phi)
+/// to Cartesian coordinates (wrote into output field).
+/// Initial situation for the Cartesian coordinate system is that angle phi
+/// lies in the x-y-plane and turns round the _polarOrigin in math. pos sense.
+template <typename T, typename S>
+class PolarToCartesian2D : public AnalyticalF2D<T,S> {
+protected:
+  /// origin of the polar coordinate system to which point x is related
+  std::vector<T> _polarOrigin;
+  //  std::vector<T> _normalToPlane;
+public:
+  /// constructor to obtain Cartesian coordinates of polar coordinates
+  PolarToCartesian2D(std::vector<T> polarOrigin);
+  /// operator writes Cartesian coordinates of polar coordinates
+  /// x[0] = radius >= 0, x[1] = phi in [0, 2*Pi) into output field
+  bool operator()(T output[], const S x[]);
+};
+
+
+/// This class converts Cartesian coordinates of point x to polar coordinates
+/// wrote into output field
+/// (output[0] = radius>= 0, output[1] = phi in [0, 2Pi).
+/// Initial situation for the polar coordinate system is that angle phi
+/// lies in plane perpendicular to the _axisDirection and turns around
+/// the _cartesianOrigin. The radius is the distance of point x to the
+/// _axisDirection.
+template <typename T, typename S>
+class CartesianToPolar2D : public AnalyticalF2D<T,S> {
+protected:
+  /// origin of the Cartesian coordinate system
+  std::vector<T> _cartesianOrigin;
+  /// direction of the axis along which the polar coordinates are calculated
+  std::vector<T> _axisDirection;
+  /// direction to know orientation for math positive to obtain angle phi
+  /// of Cartesian point x
+  std::vector<T> _orientation;
+public:
+  CartesianToPolar2D(std::vector<T> cartesianOrigin,
+                     std::vector<T> axisDirection,
+                     std::vector<T> orientation = {T(1),T(),T()});
+  CartesianToPolar2D(T cartesianOriginX, T cartesianOriginY,
+                     T cartesianOriginZ,
+                     T axisDirectionX, T axisDirectionY, T axisDirectionZ,
+                     T orientationX = T(1), T orientationY = T(),
+                     T orientationZ = T());
+  /// operator writes polar coordinates of Cartesian point x into output
+  /// field,
+  /// returns output[0] = radius ( >= 0 ), output[1] = phi in [0, 2Pi)
+  bool operator()(T output[], const S x[]);
+};
 
 } // end namespace olb
 #endif

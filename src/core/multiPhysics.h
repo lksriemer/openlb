@@ -115,17 +115,20 @@ typedef enum {
 MultiPhysicsId;
 
 template<typename T>
-MultiPhysicsId getMultiPhysicsScalarId() {
+MultiPhysicsId getMultiPhysicsScalarId()
+{
   return UndefinedId;
 }
 
 template<typename T, int n>
-MultiPhysicsId getMultiPhysicsTensorId() {
+MultiPhysicsId getMultiPhysicsTensorId()
+{
   return UndefinedId;
 }
 
 template<typename T, template<typename U> class Lattice>
-MultiPhysicsId getMultiPhysicsBlockId() {
+MultiPhysicsId getMultiPhysicsBlockId()
+{
   return UndefinedId;
 }
 

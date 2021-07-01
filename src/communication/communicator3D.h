@@ -67,6 +67,7 @@ private:
   /// Indicates if there was an initialization done
   bool _initDone;
 public:
+  ~Communicator3D() {};
   /// Constructor
   Communicator3D(SuperStructure3D<T>& superStructure);
   /// Initializes the cuboid neighbourhoods

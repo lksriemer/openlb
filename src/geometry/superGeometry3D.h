@@ -26,15 +26,15 @@
  */
 
 /// A super geometry represents a parrallel voxel mesh
-/** A super geometry consits of a number of block geometries, 
- * where the material numbers are stored. It is constructed 
+/** A super geometry consits of a number of block geometries,
+ * where the material numbers are stored. It is constructed
  * from a cuboid geometry. All coboids of the cuboid geometry
  * are asigned to block geometries which are extended by an
- * overlap in order to enable efficient parallelisation. 
- * 
- * By the class access is provied to the material numbers of 
- * the mesh. Methods for renaming materials are provided as 
- * well as a statistic class. 
+ * overlap in order to enable efficient parallelisation.
+ *
+ * By the class access is provied to the material numbers of
+ * the mesh. Methods for renaming materials are provided as
+ * well as a statistic class.
  *
  * This class is not intended to be derived from.
  */
@@ -53,7 +53,7 @@
 #include "geometry/blockGeometryView3D.h"
 #include "communication/superStructure3D.h"
 #include "communication/loadBalancer.h"
-#include "functors/indicatorF.h"
+#include "functors/indicator/indicatorF3D.h"
 #include "io/ostreamManager.h"
 
 
@@ -61,9 +61,9 @@
 namespace olb {
 
 template<typename T> class CuboidGeometry3D;
-template<typename T> class blockGeometry3D;
-template<typename T> class blockGeometryView3D;
-template<typename T, typename S> class IndicatorF3D;
+template<typename T> class BlockGeometry3D;
+template<typename T> class BlockGeometryView3D;
+template<typename T> class IndicatorF3D;
 template<typename T> class SuperStructure3D;
 template<typename T> class SuperGeometryStatistics3D;
 
@@ -96,23 +96,29 @@ public:
   /// Interface for the communicator class: Read only access to the data type dim of the data of the super structure
   int getDataTypeSize() const;
 
-  /// Write access to the material numbers, error handling: stops the program if data is not available  
+  /// Write access to the material numbers, error handling: stops the program if data is not available
   int& set(int iCglob, int iXloc, int iYloc, int iZloc); //TODO to be removed set->get, problem: with get calling wrong function
-  /// Read only access to the material numbers, error handling: returns 0 if data is not available  
+  /// Read only access to the material numbers, error handling: returns 0 if data is not available
   int const&  get(int iCglob, int iXloc, int iYloc, int iZloc) const;
-  /// Read only access to the material numbers with global communication to all ranks  
+  /// Read only access to the material numbers with global communication to all ranks
   int getAndCommunicate(int iCglob, int iXloc, int iYloc, int iZloc) const;
-  /// Write access to the material numbers, error handling: stops the program if data is not available 
+  /// Write access to the material numbers, error handling: stops the program if data is not available
   int& set(std::vector<int> latticeR); //TODO to be removed set->get, problem: with get calling wrong function
-  /// Read only access to the material numbers, error handling: returns 0 if data is not available  
+  /// Read only access to the material numbers, error handling: returns 0 if data is not available
   int const& get(std::vector<int> latticeR) const;
-  /// Read only access to the material numbers with global communication to all ranks  
+  int const& get(const int latticeR[4]) const;
+
+  /// Read only access to the material numbers with global communication to all ranks
   int getAndCommunicate(std::vector<int> latticeR) const;
 
   /// Transforms a lattice to physical position (SI unites)
   std::vector<T> getPhysR(int iCglob, int iX, int iY, int iZ) const;
   /// Transforms a lattice to physical position (SI unites)
   std::vector<T> getPhysR(std::vector<int> latticeR) const;
+  /// Returns the physical position to the given lattice position respecting periodicity for the overlap nodes which are not in the mother cuboid for the case the flag periodicityOn[iDim]=true if the   physical position is within any of the cuboids with an overlap of 1/2*delta belonging to the cuboid geometry
+  void getPhysR(T physR[3], const int& iCglob,  const int& iX, const int& iY, const int& iZ) const;
+  /// Returns the physical position to the given lattice position respecting periodicity for the overlap nodes which are not in the mother cuboid for the case the flag periodicityOn[iDim]=true
+  void getPhysR(T physR[3], const int latticeR[4]) const;
 
   /// Read and write access to a single extended block geometry
   BlockGeometryStructure3D<T>& getExtendedBlockGeometry(int locIC);
@@ -134,6 +140,7 @@ public:
 
   /// Executes an outer cleaning
   int clean(bool verbose=true);
+  int clean(int material, bool verbose=true);
   /// Removes not needed material fluids from the outer domain
   int outerClean(bool verbose=true);
   /// inner cleaning for all boundary types
@@ -146,13 +153,13 @@ public:
   /// replace one material with another
   void rename(int fromM, int toM);
   /// replace one material that fulfills an indicator functor condition with another
-  void rename(int fromM, int toM, IndicatorF3D<bool,T>& condition);
+  void rename(int fromM, int toM, IndicatorF3D<T>& condition);
   /// replace one material with another respecting an offset (overlap)
   void rename(int fromM, int toM, unsigned offsetX, unsigned offsetY, unsigned offsetZ);
   /// renames all voxels of material fromM to toM if the number of voxels given by testDirection is of material testM
   void rename(int fromM, int toM, int testM, std::vector<int> testDirection);
   /// renames all boundary voxels of material fromBcMat to toBcMat if two neighbour voxel in the direction of the discrete normal are fluid voxel with material fluidM in the region where the indicator function is fulfilled
-  void rename(int fromBcMat, int toBcMat, int fluidMat, IndicatorF3D<bool,T>& condition);
+  void rename(int fromBcMat, int toBcMat, int fluidMat, IndicatorF3D<T>& condition);
 
   /// Prints some information about the super geometry
   void print();

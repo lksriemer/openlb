@@ -28,14 +28,18 @@
 namespace olb {
 
 template class SuperMax2D<double,descriptors::D2Q9Descriptor>;
+template class SuperMin2D<double,descriptors::D2Q9Descriptor>;
 template class SuperSum2D<double,descriptors::D2Q9Descriptor>;
+template class SuperSumIndicator2D<double,descriptors::D2Q9Descriptor>;
 template class SuperIntegral2D<double,descriptors::D2Q9Descriptor>;
 template class SuperL1Norm2D<double,descriptors::D2Q9Descriptor>;
 template class SuperL2Norm2D<double,descriptors::D2Q9Descriptor>;
 template class SuperLinfNorm2D<double,descriptors::D2Q9Descriptor>;
 template class SuperL222D<double,descriptors::D2Q9Descriptor>;
 template class SuperGeometryFaces2D<double>;
+template class SuperGeometryFacesIndicator2D<double>;
 template class SuperLatticePhysDrag2D<double,descriptors::D2Q9Descriptor>;
+template class SuperLatticePhysDragIndicator2D<double,descriptors::D2Q9Descriptor>;
 template class SuperLatticePhysCorrDrag2D<double,descriptors::D2Q9Descriptor>;
 template class SuperLatticeFlux2D<double,descriptors::D2Q9Descriptor>;
 template class SuperLatticePhysVelocityFlux2D<double,descriptors::D2Q9Descriptor>;

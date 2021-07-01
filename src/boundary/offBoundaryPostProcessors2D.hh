@@ -62,8 +62,7 @@ ZeroVelocityBouzidiLinearPostProcessor2D(int x_, int y_, int iPop_, T dist_)
     yB = y - c[1];
     q = 1/(2*dist);
     iPop2 = opp;
-  }
-  else {
+  } else {
     xB = x;
     yB = y;
     q = 2*dist;
@@ -81,8 +80,9 @@ template<typename T, template<typename U> class Lattice>
 void ZeroVelocityBouzidiLinearPostProcessor2D<T,Lattice>::
 processSubDomain(BlockLattice2D<T,Lattice>& blockLattice, int x0_, int x1_, int y0_, int y1_)
 {
-  if (util::contained(x, y, x0_, x1_, y0_, y1_) )
+  if (util::contained(x, y, x0_, x1_, y0_, y1_) ) {
     process(blockLattice);
+  }
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -90,7 +90,7 @@ void ZeroVelocityBouzidiLinearPostProcessor2D<T,Lattice>::
 process(BlockLattice2D<T,Lattice>& blockLattice)
 {
   blockLattice.get(x, y)[opp] = q*blockLattice.get(xN, yN)[iPop] +
-                                   (1-q)*blockLattice.get(xB, yB)[iPop2];
+                                (1-q)*blockLattice.get(xB, yB)[iPop2];
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -113,8 +113,7 @@ VelocityBouzidiLinearPostProcessor2D(int x_, int y_, int iPop_, T dist_)
     q = 1/(2*dist);
     ufrac = q;
     iPop2 = opp;
-  }
-  else {
+  } else {
     xB = x;
     yB = y;
     q = 2*dist;
@@ -133,8 +132,9 @@ template<typename T, template<typename U> class Lattice>
 void VelocityBouzidiLinearPostProcessor2D<T,Lattice>::
 processSubDomain(BlockLattice2D<T,Lattice>& blockLattice, int x0_, int x1_, int y0_, int y1_)
 {
-  if (util::contained(x, y, x0_, x1_, y0_, y1_) )
+  if (util::contained(x, y, x0_, x1_, y0_, y1_) ) {
     process(blockLattice);
+  }
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -145,7 +145,7 @@ process(BlockLattice2D<T,Lattice>& blockLattice)
   blockLattice.get(xN, yN).getDynamics()->defineRho( blockLattice.get(xN, yN), blockLattice.get(x, y).computeRho() );
   T j = u;// * blockLattice.get(x, y).computeRho();
   blockLattice.get(x, y)[opp] = q*blockLattice.get(xN, yN)[iPop] +
-                                   (1-q)*blockLattice.get(xB, yB)[iPop2] + j;
+                                (1-q)*blockLattice.get(xB, yB)[iPop2] + j;
 }
 
 
@@ -175,8 +175,9 @@ template<typename T, template<typename U> class Lattice>
 void ZeroVelocityBounceBackPostProcessor2D<T,Lattice>::
 processSubDomain(BlockLattice2D<T,Lattice>& blockLattice, int x0_, int x1_, int y0_, int y1_)
 {
-  if (util::contained(x, y, x0_, x1_, y0_, y1_) )
+  if (util::contained(x, y, x0_, x1_, y0_, y1_) ) {
     process(blockLattice);
+  }
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -211,8 +212,9 @@ template<typename T, template<typename U> class Lattice>
 void VelocityBounceBackPostProcessor2D<T,Lattice>::
 processSubDomain(BlockLattice2D<T,Lattice>& blockLattice, int x0_, int x1_, int y0_, int y1_)
 {
-  if (util::contained(x, y, x0_, x1_, y0_, y1_) )
+  if (util::contained(x, y, x0_, x1_, y0_, y1_) ) {
     process(blockLattice);
+  }
 }
 
 template<typename T, template<typename U> class Lattice>

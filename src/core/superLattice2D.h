@@ -34,17 +34,25 @@
 #include "blockLattice2D.h"
 #include "blockLatticeView2D.h"
 #include "communication/communicator2D.h"
-#include "geometry/cuboidGeometry2D.h"
-#include "geometry/blockGeometry2D.h"
-#include "communication/loadBalancer.h"
-#include "communication/blockLoadBalancer.h"
 #include "postProcessing.h"
-#include "functors/superLatticeBaseF2D.h"
-#include "geometry/superGeometry2D.h"
+#include "serializer.h"
 #include "communication/superStructure2D.h"
+
 
 /// All OpenLB code is contained in this namespace.
 namespace olb {
+
+
+
+template<typename T> class Communicator2D;
+template<typename T> class CuboidGeometry2D;
+template<typename T, template<typename U> class Lattice> class BlockLattice2D;
+template<typename T, template<typename U> class Lattice> class BlockLatticeView2D;
+template<typename T> class LoadBalancer;
+template<typename T> class SuperGeometry2D;
+template<typename T, template<typename U> class Lattice> class SuperLatticeF2D;
+template<typename T> class SuperStructure2D;
+
 
 /// A super lattice combines a number of block lattices that are ordered
 /// in a cuboid geometry.
@@ -66,17 +74,8 @@ namespace olb {
  *
  * This class is not intended to be derived from.
  */
-
-
-template<typename T> class Communicator2D;
-template<typename T> class SuperStructure2D;
-template<typename T, template<typename U> class Lattice> class SuperLatticeF2D;
-
-//template<typename T> class CuboidGeometry2D;
-//template<typename T> class BlockLoadBalancer;
-
 template<typename T, template<typename U> class Lattice>
-class SuperLattice2D : public SuperStructure2D<T> {
+class SuperLattice2D : public SuperStructure2D<T>, public BufferSerializable {
 
 private:
   /// Lattices with ghost cell layer of size overlap
@@ -84,7 +83,7 @@ private:
   /// View of the lattices without overlap
   std::vector<BlockLatticeView2D<T,Lattice> > _blockLattices;
 
-  // Size of the refinement overlap
+  /// Size of the refinement overlap
   int                                         _overlapRefinement;
   /// This communicator handels the communication for the streaming
   Communicator2D<T>                           _commStream;
@@ -103,36 +102,44 @@ private:
 public:
   /// Construction of a super lattice
   SuperLattice2D(CuboidGeometry2D<T>& cGeometry,
-                 LoadBalancer<T>& lb, int overlapBC = 0, int overlapRefinement = 0);
+                 LoadBalancer<T>& lb, int overlapBC=0, int overlapRefinement=0);
 
-  SuperLattice2D(SuperGeometry2D<T>& superGeometry, int overlapRefinement = 0);
-
+  SuperLattice2D(SuperGeometry2D<T>& superGeometry, int overlapRefinement=0);
+  ~SuperLattice2D();
   /// Read and write access to a block lattice
-  BlockLattice2D<T,Lattice>& getExtendedBlockLattice(int locIC)
-  { return _extendedBlockLattices[locIC]; };
+  BlockLattice2D<T,Lattice>& getExtendedBlockLattice(int locIC) {
+    return _extendedBlockLattices[locIC];
+  };
   /// Read only access to a block lattice
-  BlockLattice2D<T,Lattice> const& getExtendedBlockLattice(int locIC) const
-  { return _extendedBlockLattices[locIC]; };
+  BlockLattice2D<T,Lattice> const& getExtendedBlockLattice(int locIC) const {
+    return _extendedBlockLattices[locIC];
+  };
   /// Read and write access to a lattice (block lattice view, one
   /// without overlap).
-  BlockLatticeView2D<T,Lattice>& getBlockLattice(int locIC)
-  { return _blockLattices[locIC]; };
+  BlockLatticeView2D<T,Lattice>& getBlockLattice(int locIC) {
+    return _blockLattices[locIC];
+  };
   /// Read only access to a lattice
-  BlockLatticeView2D<T,Lattice> const& getBlockLattice(int locIC) const
-  { return _blockLattices[locIC]; };
+  BlockLatticeView2D<T,Lattice> const& getBlockLattice(int locIC) const {
+    return _blockLattices[locIC];
+  };
 
   /// Read and write access to the streaming communicator
-  Communicator2D<T>& get_commStream()
-  { return _commStream; };
+  Communicator2D<T>& get_commStream() {
+    return _commStream;
+  };
   /// Read only access to the streaming communicator
-  Communicator2D<T> const& get_commStream() const
-  { return _commStream; };
+  Communicator2D<T> const& get_commStream() const {
+    return _commStream;
+  };
   /// Read and write access to the boundary communicator
-  Communicator2D<T>& get_commBC()
-  { return _commBC; };
+  Communicator2D<T>& get_commBC() {
+    return _commBC;
+  };
   /// Read only access to the boundary communicator
-  Communicator2D<T> const& get_commBC() const
-  { return _commBC; };
+  Communicator2D<T> const& get_commBC() const {
+    return _commBC;
+  };
 
   /// Return a handle to the LatticeStatistics object
   LatticeStatistics<T>& getStatistics();
@@ -150,48 +157,65 @@ public:
   Cell<T,Lattice> get(int iC, T locX, T locY) const;
 
   /// Write access to the memory of the data of the super structure
-  virtual bool* operator() (int iCloc, int iX, int iY, int iData) {return (bool*)&getExtendedBlockLattice(iCloc).get(iX+this->_overlap, iY+this->_overlap)[iData]; };
+  virtual bool* operator() (int iCloc, int iX, int iY, int iData) {
+    return (bool*)&getExtendedBlockLattice(iCloc).get(iX+this->_overlap, iY+this->_overlap)[iData];
+  };
   /// Read only access to the dim of the data of the super structure
-  virtual int getDataSize() const {return Lattice<T>::q;};
+  virtual int getDataSize() const {
+    return Lattice<T>::q;
+  };
   /// Read only access to the data type dim of the data of the super structure
-  virtual int getDataTypeSize() const {return sizeof(T);};
+  virtual int getDataTypeSize() const {
+    return sizeof(T);
+  };
   /// Initialize all lattice cells to become ready for simulation
   void initialize();
 
   /// Defines the dynamics by material
   void defineDynamics(SuperGeometry2D<T>& superGeometry, int material, Dynamics<T,Lattice>* dynamics);
   /// Defines rho on a rectangular domain
-  void defineRhoU (T x0, T x1, T y0, T y1,
-                   T rho, const T u[Lattice<T>::d] );
+  void defineRhoU (T x0, T x1, T y0, T y1, T rho, const T u[Lattice<T>::d] );
   /// Defines rho and u on a domain with a particular material number
-  void defineRhoU(SuperGeometry2D<T>& sGeometry, int material,  AnalyticalF2D<T,T>& rho, AnalyticalF2D<T,T>& u);
+  void defineRhoU(SuperGeometry2D<T>& sGeometry, int material,
+                  AnalyticalF2D<T,T>& rho, AnalyticalF2D<T,T>& u);
   /// Defines rho on a rectangular domain
-  void defineRho (T x0, T x1, T y0, T y1,
-                  T rho );
+  void defineRho (T x0, T x1, T y0, T y1, T rho );
   /// Defines rho on a domain with a particular material number
   void defineRho(SuperGeometry2D<T>& sGeometry, int material, AnalyticalF2D<T,T>& rho);
   /// Defines u on a rectangular domain
-  void defineU (T x0, T x1, T y0, T y1,
-                const T u[Lattice<T>::d] );
+  void defineU (T x0, T x1, T y0, T y1, const T u[Lattice<T>::d] );
   /// Defines u on a domain with a particular material number
   void defineU(SuperGeometry2D<T>& sGeometry, int material, AnalyticalF2D<T,T>& u);
   // Defines a Population on a domain with a particular material number
   void definePopulations(SuperGeometry2D<T>& sGeometry, int material, AnalyticalF2D<T,T>& Pop);
   /// Defines an external field on a rectangular domain
-  void defineExternalField (T x0, T x1, T y0, T y1,
-                            int fieldBeginsAt, int sizeOfField, T* field );
+  void defineExternalField (T x0, T x1, T y0, T y1, int fieldBeginsAt, int sizeOfField, T* field );
   /// Defines an external field on a domain with a particular material number
   void defineExternalField(SuperGeometry2D<T>& sGeometry, int material,
                            int fieldBeginsAt, int sizeOfField, AnalyticalF2D<T,T>& field);
+  /// Defines an external field on a domain with a particular indicator
+  void defineExternalField(SuperGeometry2D<T>& sGeometry, IndicatorF2D<T>& indicator,
+                           int fieldBeginsAt, int sizeOfField, AnalyticalF2D<T,T>& field);
+  /// Resets an external Particle Field
+  void resetExternalParticleField(SuperGeometry2D<T>& sGeometry, IndicatorF2D<T>& indicator);
+  void setExternalParticleField(SuperGeometry2D<T>& sGeometry, AnalyticalF2D<T,T>& velocity,
+                                SmoothIndicatorF2D<T,T>& sIndicator);
+  void addExternalField(SuperGeometry2D<T>& sGeometry, IndicatorF2D<T>& indicator,
+                        int fieldBeginsAt, int sizeOfField, AnalyticalF2D<T,T>& field);
+  void addExternalField(SuperGeometry2D<T>& sGeometry, IndicatorF2D<T>& indicator,
+                        int fieldBeginsAt, int sizeOfField, AnalyticalF2D<T,T>& field,
+                        AnalyticalF2D<T,T>& porous);
+  void multiplyExternalField(SuperGeometry2D<T>& sGeometry, IndicatorF2D<T>& indicator,
+                             int fieldBeginsAt, int sizeOfField, AnalyticalF2D<T,T>& field);
   /// Defines an external field on a domain with a particular material number
-  void defineExternalField(SuperGeometry2D<T>& sGeometry, int material,
-                           int fieldBeginsAt, int sizeOfField, SuperLatticeF2D<T,Lattice>& field);
+  void defineExternalField(SuperGeometry2D<T>& sGeometry, int material, int fieldBeginsAt,
+                           int sizeOfField, SuperLatticeF2D<T,Lattice>& field);
 
   /// Initializes the equilibrium
-  void iniEquilibrium (T x0, T x1, T y0, T y1,
-                       T rho, const T u[Lattice<T>::d] );
+  void iniEquilibrium (T x0, T x1, T y0, T y1, T rho, const T u[Lattice<T>::d] );
   /// Initializes the equilibrium on a domain with a particular material number
-  void iniEquilibrium(SuperGeometry2D<T>& sGeometry, int material,  AnalyticalF2D<T,T>& rho, AnalyticalF2D<T,T>& u);
+  void iniEquilibrium(SuperGeometry2D<T>& sGeometry, int material,
+                      AnalyticalF2D<T,T>& rho, AnalyticalF2D<T,T>& u);
 
   /// Apply collision step to a rectangular domain
   void collide(T x0, T x1, T y0, T y1);
@@ -215,29 +239,35 @@ public:
   /// to the whole domain
   void collideAndStream();
   /// Subtract a constant offset from the density within the whole domain
-  void stripeOffDensityOffset (int x0_, int x1_, int y0_, int y1_,
-                               T offset );
+  void stripeOffDensityOffset (int x0_, int x1_, int y0_, int y1_, T offset );
   /// Subtract a constant offset from the density within a rect. domain
   void stripeOffDensityOffset(T offset);
   /// Switches Statistics on (default on)
-  void statisticsOn() {_statistics_on = true;};
+  void statisticsOn() {
+    _statistics_on = true;
+  };
   /// Switches Statistics off (default on). That speeds up
   /// the execution time.
-  void statisticsOff() {_statistics_on = false;};
+  void statisticsOff() {
+    _statistics_on = false;
+  };
 
   /// Adds a coupling generator for one partner superLattice
   template<template<typename U> class Slattice>
-  void addLatticeCoupling(SuperGeometry2D<T>& sGeometry, int material, LatticeCouplingGenerator2D<T, Lattice> const& lcGen,
+  void addLatticeCoupling(SuperGeometry2D<T>& sGeometry, int material,
+                          LatticeCouplingGenerator2D<T, Lattice> const& lcGen,
                           SuperLattice2D<T,Slattice>& partnerLattice );
   /// Executes coupling generatur for one partner superLattice
   void executeCoupling();
 
-  /// TO BE DONE: Development of a general IO concept!
-  /// Save Data to files fName
-  void save(std::string fName, bool enforceUint = false);
-  /// Load Data from files fName
-  void load(std::string fName, bool enforceUint = false);
-  void communicate(bool verbose=true);
+  //void communicate(bool verbose=true);
+
+  /// Number of data blocks for the serializable interface
+  virtual std::size_t getNblock() const;
+  /// Binary size for the serializer
+  virtual std::size_t getSerializableSize() const;
+  /// Return a pointer to the memory of the current block and its size for the serializable interface
+  virtual bool* getBlock(std::size_t iBlock, std::size_t& sizeBlock, bool loadingMode);
 private:
   /// Resets and reduce the statistics
   void reset_statistics();

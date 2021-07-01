@@ -39,14 +39,17 @@
 #include "geometry/superGeometry3D.h"
 #include "communication/superStructure3D.h"
 #include "communication/loadBalancer.h"
-#include "functors/indicatorF.h"
-#include "functors/indicCalcF.h"
+#include "functors/indicator/indicatorF3D.h"
+#include "functors/indicator/indicCalcF3D.h"
 #include "io/ostreamManager.h"
 
 namespace olb {
 
 template<typename T>
-SuperGeometry3D<T>::SuperGeometry3D(CuboidGeometry3D<T>& cuboidGeometry, LoadBalancer<T>& loadBalancer, int overlap) : SuperStructure3D<T>(cuboidGeometry, loadBalancer, overlap), _statistics(this), clout(std::cout,"SuperGeometry3D")
+SuperGeometry3D<T>::SuperGeometry3D(CuboidGeometry3D<T>& cuboidGeometry, LoadBalancer<T>& loadBalancer, int overlap)
+  : SuperStructure3D<T>(cuboidGeometry, loadBalancer, overlap),
+    _statistics(this),
+    clout(std::cout,"SuperGeometry3D")
 {
   // init communicator
   this->_communicator.init_nh();
@@ -54,13 +57,13 @@ SuperGeometry3D<T>::SuperGeometry3D(CuboidGeometry3D<T>& cuboidGeometry, LoadBal
   this->_communicator.init();
   this->_communicationNeeded = true;
 
-  // constructing the block and extended block geometries from the cuboid geometry      
+  // constructing the block and extended block geometries from the cuboid geometry
   _blockGeometries.clear();
 
   for (int iCloc=0; iCloc<this->getLoadBalancer().size(); iCloc++) {
     int iCglob = this->getLoadBalancer().glob(iCloc);
     Cuboid3D<T> extendedCuboid(cuboidGeometry.get(iCglob),overlap);
-    BlockGeometry3D<T> tmp(extendedCuboid,iCglob);  
+    BlockGeometry3D<T> tmp(extendedCuboid,iCglob);
     _extendedBlockGeometries.push_back(tmp);
   }
 
@@ -90,7 +93,8 @@ SuperGeometry3D<T>::SuperGeometry3D(SuperGeometry3D const& rhs) : SuperStructure
 }
 
 template<typename T>
-SuperGeometry3D<T>& SuperGeometry3D<T>::operator=(SuperGeometry3D const& rhs) {
+SuperGeometry3D<T>& SuperGeometry3D<T>::operator=(SuperGeometry3D const& rhs)
+{
 
   // init communicator
   this->_communicator.init_nh();
@@ -109,54 +113,60 @@ SuperGeometry3D<T>& SuperGeometry3D<T>::operator=(SuperGeometry3D const& rhs) {
 }
 
 template<typename T>
-bool* SuperGeometry3D<T>::operator() (int iCloc, int iX, int iY, int iZ, int iData) {
+bool* SuperGeometry3D<T>::operator() (int iCloc, int iX, int iY, int iZ, int iData)
+{
   return (bool*)&getExtendedBlockGeometry(iCloc).get(iX+this->_overlap, iY+this->_overlap, iZ+this->_overlap);
 }
 
 template<typename T>
-int SuperGeometry3D<T>::getDataSize() const {
+int SuperGeometry3D<T>::getDataSize() const
+{
   return 1;
 }
 
 template<typename T>
-int SuperGeometry3D<T>::getDataTypeSize() const {
+int SuperGeometry3D<T>::getDataTypeSize() const
+{
   return sizeof(int);
 }
 
 
 template<typename T>
-int& SuperGeometry3D<T>::set(int iCglob, int iXloc, int iYloc, int iZloc) {
+int& SuperGeometry3D<T>::set(int iCglob, int iXloc, int iYloc, int iZloc)
+{
 
   if ( this->getLoadBalancer().rank(iCglob) == singleton::mpi().getRank() ) {
     std::cout << "warning: read only access to data which is not available in";
     this->_communicationNeeded = true;
     _statistics.getStatisticsStatus() = true;
     return _extendedBlockGeometries[this->getLoadBalancer().loc(iCglob)].get(iXloc+this->_overlap, iYloc+this->_overlap, iZloc+this->_overlap);
-  }
-  else {
-    std::cout << "error: write access to data which is not available in the any block geometry"; 
+  } else {
+    std::cout << "error: write access to data which is not available in the any block geometry";
     exit(-1);
     //return 0;
   }
 }
 
 template<typename T>
-int const& SuperGeometry3D<T>::get(int iCglob, int iXloc, int iYloc, int iZloc) const {
+int const& SuperGeometry3D<T>::get(int iCglob, int iXloc, int iYloc, int iZloc) const
+{
   if ( this->getLoadBalancer().rank(iCglob) == singleton::mpi().getRank() ) {
     return _extendedBlockGeometries[this->getLoadBalancer().loc(iCglob)].get(iXloc+this->_overlap, iYloc+this->_overlap, iZloc+this->_overlap);
-  }
-  else {
-    std::cout << "error: read only access to data which is not available in the any block geometry, returning 0 as default" << std::endl; 
+  } else {
+    std::cout << "error: read only access to data which is not available in the any block geometry, returning 0 as default" << std::endl;
     exit(-1);
     //return 0;
   }
 }
 
 template<typename T>
-int SuperGeometry3D<T>::getAndCommunicate(int iCglob, int iXloc, int iYloc, int iZloc) const {
+int SuperGeometry3D<T>::getAndCommunicate(int iCglob, int iXloc, int iYloc, int iZloc) const
+{
   int material = 0;
   if ( this->getLoadBalancer().rank(iCglob) == singleton::mpi().getRank() ) {
-    material = _extendedBlockGeometries[this->getLoadBalancer().loc(iCglob)].get(iXloc+this->_overlap, iYloc+this->_overlap, iZloc+this->_overlap);
+    material = _extendedBlockGeometries[this->getLoadBalancer().loc(iCglob)].get(iXloc + this->_overlap,
+               iYloc + this->_overlap,
+               iZloc + this->_overlap);
   }
 #ifdef PARALLEL_MODE_MPI
   singleton::mpi().bCast(&material, 1, this->_loadBalancer.rank(iCglob));
@@ -165,56 +175,90 @@ int SuperGeometry3D<T>::getAndCommunicate(int iCglob, int iXloc, int iYloc, int 
 }
 
 template<typename T>
-int& SuperGeometry3D<T>::set(std::vector<int> latticeR) {
+int& SuperGeometry3D<T>::set(std::vector<int> latticeR)
+{
   return set(latticeR[0], latticeR[1], latticeR[2], latticeR[3]);
 }
 
 template<typename T>
-int const& SuperGeometry3D<T>::get(std::vector<int> latticeR) const {
+int const& SuperGeometry3D<T>::get(std::vector<int> latticeR) const
+{
   return get(latticeR[0], latticeR[1], latticeR[2], latticeR[3]);
 }
 
 template<typename T>
-int SuperGeometry3D<T>::getAndCommunicate(std::vector<int> latticeR) const {
+int const& SuperGeometry3D<T>::get(const int latticeR[4]) const
+{
+  return get(latticeR[0], latticeR[1], latticeR[2], latticeR[3]);
+}
+
+template<typename T>
+int SuperGeometry3D<T>::getAndCommunicate(std::vector<int> latticeR) const
+{
   return getAndCommunicate(latticeR[0], latticeR[1], latticeR[2], latticeR[3]);
 }
 
 template<typename T>
-std::vector<T> SuperGeometry3D<T>::getPhysR(int iCglob, int iX, int iY, int iZ) const {
-  return this->_cuboidGeometry.getPhysR(iCglob, iX, iY, iZ);
+std::vector<T> SuperGeometry3D<T>::getPhysR(int iCglob, int iX, int iY, int iZ) const
+{
+  T physRv[3];
+  this->_cuboidGeometry.getPhysR(physRv, iCglob, iX, iY, iZ);
+  std::vector<T> physR(physRv,physRv + 3);
+  return physR;
 }
 
 template<typename T>
-std::vector<T> SuperGeometry3D<T>::getPhysR(std::vector<int> latticeR) const {
-  return this->_cuboidGeometry.getPhysR(latticeR);
+std::vector<T> SuperGeometry3D<T>::getPhysR(std::vector<int> latticeR) const
+{
+  T physRv[3];
+  this->_cuboidGeometry.getPhysR(physRv, latticeR[0], latticeR[1], latticeR[2], latticeR[3]);
+  std::vector<T> physR(physRv,physRv + 3);
+  return physR;
+}
+
+template<typename T>
+void  SuperGeometry3D<T>::getPhysR(T physR[3], const int& iCglob,  const int& iX, const int& iY, const int& iZ) const
+{
+  this->_cuboidGeometry.getPhysR(physR, iCglob, iX, iY, iZ);
+}
+
+template<typename T>
+void  SuperGeometry3D<T>::getPhysR(T physR[3], const int latticeR[4]) const
+{
+  this->_cuboidGeometry.getPhysR(physR, latticeR);
 }
 
 
 template<typename T>
-BlockGeometryStructure3D<T>& SuperGeometry3D<T>::getExtendedBlockGeometry(int locIC) {
+BlockGeometryStructure3D<T>& SuperGeometry3D<T>::getExtendedBlockGeometry(int locIC)
+{
   _statistics.getStatisticsStatus() = true;
   return _extendedBlockGeometries[locIC];
 }
 
 template<typename T>
-BlockGeometryStructure3D<T> const& SuperGeometry3D<T>::getExtendedBlockGeometry(int locIC) const {
+BlockGeometryStructure3D<T> const& SuperGeometry3D<T>::getExtendedBlockGeometry(int locIC) const
+{
   return _extendedBlockGeometries[locIC];
 }
 
 template<typename T>
-BlockGeometryStructure3D<T>& SuperGeometry3D<T>::getBlockGeometry(int locIC) {
+BlockGeometryStructure3D<T>& SuperGeometry3D<T>::getBlockGeometry(int locIC)
+{
   _statistics.getStatisticsStatus() = true;
   return _blockGeometries[locIC];
 }
 
 template<typename T>
-BlockGeometryStructure3D<T> const& SuperGeometry3D<T>::getBlockGeometry(int locIC) const {
+BlockGeometryStructure3D<T> const& SuperGeometry3D<T>::getBlockGeometry(int locIC) const
+{
   return _blockGeometries[locIC];
 }
 
 
 template<typename T>
-SuperGeometryStatistics3D<T>& SuperGeometry3D<T>::getStatistics() {
+SuperGeometryStatistics3D<T>& SuperGeometry3D<T>::getStatistics()
+{
   if (this->_communicationNeeded) {
     this->communicate();
     getStatisticsStatus()=true;
@@ -223,17 +267,20 @@ SuperGeometryStatistics3D<T>& SuperGeometry3D<T>::getStatistics() {
 }
 
 template<typename T>
-bool& SuperGeometry3D<T>::getStatisticsStatus() {
+bool& SuperGeometry3D<T>::getStatisticsStatus()
+{
   return _statistics.getStatisticsStatus();
 }
 
 template<typename T>
-bool const& SuperGeometry3D<T>::getStatisticsStatus() const {
+bool const& SuperGeometry3D<T>::getStatisticsStatus() const
+{
   return _statistics.getStatisticsStatus();
 }
 
 template<typename T>
-void SuperGeometry3D<T>::updateStatistics(bool verbose) {
+void SuperGeometry3D<T>::updateStatistics(bool verbose)
+{
   if (this->_communicationNeeded) {
     this->communicate(verbose);
     getStatisticsStatus()=true;
@@ -245,7 +292,8 @@ void SuperGeometry3D<T>::updateStatistics(bool verbose) {
 }
 
 template<typename T>
-int SuperGeometry3D<T>::clean(bool verbose) {
+int SuperGeometry3D<T>::clean(bool verbose)
+{
   this->communicate();
   int counter=0;
   for (unsigned iC=0; iC<_extendedBlockGeometries.size(); iC++) {
@@ -255,9 +303,10 @@ int SuperGeometry3D<T>::clean(bool verbose) {
   singleton::mpi().reduceAndBcast(counter, MPI_SUM);
 #endif
 
-  if (verbose)
+  if (verbose) {
     clout << "cleaned "<< counter << " outer boundary voxel(s)" << std::endl;
-  if(counter>0) {
+  }
+  if (counter>0) {
     _statistics.getStatisticsStatus() = true;
     this->_communicationNeeded = true;
   }
@@ -265,7 +314,30 @@ int SuperGeometry3D<T>::clean(bool verbose) {
 }
 
 template<typename T>
-int SuperGeometry3D<T>::outerClean(bool verbose) {
+int SuperGeometry3D<T>::clean(int material, bool verbose)
+{
+  this->communicate();
+  int counter=0;
+  for (unsigned iC=0; iC<_extendedBlockGeometries.size(); iC++) {
+    counter+=_extendedBlockGeometries[iC].clean(material, false);
+  }
+#ifdef PARALLEL_MODE_MPI
+  singleton::mpi().reduceAndBcast(counter, MPI_SUM);
+#endif
+
+  if (verbose) {
+    clout << "cleaned "<< counter << " outer boundary voxel(s)" << std::endl;
+  }
+  if (counter>0) {
+    _statistics.getStatisticsStatus() = true;
+    this->_communicationNeeded = true;
+  }
+  return counter;
+}
+
+template<typename T>
+int SuperGeometry3D<T>::outerClean(bool verbose)
+{
   this->communicate();
   int counter=0;
   for (unsigned iC=0; iC<_extendedBlockGeometries.size(); iC++) {
@@ -275,9 +347,10 @@ int SuperGeometry3D<T>::outerClean(bool verbose) {
   singleton::mpi().reduceAndBcast(counter, MPI_SUM);
 #endif
 
-  if (verbose)
+  if (verbose) {
     clout << "cleaned "<< counter << " outer fluid voxel(s)" << std::endl;
-  if(counter>0) {
+  }
+  if (counter>0) {
     _statistics.getStatisticsStatus() = true;
     this->_communicationNeeded = true;
   }
@@ -285,7 +358,8 @@ int SuperGeometry3D<T>::outerClean(bool verbose) {
 }
 
 template<typename T>
-int SuperGeometry3D<T>::innerClean(bool verbose) {
+int SuperGeometry3D<T>::innerClean(bool verbose)
+{
   this->communicate();
   int counter=0;
   for (unsigned iC=0; iC<_extendedBlockGeometries.size(); iC++) {
@@ -296,9 +370,10 @@ int SuperGeometry3D<T>::innerClean(bool verbose) {
   singleton::mpi().reduceAndBcast(counter, MPI_SUM);
 #endif
 
-  if (verbose)
+  if (verbose) {
     clout << "cleaned "<< counter << " inner boundary voxel(s)" << std::endl;
-  if(counter>0) {
+  }
+  if (counter>0) {
     _statistics.getStatisticsStatus() = true;
     this->_communicationNeeded = true;
   }
@@ -306,7 +381,8 @@ int SuperGeometry3D<T>::innerClean(bool verbose) {
 }
 
 template<typename T>
-int SuperGeometry3D<T>::innerClean(int bcType, bool verbose) {
+int SuperGeometry3D<T>::innerClean(int bcType, bool verbose)
+{
   this->communicate();
   int counter=0;
   for (unsigned iC=0; iC<_extendedBlockGeometries.size(); iC++) {
@@ -316,9 +392,10 @@ int SuperGeometry3D<T>::innerClean(int bcType, bool verbose) {
   singleton::mpi().reduceAndBcast(counter, MPI_SUM);
 #endif
 
-  if (verbose)
+  if (verbose) {
     clout << "cleaned "<< counter << " inner boundary voxel(s) of Type " << bcType << std::endl;
-  if(counter>0) {
+  }
+  if (counter>0) {
     _statistics.getStatisticsStatus() = true;
     this->_communicationNeeded = true;
   }
@@ -326,12 +403,14 @@ int SuperGeometry3D<T>::innerClean(int bcType, bool verbose) {
 }
 
 template<typename T>
-bool SuperGeometry3D<T>::checkForErrors(bool verbose) {
+bool SuperGeometry3D<T>::checkForErrors(bool verbose)
+{
   this->communicate();
   bool error = false;
   for (unsigned iC=0; iC<_blockGeometries.size(); iC++) {
-    if (_blockGeometries[iC].checkForErrors(false))
+    if (_blockGeometries[iC].checkForErrors(false)) {
       error = true;
+    }
   }
   if (verbose) {
     if (error) {
@@ -345,7 +424,8 @@ bool SuperGeometry3D<T>::checkForErrors(bool verbose) {
 
 
 template<typename T>
-void SuperGeometry3D<T>::rename(int fromM, int toM) {
+void SuperGeometry3D<T>::rename(int fromM, int toM)
+{
 
   this->communicate();
   for (unsigned iC=0; iC<_extendedBlockGeometries.size(); iC++) {
@@ -356,11 +436,12 @@ void SuperGeometry3D<T>::rename(int fromM, int toM) {
 }
 
 template<typename T>
-void SuperGeometry3D<T>::rename(int fromM, int toM, IndicatorF3D<bool,T>& condition) {
+void SuperGeometry3D<T>::rename(int fromM, int toM, IndicatorF3D<T>& condition)
+{
 
   this->communicate();
   //  call Identity to prevent deleting
-  IndicatorIdentity3D<bool,T> tmpCondition(condition);
+  IndicatorIdentity3D<T> tmpCondition(condition);
 
   for (unsigned iC=0; iC<_extendedBlockGeometries.size(); iC++) {
     _extendedBlockGeometries[iC].rename(fromM,toM,condition);
@@ -369,67 +450,68 @@ void SuperGeometry3D<T>::rename(int fromM, int toM, IndicatorF3D<bool,T>& condit
 }
 
 template<typename T>
-void SuperGeometry3D<T>::rename(int fromM, int toM, unsigned offsetX, unsigned offsetY, unsigned offsetZ) {
+void SuperGeometry3D<T>::rename(int fromM, int toM, unsigned offsetX, unsigned offsetY, unsigned offsetZ)
+{
 
   if ( offsetX<=unsigned(this->_overlap)
-      && offsetY<=unsigned(this->_overlap)
-      && offsetZ<=unsigned(this->_overlap) ) {
+       && offsetY<=unsigned(this->_overlap)
+       && offsetZ<=unsigned(this->_overlap) ) {
     this->communicate();
     for (unsigned iC=0; iC<_blockGeometries.size(); iC++) {
       _blockGeometries[iC].rename(fromM,toM,offsetX, offsetY, offsetZ);
     }
     _statistics.getStatisticsStatus() = true;
     this->_communicationNeeded = true;
-  }
-  else {
+  } else {
     clout << "error rename only implemented for offset<=overlap" << std::endl;
   }
 }
 
 template<typename T>
-void SuperGeometry3D<T>::rename(int fromM, int toM, int testM, std::vector<int> testDirection) {
+void SuperGeometry3D<T>::rename(int fromM, int toM, int testM, std::vector<int> testDirection)
+{
 
   if ( testDirection[0]*testDirection[0]<=(this->_overlap)*(this->_overlap)
-      && testDirection[1]*testDirection[1]<=(this->_overlap)*(this->_overlap)
-      && testDirection[2]*testDirection[2]<=(this->_overlap)*(this->_overlap) ) {
+       && testDirection[1]*testDirection[1]<=(this->_overlap)*(this->_overlap)
+       && testDirection[2]*testDirection[2]<=(this->_overlap)*(this->_overlap) ) {
     this->communicate();
     for (unsigned iC=0; iC<_blockGeometries.size(); iC++) {
       _blockGeometries[iC].rename(fromM,toM,testM,testDirection);
     }
     _statistics.getStatisticsStatus() = true;
     this->_communicationNeeded = true;
-  }
-  else {
+  } else {
     clout << "error rename only implemented for |testDirection[i]|<=overlap" << std::endl;
   }
 }
 
 template<typename T>
 void SuperGeometry3D<T>::rename(int fromBcMat, int toBcMat, int fluidMat,
-              IndicatorF3D<bool,T>& condition) {
+                                IndicatorF3D<T>& condition)
+{
   if (this->_overlap>1) {
     this->communicate();
     //  call Identity to prevent deleting
-    IndicatorIdentity3D<bool,T> tmpCondition(condition);
+    IndicatorIdentity3D<T> tmpCondition(condition);
     rename(fromBcMat, toBcMat, condition);
     std::vector<int> testDirection = this->getStatistics().computeDiscreteNormal(toBcMat);
 
     //std::cout << testDirection[0]<<testDirection[1]<<testDirection[2]<<std::endl;
     this->communicate();
     for (unsigned iC=0; iC<_blockGeometries.size(); iC++) {
-     _blockGeometries[iC].rename(fromBcMat,toBcMat,fluidMat,condition,testDirection);
+      _blockGeometries[iC].rename(fromBcMat,toBcMat,fluidMat,condition,testDirection);
     }
     _statistics.getStatisticsStatus() = true;
     this->_communicationNeeded = true;
-  }
-  else {
+  } else {
     clout << "error rename only implemented for overlap>=2" << std::endl;
   }
 }
 
 
 template<typename T>
-void SuperGeometry3D<T>::print() {
+void SuperGeometry3D<T>::print()
+{
   this->_cuboidGeometry.print();
   getStatistics().print();
 }

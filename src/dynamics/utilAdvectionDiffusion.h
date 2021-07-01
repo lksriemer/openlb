@@ -37,33 +37,35 @@ namespace utilAdvDiff {
 template <typename Descriptor, int direction, int orientation>
 class SubIndexOutgoing {
 private:
-  SubIndexOutgoing()
-  {
+  SubIndexOutgoing() {
     int normalX,normalY,normalZ;
     typedef Descriptor L;
 
-    switch(direction) {
+    switch (direction) {
     case 0: {
-      if(orientation==1)
+      if (orientation==1) {
         normalX= 1;
-      else
+      } else {
         normalX=-1;
+      }
       normalY=0;
       normalZ=0;
     }
     case 1: {
-      if(orientation==1)
+      if (orientation==1) {
         normalY= 1;
-      else
+      } else {
         normalY=-1;
+      }
       normalX=0;
       normalZ=0;
     }
     case 2: {
-      if(orientation==1)
+      if (orientation==1) {
         normalZ= 1;
-      else
+      } else {
         normalZ=-1;
+      }
       normalX=0;
       normalY=0;
     }
@@ -79,7 +81,7 @@ private:
     // compute scalar product with boundary normal for all other velocities
     for (int iPop=1; iPop<L::q; ++iPop) {
       int sum=0;
-      for(int id=0; id<L::d; ++id) {
+      for (int id=0; id<L::d; ++id) {
         sum +=  L::c[iPop][id]*NormalVec[id];
       }
       if (sum<0) {
@@ -95,7 +97,8 @@ private:
 };
 
 template <typename Descriptor,  int direction, int orientation>
-std::vector<int> const& subIndexOutgoing() {
+std::vector<int> const& subIndexOutgoing()
+{
   static SubIndexOutgoing<Descriptor,  direction, orientation> subIndexOutgoingSingleton;
   return subIndexOutgoingSingleton.indices;
 }
@@ -106,47 +109,49 @@ std::vector<int> const& subIndexOutgoing() {
 template <typename Descriptor, int plane, int normal1, int normal2>
 class SubIndexOutgoing3DonEdges {
 private:
-  SubIndexOutgoing3DonEdges()
-  {
+  SubIndexOutgoing3DonEdges() {
     int normalX,normalY,normalZ;
     typedef Descriptor L;
 
-    switch(plane) {
-    case 0:
-    {
+    switch (plane) {
+    case 0: {
       normalX=0;
-      if(normal1==1)
+      if (normal1==1) {
         normalY= 1;
-      else
+      } else {
         normalY=-1;
-      if(normal2==1)
+      }
+      if (normal2==1) {
         normalZ= 1;
-      else
+      } else {
         normalZ=-1;
+      }
     }
-    case 1:
-    {
+    case 1: {
       normalY=0;
-      if(normal1==1)
+      if (normal1==1) {
         normalX= 1;
-      else
+      } else {
         normalX=-1;
-      if(normal2==1)
+      }
+      if (normal2==1) {
         normalZ= 1;
-      else
+      } else {
         normalZ=-1;
+      }
     }
-    case 2:
-    {
+    case 2: {
       normalZ=0;
-      if(normal1==1)
+      if (normal1==1) {
         normalX= 1;
-      else
+      } else {
         normalX=-1;
-      if(normal2==1)
+      }
+      if (normal2==1) {
         normalY= 1;
-      else
+      } else {
         normalY=-1;
+      }
     }
     }
 
@@ -166,7 +171,8 @@ private:
 };
 
 template <typename Descriptor,  int plane, int normal1, int normal2>
-std::vector<int> const& subIndexOutgoing3DonEdges() {
+std::vector<int> const& subIndexOutgoing3DonEdges()
+{
   static SubIndexOutgoing3DonEdges<Descriptor,  plane, normal1, normal2> subIndexOutgoing3DonEdgesSingleton;
   return subIndexOutgoing3DonEdgesSingleton.indices;
 }
@@ -176,8 +182,7 @@ std::vector<int> const& subIndexOutgoing3DonEdges() {
 template <typename Descriptor, int normalX, int normalY, int normalZ>
 class SubIndexOutgoing3DonCorners {
 private:
-  SubIndexOutgoing3DonCorners()
-  {
+  SubIndexOutgoing3DonCorners() {
     typedef Descriptor L;
 
     // add zero velocity
@@ -197,7 +202,8 @@ private:
 };
 
 template <typename Descriptor,  int normalX, int normalY, int normalZ>
-std::vector<int> const& subIndexOutgoing3DonCorners() {
+std::vector<int> const& subIndexOutgoing3DonCorners()
+{
   static SubIndexOutgoing3DonCorners<Descriptor, normalX, normalY, normalZ> subIndexOutgoing3DonCornersSingleton;
   return subIndexOutgoing3DonCornersSingleton.indices;
 }
@@ -208,8 +214,7 @@ std::vector<int> const& subIndexOutgoing3DonCorners() {
 template <typename Descriptor, int normalX, int normalY>
 class SubIndexOutgoing2DonCorners {
 private:
-  SubIndexOutgoing2DonCorners()
-  {
+  SubIndexOutgoing2DonCorners() {
     typedef Descriptor L;
 
     // add zero velocity
@@ -229,7 +234,8 @@ private:
 };
 
 template <typename Descriptor,  int normalX, int normalY>
-std::vector<int> const& subIndexOutgoing2DonCorners() {
+std::vector<int> const& subIndexOutgoing2DonCorners()
+{
   static SubIndexOutgoing2DonCorners<Descriptor, normalX, normalY> subIndexOutgoing2DonCornersSingleton;
   return subIndexOutgoing2DonCornersSingleton.indices;
 }

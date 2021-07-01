@@ -113,7 +113,8 @@ getOffDynamics(T location[Lattice<T>::d], T distances[Lattice<T>::q])
 
 template<typename T, template<typename U> class Lattice, typename MixinDynamics>
 OffLatticeBoundaryCondition2D<T,Lattice>*
-createBouzidiBoundaryCondition2D(BlockLatticeStructure2D<T,Lattice>& block) {
+createBouzidiBoundaryCondition2D(BlockLatticeStructure2D<T,Lattice>& block)
+{
   return new OffBoundaryConditionInstantiator2D <
          T, Lattice,
          BouzidiBoundaryManager2D<T,Lattice, MixinDynamics> > (block);

@@ -34,6 +34,7 @@ template class BlockIntegral2D<double,descriptors::D2Q9Descriptor>;
 template class BlockL1Norm2D<double,descriptors::D2Q9Descriptor>;
 template class BlockL222D<double,descriptors::D2Q9Descriptor>;
 template class BlockGeometryFaces2D<double>;
+template class BlockGeometryFacesIndicator2D<double>;
 template class BlockLatticePhysDrag2D<double,descriptors::D2Q9Descriptor>;
 template class BlockLatticePhysCorrDrag2D<double,descriptors::D2Q9Descriptor>;
 

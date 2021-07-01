@@ -470,14 +470,16 @@ getInternalVelocityCornerProcessor(int x, int y, int z)
 ////////// Factory functions //////////////////////////////////////////////////
 
 template<typename T, template<typename U> class Lattice, typename MixinDynamics>
-OnLatticeBoundaryCondition3D<T,Lattice>* createLocalBoundaryCondition3D(BlockLatticeStructure3D<T,Lattice>& block) {
+OnLatticeBoundaryCondition3D<T,Lattice>* createLocalBoundaryCondition3D(BlockLatticeStructure3D<T,Lattice>& block)
+{
   return new BoundaryConditionInstantiator3D <
          T, Lattice,
          RegularizedBoundaryManager3D<T,Lattice, MixinDynamics> > (block);
 }
 
 template<typename T, template<typename U> class Lattice, typename MixinDynamics>
-OnLatticeBoundaryCondition3D<T,Lattice>* createInterpBoundaryCondition3D(BlockLatticeStructure3D<T,Lattice>& block) {
+OnLatticeBoundaryCondition3D<T,Lattice>* createInterpBoundaryCondition3D(BlockLatticeStructure3D<T,Lattice>& block)
+{
   return new BoundaryConditionInstantiator3D <
          T, Lattice,
          InterpolationBoundaryManager3D<T,Lattice, MixinDynamics> > (block);

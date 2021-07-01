@@ -29,14 +29,11 @@
 
 #include <vector>
 #include "cell.h"
+#include "blockStructure2D.h"
 #include "postProcessing.h"
-#include "dataFields2D.h"
 #include "serializer.h"
-#include "dataAnalysisBase2D.h"
 #include "spatiallyExtendedObject2D.h"
 #include "geometry/blockGeometryStructure2D.h"
-#include "geometry/blockGeometry2D.h"
-#include "geometry/blockGeometryStatistics2D.h"
 #include "latticeStatistics.h"
 #include "functors/analyticalF.h"
 
@@ -47,10 +44,12 @@ template<typename T, template<typename U> class Lattice> struct Dynamics;
 template<typename T, template<typename U> class Lattice> class Cell;
 template<typename T, template<typename U> class Lattice> struct WriteCellFunctional;
 
+
 /// An interface to all the variants of (more or less) regular lattices.
 template<typename T, template<typename U> class Lattice>
-class BlockLatticeStructure2D : public Serializable<T>, public SpatiallyExtendedObject2D {
+class BlockLatticeStructure2D : public BlockStructure2D, public SpatiallyExtendedObject2D {
 public:
+  BlockLatticeStructure2D(int nx, int ny) : BlockStructure2D(nx,ny) {};
   virtual ~BlockLatticeStructure2D() { }
 public:
   virtual void defineDynamics(BlockGeometryStructure2D<T>& blockGeometry, int material,
@@ -64,15 +63,28 @@ public:
   virtual void defineRhoU(BlockGeometryStructure2D<T>& blockGeometry, int material,
                           AnalyticalF2D<T,T>& rho, AnalyticalF2D<T,T>& u);
   virtual void definePopulations(BlockGeometryStructure2D<T>& blockGeometry, int material,
-          AnalyticalF2D<T,T>& Pop);
+                                 AnalyticalF2D<T,T>& Pop);
   virtual void defineExternalField(BlockGeometryStructure2D<T>& blockGeometry,
                                    int material, int fieldBeginsAt, int sizeOfField,
                                    AnalyticalF2D<T,T>& field);
+  virtual void defineExternalField(BlockGeometryStructure2D<T>& blockGeometry,
+                                   IndicatorF2D<T>& indicator, int fieldBeginsAt, int sizeOfField,
+                                   AnalyticalF2D<T,T>& field);
+  virtual void addExternalField(BlockGeometryStructure2D<T>& blockGeometry,
+                                IndicatorF2D<T>& indicator, int fieldBeginsAt, int sizeOfField,
+                                AnalyticalF2D<T,T>& field);
+  virtual void addExternalField(BlockGeometryStructure2D<T>& blockGeometry,
+                                IndicatorF2D<T>& indicator, int fieldBeginsAt, int sizeOfField,
+                                AnalyticalF2D<T,T>& field, AnalyticalF2D<T,T>& porous);
+  virtual void resetExternalParticleField(BlockGeometryStructure2D<T>& blockGeometry,
+                                          IndicatorF2D<T>& indicator);
+  virtual void setExternalParticleField(BlockGeometryStructure2D<T>& blockGeometry, AnalyticalF2D<T,T>& velocity, SmoothIndicatorF2D<T,T>& sIndicator);
+  virtual void multiplyExternalField(BlockGeometryStructure2D<T>& blockGeometry,
+                                     IndicatorF2D<T>& indicator, int fieldBeginsAt, int sizeOfField,
+                                     AnalyticalF2D<T,T>& field);
   virtual void iniEquilibrium(BlockGeometryStructure2D<T>& blockGeometry, int material,
                               AnalyticalF2D<T,T>& rho , AnalyticalF2D<T,T>& u);
   // pure virtual member functions
-  virtual int getNx() const =0;
-  virtual int getNy() const =0;
   virtual Cell<T,Lattice>& get(int iX, int iY) =0;
   virtual Cell<T,Lattice> const& get(int iX, int iY) const =0;
   virtual void initialize() =0;
@@ -83,9 +95,9 @@ public:
                                        bool status ) =0;
   virtual void collide(int x0_, int x1_, int y0_, int y1_) =0;
   virtual void collide() =0;
-  virtual void staticCollide(int x0, int x1, int y0, int y1,
+  /*virtual void staticCollide(int x0, int x1, int y0, int y1,
                              TensorFieldBase2D<T,2> const& u) =0;
-  virtual void staticCollide(TensorFieldBase2D<T,2> const& u) =0;
+  virtual void staticCollide(TensorFieldBase2D<T,2> const& u) =0;*/
   virtual void stream(int x0_, int x1_, int y0_, int y1_) =0;
   virtual void stream(bool periodic=false) =0;
   virtual void collideAndStream(int x0_, int x1_, int y0_, int y1_) =0;
@@ -109,11 +121,7 @@ public:
   virtual void subscribeReductions(Reductor<T>& reductor) =0;
   virtual LatticeStatistics<T>& getStatistics() =0;
   virtual LatticeStatistics<T> const& getStatistics() const =0;
-  virtual DataAnalysisBase2D<T,Lattice> const& getDataAnalysis() const =0;
-  virtual DataSerializer<T> const& getSubSerializer(int x0_, int x1_, int y0_,
-          int y1_, IndexOrdering::OrderingT ordering ) const =0;
-  virtual DataUnSerializer<T>& getSubUnSerializer( int x0_, int x1_, int y0_, int y1_,
-          IndexOrdering::OrderingT ordering) =0;
+
 };
 
 }  // namespace olb

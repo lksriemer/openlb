@@ -37,18 +37,18 @@ namespace olb {
 
 template<typename T>
 BlockGeometryView2D<T>::BlockGeometryView2D
-  (BlockGeometryStructure2D<T>& originalBlockGeometry, int x0, int x1, int y0,
-  int y1)
+(BlockGeometryStructure2D<T>& originalBlockGeometry, int x0, int x1, int y0,
+ int y1)
   : BlockGeometryStructure2D<T>(originalBlockGeometry.getIcGlob()),
     _originalBlockGeometry(&originalBlockGeometry), _x0(x0), _y0(y0),
     _nx(x1-x0+1), _ny(y1-y0+1)
-{ 
+{
   this->_statistics = BlockGeometryStatistics2D<T>(this);
   addToStatisticsList( &(this->_statistics.getStatisticsStatus()) );
 }
 
 template<typename T>
-BlockGeometryView2D<T>::BlockGeometryView2D(BlockGeometryView2D const& rhs) 
+BlockGeometryView2D<T>::BlockGeometryView2D(BlockGeometryView2D const& rhs) : BlockGeometryStructure2D<T>(rhs)
 {
   _originalBlockGeometry = rhs._originalBlockGeometry;
   _x0 = rhs._x0;
@@ -139,13 +139,12 @@ int BlockGeometryView2D<T>::getMaterial(int iX, int iY) const
   return _originalBlockGeometry->getMaterial(_x0+iX, _y0+iY);
 }
 
-
 template<typename T>
-std::vector<T> BlockGeometryView2D<T>::getPhysR(int iX, int iY) const
+void BlockGeometryView2D<T>::getPhysR(T physR[2], const int& iX, const int& iY) const
 {
-  return _originalBlockGeometry->getPhysR(_x0 + iX, _y0 + iY);
+  _originalBlockGeometry->getPhysR(physR, _x0 + iX, _y0 + iY);
+  return;
 }
-
 
 template<typename T>
 void BlockGeometryView2D<T>::addToStatisticsList(bool* statisticStatus)
@@ -154,7 +153,7 @@ void BlockGeometryView2D<T>::addToStatisticsList(bool* statisticStatus)
 }
 
 template<typename T>
-void BlockGeometryView2D<T>::removeFromStatisticsList(bool* statisticStatus) 
+void BlockGeometryView2D<T>::removeFromStatisticsList(bool* statisticStatus)
 {
   _originalBlockGeometry->removeFromStatisticsList(statisticStatus);
 }

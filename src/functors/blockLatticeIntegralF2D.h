@@ -24,11 +24,9 @@
 #ifndef BLOCK_LATTICE_INTEGRAL_F_2D_H
 #define BLOCK_LATTICE_INTEGRAL_F_2D_H
 
-#include<vector>
 
 #include "functors/genericF.h"
-#include "functors/blockLatticeBaseF2D.h"
-#include "core/blockLattice2D.h"
+#include "functors/blockBaseF2D.h"
 #include "geometry/blockGeometry2D.h"
 
 /** Note: Throughout the whole source code directory genericFunctions, the
@@ -37,6 +35,9 @@
  */
 
 namespace olb {
+
+
+template<typename T, template<typename U> class Lattice> class BlockLattice2D;
 
 
 /// BlockMax2D returns the max in each component of all points of a certain material
@@ -49,7 +50,7 @@ private:
 public:
   BlockMax2D(BlockLatticeF2D<T,DESCRIPTOR>& f, BlockGeometry2D<T>& blockGeometry,
              int material);
-  std::vector<T> operator() (std::vector<int> input);
+  bool operator() (T output[], const int input[]);
 };
 
 
@@ -63,11 +64,11 @@ private:
 public:
   BlockSum2D(BlockLatticeF2D<T,DESCRIPTOR>& f, BlockGeometry2D<T>& blockGeometry,
              int material);
-  std::vector<T> operator() (std::vector<int> input);
+  bool operator() (T output[], const int input[]);
 };
 
 
-/// BlockIntegral2D 
+/// BlockIntegral2D
 template <typename T, template <typename U> class DESCRIPTOR>
 class BlockIntegral2D : public BlockLatticeF2D<T,DESCRIPTOR> {
 private:
@@ -77,7 +78,7 @@ private:
 public:
   BlockIntegral2D(BlockLatticeF2D<T,DESCRIPTOR>& f,
                   BlockGeometry2D<T>& blockGeometry, int material);
-  std::vector<T> operator() (std::vector<int> input);
+  bool operator() (T output[], const int input[]);
 };
 
 
@@ -91,7 +92,7 @@ private:
 public:
   BlockL1Norm2D(BlockLatticeF2D<T,DESCRIPTOR>& f,
                 BlockGeometry2D<T>& blockGeometry, int material);
-  std::vector<T> operator() (std::vector<int> input);
+  bool operator() (T output[], const int input[]);
 };
 
 
@@ -105,7 +106,7 @@ private:
 public:
   BlockL222D(BlockLatticeF2D<T,DESCRIPTOR>& f, BlockGeometry2D<T>& blockGeometry,
              int material);
-  std::vector<T> operator() (std::vector<int> input);
+  bool operator() (T output[], const int input[]);
 };
 
 
@@ -119,8 +120,24 @@ private:
 public:
   BlockGeometryFaces2D(BlockGeometryStructure2D<T>& blockGeometry, int material,
                        const LBconverter<T>& converter);
-  std::vector<T> operator() (std::vector<int> input);
+  bool operator() (T output[], const int input[]);
 };
+
+/// functor counts to get the discrete surface for a smooth indicator circle in direction (1,0,0), (0,1,0), (0,0,1), (-1,0,0), (0,-1,0), (0,0,-1)
+/// and total surface, then it converts it into phys units
+template <typename T>
+class BlockGeometryFacesIndicator2D : public GenericF<T,int> {
+private:
+  BlockGeometryStructure2D<T>& _blockGeometry;
+  SmoothIndicatorCircle2D<T,T>& _indicator;
+  int _material;
+  const LBconverter<T>& _converter;
+public:
+  BlockGeometryFacesIndicator2D(BlockGeometryStructure2D<T>& blockGeometry, SmoothIndicatorCircle2D<T,T>& indicator,
+                                int material, const LBconverter<T>& converter);
+  bool operator() (T output[], const int input[]);
+};
+
 
 
 /** functor to get pointwise phys force acting on a boundary with a given
@@ -136,7 +153,7 @@ public:
   BlockLatticePhysDrag2D(BlockLattice2D<T,DESCRIPTOR>& blockLattice,
                          BlockGeometry2D<T>& blockGeometry, int material,
                          const LBconverter<T>& converter);
-  std::vector<T> operator() (std::vector<int> input);
+  bool operator() (T output[], const int input[]);
 };
 
 
@@ -154,7 +171,7 @@ public:
   BlockLatticePhysCorrDrag2D(BlockLattice2D<T,DESCRIPTOR>& blockLattice,
                              BlockGeometry2D<T>& blockGeometry, int material,
                              const LBconverter<T>& converter);
-  std::vector<T> operator() (std::vector<int> input);
+  bool operator() (T output[], const int input[]);
 };
 
 

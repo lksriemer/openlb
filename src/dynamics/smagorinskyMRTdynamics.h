@@ -41,7 +41,7 @@ public:
   SmagorinskyMRTdynamics(T omega_, Momenta<T,Lattice>& momenta_, T smagoConst_, T dx_, T dt_ );
 
 
-// Collide
+  // Collide
   virtual void collide(Cell<T,Lattice>& cell,
                        LatticeStatistics<T>& statistics_);
   /// Collide with fixed velocity

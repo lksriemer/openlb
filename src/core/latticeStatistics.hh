@@ -36,16 +36,19 @@ namespace olb {
 ////////////////////// Class LatticeStatistics /////////////////
 
 template<typename T>
-LatticeStatistics<T>::LatticeStatistics() : clout(std::cout,"LatticeStatistics") {
+LatticeStatistics<T>::LatticeStatistics() : clout(std::cout,"LatticeStatistics")
+{
   initialize();
 }
 
 template<typename T>
-LatticeStatistics<T>::~LatticeStatistics() {
+LatticeStatistics<T>::~LatticeStatistics()
+{
 }
 
 template<typename T>
-void LatticeStatistics<T>::reset() {
+void LatticeStatistics<T>::reset()
+{
   // avoid division by zero
   if (tmpNumCells == 0) {
     for (unsigned iVect=0; iVect<averageVect.size(); ++iVect) {
@@ -62,8 +65,7 @@ void LatticeStatistics<T>::reset() {
     }
     numCells = 0;
     firstCall = false;
-  }
-  else {
+  } else {
     // The average density is actually used in the "ConstRhoBgk" model.
     // Depending on the simulation setup, it is possible that it has
     // a nonsensical value before the simulation is started. For this
@@ -73,8 +75,7 @@ void LatticeStatistics<T>::reset() {
         averageVect[iVect] = (T)1;
       }
       firstCall = false;
-    }
-    else {
+    } else {
       for (unsigned iVect=0; iVect<averageVect.size(); ++iVect) {
         averageVect[iVect] = tmpAv[iVect] / (T)tmpNumCells;
       }
@@ -125,7 +126,8 @@ void LatticeStatistics<T>::reset (
 }
 
 template<typename T>
-void LatticeStatistics<T>::initialize() {
+void LatticeStatistics<T>::initialize()
+{
   tmpAv.resize(2);
   averageVect.resize(2);
   tmpMax.resize(1);
@@ -146,7 +148,8 @@ void LatticeStatistics<T>::initialize() {
 }
 
 template<typename T>
-int LatticeStatistics<T>::subscribeAverage() {
+int LatticeStatistics<T>::subscribeAverage()
+{
   int newSize = tmpAv.size()+1;
   tmpAv.resize(newSize);
   averageVect.resize(newSize);
@@ -154,7 +157,8 @@ int LatticeStatistics<T>::subscribeAverage() {
 }
 
 template<typename T>
-int LatticeStatistics<T>::subscribeSum() {
+int LatticeStatistics<T>::subscribeSum()
+{
   int newSize = tmpSum.size()+1;
   tmpSum.resize(newSize);
   sumVect.resize(newSize);
@@ -162,7 +166,8 @@ int LatticeStatistics<T>::subscribeSum() {
 }
 
 template<typename T>
-int LatticeStatistics<T>::subscribeMin() {
+int LatticeStatistics<T>::subscribeMin()
+{
   int newSize = tmpMin.size()+1;
   tmpMin.resize(newSize);
   minVect.resize(newSize);
@@ -170,7 +175,8 @@ int LatticeStatistics<T>::subscribeMin() {
 }
 
 template<typename T>
-int LatticeStatistics<T>::subscribeMax() {
+int LatticeStatistics<T>::subscribeMax()
+{
   int newSize = tmpMax.size()+1;
   tmpMax.resize(newSize);
   maxVect.resize(newSize);
@@ -178,19 +184,22 @@ int LatticeStatistics<T>::subscribeMax() {
 }
 
 template<typename T>
-void LatticeStatistics<T>::gatherAverage(int whichAverage, T value) {
+void LatticeStatistics<T>::gatherAverage(int whichAverage, T value)
+{
   OLB_PRECONDITION( whichAverage < (int) tmpAv.size() );
   tmpAv[whichAverage] += value;
 }
 
 template<typename T>
-void LatticeStatistics<T>::gatherSum(int whichSum, T value) {
+void LatticeStatistics<T>::gatherSum(int whichSum, T value)
+{
   OLB_PRECONDITION( whichSum < (int) tmpSum.size() );
   tmpSum[whichSum] += value;
 }
 
 template<typename T>
-void LatticeStatistics<T>::gatherMin(int whichMin, T value) {
+void LatticeStatistics<T>::gatherMin(int whichMin, T value)
+{
   OLB_PRECONDITION( whichMin < (int) tmpMin.size() );
   if (value < tmpMin[whichMin]) {
     tmpMin[whichMin] = value;
@@ -198,7 +207,8 @@ void LatticeStatistics<T>::gatherMin(int whichMin, T value) {
 }
 
 template<typename T>
-void LatticeStatistics<T>::gatherMax(int whichMax, T value) {
+void LatticeStatistics<T>::gatherMax(int whichMax, T value)
+{
   OLB_PRECONDITION( whichMax < (int) tmpMax.size() );
   if (value > tmpMax[whichMax]) {
     tmpMax[whichMax] = value;
@@ -206,36 +216,42 @@ void LatticeStatistics<T>::gatherMax(int whichMax, T value) {
 }
 
 template<typename T>
-void LatticeStatistics<T>::incrementStats() {
+void LatticeStatistics<T>::incrementStats()
+{
   ++tmpNumCells;
 }
 
 template<typename T>
-T LatticeStatistics<T>::getAverage(int whichAverage) const {
+T LatticeStatistics<T>::getAverage(int whichAverage) const
+{
   OLB_PRECONDITION( whichAverage < (int) tmpAv.size() );
   return averageVect[whichAverage];
 }
 
 template<typename T>
-T LatticeStatistics<T>::getSum(int whichSum) const {
+T LatticeStatistics<T>::getSum(int whichSum) const
+{
   OLB_PRECONDITION( whichSum < (int) tmpSum.size() );
   return sumVect[whichSum];
 }
 
 template<typename T>
-T LatticeStatistics<T>::getMin(int whichMin) const {
+T LatticeStatistics<T>::getMin(int whichMin) const
+{
   OLB_PRECONDITION( whichMin < (int) tmpMin.size() );
   return minVect[whichMin];
 }
 
 template<typename T>
-T LatticeStatistics<T>::getMax(int whichMax) const {
+T LatticeStatistics<T>::getMax(int whichMax) const
+{
   OLB_PRECONDITION( whichMax < (int) tmpMax.size() );
   return maxVect[whichMax];
 }
 
 template<typename T>
-void LatticeStatistics<T>::print(int iterationStep, T physicalTime) const {
+void LatticeStatistics<T>::print(int iterationStep, T physicalTime) const
+{
   clout
       << "step=" << iterationStep << "; "
       << "t=" << physicalTime << "; "

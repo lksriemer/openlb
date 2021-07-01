@@ -76,14 +76,13 @@ void ZouHeDynamics<T,Lattice,Dynamics,direction,orientation>::collide (
   // Will contain the missing poputations that are not normal to the wall.
   // (directions 3,5)
   std::vector<int> missingDiagonalIndexes = missingIndexes;
-  for (unsigned iPop = 0; iPop < missingIndexes.size(); ++iPop)
-  {
+  for (unsigned iPop = 0; iPop < missingIndexes.size(); ++iPop) {
     int numOfNonNullComp = 0;
-    for (int iDim = 0; iDim < L:: d; ++iDim)
+    for (int iDim = 0; iDim < L:: d; ++iDim) {
       numOfNonNullComp += abs(L::c[missingIndexes[iPop]][iDim]);
+    }
 
-    if (numOfNonNullComp == 1)
-    {
+    if (numOfNonNullComp == 1) {
       missingDiagonalIndexes.erase(missingDiagonalIndexes.begin()+iPop);
       break;
     }
@@ -98,8 +97,7 @@ void ZouHeDynamics<T,Lattice,Dynamics,direction,orientation>::collide (
   // The unknown non equilibrium populations are bounced back
   // (f[3] = feq[3] + fneq[7], f[4] = feq[4] + fneq[8],
   //  f[5] = feq[5] + fneq[1])
-  for (unsigned iPop = 0; iPop < missingIndexes.size(); ++iPop)
-  {
+  for (unsigned iPop = 0; iPop < missingIndexes.size(); ++iPop) {
     cell[missingIndexes[iPop]] = cell[util::opposite<L>(missingIndexes[iPop])]
                                  - computeEquilibrium(util::opposite<L>(missingIndexes[iPop]), rho, u, uSqr)
                                  + computeEquilibrium(missingIndexes[iPop], rho, u, uSqr);
@@ -111,13 +109,12 @@ void ZouHeDynamics<T,Lattice,Dynamics,direction,orientation>::collide (
   lbH::computeRhoU(cell,falseRho,falseU);
 
   T diff[L::d];
-  for (int iDim = 0; iDim < L:: d; ++iDim)
+  for (int iDim = 0; iDim < L:: d; ++iDim) {
     diff[iDim] = (rho*u[iDim] - falseRho*falseU[iDim])/ (T)missingDiagonalIndexes.size();
+  }
 
-  for (unsigned iPop = 0; iPop < missingDiagonalIndexes.size(); ++iPop)
-  {
-    for (int iDim = 1; iDim < L::d; ++iDim)
-    {
+  for (unsigned iPop = 0; iPop < missingDiagonalIndexes.size(); ++iPop) {
+    for (int iDim = 1; iDim < L::d; ++iDim) {
       cell[missingDiagonalIndexes[iPop]] +=
         L::c[missingDiagonalIndexes[iPop]][(direction+iDim)%L::d] * diff[(direction+iDim)%L::d];
     }
@@ -140,14 +137,13 @@ void ZouHeDynamics<T,Lattice,Dynamics,direction,orientation>::staticCollide (
   std::vector<int> missingIndexes = util::subIndexOutgoing<L,direction,orientation>();
   std::vector<int> missingDiagonalIndexes = missingIndexes;
 
-  for (unsigned iPop = 0; iPop < missingIndexes.size(); ++iPop)
-  {
+  for (unsigned iPop = 0; iPop < missingIndexes.size(); ++iPop) {
     int numOfNonNullComp = 0;
-    for (int iDim = 0; iDim < L:: d; ++iDim)
+    for (int iDim = 0; iDim < L:: d; ++iDim) {
       numOfNonNullComp += abs(L::c[missingIndexes[iPop]][iDim]);
+    }
 
-    if (numOfNonNullComp == 1)
-    {
+    if (numOfNonNullComp == 1) {
       missingDiagonalIndexes.erase(missingDiagonalIndexes.begin()+iPop);
       break;
     }
@@ -157,8 +153,7 @@ void ZouHeDynamics<T,Lattice,Dynamics,direction,orientation>::staticCollide (
 
   T uSqr = util::normSqr<T,L::d>(u);
 
-  for (unsigned iPop = 0; iPop < missingIndexes.size(); ++iPop)
-  {
+  for (unsigned iPop = 0; iPop < missingIndexes.size(); ++iPop) {
     cell[missingIndexes[iPop]] = cell[util::opposite<L>(missingIndexes[iPop])]
                                  - computeEquilibrium(util::opposite<L>(missingIndexes[iPop]), rho, u, uSqr)
                                  + computeEquilibrium(missingIndexes[iPop], rho, u, uSqr);
@@ -168,13 +163,12 @@ void ZouHeDynamics<T,Lattice,Dynamics,direction,orientation>::staticCollide (
   lbH::computeRhoU(cell,falseRho,falseU);
 
   T diff[L::d];
-  for (int iDim = 0; iDim < L:: d; ++iDim)
+  for (int iDim = 0; iDim < L:: d; ++iDim) {
     diff[iDim] = (rho*u[iDim] - falseRho*falseU[iDim])/ (T)missingDiagonalIndexes.size();
+  }
 
-  for (unsigned iPop = 0; iPop < missingDiagonalIndexes.size(); ++iPop)
-  {
-    for (int iDim = 1; iDim < L::d; ++iDim)
-    {
+  for (unsigned iPop = 0; iPop < missingDiagonalIndexes.size(); ++iPop) {
+    for (int iDim = 1; iDim < L::d; ++iDim) {
       cell[missingDiagonalIndexes[iPop]] +=
         L::c[missingDiagonalIndexes[iPop]][(direction+iDim)%L::d] * diff[(direction+iDim)%L::d];
     }

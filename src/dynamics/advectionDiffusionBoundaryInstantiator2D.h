@@ -71,7 +71,8 @@ AdvectionDiffusionBoundaryConditionInstantiator2D<T,Lattice,BoundaryManager>::Ad
 { }
 
 template<typename T, template<typename U> class Lattice, class BoundaryManager>
-AdvectionDiffusionBoundaryConditionInstantiator2D<T,Lattice,BoundaryManager>::~AdvectionDiffusionBoundaryConditionInstantiator2D() {
+AdvectionDiffusionBoundaryConditionInstantiator2D<T,Lattice,BoundaryManager>::~AdvectionDiffusionBoundaryConditionInstantiator2D()
+{
   for (unsigned iDynamics=0; iDynamics<dynamicsVector.size(); ++iDynamics) {
     delete dynamicsVector[iDynamics];
   }
@@ -90,9 +91,9 @@ addTemperatureBoundary(int x0, int x1, int y0, int y1, T omega)
   for (int iX=x0; iX<=x1; ++iX) {
     for (int iY=y0; iY<=y1; ++iY) {
       Momenta<T,Lattice>* momenta
-      = BoundaryManager::template getTemperatureBoundaryMomenta<direction,orientation>();
+        = BoundaryManager::template getTemperatureBoundaryMomenta<direction,orientation>();
       Dynamics<T,Lattice>* dynamics
-      = BoundaryManager::template getTemperatureBoundaryDynamics<direction,orientation>(omega, *momenta);
+        = BoundaryManager::template getTemperatureBoundaryDynamics<direction,orientation>(omega, *momenta);
       this->getBlock().defineDynamics(iX,iX,iY,iY, dynamics);
       momentaVector.push_back(momenta);
       dynamicsVector.push_back(dynamics);
@@ -100,7 +101,7 @@ addTemperatureBoundary(int x0, int x1, int y0, int y1, T omega)
   }
 
   PostProcessorGenerator2D<T,Lattice>* postProcessor
-  = BoundaryManager::template getTemperatureBoundaryProcessor<direction,orientation>(x0,x1, y0,y1);
+    = BoundaryManager::template getTemperatureBoundaryProcessor<direction,orientation>(x0,x1, y0,y1);
   if (postProcessor) {
     this->getBlock().addPostProcessor(*postProcessor);
   }
@@ -113,14 +114,14 @@ void AdvectionDiffusionBoundaryConditionInstantiator2D<T,Lattice,BoundaryManager
 addTemperatureCorner(int x, int y, T omega)
 {
   Momenta<T,Lattice>* momenta
-  = BoundaryManager::template getTemperatureCornerMomenta<xNormal,yNormal>();
+    = BoundaryManager::template getTemperatureCornerMomenta<xNormal,yNormal>();
   Dynamics<T,Lattice>* dynamics
-  = BoundaryManager::template getTemperatureCornerDynamics<xNormal,yNormal>(omega, *momenta);
+    = BoundaryManager::template getTemperatureCornerDynamics<xNormal,yNormal>(omega, *momenta);
 
   this->getBlock().defineDynamics(x,x,y,y, dynamics);
 
   PostProcessorGenerator2D<T,Lattice>* postProcessor
-  = BoundaryManager::template getTemperatureCornerProcessor<xNormal,yNormal>(x, y);
+    = BoundaryManager::template getTemperatureCornerProcessor<xNormal,yNormal>(x, y);
   if (postProcessor) {
     this->getBlock().addPostProcessor(*postProcessor);
   }
@@ -133,45 +134,39 @@ void AdvectionDiffusionBoundaryConditionInstantiator2D<T,Lattice,BoundaryManager
 addTemperatureBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int material, int x0, int x1, int y0, int y1, T omega)
 {
   std::vector<int> discreteNormal(3,0);
-  for(int iX = x0; iX <= x1; iX++) {
-    for(int iY = y0; iY <= y1; iY++) {
+  for (int iX = x0; iX <= x1; iX++) {
+    for (int iY = y0; iY <= y1; iY++) {
 
-        if(blockGeometryStructure.getMaterial(iX, iY)==material) {
-          discreteNormal = blockGeometryStructure.getStatistics().getType(iX,iY);
-          if(discreteNormal[0] == 0) {
+      if (blockGeometryStructure.getMaterial(iX, iY)==material) {
+        discreteNormal = blockGeometryStructure.getStatistics().getType(iX,iY);
+        if (discreteNormal[0] == 0) {
 
-            if(discreteNormal[1] == 1) {
-              addTemperatureBoundary<0,1>(iX,iX,iY,iY, omega);
-            }
-            else if(discreteNormal[1] == -1) {
-              addTemperatureBoundary<0,-1>(iX,iX,iY,iY, omega);
-            }
-            else if(discreteNormal[2] == 1) {
-              addTemperatureBoundary<1,1>(iX,iX,iY,iY, omega);
-            }
-            else if(discreteNormal[2] == -1) {
-              addTemperatureBoundary<1,-1>(iX,iX,iY,iY, omega);
-            }
+          if (discreteNormal[1] == 1) {
+            addTemperatureBoundary<0,1>(iX,iX,iY,iY, omega);
+          } else if (discreteNormal[1] == -1) {
+            addTemperatureBoundary<0,-1>(iX,iX,iY,iY, omega);
+          } else if (discreteNormal[2] == 1) {
+            addTemperatureBoundary<1,1>(iX,iX,iY,iY, omega);
+          } else if (discreteNormal[2] == -1) {
+            addTemperatureBoundary<1,-1>(iX,iX,iY,iY, omega);
           }
+        }
 
-          else if(discreteNormal[0] == 1) {
+        else if (discreteNormal[0] == 1) {
 
-            if(discreteNormal[1] == 1 && discreteNormal[2] == 1) {
-              addTemperatureCorner<1,1>(iX,iY, omega);
-            }
-            else if(discreteNormal[1] == 1 && discreteNormal[2] == -1) {
-              addTemperatureCorner<1,-1>(iX,iY, omega);
-            }
-            else if(discreteNormal[1] == -1 && discreteNormal[2] == 1) {
-              addTemperatureCorner<-1,1>(iX,iY, omega);
-            }
-            else if(discreteNormal[1] == -1 && discreteNormal[2] == -1) {
-              addTemperatureCorner<-1,-1>(iX,iY, omega);
-            }
-
+          if (discreteNormal[1] == 1 && discreteNormal[2] == 1) {
+            addTemperatureCorner<1,1>(iX,iY, omega);
+          } else if (discreteNormal[1] == 1 && discreteNormal[2] == -1) {
+            addTemperatureCorner<1,-1>(iX,iY, omega);
+          } else if (discreteNormal[1] == -1 && discreteNormal[2] == 1) {
+            addTemperatureCorner<-1,1>(iX,iY, omega);
+          } else if (discreteNormal[1] == -1 && discreteNormal[2] == -1) {
+            addTemperatureCorner<-1,-1>(iX,iY, omega);
           }
 
         }
+
+      }
     }
   }
 }

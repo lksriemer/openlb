@@ -28,41 +28,34 @@
 #ifndef BLOCK_GEOMETRY_3D_HH
 #define BLOCK_GEOMETRY_3D_HH
 
-//#include <math.h>
-//#include <cmath>
-#include <vector>
 
 #include "geometry/blockGeometry3D.h"
-#include "core/dataFields3D.h"
 
 
 namespace olb {
 
 template<typename T>
-BlockGeometry3D<T>::BlockGeometry3D(T x0, T y0, T z0, T h, int nX, int nY,
-  int nZ, int iCglob) : BlockGeometryStructure3D<T>(iCglob),
-  _cuboid(x0, y0, z0, h, nX, nY, nZ), _geometryData(nX, nY, nZ)
+BlockGeometry3D<T>::BlockGeometry3D(T x0, T y0, T z0, T h, int nX, int nY, int nZ, int iCglob)
+  : BlockData3D<T,int>(nX,nY,nZ), BlockGeometryStructure3D<T>(iCglob),
+    _cuboid(x0, y0, z0, h, nX, nY, nZ)
 {
-  _geometryData.construct();
-  _geometryData.reset();
   this->_statistics = BlockGeometryStatistics3D<T>(this);
   addToStatisticsList( &(this->_statistics.getStatisticsStatus()) );
 }
 
 template<typename T>
 BlockGeometry3D<T>::BlockGeometry3D(Cuboid3D<T>& cuboid, int iCglob)
-  : BlockGeometryStructure3D<T>(iCglob), _cuboid(cuboid),
-  _geometryData(cuboid.getNx(), cuboid.getNy(), cuboid.getNz())
+  : BlockData3D<T,int>(cuboid.getNx(),cuboid.getNy(),cuboid.getNz()),
+    BlockGeometryStructure3D<T>(iCglob), _cuboid(cuboid)
 {
-  _geometryData.construct();
-  _geometryData.reset();
   this->_statistics = BlockGeometryStatistics3D<T>(this);
   addToStatisticsList( &(this->_statistics.getStatisticsStatus()) );
 }
 
 template<typename T>
 BlockGeometry3D<T>::BlockGeometry3D(BlockGeometry3D const& rhs)
-  : BlockGeometryStructure3D<T>(rhs._iCglob), _cuboid(rhs._cuboid), _geometryData(rhs._geometryData)
+  : BlockData3D<T,int>(rhs.getNx(), rhs.getNy(), rhs.getNz()),
+    BlockGeometryStructure3D<T>(rhs._iCglob), _cuboid(rhs._cuboid)
 {
   this->_statistics = BlockGeometryStatistics3D<T>(this);
   addToStatisticsList( &(this->_statistics.getStatisticsStatus()) );
@@ -71,10 +64,11 @@ BlockGeometry3D<T>::BlockGeometry3D(BlockGeometry3D const& rhs)
 template<typename T>
 BlockGeometry3D<T>& BlockGeometry3D<T>::operator=(BlockGeometry3D const& rhs)
 {
+  this->_nx = rhs._nx;
+  this->_ny = rhs._ny;
+  this->_nz = rhs._nz;
   this->_iCglob = rhs._iCglob;
   _cuboid = rhs._cuboid;
-  _geometryData=rhs._geometryData;
-
   this->_statistics = BlockGeometryStatistics3D<T>(this);
   addToStatisticsList( &(this->_statistics.getStatisticsStatus()) );
   return *this;
@@ -93,28 +87,32 @@ BlockGeometryStatistics3D<T> const& BlockGeometry3D<T>::getStatistics(bool verbo
 }
 
 template<typename T>
-std::vector<T> const BlockGeometry3D<T>::getOrigin() const
+Vector<T,3> const BlockGeometry3D<T>::getOrigin() const
 {
   return _cuboid.getOrigin();
 }
 
 template<typename T>
-const T BlockGeometry3D<T>::getDeltaR() const {
+const T BlockGeometry3D<T>::getDeltaR() const
+{
   return _cuboid.getDeltaR();
 }
 
 template<typename T>
-int BlockGeometry3D<T>::getNx() const {
+int BlockGeometry3D<T>::getNx() const
+{
   return _cuboid.getNx();
 }
 
 template<typename T>
-int BlockGeometry3D<T>::getNy() const {
+int BlockGeometry3D<T>::getNy() const
+{
   return _cuboid.getNy();
 }
 
 template<typename T>
-int BlockGeometry3D<T>::getNz() const {
+int BlockGeometry3D<T>::getNz() const
+{
   return _cuboid.getNz();
 }
 
@@ -123,30 +121,34 @@ template<typename T>
 int& BlockGeometry3D<T>::get(int iX, int iY, int iZ)
 {
   resetStatistics();
-  return _geometryData.get(iX, iY, iZ);
+  return this->_field[iX][iY][iZ][0];
 }
 
 template<typename T>
 int const& BlockGeometry3D<T>::get(int iX, int iY, int iZ) const
 {
-  return _geometryData.get(iX, iY, iZ);
+  return this->_field[iX][iY][iZ][0];
 }
 
 template<typename T>
-int BlockGeometry3D<T>::getMaterial(int iX, int iY, int iZ) const {
+int BlockGeometry3D<T>::getMaterial(int iX, int iY, int iZ) const
+{
   int material;
   if (iX < 0 || iX + 1 > getNx() || iY < 0 || iY
-      + 1 > getNy() || iZ < 0 || iZ + 1 > getNz())
+      + 1 > getNy() || iZ < 0 || iZ + 1 > getNz()) {
     material = 0;
-  else
-    material = _geometryData.get(iX,iY,iZ);
+  } else {
+    material = this->_field[iX][iY][iZ][0];
+  }
   return material;
 }
 
 template<typename T>
-std::vector<T> BlockGeometry3D<T>::getPhysR(int iX, int iY, int iZ) const
+void BlockGeometry3D<T>::getPhysR(T physR[3], const int& iX, const int& iY,
+                                  const int& iZ) const
 {
-  return _cuboid.getPhysR(iX, iY, iZ);
+  _cuboid.getPhysR(physR, iX, iY, iZ);
+  return;
 }
 
 
@@ -223,13 +225,13 @@ void BlockGeometry3D<T>::refineMesh(int level) {
 
 
 template<typename T>
-void BlockGeometry3D<T>::addToStatisticsList(bool* statisticStatus) 
+void BlockGeometry3D<T>::addToStatisticsList(bool* statisticStatus)
 {
   _statisticsUpdateNeeded.push_back(statisticStatus);
 }
 
 template<typename T>
-void BlockGeometry3D<T>::removeFromStatisticsList(bool* statisticStatus) 
+void BlockGeometry3D<T>::removeFromStatisticsList(bool* statisticStatus)
 {
   _statisticsUpdateNeeded.remove(statisticStatus);
 }
@@ -237,25 +239,30 @@ void BlockGeometry3D<T>::removeFromStatisticsList(bool* statisticStatus)
 
 template<typename T>
 void BlockGeometry3D<T>::printLayer(int x0, int x1, int y0, int y1, int z0,
-                                 int z1, bool linenumber) {
+                                    int z1, bool linenumber)
+{
   for (int x = x0; x <= x1; x++) {
-    if (linenumber)
+    if (linenumber) {
       this->clout << x << ": ";
+    }
     for (int y = y0; y <= y1; y++) {
       for (int z = z0; z <= z1; z++) {
         this->clout << getMaterial(x, y, z) << " ";
       }
-      if (y1 - y0 != 0 && z1 - z0 != 0)
+      if (y1 - y0 != 0 && z1 - z0 != 0) {
         this->clout << std::endl;
+      }
     }
-    if (x1 - x0 != 0)
+    if (x1 - x0 != 0) {
       this->clout << std::endl;
+    }
   }
   this->clout << std::endl;
 }
 
 template<typename T>
-void BlockGeometry3D<T>::printLayer(int direction, int layer, bool linenumber) {
+void BlockGeometry3D<T>::printLayer(int direction, int layer, bool linenumber)
+{
   assert(direction >= 0 && direction <= 2);
   switch (direction) {
   case 0:
@@ -271,7 +278,8 @@ void BlockGeometry3D<T>::printLayer(int direction, int layer, bool linenumber) {
 }
 
 template<typename T>
-void BlockGeometry3D<T>::printNode(int x0, int y0, int z0) {
+void BlockGeometry3D<T>::printNode(int x0, int y0, int z0)
+{
   for (int x = x0 - 1; x <= x0 + 1; x++) {
     this->clout << "x=" << x << std::endl;
     for (int y = y0 - 1; y <= y0 + 1; y++) {
@@ -285,10 +293,10 @@ void BlockGeometry3D<T>::printNode(int x0, int y0, int z0) {
   this->clout << std::endl;
 }
 
-
+/*
 template<typename T>
 void BlockGeometry3D<T>::reInit(T x0, T y0, T z0, T h, int nX, int nY, int nZ,
-  int iCglob, olb::ScalarField3D<int>* geometryData) {
+                                int iCglob, olb::ScalarField3D<int>* geometryData) {
 
   _cuboid = Cuboid3D<T>(x0, y0, z0, h, nX, nY, nZ);
   if (geometryData != NULL) {
@@ -302,13 +310,13 @@ void BlockGeometry3D<T>::reInit(T x0, T y0, T z0, T h, int nX, int nY, int nZ,
     geometryDataTemp.deConstruct();
   }
   this->_iCglob=iCglob;
-}
+}*/
 
 template<typename T>
 void BlockGeometry3D<T>::resetStatistics()
 {
   for (std::list<bool*>::iterator it = _statisticsUpdateNeeded.begin(); it != _statisticsUpdateNeeded.end(); it++) {
-    **it = true; 
+    **it = true;
   }
 }
 

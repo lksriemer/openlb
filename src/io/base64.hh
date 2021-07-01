@@ -56,7 +56,8 @@ Base64Encoder<T>::Base64Encoder(std::ostream& ostr_, size_t fullLength_)
 { }
 
 template<typename T>
-void Base64Encoder<T>::encode(const T* data, size_t length) {
+void Base64Encoder<T>::encode(const T* data, size_t length)
+{
   const unsigned char* charData = reinterpret_cast<const unsigned char*>(data);
   size_t charLength = length * sizeof(T);
   OLB_PRECONDITION( numWritten+charLength <= charFullLength );
@@ -75,7 +76,8 @@ void Base64Encoder<T>::encode(const T* data, size_t length) {
 }
 
 template<typename T>
-void Base64Encoder<T>::fillOverflow(const unsigned char* charData, size_t charLength, size_t& pos) {
+void Base64Encoder<T>::fillOverflow(const unsigned char* charData, size_t charLength, size_t& pos)
+{
   while (numOverflow < 3 && pos < charLength) {
     overflow[numOverflow] = charData[pos];
     ++numOverflow;
@@ -88,7 +90,8 @@ void Base64Encoder<T>::fillOverflow(const unsigned char* charData, size_t charLe
 }
 
 template<typename T>
-void Base64Encoder<T>::flushOverflow() {
+void Base64Encoder<T>::flushOverflow()
+{
   if (numOverflow > 0) {
     for (int iOverflow = numOverflow; iOverflow<3; ++iOverflow) {
       overflow[iOverflow] = 0;
@@ -99,7 +102,8 @@ void Base64Encoder<T>::flushOverflow() {
 }
 
 template<typename T>
-void Base64Encoder<T>::encodeBlock( const unsigned char* data) {
+void Base64Encoder<T>::encodeBlock( const unsigned char* data)
+{
   ostr << enc64[ data[0] >> 2 ];
   ostr << enc64[ ((data[0] & 0x03) << 4) | ((data[1] & 0xf0) >> 4) ];
   ostr << (unsigned char) (enc64[ ((data[1] & 0x0f) << 2) | ((data[2] & 0xc0) >> 6) ]);
@@ -107,7 +111,8 @@ void Base64Encoder<T>::encodeBlock( const unsigned char* data) {
 }
 
 template<typename T>
-void Base64Encoder<T>::encodeUnfinishedBlock( const unsigned char* data, int length ) {
+void Base64Encoder<T>::encodeUnfinishedBlock( const unsigned char* data, int length )
+{
   ostr << enc64[ data[0] >> 2 ];
   ostr << enc64[ ((data[0] & 0x03) << 4) | ((data[1] & 0xf0) >> 4) ];
   ostr << (unsigned char) (
@@ -137,7 +142,8 @@ Base64Decoder<T>::Base64Decoder(std::istream& istr_, size_t fullLength_)
 { }
 
 template<typename T>
-void Base64Decoder<T>::decode(T* data, size_t length) {
+void Base64Decoder<T>::decode(T* data, size_t length)
+{
   unsigned char* charData = reinterpret_cast<unsigned char*>(data);
   size_t charLength = length * sizeof(T);
   OLB_PRECONDITION( numRead+charLength <= charFullLength );
@@ -157,7 +163,8 @@ void Base64Decoder<T>::decode(T* data, size_t length) {
 }
 
 template<typename T>
-void Base64Decoder<T>::flushOverflow(unsigned char* charData, size_t charLength, size_t& pos) {
+void Base64Decoder<T>::flushOverflow(unsigned char* charData, size_t charLength, size_t& pos)
+{
   while (posOverflow < 3 && pos < charLength) {
     charData[pos] = overflow[posOverflow];
     ++pos;
@@ -166,14 +173,16 @@ void Base64Decoder<T>::flushOverflow(unsigned char* charData, size_t charLength,
 }
 
 template<typename T>
-unsigned char Base64Decoder<T>::getNext() {
+unsigned char Base64Decoder<T>::getNext()
+{
   unsigned char nextChar;
   istr >> nextChar;
   return (unsigned char) (dec64[nextChar - 43] - 62);
 }
 
 template<typename T>
-void Base64Decoder<T>::decodeBlock(unsigned char* data) {
+void Base64Decoder<T>::decodeBlock(unsigned char* data)
+{
   unsigned char input[4];
   input[0] = getNext();
   input[1] = getNext();

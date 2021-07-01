@@ -29,32 +29,29 @@
 #ifndef SUPER_LATTICE_2D_HH
 #define SUPER_LATTICE_2D_HH
 
-#include<limits>
+#include <limits>
+#include <numeric>
 
 #include "communication/mpiManager.h"
-#include "blockLatticeStructure2D.h"
 #include "blockLattice2D.h"
 #include "cell.h"
-#include "communication/communicator2D.h"
 #include "geometry/cuboidGeometry2D.h"
-#include "geometry/blockGeometry2D.h"
 #include "geometry/superGeometry2D.h"
 #include "communication/loadBalancer.h"
-#include "postProcessing.h"
 #include "superLattice2D.h"
 #include "io/base64.h"
-
+#include "functors/superBaseF2D.h"
+#include "io/serializerIO.h"
 
 namespace olb {
 
 
-////////////////////// Class SuperLattice2D /////////////////////////
-
-
 template<typename T, template<typename U> class Lattice>
 SuperLattice2D<T, Lattice>::SuperLattice2D(CuboidGeometry2D<T>& cGeometry,
-    LoadBalancer<T>& lb, int overlapBC, int overlapRefinement) : SuperStructure2D<T>(cGeometry, lb), _overlapRefinement(overlapRefinement), _commStream(*this) ,_commBC(*this) {
-
+    LoadBalancer<T>& lb, int overlapBC, int overlapRefinement)
+  : SuperStructure2D<T>(cGeometry, lb), _overlapRefinement(overlapRefinement),
+    _commStream(*this) ,_commBC(*this)
+{
   if (overlapBC >= 1) {
     _commBC_on = true;
     this->_overlap = overlapBC;
@@ -71,7 +68,7 @@ SuperLattice2D<T, Lattice>::SuperLattice2D(CuboidGeometry2D<T>& cGeometry,
   this->_communicator.add_cells(this->_overlap);
   this->_communicator.init();
 
-  for (int iC = 0; iC < this->_loadBalancer.size(); iC++) {
+  for (int iC = 0; iC < this->_loadBalancer.size(); ++iC) {
     int nX = this->_cuboidGeometry.get(this->_loadBalancer.glob(iC)).getNx() + 2 * this->_overlap;
     int nY = this->_cuboidGeometry.get(this->_loadBalancer.glob(iC)).getNy() + 2 * this->_overlap;
 
@@ -80,7 +77,7 @@ SuperLattice2D<T, Lattice>::SuperLattice2D(CuboidGeometry2D<T>& cGeometry,
     BlockLattice2D<T, Lattice> blockLattice(nX, nY);
     _extendedBlockLattices.back().swap(blockLattice);
   }
-  for (int iC = 0; iC < this->_loadBalancer.size(); iC++) {
+  for (int iC = 0; iC < this->_loadBalancer.size(); ++iC) {
     BlockLatticeView2D<T, Lattice> lattice(_extendedBlockLattices[iC], this->_overlap,
                                            _extendedBlockLattices[iC].getNx() - this->_overlap - 1, this->_overlap,
                                            _extendedBlockLattices[iC].getNy() - this->_overlap - 1);
@@ -89,16 +86,19 @@ SuperLattice2D<T, Lattice>::SuperLattice2D(CuboidGeometry2D<T>& cGeometry,
   _statistics = new LatticeStatistics<T> ;
   _statistics_on = true;
 
-  if (_commBC_on)
+  if (_commBC_on) {
     _commBC.init_nh();
+  }
 
   this->_communicationNeeded=true;
 }
 
 template<typename T, template<typename U> class Lattice>
-SuperLattice2D<T, Lattice>::SuperLattice2D(SuperGeometry2D<T>& superGeometry, int overlapRefinement) 
-  : SuperStructure2D<T>(superGeometry.getCuboidGeometry(), superGeometry.getLoadBalancer()), _overlapRefinement(overlapRefinement), _commStream(*this), _commBC(*this) {
-
+SuperLattice2D<T, Lattice>::SuperLattice2D(SuperGeometry2D<T>& superGeometry,
+    int overlapRefinement)
+  : SuperStructure2D<T>(superGeometry.getCuboidGeometry(), superGeometry.getLoadBalancer()),
+    _overlapRefinement(overlapRefinement), _commStream(*this), _commBC(*this)
+{
   int overlapBC = superGeometry.getOverlap();
   if (overlapBC >= 1) {
     _commBC_on = true;
@@ -116,7 +116,7 @@ SuperLattice2D<T, Lattice>::SuperLattice2D(SuperGeometry2D<T>& superGeometry, in
   this->_communicator.add_cells(this->_overlap);
   this->_communicator.init();
 
-  for (int iC = 0; iC < this->_loadBalancer.size(); iC++) {
+  for (int iC = 0; iC < this->_loadBalancer.size(); ++iC) {
     int nX = this->_cuboidGeometry.get(this->_loadBalancer.glob(iC)).getNx() + 2 * this->_overlap;
     int nY = this->_cuboidGeometry.get(this->_loadBalancer.glob(iC)).getNy() + 2 * this->_overlap;
 
@@ -125,7 +125,7 @@ SuperLattice2D<T, Lattice>::SuperLattice2D(SuperGeometry2D<T>& superGeometry, in
     BlockLattice2D<T, Lattice> blockLattice(nX, nY);
     _extendedBlockLattices.back().swap(blockLattice);
   }
-  for (int iC = 0; iC < this->_loadBalancer.size(); iC++) {
+  for (int iC = 0; iC < this->_loadBalancer.size(); ++iC) {
     BlockLatticeView2D<T, Lattice> lattice(_extendedBlockLattices[iC], this->_overlap,
                                            _extendedBlockLattices[iC].getNx() - this->_overlap - 1, this->_overlap,
                                            _extendedBlockLattices[iC].getNy() - this->_overlap - 1);
@@ -134,21 +134,29 @@ SuperLattice2D<T, Lattice>::SuperLattice2D(SuperGeometry2D<T>& superGeometry, in
   _statistics = new LatticeStatistics<T> ;
   _statistics_on = true;
 
-  if (_commBC_on)
+  if (_commBC_on) {
     _commBC.init_nh();
+  }
 
   this->_communicationNeeded=true;
 }
 
 
+template<typename T, template<typename U> class Lattice>
+SuperLattice2D<T,Lattice>::~SuperLattice2D ()
+{
+  delete _statistics;
+}
+
 
 template<typename T, template<typename U> class Lattice>
-bool SuperLattice2D<T,Lattice>::set(T iX, T iY, Cell<T,Lattice> const& cell) {
+bool SuperLattice2D<T,Lattice>::set(T iX, T iY, Cell<T,Lattice> const& cell)
+{
 
   bool found = false;
   int locX, locY;
-  for (int iC=0; iC<this->_loadBalancer.size(); iC++) {
-    if(this->_cuboidGeometry.get(this->_loadBalancer.glob(iC)).checkPoint(iX, iY, locX, locY, this->_overlap)) {
+  for (int iC=0; iC<this->_loadBalancer.size(); ++iC) {
+    if (this->_cuboidGeometry.get(this->_loadBalancer.glob(iC)).checkPoint(iX, iY, locX, locY, this->_overlap)) {
       _extendedBlockLattices[iC].get(locX,locY) = cell;
       found = true;
     }
@@ -157,14 +165,14 @@ bool SuperLattice2D<T,Lattice>::set(T iX, T iY, Cell<T,Lattice> const& cell) {
 }
 
 template<typename T, template<typename U> class Lattice>
-bool SuperLattice2D<T,Lattice>::get(T iX, T iY, Cell<T,Lattice>& cell) const {
-
+bool SuperLattice2D<T,Lattice>::get(T iX, T iY, Cell<T,Lattice>& cell) const
+{
   int locX, locY;
   bool found = false;
   int foundIC = 0;
 
-  for (int iC=0; iC<this->_cuboidGeometry.getNc(); iC++) {
-    if(this->_cuboidGeometry.get(iC).checkPoint(iX, iY, locX, locY)) {
+  for (int iC=0; iC<this->_cuboidGeometry.getNc(); ++iC) {
+    if (this->_cuboidGeometry.get(iC).checkPoint(iX, iY, locX, locY)) {
       found = true;
       foundIC = iC;
       break;
@@ -193,7 +201,8 @@ bool SuperLattice2D<T,Lattice>::get(T iX, T iY, Cell<T,Lattice>& cell) const {
 }
 
 template<typename T, template<typename U> class Lattice>
-Cell<T,Lattice> SuperLattice2D<T,Lattice>::get(int iC, T locX, T locY) const {
+Cell<T,Lattice> SuperLattice2D<T,Lattice>::get(int iC, T locX, T locY) const
+{
   Cell<T,Lattice> cell;
 #ifdef PARALLEL_MODE_MPI
   const int sizeOfCell = Lattice<T>::q + Lattice<T>::ExternalField::numScalars;
@@ -213,12 +222,13 @@ Cell<T,Lattice> SuperLattice2D<T,Lattice>::get(int iC, T locX, T locY) const {
 }
 
 template<typename T, template<typename U> class Lattice>
-void SuperLattice2D<T,Lattice>::initialize() {
+void SuperLattice2D<T,Lattice>::initialize()
+{
 
   if (_commBC_on) {
     _commBC.init();
   }
-  for (int iC=0; iC<this->_loadBalancer.size(); iC++) {
+  for (int iC=0; iC<this->_loadBalancer.size(); ++iC) {
     //AENDERN VON INI in BLOCKLATTICEVIEW!!!!
     //_blockLattices[iC].initialize();
     _blockLattices[iC].postProcess();
@@ -226,23 +236,24 @@ void SuperLattice2D<T,Lattice>::initialize() {
 }
 
 template<typename T, template<typename U> class Lattice>
-void SuperLattice2D<T, Lattice>::defineDynamics(
-  SuperGeometry2D<T>& superGeometry, int material, Dynamics<T, Lattice>* dynamics) {
+void SuperLattice2D<T, Lattice>::defineDynamics(SuperGeometry2D<T>& superGeometry,
+    int material, Dynamics<T, Lattice>* dynamics)
+{
 
-  for (int iC = 0; iC < this->_loadBalancer.size(); iC++) {
+  for (int iC = 0; iC < this->_loadBalancer.size(); ++iC) {
     _extendedBlockLattices[iC].defineDynamics(superGeometry.getExtendedBlockGeometry(iC), material, dynamics);
   }
 }
 
 template<typename T, template<typename U> class Lattice>
-void SuperLattice2D<T,Lattice>::defineRhoU (
-  T x0, T x1, T y0, T y1, T rho, const T u[Lattice<T>::d] ) {
+void SuperLattice2D<T,Lattice>::defineRhoU(T x0, T x1, T y0, T y1, T rho, const T u[Lattice<T>::d] )
+{
 
   int locX0, locX1, locY0, locY1;
-  for (int iC=0; iC<this->_loadBalancer.size(); iC++) {
+  for (int iC=0; iC<this->_loadBalancer.size(); ++iC) {
     if (this->_cuboidGeometry.get(this->_loadBalancer.glob(iC)).checkInters(x0, x1, y0, y1, locX0, locX1, locY0, locY1, this->_overlap)) {
-      for (int iX=locX0; iX<=locX1; iX++) {
-        for (int iY=locY0; iY<=locY1; iY++) {
+      for (int iX=locX0; iX<=locX1; ++iX) {
+        for (int iY=locY0; iY<=locY1; ++iY) {
           _extendedBlockLattices[iC].get(iX,iY).defineRhoU(rho, u);
         }
       }
@@ -250,24 +261,25 @@ void SuperLattice2D<T,Lattice>::defineRhoU (
   }
 }
 
-template<typename T, template<typename U> class Lattice> void SuperLattice2D<T,Lattice>::defineRhoU(
-  SuperGeometry2D<T>& sGeometry, int material, AnalyticalF2D<T,T>& rho, AnalyticalF2D<T,T>& u)
+template<typename T, template<typename U> class Lattice>
+void SuperLattice2D<T,Lattice>::defineRhoU(SuperGeometry2D<T>& sGeometry, int material,
+    AnalyticalF2D<T,T>& rho, AnalyticalF2D<T,T>& u)
 {
-  for (int iC = 0; iC < this->_loadBalancer.size(); iC++) {
+  for (int iC = 0; iC < this->_loadBalancer.size(); ++iC) {
     _extendedBlockLattices[iC].defineRhoU(sGeometry.getExtendedBlockGeometry(iC), material, rho, u);
   }
 }
 
 template<typename T, template<typename U> class Lattice>
-void SuperLattice2D<T,Lattice>::defineRho (
-  T x0, T x1, T y0, T y1, T rho ) {
+void SuperLattice2D<T,Lattice>::defineRho ( T x0, T x1, T y0, T y1, T rho )
+{
 
   int locX0, locX1, locY0, locY1;
-  for (int iC=0; iC<this->_loadBalancer.size(); iC++) {
+  for (int iC=0; iC<this->_loadBalancer.size(); ++iC) {
     if (this->_cuboidGeometry.get(this->_loadBalancer.glob(iC)).checkInters( x0, x1, y0, y1,
         locX0, locX1, locY0, locY1, this->_overlap)) {
-      for (int iX=locX0; iX<=locX1; iX++) {
-        for (int iY=locY0; iY<=locY1; iY++) {
+      for (int iX=locX0; iX<=locX1; ++iX) {
+        for (int iY=locY0; iY<=locY1; ++iY) {
           _extendedBlockLattices[iC].get(iX,iY).defineRho(rho);
         }
       }
@@ -275,24 +287,25 @@ void SuperLattice2D<T,Lattice>::defineRho (
   }
 }
 
-template<typename T, template<typename U> class Lattice> void SuperLattice2D<T,
-         Lattice>::defineRho(SuperGeometry2D<T>& sGeometry, int material, AnalyticalF2D<T,T>& rho)
+template<typename T, template<typename U> class Lattice>
+void SuperLattice2D<T,Lattice>::defineRho(SuperGeometry2D<T>& sGeometry, int material,
+    AnalyticalF2D<T,T>& rho)
 {
-  for (int iC = 0; iC < this->_loadBalancer.size(); iC++) {
+  for (int iC = 0; iC < this->_loadBalancer.size(); ++iC) {
     _extendedBlockLattices[iC].defineRho(sGeometry.getExtendedBlockGeometry(iC), material, rho);
   }
 }
 
 template<typename T, template<typename U> class Lattice>
-void SuperLattice2D<T,Lattice>::defineU (
-  T x0, T x1, T y0, T y1, const T u[Lattice<T>::d] ) {
+void SuperLattice2D<T,Lattice>::defineU( T x0, T x1, T y0, T y1, const T u[Lattice<T>::d] )
+{
 
   int locX0, locX1, locY0, locY1;
-  for (int iC=0; iC<this->_loadBalancer.size(); iC++) {
+  for (int iC=0; iC<this->_loadBalancer.size(); ++iC) {
     if (this->_cuboidGeometry.get(this->_loadBalancer.glob(iC)).checkInters( x0, x1, y0, y1,
         locX0, locX1, locY0, locY1, this->_overlap)) {
-      for (int iX=locX0; iX<=locX1; iX++) {
-        for (int iY=locY0; iY<=locY1; iY++) {
+      for (int iX=locX0; iX<=locX1; ++iX) {
+        for (int iY=locY0; iY<=locY1; ++iY) {
           _extendedBlockLattices[iC].get(iX,iY).defineU(u);
         }
       }
@@ -300,30 +313,33 @@ void SuperLattice2D<T,Lattice>::defineU (
   }
 }
 
-template<typename T, template<typename U> class Lattice> void SuperLattice2D<T,Lattice>::defineU(
-  SuperGeometry2D<T>& sGeometry, int material, AnalyticalF2D<T,T>& u)
+template<typename T, template<typename U> class Lattice>
+void SuperLattice2D<T,Lattice>::defineU(SuperGeometry2D<T>& sGeometry, int material,
+                                        AnalyticalF2D<T,T>& u)
 {
-  for (int iC = 0; iC < this->_loadBalancer.size(); iC++) {
+  for (int iC = 0; iC < this->_loadBalancer.size(); ++iC) {
     _extendedBlockLattices[iC].defineU(sGeometry.getExtendedBlockGeometry(iC), material, u);
   }
 }
 
-template<typename T, template<typename U> class Lattice> void SuperLattice2D<T,Lattice>::definePopulations(
-  SuperGeometry2D<T>& sGeometry, int material, AnalyticalF2D<T,T>& Pop)
+template<typename T, template<typename U> class Lattice>
+void SuperLattice2D<T,Lattice>::definePopulations(SuperGeometry2D<T>& sGeometry,
+    int material, AnalyticalF2D<T,T>& Pop)
 {
-  for (int iC = 0; iC < this->_loadBalancer.size(); iC++) {
+  for (int iC = 0; iC < this->_loadBalancer.size(); ++iC) {
     _extendedBlockLattices[iC].definePopulations(sGeometry.getExtendedBlockGeometry(iC), material, Pop);
   }
 }
 
 template<typename T, template<typename U> class Lattice>
-void SuperLattice2D<T,Lattice>::defineExternalField (
-  T x0, T x1, T y0, T y1, int fieldBeginsAt, int sizeOfField, T* field ) {
+void SuperLattice2D<T,Lattice>::defineExternalField( T x0, T x1, T y0, T y1,
+    int fieldBeginsAt, int sizeOfField, T* field )
+{
   int locX0, locX1, locY0, locY1;
-  for (int iC=0; iC<this->_loadBalancer.size(); iC++) {
+  for (int iC=0; iC<this->_loadBalancer.size(); ++iC) {
     if (this->_cuboidGeometry.get(this->_loadBalancer.glob(iC)).checkInters(x0, x1, y0, y1, locX0, locX1, locY0, locY1, this->_overlap)) {
-      for (int iX=locX0; iX<=locX1; iX++) {
-        for (int iY=locY0; iY<=locY1; iY++) {
+      for (int iX=locX0; iX<=locX1; ++iX) {
+        for (int iY=locY0; iY<=locY1; ++iY) {
           _extendedBlockLattices[iC].get(iX,iY).defineExternalField (
             fieldBeginsAt, sizeOfField, field);
         }
@@ -333,35 +349,90 @@ void SuperLattice2D<T,Lattice>::defineExternalField (
 }
 
 template<typename T, template<typename U> class Lattice>
-void SuperLattice2D<T,Lattice>::defineExternalField(
-  SuperGeometry2D<T>& sGeometry, int material,
-  int fieldBeginsAt, int sizeOfField, AnalyticalF2D<T,T>& field)
+void SuperLattice2D<T,Lattice>::defineExternalField(SuperGeometry2D<T>& sGeometry,
+    int material, int fieldBeginsAt, int sizeOfField, AnalyticalF2D<T,T>& field)
 {
-  for (int iC = 0; iC < this->_loadBalancer.size(); iC++) {
+  for (int iC = 0; iC < this->_loadBalancer.size(); ++iC) {
     _extendedBlockLattices[iC].defineExternalField(sGeometry.getExtendedBlockGeometry(iC), material, fieldBeginsAt, sizeOfField, field);
   }
 }
 
 template<typename T, template<typename U> class Lattice>
-void SuperLattice2D<T,Lattice>::defineExternalField(
-  SuperGeometry2D<T>& sGeometry, int material,
-  int fieldBeginsAt, int sizeOfField, SuperLatticeF2D<T,Lattice>& field)
+void SuperLattice2D<T,Lattice>::defineExternalField(SuperGeometry2D<T>& sGeometry,
+    IndicatorF2D<T>& indicator, int fieldBeginsAt, int sizeOfField, AnalyticalF2D<T,T>& field)
+{
+  for (int iC = 0; iC < this->_loadBalancer.size(); ++iC) {
+    _extendedBlockLattices[iC].defineExternalField(sGeometry.getExtendedBlockGeometry(iC), indicator, fieldBeginsAt, sizeOfField, field);
+  }
+}
+
+template<typename T, template<typename U> class Lattice>
+void SuperLattice2D<T,Lattice>::resetExternalParticleField( SuperGeometry2D<T>& sGeometry,
+    IndicatorF2D<T>& indicator)
+{
+  for (int iC = 0; iC < this->_loadBalancer.size(); ++iC) {
+    _extendedBlockLattices[iC].resetExternalParticleField(sGeometry.getExtendedBlockGeometry(iC), indicator);
+  }
+}
+
+template<typename T, template<typename U> class Lattice>
+void SuperLattice2D<T,Lattice>::setExternalParticleField(SuperGeometry2D<T>& sGeometry,
+    AnalyticalF2D<T,T>& velocity, SmoothIndicatorF2D<T,T>& sIndicator)
+{
+  for (int iC = 0; iC < this->_loadBalancer.size(); ++iC) {
+    _extendedBlockLattices[iC].setExternalParticleField(sGeometry.getExtendedBlockGeometry(iC), velocity, sIndicator);
+  }
+}
+
+template<typename T, template<typename U> class Lattice>
+void SuperLattice2D<T,Lattice>::addExternalField(SuperGeometry2D<T>& sGeometry,
+    IndicatorF2D<T>& indicator, int fieldBeginsAt, int sizeOfField, AnalyticalF2D<T,T>& field)
+{
+  for (int iC = 0; iC < this->_loadBalancer.size(); ++iC) {
+    _extendedBlockLattices[iC].addExternalField(sGeometry.getExtendedBlockGeometry(iC), indicator, fieldBeginsAt, sizeOfField, field);
+  }
+}
+
+template<typename T, template<typename U> class Lattice>
+void SuperLattice2D<T,Lattice>::addExternalField( SuperGeometry2D<T>& sGeometry,
+    IndicatorF2D<T>& indicator, int fieldBeginsAt, int sizeOfField,
+    AnalyticalF2D<T,T>& field, AnalyticalF2D<T,T>& porous)
+{
+  for (int iC = 0; iC < this->_loadBalancer.size(); ++iC) {
+    _extendedBlockLattices[iC].addExternalField(sGeometry.getExtendedBlockGeometry(iC), indicator, fieldBeginsAt, sizeOfField, field, porous);
+  }
+}
+
+template<typename T, template<typename U> class Lattice>
+void SuperLattice2D<T,Lattice>::multiplyExternalField(SuperGeometry2D<T>& sGeometry,
+    IndicatorF2D<T>& indicator, int fieldBeginsAt, int sizeOfField, AnalyticalF2D<T,T>& field)
+{
+  for (int iC = 0; iC < this->_loadBalancer.size(); ++iC) {
+    _extendedBlockLattices[iC].multiplyExternalField(sGeometry.getExtendedBlockGeometry(iC), indicator, fieldBeginsAt, sizeOfField, field);
+  }
+}
+
+template<typename T, template<typename U> class Lattice>
+void SuperLattice2D<T,Lattice>::defineExternalField(SuperGeometry2D<T>& sGeometry,
+    int material, int fieldBeginsAt, int sizeOfField, SuperLatticeF2D<T,Lattice>& field)
 {
   if (sGeometry.getStatistics().getNvoxel(material)!=0) {
     int overlap = sGeometry.getOverlap();
-    for (int iC=0; iC<this->_loadBalancer.size(); iC++) {
+    for (int iC=0; iC<this->_loadBalancer.size(); ++iC) {
       const int x0 = sGeometry.getExtendedBlockGeometry(iC).getStatistics().getMinLatticeR(material)[0];
       const int y0 = sGeometry.getExtendedBlockGeometry(iC).getStatistics().getMinLatticeR(material)[1];
       const int x1 = sGeometry.getExtendedBlockGeometry(iC).getStatistics().getMaxLatticeR(material)[0];
       const int y1 = sGeometry.getExtendedBlockGeometry(iC).getStatistics().getMaxLatticeR(material)[1];
 
-      for (int iX=x0; iX<=x1; iX++) {
-        for (int iY=y0; iY<=y1; iY++) {
+      for (int iX=x0; iX<=x1; ++iX) {
+        for (int iY=y0; iY<=y1; ++iY) {
           if (sGeometry.getExtendedBlockGeometry(iC).getMaterial(iX,iY) == material) {
             T fieldTmp[sizeOfField];
-            for (int i=0; i<sizeOfField; i++) {
-              fieldTmp[i] = field(this->_loadBalancer.glob(iC),iX-overlap,iY-overlap)[i];
-            }
+            int inputTmp[3]= {this->_loadBalancer.glob(iC),iX-overlap,iY-overlap};
+            field(fieldTmp,inputTmp);
+            //            for (int i=0; i<sizeOfField; i++) {
+            //              fieldTmp[i] = field(this->_loadBalancer.glob(iC),iX-overlap,iY-overlap)[i];
+            //            }
             _extendedBlockLattices[iC].get(iX,iY).defineExternalField(fieldBeginsAt,sizeOfField, fieldTmp);
           }
         }
@@ -371,14 +442,14 @@ void SuperLattice2D<T,Lattice>::defineExternalField(
 }
 
 template<typename T, template<typename U> class Lattice>
-void SuperLattice2D<T,Lattice>::iniEquilibrium (
-  T x0, T x1, T y0, T y1, T rho, const T u[Lattice<T>::d] ) {
-
+void SuperLattice2D<T,Lattice>::iniEquilibrium ( T x0, T x1, T y0, T y1, T rho,
+    const T u[Lattice<T>::d] )
+{
   int locX0, locX1, locY0, locY1;
-  for (int iC=0; iC<this->_loadBalancer.size(); iC++) {
+  for (int iC=0; iC<this->_loadBalancer.size(); ++iC) {
     if (this->_cuboidGeometry.get(this->_loadBalancer.glob(iC)).checkInters(x0, x1, y0, y1, locX0, locX1, locY0, locY1, this->_overlap)) {
-      for (int iX=locX0; iX<=locX1; iX++) {
-        for (int iY=locY0; iY<=locY1; iY++) {
+      for (int iX=locX0; iX<=locX1; ++iX) {
+        for (int iY=locY0; iY<=locY1; ++iY) {
           _extendedBlockLattices[iC].get(iX,iY).iniEquilibrium(rho, u);
         }
       }
@@ -386,68 +457,77 @@ void SuperLattice2D<T,Lattice>::iniEquilibrium (
   }
 }
 
-template<typename T, template<typename U> class Lattice> void SuperLattice2D<T,Lattice>::iniEquilibrium(
-  SuperGeometry2D<T>& sGeometry, int material, AnalyticalF2D<T,T>& rho, AnalyticalF2D<T,T>& u)
+template<typename T, template<typename U> class Lattice>
+void SuperLattice2D<T,Lattice>::iniEquilibrium(SuperGeometry2D<T>& sGeometry,
+    int material, AnalyticalF2D<T,T>& rho, AnalyticalF2D<T,T>& u)
 {
-  for (int iC = 0; iC < this->_loadBalancer.size(); iC++) {
+  for (int iC = 0; iC < this->_loadBalancer.size(); ++iC) {
     _extendedBlockLattices[iC].iniEquilibrium(sGeometry.getExtendedBlockGeometry(iC), material, rho, u);
   }
 }
 
 template<typename T, template<typename U> class Lattice>
-void SuperLattice2D<T,Lattice>::collide () {
-
-  for (int iC=0; iC<this->_loadBalancer.size(); iC++) {
+void SuperLattice2D<T,Lattice>::collide ()
+{
+  for (int iC=0; iC<this->_loadBalancer.size(); ++iC) {
     _blockLattices[iC].collide();
   }
+
+  this->_communicationNeeded=true;
 }
 
 template<typename T, template<typename U> class Lattice>
-void SuperLattice2D<T,Lattice>::collide (T x0, T x1, T y0, T y1) {
-
+void SuperLattice2D<T,Lattice>::collide (T x0, T x1, T y0, T y1)
+{
   int locX0, locX1, locY0, locY1;
-  for (int iC=0; iC<this->_loadBalancer.size(); iC++) {
+  for (int iC=0; iC<this->_loadBalancer.size(); ++iC) {
     if (this->_cuboidGeometry.get(this->_loadBalancer.glob(iC)).checkInters(x0, x1, y0, y1, locX0, locX1, locY0, locY1, this->_overlap)) {
       _blockLattices[iC].collide(locX0, locX1, locY0, locY1);
     }
   }
+
+  this->_communicationNeeded=true;
 }
 
 template<typename T, template<typename U> class Lattice>
-void SuperLattice2D<T,Lattice>::stream () {
-
+void SuperLattice2D<T,Lattice>::stream ()
+{
   _commStream.send();
   _commStream.receive();
   _commStream.write();
 
-  for (int iC=0; iC<this->_loadBalancer.size(); iC++) {
+  for (int iC=0; iC<this->_loadBalancer.size(); ++iC) {
     _extendedBlockLattices[iC].stream(this->_overlap-1, _extendedBlockLattices[iC].getNx() - this->_overlap,
-                              this->_overlap-1, _extendedBlockLattices[iC].getNy() - this->_overlap);
+                                      this->_overlap-1, _extendedBlockLattices[iC].getNy() - this->_overlap);
   }
   if (_commBC_on) {
     //_commBC.send();
     //_commBC.receive();
     //_commBC.write();
-  _commStream.send();
-  _commStream.receive();
-  _commStream.write();
+    _commStream.send();
+    _commStream.receive();
+    _commStream.write();
   }
 
-  for (int iC=0; iC<this->_loadBalancer.size(); iC++) {
+  for (int iC=0; iC<this->_loadBalancer.size(); ++iC) {
     _blockLattices[iC].postProcess();
   }
-  if (_statistics_on) reset_statistics();
+  if (_statistics_on) {
+    reset_statistics();
+  }
+
+  this->_communicationNeeded=true;
 }
 
 template<typename T, template<typename U> class Lattice>
-void SuperLattice2D<T,Lattice>::stream (T x0, T x1, T y0, T y1) {
-
+void SuperLattice2D<T,Lattice>::stream (T x0, T x1, T y0, T y1)
+{
   _commStream.send();
   _commStream.receive();
   _commStream.write();
 
   int locX0, locX1, locY0, locY1;
-  for (int iC=0; iC<this->_loadBalancer.size(); iC++) {
+  for (int iC=0; iC<this->_loadBalancer.size(); ++iC) {
     if (this->_cuboidGeometry.get(this->_loadBalancer.glob(iC)).checkInters(x0, x1, y0, y1, locX0, locX1, locY0, locY1, this->_overlap)) {
       _extendedBlockLattices[iC].stream(locX0, locX1, locY0, locY1);
     }
@@ -456,21 +536,25 @@ void SuperLattice2D<T,Lattice>::stream (T x0, T x1, T y0, T y1) {
     //_commBC.send();
     //_commBC.receive();
     //_commBC.write();
-  _commStream.send();
-  _commStream.receive();
-  _commStream.write();
+    _commStream.send();
+    _commStream.receive();
+    _commStream.write();
   }
 
-  for (int iC=0; iC<this->_loadBalancer.size(); iC++) {
+  for (int iC=0; iC<this->_loadBalancer.size(); ++iC) {
     _blockLattices[iC].postProcess();
   }
-  if (_statistics_on) reset_statistics();
+  if (_statistics_on) {
+    reset_statistics();
+  }
+
+  this->_communicationNeeded=true;
 }
 
 template<typename T, template<typename U> class Lattice>
-void SuperLattice2D<T,Lattice>::collideAndStream () {
-
-  for (int iC=0; iC<this->_loadBalancer.size(); iC++) {
+void SuperLattice2D<T,Lattice>::collideAndStream ()
+{
+  for (int iC=0; iC<this->_loadBalancer.size(); ++iC) {
     int x1 = _blockLattices[iC].getNx() - 1;
     int y1 = _blockLattices[iC].getNy() - 1;
     _blockLattices[iC].collide(0,x1,0,0);
@@ -481,26 +565,26 @@ void SuperLattice2D<T,Lattice>::collideAndStream () {
     }
   }
 
-  for (int iC=0; iC<this->_loadBalancer.size(); iC++) {
-	  if(2*this->_overlap + 2 < _extendedBlockLattices[iC].getNx() &&
-			  2*this->_overlap + 2 < _extendedBlockLattices[iC].getNy() )
-    _extendedBlockLattices[iC].bulkCollideAndStream(this->_overlap+1, _extendedBlockLattices[iC].getNx() - this->_overlap-2,
-                                            this->_overlap+1, _extendedBlockLattices[iC].getNy() - this->_overlap-2);
+  for (int iC=0; iC<this->_loadBalancer.size(); ++iC) {
+    if (2*this->_overlap + 2 < _extendedBlockLattices[iC].getNx() &&
+        2*this->_overlap + 2 < _extendedBlockLattices[iC].getNy() )
+      _extendedBlockLattices[iC].bulkCollideAndStream(this->_overlap+1, _extendedBlockLattices[iC].getNx() - this->_overlap-2,
+          this->_overlap+1, _extendedBlockLattices[iC].getNy() - this->_overlap-2);
   }
 
   _commStream.send();
   _commStream.receive();
   _commStream.write();
 
-  for (int iC=0; iC<this->_loadBalancer.size(); iC++) {
+  for (int iC=0; iC<this->_loadBalancer.size(); ++iC) {
     int x1 = _extendedBlockLattices[iC].getNx() - 1;
     int y1 = _extendedBlockLattices[iC].getNy() - 1;
-    if(2*this->_overlap-3<x1) {
+    if (2*this->_overlap-3<x1) {
       _extendedBlockLattices[iC].boundaryStream(0,x1,0,y1, this->_overlap-1,x1-this->_overlap+1,  this->_overlap-1,this->_overlap);
       _extendedBlockLattices[iC].boundaryStream(0,x1,0,y1, this->_overlap-1,x1-this->_overlap+1,  y1-this->_overlap,y1-this->_overlap+1);
     }
 
-    if(2*this->_overlap+1<y1) {
+    if (2*this->_overlap+1<y1) {
       _extendedBlockLattices[iC].boundaryStream(0,x1,0,y1, this->_overlap-1, this->_overlap,      this->_overlap+1, y1-this->_overlap-1);
       _extendedBlockLattices[iC].boundaryStream(0,x1,0,y1, x1-this->_overlap,x1-this->_overlap+1, this->_overlap+1, y1-this->_overlap-1);
     }
@@ -516,31 +600,36 @@ void SuperLattice2D<T,Lattice>::collideAndStream () {
     //_commBC.write();
   }
 
-  for (int iC=0; iC<this->_loadBalancer.size(); iC++) {
+  for (int iC=0; iC<this->_loadBalancer.size(); ++iC) {
     _blockLattices[iC].postProcess();
   }
-  if (_statistics_on) reset_statistics();
+  if (_statistics_on) {
+    reset_statistics();
+  }
+
+  this->_communicationNeeded=true;
 }
 
 template<typename T, template<typename U> class Lattice>
-void SuperLattice2D<T,Lattice>::stripeOffDensityOffset (
-  int x0, int x1, int y0, int y1, T offset )
+void SuperLattice2D<T,Lattice>::stripeOffDensityOffset ( int x0, int x1, int y0,
+    int y1, T offset )
 {
-
   int locX0, locX1, locY0, locY1;
-  for (int iC = 0; iC < this->_loadBalancer.size(); iC++) {
+  for (int iC = 0; iC < this->_loadBalancer.size(); ++iC) {
     if (this->_cuboidGeometry.get(this->_loadBalancer.glob(iC)).checkInters(x0, x1, y0, y1,
         locX0, locX1, locY0, locY1, this->_overlap)) {
       _extendedBlockLattices[iC].stripeOffDensityOffset(locX0, locX1, locY0, locY1,
           offset);
     }
   }
+
+  this->_communicationNeeded=true;
 }
 
 template<typename T, template<typename U> class Lattice>
-void SuperLattice2D<T,Lattice>::stripeOffDensityOffset(T offset) {
-
-  for (int iC = 0; iC < this->_loadBalancer.size(); iC++) {
+void SuperLattice2D<T,Lattice>::stripeOffDensityOffset(T offset)
+{
+  for (int iC = 0; iC < this->_loadBalancer.size(); ++iC) {
     _extendedBlockLattices[iC].stripeOffDensityOffset(offset);
   }
 }
@@ -552,17 +641,17 @@ void SuperLattice2D<T, Lattice>::addLatticeCoupling(
   LatticeCouplingGenerator2D<T, Lattice> const& lcGen,
   SuperLattice2D<T,Slattice>& partnerLattice)
 {
-  for (int iC = 0; iC < this->_loadBalancer.size(); iC++) {
+  for (int iC = 0; iC < this->_loadBalancer.size(); ++iC) {
     std::vector< SpatiallyExtendedObject2D* > partnerOne;
     partnerOne.push_back(&partnerLattice.getExtendedBlockLattice(iC));
 
     int nx = _extendedBlockLattices[iC].getNx();
     int ny = _extendedBlockLattices[iC].getNy();
 
-    for (int iX = 1; iX < nx-1; iX++) {
-      for (int iY = 1; iY < ny-1; iY++) {
+    for (int iX = 1; iX < nx-1; ++iX) {
+      for (int iY = 1; iY < ny-1; ++iY) {
         LatticeCouplingGenerator2D<T, Lattice> *extractedLcGen = lcGen.clone();
-        //TODO done quick and dirty 
+        //TODO done quick and dirty
         if (extractedLcGen->extract(0, 0, 0, 0) ) {
           if (sGeometry.get(this->_loadBalancer.glob(iC), iX-this->_overlap, iY-this->_overlap) == material) {
             extractedLcGen->shift(iX, iY);
@@ -573,101 +662,56 @@ void SuperLattice2D<T, Lattice>::addLatticeCoupling(
       }
     }
   }
+
+  this->_communicationNeeded=true;
   return;
 }
 
 
 template<typename T, template<typename U> class Lattice>
-void SuperLattice2D<T, Lattice>::executeCoupling() {
-  for (int iC = 0; iC < this->_loadBalancer.size(); iC++) {
+void SuperLattice2D<T, Lattice>::executeCoupling()
+{
+  for (int iC = 0; iC < this->_loadBalancer.size(); ++iC) {
     _extendedBlockLattices[iC].executeCoupling();
   }
   this->_communicationNeeded = true;
   return;
 }
 
-template<typename T, template<typename U> class Lattice>
-void SuperLattice2D<T,Lattice>::save(std::string fName, bool enforceUint) {
-  for (int block = 0; block < this->_cuboidGeometry.getNc(); ++block) {
-    std::ofstream* ostr = 0;
-    if (singleton::mpi().getRank() == this->_loadBalancer.rank(block)) {
-      std::stringstream ss;
-      ss << fName << block;
-      ostr = new std::ofstream(ss.str().c_str());
-      OLB_PRECONDITION( *ostr );
-    }
-    DataSerializer<T> const& serializer = _extendedBlockLattices[this->_loadBalancer.loc(block)].getSerializer(IndexOrdering::memorySaving);
 
-    size_t fullSize = 0;
-    if (singleton::mpi().getRank() == this->_loadBalancer.rank(block)) {
-      fullSize = serializer.getSize();
-      size_t binarySize = (size_t) (fullSize * sizeof(T));
-      if (enforceUint) {
-        Base64Encoder<unsigned int> sizeEncoder(*ostr, 1);
-        OLB_PRECONDITION(binarySize <= std::numeric_limits<unsigned int>::max());
-        unsigned int uintBinarySize = (unsigned int)binarySize;
-        sizeEncoder.encode(&uintBinarySize, 1);
-      }
-      else {
-        Base64Encoder<size_t> sizeEncoder(*ostr, 1);
-        sizeEncoder.encode(&binarySize, 1);
-      }
-    }
-    Base64Encoder<T>* dataEncoder = 0;
-    if (singleton::mpi().getRank() == this->_loadBalancer.rank(block)) {
-      dataEncoder = new Base64Encoder<T>(*ostr, fullSize);
-    }
-    while (!serializer.isEmpty()) {
-      size_t bufferSize;
-      const T* dataBuffer = serializer.getNextDataBuffer(bufferSize);
-      if (singleton::mpi().getRank() == this->_loadBalancer.rank(block)) {
-        dataEncoder->encode(dataBuffer, bufferSize);
-      }
-    }
-    delete dataEncoder;
-    delete ostr;
-  }
+template<typename T, template<typename U> class Lattice>
+std::size_t SuperLattice2D<T,Lattice>::getNblock() const
+{
+  return std::accumulate(_extendedBlockLattices.begin(), _extendedBlockLattices.end(), size_t(0),
+                         Serializable::sumNblock());
+}
+
+
+template<typename T, template<typename U> class Lattice>
+std::size_t SuperLattice2D<T,Lattice>::getSerializableSize() const
+{
+  return std::accumulate(_extendedBlockLattices.begin(), _extendedBlockLattices.end(), size_t(0),
+                         Serializable::sumSerializableSize());
 }
 
 template<typename T, template<typename U> class Lattice>
-void SuperLattice2D<T,Lattice>::load(std::string fName, bool enforceUint) {
-  for (int block = 0; block < this->_cuboidGeometry.getNc(); ++block) {
-    if (singleton::mpi().getRank() == this->_loadBalancer.rank(block)) {
-      std::ifstream* istr = 0;
-      std::stringstream ss;
-      ss << fName << block;
-      istr = new std::ifstream(ss.str().c_str());
-      OLB_PRECONDITION( *istr );
-      DataUnSerializer<T>& unSerializer = _extendedBlockLattices[this->_loadBalancer.loc(block)].getUnSerializer(IndexOrdering::memorySaving);
-      size_t binarySize;
-      if (enforceUint) {
-        unsigned int uintBinarySize;
-        Base64Decoder<unsigned int> sizeDecoder(*istr, 1);
-        sizeDecoder.decode(&uintBinarySize, 1);
-        binarySize = uintBinarySize;
-      }
-      else {
-        Base64Decoder<size_t> sizeDecoder(*istr, 1);
-        sizeDecoder.decode(&binarySize, 1);
-      }
-      OLB_PRECONDITION(binarySize/sizeof(T) == unSerializer.getSize());
-      Base64Decoder<T>* dataDecoder = 0;
-      dataDecoder = new Base64Decoder<T>(*istr, unSerializer.getSize());
-      while (!unSerializer.isFull()) {
-        size_t bufferSize = 0;
-        T* dataBuffer = unSerializer.getNextDataBuffer(bufferSize);
-        dataDecoder->decode(dataBuffer, bufferSize);
-        unSerializer.commitData();
-      }
-      delete dataDecoder;
-      delete istr;
-    }
+bool* SuperLattice2D<T,Lattice>::getBlock(std::size_t iBlock, std::size_t& sizeBlock, bool loadingMode)
+{
+  std::size_t currentBlock = 0;
+  bool* dataPtr = nullptr;
+
+  // NOTE: _extendedBlockLattices is correctly sized after constructing SuperLattice, so no resize should be done!
+  for ( auto& bLattice : _extendedBlockLattices ) {
+    registerSerializableOfConstSize(iBlock, sizeBlock, currentBlock, dataPtr, bLattice, loadingMode);
   }
+
+  return dataPtr;
 }
 
-template<typename T, template<typename U> class Lattice>
-void SuperLattice2D<T,Lattice>::reset_statistics () {
 
+template<typename T, template<typename U> class Lattice>
+void SuperLattice2D<T,Lattice>::reset_statistics ()
+{
   T weight;
   T sum_weight = 0;
   T average_rho = 0;
@@ -677,7 +721,7 @@ void SuperLattice2D<T,Lattice>::reset_statistics () {
 
   getStatistics().reset();
 
-  for (int iC = 0; iC < this->_loadBalancer.size(); iC++) {
+  for (int iC = 0; iC < this->_loadBalancer.size(); ++iC) {
     delta = this->_cuboidGeometry.get(this->_loadBalancer.glob(iC)).getDeltaR();
     weight = _extendedBlockLattices[iC].getStatistics().getNumCells() * delta
              * delta * delta;
@@ -702,7 +746,7 @@ void SuperLattice2D<T,Lattice>::reset_statistics () {
 
   getStatistics().reset(average_rho, average_energy, maxU, (int) sum_weight);
   getStatistics().incrementTime();
-  for (int iC = 0; iC < this->_loadBalancer.size(); iC++) {
+  for (int iC = 0; iC < this->_loadBalancer.size(); ++iC) {
     delta = this->_cuboidGeometry.get(this->_loadBalancer.glob(iC)).getDeltaR();
     _extendedBlockLattices[iC].getStatistics().reset(average_rho, average_energy,
         maxU, (int) sum_weight);
@@ -711,24 +755,25 @@ void SuperLattice2D<T,Lattice>::reset_statistics () {
 }
 
 template<typename T, template<typename U> class Lattice>
-LatticeStatistics<T>& SuperLattice2D<T,Lattice>::getStatistics() {
-
+LatticeStatistics<T>& SuperLattice2D<T,Lattice>::getStatistics()
+{
   return *_statistics;
 }
 
 template<typename T, template<typename U> class Lattice>
 LatticeStatistics<T> const&
-SuperLattice2D<T,Lattice>::getStatistics() const {
-
+SuperLattice2D<T,Lattice>::getStatistics() const
+{
   return *_statistics;
 }
-
+/*
 template<typename T, template<typename U> class Lattice>
-void SuperLattice2D<T,Lattice>::communicate(bool verbose) {
+void SuperLattice2D<T,Lattice>::communicate(bool verbose)
+{
   _commStream.send();
   _commStream.receive();
   _commStream.write();
-}
+}*/
 
 } // namespace olb
 

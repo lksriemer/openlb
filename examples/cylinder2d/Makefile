@@ -71,7 +71,7 @@ clean : cleanrub cleanobj cleandep
 cleanrub: 
 	@echo Clean rubbish files
 	@rm -f *~ core .tmpfile tmp/*.* $(OUTPUT)
-	@rm -f *~ core .tmpfile tmp/data/*.* $(OUTPUT)
+	@rm -f tmp/vtkData/*.* tmp/vtkData/data/*.* tmp/imageData/*.* 
 
 cleanobj:
 	@echo Clean object files

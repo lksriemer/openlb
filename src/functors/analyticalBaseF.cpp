@@ -31,6 +31,9 @@ namespace olb {
 template class AnalyticalF1D<double,int>;
 template class AnalyticalF1D<double,double>;
 
+template class AnalyticalIdentity1D<double,int>;
+template class AnalyticalIdentity1D<double,double>;
+
 
 template class AnalyticalF2D<double,int>;
 template class AnalyticalF2D<double,double>;

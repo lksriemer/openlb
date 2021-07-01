@@ -29,8 +29,10 @@
 #ifndef CUBOID_NEIGHBOURHOOD_2D_HH
 #define CUBOID_NEIGHBOURHOOD_2D_HH
 
-#include "communication/mpiManager.h"
 #include <vector>
+#include <cstring>
+
+#include "communication/mpiManager.h"
 #include "communication/cuboidNeighbourhood2D.h"
 #include "geometry/cuboidGeometry2D.h"
 #include "dynamics/dynamics.h"
@@ -45,7 +47,8 @@ namespace olb {
 
 template<typename T>
 CuboidNeighbourhood2D<T>::CuboidNeighbourhood2D(
-  SuperStructure2D<T>& superStructure, int iC):_superStructure(superStructure) {
+  SuperStructure2D<T>& superStructure, int iC):_superStructure(superStructure)
+{
   _iCglob            = iC;
   _nC            = _superStructure.getCuboidGeometry().getNc();
   _deltaC        = _superStructure.getCuboidGeometry().get(iC).getDeltaR();
@@ -57,7 +60,8 @@ CuboidNeighbourhood2D<T>::CuboidNeighbourhood2D(
 
 template<typename T>
 CuboidNeighbourhood2D<T>::CuboidNeighbourhood2D (
-  CuboidNeighbourhood2D<T> const& rhs ):_superStructure(rhs._superStructure) {
+  CuboidNeighbourhood2D<T> const& rhs ):_superStructure(rhs._superStructure)
+{
   _iCglob            = rhs._iCglob;
   _nC            = rhs._nC;
   _deltaC        = rhs._deltaC;
@@ -75,60 +79,71 @@ CuboidNeighbourhood2D<T>::CuboidNeighbourhood2D (
 
 template<typename T>
 CuboidNeighbourhood2D<T> CuboidNeighbourhood2D<T>::operator= (
-  CuboidNeighbourhood2D<T> rhs )  {
+  CuboidNeighbourhood2D<T> rhs )
+{
   CuboidNeighbourhood2D<T> tmp(rhs);
   return tmp;
 }
 
 template<typename T>
-CuboidNeighbourhood2D<T>::~CuboidNeighbourhood2D<T>() {
+CuboidNeighbourhood2D<T>::~CuboidNeighbourhood2D<T>()
+{
   reset();
 }
 
 
 template<typename T>
-Cell2D<T> const& CuboidNeighbourhood2D<T>::get_inCell(int i) const {
+Cell2D<T> const& CuboidNeighbourhood2D<T>::get_inCell(int i) const
+{
   return _inCells[i];
 }
 
 template<typename T>
-int CuboidNeighbourhood2D<T>::get_inCellsSize() const {
+int CuboidNeighbourhood2D<T>::get_inCellsSize() const
+{
   return _inCells.size();
 }
 
 template<typename T>
-int const& CuboidNeighbourhood2D<T>::get_inC(int i) const {
+int const& CuboidNeighbourhood2D<T>::get_inC(int i) const
+{
   return _inC[i];
 }
 
 template<typename T>
-int CuboidNeighbourhood2D<T>::get_inCsize() const {
+int CuboidNeighbourhood2D<T>::get_inCsize() const
+{
   return _inC.size();
 }
 
 template<typename T>
-bool** CuboidNeighbourhood2D<T>::get_inData() {
+bool** CuboidNeighbourhood2D<T>::get_inData()
+{
   return _inData;
 }
 
 template<typename T>
-bool** CuboidNeighbourhood2D<T>::get_outData() {
+bool** CuboidNeighbourhood2D<T>::get_outData()
+{
   return _outData;
 }
 
 
 template<typename T>
-void CuboidNeighbourhood2D<T>::add_inCell(Cell2D<T> cell) {
+void CuboidNeighbourhood2D<T>::add_inCell(Cell2D<T> cell)
+{
   _inCells.push_back(cell);
 }
 
 template<typename T>
-void CuboidNeighbourhood2D<T>::add_outCell(Cell2D<T> cell) {
+void CuboidNeighbourhood2D<T>::add_outCell(Cell2D<T> cell)
+{
   _outCells.push_back(cell);
 }
 
 template<typename T>
-void CuboidNeighbourhood2D<T>::add_inCell(int iX, int iY) {
+void CuboidNeighbourhood2D<T>::add_inCell(int iX, int iY)
+{
 
   Cell2D<T> found;
   found.latticeR[0] = _iCglob;
@@ -137,14 +152,17 @@ void CuboidNeighbourhood2D<T>::add_inCell(int iX, int iY) {
   found.physR = _superStructure.getCuboidGeometry().getPhysR(found.latticeR);
   if (_superStructure.getCuboidGeometry().getC(found.physR, found.latticeR[0]) ) {
     for (unsigned i=0; i<_inCells.size(); i++) {
-      if(_inCells[i]==found) return;
+      if (_inCells[i]==found) {
+        return;
+      }
     }
-    _inCells.push_back(found);  
-  } 
+    _inCells.push_back(found);
+  }
 }
 
 template<typename T>
-void CuboidNeighbourhood2D<T>::add_inCells(int overlap) {
+void CuboidNeighbourhood2D<T>::add_inCells(int overlap)
+{
 
   int nX  = _superStructure.getCuboidGeometry().get(_iCglob).getNx();
   int nY  = _superStructure.getCuboidGeometry().get(_iCglob).getNy();
@@ -157,11 +175,11 @@ void CuboidNeighbourhood2D<T>::add_inCells(int overlap) {
         found.latticeR[0] = _iCglob;
         found.latticeR[1] = iX - overlap;
         found.latticeR[2] = iY - overlap;
-   
+
         found.physR = _superStructure.getCuboidGeometry().getPhysR(found.latticeR);
 
         if (_superStructure.getCuboidGeometry().getC(found.physR, found.latticeR[0]) ) {
-          _inCells.push_back(found);  
+          _inCells.push_back(found);
         }
       }
     }
@@ -169,7 +187,8 @@ void CuboidNeighbourhood2D<T>::add_inCells(int overlap) {
 }
 
 template<typename T>
-void CuboidNeighbourhood2D<T>::init_inCN() {
+void CuboidNeighbourhood2D<T>::init_inCN()
+{
 
   _inC.clear();
   _inN.clear();
@@ -205,8 +224,9 @@ void CuboidNeighbourhood2D<T>::init_inCN() {
   int counter=0;
   for (int i=0; i<_nC; i++) {
     int dRank = _superStructure.getLoadBalancer().rank(i);
-    if ( singleton::mpi().getRank() != dRank )
+    if ( singleton::mpi().getRank() != dRank ) {
       counter++;
+    }
   }
   _mpiNbHelper.allocate(counter);
   counter=0;
@@ -223,7 +243,8 @@ void CuboidNeighbourhood2D<T>::init_inCN() {
 }
 
 template<typename T>
-void CuboidNeighbourhood2D<T>::init_outCN() {
+void CuboidNeighbourhood2D<T>::init_outCN()
+{
 
   _outC.clear();
   _outN.clear();
@@ -255,7 +276,8 @@ void CuboidNeighbourhood2D<T>::init_outCN() {
 }
 
 template<typename T>
-void CuboidNeighbourhood2D<T>::bufSend_inCells() {
+void CuboidNeighbourhood2D<T>::bufSend_inCells()
+{
 
 #ifdef PARALLEL_MODE_MPI
   _mpiNbHelper.free();
@@ -291,7 +313,8 @@ void CuboidNeighbourhood2D<T>::bufSend_inCells() {
 }
 
 template<typename T>
-void CuboidNeighbourhood2D<T>::recWrite_outCells() {
+void CuboidNeighbourhood2D<T>::recWrite_outCells()
+{
 
 #ifdef PARALLEL_MODE_MPI
   for (unsigned iC=0; iC<_outC.size(); iC++) {
@@ -313,7 +336,8 @@ void CuboidNeighbourhood2D<T>::recWrite_outCells() {
 }
 
 template<typename T>
-void CuboidNeighbourhood2D<T>::finish_comm() {
+void CuboidNeighbourhood2D<T>::finish_comm()
+{
 
 #ifdef PARALLEL_MODE_MPI
   singleton::mpi().waitAll(_mpiNbHelper);
@@ -322,7 +346,8 @@ void CuboidNeighbourhood2D<T>::finish_comm() {
 }
 
 template<typename T>
-void CuboidNeighbourhood2D<T>::buffer_outData() {
+void CuboidNeighbourhood2D<T>::buffer_outData()
+{
 
   std::vector<int> temp(_nC,0);
   int iCloc = _superStructure.getLoadBalancer().loc(_iCglob);
@@ -334,13 +359,14 @@ void CuboidNeighbourhood2D<T>::buffer_outData() {
     //for (int iData=0; iData<_nData; iData++) {
     //  memcpy(_outData[iC] + (temp[iC]*_nData + iData)*_nDataType, _superStructure(iCloc,iX+overlap,iY+overlap,iZ+overlap,iData), _nDataType);
     //}
-    memcpy(_outData[iC] + temp[iC]*_nData*_nDataType, _superStructure(iCloc,_outCells[i].latticeR[1],_outCells[i].latticeR[2],0), _nDataType*_nData);
+    std::memcpy(_outData[iC] + temp[iC]*_nData*_nDataType, _superStructure(iCloc,_outCells[i].latticeR[1],_outCells[i].latticeR[2],0), _nDataType*_nData);
     temp[iC]++;
   }
 }
 
 template<typename T>
-void CuboidNeighbourhood2D<T>::send_outData() {
+void CuboidNeighbourhood2D<T>::send_outData()
+{
 #ifdef PARALLEL_MODE_MPI
   for (unsigned iC=0; iC<_outC.size(); iC++) {
     int dRank = _superStructure.getLoadBalancer().rank(_outC[iC]);
@@ -351,7 +377,8 @@ void CuboidNeighbourhood2D<T>::send_outData() {
 }
 
 template<typename T>
-void CuboidNeighbourhood2D<T>::receive_inData() {
+void CuboidNeighbourhood2D<T>::receive_inData()
+{
 #ifdef PARALLEL_MODE_MPI
   for (unsigned iC=0; iC<_inC.size(); iC++) {
     int sRank = _superStructure.getLoadBalancer().rank(_inC[iC]);
@@ -361,7 +388,8 @@ void CuboidNeighbourhood2D<T>::receive_inData() {
 }
 
 template<typename T>
-void CuboidNeighbourhood2D<T>::write_inData() {
+void CuboidNeighbourhood2D<T>::write_inData()
+{
 
   int iCloc = _superStructure.getLoadBalancer().loc(_iCglob);
   std::vector<int> temp(_nC,0);
@@ -372,33 +400,34 @@ void CuboidNeighbourhood2D<T>::write_inData() {
     //}
     //memcpy(_superStructure(iCloc,iX+overlap,iY+overlap,iZ+overlap,0), _inData[iC] + temp[iC]*_nData*_nDataType, _nData*_nDataType);
     //temp[iC]++;
-    memcpy(_superStructure(iCloc,_inCells[i].latticeR[1],_inCells[i].latticeR[2],0), _inData[iC] + temp[iC]*_nData*_nDataType, _nData*_nDataType);
+    std::memcpy(_superStructure(iCloc,_inCells[i].latticeR[1],_inCells[i].latticeR[2],0), _inData[iC] + temp[iC]*_nData*_nDataType, _nData*_nDataType);
     temp[iC]++;
   }
 }
 
 template<typename T>
-void CuboidNeighbourhood2D<T>::reset() {
+void CuboidNeighbourhood2D<T>::reset()
+{
 
   if (_initInCNdone) {
 #ifdef PARALLEL_MODE_MPI
     for (int iC=0; iC<_nC; iC++) {
-      delete _inData[iC];
-      delete _inDataCoordinates[iC];
+      delete[] _inData[iC];
+      delete[] _inDataCoordinates[iC];
     }
 #endif
-    delete _inData;
-    delete _inDataCoordinates;
-    delete _tempInCN;
+    delete[] _inData;
+    delete[] _inDataCoordinates;
+    delete[] _tempInCN;
     _initInCNdone = false;
   }
   if (_initOutCNdone) {
     for (int iC=0; iC<_nC; iC++) {
-      delete _outData[iC];
-      delete _outDataCoordinates[iC];
+      delete[] _outData[iC];
+      delete[] _outDataCoordinates[iC];
     }
-    delete _outData;
-    delete _outDataCoordinates;
+    delete[] _outData;
+    delete[] _outDataCoordinates;
 #ifdef PARALLEL_MODE_MPI
     _mpiNbHelper.free();
 #endif

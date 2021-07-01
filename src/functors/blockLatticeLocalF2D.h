@@ -26,7 +26,7 @@
 
 #include<vector>
 
-#include "functors/blockLatticeBaseF2D.h"
+#include "functors/blockBaseF2D.h"
 #include "geometry/blockGeometry2D.h"
 #include "core/blockLattice2D.h"
 #include "core/blockLatticeStructure2D.h"
@@ -43,7 +43,7 @@ namespace olb {
 ////////////////////////////////////////////////////////////////////////////////
 
 
-/// BlockLatticeDissipation2D returns pointwise dissipation density on local lattices. 
+/// BlockLatticeDissipation2D returns pointwise dissipation density on local lattices.
 template <typename T, template <typename U> class DESCRIPTOR>
 class BlockLatticeDissipation2D : public BlockLatticeF2D<T,DESCRIPTOR> {
 protected:
@@ -51,26 +51,36 @@ protected:
 public:
   BlockLatticeDissipation2D(BlockLatticeStructure2D<T,DESCRIPTOR>& blockLattice,
                             const LBconverter<T>& converter);
-  std::vector<T> operator() (std::vector<int> input);
+  bool operator() (T output[], const int input[]);
 };
 
+/// BlockLatticePhysDissipation2D returns pointwise physical dissipation density on local lattices.
+template <typename T, template <typename U> class DESCRIPTOR>
+class BlockLatticePhysDissipation2D : public BlockLatticeF2D<T,DESCRIPTOR> {
+protected:
+  const LBconverter<T>& _converter;
+public:
+  BlockLatticePhysDissipation2D(BlockLatticeStructure2D<T,DESCRIPTOR>& blockLattice,
+                                const LBconverter<T>& converter);
+  bool operator() (T output[], const int input[]);
+};
 
 /// BlockLatticeDensity2D returns pointwise density rho on local lattices.
 template <typename T, template <typename U> class DESCRIPTOR>
 class BlockLatticeDensity2D : public BlockLatticeF2D<T,DESCRIPTOR> {
 public:
   BlockLatticeDensity2D(BlockLatticeStructure2D<T,DESCRIPTOR>& blockLattice);
-  std::vector<T> operator() (std::vector<int> input);
+  bool operator() (T output[], const int input[]);
 };
 
 
 
-/// BlockLatticeDensity2D returns pointwise velocity on local lattices.
+/// BlockLatticeVelocity2D returns pointwise velocity on local lattices.
 template <typename T, template <typename U> class DESCRIPTOR>
 class BlockLatticeVelocity2D : public BlockLatticeF2D<T,DESCRIPTOR> {
 public:
   BlockLatticeVelocity2D(BlockLatticeStructure2D<T,DESCRIPTOR>& blockLattice);
-  std::vector<T> operator() (std::vector<int> input);
+  bool operator() (T output[], const int input[]);
 };
 
 
@@ -83,7 +93,7 @@ private:
 public:
   BlockLatticeGeometry2D(BlockLatticeStructure2D<T,DESCRIPTOR>& blockLattice,
                          BlockGeometryStructure2D<T>& blockGeometry, int material = -1);
-  std::vector<T> operator() (std::vector<int> input);
+  bool operator() (T output[], const int input[]);
 };
 
 
@@ -92,7 +102,7 @@ template <typename T, template <typename U> class DESCRIPTOR>
 class BlockLatticeRank2D : public BlockLatticeF2D<T,DESCRIPTOR> {
 public:
   BlockLatticeRank2D(BlockLatticeStructure2D<T,DESCRIPTOR>& blockLattice);
-  std::vector<T> operator() (std::vector<int> input);
+  bool operator() (T output[], const int input[]);
 };
 
 
@@ -101,17 +111,17 @@ template <typename T, template <typename U> class DESCRIPTOR>
 class BlockLatticeCuboid2D : public BlockLatticeF2D<T,DESCRIPTOR> {
 public:
   BlockLatticeCuboid2D(BlockLatticeStructure2D<T,DESCRIPTOR>& blockLattice);
-  std::vector<T> operator() (std::vector<int> input);
+  bool operator() (T output[], const int input[]);
 };
 
 
-/// BlockLatticeCuboid2D returns pointwise phys pressure from rho on local lattices.
+/// BlockLatticePhysPressure2D returns pointwise phys pressure from rho on local lattices.
 template <typename T, template <typename U> class DESCRIPTOR>
 class BlockLatticePhysPressure2D : public BlockLatticePhysF2D<T,DESCRIPTOR> {
 public:
   BlockLatticePhysPressure2D(BlockLatticeStructure2D<T,DESCRIPTOR>& blockLattice,
                              const LBconverter<T>& converter);
-  std::vector<T> operator() (std::vector<int> input);
+  bool operator() (T output[], const int input[]);
 };
 
 
@@ -121,17 +131,41 @@ class BlockLatticePhysVelocity2D : public BlockLatticePhysF2D<T,DESCRIPTOR> {
 public:
   BlockLatticePhysVelocity2D(BlockLatticeStructure2D<T,DESCRIPTOR>& blockLattice,
                              const LBconverter<T>& converter);
-  std::vector<T> operator() (std::vector<int> input);
+  bool operator() (T output[], const int input[]);
 };
 
+
+template <typename T, template <typename U> class DESCRIPTOR>
+class BlockLatticePhysExternalPorosity2D : public BlockLatticePhysF2D<T,DESCRIPTOR> {
+public:
+  BlockLatticePhysExternalPorosity2D(BlockLatticeStructure2D<T,DESCRIPTOR>& blockLattice,
+                                     const LBconverter<T>& converter);
+  bool operator() (T output[], const int input[]);
+};
+
+template <typename T, template <typename U> class DESCRIPTOR>
+class BlockLatticePhysExternalVelocity2D : public BlockLatticePhysF2D<T,DESCRIPTOR> {
+public:
+  BlockLatticePhysExternalVelocity2D(BlockLatticeStructure2D<T,DESCRIPTOR>& blockLattice,
+                                     const LBconverter<T>& converter);
+  bool operator() (T output[], const int input[]);
+};
+
+template <typename T, template <typename U> class DESCRIPTOR>
+class BlockLatticePhysExternalParticleVelocity2D : public BlockLatticePhysF2D<T,DESCRIPTOR> {
+public:
+  BlockLatticePhysExternalParticleVelocity2D(BlockLatticeStructure2D<T,DESCRIPTOR>& blockLattice,
+      const LBconverter<T>& converter);
+  bool operator() (T output[], const int input[]);
+};
 
 /// BlockLatticeStrainRate2D returns pointwise strain rate on local lattice.
 template <typename T, template <typename U> class DESCRIPTOR>
 class BlockLatticeStrainRate2D : public BlockLatticePhysF2D<T,DESCRIPTOR> {
 public:
   BlockLatticeStrainRate2D(BlockLatticeStructure2D<T,DESCRIPTOR>& blockLattice,
-                             const LBconverter<T>& converter);
-  std::vector<T> operator() (std::vector<int> input);
+                           const LBconverter<T>& converter);
+  bool operator() (T output[], const int input[]);
 };
 
 
@@ -140,8 +174,8 @@ template <typename T, template <typename U> class DESCRIPTOR>
 class BlockLatticePhysStrainRate2D : public BlockLatticePhysF2D<T,DESCRIPTOR> {
 public:
   BlockLatticePhysStrainRate2D(BlockLatticeStructure2D<T,DESCRIPTOR>& blockLattice,
-                             const LBconverter<T>& converter);
-  std::vector<T> operator() (std::vector<int> input);
+                               const LBconverter<T>& converter);
+  bool operator() (T output[], const int input[]);
 };
 
 
@@ -155,13 +189,13 @@ public:
   BlockLatticePhysBoundaryForce2D(BlockLatticeStructure2D<T,DESCRIPTOR>& blockLattice,
                                   BlockGeometry2D<T>& blockGeometry,
                                   int material, const LBconverter<T>& converter);
-  std::vector<T> operator() (std::vector<int> input);
+  bool operator() (T output[], const int input[]);
 };
 
 
 
 /**
- *  BlockLatticePhysCorrBoundaryForce2D returns pointwise phys force acting on a 
+ *  BlockLatticePhysCorrBoundaryForce2D returns pointwise phys force acting on a
  *  boundary with a given material on local lattice.
  *  see: Caiazzo, Junk: Boundary Forces in lattice Boltzmann: Analysis of MEA
  */
@@ -174,7 +208,7 @@ public:
   BlockLatticePhysCorrBoundaryForce2D(BlockLatticeStructure2D<T,DESCRIPTOR>& blockLattice,
                                       BlockGeometry2D<T>& blockGeometry, int material,
                                       const LBconverter<T>& converter);
-  std::vector<T> operator() (std::vector<int> input);
+  bool operator() (T output[], const int input[]);
 };
 
 
@@ -191,7 +225,7 @@ public:
   BlockLatticePorosity2D(BlockLatticeStructure2D<T,DESCRIPTOR>& blockLattice,
                          BlockGeometry2D<T>& blockGeometry, int material,
                          const LBconverter<T>& converter);
-  std::vector<T> operator()(std::vector<int> input);
+  bool operator() (T output[], const int input[]);
 };
 
 
@@ -209,7 +243,7 @@ public:
   BlockLatticePhysPermeability2D(BlockLatticeStructure2D<T,DESCRIPTOR>& blockLattice,
                                  BlockGeometry2D<T>& blockGeometry,
                                  int material, const LBconverter<T>& converter);
-  std::vector<T> operator()(std::vector<int> input);
+  bool operator() (T output[], const int input[]);
 };
 
 
@@ -223,7 +257,7 @@ public:
   BlockLatticePhysDarcyForce2D(BlockLatticeStructure2D<T,DESCRIPTOR>& blockLattice,
                                BlockGeometry2D<T>& blockGeometry, int material,
                                const LBconverter<T>& converter);
-  std::vector<T> operator()(std::vector<int> input);
+  bool operator() (T output[], const int input[]);
 };
 
 
@@ -242,18 +276,18 @@ private:
 public:
   BlockLatticeAverage2D(BlockLatticeF2D<T,DESCRIPTOR>& f,
                         BlockGeometry2D<T>& blockGeometry, int material, T radius);
-  std::vector<T> operator() (std::vector<int> input);
+  bool operator() (T output[], const int input[]);
 };
 
 
 ///  BlockL2Norm2D returns pointwise the l2-norm, e.g. of a velocity.
 template <typename T, template <typename U> class DESCRIPTOR>
-class BlockL2Norm2D : public BlockLatticeF2D<T,DESCRIPTOR> {
+class BlockL2Norm2D : public BlockF2D<T> {
 private:
-  BlockLatticeF2D<T,DESCRIPTOR>& _f;
+  BlockF2D<T>& _f;
 public:
-  BlockL2Norm2D(BlockLatticeF2D<T,DESCRIPTOR>& f);
-  std::vector<T> operator() (std::vector<int> input);
+  BlockL2Norm2D(BlockF2D<T>& f);
+  bool operator() (T output[], const int input[]);
 };
 
 

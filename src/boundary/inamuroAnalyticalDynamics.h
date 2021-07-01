@@ -36,8 +36,7 @@ namespace olb {
  * This implementation works for the D2Q9 Lattice only.
 */
 template<typename T, template<typename U> class Lattice, typename Dynamics, int direction, int orientation>
-class InamuroAnalyticalDynamics : public BasicDynamics<T,Lattice>
-{
+class InamuroAnalyticalDynamics : public BasicDynamics<T,Lattice> {
 public:
   /// Constructor
   InamuroAnalyticalDynamics(T omega_, Momenta<T,Lattice>& momenta_);

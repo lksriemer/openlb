@@ -26,6 +26,7 @@
 #define BOUNDARY_INSTANTIATOR_2D_H
 
 #include "boundaryCondition2D.h"
+#include "boundaryPostProcessors2D.h"
 #include "geometry/blockGeometry2D.h"
 #include "geometry/blockGeometryStatistics2D.h"
 #include "io/ostreamManager.h"
@@ -43,6 +44,8 @@ public:
   void addVelocityBoundary0P(int x0, int x1, int y0, int y1, T omega);
   void addVelocityBoundary1N(int x0, int x1, int y0, int y1, T omega);
   void addVelocityBoundary1P(int x0, int x1, int y0, int y1, T omega);
+
+  void addSlipBoundary(int x0, int x1, int y0, int y1, int discreteNormalX, int discreteNormalY);
 
   void addPressureBoundary0N(int x0, int x1, int y0, int y1, T omega);
   void addPressureBoundary0P(int x0, int x1, int y0, int y1, T omega);
@@ -66,6 +69,8 @@ public:
 
   void addVelocityBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int material, int x0, int x1, int y0, int y1, T omega);
   void addVelocityBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int material, T omega);
+  void addSlipBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int material, int x0, int x1, int y0, int y1);
+  void addSlipBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int material);
   void addPressureBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int material, int x0, int x1, int y0, int y1, T omega);
   void addPressureBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int material, T omega);
   void addConvectionBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int material, int x0, int x1, int y0, int y1, T omega, T* uAv=NULL);
@@ -100,11 +105,13 @@ private:
 template<typename T, template<typename U> class Lattice, class BoundaryManager>
 BoundaryConditionInstantiator2D<T, Lattice, BoundaryManager>::BoundaryConditionInstantiator2D(
   BlockLatticeStructure2D<T, Lattice>& block_) :
-  block(block_), _output(false), clout(std::cout,"BoundaryConditionInstantiator2D") {
+  block(block_), _output(false), clout(std::cout,"BoundaryConditionInstantiator2D")
+{
 }
 
 template<typename T, template<typename U> class Lattice, class BoundaryManager>
-BoundaryConditionInstantiator2D<T, Lattice, BoundaryManager>::~BoundaryConditionInstantiator2D() {
+BoundaryConditionInstantiator2D<T, Lattice, BoundaryManager>::~BoundaryConditionInstantiator2D()
+{
   for (unsigned iDynamics = 0; iDynamics < dynamicsVector.size(); ++iDynamics) {
     delete dynamicsVector[iDynamics];
   }
@@ -116,7 +123,8 @@ BoundaryConditionInstantiator2D<T, Lattice, BoundaryManager>::~BoundaryCondition
 template<typename T, template<typename U> class Lattice, class BoundaryManager>
 template<int direction, int orientation>
 void BoundaryConditionInstantiator2D<T, Lattice, BoundaryManager>::addVelocityBoundary(
-  int x0, int x1, int y0, int y1, T omega) {
+  int x0, int x1, int y0, int y1, T omega)
+{
   OLB_PRECONDITION(x0==x1 || y0==y1);
 
   for (int iX = x0; iX <= x1; ++iX) {
@@ -145,9 +153,30 @@ void BoundaryConditionInstantiator2D<T, Lattice, BoundaryManager>::addVelocityBo
 }
 
 template<typename T, template<typename U> class Lattice, class BoundaryManager>
+void BoundaryConditionInstantiator2D<T, Lattice, BoundaryManager>::addSlipBoundary(
+  int x0, int x1, int y0, int y1, int discreteNormalX, int discreteNormalY)
+{
+  OLB_PRECONDITION(x0==x1 || y0==y1);
+
+  for (int iX = x0; iX <= x1; ++iX) {
+    for (int iY = y0; iY <= y1; ++iY) {
+      if (_output) {
+        clout << "addSlipBoundary<" << discreteNormalX << ","<< discreteNormalY << ">("  << x0 << ", "<< x1 << ", " << y0 << ", " << y1 << " )" << std::endl;
+      }
+    }
+  }
+
+  PostProcessorGenerator2D<T, Lattice>* postProcessor = new SlipBoundaryProcessorGenerator2D<T, Lattice>(x0, x1, y0, y1, discreteNormalX, discreteNormalY);
+  if (postProcessor) {
+    this->getBlock().addPostProcessor(*postProcessor);
+  }
+}
+
+template<typename T, template<typename U> class Lattice, class BoundaryManager>
 template<int direction, int orientation>
 void BoundaryConditionInstantiator2D<T, Lattice, BoundaryManager>::addPressureBoundary(
-  int x0, int x1, int y0, int y1, T omega) {
+  int x0, int x1, int y0, int y1, T omega)
+{
   OLB_PRECONDITION(x0==x1 || y0==y1);
 
   for (int iX = x0; iX <= x1; ++iX) {
@@ -178,7 +207,8 @@ void BoundaryConditionInstantiator2D<T, Lattice, BoundaryManager>::addPressureBo
 template<typename T, template<typename U> class Lattice, class BoundaryManager>
 template<int direction, int orientation>
 void BoundaryConditionInstantiator2D<T, Lattice, BoundaryManager>::addConvectionBoundary(
-  int x0, int x1, int y0, int y1, T omega, T* uAv) {
+  int x0, int x1, int y0, int y1, T omega, T* uAv)
+{
   OLB_PRECONDITION(x0==x1 || y0==y1);
 
   for (int iX = x0; iX <= x1; ++iX) {
@@ -200,7 +230,8 @@ void BoundaryConditionInstantiator2D<T, Lattice, BoundaryManager>::addConvection
 template<typename T, template<typename U> class Lattice, class BoundaryManager>
 template<int xNormal, int yNormal>
 void BoundaryConditionInstantiator2D<T, Lattice, BoundaryManager>::addExternalVelocityCorner(
-  int x, int y, T omega) {
+  int x, int y, T omega)
+{
   Momenta<T, Lattice>* momenta =
     BoundaryManager::template getExternalVelocityCornerMomenta<xNormal,
     yNormal>();
@@ -226,7 +257,8 @@ void BoundaryConditionInstantiator2D<T, Lattice, BoundaryManager>::addExternalVe
 template<typename T, template<typename U> class Lattice, class BoundaryManager>
 template<int xNormal, int yNormal>
 void BoundaryConditionInstantiator2D<T, Lattice, BoundaryManager>::addInternalVelocityCorner(
-  int x, int y, T omega) {
+  int x, int y, T omega)
+{
   Momenta<T, Lattice>* momenta =
     BoundaryManager::template getInternalVelocityCornerMomenta<xNormal,
     yNormal>();
@@ -250,7 +282,8 @@ void BoundaryConditionInstantiator2D<T, Lattice, BoundaryManager>::addInternalVe
 }
 
 template<typename T, template<typename U> class Lattice, class BoundaryManager>
-void BoundaryConditionInstantiator2D<T, Lattice, BoundaryManager>::addVelocityBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int material, int x0, int x1, int y0, int y1, T omega) {
+void BoundaryConditionInstantiator2D<T, Lattice, BoundaryManager>::addVelocityBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int material, int x0, int x1, int y0, int y1, T omega)
+{
   std::vector<int> discreteNormal(3, 0);
   for (int iX = x0; iX <= x1; iX++) {
     for (int iY = y0; iY <= y1; iY++) {
@@ -319,14 +352,44 @@ void BoundaryConditionInstantiator2D<T, Lattice, BoundaryManager>::addVelocityBo
 }
 
 template<typename T, template<typename U> class Lattice, class BoundaryManager>
-void BoundaryConditionInstantiator2D<T, Lattice, BoundaryManager>::addVelocityBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int material, T omega) {
+void BoundaryConditionInstantiator2D<T, Lattice, BoundaryManager>::addSlipBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int material, int x0, int x1, int y0, int y1)
+{
+  std::vector<int> discreteNormal(3, 0);
+  for (int iX = x0; iX <= x1; iX++) {
+    for (int iY = y0; iY <= y1; iY++) {
+
+      if (blockGeometryStructure.get(iX, iY) == material) {
+        discreteNormal = blockGeometryStructure.getStatistics().getType(iX, iY);
+        if (discreteNormal[1]!=0 || discreteNormal[2]!=0) {
+          addSlipBoundary(iX, iX, iY, iY, discreteNormal[1], discreteNormal[2]);
+        } else {
+          clout << "Warning: Could not addSlipBoundary (" << iX << ", " << iY << "), discreteNormal=(" << discreteNormal[0] <<","<< discreteNormal[1] <<","<< discreteNormal[2] <<"), set to bounceBack" << std::endl;
+          this->getBlock().defineDynamics(iX, iY, &instances::getBounceBack<T, Lattice>() );
+        }
+      }
+    }
+  }
+}
+
+template<typename T, template<typename U> class Lattice, class BoundaryManager>
+void BoundaryConditionInstantiator2D<T, Lattice, BoundaryManager>::addVelocityBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int material, T omega)
+{
   addVelocityBoundary(blockGeometryStructure, material, 0,
                       blockGeometryStructure.getNx()-1, 0,
                       blockGeometryStructure.getNy()-1, omega);
 }
 
 template<typename T, template<typename U> class Lattice, class BoundaryManager>
-void BoundaryConditionInstantiator2D<T, Lattice, BoundaryManager>::addPressureBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int material, int x0, int x1, int y0, int y1, T omega) {
+void BoundaryConditionInstantiator2D<T, Lattice, BoundaryManager>::addSlipBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int material)
+{
+  addSlipBoundary(blockGeometryStructure, material, 0,
+                  blockGeometryStructure.getNx()-1, 0,
+                  blockGeometryStructure.getNy()-1);
+}
+
+template<typename T, template<typename U> class Lattice, class BoundaryManager>
+void BoundaryConditionInstantiator2D<T, Lattice, BoundaryManager>::addPressureBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int material, int x0, int x1, int y0, int y1, T omega)
+{
   std::vector<int> discreteNormal(3, 0);
   for (int iX = x0; iX <= x1; iX++) {
     for (int iY = y0; iY <= y1; iY++) {
@@ -351,7 +414,8 @@ void BoundaryConditionInstantiator2D<T, Lattice, BoundaryManager>::addPressureBo
 
 template<typename T, template<typename U> class Lattice, class BoundaryManager>
 void BoundaryConditionInstantiator2D<T, Lattice, BoundaryManager>::addPressureBoundary(
-  BlockGeometryStructure2D<T>& blockGeometryStructure, int material, T omega) {
+  BlockGeometryStructure2D<T>& blockGeometryStructure, int material, T omega)
+{
   addPressureBoundary(blockGeometryStructure, material, 0,
                       blockGeometryStructure.getNx()-1, 0,
                       blockGeometryStructure.getNy()-1, omega);
@@ -361,7 +425,8 @@ void BoundaryConditionInstantiator2D<T, Lattice, BoundaryManager>::addPressureBo
 template<typename T, template<typename U> class Lattice, class BoundaryManager>
 void BoundaryConditionInstantiator2D<T, Lattice, BoundaryManager>::addConvectionBoundary(
   BlockGeometryStructure2D<T>& blockGeometryStructure, int material, int x0, int x1, int y0, int y1,
-  T omega, T* uAv) {
+  T omega, T* uAv)
+{
   std::vector<int> discreteNormal(3, 0);
   for (int iX = x0; iX <= x1; iX++) {
     for (int iY = y0; iY <= y1; iY++) {
@@ -386,7 +451,8 @@ void BoundaryConditionInstantiator2D<T, Lattice, BoundaryManager>::addConvection
 
 template<typename T, template<typename U> class Lattice, class BoundaryManager>
 void BoundaryConditionInstantiator2D<T, Lattice, BoundaryManager>::addConvectionBoundary(
-  BlockGeometryStructure2D<T>& blockGeometryStructure, int material, T omega, T* uAv) {
+  BlockGeometryStructure2D<T>& blockGeometryStructure, int material, T omega, T* uAv)
+{
   addConvectionBoundary(blockGeometryStructure, material, 0,
                         blockGeometryStructure.getNx()-1, 0,
                         blockGeometryStructure.getNy()-1, omega, uAv);
@@ -394,144 +460,168 @@ void BoundaryConditionInstantiator2D<T, Lattice, BoundaryManager>::addConvection
 
 template<typename T, template<typename U> class Lattice, class BoundaryManager>
 void BoundaryConditionInstantiator2D<T, Lattice, BoundaryManager>::addVelocityBoundary0N(
-  int x0, int x1, int y0, int y1, T omega) {
+  int x0, int x1, int y0, int y1, T omega)
+{
   addVelocityBoundary<0, -1> (x0, x1, y0, y1, omega);
 }
 
 template<typename T, template<typename U> class Lattice, class BoundaryManager>
 void BoundaryConditionInstantiator2D<T, Lattice, BoundaryManager>::addVelocityBoundary0P(
-  int x0, int x1, int y0, int y1, T omega) {
+  int x0, int x1, int y0, int y1, T omega)
+{
   addVelocityBoundary<0, 1> (x0, x1, y0, y1, omega);
 }
 
 template<typename T, template<typename U> class Lattice, class BoundaryManager>
 void BoundaryConditionInstantiator2D<T, Lattice, BoundaryManager>::addVelocityBoundary1N(
-  int x0, int x1, int y0, int y1, T omega) {
+  int x0, int x1, int y0, int y1, T omega)
+{
   addVelocityBoundary<1, -1> (x0, x1, y0, y1, omega);
 }
 
 template<typename T, template<typename U> class Lattice, class BoundaryManager>
 void BoundaryConditionInstantiator2D<T, Lattice, BoundaryManager>::addVelocityBoundary1P(
-  int x0, int x1, int y0, int y1, T omega) {
+  int x0, int x1, int y0, int y1, T omega)
+{
   addVelocityBoundary<1, 1> (x0, x1, y0, y1, omega);
 }
 
 template<typename T, template<typename U> class Lattice, class BoundaryManager>
 void BoundaryConditionInstantiator2D<T, Lattice, BoundaryManager>::addPressureBoundary0N(
-  int x0, int x1, int y0, int y1, T omega) {
+  int x0, int x1, int y0, int y1, T omega)
+{
   addPressureBoundary<0, -1> (x0, x1, y0, y1, omega);
 }
 
 template<typename T, template<typename U> class Lattice, class BoundaryManager>
 void BoundaryConditionInstantiator2D<T, Lattice, BoundaryManager>::addPressureBoundary0P(
-  int x0, int x1, int y0, int y1, T omega) {
+  int x0, int x1, int y0, int y1, T omega)
+{
   addPressureBoundary<0, 1> (x0, x1, y0, y1, omega);
 }
 
 template<typename T, template<typename U> class Lattice, class BoundaryManager>
 void BoundaryConditionInstantiator2D<T, Lattice, BoundaryManager>::addPressureBoundary1N(
-  int x0, int x1, int y0, int y1, T omega) {
+  int x0, int x1, int y0, int y1, T omega)
+{
   addPressureBoundary<1, -1> (x0, x1, y0, y1, omega);
 }
 
 template<typename T, template<typename U> class Lattice, class BoundaryManager>
 void BoundaryConditionInstantiator2D<T, Lattice, BoundaryManager>::addPressureBoundary1P(
-  int x0, int x1, int y0, int y1, T omega) {
+  int x0, int x1, int y0, int y1, T omega)
+{
   addPressureBoundary<1, 1> (x0, x1, y0, y1, omega);
 }
 
 template<typename T, template<typename U> class Lattice, class BoundaryManager>
 void BoundaryConditionInstantiator2D<T, Lattice, BoundaryManager>::addConvectionBoundary0N(
-  int x0, int x1, int y0, int y1, T omega, T* uAv) {
+  int x0, int x1, int y0, int y1, T omega, T* uAv)
+{
   addConvectionBoundary<0, -1> (x0, x1, y0, y1, omega, uAv);
 }
 
 template<typename T, template<typename U> class Lattice, class BoundaryManager>
 void BoundaryConditionInstantiator2D<T, Lattice, BoundaryManager>::addConvectionBoundary0P(
-  int x0, int x1, int y0, int y1, T omega, T* uAv) {
+  int x0, int x1, int y0, int y1, T omega, T* uAv)
+{
   addConvectionBoundary<0, 1> (x0, x1, y0, y1, omega, uAv);
 }
 
 template<typename T, template<typename U> class Lattice, class BoundaryManager>
 void BoundaryConditionInstantiator2D<T, Lattice, BoundaryManager>::addConvectionBoundary1N(
-  int x0, int x1, int y0, int y1, T omega, T* uAv) {
+  int x0, int x1, int y0, int y1, T omega, T* uAv)
+{
   addConvectionBoundary<1, -1> (x0, x1, y0, y1, omega, uAv);
 }
 
 template<typename T, template<typename U> class Lattice, class BoundaryManager>
 void BoundaryConditionInstantiator2D<T, Lattice, BoundaryManager>::addConvectionBoundary1P(
-  int x0, int x1, int y0, int y1, T omega, T* uAv) {
+  int x0, int x1, int y0, int y1, T omega, T* uAv)
+{
   addConvectionBoundary<1, 1> (x0, x1, y0, y1, omega, uAv);
 }
 
 
 template<typename T, template<typename U> class Lattice, class BoundaryManager>
 void BoundaryConditionInstantiator2D<T, Lattice, BoundaryManager>::addExternalVelocityCornerNN(
-  int x, int y, T omega) {
+  int x, int y, T omega)
+{
   addExternalVelocityCorner<-1, -1> (x, y, omega);
 }
 
 template<typename T, template<typename U> class Lattice, class BoundaryManager>
 void BoundaryConditionInstantiator2D<T, Lattice, BoundaryManager>::addExternalVelocityCornerNP(
-  int x, int y, T omega) {
+  int x, int y, T omega)
+{
   addExternalVelocityCorner<-1, 1> (x, y, omega);
 }
 
 template<typename T, template<typename U> class Lattice, class BoundaryManager>
 void BoundaryConditionInstantiator2D<T, Lattice, BoundaryManager>::addExternalVelocityCornerPN(
-  int x, int y, T omega) {
+  int x, int y, T omega)
+{
   addExternalVelocityCorner<1, -1> (x, y, omega);
 }
 
 template<typename T, template<typename U> class Lattice, class BoundaryManager>
 void BoundaryConditionInstantiator2D<T, Lattice, BoundaryManager>::addExternalVelocityCornerPP(
-  int x, int y, T omega) {
+  int x, int y, T omega)
+{
   addExternalVelocityCorner<1, 1> (x, y, omega);
 }
 
 template<typename T, template<typename U> class Lattice, class BoundaryManager>
 void BoundaryConditionInstantiator2D<T, Lattice, BoundaryManager>::addInternalVelocityCornerNN(
-  int x, int y, T omega) {
+  int x, int y, T omega)
+{
   addInternalVelocityCorner<-1, -1> (x, y, omega);
 }
 
 template<typename T, template<typename U> class Lattice, class BoundaryManager>
 void BoundaryConditionInstantiator2D<T, Lattice, BoundaryManager>::addInternalVelocityCornerNP(
-  int x, int y, T omega) {
+  int x, int y, T omega)
+{
   addInternalVelocityCorner<-1, 1> (x, y, omega);
 }
 
 template<typename T, template<typename U> class Lattice, class BoundaryManager>
 void BoundaryConditionInstantiator2D<T, Lattice, BoundaryManager>::addInternalVelocityCornerPN(
-  int x, int y, T omega) {
+  int x, int y, T omega)
+{
   addInternalVelocityCorner<1, -1> (x, y, omega);
 }
 
 template<typename T, template<typename U> class Lattice, class BoundaryManager>
 void BoundaryConditionInstantiator2D<T, Lattice, BoundaryManager>::addInternalVelocityCornerPP(
-  int x, int y, T omega) {
+  int x, int y, T omega)
+{
   addInternalVelocityCorner<1, 1> (x, y, omega);
 }
 
 template<typename T, template<typename U> class Lattice, class BoundaryManager>
 BlockLatticeStructure2D<T, Lattice>& BoundaryConditionInstantiator2D<T, Lattice,
-BoundaryManager>::getBlock() {
+                        BoundaryManager>::getBlock()
+{
   return block;
 }
 
 template<typename T, template<typename U> class Lattice, class BoundaryManager>
 BlockLatticeStructure2D<T, Lattice> const& BoundaryConditionInstantiator2D<T, Lattice,
-BoundaryManager>::getBlock() const {
+                        BoundaryManager>::getBlock() const
+{
   return block;
 }
 
 template<typename T, template<typename U> class Lattice, class BoundaryManager>
-void BoundaryConditionInstantiator2D<T, Lattice, BoundaryManager>::outputOn() {
+void BoundaryConditionInstantiator2D<T, Lattice, BoundaryManager>::outputOn()
+{
   _output = true;
 }
 
 template<typename T, template<typename U> class Lattice, class BoundaryManager>
-void BoundaryConditionInstantiator2D<T, Lattice, BoundaryManager>::outputOff() {
+void BoundaryConditionInstantiator2D<T, Lattice, BoundaryManager>::outputOff()
+{
   _output = false;
 }
 

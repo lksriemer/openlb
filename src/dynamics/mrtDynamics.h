@@ -88,7 +88,7 @@ public:
   virtual void collide(Cell<T,Lattice>& cell,
                        LatticeStatistics<T>& statistics_);
 
-  protected:
+protected:
   T invM_S_2[Lattice<T>::q][Lattice<T>::q]; // relaxation times matrix.
   T omega;
 };

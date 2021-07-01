@@ -25,18 +25,15 @@
 #ifndef BLOCK_LOAD_BALANCER_H
 #define BLOCK_LOAD_BALANCER_H
 
-#include <vector>
-#include <map>
-#include "communication/loadBalancer.h"
-#include "geometry/cuboidGeometry2D.h"
-#include "geometry/cuboidGeometry3D.h"
-#include "communication/mpiManager.h"
-#include "io/ostreamManager.h"
 
+#include "communication/loadBalancer.h"
 
 
 
 namespace olb {
+
+template<typename T> class CuboidGeometry3D;
+template<typename T> class CuboidGeometry2D;
 
 
 template<typename T>

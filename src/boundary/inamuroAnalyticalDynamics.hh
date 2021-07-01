@@ -75,14 +75,13 @@ void InamuroAnalyticalDynamics<T,Lattice,Dynamics,direction,orientation>::collid
   // (directions 3,5)
   std::vector<int> missDiagInd = missInd;
 
-  for (unsigned iPop = 0; iPop < missInd.size(); ++iPop)
-  {
+  for (unsigned iPop = 0; iPop < missInd.size(); ++iPop) {
     int numOfNonNullComp = 0;
-    for (int iDim = 0; iDim < L:: d; ++iDim)
+    for (int iDim = 0; iDim < L:: d; ++iDim) {
       numOfNonNullComp += abs(L::c[missInd[iPop]][iDim]);
+    }
 
-    if (numOfNonNullComp == 1)
-    {
+    if (numOfNonNullComp == 1) {
       missDiagInd.erase(missDiagInd.begin()+iPop);
       break;
     }
@@ -91,10 +90,8 @@ void InamuroAnalyticalDynamics<T,Lattice,Dynamics,direction,orientation>::collid
   // Will contain the populations normal to the wall's normal vector.
   // (directions 2,6)
   std::vector<int> perpInd = util::subIndex<L,direction,0>();
-  for (unsigned iPop = 0; iPop < perpInd.size(); ++iPop)
-  {
-    if (L::c[perpInd[iPop]][0] == 0 && L::c[perpInd[iPop]][1] == 0)
-    {
+  for (unsigned iPop = 0; iPop < perpInd.size(); ++iPop) {
+    if (L::c[perpInd[iPop]][0] == 0 && L::c[perpInd[iPop]][1] == 0) {
       perpInd.erase(perpInd.begin() + iPop);
       break;
     }
@@ -105,12 +102,12 @@ void InamuroAnalyticalDynamics<T,Lattice,Dynamics,direction,orientation>::collid
 
   T rhoCs = T();
   T uCs[L::d];
-  for (int iDim = 0; iDim < L::d; ++iDim)
+  for (int iDim = 0; iDim < L::d; ++iDim) {
     uCs[iDim] = T();
+  }
 
   T fSum = T();
-  for (unsigned iPop = 0; iPop < missInd.size(); ++iPop)
-  {
+  for (unsigned iPop = 0; iPop < missInd.size(); ++iPop) {
     fSum += cell[util::opposite<L>(missInd[iPop])];
   }
   // do not forget the "+1" in the rhoCs equation in the numerator (it's
@@ -119,8 +116,9 @@ void InamuroAnalyticalDynamics<T,Lattice,Dynamics,direction,orientation>::collid
           ((T)3 * u[direction] * u[direction] - orientation * (T)3 * u[direction] + (T)1);
 
   T fDiffPerp = T();
-  for (unsigned iPop = 0; iPop < perpInd.size(); ++iPop)
+  for (unsigned iPop = 0; iPop < perpInd.size(); ++iPop) {
     fDiffPerp += L::c[perpInd[iPop]][(direction + 1)%2] * cell[perpInd[iPop]];
+  }
   fDiffPerp *= orientation;
 
   T fDiffDiag = T();
@@ -137,13 +135,15 @@ void InamuroAnalyticalDynamics<T,Lattice,Dynamics,direction,orientation>::collid
                               / (
                                 rhoCs * (-orientation + (T)3 * u[direction]));
 
-  for (int iDim = 0; iDim < L::d; ++iDim)
+  for (int iDim = 0; iDim < L::d; ++iDim) {
     uCs[iDim] += u[iDim];
+  }
 
   T uSqr = util::normSqr<T,L::d>(uCs);
 
-  for (unsigned iPop = 0; iPop < missInd.size(); ++iPop)
+  for (unsigned iPop = 0; iPop < missInd.size(); ++iPop) {
     cell[missInd[iPop]] = computeEquilibrium(missInd[iPop], rhoCs, uCs, uSqr);
+  }
 
   boundaryDynamics.collide(cell, statistics);
 }
@@ -165,14 +165,13 @@ void InamuroAnalyticalDynamics<T,Lattice,Dynamics,direction,orientation>::static
   // (directions 3,5)
   std::vector<int> missDiagInd = missInd;
 
-  for (unsigned iPop = 0; iPop < missInd.size(); ++iPop)
-  {
+  for (unsigned iPop = 0; iPop < missInd.size(); ++iPop) {
     int numOfNonNullComp = 0;
-    for (int iDim = 0; iDim < L:: d; ++iDim)
+    for (int iDim = 0; iDim < L:: d; ++iDim) {
       numOfNonNullComp += abs(L::c[missInd[iPop]][iDim]);
+    }
 
-    if (numOfNonNullComp == 1)
-    {
+    if (numOfNonNullComp == 1) {
       missDiagInd.erase(missDiagInd.begin()+iPop);
       break;
     }
@@ -181,10 +180,8 @@ void InamuroAnalyticalDynamics<T,Lattice,Dynamics,direction,orientation>::static
   // Will contain the populations normal to the wall's normal vector.
   // (directions 2,6)
   std::vector<int> perpInd = util::subIndex<L,direction,0>();
-  for (unsigned iPop = 0; iPop < perpInd.size(); ++iPop)
-  {
-    if (L::c[perpInd[iPop]][0] == 0 && L::c[perpInd[iPop]][1] == 0)
-    {
+  for (unsigned iPop = 0; iPop < perpInd.size(); ++iPop) {
+    if (L::c[perpInd[iPop]][0] == 0 && L::c[perpInd[iPop]][1] == 0) {
       perpInd.erase(perpInd.begin() + iPop);
       break;
     }
@@ -194,12 +191,12 @@ void InamuroAnalyticalDynamics<T,Lattice,Dynamics,direction,orientation>::static
 
   T rhoCs = T();
   T uCs[L::d];
-  for (int iDim = 0; iDim < L::d; ++iDim)
+  for (int iDim = 0; iDim < L::d; ++iDim) {
     uCs[iDim] = T();
+  }
 
   T fSum = T();
-  for (unsigned iPop = 0; iPop < missInd.size(); ++iPop)
-  {
+  for (unsigned iPop = 0; iPop < missInd.size(); ++iPop) {
     fSum += cell[util::opposite<L>(missInd[iPop])];
   }
   // do not forget the "+1" in the rhoCs equation in the numerator (it's
@@ -208,8 +205,9 @@ void InamuroAnalyticalDynamics<T,Lattice,Dynamics,direction,orientation>::static
           ((T)3 * u[direction] * u[direction] - orientation * (T)3 * u[direction] + (T)1);
 
   T fDiffPerp = T();
-  for (unsigned iPop = 0; iPop < perpInd.size(); ++iPop)
+  for (unsigned iPop = 0; iPop < perpInd.size(); ++iPop) {
     fDiffPerp += L::c[perpInd[iPop]][(direction + 1)%2] * cell[perpInd[iPop]];
+  }
   fDiffPerp *= orientation;
 
   T fDiffDiag = T();
@@ -226,13 +224,15 @@ void InamuroAnalyticalDynamics<T,Lattice,Dynamics,direction,orientation>::static
                               / (
                                 rhoCs * (-orientation + (T)3 * u[direction]));
 
-  for (int iDim = 0; iDim < L::d; ++iDim)
+  for (int iDim = 0; iDim < L::d; ++iDim) {
     uCs[iDim] += u[iDim];
+  }
 
   T uSqr = util::normSqr<T,L::d>(uCs);
 
-  for (unsigned iPop = 0; iPop < missInd.size(); ++iPop)
+  for (unsigned iPop = 0; iPop < missInd.size(); ++iPop) {
     cell[missInd[iPop]] = computeEquilibrium(missInd[iPop], rhoCs, uCs, uSqr);
+  }
 
   boundaryDynamics.staticCollide(cell, u, statistics);
 }

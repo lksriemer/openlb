@@ -50,9 +50,10 @@ typedef double T;
 
 
 // Parameters for the simulation setup
-const T lx  = 2.;
-const T ly  = 1.;
+const T lx  = 2.;       // length of the channel
+const T ly  = 1.;       // height of the channel
 const int N = 50;       // resolution of the model
+const int M = N;        // time discretization refinement
 const T Re = 10.;       // Reynolds number
 const T maxPhysT = 20.; // max. simulation time in s, SI unit
 
@@ -66,9 +67,12 @@ void prepareGeometry(LBconverter<T> const& converter,
 
   superGeometry.rename(0,2);
 
-  std::vector<T> extend(2,T()); extend[0] = lx; extend[1] = ly - 1.8*converter.getLatticeL();
-  std::vector<T> origin(2,T()); origin[1] = 0.9*converter.getLatticeL();
-  IndicatorCuboid2D<bool,T> cuboid2(extend, origin);
+  std::vector<T> extend(2,T());
+  extend[0] = lx;
+  extend[1] = ly - 1.8*converter.getLatticeL();
+  std::vector<T> origin(2,T());
+  origin[1] = 0.9*converter.getLatticeL();
+  IndicatorCuboid2D<T> cuboid2(extend, origin);
 
   superGeometry.rename(2,1,cuboid2);
 
@@ -135,13 +139,18 @@ void error(SuperGeometry2D<T>& superGeometry,
 
   OstreamManager clout(std::cout,"error");
 
-  std::vector<int> tmp; T result; T result1;
-  std::vector<double> vec(2,0);
+  int tmp[]={int()};
+  T result[2]={T(),T()}, result_tmp[2]={T(),T()};
+  T result1;
 
   const T maxVelocity = converter.physVelocity(converter.getLatticeU());
   const T radius = ly/2.;
-  std::vector<T> axisPoint(2,T()); axisPoint[0] = lx/2.; axisPoint[1] = ly/2.;
-  std::vector<T> axisDirection(2,T()); axisDirection[0] = 1; axisDirection[1] = 0;
+  std::vector<T> axisPoint(2,T());
+  axisPoint[0] = lx/2.;
+  axisPoint[1] = ly/2.;
+  std::vector<T> axisDirection(2,T());
+  axisDirection[0] = 1;
+  axisDirection[1] = 0;
   Poiseuille2D<T> uSol(axisPoint, axisDirection, maxVelocity, radius);
   SuperLatticePhysVelocity2D<T,DESCRIPTOR> u(sLattice,converter);
   SuperLatticeFfromAnalyticalF2D<T,DESCRIPTOR> uSolLattice(uSol,sLattice,superGeometry);
@@ -150,46 +159,54 @@ void error(SuperGeometry2D<T>& superGeometry,
   SuperLatticePhysStrainRate2D<T,DESCRIPTOR> s(sLattice,converter);
   SuperLatticeFfromAnalyticalF2D<T,DESCRIPTOR> sSolLattice(sSol,sLattice,superGeometry);
 
-  
+
   // velocity error
   SuperL1Norm2D<T,DESCRIPTOR> uL1Norm(uSolLattice-u,superGeometry,1);
   SuperL1Norm2D<T,DESCRIPTOR> uSolL1Norm(uSolLattice,superGeometry,1);
-  result = uL1Norm(tmp)[0]; result1=result/uSolL1Norm(tmp)[0];
-  clout << "velocity-L1-error(abs)=" << result << "; velocity-L1-error(rel)=" << result1 << std::endl;
+  uL1Norm(result,tmp);
+  uSolL1Norm(result_tmp,tmp);
+  result1=result[0]/result_tmp[0];
+  clout << "velocity-L1-error(abs)=" << result[0] << "; velocity-L1-error(rel)=" << result1 << std::endl;
 
   SuperL2Norm2D<T,DESCRIPTOR> uL2Norm(uSolLattice-u,superGeometry,1);
   SuperL2Norm2D<T,DESCRIPTOR> uSolL2Norm(uSolLattice,superGeometry,1);
-  result = uL2Norm(tmp)[0]; result1=result/uSolL2Norm(tmp)[0];
-  clout << "velocity-L2-error(abs)=" << result << "; velocity-L2-error(rel)=" << result1 << std::endl;
+  uL2Norm(result,tmp);
+  uSolL2Norm(result_tmp,tmp);
+  result1=result[0]/result_tmp[0];
+  clout << "velocity-L2-error(abs)=" << result[0] << "; velocity-L2-error(rel)=" << result1 << std::endl;
 
   SuperLinfNorm2D<T,DESCRIPTOR> uLinfNorm(uSolLattice-u,superGeometry,1);
-  result = uLinfNorm(tmp)[0];
-  clout << "velocity-Linf-error(abs)=" << result << std::endl;
+  uLinfNorm(&result1,tmp);
+  clout << "velocity-Linf-error(abs)=" << result1 << std::endl;
 
   // strainRate error
   SuperL1Norm2D<T,DESCRIPTOR> sL1Norm(sSolLattice-s,superGeometry,1);
   SuperL1Norm2D<T,DESCRIPTOR> sSolL1Norm(sSolLattice,superGeometry,1);
-  result = sL1Norm(tmp)[0]; result1=result/sSolL1Norm(tmp)[0];
-  clout << "strainRate-L1-error(abs)=" << result << "; strainRate-L1-error(rel)=" << result1 << std::endl;
+  sL1Norm(result,tmp);
+  sSolL1Norm(result_tmp,tmp);
+  result1=result[0]/result_tmp[0];
+  clout << "strainRate-L1-error(abs)=" << result[0] << "; strainRate-L1-error(rel)=" << result1 << std::endl;
 
   SuperL2Norm2D<T,DESCRIPTOR> sL2Norm(sSolLattice-s,superGeometry,1);
   SuperL2Norm2D<T,DESCRIPTOR> sSolL2Norm(sSolLattice,superGeometry,1);
-  result = sL2Norm(tmp)[0]; result1=result/sSolL2Norm(tmp)[0];
-  clout << "strainRate-L2-error(abs)=" << result << "; strainRate-L2-error(rel)=" << result1 << std::endl;
+  sL2Norm(result,tmp);
+  sSolL2Norm(result_tmp,tmp);
+  result1=result[0]/result_tmp[0];
+  clout << "strainRate-L2-error(abs)=" << result[0] << "; strainRate-L2-error(rel)=" << result1 << std::endl;
 
   SuperLinfNorm2D<T,DESCRIPTOR> sLinfNorm(sSolLattice-s,superGeometry,1);
-  result = sLinfNorm(tmp)[0];
-  clout << "strainRate-Linf-error(abs)=" << result << std::endl;
+  sLinfNorm(&result1,tmp);
+  clout << "strainRate-Linf-error(abs)=" << result1 << std::endl;
 }
 
 /// Output to console and files
 void getResults(SuperLattice2D<T,DESCRIPTOR>& sLattice, Dynamics<T, DESCRIPTOR>& bulkDynamics,
                 LBconverter<T>& converter, int iT,
-                SuperGeometry2D<T>& superGeometry, Timer<double>& timer) {
+                SuperGeometry2D<T>& superGeometry, Timer<T>& timer) {
 
   OstreamManager clout(std::cout,"getResults");
 
-  SuperVTKwriter2D<T,DESCRIPTOR> vtkWriter("forcedPoiseuille2d");
+  SuperVTKwriter2D<T> vtkWriter("forcedPoiseuille2d");
   SuperLatticePhysVelocity2D<T, DESCRIPTOR> velocity(sLattice, converter);
   SuperLatticePhysPressure2D<T, DESCRIPTOR> pressure(sLattice, converter);
   vtkWriter.addFunctor( velocity );
@@ -205,8 +222,9 @@ void getResults(SuperLattice2D<T,DESCRIPTOR>& sLattice, Dynamics<T, DESCRIPTOR>&
     /// Writes the geometry, cuboid no. and rank no. as vti file for visualization
     SuperLatticeGeometry2D<T, DESCRIPTOR> geometry(sLattice, superGeometry);
     SuperLatticeCuboid2D<T, DESCRIPTOR> cuboid(sLattice);
-    SuperLatticeRank2D<T, DESCRIPTOR> rank(sLattice);  superGeometry.rename(0,2);
-    vtkWriter.write(geometry);  
+    SuperLatticeRank2D<T, DESCRIPTOR> rank(sLattice);
+    superGeometry.rename(0,2);
+    vtkWriter.write(geometry);
     vtkWriter.write(cuboid);
     vtkWriter.write(rank);
 
@@ -216,6 +234,12 @@ void getResults(SuperLattice2D<T,DESCRIPTOR>& sLattice, Dynamics<T, DESCRIPTOR>&
   /// Writes the vtk files and profile text file
   if (iT%vtkIter==0) {
     vtkWriter.write(iT);
+    
+    SuperEuklidNorm2D<T, DESCRIPTOR> normVel(velocity);
+    BlockLatticeReduction2D<T, DESCRIPTOR> planeReduction(normVel);
+    BlockGifWriter<T> gifWriter;
+    gifWriter.write(planeReduction, iT, "vel"); // scaled
+
     ofstream *ofile = 0;
     if (singleton::mpi().isMainProcessor()) {
       ofile = new ofstream((singleton::directories().getLogOutDir()+"centerVel.dat").c_str());
@@ -224,20 +248,26 @@ void getResults(SuperLattice2D<T,DESCRIPTOR>& sLattice, Dynamics<T, DESCRIPTOR>&
     for (int iY=0; iY<=Ly; ++iY) {
       T dx = converter.getDeltaX();
       const T maxVelocity = converter.physVelocity(converter.getLatticeU());
-      std::vector<T> point(2,T());
+      T point[2]={T(),T()};
       point[0] = lx/2.;
       point[1] = (T)iY/Ly;
       const T radius = ly/2.;
-      std::vector<T> axisPoint(2,T()); axisPoint[0] = lx/2.; axisPoint[1] = ly/2.;
-      std::vector<T> axisDirection(2,T()); axisDirection[0] = 1; axisDirection[1] = 0;
+      std::vector<T> axisPoint(2,T());
+      axisPoint[0] = lx/2.;
+      axisPoint[1] = ly/2.;
+      std::vector<T> axisDirection(2,T());
+      axisDirection[0] = 1;
+      axisDirection[1] = 0;
       Poiseuille2D<T> uSol(axisPoint, axisDirection, maxVelocity, radius);
-      T analytical = uSol(point)[0];
+      T analytical[2] = {T(),T()};
+      uSol(analytical,point);
       SuperLatticePhysVelocity2D<T, DESCRIPTOR> velocity(sLattice, converter);
       AnalyticalFfromSuperLatticeF2D<T, DESCRIPTOR> intpolateVelocity(velocity, true);
-      T numerical = intpolateVelocity(point)[0];
+      T numerical[2] = {T(),T()};
+      intpolateVelocity(numerical,point);
       if (singleton::mpi().isMainProcessor()) {
-        *ofile << iY*dx << " " << analytical
-               << " " << numerical << "\n";
+        *ofile << iY*dx << " " << analytical[0]
+               << " " << numerical[0] << "\n";
       }
     }
     delete ofile;
@@ -269,23 +299,25 @@ int main(int argc, char* argv[]) {
   LBconverter<T> converter(
     (int) 2,                               // dim
     1./N,                                  // latticeL_
-    1./N,                                  // latticeU_
+    1./M,                                  // latticeU_
     (T)   1./Re,                           // charNu_
     (T)   1.                               // charL_ = 1,
   );
   converter.print();
 
   /// === 2nd Step: Prepare Geometry ===
-  std::vector<T> extend(2,T()); extend[0] = lx; extend[1] = ly;
+  std::vector<T> extend(2,T());
+  extend[0] = lx;
+  extend[1] = ly;
   std::vector<T> origin(2,T());
-  IndicatorCuboid2D<bool,T> cuboid(extend, origin);
+  IndicatorCuboid2D<T> cuboid(extend, origin);
 
   /// Instantiation of a cuboidGeometry with weights
-  #ifdef PARALLEL_MODE_MPI
-    const int noOfCuboids = singleton::mpi().getSize();
-  #else
-    const int noOfCuboids = 7;
-  #endif
+#ifdef PARALLEL_MODE_MPI
+  const int noOfCuboids = singleton::mpi().getSize();
+#else
+  const int noOfCuboids = 7;
+#endif
   CuboidGeometry2D<T> cuboidGeometry(cuboid, converter.getLatticeL(), noOfCuboids);
 
   /// Periodic boundaries in x-direction

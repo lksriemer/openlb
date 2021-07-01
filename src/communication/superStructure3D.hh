@@ -36,49 +36,75 @@ namespace olb {
 
 template<typename T>
 SuperStructure3D<T>::SuperStructure3D(CuboidGeometry3D<T>& cuboidGeometry,
-    LoadBalancer<T>& loadBalancer, int overlap) :
-  _cuboidGeometry(cuboidGeometry), _loadBalancer(loadBalancer), _overlap(overlap), _communicator(*this), _communicationNeeded(true), clout(std::cout,"SuperGeometry3D") {
+                                      LoadBalancer<T>& loadBalancer, int overlap)
+  : _cuboidGeometry(cuboidGeometry),
+    _loadBalancer(loadBalancer),
+    _overlap(overlap),
+    _communicator(*this),
+    _communicationNeeded(true),
+    clout(std::cout,"SuperGeometry3D")
+{
 }
 
 template<typename T>
-CuboidGeometry3D<T>& SuperStructure3D<T>::getCuboidGeometry() {
+SuperStructure3D<T>::SuperStructure3D(int overlap)
+  : SuperStructure3D(
+    *(new CuboidGeometry3D<T> ()),
+    *(new LoadBalancer<T> ()),
+    overlap)
+{
+}
+
+template<typename T>
+CuboidGeometry3D<T>& SuperStructure3D<T>::getCuboidGeometry()
+{
   return _cuboidGeometry;
 }
 
 template<typename T>
-CuboidGeometry3D<T> const& SuperStructure3D<T>::getCuboidGeometry() const {
+CuboidGeometry3D<T> const& SuperStructure3D<T>::getCuboidGeometry() const
+{
   return _cuboidGeometry;
 }
 
 template<typename T>
-int SuperStructure3D<T>::getOverlap() {
+int SuperStructure3D<T>::getOverlap()
+{
   return _overlap;
 }
 
 template<typename T>
-int SuperStructure3D<T>::getOverlap() const {
+int SuperStructure3D<T>::getOverlap() const
+{
   return _overlap;
 }
 
 template<typename T>
-LoadBalancer<T>& SuperStructure3D<T>::getLoadBalancer() {
+LoadBalancer<T>& SuperStructure3D<T>::getLoadBalancer()
+{
   return _loadBalancer;
 }
 
 template<typename T>
-LoadBalancer<T> const& SuperStructure3D<T>::getLoadBalancer() const {
+LoadBalancer<T> const& SuperStructure3D<T>::getLoadBalancer() const
+{
   return _loadBalancer;
 }
 
 template<typename T>
-void SuperStructure3D<T>::communicate(bool verbose) {
-  if(_communicationNeeded) {
-    if(verbose) clout << "Cummunicate ..." << std::endl;
-      _communicator.send();
-      _communicator.receive();
-      _communicator.write();
-      _communicationNeeded = false;
-    if(verbose) clout << "Cummunicate ...ok" << std::endl;
+void SuperStructure3D<T>::communicate(bool verbose)
+{
+  if (_communicationNeeded) {
+    if (verbose) {
+      clout << "Communicate ..." << std::endl;
+    }
+    _communicator.send();
+    _communicator.receive();
+    _communicator.write();
+    _communicationNeeded = false;
+    if (verbose) {
+      clout << "Communicate ...ok" << std::endl;
+    }
   }
 }
 

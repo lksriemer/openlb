@@ -60,16 +60,15 @@ void prepareGeometry(SuperGeometry3D<T>& superGeometry,
 
   superGeometry.rename(0,1);
 
-  std::vector<T> origin1(3,T());
-  std::vector<T> origin2(3,T()); origin2[1] = converter.getLy()*converter.getN();
-  std::vector<T> origin3(3,T()); origin3[0] = converter.getLx()*converter.getN()/2; origin3[1] = 1; origin3[2] = converter.getLz()*converter.getN()/2;
+  Vector<T,3> origin1(-2., T(), -2.);
+  Vector<T,3> origin2(-2., converter.getLy()*converter.getN(), -2.);
+  Vector<T,3> origin3(converter.getLx()*converter.getN()/2, T(1), converter.getLz()*converter.getN()/2);
+  Vector<T,3> extend1(converter.getLx()*converter.getN()+4., T(), converter.getLz()*converter.getN()+4.);
+  Vector<T,3> extend2(1,1,1);
 
-  std::vector<T> extend1(3,T()); extend1[0] = converter.getLx()*converter.getN(); extend1[2] = converter.getLz()*converter.getN();
-  std::vector<T> extend2(3,T()); extend2[0] = 1; extend2[1] = 1; extend2[2] = 1;
-
-  IndicatorCuboid3D<bool,T> bottom(extend1, origin1);
-  IndicatorCuboid3D<bool,T> top(extend1, origin2);
-  IndicatorCuboid3D<bool,T> perturbation(extend2, origin3);
+  IndicatorCuboid3D<T> bottom(extend1, origin1);
+  IndicatorCuboid3D<T> top(extend1, origin2);
+  IndicatorCuboid3D<T> perturbation(extend2, origin3);
 
   superGeometry.rename(1,2,bottom);
   superGeometry.rename(1,3,top);
@@ -134,30 +133,30 @@ void setBoundaryValues(AdvectionDiffusionUnitLB<T,NSDESCRIPTOR,TDESCRIPTOR> &con
     /// for each material set the defineRhou and the Equilibrium
 
     std::vector<T> zero(3,T());
-	T zerovel[TDESCRIPTOR<T>::d] = {0.,0.,0.};
+    T zerovel[TDESCRIPTOR<T>::d] = {0.,0.,0.};
     AnalyticalConst3D<T,T> u(zero);
     AnalyticalConst3D<T,T> rho(1.);
     AnalyticalConst3D<T,T> force(zero);
     NSlattice.defineRhoU(superGeometry, 1, rho, u);
     NSlattice.iniEquilibrium(superGeometry, 1, rho, u);
     NSlattice.defineExternalField(superGeometry, 1,
-                                    NSDESCRIPTOR<T>::ExternalField::forceBeginsAt,
-                                    NSDESCRIPTOR<T>::ExternalField::sizeOfForce, force );
+                                  NSDESCRIPTOR<T>::ExternalField::forceBeginsAt,
+                                  NSDESCRIPTOR<T>::ExternalField::sizeOfForce, force );
     NSlattice.defineRhoU(superGeometry, 2, rho, u);
     NSlattice.iniEquilibrium(superGeometry, 2, rho, u);
     NSlattice.defineExternalField(superGeometry, 2,
-                                    NSDESCRIPTOR<T>::ExternalField::forceBeginsAt,
-                                    NSDESCRIPTOR<T>::ExternalField::sizeOfForce, force );
+                                  NSDESCRIPTOR<T>::ExternalField::forceBeginsAt,
+                                  NSDESCRIPTOR<T>::ExternalField::sizeOfForce, force );
     NSlattice.defineRhoU(superGeometry, 3, rho, u);
     NSlattice.iniEquilibrium(superGeometry, 3, rho, u);
     NSlattice.defineExternalField(superGeometry, 3,
-                                    NSDESCRIPTOR<T>::ExternalField::forceBeginsAt,
-                                    NSDESCRIPTOR<T>::ExternalField::sizeOfForce, force );
+                                  NSDESCRIPTOR<T>::ExternalField::forceBeginsAt,
+                                  NSDESCRIPTOR<T>::ExternalField::sizeOfForce, force );
     NSlattice.defineRhoU(superGeometry, 4, rho, u);
     NSlattice.iniEquilibrium(superGeometry, 4, rho, u);
     NSlattice.defineExternalField(superGeometry, 4,
-                                    NSDESCRIPTOR<T>::ExternalField::forceBeginsAt,
-                                    NSDESCRIPTOR<T>::ExternalField::sizeOfForce, force );
+                                  NSDESCRIPTOR<T>::ExternalField::forceBeginsAt,
+                                  NSDESCRIPTOR<T>::ExternalField::sizeOfForce, force );
 
     T Tcold    = converter.getTcold();
     T Thot     = converter.getThot();
@@ -184,23 +183,23 @@ void setBoundaryValues(AdvectionDiffusionUnitLB<T,NSDESCRIPTOR,TDESCRIPTOR> &con
     ADlattice.defineRho(superGeometry, 1, Cold);
     ADlattice.definePopulations(superGeometry, 1, EqCold);
     ADlattice.defineExternalField(superGeometry, 1,
-                                    TDESCRIPTOR<T>::ExternalField::velocityBeginsAt,
-                                    TDESCRIPTOR<T>::ExternalField::sizeOfVelocity, u );
+                                  TDESCRIPTOR<T>::ExternalField::velocityBeginsAt,
+                                  TDESCRIPTOR<T>::ExternalField::sizeOfVelocity, u );
     ADlattice.defineRho(superGeometry, 2, Hot);
     ADlattice.definePopulations(superGeometry, 2, EqHot);
     ADlattice.defineExternalField(superGeometry, 2,
-                                    TDESCRIPTOR<T>::ExternalField::velocityBeginsAt,
-                                    TDESCRIPTOR<T>::ExternalField::sizeOfVelocity, u );
+                                  TDESCRIPTOR<T>::ExternalField::velocityBeginsAt,
+                                  TDESCRIPTOR<T>::ExternalField::sizeOfVelocity, u );
     ADlattice.defineRho(superGeometry, 3, Cold);
     ADlattice.definePopulations(superGeometry, 3, EqCold);
     ADlattice.defineExternalField(superGeometry, 3,
-                                    TDESCRIPTOR<T>::ExternalField::velocityBeginsAt,
-                                    TDESCRIPTOR<T>::ExternalField::sizeOfVelocity, u );
+                                  TDESCRIPTOR<T>::ExternalField::velocityBeginsAt,
+                                  TDESCRIPTOR<T>::ExternalField::sizeOfVelocity, u );
     ADlattice.defineRho(superGeometry, 4, Perturb);
     ADlattice.definePopulations(superGeometry, 4, EqPerturb);
     ADlattice.defineExternalField(superGeometry, 4,
-                                    TDESCRIPTOR<T>::ExternalField::velocityBeginsAt,
-                                    TDESCRIPTOR<T>::ExternalField::sizeOfVelocity, u );
+                                  TDESCRIPTOR<T>::ExternalField::velocityBeginsAt,
+                                  TDESCRIPTOR<T>::ExternalField::sizeOfVelocity, u );
 
     /// Make the lattice ready for simulation
     NSlattice.initialize();
@@ -215,8 +214,8 @@ void getResults(AdvectionDiffusionUnitLB<T,NSDESCRIPTOR,TDESCRIPTOR> &converter,
 
   OstreamManager clout(std::cout,"getResults");
 
-  SuperVTKwriter3D<T,NSDESCRIPTOR> vtkWriterNS("rayleighBenard3dNSlattice");
-  SuperVTKwriter3D<T,TDESCRIPTOR> vtkWriterAD("rayleighBenard3dADlattice");
+  SuperVTKwriter3D<T> vtkWriterNS("rayleighBenard3dNSlattice");
+  SuperVTKwriter3D<T> vtkWriterAD("rayleighBenard3dADlattice");
 
   if (iT==0) {
     /// Writes the converter log file
@@ -244,6 +243,10 @@ void getResults(AdvectionDiffusionUnitLB<T,NSDESCRIPTOR,TDESCRIPTOR> &converter,
     vtkWriterAD.addFunctor( density );
     vtkWriterNS.write(iT);
     vtkWriterAD.write(iT);
+
+    BlockLatticeReduction3D<T, TDESCRIPTOR> planeReduction( density, 0, 0, -1 );
+    BlockGifWriter<T> gifWriter;
+    gifWriter.write( planeReduction, iT, "density" );
   }
 
 }
@@ -252,31 +255,31 @@ T computeNusselt(SuperLattice3D<T, NSDESCRIPTOR>& NSlattice,
                  SuperLattice3D<T,TDESCRIPTOR> &ADlattice,
                  AdvectionDiffusionUnitLB<T,NSDESCRIPTOR,TDESCRIPTOR> &converter)
 {
-	T u_T = T();
-	for (int iC = 0; iC < ADlattice.getLoadBalancer().size(); iC++) {
-	    int nx = ADlattice.getBlockLattice(iC).getNx();
-		int ny = ADlattice.getBlockLattice(iC).getNy();
-		int nz = ADlattice.getBlockLattice(iC).getNz();
+  T u_T = T();
+  for (int iC = 0; iC < ADlattice.getLoadBalancer().size(); iC++) {
+    int nx = ADlattice.getBlockLattice(iC).getNx();
+    int ny = ADlattice.getBlockLattice(iC).getNy();
+    int nz = ADlattice.getBlockLattice(iC).getNz();
 
-		for (int iX = 0; iX < nx; ++iX) {
-			for (int iY = 0; iY < ny; ++iY) {
-				for (int iZ = 0; iZ < nz; ++iZ) {
-					T uz[3];
-					NSlattice.getBlockLattice(iC).get(iX,iY,iZ).computeU(uz);
-					u_T += uz[2] * ADlattice.getBlockLattice(iC).get(iX,iY,iZ).computeRho();
-				}
-			}
-		}
-	}
+    for (int iX = 0; iX < nx; ++iX) {
+      for (int iY = 0; iY < ny; ++iY) {
+        for (int iZ = 0; iZ < nz; ++iZ) {
+          T uz[3];
+          NSlattice.getBlockLattice(iC).get(iX,iY,iZ).computeU(uz);
+          u_T += uz[2] * ADlattice.getBlockLattice(iC).get(iX,iY,iZ).computeRho();
+        }
+      }
+    }
+  }
 
-	#ifdef PARALLEL_MODE_MPI
-	   singleton::mpi().reduceAndBcast(u_T, MPI_SUM);
-	#endif
-	// maybe wrong if DeltaX != DeltaY
-	T nusselt = (T)1 + u_T * converter.getDeltaX() * converter.getDeltaX() / (converter.getKappa() * (converter.getThot()-converter.getTcold()));
-	// T nusselt = (T)1 + u_T / ( (T)(nx-1) * (T)(ny-1) * converter.getKappa() * (converter.getThot()-converter.getTcold()));
+#ifdef PARALLEL_MODE_MPI
+  singleton::mpi().reduceAndBcast(u_T, MPI_SUM);
+#endif
+  // maybe wrong if DeltaX != DeltaY
+  T nusselt = (T)1 + u_T * converter.getDeltaX() * converter.getDeltaX() / (converter.getKappa() * (converter.getThot()-converter.getTcold()));
+  // T nusselt = (T)1 + u_T / ( (T)(nx-1) * (T)(ny-1) * converter.getKappa() * (converter.getThot()-converter.getTcold()));
 
-	return nusselt;
+  return nusselt;
 }
 
 int main(int argc, char *argv[]) {
@@ -317,7 +320,7 @@ int main(int argc, char *argv[]) {
     dt,  // dt
     2.0, // lx
     1.0, // ly
-    1.0  // lz
+    2.0  // lz
   );
 
   const double Raprova = converter.getN() * converter.getN() *

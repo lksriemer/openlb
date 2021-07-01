@@ -47,7 +47,8 @@ OMBuf::OMBuf(const OMBuf& rhs)
   : output(rhs.output), text(rhs.text)
 { }
 
-OMBuf& OMBuf::operator=(const OMBuf& rhs) {
+OMBuf& OMBuf::operator=(const OMBuf& rhs)
+{
   output = rhs.output;
   text = rhs.text;
 
@@ -58,11 +59,13 @@ OMBuf::OMBuf(std::ostream& str, std::string classname)
   : output(&str), text(classname)
 { }
 
-void OMBuf::setMultiOutput(bool b) {
+void OMBuf::setMultiOutput(bool b)
+{
   (*this).multiOutput = b;
 }
 
-int OMBuf::sync() {
+int OMBuf::sync()
+{
 #ifdef PARALLEL_MODE_MPI
   if (multiOutput==true) {
     *output << "["
@@ -112,14 +115,16 @@ OstreamManager::OstreamManager(const OstreamManager& rhs)
   : std::ostream(&buffer), buffer(rhs.buffer)
 { }
 
-OstreamManager& OstreamManager::operator=(const OstreamManager& rhs) {
+OstreamManager& OstreamManager::operator=(const OstreamManager& rhs)
+{
   buffer = rhs.buffer;
   return *this;
 }
 
 OstreamManager::~OstreamManager() { }
 
-void OstreamManager::setMultiOutput(bool b) {
+void OstreamManager::setMultiOutput(bool b)
+{
   buffer.setMultiOutput(b);
 }
 

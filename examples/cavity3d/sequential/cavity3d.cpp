@@ -48,9 +48,11 @@ using namespace std;
 typedef double T;
 #define DESCRIPTOR D3Q19Descriptor
 
-int N = 1; // resolution of the model
+const int N = 1; // resolution of the model
+const int M = 1; // time discretization refinement
+const T maxT = (T)30.; // max. simulation time in s, SI unit
 
-void prepareGeometry(LBconverter<T> const& converter, IndicatorF3D<bool,T>& indicator, BlockGeometry3D<T>& blockGeometry) {
+void prepareGeometry(LBconverter<T> const& converter, IndicatorF3D<T>& indicator, BlockGeometry3D<T>& blockGeometry) {
 
   OstreamManager clout(std::cout,"prepareGeometry");
   clout << "Prepare Geometry ..." << std::endl;
@@ -59,10 +61,10 @@ void prepareGeometry(LBconverter<T> const& converter, IndicatorF3D<bool,T>& indi
   blockGeometry.rename(0,2,indicator);
   blockGeometry.rename(2,1,1,1,1);
 
-  std::vector<T> origin(3,T()); origin[1]=converter.getCharL();
-  std::vector<T> extend(3,converter.getCharL()); extend[1]=converter.getLatticeL();
-  IndicatorCuboid3D<bool,T> lid(extend,origin);
- 
+  Vector<T,3> origin(T(), converter.getCharL(), T());
+  Vector<T,3> extend(converter.getCharL(), converter.getLatticeL(), converter.getCharL());
+  IndicatorCuboid3D<T> lid(extend,origin);
+
   blockGeometry.rename(2,3,1,lid);
 
   /// Removes all not needed boundary voxels outside the surface
@@ -95,7 +97,7 @@ void prepareLattice(LBconverter<T> const& converter,
   /// Material=2 -->bounce back
   //lattice.defineDynamics(superGeometry, 2, &instances::getBounceBack<T, DESCRIPTOR>());
 
-  /// Material=2,3 -->bulk dynamics, velocity boundary 
+  /// Material=2,3 -->bulk dynamics, velocity boundary
   lattice.defineDynamics(blockGeometry, 2, &bulkDynamics);
   lattice.defineDynamics(blockGeometry, 3, &bulkDynamics);
   bc.addVelocityBoundary(blockGeometry, 2, omega);
@@ -111,34 +113,33 @@ void setBoundaryValues(LBconverter<T> const&converter,
 
   if(iT==0) {
 
-  AnalyticalConst3D<T,T> rhoF(1);
-  std::vector<T> velocity(3,T());
-  AnalyticalConst3D<T,T> uF(velocity);
+    AnalyticalConst3D<T,T> rhoF(1);
+    std::vector<T> velocity(3,T());
+    AnalyticalConst3D<T,T> uF(velocity);
 
-  lattice.iniEquilibrium(blockGeometry, 1, rhoF, uF);
-  lattice.iniEquilibrium(blockGeometry, 2, rhoF, uF);
-  lattice.iniEquilibrium(blockGeometry, 3, rhoF, uF);
+    lattice.iniEquilibrium(blockGeometry, 1, rhoF, uF);
+    lattice.iniEquilibrium(blockGeometry, 2, rhoF, uF);
+    lattice.iniEquilibrium(blockGeometry, 3, rhoF, uF);
 
-  lattice.defineRhoU(blockGeometry, 1, rhoF, uF);
-  lattice.defineRhoU(blockGeometry, 2, rhoF, uF);
-  lattice.defineRhoU(blockGeometry, 3, rhoF, uF);
+    lattice.defineRhoU(blockGeometry, 1, rhoF, uF);
+    lattice.defineRhoU(blockGeometry, 2, rhoF, uF);
+    lattice.defineRhoU(blockGeometry, 3, rhoF, uF);
 
-  velocity[0]=converter.getLatticeU();
-  AnalyticalConst3D<T,T> u(velocity);
+    velocity[0]=converter.getLatticeU();
+    AnalyticalConst3D<T,T> u(velocity);
 
-  lattice.defineU(blockGeometry,3,u);
+    lattice.defineU(blockGeometry,3,u);
 
-  /// Make the lattice ready for simulation
-  lattice.initialize();
+    /// Make the lattice ready for simulation
+    lattice.initialize();
   }
 }
 
 void getResults(BlockLatticeStructure3D<T,DESCRIPTOR>& lattice,
-                LBconverter<T> const& converter, BlockGeometry3D<T>& blockGeometry, int iT, Timer<double>& timer,
-                const T maxT) {
+                LBconverter<T> const& converter, BlockGeometry3D<T>& blockGeometry, int iT, Timer<T>& timer) {
 
   OstreamManager clout(std::cout,"getResults");
-  BlockVTKwriter3D<T,DESCRIPTOR> vtkWriter("cavity3d");
+  BlockVTKwriter3D<T> vtkWriter("cavity3d");
 
   const T logT     = (T)1.;
   const T vtkSave  = (T)1.;
@@ -161,12 +162,12 @@ void getResults(BlockLatticeStructure3D<T,DESCRIPTOR>& lattice,
   /// Writes the VTK files
   if (iT%converter.numTimeSteps(vtkSave)==0 && iT>0) {
 
-  BlockLatticePhysVelocity3D<T, DESCRIPTOR> velocity(lattice, converter);
-  BlockLatticePhysPressure3D<T, DESCRIPTOR> pressure(lattice, converter);
-  vtkWriter.addFunctor( velocity );
-  vtkWriter.addFunctor( pressure );
+    BlockLatticePhysVelocity3D<T, DESCRIPTOR> velocity(lattice, converter);
+    BlockLatticePhysPressure3D<T, DESCRIPTOR> pressure(lattice, converter);
+    vtkWriter.addFunctor( velocity );
+    vtkWriter.addFunctor( pressure );
 
-  vtkWriter.write(iT);
+    vtkWriter.write(iT);
   }
 }
 
@@ -183,19 +184,19 @@ int main(int argc, char **argv) {
   LBconverter<T> converter(
     (int) 3,                               // dim
     (T)   1./30./N,                        // latticeL_
-    (T)   1e-1,                            // latticeU_
+    (T)   1e-1/M,                          // latticeU_
     (T)   1./1000.,                        // charNu_
     (T)   1.,                              // charL_ = 1
     (T)   1.                               // charU_ = 1
   );
-  const T maxT     = (T)30.;
 
   /// === 2nd Step: Prepare Geometry ===
 
-  /// Instantiation of a unit cube by an indicator 
+  /// Instantiation of a unit cube by an indicator
 
-  std::vector<T> origin(3,T()); std::vector<T> extend(3,converter.getCharL());
-  IndicatorCuboid3D<bool,T> cube(extend,origin);
+  std::vector<T> origin(3,T());
+  std::vector<T> extend(3,converter.getCharL());
+  IndicatorCuboid3D<T> cube(extend,origin);
 
   Cuboid3D<T> cuboid(cube, converter.getLatticeL());
 
@@ -220,7 +221,7 @@ int main(int argc, char **argv) {
 
   /// === 4th Step: Main Loop with Timer ===
 
-  Timer<double> timer(converter.numTimeSteps(maxT), converter.numNodes(1)*converter.numNodes(1)*converter.numNodes(1) );
+  Timer<T> timer(converter.numTimeSteps(maxT), converter.numNodes(1)*converter.numNodes(1)*converter.numNodes(1) );
   timer.start();
   int iT;
 
@@ -234,7 +235,7 @@ int main(int argc, char **argv) {
     lattice.collideAndStream();
 
     /// === 7th Step: Computation and Output of the Results ===
-    getResults(lattice, converter, blockGeometry, iT, timer, maxT);
+    getResults(lattice, converter, blockGeometry, iT, timer);
   }
 
   timer.stop();

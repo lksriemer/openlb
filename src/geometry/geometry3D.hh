@@ -19,7 +19,7 @@
 */
 
 /** \file
- * Groups all the include files for 2D dynamics in
+ * Groups all the include files for 3D dynamics in
  * the dataStructure directory.
  */
 

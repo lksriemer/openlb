@@ -37,8 +37,7 @@ namespace olb {
 * Phys. Fluids , (1997), Volume 9, Issue 6, pp. 1591-1598
 */
 template<typename T, template<typename U> class Lattice, typename Dynamics, int direction, int orientation>
-class ZouHeDynamics : public BasicDynamics<T,Lattice>
-{
+class ZouHeDynamics : public BasicDynamics<T,Lattice> {
 public:
   /// Constructor
   ZouHeDynamics(T omega_, Momenta<T,Lattice>& momenta_);

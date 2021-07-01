@@ -44,8 +44,8 @@ struct Porous2dDescriptorBase {
 };
 
 template <typename T> struct PorousD2Q9Descriptor
-    : public D2Q9DescriptorBase<T>, public Porous2dDescriptorBase
-  { };
+    : public D2Q9DescriptorBase<T>, public Porous2dDescriptorBase {
+};
 
 ////////////////////////////////////////////////////////////////////////////////
 // extended descriptor for drag computation - 2D
@@ -63,8 +63,34 @@ struct ExtendedPorous2dDescriptorBase {
 };
 
 template <typename T> struct ExtendedPorousD2Q9Descriptor
-    : public D2Q9DescriptorBase<T>, public ExtendedPorous2dDescriptorBase
-  { };
+    : public D2Q9DescriptorBase<T>, public ExtendedPorous2dDescriptorBase {
+};
+
+////////////////////////////////////////////////////////////////////////////////
+// extended descriptor for porous particles - 2D
+
+struct PorousParticle2dDescriptor {
+  static const int numScalars = 4;
+  static const int numSpecies = 3;
+
+  static const int porosityIsAt      = 0;
+  static const int velNumerator      = 1;
+  static const int velDenominator    = 3;
+  //  static const int deltaMomentum     = 4;
+
+  static const int sizeOfPorosity    = 1;
+  static const int sizeOfVelNum      = 2;
+  static const int sizeOfVelDenom    = 1;
+  //  static const int sizeOfDeltaMomentum    = 2;
+};
+
+struct PorousParticle2dDescriptorBase {
+  typedef PorousParticle2dDescriptor ExternalField;
+};
+
+template <typename T> struct PorousParticleD2Q9Descriptor
+    : public D2Q9DescriptorBase<T>, public PorousParticle2dDescriptorBase {
+};
 
 
 /////////////////////////////////////////////////////////////////////////////////
@@ -81,8 +107,8 @@ struct Porous3dDescriptorBase {
 };
 
 template <typename T> struct PorousD3Q19Descriptor
-    : public D3Q19DescriptorBase<T>, public Porous3dDescriptorBase
-  { };
+    : public D3Q19DescriptorBase<T>, public Porous3dDescriptorBase {
+};
 
 
 
@@ -102,8 +128,8 @@ struct ExtendedPorous3dDescriptorBase {
 };
 
 template <typename T> struct ExtendedPorousD3Q19Descriptor
-    : public D3Q19DescriptorBase<T>, public ExtendedPorous3dDescriptorBase
-  { };
+    : public D3Q19DescriptorBase<T>, public ExtendedPorous3dDescriptorBase {
+};
 
 } // namespace descriptors
 

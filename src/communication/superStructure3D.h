@@ -35,12 +35,12 @@
 /// All OpenLB code is contained in this namespace.
 namespace olb {
 
+template<typename T> class LoadBalancer;
 template<typename T> class CuboidGeometry3D;
 template<typename T> class Communicator3D;
 
 template<typename T>
 class SuperStructure3D {
-
 protected:
   /// The grid structure is stored here
   CuboidGeometry3D<T>& _cuboidGeometry;
@@ -49,7 +49,7 @@ protected:
   /// Size of ghost cell layer (must be greater than 1 and
   /// greater_overlapBC, default =1)
   int _overlap;
-  /// This communicator handels the communication of the overlap
+  /// This communicator handles the communication of the overlap
   Communicator3D<T> _communicator;
   /// Specifies if there has been some data updated which requires
   /// communication
@@ -57,16 +57,20 @@ protected:
   /// class specific output stream
   mutable OstreamManager clout;
 public:
+  /// Virtual Destructor for inheritance
+  virtual ~SuperStructure3D() {};
   /// Construction of a super structure
   SuperStructure3D(CuboidGeometry3D<T>& cuboidGeometry,
                    LoadBalancer<T>& loadBalancer, int overlap = 2);
+  /// Default Constructor for empty SuperStructure
+  SuperStructure3D(int overlap = 1);
 
   /// Write access to the memory of the data of the super structure where (iX, iY, iZ) is the point providing the data iData in the block iCloc
   virtual bool* operator() (int iCloc, int iX, int iY, int iZ, int iData) =0;
   /// Read only access to the dim of the data of the super structure
   virtual int getDataSize() const =0;
   /// Read only access to the data type dim of the data of the super structure
-  virtual int getDataTypeSize() const =0;
+  virtual int getDataTypeSize() const=0;
 
   /// Read and write access to cuboid geometry
   CuboidGeometry3D<T>& getCuboidGeometry();
@@ -82,7 +86,7 @@ public:
   LoadBalancer<T> const& getLoadBalancer() const;
 
   /// Communicates the data in the overlap
-  void communicate(bool verbose=false); 
+  void communicate(bool verbose=false);
 };
 
 } // namespace olb

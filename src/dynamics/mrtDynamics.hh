@@ -42,35 +42,29 @@ namespace olb {
  *  \param lambda_ will be used as an
  */
 
- // Original implementation based on:
- // D'Humieres et al., "Multiple-relaxation-time lattice Boltzmann models in three dimensions", 
- // Phil: Trans. R. soc. Lond. A (2002) 360, 437-451 
- // and
- // Yu et al,, "LES of turbulent square jet flow using an MRT lattice Boltzmann model",
- // Computers & Fluids 35 (2006), 957-965
+// Original implementation based on:
+// D'Humieres et al., "Multiple-relaxation-time lattice Boltzmann models in three dimensions",
+// Phil: Trans. R. soc. Lond. A (2002) 360, 437-451
+// and
+// Yu et al,, "LES of turbulent square jet flow using an MRT lattice Boltzmann model",
+// Computers & Fluids 35 (2006), 957-965
 template<typename T, template<typename U> class Lattice>
 MRTdynamics<T,Lattice>::MRTdynamics (
   T omega_, Momenta<T,Lattice>& momenta_ )
   : BasicDynamics<T,Lattice>(momenta_), omega(omega_), lambda(omega_)
 {
   T rt[Lattice<T>::q]; // relaxation times vector.
-  for (int iPop  = 0; iPop < Lattice<T>::q; ++iPop)
-  {
+  for (int iPop  = 0; iPop < Lattice<T>::q; ++iPop) {
     rt[iPop] = Lattice<T>::S[iPop];
   }
-  for (int iPop  = 0; iPop < Lattice<T>::shearIndexes; ++iPop)
-  {
+  for (int iPop  = 0; iPop < Lattice<T>::shearIndexes; ++iPop) {
     rt[Lattice<T>::shearViscIndexes[iPop]] = omega;
   }
-  for (int iPop = 0; iPop < Lattice<T>::q; ++iPop)
-  {
-    for (int jPop = 0; jPop < Lattice<T>::q; ++jPop)
-    {
+  for (int iPop = 0; iPop < Lattice<T>::q; ++iPop) {
+    for (int jPop = 0; jPop < Lattice<T>::q; ++jPop) {
       invM_S[iPop][jPop] = T();
-      for (int kPop = 0; kPop < Lattice<T>::q; ++kPop)
-      {
-        if (kPop == jPop)
-        {
+      for (int kPop = 0; kPop < Lattice<T>::q; ++kPop) {
+        if (kPop == jPop) {
           invM_S[iPop][jPop] += Lattice<T>::invM[iPop][kPop] *
                                 rt[kPop];
         }
@@ -158,25 +152,19 @@ MRTdynamics2<T,Lattice>::MRTdynamics2 (
   : MRTdynamics<T,Lattice>(omega_, momenta_)
 {
   T rt[Lattice<T>::q]; // relaxation times vector.
-  for (int iPop  = 0; iPop < Lattice<T>::q; ++iPop)
-  {
+  for (int iPop  = 0; iPop < Lattice<T>::q; ++iPop) {
     rt[iPop] = Lattice<T>::S_2[iPop];
   }
-  for (int iPop  = 0; iPop < Lattice<T>::shearIndexes; ++iPop)
-  {
+  for (int iPop  = 0; iPop < Lattice<T>::shearIndexes; ++iPop) {
     rt[Lattice<T>::shearViscIndexes[iPop]] = omega;
   }
-  for (int iPop = 0; iPop < Lattice<T>::q; ++iPop)
-  {
-    for (int jPop = 0; jPop < Lattice<T>::q; ++jPop)
-    {
+  for (int iPop = 0; iPop < Lattice<T>::q; ++iPop) {
+    for (int jPop = 0; jPop < Lattice<T>::q; ++jPop) {
       invM_S_2[iPop][jPop] = T();
-      for (int kPop = 0; kPop < Lattice<T>::q; ++kPop)
-      {
-        if (kPop == jPop)
-        {
+      for (int kPop = 0; kPop < Lattice<T>::q; ++kPop) {
+        if (kPop == jPop) {
           invM_S_2[iPop][jPop] += Lattice<T>::invM[iPop][kPop] *
-                                rt[kPop];
+                                  rt[kPop];
         }
       }
     }

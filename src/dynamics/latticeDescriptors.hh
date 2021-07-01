@@ -43,16 +43,14 @@ const int D2Q9DescriptorBase<T>::vicinity = 1;
 
 template<typename T>
 const int D2Q9DescriptorBase<T>::c
-[D2Q9DescriptorBase<T>::q][D2Q9DescriptorBase<T>::d] =
-{
+[D2Q9DescriptorBase<T>::q][D2Q9DescriptorBase<T>::d] = {
   { 0, 0},
   {-1, 1}, {-1, 0}, {-1,-1}, { 0,-1},
   { 1,-1}, { 1, 0}, { 1, 1}, { 0, 1}
 };
 
 template<typename T>
-const T D2Q9DescriptorBase<T>::t[D2Q9DescriptorBase<T>::q] =
-{
+const T D2Q9DescriptorBase<T>::t[D2Q9DescriptorBase<T>::q] = {
   (T)4/(T)9, (T)1/(T)36, (T)1/(T)9, (T)1/(T)36, (T)1/(T)9,
   (T)1/(T)36, (T)1/(T)9, (T)1/(T)36, (T)1/(T)9
 };
@@ -67,8 +65,7 @@ const int D3Q13DescriptorBase<T>::vicinity = 1;
 
 template<typename T>
 const int D3Q13DescriptorBase<T>::c
-[D3Q13DescriptorBase<T>::q][D3Q13DescriptorBase<T>::d] =
-{
+[D3Q13DescriptorBase<T>::q][D3Q13DescriptorBase<T>::d] = {
   { 0, 0, 0},
 
   {-1,-1, 0}, {-1, 1, 0}, {-1, 0,-1},
@@ -79,8 +76,7 @@ const int D3Q13DescriptorBase<T>::c
 };
 
 template<typename T>
-const T D3Q13DescriptorBase<T>::t[D3Q13DescriptorBase<T>::q] =
-{
+const T D3Q13DescriptorBase<T>::t[D3Q13DescriptorBase<T>::q] = {
   (T)1/(T)2,
 
   (T)1/(T)24, (T)1/(T)24, (T)1/(T)24,
@@ -111,8 +107,7 @@ const int D3Q15DescriptorBase<T>::vicinity = 1;
 
 template<typename T>
 const int D3Q15DescriptorBase<T>::c
-[D3Q15DescriptorBase<T>::q][D3Q15DescriptorBase<T>::d] =
-{
+[D3Q15DescriptorBase<T>::q][D3Q15DescriptorBase<T>::d] = {
   { 0, 0, 0},
 
   {-1, 0, 0}, { 0,-1, 0}, { 0, 0,-1},
@@ -124,8 +119,7 @@ const int D3Q15DescriptorBase<T>::c
 };
 
 template<typename T>
-const T D3Q15DescriptorBase<T>::t[D3Q15DescriptorBase<T>::q] =
-{
+const T D3Q15DescriptorBase<T>::t[D3Q15DescriptorBase<T>::q] = {
   (T)2/(T)9,
 
   (T)1/(T)9, (T)1/(T)9, (T)1/(T)9,
@@ -146,8 +140,7 @@ const int D3Q19DescriptorBase<T>::vicinity = 1;
 
 template<typename T>
 const int D3Q19DescriptorBase<T>::c
-[D3Q19DescriptorBase<T>::q][D3Q19DescriptorBase<T>::d] =
-{
+[D3Q19DescriptorBase<T>::q][D3Q19DescriptorBase<T>::d] = {
   { 0, 0, 0},
 
   {-1, 0, 0}, { 0,-1, 0}, { 0, 0,-1},
@@ -160,8 +153,7 @@ const int D3Q19DescriptorBase<T>::c
 };
 
 template<typename T>
-const T D3Q19DescriptorBase<T>::t[D3Q19DescriptorBase<T>::q] =
-{
+const T D3Q19DescriptorBase<T>::t[D3Q19DescriptorBase<T>::q] = {
   (T)1/(T)3,
 
   (T)1/(T)18, (T)1/(T)18, (T)1/(T)18,
@@ -184,8 +176,7 @@ const int D3Q27DescriptorBase<T>::vicinity = 1;
 
 template<typename T>
 const int D3Q27DescriptorBase<T>::c
-[D3Q27DescriptorBase<T>::q][D3Q27DescriptorBase<T>::d] =
-{
+[D3Q27DescriptorBase<T>::q][D3Q27DescriptorBase<T>::d] = {
   { 0, 0, 0},
 
   {-1, 0, 0}, { 0,-1, 0}, { 0, 0,-1},
@@ -200,8 +191,7 @@ const int D3Q27DescriptorBase<T>::c
 };
 
 template<typename T>
-const T D3Q27DescriptorBase<T>::t[D3Q27DescriptorBase<T>::q] =
-{
+const T D3Q27DescriptorBase<T>::t[D3Q27DescriptorBase<T>::q] = {
   (T)8/(T)27,
 
   (T)2/(T)27, (T)2/(T)27, (T)2/(T)27,

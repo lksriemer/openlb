@@ -32,11 +32,16 @@
 #include <vector>
 #include <iostream>
 #include <sstream>
+#include <set>
+
 #include "communication/loadBalancer.h"
 #include "geometry/cuboidGeometry3D.h"
-#include "functors/indicatorF.h"
+#include "functors/indicator/indicatorF3D.h"
+#include "functors/indicator/indicatorBaseF3D.h"
 #include "utilities/vectorHelpers.h"
 #include "octree.h"
+#include "core/vector.h"
+
 
 using namespace olb::util;
 
@@ -51,15 +56,15 @@ struct STLpoint {
   /// Constructor constructs
   STLpoint() : r(3, T()) {};
   /// Operator= equals
-	STLpoint<T>& operator=(STLpoint<T> const& rhs) {
-		r = rhs.r;
-		return *this;
-	};
+  STLpoint<T>& operator=(STLpoint<T> const& rhs) {
+    r = rhs.r;
+    return *this;
+  };
   /// CopyConstructor copies
-	STLpoint(STLpoint<T> const& rhs):r(rhs.r){};
+  STLpoint(STLpoint<T> const& rhs):r(rhs.r) {};
 
-	/// Point coordinates
-  std::vector<T> r;
+  /// Point coordinates in SI units
+  Vector<T,3> r;
 };
 
 template<typename T>
@@ -70,18 +75,20 @@ struct STLtriangle {
    * \param q Point of intersection (if intersection occurs)
    * \param alpha Explained in http://www.uninformativ.de/bin/RaytracingSchnitttests-76a577a-CC-BY.pdf page 7-12
    *            q = pt + alpha * dir
-   * \param rad It's complicated. Imagine you have a sphere with radius rad moving along the ray. Then q becomes the first point of the sphere to touch the triangle.
+   * \param rad It's complicated. Imagine you have a sphere with radius rad moving a long the ray. Then q becomes the first point of the sphere to touch the triangle.
    */
-  bool testRayIntersect(const std::vector<T>& pt,const std::vector<T>& dir, std::vector<T>& q, T& alpha, const T& rad = T()) const;
+  bool testRayIntersect(const Vector<T,3>& pt,const Vector<T,3>& dir, Vector<T,3>& q, T& alpha, const T& rad = T(), bool print = false);
+  Vector<T,3> closestPtPointTriangle(const Vector<T,3>& pt) const;
 
   /// A triangle contains 3 Points
   std::vector<STLpoint<T> > point;
 
   /// normal of triangle
-  std::vector<T> normal;
+  Vector<T,3> normal;
 
   /// variables explained in http://www.uninformativ.de/bin/RaytracingSchnitttests-76a577a-CC-BY.pdf page 7-12
-  std::vector<T> uBeta, uGamma;
+  /// precomputed for speedup
+  Vector<T,3> uBeta, uGamma;
   T d, kBeta, kGamma;
 
 public:
@@ -91,18 +98,24 @@ public:
   STLtriangle(STLtriangle<T> const& tri):point(tri.point), normal(tri.normal), uBeta(tri.uBeta), uGamma(tri.uGamma), d(tri.d), kBeta(tri.kBeta), kGamma(tri.kGamma) {};
   /// Operator= equals
   STLtriangle<T>& operator=(STLtriangle<T> const& tri) {
-		point = tri.point; 
-		normal = tri.normal; 
-		uBeta = tri.uBeta; 
-		uGamma = tri.uGamma; 
-		d = tri.d; 
-		kBeta = tri.kBeta; 
-		kGamma = tri.kGamma;
-		return *this;
-	};
+    point = tri.point;
+    normal = tri.normal;
+    uBeta = tri.uBeta;
+    uGamma = tri.uGamma;
+    d = tri.d;
+    kBeta = tri.kBeta;
+    kGamma = tri.kGamma;
+    return *this;
+  };
+
+  ~STLtriangle() {};
 
   /// Initializes triangle and precomputes member variables.
   void init();
+  /// Return write access to normal
+  inline Vector<T,3>& getNormal() {
+    return normal;
+  }
   /// Returns Pt0-Pt1
   std::vector<T> getE0();
   /// Returns Pt0-Pt2
@@ -112,15 +125,15 @@ public:
 template<typename T>
 class STLmesh {
   /// Computes distance squared betwenn p1 and p2
-  double distPoints(STLpoint<T>& p1, STLpoint<T>& p2);
+  T distPoints(STLpoint<T>& p1, STLpoint<T>& p2);
   /// Filename
   const std::string& _fName;
   /// Vector of Triangles
   std::vector<STLtriangle<T> > _triangles;
-  /// Min and Max points
-  std::vector<T> _min, _max;
-  /// I have no idea, probably max(distPoints)
-  double _maxDist2;
+  /// Min and Max points of axis aligned bounding box coordinate in SI units
+  Vector<T,3> _min, _max;
+  /// largest squared length of edge of all triangles
+  T _maxDist2;
   /// OstreamManager
   mutable OstreamManager clout;
 
@@ -131,37 +144,57 @@ public:
    * \param stlSize - Conversion factor for STL (e.g. STL in mm stlSize=10^-3)
    */
   STLmesh(std::string, T stlSize = 1.);
- 
+
   /// Returns reference to a triangle
-  inline const STLtriangle<T>& getTri(size_t i) {return _triangles[i];}
+  inline STLtriangle<T>& getTri(unsigned int i) {
+    return _triangles[i];
+  }
   /// Returns number of triangles
-  inline size_t triangleSize() const {
+  inline unsigned int triangleSize() const {
     return _triangles.size();
   }
   /// Returns _min
-  inline std::vector<T>& getMin() {return _min;};
+  inline Vector<T,3>& getMin() {
+    return _min;
+  };
   /// Returns _max
-  inline std::vector<T>& getMax() {return _max;};
+  inline Vector<T,3>& getMax() {
+    return _max;
+  };
   /// Returns maxDist squared
-  inline float maxDist2() const {return _maxDist2;}
+  inline float maxDist2() const {
+    return _maxDist2;
+  }
   /// Prints console output
   void print(bool full = false);
- /// Writes STL mesh in Si units
+  /// Writes STL mesh in Si units
   void write(std::string fName);
+  /// Compute intersection between Ray and set of triangles; returns true if intersection is found
+  bool testRayIntersect(const std::set<unsigned int>& tris, const Vector<T,3>& pt,const Vector<T,3>& dir, Vector<T,3>& q, T& alpha);
 };
 
+
 template<typename T>
-class STLreader : public IndicatorF3D<bool,T> {
+class STLreader : public IndicatorF3D<T> {
 private:
-  /// Indicates (slow, more stable)
+  /*
+   *  Old indicate function (slower, more stable)
+   *  Define three rays (X-, Y-, Z-direction) for each leaf and count intersections
+   *  with STL for each ray. Odd number of intersection means inside (Majority vote).
+   */
   void indicate1();
-  /// Indicates (fast, less stable)
+  /*
+   *  New indicate function (faster, less stable)
+   *  Define ray in Z-direction for each Voxel in XY-layer. Indicate all nodes on the fly.
+   */
   void indicate2();
   /// Size of the smallest voxel
   T _voxelSize;
-  /// Factor to get Si unit (m), i.e. "0.001" means mm 
+  /// Factor to get Si unit (m), i.e. "0.001" means mm
   T _stlSize;
-  /// The tree
+  /// Overlap increases Octree radius by _overlap
+  T _overlap;
+  /// Pointer to tree
   Octree<T>* _tree;
   /// The filename
   const std::string _fName;
@@ -183,13 +216,14 @@ public:
    *               1: slow, more stable (for untight STLs)
    * \param verbose Get additional information.
    */
-  STLreader(const std::string fName, T voxelSize, T stlSize=1, unsigned short int method = 0, bool verbose = false);
+  STLreader(const std::string fName, T voxelSize, T stlSize=1, unsigned short int method=2,
+            bool verbose = false, T overlap=0., T max=0.);
 
   /// Returns whether node is inside or not.
-  std::vector<bool> operator()(std::vector<T> input);
+  bool operator() (bool output[], const T input[]) override;
 
   /// Computes distance to closest triangle intersection
-  bool distance(T& distance,const std::vector<T>& origin, const std::vector<T>& direction, int iC=-1);
+  bool distance(T& distance,const Vector<T,3>& origin, const Vector<T,3>& direction, int iC=-1) override;
 
   /// Prints console output
   void print();
@@ -197,14 +231,22 @@ public:
   /// Writes STL mesh in Si units
   void writeSTL();
 
-  /// Writes Octree 
+  /// Writes Octree
   void writeOctree();
 
+  /// Rearranges normals of triangles to point outside of geometry
+  void setNormalsOutside();
+
   /// Returns tree
-  inline const Octree<T>* getTree() const {return _tree;};
+  inline Octree<T>* getTree() const {
+    return _tree;
+  };
+
 
   /// Returns mesh
-  inline STLmesh<T>& getMesh() {return _mesh;};
+  inline STLmesh<T>& getMesh() {
+    return _mesh;
+  };
 };
 
 }  // namespace olb

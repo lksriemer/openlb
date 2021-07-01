@@ -40,15 +40,18 @@ namespace olb {
 //======================================================================
 template<typename T, template<typename U> class Lattice>
 class NavierStokesAdvectionDiffusionCouplingPostProcessor3D :
-  public LocalPostProcessor3D<T,Lattice>
-{
+  public LocalPostProcessor3D<T,Lattice> {
 public:
   NavierStokesAdvectionDiffusionCouplingPostProcessor3D(
     int x0_, int x1_, int y0_, int y1_, int z0_, int z1_,
     T gravity_, T T0_, T deltaTemp_, std::vector<T> dir_,
     std::vector<SpatiallyExtendedObject3D* > partners_);
-  virtual int extent() const { return 1; }
-  virtual int extent(int whichDirection) const { return 1; }
+  virtual int extent() const {
+    return 1;
+  }
+  virtual int extent(int whichDirection) const {
+    return 1;
+  }
   virtual void process(BlockLattice3D<T,Lattice>& blockLattice);
   virtual void processSubDomain(BlockLattice3D<T,Lattice>& blockLattice,
                                 int x0_, int x1_, int y0_, int y1_,  int z0_, int z1_);
@@ -62,8 +65,7 @@ private:
 
 template<typename T, template<typename U> class Lattice>
 class NavierStokesAdvectionDiffusionCouplingGenerator3D :
-  public LatticeCouplingGenerator3D<T,Lattice>
-{
+  public LatticeCouplingGenerator3D<T,Lattice> {
 public:
   NavierStokesAdvectionDiffusionCouplingGenerator3D(
     int x0_, int x1_, int y0_, int y1_,  int z0_, int z1_,
@@ -77,9 +79,48 @@ private:
   std::vector<T> dir;
 };
 
+//==================================================================================================
+// ========Coupling 3D of Navier-Stokes on Advection-Diffusion with Stokes drag====================//
+//==================================================================================================
+template<typename T, template<typename U> class Lattice>
+class StokesDragCouplingPostProcessor3D :
+  public LocalPostProcessor3D<T,Lattice> {
+public:
+  StokesDragCouplingPostProcessor3D(
+    int x0_, int x1_, int y0_, int y1_, int z0_, int z1_, T dragCoeff_, int offset_,
+    std::vector<SpatiallyExtendedObject3D* > partners_);
+  virtual int extent() const {
+    return 1;
+  }
+  virtual int extent(int whichDirection) const {
+    return 1;
+  }
+  virtual void process(BlockLattice3D<T,Lattice>& blockLattice);
+  virtual void processSubDomain(BlockLattice3D<T,Lattice>& blockLattice,
+                                int x0_, int x1_, int y0_, int y1_,  int z0_, int z1_);
+private:
+  int x0, x1, y0, y1, z0, z1;
+  T dragCoeff;
+  int offset;
+  T *vel, *vel_new, *velXp, *velXn, *velYp, *velYn, *velZp, *velZn;
+  bool par = true;
 
+  std::vector<SpatiallyExtendedObject3D*> partners;
+};
 
+template<typename T, template<typename U> class Lattice>
+class StokesDragCouplingGenerator3D :
+  public LatticeCouplingGenerator3D<T,Lattice> {
+public:
+  StokesDragCouplingGenerator3D(LBconverter<T> const& converter_, T radius_, T particleRho_, int offset_);
+  virtual PostProcessor3D<T,Lattice>* generate(
+    std::vector<SpatiallyExtendedObject3D* > partners) const;
+  virtual LatticeCouplingGenerator3D<T,Lattice>* clone() const;
 
+private:
+  T dragCoeff;
+  int offset;
+};
 
 }
 

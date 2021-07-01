@@ -59,16 +59,16 @@ private:
 
   /// Points to the underlying data from which the statistics is taken
   SuperGeometry2D<T>* _superGeometry;
-  /// Specifies if an update is needed  
+  /// Specifies if an update is needed
   bool _statisticsUpdateNeeded;
   /// Size of ghost voxel layer
   int _overlap;
 
-  /// Number of different material numbers 
+  /// Number of different material numbers
   int _nMaterials;
-  /// Mapping a material number to the number of this kind found in the super geometry 
+  /// Mapping a material number to the number of this kind found in the super geometry
   std::map<int, int> _material2n;
-  /// Mapping a material number to the min. physical position in each space direction 
+  /// Mapping a material number to the min. physical position in each space direction
   std::map<int, std::vector<T> > _material2min;
   /// Mapping a material number to the max. physical position in each space direction
   std::map<int, std::vector<T> > _material2max;
@@ -85,7 +85,7 @@ public:
   /// Copy assignment
   SuperGeometryStatistics2D<T>& operator=(SuperGeometryStatistics2D const& rhs);
 
-  /// Read and write access to a flag, which indicates if an uptate is needed (=true)  
+  /// Read and write access to a flag, which indicates if an uptate is needed (=true)
   bool& getStatisticsStatus();
   /// Read only access to a flag, which indicates if an uptate is needed (=true)
   bool const & getStatisticsStatus() const;
@@ -95,7 +95,7 @@ public:
 
   /// Returns the number of different materials
   int getNmaterials();
-  /// Returns the number of voxels for a given material number 
+  /// Returns the number of voxels for a given material number
   int getNvoxel(int material);
   /// Returns the number of voxels with material!=0
   int getNvoxel();
@@ -109,7 +109,7 @@ public:
   std::vector<T> getPhysRadius(int material);
   /// Returns the center position
   std::vector<T> getCenterPhysR(int material);
-  /// Returns the boundary type which is characterized by a discrte normal (c.f. Zimny) 
+  /// Returns the boundary type which is characterized by a discrte normal (c.f. Zimny)
   std::vector<int> getType(int iC, int iX, int iY);
 
   /// Returns normal that points into the fluid for paraxial surfaces

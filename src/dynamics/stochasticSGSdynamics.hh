@@ -68,33 +68,33 @@ StochasticSGSdynamics<T,Lattice>::StochasticSGSdynamics (
 
 {
 
-//    T invM_S_SGS[Lattice<T>::q][Lattice<T>::q];
-//    T rtSGS[Lattice<T>::q]; // relaxation times vector for SGS approach.
-//    for (int iPop  = 0; iPop < Lattice<T>::q; ++iPop)
-//    {
-//      rtSGS[iPop] = Lattice<T>::S[iPop];
-//    }
-//    for (int iPop  = 0; iPop < Lattice<T>::shearIndexes; ++iPop)
-//    {
-//      rtSGS[Lattice<T>::shearViscIndexes[iPop]] = omega;
-//    }
-//    for (int iPop = 0; iPop < Lattice<T>::q; ++iPop)
-//    {
-//      for (int jPop = 0; jPop < Lattice<T>::q; ++jPop)
-//      {
-//        invM_S_SGS[iPop][jPop] = T();
-//        for (int kPop = 0; kPop < Lattice<T>::q; ++kPop)
-//        {
-//          if (kPop == jPop)
-//          {
-//            invM_S_SGS[iPop][jPop] += Lattice<T>::invM[iPop][kPop] *
-//                                  rtSGS[kPop];
-//            cout << "wert"<<iPop <<jPop << "= "<<  invM_S_SGS[iPop][jPop]<< endl;
-//          }
-//        }
-//      }
-//    }
-//
+  //    T invM_S_SGS[Lattice<T>::q][Lattice<T>::q];
+  //    T rtSGS[Lattice<T>::q]; // relaxation times vector for SGS approach.
+  //    for (int iPop  = 0; iPop < Lattice<T>::q; ++iPop)
+  //    {
+  //      rtSGS[iPop] = Lattice<T>::S[iPop];
+  //    }
+  //    for (int iPop  = 0; iPop < Lattice<T>::shearIndexes; ++iPop)
+  //    {
+  //      rtSGS[Lattice<T>::shearViscIndexes[iPop]] = omega;
+  //    }
+  //    for (int iPop = 0; iPop < Lattice<T>::q; ++iPop)
+  //    {
+  //      for (int jPop = 0; jPop < Lattice<T>::q; ++jPop)
+  //      {
+  //        invM_S_SGS[iPop][jPop] = T();
+  //        for (int kPop = 0; kPop < Lattice<T>::q; ++kPop)
+  //        {
+  //          if (kPop == jPop)
+  //          {
+  //            invM_S_SGS[iPop][jPop] += Lattice<T>::invM[iPop][kPop] *
+  //                                  rtSGS[kPop];
+  //            cout << "wert"<<iPop <<jPop << "= "<<  invM_S_SGS[iPop][jPop]<< endl;
+  //          }
+  //        }
+  //      }
+  //    }
+  //
 
 
 }
@@ -126,23 +126,17 @@ void StochasticSGSdynamics<T,Lattice>::collide(
 
   T invM_S_SGS[Lattice<T>::q][Lattice<T>::q];
   T rtSGS[Lattice<T>::q]; // relaxation times vector for SGS approach.
-  for (int iPop  = 0; iPop < Lattice<T>::q; ++iPop)
-  {
+  for (int iPop  = 0; iPop < Lattice<T>::q; ++iPop) {
     rtSGS[iPop] = Lattice<T>::S[iPop];
   }
-  for (int iPop  = 0; iPop < Lattice<T>::shearIndexes; ++iPop)
-  {
+  for (int iPop  = 0; iPop < Lattice<T>::shearIndexes; ++iPop) {
     rtSGS[Lattice<T>::shearViscIndexes[iPop]] = newOmega;
   }
-  for (int iPop = 0; iPop < Lattice<T>::q; ++iPop)
-  {
-    for (int jPop = 0; jPop < Lattice<T>::q; ++jPop)
-    {
+  for (int iPop = 0; iPop < Lattice<T>::q; ++iPop) {
+    for (int jPop = 0; jPop < Lattice<T>::q; ++jPop) {
       invM_S_SGS[iPop][jPop] = T();
-      for (int kPop = 0; kPop < Lattice<T>::q; ++kPop)
-      {
-        if (kPop == jPop)
-        {
+      for (int kPop = 0; kPop < Lattice<T>::q; ++kPop) {
+        if (kPop == jPop) {
           invM_S_SGS[iPop][jPop] += Lattice<T>::invM[iPop][kPop] *
                                     rtSGS[kPop];
           //cout << "wert"<<iPop <<jPop << "= "<<  invM_S_SGS[iPop][jPop]<< endl;
@@ -207,13 +201,15 @@ void StochasticSGSdynamics<T,Lattice>::collide(
 
 
 template<typename T, template<typename U> class Lattice>
-void StochasticSGSdynamics<T,Lattice>::setOmega(T omega) {
+void StochasticSGSdynamics<T,Lattice>::setOmega(T omega)
+{
   this->setOmega(omega);
   preFactor = computePreFactor(omega, smagoConst, dx, dt);
 }
 
 template<typename T, template<typename U> class Lattice>
-T StochasticSGSdynamics<T,Lattice>::getSmagorinskyOmega(Cell<T,Lattice>& cell, T X_lang_n ) {
+T StochasticSGSdynamics<T,Lattice>::getSmagorinskyOmega(Cell<T,Lattice>& cell, T X_lang_n )
+{
   T rho, uTemp[Lattice<T>::d], pi[util::TensorVal<Lattice<T> >::n];
   this->momenta.computeAllMomenta(cell, rho, uTemp, pi);
   T newOmega = computeOmega(this->getOmega(), preFactor, rho, pi, X_lang_n);
@@ -293,8 +289,9 @@ T StochasticSGSdynamics<T,Lattice>::computeTimeScale(
 {
   T Const = 0.2;
   T PiNeqNormSqr = pi[0]*pi[0] + 2.0*pi[1]*pi[1] + pi[2]*pi[2];
-  if (util::TensorVal<Lattice<T> >::n == 6)
+  if (util::TensorVal<Lattice<T> >::n == 6) {
     PiNeqNormSqr += pi[2]*pi[2] + pi[3]*pi[3] + 2*pi[4]*pi[4] +pi[5]*pi[5];
+  }
   T PiNeqNorm    = sqrt(PiNeqNormSqr);
 
   /// SGS dissipation is calcualted directly withou any filter size due to effeiciency in tau
@@ -319,7 +316,8 @@ T StochasticSGSdynamics<T,Lattice>::computeTimeScale(
 
 
 template<typename T, template<typename U> class Lattice>
-T StochasticSGSdynamics<T,Lattice>::computePreFactor(T omega, T smagoConst, T dx, T dt) {
+T StochasticSGSdynamics<T,Lattice>::computePreFactor(T omega, T smagoConst, T dx, T dt)
+{
   return (T)(smagoConst*smagoConst*dx*dx)*Lattice<T>::invCs2/dt*4*sqrt(2);
 }
 
@@ -327,8 +325,9 @@ template<typename T, template<typename U> class Lattice>
 T StochasticSGSdynamics<T,Lattice>::computeOmega(T omega0, T preFactor, T rho, T pi[util::TensorVal<Lattice<T> >::n], T X_lang_n)
 {
   T PiNeqNormSqr = pi[0]*pi[0] + 2.0*pi[1]*pi[1] + pi[2]*pi[2];
-  if (util::TensorVal<Lattice<T> >::n == 6)
+  if (util::TensorVal<Lattice<T> >::n == 6) {
     PiNeqNormSqr += pi[2]*pi[2] + pi[3]*pi[3] + 2*pi[4]*pi[4] +pi[5]*pi[5];
+  }
   T PiNeqNorm    = sqrt(PiNeqNormSqr);
   /// Molecular realaxation time
   T tau_mol = 1. /omega0;

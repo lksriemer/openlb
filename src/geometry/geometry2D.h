@@ -35,6 +35,4 @@
 #include "superGeometry2D.h"
 #include "superGeometryStatistics2D.h"
 
-
-
 #endif

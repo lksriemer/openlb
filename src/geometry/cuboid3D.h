@@ -29,12 +29,19 @@
 #define CUBOID_3D_H
 
 #include <vector>
+#include <math.h>
+
+#include "core/serializer.h"
 #include "io/ostreamManager.h"
-#include "functors/indicatorF.h"
+#include "functors/indicator/indicatorF3D.h"
 
 
 /// All OpenLB code is contained in this namespace.
 namespace olb {
+
+
+template<typename T> class IndicatorF3D;
+
 
 /// A regular single 3D cuboid is the basic component of a 3D cuboid
 /// structure which defines the grid.
@@ -46,10 +53,8 @@ namespace olb {
  *
  * This class is not intended to be derived from.
  */
-
-
 template<typename T>
-class Cuboid3D {
+class Cuboid3D : public Serializable {
 private:
   /// Global position of the left lower corner of the cuboid
   T   _globPosX, _globPosY, _globPosZ;
@@ -66,31 +71,24 @@ private:
   mutable OstreamManager clout;
 
 public:
+  /// Construction of an empty cuboid at position 0, 0, 0 with delta 0 and nX = nY = nZ = 0
+  Cuboid3D();
   /// Construction of a cuboid
   Cuboid3D(T globPosX, T globPosY, T globPosZ, T delta, int nX, int nY, int nZ, int refinementLevel=0);
   /// Construction of a cuboid vector version
   Cuboid3D(std::vector<T> origin, T delta, std::vector<int> extend, int refinementLevel=0);
   /// Construction of a cuboid using indicator
-  Cuboid3D(IndicatorF3D<bool,T>& indicatorF, T voxelSize, int refinementLevel=0);
+  Cuboid3D(IndicatorF3D<T>& indicatorF, T voxelSize, int refinementLevel=0);
   /// Copy constructor
-  Cuboid3D(Cuboid3D<T> const& rhs, int overlap=0) : clout(std::cout,"Cuboid3D") {
-    this->init(rhs._globPosX-rhs._delta*overlap, rhs._globPosY-rhs._delta*overlap, rhs._globPosZ-rhs._delta*overlap, rhs._delta, rhs._nX+2*overlap, rhs._nY+2*overlap, rhs._nZ+2*overlap);
-    _weight = rhs._weight;
-    _refinementLevel = rhs._refinementLevel;
-  };
+  Cuboid3D(Cuboid3D<T> const& rhs, int overlap=0);
   /// Copy assignment
-  Cuboid3D& operator=(Cuboid3D const& rhs) {
-    this->init(rhs._globPosX, rhs._globPosY, rhs._globPosZ, rhs._delta, rhs._nX, rhs._nY, rhs._nZ);
-    _weight = rhs._weight;
-    _refinementLevel = rhs._refinementLevel;
-    return *this;
-  };
-
+  Cuboid3D& operator=(Cuboid3D const& rhs);
   /// Initializes the cuboid
-  void init(T globPosX, T globPosY, T globPosZ, T delta, int nX, int nY, int nZ, int refinementLevel=0); //TODO: remove or private
+  void init(T globPosX, T globPosY, T globPosZ, T delta, int nX, int nY, int nZ,
+            int refinementLevel=0); //TODO: remove or private
 
   /// Read only access to left lower corner coordinates
-  std::vector<T> const getOrigin() const {std::vector<T> origin(3,T()); origin[0] = _globPosX; origin[1] = _globPosY; origin[2] = _globPosZ; return origin;};
+  Vector<T,3> const getOrigin() const;
   /// Read only access to the distance of cuboid nodes
   T getDeltaR() const;
   /// Read access to cuboid width
@@ -100,34 +98,61 @@ public:
   /// Read access to cuboid depth
   int getNz() const;
   /// Read only access to the number of voxels in every dimension
-  std::vector<int> const getExtend() const {std::vector<int> extend(3,T()); extend[0] = _nX; extend[1] = _nY; extend[2] = _nZ; return extend;};
-
+  Vector<int,3> const getExtend() const;
   /// Returns the volume of the cuboid
   T getPhysVolume() const;
+  /// Returns the actual value of weight (-1 for getLatticeVolume())
+  int getWeightValue() const;
   /// Returns the number of full cells
   int getWeight() const;
   /// Sets the number of full cells
   void setWeight(int fullCells);
+  /// Returns the refinementLevel
+  int getRefinementLevel() const;
+  /// Sets the refinementLevel
+  void setRefinementLevel(int refLevel);
   /// Returns the number of Nodes in the volume
   int getLatticeVolume() const;
   /// Returns the perimeter of the cuboid
   T getPhysPerimeter() const;
   /// Returns the number of Nodes at the perimeter
   int getLatticePerimeter() const;
+
+  /// equal operator
+  bool operator==(const Cuboid3D<T>& rhs) const;
+
+  /// Number of data blocks for the serializable interface
+  std::size_t getNblock() const {
+    return 9;
+  };
+  /// Binary size for the serializer interface
+  std::size_t getSerializableSize() const {
+    return ( 4 * sizeof(T) )  + ( 5 * sizeof(int) );
+  }
+  /// \return a pointer to the memory of the current block and its size for the serializable interface
+  bool* getBlock(std::size_t iBlock, std::size_t& sizeBlock, bool loadingMode);
+
   /// Prints cuboid details
   void print() const;
 
-  std::vector<T> getPhysR(int iX, int iY, int iZ) const {
-    std::vector<T> physR(3,T());
-    physR[0] = _globPosX + iX*_delta;
-    physR[1] = _globPosY + iY*_delta;
-    physR[2] = _globPosZ + iZ*_delta;
-    return physR;
-  };
-  std::vector<T> getPhysR(std::vector<int> latticeR) const {
-    std::vector<T> physR(getPhysR(latticeR[0],latticeR[1],latticeR[2]));
-    return physR;
-  };
+  void getPhysR(T physR[3], const int latticeR[3]) const;
+  void getPhysR(T physR[3], const int& iX, const int& iY, const int& iZ) const;
+
+  void getLatticeR(int latticeR[3], const T physR[3]) const {
+    latticeR[0] = (int)floor( (physR[0] - _globPosX )/_delta +.5);
+    latticeR[1] = (int)floor( (physR[1] - _globPosY )/_delta +.5);
+    latticeR[2] = (int)floor( (physR[2] - _globPosZ )/_delta +.5);
+  }
+
+  void getFloorLatticeR(const std::vector<T>& physR, std::vector<int>& latticeR) const {
+    getFloorLatticeR(&latticeR[0], &physR[0]);
+  }
+
+  void getFloorLatticeR(int latticeR[3], const T physR[3]) const {
+    latticeR[0] = (int)floor( (physR[0] - _globPosX)/_delta);
+    latticeR[1] = (int)floor( (physR[1] - _globPosY)/_delta);
+    latticeR[2] = (int)floor( (physR[2] - _globPosZ)/_delta);
+  }
 
   /// Checks whether a point (globX/gloxY/globZ) is contained in the cuboid
   /// extended with an layer of size overlap*delta
@@ -148,7 +173,6 @@ public:
   bool checkInters(T globX0, T globX1, T globY0, T globY1, T globZ0, T globZ1,
                    int &locX0, int &locX1, int &locY0, int &locY1, int &locZ0, int &locZ1,
                    int overlap = 0) const;
-
   /// Divides the cuboid in p*q*r cuboids and add the to the given vector
   void divide(int p, int q, int r, std::vector<Cuboid3D<T> > &childrenC) const;
   /// Divides the cuboid in p cuboids and add them to the given vector

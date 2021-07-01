@@ -1,6 +1,6 @@
 /*  This file is part of the OpenLB library
  *
- *  Copyright (C) 2006, 2007 Jonas Latt
+ *  Copyright (C) 2006, 2007 Jonas Latt, 2015 Mathias J. Krause
  *  E-mail contact: info@openlb.net
  *  The most recent release of OpenLB can be downloaded at
  *  <http://www.openlb.net/>
@@ -28,6 +28,7 @@
 #define CELL_H
 
 #include "olbDebug.h"
+#include "serializer.h"
 #include "dynamics/latticeDescriptors.h"
 #include "dynamics/dynamics.h"
 
@@ -46,38 +47,52 @@ namespace olb {
  *
  * This class is not intended to be derived from.
  */
-template<typename T, template<typename U> class Lattice>
-class Cell {
-public:
+template<typename T, class Descriptor>
+class CellBase {
+
+protected:
   /// The lattice populations are defined as a q-element C-array.
-  typedef T fPop[Lattice<T>::q];
+  T f[Descriptor::q];   ///< distribution functions
+
+public:
+  /// Read-write access to distribution functions.
+  /** \param iPop index of the accessed distribution function */
+  T& operator[](int const& iPop) {
+    OLB_PRECONDITION( iPop < Descriptor::q );
+    return f[iPop];
+  }
+  /// Read-only access to distribution functions.
+  /** \param iPop index of the accessed distribution function */
+  T const& operator[](int const& iPop) const {
+    OLB_PRECONDITION( iPop < Descriptor::q );
+    return f[iPop];
+  }
+};
+
+
+template<typename T, template<typename U> class Lattice>
+class Cell : public CellBase<T, typename Lattice<T>::BaseDescriptor>, public Serializable {
+public:
   /// Additional per-cell scalars for external fields, e.g. forces
   typedef descriptors::ExternalFieldArray <
   T, typename Lattice<T>::ExternalField > External;
+private:
+  External             external;  ///< external scalars
+  bool                 takesStat; ///< is statistics taken?
+  Dynamics<T,Lattice>* dynamics;  ///< local LB dynamics
+
 public:
   /// Default constructor.
   Cell();
   /// Constructor, to be used whenever possible.
   Cell(Dynamics<T,Lattice>* dynamics_);
 public:
-  /// Read-write access to distribution functions.
-  /** \param iPop index of the accessed distribution function */
-  T& operator[](int iPop) {
-    OLB_PRECONDITION( iPop < Lattice<T>::q );
-    return f[iPop];
-  }
-  /// Read-only access to distribution functions.
-  /** \param iPop index of the accessed distribution function */
-  T const& operator[](int iPop) const {
-    OLB_PRECONDITION( iPop < Lattice<T>::q );
-    return f[iPop];
-  }
   /// Attribute all f-values from another cell to the present one.
   /** \return a reference to *this
    */
   Cell<T,Lattice>& attributeF(Cell<T,Lattice> const& rhs) {
     for (unsigned iPop=0; iPop < Lattice<T>::q; ++iPop) {
-      f[iPop] = rhs.f[iPop];
+      this->f[iPop] = rhs.f[iPop];
     }
     return *this;
   };
@@ -131,15 +146,13 @@ public:
     dynamics->collide(*this, statistics);
   }
   /// Apply LB collision with fixed velocity to the cell.
-  void staticCollide(const T u[Lattice<T>::d], LatticeStatistics<T>& statistics)
-  {
+  void staticCollide(const T u[Lattice<T>::d], LatticeStatistics<T>& statistics) {
     OLB_PRECONDITION( dynamics );
     dynamics->staticCollide(*this, u, statistics);
   }
 
   /// Compute equilibrium distribution function
-  T computeEquilibrium(int iPop, T rho, const T u[Lattice<T>::d], T uSqr) const
-  {
+  T computeEquilibrium(int iPop, T rho, const T u[Lattice<T>::d], T uSqr) const {
     OLB_PRECONDITION( dynamics );
     return dynamics->computeEquilibrium(iPop, rho, u, uSqr);
   }
@@ -161,8 +174,7 @@ public:
   /// Compute components of the stress tensor on the cell.
   /** \param pi stress tensor */
   void computeStress (
-    T pi[util::TensorVal<Lattice<T> >::n]) const
-  {
+    T pi[util::TensorVal<Lattice<T> >::n]) const {
     OLB_PRECONDITION( dynamics );
     T rho, u[Lattice<T>::d];
     dynamics->computeRhoU(*this, rho, u);
@@ -183,8 +195,7 @@ public:
    */
   void computeAllMomenta (
     T& rho, T u[Lattice<T>::d],
-    T pi[util::TensorVal<Lattice<T> >::n] ) const
-  {
+    T pi[util::TensorVal<Lattice<T> >::n] ) const {
     OLB_PRECONDITION( dynamics );
     dynamics->computeAllMomenta(*this, rho, u, pi);
   }
@@ -225,8 +236,7 @@ public:
   /// Set components of the stress tensor on the cell.
   /** \param pi stress tensor */
   void defineStress (
-    const T pi[util::TensorVal<Lattice<T> >::n])
-  {
+    const T pi[util::TensorVal<Lattice<T> >::n]) {
     OLB_PRECONDITION( dynamics );
     T rho, u[Lattice<T>::d];
     dynamics->computeRhoU(*this, rho, u);
@@ -247,8 +257,7 @@ public:
    */
   void defineAllMomenta (
     T rho, const T u[Lattice<T>::d],
-    const T pi[util::TensorVal<Lattice<T> >::n] )
-  {
+    const T pi[util::TensorVal<Lattice<T> >::n] ) {
     OLB_PRECONDITION( dynamics );
     dynamics->defineAllMomenta(*this, rho, u, pi);
   }
@@ -272,6 +281,22 @@ public:
     OLB_PRECONDITION( dynamics );
     dynamics->defineExternalField(*this, pos, size, ext);
   }
+  /// Add external fields through the dynamics object.
+  /** Similar to defineExternalField(),but instead of replacing existing values
+   *  ext is added to existing values.
+   */
+  inline void addExternalField(int pos, int size, const T* ext) {
+    OLB_PRECONDITION( dynamics );
+    dynamics->addExternalField(*this, pos, size, ext);
+  }
+  /// Add external fields through the dynamics object.
+  /** Similar to defineExternalField(),but instead of replacing existing values
+   *  ext is multiplied to existing values.
+   */
+  inline void multiplyExternalField(int pos, int size, const T* ext) {
+    OLB_PRECONDITION( dynamics );
+    dynamics->multiplyExternalField(*this, pos, size, ext);
+  }
   /// Initialize all f values to their local equilibrium
   void iniEquilibrium(T rho, const T u[Lattice<T>::d]) {
     OLB_PRECONDITION( dynamics );
@@ -281,14 +306,19 @@ public:
   void revert();
   void serialize(T* data) const;
   void unSerialize(T const* data);
+
+  /// \return the number of data blocks for the serializable interface
+  std::size_t getNblock() const {
+    return 3;
+  };
+  /// Binary size for the serializer
+  virtual std::size_t getSerializableSize() const;
+  /// \return a pointer to the memory of the current block and its size for the serializable interface
+  bool* getBlock(std::size_t iBlock, std::size_t& sizeBlock, bool loadingMode);
+
 private:
   void iniPop();
   void iniExternal();
-private:
-  fPop                 f;         ///< distribution functions
-  External             external;  ///< external scalars
-  bool                 takesStat; ///< is statistics taken?
-  Dynamics<T,Lattice>* dynamics;  ///< local LB dynamics
 };
 
 template<typename T, template<typename U> class Lattice>

@@ -31,14 +31,13 @@
 
 #include <vector>
 #include "geometry/cuboid2D.h"
-#include "core/dataFields2D.h"
 #include "io/ostreamManager.h"
-#include "functors/indicatorF.h"
-#include "functors/indicCalcF.h"
 
 
 /// All OpenLB code is contained in this namespace.
 namespace olb {
+
+template<typename T> class IndicatorF2D;
 
 /// A cuboid structure represents the grid of a considered domain
 /** A cuboid structure is given by a number of cuboids. To represent
@@ -53,15 +52,11 @@ namespace olb {
  *
  * This class is not intended to be derived from.
  */
-
-
-template<typename T> class Cuboid2D;
-
 template<typename T>
 class CuboidGeometry2D {
 
 private:
-  // TODO quick and dirty solution for 3d split to be removed after 2d clearence 
+  // TODO quick and dirty solution for 3d split to be removed after 2d clearence
   bool _oldApproach;
 
   /// Vector of the cuboids
@@ -75,10 +70,12 @@ private:
 
 public:
 
+  /// Constructs empty Geometry
+  CuboidGeometry2D();
   /// Constructs a cuboid geometry with a cubic shape of size nX times nY times nZ with origin originR=(originX, originY, originZ) that consits of nC cuboids
   CuboidGeometry2D(T originX, T originY, T deltaR, int nX, int nY, int nC=1);
   /// Constructs a cuboid structure with a uniform spacing of voxelsize which consits of  nC cuboids, the cuboids not needed are removed and too big ones are shrinked
-  CuboidGeometry2D(IndicatorF2D<bool,T>& indicatorF, T voxelSize, int nC=1);
+  CuboidGeometry2D(IndicatorF2D<T>& indicatorF, T voxelSize, int nC=1);
 
   /// Re init
   void reInit(T globPosX, T globPosY,
@@ -87,26 +84,33 @@ public:
   Cuboid2D<T>& get(int i);
   /// Read access to the cuboids
   Cuboid2D<T> const& get(int i) const;
-  /// Set flag to enable/disable periodicity 
+  /// Set flag to enable/disable periodicity
   void setPeriodicity(bool periodicityX, bool periodicityY);
 
-  /// Returns true and the cuboid number of the nearest lattice position to the given physical position if the physical position is within any of the cuboids with an overlap of 1/2*delta belonging to the cuboid geometry 
+  /// Returns true and the cuboid number of the nearest lattice position to the given physical position if the physical position is within any of the cuboids with an overlap of 1/2*delta belonging to the cuboid geometry
   bool getC(std::vector<T> physR, int& iC) const; //TODO new one
-  /// Returns true and the nearest lattice position to the given physical position if the physical position is within any of the cuboids with an overlap of 1/2*delta belonging to the cuboid geometry    
+  /// Returns true and the nearest lattice position to the given physical position if the physical position is within any of the cuboids with an overlap of 1/2*delta belonging to the cuboid geometry
   bool getLatticeR(std::vector<T> physR, std::vector<int>& latticeR) const;
+  bool getLatticeR(int latticeR[], const T physR[]) const;
+
   /// Returns true and the floor lattice position to the given physical position if the physical position is within any of the cuboids with an overlap of 1/2*delta belonging to the cuboid geometry
   bool getFloorLatticeR(std::vector<T> physR, std::vector<int>& latticeR) const;
   /// Returns the physical position to the given lattice position respecting periodicity for the overlap nodes which are not in the mother cuboid for the case the flag periodicityOn[iDim]=true if the physical position is within any of the cuboids with an overlap of 1/2*delta belonging to the cuboid geometry
   std::vector<T> getPhysR(int iCglob, int iX, int iY) const;
-  /// Returns the physical position to the given lattice position respecting periodicity for the overlap nodes which are not in the mother cuboid for the case the flag periodicityOn[iDim]=true 
+  /// Returns the physical position to the given lattice position respecting periodicity for the overlap nodes which are not in the mother cuboid for the case the flag periodicityOn[iDim]=true
   std::vector<T> getPhysR(std::vector<int> latticeR) const;
-
+  void getPhysR(T output[2], const int latticeR[3]) const;
+  void getPhysR(T output[2], const int iCglob, const int iX, const int iY) const;
 
   /// Returns the number of cuboids in the structure
   int getNc() const;
   /// Returns the maximum/minimum of the ratio nX/NY in the structure
   T getMinRatio() const;
   T getMaxRatio() const;
+  /// Returns the minimum coordinate in the structure
+  std::vector<T> getMinPhysR() const;
+  /// Returns the maximum coordinate in the structure
+  std::vector<T> getMaxPhysR() const;
   /// Returns the maximum/minimum volume in the structure
   T getMinPhysVolume() const;
   T getMaxPhysVolume() const;
@@ -135,9 +139,11 @@ public:
   /// Removes the cuboid iC
   void remove(int iC);
   /// Removes all cuboids where geometryData = 0
-  void remove(olb::ScalarField2D<int>* geometryData);
+  //void remove(olb::ScalarField2D<int>* geometryData);
   /// Splits cuboid iC, removes it and add p cuboids
   void split(int iC, int p);
+  /// Shrink all cuboids so that no empty planes are left
+  void shrink(IndicatorF2D<T>& indicatorF);
 
   /// stores the neighbouring cuboids in array neighbours;
   void getNeighbourhood(int cuboid, std::vector<int> neighbours, int offset = 0);

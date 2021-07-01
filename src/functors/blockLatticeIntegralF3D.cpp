@@ -37,6 +37,8 @@ template class BlockGeometryFaces3D<double>;
 template class BlockLatticePhysDrag3D<double,descriptors::D3Q19Descriptor>;
 template class BlockLatticePhysCorrDrag3D<double,descriptors::D3Q19Descriptor>;
 
+template class BlockLatticeInterpPhysVelocity3D<double,descriptors::D3Q19Descriptor>;
+
 } // end namespace olb
 
 

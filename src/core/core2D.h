@@ -24,24 +24,22 @@
 /** \file
  * Groups all the include files for basic 2D dynamics.
  */
-#include "analysisFlags.h"
+
+#include "blockData2D.h"
 #include "blockLattice2D.h"
 #include "blockLatticeStructure2D.h"
 #include "blockLatticeView2D.h"
+#include "blockStructure2D.h"
 #include "cell.h"
-#include "dataAnalysis2D.h"
-#include "dataAnalysisBase2D.h"
-#include "dataFieldBase2D.h"
-#include "dataFields2D.h"
-#include "dataReductions.h"
 #include "latticeStatistics.h"
 #include "multiPhysics.h"
 #include "olbInit.h"
 #include "postProcessing.h"
 #include "serializer.h"
-#include "simulationSetup2D.h"
 #include "singleton.h"
+#include "superData2D.h"
 #include "superLattice2D.h"
 #include "superExternal2D.h"
 #include "units.h"
+#include "vector.h"
 

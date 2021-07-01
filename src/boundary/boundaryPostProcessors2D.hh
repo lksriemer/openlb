@@ -53,8 +53,7 @@ processSubDomain(BlockLattice2D<T,Lattice>& blockLattice, int x0_, int x1_, int 
   if ( util::intersect (
          x0, x1, y0, y1,
          x0_, x1_, y0_, y1_,
-         newX0, newX1, newY0, newY1 ) )
-  {
+         newX0, newX1, newY0, newY1 ) ) {
 
     int iX;
 
@@ -138,7 +137,7 @@ StraightFdBoundaryProcessorGenerator2D<T,Lattice,direction,orientation>::clone()
 }
 
 
-////////  StraightConvectionBoundaryProcessorGenerator2D ////////////////////////////////
+////////  StraightConvectionBoundaryProcessor2D ////////////////////////////////
 
 template<typename T, template<typename U> class Lattice, int direction, int orientation>
 StraightConvectionBoundaryProcessor2D<T,Lattice,direction,orientation>::
@@ -182,17 +181,16 @@ processSubDomain(BlockLattice2D<T,Lattice>& blockLattice, int x0_, int x1_, int 
   if ( util::intersect (
          x0, x1, y0, y1,
          x0_, x1_, y0_, y1_,
-         newX0, newX1, newY0, newY1 ) )
-  {
+         newX0, newX1, newY0, newY1 ) ) {
 
     int iX;
 #ifdef PARALLEL_MODE_OMP
-  #pragma omp parallel for
+    #pragma omp parallel for
 #endif
     for (iX=newX0; iX<=newX1; ++iX) {
       for (int iY=newY0; iY<=newY1; ++iY) {
         Cell<T,Lattice>& cell = blockLattice.get(iX,iY);
-        for (int iPop = 0; iPop < Lattice<T>::q ; ++iPop){
+        for (int iPop = 0; iPop < Lattice<T>::q ; ++iPop) {
           if (Lattice<T>::c[iPop][direction]==-orientation) {
             cell[iPop] = saveCell[iX-newX0][iY-newY0][iPop];
           }
@@ -205,28 +203,31 @@ processSubDomain(BlockLattice2D<T,Lattice>& blockLattice, int x0_, int x1_, int 
           blockLattice.get(iX,iY).computeRhoU(rho0,u0);
           blockLattice.get(iX-orientation,iY).computeRhoU(rho1,u1);
           blockLattice.get(iX-orientation*2,iY).computeRhoU(rho2,u2);
-        } 
-        else {
+        } else {
           blockLattice.get(iX,iY).computeRhoU(rho0,u0);
           blockLattice.get(iX,iY-orientation).computeRhoU(rho1,u1);
           blockLattice.get(iX,iY-orientation*2).computeRhoU(rho2,u2);
         }
 
-        rho0 = T(1); rho1 = T(1); rho2 = T(1);
+        rho0 = T(1);
+        rho1 = T(1);
+        rho2 = T(1);
         T uDelta[2];
         T uAverage = rho0*u0[direction];
-        if (uAv!=NULL) uAverage = *uAv;
+        if (uAv!=NULL) {
+          uAverage = *uAv;
+        }
         uDelta[0]=-uAverage*0.5*(3*rho0*u0[0]-4*rho1*u1[0]+rho2*u2[0]);
         uDelta[1]=-uAverage*0.5*(3*rho0*u0[1]-4*rho1*u1[1]+rho2*u2[1]);
 
-        for (int iPop = 0; iPop < Lattice<T>::q ; ++iPop){
+        for (int iPop = 0; iPop < Lattice<T>::q ; ++iPop) {
           if (Lattice<T>::c[iPop][direction] == -orientation) {
             saveCell[iX-newX0][iY-newY0][iPop] = cell[iPop] + Lattice<T>::invCs2*Lattice<T>::t[iPop]*(uDelta[0]*Lattice<T>::c[iPop][0]+uDelta[1]*Lattice<T>::c[iPop][1]);
           }
         }
       }
     }
-  } 
+  }
 }
 
 template<typename T, template<typename U> class Lattice, int direction,int orientation>
@@ -261,6 +262,98 @@ StraightConvectionBoundaryProcessorGenerator2D<T,Lattice,direction,orientation>:
          (this->x0, this->x1, this->y0, this->y1, uAv);
 }
 
+
+////////  SlipBoundaryProcessor2D ////////////////////////////////
+
+template<typename T, template<typename U> class Lattice>
+SlipBoundaryProcessor2D<T,Lattice>::
+SlipBoundaryProcessor2D(int x0_, int x1_, int y0_, int y1_, int discreteNormalX, int discreteNormalY)
+  : x0(x0_), x1(x1_), y0(y0_), y1(y1_)
+{
+  OLB_PRECONDITION(x0==x1 || y0==y1);
+  reflectionPop[0] = 0;
+  for (int iPop = 1; iPop < Lattice<T>::q; iPop++) {
+    reflectionPop[iPop] = 0;
+    // iPop are the directions which ointing into the fluid, discreteNormal is pointing outwarts
+    if (Lattice<T>::c[iPop][0]*discreteNormalX + Lattice<T>::c[iPop][1]*discreteNormalY < 0) {
+      // std::cout << "-----" <<s td::endl;
+      int mirrorDirection0;
+      int mirrorDirection1;
+      int mult = 1;
+      if (discreteNormalX*discreteNormalY==0) {
+        mult = 2;
+      }
+      mirrorDirection0 = (Lattice<T>::c[iPop][0] - mult*(Lattice<T>::c[iPop][0]*discreteNormalX + Lattice<T>::c[iPop][1]*discreteNormalY )*discreteNormalX);
+      mirrorDirection1 = (Lattice<T>::c[iPop][1] - mult*(Lattice<T>::c[iPop][0]*discreteNormalX + Lattice<T>::c[iPop][1]*discreteNormalY )*discreteNormalY);
+
+      // computes mirror jPop
+      for (reflectionPop[iPop] = 1; reflectionPop[iPop] < Lattice<T>::q ; reflectionPop[iPop]++) {
+        if (Lattice<T>::c[reflectionPop[iPop]][0]==mirrorDirection0 && Lattice<T>::c[reflectionPop[iPop]][1]==mirrorDirection1 ) {
+          break;
+        }
+      }
+      //std::cout <<iPop << " to "<< jPop <<" for discreteNormal= "<< discreteNormalX << "/"<<discreteNormalY <<std::endl;
+    }
+  }
+}
+
+template<typename T, template<typename U> class Lattice>
+void SlipBoundaryProcessor2D<T,Lattice>::
+processSubDomain(BlockLattice2D<T,Lattice>& blockLattice, int x0_, int x1_, int y0_, int y1_)
+{
+  int newX0, newX1, newY0, newY1;
+  if ( util::intersect (
+         x0, x1, y0, y1,
+         x0_, x1_, y0_, y1_,
+         newX0, newX1, newY0, newY1 ) ) {
+
+    int iX;
+#ifdef PARALLEL_MODE_OMP
+    #pragma omp parallel for
+#endif
+    for (iX=newX0; iX<=newX1; ++iX) {
+      for (int iY=newY0; iY<=newY1; ++iY) {
+        for (int iPop = 1; iPop < Lattice<T>::q ; ++iPop) {
+          if (reflectionPop[iPop]!=0) {
+            //do reflection
+            blockLattice.get(iX,iY)[iPop] = blockLattice.get(iX,iY)[reflectionPop[iPop]];
+          }
+        }
+      }
+    }
+  }
+}
+
+template<typename T, template<typename U> class Lattice>
+void SlipBoundaryProcessor2D<T,Lattice>::
+process(BlockLattice2D<T,Lattice>& blockLattice)
+{
+  processSubDomain(blockLattice, x0, x1, y0, y1);
+}
+
+////////  SlipBoundaryProcessorGenerator2D ////////////////////////////////
+
+template<typename T, template<typename U> class Lattice>
+SlipBoundaryProcessorGenerator2D<T,Lattice>::
+SlipBoundaryProcessorGenerator2D(int x0_, int x1_, int y0_, int y1_, int discreteNormalX_, int discreteNormalY_)
+  : PostProcessorGenerator2D<T,Lattice>(x0_, x1_, y0_, y1_), discreteNormalX(discreteNormalX_), discreteNormalY(discreteNormalY_)
+{ }
+
+template<typename T, template<typename U> class Lattice>
+PostProcessor2D<T,Lattice>*
+SlipBoundaryProcessorGenerator2D<T,Lattice>::generate() const
+{
+  return new SlipBoundaryProcessor2D<T,Lattice>
+         ( this->x0, this->x1, this->y0, this->y1, discreteNormalX, discreteNormalY);
+}
+
+template<typename T, template<typename U> class Lattice>
+PostProcessorGenerator2D<T,Lattice>*
+SlipBoundaryProcessorGenerator2D<T,Lattice>::clone() const
+{
+  return new SlipBoundaryProcessorGenerator2D<T,Lattice>
+         (this->x0, this->x1, this->y0, this->y1, discreteNormalX, discreteNormalY);
+}
 
 /////////// OuterVelocityCornerProcessor2D /////////////////////////////////////
 

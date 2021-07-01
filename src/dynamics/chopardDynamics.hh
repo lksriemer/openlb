@@ -59,7 +59,8 @@ ChopardDynamics<T,Lattice>::ChopardDynamics (
 { }
 
 template<typename T, template<typename U> class Lattice>
-ChopardDynamics<T,Lattice>* ChopardDynamics<T,Lattice>::clone() const {
+ChopardDynamics<T,Lattice>* ChopardDynamics<T,Lattice>::clone() const
+{
   return new ChopardDynamics<T,Lattice>(*this);
 }
 
@@ -108,17 +109,20 @@ void ChopardDynamics<T,Lattice>::staticCollide (
 }
 
 template<typename T, template<typename U> class Lattice>
-T ChopardDynamics<T,Lattice>::getOmega() const {
+T ChopardDynamics<T,Lattice>::getOmega() const
+{
   return omega;
 }
 
 template<typename T, template<typename U> class Lattice>
-void ChopardDynamics<T,Lattice>::setOmega(T omega_) {
+void ChopardDynamics<T,Lattice>::setOmega(T omega_)
+{
   omega = omega_;
 }
 
 template<typename T, template<typename U> class Lattice>
-T ChopardDynamics<T,Lattice>::getParameter(int whichParameter) const {
+T ChopardDynamics<T,Lattice>::getParameter(int whichParameter) const
+{
   switch (whichParameter) {
   case dynamicParams::omega_shear     :
     return getOmega();
@@ -129,7 +133,8 @@ T ChopardDynamics<T,Lattice>::getParameter(int whichParameter) const {
 }
 
 template<typename T, template<typename U> class Lattice>
-void ChopardDynamics<T,Lattice>::setParameter(int whichParameter, T value) {
+void ChopardDynamics<T,Lattice>::setParameter(int whichParameter, T value)
+{
   switch (whichParameter) {
   case dynamicParams::omega_shear     :
     setOmega(value);
@@ -140,12 +145,14 @@ void ChopardDynamics<T,Lattice>::setParameter(int whichParameter, T value) {
 
 
 template<typename T, template<typename U> class Lattice>
-T ChopardDynamics<T,Lattice>::getVs2() const {
+T ChopardDynamics<T,Lattice>::getVs2() const
+{
   return vs2;
 }
 
 template<typename T, template<typename U> class Lattice>
-void ChopardDynamics<T,Lattice>::setVs2(T vs2_) {
+void ChopardDynamics<T,Lattice>::setVs2(T vs2_)
+{
   vs2 = vs2_;
 }
 
@@ -169,8 +176,7 @@ T ChopardDynamics<T,Lattice>::chopardEquilibrium (
     return rho*( (T)1 -
                  vs2*Lattice<T>::invCs2*((T)1-Lattice<T>::t[0]) -
                  Lattice<T>::t[0]/(T)2*Lattice<T>::invCs2*uSqr ) - Lattice<T>::t[0];
-  }
-  else {
+  } else {
     T c_u = T();
     for (int iD=0; iD < Lattice<T>::d; ++iD) {
       c_u += Lattice<T>::c[iPop][iD]*u[iD];

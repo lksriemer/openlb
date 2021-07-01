@@ -36,8 +36,7 @@ namespace descriptors {
 // MRT D2Q9 ////////////////////////////////////////////////////////////
 
 template<typename T>
-const T MRTD2Q9DescriptorBase<T>::M[MRTD2Q9DescriptorBase<T>::q_][MRTD2Q9DescriptorBase<T>::q_] =
-{
+const T MRTD2Q9DescriptorBase<T>::M[MRTD2Q9DescriptorBase<T>::q_][MRTD2Q9DescriptorBase<T>::q_] = {
   {(T)1, (T)1, (T)1, (T)1, (T)1, (T)1, (T)1, (T)1, (T)1},
   {-(T)4,(T)2,-(T)1, (T)2,-(T)1, (T)2,-(T)1, (T)2,-(T)1},
   {(T)4, (T)1,-(T)2, (T)1,-(T)2, (T)1,-(T)2, (T)1,-(T)2},
@@ -50,8 +49,7 @@ const T MRTD2Q9DescriptorBase<T>::M[MRTD2Q9DescriptorBase<T>::q_][MRTD2Q9Descrip
 };
 
 template<typename T>
-const T MRTD2Q9DescriptorBase<T>::invM[MRTD2Q9DescriptorBase<T>::q_][MRTD2Q9DescriptorBase<T>::q_] =
-{
+const T MRTD2Q9DescriptorBase<T>::invM[MRTD2Q9DescriptorBase<T>::q_][MRTD2Q9DescriptorBase<T>::q_] = {
   {(T)1/(T)9, -(T)1/(T)9, (T)1/(T)9, T(), T(), T(), T(), T(), T()},
   {(T)1/(T)9, (T)1/(T)18, (T)1/(T)36, -(T)1/(T)6, -(T)1/(T)12, (T)1/(T)6, (T)1/(T)12, T(), -(T)1/(T)4},
   {(T)1/(T)9, -(T)1/(T)36, -(T)1/(T)18, -(T)1/(T)6, (T)1/(T)6, T(), T(), (T)1/(T)4, T()},
@@ -77,8 +75,7 @@ const int MRTD2Q9DescriptorBase<T>::shearViscIndexes[MRTD2Q9DescriptorBase<T>::s
 // MRT D3Q19 ////////////////////////////////////////////////////////////
 
 template<typename T>
-const T MRTD3Q19DescriptorBase<T>::M[MRTD3Q19DescriptorBase<T>::q_][MRTD3Q19DescriptorBase<T>::q_] =
-{
+const T MRTD3Q19DescriptorBase<T>::M[MRTD3Q19DescriptorBase<T>::q_][MRTD3Q19DescriptorBase<T>::q_] = {
   /*0*/      {
     (T)1,
     (T)1, (T)1, (T)1, (T)1, (T)1, (T)1, (T)1, (T)1, (T)1,
@@ -177,8 +174,7 @@ const T MRTD3Q19DescriptorBase<T>::M[MRTD3Q19DescriptorBase<T>::q_][MRTD3Q19Desc
 };
 
 template<typename T>
-const T MRTD3Q19DescriptorBase<T>::invM[MRTD3Q19DescriptorBase<T>::q_][MRTD3Q19DescriptorBase<T>::q_] =
-{
+const T MRTD3Q19DescriptorBase<T>::invM[MRTD3Q19DescriptorBase<T>::q_][MRTD3Q19DescriptorBase<T>::q_] = {
   /*0*/       {
     (T)1/(T)19,
     -(T)5/(T)399,(T)1/(T)21,T(),T(),T(),T(),T(),T(),
@@ -295,8 +291,7 @@ const T MRTD3Q19DescriptorBase<T>::invM[MRTD3Q19DescriptorBase<T>::q_][MRTD3Q19D
 };
 
 template<typename T>
-const T MRTD3Q19DescriptorBase<T>::S[MRTD3Q19DescriptorBase<T>::q_] =
-{
+const T MRTD3Q19DescriptorBase<T>::S[MRTD3Q19DescriptorBase<T>::q_] = {
 
 
   // Original MRT Relaxation times
@@ -324,10 +319,9 @@ const T MRTD3Q19DescriptorBase<T>::S[MRTD3Q19DescriptorBase<T>::q_] =
 };
 
 template<typename T>
-const T MRTD3Q19DescriptorBase<T>::S_2[MRTD3Q19DescriptorBase<T>::q_] =
-{
+const T MRTD3Q19DescriptorBase<T>::S_2[MRTD3Q19DescriptorBase<T>::q_] = {
 
-//  Use these relaxation time for higher stability
+  //  Use these relaxation time for higher stability
   /*s0*/  T(), // rho (conserved)
   /*s1*/  (T)1.0,
   /*s2*/  (T)1.0,

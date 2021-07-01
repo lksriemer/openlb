@@ -62,49 +62,56 @@ Cell<T,Lattice>::Cell(Dynamics<T,Lattice>* dynamics_)
 }
 
 template<typename T, template<typename U> class Lattice>
-void Cell<T,Lattice>::defineDynamics(Dynamics<T,Lattice>* dynamics_) {
+void Cell<T,Lattice>::defineDynamics(Dynamics<T,Lattice>* dynamics_)
+{
   dynamics = dynamics_;
 }
 
 template<typename T, template<typename U> class Lattice>
-Dynamics<T,Lattice> const* Cell<T,Lattice>::getDynamics() const {
+Dynamics<T,Lattice> const* Cell<T,Lattice>::getDynamics() const
+{
   OLB_PRECONDITION(dynamics);
   return dynamics;
 }
 
 template<typename T, template<typename U> class Lattice>
-Dynamics<T,Lattice>* Cell<T,Lattice>::getDynamics() {
+Dynamics<T,Lattice>* Cell<T,Lattice>::getDynamics()
+{
   OLB_PRECONDITION(dynamics);
   return dynamics;
 }
 
 template<typename T, template<typename U> class Lattice>
-void Cell<T,Lattice>::revert() {
+void Cell<T,Lattice>::revert()
+{
   for (int iPop=1; iPop<=Lattice<T>::q/2; ++iPop) {
-    std::swap(f[iPop],f[iPop+Lattice<T>::q/2]);
+    std::swap(this->f[iPop],this->f[iPop+Lattice<T>::q/2]);
   }
 }
 
 template<typename T, template<typename U> class Lattice>
-void Cell<T,Lattice>::iniPop() {
+void Cell<T,Lattice>::iniPop()
+{
   for (int iPop=0; iPop<Lattice<T>::q; ++iPop) {
-    f[iPop] = T();
+    this->f[iPop] = T();
   }
 }
 
 template<typename T, template<typename U> class Lattice>
-void Cell<T,Lattice>::iniExternal() {
+void Cell<T,Lattice>::iniExternal()
+{
   for (int iData=0; iData<Lattice<T>::ExternalField::numScalars; ++iData) {
     *external.get(iData) = T();
   }
 }
 
 template<typename T, template<typename U> class Lattice>
-void Cell<T,Lattice>::serialize(T* data) const {
+void Cell<T,Lattice>::serialize(T* data) const
+{
   const int q = Lattice<T>::q;
   const int numExt = Lattice<T>::ExternalField::numScalars;
   for (int iPop=0; iPop<q; ++iPop) {
-    data[iPop] = f[iPop];
+    data[iPop] = this->f[iPop];
   }
   for (int iExternal=0; iExternal < numExt; ++iExternal) {
     data[iExternal+q] = *external.get(iExternal);
@@ -112,15 +119,40 @@ void Cell<T,Lattice>::serialize(T* data) const {
 }
 
 template<typename T, template<typename U> class Lattice>
-void Cell<T,Lattice>::unSerialize(T const* data) {
+void Cell<T,Lattice>::unSerialize(T const* data)
+{
   const int q = Lattice<T>::q;
   const int numExt = Lattice<T>::ExternalField::numScalars;
   for (int iPop=0; iPop<q; ++iPop) {
-    f[iPop] = data[iPop];
+    this->f[iPop] = data[iPop];
   }
   for (int iExternal=0; iExternal < numExt; ++iExternal) {
     *external.get(iExternal) = data[iExternal+q];
   }
+}
+
+
+template<typename T, template<typename U> class Lattice>
+std::size_t Cell<T,Lattice>::getSerializableSize() const
+{
+  return sizeof(bool) // takesStat
+         + sizeof(T) * Lattice<T>::q // this->f
+         + sizeof(T) * Lattice<T>::ExternalField::numScalars; // externals
+}
+
+
+template<typename T, template<typename U> class Lattice>
+bool* Cell<T,Lattice>::getBlock(std::size_t iBlock, std::size_t& sizeBlock, bool loadingMode)
+{
+  std::size_t currentBlock = 0;
+  bool* dataPtr = nullptr;
+
+  this->registerVar(iBlock, sizeBlock, currentBlock, dataPtr, this->f[0], Lattice<T>::q);
+  this->registerVar(iBlock, sizeBlock, currentBlock, dataPtr, takesStat);
+  this->registerVar(iBlock, sizeBlock, currentBlock, dataPtr, *(external.get(0)),
+                    Lattice<T>::ExternalField::numScalars);
+
+  return dataPtr;
 }
 
 }  // namespace olb

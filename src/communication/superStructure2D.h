@@ -40,7 +40,6 @@ template<typename T> class CuboidGeometry2D;
 
 template<typename T>
 class SuperStructure2D {
-
 protected:
   /// The grid structure is stored here
   CuboidGeometry2D<T>& _cuboidGeometry;
@@ -60,7 +59,8 @@ public:
   /// Construction of a super structure
   SuperStructure2D(CuboidGeometry2D<T>& cuboidGeometry,
                    LoadBalancer<T>& loadBalancer, int overlap = 1);
-
+  /// Default Constructor for empty SuperStructure
+  SuperStructure2D(int overlap = 1);
   /// Write access to the memory of the data of the super structure where (iX, iY, iZ) is the point providing the data iData in the block iCloc
   virtual bool* operator() (int iCloc, int iX, int iY, int iData) =0;
   /// Read only access to the dim of the data of the super structure
@@ -81,7 +81,7 @@ public:
   /// Read only access to the load balancer
   LoadBalancer<T> const& getLoadBalancer() const;
   /// Communicates the data in the overlap
-  virtual void communicate(bool verbose=false); 
+  virtual void communicate(bool verbose=false);
 };
 
 } // namespace olb

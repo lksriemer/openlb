@@ -26,17 +26,15 @@
 #define INTERPOLATION_F_2D_H
 
 
-#include<vector>
-#include<string>
-
 #include "functors/analyticalF.h"
-#include "functors/blockLatticeBaseF2D.h"
-#include "core/superLattice2D.h"
+#include "functors/superBaseF2D.h"
 #include "geometry/superGeometry2D.h"
 #include "geometry/cuboidGeometry2D.h"
-#include "core/blockLattice2D.h"
 
 namespace olb {
+
+
+template< typename T, template <typename U> class DESCRIPTOR> class SuperLattice2D;
 
 
 /// converts lattice functions to analytical functions
@@ -49,8 +47,8 @@ protected:
   int                             _overlap;
 public:
   AnalyticalFfromSuperLatticeF2D(SuperLatticeF2D<T,DESCRIPTOR>& f,
-                                 bool communicateToAll = false, int overlap = 2);
-  std::vector<T> operator() (std::vector<T> physC);
+                                 bool communicateToAll = false, int overlap = -1);
+  bool operator() (T output[], const T physC[]);
 };
 
 
@@ -67,7 +65,7 @@ protected:
 public:
   SuperLatticeFfromAnalyticalF2D(AnalyticalF2D<T,T>& f, SuperLattice2D<T,DESCRIPTOR>& sLattice,
                                  SuperGeometry2D<T>& sg);
-  std::vector<T> operator() (std::vector<int> input);
+  bool operator() (T output[], const int input[]);
 };
 
 

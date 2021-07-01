@@ -29,12 +29,12 @@
 #ifndef CUBOID_3D_HH
 #define CUBOID_3D_HH
 
-#include <iostream>
-#include <math.h>
+
 #include <vector>
 #include "geometry/cuboidGeometry2D.h"
 #include "cuboid3D.h"
 #include "dynamics/lbHelpers.h"
+#include "utilities/vectorHelpers.h"
 
 
 namespace olb {
@@ -46,30 +46,66 @@ Cuboid3D<T>::Cuboid3D() : clout(std::cout,"Cuboid3D") {
   _weight = -1;
 }*/
 
+template<typename T>
+Cuboid3D<T>::Cuboid3D() : Cuboid3D<T>(0, 0, 0, 0, 0, 0, 0, 0)
+{
+}
 
 template<typename T>
-Cuboid3D<T>::Cuboid3D(T globPosX, T globPosY, T globPosZ, T delta , int nX, int nY, int nZ, int refinementLevel)
-  : clout(std::cout,"Cuboid3D") {
-  _weight = -1;
+Cuboid3D<T>::Cuboid3D(T globPosX, T globPosY, T globPosZ, T delta , int nX, int nY,
+                      int nZ, int refinementLevel)
+  : _weight(-1), clout(std::cout,"Cuboid3D")
+{
   this->init(globPosX, globPosY, globPosZ, delta, nX, nY, nZ, refinementLevel);
 }
 
 template<typename T>
-Cuboid3D<T>::Cuboid3D(std::vector<T> origin, T delta , std::vector<int> extend, int refinementLevel)
-  : clout(std::cout,"Cuboid3D") {
+Cuboid3D<T>::Cuboid3D(std::vector<T> origin, T delta , std::vector<int> extend,
+                      int refinementLevel)
+  : clout(std::cout,"Cuboid3D")
+{
   _weight = -1;
   this->init(origin[0], origin[1], origin[2], delta, extend[0], extend[1], extend[2], refinementLevel);
 }
 
 template<typename T>
-Cuboid3D<T>::Cuboid3D(IndicatorF3D<bool,T>& indicator, T voxelSize, int refinementLevel)
-  : clout(std::cout,"Cuboid3D") {
+Cuboid3D<T>::Cuboid3D(IndicatorF3D<T>& indicatorF, T voxelSize, int refinementLevel)
+  : clout(std::cout,"Cuboid3D")
+{
   _weight = -1;
-  this->init(indicator.getMin()[0],  indicator.getMin()[1],  indicator.getMin()[2], voxelSize, (int)((indicator.getMax()[0]-indicator.getMin()[0])/voxelSize+1.5), (int)((indicator.getMax()[1]-indicator.getMin()[1])/voxelSize+1.5), (int)((indicator.getMax()[2]-indicator.getMin()[2])/voxelSize+1.5), refinementLevel);
+  this->init(indicatorF.getMin()[0],  indicatorF.getMin()[1],  indicatorF.getMin()[2], voxelSize,
+             (int)((indicatorF.getMax()[0]-indicatorF.getMin()[0])/voxelSize+1.5),
+             (int)((indicatorF.getMax()[1]-indicatorF.getMin()[1])/voxelSize+1.5),
+             (int)((indicatorF.getMax()[2]-indicatorF.getMin()[2])/voxelSize+1.5), refinementLevel);
+}
+
+// copy constructor
+template<typename T>
+Cuboid3D<T>::Cuboid3D(Cuboid3D<T> const& rhs, int overlap) : clout(std::cout,"Cuboid3D")
+{
+  this->init( rhs._globPosX-rhs._delta*overlap, rhs._globPosY-rhs._delta*overlap,
+              rhs._globPosZ-rhs._delta*overlap, rhs._delta, rhs._nX+2*overlap,
+              rhs._nY+2*overlap, rhs._nZ+2*overlap);
+  _weight = rhs._weight;
+  _refinementLevel = rhs._refinementLevel;
+}
+
+
+// copy assignment
+template<typename T>
+Cuboid3D<T>& Cuboid3D<T>::operator=(Cuboid3D<T> const& rhs)
+{
+  this->init( rhs._globPosX, rhs._globPosY, rhs._globPosZ, rhs._delta, rhs._nX,
+              rhs._nY, rhs._nZ);
+  _weight = rhs._weight;
+  _refinementLevel = rhs._refinementLevel;
+  return *this;
 }
 
 template<typename T>
-void Cuboid3D<T>::init(T globPosX, T globPosY, T globPosZ, T delta, int nX, int nY, int nZ, int refinementLevel) {
+void Cuboid3D<T>::init(T globPosX, T globPosY, T globPosZ, T delta, int nX, int nY,
+                       int nZ, int refinementLevel)
+{
   _globPosX = globPosX;
   _globPosY = globPosY;
   _globPosZ = globPosZ;
@@ -80,50 +116,138 @@ void Cuboid3D<T>::init(T globPosX, T globPosY, T globPosZ, T delta, int nX, int 
   _refinementLevel = refinementLevel;
 }
 
-
 template<typename T>
-T Cuboid3D<T>::getDeltaR() const { return _delta; }
-
-template<typename T>
-int Cuboid3D<T>::getNx() const { return _nX; }
-
-template<typename T>
-int Cuboid3D<T>::getNy() const { return _nY; }
-
-template<typename T>
-int Cuboid3D<T>::getNz() const { return _nZ; }
-
-template<typename T>
-T Cuboid3D<T>::getPhysVolume() const { return _nY*_nX*_nZ*_delta*_delta*_delta; }
-
-template<typename T>
-int Cuboid3D<T>::getWeight() const {
-  if (_weight == -1) {
-    return getLatticeVolume();
-  }
-  else return _weight;
+Vector<T,3> const Cuboid3D<T>::getOrigin() const
+{
+  return Vector<T,3> (_globPosX, _globPosY, _globPosZ);
 }
 
 template<typename T>
-void Cuboid3D<T>::setWeight(int fullCells) {
+T Cuboid3D<T>::getDeltaR() const
+{
+  return _delta;
+}
+
+template<typename T>
+int Cuboid3D<T>::getNx() const
+{
+  return _nX;
+}
+
+template<typename T>
+int Cuboid3D<T>::getNy() const
+{
+  return _nY;
+}
+
+template<typename T>
+int Cuboid3D<T>::getNz() const
+{
+  return _nZ;
+}
+
+template<typename T>
+Vector<int,3> const Cuboid3D<T>::getExtend() const
+{
+  return Vector<int,3> (_nX, _nY, _nZ);
+}
+
+template<typename T>
+T Cuboid3D<T>::getPhysVolume() const
+{
+  return _nY*_nX*_nZ*_delta*_delta*_delta;
+}
+
+template<typename T>
+int Cuboid3D<T>::getWeightValue() const
+{
+  return _weight;
+}
+
+template<typename T>
+int Cuboid3D<T>::getWeight() const
+{
+  if (_weight == -1) {
+    return getLatticeVolume();
+  } else {
+    return _weight;
+  }
+}
+
+template<typename T>
+void Cuboid3D<T>::setWeight(int fullCells)
+{
   _weight = fullCells;
 }
 
 template<typename T>
-int Cuboid3D<T>::getLatticeVolume() const { return _nY*_nX*_nZ; }
+int Cuboid3D<T>::getRefinementLevel() const
+{
+  return _refinementLevel;
+}
 
 template<typename T>
-T Cuboid3D<T>::getPhysPerimeter() const {
+void Cuboid3D<T>::setRefinementLevel(int refLevel)
+{
+  _refinementLevel = refLevel;
+}
+
+template<typename T>
+int Cuboid3D<T>::getLatticeVolume() const
+{
+  return _nY*_nX*_nZ;
+}
+
+template<typename T>
+T Cuboid3D<T>::getPhysPerimeter() const
+{
   return 2*_delta*_delta*(_nX*_nY + _nY*_nZ + _nZ*_nX);
 }
 
 template<typename T>
-int Cuboid3D<T>::getLatticePerimeter() const {
+int Cuboid3D<T>::getLatticePerimeter() const
+{
   return 2*((_nX-1)*(_nY-1) + (_nY-1)*(_nZ-1) + (_nZ-1)*(_nX-1));
 }
 
+
 template<typename T>
-void Cuboid3D<T>::print() const {
+bool Cuboid3D<T>::operator==(const Cuboid3D<T>& rhs) const
+{
+  return util::nearZero<T>(_globPosX - rhs._globPosX) &&
+         util::nearZero<T>(_globPosY - rhs._globPosY) &&
+         util::nearZero<T>(_globPosZ - rhs._globPosZ) &&
+         util::nearZero<T>(_delta    - rhs._delta) &&
+         _nX              == rhs._nX &&
+         _nY              == rhs._nY &&
+         _nZ              == rhs._nZ &&
+         _weight          == rhs._weight &&
+         _refinementLevel == rhs._refinementLevel;
+}
+
+
+template<typename T>
+bool* Cuboid3D<T>::getBlock(std::size_t iBlock, std::size_t& sizeBlock, bool loadingMode)
+{
+  std::size_t currentBlock = 0;
+  bool* dataPtr = nullptr;
+
+  registerVar(iBlock, sizeBlock, currentBlock, dataPtr, _globPosX);
+  registerVar(iBlock, sizeBlock, currentBlock, dataPtr, _globPosY);
+  registerVar(iBlock, sizeBlock, currentBlock, dataPtr, _globPosZ);
+  registerVar(iBlock, sizeBlock, currentBlock, dataPtr, _delta);
+  registerVar(iBlock, sizeBlock, currentBlock, dataPtr, _nX);
+  registerVar(iBlock, sizeBlock, currentBlock, dataPtr, _nY);
+  registerVar(iBlock, sizeBlock, currentBlock, dataPtr, _nZ);
+  registerVar(iBlock, sizeBlock, currentBlock, dataPtr, _weight);
+  registerVar(iBlock, sizeBlock, currentBlock, dataPtr, _refinementLevel);
+
+  return dataPtr;
+}
+
+template<typename T>
+void Cuboid3D<T>::print() const
+{
   clout.setMultiOutput(true);
   clout << "--------Cuboid Details----------" << std::endl;
   clout << " Corner (x/y/z): " << "\t" << "("
@@ -138,16 +262,33 @@ void Cuboid3D<T>::print() const {
   clout << " Nodes at Perimeter: " << "\t" << this->getLatticePerimeter() << std::endl;
   clout << " Nodes in Volume: " << "\t" << this->getLatticeVolume() << std::endl;
   clout << " Other Corner: "  << "\t"<<  "(" << _globPosX + T(_nX-0.5)*_delta << "/"
-		  << _globPosY + T(_nY-0.5)*_delta << "/"
-		  << _globPosZ + T(_nZ-0.5)*_delta <<  ")" << std::endl;
+        << _globPosY + T(_nY-0.5)*_delta << "/"
+        << _globPosZ + T(_nZ-0.5)*_delta <<  ")" << std::endl;
   clout << "--------------------------------" << std::endl;
   clout.setMultiOutput(false);
 
 }
 
+template<typename T>
+void Cuboid3D<T>::getPhysR(T physR[3], const int latticeR[3]) const
+{
+  physR[0] = _globPosX + latticeR[0]*_delta;
+  physR[1] = _globPosY + latticeR[1]*_delta;
+  physR[2] = _globPosZ + latticeR[2]*_delta;
+}
 
 template<typename T>
-bool Cuboid3D<T>::checkPoint(T globX, T globY, T globZ, int overlap) const {
+void Cuboid3D<T>::getPhysR(T physR[3], const int& iX, const int& iY, const int& iZ) const
+{
+  physR[0] = _globPosX + iX*_delta;
+  physR[1] = _globPosY + iY*_delta;
+  physR[2] = _globPosZ + iZ*_delta;
+}
+
+
+template<typename T>
+bool Cuboid3D<T>::checkPoint(T globX, T globY, T globZ, int overlap) const
+{
   if (_globPosX - _delta/2. <= globX + overlap * _delta &&
       _globPosX + T(_nX-0.5+overlap) * _delta  > globX &&
       _globPosY - _delta/2. <= globY + overlap * _delta &&
@@ -155,41 +296,49 @@ bool Cuboid3D<T>::checkPoint(T globX, T globY, T globZ, int overlap) const {
       _globPosZ - _delta/2. <= globZ + overlap * _delta &&
       _globPosZ + T(_nZ-0.5+overlap) * _delta  > globZ ) {
     return true;
+  } else {
+    return false;
   }
-  else return false;
 }
 
 template<typename T>
-bool Cuboid3D<T>::physCheckPoint(T globX, T globY, T globZ, double overlap) const {
-  if (_globPosX - _delta/2. -overlap <= globX &&
-      _globPosX + T(_nX-0.5) * _delta + overlap > globX &&
-      _globPosY - _delta/2. -overlap <= globY &&
-      _globPosY + T(_nY-0.5) * _delta + overlap > globY &&
-      _globPosZ - _delta/2. - overlap <= globZ&&
-      _globPosZ + T(_nZ-0.5) * _delta + overlap > globZ ) {
+bool Cuboid3D<T>::physCheckPoint(T globX, T globY, T globZ, double overlap) const
+{
+  if (_globPosX - T(0.5 + overlap)*_delta <= globX &&
+      _globPosX + T(_nX-0.5+overlap)*_delta  > globX &&
+      _globPosY - T(0.5 + overlap)*_delta <= globY &&
+      _globPosY + T(_nY-0.5+overlap)*_delta  > globY &&
+      _globPosZ - T(0.5 + overlap)*_delta <= globZ &&
+      _globPosZ + T(_nZ-0.5+overlap)*_delta  > globZ ) {
+
     return true;
+  } else {
+    return false;
   }
-  else return false;
 }
 
 template<typename T>
-bool Cuboid3D<T>::checkPoint(T globX, T globY, T globZ, int &locX, int &locY, int &locZ, int overlap) const {
+bool Cuboid3D<T>::checkPoint(T globX, T globY, T globZ, int &locX, int &locY,
+                             int &locZ, int overlap) const
+{
   if (overlap!=0) {
     Cuboid3D tmp(_globPosX - overlap*_delta, _globPosY - overlap*_delta, _globPosZ - overlap*_delta,
                  _delta , _nX + overlap*2, _nY + overlap*2, _nZ + overlap*2);
     return tmp.checkPoint(globX, globY, globZ, locX, locY, locZ);
-  }
-  else if (!checkPoint(globX, globY, globZ)) return false;
-  else {
-    locX = (int)((globX - (T)_globPosX)/_delta);
-    locY = (int)((globY - (T)_globPosY)/_delta);
-    locZ = (int)((globZ - (T)_globPosZ)/_delta);
+  } else if (!checkPoint(globX, globY, globZ)) {
+    return false;
+  } else {
+    locX = (int)floor((globX - (T)_globPosX)/_delta + .5);
+    locY = (int)floor((globY - (T)_globPosY)/_delta + .5);
+    locZ = (int)floor((globZ - (T)_globPosZ)/_delta + .5);
     return true;
   }
 }
 
 template<typename T>
-bool Cuboid3D<T>::checkInters(T globX0, T globX1, T globY0, T globY1, T globZ0, T globZ1, int overlap) const {
+bool Cuboid3D<T>::checkInters(T globX0, T globX1, T globY0, T globY1, T globZ0,
+                              T globZ1, int overlap) const
+{
 
   T locX0d = std::max(_globPosX-overlap*_delta,globX0);
   T locY0d = std::max(_globPosY-overlap*_delta,globY0);
@@ -199,20 +348,22 @@ bool Cuboid3D<T>::checkInters(T globX0, T globX1, T globY0, T globY1, T globZ0, 
   T locZ1d = std::min(_globPosZ+(_nZ+overlap-1)*_delta,globZ1);
 
 
-  if (!(locX1d>=locX0d && locY1d>=locY0d && locZ1d>=locZ0d)) return false;
+  if (!(locX1d>=locX0d && locY1d>=locY0d && locZ1d>=locZ0d)) {
+    return false;
+  }
   return true;
 }
 
 template<typename T>
 bool Cuboid3D<T>::checkInters(T globX0, T globX1, T globY0, T globY1, T globZ0, T globZ1,
-                              int &locX0, int &locX1, int &locY0, int &locY1, int &locZ0, int &locZ1, int overlap) const {
+                              int &locX0, int &locX1, int &locY0, int &locY1, int &locZ0, int &locZ1, int overlap) const
+{
   if (overlap!=0) {
     Cuboid3D tmp(_globPosX - overlap*_delta, _globPosY - overlap*_delta, _globPosZ - overlap*_delta,
                  _delta , _nX + overlap*2, _nY + overlap*2, _nZ + overlap*2);
     return tmp.checkInters(globX0, globX1, globY0, globY1, globZ0, globZ1,
                            locX0, locX1, locY0, locY1, locZ0, locZ1);
-  }
-  else if (!checkInters(globX0, globX1, globY0, globY1, globZ0, globZ1)) {
+  } else if (!checkInters(globX0, globX1, globY0, globY1, globZ0, globZ1)) {
     locX0 = 1;
     locX1 = 0;
     locY0 = 1;
@@ -220,26 +371,38 @@ bool Cuboid3D<T>::checkInters(T globX0, T globX1, T globY0, T globY1, T globZ0, 
     locZ0 = 1;
     locZ1 = 0;
     return false;
-  }
-  else {
+  } else {
     locX0 = 0;
-    for (int i=0; _globPosX + i*_delta < globX0; i++) {locX0 = i+1;}
+    for (int i=0; _globPosX + i*_delta < globX0; i++) {
+      locX0 = i+1;
+    }
     locX1 = _nX-1;
-    for (int i=_nX-1; _globPosX + i*_delta > globX1; i--) {locX1 = i-1;}
+    for (int i=_nX-1; _globPosX + i*_delta > globX1; i--) {
+      locX1 = i-1;
+    }
     locY0 = 0;
-    for (int i=0; _globPosY + i*_delta < globY0; i++) {locY0 = i+1;}
+    for (int i=0; _globPosY + i*_delta < globY0; i++) {
+      locY0 = i+1;
+    }
     locY1 = _nY-1;
-    for (int i=_nY-1; _globPosY + i*_delta > globY1; i--) {locY1 = i-1;}
+    for (int i=_nY-1; _globPosY + i*_delta > globY1; i--) {
+      locY1 = i-1;
+    }
     locZ0 = 0;
-    for (int i=0; _globPosZ + i*_delta < globZ0; i++) {locZ0 = i+1;}
+    for (int i=0; _globPosZ + i*_delta < globZ0; i++) {
+      locZ0 = i+1;
+    }
     locZ1 = _nZ-1;
-    for (int i=_nZ-1; _globPosZ + i*_delta > globZ1; i--) {locZ1 = i-1;}
+    for (int i=_nZ-1; _globPosZ + i*_delta > globZ1; i--) {
+      locZ1 = i-1;
+    }
     return true;
   }
 }
 
 template<typename T>
-void Cuboid3D<T>::divide(int nX, int nY, int nZ, std::vector<Cuboid3D<T> > &childrenC) const {
+void Cuboid3D<T>::divide(int nX, int nY, int nZ, std::vector<Cuboid3D<T> > &childrenC) const
+{
   T globPosX_child, globPosY_child, globPosZ_child;
   int xN_child = 0;
   int yN_child = 0;
@@ -270,7 +433,8 @@ void Cuboid3D<T>::divide(int nX, int nY, int nZ, std::vector<Cuboid3D<T> > &chil
 
 
 template<typename T>
-void Cuboid3D<T>::resize(int iX, int iY, int iZ, int nX, int nY, int nZ) {
+void Cuboid3D<T>::resize(int iX, int iY, int iZ, int nX, int nY, int nZ)
+{
   _globPosX = _globPosX+iX*_delta;
   _globPosY = _globPosY+iY*_delta;
   _globPosZ = _globPosZ+iZ*_delta;
@@ -282,7 +446,8 @@ void Cuboid3D<T>::resize(int iX, int iY, int iZ, int nX, int nY, int nZ) {
 
 
 template<typename T>
-void Cuboid3D<T>::divide(int p, std::vector<Cuboid3D<T> > &childrenC) const {
+void Cuboid3D<T>::divide(int p, std::vector<Cuboid3D<T> > &childrenC) const
+{
 
   OLB_PRECONDITION(p>0);
 
@@ -323,11 +488,10 @@ void Cuboid3D<T>::divide(int p, std::vector<Cuboid3D<T> > &childrenC) const {
   int rest = p - bestIx*bestIy*bestIz;
 
   // split in one cuboid
-  if (rest==0) { 
+  if (rest==0) {
     divide(bestIx, bestIy, bestIz, childrenC);
     return;
-  }
-  else {
+  } else {
 
     // add in z than in y direction
     if (nZ>nY && nZ>nX) {
@@ -359,7 +523,7 @@ void Cuboid3D<T>::divide(int p, std::vector<Cuboid3D<T> > &childrenC) const {
         return;
       }
 
-      // spilt in four cuboid
+      // split in four cuboid
 
       int restX = rest/bestIy+1;
       int yN_child = 0;
@@ -433,7 +597,7 @@ void Cuboid3D<T>::divide(int p, std::vector<Cuboid3D<T> > &childrenC) const {
         return;
       }
 
-      // spilt in four cuboid
+      // split in four cuboid
 
       int restZ = rest/bestIy+1;
 
@@ -481,7 +645,7 @@ void Cuboid3D<T>::divide(int p, std::vector<Cuboid3D<T> > &childrenC) const {
     }
 
     // add in y than in x direction
-    else { 
+    else {
       int restX = rest%bestIx;
       // split in two cuboid
       if (restX==0) {
@@ -509,7 +673,7 @@ void Cuboid3D<T>::divide(int p, std::vector<Cuboid3D<T> > &childrenC) const {
         return;
       }
 
-      // spilt in four cuboid
+      // split in four cuboid
 
       int restZ = rest/bestIx+1;
       int xN_child = 0;

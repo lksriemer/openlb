@@ -41,12 +41,15 @@ namespace olb {
 * University of Geneva, (2007).
 */
 template<typename T, template<typename U> class Lattice, int direction, int orientation>
-class ExtendedStraightFdBoundaryPostProcessor2D : public LocalPostProcessor2D<T,Lattice>
-{
+class ExtendedStraightFdBoundaryPostProcessor2D : public LocalPostProcessor2D<T,Lattice> {
 public:
   ExtendedStraightFdBoundaryPostProcessor2D(int x0_, int x1_, int y0_, int y1_);
-  virtual int extent() const { return 1; }
-  virtual int extent(int whichDirection) const { return 1; }
+  virtual int extent() const {
+    return 1;
+  }
+  virtual int extent(int whichDirection) const {
+    return 1;
+  }
   virtual void process(BlockLattice2D<T,Lattice>& blockLattice);
   virtual void processSubDomain(BlockLattice2D<T,Lattice>& blockLattice,
                                 int x0_, int x1_, int y0_, int y1_ );
@@ -63,8 +66,7 @@ private:
 };
 
 template<typename T, template<typename U> class Lattice, int direction, int orientation>
-class ExtendedStraightFdBoundaryProcessorGenerator2D : public PostProcessorGenerator2D<T,Lattice>
-{
+class ExtendedStraightFdBoundaryProcessorGenerator2D : public PostProcessorGenerator2D<T,Lattice> {
 public:
   ExtendedStraightFdBoundaryProcessorGenerator2D(int x0_, int x1_, int y0_, int y1_);
   virtual PostProcessor2D<T,Lattice>* generate() const;

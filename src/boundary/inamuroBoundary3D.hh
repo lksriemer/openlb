@@ -249,7 +249,8 @@ getInternalVelocityCornerProcessor(int x, int y, int z)
 ////////// Factory functions //////////////////////////////////////////////////
 
 template<typename T, template<typename U> class Lattice, typename MixinDynamics>
-OnLatticeBoundaryCondition3D<T,Lattice>* createInamuroBoundaryCondition3D(BlockLatticeStructure3D<T,Lattice>& block) {
+OnLatticeBoundaryCondition3D<T,Lattice>* createInamuroBoundaryCondition3D(BlockLatticeStructure3D<T,Lattice>& block)
+{
   return new BoundaryConditionInstantiator3D <
          T, Lattice,
          InamuroBoundaryManager3D<T,Lattice, MixinDynamics> > (block);

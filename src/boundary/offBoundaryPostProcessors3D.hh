@@ -64,8 +64,7 @@ ZeroVelocityBouzidiLinearPostProcessor3D(int x_, int y_, int z_, int iPop_, T di
     zB = z - c[2];
     q = 1/(2*dist);
     iPop2 = opp;
-  }
-  else {
+  } else {
     xB = x;
     yB = y;
     zB = z;
@@ -84,8 +83,9 @@ template<typename T, template<typename U> class Lattice>
 void ZeroVelocityBouzidiLinearPostProcessor3D<T,Lattice>::
 processSubDomain(BlockLattice3D<T,Lattice>& blockLattice, int x0_, int x1_, int y0_, int y1_, int z0_, int z1_)
 {
-  if (util::contained(x, y, z, x0_, x1_, y0_, y1_, z0_, z1_))
+  if (util::contained(x, y, z, x0_, x1_, y0_, y1_, z0_, z1_)) {
     process(blockLattice);
+  }
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -118,8 +118,7 @@ VelocityBouzidiLinearPostProcessor3D(int x_, int y_, int z_, int iPop_, T dist_)
     q = 1/(2*dist);
     ufrac = q;
     iPop2 = opp;
-  }
-  else {
+  } else {
     xB = x;
     yB = y;
     zB = z;
@@ -139,8 +138,9 @@ template<typename T, template<typename U> class Lattice>
 void VelocityBouzidiLinearPostProcessor3D<T,Lattice>::
 processSubDomain(BlockLattice3D<T,Lattice>& blockLattice, int x0_, int x1_, int y0_, int y1_, int z0_, int z1_)
 {
-  if (util::contained(x, y, z, x0_, x1_, y0_, y1_, z0_, z1_))
+  if (util::contained(x, y, z, x0_, x1_, y0_, y1_, z0_, z1_)) {
     process(blockLattice);
+  }
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -182,8 +182,9 @@ template<typename T, template<typename U> class Lattice>
 void ZeroVelocityBounceBackPostProcessor3D<T,Lattice>::
 processSubDomain(BlockLattice3D<T,Lattice>& blockLattice, int x0_, int x1_, int y0_, int y1_, int z0_, int z1_)
 {
-  if (util::contained(x, y, z, x0_, x1_, y0_, y1_, z0_, z1_))
+  if (util::contained(x, y, z, x0_, x1_, y0_, y1_, z0_, z1_)) {
     process(blockLattice);
+  }
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -219,8 +220,9 @@ template<typename T, template<typename U> class Lattice>
 void VelocityBounceBackPostProcessor3D<T,Lattice>::
 processSubDomain(BlockLattice3D<T,Lattice>& blockLattice, int x0_, int x1_, int y0_, int y1_, int z0_, int z1_)
 {
-  if (util::contained(x, y, z, x0_, x1_, y0_, y1_, z0_, z1_))
+  if (util::contained(x, y, z, x0_, x1_, y0_, y1_, z0_, z1_)) {
     process(blockLattice);
+  }
 }
 
 template<typename T, template<typename U> class Lattice>

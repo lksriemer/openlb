@@ -29,6 +29,6 @@
 #include "blockGeometryStatistics3D.hh"
 
 namespace olb {
-  template class BlockGeometryStatistics3D<double>;
+template class BlockGeometryStatistics3D<double>;
 }
 

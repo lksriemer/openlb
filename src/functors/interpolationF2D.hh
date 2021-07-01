@@ -25,12 +25,8 @@
 #ifndef INTERPOLATION_F_2D_HH
 #define INTERPOLATION_F_2D_HH
 
-#include<vector>
 
 #include "functors/interpolationF2D.h"
-#include "functors/genericF.h"
-#include "functors/analyticalF.h"
-#include "functors/indicatorF.h"
 #include "core/superLattice2D.h"
 #include "dynamics/lbHelpers.h"
 
@@ -41,40 +37,53 @@ namespace olb {
 template <typename T, template <typename U> class DESCRIPTOR>
 AnalyticalFfromSuperLatticeF2D<T,DESCRIPTOR>::
 AnalyticalFfromSuperLatticeF2D(SuperLatticeF2D<T,DESCRIPTOR>& f, bool communicateToAll,
-  int overlap)
+                               int overlap)
   : AnalyticalF2D<T,T>(f.getTargetDim()), _f(f),
-    _cg(_f.getSuperLattice2D().getCuboidGeometry()), _communicateToAll(communicateToAll),
+    _cg(_f.getSuperLattice().getCuboidGeometry()), _communicateToAll(communicateToAll),
     _overlap(overlap)
 {
-  this->_name = "fromSuperLatticeF";
+  this->getName() = "fromSuperLatticeF";
+  if (overlap==-1) {
+    _overlap = f.getSuperLattice().getOverlap();
+  }
 }
 
 
 template <typename T, template <typename U> class DESCRIPTOR>
-std::vector<T> AnalyticalFfromSuperLatticeF2D<T,DESCRIPTOR>::operator() (std::vector<T> physC)
+bool AnalyticalFfromSuperLatticeF2D<T,DESCRIPTOR>::operator() (T output[], const T physC[])
 {
+  int latticeR[3] = {0,0,0};
+  for (int iD = 0; iD < _f.getTargetDim(); ++iD) {
+    output[iD] = T();
+  }
+  if (!(_cg.getLatticeR(latticeR,physC))) {
+    return false;
+  }
+
   // convert to lattice coordinates
   T d[2];
 
-  if(_communicateToAll) {
-	  _f.getSuperLattice2D().communicate();
-  }
+  _f.getSuperLattice().communicate();
 
   int locX, locY;
-#ifdef PARALLEL_MODE_MPI
+
   int dataSize = 0;
   int dataFound = 0;
-#endif
-  std::vector<T> pOutput;
-  std::vector<int> latticeC(3,0);
 
-  for (int iC = 0; iC < _f.getSuperLattice2D().getLoadBalancer().size(); iC++) {
-    latticeC[0] = _f.getSuperLattice2D().getLoadBalancer().glob(iC);
-    if (_cg.get(latticeC[0]).checkPoint(physC[0], physC[1], locX, locY, _overlap-1)) {
-      locX -= (_overlap-1);
-      locY -= (_overlap-1);
+  int latticeC[3]= {};
+  T physRiC[2];
 
-      std::vector<T> physRiC = _cg.get(latticeC[0]).getPhysR(locX,locY);
+
+  for (int iC = 0; iC < _f.getSuperLattice().getLoadBalancer().size(); ++iC) {
+    latticeC[0] = _f.getSuperLattice().getLoadBalancer().glob(iC);
+    _cg.get(latticeC[0]).getFloorLatticeR(latticeR, physC);
+    if (latticeR[0] >= -_overlap && latticeR[0] + 1 < _cg.get(latticeC[0]).getNx() + _overlap &&
+        latticeR[1] >= -_overlap && latticeR[1] + 1 < _cg.get(latticeC[0]).getNy() + _overlap ) {
+
+      locX = latticeR[0];
+      locY = latticeR[1];
+
+      _cg.get(latticeC[0]).getPhysR(physRiC, locX,locY);
 
       d[0] = (physC[0] - physRiC[0]);
       d[1] = (physC[1] - physRiC[1]);
@@ -82,53 +91,63 @@ std::vector<T> AnalyticalFfromSuperLatticeF2D<T,DESCRIPTOR>::operator() (std::ve
       d[0] /= _cg.get(latticeC[0]).getDeltaR();
       d[1] /= _cg.get(latticeC[0]).getDeltaR();
 
-      std::vector<T> output(_f.getTargetDim(), T());
-
-      for (unsigned int iD = 0; iD < output.size(); iD++) {
-        latticeC[1] = locX;
-        latticeC[2] = locY;
-        output[iD] += (_f(latticeC)[iD]*(1-d[0])*(1-d[1]));
-
-        latticeC[1] = locX;
-        latticeC[2] = locY+1;
-        output[iD] += (_f(latticeC)[iD]*(1-d[0])*(d[1]));
-
-        latticeC[1] = locX+1;
-        latticeC[2] = locY;
-        output[iD] += (_f(latticeC)[iD]*(d[0])*(1-d[1]));
-
-        latticeC[1] = locX+1;
-        latticeC[2] = locY+1;
-        output[iD] += (_f(latticeC)[iD]*(d[0])*(d[1]));
+      T outputTmp[_f.getTargetDim()];
+      for (int iD = 0; iD < _f.getTargetDim(); ++iD) {
+        output[iD] = T();
+        outputTmp[iD] = T();
       }
-#ifdef PARALLEL_MODE_MPI
-      dataSize = _f(latticeC).size();
-      dataFound = 1;
-#endif
-      pOutput = output;
+
+      latticeC[1] = locX;
+      latticeC[2] = locY;
+      _f(outputTmp,latticeC);
+      for (int iD = 0; iD < _f.getTargetDim(); ++iD) {
+        output[iD] += (outputTmp[iD]*(1-d[0])*(1-d[1]));
+        outputTmp[iD] = T();
+      }
+      latticeC[1] = locX;
+      latticeC[2] = locY+1;
+      _f(outputTmp,latticeC);
+      for (int iD = 0; iD < _f.getTargetDim(); ++iD) {
+        output[iD] += (outputTmp[iD]*(1-d[0])*(d[1]));
+        outputTmp[iD] = T();
+      }
+      latticeC[1] = locX+1;
+      latticeC[2] = locY;
+      _f(outputTmp,latticeC);
+      for (int iD = 0; iD < _f.getTargetDim(); ++iD) {
+        output[iD] += (outputTmp[iD]*(d[0])*(1-d[1]));
+        outputTmp[iD] = T();
+      }
+      latticeC[1] = locX+1;
+      latticeC[2] = locY+1;
+      _f(outputTmp,latticeC);
+      for (int iD = 0; iD < _f.getTargetDim(); ++iD) {
+        output[iD] += (outputTmp[iD]*(d[0])*(d[1]));
+        outputTmp[iD] = T();
+      }
+
+      dataSize += _f.getTargetDim();
+      dataFound ++;
     }
   }
 
 #ifdef PARALLEL_MODE_MPI
-  if(_communicateToAll) {
+  if (_communicateToAll) {
     singleton::mpi().reduceAndBcast(dataFound, MPI_SUM);
     singleton::mpi().reduceAndBcast(dataSize, MPI_SUM);
     dataSize /= dataFound;
-    if (pOutput.size() == 0) {
-      for (int iD = 0; iD < dataSize; iD++) {
-        pOutput.push_back(T());
-      }
+    for (int iD = 0; iD < dataSize; ++iD) {
+      singleton::mpi().reduceAndBcast(output[iD], MPI_SUM);
     }
-    for (int iD = 0; iD < dataSize; iD++) {
-      singleton::mpi().reduceAndBcast(pOutput[iD], MPI_SUM);
-    }
-    for (int iD = 0; iD < dataSize; iD++) {
-      pOutput[iD] /= dataFound;
+    for (int iD = 0; iD < dataSize; ++iD) {
+      output[iD]/=dataFound;
     }
   }
 #endif
-
-  return pOutput;
+  if (dataFound>0) {
+    return true;
+  }
+  return false;
 }
 
 
@@ -136,21 +155,21 @@ std::vector<T> AnalyticalFfromSuperLatticeF2D<T,DESCRIPTOR>::operator() (std::ve
 template <typename T, template <typename U> class DESCRIPTOR>
 SuperLatticeFfromAnalyticalF2D<T,DESCRIPTOR>::
 SuperLatticeFfromAnalyticalF2D(AnalyticalF2D<T,T>& f, SuperLattice2D<T,DESCRIPTOR>& sLattice,
-  SuperGeometry2D<T>& sg)
+                               SuperGeometry2D<T>& sg)
   : SuperLatticeF2D<T,DESCRIPTOR>(sLattice, f.getTargetDim()), _f(f), _sg(sg)
 {
-  this->_name = "fromAnalyticalF";
+  this->getName() = "fromAnalyticalF";
 }
 
 template <typename T, template <typename U> class DESCRIPTOR>
-std::vector<T> SuperLatticeFfromAnalyticalF2D<T,DESCRIPTOR>::operator() (std::vector<int> input)
+bool SuperLatticeFfromAnalyticalF2D<T,DESCRIPTOR>::operator() (T output[], const int input[])
 {
-	// convert to physical coordinates
-	std::vector<T> physCoordinate;
-	physCoordinate.push_back(this->_sg.getPhysR(input)[0]);
-	physCoordinate.push_back(this->_sg.getPhysR(input)[1]);
-
-	return _f(physCoordinate);
+  // convert to physical coordinates
+  T physCoordinate[2] = {};
+  physCoordinate[0] = this->_sg.getPhysR(input[0],input[1],input[2])[0];
+  physCoordinate[1] = this->_sg.getPhysR(input[0],input[1],input[2])[1];
+  _f(output,physCoordinate);
+  return true;
 }
 
 

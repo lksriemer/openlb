@@ -53,8 +53,7 @@ namespace descriptors {
 /// with the method of lattice Boltzmann equation", D. Yu, L.-S. Luo, W. Shi,
 /// Progress in Aerospace Sciences 39, (2003), p. 329-367
 template <typename T>
-struct MRTD2Q9DescriptorBase : public D2Q9DescriptorBase<T>
-{
+struct MRTD2Q9DescriptorBase : public D2Q9DescriptorBase<T> {
   enum { d_ = 2, q_ = 9 };     ///< number of dimensions/distr. functions
   static const T M[q_][q_];    // Matrix of base change between f and moments : moments=M.f
   static const T invM[q_][q_]; // inverse of base change matrix : f=invM.moments
@@ -69,8 +68,7 @@ struct MRTD2Q9DescriptorBase : public D2Q9DescriptorBase<T>
 /// I. Ginzburg, M. Krafzcyk, P. Lallemand, L.-S. Luo,
 /// Phil. Trans. R. Soc. Lond. A (2002) 660, p. 437-451
 template <typename T>
-struct MRTD3Q19DescriptorBase : public D3Q19DescriptorBase<T>
-{
+struct MRTD3Q19DescriptorBase : public D3Q19DescriptorBase<T> {
   enum { d_ = 3, q_ = 19 };     ///< number of dimensions/distr. functions
   static const T M[q_][q_];    // Matrix of base change between f and moments : moments=M.f
   static const T invM[q_][q_]; // inverse of base change matrix : f=invM.moments
@@ -83,23 +81,23 @@ struct MRTD3Q19DescriptorBase : public D3Q19DescriptorBase<T>
 
 template <typename T>
 struct MRTD2Q9Descriptor
-    : public MRTD2Q9DescriptorBase<T>, public NoExternalFieldBase
-  { };
+    : public MRTD2Q9DescriptorBase<T>, public NoExternalFieldBase {
+};
 
 template <typename T>
 struct MRTD3Q19Descriptor
-    : public MRTD3Q19DescriptorBase<T>, public NoExternalFieldBase
-  { };
+    : public MRTD3Q19DescriptorBase<T>, public NoExternalFieldBase {
+};
 
 template <typename T>
 struct ForcedMRTD2Q9Descriptor
-    : public MRTD2Q9DescriptorBase<T>, public Force2dDescriptorBase
-  { };
+    : public MRTD2Q9DescriptorBase<T>, public Force2dDescriptorBase {
+};
 
 template <typename T>
 struct ForcedMRTD3Q19Descriptor
-    : public MRTD3Q19DescriptorBase<T>, public Force3dDescriptorBase
-  { };
+    : public MRTD3Q19DescriptorBase<T>, public Force3dDescriptorBase {
+};
 
 }  // namespace descriptors
 

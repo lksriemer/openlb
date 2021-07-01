@@ -24,17 +24,16 @@
 /** \file
  * Groups all the generic implementation files for basic 2D dynamics.
  */
+
+#include "blockData2D.hh"
 #include "blockLattice2D.hh"
 #include "blockLatticeStructure2D.hh"
 #include "blockLatticeView2D.hh"
 #include "cell.hh"
-#include "dataAnalysis2D.hh"
-#include "dataFields2D.hh"
-#include "dataReductions.hh"
 #include "latticeStatistics.hh"
 #include "postProcessing.hh"
 #include "serializer.hh"
-#include "simulationSetup2D.hh"
+#include "superData2D.hh"
 #include "superLattice2D.hh"
 #include "superExternal2D.hh"
 #include "units.hh"

@@ -113,7 +113,8 @@ getOffDynamics(T location[Lattice<T>::d], T distances[Lattice<T>::q])
 
 template<typename T, template<typename U> class Lattice, typename MixinDynamics>
 OffLatticeBoundaryCondition3D<T,Lattice>*
-createBouzidiBoundaryCondition3D(BlockLatticeStructure3D<T,Lattice>& block) {
+createBouzidiBoundaryCondition3D(BlockLatticeStructure3D<T,Lattice>& block)
+{
   return new OffBoundaryConditionInstantiator3D <
          T, Lattice,
          BouzidiBoundaryManager3D<T,Lattice, MixinDynamics> > (block);

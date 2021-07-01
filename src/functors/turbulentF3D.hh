@@ -26,14 +26,11 @@
 
 #include<vector>
 #include<cmath>
-#include<string>
 
 #include "functors/turbulentF3D.h"
-#include "functors/blockLatticeBaseF3D.h"
 #include "functors/blockLatticeLocalF3D.h"
-#include "functors/superLatticeBaseF3D.h"
-#include "functors/indicatorBaseF.h"
 #include "core/superLattice3D.h"
+#include "geometry/superGeometry3D.h"
 #include "utilities/vectorHelpers.h"
 #include "dynamics/lbHelpers.h"  // for computation of lattice rho and velocity
 
@@ -44,48 +41,46 @@ namespace olb {
 ///////////////////////////// SuperLatticeYplus3D //////////////////////////////
 template <typename T, template <typename U> class DESCRIPTOR>
 SuperLatticeYplus3D<T,DESCRIPTOR>::SuperLatticeYplus3D(SuperLattice3D<T,DESCRIPTOR>& sLattice,
-  const LBconverter<T>& converter, SuperGeometry3D<T>& superGeometry,
-  IndicatorF3D<bool,T>& indicator, const int material )
+    const LBconverter<T>& converter, SuperGeometry3D<T>& superGeometry,
+    IndicatorF3D<T>& indicator, const int material )
   : SuperLatticePhysF3D<T,DESCRIPTOR>(sLattice,converter,1),
     _superGeometry(superGeometry), _indicator(indicator), _material(material)
 {
-  this->_name = "yPlus";
+  this->getName() = "yPlus";
 }
 
 template <typename T, template <typename U> class DESCRIPTOR>
-std::vector<T> SuperLatticeYplus3D<T,DESCRIPTOR>::operator() (std::vector<int> input) {
+bool SuperLatticeYplus3D<T,DESCRIPTOR>::operator() (T output[], const int input[])
+{
   int globIC = input[0];
   int locix = input[1];
   int lociy = input[2];
   int lociz = input[3];
 
-  std::vector<T> output(1,T());
-
-  if( this->_sLattice.getLoadBalancer().rank(globIC) == singleton::mpi().getRank() )
-  {
+  output[0]=T();
+  if ( this->_sLattice.getLoadBalancer().rank(globIC) == singleton::mpi().getRank() ) {
     std::vector<T> normalTemp(3,T());
     std::vector<T> normal(3,T());       // normalized
     T counter = T();
     T distance = T();
-    if(_superGeometry.get(input) == 1)
-    {
-      for(int iPop = 1; iPop < DESCRIPTOR<T>::q; iPop++)
-      {
-        if(_superGeometry.get(input[0],
-                              input[1] + DESCRIPTOR<T>::c[iPop][0],
-                              input[2] + DESCRIPTOR<T>::c[iPop][1],
-                              input[3] + DESCRIPTOR<T>::c[iPop][2]) == _material)
-        {
+    if (_superGeometry.get(input) == 1) {
+      for (int iPop = 1; iPop < DESCRIPTOR<T>::q; ++iPop) {
+        if (_superGeometry.get(input[0],
+                               input[1] + DESCRIPTOR<T>::c[iPop][0],
+                               input[2] + DESCRIPTOR<T>::c[iPop][1],
+                               input[3] + DESCRIPTOR<T>::c[iPop][2]) == _material) {
           counter++;
           normalTemp[0] += DESCRIPTOR<T>::c[iPop][0];
           normalTemp[1] += DESCRIPTOR<T>::c[iPop][1];
           normalTemp[2] += DESCRIPTOR<T>::c[iPop][2];
         }
       }
-      if(counter != 0)
-      {
+      if (counter != 0) {
         // get physical Coordinates at intersection
-        std::vector<T> physR = _superGeometry.getCuboidGeometry().getPhysR(input);
+
+        std::vector<T> physR(3, T());
+        _superGeometry.getCuboidGeometry().getPhysR(&(physR[0]), &(input[0]));
+
         T voxelSize = _superGeometry.getCuboidGeometry().get(globIC).getDeltaR();
 
         normal = util::normalize(normalTemp);
@@ -96,8 +91,7 @@ std::vector<T> SuperLatticeYplus3D<T,DESCRIPTOR>::operator() (std::vector<int> i
         direction[2] = voxelSize*normal[2]*2.;
 
         // calculate distance to STL file
-        if( _indicator.distance(distance, physR, direction) )
-        {
+        if ( _indicator.distance(distance, physR, direction) ) {
           // call stress at this point
           T rho;
           T u[3];
@@ -117,8 +111,8 @@ std::vector<T> SuperLatticeYplus3D<T,DESCRIPTOR>::operator() (std::vector<int> i
 
           // Stress appearing as pressure in corresponding direction is calculated and substracted
           T R_res_pressure = normal[0]*pi[0]*physFactor*normal[0] + normal[0]*pi[1]*physFactor*normal[1] + normal[0]*pi[2]*physFactor*normal[2]
-                            +normal[1]*pi[1]*physFactor*normal[0] + normal[1]*pi[3]*physFactor*normal[1] + normal[1]*pi[4]*physFactor*normal[2]
-                            +normal[2]*pi[2]*physFactor*normal[0] + normal[2]*pi[4]*physFactor*normal[1] + normal[2]*pi[5]*physFactor*normal[2];
+                             +normal[1]*pi[1]*physFactor*normal[0] + normal[1]*pi[3]*physFactor*normal[1] + normal[1]*pi[4]*physFactor*normal[2]
+                             +normal[2]*pi[2]*physFactor*normal[0] + normal[2]*pi[4]*physFactor*normal[1] + normal[2]*pi[5]*physFactor*normal[2];
 
           Rx -= R_res_pressure *normal[0];
           Ry -= R_res_pressure *normal[1];
@@ -127,159 +121,152 @@ std::vector<T> SuperLatticeYplus3D<T,DESCRIPTOR>::operator() (std::vector<int> i
           T tau_wall = sqrt(Rx*Rx+Ry*Ry+Rz*Rz);
           T u_tau = sqrt(tau_wall/this->_converter.physRho(rho));
           //y_plus
-          output[0] = distance*u_tau / this->_converter.getCharNu(); 
+          output[0] = distance*u_tau / this->_converter.getCharNu();
         } // if 4
       }
     }
   }
-  return output;
+  return true;
 }
-
 
 template <typename T, template <typename U> class DESCRIPTOR>
 BlockLatticeADM3D<T,DESCRIPTOR>::BlockLatticeADM3D
-  (BlockLatticeStructure3D<T,DESCRIPTOR>& blockLattice, T sigma, int order )
+(BlockLatticeStructure3D<T,DESCRIPTOR>& blockLattice, T sigma, int order )
   : BlockLatticeF3D<T,DESCRIPTOR>(blockLattice,4), _sigma(sigma), _order(order)
-{ this->_name = "ADMfilter"; }
+{
+  this->getName() = "ADMfilter";
+}
 
 template <typename T, template <typename U> class DESCRIPTOR>
-std::vector<T> BlockLatticeADM3D<T,DESCRIPTOR>::operator() (std::vector<int> input) {
+bool BlockLatticeADM3D<T,DESCRIPTOR>::operator() (T output[], const int input[])
+{
+  // Declaration of all variables needed for filtering
 
-  std::vector<T> output(4,T());
-
-  //////Declaration of all variables needed for filtering //////
- 
   int globX = input[0];
   int globY = input[1];
   int globZ = input[2];
 
-  std::vector<int> u_000(3,int());
-  u_000[0]=globX, u_000[1]=globY, u_000[2]=globZ;
+  T output000[4] = {1.,0.,0.,0.};
+  this-> _blockLattice.get(globX, globY, globZ).computeRhoU(output000[0],output000+1);
 
-  ///x filter ini
-  std::vector<int> u_p00(3,int());
-  u_p00[0]=globX+1, u_p00[1]=globY, u_p00[2]=globZ;
+  T outputp00[4]= {1.,0.,0.,0.};
+  this-> _blockLattice.get(globX+1, globY, globZ).computeRhoU(outputp00[0],outputp00+1);
 
-  std::vector<int> u_2p00(3,int());
-  u_2p00[0]=globX+2, u_2p00[1]=globY, u_2p00[2]=globZ;
+  T output2p00[4]= {1.,0.,0.,0.};
+  this-> _blockLattice.get(globX+2, globY, globZ).computeRhoU(output2p00[0],output2p00+1);
 
-  std::vector<int> u_3p00(3,int());
-  u_3p00[0]=globX+3, u_3p00[1]=globY, u_3p00[2]=globZ;
+  T outputn00[4]= {1.,0.,0.,0.};
+  this-> _blockLattice.get(globX-1, globY, globZ).computeRhoU(outputn00[0],outputn00+1);
 
-  std::vector<int> u_n00(3,int());
-  u_n00[0]=globX-1, u_n00[1]=globY, u_n00[2]=globZ;
+  T output2n00[4]= {1.,0.,0.,0.};
+  this-> _blockLattice.get(globX-2, globY, globZ).computeRhoU(output2n00[0],output2n00+1);
 
-  std::vector<int> u_2n00(3,int());
-  u_2n00[0]=globX-2, u_2n00[1]=globY, u_2n00[2]=globZ;
 
-  std::vector<int> u_3n00(3,int());
-  u_3n00[0]=globX-3, u_3n00[1]=globY, u_3n00[2]=globZ;
+  T output0p0[4]= {1.,0.,0.,0.};
+  this-> _blockLattice.get(globX, globY+1, globZ).computeRhoU(output0p0[0],output0p0+1);
 
-  ///y filter ini
-  std::vector<int> u_0p0(3,int());
-  u_0p0[0]=globX, u_0p0[1]=globY+1, u_0p0[2]=globZ;
+  T output02p0[4]= {1.,0.,0.,0.};
+  this-> _blockLattice.get(globX, globY+2, globZ).computeRhoU(output02p0[0],output02p0+1);
 
-  std::vector<int> u_02p0(3,int());
-  u_02p0[0]=globX, u_02p0[1]=globY+2, u_02p0[2]=globZ;
+  T output0n0[4]= {1.,0.,0.,0.};
+  this-> _blockLattice.get(globX, globY-1, globZ).computeRhoU(output0n0[0],output0n0+1);
 
-  std::vector<int> u_03p0(3,int());
-  u_03p0[0]=globX, u_03p0[1]=globY+3, u_03p0[2]=globZ;
+  T output02n0[4]= {1.,0.,0.,0.};
+  this-> _blockLattice.get(globX, globY-2, globZ).computeRhoU(output02n0[0],output02n0+1);
 
-  std::vector<int> u_0n0(3,int());
-  u_0n0[0]=globX, u_0n0[1]=globY-1, u_0n0[2]=globZ;
 
-  std::vector<int> u_02n0(3,int());
-  u_02n0[0]=globX, u_02n0[1]=globY-2, u_02n0[2]=globZ;
+  T output00p[4]= {1.,0.,0.,0.};
+  this-> _blockLattice.get(globX, globY, globZ+1).computeRhoU(output00p[0],output00p+1);
 
-  std::vector<int> u_03n0(3,int());
-  u_03n0[0]=globX, u_03n0[1]=globY-3, u_03n0[2]=globZ;
-   
-  ///z filter ini
-  std::vector<int> u_00p(3,int());
-  u_00p[0]=globX, u_00p[1]=globY, u_00p[2]=globZ+1;
+  T output002p[4]= {1.,0.,0.,0.};
+  this-> _blockLattice.get(globX, globY, globZ+2).computeRhoU(output002p[0],output002p+1);
 
-  std::vector<int> u_002p(3,int());
-  u_002p[0]=globX, u_002p[1]=globY, u_002p[2]=globZ+2;
+  T output00n[4]= {1.,0.,0.,0.};
+  this-> _blockLattice.get(globX, globY, globZ-1).computeRhoU(output00n[0],output00n+1);
 
-  std::vector<int> u_003p(3,int());
-  u_003p[0]=globX, u_003p[1]=globY, u_003p[2]=globZ+3;
+  T output002n[4]= {1.,0.,0.,0.};
+  this-> _blockLattice.get(globX, globY, globZ-2).computeRhoU(output002n[0],output002n+1);
 
-  std::vector<int> u_00n(3,int());
-  u_00n[0]=globX, u_00n[1]=globY, u_00n[2]=globZ-1;
+  if (_order==2) { // second order
+    T d_0 = 6./16.;
+    T d_1 = -4./16.;
+    T d_2 = 1./16.;
 
-  std::vector<int> u_002n(3,int());
-  u_002n[0]=globX, u_002n[1]=globY, u_002n[2]=globZ-2;
-
-  std::vector<int> u_003n(3,int());
-  u_003n[0]=globX, u_003n[1]=globY, u_003n[2]=globZ-3;
-   
-  BlockLatticeDensity3D<T, DESCRIPTOR> density(this-> _blockLattice);
-  BlockLatticeVelocity3D<T, DESCRIPTOR> velocity(this-> _blockLattice);
-  //////// end of declaration 
-
-  switch(_order) {
-    case(2): //////// second order//////// 
-    {
-      T d_0 = 6./16.; 
-      T d_1 = -4./16.;
-      T d_2 = 1./16.;
-      output[0] = density(u_000)[0] - _sigma*(d_2*(density(u_2n00)[0]+density(u_02n0)[0]+density(u_002n)[0]) +
-                                    d_1*(density(u_n00)[0]+density(u_0n0)[0]+density(u_00n)[0])+
-                                    d_0*(density(u_000)[0]+density(u_000)[0]+density(u_000)[0])+
-                                    d_1*(density(u_p00)[0]+density(u_0p0)[0]+density(u_00p)[0])+
-                                    d_2*(density(u_2p00)[0]+density(u_02p0)[0]+density(u_002p)[0]) );
-      for (int i = 0; i < 3; ++i ) {        
-        output[i+1] = velocity(u_000)[i] - _sigma*(d_2*(velocity(u_2n00)[i] + velocity(u_02n0)[i] + velocity(u_002n)[i]) +
-                                                  d_1*(velocity(u_n00)[i] + velocity(u_0n0)[i] + velocity(u_00n)[i])+
-                                                  d_0*(velocity(u_000)[i] + velocity(u_000)[i] + velocity(u_000)[i])+
-                                                  d_1*(velocity(u_p00)[i] + velocity(u_0p0)[i] + velocity(u_00p)[i])+
-                                                  d_2*(velocity(u_2p00)[i] + velocity(u_02p0)[i] + velocity(u_002p)[i]) );
-      }
+    output[0] = output000[0] - _sigma*(d_2*(output2n00[0]+output02n0[0]+output002n[0]) +
+                                       d_1*(outputn00[0]+output0n0[0]+output00n[0])+
+                                       d_0*(output000[0]+output000[0]+output000[0])+
+                                       d_1*(outputp00[0]+output0p0[0]+output00p[0])+
+                                       d_2*(output2p00[0]+output02p0[0]+output002p[0]) );
+    for (int i = 1; i < 4; ++i ) {
+      output[i] = output000[i] - _sigma*(d_2*(output2n00[i] + output02n0[i] + output002n[i]) +
+                                         d_1*(outputn00[i] + output0n0[i] + output00n[i])+
+                                         d_0*(output000[i] + output000[i] + output000[i])+
+                                         d_1*(outputp00[i] + output0p0[i] + output00p[i])+
+                                         d_2*(output2p00[i] + output02p0[i] + output002p[i]) );
     }
-    case(3): ////// third order ///////////
-    { 
-      T d_0 = 5./16.;  
-      T d_1 = -15./64.;
-      T d_2 = 3./32.;
-      T d_3 = -1./64.;
-      output[0] = density(u_000)[0]- _sigma*(d_3*(density(u_3n00)[0]+density(u_03n0)[0]+density(u_003n)[0])+
-                                    d_2*(density(u_2n00)[0]+density(u_02n0)[0]+density(u_002n)[0]) +
-                                    d_1*(density(u_n00)[0]+density(u_0n0)[0]+density(u_00n)[0])+
-                                    d_0*(density(u_000)[0]+density(u_000)[0]+density(u_000)[0])+
-                                    d_1*(density(u_p00)[0]+density(u_0p0)[0]+density(u_00p)[0])+
-                                    d_2*(density(u_2p00)[0]+density(u_02p0)[0]+density(u_002p)[0])+
-                                    d_3*(density(u_3p00)[0]+density(u_03p0)[0]+density(u_003p)[0]) );
-      for (int i = 0; i < 3; ++i ) {        
-        output[i+1] = velocity(u_000)[i] - _sigma*(d_3*(velocity(u_3n00)[i] + velocity(u_03n0)[i]+velocity(u_003n)[i])+
-                                                  d_2*(velocity(u_2n00)[i] + velocity(u_02n0)[i]+velocity(u_002n)[i])+
-                                                  d_1*(velocity(u_n00)[i] + velocity(u_0n0)[i]+velocity(u_00n)[i])+
-                                                  d_0*(velocity(u_000)[i] + velocity(u_000)[i]+velocity(u_000)[i])+
-                                                  d_1*(velocity(u_p00)[i] + velocity(u_0p0)[i]+velocity(u_00p)[i])+
-                                                  d_2*(velocity(u_2p00)[i] + velocity(u_02p0)[i]+velocity(u_002p)[i])+
-                                                  d_3*(velocity(u_3p00)[i] + velocity(u_03p0)[i]+velocity(u_003p)[i]) );
-      }
+  } else { // third order
+
+    T output3p00[4]= {1.,0.,0.,0.};
+    this-> _blockLattice.get(globX+3, globY, globZ).computeRhoU(output3p00[0],output3p00+1);
+
+    T output3n00[4]= {1.,0.,0.,0.};
+    this-> _blockLattice.get(globX-3, globY, globZ).computeRhoU(output3n00[0],output3n00+1);
+
+    T output03p0[4]= {1.,0.,0.,0.};
+    this-> _blockLattice.get(globX, globY+3, globZ).computeRhoU(output03p0[0],output03p0+1);
+
+    T output03n0[4]= {1.,0.,0.,0.};
+    this-> _blockLattice.get(globX, globY-3, globZ).computeRhoU(output03n0[0],output03n0+1);
+
+    T output003p[4]= {1.,0.,0.,0.};
+    this-> _blockLattice.get(globX, globY, globZ+3).computeRhoU(output003p[0],output003p+1);
+
+    T output003n[4] = {1.,0.,0.,0.};
+    this-> _blockLattice.get(globX, globY, globZ-3).computeRhoU(output003n[0],output003n+1);
+
+    T d_0 = 5./16.;
+    T d_1 = -15./64.;
+    T d_2 = 3./32.;
+    T d_3 = -1./64.;
+    output[0] = output000[0] - _sigma*(d_3*(output3n00[0]+output03n0[0]+output003n[0])+
+                                       d_2*(output2n00[0]+output02n0[0]+output002n[0]) +
+                                       d_1*(outputn00[0]+output0n0[0]+output00n[0])+
+                                       d_0*(output000[0]+output000[0]+output000[0])+
+                                       d_1*(outputp00[0]+output0p0[0]+output00p[0])+
+                                       d_2*(output2p00[0]+output02p0[0]+output002p[0])+
+                                       d_3*(output3p00[0]+output03p0[0]+output003p[0]) );
+    for (int i = 1; i < 4; ++i ) {
+      output[i] = output000[i] - _sigma*(d_3*(output3n00[i]+output03n0[i]+output003n[i])+
+                                         d_2*(output2n00[i]+output02n0[i]+output002n[i]) +
+                                         d_1*(outputn00[i]+output0n0[i]+output00n[i])+
+                                         d_0*(output000[i]+output000[i]+output000[i])+
+                                         d_1*(outputp00[i]+output0p0[i]+output00p[i])+
+                                         d_2*(output2p00[i]+output02p0[i]+output002p[i])+
+                                         d_3*(output3p00[i]+output03p0[i]+output003p[i]) );
     }
   }
-  return output;
+  return true;
 }
 
 template <typename T, template <typename U> class DESCRIPTOR>
-void BlockLatticeADM3D<T,DESCRIPTOR>::execute(std::vector<int> input) {
-
-  this-> _blockLattice.get(input[0],input[1],input[2]).defineExternalField( DESCRIPTOR<T>::ExternalField::rhoIsAt, 1, &this->operator()(input)[0] );
-  this-> _blockLattice.get(input[0],input[1],input[2]).defineExternalField( DESCRIPTOR<T>::ExternalField::velocityBeginsAt, 3, &this->operator()(input)[0] );
+void BlockLatticeADM3D<T,DESCRIPTOR>::execute(const int input[])
+{
+  T output[4] = {T(),T(),T(),T()};
+  this->operator()(output,input);
+  this-> _blockLattice.get(input[0],input[1],input[2]).defineExternalField( DESCRIPTOR<T>::ExternalField::rhoIsAt, 1, output );
+  this-> _blockLattice.get(input[0],input[1],input[2]).defineExternalField( DESCRIPTOR<T>::ExternalField::velocityBeginsAt, 3, output + 1);
 }
 
 template <typename T, template <typename U> class DESCRIPTOR>
-void BlockLatticeADM3D<T,DESCRIPTOR>::execute() {
-
+void BlockLatticeADM3D<T,DESCRIPTOR>::execute()
+{
   int nX = this-> _blockLattice.getNx();
   int nY = this-> _blockLattice.getNy();
   int nZ = this-> _blockLattice.getNz();
-  std::vector<int> i(3,int());
-  for (i[0]=0; i[0]<nX; i[0]++) {
-    for (i[1]=0; i[1]<nY; i[1]++) {
-      for (i[2]=0; i[2]<nZ; i[2]++) {
+  int i[3];
+  for (i[0]=0; i[0]<nX; ++i[0]) {
+    for (i[1]=0; i[1]<nY; ++i[1]) {
+      for (i[2]=0; i[2]<nZ; ++i[2]) {
         execute(i);
       }
     }
@@ -289,16 +276,18 @@ void BlockLatticeADM3D<T,DESCRIPTOR>::execute() {
 
 template <typename T, template <typename U> class DESCRIPTOR>
 SuperLatticeADM3D<T,DESCRIPTOR>::SuperLatticeADM3D
-  (SuperLattice3D<T,DESCRIPTOR>& sLattice, T sigma, int order) : SuperLatticeF3D<T,DESCRIPTOR>(sLattice,4),
-  _sigma(sigma), _order(order)
-{ this->_name = "ADMfilter"; }
+(SuperLattice3D<T,DESCRIPTOR>& sLattice, T sigma, int order)
+  : SuperLatticeF3D<T,DESCRIPTOR>(sLattice,4), _sigma(sigma), _order(order)
+{
+  this->getName() = "ADMfilter";
+}
 
 template <typename T, template <typename U> class DESCRIPTOR>
-std::vector<T> SuperLatticeADM3D<T,DESCRIPTOR>::operator() (std::vector<int> input)
+bool SuperLatticeADM3D<T,DESCRIPTOR>::operator() (T output[], const int input[])
 {
   int globIC = input[0];
   if ( this->_sLattice.getLoadBalancer().rank(globIC) == singleton::mpi().getRank() ) {
-    std::vector<int> inputLocal(3,T());
+    int inputLocal[3]= {};
     T overlap = this->_sLattice.getOverlap();
     inputLocal[0] = input[1] + overlap;
     inputLocal[1] = input[2] + overlap;
@@ -306,37 +295,40 @@ std::vector<T> SuperLatticeADM3D<T,DESCRIPTOR>::operator() (std::vector<int> inp
 
     BlockLatticeADM3D<T,DESCRIPTOR> blockLatticeF( this->_sLattice.getExtendedBlockLattice(this->_sLattice.getLoadBalancer().loc(globIC)), _sigma, _order );
 
-    return blockLatticeF(inputLocal);
+    blockLatticeF(output,inputLocal);
+    return true;
   } else {
-    return std::vector<T>();
+    return false;
   }
 }
 
 template <typename T, template <typename U> class DESCRIPTOR>
-void SuperLatticeADM3D<T,DESCRIPTOR>::execute(SuperGeometry3D<T>& superGeometry, const int material) {
-
+void SuperLatticeADM3D<T,DESCRIPTOR>::execute(SuperGeometry3D<T>& superGeometry, const int material)
+{
   this->_sLattice.communicate();
   CuboidGeometry3D<T>& cGeometry =  this->_sLattice.getCuboidGeometry();
   LoadBalancer<T>& load = this->_sLattice.getLoadBalancer();
   int overlap = this->_sLattice.getOverlap();
 
-  for (int iC=0; iC<load.size(); iC++) {
+  for (int iC = 0; iC < load.size(); ++iC) {
     BlockLatticeADM3D<T,DESCRIPTOR> blockLatticeF( this->_sLattice.getExtendedBlockLattice(iC), _sigma, _order );
     int nX = cGeometry.get(load.glob(iC)).getNx();
     int nY = cGeometry.get(load.glob(iC)).getNy();
     int nZ = cGeometry.get(load.glob(iC)).getNz();
 
-    std::vector<int> i(3,overlap);
-    for (; i[0]<nX+overlap; i[0]++) {
-      for (; i[1]<nY+overlap; i[1]++) {
-        for (; i[2]<nZ+overlap; i[2]++) {
-          if (superGeometry.getExtendedBlockGeometry(iC).get(i) == material)
+    int i[3];
+    for (i[0]=overlap; i[0]<nX+overlap; ++i[0]) {
+      for (i[1]=overlap; i[1]<nY+overlap; ++i[1]) {
+        for (i[2]=overlap; i[2]<nZ+overlap; ++i[2]) {
+          if (superGeometry.getExtendedBlockGeometry(iC).get(i[0],i[1],i[2]) == material) {
             blockLatticeF.execute(i);
+          }
         }
       }
     }
   }
 }
+
 
 
 } // end namespace olb

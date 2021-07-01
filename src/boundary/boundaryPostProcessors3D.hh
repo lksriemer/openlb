@@ -53,8 +53,7 @@ processSubDomain(BlockLattice3D<T,Lattice>& blockLattice,
   if ( util::intersect (
          x0, x1, y0, y1, z0, z1,
          x0_, x1_, y0_, y1_, z0_, z1_,
-         newX0, newX1, newY0, newY1, newZ0, newZ1 ) )
-  {
+         newX0, newX1, newY0, newY1, newZ0, newZ1 ) ) {
     int iX;
 
 #ifdef PARALLEL_MODE_OMP
@@ -152,7 +151,7 @@ PlaneFdBoundaryProcessorGenerator3D<T,Lattice,direction,orientation>::clone() co
 template<typename T, template<typename U> class Lattice, int direction, int orientation>
 StraightConvectionBoundaryProcessor3D<T,Lattice,direction,orientation>::
 StraightConvectionBoundaryProcessor3D(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_, T* uAv_)
-: x0(x0_), x1(x1_), y0(y0_), y1(y1_), z0(z0_), z1(z1_), uAv(uAv_)
+  : x0(x0_), x1(x1_), y0(y0_), y1(y1_), z0(z0_), z1(z1_), uAv(uAv_)
 {
   OLB_PRECONDITION(x0==x1 || y0==y1 || z0==z1);
 
@@ -195,18 +194,17 @@ processSubDomain(BlockLattice3D<T,Lattice>& blockLattice, int x0_, int x1_, int 
   if ( util::intersect (
          x0, x1, y0, y1, z0, z1,
          x0_, x1_, y0_, y1_, z0_, z1_,
-         newX0, newX1, newY0, newY1, newZ0, newZ1 ) )
-  {
+         newX0, newX1, newY0, newY1, newZ0, newZ1 ) ) {
 
     int iX;
 #ifdef PARALLEL_MODE_OMP
-  #pragma omp parallel for
+    #pragma omp parallel for
 #endif
     for (iX=newX0; iX<=newX1; ++iX) {
       for (int iY=newY0; iY<=newY1; ++iY) {
         for (int iZ=newZ0; iZ<=newZ1; ++iZ) {
-        Cell<T,Lattice>& cell = blockLattice.get(iX,iY,iZ);
-          for (int iPop = 0; iPop < Lattice<T>::q ; ++iPop){
+          Cell<T,Lattice>& cell = blockLattice.get(iX,iY,iZ);
+          for (int iPop = 0; iPop < Lattice<T>::q ; ++iPop) {
             if (Lattice<T>::c[iPop][direction]==-orientation) {
               cell[iPop] = saveCell[iX-newX0][iY-newY0][iZ-newZ0][iPop];
             }
@@ -219,28 +217,28 @@ processSubDomain(BlockLattice3D<T,Lattice>& blockLattice, int x0_, int x1_, int 
             blockLattice.get(iX,iY,iZ).computeRhoU(rho0,u0);
             blockLattice.get(iX-orientation,iY,iZ).computeRhoU(rho1,u1);
             blockLattice.get(iX-orientation*2,iY,iZ).computeRhoU(rho2,u2);
-          } 
-          else if (direction==1) {
+          } else if (direction==1) {
             blockLattice.get(iX,iY,iZ).computeRhoU(rho0,u0);
             blockLattice.get(iX,iY-orientation,iZ).computeRhoU(rho1,u1);
             blockLattice.get(iX,iY-orientation*2,iZ).computeRhoU(rho2,u2);
-          }
-          else {
+          } else {
             blockLattice.get(iX,iY,iZ).computeRhoU(rho0,u0);
             blockLattice.get(iX,iY,iZ-orientation).computeRhoU(rho1,u1);
             blockLattice.get(iX,iY,iZ-orientation*2).computeRhoU(rho2,u2);
           }
 
-         // rho0 = T(1); rho1 = T(1); rho2 = T(1);
+          // rho0 = T(1); rho1 = T(1); rho2 = T(1);
 
           T uDelta[3];
           T uAverage = rho0*u0[direction];
-          if (uAv!=NULL) uAverage = *uAv * rho0;
+          if (uAv!=NULL) {
+            uAverage = *uAv * rho0;
+          }
           uDelta[0]=-uAverage*0.5*(3*rho0*u0[0]-4*rho1*u1[0]+rho2*u2[0]);
           uDelta[1]=-uAverage*0.5*(3*rho0*u0[1]-4*rho1*u1[1]+rho2*u2[1]);
           uDelta[2]=-uAverage*0.5*(3*rho0*u0[2]-4*rho1*u1[2]+rho2*u2[2]);
 
-          for (int iPop = 0; iPop < Lattice<T>::q ; ++iPop){
+          for (int iPop = 0; iPop < Lattice<T>::q ; ++iPop) {
             if (Lattice<T>::c[iPop][direction] == -orientation) {
               saveCell[iX-newX0][iY-newY0][iZ-newZ0][iPop] = cell[iPop] + Lattice<T>::invCs2*Lattice<T>::t[iPop]*(uDelta[0]*Lattice<T>::c[iPop][0]+uDelta[1]*Lattice<T>::c[iPop][1]+uDelta[2]*Lattice<T>::c[iPop][2]);
             }
@@ -248,7 +246,7 @@ processSubDomain(BlockLattice3D<T,Lattice>& blockLattice, int x0_, int x1_, int 
         }
       }
     }
-  } 
+  }
 }
 
 template<typename T, template<typename U> class Lattice, int direction,int orientation>
@@ -308,8 +306,7 @@ processSubDomain(BlockLattice3D<T,Lattice>& blockLattice,
   int newX0, newX1, newY0, newY1, newZ0, newZ1;
   if ( util::intersect ( x0, x1, y0, y1, z0, z1,
                          x0_, x1_, y0_, y1_, z0_, z1_,
-                         newX0, newX1, newY0, newY1, newZ0, newZ1 ) )
-  {
+                         newX0, newX1, newY0, newY1, newZ0, newZ1 ) ) {
     int iX;
 
 #ifdef PARALLEL_MODE_OMP

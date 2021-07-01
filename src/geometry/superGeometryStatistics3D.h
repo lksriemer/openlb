@@ -33,6 +33,7 @@
 #include <string>
 #include <vector>
 
+#include "communication/mpiManager.h"
 #include "geometry/superGeometry3D.h"
 #include "io/ostreamManager.h"
 
@@ -59,19 +60,23 @@ private:
 
   /// Points to the underlying data from which the statistics is taken
   SuperGeometry3D<T>* _superGeometry;
-  /// Specifies if an update is needed  
+  /// Specifies if an update is needed
   bool _statisticsUpdateNeeded;
   /// Size of ghost voxel layer
   int _overlap;
 
-  /// Number of different material numbers 
+  /// Number of different material numbers
   int _nMaterials;
-  /// Mapping a material number to the number of this kind found in the super geometry 
+  /// Mapping a material number to the number of this kind found in the super geometry
   std::map<int, int> _material2n;
-  /// Mapping a material number to the min. physical position in each space direction 
+  /// Mapping a material number to the min. physical position in each space direction
   std::map<int, std::vector<T> > _material2min;
   /// Mapping a material number to the max. physical position in each space direction
   std::map<int, std::vector<T> > _material2max;
+  /// Componentwise min extension over all material numbers. Default is 0.
+  std::vector<T> _minOverMaterial;
+  /// Componentwise maximal extension over all material numbers. Default is 0.
+  std::vector<T> _maxOverMaterial;
 
   /// class specific cout
   mutable OstreamManager clout;
@@ -85,7 +90,7 @@ public:
   /// Copy assignment
   SuperGeometryStatistics3D<T>& operator=(SuperGeometryStatistics3D const& rhs);
 
-  /// Read and write access to a flag, which indicates if an uptate is needed (=true)  
+  /// Read and write access to a flag, which indicates if an uptate is needed (=true)
   bool& getStatisticsStatus();
   /// Read only access to a flag, which indicates if an uptate is needed (=true)
   bool const & getStatisticsStatus() const;
@@ -95,21 +100,25 @@ public:
 
   /// Returns the number of different materials
   int getNmaterials();
-  /// Returns the number of voxels for a given material number 
+  /// Returns the number of voxels for a given material number
   int getNvoxel(int material);
   /// Returns the number of voxels with material!=0
   int getNvoxel();
-  /// Returns the min. phys position in each direction
+  /// Returns the min. phys position in each direction corresponding to material number
   std::vector<T> getMinPhysR(int material);
-  /// Returns the max. phys position in each direction
+  /// Returns the min. phys position in each direction corresponding to all non-zero material numbers
+  std::vector<T> getMinPhysR();
+  /// Returns the max. phys position in each direction corresponding to material number
   std::vector<T> getMaxPhysR(int material);
+  /// Returns the max. phys position in each direction corresponding to all non-zero material numbers
+  std::vector<T> getMaxPhysR();
   /// Returns the phys extend as length in each direction
   std::vector<T> getPhysExtend(int material);
   /// Returns the phys radius as length in each direction
   std::vector<T> getPhysRadius(int material);
   /// Returns the center position
   std::vector<T> getCenterPhysR(int material);
-  /// Returns the boundary type which is characterized by a discrte normal (c.f. Zimny) 
+  /// Returns the boundary type which is characterized by a discrte normal (c.f. Zimny)
   std::vector<int> getType(int iC, int iX, int iY, int iZ);
 
   /// Returns normal that points into the fluid for paraxial surfaces
@@ -117,7 +126,10 @@ public:
   /// Returns discrete normal with norm maxNorm that points into the fluid for paraxial surfaces
   /// maxNorm=1.1 implies only normals parallel to the axises
   std::vector<int> computeDiscreteNormal (int material, T maxNorm = 1.1);
-
+  /// Returns sqrt( maxX^2 + maxY^2 + maxZ^2 ) max over a certain material number
+  T computeMaxPhysDistance( int material );
+  /// Returns sqrt( maxX^2 + maxY^2 + maxZ^2 ) max over all material numbers
+  T computeMaxPhysDistance();
   /// Prints some statistic information, i.e. the number of voxels and min. max. physical position for each different material
   void print();
 };

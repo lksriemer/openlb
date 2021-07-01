@@ -48,8 +48,8 @@ struct ADM2DdescriptorBase {
 };
 
 template <typename T> struct ADMD2Q9Descriptor
-    : public D2Q9DescriptorBase<T>, public ADM2DdescriptorBase
-  { };
+    : public D2Q9DescriptorBase<T>, public ADM2DdescriptorBase {
+};
 
 
 
@@ -71,8 +71,8 @@ struct ADM3dDescriptorBase {
 };
 
 template <typename T> struct ADMD3Q19Descriptor
-    : public D3Q19DescriptorBase<T>, public ADM3dDescriptorBase
-  { };
+    : public D3Q19DescriptorBase<T>, public ADM3dDescriptorBase {
+};
 
 
 ////////////////////////////////////////
@@ -95,8 +95,8 @@ struct ForcedADM2DdescriptorBase {
 };
 
 template <typename T> struct ForcedADMD2Q9Descriptor
-    : public D2Q9DescriptorBase<T>, public ForcedADM2DdescriptorBase
-  { };
+    : public D2Q9DescriptorBase<T>, public ForcedADM2DdescriptorBase {
+};
 
 
 //// Forced 3D ADM filter scheme
@@ -117,8 +117,8 @@ struct ForcedADM3dDescriptorBase {
 };
 
 template <typename T> struct ForcedADMD3Q19Descriptor
-    : public D3Q19DescriptorBase<T>, public ForcedADM3dDescriptorBase
-  { };
+    : public D3Q19DescriptorBase<T>, public ForcedADM3dDescriptorBase {
+};
 
 
 } // namespace descriptors

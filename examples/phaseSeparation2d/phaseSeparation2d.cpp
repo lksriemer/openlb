@@ -41,11 +41,13 @@ using namespace olb::graphics;
 using namespace std;
 
 typedef double T;
-#define DESCRIPTOR ForcedShanChenD2Q9Descriptor
+#define DESCRIPTOR ShanChenDynOmegaForcedD2Q9Descriptor
 
 
 // Parameters for the simulation setup
 const int maxIter  = 10000;
+const int nx   = 201;
+const int ny   = 201;
 
 
 /// Stores geometry information in form of material numbers
@@ -81,8 +83,8 @@ void prepareLattice(SuperLattice2D<T, DESCRIPTOR>& sLattice,
   std::vector<T> v(2,T());
   AnalyticalConst2D<T,T> zeroVelocity(v);
   AnalyticalConst2D<T,T> oldRho(199.);
-  AnalyticalRandom2D<T,T> random; // not yet thread safe
-  AnalyticalIdentity2D<T,T> newRho = random*noise+oldRho;
+  AnalyticalRandom2D<T,T> random;
+  AnalyticalIdentity2D<T,T> newRho(random*noise+oldRho);
 
   // Initialize all values of distribution functions to their local equilibrium
   sLattice.defineRhoU(superGeometry, 1, newRho, zeroVelocity);
@@ -94,11 +96,11 @@ void prepareLattice(SuperLattice2D<T, DESCRIPTOR>& sLattice,
 
 /// Output to console and files
 void getResults(SuperLattice2D<T, DESCRIPTOR>& sLattice, int iT,
-                SuperGeometry2D<T>& superGeometry) {
+                SuperGeometry2D<T>& superGeometry, Timer<T>& timer) {
 
   OstreamManager clout(std::cout,"getResults");
 
-  SuperVTKwriter2D<T,DESCRIPTOR> vtkWriter("phaseSeparation2d");
+  SuperVTKwriter2D<T> vtkWriter("phaseSeparation2d");
   SuperLatticeVelocity2D<T, DESCRIPTOR> velocity(sLattice);
   SuperLatticeDensity2D<T, DESCRIPTOR> density(sLattice);
   vtkWriter.addFunctor( velocity );
@@ -123,10 +125,18 @@ void getResults(SuperLattice2D<T, DESCRIPTOR>& sLattice, int iT,
   if (iT%vtkIter==0) {
     clout << "Writing VTK..." << std::endl;
     vtkWriter.write(iT);
+
+    BlockLatticeReduction2D<T, DESCRIPTOR> planeReduction(density);
+    BlockGifWriter<T> gifWriter;
+    gifWriter.write(planeReduction, iT, "density");
   }
 
   /// Writes output on the console
   if (iT%statIter==0) {
+    /// Timer console output
+    timer.update( iT );
+    timer.printStep();
+
     /// Lattice statistics console output
     sLattice.getStatistics().print(iT,iT);
   }
@@ -142,23 +152,21 @@ int main(int argc, char *argv[]) {
   //clout.setMultiOutput(true);
 
   const T omega1 = 1.0;
-  const int nx   = 201;
-  const int ny   = 201;
   const T G      = -120.;
 
   /// === 2rd Step: Prepare Geometry ===
 
   /// Instantiation of a cuboidGeometry with weights
-  #ifdef PARALLEL_MODE_MPI
-    const int noOfCuboids = singleton::mpi().getSize();
-  #else
-    const int noOfCuboids = 1;
-  #endif
+#ifdef PARALLEL_MODE_MPI
+  const int noOfCuboids = singleton::mpi().getSize();
+#else
+  const int noOfCuboids = 1;
+#endif
   CuboidGeometry2D<T> cuboidGeometry(0, 0, 1, nx, ny, noOfCuboids);
 
   /// Periodic boundaries in x- and y-direction
   cuboidGeometry.setPeriodicity(true, true);
-  
+
   /// Instantiation of a loadBalancer
   HeuristicLoadBalancer<T> loadBalancer(cuboidGeometry);
 
@@ -170,13 +178,14 @@ int main(int argc, char *argv[]) {
   /// === 3rd Step: Prepare Lattice ===
   SuperLattice2D<T, DESCRIPTOR> sLattice(superGeometry);
 
-  BGKdynamics<T, DESCRIPTOR> bulkDynamics1 (
+  ForcedShanChenBGKdynamics<T, DESCRIPTOR> bulkDynamics1 (
     omega1, instances::getExternalVelocityMomenta<T,DESCRIPTOR>() );
 
   std::vector<T> rho0;
   rho0.push_back(1);
   rho0.push_back(1);
-  ForcedShanChenSingleComponentCouplingGenerator2D<T,DESCRIPTOR> coupling(0,nx-1,0,ny-1,G,rho0);
+  ShanChen94<T,T> interactionPotential;
+  ShanChenForcedSingleComponentGenerator2D<T,DESCRIPTOR> coupling(G,rho0,interactionPotential);
 
   sLattice.addLatticeCoupling(superGeometry, 1, coupling, sLattice);
 
@@ -185,6 +194,8 @@ int main(int argc, char *argv[]) {
   /// === 4th Step: Main Loop ===
   int iT = 0;
   clout << "starting simulation..." << endl;
+  Timer<T> timer( maxIter, superGeometry.getStatistics().getNvoxel() );
+  timer.start();
 
   for (iT = 0; iT < maxIter; ++iT) {
 
@@ -197,7 +208,10 @@ int main(int argc, char *argv[]) {
     sLattice.executeCoupling();
 
     /// === 7th Step: Computation and Output of the Results ===
-    getResults(sLattice, iT, superGeometry);
+    getResults(sLattice, iT, superGeometry, timer);
   }
+
+  timer.stop();
+  timer.printSummary();
 }
 

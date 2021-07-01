@@ -65,24 +65,46 @@ public:
   void gatherMin(int whichMin, T value);
   void gatherMax(int whichMax, T value);
   void incrementStats();
-  T getAverageRho()        const { return averageVect[avRho]; }
-  T getAverageEnergy()     const { return averageVect[avEnergy]; }
-  T getMaxU()              const { return maxVect[maxU]; }
-  size_t const& getNumCells() const { return numCells; }
+  T getAverageRho()        const {
+    return averageVect[avRho];
+  }
+  T getAverageEnergy()     const {
+    return averageVect[avEnergy];
+  }
+  T getMaxU()              const {
+    return maxVect[maxU];
+  }
+  size_t const& getNumCells() const {
+    return numCells;
+  }
 
   T getAverage(int whichAverage) const;
   T getSum(int whichSum) const;
   T getMin(int whichMin) const;
   T getMax(int whichMax) const;
 
-  std::vector<T>& getAverageVect() { return averageVect; }
-  std::vector<T>& getSumVect() { return sumVect; }
-  std::vector<T>& getMinVect() { return minVect; }
-  std::vector<T>& getMaxVect() { return maxVect; }
+  std::vector<T>& getAverageVect() {
+    return averageVect;
+  }
+  std::vector<T>& getSumVect() {
+    return sumVect;
+  }
+  std::vector<T>& getMinVect() {
+    return minVect;
+  }
+  std::vector<T>& getMaxVect() {
+    return maxVect;
+  }
 
-  void incrementTime() { ++latticeTime; };
-  void resetTime(size_t value=0) { latticeTime=value; } ;
-  size_t getTime() const { return latticeTime; };
+  void incrementTime() {
+    ++latticeTime;
+  };
+  void resetTime(size_t value=0) {
+    latticeTime=value;
+  } ;
+  size_t getTime() const {
+    return latticeTime;
+  };
   void print(int iterationStep, T physicalTime=-1) const;
   void initialize();
 private:

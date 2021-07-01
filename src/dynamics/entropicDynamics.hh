@@ -50,7 +50,8 @@ EntropicDynamics<T,Lattice>::EntropicDynamics (
 { }
 
 template<typename T, template<typename U> class Lattice>
-EntropicDynamics<T,Lattice>* EntropicDynamics<T,Lattice>::clone() const {
+EntropicDynamics<T,Lattice>* EntropicDynamics<T,Lattice>::clone() const
+{
   return new EntropicDynamics<T,Lattice>(*this);
 }
 
@@ -73,8 +74,7 @@ void EntropicDynamics<T,Lattice>::collide (
   T uSqr = util::normSqr<T,L::d>(u);
 
   T f[L::q], fEq[L::q], fNeq[L::q];
-  for (int iPop = 0; iPop < L::q; ++iPop)
-  {
+  for (int iPop = 0; iPop < L::q; ++iPop) {
     fEq[iPop]  = eLbH::equilibrium(iPop,rho,u);
     fNeq[iPop] = cell[iPop] - fEq[iPop];
     f[iPop]    = cell[iPop] + L::t[iPop];
@@ -86,8 +86,7 @@ void EntropicDynamics<T,Lattice>::collide (
 
   T alpha = 2.0;
   bool converged = getAlpha(alpha,f,fNeq);
-  if (!converged)
-  {
+  if (!converged) {
     std::cout << "Newton-Raphson failed to converge.\n";
     exit(1);
   }
@@ -95,8 +94,7 @@ void EntropicDynamics<T,Lattice>::collide (
   OLB_ASSERT(converged,"Entropy growth failed to converge!");
 
   T omegaTot = omega / 2.0 * alpha;
-  for (int iPop=0; iPop < Lattice<T>::q; ++iPop)
-  {
+  for (int iPop=0; iPop < Lattice<T>::q; ++iPop) {
     cell[iPop] *= (T)1-omegaTot;
     cell[iPop] += omegaTot * (fEq[iPop]-L::t[iPop]);
   }
@@ -119,8 +117,7 @@ void EntropicDynamics<T,Lattice>::staticCollide (
   T uSqr = util::normSqr<T,L::d>(u);
 
   T f[L::q], fEq[L::q], fNeq[L::q];
-  for (int iPop = 0; iPop < L::q; ++iPop)
-  {
+  for (int iPop = 0; iPop < L::q; ++iPop) {
     fEq[iPop]  = eLbH::equilibrium(iPop,rho,u);
     fNeq[iPop] = cell[iPop] - fEq[iPop];
     f[iPop]    = cell[iPop] + L::t[iPop];
@@ -132,8 +129,7 @@ void EntropicDynamics<T,Lattice>::staticCollide (
 
   T alpha = 2.0;
   bool converged = getAlpha(alpha,f,fNeq);
-  if (!converged)
-  {
+  if (!converged) {
     std::cout << "Newton-Raphson failed to converge.\n";
     exit(1);
   }
@@ -141,8 +137,7 @@ void EntropicDynamics<T,Lattice>::staticCollide (
   OLB_ASSERT(converged,"Entropy growth failed to converge!");
 
   T omegaTot = omega / 2.0 * alpha;
-  for (int iPop=0; iPop < Lattice<T>::q; ++iPop)
-  {
+  for (int iPop=0; iPop < Lattice<T>::q; ++iPop) {
     cell[iPop] *= (T)1-omegaTot;
     cell[iPop] += omegaTot * (fEq[iPop]-L::t[iPop]);
   }
@@ -153,12 +148,14 @@ void EntropicDynamics<T,Lattice>::staticCollide (
 }
 
 template<typename T, template<typename U> class Lattice>
-T EntropicDynamics<T,Lattice>::getOmega() const {
+T EntropicDynamics<T,Lattice>::getOmega() const
+{
   return omega;
 }
 
 template<typename T, template<typename U> class Lattice>
-void EntropicDynamics<T,Lattice>::setOmega(T omega_) {
+void EntropicDynamics<T,Lattice>::setOmega(T omega_)
+{
   omega = omega_;
 }
 
@@ -167,8 +164,7 @@ T EntropicDynamics<T,Lattice>::computeEntropy(const T f[])
 {
   typedef Lattice<T> L;
   T entropy = T();
-  for (int iPop = 0; iPop < L::q; ++iPop)
-  {
+  for (int iPop = 0; iPop < L::q; ++iPop) {
     OLB_ASSERT(f[iPop] > T(), "f[iPop] <= 0");
     entropy += f[iPop]*log(f[iPop]/L::t[iPop]);
   }
@@ -182,8 +178,7 @@ T EntropicDynamics<T,Lattice>::computeEntropyGrowth(const T f[], const T fNeq[],
   typedef Lattice<T> L;
 
   T fAlphaFneq[L::q];
-  for (int iPop = 0; iPop < L::q; ++iPop)
-  {
+  for (int iPop = 0; iPop < L::q; ++iPop) {
     fAlphaFneq[iPop] = f[iPop] - alpha*fNeq[iPop];
   }
 
@@ -196,8 +191,7 @@ T EntropicDynamics<T,Lattice>::computeEntropyGrowthDerivative(const T f[], const
   typedef Lattice<T> L;
 
   T entropyGrowthDerivative = T();
-  for (int iPop = 0; iPop < L::q; ++iPop)
-  {
+  for (int iPop = 0; iPop < L::q; ++iPop) {
     T tmp = f[iPop] - alpha*fNeq[iPop];
     OLB_ASSERT(tmp > T(), "f[iPop] - alpha*fNeq[iPop] <= 0");
     entropyGrowthDerivative += fNeq[iPop]*(log(tmp/L::t[iPop]));
@@ -216,12 +210,10 @@ bool EntropicDynamics<T,Lattice>::getAlpha(T &alpha, const T f[], const T fNeq[]
   const T errorMax = epsilon*var;
   T error = 1.0;
   int count = 0;
-  for (count = 0; count < 10000; ++count)
-  {
+  for (count = 0; count < 10000; ++count) {
     T entGrowth = computeEntropyGrowth(f,fNeq,alpha);
     T entGrowthDerivative = computeEntropyGrowthDerivative(f,fNeq,alpha);
-    if ((error < errorMax) || (fabs(entGrowth) < var*epsilon))
-    {
+    if ((error < errorMax) || (fabs(entGrowth) < var*epsilon)) {
       return true;
     }
     alphaGuess = alpha - entGrowth /
@@ -246,7 +238,8 @@ ForcedEntropicDynamics<T,Lattice>::ForcedEntropicDynamics (
 { }
 
 template<typename T, template<typename U> class Lattice>
-ForcedEntropicDynamics<T,Lattice>* ForcedEntropicDynamics<T,Lattice>::clone() const {
+ForcedEntropicDynamics<T,Lattice>* ForcedEntropicDynamics<T,Lattice>::clone() const
+{
   return new ForcedEntropicDynamics<T,Lattice>(*this);
 }
 
@@ -270,8 +263,7 @@ void ForcedEntropicDynamics<T,Lattice>::collide (
   T uSqr = util::normSqr<T,L::d>(u);
 
   T f[L::q], fEq[L::q], fNeq[L::q];
-  for (int iPop = 0; iPop < L::q; ++iPop)
-  {
+  for (int iPop = 0; iPop < L::q; ++iPop) {
     fEq[iPop]  = eLbH::equilibrium(iPop,rho,u);
     fNeq[iPop] = cell[iPop] - fEq[iPop];
     f[iPop]    = cell[iPop] + L::t[iPop];
@@ -283,8 +275,7 @@ void ForcedEntropicDynamics<T,Lattice>::collide (
 
   T alpha = 2.0;
   bool converged = getAlpha(alpha,f,fNeq);
-  if (!converged)
-  {
+  if (!converged) {
     std::cout << "Newton-Raphson failed to converge.\n";
     exit(1);
   }
@@ -292,21 +283,18 @@ void ForcedEntropicDynamics<T,Lattice>::collide (
   OLB_ASSERT(converged,"Entropy growth failed to converge!");
 
   T* force = cell.getExternal(forceBeginsAt);
-  for (int iDim=0; iDim<Lattice<T>::d; ++iDim)
-  {
+  for (int iDim=0; iDim<Lattice<T>::d; ++iDim) {
     u[iDim] += force[iDim] / (T)2.;
   }
   uSqr = util::normSqr<T,L::d>(u);
   T omegaTot = omega / 2.0 * alpha;
-  for (int iPop=0; iPop < Lattice<T>::q; ++iPop)
-  {
+  for (int iPop=0; iPop < Lattice<T>::q; ++iPop) {
     cell[iPop] *= (T)1-omegaTot;
     cell[iPop] += omegaTot * eLbH::equilibrium(iPop,rho,u);
   }
   lbHelpers<T,Lattice>::addExternalForce(cell, u, omegaTot);
 
-  if (cell.takesStatistics())
-  {
+  if (cell.takesStatistics()) {
     statistics.incrementStats(rho, uSqr);
   }
 }
@@ -325,8 +313,7 @@ void ForcedEntropicDynamics<T,Lattice>::staticCollide (
   T uSqr = util::normSqr<T,L::d>(u);
 
   T f[L::q], fEq[L::q], fNeq[L::q];
-  for (int iPop = 0; iPop < L::q; ++iPop)
-  {
+  for (int iPop = 0; iPop < L::q; ++iPop) {
     fEq[iPop]  = eLbH::equilibrium(iPop,rho,u);
     fNeq[iPop] = cell[iPop] - fEq[iPop];
     f[iPop]    = cell[iPop] + L::t[iPop];
@@ -338,8 +325,7 @@ void ForcedEntropicDynamics<T,Lattice>::staticCollide (
 
   T alpha = 2.0;
   bool converged = getAlpha(alpha,f,fNeq);
-  if (!converged)
-  {
+  if (!converged) {
     std::cout << "Newton-Raphson failed to converge.\n";
     exit(1);
   }
@@ -347,8 +333,7 @@ void ForcedEntropicDynamics<T,Lattice>::staticCollide (
   OLB_ASSERT(converged,"Entropy growth failed to converge!");
 
   T omegaTot = omega / 2.0 * alpha;
-  for (int iPop=0; iPop < Lattice<T>::q; ++iPop)
-  {
+  for (int iPop=0; iPop < Lattice<T>::q; ++iPop) {
     cell[iPop] *= (T)1-omegaTot;
     cell[iPop] += omegaTot * (fEq[iPop]-L::t[iPop]);
   }
@@ -360,12 +345,14 @@ void ForcedEntropicDynamics<T,Lattice>::staticCollide (
 }
 
 template<typename T, template<typename U> class Lattice>
-T ForcedEntropicDynamics<T,Lattice>::getOmega() const {
+T ForcedEntropicDynamics<T,Lattice>::getOmega() const
+{
   return omega;
 }
 
 template<typename T, template<typename U> class Lattice>
-void ForcedEntropicDynamics<T,Lattice>::setOmega(T omega_) {
+void ForcedEntropicDynamics<T,Lattice>::setOmega(T omega_)
+{
   omega = omega_;
 }
 
@@ -374,8 +361,7 @@ T ForcedEntropicDynamics<T,Lattice>::computeEntropy(const T f[])
 {
   typedef Lattice<T> L;
   T entropy = T();
-  for (int iPop = 0; iPop < L::q; ++iPop)
-  {
+  for (int iPop = 0; iPop < L::q; ++iPop) {
     OLB_ASSERT(f[iPop] > T(), "f[iPop] <= 0");
     entropy += f[iPop]*log(f[iPop]/L::t[iPop]);
   }
@@ -389,8 +375,7 @@ T ForcedEntropicDynamics<T,Lattice>::computeEntropyGrowth(const T f[], const T f
   typedef Lattice<T> L;
 
   T fAlphaFneq[L::q];
-  for (int iPop = 0; iPop < L::q; ++iPop)
-  {
+  for (int iPop = 0; iPop < L::q; ++iPop) {
     fAlphaFneq[iPop] = f[iPop] - alpha*fNeq[iPop];
   }
 
@@ -403,8 +388,7 @@ T ForcedEntropicDynamics<T,Lattice>::computeEntropyGrowthDerivative(const T f[],
   typedef Lattice<T> L;
 
   T entropyGrowthDerivative = T();
-  for (int iPop = 0; iPop < L::q; ++iPop)
-  {
+  for (int iPop = 0; iPop < L::q; ++iPop) {
     T tmp = f[iPop] - alpha*fNeq[iPop];
     OLB_ASSERT(tmp > T(), "f[iPop] - alpha*fNeq[iPop] <= 0");
     entropyGrowthDerivative += fNeq[iPop]*log(tmp/L::t[iPop]);
@@ -423,12 +407,10 @@ bool ForcedEntropicDynamics<T,Lattice>::getAlpha(T &alpha, const T f[], const T 
   const T errorMax = epsilon*var;
   T error = 1.0;
   int count = 0;
-  for (count = 0; count < 10000; ++count)
-  {
+  for (count = 0; count < 10000; ++count) {
     T entGrowth = computeEntropyGrowth(f,fNeq,alpha);
     T entGrowthDerivative = computeEntropyGrowthDerivative(f,fNeq,alpha);
-    if ((error < errorMax) || (fabs(entGrowth) < var*epsilon))
-    {
+    if ((error < errorMax) || (fabs(entGrowth) < var*epsilon)) {
       return true;
     }
     alphaGuess = alpha - entGrowth /

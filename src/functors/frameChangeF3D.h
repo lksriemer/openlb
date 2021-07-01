@@ -1,6 +1,7 @@
 /*  This file is part of the OpenLB library
  *
- *  Copyright (C) 2013 Gilles Zahnd, Mathias J. Krause
+ *  Copyright (C) 2013, 2015 Gilles Zahnd, Mathias J. Krause
+ *  Marie-Luise Maier
  *  E-mail contact: info@openlb.net
  *  The most recent release of OpenLB can be downloaded at
  *  <http://www.openlb.net/>
@@ -25,15 +26,11 @@
 #define FRAME_CHANGE_F_3D_H
 
 #include<vector>
-#include<cmath>
 #include<string>
-#include"math.h"
-
-#include "functors/genericF.h"
+#include "frameChangeF2D.h"
 #include "functors/analyticalF.h"
-#include "functors/superLatticeBaseF3D.h"
+#include "functors/superBaseF3D.h"
 #include "functors/superLatticeLocalF3D.h"
-#include "core/superLattice3D.h"
 
 /** \file
   This file contains two different classes of functors, in the FIRST part
@@ -63,6 +60,9 @@
 namespace olb {
 
 
+template<typename T, template<typename U> class Lattice> class SuperLatticeF3D;
+
+
 // PART 1: /////////////////////////////////////////////////////////////////////
 // Functors for rotating the coordinate system (velocity, pressure, force,...)
 
@@ -83,7 +83,7 @@ protected:
   T scale;
 public:
   RotatingLinear3D(std::vector<T> axisPoint_, std::vector<T> axisDirection_, T w_, T scale_=1);
-  std::vector<T> operator()(std::vector<T> x);
+  bool operator()(T output[], const T x[]);
 };
 
 
@@ -107,7 +107,7 @@ protected:
 public:
   RotatingQuadratic1D(std::vector<T> axisPoint_, std::vector<T> axisDirection_,
                       T w_, T scale_=1, T additive_=0);
-  std::vector<T> operator()(std::vector<T> x);
+  bool operator()(T output[], const T x[]);
 };
 
 
@@ -134,8 +134,8 @@ protected:
   T w;
   bool centrifugeForceOn;
   bool coriolisForceOn;
-  SuperLatticePhysVelocity3D<T, DESCRIPTOR>* velocity;
-  SuperLatticeDensity3D<T, DESCRIPTOR>* rho;
+  SuperLatticePhysVelocity3D<T, DESCRIPTOR> velocity;
+  SuperLatticeDensity3D<T, DESCRIPTOR> rho;
 
 public:
   RotatingForceField3D(SuperLattice3D<T,DESCRIPTOR>& sLattice_,
@@ -147,9 +147,10 @@ public:
                        bool centrifugeForceOn_ = true,
                        bool coriolisForceOn_ = true);
 
-  ~RotatingForceField3D();
-  std::vector<T> operator()(std::vector<int> x);
-  std::string name() { return "rotatingForce"; }
+  bool operator() (T output[], const int x[]);
+  std::string name() {
+    return "rotatingForce";
+  }
 };
 
 
@@ -186,23 +187,33 @@ protected:
 public:
   CirclePoiseuille3D(std::vector<T> axisPoint_, std::vector<T> axisDirection_,  T maxVelocity_, T radius_, T scale_=1);
   CirclePoiseuille3D(T center0, T center1, T center2, T normal0, T normal1, T normal2, T radius, T maxVelocity = T(1), T scale = T(1) ) : AnalyticalF3D<T,T>(3), _radius(radius), _maxVelocity(maxVelocity), _scale(scale) {
-    _center.push_back(center0); _center.push_back(center1); _center.push_back(center2);
+    _center.push_back(center0);
+    _center.push_back(center1);
+    _center.push_back(center2);
     std::vector<T> normalTmp;
-    normalTmp.push_back(normal0); normalTmp.push_back(normal1); normalTmp.push_back(normal2 );
+    normalTmp.push_back(normal0);
+    normalTmp.push_back(normal1);
+    normalTmp.push_back(normal2 );
     _normal = normalTmp;
-   };
+  };
 
   /// construct from material number, note: untested
   CirclePoiseuille3D(SuperGeometry3D<T>& superGeometry_, int material_, T maxVelocity_, T scale_=1);
 
   /// Returns centerpoint vector
-  std::vector<T> getCenter() { return _center; };
+  std::vector<T> getCenter() {
+    return _center;
+  };
   /// Returns normal vector
-  std::vector<T> getNormal() { return _normal; };
+  std::vector<T> getNormal() {
+    return _normal;
+  };
   /// Returns radi
-  T getRadius() { return _radius; };
+  T getRadius() {
+    return _radius;
+  };
 
-  std::vector<T> operator()(std::vector<T> x);
+  bool operator()(T output[], const T x[]);
 };
 
 /**
@@ -224,7 +235,7 @@ public:
   /** offsetX,Y,Z is a positive number denoting the distance from border
     * voxels of material_ to the zerovelocity boundary */
   RectanglePoiseuille3D(SuperGeometry3D<T>& superGeometry_, int material_, std::vector<T>& maxVelocity_, T offsetX, T offsetY, T offsetZ);
-  std::vector<T> operator()(std::vector<T> x);
+  bool operator()(T output[], const T x[]);
 };
 
 
@@ -248,8 +259,208 @@ protected:
 
 public:
   EllipticPoiseuille3D(std::vector<T> center, T a, T b, T maxVel);
-  std::vector<T> operator()(std::vector<T> x);
+  bool operator()(T output[], const T x[]);
 };
+
+
+////////////////Coordinate Transformation//////////////
+
+
+/// This class calculates the angle alpha between vector _referenceVector and
+/// any other vector x.
+/// Vector x has to be turned by alpha in mathematical positive sense depending
+/// to _orientation to lie over vector _referenceVector
+template <typename T, typename S>
+class AngleBetweenVectors3D : public AnalyticalF3D<T,S> {
+protected:
+  /// between _referenceVector and vector x, angle is calculated
+  std::vector<T> _referenceVector;
+  /// direction around which x has to be turned with angle is in math pos sense
+  /// to lie over _referenceVector
+  std::vector<T> _orientation;
+public:
+  /// constructor defines _referenceVector and _orientation
+  AngleBetweenVectors3D(std::vector<T> referenceVector,
+                        std::vector<T> orientation);
+  /// operator writes angle between x and _referenceVector inro output field
+  bool operator()(T output[], const S x[]);
+};
+
+
+/// This class saves coordinates of the resulting point after rotation in the
+/// output field. The resulting point is achieved after rotation of x with
+/// angle _alpha in math positive sense relative to _rotAxisDirection with a
+/// given _origin.
+template <typename T, typename S>
+class RotationRoundAxis3D : public AnalyticalF3D<T,S> {
+protected:
+  /// origin, around which x is turned
+  std::vector<T> _origin;
+  /// direction, around which x is turned
+  std::vector<T> _rotAxisDirection;
+  /// angle, by which vector x is rotated around _rotAxisDirection
+  T _alpha;
+public:
+  /// constructor defines _rotAxisDirection, _alpha and _origin
+  RotationRoundAxis3D(std::vector<T> origin, std::vector<T> rotAxisDirection,
+                      T alpha);
+  /// operator writes coordinates of the resulting point after rotation
+  /// of x by angle _alpha in math positive sense to _rotAxisDirection
+  /// with _origin into output field
+  bool operator()(T output[], const S x[]);
+};
+
+
+////////// Cylinder & Cartesian ///////////////
+
+
+/// This class converts cylindrical of point x (x[0] = radius, x[1] = phi,
+/// x[2] = z) to Cartesian coordinates (wrote into output field).
+/// Initial situation for the Cartesian coordinate system is that angle phi
+/// lies in the x-y-plane and turns round the _cylinderOrigin, the z-axis
+/// direction equals the axis direction of the cylinder.
+template <typename T, typename S>
+class CylinderToCartesian3D : public AnalyticalF3D<T,S> {
+protected:
+  std::vector<T> _cylinderOrigin;
+public:
+  /// constructor defines _cylinderOrigin
+  CylinderToCartesian3D(std::vector<T> cylinderOrigin);
+  /// operator writes Cartesian coordinates of cylinder coordinates
+  /// x[0] = radius >= 0, x[1] = phi in [0, 2*Pi), x[2] = z into output field
+  bool operator()(T output[], const S x[]);
+};
+
+
+/// This class converts Cartesian coordinates of point x to cylindrical
+/// coordinates wrote into output field
+/// (output[0] = radius, output[1] = phi, output[2] = z).
+/// Initial situation for the cylindrical coordinate system is that angle phi
+/// lies in plane perpendicular to the _axisDirection and turns around the
+/// _cartesianOrigin. The radius is the distance of point x to the
+/// _axisDirection and z the distance to _cartesianOrigin along _axisDirection.
+template <typename T, typename S>
+class CartesianToCylinder3D : public AnalyticalF3D<T,S> {
+protected:
+  /// origin of the Cartesian coordinate system
+  std::vector<T> _cartesianOrigin;
+  /// direction of the axis along which the cylindrical coordinates are calculated
+  std::vector<T> _axisDirection;
+  /// direction to know orientation for math positive to obtain angle phi
+  /// of Cartesian point x
+  std::vector<T> _orientation;
+public:
+  CartesianToCylinder3D(std::vector<T> cartesianOrigin, T& angle,
+                        std::vector<T> orientation = {T(1),T(),T()});
+  CartesianToCylinder3D(std::vector<T> cartesianOrigin,
+                        std::vector<T> axisDirection,
+                        std::vector<T> orientation = {T(1),T(),T()});
+  CartesianToCylinder3D(T cartesianOriginX, T cartesianOriginY,
+                        T cartesianOriginZ,
+                        T axisDirectionX, T axisDirectionY,
+                        T axisDirectionZ,
+                        T orientationX = T(1), T orientationY = T(),
+                        T orientationZ = T());
+  /// operator writes cylindrical coordinates of Cartesian point x into output
+  /// field,
+  /// output[0] = radius ( >= 0), output[1] = phi (in [0, 2Pi)), output[2] = z
+  bool operator()(T output[], const S x[]);
+  /// Read only access to _axisDirection
+  std::vector<T> const& getAxisDirection() const;
+  /// Read and write access to _axisDirection
+  std::vector<T>& getAxisDirection();
+  /// Read only access to _catesianOrigin
+  std::vector<T> const& getCartesianOrigin() const;
+  /// Read and write access to _catesianOrigin
+  std::vector<T>& getCartesianOrigin();
+  /// Read and write access to _axisDirection using angle
+  void setAngle(T angle);
+};
+
+
+////////// Spherical & Cartesian ///////////////
+
+
+/// This class converts spherical coordinates of point x
+/// (x[0] = radius, x[1] = phi, x[2] = theta) to Cartesian coordinates wrote
+/// into output field.
+/// Initial situation for the Cartesian coordinate system is that angle phi
+/// (phi in [0, 2Pi)) lies in x-y-plane and turns around the Cartesian origin
+/// (0,0,0). Angle theta (theta in [0, Pi]) lies in y-z-plane. z axis equals
+/// the _orientation of the spherical coordinate system.
+/// The radius is distance of point x to the Cartesian _origin
+template <typename T, typename S>
+class SphericalToCartesian3D : public AnalyticalF3D<T,S> {
+  //protected:
+public:
+  SphericalToCartesian3D();
+  /// operator writes spherical coordinates of Cartesian coordinates of x
+  /// (x[0] = radius, x[1] = phi, x[2] = theta) into output field.
+  /// phi is in x-y-plane, theta in x-z-plane, z axis as orientation
+  bool operator()(T output[], const S x[]);
+};
+
+
+/// This class converts Cartesian coordinates of point x to spherical
+/// coordinates wrote into output field
+/// (output[0] = radius, output[1] = phi, output[2] = theta).
+/// Initial situation for the spherical coordinate system is that angle phi
+/// lies in x-y-plane and theta in x-z-plane.
+/// The z axis is the orientation for the mathematical positive sense of phi.
+template <typename T, typename S>
+class CartesianToSpherical3D : public AnalyticalF3D<T,S> {
+protected:
+  /// origin of the Cartesian coordinate system
+  std::vector<T> _cartesianOrigin;
+  /// direction of the axis along which the spherical coordinates are calculated
+  std::vector<T> _axisDirection;
+public:
+  CartesianToSpherical3D(std::vector<T> cartesianOrigin,
+                         std::vector<T> axisDirection);//, std::vector<T> orientation);
+  /// operator writes shperical coordinates of Cartesian point x into output
+  /// field,
+  /// output[0] = radius ( >= 0), output[1] = phi (in [0, 2Pi)),
+  /// output[2] = theta (in [0, Pi])
+  bool operator()(T output[], const S x[]);
+};
+
+
+////////// Magnetic Field ///////////////
+
+
+/// Magnetic field that creates magnetization in wire has to be orthogonal to
+/// the wire. To calculate the magnetic force on particles around a cylinder
+/// (J. Lindner et al. / Computers and Chemical Engineering 54 (2013) 111-121)
+///  Fm = mu0*4/3.*PI*radParticle^3*_Mp*radWire^2/r^3 *
+///       [radWire^2/r^2+cos(2*theta), sin(2*theta), 0]
+template <typename T, typename S>
+class MagneticForceFromCylinder3D : public AnalyticalF3D<T,S> {
+protected:
+  CartesianToCylinder3D<T,S>& _car2cyl;
+  /// length of the wire, from origin to _car2cyl.axisDirection
+  T _length;
+  /// wire radius
+  T _radWire;
+  /// maximal distance from wire cutoff/threshold
+  T _cutoff;
+  /// saturation magnetization wire, linear scaling factor
+  T _Mw;
+  /// magnetization particle, linear scaling factor
+  T _Mp;
+  /// particle radius, cubic scaling factor
+  T _radParticle;
+  /// permeability constant, linear scaling factor
+  T _mu0;
+  /// factor = mu0*4/3.*PI*radParticle^3*_Mp*radWire^2/r^3
+  T _factor;
+public:
+  MagneticForceFromCylinder3D(CartesianToCylinder3D<T,S>& car2cyl, T length,
+                              T radWire, T cutoff, T Mw, T Mp = T(1),
+                              T radParticle = T(1), T mu0 = 4*3.14159265e-7);
+  /// operator writes the magnetic force in a point x round a cylindrical wire into output field
+  bool operator()(T output[], const S x[]);
+};
+
 
 } // end namespace olb
 #endif

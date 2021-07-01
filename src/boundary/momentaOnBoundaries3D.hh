@@ -51,8 +51,7 @@ InnerEdgeVelBM3D(const T u_[Lattice<T>::d])
 template<typename T, template<typename U> class Lattice,
          int plane, int normal1, int normal2>
 T InnerEdgeVelBM3D<T,Lattice,plane,normal1,normal2>::computeRho (
-  Cell<T,Lattice> const& cell ) const
-{
+  Cell<T,Lattice> const& cell ) const {
   return (momenta1.computeRho(cell) + momenta2.computeRho(cell)) / (T)2;
 }
 
@@ -60,8 +59,7 @@ template<typename T, template<typename U> class Lattice,
          int plane, int normal1, int normal2>
 void InnerEdgeVelBM3D<T,Lattice,plane,normal1,normal2>::computeU (
   Cell<T,Lattice> const& cell,
-  T u[Lattice<T>::d] ) const
-{
+  T u[Lattice<T>::d] ) const {
   momenta1.computeU(cell, u);
 }
 
@@ -69,16 +67,14 @@ template<typename T, template<typename U> class Lattice,
          int plane, int normal1, int normal2>
 void InnerEdgeVelBM3D<T,Lattice,plane,normal1,normal2>::computeJ (
   Cell<T,Lattice> const& cell,
-  T j[Lattice<T>::d] ) const
-{
+  T j[Lattice<T>::d] ) const {
   momenta1.computeJ(cell, j);
 }
 
 template<typename T, template<typename U> class Lattice,
          int plane, int normal1, int normal2>
 void InnerEdgeVelBM3D<T,Lattice,plane,normal1,normal2>::computeU (
-  T u[Lattice<T>::d] ) const
-{
+  T u[Lattice<T>::d] ) const {
   momenta1.computeU(u);
 }
 
@@ -125,8 +121,7 @@ void InnerEdgeVelBM3D<T,Lattice,plane,normal1,normal2>::
 computeStress (
   Cell<T,Lattice> const& cell,
   T rho, const T u[Lattice<T>::d],
-  T pi[util::TensorVal<Lattice<T> >::n] ) const
-{
+  T pi[util::TensorVal<Lattice<T> >::n] ) const {
   typedef lbHelpers<T,Lattice> lbH;
 
   T uSqr = util::normSqr<T,Lattice<T>::d>(u);
@@ -134,8 +129,7 @@ computeStress (
   Cell<T,Lattice> newCell(cell);
   for (int iPop=0; iPop<Lattice<T>::q; ++iPop) {
     if ( (Lattice<T>::c[iPop][direction1] == -normal1) &&
-         (Lattice<T>::c[iPop][direction2] == -normal2) )
-    {
+         (Lattice<T>::c[iPop][direction2] == -normal2) ) {
       int opp = util::opposite<Lattice<T> >(iPop);
       newCell[iPop] = newCell[opp]
                       - lbH::equilibrium(opp, rho, u, uSqr)
@@ -163,8 +157,7 @@ InnerCornerVelBM3D<T,Lattice,normalX,normalY,normalZ>::InnerCornerVelBM3D (
 template<typename T, template<typename U> class Lattice,
          int normalX, int normalY, int normalZ>
 T InnerCornerVelBM3D<T,Lattice,normalX,normalY,normalZ>::computeRho (
-  Cell<T,Lattice> const& cell ) const
-{
+  Cell<T,Lattice> const& cell ) const {
   return (xMomenta.computeRho(cell) +
           yMomenta.computeRho(cell) +
           zMomenta.computeRho(cell) ) / (T)3;
@@ -174,8 +167,7 @@ template<typename T, template<typename U> class Lattice,
          int normalX, int normalY, int normalZ>
 void InnerCornerVelBM3D<T,Lattice,normalX,normalY,normalZ>::computeU (
   Cell<T,Lattice> const& cell,
-  T u[Lattice<T>::d] ) const
-{
+  T u[Lattice<T>::d] ) const {
   xMomenta.computeU(cell, u);
 }
 
@@ -183,16 +175,14 @@ template<typename T, template<typename U> class Lattice,
          int normalX, int normalY, int normalZ>
 void InnerCornerVelBM3D<T,Lattice,normalX,normalY,normalZ>::computeJ (
   Cell<T,Lattice> const& cell,
-  T j[Lattice<T>::d] ) const
-{
+  T j[Lattice<T>::d] ) const {
   xMomenta.computeJ(cell, j);
 }
 
 template<typename T, template<typename U> class Lattice,
          int normalX, int normalY, int normalZ>
 void InnerCornerVelBM3D<T,Lattice,normalX,normalY,normalZ>::computeU (
-  T u[Lattice<T>::d] ) const
-{
+  T u[Lattice<T>::d] ) const {
   xMomenta.computeU(u);
 }
 
@@ -240,8 +230,7 @@ template<typename T, template<typename U> class Lattice,
 void InnerCornerVelBM3D<T,Lattice,normalX,normalY,normalZ>::computeStress (
   Cell<T,Lattice> const& cell,
   T rho, const T u[Lattice<T>::d],
-  T pi[util::TensorVal<Lattice<T> >::n] ) const
-{
+  T pi[util::TensorVal<Lattice<T> >::n] ) const {
   typedef lbHelpers<T,Lattice> lbH;
   Cell<T,Lattice> newCell(cell);
   int v[Lattice<T>::d] = { -normalX, -normalY, -normalZ };

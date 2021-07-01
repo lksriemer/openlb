@@ -64,7 +64,8 @@ sOffLatticeBoundaryCondition2D(sOffLatticeBoundaryCondition2D<T,Lattice> const& 
 
 template<typename T, template<typename U> class Lattice>
 sOffLatticeBoundaryCondition2D<T,Lattice> sOffLatticeBoundaryCondition2D<T,Lattice>::operator=(
-  sOffLatticeBoundaryCondition2D<T,Lattice> rhs) {
+  sOffLatticeBoundaryCondition2D<T,Lattice> rhs)
+{
 
   sOffLatticeBoundaryCondition2D<T,Lattice> tmp(rhs);
   return tmp;
@@ -72,7 +73,8 @@ sOffLatticeBoundaryCondition2D<T,Lattice> sOffLatticeBoundaryCondition2D<T,Latti
 
 template<typename T, template<typename U> class Lattice>
 sOffLatticeBoundaryCondition2D<T,Lattice>::
-~sOffLatticeBoundaryCondition2D() {
+~sOffLatticeBoundaryCondition2D()
+{
 
   for (unsigned iC=0; iC<_blockBCs.size(); iC++) {
     delete _blockBCs[iC];
@@ -80,7 +82,8 @@ sOffLatticeBoundaryCondition2D<T,Lattice>::
 }
 
 template<typename T, template<typename U> class Lattice>
-void sOffLatticeBoundaryCondition2D<T,Lattice>::addZeroVelocityBoundary(SuperGeometry2D<T>& superGeometry, int material, IndicatorF2D<bool,T>& indicator, std::list<int> bulkMaterials) {
+void sOffLatticeBoundaryCondition2D<T,Lattice>::addZeroVelocityBoundary(SuperGeometry2D<T>& superGeometry, int material, IndicatorF2D<T>& indicator, std::list<int> bulkMaterials)
+{
   clout << "epsFraction=" << _epsFraction << std::endl;
   clout.setMultiOutput(true);
   int nCloc = _sLattice.getLoadBalancer().size();
@@ -97,7 +100,8 @@ void sOffLatticeBoundaryCondition2D<T,Lattice>::addZeroVelocityBoundary(SuperGeo
 
 template<typename T, template<typename U> class Lattice>
 void sOffLatticeBoundaryCondition2D<T,Lattice>::
-addVelocityBoundary(SuperGeometry2D<T>& superGeometry, int material, IndicatorF2D<bool,T>& indicator, std::list<int> bulkMaterials) {
+addVelocityBoundary(SuperGeometry2D<T>& superGeometry, int material, IndicatorF2D<T>& indicator, std::list<int> bulkMaterials)
+{
   clout << "epsFraction=" << _epsFraction << std::endl;
   clout.setMultiOutput(true);
   int nC = _sLattice.getLoadBalancer().size();
@@ -115,7 +119,8 @@ addVelocityBoundary(SuperGeometry2D<T>& superGeometry, int material, IndicatorF2
 
 template<typename T, template<typename U> class Lattice>
 void sOffLatticeBoundaryCondition2D<T,Lattice>::
-defineU(SuperGeometry2D<T>& superGeometry, int material, AnalyticalF2D<T,T>& u, std::list<int> bulkMaterials ) {
+defineU(SuperGeometry2D<T>& superGeometry, int material, AnalyticalF2D<T,T>& u, std::list<int> bulkMaterials )
+{
 
   int nC = _sLattice.getLoadBalancer().size();
   for (int iCloc = 0; iCloc < nC; iCloc++) {
@@ -126,7 +131,8 @@ defineU(SuperGeometry2D<T>& superGeometry, int material, AnalyticalF2D<T,T>& u, 
 
 template<typename T, template<typename U> class Lattice>
 void sOffLatticeBoundaryCondition2D<T,Lattice>::
-addPoints2CommBC(SuperGeometry2D<T>& superGeometry, int material) {
+addPoints2CommBC(SuperGeometry2D<T>& superGeometry, int material)
+{
 
   if (_overlap != 0) {
     int nC = _sLattice.getLoadBalancer().size();
@@ -139,22 +145,26 @@ addPoints2CommBC(SuperGeometry2D<T>& superGeometry, int material) {
           if (iX < 0 || iX > nX - 1 ||
               iY < 0 || iY > nY - 1 ) {
             int found = false;
-            if(superGeometry.getBlockGeometry(iCloc).getMaterial(iX,iY)!=0) {
+            if (superGeometry.getBlockGeometry(iCloc).getMaterial(iX,iY)!=0) {
               for (int iXo=-_overlap; iXo<=_overlap; iXo++) {
                 for (int iYo=-_overlap; iYo<=_overlap; iYo++) {
                   int nextX = iXo + iX;
                   int nextY = iYo + iY;
-                  if(superGeometry.getBlockGeometry(iCloc).getMaterial(nextX,nextY)==material) {
+                  if (superGeometry.getBlockGeometry(iCloc).getMaterial(nextX,nextY)==material) {
                     _sLattice.get_commBC().add_cell(iCloc, iX, iY);
                     //std::cout << "found:" <<iX<<"/"<<iY<<std::endl;
                     found = true;
                   }
-                  if (found) break;
+                  if (found) {
+                    break;
+                  }
                 }
-                if (found) break;
+                if (found) {
+                  break;
+                }
               }
             }
-          } 
+          }
         }
       }
     }
@@ -162,7 +172,8 @@ addPoints2CommBC(SuperGeometry2D<T>& superGeometry, int material) {
 }
 
 template<typename T, template<typename U> class Lattice>
-void sOffLatticeBoundaryCondition2D<T,Lattice>::outputOn() {
+void sOffLatticeBoundaryCondition2D<T,Lattice>::outputOn()
+{
   _output = true;
   int nC = _sLattice.getLoadBalancer().size();
   for (int iCloc = 0; iCloc < nC; iCloc++) {
@@ -171,7 +182,8 @@ void sOffLatticeBoundaryCondition2D<T,Lattice>::outputOn() {
 }
 
 template<typename T, template<typename U> class Lattice>
-void sOffLatticeBoundaryCondition2D<T,Lattice>::outputOff() {
+void sOffLatticeBoundaryCondition2D<T,Lattice>::outputOff()
+{
   _output = false;
   int nC = _sLattice.getLoadBalancer().size();
   for (int iCloc = 0; iCloc < nC; iCloc++) {
@@ -182,13 +194,14 @@ void sOffLatticeBoundaryCondition2D<T,Lattice>::outputOff() {
 ////////////////// Factory functions //////////////////////////////////
 
 template<typename T, template<typename U> class Lattice, typename MixinDynamics>
-void createBouzidiBoundaryCondition2D(sOffLatticeBoundaryCondition2D<T,Lattice>& sBC) {
+void createBouzidiBoundaryCondition2D(sOffLatticeBoundaryCondition2D<T,Lattice>& sBC)
+{
 
   int nC = sBC.getSuperLattice().getLoadBalancer().size();
   sBC.setOverlap(1);
   for (int iC=0; iC<nC; iC++) {
     OffLatticeBoundaryCondition2D<T,Lattice>* blockBC
-    = createBouzidiBoundaryCondition2D<T,Lattice,MixinDynamics>(sBC.getSuperLattice().getExtendedBlockLattice(iC));
+      = createBouzidiBoundaryCondition2D<T,Lattice,MixinDynamics>(sBC.getSuperLattice().getExtendedBlockLattice(iC));
     sBC.getBlockBCs().push_back(blockBC);
   }
 }

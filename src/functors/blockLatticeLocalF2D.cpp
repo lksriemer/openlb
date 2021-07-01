@@ -28,6 +28,7 @@
 namespace olb {
 
 template class BlockLatticeDissipation2D<double,descriptors::D2Q9Descriptor>;
+template class BlockLatticePhysDissipation2D<double,descriptors::D2Q9Descriptor>;
 template class BlockLatticeDensity2D<double,descriptors::D2Q9Descriptor>;
 template class BlockLatticeVelocity2D<double,descriptors::D2Q9Descriptor>;
 template class BlockLatticePhysStrainRate2D<double,descriptors::D2Q9Descriptor>;
@@ -36,6 +37,8 @@ template class BlockLatticeRank2D<double,descriptors::D2Q9Descriptor>;
 template class BlockLatticeCuboid2D<double,descriptors::D2Q9Descriptor>;
 template class BlockLatticePhysPressure2D<double,descriptors::D2Q9Descriptor>;
 template class BlockLatticePhysVelocity2D<double,descriptors::D2Q9Descriptor>;
+//template class BlockLatticePhysExternalPorosity2D<double,descriptors::D2Q9Descriptor>;
+//template class BlockLatticePhysExternalVelocity2D<double,descriptors::D2Q9Descriptor>;
 template class BlockLatticePhysBoundaryForce2D<double,descriptors::D2Q9Descriptor>;
 template class BlockLatticePhysCorrBoundaryForce2D<double,descriptors::D2Q9Descriptor>;
 template class BlockLatticePorosity2D<double,descriptors::D2Q9Descriptor>;

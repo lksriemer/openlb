@@ -29,16 +29,10 @@
 
 #include <vector>
 #include "blockLatticeStructure2D.h"
-#include "dataAnalysisBase2D.h"
 #include "geometry/blockGeometry2D.h"
 #include "geometry/blockGeometryStatistics2D.h"
 
 namespace olb {
-
-template<typename T, template<typename U> class Lattice> class DataAnalysis2D;
-
-template<typename T, template<typename U> class Lattice> class BlockLatticeViewSerializer2D;
-template<typename T, template<typename U> class Lattice> class BlockLatticeViewUnSerializer2D;
 
 /// A rectangular extract from a given BlockLatticeStructure.
 /** Attention:
@@ -58,8 +52,6 @@ public:
   (BlockLatticeView2D<T,Lattice> const& rhs);
   void swap(BlockLatticeView2D<T,Lattice>& rhs);
 
-  virtual int getNx() const { return nx; }
-  virtual int getNy() const { return ny; }
   virtual Cell<T,Lattice>& get(int iX, int iY);
   virtual Cell<T,Lattice> const& get(int iX, int iY) const;
   virtual void initialize();
@@ -71,9 +63,9 @@ public:
     int x0_, int x1_, int y0_, int y1_, bool status );
   virtual void collide(int x0_, int x1_, int y0_, int y1_);
   virtual void collide();
-  virtual void staticCollide (int x0, int x1, int y0, int y1,
+  /*virtual void staticCollide (int x0, int x1, int y0, int y1,
                               TensorFieldBase2D<T,2> const& u);
-  virtual void staticCollide (TensorFieldBase2D<T,2> const& u);
+  virtual void staticCollide (TensorFieldBase2D<T,2> const& u);*/
   virtual void stream(int x0_, int x1_, int y0_, int y1_);
   virtual void collideAndStream(int x0_, int x1_, int y0_, int y1_);
   virtual void stream(bool periodic=false);
@@ -99,23 +91,13 @@ public:
   virtual void subscribeReductions(Reductor<T>& reductor);
   virtual LatticeStatistics<T>& getStatistics();
   virtual LatticeStatistics<T> const& getStatistics() const;
-  virtual DataAnalysisBase2D<T,Lattice> const& getDataAnalysis() const;
-  virtual DataSerializer<T> const& getSerializer(IndexOrdering::OrderingT ordering) const;
-  virtual DataUnSerializer<T>& getUnSerializer(IndexOrdering::OrderingT ordering);
-  virtual DataSerializer<T> const& getSubSerializer (
-    int x0_, int x1_, int y0_, int y1_,
-    IndexOrdering::OrderingT ordering ) const;
-  virtual DataUnSerializer<T>& getSubUnSerializer (
-    int x0_, int x1_, int y0_, int y1_,
-    IndexOrdering::OrderingT ordering );
+
   virtual SpatiallyExtendedObject2D* getComponent(int iBlock);
   virtual SpatiallyExtendedObject2D const* getComponent(int iBlock) const;
   virtual multiPhysics::MultiPhysicsId getMultiPhysicsId() const;
 private:
   BlockLatticeStructure2D<T,Lattice>  *originalLattice;
   int                          x0, y0;
-  int                          nx,ny;
-  DataAnalysis2D<T,Lattice>    *dataAnalysis;
 };
 
 }  // namespace olb

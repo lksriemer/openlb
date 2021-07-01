@@ -47,7 +47,8 @@ Timer<T>::Timer(int maxTimeSteps, int numFluidCells, bool *p, int size_p)
 }
 
 template<typename T>
-void Timer<T>::initialize(int maxTimeSteps, int numFluidCells, bool *p, int size_p) {
+void Timer<T>::initialize(int maxTimeSteps, int numFluidCells, bool *p, int size_p)
+{
   deltaTS=0;
   curTS=0;
   rtRemMs=1; // avoids some stupid numbers in first call of printStep() (not for T=double)
@@ -56,7 +57,8 @@ void Timer<T>::initialize(int maxTimeSteps, int numFluidCells, bool *p, int size
 }
 
 template<typename T>
-T Timer<T>::timevalDiffTimeMs(timeval end, timeval start) {
+T Timer<T>::timevalDiffTimeMs(timeval end, timeval start)
+{
   T msDiff;
   msDiff = 1000*(end.tv_sec - start.tv_sec)
            +(end.tv_usec-start.tv_usec)/1000;
@@ -64,32 +66,37 @@ T Timer<T>::timevalDiffTimeMs(timeval end, timeval start) {
 }
 
 template<typename T>
-T Timer<T>::getMLUPs() {
+T Timer<T>::getMLUPs()
+{
   T mlups = (numFC * deltaTS) / (timevalDiffTimeMs(msTimeCur, msTimeLast)*1000);
   return mlups;
 }
 
 template<typename T>
-T Timer<T>::getMLUPps() {
+T Timer<T>::getMLUPps()
+{
   T mlupps = getMLUPs()/singleton::mpi().getSize();
   return mlupps;
 }
 
 template<typename T>
-T Timer<T>::getTotalMLUPs() {
+T Timer<T>::getTotalMLUPs()
+{
   T tmlups = ((T)numFC * maxTS) / (timevalDiffTimeMs(msTimeEnd, msTimeStart)*1000);
   return tmlups;
 }
 
 template<typename T>
-T Timer<T>::getTotalMLUPps() {
+T Timer<T>::getTotalMLUPps()
+{
   T tmlupps = getTotalMLUPs()/singleton::mpi().getSize();
   return tmlupps;
 }
 
 
 template<typename T>
-void Timer<T>::start() {
+void Timer<T>::start()
+{
   sTimeStart = time(tp);          // time in s
   gettimeofday(&msTimeStart, 0);  // time in ms
   gettimeofday(&msTimeCur, 0);    // time in ms, here only necessary for MLUP-calculations
@@ -97,7 +104,8 @@ void Timer<T>::start() {
 }
 
 template<typename T>
-void Timer<T>::update(int currentTimeStep) {  // Is int sufficient? Is it possible/desirable to have non-integer time steps?
+void Timer<T>::update(int currentTimeStep)    // Is int sufficient? Is it possible/desirable to have non-integer time steps?
+{
 
   cpuTimeCur = clock();           // CPU-time
   sTimeCur   = time(tp);          // time in s
@@ -123,43 +131,51 @@ void Timer<T>::update(int currentTimeStep) {  // Is int sufficient? Is it possib
 }
 
 template<typename T>
-void Timer<T>::stop() {
+void Timer<T>::stop()
+{
   cpuTimeEnd = clock();           // cpu-time
   sTimeEnd = time(tp);            // time in s
   gettimeofday(&msTimeEnd, 0);    // time in ms
 }
 
 template<typename T>
-double Timer<T>::getTotalCpuTime() {
+double Timer<T>::getTotalCpuTime()
+{
   return (cpuTimeEnd-cpuTimeStart)/CLOCKS_PER_SEC;
 }
 
 template<typename T>
-T Timer<T>::getTotalRealTime() {
+T Timer<T>::getTotalRealTime()
+{
   return difftime(sTimeEnd,sTimeStart);
 }
 
 template<typename T>
-T Timer<T>::getTotalRealTimeMs() {
+T Timer<T>::getTotalRealTimeMs()
+{
   return timevalDiffTimeMs(msTimeEnd, msTimeStart);
 }
 
 template<typename T>
-void Timer<T>::print(int currentTimeStep,  int printMode) {
-  if (currentTimeStep!=curTS) update(currentTimeStep);
+void Timer<T>::print(int currentTimeStep,  int printMode)
+{
+  if (currentTimeStep!=curTS) {
+    update(currentTimeStep);
+  }
   printStep(printMode);
 }
 
 template<typename T>
-void Timer<T>::printStep(int printMode) {
+void Timer<T>::printStep(int printMode)
+{
   switch (printMode) {
   case 0: //single-line layout, usable for data extraction as csv
     clout
         << "step=" << curTS << "; "
-//      << "stepMax=" << maxTS << "; "
+        //      << "stepMax=" << maxTS << "; "
         << "percent=" << 100.0*curTS/maxTS << "; "
         << "passedTime=" << (double)rtPasMs/1000 << "; "
-//      << "totalTime=" << (double)rtTotMs/1000 << "; "
+        //      << "totalTime=" << (double)rtTotMs/1000 << "; "
         << "remTime=" << rtRemMs/1000 << "; "
         << "MLUPs=" << getMLUPs()
         << std::endl;
@@ -207,7 +223,8 @@ void Timer<T>::printStep(int printMode) {
 }
 
 template<typename T>
-void Timer<T>::printSummary() {
+void Timer<T>::printSummary()
+{
   clout << std::endl;
   clout << "----------------Summary:Timer----------------" << std::endl;
   clout << "measured time (rt) : " << (int)getTotalRealTimeMs()/1000 << "." << (int)getTotalRealTimeMs()-(int)getTotalRealTimeMs()/1000*1000 << "s" << std::endl;
@@ -218,7 +235,8 @@ void Timer<T>::printSummary() {
 }
 
 template<typename T>
-void Timer<T>::printShortSummary() {
+void Timer<T>::printShortSummary()
+{
   clout << "realTime=" << (int)getTotalRealTimeMs()/1000 << "." << (int)getTotalRealTimeMs()-(int)getTotalRealTimeMs()/1000*1000
         << "; cpuTime=" <<  std::setprecision(3) << std::fixed << getTotalCpuTime() << std::endl;
 }
@@ -226,7 +244,8 @@ void Timer<T>::printShortSummary() {
 // Factory function /////////////////////////////////
 
 template<typename T>
-Timer<T>* createTimer(XMLreader& param, const LBconverter<T>& converter, int numLatticePoints) {
+Timer<T>* createTimer(XMLreader& param, const LBconverter<T>& converter, int numLatticePoints)
+{
   OstreamManager clout(std::cout,"createTimer");
 
   // initialize parameters with some default values
@@ -236,12 +255,15 @@ Timer<T>* createTimer(XMLreader& param, const LBconverter<T>& converter, int num
   int numNodes = numLatticePoints;
 
   // fetch xml Data and error handling
-  if ( ! param["Application"]["PhysParam"]["MaxTime"].read(physMaxT) )
+  if ( ! param["Application"]["PhysParam"]["MaxTime"].read(physMaxT) ) {
     clout << "PhysMaxTime not found" << std::endl;
-  if ( ! param["Application"]["PhysParam"]["MaxTime"].read(physStartT) )
+  }
+  if ( ! param["Application"]["PhysParam"]["MaxStartTime"].read(physStartT) ) {
     clout << "PhysStartTime not found" << std::endl;
-  if ( ! param["Application"]["dim"].read(dim) )
+  }
+  if ( ! param["Application"]["dim"].read(dim) ) {
     clout << "dim not found" << std::endl;
+  }
 
   // variable processing according to the constructor
   int maxT = converter.numTimeSteps(physMaxT) + converter.numTimeSteps(physStartT);

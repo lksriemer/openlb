@@ -34,12 +34,15 @@ namespace olb {
 */
 
 template<typename T, template<typename U> class Lattice>
-class ZeroVelocityBouzidiLinearPostProcessor3D : public LocalPostProcessor3D<T,Lattice>
-{
+class ZeroVelocityBouzidiLinearPostProcessor3D : public LocalPostProcessor3D<T,Lattice> {
 public:
   ZeroVelocityBouzidiLinearPostProcessor3D(int x_, int y_, int z_, int iPop_, T dist_);
-  virtual int extent() const { return 1; }
-  virtual int extent(int whichDirection) const { return 1; }
+  virtual int extent() const {
+    return 1;
+  }
+  virtual int extent(int whichDirection) const {
+    return 1;
+  }
   virtual void process(BlockLattice3D<T,Lattice>& blockLattice);
   virtual void processSubDomain(BlockLattice3D<T,Lattice>& blockLattice,
                                 int x0_, int x1_, int y0_, int y1_, int z0_, int z1_ );
@@ -51,12 +54,15 @@ private:
 };
 
 template<typename T, template<typename U> class Lattice>
-class ZeroVelocityBounceBackPostProcessor3D : public LocalPostProcessor3D<T,Lattice>
-{
+class ZeroVelocityBounceBackPostProcessor3D : public LocalPostProcessor3D<T,Lattice> {
 public:
   ZeroVelocityBounceBackPostProcessor3D(int x_, int y_, int z_, int iPop_, T dist_);
-  virtual int extent() const { return 1; }
-  virtual int extent(int whichDirection) const { return 1; }
+  virtual int extent() const {
+    return 1;
+  }
+  virtual int extent(int whichDirection) const {
+    return 1;
+  }
   virtual void process(BlockLattice3D<T,Lattice>& blockLattice);
   virtual void processSubDomain(BlockLattice3D<T,Lattice>& blockLattice,
                                 int x0_, int x1_, int y0_, int y1_, int z0_, int z1_ );
@@ -68,12 +74,15 @@ private:
 };
 
 template<typename T, template<typename U> class Lattice>
-class VelocityBouzidiLinearPostProcessor3D : public LocalPostProcessor3D<T,Lattice>
-{
+class VelocityBouzidiLinearPostProcessor3D : public LocalPostProcessor3D<T,Lattice> {
 public:
   VelocityBouzidiLinearPostProcessor3D(int x_, int y_, int z_, int iPop_, T dist_);
-  virtual int extent() const { return 1; }
-  virtual int extent(int whichDirection) const { return 1; }
+  virtual int extent() const {
+    return 1;
+  }
+  virtual int extent(int whichDirection) const {
+    return 1;
+  }
   virtual void process(BlockLattice3D<T,Lattice>& blockLattice);
   virtual void processSubDomain(BlockLattice3D<T,Lattice>& blockLattice,
                                 int x0_, int x1_, int y0_, int y1_, int z0_, int z1_ );
@@ -86,12 +95,15 @@ private:
 };
 
 template<typename T, template<typename U> class Lattice>
-class VelocityBounceBackPostProcessor3D : public LocalPostProcessor3D<T,Lattice>
-{
+class VelocityBounceBackPostProcessor3D : public LocalPostProcessor3D<T,Lattice> {
 public:
   VelocityBounceBackPostProcessor3D(int x_, int y_, int z_, int iPop_, T dist_);
-  virtual int extent() const { return 1; }
-  virtual int extent(int whichDirection) const { return 1; }
+  virtual int extent() const {
+    return 1;
+  }
+  virtual int extent(int whichDirection) const {
+    return 1;
+  }
   virtual void process(BlockLattice3D<T,Lattice>& blockLattice);
   virtual void processSubDomain(BlockLattice3D<T,Lattice>& blockLattice,
                                 int x0_, int x1_, int y0_, int y1_, int z0_, int z1_ );
@@ -107,8 +119,7 @@ private:
 */
 
 template<typename T, template<typename U> class Lattice>
-class ZeroVelocityBouzidiLinearPostProcessorGenerator3D : public PostProcessorGenerator3D<T,Lattice>
-{
+class ZeroVelocityBouzidiLinearPostProcessorGenerator3D : public PostProcessorGenerator3D<T,Lattice> {
 public:
   ZeroVelocityBouzidiLinearPostProcessorGenerator3D(int x_, int y_, int z_, int iPop_, T dist_);
   virtual PostProcessor3D<T,Lattice>* generate() const;
@@ -120,8 +131,7 @@ private:
 };
 
 template<typename T, template<typename U> class Lattice>
-class ZeroVelocityBounceBackPostProcessorGenerator3D : public PostProcessorGenerator3D<T,Lattice>
-{
+class ZeroVelocityBounceBackPostProcessorGenerator3D : public PostProcessorGenerator3D<T,Lattice> {
 public:
   ZeroVelocityBounceBackPostProcessorGenerator3D(int x_, int y_, int z_, int iPop_, T dist_);
   virtual PostProcessor3D<T,Lattice>* generate() const;
@@ -133,8 +143,7 @@ private:
 };
 
 template<typename T, template<typename U> class Lattice>
-class VelocityBouzidiLinearPostProcessorGenerator3D : public PostProcessorGenerator3D<T,Lattice>
-{
+class VelocityBouzidiLinearPostProcessorGenerator3D : public PostProcessorGenerator3D<T,Lattice> {
 public:
   VelocityBouzidiLinearPostProcessorGenerator3D(int x_, int y_, int z_, int iPop_, T dist_);
   virtual PostProcessor3D<T,Lattice>* generate() const;
@@ -146,8 +155,7 @@ private:
 };
 
 template<typename T, template<typename U> class Lattice>
-class VelocityBounceBackPostProcessorGenerator3D : public PostProcessorGenerator3D<T,Lattice>
-{
+class VelocityBounceBackPostProcessorGenerator3D : public PostProcessorGenerator3D<T,Lattice> {
 public:
   VelocityBounceBackPostProcessorGenerator3D(int x_, int y_, int z_, int iPop_, T dist_);
   virtual PostProcessor3D<T,Lattice>* generate() const;

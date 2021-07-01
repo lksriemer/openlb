@@ -25,9 +25,10 @@
  * Groups all the 2D generic template files for the directory io.
  */
 #include "base64.hh"
-#include "serializerIO.hh"
-#include "colormaps.hh"
-#include "imageWriter.hh"
-#include "vtiReader.hh"
-#include "superVtkWriter2D.hh"
+#include "blockGifWriter.hh"
 #include "blockVtkWriter2D.hh"
+#include "colormaps.hh"
+#include "serializerIO.hh"
+#include "superVtkWriter2D.hh"
+#include "vtiReader.hh"
+

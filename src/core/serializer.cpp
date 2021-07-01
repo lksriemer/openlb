@@ -1,6 +1,6 @@
 /*  This file is part of the OpenLB library
  *
- *  Copyright (C) 2006, 2007 Jonas Latt
+ *  Copyright (C) 2006-2016 Jonas Latt, Mathias J. Krause
  *  E-mail contact: info@openlb.net
  *  The most recent release of OpenLB can be downloaded at
  *  <http://www.openlb.net/>
@@ -30,14 +30,7 @@
 
 namespace olb {
 
-template class ScalingSerializer<double>;
-template class ScalingSerializer<int>;
-template class TypeConversionSerializer<double,double>;
-template class TypeConversionSerializer<double,float>;
-
-template void copySerializedData<double>(DataSerializer<double> const& serializer,
-    DataUnSerializer<double>& unSerializer);
-template void copyDataBlock<double>(Serializable<double> const& from, Serializable<double>& to,
-                                    IndexOrdering::OrderingT ordering);
+struct Seriablizable;
+class Serializer;
 
 }  // namespace olb

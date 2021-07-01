@@ -44,12 +44,14 @@ namespace olb {
 
 
 template<typename T>
-Communicator3D<T>::Communicator3D(SuperStructure3D<T>& superStructure):_superStructure(superStructure) {
+Communicator3D<T>::Communicator3D(SuperStructure3D<T>& superStructure):_superStructure(superStructure)
+{
   _initDone = false;
 }
 
 template<typename T>
-void Communicator3D<T>::init_nh() {
+void Communicator3D<T>::init_nh()
+{
 
   _nC = _superStructure.getCuboidGeometry().getNc();
 
@@ -60,13 +62,15 @@ void Communicator3D<T>::init_nh() {
 }
 
 template<typename T>
-void Communicator3D<T>::add_cell(int iCloc, int iX, int iY, int iZ) {
+void Communicator3D<T>::add_cell(int iCloc, int iX, int iY, int iZ)
+{
 
   _nh[iCloc].add_inCell(iX,iY,iZ);
 }
 
 template<typename T>
-void Communicator3D<T>::add_cells(int overlap) {
+void Communicator3D<T>::add_cells(int overlap)
+{
 
   for (int iC=0; iC<_superStructure.getLoadBalancer().size(); iC++) {
     _nh[iC].add_inCells(overlap);
@@ -74,7 +78,8 @@ void Communicator3D<T>::add_cells(int overlap) {
 }
 
 template<typename T>
-void Communicator3D<T>::init() {
+void Communicator3D<T>::init()
+{
 
   reset();
   for (int iC=0; iC<_superStructure.getLoadBalancer().size(); iC++) {
@@ -89,7 +94,7 @@ void Communicator3D<T>::init() {
         temp.physR[0] = _nh[iC].get_inCell(i).physR[0];
         temp.physR[1] = _nh[iC].get_inCell(i).physR[1];
         temp.physR[2] = _nh[iC].get_inCell(i).physR[2];
-        _superStructure.getCuboidGeometry().getLatticeR(temp.physR, temp.latticeR);
+        _superStructure.getCuboidGeometry().getLatticeR(temp.latticeR,temp.physR);
         temp.latticeR[0]    = _superStructure.getLoadBalancer().glob(iC);
         _nh[_superStructure.getLoadBalancer().loc(ID)].add_outCell(temp);
       }
@@ -117,7 +122,8 @@ void Communicator3D<T>::init() {
 }
 
 template<typename T>
-void Communicator3D<T>::reset() {
+void Communicator3D<T>::reset()
+{
 
   if (_initDone) {
     for (int iC=0; iC<_superStructure.getLoadBalancer().size(); iC++) {
@@ -128,7 +134,8 @@ void Communicator3D<T>::reset() {
 }
 
 template<typename T>
-void Communicator3D<T>::send() {
+void Communicator3D<T>::send()
+{
 
   for (int iC=0; iC<_superStructure.getLoadBalancer().size(); iC++) {
     _nh[iC].buffer_outData();
@@ -139,7 +146,8 @@ void Communicator3D<T>::send() {
 }
 
 template<typename T>
-void Communicator3D<T>::receive() {
+void Communicator3D<T>::receive()
+{
 
   for (int iC=0; iC<_superStructure.getLoadBalancer().size(); iC++) {
 #ifdef PARALLEL_MODE_MPI
@@ -159,7 +167,8 @@ void Communicator3D<T>::receive() {
 }
 
 template<typename T>
-void Communicator3D<T>::write() {
+void Communicator3D<T>::write()
+{
 
   for (int iC=0; iC<_superStructure.getLoadBalancer().size(); iC++) {
     _nh[iC].write_inData();

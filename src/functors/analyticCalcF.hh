@@ -24,12 +24,8 @@
 #ifndef ANALYTICAL_CALC_F_HH
 #define ANALYTICAL_CALC_F_HH
 
-#include<vector>
 
 #include "functors/analyticCalcF.h"
-#include "functors/analyticalBaseF.h"
-#include "functors/genericF.h"
-
 
 namespace olb {
 
@@ -38,105 +34,121 @@ namespace olb {
 //////////////////////////////// AnalyticCalc1D ////////////////////////////////
 template <typename T, typename S>
 AnalyticCalc1D<T,S>::AnalyticCalc1D(AnalyticalF1D<T,S>& f, AnalyticalF1D<T,S>& g)
-  : AnalyticalF1D<T,S>(f.getTargetDim()), _f(f), _g(g) { }
-
-template <typename T, typename S>
-void AnalyticCalc1D<T,S>::myErase(GenericF<T,S>* ptr) {
-  // delete child...
-  this->removeChild(ptr);
-  delete ptr;
-  // ... and delete myself from father's list
-  if( this->_pointerVec.size() == 0 )  _f.myErase(this);
+  : AnalyticalF1D<T,S>(f.getTargetDim()), _f(f), _g(g)
+{
+  std::swap(f._ptrCalcC, this->_ptrCalcC);
 }
-
 
 template <typename T, typename S>
 AnalyticPlus1D<T,S>::AnalyticPlus1D(AnalyticalF1D<T,S>& f, AnalyticalF1D<T,S>& g)
-  : AnalyticCalc1D<T,S>(f,g) { }
+  : AnalyticCalc1D<T,S>(f,g)
+{
+  this->getName() = "(" + f.getName() + "+" + g.getName() + ")";
 
-template <typename T, typename S>
-std::vector<T> AnalyticPlus1D<T,S>::operator()(std::vector<S> input) {
-  std::vector<T> output;
-  for(int i = 0; i < this->_f.getTargetDim(); i++) {
-    output.push_back( this->_f(input)[i] + this->_g(input)[i] );
-  }
-  // start deleting PlusF and GenericF objects
-  if (this->_pointerVec.size() == 0) this->_f.myErase(this);
-  return output;
 }
 
+template <typename T, typename S>
+bool AnalyticPlus1D<T,S>::operator()(T output[], const S input[])
+{
+  T outputTmp[this->_g.getTargetDim()];
+  this->_g(outputTmp,input);
+  this->_f(output,input);
+  for (int i = 0; i < this->_f.getTargetDim(); i++) {
+    output[i]+=outputTmp[i];
+  }
+  return true;
+}
 
 template <typename T, typename S>
 AnalyticMinus1D<T,S>::AnalyticMinus1D(AnalyticalF1D<T,S>& f, AnalyticalF1D<T,S>& g)
-  : AnalyticCalc1D<T,S>(f,g) { }
+  : AnalyticCalc1D<T,S>(f,g)
+{
+  this->getName() = "(" + f.getName() + "-" + g.getName() + ")";
+}
 
 template <typename T, typename S>
-std::vector<T> AnalyticMinus1D<T,S>::operator()(std::vector<S> input) {
-  std::vector<T> output;
-  for(int i = 0; i < this->_f.getTargetDim(); i++) {
-    output.push_back( this->_f(input)[i] - this->_g(input)[i] );
+bool AnalyticMinus1D<T,S>::operator()(T output[], const S input[])
+{
+  T outputTmp[this->_g.getTargetDim()];
+  this->_g(outputTmp,input);
+  this->_f(output,input);
+  for (int i = 0; i < this->_f.getTargetDim(); i++) {
+    output[i]-=outputTmp[i];
   }
-  if (this->_pointerVec.size() == 0)  this->_f.myErase(this);
-  return output;
+  return true;
 }
 
 
 template <typename T, typename S>
 AnalyticMultiplication1D<T,S>::AnalyticMultiplication1D(AnalyticalF1D<T,S>& f,
-  AnalyticalF1D<T,S>& g) : AnalyticCalc1D<T,S>(f,g) { }
+    AnalyticalF1D<T,S>& g) : AnalyticCalc1D<T,S>(f,g)
+{
+  this->getName() = "(" + f.getName() + "*" + g.getName() + ")";
+}
 
 template <typename T, typename S>
-std::vector<T> AnalyticMultiplication1D<T,S>::operator()(std::vector<S> input) {
-  std::vector<T> output;
-  for(int i = 0; i < this->_f.getTargetDim(); i++) {
-    output.push_back( this->_f(input)[i] * this->_g(input)[i] );
+bool AnalyticMultiplication1D<T,S>::operator()(T output[], const S input[])
+{
+  T outputTmp[this->_g.getTargetDim()];
+  this->_g(outputTmp,input);
+  this->_f(output,input);
+  for (int i = 0; i < this->_f.getTargetDim(); i++) {
+    output[i]*=outputTmp[i];
   }
-  if (this->_pointerVec.size() == 0) this->_f.myErase(this);
-  return output;
+  return true;
 }
 
 
 template <typename T, typename S>
 AnalyticDivision1D<T,S>::AnalyticDivision1D(AnalyticalF1D<T,S>& f,
-  AnalyticalF1D<T,S>& g) : AnalyticCalc1D<T,S>(f,g) { }
+    AnalyticalF1D<T,S>& g) : AnalyticCalc1D<T,S>(f,g)
+{
+  this->getName() = "(" + f.getName() + "/" + g.getName() + ")";
+}
 
 template <typename T, typename S>
-std::vector<T> AnalyticDivision1D<T,S>::operator()(std::vector<S> input) {
-  std::vector<T> output;
-  for(int i = 0; i < this->_f.getTargetDim(); i++) {
-    output.push_back( this->_f(input)[i] / this->_g(input)[i] );
+bool AnalyticDivision1D<T,S>::operator()(T output[], const S input[])
+{
+  T outputTmp[this->_g.getTargetDim()];
+  this->_g(outputTmp,input);
+  this->_f(output,input);
+  for (int i = 0; i < this->_f.getTargetDim(); i++) {
+    output[i]/=outputTmp[i];
   }
-  if (this->_pointerVec.size() == 0) this->_f.myErase(this);
-  return output;
+  return true;
 }
 
 
 /////////////////////////////////operator()/// ////////////////////////////////
 template <typename T, typename S>
-AnalyticalF1D<T,S>& AnalyticalF1D<T,S>::operator+(AnalyticalF1D<T,S>& rhs) {
-  AnalyticalF1D<T,S>* tmp = new AnalyticPlus1D<T,S>(*this,rhs);
-  this->addChild(tmp);
+AnalyticalF1D<T,S>& AnalyticalF1D<T,S>::operator+(AnalyticalF1D<T,S>& rhs)
+{
+  auto tmp = std::make_shared< AnalyticPlus1D<T,S> >(*this,rhs);
+  this->_ptrCalcC = tmp;
   return *tmp;
 }
 
 template <typename T, typename S>
-AnalyticalF1D<T,S>& AnalyticalF1D<T,S>::operator-(AnalyticalF1D<T,S>& rhs) {
-  AnalyticalF1D<T,S>* tmp = new AnalyticMinus1D<T,S>(*this,rhs);
-  this->addChild(tmp);
+AnalyticalF1D<T,S>& AnalyticalF1D<T,S>::operator-(AnalyticalF1D<T,S>& rhs)
+{
+  auto tmp = std::make_shared< AnalyticMinus1D<T,S> >(*this,rhs);
+  this->_ptrCalcC = tmp;
   return *tmp;
 }
 
 template <typename T, typename S>
-AnalyticalF1D<T,S>& AnalyticalF1D<T,S>::operator*(AnalyticalF1D<T,S>& rhs) {
-  AnalyticalF1D<T,S>* tmp = new AnalyticMultiplication1D<T,S>(*this,rhs);
-  this->addChild(tmp);
+AnalyticalF1D<T,S>& AnalyticalF1D<T,S>::operator*(AnalyticalF1D<T,S>& rhs)
+{
+  auto tmp = std::make_shared< AnalyticMultiplication1D<T,S> >(*this,rhs);
+  this->_ptrCalcC = tmp;
   return *tmp;
 }
 
 template <typename T, typename S>
-AnalyticalF1D<T,S>& AnalyticalF1D<T,S>::operator/(AnalyticalF1D<T,S>& rhs) {
-  AnalyticalF1D<T,S>* tmp = new AnalyticDivision1D<T,S>(*this,rhs);
-  this->addChild(tmp);
+AnalyticalF1D<T,S>& AnalyticalF1D<T,S>::operator/(AnalyticalF1D<T,S>& rhs)
+{
+  auto tmp = std::make_shared< AnalyticDivision1D<T,S> >(*this,rhs);
+  this->_ptrCalcC = tmp;
   return *tmp;
 }
 
@@ -146,104 +158,144 @@ AnalyticalF1D<T,S>& AnalyticalF1D<T,S>::operator/(AnalyticalF1D<T,S>& rhs) {
 //////////////////////////////// AnalyticCalc2D ////////////////////////////////
 template <typename T, typename S>
 AnalyticCalc2D<T,S>::AnalyticCalc2D(AnalyticalF2D<T,S>& f, AnalyticalF2D<T,S>& g)
-  : AnalyticalF2D<T,S>(f.getTargetDim()), _f(f), _g(g) { }
+  : AnalyticalF2D<T,S>(f.getTargetDim()), _f(f), _g(g)
+{
+  // pass through the shared_ptr from the first argument f to the arithmetic class itself.
+  // used by secsessive calls: e.g. (functorA + functor B) followed by (functorA + functorC)
+  // the result of the first operation is overwritten by the second.
 
-template <typename T, typename S>
-void AnalyticCalc2D<T,S>::myErase(GenericF<T,S>* ptr) {
-  // delete child...
-  this->removeChild(ptr);
-  delete ptr;
-  // ... and delete myself from father's list
-  if( this->_pointerVec.size() == 0 )  _f.myErase(this);
+  // equivalent operations
+  //  std::swap(f._ptrCalcC, this->_ptrCalcC);
+  //  this->_ptrCalcC = f._ptrCalcC;
+  this->_ptrCalcC.swap(f._ptrCalcC);
 }
 
 
 template <typename T, typename S>
 AnalyticPlus2D<T,S>::AnalyticPlus2D(AnalyticalF2D<T,S>& f, AnalyticalF2D<T,S>& g)
-  : AnalyticCalc2D<T,S>(f,g) { }
+  : AnalyticCalc2D<T,S>(f,g)
+{
+  this->getName() = "(" + f.getName() + "+" + g.getName() + ")";
+}
 
 template <typename T, typename S>
-std::vector<T> AnalyticPlus2D<T,S>::operator()(std::vector<S> input) {
-  std::vector<T> output;
-  for(int i = 0; i < this->_f.getTargetDim(); i++) {
-    output.push_back( this->_f(input)[i] + this->_g(input)[i] );
+bool AnalyticPlus2D<T,S>::operator()(T output[], const S input[])
+{
+  T outputTmp[this->_g.getTargetDim()];
+  this->_g(outputTmp,input);
+  this->_f(output,input);
+  for (int i = 0; i < this->_f.getTargetDim(); i++) {
+    output[i]+=outputTmp[i];
   }
-  if (this->_pointerVec.size() == 0) this->_f.myErase(this);
-  return output;
+  return true;
 }
 
 
 template <typename T, typename S>
 AnalyticMinus2D<T,S>::AnalyticMinus2D(AnalyticalF2D<T,S>& f, AnalyticalF2D<T,S>& g)
-  : AnalyticCalc2D<T,S>(f,g) { }
+  : AnalyticCalc2D<T,S>(f,g)
+{
+  this->getName() = "(" + f.getName() + "-" + g.getName() + ")";
+}
 
 template <typename T, typename S>
-std::vector<T> AnalyticMinus2D<T,S>::operator()(std::vector<S> input) {
-  std::vector<T> output;
-  for(int i = 0; i < this->_f.getTargetDim(); i++) {
-    output.push_back( this->_f(input)[i] - this->_g(input)[i] );
+bool AnalyticMinus2D<T,S>::operator()(T output[], const S input[])
+{
+  T outputTmp[this->_g.getTargetDim()];
+  this->_g(outputTmp,input);
+  this->_f(output,input);
+  for (int i = 0; i < this->_f.getTargetDim(); i++) {
+    output[i]-=outputTmp[i];
   }
-  if (this->_pointerVec.size() == 0) this->_f.myErase(this);
-  return output;
+  return true;
 }
 
 
 template <typename T, typename S>
 AnalyticMultiplication2D<T,S>::AnalyticMultiplication2D(AnalyticalF2D<T,S>& f,
-  AnalyticalF2D<T,S>& g) : AnalyticCalc2D<T,S>(f,g) { }
+    AnalyticalF2D<T,S>& g) : AnalyticCalc2D<T,S>(f,g)
+{
+  this->getName() = "(" + f.getName() + "*" + g.getName() + ")";
+}
 
 template <typename T, typename S>
-std::vector<T> AnalyticMultiplication2D<T,S>::operator()(std::vector<S> input) {
-  std::vector<T> output;
-  for(int i = 0; i < this->_f.getTargetDim(); i++) {
-    output.push_back( this->_f(input)[i] * this->_g(input)[i] );
+bool AnalyticMultiplication2D<T,S>::operator()(T output[], const S input[])
+{
+  T outputTmp[this->_g.getTargetDim()];
+  this->_g(outputTmp,input);
+  this->_f(output,input);
+  for (int i = 0; i < this->_f.getTargetDim(); i++) {
+    output[i]*=outputTmp[i];
   }
-  if (this->_pointerVec.size() == 0) this->_f.myErase(this);
-  return output;
+  return true;
 }
 
 
 template <typename T, typename S>
 AnalyticDivision2D<T,S>::AnalyticDivision2D(AnalyticalF2D<T,S>& f,
-  AnalyticalF2D<T,S>& g) : AnalyticCalc2D<T,S>(f,g) { }
+    AnalyticalF2D<T,S>& g) : AnalyticCalc2D<T,S>(f,g)
+{
+  this->getName() = "(" + f.getName() + "/" + g.getName() + ")";
+}
 
 template <typename T, typename S>
-std::vector<T> AnalyticDivision2D<T,S>::operator()(std::vector<S> input) {
-  std::vector<T> output;
-  for(int i = 0; i < this->_f.getTargetDim(); i++) {
-    output.push_back( this->_f(input)[i] / this->_g(input)[i] );
+bool AnalyticDivision2D<T,S>::operator()(T output[], const S input[])
+{
+  T outputTmp[this->_g.getTargetDim()];
+  this->_g(outputTmp,input);
+  this->_f(output,input);
+  for (int i = 0; i < this->_f.getTargetDim(); i++) {
+    output[i]/=outputTmp[i];
   }
-  if (this->_pointerVec.size() == 0) this->_f.myErase(this);
-  return output;
+  return true;
 }
 
 
-/////////////////////////////////operator()/// ////////////////////////////////
+/////////////////////////////////operator()////////////////////////////////////
 template <typename T, typename S>
-AnalyticalF2D<T,S>& AnalyticalF2D<T,S>::operator+(AnalyticalF2D<T,S>& rhs) {
-  AnalyticalF2D<T,S>* tmp = new AnalyticPlus2D<T,S>(*this,rhs);
-  this->addChild(tmp);
+AnalyticalF2D<T,S>& AnalyticalF2D<T,S>::operator+(AnalyticalF2D<T,S>& rhs)
+{
+  // version 1
+  //    AnalyticalF2D<T,S>* tmp = new AnalyticPlus2D<T,S>(*this,rhs);
+  //    std::shared_ptr< GenericF<T,S> > ptr( tmp );
+  //    this->_ptrCalcC = ptr;
+
+  // version 2
+  //  std::shared_ptr< AnalyticalF2D<T,S> > tmp = std::make_shared< AnalyticPlus2D<T,S> >(*this,rhs);
+
+  // version 2.5
+  //  std::shared_ptr< AnalyticPlus2D<T,S> > tmp( new AnalyticPlus2D<T,S>(*this,rhs) );
+
+  // version 3
+  auto tmp = std::make_shared< AnalyticPlus2D<T,S> >(*this,rhs);
+
+  this->_ptrCalcC = tmp;
+
+  //  std::cout << "operator+(): " << this->_ptrCalcC.get()->getName() << std::endl;
   return *tmp;
 }
 
 template <typename T, typename S>
-AnalyticalF2D<T,S>& AnalyticalF2D<T,S>::operator-(AnalyticalF2D<T,S>& rhs) {
-  AnalyticalF2D<T,S>* tmp = new AnalyticMinus2D<T,S>(*this,rhs);
-  this->addChild(tmp);
+AnalyticalF2D<T,S>& AnalyticalF2D<T,S>::operator-(AnalyticalF2D<T,S>& rhs)
+{
+  auto tmp = std::make_shared< AnalyticMinus2D<T,S> >(*this,rhs);
+  this->_ptrCalcC = tmp;
   return *tmp;
 }
 
 template <typename T, typename S>
-AnalyticalF2D<T,S>& AnalyticalF2D<T,S>::operator*(AnalyticalF2D<T,S>& rhs) {
-  AnalyticalF2D<T,S>* tmp = new AnalyticMultiplication2D<T,S>(*this,rhs);
-  this->addChild(tmp);
+AnalyticalF2D<T,S>& AnalyticalF2D<T,S>::operator*(AnalyticalF2D<T,S>& rhs)
+{
+  auto tmp = std::make_shared< AnalyticMultiplication2D<T,S> >(*this,rhs);
+  this->_ptrCalcC = tmp;
   return *tmp;
 }
 
 template <typename T, typename S>
-AnalyticalF2D<T,S>& AnalyticalF2D<T,S>::operator/(AnalyticalF2D<T,S>& rhs) {
-  AnalyticalF2D<T,S>* tmp = new AnalyticDivision2D<T,S>(*this,rhs);
-  this->addChild(tmp);
+AnalyticalF2D<T,S>& AnalyticalF2D<T,S>::operator/(AnalyticalF2D<T,S>& rhs)
+{
+  auto tmp = std::make_shared< AnalyticDivision2D<T,S> >(*this,rhs);
+  this->_ptrCalcC = tmp;
   return *tmp;
 }
 
@@ -253,103 +305,123 @@ AnalyticalF2D<T,S>& AnalyticalF2D<T,S>::operator/(AnalyticalF2D<T,S>& rhs) {
 //////////////////////////////// AnalyticCalc3D ////////////////////////////////
 template <typename T, typename S>
 AnalyticCalc3D<T,S>::AnalyticCalc3D(AnalyticalF3D<T,S>& f, AnalyticalF3D<T,S>& g)
-  : AnalyticalF3D<T,S>(f.getTargetDim()), _f(f), _g(g) { }
-
-template <typename T, typename S>
-void AnalyticCalc3D<T,S>::myErase(GenericF<T,S>* ptr) {
-  // delete child...
-  this->removeChild(ptr);
-  delete ptr;
-  // ... and delete myself from father's list
-  if( this->_pointerVec.size() == 0 )  _f.myErase(this);
-}
+  : AnalyticalF3D<T,S>(f.getTargetDim()), _f(f), _g(g)
+{}
 
 
 template <typename T, typename S>
 AnalyticPlus3D<T,S>::AnalyticPlus3D(AnalyticalF3D<T,S>& f, AnalyticalF3D<T,S>& g)
-  : AnalyticCalc3D<T,S>(f,g) { }
+  : AnalyticCalc3D<T,S>(f,g)
+{
+  this->getName() = "(" + f.getName() + "+" + g.getName() + ")";
+  std::swap(f._ptrCalcC, this->_ptrCalcC);
+}
 
 template <typename T, typename S>
-std::vector<T> AnalyticPlus3D<T,S>::operator()(std::vector<S> input) {
-  std::vector<T> output;
-  for(int i = 0; i < this->_f.getTargetDim(); i++) {
-    output.push_back( this->_f(input)[i] + this->_g(input)[i] );
+bool AnalyticPlus3D<T,S>::operator()(T output[], const S input[])
+{
+  T outputTmp[this->_g.getTargetDim()];
+  this->_g(outputTmp,input);
+  this->_f(output,input);
+  for (int i = 0; i < this->_f.getTargetDim(); i++) {
+    output[i]+=outputTmp[i];
   }
-  if (this->_pointerVec.size() == 0) this->_f.myErase(this);
-  return output;
+  return true;
 }
 
 
 template <typename T, typename S>
 AnalyticMinus3D<T,S>::AnalyticMinus3D(AnalyticalF3D<T,S>& f, AnalyticalF3D<T,S>& g)
-  : AnalyticCalc3D<T,S>(f,g) { }
+  : AnalyticCalc3D<T,S>(f,g)
+{
+  this->getName() = "(" + f.getName() + "-" + g.getName() + ")";
+  std::swap(f._ptrCalcC, this->_ptrCalcC);
+}
 
 template <typename T, typename S>
-std::vector<T> AnalyticMinus3D<T,S>::operator()(std::vector<S> input) {
-  std::vector<T> output;
-  for(int i = 0; i < this->_f.getTargetDim(); i++) {
-    output.push_back( this->_f(input)[i] - this->_g(input)[i] );
+bool AnalyticMinus3D<T,S>::operator()(T output[], const S input[])
+{
+  T outputTmp[this->_g.getTargetDim()];
+  this->_g(outputTmp,input);
+  this->_f(output,input);
+  for (int i = 0; i < this->_f.getTargetDim(); i++) {
+    output[i]+=outputTmp[i];
   }
-  if (this->_pointerVec.size() == 0) this->_f.myErase(this);
-  return output;
+  return true;
 }
 
 
-/////////////////////////////////operator()/// ////////////////////////////////
 template <typename T, typename S>
 AnalyticMultiplication3D<T,S>::AnalyticMultiplication3D(AnalyticalF3D<T,S>& f,
-  AnalyticalF3D<T,S>& g) : AnalyticCalc3D<T,S>(f,g) { }
+    AnalyticalF3D<T,S>& g) : AnalyticCalc3D<T,S>(f,g)
+{
+  this->getName() = "(" + f.getName() + "*" + g.getName() + ")";
+  std::swap(f._ptrCalcC, this->_ptrCalcC);
+}
 
 template <typename T, typename S>
-std::vector<T> AnalyticMultiplication3D<T,S>::operator()(std::vector<S> input) {
-  std::vector<T> output;
-  for(int i = 0; i < this->_f.getTargetDim(); i++) {
-    output.push_back( this->_f(input)[i] * this->_g(input)[i] );
+bool AnalyticMultiplication3D<T,S>::operator()(T output[], const S input[])
+{
+  T outputTmp[this->_g.getTargetDim()];
+  this->_g(outputTmp,input);
+  this->_f(output,input);
+  for (int i = 0; i < this->_f.getTargetDim(); i++) {
+    output[i]*=outputTmp[i];
   }
-  if (this->_pointerVec.size() == 0) this->_f.myErase(this);
-  return output;
+  return true;
 }
 
 
 template <typename T, typename S>
 AnalyticDivision3D<T,S>::AnalyticDivision3D(AnalyticalF3D<T,S>& f,
-  AnalyticalF3D<T,S>& g) : AnalyticCalc3D<T,S>(f,g) { }
+    AnalyticalF3D<T,S>& g) : AnalyticCalc3D<T,S>(f,g)
+{
+  this->getName() = "(" + f.getName() + "/" + g.getName() + ")";
+  std::swap(f._ptrCalcC, this->_ptrCalcC);
+}
 
 template <typename T, typename S>
-std::vector<T> AnalyticDivision3D<T,S>::operator()(std::vector<S> input) {
-  std::vector<T> output;
-  for(int i = 0; i < this->_f.getTargetDim(); i++) {
-    output.push_back( this->_f(input)[i] / this->_g(input)[i] );
+bool AnalyticDivision3D<T,S>::operator()(T output[], const S input[])
+{
+  T outputTmp[this->_g.getTargetDim()];
+  this->_g(outputTmp,input);
+  this->_f(output,input);
+  for (int i = 0; i < this->_f.getTargetDim(); i++) {
+    output[i]*=outputTmp[i];
   }
-  if (this->_pointerVec.size() == 0) this->_f.myErase(this);
-  return output;
+  return true;
 }
 
-
+/////////////////////////////////operator()/// ////////////////////////////////
 template <typename T, typename S>
-AnalyticalF3D<T,S>& AnalyticalF3D<T,S>::operator/(AnalyticalF3D<T,S>& rhs) {
-  AnalyticalF3D<T,S>* tmp = new AnalyticDivision3D<T,S>(*this,rhs);
-  this->addChild(tmp);
-  return *tmp;
-}
-template <typename T, typename S>
-AnalyticalF3D<T,S>& AnalyticalF3D<T,S>::operator*(AnalyticalF3D<T,S>& rhs) {
-  AnalyticalF3D<T,S>* tmp = new AnalyticMultiplication3D<T,S>(*this,rhs);
-  this->addChild(tmp);
+AnalyticalF3D<T,S>& AnalyticalF3D<T,S>::operator+(AnalyticalF3D<T,S>& rhs)
+{
+  auto tmp = std::make_shared< AnalyticPlus3D<T,S> >(*this,rhs);
+  this->_ptrCalcC = tmp;
   return *tmp;
 }
 
 template <typename T, typename S>
-AnalyticalF3D<T,S>& AnalyticalF3D<T,S>::operator-(AnalyticalF3D<T,S>& rhs) {
-  AnalyticalF3D<T,S>* tmp = new AnalyticMinus3D<T,S>(*this,rhs);
-  this->addChild(tmp);
+AnalyticalF3D<T,S>& AnalyticalF3D<T,S>::operator-(AnalyticalF3D<T,S>& rhs)
+{
+  auto tmp = std::make_shared< AnalyticMinus3D<T,S> >(*this,rhs);
+  this->_ptrCalcC = tmp;
   return *tmp;
 }
 
 template <typename T, typename S>
-AnalyticalF3D<T,S>& AnalyticalF3D<T,S>::operator+(AnalyticalF3D<T,S>& rhs) {
-  AnalyticalF3D<T,S>* tmp = new AnalyticPlus3D<T,S>(*this,rhs);
-  this->addChild(tmp);
+AnalyticalF3D<T,S>& AnalyticalF3D<T,S>::operator*(AnalyticalF3D<T,S>& rhs)
+{
+  auto tmp = std::make_shared< AnalyticMultiplication3D<T,S> >(*this,rhs);
+  this->_ptrCalcC = tmp;
+  return *tmp;
+}
+
+template <typename T, typename S>
+AnalyticalF3D<T,S>& AnalyticalF3D<T,S>::operator/(AnalyticalF3D<T,S>& rhs)
+{
+  auto tmp = std::make_shared< AnalyticDivision3D<T,S> >(*this,rhs);
+  this->_ptrCalcC = tmp;
   return *tmp;
 }
 

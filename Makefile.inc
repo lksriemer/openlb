@@ -34,8 +34,14 @@ DEBUG           := -g -DOLB_DEBUG
 CXXFLAGS        := $(OPTIM)
 #CXXFLAGS        := $(DEBUG)
 
+# to enable std::shared_ptr in functor arithmetik
+# works in gcc 4.3 and later, source https://gcc.gnu.org/projects/cxx0x.html
+CXXFLAGS        += -std=c++0x
+# works in gcc 4.7 and later (recommended)
+#CXXFLAGS        += -std=c++11
+
 #CXXFLAGS        += -fdiagnostics-color=auto
-#CXXFLAGS        += -std=c++0x                  
+#CXXFLAGS        += -std=gnu++14
 
 ARPRG           := ar
 #ARPRG           := xiar                  # mandatory for intel compiler
@@ -98,10 +104,16 @@ SUBDIRS         := src/boundary \
                    src/geometry \
                    src/external/tinyxml \
                    src/functors \
+                   src/functors/indicator \
                    src/io \
+                   src/particles \
+                   src/particles/forces \
+                   src/particles/boundaries \
                    src/utilities
 
 EXAMPLEDIRS     := examples/aorta3d \
+                   examples/bifurcation3d/eulerEuler \
+                   examples/bifurcation3d/eulerLagrange \
                    examples/bstep2d \
                    examples/bstep3d \
                    examples/cavity2d/sequential \
@@ -110,7 +122,6 @@ EXAMPLEDIRS     := examples/aorta3d \
                    examples/cavity3d/parallel \
                    examples/cylinder2d \
                    examples/cylinder3d \
-                   examples/d3q13cavity \
                    examples/multiComponent2d \
                    examples/multiComponent3d \
                    examples/nozzle3d \

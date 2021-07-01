@@ -39,8 +39,7 @@ namespace olb {
 //===================================================================================
 
 template<typename T, template<typename U> class Lattice, typename Dynamics, int direction, int orientation>
-class AdvectionDiffusionBoundariesDynamics : public BasicDynamics<T,Lattice>
-{
+class AdvectionDiffusionBoundariesDynamics : public BasicDynamics<T,Lattice> {
 public:
   /// Constructor
   AdvectionDiffusionBoundariesDynamics(T omega_, Momenta<T,Lattice>& momenta_);
@@ -67,8 +66,7 @@ private:
 //===================================================================================
 
 template<typename T, template<typename U> class Lattice, typename Dynamics, int plane, int normal1, int normal2>
-class AdvectionDiffusionEdgesDynamics : public BasicDynamics<T,Lattice>
-{
+class AdvectionDiffusionEdgesDynamics : public BasicDynamics<T,Lattice> {
 public:
   /// Constructor
   AdvectionDiffusionEdgesDynamics(T omega_, Momenta<T,Lattice>& momenta_);
@@ -96,8 +94,7 @@ private:
 //===================================================================================
 
 template<typename T, template<typename U> class Lattice, typename Dynamics, int xNormal, int yNormal>
-class AdvectionDiffusionCornerDynamics2D : public BasicDynamics<T,Lattice>
-{
+class AdvectionDiffusionCornerDynamics2D : public BasicDynamics<T,Lattice> {
 public:
   /// Constructor
   AdvectionDiffusionCornerDynamics2D(T omega_, Momenta<T,Lattice>& momenta_);
@@ -124,8 +121,7 @@ private:
 //===================================================================================
 
 template<typename T, template<typename U> class Lattice, typename Dynamics, int xNormal, int yNormal, int zNormal>
-class AdvectionDiffusionCornerDynamics3D : public BasicDynamics<T,Lattice>
-{
+class AdvectionDiffusionCornerDynamics3D : public BasicDynamics<T,Lattice> {
 public:
   /// Constructor
   AdvectionDiffusionCornerDynamics3D(T omega_, Momenta<T,Lattice>& momenta_);

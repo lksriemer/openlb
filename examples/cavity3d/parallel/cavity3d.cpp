@@ -48,9 +48,11 @@ using namespace std;
 typedef double T;
 #define DESCRIPTOR D3Q19Descriptor
 
-int N = 1; // resolution of the model
+const int N = 1; // resolution of the model
+const int M = 1; // time discretization refinement
+const T maxT = (T)30.; // max. simulation time in s, SI unit
 
-void prepareGeometry(LBconverter<T> const& converter, IndicatorF3D<bool,T>& indicator, SuperGeometry3D<T>& superGeometry) {
+void prepareGeometry(LBconverter<T> const& converter, IndicatorF3D<T>& indicator, SuperGeometry3D<T>& superGeometry) {
 
   OstreamManager clout(std::cout,"prepareGeometry");
   clout << "Prepare Geometry ..." << std::endl;
@@ -59,10 +61,10 @@ void prepareGeometry(LBconverter<T> const& converter, IndicatorF3D<bool,T>& indi
   superGeometry.rename(0,2,indicator);
   superGeometry.rename(2,1,1,1,1);
 
-  std::vector<T> origin(3,T()); origin[1]=converter.getCharL();
-  std::vector<T> extend(3,converter.getCharL()); extend[1]=converter.getLatticeL();
-  IndicatorCuboid3D<bool,T> lid(extend,origin);
- 
+  Vector<T,3> origin(T(), converter.getCharL(), T());
+  Vector<T,3> extend(converter.getCharL(), converter.getLatticeL(), converter.getCharL());
+  IndicatorCuboid3D<T> lid(extend,origin);
+
   superGeometry.rename(2,3,1,lid);
 
   /// Removes all not needed boundary voxels outside the surface
@@ -94,7 +96,7 @@ void prepareLattice(LBconverter<T> const& converter,
   /// Material=1 -->bulk dynamics
   lattice.defineDynamics(superGeometry, 1, &bulkDynamics);
 
-  /// Material=2,3 -->bulk dynamics, velocity boundary 
+  /// Material=2,3 -->bulk dynamics, velocity boundary
   lattice.defineDynamics(superGeometry, 2, &bulkDynamics);
   lattice.defineDynamics(superGeometry, 3, &bulkDynamics);
   bc.addVelocityBoundary(superGeometry, 2, omega);
@@ -133,14 +135,16 @@ void setBoundaryValues(LBconverter<T> const&converter,
 }
 
 void getResults(SuperLattice3D<T,DESCRIPTOR>& sLattice,
-                LBconverter<T> const& converter, SuperGeometry3D<T>& superGeometry, int iT, Timer<double>& timer,
-                const T maxT) {
+                LBconverter<T> const& converter, SuperGeometry3D<T>& superGeometry, int iT, Timer<T>& timer) {
 
   OstreamManager clout(std::cout,"getResults");
-  SuperVTKwriter3D<T,DESCRIPTOR> vtkWriter("cavity3d");
+  SuperVTKwriter3D<T> vtkWriter("cavity3d");
 
   const T logT     = (T)1.;
   const T vtkSave  = (T)1.;
+
+
+
 
   if (iT==0) {
     /// Writes the converter log file
@@ -162,7 +166,7 @@ void getResults(SuperLattice3D<T,DESCRIPTOR>& sLattice,
     sLattice.getStatistics().print(iT,converter.physTime(iT));
   }
 
-  /// Writes the VTK files
+  /// Writes the VTK and GIF files
   if (iT%converter.numTimeSteps(vtkSave)==0 && iT>0) {
     SuperLatticePhysVelocity3D<T, DESCRIPTOR> velocity(sLattice, converter);
     SuperLatticePhysPressure3D<T, DESCRIPTOR> pressure(sLattice, converter);
@@ -170,6 +174,18 @@ void getResults(SuperLattice3D<T,DESCRIPTOR>& sLattice,
     vtkWriter.addFunctor( pressure );
 
     vtkWriter.write(iT);
+
+    // define vector which span the gif-plane
+    Vector<T,3> u(1,0,0);
+    Vector<T,3> v(0,1,0);
+    T tmp = T(converter.getCharL() / 2.);
+    T origin[3] = {tmp,tmp,tmp};
+
+    SuperEuklidNorm3D<T, DESCRIPTOR> normVel(velocity);
+    BlockLatticeReduction3D<T, DESCRIPTOR> planeReduction(normVel, u, v, 600, origin);
+    BlockGifWriter<T> gifWriter;
+
+    gifWriter.write(planeReduction, iT);
   }
 }
 
@@ -186,23 +202,25 @@ int main(int argc, char **argv) {
   LBconverter<T> converter(
     (int) 3,                               // dim
     (T)   1./30./N,                        // latticeL_
-    (T)   1e-1,                            // latticeU_
+    (T)   1e-1/M,                          // latticeU_
     (T)   1./1000.,                        // charNu_
     (T)   1.,                              // charL_ = 1
     (T)   1.                               // charU_ = 1
   );
-  const T maxT     = (T)30.;
 
   /// === 2nd Step: Prepare Geometry ===
 
-  /// Instantiation of a unit cube by an indicator 
+  /// Instantiation of a unit cube by an indicator
 
-  std::vector<T> origin(3,T()); std::vector<T> extend(3,converter.getCharL());
-  IndicatorCuboid3D<bool,T> cube(extend,origin);
+  std::vector<T> origin(3,T());
+  std::vector<T> extend(3,converter.getCharL());
+  IndicatorCuboid3D<T> cube(extend,origin);
 
   /// Instantiation of a cuboid geometry with weights
   int noCuboids = singleton::mpi().getSize();
-  if (noCuboids<7) noCuboids = 7;
+  if (noCuboids<7) {
+    noCuboids = 7;
+  }
   CuboidGeometry3D<T> cuboidGeometry(cube, converter.getLatticeL(), noCuboids);
 
   /// Instantiation of a load balancer
@@ -228,7 +246,7 @@ int main(int argc, char **argv) {
 
   /// === 4th Step: Main Loop with Timer ===
 
-  Timer<double> timer(converter.numTimeSteps(maxT), converter.numNodes(1)*converter.numNodes(1)*converter.numNodes(1) );
+  Timer<T> timer(converter.numTimeSteps(maxT), converter.numNodes(1)*converter.numNodes(1)*converter.numNodes(1) );
   timer.start();
   int iT;
 
@@ -241,7 +259,7 @@ int main(int argc, char **argv) {
     sLattice.collideAndStream();
 
     /// === 7th Step: Computation and Output of the Results ===
-    getResults(sLattice, converter, superGeometry, iT, timer, maxT);
+    getResults(sLattice, converter, superGeometry, iT, timer);
   }
 
   timer.stop();

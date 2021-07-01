@@ -45,14 +45,17 @@ namespace olb {
 // ========Regularized NSDiffusion Coupling 2D ====================//
 //======================================================================
 template<typename T, template<typename U> class Lattice>
-class NavierStokesAdvectionDiffusionCouplingPostProcessor2D : public LocalPostProcessor2D<T,Lattice>
-{
+class NavierStokesAdvectionDiffusionCouplingPostProcessor2D : public LocalPostProcessor2D<T,Lattice> {
 public:
   NavierStokesAdvectionDiffusionCouplingPostProcessor2D(int x0_, int x1_, int y0_, int y1_,
       T gravity_, T T0_, T deltaTemp_, std::vector<T> dir_,
       std::vector<SpatiallyExtendedObject2D* > partners_);
-  virtual int extent() const { return 0; }
-  virtual int extent(int whichDirection) const { return 0; }
+  virtual int extent() const {
+    return 0;
+  }
+  virtual int extent(int whichDirection) const {
+    return 0;
+  }
   virtual void process(BlockLattice2D<T,Lattice>& blockLattice);
   virtual void processSubDomain(BlockLattice2D<T,Lattice>& blockLattice,
                                 int x0_, int x1_, int y0_, int y1_);
@@ -65,8 +68,7 @@ private:
 };
 
 template<typename T, template<typename U> class Lattice>
-class NavierStokesAdvectionDiffusionCouplingGenerator2D : public LatticeCouplingGenerator2D<T,Lattice>
-{
+class NavierStokesAdvectionDiffusionCouplingGenerator2D : public LatticeCouplingGenerator2D<T,Lattice> {
 public:
   NavierStokesAdvectionDiffusionCouplingGenerator2D(int x0_, int x1_, int y0_, int y1_,
       T gravity_, T T0_, T deltaTemp_, std::vector<T> dir_);

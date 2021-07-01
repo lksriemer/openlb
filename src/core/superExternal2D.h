@@ -31,35 +31,37 @@
 
 #include <vector>
 #include "superLattice2D.h"
+#include "communication/superStructure2D.h"
 
 /// All OpenLB code is contained in this namespace.
 namespace olb {
 
-/// A super external field is needed to communicate values of the external field
 
 template<typename T> class Communicator2D;
+template<typename T> class SuperGeometry2D;
+template<typename T, template<typename U> class Lattice> class SuperLattice2D;
 template<typename T> class SuperStructure2D;
 
+/// A super external field is needed to communicate values of the external field
 template<typename T, template<typename U> class Lattice>
 class SuperExternal2D : public SuperStructure2D<T> {
-
 private:
   int _offset;
   int _size;
   int _overlap;
   SuperLattice2D<T, Lattice>& _sLattice;
-
 public:
   /// Construction of a super external field
-  SuperExternal2D(SuperGeometry2D<T>& superGeometry, SuperLattice2D<T, Lattice>& sLattice, int offset, int size, int overlap);
+  SuperExternal2D(SuperGeometry2D<T>& superGeometry,
+                  SuperLattice2D<T,Lattice>& sLattice,
+                  int offset, int size, int overlap);
   void communicate(bool verbose=true);
   /// Write access to the memory of the data of the super structure
-  virtual bool* operator() (int iCloc, int iX, int iY, int iData) { return (bool*)_sLattice.getExtendedBlockLattice(iCloc).get(iX+_overlap, iY+_overlap).getExternal(_offset); };
+  virtual bool* operator() (int iCloc, int iX, int iY, int iData);
   /// Read only access to the dim of the data of the super structure
-  virtual int getDataSize() const {return _size;};
+  virtual int getDataSize() const;
   /// Read only access to the data type dim of the data of the super structure
-  virtual int getDataTypeSize() const {return sizeof(T);};
-
+  virtual int getDataTypeSize() const;
 };
 
 } // namespace olb

@@ -32,7 +32,5 @@
 namespace olb {
 
 template class BlockLattice3D<double, descriptors::D3Q19Descriptor>;
-template class BlockLatticeSerializer3D<double, descriptors::D3Q19Descriptor>;
-template class BlockLatticeUnSerializer3D<double, descriptors::D3Q19Descriptor>;
 
 }  // namespace olb

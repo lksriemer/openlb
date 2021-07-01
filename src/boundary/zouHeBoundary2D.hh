@@ -183,7 +183,8 @@ ZouHeBoundaryManager2D<T,Lattice,MixinDynamics>::getInternalVelocityCornerProces
 ////////// Factory function //////////////////////////////////////////////////
 
 template<typename T, template<typename U> class Lattice, typename MixinDynamics>
-OnLatticeBoundaryCondition2D<T,Lattice>* createZouHeBoundaryCondition2D(BlockLatticeStructure2D<T,Lattice>& block) {
+OnLatticeBoundaryCondition2D<T,Lattice>* createZouHeBoundaryCondition2D(BlockLatticeStructure2D<T,Lattice>& block)
+{
   return new BoundaryConditionInstantiator2D <
          T, Lattice,
          ZouHeBoundaryManager2D<T,Lattice, MixinDynamics> > (block);

@@ -36,14 +36,14 @@
 /// All OpenLB code is contained in this namespace.
 namespace olb {
 
-/// Representation of a block geometry view  
-/** This class is derived from block geometry structure. It 
- * holds a poniter to another block geometry structure. It operates 
+/// Representation of a block geometry view
+/** This class is derived from block geometry structure. It
+ * holds a poniter to another block geometry structure. It operates
  * as a structure on a smaller intersection of teh greater structure.
- * It presents a volume of voxels where different types are 
+ * It presents a volume of voxels where different types are
  * given my material numbers which is imporant e.g. to work
  * with different boundaries (like for inflow/output regions).
- * 
+ *
  * This class is not intended to be derived from.
  */
 
@@ -54,11 +54,11 @@ template<typename T>
 class BlockGeometryView3D : public BlockGeometryStructure3D<T> {
 
 private:
-  // Points to the structure where this view class is viewing at 
+  // Points to the structure where this view class is viewing at
   BlockGeometryStructure3D<T>* _originalBlockGeometry;
-  // Offset of the data field with respect to the data of the original geometry    
+  // Offset of the data field with respect to the data of the original geometry
   int _x0, _y0, _z0;
-  // Dimension of the view cuboid 
+  // Dimension of the view cuboid
   int _nx, _ny, _nz;
 
 public:
@@ -71,13 +71,13 @@ public:
   /// Destructor
   ~BlockGeometryView3D();
 
-  /// Write access to the associated block statistic 
+  /// Write access to the associated block statistic
   BlockGeometryStatistics3D<T>& getStatistics(bool verbose=true);
   /// Read only access to the associated block statistic
   BlockGeometryStatistics3D<T> const& getStatistics(bool verbose=true) const;
 
   /// Read only access to the origin position given in SI units (meter)
-  std::vector<T> const getOrigin() const;
+  Vector<T,3> const getOrigin() const;
   /// Read only access to the voxel size given in SI units (meter)
   const T getDeltaR() const;
   /// Returns the extend (number of voxels) in X-direction
@@ -95,7 +95,7 @@ public:
   int getMaterial(int iX, int iY, int iZ) const; // TODO old
 
   /// Transforms lattice to physical coordinates (wrapped from cuboid geometry)
-  std::vector<T> getPhysR(int iX, int iY, int iZ) const;
+  void getPhysR(T physR[3], const int& iX, const int& iY, const int& iZ) const;
 
   /// Adds a pointer to the list of dependent statistic classes
   void addToStatisticsList(bool* statisticStatus);

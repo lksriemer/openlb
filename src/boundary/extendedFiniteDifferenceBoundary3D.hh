@@ -59,8 +59,7 @@ processSubDomain(BlockLattice3D<T,Lattice>& blockLattice,
   if ( util::intersect (
          x0, x1, y0, y1, z0, z1,
          x0_, x1_, y0_, y1_, z0_, z1_,
-         newX0, newX1, newY0, newY1, newZ0, newZ1 ) )
-  {
+         newX0, newX1, newY0, newY1, newZ0, newZ1 ) ) {
 
     for (int iX=newX0; iX<=newX1; ++iX) {
       for (int iY=newY0; iY<=newY1; ++iY) {
@@ -106,11 +105,9 @@ processSubDomain(BlockLattice3D<T,Lattice>& blockLattice,
           interpolateGradients<0>(blockLattice, dx_rho, iX, iY, iZ);
           interpolateGradients<1>(blockLattice, dy_rho, iX, iY, iZ);
           interpolateGradients<2>(blockLattice, dz_rho, iX, iY, iZ);
-          for (int iPop = 0; iPop < L::q; ++iPop)
-          {
+          for (int iPop = 0; iPop < L::q; ++iPop) {
             T cGradRhoUU = T();
-            for (int iAlpha=0; iAlpha < L::d; ++iAlpha)
-            {
+            for (int iAlpha=0; iAlpha < L::d; ++iAlpha) {
               cGradRhoUU += L::c[iPop][iAlpha] * (
                               dx_rho*u[iAlpha]*u[x] +
                               dx_U[iAlpha]*rho*u[x] +
@@ -126,10 +123,8 @@ processSubDomain(BlockLattice3D<T,Lattice>& blockLattice,
             // then we compute the term
             // c_{i\gamma}\nabla_{\gamma}(\rho*u_\alpha * u_\beta)
             T cDivRhoUU[L::d][L::d]; //first step towards QcdivRhoUU
-            for (int iAlpha = 0; iAlpha < L::d; ++iAlpha)
-            {
-              for (int iBeta = 0; iBeta < L::d; ++iBeta)
-              {
+            for (int iAlpha = 0; iAlpha < L::d; ++iAlpha) {
+              for (int iBeta = 0; iBeta < L::d; ++iBeta) {
                 cDivRhoUU[iAlpha][iBeta] = L::c[iPop][x]*
                                            (dx_rho*u[iAlpha]*u[iBeta] +
                                             dx_U[iAlpha]*rho*u[iBeta] +
