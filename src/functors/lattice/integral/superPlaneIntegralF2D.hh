@@ -75,8 +75,8 @@ SuperPlaneIntegralF2D<T>::SuperPlaneIntegralF2D(
 {
   this->getName() = "SuperPlaneIntegralF2D";
 
-  _normal.normalize();
-  _u.normalize();
+  _normal = normalize(_normal);
+  _u = normalize(_u);
 
   for ( const std::tuple<int,int>& pos : _reductionF.getRankLocalSubplane() ) {
     const int& i  = std::get<0>(pos);

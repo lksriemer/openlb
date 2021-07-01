@@ -35,9 +35,9 @@ namespace olb {
 
 template<typename T, typename DESCRIPTOR>
 SmagorinskyPorousParticleBGKdynamics<T,DESCRIPTOR>::SmagorinskyPorousParticleBGKdynamics(T omega_,
-    Momenta<T,DESCRIPTOR>& momenta_, T smagoConst_, T dx_, T dt_ )
-  : PorousParticleBGKdynamics<T,DESCRIPTOR>(omega_,momenta_), smagoConst(smagoConst_),
-    preFactor(computePreFactor(omega_,smagoConst_) )
+    Momenta<T,DESCRIPTOR>& momenta_, T smagoConst_)
+  : SmagorinskyDynamics<T,DESCRIPTOR>(smagoConst_),
+    PorousParticleBGKdynamics<T,DESCRIPTOR>(omega_,momenta_)
 { }
 
 template<typename T, typename DESCRIPTOR>
@@ -45,73 +45,39 @@ void SmagorinskyPorousParticleBGKdynamics<T,DESCRIPTOR>::collide (
   Cell<T,DESCRIPTOR>& cell,
   LatticeStatistics<T>& statistics )
 {
-  T rho, u[DESCRIPTOR::d], pi[util::TensorVal<DESCRIPTOR >::n];
-  this->_momenta.computeAllMomenta(cell, rho, u, pi);
-/*
-  T* porosity = cell.template getFieldPointer<descriptors::POROSITY>();
-  for (int i=0; i<DESCRIPTOR::d; i++)  {
-    u[i] *= porosity[0];
-  }
-*/
-  T* velDenominator = cell.template getFieldPointer<descriptors::VELOCITY_DENOMINATOR>();
-  T* velNumerator = cell.template getFieldPointer<descriptors::VELOCITY_NUMERATOR>();
-  T* porosity = cell.template getFieldPointer<descriptors::POROSITY>();
-  if (*velDenominator > std::numeric_limits<T>::epsilon()) {
-    *porosity = 1.-*porosity; // 1-prod(1-smoothInd)
-    for (int i=0; i < DESCRIPTOR::d; i++)  {
-      u[i] += *porosity * (*(velNumerator+i) / *velDenominator - u[i]);
-    }
-  }
-  T newOmega = computeOmega(this->getOmega(), preFactor, rho, pi);
-  T uSqr = lbHelpers<T,DESCRIPTOR>::bgkCollision(cell, rho, u, newOmega);
+  T newOmega = computeEffectiveOmega(cell);
+  T rho, u[DESCRIPTOR::d];
+  this->_momenta.computeRhoU(cell, rho, u);
+  T uSqr = this->porousParticleBgkCollision(cell, rho, u, newOmega);
   statistics.incrementStats(rho, uSqr);
-
-  cell.template defineField<descriptors::POROSITY>(1.0);
-  cell.template defineField<descriptors::VELOCITY_DENOMINATOR>(0.0);
-  cell.template defineField<descriptors::VELOCITY_NUMERATOR>(0.0);
 }
 
 template<typename T, typename DESCRIPTOR>
-void SmagorinskyPorousParticleBGKdynamics<T,DESCRIPTOR>::setOmega(T omega_)
+T SmagorinskyPorousParticleBGKdynamics<T,DESCRIPTOR>::getEffectiveOmega(Cell<T,DESCRIPTOR>& cell)
 {
-  PorousParticleBGKdynamics<T,DESCRIPTOR>::setOmega(omega_);
-  preFactor = computePreFactor(omega_, smagoConst);
-}
-
-template<typename T, typename DESCRIPTOR>
-T SmagorinskyPorousParticleBGKdynamics<T,DESCRIPTOR>::getSmagorinskyOmega(Cell<T,DESCRIPTOR>& cell )
-{
-  T rho, uTemp[DESCRIPTOR::d], pi[util::TensorVal<DESCRIPTOR >::n];
-  this->_momenta.computeAllMomenta(cell, rho, uTemp, pi);
-  T newOmega = computeOmega(this->getOmega(), preFactor, rho, pi);
+  T newOmega = computeEffectiveOmega(cell);
   return newOmega;
 }
 
 template<typename T, typename DESCRIPTOR>
-T SmagorinskyPorousParticleBGKdynamics<T,DESCRIPTOR>::computePreFactor(T omega_, T smagoConst_)
+T SmagorinskyPorousParticleBGKdynamics<T,DESCRIPTOR>::computeEffectiveOmega(Cell<T,DESCRIPTOR>& cell)
 {
-  return (T)smagoConst_*smagoConst_*descriptors::invCs2<T,DESCRIPTOR>()*descriptors::invCs2<T,DESCRIPTOR>()*2*sqrt(2);
-}
-
-
-
-template<typename T, typename DESCRIPTOR>
-T SmagorinskyPorousParticleBGKdynamics<T,DESCRIPTOR>::computeOmega(T omega0, T preFactor_, T rho,
-    T pi[util::TensorVal<DESCRIPTOR >::n] )
-{
+  T rho, u[DESCRIPTOR::d], pi[util::TensorVal<DESCRIPTOR >::n];
+  this->_momenta.computeAllMomenta(cell, rho, u, pi);
   T PiNeqNormSqr = pi[0]*pi[0] + 2.0*pi[1]*pi[1] + pi[2]*pi[2];
   if (util::TensorVal<DESCRIPTOR >::n == 6) {
     PiNeqNormSqr += pi[2]*pi[2] + pi[3]*pi[3] + 2*pi[4]*pi[4] +pi[5]*pi[5];
   }
   T PiNeqNorm    = sqrt(PiNeqNormSqr);
   /// Molecular realaxation time
-  T tau_mol = 1. /omega0;
+  T tau_mol = 1. /this->getOmega();
   /// Turbulent realaxation time
-  T tau_turb = 0.5*(sqrt(tau_mol*tau_mol + preFactor_/rho*PiNeqNorm) - tau_mol);
+  T tau_turb = 0.5*(sqrt(tau_mol*tau_mol + this->getPreFactor()/rho*PiNeqNorm) - tau_mol);
   /// Effective realaxation time
-  tau_eff = tau_mol+tau_turb;
+  T tau_eff = tau_mol+tau_turb;
   T omega_new= 1./tau_eff;
   return omega_new;
+
 }
 
 } // olb

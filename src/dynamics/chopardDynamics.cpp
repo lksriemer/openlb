@@ -29,7 +29,7 @@
 #include "chopardDynamics.h"
 #include "chopardDynamics.hh"
 #include "latticeDescriptors.h"
- 
+
 
 namespace olb {
 

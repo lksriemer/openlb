@@ -29,7 +29,7 @@
 #ifndef LB_GUOZHAO_HELPERS_H
 #define LB_GUOZHAO_HELPERS_H
 
-#include "dynamics/guoZhaoLatticeDescriptors.h"
+#include "dynamics/descriptorAlias.h"
 #include "core/cell.h"
 #include "core/util.h"
 
@@ -38,7 +38,7 @@ namespace olb {
 
 
 // Forward declarations
-template<typename T, typename DESCRIPTORBASE> struct GuoZhaoLbDynamicsHelpers;
+template<typename T, typename DESCRIPTOR> struct GuoZhaoLbDynamicsHelpers;
 template<typename T, typename DESCRIPTOR> struct GuoZhaoLbExternalHelpers;
 
 /// This structure forwards the calls to the appropriate Guo Zhao helper class
@@ -46,12 +46,12 @@ template<typename T, typename DESCRIPTOR>
 struct GuoZhaoLbHelpers {
 
   static T equilibrium(int iPop, T epsilon, T rho, const T u[DESCRIPTOR::d], const T uSqr) {
-    return GuoZhaoLbDynamicsHelpers<T,typename DESCRIPTOR::BaseDescriptor>
+    return GuoZhaoLbDynamicsHelpers<T,DESCRIPTOR>
            ::equilibrium(iPop, epsilon, rho, u, uSqr);
   }
 
   static T bgkCollision(Cell<T,DESCRIPTOR>& cell, T const& epsilon, T const& rho, const T u[DESCRIPTOR::d], T const& omega) {
-    return GuoZhaoLbDynamicsHelpers<T,typename DESCRIPTOR::BaseDescriptor>
+    return GuoZhaoLbDynamicsHelpers<T,DESCRIPTOR>
            ::bgkCollision(cell, epsilon, rho, u, omega);
   }
 
@@ -68,32 +68,32 @@ struct GuoZhaoLbHelpers {
 
 
 /// All Guo Zhao helper functions are inside this structure
-template<typename T, typename DESCRIPTORBASE>
+template<typename T, typename DESCRIPTOR>
 struct GuoZhaoLbDynamicsHelpers {
 
   /// Computation of Guo Zhao equilibrium distribution - original (compressible) formulation following Guo and Zhao (2002).
-  static T forceEquilibrium(int iPop, T epsilon, T rho, const T u[DESCRIPTORBASE::d], const T force[DESCRIPTORBASE::d], T nu) {
+  static T forceEquilibrium(int iPop, T epsilon, T rho, const T u[DESCRIPTOR::d], const T force[DESCRIPTOR::d], T nu) {
   }
 
   /// Computation of Guo Zhao equilibrium distribution - original (compressible) formulation following Guo and Zhao (2002).
-  static T equilibrium(int iPop, T epsilon, T rho, const T u[DESCRIPTORBASE::d], const T uSqr) {
+  static T equilibrium(int iPop, T epsilon, T rho, const T u[DESCRIPTOR::d], const T uSqr) {
     T c_u = T();
-    for (int iD=0; iD < DESCRIPTORBASE::d; ++iD) {
-      c_u += descriptors::c<DESCRIPTORBASE>(iPop,iD)*u[iD];
+    for (int iD=0; iD < DESCRIPTOR::d; ++iD) {
+      c_u += descriptors::c<DESCRIPTOR>(iPop,iD)*u[iD];
     }
-    return rho * descriptors::t<T,DESCRIPTORBASE>(iPop) * (
-             (T)1 + descriptors::invCs2<T,DESCRIPTORBASE>() * c_u +
-             descriptors::invCs2<T,DESCRIPTORBASE>() * descriptors::invCs2<T,DESCRIPTORBASE>()/((T)2*epsilon) * c_u*c_u -
-             descriptors::invCs2<T,DESCRIPTORBASE>()/((T)2*epsilon) * uSqr
-           ) - descriptors::t<T,DESCRIPTORBASE>(iPop);
+    return rho * descriptors::t<T,DESCRIPTOR>(iPop) * (
+             (T)1 + descriptors::invCs2<T,DESCRIPTOR>() * c_u +
+             descriptors::invCs2<T,DESCRIPTOR>() * descriptors::invCs2<T,DESCRIPTOR>()/((T)2*epsilon) * c_u*c_u -
+             descriptors::invCs2<T,DESCRIPTOR>()/((T)2*epsilon) * uSqr
+           ) - descriptors::t<T,DESCRIPTOR>(iPop);
   }
 
   /// Guo Zhao BGK collision step
-  static T bgkCollision(CellBase<T,DESCRIPTORBASE>& cell, T const& epsilon, T const& rho, const T u[DESCRIPTORBASE::d], T const& omega) {
-    const T uSqr = util::normSqr<T,DESCRIPTORBASE::d>(u);
-    for (int iPop=0; iPop < DESCRIPTORBASE::q; ++iPop) {
+  static T bgkCollision(Cell<T,DESCRIPTOR>& cell, T const& epsilon, T const& rho, const T u[DESCRIPTOR::d], T const& omega) {
+    const T uSqr = util::normSqr<T,DESCRIPTOR::d>(u);
+    for (int iPop=0; iPop < DESCRIPTOR::q; ++iPop) {
       cell[iPop] *= (T)1-omega;
-      cell[iPop] += omega * GuoZhaoLbDynamicsHelpers<T,DESCRIPTORBASE>::equilibrium (
+      cell[iPop] += omega * GuoZhaoLbDynamicsHelpers<T,DESCRIPTOR>::equilibrium (
                       iPop, epsilon, rho, u, uSqr );
     }
     return uSqr;
@@ -106,38 +106,26 @@ template<typename T, typename DESCRIPTOR>
 /// Updates Guo Zhao porous force
 struct GuoZhaoLbExternalHelpers {
   static void updateGuoZhaoForce(Cell<T,DESCRIPTOR>& cell, const T u[DESCRIPTOR::d]) {
-    T epsilon = *cell.template getFieldPointer<descriptors::EPSILON>();
-    T k       = *cell.template getFieldPointer<descriptors::K>();
-    T nu      = *cell.template getFieldPointer<descriptors::NU>();
+    const T epsilon = cell.template getField<descriptors::EPSILON>();
+    const T k       = cell.template getField<descriptors::K>();
+    const T nu      = cell.template getField<descriptors::NU>();
+    auto bodyF      = cell.template getField<descriptors::BODY_FORCE>();
 
-    T* force[DESCRIPTOR::d];
-    for (int iDim=0; iDim <DESCRIPTOR::d; iDim++) {
-      force[iDim] = cell.template getFieldPointer<descriptors::FORCE>() + iDim;
-    }
+    auto force = cell.template getFieldPointer<descriptors::FORCE>();
 
-    T bodyF[DESCRIPTOR::d];
-    for (int iDim=0; iDim <DESCRIPTOR::d; iDim++) {
-      bodyF[iDim] = cell.template getFieldPointer<descriptors::BODY_FORCE>()[iDim];
-    }
-
-    T uMag = 0.;
-    for (int iDim=0; iDim <DESCRIPTOR::d; iDim++) {
-      uMag += u[iDim]*u[iDim];
-    }
-    uMag = sqrt(uMag);
-
-    T Fe = 0.; //1.75/sqrt(150.*pow(epsilon,3));
+    const T uMag = sqrt( util::normSqr<T,DESCRIPTOR::d>(u) );
+    const T Fe = 0;//1.75/sqrt(150.*pow(epsilon,3));
 
     // Linear Darcy term, nonlinear Forchheimer term and body force
     for (int iDim=0; iDim <DESCRIPTOR::d; iDim++) {
-      *force[iDim] = -u[iDim]*epsilon*nu/k - epsilon*Fe/sqrt(k)*uMag*u[iDim] + bodyF[iDim]*epsilon;
+      force[iDim] = -u[iDim]*epsilon*nu/k - epsilon*Fe/sqrt(k)*uMag*u[iDim] + bodyF[iDim]*epsilon;
     }
   }
 
   /// Add a force term scaled by physical porosity epsilon after BGK collision
   static void addExternalForce(Cell<T,DESCRIPTOR>& cell, const T u[DESCRIPTOR::d], T omega, T rho, T epsilon)
   {
-    T* force = cell.template getFieldPointer<descriptors::FORCE>();
+    auto force = cell.template getFieldPointer<descriptors::FORCE>();
     for (int iPop=0; iPop < DESCRIPTOR::q; ++iPop) {
       T c_u = T();
       for (int iD=0; iD < DESCRIPTOR::d; ++iD) {

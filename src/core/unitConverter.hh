@@ -36,7 +36,7 @@
 namespace olb {
 
 template <typename T, typename DESCRIPTOR>
-void UnitConverter<T, DESCRIPTOR>::print() const
+void UnitConverter<T, DESCRIPTOR>::print(std::ostream& clout) const
 {
   clout << "----------------- UnitConverter information -----------------" << std::endl;
   clout << "-- Parameters:" << std::endl;
@@ -68,6 +68,12 @@ void UnitConverter<T, DESCRIPTOR>::print() const
 
 }
 
+template <typename T, class DESCRIPTOR>
+void UnitConverter<T, DESCRIPTOR>::print() const
+{
+  print(clout);
+}
+
 template <typename T, typename DESCRIPTOR>
 void UnitConverter<T, DESCRIPTOR>::write(std::string const& fileName) const
 {
@@ -75,38 +81,13 @@ void UnitConverter<T, DESCRIPTOR>::write(std::string const& fileName) const
 
   if (singleton::mpi().isMainProcessor())
   {
-    std::ofstream fout;
-    fout.open(dataFile.c_str(), std::ios::trunc);
-
-    fout << "UnitConverter information\n\n";
-    fout << "----------------- UnitConverter information -----------------\n";
-    fout << "-- Parameters:" << std::endl;
-    fout << "Resolution:                       N=              " << getResolution()                << "\n";
-    fout << "Lattice velocity:                 latticeU=       " << getCharLatticeVelocity()       << "\n";
-    fout << "Lattice relaxation frequency:     omega=          " << getLatticeRelaxationFrequency(  ) << std::endl;
-    fout << "Lattice relaxation time:          tau=            " << getLatticeRelaxationTime()     << "\n";
-    fout << "Characteristical length(m):       charL=          " << getCharPhysLength()            << "\n";
-    fout << "Characteristical speed(m/s):      charU=          " << getCharPhysVelocity()          << "\n";
-    fout << "Phys. kinematic viscosity(m^2/s): charNu=         " << getPhysViscosity()             << "\n";
-    fout << "Phys. density(kg/m^d):            charRho=        " << getPhysDensity()               << "\n";
-    fout << "Characteristical pressure(N/m^2): charPressure=   " << getCharPhysPressure()          << "\n";
-    fout << "Mach number:                      machNumber=     " << getMachNumber()                << "\n";
-    fout << "Reynolds number:                  reynoldsNumber= " << getReynoldsNumber()            << "\n";
-    fout << "Knudsen number:                   knudsenNumber=  " << getKnudsenNumber()             << std::endl;
-    fout << "\n";
-    fout << "-- Conversion factors:"                                                               << "\n";
-    fout << "Voxel length(m):                  physDeltaX=     " << getConversionFactorLength() << std::endl;
-    fout << "Time step(s):                     physDeltaT=     " << getConversionFactorTime()      << "\n";
-    fout << "Velocity factor(m/s):             physVelocity=   " << getConversionFactorVelocity()  << "\n";
-    fout << "Density factor(kg/m^3):           physDensity=    " << getConversionFactorDensity()   << "\n";
-    fout << "Mass factor(kg):                  physMass=       " << getConversionFactorMass()      << "\n";
-    fout << "Viscosity factor(m^2/s):          physViscosity=  " << getConversionFactorViscosity() << "\n";
-    fout << "Force factor(N):                  physForce=      " << getConversionFactorForce()     << "\n";
-    fout << "Pressure factor(N/m^2):           physPressure=   " << getConversionFactorPressure()  << "\n";
-
-    fout << "-------------------------------------------------------------" << "\n";
-
-    fout.close();
+    std::ofstream fout(dataFile.c_str(), std::ios::trunc);
+    if(!fout) {
+      clout << "error write() function: can not open std::ofstream" << std::endl;
+    } else {
+      print( fout );
+      fout.close();
+    }
   }
 }
 

@@ -29,9 +29,9 @@
 #include "communication/mpiManager.h"
 #include "superLattice2D.h"
 #include "superLattice2D.hh"
+#include "communication/blockPropagation.hh"
+#include "communication/superPropagation.hh"
 #include "dynamics/latticeDescriptors.h"
- 
-
 
 namespace olb {
 

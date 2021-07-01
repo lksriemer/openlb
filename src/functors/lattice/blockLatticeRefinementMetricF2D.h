@@ -28,7 +28,6 @@
 #include "core/blockLattice2D.h"
 #include "core/blockLatticeStructure2D.h"
 
-
 namespace olb {
 
 
@@ -48,7 +47,7 @@ public:
   BlockLatticeRefinementMetricKnudsen2D(
     BlockLatticeStructure2D<T, DESCRIPTOR>& blockLattice,
     const UnitConverter<T, DESCRIPTOR>&     converter);
-
+  
   bool operator() (T output[]);
   bool operator() (T output[], const int input[]) override;
 };

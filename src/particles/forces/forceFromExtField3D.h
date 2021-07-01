@@ -23,7 +23,6 @@
 #ifndef ForceFromExtField3D_H
 #define ForceFromExtField3D_H
 
-#include "functors/lattice/superLatticeLocalF3D.h"
 #include "particles/particleSystem3D.h"
 #include "force3D.h"
 

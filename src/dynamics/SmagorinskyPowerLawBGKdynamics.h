@@ -43,12 +43,10 @@ public:
   /// m,n...parameter in the power law model
   SmagorinskyPowerLawBGKdynamics(T omega, Momenta<T,DESCRIPTOR>& momenta, T m=0.1, T n=.5, T nuMin=T(2.9686e-3), T nuMax=T(3.1667), T smagoConst=T(0.14));
   /// Collision step
-  virtual void collide(Cell<T,DESCRIPTOR>& cell, LatticeStatistics<T>& statistics) override;
+  void collide(Cell<T,DESCRIPTOR>& cell, LatticeStatistics<T>& statistics) override;
+protected:
   /// Computes the local smagorinsky relaxation parameter with omega0 as an input
   virtual T computeEffectiveOmega(Cell<T,DESCRIPTOR>& cell, T omega0);
-protected:
-  /// Computes squared norm of non-equilibrium part of 2nd momentum (for power-law)
-  virtual T PiNeqNormSqr(Cell<T,DESCRIPTOR>& cell ) override;
 };
 
 /// Implementation of the ForcedBGK collision step
@@ -59,13 +57,11 @@ public:
   /// m,n...parameter in the power law model
   SmagorinskyPowerLawForcedBGKdynamics(T omega, Momenta<T,DESCRIPTOR>& momenta, T m=0.1, T n=.5, T nuMin=T(2.9686e-3), T nuMax=T(3.1667), T smagoConst=T(0.14));
   /// Collision step
-  virtual void collide(Cell<T,DESCRIPTOR>& cell, LatticeStatistics<T>& statistics) override;
+  void collide(Cell<T,DESCRIPTOR>& cell, LatticeStatistics<T>& statistics) override;
 
 protected:
   /// Computes the local smagorinsky relaxation parameter with omega0 as an input
   virtual T computeEffectiveOmega(Cell<T,DESCRIPTOR>& cell, T omega0);
-  /// Computes squared norm of non-equilibrium part of 2nd momentum (for power-law)
-  virtual T PiNeqNormSqr(Cell<T,DESCRIPTOR>& cell ) override;
 };
 
 }

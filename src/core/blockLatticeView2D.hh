@@ -87,22 +87,33 @@ void BlockLatticeView2D<T,DESCRIPTOR>::swap (
 }
 
 template<typename T, typename DESCRIPTOR>
-Cell<T,DESCRIPTOR>& BlockLatticeView2D<T,DESCRIPTOR>::get(int iX, int iY)
+Cell<T,DESCRIPTOR> BlockLatticeView2D<T,DESCRIPTOR>::get(int iX, int iY)
 {
   return originalLattice->get(iX+x0, iY+y0);
 }
 
 template<typename T, typename DESCRIPTOR>
-Cell<T,DESCRIPTOR>& BlockLatticeView2D<T,DESCRIPTOR>::get(int latticeR[])
+Cell<T,DESCRIPTOR> BlockLatticeView2D<T,DESCRIPTOR>::get(int latticeR[])
 {
   return get(latticeR[0], latticeR[1]);
 }
 
 template<typename T, typename DESCRIPTOR>
-Cell<T,DESCRIPTOR> const& BlockLatticeView2D<T,DESCRIPTOR>::get (
-  int iX, int iY ) const
+ConstCell<T,DESCRIPTOR> BlockLatticeView2D<T,DESCRIPTOR>::get(int iX, int iY) const
 {
   return originalLattice->get(iX+x0, iY+y0);
+}
+
+template<typename T, typename DESCRIPTOR>
+T& BlockLatticeView2D<T,DESCRIPTOR>::getPop(std::size_t iCell, unsigned iPop)
+{
+  return originalLattice->getPop(iCell, iPop);
+}
+
+template<typename T, typename DESCRIPTOR>
+T& BlockLatticeView2D<T,DESCRIPTOR>::getPop(int iX, int iY, unsigned iPop)
+{
+  return originalLattice->getPop(iX+x0, iY+y0, iPop);
 }
 
 template<typename T, typename DESCRIPTOR>
@@ -145,37 +156,22 @@ void BlockLatticeView2D<T,DESCRIPTOR>::collide (
 }
 
 template<typename T, typename DESCRIPTOR>
+void BlockLatticeView2D<T,DESCRIPTOR>::collideAndStream(
+  int x0_, int x1_, int y0_, int y1_)
+{
+  originalLattice->collideAndStream(x0_, x1_, y0_, y1_);
+}
+
+template<typename T, typename DESCRIPTOR>
 void BlockLatticeView2D<T,DESCRIPTOR>::collide()
 {
   originalLattice->collide( x0, x0+this->_nx-1, y0, y0+this->_ny-1);
 }
 
 template<typename T, typename DESCRIPTOR>
-void BlockLatticeView2D<T,DESCRIPTOR>::stream(int x0_, int x1_, int y0_, int y1_)
+void BlockLatticeView2D<T,DESCRIPTOR>::collideAndStream()
 {
-  originalLattice->stream(x0_+x0, x1_+x0, y0_+y0, y1_+y0);
-}
-
-template<typename T, typename DESCRIPTOR>
-void BlockLatticeView2D<T,DESCRIPTOR>::stream(bool periodic)
-{
-  OLB_PRECONDITION(!periodic);
-  originalLattice->stream( x0, x0+this->_nx-1, y0, y0+this->_ny-1);
-  postProcess();
-}
-
-template<typename T, typename DESCRIPTOR>
-void BlockLatticeView2D<T,DESCRIPTOR>::collideAndStream(int x0_, int x1_, int y0_, int y1_)
-{
-  originalLattice->collideAndStream(x0_+x0, x1_+x0, y0_+y0, y1_+y0);
-}
-
-template<typename T, typename DESCRIPTOR>
-void BlockLatticeView2D<T,DESCRIPTOR>::collideAndStream(bool periodic)
-{
-  OLB_PRECONDITION(!periodic);
   originalLattice->collideAndStream( x0, x0+this->_nx-1, y0, y0+this->_ny-1);
-  postProcess();
 }
 
 template<typename T, typename DESCRIPTOR>

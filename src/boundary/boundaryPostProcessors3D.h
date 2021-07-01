@@ -52,7 +52,7 @@ public:
   }
   void process(BlockLattice3D<T,DESCRIPTOR>& blockLattice) override;
   void processSubDomain(BlockLattice3D<T,DESCRIPTOR>& blockLattice,
-                                int x0_, int x1_, int y0_, int y1_, int z0_, int z1_ ) override;
+                        int x0_, int x1_, int y0_, int y1_, int z0_, int z1_ ) override;
 private:
   template<int deriveDirection>
   void interpolateGradients (
@@ -89,7 +89,7 @@ public:
   }
   void process(BlockLattice3D<T,DESCRIPTOR>& blockLattice) override;
   void processSubDomain ( BlockLattice3D<T,DESCRIPTOR>& blockLattice,
-                                  int x0_, int x1_, int y0_, int y1_ , int z0_, int z1_) override;
+                          int x0_, int x1_, int y0_, int y1_, int z0_, int z1_) override;
 private:
   int x0, x1, y0, y1, z0, z1;
   T**** saveCell;
@@ -129,11 +129,15 @@ public:
   }
   void process(BlockLattice3D<T,DESCRIPTOR>& blockLattice) override;
   void processSubDomain(BlockLattice3D<T,DESCRIPTOR>& blockLattice,
-                                int x0_, int x1_, int y0_, int y1_,
-                                int z0_, int z1_ ) override;
+                        int x0_, int x1_, int y0_, int y1_,
+                        int z0_, int z1_ ) override;
 private:
   T getNeighborRho(int x, int y, int z, int step1, int step2,
                    BlockLattice3D<T,DESCRIPTOR> const& blockLattice);
+  template<int deriveDirection, int orientation>
+  bool canInterpolateGradients (
+    BlockLattice3D<T,DESCRIPTOR> const& blockLattice,
+    int iX, int iY, int iZ ) const;
   template<int deriveDirection, int orientation>
   void interpolateGradients (
     BlockLattice3D<T,DESCRIPTOR> const& blockLattice,
@@ -169,8 +173,8 @@ public:
   }
   void process(BlockLattice3D<T,DESCRIPTOR>& blockLattice) override;
   void processSubDomain(BlockLattice3D<T,DESCRIPTOR>& blockLattice,
-                                int x0_, int x1_, int y0_, int y1_,
-                                int z0_, int z1_ ) override;
+                        int x0_, int x1_, int y0_, int y1_,
+                        int z0_, int z1_ ) override;
 private:
   int x,y,z;
 };
@@ -203,7 +207,7 @@ public:
   }
   void process(BlockLattice3D<T,DESCRIPTOR>& blockLattice) override;
   void processSubDomain ( BlockLattice3D<T,DESCRIPTOR>& blockLattice,
-                                  int x0_, int x1_, int y0_, int y1_, int z0_, int z1_ ) override;
+                          int x0_, int x1_, int y0_, int y1_, int z0_, int z1_ ) override;
 private:
   int reflectionPop[DESCRIPTOR::q];
   int x0, x1, y0, y1, z0, z1;
@@ -240,7 +244,7 @@ public:
   }
   void process(BlockLattice3D<T,DESCRIPTOR>& blockLattice) override;
   void processSubDomain ( BlockLattice3D<T,DESCRIPTOR>& blockLattice,
-                                  int x0_, int x1_, int y0_, int y1_, int z0_, int z1_ ) override;
+                          int x0_, int x1_, int y0_, int y1_, int z0_, int z1_ ) override;
 private:
   int reflectionPop[DESCRIPTOR::q];
   int x0, x1, y0, y1, z0, z1;
@@ -261,15 +265,15 @@ private:
   T tuner;
 };
 
-/// PostProcessor for the wetting boundary condition in the free energy model. This is 
-/// required to set rho on the boundary (using the denisty of the neighbouring cell in 
-/// direction of inwards facing normal at the boundary), as the coupling between the 
+/// PostProcessor for the wetting boundary condition in the free energy model. This is
+/// required to set rho on the boundary (using the denisty of the neighbouring cell in
+/// direction of inwards facing normal at the boundary), as the coupling between the
 /// lattices requires the calculation of a density gradient.
 template<typename T, typename DESCRIPTOR>
 class FreeEnergyWallProcessor3D : public LocalPostProcessor3D<T, DESCRIPTOR> {
 public:
   FreeEnergyWallProcessor3D(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_,
-          int discreteNormalX_, int discreteNormalY_, int discreteNormalZ_, T addend_);
+                            int discreteNormalX_, int discreteNormalY_, int discreteNormalZ_, T addend_);
   int extent() const override
   {
     return 2;
@@ -292,7 +296,7 @@ template<typename T, typename DESCRIPTOR>
 class FreeEnergyWallProcessorGenerator3D : public PostProcessorGenerator3D<T, DESCRIPTOR> {
 public:
   FreeEnergyWallProcessorGenerator3D(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_,
-          int discreteNormalX_, int discreteNormalY_, int discreteNormalZ_, T addend_);
+                                     int discreteNormalX_, int discreteNormalY_, int discreteNormalZ_, T addend_);
   PostProcessor3D<T,DESCRIPTOR>* generate() const override;
   PostProcessorGenerator3D<T,DESCRIPTOR>*  clone() const override;
 private:
@@ -305,7 +309,7 @@ private:
 
 /// PostProcessor for the chemical potential boundary condition in the free energy model.
 /// The chemical potentials on the boundary are set equal to the chemical potential on the
-/// fluid cell normal to the boundary. This is necessary because the coupling between the 
+/// fluid cell normal to the boundary. This is necessary because the coupling between the
 /// lattices requires the calculation of the gradient of the chemical potential.
 ///
 /// It would be preferable if this were implemented as a lattice coupling that ran
@@ -315,7 +319,7 @@ template<typename T, typename DESCRIPTOR>
 class FreeEnergyChemPotBoundaryProcessor3D : public LocalPostProcessor3D<T, DESCRIPTOR> {
 public:
   FreeEnergyChemPotBoundaryProcessor3D(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_,
-          int discreteNormalX_, int discreteNormalY_, int discreteNormalZ_, int latticeNumber_);
+                                       int discreteNormalX_, int discreteNormalY_, int discreteNormalZ_, int latticeNumber_);
   int extent() const override
   {
     return 2;
@@ -338,7 +342,7 @@ template<typename T, typename DESCRIPTOR>
 class FreeEnergyChemPotBoundaryProcessorGenerator3D : public PostProcessorGenerator3D<T, DESCRIPTOR> {
 public:
   FreeEnergyChemPotBoundaryProcessorGenerator3D(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_,
-          int discreteNormalX_, int discreteNormalY_, int discreteNormalZ_, int latticeNumber_);
+      int discreteNormalX_, int discreteNormalY_, int discreteNormalZ_, int latticeNumber_);
   PostProcessor3D<T,DESCRIPTOR>* generate() const override;
   PostProcessorGenerator3D<T,DESCRIPTOR>*  clone() const override;
 private:
@@ -356,7 +360,7 @@ template<typename T, typename DESCRIPTOR>
 class FreeEnergyConvectiveProcessor3D : public LocalPostProcessor3D<T, DESCRIPTOR> {
 public:
   FreeEnergyConvectiveProcessor3D(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_,
-          int discreteNormalX_, int discreteNormalY_, int discreteNormalZ_);
+                                  int discreteNormalX_, int discreteNormalY_, int discreteNormalZ_);
   int extent() const override
   {
     return 2;
@@ -378,7 +382,7 @@ template<typename T, typename DESCRIPTOR>
 class FreeEnergyConvectiveProcessorGenerator3D : public PostProcessorGenerator3D<T, DESCRIPTOR> {
 public:
   FreeEnergyConvectiveProcessorGenerator3D(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_,
-          int discreteNormalX_, int discreteNormalY_, int discreteNormalZ_);
+      int discreteNormalX_, int discreteNormalY_, int discreteNormalZ_);
   PostProcessor3D<T,DESCRIPTOR>* generate() const override;
   PostProcessorGenerator3D<T,DESCRIPTOR>*  clone() const override;
 private:

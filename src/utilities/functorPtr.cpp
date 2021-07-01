@@ -31,17 +31,17 @@
 
 namespace olb {
 
-template class FunctorPtr<AnalyticalF1D<double,double>>;
-template class FunctorPtr<AnalyticalF1D<double,int>>;
-template class FunctorPtr<AnalyticalF1D<bool,double>>;
+template class FunctorPtr<AnalyticalF<1,double,double>>;
+template class FunctorPtr<AnalyticalF<2,double,double>>;
+template class FunctorPtr<AnalyticalF<3,double,double>>;
 
-template class FunctorPtr<AnalyticalF2D<double,double>>;
-template class FunctorPtr<AnalyticalF2D<double,int>>;
-template class FunctorPtr<AnalyticalF2D<bool,double>>;
+template class FunctorPtr<AnalyticalF<1,double,int>>;
+template class FunctorPtr<AnalyticalF<2,double,int>>;
+template class FunctorPtr<AnalyticalF<3,double,int>>;
 
-template class FunctorPtr<AnalyticalF3D<double,double>>;
-template class FunctorPtr<AnalyticalF3D<double,int>>;
-template class FunctorPtr<AnalyticalF3D<bool,double>>;
+template class FunctorPtr<AnalyticalF<1,bool,double>>;
+template class FunctorPtr<AnalyticalF<2,bool,double>>;
+template class FunctorPtr<AnalyticalF<3,bool,double>>;
 
 template class FunctorPtr<SuperF2D<double>>;
 template class FunctorPtr<SuperF2D<double,int>>;

@@ -46,9 +46,13 @@ public:
   (BlockLatticeView3D<T,DESCRIPTOR> const& rhs);
   void swap(BlockLatticeView3D<T,DESCRIPTOR>& rhs);
 
-  Cell<T,DESCRIPTOR>& get(int iX, int iY, int iZ) override;
-  Cell<T,DESCRIPTOR>& get(const int latticeR[]) override;
-  Cell<T,DESCRIPTOR> const& get(int iX, int iY, int iZ) const override;
+  Cell<T,DESCRIPTOR> get(int iX, int iY, int iZ) override;
+  Cell<T,DESCRIPTOR> get(const int latticeR[]) override;
+
+  T& getPop(std::size_t iCell, unsigned iPop) override;
+  T& getPop(int iX, int iY, int iZ, unsigned iPop) override;
+
+  ConstCell<T,DESCRIPTOR> get(int iX, int iY, int iZ) const override;
   void initialize() override;
   void defineDynamics(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_,
                       Dynamics<T,DESCRIPTOR>* dynamics) override;
@@ -60,11 +64,10 @@ public:
   Dynamics<T,DESCRIPTOR>* getDynamics(int iX, int iY, int iZ) override;
   void collide (
     int x0_, int x1_, int y0_, int y1_, int z0_, int z1_ ) override;
+  void collideAndStream (
+    int x0_, int x1_, int y0_, int y1_, int z0_, int z1_ ) override;
   void collide() override;
-  void stream(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_) override;
-  void stream(bool periodic=false) override;
-  void collideAndStream(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_) override;
-  void collideAndStream(bool periodic=false) override;
+  void collideAndStream() override;
   T computeAverageDensity (
     int x0_, int x1_, int y0_, int y1_, int z0_, int z1_ ) const override;
   T computeAverageDensity() const override;

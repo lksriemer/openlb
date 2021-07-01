@@ -28,6 +28,7 @@
 #define RTLBM_DESCRIPTORS_H
 
 #include "latticeDescriptors.h"
+#include <cmath>
 
 namespace olb {
 
@@ -39,9 +40,6 @@ struct RTLBM : public CATEGORY, public DESCRIPTOR_TAG { };
 
 }
 
-using D3Q7DescriptorRTLBM  = D3Q7<>;
-using D3Q19DescriptorRTLBM = D3Q19<>;
-using D3Q27DescriptorRTLBM = D3Q27<tag::RTLBM>;
 
 namespace rtlbm_data {
 
@@ -49,6 +47,41 @@ using utilities::Fraction;
 
 template <unsigned D, unsigned Q>
 constexpr Fraction t[Q] = {};
+
+template <unsigned D, unsigned Q>
+constexpr double norm_c[Q] = {};
+
+template <>
+constexpr Fraction t<3,7>[7] = {
+  0,
+  {1, 6}, {1, 6}, {1, 6},
+  {1, 6}, {1, 6}, {1, 6}
+};
+
+template <>
+constexpr double norm_c<3,7>[7] = {
+  0.0,
+  1.0, 1.0, 1.0,
+  1.0, 1.0, 1.0
+};
+
+template <>
+constexpr Fraction t<3,15>[15] = {
+  0,
+  {1, 15}, {1, 15}, {1, 15},
+  {3, 40}, {3, 40}, {3, 40}, {3, 40},
+  {1, 15}, {1, 15}, {1, 15},
+  {3, 40}, {3, 40}, {3, 40}, {3, 40}
+};
+
+template <>
+constexpr double norm_c<3,15>[15] = {
+  0.0,
+  1.0, 1.0, 1.0,
+  1.73205080757, 1.73205080757, 1.73205080757, 1.73205080757,
+  1.0, 1.0, 1.0,
+  1.73205080757, 1.73205080757, 1.73205080757, 1.73205080757
+};
 
 template <>
 constexpr Fraction t<3,27>[27] = {
@@ -65,8 +98,8 @@ constexpr Fraction t<3,27>[27] = {
   {9, 280}, {9, 280}, {9, 280}, {9, 280}
 };
 
-template<typename T>
-constexpr T norm_c_3_27[27] = {
+template <>
+constexpr double norm_c<3,27>[27] = {
   0.0,
   1.0, 1.0, 1.0,
   1.41421356237, 1.41421356237, 1.41421356237,
@@ -86,15 +119,16 @@ constexpr T t(unsigned iPop, tag::RTLBM)
   return rtlbm_data::t<D,Q>[iPop].template as<T>();
 }
 
+template <typename T, unsigned D, unsigned Q>
+constexpr T norm_c(unsigned iPop, tag::RTLBM)
+{
+  return T{rtlbm_data::norm_c<D,Q>[iPop]};
+}
+
 template <typename T, typename DESCRIPTOR>
 constexpr T norm_c(unsigned iPop)
 {
-  // Hacky but should hold until we implemented a solution for abstracting T in this setting
-  static_assert(
-      DESCRIPTOR::d == 3 && DESCRIPTOR::q == 27 && DESCRIPTOR::template provides<tag::RTLBM>(),
-      "DESCRIPTOR is D3Q27 RTLBM"
-    );
-  return rtlbm_data::norm_c_3_27<T>[iPop];
+  return norm_c<T, DESCRIPTOR::d, DESCRIPTOR::q>(iPop, typename DESCRIPTOR::category_tag());
 }
 
 }  // namespace descriptors

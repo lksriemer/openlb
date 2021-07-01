@@ -29,7 +29,7 @@
 #include "momentaOnBoundaries2D.h"
 #include "momentaOnBoundaries2D.hh"
 #include "dynamics/latticeDescriptors.h"
- 
+
 
 namespace olb {
 template class EquilibriumBM<double, descriptors::D2Q9<>>;

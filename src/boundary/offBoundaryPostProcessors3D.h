@@ -47,7 +47,7 @@ public:
   }
   void process(BlockLattice3D<T,DESCRIPTOR>& blockLattice) override;
   void processSubDomain(BlockLattice3D<T,DESCRIPTOR>& blockLattice,
-                                int x0_, int x1_, int y0_, int y1_, int z0_, int z1_ ) override;
+                        int x0_, int x1_, int y0_, int y1_, int z0_, int z1_ ) override;
 private:
   int x, y, z;
   int xN, yN, zN, xB, yB, zB;
@@ -69,7 +69,7 @@ public:
   }
   void process(BlockLattice3D<T,DESCRIPTOR>& blockLattice) override;
   void processSubDomain(BlockLattice3D<T,DESCRIPTOR>& blockLattice,
-                                int x0_, int x1_, int y0_, int y1_, int z0_, int z1_ ) override;
+                        int x0_, int x1_, int y0_, int y1_, int z0_, int z1_ ) override;
 private:
   int x, y, z;
   int xN, yN, zN;
@@ -91,7 +91,7 @@ public:
   }
   void process(BlockLattice3D<T,DESCRIPTOR>& blockLattice) override;
   void processSubDomain(BlockLattice3D<T,DESCRIPTOR>& blockLattice,
-                                int x0_, int x1_, int y0_, int y1_, int z0_, int z1_ ) override;
+                        int x0_, int x1_, int y0_, int y1_, int z0_, int z1_ ) override;
 private:
   int x, y, z;
   int xN, yN, zN, xB, yB, zB;
@@ -114,7 +114,7 @@ public:
   }
   void process(BlockLattice3D<T,DESCRIPTOR>& blockLattice) override;
   void processSubDomain(BlockLattice3D<T,DESCRIPTOR>& blockLattice,
-                                int x0_, int x1_, int y0_, int y1_, int z0_, int z1_ ) override;
+                        int x0_, int x1_, int y0_, int y1_, int z0_, int z1_ ) override;
 private:
   int x, y, z;
   int xN, yN, zN;

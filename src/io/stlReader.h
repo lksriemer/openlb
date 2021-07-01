@@ -204,9 +204,20 @@ private:
    */
   void indicate2();
   /*
+  *  New indicate function (faster, less stable)
+  *  Define ray in X-direction for each Voxel in YZ-layer. Indicate all nodes on the fly.
+  */
+  void indicate2_Xray();
+  /*
+  *  New indicate function (faster, less stable)
+  *  Define ray in Y-direction for each Voxel in XZ-layer. Indicate all nodes on the fly.
+  */
+  void indicate2_Yray(); 
+  /*
    *  Double ray approach: two times (X-, Y-, Z-direction) for each leaf.
    *  Could be use to deal with double layer triangles and face intersections.
    */
+  
   void indicate3();
   /// Size of the smallest voxel
   T _voxelSize;

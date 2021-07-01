@@ -202,5 +202,156 @@ void SimpleReflectBoundary3D<T, PARTICLETYPE>::applyBoundary(typename std::deque
   }
 }
 
+
+template<typename T, template<typename U> class PARTICLETYPE>
+ReflectBoundary3D<T, PARTICLETYPE>::ReflectBoundary3D(T dT, SuperGeometry3D<T>& sg, std::set<int> materials) :
+  Boundary3D<T, PARTICLETYPE>(), _dT(dT), _sg(sg), _materials(materials) {
+  _matIter = _materials.begin();
+}
+
+template<typename T, template<typename U> class PARTICLETYPE>
+Vector<T,3> ReflectBoundary3D<T, PARTICLETYPE>::computeDiscreteNormal(int latticeR[]) {
+  Vector<T,3> normal {0,0,0};
+  if (_sg.get(latticeR[0], latticeR[1] - 1, latticeR[2], latticeR[3]) == 1)   normal[0] = -1;
+  if (_sg.get(latticeR[0], latticeR[1] + 1, latticeR[2], latticeR[3]) == 1)   normal[0] = 1;
+  if (_sg.get(latticeR[0], latticeR[1], latticeR[2] - 1, latticeR[3]) == 1)   normal[1] = -1;
+  if (_sg.get(latticeR[0], latticeR[1], latticeR[2] + 1, latticeR[3]) == 1)   normal[1] = 1;
+  if (_sg.get(latticeR[0], latticeR[1], latticeR[2], latticeR[3] - 1) == 1)   normal[2] = -1;
+  if (_sg.get(latticeR[0], latticeR[1], latticeR[2], latticeR[3] + 1) == 1)   normal[2] = 1;
+
+  if (normal[0]==0 && normal[1]==0 && normal[2]==0) {
+    // check for outer edge. The normals to the planes forming the edge need to be pushed back to normal.
+    if (_sg.get(latticeR[0], latticeR[1] - 1, latticeR[2] - 1, latticeR[3]) == 1)   {
+      normal[0] = -1;
+      normal[1] = -1;
+    }
+    else if (_sg.get(latticeR[0], latticeR[1] - 1, latticeR[2] + 1, latticeR[3]) == 1)   {
+      normal[0] = -1;
+      normal[1] = 1;
+    }
+    else if (_sg.get(latticeR[0], latticeR[1] + 1, latticeR[2] - 1, latticeR[3]) == 1)   {
+      normal[0] = 1;
+      normal[1] = -1;
+    }
+    else if (_sg.get(latticeR[0], latticeR[1] + 1, latticeR[2] + 1, latticeR[3]) == 1)   {
+      normal[0] = 1;
+      normal[1] = 1;
+    }
+    else if (_sg.get(latticeR[0], latticeR[1] - 1, latticeR[2], latticeR[3] - 1) == 1)   {
+      normal[0] = -1;
+      normal[2] = -1;
+    }
+    else if (_sg.get(latticeR[0], latticeR[1] - 1, latticeR[2], latticeR[3] + 1) == 1)   {
+      normal[0] = -1;
+      normal[2] = 1;
+    }
+    else if (_sg.get(latticeR[0], latticeR[1] + 1, latticeR[2], latticeR[3] - 1) == 1)   {
+      normal[0] = 1;
+      normal[2] = -1;
+    }
+    else if (_sg.get(latticeR[0], latticeR[1] + 1, latticeR[2], latticeR[3] + 1) == 1)   {
+      normal[0] = 1;
+      normal[2] = 1;
+    }
+    else if (_sg.get(latticeR[0], latticeR[1], latticeR[2] - 1, latticeR[3] - 1) == 1)   {
+      normal[1] = -1;
+      normal[2] = -1;
+    }
+    else if (_sg.get(latticeR[0], latticeR[1], latticeR[2] - 1, latticeR[3] + 1) == 1)   {
+      normal[1] = -1;
+      normal[2] = 1;
+    }
+    else if (_sg.get(latticeR[0], latticeR[1], latticeR[2] + 1, latticeR[3] - 1) == 1)   {
+      normal[1] = +1;
+      normal[2] = -1;
+    }
+    else if (_sg.get(latticeR[0], latticeR[1], latticeR[2] + 1, latticeR[3] + 1) == 1)   {
+      normal[1] = +1;
+      normal[2] = 1;
+    }
+    // check for outer corner. The normals to the planes forming the corner need to be pushed back to normal.
+    else if (_sg.get(latticeR[0], latticeR[1] - 1, latticeR[2] - 1, latticeR[3] - 1) == 1)   {
+      normal[0] = -1;
+      normal[1] = -1;
+      normal[2] = -1;
+    }
+    else if (_sg.get(latticeR[0], latticeR[1] - 1, latticeR[2] - 1, latticeR[3] + 1) == 1)   {
+      normal[0] = -1;
+      normal[1] = -1;
+      normal[2] = 1;
+    }
+    else if (_sg.get(latticeR[0], latticeR[1] - 1, latticeR[2] + 1, latticeR[3] - 1) == 1)   {
+      normal[0] = -1;
+      normal[1] = +1;
+      normal[2] = -1;
+    }
+    else if (_sg.get(latticeR[0], latticeR[1] - 1, latticeR[2] + 1, latticeR[3] + 1) == 1)   {
+      normal[0] = -1;
+      normal[1] = +1;
+      normal[2] = 1;
+    }
+    else if (_sg.get(latticeR[0], latticeR[1] + 1, latticeR[2] - 1, latticeR[3] - 1) == 1)   {
+      normal[0] = +1;
+      normal[1] = -1;
+      normal[2] = -1;
+    }
+    else if (_sg.get(latticeR[0], latticeR[1] + 1, latticeR[2] - 1, latticeR[3] + 1) == 1)   {
+      normal[0] = +1;
+      normal[1] = -1;
+      normal[2] = 1;
+    }
+    else if (_sg.get(latticeR[0], latticeR[1] + 1, latticeR[2] + 1, latticeR[3] - 1) == 1)   {
+      normal[0] = +1;
+      normal[1] = +1;
+      normal[2] = -1;
+    }
+    else if (_sg.get(latticeR[0], latticeR[1] + 1, latticeR[2] + 1, latticeR[3] + 1) == 1)   {
+      normal[0] = +1;
+      normal[1] = +1;
+      normal[2] = 1;
+    }
+    // Error since normal[0] is still zero
+    else {
+      throw std::out_of_range("----->>>>> ERROR in ReflectionBoundary3D::computeDiscreteNormals(): Normal is ZERO");
+    }
+  }
+
+  return normal;
+}
+
+
+template<typename T, template<typename U> class PARTICLETYPE>
+void ReflectBoundary3D<T, PARTICLETYPE>::applyBoundary(typename std::deque<PARTICLETYPE<T> >::iterator& p, ParticleSystem3D<T, PARTICLETYPE>& psSys) {
+  //
+  int latticeR[4] = { 0,0,0,0 };
+  latticeR[0] = p->getCuboid();
+  _sg.getCuboidGeometry().get(latticeR[0]).getLatticeR(&(latticeR[1]),&p->getPos()[0]);
+
+  int mat = _sg.get(latticeR);
+  for (_matIter = _materials.begin(); _matIter != _materials.end();_matIter++) {
+    if (mat == *_matIter) {
+      // Computing the discrete normal(s).
+      Vector<T,3> normal { computeDiscreteNormal(latticeR) };
+      Vector<T,3> P1     { p->getPos() };
+      Vector<T,3> R      { _sg.getPhysR(latticeR[0], latticeR[1], latticeR[2], latticeR[3]) };
+
+      std::vector<T> P1New { p->getPos() };
+      std::vector<T> vNew  { p->getVel() };
+
+      for (int iD=0; iD<3; iD++) {
+        if (normal[iD]*(R[iD] - P1[iD]) > 0) {
+          P1New[iD] = 2.*R[iD] - P1[iD];
+          vNew[iD]  = -vNew[iD];
+        }
+      }
+      p->setPos(P1New);
+      p->setVel(vNew);
+
+      return;
+    }
+  }
+}
+
+
 }
 #endif

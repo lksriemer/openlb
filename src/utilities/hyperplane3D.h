@@ -56,7 +56,7 @@ struct Hyperplane3D {
   Vector<T,3> v;
   Vector<T,3> normal;
 
-  Hyperplane3D() = default;
+  explicit Hyperplane3D() = default;
 
   /// Center the hyperplane at the given origin vector
   /// \return Hyperplane3D reference for further construction

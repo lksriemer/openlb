@@ -31,7 +31,7 @@ namespace olb {
 
 template <typename T>
 BlockIndicatorF2D<T>::BlockIndicatorF2D(BlockGeometryStructure2D<T>& geometry)
-  : BlockF2D<bool>(geometry.getBlockStructure(), 1),
+  : BlockF2D<bool>(geometry, 1),
     _blockGeometryStructure(geometry),
     _cachedData{nullptr}
 { }

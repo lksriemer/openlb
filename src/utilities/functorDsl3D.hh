@@ -46,16 +46,16 @@ std::shared_ptr<SuperF3D<T,W>> lift(SuperF3D<T,W>* f)
   return FunctorPtr<SuperF3D<T,W>>(f).toShared();
 }
 
-template<typename T, typename S>
-std::shared_ptr<AnalyticalF3D<T,S>> lift(AnalyticalF3D<T,S>& f)
+template<typename T, typename W>
+std::shared_ptr<AnalyticalF3D<T,W>> lift(AnalyticalF3D<T,W>& f)
 {
-  return FunctorPtr<AnalyticalF3D<T,S>>(f).toShared();
+  return FunctorPtr<AnalyticalF3D<T,W>>(f).toShared();
 }
 
-template<typename T, typename S>
-std::shared_ptr<AnalyticalF3D<T,S>> lift(AnalyticalF3D<T,S>* f)
+template<typename T, typename W>
+std::shared_ptr<AnalyticalF3D<T,W>> lift(AnalyticalF3D<T,W>* f)
 {
-  return FunctorPtr<AnalyticalF3D<T,S>>(f).toShared();
+  return FunctorPtr<AnalyticalF3D<T,W>>(f).toShared();
 }
 
 template<typename T, typename W>

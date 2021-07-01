@@ -26,6 +26,9 @@
  */
 
 #include "blockData2D.hh"
+#include "blockStaticFieldsD2D.hh"
+#include "blockStaticPopulationD2D.hh"
+#include "blockDynamicFieldsD2D.hh"
 #include "blockLattice2D.hh"
 #include "blockLatticeStructure2D.hh"
 #include "blockLatticeView2D.hh"
@@ -36,7 +39,7 @@
 #include "serializer.hh"
 #include "superData2D.hh"
 #include "superLattice2D.hh"
-#include "superExternal2D.hh"
+#include "superField2D.hh"
 #include "unitConverter.hh"
 #include "thermalUnitConverter.hh"
-
+#include "fieldArrayD.hh"

@@ -36,33 +36,30 @@ namespace olb {
 // Efficient specialization for D2Q5 lattice
 template<typename T, typename... FIELDS>
 struct lbDynamicsHelpers<T, descriptors::D2Q5<FIELDS...> > {
-  using SpecializedCellBase = CellBase<T,descriptors::D2Q5<FIELDS...>>;
+  using DESCRIPTOR = descriptors::D2Q5<FIELDS...>;
 
   static T equilibrium( int iPop, T rho, const T u[2], T uSqr )
   {
-    typedef descriptors::D2Q5<> L;
-    T c_u = descriptors::c<L>(iPop,0)*u[0] + descriptors::c<L>(iPop,1)*u[1];
-    return rho * descriptors::t<T,L>(iPop) * (
+    T c_u = descriptors::c<DESCRIPTOR>(iPop,0)*u[0] + descriptors::c<DESCRIPTOR>(iPop,1)*u[1];
+    return rho * descriptors::t<T,DESCRIPTOR>(iPop) * (
              1. + 3.*c_u + 4.5*c_u*c_u - 1.5*uSqr )
-           - descriptors::t<T,L>(iPop);
+           - descriptors::t<T,DESCRIPTOR>(iPop);
   }
 
   /// equilibrium distribution
   static T equilibriumFirstOrder( int iPop, T rho, const T u[2] )
   {
-    typedef descriptors::D2Q5<> L;
-    T c_u = descriptors::c<L>(iPop,0) * u[0] + descriptors::c<L>(iPop,1) * u[1];
+    T c_u = descriptors::c<DESCRIPTOR>(iPop,0) * u[0] + descriptors::c<DESCRIPTOR>(iPop,1) * u[1];
 
-    return rho * descriptors::t<T,L>(iPop) * ( ( T )1 + c_u * descriptors::invCs2<T,L>() ) - descriptors::t<T,L>(iPop);
+    return rho * descriptors::t<T,DESCRIPTOR>(iPop) * ( ( T )1 + c_u * descriptors::invCs2<T,DESCRIPTOR>() ) - descriptors::t<T,DESCRIPTOR>(iPop);
   }
 
   /// RLB advection diffusion collision step
-  static T rlbCollision( SpecializedCellBase& cell, T rho, const T u[2], T omega )
+  static T rlbCollision( Cell<T,DESCRIPTOR>& cell, T rho, const T u[2], T omega )
   {
-    typedef descriptors::D2Q5<> L;
     const T uSqr = u[0] * u[0] + u[1] * u[1];
 
-    const T Cs2 = ( T )1 / descriptors::invCs2<T,L>();
+    const T Cs2 = ( T )1 / descriptors::invCs2<T,DESCRIPTOR>();
 
     T rho_1 = rho - ( T )1;
     cell[0] = ( ( T )1 - ( T )2 * Cs2 ) * rho_1; //f[0]=(1-2c_s^2)(rho-1)
@@ -88,11 +85,9 @@ struct lbDynamicsHelpers<T, descriptors::D2Q5<FIELDS...> > {
   }
 
   // BGK advection diffusion collision step
-  static T bgkCollision(  SpecializedCellBase& cell, T rho, const T u[2], T omega )
+  static T bgkCollision(  Cell<T,DESCRIPTOR>& cell, T rho, const T u[2], T omega )
   {
-    typedef descriptors::D2Q5<> L;
-
-    const T Cs2 = ( T )1 / descriptors::invCs2<T,L>();
+    const T Cs2 = ( T )1 / descriptors::invCs2<T,DESCRIPTOR>();
     const T uSqr = u[0] * u[0] + u[1] * u[1];
 
     const T omega_ = ( T )1 - omega;
@@ -122,7 +117,7 @@ struct lbDynamicsHelpers<T, descriptors::D2Q5<FIELDS...> > {
     momentaEq[4] = T();
   }
 
-  static void computeMomenta( T momenta[5], SpecializedCellBase const& cell )
+  static void computeMomenta( T momenta[5], ConstCell<T,DESCRIPTOR>& cell )
   {
     momenta[0] = cell[0] + cell[1] + cell[2] + cell[3] + cell[4];
     momenta[1] = -cell[1] + cell[3];
@@ -131,7 +126,7 @@ struct lbDynamicsHelpers<T, descriptors::D2Q5<FIELDS...> > {
     momenta[4] = cell[1] - cell[2] + cell[3] - cell[4];
   }
 
-  static T mrtCollision( SpecializedCellBase& cell, T rho, const T u[2], T invM_S[5][5] )
+  static T mrtCollision( Cell<T,DESCRIPTOR>& cell, T rho, const T u[2], T invM_S[5][5] )
   {
     T uSqr = util::normSqr<T,2>(u);
     T momenta[5];
@@ -163,7 +158,7 @@ struct lbDynamicsHelpers<T, descriptors::D2Q5<FIELDS...> > {
     return uSqr;
   }
 
-  static void computeFneq ( SpecializedCellBase const& cell, T fNeq[5], T rho, const T u[2] )
+  static void computeFneq ( ConstCell<T,DESCRIPTOR>& cell, T fNeq[5], T rho, const T u[2] )
   {
     for (int iPop=0; iPop < 5; ++iPop) {
       // printf("WARNING: First order equilibrium function is used for the calculation of the non-equilibrium parts!\n");
@@ -171,13 +166,13 @@ struct lbDynamicsHelpers<T, descriptors::D2Q5<FIELDS...> > {
     }
   }
 
-  static T computeRho(SpecializedCellBase const& cell)
+  static T computeRho(ConstCell<T,DESCRIPTOR>& cell)
   {
     T rho = cell[0] + cell[1] + cell[2] + cell[3] + cell[4] + (T)1;
     return rho;
   }
 
-  static void computeRhoU(SpecializedCellBase const& cell, T& rho, T u[2])
+  static void computeRhoU(ConstCell<T,DESCRIPTOR>& cell, T& rho, T u[2])
   {
     rho = cell[0] + cell[1] + cell[2] + cell[3] + cell[4] + (T)1;
     T invRho= 1./rho;
@@ -185,7 +180,7 @@ struct lbDynamicsHelpers<T, descriptors::D2Q5<FIELDS...> > {
     u[1]  = (cell[4] - cell[2])*invRho;
   }
 
-   static void computeRhoJ(SpecializedCellBase const& cell, T& rho, T j[2])
+   static void computeRhoJ(ConstCell<T,DESCRIPTOR>& cell, T& rho, T j[2])
    {
      rho = cell[0] + cell[1] + cell[2] + cell[3] + cell[4] + (T)1;
 
@@ -193,18 +188,18 @@ struct lbDynamicsHelpers<T, descriptors::D2Q5<FIELDS...> > {
      j[1]  = (cell[4] - cell[2]);
    }
 
-   static void computeJ(SpecializedCellBase const& cell, T j[2])
+   static void computeJ(ConstCell<T,DESCRIPTOR>& cell, T j[2])
    {
      j[0]  = (cell[3] - cell[1]);
      j[1]  = (cell[4] - cell[2]);
    }
 
-   static void computeStress(SpecializedCellBase const& cell, T rho, const T u[2], T pi[6])
+   static void computeStress(ConstCell<T,DESCRIPTOR>& cell, T rho, const T u[2], T pi[6])
    {
      // printf("ERROR: Stress tensor not defined in D2Q5!\n");
    }
 
-   static void computeAllMomenta(SpecializedCellBase const& cell, T& rho, T u[2], T pi[6])
+   static void computeAllMomenta(ConstCell<T,DESCRIPTOR>& cell, T& rho, T u[2], T pi[6])
    {
      rho = cell[0] + cell[1] + cell[2] + cell[3] + cell[4] + (T)1;
      T invRho= 1./rho;

@@ -29,7 +29,6 @@
 #include <cmath>
 
 #include "blockLatticeIntegralF3D.h"
-#include "blockLatticeLocalF3D.h"
 #include "blockGeometryFaces3D.h"
 #include "blockCalcF3D.h" // for IdentityF
 #include "core/blockLattice3D.h"

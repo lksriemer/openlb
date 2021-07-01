@@ -227,8 +227,8 @@ IndicatorLayer2D<S>::IndicatorLayer2D(IndicatorF2D<S>& indicatorF, S layerSize)
 {
   this->_myMin = indicatorF.getMin() - layerSize;
   this->_myMax = indicatorF.getMax() + layerSize;
-  OLB_ASSERT( (this->_myMax[0]-this->_myMin[0]) <= std::numeric_limits<S>::epsilon() ,"Indicator reduced to zero-set in x direction");
-  OLB_ASSERT( (this->_myMax[1]-this->_myMin[1]) <= std::numeric_limits<S>::epsilon() ,"Indicator reduced to zero-set in y direction");
+  OLB_ASSERT( (this->_myMax[0]-this->_myMin[0]) > std::numeric_limits<S>::epsilon() ,"Indicator reduced to zero-set in x direction");
+  OLB_ASSERT( (this->_myMax[1]-this->_myMin[1]) > std::numeric_limits<S>::epsilon() ,"Indicator reduced to zero-set in y direction");
   _isPositive = std::signbit(layerSize);
 }
 

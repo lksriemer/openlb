@@ -30,211 +30,96 @@
 #include "utilities/functorPtr.h"
 #include "utilities/arithmetic.h"
 
-
 namespace olb {
 
-/*
-    arithmetic helper classes for AnalyticalF1D, AnalyticalF3D, AnalyticalF3D
 
-    pointwise: difference, plus, multiplication, division
-
-*/
-
-//////////////////////////////// AnalyticCalcF1D ////////////////////////////////
-
-/// arithmetic helper class for analytical 1D functors
-template <typename T, typename S, template<typename> class F>
-class AnalyticCalcF1D : public AnalyticalF1D<T,S> {
+/// arithmetic helper class for analytical functors
+template <unsigned D, typename T, typename S, template<typename> class F>
+class AnalyticCalcF : public AnalyticalF<D,T,S> {
 protected:
-  FunctorPtr<AnalyticalF1D<T,S>> _f;
-  FunctorPtr<AnalyticalF1D<T,S>> _g;
+  FunctorPtr<AnalyticalF<D,T,S>> _f;
+  FunctorPtr<AnalyticalF<D,T,S>> _g;
 public:
-  AnalyticCalcF1D(FunctorPtr<AnalyticalF1D<T,S>>&& f,
-                  FunctorPtr<AnalyticalF1D<T,S>>&& g);
+  AnalyticCalcF(FunctorPtr<AnalyticalF<D,T,S>>&& f,
+                  FunctorPtr<AnalyticalF<D,T,S>>&& g);
 
-  AnalyticCalcF1D(T scalar, FunctorPtr<AnalyticalF1D<T,S>>&& g);
-  AnalyticCalcF1D(FunctorPtr<AnalyticalF1D<T,S>>&& f, T scalar);
+  AnalyticCalcF(T scalar, FunctorPtr<AnalyticalF<D,T,S>>&& g);
+  AnalyticCalcF(FunctorPtr<AnalyticalF<D,T,S>>&& f, T scalar);
 
   bool operator() (T output[], const S input[]) override;
 };
 
 /// addition functor
+template <unsigned D, typename T, typename S>
+using AnalyticCalcPlus = AnalyticCalcF<D,T,S,util::plus>;
+
 template <typename T, typename S>
-using AnalyticCalcPlus1D = AnalyticCalcF1D<T,S,util::plus>;
+using AnalyticCalcPlus1D = AnalyticCalcPlus<1,T,S>;
+template <typename T, typename S>
+using AnalyticCalcPlus2D = AnalyticCalcPlus<2,T,S>;
+template <typename T, typename S>
+using AnalyticCalcPlus3D = AnalyticCalcPlus<3,T,S>;
 
 /// subtraction functor
+template <unsigned D, typename T, typename S>
+using AnalyticCalcMinus = AnalyticCalcF<D,T,S,util::minus>;
+
 template <typename T, typename S>
-using AnalyticCalcMinus1D = AnalyticCalcF1D<T,S,util::minus>;
+using AnalyticCalcMinus1D = AnalyticCalcMinus<1,T,S>;
+template <typename T, typename S>
+using AnalyticCalcMinus2D = AnalyticCalcMinus<2,T,S>;
+template <typename T, typename S>
+using AnalyticCalcMinus3D = AnalyticCalcMinus<3,T,S>;
 
 /// multiplication functor
+template <unsigned D, typename T, typename S>
+using AnalyticCalcMultiplication = AnalyticCalcF<D,T,S,util::multiplies>;
+
 template <typename T, typename S>
-using AnalyticCalcMultiplication1D = AnalyticCalcF1D<T,S,util::multiplies>;
+using AnalyticCalcMultiplication1D = AnalyticCalcMultiplication<1,T,S>;
+template <typename T, typename S>
+using AnalyticCalcMultiplication2D = AnalyticCalcMultiplication<2,T,S>;
+template <typename T, typename S>
+using AnalyticCalcMultiplication3D = AnalyticCalcMultiplication<3,T,S>;
 
 /// division functor
-template <typename T, typename S>
-using AnalyticCalcDivision1D = AnalyticCalcF1D<T,S,util::divides>;
-
-//////////////////////////////// AnalyticCalcF2D ////////////////////////////////
-
-/// arithmetic helper class for analytical 2D functors
-template <typename T, typename S, template<typename> class F>
-class AnalyticCalcF2D : public AnalyticalF2D<T,S> {
-protected:
-  FunctorPtr<AnalyticalF2D<T,S>> _f;
-  FunctorPtr<AnalyticalF2D<T,S>> _g;
-public:
-  AnalyticCalcF2D(FunctorPtr<AnalyticalF2D<T,S>>&& f,
-                  FunctorPtr<AnalyticalF2D<T,S>>&& g);
-
-  AnalyticCalcF2D(T scalar, FunctorPtr<AnalyticalF2D<T,S>>&& g);
-  AnalyticCalcF2D(FunctorPtr<AnalyticalF2D<T,S>>&& f, T scalar);
-
-  bool operator() (T output[], const S input[]) override;
-};
-
-/// addition functor
-template <typename T, typename S>
-using AnalyticCalcPlus2D = AnalyticCalcF2D<T,S,util::plus>;
-
-/// subtraction functor
-template <typename T, typename S>
-using AnalyticCalcMinus2D = AnalyticCalcF2D<T,S,util::minus>;
-
-/// multiplication functor
-template <typename T, typename S>
-using AnalyticCalcMultiplication2D = AnalyticCalcF2D<T,S,util::multiplies>;
-
-/// division functor
-template <typename T, typename S>
-using AnalyticCalcDivision2D = AnalyticCalcF2D<T,S,util::divides>;
-
-//////////////////////////////// AnalyticCalcF3D ////////////////////////////////
-
-/// arithmetic helper class for analytical 3D functors
-template <typename T, typename S, template<typename> class F>
-class AnalyticCalcF3D : public AnalyticalF3D<T,S> {
-protected:
-  FunctorPtr<AnalyticalF3D<T,S>> _f;
-  FunctorPtr<AnalyticalF3D<T,S>> _g;
-public:
-  AnalyticCalcF3D(FunctorPtr<AnalyticalF3D<T,S>>&& f,
-                  FunctorPtr<AnalyticalF3D<T,S>>&& g);
-
-  AnalyticCalcF3D(T scalar, FunctorPtr<AnalyticalF3D<T,S>>&& g);
-  AnalyticCalcF3D(FunctorPtr<AnalyticalF3D<T,S>>&& f, T scalar);
-
-  bool operator() (T output[], const S input[]) override;
-};
-
-/// addition functor
-template <typename T, typename S>
-using AnalyticCalcPlus3D = AnalyticCalcF3D<T,S,util::plus>;
-
-/// subtraction functor
-template <typename T, typename S>
-using AnalyticCalcMinus3D = AnalyticCalcF3D<T,S,util::minus>;
-
-/// multiplication functor
-template <typename T, typename S>
-using AnalyticCalcMultiplication3D = AnalyticCalcF3D<T,S,util::multiplies>;
-
-/// division functor
-template <typename T, typename S>
-using AnalyticCalcDivision3D = AnalyticCalcF3D<T,S,util::divides>;
-
-
-/**
- * \name Arithmetic for functors managed by std::shared_ptr
- * \{
- **/
+template <unsigned D, typename T, typename S>
+using AnalyticCalcDivision = AnalyticCalcF<D,T,S,util::divides>;
 
 template <typename T, typename S>
-std::shared_ptr<AnalyticalF1D<T,S>> operator+(std::shared_ptr<AnalyticalF1D<T,S>> lhs, std::shared_ptr<AnalyticalF1D<T,S>> rhs);
+using AnalyticCalcDivision1D = AnalyticCalcDivision<1,T,S>;
 template <typename T, typename S>
-std::shared_ptr<AnalyticalF1D<T,S>> operator+(std::shared_ptr<AnalyticalF1D<T,S>> lhs, T rhs);
+using AnalyticCalcDivision2D = AnalyticCalcDivision<2,T,S>;
 template <typename T, typename S>
-std::shared_ptr<AnalyticalF1D<T,S>> operator+(T lhs, std::shared_ptr<AnalyticalF1D<T,S>> rhs);
+using AnalyticCalcDivision3D = AnalyticCalcDivision<3,T,S>;
 
-template <typename T, typename S>
-std::shared_ptr<AnalyticalF1D<T,S>> operator-(std::shared_ptr<AnalyticalF1D<T,S>> lhs, std::shared_ptr<AnalyticalF1D<T,S>> rhs);
-template <typename T, typename S>
-std::shared_ptr<AnalyticalF1D<T,S>> operator-(std::shared_ptr<AnalyticalF1D<T,S>> lhs, T rhs);
-template <typename T, typename S>
-std::shared_ptr<AnalyticalF1D<T,S>> operator-(T lhs, std::shared_ptr<AnalyticalF1D<T,S>> rhs);
+template <unsigned D, typename T, typename S>
+std::shared_ptr<AnalyticalF<D,T,S>> operator+(std::shared_ptr<AnalyticalF<D,T,S>> lhs, std::shared_ptr<AnalyticalF<D,T,S>> rhs);
+template <unsigned D, typename T, typename S>
+std::shared_ptr<AnalyticalF<D,T,S>> operator+(std::shared_ptr<AnalyticalF<D,T,S>> lhs, T rhs);
+template <unsigned D, typename T, typename S>
+std::shared_ptr<AnalyticalF<D,T,S>> operator+(T lhs, std::shared_ptr<AnalyticalF<D,T,S>> rhs);
 
-template <typename T, typename S>
-std::shared_ptr<AnalyticalF1D<T,S>> operator*(std::shared_ptr<AnalyticalF1D<T,S>> lhs, std::shared_ptr<AnalyticalF1D<T,S>> rhs);
-template <typename T, typename S>
-std::shared_ptr<AnalyticalF1D<T,S>> operator*(std::shared_ptr<AnalyticalF1D<T,S>> lhs, T rhs);
-template <typename T, typename S>
-std::shared_ptr<AnalyticalF1D<T,S>> operator*(T lhs, std::shared_ptr<AnalyticalF1D<T,S>> rhs);
+template <unsigned D, typename T, typename S>
+std::shared_ptr<AnalyticalF<D,T,S>> operator-(std::shared_ptr<AnalyticalF<D,T,S>> lhs, std::shared_ptr<AnalyticalF<D,T,S>> rhs);
+template <unsigned D, typename T, typename S>
+std::shared_ptr<AnalyticalF<D,T,S>> operator-(std::shared_ptr<AnalyticalF<D,T,S>> lhs, T rhs);
+template <unsigned D, typename T, typename S>
+std::shared_ptr<AnalyticalF<D,T,S>> operator-(T lhs, std::shared_ptr<AnalyticalF<D,T,S>> rhs);
 
-template <typename T, typename S>
-std::shared_ptr<AnalyticalF1D<T,S>> operator/(std::shared_ptr<AnalyticalF1D<T,S>> lhs, std::shared_ptr<AnalyticalF1D<T,S>> rhs);
-template <typename T, typename S>
-std::shared_ptr<AnalyticalF1D<T,S>> operator/(std::shared_ptr<AnalyticalF1D<T,S>> lhs, T rhs);
-template <typename T, typename S>
-std::shared_ptr<AnalyticalF1D<T,S>> operator/(T lhs, std::shared_ptr<AnalyticalF1D<T,S>> rhs);
+template <unsigned D, typename T, typename S>
+std::shared_ptr<AnalyticalF<D,T,S>> operator*(std::shared_ptr<AnalyticalF<D,T,S>> lhs, std::shared_ptr<AnalyticalF<D,T,S>> rhs);
+template <unsigned D, typename T, typename S>
+std::shared_ptr<AnalyticalF<D,T,S>> operator*(std::shared_ptr<AnalyticalF<D,T,S>> lhs, T rhs);
+template <unsigned D, typename T, typename S>
+std::shared_ptr<AnalyticalF<D,T,S>> operator*(T lhs, std::shared_ptr<AnalyticalF<D,T,S>> rhs);
 
-
-template <typename T, typename S>
-std::shared_ptr<AnalyticalF2D<T,S>> operator+(std::shared_ptr<AnalyticalF2D<T,S>> lhs, std::shared_ptr<AnalyticalF2D<T,S>> rhs);
-template <typename T, typename S>
-std::shared_ptr<AnalyticalF2D<T,S>> operator+(std::shared_ptr<AnalyticalF2D<T,S>> lhs, T rhs);
-template <typename T, typename S>
-std::shared_ptr<AnalyticalF2D<T,S>> operator+(T lhs, std::shared_ptr<AnalyticalF2D<T,S>> rhs);
-
-template <typename T, typename S>
-std::shared_ptr<AnalyticalF2D<T,S>> operator-(std::shared_ptr<AnalyticalF2D<T,S>> lhs, std::shared_ptr<AnalyticalF2D<T,S>> rhs);
-template <typename T, typename S>
-std::shared_ptr<AnalyticalF2D<T,S>> operator-(std::shared_ptr<AnalyticalF2D<T,S>> lhs, T rhs);
-template <typename T, typename S>
-std::shared_ptr<AnalyticalF2D<T,S>> operator-(T lhs, std::shared_ptr<AnalyticalF2D<T,S>> rhs);
-
-template <typename T, typename S>
-std::shared_ptr<AnalyticalF2D<T,S>> operator*(std::shared_ptr<AnalyticalF2D<T,S>> lhs, std::shared_ptr<AnalyticalF2D<T,S>> rhs);
-template <typename T, typename S>
-std::shared_ptr<AnalyticalF2D<T,S>> operator*(std::shared_ptr<AnalyticalF2D<T,S>> lhs, T rhs);
-template <typename T, typename S>
-std::shared_ptr<AnalyticalF2D<T,S>> operator*(T lhs, std::shared_ptr<AnalyticalF2D<T,S>> rhs);
-
-template <typename T, typename S>
-std::shared_ptr<AnalyticalF2D<T,S>> operator/(std::shared_ptr<AnalyticalF2D<T,S>> lhs, std::shared_ptr<AnalyticalF2D<T,S>> rhs);
-template <typename T, typename S>
-std::shared_ptr<AnalyticalF2D<T,S>> operator/(std::shared_ptr<AnalyticalF2D<T,S>> lhs, T rhs);
-template <typename T, typename S>
-std::shared_ptr<AnalyticalF2D<T,S>> operator/(T lhs, std::shared_ptr<AnalyticalF2D<T,S>> rhs);
-
-
-template <typename T, typename S>
-std::shared_ptr<AnalyticalF3D<T,S>> operator+(std::shared_ptr<AnalyticalF3D<T,S>> lhs, std::shared_ptr<AnalyticalF3D<T,S>> rhs);
-template <typename T, typename S>
-std::shared_ptr<AnalyticalF3D<T,S>> operator+(std::shared_ptr<AnalyticalF3D<T,S>> lhs, T rhs);
-template <typename T, typename S>
-std::shared_ptr<AnalyticalF3D<T,S>> operator+(T lhs, std::shared_ptr<AnalyticalF3D<T,S>> rhs);
-
-template <typename T, typename S>
-std::shared_ptr<AnalyticalF3D<T,S>> operator-(std::shared_ptr<AnalyticalF3D<T,S>> lhs, std::shared_ptr<AnalyticalF3D<T,S>> rhs);
-template <typename T, typename S>
-std::shared_ptr<AnalyticalF3D<T,S>> operator-(std::shared_ptr<AnalyticalF3D<T,S>> lhs, T rhs);
-template <typename T, typename S>
-std::shared_ptr<AnalyticalF3D<T,S>> operator-(T lhs, std::shared_ptr<AnalyticalF3D<T,S>> rhs);
-
-template <typename T, typename S>
-std::shared_ptr<AnalyticalF3D<T,S>> operator*(std::shared_ptr<AnalyticalF3D<T,S>> lhs, std::shared_ptr<AnalyticalF3D<T,S>> rhs);
-template <typename T, typename S>
-std::shared_ptr<AnalyticalF3D<T,S>> operator*(std::shared_ptr<AnalyticalF3D<T,S>> lhs, T rhs);
-template <typename T, typename S>
-std::shared_ptr<AnalyticalF3D<T,S>> operator*(T lhs, std::shared_ptr<AnalyticalF3D<T,S>> rhs);
-
-template <typename T, typename S>
-std::shared_ptr<AnalyticalF3D<T,S>> operator/(std::shared_ptr<AnalyticalF3D<T,S>> lhs, std::shared_ptr<AnalyticalF3D<T,S>> rhs);
-template <typename T, typename S>
-std::shared_ptr<AnalyticalF3D<T,S>> operator/(std::shared_ptr<AnalyticalF3D<T,S>> lhs, T rhs);
-template <typename T, typename S>
-std::shared_ptr<AnalyticalF3D<T,S>> operator/(T lhs, std::shared_ptr<AnalyticalF3D<T,S>> rhs);
-
-///\}
+template <unsigned D, typename T, typename S>
+std::shared_ptr<AnalyticalF<D,T,S>> operator/(std::shared_ptr<AnalyticalF<D,T,S>> lhs, std::shared_ptr<AnalyticalF<D,T,S>> rhs);
+template <unsigned D, typename T, typename S>
+std::shared_ptr<AnalyticalF<D,T,S>> operator/(std::shared_ptr<AnalyticalF<D,T,S>> lhs, T rhs);
+template <unsigned D, typename T, typename S>
+std::shared_ptr<AnalyticalF<D,T,S>> operator/(T lhs, std::shared_ptr<AnalyticalF<D,T,S>> rhs);
 
 
 } // end namespace olb

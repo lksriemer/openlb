@@ -26,7 +26,7 @@
 #include "boundaryPostProcessors3D.h"
 #include "boundaryPostProcessors3D.hh"
 #include "core/postProcessing.h"
- 
+
 
 
 namespace olb {
@@ -43,20 +43,5 @@ template class ExtendedFdPlaneBoundaryPostProcessor3D<double, descriptors::D3Q19
 template class ExtendedFdPlaneBoundaryProcessorGenerator3D<double, descriptors::D3Q19<>, 2,1>;
 template class ExtendedFdPlaneBoundaryPostProcessor3D<double, descriptors::D3Q19<>,          2,-1>;
 template class ExtendedFdPlaneBoundaryProcessorGenerator3D<double, descriptors::D3Q19<>, 2,-1>;
-
-
-template class BoundaryConditionInstantiator3D
-<
-  double, descriptors::D3Q19<>,
-  ExtendedFdBoundaryManager3D < double, descriptors::D3Q19<>,
-                                BGKdynamics<double,descriptors::D3Q19<>> >
-  >;
-
-template OnLatticeBoundaryCondition3D<double,descriptors::D3Q19<>>*
-createExtendedFdBoundaryCondition3D < double,descriptors::D3Q19<>,
-                                    BGKdynamics<double,descriptors::D3Q19<>> >
-                                    (
-                                      BlockLatticeStructure3D<double,descriptors::D3Q19<>>& block
-                                    );
 
 }  // namespace olb

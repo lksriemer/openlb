@@ -29,8 +29,10 @@
 #define RADIATIVEUNITCONVERTER_H
 
 
+#include <fstream>
 #include "io/ostreamManager.h"
 #include "core/unitConverter.h"
+#include "core/singleton.h"
 
 
 /// All OpenLB code is contained in this namespace.
@@ -78,7 +80,7 @@ public:
     *   \param physScattering   physical scattering in 1/meter
     */
   constexpr RadiativeUnitConverter( int resolution, T latticeRelaxationTime, T physAbsorption, T physScattering, T anisotropyFactor=0, T charPhysLength=1, T refractiveMedia=1, T refractiveAmbient=1 )
-    : UnitConverterFromResolutionAndRelaxationTime<T, DESCRIPTOR>( resolution, latticeRelaxationTime, charPhysLength, T(1), T(1), T(1) ),
+    : UnitConverterFromResolutionAndRelaxationTime<T, DESCRIPTOR>( resolution, latticeRelaxationTime, charPhysLength, /*visc*/ 1./(3*(physAbsorption+physScattering)), T(1), T(1) ),
       clout(std::cout, "RadiativeUnitConverter"),
       _physAbsorption(physAbsorption),
       _physScattering(physScattering),
@@ -149,6 +151,8 @@ public:
   };
 
   void print() const override;
+  void print(std::ostream& fout) const;
+  void write() const;
 
 private:
   mutable OstreamManager clout;
@@ -168,8 +172,8 @@ private:
   double _latticeDiffusion;
 };
 
-template <typename T, typename DESCRIPTOR>
-void RadiativeUnitConverter<T, DESCRIPTOR>::print() const
+template <typename T, class DESCRIPTOR>
+void RadiativeUnitConverter<T, DESCRIPTOR>::print(std::ostream& clout) const
 {
   clout << "----------------- UnitConverter information -----------------" << std::endl;
   clout << "-- Parameters:" << std::endl;
@@ -200,9 +204,30 @@ void RadiativeUnitConverter<T, DESCRIPTOR>::print() const
   clout << "Time step(s):                     physDeltaT=     " << this->getConversionFactorTime() << std::endl;
   clout << "Density factor(kg/m^3):           physDensity=    " << this->getConversionFactorDensity() <<  std::endl;
   clout << "-------------------------------------------------------------" << std::endl;
-
 }
 
+template <typename T, class DESCRIPTOR>
+void RadiativeUnitConverter<T, DESCRIPTOR>::print() const
+{
+  print(clout);
+}
+
+template <typename T, class DESCRIPTOR>
+void RadiativeUnitConverter<T, DESCRIPTOR>::write() const
+{
+  std::string dataFile = singleton::directories().getLogOutDir() + "radiativeUnitConverter.dat";
+  if (singleton::mpi().isMainProcessor())
+  {
+    std::ofstream fout(dataFile.c_str(), std::ios::trunc);
+    if(!fout) {
+      clout << "error write() function: can not open std::ofstream" << std::endl;
+    } else {
+      print( fout );
+      fout.close();
+    }
+  }
+
+}
 
 }  // namespace olb
 

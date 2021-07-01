@@ -33,6 +33,26 @@
 
 namespace olb {
 
+////////////////////// Class PostProcessor2D /////////////////
+
+template <typename T, typename DESCRIPTOR>
+std::string& PostProcessor2D<T,DESCRIPTOR>::getName()
+{
+  return _name;
+}
+
+template <typename T, typename DESCRIPTOR>
+std::string const& PostProcessor2D<T,DESCRIPTOR>::getName() const
+{
+  return _name;
+}
+
+template <typename T, typename DESCRIPTOR>
+int PostProcessor2D<T,DESCRIPTOR>::getPriority() const
+{
+  return _priority;
+}
+
 ////////////////////// Class PostProcessorGenerator2D /////////////////
 
 template<typename T, typename DESCRIPTOR>
@@ -64,9 +84,19 @@ extract(int x0_, int x1_, int y0_, int y1_)
     y0 = newY0;
     y1 = newY1;
     return true;
-  } else {
+  }
+  else {
     return false;
   }
+}
+
+template<typename T, typename DESCRIPTOR>
+void PostProcessorGenerator2D<T,DESCRIPTOR>::reset(int x0_, int x1_, int y0_, int y1_)
+{
+  x0 = x0_;
+  x1 = x1_;
+  y0 = y0_;
+  y1 = y1_;
 }
 
 
@@ -100,7 +130,8 @@ bool LatticeCouplingGenerator2D<T,DESCRIPTOR>::extract(int x0_, int x1_, int y0_
     y0 = newY0;
     y1 = newY1;
     return true;
-  } else {
+  }
+  else {
     return false;
   }
 }
@@ -119,7 +150,10 @@ void LatticeCouplingGenerator2D<T,DESCRIPTOR>::reset(int x0_, int x1_, int y0_, 
 
 template<typename T, typename DESCRIPTOR>
 StatisticsPostProcessor2D<T,DESCRIPTOR>::StatisticsPostProcessor2D()
-{ }
+{ 
+  this->getName() = "StatisticsPostProcessor2D";
+    
+}
 
 #ifndef PARALLEL_MODE_OMP
 template<typename T, typename DESCRIPTOR>
@@ -166,7 +200,8 @@ void StatisticsPostProcessor2D<T,DESCRIPTOR>::process (
     avEnergy = T();
     maxU = T();
     numCells = 0;
-  } else {
+  }
+  else {
     avRho    = avRho / numCells;
     avEnergy = avEnergy / numCells;
   }
@@ -197,6 +232,25 @@ StatPPGenerator2D<T,DESCRIPTOR>::clone() const
   return new StatPPGenerator2D;
 }
 
+////////////////////// Class PostProcessor3D /////////////////
+
+template <typename T, typename DESCRIPTOR>
+std::string& PostProcessor3D<T,DESCRIPTOR>::getName()
+{
+  return _name;
+}
+
+template <typename T, typename DESCRIPTOR>
+std::string const& PostProcessor3D<T,DESCRIPTOR>::getName() const
+{
+  return _name;
+}
+
+template <typename T, typename DESCRIPTOR>
+int PostProcessor3D<T,DESCRIPTOR>::getPriority() const
+{
+  return _priority;
+}
 
 ////////////////////// Class PostProcessorGenerator3D /////////////////
 
@@ -208,7 +262,7 @@ PostProcessorGenerator3D<T,DESCRIPTOR>::PostProcessorGenerator3D (
 
 template<typename T, typename DESCRIPTOR>
 void PostProcessorGenerator3D<T,DESCRIPTOR>::shift (
-  int deltaX, int deltaY, int deltaZ )
+  int deltaX, int deltaY, int deltaZ, int iC_ )
 {
   x0 += deltaX;
   x1 += deltaX;
@@ -216,6 +270,7 @@ void PostProcessorGenerator3D<T,DESCRIPTOR>::shift (
   y1 += deltaY;
   z0 += deltaZ;
   z1 += deltaZ;
+  iC = iC_;
 }
 
 template<typename T, typename DESCRIPTOR>
@@ -234,9 +289,22 @@ extract(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_)
     z0 = newZ0;
     z1 = newZ1;
     return true;
-  } else {
+  }
+  else {
     return false;
   }
+}
+
+template<typename T, typename DESCRIPTOR>
+void PostProcessorGenerator3D<T,DESCRIPTOR>::
+reset(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_)
+{
+  x0 = x0_;
+  x1 = x1_;
+  y0 = y0_;
+  y1 = y1_;
+  z0 = z0_;
+  z1 = z1_;
 }
 
 ////////////////////// Class LatticeCouplingGenerator3D /////////////////
@@ -244,7 +312,7 @@ extract(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_)
 template<typename T, typename DESCRIPTOR>
 LatticeCouplingGenerator3D<T,DESCRIPTOR>::LatticeCouplingGenerator3D (
   int x0_, int x1_, int y0_, int y1_, int z0_, int z1_)
-  : x0(x0_), x1(x1_), y0(y0_), y1(y1_), z0(z0_), z1(z1_)
+  : x0(x0_), x1(x1_), y0(y0_), y1(y1_), z0(z0_), z1(z1_), iC(-1)
 { }
 
 template<typename T, typename DESCRIPTOR>
@@ -276,7 +344,8 @@ extract(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_)
     z0 = newZ0;
     z1 = newZ1;
     return true;
-  } else {
+  }
+  else {
     return false;
   }
 }
@@ -297,7 +366,9 @@ reset(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_)
 
 template<typename T, typename DESCRIPTOR>
 StatisticsPostProcessor3D<T,DESCRIPTOR>::StatisticsPostProcessor3D()
-{ }
+{
+  this->getName() = "StatisticsPostProcessor3D";  
+}
 
 #ifndef PARALLEL_MODE_OMP
 template<typename T, typename DESCRIPTOR>
@@ -342,7 +413,8 @@ void StatisticsPostProcessor3D<T,DESCRIPTOR>::process (
     avEnergy = T();
     maxU = T();
     numCells = 0;
-  } else {
+  }
+  else {
     avRho    = avRho / numCells;
     avEnergy = avEnergy / numCells;
   }

@@ -22,7 +22,7 @@
 */
 
 #include "dynamics/latticeDescriptors.h"
- 
+
 #include "particles/particle3D.h"
 #include "particles/particle3D.hh"
 #include "linearContactForce3D.h"

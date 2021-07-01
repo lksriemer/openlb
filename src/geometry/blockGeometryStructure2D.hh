@@ -36,8 +36,11 @@
 namespace olb {
 
 template<typename T>
-BlockGeometryStructure2D<T>::BlockGeometryStructure2D(int iCglob)
-  : _iCglob(iCglob), _statistics(this), clout(std::cout,"BlockGeometryStructure2D") { }
+BlockGeometryStructure2D<T>::BlockGeometryStructure2D(int nX, int nY, int iCglob)
+  : BlockStructure2D(nX, nY),
+    _iCglob(iCglob),
+    _statistics(this),
+    clout(std::cout,"BlockGeometryStructure2D") { }
 
 template<typename T>
 int const& BlockGeometryStructure2D<T>::getIcGlob() const
@@ -46,9 +49,9 @@ int const& BlockGeometryStructure2D<T>::getIcGlob() const
 }
 
 template<typename T>
-Vector<int,2> const BlockGeometryStructure2D<T>::getExtend() const
+Vector<int,2> BlockGeometryStructure2D<T>::getExtend() const
 {
-  return  Vector<int,2> (getNx(), getNy());
+  return Vector<int,2>(this->getNx(), this->getNy());
 }
 
 template<typename T>
@@ -59,7 +62,7 @@ void BlockGeometryStructure2D<T>::getPhysR(T physR[2], const int latticeR[2]) co
 }
 
 template<typename T>
-int&  BlockGeometryStructure2D<T>::get(std::vector<int> latticeR)
+int& BlockGeometryStructure2D<T>::get(std::vector<int> latticeR)
 {
   return get(latticeR[0], latticeR[1]);
 }
@@ -74,8 +77,8 @@ template<typename T>
 int BlockGeometryStructure2D<T>::clean(bool verbose)
 {
   int counter=0;
-  for (int iX = 0; iX < getNx(); iX++) {
-    for (int iY = 0; iY < getNy(); iY++) {
+  for (int iX = 0; iX < this->getNx(); iX++) {
+    for (int iY = 0; iY < this->getNy(); iY++) {
       if (get(iX, iY) != 1 && get(iX, iY)!= 0) {
         if (   getMaterial(iX, iY) != 1
                && getMaterial(iX + 1, iY) != 1
@@ -102,8 +105,8 @@ template<typename T>
 int BlockGeometryStructure2D<T>::outerClean(bool verbose)
 {
   int counter=0;
-  for (int iX = 0; iX < getNx(); iX++) {
-    for (int iY = 0; iY < getNy(); iY++) {
+  for (int iX = 0; iX < this->getNx(); iX++) {
+    for (int iY = 0; iY < this->getNy(); iY++) {
       if (get(iX, iY) == 1) {
         if (   getMaterial(iX + 1, iY) == 0
                || getMaterial(iX - 1, iY) == 0
@@ -131,8 +134,8 @@ int BlockGeometryStructure2D<T>::innerClean(bool verbose)
   int count = 0;
   int count2 = 0;
 
-  for (int iX = 0; iX < getNx(); iX++) {
-    for (int iY = 0; iY < getNy(); iY++) {
+  for (int iX = 0; iX < this->getNx(); iX++) {
+    for (int iY = 0; iY < this->getNy(); iY++) {
       if (get(iX, iY) != 1 && get(iX, iY) != 0) {
         count++;
 
@@ -183,8 +186,8 @@ int BlockGeometryStructure2D<T>::innerClean(int fromM, bool verbose)
   int count = 0;
   int count2 = 0;
 
-  for (int iX = 0; iX < getNx(); iX++) {
-    for (int iY = 0; iY < getNy(); iY++) {
+  for (int iX = 0; iX < this->getNx(); iX++) {
+    for (int iY = 0; iY < this->getNy(); iY++) {
       if (get(iX, iY) != 1 && get(iX, iY)!= 0 && get(iX, iY) == fromM) {
         count++;
         if (getMaterial(iX - 1, iY) == 1) {
@@ -231,8 +234,8 @@ int BlockGeometryStructure2D<T>::innerClean(int fromM, bool verbose)
 template<typename T>
 void BlockGeometryStructure2D<T>::reset(IndicatorF2D<T>& domain)
 {
-  for (int iX = 0; iX < getNx(); iX++) {
-    for (int iY = 0; iY < getNy(); iY++) {
+  for (int iX = 0; iX < this->getNx(); iX++) {
+    for (int iY = 0; iY < this->getNy(); iY++) {
       T physR[2] { };
       getPhysR(physR, iX, iY);
       if (domain(physR)) {
@@ -296,8 +299,8 @@ bool BlockGeometryStructure2D<T>::find(int material, unsigned offsetX, unsigned 
 {
 
   bool found = false;
-  for (foundX = 0; foundX < getNx(); foundX++) {
-    for (foundY = 0; foundY < getNy(); foundY++) {
+  for (foundX = 0; foundX < this->getNx(); foundX++) {
+    for (foundY = 0; foundY < this->getNy(); foundY++) {
       found = check(material, foundX, foundY, offsetX, offsetY);
       if (found) {
         return found;
@@ -327,8 +330,8 @@ bool BlockGeometryStructure2D<T>::checkForErrors(bool verbose) const
 {
   bool error = false;
 
-  for (int iX = 0; iX < getNx(); iX++) {
-    for (int iY = 0; iY < getNy(); iY++) {
+  for (int iX = 0; iX < this->getNx(); iX++) {
+    for (int iY = 0; iY < this->getNy(); iY++) {
       if (get(iX, iY) == 0) {
         if (   getMaterial(iX + 1, iY) == 1
                || getMaterial(iX - 1, iY) == 1
@@ -357,8 +360,8 @@ bool BlockGeometryStructure2D<T>::checkForErrors(bool verbose) const
 template<typename T>
 void BlockGeometryStructure2D<T>::rename(int fromM, int toM)
 {
-  for (int iX = 0; iX < getNx(); iX++) {
-    for (int iY = 0; iY < getNy(); iY++) {
+  for (int iX = 0; iX < this->getNx(); iX++) {
+    for (int iY = 0; iY < this->getNy(); iY++) {
       if (get(iX, iY) == fromM) {
         get(iX, iY) = toM;
       }
@@ -370,8 +373,8 @@ template<typename T>
 void BlockGeometryStructure2D<T>::rename(int fromM, int toM, IndicatorF2D<T>& condition)
 {
   T physR[2];
-  for (int iX = 0; iX < getNx(); iX++) {
-    for (int iY = 0; iY < getNy(); iY++) {
+  for (int iX = 0; iX < this->getNx(); iX++) {
+    for (int iY = 0; iY < this->getNy(); iY++) {
       if (get(iX, iY) == fromM) {
         getPhysR(physR, iX,iY);
         bool inside[1];
@@ -388,8 +391,8 @@ template<typename T>
 void BlockGeometryStructure2D<T>::rename(int fromM, int toM, unsigned offsetX,
     unsigned offsetY)
 {
-  for (int iX = 0; iX < getNx(); iX++) {
-    for (int iY = 0; iY < getNy(); iY++) {
+  for (int iX = 0; iX < this->getNx(); iX++) {
+    for (int iY = 0; iY < this->getNy(); iY++) {
       if (get(iX, iY) == fromM) {
         bool found = true;
         for (int iOffsetX = -offsetX; iOffsetX <= (int) offsetX; ++iOffsetX) {
@@ -414,8 +417,8 @@ template<typename T>
 void BlockGeometryStructure2D<T>::rename(int fromM, int toM, int testM,
     std::vector<int> testDirection)
 {
-  for (int iX = 0; iX < getNx(); iX++) {
-    for (int iY = 0; iY < getNy(); iY++) {
+  for (int iX = 0; iX < this->getNx(); iX++) {
+    for (int iY = 0; iY < this->getNy(); iY++) {
       if (get(iX, iY) == fromM) {
 
         // flag that indicates the renaming of the current voxel, valid voxels are not renamed
@@ -445,8 +448,8 @@ void BlockGeometryStructure2D<T>::rename(int fromM, int toM, int fluidM,
   rename(fromM, toM, condition);
   std::vector<int> testDirection(discreteNormal);
   T physR[2];
-  for (int iX = 0; iX < getNx(); iX++) {
-    for (int iY = 0; iY < getNy(); iY++) {
+  for (int iX = 0; iX < this->getNx(); iX++) {
+    for (int iY = 0; iY < this->getNy(); iY++) {
       if (get(iX, iY) == toM) {
         getPhysR(physR, iX,iY);
         bool inside[1];
@@ -470,8 +473,8 @@ void BlockGeometryStructure2D<T>::rename(int fromM, int toM, int fluidM,
   rename(fromM, toM, condition);
   std::vector<int> testDirection = getStatistics().computeDiscreteNormal(toM);
   T physR[3];
-  for (int iX = 0; iX < getNx(); iX++) {
-    for (int iY = 0; iY < getNy(); iY++) {
+  for (int iX = 0; iX < this->getNx(); iX++) {
+    for (int iY = 0; iY < this->getNy(); iY++) {
       if (get(iX, iY) == toM) {
         getPhysR(physR, iX,iY);
         bool inside[1];

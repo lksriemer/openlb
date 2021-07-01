@@ -156,13 +156,13 @@ SmoothIndicatorTriangle2D<T,S, HLBM>::SmoothIndicatorTriangle2D(Vector<S,2> cent
   T invEps = 1./this->getEpsilon();
 
   _ab = _PointB - _PointA;
-  _ab.normalize(invEps);
+  _ab = normalize(_ab, invEps);
   _ab_d = _ab[1]*_PointA[0] - _ab[0]*_PointA[1];
   _bc = _PointC - _PointB;
-  _bc.normalize(invEps);
+  _bc = normalize(_bc, invEps);
   _bc_d = _bc[1]*_PointB[0] - _bc[0]*_PointB[1];
   _ca = _PointA - _PointC;
-  _ca.normalize(invEps);
+  _ca = normalize(_ca, invEps);
   _ca_d = _ca[1]*_PointC[0] - _ca[0]*_PointC[1];
 
   T mass = density*0.5*base*altitude;
@@ -170,6 +170,8 @@ SmoothIndicatorTriangle2D<T,S, HLBM>::SmoothIndicatorTriangle2D(Vector<S,2> cent
   this->init(theta, vel, mass, mofi);
 }
 
+// returns true if x is inside the sphere
+// TODO: check if epsilon treatment is correct (currently epsilon not around but after the boundary)
 template <typename T, typename S, bool HLBM>
 bool SmoothIndicatorTriangle2D<T,S,HLBM>::operator()(T output[], const S input[])
 {
@@ -233,6 +235,152 @@ bool SmoothIndicatorTriangle2D<T,S,HLBM>::operator()(T output[], const S input[]
   output[0] = 0.;
   return false;
 }
+//needs to be updated to current state
+/*
+//TODO: Check for consitency
+template <typename T, typename S, typename DESCRIPTOR, bool HLBM>
+SmoothIndicatorCustom2D<T,S,DESCRIPTOR,HLBM>::SmoothIndicatorCustom2D(UnitConverter<T,DESCRIPTOR> const& converter,
+    IndicatorF3D<T>& ind,
+    Vector<T,2> center,
+    T epsilon,
+    T slice,
+    S theta,
+    S rhoP,
+    Vector<S,2> vel)
+  : _converter(converter)
+{
+  OstreamManager clout(std::cout,"createIndicatorCustom2D");
+  this->_pos = center;
+  this->_vel = vel;
+  this->_epsilon = epsilon;
+  this->_theta = theta;
+
+  // initialize temporary values
+  SmoothBlockIndicator3D<T,olb::descriptors::D3Q19<>> smoothBlock(ind, this->_epsilon);
+  int _nX = smoothBlock.getBlockData().getNx();
+  int _nY = smoothBlock.getBlockData().getNy();
+  int tmpNcells = 0;
+  if (slice<ind.getMin()[2] || slice>ind.getMax()[2]) {
+    clout << "ERROR: Forbidden value, slice out of bounds. Value needs to be between " << ind.getMin()[2] << " and " << ind.getMax()[2] << std::endl;
+    return;
+  }
+
+  // create smoothed blockData
+  int tmpZ = int(slice/this->_converter.getConversionFactorLength());
+  BlockData2D<T,BaseType> block_tmp(_nX, _nY);
+  for (int iX=0; iX < _nX; iX++) {
+    for (int iY=0; iY < _nY; iY++) {
+      block_tmp.get(iX, iY) = smoothBlock.getBlockData().get(iX, iY, tmpZ);
+      if (block_tmp.get(iX, iY) > 0) {
+        tmpNcells++;
+      }
+    }
+  }
+  this->_blockData = block_tmp;
+  T invNcells = 1./tmpNcells;
+
+  // calculate mass and centerpoint for rotation
+  this->_mass = rhoP * tmpNcells * std::pow(_converter.getConversionFactorLength(), 2);
+  this->_center[0] = 0.0;
+  this->_center[1] = 0.0;
+  for (int iX= 0; iX < _nX; iX++) {
+    for (int iY = 0; iY < _nY; iY++) {
+      if (this->_blockData.get(iX,iY) > std::numeric_limits<T>::epsilon()) {
+        this->_center[0] += _converter.getPhysLength(iX) * this->_blockData.get(iX, iY) * invNcells;
+        this->_center[1] += _converter.getPhysLength(iY) * this->_blockData.get(iX, iY) * invNcells;
+      }
+    }
+  }
+  this->_latticeCenter[0] = _converter.numCells(this->_center[0]);  // TODO
+  this->_latticeCenter[1] = _converter.numCells(this->_center[1]);
+
+  // calculate moment of inertia
+  this->_mofi = 0.;
+  for (int iX = 0; iX < _nX; ++iX) {
+    for (int iY = 0; iY < _nY; ++iY) {
+      if (this->_blockData.get(iX,iY) > std::numeric_limits<T>::epsilon()) {
+        T dx = std::abs(_converter.getPhysLength(iX) - this->_center[0]);
+        T dy = std::abs(_converter.getPhysLength(iY) - this->_center[1]);
+        this->_mofi += (dx*dx+dy*dy);
+      }
+    }
+  }
+  this->_mofi += pow(_converter.getPhysLength(1), 4)/ 6.0;
+  this->_mofi *= this->_mass*invNcells;
+
+  // calculate circumradius
+  T distance = 0.;
+  for (int iX = 0; iX < _nX; iX++) {
+    T x = _converter.getPhysLength(iX);
+    for (int iY = 0; iY < _nY; iY++) {
+      T y = _converter.getPhysLength(iY);
+      if (this->_blockData.get(iX,iY) > std::numeric_limits<T>::epsilon()) {
+        T tmpDist = std::sqrt(std::pow(this->_center[0]-x,2)+std::pow(this->_center[1]-y,2));
+        if (tmpDist > distance) {
+          distance = tmpDist;
+        }
+      }
+    }
+  }
+  this->_circumradius = 2.*this->_epsilon+distance;
+
+  this->_rotMat[0] = std::cos(theta);
+  this->_rotMat[1] = std::sin(theta);
+  this->_rotMat[2] = -std::sin(theta);
+  this->_rotMat[3] = std::cos(theta);
+}
+
+template <typename T, typename S, typename DESCRIPTOR, bool HLBM>
+bool SmoothIndicatorCustom2D<T,S,DESCRIPTOR,HLBM>::operator() (T output[], const S input[])
+{
+  // Translation
+  T xDist = input[0] - this->getPos()[0];
+  T yDist = input[1] - this->getPos()[1];
+
+  // counter-clockwise rotation by _theta=-theta around (0/0) and movement from rotation center to local center
+  int x = this->_converter.numCells(xDist*this->_rotMat[0] + yDist*this->_rotMat[2]) + this->_latticeCenter[0];
+  int y = this->_converter.numCells(xDist*this->_rotMat[1] + yDist*this->_rotMat[3]) + this->_latticeCenter[1];
+
+  /// Checking if coordinates are inside the BlockData
+  if (x >= 0 && x < _blockData.getNx() && y >= 0 && y < _blockData.getNy()) {
+    if (this->_blockData.get(x, y) > std::numeric_limits<T>::epsilon()) {
+      output[0] = T(this->_blockData.get(x, y));
+      return true;
+    }
+  }
+  output[0] = T(0);
+  return false;
+}
+*/
+
+//Geng2019:
+template <typename T, typename S, bool HLBM>
+SmoothIndicatorHTCircle2D<T,S,HLBM>::SmoothIndicatorHTCircle2D(Vector<S,2> center, S radius, S epsilon, S density, Vector<S,2> vel)
+  : _radius(radius)
+{
+  this->_pos = center;
+  this->_circumRadius = radius + 0.5*epsilon;
+  this->_myMin = {center[0] - this->getCircumRadius(), center[1] - this->getCircumRadius()};
+  this->_myMax = {center[0] + this->getCircumRadius(), center[1] + this->getCircumRadius()};
+  this->_epsilon = epsilon;
+  T mass = M_PI*radius*radius*density;
+  T mofi = 0.5 * mass * radius * radius;
+  this->init(0., vel, mass, mofi);
+}
+
+// returns true if x is inside the sphere
+template <typename T, typename S, bool HLBM>
+bool SmoothIndicatorHTCircle2D<T,S,HLBM>::operator()(T output[], const S input[])
+{
+  double distToCenter2 = std::pow(this->getPos()[0]-input[0], 2) +
+                         std::pow(this->getPos()[1]-input[1], 2);
+  
+  
+  double d = std::sqrt(distToCenter2) - this->_radius;
+  output[0] = T((1.-tanh(d/this->getEpsilon()))/2.);
+  return true;
+}
+
 
 } // namespace olb
 

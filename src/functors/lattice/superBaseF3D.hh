@@ -56,6 +56,23 @@ BlockF3D<W>& SuperF3D<T,W>::getBlockF(int iCloc)
   return *(_blockF[iCloc]);
 }
 
+template <typename T, typename W>
+bool SuperF3D<T,W>::operator()(W output[], const int input[])
+{
+  
+  LoadBalancer<T>& load = _superStructure.getLoadBalancer();
+
+  if (load.isLocal(input[0])) {
+    const int loc = load.loc(input[0]);
+
+    return this->getBlockF(loc)(output, &input[1]);
+  }
+  else {
+    return false;
+  }
+
+}
+
 
 template <typename T, typename BaseType>
 SuperDataF3D<T,BaseType>::SuperDataF3D(SuperData3D<T,BaseType>& superData)
@@ -267,6 +284,22 @@ template <typename T, typename DESCRIPTOR>
 SuperLattice3D<T,DESCRIPTOR>& SuperLatticeF3D<T,DESCRIPTOR>::getSuperLattice()
 {
   return _sLattice;
+}
+
+template<typename T, typename DESCRIPTOR>
+bool SuperLatticeF3D<T, DESCRIPTOR>::operator()(
+  T output[], const int input[])
+{
+  auto& load = this->_sLattice.getLoadBalancer();
+
+  if (load.isLocal(input[0])) {
+    const int loc = load.loc(input[0]);
+
+    return this->getBlockF(loc)(output, &input[1]);
+  }
+  else {
+    return false;
+  }
 }
 
 template <typename T, typename DESCRIPTOR>

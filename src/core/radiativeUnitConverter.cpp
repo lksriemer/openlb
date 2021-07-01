@@ -43,7 +43,7 @@ namespace olb {
 double getThetaRefracted(double const& thetaIncident, double const& refractiveRelative)
 {
   double thetaRefracted = M_PI/2.;
-  if( refractiveRelative * sin(thetaIncident) < 1 ) {
+  if ( refractiveRelative * sin(thetaIncident) < 1 ) {
     thetaRefracted = asin( refractiveRelative * sin(thetaIncident));  // eq.(5.118)
   }
   return thetaRefracted;

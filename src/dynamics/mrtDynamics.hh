@@ -53,6 +53,7 @@ MRTdynamics<T,DESCRIPTOR>::MRTdynamics (
   T omega_, Momenta<T,DESCRIPTOR>& momenta_ )
   : BasicDynamics<T,DESCRIPTOR>(momenta_), omega(omega_), lambda(omega_)
 {
+  this->getName() = "MRTdynamics";  
   T rt[DESCRIPTOR::q]; // relaxation times vector.
   for (int iPop  = 0; iPop < DESCRIPTOR::q; ++iPop) {
     rt[iPop] = descriptors::s<T,DESCRIPTOR>(iPop);

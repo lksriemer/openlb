@@ -91,7 +91,7 @@ template<typename T, typename DESCRIPTOR,
 typename ADLattice=descriptors::D3Q7<descriptors::VELOCITY,descriptors::VELOCITY2>>
 class AdvDiffMagneticWireForce3D : public AdvectionDiffusionForce3D<T,DESCRIPTOR,ADLattice> {
 public:
-  AdvDiffMagneticWireForce3D(SuperGeometry3D<T>& superGeometry_, UnitConverter<T,DESCRIPTOR> const& converter_, T pMass, AnalyticalF3D<T, T>& getMagForce);
+  AdvDiffMagneticWireForce3D(SuperGeometry3D<T>& superGeometry_, UnitConverter<T,DESCRIPTOR> const& converter_, T pMass, AnalyticalF<3,T, T>& getMagForce);
   ~AdvDiffMagneticWireForce3D() override {};
   void applyForce(T force[], Cell<T,DESCRIPTOR> *nsCell, Cell<T,ADLattice> *adCell, T vel[], int latticeR[]) override;
 
@@ -100,7 +100,7 @@ private:
   int initArg;
   T _pMass;
   T _conversionVelocity;
-  AnalyticalF3D<T, T>& _getMagForce;
+  AnalyticalF<3,T, T>& _getMagForce;
 };
 
 }

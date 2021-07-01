@@ -170,7 +170,7 @@ const Vector<S,2>& SmoothIndicatorF2D<T,S,true>::getAcc2() const {
 }
 
 template <typename T, typename S>
-const Vector<S,2>& SmoothIndicatorF2D<T,S,true>::getForce() const {
+const Vector<S,2>& SmoothIndicatorF2D<T,S,true>::getHydrodynamicForce() const {
   return _force;
 }
 
@@ -249,7 +249,7 @@ void SmoothIndicatorF2D<T,S,true>::setAcc2(Vector<S,2> acc2) {
 }
 
 template <typename T, typename S>
-void SmoothIndicatorF2D<T,S,true>::setForce(Vector<S,2> force) {
+void SmoothIndicatorF2D<T,S,true>::setHydrodynamicForce(Vector<S,2> force) {
   _force[0] = force[0];
   _force[1] = force[1];
 }

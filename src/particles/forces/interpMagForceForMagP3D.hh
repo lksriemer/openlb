@@ -61,7 +61,7 @@ void InterpMagForceForMagP3D<T, PARTICLETYPE, DESCRIPTOR>::applyForce(
     ret_matches.begin();
 
   Vector<T, 3> dMom_1 = Vector<T, 3>((p->getMoment()));
-  if (dMom_1.norm() > std::numeric_limits<T>::epsilon()) {
+  if (norm(dMom_1) > std::numeric_limits<T>::epsilon()) {
     T m_p1 = p->getMagnetisation();
 
     for (; it != ret_matches.end(); it++) {
@@ -74,18 +74,18 @@ void InterpMagForceForMagP3D<T, PARTICLETYPE, DESCRIPTOR>::applyForce(
 
         // get neighbour particle moment
         Vector<T, 3> dMom_2((p2->getMoment()));
-        if (dMom_2.norm() > std::numeric_limits<T>::epsilon()) {
+        if (norm(dMom_2) > std::numeric_limits<T>::epsilon()) {
           T m_p2 = p2->getMagnetisation();
 
           // given moment magnitudes as scale factors
-          T m_i_scaleFactor = dMom_1.norm();
-          T m_j_scaleFactor = dMom_2.norm();
+          T m_i_scaleFactor = norm(dMom_1);
+          T m_j_scaleFactor = norm(dMom_2);
 
           // normalised moment directions
           Vector<T, 3> n_i(dMom_1);
-          n_i.normalize();
+          n_i = normalize(n_i);
           Vector<T, 3> n_j(dMom_2);
-          n_j.normalize();
+          n_j = normalize(n_j);
 
           // constants
           T mu_0 = 4 * M_PI * 1.e-7; // magnetic constant
@@ -100,11 +100,11 @@ void InterpMagForceForMagP3D<T, PARTICLETYPE, DESCRIPTOR>::applyForce(
           r_ij[2] = p->getPos()[2] - p2->getPos()[2];
 
           // distance from particle1 to particle2
-          T r = r_ij.norm();
+          T r = norm(r_ij);
 
           // normalised direction vector
           Vector<T, 3> t_ij(r_ij);
-          t_ij.normalize();
+          t_ij = normalize(t_ij);
 
           // FORCE of Dipole 1 on Dipole 2
           Vector<T, 3> mi = {n_i};
@@ -113,7 +113,7 @@ void InterpMagForceForMagP3D<T, PARTICLETYPE, DESCRIPTOR>::applyForce(
           mj *= mu_j;
           Vector<T, 3> rn = {r_ij};
           rn *= -1. ;
-          normalize(rn);
+          rn = normalize(rn);
           T scalar_termF = (3 * mu_0 ) / (4 * M_PI * std::pow(r, 4));
           Vector<T, 3> force = mj * (mi * rn) + mi * (mj * rn) + rn * (mi * mj) - 5 * rn * (mi * rn) * (mj * rn) ;
           force *= scalar_termF;
@@ -127,8 +127,7 @@ void InterpMagForceForMagP3D<T, PARTICLETYPE, DESCRIPTOR>::applyForce(
 
           // Force an torque for overlapping particles 
           if ((p2->getRad() + p->getRad()) >= std::sqrt(it->second)) {
-
-            normalize(force);
+            force = normalize(force);
             torque *= 0;
             force *= mu_0 * pow((mu_i + mu_j) / 2., 2.) / (4 * M_PI * pow(r / 2, 4.)) ;
           }

@@ -57,10 +57,10 @@ public:
   void setOmega(T omega_) override;
   /// Compute fluid velocity and particle density on the cell.
   void computeRhoU(
-    Cell<T,DESCRIPTOR> const& cell,
+    ConstCell<T,DESCRIPTOR>& cell,
     T& rho, T u[DESCRIPTOR::d]) const override;
   /// Compute fluid velocity on the cell.
-  void computeU(Cell<T,DESCRIPTOR> const& cell, T u[DESCRIPTOR::d]) const override;
+  void computeU(ConstCell<T,DESCRIPTOR>& cell, T u[DESCRIPTOR::d]) const override;
 private:
   T omega; /// relaxation parameter
   T gamma; /// tunable parameter
@@ -102,11 +102,11 @@ public:
   /// Set local relaxation parameter of the dynamics
   void setOmega(T omega_) override;
   /// Compute particle density on the cell.
-  T computeRho(Cell<T,DESCRIPTOR> const& cell) const override;
+  T computeRho(ConstCell<T,DESCRIPTOR>& cell) const override;
   /// Compute fluid velocity on the cell.
-  void computeU(Cell<T,DESCRIPTOR > const &cell, T u[DESCRIPTOR::d]) const override;
+  void computeU(ConstCell<T,DESCRIPTOR>& cell, T u[DESCRIPTOR::d]) const override;
   /// Compute fluid velocity and particle density on the cell. 
-  void computeRhoU (Cell<T,DESCRIPTOR> const& cell, T& rho, T u[DESCRIPTOR::d]) const override;
+  void computeRhoU (ConstCell<T,DESCRIPTOR>& cell, T& rho, T u[DESCRIPTOR::d]) const override;
   /// Set particle density on the cell.
   void defineRho(Cell<T,DESCRIPTOR>& cell, T rho) override;
   /// Set fluid velocity on the cell.

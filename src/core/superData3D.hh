@@ -192,9 +192,15 @@ BaseType const& SuperData3D<T,BaseType>::get(int iC, int iX, int iY, int iZ, int
 }
 
 template<typename T, typename BaseType>
-bool* SuperData3D<T,BaseType>::operator() (int iCloc, int iX, int iY, int iZ, int iData)
+std::uint8_t* SuperData3D<T,BaseType>::operator() (int iCloc, int iX, int iY, int iZ, int iData)
 {
-  return (bool*)&get(iCloc,iX,iY,iZ,iData);
+  return reinterpret_cast<std::uint8_t*>(&get(iCloc,iX,iY,iZ,iData));
+}
+
+template<typename T, typename BaseType>
+std::uint8_t* SuperData3D<T,BaseType>::operator() (int iCloc, std::size_t iCell, int iData)
+{
+  return reinterpret_cast<std::uint8_t*>(&_extendedBlockData[iCloc].get(iCell, iData));
 }
 
 template<typename T, typename BaseType>

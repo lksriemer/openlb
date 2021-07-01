@@ -67,11 +67,11 @@ typedef double T;
 #define finiteDiff //for N<256
 
 #ifdef ShearSmagorinsky
-#define DESCRIPTOR ShearSmagorinskyD3Q19Descriptor
+typedef D3Q19<AV_SHEAR> DESCRIPTOR;
 #elif defined (WALE)
-#define DESCRIPTOR WALED3Q19Descriptor
+typedef d3Q19<EFFECTIVE_OMEGA,VELO_GRAD> DESCRIPTOR;
 #else
-#define DESCRIPTOR D3Q19<>
+typedef D3Q19<> DESCRIPTOR;
 #endif
 
 // Global constants
@@ -98,12 +98,12 @@ protected:
 
 // initial solution of the TGV
 public:
-  Tgv3D(UnitConverter<T,_DESCRIPTOR> const& converter, T frac) : AnalyticalF3D<T,S>(3)
+  Tgv3D(UnitConverter<T,_DESCRIPTOR> const& converter, T frac) : AnalyticalF3D<T,BaseType<T>>(3)
   {
     u0 = converter.getCharLatticeVelocity();
   };
 
-  bool operator()(T output[], const S input[]) override
+  bool operator()(T output[], const BaseType<T> input[]) override
   {
     T x = input[0];
     T y = input[1];
@@ -234,7 +234,7 @@ void getDNSValues()
 
 
 void getResults(SuperLattice3D<T, DESCRIPTOR>& sLattice,
-                UnitConverter<T,DESCRIPTOR> const& converter, int iT,
+                UnitConverter<T,DESCRIPTOR> const& converter, std::size_t iT,
                 SuperGeometry3D<T>& superGeometry, Timer<double>& timer,
                 Dynamics<T, DESCRIPTOR>* bulkDynamics)
 {
@@ -265,7 +265,7 @@ void getResults(SuperLattice3D<T, DESCRIPTOR>& sLattice,
 
     // write output of velocity as JPEG
     SuperEuklidNorm3D<T, DESCRIPTOR> normVel( velocity );
-    BlockReduction3D2D<T> planeReduction( normVel, {0, 0, 1} );
+    BlockReduction3D2D<T> planeReduction( normVel, Vector<T,3>({0, 0, 1}) );
     heatmap::write(planeReduction, iT);
 
     timer.update(iT);
@@ -286,7 +286,7 @@ void getResults(SuperLattice3D<T, DESCRIPTOR>& sLattice,
     SuperLatticePhysDissipationFD3D<T, DESCRIPTOR> diss(superGeometry, sLattice, matNumber, converter);
 #if !defined (DNS)
     SuperLatticePhysEffectiveDissipationFD3D<T, DESCRIPTOR> effectiveDiss(superGeometry, sLattice, matNumber,
-                                                                          converter, *(dynamic_cast<LESDynamics<T,DESCRIPTOR>*>(bulkDynamics)));
+        converter, *(dynamic_cast<LESDynamics<T,DESCRIPTOR>*>(bulkDynamics)));
 #endif
 #else
     SuperLatticePhysDissipation3D<T, DESCRIPTOR> diss(sLattice, converter);
@@ -308,11 +308,12 @@ void getResults(SuperLattice3D<T, DESCRIPTOR>& sLattice,
 #endif
 
     T diss_eddy = diss_eff - diss_mol;
-    if(plotDNS==true) {
-     int step = converter.getPhysTime(iT) / gnuplotSave + 0.5;
-     gplot.setData(converter.getPhysTime(iT), {diss_mol, diss_eddy, diss_eff, values_DNS[step][1]}, {"molecular dissipation rate", "eddy dissipation rate", "effective dissipation rate" ,"Brachet et al."}, "bottom right");
-    } else {
-     gplot.setData(converter.getPhysTime(iT), {diss_mol, diss_eddy, diss_eff}, {"molecular dissipation rate", "eddy dissipation rate", "effective dissipation rate"}, "bottom right");
+    if (plotDNS==true) {
+      int step = converter.getPhysTime(iT) / gnuplotSave + 0.5;
+      gplot.setData(converter.getPhysTime(iT), {diss_mol, diss_eddy, diss_eff, values_DNS[step][1]}, {"molecular dissipation rate", "eddy dissipation rate", "effective dissipation rate","Brachet et al."}, "bottom right");
+    }
+    else {
+      gplot.setData(converter.getPhysTime(iT), {diss_mol, diss_eddy, diss_eff}, {"molecular dissipation rate", "eddy dissipation rate", "effective dissipation rate"}, "bottom right");
     }
     gplot.writePNG();
   }
@@ -372,20 +373,20 @@ int main(int argc, char* argv[])
   bulkDynamics.reset(new BGKdynamics<T, DESCRIPTOR>(omega, instances::getBulkMomenta<T, DESCRIPTOR>()));
 #elif defined(WALE)
   bulkDynamics.reset(new WALEBGKdynamics<T, DESCRIPTOR>(omega, instances::getBulkMomenta<T, DESCRIPTOR>(),
-      smagoConst));
+                     smagoConst));
 #elif defined(ShearSmagorinsky)
   bulkDynamics.reset(new ShearSmagorinskyBGKdynamics<T, DESCRIPTOR>(omega, instances::getBulkMomenta<T, DESCRIPTOR>(),
-      smagoConst));
+                     smagoConst));
 #elif defined(Krause)
   bulkDynamics.reset(new KrauseBGKdynamics<T, DESCRIPTOR>(omega, instances::getBulkMomenta<T, DESCRIPTOR>(),
-      smagoConst));
+                     smagoConst));
 #elif defined(ConsistentStrainSmagorinsky)
   bulkDynamics.reset(new ConStrainSmagorinskyBGKdynamics<T, DESCRIPTOR>(omega, instances::getBulkMomenta<T, DESCRIPTOR>(),
-      smagoConst));
+                     smagoConst));
 #else //DNS Simulation
 
   bulkDynamics.reset(new SmagorinskyBGKdynamics<T, DESCRIPTOR>(omega, instances::getBulkMomenta<T, DESCRIPTOR>(),
-      smagoConst));
+                     smagoConst));
 #endif
 
   prepareLattice(sLattice, converter, *bulkDynamics, superGeometry);
@@ -393,7 +394,8 @@ int main(int argc, char* argv[])
 #if defined(WALE)
   std::list<int> mat;
   mat.push_back(1);
-  std::unique_ptr;SuperLatticeF3D<T, DESCRIPTOR>> functor(new SuperLatticeVelocityGradientFD3D<T, DESCRIPTOR>(superGeometry, sLattice, mat));
+  std::unique_ptr;
+  SuperLatticeF3D<T, DESCRIPTOR>> functor(new SuperLatticeVelocityGradientFD3D<T, DESCRIPTOR>(superGeometry, sLattice, mat));
 #endif
 
   /// === 4th Step: Main Loop with Timer ===
@@ -403,7 +405,7 @@ int main(int argc, char* argv[])
   // === 5th Step: Definition of Initial and Boundary Conditions ===
   setBoundaryValues(sLattice, converter, superGeometry);
 
-  for (int iT = 0; iT <= converter.getLatticeTime(maxPhysT); ++iT) {
+  for (std::size_t iT = 0; iT <= converter.getLatticeTime(maxPhysT); ++iT) {
 #if defined(WALE)
     sLattice.defineField<descriptors::VELO_GRAD>(superGeometry, 1, *functor);
 #endif

@@ -1,7 +1,7 @@
 /*  Lattice Boltzmann sample, written in C++, using the OpenLB
  *  library
  *
- *  Copyright (C) 2018 Marc Haußmann, Mathias J. Krause
+ *  Copyright (C) 2018 Marc Haußmann, Mathias J. Krause, Jonathan Jeppener-Haltenhoff
  *  E-mail contact: info@openlb.net
  *  The most recent release of OpenLB can be downloaded at
  *  <http://www.openlb.net/>
@@ -44,11 +44,11 @@ using namespace std;
 
 typedef double T;
 
-//#define MRT
-#ifdef MRT
-#define DESCRIPTOR ForcedMRTD3Q19Descriptor
+//#define ENABLE_MRT
+#ifdef ENABLE_MRT
+using DESCRIPTOR = D3Q19<tag::MRT,FORCE>;
 #else
-#define DESCRIPTOR  D3Q19<FORCE>
+using DESCRIPTOR = D3Q19<FORCE>;
 #endif
 
 typedef enum {forced, nonForced} FlowType;
@@ -57,8 +57,8 @@ typedef enum {bounceBack, local, interpolated, bouzidi, freeSlip, partialSlip} B
 
 
 // Parameters for the simulation setup
-FlowType flowType = forced;
-BoundaryType boundaryType = bouzidi;
+FlowType flowType = nonForced;
+BoundaryType boundaryType = interpolated;
 const T length  = 2.;         // length of the pie
 const T diameter  = 1.;       // diameter of the pipe
 int N = 21;                   // resolution of the model
@@ -128,10 +128,9 @@ void prepareGeometry( UnitConverter<T,DESCRIPTOR> const& converter,
 void prepareLattice(SuperLattice3D<T, DESCRIPTOR>& sLattice,
                     UnitConverter<T, DESCRIPTOR>const& converter,
                     Dynamics<T, DESCRIPTOR>& bulkDynamics,
-                    sOnLatticeBoundaryCondition3D<T, DESCRIPTOR>& onBc,
-                    sOffLatticeBoundaryCondition3D<T, DESCRIPTOR>& offBc,
                     SuperGeometry3D<T>& superGeometry)
 {
+
 
   OstreamManager clout( std::cout,"prepareLattice" );
   clout << "Prepare Lattice ..." << std::endl;
@@ -153,49 +152,64 @@ void prepareLattice(SuperLattice3D<T, DESCRIPTOR>& sLattice,
   CirclePoiseuille3D<T> poiseuilleU(origin, axis, converter.getCharLatticeVelocity(), radius);
 
   if (boundaryType == bounceBack) {
-    sLattice.defineDynamics( superGeometry, 2, &instances::getBounceBack<T, DESCRIPTOR>() );
-  }
-  else if (boundaryType == freeSlip) {
-    sLattice.defineDynamics(superGeometry, 2, &instances::getNoDynamics<T, DESCRIPTOR>());
-    onBc.addSlipBoundary( superGeometry, 2 );
-  }
-  else if (boundaryType == partialSlip) {
-    sLattice.defineDynamics(superGeometry, 2, &instances::getNoDynamics<T, DESCRIPTOR>());
-    onBc.addPartialSlipBoundary(tuner, superGeometry, 2 );
-  }
-  else if (boundaryType == bouzidi) {
-    sLattice.defineDynamics(superGeometry, 2, &instances::getNoDynamics<T, DESCRIPTOR>() );
+     sLattice.defineDynamics( superGeometry, 2, &instances::getBounceBack<T, DESCRIPTOR>() );
+   }
+   else if (boundaryType == freeSlip) {
+     sLattice.defineDynamics(superGeometry, 2, &instances::getNoDynamics<T, DESCRIPTOR>());
+     setSlipBoundary<T,DESCRIPTOR>(sLattice, superGeometry, 2);
+   }
+   else if (boundaryType == partialSlip) {
+     sLattice.defineDynamics(superGeometry, 2, &instances::getNoDynamics<T, DESCRIPTOR>());
+     setPartialSlipBoundary<T,DESCRIPTOR>(sLattice, tuner, superGeometry, 2);
+   }
+   else if (boundaryType == bouzidi) {
+     sLattice.defineDynamics(superGeometry, 2, &instances::getNoDynamics<T, DESCRIPTOR>() );
 
-    center0[0] -= 0.5*converter.getPhysDeltaX();
-    center1[0] += 0.5*converter.getPhysDeltaX();
-    if (flowType == forced) {
-      center0[0] -= 3.*converter.getPhysDeltaX();
-      center1[0] += 3.*converter.getPhysDeltaX();
-    }
-    IndicatorCylinder3D<T> pipe(center0, center1, radius);
-    offBc.addZeroVelocityBoundary(superGeometry, 2, pipe);
-  }
-  else {
-    sLattice.defineDynamics( superGeometry, 2, &bulkDynamics );
-    onBc.addVelocityBoundary( superGeometry, 2, omega );
-  }
+     center0[0] -= 0.5*converter.getPhysDeltaX();
+     center1[0] += 0.5*converter.getPhysDeltaX();
+     if (flowType == forced) {
+       center0[0] -= 3.*converter.getPhysDeltaX();
+       center1[0] += 3.*converter.getPhysDeltaX();
+     }
+     IndicatorCylinder3D<T> pipe(center0, center1, radius);
+     setBouzidiZeroVelocityBoundary<T,DESCRIPTOR>(sLattice, superGeometry, 2, pipe);
+   }
+   else {
+     sLattice.defineDynamics( superGeometry, 2, &bulkDynamics );
+     if(boundaryType == local){
+     	setLocalVelocityBoundary<T,DESCRIPTOR>(sLattice, omega, superGeometry, 2);
+     }
+     else{
+     	setInterpolatedVelocityBoundary<T,DESCRIPTOR>(sLattice, omega, superGeometry, 2);
+     }
+   }
 
-  if (flowType == nonForced) {
-    if (boundaryType == bouzidi) {
-      sLattice.defineDynamics(superGeometry, 3, &instances::getNoDynamics<T, DESCRIPTOR>() );
-      IndicatorCylinder3D<T> pipe(center0, center1, radius);
-      offBc.addVelocityBoundary(superGeometry, 3, pipe);
-      offBc.defineU(superGeometry,3,poiseuilleU);
-    }
-    else {
-      // Material=3 -->bulk dynamics
-      sLattice.defineDynamics( superGeometry, 3, &bulkDynamics );
-      onBc.addVelocityBoundary( superGeometry, 3, omega );
-    }
-    // Material=4 -->bulk dynamics
-    sLattice.defineDynamics( superGeometry, 4, &bulkDynamics );
-    onBc.addPressureBoundary( superGeometry, 4, omega );
-  }
+   if (flowType == nonForced) {
+     if (boundaryType == bouzidi) {
+       sLattice.defineDynamics(superGeometry, 3, &instances::getNoDynamics<T, DESCRIPTOR>() );
+       IndicatorCylinder3D<T> pipe(center0, center1, radius);
+       setBouzidiVelocityBoundary<T,DESCRIPTOR>(sLattice, superGeometry, 3, pipe);
+       defineUBouzidi<T,DESCRIPTOR>(sLattice, superGeometry, 3, poiseuilleU);
+     }
+     else {
+       // Material=3 -->bulk dynamics
+       sLattice.defineDynamics( superGeometry, 3, &bulkDynamics );
+       if(boundaryType == local){
+        	setLocalVelocityBoundary<T,DESCRIPTOR>(sLattice, omega, superGeometry, 3);
+        }
+        else{
+        	setInterpolatedVelocityBoundary<T,DESCRIPTOR>(sLattice, omega, superGeometry, 3);
+        }
+     }
+     // Material=4 -->bulk dynamics
+     sLattice.defineDynamics( superGeometry, 4, &bulkDynamics );
+     if(boundaryType == local){
+     	setLocalPressureBoundary<T,DESCRIPTOR>(sLattice, omega, superGeometry, 4);
+     }
+     else{
+     	setInterpolatedPressureBoundary<T,DESCRIPTOR>(sLattice, omega, superGeometry, 4);
+     }
+   }
 
   if (flowType == forced) {
     // Initial conditions
@@ -405,7 +419,7 @@ void getResults( SuperLattice3D<T,DESCRIPTOR>& sLattice, Dynamics<T, DESCRIPTOR>
     vtmWriter.write( iT );
 
     SuperEuklidNorm3D<T, DESCRIPTOR> normVel( velocity );
-    BlockReduction3D2D<T> planeReduction( normVel, {0,0,1}, 600, BlockDataSyncMode::ReduceOnly );
+    BlockReduction3D2D<T> planeReduction( normVel, Vector<T,3>({0,0,1}), 600, BlockDataSyncMode::ReduceOnly );
     // write output as JPEG
     heatmap::write(planeReduction, iT);
 
@@ -541,7 +555,7 @@ int main( int argc, char* argv[] )
 
   std::unique_ptr<Dynamics<T, DESCRIPTOR>> bulkDynamics;
 
-#if defined(MRT)
+#if defined(ENABLE_MRT)
   if (flowType == forced) {
     bulkDynamics.reset(new ForcedMRTdynamics<T, DESCRIPTOR>( converter.getLatticeRelaxationFrequency(), instances::getBulkMomenta<T, DESCRIPTOR>() ));
   }
@@ -558,19 +572,8 @@ int main( int argc, char* argv[] )
 #endif
 
 
-  // choose between local and non-local boundary condition
-  sOnLatticeBoundaryCondition3D<T, DESCRIPTOR> sOnBoundaryCondition( sLattice );
-  sOffLatticeBoundaryCondition3D<T, DESCRIPTOR> sOffBoundaryCondition(sLattice);
-  createBouzidiBoundaryCondition3D<T, DESCRIPTOR>(sOffBoundaryCondition);
-
-  if (boundaryType == local) {
-    createLocalBoundaryCondition3D<T, DESCRIPTOR> (sOnBoundaryCondition);
-  }
-  else {
-    createInterpBoundaryCondition3D<T, DESCRIPTOR> ( sOnBoundaryCondition );
-  }
-
-  prepareLattice(sLattice, converter, *bulkDynamics, sOnBoundaryCondition, sOffBoundaryCondition, superGeometry);
+  //prepareLattice and setBoundaryConditions
+  prepareLattice(sLattice, converter, *bulkDynamics, superGeometry);
 
   // set up size-increased indicator and instantiate wall shear stress functor (wss)
   Vector<T, 3> center0Extended(-converter.getPhysDeltaX() * 0.2, radius, radius);
@@ -589,7 +592,7 @@ int main( int argc, char* argv[] )
   util::ValueTracer<T> converge( converter.getLatticeTime( physInterval ), residuum );
   timer.start();
 
-  for ( int iT = 0; iT < converter.getLatticeTime( maxPhysT ); ++iT ) {
+  for ( std::size_t iT = 0; iT < converter.getLatticeTime( maxPhysT ); ++iT ) {
     if ( converge.hasConverged() ) {
       clout << "Simulation converged." << endl;
       getResults( sLattice, *bulkDynamics, converter, iT, superGeometry, timer, converge.hasConverged(), wss );

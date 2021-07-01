@@ -37,7 +37,9 @@ InamuroAnalyticalDynamics<T,DESCRIPTOR,Dynamics,direction,orientation>::InamuroA
   T omega_, Momenta<T,DESCRIPTOR>& momenta_ )
   : BasicDynamics<T,DESCRIPTOR>(momenta_),
     boundaryDynamics(omega_, momenta_)
-{ }
+{
+  this->getName() = "InamuroAnalyticalDynamics";
+}
 
 template<typename T, typename DESCRIPTOR, typename Dynamics, int direction, int orientation>
 T InamuroAnalyticalDynamics<T,DESCRIPTOR, Dynamics, direction, orientation>::

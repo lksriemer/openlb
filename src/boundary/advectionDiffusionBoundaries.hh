@@ -31,7 +31,7 @@
 
 namespace olb {
 
- 
+
 
 //==================================================================================================
 //==================== For regularized Advection Diffusion Boundary Condition ======================
@@ -45,6 +45,7 @@ AdvectionDiffusionBoundariesDynamics<T,DESCRIPTOR,Dynamics,direction,orientation
 AdvectionDiffusionBoundariesDynamics( T omega_, Momenta<T,DESCRIPTOR>& momenta_)
   : BasicDynamics<T,DESCRIPTOR>(momenta_), boundaryDynamics(omega_, momenta_)
 {
+  this->getName() = "AdvectionDiffusionBoundariesDynamics";
 }
 
 template<typename T, typename DESCRIPTOR, typename Dynamics, int direction, int orientation>
@@ -63,10 +64,10 @@ collide(Cell<T,DESCRIPTOR>& cell,LatticeStatistics<T>& statistics)
   typedef lbHelpers<T,DESCRIPTOR> lbH;
 
   T dirichletTemperature = this->_momenta.computeRho(cell);
-  T* u = cell.template getFieldPointer<descriptors::VELOCITY>();
+  auto u = cell.template getField<descriptors::VELOCITY>();
 
   std::vector<int> unknownIndexes = util::subIndexOutgoing<L, direction,
-      orientation>();
+                   orientation>();
   std::vector<int> knownIndexes = util::remainingIndexes<L>(unknownIndexes);
 
   int missingNormal = 0;
@@ -83,7 +84,7 @@ collide(Cell<T,DESCRIPTOR>& cell,LatticeStatistics<T>& statistics)
     for (unsigned i = 0; i < unknownIndexes.size(); ++i) {
       int numOfNonNullComp = 0;
       for (int iDim = 0; iDim < L::d; ++iDim) {
-        numOfNonNullComp += abs(descriptors::c<L>(unknownIndexes[i],iDim));
+        numOfNonNullComp += std::abs(descriptors::c<L>(unknownIndexes[i],iDim));
       }
       if (numOfNonNullComp == 1) {
         missingNormal = unknownIndexes[i];
@@ -96,18 +97,19 @@ collide(Cell<T,DESCRIPTOR>& cell,LatticeStatistics<T>& statistics)
     }
     cell[missingNormal] = difference; // on cell there are non-shiftet values -> temperature has to be changed
     boundaryDynamics.collide(cell, statistics); // only for D3Q7
-  } else {
+  }
+  else {
     // part for q=19 copied from AdvectionDiffusionEdgesDynamics.collide()
     // but here just all missing directions, even at border of inlet area
     // has to be checked!
     for (unsigned iteratePop = 0; iteratePop < unknownIndexes.size();
-        ++iteratePop) {
+         ++iteratePop) {
       cell[unknownIndexes[iteratePop]] =
-          lbH::equilibriumFirstOrder(unknownIndexes[iteratePop], dirichletTemperature, u)
-              - (cell[util::opposite<L>(unknownIndexes[iteratePop])]
-                  - lbH::equilibriumFirstOrder(
-                      util::opposite<L>(unknownIndexes[iteratePop]),
-                      dirichletTemperature, u));
+        lbH::equilibriumFirstOrder(unknownIndexes[iteratePop], dirichletTemperature, u.data())
+        - (cell[util::opposite<L>(unknownIndexes[iteratePop])]
+           - lbH::equilibriumFirstOrder(
+             util::opposite<L>(unknownIndexes[iteratePop]),
+             dirichletTemperature, u.data()));
     }
   }
 }
@@ -135,6 +137,7 @@ AdvectionDiffusionCornerDynamics2D<T,DESCRIPTOR,Dynamics,xNormal,yNormal>::Advec
   : BasicDynamics<T,DESCRIPTOR>(momenta_),
     boundaryDynamics(omega_, momenta_)
 {
+  this->getName() = "AdvectionDiffusionCornerDynamics2D";
 }
 
 template<typename T, typename DESCRIPTOR, typename Dynamics,  int xNormal, int yNormal>
@@ -151,7 +154,7 @@ void AdvectionDiffusionCornerDynamics2D<T,DESCRIPTOR,Dynamics,xNormal,yNormal>::
   typedef lbHelpers<T,DESCRIPTOR> lbH;
 
   T temperature = this->_momenta.computeRho(cell);
-  T* u = cell.template getFieldPointer<descriptors::VELOCITY>();
+  auto u = cell.template getField<descriptors::VELOCITY>();
   // I need to get Missing information on the corners !!!!
   std::vector<int> unknownIndexes = util::subIndexOutgoing2DonCorners<L,xNormal,yNormal>();
   // here I know all missing and non missing f_i
@@ -162,9 +165,9 @@ void AdvectionDiffusionCornerDynamics2D<T,DESCRIPTOR,Dynamics,xNormal,yNormal>::
   // I have the right number of equations for the number of unknowns using these lattices
 
   for (unsigned iPop = 0; iPop < unknownIndexes.size(); ++iPop) {
-    cell[unknownIndexes[iPop]] = lbH::equilibriumFirstOrder(unknownIndexes[iPop], temperature, u)
+    cell[unknownIndexes[iPop]] = lbH::equilibriumFirstOrder(unknownIndexes[iPop], temperature, u.data())
                                  -(cell[util::opposite<L>(unknownIndexes[iPop])]
-                                 - lbH::equilibriumFirstOrder(util::opposite<L>(unknownIndexes[iPop]), temperature, u) ) ;
+                                   - lbH::equilibriumFirstOrder(util::opposite<L>(unknownIndexes[iPop]), temperature, u.data()) ) ;
   }
 
   // Once all the f_i are known, I can call the collision for the Regularized Model.
@@ -195,6 +198,7 @@ AdvectionDiffusionCornerDynamics3D<T,DESCRIPTOR,Dynamics,xNormal,yNormal,zNormal
   : BasicDynamics<T,DESCRIPTOR>(momenta_),
     boundaryDynamics(omega_, momenta_)
 {
+  this->getName() = "AdvectionDiffusionCornerDynamics3D";
 }
 
 template<typename T, typename DESCRIPTOR, typename Dynamics,  int xNormal, int yNormal, int zNormal>
@@ -211,20 +215,19 @@ void AdvectionDiffusionCornerDynamics3D<T,DESCRIPTOR,Dynamics,xNormal,yNormal,zN
   typedef lbHelpers<T,DESCRIPTOR> lbH;
 
   T temperature = this->_momenta.computeRho(cell);
-  T* u = cell.template getFieldPointer<descriptors::VELOCITY>();
+  auto u = cell.template getField<descriptors::VELOCITY>();
   // I need to get Missing information on the corners !!!!
   std::vector<int> unknownIndexes = util::subIndexOutgoing3DonCorners<L,xNormal,yNormal,zNormal>();
   // here I know all missing and non missing f_i
-
 
   // The collision procedure for D2Q5 and D3Q7 lattice is the same ...
   // Given the rule f_i_neq = -f_opposite(i)_neq
   // I have the right number of equations for the number of unknowns using these lattices
 
   for (unsigned iPop = 0; iPop < unknownIndexes.size(); ++iPop) {
-    cell[unknownIndexes[iPop]] = lbH::equilibriumFirstOrder(unknownIndexes[iPop], temperature, u)
+    cell[unknownIndexes[iPop]] = lbH::equilibriumFirstOrder(unknownIndexes[iPop], temperature, u.data())
                                  -(cell[util::opposite<L>(unknownIndexes[iPop])]
-                                   - lbH::equilibriumFirstOrder(util::opposite<L>(unknownIndexes[iPop]), temperature, u) ) ;
+                                   - lbH::equilibriumFirstOrder(util::opposite<L>(unknownIndexes[iPop]), temperature, u.data()) ) ;
   }
 
   // Once all the f_i are known, I can call the collision for the Regularized Model.
@@ -253,6 +256,7 @@ AdvectionDiffusionEdgesDynamics<T,DESCRIPTOR,Dynamics,plane,normal1, normal2>::A
   : BasicDynamics<T,DESCRIPTOR>(momenta_),
     boundaryDynamics(omega_, momenta_)
 {
+  this->getName() = "AdvectionDiffusionEdgesDynamics";
 }
 
 template<typename T, typename DESCRIPTOR, typename Dynamics, int plane, int normal1, int normal2>
@@ -269,7 +273,7 @@ void AdvectionDiffusionEdgesDynamics<T,DESCRIPTOR,Dynamics,plane,normal1, normal
   typedef lbHelpers<T,DESCRIPTOR> lbH;
 
   T temperature = this->_momenta.computeRho(cell);
-  T* u = cell.template getFieldPointer<descriptors::VELOCITY>();
+  auto u = cell.template getField<descriptors::VELOCITY>();
   // I need to get Missing information on the corners !!!!
   std::vector<int> unknownIndexes = util::subIndexOutgoing3DonEdges<L,plane,normal1, normal2>();
   // here I know all missing and non missing f_i
@@ -280,9 +284,9 @@ void AdvectionDiffusionEdgesDynamics<T,DESCRIPTOR,Dynamics,plane,normal1, normal
   // I have the right number of equations for the number of unknowns using these lattices
 
   for (unsigned iPop = 0; iPop < unknownIndexes.size(); ++iPop) {
-    cell[unknownIndexes[iPop]] = lbH::equilibriumFirstOrder(unknownIndexes[iPop], temperature, u)
+    cell[unknownIndexes[iPop]] = lbH::equilibriumFirstOrder(unknownIndexes[iPop], temperature, u.data())
                                  -(cell[util::opposite<L>(unknownIndexes[iPop])]
-                                 - lbH::equilibriumFirstOrder(util::opposite<L>(unknownIndexes[iPop]), temperature, u) ) ;
+                                   - lbH::equilibriumFirstOrder(util::opposite<L>(unknownIndexes[iPop]), temperature, u.data()) ) ;
   }
 
   // Once all the f_i are known, I can call the collision for the Regularized Model.

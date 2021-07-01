@@ -53,7 +53,10 @@ class BlockLattice3D;
 
 /// Interface of 2D post-processing steps.
 template<typename T, typename DESCRIPTOR>
-struct PostProcessor2D {
+class PostProcessor2D {
+public:
+  PostProcessor2D():
+    _priority{0} { }
   virtual ~PostProcessor2D() { }
   /// Execute post-processing step
   virtual void process(BlockLattice2D<T,DESCRIPTOR>& blockLattice) =0;
@@ -64,6 +67,16 @@ struct PostProcessor2D {
   virtual int extent() const =0;
   /// Extent of application area along a direction (0 or 1)
   virtual int extent(int direction) const =0;
+  /// read and write access to name
+  std::string& getName();
+  /// read only access to name
+  std::string const& getName() const;
+  /// read only access to priority
+  int getPriority() const;
+protected:
+  int _priority;
+private:
+  std::string _name;
 };
 
 template<typename T, typename DESCRIPTOR>
@@ -73,6 +86,7 @@ public:
   virtual ~PostProcessorGenerator2D() { }
   void shift(int deltaX, int deltaY);
   bool extract(int x0_, int x1_, int y0_, int y1_);
+  void reset(int x0_, int x1_, int y0_, int y1_);
   virtual PostProcessor2D<T,DESCRIPTOR>* generate() const =0;
   virtual PostProcessorGenerator2D<T,DESCRIPTOR>* clone() const =0;
 protected:
@@ -102,7 +116,7 @@ template<typename T, typename DESCRIPTOR>
 struct GlobalPostProcessor2D : public PostProcessor2D<T,DESCRIPTOR> {
   void process(BlockLattice2D<T,DESCRIPTOR>& blockLattice) override =0;
   void processSubDomain(BlockLattice2D<T,DESCRIPTOR>& blockLattice,
-                                int x0_, int x1_, int y0_, int y1_ ) override
+                        int x0_, int x1_, int y0_, int y1_ ) override
   {
     this -> process(blockLattice);
   }
@@ -120,7 +134,10 @@ struct GlobalPostProcessor2D : public PostProcessor2D<T,DESCRIPTOR> {
 /////////////////// 3D Postprocessing ///////////////////////////////
 
 template<typename T, typename DESCRIPTOR>
-struct PostProcessor3D {
+class PostProcessor3D {
+public:
+  PostProcessor3D():
+    _priority{0} { }
   virtual ~PostProcessor3D() { }
   /// Execute post-processing step
   virtual void process(BlockLattice3D<T,DESCRIPTOR>& blockLattice) =0;
@@ -132,6 +149,16 @@ struct PostProcessor3D {
   virtual int extent() const =0;
   /// Extent of application area along a direction (0 or 1)
   virtual int extent(int direction) const =0;
+  /// read and write access to name
+  std::string& getName();
+  /// read only access to name
+  std::string const& getName() const;
+  /// read only access to priority
+  int getPriority() const;
+protected:
+  int _priority;
+private:
+  std::string _name;
 };
 
 template<typename T, typename DESCRIPTOR>
@@ -140,18 +167,20 @@ public:
   PostProcessorGenerator3D( int x0_, int x1_, int y0_, int y1_,
                             int z0_, int z1_ );
   virtual ~PostProcessorGenerator3D() { }
-  void shift(int deltaX, int deltaY, int deltaZ);
+  void shift(int deltaX, int deltaY, int deltaZ, int iC_=-1);
   bool extract(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_);
+  void reset(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_);
   virtual PostProcessor3D<T,DESCRIPTOR>* generate() const =0;
   virtual PostProcessorGenerator3D<T,DESCRIPTOR>* clone() const =0;
 protected:
-  int x0, x1, y0, y1, z0, z1;
+  int x0, x1, y0, y1, z0, z1, iC;
 };
 
 
 template<typename T, typename DESCRIPTOR>
 class LatticeCouplingGenerator3D {
 public:
+  LatticeCouplingGenerator3D() = delete;
   LatticeCouplingGenerator3D( int x0_, int x1_, int y0_, int y1_,
                               int z0_, int z1_ );
   virtual ~LatticeCouplingGenerator3D() { }
@@ -173,8 +202,8 @@ template<typename T, typename DESCRIPTOR>
 struct GlobalPostProcessor3D : public PostProcessor3D<T,DESCRIPTOR> {
   void process(BlockLattice3D<T,DESCRIPTOR>& blockLattice) override =0;
   void processSubDomain(BlockLattice3D<T,DESCRIPTOR>& blockLattice,
-                                int x0_, int x1_, int y0_, int y1_,
-                                int z0_, int z1_ ) override
+                        int x0_, int x1_, int y0_, int y1_,
+                        int z0_, int z1_ ) override
   {
     this -> process(blockLattice);
   }

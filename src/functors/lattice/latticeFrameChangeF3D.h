@@ -31,7 +31,8 @@
 #include "functors/analytical/analyticalF.h"
 #include "functors/analytical/frameChangeF2D.h"
 #include "superBaseF3D.h"
-#include "superLatticeLocalF3D.h"
+#include "latticePhysVelocity3D.h"
+#include "latticeDensity3D.h"
 
 /** To enable simulations in a rotating frame, the axis is set in the
   * constructor with axisPoint and axisDirection. The axisPoint can be the
@@ -113,12 +114,12 @@ protected:
 
 public:
   HarmonicOscillatingRotatingForceField3D(SuperLattice3D<T,DESCRIPTOR>& sLattice_,
-                                           SuperGeometry3D<T>& superGeometry_,
-                                           const UnitConverter<T,DESCRIPTOR>& converter_,
-                                           std::vector<T> axisPoint_,
-                                           std::vector<T> axisDirection_,
-                                           T amplitude_,
-                                           T frequency_);
+                                          SuperGeometry3D<T>& superGeometry_,
+                                          const UnitConverter<T,DESCRIPTOR>& converter_,
+                                          std::vector<T> axisPoint_,
+                                          std::vector<T> axisDirection_,
+                                          T amplitude_,
+                                          T frequency_);
   void updateTimeStep(int iT);
 
   bool operator() (T output[], const int x[]) override;

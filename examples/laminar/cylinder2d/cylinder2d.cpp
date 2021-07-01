@@ -1,8 +1,7 @@
-/*  Lattice Boltzmann sample, written in C++, using the OpenLB
- *  library
+/*  Lattice Boltzmann sample, written in C++, using the OpenLBlibrary
  *
- *  Copyright (C) 2006-2014 Jonas Latt, Mathias J. Krause,
- *  Vojtech Cvrcek, Peter Weisbrod
+ *  Copyright (C) 2006-2019 Jonas Latt, Mathias J. Krause,
+ *  Vojtech Cvrcek, Peter Weisbrod, Adrian Kummerländer
  *  E-mail contact: info@openlb.net
  *  The most recent release of OpenLB can be downloaded at
  *  <http://www.openlb.net/>
@@ -54,13 +53,13 @@ using namespace olb::util;
 using namespace std;
 
 typedef double T;
-#define DESCRIPTOR D2Q9<>
+typedef D2Q9<> DESCRIPTOR;
 
 
 // Parameters for the simulation setup
 const int N = 10;       // resolution of the model
 const T Re = 20.;       // Reynolds number
-const T maxPhysT = 16.; // max. simulation time in s, SI unit
+const T maxPhysT = 16;  // max. simulation time in s, SI unit
 const T L = 0.1/N;      // latticeL
 const T lengthX = 2.2;
 const T lengthY = .41+L;
@@ -111,8 +110,6 @@ void prepareGeometry( UnitConverter<T, DESCRIPTOR> const& converter,
 void prepareLattice( SuperLattice2D<T,DESCRIPTOR>& sLattice,
                      UnitConverter<T, DESCRIPTOR> const& converter,
                      Dynamics<T, DESCRIPTOR>& bulkDynamics,
-                     sOnLatticeBoundaryCondition2D<T,DESCRIPTOR>& sBoundaryCondition,
-                     sOffLatticeBoundaryCondition2D<T,DESCRIPTOR>& offBc,
                      SuperGeometry2D<T>& superGeometry )
 {
 
@@ -134,19 +131,25 @@ void prepareLattice( SuperLattice2D<T,DESCRIPTOR>& sLattice,
   sLattice.defineDynamics( superGeometry, 2, &instances::getBounceBack<T, DESCRIPTOR>() );
 
   // Setting of the boundary conditions
-  sBoundaryCondition.addVelocityBoundary( superGeometry, 3, omega );
-  sBoundaryCondition.addPressureBoundary( superGeometry, 4, omega );
 
-  // Material=5 -->bounce back
+  //if boundary conditions are chosen to be local
+	setLocalVelocityBoundary<T,DESCRIPTOR>(sLattice, omega, superGeometry, 3);
+	setLocalPressureBoundary<T,DESCRIPTOR>(sLattice, omega, superGeometry, 4);
+
+	//if boundary conditions are chosen to be interpolated
+	//setInterpolatedVelocityBoundary<T,DESCRIPTOR>(sLattice, converter.getLatticeRelaxationFrequency(), superGeometry, 3);
+	//setInterpolatedPressureBoundary<T,DESCRIPTOR>(sLattice, converter.getLatticeRelaxationFrequency(), superGeometry, 4);
+
+	// Material=5 -->bounce back
   //sLattice.defineDynamics(superGeometry, 5, &instances::getBounceBack<T, DESCRIPTOR>());
 
   // Material=5 -->bouzidi
 
   Vector<T,2> center( centerCylinderX,centerCylinderY );
-  IndicatorCircle2D<T> circle( center, radiusCylinder );
+  IndicatorCircle2D<T> circle ( center, radiusCylinder );
 
   sLattice.defineDynamics( superGeometry, 5, &instances::getNoDynamics<T,DESCRIPTOR>() );
-  offBc.addZeroVelocityBoundary( superGeometry, 5, circle );
+  setBouzidiZeroVelocityBoundary<T,DESCRIPTOR>(sLattice, superGeometry, 5, circle);
 
   // Initial conditions
   AnalyticalConst2D<T,T> rhoF( 1 );
@@ -197,7 +200,7 @@ void setBoundaryValues( SuperLattice2D<T, DESCRIPTOR>& sLattice,
 
 // Computes the pressure drop between the voxels before and after the cylinder
 void getResults( SuperLattice2D<T, DESCRIPTOR>& sLattice,
-                 UnitConverter<T, DESCRIPTOR> const& converter, int iT,
+                 UnitConverter<T, DESCRIPTOR> const& converter, std::size_t iT,
                  SuperGeometry2D<T>& superGeometry, Timer<T>& timer,
                  CircularBuffer<T>& buffer )
 {
@@ -207,6 +210,11 @@ void getResults( SuperLattice2D<T, DESCRIPTOR>& sLattice,
   SuperVTMwriter2D<T> vtmWriter( "cylinder2d" );
   SuperLatticePhysVelocity2D<T, DESCRIPTOR> velocity( sLattice, converter );
   SuperLatticePhysPressure2D<T, DESCRIPTOR> pressure( sLattice, converter );
+  SuperLatticeRefinementMetricKnudsen2D<T, DESCRIPTOR> quality( sLattice, converter);
+  SuperRoundingF2D<T> roundedQuality ( quality, RoundingMode::NearestInteger);
+  SuperDiscretizationF2D<T> discretization ( roundedQuality, 0., 2. );
+
+  vtmWriter.addFunctor( quality );
   vtmWriter.addFunctor( velocity );
   vtmWriter.addFunctor( pressure );
 
@@ -237,10 +245,21 @@ void getResults( SuperLattice2D<T, DESCRIPTOR>& sLattice,
   if ( iT%vtkIter == 0 && iT > 0 ) {
     vtmWriter.write( iT );
 
-    SuperEuklidNorm2D<T, DESCRIPTOR> normVel( velocity );
-    BlockReduction2D2D<T> planeReduction( normVel, 600, BlockDataSyncMode::ReduceOnly );
-    // write output as JPEG
-    heatmap::write(planeReduction, iT);
+    {
+      SuperEuklidNorm2D<T, DESCRIPTOR> normVel( velocity );
+      BlockReduction2D2D<T> planeReduction( normVel, 600, BlockDataSyncMode::ReduceOnly );
+      // write output as JPEG
+      heatmap::write(planeReduction, iT);
+    }
+
+    {
+      BlockReduction2D2D<T> planeReduction( discretization, 600, BlockDataSyncMode::ReduceOnly );
+      heatmap::plotParam<T> jpeg_scale;
+      jpeg_scale.name = "quality";
+      jpeg_scale.colour = "blackbody";
+      heatmap::write( planeReduction, iT, jpeg_scale );
+    }
+
   }
 
   // Gnuplot constructor (must be static!)
@@ -354,15 +373,8 @@ int main( int argc, char* argv[] )
 
   BGKdynamics<T, DESCRIPTOR> bulkDynamics( converter.getLatticeRelaxationFrequency(), instances::getBulkMomenta<T, DESCRIPTOR>() );
 
-  // choose between local and non-local boundary condition
-  sOnLatticeBoundaryCondition2D<T,DESCRIPTOR> sBoundaryCondition( sLattice );
-  // createInterpBoundaryCondition2D<T,DESCRIPTOR>(sBoundaryCondition);
-  createLocalBoundaryCondition2D<T,DESCRIPTOR>( sBoundaryCondition );
-
-  sOffLatticeBoundaryCondition2D<T, DESCRIPTOR> sOffBoundaryCondition( sLattice );
-  createBouzidiBoundaryCondition2D<T, DESCRIPTOR> ( sOffBoundaryCondition );
-
-  prepareLattice( sLattice, converter, bulkDynamics, sBoundaryCondition, sOffBoundaryCondition, superGeometry );
+  //prepareLattice and set boundaryConditions
+  prepareLattice( sLattice, converter, bulkDynamics, superGeometry );
 
   // === 4th Step: Main Loop with Timer ===
   CircularBuffer<T> buffer(converter.getLatticeTime(.2));
@@ -370,7 +382,7 @@ int main( int argc, char* argv[] )
   Timer<T> timer( converter.getLatticeTime( maxPhysT ), superGeometry.getStatistics().getNvoxel() );
   timer.start();
 
-  for ( int iT = 0; iT < converter.getLatticeTime( maxPhysT ); ++iT ) {
+  for ( std::size_t iT = 0; iT < converter.getLatticeTime( maxPhysT ); ++iT ) {
     // === 5th Step: Definition of Initial and Boundary Conditions ===
     setBoundaryValues( sLattice, converter, iT, superGeometry );
 

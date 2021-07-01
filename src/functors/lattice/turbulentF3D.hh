@@ -28,7 +28,6 @@
 #include<cmath>
 
 #include "turbulentF3D.h"
-#include "blockLatticeLocalF3D.h"
 #include "dynamics/smagorinskyBGKdynamics.h"
 #include "core/superLattice3D.h"
 #include "core/finiteDifference.h"
@@ -605,8 +604,6 @@ bool BlockFiniteDifference3D<T>::operator() (T output[], const int input[])
   return true;
 }
 
-
-
 ////////////////////////SuperFiniteDifference3D//////////////////////////////////
 template <typename T>
 SuperFiniteDifference3D<T>::SuperFiniteDifference3D
@@ -618,16 +615,6 @@ SuperFiniteDifference3D<T>::SuperFiniteDifference3D
   this->_blockF.reserve(maxC);
   for (int iC = 0; iC < maxC; iC++) {
     this->_blockF.emplace_back(new BlockFiniteDifference3D<T> ( _sGeometry.getBlockGeometry(iC), _sFunctor.getBlockF(iC), _matNumber ));
-  }
-}
-
-template <typename T>
-bool SuperFiniteDifference3D<T>::operator() (T output[], const int input[])
-{
-  if (this->_superStructure.getLoadBalancer().rank(input[0]) == singleton::mpi().getRank()) {
-    return this->getBlockF(this->_superStructure.getLoadBalancer().loc(input[0]) )(output,&input[1]);
-  } else {
-    return false;
   }
 }
 
@@ -652,8 +639,6 @@ bool BlockPhysFiniteDifference3D<T,DESCRIPTOR>::operator() (T output[], const in
   return true;
 }
 
-
-
 ////////////////////////SuperPhysFiniteDifference3D//////////////////////////////////
 template <typename T, typename DESCRIPTOR>
 SuperPhysFiniteDifference3D<T,DESCRIPTOR>::SuperPhysFiniteDifference3D
@@ -668,15 +653,6 @@ SuperPhysFiniteDifference3D<T,DESCRIPTOR>::SuperPhysFiniteDifference3D
   }
 }
 
-template <typename T, typename DESCRIPTOR>
-bool SuperPhysFiniteDifference3D<T,DESCRIPTOR>::operator() (T output[], const int input[])
-{
-  if (this->_superStructure.getLoadBalancer().rank(input[0]) == singleton::mpi().getRank()) {
-    return this->getBlockF(this->_superStructure.getLoadBalancer().loc(input[0]) )(output,&input[1]);
-  } else {
-    return false;
-  }
-}
 ////////////////////////BlockLatticeVelocityGradientFD3D//////////////////////////////////
 template <typename T, typename DESCRIPTOR>
 BlockLatticeVelocityGradientFD3D<T,DESCRIPTOR>::BlockLatticeVelocityGradientFD3D
@@ -729,15 +705,6 @@ SuperLatticeVelocityGradientFD3D<T,DESCRIPTOR>::SuperLatticeVelocityGradientFD3D
   }
 }
 
-template <typename T, typename DESCRIPTOR>
-bool SuperLatticeVelocityGradientFD3D<T,DESCRIPTOR>::operator() (T output[], const int input[])
-{
-  if (this->_sLattice.getLoadBalancer().rank(input[0]) == singleton::mpi().getRank()) {
-    return this->getBlockF(this->_sLattice.getLoadBalancer().loc(input[0]) )(output,&input[1]);
-  } else {
-    return false;
-  }
-}
 ////////////////////////SuperLatticeExternalVelocityGradientFD3D//////////////////////////////////
 template <typename T, typename DESCRIPTOR>
 SuperLatticeExternalVelocityGradientFD3D<T,DESCRIPTOR>::SuperLatticeExternalVelocityGradientFD3D
@@ -752,15 +719,6 @@ SuperLatticeExternalVelocityGradientFD3D<T,DESCRIPTOR>::SuperLatticeExternalVelo
   }
 }
 
-template <typename T, typename DESCRIPTOR>
-bool SuperLatticeExternalVelocityGradientFD3D<T,DESCRIPTOR>::operator() (T output[], const int input[])
-{
-  if (this->_sLattice.getLoadBalancer().rank(input[0]) == singleton::mpi().getRank()) {
-    return this->getBlockF(this->_sLattice.getLoadBalancer().loc(input[0]) )(output,&input[1]);
-  } else {
-    return false;
-  }
-}
 ////////////////////////BlockLatticePhysVelocityGradientFD3D//////////////////////////////////
 template <typename T, typename DESCRIPTOR>
 BlockLatticePhysVelocityGradientFD3D<T,DESCRIPTOR>::BlockLatticePhysVelocityGradientFD3D
@@ -777,8 +735,6 @@ bool BlockLatticePhysVelocityGradientFD3D<T,DESCRIPTOR>::operator() (T output[],
   return true;
 }
 
-
-
 ////////////////////////SuperLatticePhysVelocityGradientFD3D//////////////////////////////////
 template <typename T, typename DESCRIPTOR>
 SuperLatticePhysVelocityGradientFD3D<T,DESCRIPTOR>::SuperLatticePhysVelocityGradientFD3D
@@ -793,15 +749,6 @@ SuperLatticePhysVelocityGradientFD3D<T,DESCRIPTOR>::SuperLatticePhysVelocityGrad
   }
 }
 
-template <typename T, typename DESCRIPTOR>
-bool SuperLatticePhysVelocityGradientFD3D<T,DESCRIPTOR>::operator() (T output[], const int input[])
-{
-  if (this->_sLattice.getLoadBalancer().rank(input[0]) == singleton::mpi().getRank()) {
-    return this->getBlockF(this->_sLattice.getLoadBalancer().loc(input[0]) )(output,&input[1]);
-  } else {
-    return false;
-  }
-}
 ////////////////////////BlockLatticeStrainRateFD3D//////////////////////////////////
 template <typename T, typename DESCRIPTOR>
 BlockLatticeStrainRateFD3D<T,DESCRIPTOR>::BlockLatticeStrainRateFD3D
@@ -828,8 +775,6 @@ bool BlockLatticeStrainRateFD3D<T,DESCRIPTOR>::operator() (T output[], const int
   return true;
 }
 
-
-
 ////////////////////////SuperLatticeStrainRateFD3D//////////////////////////////////
 template <typename T, typename DESCRIPTOR>
 SuperLatticeStrainRateFD3D<T,DESCRIPTOR>::SuperLatticeStrainRateFD3D
@@ -844,15 +789,6 @@ SuperLatticeStrainRateFD3D<T,DESCRIPTOR>::SuperLatticeStrainRateFD3D
   }
 }
 
-template <typename T, typename DESCRIPTOR>
-bool SuperLatticeStrainRateFD3D<T,DESCRIPTOR>::operator() (T output[], const int input[])
-{
-  if (this->_sLattice.getLoadBalancer().rank(input[0]) == singleton::mpi().getRank()) {
-    return this->getBlockF(this->_sLattice.getLoadBalancer().loc(input[0]) )(output,&input[1]);
-  } else {
-    return false;
-  }
-}
 ////////////////////////BlockLatticePhysStrainRateFD3D//////////////////////////////////
 template <typename T, typename DESCRIPTOR>
 BlockLatticePhysStrainRateFD3D<T,DESCRIPTOR>::BlockLatticePhysStrainRateFD3D
@@ -880,8 +816,6 @@ bool BlockLatticePhysStrainRateFD3D<T,DESCRIPTOR>::operator() (T output[], const
   return true;
 }
 
-
-
 ////////////////////////SuperLatticePhysStrainRateFD3D//////////////////////////////////
 template <typename T, typename DESCRIPTOR>
 SuperLatticePhysStrainRateFD3D<T,DESCRIPTOR>::SuperLatticePhysStrainRateFD3D
@@ -893,16 +827,6 @@ SuperLatticePhysStrainRateFD3D<T,DESCRIPTOR>::SuperLatticePhysStrainRateFD3D
   this->_blockF.reserve(maxC);
   for (int iC = 0; iC < maxC; iC++) {
     this->_blockF.emplace_back(new BlockLatticePhysStrainRateFD3D<T,DESCRIPTOR> (this->_sLattice.getBlockLattice(iC), this->_sVeloGrad.getBlockF(iC), this->_converter));
-  }
-}
-
-template <typename T, typename DESCRIPTOR>
-bool SuperLatticePhysStrainRateFD3D<T,DESCRIPTOR>::operator() (T output[], const int input[])
-{
-  if (this->_sLattice.getLoadBalancer().rank(input[0]) == singleton::mpi().getRank()) {
-    return this->getBlockF(this->_sLattice.getLoadBalancer().loc(input[0]) )(output,&input[1]);
-  } else {
-    return false;
   }
 }
 
@@ -928,8 +852,6 @@ bool BlockLatticeDissipationFD3D<T,DESCRIPTOR>::operator() (T output[], const in
   return true;
 }
 
-
-
 ////////////////////////SuperLatticeDissipationFD3D//////////////////////////////////
 template <typename T, typename DESCRIPTOR>
 SuperLatticeDissipationFD3D<T,DESCRIPTOR>::SuperLatticeDissipationFD3D
@@ -941,16 +863,6 @@ SuperLatticeDissipationFD3D<T,DESCRIPTOR>::SuperLatticeDissipationFD3D
   this->_blockF.reserve(maxC);
   for (int iC = 0; iC < maxC; iC++) {
     this->_blockF.emplace_back(new BlockLatticeDissipationFD3D<T,DESCRIPTOR> (this->_sLattice.getBlockLattice(iC), this->_sVeloGrad.getBlockF(iC), this->_converter));
-  }
-}
-
-template <typename T, typename DESCRIPTOR>
-bool SuperLatticeDissipationFD3D<T,DESCRIPTOR>::operator() (T output[], const int input[])
-{
-  if (this->_sLattice.getLoadBalancer().rank(input[0]) == singleton::mpi().getRank()) {
-    return this->getBlockF(this->_sLattice.getLoadBalancer().loc(input[0]) )(output,&input[1]);
-  } else {
-    return false;
   }
 }
 
@@ -976,8 +888,6 @@ bool BlockLatticePhysDissipationFD3D<T,DESCRIPTOR>::operator() (T output[], cons
   return true;
 }
 
-
-
 ////////////////////////SuperLatticePhysDissipationFD3D//////////////////////////////////
 template <typename T, typename DESCRIPTOR>
 SuperLatticePhysDissipationFD3D<T,DESCRIPTOR>::SuperLatticePhysDissipationFD3D
@@ -989,16 +899,6 @@ SuperLatticePhysDissipationFD3D<T,DESCRIPTOR>::SuperLatticePhysDissipationFD3D
   this->_blockF.reserve(maxC);
   for (int iC = 0; iC < maxC; iC++) {
     this->_blockF.emplace_back(new BlockLatticePhysDissipationFD3D<T,DESCRIPTOR> (this->_sLattice.getBlockLattice(iC), this->_sVeloGrad.getBlockF(iC), this->_converter));
-  }
-}
-
-template <typename T, typename DESCRIPTOR>
-bool SuperLatticePhysDissipationFD3D<T,DESCRIPTOR>::operator() (T output[], const int input[])
-{
-  if (this->_sLattice.getLoadBalancer().rank(input[0]) == singleton::mpi().getRank()) {
-    return this->getBlockF(this->_sLattice.getLoadBalancer().loc(input[0]) )(output,&input[1]);
-  } else {
-    return false;
   }
 }
 
@@ -1027,8 +927,6 @@ bool BlockLatticeEffectiveDissipationFD3D<T,DESCRIPTOR>::operator() (T output[],
   return true;
 }
 
-
-
 ////////////////////////SuperLatticeEffectiveDissipationFD3D//////////////////////////////////
 template <typename T, typename DESCRIPTOR>
 SuperLatticeEffectiveDissipationFD3D<T,DESCRIPTOR>::SuperLatticeEffectiveDissipationFD3D
@@ -1040,16 +938,6 @@ SuperLatticeEffectiveDissipationFD3D<T,DESCRIPTOR>::SuperLatticeEffectiveDissipa
   this->_blockF.reserve(maxC);
   for (int iC = 0; iC < maxC; iC++) {
     this->_blockF.emplace_back(new BlockLatticeEffectiveDissipationFD3D<T,DESCRIPTOR> (this->_sLattice.getBlockLattice(iC), this->_sVeloGrad.getBlockF(iC), this->_converter));
-  }
-}
-
-template <typename T, typename DESCRIPTOR>
-bool SuperLatticeEffectiveDissipationFD3D<T,DESCRIPTOR>::operator() (T output[], const int input[])
-{
-  if (this->_sLattice.getLoadBalancer().rank(input[0]) == singleton::mpi().getRank()) {
-    return this->getBlockF(this->_sLattice.getLoadBalancer().loc(input[0]) )(output,&input[1]);
-  } else {
-    return false;
   }
 }
 
@@ -1071,14 +959,13 @@ bool BlockLatticePhysEffectiveDissipationFD3D<T,DESCRIPTOR>::operator() (T outpu
               velograd[3] * velograd[3] + velograd[4] * velograd[4] + velograd[5] * velograd[5] +
               velograd[6] * velograd[6] + velograd[7] * velograd[7] + velograd[8] * velograd[8];
 
-  T omegaEff = _LESdynamics.getEffectiveOmega(this->_blockLattice.get(input[0], input[1], input[2]));
+  auto cell = this->_blockLattice.get(input[0], input[1], input[2]);
+  T omegaEff = _LESdynamics.getEffectiveOmega(cell);
   T nuEff = ((1./omegaEff)-0.5)/descriptors::invCs2<T,DESCRIPTOR>();
   output[0] *= _converter.getPhysViscosity( nuEff );
 
   return true;
 }
-
-
 
 ////////////////////////SuperLatticePhysEffectiveDissipationFD3D//////////////////////////////////
 template <typename T, typename DESCRIPTOR>
@@ -1091,16 +978,6 @@ SuperLatticePhysEffectiveDissipationFD3D<T,DESCRIPTOR>::SuperLatticePhysEffectiv
   this->_blockF.reserve(maxC);
   for (int iC = 0; iC < maxC; iC++) {
     this->_blockF.emplace_back(new BlockLatticePhysEffectiveDissipationFD3D<T,DESCRIPTOR> (this->_sLattice.getBlockLattice(iC), this->_sVeloGrad.getBlockF(iC), this->_converter, LESdynamics));
-  }
-}
-
-template <typename T, typename DESCRIPTOR>
-bool SuperLatticePhysEffectiveDissipationFD3D<T,DESCRIPTOR>::operator() (T output[], const int input[])
-{
-  if (this->_sLattice.getLoadBalancer().rank(input[0]) == singleton::mpi().getRank()) {
-    return this->getBlockF(this->_sLattice.getLoadBalancer().loc(input[0]) )(output,&input[1]);
-  } else {
-    return false;
   }
 }
 
@@ -1124,8 +1001,6 @@ bool BlockLatticeVorticityFD3D<T,DESCRIPTOR>::operator() (T output[], const int 
   return true;
 }
 
-
-
 ////////////////////////SuperLatticeVorticityFD3D//////////////////////////////////
 template <typename T, typename DESCRIPTOR>
 SuperLatticeVorticityFD3D<T,DESCRIPTOR>::SuperLatticeVorticityFD3D
@@ -1137,16 +1012,6 @@ SuperLatticeVorticityFD3D<T,DESCRIPTOR>::SuperLatticeVorticityFD3D
   this->_blockF.reserve(maxC);
   for (int iC = 0; iC < maxC; iC++) {
     this->_blockF.emplace_back(new BlockLatticeVorticityFD3D<T,DESCRIPTOR> (this->_sLattice.getBlockLattice(iC), this->_sVeloGrad.getBlockF(iC), this->_converter));
-  }
-}
-
-template <typename T, typename DESCRIPTOR>
-bool SuperLatticeVorticityFD3D<T,DESCRIPTOR>::operator() (T output[], const int input[])
-{
-  if (this->_sLattice.getLoadBalancer().rank(input[0]) == singleton::mpi().getRank()) {
-    return this->getBlockF(this->_sLattice.getLoadBalancer().loc(input[0]) )(output,&input[1]);
-  } else {
-    return false;
   }
 }
 
@@ -1170,8 +1035,6 @@ bool BlockLatticePhysVorticityFD3D<T,DESCRIPTOR>::operator() (T output[], const 
   return true;
 }
 
-
-
 ////////////////////////SuperLatticePhysVorticityFD3D//////////////////////////////////
 template <typename T, typename DESCRIPTOR>
 SuperLatticePhysVorticityFD3D<T,DESCRIPTOR>::SuperLatticePhysVorticityFD3D
@@ -1183,16 +1046,6 @@ SuperLatticePhysVorticityFD3D<T,DESCRIPTOR>::SuperLatticePhysVorticityFD3D
   this->_blockF.reserve(maxC);
   for (int iC = 0; iC < maxC; iC++) {
     this->_blockF.emplace_back(new BlockLatticePhysVorticityFD3D<T,DESCRIPTOR> (this->_sLattice.getBlockLattice(iC), this->_sVeloGrad.getBlockF(iC), this->_converter));
-  }
-}
-
-template <typename T, typename DESCRIPTOR>
-bool SuperLatticePhysVorticityFD3D<T,DESCRIPTOR>::operator() (T output[], const int input[])
-{
-  if (this->_sLattice.getLoadBalancer().rank(input[0]) == singleton::mpi().getRank()) {
-    return this->getBlockF(this->_sLattice.getLoadBalancer().loc(input[0]) )(output,&input[1]);
-  } else {
-    return false;
   }
 }
 
@@ -1215,8 +1068,6 @@ bool BlockLatticePhysStressFD3D<T,DESCRIPTOR>::operator() (T output[], const int
   return true;
 }
 
-
-
 ////////////////////////SuperLatticePhysStressFD3D//////////////////////////////////
 template <typename T, typename DESCRIPTOR>
 SuperLatticePhysStressFD3D<T,DESCRIPTOR>::SuperLatticePhysStressFD3D
@@ -1228,16 +1079,6 @@ SuperLatticePhysStressFD3D<T,DESCRIPTOR>::SuperLatticePhysStressFD3D
   this->_blockF.reserve(maxC);
   for (int iC = 0; iC < maxC; iC++) {
     this->_blockF.emplace_back(new BlockLatticePhysStressFD3D<T,DESCRIPTOR> (this->_sLattice.getBlockLattice(iC), this->_sStrainRate.getBlockF(iC), this->_converter));
-  }
-}
-
-template <typename T, typename DESCRIPTOR>
-bool SuperLatticePhysStressFD3D<T,DESCRIPTOR>::operator() (T output[], const int input[])
-{
-  if (this->_sLattice.getLoadBalancer().rank(input[0]) == singleton::mpi().getRank()) {
-    return this->getBlockF(this->_sLattice.getLoadBalancer().loc(input[0]) )(output,&input[1]);
-  } else {
-    return false;
   }
 }
 
@@ -1262,7 +1103,6 @@ bool BlockIsotropicHomogeneousTKE3D<T, DESCRIPTOR>::operator()(T output[], const
   return true;
 }
 
-
 ////////////////////////SuperIsotropicHomogeneousTKE//////////////////////////////////
 template<typename T, typename DESCRIPTOR>
 SuperIsotropicHomogeneousTKE3D<T, DESCRIPTOR>::SuperIsotropicHomogeneousTKE3D(
@@ -1279,21 +1119,11 @@ SuperLattice3D<T,DESCRIPTOR>& sLattice, const  UnitConverter<T,DESCRIPTOR>& conv
   }
 }
 
-template<typename T, typename DESCRIPTOR>
-bool SuperIsotropicHomogeneousTKE3D<T, DESCRIPTOR>::operator()(T output[], const int input[])
-{
-  if (this->_sLattice.getLoadBalancer().rank(input[0]) == singleton::mpi().getRank()) {
-    return this->getBlockF(this->_sLattice.getLoadBalancer().loc(input[0]) )(output,&input[1]);
-  } else {
-    return false;
-  }
-}
-
  ////////////////////////BlockLatticePhysEnstrophyFD3D//////////////////////////////////
 template <typename T, typename DESCRIPTOR>
 BlockLatticePhysEnstrophyFD3D<T,DESCRIPTOR>::BlockLatticePhysEnstrophyFD3D
 (BlockLatticeStructure3D<T,DESCRIPTOR>& blockLattice, BlockF3D<T>& blockVeloGrad, const  UnitConverter<T,DESCRIPTOR>& converter)
-  : BlockLatticeF3D<T,DESCRIPTOR>(blockLattice, 3), _blockVeloGrad(blockVeloGrad), _converter(converter)
+  : BlockLatticeF3D<T,DESCRIPTOR>(blockLattice, 1), _blockVeloGrad(blockVeloGrad), _converter(converter)
 {
   this->getName() = "PhysEnstrophyFD";
 }
@@ -1303,19 +1133,14 @@ bool BlockLatticePhysEnstrophyFD3D<T,DESCRIPTOR>::operator() (T output[], const 
 {
   T velograd[9];
   _blockVeloGrad(velograd,input);
-    // mod 2019-04-10:
-    // this is now the local enstrophy value: 0.5 * vort_\alpha * vort_\alpha.
-    // to obtain global enstrophy: integrate and divide by integration volume.
-    output[0] = 0.5 * ( pow(velograd[7] - velograd[5], 2) + pow(velograd[2] - velograd[6], 2) + pow(velograd[3] - velograd[1], 2) );
-    // output[1] = pow(velograd[2] - velograd[6], 2);
-    // output[2] = pow(velograd[3] - velograd[1], 2);
+  output[0] = 0.5 * ( pow(velograd[7] - velograd[5], 2) + pow(velograd[2] - velograd[6], 2) + pow(velograd[3] - velograd[1], 2) );
   return true;
 }
 
 ////////////////////////SuperLatticePhysEnstrophyFD3D//////////////////////////////////
 template <typename T, typename DESCRIPTOR>
 SuperLatticePhysEnstrophyFD3D<T,DESCRIPTOR>::SuperLatticePhysEnstrophyFD3D
-(SuperGeometry3D<T>& sGeometry, SuperLattice3D<T,DESCRIPTOR>& sLattice, std::list<int>& matNumber, const  UnitConverter<T,DESCRIPTOR>& converter) : SuperLatticeF3D<T,DESCRIPTOR>(sLattice,3),
+(SuperGeometry3D<T>& sGeometry, SuperLattice3D<T,DESCRIPTOR>& sLattice, std::list<int>& matNumber, const  UnitConverter<T,DESCRIPTOR>& converter) : SuperLatticeF3D<T,DESCRIPTOR>(sLattice, 1),
   _sVeloGrad(sGeometry, sLattice, matNumber, converter), _converter(converter)
 {
   this->getName() = "PhysEnstrophyFD";
@@ -1323,16 +1148,6 @@ SuperLatticePhysEnstrophyFD3D<T,DESCRIPTOR>::SuperLatticePhysEnstrophyFD3D
   this->_blockF.reserve(maxC);
   for (int iC = 0; iC < maxC; iC++) {
     this->_blockF.emplace_back(new BlockLatticePhysEnstrophyFD3D<T,DESCRIPTOR> (this->_sLattice.getBlockLattice(iC), this->_sVeloGrad.getBlockF(iC), this->_converter));
-  }
-}
-
-template <typename T, typename DESCRIPTOR>
-bool SuperLatticePhysEnstrophyFD3D<T, DESCRIPTOR>::operator() (T output[], const int input[])
-{
-  if (this->_sLattice.getLoadBalancer().rank(input[0]) == singleton::mpi().getRank()) {
-    return this->getBlockF(this->_sLattice.getLoadBalancer().loc(input[0]) )(output,&input[1]);
-  } else {
-    return false;
   }
 }
 

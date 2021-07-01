@@ -45,23 +45,76 @@
 namespace olb {
 
 
-//////////////////////////////////1D////////////////////////////////////////////
-template <typename T, typename S>
-AnalyticalConst1D<T,S>::AnalyticalConst1D(const std::vector<T>& value)
-  : AnalyticalF1D<T,S>(value.size()), _c(value)
+template <unsigned D, typename T, typename S>
+AnalyticalComposed<D,T,S>::AnalyticalComposed( std::vector<AnalyticalF<D,T,S>>& f)
+  : AnalyticalF<D,T,S>(f.size())
+{
+  if (D != f.size())
+    throw std::length_error("D does not match with f.size().");
+  this->getName() = "composed";
+  for (auto&& i : f)
+    _f.push_back(i);
+}
+
+template <unsigned D, typename T, typename S>
+bool AnalyticalComposed<D,T,S>::operator()(T output[], const S x[])
+{
+  for (unsigned int i=0; i<D; ++i) {
+    T outputTmp[_f[i].get().getTargetDim()];
+    _f[i].get()(outputTmp,x);
+    output[i]=outputTmp[0];
+  }
+  return true;
+}
+
+
+template <unsigned D, typename T, typename S>
+AnalyticalConst<D,T,S>::AnalyticalConst(const std::vector<T>& value)
+  : AnalyticalF<D,T,S>(value.size()), _c(value)
 {
   this->getName() = "const";
 }
 
-template <typename T, typename S>
-AnalyticalConst1D<T,S>::AnalyticalConst1D(T value) : AnalyticalF1D<T,S>(1)
+template <unsigned D, typename T, typename S>
+AnalyticalConst<D,T,S>::AnalyticalConst(T value)
+  : AnalyticalF<D,T,S>(1)
 {
   _c.push_back(value);
   this->getName() = "const";
 }
 
-template <typename T, typename S>
-bool AnalyticalConst1D<T,S>::operator()(T output[], const S x[])
+template <unsigned D, typename T, typename S>
+AnalyticalConst<D,T,S>::AnalyticalConst(T value0, T value1)
+  : AnalyticalF<D,T,S>(2)
+{
+  _c.push_back(value0);
+  _c.push_back(value1);
+  this->getName() = "const";
+}
+
+template <unsigned D, typename T, typename S>
+AnalyticalConst<D,T,S>::AnalyticalConst(T value0, T value1, T value2)
+  : AnalyticalF<D,T,S>(3)
+{
+  _c.push_back(value0);
+  _c.push_back(value1);
+  _c.push_back(value2);
+  this->getName() = "const";
+}
+
+template <unsigned D, typename T, typename S>
+AnalyticalConst<D,T,S>::AnalyticalConst(const Vector<T,3>& value)
+  : AnalyticalF<D,T,S>(3)
+{
+  _c.reserve(3);
+  _c.push_back(value[0]);
+  _c.push_back(value[1]);
+  _c.push_back(value[2]);
+  this->getName() = "const";
+}
+
+template <unsigned D, typename T, typename S>
+bool AnalyticalConst<D,T,S>::operator()(T output[], const S x[])
 {
   for ( unsigned i = 0; i < _c.size(); ++i) {
     output[i] = _c[i];
@@ -70,6 +123,113 @@ bool AnalyticalConst1D<T,S>::operator()(T output[], const S x[])
 }
 
 
+template <unsigned D, typename T, typename S>
+AnalyticalNormal<D,T,S>::AnalyticalNormal(std::vector<T> mean, T stdDev)
+  : AnalyticalF<D,T,S>(1), _mean(mean), _stdDev(stdDev)
+{
+  this->getName() = "normal";
+}
+
+template <unsigned D, typename T, typename S>
+bool AnalyticalNormal<D,T,S>::operator()(T output[], const S x[])
+{
+  T r2 = T();
+  for ( unsigned i = 0; i < D; ++i) {
+    r2 += (x[i] - _mean[i]) * (x[i] - _mean[i]);
+  }
+  output[0] = exp(-r2/(2*_stdDev*_stdDev)) / (_stdDev*sqrt(2.*M_PI));
+  return true;
+}
+
+
+template <unsigned D, typename T, typename S>
+AnalyticalRandomBase<D,T,S>::AnalyticalRandomBase()
+  : AnalyticalF<D,T,S>(1),
+    gen{rd()}
+{
+  this->getName() = "random";
+}
+
+
+template <unsigned D, typename T, typename S>
+AnalyticalRandomUniform<D,T,S>::AnalyticalRandomUniform(T minVal, T maxVal)
+  : AnalyticalRandomBase<D,T,S>(),
+    distro{minVal, maxVal}
+{ }
+
+template <unsigned D, typename T, typename S>
+bool AnalyticalRandomUniform<D,T,S>::operator()(T output[], const S x[])
+{
+  output[0] = distro(this->gen);
+  return true;
+}
+
+
+template <unsigned D, typename T, typename S>
+AnalyticalRandomNormal<D,T,S>::AnalyticalRandomNormal(T mean, T stdDev)
+  : AnalyticalRandomBase<D,T,S>(),
+    distro{mean, stdDev}
+{ }
+
+template <unsigned D, typename T, typename S>
+bool AnalyticalRandomNormal<D,T,S>::operator()(T output[], const S x[])
+{
+  output[0] = distro(this->gen);
+  return true;
+}
+
+
+template <unsigned D, typename T, typename S>
+AnalyticalRandomTruncatedNormal<D,T,S>::AnalyticalRandomTruncatedNormal(T mean, T stdDev, T n)
+  : AnalyticalRandomNormal<D,T,S>(mean, stdDev),
+    _min(mean - n*stdDev),
+    _max(mean + n*stdDev)
+{ }
+
+template <unsigned D, typename T, typename S>
+bool AnalyticalRandomTruncatedNormal<D,T,S>::operator()(T output[], const S x[])
+{
+  do {
+    output[0] = this->distro(this->gen);
+  } while (output[0] < _min || output[0] > _max);
+  return true;
+}
+
+
+template <unsigned D, typename T, typename S>
+AnalyticalRandomOld<D,T,S>::AnalyticalRandomOld()
+  : AnalyticalF<D,T,S>(1)
+{
+#ifdef PARALLEL_MODE_MPI
+  int  nameLen, numProcs, myID;
+  char processorName[MPI_MAX_PROCESSOR_NAME];
+  MPI_Comm_rank(MPI_COMM_WORLD,&myID);
+  MPI_Comm_size(MPI_COMM_WORLD,&numProcs);
+  MPI_Get_processor_name(processorName,&nameLen);
+  srand(time(0)+myID*numProcs + nameLen);
+#else
+  srand(time(nullptr));
+#endif
+  this->getName() = "random";
+}
+
+template <unsigned D, typename T, typename S>
+bool AnalyticalRandomOld<D,T,S>::operator()(T output[], const S x[])
+{
+  output[0]=(rand()%RAND_MAX)/(T)RAND_MAX;
+  return true;
+}
+
+
+
+
+
+
+
+
+////////////// OLD IMPLEMENTATION //////////////////////////
+
+//////////////////////////////////1D////////////////////////////////////////////
 template <typename T, typename S>
 AnalyticalLinear1D<T,S>::AnalyticalLinear1D(T a, T b)
   : AnalyticalF1D<T,S>(1), _a(a), _b(b)
@@ -94,30 +254,6 @@ template <typename T, typename S>
 bool AnalyticalLinear1D<T,S>::operator()(T output[], const S x[])
 {
   output[0]=_a*x[0] + _b;
-  return true;
-}
-
-
-template <typename T, typename S>
-AnalyticalRandom1D<T,S>::AnalyticalRandom1D() : AnalyticalF1D<T,S>(1)
-{
-#ifdef PARALLEL_MODE_MPI
-  int  nameLen, numProcs, myID;
-  char processorName[MPI_MAX_PROCESSOR_NAME];
-  MPI_Comm_rank(MPI_COMM_WORLD,&myID);
-  MPI_Comm_size(MPI_COMM_WORLD,&numProcs);
-  MPI_Get_processor_name(processorName,&nameLen);
-  srand(time(0)+myID*numProcs + nameLen);
-#else
-  srand(time(nullptr));
-#endif
-  this->getName() = "random";
-}
-
-template <typename T, typename S>
-bool AnalyticalRandom1D<T,S>::operator()(T output[], const S x[])
-{
-  output[0]=(rand()%RAND_MAX)/(T)RAND_MAX;
   return true;
 }
 
@@ -188,68 +324,46 @@ bool AnalyticalDiffFD1D<T>::operator() (T output[], const T input[])
   return true;
 }
 
-///////////////////////////////////////2D///////////////////////////////////////
 template <typename T, typename S>
-AnalyticalComposed2D<T,S>::AnalyticalComposed2D( AnalyticalF2D<T,S>& f0,
-    AnalyticalF2D<T,S>& f1)
-  : AnalyticalF2D<T,S>(2), _f0(f0), _f1(f1)
+Cosinus<T,S>::Cosinus(T period, T amplitude)
+  : AnalyticalF1D<T,S>(1), _period(period), _amplitude(amplitude),
+    _pi(4.0*atan(1.0))
 {
-  this->getName() = "composed";
+  this->getName() = "Cosinus";
 }
 
 template <typename T, typename S>
-bool AnalyticalComposed2D<T,S>::operator()(T output[], const S x[])
+bool Cosinus<T,S>::operator()(T output[], const S x[])
 {
-  T tmp1[_f0.getTargetDim()], tmp2[_f1.getTargetDim()];
-  _f0(tmp1,x);
-  _f1(tmp2,x);
-  output[0]=tmp1[0];
-  output[1]=tmp2[0];
+  output[0] = _amplitude * cos((x[0] / _period) * 2 * _pi);
   return true;
 }
 
-
 template <typename T, typename S>
-AnalyticalConst2D<T,S>::AnalyticalConst2D(const std::vector<T>& value)
-  : AnalyticalF2D<T,S>(value.size()), _c(value)
+CosinusComposite<T,S>::CosinusComposite(T period, T difference, T amplitude)
+  : AnalyticalF1D<T,S>(1), _period(period), _difference(difference) ,_amplitude(amplitude),
+    _pi(4.0*atan(1.0))
 {
-  this->getName() = "const";
+  this->getName() = "CosinusComposite";
 }
 
 template <typename T, typename S>
-AnalyticalConst2D<T,S>::AnalyticalConst2D(T value) : AnalyticalF2D<T,S>(1)
+bool CosinusComposite<T,S>::operator()(T output[], const S x[])
 {
-  _c.push_back(value);
-  this->getName() = "const";
-}
-
-template <typename T, typename S>
-AnalyticalConst2D<T,S>::AnalyticalConst2D(T value0, T value1) : AnalyticalF2D<T,S>(2)
-{
-  _c.push_back(value0);
-  _c.push_back(value1);
-  this->getName() = "const";
-}
-
-template <typename T, typename S>
-AnalyticalConst2D<T,S>::AnalyticalConst2D(T value0, T value1, T value2) : AnalyticalF2D<T,S>(3)
-{
-  _c.push_back(value0);
-  _c.push_back(value1);
-  _c.push_back(value2);
-  this->getName() = "const";
-}
-
-template <typename T, typename S>
-bool AnalyticalConst2D<T,S>::operator()(T output[], const S x[])
-{
-  for (unsigned i = 0; i < _c.size(); ++i) {
-    output[i] = _c[i];
+  if( std::fmod(x[0],_period) <= (_difference * _period)){
+  	output[0] = _amplitude * cos(((std::fmod(x[0], _period)) / (_difference * _period)) * _pi);
+  }
+  else
+  {
+	output[0] = _amplitude * cos(((std::fmod(x[0], _period) - (_difference * _period)) / (_period - (_difference * _period))) * _pi + _pi);
   }
   return true;
 }
 
 
+
+
+///////////////////////////////////////2D///////////////////////////////////////
 template <typename T, typename S>
 AnalyticalLinear2D<T,S>::AnalyticalLinear2D(T a, T b, T c)
   : AnalyticalF2D<T,S>(1), _a(a), _b(b), _c(c)
@@ -307,30 +421,6 @@ bool AnalyticalParticleAdsorptionLinear2D<T,S>::operator()(T output[], const S i
 }
 
 
-
-template <typename T, typename S>
-AnalyticalRandom2D<T,S>::AnalyticalRandom2D() : AnalyticalF2D<T,S>(1)
-{
-#ifdef PARALLEL_MODE_MPI
-  int  nameLen, numProcs, myID;
-  char processorName[MPI_MAX_PROCESSOR_NAME];
-  MPI_Comm_rank(MPI_COMM_WORLD,&myID);
-  MPI_Comm_size(MPI_COMM_WORLD,&numProcs);
-  MPI_Get_processor_name(processorName,&nameLen);
-  srand(time(0)+myID*numProcs + nameLen);
-#else
-  srand(time(nullptr));
-#endif
-  this->getName() = "random";
-}
-
-template <typename T, typename S>
-bool AnalyticalRandom2D<T,S>::operator()(T output[], const S x[])
-{
-  output[0]=(rand()%RAND_MAX)/(T)RAND_MAX;
-  return true;
-}
-
 template <typename T, typename S, typename DESCRIPTOR>
 ParticleU2D<T,S,DESCRIPTOR>::ParticleU2D(SmoothIndicatorF2D<T,T,true>& indicator, UnitConverter<T,DESCRIPTOR> const& converter)
   :AnalyticalF2D<T,S>(2), _indicator(indicator), _converter(converter)
@@ -342,90 +432,14 @@ template <typename T, typename S, typename DESCRIPTOR>
 bool ParticleU2D<T,S,DESCRIPTOR>::operator()(T output[], const S input[])
 {
   //two dimensions: u = U + w x r = (Ux, Uy, 0) + (0,0,w) x (X,Y,0) = (Ux, Uy, 0) + (-w*Y, w*X, 0)
-  output[0] = _converter.getLatticeVelocity( _indicator.getVel()[0] - _indicator.getOmega() * (input[1] - _indicator.getPos()[1]) );
-  output[1] = _converter.getLatticeVelocity( _indicator.getVel()[1] + _indicator.getOmega() * (input[0] - _indicator.getPos()[0]) );
+  output[0] = _converter.getLatticeVelocity( _indicator.getVel()[0] + _indicator.getOmega() * (input[1] - _indicator.getPos()[1]) );
+  output[1] = _converter.getLatticeVelocity( _indicator.getVel()[1] - _indicator.getOmega() * (input[0] - _indicator.getPos()[0]) );
 
   return true;
 }
 
 
 ///////////////////////////////////////3D///////////////////////////////////////
-template <typename T, typename S>
-AnalyticalComposed3D<T,S>::AnalyticalComposed3D(AnalyticalF3D<T,S>& f0,
-    AnalyticalF3D<T,S>& f1, AnalyticalF3D<T,S>& f2)
-  : AnalyticalF3D<T,S>(3), _f0(f0), _f1(f1), _f2(f2)
-{
-  this->getName() = "composed";
-}
-
-template <typename T, typename S>
-bool AnalyticalComposed3D<T,S>::operator()(T output[], const S x[])
-{
-  T outputTmp0[_f0.getTargetDim()];
-  _f0(outputTmp0,x);
-  output[0]=outputTmp0[0];
-  T outputTmp1[_f1.getTargetDim()];
-  _f1(outputTmp1,x);
-  output[1]=outputTmp1[0];
-  T outputTmp2[_f2.getTargetDim()];
-  _f2(outputTmp2,x);
-  output[2]=outputTmp2[0];
-  return true;
-}
-
-template <typename T, typename S>
-AnalyticalConst3D<T,S>::AnalyticalConst3D(const std::vector<T>& value)
-  : AnalyticalF3D<T,S>(value.size()), _c(value)
-{
-  this->getName() = "const";
-}
-
-template <typename T, typename S>
-AnalyticalConst3D<T,S>::AnalyticalConst3D(T value) : AnalyticalF3D<T,S>(1)
-{
-  _c.push_back(value);
-  this->getName() = "const";
-}
-
-template <typename T, typename S>
-AnalyticalConst3D<T,S>::AnalyticalConst3D(T value0, T value1) : AnalyticalF3D<T,S>(2)
-{
-  _c.push_back(value0);
-  _c.push_back(value1);
-  this->getName() = "const";
-}
-
-template <typename T, typename S>
-AnalyticalConst3D<T,S>::AnalyticalConst3D(T value0, T value1, T value2)
-  : AnalyticalF3D<T,S>(3)
-{
-  _c.push_back(value0);
-  _c.push_back(value1);
-  _c.push_back(value2);
-  this->getName() = "const";
-}
-
-template <typename T, typename S>
-AnalyticalConst3D<T,S>::AnalyticalConst3D(const Vector<T,3>& value)
-  : AnalyticalF3D<T,S>(3)
-{
-  _c.reserve(3);
-  _c.push_back(value[0]);
-  _c.push_back(value[1]);
-  _c.push_back(value[2]);
-  this->getName() = "const";
-}
-
-template <typename T, typename S>
-bool AnalyticalConst3D<T,S>::operator()(T output[], const S x[])
-{
-  for (unsigned int i = 0; i < _c.size(); ++i) {
-    output[i] = _c[i];
-  }
-  return true;
-}
-
-
 template <typename T, typename S>
 AnalyticalLinear3D<T,S>::AnalyticalLinear3D(T a, T b, T c, T d)
   : AnalyticalF3D<T,S>(1), _a(a), _b(b), _c(c), _d(d)
@@ -465,30 +479,6 @@ template <typename T, typename S>
 bool AnalyticalLinear3D<T,S>::operator()(T output[], const S x[])
 {
   output[0]=_a*x[0] + _b*x[1] + _c*x[2] + _d;
-  return true;
-}
-
-
-template <typename T, typename S>
-AnalyticalRandom3D<T,S>::AnalyticalRandom3D() : AnalyticalF3D<T,S>(1)
-{
-#ifdef PARALLEL_MODE_MPI
-  int  nameLen, numProcs, myID;
-  char processorName[MPI_MAX_PROCESSOR_NAME];
-  MPI_Comm_rank(MPI_COMM_WORLD,&myID);
-  MPI_Comm_size(MPI_COMM_WORLD,&numProcs);
-  MPI_Get_processor_name(processorName,&nameLen);
-  srand(time(0)+myID*numProcs + nameLen);
-#else
-  srand(time(nullptr));
-#endif
-  this->getName() = "random";
-}
-
-template <typename T, typename S>
-bool AnalyticalRandom3D<T,S>::operator()(T output[], const S x[])
-{
-  output[0]=(rand()%RAND_MAX)/(T)RAND_MAX;
   return true;
 }
 
@@ -564,7 +554,7 @@ template <typename T, typename S>
 bool Spotlight<T,S>::operator()(T output[1], const S x[3])
 {
   Vector<T,3> w(x[0] -_position[0], x[1] -_position[1], x[2] -_position[2]);
-  normalize(w);
+  w = normalize(w);
   T cosPhi = w*_orientation;
   output[0] = 1. / (norm(w)*norm(w)) * std::pow(std::max(0., cosPhi), _falloff);
   return true;

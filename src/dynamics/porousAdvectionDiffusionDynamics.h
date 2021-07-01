@@ -45,13 +45,13 @@ public:
   /// Compute equilibrium distribution function
   T computeEquilibrium( int iPop, T rho, const T u[DESCRIPTOR::d], T uSqr ) const override;
   /// Collision step
-  void collide( Cell<T, DESCRIPTOR>& cell, LatticeStatistics<T>& statistics ) override;
+  void collide( Cell<T,DESCRIPTOR>& cell, LatticeStatistics<T>& statistics ) override;
   /// Get local relaxation parameter of the dynamics
   T getOmega() const override;
   /// Set local relaxation parameter of the dynamics
   void setOmega( T omega ) override;
   /// Set local relaxation parameter of the dynamics
-  T computeRho( const Cell<T, DESCRIPTOR>& cell ) const override;
+  T computeRho( ConstCell<T,DESCRIPTOR>& cell ) const override;
 private:
   T scaleTemp(const T rho, const T porosity) const; // scales temperature relative to porosity
   T _omega;  ///< relaxation parameter

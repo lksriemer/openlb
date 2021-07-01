@@ -36,8 +36,11 @@
 namespace olb {
 
 template<typename T>
-BlockGeometryStructure3D<T>::BlockGeometryStructure3D(int iCglob)
-  : _iCglob(iCglob), _statistics(this), clout(std::cout,"BlockGeometryStructure3D") { }
+BlockGeometryStructure3D<T>::BlockGeometryStructure3D(int nX, int nY, int nZ, int iCglob)
+  : BlockStructure3D(nX, nY, nZ),
+    _iCglob(iCglob),
+    _statistics(this),
+    clout(std::cout,"BlockGeometryStructure3D") { }
 
 template<typename T>
 int const& BlockGeometryStructure3D<T>::getIcGlob() const
@@ -46,9 +49,9 @@ int const& BlockGeometryStructure3D<T>::getIcGlob() const
 }
 
 template<typename T>
-Vector<int,3> const BlockGeometryStructure3D<T>::getExtend() const
+Vector<int,3> BlockGeometryStructure3D<T>::getExtend() const
 {
-  return Vector<int,3> (getNx(), getNy(), getNz());
+  return Vector<int,3>(this->getNx(), this->getNy(), this->getNz());
 }
 
 template<typename T>
@@ -56,14 +59,6 @@ void BlockGeometryStructure3D<T>::getPhysR(T physR[3], const int latticeR[3]) co
 {
   getPhysR(physR, latticeR[0], latticeR[1], latticeR[2]);
   return;
-}
-
-template<typename T>
-bool BlockGeometryStructure3D<T>::isInside(int iX, int iY, int iZ) const
-{
-  return 0 <= iX && iX < getNx() &&
-         0 <= iY && iY < getNy() &&
-         0 <= iZ && iZ < getNz();
 }
 
 template<typename T>
@@ -82,9 +77,9 @@ template<typename T>
 int BlockGeometryStructure3D<T>::clean(bool verbose)
 {
   int counter=0;
-  for (int iX = 0; iX < getNx(); iX++) {
-    for (int iY = 0; iY < getNy(); iY++) {
-      for (int iZ = 0; iZ < getNz(); iZ++) {
+  for (int iX = 0; iX < this->getNx(); iX++) {
+    for (int iY = 0; iY < this->getNy(); iY++) {
+      for (int iZ = 0; iZ < this->getNz(); iZ++) {
 
         if (get(iX, iY, iZ) != 1 && get(iX, iY, iZ) != 0) {
 
@@ -133,9 +128,9 @@ template<typename T>
 int BlockGeometryStructure3D<T>::clean(int material, bool verbose)
 {
   int counter=0;
-  for (int iX = 0; iX < getNx(); iX++) {
-    for (int iY = 0; iY < getNy(); iY++) {
-      for (int iZ = 0; iZ < getNz(); iZ++) {
+  for (int iX = 0; iX < this->getNx(); iX++) {
+    for (int iY = 0; iY < this->getNy(); iY++) {
+      for (int iZ = 0; iZ < this->getNz(); iZ++) {
 
         if (get(iX, iY, iZ) != 1 && get(iX, iY, iZ) != 0 && get(iX, iY, iZ) != material) {
 
@@ -184,9 +179,9 @@ template<typename T>
 int BlockGeometryStructure3D<T>::outerClean(bool verbose)
 {
   int counter=0;
-  for (int iX = 0; iX < getNx(); iX++) {
-    for (int iY = 0; iY < getNy(); iY++) {
-      for (int iZ = 0; iZ < getNz(); iZ++) {
+  for (int iX = 0; iX < this->getNx(); iX++) {
+    for (int iY = 0; iY < this->getNy(); iY++) {
+      for (int iZ = 0; iZ < this->getNz(); iZ++) {
 
         if (get(iX, iY, iZ) == 1) {
           if (   getMaterial(iX - 1, iY,     iZ    ) == 0
@@ -234,9 +229,9 @@ int BlockGeometryStructure3D<T>::innerClean(bool verbose)
   int count = 0;
   int count2 = 0;
 
-  for (int iX = 0; iX < getNx(); iX++) {
-    for (int iY = 0; iY < getNy(); iY++) {
-      for (int iZ = 0; iZ < getNz(); iZ++) {
+  for (int iX = 0; iX < this->getNx(); iX++) {
+    for (int iY = 0; iY < this->getNy(); iY++) {
+      for (int iZ = 0; iZ < this->getNz(); iZ++) {
 
         if (get(iX, iY, iZ) != 1 && get(iX, iY, iZ) != 0) {
           count++;
@@ -353,9 +348,9 @@ int BlockGeometryStructure3D<T>::innerClean(int fromM, bool verbose)
   int count = 0;
   int count2 = 0;
 
-  for (int iX = 0; iX < getNx(); iX++) {
-    for (int iY = 0; iY < getNy(); iY++) {
-      for (int iZ = 0; iZ < getNz(); iZ++) {
+  for (int iX = 0; iX < this->getNx(); iX++) {
+    for (int iY = 0; iY < this->getNy(); iY++) {
+      for (int iZ = 0; iZ < this->getNz(); iZ++) {
 
         if (get(iX, iY, iZ) != 1 && get(iX, iY, iZ)
             != 0 && get(iX, iY, iZ) == fromM) {
@@ -474,9 +469,9 @@ bool BlockGeometryStructure3D<T>::find(int material, unsigned offsetX, unsigned 
 {
 
   bool found = false;
-  for (foundX = 0; foundX < getNx(); foundX++) {
-    for (foundY = 0; foundY < getNy(); foundY++) {
-      for (foundZ = 0; foundZ < getNz(); foundZ++) {
+  for (foundX = 0; foundX < this->getNx(); foundX++) {
+    for (foundY = 0; foundY < this->getNy(); foundY++) {
+      for (foundZ = 0; foundZ < this->getNz(); foundZ++) {
         found = check(material, foundX, foundY, foundZ, offsetX, offsetY, offsetZ);
         if (found) {
           return found;
@@ -509,9 +504,9 @@ bool BlockGeometryStructure3D<T>::checkForErrors(bool verbose) const
 {
   bool error = false;
 
-  for (int iX = 0; iX < getNx(); iX++) {
-    for (int iY = 0; iY < getNy(); iY++) {
-      for (int iZ = 0; iZ < getNz(); iZ++) {
+  for (int iX = 0; iX < this->getNx(); iX++) {
+    for (int iY = 0; iY < this->getNy(); iY++) {
+      for (int iZ = 0; iZ < this->getNz(); iZ++) {
         if (get(iX, iY, iZ) == 0) {
           if (   getMaterial(iX - 1, iY,     iZ    ) == 1
                  || getMaterial(iX,     iY - 1, iZ    ) == 1
@@ -560,9 +555,9 @@ template<typename T>
 void BlockGeometryStructure3D<T>::rename(int fromM, int toM)
 {
 
-  for (int iX = 0; iX < getNx(); iX++) {
-    for (int iY = 0; iY < getNy(); iY++) {
-      for (int iZ = 0; iZ < getNz(); iZ++) {
+  for (int iX = 0; iX < this->getNx(); iX++) {
+    for (int iY = 0; iY < this->getNy(); iY++) {
+      for (int iZ = 0; iZ < this->getNz(); iZ++) {
         if (get(iX, iY, iZ) == fromM) {
           get(iX, iY, iZ) = toM;
         }
@@ -575,9 +570,9 @@ template<typename T>
 void BlockGeometryStructure3D<T>::rename(int fromM, int toM, IndicatorF3D<T>& condition)
 {
   T physR[3];
-  for (int iX = 0; iX < getNx(); iX++) {
-    for (int iY = 0; iY < getNy(); iY++) {
-      for (int iZ = 0; iZ < getNz(); iZ++) {
+  for (int iX = 0; iX < this->getNx(); iX++) {
+    for (int iY = 0; iY < this->getNy(); iY++) {
+      for (int iZ = 0; iZ < this->getNz(); iZ++) {
         if (get(iX, iY, iZ) == fromM) {
           getPhysR(physR, iX,iY,iZ);
           bool inside[1];
@@ -595,9 +590,9 @@ template<typename T>
 void BlockGeometryStructure3D<T>::rename(int fromM, int toM, unsigned offsetX,
     unsigned offsetY, unsigned offsetZ)
 {
-  for (int iX = 0; iX < getNx(); iX++) {
-    for (int iY = 0; iY < getNy(); iY++) {
-      for (int iZ = 0; iZ < getNz(); iZ++) {
+  for (int iX = 0; iX < this->getNx(); iX++) {
+    for (int iY = 0; iY < this->getNy(); iY++) {
+      for (int iZ = 0; iZ < this->getNz(); iZ++) {
         if (get(iX, iY, iZ) == fromM) {
           bool found = true;
           for (int iOffsetX = -offsetX; iOffsetX <= (int) offsetX; ++iOffsetX) {
@@ -625,9 +620,9 @@ template<typename T>
 void BlockGeometryStructure3D<T>::rename(int fromM, int toM, int testM,
     std::vector<int> testDirection)
 {
-  for (int iX = 0; iX < getNx(); iX++) {
-    for (int iY = 0; iY < getNy(); iY++) {
-      for (int iZ = 0; iZ < getNz(); iZ++) {
+  for (int iX = 0; iX < this->getNx(); iX++) {
+    for (int iY = 0; iY < this->getNy(); iY++) {
+      for (int iZ = 0; iZ < this->getNz(); iZ++) {
         if (get(iX, iY, iZ) == fromM) {
 
           // flag that indicates the renaming of the current voxel, valid voxels are not renamed
@@ -660,9 +655,9 @@ void BlockGeometryStructure3D<T>::rename(int fromM, int toM, int fluidM, Indicat
   rename(fromM, toM, condition);
   std::vector<int> testDirection(discreteNormal);
   T physR[3];
-  for (int iX = 0; iX < getNx(); iX++) {
-    for (int iY = 0; iY < getNy(); iY++) {
-      for (int iZ = 0; iZ < getNz(); iZ++) {
+  for (int iX = 0; iX < this->getNx(); iX++) {
+    for (int iY = 0; iY < this->getNy(); iY++) {
+      for (int iZ = 0; iZ < this->getNz(); iZ++) {
         if (get(iX, iY, iZ) == toM) {
           getPhysR(physR, iX,iY,iZ);
           bool inside[1];
@@ -686,9 +681,9 @@ void BlockGeometryStructure3D<T>::rename(int fromM, int toM, int fluidM, Indicat
   rename(fromM, toM, condition);
   std::vector<int> testDirection = getStatistics().computeDiscreteNormal(toM);
   T physR[3];
-  for (int iX = 0; iX < getNx(); iX++) {
-    for (int iY = 0; iY < getNy(); iY++) {
-      for (int iZ = 0; iZ < getNz(); iZ++) {
+  for (int iX = 0; iX < this->getNx(); iX++) {
+    for (int iY = 0; iY < this->getNy(); iY++) {
+      for (int iZ = 0; iZ < this->getNz(); iZ++) {
         if (get(iX, iY, iZ) == toM) {
           getPhysR(physR, iX,iY,iZ);
           bool inside[1];
@@ -710,17 +705,17 @@ template<typename T>
 void BlockGeometryStructure3D<T>::copyMaterialLayer(IndicatorF3D<T>& condition, int discreteNormal[3], int numberOfLayers)
 {
   T physR[3];
-  for (int iX = 0; iX < getNx(); iX++) {
-    for (int iY = 0; iY < getNy(); iY++) {
-      for (int iZ = 0; iZ < getNz(); iZ++) {
+  for (int iX = 0; iX < this->getNx(); iX++) {
+    for (int iY = 0; iY < this->getNy(); iY++) {
+      for (int iZ = 0; iZ < this->getNz(); iZ++) {
         getPhysR(physR, iX,iY,iZ);
         bool inside[1];
         condition(inside, physR);
         if (inside[0]) {
           for (int i = 0; i < numberOfLayers; i++) {
-            if (0 <= iX + i * discreteNormal[0] && iX + i * discreteNormal[0] < getNx() &&
-                0 <= iY + i * discreteNormal[1] && iY + i * discreteNormal[1] < getNy() &&
-                0 <= iZ + i * discreteNormal[2] && iZ + i * discreteNormal[2] < getNz()) {
+            if (0 <= iX + i * discreteNormal[0] && iX + i * discreteNormal[0] < this->getNx() &&
+                0 <= iY + i * discreteNormal[1] && iY + i * discreteNormal[1] < this->getNy() &&
+                0 <= iZ + i * discreteNormal[2] && iZ + i * discreteNormal[2] < this->getNz()) {
               get(iX + i * discreteNormal[0], iY + i * discreteNormal[1], iZ + i * discreteNormal[2]) = get(iX, iY, iZ);
             }
           }

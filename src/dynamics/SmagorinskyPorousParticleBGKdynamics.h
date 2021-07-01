@@ -33,37 +33,19 @@ namespace olb {
 
 /// Implementation of the BGK collision step for a porosity model
 template<typename T, typename DESCRIPTOR>
-class SmagorinskyPorousParticleBGKdynamics : public PorousParticleBGKdynamics<T,DESCRIPTOR> {
+class SmagorinskyPorousParticleBGKdynamics : public SmagorinskyDynamics<T,DESCRIPTOR>, public PorousParticleBGKdynamics<T,DESCRIPTOR> {
 public:
   /// Constructor
-  SmagorinskyPorousParticleBGKdynamics(T omega_, Momenta<T,DESCRIPTOR>& momenta_, T smagoConst_,
-                         T dx_ = 1, T dt_ = 1);
-
+  SmagorinskyPorousParticleBGKdynamics(T omega_, Momenta<T,DESCRIPTOR>& momenta_, T smagoConst_);
   /// Collision step
-  virtual void collide(Cell<T,DESCRIPTOR>& cell,
-                       LatticeStatistics<T>& statistics_);
-
-  /// set relaxation parameter
-  void setOmega(T omega_);
+  void collide(Cell<T,DESCRIPTOR>& cell,
+                       LatticeStatistics<T>& statistics_) override;
   /// Get local smagorinsky relaxation parameter of the dynamics
-  virtual T getSmagorinskyOmega(Cell<T,DESCRIPTOR>& cell_);
-
+  T getEffectiveOmega(Cell<T,DESCRIPTOR>& cell_) override;
 
 protected:
-  /// Computes a constant prefactor in order to speed up the computation
-  T computePreFactor(T omega_, T smagoConst_);
   /// Computes the local smagorinsky relaxation parameter
-  T computeOmega(T omega0, T preFactor_, T rho,
-                 T pi[util::TensorVal<DESCRIPTOR >::n] );
-
-  /// effective collision time based upon Smagorisnky approach
-  T tau_eff;
-  /// Smagorinsky constant
-  T smagoConst;
-  /// Precomputed constant which speeeds up the computation
-  T preFactor;
-  T dx;
-  T dt;
+  virtual T computeEffectiveOmega(Cell<T,DESCRIPTOR>& cell);
 };
 
 } // olb

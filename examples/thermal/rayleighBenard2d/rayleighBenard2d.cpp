@@ -39,8 +39,8 @@ using namespace std;
 
 typedef double T;
 
-#define NSDESCRIPTOR D2Q9<FORCE>
-#define TDESCRIPTOR D2Q5<VELOCITY>
+typedef D2Q9<FORCE> NSDESCRIPTOR;
+typedef D2Q5<VELOCITY> TDESCRIPTOR;
 
 // Parameters for the simulation setup
 const T lx  = 2.;          // length of the channel
@@ -102,8 +102,6 @@ void prepareLattice( ThermalUnitConverter<T, NSDESCRIPTOR, TDESCRIPTOR> &convert
                      SuperLattice2D<T, TDESCRIPTOR>& ADlattice,
                      Dynamics<T, NSDESCRIPTOR> &bulkDynamics,
                      Dynamics<T, TDESCRIPTOR>& advectionDiffusionBulkDynamics,
-                     sOnLatticeBoundaryCondition2D<T,NSDESCRIPTOR>& NSboundaryCondition,
-                     sOnLatticeBoundaryCondition2D<T,TDESCRIPTOR>& TboundaryCondition,
                      SuperGeometry2D<T>& superGeometry )
 {
 
@@ -127,8 +125,8 @@ void prepareLattice( ThermalUnitConverter<T, NSDESCRIPTOR, TDESCRIPTOR> &convert
   NSlattice.defineDynamics(superGeometry, 4, &bulkDynamics);
 
   /// sets boundary
-  TboundaryCondition.addTemperatureBoundary(superGeometry, 2, Tomega);
-  TboundaryCondition.addTemperatureBoundary(superGeometry, 3, Tomega);
+  setAdvectionDiffusionTemperatureBoundary<T,TDESCRIPTOR>(ADlattice, Tomega, superGeometry, 2);
+  setAdvectionDiffusionTemperatureBoundary<T,TDESCRIPTOR>(ADlattice, Tomega, superGeometry, 3);
 
   /// define initial conditions
   AnalyticalConst2D<T,T> rho(1.);
@@ -275,11 +273,6 @@ int main(int argc, char *argv[])
   SuperLattice2D<T, TDESCRIPTOR> ADlattice(superGeometry);
   SuperLattice2D<T, NSDESCRIPTOR> NSlattice(superGeometry);
 
-  sOnLatticeBoundaryCondition2D<T, NSDESCRIPTOR> NSboundaryCondition(NSlattice);
-  createLocalBoundaryCondition2D<T, NSDESCRIPTOR>(NSboundaryCondition);
-
-  sOnLatticeBoundaryCondition2D<T, TDESCRIPTOR> TboundaryCondition(ADlattice);
-  createAdvectionDiffusionBoundaryCondition2D<T, TDESCRIPTOR>(TboundaryCondition);
 
   ForcedBGKdynamics<T, NSDESCRIPTOR> NSbulkDynamics(
     converter.getLatticeRelaxationFrequency(),
@@ -297,7 +290,7 @@ int main(int argc, char *argv[])
   std::vector<T> dir{0.0, 1.0};
 
   T boussinesqForcePrefactor = 9.81 / converter.getConversionFactorVelocity() * converter.getConversionFactorTime() *
-    converter.getCharPhysTemperatureDifference() * converter.getPhysThermalExpansionCoefficient();
+                               converter.getCharPhysTemperatureDifference() * converter.getPhysThermalExpansionCoefficient();
 
   NavierStokesAdvectionDiffusionCouplingGenerator2D<T,NSDESCRIPTOR> coupling(0, converter.getLatticeLength(lx), 0, converter.getLatticeLength(ly), boussinesqForcePrefactor, converter.getLatticeTemperature(Tcold), 1., dir);
 
@@ -309,14 +302,14 @@ int main(int argc, char *argv[])
   prepareLattice(converter,
                  NSlattice, ADlattice,
                  NSbulkDynamics, TbulkDynamics,
-                 NSboundaryCondition, TboundaryCondition, superGeometry );
+                 superGeometry );
 
   /// === 4th Step: Main Loop with Timer ===
   Timer<T> timer(converter.getLatticeTime(maxPhysT), superGeometry.getStatistics().getNvoxel() );
   timer.start();
 
   util::ValueTracer<T> converge(converter.getLatticeTime(50.),epsilon);
-  for (int iT = 0; iT < converter.getLatticeTime(maxPhysT); ++iT) {
+  for (std::size_t iT = 0; iT < converter.getLatticeTime(maxPhysT); ++iT) {
 
     if (converge.hasConverged()) {
       clout << "Simulation converged." << endl;

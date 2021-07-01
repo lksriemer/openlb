@@ -59,12 +59,12 @@ void SmagorinskyPowerLawBGKdynamics<T,DESCRIPTOR>::collide (
 
   // Computation of the power-law omega.
   // An external is used in place of BGKdynamics::_omega to keep generality and flexibility.
-  T oldOmega = cell.template getFieldPointer<descriptors::OMEGA>()[0];
+  T oldOmega = cell.template getField<descriptors::OMEGA>();
   T intOmega = this->computeOmegaPL(cell, oldOmega, rho, pi);
   T newOmega = computeEffectiveOmega(cell, intOmega); // turbulent omega
 
   T uSqr = lbHelpers<T,DESCRIPTOR>::bgkCollision(cell, rho, u, newOmega);
-  cell.template getFieldPointer<descriptors::OMEGA>()[0] = intOmega; // updating omega
+  cell.template setField<descriptors::OMEGA>(intOmega);
   statistics.incrementStats(rho, uSqr);
 }
 
@@ -81,12 +81,6 @@ T SmagorinskyPowerLawBGKdynamics<T,DESCRIPTOR>::computeEffectiveOmega(Cell<T,DES
   T tau_eff = tau_mol+tau_turb;
   T omega_new= 1./tau_eff;
   return omega_new;
-}
-
-template<typename T, typename DESCRIPTOR>
-T SmagorinskyPowerLawBGKdynamics<T,DESCRIPTOR>::PiNeqNormSqr(Cell<T,DESCRIPTOR>& cell )
-{
-  return lbHelpers<T,DESCRIPTOR>::computePiNeqNormSqr(cell);
 }
 
 
@@ -108,23 +102,22 @@ void SmagorinskyPowerLawForcedBGKdynamics<T,DESCRIPTOR>::collide (
   Cell<T,DESCRIPTOR>& cell,
   LatticeStatistics<T>& statistics )
 {
-  T rho, u[DESCRIPTOR::d], pi[util::TensorVal<DESCRIPTOR >::n];
-  this->_momenta.computeAllMomenta(cell, rho, u, pi);
+  T rho, pi[util::TensorVal<DESCRIPTOR >::n];
+  FieldD<T,DESCRIPTOR,descriptors::VELOCITY> u;
+  this->_momenta.computeAllMomenta(cell, rho, u.data(), pi);
 
   // Computation of the power-law omega.
   // An external is used in place of BGKdynamics::_omega to keep generality and flexibility.
-  T oldOmega = cell.template getFieldPointer<descriptors::OMEGA>()[0];
+  T oldOmega = cell.template getField<descriptors::OMEGA>();
   T intOmega = this->computeOmegaPL(cell, oldOmega, rho, pi);
   T newOmega = computeEffectiveOmega(cell, intOmega); // turbulent omega
 
-  T* force = cell.template getFieldPointer<descriptors::FORCE>();
-  for (int iVel=0; iVel<DESCRIPTOR::d; ++iVel) {
-    u[iVel] += force[iVel] / (T)2.;
-  }
+  auto force = cell.template getFieldPointer<descriptors::FORCE>();
+  u += 0.5 * force;
 
-  T uSqr = lbHelpers<T,DESCRIPTOR>::bgkCollision(cell, rho, u, newOmega);
-  cell.template getFieldPointer<descriptors::OMEGA>()[0] = intOmega; // updating omega
-  lbHelpers<T,DESCRIPTOR>::addExternalForce(cell, u, newOmega, rho);
+  T uSqr = lbHelpers<T,DESCRIPTOR>::bgkCollision(cell, rho, u.data(), newOmega);
+  cell.template setField<descriptors::OMEGA>(intOmega); // updating omega
+  lbHelpers<T,DESCRIPTOR>::addExternalForce(cell, u.data(), newOmega, rho);
   statistics.incrementStats(rho, uSqr);
 }
 
@@ -132,7 +125,7 @@ template<typename T, typename DESCRIPTOR>
 T SmagorinskyPowerLawForcedBGKdynamics<T,DESCRIPTOR>::computeEffectiveOmega(Cell<T,DESCRIPTOR>& cell, T omega0)
 {
   T rho = this->_momenta.computeRho(cell);
-  T PiNeqNorm    = sqrt(PiNeqNormSqr(cell));
+  T PiNeqNorm    = sqrt(lbHelpers<T,DESCRIPTOR>::computePiNeqNormSqr(cell));
   /// Molecular realaxation time
   T tau_mol = 1. /omega0;
   /// Turbulent realaxation time
@@ -141,12 +134,6 @@ T SmagorinskyPowerLawForcedBGKdynamics<T,DESCRIPTOR>::computeEffectiveOmega(Cell
   T tau_eff = tau_mol+tau_turb;
   T omega_new= 1./tau_eff;
   return omega_new;
-}
-
-template<typename T, typename DESCRIPTOR>
-T SmagorinskyPowerLawForcedBGKdynamics<T,DESCRIPTOR>::PiNeqNormSqr(Cell<T,DESCRIPTOR>& cell )
-{
-  return lbHelpers<T,DESCRIPTOR>::computeForcedPiNeqNormSqr(cell);
 }
 
 }

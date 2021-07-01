@@ -52,9 +52,9 @@ void PorousBGKdynamics<T,DESCRIPTOR>::collide (
 {
   T rho, u[DESCRIPTOR::d];
   this->_momenta.computeRhoU(cell, rho, u);
-  T* porosity = cell.template getFieldPointer<descriptors::POROSITY>();
+  T porosity = cell.template getField<descriptors::POROSITY>();
   for (int i=0; i<DESCRIPTOR::d; i++)  {
-    u[i] *= porosity[0];
+    u[i] *= porosity;
   }
   T uSqr = lbHelpers<T,DESCRIPTOR>::bgkCollision(cell, rho, u, omega);
   statistics.incrementStats(rho, uSqr);
@@ -81,6 +81,7 @@ ExtendedPorousBGKdynamics<T,DESCRIPTOR>::ExtendedPorousBGKdynamics (
   : BGKdynamics<T,DESCRIPTOR>(omega_,momenta_),
     omega(omega_)
 {
+  this->getName() = "ExtendedPorousBGKdynamics";
 }
 
 template<typename T, typename DESCRIPTOR>
@@ -90,8 +91,8 @@ void ExtendedPorousBGKdynamics<T,DESCRIPTOR>::collide (
 {
   T rho, u[DESCRIPTOR::d];
   this->_momenta.computeRhoU(cell, rho, u);
-  T* porosity = cell.template getFieldPointer<descriptors::POROSITY>();
-  T* localVelocity = cell.template getFieldPointer<descriptors::LOCAL_DRAG>();
+  T porosity = cell.template getField<descriptors::POROSITY>();
+  auto localVelocity = cell.template getFieldPointer<descriptors::LOCAL_DRAG>();
 
   cell.template setField<descriptors::LOCAL_DRAG>(u);
 
@@ -136,14 +137,14 @@ void SubgridParticleBGKdynamics<T,DESCRIPTOR>::collide (
 {
   T rho, u[DESCRIPTOR::d];
   this->_momenta.computeRhoU(cell, rho, u);
-  T* porosity = cell.template getFieldPointer<descriptors::POROSITY>();
-  T* extVelocity = cell.template getFieldPointer<descriptors::LOCAL_DRAG>();
+  T porosity = cell.template getField<descriptors::POROSITY>();
+  auto extVelocity = cell.template getFieldPointer<descriptors::LOCAL_DRAG>();
 //  if (porosity[0] != 0) {
 //    cout << "extVelocity: " << extVelocity[0] << " " <<  extVelocity[1] << " " <<  extVelocity[2] << " " << std::endl;
 //    cout << "porosity: " << porosity[0] << std::endl;
 //  }
   for (int i=0; i<DESCRIPTOR::d; i++)  {
-    u[i] *= (1.-porosity[0]);
+    u[i] *= (1.-porosity);
     u[i] += extVelocity[i];
   }
   T uSqr = lbHelpers<T,DESCRIPTOR>::bgkCollision(cell, rho, u, omega);
@@ -166,14 +167,72 @@ void SubgridParticleBGKdynamics<T,DESCRIPTOR>::setOmega(T omega_)
   omega = omega_;
 }
 
+//////////////////// Class PorousParticleDynamics ////////////////////
+
+template<typename T, typename DESCRIPTOR, bool isStatic>
+template <bool isStatic_>
+std::enable_if_t<isStatic_>
+PorousParticleDynamics<T,DESCRIPTOR,isStatic>::calculate(ConstCell<T,DESCRIPTOR>& cell, T* pVelocity) {
+  for (int i=0; i<DESCRIPTOR::d; i++)  {
+    pVelocity[i] -= (1.-(cell.template getField<descriptors::POROSITY>())) * pVelocity[i];
+  }
+}
+
+template<typename T, typename DESCRIPTOR, bool isStatic>
+template <bool isStatic_>
+std::enable_if_t<!isStatic_>
+PorousParticleDynamics<T,DESCRIPTOR,isStatic>::calculate(Cell<T,DESCRIPTOR>& cell, T* pVelocity) {
+  for (int i=0; i<DESCRIPTOR::d; i++)  {
+    pVelocity[i] += (1.-cell.template getField<descriptors::POROSITY>())
+        * (cell.template getFieldPointer<descriptors::VELOCITY_NUMERATOR>()[i]
+          / cell.template getField<descriptors::VELOCITY_DENOMINATOR>() - pVelocity[i]);
+  }
+  cell.template setField<descriptors::POROSITY>(1.);
+  cell.template setField<descriptors::VELOCITY_DENOMINATOR>(0.);
+}
+
 //////////////////// Class PorousParticleBGKdynamics ////////////////////
 
 template<typename T, typename DESCRIPTOR, bool isStatic>
 PorousParticleBGKdynamics<T,DESCRIPTOR,isStatic>::PorousParticleBGKdynamics (
   T omega_, Momenta<T,DESCRIPTOR>& momenta_)
-  : BGKdynamics<T,DESCRIPTOR>(omega_,momenta_),
-    omega(omega_)
+  : BGKdynamics<T,DESCRIPTOR>(omega_,momenta_)
 {}
+
+template<typename T, typename DESCRIPTOR, bool isStatic>
+void PorousParticleBGKdynamics<T,DESCRIPTOR,isStatic>::computeU (
+  ConstCell<T,DESCRIPTOR>& cell, T u[DESCRIPTOR::d]) const
+{
+  T rho;
+  this->_momenta.computeRhoU(cell, rho, u);
+  T u_tmp[3] = {0., 0., 0.};
+  if ( cell.template getFieldPointer<descriptors::VELOCITY_DENOMINATOR>()[0] > std::numeric_limits<T>::epsilon()) {
+    for (int i=0; i<DESCRIPTOR::d; i++)  {
+     u_tmp[i] = (1.-cell.template getField<descriptors::POROSITY>())
+         * (cell.template getFieldPointer<descriptors::VELOCITY_NUMERATOR>()[i]
+           / cell.template getField<descriptors::VELOCITY_DENOMINATOR>()
+           - u[i]);
+      u[i] += rho * u_tmp[i] / (T)2.;
+    }
+  }
+}
+
+template<typename T, typename DESCRIPTOR, bool isStatic>
+void PorousParticleBGKdynamics<T,DESCRIPTOR,isStatic>::computeRhoU (
+  ConstCell<T,DESCRIPTOR>& cell, T& rho, T u[DESCRIPTOR::d]) const
+{
+  this->_momenta.computeRhoU(cell, rho, u);
+  T u_tmp[3] = {0., 0., 0.};
+  if ( cell.template getFieldPointer<descriptors::VELOCITY_DENOMINATOR>()[0] > std::numeric_limits<T>::epsilon()) {
+    for (int i=0; i<DESCRIPTOR::d; i++)  {
+      u_tmp[i] = (1.-cell.template getField<descriptors::POROSITY>())
+         * (cell.template getFieldPointer<descriptors::VELOCITY_NUMERATOR>()[i]
+            / cell.template getField<descriptors::VELOCITY_DENOMINATOR>()
+            - u[i]);
+      u[i] += rho * u_tmp[i] / (T)2.;
+    }
+  }
+}
 
 template<typename T, typename DESCRIPTOR, bool isStatic>
 void PorousParticleBGKdynamics<T,DESCRIPTOR,isStatic>::collide (
@@ -182,92 +241,198 @@ void PorousParticleBGKdynamics<T,DESCRIPTOR,isStatic>::collide (
 {
   T rho, u[DESCRIPTOR::d];
   this->_momenta.computeRhoU(cell, rho, u);
-  T tmpMomentumLoss[DESCRIPTOR::d] = { };
+  T uSqr = this->porousParticleBgkCollision(cell, rho, u, this->getOmega());
+  statistics.incrementStats(rho, uSqr);
+}
 
-  T* const velNumerator   = cell.template getFieldPointer<descriptors::VELOCITY_NUMERATOR>();
-  T* const external = cell.template getFieldPointer<descriptors::POROSITY>(); // TODO: Remove implicit layout requirements in favor of descriptor fields
-  T* const velDenominator = cell.template getFieldPointer<descriptors::VELOCITY_DENOMINATOR>();
+template<typename T, typename DESCRIPTOR, bool isStatic>
+T PorousParticleBGKdynamics<T,DESCRIPTOR,isStatic>::porousParticleBgkCollision(Cell<T,DESCRIPTOR>& cell, T rho, T u[DESCRIPTOR::d], T omega)
+{
+  auto velDenominator = cell.template getFieldPointer<descriptors::VELOCITY_DENOMINATOR>();
 
-// use HLBM with Shan-Chen forcing as in previous versions
-#ifdef HLBM_FORCING_SHANCHEN
-  if (*velDenominator > std::numeric_limits<T>::epsilon()) {
-    effectiveVelocity<isStatic>::calculate(velNumerator, u);
+#if defined(FEATURE_HLBM_SHANCHEN_FORCING)
+  if (velDenominator[0] > std::numeric_limits<T>::epsilon()) {
+    T  u_tmp[DESCRIPTOR::d] = { };
+    for(int iDim=0; iDim<DESCRIPTOR::d; iDim++)
+      u_tmp[iDim] = u[iDim];
+    this->calculate(cell, u);
+#ifdef FEATURE_HLBM_MLA
+    auto velNumerator   = cell.template getFieldPointer<descriptors::VELOCITY_NUMERATOR>();
     const T tmp_uSqr = util::normSqr<T,DESCRIPTOR::d>(u);
-    for(int tmp_i=0; tmp_i<DESCRIPTOR::d; tmp_i++) {
-      for(int tmp_iPop=0; tmp_iPop<DESCRIPTOR::q; tmp_iPop++) {
-        tmpMomentumLoss[tmp_i] -= DESCRIPTOR::c[tmp_iPop][tmp_i] * omega
-                * (lbDynamicsHelpers<T,DESCRIPTOR>::equilibrium(tmp_iPop, rho, u, tmp_uSqr)-cell[tmp_iPop]);
+    for(int iDim=0; iDim<DESCRIPTOR::d; iDim++) {
+      for(int iPop=0; iPop<DESCRIPTOR::q; iPop++) {
+        velNumerator[iDim] -= descriptors::c<DESCRIPTOR>(iPop,iDim) * omega
+                * (lbDynamicsHelpers<T,DESCRIPTOR>::equilibrium(iPop, rho, u, tmp_uSqr)
+                   - lbDynamicsHelpers<T,DESCRIPTOR>::equilibrium(iPop, rho, u_tmp, tmp_uSqr_2) );
       }
+    }
+#endif
+  }
+  T uSqr = lbHelpers<T,DESCRIPTOR>::bgkCollision(cell, rho, u, omega);
+#elif defined(FEATURE_HLBM_GUO_FORCING)
+  T  force[DESCRIPTOR::d] = { };
+#ifdef FEATURE_HLBM_MLA
+  T  u_saved[DESCRIPTOR::d] = { };
+  for(int iDim=0; iDim<DESCRIPTOR::d; iDim++)
+    u_saved[iDim] = u[iDim];
+#endif
+  bool particle = velDenominator[0] > std::numeric_limits<T>::epsilon();
+  if (particle) {
+    T  uPlus[DESCRIPTOR::d] = { };
+    for(int iDim=0; iDim<DESCRIPTOR::d; iDim++)
+      uPlus[iDim] = u[iDim];
+    this->calculate(cell, uPlus);
+    for(int iDim=0; iDim<DESCRIPTOR::d; iDim++) {
+      force[iDim] = uPlus[iDim]-u[iDim];
+      u[iDim] += force[iDim] * 0.5;
     }
   }
   T uSqr = lbHelpers<T,DESCRIPTOR>::bgkCollision(cell, rho, u, omega);
-
-// use Kuperstokh forcing by default
+#ifdef FEATURE_HLBM_MLA
+  for(int iDim=0; iDim<DESCRIPTOR::d; iDim++) {
+    velNumerator[iDim] = 0.;
+  }
+#endif
+  // lbHelpers::addExternalForce is restricted to a force stored in the descriptor field <FORCE>
+  for (int iPop=0; iPop < DESCRIPTOR::q; ++iPop) {
+    T c_u = T();
+    for (int iD=0; iD < DESCRIPTOR::d; ++iD) {
+      c_u += descriptors::c<DESCRIPTOR>(iPop,iD)*u[iD];
+    }
+    c_u *= descriptors::invCs2<T,DESCRIPTOR>()*descriptors::invCs2<T,DESCRIPTOR>();
+    T forceTerm = T();
+    for (int iD=0; iD < DESCRIPTOR::d; ++iD) {
+      forceTerm +=
+         (   ((T)descriptors::c<DESCRIPTOR>(iPop,iD)-u[iD]) * descriptors::invCs2<T,DESCRIPTOR>()
+               + c_u * descriptors::c<DESCRIPTOR>(iPop,iD)                                      )
+           * force[iD];
+    }
+    forceTerm *= descriptors::t<T,DESCRIPTOR>(iPop);
+    forceTerm *= T(1) - omega/T(2);
+    forceTerm *= rho;
+    cell[iPop] += forceTerm;
+#ifdef FEATURE_HLBM_MLA
+    if (particle) {
+      const T tmp_uSqr_mla = util::normSqr<T,DESCRIPTOR::d>(u_saved);
+      const T tmp_uSqr_mla_2 = util::normSqr<T,DESCRIPTOR::d>(u);
+      for(int iDim=0; iDim<DESCRIPTOR::d; iDim++) {
+        velNumerator[iDim] += descriptors::c<DESCRIPTOR>(iPop,iDim) * ( omega
+                                * (lbDynamicsHelpers<T,DESCRIPTOR>::equilibrium(iPop, rho, u_saved, tmp_uSqr_mla)
+                                   - lbDynamicsHelpers<T,DESCRIPTOR>::equilibrium(iPop, rho, u, tmp_uSqr_mla_2) )
+                                - forceTerm );
+      }
+    }
+#endif
+  }
+#ifdef FEATURE_HLBM_MLA
+  // should yield same result as above, however this tests the forcing
+  // and is for now more consistent with the idea of mla
+  //for(int iDim=0; iDim<DESCRIPTOR::d; iDim++)
+  //  velNumerator[iDim] = -force[iDim]*rho;
+#endif
 #else
+  // use Kuperstokh forcing by default
   T uSqr = lbHelpers<T,DESCRIPTOR>::bgkCollision(cell, rho, u, omega);
-  T  uPlus[DESCRIPTOR::d] = { };
+  T uPlus[DESCRIPTOR::d] = { };
   T diff[DESCRIPTOR::q] = {};
-  if (*velDenominator > std::numeric_limits<T>::epsilon()) {
+  if (velDenominator[0] > std::numeric_limits<T>::epsilon()) {
     for(int iDim=0; iDim<DESCRIPTOR::d; iDim++)
       uPlus[iDim] = u[iDim];
-    effectiveVelocity<isStatic>::calculate(external, uPlus);
+    this->calculate(cell, uPlus);
     const T uPlusSqr = util::normSqr<T,DESCRIPTOR::d>(uPlus);
     for(int tmp_iPop=0; tmp_iPop<DESCRIPTOR::q; tmp_iPop++) {
       diff[tmp_iPop] += lbHelpers<T,DESCRIPTOR>::equilibrium(tmp_iPop, rho, uPlus, uPlusSqr)
                       - lbHelpers<T,DESCRIPTOR>::equilibrium(tmp_iPop, rho, u, uSqr);
       cell[tmp_iPop] += diff[tmp_iPop];
-      for(int iDim=0; iDim<DESCRIPTOR::d; iDim++) {
-        tmpMomentumLoss[iDim] -= descriptors::c<DESCRIPTOR>(tmp_iPop,iDim) * diff[tmp_iPop];
-      }
     }
-    // alternate option to calculate the force
+#ifdef FEATURE_HLBM_MLA
+    for(int iDim=0; iDim<DESCRIPTOR::d; iDim++) {
+      velNumerator[iDim] = 0.;
+      for(int tmp_iPop=0; tmp_iPop<DESCRIPTOR::q; tmp_iPop++)
+        velNumerator[iDim] -= descriptors::c<DESCRIPTOR>(tmp_iPop,iDim) * diff[tmp_iPop];
+    }
+    // should yield same result as above, however this tests the forcing
+    // and is for now more consistent with the idea of mla
     //for(int iDim=0; iDim<DESCRIPTOR::d; iDim++)
-    //  tmpMomentumLoss[iDim] = -rho*(uPlus[iDim]-u[iDim]);
+      //*(velNumerator+iDim) = -rho*(uPlus[iDim]-u[iDim]);
+#endif
   }
 #endif
 
+  return uSqr;
+}
+
+
+//////////////////// Class DBBParticleBGKdynamics ////////////////////
+
+template<typename T, typename DESCRIPTOR, bool isStatic>
+DBBParticleBGKdynamics<T,DESCRIPTOR,isStatic>::DBBParticleBGKdynamics (
+  T omega_, Momenta<T,DESCRIPTOR>& momenta_)
+  : BGKdynamics<T,DESCRIPTOR>(omega_,momenta_)
+{
+  this->getName() = "DBBParticleBGKdynamics";
+}
+
+template<typename T, typename DESCRIPTOR, bool isStatic>
+void DBBParticleBGKdynamics<T,DESCRIPTOR,isStatic>::collide (
+  Cell<T,DESCRIPTOR>& cell,
+  LatticeStatistics<T>& statistics )
+{
+  T rho, u[DESCRIPTOR::d],eta[DESCRIPTOR::q],uPlus[DESCRIPTOR::d],tmp_cell[(DESCRIPTOR::q+1)/2];
+  this->_momenta.computeRhoU(cell, rho, u);
+  T uSqr = this->dbbParticleBgkCollision(cell, rho, u, eta, uPlus, tmp_cell, this->getOmega());
   statistics.incrementStats(rho, uSqr);
+}
+
+template<typename T, typename DESCRIPTOR, bool isStatic>
+T DBBParticleBGKdynamics<T,DESCRIPTOR,isStatic>::dbbParticleBgkCollision(Cell<T,DESCRIPTOR>& cell, T rho, T u[DESCRIPTOR::d], T eta[DESCRIPTOR::d], T uPlus[DESCRIPTOR::d],T tmp_cell[(DESCRIPTOR::q+1)/2], T omega)
+{
+
+  T tmpMomentumLoss[DESCRIPTOR::d] = { };
+
+  auto velNumerator   = cell.template getFieldPointer<descriptors::VELOCITY_NUMERATOR>();
+  auto zeta = cell.template getFieldPointer<descriptors::ZETA>();
+  auto velDenominator = cell.template getFieldPointer<descriptors::VELOCITY_DENOMINATOR>();
+
+  if(*(velDenominator)>1)
+    rho/=T(*(velDenominator));
+  for(int tmp_iPop=1; 2*tmp_iPop<DESCRIPTOR::q; tmp_iPop++) {
+    eta[tmp_iPop]=6.*descriptors::t<T,DESCRIPTOR>(tmp_iPop)*rho*(descriptors::c<DESCRIPTOR>(tmp_iPop,0)*(*velNumerator)+descriptors::c<DESCRIPTOR>(tmp_iPop,1)*(*(velNumerator+1)));
+    tmp_cell[tmp_iPop]=(*(zeta+tmp_iPop))*(-cell[tmp_iPop]+cell[descriptors::opposite<DESCRIPTOR>(tmp_iPop)]+eta[tmp_iPop]);
+    cell[tmp_iPop]+=tmp_cell[tmp_iPop]/(1.+2.*(*(zeta+tmp_iPop)));
+    cell[descriptors::opposite<DESCRIPTOR>(tmp_iPop)]-=tmp_cell[tmp_iPop]/(1.+2.*(*(zeta+tmp_iPop)));
+    *(zeta+tmp_iPop) = 0.;
+    *(zeta+descriptors::opposite<DESCRIPTOR>(tmp_iPop)) = 0.;
+  }
+
+  cell.template setField<descriptors::POROSITY>(1.);
+  *velDenominator=0.;
+
+  this->_momenta.computeRhoU(cell, rho, uPlus);
+
+  T uPlusSqr = lbHelpers<T,DESCRIPTOR>::bgkCollision(cell, rho, uPlus, omega);
+
+  T uSqr = util::normSqr<T,DESCRIPTOR::d>(u);
+
+  T diff[DESCRIPTOR::q] = {};
+  for(int tmp_iPop=0; tmp_iPop<DESCRIPTOR::q; tmp_iPop++) {
+    diff[tmp_iPop] += lbHelpers<T,DESCRIPTOR>::equilibrium(tmp_iPop, rho, uPlus, uPlusSqr)
+      - lbHelpers<T,DESCRIPTOR>::equilibrium(tmp_iPop, rho, u, uSqr);
+
+    for(int iDim=0; iDim<DESCRIPTOR::d; iDim++) {
+      tmpMomentumLoss[iDim] -= descriptors::c<DESCRIPTOR>(tmp_iPop,iDim) * diff[tmp_iPop];
+    }
+  }
+
   for(int i_dim=0; i_dim<DESCRIPTOR::d; i_dim++) {
     *(velNumerator+i_dim) = tmpMomentumLoss[i_dim];
   }
+
+  return uSqr;
 }
 
-// TODO: Update for meta descriptor
-template<typename T, typename DESCRIPTOR, bool isStatic>
-template<bool dummy>
-struct PorousParticleBGKdynamics<T,DESCRIPTOR,isStatic>::effectiveVelocity<false, dummy> {
-  static void calculate(T* pExternal, T* pVelocity) {
-    for (int i=0; i<DESCRIPTOR::d; i++)  {
-      pVelocity[i] += (1.-pExternal[DESCRIPTOR::template index<descriptors::POROSITY>() - DESCRIPTOR::q])
-          * (pExternal[DESCRIPTOR::template index<descriptors::VELOCITY_NUMERATOR>() - DESCRIPTOR::q +i] / pExternal[DESCRIPTOR::template index<descriptors::VELOCITY_DENOMINATOR>() - DESCRIPTOR::q] - pVelocity[i]);
-    }
-    pExternal[DESCRIPTOR::template index<descriptors::POROSITY>() - DESCRIPTOR::q] = 1.;
-    pExternal[DESCRIPTOR::template index<descriptors::VELOCITY_DENOMINATOR>() - DESCRIPTOR::q] = 0.;
-  }
-};
 
-// TODO: Update for meta descriptor
-template<typename T, typename Lattice, bool isStatic>
-template<bool dummy>
-struct PorousParticleBGKdynamics<T,Lattice,isStatic>::effectiveVelocity<true, dummy> {
-  static void calculate(T* pExternal, T* pVelocity) {
-    for (int i=0; i<Lattice::d; i++)  {
-      pVelocity[i] -= (1.-pExternal[Lattice::template index<descriptors::POROSITY>() - Lattice::q]) * pVelocity[i];
-    }
-  }
-};
 
-template<typename T, typename DESCRIPTOR, bool isStatic>
-T PorousParticleBGKdynamics<T,DESCRIPTOR,isStatic>::getOmega() const
-{
-  return omega;
-}
-
-template<typename T, typename DESCRIPTOR, bool isStatic>
-void PorousParticleBGKdynamics<T,DESCRIPTOR,isStatic>::setOmega(T omega_)
-{
-  omega = omega_;
-}
 
 //////////////////// Class KrauseHBGKdynamics ////////////////////
 
@@ -293,10 +458,10 @@ void KrauseHBGKdynamics<T,DESCRIPTOR>::collide (
   this->_momenta.computeRhoU(cell, rho, u);
   computeOmega(this->getOmega(), cell, preFactor, rho, u, newOmega);
 
-  T vel_denom = *cell.template getFieldPointer<descriptors::VELOCITY_DENOMINATOR>();
+  T vel_denom = cell.template getField<descriptors::VELOCITY_DENOMINATOR>();
   if (vel_denom > std::numeric_limits<T>::epsilon()) {
-    T porosity = *cell.template getFieldPointer<descriptors::POROSITY>(); // prod(1-smoothInd)
-    T* vel_num = cell.template getFieldPointer<descriptors::VELOCITY_NUMERATOR>();
+    T porosity = cell.template getField<descriptors::POROSITY>(); // prod(1-smoothInd)
+    auto vel_num = cell.template getFieldPointer<descriptors::VELOCITY_NUMERATOR>();
     porosity = 1.-porosity; // 1-prod(1-smoothInd)
     for (int i=0; i<DESCRIPTOR::d; i++)  {
       u[i] += porosity * (vel_num[i] / vel_denom - u[i]);
@@ -368,8 +533,8 @@ void ParticlePorousBGKdynamics<T,DESCRIPTOR>::collide (
 {
   T rho, u[DESCRIPTOR::d];
   this->_momenta.computeRhoU(cell, rho, u);
-  T* porosity = cell.template getFieldPointer<descriptors::POROSITY>();
-  T* localVelocity = cell.template getFieldPointer<descriptors::LOCAL_DRAG>();
+  auto porosity = cell.template getFieldPointer<descriptors::POROSITY>();
+  auto localVelocity = cell.template getFieldPointer<descriptors::LOCAL_DRAG>();
   for (int i=0; i<DESCRIPTOR::d; i++)  {
     u[i] *= porosity[0];
     u[i] += localVelocity[i];
@@ -409,12 +574,12 @@ void SmallParticleBGKdynamics<T,DESCRIPTOR>::collide (
 {
   T rho, u[DESCRIPTOR::d];
   this->_momenta.computeRhoU(cell, rho, u);
-  T* porosity = cell.template getFieldPointer<descriptors::POROSITY>();
-  T* localVelocity = cell.template getFieldPointer<descriptors::LOCAL_DRAG>();
+  T porosity = cell.template getField<descriptors::POROSITY>();
+  auto localVelocity = cell.template getFieldPointer<descriptors::LOCAL_DRAG>();
 
   //cout << porosity[0]  << " " <<   localVelocity[0]<< " " <<   localVelocity[1]<< " " <<   localVelocity[2]<<std::endl;
   for (int i=0; i<DESCRIPTOR::d; i++)  {
-    u[i] *= porosity[0];
+    u[i] *= porosity;
     u[i] += localVelocity[i];
   }
   T uSqr = lbHelpers<T,DESCRIPTOR>::bgkCollision(cell, rho, u, omega);
@@ -448,7 +613,7 @@ PSMBGKdynamics<T,DESCRIPTOR>::PSMBGKdynamics (
 }
 
 template<typename T, typename DESCRIPTOR>
-void PSMBGKdynamics<T,DESCRIPTOR>::computeU (Cell<T,DESCRIPTOR> const& cell, T u[DESCRIPTOR::d] ) const
+void PSMBGKdynamics<T,DESCRIPTOR>::computeU (ConstCell<T,DESCRIPTOR>& cell, T u[DESCRIPTOR::d] ) const
 {
   T rho;
   this->_momenta.computeRhoU(cell, rho, u);
@@ -464,7 +629,7 @@ void PSMBGKdynamics<T,DESCRIPTOR>::computeU (Cell<T,DESCRIPTOR> const& cell, T u
 }
 
 template<typename T, typename DESCRIPTOR>
-void PSMBGKdynamics<T,DESCRIPTOR>::computeRhoU (Cell<T,DESCRIPTOR> const& cell, T& rho, T u[DESCRIPTOR::d] ) const
+void PSMBGKdynamics<T,DESCRIPTOR>::computeRhoU (ConstCell<T,DESCRIPTOR>& cell, T& rho, T u[DESCRIPTOR::d] ) const
 {
     this->_momenta.computeRhoU(cell, rho, u);
 //  T epsilon = 1. - *(cell.template getFieldPointer<descriptors::POROSITY>());
@@ -484,14 +649,11 @@ void PSMBGKdynamics<T,DESCRIPTOR>::collide (
   LatticeStatistics<T>& statistics )
 {
   T rho, u[DESCRIPTOR::d], uSqr;
-  T epsilon = 1. - *(cell.template getFieldPointer<descriptors::POROSITY>());
+  T epsilon = 1. - cell.template getField<descriptors::POROSITY>();
 
   this->_momenta.computeRhoU(cell, rho, u);
   // velocity at the boundary
-  T u_s[DESCRIPTOR::d];
-  for (int i = 0; i < DESCRIPTOR::d; i++) {
-    u_s[i] = (cell.template getFieldPointer<descriptors::VELOCITY_SOLID>())[i];
-  }
+  auto u_s = cell.template getField<descriptors::VELOCITY_SOLID>();
 
   if (epsilon < 1e-5) {
     uSqr = lbHelpers<T,DESCRIPTOR>::bgkCollision(cell, rho, u, omega);
@@ -504,16 +666,16 @@ void PSMBGKdynamics<T,DESCRIPTOR>::collide (
     T omega_s[DESCRIPTOR::q];
     T cell_tmp[DESCRIPTOR::q];
 
-    const T uSqr_s = util::normSqr<T,DESCRIPTOR::d>(u_s);
+    const T uSqr_s = util::normSqr<T,DESCRIPTOR::d>(u_s.data());
 
     uSqr = util::normSqr<T,DESCRIPTOR::d>(u);
     for (int iPop=0; iPop < DESCRIPTOR::q; ++iPop) {
       cell_tmp[iPop] = cell[iPop];
       switch(mode){
-        case M2: omega_s[iPop] = (lbDynamicsHelpers<T,DESCRIPTOR>::equilibrium(iPop, rho, u_s, uSqr_s ) - cell[iPop])
+        case M2: omega_s[iPop] = (lbDynamicsHelpers<T,DESCRIPTOR>::equilibrium(iPop, rho, u_s.data(), uSqr_s ) - cell[iPop])
                          + (1 - omega) * (cell[iPop] - lbDynamicsHelpers<T,DESCRIPTOR>::equilibrium(iPop, rho, u, uSqr )); break;
-        case M3: omega_s[iPop] = (cell[descriptors::opposite<DESCRIPTOR>(iPop)] - lbDynamicsHelpers<T,DESCRIPTOR>::equilibrium(descriptors::opposite<DESCRIPTOR>(iPop), rho, u_s, uSqr_s ))
-               - (cell[iPop] - lbDynamicsHelpers<T,DESCRIPTOR>::equilibrium(iPop, rho, u_s, uSqr_s ));
+        case M3: omega_s[iPop] = (cell[descriptors::opposite<DESCRIPTOR>(iPop)] - lbDynamicsHelpers<T,DESCRIPTOR>::equilibrium(descriptors::opposite<DESCRIPTOR>(iPop), rho, u_s.data(), uSqr_s ))
+          - (cell[iPop] - lbDynamicsHelpers<T,DESCRIPTOR>::equilibrium(iPop, rho, u_s.data(), uSqr_s ));
       }
 
     }
@@ -562,11 +724,11 @@ ForcedPSMBGKdynamics<T,DESCRIPTOR>::ForcedPSMBGKdynamics (
 
 
 template<typename T, typename DESCRIPTOR>
-void ForcedPSMBGKdynamics<T,DESCRIPTOR>::computeU (Cell<T,DESCRIPTOR> const& cell, T u[DESCRIPTOR::d] ) const
+void ForcedPSMBGKdynamics<T,DESCRIPTOR>::computeU (ConstCell<T,DESCRIPTOR>& cell, T u[DESCRIPTOR::d] ) const
 {
   T rho;
   this->_momenta.computeRhoU(cell, rho, u);
-  T epsilon = 1. - *(cell.template getFieldPointer<descriptors::POROSITY>());
+  T epsilon = 1. - cell.template getField<descriptors::POROSITY>();
   // speed up paramB
   T paramB = (epsilon * paramA) / ((1. - epsilon) + paramA);
   // speed up paramC
@@ -578,10 +740,10 @@ void ForcedPSMBGKdynamics<T,DESCRIPTOR>::computeU (Cell<T,DESCRIPTOR> const& cel
 }
 
 template<typename T, typename DESCRIPTOR>
-void ForcedPSMBGKdynamics<T,DESCRIPTOR>::computeRhoU (Cell<T,DESCRIPTOR> const& cell, T& rho, T u[DESCRIPTOR::d] ) const
+void ForcedPSMBGKdynamics<T,DESCRIPTOR>::computeRhoU (ConstCell<T,DESCRIPTOR>& cell, T& rho, T u[DESCRIPTOR::d] ) const
 {
   this->_momenta.computeRhoU(cell, rho, u);
-  T epsilon = 1. - *(cell.template getFieldPointer<descriptors::POROSITY>());
+  T epsilon = 1. - cell.template getField<descriptors::POROSITY>();
   // speed up paramB
   T paramB = (epsilon * paramA) / ((1. - epsilon) + paramA);
   // speed up paramC
@@ -597,20 +759,17 @@ void ForcedPSMBGKdynamics<T,DESCRIPTOR>::collide (
   Cell<T,DESCRIPTOR>& cell,
   LatticeStatistics<T>& statistics )
 {
-  T rho, u[DESCRIPTOR::d], uSqr;
-  T epsilon = 1. - *(cell.template getFieldPointer<descriptors::POROSITY>());
+  T rho, u[DESCRIPTOR::d], uSqr=0;
+  T epsilon = 1. - cell.template getField<descriptors::POROSITY>();
 
   this->_momenta.computeRhoU(cell, rho, u);
 
-  T* force = cell.template getFieldPointer<descriptors::FORCE>();
+  auto force = cell.template getFieldPointer<descriptors::FORCE>();
   for (int iVel=0; iVel<DESCRIPTOR::d; ++iVel) {
     u[iVel] += force[iVel] / (T)2.;
   }
   // velocity at the boundary
-  T u_s[DESCRIPTOR::d];
-  for (int i = 0; i < DESCRIPTOR::d; i++) {
-    u_s[i] = (cell.template getFieldPointer<descriptors::VELOCITY_SOLID>())[i];
-  }
+  auto u_s = cell.template getField<descriptors::VELOCITY_SOLID>();
 
   if (epsilon < 1e-5) {
     uSqr = lbHelpers<T,DESCRIPTOR>::bgkCollision(cell, rho, u, omega);
@@ -624,15 +783,15 @@ void ForcedPSMBGKdynamics<T,DESCRIPTOR>::collide (
     T omega_s[DESCRIPTOR::q];
     T cell_tmp[DESCRIPTOR::q];
 
-    const T uSqr_s = util::normSqr<T,DESCRIPTOR::d>(u_s);
+    const T uSqr_s = util::normSqr<T,DESCRIPTOR::d>(u_s.data());
 
     for (int iPop=0; iPop < DESCRIPTOR::q; ++iPop) {
       cell_tmp[iPop] = cell[iPop];
       switch(mode){
-        case M2: omega_s[iPop] = (lbDynamicsHelpers<T,DESCRIPTOR>::equilibrium(iPop, rho, u_s, uSqr_s ) - cell[iPop])
+        case M2: omega_s[iPop] = (lbDynamicsHelpers<T,DESCRIPTOR>::equilibrium(iPop, rho, u_s.data(), uSqr_s ) - cell[iPop])
                          + (1 - omega) * (cell[iPop] - lbDynamicsHelpers<T,DESCRIPTOR>::equilibrium(iPop, rho, u, uSqr )); break;
-        case M3: omega_s[iPop] = (cell[descriptors::opposite<DESCRIPTOR>(iPop)] - lbDynamicsHelpers<T,DESCRIPTOR>::equilibrium(descriptors::opposite<DESCRIPTOR>(iPop), rho, u_s, uSqr_s ))
-               - (cell[iPop] - lbDynamicsHelpers<T,DESCRIPTOR>::equilibrium(iPop, rho, u_s, uSqr_s ));
+        case M3: omega_s[iPop] = (cell[descriptors::opposite<DESCRIPTOR>(iPop)] - lbDynamicsHelpers<T,DESCRIPTOR>::equilibrium(descriptors::opposite<DESCRIPTOR>(iPop), rho, u_s.data(), uSqr_s ))
+               - (cell[iPop] - lbDynamicsHelpers<T,DESCRIPTOR>::equilibrium(iPop, rho, u_s.data(), uSqr_s ));
       }
     }
 

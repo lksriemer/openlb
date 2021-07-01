@@ -1,6 +1,8 @@
 /*  This file is part of the OpenLB library
  *
  *  Copyright (C) 2006-2008 Jonas Latt
+ *                2008-2020 Mathias Krause
+ *                2020 Adrian Kummerlaender
  *  E-mail contact: info@openlb.net
  *  The most recent release of OpenLB can be downloaded at
  *  <http://www.openlb.net/>
@@ -28,40 +30,48 @@
 #define BLOCK_LATTICE_2D_H
 
 #include <vector>
+#include <forward_list>
+
 #include "olbDebug.h"
 #include "postProcessing.h"
 #include "blockLatticeStructure2D.h"
 #include "core/cell.h"
 #include "latticeStatistics.h"
 #include "serializer.h"
+#include "blockStaticPopulationD2D.h"
+#include "blockStaticFieldsD2D.h"
+#include "blockDynamicFieldsD2D.h"
+#include "blockDynamicsMap.h"
 
-/// All OpenLB code is contained in this namespace.
+
 namespace olb {
 
 template<typename T> class BlockGeometryStructure2D;
 template<typename T, typename DESCRIPTOR> struct Dynamics;
 template<typename T> class BlockIndicatorF2D;
 
-/** A regular lattice for highly efficient 2D LB dynamics.
- * A block lattice contains a regular array of Cell objects and
- * some useful methods to execute the LB dynamics on the lattice.
- *
- * This class is not intended to be derived from.
- */
+/// Regular lattice for highly efficient 2D LB dynamics.
 template<typename T, typename DESCRIPTOR>
 class BlockLattice2D final : public BlockLatticeStructure2D<T,DESCRIPTOR>, public Serializable {
-public:
-  typedef std::vector<PostProcessor2D<T,DESCRIPTOR>*> PostProcVector;
 private:
-  /// Actual data array
-  Cell<T,DESCRIPTOR>      *rawData;
-  /// 3D-Array pointing to rawData; grid[iX] points to beginning of y-array in rawData
-  Cell<T,DESCRIPTOR>      **grid;
-  PostProcVector       postProcessors, latticeCouplings;
+  /// Population data of a lattice with DESCRIPTOR structure
+  BlockStaticPopulationD2D<T,DESCRIPTOR> _staticPopulationD;
+  /// Field data of DESCRIPTOR provided fields
+  BlockStaticFieldsD2D<T,DESCRIPTOR>     _staticFieldsD;
+  /// Field data for runtime-declared fields not in DESCRIPTOR
+  BlockDynamicFieldsD2D<T,DESCRIPTOR>    _dynamicFieldsD;
+  /// Assignments of dynamics instances to spatial cell locations
+  BlockDynamicsMap<T,DESCRIPTOR> _dynamicsMap;
+
+  /// List of all post processors to be applied after streaming
+  std::vector<PostProcessor2D<T,DESCRIPTOR>*> _postProcessors;
+  /// List of all coupling post processors
+  std::vector<PostProcessor2D<T,DESCRIPTOR>*> _latticeCouplings;
+
 #ifdef PARALLEL_MODE_OMP
-  LatticeStatistics<T> **statistics;
+  LatticeStatistics<T> **_statistics;
 #else
-  LatticeStatistics<T> *statistics;
+  LatticeStatistics<T> *_statistics;
 #endif
 
 public:
@@ -75,26 +85,53 @@ public:
   BlockLattice2D(BlockLattice2D&&) = default;
   /// Copy assignment
   BlockLattice2D& operator=(BlockLattice2D<T,DESCRIPTOR> const& rhs) = delete;
-public:
-  /// Read/write access to lattice cells
-  Cell<T,DESCRIPTOR>& get(int iX, int iY) override
+
+  BlockStaticPopulationD2D<T,DESCRIPTOR>& getStaticPopulationD() {
+    return _staticPopulationD;
+  }
+  BlockStaticFieldsD2D<T,DESCRIPTOR>& getStaticFieldsD() {
+    return _staticFieldsD;
+  }
+  BlockDynamicFieldsD2D<T,DESCRIPTOR>& getDynamicFieldsD() {
+    return _dynamicFieldsD;
+  }
+
+  template<typename FIELD>
+  FieldArrayD<T,DESCRIPTOR,FIELD>& getDynamicFieldArray() {
+    return _dynamicFieldsD.template getFieldArray<FIELD>();
+  }
+
+  Cell<T,DESCRIPTOR> get(std::size_t iCell)
   {
-    OLB_PRECONDITION(iX<this->_nx);
-    OLB_PRECONDITION(iY<this->_ny);
-    return grid[iX][iY];
+    return Cell<T,DESCRIPTOR>(
+      _staticPopulationD, _staticFieldsD, _dynamicFieldsD, _dynamicsMap, iCell);
+  }
+
+  /// Read/write access to lattice cells
+  Cell<T,DESCRIPTOR> get(int iX, int iY) override
+  {
+    return get(this->getCellId(iX,iY));
   }
   /// Read/write access to lattice cells
-  Cell<T,DESCRIPTOR>& get(int latticeR[]) override
+  Cell<T,DESCRIPTOR> get(int latticeR[]) override
   {
     return get(latticeR[0], latticeR[1]);
   }
   /// Read only access to lattice cells
-  Cell<T,DESCRIPTOR> const& get(int iX, int iY) const override
+  ConstCell<T,DESCRIPTOR> get(int iX, int iY) const override
   {
-    OLB_PRECONDITION(iX<this->_nx);
-    OLB_PRECONDITION(iY<this->_ny);
-    return grid[iX][iY];
+    return ConstCell<T,DESCRIPTOR>(
+      _staticPopulationD, _staticFieldsD, _dynamicFieldsD, _dynamicsMap, this->getCellId(iX,iY));
   }
+
+  T& getPop(std::size_t iCell, unsigned iPop) override {
+    return *_staticPopulationD.getPopulationPointer(iPop, iCell);
+  }
+
+  T& getPop(int iX, int iY, unsigned iPop) override {
+    return *_staticPopulationD.getPopulationPointer(iPop, this->getCellId(iX, iY));
+  }
+
   /// Initialize the lattice cells to become ready for simulation
   void initialize() override;
   /// Get the dynamics for the specific point
@@ -113,16 +150,15 @@ public:
 
   /// Apply collision step to a rectangular domain
   void collide(int x0, int x1, int y0, int y1) override;
+  /// Perform streaming on the whole domain
+  void stream();
+  /// Apply collide and stream on a rectangular domain
+  void collideAndStream(int x0, int x1, int y0, int y1) override;
   /// Apply collision step to the whole domain
   void collide() override;
-  /// Apply streaming step to a rectangular domain
-  void stream(int x0, int x1, int y0, int y1) override;
-  /// Apply streaming step to the whole domain
-  void stream(bool periodic=false) override;
-  /// Apply first collision, then streaming step to a rectangular domain
-  void collideAndStream(int x0, int x1, int y0, int y1) override;
-  /// Apply first collision, then streaming step to the whole domain
-  void collideAndStream(bool periodic=false) override;
+  /// Apply collide and stream to the whole domain
+  void collideAndStream() override;
+
   /// Compute the average density within a rectangular domain
   T computeAverageDensity(int x0, int x1, int y0, int y1) const override;
   /// Compute the average density within the whole domain
@@ -158,16 +194,8 @@ public:
   LatticeStatistics<T>& getStatistics() override;
   /// Return a constant handle to the LatticeStatistics object
   LatticeStatistics<T> const& getStatistics() const override;
+
 public:
-  /// Apply streaming step to bulk (non-boundary) cells
-  void bulkStream(int x0, int x1, int y0, int y1);
-  /// Apply streaming step to boundary cells
-  void boundaryStream ( int lim_x0, int lim_x1, int lim_y0, int lim_y1, int x0,
-                        int x1, int y0, int y1 );
-  /// Apply collision and streaming step to bulk (non-boundary) cells
-  void bulkCollideAndStream(int x0, int x1, int y0, int y1);
-
-
   /// Number of data blocks for the serializable interface
   std::size_t getNblock() const override;
   /// Binary size for the serializer
@@ -176,10 +204,6 @@ public:
   bool* getBlock(std::size_t iBlock, std::size_t& sizeBlock, bool loadingMode) override;
 
 private:
-  /// Helper method for memory allocation
-  void allocateMemory();
-  /// Helper method for memory de-allocation
-  void releaseMemory();
   /// Release memory for post processors
   void clearPostProcessors();
   /// Release memory for lattice couplings

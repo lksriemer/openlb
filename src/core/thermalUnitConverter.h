@@ -216,14 +216,16 @@ public:
   {
     return _conversionHeatFlux;
   };
-  constexpr T getPrandtlNumber() const{
+  constexpr T getPrandtlNumber() const
+  {
     return this->_physViscosity/_physThermalDiffusivity;
   };
-  constexpr T getRayleighNumber() const{
+  constexpr T getRayleighNumber() const
+  {
     return 9.81 * _physThermalExpansionCoefficient/this->_physViscosity/_physThermalDiffusivity * (_charPhysHighTemperature - _charPhysLowTemperature) * pow(this->_charPhysLength,3);
   };
 /// nice terminal output for conversion factors, characteristical and physical data
-  virtual void print() const;
+  void print() const override;
 
   void write(std::string const& fileName = "ThermalUnitConverter") const;
 

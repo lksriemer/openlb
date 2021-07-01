@@ -51,8 +51,9 @@ template <typename T, typename W = T>
 class SuperF2D : public GenericF<W, int> {
 protected:
   SuperF2D(SuperStructure2D<T>& superStructure, int targetDim);
-
+  
   SuperStructure2D<T>& _superStructure;
+  
   /// Super functors may consist of several BlockF2D<W> derived functors
   /**
    * By convention: If block level functors are used at all they should
@@ -73,6 +74,11 @@ public:
   int getBlockFSize() const;
   /// \return _blockF[iCloc]
   BlockF2D<W>& getBlockF(int iCloc);
+  
+  bool operator() (W output[], const int input []) override;
+    
+  using GenericF<W,int>::operator();
+  
 };
 
 
@@ -110,6 +116,10 @@ protected:
   SuperLattice2D<T,DESCRIPTOR>& _sLattice;
 public:
   SuperLattice2D<T,DESCRIPTOR>& getSuperLattice();
+  
+  bool operator () (T output[], const int input []);
+  
+  using GenericF<T,int>::operator();
 };
 
 /// represents all functors that operate on a DESCRIPTOR with output in Phys, e.g. physVelocity(), physForce(), physPressure()

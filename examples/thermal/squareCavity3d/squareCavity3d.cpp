@@ -34,8 +34,8 @@ using namespace std;
 
 typedef double T;
 
-#define NSDESCRIPTOR D3Q19<FORCE>
-#define TDESCRIPTOR D3Q7<VELOCITY>
+typedef D3Q19<FORCE> NSDESCRIPTOR;
+typedef D3Q7<VELOCITY> TDESCRIPTOR;
 
 // Parameters for the simulation setup
 T Ra = 1e3;  // Rayleigh-Zahl
@@ -165,8 +165,6 @@ void prepareLattice( ThermalUnitConverter<T, NSDESCRIPTOR, TDESCRIPTOR> &convert
                      SuperLattice3D<T, TDESCRIPTOR>& ADlattice,
                      Dynamics<T, NSDESCRIPTOR> &bulkDynamics,
                      Dynamics<T, TDESCRIPTOR>& advectionDiffusionBulkDynamics,
-                     sOnLatticeBoundaryCondition3D<T,NSDESCRIPTOR>& NSboundaryCondition,
-                     sOnLatticeBoundaryCondition3D<T,TDESCRIPTOR>& TboundaryCondition,
                      SuperGeometry3D<T>& superGeometry )
 {
 
@@ -187,8 +185,8 @@ void prepareLattice( ThermalUnitConverter<T, NSDESCRIPTOR, TDESCRIPTOR> &convert
   NSlattice.defineDynamics(superGeometry, 4, &instances::getBounceBack<T, NSDESCRIPTOR>());
 
   /// sets boundary
-  TboundaryCondition.addTemperatureBoundary(superGeometry.getMaterialIndicator({2, 3}), Tomega);
-  NSboundaryCondition.addVelocityBoundary(superGeometry.getMaterialIndicator({2, 3}), omega);
+  setAdvectionDiffusionTemperatureBoundary<T,TDESCRIPTOR>(ADlattice, Tomega, superGeometry.getMaterialIndicator({2, 3}));
+  setLocalVelocityBoundary<T,NSDESCRIPTOR>(NSlattice, omega, superGeometry.getMaterialIndicator({2, 3}));
 
   /// define initial conditions
   AnalyticalConst3D<T,T> rho(1.);
@@ -446,11 +444,6 @@ int main(int argc, char *argv[])
   SuperLattice3D<T, TDESCRIPTOR> ADlattice(superGeometry);
   SuperLattice3D<T, NSDESCRIPTOR> NSlattice(superGeometry);
 
-  sOnLatticeBoundaryCondition3D<T, NSDESCRIPTOR> NSboundaryCondition(NSlattice);
-  createLocalBoundaryCondition3D<T, NSDESCRIPTOR>(NSboundaryCondition);
-
-  sOnLatticeBoundaryCondition3D<T, TDESCRIPTOR> TboundaryCondition(ADlattice);
-  createAdvectionDiffusionBoundaryCondition3D<T, TDESCRIPTOR>(TboundaryCondition);
 
   ForcedBGKdynamics<T, NSDESCRIPTOR> NSbulkDynamics(
     converter.getLatticeRelaxationFrequency(),
@@ -475,10 +468,12 @@ int main(int argc, char *argv[])
 
   NSlattice.addLatticeCoupling(coupling, ADlattice);
 
+  //prepareLattice and setBoundaryCondition
   prepareLattice(converter,
                  NSlattice, ADlattice,
                  NSbulkDynamics, TbulkDynamics,
-                 NSboundaryCondition, TboundaryCondition, superGeometry );
+                 superGeometry );
+
 
 
   /// === 4th Step: Main Loop with Timer ===
@@ -486,7 +481,7 @@ int main(int argc, char *argv[])
   timer.start();
 
   util::ValueTracer<T> converge(6,epsilon);
-  for (int iT = 0; iT < converter.getLatticeTime(maxPhysT); ++iT) {
+  for (std::size_t iT = 0; iT < converter.getLatticeTime(maxPhysT); ++iT) {
 
     if (converge.hasConverged()) {
       clout << "Simulation converged." << endl;

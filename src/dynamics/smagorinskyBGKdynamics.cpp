@@ -29,7 +29,7 @@
 #include "smagorinskyBGKdynamics.h"
 #include "smagorinskyBGKdynamics.hh"
 #include "latticeDescriptors.h"
- 
+
 
 namespace olb {
 

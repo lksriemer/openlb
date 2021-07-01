@@ -192,9 +192,15 @@ BaseType const& SuperData2D<T,BaseType>::get(int iC, int iX, int iY, int iData) 
 }
 
 template<typename T, typename BaseType>
-bool* SuperData2D<T,BaseType>::operator() (int iCloc, int iX, int iY, int iData)
+std::uint8_t* SuperData2D<T,BaseType>::operator() (int iCloc, int iX, int iY, int iData)
 {
-  return (bool*)&get(iCloc,iX,iY,iData);
+  return reinterpret_cast<std::uint8_t*>(&get(iCloc,iX,iY,iData));
+}
+
+template<typename T, typename BaseType>
+std::uint8_t* SuperData2D<T,BaseType>::operator() (int iCloc, std::size_t iCell, int iData)
+{
+  return reinterpret_cast<std::uint8_t*>(&_extendedBlockData[iCloc].get(iCell, iData));
 }
 
 template<typename T, typename BaseType>

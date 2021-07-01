@@ -163,7 +163,7 @@ inline void exit(int exitcode)
 #ifdef PARALLEL_MODE_MPI
         MPI_Abort(MPI_COMM_WORLD, exitcode);
 #else
-        exit(exitcode);
+        std::exit(exitcode);
 #endif
 }
 

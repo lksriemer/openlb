@@ -64,6 +64,19 @@ public:
 
 };
 
+/// functor counts to get the discrete surface for a material no. and SmoothIndicator in direction (1,0,0), (0,1,0), (0,0,1), (-1,0,0), (0,-1,0), (0,0,-1) and total surface, then it converts it into phys units
+template <typename T, bool HLBM>
+class SuperGeometryFacesIndicator3D final : public GenericF<T,int> {
+private:
+  SuperGeometry3D<T>&   _superGeometry;
+  SmoothIndicatorF3D<T,T,HLBM>& _indicator;
+  const int             _material;
+  T _latticeL;
+public:
+  SuperGeometryFacesIndicator3D(SuperGeometry3D<T>& superGeometry, SmoothIndicatorF3D<T,T,HLBM>& indicator, const int material,
+  T deltaX);
+  bool operator() (T output[], const int input[]) override;
+};
 
 }
 

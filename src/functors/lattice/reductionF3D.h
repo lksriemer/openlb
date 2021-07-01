@@ -81,9 +81,6 @@ public:
 template <typename T, typename DESCRIPTOR>
 class SmoothBlockIndicator3D final : public BlockDataF3D<T,T> {
 protected:
-  IndicatorF3D<T>&  _f;
-  T _h;
-  T _eps;
   /*
   * int _wa (weight accuracy): to change the size of the weights array, 3 should be enough, 7 & 5 is more accurate.
   * only use these sizes: 3, 5, 7, 9, ... (still 3 or 5 is recommended)
@@ -92,9 +89,18 @@ protected:
   *
   * Note: wa influences the boundary size. Maybe unify eps-boundary size somehow.
   */
-  int _wa;
+  /// Lattice spacing of the particle grid
+  const T _h;
+  /// Important parameter for the Gaussian point spread Function (standard deviations)
+  const T _sigma;
+  /// Size (always a multiple of 2) of the epsilon layer eps_phys = _eps * _h
+  const int _eps;
+  /// size of the matrix of weight coefficients (from 3D Gaussian Function) _wa x _wa x _wa
+  const int _wa;
+  /// _f holds the geometry
+  IndicatorF3D<T>&  _f;
 public:
-  SmoothBlockIndicator3D(IndicatorF3D<T>& f, T h, T eps, int wa = 3);
+  SmoothBlockIndicator3D(IndicatorF3D<T>& f, T h, T eps, T sigma);
   //bool operator() (T output[], const int input[]);
 };
 

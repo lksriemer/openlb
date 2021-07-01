@@ -64,13 +64,13 @@ bool IndicatorF3D<S>::distance(S& distance, const Vector<S,3>& origin, const Vec
   // start at origin and move into given direction
   Vector<S,3> currentPoint(origin);
 
-  (*this)(&originValue, origin.data);
-  (*this)(&currentValue, currentPoint.data);
+  (*this)(&originValue, origin.data());
+  (*this)(&currentValue, currentPoint.data());
 
   while (currentValue == originValue && isInsideBox(currentPoint)) {
     currentPoint += direction;
     // update currentValue until the first point on the other side (inside/outside) is found
-    (*this)(&currentValue, currentPoint.data);
+    (*this)(&currentValue, currentPoint.data());
   }
 
   // return false if no point was found in given direction
@@ -84,7 +84,7 @@ bool IndicatorF3D<S>::distance(S& distance, const Vector<S,3>& origin, const Vec
       currentPoint -= pitch * direction;
       pitch /= 2.;
     } else {
-      (*this)(&currentValue, currentPoint.data);
+      (*this)(&currentValue, currentPoint.data());
       if (currentValue == originValue) {
         currentPoint += pitch * direction;
         pitch /= 2.;
@@ -95,7 +95,7 @@ bool IndicatorF3D<S>::distance(S& distance, const Vector<S,3>& origin, const Vec
     }
   }
 
-  distance = (currentPoint - origin).norm();
+  distance = norm(currentPoint - origin);
   return true;
 }
 
@@ -112,7 +112,7 @@ bool IndicatorF3D<S>::rotOnAxis(Vector<S,3>& vec_rot, const Vector<S,3>& vec, co
   /// http://mathworld.wolfram.com/RodriguesRotationFormula.html https://en.wikipedia.org/wiki/Rodrigues%27_rotation_formula
 
   //Vector<S,3> axisN(axis*(1/(axis).norm())); // normalize rotation axis
-  Vector<S,3> axisN(axis*(1/const_cast<Vector<S,3>&> (axis).norm())); // normalize rotation axis
+  Vector<S,3> axisN(axis*(1/norm(axis))); // normalize rotation axis
 
   vec_rot = vec ;
 
@@ -140,7 +140,7 @@ bool IndicatorF3D<S>::normal(Vector<S,3>& normal, const Vector<S,3>& origin, con
 #endif
 
   bool originValue;
-  (*this)(&originValue, origin.data);
+  (*this)(&originValue, origin.data());
   Vector<S,3> currentPoint(origin);
 
   S precision = .0001;
@@ -148,7 +148,7 @@ bool IndicatorF3D<S>::normal(Vector<S,3>& normal, const Vector<S,3>& origin, con
   S dist;
   distance(dist, origin, direction, iC);
   
-  S dirMag = const_cast<Vector<S,3>&> (direction).norm();
+  S dirMag = norm(direction);
 #ifdef OLB_DEBUG
   std::cout << "magnitude = " << dirMag << std::endl;
 #endif
@@ -173,12 +173,16 @@ bool IndicatorF3D<S>::normal(Vector<S,3>& normal, const Vector<S,3>& origin, con
     directionPerp[0] = directionN[0];
     directionPerp[1] = directionN[1];
     directionPerp[2] = -(directionN[0] + directionN[1])/directionN[2];
+  } else if ( ( !util::nearZero(directionN[0]) || !util::nearZero(directionN[1]) ) && util::nearZero(directionN[2]) ) {
+    directionPerp[0] = directionN[0];
+    directionPerp[1] = -(directionN[0] + directionN[2])/directionN[1];
+    directionPerp[2] = directionN[2];
   } else {
     std::cout << "Error: unknown case for perpendicular check" << std::endl;
     return false;
   }
 
-  Vector<S,3> directionPerpN(directionPerp*(dirMag/(directionPerp).norm()));
+  Vector<S,3> directionPerpN(directionPerp*(dirMag/norm(directionPerp)));
 
 
   Vector<S,3> point1;
@@ -228,8 +232,8 @@ bool IndicatorF3D<S>::normal(Vector<S,3>& normal, const Vector<S,3>& origin, con
     //std::cout << "testPOS = [" << testPOS[0] << "," << testPOS[1]  << "," << testPOS[2] << "]" << std::endl;
     //std::cout << "testPoint = [" << testPoint[0] << "," << testPoint[1]  << "," << testPoint[2] << "]" << std::endl;
 
-    S distTestPoint = (testPoint - origin).norm();
-    S distPerpPoint = (perpPoint - origin).norm();
+    S distTestPoint = norm(testPoint - origin);
+    S distPerpPoint = norm(perpPoint - origin);
 
     S mod = 0;
     if (distTestPoint < distPerpPoint) { // pos. angle rotates towards
@@ -243,7 +247,7 @@ bool IndicatorF3D<S>::normal(Vector<S,3>& normal, const Vector<S,3>& origin, con
       S theta(pitch*M_PI/180);
 
       currentPoint = POS + vec;
-      (*this)(&currentValue, currentPoint.data);
+      (*this)(&currentValue, currentPoint.data());
 
       S temp;
       if (currentValue == originValue) {

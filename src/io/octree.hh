@@ -368,7 +368,7 @@ void Octree<T>::checkRay(const Vector<T,3>& pt,const Vector<T,3>& dir, unsigned 
 {
   unsigned short left=0, right=0;
   Vector<T,3> dirNormed(dir);
-  dirNormed.normalize();
+  dirNormed = normalize(dirNormed);
   dirNormed*= _radius * 2.;
   Vector<T,3> q;
   std::vector<Vector<T,3> > qs;

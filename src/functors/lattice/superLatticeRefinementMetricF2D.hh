@@ -45,21 +45,7 @@ SuperLatticeKnudsen2D<T, DESCRIPTOR>::SuperLatticeKnudsen2D(
   }
 }
 
-template<typename T, typename DESCRIPTOR>
-bool SuperLatticeKnudsen2D<T, DESCRIPTOR>::operator()(
-  T output[], const int input[])
-{
-  auto& load = this->_sLattice.getLoadBalancer();
 
-  if (load.isLocal(input[0])) {
-    const int loc = load.loc(input[0]);
-
-    return this->getBlockF(loc)(output, &input[1]);
-  }
-  else {
-    return false;
-  }
-}
 
 
 template<typename T, typename DESCRIPTOR>
@@ -93,21 +79,7 @@ bool SuperLatticeRefinementMetricKnudsen2D<T, DESCRIPTOR>::operator()(T output[]
   }
 }
 
-template<typename T, typename DESCRIPTOR>
-bool SuperLatticeRefinementMetricKnudsen2D<T, DESCRIPTOR>::operator()(
-  T output[], const int input[])
-{
-  auto& load = this->_sLattice.getLoadBalancer();
 
-  if (load.isLocal(input[0])) {
-    const int loc = load.loc(input[0]);
-
-    return this->getBlockF(loc)(output, &input[1]);
-  }
-  else {
-    return false;
-  }
-}
 
 template<typename T, typename DESCRIPTOR>
 void SuperLatticeRefinementMetricKnudsen2D<T, DESCRIPTOR>::print()

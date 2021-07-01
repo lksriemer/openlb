@@ -32,33 +32,24 @@
 #define SMAGORINSKY_POWER_LAW_POROUS_BGK_DYNAMICS_H
 
 #include "SmagorinskyPorousParticleBGKdynamics.h"
+#include "SmagorinskyPowerLawBGKdynamics.h"
 #include "core/cell.h"
 
 namespace olb {
 
 /// Implementation of the BGK collision step
 template<typename T, typename DESCRIPTOR>
-class SmagorinskyPowerLawPorousParticleBGKdynamics : public SmagorinskyPorousParticleBGKdynamics<T,DESCRIPTOR> {
+class SmagorinskyPowerLawPorousParticleBGKdynamics : public SmagorinskyPorousParticleBGKdynamics<T,DESCRIPTOR>, public PowerLawDynamics<T,DESCRIPTOR> {
 public:
   /// Constructor
-  /// m,n...parameter in the power law model, dt...the explizit typed time step from LBM model
-  SmagorinskyPowerLawPorousParticleBGKdynamics(T omega_, Momenta<T,DESCRIPTOR>& momenta_, T m_=0.1, T n_=.5, T dtPL_=T(0.0016), T nuMin=T(2.9686e-3), T nuMax=T(3.1667), T smagoConst_=T(0.14));
-
+  /// m,n...parameter in the power law model
+  SmagorinskyPowerLawPorousParticleBGKdynamics ( T omega_, Momenta<T,DESCRIPTOR>& momenta_,
+                  T m_=0.1, T n_=.5, T nuMin=T(2.9686e-3), T nuMax=T(3.1667), T smagoConst_=T(0.14) );
   /// Collision step
-  virtual void collide(Cell<T,DESCRIPTOR>& cell,
-                       LatticeStatistics<T>& statistics_);
-
-private:
-
-  /// Computes the local powerLaw relaxation parameter
-  T computeOmegaPL(T omega0_, T rho_, T pi_[util::TensorVal<DESCRIPTOR >::n] );
-
-private:
-  T m;
-  T n;
-  T dtPL;
-  T omegaMin;
-  T omegaMax;
+  void collide(Cell<T,DESCRIPTOR>& cell, LatticeStatistics<T>& statistics_) override;
+protected:
+  /// Computes the local smagorinsky relaxation parameter - special version with omega as parameter
+  virtual T computeEffectiveOmega(Cell<T,DESCRIPTOR>& cell, T omega);
 };
 
 }

@@ -1,7 +1,7 @@
 /*  Lattice Boltzmann sample, written in C++, using the OpenLB
  *  library
  *
- *  Copyright (C) 2017 Davide Dapelo, Mathias J. Krause
+ *  Copyright (C) 2019 Fabian Klemens, Davide Dapelo, Mathias J. Krause
  *  E-mail contact: info@openlb.net
  *  The most recent release of OpenLB can be downloaded at
  *  <http://www.openlb.net/>
@@ -23,15 +23,15 @@
  */
 
 /* porousPoiseuille2d.cpp:
- * Poiseuille flow through porous media.
- * This implementation is the reproduction of the Guo and Zhao (2002)'s
- * benchmark example A. The theoretical maximum velocity is calculated
- * as in Equation 21, and the velocity profile as in Equation 23 of
- * the original reference.
+ * This example examines a 2D Poseuille flow with porous media.
+ * Two porous media LB methods can be used here:
+ * Spaid and Phelan (doi:10.1063/1.869392), or
+ * Guo and Zhao (doi:10.1103/PhysRevE.66.036304)
  */
 
+
 #include "olb2D.h"
-#include "olb2D.hh"   // use only generic version!
+#include "olb2D.hh"
 
 #include <vector>
 #include <cmath>
@@ -41,74 +41,124 @@
 
 using namespace olb;
 using namespace olb::descriptors;
-using namespace olb::graphics;
-using namespace std;
 
 typedef double T;
-#define DESCRIPTOR GuoZhaoD2Q9Descriptor
-#define DYNAMICS GuoZhaoBGKdynamics
-//#define DYNAMICS SmagorinskyGuoZhaoBGKdynamics
 
-/// Functional to calculate velocity profile on pipe with porous media.
+//#define BGK
+#define SPAID_PHELAN
+//#define GUO_ZHAO
+
+
+T Kin = 1e-2;               // Permeability
+T epsilon = 1.;             // Porosity (Spaid and Phelan can only handle epsilon=1)
+
+T p0;                       // Initial pressure at inlet
+T dp;                       // Pressure gradient
+T mu;                       // Dynamic viscosity
+
+#ifdef BGK
+  typedef D2Q9<> DESCRIPTOR;
+  #define DYNAMICS BGKdynamics
+#endif
+// Porous media
+#ifdef SPAID_PHELAN
+  typedef D2Q9<POROSITY> DESCRIPTOR;
+  #define DYNAMICS PorousBGKdynamics
+#elif defined GUO_ZHAO
+  typedef D2Q9<FORCE,EPSILON,K,NU,BODY_FORCE> DESCRIPTOR;
+  #define DYNAMICS GuoZhaoBGKdynamics
+#endif
+
+
+
+// Functor to convert physical to lattice velocity
 template <typename T>
-class PorousPipe2D : public AnalyticalF2D<T,T> {
+class PhysicalToLatticeVelocityF2D: public AnalyticalF2D<T,T> {
 protected:
-  std::vector<T> axisPoint;
-  std::vector<T> axisDirection;
-  T radius, rFactor, u0;
+  AnalyticalF2D<T,T>* f;
+  UnitConverter<T,DESCRIPTOR> converter;
 
 public:
-  PorousPipe2D(std::vector<T> axisPoint_, std::vector<T> axisDirection_, T radius_, T rFactor_, T u0_);
-  bool operator()(T output[], const T x[]) override;
+  PhysicalToLatticeVelocityF2D(AnalyticalF2D<T,T>* f_, UnitConverter<T,DESCRIPTOR> const& converter_)
+    : AnalyticalF2D<T,T>(2), f(f_), converter(converter_) {};
+
+  bool operator()(T output[], const T x[]) override {
+    (*f)(output, x);
+    for (int i=0; i<2; ++i) {
+      output[i] = converter.getLatticeVelocity( output[i] );
+    }
+    return true;
+  };
 };
 
+/// Velocity profile in a pipe filled with isotropic porous media
 template <typename T>
-PorousPipe2D<T>::PorousPipe2D(std::vector<T> axisPoint_, std::vector<T> axisDirection_, T radius_, T rFactor_, T u0_)
-  : AnalyticalF2D<T,T>(2)
-{
-  this->getName() = "PorousPipe2D";
-  axisPoint.resize(2);
-  axisDirection.resize(2);
-  for (int i = 0; i < 2; ++i) {
-    axisDirection[i] = axisDirection_[i];
-    axisPoint[i] = axisPoint_[i];
+class PorousPoiseuille2D : public AnalyticalF2D<T,T> {
+protected:
+  T K, dp, mu, radius;
+
+public:
+  PorousPoiseuille2D(T K_, T dp_, T mu_, T radius_)
+    : AnalyticalF2D<T,T>(2), K(K_), dp(dp_), mu(mu_), radius(radius_) {};
+
+  bool operator()(T output[], const T x[]) override
+  {
+    T r = sqrt(epsilon/K);
+    output[0] = dp / mu * K * ( 1. - cosh(r*(x[1] - radius)) / cosh(r*radius) );
+    output[1] = 0.;
+
+    if ( x[1] < 0 || x[1] > 2.*radius )
+      output[0] = 0.;
+
+    return true;
   }
-  radius = radius_;
-  rFactor = rFactor_;
-  u0 = u0_;
-}
+};
 
-template <typename T>
-bool PorousPipe2D<T>::operator()(T output[], const T x[])
+
+typedef enum {bounceBack, local, interpolated} BoundaryType;
+
+// Parameters for the simulation setup
+BoundaryType boundaryType = interpolated;
+const T lx  = 2.;             // length of the channel
+const T ly  = 1.;             // height of the channel
+int N = 50;                   // resolution of the model
+const T Re = 1.;              // Reynolds number
+const T maxPhysT = 20.;       // max. simulation time in s, SI unit
+const T physInterval = 0.25;  // interval for the convergence check in s
+const T residuum = 1e-5;      // residuum for the convergence check
+
+
+// Stores geometry information in form of material numbers
+void prepareGeometry( UnitConverter<T,DESCRIPTOR> const& converter,
+                      SuperGeometry2D<T>& superGeometry )
 {
-  output[0] = axisDirection[0]*u0*(cosh(rFactor*radius) - cosh(rFactor*x[1] - rFactor*radius))/(cosh(rFactor*radius) - 1);
-  output[1] = axisDirection[1]*u0*(cosh(rFactor*radius) - cosh(rFactor*x[0] - rFactor*radius))/(cosh(rFactor*radius) - 1);
 
-  return true;
-}
-
-/// Stores geometry information in form of material numbers
-void prepareGeometry(UnitConverter<T,DESCRIPTOR> const& converter, T lx, T ly,
-                     SuperGeometry2D<T>& superGeometry)
-{
-
-  OstreamManager clout(std::cout,"prepareGeometry");
+  OstreamManager clout( std::cout,"prepareGeometry" );
   clout << "Prepare Geometry ..." << std::endl;
 
-  superGeometry.rename(0,2);
+  superGeometry.rename( 0,2 );
 
-  std::vector<T> extend(2,T());
-  extend[0] = lx;
-  extend[1] = ly - 1.8*converter.getPhysLength(1);
-  std::vector<T> origin(2,T());
-  origin[1] = 0.9*converter.getPhysLength(1);
-  IndicatorCuboid2D<T> cuboid2(extend, origin);
+  superGeometry.rename( 2,1,1,1 );
 
-  superGeometry.rename(2,1,cuboid2);
+  Vector<T,2> extend;
+  Vector<T,2> origin;
+  T physSpacing = converter.getPhysDeltaX();
 
-  /// Removes all not needed boundary voxels outside the surface
+  // Set material number for inflow
+  extend[1] = ly;
+  extend[0] = physSpacing / 2;
+  origin[0] -= physSpacing / 4;
+  IndicatorCuboid2D<T> inflow( extend, origin );
+  superGeometry.rename( 2,3,1,inflow );
+
+  // Set material number for outflow
+  origin[0] = lx - physSpacing / 4;
+  IndicatorCuboid2D<T> outflow( extend, origin );
+  superGeometry.rename( 2,4,1,outflow );
+
+  // Removes all not needed boundary voxels outside the surface
   superGeometry.clean();
-  /// Removes all not needed boundary voxels inside the surface
+  // Removes all not needed boundary voxels inside the surface
   superGeometry.innerClean();
   superGeometry.checkForErrors();
 
@@ -117,362 +167,364 @@ void prepareGeometry(UnitConverter<T,DESCRIPTOR> const& converter, T lx, T ly,
   clout << "Prepare Geometry ... OK" << std::endl;
 }
 
-/// Set up the geometry of the simulation
-void prepareLattice(UnitConverter<T,DESCRIPTOR> const& converter, T lx, T ly,
-                    T epsilonIn, T KIn, T bodyForceIn,
-                    SuperLattice2D<T, DESCRIPTOR>& sLattice,
-                    Dynamics<T, DESCRIPTOR>& bulkDynamics,
-                    sOnLatticeBoundaryCondition2D<T,DESCRIPTOR>& sBoundaryCondition,
-                    SuperGuoZhaoInstantiator2D<T, DESCRIPTOR, DYNAMICS<T, DESCRIPTOR> >& sGuoZhaoInstantiator,
-                    SuperGeometry2D<T>& superGeometry )
+// Set up the geometry of the simulation
+void prepareLattice( UnitConverter<T,DESCRIPTOR> const& converter,
+                     SuperLattice2D<T, DESCRIPTOR>& sLattice,
+                     Dynamics<T, DESCRIPTOR>& bulkDynamics,
+                     SuperGeometry2D<T>& superGeometry )
 {
 
-  OstreamManager clout(std::cout,"prepareLattice");
+  OstreamManager clout( std::cout,"prepareLattice" );
   clout << "Prepare Lattice ..." << std::endl;
 
-  T   omega = converter.getLatticeRelaxationFrequency();
+  const T omega = converter.getLatticeRelaxationFrequency();
 
-  /// Material=0 -->do nothing
-  sLattice.defineDynamics(superGeometry, 0, &instances::getNoDynamics<T, DESCRIPTOR>());
+  // Material=0 -->do nothing
+  sLattice.defineDynamics( superGeometry, 0, &instances::getNoDynamics<T, DESCRIPTOR>() );
 
-  /// Material=1 -->bulk dynamics
-  sLattice.defineDynamics(superGeometry, 1, &bulkDynamics);
+  // Material=1 -->bulk dynamics
+  sLattice.defineDynamics( superGeometry, 1, &bulkDynamics );
 
-  /// Material=2 -->bulk dynamics
-  sLattice.defineDynamics(superGeometry, 2, &bulkDynamics);
+  if (boundaryType == bounceBack) {
+    sLattice.defineDynamics( superGeometry, 2, &instances::getBounceBack<T, DESCRIPTOR>() );
+  }
+  else {
+	 sLattice.defineDynamics( superGeometry, 2, &bulkDynamics );
+		if(boundaryType == local){
+			setLocalVelocityBoundary<T,DESCRIPTOR>(sLattice, omega, superGeometry, 2);
+		}
+		else{
+			setInterpolatedVelocityBoundary<T,DESCRIPTOR>(sLattice, omega, superGeometry, 2);
+		}
+  }
 
-  /// Setting of the boundary conditions
-  sBoundaryCondition.addVelocityBoundary(superGeometry, 2, omega);
+  // Material=3 -->bulk dynamics
+  sLattice.defineDynamics( superGeometry, 3, &bulkDynamics );
 
-  /// Initial conditions
-  std::vector<T> epsilonValue(1, epsilonIn);
-  AnalyticalConst2D<T,T> epsilon(epsilonValue);
+  // Material=4 -->bulk dynamics
+  sLattice.defineDynamics( superGeometry, 4, &bulkDynamics );
 
-  std::vector<T> KValue(1, KIn);
-  AnalyticalConst2D<T,T> K(KValue);
+  if(boundaryType == local){
+		setLocalVelocityBoundary<T,DESCRIPTOR>(sLattice, omega, superGeometry, 3);
+		setLocalPressureBoundary<T,DESCRIPTOR>(sLattice, omega, superGeometry, 4);
+	}
+	else{
+		setInterpolatedVelocityBoundary<T,DESCRIPTOR>(sLattice, omega, superGeometry, 3);
+		setInterpolatedPressureBoundary<T,DESCRIPTOR>(sLattice, omega, superGeometry, 4);
+	}
 
-  std::vector<T> bodyForceValue (2, (T)0);
-  bodyForceValue[0] = bodyForceIn;
-  AnalyticalConst2D<T,T> bodyForce(bodyForceValue);
+#ifdef SPAID_PHELAN
+  T tau = converter.getLatticeRelaxationTime();
+  T nu = converter.getLatticeViscosity();
+  T h = converter.getPhysDeltaX();
+  T d = 1. - (h*h*nu*tau/Kin);
+  clout << "Lattice Porosity: " << d << std::endl;
+  clout << "Kmin: " << h*h*nu*tau << std::endl;
+  if (Kin < h*h*nu*tau) {
+    clout << "WARNING: Chosen K is too small!" << std::endl;
+    exit(1);
+  }
+  AnalyticalConst2D<T,T> porosity( d );
+  for (int i: {0,1,2,3,4}) {
+    sLattice.defineField<POROSITY>(superGeometry, i, porosity);
+  }
+#elif defined GUO_ZHAO
+  AnalyticalConst2D<T,T> eps( epsilon );
+  AnalyticalConst2D<T,T> Nu( converter.getLatticeViscosity() );
+  AnalyticalConst2D<T,T> k( Kin/pow(converter.getPhysDeltaX(), 2.) );
+  for (int i: {0,1,2,3,4}) {
+    sLattice.defineField<EPSILON>(superGeometry, i, eps);
+    sLattice.defineField<NU>(superGeometry, i, Nu);
+    sLattice.defineField<K>(superGeometry, i, k);
+  }
+#endif
 
-  // Initialize porosity
-  sGuoZhaoInstantiator.defineEpsilon(superGeometry, 1, epsilon);
-  sGuoZhaoInstantiator.defineEpsilon(superGeometry, 2, epsilon);
+  // Initial conditions
+  // Pressure for Poiseuille flow with maximum velocity of charU at K->infty
+  p0 = 8.*converter.getPhysViscosity()*converter.getCharPhysVelocity()*lx/( ly*ly );
+  // Pressure for PorousPoiseuille with maximum velocity of charU for every permeability K
+  //p0 = converter.getCharPhysVelocity() * converter.getPhysViscosity() * converter.getPhysDensity() / Kin * lx / (1. - 1./cosh(sqrt(1./Kin)*ly/2.));
 
-  sGuoZhaoInstantiator.defineK(converter, superGeometry, 1, K);
-  sGuoZhaoInstantiator.defineK(converter, superGeometry, 2, K);
+  T p0L = converter.getLatticePressure(p0);
+  AnalyticalLinear2D<T,T> rho( -p0L/lx*invCs2<T,DESCRIPTOR>(), 0, p0L*invCs2<T,DESCRIPTOR>()+1 );
 
-  sGuoZhaoInstantiator.defineNu(converter, superGeometry, 1);
-  sGuoZhaoInstantiator.defineNu(converter, superGeometry, 2);
+  dp = p0/lx;
+  mu = converter.getPhysViscosity()*converter.getPhysDensity();
 
-  sGuoZhaoInstantiator.defineBodyForce(converter, superGeometry, 1, bodyForce);
-  sGuoZhaoInstantiator.defineBodyForce(converter, superGeometry, 2, bodyForce);
+  //Poiseuille2D<T> uSol( {lx/2.,ly/2.}, {1,0}, converter.getCharPhysVelocity(), ly/2. );
+  PorousPoiseuille2D<T> uSol( Kin, dp, mu, ly/2. );
+  PhysicalToLatticeVelocityF2D<T> u( &uSol, converter );
 
-  /// Make the lattice ready for simulation
-  clout << "Ready to initialize the lattice..." << std::endl;
+  // Initialize all values of distribution functions to their local equilibrium
+  for (int i: {0,1,2,3,4}) {
+    sLattice.defineRhoU( superGeometry, i, rho, u );
+    sLattice.iniEquilibrium( superGeometry, i, rho, u );
+  }
+
+  // Make the lattice ready for simulation
   sLattice.initialize();
 
   clout << "Prepare Lattice ... OK" << std::endl;
 }
 
-/// Compute error norms
+// Compute error norms
 void error( SuperGeometry2D<T>& superGeometry,
             SuperLattice2D<T, DESCRIPTOR>& sLattice,
             UnitConverter<T,DESCRIPTOR> const& converter,
-            Dynamics<T, DESCRIPTOR>& bulkDynamics,
-            AnalyticalF2D<T,T>& uSol) {
+            Dynamics<T, DESCRIPTOR>& bulkDynamics )
+{
 
   OstreamManager clout( std::cout,"error" );
 
-  int input[1] = { };
-  T result[1]  = { };
+  int tmp[]= { };
+  T result[2]= { };
 
+  // velocity error
+  //Poiseuille2D<T> uSol( {lx/2.,ly/2.}, {1,0}, converter.getCharPhysVelocity(), ly/2. );
+  PorousPoiseuille2D<T> uSol( Kin, dp, mu, ly/2. );
   SuperLatticePhysVelocity2D<T,DESCRIPTOR> u( sLattice,converter );
   auto indicatorF = superGeometry.getMaterialIndicator(1);
 
-  // velocity error
   SuperAbsoluteErrorL1Norm2D<T> absVelocityErrorNormL1(u, uSol, indicatorF);
-  absVelocityErrorNormL1(result, input);
+  absVelocityErrorNormL1(result, tmp);
   clout << "velocity-L1-error(abs)=" << result[0];
   SuperRelativeErrorL1Norm2D<T> relVelocityErrorNormL1(u, uSol, indicatorF);
-  relVelocityErrorNormL1(result, input);
+  relVelocityErrorNormL1(result, tmp);
   clout << "; velocity-L1-error(rel)=" << result[0] << std::endl;
 
   SuperAbsoluteErrorL2Norm2D<T> absVelocityErrorNormL2(u, uSol, indicatorF);
-  absVelocityErrorNormL2(result, input);
+  absVelocityErrorNormL2(result, tmp);
   clout << "velocity-L2-error(abs)=" << result[0];
   SuperRelativeErrorL2Norm2D<T> relVelocityErrorNormL2(u, uSol, indicatorF);
-  relVelocityErrorNormL2(result, input);
+  relVelocityErrorNormL2(result, tmp);
   clout << "; velocity-L2-error(rel)=" << result[0] << std::endl;
 
   SuperAbsoluteErrorLinfNorm2D<T> absVelocityErrorNormLinf(u, uSol, indicatorF);
-  absVelocityErrorNormLinf(result, input);
-  clout << "velocity-Linf-error(abs)=" << result[0] << std::endl;
+  absVelocityErrorNormLinf(result, tmp);
+  clout << "velocity-Linf-error(abs)=" << result[0];
+  SuperRelativeErrorLinfNorm2D<T> relVelocityErrorNormLinf(u, uSol, indicatorF);
+  relVelocityErrorNormLinf(result, tmp);
+  clout << "; velocity-Linf-error(rel)=" << result[0] << std::endl;
+
+  // pressure error
+  T p0L = converter.getLatticePressure( p0 );
+  AnalyticalLinear2D<T,T> pressureSol( -converter.getPhysPressure( p0L )/lx, 0, converter.getPhysPressure( p0L ) );
+  SuperLatticePhysPressure2D<T,DESCRIPTOR> pressure( sLattice,converter );
+
+  SuperAbsoluteErrorL1Norm2D<T> absPressureErrorNormL1(pressure, pressureSol, indicatorF);
+  absPressureErrorNormL1(result, tmp);
+  clout << "pressure-L1-error(abs)=" << result[0];
+  SuperRelativeErrorL1Norm2D<T> relPressureErrorNormL1(pressure, pressureSol, indicatorF);
+  relPressureErrorNormL1(result, tmp);
+  clout << "; pressure-L1-error(rel)=" << result[0] << std::endl;
+
+  SuperAbsoluteErrorL2Norm2D<T> absPressureErrorNormL2(pressure, pressureSol, indicatorF);
+  absPressureErrorNormL2(result, tmp);
+  clout << "pressure-L2-error(abs)=" << result[0];
+  SuperRelativeErrorL2Norm2D<T> relPressureErrorNormL2(pressure, pressureSol, indicatorF);
+  relPressureErrorNormL2(result, tmp);
+  clout << "; pressure-L2-error(rel)=" << result[0] << std::endl;
+
+  SuperAbsoluteErrorLinfNorm2D<T> absPressureErrorNormLinf(pressure, pressureSol, indicatorF);
+  absPressureErrorNormLinf(result, tmp);
+  clout << "pressure-Linf-error(abs)=" << result[0];
+  SuperRelativeErrorLinfNorm2D<T> relPressureErrorNormLinf(pressure, pressureSol, indicatorF);
+  relPressureErrorNormLinf(result, tmp);
+  clout << "; pressure-Linf-error(rel)=" << result[0] << std::endl;
 }
 
-/// Output to console and files
-void getResults(SuperLattice2D<T,DESCRIPTOR>& sLattice, Dynamics<T, DESCRIPTOR>& bulkDynamics,
-                UnitConverter<T,DESCRIPTOR> const& converter, T lx, T ly, T G, T K, T nu, T epsilon, T maxPhysT, int iT, int numOfIterations,
-                SuperGeometry2D<T>& superGeometry, Timer<T>& timer, bool hasConverged)
+// Output to console and files
+void getResults( SuperLattice2D<T,DESCRIPTOR>& sLattice, Dynamics<T, DESCRIPTOR>& bulkDynamics,
+                 UnitConverter<T,DESCRIPTOR> const& converter, int iT,
+                 SuperGeometry2D<T>& superGeometry, Timer<T>& timer, bool hasConverged )
 {
 
-  OstreamManager clout(std::cout,"getResults");
+  OstreamManager clout( std::cout,"getResults" );
 
-  SuperVTMwriter2D<T> vtkWriter("porousPoiseuille2d");
-  SuperLatticePhysVelocity2D<T, DESCRIPTOR> velocity(sLattice, converter);
-  SuperLatticePhysPressure2D<T, DESCRIPTOR> pressure(sLattice, converter);
-//  SuperLatticeEpsilon2D<T, DESCRIPTOR> epsilonVTM(sLattice, converter);
-//  SuperLatticePhysK2D<T, DESCRIPTOR> KVTM(sLattice, converter);
-//  SuperLatticePhysBodyForce2D<T, DESCRIPTOR> bodyForce(sLattice, converter);
-  vtkWriter.addFunctor( velocity );
-  vtkWriter.addFunctor( pressure );
-//  vtkWriter.addFunctor( epsilonVTM );
-//  vtkWriter.addFunctor( KVTM );
-//  vtkWriter.addFunctor( bodyForce );
+  SuperVTMwriter2D<T> vtmWriter( "porousPoiseuille2d" );
+  SuperLatticePhysVelocity2D<T, DESCRIPTOR> velocity( sLattice, converter );
+  SuperLatticePhysPressure2D<T, DESCRIPTOR> pressure( sLattice, converter );
+  vtmWriter.addFunctor( velocity );
+  vtmWriter.addFunctor( pressure );
 
-  const int vtkIter  = converter.getLatticeTime(maxPhysT/numOfIterations);
-  const int statIter = converter.getLatticeTime(maxPhysT/numOfIterations);
+  //Poiseuille2D<T> uSol( {lx/2.,ly/2.}, {1,0}, converter.getCharPhysVelocity(), ly/2. );
+  PorousPoiseuille2D<T> uSol( Kin, dp, mu, ly/2. );
+  SuperLatticeFfromAnalyticalF2D<T,DESCRIPTOR> uSolF( uSol, sLattice);
+  vtmWriter.addFunctor( uSolF );
 
-  static Gnuplot<T> gplot_uCentre( "uCentre" );
-  static Gnuplot<T> gplot_profile( "profile" );
+  const int vtmIter  = converter.getLatticeTime( maxPhysT/20. );
+  const int statIter = converter.getLatticeTime( maxPhysT/20. );
 
-  if (iT==0) {
-    /// Writes the geometry, cuboid no. and rank no. as vti file for visualization
-    SuperLatticeGeometry2D<T, DESCRIPTOR> geometry(sLattice, superGeometry);
-    SuperLatticeCuboid2D<T, DESCRIPTOR> cuboid(sLattice);
-    SuperLatticeRank2D<T, DESCRIPTOR> rank(sLattice);
-    superGeometry.rename(0,2);
-    vtkWriter.write(geometry);
-    vtkWriter.write(cuboid);
-    vtkWriter.write(rank);
+  if ( iT==0 ) {
+    // Writes the geometry, cuboid no. and rank no. as vti file for visualization
+    SuperLatticeGeometry2D<T, DESCRIPTOR> geometry( sLattice, superGeometry );
+    SuperLatticeCuboid2D<T, DESCRIPTOR> cuboid( sLattice );
+    SuperLatticeRank2D<T, DESCRIPTOR> rank( sLattice );
+    superGeometry.rename( 0,2 );
+    vtmWriter.write( geometry );
+    vtmWriter.write( cuboid );
+    vtmWriter.write( rank );
 
-    vtkWriter.createMasterFile();
+    vtmWriter.createMasterFile();
   }
 
-  /// Writes the vtk files and profile text file
- T Ly = converter.getLatticeLength(ly);
-    AnalyticalFfromSuperF2D<T> intpolateVelocity( velocity, true );
-    T centre[2] = {converter.getCharPhysLength()/2, converter.getCharPhysLength()/2};
-    T uCentre[2];
-    intpolateVelocity(uCentre, centre);
-    T r = sqrt(epsilon/K);
-    T dx = converter.getPhysDeltaX();
-    const T radius = ly/2.;
-    std::vector<T> axisPoint(2,T());
-    axisPoint[0] = lx/2.;
-    axisPoint[1] = ly/2.;
-    std::vector<T> axisDirection(2,T());
-    axisDirection[0] = 1;
-    axisDirection[1] = 0;
-    PorousPipe2D<T> uSol(axisPoint, axisDirection, radius, r, uCentre[0]);
+  // Writes the vtm files and profile text file
+  if ( iT%vtmIter==0 || hasConverged ) {
+    vtmWriter.write( iT );
 
-
-  if (iT%vtkIter==0 || hasConverged) {
-    vtkWriter.write(iT);
-
-    SuperEuklidNorm2D<T, DESCRIPTOR> normVel(velocity);
+    SuperEuklidNorm2D<T, DESCRIPTOR> normVel( velocity );
     BlockReduction2D2D<T> planeReduction( normVel, 600, BlockDataSyncMode::ReduceOnly );
-    // write output of velocity as JPEG
+    // write output as JPEG
     heatmap::write(planeReduction, iT);
+  }
 
-    ofstream *ofile = nullptr;
-    if (singleton::mpi().isMainProcessor()) {
-      ofile = new ofstream((singleton::directories().getLogOutDir()+"centerVel.dat").c_str());
-    }
-    for (int iY=0; iY<=Ly; ++iY) {
+  if ( hasConverged ) {
+    Gnuplot<T> gplot( "centerVelocity" );
+    T Ly = converter.getLatticeLength( ly );
+    for ( int iY=0; iY<=Ly; ++iY ) {
+      T dx = 1. / T(converter.getResolution());
       T point[2]= {T(),T()};
       point[0] = lx/2.;
-      point[1] = (T)iY*converter.getPhysLength(1);
+      point[1] = ( T )iY/Ly;
+      //Poiseuille2D<T> uSol( {lx/2.,ly/2.}, {1,0}, converter.getCharPhysVelocity(), ly/2. );
+      PorousPoiseuille2D<T> uSol( Kin, dp, mu, ly/2. );
       T analytical[2] = {T(),T()};
-      uSol(analytical,point);
-      SuperLatticePhysVelocity2D<T, DESCRIPTOR> velocity(sLattice, converter);
-      AnalyticalFfromSuperF2D<T> intpolateVelocity(velocity, true);
+      uSol( analytical,point );
+      SuperLatticePhysVelocity2D<T, DESCRIPTOR> velocity( sLattice, converter );
+      AnalyticalFfromSuperF2D<T> intpolateVelocity( velocity, true );
       T numerical[2] = {T(),T()};
-      intpolateVelocity(numerical,point);
-      if (singleton::mpi().isMainProcessor()) {
-        *ofile << iY*dx << " " << analytical[0]
-               << " " << numerical[0] << "\n";
-        if ( iT == .8*converter.getLatticeTime( maxPhysT ) ) {
-//          if ( iT == converter.numTimeSteps( maxPhysT )-1 ) {
-          gplot_profile.setData( point[1], {numerical[0], analytical[0]}, {"Numerical profile", "Analytical profile"}, "bottom right" );
-          gplot_profile.writePNG();
-        }
-      }
+      intpolateVelocity( numerical,point );
+      gplot.setData( iY*dx, {analytical[0],numerical[0]}, {"analytical","numerical"} );
     }
-    delete ofile;
+    // Create PNG file
+    gplot.writePNG();
   }
 
-  /// Writes output on the console
-  if (iT%statIter==0 || hasConverged) {
-    /// Timer console output
-    timer.update(iT);
+  // Writes output on the console
+  if ( iT%statIter==0 || hasConverged ) {
+    // Timer console output
+    timer.update( iT );
     timer.printStep();
 
-    /// Lattice statistics console output
-    sLattice.getStatistics().print(iT,converter.getPhysTime(iT));
+    // Lattice statistics console output
+    sLattice.getStatistics().print( iT,converter.getPhysTime( iT ) );
 
-    /// Error norms
-    error(superGeometry, sLattice, converter, bulkDynamics, uSol);
-
-    AnalyticalFfromSuperF2D<T> intpolatePressure( pressure, true );
-    AnalyticalFfromSuperF2D<T> intpolateVelocity( velocity, true );
-    T centre[2] = {converter.getCharPhysLength()/2, converter.getCharPhysLength()/2};
-    T uCentre[2];
-    intpolateVelocity(uCentre, centre);
-
-    T uMaxMeas = sLattice.getStatistics().getMaxU() / converter.getCharLatticeVelocity();
-    T uMaxTheo = G*K/nu*(1.-1./cosh(converter.getCharPhysLength()/2 * sqrt(epsilon/K)));
-    clout << "uMaxTheo=" << uMaxTheo
-          << "; uMaxMeas=" << uMaxMeas
-          << "; uCentre="  << uCentre[0]
-          << std::endl;
-
-    gplot_uCentre.setData( converter.getPhysTime( iT ), uCentre[0], "Centre velocity", "bottom right" );
-    gplot_uCentre.writePNG( iT, maxPhysT );
+    // Error norms
+    error( superGeometry, sLattice, converter, bulkDynamics );
   }
 }
 
-int main(int argc, char* argv[])
+int main( int argc, char* argv[] )
 {
 
-  /// === 1st Step: Initialization ===
-  olbInit(&argc, &argv);
-  singleton::directories().setOutputDir("./tmp/");
-  OstreamManager clout(std::cout,"main");
-  // display messages from every single mpi process
-  //clout.setMultiOutput(true);
+  // === 1st Step: Initialization ===
+  olbInit( &argc, &argv );
+  singleton::directories().setOutputDir( "./tmp/" );
+  OstreamManager clout( std::cout,"main" );
 
-  // Parameters for the simulation setup
-  int nx;      // length of the channel
-  int ny;      // height of the channel
-  int N;       // resolution of the model
-  T tau;       // Relaxation time
-  T Re;        // Reynolds number
-  T Da;        // Darcy number
+  if (argc > 1) {
+    if (argv[1][0]=='-'&&argv[1][1]=='h') {
+      OstreamManager clout( std::cout,"help" );
+      clout<<"Usage: program [Resolution] [Permeability] [BoundaryType]"<<std::endl;
+      clout<<"BoundaryType: 0=bounceBack, 1=local, 2=interpolated"<<std::endl;
+      clout<<"Default: Resolution=50, Permeability=1e-2, BoundaryTpe=interpolated"<<std::endl;
+      return 0;
+    }
+  }
 
-  T epsilon;        // Porosity (non-dimensional)
-  T K;              // Permeability (SI units)
+  if (argc > 1) {
+    N = atoi(argv[1]);
+    if (N < 1) {
+      std::cerr << "Fluid domain is too small" << std::endl;
+      return 1;
+    }
+  }
 
-  T maxPhysT; // max. simulation time in s, SI unit
-  int numOfIterations; // number of iterations reported in paraview-Gnuplot.
-  T residuum;
+  if (argc > 2) {
+    Kin = atof(argv[2]);
+    if (Kin < 0) {
+      std::cerr << "Permeability must be non-negative" << std::endl;
+      return 2;
+    }
+  }
 
-  string fName("input.xml");
-  XMLreader config(fName);
-
-  config["setup"]["nx"].read(nx);
-  config["setup"]["ny"].read(ny);
-  config["setup"]["tau"].read(tau);
-  config["setup"]["N"].read(N);
-  config["setup"]["Da"].read(Da);
-  config["setup"]["Re"].read(Re);
-  config["porous"]["epsilon"].read(epsilon);
-  config["porous"]["K"].read(K);
-  config["time"]["maxPhysT"].read(maxPhysT);
-  config["time"]["numOfIterations"].read(numOfIterations);
-  config["convergence"]["residuum"].read(residuum);
-
-  T charL = sqrt(K/Da);
-  T lx = nx*charL;
-  T ly = ny*charL;
-
-  //T latticeU = Re*(tau-(T).5)/((T)3*N);
-  T charU = (T)1.;
-  T bodyForceValue = charU*charU*charL / ( Re*K*((T)1. - (T)1./cosh(charL/(T)2 * sqrt(epsilon/K))) );
-  T nu = bodyForceValue*K/charU*((T)1. - (T)1./cosh(charL/(T)2 * sqrt(epsilon/K)));
+  if (argc > 3) {
+    int boundaryTypeNumber = atoi(argv[3]);
+    if (boundaryTypeNumber < 0 || boundaryTypeNumber > (int) interpolated) {
+      std::cerr << "Unknown boundary type" << std::endl;
+      return 3;
+    }
+    boundaryType = (BoundaryType) boundaryTypeNumber;
+  }
 
   UnitConverterFromResolutionAndRelaxationTime<T, DESCRIPTOR> const converter(
     int {N},     // resolution: number of voxels per charPhysL
-    (T)   tau,   // latticeRelaxationTime: relaxation time, have to be greater than 0.5!
-    (T)   charL, // charPhysLength: reference length of simulation geometry
-    (T)   charU, // charPhysVelocity: maximal/highest expected velocity during simulation in __m / s__
-    (T)   nu,    // physViscosity: physical kinematic viscosity in __m^2 / s__
-    (T)   1.0    // physDensity: physical density in __kg / m^3__
+    (T)   0.8,   // latticeRelaxationTime: relaxation time, have to be greater than 0.5!
+    (T)   1,     // charPhysLength: reference length of simulation geometry
+    (T)   1,     // charPhysVelocity: maximal/highest expected velocity during simulation in __m / s__
+    (T)   1./Re, // physViscosity: physical kinematic viscosity in __m^2 / s__
+    (T)   1.     // physDensity: physical density in __kg / m^3__
   );
   // Prints the converter log as console output
   converter.print();
   // Writes the converter log in a file
   converter.write("porousPoiseuille2d");
 
-  /// === 2nd Step: Prepare Geometry ===
-  std::vector<T> extend(2,T());
-  extend[0] = lx;
-  extend[1] = ly;
-  std::vector<T> origin(2,T());
-  IndicatorCuboid2D<T> cuboid(extend, origin);
 
-  /// Instantiation of a cuboidGeometry with weights
+  // === 2nd Step: Prepare Geometry ===
+  Vector<T,2> extend( lx, ly );
+  Vector<T,2> origin;
+  IndicatorCuboid2D<T> cuboid( extend, origin );
+
+  // Instantiation of a cuboidGeometry with weights
 #ifdef PARALLEL_MODE_MPI
   const int noOfCuboids = singleton::mpi().getSize();
 #else
-  const int noOfCuboids = 7;
+  const int noOfCuboids = 1;
 #endif
-  CuboidGeometry2D<T> cuboidGeometry(cuboid, converter.getPhysDeltaX(), noOfCuboids);
+  CuboidGeometry2D<T> cuboidGeometry( cuboid, converter.getConversionFactorLength(), noOfCuboids );
 
-  /// Periodic boundaries in x-direction
-  cuboidGeometry.setPeriodicity(true, false);
+  // Instantiation of a loadBalancer
+  HeuristicLoadBalancer<T> loadBalancer( cuboidGeometry );
 
-  /// Instantiation of a loadBalancer
-  HeuristicLoadBalancer<T> loadBalancer(cuboidGeometry);
+  // Instantiation of a superGeometry
+  SuperGeometry2D<T> superGeometry( cuboidGeometry, loadBalancer, 2 );
 
-  /// Instantiation of a superGeometry
-  SuperGeometry2D<T> superGeometry(cuboidGeometry, loadBalancer, 2);
+  prepareGeometry( converter, superGeometry );
 
-  prepareGeometry(converter, lx, ly, superGeometry);
+  // === 3rd Step: Prepare Lattice ===
+  SuperLattice2D<T, DESCRIPTOR> sLattice( superGeometry );
 
-  /// === 3rd Step: Prepare Lattice ===
-  SuperLattice2D<T, DESCRIPTOR> sLattice(superGeometry);
+  DYNAMICS<T, DESCRIPTOR> bulkDynamics( converter.getLatticeRelaxationFrequency(), instances::getBulkMomenta<T, DESCRIPTOR>() );
 
-  DYNAMICS<T, DESCRIPTOR> bulkDynamics (
-    converter.getLatticeRelaxationFrequency(),
-    instances::getBulkMomenta<T,DESCRIPTOR>()
-  );
+  //prepareLattice and setBoundaryConditions
+  prepareLattice( converter, sLattice, bulkDynamics, superGeometry );
 
-  SuperGuoZhaoInstantiator2D<T, DESCRIPTOR, DYNAMICS<T, DESCRIPTOR> > sGuoZhaoInstantiator(sLattice);
-
-  // choose between local and non-local boundary condition
-  sOnLatticeBoundaryCondition2D<T, DESCRIPTOR> sBoundaryCondition(sLattice);
-  createInterpBoundaryCondition2D<T, DESCRIPTOR, DYNAMICS<T, DESCRIPTOR> > (sBoundaryCondition);
-
-  prepareLattice(converter, lx, ly, epsilon, K, bodyForceValue, sLattice, bulkDynamics, sBoundaryCondition, sGuoZhaoInstantiator, superGeometry);
-
-  SuperExternal2D<T, DESCRIPTOR, descriptors::FORCE>      externalForce(superGeometry, sLattice, 2);
-  SuperExternal2D<T, DESCRIPTOR, descriptors::EPSILON>    externalEpsilon(superGeometry, sLattice, 2);
-  SuperExternal2D<T, DESCRIPTOR, descriptors::K>          externalK(superGeometry, sLattice, 2);
-  SuperExternal2D<T, DESCRIPTOR, descriptors::NU>         externalNu(superGeometry, sLattice, 2);
-  SuperExternal2D<T, DESCRIPTOR, descriptors::BODY_FORCE> externalBodyForce(superGeometry, sLattice, 2);
-
-  /// === 4th Step: Main Loop with Timer ===
+  // === 4th Step: Main Loop with Timer ===
   clout << "starting simulation..." << endl;
-  Timer<T> timer(converter.getLatticeTime(maxPhysT), superGeometry.getStatistics().getNvoxel() );
-  util::ValueTracer<T> converge( converter.getLatticeTime(maxPhysT/numOfIterations), residuum );
+  Timer<T> timer( converter.getLatticeTime( maxPhysT ), superGeometry.getStatistics().getNvoxel() );
+  util::ValueTracer<T> converge( converter.getLatticeTime( physInterval ), residuum );
   timer.start();
 
-  for (int iT = 0; iT < converter.getLatticeTime(maxPhysT); ++iT) {
+  for ( std::size_t iT = 0; iT < converter.getLatticeTime( maxPhysT ); ++iT ) {
     if ( converge.hasConverged() ) {
-       clout << "Simulation converged." << endl;
-       getResults(sLattice, bulkDynamics, converter, lx, ly, bodyForceValue, K, converter.getPhysViscosity(), epsilon, maxPhysT, iT, numOfIterations, superGeometry, timer, converge.hasConverged() );
-        break;
-     }
+      clout << "Simulation converged." << endl;
+      getResults( sLattice, bulkDynamics, converter, iT, superGeometry, timer, converge.hasConverged() );
 
-    /// === 5th Step: Definition of Initial and Boundary Conditions ===
+      break;
+    }
+
+    // === 5th Step: Definition of Initial and Boundary Conditions ===
     // in this application no boundary conditions have to be adjusted
 
-    /// === 6th Step: Collide and Stream Execution ===
+    // === 6th Step: Collide and Stream Execution ===
     sLattice.collideAndStream();
 
-    externalForce.communicate();
-    externalEpsilon.communicate();
-    externalK.communicate();
-    externalNu.communicate();
-    externalBodyForce.communicate();
-
-    /// === 7th Step: Computation and Output of the Results ===
-    getResults(sLattice, bulkDynamics, converter, lx, ly, bodyForceValue, K, converter.getPhysViscosity(), epsilon, maxPhysT, iT, numOfIterations, superGeometry, timer, converge.hasConverged() );
-  converge.takeValue( sLattice.getStatistics().getAverageEnergy(), true );
+    // === 7th Step: Computation and Output of the Results ===
+    getResults( sLattice, bulkDynamics, converter, iT, superGeometry, timer, converge.hasConverged()  );
+    converge.takeValue( sLattice.getStatistics().getAverageEnergy(), true );
   }
 
   timer.stop();
   timer.printSummary();
 }
-

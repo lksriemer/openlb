@@ -50,7 +50,7 @@ public:
   /// Compute equilibrium distribution function
   T computeEquilibrium( int iPop, T rho, const T u[DESCRIPTOR::d], T uSqr ) const override;
   /// Collision step
-  void collide( Cell<T, DESCRIPTOR>& cell, LatticeStatistics<T>& statistics ) override;
+  void collide( Cell<T,DESCRIPTOR>& cell, LatticeStatistics<T>& statistics ) override;
   /// Get local relaxation parameter of the dynamics
   T getOmega() const override;
   /// Set local relaxation parameter of the dynamics
@@ -66,12 +66,14 @@ protected:
 template<typename T, typename DESCRIPTOR>
 class RTLBMdynamicsMcHardyRK : public BasicDynamics<T, DESCRIPTOR> {
 public:
+  static_assert(DESCRIPTOR::template provides<descriptors::tag::RTLBM>(), "Must be RTLBM");
+
   /// Constructor
   RTLBMdynamicsMcHardyRK( Momenta<T,DESCRIPTOR>& momenta, T latticeAbsorption, T latticeScattering, std::array<std::array<T,DESCRIPTOR::q>, DESCRIPTOR::q>& anisoMatrix );
   /// Compute equilibrium distribution function
   T computeEquilibrium( int iPop, T rho, const T u[DESCRIPTOR::d], T uSqr ) const override;
   /// Collision step
-  void collide( Cell<T, DESCRIPTOR>& cell, LatticeStatistics<T>& statistics ) override;
+  void collide( Cell<T,DESCRIPTOR>& cell, LatticeStatistics<T>& statistics ) override;
   /// Get local relaxation parameter of the dynamics
   T getOmega() const override;
   /// Set local relaxation parameter of the dynamics

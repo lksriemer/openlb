@@ -35,7 +35,7 @@
 namespace olb {
 
 template <typename T, typename DESCRIPTOR>
-void PowerLawUnitConverter<T, DESCRIPTOR>::print() const
+void PowerLawUnitConverter<T, DESCRIPTOR>::print(std::ostream& clout) const
 {
   clout << "----------------- UnitConverter information ------------------" << std::endl;
   clout << "-- Parameters:" << std::endl;
@@ -67,6 +67,12 @@ void PowerLawUnitConverter<T, DESCRIPTOR>::print() const
 
 }
 
+template <typename T, class DESCRIPTOR>
+void PowerLawUnitConverter<T, DESCRIPTOR>::print() const
+{
+  print(clout);
+}
+
 template <typename T, typename DESCRIPTOR>
 void PowerLawUnitConverter<T, DESCRIPTOR>::write(std::string const& fileName) const
 {
@@ -74,38 +80,13 @@ void PowerLawUnitConverter<T, DESCRIPTOR>::write(std::string const& fileName) co
 
   if (singleton::mpi().isMainProcessor())
   {
-    std::ofstream fout;
-    fout.open(dataFile.c_str(), std::ios::trunc);
-
-    fout << "UnitConverter information\n\n";
-    fout << "----------------- UnitConverter information ------------------\n";
-    fout << "-- Parameters:" << std::endl;
-    fout << "Resolution:                           N=              " << this->getResolution()                << "\n";
-    fout << "DESCRIPTOR velocity:                     latticeU=       " << this->getCharLatticeVelocity()       << "\n";
-    fout << "DESCRIPTOR relaxation frequency:         omega=          " << this->getLatticeRelaxationFrequency(  ) << std::endl;
-    fout << "DESCRIPTOR relaxation time:              tau=            " << this->getLatticeRelaxationTime()     << "\n";
-    fout << "Characteristical length(m):           charL=          " << this->getCharPhysLength()            << "\n";
-    fout << "Characteristical speed(m/s):          charU=          " << this->getCharPhysVelocity()          << "\n";
-    fout << "Phys. char kinematic visco(m^2/s):    charNu=         " << this->getPhysViscosity() << std::endl;
-    fout << "Phys. consistency coeff(m^2 s^(n-2)): charM=          " << this->getPhysConsistencyCoeff() << std::endl;
-    fout << "Power-law index:                      n=              " << this->getPowerLawIndex() << std::endl;
-    fout << "Phys. density(kg/m^d):                charRho=        " << this->getPhysDensity()               << "\n";
-    fout << "Characteristical pressure(N/m^2):     charPressure=   " << this->getCharPhysPressure()          << "\n";
-    fout << "Reynolds number:                      reynoldsNumber= " << this->getReynoldsNumber() << std::endl;
-    fout << "\n";
-    fout << "-- Conversion factors:"                                                               << "\n";
-    fout << "Voxel length(m):                      physDeltaX=     " << this->getConversionFactorLength() << std::endl;
-    fout << "Time step(s):                         physDeltaT=     " << this->getConversionFactorTime()      << "\n";
-    fout << "Velocity factor(m/s):                 physVelocity=   " << this->getConversionFactorVelocity()  << "\n";
-    fout << "Density factor(kg/m^3):               physDensity=    " << this->getConversionFactorDensity()   << "\n";
-    fout << "Mass factor(kg):                      physMass=       " << this->getConversionFactorMass()      << "\n";
-    fout << "Viscosity factor(m^2/s):              physViscosity=  " << this->getConversionFactorViscosity() << "\n";
-    fout << "Force factor(N):                      physForce=      " << this->getConversionFactorForce()     << "\n";
-    fout << "Pressure factor(N/m^2):               physPressure=   " << this->getConversionFactorPressure()  << "\n";
-
-    fout << "--------------------------------------------------------------" << "\n";
-
-    fout.close();
+    std::ofstream fout(dataFile.c_str(), std::ios::trunc);
+    if(!fout) {
+      clout << "error write() function: can not open std::ofstream" << std::endl;
+    } else {
+      print( fout );
+      fout.close();
+    }
   }
 }
 

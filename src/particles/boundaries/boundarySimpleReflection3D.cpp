@@ -31,5 +31,8 @@ namespace olb {
 template class SimpleReflectBoundary3D<double,Particle3D>;
 template class SimpleReflectBoundary3D<double,MagneticParticle3D>;
 
+template class ReflectBoundary3D<double,Particle3D>;
+template class ReflectBoundary3D<double,MagneticParticle3D>;
+
 }  // namespace olb
 

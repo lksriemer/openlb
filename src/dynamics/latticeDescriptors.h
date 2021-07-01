@@ -53,8 +53,7 @@ namespace descriptors {
 
 /// D2Q9 lattice
 template <typename... FIELDS>
-struct D2Q9 : public DESCRIPTOR_BASE<2,9,POPULATION,FIELDS...> {
-  typedef D2Q9<FIELDS...> BaseDescriptor;
+struct D2Q9 : public DESCRIPTOR_BASE<2,9,FIELDS...> {
   D2Q9() = delete;
 };
 
@@ -86,19 +85,10 @@ constexpr Fraction cs2<2,9> = {1, 3};
 
 }
 
-using D2Q9Descriptor                   = D2Q9<>;
-using AdvectionDiffusionD2Q9Descriptor = D2Q9<VELOCITY>;
-using ForcedD2Q9Descriptor             = D2Q9<FORCE>;
-using SmagorinskyForcedD2Q9Descriptor  = D2Q9<FORCE,TAU_EFF>;
-using MixedScaleForcedD2Q9Descriptor   = D2Q9<FORCE,TAU_EFF,CUTOFF_KIN_ENERGY>;
-using FreeEnergyD2Q9Descriptor         = D2Q9<CHEM_POTENTIAL,FORCE>;
-using V6ForcedD2Q9Descriptor           = D2Q9<FORCE,V6>;
-
 
 /// D2Q5 lattice
 template <typename... FIELDS>
-struct D2Q5 : public DESCRIPTOR_BASE<2,5,POPULATION,FIELDS...> {
-  typedef D2Q5<FIELDS...> BaseDescriptor;
+struct D2Q5 : public DESCRIPTOR_BASE<2,5,FIELDS...> {
   D2Q5() = delete;
 };
 
@@ -130,17 +120,10 @@ constexpr Fraction cs2<2,5> = {1, 3};
 
 }
 
-using D2Q5Descriptor                   = D2Q5<>;
-using AdvectionDiffusionD2Q5Descriptor = D2Q5<VELOCITY>;
-using SourcedAdvectionDiffusionD2Q5Descriptor = D2Q5<SOURCE,VELOCITY>;
-using SmagorinskyAdvectionDiffusionD2Q5Descriptor = D2Q5<VELOCITY,TAU_EFF>;
-using MixedScaleAdvectionDiffusionD2Q5Descriptor  = D2Q5<VELOCITY,TAU_EFF,CUTOFF_HEAT_FLUX>;
-
 
 /// D3Q19 lattice
 template <typename... FIELDS>
-struct D3Q19 : public DESCRIPTOR_BASE<3,19,POPULATION,FIELDS...> {
-  typedef D3Q19<FIELDS...> BaseDescriptor;
+struct D3Q19 : public DESCRIPTOR_BASE<3,19,FIELDS...> {
   D3Q19() = delete;
 };
 
@@ -185,17 +168,10 @@ constexpr Fraction cs2<3,19> = {1, 3};
 
 }
 
-using D3Q19Descriptor                   = D3Q19<>;
-using ForcedD3Q19Descriptor             = D3Q19<FORCE>;
-using SmagorinskyForcedD3Q19Descriptor  = D3Q19<FORCE,TAU_EFF>;
-using V12ForcedD3Q19Descriptor          = D3Q19<FORCE,V12>;
-using FreeEnergyD3Q19Descriptor         = D3Q19<CHEM_POTENTIAL,FORCE>;
-using ParticleAdvectionDiffusionD3Q19Descriptor = D3Q19<VELOCITY>;
 
 /// D3Q7 lattice
 template <typename... FIELDS>
-struct D3Q7 : public DESCRIPTOR_BASE<3,7,POPULATION,FIELDS...> {
-  typedef D3Q7<FIELDS...> BaseDescriptor;
+struct D3Q7 : public DESCRIPTOR_BASE<3,7,FIELDS...> {
   D3Q7() = delete;
 };
 
@@ -231,17 +207,10 @@ constexpr Fraction t<3,7>[7] = {
 
 }
 
-using D3Q7Descriptor                              = D3Q7<>;
-using AdvectionDiffusionD3Q7Descriptor            = D3Q7<VELOCITY>;
-using SourcedAdvectionDiffusionD3Q7Descriptor     = D3Q7<SOURCE,VELOCITY>;
-using SmagorinskyAdvectionDiffusionD3Q7Descriptor = D3Q7<VELOCITY,TAU_EFF>;
-using ParticleAdvectionDiffusionD3Q7Descriptor    = D3Q7<VELOCITY,VELOCITY2>;
-using ParticleAdvectionDiffusionMRTD3Q7Descriptor = D3Q7<VELOCITY,VELOCITY2>;
 
 /// D3Q13 lattice
 template <typename... FIELDS>
-struct D3Q13 : public DESCRIPTOR_BASE<3,13,POPULATION,FIELDS...> {
-  typedef D3Q13<FIELDS...> BaseDescriptor;
+struct D3Q13 : public DESCRIPTOR_BASE<3,13,FIELDS...> {
   D3Q13() = delete;
 };
 
@@ -288,14 +257,10 @@ constexpr Fraction lambda_h<3,13> = {9, 5};
 
 }
 
-using D3Q13Descriptor       = D3Q13<>;
-using ForcedD3Q13Descriptor = D3Q13<FORCE>;
-
 
 /// D3Q15 lattice
 template <typename... FIELDS>
-struct D3Q15 : public DESCRIPTOR_BASE<3,15,POPULATION,FIELDS...> {
-  typedef D3Q15<FIELDS...> BaseDescriptor;
+struct D3Q15 : public DESCRIPTOR_BASE<3,15,FIELDS...> {
   D3Q15() = delete;
 };
 
@@ -336,14 +301,10 @@ constexpr Fraction t<3,15>[15] = {
 
 }
 
-using D3Q15Descriptor = D3Q15<>;
-using ForcedD3Q15Descriptor = D3Q15<FORCE>;
-
 
 /// D3Q27 lattice
 template <typename... FIELDS>
-struct D3Q27 : public DESCRIPTOR_BASE<3,27,POPULATION,FIELDS...> {
-  typedef D3Q27<FIELDS...> BaseDescriptor;
+struct D3Q27 : public DESCRIPTOR_BASE<3,27,FIELDS...> {
   D3Q27() = delete;
 };
 
@@ -392,9 +353,6 @@ constexpr Fraction t<3,27>[27] = {
 };
 
 }
-
-using D3Q27Descriptor       = D3Q27<>;
-using ForcedD3Q27Descriptor = D3Q27<FORCE>;
 
 
 }  // namespace descriptors

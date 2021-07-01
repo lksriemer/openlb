@@ -25,7 +25,8 @@
 #define SUPER_PLANE_INTEGRAL_FLUX_F_2D_H
 
 #include "superPlaneIntegralF2D.h"
-#include "functors/lattice/superLatticeLocalF2D.h"
+#include "functors/lattice/latticePhysPressure2D.h"
+#include "functors/lattice/latticePhysVelocity2D.h"
 
 namespace olb {
 

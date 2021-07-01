@@ -47,7 +47,7 @@ using namespace olb::util;
 using namespace std;
 
 typedef double T;
-#define DESCRIPTOR DynOmegaD2Q9Descriptor
+typedef D2Q9<OMEGA> DESCRIPTOR;
 
 // Parameters for the simulation setup
 int N = 40;            // resolution of the model
@@ -65,7 +65,8 @@ bool bcTypePeriodic = false; //true works only with one core
 const T residuum = 1e-5;      // residuum for the convergence check
 
 void prepareGeometry( PowerLawUnitConverter<T,DESCRIPTOR> const& converter,
-                      SuperGeometry2D<T>& superGeometry ) {
+                      SuperGeometry2D<T>& superGeometry )
+{
   OstreamManager clout( std::cout,"prepareGeometry" );
   clout << "Prepare Geometry ..." << std::endl;
 
@@ -79,17 +80,21 @@ void prepareGeometry( PowerLawUnitConverter<T,DESCRIPTOR> const& converter,
   extend[0] = 1.2*converter.getConversionFactorLength();
   origin[0] = -converter.getConversionFactorLength();
   IndicatorCuboid2D<T> inflow( extend, origin );
-  if (bcTypePeriodic)
+  if (bcTypePeriodic) {
     superGeometry.rename( 1,3,inflow );
-  else
+  }
+  else {
     superGeometry.rename( 2,3,1,inflow );
+  }
   // Set material number for outflow
   origin[0] = lx-.5*converter.getConversionFactorLength();
   IndicatorCuboid2D<T> outflow( extend, origin );
-  if (bcTypePeriodic)
+  if (bcTypePeriodic) {
     superGeometry.rename( 1,4,outflow );
-  else
+  }
+  else {
     superGeometry.rename( 2,4,1,outflow );
+  }
   // Removes all not needed boundary voxels outside the surface
   superGeometry.clean();
   // Removes all not needed boundary voxels inside the surface
@@ -107,8 +112,8 @@ void prepareLattice( SuperLattice2D<T,DESCRIPTOR>& sLattice,
                      Dynamics<T, DESCRIPTOR>& bulkDynamics,
                      Dynamics<T, DESCRIPTOR>& inDynamics,
                      Dynamics<T, DESCRIPTOR>& outDynamics,
-                     sOnLatticeBoundaryCondition2D<T,DESCRIPTOR>& sBoundaryCondition,
-                     SuperGeometry2D<T>& superGeometry ) {
+                     SuperGeometry2D<T>& superGeometry )
+{
 
   OstreamManager clout( std::cout,"prepareLattice" );
   clout << "Prepare Lattice ..." << std::endl;
@@ -125,21 +130,23 @@ void prepareLattice( SuperLattice2D<T,DESCRIPTOR>& sLattice,
   sLattice.defineDynamics( superGeometry.getMaterialIndicator(2), &instances::getBounceBack<T, DESCRIPTOR>() );
 
   // Material=3 -->bulk dynamics (inflow)
-  if (bcTypePeriodic)
+  if (bcTypePeriodic) {
     sLattice.defineDynamics( superGeometry.getMaterialIndicator(3), &inDynamics );
+  }
   else {
     sLattice.defineDynamics( superGeometry.getMaterialIndicator(3), &bulkDynamics );
     // Setting of the boundary conditions
-    sBoundaryCondition.addVelocityBoundary( superGeometry, 3, omega );
+    setLocalVelocityBoundary<T,DESCRIPTOR>(sLattice, omega, superGeometry, 3);
   }
 
   // Material=4 -->bulk dynamics (outflow)
-  if (bcTypePeriodic)
+  if (bcTypePeriodic) {
     sLattice.defineDynamics( superGeometry.getMaterialIndicator(4), &outDynamics );
+  }
   else {
     sLattice.defineDynamics( superGeometry.getMaterialIndicator(4), &bulkDynamics );
     // Setting of the boundary conditions
-    sBoundaryCondition.addPressureBoundary( superGeometry, 4, omega );
+    setLocalPressureBoundary<T,DESCRIPTOR>(sLattice, omega, superGeometry, 4);
   }
   clout << "Prepare Lattice ... OK" << std::endl;
 }
@@ -147,7 +154,8 @@ void prepareLattice( SuperLattice2D<T,DESCRIPTOR>& sLattice,
 
 void setBoundaryValues( SuperLattice2D<T, DESCRIPTOR>& sLattice,
                         PowerLawUnitConverter<T,DESCRIPTOR> const& converter,
-                        int iT, SuperGeometry2D<T>& superGeometry ) {
+                        int iT, SuperGeometry2D<T>& superGeometry )
+{
 
   OstreamManager clout( std::cout,"setBoundaryValues" );
 
@@ -191,7 +199,8 @@ void setBoundaryValues( SuperLattice2D<T, DESCRIPTOR>& sLattice,
 void error( SuperGeometry2D<T>& superGeometry,
             SuperLattice2D<T, DESCRIPTOR>& sLattice,
             PowerLawUnitConverter<T,DESCRIPTOR> const& converter,
-            Dynamics<T, DESCRIPTOR>& bulkDynamics ) {
+            Dynamics<T, DESCRIPTOR>& bulkDynamics )
+{
   OstreamManager clout( std::cout,"error" );
 
   int input[1] = { };
@@ -257,7 +266,8 @@ void error( SuperGeometry2D<T>& superGeometry,
 void getResults( SuperLattice2D<T, DESCRIPTOR>& sLattice,
                  Dynamics<T, DESCRIPTOR>& bulkDynamics,
                  PowerLawUnitConverter<T,DESCRIPTOR> const& converter, int iT,
-                 SuperGeometry2D<T>& superGeometry, Timer<double>& timer ) {
+                 SuperGeometry2D<T>& superGeometry, Timer<double>& timer )
+{
   OstreamManager clout( std::cout,"getResults" );
 
   SuperVTMwriter2D<T> vtmWriter( "powerLaw2d" );
@@ -297,7 +307,8 @@ void getResults( SuperLattice2D<T, DESCRIPTOR>& sLattice,
 }
 
 
-int main( int argc, char* argv[] ) {
+int main( int argc, char* argv[] )
+{
 
   // === 1st Step: Initialization ===
   olbInit( &argc, &argv );
@@ -342,13 +353,13 @@ int main( int argc, char* argv[] ) {
   );
   */
   PowerLawUnitConverterFrom_Resolution_RelaxationTime_Reynolds_PLindex<T, DESCRIPTOR> const converter(
-  int {N},     // resolution: number of voxels per charPhysL
-  (T)   tau,   // latticeRelaxationTime: relaxation time, have to be greater than 0.5!
-  (T)   ly,     // charPhysLength: reference length of simulation geometry
-  (T)   maxU,     // charPhysVelocity: maximal/highest expected velocity during simulation in __m / s__
-  (T)   Re,        // Reynolds number
-  (T)   n,     // power-law index
-  (T)   1.0    // physDensity: physical density in __kg / m^3__
+    int {N},     // resolution: number of voxels per charPhysL
+    (T)   tau,   // latticeRelaxationTime: relaxation time, have to be greater than 0.5!
+    (T)   ly,     // charPhysLength: reference length of simulation geometry
+    (T)   maxU,     // charPhysVelocity: maximal/highest expected velocity during simulation in __m / s__
+    (T)   Re,        // Reynolds number
+    (T)   n,     // power-law index
+    (T)   1.0    // physDensity: physical density in __kg / m^3__
   );
   // Prints the converter log as console output
   converter.print();
@@ -370,8 +381,9 @@ int main( int argc, char* argv[] ) {
 #endif
 
   // Periodic boundaries in x-direction
-  if (bcTypePeriodic)
+  if (bcTypePeriodic) {
     cuboidGeometry.setPeriodicity( true, false );
+  }
 
   //cuboidGeometry.printExtended();
 
@@ -392,17 +404,15 @@ int main( int argc, char* argv[] ) {
   PeriodicPressureDynamics<T, DESCRIPTOR, PowerLawBGKdynamics<T,DESCRIPTOR>> inDynamics( bulkDynamics,-converter.getLatticeDensityFromPhysPressure( p0*(lx + distance2Wall*2. ))+1,-1,0);
   std::cout << -converter.getLatticeDensityFromPhysPressure( p0 )+1 << std::endl;
 
-  sOnLatticeBoundaryCondition2D<T, DESCRIPTOR> sBoundaryCondition( sLattice );
-  createLocalBoundaryCondition2D<T, DESCRIPTOR, PowerLawBGKdynamics<T,DESCRIPTOR> > ( sBoundaryCondition );
-
-  prepareLattice( sLattice, converter, bulkDynamics, inDynamics, outDynamics, sBoundaryCondition, superGeometry );
+  //prepareLattice and set boundaryConditions
+  prepareLattice( sLattice, converter, bulkDynamics, inDynamics, outDynamics,  superGeometry );
 
   // === 4th Step: Main Loop with Timer ===
   Timer<double> timer( converter.getLatticeTime( Tmax ), superGeometry.getStatistics().getNvoxel() );
   util::ValueTracer<T> converge( converter.getLatticeTime( 0.1*Tprint ), residuum );
   timer.start();
 
-  for ( int iT=0; iT<converter.getLatticeTime( Tmax ); ++iT ) {
+  for ( std::size_t iT=0; iT<converter.getLatticeTime( Tmax ); ++iT ) {
     if ( converge.hasConverged() ) {
       clout << "Simulation converged." << endl;
       getResults( sLattice, bulkDynamics, converter, iT, superGeometry, timer );
@@ -418,8 +428,9 @@ int main( int argc, char* argv[] ) {
     // === 6th Step: Collide and Stream Execution ===
     sLattice.collideAndStream();
 
-    if (bcTypePeriodic)
+    if (bcTypePeriodic) {
       sLattice.stripeOffDensityOffset ( sLattice.getStatistics().getAverageRho()-(T)1 );
+    }
   }
   timer.stop();
   timer.printSummary();

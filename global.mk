@@ -89,10 +89,8 @@ SUBDIRS         := src/boundary \
 
 EXAMPLEDIRS     := examples/laminar/bstep2d \
                    examples/laminar/bstep3d \
-                   examples/laminar/cavity2d/sequential \
-                   examples/laminar/cavity2d/parallel \
-                   examples/laminar/cavity3d/sequential \
-                   examples/laminar/cavity3d/parallel \
+                   examples/laminar/cavity2d \
+                   examples/laminar/cavity3d \
                    examples/laminar/cylinder2d \
                    examples/laminar/cylinder3d \
                    examples/laminar/poiseuille2d \
@@ -114,6 +112,10 @@ EXAMPLEDIRS     := examples/laminar/bstep2d \
                    examples/particles/settlingCube3d \
                    examples/porousMedia/porousPoiseuille2d \
                    examples/porousMedia/porousPoiseuille3d \
+                   examples/thermal/advectionDiffusion1d \
+                   examples/thermal/advectionDiffusion2d \
+                   examples/thermal/galliumMelting2d \
+                   examples/thermal/stefanMelting2d \
                    examples/thermal/porousPlate2d \
                    examples/thermal/porousPlate3d \
                    examples/thermal/rayleighBenard2d \
@@ -121,6 +123,7 @@ EXAMPLEDIRS     := examples/laminar/bstep2d \
                    examples/thermal/squareCavity2d \
                    examples/thermal/squareCavity3d \
                    examples/turbulence/aorta3d \
+                   examples/turbulence/channel3d \
                    examples/turbulence/nozzle3d \
                    examples/turbulence/tgv3d \
                    examples/turbulence/venturi3d \

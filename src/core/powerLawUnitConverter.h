@@ -127,8 +127,9 @@ public:
   }
 
   /// nice terminal output for conversion factors, characteristical and physical data
-  virtual void print() const;
-
+  void print() const override;
+  void print(std::ostream& fout) const;
+  
   void write(std::string const& fileName = "unitConverter") const;
 
 protected:

@@ -74,9 +74,9 @@ class SuperGeometry3D : public SuperStructure3D<T> {
 
 private:
   /// Vector of block geometries with overlap
-  std::vector<BlockGeometry3D<T> > _extendedBlockGeometries;
+  std::vector<BlockGeometry3D<T>> _extendedBlockGeometries;
   /// Vector of block geometries without overlap
-  std::vector<BlockGeometryView3D<T> > _blockGeometries;
+  std::vector<BlockGeometryView3D<T>> _blockGeometries;
   /// Statistic class
   SuperGeometryStatistics3D<T> _statistics;
   /// class specific output stream
@@ -86,13 +86,10 @@ public:
   /// Constructor
   SuperGeometry3D(CuboidGeometry3D<T>& cuboidGeometry,
                   LoadBalancer<T>& lb, int overlap = 2);
-  /// Copy constructor
-  SuperGeometry3D(SuperGeometry3D const& rhs);
-  /// Copy assignment
-  SuperGeometry3D& operator=(SuperGeometry3D const& rhs);
 
   /// Interface for the communicator class: Write access to the memory of the data of the super structure
-  bool* operator() (int iCloc, int iX, int iY, int iZ, int iData) override;
+  std::uint8_t* operator() (int iCloc, int iX, int iY, int iZ, int iData) override;
+  std::uint8_t* operator() (int iCloc, std::size_t, int iData) override;
   /// Interface for the communicator class: Read only access to the dim of the data of the super structure
   int getDataSize() const override;
   /// Interface for the communicator class: Read only access to the data type dim of the data of the super structure

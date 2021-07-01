@@ -23,11 +23,13 @@
 
 #include "particle3D.h"
 #include "particle3D.hh"
+#include "particleSpecializations/particleSpecializations3D.h"
+#include "particleSpecializations/particleSpecializations3D.hh"
 #include "particleSystem3D.h"
 #include "particleSystem3D.hh"
 #include "dynamics/latticeDescriptors.h"
- 
-#include "functors/lattice/superLatticeLocalF3D.h"
+
+#include "functors/lattice/latticeInterpPhysVelocity3D.h"
 
 namespace olb {
 
@@ -42,7 +44,7 @@ template<>
 template<>
 void ParticleSystem3D<double,Particle3D>::
 setVelToFluidVel<descriptors::D3Q19<>>(
-  SuperLatticeInterpPhysVelocity3D<double, descriptors::D3Q19<>>& fVel)
+                                      SuperLatticeInterpPhysVelocity3D<double, descriptors::D3Q19<>>& fVel)
 {
   for (auto& p : _particles) {
     if (p.getActive()) {
@@ -55,7 +57,7 @@ template<>
 template<>
 void ParticleSystem3D<double,MagneticParticle3D>::
 setVelToFluidVel<descriptors::D3Q19<>>(
-  SuperLatticeInterpPhysVelocity3D<double, descriptors::D3Q19<>>& fVel)
+                                      SuperLatticeInterpPhysVelocity3D<double, descriptors::D3Q19<>>& fVel)
 {
   for (auto& p : _particles) {
     if (p.getActive()) {
@@ -69,7 +71,7 @@ template<>
 template<>
 void ParticleSystem3D<double,Particle3D>::
 setVelToFluidVel<descriptors::D3Q19<descriptors::FORCE>>(
-  SuperLatticeInterpPhysVelocity3D<double, descriptors::D3Q19<descriptors::FORCE>>& fVel)
+      SuperLatticeInterpPhysVelocity3D<double, descriptors::D3Q19<descriptors::FORCE>>& fVel)
 {
   for (auto& p : _particles) {
     if (p.getActive()) {
@@ -82,7 +84,7 @@ template<>
 template<>
 void ParticleSystem3D<double,MagneticParticle3D>::
 setVelToFluidVel<descriptors::D3Q19<descriptors::FORCE>>(
-  SuperLatticeInterpPhysVelocity3D<double, descriptors::D3Q19<descriptors::FORCE>>& fVel)
+      SuperLatticeInterpPhysVelocity3D<double, descriptors::D3Q19<descriptors::FORCE>>& fVel)
 {
   for (auto& p : _particles) {
     if (p.getActive()) {

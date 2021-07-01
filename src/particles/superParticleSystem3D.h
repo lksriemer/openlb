@@ -1,6 +1,6 @@
 /*  This file is part of the OpenLB library
  *
- *  Copyright (C) 2016 Thomas Henn, Mathias J. Krause
+ *  Copyright (C) 2016 Thomas Henn, Mathias J. Krause, Davide Dapelo
  *  E-mail contact: info@openlb.net
  *  The most recent release of OpenLB can be downloaded at
  *  <http://www.openlb.net/>
@@ -42,7 +42,7 @@
 #include "geometry/superGeometry3D.h"
 #include "particleSystem3D.h"
 #include "superParticleSysVTUout.h"
-#include "functors/lattice/superLatticeLocalF3D.h"
+#include "functors/lattice/latticeInterpPhysVelocity3D.h"
 #include "twoWayCouplings/twoWayCouplings3D.h"
 
 namespace olb {
@@ -253,6 +253,8 @@ public:
   void addForce(std::shared_ptr<Force3D<T, PARTICLETYPE> > f);
   /// Add a boundary to system
   void addBoundary(std::shared_ptr<Boundary3D<T, PARTICLETYPE> > b);
+  /// Add an operation to system
+  void addParticleOperation(std::shared_ptr<ParticleOperation3D<T, PARTICLETYPE> > o);
 
   /// Set particle velocity to fluid velocity (e.g. as inital condition
   template<typename DESCRIPTOR>
@@ -292,7 +294,11 @@ public:
                  unsigned short particleProperties);
 
   /// Not relevant. But class must inherit from SuperStructure3D so we are forced to implement these functions.
-  bool* operator()(int iCloc, int iX, int iY, int iZ, int iData) override
+  std::uint8_t* operator()(int iCloc, int iX, int iY, int iZ, int iData) override
+  {
+    return nullptr;
+  }
+  std::uint8_t* operator()(int iCloc, std::size_t iCell, int iData) override
   {
     return nullptr;
   }

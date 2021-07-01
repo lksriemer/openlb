@@ -69,11 +69,11 @@ void SuperLatticeTimeAveragedF2D<T>::addEnsemble()
       for (iY=0; iY < _sData.get(iCloc).getNy(); iY++) {
         i[1] = iX - _sData.getOverlap();
         i[2] = iY - _sData.getOverlap();
-        BaseType tmp[_sFunctor.getTargetDim()];
+        BaseType<T> tmp[_sFunctor.getTargetDim()];
         _sFunctor(tmp, i);
         for (int iDim=0; iDim<_sFunctor.getTargetDim(); iDim++) {
-          _sData.get(iCloc).get(iX, iY, iDim) += (BaseType)(tmp[iDim]) ;
-          _sDataP2.get(iCloc).get(iX, iY, iDim) += (BaseType)(tmp[iDim]) *(BaseType)(tmp[iDim]) ;
+          _sData.get(iCloc).get(iX, iY, iDim) += (BaseType<T>)(tmp[iDim]) ;
+          _sDataP2.get(iCloc).get(iX, iY, iDim) += (BaseType<T>)(tmp[iDim]) *(BaseType<T>)(tmp[iDim]) ;
         }
       }
     }
@@ -107,22 +107,22 @@ void SuperLatticeTimeAveragedCrossCorrelationF2D<T>::addEnsemble()
       for (iY=0; iY < _sDataMN.get(iCloc).getNy(); iY++) {
         i[1] = iX - _sDataMN.getOverlap();
         i[2] = iY - _sDataMN.getOverlap();
-        BaseType tmpN[_sFunctorN.getTargetDim()];
-        BaseType tmpM[_sFunctorM.getTargetDim()];
+        BaseType<T> tmpN[_sFunctorN.getTargetDim()];
+        BaseType<T> tmpM[_sFunctorM.getTargetDim()];
         _sFunctorN(tmpN, i);
         _sFunctorM(tmpM, i);
         iDimMN=0;
         for (int iDimM=0; iDimM<_sFunctorM.getTargetDim(); iDimM++) {
           for (int iDimN=0; iDimN<_sFunctorN.getTargetDim(); iDimN++) {
-            _sDataMN.get(iCloc).get(iX, iY, iDimMN) += (BaseType)(tmpM[iDimM])*(BaseType)(tmpN[iDimN]) ;
+            _sDataMN.get(iCloc).get(iX, iY, iDimMN) += (BaseType<T>)(tmpM[iDimM])*(BaseType<T>)(tmpN[iDimN]) ;
             iDimMN++;
           }
         }
         for (int iDim=0; iDim<_sFunctorN.getTargetDim(); iDim++) {
-          _sDataN.get(iCloc).get(iX, iY, iDim) += (BaseType)(tmpN[iDim]) ;
+          _sDataN.get(iCloc).get(iX, iY, iDim) += (BaseType<T>)(tmpN[iDim]) ;
         }
         for (int iDim=0; iDim<_sFunctorM.getTargetDim(); iDim++) {
-          _sDataM.get(iCloc).get(iX, iY, iDim) += (BaseType)(tmpM[iDim]) ;
+          _sDataM.get(iCloc).get(iX, iY, iDim) += (BaseType<T>)(tmpM[iDim]) ;
         }
       }
     }

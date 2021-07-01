@@ -49,11 +49,12 @@ using namespace olb::util;
 using namespace std;
 
 typedef double T;
-#define DESCRIPTOR D3Q19<>
+typedef D3Q19<> DESCRIPTOR;
 
 T maxPhysT = 200.0; // max. simulation time in s, SI unit
 
-SuperGeometry3D<T> prepareGeometry( ) {
+SuperGeometry3D<T> prepareGeometry( )
+{
 
   OstreamManager clout( std::cout,"prepareGeometry" );
   clout << "Prepare Geometry ..." << std::endl;
@@ -102,9 +103,8 @@ SuperGeometry3D<T> prepareGeometry( ) {
 void prepareLattice( SuperLattice3D<T,DESCRIPTOR>& sLattice,
                      UnitConverter<T, DESCRIPTOR> const& converter,
                      Dynamics<T, DESCRIPTOR>& bulkDynamics,
-                     sOnLatticeBoundaryCondition3D<T,DESCRIPTOR>& bc,
-                     sOffLatticeBoundaryCondition3D<T,DESCRIPTOR>& offBc,
-                     SuperGeometry3D<T>& superGeometry ) {
+                     SuperGeometry3D<T>& superGeometry )
+{
 
   OstreamManager clout( std::cout,"prepareLattice" );
   clout << "Prepare Lattice ..." << std::endl;
@@ -130,17 +130,17 @@ void prepareLattice( SuperLattice3D<T,DESCRIPTOR>& sLattice,
   sLattice.defineDynamics( superGeometry, 5, &bulkDynamics );
 
   // Setting of the boundary conditions
-  bc.addVelocityBoundary( superGeometry, 3, omega );
-  bc.addPressureBoundary( superGeometry, 4, omega );
-  bc.addPressureBoundary( superGeometry, 5, omega );
-
+  setInterpolatedVelocityBoundary<T,DESCRIPTOR>(sLattice, omega, superGeometry, 3);
+  setInterpolatedPressureBoundary<T,DESCRIPTOR>(sLattice, omega, superGeometry, 4);
+  setInterpolatedPressureBoundary<T,DESCRIPTOR>(sLattice, omega, superGeometry, 5);
   clout << "Prepare Lattice ... OK" << std::endl;
 }
 
 // Generates a slowly increasing sinuidal inflow for the first iTMax timesteps
 void setBoundaryValues( SuperLattice3D<T, DESCRIPTOR>& sLattice,
                         UnitConverter<T, DESCRIPTOR> const& converter, int iT,
-                        SuperGeometry3D<T>& superGeometry ) {
+                        SuperGeometry3D<T>& superGeometry )
+{
 
   OstreamManager clout( std::cout,"setBoundaryValues" );
 
@@ -173,7 +173,8 @@ void setBoundaryValues( SuperLattice3D<T, DESCRIPTOR>& sLattice,
 
 void getResults( SuperLattice3D<T, DESCRIPTOR>& sLattice,
                  UnitConverter<T, DESCRIPTOR>& converter, int iT,
-                 SuperGeometry3D<T>& superGeometry, Timer<T>& timer ) {
+                 SuperGeometry3D<T>& superGeometry, Timer<T>& timer )
+{
 
   OstreamManager clout( std::cout,"getResults" );
   SuperVTMwriter3D<T> vtmWriter( "venturi3d" );
@@ -199,7 +200,7 @@ void getResults( SuperLattice3D<T, DESCRIPTOR>& sLattice,
     vtmWriter.write( iT );
 
     SuperEuklidNorm3D<T, DESCRIPTOR> normVel( velocity );
-    BlockReduction3D2D<T> planeReduction( normVel, {0, 0, 1} );
+    BlockReduction3D2D<T> planeReduction( normVel, Vector<T,3>({0, 0, 1}) );
 
     // write output as JPEG
     heatmap::write(planeReduction, iT);
@@ -224,7 +225,8 @@ void getResults( SuperLattice3D<T, DESCRIPTOR>& sLattice,
 }
 
 
-int main( int argc, char* argv[] ) {
+int main( int argc, char* argv[] )
+{
 
   // === 1st Step: Initialization ===
 
@@ -254,20 +256,14 @@ int main( int argc, char* argv[] ) {
 
   RLBdynamics<T, DESCRIPTOR> bulkDynamics( converter->getLatticeRelaxationFrequency(), instances::getBulkMomenta<T, DESCRIPTOR>() );
 
-  sOnLatticeBoundaryCondition3D<T, DESCRIPTOR> sBoundaryCondition( sLattice );
-  createInterpBoundaryCondition3D<T, DESCRIPTOR> ( sBoundaryCondition );
-
-  sOffLatticeBoundaryCondition3D<T, DESCRIPTOR> sOffBoundaryCondition( sLattice );
-  createBouzidiBoundaryCondition3D<T, DESCRIPTOR> ( sOffBoundaryCondition );
-
-  prepareLattice( sLattice, *converter, bulkDynamics, sBoundaryCondition, sOffBoundaryCondition, superGeometry );
+  prepareLattice( sLattice, *converter, bulkDynamics, superGeometry );
 
   Timer<T> timer( converter->getLatticeTime( maxPhysT ), superGeometry.getStatistics().getNvoxel() );
   timer.start();
   getResults( sLattice, *converter, 0, superGeometry, timer );
 
   // === 4th Step: Main Loop with Timer ===
-  for ( int iT = 0; iT <= converter->getLatticeTime( maxPhysT ); ++iT ) {
+  for ( std::size_t iT = 0; iT <= converter->getLatticeTime( maxPhysT ); ++iT ) {
 
     // === 5th Step: Definition of Initial and Boundary Conditions ===
     setBoundaryValues( sLattice, *converter, iT, superGeometry );

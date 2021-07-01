@@ -102,7 +102,8 @@ HarmonicOscillatingRotatingForceField3D<T,DESCRIPTOR>::HarmonicOscillatingRotati
 }
 
 template <typename T, typename DESCRIPTOR>
-void HarmonicOscillatingRotatingForceField3D<T,DESCRIPTOR>::updateTimeStep(int iT) {
+void HarmonicOscillatingRotatingForceField3D<T,DESCRIPTOR>::updateTimeStep(int iT)
+{
   w = resonanceFrequency * amplitude * cos(resonanceFrequency*converter.getPhysTime(iT));
   dwdt = -resonanceFrequency * resonanceFrequency * amplitude * sin(resonanceFrequency*converter.getPhysTime(iT));
 }

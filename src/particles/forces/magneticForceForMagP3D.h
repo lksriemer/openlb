@@ -49,13 +49,13 @@ class MagneticForceForMagP3D: public Force3D<T, PARTICLETYPE> {
 
 public:
 
-  MagneticForceForMagP3D(AnalyticalF3D<T, T>& getMagForce, AnalyticalF3D<T, T>& getMagField, T scale = T(1.));
+  MagneticForceForMagP3D(AnalyticalF<3,T, T>& getMagForce, AnalyticalF<3,T, T>& getMagField, T scale = T(1.));
   ~MagneticForceForMagP3D() override {};
   void applyForce(typename std::deque<PARTICLETYPE<T> >::iterator p, int pInt,
                   ParticleSystem3D<T, PARTICLETYPE>& psSys) override;
 private:
-  AnalyticalF3D<T, T>& _getMagForce;
-  AnalyticalF3D<T, T>& _getMagField;
+  AnalyticalF<3,T, T>& _getMagForce;
+  AnalyticalF<3,T, T>& _getMagField;
   T _scale;
 };
 

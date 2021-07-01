@@ -72,7 +72,7 @@ class SmagorinskyBGKdynamics : public SmagorinskyDynamics<T,DESCRIPTOR>, public 
 public:
   /// Constructor
   SmagorinskyBGKdynamics(T omega_, Momenta<T,DESCRIPTOR>& momenta_,
-                         T smagoConst_);
+                         T smagoConst_ = (T)0.1);
   /// Collision step
   void collide(Cell<T,DESCRIPTOR>& cell, LatticeStatistics<T>& statistics_) override;
   /// Get local smagorinsky relaxation parameter of the dynamics
@@ -88,11 +88,11 @@ template<typename T, typename DESCRIPTOR>
 class SmagorinskyForcedBGKdynamics : public SmagorinskyDynamics<T,DESCRIPTOR>, public ForcedBGKdynamics<T,DESCRIPTOR> {
 public:
   /// Constructor
-  SmagorinskyForcedBGKdynamics(T omega_, Momenta<T,DESCRIPTOR>& momenta_, T smagoConst_);
+  SmagorinskyForcedBGKdynamics(T omega_, Momenta<T,DESCRIPTOR>& momenta_, T smagoConst_ = (T)0.1);
   /// Collision step
-  virtual void collide(Cell<T,DESCRIPTOR>& cell, LatticeStatistics<T>& statistics_) override;
+  void collide(Cell<T,DESCRIPTOR>& cell, LatticeStatistics<T>& statistics_) override;
   /// Get local smagorinsky relaxation parameter of the dynamics
-  virtual T getEffectiveOmega(Cell<T,DESCRIPTOR>& cell_) override;
+  T getEffectiveOmega(Cell<T,DESCRIPTOR>& cell_) override;
 
 protected:
   /// Computes the local smagorinsky relaxation parameter
@@ -104,7 +104,7 @@ template<typename T, typename DESCRIPTOR>
 class ExternalTauEffLESBGKdynamics : public SmagorinskyBGKdynamics<T,DESCRIPTOR> {
 public:
   /// Constructor
-  ExternalTauEffLESBGKdynamics(T omega_, Momenta<T,DESCRIPTOR>& momenta_, T smagoConst_ = (T)0);
+  ExternalTauEffLESBGKdynamics(T omega_, Momenta<T,DESCRIPTOR>& momenta_, T smagoConst_ = (T)0.1);
   /// Collision step
   void collide(Cell<T,DESCRIPTOR>& cell, LatticeStatistics<T>& statistics_) override;
 };
@@ -114,7 +114,7 @@ template<typename T, typename DESCRIPTOR>
 class ExternalTauEffLESForcedBGKdynamics : public SmagorinskyForcedBGKdynamics<T,DESCRIPTOR> {
 public:
   /// Constructor
-  ExternalTauEffLESForcedBGKdynamics(T omega_, Momenta<T,DESCRIPTOR>& momenta_, T smagoConst_ = (T)0);
+  ExternalTauEffLESForcedBGKdynamics(T omega_, Momenta<T,DESCRIPTOR>& momenta_, T smagoConst_ = (T)0.1);
   /// Collision step
   void collide(Cell<T,DESCRIPTOR>& cell, LatticeStatistics<T>& statistics_) override;
 };
@@ -134,7 +134,7 @@ public:
                                   T smagoConst_=T(.1));
 protected:
   /// Computes the local smagorinsky relaxation parameter
-  T computeEffectiveOmega(Cell<T,DESCRIPTOR>& cell_);
+  T computeEffectiveOmega(Cell<T,DESCRIPTOR>& cell_) override;
 };
 
 /// Implementation of the consistent Smagorinsky BGK collision step

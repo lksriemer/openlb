@@ -36,29 +36,29 @@ namespace olb {
 ////////////////////// Class AdvectionDiffusionBulkMomenta //////////////////////////
 
 template<typename T, typename DESCRIPTOR>
-T AdvectionDiffusionBulkMomenta<T,DESCRIPTOR>::computeRho(Cell<T,DESCRIPTOR> const& cell) const
+T AdvectionDiffusionBulkMomenta<T,DESCRIPTOR>::computeRho(ConstCell<T,DESCRIPTOR>& cell) const
 {
   return lbHelpers<T,DESCRIPTOR>::computeRho(cell);
 }
 
 template<typename T, typename DESCRIPTOR>
-void AdvectionDiffusionBulkMomenta<T,DESCRIPTOR>::computeU(Cell<T,DESCRIPTOR> const& cell, T u[DESCRIPTOR::d]) const
+void AdvectionDiffusionBulkMomenta<T,DESCRIPTOR>::computeU(ConstCell<T,DESCRIPTOR>& cell, T u[DESCRIPTOR::d]) const
 {
-  const T *u_ = cell.template getFieldPointer<descriptors::VELOCITY>();
+  auto u_ = cell.template getFieldPointer<descriptors::VELOCITY>();
   for (int iD = 0; iD < DESCRIPTOR::d; ++iD) {
     u[iD] = u_[iD];
   }
 }
 
 template<typename T, typename DESCRIPTOR>
-void AdvectionDiffusionBulkMomenta<T,DESCRIPTOR>::computeJ(Cell<T,DESCRIPTOR> const& cell, T j[DESCRIPTOR::d]) const
+void AdvectionDiffusionBulkMomenta<T,DESCRIPTOR>::computeJ(ConstCell<T,DESCRIPTOR>& cell, T j[DESCRIPTOR::d]) const
 {
   lbHelpers<T,DESCRIPTOR>::computeJ(cell, j);
 }
 
 template<typename T, typename DESCRIPTOR>
 void AdvectionDiffusionBulkMomenta<T,DESCRIPTOR>::computeStress (
-  Cell<T,DESCRIPTOR> const& cell,
+  ConstCell<T,DESCRIPTOR>& cell,
   T rho, const T u[DESCRIPTOR::d],
   T pi[util::TensorVal<DESCRIPTOR >::n] ) const
 {
@@ -66,11 +66,11 @@ void AdvectionDiffusionBulkMomenta<T,DESCRIPTOR>::computeStress (
 
 template<typename T, typename DESCRIPTOR>
 void AdvectionDiffusionBulkMomenta<T,DESCRIPTOR>::computeRhoU (
-  Cell<T,DESCRIPTOR> const& cell,
+  ConstCell<T,DESCRIPTOR>& cell,
   T& rho, T u[DESCRIPTOR::d] ) const
 {
   rho = cell.computeRho();
-  const T *u_ = cell.template getFieldPointer<descriptors::VELOCITY>();
+  auto u_ = cell.template getFieldPointer<descriptors::VELOCITY>();
   for (int iD = 0; iD < DESCRIPTOR::d; ++iD) {
     u[iD] = u_[iD];
   }
@@ -78,12 +78,12 @@ void AdvectionDiffusionBulkMomenta<T,DESCRIPTOR>::computeRhoU (
 
 template<typename T, typename DESCRIPTOR>
 void AdvectionDiffusionBulkMomenta<T,DESCRIPTOR>::computeAllMomenta (
-  Cell<T,DESCRIPTOR> const& cell,
+  ConstCell<T,DESCRIPTOR>& cell,
   T& rho, T u[DESCRIPTOR::d],
   T pi[util::TensorVal<DESCRIPTOR >::n] ) const
 {
   rho = cell.computeRho();
-  const T *u_ = cell.template getFieldPointer<descriptors::VELOCITY>();
+  auto u_ = cell.template getFieldPointer<descriptors::VELOCITY>();
   for (int iD = 0; iD < DESCRIPTOR::d; ++iD) {
     u[iD] = u_[iD];
   }
@@ -92,9 +92,9 @@ void AdvectionDiffusionBulkMomenta<T,DESCRIPTOR>::computeAllMomenta (
 template<typename T, typename DESCRIPTOR>
 void AdvectionDiffusionBulkMomenta<T,DESCRIPTOR>::defineRho(Cell<T,DESCRIPTOR>& cell, T rho)
 {
-  T *u = cell.template getFieldPointer<descriptors::VELOCITY>();
+  auto u = cell.template getField<descriptors::VELOCITY>();
   for (int iPop=0; iPop < DESCRIPTOR::q; ++iPop) {
-    cell[iPop] = lbHelpers<T, DESCRIPTOR>::equilibriumFirstOrder( iPop, rho, u );
+    cell[iPop] = lbHelpers<T, DESCRIPTOR>::equilibriumFirstOrder( iPop, rho, u.data() );
   }
 }
 
@@ -104,7 +104,7 @@ void AdvectionDiffusionBulkMomenta<T,DESCRIPTOR>::defineU (
   const T u[DESCRIPTOR::d])
 {
   T rho = cell.computeRho();
-  T *u_ = cell.template getFieldPointer<descriptors::VELOCITY>();
+  auto u_ = cell.template getFieldPointer<descriptors::VELOCITY>();
   for (int iD = 0; iD < DESCRIPTOR::d; ++iD) {
     u_[iD] = u[iD];
   }
@@ -118,7 +118,7 @@ void AdvectionDiffusionBulkMomenta<T,DESCRIPTOR>::defineRhoU (
   Cell<T,DESCRIPTOR>& cell,
   T rho, const T u[DESCRIPTOR::d])
 {
-  T *u_ = cell.template getFieldPointer<descriptors::VELOCITY>();
+  auto u_ = cell.template getFieldPointer<descriptors::VELOCITY>();
   for (int iD = 0; iD < DESCRIPTOR::d; ++iD) {
     u_[iD] = u[iD];
   }
@@ -133,7 +133,7 @@ void AdvectionDiffusionBulkMomenta<T,DESCRIPTOR>::defineAllMomenta (
   T rho, const T u[DESCRIPTOR::d],
   const T pi[util::TensorVal<DESCRIPTOR >::n] )
 {
-  T *u_ = cell.template getFieldPointer<descriptors::VELOCITY>();
+  auto u_ = cell.template getFieldPointer<descriptors::VELOCITY>();
   for (int iD = 0; iD < DESCRIPTOR::d; ++iD) {
     u_[iD] = u[iD];
   }

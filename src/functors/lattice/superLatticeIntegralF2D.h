@@ -29,7 +29,6 @@
 
 #include "functors/genericF.h"
 #include "superBaseF2D.h"
-#include "superLatticeLocalF2D.h"
 #include "indicator/superIndicatorBaseF2D.h"
 #include "functors/analytical/interpolationF2D.h"
 #include "core/superLattice2D.h"
@@ -116,7 +115,7 @@ public:
 };
 
 
-/// functor counts to get the discrete surface for a material no. in direction (1,0,0), (0,1,0), (0,0,1), (-1,0,0), (0,-1,0), (0,0,-1) and total surface, then it converts it into phys units
+/// functor counts to get the discrete surface for a material no. and SmoothIndicator in direction (1,0,0), (0,1,0), (-1,0,0), (0,-1,0) and total surface, then it converts it into phys units
 template <typename T, bool HLBM>
 class SuperGeometryFacesIndicator2D final : public GenericF<T,int> {
 private:

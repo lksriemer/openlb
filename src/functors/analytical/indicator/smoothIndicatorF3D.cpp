@@ -32,6 +32,8 @@ template class STLreader<double>;
 
 // smoothIndicator functors
 template class SmoothIndicatorCuboid3D<double,double,false>;
+template class SmoothIndicatorEllipsoid3D<double,double,false>;
+template class SmoothIndicatorSuperEllipsoid3D<double,double,false>;
 template class SmoothIndicatorSphere3D<double,double,false>;
 template class SmoothIndicatorCylinder3D<double,double,false>;
 //template class SmoothIndicatorCone3D<double,double,false>;

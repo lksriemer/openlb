@@ -34,7 +34,7 @@ using namespace olb::util;
 using namespace std;
 
 typedef double T;
-#define DESCRIPTOR D2Q9<POROSITY,VELOCITY_NUMERATOR,VELOCITY_DENOMINATOR>
+typedef D2Q9<POROSITY,VELOCITY_NUMERATOR,VELOCITY_DENOMINATOR> DESCRIPTOR;
 
 #define WriteVTK
 #define WriteGnuPlot
@@ -84,7 +84,6 @@ void prepareGeometry(UnitConverter<T,DESCRIPTOR> const& converter,
 void prepareLattice(
   SuperLattice2D<T, DESCRIPTOR>& sLattice, UnitConverter<T,DESCRIPTOR> const& converter,
   Dynamics<T, DESCRIPTOR>& designDynamics,
-  sOnLatticeBoundaryCondition2D<T, DESCRIPTOR>& sBoundaryCondition,
   SuperGeometry2D<T>& superGeometry)
 {
   OstreamManager clout(std::cout, "prepareLattice");
@@ -106,7 +105,7 @@ void setBoundaryValues(SuperLattice2D<T, DESCRIPTOR>& sLattice,
 
   AnalyticalConst2D<T, T> one(1.);
   sLattice.defineField<POROSITY>(superGeometry.getMaterialIndicator({1,2}), one);
-  
+
   // Set initial condition
   AnalyticalConst2D<T, T> ux(0.);
   AnalyticalConst2D<T, T> uy(0.);
@@ -218,10 +217,7 @@ int main(int argc, char* argv[])
   SuperLattice2D<T, DESCRIPTOR> sLattice(superGeometry);
   PorousParticleBGKdynamics<T, DESCRIPTOR> designDynamics(converter.getLatticeRelaxationFrequency(), instances::getBulkMomenta<T, DESCRIPTOR>());
 
-  sOnLatticeBoundaryCondition2D<T, DESCRIPTOR> sBoundaryCondition(sLattice);
-  createLocalBoundaryCondition2D<T, DESCRIPTOR>(sBoundaryCondition);
-
-  prepareLattice(sLattice, converter, designDynamics, sBoundaryCondition, superGeometry);
+  prepareLattice(sLattice, converter, designDynamics, superGeometry);
 
   /// === 4th Step: Main Loop with Timer ===
   Timer<double> timer(converter.getLatticeTime(maxPhysT), superGeometry.getStatistics().getNvoxel());
@@ -233,15 +229,15 @@ int main(int argc, char* argv[])
   particle.addParticle(circle2);
   particle.addParticle(circle1);
 
-  SuperExternal2D<T,DESCRIPTOR,POROSITY> superExt1(superGeometry, sLattice, sLattice.getOverlap());
-  SuperExternal2D<T,DESCRIPTOR,VELOCITY_NUMERATOR> superExt2(superGeometry, sLattice, sLattice.getOverlap());
-  SuperExternal2D<T,DESCRIPTOR,VELOCITY_DENOMINATOR> superExt3(superGeometry, sLattice, sLattice.getOverlap());
+  SuperField2D<T,DESCRIPTOR,POROSITY> superExt1(superGeometry, sLattice, sLattice.getOverlap());
+  SuperField2D<T,DESCRIPTOR,VELOCITY_NUMERATOR> superExt2(superGeometry, sLattice, sLattice.getOverlap());
+  SuperField2D<T,DESCRIPTOR,VELOCITY_DENOMINATOR> superExt3(superGeometry, sLattice, sLattice.getOverlap());
 
   /// === 5th Step: Definition of Initial and Boundary Conditions ===
   setBoundaryValues(sLattice, converter, superGeometry);
 
   clout << "MaxIT: " << converter.getLatticeTime(maxPhysT) << std::endl;
-  for (int iT = 0; iT < converter.getLatticeTime(maxPhysT)+10; ++iT) {
+  for (std::size_t iT = 0; iT < converter.getLatticeTime(maxPhysT)+10; ++iT) {
     particle.simulateTimestep("verlet");
     getResults(sLattice, converter, iT, superGeometry, timer, circle1, circle2);
     sLattice.collideAndStream();

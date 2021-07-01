@@ -44,39 +44,44 @@ private:
   Vector<T,3> _accExt;
   bool _escapeFromDomain=false;
   bool _oldWallCollision=true;
+  Vector<bool,3> _periodicity;
 
 public:
-  ParticleDynamics3D(SuperLattice3D<T, DESCRIPTOR>& sLattice, 
-                    UnitConverter<T,DESCRIPTOR> const& converter,
-                    SuperGeometry3D<T>& superGeometry, 
-                    T lengthX, T lengthY, T lengthZ, 
-                    Vector<T,3> accExt = Vector<T,3> (0.,0.,0.))
-    : _sLattice(sLattice), 
+  ParticleDynamics3D(SuperLattice3D<T, DESCRIPTOR>& sLattice,
+                     UnitConverter<T,DESCRIPTOR> const& converter,
+                     SuperGeometry3D<T>& superGeometry,
+                     T lengthX, T lengthY, T lengthZ,
+                     Vector<T,3> accExt = Vector<T,3> (0.,0.,0.),
+                     Vector<bool,3> periodicity = Vector<bool,3> (false,false,false))
+    : _sLattice(sLattice),
       _converter(converter),
-      _superGeometry(superGeometry), 
-      _lengthX(lengthX), 
-      _lengthY(lengthY), 
+      _superGeometry(superGeometry),
+      _lengthX(lengthX),
+      _lengthY(lengthY),
       _lengthZ(lengthZ),
-      _accExt(accExt) 
+      _accExt(accExt),
+      _periodicity(periodicity)
   {}
 
   ParticleDynamics3D(SuperLattice3D<T, DESCRIPTOR>& sLattice,
-		    UnitConverter<T,DESCRIPTOR> const& converter,
-                    SuperGeometry3D<T>& superGeometry, 
-                    std::shared_ptr<IndicatorF3D<T> > indicatorF,
-		    bool escapeFromDomain, bool oldWallCollision=false,
-                    Vector<T,3> accExt = Vector<T,3> (0.,0.,0.))
-      : _sLattice(sLattice),
-	_converter(converter),
-        _superGeometry(superGeometry),
-	_indicatorF(indicatorF),
-        _accExt(accExt),
-	_escapeFromDomain(escapeFromDomain),
-        _oldWallCollision(oldWallCollision)
+                     UnitConverter<T,DESCRIPTOR> const& converter,
+                     SuperGeometry3D<T>& superGeometry,
+                     std::shared_ptr<IndicatorF3D<T> > indicatorF,
+                     bool escapeFromDomain, bool oldWallCollision=false,
+                     Vector<T,3> accExt = Vector<T,3> (0.,0.,0.),
+                     Vector<bool,3> periodicity = Vector<bool,3> (false,false,false))
+    : _sLattice(sLattice),
+      _converter(converter),
+      _superGeometry(superGeometry),
+      _indicatorF(indicatorF),
+      _accExt(accExt),
+      _escapeFromDomain(escapeFromDomain),
+      _oldWallCollision(oldWallCollision),
+      _periodicity(periodicity)
   {}
 
-  void addCuboid(Vector< T, 3> center, T xLength, T yLength, T zLength, T mass, T epsilon, Vector< T, 3 > theta, Vector<S,3> vel = Vector<S,3> (0.,0.,0.));
-  void addSphere(Vector< T, 3> center, T radius, T epsilon, T density, Vector<S,3> vel = Vector<S,3> (0.,0.,0.));
+  void addCuboid(Vector< T, 3> center, T xLength, T yLength, T zLength, T mass, T epsilon, Vector< T, 3 > theta, Vector<BaseType<T>,3> vel = Vector<BaseType<T>,3> (0.,0.,0.));
+  void addSphere(Vector< T, 3> center, T radius, T epsilon, T density, Vector<BaseType<T>,3> vel = Vector<BaseType<T>,3> (0.,0.,0.));
   void addParticle(SmoothIndicatorF3D<T, T, true>& indicator);
 
   void computeBoundaryForce(std::vector<SmoothIndicatorF3D<T, T, true>* >& indicator);
@@ -93,14 +98,28 @@ public:
 
   void simulateTimestep(std::string name);
 
+  // currently only for single particle / uniform movement
+  void simulatePrescribedVelocity(std::string name, const Vector<T,3>& vel, const Vector<T,3>& angularVel);
+
+  void calculateDragLiftCoefficients(SmoothIndicatorF3D<T, T, true>& indicator, Vector<T,3>& coeff, const Vector<T,3>& fluidVel = Vector<T,3> (0.,0.,0.) );
+
   void print();
 
   void load(std::string filename, T epsilon);
 
   void save(std::string filename);
 
+  SmoothIndicatorF3D<T,T,true>& getSmoothIndicator(int id);
+
+  std::vector<SmoothIndicatorF3D<T,T,true>* >& getVectorOfIndicator();
+
+//  void addCollisionModel(SmoothIndicatorF3D<T, T,true>* indicator,
+//                         SmoothIndicatorF3D<T, T,true>* indicator2);
+
   void eulerIntegration(SmoothIndicatorF3D<T,T,true>& indicator);
 
+////  void lennardJonesColl(SmoothIndicatorF2D<T, T, true>& indicator,
+////                          const std::vector<T>& pos2, T delta = 0.)
 };
 
 }

@@ -31,8 +31,6 @@
 
 namespace olb {
 
-template<typename T, typename DESCRIPTOR> class Cell;
-
 /// Dirichlet condition on velocity and/or pressure
 template<typename T, typename DESCRIPTOR>
 class DirichletBoundaryMomenta : public Momenta<T,DESCRIPTOR> {
@@ -43,15 +41,15 @@ class EquilibriumBM : public DirichletBoundaryMomenta<T,DESCRIPTOR> {
 public:
   EquilibriumBM();
   EquilibriumBM( T rho, const T u[DESCRIPTOR::d] );
-  T computeRho( Cell<T,DESCRIPTOR> const& cell ) const override;
-  void computeU( Cell<T,DESCRIPTOR> const& cell, T u[DESCRIPTOR::d] ) const override;
-  void computeJ( Cell<T,DESCRIPTOR> const& cell, T j[DESCRIPTOR::d] ) const override;
-  void computeStress( Cell<T,DESCRIPTOR> const& cell, T rho, const T u[DESCRIPTOR::d],
-                              T pi[util::TensorVal<DESCRIPTOR >::n] ) const override;
+  T computeRho( ConstCell<T,DESCRIPTOR>& cell ) const override;
+  void computeU( ConstCell<T,DESCRIPTOR>& cell, T u[DESCRIPTOR::d] ) const override;
+  void computeJ( ConstCell<T,DESCRIPTOR>& cell, T j[DESCRIPTOR::d] ) const override;
+  void computeStress( ConstCell<T,DESCRIPTOR>& cell, T rho, const T u[DESCRIPTOR::d],
+                      T pi[util::TensorVal<DESCRIPTOR >::n] ) const override;
   void defineRho( Cell<T,DESCRIPTOR>& cell, T rho) override;
   void defineU( Cell<T,DESCRIPTOR>& cell, const T u[DESCRIPTOR::d]) override;
   void defineAllMomenta( Cell<T,DESCRIPTOR>& cell, T rho, const T u[DESCRIPTOR::d],
-                                 const T pi[util::TensorVal<DESCRIPTOR >::n] ) override;
+                         const T pi[util::TensorVal<DESCRIPTOR >::n] ) override;
 private:
   T _rho;
   T _u[DESCRIPTOR::d];   ///< value of the velocity on the boundary
@@ -66,15 +64,15 @@ public:
   /// Constructor with boundary initialization
   VelocityBM(const T u[DESCRIPTOR::d]);
 
-  T computeRho(Cell<T,DESCRIPTOR> const& cell) const override;
-  void computeU ( Cell<T,DESCRIPTOR> const& cell, T u[DESCRIPTOR::d] ) const override;
-  void computeJ ( Cell<T,DESCRIPTOR> const& cell, T j[DESCRIPTOR::d] ) const override;
+  T computeRho(ConstCell<T,DESCRIPTOR>& cell) const override;
+  void computeU ( ConstCell<T,DESCRIPTOR>& cell, T u[DESCRIPTOR::d] ) const override;
+  void computeJ ( ConstCell<T,DESCRIPTOR>& cell, T j[DESCRIPTOR::d] ) const override;
   void computeU(T u[DESCRIPTOR::d]) const;
   void defineRho(Cell<T,DESCRIPTOR>& cell, T rho) override ;
   void defineU(Cell<T,DESCRIPTOR>& cell, const T u[DESCRIPTOR::d]) override ;
   void defineU(const T u[DESCRIPTOR::d]);
   void defineAllMomenta( Cell<T,DESCRIPTOR>& cell, T rho, const T u[DESCRIPTOR::d],
-                                 const T pi[util::TensorVal<DESCRIPTOR >::n] ) override;
+                         const T pi[util::TensorVal<DESCRIPTOR >::n] ) override;
 private:
   T _u[DESCRIPTOR::d];   ///< value of the velocity on the boundary
 };
@@ -88,15 +86,15 @@ public:
   /// Constructor with boundary initialization
   PressureBM(const T values_[DESCRIPTOR::d]);
 
-  T computeRho(Cell<T,DESCRIPTOR> const& cell) const override;
+  T computeRho(ConstCell<T,DESCRIPTOR>& cell) const override;
   T computeRho() const;
-  void computeU( Cell<T,DESCRIPTOR> const& cell, T u[DESCRIPTOR::d] ) const override;
-  void computeJ( Cell<T,DESCRIPTOR> const& cell, T j[DESCRIPTOR::d] ) const override;
+  void computeU( ConstCell<T,DESCRIPTOR>& cell, T u[DESCRIPTOR::d] ) const override;
+  void computeJ( ConstCell<T,DESCRIPTOR>& cell, T j[DESCRIPTOR::d] ) const override;
   void defineRho(Cell<T,DESCRIPTOR>& cell, T rho) override;
   void defineRho(T rho);
   void defineU(Cell<T,DESCRIPTOR>& cell, const T u[DESCRIPTOR::d]) override;
   void defineAllMomenta( Cell<T,DESCRIPTOR>& cell, T rho, const T u[DESCRIPTOR::d],
-                                 const T pi[util::TensorVal<DESCRIPTOR >::n] ) override;
+                         const T pi[util::TensorVal<DESCRIPTOR >::n] ) override;
 private:
   /// Velocity/Density on boundary.
   /** Contains velocity on the boundary, except for values[direction] that
@@ -109,8 +107,8 @@ private:
 template<typename T, typename DESCRIPTOR>
 class FreeStressBM : virtual public DirichletBoundaryMomenta<T,DESCRIPTOR> {
 public:
-  void computeStress( Cell<T,DESCRIPTOR> const& cell, T rho, const T u[DESCRIPTOR::d],
-                              T pi[util::TensorVal<DESCRIPTOR >::n] ) const override;
+  void computeStress( ConstCell<T,DESCRIPTOR>& cell, T rho, const T u[DESCRIPTOR::d],
+                      T pi[util::TensorVal<DESCRIPTOR >::n] ) const override;
 };
 
 /// Use special trick to compute u resp. rho, but compute pi from part. distr. functions
@@ -128,8 +126,8 @@ template<typename T, typename DESCRIPTOR, int direction, int orientation>
 class RegularizedBM : virtual public DirichletBoundaryMomenta<T,DESCRIPTOR> {
 public:
   /// Stress tensor
-  void computeStress( Cell<T,DESCRIPTOR> const& cell, T rho, const T u[DESCRIPTOR::d],
-                              T pi[util::TensorVal<DESCRIPTOR >::n] ) const override;
+  void computeStress( ConstCell<T,DESCRIPTOR>& cell, T rho, const T u[DESCRIPTOR::d],
+                      T pi[util::TensorVal<DESCRIPTOR >::n] ) const override;
 };
 
 /// Regularized velocity boundary node
@@ -157,26 +155,26 @@ public:
 template<typename T, typename DESCRIPTOR>
 class FixedVelocityBM : public Momenta<T,DESCRIPTOR> {
 public:
-  T computeRho(Cell<T,DESCRIPTOR> const& cell) const override;
-  void computeU( Cell<T,DESCRIPTOR> const& cell, T u[DESCRIPTOR::d] ) const override;
-  void computeJ( Cell<T,DESCRIPTOR> const& cell, T j[DESCRIPTOR::d] ) const override;
-  void computeStress( Cell<T,DESCRIPTOR> const& cell, T rho, const T u[DESCRIPTOR::d],
-                              T pi[util::TensorVal<DESCRIPTOR >::n] ) const override;
-  void computeRhoU( Cell<T,DESCRIPTOR> const& cell, T& rho, T u[DESCRIPTOR::d]) const override;
-  void computeAllMomenta( Cell<T,DESCRIPTOR> const& cell, T& rho, T u[DESCRIPTOR::d],
-                                  T pi[util::TensorVal<DESCRIPTOR >::n] ) const override;
+  T computeRho(ConstCell<T,DESCRIPTOR>& cell) const override;
+  void computeU( ConstCell<T,DESCRIPTOR>& cell, T u[DESCRIPTOR::d] ) const override;
+  void computeJ( ConstCell<T,DESCRIPTOR>& cell, T j[DESCRIPTOR::d] ) const override;
+  void computeStress( ConstCell<T,DESCRIPTOR>& cell, T rho, const T u[DESCRIPTOR::d],
+                      T pi[util::TensorVal<DESCRIPTOR >::n] ) const override;
+  void computeRhoU( ConstCell<T,DESCRIPTOR>& cell, T& rho, T u[DESCRIPTOR::d]) const override;
+  void computeAllMomenta( ConstCell<T,DESCRIPTOR>& cell, T& rho, T u[DESCRIPTOR::d],
+                          T pi[util::TensorVal<DESCRIPTOR >::n] ) const override;
   void defineRho(Cell<T,DESCRIPTOR>& cell, T rho) override;
   void defineU(Cell<T,DESCRIPTOR>& cell, const T u[DESCRIPTOR::d]) override;
   void defineRhoU( Cell<T,DESCRIPTOR>& cell, T rho, const T u[DESCRIPTOR::d]) override;
   void defineAllMomenta( Cell<T,DESCRIPTOR>& cell, T rho, const T u[DESCRIPTOR::d],
-                                 const T pi[util::TensorVal<DESCRIPTOR >::n] ) override;
+                         const T pi[util::TensorVal<DESCRIPTOR >::n] ) override;
 private:
   BulkMomenta<T,DESCRIPTOR> _basicMomenta;
   T _fixU[DESCRIPTOR::d];
 };
 
 template<typename T, typename DESCRIPTOR, int direction, int orientation>
-T velocityBMRho( Cell<T,DESCRIPTOR> const& cell, const T* u );
+T velocityBMRho( ConstCell<T,DESCRIPTOR>& cell, const T* u );
 
 }  // namespace olb
 

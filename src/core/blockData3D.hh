@@ -88,9 +88,6 @@ BlockData3D<T,BaseType>::BlockData3D(BlockData3D<T,BaseType> const& rhs)
 {
   if (rhs.isConstructed()) {
     construct();
-//    for (size_t iData = 0; iData < getDataSize(); ++iData) {
-//      (*this)[iData] = rhs[iData];
-//    }
     std::copy( rhs._rawData, rhs._rawData + getDataSize(), _rawData );
   }
 }
@@ -185,14 +182,14 @@ void BlockData3D<T,BaseType>::allocateMemory()
   // The conversions to size_t ensure 64-bit compatibility. Note that
   //   nx and ny are of type int, which might be 32-bit types, even on
   //   64-bit platforms. Therefore, nx*ny may lead to a type overflow.
-  _rawData = new BaseType[ getDataSize() ];
-  _field   = new BaseType*** [(size_t)(this->_nx)];
+  _rawData = new BaseType[getDataSize()];
+  _field   = new BaseType***[(size_t)(this->_nx)];
   for (int iX = 0; iX < this->_nx; ++iX) {
     _field[iX] = new BaseType** [(size_t)this->_ny];
     for (int iY = 0; iY < this->_ny; ++iY) {
       _field[iX][iY] = new BaseType* [(size_t)this->_nz];
       for (int iZ = 0; iZ < this->_nz; ++iZ) {
-        _field[iX][iY][iZ] = _rawData + _size*( (size_t)iZ + (size_t)(this->_nz)*((size_t)iY + (size_t)(this->_ny)*(size_t)iX) );
+        _field[iX][iY][iZ] = _rawData + _size*this->getCellId(iX,iY,iZ);
         for (int iDim = 0; iDim < _size; ++iDim) {
           _field[iX][iY][iZ][iDim] = BaseType();
         }
@@ -261,6 +258,13 @@ BaseType& BlockData3D<T,BaseType>::get(int iX, int iY, int iZ, int iSize)
 }
 
 template<typename T, typename BaseType>
+BaseType& BlockData3D<T,BaseType>::get(std::size_t iCell, int iSize)
+{
+  OLB_PRECONDITION(isConstructed());
+  return _rawData[_size*iCell+iSize];
+}
+
+template<typename T, typename BaseType>
 BaseType const& BlockData3D<T,BaseType>::get(int iX, int iY, int iZ, int iSize) const
 {
   OLB_PRECONDITION(iX >= 0 && iX < this->_nx);
@@ -269,6 +273,13 @@ BaseType const& BlockData3D<T,BaseType>::get(int iX, int iY, int iZ, int iSize) 
   OLB_PRECONDITION(iSize >= 0 && iSize < _size);
   OLB_PRECONDITION(isConstructed());
   return _field[iX][iY][iZ][iSize];
+}
+
+template<typename T, typename BaseType>
+BaseType const& BlockData3D<T,BaseType>::get(std::size_t iCell, int iSize) const
+{
+  OLB_PRECONDITION(isConstructed());
+  return _rawData[_size*iCell+iSize];
 }
 
 template<typename T, typename BaseType>

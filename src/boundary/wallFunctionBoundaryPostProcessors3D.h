@@ -31,8 +31,7 @@
 namespace olb {
 
 template <typename T>
-struct wallFunctionParam
-{
+struct wallFunctionParam {
   /*  Used method for density reconstruction
    *  0: Zou-He
    *  1: extrapolation
@@ -72,7 +71,7 @@ struct wallFunctionParam
 
 /// Musker profile
 template <typename T, typename S>
-class Musker : public AnalyticalF1D<T,S> {
+class Musker : public AnalyticalF<1,T,S> {
 private:
   T _nu;
   T _y;
@@ -84,7 +83,7 @@ public:
 
 /// PowerLaw profile
 template <typename T, typename S>
-class PowerLawProfile : public AnalyticalF1D<T,S> {
+class PowerLawProfile : public AnalyticalF<1,T,S> {
 private:
   T _nu;
   T _u2;
@@ -100,13 +99,15 @@ template<typename T, typename DESCRIPTOR>
 class WallFunctionBoundaryProcessor3D : public LocalPostProcessor3D<T,DESCRIPTOR> {
 public:
   WallFunctionBoundaryProcessor3D(int x0, int x1, int y0, int y1, int z0, int z1, BlockGeometryStructure3D<T>& blockGeometryStructure,
-                                            std::vector<int> discreteNormal, std::vector<int> missingIndices,
-                                            UnitConverter<T, DESCRIPTOR> const& converter, wallFunctionParam<T> const& wallFunctionParam,
-                                            IndicatorF3D<T>* geoIndicator);
-  virtual int extent() const {
+                                  std::vector<int> discreteNormal, std::vector<int> missingIndices,
+                                  UnitConverter<T, DESCRIPTOR> const& converter, wallFunctionParam<T> const& wallFunctionParam,
+                                  IndicatorF3D<T>* geoIndicator);
+  virtual int extent() const
+  {
     return 2;
   }
-  virtual int extent(int whichDirection) const {
+  virtual int extent(int whichDirection) const
+  {
     return 2;
   }
   virtual void process(BlockLattice3D<T,DESCRIPTOR>& blockLattice);
@@ -128,8 +129,8 @@ private:
                            T u_x1[DESCRIPTOR::d], T u_x2[DESCRIPTOR::d], T u_y1[DESCRIPTOR::d], T u_y2[DESCRIPTOR::d], T u_z1[DESCRIPTOR::d], T u_z2[DESCRIPTOR::d],
                            T& rho_x1, T& rho_x2, T& rho_y1, T& rho_y2, T& rho_z1, T& rho_z2);
   void computeNeighborsRhoU(BlockLattice3D<T,DESCRIPTOR>& blockLattice, int x, int y, int z,
-                           T u_x1[DESCRIPTOR::d], T u_x2[DESCRIPTOR::d], T u_y1[DESCRIPTOR::d], T u_y2[DESCRIPTOR::d], T u_z1[DESCRIPTOR::d], T u_z2[DESCRIPTOR::d],
-                           T& rho_x1, T& rho_x2, T& rho_y1, T& rho_y2, T& rho_z1, T& rho_z2);
+                            T u_x1[DESCRIPTOR::d], T u_x2[DESCRIPTOR::d], T u_y1[DESCRIPTOR::d], T u_y2[DESCRIPTOR::d], T u_z1[DESCRIPTOR::d], T u_z2[DESCRIPTOR::d],
+                            T& rho_x1, T& rho_x2, T& rho_y1, T& rho_y2, T& rho_z1, T& rho_z2);
 
   // Van Driest Method
   void computeVanDriestTauEff(T y_bc, T tau_w, T u_bc, T u_1, T u_2, T& tau_eff);
@@ -173,10 +174,10 @@ template<typename T, typename DESCRIPTOR>
 class WallFunctionBoundaryProcessorGenerator3D : public PostProcessorGenerator3D<T,DESCRIPTOR> {
 public:
   WallFunctionBoundaryProcessorGenerator3D(int x0, int x1, int y0, int y1, int z0, int z1, BlockGeometryStructure3D<T>& blockGeometryStructure,
-                                           std::vector<int> discreteNormal, std::vector<int> missingIndices,
-                                           UnitConverter<T, DESCRIPTOR> const& converter, wallFunctionParam<T> const& wallFunctionParam, IndicatorF3D<T>* geoIndicator);
-  virtual PostProcessor3D<T,DESCRIPTOR>* generate() const override;
-  virtual PostProcessorGenerator3D<T,DESCRIPTOR>*  clone() const override;
+      std::vector<int> discreteNormal, std::vector<int> missingIndices,
+      UnitConverter<T, DESCRIPTOR> const& converter, wallFunctionParam<T> const& wallFunctionParam, IndicatorF3D<T>* geoIndicator);
+  PostProcessor3D<T,DESCRIPTOR>* generate() const override;
+  PostProcessorGenerator3D<T,DESCRIPTOR>*  clone() const override;
 private:
   BlockGeometryStructure3D<T>& _blockGeometryStructure;
   std::vector<int> _discreteNormal;

@@ -23,6 +23,10 @@
  *  Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  *  Boston, MA  02110-1301, USA.
 */
+#ifndef ADVECTION_DIFFUSION_BOUNDARY_POST_PROCESSOR_3D_H
+#define ADVECTION_DIFFUSION_BOUNDARY_POST_PROCESSOR_3D_H
+
+
 
 #include "core/postProcessing.h"
 #include "core/blockLattice3D.h"
@@ -52,7 +56,7 @@ public:
   }
   void process(BlockLattice3D<T,DESCRIPTOR>& blockLattice) override;
   void processSubDomain ( BlockLattice3D<T,DESCRIPTOR>& blockLattice,
-                                  int x0_, int x1_, int y0_, int y1_ , int z0_, int z1_) override;
+                          int x0_, int x1_, int y0_, int y1_, int z0_, int z1_) override;
 private:
   int interpolationPop[DESCRIPTOR::q];
   int x0, x1, y0, y1, z0, z1;
@@ -77,12 +81,11 @@ private:
 * external field from the neighbour in normal direction.
 * Therefore it is assumed this neighbour is a fluid cell.
 */
-template<typename T, typename DESCRIPTOR>
+template<typename T, typename DESCRIPTOR, typename FIELD_A, typename FIELD_B>
 class ExtFieldBoundaryProcessor3D : public LocalPostProcessor3D<T,DESCRIPTOR> {
 public:
-  ExtFieldBoundaryProcessor3D(int x0_, int x1_, int y0_, int y1_, int z0_,
-                              int z1_, int discreteNormalX_, int discreteNormalY_,
-                              int discreteNormalZ_, int offset_);
+  ExtFieldBoundaryProcessor3D(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_,
+                              int discreteNormalX_, int discreteNormalY_, int discreteNormalZ_);
   int extent() const override
   {
     return 0;
@@ -93,25 +96,23 @@ public:
   }
   void process(BlockLattice3D<T,DESCRIPTOR>& blockLattice) override;
   void processSubDomain ( BlockLattice3D<T,DESCRIPTOR>& blockLattice,
-                                  int x0_, int x1_, int y0_, int y1_ , int z0_, int z1_) override;
+                          int x0_, int x1_, int y0_, int y1_, int z0_, int z1_) override;
 private:
   int x0, x1, y0, y1, z0, z1;
   int discreteNormalX, discreteNormalY, discreteNormalZ;
-  int offset;
-  bool par;
+  bool tick;
 };
 
-template<typename T, typename DESCRIPTOR>
+template<typename T, typename DESCRIPTOR, typename FIELD_A, typename FIELD_B>
 class ExtFieldBoundaryProcessorGenerator3D : public PostProcessorGenerator3D<T,DESCRIPTOR> {
 public:
   ExtFieldBoundaryProcessorGenerator3D(int x0_, int x1_, int y0_, int y1_, int z0_,
                                        int z1_, int discreteNormalX_, int discreteNormalY_,
-                                       int discreteNormalZ_, int offset_);
+                                       int discreteNormalZ_);
   PostProcessor3D<T,DESCRIPTOR>* generate() const override;
   PostProcessorGenerator3D<T,DESCRIPTOR>*  clone() const override;
 private:
   int discreteNormalX, discreteNormalY, discreteNormalZ;
-  int offset;
 };
 
 /**
@@ -136,7 +137,7 @@ public:
   }
   void process(BlockLattice3D<T,DESCRIPTOR>& blockLattice) override;
   void processSubDomain ( BlockLattice3D<T,DESCRIPTOR>& blockLattice,
-                                  int x0_, int x1_, int y0_, int y1_ , int z0_, int z1_) override;
+                          int x0_, int x1_, int y0_, int y1_, int z0_, int z1_) override;
 private:
   int resetPop[DESCRIPTOR::q];
   int x0, x1, y0, y1, z0, z1;
@@ -156,4 +157,7 @@ private:
   int discreteNormalZ;
 };
 }
+
+
+#endif
 

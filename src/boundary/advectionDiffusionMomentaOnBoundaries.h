@@ -38,7 +38,7 @@ namespace olb {
 template<typename T, typename DESCRIPTOR>
 class AdvectionDiffusionBoundaryMomenta : virtual public AdvectionDiffusionBulkMomenta<T,DESCRIPTOR> {
 public:
-  virtual void computeJneq( Cell<T,DESCRIPTOR> const& cell, T jNeq[DESCRIPTOR::d] ) const =0;
+  virtual void computeJneq( ConstCell<T,DESCRIPTOR>& cell, T jNeq[DESCRIPTOR::d] ) const =0;
 };
 
 /// Computation of velocity momenta on a velocity boundary
@@ -48,9 +48,9 @@ public:
   /// Default Constructor: initialization to u=0, rho=1
   RegularizedTemperatureBM(const T temperature = 0.5);
 
-  T computeRho(Cell<T,DESCRIPTOR> const& cell) const override;
-  void computeJ( Cell<T,DESCRIPTOR> const& cell, T j[DESCRIPTOR::d] ) const override;
-  void computeJneq( Cell<T,DESCRIPTOR> const& cell, T jNeq[DESCRIPTOR::d] ) const override;
+  T computeRho(ConstCell<T,DESCRIPTOR>& cell) const override;
+  void computeJ( ConstCell<T,DESCRIPTOR>& cell, T j[DESCRIPTOR::d] ) const override;
+  void computeJneq( ConstCell<T,DESCRIPTOR>& cell, T jNeq[DESCRIPTOR::d] ) const override;
   void defineRho(Cell<T,DESCRIPTOR>& cell, T rho) override;
   void defineRhoU (Cell<T,DESCRIPTOR>& cell, T rho, const T u[DESCRIPTOR::d]) override;
 private:
@@ -65,9 +65,9 @@ public:
   /// Default Constructor: initialization to u=0, rho=1
   RegularizedHeatFluxBM(T *heatFlux = nullptr);
 
-  T computeRho(Cell<T,DESCRIPTOR> const& cell) const override;
-  void computeJ( Cell<T,DESCRIPTOR> const& cell, T j[DESCRIPTOR::d] ) const override;
-  void computeJneq( Cell<T,DESCRIPTOR> const& cell, T jNeq[DESCRIPTOR::d] ) const override;
+  T computeRho(ConstCell<T,DESCRIPTOR>& cell) const override;
+  void computeJ( ConstCell<T,DESCRIPTOR>& cell, T j[DESCRIPTOR::d] ) const override;
+  void computeJneq( ConstCell<T,DESCRIPTOR>& cell, T jNeq[DESCRIPTOR::d] ) const override;
 private:
   T _heatFlux[DESCRIPTOR::d];
 };

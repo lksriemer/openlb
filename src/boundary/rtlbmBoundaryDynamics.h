@@ -172,6 +172,36 @@ public:
   /// place holder
   void setOmega(T omega_) override;
 };
+
+template<typename T, typename DESCRIPTOR, int plane, int normal1, int normal2>
+class RtlbmDirectedEdgeBoundaryDynamics : public BasicDynamics<T,DESCRIPTOR> {
+public:
+  /// Constructor
+  RtlbmDirectedEdgeBoundaryDynamics(T omega_, Momenta<T,DESCRIPTOR>& momenta_);
+  /// Compute equilibrium distribution function
+  T computeEquilibrium(int iPop, T rho, const T u[DESCRIPTOR::d], T uSqr) const override;
+  /// Collision step for directed boundary walls
+  void collide(Cell<T,DESCRIPTOR>& cell, LatticeStatistics<T>& statistics) override;
+  /// place holder
+  T getOmega() const override;
+  /// place holder
+  void setOmega(T omega_) override;
+};
+
+template<typename T, typename DESCRIPTOR, int xNormal, int yNormal, int zNormal>
+class RtlbmDirectedCornerBoundaryDynamics : public BasicDynamics<T,DESCRIPTOR> {
+public:
+  /// Constructor
+  RtlbmDirectedCornerBoundaryDynamics(T omega_, Momenta<T,DESCRIPTOR>& momenta_);
+  /// Compute equilibrium distribution function
+  T computeEquilibrium(int iPop, T rho, const T u[DESCRIPTOR::d], T uSqr) const override;
+  /// Collision step for directed boundary walls
+  void collide(Cell<T,DESCRIPTOR>& cell, LatticeStatistics<T>& statistics) override;
+  /// place holder
+  T getOmega() const override;
+  /// place holder
+  void setOmega(T omega_) override;
+};
 }  // namespace olb
 
 #endif

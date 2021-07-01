@@ -27,47 +27,34 @@
 namespace olb {
 
 
-// arithmetic helper class for analytical 1d functors
+template class AnalyticCalcF<1,double,int,util::plus>;
+template class AnalyticCalcF<2,double,int,util::plus>;
+template class AnalyticCalcF<3,double,int,util::plus>;
+template class AnalyticCalcF<1,double,double,util::plus>;
+template class AnalyticCalcF<2,double,double,util::plus>;
+template class AnalyticCalcF<3,double,double,util::plus>;
 
-template class AnalyticCalcF1D<double,int,util::plus>;
-template class AnalyticCalcF1D<double,double,util::plus>;
+template class AnalyticCalcF<1,double,int,util::minus>;
+template class AnalyticCalcF<2,double,int,util::minus>;
+template class AnalyticCalcF<3,double,int,util::minus>;
+template class AnalyticCalcF<1,double,double,util::minus>;
+template class AnalyticCalcF<2,double,double,util::minus>;
+template class AnalyticCalcF<3,double,double,util::minus>;
 
-template class AnalyticCalcF1D<double,int,util::minus>;
-template class AnalyticCalcF1D<double,double,util::minus>;
+template class AnalyticCalcF<1,double,int,util::multiplies>;
+template class AnalyticCalcF<2,double,int,util::multiplies>;
+template class AnalyticCalcF<3,double,int,util::multiplies>;
+template class AnalyticCalcF<1,double,double,util::multiplies>;
+template class AnalyticCalcF<2,double,double,util::multiplies>;
+template class AnalyticCalcF<3,double,double,util::multiplies>;
 
-template class AnalyticCalcF1D<double,int,util::multiplies>;
-template class AnalyticCalcF1D<double,double,util::multiplies>;
+template class AnalyticCalcF<1,double,int,util::divides>;
+template class AnalyticCalcF<2,double,int,util::divides>;
+template class AnalyticCalcF<3,double,int,util::divides>;
+template class AnalyticCalcF<1,double,double,util::divides>;
+template class AnalyticCalcF<2,double,double,util::divides>;
+template class AnalyticCalcF<3,double,double,util::divides>;
 
-template class AnalyticCalcF1D<double,int,util::divides>;
-template class AnalyticCalcF1D<double,double,util::divides>;
-
-// arithmetic helper class for analytical 2d functors
-
-template class AnalyticCalcF2D<double,int,util::plus>;
-template class AnalyticCalcF2D<double,double,util::plus>;
-
-template class AnalyticCalcF2D<double,int,util::minus>;
-template class AnalyticCalcF2D<double,double,util::minus>;
-
-template class AnalyticCalcF2D<double,int,util::multiplies>;
-template class AnalyticCalcF2D<double,double,util::multiplies>;
-
-template class AnalyticCalcF2D<double,int,util::divides>;
-template class AnalyticCalcF2D<double,double,util::divides>;
-
-// arithmetic helper class for analytical 3d functors
-
-template class AnalyticCalcF3D<double,int,util::plus>;
-template class AnalyticCalcF3D<double,double,util::plus>;
-
-template class AnalyticCalcF3D<double,int,util::minus>;
-template class AnalyticCalcF3D<double,double,util::minus>;
-
-template class AnalyticCalcF3D<double,int,util::multiplies>;
-template class AnalyticCalcF3D<double,double,util::multiplies>;
-
-template class AnalyticCalcF3D<double,int,util::divides>;
-template class AnalyticCalcF3D<double,double,util::divides>;
 
 }
 

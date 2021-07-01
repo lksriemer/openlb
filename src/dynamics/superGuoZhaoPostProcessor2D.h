@@ -39,11 +39,11 @@ template<typename T, typename DESCRIPTOR, class dynamicsManager>
 class SuperGuoZhaoInstantiator2D {
 public:
   SuperGuoZhaoInstantiator2D (SuperLattice2D<T, DESCRIPTOR>& sLattice_);
-  void definePorousFields(AnalyticalF2D<T,T>& epsilon_, AnalyticalF2D<T,T>& K_);
-  void defineEpsilon(SuperGeometry2D<T>& sGeometry, int material, AnalyticalF2D<T,T>& epsilon);
-  void defineK(UnitConverter<T,DESCRIPTOR> const& converter, SuperGeometry2D<T>& sGeometry, int material, AnalyticalF2D<T,T>& K);
+  void definePorousFields(AnalyticalF<2,T,T>& epsilon_, AnalyticalF<2,T,T>& K_);
+  void defineEpsilon(SuperGeometry2D<T>& sGeometry, int material, AnalyticalF<2,T,T>& epsilon);
+  void defineK(UnitConverter<T,DESCRIPTOR> const& converter, SuperGeometry2D<T>& sGeometry, int material, AnalyticalF<2,T,T>& K);
   void defineNu(UnitConverter<T,DESCRIPTOR> const& converter, SuperGeometry2D<T>& sGeometry, int material);
-  void defineBodyForce(UnitConverter<T,DESCRIPTOR> const& converter, SuperGeometry2D<T>& sGeometry, int material, AnalyticalF2D<T,T>& bodyForce);
+  void defineBodyForce(UnitConverter<T,DESCRIPTOR> const& converter, SuperGeometry2D<T>& sGeometry, int material, AnalyticalF<2,T,T>& bodyForce);
 
 private:
   SuperLattice2D<T, DESCRIPTOR>& sLattice;

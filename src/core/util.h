@@ -28,10 +28,14 @@
 #ifndef UTIL_H
 #define UTIL_H
 
-#include<sstream>
-#include<algorithm>
-#include<utilities/vectorHelpers.h>
+#include <sstream>
+#include <vector>
+#include <algorithm>
+#include <numeric>
+#include <type_traits>
 
+#include "utilities/vectorHelpers.h"
+#include "utilities/meta.h"
 #include "dynamics/descriptorFunction.h"
 
 // patch due to ploblems with older compilers
@@ -48,6 +52,26 @@ std::string to_string(const T &n)
 namespace olb {
 
 namespace util {
+
+template <typename T>
+struct BaseTypeHelper {
+  using type = typename T::base_t;
+};
+
+template <>
+struct BaseTypeHelper<double> {
+  using type = double;
+};
+
+template <>
+struct BaseTypeHelper<float> {
+  using type = float;
+};
+
+template <>
+struct BaseTypeHelper<int> {
+  using type = int;
+};
 
 template<typename T> T norm(const std::vector<T>& a);
 
@@ -150,9 +174,16 @@ T normSqr(const T u[D])
   return uSqr;
 }
 
+template<typename T>
+T normSqr(std::initializer_list<T> data)
+{
+  return std::inner_product(data.begin(), data.end(), data.begin(), T(0));
+}
+
+
 /// Compute norm square of a d-dimensional vector
-template<typename T, unsigned D>
-T normSqr(const Vector<T,D>& u)
+template<typename T, unsigned D, typename IMPL>
+T normSqr(const ScalarVector<T,D,IMPL>& u)
 {
   T uSqr = T();
   for (unsigned iD=0; iD < D; ++iD) {
@@ -465,6 +496,14 @@ T pressureFromDensity( T latticeDensity )
 }
 
 }  // namespace util
+
+template <typename T>
+using BaseType = typename util::BaseTypeHelper<T>::type;
+
+template <typename T>
+std::enable_if_t<std::is_arithmetic<T>::type::value, T> abs(T x) {
+  return std::fabs(x);
+}
 
 }  // namespace olb
 

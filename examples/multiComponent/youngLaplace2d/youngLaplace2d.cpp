@@ -24,10 +24,10 @@
 
 /* youngLaplace2d.cpp
  * In this example a Young-Laplace test is performed. A circular domain
- * of fluid 2 is immersed in fluid 1. A diffusive interface forms and the 
+ * of fluid 2 is immersed in fluid 1. A diffusive interface forms and the
  * surface tension can be calculated using the Laplace pressure relation.
  * The pressure difference is calculated between a point in the middle of
- * the circular domain and a point furthest away from it in the 
+ * the circular domain and a point furthest away from it in the
  * computational domain (here left bottom corner).
  *
  * This example shows the simplest case for the free-energy model with two
@@ -46,7 +46,7 @@ using namespace olb::graphics;
 using namespace std;
 
 typedef double T;
-#define DESCRIPTOR D2Q9<CHEM_POTENTIAL,FORCE>
+typedef D2Q9<CHEM_POTENTIAL,FORCE> DESCRIPTOR;
 
 // Parameters for the simulation setup
 const int N  = 100;
@@ -62,7 +62,8 @@ const int vtkIter  = 200;
 const int statIter = 1000;
 
 
-void prepareGeometry( SuperGeometry2D<T>& superGeometry ) {
+void prepareGeometry( SuperGeometry2D<T>& superGeometry )
+{
 
   OstreamManager clout( std::cout,"prepareGeometry" );
   clout << "Prepare Geometry ..." << std::endl;
@@ -82,11 +83,12 @@ void prepareLattice( SuperLattice2D<T, DESCRIPTOR>& sLattice1,
                      Dynamics<T, DESCRIPTOR>& bulkDynamics1,
                      Dynamics<T, DESCRIPTOR>& bulkDynamics2,
                      UnitConverter<T, DESCRIPTOR>& converter,
-                     SuperGeometry2D<T>& superGeometry ) {
+                     SuperGeometry2D<T>& superGeometry )
+{
 
   OstreamManager clout( std::cout,"prepareLattice" );
   clout << "Prepare Lattice ..." << std::endl;
- 
+
   // define lattice Dynamics
   sLattice1.defineDynamics( superGeometry, 0, &instances::getNoDynamics<T, DESCRIPTOR>() );
   sLattice2.defineDynamics( superGeometry, 0, &instances::getNoDynamics<T, DESCRIPTOR>() );
@@ -116,7 +118,8 @@ void prepareLattice( SuperLattice2D<T, DESCRIPTOR>& sLattice1,
 
 
 void prepareCoupling(SuperLattice2D<T, DESCRIPTOR>& sLattice1,
-                     SuperLattice2D<T, DESCRIPTOR>& sLattice2) {
+                     SuperLattice2D<T, DESCRIPTOR>& sLattice2)
+{
 
   OstreamManager clout( std::cout,"prepareCoupling" );
   clout << "Add lattice coupling" << endl;
@@ -137,7 +140,8 @@ void prepareCoupling(SuperLattice2D<T, DESCRIPTOR>& sLattice1,
 void getResults( SuperLattice2D<T, DESCRIPTOR>& sLattice2,
                  SuperLattice2D<T, DESCRIPTOR>& sLattice1, int iT,
                  SuperGeometry2D<T>& superGeometry, Timer<T>& timer,
-                 UnitConverter<T, DESCRIPTOR> converter) {
+                 UnitConverter<T, DESCRIPTOR> converter)
+{
 
   OstreamManager clout( std::cout,"getResults" );
   SuperVTMwriter2D<T> vtmWriter( "youngLaplace2d" );
@@ -171,7 +175,7 @@ void getResults( SuperLattice2D<T, DESCRIPTOR>& sLattice2,
     density1.getName() = "rho";
     SuperLatticeDensity2D<T, DESCRIPTOR> density2( sLattice2 );
     density2.getName() = "phi";
-    
+
     SuperIdentity2D<T,T> c1 (half*(density1+density2));
     c1.getName() = "density-fluid-1";
     SuperIdentity2D<T,T> c2 (half*(density1-density2));
@@ -182,9 +186,9 @@ void getResults( SuperLattice2D<T, DESCRIPTOR>& sLattice2,
     vtmWriter.addFunctor( c1 );
     vtmWriter.addFunctor( c2 );
     vtmWriter.write( iT );
-    
+
     // calculate bulk pressure, pressure difference and surface tension
-    if(iT%statIter==0) {
+    if (iT%statIter==0) {
       AnalyticalConst2D<T,T> two_( 2. );
       AnalyticalConst2D<T,T> onefive_( 1.5 );
       AnalyticalConst2D<T,T> k1_( kappa1 );
@@ -200,9 +204,9 @@ void getResults( SuperLattice2D<T, DESCRIPTOR>& sLattice2,
       // c_1 = density of fluid 1; c_2 = density of fluid 2
       // p_bulk = rho*c_s^2 + kappa1 * (3/2*c_1^4 - 2*c_1^3 + 0.5*c_1^2)
       //                    + kappa2 * (3/2*c_2^4 - 2*c_2^3 + 0.5*c_2^2)
-      SuperIdentity2D<T,T> bulkPressure ( density1*cs2 
-              + k1*( onefive*c1*c1*c1*c1 - two*c1*c1*c1 + half*c1*c1 ) 
-              + k2*( onefive*c2*c2*c2*c2 - two*c2*c2*c2 + half*c2*c2 ) );
+      SuperIdentity2D<T,T> bulkPressure ( density1*cs2
+                                          + k1*( onefive*c1*c1*c1*c1 - two*c1*c1*c1 + half*c1*c1 )
+                                          + k2*( onefive*c2*c2*c2*c2 - two*c2*c2*c2 + half*c2*c2 ) );
 
       AnalyticalFfromSuperF2D<T, T> interpolPressure( bulkPressure, true, 1);
       double position[2] = { 0.5*nx, 0.5*nx };
@@ -222,7 +226,8 @@ void getResults( SuperLattice2D<T, DESCRIPTOR>& sLattice2,
 }
 
 
-int main( int argc, char *argv[] ) {
+int main( int argc, char *argv[] )
+{
 
   // === 1st Step: Initialization ===
 
@@ -281,8 +286,8 @@ int main( int argc, char *argv[] ) {
 
   prepareCoupling( sLattice1, sLattice2);
 
-  SuperExternal2D<T,DESCRIPTOR,CHEM_POTENTIAL> sExternal1 (superGeometry, sLattice1, sLattice1.getOverlap() );
-  SuperExternal2D<T,DESCRIPTOR,CHEM_POTENTIAL> sExternal2 (superGeometry, sLattice2, sLattice2.getOverlap() );
+  SuperField2D<T,DESCRIPTOR,CHEM_POTENTIAL> sExternal1 (superGeometry, sLattice1, sLattice1.getOverlap() );
+  SuperField2D<T,DESCRIPTOR,CHEM_POTENTIAL> sExternal2 (superGeometry, sLattice2, sLattice2.getOverlap() );
 
   // === 4th Step: Main Loop with Timer ===
   int iT = 0;
@@ -301,7 +306,7 @@ int main( int argc, char *argv[] ) {
     // MPI communication for lattice data
     sLattice1.communicate();
     sLattice2.communicate();
- 
+
     // Execute coupling between the two lattices
     sLattice1.executeCoupling();
     sExternal1.communicate();

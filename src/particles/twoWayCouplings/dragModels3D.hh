@@ -48,7 +48,7 @@ StokesSimplifiedDragModel<T,Lattice,Particle>::StokesSimplifiedDragModel(UnitCon
 
 template<typename T, typename Lattice, template<typename V> class Particle>
 T StokesSimplifiedDragModel<T,Lattice,Particle>::operator() (
-                         Particle<T>* p, T latticeVelF[], T latticeVelP[], int globicFull[] )
+                         Particle<T>* p, T latticeVelF[], T latticeVelP[], int globicFull[], T continuousPhaseFraction )
 {
   return 1.83;
 }
@@ -65,14 +65,14 @@ MorsiDragModel<T,Lattice,Particle>::MorsiDragModel(UnitConverter<T, Lattice>& co
 
 template<typename T, typename Lattice, template<typename V> class Particle>
 T MorsiDragModel<T,Lattice,Particle>::operator() (
-                         Particle<T>* p, T latticeVelF[], T latticeVelP[], int globicFull[] )
+                         Particle<T>* p, T latticeVelF[], T latticeVelP[], int globicFull[], T continuousPhaseFraction )
 {
   T physVelRelative = this->_converter.getPhysVelocity (
                              sqrt( pow(latticeVelF[0] - latticeVelP[0],2) +
                                    pow(latticeVelF[1] - latticeVelP[1],2) +
                                    pow(latticeVelF[2] - latticeVelP[2],2) ) );
 
-  T ReP = this->_reP->operator() (p, physVelRelative, globicFull);
+  T ReP = continuousPhaseFraction * this->_reP->operator() (p, physVelRelative, globicFull);
 
   T a[3] = {T(), T(), T()};
   if (ReP < 0.1) {
@@ -88,7 +88,7 @@ T MorsiDragModel<T,Lattice,Particle>::operator() (
     a[0] = 0.6167;  a[1] = 46.5;      a[2] =-116.67;
   }
   else if (ReP < 1000.0) {
-    a[0] = 0.3644;  a[1] = 498.33;    a[2] =-2778;
+    a[0] = 0.3644;  a[1] = 98.33;     a[2] =-2778;
   }
   else if (ReP < 5000.0) {
     a[0] = 0.357;   a[1] = 148.62;    a[2] =-4.75e4;
@@ -100,8 +100,55 @@ T MorsiDragModel<T,Lattice,Particle>::operator() (
     a[0] = 0.5191;  a[1] =-1662.5;    a[2] = 5.4167e6;
   }
 
+  return ( a[0] + a[1]/ReP + a[2]/(ReP*ReP) );
+}
 
-  return ( a[0] + a[1]/ReP + a[2]/(ReP*ReP) ) * physVelRelative;
+
+////////////////////// Class PowerLawMorsiDragModel ////////////////////////
+
+template<typename T, typename Lattice, template<typename V> class Particle>
+PowerLawMorsiDragModel<T,Lattice,Particle>::PowerLawMorsiDragModel (
+        UnitConverter<T, Lattice>& converter, SuperLattice3D<T, Lattice>& sLattice )
+         : MorsiDragModel<T,Lattice,Particle>(converter)
+{
+  this->_reP = std::make_shared<PowerLawParticleReynoldsNumber<T,Lattice,Particle> > (this->_converter, sLattice);
+}
+
+
+////////////////////// Class SchillerNaumannDragModel ////////////////////////
+
+template<typename T, typename Lattice, template<typename V> class Particle>
+SchillerNaumannDragModel<T,Lattice,Particle>::SchillerNaumannDragModel(UnitConverter<T, Lattice>& converter)
+         : DragModelBase<T,Lattice,Particle>(converter)
+{
+  this->_reP = std::make_shared<NewtonianParticleReynoldsNumber<T,Lattice,Particle> > (this->_converter);
+}
+
+template<typename T, typename Lattice, template<typename V> class Particle>
+T SchillerNaumannDragModel<T,Lattice,Particle>::operator() (
+                         Particle<T>* p, T latticeVelF[], T latticeVelP[], int globicFull[], T continuousPhaseFraction )
+{
+  T physVelRelative = this->_converter.getPhysVelocity (
+                             sqrt( pow(latticeVelF[0] - latticeVelP[0],2) +
+                                   pow(latticeVelF[1] - latticeVelP[1],2) +
+                                   pow(latticeVelF[2] - latticeVelP[2],2) ) );
+
+  T ReP = continuousPhaseFraction * this->_reP->operator() (p, physVelRelative, globicFull);
+
+  return ReP > 1000.
+         ? 0.44
+         : ( 24. * (1. + 0.15 * pow(ReP , 0.687)) / ReP );
+}
+
+
+////////////////////// Class PowerLawSchillerNaumannDragModel ////////////////////////
+
+template<typename T, typename Lattice, template<typename V> class Particle>
+PowerLawSchillerNaumannDragModel<T,Lattice,Particle>::PowerLawSchillerNaumannDragModel (
+        UnitConverter<T, Lattice>& converter, SuperLattice3D<T, Lattice>& sLattice )
+         : SchillerNaumannDragModel<T,Lattice,Particle>(converter)
+{
+  this->_reP = std::make_shared<PowerLawParticleReynoldsNumber<T,Lattice,Particle> > (this->_converter, sLattice);
 }
 
 
@@ -116,21 +163,18 @@ DewsburyDragModel<T,Lattice,Particle>::DewsburyDragModel(UnitConverter<T, Lattic
 
 template<typename T, typename Lattice, template<typename V> class Particle>
 T DewsburyDragModel<T,Lattice,Particle>::operator() (
-                         Particle<T>* p, T latticeVelF[], T latticeVelP[], int globicFull[] )
+                         Particle<T>* p, T latticeVelF[], T latticeVelP[], int globicFull[], T continuousPhaseFraction )
 {
   T physVelRelative = this->_converter.getPhysVelocity (
                              sqrt( pow(latticeVelF[0] - latticeVelP[0],2) +
                                    pow(latticeVelF[1] - latticeVelP[1],2) +
                                    pow(latticeVelF[2] - latticeVelP[2],2) ) );
 
-  T ReP = this->_reP->operator() (p, physVelRelative, globicFull);
+  T ReP = continuousPhaseFraction * this->_reP->operator() (p, physVelRelative, globicFull);
 
-  T Cd = 0.95;
-  if (ReP <= 195.) {
-    Cd = 16./ReP * (1. + 0.173*pow(ReP, 0.657))
-       + 0.413 / (1. + 16300*pow(ReP, -1.09));
-  }
-  return Cd * this->_converter.getLatticeVelocity(physVelRelative);
+  return ReP > 195.
+         ? 0.95
+         : ( 16./ReP * (1. + 0.173*pow(ReP, 0.657)) + 0.413 / (1. + 16300*pow(ReP, -1.09)) );
 }
 
 
@@ -140,6 +184,49 @@ template<typename T, typename Lattice, template<typename V> class Particle>
 PowerLawDewsburyDragModel<T,Lattice,Particle>::PowerLawDewsburyDragModel (
         UnitConverter<T, Lattice>& converter, SuperLattice3D<T, Lattice>& sLattice )
          : DewsburyDragModel<T,Lattice,Particle>(converter)
+{
+  this->_reP = std::make_shared<PowerLawParticleReynoldsNumber<T,Lattice,Particle> > (this->_converter, sLattice);
+}
+
+
+////////////////////// Class SunDragModel ////////////////////////
+
+template<typename T, typename Lattice, template<typename V> class Particle>
+SunDragModel<T,Lattice,Particle>::SunDragModel(UnitConverter<T, Lattice>& converter)
+         : DragModelBase<T,Lattice,Particle>(converter)
+{
+  this->_reP = std::make_shared<NewtonianParticleReynoldsNumber<T,Lattice,Particle> > (this->_converter);
+}
+
+template<typename T, typename Lattice, template<typename V> class Particle>
+T SunDragModel<T,Lattice,Particle>::operator() (
+                         Particle<T>* p, T latticeVelF[], T latticeVelP[], int globicFull[], T continuousPhaseFraction )
+{
+  T physVelRelative = this->_converter.getPhysVelocity (
+                             sqrt( pow(latticeVelF[0] - latticeVelP[0],2) +
+                                   pow(latticeVelF[1] - latticeVelP[1],2) +
+                                   pow(latticeVelF[2] - latticeVelP[2],2) ) );
+
+  T ReP = continuousPhaseFraction * this->_reP->operator() (p, physVelRelative, globicFull);
+
+  if (ReP <= 10.) {
+    return 1.2 * 24./ReP * ( 1. + 0.173*pow(ReP, 0.675) );
+  }
+  else if (ReP <= 100. ) {
+    return 0.813 * 24./ReP * ( 1. + 24.*pow(ReP, -1.125) );
+  }
+  else {
+    return 1.07 * 24./ReP * ( -1. + 0.037*pow(ReP, 0.825) );
+  }
+}
+
+
+////////////////////// Class PowerLawSunDragModel ////////////////////////
+
+template<typename T, typename Lattice, template<typename V> class Particle>
+PowerLawSunDragModel<T,Lattice,Particle>::PowerLawSunDragModel (
+        UnitConverter<T, Lattice>& converter, SuperLattice3D<T, Lattice>& sLattice )
+         : SunDragModel<T,Lattice,Particle>(converter)
 {
   this->_reP = std::make_shared<PowerLawParticleReynoldsNumber<T,Lattice,Particle> > (this->_converter, sLattice);
 }

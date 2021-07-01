@@ -40,7 +40,16 @@ struct DESCRIPTOR_TAG {
   {
     return 0; // a tag doesn't have a size
   }
+
+  template <typename T>
+  using value_type = void;
 };
+
+template <typename FIELD>
+using is_tag_field = typename std::is_base_of<DESCRIPTOR_TAG, FIELD>::type;
+
+template <typename FIELD>
+using is_data_field = typename std::integral_constant<bool, !is_tag_field<FIELD>::value>::type;
 
 namespace tag {
 

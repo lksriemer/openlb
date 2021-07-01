@@ -92,7 +92,7 @@ void BlockLatticeView3D<T,DESCRIPTOR>::swap (
 }
 
 template<typename T, typename DESCRIPTOR>
-Cell<T,DESCRIPTOR>& BlockLatticeView3D<T,DESCRIPTOR>::get(int iX, int iY, int iZ)
+Cell<T,DESCRIPTOR> BlockLatticeView3D<T,DESCRIPTOR>::get(int iX, int iY, int iZ)
 {
   OLB_PRECONDITION(iX<originalLattice->getNx());
   OLB_PRECONDITION(iY<originalLattice->getNy());
@@ -101,19 +101,31 @@ Cell<T,DESCRIPTOR>& BlockLatticeView3D<T,DESCRIPTOR>::get(int iX, int iY, int iZ
 }
 
 template<typename T, typename DESCRIPTOR>
-Cell<T,DESCRIPTOR>& BlockLatticeView3D<T,DESCRIPTOR>::get(const int latticeR[])
+Cell<T,DESCRIPTOR> BlockLatticeView3D<T,DESCRIPTOR>::get(const int latticeR[])
 {
   return get(latticeR[0], latticeR[1], latticeR[2]);
 }
 
 template<typename T, typename DESCRIPTOR>
-Cell<T,DESCRIPTOR> const& BlockLatticeView3D<T,DESCRIPTOR>::get (
+ConstCell<T,DESCRIPTOR> BlockLatticeView3D<T,DESCRIPTOR>::get (
   int iX, int iY, int iZ ) const
 {
   OLB_PRECONDITION(iX<originalLattice->getNx());
   OLB_PRECONDITION(iY<originalLattice->getNy());
   OLB_PRECONDITION(iZ<originalLattice->getNz());
   return originalLattice->get(iX+x0, iY+y0, iZ+z0);
+}
+
+template<typename T, typename DESCRIPTOR>
+T& BlockLatticeView3D<T,DESCRIPTOR>::getPop(std::size_t iCell, unsigned iPop)
+{
+  return originalLattice->getPop(iCell, iPop);
+}
+
+template<typename T, typename DESCRIPTOR>
+T& BlockLatticeView3D<T,DESCRIPTOR>::getPop(int iX, int iY, int iZ, unsigned iPop)
+{
+  return originalLattice->getPop(iX+x0, iY+y0, iZ+z0, iPop);
 }
 
 template<typename T, typename DESCRIPTOR>
@@ -181,42 +193,25 @@ void BlockLatticeView3D<T,DESCRIPTOR>::collide (
 }
 
 template<typename T, typename DESCRIPTOR>
-void BlockLatticeView3D<T,DESCRIPTOR>::collide()
-{
-  originalLattice->collide( x0, x0+this->_nx-1, y0, y0+this->_ny-1, z0, z0+this->_nz-1);
-}
-
-template<typename T, typename DESCRIPTOR>
-void BlockLatticeView3D<T,DESCRIPTOR>::stream(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_)
-{
-  originalLattice->stream( x0_+x0, x1_+x0,
-                           y0_+y0, y1_+y0,
-                           z0_+z0, z1_+z0 );
-}
-
-template<typename T, typename DESCRIPTOR>
-void BlockLatticeView3D<T,DESCRIPTOR>::stream(bool periodic)
-{
-  OLB_PRECONDITION(!periodic);
-  originalLattice->stream( x0, x0+this->_nx-1, y0, y0+this->_ny-1, z0, z0+this->_nz-1);
-  postProcess();
-}
-
-template<typename T, typename DESCRIPTOR>
 void BlockLatticeView3D<T,DESCRIPTOR>::collideAndStream (
   int x0_, int x1_, int y0_, int y1_, int z0_, int z1_ )
 {
   originalLattice->collideAndStream( x0_+x0, x1_+x0,
                                      y0_+y0, y1_+y0,
                                      z0_+z0, z1_+z0 );
+
 }
 
 template<typename T, typename DESCRIPTOR>
-void BlockLatticeView3D<T,DESCRIPTOR>::collideAndStream(bool periodic)
+void BlockLatticeView3D<T,DESCRIPTOR>::collide()
 {
-  OLB_PRECONDITION(!periodic);
-  originalLattice->collideAndStream(x0, x0+this->_nx-1, y0, y0+this->_ny-1, z0, z0+this->_nz-1);
-  postProcess();
+  originalLattice->collide( x0, x0+this->_nx-1, y0, y0+this->_ny-1, z0, z0+this->_nz-1);
+}
+
+template<typename T, typename DESCRIPTOR>
+void BlockLatticeView3D<T,DESCRIPTOR>::collideAndStream()
+{
+  originalLattice->collideAndStream( x0, x0+this->_nx-1, y0, y0+this->_ny-1, z0, z0+this->_nz-1);
 }
 
 template<typename T, typename DESCRIPTOR>

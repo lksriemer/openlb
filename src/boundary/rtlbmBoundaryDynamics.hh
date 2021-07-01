@@ -36,6 +36,7 @@ template<typename T, typename DESCRIPTOR, int direction, int orientation>
 RtlbmDiffuseBoundaryDynamics<T,DESCRIPTOR,direction,orientation>::RtlbmDiffuseBoundaryDynamics( T omega_, Momenta<T,DESCRIPTOR>& momenta_)
   : BasicDynamics<T,DESCRIPTOR>(momenta_)
 {
+  this->getName() = "RtlbmDiffuseBoundaryDynamics";
 }
 
 template<typename T, typename DESCRIPTOR, int direction, int orientation>
@@ -77,6 +78,7 @@ template<typename T, typename DESCRIPTOR, int plane, int normal1, int normal2>
 RtlbmDiffuseEdgeBoundaryDynamics<T,DESCRIPTOR,plane,normal1,normal2>::RtlbmDiffuseEdgeBoundaryDynamics( T omega_, Momenta<T,DESCRIPTOR>& momenta_)
   : BasicDynamics<T,DESCRIPTOR>(momenta_)
 {
+  this->getName() = "RtlbmDiffuseEdgeBoundaryDynamics";
 }
 
 template<typename T, typename DESCRIPTOR, int plane, int normal1, int normal2>
@@ -118,6 +120,7 @@ template<typename T, typename DESCRIPTOR, int xNormal, int yNormal, int zNormal>
 RtlbmDiffuseCornerBoundaryDynamics<T,DESCRIPTOR,xNormal,yNormal,zNormal>::RtlbmDiffuseCornerBoundaryDynamics( T omega_, Momenta<T,DESCRIPTOR>& momenta_)
   : BasicDynamics<T,DESCRIPTOR>(momenta_)
 {
+  this->getName() = "RtlbmDiffuseCornerBoundaryDynamics";
 }
 
 template<typename T, typename DESCRIPTOR, int xNormal, int yNormal, int zNormal>
@@ -162,6 +165,7 @@ template<typename T, typename DESCRIPTOR, int direction, int orientation>
 RtlbmDiffuseConstBoundaryDynamics<T,DESCRIPTOR,direction,orientation>::RtlbmDiffuseConstBoundaryDynamics( T omega_, Momenta<T,DESCRIPTOR>& momenta_)
   : BasicDynamics<T,DESCRIPTOR>(momenta_)
 {
+  this->getName() = "RtlbmDiffuseConstBoundaryDynamics";
 }
 
 template<typename T, typename DESCRIPTOR, int direction, int orientation>
@@ -217,6 +221,7 @@ template<typename T, typename DESCRIPTOR, int plane, int normal1, int normal2>
 RtlbmDiffuseConstEdgeBoundaryDynamics<T,DESCRIPTOR,plane,normal1,normal2>::RtlbmDiffuseConstEdgeBoundaryDynamics( T omega_, Momenta<T,DESCRIPTOR>& momenta_)
   : BasicDynamics<T,DESCRIPTOR>(momenta_)
 {
+  this->getName() = "RtlbmDiffuseConstEdgeBoundaryDynamics";
 }
 
 template<typename T, typename DESCRIPTOR, int plane, int normal1, int normal2>
@@ -228,12 +233,12 @@ T RtlbmDiffuseConstEdgeBoundaryDynamics<T,DESCRIPTOR,plane,normal1,normal2>::com
 template<typename T, typename DESCRIPTOR, int plane, int normal1, int normal2>
 void RtlbmDiffuseConstEdgeBoundaryDynamics<T,DESCRIPTOR,plane,normal1,normal2>::collide(Cell<T,DESCRIPTOR>& cell,LatticeStatistics<T>& statistics)
 {
-    // For direction i \in I_in define
-    // cell_i = w_i * dirichlet/sumWeights - w_i
-    // For direction i \in I_out defube
-    // cell_i = - w_i
-    // This construction yields
-    // sum_{i=0}^{q-1} cell_i == dirichlet - 1
+  // For direction i \in I_in define
+  // cell_i = w_i * dirichlet/sumWeights - w_i
+  // For direction i \in I_out defube
+  // cell_i = - w_i
+  // This construction yields
+  // sum_{i=0}^{q-1} cell_i == dirichlet - 1
 
   typedef DESCRIPTOR L;
 
@@ -272,6 +277,7 @@ template<typename T, typename DESCRIPTOR, int xNormal, int yNormal, int zNormal>
 RtlbmDiffuseConstCornerBoundaryDynamics<T,DESCRIPTOR,xNormal,yNormal,zNormal>::RtlbmDiffuseConstCornerBoundaryDynamics( T omega_, Momenta<T,DESCRIPTOR>& momenta_)
   : BasicDynamics<T,DESCRIPTOR>(momenta_)
 {
+  this->getName() = "RtlbmDiffuseConstCornerBoundaryDynamics";
 }
 
 template<typename T, typename DESCRIPTOR, int xNormal, int yNormal, int zNormal>
@@ -283,12 +289,12 @@ T RtlbmDiffuseConstCornerBoundaryDynamics<T,DESCRIPTOR,xNormal,yNormal,zNormal>:
 template<typename T, typename DESCRIPTOR, int xNormal, int yNormal, int zNormal>
 void RtlbmDiffuseConstCornerBoundaryDynamics<T,DESCRIPTOR,xNormal,yNormal,zNormal>::collide(Cell<T,DESCRIPTOR>& cell,LatticeStatistics<T>& statistics)
 {
-    // For direction i \in I_in define
-    // cell_i = w_i * dirichlet/sumWeights - w_i
-    // For direction i \in I_out defube
-    // cell_i = - w_i
-    // This construction yields
-    // sum_{i=0}^{q-1} cell_i == dirichlet - 1
+  // For direction i \in I_in define
+  // cell_i = w_i * dirichlet/sumWeights - w_i
+  // For direction i \in I_out defube
+  // cell_i = - w_i
+  // This construction yields
+  // sum_{i=0}^{q-1} cell_i == dirichlet - 1
 
   typedef DESCRIPTOR L;
 
@@ -326,12 +332,13 @@ template<typename T, typename DESCRIPTOR, int direction, int orientation>
 RtlbmDirectedBoundaryDynamics<T,DESCRIPTOR,direction,orientation>::RtlbmDirectedBoundaryDynamics( T omega_, Momenta<T,DESCRIPTOR>& momenta_)
   : BasicDynamics<T,DESCRIPTOR>(momenta_)
 {
+  this->getName() = "RtlbmDirectedBoundaryDynamics";
 }
 
 template<typename T, typename DESCRIPTOR, int direction, int orientation>
 T RtlbmDirectedBoundaryDynamics<T,DESCRIPTOR,direction,orientation>::computeEquilibrium(int iPop, T rho, const T u[DESCRIPTOR::d], T uSqr) const
 {
-  return lbHelpers<T,DESCRIPTOR>::equilibriumFirstOrder( iPop, rho, u );
+  return rho*descriptors::t<T,DESCRIPTOR>(iPop) - descriptors::t<T,DESCRIPTOR>(iPop);
 }
 
 template<typename T, typename DESCRIPTOR, int direction, int orientation>
@@ -340,7 +347,7 @@ void RtlbmDirectedBoundaryDynamics<T,DESCRIPTOR,direction,orientation>::collide(
   typedef DESCRIPTOR L;
   T dirichletTemperature = this->_momenta.computeRho(cell);
 
-  for( int iPop = 0; iPop < L::q; ++iPop ) {
+  for ( int iPop = 0; iPop < L::q; ++iPop ) {
     cell[iPop] = - descriptors::t<T,L>(iPop);
   }
 
@@ -348,9 +355,17 @@ void RtlbmDirectedBoundaryDynamics<T,DESCRIPTOR,direction,orientation>::collide(
   for ( int i : missingDiagonal ) {
     // compute norm of c_iPopMissing
     // is direction axis parallel
-    if ( util::normSqr<int,L::d>(descriptors::c<L>(i)) == 1 ) {
-      cell[i] = dirichletTemperature - descriptors::t<T,L>(i);
+    if ( util::normSqr<int>({descriptors::c<L>(i,0), descriptors::c<L>(i,1), descriptors::c<L>(i,2)}) == 1 ) {
+      if ( std::is_base_of<DESCRIPTOR,descriptors::D3Q7<> >::value ) {
+        cell[i] = (1-descriptors::t<T,L>(0))*dirichletTemperature - descriptors::t<T,L>(i);
+      }
+      if ( DESCRIPTOR::template provides<descriptors::tag::RTLBM>() ) {
+        cell[i] = dirichletTemperature - descriptors::t<T,L>(i);
+      }
     }
+  }
+  if ( std::is_base_of<DESCRIPTOR,descriptors::D3Q7<> >::value ) {
+    cell[0] = descriptors::t<T,L>(0)*dirichletTemperature - descriptors::t<T,L>(0);
   }
 }
 
@@ -365,6 +380,112 @@ void RtlbmDirectedBoundaryDynamics<T,DESCRIPTOR,direction,orientation>::setOmega
 {
 }
 
+// directed edges
+template<typename T, typename DESCRIPTOR, int plane, int normal1, int normal2>
+RtlbmDirectedEdgeBoundaryDynamics<T,DESCRIPTOR,plane,normal1,normal2>::RtlbmDirectedEdgeBoundaryDynamics( T omega_, Momenta<T,DESCRIPTOR>& momenta_)
+  : BasicDynamics<T,DESCRIPTOR>(momenta_)
+{
+  this->getName() = "RtlbmDirectedEdgeBoundaryDynamics";
+}
+
+template<typename T, typename DESCRIPTOR, int plane, int normal1, int normal2>
+T RtlbmDirectedEdgeBoundaryDynamics<T,DESCRIPTOR,plane,normal1,normal2>::computeEquilibrium(int iPop, T rho, const T u[DESCRIPTOR::d], T uSqr) const
+{
+  return rho*descriptors::t<T,DESCRIPTOR>(iPop) - descriptors::t<T,DESCRIPTOR>(iPop);
+}
+
+template<typename T, typename DESCRIPTOR, int plane, int normal1, int normal2>
+void RtlbmDirectedEdgeBoundaryDynamics<T,DESCRIPTOR,plane,normal1,normal2>::collide(Cell<T,DESCRIPTOR>& cell,LatticeStatistics<T>& statistics)
+{
+  typedef DESCRIPTOR L;
+  T dirichletTemperature = this->_momenta.computeRho(cell);
+
+  for ( int iPop = 0; iPop < L::q; ++iPop ) {
+    cell[iPop] = - descriptors::t<T,L>(iPop);
+  }
+
+  std::vector<int> const missingDiagonal = util::subIndexOutgoing3DonEdges<DESCRIPTOR,plane,normal1,normal2>();
+  for ( int i : missingDiagonal ) {
+    // compute norm of c_iPopMissing
+    // is direction axis parallel
+    if ( util::normSqr<int>({descriptors::c<L>(i,0), descriptors::c<L>(i,1), descriptors::c<L>(i,2)}) == 1 ) {
+      if ( std::is_base_of<DESCRIPTOR,descriptors::D3Q7<> >::value ) {
+        cell[i] = (1-descriptors::t<T,L>(0))*dirichletTemperature - descriptors::t<T,L>(i);
+      }
+      if ( DESCRIPTOR::template provides<descriptors::tag::RTLBM>() ) {
+        cell[i] = dirichletTemperature - descriptors::t<T,L>(i);
+      }
+    }
+  }
+  if ( std::is_base_of<DESCRIPTOR,descriptors::D3Q7<> >::value ) {
+    cell[0] = descriptors::t<T,L>(0)*dirichletTemperature - descriptors::t<T,L>(0);
+  }
+}
+
+template<typename T, typename DESCRIPTOR, int plane, int normal1, int normal2>
+T RtlbmDirectedEdgeBoundaryDynamics<T,DESCRIPTOR,plane,normal1,normal2>::getOmega() const
+{
+  return T(-1);
+}
+
+template<typename T, typename DESCRIPTOR, int plane, int normal1, int normal2>
+void RtlbmDirectedEdgeBoundaryDynamics<T,DESCRIPTOR,plane,normal1,normal2>::setOmega(T omega_)
+{
+}
+
+
+// directed corner
+template<typename T, typename DESCRIPTOR, int xNormal, int yNormal, int zNormal>
+RtlbmDirectedCornerBoundaryDynamics<T,DESCRIPTOR,xNormal,yNormal,zNormal>::RtlbmDirectedCornerBoundaryDynamics( T omega_, Momenta<T,DESCRIPTOR>& momenta_)
+  : BasicDynamics<T,DESCRIPTOR>(momenta_)
+{
+  this->getName() = "RtlbmDirectedCornerBoundaryDynamics";
+}
+
+template<typename T, typename DESCRIPTOR, int xNormal, int yNormal, int zNormal>
+T RtlbmDirectedCornerBoundaryDynamics<T,DESCRIPTOR,xNormal,yNormal,zNormal>::computeEquilibrium(int iPop, T rho, const T u[DESCRIPTOR::d], T uSqr) const
+{
+  return rho*descriptors::t<T,DESCRIPTOR>(iPop) - descriptors::t<T,DESCRIPTOR>(iPop);
+}
+
+template<typename T, typename DESCRIPTOR, int xNormal, int yNormal, int zNormal>
+void RtlbmDirectedCornerBoundaryDynamics<T,DESCRIPTOR,xNormal,yNormal,zNormal>::collide(Cell<T,DESCRIPTOR>& cell,LatticeStatistics<T>& statistics)
+{
+  typedef DESCRIPTOR L;
+  T dirichletTemperature = this->_momenta.computeRho(cell);
+
+  for ( int iPop = 0; iPop < L::q; ++iPop ) {
+    cell[iPop] = - descriptors::t<T,L>(iPop);
+  }
+
+  std::vector<int> const missingDiagonal = util::subIndexOutgoing3DonCorners<DESCRIPTOR,xNormal,yNormal,zNormal>();
+  for ( int i : missingDiagonal ) {
+    // compute norm of c_iPopMissing
+    // is direction axis parallel
+    if ( util::normSqr<int>({descriptors::c<L>(i,0), descriptors::c<L>(i,1), descriptors::c<L>(i,2)}) == 1 ) {
+      if ( std::is_base_of<DESCRIPTOR,descriptors::D3Q7<> >::value ) {
+        cell[i] = (1-descriptors::t<T,L>(0))*dirichletTemperature - descriptors::t<T,L>(i);
+      }
+      if ( DESCRIPTOR::template provides<descriptors::tag::RTLBM>() ) {
+        cell[i] = dirichletTemperature - descriptors::t<T,L>(i);
+      }
+    }
+  }
+  if ( std::is_base_of<DESCRIPTOR,descriptors::D3Q7<> >::value ) {
+    cell[0] = descriptors::t<T,L>(0)*dirichletTemperature - descriptors::t<T,L>(0);
+  }
+}
+
+template<typename T, typename DESCRIPTOR, int xNormal, int yNormal, int zNormal>
+T RtlbmDirectedCornerBoundaryDynamics<T,DESCRIPTOR,xNormal,yNormal,zNormal>::getOmega() const
+{
+  return T(-1);
+}
+
+template<typename T, typename DESCRIPTOR, int xNormal, int yNormal, int zNormal>
+void RtlbmDirectedCornerBoundaryDynamics<T,DESCRIPTOR,xNormal,yNormal,zNormal>::setOmega(T omega_)
+{
+}
 
 
 

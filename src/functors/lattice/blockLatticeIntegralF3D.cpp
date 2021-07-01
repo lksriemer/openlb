@@ -24,6 +24,7 @@
 #include "blockLatticeIntegralF3D.h"
 #include "blockLatticeIntegralF3D.hh"
 #include "dynamics/latticeDescriptors.h"
+#include "latticeInterpPhysVelocity3D.h"
 
 namespace olb {
 

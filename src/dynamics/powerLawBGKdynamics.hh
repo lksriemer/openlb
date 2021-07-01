@@ -29,7 +29,7 @@
 #ifndef POWER_LAW_BGK_DYNAMICS_HH
 #define POWER_LAW_BGK_DYNAMICS_HH
 
-#include "dynOmegaLatticeDescriptors.h"
+#include "descriptorAlias.h"
 #include "powerLawBGKdynamics.h"
 #include "core/cell.h"
 #include "core/util.h"
@@ -46,8 +46,50 @@ PowerLawDynamics<T,DESCRIPTOR>::PowerLawDynamics (T m, T n , T nuMin, T nuMax)
   : _m(m),
     _n(n)
 {
-  _omegaMin = 2./(nuMax*2.*descriptors::invCs2<T,DESCRIPTOR>() + 1.);
-  _omegaMax = 2./(nuMin*2.*descriptors::invCs2<T,DESCRIPTOR>() + 1.);
+  setViscoLimits(nuMin, nuMax);
+}
+
+template<typename T, typename DESCRIPTOR>
+void PowerLawDynamics<T,DESCRIPTOR>::setViscoLimits (T nuMin, T nuMax)
+{
+  _omegaMin = 1./(nuMax*descriptors::invCs2<T,DESCRIPTOR>() + 0.5);
+  _omegaMax = 1./(nuMin*descriptors::invCs2<T,DESCRIPTOR>() + 0.5);
+}
+
+template<typename T, typename DESCRIPTOR>
+void PowerLawDynamics<T,DESCRIPTOR>::setM (T m)
+{
+  _m = m;
+}
+
+template<typename T, typename DESCRIPTOR>
+void PowerLawDynamics<T,DESCRIPTOR>::setN (T n)
+{
+  _n = n;
+}
+
+template<typename T, typename DESCRIPTOR>
+T PowerLawDynamics<T,DESCRIPTOR>::getM ()
+{
+  return _m;
+}
+
+template<typename T, typename DESCRIPTOR>
+T PowerLawDynamics<T,DESCRIPTOR>::getN ()
+{
+  return _n;
+}
+
+template<typename T, typename DESCRIPTOR>
+T PowerLawDynamics<T,DESCRIPTOR>::getNuMin ()
+{
+  return (1./_omegaMax -0.5) / descriptors::invCs2<T,DESCRIPTOR>();
+}
+
+template<typename T, typename DESCRIPTOR>
+T PowerLawDynamics<T,DESCRIPTOR>::getNuMax ()
+{
+  return (1./_omegaMin -0.5) / descriptors::invCs2<T,DESCRIPTOR>();
 }
 
 template<typename T, typename DESCRIPTOR>
@@ -55,10 +97,11 @@ T PowerLawDynamics<T,DESCRIPTOR>::computeOmegaPL( Cell<T,DESCRIPTOR>& cell, T om
            T rho, T pi[util::TensorVal<DESCRIPTOR >::n] )
 {
   T pre2 = pow(descriptors::invCs2<T,DESCRIPTOR>()/2.* omega0/rho,2.); // strain rate tensor prefactor
-  T gamma = sqrt(2.*pre2*PiNeqNormSqr(cell)); // shear rate
+  //T gamma = sqrt(2.*pre2*PiNeqNormSqr(cell)); // shear rate
+  T gamma = sqrt(2.*pre2*lbHelpers<T,DESCRIPTOR>::computePiNeqNormSqr(cell)); // shear rate
 
   T nuNew = _m*pow(gamma,_n-1.); //nu for non-Newtonian fluid
-  T newOmega = 2./(nuNew*2.*descriptors::invCs2<T,DESCRIPTOR>() + 1.);
+  T newOmega = 1./(nuNew*descriptors::invCs2<T,DESCRIPTOR>() + 0.5);
 
   if (newOmega>_omegaMax) {
     newOmega = _omegaMax;
@@ -67,7 +110,10 @@ T PowerLawDynamics<T,DESCRIPTOR>::computeOmegaPL( Cell<T,DESCRIPTOR>& cell, T om
     newOmega = _omegaMin;
   }
 
+  //std::cout << nuNew << " " << (1./newOmega -0.5) / descriptors::invCs2<T,DESCRIPTOR>() << "        "
+            //<< omega0 << " " << _omegaMin << " " << _omegaMax << " "  << newOmega << std::endl; // <---
   return newOmega;
+  //return omega0;
 }
 
 
@@ -102,12 +148,6 @@ void PowerLawBGKdynamics<T,DESCRIPTOR>::collide (
   statistics.incrementStats(rho, uSqr);
 }
 
-template<typename T, typename DESCRIPTOR>
-T PowerLawBGKdynamics<T,DESCRIPTOR>::PiNeqNormSqr(Cell<T,DESCRIPTOR>& cell )
-{
-  return lbHelpers<T,DESCRIPTOR>::computePiNeqNormSqr(cell);
-}
-
 
 ////////////////////// Class ForcedPowerLawBGKdynamics //////////////////////////
 
@@ -127,29 +167,22 @@ void PowerLawForcedBGKdynamics<T,DESCRIPTOR>::collide (
   Cell<T,DESCRIPTOR>& cell,
   LatticeStatistics<T>& statistics )
 {
-  T rho, u[DESCRIPTOR::d], pi[util::TensorVal<DESCRIPTOR >::n];
-  this->_momenta.computeAllMomenta(cell, rho, u, pi);
+  T rho, pi[util::TensorVal<DESCRIPTOR >::n];
+  FieldD<T,DESCRIPTOR,descriptors::VELOCITY> u;
+  this->_momenta.computeAllMomenta(cell, rho, u.data(), pi);
 
   // Computation of the power-law omega.
   // An external is used in place of BGKdynamics::_omega to keep generality and flexibility.
-  T oldOmega = cell.template getFieldPointer<descriptors::OMEGA>()[0];
+  T oldOmega = cell.template getField<descriptors::OMEGA>();
   T newOmega = this->computeOmegaPL(cell, oldOmega, rho, pi);
 
-  T* force = cell.template getFieldPointer<descriptors::FORCE>();
-  for (int iVel=0; iVel<DESCRIPTOR::d; ++iVel) {
-    u[iVel] += force[iVel] / (T)2.;
-  }
+  auto force = cell.template getFieldPointer<descriptors::FORCE>();
+  u += 0.5 * force;
 
-  T uSqr = lbHelpers<T,DESCRIPTOR>::bgkCollision(cell, rho, u, this->getOmega());
-  lbHelpers<T,DESCRIPTOR>::addExternalForce(cell, u, newOmega, rho);
-  cell.template getFieldPointer<descriptors::OMEGA>()[0] = newOmega; // updating omega
+  T uSqr = lbHelpers<T,DESCRIPTOR>::bgkCollision(cell, rho, u.data(), this->getOmega());
+  lbHelpers<T,DESCRIPTOR>::addExternalForce(cell, u.data(), newOmega, rho);
+  cell.template setField<descriptors::OMEGA>(newOmega);
   statistics.incrementStats(rho, uSqr);
-}
-
-template<typename T, typename DESCRIPTOR>
-T PowerLawForcedBGKdynamics<T,DESCRIPTOR>::PiNeqNormSqr(Cell<T,DESCRIPTOR>& cell )
-{
-  return lbHelpers<T,DESCRIPTOR>::computeForcedPiNeqNormSqr(cell);
 }
 
 }

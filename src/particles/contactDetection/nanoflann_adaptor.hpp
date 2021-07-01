@@ -98,16 +98,16 @@ class NanoflannContact : public ContactDetection<T, PARTICLETYPE> {
     _index.init();
     _params.sorted = false;
   }
-  virtual ContactDetection<T, PARTICLETYPE>* generate(ParticleSystem3D<T, PARTICLETYPE>& pSys) {
+  ContactDetection<T, PARTICLETYPE>* generate(ParticleSystem3D<T, PARTICLETYPE>& pSys) override {
     //std::cout << "calling NanoflannContact.generate()" << std::endl;
     return new NanoflannContact(pSys,_sRad);
   }
 
-  void sort() {
+  void sort() override {
     _index.buildIndex();
   }
 
-  int getMatches(int pInt, std::vector<std::pair<size_t, T> >& matches) {
+  int getMatches(int pInt, std::vector<std::pair<size_t, T> >& matches) override {
    _index.radiusSearch(&this->_pSys[pInt].getPos()[0], _sRad2, matches, _params);
    return matches.size();
   }

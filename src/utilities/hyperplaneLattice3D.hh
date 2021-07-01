@@ -25,6 +25,7 @@
 #define HYPERPLANE_LATTICE_3D_HH
 
 #include "hyperplaneLattice3D.h"
+#include "utilities/vectorHelpers.h"
 
 namespace olb {
 
@@ -164,8 +165,8 @@ void HyperplaneLattice3D<T>::setToResolution(int resolution)
     _nx = (int) (_nx*_h/newH) + 1;
     _h = newH;
   }
-  _u.normalize(_h);
-  _v.normalize(_h);
+  _u = normalize(_u, _h);
+  _v = normalize(_v, _h);
 }
 
 template<typename T>
@@ -177,8 +178,8 @@ HyperplaneLattice3D<T>::HyperplaneLattice3D(
     _v(hyperplane.v),
     _h(geometry.getMinDeltaR())
 {
-  _u.normalize(_h);
-  _v.normalize(_h);
+  _u = normalize(_u, _h);
+  _v = normalize(_v, _h);
 
   const int maxLatticeDistance = computeMaxLatticeDistance(geometry.getMotherCuboid());
   // compute _hyperplane.origin, _nx, _ny so that the cuboid is right inside the geometry
@@ -194,8 +195,8 @@ HyperplaneLattice3D<T>::HyperplaneLattice3D(
     _v(hyperplane.v),
     _h(geometry.getMinDeltaR())
 {
-  _u.normalize(_h);
-  _v.normalize(_h);
+  _u = normalize(_u, _h);
+  _v = normalize(_v, _h);
 
   const int maxLatticeDistance = computeMaxLatticeDistance(geometry.getMotherCuboid());
   // compute _hyperplane.origin, _nx, _ny so that the cuboid is right inside the geometry
@@ -219,8 +220,8 @@ HyperplaneLattice3D<T>::HyperplaneLattice3D(
     _h = geometry.getMinDeltaR();
   }
 
-  _u.normalize(_h);
-  _v.normalize(_h);
+  _u = normalize(_u, _h);
+  _v = normalize(_v, _h);
 
   const int maxLatticeDistance = computeMaxLatticeDistance(geometry.getMotherCuboid());
   // compute _hyperplane.origin, _nx, _ny so that the cuboid is right inside the geometry
@@ -239,8 +240,8 @@ HyperplaneLattice3D<T>::HyperplaneLattice3D(
     _nx(nx),
     _ny(ny)
 {
-  _u.normalize(_h);
-  _v.normalize(_h);
+  _u = normalize(_u, _h);
+  _v = normalize(_v, _h);
 }
 
 template <typename T>

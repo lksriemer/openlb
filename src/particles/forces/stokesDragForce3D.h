@@ -31,7 +31,7 @@
 #ifndef STOKESDRAGFORCE_3D_H
 #define STOKESDRAGFORCE_3D_H
 
-#include "functors/lattice/superLatticeLocalF3D.h"
+#include "functors/lattice/latticeInterpPhysVelocity3D.h"
 #include "particles/particleSystem3D.h"
 #include "force3D.h"
 

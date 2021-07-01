@@ -25,6 +25,7 @@
 #define HYPERPLANE_LATTICE_2D_HH
 
 #include "hyperplaneLattice2D.h"
+#include "utilities/vectorHelpers.h"
 
 namespace olb {
 
@@ -95,7 +96,7 @@ void HyperplaneLattice2D<T>::setToResolution(int resolution)
   T newH = _n*_h/(T) resolution;
   _n = resolution;
   _h = newH;
-  _u.normalize(_h);
+  _u = normalize(_u, _h);
 }
 
 template<typename T>
@@ -107,7 +108,7 @@ HyperplaneLattice2D<T>::HyperplaneLattice2D(
     _u(hyperplane.u),
     _h(geometry.getMinDeltaR())
 {
-  _u.normalize(_h);
+  _u = normalize(_u, _h);
 
   const int maxLatticeDistance = computeMaxLatticeDistance();
   // compute _hyperplane.origin, _nx, _ny so that the cuboid is right inside the geometry
@@ -123,7 +124,7 @@ HyperplaneLattice2D<T>::HyperplaneLattice2D(
     _u(hyperplane.u),
     _h(geometry.getMinDeltaR())
 {
-  _u.normalize(_h);
+  _u = normalize(_u, _h);
 
   const int maxLatticeDistance = computeMaxLatticeDistance();
   // compute _hyperplane.origin, _nx, _ny so that the cuboid is right inside the geometry
@@ -147,7 +148,7 @@ HyperplaneLattice2D<T>::HyperplaneLattice2D(
     _h = _geometry.getMinDeltaR();
   }
 
-  _u.normalize(_h);
+  _u = normalize(_u, _h);
 
   const int maxLatticeDistance = computeMaxLatticeDistance();
   // compute _hyperplane.origin, _nx, _ny so that the cuboid is right inside the geometry

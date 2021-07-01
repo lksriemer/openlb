@@ -57,7 +57,7 @@ using namespace olb::util;
 using namespace std;
 
 typedef double T;
-#define DESCRIPTOR D3Q19<POROSITY,VELOCITY_NUMERATOR,VELOCITY_DENOMINATOR>
+typedef D3Q19<POROSITY,VELOCITY_NUMERATOR,VELOCITY_DENOMINATOR> DESCRIPTOR;
 
 #define WriteVTK
 
@@ -70,11 +70,11 @@ T const maxPhysT = 0.5;       // max. simulation time in s
 T const iTwrite = 0.02;       // write out intervall in s
 
 // Domain Settings
-T const lengthX = 0.01;     
-T const lengthY = 0.01;     
+T const lengthX = 0.01;
+T const lengthY = 0.01;
 T const lengthZ = 0.05;
 
-// Fluid Settings 
+// Fluid Settings
 T const physDensity = 1000;
 T const physViscosity = 1E-5;
 
@@ -82,10 +82,10 @@ T const physViscosity = 1E-5;
 T centerX = lengthX*.5;
 T centerY = lengthY*.5;
 T centerZ = lengthZ*.9;
-T const cubeDensity = 2500;              
-T const cubeEdgeLength = 0.0025; 
+T const cubeDensity = 2500;
+T const cubeEdgeLength = 0.0025;
 Vector<T,3> cubeCenter = {centerX,centerY,centerZ};
-Vector<T,3> cubeOrientation = {0.,15.,0.}; 
+Vector<T,3> cubeOrientation = {0.,15.,0.};
 Vector<T,3> cubeVelocity = {0.,0.,0.};
 Vector<T,3> externalAcceleration = {.0, .0, -9.81 * (1. - physDensity / cubeDensity)};
 
@@ -118,7 +118,6 @@ void prepareGeometry(UnitConverter<T,DESCRIPTOR> const& converter,
 void prepareLattice(
   SuperLattice3D<T, DESCRIPTOR>& sLattice, UnitConverter<T,DESCRIPTOR> const& converter,
   Dynamics<T, DESCRIPTOR>& designDynamics,
-  sOnLatticeBoundaryCondition3D<T, DESCRIPTOR>& sBoundaryCondition,
   SuperGeometry3D<T>& superGeometry)
 {
   OstreamManager clout(std::cout, "prepareLattice");
@@ -144,7 +143,7 @@ void setBoundaryValues(SuperLattice3D<T, DESCRIPTOR>& sLattice,
   if (iT == 0) {
     AnalyticalConst3D<T, T> zero(0.);
     AnalyticalConst3D<T, T> one(1.);
-    sLattice.defineField<descriptors::POROSITY>(superGeometry.getMaterialIndicator({0,1,2}), one);    
+    sLattice.defineField<descriptors::POROSITY>(superGeometry.getMaterialIndicator({0,1,2}), one);
     // Set initial condition
     AnalyticalConst3D<T, T> ux(0.);
     AnalyticalConst3D<T, T> uy(0.);
@@ -200,7 +199,7 @@ void getResults(SuperLattice3D<T, DESCRIPTOR>& sLattice,
     timer.update(iT);
     timer.printStep();
     sLattice.getStatistics().print(iT, converter.getPhysTime(iT));
-    particleDynamics.print(); 
+    particleDynamics.print();
   }
 }
 
@@ -246,10 +245,8 @@ int main(int argc, char* argv[])
 
   PorousParticleBGKdynamics<T, DESCRIPTOR, false> designDynamics(converter.getLatticeRelaxationFrequency(), instances::getBulkMomenta<T, DESCRIPTOR>());
 
-  sOnLatticeBoundaryCondition3D<T, DESCRIPTOR> sBoundaryCondition(sLattice);
-  createLocalBoundaryCondition3D<T, DESCRIPTOR>(sBoundaryCondition);
+  prepareLattice(sLattice, converter, designDynamics, superGeometry);
 
-  prepareLattice(sLattice, converter, designDynamics, sBoundaryCondition, superGeometry);
 
   /// === 4th Step: Main Loop with Timer ===
   Timer<double> timer(converter.getLatticeTime(maxPhysT), superGeometry.getStatistics().getNvoxel());
@@ -257,22 +254,22 @@ int main(int argc, char* argv[])
 
   // Create Particle Dynamics
   ParticleDynamics3D<T, DESCRIPTOR> particleDynamics(sLattice, converter, superGeometry, lengthX, lengthY, lengthZ, externalAcceleration);
-  
+
   // Create Cube Indicator
   T epsilon = 0.5*converter.getConversionFactorLength();
-  
+
   //Cube indicator
   SmoothIndicatorCuboid3D<T, T, true> particleIndicator(cubeCenter, cubeEdgeLength, cubeEdgeLength, cubeEdgeLength, epsilon, cubeOrientation, cubeDensity, cubeVelocity);
-  
+
   //Sphere indicator
   //SmoothIndicatorSphere3D<T, T, true> particleIndicator(cubeCenter, 0.5*cubeEdgeLength, epsilon, cubeDensity, cubeVelocity);
-  
+
   //Cylinder indicator
   //SmoothIndicatorCylinder3D<T, T, true> particleIndicator(cubeCenter, { 1, 0, 0 }, 0.5*cubeEdgeLength, cubeEdgeLength, epsilon, cubeOrientation, cubeDensity, cubeVelocity);
 
-  SuperExternal3D<T,DESCRIPTOR,POROSITY> superExtPorosity(superGeometry, sLattice, sLattice.getOverlap());
-  SuperExternal3D<T,DESCRIPTOR,VELOCITY_NUMERATOR> superExtNumerator(superGeometry, sLattice, sLattice.getOverlap());
-  SuperExternal3D<T,DESCRIPTOR,VELOCITY_DENOMINATOR> superExtDenominator(superGeometry, sLattice, sLattice.getOverlap());
+  SuperField3D<T,DESCRIPTOR,POROSITY> superExtPorosity(superGeometry, sLattice, sLattice.getOverlap());
+  SuperField3D<T,DESCRIPTOR,VELOCITY_NUMERATOR> superExtNumerator(superGeometry, sLattice, sLattice.getOverlap());
+  SuperField3D<T,DESCRIPTOR,VELOCITY_DENOMINATOR> superExtDenominator(superGeometry, sLattice, sLattice.getOverlap());
   particleDynamics.addParticle( particleIndicator );
   particleDynamics.print();
 
@@ -280,7 +277,7 @@ int main(int argc, char* argv[])
   setBoundaryValues(sLattice, converter, 0, superGeometry);
 
   clout << "MaxIT: " << converter.getLatticeTime(maxPhysT) << std::endl;
-  for (int iT = 0; iT < converter.getLatticeTime(maxPhysT)+10; ++iT) {
+  for (std::size_t iT = 0; iT < converter.getLatticeTime(maxPhysT)+10; ++iT) {
     particleDynamics.simulateTimestep("verlet");
     getResults(sLattice, converter, iT, superGeometry, timer, particleDynamics);
     sLattice.collideAndStream();

@@ -43,10 +43,10 @@ template<typename T, typename DESCRIPTOR>
 class ShanChenDynOmegaForcedPostProcessor2D : public LocalPostProcessor2D<T,DESCRIPTOR> {
 public:
   ShanChenDynOmegaForcedPostProcessor2D(int x0_, int x1_, int y0_, int y1_, T G_,
-                                        std::vector<T> rho0_, AnalyticalF1D<T,T>& iP_,
+                                        std::vector<T> rho0_, AnalyticalF<1,T,T>& iP_,
                                         std::vector<SpatiallyExtendedObject2D*> partners_);
   ShanChenDynOmegaForcedPostProcessor2D(T G_,
-                                        std::vector<T> rho0_, AnalyticalF1D<T,T>& iP_,
+                                        std::vector<T> rho0_, AnalyticalF<1,T,T>& iP_,
                                         std::vector<SpatiallyExtendedObject2D*> partners_);
   virtual int extent() const
   {
@@ -60,24 +60,25 @@ public:
   virtual void processSubDomain(BlockLattice2D<T,DESCRIPTOR>& blockLattice,
                                 int x0_, int x1_, int y0_, int y1_);
 private:
+  using RHO_CACHE = descriptors::DESCRIPTOR_FIELD_BASE<2, 0, 0>;
   int x0, x1, y0, y1;
   T G;
   std::vector<T> rho0;
-  AnalyticalF1D<T,T>& interactionPotential;
+  AnalyticalF<1,T,T>& interactionPotential;
   std::vector<SpatiallyExtendedObject2D*> partners;
 };
 
 template<typename T, typename DESCRIPTOR>
 class ShanChenDynOmegaForcedGenerator2D : public LatticeCouplingGenerator2D<T,DESCRIPTOR> {
 public:
-  ShanChenDynOmegaForcedGenerator2D(int x0_, int x1_, int y0_, int y1_, T G_, std::vector<T> rho0_, AnalyticalF1D<T,T>& iP_);
-  ShanChenDynOmegaForcedGenerator2D(T G_, std::vector<T> rho0_, AnalyticalF1D<T,T>& iP_);
+  ShanChenDynOmegaForcedGenerator2D(int x0_, int x1_, int y0_, int y1_, T G_, std::vector<T> rho0_, AnalyticalF<1,T,T>& iP_);
+  ShanChenDynOmegaForcedGenerator2D(T G_, std::vector<T> rho0_, AnalyticalF<1,T,T>& iP_);
   virtual PostProcessor2D<T,DESCRIPTOR>* generate(std::vector<SpatiallyExtendedObject2D*> partners) const;
   virtual LatticeCouplingGenerator2D<T,DESCRIPTOR>* clone() const;
 private:
   T G;
   std::vector<T> rho0;
-  AnalyticalF1D<T,T>& interactionPotential;
+  AnalyticalF<1,T,T>& interactionPotential;
 };
 
 }

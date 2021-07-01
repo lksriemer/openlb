@@ -26,6 +26,8 @@
  *  Groups all the generic 3D template files in the twoWayCoupling folder.
  */
 
+#include "ReynoldsNumbers3D.hh"
+#include "smoothingFunctionals3D.hh"
 #include "twoWayHelperFunctionals.hh"
 #include "dragModels3D.hh"
 #include "forwardCouplingModels3D.hh"

@@ -42,17 +42,17 @@ public:
   /// Constructor with boundary initialization
   InnerEdgeVelBM3D(const T u_[DESCRIPTOR::d]);
 
-  T computeRho(Cell<T,DESCRIPTOR> const& cell) const override;
+  T computeRho(ConstCell<T,DESCRIPTOR>& cell) const override;
   void computeU (
-    Cell<T,DESCRIPTOR> const& cell,
+    ConstCell<T,DESCRIPTOR>& cell,
     T u[DESCRIPTOR::d] ) const override;
   void computeJ (
-    Cell<T,DESCRIPTOR> const& cell,
+    ConstCell<T,DESCRIPTOR>& cell,
     T j[DESCRIPTOR::d] ) const override;
   void computeU(T u[DESCRIPTOR::d]) const;
   void defineRho(Cell<T,DESCRIPTOR>& cell, T rho) override ;
   void defineU(Cell<T,DESCRIPTOR>& cell,
-                       const T u[DESCRIPTOR::d]) override ;
+               const T u[DESCRIPTOR::d]) override ;
   void defineU(const T u[DESCRIPTOR::d]);
   void defineAllMomenta (
     Cell<T,DESCRIPTOR>& cell,
@@ -60,7 +60,7 @@ public:
     const T pi[util::TensorVal<DESCRIPTOR >::n] ) override;
   /// Stress tensor
   void computeStress (
-    Cell<T,DESCRIPTOR> const& cell,
+    ConstCell<T,DESCRIPTOR>& cell,
     T rho, const T u[DESCRIPTOR::d],
     T pi[util::TensorVal<DESCRIPTOR >::n] ) const override;
 private:
@@ -77,17 +77,17 @@ public:
   /// Constructor with boundary initialization
   InnerCornerVelBM3D(const T u_[DESCRIPTOR::d]);
 
-  T computeRho(Cell<T,DESCRIPTOR> const& cell) const override;
+  T computeRho(ConstCell<T,DESCRIPTOR>& cell) const override;
   void computeU (
-    Cell<T,DESCRIPTOR> const& cell,
+    ConstCell<T,DESCRIPTOR>& cell,
     T u[DESCRIPTOR::d] ) const override;
   void computeJ (
-    Cell<T,DESCRIPTOR> const& cell,
+    ConstCell<T,DESCRIPTOR>& cell,
     T j[DESCRIPTOR::d] ) const override;
   void computeU(T u[DESCRIPTOR::d]) const;
   void defineRho(Cell<T,DESCRIPTOR>& cell, T rho) override ;
   void defineU(Cell<T,DESCRIPTOR>& cell,
-                       const T u[DESCRIPTOR::d]) override ;
+               const T u[DESCRIPTOR::d]) override ;
   void defineU(const T u[DESCRIPTOR::d]);
   void defineAllMomenta (
     Cell<T,DESCRIPTOR>& cell,
@@ -95,7 +95,7 @@ public:
     const T pi[util::TensorVal<DESCRIPTOR >::n] ) override;
   /// Stress tensor
   void computeStress (
-    Cell<T,DESCRIPTOR> const& cell,
+    ConstCell<T,DESCRIPTOR>& cell,
     T rho, const T u[DESCRIPTOR::d],
     T pi[util::TensorVal<DESCRIPTOR >::n] ) const override;
 private:

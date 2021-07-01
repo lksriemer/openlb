@@ -1,6 +1,6 @@
 /*  This file is part of the OpenLB library
  *
- *  Copyright (C) 2016 Thomas Henn
+ *  Copyright (C) 2016 Thomas Henn, Davide Dapelo
  *  E-mail contact: info@openlb.net
  *  The most recent release of OpenLB can be downloaded at
  *  <http://www.openlb.net/>
@@ -240,9 +240,16 @@ void ParticleSystem3D<T, PARTICLETYPE>::addForce(
 
 template<typename T, template<typename U> class PARTICLETYPE>
 void ParticleSystem3D<T, PARTICLETYPE>::addBoundary(
-  std::shared_ptr<Boundary3D<T, PARTICLETYPE> > b)
+  std::shared_ptr<Boundary3D<T, PARTICLETYPE> > pB)
 {
-  _boundaries.push_back(b);
+  _boundaries.push_back(pB);
+}
+
+template<typename T, template<typename U> class PARTICLETYPE>
+void ParticleSystem3D<T, PARTICLETYPE>::addParticleOperation(
+  std::shared_ptr<ParticleOperation3D<T, PARTICLETYPE> > pO)
+{
+  _particleOperations.push_back(pO);
 }
 
 template<typename T, template<typename U> class PARTICLETYPE>
@@ -292,6 +299,19 @@ void ParticleSystem3D<T, PARTICLETYPE>::computeBoundary()
     for (p = _particles.begin(); p != _particles.end(); ++p) {
       if (p->getActive()) {
         f->applyBoundary(p, *this);
+      }
+    }
+  }
+}
+
+template<typename T, template<typename U> class PARTICLETYPE>
+void ParticleSystem3D<T, PARTICLETYPE>::computeParticleOperation()
+{
+  typename std::deque<PARTICLETYPE<T> >::iterator p;
+  for (auto o : _particleOperations) {
+    for (p = _particles.begin(); p != _particles.end(); ++p) {
+      if (p->getActive()) {
+        o->applyParticleOperation(p, *this);
       }
     }
   }
@@ -394,7 +414,7 @@ void ParticleSystem3D<T, PARTICLETYPE>::explicitEuler(T dT, bool scale)
     if (p.getActive()) {
 
       for (int i = 0; i < 3; i++) {
-        p.getVel()[i] += p.getForce()[i] * p.getInvMass() * dT;
+        p.getVel()[i] += p.getForce()[i] * p.getInvAddedMass() * dT;
         p.getPos()[i] += p.getVel()[i] * dT;
 
         // computation of direction depending maxFactor to scale velocity value
@@ -445,7 +465,7 @@ void ParticleSystem3D<double, MagneticParticle3D>::explicitEuler(double dT, bool
       if (p.getSActivity() == 3) {continue;}
 
       for (int i = 0; i < 3; i++) {
-        p.getVel()[i] += p.getForce()[i] * p.getInvMass() * dT;
+        p.getVel()[i] += p.getForce()[i] * p.getInvAddedMass() * dT;
         p.getPos()[i] += p.getVel()[i] * dT;
 
         // computation of direction depending maxFactor to scale velocity value
@@ -509,7 +529,7 @@ void ParticleSystem3D<double, MagneticParticle3D>::explicitEuler(double dT, std:
       if (b == false) {continue;}
 
       for (int i = 0; i < 3; i++) {
-        p.getVel()[i] += p.getForce()[i] * p.getInvMass() * dT;
+        p.getVel()[i] += p.getForce()[i] * p.getInvAddedMass() * dT;
         p.getPos()[i] += p.getVel()[i] * dT;
 
         // computation of direction depending maxFactor to scale velocity value
@@ -613,7 +633,7 @@ void ParticleSystem3D<double, MagneticParticle3D>::explicitEuler(double dT, std:
 //}
 
 //template<typename T, template<typename U> class PARTICLETYPE>
-//void ParticleSystem3D<T, PARTICLETYPE>::implicitEuler(T dT, AnalyticalF3D<T,T>& getvel) {
+//void ParticleSystem3D<T, PARTICLETYPE>::implicitEuler(T dT, AnalyticalF<3,T,T>& getvel) {
 //  _activeParticles = 0;
 //  for (auto& p : _particles) {
 //    if(p.getActive()) {
@@ -1164,8 +1184,8 @@ void ParticleSystem3D<double, MagneticParticle3D>::integrateTorqueMag(double dT)
         rotRAxis(output, input);
         Vector<double, 3> out(output);
         // renormalize output
-        if (out.norm() > epsilon) {
-          out = (1. / out.norm()) * out;
+        if (norm(out) > epsilon) {
+          out = normalize(out);
         }
 
         p.getMoment()[0] = out[0];
@@ -1208,8 +1228,8 @@ void ParticleSystem3D<double, MagneticParticle3D>::integrateTorqueMag(double dT,
         rotRAxis(output, input);
         Vector<double, 3> out(output);
         // renormalize output
-        if (out.norm() > epsilon) {
-          out = (1. / out.norm()) * out;
+        if (norm(out) > epsilon) {
+          out = normalize(out);
         }
 
         p.getMoment()[0] = out[0];

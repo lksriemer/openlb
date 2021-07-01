@@ -48,6 +48,8 @@ ZeroVelocityBouzidiLinearPostProcessor3D<T,DESCRIPTOR>::
 ZeroVelocityBouzidiLinearPostProcessor3D(int x_, int y_, int z_, int iPop_, T dist_)
   : x(x_), y(y_), z(z_), iPop(iPop_), dist(dist_)
 {
+  this->getName() = "ZeroVelocityBouzidiLinearPostProcessor3D";  
+  this->_priority = -1;
 #ifndef QUIET
   if (dist < 0 || dist > 1)
     std::cout << "WARNING: Bogus distance at (" << x << "," << y << "," << z << "): "
@@ -66,7 +68,8 @@ ZeroVelocityBouzidiLinearPostProcessor3D(int x_, int y_, int z_, int iPop_, T di
     zB = z - c[2];
     q = 1/(2*dist);
     iPop2 = opp;
-  } else {
+  }
+  else {
     xB = x;
     yB = y;
     zB = z;
@@ -103,6 +106,9 @@ VelocityBouzidiLinearPostProcessor3D<T,DESCRIPTOR>::
 VelocityBouzidiLinearPostProcessor3D(int x_, int y_, int z_, int iPop_, T dist_)
   : x(x_), y(y_), z(z_), iPop(iPop_), dist(dist_)
 {
+  this->getName() = "VelocityBouzidiLinearPostProcessor3D";
+  this->_priority = -1;
+  
 #ifndef QUIET
   if (dist < 0 || dist > 1)
     std::cout << "WARNING: Bogus distance at (" << x << "," << y << "," << z << "): "
@@ -122,7 +128,8 @@ VelocityBouzidiLinearPostProcessor3D(int x_, int y_, int z_, int iPop_, T dist_)
     q = 1/(2*dist);
     ufrac = q;
     iPop2 = opp;
-  } else {
+  }
+  else {
     xB = x;
     yB = y;
     zB = z;
@@ -153,10 +160,10 @@ process(BlockLattice3D<T,DESCRIPTOR>& blockLattice)
 {
   Dynamics<T,DESCRIPTOR>* dynamics = blockLattice.getDynamics(xN, yN, zN);
   T u = ufrac*dynamics->getVelocityCoefficient(iPop);
-  dynamics->defineRho( blockLattice.get(xN, yN, zN), blockLattice.get(x, y, z).computeRho() );
-  T j = u;// * blockLattice.get(x, y, z).computeRho();
-  blockLattice.get(x, y, z)[opp] = q*blockLattice.get(xN, yN, zN)[iPop] +
-                                   (1-q)*blockLattice.get(xB, yB, zB)[iPop2] + j;
+  auto cellN = blockLattice.get(xN, yN, zN);
+  auto cell = blockLattice.get(x, y, z);
+  dynamics->defineRho(cellN, cell.computeRho());
+  cell[opp] = q*cellN[iPop] + (1-q)*blockLattice.get(xB, yB, zB)[iPop2] + u;
 }
 
 
@@ -167,6 +174,9 @@ ZeroVelocityBounceBackPostProcessor3D<T,DESCRIPTOR>::
 ZeroVelocityBounceBackPostProcessor3D(int x_, int y_, int z_, int iPop_, T dist_)
   : x(x_), y(y_), z(z_), iPop(iPop_), dist(dist_)
 {
+  this->getName() = "ZeroVelocityBounceBackPostProcessor3D";  
+  this->_priority = -1;
+
 #ifndef QUIET
   if (dist < 0 || dist > 1)
     std::cout << "WARNING: Bogus distance at (" << x << "," << y << "," << z << "): "
@@ -206,6 +216,9 @@ VelocityBounceBackPostProcessor3D<T,DESCRIPTOR>::
 VelocityBounceBackPostProcessor3D(int x_, int y_, int z_, int iPop_, T dist_)
   : x(x_), y(y_), z(z_), iPop(iPop_), dist(dist_)
 {
+  this->getName() = "VelocityBounceBackPostProcessor3D";  
+  this->_priority = -1;
+
 #ifndef QUIET
   if (dist < 0 || dist > 1)
     std::cout << "WARNING: Bogus distance at (" << x << "," << y << "," << z << "): "
@@ -240,9 +253,10 @@ process(BlockLattice3D<T,DESCRIPTOR>& blockLattice)
 {
   Dynamics<T,DESCRIPTOR>* dynamics = blockLattice.getDynamics(xN, yN, zN);
   T u = dynamics->getVelocityCoefficient(iPop);
-  dynamics->defineRho( blockLattice.get(xN, yN, zN), blockLattice.get(x, y, z).computeRho() );
-  T j = u;//*blockLattice.get(x, y, z).computeRho();
-  blockLattice.get(x, y, z)[opp] = blockLattice.get(xN, yN, zN)[iPop] + j;
+  auto cellN = blockLattice.get(xN, yN, zN);
+  auto cell  = blockLattice.get(x, y, z);
+  dynamics->defineRho(cellN, cell.computeRho());
+  cell[opp] = cellN[iPop] + u;
 }
 
 ////////  LinearBouzidiBoundaryPostProcessorGenerator ////////////////////////////////

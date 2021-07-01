@@ -47,6 +47,36 @@ namespace olb {
 template<typename T, typename DESCRIPTOR>
 struct firstOrderLbHelpers {
 
+
+
+/// compute off-equilibrium part of the populations from gradient of the flux
+/// for asymmetric regularization init to circumvent pi computation
+  static T fromJgradToFneq (
+    int iPop,
+    const T Jgrad[DESCRIPTOR::d * DESCRIPTOR::d],
+    T omega )
+  {
+    typedef DESCRIPTOR L;
+    T fNeq = T();
+    int iJgrad = 0;
+    for (int iAlpha=0; iAlpha<L::d; ++iAlpha) {
+      for (int iBeta=0; iBeta<L::d; ++iBeta) {
+        T toAdd = descriptors::c<L>(iPop,iAlpha) * descriptors::c<L>(iPop,iBeta);
+        if (iAlpha==iBeta) {
+          toAdd -= 1./descriptors::invCs2<T,L>();
+        } else {
+          toAdd *= (T)2;
+        }
+        toAdd *= Jgrad[iJgrad++];
+        fNeq += toAdd;
+      }
+    }
+    fNeq *= - descriptors::t<T,L>(iPop) * descriptors::invCs2<T,L>() / omega;
+    return fNeq;
+  }
+
+
+
   /// Compute off-equilibrium part of the f's from the stress tensor Pi.
   /** Implements the following formula (with Einstein index contraction):
    * \f[ f_i^{neq} = t_i / (2 c_s^4) *

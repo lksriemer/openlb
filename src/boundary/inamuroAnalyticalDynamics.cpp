@@ -24,7 +24,7 @@
 #include "inamuroAnalyticalDynamics.h"
 #include "inamuroAnalyticalDynamics.hh"
 #include "dynamics/latticeDescriptors.h"
- 
+
 
 
 namespace olb {

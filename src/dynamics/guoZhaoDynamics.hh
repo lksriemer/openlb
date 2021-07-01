@@ -49,6 +49,7 @@ GuoZhaoBGKdynamics<T,DESCRIPTOR>::GuoZhaoBGKdynamics (
   : BasicDynamics<T,DESCRIPTOR>(momenta),
     _omega(omega)
 {
+  this->getName() = "GuoZhaoBGKdynamics";  
   OLB_PRECONDITION( DESCRIPTOR::template provides<descriptors::FORCE>() );
 
   _epsilon = (T)1.0; // This to avoid a NaN error at the first timestep.
@@ -61,46 +62,43 @@ T GuoZhaoBGKdynamics<T,DESCRIPTOR>::computeEquilibrium(int iPop, T rho, const T 
 }
 
 template<typename T, typename DESCRIPTOR>
-void GuoZhaoBGKdynamics<T,DESCRIPTOR>::computeU (Cell<T,DESCRIPTOR> const& cell, T u[DESCRIPTOR::d] ) const
+void GuoZhaoBGKdynamics<T,DESCRIPTOR>::computeU (ConstCell<T,DESCRIPTOR>& cell, T u[DESCRIPTOR::d] ) const
 {
   T rho;
-  this->_momenta.computeRhoU(cell, rho, u);
-  for (int iVel=0; iVel<DESCRIPTOR::d; ++iVel) {
-    u[iVel] += cell.template getFieldPointer<descriptors::FORCE>()[iVel] / (T)2.;
-  }
+  this->computeRhoU(cell, rho, u);
 }
 
 template<typename T, typename DESCRIPTOR>
-void GuoZhaoBGKdynamics<T,DESCRIPTOR>::computeRhoU (Cell<T,DESCRIPTOR> const& cell, T& rho, T u[DESCRIPTOR::d] ) const
+void GuoZhaoBGKdynamics<T,DESCRIPTOR>::computeRhoU (ConstCell<T,DESCRIPTOR>& cell, T& rho, T u[DESCRIPTOR::d] ) const
 {
   this->_momenta.computeRhoU(cell, rho, u);
 
-  T epsilon = cell.template getFieldPointer<descriptors::EPSILON>()[0];
-  T nu = cell.template getFieldPointer<descriptors::NU>()[0];
-  T k = cell.template getFieldPointer<descriptors::K>()[0];
+  const T epsilon = cell.template getField<descriptors::EPSILON>();
+  const T nu      = cell.template getField<descriptors::NU>();
+  const T k       = cell.template getField<descriptors::K>();
 
-  T Fe = 0.; //1.75/sqrt(150.*pow(epsilon,3));
+  auto bodyF = cell.template getFieldPointer<descriptors::BODY_FORCE>();
 
-  T c_0 = 0.5*(1 + 0.5*epsilon*nu/k);
-  T c_1 = 0.5*epsilon*Fe/sqrt(k);
-
-  T uMag = 0.;
   for (int iDim=0; iDim<DESCRIPTOR::d; ++iDim) {
-    uMag += u[iDim]*u[iDim];
+    u[iDim] += 0.5*epsilon*bodyF[iDim];
   }
-  uMag = sqrt(uMag);
+
+  const T uMag = sqrt( util::normSqr<T,DESCRIPTOR::d>(u) );
+  const T Fe = 0.;//1.75/sqrt(150.*pow(epsilon,3));
+
+  const T c_0 = 0.5*(1 + 0.5*epsilon*nu/k);
+  const T c_1 = 0.5*epsilon*Fe/sqrt(k);
 
   for (int iDim=0; iDim<DESCRIPTOR::d; ++iDim) {
     u[iDim] /= (c_0 + sqrt(c_0*c_0 + c_1*uMag));
-    u[iDim] += 0.5*epsilon*cell.template getFieldPointer<descriptors::BODY_FORCE>()[iDim];
   }
 }
 
 template<typename T, typename DESCRIPTOR>
 void GuoZhaoBGKdynamics<T,DESCRIPTOR>::updateEpsilon (Cell<T,DESCRIPTOR>& cell)
 {
-  _epsilon = *cell.template getFieldPointer<descriptors::EPSILON>(); //Copying epsilon from
-  // external to member variable to provide access for computeEquilibrium.
+  // Copying epsilon from external to member variable to provide access for computeEquilibrium.
+  _epsilon = cell.template getField<descriptors::EPSILON>();
 }
 
 
@@ -113,7 +111,7 @@ void GuoZhaoBGKdynamics<T,DESCRIPTOR>::collide (
   // external to member variable to provide access for computeEquilibrium.
   updateEpsilon(cell);
   T rho, u[DESCRIPTOR::d];
-  this->_momenta.computeRhoU(cell, rho, u);
+  this->computeRhoU(cell, rho, u);
   GuoZhaoLbHelpers<T,DESCRIPTOR>::updateGuoZhaoForce(cell, u);
   T uSqr = GuoZhaoLbHelpers<T,DESCRIPTOR>::bgkCollision(cell, _epsilon, rho, u, _omega);
   GuoZhaoLbHelpers<T,DESCRIPTOR>::addExternalForce(cell, u, _omega, rho, _epsilon);

@@ -29,7 +29,7 @@
 #ifndef LB_SMAGO_GUOZHAO_DYNAMICS_H
 #define LB_SMAGO_GUOZHAO_DYNAMICS_H
 
-#include "dynamics/guoZhaoLatticeDescriptors.h"
+#include "dynamics/descriptorAlias.h"
 #include "core/util.h"
 #include "core/postProcessing.h"
 #include "core/latticeStatistics.h"

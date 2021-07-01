@@ -29,6 +29,7 @@
 #define LB_BACK_COUPLING_MODELS_H
 
 #include "twoWayHelperFunctionals.h"
+#include "smoothingFunctionals3D.h"
 
 namespace olb {
 

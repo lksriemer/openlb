@@ -37,7 +37,15 @@
 
 namespace olb {
 
-/// implements a smooth particle cuboid in 2D with an _epsilon sector
+
+///////////////////////////SmoothIndicatorF/////////////////////////////////////
+
+/** implements a smooth cuboid in 2D with an _epsilon sector.
+ * \param mass    TODO
+ * \param epsilon
+ * \param theta   TODO
+ *
+ */
 template <typename T, typename S, bool HLBM=false>
 class SmoothIndicatorCuboid2D final : public SmoothIndicatorF2D<T,S,HLBM> {
 private:
@@ -58,6 +66,7 @@ public:
   bool operator() (T output[], const S input[]) override;
 };
 
+
 /// implements a smooth triangle in 2D with an _epsilon sector
 template <typename T, typename S, bool HLBM=false>
 class SmoothIndicatorTriangle2D final : public SmoothIndicatorF2D<T,S,HLBM> {
@@ -70,7 +79,35 @@ private:
   S _ab_d, _bc_d, _ca_d;
 public:
   SmoothIndicatorTriangle2D(Vector<S,2> center, S radius, S epsilon, S theta=0, S density=0, Vector<S,2> vel = Vector<S,2> (0.,0.));
+  bool operator() (T output[], const S input[]) override;
+};
+// needs to be updated to current state
+/*
+/// implements a custom shaped smooth particle //TODO: Check for consistency
+template <typename T, typename S, template<typename U> class DESCRIPTOR, bool HLBM=false>
+class SmoothIndicatorCustom2D final : public SmoothIndicatorF2D<T,S,HLBM> {
+private:
+  // _center is the local center, _startPos the center at the start
+  Vector<T,2> _center;
+  // _latticeCenter gives the center in local lattice coordinates
+  Vector<int,2> _latticeCenter;
+  BlockData2D<T, T> _blockData;
+  UnitConverter<T,DESCRIPTOR> const& _converter;
+public:
+  SmoothIndicatorCustom2D(UnitConverter<T,DESCRIPTOR> const& converter, IndicatorF3D<T>& ind, Vector<T,2> center, T epsilon, T slice, S theta=0, S density=0, Vector<S,2> vel = Vector<S,2> (0.,0.));
   bool operator() (T output[], const S input[]);
+};
+*/
+
+//Geng2019:
+/// implements a smooth circle in 2D with an tangiant _epsilon sector 
+template <typename T, typename S, bool HLBM=false>
+class SmoothIndicatorHTCircle2D final : public SmoothIndicatorF2D<T,S,HLBM> {
+private:
+  S _radius;
+public:
+  SmoothIndicatorHTCircle2D(Vector<S,2> center, S radius, S epsilon, S density=0, Vector<S,2> vel = Vector<S,2> (0.,0.));
+  bool operator() (T output[], const S input[]) override;
 };
 
 }

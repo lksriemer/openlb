@@ -74,6 +74,7 @@ public:
   void processSubDomain(BlockLattice2D<T,DESCRIPTOR>& blockLattice,
                                 int x0_, int x1_, int y0_, int y1_) override;
 private:
+  using RHO_CACHE = descriptors::DESCRIPTOR_FIELD_BASE<3, 0, 0>;
   int x0, x1, y0, y1;
   T alpha, kappa1, kappa2, kappa3;
   std::vector<SpatiallyExtendedObject2D*> partners;

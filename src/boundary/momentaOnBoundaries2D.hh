@@ -30,6 +30,7 @@
 #include "momentaOnBoundaries2D.h"
 #include "dynamics/lbHelpers.h"
 #include "dynamics/firstOrderLbHelpers.h"
+#include "core/cellD.h"
 
 namespace olb {
 
@@ -57,7 +58,7 @@ InnerCornerVelBM2D<T,DESCRIPTOR,normalX,normalY>::InnerCornerVelBM2D (
 template<typename T, typename DESCRIPTOR,
          int normalX, int normalY>
 T InnerCornerVelBM2D<T,DESCRIPTOR,normalX,normalY>::computeRho (
-  Cell<T,DESCRIPTOR> const& cell ) const
+  ConstCell<T,DESCRIPTOR>& cell ) const
 {
   T rhoX = velocityBMRho<T, DESCRIPTOR, 0, normalX>(cell, _u);
   T rhoY = velocityBMRho<T, DESCRIPTOR, 1, normalY>(cell, _u);
@@ -67,7 +68,7 @@ T InnerCornerVelBM2D<T,DESCRIPTOR,normalX,normalY>::computeRho (
 template<typename T, typename DESCRIPTOR,
          int normalX, int normalY>
 void InnerCornerVelBM2D<T,DESCRIPTOR,normalX,normalY>::computeU (
-  Cell<T,DESCRIPTOR> const& cell,
+  ConstCell<T,DESCRIPTOR>& cell,
   T u[DESCRIPTOR::d] ) const
 {
   for (int iD=0; iD<DESCRIPTOR::d; ++iD) {
@@ -78,7 +79,7 @@ void InnerCornerVelBM2D<T,DESCRIPTOR,normalX,normalY>::computeU (
 template<typename T, typename DESCRIPTOR,
          int normalX, int normalY>
 void InnerCornerVelBM2D<T,DESCRIPTOR,normalX,normalY>::computeJ (
-  Cell<T,DESCRIPTOR> const& cell,
+  ConstCell<T,DESCRIPTOR>& cell,
   T j[DESCRIPTOR::d] ) const
 {
   computeU(cell, j);
@@ -140,12 +141,12 @@ void InnerCornerVelBM2D<T,DESCRIPTOR,normalX,normalY>::defineAllMomenta (
 template<typename T, typename DESCRIPTOR,
          int normalX, int normalY>
 void InnerCornerVelBM2D<T,DESCRIPTOR,normalX,normalY>::computeStress (
-  Cell<T,DESCRIPTOR> const& cell,
+  ConstCell<T,DESCRIPTOR>& cell,
   T rho, const T u[DESCRIPTOR::d],
   T pi[util::TensorVal<DESCRIPTOR >::n] ) const
 {
   typedef lbHelpers<T,DESCRIPTOR> lbH;
-  Cell<T,DESCRIPTOR> newCell(cell);
+  CellD<T,DESCRIPTOR> newCell(cell);
   int v[DESCRIPTOR::d] = { -normalX, -normalY };
   int unknownF  = util::findVelocity<DESCRIPTOR >(v);
 

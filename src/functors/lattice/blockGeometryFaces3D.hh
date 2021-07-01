@@ -91,7 +91,82 @@ bool BlockGeometryFaces3D<T>::operator() (T output[], const int input[])
   return true;
 }
 
+template <typename T, bool HLBM>
+BlockGeometryFacesIndicator3D<T,HLBM>::BlockGeometryFacesIndicator3D(
+  BlockGeometryStructure3D<T>& blockGeometry, SmoothIndicatorF3D<T,T,HLBM>& indicator,
+  int material, T latticeL)
+  : GenericF<T,int>(7,0), _blockGeometry(blockGeometry), _indicator(indicator),
+    _material(material), _latticeLsqr(latticeL*latticeL)
+{
+      this->getName() = "facesSmoothInd";
+}
+template <typename T, bool HLBM>
+bool BlockGeometryFacesIndicator3D<T,HLBM>::operator() (T output[], const int input[])
+{
+  int counter[6] = {0,0,0,0,0,0};
+  T inside[1];
+  T physR[3];
+  if (_blockGeometry.getStatistics().getNvoxel(_material)!=0) {
+    const int x0 = _blockGeometry.getStatistics().getMinLatticeR(_material)[0];
+    const int y0 = _blockGeometry.getStatistics().getMinLatticeR(_material)[1];
+    const int z0 = _blockGeometry.getStatistics().getMinLatticeR(_material)[2];
+    const int x1 = _blockGeometry.getStatistics().getMaxLatticeR(_material)[0];
+    const int y1 = _blockGeometry.getStatistics().getMaxLatticeR(_material)[1];
+    const int z1 = _blockGeometry.getStatistics().getMaxLatticeR(_material)[2];
+
+    // Iterate over all cells and count the cells of the face
+    for (int iX = x0; iX <= x1; ++iX) {
+      for (int iY = y0; iY <= y1; ++iY) {
+        for (int iZ = z0; iZ <= z1; ++iZ) {
+          // Look at solid nodes only
+          _blockGeometry.getPhysR(physR, iX, iY, iZ);
+          _indicator(inside, physR);
+          if ( !util::nearZero(inside[0]) ) {
+            _blockGeometry.getPhysR(physR, iX-1, iY, iZ);
+            _indicator(inside, physR);
+            if ( util::nearZero(inside[0]) )
+              counter[0]++;
+            _blockGeometry.getPhysR(physR, iX, iY-1, iZ);
+            _indicator(inside, physR);
+            if ( util::nearZero(inside[0]) )
+              counter[1]++;
+            _blockGeometry.getPhysR(physR, iX, iY, iZ-1);
+            _indicator(inside, physR);
+            if ( util::nearZero(inside[0]) )
+              counter[2]++;
+            _blockGeometry.getPhysR(physR, iX+1, iY, iZ);
+            _indicator(inside, physR);
+            if ( util::nearZero(inside[0]) )
+              counter[3]++;
+            _blockGeometry.getPhysR(physR, iX, iY+1, iZ);
+            _indicator(inside, physR);
+            if ( util::nearZero(inside[0]) )
+              counter[4]++;
+            _blockGeometry.getPhysR(physR, iX, iY, iZ+1);
+            _indicator(inside, physR);
+            if ( util::nearZero(inside[0]) )
+              counter[5]++;
+          }
+        }
+      }
+    }
+
+    T total = T();
+    for (int i=0; i<6; ++i) {
+      output[i]= ((T) counter[i]) * _latticeLsqr;
+      total+= ((T) counter[i]) * _latticeLsqr;
+    }
+    output[6]=total;
+    return true;
+  } else {
+    for (int i=0; i<7; ++i) {
+      output[i]=T();
+    }
+    return true;
+  }
+  return false;
 
 }
 
+}
 #endif

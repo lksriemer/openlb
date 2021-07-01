@@ -44,11 +44,11 @@ using namespace std;
 
 typedef double T;
 
-//#define MRT
-#ifdef MRT
-#define DESCRIPTOR ForcedMRTD2Q9Descriptor
+//#define ENABLE_MRT
+#ifdef ENABLE_MRT
+typedef D2Q9<tag::MRT,FORCE> DESCRIPTOR;
 #else
-#define DESCRIPTOR  D2Q9<FORCE>
+typedef D2Q9<FORCE> DESCRIPTOR;
 #endif
 
 typedef enum {forced, nonForced} FlowType;
@@ -71,7 +71,8 @@ const T tuner = 0.99;         // for partialSlip only: 0->bounceBack, 1->freeSli
 
 // Stores geometry information in form of material numbers
 void prepareGeometry( UnitConverter<T,DESCRIPTOR> const& converter,
-                      SuperGeometry2D<T>& superGeometry ) {
+                      SuperGeometry2D<T>& superGeometry )
+{
 
   OstreamManager clout( std::cout,"prepareGeometry" );
   clout << "Prepare Geometry ..." << std::endl;
@@ -113,8 +114,8 @@ void prepareGeometry( UnitConverter<T,DESCRIPTOR> const& converter,
 void prepareLattice( UnitConverter<T,DESCRIPTOR> const& converter,
                      SuperLattice2D<T, DESCRIPTOR>& sLattice,
                      Dynamics<T, DESCRIPTOR>& bulkDynamics,
-                     sOnLatticeBoundaryCondition2D<T,DESCRIPTOR>& sBoundaryCondition,
-                     SuperGeometry2D<T>& superGeometry ) {
+                     SuperGeometry2D<T>& superGeometry )
+{
 
   OstreamManager clout( std::cout,"prepareLattice" );
   clout << "Prepare Lattice ..." << std::endl;
@@ -129,15 +130,23 @@ void prepareLattice( UnitConverter<T,DESCRIPTOR> const& converter,
 
   if (boundaryType == bounceBack) {
     sLattice.defineDynamics( superGeometry, 2, &instances::getBounceBack<T, DESCRIPTOR>() );
-  } else if (boundaryType == freeSlip) {
+  }
+  else if (boundaryType == freeSlip) {
     sLattice.defineDynamics(superGeometry, 2, &instances::getNoDynamics<T, DESCRIPTOR>());
-    sBoundaryCondition.addSlipBoundary( superGeometry, 2 );
-  } else if (boundaryType == partialSlip) {
+    setSlipBoundary<T,DESCRIPTOR>(sLattice, superGeometry, 2);
+
+  }
+  else if (boundaryType == partialSlip) {
     sLattice.defineDynamics(superGeometry, 2, &instances::getNoDynamics<T, DESCRIPTOR>());
-    sBoundaryCondition.addPartialSlipBoundary(tuner, superGeometry, 2 );
-  } else {
-    sLattice.defineDynamics( superGeometry, 2, &bulkDynamics );
-    sBoundaryCondition.addVelocityBoundary( superGeometry, 2, omega );
+    setPartialSlipBoundary<T,DESCRIPTOR>(sLattice, tuner, superGeometry, 2);  }
+  else {
+  	sLattice.defineDynamics( superGeometry, 2, &bulkDynamics );
+		if(boundaryType == local){
+			setLocalVelocityBoundary<T,DESCRIPTOR>(sLattice, omega, superGeometry, 2);
+		}
+		else{
+			setInterpolatedVelocityBoundary<T,DESCRIPTOR>(sLattice, omega, superGeometry, 2);
+		}
   }
 
   if (flowType == nonForced) {
@@ -147,8 +156,15 @@ void prepareLattice( UnitConverter<T,DESCRIPTOR> const& converter,
     // Material=4 -->bulk dynamics
     sLattice.defineDynamics( superGeometry, 4, &bulkDynamics );
 
-    sBoundaryCondition.addVelocityBoundary( superGeometry, 3, omega );
-    sBoundaryCondition.addPressureBoundary( superGeometry, 4, omega );
+    if(boundaryType == local){
+			setLocalVelocityBoundary<T,DESCRIPTOR>(sLattice, omega, superGeometry, 3);
+			setLocalPressureBoundary<T,DESCRIPTOR>(sLattice, omega, superGeometry, 4);
+		}
+		else{
+			setInterpolatedVelocityBoundary<T,DESCRIPTOR>(sLattice, omega, superGeometry, 3);
+			setInterpolatedPressureBoundary<T,DESCRIPTOR>(sLattice, omega, superGeometry, 4);
+		}
+
   }
 
   // Initial conditions
@@ -163,9 +179,10 @@ void prepareLattice( UnitConverter<T,DESCRIPTOR> const& converter,
     // Initialize force
     sLattice.defineField<FORCE>(superGeometry, 1, force);
     sLattice.defineField<FORCE>(superGeometry, 2, force);
-  } else {
+  }
+  else {
     T p0 =8.*converter.getLatticeViscosity()*converter.getCharLatticeVelocity()*Lx/( Ly*Ly );
-    AnalyticalLinear2D<T,T> rho( -p0/lx*invCs2<T,DESCRIPTOR>(), 0 , p0*invCs2<T,DESCRIPTOR>()+1 );
+    AnalyticalLinear2D<T,T> rho( -p0/lx*invCs2<T,DESCRIPTOR>(), 0, p0*invCs2<T,DESCRIPTOR>()+1 );
 
     T maxVelocity = converter.getCharLatticeVelocity();
     T distance2Wall = converter.getConversionFactorLength();
@@ -192,7 +209,8 @@ void prepareLattice( UnitConverter<T,DESCRIPTOR> const& converter,
 void error( SuperGeometry2D<T>& superGeometry,
             SuperLattice2D<T, DESCRIPTOR>& sLattice,
             UnitConverter<T,DESCRIPTOR> const& converter,
-            Dynamics<T, DESCRIPTOR>& bulkDynamics ) {
+            Dynamics<T, DESCRIPTOR>& bulkDynamics )
+{
 
   OstreamManager clout( std::cout,"error" );
 
@@ -263,7 +281,7 @@ void error( SuperGeometry2D<T>& superGeometry,
     int Lx = converter.getLatticeLength( lx );
     int Ly = converter.getLatticeLength( ly );
     T p0 = 8.*converter.getLatticeViscosity()*converter.getCharLatticeVelocity()*Lx/T( Ly*Ly );
-    AnalyticalLinear2D<T,T> pressureSol( -converter.getPhysPressure( p0 )/lx , 0 , converter.getPhysPressure( p0 ) );
+    AnalyticalLinear2D<T,T> pressureSol( -converter.getPhysPressure( p0 )/lx, 0, converter.getPhysPressure( p0 ) );
     SuperLatticePhysPressure2D<T,DESCRIPTOR> pressure( sLattice,converter );
 
     SuperAbsoluteErrorL1Norm2D<T> absPressureErrorNormL1(pressure, pressureSol, indicatorF);
@@ -292,7 +310,8 @@ void error( SuperGeometry2D<T>& superGeometry,
 // Output to console and files
 void getResults( SuperLattice2D<T,DESCRIPTOR>& sLattice, Dynamics<T, DESCRIPTOR>& bulkDynamics,
                  UnitConverter<T,DESCRIPTOR> const& converter, int iT,
-                 SuperGeometry2D<T>& superGeometry, Timer<T>& timer, bool hasConverged ) {
+                 SuperGeometry2D<T>& superGeometry, Timer<T>& timer, bool hasConverged )
+{
 
   OstreamManager clout( std::cout,"getResults" );
 
@@ -371,7 +390,8 @@ void getResults( SuperLattice2D<T,DESCRIPTOR>& sLattice, Dynamics<T, DESCRIPTOR>
   }
 }
 
-int main( int argc, char* argv[] ) {
+int main( int argc, char* argv[] )
+{
 
   // === 1st Step: Initialization ===
   olbInit( &argc, &argv );
@@ -461,30 +481,27 @@ int main( int argc, char* argv[] ) {
 
   Dynamics<T, DESCRIPTOR>* bulkDynamics;
 
-#if defined(MRT)
+#if defined(ENABLE_MRT)
   if (flowType == forced) {
     bulkDynamics = new ForcedMRTdynamics<T, DESCRIPTOR>( converter.getLatticeRelaxationFrequency(), instances::getBulkMomenta<T, DESCRIPTOR>() );
-  } else {
+  }
+  else {
     bulkDynamics = new MRTdynamics<T, DESCRIPTOR>( converter.getLatticeRelaxationFrequency(), instances::getBulkMomenta<T, DESCRIPTOR>() );
   }
 #else
   if (flowType == forced) {
     bulkDynamics = new ForcedBGKdynamics<T, DESCRIPTOR>( converter.getLatticeRelaxationFrequency(), instances::getBulkMomenta<T, DESCRIPTOR>() );
-  } else {
+  }
+  else {
     bulkDynamics = new BGKdynamics<T, DESCRIPTOR>( converter.getLatticeRelaxationFrequency(), instances::getBulkMomenta<T, DESCRIPTOR>() );
   }
 #endif
 
 
-  // choose between local and non-local boundary condition
-  sOnLatticeBoundaryCondition2D<T, DESCRIPTOR> sBoundaryCondition( sLattice );
-  if (boundaryType == local) {
-    createLocalBoundaryCondition2D<T, DESCRIPTOR> (sBoundaryCondition);
-  } else {
-    createInterpBoundaryCondition2D<T, DESCRIPTOR> ( sBoundaryCondition );
-  }
+  //prepareLattice and setBoundaryConditions
+  prepareLattice( converter, sLattice, *bulkDynamics, superGeometry );
 
-  prepareLattice( converter, sLattice, *bulkDynamics, sBoundaryCondition, superGeometry );
+
 
   // === 4th Step: Main Loop with Timer ===
   clout << "starting simulation..." << endl;
@@ -492,7 +509,7 @@ int main( int argc, char* argv[] ) {
   util::ValueTracer<T> converge( converter.getLatticeTime( physInterval ), residuum );
   timer.start();
 
-  for ( int iT = 0; iT < converter.getLatticeTime( maxPhysT ); ++iT ) {
+  for ( std::size_t iT = 0; iT < converter.getLatticeTime( maxPhysT ); ++iT ) {
     if ( converge.hasConverged() ) {
       clout << "Simulation converged." << endl;
       getResults( sLattice, *bulkDynamics, converter, iT, superGeometry, timer, converge.hasConverged() );

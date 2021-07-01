@@ -44,7 +44,7 @@ public:
   /// Compute equilibrium distribution function
   T computeEquilibrium( int iPop, T rho, const T u[DESCRIPTOR::d], T uSqr ) const override;
   /// Collision step
-  void collide( Cell<T, DESCRIPTOR>& cell, LatticeStatistics<T>& statistics ) override;
+  void collide( Cell<T,DESCRIPTOR>& cell, LatticeStatistics<T>& statistics ) override;
   /// Get local relaxation parameter of the dynamics
   T getOmega() const override;
   /// Set local relaxation parameter of the dynamics
@@ -83,7 +83,7 @@ public:
   /// Compute equilibrium distribution function
   T computeEquilibrium( int iPop, T rho, const T u[DESCRIPTOR::d], T uSqr ) const override;
   /// Collision step
-  void collide( Cell<T, DESCRIPTOR>& cell, LatticeStatistics<T>& statistics ) override;
+  void collide( Cell<T,DESCRIPTOR>& cell, LatticeStatistics<T>& statistics ) override;
   /// Get local relaxation parameter of the dynamics
   T getOmega() const override;
   /// Set local relaxation parameter of the dynamics
@@ -102,7 +102,7 @@ public:
   /// Constructor
   AdvectionDiffusionTRTdynamics( T omega, Momenta<T, DESCRIPTOR>& momenta, T magicParameter );
   /// Collision step
-  void collide( Cell<T, DESCRIPTOR>& cell, LatticeStatistics<T>& statistics ) override;
+  void collide( Cell<T,DESCRIPTOR>& cell, LatticeStatistics<T>& statistics ) override;
 protected:
   T _omega2; /// relaxation parameter for odd moments
   T _magicParameter;
@@ -119,15 +119,68 @@ public:
   /// Constructor
   SourcedAdvectionDiffusionBGKdynamics(T omega_, Momenta<T,DESCRIPTOR>& momenta_ );
   /// Collision step
-  virtual void collide(Cell<T,DESCRIPTOR>& cell, LatticeStatistics<T>& statistics ) override;
+  void collide(Cell<T,DESCRIPTOR>& cell, LatticeStatistics<T>& statistics ) override;
   /// Compute Density
-  T computeRho(Cell<T,DESCRIPTOR> const& cell) const override;
+  T computeRho(ConstCell<T,DESCRIPTOR>& cell) const override;
   /// Compute fluid velocity and particle density on the cell.
   void computeRhoU (
-    Cell<T,DESCRIPTOR> const& cell,
+    ConstCell<T,DESCRIPTOR>& cell,
     T& rho, T u[DESCRIPTOR::d]) const override;
 private:
   const T _omegaMod;
+};
+
+// ======= BGK advection diffusion dynamics for solid-liquid phase change  ======//
+// following Huang, R. (2015). Phase interface effects in the total
+// enthalpy-based lattice Boltzmann model for solid–liquid phase change.
+// Journal of Computational Physics, 294, 345-362.
+template<typename T, typename DESCRIPTOR>
+class TotalEnthalpyAdvectionDiffusionBGKdynamics : public AdvectionDiffusionBGKdynamics<T,DESCRIPTOR> {
+public:
+  /// Constructor
+  TotalEnthalpyAdvectionDiffusionBGKdynamics(T omega_, Momenta<T,DESCRIPTOR>& momenta_,
+      T T_s_, T T_l_, T cp_s_, T cp_l_, T lambda_s_, T lambda_l_, T l_);
+  /// Compute equilibrium distribution function
+  T computeEquilibrium( int iPop, T rho, const T u[DESCRIPTOR::d], T uSqr ) const override;
+  /// Collision step
+  void collide(Cell<T,DESCRIPTOR>& cell, LatticeStatistics<T>& statistics ) override;
+  T computeTemperature( T enthalpy ) const;
+  T computeLiquidFraction( T enthalpy ) const;
+protected:
+  const T _T_s, _T_l, _cp_s, _cp_l, _lambda_s, _lambda_l, _l;
+  const T _H_s, _H_l, _cp_ref;
+};
+
+// ======= TRT advection diffusion dynamics for solid-liquid phase change  ======//
+// following Huang, R. (2015). Phase interface effects in the total
+// enthalpy-based lattice Boltzmann model for solid–liquid phase change.
+// Journal of Computational Physics, 294, 345-362.
+template<typename T, typename DESCRIPTOR>
+class TotalEnthalpyAdvectionDiffusionTRTdynamics : public TotalEnthalpyAdvectionDiffusionBGKdynamics<T,DESCRIPTOR> {
+public:
+  /// Constructor
+  TotalEnthalpyAdvectionDiffusionTRTdynamics(T omega_, Momenta<T,DESCRIPTOR>& momenta_,
+      T magicParameter_,
+      T T_s_, T T_l_, T cp_s_, T cp_l_, T lambda_s_, T lambda_l_, T l_);
+  /// Collision step
+  void collide(Cell<T,DESCRIPTOR>& cell, LatticeStatistics<T>& statistics ) override;
+private:
+  const T _magicParameter;
+};
+
+// ======= BGK advection diffusion dynamics for phase field equation  ======//
+// following Fakhari, Abbas, et al. (2017). Improved locality of the phase-field
+// lattice-Boltzmann model for immiscible fluids at high density ratios.
+// Physical Review E 96.5, 053301.
+template<typename T, typename DESCRIPTOR>
+class PhaseFieldAdvectionDiffusionBGKdynamics : public AdvectionDiffusionBGKdynamics<T,DESCRIPTOR> {
+public:
+  /// Constructor
+  PhaseFieldAdvectionDiffusionBGKdynamics(T omega_, Momenta<T,DESCRIPTOR>& momenta_, T interface_thickness = 3.0 );
+  /// Collision step
+  void collide(Cell<T,DESCRIPTOR>& cell, LatticeStatistics<T>& statistics ) override;
+protected:
+  const T _mobility, _interface_thickness;
 };
 
 // ========= the BGK advection diffusion Stokes drag dynamics with a Smagorinsky turbulence model ========//
@@ -185,7 +238,7 @@ public:
   /// Compute equilibrium distribution function
   T computeEquilibrium( int iPop, T rho, const T u[DESCRIPTOR::d], T uSqr ) const override;
   /// Collision step
-  void collide( Cell<T, DESCRIPTOR>& cell, LatticeStatistics<T>& statistics ) override;
+  void collide( Cell<T,DESCRIPTOR>& cell, LatticeStatistics<T>& statistics ) override;
   /// Get local relaxation parameter of the dynamics
   T getOmega() const override;
   /// Set local relaxation parameter of the dynamics

@@ -37,7 +37,9 @@ FreeEnergyChemicalPotentialCoupling3D <T,DESCRIPTOR>::FreeEnergyChemicalPotentia
   std::vector<SpatiallyExtendedObject3D*> partners_)
   :  x0(x0_), x1(x1_), y0(y0_), y1(y1_), z0(z0_), z1(z1_), alpha(alpha_),
      kappa1(kappa1_), kappa2(kappa2_), kappa3(kappa3_), partners(partners_)
-{ }
+{
+  this->getName() = "FreeEnergyChemicalPotentialCoupling3D";  
+}
 
 template<typename T, typename DESCRIPTOR>
 FreeEnergyChemicalPotentialCoupling3D <T,DESCRIPTOR>::FreeEnergyChemicalPotentialCoupling3D (
@@ -45,7 +47,9 @@ FreeEnergyChemicalPotentialCoupling3D <T,DESCRIPTOR>::FreeEnergyChemicalPotentia
   std::vector<SpatiallyExtendedObject3D*> partners_)
   :  x0(0), x1(0), y0(0), y1(0), z0(0), z1(0), alpha(alpha_),
      kappa1(kappa1_), kappa2(kappa2_), kappa3(kappa3_), partners(partners_)
-{ }
+{
+  this->getName() = "FreeEnergyChemicalPotentialCoupling3D";   
+}
 
 template<typename T, typename DESCRIPTOR>
 void FreeEnergyChemicalPotentialCoupling3D<T,DESCRIPTOR>::processSubDomain (
@@ -54,42 +58,35 @@ void FreeEnergyChemicalPotentialCoupling3D<T,DESCRIPTOR>::processSubDomain (
 {
   // If partners.size() == 1: two fluid components
   // If partners.size() == 2: three fluid components
-  BlockLattice3D<T,DESCRIPTOR> *partnerLattice1 = dynamic_cast<BlockLattice3D<T,DESCRIPTOR> *>(partners[0]);
+  BlockLattice3D<T,DESCRIPTOR> *partnerLattice1 = static_cast<BlockLattice3D<T,DESCRIPTOR> *>(partners[0]);
   BlockLattice3D<T,DESCRIPTOR> *partnerLattice2 = 0;
   if (partners.size() > 1) {
-    partnerLattice2 = dynamic_cast<BlockLattice3D<T,DESCRIPTOR> *>(partners[1]);
+    partnerLattice2 = static_cast<BlockLattice3D<T,DESCRIPTOR> *>(partners[1]);
   }
 
   int newX0, newX1, newY0, newY1, newZ0, newZ1;
   if ( util::intersect ( x0, x1, y0, y1, z0, z1,
                          x0_, x1_, y0_, y1_, z0, z1,
                          newX0, newX1, newY0, newY1, newZ0, newZ1 ) ) {
-    int nx = newX1-newX0+3; // include a one-cell boundary
-    int ny = newY1-newY0+3; // include a one-cell boundary
-    int nz = newZ1-newZ0+3; // include a one-cell boundary
-    int offsetX = newX0-1;
-    int offsetY = newY0-1;
-    int offsetZ = newZ0-1;
 
     // compute the density fields for each lattice
-    BlockData3D<T,T> rhoField1(nx, ny, nz);
-    BlockData3D<T,T> rhoField2(nx, ny, nz);
-    BlockData3D<T,T> rhoField3(nx, ny, nz);
+    auto& rhoField = blockLattice.template getDynamicFieldArray<RHO_CACHE>();
+
     for (int iX=newX0-1; iX<=newX1+1; ++iX)
       for (int iY=newY0-1; iY<=newY1+1; ++iY)
         for (int iZ=newZ0-1; iZ<=newZ1+1; ++iZ) {
-          rhoField1.get(iX-offsetX, iY-offsetY, iZ-offsetZ) = blockLattice.get(iX,iY,iZ).computeRho();
+          rhoField[0][blockLattice.getCellId(iX, iY, iZ)] = blockLattice.get(iX,iY,iZ).computeRho();
         }
     for (int iX=newX0-1; iX<=newX1+1; ++iX)
       for (int iY=newY0-1; iY<=newY1+1; ++iY)
         for (int iZ=newZ0-1; iZ<=newZ1+1; ++iZ) {
-          rhoField2.get(iX-offsetX, iY-offsetY, iZ-offsetZ) = partnerLattice1->get(iX,iY,iZ).computeRho();
+          rhoField[1][blockLattice.getCellId(iX, iY, iZ)] = partnerLattice1->get(iX,iY,iZ).computeRho();
         }
     if (partners.size() > 1) {
       for (int iX=newX0-1; iX<=newX1+1; ++iX)
         for (int iY=newY0-1; iY<=newY1+1; ++iY)
           for (int iZ=newZ0-1; iZ<=newZ1+1; ++iZ) {
-            rhoField3.get(iX-offsetX, iY-offsetY, iZ-offsetZ) = partnerLattice2->get(iX,iY,iZ).computeRho();
+            rhoField[2][blockLattice.getCellId(iX, iY, iZ)] = partnerLattice2->get(iX,iY,iZ).computeRho();
           }
     }
 
@@ -97,13 +94,13 @@ void FreeEnergyChemicalPotentialCoupling3D<T,DESCRIPTOR>::processSubDomain (
     for (int iX=newX0; iX<=newX1; ++iX) {
       for (int iY=newY0; iY<=newY1; ++iY) {
         for (int iZ=newZ0; iZ<=newZ1; ++iZ) {
-          T densitySum = rhoField1.get(iX-offsetX, iY-offsetY, iZ-offsetZ)
-                         + rhoField2.get(iX-offsetX, iY-offsetY, iZ-offsetZ);
-          T densityDifference = rhoField1.get(iX-offsetX, iY-offsetY, iZ-offsetZ)
-                                - rhoField2.get(iX-offsetX, iY-offsetY, iZ-offsetZ);
+          T densitySum = rhoField[0][blockLattice.getCellId(iX, iY, iZ)]
+                         + rhoField[1][blockLattice.getCellId(iX, iY, iZ)];
+          T densityDifference = rhoField[0][blockLattice.getCellId(iX, iY, iZ)]
+                                - rhoField[1][blockLattice.getCellId(iX, iY, iZ)];
           if (partners.size() > 1) {
-            densitySum -= rhoField3.get(iX-offsetX, iY-offsetY, iZ-offsetZ);
-            densityDifference -= rhoField3.get(iX-offsetX, iY-offsetY, iZ-offsetZ);
+            densitySum -= rhoField[2][blockLattice.getCellId(iX, iY, iZ)];
+            densityDifference -= rhoField[2][blockLattice.getCellId(iX, iY, iZ)];
           }
           T term1 = 0.125 * kappa1 * (densitySum)
                     * (densitySum-1.) * (densitySum-2.);
@@ -111,76 +108,76 @@ void FreeEnergyChemicalPotentialCoupling3D<T,DESCRIPTOR>::processSubDomain (
                     * (densityDifference-1.) * (densityDifference-2.);
           T term3 = 0.;
           if (partners.size() > 1) {
-            T rho3 = rhoField3.get(iX-offsetX, iY-offsetY, iZ-offsetZ);
+            T rho3 = rhoField[2][blockLattice.getCellId(iX, iY, iZ)];
             term3 = kappa3 * rho3 * (rho3 - 1.) * (2.*rho3 - 1.);
           }
 
           T laplaceRho1 = 1.0 / 6.0 * (
-                            rhoField1.get(iX-offsetX,   iY-offsetY-1, iZ-offsetZ-1)
-                            +      rhoField1.get(iX-offsetX-1, iY-offsetY,   iZ-offsetZ-1)
-                            + 2. * rhoField1.get(iX-offsetX,   iY-offsetY,   iZ-offsetZ-1)
-                            +      rhoField1.get(iX-offsetX+1, iY-offsetY,   iZ-offsetZ-1)
-                            +      rhoField1.get(iX-offsetX,   iY-offsetY+1, iZ-offsetZ-1)
-                            +      rhoField1.get(iX-offsetX-1, iY-offsetY-1, iZ-offsetZ)
-                            + 2. * rhoField1.get(iX-offsetX,   iY-offsetY-1, iZ-offsetZ)
-                            +      rhoField1.get(iX-offsetX+1, iY-offsetY-1, iZ-offsetZ)
-                            + 2. * rhoField1.get(iX-offsetX-1, iY-offsetY,   iZ-offsetZ)
-                            -24. * rhoField1.get(iX-offsetX,   iY-offsetY,   iZ-offsetZ)
-                            + 2. * rhoField1.get(iX-offsetX+1, iY-offsetY,   iZ-offsetZ)
-                            +      rhoField1.get(iX-offsetX-1, iY-offsetY+1, iZ-offsetZ)
-                            + 2. * rhoField1.get(iX-offsetX,   iY-offsetY+1, iZ-offsetZ)
-                            +      rhoField1.get(iX-offsetX+1, iY-offsetY+1, iZ-offsetZ)
-                            +      rhoField1.get(iX-offsetX,   iY-offsetY-1, iZ-offsetZ+1)
-                            +      rhoField1.get(iX-offsetX-1, iY-offsetY,   iZ-offsetZ+1)
-                            + 2. * rhoField1.get(iX-offsetX,   iY-offsetY,   iZ-offsetZ+1)
-                            +      rhoField1.get(iX-offsetX+1, iY-offsetY,   iZ-offsetZ+1)
-                            +      rhoField1.get(iX-offsetX,   iY-offsetY+1, iZ-offsetZ+1)
+                            rhoField[0][blockLattice.getCellId(iX,   iY-1, iZ-1)]
+                            +      rhoField[0][blockLattice.getCellId(iX-1, iY,   iZ-1)]
+                            + 2. * rhoField[0][blockLattice.getCellId(iX,   iY,   iZ-1)]
+                            +      rhoField[0][blockLattice.getCellId(iX+1, iY,   iZ-1)]
+                            +      rhoField[0][blockLattice.getCellId(iX,   iY+1, iZ-1)]
+                            +      rhoField[0][blockLattice.getCellId(iX-1, iY-1, iZ)]
+                            + 2. * rhoField[0][blockLattice.getCellId(iX,   iY-1, iZ)]
+                            +      rhoField[0][blockLattice.getCellId(iX+1, iY-1, iZ)]
+                            + 2. * rhoField[0][blockLattice.getCellId(iX-1, iY,   iZ)]
+                            -24. * rhoField[0][blockLattice.getCellId(iX,   iY,   iZ)]
+                            + 2. * rhoField[0][blockLattice.getCellId(iX+1, iY,   iZ)]
+                            +      rhoField[0][blockLattice.getCellId(iX-1, iY+1, iZ)]
+                            + 2. * rhoField[0][blockLattice.getCellId(iX,   iY+1, iZ)]
+                            +      rhoField[0][blockLattice.getCellId(iX+1, iY+1, iZ)]
+                            +      rhoField[0][blockLattice.getCellId(iX,   iY-1, iZ+1)]
+                            +      rhoField[0][blockLattice.getCellId(iX-1, iY,   iZ+1)]
+                            + 2. * rhoField[0][blockLattice.getCellId(iX,   iY,   iZ+1)]
+                            +      rhoField[0][blockLattice.getCellId(iX+1, iY,   iZ+1)]
+                            +      rhoField[0][blockLattice.getCellId(iX,   iY+1, iZ+1)]
                           );
 
           T laplaceRho2 = 1.0 / 6.0 * (
-                            rhoField2.get(iX-offsetX,   iY-offsetY-1, iZ-offsetZ-1)
-                            +      rhoField2.get(iX-offsetX-1, iY-offsetY,   iZ-offsetZ-1)
-                            + 2. * rhoField2.get(iX-offsetX,   iY-offsetY,   iZ-offsetZ-1)
-                            +      rhoField2.get(iX-offsetX+1, iY-offsetY,   iZ-offsetZ-1)
-                            +      rhoField2.get(iX-offsetX,   iY-offsetY+1, iZ-offsetZ-1)
-                            +      rhoField2.get(iX-offsetX-1, iY-offsetY-1, iZ-offsetZ)
-                            + 2. * rhoField2.get(iX-offsetX,   iY-offsetY-1, iZ-offsetZ)
-                            +      rhoField2.get(iX-offsetX+1, iY-offsetY-1, iZ-offsetZ)
-                            + 2. * rhoField2.get(iX-offsetX-1, iY-offsetY,   iZ-offsetZ)
-                            -24. * rhoField2.get(iX-offsetX,   iY-offsetY,   iZ-offsetZ)
-                            + 2. * rhoField2.get(iX-offsetX+1, iY-offsetY,   iZ-offsetZ)
-                            +      rhoField2.get(iX-offsetX-1, iY-offsetY+1, iZ-offsetZ)
-                            + 2. * rhoField2.get(iX-offsetX,   iY-offsetY+1, iZ-offsetZ)
-                            +      rhoField2.get(iX-offsetX+1, iY-offsetY+1, iZ-offsetZ)
-                            +      rhoField2.get(iX-offsetX,   iY-offsetY-1, iZ-offsetZ+1)
-                            +      rhoField2.get(iX-offsetX-1, iY-offsetY,   iZ-offsetZ+1)
-                            + 2. * rhoField2.get(iX-offsetX,   iY-offsetY,   iZ-offsetZ+1)
-                            +      rhoField2.get(iX-offsetX+1, iY-offsetY,   iZ-offsetZ+1)
-                            +      rhoField2.get(iX-offsetX,   iY-offsetY+1, iZ-offsetZ+1)
+                            rhoField[1][blockLattice.getCellId(iX,   iY-1, iZ-1)]
+                            +      rhoField[1][blockLattice.getCellId(iX-1, iY,   iZ-1)]
+                            + 2. * rhoField[1][blockLattice.getCellId(iX,   iY,   iZ-1)]
+                            +      rhoField[1][blockLattice.getCellId(iX+1, iY,   iZ-1)]
+                            +      rhoField[1][blockLattice.getCellId(iX,   iY+1, iZ-1)]
+                            +      rhoField[1][blockLattice.getCellId(iX-1, iY-1, iZ)]
+                            + 2. * rhoField[1][blockLattice.getCellId(iX,   iY-1, iZ)]
+                            +      rhoField[1][blockLattice.getCellId(iX+1, iY-1, iZ)]
+                            + 2. * rhoField[1][blockLattice.getCellId(iX-1, iY,   iZ)]
+                            -24. * rhoField[1][blockLattice.getCellId(iX,   iY,   iZ)]
+                            + 2. * rhoField[1][blockLattice.getCellId(iX+1, iY,   iZ)]
+                            +      rhoField[1][blockLattice.getCellId(iX-1, iY+1, iZ)]
+                            + 2. * rhoField[1][blockLattice.getCellId(iX,   iY+1, iZ)]
+                            +      rhoField[1][blockLattice.getCellId(iX+1, iY+1, iZ)]
+                            +      rhoField[1][blockLattice.getCellId(iX,   iY-1, iZ+1)]
+                            +      rhoField[1][blockLattice.getCellId(iX-1, iY,   iZ+1)]
+                            + 2. * rhoField[1][blockLattice.getCellId(iX,   iY,   iZ+1)]
+                            +      rhoField[1][blockLattice.getCellId(iX+1, iY,   iZ+1)]
+                            +      rhoField[1][blockLattice.getCellId(iX,   iY+1, iZ+1)]
                           );
 
           T laplaceRho3 = 0.;
           if (partners.size() > 1) {
             laplaceRho3 = 1.0 / 6.0 * (
-                            rhoField3.get(iX-offsetX,   iY-offsetY-1, iZ-offsetZ-1)
-                            +      rhoField3.get(iX-offsetX-1, iY-offsetY,   iZ-offsetZ-1)
-                            + 2. * rhoField3.get(iX-offsetX,   iY-offsetY,   iZ-offsetZ-1)
-                            +      rhoField3.get(iX-offsetX+1, iY-offsetY,   iZ-offsetZ-1)
-                            +      rhoField3.get(iX-offsetX,   iY-offsetY+1, iZ-offsetZ-1)
-                            +      rhoField3.get(iX-offsetX-1, iY-offsetY-1, iZ-offsetZ)
-                            + 2. * rhoField3.get(iX-offsetX,   iY-offsetY-1, iZ-offsetZ)
-                            +      rhoField3.get(iX-offsetX+1, iY-offsetY-1, iZ-offsetZ)
-                            + 2. * rhoField3.get(iX-offsetX-1, iY-offsetY,   iZ-offsetZ)
-                            -24. * rhoField3.get(iX-offsetX,   iY-offsetY,   iZ-offsetZ)
-                            + 2. * rhoField3.get(iX-offsetX+1, iY-offsetY,   iZ-offsetZ)
-                            +      rhoField3.get(iX-offsetX-1, iY-offsetY+1, iZ-offsetZ)
-                            + 2. * rhoField3.get(iX-offsetX,   iY-offsetY+1, iZ-offsetZ)
-                            +      rhoField3.get(iX-offsetX+1, iY-offsetY+1, iZ-offsetZ)
-                            +      rhoField3.get(iX-offsetX,   iY-offsetY-1, iZ-offsetZ+1)
-                            +      rhoField3.get(iX-offsetX-1, iY-offsetY,   iZ-offsetZ+1)
-                            + 2. * rhoField3.get(iX-offsetX,   iY-offsetY,   iZ-offsetZ+1)
-                            +      rhoField3.get(iX-offsetX+1, iY-offsetY,   iZ-offsetZ+1)
-                            +      rhoField3.get(iX-offsetX,   iY-offsetY+1, iZ-offsetZ+1)
+                            rhoField[2][blockLattice.getCellId(iX,   iY-1, iZ-1)]
+                            +      rhoField[2][blockLattice.getCellId(iX-1, iY,   iZ-1)]
+                            + 2. * rhoField[2][blockLattice.getCellId(iX,   iY,   iZ-1)]
+                            +      rhoField[2][blockLattice.getCellId(iX+1, iY,   iZ-1)]
+                            +      rhoField[2][blockLattice.getCellId(iX,   iY+1, iZ-1)]
+                            +      rhoField[2][blockLattice.getCellId(iX-1, iY-1, iZ)]
+                            + 2. * rhoField[2][blockLattice.getCellId(iX,   iY-1, iZ)]
+                            +      rhoField[2][blockLattice.getCellId(iX+1, iY-1, iZ)]
+                            + 2. * rhoField[2][blockLattice.getCellId(iX-1, iY,   iZ)]
+                            -24. * rhoField[2][blockLattice.getCellId(iX,   iY,   iZ)]
+                            + 2. * rhoField[2][blockLattice.getCellId(iX+1, iY,   iZ)]
+                            +      rhoField[2][blockLattice.getCellId(iX-1, iY+1, iZ)]
+                            + 2. * rhoField[2][blockLattice.getCellId(iX,   iY+1, iZ)]
+                            +      rhoField[2][blockLattice.getCellId(iX+1, iY+1, iZ)]
+                            +      rhoField[2][blockLattice.getCellId(iX,   iY-1, iZ+1)]
+                            +      rhoField[2][blockLattice.getCellId(iX-1, iY,   iZ+1)]
+                            + 2. * rhoField[2][blockLattice.getCellId(iX,   iY,   iZ+1)]
+                            +      rhoField[2][blockLattice.getCellId(iX+1, iY,   iZ+1)]
+                            +      rhoField[2][blockLattice.getCellId(iX,   iY+1, iZ+1)]
                           );
           }
 
@@ -223,13 +220,17 @@ FreeEnergyForceCoupling3D <T,DESCRIPTOR>::FreeEnergyForceCoupling3D (
   int x0_, int x1_, int y0_, int y1_, int z0_, int z1_,
   std::vector<SpatiallyExtendedObject3D*> partners_)
   :  x0(x0_), x1(x1_), y0(y0_), y1(y1_), z0(z0_), z1(z1_), partners(partners_)
-{ }
+{
+  this->getName() = "FreeEnergyForceCoupling3D";  
+}
 
 template<typename T, typename DESCRIPTOR>
 FreeEnergyForceCoupling3D <T,DESCRIPTOR>::FreeEnergyForceCoupling3D (
   std::vector<SpatiallyExtendedObject3D*> partners_)
   :  x0(0), x1(0), y0(0), y1(0), z0(0), z1(0), partners(partners_)
-{ }
+{
+  this->getName() = "FreeEnergyForceCoupling3D";  
+}
 
 template<typename T, typename DESCRIPTOR>
 void FreeEnergyForceCoupling3D<T,DESCRIPTOR>::processSubDomain (
@@ -238,10 +239,10 @@ void FreeEnergyForceCoupling3D<T,DESCRIPTOR>::processSubDomain (
 {
   // If partners.size() == 1: two fluid components
   // If partners.size() == 2: three fluid components
-  BlockLattice3D<T,DESCRIPTOR> *partnerLattice1 = dynamic_cast<BlockLattice3D<T,DESCRIPTOR> *>(partners[0]);
+  BlockLattice3D<T,DESCRIPTOR> *partnerLattice1 = static_cast<BlockLattice3D<T,DESCRIPTOR> *>(partners[0]);
   BlockLattice3D<T,DESCRIPTOR> *partnerLattice2 = 0;
   if (partners.size() > 1) {
-    partnerLattice2 = dynamic_cast<BlockLattice3D<T,DESCRIPTOR> *>(partners[1]);
+    partnerLattice2 = static_cast<BlockLattice3D<T,DESCRIPTOR> *>(partners[1]);
   }
 
   int newX0, newX1, newY0, newY1, newZ0, newZ1;
@@ -386,13 +387,17 @@ FreeEnergyInletOutletCoupling3D <T,DESCRIPTOR>::FreeEnergyInletOutletCoupling3D 
   int x0_, int x1_, int y0_, int y1_, int z0_, int z1_,
   std::vector<SpatiallyExtendedObject3D*> partners_)
   : x0(x0_), x1(x1_), y0(y0_), y1(y1_), z0(z0_), z1(z1_), partners(partners_)
-{ }
+{
+  this->getName() = "FreeEnergyInletOutletCoupling3D";  
+}
 
 template<typename T, typename DESCRIPTOR>
 FreeEnergyInletOutletCoupling3D <T,DESCRIPTOR>::FreeEnergyInletOutletCoupling3D (
   std::vector<SpatiallyExtendedObject3D*> partners_)
   : x0(0), x1(0), y0(0), y1(0), z0(0), z1(0), partners(partners_)
-{ }
+{
+  this->getName() = "FreeEnergyInletOutletCoupling3D";   
+}
 
 template<typename T, typename DESCRIPTOR>
 void FreeEnergyInletOutletCoupling3D<T,DESCRIPTOR>::processSubDomain (
@@ -401,10 +406,10 @@ void FreeEnergyInletOutletCoupling3D<T,DESCRIPTOR>::processSubDomain (
 {
   // If partners.size() == 1: two fluid components
   // If partners.size() == 2: three fluid components
-  BlockLattice3D<T,DESCRIPTOR> *partnerLattice1 = dynamic_cast<BlockLattice3D<T,DESCRIPTOR> *>(partners[0]);
+  BlockLattice3D<T,DESCRIPTOR> *partnerLattice1 = static_cast<BlockLattice3D<T,DESCRIPTOR> *>(partners[0]);
   BlockLattice3D<T,DESCRIPTOR> *partnerLattice2 = 0;
   if (partners.size() > 1) {
-    partnerLattice2 = dynamic_cast<BlockLattice3D<T,DESCRIPTOR> *>(partners[1]);
+    partnerLattice2 = static_cast<BlockLattice3D<T,DESCRIPTOR> *>(partners[1]);
   }
 
   int newX0, newX1, newY0, newY1, newZ0, newZ1;
@@ -442,13 +447,17 @@ FreeEnergyDensityOutletCoupling3D <T,DESCRIPTOR>::FreeEnergyDensityOutletCouplin
   std::vector<SpatiallyExtendedObject3D*> partners_)
   : x0(x0_), x1(x1_), y0(y0_), y1(y1_), z0(z0_), z1(z1_),
     rho(rho_), partners(partners_)
-{ }
+{
+  this->getName() = "FreeEnergyDensityOutletCoupling3D";  
+}
 
 template<typename T, typename DESCRIPTOR>
 FreeEnergyDensityOutletCoupling3D <T,DESCRIPTOR>::FreeEnergyDensityOutletCoupling3D (
   T rho_, std::vector<SpatiallyExtendedObject3D*> partners_)
   : x0(0), x1(0), y0(0), y1(0), z0(0), z1(0), rho(rho_), partners(partners_)
-{ }
+{
+  this->getName() = "FreeEnergyDensityOutletCoupling3D";   
+}
 
 template<typename T, typename DESCRIPTOR>
 void FreeEnergyDensityOutletCoupling3D<T,DESCRIPTOR>::processSubDomain (
@@ -457,10 +466,10 @@ void FreeEnergyDensityOutletCoupling3D<T,DESCRIPTOR>::processSubDomain (
 {
   // If partners.size() == 1: two fluid components
   // If partners.size() == 2: three fluid components
-  BlockLattice3D<T,DESCRIPTOR> *partnerLattice1 = dynamic_cast<BlockLattice3D<T,DESCRIPTOR> *>(partners[0]);
+  BlockLattice3D<T,DESCRIPTOR> *partnerLattice1 = static_cast<BlockLattice3D<T,DESCRIPTOR> *>(partners[0]);
   BlockLattice3D<T,DESCRIPTOR> *partnerLattice2 = 0;
   if (partners.size() > 1) {
-    partnerLattice2 = dynamic_cast<BlockLattice3D<T,DESCRIPTOR> *>(partners[1]);
+    partnerLattice2 = static_cast<BlockLattice3D<T,DESCRIPTOR> *>(partners[1]);
   }
 
   int newX0, newX1, newY0, newY1, newZ0, newZ1;

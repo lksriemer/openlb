@@ -26,6 +26,7 @@
 
 #include "hyperplane2D.h"
 #include "core/olbDebug.h"
+#include "utilities/vectorHelpers.h"
 
 namespace olb {
 
@@ -58,8 +59,7 @@ template <typename T>
 Hyperplane2D<T>& Hyperplane2D<T>::parallelTo(const Vector<T,2>& direction)
 {
   u = direction;
-  normal = { u[1], -u[0] };
-  normal.normalize();
+  normal = normalize(Vector<T,2>({ u[1], -u[0] }));
 
   OLB_POSTCONDITION(util::nearZero(util::dotProduct2D(u,normal)));
 
@@ -83,8 +83,8 @@ Hyperplane2D<T>& Hyperplane2D<T>::normalTo(const Vector<T,2>& n)
     u = {normal[1], -normal[0]};
   }
 
-  u.normalize();
-  normal.normalize();
+  u = normalize(u);
+  normal = normalize(normal);
 
   OLB_POSTCONDITION(util::nearZero(util::dotProduct2D(u,normal)));
 

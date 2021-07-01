@@ -115,7 +115,7 @@ public:
 template <typename T>
 class BlockGeometryFaces2D final : public GenericF<T,int> {
 private:
-  BlockGeometryStructure2D<T>& _blockGeometry;
+  const BlockGeometryStructure2D<T>& _blockGeometry;
   int _material;
   T _latticeL;
 public:
@@ -125,13 +125,13 @@ public:
   bool operator() (T output[], const int input[]) override;
 };
 
-/// functor counts to get the discrete surface for a smooth indicator circle in direction (1,0,0), (0,1,0), (0,0,1), (-1,0,0), (0,-1,0), (0,0,-1)
+/// functor counts to get the discrete surface for a smooth indicator in direction (1,0,0), (0,1,0), (-1,0,0), (0,-1,0)
 /// and total surface, then it converts it into phys units
 template <typename T, bool HLBM=false>
 class BlockGeometryFacesIndicator2D final : public GenericF<T,int> {
 private:
   BlockGeometryStructure2D<T>& _blockGeometry;
-  SmoothIndicatorF2D<T,T>& _indicator;
+  SmoothIndicatorF2D<T,T,HLBM>& _indicator;
   int _material;
   T _latticeL;
 public:

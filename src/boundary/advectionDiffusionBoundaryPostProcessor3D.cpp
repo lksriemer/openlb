@@ -26,7 +26,7 @@
 #include "core/postProcessing.h"
 #include "core/postProcessing.hh"
 #include "latticeDescriptors.h"
- 
+
 //#include "advectionDiffusionLatticeDescriptors.h"
 //#include "advectionDiffusionLatticeDescriptors.hh"
 

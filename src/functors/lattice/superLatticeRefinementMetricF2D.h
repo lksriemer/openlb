@@ -24,9 +24,8 @@
 #ifndef SUPER_LATTICE_REFINEMENT_METRIC_F_2D_H
 #define SUPER_LATTICE_REFINEMENT_METRIC_F_2D_H
 
-#include "superBaseF2D.h"
 #include "core/superLattice2D.h"
-
+#include "superBaseF2D.h"
 
 namespace olb {
 
@@ -44,7 +43,6 @@ class SuperLatticeKnudsen2D final : public SuperLatticeF2D<T, DESCRIPTOR> {
 public:
   SuperLatticeKnudsen2D(SuperLattice2D<T, DESCRIPTOR>& lattice);
 
-  bool operator() (T output[], const int input[]) override;
 };
 
 /// SuperLatticeRefinementMetricKnudsen2D suggests a per-block grid refinement factor
@@ -59,6 +57,7 @@ public:
   /// Constructor
   /**
    * \param converter Required to get the theoretical Knudsen number as reference
+   * \param rounding  Configures the quality of the grid by rounding the output
    **/
   SuperLatticeRefinementMetricKnudsen2D(
     SuperLattice2D<T, DESCRIPTOR>&      lattice,
@@ -79,8 +78,6 @@ public:
    * \input input
    *        grid cell to be considered
    **/
-  bool operator() (T output[], const int input[]) override;
-
   /// Convenience method for printing per-block refinement factors
   void print();
 };

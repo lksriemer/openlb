@@ -54,14 +54,14 @@ EquilibriumBM<T,DESCRIPTOR>::EquilibriumBM(T rho, const T u[DESCRIPTOR::d])
 }
 
 template<typename T, typename DESCRIPTOR>
-T EquilibriumBM<T,DESCRIPTOR>::computeRho( Cell<T,DESCRIPTOR> const& cell ) const
+T EquilibriumBM<T,DESCRIPTOR>::computeRho(ConstCell<T,DESCRIPTOR>& cell ) const
 {
   return _rho;
 }
 
 template<typename T, typename DESCRIPTOR>
 void EquilibriumBM<T,DESCRIPTOR>::computeU(
-  Cell<T,DESCRIPTOR> const& cell, T u[DESCRIPTOR::d]) const
+  ConstCell<T,DESCRIPTOR>& cell, T u[DESCRIPTOR::d]) const
 {
   for (int iD=0; iD<DESCRIPTOR::d; ++iD) {
     u[iD] = _u[iD];
@@ -70,7 +70,7 @@ void EquilibriumBM<T,DESCRIPTOR>::computeU(
 
 template<typename T, typename DESCRIPTOR>
 void EquilibriumBM<T,DESCRIPTOR>::computeJ (
-  Cell<T,DESCRIPTOR> const& cell, T j[DESCRIPTOR::d]) const
+  ConstCell<T,DESCRIPTOR>& cell, T j[DESCRIPTOR::d]) const
 {
   for (int iD=0; iD<DESCRIPTOR::d; ++iD) {
     j[iD] = _u[iD]*_rho;
@@ -78,7 +78,7 @@ void EquilibriumBM<T,DESCRIPTOR>::computeJ (
 }
 
 template<typename T, typename DESCRIPTOR>
-void EquilibriumBM<T,DESCRIPTOR>::computeStress( Cell<T,DESCRIPTOR> const& cell,
+void EquilibriumBM<T,DESCRIPTOR>::computeStress( ConstCell<T,DESCRIPTOR>& cell,
     T rho, const T u[DESCRIPTOR::d], T pi[util::TensorVal<DESCRIPTOR >::n] ) const
 {
   for (int iPi=0; iPi<util::TensorVal<DESCRIPTOR >::n; ++iPi) {
@@ -134,21 +134,21 @@ VelocityBM<T,DESCRIPTOR,direction,orientation>::VelocityBM(const T u[DESCRIPTOR:
 }
 
 template<typename T, typename DESCRIPTOR, int direction, int orientation>
-T VelocityBM<T,DESCRIPTOR,direction,orientation>::computeRho( Cell<T,DESCRIPTOR> const& cell ) const
+T VelocityBM<T,DESCRIPTOR,direction,orientation>::computeRho( ConstCell<T,DESCRIPTOR>& cell ) const
 {
   return velocityBMRho<T, DESCRIPTOR, direction, orientation>(cell, _u);
 }
 
 template<typename T, typename DESCRIPTOR, int direction, int orientation>
 void VelocityBM<T,DESCRIPTOR,direction,orientation>::computeU (
-  Cell<T,DESCRIPTOR> const& cell, T u[DESCRIPTOR::d]) const
+  ConstCell<T,DESCRIPTOR>& cell, T u[DESCRIPTOR::d]) const
 {
   computeU(u);
 }
 
 template<typename T, typename DESCRIPTOR, int direction, int orientation>
 void VelocityBM<T,DESCRIPTOR,direction,orientation>::computeJ (
-  Cell<T,DESCRIPTOR> const& cell, T j[DESCRIPTOR::d]) const
+  ConstCell<T,DESCRIPTOR>& cell, T j[DESCRIPTOR::d]) const
 {
   T rho = computeRho(cell);
   for (int iD=0; iD<DESCRIPTOR::d; ++iD) {
@@ -215,7 +215,7 @@ PressureBM<T,DESCRIPTOR,direction,orientation>::PressureBM(const T values[DESCRI
 }
 
 template<typename T, typename DESCRIPTOR, int direction, int orientation>
-T PressureBM<T,DESCRIPTOR,direction,orientation>::computeRho( Cell<T,DESCRIPTOR> const& cell ) const
+T PressureBM<T,DESCRIPTOR,direction,orientation>::computeRho( ConstCell<T,DESCRIPTOR>& cell ) const
 {
   return computeRho();
 }
@@ -228,7 +228,7 @@ T PressureBM<T,DESCRIPTOR,direction,orientation>::computeRho() const
 
 template<typename T, typename DESCRIPTOR, int direction, int orientation>
 void PressureBM<T,DESCRIPTOR,direction,orientation>::computeU (
-  Cell<T,DESCRIPTOR> const& cell, T u[DESCRIPTOR::d]) const
+  ConstCell<T,DESCRIPTOR>& cell, T u[DESCRIPTOR::d]) const
 {
   for (int iD=0; iD<DESCRIPTOR::d; ++iD) {
     u[iD] = _values[iD];
@@ -256,7 +256,7 @@ void PressureBM<T,DESCRIPTOR,direction,orientation>::computeU (
 
 template<typename T, typename DESCRIPTOR, int direction, int orientation>
 void PressureBM<T,DESCRIPTOR,direction,orientation>::computeJ (
-  Cell<T,DESCRIPTOR> const& cell, T j[DESCRIPTOR::d]) const
+  ConstCell<T,DESCRIPTOR>& cell, T j[DESCRIPTOR::d]) const
 {
   computeU(cell, j);
   T rho = computeRho(cell);
@@ -299,7 +299,7 @@ void PressureBM<T,DESCRIPTOR,direction,orientation>::defineAllMomenta(
 
 template<typename T, typename DESCRIPTOR>
 void FreeStressBM<T,DESCRIPTOR>::computeStress (
-  Cell<T,DESCRIPTOR> const& cell, T rho, const T u[DESCRIPTOR::d], T pi[util::TensorVal<DESCRIPTOR >::n] ) const
+  ConstCell<T,DESCRIPTOR>& cell, T rho, const T u[DESCRIPTOR::d], T pi[util::TensorVal<DESCRIPTOR >::n] ) const
 {
   lbHelpers<T,DESCRIPTOR>::computeStress(cell, rho, u, pi);
 }
@@ -310,7 +310,7 @@ void FreeStressBM<T,DESCRIPTOR>::computeStress (
 
 template<typename T, typename DESCRIPTOR, int direction, int orientation>
 void RegularizedBM<T,DESCRIPTOR,direction,orientation>::computeStress (
-  Cell<T,DESCRIPTOR> const& cell, T rho, const T u[DESCRIPTOR::d],
+  ConstCell<T,DESCRIPTOR>& cell, T rho, const T u[DESCRIPTOR::d],
   T pi[util::TensorVal<DESCRIPTOR >::n] ) const
 {
   BoundaryHelpers<T,DESCRIPTOR,direction,orientation>::computeStress(cell, rho, u, pi);
@@ -319,13 +319,13 @@ void RegularizedBM<T,DESCRIPTOR,direction,orientation>::computeStress (
 ////////////////////// Class FixedVelocityBM //////////////////////////
 
 template<typename T, typename DESCRIPTOR>
-T FixedVelocityBM<T,DESCRIPTOR>::computeRho(Cell<T,DESCRIPTOR> const& cell) const
+T FixedVelocityBM<T,DESCRIPTOR>::computeRho(ConstCell<T,DESCRIPTOR>& cell) const
 {
   return _basicMomenta.computeRho(cell);
 }
 
 template<typename T, typename DESCRIPTOR>
-void FixedVelocityBM<T,DESCRIPTOR>::computeU(Cell<T,DESCRIPTOR> const& cell, T u[DESCRIPTOR::d]) const
+void FixedVelocityBM<T,DESCRIPTOR>::computeU(ConstCell<T,DESCRIPTOR>& cell, T u[DESCRIPTOR::d]) const
 {
   for (int iD=0; iD<DESCRIPTOR::d; ++iD) {
     u[iD] = _fixU[iD];
@@ -333,7 +333,7 @@ void FixedVelocityBM<T,DESCRIPTOR>::computeU(Cell<T,DESCRIPTOR> const& cell, T u
 }
 
 template<typename T, typename DESCRIPTOR>
-void FixedVelocityBM<T,DESCRIPTOR>::computeJ(Cell<T,DESCRIPTOR> const& cell, T j[DESCRIPTOR::d]) const
+void FixedVelocityBM<T,DESCRIPTOR>::computeJ(ConstCell<T,DESCRIPTOR>& cell, T j[DESCRIPTOR::d]) const
 {
   T rho = computeRho(cell);
   for (int iD=0; iD<DESCRIPTOR::d; ++iD) {
@@ -343,14 +343,14 @@ void FixedVelocityBM<T,DESCRIPTOR>::computeJ(Cell<T,DESCRIPTOR> const& cell, T j
 
 template<typename T, typename DESCRIPTOR>
 void FixedVelocityBM<T,DESCRIPTOR>::computeStress (
-  Cell<T,DESCRIPTOR> const& cell, T rho, const T u[DESCRIPTOR::d], T pi[util::TensorVal<DESCRIPTOR >::n] ) const
+  ConstCell<T,DESCRIPTOR>& cell, T rho, const T u[DESCRIPTOR::d], T pi[util::TensorVal<DESCRIPTOR >::n] ) const
 {
   _basicMomenta.computeStress(cell, rho, u, pi);
 }
 
 template<typename T, typename DESCRIPTOR>
 void FixedVelocityBM<T,DESCRIPTOR>::computeRhoU (
-  Cell<T,DESCRIPTOR> const& cell, T& rho, T u[DESCRIPTOR::d] ) const
+  ConstCell<T,DESCRIPTOR>& cell, T& rho, T u[DESCRIPTOR::d] ) const
 {
   rho = computeRho(cell);
   computeU(cell,u);
@@ -358,7 +358,7 @@ void FixedVelocityBM<T,DESCRIPTOR>::computeRhoU (
 
 template<typename T, typename DESCRIPTOR>
 void FixedVelocityBM<T,DESCRIPTOR>::computeAllMomenta (
-  Cell<T,DESCRIPTOR> const& cell, T& rho, T u[DESCRIPTOR::d], T pi[util::TensorVal<DESCRIPTOR >::n] ) const
+  ConstCell<T,DESCRIPTOR>& cell, T& rho, T u[DESCRIPTOR::d], T pi[util::TensorVal<DESCRIPTOR >::n] ) const
 {
   _basicMomenta.computeAllMomenta(cell, rho, u, pi);
   computeU(cell, u);
@@ -396,7 +396,7 @@ void FixedVelocityBM<T,DESCRIPTOR>::defineAllMomenta( Cell<T,DESCRIPTOR>& cell, 
 ////////////////////// Extracted helper functions //////////////////////////
 
 template<typename T, typename DESCRIPTOR, int direction, int orientation>
-T velocityBMRho( Cell<T,DESCRIPTOR> const& cell, const T* u )
+T velocityBMRho( ConstCell<T,DESCRIPTOR>& cell, const T* u )
 {
   std::vector<int> const& onWallIndices
     = util::subIndex<DESCRIPTOR, direction, 0>();

@@ -24,7 +24,7 @@
 /// Linear damping Force for magnetic dipolemoment in magnetic Field
 
 #include "dynamics/latticeDescriptors.h"
- 
+
 #include "particles/particle3D.h"
 #include "particles/particle3D.hh"
 #include "linearDampingForceForMagDipoleMoment3D.h"

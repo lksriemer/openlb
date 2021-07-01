@@ -28,7 +28,7 @@
 #ifndef LB_GUOZHAO_DYNAMICS_H
 #define LB_GUOZHAO_DYNAMICS_H
 
-#include "dynamics/guoZhaoLatticeDescriptors.h"
+#include "dynamics/descriptorAlias.h"
 #include "core/util.h"
 #include "core/postProcessing.h"
 #include "core/latticeStatistics.h"
@@ -45,11 +45,11 @@ public:
   GuoZhaoBGKdynamics(T omega_, Momenta<T,DESCRIPTOR>& momenta_);
   ///  Compute fluid velocity on the cell.
   void computeU (
-    Cell<T,DESCRIPTOR> const& cell,
+    ConstCell<T,DESCRIPTOR>& cell,
     T u[DESCRIPTOR::d] ) const override;
   /// Compute fluid velocity and particle density on the cell.
   void computeRhoU (
-    Cell<T,DESCRIPTOR> const& cell,
+    ConstCell<T,DESCRIPTOR>& cell,
     T& rho, T u[DESCRIPTOR::d]) const override;
   /// Compute equilibrium distribution function
   T computeEquilibrium(int iPop, T rho, const T u[DESCRIPTOR::d], T uSqr) const override;

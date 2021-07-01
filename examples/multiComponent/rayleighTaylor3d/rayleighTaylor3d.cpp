@@ -41,7 +41,7 @@ using namespace olb::graphics;
 using namespace std;
 
 typedef double T;
-#define DESCRIPTOR ShanChenDynOmegaForcedD3Q19Descriptor
+typedef D3Q19<VELOCITY,FORCE,EXTERNAL_FORCE,OMEGA> DESCRIPTOR;
 
 
 // Parameters for the simulation setup
@@ -52,7 +52,8 @@ const int maxIter  = 4000;
 
 
 // Stores geometry information in form of material numbers
-void prepareGeometry( SuperGeometry3D<T>& superGeometry ) {
+void prepareGeometry( SuperGeometry3D<T>& superGeometry )
+{
 
   OstreamManager clout( std::cout,"prepareGeometry" );
   clout << "Prepare Geometry ..." << std::endl;
@@ -92,7 +93,8 @@ void prepareLattice( SuperLattice3D<T, DESCRIPTOR>& sLatticeOne,
                      Dynamics<T, DESCRIPTOR>& bulkDynamics2,
                      Dynamics<T, DESCRIPTOR>& bounceBackRho0,
                      Dynamics<T, DESCRIPTOR>& bounceBackRho1,
-                     SuperGeometry3D<T>& superGeometry ) {
+                     SuperGeometry3D<T>& superGeometry )
+{
 
   OstreamManager clout( std::cout,"prepareLattice" );
   clout << "Prepare Lattice ..." << std::endl;
@@ -125,14 +127,15 @@ void prepareLattice( SuperLattice3D<T, DESCRIPTOR>& sLatticeOne,
 
 void setBoundaryValues( SuperLattice3D<T, DESCRIPTOR>& sLatticeOne,
                         SuperLattice3D<T, DESCRIPTOR>& sLatticeTwo,
-                        T force, int iT, SuperGeometry3D<T>& superGeometry ) {
+                        T force, int iT, SuperGeometry3D<T>& superGeometry )
+{
 
   if ( iT==0 ) {
 
     AnalyticalConst3D<T,T> noise( 4.e-2 );
     std::vector<T> v( 3,T() );
     AnalyticalConst3D<T,T> zeroV( v );
-    AnalyticalConst3D<T,T> zero( 0. );
+    AnalyticalConst3D<T,T> zero( 1.e-6 );
     AnalyticalLinear3D<T,T> one( 0.,-force*descriptors::invCs2<T,DESCRIPTOR>(),0.,0.98+force*ny*descriptors::invCs2<T,DESCRIPTOR>() );
     AnalyticalConst3D<T,T> onePlus( 0.98+force*ny/2.*descriptors::invCs2<T,DESCRIPTOR>() );
     AnalyticalRandom3D<T,T> random;
@@ -176,7 +179,8 @@ void setBoundaryValues( SuperLattice3D<T, DESCRIPTOR>& sLatticeOne,
 
 void getResults( SuperLattice3D<T, DESCRIPTOR>& sLatticeTwo,
                  SuperLattice3D<T, DESCRIPTOR>& sLatticeOne, int iT,
-                 SuperGeometry3D<T>& superGeometry, Timer<T>& timer ) {
+                 SuperGeometry3D<T>& superGeometry, Timer<T>& timer )
+{
 
   OstreamManager clout( std::cout,"getResults" );
   SuperVTMwriter3D<T> vtmWriter( "rayleighTaylor3dsLatticeOne" );
@@ -223,7 +227,8 @@ void getResults( SuperLattice3D<T, DESCRIPTOR>& sLatticeTwo,
 }
 
 
-int main( int argc, char *argv[] ) {
+int main( int argc, char *argv[] )
+{
 
   // === 1st Step: Initialization ===
 

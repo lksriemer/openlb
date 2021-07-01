@@ -40,12 +40,12 @@ template<typename T, typename W>
 std::shared_ptr<SuperF2D<T,W>> lift(SuperF2D<T,W>* f);
 
 /// Lifts functor reference to std::shared_ptr functor arithmetic
-template<typename T, typename S>
-std::shared_ptr<AnalyticalF2D<T,S>> lift(AnalyticalF2D<T,S>& f);
+template<typename T, typename W>
+std::shared_ptr<AnalyticalF2D<T,W>> lift(AnalyticalF2D<T,W>& f);
 
 /// Lifts functor pointer to std::shared_ptr functor arithmetic
 template<typename T, typename W>
-std::shared_ptr<AnalyticalF2D<T,S>> lift(AnalyticalF2D<T,S>* f);
+std::shared_ptr<AnalyticalF2D<T,W>> lift(AnalyticalF2D<T,W>* f);
 
 /// Returns baseF raised to the power of exponentF
 template<typename T, typename W>

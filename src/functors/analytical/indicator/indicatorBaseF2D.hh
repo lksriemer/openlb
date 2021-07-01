@@ -74,17 +74,17 @@ template <typename S>
 bool IndicatorF2D<S>::distance(S& distance, const Vector<S,2>& origin, const Vector<S,2>& direction, int iC)
 {
   bool originValue;
-  (*this)(&originValue, origin.data);
+  (*this)(&originValue, origin.data());
   Vector<S,2> currentPoint(origin);
 
   S precision = .0001;
   S pitch = 0.5;
 
   bool currentValue;
-  (*this)(&currentValue, currentPoint.data);
+  (*this)(&currentValue, currentPoint.data());
   while (currentValue == originValue && isInsideBox(currentPoint)) {
     currentPoint += direction;
-    (*this)(&currentValue, currentPoint.data);//changed until first point on the other side (inside/outside) is found
+    (*this)(&currentValue, currentPoint.data());//changed until first point on the other side (inside/outside) is found
   }
 
   if (!isInsideBox(currentPoint) && !originValue) {
@@ -96,7 +96,7 @@ bool IndicatorF2D<S>::distance(S& distance, const Vector<S,2>& origin, const Vec
       currentPoint -= pitch * direction;
       pitch /= 2.;
     } else {
-      (*this)(&currentValue, currentPoint.data);
+      (*this)(&currentValue, currentPoint.data());
       if (currentValue == originValue) {
         currentPoint += pitch * direction;
         pitch /= 2.;
@@ -108,7 +108,7 @@ bool IndicatorF2D<S>::distance(S& distance, const Vector<S,2>& origin, const Vec
   }
 
 
-  distance = (currentPoint - origin).norm();
+  distance = norm(currentPoint - origin);
   return true;
 }
 
@@ -124,7 +124,7 @@ bool IndicatorF2D<S>::normal(Vector<S,2>& normal, const Vector<S,2>& origin, con
   //OstreamManager clout(std::cout,"normal");
   //clout << "Calculating IndicatorF2D Normal " << endl;
   bool originValue;
-  (*this)(&originValue, origin.data);
+  (*this)(&originValue, origin.data());
   Vector<S,2> currentPoint(origin);
 
   S precision = .0001;
@@ -133,7 +133,7 @@ bool IndicatorF2D<S>::normal(Vector<S,2>& normal, const Vector<S,2>& origin, con
   distance(dist, origin, direction, iC);
 
 
-  Vector<S,2> POS(origin + dist*direction*(1/const_cast<Vector<S,2>&> (direction).norm())); //Point on Surface
+  Vector<S,2> POS(origin + dist*direction*(1/norm(direction))); //Point on Surface
 
   Vector<S,2> point1;
   Vector<S,2> point2;
@@ -150,7 +150,7 @@ bool IndicatorF2D<S>::normal(Vector<S,2>& normal, const Vector<S,2>& origin, con
 
       Vector<S,2> vec(std::cos(theta)*direction[0]+std::sin(theta)*direction[1],-std::sin(theta)*direction[0]+std::cos(theta)*direction[1]);
       currentPoint = POS + vec;
-      (*this)(&currentValue, currentPoint.data);
+      (*this)(&currentValue, currentPoint.data());
 
       if (currentValue == originValue) {
         rotate -= pitch;

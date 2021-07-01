@@ -41,7 +41,7 @@ namespace olb {
 
 template<typename T, template<typename U> class PARTICLETYPE, typename DESCRIPTOR>
 MagneticForceForMagP3D<T, PARTICLETYPE, DESCRIPTOR>::MagneticForceForMagP3D(
-  AnalyticalF3D<T, T>& getMagForce, AnalyticalF3D<T, T>& getMagField, T scale) :
+  AnalyticalF<3,T, T>& getMagForce, AnalyticalF<3,T, T>& getMagField, T scale) :
   Force3D<T, PARTICLETYPE>(), _getMagForce(getMagForce), _getMagField(getMagField), _scale(scale)
 { }
 

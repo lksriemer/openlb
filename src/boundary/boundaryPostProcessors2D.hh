@@ -41,6 +41,7 @@ StraightFdBoundaryProcessor2D(int x0_, int x1_, int y0_, int y1_)
   : x0(x0_), x1(x1_), y0(y0_), y1(y1_)
 {
   OLB_PRECONDITION(x0==x1 || y0==y1);
+  this->getName() = "StraightFdBoundaryProcessor2D";
 }
 
 template<typename T, typename DESCRIPTOR, int direction,int orientation>
@@ -63,7 +64,7 @@ processSubDomain(BlockLattice2D<T,DESCRIPTOR>& blockLattice, int x0_, int x1_, i
     for (iX=newX0; iX<=newX1; ++iX) {
       T dx_u[DESCRIPTOR::d], dy_u[DESCRIPTOR::d];
       for (int iY=newY0; iY<=newY1; ++iY) {
-        Cell<T,DESCRIPTOR>& cell = blockLattice.get(iX,iY);
+        Cell<T,DESCRIPTOR> cell = blockLattice.get(iX,iY);
         Dynamics<T,DESCRIPTOR>* dynamics = blockLattice.getDynamics(iX, iY);
 
         T rho, u[DESCRIPTOR::d];
@@ -146,6 +147,7 @@ StraightConvectionBoundaryProcessor2D(int x0_, int x1_, int y0_, int y1_, T* uAv
 {
   OLB_PRECONDITION(x0==x1 || y0==y1);
 
+  this->getName() = "StraightConvectionBoundaryProcessor2D";
   saveCell = new T** [(size_t)(x1_-x0_+1)];
   for (int iX=0; iX<=x1_-x0_; ++iX) {
     saveCell[iX] = new T* [(size_t)(y1_-y0_+1)];
@@ -190,11 +192,11 @@ processSubDomain(BlockLattice2D<T,DESCRIPTOR>& blockLattice, int x0_, int x1_, i
 #endif
     for (iX=newX0; iX<=newX1; ++iX) {
       for (int iY=newY0; iY<=newY1; ++iY) {
-        Cell<T,DESCRIPTOR>& cell = blockLattice.get(iX,iY);
+        Cell<T,DESCRIPTOR> cell = blockLattice.get(iX,iY);
         for (int iPop = 0; iPop < DESCRIPTOR::q ; ++iPop) {
           if (descriptors::c<DESCRIPTOR>(iPop,direction)==-orientation) {
             // using default -1 avoids wrong first call
-            if (!util::nearZero(1 + saveCell[iX-newX0][iY-newY0][iPop]) ){
+            if (!util::nearZero(1 + saveCell[iX-newX0][iY-newY0][iPop]) ) {
               cell[iPop] = saveCell[iX-newX0][iY-newY0][iPop];
             }
           }
@@ -207,7 +209,8 @@ processSubDomain(BlockLattice2D<T,DESCRIPTOR>& blockLattice, int x0_, int x1_, i
           blockLattice.get(iX,iY).computeRhoU(rho0,u0);
           blockLattice.get(iX-orientation,iY).computeRhoU(rho1,u1);
           blockLattice.get(iX-orientation*2,iY).computeRhoU(rho2,u2);
-        } else {
+        }
+        else {
           blockLattice.get(iX,iY).computeRhoU(rho0,u0);
           blockLattice.get(iX,iY-orientation).computeRhoU(rho1,u1);
           blockLattice.get(iX,iY-orientation*2).computeRhoU(rho2,u2);
@@ -273,6 +276,7 @@ SlipBoundaryProcessor2D<T,DESCRIPTOR>::
 SlipBoundaryProcessor2D(int x0_, int x1_, int y0_, int y1_, int discreteNormalX, int discreteNormalY)
   : x0(x0_), x1(x1_), y0(y0_), y1(y1_)
 {
+  this->getName() = "SlipBoundaryProcessor2D";
   OLB_PRECONDITION(x0==x1 || y0==y1);
   reflectionPop[0] = 0;
   for (int iPop = 1; iPop < DESCRIPTOR::q; iPop++) {
@@ -365,6 +369,7 @@ PartialSlipBoundaryProcessor2D<T,DESCRIPTOR>::
 PartialSlipBoundaryProcessor2D(T tuner_, int x0_, int x1_, int y0_, int y1_, int discreteNormalX, int discreteNormalY)
   : x0(x0_), x1(x1_), y0(y0_), y1(y1_), tuner(tuner_)
 {
+  this->getName() = "PartialSlipBoundaryProcessor2D";
   OLB_PRECONDITION(x0==x1 || y0==y1);
   reflectionPop[0] = 0;
   for (int iPop = 1; iPop < DESCRIPTOR::q; iPop++) {
@@ -417,7 +422,7 @@ processSubDomain(BlockLattice2D<T,DESCRIPTOR>& blockLattice, int x0_, int x1_, i
         for (int iPop = 1; iPop < DESCRIPTOR::q/2 ; ++iPop) {
           T provv = blockLattice.get(iX,iY)[descriptors::opposite<DESCRIPTOR>(iPop)];
           blockLattice.get(iX,iY)[descriptors::opposite<DESCRIPTOR>(iPop)] +=
-                                         (1.-tuner)*blockLattice.get(iX,iY)[iPop];
+            (1.-tuner)*blockLattice.get(iX,iY)[iPop];
           blockLattice.get(iX,iY)[iPop] += (1.-tuner)*provv;
         }
       }
@@ -462,7 +467,10 @@ template<typename T, typename DESCRIPTOR, int xNormal,int yNormal>
 OuterVelocityCornerProcessor2D<T, DESCRIPTOR, xNormal, yNormal>::
 OuterVelocityCornerProcessor2D(int x_, int y_)
   : x(x_), y(y_)
-{ }
+{
+  this->_priority = 1;
+  this->getName() = "OuterVelocityCornerProcessor2D";
+}
 
 template<typename T, typename DESCRIPTOR, int xNormal,int yNormal>
 void OuterVelocityCornerProcessor2D<T, DESCRIPTOR, xNormal, yNormal>::
@@ -486,7 +494,7 @@ process(BlockLattice2D<T,DESCRIPTOR>& blockLattice)
   T dx_uy = dx_u[1];
   T dy_uy = dy_u[1];
 
-  Cell<T,DESCRIPTOR>& cell = blockLattice.get(x,y);
+  Cell<T,DESCRIPTOR> cell = blockLattice.get(x,y);
   Dynamics<T,DESCRIPTOR>* dynamics = blockLattice.getDynamics(x, y);
   T omega = dynamics -> getOmega();
 
@@ -552,7 +560,9 @@ FreeEnergyWallProcessor2D(int x0_, int x1_, int y0_, int y1_, int discreteNormal
   : x0(x0_), x1(x1_), y0(y0_), y1(y1_),
     discreteNormalX(discreteNormalX_), discreteNormalY(discreteNormalY_),
     addend(addend_)
-{ }
+{
+  this->getName() = "FreeEnergyWallProcessor2D";
+}
 
 template<typename T, typename DESCRIPTOR>
 void FreeEnergyWallProcessor2D<T,DESCRIPTOR>::
@@ -569,7 +579,7 @@ processSubDomain(BlockLattice2D<T,DESCRIPTOR>& blockLattice, int x0_, int x1_, i
         T rhoAvg = blockLattice.get(iX-discreteNormalX, iY-discreteNormalY).computeRho();
         T rhoTmp = 0.;
         for (int iPop = 1; iPop < DESCRIPTOR::q ; ++iPop) {
-            rhoTmp += blockLattice.get(iX,iY)[iPop];
+          rhoTmp += blockLattice.get(iX,iY)[iPop];
         }
         T rho = rhoAvg + addend;
         rho -= rhoTmp;
@@ -583,22 +593,22 @@ template<typename T, typename DESCRIPTOR>
 void FreeEnergyWallProcessor2D<T,DESCRIPTOR>::
 process(BlockLattice2D<T,DESCRIPTOR>& blockLattice)
 {
-processSubDomain(blockLattice, x0, x1, y0, y1);
+  processSubDomain(blockLattice, x0, x1, y0, y1);
 }
 
 template<typename T, typename DESCRIPTOR>
 FreeEnergyWallProcessorGenerator2D<T,DESCRIPTOR>::
 FreeEnergyWallProcessorGenerator2D(int x0_, int x1_, int y0_, int y1_, int discreteNormalX_,
-    int discreteNormalY_, T addend_)
-: PostProcessorGenerator2D<T,DESCRIPTOR>(x0_, x1_, y0_, y1_), discreteNormalX(discreteNormalX_), discreteNormalY(discreteNormalY_), addend(addend_)
+                                   int discreteNormalY_, T addend_)
+  : PostProcessorGenerator2D<T,DESCRIPTOR>(x0_, x1_, y0_, y1_), discreteNormalX(discreteNormalX_), discreteNormalY(discreteNormalY_), addend(addend_)
 { }
 
 template<typename T, typename DESCRIPTOR>
 PostProcessor2D<T,DESCRIPTOR>*
 FreeEnergyWallProcessorGenerator2D<T,DESCRIPTOR>::generate() const
 {
-return new FreeEnergyWallProcessor2D<T,DESCRIPTOR>
-     (this->x0, this->x1, this->y0, this->y1, discreteNormalX, discreteNormalY, addend);
+  return new FreeEnergyWallProcessor2D<T,DESCRIPTOR>
+         (this->x0, this->x1, this->y0, this->y1, discreteNormalX, discreteNormalY, addend);
 }
 
 template<typename T, typename DESCRIPTOR>
@@ -618,7 +628,9 @@ FreeEnergyChemPotBoundaryProcessor2D(
   int x0_, int x1_, int y0_, int y1_, int discreteNormalX_, int discreteNormalY_, int latticeNumber_)
   : x0(x0_), x1(x1_), y0(y0_), y1(y1_), discreteNormalX(discreteNormalX_),
     discreteNormalY(discreteNormalY_), latticeNumber(latticeNumber_)
-{ }
+{
+  this->getName() = "FreeEnergyChemPotBoundaryProcessor2D";
+}
 
 template<typename T, typename DESCRIPTOR>
 void FreeEnergyChemPotBoundaryProcessor2D<T,DESCRIPTOR>::
@@ -637,9 +649,12 @@ processSubDomain(
           blockLattice.get(iX-discreteNormalX, iY-discreteNormalY).template getField<descriptors::CHEM_POTENTIAL>()
         );
         if (latticeNumber == 1) {
-          T rho0 = blockLattice.get(iX, iY).computeRho();
+          auto cell = blockLattice.get(iX,iY);
+          T rho0 = cell.computeRho();
           T rho1 = blockLattice.get(iX-discreteNormalX, iY-discreteNormalY).computeRho();
-          *(blockLattice.get(iX,iY).template getFieldPointer<descriptors::CHEM_POTENTIAL>()) += (rho1 / rho0 - 1) / descriptors::invCs2<T,DESCRIPTOR>();
+          cell.template setField<descriptors::CHEM_POTENTIAL>(
+            cell.template getField<descriptors::CHEM_POTENTIAL>() + (rho1 / rho0 - 1) / descriptors::invCs2<T,DESCRIPTOR>()
+          );
         }
       }
     }
@@ -650,7 +665,7 @@ template<typename T, typename DESCRIPTOR>
 void FreeEnergyChemPotBoundaryProcessor2D<T,DESCRIPTOR>::
 process(BlockLattice2D<T,DESCRIPTOR>& blockLattice)
 {
-processSubDomain(blockLattice, x0, x1, y0, y1);
+  processSubDomain(blockLattice, x0, x1, y0, y1);
 }
 
 ////////  FreeEnergyChemPotBoundaryProcessorGenerator2D ////////////////////////////
@@ -658,7 +673,7 @@ processSubDomain(blockLattice, x0, x1, y0, y1);
 template<typename T, typename DESCRIPTOR>
 FreeEnergyChemPotBoundaryProcessorGenerator2D<T,DESCRIPTOR>::
 FreeEnergyChemPotBoundaryProcessorGenerator2D(int x0_, int x1_, int y0_, int y1_,
-  int discreteNormalX_, int discreteNormalY_, int latticeNumber_)
+    int discreteNormalX_, int discreteNormalY_, int latticeNumber_)
   : PostProcessorGenerator2D<T,DESCRIPTOR>(x0_, x1_, y0_, y1_), discreteNormalX(discreteNormalX_),
     discreteNormalY(discreteNormalY_), latticeNumber(latticeNumber_)
 { }
@@ -667,8 +682,8 @@ template<typename T, typename DESCRIPTOR>
 PostProcessor2D<T,DESCRIPTOR>*
 FreeEnergyChemPotBoundaryProcessorGenerator2D<T,DESCRIPTOR>::generate() const
 {
-return new FreeEnergyChemPotBoundaryProcessor2D<T,DESCRIPTOR>
-     (this->x0, this->x1, this->y0, this->y1, discreteNormalX, discreteNormalY, latticeNumber);
+  return new FreeEnergyChemPotBoundaryProcessor2D<T,DESCRIPTOR>
+         (this->x0, this->x1, this->y0, this->y1, discreteNormalX, discreteNormalY, latticeNumber);
 }
 
 template<typename T, typename DESCRIPTOR>
@@ -688,7 +703,9 @@ FreeEnergyConvectiveProcessor2D(
   int x0_, int x1_, int y0_, int y1_, int discreteNormalX_, int discreteNormalY_)
   : x0(x0_), x1(x1_), y0(y0_), y1(y1_),
     discreteNormalX(discreteNormalX_), discreteNormalY(discreteNormalY_)
-{ }
+{
+  this->getName() = "FreeEnergyConvectiveProcessor2D";
+}
 
 template<typename T, typename DESCRIPTOR>
 void FreeEnergyConvectiveProcessor2D<T,DESCRIPTOR>::
@@ -709,7 +726,8 @@ processSubDomain(
         T uPerp = 0;
         if (discreteNormalX == 0) {
           uPerp = discreteNormalY * u[1];
-        } else if (discreteNormalY == 0) {
+        }
+        else if (discreteNormalY == 0) {
           uPerp = discreteNormalX * u[0];
         }
         rho = (rho0 + uPerp * rho1) / (1. + uPerp);
@@ -723,7 +741,7 @@ template<typename T, typename DESCRIPTOR>
 void FreeEnergyConvectiveProcessor2D<T,DESCRIPTOR>::
 process(BlockLattice2D<T,DESCRIPTOR>& blockLattice)
 {
-processSubDomain(blockLattice, x0, x1, y0, y1);
+  processSubDomain(blockLattice, x0, x1, y0, y1);
 }
 
 ////////  FreeEnergyConvectiveProcessorGenerator2D ////////////////////////////
@@ -731,7 +749,7 @@ processSubDomain(blockLattice, x0, x1, y0, y1);
 template<typename T, typename DESCRIPTOR>
 FreeEnergyConvectiveProcessorGenerator2D<T,DESCRIPTOR>::
 FreeEnergyConvectiveProcessorGenerator2D(int x0_, int x1_, int y0_, int y1_,
-  int discreteNormalX_, int discreteNormalY_)
+    int discreteNormalX_, int discreteNormalY_)
   : PostProcessorGenerator2D<T,DESCRIPTOR>(x0_, x1_, y0_, y1_),
     discreteNormalX(discreteNormalX_), discreteNormalY(discreteNormalY_)
 { }
@@ -740,8 +758,8 @@ template<typename T, typename DESCRIPTOR>
 PostProcessor2D<T,DESCRIPTOR>*
 FreeEnergyConvectiveProcessorGenerator2D<T,DESCRIPTOR>::generate() const
 {
-return new FreeEnergyConvectiveProcessor2D<T,DESCRIPTOR>
-     (this->x0, this->x1, this->y0, this->y1, discreteNormalX, discreteNormalY);
+  return new FreeEnergyConvectiveProcessor2D<T,DESCRIPTOR>
+         (this->x0, this->x1, this->y0, this->y1, discreteNormalX, discreteNormalY);
 }
 
 template<typename T, typename DESCRIPTOR>

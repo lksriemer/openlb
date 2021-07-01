@@ -27,7 +27,8 @@
 #include "blockLattice3D.h"
 #include "blockLattice3D.hh"
 #include "dynamics/latticeDescriptors.h"
- 
+#include "postProcessing.hh"
+
 
 namespace olb {
 

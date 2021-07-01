@@ -94,64 +94,63 @@ bool BlockLatticeFfromAnalyticalF3D<T, DESCRIPTOR>::operator()(
 ////////////////////////////////////////////////
 template<typename T, typename DESCRIPTOR>
 SmoothBlockIndicator3D<T, DESCRIPTOR>::SmoothBlockIndicator3D(
-  IndicatorF3D<T>& f, T h, T eps, int wa)
-  : BlockDataF3D<T, T>((int)((f.getMax()[0] - f.getMin()[0]) / h + (wa+1)*eps)+2,
-                       (int)((f.getMax()[1] - f.getMin()[1]) / h + (wa+1)*eps)+2,
-                       (int)((f.getMax()[2] - f.getMin()[2]) / h + (wa+1)*eps)+2),
-    _f(f),
+  IndicatorF3D<T>& f, T h, T eps, T sigma)
+  : BlockDataF3D<T, T>((int)((f.getMax()[0] - f.getMin()[0]) / h + ( round(eps*0.5)*2+2 )),
+                       (int)((f.getMax()[1] - f.getMin()[1]) / h + ( round(eps*0.5)*2+2 )),
+                       (int)((f.getMax()[2] - f.getMin()[2]) / h + ( round(eps*0.5)*2+2 ))),
     _h(h),
-    _eps(eps),
-    _wa(wa)
+    _sigma(sigma),
+    _eps(round(eps*0.5)*2),
+    _wa(_eps+1),
+    _f(f)
 {
   this->getName() = "SmoothBlockIndicator3D";
-
-  // shrink epsilon boundary to one size
-  this->_eps = this->_eps/((this->_wa-1)/2.0);
-  T value;
-
-  // Important parameter of the gaussian psf (point spread function), but adaption should not be necessary
-  T sigma = 1.0;
-
+  T value, dx, dy, dz;
   T weights[this->_wa][this->_wa][this->_wa];
   T sum = 0;
-  int iStart = floor(this->_wa/2.0);
-  int iEnd = ceil(this->_wa/2.0);
+  const int iStart = floor(this->_wa*0.5);
+  const int iEnd = ceil(this->_wa*0.5);
 
   // calculate weights: they are constants, but calculation here is less error-prone than hardcoding these parameters
-  for (int x = -iStart; x < iEnd; x++) {
-    for (int y = -iStart; y < iEnd; y++) {
-      for (int z = -iStart; z < iEnd; z++) {
-        weights[x+iStart][y+iStart][z+iStart] = exp(-(x*x+y*y+z*z)/(2*sigma*sigma)) / (pow(sigma,3)*sqrt(pow(2,3)*pow(M_PI,3)));
+  for (int x = -iStart; x < iEnd; ++x) {
+    for (int y = -iStart; y < iEnd; ++y) {
+      for (int z = -iStart; z < iEnd; ++z) {
+        weights[x+iStart][y+iStart][z+iStart] = exp(-(x*x+y*y+z*z)/(2*this->_sigma*this->_sigma)) / (pow(this->_sigma,3)*sqrt(pow(2,3)*pow(M_PI,3)));
         // important because sum of all weigths only equals 1 for this->_wa -> infinity
         sum += weights[x+iStart][y+iStart][z+iStart];
       }
     }
   }
+  const T invSum = 1./sum;
 
-  for (int iX=0; iX<this->getBlockData().getNx(); iX++) {
-    for (int iY=0; iY<this->getBlockData().getNy(); iY++) {
-      for (int iZ=0; iZ<this->getBlockData().getNz(); iZ++) {
+  for (int iX=0; iX<this->getBlockData().getNx(); ++iX) {
+    for (int iY=0; iY<this->getBlockData().getNy(); ++iY) {
+      for (int iZ=0; iZ<this->getBlockData().getNz(); ++iZ) {
         bool output[1];
         value = 0;
 
-        // input: regarded point (centre)
+        // input: regarded point (center)
         T input[] = {
-          _f.getMin()[0] + (iX-iStart*_eps)*_h,
-          _f.getMin()[1] + (iY-iStart*_eps)*_h,
-          _f.getMin()[2] + (iZ-iStart*_eps)*_h
+          _f.getMin()[0] + iX*_h,
+          _f.getMin()[1] + iY*_h,
+          _f.getMin()[2] + iZ*_h
         };
 
         /*
          * three loops to look at every point (which weight is not 0) around the regarded point
          * sum all weighted porosities
          */
-        for (int x = -iStart; x < iEnd; x++) {
-          for (int y = -iStart; y < iEnd; y++) {
-            for (int z = -iStart; z < iEnd; z++) {
+        for (int x = -iStart; x < iEnd; ++x) {
+          for (int y = -iStart; y < iEnd; ++y) {
+            for (int z = -iStart; z < iEnd; ++z) {
+              dx = x*_h;
+              dy = y*_h;
+              dz = z*_h;
+
               // move from regarded point to point in neighborhood
-              input[0] += x*_eps*_h;
-              input[1] += y*_eps*_h;
-              input[2] += z*_eps*_h;
+              input[0] += dx;
+              input[1] += dy;
+              input[2] += dz;
 
               // get porosity
               _f(output,input);
@@ -159,10 +158,10 @@ SmoothBlockIndicator3D<T, DESCRIPTOR>::SmoothBlockIndicator3D(
               // sum porosity
               value += output[0] * weights[x+iStart][y+iStart][z+iStart];
 
-              // move back to centre
-              input[0] -= x*_eps*_h;
-              input[1] -= y*_eps*_h;
-              input[2] -= z*_eps*_h;
+              // move back to center
+              input[0] -= dx;
+              input[1] -= dy;
+              input[2] -= dz;
             }
           }
         }
@@ -170,7 +169,7 @@ SmoothBlockIndicator3D<T, DESCRIPTOR>::SmoothBlockIndicator3D(
          * Round to 3 decimals
          * See above sum != 1.0, that's the reason for devision, otherwise porosity will never reach 0
          */
-        this->getBlockData().get(iX,iY,iZ,0) = nearbyint(1000*value/sum)/1000.0;
+        this->getBlockData().get(iX,iY,iZ,0) = value*invSum;//nearbyint(1000*value/sum)/1000.0;
       }
     }
   }

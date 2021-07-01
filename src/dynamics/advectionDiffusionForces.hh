@@ -100,7 +100,7 @@ void AdvDiffRotatingForce3D<T,DESCRIPTOR,ADLattice>::applyForce(T force[], Cell<
 
 template<typename T, typename DESCRIPTOR,
 typename ADLattice>
-AdvDiffMagneticWireForce3D<T,DESCRIPTOR,ADLattice>::AdvDiffMagneticWireForce3D(SuperGeometry3D<T>& superGeometry_, UnitConverter<T,DESCRIPTOR> const& converter_, T pMass, AnalyticalF3D<T, T>& getMagForce) : sg(superGeometry_), _getMagForce(getMagForce)
+AdvDiffMagneticWireForce3D<T,DESCRIPTOR,ADLattice>::AdvDiffMagneticWireForce3D(SuperGeometry3D<T>& superGeometry_, UnitConverter<T,DESCRIPTOR> const& converter_, T pMass, AnalyticalF<3,T, T>& getMagForce) : sg(superGeometry_), _getMagForce(getMagForce)
 {
   initArg = 8;
   _pMass = converter_.getConversionFactorTime() / pMass;

@@ -181,7 +181,7 @@ const Vector<S,3>& SmoothIndicatorF3D<T, S, true>::getAcc2() const
 }
 
 template <typename T, typename S>
-const Vector<S,3>& SmoothIndicatorF3D<T,S,true>::getForce() const {
+const Vector<S,3>& SmoothIndicatorF3D<T,S,true>::getHydrodynamicForce() const {
   return _force;
 }
 
@@ -271,7 +271,7 @@ void SmoothIndicatorF3D<T,S,true>::setAcc2(Vector<S,3> acc2) {
 }
 
 template <typename T, typename S>
-void SmoothIndicatorF3D<T,S,true>::setForce(Vector<S,3> force) {
+void SmoothIndicatorF3D<T,S,true>::setHydrodynamicForce(Vector<S,3> force) {
   _force[0] = force[0];
   _force[1] = force[1];
   _force[2] = force[2];

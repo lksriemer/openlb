@@ -34,7 +34,6 @@ template<typename T, typename W>
 SuperF2D<T,W>::SuperF2D(SuperStructure2D<T>& superStructure, int targetDim)
   : GenericF<W,int>(targetDim,3), _superStructure(superStructure) { }
 
-
 template<typename T, typename W>
 SuperStructure2D<T>& SuperF2D<T,W>::getSuperStructure()
 {
@@ -55,6 +54,23 @@ BlockF2D<W>& SuperF2D<T,W>::getBlockF(int iCloc)
   OLB_ASSERT(size_t(iCloc) < _blockF.size() && iCloc >= 0,
              "block functor index within bounds");
   return *(_blockF[iCloc]);
+}
+
+template <typename T, typename W>
+bool SuperF2D<T,W>::operator()(W output[], const int input[])
+{
+  
+  LoadBalancer<T>& load = _superStructure.getLoadBalancer();
+
+  if (load.isLocal(input[0])) {
+    const int loc = load.loc(input[0]);
+
+    return this->getBlockF(loc)(output, &input[1]);
+  }
+  else {
+    return false;
+  }
+
 }
 
 
@@ -119,6 +135,22 @@ template <typename T, typename DESCRIPTOR>
 SuperLattice2D<T,DESCRIPTOR>& SuperLatticeF2D<T,DESCRIPTOR>::getSuperLattice()
 {
   return _sLattice;
+}
+
+template<typename T, typename DESCRIPTOR>
+bool SuperLatticeF2D<T, DESCRIPTOR>::operator()(
+  T output[], const int input[])
+{
+  auto& load = this->_sLattice.getLoadBalancer();
+
+  if (load.isLocal(input[0])) {
+    const int loc = load.loc(input[0]);
+
+    return this->getBlockF(loc)(output, &input[1]);
+  }
+  else {
+    return false;
+  }
 }
 
 template <typename T, typename DESCRIPTOR>

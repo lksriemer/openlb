@@ -28,10 +28,11 @@
 
 #include "blockBaseF3D.h"
 #include "superBaseF3D.h"
-#include "blockLatticeLocalF3D.h"
-#include "superLatticeLocalF3D.h"
 #include "core/unitConverter.h"
 #include "functors/analytical/indicator/indicatorBaseF3D.h"
+#include "latticeVelocity3D.h"
+#include "latticeExternalVelocity3D.h"
+#include "latticePhysVelocity3D.h"
 
 
 /** These are functors used for turbulent flows. Some like AMD have an execute member
@@ -98,7 +99,6 @@ private:
   std::list<int>& _matNumber;
   int _targetDim;
   int _n[3];
-
 public:
   BlockFiniteDifference3D(BlockGeometryStructure3D<T>& blockGeometry, BlockF3D<T>& blockFunctor, std::list<int>& matNumber);
   bool operator() (T output[], const int input[]) override;
@@ -114,7 +114,6 @@ private:
   std::list<int>& _matNumber;
 public:
   SuperFiniteDifference3D(SuperGeometry3D<T>& sGeometry, SuperF3D<T>& sFunctor, std::list<int>& matNumber);
-  bool operator() (T output[], const int input[]) override;
 };
 
 template <typename T, typename DESCRIPTOR>
@@ -137,14 +136,12 @@ private:
   const UnitConverter<T,DESCRIPTOR>& _converter;
 public:
   SuperPhysFiniteDifference3D(SuperGeometry3D<T>& sGeometry, SuperF3D<T>& sFunctor, std::list<int>& matNumber, const UnitConverter<T,DESCRIPTOR>& converter);
-  bool operator() (T output[], const int input[]) override;
 };
 
 template <typename T, typename DESCRIPTOR>
 class BlockLatticeVelocityGradientFD3D : public BlockLatticeF3D<T,DESCRIPTOR> {
 private:
   BlockF3D<T>& _blockFinDiff;
-
 public:
   BlockLatticeVelocityGradientFD3D(BlockLatticeStructure3D<T,DESCRIPTOR>& blockLattice, BlockF3D<T>& blockFunctor);
   bool operator() (T output[], const int input[]);
@@ -154,7 +151,6 @@ template <typename T, typename DESCRIPTOR>
 class BlockLatticeExternalVelocityGradientFD3D : public BlockLatticeF3D<T,DESCRIPTOR> {
 private:
   BlockF3D<T>& _blockFinDiff;
-
 public:
   BlockLatticeExternalVelocityGradientFD3D(BlockLatticeStructure3D<T,DESCRIPTOR>& blockLattice, BlockF3D<T>& blockFunctor);
   bool operator() (T output[], const int input[]);
@@ -169,7 +165,6 @@ private:
   SuperFiniteDifference3D<T> _sFinDiff;
 public:
   SuperLatticeVelocityGradientFD3D(SuperGeometry3D<T>& sGeometry, SuperLattice3D<T,DESCRIPTOR>& sLattice, std::list<int>& matNumber);
-  bool operator() (T output[], const int input[]);
 };
 
 /// functor to get pointwise explicit filter on local lattice, if globIC is not on
@@ -181,9 +176,7 @@ private:
   SuperFiniteDifference3D<T> _sFinDiff;
 public:
   SuperLatticeExternalVelocityGradientFD3D(SuperGeometry3D<T>& sGeometry, SuperLattice3D<T,DESCRIPTOR>& sLattice, std::list<int>& matNumber);
-  bool operator() (T output[], const int input[]);
 };
-
 
 template <typename T, typename DESCRIPTOR>
 class BlockLatticePhysVelocityGradientFD3D : public BlockLatticeF3D<T,DESCRIPTOR> {
@@ -205,7 +198,6 @@ private:
   const UnitConverter<T,DESCRIPTOR>& _converter;
 public:
   SuperLatticePhysVelocityGradientFD3D(SuperGeometry3D<T>& sGeometry, SuperLattice3D<T,DESCRIPTOR>& sLattice, std::list<int>& matNumber, const UnitConverter<T,DESCRIPTOR>& converter);
-  bool operator() (T output[], const int input[]) override;
 };
 
 template <typename T, typename DESCRIPTOR>
@@ -225,7 +217,6 @@ private:
   SuperLatticeVelocityGradientFD3D<T,DESCRIPTOR> _sVeloGrad;
 public:
   SuperLatticeStrainRateFD3D(SuperGeometry3D<T>& sGeometry, SuperLattice3D<T,DESCRIPTOR>& sLattice, std::list<int>& matNumber);
-  bool operator() (T output[], const int input[]);
 };
 
 template <typename T, typename DESCRIPTOR>
@@ -247,7 +238,6 @@ private:
   const UnitConverter<T,DESCRIPTOR>& _converter;
 public:
   SuperLatticePhysStrainRateFD3D(SuperGeometry3D<T>& sGeometry, SuperLattice3D<T,DESCRIPTOR>& sLattice, std::list<int>& matNumber, const UnitConverter<T,DESCRIPTOR>& converter);
-  bool operator() (T output[], const int input[]);
 };
 
 template <typename T, typename DESCRIPTOR>
@@ -269,7 +259,6 @@ private:
   const UnitConverter<T,DESCRIPTOR>& _converter;
 public:
   SuperLatticeDissipationFD3D(SuperGeometry3D<T>& sGeometry, SuperLattice3D<T,DESCRIPTOR>& sLattice, std::list<int>& matNumber, const UnitConverter<T,DESCRIPTOR>& converter);
-  bool operator() (T output[], const int input[]);
 };
 
 template <typename T, typename DESCRIPTOR>
@@ -291,7 +280,6 @@ private:
   const UnitConverter<T,DESCRIPTOR>& _converter;
 public:
   SuperLatticePhysDissipationFD3D(SuperGeometry3D<T>& sGeometry, SuperLattice3D<T,DESCRIPTOR>& sLattice, std::list<int>& matNumber, const UnitConverter<T,DESCRIPTOR>& converter);
-  bool operator() (T output[], const int input[]) override;
 };
 
 template <typename T, typename DESCRIPTOR>
@@ -316,7 +304,6 @@ private:
 public:
   SuperLatticeEffectiveDissipationFD3D(SuperGeometry3D<T>& sGeometry, SuperLattice3D<T,DESCRIPTOR>& sLattice, std::list<int>& matNumber,
                                        const UnitConverter<T,DESCRIPTOR>& converter, LESDynamics<T, DESCRIPTOR>& LESdynamics);
-  bool operator() (T output[], const int input[]);
 };
 
 template <typename T, typename DESCRIPTOR>
@@ -341,7 +328,6 @@ private:
 public:
   SuperLatticePhysEffectiveDissipationFD3D(SuperGeometry3D<T>& sGeometry, SuperLattice3D<T,DESCRIPTOR>& sLattice, std::list<int>& matNumber,
       const UnitConverter<T,DESCRIPTOR>& converter, LESDynamics<T, DESCRIPTOR>& LESdynamics);
-  bool operator() (T output[], const int input[]) override;
 };
 
 template <typename T, typename DESCRIPTOR>
@@ -361,7 +347,6 @@ private:
   SuperLatticeVelocityGradientFD3D<T,DESCRIPTOR> _sVeloGrad;
 public:
   SuperLatticeVorticityFD3D(SuperGeometry3D<T>& sGeometry, SuperLattice3D<T,DESCRIPTOR>& sLattice, std::list<int>& matNumber);
-  bool operator() (T output[], const int input[]);
 };
 
 template <typename T, typename DESCRIPTOR>
@@ -383,7 +368,6 @@ private:
   const UnitConverter<T,DESCRIPTOR>& _converter;
 public:
   SuperLatticePhysVorticityFD3D(SuperGeometry3D<T>& sGeometry, SuperLattice3D<T,DESCRIPTOR>& sLattice, std::list<int>& matNumber, const UnitConverter<T,DESCRIPTOR>& converter);
-  bool operator() (T output[], const int input[]);
 };
 
 /// functor that returns pointwise the enstrophy
@@ -404,7 +388,6 @@ private:
   const UnitConverter<T,DESCRIPTOR>& _converter;
 public:
   SuperLatticePhysEnstrophyFD3D(SuperGeometry3D<T>& sGeometry, SuperLattice3D<T,DESCRIPTOR>& sLattice, std::list<int>& matNumber, const  UnitConverter<T,DESCRIPTOR>& converter);
-  bool operator() (T output[], const int input[]);
 };
 
 template <typename T, typename DESCRIPTOR>
@@ -426,7 +409,6 @@ private:
   const UnitConverter<T,DESCRIPTOR>& _converter;
 public:
   SuperLatticePhysStressFD3D(SuperGeometry3D<T>& sGeometry, SuperLattice3D<T,DESCRIPTOR>& sLattice, std::list<int>& matNumber, const UnitConverter<T,DESCRIPTOR>& converter);
-  bool operator() (T output[], const int input[]);
 };
 
 /// functor that returns pointwise the turbulent, kinetic energy
@@ -447,7 +429,6 @@ private:
   const UnitConverter<T,DESCRIPTOR>& _converter;
 public:
   SuperIsotropicHomogeneousTKE3D( SuperLattice3D<T,DESCRIPTOR>& sLattice, const UnitConverter<T,DESCRIPTOR>& converter);
-  bool operator() (T output[], const int input[]);
 };
 
 /*

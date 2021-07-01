@@ -24,6 +24,14 @@
 
 ## installing the configuration makefile
 
+## the variable is just here to ensure that the Makefile is copied if it does not exist yet
+ifdef IN_NIX_SHELL
+  ifndef OPENLB_CONFIG
+  endif
+  MAKEFILE_INC_TEMP := $(shell cp -n ${OPENLB_CONFIG} config.mk)
+else
+endif
+
 ROOT := .
 
 include global.mk
@@ -37,6 +45,8 @@ LIB_OBJECTS :=
 SAMPLES :=
 
 TESTS :=
+
+RUNTESTS :=
 
 BENCHMARKS :=
 
@@ -95,26 +105,8 @@ clean: $(CLEANTARGETS) cleanlib
 
 samples: lib $(SAMPLES)
 
-############################yy###############################################
-## user guide documentation
-
-userguide:
-	@cd doc/userGuide/; \
-	latexmk -pdf -silent -f olb-ug.tex
-
 ###########################################################################
 ## doxygen documentation
 
 doxygen:
 	doxygen doc/DoxygenConfig
-
-###########################################################################
-## checking whether to automatically install the git hook
-GITDEPEND := $(shell test -d ".git" && echo .git/hooks/pre-commit)
-
-ifneq ($(strip $(GITDEPEND)),)
-.git/hooks/pre-commit: hooks/pre-commit
-	@echo Installing git hook
-	cp hooks/pre-commit .git/hooks/pre-commit
-	chmod +x .git/hooks/pre-commit
-endif

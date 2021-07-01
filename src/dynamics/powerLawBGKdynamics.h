@@ -41,13 +41,25 @@ class PowerLawDynamics {
 public:
   /// Constructor
   PowerLawDynamics(T m=0.1, T n=.5, T nuMin=T(2.9686e-3), T nuMax=T(3.1667));
+  /// Set _omegaMin and _omegaMax
+  void setViscoLimits(T nuMin, T nuMax);
+  /// Set m parameter
+  void setM(T m);
+  /// Set n parameter
+  void setN(T n);
+  /// Return m parameter
+  T getM();
+  /// Return n parameter
+  T getN();
+  /// Return minimum viscosity
+  T getNuMin();
+  /// Return maximum viscosity
+  T getNuMax();
 
 protected:
   /// Computes the local power-Law relaxation parameter
   T computeOmegaPL ( Cell<T,DESCRIPTOR>& cell, T omega0,
            T rho, T pi[util::TensorVal<DESCRIPTOR >::n] );
-  /// Computes squared norm of non-equilibrium part of 2nd momentum
-  virtual T PiNeqNormSqr(Cell<T,DESCRIPTOR>& cell ) =0;
 
 protected:
   T _m;
@@ -66,10 +78,6 @@ public:
 
   /// Collision step
   void collide(Cell<T,DESCRIPTOR>& cell, LatticeStatistics<T>& statistics) override;
-
-protected:
-  /// Computes squared norm of non-equilibrium part of 2nd momentum
-  virtual T PiNeqNormSqr(Cell<T,DESCRIPTOR>& cell ) override;
 };
 
 /// Implementation of the forced BGK collision step
@@ -81,11 +89,7 @@ public:
   PowerLawForcedBGKdynamics(T omega, Momenta<T,DESCRIPTOR>& momenta, T m=0.1, T n=.5, T nuMin=T(2.9686e-3), T nuMax=T(3.1667));
 
   /// Collision step
-  virtual void collide(Cell<T,DESCRIPTOR>& cell, LatticeStatistics<T>& statistics) override;
-
-protected:
-  /// Computes squared norm of non-equilibrium part of 2nd momentum
-  virtual T PiNeqNormSqr(Cell<T,DESCRIPTOR>& cell ) override;
+  void collide(Cell<T,DESCRIPTOR>& cell, LatticeStatistics<T>& statistics) override;
 };
 
 }

@@ -83,7 +83,9 @@ ForcedADMBGKdynamics<T,DESCRIPTOR>::ForcedADMBGKdynamics (
   T omega_, Momenta<T,DESCRIPTOR>& momenta_ )
   : BGKdynamics<T,DESCRIPTOR>(omega_,momenta_),
     omega(omega_)
-{ }
+{
+  this->getName() = "ForcedADMBGKdynamics";  
+}
 
 template<typename T, typename DESCRIPTOR>
 void ForcedADMBGKdynamics<T,DESCRIPTOR>::collide (
@@ -95,16 +97,16 @@ void ForcedADMBGKdynamics<T,DESCRIPTOR>::collide (
 
 // this->momenta.computeAllMomenta(cell, rho, utst, pi);
 
-  T* rho_fil = cell.template getFieldPointer<descriptors::FIL_RHO>();
-  T* u_filX = cell.template getFieldPointer<descriptors::LOCAL_FIL_VEL_X>();
-  T* u_filY = cell.template getFieldPointer<descriptors::LOCAL_FIL_VEL_Y>();
-  T* u_filZ = cell.template getFieldPointer<descriptors::LOCAL_FIL_VEL_Z>();
+  auto rho_fil = cell.template getFieldPointer<descriptors::FIL_RHO>();
+  auto u_filX = cell.template getFieldPointer<descriptors::LOCAL_FIL_VEL_X>();
+  auto u_filY = cell.template getFieldPointer<descriptors::LOCAL_FIL_VEL_Y>();
+  auto u_filZ = cell.template getFieldPointer<descriptors::LOCAL_FIL_VEL_Z>();
 
   u[0] = *u_filX;/// *rho_fil;
   u[1] = *u_filY;/// *rho_fil;
   u[2] = *u_filZ;/// *rho_fil;
 
-  T* force = cell.template getFieldPointer<descriptors::FORCE>();
+  auto force = cell.template getFieldPointer<descriptors::FORCE>();
   for (int iVel=0; iVel<DESCRIPTOR::d; ++iVel) {
     u[iVel] += force[iVel] / (T)2.;
   }
@@ -255,7 +257,7 @@ T DynSmagorinskyBGKdynamics<T,DESCRIPTOR>::computeEffectiveOmega(Cell<T,DESCRIPT
 {
   // computation of the relaxation time
   T v_t = 0;
-  T* dynSmago = cell.template getFieldPointer<descriptors::SMAGO_CONST>();
+  auto dynSmago = cell.template getFieldPointer<descriptors::SMAGO_CONST>();
 
   T rho, u[DESCRIPTOR::d], pi[util::TensorVal<DESCRIPTOR >::n];
   this->_momenta.computeAllMomenta(cell, rho, u, pi);
@@ -302,7 +304,7 @@ T ShearSmagorinskyBGKdynamics<T,DESCRIPTOR>::getEffectiveOmega(Cell<T,DESCRIPTOR
   }
   T PiNeqNorm    = sqrt(PiNeqNormSqr);
 
-  T* avShear = cell.template getFieldPointer<descriptors::AV_SHEAR>();
+  auto avShear = cell.template getFieldPointer<descriptors::AV_SHEAR>();
   T tau_0 = 1./this->getOmega();
   T PiNeqNorm_SISM = PiNeqNorm - *avShear;
   T tau_t = 0.5*(sqrt(tau_0*tau_0+(this->getPreFactor()*PiNeqNorm_SISM/rho))-tau_0);
@@ -326,7 +328,7 @@ T ShearSmagorinskyBGKdynamics<T,DESCRIPTOR>::computeEffectiveOmega(Cell<T,DESCRI
   }
   T PiNeqNorm    = sqrt(PiNeqNormSqr);
 
-  T* avShear = cell.template getFieldPointer<descriptors::AV_SHEAR>();
+  auto avShear = cell.template getFieldPointer<descriptors::AV_SHEAR>();
   *avShear = (*avShear*iT + PiNeqNorm)/(iT+1);
   T tau_0 = 1./this->getOmega();
   T PiNeqNorm_SISM = PiNeqNorm - *avShear;
@@ -351,7 +353,7 @@ void ShearSmagorinskyForcedBGKdynamics<T,DESCRIPTOR>::collide(Cell<T,DESCRIPTOR>
   T newOmega = computeEffectiveOmega(cell, statistics.getTime());
   T rho, u[DESCRIPTOR::d];
   this->_momenta.computeRhoU(cell, rho, u);
-  T* force = cell.template getFieldPointer<descriptors::FORCE>();
+  auto force = cell.template getFieldPointer<descriptors::FORCE>();
   for (int iVel=0; iVel<DESCRIPTOR::d; ++iVel) {
     u[iVel] += force[iVel] / (T)2.;
   }
@@ -372,7 +374,7 @@ T ShearSmagorinskyForcedBGKdynamics<T,DESCRIPTOR>::getEffectiveOmega(Cell<T,DESC
   }
   T PiNeqNorm    = sqrt(PiNeqNormSqr);
 
-  T* avShear = cell.template getFieldPointer<descriptors::AV_SHEAR>();
+  auto avShear = cell.template getFieldPointer<descriptors::AV_SHEAR>();
   T tau_0 = 1./this->getOmega();
   T PiNeqNorm_SISM = PiNeqNorm - *avShear;
   T tau_t = 0.5*(sqrt(tau_0*tau_0+(this->getPreFactor()*PiNeqNorm_SISM/rho))-tau_0);
@@ -409,7 +411,7 @@ T ShearSmagorinskyForcedBGKdynamics<T,DESCRIPTOR>::computeEffectiveOmega(Cell<T,
   }
   T PiNeqNorm    = sqrt(PiNeqNormSqr);
 
-  T* avShear = cell.template getFieldPointer<descriptors::AV_SHEAR>();
+  auto avShear = cell.template getFieldPointer<descriptors::AV_SHEAR>();
   *avShear = (*avShear*iT+PiNeqNorm)/(iT+1);
 
   T tau_0 = 1./this->getOmega();
@@ -487,7 +489,7 @@ void SmagorinskyForcedBGKdynamics<T,DESCRIPTOR>::collide(Cell<T,DESCRIPTOR>& cel
   T newOmega = computeEffectiveOmega(cell);
   T rho, u[DESCRIPTOR::d];
   this->_momenta.computeRhoU(cell, rho, u);
-  T* force = cell.template getFieldPointer<descriptors::FORCE>();
+  auto force = cell.template getFieldPointer<descriptors::FORCE>();
   for (int iVel=0; iVel<DESCRIPTOR::d; ++iVel) {
     u[iVel] += force[iVel] / (T)2.;
   }
@@ -546,7 +548,7 @@ template<typename T, typename DESCRIPTOR>
 void ExternalTauEffLESBGKdynamics<T,DESCRIPTOR>::collide(Cell<T,DESCRIPTOR>& cell,
     LatticeStatistics<T>& statistics )
 {
-  T newTau = *(cell.template getFieldPointer<descriptors::TAU_EFF>());
+  T newTau = cell.template getField<descriptors::TAU_EFF>();
   T newOmega = 1./newTau;
   T rho, u[DESCRIPTOR::d];
   this->_momenta.computeRhoU(cell, rho, u);
@@ -564,11 +566,11 @@ template<typename T, typename DESCRIPTOR>
 void ExternalTauEffLESForcedBGKdynamics<T,DESCRIPTOR>::collide(Cell<T,DESCRIPTOR>& cell,
     LatticeStatistics<T>& statistics )
 {
-  T newTau = *(cell.template getFieldPointer<descriptors::TAU_EFF>());
+  T newTau = cell.template getField<descriptors::TAU_EFF>();
   T newOmega = 1./newTau;
   T rho, u[DESCRIPTOR::d];
   this->_momenta.computeRhoU(cell, rho, u);
-  T* force = cell.template getFieldPointer<descriptors::FORCE>();
+  auto force = cell.template getFieldPointer<descriptors::FORCE>();
   for (int iVel=0; iVel<DESCRIPTOR::d; ++iVel) {
     u[iVel] += force[iVel] / (T)2.;
   }
@@ -591,13 +593,13 @@ void SmagorinskyLinearVelocityForcedBGKdynamics<T,DESCRIPTOR>::collide(Cell<T,DE
   T rho, u[DESCRIPTOR::d], pi[util::TensorVal<DESCRIPTOR >::n];
   this->_momenta.computeAllMomenta(cell, rho, u, pi);
   T newOmega = computeEffectiveOmega(cell);
-  T* force = cell.template getFieldPointer<descriptors::FORCE>();
+  auto force = cell.template getFieldPointer<descriptors::FORCE>();
   int nDim = DESCRIPTOR::d;
   T forceSave[nDim];
   // adds a+Bu to force, where
   //   d=2: a1=v[0], a2=v[1], B11=v[2], B12=v[3], B21=v[4], B22=v[5]
   //   d=2: a1=v[0], a2=v[1], a3=v[2], B11=v[3], B12=v[4], B13=v[5], B21=v[6], B22=v[7], B23=v[8], B31=v[9], B32=v[10], B33=v[11]
-  T* v = cell.template getFieldPointer<descriptors::V12>();
+  auto v = cell.template getFieldPointer<descriptors::V12>();
   for (int iDim=0; iDim<nDim; ++iDim) {
     forceSave[iDim] = force[iDim];
     force[iDim] += v[iDim];
@@ -710,7 +712,7 @@ T WALEBGKdynamics<T,DESCRIPTOR>::computeEffectiveOmega(Cell<T,DESCRIPTOR>& cell_
   T g[3][3];
   for ( int i = 0; i < 3; i++) {
     for ( int j = 0; j < 3; j++) {
-      g[i][j] = *(cell_.template getFieldPointer<descriptors::VELO_GRAD>()+(i*3 + j));
+      g[i][j] = cell_.template getFieldPointer<descriptors::VELO_GRAD>()[i*3 + j];
     }
   }
   // strain rate tensor
@@ -810,7 +812,7 @@ T WALEForcedBGKdynamics<T,DESCRIPTOR>::computeEffectiveOmega(Cell<T,DESCRIPTOR>&
   T g[3][3];
   for ( int i = 0; i < 3; i++) {
     for ( int j = 0; j < 3; j++) {
-      g[i][j] = *(cell_.template getFieldPointer<descriptors::VELO_GRAD>()+(i*3 + j));
+      g[i][j] = cell_.template getFieldPointer<descriptors::VELO_GRAD>()[i*3 + j];
     }
   }
   // strain rate tensor
@@ -970,7 +972,7 @@ void FDKalmanShearSmagorinskyBGKdynamics<T,DESCRIPTOR>::computeNormStrainRate(Ce
   T VG[Dim][Dim];
   for ( int i = 0; i < Dim; i++) {
     for ( int j = 0; j < Dim; j++) {
-      VG[i][j] = *(cell.template getFieldPointer<descriptors::FILTERED_VEL_GRAD>()+(i*Dim + j));
+      VG[i][j] = cell.template getFieldPointer<descriptors::FILTERED_VEL_GRAD>()[i*Dim + j];
     }
   }
   // Strain rate tensor
@@ -997,12 +999,12 @@ template<typename T, typename DESCRIPTOR>
 void FDKalmanShearSmagorinskyBGKdynamics<T,DESCRIPTOR>::KalmanStep(Cell<T,DESCRIPTOR>& cell)
 {
   // 1. Prediction Step
-  T* ErrorCovariance = cell.template getFieldPointer<descriptors::ERROR_COVARIANCE>();
+  auto ErrorCovariance = cell.template getFieldPointer<descriptors::ERROR_COVARIANCE>();
   ErrorCovariance[0] += VarInVelKal;
 
   // 2. Update Step
   // 2.1. Smooothing Factor : K
-  T* Variance = cell.template getFieldPointer<descriptors::VARIANCE>();
+  auto Variance = cell.template getFieldPointer<descriptors::VARIANCE>();
   T K = ErrorCovariance[0]/(ErrorCovariance[0] + Variance[0]);
 
   // 2.2. Kalman filtered Velocity -> Kalman filtered Populations
@@ -1010,7 +1012,7 @@ void FDKalmanShearSmagorinskyBGKdynamics<T,DESCRIPTOR>::KalmanStep(Cell<T,DESCRI
   T u[DESCRIPTOR::d] = {0., 0., 0.};
   cell.computeU(u);
 
-  T* KalmanVel = cell.template getFieldPointer<descriptors::VELOCITY>();
+  auto KalmanVel = cell.template getFieldPointer<descriptors::VELOCITY>();
   for (int iVel=0; iVel<DESCRIPTOR::d; iVel++) {
     KalmanVel[iVel] = (KalmanVel[iVel] * (1-K)) + (K * u[iVel]);
   }
@@ -1106,7 +1108,7 @@ void ShearKalmanSmagorinskyBGKdynamics<T,DESCRIPTOR>::KalmanStep(Cell<T,DESCRIPT
   T rho, u[DESCRIPTOR::d], pi[util::TensorVal<DESCRIPTOR >::n];
   cell.computeAllMomenta(rho, u, pi);
 
-  T* KalmanPopulation = cell.template getFieldPointer<descriptors::FILTERED_POPULATION>();
+  auto KalmanPopulation = cell.template getFieldPointer<descriptors::FILTERED_POPULATION>();
   if (KalmanPopulation[0] == (T)-1.0){
     for (int iPop=0; iPop<DESCRIPTOR::q; iPop++){
       KalmanPopulation[iPop] =  cell[iPop]/rho;
@@ -1114,13 +1116,13 @@ void ShearKalmanSmagorinskyBGKdynamics<T,DESCRIPTOR>::KalmanStep(Cell<T,DESCRIPT
   }
 
   // 1. Prediction Step
-  T* ErrorCovariance = cell.template getFieldPointer<descriptors::ERROR_COVARIANCE>();
-  *ErrorCovariance += VarInVelKal;
+  auto ErrorCovariance = cell.template getFieldPointer<descriptors::ERROR_COVARIANCE>();
+  ErrorCovariance[0] += VarInVelKal;
 
   // 2. Update Step
   // 2.1. Smoothing Factor : K
-  T* Variance = cell.template getFieldPointer<descriptors::VARIANCE>();
-  T K = *ErrorCovariance/(*ErrorCovariance + *Variance);
+  auto Variance = cell.template getFieldPointer<descriptors::VARIANCE>();
+  T K = ErrorCovariance[0]/(ErrorCovariance[0] + Variance[0]);
 
   // 2.2. Kalman filtered Velocity -> Kalman filtered Populations
   for (int iPop=0; iPop<DESCRIPTOR::q; iPop++) {
@@ -1156,7 +1158,7 @@ void ShearKalmanSmagorinskyBGKdynamics<T,DESCRIPTOR>::computeKalmanUStress(Cell<
 template<typename T, typename DESCRIPTOR>
 void ShearKalmanSmagorinskyBGKdynamics<T,DESCRIPTOR>::computeKalmanU(Cell<T,DESCRIPTOR>& cell, T (&KalmanU)[DESCRIPTOR::d])
 {
-  T* KalmanPopulation = cell.template getFieldPointer<descriptors::FILTERED_POPULATION>();
+  auto KalmanPopulation = cell.template getFieldPointer<descriptors::FILTERED_POPULATION>();
   for (int iD=0; iD < DESCRIPTOR::d; ++iD) {
     KalmanU[iD] = T();
   }
@@ -1171,7 +1173,7 @@ template<typename T, typename DESCRIPTOR>
 void ShearKalmanSmagorinskyBGKdynamics<T,DESCRIPTOR>::computeKalmanStress(Cell<T,DESCRIPTOR>& cell,
       T (&KalmanU)[DESCRIPTOR::d],T (&KalmanPi)[util::TensorVal<DESCRIPTOR >::n] )
 {
-  T* KalmanPopulation = cell.template getFieldPointer<descriptors::FILTERED_POPULATION>();
+  auto KalmanPopulation = cell.template getFieldPointer<descriptors::FILTERED_POPULATION>();
 
   T rhoRelative = T(0.);
   for (int iPop = 0; iPop < DESCRIPTOR::q; iPop++) {
@@ -1256,7 +1258,7 @@ void ShearKalmanSmagorinskyBGKdynamics<T,DESCRIPTOR>::computeTauSgs(Cell<T,DESCR
       T rho, T KalmanPiNeqNormSqr, T KalmanInstPiNeqNormSqr, T PiNeqNormSqr, T K, T &tau_sgs)
 {
   T tau_mol = this->getOmega();
-  T tau_eff_n = tau_mol + *(cell.template getFieldPointer<descriptors::TAU_SGS>());
+  T tau_eff_n = tau_mol + cell.template getField<descriptors::TAU_SGS>();
   T F = 1.0/(pow(this->getSmagoConst()/descriptors::invCs2<T,DESCRIPTOR>(),2.0)/(2.0*tau_eff_n));
 
   // Coefficients of 4th polynomial : Ax^4 + Bx^3 + Cx^2 + Dx + E = 0
@@ -1323,7 +1325,7 @@ template<typename T, typename DESCRIPTOR>
 void ShearKalmanSmagorinskyBGKdynamics<T,DESCRIPTOR>::updateTauSgsKalman(Cell<T,DESCRIPTOR>& cell, T NN, T Nn1, T n1n1, T N1N1, T K, T tau_sgs_n1)
 {
   T tau_mol = this->getOmega();
-  T* tau_sgs_N = cell.template getFieldPointer<descriptors::TAU_SGS>();
+  auto tau_sgs_N = cell.template getFieldPointer<descriptors::TAU_SGS>();
 
   //T tau_eff_N = tau_mol + *tau_sgs_N;
   //T tau_eff_n1 = *(cell[EffectiveOmegaIsAt]);

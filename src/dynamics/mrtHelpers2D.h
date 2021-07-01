@@ -35,8 +35,8 @@ namespace olb {
 
 // Efficient specialization for D2Q9 lattice
 template<typename T>
-struct mrtHelpers<T,descriptors::MRTD2Q9Descriptor> {
-  using DESCRIPTOR = descriptors::MRTD2Q9Descriptor;
+struct mrtHelpers<T,descriptors::D2Q9<descriptors::tag::MRT>> {
+  using DESCRIPTOR = descriptors::D2Q9<descriptors::tag::MRT>;
 
   /// Computation of all equilibrium distribution (in momenta space)
   static void computeEquilibrium( T momentaEq[9],
@@ -55,7 +55,7 @@ struct mrtHelpers<T,descriptors::MRTD2Q9Descriptor> {
   }
 
   /// Computation of all momenta (specialized for d2q9)
-  static void computeMomenta(T momenta[9], Cell<T,DESCRIPTOR> &cell)
+  static void computeMomenta(T momenta[9], Cell<T,DESCRIPTOR>& cell)
   {
     //         momenta[0] = cell[0] + cell[1] + cell[2] + cell[3] +
     //                 cell[4] + cell[5] + cell[6] + cell[7] + cell[8] + (T)1;

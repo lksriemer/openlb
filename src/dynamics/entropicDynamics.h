@@ -39,8 +39,6 @@
 
 namespace olb {
 
-template<typename T, typename DESCRIPTOR> class Cell;
-
 
 /// Implementation of the entropic collision step
 template<typename T, typename DESCRIPTOR>

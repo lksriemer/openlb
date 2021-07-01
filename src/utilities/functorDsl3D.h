@@ -74,12 +74,12 @@ template<typename T, typename W>
 std::shared_ptr<SuperF3D<T,W>> lift(SuperF3D<T,W>* f);
 
 /// Lifts functor reference to std::shared_ptr functor arithmetic
-template<typename T, typename S>
-std::shared_ptr<AnalyticalF3D<T,S>> lift(AnalyticalF3D<T,S>& f);
+template<typename T, typename W>
+std::shared_ptr<AnalyticalF3D<T,W>> lift(AnalyticalF3D<T,W>& f);
 
 /// Lifts functor pointer to std::shared_ptr functor arithmetic
 template<typename T, typename W>
-std::shared_ptr<AnalyticalF3D<T,S>> lift(AnalyticalF3D<T,S>* f);
+std::shared_ptr<AnalyticalF3D<T,W>> lift(AnalyticalF3D<T,W>* f);
 
 /// Returns baseF raised to the power of exponentF
 template<typename T, typename W>

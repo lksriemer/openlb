@@ -49,7 +49,8 @@ bool IndicatorTranslate3D<S>::operator() (bool output[], const S input[] )
   const S inputTranslated[3] = {
     input[0] - _translate[0],
     input[1] - _translate[1],
-    input[2] - _translate[2] };
+    input[2] - _translate[2]
+  };
 
   _indicator.operator()(output, inputTranslated);
   return output[0];
@@ -59,7 +60,7 @@ template <typename S>
 IndicatorCircle3D<S>::IndicatorCircle3D(Vector<S,3> center, Vector<S,3> normal, S radius)
   :  _center(center), _normal(normal), _radius2(radius*radius)
 {
-  _normal.normalize();
+  _normal = normalize(_normal);
   this->_myMin = _center - radius;
   this->_myMax = _center + radius;
 }
@@ -71,7 +72,7 @@ IndicatorCircle3D<S>::IndicatorCircle3D(S center0, S center1, S center2,
 {
   _center = {center0, center1, center2};
   _normal = {normal0, normal1, normal2};
-  _normal.normalize();
+  _normal = normalize(_normal);
   this->_myMin = _center - radius;
   this->_myMax = _center + radius;
 }
@@ -136,8 +137,8 @@ template <typename S>
 bool IndicatorSphere3D<S>::distance(S& distance, const Vector<S,3>& origin)
 {
   distance = sqrt(  (_center[0] - origin[0]) * (_center[0]-origin[0])
-                 +(_center[1] - origin[1]) * (_center[1]-origin[1])
-                 +(_center[2] - origin[2]) * (_center[2]-origin[2]) ) - sqrt(_radius2);
+                    +(_center[1] - origin[1]) * (_center[1]-origin[1])
+                    +(_center[2] - origin[2]) * (_center[2]-origin[2]) ) - sqrt(_radius2);
   return true;
 }
 
@@ -237,8 +238,9 @@ bool IndicatorInternal3D<S>::operator()(bool output[], const S input[])
 {
   output[0] = false;
   _indicatorF(output,input);
-  if (!output[0])
+  if (!output[0]) {
     return true;
+  }
 
   S r[3];
   for (int iX =- 1; iX < 2; ++iX) {
@@ -275,7 +277,7 @@ IndicatorCylinder3D<S>::IndicatorCylinder3D(Vector<S,3> center1,
     Vector<S,3> normal, S radius, S eps)
   :  _center1(center1), _center2(center1), _radius2(radius*radius)
 {
-  normal.normalize();
+  normal = normalize(normal);
   // cylinder defined by the centers of the two extremities and the radius
   // _I,_J,_K is the new base where _K is the axe of the cylinder0
   _center1 -= .5*eps*normal;
@@ -333,7 +335,8 @@ void IndicatorCylinder3D<S>::init()
     }
     _I = {1,0,0};
     _J = {0,1,0};
-  } else {
+  }
+  else {
     S normi = sqrt (_K[1]*_K[1]+_K[0]*_K[0]);
     _I = {-_K[1]/normi, _K[0]/normi,0};
     _J = {_K[1]*_I[2] - _K[2]*_I[1], _K[2]*_I[0] - _K[0]*_I[2], _K[0]*_I[1] - _K[1]*_I[0]};
@@ -404,7 +407,8 @@ IndicatorCone3D<S>::IndicatorCone3D(Vector<S,3> center1, Vector<S,3> center2,
     }
     _I = {1,0,0};
     _J = {0,1,0};
-  } else {
+  }
+  else {
     S normi = sqrt(_K[1]*_K[1] + _K[0]*_K[0]);
     _I = {-_K[1]/normi, _K[0]/normi,0};
     _J = {_K[1]*_I[2] - _K[2]*_I[1], _K[2]*_I[0] - _K[0]*_I[2], _K[0]*_I[1] - _K[1]*_I[0]};
@@ -414,20 +418,19 @@ IndicatorCone3D<S>::IndicatorCone3D(Vector<S,3> center1, Vector<S,3> center2,
   S minx, miny, minz;
 
   maxx= _center1[0] + max( sqrt(_I[0]*_I[0]+_J[0]*_J[0])*_radius1,
-                                sqrt(_I[0]*_I[0]+_J[0]*_J[0])*_radius2 + _K[0]*_length);
+                           sqrt(_I[0]*_I[0]+_J[0]*_J[0])*_radius2 + _K[0]*_length);
   minx= _center1[0] + min(-sqrt(_I[0]*_I[0]+_J[0]*_J[0])*_radius1,
-                               -sqrt(_I[0]*_I[0]+_J[0]*_J[0])*_radius2 + _K[0]*_length);
+                          -sqrt(_I[0]*_I[0]+_J[0]*_J[0])*_radius2 + _K[0]*_length);
 
   maxy= _center1[1] + max( sqrt(_I[1]*_I[1]+_J[1]*_J[1])*_radius1,
-                                sqrt(_I[1]*_I[1]+_J[1]*_J[1])*_radius2 + _K[1]*_length);
+                           sqrt(_I[1]*_I[1]+_J[1]*_J[1])*_radius2 + _K[1]*_length);
   miny= _center1[1] + min(-sqrt(_I[1]*_I[1]+_J[1]*_J[1])*_radius1,
-                               -sqrt(_I[1]*_I[1]+_J[1]*_J[1])*_radius2 + _K[1]*_length);
+                          -sqrt(_I[1]*_I[1]+_J[1]*_J[1])*_radius2 + _K[1]*_length);
 
   maxz= _center1[2] + max( sqrt(_I[2]*_I[2]+_J[2]*_J[2])*_radius1,
-                                sqrt(_I[2]*_I[2]+_J[2]*_J[2])*_radius2 + _K[2]*_length);
+                           sqrt(_I[2]*_I[2]+_J[2]*_J[2])*_radius2 + _K[2]*_length);
   minz= _center1[2] + min(-sqrt(_I[2]*_I[2]+_J[2]*_J[2])*_radius1,
-                               -sqrt(_I[2]*_I[2]+_J[2]*_J[2])*_radius2 + _K[2]*_length);
-
+                          -sqrt(_I[2]*_I[2]+_J[2]*_J[2])*_radius2 + _K[2]*_length);
 
   this->_myMin = {minx, miny, minz};
   this->_myMax = {maxx, maxy, maxz};
@@ -505,10 +508,11 @@ bool IndicatorCuboidRotate3D<S>::operator()(bool output[], const S input[])
   //initialize for _plane == 2
   int i=0;
   int j=1;
-   if (_plane == 1) { // rotation around y axis
+  if (_plane == 1) { // rotation around y axis
     i=0;
     j=2;
-  } else if (_plane == 0) {  // rotation around x axis
+  }
+  else if (_plane == 0) {    // rotation around x axis
     i=1;
     j=2;
   }
@@ -705,21 +709,29 @@ std::shared_ptr<IndicatorF3D<S>> createIndicatorF3D(XMLreader const& params, boo
   std::string actualName = params.getName();
   if ( actualName == "IndicatorCircle3D" ) {
     return createIndicatorCircle3D<S>(params);
-  } else if ( actualName == "IndicatorSphere3D" ) {
+  }
+  else if ( actualName == "IndicatorSphere3D" ) {
     return createIndicatorSphere3D<S>(params);
-  } else if ( actualName == "IndicatorCylinder3D" ) {
+  }
+  else if ( actualName == "IndicatorCylinder3D" ) {
     return createIndicatorCylinder3D<S>(params);
-  } else if ( actualName == "IndicatorCone3D" ) {
+  }
+  else if ( actualName == "IndicatorCone3D" ) {
     return createIndicatorCone3D<S>(params);
-  } else if ( actualName == "IndicatorCuboid3D" ) {
+  }
+  else if ( actualName == "IndicatorCuboid3D" ) {
     return createIndicatorCuboid3D<S>(params);
-  } else if ( actualName == "IndicatorUnion3D" ) {
+  }
+  else if ( actualName == "IndicatorUnion3D" ) {
     return createIndicatorUnion3D<S>(params);
-  } else if ( actualName == "IndicatorWithout3D" ) {
+  }
+  else if ( actualName == "IndicatorWithout3D" ) {
     return createIndicatorWithout3D<S>(params);
-  } else if ( actualName == "IndicatorIntersection3D" ) {
+  }
+  else if ( actualName == "IndicatorIntersection3D" ) {
     return createIndicatorIntersection3D<S>(params);
-  } else {
+  }
+  else {
     auto firstChild = params.begin(); // get iterator of childTree
     return createIndicatorF3D<S>( **firstChild );
   }

@@ -1,8 +1,7 @@
 /*  Lattice Boltzmann sample, written in C++, using the OpenLB
  *  library
  *
- *  Copyright (C) 2019 Fabian Klemens, Marc Haußmann
- *  Mathias J. Krause, Vojtech Cvrcek, Peter Weisbrod
+ *  Copyright (C) 2019 Fabian Klemens, Davide Dapelo, Mathias J. Krause
  *  E-mail contact: info@openlb.net
  *  The most recent release of OpenLB can be downloaded at
  *  <http://www.openlb.net/>
@@ -40,39 +39,100 @@
 #include <iomanip>
 #include <fstream>
 
+
 using namespace olb;
+using namespace olb::descriptors;
 
 typedef double T;
 
+//#define BGK
 #define SPAID_PHELAN
 //#define GUO_ZHAO
 
-T epsilon = 1.;
-T K = 1e-3;
+T Kin = 1e-2;               // Permeability
+T epsilon = 1.;             // Porosity (Spaid and Phelan can only handle epsilon=1)
 
-#ifdef SPAID_PHELAN
-#define DESCRIPTOR descriptors::PorousD3Q19Descriptor
-#elif defined GUO_ZHAO
-#define DESCRIPTOR descriptors::GuoZhaoD3Q19Descriptor
+T p0;                       // Initial pressure at inlet
+T dp;                       // Pressure gradient
+T mu;                       // Dynamic viscosity
+
+#ifdef BGK
+  typedef D3Q19<> DESCRIPTOR;
+  #define DYNAMICS BGKdynamics
 #endif
-
+// Porous media
+#ifdef SPAID_PHELAN
+  typedef D3Q19<POROSITY> DESCRIPTOR;
+  #define DYNAMICS PorousBGKdynamics
+#elif defined GUO_ZHAO
+  typedef D3Q19<FORCE,EPSILON,K,NU,BODY_FORCE> DESCRIPTOR;
+  #define DYNAMICS GuoZhaoBGKdynamics
+#endif
 
 // Parameters for the simulation setup
 const T length  = 2.;         // length of the pie
 const T diameter  = 1.;       // diameter of the pipe
 int N = 21;                   // resolution of the model
 const T physU = 1.;           // physical velocity
-const T Re = 1.;             // Reynolds number
+const T Re = 1.;              // Reynolds number
 const T physRho = 1.;         // physical density
 const T tau = 0.8;            // lattice relaxation time
 const T maxPhysT = 20.;       // max. simulation time in s, SI unit
 const T residuum = 1e-5;      // residuum for the convergence check
-const T tuner = 0.97;         // for partialSlip only: 0->bounceBack, 1->freeSlip
 
 // Scaled Parameters
 const T radius  = diameter/2.;            // radius of the pipe
 const T physInterval = 0.0125*maxPhysT;   // interval for the convergence check in s
 
+
+template <typename T>
+class PhysicalToLatticeVelocityF3D: public AnalyticalF3D<T,T> {
+protected:
+  AnalyticalF3D<T,T>* f;
+  UnitConverter<T,DESCRIPTOR> converter;
+
+public:
+  PhysicalToLatticeVelocityF3D(AnalyticalF3D<T,T>* f_, UnitConverter<T,DESCRIPTOR> const& converter_)
+    : AnalyticalF3D<T,T>(3), f(f_), converter(converter_) {};
+
+  bool operator()(T output[], const T x[]) override {
+    (*f)(output, x);
+    for (int i=0; i<3; ++i) {
+      output[i] = converter.getLatticeVelocity( output[i] );
+    }
+    return true;
+  };
+};
+
+
+// Approximation of the modified Bessel function (doi:10.1088/1742-6596/1043/1/012003)
+T besselApprox( T x ) {
+  return cosh(x) / pow( 1 + 0.25*pow(x,2), 0.25 ) * ( 1 + 0.24273*pow(x,2) )/( 1 + 0.43023*pow(x,2) );
+}
+
+/// Functional to calculate velocity profile on pipe with porous media.
+template <typename T>
+class PorousPoiseuille3D : public AnalyticalF3D<T,T> {
+protected:
+  T K, mu, dp, radius;
+  bool trunc;
+
+public:
+  PorousPoiseuille3D(T K_, T mu_, T dp_, T radius_)
+    : AnalyticalF3D<T,T>(3), K(K_), mu(mu_), dp(dp_), radius(radius_) {};
+  bool operator()(T output[], const T x[]) override {
+    T r = sqrt(epsilon/K);
+    T dist = sqrt( pow(x[1]-radius, 2.) + pow(x[2]-radius, 2.) );
+    output[0] = K / mu * dp * ( 1. - besselApprox(r*dist) / besselApprox(r*radius)  );
+    output[1] = 0.;
+    output[2] = 0.;
+
+    if ( dist > radius )
+      output[0] = 0.;
+
+    return true;
+  };
+};
 
 // Stores geometry information in form of material numbers
 void prepareGeometry( UnitConverter<T,DESCRIPTOR> const& converter,
@@ -121,8 +181,6 @@ void prepareGeometry( UnitConverter<T,DESCRIPTOR> const& converter,
 void prepareLattice(SuperLattice3D<T, DESCRIPTOR>& sLattice,
                     UnitConverter<T, DESCRIPTOR>const& converter,
                     Dynamics<T, DESCRIPTOR>& bulkDynamics,
-                    sOnLatticeBoundaryCondition3D<T, DESCRIPTOR>& onBc,
-                    sOffLatticeBoundaryCondition3D<T, DESCRIPTOR>& offBc,
                     SuperGeometry3D<T>& superGeometry)
 {
 
@@ -140,77 +198,71 @@ void prepareLattice(SuperLattice3D<T, DESCRIPTOR>& sLattice,
   Vector<T, 3> center0(0, radius, radius);
   Vector<T, 3> center1(length, radius, radius);
 
-  std::vector<T> origin = { length, radius, radius};
-  std::vector<T> axis = { 1, 0, 0 };
-
-  CirclePoiseuille3D<T> poiseuilleU(origin, axis, converter.getCharLatticeVelocity(), radius);
-
   AnalyticalConst3D<T,T> zero(0.);
   AnalyticalConst3D<T,T> one(1.);
 
   T nu = (tau-0.5)/3.;
   T h = converter.getPhysDeltaX();
 #ifdef SPAID_PHELAN
-  T d = 1. - (h*h*nu*tau/K);
+  T d = 1. - (h*h*nu*tau/Kin);
   clout << "Lattice Porosity: " << d << std::endl;
   clout << "Kmin: " << h*h*nu*tau << std::endl;
-  if (K < h*h*nu*tau) {
+  if (Kin < h*h*nu*tau) {
     clout << "WARNING: Chosen K is too small!" << std::endl;
     exit(1);
   }
-#endif
-
-#ifdef SPAID_PHELAN
   AnalyticalConst3D<T,T> porosity(d);
-  sLattice.defineField<descriptors::POROSITY>(superGeometry, 1, porosity);
+  for (int i:{0,1,2,3,4}) {
+    sLattice.defineField<POROSITY>(superGeometry, i, porosity);
+  }
 #elif defined GUO_ZHAO
   AnalyticalConst3D<T,T> Nu(nu);
-  AnalyticalConst3D<T,T> k(K/(h*h));
+  AnalyticalConst3D<T,T> k(Kin/(h*h));
   AnalyticalConst3D<T,T> eps(epsilon);
-
-  sLattice.defineField<descriptors::EPSILON>(superGeometry, 1,  eps);
-  sLattice.defineField<descriptors::NU>(superGeometry, 1, 1, Nu);
-  sLattice.defineField<descriptors::K>(superGeometry, 1, k);
+  for (int i:{0,1,2,3,4}) {
+    sLattice.defineField<EPSILON>(superGeometry, i, eps);
+    sLattice.defineField<NU>(superGeometry, i, Nu);
+    sLattice.defineField<K>(superGeometry, i, k);
+  }
 #endif
 
+  // Bouzidi
   sLattice.defineDynamics(superGeometry, 2, &instances::getNoDynamics<T, DESCRIPTOR>() );
-
   center0[0] -= 0.5*converter.getPhysDeltaX();
   center1[0] += 0.5*converter.getPhysDeltaX();
   IndicatorCylinder3D<T> pipe(center0, center1, radius);
-  offBc.addZeroVelocityBoundary(superGeometry, 2, pipe);
+  setBouzidiZeroVelocityBoundary<T,DESCRIPTOR>(sLattice, superGeometry, 2, pipe);
+  // Interp
+  //sLattice.defineDynamics( superGeometry, 2, &bulkDynamics );
+  //setInterpolatedVelocityBoundary<T,DESCRIPTOR>(sLattice, omega, superGeometry, 2);
 
-  sLattice.defineDynamics( superGeometry, 2, &bulkDynamics );
-  onBc.addVelocityBoundary( superGeometry, 2, omega );
 
-  sLattice.defineDynamics(superGeometry, 3, &instances::getNoDynamics<T, DESCRIPTOR>() );
-  offBc.addVelocityBoundary(superGeometry, 3, pipe);
-  offBc.defineU(superGeometry,3,poiseuilleU);
+  // Material=3 --> bulk dynamics
+  sLattice.defineDynamics( superGeometry, 3, &bulkDynamics );
+  setInterpolatedVelocityBoundary<T,DESCRIPTOR>(sLattice, omega, superGeometry, 3);
 
-  // Material=4 -->bulk dynamics
+  // Material=4 --> bulk dynamics
   sLattice.defineDynamics( superGeometry, 4, &bulkDynamics );
-  onBc.addPressureBoundary( superGeometry, 4, omega );
+  setInterpolatedPressureBoundary<T,DESCRIPTOR>(sLattice, omega, superGeometry, 4);
 
   // Initial conditions
-  T p0 = 4. * converter.getPhysViscosity() * converter.getCharPhysVelocity() * length / (radius * radius);
+  // Pressure for Poiseuille flow with maximum velocity of charU at K->infty
+  p0 = 4. * converter.getPhysViscosity() * converter.getCharPhysVelocity() * length / (radius * radius);
+  T p0L = converter.getLatticePressure(p0);
+  AnalyticalLinear3D<T, T> rho(-p0L / length * invCs2<T,DESCRIPTOR>(), 0, 0, p0L * invCs2<T,DESCRIPTOR>() + 1);
 
-  p0 = converter.getLatticePressure(p0);
-  AnalyticalLinear3D<T, T> rho(-p0 / length * descriptors::invCs2<T,DESCRIPTOR>(), 0, 0, p0 * descriptors::invCs2<T,DESCRIPTOR>() + 1);
+  dp = p0/length;
+  mu = converter.getPhysViscosity()*converter.getPhysDensity();
 
-  std::vector<T> velocity(3, T());
-  AnalyticalConst3D<T, T> uF(velocity);
+  //CirclePoiseuille3D<T> uSol( {0., radius, radius}, {1, 0, 0}, converter.getCharPhysVelocity(), radius );
+  PorousPoiseuille3D<T> uSol( Kin, mu, dp, radius );
+  PhysicalToLatticeVelocityF3D<T> u(&uSol, converter);
 
   // Initialize all values of distribution functions to their local equilibrium
-  sLattice.defineRhoU(superGeometry, 0, rho, uF);
-  sLattice.iniEquilibrium(superGeometry, 0, rho, uF);
-  sLattice.defineRhoU(superGeometry, 1, rho, poiseuilleU);
-  sLattice.iniEquilibrium(superGeometry, 1, rho, poiseuilleU);
-  sLattice.defineRhoU(superGeometry, 2, rho, poiseuilleU);
-  sLattice.iniEquilibrium(superGeometry, 2, rho, poiseuilleU);
-  sLattice.defineRhoU(superGeometry, 3, rho, poiseuilleU);
-  sLattice.iniEquilibrium(superGeometry, 3, rho, poiseuilleU);
-  sLattice.defineRhoU(superGeometry, 4, rho, poiseuilleU);
-  sLattice.iniEquilibrium(superGeometry, 4, rho, poiseuilleU);
+  for (int i:{0,1,2,3,4}) {
+    sLattice.defineRhoU(superGeometry, i, rho, u);
+    sLattice.iniEquilibrium(superGeometry, i, rho, u);
+  }
 
   // Make the lattice ready for simulation
   sLattice.initialize();
@@ -222,7 +274,7 @@ void prepareLattice(SuperLattice3D<T, DESCRIPTOR>& sLattice,
 void error( SuperGeometry3D<T>& superGeometry,
             SuperLattice3D<T, DESCRIPTOR>& sLattice,
             UnitConverter<T,DESCRIPTOR> const& converter,
-            AnalyticalF3D<T,T>& porVel) {
+            AnalyticalF3D<T,T>& uSol) {
 
   OstreamManager clout( std::cout,"error" );
 
@@ -232,26 +284,53 @@ void error( SuperGeometry3D<T>& superGeometry,
   auto indicatorF = superGeometry.getMaterialIndicator(1);
   SuperLatticePhysVelocity3D<T,DESCRIPTOR> u( sLattice, converter );
 
-  SuperAbsoluteErrorL1Norm3D<T> absVelocityErrorNormL1(u, porVel, indicatorF);
+  // Velocity error
+  SuperAbsoluteErrorL1Norm3D<T> absVelocityErrorNormL1(u, uSol, indicatorF);
   absVelocityErrorNormL1(result, tmp);
   clout << "velocity-L1-error(abs)=" << result[0];
-  SuperRelativeErrorL1Norm3D<T> relVelocityErrorNormL1(u, porVel, indicatorF);
+  SuperRelativeErrorL1Norm3D<T> relVelocityErrorNormL1(u, uSol, indicatorF);
   relVelocityErrorNormL1(result, tmp);
   clout << "; velocity-L1-error(rel)=" << result[0] << std::endl;
 
-  SuperAbsoluteErrorL2Norm3D<T> absVelocityErrorNormL2(u, porVel, indicatorF);
+  SuperAbsoluteErrorL2Norm3D<T> absVelocityErrorNormL2(u, uSol, indicatorF);
   absVelocityErrorNormL2(result, tmp);
   clout << "velocity-L2-error(abs)=" << result[0];
-  SuperRelativeErrorL2Norm3D<T> relVelocityErrorNormL2(u, porVel, indicatorF);
+  SuperRelativeErrorL2Norm3D<T> relVelocityErrorNormL2(u, uSol, indicatorF);
   relVelocityErrorNormL2(result, tmp);
   clout << "; velocity-L2-error(rel)=" << result[0] << std::endl;
 
-  SuperAbsoluteErrorLinfNorm3D<T> absVelocityErrorNormLinf(u, porVel, indicatorF);
+  SuperAbsoluteErrorLinfNorm3D<T> absVelocityErrorNormLinf(u, uSol, indicatorF);
   absVelocityErrorNormLinf(result, tmp);
   clout << "velocity-Linf-error(abs)=" << result[0];
-  SuperRelativeErrorLinfNorm3D<T> relVelocityErrorNormLinf(u, porVel, indicatorF);
+  SuperRelativeErrorLinfNorm3D<T> relVelocityErrorNormLinf(u, uSol, indicatorF);
   relVelocityErrorNormLinf(result, tmp);
   clout << "; velocity-Linf-error(rel)=" << result[0] << std::endl;
+
+  // Pressure error
+  T p0L = converter.getLatticePressure(p0);
+  AnalyticalLinear3D<T,T> pressureSol( -converter.getPhysPressure( p0L )/length, 0, 0, converter.getPhysPressure( p0L ) );
+  SuperLatticePhysPressure3D<T,DESCRIPTOR> pressure( sLattice,converter );
+
+  SuperAbsoluteErrorL1Norm3D<T> absPressureErrorNormL1(pressure, pressureSol, indicatorF);
+  absPressureErrorNormL1(result, tmp);
+  clout << "pressure-L1-error(abs)=" << result[0];
+  SuperRelativeErrorL1Norm3D<T> relPressureErrorNormL1(pressure, pressureSol, indicatorF);
+  relPressureErrorNormL1(result, tmp);
+  clout << "; pressure-L1-error(rel)=" << result[0] << std::endl;
+
+  SuperAbsoluteErrorL2Norm3D<T> absPressureErrorNormL2(pressure, pressureSol, indicatorF);
+  absPressureErrorNormL2(result, tmp);
+  clout << "pressure-L2-error(abs)=" << result[0];
+  SuperRelativeErrorL2Norm3D<T> relPressureErrorNormL2(pressure, pressureSol, indicatorF);
+  relPressureErrorNormL2(result, tmp);
+  clout << "; pressure-L2-error(rel)=" << result[0] << std::endl;
+
+  SuperAbsoluteErrorLinfNorm3D<T> absPressureErrorNormLinf(pressure, pressureSol, indicatorF);
+  absPressureErrorNormLinf(result, tmp);
+  clout << "pressure-Linf-error(abs)=" << result[0];
+  SuperRelativeErrorLinfNorm3D<T> relPressureErrorNormLinf(pressure, pressureSol, indicatorF);
+  relPressureErrorNormLinf(result, tmp);
+  clout << "; pressure-Linf-error(rel)=" << result[0] << std::endl;
 }
 
 
@@ -268,6 +347,11 @@ void getResults( SuperLattice3D<T,DESCRIPTOR>& sLattice, Dynamics<T, DESCRIPTOR>
   SuperLatticePhysPressure3D<T, DESCRIPTOR> pressure( sLattice, converter );
   vtmWriter.addFunctor( velocity );
   vtmWriter.addFunctor( pressure );
+
+  //CirclePoiseuille3D<T> uSol( {0., radius, radius}, {1, 0, 0}, converter.getCharPhysVelocity(), radius );
+  PorousPoiseuille3D<T> uSol( Kin, mu, dp, radius );
+  SuperLatticeFfromAnalyticalF3D<T,DESCRIPTOR> uSolF( uSol, sLattice );
+  vtmWriter.addFunctor( uSolF );
 
   const int vtmIter  = converter.getLatticeTime( maxPhysT/20. );
   const int statIter = converter.getLatticeTime( maxPhysT/20. );
@@ -300,6 +384,27 @@ void getResults( SuperLattice3D<T,DESCRIPTOR>& sLattice, Dynamics<T, DESCRIPTOR>
     // Lattice statistics console output
     sLattice.getStatistics().print( iT,converter.getPhysTime( iT ) );
 
+    // Calculate inflow and outflow flux
+    std::vector<int> materials = { 1, 3, 4 };
+    Vector<T,3> normal( 1, 0, 0 );
+    auto mode = BlockDataReductionMode::Discrete;
+    Vector<T,3> posInflow = superGeometry.getStatistics().getMinPhysR( 1 );
+    Vector<T,3> posOutflow = superGeometry.getStatistics().getMaxPhysR( 1 );
+
+    SuperPlaneIntegralFluxVelocity3D<T> vFluxIn( sLattice, converter,
+      superGeometry, posInflow, normal, materials, mode );
+    SuperPlaneIntegralFluxPressure3D<T> pFluxIn( sLattice, converter,
+      superGeometry, posInflow, normal, materials, mode );
+    SuperPlaneIntegralFluxVelocity3D<T> vFluxOut( sLattice, converter,
+      superGeometry, posOutflow, normal, materials, mode );
+    SuperPlaneIntegralFluxPressure3D<T> pFluxOut( sLattice, converter,
+      superGeometry, posOutflow, normal, materials, mode );
+
+    vFluxIn.print( "Inflow" );
+    pFluxIn.print( "Inflow" );
+    vFluxOut.print( "Outflow" );
+    pFluxOut.print( "Outflow" );
+
     // Error norms
     AnalyticalFfromSuperF3D<T> intpolatePressure( pressure, true );
 
@@ -317,43 +422,19 @@ void getResults( SuperLattice3D<T,DESCRIPTOR>& sLattice, Dynamics<T, DESCRIPTOR>
     clout << "; pressure2=" << p2;
 
     T pressureDrop = p1-p2;
-    clout << "; pressureDrop=" << pressureDrop;
+    clout << "; pressureDrop=" << pressureDrop << std::endl;
 
-    AnalyticalFfromSuperF3D<T> intpolateVelocity( velocity, true );
-    T midVel[3];
-    T mid[3] = {length*0.5, radius, radius};
-    intpolateVelocity(midVel, mid);
-    T mu = converter.getPhysViscosity()*converter.getPhysDensity();
-    T l = point2[0] - point1[0];
-    T vel = midVel[0];
-    T pressureGradient = pressureDrop/l;
-
-    AnalyticalPorousVelocity3D<T> porVel(superGeometry, 3, K, mu, pressureGradient, radius, epsilon);
-
-    /// Darcy law
-    T expectedPressureDrop = vel*mu*l/K;
-    T darcyFlux =  K*pressureGradient/mu;
-#ifdef GUO_ZHAO
-    expectedPressureDrop *= epsilon;
-    darcyFlux /= epsilon;
-#endif
-
-    clout << "; expected(darcy)=" << expectedPressureDrop << std::endl;
-    clout << "peakVelocity=" <<  midVel[0];
-    clout << "; expected(darcy)=" << darcyFlux << std::endl;
-    clout << "peakVelocity(analytical)=" << porVel.getPeakVelocity();
-    clout << "; peakVelocity-error(rel)=" << abs(porVel.getPeakVelocity()-vel)/porVel.getPeakVelocity() << std::endl;
-
-    error(superGeometry, sLattice, converter, porVel);
+    error(superGeometry, sLattice, converter, uSol);
 
     // Gnuplot
     Gnuplot<T> gplot( "velocityProfile" );
     T uAnalytical[3] = {};
     T uNumerical[3] = {};
+    AnalyticalFfromSuperF3D<T> intpolateVelocity( velocity, true );
     for (int i=0; i<101; i++) {
       T yInput = diameter*i/100.;
       T input[3] = {length*0.5, yInput, radius};
-      porVel(uAnalytical, input);
+      uSol(uAnalytical, input);
       intpolateVelocity(uNumerical, input);
       gplot.setData( yInput, {uAnalytical[0], uNumerical[0]}, {"analytical","numerical"} );
     }
@@ -375,7 +456,7 @@ int main( int argc, char* argv[] )
     if (argv[1][0]=='-'&&argv[1][1]=='h') {
       OstreamManager clout( std::cout,"help" );
       clout<<"Usage: program [Resolution] [Permeability]" <<std::endl;
-      clout<<"Default: Resolution=21, Permeability=1e-3" <<std::endl;
+      clout<<"Default: Resolution=21, Permeability=1e-2" <<std::endl;
       return 0;
     }
   }
@@ -389,8 +470,8 @@ int main( int argc, char* argv[] )
   }
 
   if (argc > 2) {
-    K = atof(argv[2]);
-    if (K < 0) {
+    Kin = atof(argv[2]);
+    if (Kin < 0) {
       std::cerr << "Permeabilty must be greater than 0" << std::endl;
       return 2;
     }
@@ -405,7 +486,7 @@ int main( int argc, char* argv[] )
     (T)   physRho             // physDensity: physical density in __kg / m^3__
   );
   // Prints the converter log as console output
-  converter.print();
+  //converter.print();
   // Writes the converter log in a file
   converter.write("porousPoiseuille3d");
 
@@ -436,23 +517,10 @@ int main( int argc, char* argv[] )
   // === 3rd Step: Prepare Lattice ===
   SuperLattice3D<T, DESCRIPTOR> sLattice( superGeometry );
 
-  std::unique_ptr<Dynamics<T, DESCRIPTOR>> bulkDynamics;
+  DYNAMICS<T, DESCRIPTOR> bulkDynamics( converter.getLatticeRelaxationFrequency(), instances::getBulkMomenta<T, DESCRIPTOR>() );
 
-#ifdef SPAID_PHELAN
-  bulkDynamics.reset(new PorousBGKdynamics<T, DESCRIPTOR>( converter.getLatticeRelaxationFrequency(), instances::getBulkMomenta<T, DESCRIPTOR>() ));
-#elif defined GUO_ZHAO
-  bulkDynamics.reset(new GuoZhaoBGKdynamics<T, DESCRIPTOR>( converter.getLatticeRelaxationFrequency(), instances::getBulkMomenta<T, DESCRIPTOR>() ));
-#endif
-
-
-  // choose between local and non-local boundary condition
-  sOnLatticeBoundaryCondition3D<T, DESCRIPTOR> sOnBoundaryCondition( sLattice );
-  sOffLatticeBoundaryCondition3D<T, DESCRIPTOR> sOffBoundaryCondition(sLattice);
-  createBouzidiBoundaryCondition3D<T, DESCRIPTOR>(sOffBoundaryCondition);
-
-  createInterpBoundaryCondition3D<T, DESCRIPTOR> ( sOnBoundaryCondition );
-
-  prepareLattice(sLattice, converter, *bulkDynamics, sOnBoundaryCondition, sOffBoundaryCondition, superGeometry);
+  //prepareLattice and setBoundaryConditions
+  prepareLattice(sLattice, converter, bulkDynamics, superGeometry);
 
   // === 4th Step: Main Loop with Timer ===
   clout << "starting simulation..." << endl;
@@ -460,10 +528,10 @@ int main( int argc, char* argv[] )
   util::ValueTracer<T> converge( converter.getLatticeTime( physInterval ), residuum );
   timer.start();
 
-  for ( int iT = 0; iT < converter.getLatticeTime( maxPhysT ); ++iT ) {
+  for ( std::size_t iT = 0; iT < converter.getLatticeTime( maxPhysT ); ++iT ) {
     if ( converge.hasConverged() ) {
       clout << "Simulation converged." << endl;
-      getResults( sLattice, *bulkDynamics, converter, iT, superGeometry, timer, converge.hasConverged() );
+      getResults( sLattice, bulkDynamics, converter, iT, superGeometry, timer, converge.hasConverged() );
 
       break;
     }
@@ -475,7 +543,7 @@ int main( int argc, char* argv[] )
     sLattice.collideAndStream();
 
     // === 7th Step: Computation and Output of the Results ===
-    getResults( sLattice, *bulkDynamics, converter, iT, superGeometry, timer, converge.hasConverged()  );
+    getResults( sLattice, bulkDynamics, converter, iT, superGeometry, timer, converge.hasConverged()  );
     converge.takeValue( sLattice.getStatistics().getAverageEnergy(), true );
   }
 

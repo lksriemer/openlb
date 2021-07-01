@@ -54,16 +54,35 @@ struct DESCRIPTOR_BASE {
   /// Number of velocities
   static constexpr int q = Q;
 
+  /// Number of fields
+  static constexpr std::size_t field_count = sizeof...(FIELDS);
+
   /// Returns index of WANTED_FIELD
   /**
    * Fails compilation if WANTED_FIELD is not contained in FIELDS.
    * Branching that depends on this information can be realized using `provides`.
    **/
   template <typename WANTED_FIELD>
-  static constexpr int index(const unsigned localIndex=0)
+  static constexpr int index()
   {
-    return getIndexFromFieldList<D,Q,WANTED_FIELD,FIELDS...>()
-           + WANTED_FIELD::template getLocalIndex<D,Q>(localIndex);
+    return getIndexFromFieldList<D,Q,WANTED_FIELD,FIELDS...>();
+  }
+
+  static constexpr std::size_t index(std::size_t field_number)
+  {
+    return getIndexFromFieldNumber<D,Q,FIELDS...>(field_number);
+  }
+
+  static constexpr std::size_t size(std::size_t field_number)
+  {
+    return getSizeFromFieldNumber<D,Q,FIELDS...>(field_number);
+  }
+
+  static constexpr std::size_t deprecated_size(std::size_t index)
+  {
+    return getSizeFromFieldNumber<D,Q,FIELDS...>(
+      getFieldFromIndex<D,Q,FIELDS...>(index)
+    );
   }
 
   /// Returns size of FIELD
@@ -72,9 +91,9 @@ struct DESCRIPTOR_BASE {
    **/
   template <
     typename FIELD = void,
-    utilities::meta::enable_if_t<!std::is_same<FIELD,void>::value, int> = 0
+    std::enable_if_t<!std::is_same<FIELD,void>::value, std::size_t> = 0
   >
-  static constexpr int size()
+  static constexpr std::size_t size()
   {
     return FIELD::template size<D,Q>();
   }
@@ -85,9 +104,9 @@ struct DESCRIPTOR_BASE {
    **/
   template <
     typename FIELD = void,
-    utilities::meta::enable_if_t<std::is_same<FIELD,void>::value, int> = 0
+    std::enable_if_t<std::is_same<FIELD,void>::value, std::size_t> = 0
   >
-  static constexpr int size()
+  static constexpr std::size_t size()
   {
     return getFieldListSize<D,Q,FIELDS...>();
   }
@@ -98,6 +117,9 @@ struct DESCRIPTOR_BASE {
   {
     return utilities::meta::list_contains_item<WANTED_FIELD,FIELDS...>::type::value;
   }
+
+  template <template<typename...> class COLLECTION>
+  using decomposeInto = COLLECTION<FIELDS...>;
 
 };
 

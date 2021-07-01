@@ -45,17 +45,18 @@ RTLBMdynamicsMcHardy<T, DESCRIPTOR>::RTLBMdynamicsMcHardy
 (Momenta<T, DESCRIPTOR>& momenta, T latticeAbsorption, T latticeScattering, std::array<std::array<T,DESCRIPTOR::q>, DESCRIPTOR::q>& anisoMatrix)
   : BasicDynamics<T, DESCRIPTOR>(momenta), _absorption(latticeAbsorption), _scattering(latticeScattering), _anisoMatrix(anisoMatrix)
 {
+  this->getName() = "RTLBMdynamicsMcHardy";  
 }
 
 template<typename T, typename DESCRIPTOR>
 T RTLBMdynamicsMcHardy<T, DESCRIPTOR>::computeEquilibrium( int iPop, T rho, const T u[DESCRIPTOR::d], T uSqr ) const
 {
-  return lbHelpers<T,DESCRIPTOR>::equilibriumFirstOrder( iPop, rho, u );
+  return rho*descriptors::t<T,DESCRIPTOR>(iPop) - descriptors::t<T,DESCRIPTOR>(iPop);
 }
 
 
 template<typename T, typename DESCRIPTOR>
-void RTLBMdynamicsMcHardy<T, DESCRIPTOR>::collide( Cell<T, DESCRIPTOR>& cell, LatticeStatistics<T>& statistics )
+void RTLBMdynamicsMcHardy<T, DESCRIPTOR>::collide( Cell<T,DESCRIPTOR>& cell, LatticeStatistics<T>& statistics )
 {
   std::array<double, DESCRIPTOR::q> feq = {};
   for ( int iPop = 0; iPop < DESCRIPTOR::q; ++iPop ) {
@@ -92,11 +93,12 @@ RTLBMdynamicsMcHardyRK<T, DESCRIPTOR>::RTLBMdynamicsMcHardyRK
 (Momenta<T, DESCRIPTOR>& momenta, T latticeAbsorption, T latticeScattering, std::array<std::array<T,DESCRIPTOR::q>, DESCRIPTOR::q>& anisoMatrix)
   : BasicDynamics<T, DESCRIPTOR>(momenta), _absorption(latticeAbsorption), _scattering(latticeScattering), _anisoMatrix(anisoMatrix)
 {
+  this->getName() = "RTLBMdynamicsMcHardyRK";  
 }
 template<typename T, typename DESCRIPTOR>
 T RTLBMdynamicsMcHardyRK<T, DESCRIPTOR>::computeEquilibrium( int iPop, T rho, const T u[DESCRIPTOR::d], T uSqr ) const
 {
-  return lbHelpers<T,DESCRIPTOR>::equilibriumFirstOrder( iPop, rho, u );
+  return rho*descriptors::t<T,DESCRIPTOR>(iPop) - descriptors::t<T,DESCRIPTOR>(iPop);
 }
 
 template<typename T, typename DESCRIPTOR>
@@ -123,7 +125,7 @@ std::array<T,DESCRIPTOR::q> RTLBMdynamicsMcHardyRK<T,DESCRIPTOR>::doCollision(Ce
 }
 
 template<typename T, typename DESCRIPTOR>
-void RTLBMdynamicsMcHardyRK<T, DESCRIPTOR>::collide( Cell<T, DESCRIPTOR>& cell, LatticeStatistics<T>& statistics )
+void RTLBMdynamicsMcHardyRK<T, DESCRIPTOR>::collide( Cell<T,DESCRIPTOR>& cell, LatticeStatistics<T>& statistics )
 {
   std::array<T,DESCRIPTOR::q> feq;
   std::array<T,DESCRIPTOR::q> f_pre_collision;

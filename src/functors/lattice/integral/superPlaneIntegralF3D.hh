@@ -80,9 +80,9 @@ SuperPlaneIntegralF3D<T>::SuperPlaneIntegralF3D(
 {
   this->getName() = "SuperPlaneIntegralF3D";
 
-  _normal.normalize();
-  _u.normalize();
-  _v.normalize();
+  _normal = normalize(_normal);
+  _u = normalize(_u);
+  _v = normalize(_v);
 
   for ( const std::tuple<int,int,int>& pos : _reductionF.getRankLocalSubplane() ) {
     const int& i  = std::get<0>(pos);

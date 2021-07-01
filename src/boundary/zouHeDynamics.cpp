@@ -24,7 +24,7 @@
 #include "zouHeDynamics.h"
 #include "zouHeDynamics.hh"
 #include "dynamics/latticeDescriptors.h"
- 
+
 
 
 namespace olb {

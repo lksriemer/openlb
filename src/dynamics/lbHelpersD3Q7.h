@@ -37,34 +37,35 @@ namespace olb {
  */
 template<typename T, typename... FIELDS>
 struct lbDynamicsHelpers<T, descriptors::D3Q7<FIELDS...> > {
-  using SpecializedCellBase = CellBase<T,descriptors::D3Q7<FIELDS...>>;
-
-  template <typename>
-  using SpecializedDescriptor = descriptors::D3Q7<FIELDS...>;
+  using DESCRIPTOR = descriptors::D3Q7<FIELDS...>;
 
   static T equilibrium( int iPop, T rho, const T u[3], T uSqr )
   {
-    typedef descriptors::D3Q7<> L;
-    T c_u = descriptors::c<L>(iPop,0)*u[0] + descriptors::c<L>(iPop,1)*u[1];
-    return rho * descriptors::t<T,L>(iPop) * (
+    T c_u = descriptors::c<DESCRIPTOR>(iPop,0) * u[0] + descriptors::c<DESCRIPTOR>(iPop,1) * u[1] + descriptors::c<DESCRIPTOR>(iPop,2) * u[2];
+
+    return rho * descriptors::t<T,DESCRIPTOR>(iPop) * (
              1. + 3.*c_u + 4.5*c_u*c_u - 1.5*uSqr )
-           - descriptors::t<T,L>(iPop);
+           - descriptors::t<T,DESCRIPTOR>(iPop);
   }
 
   static T equilibriumFirstOrder( int iPop, T rho, const T u[3] )
   {
-    typedef descriptors::D3Q7<> L;
-    T c_u = descriptors::c<L>(iPop,0) * u[0] + descriptors::c<L>(iPop,1) * u[1] + descriptors::c<L>(iPop,2) * u[2];
-    return rho*descriptors::t<T,L>(iPop)*((T)1 + c_u*descriptors::invCs2<T,L>())-descriptors::t<T,L>(iPop);
+    T c_u = descriptors::c<DESCRIPTOR>(iPop,0) * u[0] + descriptors::c<DESCRIPTOR>(iPop,1) * u[1] + descriptors::c<DESCRIPTOR>(iPop,2) * u[2];
+    return rho*descriptors::t<T,DESCRIPTOR>(iPop)*((T)1 + c_u*descriptors::invCs2<T,DESCRIPTOR>())-descriptors::t<T,DESCRIPTOR>(iPop);
+  }
+
+  static T equilibriumP1( int iPop, T rho, std::array<T,3>& u )
+  {
+    T c_u = descriptors::c<DESCRIPTOR>(iPop,0) * u[0] + descriptors::c<DESCRIPTOR>(iPop,1) * u[1] + descriptors::c<DESCRIPTOR>(iPop,2) * u[2];
+    return descriptors::t<T,DESCRIPTOR>(iPop)*(rho + c_u)-descriptors::t<T,DESCRIPTOR>(iPop);
   }
 
   /// RLB advection diffusion collision step
-  static T rlbCollision( SpecializedCellBase& cell, T rho, const T u[3], T omega )
+  static T rlbCollision( Cell<T,DESCRIPTOR>& cell, T rho, const T u[3], T omega )
   {
-    typedef descriptors::D3Q7<> L;
     const T uSqr = u[0] * u[0] + u[1] * u[1] + u[2] * u[2];
 
-    const T Cs2 = (T)1 / descriptors::invCs2<T,L>();
+    const T Cs2 = (T)1 / descriptors::invCs2<T,DESCRIPTOR>();
 
     T rho_1 = rho - (T)1;
     cell[0] = ( (T)1 - (T)3 * Cs2 ) * rho_1; //f[0]=(1-3c_s^2)(rho-1)
@@ -96,7 +97,7 @@ struct lbDynamicsHelpers<T, descriptors::D3Q7<FIELDS...> > {
   }
 
   // BGK advection diffusion collision step
-  static T bgkCollision( SpecializedCellBase& cell, T rho, const T u[3], T omega )
+  static T bgkCollision( Cell<T,DESCRIPTOR>& cell, T rho, const T u[3], T omega )
   {
     const T Cs2 = 0.25;
     const T uSqr = u[0] * u[0] + u[1] * u[1] + u[2] * u[2];
@@ -122,7 +123,7 @@ struct lbDynamicsHelpers<T, descriptors::D3Q7<FIELDS...> > {
 
   /// Paper: Mink et al. 2016 DOI: 10.1016/j.jocs.2016.03.014
   /// omega is expected to be one
-  static T sinkCollision( SpecializedCellBase& cell, T intensity, T omega, T sink )
+  static T sinkCollision( Cell<T,DESCRIPTOR>& cell, T intensity, T omega, T sink )
   {
     // fi = (1-w) fi + w fi^{eq} - absorption fi;
     // where fi^{eq} = rho ti and t0 = 1/4, t1=...t6=1/8
@@ -162,7 +163,7 @@ static void computeMomentaEquilibrium(T momentaEq[7], T rho, const T u[3], T uSq
     momentaEq[6] = T();
   }
 
-  static void computeMomenta(T momenta[7], SpecializedCellBase const& cell)
+  static void computeMomenta(T momenta[7], ConstCell<T,DESCRIPTOR>& cell)
   {
     /* The implementation is based on the "Passive heat transfer
      * in a turbulent channel flow simulation using large eddy
@@ -188,7 +189,7 @@ static void computeMomentaEquilibrium(T momentaEq[7], T rho, const T u[3], T uSq
     momenta[6] = cell[2] - cell[4] + cell[5] - cell[6];
   }
 
-  static T mrtCollision( SpecializedCellBase& cell, const T rho, const T u[3], const T invM_S[7][7])
+  static T mrtCollision( Cell<T,DESCRIPTOR>& cell, const T rho, const T u[3], const T invM_S[7][7])
   {
     T uSqr = util::normSqr<T, 3>(u);
     T momenta[7];
@@ -247,7 +248,7 @@ static void computeMomentaEquilibrium(T momentaEq[7], T rho, const T u[3], T uSq
   }
 
     static void computeFneq (
-      SpecializedCellBase const& cell, T fNeq[7], T rho, const T u[3] )
+      ConstCell<T,DESCRIPTOR>& cell, T fNeq[7], T rho, const T u[3] )
     {
       // std::cout << "WARNING: First order equilibrium function is used for the calculation of the non-equilibrium parts!" << std::endl;
       for (int iPop=0; iPop < 7; ++iPop) {
@@ -255,13 +256,13 @@ static void computeMomentaEquilibrium(T momentaEq[7], T rho, const T u[3], T uSq
       }
     }
 
-    static T computeRho(SpecializedCellBase const& cell)
+    static T computeRho(ConstCell<T,DESCRIPTOR>& cell)
     {
       T rho = cell[0] + cell[1] + cell[2] + cell[3] + cell[4] + cell[5] + cell[6] + (T)1;
       return rho;
     }
 
-    static void computeRhoU(SpecializedCellBase const& cell, T& rho, T u[3])
+    static void computeRhoU(ConstCell<T,DESCRIPTOR>& cell, T& rho, T u[3])
     {
        rho =  cell[0] + cell[1] + cell[2] + cell[3] + cell[4] + cell[5] + cell[6] + (T)1;
        T invRho= 1./rho;
@@ -271,7 +272,7 @@ static void computeMomentaEquilibrium(T momentaEq[7], T rho, const T u[3], T uSq
        u[2]  = ( cell[6] - cell[3] )*invRho;
     }
 
-    static void computeRhoJ(SpecializedCellBase const& cell, T& rho, T j[3])
+    static void computeRhoJ(ConstCell<T,DESCRIPTOR>& cell, T& rho, T j[3])
     {
       rho =  cell[0] + cell[1] + cell[2] + cell[3] + cell[4] + cell[5] + cell[6] + (T)1;
 
@@ -280,19 +281,19 @@ static void computeMomentaEquilibrium(T momentaEq[7], T rho, const T u[3], T uSq
       j[2]  = ( cell[6] - cell[3] );
     }
 
-    static void computeJ(SpecializedCellBase const& cell, T j[3])
+    static void computeJ(ConstCell<T,DESCRIPTOR>& cell, T j[3])
     {
       j[0]  = ( cell[4] - cell[1] );
       j[1]  = ( cell[5] - cell[2] );
       j[2]  = ( cell[6] - cell[3] );
     }
 
-    static void computeStress(SpecializedCellBase const& cell, T rho, const T u[3], T pi[6])
+    static void computeStress(ConstCell<T,DESCRIPTOR>& cell, T rho, const T u[3], T pi[6])
     {
       // printf("ERROR: Stress tensor not defined in D3Q7!\n");
     }
 
-    static void computeAllMomenta(SpecializedCellBase const& cell, T& rho, T u[3], T pi[6])
+    static void computeAllMomenta(ConstCell<T,DESCRIPTOR>& cell, T& rho, T u[3], T pi[6])
     {
       assert(false);
     }

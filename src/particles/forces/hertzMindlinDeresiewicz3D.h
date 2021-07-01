@@ -35,7 +35,6 @@
 #define HERTZMINDLINDERESIEWICZ3D_H
 
 #include <cmath>
-#include "functors/lattice/superLatticeLocalF3D.h"
 #include "particles/particleSystem3D.h"
 #include "force3D.h"
 

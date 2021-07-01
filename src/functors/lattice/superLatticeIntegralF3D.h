@@ -33,7 +33,6 @@
 #include "indicator/superIndicatorBaseF3D.h"
 #include "functors/analytical/indicator/indicatorBaseF3D.h"
 #include "indicator/superIndicatorF3D.h"
-#include "superLatticeLocalF3D.h"
 #include "functors/analytical/interpolationF3D.h"
 #include "functors/lattice/reductionF3D.h"
 #include "integral/superIntegralF3D.h"
@@ -43,6 +42,8 @@
 #include "geometry/superGeometry3D.h"
 #include "superGeometryFaces3D.h"
 #include "utilities/functorPtr.h"
+#include "latticePhysBoundaryForce3D.h"
+#include "latticePhysCorrBoundaryForce3D.h"
 
 /** Note: Throughout the whole source code directory genericFunctions, the
  *  template parameters for i/o dimensions are:

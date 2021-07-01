@@ -45,14 +45,14 @@ public:
   T computeEquilibrium(int iPop, T rho, const T u[DESCRIPTOR::d], T uSqr) const override;
   /// Collision step
   void collide(Cell<T,DESCRIPTOR>& cell,
-                       LatticeStatistics<T>& statistics) override;
+               LatticeStatistics<T>& statistics) override;
   /// Get local relaxation parameter of the dynamics
   T getOmega() const override;
   /// Set local relaxation parameter of the dynamics
   void setOmega(T omega) override;
 private:
   void computeApproxMomentum(T approxMomentum[DESCRIPTOR::d],
-                             const Cell<T,DESCRIPTOR> &cell,
+                             ConstCell<T,DESCRIPTOR>& cell,
                              const T &rho, const T u[DESCRIPTOR::d], const T xi[DESCRIPTOR::d],
                              const std::vector<int> knownIndexes,const std::vector<int> missingIndexes);
 

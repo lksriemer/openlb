@@ -32,3 +32,5 @@
 #include "smoothIndicatorBaseF2D.h"
 #include "smoothIndicatorF2D.h"
 #include "smoothIndicatorCalcF2D.h"
+
+#include "sdf.h"

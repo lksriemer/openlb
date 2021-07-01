@@ -43,14 +43,14 @@ SuperGuoZhaoInstantiator2D<T, DESCRIPTOR, dynamicsManager>::SuperGuoZhaoInstanti
 
 template<typename T, typename DESCRIPTOR, class dynamicsManager>
 void SuperGuoZhaoInstantiator2D<T, DESCRIPTOR, dynamicsManager>::definePorousFields (
-  AnalyticalF2D<T,T>& epsilon_, AnalyticalF2D<T,T>& K_)
+  AnalyticalF<2,T,T>& epsilon_, AnalyticalF<2,T,T>& K_)
 {
 
 }
 
 template<typename T, typename DESCRIPTOR, class dynamicsManager>
 void SuperGuoZhaoInstantiator2D<T, DESCRIPTOR, dynamicsManager>::defineEpsilon (
-  SuperGeometry2D<T>& sGeometry, int material, AnalyticalF2D<T,T>& epsilon)
+  SuperGeometry2D<T>& sGeometry, int material, AnalyticalF<2,T,T>& epsilon)
 {
 
   sLattice.template defineField<descriptors::EPSILON>(sGeometry, material, epsilon);
@@ -58,7 +58,7 @@ void SuperGuoZhaoInstantiator2D<T, DESCRIPTOR, dynamicsManager>::defineEpsilon (
 
 template<typename T, typename DESCRIPTOR, class dynamicsManager>
 void SuperGuoZhaoInstantiator2D<T, DESCRIPTOR, dynamicsManager>::defineK (
-  UnitConverter<T,DESCRIPTOR> const& converter, SuperGeometry2D<T>& sGeometry, int material, AnalyticalF2D<T,T>& K)
+  UnitConverter<T,DESCRIPTOR> const& converter, SuperGeometry2D<T>& sGeometry, int material, AnalyticalF<2,T,T>& K)
 {
 
   AnalyticalConst2D<T,T> normFactor(converter.getConversionFactorLength()*converter.getConversionFactorLength());
@@ -77,7 +77,7 @@ void SuperGuoZhaoInstantiator2D<T, DESCRIPTOR, dynamicsManager>::defineNu (
 
 template<typename T, typename DESCRIPTOR, class dynamicsManager>
 void SuperGuoZhaoInstantiator2D<T, DESCRIPTOR, dynamicsManager>::defineBodyForce (
-  UnitConverter<T,DESCRIPTOR> const& converter, SuperGeometry2D<T>& sGeometry, int material, AnalyticalF2D<T,T>& BodyForce)
+  UnitConverter<T,DESCRIPTOR> const& converter, SuperGeometry2D<T>& sGeometry, int material, AnalyticalF<2,T,T>& BodyForce)
 {
 
   std::vector<T> normFactorValue ( 2,

@@ -28,6 +28,7 @@
 #include "freeEnergyDynamics.h"
 #include "freeEnergyDynamics.hh"
 #include "latticeDescriptors.h"
+#include "core/cell.hh"
 
 namespace olb {
 

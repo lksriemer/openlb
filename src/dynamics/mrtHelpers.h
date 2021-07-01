@@ -73,7 +73,7 @@ struct mrtHelpers {
     }
   }
 
-  static void computeMomenta(T momenta[DESCRIPTOR::q], Cell<T,DESCRIPTOR> &cell)
+  static void computeMomenta(T momenta[DESCRIPTOR::q], Cell<T,DESCRIPTOR>& cell)
   {
     for (int iPop = 0; iPop < DESCRIPTOR::q; ++iPop) {
       momenta[iPop] = T();
@@ -142,7 +142,7 @@ struct mrtHelpers {
                                 const T u[DESCRIPTOR::d],
                                 T invM_S[DESCRIPTOR::q][DESCRIPTOR::q])
   {
-    T* force = cell.template getFieldPointer<descriptors::FORCE>();
+    auto force = cell.template getFieldPointer<descriptors::FORCE>();
     T f_u = T();
     for (int iD=0; iD < DESCRIPTOR::d; ++iD) {
       f_u += force[iD]*u[iD];

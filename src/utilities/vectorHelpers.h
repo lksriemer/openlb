@@ -271,6 +271,7 @@ void print(U data, const std::string& name="", OstreamManager clout = OstreamMan
 
 
 } // namespace util
+
 } // namespace olb
 
 #endif

@@ -44,15 +44,15 @@ RegularizedTemperatureBM<T,DESCRIPTOR,direction,orientation>::RegularizedTempera
 }
 
 template<typename T, typename DESCRIPTOR, int direction, int orientation>
-T RegularizedTemperatureBM<T,DESCRIPTOR,direction,orientation>::computeRho( Cell<T,DESCRIPTOR> const& cell ) const
+T RegularizedTemperatureBM<T,DESCRIPTOR,direction,orientation>::computeRho( ConstCell<T,DESCRIPTOR>& cell ) const
 {
   return _temperature;
 }
 
 template<typename T, typename DESCRIPTOR, int direction, int orientation>
-void RegularizedTemperatureBM<T,DESCRIPTOR,direction,orientation>::computeJ( Cell<T,DESCRIPTOR> const& cell, T j[DESCRIPTOR::d] ) const
+void RegularizedTemperatureBM<T,DESCRIPTOR,direction,orientation>::computeJ( ConstCell<T,DESCRIPTOR>& cell, T j[DESCRIPTOR::d] ) const
 {
-  const T* u = cell.template getFieldPointer<descriptors::VELOCITY>();
+  const auto u = cell.template getFieldPointer<descriptors::VELOCITY>();
   computeJneq( cell, j );
 
   for (int iD=0; iD<DESCRIPTOR::d; ++iD) {
@@ -62,12 +62,12 @@ void RegularizedTemperatureBM<T,DESCRIPTOR,direction,orientation>::computeJ( Cel
 
 
 template<typename T, typename DESCRIPTOR, int direction, int orientation>
-void RegularizedTemperatureBM<T,DESCRIPTOR,direction,orientation>::computeJneq( Cell<T,DESCRIPTOR> const& cell, T jNeq[DESCRIPTOR::d] ) const
+void RegularizedTemperatureBM<T,DESCRIPTOR,direction,orientation>::computeJneq( ConstCell<T,DESCRIPTOR>& cell, T jNeq[DESCRIPTOR::d] ) const
 {
   std::vector<int> const& onWallIndices = util::subIndex<DESCRIPTOR, direction, 0>();
   std::vector<int> const& normalIndices = util::subIndex<DESCRIPTOR, direction, orientation>();
 
-  const T* u = cell.template getFieldPointer<descriptors::VELOCITY>();
+  const auto u = cell.template getField<descriptors::VELOCITY>();
 
   T jNeqOnWall[DESCRIPTOR::d], jNeqNormal[DESCRIPTOR::d];
   for (int iD=0; iD<DESCRIPTOR::d; ++iD) {
@@ -77,13 +77,13 @@ void RegularizedTemperatureBM<T,DESCRIPTOR,direction,orientation>::computeJneq( 
 
   for (unsigned fIndex=0; fIndex<onWallIndices.size(); ++fIndex) {
     for (int iD=0; iD<DESCRIPTOR::d; ++iD) {
-      jNeqOnWall[iD] += (cell[onWallIndices[fIndex]] - lbHelpers<T,DESCRIPTOR>::equilibriumFirstOrder(onWallIndices[fIndex],_temperature,u)) * descriptors::c<DESCRIPTOR>(onWallIndices[fIndex],iD);
+      jNeqOnWall[iD] += (cell[onWallIndices[fIndex]] - lbHelpers<T,DESCRIPTOR>::equilibriumFirstOrder(onWallIndices[fIndex],_temperature,u.data())) * descriptors::c<DESCRIPTOR>(onWallIndices[fIndex],iD);
     }
   }
 
   for (unsigned fIndex=0; fIndex<normalIndices.size(); ++fIndex) {
     for (int iD=0; iD<DESCRIPTOR::d; ++iD) {
-      jNeqNormal[iD] += (cell[normalIndices[fIndex]]-lbHelpers<T,DESCRIPTOR>::equilibriumFirstOrder(normalIndices[fIndex],_temperature,u)) * descriptors::c<DESCRIPTOR>(normalIndices[fIndex],iD);
+      jNeqNormal[iD] += (cell[normalIndices[fIndex]]-lbHelpers<T,DESCRIPTOR>::equilibriumFirstOrder(normalIndices[fIndex],_temperature,u.data())) * descriptors::c<DESCRIPTOR>(normalIndices[fIndex],iD);
     }
   }
 
@@ -102,7 +102,7 @@ template<typename T, typename DESCRIPTOR, int direction, int orientation>
 void RegularizedTemperatureBM<T,DESCRIPTOR,direction,orientation>::defineRhoU( Cell<T,DESCRIPTOR>& cell, T rho, const T u[DESCRIPTOR::d])
 {
   _temperature = rho;
-  T *u_ = cell.template getFieldPointer<descriptors::VELOCITY>();
+  auto u_ = cell.template getFieldPointer<descriptors::VELOCITY>();
   for (int iD = 0; iD < DESCRIPTOR::d; ++iD) {
     u_[iD] = u[iD];
   }
@@ -119,19 +119,21 @@ RegularizedHeatFluxBM<T,DESCRIPTOR,direction,orientation>::RegularizedHeatFluxBM
   AdvectionDiffusionBulkMomenta<T,DESCRIPTOR>()
 {
   for (int iDim = 0; iDim < DESCRIPTOR::d; iDim++) {
-    if (heatFlux == nullptr)
+    if (heatFlux == nullptr) {
       _heatFlux[iDim] = T();
-    else
+    }
+    else {
       _heatFlux[iDim] = heatFlux[iDim];
+    }
   }
 }
 
 template<typename T, typename DESCRIPTOR, int direction, int orientation>
-T RegularizedHeatFluxBM<T,DESCRIPTOR,direction,orientation>::computeRho( Cell<T,DESCRIPTOR> const& cell ) const
+T RegularizedHeatFluxBM<T,DESCRIPTOR,direction,orientation>::computeRho( ConstCell<T,DESCRIPTOR>& cell ) const
 {
   std::vector<int> const& onWallIndices = util::subIndex<DESCRIPTOR, direction, 0>();
   std::vector<int> const& normalIndices = util::subIndex<DESCRIPTOR, direction, orientation>();
-  const T* u = cell.template getFieldPointer<descriptors::VELOCITY>();
+  const auto u = cell.template getFieldPointer<descriptors::VELOCITY>();
 
   T rhoOnWall = T();
   for (unsigned fIndex=0; fIndex<onWallIndices.size(); ++fIndex) {
@@ -150,10 +152,10 @@ T RegularizedHeatFluxBM<T,DESCRIPTOR,direction,orientation>::computeRho( Cell<T,
 }
 
 template<typename T, typename DESCRIPTOR, int direction, int orientation>
-void RegularizedHeatFluxBM<T,DESCRIPTOR,direction,orientation>::computeJ( Cell<T,DESCRIPTOR> const& cell, T j[DESCRIPTOR::d] ) const
+void RegularizedHeatFluxBM<T,DESCRIPTOR,direction,orientation>::computeJ( ConstCell<T,DESCRIPTOR>& cell, T j[DESCRIPTOR::d] ) const
 {
   T temperature = computeRho(cell);
-  const T* u = cell.template getFieldPointer<descriptors::VELOCITY>();
+  const auto u = cell.template getFieldPointer<descriptors::VELOCITY>();
 
   for (int iD=0; iD<DESCRIPTOR::d; ++iD) {
     j[iD] = _heatFlux[iD] + temperature * u[iD];
@@ -162,7 +164,7 @@ void RegularizedHeatFluxBM<T,DESCRIPTOR,direction,orientation>::computeJ( Cell<T
 
 
 template<typename T, typename DESCRIPTOR, int direction, int orientation>
-void RegularizedHeatFluxBM<T,DESCRIPTOR,direction,orientation>::computeJneq( Cell<T,DESCRIPTOR> const& cell, T jNeq[DESCRIPTOR::d] ) const
+void RegularizedHeatFluxBM<T,DESCRIPTOR,direction,orientation>::computeJneq( ConstCell<T,DESCRIPTOR>& cell, T jNeq[DESCRIPTOR::d] ) const
 {
   for (int iD=0; iD<DESCRIPTOR::d; ++iD) {
     jNeq[iD] = _heatFlux[iD];

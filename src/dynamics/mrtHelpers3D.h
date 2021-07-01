@@ -35,7 +35,7 @@ namespace olb {
 
 // Efficient specialization for D3Q19 lattice
 template<typename T>
-struct mrtHelpers<T, descriptors::MRTD3Q19Descriptor> {
+struct mrtHelpers<T, descriptors::D3Q19<descriptors::tag::MRT>> {
 
   /// Computation of all equilibrium distribution (in momenta space)
   static void computeEquilibrium( T momentaEq[19],
@@ -64,7 +64,7 @@ struct mrtHelpers<T, descriptors::MRTD3Q19Descriptor> {
   }
 
   /// Computation of all momenta (specialized for d3q19)
-  static void computeMomenta(T momenta[19], Cell<T,descriptors::MRTD3Q19Descriptor> &cell)
+  static void computeMomenta(T momenta[19], Cell<T,descriptors::D3Q19<descriptors::tag::MRT>> &cell)
   {
     momenta[1] =
       -(T)30*cell[0]-(T)11*cell[1]-(T)11*cell[2]-(T)11*cell[3]
@@ -133,7 +133,7 @@ struct mrtHelpers<T, descriptors::MRTD3Q19Descriptor> {
   }
 
   /// MRT collision step
-  static T mrtCollision( Cell<T,descriptors::MRTD3Q19Descriptor>& cell,
+  static T mrtCollision( Cell<T,descriptors::D3Q19<descriptors::tag::MRT>>& cell,
                          T rho, const T u[3],
                          T invM_S[19][19] )
   {
@@ -350,7 +350,7 @@ struct mrtHelpers<T, descriptors::MRTD3Q19Descriptor> {
     return uSqr;
   }
   /// MRT collision step
-  static T mrtSGSCollision( Cell<T,descriptors::MRTD3Q19Descriptor>& cell,
+  static T mrtSGSCollision( Cell<T,descriptors::D3Q19<descriptors::tag::MRT>>& cell,
                             T rho, const T u[3], T omega,
                             T invM_S_SGS[19][19] )
   {

@@ -20,6 +20,8 @@
  *  Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  *  Boston, MA  02110-1301, USA.
 */
+#ifndef ADVECTION_DIFFUSION_BOUNDARY_POST_PROCESSOR_3D_HH
+#define ADVECTION_DIFFUSION_BOUNDARY_POST_PROCESSOR_3D_HH
 
 #include "advectionDiffusionBoundaryPostProcessor3D.h"
 #include "core/blockLattice3D.h"
@@ -38,6 +40,8 @@ ConvectionBoundaryProcessor3D(int x0_, int x1_, int y0_, int y1_, int z0_, int z
   : x0(x0_), x1(x1_), y0(y0_), y1(y1_), z0(z0_), z1(z1_)
 {
   OLB_PRECONDITION(x0==x1 || y0==y1 || z0==z1);
+
+  this->getName() = "ConvectionBoundaryProcessor3D";
 
   interpolationPop[0] = 0;
   for (int iPop = 1; iPop < DESCRIPTOR::q; iPop++) {
@@ -68,12 +72,13 @@ processSubDomain(BlockLattice3D<T,DESCRIPTOR>& blockLattice, int x0_, int x1_, i
       for (int iY=newY0; iY<=newY1; ++iY) {
         for (int iZ=newZ0; iZ<=newZ1; ++iZ) {
           for (int iPop = 1; iPop < DESCRIPTOR::q ; ++iPop) {
-            if (interpolationPop[iPop]!=0) {
-              //do reflection
-              blockLattice.get(iX,iY,iZ)[iPop] =
-                ( blockLattice.get(iX+descriptors::c<DESCRIPTOR>(iPop,0),iY+descriptors::c<DESCRIPTOR>(iPop,1),iZ+descriptors::c<DESCRIPTOR>(iPop,2))[iPop]
-                  + blockLattice.get(iX+2*descriptors::c<DESCRIPTOR>(iPop,0),iY+2*descriptors::c<DESCRIPTOR>(iPop,1),iZ+2*descriptors::c<DESCRIPTOR>(iPop,2))[iPop]
-                ) * 0.5;
+            if (interpolationPop[iPop] != 0) {
+              const auto c = descriptors::c<DESCRIPTOR>(iPop);
+              if (blockLattice.isInside(iX+c[0],iY+c[0],iZ+c[0]) && blockLattice.isInside(iX+2*c[0],iY+2*c[0],iZ+2*c[0])) {
+                //do reflection
+                blockLattice.get(iX,iY,iZ)[iPop] = 0.5 * (blockLattice.getPop(iX+c[0],iY+c[1],iZ+c[2],iPop)
+                                                          + blockLattice.getPop(iX+2*c[0],iY+2*c[1],iZ+2*c[2],iPop));
+              }
             }
           }
         }
@@ -97,6 +102,7 @@ ZeroDistributionBoundaryProcessor3D(int x0_, int x1_, int y0_, int y1_, int z0_,
                                     int z1_, int discreteNormalX, int discreteNormalY, int discreteNormalZ)
   : x0(x0_), x1(x1_), y0(y0_), y1(y1_), z0(z0_), z1(z1_)
 {
+  this->getName() = "ZeroDistributionBoundaryProcessor3D";
   OLB_PRECONDITION(x0==x1 || y0==y1 || z0==z1);
 
   resetPop[0] = 0;
@@ -146,54 +152,55 @@ process(BlockLattice3D<T,DESCRIPTOR>& blockLattice)
 
 ////////  ExtFieldBoundaryProcessor3D ////////////////////////////////
 
-template<typename T, typename DESCRIPTOR>
-ExtFieldBoundaryProcessor3D<T,DESCRIPTOR>::
+template<typename T, typename DESCRIPTOR, typename FIELD_A, typename FIELD_B>
+ExtFieldBoundaryProcessor3D<T,DESCRIPTOR,FIELD_A,FIELD_B>::
 ExtFieldBoundaryProcessor3D(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_,
-                            int discreteNormalX_, int discreteNormalY_, int discreteNormalZ_, int offset_)
+                            int discreteNormalX_, int discreteNormalY_, int discreteNormalZ_)
   : x0(x0_), x1(x1_), y0(y0_), y1(y1_), z0(z0_), z1(z1_),
     discreteNormalX(discreteNormalX_), discreteNormalY(discreteNormalY_),
-    discreteNormalZ(discreteNormalZ_), offset(offset_)
+    discreteNormalZ(discreteNormalZ_)
 {
   OLB_PRECONDITION(x0==x1 || y0==y1 || z0==z1);
-  par = true;
+  this->getName() = "ExtFieldBoundaryProcessor3D";
+  tick = true;
 }
 
-template<typename T, typename DESCRIPTOR>
-void ExtFieldBoundaryProcessor3D<T,DESCRIPTOR>::
-processSubDomain(BlockLattice3D<T,DESCRIPTOR>& blockLattice, int x0_, int x1_,
-                 int y0_, int y1_, int z0_, int z1_)
+template<typename T, typename DESCRIPTOR, typename FIELD_A, typename FIELD_B>
+void ExtFieldBoundaryProcessor3D<T,DESCRIPTOR,FIELD_A,FIELD_B>::
+processSubDomain(BlockLattice3D<T,DESCRIPTOR>& blockLattice,
+                 int x0_, int x1_,
+                 int y0_, int y1_,
+                 int z0_, int z1_)
 {
   int newX0, newX1, newY0, newY1, newZ0, newZ1;
-
-  int off = (par) ? 3 : 0;
-  int off2 = (par) ? 0 : 3;
 
   if ( util::intersect (
          x0, x1, y0, y1, z0, z1,
          x0_, x1_, y0_, y1_, z0_, z1_,
          newX0, newX1, newY0, newY1, newZ0, newZ1 ) ) {
-
 #ifdef PARALLEL_MODE_OMP
     #pragma omp parallel for
 #endif
     for (int iX=newX0; iX<=newX1; ++iX) {
       for (int iY=newY0; iY<=newY1; ++iY) {
         for (int iZ=newZ0; iZ<=newZ1; ++iZ) {
-          // TODO: Update to use descriptor fields
-          T* velNeighbour = &blockLattice.get(iX+discreteNormalX,iY+discreteNormalY,iZ+discreteNormalZ)[offset+off];
-          T* velCell = &blockLattice.get(iX,iY,iZ)[offset+off2];
-          for (unsigned iD = 0; iD < DESCRIPTOR::d; ++iD) {
-            velCell[iD] = velNeighbour[iD];
+          auto self = blockLattice.get(iX,iY,iZ);
+          auto neighbor = self.neighbor({discreteNormalX, discreteNormalY, discreteNormalZ});
+          if (tick) {
+            self.template setField<FIELD_A>(neighbor.template getField<FIELD_B>());
+          }
+          else {
+            self.template setField<FIELD_B>(neighbor.template getField<FIELD_A>());
           }
         }
       }
     }
   }
-  par = !par;
+  tick = !tick;
 }
 
-template<typename T, typename DESCRIPTOR>
-void ExtFieldBoundaryProcessor3D<T,DESCRIPTOR>::
+template<typename T, typename DESCRIPTOR, typename FIELD_A, typename FIELD_B>
+void ExtFieldBoundaryProcessor3D<T,DESCRIPTOR,FIELD_A,FIELD_B>::
 process(BlockLattice3D<T,DESCRIPTOR>& blockLattice)
 {
   processSubDomain(blockLattice, x0, x1, y0, y1, z0, z1);
@@ -261,31 +268,35 @@ ZeroDistributionBoundaryProcessorGenerator3D<T,DESCRIPTOR>::clone() const
 
 ////////  ExtFieldBoundaryProcessorGenerator3D ////////////////////////////////
 
-template<typename T, typename DESCRIPTOR>
-ExtFieldBoundaryProcessorGenerator3D<T,DESCRIPTOR>::
+template<typename T, typename DESCRIPTOR, typename FIELD_A, typename FIELD_B>
+ExtFieldBoundaryProcessorGenerator3D<T,DESCRIPTOR,FIELD_A,FIELD_B>::
 ExtFieldBoundaryProcessorGenerator3D(int x0_, int x1_, int y0_, int y1_, int z0_,
-                                     int z1_, int discreteNormalX_, int discreteNormalY_, int discreteNormalZ_, int offset_)
+                                     int z1_, int discreteNormalX_, int discreteNormalY_, int discreteNormalZ_)
   : PostProcessorGenerator3D<T,DESCRIPTOR>(x0_, x1_, y0_, y1_, z0_, z1_),
-    discreteNormalX(discreteNormalX_), discreteNormalY(discreteNormalY_),
-    discreteNormalZ(discreteNormalZ_), offset(offset_)
+    discreteNormalX(discreteNormalX_),
+    discreteNormalY(discreteNormalY_),
+    discreteNormalZ(discreteNormalZ_)
 { }
 
-template<typename T, typename DESCRIPTOR>
+template<typename T, typename DESCRIPTOR, typename FIELD_A, typename FIELD_B>
 PostProcessor3D<T,DESCRIPTOR>*
-ExtFieldBoundaryProcessorGenerator3D<T,DESCRIPTOR>::generate() const
+ExtFieldBoundaryProcessorGenerator3D<T,DESCRIPTOR,FIELD_A,FIELD_B>::generate() const
 {
-  return new ExtFieldBoundaryProcessor3D<T,DESCRIPTOR>(this->x0, this->x1, this->y0,
-         this->y1, this->z0, this->z1, discreteNormalX, discreteNormalY,
-         discreteNormalZ, offset);
+  return new ExtFieldBoundaryProcessor3D<T,DESCRIPTOR,FIELD_A,FIELD_B>(this->x0, this->x1, this->y0,
+         this->y1, this->z0, this->z1,
+         discreteNormalX, discreteNormalY, discreteNormalZ);
 }
 
-template<typename T, typename DESCRIPTOR>
+template<typename T, typename DESCRIPTOR, typename FIELD_A, typename FIELD_B>
 PostProcessorGenerator3D<T,DESCRIPTOR>*
-ExtFieldBoundaryProcessorGenerator3D<T,DESCRIPTOR>::clone() const
+ExtFieldBoundaryProcessorGenerator3D<T,DESCRIPTOR,FIELD_A,FIELD_B>::clone() const
 {
-  return new ExtFieldBoundaryProcessorGenerator3D<T,DESCRIPTOR>(this->x0, this->x1,
+  return new ExtFieldBoundaryProcessorGenerator3D<T,DESCRIPTOR,FIELD_A,FIELD_B>(this->x0, this->x1,
          this->y0, this->y1, this->z0, this->z1,
-         discreteNormalX, discreteNormalY, discreteNormalZ, offset);
+         discreteNormalX, discreteNormalY, discreteNormalZ);
 }
 
 }  // namespace olb
+
+
+#endif

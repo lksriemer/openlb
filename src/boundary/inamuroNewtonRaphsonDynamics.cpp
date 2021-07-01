@@ -24,7 +24,7 @@
 #include "inamuroNewtonRaphsonDynamics.h"
 #include "inamuroNewtonRaphsonDynamics.hh"
 #include "dynamics/latticeDescriptors.h"
- 
+
 
 
 namespace olb {

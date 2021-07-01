@@ -729,6 +729,12 @@ STLreader<T>::STLreader(const std::string fName, T voxelSize, T stlSize,
   case 3:
     indicate3();
     break;
+  case 4:
+    indicate2_Xray();
+    break;
+  case 5:
+    indicate2_Yray();
+	break;
   default:
     indicate2();
     break;
@@ -796,7 +802,20 @@ STLreader<T>::STLreader(const std::vector<std::vector<T>> meshPoints, T voxelSiz
     this->_myMax[i] -= _voxelSize;
     this->_myMin[i] += _voxelSize;
   }
-
+  //automaticly choose the method with minimum extension in its direction
+  
+  /*if(extension[0] == std::min_element(extension.begin(), extension.end())){
+    method = 4;
+  }
+  else if(extension[1] == std::min_element(extension.begin(), extension.end())){
+    method = 5;
+  }
+  else if(extension[2] == std::min_element(extension.begin(), extension.end())){
+    method = 0; 
+  }
+  */
+ 
+  
   // Indicate nodes of the tree. (Inside/Outside)
   switch (method) {
   case 1:
@@ -805,6 +824,12 @@ STLreader<T>::STLreader(const std::vector<std::vector<T>> meshPoints, T voxelSiz
   case 3:
     indicate3();
     break;
+  case 4:
+    indicate2_Xray();
+    break;
+  case 5:
+	indicate2_Yray();
+	break;
   default:
     indicate2();
     break;
@@ -937,6 +962,99 @@ void STLreader<T>::indicate2()
   }
 }
 
+
+
+/*
+ *  New indicate function (faster, less stable)
+ *  Define ray in X-direction for each Voxel in YZ-layer. Indicate all nodes on the fly.
+ */
+
+template<typename T>
+void STLreader<T>::indicate2_Xray()
+{
+  T rad = _tree->getRadius();
+  Vector<T,3> rayPt = _tree->getCenter() - rad + .5 * _voxelSize;
+  Vector<T,3> pt = rayPt;
+  Vector<T,3> rayDir;
+  rayDir[0] = 1.;
+  rayDir[1] = 0.;
+  rayDir[2] = 0.;
+  //Vector<T,3> maxEdge = _tree->getCenter() + rad;
+
+  T step = 1. / 1000. * _voxelSize;
+
+  Octree<T>* node = nullptr;
+  unsigned short rayInside = 0;
+  Vector<T,3> nodeInters;
+  while (pt[2] < _mesh.getMax()[2] + std::numeric_limits<T>::epsilon()) {
+    node = _tree->find(pt);
+    nodeInters = pt;
+    nodeInters[0] = node->getCenter()[0] - node->getRadius();
+    rayInside = 0;
+    while (pt[1] < _mesh.getMax()[1] + std::numeric_limits<T>::epsilon()) {
+      node = _tree->find(pt);
+      nodeInters = pt;
+      nodeInters[0] = node->getCenter()[0] - node->getRadius();
+      rayInside = 0;
+      while (pt[0] < _mesh.getMax()[0] + std::numeric_limits<T>::epsilon()) {
+        node = _tree->find(pt);
+        node->checkRay(nodeInters, rayDir, rayInside);
+        node->intersectRayNode(pt, rayDir, nodeInters);
+        pt = nodeInters + step * rayDir;
+      }
+      pt[0] = rayPt[0];
+      pt[1] += _voxelSize;
+    }
+    pt[1] = rayPt[1];
+    pt[2] += _voxelSize;
+  }
+}
+
+/*
+ *  New indicate function (faster, less stable)
+ *  Define ray in Y-direction for each Voxel in XZ-layer. Indicate all nodes on the fly.
+ */
+
+template<typename T>
+void STLreader<T>::indicate2_Yray()
+{
+  T rad = _tree->getRadius();
+  Vector<T,3> rayPt = _tree->getCenter() - rad + .5 * _voxelSize;
+  Vector<T,3> pt = rayPt;
+  Vector<T,3> rayDir;
+  rayDir[0] = 0.;
+  rayDir[1] = 1.;
+  rayDir[2] = 0.;
+  //Vector<T,3> maxEdge = _tree->getCenter() + rad;
+
+  T step = 1. / 1000. * _voxelSize;
+
+  Octree<T>* node = nullptr;
+  unsigned short rayInside = 0;
+  Vector<T,3> nodeInters;
+  while (pt[2] < _mesh.getMax()[2] + std::numeric_limits<T>::epsilon()) {
+    node = _tree->find(pt);
+    nodeInters = pt;
+    nodeInters[1] = node->getCenter()[1] - node->getRadius();
+    rayInside = 0;
+    while (pt[0] < _mesh.getMax()[0] + std::numeric_limits<T>::epsilon()) {
+      node = _tree->find(pt);
+      nodeInters = pt;
+      nodeInters[1] = node->getCenter()[1] - node->getRadius();
+      rayInside = 0;
+      while (pt[1] < _mesh.getMax()[1] + std::numeric_limits<T>::epsilon()) {
+        node = _tree->find(pt);
+        node->checkRay(nodeInters, rayDir, rayInside);
+        node->intersectRayNode(pt, rayDir, nodeInters);
+        pt = nodeInters + step * rayDir;
+      }
+      pt[1] = rayPt[1];
+      pt[0] += _voxelSize;
+    }
+    pt[0] = rayPt[0];
+    pt[2] += _voxelSize;
+  }
+}
 
 /*
  *  Double ray approach: two times (X-, Y-, Z-direction) for each leaf.
@@ -1085,7 +1203,7 @@ bool STLreader<T>::distance(T& distance, const Vector<T,3>& origin,
 {
   Octree<T>* node = nullptr;
   Vector<T,3> dir(direction);
-  dir.normalize();
+  dir = normalize(dir);
   Vector<T,3> extends = _mesh.getMax() - _mesh.getMin();
   Vector<T,3> pt(origin);
   Vector<T,3> q;
@@ -1181,7 +1299,7 @@ bool STLreader<T>::distance(T& distance, const Vector<T,3>& origin,
     node = _tree->find(pt);
     if (node->closestIntersection(Vector<T,3>(origin), dir, q, a)) {
       Vector<T,3> vek(q - Vector<T,3>(origin));
-      distance = vek.norm();
+      distance = norm(vek);
       return true;
     } else {
       Octree<T>* tmpNode = _tree->find(pt);

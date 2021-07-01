@@ -28,7 +28,7 @@
 #include "dynamics.h"
 #include "dynamics.hh"
 #include "latticeDescriptors.h"
- 
+
 
 namespace olb {
 

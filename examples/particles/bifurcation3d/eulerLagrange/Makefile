@@ -1,6 +1,6 @@
 #  This file is part of the OpenLB library
 #
-#  Copyright (C) 2007 Mathias Krause
+#  Copyright (C) 2007 Mathias J. Krause
 #  E-mail contact: info@openlb.net
 #  The most recent release of OpenLB can be downloaded at
 #  <http://www.openlb.net/>
@@ -33,8 +33,14 @@ DEPS       := $(foreach file, $(SRC), $(PWD)/$(file:.cpp=.d))
 ###########################################################################
 ## all
 
-all : depend compile link
+all :
+	@$(MAKE) updatelib
+	@$(MAKE) sample
 
+###########################################################################
+## sample
+
+sample: depend compile link
 
 ###########################################################################
 ## dependencies
@@ -64,7 +70,7 @@ clean : cleanrub cleanobj cleandep
 cleanrub:
 	@echo Clean rubbish files
 	@rm -f *~ core .tmpfile tmp/*.* $(OUTPUT)
-	@rm -f tmp/vtkData/*.* tmp/vtkData/data/*.* tmp/imageData/*.* tmp/gnuplotData/*.* tmp/gnuplotData/data/*.*
+	@rm -f tmp/vtkData/*.* tmp/vtkData/data/*.* tmp/imageData/*.* tmp/imageData/data/*.* tmp/gnuplotData/*.* tmp/gnuplotData/data/*.*
 
 cleanobj:
 	@echo Clean object files
@@ -81,7 +87,7 @@ cleanbuild:
 ###########################################################################
 ## update lib
 
-$(ROOT)/$(LIBDIR)/lib$(LIB).a :
+updatelib:
 	@cd $(ROOT); \
 	$(MAKE) all
 

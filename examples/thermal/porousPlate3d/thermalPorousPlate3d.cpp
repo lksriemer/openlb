@@ -45,8 +45,8 @@ using namespace std;
 typedef double T;
 
 
-#define NSDESCRIPTOR D3Q19<FORCE>
-#define TDESCRIPTOR D3Q7<VELOCITY>
+typedef D3Q19<FORCE> NSDESCRIPTOR;
+typedef D3Q7<VELOCITY> TDESCRIPTOR;
 
 
 
@@ -84,7 +84,7 @@ public:
     this->getName() = "AnalyticalVelocityPorousPlate3D";
   };
 
-  bool operator()(T output[3], const S x[3])
+  bool operator()(T output[3], const S x[3]) override
   {
     output[0] = _u0*((exp(_Re* x[1] / _ly) - 1) / (exp(_Re) - 1));
     output[1] = _v0;
@@ -108,7 +108,7 @@ public:
     this->getName() = "AnalyticalTemperaturePorousPlate3D";
   };
 
-  bool operator()(T output[1], const S x[3])
+  bool operator()(T output[1], const S x[3]) override
   {
     output[0] = _T0 + _deltaT*((exp(_Pr*_Re*x[1] / _ly) - 1) / (exp(_Pr*_Re) - 1));
     return true;
@@ -125,12 +125,12 @@ private:
   T _lambda;
 public:
   AnalyticalHeatFluxPorousPlate3D(T Re, T Pr, T deltaT, T ly,T lambda) : AnalyticalF3D<T, S>(3),
-   _Re(Re), _Pr(Pr), _deltaT(deltaT), _ly(ly), _lambda(lambda)
+    _Re(Re), _Pr(Pr), _deltaT(deltaT), _ly(ly), _lambda(lambda)
   {
     this->getName() = "AnalyticalHeatFluxPorousPlate3D";
   };
 
-  bool operator()(T output[3], const S x[3])
+  bool operator()(T output[3], const S x[3]) override
   {
     output[0] = 0;
     output[1] = - _lambda * _Re * _Pr * _deltaT / _ly * (exp(_Pr * _Re * x[1] / _ly))/(exp(_Pr * _Re) - 1);
@@ -221,8 +221,6 @@ void prepareLattice( ThermalUnitConverter<T, NSDESCRIPTOR, TDESCRIPTOR> const& c
                      SuperLattice3D<T, TDESCRIPTOR>& ADlattice,
                      Dynamics<T, NSDESCRIPTOR> &bulkDynamics,
                      Dynamics<T, TDESCRIPTOR>& advectionDiffusionBulkDynamics,
-                     sOnLatticeBoundaryCondition3D<T,NSDESCRIPTOR>& NSboundaryCondition,
-                     sOnLatticeBoundaryCondition3D<T,TDESCRIPTOR>& TboundaryCondition,
                      SuperGeometry3D<T>& superGeometry )
 {
 
@@ -241,8 +239,8 @@ void prepareLattice( ThermalUnitConverter<T, NSDESCRIPTOR, TDESCRIPTOR> const& c
   NSlattice.defineDynamics(superGeometry.getMaterialIndicator({1, 2, 3}), &bulkDynamics);
 
   /// sets boundary
-  NSboundaryCondition.addVelocityBoundary(superGeometry.getMaterialIndicator({2, 3}), NSomega);
-  TboundaryCondition.addTemperatureBoundary(superGeometry.getMaterialIndicator({2, 3}), Tomega);
+  setLocalVelocityBoundary<T,NSDESCRIPTOR>(NSlattice, NSomega, superGeometry.getMaterialIndicator({2, 3}));
+  setAdvectionDiffusionTemperatureBoundary<T,TDESCRIPTOR>(ADlattice, Tomega, superGeometry.getMaterialIndicator({2, 3}));
 }
 
 void setBoundaryValues(ThermalUnitConverter<T, NSDESCRIPTOR, TDESCRIPTOR> const& converter,
@@ -344,7 +342,7 @@ void getResults(ThermalUnitConverter<T, NSDESCRIPTOR, TDESCRIPTOR> const& conver
 
     vtkWriter.write(iT);
 
-      BlockReduction3D2D<T> planeReduction( temperature, {0,0,1}, 600, BlockDataSyncMode::ReduceOnly );
+    BlockReduction3D2D<T> planeReduction( temperature, Vector<T,3>({0,0,1}), 600, BlockDataSyncMode::ReduceOnly );
     // write output as JPEG
     heatmap::plotParam<T> jpeg_Param;
     jpeg_Param.maxValue = Thot;
@@ -421,11 +419,7 @@ int main(int argc, char *argv[])
   SuperLattice3D<T, TDESCRIPTOR> ADlattice(superGeometry);
   SuperLattice3D<T, NSDESCRIPTOR> NSlattice(superGeometry);
 
-  sOnLatticeBoundaryCondition3D<T, NSDESCRIPTOR> NSboundaryCondition(NSlattice);
-  createLocalBoundaryCondition3D<T, NSDESCRIPTOR>(NSboundaryCondition);
 
-  sOnLatticeBoundaryCondition3D<T, TDESCRIPTOR> TboundaryCondition(ADlattice);
-  createAdvectionDiffusionBoundaryCondition3D<T, TDESCRIPTOR>(TboundaryCondition);
 
   ForcedBGKdynamics<T, NSDESCRIPTOR> NSbulkDynamics(
     converter.getLatticeRelaxationFrequency(),
@@ -447,7 +441,7 @@ int main(int argc, char *argv[])
   std::vector<T> dir{0.0, 1.0, 0.0};
 
   T boussinesqForcePrefactor = 9.81 / converter.getConversionFactorVelocity() * converter.getConversionFactorTime() *
-    converter.getCharPhysTemperatureDifference() * converter.getPhysThermalExpansionCoefficient();
+                               converter.getCharPhysTemperatureDifference() * converter.getPhysThermalExpansionCoefficient();
 
   NavierStokesAdvectionDiffusionCouplingGenerator3D<T,NSDESCRIPTOR>
   coupling(0, converter.getLatticeLength(lx), 0, converter.getLatticeLength(ly), 0, converter.getLatticeLength(lz),
@@ -455,18 +449,18 @@ int main(int argc, char *argv[])
 
   NSlattice.addLatticeCoupling(coupling, ADlattice);
 
+  //prepareLattice and setBoundaryConditions
   prepareLattice(converter,
                  NSlattice, ADlattice,
                  NSbulkDynamics, TbulkDynamics,
-                 NSboundaryCondition, TboundaryCondition, superGeometry );
-
+                 superGeometry );
 
   /// === 4th Step: Main Loop with Timer ===
   Timer<T> timer(converter.getLatticeTime(maxPhysT), superGeometry.getStatistics().getNvoxel() );
   timer.start();
 
   util::ValueTracer<T> converge(converter.getLatticeTime(1.0),epsilon);
-  for (int iT = 0; iT < converter.getLatticeTime(maxPhysT); ++iT) {
+  for (std::size_t iT = 0; iT < converter.getLatticeTime(maxPhysT); ++iT) {
 
     if (converge.hasConverged()) {
       clout << "Simulation converged." << endl;

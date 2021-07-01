@@ -37,14 +37,18 @@ FreeEnergyChemicalPotentialCoupling2D <T,DESCRIPTOR>::FreeEnergyChemicalPotentia
   std::vector<SpatiallyExtendedObject2D*> partners_)
   :  x0(x0_), x1(x1_), y0(y0_), y1(y1_), alpha(alpha_), kappa1(kappa1_),
      kappa2(kappa2_), kappa3(kappa3_), partners(partners_)
-{ }
+{
+  this->getName() = "FreeEnergyChemicalPotentialCoupling2D";  
+}
 
 template<typename T, typename DESCRIPTOR>
 FreeEnergyChemicalPotentialCoupling2D <T,DESCRIPTOR>::FreeEnergyChemicalPotentialCoupling2D (
   T alpha_, T kappa1_, T kappa2_, T kappa3_, std::vector<SpatiallyExtendedObject2D*> partners_)
-  :  x0(0), x1(0), y0(0), y1(0), alpha(alpha_), kappa1(kappa1_), kappa2(kappa2_), 
+  :  x0(0), x1(0), y0(0), y1(0), alpha(alpha_), kappa1(kappa1_), kappa2(kappa2_),
      kappa3(kappa3_), partners(partners_)
-{ }
+{
+  this->getName() = "FreeEnergyChemicalPotentialCoupling2D";  
+}
 
 template<typename T, typename DESCRIPTOR>
 void FreeEnergyChemicalPotentialCoupling2D<T,DESCRIPTOR>::processSubDomain (
@@ -52,95 +56,89 @@ void FreeEnergyChemicalPotentialCoupling2D<T,DESCRIPTOR>::processSubDomain (
 {
   // If partners.size() == 1: two fluid components
   // If partners.size() == 2: three fluid components
-  BlockLattice2D<T,DESCRIPTOR> *partnerLattice1 = dynamic_cast<BlockLattice2D<T,DESCRIPTOR> *>(partners[0]);
+  BlockLattice2D<T,DESCRIPTOR> *partnerLattice1 = static_cast<BlockLattice2D<T,DESCRIPTOR> *>(partners[0]);
   BlockLattice2D<T,DESCRIPTOR> *partnerLattice2 = 0;
   if (partners.size() > 1) {
-    partnerLattice2 = dynamic_cast<BlockLattice2D<T,DESCRIPTOR> *>(partners[1]);
+    partnerLattice2 = static_cast<BlockLattice2D<T,DESCRIPTOR> *>(partners[1]);
   }
 
   int newX0, newX1, newY0, newY1;
   if ( util::intersect ( x0, x1, y0, y1,
                          x0_, x1_, y0_, y1_,
                          newX0, newX1, newY0, newY1 ) ) {
-    int nx = newX1-newX0+3; // include a one-cell boundary
-    int ny = newY1-newY0+3; // include a one-cell boundary
-    int offsetX = newX0-1;
-    int offsetY = newY0-1;
-    
-    // compute the density fields for each lattice
-    BlockData2D<T,T> rhoField1(nx, ny);
-    BlockData2D<T,T> rhoField2(nx, ny);
-    BlockData2D<T,T> rhoField3(nx, ny);
+
+    auto& rhoField = blockLattice.template getDynamicFieldArray<RHO_CACHE>();
+
     for (int iX=newX0-1; iX<=newX1+1; ++iX)
       for (int iY=newY0-1; iY<=newY1+1; ++iY)
-        rhoField1.get(iX-offsetX, iY-offsetY) = blockLattice.get(iX,iY).computeRho();
+        rhoField[0][blockLattice.getCellId(iX, iY)] = blockLattice.get(iX,iY).computeRho();
     for (int iX=newX0-1; iX<=newX1+1; ++iX)
       for (int iY=newY0-1; iY<=newY1+1; ++iY)
-        rhoField2.get(iX-offsetX, iY-offsetY) = partnerLattice1->get(iX,iY).computeRho();
+        rhoField[1][blockLattice.getCellId(iX, iY)] = partnerLattice1->get(iX,iY).computeRho();
     if (partners.size() > 1) {
       for (int iX=newX0-1; iX<=newX1+1; ++iX)
         for (int iY=newY0-1; iY<=newY1+1; ++iY)
-          rhoField3.get(iX-offsetX, iY-offsetY) = partnerLattice2->get(iX,iY).computeRho();
+          rhoField[2][blockLattice.getCellId(iX, iY)] = partnerLattice2->get(iX,iY).computeRho();
     }
 
     // calculate chemical potential
     for (int iX=newX0; iX<=newX1; ++iX) {
       for (int iY=newY0; iY<=newY1; ++iY) {
-        T densitySum = rhoField1.get(iX-offsetX, iY-offsetY)
-                     + rhoField2.get(iX-offsetX, iY-offsetY);
-        T densityDifference = rhoField1.get(iX-offsetX, iY-offsetY)
-                            - rhoField2.get(iX-offsetX, iY-offsetY);
+        T densitySum = rhoField[0][blockLattice.getCellId(iX, iY)]
+                     + rhoField[1][blockLattice.getCellId(iX, iY)];
+        T densityDifference = rhoField[0][blockLattice.getCellId(iX, iY)]
+                            - rhoField[1][blockLattice.getCellId(iX, iY)];
         if (partners.size() > 1) {
-          densitySum -= rhoField3.get(iX-offsetX, iY-offsetY);
-          densityDifference -= rhoField3.get(iX-offsetX, iY-offsetY);
+          densitySum -= rhoField[2][blockLattice.getCellId(iX, iY)];
+          densityDifference -= rhoField[2][blockLattice.getCellId(iX, iY)];
         }
-        T term1 = 0.125 * kappa1 * (densitySum) 
+        T term1 = 0.125 * kappa1 * (densitySum)
                 * (densitySum-1.) * (densitySum-2.);
-        T term2 = 0.125 * kappa2 * (densityDifference) 
+        T term2 = 0.125 * kappa2 * (densityDifference)
                 * (densityDifference-1.) * (densityDifference-2.);
         T term3 = 0.;
         if (partners.size() > 1) {
-          T rho3 = rhoField3.get(iX-offsetX, iY-offsetY);
+          T rho3 = rhoField[2][blockLattice.getCellId(iX, iY)];
           term3 = kappa3 * rho3 * (rho3 - 1.) * (2.*rho3 - 1.);
         }
 
         T laplaceRho1 = 0.25 * (
-                       rhoField1.get(iX-offsetX-1, iY-offsetY-1)
-                + 2. * rhoField1.get(iX-offsetX, iY-offsetY-1)
-                +      rhoField1.get(iX-offsetX+1, iY-offsetY-1)
-                + 2. * rhoField1.get(iX-offsetX-1, iY-offsetY)
-                -12. * rhoField1.get(iX-offsetX, iY-offsetY)
-                + 2. * rhoField1.get(iX-offsetX+1, iY-offsetY)
-                +      rhoField1.get(iX-offsetX-1, iY-offsetY+1)
-                + 2. * rhoField1.get(iX-offsetX, iY-offsetY+1)
-                +      rhoField1.get(iX-offsetX+1, iY-offsetY+1)
+                       rhoField[0][blockLattice.getCellId(iX-1, iY-1)]
+                + 2. * rhoField[0][blockLattice.getCellId(iX, iY-1)]
+                +      rhoField[0][blockLattice.getCellId(iX+1, iY-1)]
+                + 2. * rhoField[0][blockLattice.getCellId(iX-1, iY)]
+                -12. * rhoField[0][blockLattice.getCellId(iX, iY)]
+                + 2. * rhoField[0][blockLattice.getCellId(iX+1, iY)]
+                +      rhoField[0][blockLattice.getCellId(iX-1, iY+1)]
+                + 2. * rhoField[0][blockLattice.getCellId(iX, iY+1)]
+                +      rhoField[0][blockLattice.getCellId(iX+1, iY+1)]
                 );
         T laplaceRho2 = 0.25 * (
-                       rhoField2.get(iX-offsetX-1, iY-offsetY-1)
-                + 2. * rhoField2.get(iX-offsetX, iY-offsetY-1)
-                +      rhoField2.get(iX-offsetX+1, iY-offsetY-1)
-                + 2. * rhoField2.get(iX-offsetX-1, iY-offsetY)
-                -12. * rhoField2.get(iX-offsetX, iY-offsetY)
-                + 2. * rhoField2.get(iX-offsetX+1, iY-offsetY)
-                +      rhoField2.get(iX-offsetX-1, iY-offsetY+1)
-                + 2. * rhoField2.get(iX-offsetX, iY-offsetY+1)
-                +      rhoField2.get(iX-offsetX+1, iY-offsetY+1)
+                       rhoField[1][blockLattice.getCellId(iX-1, iY-1)]
+                + 2. * rhoField[1][blockLattice.getCellId(iX, iY-1)]
+                +      rhoField[1][blockLattice.getCellId(iX+1, iY-1)]
+                + 2. * rhoField[1][blockLattice.getCellId(iX-1, iY)]
+                -12. * rhoField[1][blockLattice.getCellId(iX, iY)]
+                + 2. * rhoField[1][blockLattice.getCellId(iX+1, iY)]
+                +      rhoField[1][blockLattice.getCellId(iX-1, iY+1)]
+                + 2. * rhoField[1][blockLattice.getCellId(iX, iY+1)]
+                +      rhoField[1][blockLattice.getCellId(iX+1, iY+1)]
                 );
         T laplaceRho3 = 0.;
         if (partners.size() > 1) {
           laplaceRho3 = 0.25 * (
-                         rhoField3.get(iX-offsetX-1, iY-offsetY-1)
-                  + 2. * rhoField3.get(iX-offsetX, iY-offsetY-1)
-                  +      rhoField3.get(iX-offsetX+1, iY-offsetY-1)
-                  + 2. * rhoField3.get(iX-offsetX-1, iY-offsetY)
-                  -12. * rhoField3.get(iX-offsetX, iY-offsetY)
-                  + 2. * rhoField3.get(iX-offsetX+1, iY-offsetY)
-                  +      rhoField3.get(iX-offsetX-1, iY-offsetY+1)
-                  + 2. * rhoField3.get(iX-offsetX, iY-offsetY+1)
-                  +      rhoField3.get(iX-offsetX+1, iY-offsetY+1)
+                         rhoField[2][blockLattice.getCellId(iX-1, iY-1)]
+                  + 2. * rhoField[2][blockLattice.getCellId(iX, iY-1)]
+                  +      rhoField[2][blockLattice.getCellId(iX+1, iY-1)]
+                  + 2. * rhoField[2][blockLattice.getCellId(iX-1, iY)]
+                  -12. * rhoField[2][blockLattice.getCellId(iX, iY)]
+                  + 2. * rhoField[2][blockLattice.getCellId(iX+1, iY)]
+                  +      rhoField[2][blockLattice.getCellId(iX-1, iY+1)]
+                  + 2. * rhoField[2][blockLattice.getCellId(iX, iY+1)]
+                  +      rhoField[2][blockLattice.getCellId(iX+1, iY+1)]
                   );
         }
-        
+
         // setting chemical potential to the respective lattices
         blockLattice.get(iX, iY).template setField<descriptors::CHEM_POTENTIAL>(term1 + term2
                 + 0.25*alpha*alpha*( (kappa2 - kappa1) * laplaceRho2
@@ -175,13 +173,17 @@ FreeEnergyForceCoupling2D <T,DESCRIPTOR>::FreeEnergyForceCoupling2D (
   int x0_, int x1_, int y0_, int y1_,
   std::vector<SpatiallyExtendedObject2D*> partners_)
   :  x0(x0_), x1(x1_), y0(y0_), y1(y1_), partners(partners_)
-{ }
+{
+  this->getName() = "FreeEnergyForceCoupling2D";  
+}
 
 template<typename T, typename DESCRIPTOR>
 FreeEnergyForceCoupling2D <T,DESCRIPTOR>::FreeEnergyForceCoupling2D (
   std::vector<SpatiallyExtendedObject2D*> partners_)
   :  x0(0), x1(0), y0(0), y1(0), partners(partners_)
-{ }
+{
+  this->getName() = "FreeEnergyForceCoupling2D";   
+}
 
 template<typename T, typename DESCRIPTOR>
 void FreeEnergyForceCoupling2D<T,DESCRIPTOR>::processSubDomain (
@@ -189,17 +191,17 @@ void FreeEnergyForceCoupling2D<T,DESCRIPTOR>::processSubDomain (
 {
   // If partners.size() == 1: two fluid components
   // If partners.size() == 2: three fluid components
-  BlockLattice2D<T,DESCRIPTOR> *partnerLattice1 = dynamic_cast<BlockLattice2D<T,DESCRIPTOR> *>(partners[0]);
-  BlockLattice2D<T,DESCRIPTOR> *partnerLattice2 = 0;
+  BlockLattice2D<T,DESCRIPTOR> *partnerLattice1 = static_cast<BlockLattice2D<T,DESCRIPTOR> *>(partners[0]);
+  BlockLattice2D<T,DESCRIPTOR> *partnerLattice2 = nullptr;
   if (partners.size() > 1) {
-    partnerLattice2 = dynamic_cast<BlockLattice2D<T,DESCRIPTOR> *>(partners[1]);
+    partnerLattice2 = static_cast<BlockLattice2D<T,DESCRIPTOR> *>(partners[1]);
   }
-  
+
   int newX0, newX1, newY0, newY1;
-  if ( util::intersect ( x0, x1, y0, y1,
-                         x0_, x1_, y0_, y1_,
-                         newX0, newX1, newY0, newY1 ) ) {
-    
+  if ( util::intersect(x0, x1, y0, y1,
+                       x0_, x1_, y0_, y1_,
+                       newX0, newX1, newY0, newY1) ) {
+
     for (int iX=newX0; iX<=newX1; ++iX) {
       for (int iY=newY0; iY<=newY1; ++iY) {
         T phi = blockLattice.get(iX,iY).computeRho();
@@ -245,13 +247,15 @@ void FreeEnergyForceCoupling2D<T,DESCRIPTOR>::processSubDomain (
                              +  partnerLattice2->get(iX-1,iY+1).template getField<descriptors::CHEM_POTENTIAL>()
                           + 4.* partnerLattice2->get(iX  ,iY+1).template getField<descriptors::CHEM_POTENTIAL>()
                              +  partnerLattice2->get(iX+1,iY+1).template getField<descriptors::CHEM_POTENTIAL>() );
-        }      
-        
-        T forceX = -rho*gradMuRhoX - phi*gradMuPhiX - psi*gradMuPsiX;
-        T forceY = -rho*gradMuRhoY - phi*gradMuPhiY - psi*gradMuPsiY;
-        partnerLattice1->get(iX, iY).template setField<descriptors::FORCE>({forceX, forceY});
-        T u[2];
-        partnerLattice1->get(iX,iY).computeU(u);
+        }
+
+        auto partnerCell = partnerLattice1->get(iX, iY);
+        partnerCell.template setField<descriptors::FORCE>({
+          -rho*gradMuRhoX - phi*gradMuPhiX - psi*gradMuPsiX,
+          -rho*gradMuRhoY - phi*gradMuPhiY - psi*gradMuPsiY
+        });
+        T u[2] { };
+        partnerCell.computeU(u);
         blockLattice.get(iX, iY).template setField<descriptors::FORCE>(u);
         if (partners.size() > 1) {
           partnerLattice2->get(iX, iY).template setField<descriptors::FORCE>(u);
@@ -275,13 +279,17 @@ template<typename T, typename DESCRIPTOR>
 FreeEnergyInletOutletCoupling2D <T,DESCRIPTOR>::FreeEnergyInletOutletCoupling2D (
   int x0_, int x1_, int y0_, int y1_, std::vector<SpatiallyExtendedObject2D*> partners_)
   : x0(x0_), x1(x1_), y0(y0_), y1(y1_), partners(partners_)
-{ }
+{
+  this->getName() = "FreeEnergyInletOutletCoupling2D";  
+}
 
 template<typename T, typename DESCRIPTOR>
 FreeEnergyInletOutletCoupling2D <T,DESCRIPTOR>::FreeEnergyInletOutletCoupling2D (
   std::vector<SpatiallyExtendedObject2D*> partners_)
   : x0(0), x1(0), y0(0), y1(0), partners(partners_)
-{ }
+{
+  this->getName() = "FreeEnergyInletOutletCoupling2D";    
+}
 
 template<typename T, typename DESCRIPTOR>
 void FreeEnergyInletOutletCoupling2D<T,DESCRIPTOR>::processSubDomain (
@@ -289,19 +297,18 @@ void FreeEnergyInletOutletCoupling2D<T,DESCRIPTOR>::processSubDomain (
 {
   // If partners.size() == 1: two fluid components
   // If partners.size() == 2: three fluid components
-  BlockLattice2D<T,DESCRIPTOR> *partnerLattice1 = dynamic_cast<BlockLattice2D<T,DESCRIPTOR> *>(partners[0]);
+  BlockLattice2D<T,DESCRIPTOR> *partnerLattice1 = static_cast<BlockLattice2D<T,DESCRIPTOR> *>(partners[0]);
   BlockLattice2D<T,DESCRIPTOR> *partnerLattice2 = 0;
   if (partners.size() > 1) {
-    partnerLattice2 = dynamic_cast<BlockLattice2D<T,DESCRIPTOR> *>(partners[1]);
+    partnerLattice2 = static_cast<BlockLattice2D<T,DESCRIPTOR> *>(partners[1]);
   }
-  
+
   int newX0, newX1, newY0, newY1;
   if ( util::intersect ( x0, x1, y0, y1,
                          x0_, x1_, y0_, y1_,
                          newX0, newX1, newY0, newY1 ) ) {
     for (int iX=newX0; iX<=newX1; ++iX) {
       for (int iY=newY0; iY<=newY1; ++iY) {
-       
         T u[DESCRIPTOR::d];
         partnerLattice1->get(iX,iY).computeU(u);
         blockLattice.get(iX,iY).defineU(u);
@@ -328,13 +335,17 @@ FreeEnergyDensityOutletCoupling2D <T,DESCRIPTOR>::FreeEnergyDensityOutletCouplin
   int x0_, int x1_, int y0_, int y1_, T rho_,
   std::vector<SpatiallyExtendedObject2D*> partners_)
   : x0(x0_), x1(x1_), y0(y0_), y1(y1_), rho(rho_), partners(partners_)
-{ }
+{ 
+  this->getName() = "FreeEnergyDensityOutletCoupling2D";  
+}
 
 template<typename T, typename DESCRIPTOR>
 FreeEnergyDensityOutletCoupling2D <T,DESCRIPTOR>::FreeEnergyDensityOutletCoupling2D (
   T rho_, std::vector<SpatiallyExtendedObject2D*> partners_)
   : x0(0), x1(0), y0(0), y1(0), rho(rho_), partners(partners_)
-{ }
+{
+  this->getName() = "FreeEnergyDensityOutletCoupling2D";   
+}
 
 template<typename T, typename DESCRIPTOR>
 void FreeEnergyDensityOutletCoupling2D<T,DESCRIPTOR>::processSubDomain (
@@ -342,19 +353,18 @@ void FreeEnergyDensityOutletCoupling2D<T,DESCRIPTOR>::processSubDomain (
 {
   // If partners.size() == 1: two fluid components
   // If partners.size() == 2: three fluid components
-  BlockLattice2D<T,DESCRIPTOR> *partnerLattice1 = dynamic_cast<BlockLattice2D<T,DESCRIPTOR> *>(partners[0]);
-  BlockLattice2D<T,DESCRIPTOR> *partnerLattice2 = 0;
+  BlockLattice2D<T,DESCRIPTOR> *partnerLattice1 = static_cast<BlockLattice2D<T,DESCRIPTOR> *>(partners[0]);
+  BlockLattice2D<T,DESCRIPTOR> *partnerLattice2 = nullptr;
   if (partners.size() > 1) {
-    partnerLattice2 = dynamic_cast<BlockLattice2D<T,DESCRIPTOR> *>(partners[1]);
+    partnerLattice2 = static_cast<BlockLattice2D<T,DESCRIPTOR> *>(partners[1]);
   }
-  
+
   int newX0, newX1, newY0, newY1;
   if ( util::intersect ( x0, x1, y0, y1,
                          x0_, x1_, y0_, y1_,
                          newX0, newX1, newY0, newY1 ) ) {
     for (int iX=newX0; iX<=newX1; ++iX) {
       for (int iY=newY0; iY<=newY1; ++iY) {
-        
         T rho0, phi, psi;
         rho0 = blockLattice.get(iX,iY).computeRho();
         phi = partnerLattice1->get(iX,iY).computeRho();
@@ -364,7 +374,6 @@ void FreeEnergyDensityOutletCoupling2D<T,DESCRIPTOR>::processSubDomain (
           psi = partnerLattice2->get(iX,iY).computeRho();
           partnerLattice2->get(iX,iY).defineRho(psi * rho / rho0);
         }
-
       }
     }
   }
@@ -383,7 +392,7 @@ void FreeEnergyDensityOutletCoupling2D<T,DESCRIPTOR>::process(
 template<typename T, typename DESCRIPTOR>
 FreeEnergyChemicalPotentialGenerator2D<T,DESCRIPTOR>::FreeEnergyChemicalPotentialGenerator2D (
   int x0_, int x1_, int y0_, int y1_, T alpha_, T kappa1_, T kappa2_)
-  : LatticeCouplingGenerator2D<T,DESCRIPTOR>(x0_, x1_, y0_, y1_), alpha(alpha_), 
+  : LatticeCouplingGenerator2D<T,DESCRIPTOR>(x0_, x1_, y0_, y1_), alpha(alpha_),
     kappa1(kappa1_), kappa2(kappa2_), kappa3(0)
 { }
 
@@ -397,7 +406,7 @@ FreeEnergyChemicalPotentialGenerator2D<T,DESCRIPTOR>::FreeEnergyChemicalPotentia
 template<typename T, typename DESCRIPTOR>
 FreeEnergyChemicalPotentialGenerator2D<T,DESCRIPTOR>::FreeEnergyChemicalPotentialGenerator2D (
   int x0_, int x1_, int y0_, int y1_, T alpha_, T kappa1_, T kappa2_, T kappa3_)
-  : LatticeCouplingGenerator2D<T,DESCRIPTOR>(x0_, x1_, y0_, y1_), alpha(alpha_), 
+  : LatticeCouplingGenerator2D<T,DESCRIPTOR>(x0_, x1_, y0_, y1_), alpha(alpha_),
     kappa1(kappa1_), kappa2(kappa2_), kappa3(kappa3_)
 { }
 

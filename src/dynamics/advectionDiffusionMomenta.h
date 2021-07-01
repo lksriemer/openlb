@@ -37,27 +37,27 @@ namespace olb {
 template<typename T, typename DESCRIPTOR>
 struct AdvectionDiffusionBulkMomenta : public Momenta<T,DESCRIPTOR> {
   /// Compute particle density on the cell.
-  T computeRho(Cell<T,DESCRIPTOR> const& cell) const override;
+  T computeRho(ConstCell<T,DESCRIPTOR>& cell) const override;
   /// Compute fluid velocity on the cell.
   void computeU (
-    Cell<T,DESCRIPTOR> const& cell,
+    ConstCell<T,DESCRIPTOR>& cell,
     T u[DESCRIPTOR::d] ) const override;
   /// Compute fluid momentum on the cell.
   void computeJ (
-    Cell<T,DESCRIPTOR> const& cell,
+    ConstCell<T,DESCRIPTOR>& cell,
     T j[DESCRIPTOR::d] ) const override;
   /// Compute components of the stress tensor on the cell.
   void computeStress (
-    Cell<T,DESCRIPTOR> const& cell,
+    ConstCell<T,DESCRIPTOR>& cell,
     T rho, const T u[DESCRIPTOR::d],
     T pi[util::TensorVal<DESCRIPTOR >::n] ) const override;
   /// Compute fluid velocity and particle density on the cell.
   void computeRhoU (
-    Cell<T,DESCRIPTOR> const& cell,
+    ConstCell<T,DESCRIPTOR>& cell,
     T& rho, T u[DESCRIPTOR::d]) const override;
   /// Compute all momenta on the cell, up to second order.
   void computeAllMomenta (
-    Cell<T,DESCRIPTOR> const& cell,
+    ConstCell<T,DESCRIPTOR>& cell,
     T& rho, T u[DESCRIPTOR::d],
     T pi[util::TensorVal<DESCRIPTOR >::n] ) const override;
   /// Set particle density on the cell.

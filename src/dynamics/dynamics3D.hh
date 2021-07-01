@@ -26,7 +26,6 @@
  */
 
 #include "boundary/advectionDiffusionBoundaries.hh"
-#include "boundary/advectionDiffusionBoundaryCondition3D.hh"
 #include "advectionDiffusionDynamics.hh"
 #include "advectionDiffusionForces.hh"
 #include "advectionDiffusionMomenta.hh"
@@ -40,7 +39,6 @@
 #include "mrtDynamics.hh"
 //#include "mrtLatticeDescriptors.hh"
 #include "navierStokesAdvectionDiffusionCouplingPostProcessor3D.hh"
-#include "navierStokesAdvectionDiffusionMRTCouplingPostProcessor3D.hh"
 #include "porousBGKdynamics.hh"
 #include "powerLawBGKdynamics.hh"
 #include "rtlbmDynamics.hh"

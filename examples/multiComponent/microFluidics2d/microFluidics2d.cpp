@@ -47,7 +47,7 @@ using namespace olb::graphics;
 using namespace std;
 
 typedef double T;
-#define DESCRIPTOR D2Q9<CHEM_POTENTIAL,FORCE>
+typedef D2Q9<CHEM_POTENTIAL,FORCE> DESCRIPTOR;
 
 // Parameters for the simulation setup
 const int N  = 100;
@@ -85,15 +85,16 @@ const int vtkIter  = 1000;
 const int statIter = 2000;
 
 
-void prepareGeometry( SuperGeometry2D<T>& superGeometry ) {
+void prepareGeometry( SuperGeometry2D<T>& superGeometry )
+{
   OstreamManager clout( std::cout,"prepareGeometry" );
   clout << "Prepare Geometry ..." << std::endl;
 
-  std::shared_ptr<IndicatorF2D<T>> section1 = std::make_shared<IndicatorCuboid2D<T>>( xl1, yl1, std::vector<T>{xl1/2., ny/2.} );
-  std::shared_ptr<IndicatorF2D<T>> section2 = std::make_shared<IndicatorCuboid2D<T>>( xl2, yl2, std::vector<T>{xl1 + xl2/2., ny/2.} );
-  std::shared_ptr<IndicatorF2D<T>> section3 = std::make_shared<IndicatorCuboid2D<T>>( xl3, yl3, std::vector<T>{xl1 + xl2 + xl3/2., ny/2.} );
-  std::shared_ptr<IndicatorF2D<T>> section4 = std::make_shared<IndicatorCuboid2D<T>>( xl4, yl4, std::vector<T>{xl1 + xl2 + xl3 + xl4/2., ny/2.} );
-  std::shared_ptr<IndicatorF2D<T>> section5 = std::make_shared<IndicatorCuboid2D<T>>( xl5, yl5, std::vector<T>{xl1 + xl2 + xl3 + xl4 + xl5/2., ny/2.} );
+  std::shared_ptr<IndicatorF2D<T>> section1 = std::make_shared<IndicatorCuboid2D<T>>( xl1, yl1, std::vector<T> {xl1/2., ny/2.} );
+  std::shared_ptr<IndicatorF2D<T>> section2 = std::make_shared<IndicatorCuboid2D<T>>( xl2, yl2, std::vector<T> {xl1 + xl2/2., ny/2.} );
+  std::shared_ptr<IndicatorF2D<T>> section3 = std::make_shared<IndicatorCuboid2D<T>>( xl3, yl3, std::vector<T> {xl1 + xl2 + xl3/2., ny/2.} );
+  std::shared_ptr<IndicatorF2D<T>> section4 = std::make_shared<IndicatorCuboid2D<T>>( xl4, yl4, std::vector<T> {xl1 + xl2 + xl3 + xl4/2., ny/2.} );
+  std::shared_ptr<IndicatorF2D<T>> section5 = std::make_shared<IndicatorCuboid2D<T>>( xl5, yl5, std::vector<T> {xl1 + xl2 + xl3 + xl4 + xl5/2., ny/2.} );
   IndicatorIdentity2D<T> channel( section1 + section2 + section3 + section4 + section5 );
 
   superGeometry.rename( 0, 2, channel );
@@ -127,15 +128,13 @@ void prepareLattice( SuperLattice2D<T, DESCRIPTOR>& sLattice1,
                      Dynamics<T, DESCRIPTOR>& bulkDynamics1,
                      Dynamics<T, DESCRIPTOR>& bulkDynamics2,
                      Dynamics<T, DESCRIPTOR>& bulkDynamics3,
-                     sOnLatticeBoundaryCondition2D<T,DESCRIPTOR>& sOnBC1,
-                     sOnLatticeBoundaryCondition2D<T,DESCRIPTOR>& sOnBC2,
-                     sOnLatticeBoundaryCondition2D<T,DESCRIPTOR>& sOnBC3,
                      UnitConverter<T, DESCRIPTOR>& converter,
-                     SuperGeometry2D<T>& superGeometry ) {
+                     SuperGeometry2D<T>& superGeometry )
+{
 
   OstreamManager clout( std::cout,"prepareLattice" );
   clout << "Prepare Lattice ..." << std::endl;
- 
+
   // define lattice dynamics
   sLattice1.defineDynamics( superGeometry, 0, &instances::getNoDynamics<T, DESCRIPTOR>() );
   sLattice2.defineDynamics( superGeometry, 0, &instances::getNoDynamics<T, DESCRIPTOR>() );
@@ -174,32 +173,32 @@ void prepareLattice( SuperLattice2D<T, DESCRIPTOR>& sLattice1,
   sLattice3.defineDynamics( superGeometry, 8, &instances::getNoDynamics<T, DESCRIPTOR>() );
 
   // add wall boundary
-  sOnBC1.addFreeEnergyWallBoundary( superGeometry, 2, alpha, kappa1, kappa2, kappa3, h1, h2, h3, 1 );
-  sOnBC2.addFreeEnergyWallBoundary( superGeometry, 2, alpha, kappa1, kappa2, kappa3, h1, h2, h3, 2 );
-  sOnBC3.addFreeEnergyWallBoundary( superGeometry, 2, alpha, kappa1, kappa2, kappa3, h1, h2, h3, 3 );
+  setFreeEnergyWallBoundary<T,DESCRIPTOR>(sLattice1, superGeometry, 2, alpha, kappa1, kappa2, kappa3, h1, h2, h3, 1);
+  setFreeEnergyWallBoundary<T,DESCRIPTOR>(sLattice2, superGeometry, 2, alpha, kappa1, kappa2, kappa3, h1, h2, h3, 2);
+  setFreeEnergyWallBoundary<T,DESCRIPTOR>(sLattice3, superGeometry, 2, alpha, kappa1, kappa2, kappa3, h1, h2, h3, 3);
 
   // add inlet boundaries
   T omega = converter.getLatticeRelaxationFrequency();
   auto inlet1Indicator = superGeometry.getMaterialIndicator(3);
-  sOnBC1.addFreeEnergyInletBoundary( inlet1Indicator, omega, "velocity", 1 );
-  sOnBC2.addFreeEnergyInletBoundary( inlet1Indicator, omega, "velocity", 2 );
-  sOnBC3.addFreeEnergyInletBoundary( inlet1Indicator, omega, "velocity", 3 );
+  setFreeEnergyInletBoundary<T,DESCRIPTOR>(sLattice1, omega, inlet1Indicator, "velocity", 1);
+  setFreeEnergyInletBoundary<T,DESCRIPTOR>(sLattice2, omega, inlet1Indicator, "velocity", 2);
+  setFreeEnergyInletBoundary<T,DESCRIPTOR>(sLattice3, omega, inlet1Indicator, "velocity", 3);
 
   auto inlet2Indicator = superGeometry.getMaterialIndicator({4, 5});
-  sOnBC1.addFreeEnergyInletBoundary( inlet2Indicator, omega, "velocity", 1 );
-  sOnBC2.addFreeEnergyInletBoundary( inlet2Indicator, omega, "velocity", 2 );
-  sOnBC3.addFreeEnergyInletBoundary( inlet2Indicator, omega, "velocity", 3 );
+  setFreeEnergyInletBoundary<T,DESCRIPTOR>(sLattice1, omega, inlet2Indicator, "velocity", 1);
+  setFreeEnergyInletBoundary<T,DESCRIPTOR>(sLattice2, omega, inlet2Indicator, "velocity", 2);
+  setFreeEnergyInletBoundary<T,DESCRIPTOR>(sLattice3, omega, inlet2Indicator, "velocity", 3);
 
   auto inlet3Indicator = superGeometry.getMaterialIndicator({6, 7});
-  sOnBC1.addFreeEnergyInletBoundary( inlet3Indicator, omega, "velocity", 1 );
-  sOnBC2.addFreeEnergyInletBoundary( inlet3Indicator, omega, "velocity", 2 );
-  sOnBC3.addFreeEnergyInletBoundary( inlet3Indicator, omega, "velocity", 3 );
+  setFreeEnergyInletBoundary<T,DESCRIPTOR>(sLattice1, omega, inlet3Indicator, "velocity", 1);
+  setFreeEnergyInletBoundary<T,DESCRIPTOR>(sLattice2, omega, inlet3Indicator, "velocity", 2);
+  setFreeEnergyInletBoundary<T,DESCRIPTOR>(sLattice3, omega, inlet3Indicator, "velocity", 3);
 
   // add outlet boundary
   auto outletIndicator = superGeometry.getMaterialIndicator(8);
-  sOnBC1.addFreeEnergyOutletBoundary( outletIndicator, omega, "density", 1 );
-  sOnBC2.addFreeEnergyOutletBoundary( outletIndicator, omega, "density", 2 );
-  sOnBC3.addFreeEnergyOutletBoundary( outletIndicator, omega, "density", 3 );
+  setFreeEnergyOutletBoundary<T,DESCRIPTOR>(sLattice1, omega, outletIndicator, "density",1);
+  setFreeEnergyOutletBoundary<T,DESCRIPTOR>(sLattice2, omega, outletIndicator, "density",2);
+  setFreeEnergyOutletBoundary<T,DESCRIPTOR>(sLattice3, omega, outletIndicator, "density",3);
 
   // bulk initial conditions
   std::vector<T> v( 2,T() );
@@ -265,7 +264,8 @@ void prepareLattice( SuperLattice2D<T, DESCRIPTOR>& sLattice1,
 void prepareCoupling(SuperLattice2D<T, DESCRIPTOR>& sLattice1,
                      SuperLattice2D<T, DESCRIPTOR>& sLattice2,
                      SuperLattice2D<T, DESCRIPTOR>& sLattice3,
-                     SuperGeometry2D<T>& superGeometry) {
+                     SuperGeometry2D<T>& superGeometry)
+{
   OstreamManager clout( std::cout,"prepareCoupling" );
   clout << "Add lattice coupling" << endl;
 
@@ -299,7 +299,8 @@ void getResults( SuperLattice2D<T, DESCRIPTOR>& sLattice1,
                  SuperLattice2D<T, DESCRIPTOR>& sLattice2,
                  SuperLattice2D<T, DESCRIPTOR>& sLattice3, int iT,
                  SuperGeometry2D<T>& superGeometry, Timer<T>& timer,
-                 UnitConverter<T, DESCRIPTOR> converter) {
+                 UnitConverter<T, DESCRIPTOR> converter)
+{
 
   OstreamManager clout( std::cout,"getResults" );
   SuperVTMwriter2D<T> vtmWriter( "microFluidics2d" );
@@ -334,7 +335,7 @@ void getResults( SuperLattice2D<T, DESCRIPTOR>& sLattice1,
     density2.getName() = "phi";
     SuperLatticeDensity2D<T, DESCRIPTOR> density3( sLattice3 );
     density3.getName() = "density-fluid-3";
-    
+
     AnalyticalConst2D<T,T> half_( 0.5 );
     SuperLatticeFfromAnalyticalF2D<T, DESCRIPTOR> half(half_, sLattice1);
 
@@ -354,7 +355,8 @@ void getResults( SuperLattice2D<T, DESCRIPTOR>& sLattice1,
 }
 
 
-int main( int argc, char *argv[] ) {
+int main( int argc, char *argv[] )
+{
 
   // === 1st Step: Initialization ===
 
@@ -406,28 +408,22 @@ int main( int argc, char *argv[] ) {
     converter.getLatticeRelaxationFrequency(), gama,
     instances::getBulkMomenta<T,DESCRIPTOR>() );
 
-  sOnLatticeBoundaryCondition2D<T, DESCRIPTOR> sOnBC1( sLattice1 );
-  sOnLatticeBoundaryCondition2D<T, DESCRIPTOR> sOnBC2( sLattice2 );
-  sOnLatticeBoundaryCondition2D<T, DESCRIPTOR> sOnBC3( sLattice3 );
-  createLocalBoundaryCondition2D<T, DESCRIPTOR> (sOnBC1);
-  createLocalBoundaryCondition2D<T, DESCRIPTOR> (sOnBC2);
-  createLocalBoundaryCondition2D<T, DESCRIPTOR> (sOnBC3);
-
+  //prepareLattice and set boundaryConditions
   prepareLattice( sLattice1, sLattice2, sLattice3, bulkDynamics1, bulkDynamics23,
-                  bulkDynamics23, sOnBC1, sOnBC2, sOnBC3, converter, superGeometry );
+                  bulkDynamics23, converter, superGeometry );
 
   prepareCoupling( sLattice1, sLattice2, sLattice3, superGeometry );
 
-  SuperExternal2D<T,DESCRIPTOR,CHEM_POTENTIAL> sExternal1 (superGeometry, sLattice1, sLattice1.getOverlap() );
-  SuperExternal2D<T,DESCRIPTOR,CHEM_POTENTIAL> sExternal2 (superGeometry, sLattice2, sLattice2.getOverlap() );
-  SuperExternal2D<T,DESCRIPTOR,CHEM_POTENTIAL> sExternal3 (superGeometry, sLattice3, sLattice3.getOverlap() );
+  SuperField2D<T,DESCRIPTOR,CHEM_POTENTIAL> sExternal1 (superGeometry, sLattice1, sLattice1.getOverlap() );
+  SuperField2D<T,DESCRIPTOR,CHEM_POTENTIAL> sExternal2 (superGeometry, sLattice2, sLattice2.getOverlap() );
+  SuperField2D<T,DESCRIPTOR,CHEM_POTENTIAL> sExternal3 (superGeometry, sLattice3, sLattice3.getOverlap() );
 
   // === 4th Step: Main Loop with Timer ===
   int iT = 0;
   clout << "starting simulation..." << endl;
   Timer<T> timer( maxIter, superGeometry.getStatistics().getNvoxel() );
   timer.start();
-  
+
   for ( iT=0; iT<maxIter; ++iT ) {
     // Computation and output of the results
     getResults( sLattice1, sLattice2, sLattice3, iT, superGeometry, timer, converter );
@@ -441,7 +437,7 @@ int main( int argc, char *argv[] ) {
     sLattice1.communicate();
     sLattice2.communicate();
     sLattice3.communicate();
- 
+
     // Execute coupling between the two lattices
     sLattice1.executeCoupling();
     sExternal1.communicate();

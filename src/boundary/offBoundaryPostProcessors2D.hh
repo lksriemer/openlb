@@ -48,6 +48,7 @@ ZeroVelocityBouzidiLinearPostProcessor2D<T,DESCRIPTOR>::
 ZeroVelocityBouzidiLinearPostProcessor2D(int x_, int y_, int iPop_, T dist_)
   : x(x_), y(y_), iPop(iPop_), dist(dist_)
 {
+  this->getName() = "ZeroVelocityBouzidiLinearPostProcessor2D";
 #ifndef QUIET
   if (dist < 0 || dist > 1)
     std::cout << "WARNING: Bogus distance at (" << x << "," << y << "): "
@@ -63,7 +64,8 @@ ZeroVelocityBouzidiLinearPostProcessor2D(int x_, int y_, int iPop_, T dist_)
     yB = y - descriptors::c<L>(iPop,1);
     q = 1/(2*dist);
     iPop2 = opp;
-  } else {
+  }
+  else {
     xB = x;
     yB = y;
     q = 2*dist;
@@ -99,6 +101,7 @@ VelocityBouzidiLinearPostProcessor2D<T,DESCRIPTOR>::
 VelocityBouzidiLinearPostProcessor2D(int x_, int y_, int iPop_, T dist_)
   : x(x_), y(y_), iPop(iPop_), dist(dist_)
 {
+  this->getName() = "VelocityBouzidiLinearPostProcessor2D";
 #ifndef QUIET
   if (dist < 0 || dist > 1)
     std::cout << "WARNING: Bogus distance at (" << x << "," << y << "," << "): "
@@ -115,7 +118,8 @@ VelocityBouzidiLinearPostProcessor2D(int x_, int y_, int iPop_, T dist_)
     q = 1/(2*dist);
     ufrac = q;
     iPop2 = opp;
-  } else {
+  }
+  else {
     xB = x;
     yB = y;
     q = 2*dist;
@@ -143,11 +147,12 @@ template<typename T, typename DESCRIPTOR>
 void VelocityBouzidiLinearPostProcessor2D<T,DESCRIPTOR>::
 process(BlockLattice2D<T,DESCRIPTOR>& blockLattice)
 {
-  Dynamics<T,DESCRIPTOR>* dynamics = blockLattice.getDynamics(xN, yN);
+  auto cell = blockLattice.get(x, y);
+  auto cellN = blockLattice.get(xN, yN);
+  Dynamics<T,DESCRIPTOR>* dynamics = cellN.getDynamics();
   T velCoeff = ufrac*dynamics->getVelocityCoefficient(iPop);
-  dynamics->defineRho( blockLattice.get(xN, yN), blockLattice.get(x, y).computeRho() );
-  blockLattice.get(x, y)[opp] = q*blockLattice.get(xN, yN)[iPop] +
-                                (1-q)*blockLattice.get(xB, yB)[iPop2] + velCoeff;
+  dynamics->defineRho( cellN, cell.computeRho() );
+  cell[opp] = q*cellN[iPop] + (1-q)*blockLattice.get(xB, yB)[iPop2] + velCoeff;
 }
 
 
@@ -158,6 +163,7 @@ ZeroVelocityBounceBackPostProcessor2D<T,DESCRIPTOR>::
 ZeroVelocityBounceBackPostProcessor2D(int x_, int y_, int iPop_, T dist_)
   : x(x_), y(y_), iPop(iPop_), dist(dist_)
 {
+  this->getName() = "ZeroVelocityBounceBackPostProcessor2D";
 #ifndef QUIET
   if (dist < 0 || dist > 1)
     std::cout << "WARNING: Bogus distance at (" << x << "," << y << "," << "): "
@@ -196,6 +202,7 @@ VelocityBounceBackPostProcessor2D<T,DESCRIPTOR>::
 VelocityBounceBackPostProcessor2D(int x_, int y_, int iPop_, T dist_)
   : x(x_), y(y_), iPop(iPop_), dist(dist_)
 {
+  this->getName() = "VelocityBounceBackPostProcessor2D";
 #ifndef QUIET
   if (dist < 0 || dist > 1)
     std::cout << "WARNING: Bogus distance at (" << x << "," << y << "," << "): "
@@ -226,10 +233,12 @@ template<typename T, typename DESCRIPTOR>
 void VelocityBounceBackPostProcessor2D<T,DESCRIPTOR>::
 process(BlockLattice2D<T,DESCRIPTOR>& blockLattice)
 {
-  Dynamics<T,DESCRIPTOR>* dynamics = blockLattice.getDynamics(xN, yN);
+  auto cell = blockLattice.get(x, y);
+  auto cellN = blockLattice.get(xN, yN);
+  Dynamics<T,DESCRIPTOR>* dynamics = cell.getDynamics();
   T velCoeff = dynamics->getVelocityCoefficient(iPop);
-  dynamics->defineRho( blockLattice.get(xN, yN), blockLattice.get(x, y).computeRho() );
-  blockLattice.get(x, y)[opp] = blockLattice.get(xN, yN)[iPop] + velCoeff;
+  dynamics->defineRho( cellN, cell.computeRho() );
+  cell[opp] = cellN[iPop] + velCoeff;
 }
 
 
@@ -248,6 +257,7 @@ AntiBounceBackPostProcessor2D(int x_, int y_, int iPop_)
         "), iPop: " << iPop << ", nP: (" << xN << "," << yN << "," <<
         "), dist: " << dist << std::endl;
   */
+  this->getName() = "AntiBounceBackPostProcessor2D";
 }
 
 template<typename T, typename DESCRIPTOR>
@@ -281,6 +291,7 @@ BoundaryStreamPostProcessor2D(int x_, int y_, const bool streamDirection[DESCRIP
   for (int iPop = 0; iPop < DESCRIPTOR::q ; ++iPop) {
     this->_streamDirections[iPop] = streamDirection[iPop];
   }
+  this->getName() = "BoundaryStreamPostProcessor2D";
 }
 
 template<typename T, typename DESCRIPTOR>
@@ -296,9 +307,10 @@ template<typename T, typename DESCRIPTOR>
 void BoundaryStreamPostProcessor2D<T,DESCRIPTOR>::
 process(BlockLattice2D<T,DESCRIPTOR>& blockLattice)
 {
+  auto cell = blockLattice.get(x, y);
   for (int iPop = 1; iPop < DESCRIPTOR::q ; ++iPop) {
     if (_streamDirections[iPop]) {
-      blockLattice.get(x + descriptors::c<DESCRIPTOR>(iPop,0), y + descriptors::c<DESCRIPTOR>(iPop,1))[iPop] = blockLattice.get(x, y)[iPop];
+      blockLattice.get(x + descriptors::c<DESCRIPTOR>(iPop,0), y + descriptors::c<DESCRIPTOR>(iPop,1))[iPop] = cell[iPop];
     }
   }
 }

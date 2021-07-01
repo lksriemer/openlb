@@ -31,7 +31,6 @@
 #include "utilities/functorPtr.hh"
 #include "functors/lattice/indicator/indicator2D.hh"
 
-#include "functors/lattice/superLatticeLocalF3D.h"
 #include "functors/lattice/superCalcF3D.h"
 #include "functors/lattice/superCalcF3D.hh"
 

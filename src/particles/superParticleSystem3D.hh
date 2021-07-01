@@ -1,6 +1,6 @@
 /*  This file is part of the OpenLB library
  *
- *  Copyright (C) 2016 Thomas Henn
+ *  Copyright (C) 2016 Thomas Henn, Davide Dapelo
  *  E-mail contact: info@openlb.net
  *  The most recent release of OpenLB can be downloaded at
  *  <http://www.openlb.net/>
@@ -24,6 +24,7 @@
 #ifndef SUPERPARTICLESYSTEM_3D_HH
 #define SUPERPARTICLESYSTEM_3D_HH
 
+#include <cassert>
 #define shadows
 
 #include <utility>
@@ -81,11 +82,9 @@ void SuperParticleSystem3D<T, PARTICLETYPE>::init()
   size = singleton::mpi().getSize();
 #endif
   for (int i = 0; i < this->_cuboidGeometry.getNc(); ++i) {
-    //clout << i << std::endl;
     if (this->_loadBalancer.rank(i) == rank) {
       auto dummy = new ParticleSystem3D<T, PARTICLETYPE>(i, _superGeometry);
-      this->_cuboidGeometry.get(i).getOrigin().toStdVector()[0];
-      std::vector<T> physPos = this->_cuboidGeometry.get(i).getOrigin().toStdVector();
+      std::vector<T> physPos = toStdVector(this->_cuboidGeometry.get(i).getOrigin());
       std::vector<T> physExtend(3, 0);
       T physR = this->_cuboidGeometry.get(i).getDeltaR();
       for (int j = 0; j < 3; j++) {
@@ -97,7 +96,6 @@ void SuperParticleSystem3D<T, PARTICLETYPE>::init()
       _pSystems.push_back(dummy);
     }
   }
-  //singleton::exit(0);
 
 #ifdef PARALLEL_MODE_MPI
   for (int i = 0; i < this->_cuboidGeometry.getNc(); ++i) {
@@ -565,10 +563,6 @@ void SuperParticleSystem3D<T, PARTICLETYPE>::simulateWithTwoWayCoupling_Davide (
                                     BackCouplingModel<T,PARTICLETYPE>& backCoupling,
                                     int material, int subSteps, bool resetExternalField, bool scale )
 {
-  // reset external field
-  if (resetExternalField)
-    backCoupling.resetExternalField(material);
-
   for (auto pS : _pSystems) {
     time_t delta = clock();
     pS->_contactDetection->sort();
@@ -613,11 +607,7 @@ bool SuperParticleSystem3D<double, MagneticParticle3D>::particleSActivityTest(in
 template<typename T, template<typename U> class PARTICLETYPE>
 void SuperParticleSystem3D<T, PARTICLETYPE>::setOverlap(T overlap)
 {
-  if ( int(overlap) + 1 > _superGeometry.getOverlap() ) {
-    clout << "Overlap of SuperParticleSystem3D should be < overlap "
-          "of SuperStructure3D" << std::endl;
-    exit(-1);
-  }
+  assert( int(overlap) + 1 <= _superGeometry.getOverlap() );
   _overlap = overlap;
 }
 
@@ -994,8 +984,11 @@ void SuperParticleSystem3D<T, PARTICLETYPE>::updateParticleDistribution()
       if (tmpFlag) {
         int number_amount = 0;
         MPI_Get_count(&status, MPI_DOUBLE, &number_amount);
-        T recv_buffer[number_amount];
-        singleton::mpi().receive(recv_buffer, number_amount, rN, 1);
+        //T recv_buffer[number_amount];
+        //singleton::mpi().receive(recv_buffer, number_amount, rN, 1);
+        std::vector<T> recv_buffer;
+        recv_buffer.reserve(number_amount);
+        singleton::mpi().receive(recv_buffer.data(), number_amount, rN, 1);
 
         for (int iPar = 0; iPar < number_amount; iPar += PARTICLETYPE<T>::serialPartSize) {
           PARTICLETYPE<T> p;
@@ -1054,8 +1047,9 @@ void SuperParticleSystem3D<T, PARTICLETYPE>::updateParticleDistribution()
         int number_amount = 0;
         MPI_Get_count(&status, MPI_DOUBLE, &number_amount);
         //        cout << "Contains " << number_amount << " infos" << std::endl;
-        T recv_buffer[number_amount];
-        singleton::mpi().receive(recv_buffer, number_amount, rN, 4);
+        std::vector<T> recv_buffer;
+        recv_buffer.reserve(number_amount);
+        singleton::mpi().receive(recv_buffer.data(), number_amount, rN, 4);
         for (int iPar = 0; iPar < number_amount; iPar += PARTICLETYPE<T>::serialPartSize) {
           //          std::cout << "Particle unserialized" << std::endl;
           // par contains information of shadow particle
@@ -2109,6 +2103,15 @@ void SuperParticleSystem3D<T, PARTICLETYPE>::addBoundary(
 {
   for (auto pS : _pSystems) {
     pS->addBoundary(b);
+  }
+}
+
+template<typename T, template<typename U> class PARTICLETYPE>
+void SuperParticleSystem3D<T, PARTICLETYPE>::addParticleOperation(
+  std::shared_ptr<ParticleOperation3D<T, PARTICLETYPE> > o)
+{
+  for (auto pS : _pSystems) {
+    pS->addParticleOperation(o);
   }
 }
 

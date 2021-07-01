@@ -26,7 +26,7 @@
  */
 
 #include "dynamics/latticeDescriptors.h"
- 
+
 #include "blockGeometry2D.h"
 #include "blockGeometry2D.hh"
 

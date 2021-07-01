@@ -1,6 +1,6 @@
 #  This file is part of the OpenLB library
 #
-#  Copyright (C) 2007 Mathias Krause
+#  Copyright (C) 2007 Mathias J. Krause
 #  E-mail contact: info@openlb.net
 #  The most recent release of OpenLB can be downloaded at
 #  <http://www.openlb.net/>
@@ -20,28 +20,27 @@
 #  Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
 #  Boston, MA  02110-1301, USA.
 
-
-###########################################################################
-###########################################################################
-## DEFINITIONS TO BE CHANGED
-
-ROOT            := ../../..
-SRC             :=
-OUTPUT          := dkt2d
-
 ###########################################################################
 ## definitions
 
+include definitions.mk
+
 include $(ROOT)/global.mk
 
-OBJECTS    := $(foreach file, $(SRC) $(OUTPUT), $(PWD)/$(file).o)
-DEPS       := $(foreach file, $(SRC) $(OUTPUT), $(PWD)/$(file).d)
+OBJECTS    := $(foreach file, $(SRC), $(PWD)/$(file:.cpp=.o))
+DEPS       := $(foreach file, $(SRC), $(PWD)/$(file:.cpp=.d))
 
 ###########################################################################
 ## all
 
-all : depend compile updatelib link
+all :
+	@$(MAKE) updatelib
+	@$(MAKE) sample
 
+###########################################################################
+## sample
+
+sample: depend compile link
 
 ###########################################################################
 ## dependencies
@@ -71,9 +70,8 @@ clean : cleanrub cleanobj cleandep
 cleanrub:
 	@echo Clean rubbish files
 	@rm -f *~ core .tmpfile tmp/*.* $(OUTPUT)
-	@rm -f *.pdf *.dat
-	@rm -f tmp/vtkData/*.* tmp/vtkData/data/*.* tmp/imageData/*.*
-	@rm -f tmp/gnuplotData/*.* tmp/gnuplotData/data/*.*
+	@rm -f *.pdf
+	@rm -f tmp/vtkData/*.* tmp/vtkData/data/*.* tmp/imageData/*.* tmp/imageData/data/*.* tmp/gnuplotData/*.* tmp/gnuplotData/data/*.*
 
 cleanobj:
 	@echo Clean object files
@@ -84,16 +82,15 @@ cleandep:
 	@rm -f $(DEPS)
 
 cleanbuild:
-	@echo Clean olb main
 	@cd $(ROOT); \
-	 $(MAKE) cleanbuild;
+	 $(MAKE) cleanlib;
 
 ###########################################################################
 ## update lib
 
-updatelib :
+updatelib:
 	@cd $(ROOT); \
-	 $(MAKE) all;
+	$(MAKE) all
 
 ###########################################################################
 ## link
@@ -102,7 +99,7 @@ link: $(OUTPUT)
 
 $(OUTPUT): $(OBJECTS) $(ROOT)/$(LIBDIR)/lib$(LIB).a
 	@echo Link $@
-	$(CXX) $(foreach file, $(SRC), $(file).o) $@.o $(LDFLAGS) -L$(ROOT)/$(LIBDIR) -l$(LIB) -lz -o $@
+	$(CXX) $(foreach file, $(SRC), $(file:.cpp=.o)) $(LDFLAGS) -L$(ROOT)/$(LIBDIR) -l$(LIB) -lz -o $@
 
 ###########################################################################
 ## include dependencies

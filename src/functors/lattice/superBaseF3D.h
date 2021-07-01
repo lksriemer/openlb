@@ -76,6 +76,10 @@ public:
   int getBlockFSize() const;
   /// \return SuperF3D<T,W>::_blockF[iCloc]
   BlockF3D<W>& getBlockF(int iCloc);
+  
+  bool operator() (W output[], const int input []);
+  
+  using GenericF<W,int>::operator();
 };
 
 
@@ -179,6 +183,10 @@ public:
   using identity_functor_type = SuperLatticeIdentity3D<T,DESCRIPTOR>;
 
   SuperLattice3D<T,DESCRIPTOR>& getSuperLattice();
+  
+  bool operator() (T output [], const int input []);
+  
+  using GenericF<T,int>::operator();
 };
 
 /// identity functor for memory management

@@ -31,17 +31,17 @@
 namespace olb {
 
 template<typename T, typename DESCRIPTOR>
-void ParticleDynamics3D<T, DESCRIPTOR>::addCuboid(Vector< T, 3> center, T xLength, T yLength, T zLength, T density, T epsilon, Vector< T, 3 > theta, Vector<S,3> vel)
+void ParticleDynamics3D<T, DESCRIPTOR>::addCuboid(Vector< T, 3> center, T xLength, T yLength, T zLength, T density, T epsilon, Vector< T, 3 > theta, Vector<BaseType<T>,3> vel)
 {
   _vectorOfIndicator.push_back (
-		new SmoothIndicatorCuboid3D<T, T, true>(center, xLength, yLength, zLength, density, epsilon, theta, vel) );
+    new SmoothIndicatorCuboid3D<T, T, true>(center, xLength, yLength, zLength, epsilon, theta, density, vel) );
 }
 
 template<typename T, typename DESCRIPTOR>
-void ParticleDynamics3D<T, DESCRIPTOR>::addSphere(Vector< T, 3> center, T radius, T epsilon, T density, Vector<S,3> vel)
+void ParticleDynamics3D<T, DESCRIPTOR>::addSphere(Vector< T, 3> center, T radius, T epsilon, T density, Vector<BaseType<T>,3> vel)
 {
   _vectorOfIndicator.push_back (
-		new SmoothIndicatorSphere3D<T, T, true>(center, radius, density, epsilon, vel) );
+    new SmoothIndicatorSphere3D<T, T, true>(center, radius, epsilon, density, vel) );
 }
 
 template<typename T, typename DESCRIPTOR>
@@ -53,7 +53,11 @@ void ParticleDynamics3D<T, DESCRIPTOR>::addParticle(SmoothIndicatorF3D<T, T, tru
 template<typename T, typename DESCRIPTOR>
 void ParticleDynamics3D<T, DESCRIPTOR>::computeBoundaryForce(std::vector<SmoothIndicatorF3D<T,T,true>* >& indicator)
 {
-  SuperLatticePorousMomentumLossForce3D<T, DESCRIPTOR> force(_sLattice, _superGeometry, indicator, _converter);
+#ifdef FEATURE_HLBM_MLA
+  SuperLatticePorousMomentumLossForce3D<T, DESCRIPTOR> force(_sLattice, _superGeometry, indicator, _converter, _periodicity);
+#else
+  SuperLatticeMomentumExchangeForce3D<T, DESCRIPTOR> force(_sLattice, _superGeometry, indicator, _converter, _periodicity);
+#endif
   T sumF[force.getTargetDim()];
   for (int i=0; i<force.getTargetDim(); i++) {
     sumF[i]=0.;
@@ -75,7 +79,7 @@ void ParticleDynamics3D<T, DESCRIPTOR>::computeBoundaryForce(std::vector<SmoothI
     alpha2[0] = sumF[3+7*iInd] / indicator[iInd]->getMofi()[0];
     alpha2[1] = sumF[4+7*iInd] / indicator[iInd]->getMofi()[1];
     alpha2[2] = sumF[5+7*iInd] / indicator[iInd]->getMofi()[2];
-    indicator[iInd]->setForce( force );
+    indicator[iInd]->setHydrodynamicForce( force );
     indicator[iInd]->setAcc2( acceleration2 );
     indicator[iInd]->setAlpha2( alpha2 );
   }
@@ -118,7 +122,7 @@ void ParticleDynamics3D<T, DESCRIPTOR>::verletIntegration(SmoothIndicatorF3D<T, 
   T time2 = time*time;
 
   Vector<T,3> position, velocity, theta, omega, alpha;
-  Vector<T,9> rotationMatrix; 
+  Vector<T,9> rotationMatrix;
   for (int i=0; i<3; i++) {
     position[i] = indicator.getPos()[i] + indicator.getVel()[i] * time + (0.5 * indicator.getAcc()[i] * time2);
     T avgAcc = (indicator.getAcc()[i] +  indicator.getAcc2()[i]) * 0.5;
@@ -140,7 +144,7 @@ void ParticleDynamics3D<T, DESCRIPTOR>::verletIntegration(SmoothIndicatorF3D<T, 
   T sin0 = std::sin(indicator.getTheta()[0]);
   T sin1 = std::sin(indicator.getTheta()[1]);
   T sin2 = std::sin(indicator.getTheta()[2]);
-  
+
   rotationMatrix[0] = cos1 * cos2;
   rotationMatrix[1] = sin0*sin1*cos2 - cos0*sin2;
   rotationMatrix[2] = cos0*sin1*cos2 + sin0*sin2;
@@ -159,13 +163,18 @@ void ParticleDynamics3D<T, DESCRIPTOR>::updateParticleDynamics(std::string name,
   if (name == "euler") {
     this->eulerIntegration(indicator);
   } else if (name == "verlet") {
-  this->verletIntegration(indicator);
+    this->verletIntegration(indicator);
   } else {
     std::cout << "ERROR: no valid integration...use 'euler' or 'verlet'"
               << std::endl;
   }
 }
 
+
+
+// TODO: Adapted from 2D. Original Note in 2D:
+// "Needs work as one evaluation of "layer" requires 3-5 indicator
+// evaluations (each a virtual function calls), this may be costly"
 template<typename T, typename DESCRIPTOR>
 void ParticleDynamics3D<T, DESCRIPTOR>::checkAndRemoveEscaped()
 {
@@ -191,14 +200,20 @@ void ParticleDynamics3D<T, DESCRIPTOR>::addParticleField(SmoothIndicatorF3D<T, T
 {
   /// Analytical3D functor for particle motion (trans+rot)
   ParticleU3D<T,T,DESCRIPTOR> velocity(indicator, _converter);
-  setSuperExternalParticleField(_superGeometry, velocity, indicator, _sLattice);
+  if ( _periodicity[0] || _periodicity[1] || _periodicity[2] ) {
+    setSuperExternalParticleField(_superGeometry, velocity, indicator, _sLattice, _periodicity);
+  } else {
+    setSuperExternalParticleField(_superGeometry, velocity, indicator, _sLattice);
+  }
 }
 
 template<typename T, typename DESCRIPTOR>
 void ParticleDynamics3D<T, DESCRIPTOR>::simulateTimestep(std::string name)
 {
   // Remove particles from domain if _escapeFromDomain is toggled
-  if (_escapeFromDomain) checkAndRemoveEscaped();
+  if (_escapeFromDomain) {
+    checkAndRemoveEscaped();
+  }
 
   // Compute force acting on particles boundary
   computeBoundaryForce(_vectorOfIndicator);
@@ -210,6 +225,40 @@ void ParticleDynamics3D<T, DESCRIPTOR>::simulateTimestep(std::string name)
   }
 }
 
+template<typename T, typename DESCRIPTOR>
+void ParticleDynamics3D<T, DESCRIPTOR>::simulatePrescribedVelocity(std::string name, const Vector<T,3>& vel, const Vector<T,3>& angularVel)
+{
+  computeBoundaryForce(_vectorOfIndicator);
+
+  // Update particle dynamics and porous particle field
+  Vector<T,3> zero = {0.,0.,0.};
+  for (auto i=_vectorOfIndicator.begin(); i!=_vectorOfIndicator.end(); i++) {
+    updateParticleDynamics(name, **i);
+    (**i).setOmega(angularVel);
+    (**i).setVel(vel);
+    (**i).setAcc(zero);
+    (**i).setAcc2(zero);
+    (**i).setAlpha(zero);
+    (**i).setAlpha2(zero);
+    addParticleField(**i);
+  }
+}
+
+template<typename T, typename DESCRIPTOR>
+void ParticleDynamics3D<T, DESCRIPTOR>::calculateDragLiftCoefficients(SmoothIndicatorF3D<T, T, true>& indicator, Vector<T,3>& coeff, const Vector<T,3>& fluidVel)
+{
+  // calculate area of indicator object in direction of main axes
+  SuperGeometryFacesIndicator3D<T,true> f(_superGeometry, indicator, 1, _converter.getPhysDeltaX());
+  T area[7];
+  int input[4];
+  f(area, input);
+  // calculate relative velocity
+
+  for (int i=0; i<3; i++) {
+    T relativeVelSqr = std::pow( indicator.getVel()[i]-fluidVel[i], 2.);
+    coeff[i] = 2.*indicator.getHydrodynamicForce()[i] / (_converter.getPhysDensity()*area[i]*relativeVelSqr);
+  }
+}
 
 template<typename T, typename DESCRIPTOR>
 void ParticleDynamics3D<T, DESCRIPTOR>::print()
@@ -225,9 +274,9 @@ void ParticleDynamics3D<T, DESCRIPTOR>::print()
     clout << " |Angle(°)=            (" << setw(13) << (**i).getTheta()[0]*(180/M_PI) << ", " << setw(13) << (**i).getTheta()[1]*(180/M_PI) << ", " << setw(13) << (**i).getTheta()[2]*(180/M_PI) << ")" << std::endl;
     clout << " |Velocity(m/s)=       (" << setw(13) << (**i).getVel()[0] << ", " << setw(13) << (**i).getVel()[1] << ", " << setw(13) << (**i).getVel()[2] << ")" << std::endl;
     clout << " |Ang. velocity(°/s)=  (" << setw(13) << (**i).getOmega()[0]*(180/M_PI) << ", " << setw(13) << (**i).getOmega()[1]*(180/M_PI) << ", " << setw(13) << (**i).getOmega()[2]*(180/M_PI) << ")" << std::endl;
-    clout << " |Hydro. Force(N)=     (" << setw(13) << (**i).getForce()[0] << ", " << setw(13) << (**i).getForce()[1] << ", " << setw(13) << (**i).getForce()[2] << ")" << std::endl;
+    clout << " |Hydro. Force(N)=     (" << setw(13) << (**i).getHydrodynamicForce()[0] << ", " << setw(13) << (**i).getHydrodynamicForce()[1] << ", " << setw(13) << (**i).getHydrodynamicForce()[2] << ")" << std::endl;
     clout << " |Acceleration(m/s^2)= (" << setw(13) << (**i).getAcc()[0] << ", " << setw(13) << (**i).getAcc()[1] << ", " << setw(13) << (**i).getAcc()[2] << ")" << std::endl;
-    clout << " |Ang. acc.(°/s^2)=    (" << setw(13) << (**i).getAlpha()[0]*(180/M_PI) << ", " << setw(13) << (**i).getAlpha()[1]*(180/M_PI) << ", " << setw(13) << (**i).getAlpha()[1]*(180/M_PI) << ")" << std::endl;
+    clout << " |Ang. acc.(°/s^2)=    (" << setw(13) << (**i).getAlpha()[0]*(180/M_PI) << ", " << setw(13) << (**i).getAlpha()[1]*(180/M_PI) << ", " << setw(13) << (**i).getAlpha()[2]*(180/M_PI) << ")" << std::endl;
   }
 }
 
@@ -264,21 +313,30 @@ void ParticleDynamics3D<T, DESCRIPTOR>::save(std::string filename)
   for (auto i=_vectorOfIndicator.begin(); i!=_vectorOfIndicator.end(); i++) {
     if ((**i).name() == "sphere") {
       fout << (**i).name()      << " "
-           << (**i).getPos()[0] << " " << (**i).getPos()[1] << " " << (**i).getPos()[2] << " " 
-           << (**i).getCircumRadius() << " " << (**i).getMass()   << " " 
+           << (**i).getPos()[0] << " " << (**i).getPos()[1] << " " << (**i).getPos()[2] << " "
+           << (**i).getCircumRadius() << " " << (**i).getMass()   << " "
            << (**i).getVel()[0] << " " << (**i).getVel()[1] << " " << (**i).getVel()[2]
            << std::endl;
     }
   }
+
   fout.close();
 }
 
+//template<typename T, typename DESCRIPTOR>
+//void ParticleDynamics3D<T>::addCollisionModel(SmoothIndicatorF3D<T, T, true>* indicator,
+//                       SmoothIndicatorF3D<T, T, true>* indicator2) {
+//  this->addParticleColl(indicator, indicator2, 2*_converter.getLatticeL());
+//  this->addWallColl(indicator, 2. * _converter.getLatticeL());  //10.*converter
+//}
+
 template<typename T, typename DESCRIPTOR>
-void ParticleDynamics3D<T, DESCRIPTOR>::eulerIntegration(SmoothIndicatorF3D<T,T,true>& indicator) {
+void ParticleDynamics3D<T, DESCRIPTOR>::eulerIntegration(SmoothIndicatorF3D<T,T,true>& indicator)
+{
   T time = _converter.getConversionFactorTime();
 
   Vector<T,3> position, velocity, theta, omega, alpha;
-  Vector<T,9> rotationMatrix; 
+  Vector<T,9> rotationMatrix;
   for (int i=0; i<3; i++) {
     velocity[i] = indicator.getVel()[i] + indicator.getAcc2()[i] * time;
     position[i] = indicator.getPos()[i] + indicator.getVel()[i] * time;
@@ -299,7 +357,7 @@ void ParticleDynamics3D<T, DESCRIPTOR>::eulerIntegration(SmoothIndicatorF3D<T,T,
   T sin0 = std::sin(indicator.getTheta()[0]);
   T sin1 = std::sin(indicator.getTheta()[1]);
   T sin2 = std::sin(indicator.getTheta()[2]);
-  
+
   rotationMatrix[0] = cos1 * cos2;
   rotationMatrix[1] = sin0*sin1*cos2 - cos0*sin2;
   rotationMatrix[2] = cos0*sin1*cos2 + sin0*sin2;
@@ -311,6 +369,39 @@ void ParticleDynamics3D<T, DESCRIPTOR>::eulerIntegration(SmoothIndicatorF3D<T,T,
   rotationMatrix[8] = cos0*cos1;
   indicator.setRotationMatrix( rotationMatrix );
 }
+
+template<typename T, typename DESCRIPTOR>
+SmoothIndicatorF3D<T,T,true>& ParticleDynamics3D<T, DESCRIPTOR>::getSmoothIndicator(int id)
+{
+  return *(_vectorOfIndicator[id]);
+}
+
+template<typename T, typename DESCRIPTOR>
+std::vector<SmoothIndicatorF3D<T,T,true>* >& ParticleDynamics3D<T, DESCRIPTOR>::getVectorOfIndicator()
+{ 
+  return _vectorOfIndicator;
+}
+
+//  void lennardJonesColl(SmoothIndicatorF3D<T, T, true>& indicator,
+//                        const std::vector<T>& pos2, T delta = 0.) {
+//    T dist = std::sqrt(
+//        std::pow(_pos[0] - pos2[0], 2) + std::pow(_pos[1] - pos2[1], 2));
+//    T a = radius;
+//    if (delta == 0.) {
+//      delta = _converter.getLatticeL();
+//    }
+//
+//    if (dist <= 2 * radius + delta) {
+//      for (int i = 0; i < 2; ++i) {
+//        _A[i] /*+*/= 2.4 * std::pow(a, 2)
+//            * (2 * std::pow(2 * a / dist, 14) - std::pow(2 * a / dist, 8))
+//            * ((_pos[i] - pos2[i]) / std::pow(2 * a, 2));
+//        _A[i] /= mass;
+//      }
+//    }
+//  }
+//  ;
+
 
 }
 

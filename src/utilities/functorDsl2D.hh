@@ -45,16 +45,16 @@ std::shared_ptr<SuperF2D<T,W>> lift(SuperF2D<T,W>* f)
   return FunctorPtr<SuperF2D<T,W>>(f).toShared();
 }
 
-template<typename T, typename S>
-std::shared_ptr<AnalyticalF2D<T,S>> lift(AnalyticalF2D<T,S>& f)
+template<typename T, typename W>
+std::shared_ptr<AnalyticalF2D<T,W>> lift(AnalyticalF2D<T,W>& f)
 {
-  return FunctorPtr<AnalyticalF2D<T,S>>(f).toShared();
+  return FunctorPtr<AnalyticalF2D<T,W>>(f).toShared();
 }
 
-template<typename T, typename S>
-std::shared_ptr<AnalyticalF2D<T,S>> lift(AnalyticalF2D<T,S>* f)
+template<typename T, typename W>
+std::shared_ptr<AnalyticalF2D<T,W>> lift(AnalyticalF2D<T,W>* f)
 {
-  return FunctorPtr<AnalyticalF2D<T,S>>(f).toShared();
+  return FunctorPtr<AnalyticalF2D<T,W>>(f).toShared();
 }
 
 template<typename T, typename W>

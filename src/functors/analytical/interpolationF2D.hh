@@ -55,7 +55,7 @@ bool AnalyticalFfromBlockF2D<T,W>::operator()(W output[], const T physC[])
 
     Vector<T,2> physRiC;
     Vector<T,2> physCv(physC);
-    _cuboid.getPhysR(physRiC.data, locX, locY);
+    _cuboid.getPhysR(physRiC.data(), locX, locY);
 
     // compute weights
     Vector<W,2> d = (physCv - physRiC) * (1. / _cuboid.getDeltaR());
@@ -171,7 +171,7 @@ bool AnalyticalFfromSuperF2D<T,W>::operator() (T output[], const T physC[])
 
         Vector<T,2> physRiC;
         Vector<T,2> physCv(physC);
-        cuboid.getPhysR(physRiC.data, locX, locY);
+        cuboid.getPhysR(physRiC.data(), locX, locY);
 
         // compute weights
         Vector<W,2> d = (physCv - physRiC) * (1. / cuboid.getDeltaR());

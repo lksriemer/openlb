@@ -41,7 +41,7 @@ using namespace olb::graphics;
 using namespace std;
 
 typedef double T;
-#define DESCRIPTOR ShanChenDynOmegaForcedD3Q19Descriptor
+typedef D3Q19<VELOCITY,FORCE,EXTERNAL_FORCE,OMEGA> DESCRIPTOR;
 
 
 // Parameters for the simulation setup
@@ -52,7 +52,8 @@ const int nz   = 76;
 
 
 // Stores geometry information in form of material numbers
-void prepareGeometry( SuperGeometry3D<T>& superGeometry ) {
+void prepareGeometry( SuperGeometry3D<T>& superGeometry )
+{
 
   OstreamManager clout( std::cout,"prepareGeometry" );
   clout << "Prepare Geometry ..." << std::endl;
@@ -74,7 +75,8 @@ void prepareGeometry( SuperGeometry3D<T>& superGeometry ) {
 // Set up the geometry of the simulation
 void prepareLattice( SuperLattice3D<T, DESCRIPTOR>& sLattice,
                      Dynamics<T, DESCRIPTOR>& bulkDynamics1,
-                     SuperGeometry3D<T>& superGeometry ) {
+                     SuperGeometry3D<T>& superGeometry )
+{
 
   // Material=1 -->bulk dynamics
   sLattice.defineDynamics( superGeometry, 1, &bulkDynamics1 );
@@ -97,7 +99,8 @@ void prepareLattice( SuperLattice3D<T, DESCRIPTOR>& sLattice,
 
 // Output to console and files
 void getResults( SuperLattice3D<T, DESCRIPTOR>& sLattice, int iT,
-                 SuperGeometry3D<T>& superGeometry, Timer<T>& timer ) {
+                 SuperGeometry3D<T>& superGeometry, Timer<T>& timer )
+{
 
   OstreamManager clout( std::cout,"getResults" );
 
@@ -127,7 +130,7 @@ void getResults( SuperLattice3D<T, DESCRIPTOR>& sLattice, int iT,
     clout << "Writing VTK and JPEG..." << std::endl;
     vtmWriter.write( iT );
 
-    BlockReduction3D2D<T> planeReduction( density, {0, 0, 1} );
+    BlockReduction3D2D<T> planeReduction( density, Vector<T,3>({0, 0, 1}) );
     // write output as JPEG
     heatmap::write(planeReduction, iT);
   }
@@ -143,7 +146,8 @@ void getResults( SuperLattice3D<T, DESCRIPTOR>& sLattice, int iT,
   }
 }
 
-int main( int argc, char *argv[] ) {
+int main( int argc, char *argv[] )
+{
 
   // === 1st Step: Initialization ===
   olbInit( &argc, &argv );

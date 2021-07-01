@@ -28,8 +28,8 @@
 #include "core/postProcessing.h"
 #include "core/postProcessing.hh"
 #include "dynamics/latticeDescriptors.h"
- 
-#include "dynamics/wallFunctionLatticeDescriptors.h"
+
+//#include "dynamics/wallFunctionLatticeDescriptors.h"
 
 namespace olb {
 

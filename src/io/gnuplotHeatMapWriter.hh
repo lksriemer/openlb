@@ -38,21 +38,21 @@ namespace olb {
 namespace heatmap {
 
 template <typename T>
-void write(BlockReduction3D2D<T>& blockReduction, int iT, const plotParam<T> param) {
-  detail::genericHeatMapInterface(blockReduction, blockReduction, iT, param);
+void write(BlockReduction3D2D<T>& blockReduction, int iT, const plotParam<T> param, const std::vector<T>& valueArea) {
+  detail::genericHeatMapInterface(blockReduction, blockReduction, iT, valueArea, param);
 }
 
 template <typename T>
-void write(BlockReduction2D2D<T>& blockReduction, int iT, const plotParam<T> param) {
+void write(BlockReduction2D2D<T>& blockReduction, int iT, const plotParam<T> param, const std::vector<T>& valueArea) {
   detail::genericHeatMapInterface(blockReduction.getPlaneDiscretizationIn3D(), blockReduction, iT,
-                                  param);
+                                  valueArea, param);
 }
 
 namespace detail {
 
 template <typename T>
 void genericHeatMapInterface(const HyperplaneLattice3D<T>& hyperPlane, BlockF2D<T>& blockData, int iT,
-                             const plotParam<T>& plot) {
+                             const std::vector<T>& valueArea, const plotParam<T>& plot) {
 
 
   if ( blockData.getTargetDim() != 1 ) {
@@ -97,7 +97,7 @@ void genericHeatMapInterface(const HyperplaneLattice3D<T>& hyperPlane, BlockF2D<
       param.iT = iT;
 
       writeHeatMapDataFile(param);
-      writeHeatMapPlotFile(param);
+      writeHeatMapPlotFile(param, valueArea);
       executeGnuplot(param);
     }
   }
@@ -141,7 +141,7 @@ void writeHeatMapDataFile(detailParam<T>& param) {
 }
 
 template <typename T>
-void writeHeatMapPlotFile(detailParam<T>& param) {
+void writeHeatMapPlotFile(detailParam<T>& param, const std::vector<T>& valueArea) {
   std::ofstream fout;
 
   fout.open(param.plotFilePath.c_str(), std::ios::trunc);
@@ -204,7 +204,18 @@ void writeHeatMapPlotFile(detailParam<T>& param) {
     fout << "set cbrange [" << param.plot->minValue << ":" << param.plot->maxValue <<"]" << "\n";
   }
 
-  fout << "set autoscale fix" << "\n";
+  if (valueArea.empty()) {
+    fout << "set autoscale fix" << "\n";
+  } else if (valueArea[0] < valueArea[1]) {
+    fout << "set cbrange [" << valueArea[0] << ":" << valueArea[1] << "]" << "\n";
+  } else {
+    fout << "set cbrange [" << valueArea[1] << ":" << valueArea[0] << "]" << "\n";
+  }
+
+
+
+  
+
   if (param.plot->colour == "grey") {
     fout << "set palette grey" << "\n";
   } else if (param.plot->colour == "pm3d") {

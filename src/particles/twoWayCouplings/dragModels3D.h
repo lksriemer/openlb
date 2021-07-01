@@ -29,7 +29,7 @@
 #define LB_DRAG_MODELS_H
 
 #include "functors/lattice/reductionF3D.h"
-#include "twoWayHelperFunctionals.h"
+#include "ReynoldsNumbers3D.h"
 
 namespace olb {
 
@@ -40,7 +40,7 @@ template<typename T, template<typename V> class Particle>
 class DragModel {
 public:
   /// Returns the scalar drag coefficient to overload. globicFull = { globic, latticeRoundedP[0, ..., 2] }
-  virtual T operator() (Particle<T>* p, T latticeVelF[], T latticeVelP[], int globicFull[])=0;
+  virtual T operator() (Particle<T>* p, T latticeVelF[], T latticeVelP[], int globicFull[], T continuousPhaseFraction=1.)=0;
 protected:
   /// Functional to compute particle Reynolds number
   std::shared_ptr<ParticleReynoldsNumber<T, Particle> > _reP;
@@ -69,7 +69,7 @@ public:
   /// Constructor
   StokesSimplifiedDragModel(UnitConverter<T, Lattice>& converter);
   /// Returns the scalar drag coefficient. globicFull = { globic, latticeRoundedP[0, ..., 2] }
-  virtual T operator() (Particle<T>* p, T latticeVelF[], T latticeVelP[], int globicFull[]) override;
+  virtual T operator() (Particle<T>* p, T latticeVelF[], T latticeVelP[], int globicFull[], T continuousPhaseFraction=1.) override;
 };
 
 /** Class to compute the standard drag coefficient
@@ -81,7 +81,41 @@ public:
   /// Constructor
   MorsiDragModel(UnitConverter<T, Lattice>& converter);
   /// Returns the scalar drag coefficient. globicFull = { globic, latticeRoundedP[0, ..., 2] }
-  virtual T operator() (Particle<T>* p, T latticeVelF[], T latticeVelP[], int globicFull[]) override;
+  virtual T operator() (Particle<T>* p, T latticeVelF[], T latticeVelP[], int globicFull[], T continuousPhaseFraction=1.) override;
+};
+
+/** Class to compute the standard drag coefficient
+  * as in Morsi and Alexander (1972), in a power-law fluid.
+  */
+template<typename T, typename Lattice, template<typename V> class Particle>
+class PowerLawMorsiDragModel : public MorsiDragModel<T,Lattice,Particle> {
+public:
+  /// Constructor
+  PowerLawMorsiDragModel (
+        UnitConverter<T, Lattice>& converter, SuperLattice3D<T, Lattice>& sLattice );
+};
+
+/** Class to compute the standard drag coefficient
+  * as in Schiller and Naumann (1935).
+  */
+template<typename T, typename Lattice, template<typename V> class Particle>
+class SchillerNaumannDragModel : public DragModelBase<T,Lattice,Particle> {
+public:
+  /// Constructor
+  SchillerNaumannDragModel(UnitConverter<T, Lattice>& converter);
+  /// Returns the scalar drag coefficient. globicFull = { globic, latticeRoundedP[0, ..., 2] }
+  virtual T operator() (Particle<T>* p, T latticeVelF[], T latticeVelP[], int globicFull[], T continuousPhaseFraction=1.) override;
+};
+
+/** Class to compute the standard drag coefficient
+  * as in Schiller and Naumann (1935), in a power-law fluid.
+  */
+template<typename T, typename Lattice, template<typename V> class Particle>
+class PowerLawSchillerNaumannDragModel : public SchillerNaumannDragModel<T,Lattice,Particle> {
+public:
+  /// Constructor
+  PowerLawSchillerNaumannDragModel (
+        UnitConverter<T, Lattice>& converter, SuperLattice3D<T, Lattice>& sLattice );
 };
 
 /** Class to compute the drag coefficient for gas bubbles in a liquid fluid phase
@@ -93,7 +127,7 @@ public:
   /// Constructor
   DewsburyDragModel(UnitConverter<T, Lattice>& converter);
   /// Returns the scalar drag coefficient. globicFull = { globic, latticeRoundedP[0, ..., 2] }
-  virtual T operator() (Particle<T>* p, T latticeVelF[], T latticeVelP[], int globicFull[]) override;
+  virtual T operator() (Particle<T>* p, T latticeVelF[], T latticeVelP[], int globicFull[], T continuousPhaseFraction=1.) override;
 };
 
 /** Class to compute the drag coefficient for gas bubbles in a liquid fluid phase
@@ -104,6 +138,29 @@ class PowerLawDewsburyDragModel : public DewsburyDragModel<T,Lattice,Particle> {
 public:
   /// Constructor
   PowerLawDewsburyDragModel ( 
+        UnitConverter<T, Lattice>& converter, SuperLattice3D<T, Lattice>& sLattice );
+};
+
+/** Class to compute the drag coefficient for gas bubbles in a liquid fluid phase
+  * as in Sun, Guo, Wang et al. (2015).
+  */
+template<typename T, typename Lattice, template<typename V> class Particle>
+class SunDragModel : public DragModelBase<T,Lattice,Particle> {
+public:
+  /// Constructor
+  SunDragModel(UnitConverter<T, Lattice>& converter);
+  /// Returns the scalar drag coefficient. globicFull = { globic, latticeRoundedP[0, ..., 2] }
+  virtual T operator() (Particle<T>* p, T latticeVelF[], T latticeVelP[], int globicFull[], T continuousPhaseFraction=1.) override;
+};
+
+/** Class to compute the drag coefficient for gas bubbles in a liquid fluid phase
+  * as in Sun, Guo, Wang et al. (2015), in a power-law fluid.
+  */
+template<typename T, typename Lattice, template<typename V> class Particle>
+class PowerLawSunDragModel : public SunDragModel<T,Lattice,Particle> {
+public:
+  /// Constructor
+  PowerLawSunDragModel ( 
         UnitConverter<T, Lattice>& converter, SuperLattice3D<T, Lattice>& sLattice );
 };
 

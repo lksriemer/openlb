@@ -45,8 +45,8 @@ using namespace std;
 
 typedef double T;
 
-#define NSDESCRIPTOR D2Q9<FORCE>
-#define TDESCRIPTOR D2Q5<VELOCITY>
+typedef D2Q9<FORCE> NSDESCRIPTOR;
+typedef D2Q5<VELOCITY> TDESCRIPTOR;
 
 // #define TemperatureBoundary
 // #define RegularizedTemperatureBoundary
@@ -69,7 +69,7 @@ const T epsilon = 1.e-7; // precision of the convergence (residuum)
 const T Tcold = 273.15;
 const T Thot = 274.15;
 
-int iT;
+std::size_t iT;
 
 // analytical solution from point light source in infinte domain
 // appliacation from R3 to R1.
@@ -84,12 +84,12 @@ private:
   T _ly;
 public:
   AnalyticalVelocityPorousPlate2D(T Re, T u0, T v0, T ly) : AnalyticalF2D<T, S>(2),
-   _Re(Re), _u0(u0), _v0(v0), _ly(ly)
+    _Re(Re), _u0(u0), _v0(v0), _ly(ly)
   {
     this->getName() = "AnalyticalVelocityPorousPlate2D";
   };
 
-  bool operator()(T output[2], const S x[2])
+  bool operator()(T output[2], const S x[2]) override
   {
     output[0] = _u0*((exp(_Re* x[1] / _ly) - 1) / (exp(_Re) - 1));
     output[1] = _v0;
@@ -112,7 +112,7 @@ public:
     this->getName() = "AnalyticalTemperaturePorousPlate2D";
   };
 
-  bool operator()(T output[1], const S x[2])
+  bool operator()(T output[1], const S x[2]) override
   {
     output[0] = _T0 + _deltaT*((exp(_Pr*_Re*x[1] / _ly) - 1) / (exp(_Pr*_Re) - 1));
     return true;
@@ -129,12 +129,12 @@ private:
   T _lambda;
 public:
   AnalyticalHeatFluxPorousPlate2D(T Re, T Pr, T deltaT, T ly,T lambda) : AnalyticalF2D<T, S>(2),
-   _Re(Re), _Pr(Pr), _deltaT(deltaT), _ly(ly), _lambda(lambda)
+    _Re(Re), _Pr(Pr), _deltaT(deltaT), _ly(ly), _lambda(lambda)
   {
     this->getName() = "AnalyticalHeatFluxPorousPlate2D";
   };
 
-  bool operator()(T output[2], const S x[2])
+  bool operator()(T output[2], const S x[2]) override
   {
     output[0] = 0;
     output[1] = - _lambda * _Re * _Pr * _deltaT / _ly * (exp(_Pr * _Re * x[1] / _ly))/(exp(_Pr * _Re) - 1);
@@ -223,8 +223,6 @@ void prepareLattice( ThermalUnitConverter<T, NSDESCRIPTOR, TDESCRIPTOR> const& c
                      SuperLattice2D<T, TDESCRIPTOR>& ADlattice,
                      Dynamics<T, NSDESCRIPTOR> &bulkDynamics,
                      Dynamics<T, TDESCRIPTOR>& advectionDiffusionBulkDynamics,
-                     sOnLatticeBoundaryCondition2D<T,NSDESCRIPTOR>& NSboundaryCondition,
-                     sOnLatticeBoundaryCondition2D<T,TDESCRIPTOR>& TboundaryCondition,
                      SuperGeometry2D<T>& superGeometry )
 {
 
@@ -248,18 +246,21 @@ void prepareLattice( ThermalUnitConverter<T, NSDESCRIPTOR, TDESCRIPTOR> const& c
 
 
   /// sets boundary
-  NSboundaryCondition.addVelocityBoundary(superGeometry, 2, NSomega);
-  NSboundaryCondition.addVelocityBoundary(superGeometry, 3, NSomega);
+  setLocalVelocityBoundary<T, NSDESCRIPTOR>(NSlattice, NSomega, superGeometry, 2);
+  setLocalVelocityBoundary<T, NSDESCRIPTOR>(NSlattice, NSomega, superGeometry, 3);
 
-  #ifdef TemperatureBoundary
-  TboundaryCondition.addTemperatureBoundary(superGeometry, 2, Tomega);
-  TboundaryCondition.addTemperatureBoundary(superGeometry, 3, Tomega);
-  #endif
-  #ifdef RegularizedTemperatureBoundary
-  TboundaryCondition.addRegularizedTemperatureBoundary(superGeometry, 2, Tomega);
-  TboundaryCondition.addRegularizedTemperatureBoundary(superGeometry, 3, Tomega);
-  #endif
-  #ifdef RegularizedHeatFluxBoundary
+#ifdef TemperatureBoundary
+
+  setAdvectionDiffusionTemperatureBoundary<T,TDESCRIPTOR>(ADlattice, Tomega, superGeometry, 2);
+  setAdvectionDiffusionTemperatureBoundary<T,TDESCRIPTOR>(ADlattice, Tomega, superGeometry, 3);
+
+#endif
+#ifdef RegularizedTemperatureBoundary
+  setRegularizedTemperatureBoundary<T,TDESCRIPTOR>(ADlattice, Tomega, superGeometry, 2);
+  setRegularizedTemperatureBoundary<T,TDESCRIPTOR>(ADlattice, Tomega, superGeometry, 3);
+
+#endif
+#ifdef RegularizedHeatFluxBoundary
   T heatFlux[2];
   T input[2] = {0.,1.};
   AnalyticalHeatFluxPorousPlate2D<T,T> HeatFluxSol(Re, Pr, converter.getCharPhysTemperatureDifference(), converter.getCharPhysLength(), converter.getThermalConductivity());
@@ -267,9 +268,9 @@ void prepareLattice( ThermalUnitConverter<T, NSDESCRIPTOR, TDESCRIPTOR> const& c
   T temp = converter.getLatticeSpecificHeatCapacity(converter.getPhysSpecificHeatCapacity())*(converter.getLatticeThermalRelaxationTime() - 0.5) / converter.getLatticeThermalRelaxationTime();
   heatFlux[0] = converter.getLatticeHeatFlux(heatFlux[0]) / temp;
   heatFlux[1] = converter.getLatticeHeatFlux(heatFlux[1]) / temp;
-  TboundaryCondition.addRegularizedHeatFluxBoundary(superGeometry, 2, Tomega, heatFlux);
-  TboundaryCondition.addRegularizedTemperatureBoundary(superGeometry, 3, Tomega);
-  #endif
+  setRegularizedHeatFluxBoundary<T,TDESCRIPTOR>(ADlattice, Tomega, superGeometry, 2, heatFlux);
+  setRegularizedTemperatureBoundary<T,TDESCRIPTOR>(ADlattice, Tomega, superGeometry, 3);
+#endif
 }
 
 void setBoundaryValues(ThermalUnitConverter<T, NSDESCRIPTOR, TDESCRIPTOR> const& converter,
@@ -356,7 +357,7 @@ void getResults(ThermalUnitConverter<T, NSDESCRIPTOR, TDESCRIPTOR> const& conver
   vtkWriter.addFunctor( TSolLattice );
   vtkWriter.addFunctor( HeatFluxSolLattice );
 
-  const int vtkIter = converter.getLatticeTime(10.);
+  const int vtkIter = converter.getLatticeTime(100.);
 
   if (iT == 0) {
     /// Writes the converter log file
@@ -389,7 +390,7 @@ void getResults(ThermalUnitConverter<T, NSDESCRIPTOR, TDESCRIPTOR> const& conver
 
     ///writes Jpeg
     //SuperEuklidNorm2D<T, DESCRIPTOR> normVel(velocity);
-    BlockReduction2D2D<T> planeReduction( temperature, 600, BlockDataSyncMode::ReduceOnly );
+    BlockReduction2D2D<T> planeReduction(temperature, N, BlockDataSyncMode::ReduceOnly);
     // write output of velocity as JPEG
     heatmap::plotParam<T> jpeg_Param;
     jpeg_Param.maxValue = Thot;
@@ -458,11 +459,6 @@ int main(int argc, char *argv[])
   SuperLattice2D<T, TDESCRIPTOR> ADlattice(superGeometry);
   SuperLattice2D<T, NSDESCRIPTOR> NSlattice(superGeometry);
 
-  sOnLatticeBoundaryCondition2D<T, NSDESCRIPTOR> NSboundaryCondition(NSlattice);
-  createLocalBoundaryCondition2D<T, NSDESCRIPTOR>(NSboundaryCondition);
-
-  sOnLatticeBoundaryCondition2D<T, TDESCRIPTOR> TboundaryCondition(ADlattice);
-  createAdvectionDiffusionBoundaryCondition2D<T, TDESCRIPTOR>(TboundaryCondition);
 
   ForcedBGKdynamics<T, NSDESCRIPTOR> NSbulkDynamics(
     converter.getLatticeRelaxationFrequency(),
@@ -480,18 +476,19 @@ int main(int argc, char *argv[])
   std::vector<T> dir{0.0, 1.0};
 
   T boussinesqForcePrefactor = 9.81 / converter.getConversionFactorVelocity() * converter.getConversionFactorTime() *
-    converter.getCharPhysTemperatureDifference() * converter.getPhysThermalExpansionCoefficient();
+                               converter.getCharPhysTemperatureDifference() * converter.getPhysThermalExpansionCoefficient();
 
   NavierStokesAdvectionDiffusionCouplingGenerator2D<T,NSDESCRIPTOR>
-    coupling(0, converter.getLatticeLength(lx), 0, converter.getLatticeLength(ly),
-        boussinesqForcePrefactor, converter.getLatticeTemperature(Tcold), 1., dir);
+  coupling(0, converter.getLatticeLength(lx), 0, converter.getLatticeLength(ly),
+           boussinesqForcePrefactor, converter.getLatticeTemperature(Tcold), 1., dir);
 
   NSlattice.addLatticeCoupling(coupling, ADlattice);
 
+  //prepareLattice and setBoundaryConditions
   prepareLattice(converter,
                  NSlattice, ADlattice,
                  NSbulkDynamics, TbulkDynamics,
-                 NSboundaryCondition, TboundaryCondition, superGeometry );
+                 superGeometry );
 
   /// === 4th Step: Main Loop with Timer ===
   Timer<T> timer(converter.getLatticeTime(maxPhysT), superGeometry.getStatistics().getNvoxel() );

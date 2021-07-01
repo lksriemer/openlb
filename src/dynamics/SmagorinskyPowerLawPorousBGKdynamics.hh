@@ -32,6 +32,7 @@
 
 #include "SmagorinskyPowerLawPorousBGKdynamics.h"
 #include "SmagorinskyPorousParticleBGKdynamics.hh"
+#include "SmagorinskyPowerLawBGKdynamics.hh"
 #include "math.h"
 
 namespace olb {
@@ -44,16 +45,10 @@ namespace olb {
  */
 template<typename T, typename DESCRIPTOR>
 SmagorinskyPowerLawPorousParticleBGKdynamics<T,DESCRIPTOR>::SmagorinskyPowerLawPorousParticleBGKdynamics (
-  T omega_, Momenta<T,DESCRIPTOR>& momenta_, T m_, T n_ , T dtPL_, T nuMin, T nuMax, T smagoConst_)
-  : SmagorinskyPorousParticleBGKdynamics<T,DESCRIPTOR>(omega_,momenta_,smagoConst_),
-    m(m_),
-    n(n_),
-    dtPL(dtPL_)
-    //preFactor(computePreFactor(omega_,smagoConstPL_) )
-{
-  omegaMin = 2./(nuMax*2.*descriptors::invCs2<T,DESCRIPTOR>() + 1.);
-  omegaMax = 2./(nuMin*2.*descriptors::invCs2<T,DESCRIPTOR>() + 1.);
-}
+  T omega_, Momenta<T,DESCRIPTOR>& momenta_, T m_, T n_ , T nuMin, T nuMax, T smagoConst_)
+  : SmagorinskyPorousParticleBGKdynamics<T,DESCRIPTOR>(omega_, momenta_, smagoConst_),
+    PowerLawDynamics<T,DESCRIPTOR>(m_, n_, nuMin, nuMax)
+{ }
 
 template<typename T, typename DESCRIPTOR>
 void SmagorinskyPowerLawPorousParticleBGKdynamics<T,DESCRIPTOR>::collide (
@@ -62,71 +57,34 @@ void SmagorinskyPowerLawPorousParticleBGKdynamics<T,DESCRIPTOR>::collide (
 {
   T rho, u[DESCRIPTOR::d], pi[util::TensorVal<DESCRIPTOR >::n];
   this->_momenta.computeAllMomenta(cell, rho, u, pi);
-  // load old omega from dyn. omega descriptor
 //  T oldOmega = this->getOmega(); //compute with constant omega
-  T oldOmega = cell.template getFieldPointer<descriptors::OMEGA>()[0]; //compute with dynamic omega
-  T OmegaPL = computeOmegaPL(oldOmega, rho, pi);
-  T* velDenominator = cell.template getFieldPointer<descriptors::VELOCITY_DENOMINATOR>();
-  T* velNumerator = cell.template getFieldPointer<descriptors::VELOCITY_NUMERATOR>();
-  T* porosity = cell.template getFieldPointer<descriptors::POROSITY>();
-  if (*velDenominator > std::numeric_limits<T>::epsilon()) {
-    *porosity = 1.-*porosity; // 1-prod(1-smoothInd)
-    for (int i=0; i < DESCRIPTOR::d; i++)  {
-      u[i] += *porosity * (*(velNumerator+i) / *velDenominator - u[i]);
-    }
-  }
-
-  T newOmega = this->computeOmega(OmegaPL, this->preFactor, rho, pi); 
-
-  T uSqr = lbHelpers<T,DESCRIPTOR>::bgkCollision(cell, rho, u, newOmega);
-  // save new omega to dyn. omega descriptor
-  cell.template getFieldPointer<descriptors::OMEGA>()[0] = newOmega; //compute with dynamic omega
+  T oldOmega = cell.template getField<descriptors::OMEGA>(); //compute with dynamic omega
+  T omegaPL = this->computeOmegaPL(cell, oldOmega, rho, pi);
+  T newOmega = computeEffectiveOmega(cell, omegaPL);
+  T uSqr = this->porousParticleBgkCollision(cell, rho, u, newOmega);
   statistics.incrementStats(rho, uSqr);
-
-  cell.template defineField<descriptors::POROSITY>(1.0);
-  cell.template defineField<descriptors::VELOCITY_DENOMINATOR>(0.0);
-  cell.template defineField<descriptors::VELOCITY_NUMERATOR>(0.0);
+  cell.template setField<descriptors::OMEGA>(omegaPL); //compute with dynamic omega
 }
 
 template<typename T, typename DESCRIPTOR>
-T SmagorinskyPowerLawPorousParticleBGKdynamics<T,DESCRIPTOR>::computeOmegaPL(T omega0, T rho, T pi[util::TensorVal<DESCRIPTOR >::n] )
+T SmagorinskyPowerLawPorousParticleBGKdynamics<T,DESCRIPTOR>::computeEffectiveOmega(Cell<T,DESCRIPTOR>& cell, T omega)
 {
-
-  // strain rate tensor without prefactor
-  T PiNeqNormSqr = pi[0]*pi[0] + 2.*pi[1]*pi[1] + pi[2]*pi[2];
+  T rho, u[DESCRIPTOR::d], pi[util::TensorVal<DESCRIPTOR >::n];
+  this->_momenta.computeAllMomenta(cell, rho, u, pi);
+  T PiNeqNormSqr = pi[0]*pi[0] + 2.0*pi[1]*pi[1] + pi[2]*pi[2];
   if (util::TensorVal<DESCRIPTOR >::n == 6) {
-    PiNeqNormSqr += pi[2]*pi[2] + pi[3]*pi[3] + 2.*pi[4]*pi[4] +pi[5]*pi[5];
+    PiNeqNormSqr += pi[2]*pi[2] + pi[3]*pi[3] + 2*pi[4]*pi[4] +pi[5]*pi[5];
   }
-
-  T pre2 = pow(descriptors::invCs2<T,DESCRIPTOR>()/2./dtPL* omega0/rho,2.); // prefactor to the strain rate tensor
-  T D = pre2*PiNeqNormSqr; // Strain rate tensor
-  T gamma = sqrt(2.*D); // shear rate
-
-  T nuNew = m*pow(gamma,n-1.); //nu for non-Newtonian fluid
-  //T newOmega = 2./(nuNew*6.+1.);
-  T newOmega = 2./(nuNew*2.*descriptors::invCs2<T,DESCRIPTOR>() + 1.);
-
-  /*
-     * problem if newOmega too small or too big is see e.g. "Daniel Conrad , Andreas Schneider, Martin Böhle:
-     * A viscosity adaption method for Lattice Boltzmann simulations"
-    */
-  //if (newOmega>1.965) {
-  //  newOmega = 1.965;  //std::cout << newOmega << std::endl;
-  //}
-  //if (newOmega<0.1) {
-  //  newOmega = 0.1;  //std::cout << newOmega << std::endl;
-  //}
-  if (newOmega>omegaMax) {
-    newOmega = omegaMax;  //std::cout << newOmega << std::endl;
-  }
-  if (newOmega<omegaMin) {
-    newOmega = omegaMin;  //std::cout << newOmega << std::endl;
-  }
-//  std::cout << newOmega << std::endl;
-  return newOmega;
-  //return omega0;
+  T PiNeqNorm    = sqrt(PiNeqNormSqr);
+  /// Molecular realaxation time
+  T tau_mol = 1. /omega;
+  /// Turbulent realaxation time
+  T tau_turb = 0.5*(sqrt(tau_mol*tau_mol + this->getPreFactor()/rho*PiNeqNorm) - tau_mol);
+  /// Effective realaxation time
+  T tau_eff = tau_mol+tau_turb;
+  T omega_new= 1./tau_eff;
+  return omega_new;
 }
-
 
 }
 

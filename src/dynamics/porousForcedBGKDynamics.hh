@@ -44,11 +44,12 @@ PorousForcedBGKdynamics<T,DESCRIPTOR>::PorousForcedBGKdynamics (
   : BasicDynamics<T,DESCRIPTOR>(momenta),
     _omega(omega)
 {
+  this->getName() = "PorousForcedBGKdynamics";  
   OLB_PRECONDITION( DESCRIPTOR::template provides<descriptors::FORCE>() );
 }
 
 template<typename T, typename DESCRIPTOR>
-void PorousForcedBGKdynamics<T,DESCRIPTOR>::computeU (Cell<T,DESCRIPTOR> const& cell, T u[DESCRIPTOR::d] ) const
+void PorousForcedBGKdynamics<T,DESCRIPTOR>::computeU (ConstCell<T,DESCRIPTOR>& cell, T u[DESCRIPTOR::d] ) const
 {
   T rho;
   this->_momenta.computeRhoU(cell, rho, u);
@@ -58,7 +59,7 @@ void PorousForcedBGKdynamics<T,DESCRIPTOR>::computeU (Cell<T,DESCRIPTOR> const& 
 }
 
 template<typename T, typename DESCRIPTOR>
-void PorousForcedBGKdynamics<T,DESCRIPTOR>::computeRhoU (Cell<T,DESCRIPTOR> const& cell, T& rho, T u[DESCRIPTOR::d] ) const
+void PorousForcedBGKdynamics<T,DESCRIPTOR>::computeRhoU (ConstCell<T,DESCRIPTOR>& cell, T& rho, T u[DESCRIPTOR::d] ) const
 {
   this->_momenta.computeRhoU(cell, rho, u);
   for (int iVel=0; iVel<DESCRIPTOR::d; ++iVel) {
@@ -74,13 +75,13 @@ void PorousForcedBGKdynamics<T,DESCRIPTOR>::collide (
 {
   T rho, u[DESCRIPTOR::d];
   this->_momenta.computeRhoU(cell, rho, u);
-  T* force = cell.template getFieldPointer<descriptors::FORCE>();
+  auto force = cell.template getField<descriptors::FORCE>();
   for (int iVel=0; iVel<DESCRIPTOR::d; ++iVel) {
     u[iVel] += force[iVel] / (T)2.;
   }
-  T* porosity = cell.template getFieldPointer<descriptors::POROSITY>();
+  T porosity = cell.template getField<descriptors::POROSITY>();
   for (int i=0; i<DESCRIPTOR::d; i++)  {
-    u[i] *= porosity[0];
+    u[i] *= porosity;
   }
   T uSqr = lbHelpers<T,DESCRIPTOR>::bgkCollision(cell, rho, u, _omega);
   lbHelpers<T,DESCRIPTOR>::addExternalForce(cell, u, _omega, rho);

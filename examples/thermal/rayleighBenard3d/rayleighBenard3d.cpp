@@ -39,8 +39,8 @@ using namespace std;
 
 typedef double T;
 
-#define TDESCRIPTOR D3Q7<VELOCITY>
-#define NSDESCRIPTOR D3Q19<FORCE>
+typedef D3Q7<VELOCITY> TDESCRIPTOR;
+typedef D3Q19<FORCE> NSDESCRIPTOR;
 
 // Parameters for the simulation setup
 const T lx  = 0.2;          // length of the channel
@@ -106,8 +106,6 @@ void prepareLattice( ThermalUnitConverter<T, NSDESCRIPTOR, TDESCRIPTOR> &convert
                      SuperLattice3D<T, TDESCRIPTOR>& ADlattice,
                      ForcedBGKdynamics<T, NSDESCRIPTOR> &bulkDynamics,
                      Dynamics<T, TDESCRIPTOR>& advectionDiffusionBulkDynamics,
-                     sOnLatticeBoundaryCondition3D<T,NSDESCRIPTOR>& NSboundaryCondition,
-                     sOnLatticeBoundaryCondition3D<T,TDESCRIPTOR>& TboundaryCondition,
                      SuperGeometry3D<T>& superGeometry )
 {
 
@@ -128,8 +126,8 @@ void prepareLattice( ThermalUnitConverter<T, NSDESCRIPTOR, TDESCRIPTOR> &convert
   NSlattice.defineDynamics(superGeometry, 4, &bulkDynamics);
 
   /// sets boundary
-  TboundaryCondition.addTemperatureBoundary(superGeometry, 2, Tomega);
-  TboundaryCondition.addTemperatureBoundary(superGeometry, 3, Tomega);
+  setAdvectionDiffusionTemperatureBoundary<T,TDESCRIPTOR>(ADlattice, Tomega, superGeometry, 2);
+  setAdvectionDiffusionTemperatureBoundary<T,TDESCRIPTOR>(ADlattice, Tomega, superGeometry, 3);
 
   /// define initial conditions
   AnalyticalConst3D<T,T> rho(1.);
@@ -265,11 +263,6 @@ int main(int argc, char *argv[])
   SuperLattice3D<T, TDESCRIPTOR> ADlattice(superGeometry);
   SuperLattice3D<T, NSDESCRIPTOR> NSlattice(superGeometry);
 
-  sOnLatticeBoundaryCondition3D<T,NSDESCRIPTOR> NSboundaryCondition(NSlattice);
-  createLocalBoundaryCondition3D<T,NSDESCRIPTOR>(NSboundaryCondition);
-
-  sOnLatticeBoundaryCondition3D<T,TDESCRIPTOR> TboundaryCondition(ADlattice);
-  createAdvectionDiffusionBoundaryCondition3D<T,TDESCRIPTOR>(TboundaryCondition);
 
   ForcedBGKdynamics<T, NSDESCRIPTOR> NSbulkDynamics(
     converter.getLatticeRelaxationFrequency(),
@@ -288,24 +281,25 @@ int main(int argc, char *argv[])
   std::vector<T> dir{0.0, 1.0, 0.0};
 
   T boussinesqForcePrefactor = 9.81 / converter.getConversionFactorVelocity() * converter.getConversionFactorTime() *
-    converter.getCharPhysTemperatureDifference() * converter.getPhysThermalExpansionCoefficient();
+                               converter.getCharPhysTemperatureDifference() * converter.getPhysThermalExpansionCoefficient();
 
   NavierStokesAdvectionDiffusionCouplingGenerator3D<T,NSDESCRIPTOR>  coupling(0, converter.getLatticeLength(lx), 0, converter.getLatticeLength(ly),
       0, converter.getLatticeLength(lz), boussinesqForcePrefactor, converter.getLatticeTemperature(Tcold), 1., dir);
 
   NSlattice.addLatticeCoupling(coupling, ADlattice);
 
+  //prepareLattice and setBoundaryConditions
   prepareLattice(converter,
                  NSlattice, ADlattice,
                  NSbulkDynamics, TbulkDynamics,
-                 NSboundaryCondition, TboundaryCondition, superGeometry );
+                 superGeometry );
 
   /// === 4th Step: Main Loop with Timer ===
   Timer<T> timer(converter.getLatticeTime(maxPhysT), superGeometry.getStatistics().getNvoxel() );
   timer.start();
 
   util::ValueTracer<T> converge(converter.getLatticeTime(50.),epsilon);
-  for (int iT = 0; iT < converter.getLatticeTime(maxPhysT); ++iT) {
+  for (std::size_t iT = 0; iT < converter.getLatticeTime(maxPhysT); ++iT) {
 
     if (converge.hasConverged()) {
       clout << "Simulation converged." << endl;

@@ -28,10 +28,12 @@
 #include<vector>
 
 #include "blockLatticeIntegralF2D.h"
-#include "blockLatticeLocalF2D.h"
 #include "blockCalcF2D.h" // for IdentityF
 #include "utilities/vectorHelpers.h"
 #include "indicator/blockIndicatorBaseF2D.h"
+#include "latticePhysBoundaryForce2D.h"
+#include "latticePhysCorrBoundaryForce2D.h"
+#include "latticeIndicatorSmoothIndicatorIntersection2D.h"
 
 
 namespace olb {
@@ -324,15 +326,15 @@ bool BlockGeometryFaces2D<T>::operator() (T output[], const int input[])
 
 template <typename T, bool HLBM>
 BlockGeometryFacesIndicator2D<T,HLBM>::BlockGeometryFacesIndicator2D(BlockGeometryStructure2D<T>& blockGeometry, SmoothIndicatorF2D<T,T,HLBM>& indicator, int material, T latticeL)
-  : GenericF<T,int>(7,0), _blockGeometry(blockGeometry), _indicator(indicator), _material(material), _latticeL(latticeL)
+  : GenericF<T,int>(5,0), _blockGeometry(blockGeometry), _indicator(indicator), _material(material), _latticeL(latticeL)
 {
-  this->getName() = "facesInd";
+  this->getName() = "facesSmoothInd";
 }
 
 template <typename T, bool HLBM>
 bool BlockGeometryFacesIndicator2D<T,HLBM>::operator() (T output[], const int input[])
 {
-  int counter[7] = {0,0,0,0,0,0,0};
+  int counter[4] = {0,0,0,0};
   T inside[1];
   T physR[2];
   if (_blockGeometry.getStatistics().getNvoxel(_material)!=0) {
@@ -350,37 +352,37 @@ bool BlockGeometryFacesIndicator2D<T,HLBM>::operator() (T output[], const int in
         if ( !util::nearZero(inside[0]) ) {
           _blockGeometry.getPhysR(physR, iX-1, iY);
           _indicator(inside, physR);
-          if ( !util::nearZero(inside[0]) ) {
+          if ( util::nearZero(inside[0]) ) {
             counter[0]++;
           }
           _blockGeometry.getPhysR(physR, iX, iY-1);
           _indicator(inside, physR);
-          if ( !util::nearZero(inside[0]) ) {
+          if ( util::nearZero(inside[0]) ) {
             counter[1]++;
           }
           _blockGeometry.getPhysR(physR, iX+1, iY);
           _indicator(inside, physR);
-          if ( !util::nearZero(inside[0]) ) {
-            counter[3]++;
+          if ( util::nearZero(inside[0]) ) {
+            counter[2]++;
           }
           _blockGeometry.getPhysR(physR, iX, iY+1);
           _indicator(inside, physR);
-          if ( !util::nearZero(inside[0]) ) {
-            counter[4]++;
+          if ( util::nearZero(inside[0]) ) {
+            counter[3]++;
           }
         }
       }
     }
 
     T total = T();
-    for (int i=0; i<6; ++i) {
-      output[i]=(T) counter[i] * _latticeL;
-      total+=(T) counter[i] * _latticeL;
+    for (int i=0; i<4; ++i) {
+      output[i]= ((T) counter[i]) * _latticeL;
+      total+= ((T) counter[i]) * _latticeL;
     }
-    output[6]=total;
+    output[4]=total;
     return true;
   } else {
-    for (int i=0; i<7; ++i) {
+    for (int i=0; i<5; ++i) {
       output[i]=T();
     }
     return true;

@@ -52,6 +52,7 @@
 namespace olb {
 
 
+
 template <typename S>
 class IndicatorTranslate3D : public IndicatorF3D<S> {
 private:
@@ -95,7 +96,7 @@ public:
   bool operator() (bool output[], const S input[]) override;
   bool distance(S& distance, const Vector<S,3>& origin,
                 const Vector<S,3>& direction, int iC=-1) override;
-  bool distance(S& distance, const Vector<S,3>& origin);
+  bool distance(S& distance, const Vector<S,3>& origin) override;
 };
 
 /// indicator function for a layer
@@ -172,9 +173,9 @@ private:
   const S _yLength;
   const S _zLength;
 public:
-  /// constructs an cuboid with x axis dimension 0 to extend[0], ...
+  /// constructs an cuboid with x axis from origin[0] to origin[0]+extend[0], ...
   IndicatorCuboid3D(Vector<S,3> extend, Vector<S,3> origin);
-  /// constructs an cuboid with x axis dimension -xlength/2 to xlength/2
+  /// constructs an cuboid with x axis dimension center[0]-xlength/2 to center[0]+xlength/2
   IndicatorCuboid3D(S xlength, S ylength, S zlength, Vector<S,3> center);
   /// returns true if input is inside, otherwise false
   bool operator() (bool output[], const S input[]) override;

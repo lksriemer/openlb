@@ -41,7 +41,7 @@ using namespace olb::graphics;
 using namespace std;
 
 typedef double T;
-#define DESCRIPTOR ShanChenDynOmegaForcedD2Q9Descriptor
+typedef D2Q9<VELOCITY,FORCE,EXTERNAL_FORCE,OMEGA> DESCRIPTOR;
 
 
 // Parameters for the simulation setup
@@ -51,7 +51,8 @@ const int maxIter  = 20000;
 
 
 // Stores geometry information in form of material numbers
-void prepareGeometry( SuperGeometry2D<T>& superGeometry ) {
+void prepareGeometry( SuperGeometry2D<T>& superGeometry )
+{
 
   OstreamManager clout( std::cout,"prepareGeometry" );
   clout << "Prepare Geometry ..." << std::endl;
@@ -90,7 +91,8 @@ void prepareLattice( SuperLattice2D<T, DESCRIPTOR>& sLatticeOne,
                      Dynamics<T, DESCRIPTOR>& bulkDynamics2,
                      Dynamics<T, DESCRIPTOR>& bounceBackRho0,
                      Dynamics<T, DESCRIPTOR>& bounceBackRho1,
-                     SuperGeometry2D<T>& superGeometry ) {
+                     SuperGeometry2D<T>& superGeometry )
+{
 
   OstreamManager clout( std::cout,"prepareLattice" );
   clout << "Prepare Lattice ..." << std::endl;
@@ -123,14 +125,14 @@ void prepareLattice( SuperLattice2D<T, DESCRIPTOR>& sLatticeOne,
 
 void setBoundaryValues( SuperLattice2D<T, DESCRIPTOR>& sLatticeOne,
                         SuperLattice2D<T, DESCRIPTOR>& sLatticeTwo,
-                        T force, int iT, SuperGeometry2D<T>& superGeometry ) {
-
+                        T force, int iT, SuperGeometry2D<T>& superGeometry )
+{
   if ( iT==0 ) {
 
     AnalyticalConst2D<T,T> noise( 4.e-2 );
     std::vector<T> v( 2,T() );
     AnalyticalConst2D<T,T> zeroV( v );
-    AnalyticalConst2D<T,T> zero( 0. );
+    AnalyticalConst2D<T,T> zero( 1.e-6 );
     AnalyticalLinear2D<T,T> one( 0.,-force*invCs2<T,DESCRIPTOR>(),0.98+force*ny*invCs2<T,DESCRIPTOR>() );
     AnalyticalConst2D<T,T> onePlus( 0.98+force*ny/2.*invCs2<T,DESCRIPTOR>() );
     AnalyticalRandom2D<T,T> random;
@@ -174,7 +176,8 @@ void setBoundaryValues( SuperLattice2D<T, DESCRIPTOR>& sLatticeOne,
 
 void getResults( SuperLattice2D<T, DESCRIPTOR>&    sLatticeTwo,
                  SuperLattice2D<T, DESCRIPTOR>&    sLatticeOne, int iT,
-                 SuperGeometry2D<T>& superGeometry, Timer<T>& timer ) {
+                 SuperGeometry2D<T>& superGeometry, Timer<T>& timer )
+{
 
   OstreamManager clout( std::cout,"getResults" );
   SuperVTMwriter2D<T> vtmWriter( "rayleighTaylor2dsLatticeOne" );
@@ -220,7 +223,8 @@ void getResults( SuperLattice2D<T, DESCRIPTOR>&    sLatticeTwo,
   }
 }
 
-int main( int argc, char *argv[] ) {
+int main( int argc, char *argv[] )
+{
 
   // === 1st Step: Initialization ===
 

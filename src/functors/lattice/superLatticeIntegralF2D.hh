@@ -32,6 +32,7 @@
 #include "indicator/superIndicatorF2D.h"
 #include "utilities/vectorHelpers.h"
 #include "core/vector.h"
+#include "latticePhysBoundaryForce2D.h"
 
 using namespace olb::util;
 
@@ -93,7 +94,7 @@ bool SuperMin2D<T>::operator() (T output[], const int input[])
   LoadBalancer<T>& load = _f.getSuperStructure().getLoadBalancer();
 
   for (int i = 0; i < this->getTargetDim(); ++i) {
-    output[i]=T();
+    output[i] = std::numeric_limits<T>::max();
     for (int iC = 0; iC < load.size(); ++iC) {
       int nX = cGeometry.get(load.glob(iC)).getNx();
       int nY = cGeometry.get(load.glob(iC)).getNy();
@@ -255,7 +256,7 @@ bool SuperGeometryFaces2D<T>::operator() (T output[], const int input[])
 template <typename T, bool HLBM>
 SuperGeometryFacesIndicator2D<T,HLBM>::SuperGeometryFacesIndicator2D(SuperGeometry2D<T>& superGeometry,
     SmoothIndicatorF2D<T,T,HLBM>& indicator, const int material, T deltaX)
-  : GenericF<T,int>(7,0), _superGeometry(superGeometry), _indicator(indicator), _material(material), _latticeL(deltaX)
+  : GenericF<T,int>(5,0), _superGeometry(superGeometry), _indicator(indicator), _material(material), _latticeL(deltaX)
 {
   this->getName() = "superGeometryFacesInd";
 }
@@ -264,19 +265,19 @@ template <typename T, bool HLBM>
 bool SuperGeometryFacesIndicator2D<T,HLBM>::operator() (T output[], const int input[])
 {
   _superGeometry.communicate();
-  for (int iDim = 0; iDim < 7; ++iDim) {
+  for (int iDim = 0; iDim < 5; ++iDim) {
     output[iDim]=T();
   }
   for (int iC = 0; iC < _superGeometry.getLoadBalancer().size(); ++iC) {
     BlockGeometryFacesIndicator2D<T,HLBM> f(_superGeometry.getBlockGeometry(iC), _indicator, _material, _latticeL);
     T outputTmp[f.getTargetDim()];
     f(outputTmp,input);
-    for (int iDim = 0; iDim < 7; ++iDim) {
+    for (int iDim = 0; iDim < 5; ++iDim) {
       output[iDim] += outputTmp[iDim];
     }
   }
 #ifdef PARALLEL_MODE_MPI
-  for (int iDim = 0; iDim < 7; ++iDim) {
+  for (int iDim = 0; iDim < 5; ++iDim) {
     singleton::mpi().reduceAndBcast( output[iDim], MPI_SUM);
   }
 #endif

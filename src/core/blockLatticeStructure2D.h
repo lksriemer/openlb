@@ -41,7 +41,6 @@
 namespace olb {
 
 template<typename T, typename DESCRIPTOR> struct Dynamics;
-template<typename T, typename DESCRIPTOR> class Cell;
 template<typename T, typename DESCRIPTOR> struct WriteCellFunctional;
 template<typename T> class BlockIndicatorF2D;
 
@@ -52,67 +51,78 @@ class BlockLatticeStructure2D : public BlockStructure2D, public SpatiallyExtende
 public:
   BlockLatticeStructure2D(int nx, int ny) : BlockStructure2D(nx,ny) {};
   ~BlockLatticeStructure2D() override { }
+  std::vector<Momenta<T,DESCRIPTOR>*>  momentaVector;
+  std::vector<Dynamics<T,DESCRIPTOR>*> dynamicsVector;
 public:
   virtual void defineRho(BlockIndicatorF2D<T>& indicator,
-                         AnalyticalF2D<T,T>& rho);
+                         AnalyticalF<2,T,T>& rho);
   virtual void defineRho(BlockGeometryStructure2D<T>& blockGeometry, int material,
-                         AnalyticalF2D<T,T>& rho);
+                         AnalyticalF<2,T,T>& rho);
   virtual void defineU(BlockIndicatorF2D<T>& indicator,
-                       AnalyticalF2D<T,T>& u);
+                       AnalyticalF<2,T,T>& u);
   virtual void defineU(BlockGeometryStructure2D<T>& blockGeometry, int material,
-                       AnalyticalF2D<T,T>& u);
+                       AnalyticalF<2,T,T>& u);
   virtual void defineRhoU(BlockIndicatorF2D<T>& indicator,
-                          AnalyticalF2D<T,T>& rho, AnalyticalF2D<T,T>& u);
+                          AnalyticalF<2,T,T>& rho, AnalyticalF<2,T,T>& u);
   virtual void defineRhoU(BlockGeometryStructure2D<T>& blockGeometry, int material,
-                          AnalyticalF2D<T,T>& rho, AnalyticalF2D<T,T>& u);
+                          AnalyticalF<2,T,T>& rho, AnalyticalF<2,T,T>& u);
   virtual void definePopulations(BlockIndicatorF2D<T>& indicator,
-                                 AnalyticalF2D<T,T>& Pop);
+                                 AnalyticalF<2,T,T>& Pop);
   virtual void definePopulations(BlockGeometryStructure2D<T>& blockGeometry, int material,
-                                 AnalyticalF2D<T,T>& Pop);
+                                 AnalyticalF<2,T,T>& Pop);
 
   template <typename FIELD>
   void defineField(BlockIndicatorF2D<T>& indicator,
-                   AnalyticalF2D<T,T>& field);
+                   AnalyticalF<2,T,T>& field);
   template <typename FIELD>
   void defineField(BlockGeometryStructure2D<T>& blockGeometry, int material,
-                   AnalyticalF2D<T,T>& field);
+                   AnalyticalF<2,T,T>& field);
   template <typename FIELD>
   void defineField(BlockGeometryStructure2D<T>& blockGeometry,
                    IndicatorF2D<T>& indicator,
-                   AnalyticalF2D<T,T>& field);
+                   AnalyticalF<2,T,T>& field);
   template <typename FIELD>
   void addField(BlockGeometryStructure2D<T>& blockGeometry,
                 IndicatorF2D<T>& indicator,
-                AnalyticalF2D<T,T>& field);
+                AnalyticalF<2,T,T>& field);
   template <typename FIELD>
   void addField(BlockGeometryStructure2D<T>& blockGeometry,
                 IndicatorF2D<T>& indicator,
-                AnalyticalF2D<T,T>& field, AnalyticalF2D<T,T>& porous);
+                AnalyticalF<2,T,T>& field, AnalyticalF<2,T,T>& porous);
   template <typename FIELD>
   void multiplyField(BlockGeometryStructure2D<T>& blockGeometry,
                      IndicatorF2D<T>& indicator,
-                     AnalyticalF2D<T,T>& field);
+                     AnalyticalF<2,T,T>& field);
+
 
   virtual void iniEquilibrium(BlockIndicatorF2D<T>& indicator,
-                              AnalyticalF2D<T,T>& rho, AnalyticalF2D<T,T>& u);
+                              AnalyticalF<2,T,T>& rho, AnalyticalF<2,T,T>& u);
   virtual void iniEquilibrium(BlockGeometryStructure2D<T>& blockGeometry, int material,
-                              AnalyticalF2D<T,T>& rho, AnalyticalF2D<T,T>& u);
+                              AnalyticalF<2,T,T>& rho, AnalyticalF<2,T,T>& u);
+  virtual void iniRegularized(BlockIndicatorF2D<T>& indicator,
+                              AnalyticalF<2,T,T>& rho, AnalyticalF<2,T,T>& u, AnalyticalF<2,T,T>& pi);
+  virtual void iniRegularized(BlockGeometryStructure2D<T>& blockGeometry, int material,
+                              AnalyticalF<2,T,T>& rho, AnalyticalF<2,T,T>& u, AnalyticalF<2,T,T>& pi);
 
   // pure virtual member functions
-  virtual Cell<T,DESCRIPTOR>& get(int iX, int iY) =0;
-  virtual Cell<T,DESCRIPTOR>& get(int latticeR[]) =0;
-  virtual Cell<T,DESCRIPTOR> const& get(int iX, int iY) const =0;
+  virtual Cell<T,DESCRIPTOR> get(int iX, int iY) =0;
+  virtual Cell<T,DESCRIPTOR> get(int latticeR[]) =0;
+  virtual ConstCell<T,DESCRIPTOR> get(int iX, int iY) const =0;
+
+  virtual T& getPop(std::size_t iCell, unsigned iPop) =0;
+  virtual T& getPop(int iX, int iY, unsigned iPop) =0;
+
   virtual void initialize() =0;
   virtual void defineDynamics(int x0_, int x1_, int y0_, int y1_,
                               Dynamics<T,DESCRIPTOR>* dynamics ) =0;
   virtual void defineDynamics(int iX, int iY, Dynamics<T,DESCRIPTOR>* dynamics ) =0;
   virtual Dynamics<T,DESCRIPTOR>* getDynamics(int iX, int iY) = 0;
+
   virtual void collide(int x0_, int x1_, int y0_, int y1_) =0;
+  virtual void collideAndStream(int x0, int x1, int y0, int y1) =0;
   virtual void collide() =0;
-  virtual void stream(int x0_, int x1_, int y0_, int y1_) =0;
-  virtual void stream(bool periodic=false) =0;
-  virtual void collideAndStream(int x0_, int x1_, int y0_, int y1_) =0;
-  virtual void collideAndStream(bool periodic=false) =0;
+  virtual void collideAndStream() =0;
+
   virtual T computeAverageDensity(int x0_, int x1_, int y0_, int y1_) const =0;
   virtual T computeAverageDensity() const =0;
   virtual void computeStress(int iX, int iY, T pi[util::TensorVal<DESCRIPTOR >::n]) = 0;
@@ -135,13 +145,37 @@ public:
 
 };
 
+
 ////////// FREE FUNCTIONS //////////
 
+template <typename T>
+bool getRangeBlockGeometrySmoothIndicatorIntersection2D(BlockGeometryStructure2D<T>& blockGeometry,
+    SmoothIndicatorF2D<T,T,true>& sIndicator,
+    T invDeltaX, std::vector<int>& start, std::vector<int>& end);
+
+template<typename T>
+void checkSmoothIndicatorOutOfGeometry( bool& outOfGeometry, Vector<T,2>& ghostPos,
+                                        SmoothIndicatorF2D<T,T,true>& sIndicator,
+                                        Vector<T,2> cellMin, Vector<T,2> cellMax,
+                                        Vector<bool,2> periodic);
+
 template <typename T, typename DESCRIPTOR>
-void setBlockExternalParticleField( BlockGeometryStructure2D<T>& blockGeometry, AnalyticalF2D<T,T>& velocity,
+void setBlockExternalParticleField( BlockGeometryStructure2D<T>& blockGeometry, AnalyticalF<2,T,T>& velocity,
                                     SmoothIndicatorF2D<T,T,true>& sIndicator,
                                     BlockLattice2D<T,DESCRIPTOR>& extendedBlockLattice );
 
+template <typename T, typename DESCRIPTOR>
+void setBlockExternalParticleField( BlockGeometryStructure2D<T>& blockGeometry, AnalyticalF<2,T,T>& velocity,
+                                    SmoothIndicatorF2D<T,T,true>& sIndicator,
+                                    BlockLattice2D<T,DESCRIPTOR>& extendedBlockLattice,
+                                    Vector<T,2> cellMin, Vector<T,2> cellMax,
+                                    Vector<bool,2> periodic );
+
+//Geng2019
+template <typename T, typename DESCRIPTOR>
+void setBlockZetaParticleField( BlockGeometryStructure2D<T>& blockGeometry, AnalyticalF<2,T,T>& velocity,
+                                SmoothIndicatorF2D<T,T,true>& sIndicator,
+                                BlockLattice2D<T,DESCRIPTOR>& extendedBlockLattice );
 
 }  // namespace olb
 

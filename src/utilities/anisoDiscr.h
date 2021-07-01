@@ -41,7 +41,8 @@
 #include <openblas/lapacke.h>
 #endif
 
-#include "utilities/vectorHelpers.h"
+#include "dynamics/descriptorFunction.h"
+#include "core/util.h"
 
 namespace olb {
 
@@ -131,6 +132,11 @@ void computeAnisotropyMatrix( double const stepsize, double const anisotropyFact
   std::array<std::array<double,DESCRIPTOR::q-1>, DESCRIPTOR::q-1>& phi, int const breakAfter = -1)
 {
   using namespace descriptors;
+  if( !DESCRIPTOR::template provides<descriptors::tag::RTLBM>() ){
+    std::cout << "Warning: Compute anisotropy matrix for wrong latice stencil!" << std::endl;
+    std::cout << "Weight for direction 0 is required to be 0." << std::endl;
+    return;
+  }
 
   OstreamManager clout( std::cout, "AnisotropyMatrix" );
   clout << "Call AnistorpiyMatrix()" << std::endl;
@@ -142,11 +148,7 @@ void computeAnisotropyMatrix( double const stepsize, double const anisotropyFact
   int const nn = (q+1)*q/2;
 
   // qxq matrix 0th row and 0th column are empty
-  std::vector<std::vector<double>> angleProb;
-  angleProb.resize(q);
-  for ( int n = 0; n < q; n++ ) {
-    angleProb[n].resize(q);
-  }
+  std::array<std::array<double,q>,q> angleProb;
   double dotProduct;
   double normI;
   double normJ;

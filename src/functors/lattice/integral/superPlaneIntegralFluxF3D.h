@@ -25,7 +25,8 @@
 #define SUPER_PLANE_INTEGRAL_FLUX_F_3D_H
 
 #include "superPlaneIntegralF3D.h"
-#include "functors/lattice/superLatticeLocalF3D.h"
+#include "functors/lattice/latticePhysPressure3D.h"
+#include "functors/lattice/latticePhysVelocity3D.h"
 
 namespace olb {
 

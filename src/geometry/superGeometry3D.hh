@@ -58,12 +58,12 @@ SuperGeometry3D<T>::SuperGeometry3D(CuboidGeometry3D<T>& cuboidGeometry, LoadBal
   this->_communicator.init();
   this->_communicationNeeded = true;
 
-  // constructing the block and extended block geometries from the cuboid geometry
-  _blockGeometries.clear();
+  _extendedBlockGeometries.reserve(this->getLoadBalancer().size());
+  _blockGeometries.reserve(this->getLoadBalancer().size());
 
   for (int iCloc=0; iCloc<this->getLoadBalancer().size(); iCloc++) {
     int iCglob = this->getLoadBalancer().glob(iCloc);
-    Cuboid3D<T> extendedCuboid(cuboidGeometry.get(iCglob),overlap);
+    Cuboid3D<T> extendedCuboid(cuboidGeometry.get(iCglob), overlap);
     _extendedBlockGeometries.emplace_back(extendedCuboid, iCglob);
   }
 
@@ -81,46 +81,17 @@ SuperGeometry3D<T>::SuperGeometry3D(CuboidGeometry3D<T>& cuboidGeometry, LoadBal
 }
 
 template<typename T>
-SuperGeometry3D<T>::SuperGeometry3D(SuperGeometry3D const& rhs)
-  : SuperStructure3D<T>(rhs._cuboidGeometry, rhs._loadBalancer, rhs._overlap),
-    _statistics(this),
-    clout(std::cout,"SuperGeometry3D")
+std::uint8_t* SuperGeometry3D<T>::operator() (int iCloc, int iX, int iY, int iZ, int iData)
 {
-  // init communicator
-  this->_communicator.init_nh();
-  this->_communicator.add_cells(this->_overlap);
-  this->_communicator.init();
-  this->_communicationNeeded = true;
-  // copy block and extended block geometries
-  _blockGeometries = rhs._blockGeometries;
-  _extendedBlockGeometries = rhs._extendedBlockGeometries;
-  _statistics.getStatisticsStatus() = true;
+  return reinterpret_cast<std::uint8_t*>(
+      &getExtendedBlockGeometry(iCloc).get(iX+this->_overlap, iY+this->_overlap, iZ+this->_overlap));
 }
 
 template<typename T>
-SuperGeometry3D<T>& SuperGeometry3D<T>::operator=(SuperGeometry3D const& rhs)
+std::uint8_t* SuperGeometry3D<T>::operator() (int iCloc, std::size_t iCell, int iData)
 {
-
-  // init communicator
-  this->_communicator.init_nh();
-  this->_communicator.add_cells(this->_overlap);
-  this->_communicator.init();
-  this->_communicationNeeded = true;
-  // copy mother data
-  this->_cuboidGeometry = rhs._cuboidGeometry;
-  this->_loadBalancer = rhs._loadBalancer;
-  this->_overlap = rhs._overlap;
-  // copy block and extended block geometrie
-  _blockGeometries = rhs._blockGeometries;
-  _extendedBlockGeometries = rhs._extendedBlockGeometries;
-  _statistics = SuperGeometryStatistics3D<T>(this);
-  return *this;
-}
-
-template<typename T>
-bool* SuperGeometry3D<T>::operator() (int iCloc, int iX, int iY, int iZ, int iData)
-{
-  return (bool*)&getExtendedBlockGeometry(iCloc).get(iX+this->_overlap, iY+this->_overlap, iZ+this->_overlap);
+  return reinterpret_cast<std::uint8_t*>(
+      &getExtendedBlockGeometry(iCloc).get(iCell));
 }
 
 template<typename T>

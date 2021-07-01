@@ -34,7 +34,7 @@
 #include "analyticalF.h"
 #include "functors/lattice/superBaseF2D.h"
 #include "geometry/superGeometry2D.h"
-#include "functors/lattice/superLatticeLocalF2D.h"
+
 #include "core/superLattice2D.h"
 #include "dynamics/lbHelpers.h"  // for computation of lattice rho and velocity
 #include "utilities/vectorHelpers.h"  // for normalize
@@ -237,7 +237,7 @@ bool CartesianToPolar2D<T, S>::operator()(T output[], const S x[])
 
   Vector<T, 3> normal = crossProduct3D(axisDirection, e3);
   Vector<T, 3> normalAxisDir(axisDirection);
-  normalAxisDir.normalize();
+  normalAxisDir = normalize(normalAxisDir);
 
   // if axis has to be rotated
   if (!( util::nearZero(normalAxisDir[0]) && util::nearZero(normalAxisDir[1]) && util::nearZero(normalAxisDir[2]-1) ) ) {

@@ -28,7 +28,6 @@
 #include "core/postProcessing.h"
 #include "momentaOnBoundaries.h"
 #include "core/blockLattice2D.h"
-#include "boundaryCondition2D.h"
 
 
 namespace olb {
@@ -54,7 +53,7 @@ public:
   }
   void process(BlockLattice2D<T,DESCRIPTOR>& blockLattice) override;
   void processSubDomain(BlockLattice2D<T,DESCRIPTOR>& blockLattice,
-                                int x0_, int x1_, int y0_, int y1_ ) override;
+                        int x0_, int x1_, int y0_, int y1_ ) override;
 private:
   template<int deriveDirection>
   void interpolateGradients(BlockLattice2D<T,DESCRIPTOR> const& blockLattice,
@@ -74,13 +73,6 @@ public:
   PostProcessor2D<T,DESCRIPTOR>* generate() const override;
   PostProcessorGenerator2D<T,DESCRIPTOR>*  clone() const override;
 };
-
-
-////////// Factory function for Extended Finite Difference BC ///////////////////////////////
-
-template<typename T, typename DESCRIPTOR, typename MixinDynamics=BGKdynamics<T,DESCRIPTOR> >
-OnLatticeBoundaryCondition2D<T,DESCRIPTOR>*
-createExtendedFdBoundaryCondition2D(BlockLatticeStructure2D<T,DESCRIPTOR>& block);
 
 }  // namespace olb
 

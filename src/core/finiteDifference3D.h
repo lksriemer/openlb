@@ -47,6 +47,18 @@ template<typename T, typename DESCRIPTOR,
          int direction, int orientation, int deriveDirection>
 struct DirectedGradients3D<T, DESCRIPTOR, direction, orientation,
          deriveDirection, true> {
+  static bool canInterpolateVector(BlockLattice3D<T,DESCRIPTOR> const& blockLattice,
+                                   int iX, int iY, int iZ)
+  {
+    return blockLattice.isInside(iX,iY,iZ)
+        && blockLattice.isInside(iX+(direction==0 ? (-orientation):0),
+                                 iY+(direction==1 ? (-orientation):0),
+                                 iZ+(direction==2 ? (-orientation):0))
+        && blockLattice.isInside(iX+(direction==0 ? (-2*orientation):0),
+                                 iY+(direction==1 ? (-2*orientation):0),
+                                 iZ+(direction==2 ? (-2*orientation):0));
+  }
+
   static void interpolateVector(T velDeriv[DESCRIPTOR::d],
                                 BlockLattice3D<T,DESCRIPTOR> const& blockLattice,
                                 int iX, int iY, int iZ)
@@ -96,6 +108,17 @@ template<typename T, typename DESCRIPTOR,
          int direction, int orientation, int deriveDirection>
 struct DirectedGradients3D<T, DESCRIPTOR, direction, orientation,
          deriveDirection, false> {
+  static bool canInterpolateVector(BlockLattice3D<T,DESCRIPTOR> const& blockLattice,
+                                   int iX, int iY, int iZ)
+  {
+    return blockLattice.isInside(iX+(deriveDirection==0 ? 1:0),
+                                 iY+(deriveDirection==1 ? 1:0),
+                                 iZ+(deriveDirection==2 ? 1:0))
+        && blockLattice.isInside(iX+(deriveDirection==0 ? (-1):0),
+                                 iY+(deriveDirection==1 ? (-1):0),
+                                 iZ+(deriveDirection==2 ? (-1):0));
+  }
+
   static void  interpolateVector(T velDeriv[DESCRIPTOR::d],
                                  BlockLattice3D<T,DESCRIPTOR> const& blockLattice,
                                  int iX, int iY, int iZ)

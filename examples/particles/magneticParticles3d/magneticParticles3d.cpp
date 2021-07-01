@@ -42,7 +42,7 @@ using namespace olb::graphics;
 using namespace olb::util;
 using namespace std;
 
-#define DESCRIPTOR D3Q19<>
+typedef D3Q19<> DESCRIPTOR;
 
 #define PARTICLE MagneticParticle3D
 
@@ -122,8 +122,6 @@ void prepareGeometry(UnitConverter<T, DESCRIPTOR> const& converter, IndicatorF3D
 void prepareLattice(SuperLattice3D<T, DESCRIPTOR>& sLattice,
                     UnitConverter<T, DESCRIPTOR> const& converter, IndicatorF3D<T>& wire,
                     Dynamics<T, DESCRIPTOR>& bulkDynamics,
-                    sOnLatticeBoundaryCondition3D<T, DESCRIPTOR>& sOnBC,
-                    sOffLatticeBoundaryCondition3D<T, DESCRIPTOR>& offBc,
                     SuperGeometry3D<T>& superGeometry)
 {
   OstreamManager clout(std::cout, "prepareLattice");
@@ -148,14 +146,14 @@ void prepareLattice(SuperLattice3D<T, DESCRIPTOR>& sLattice,
   /// Material=5 -->do nothing
   sLattice.defineDynamics(superGeometry, 5,
                           &instances::getNoDynamics<T, DESCRIPTOR>());
-  offBc.addZeroVelocityBoundary(superGeometry, 5, wire);
+  setBouzidiZeroVelocityBoundary<T,DESCRIPTOR>(sLattice, superGeometry, 5, wire);
 
   // boundary conditions for fluid
 
   // inlet
-  sOnBC.addVelocityBoundary(superGeometry, 3, omega);
+  setInterpolatedVelocityBoundary<T,DESCRIPTOR>(sLattice, omega, superGeometry, 3);
   // outlet
-  sOnBC.addPressureBoundary(superGeometry, 4, omega);
+  setInterpolatedPressureBoundary<T,DESCRIPTOR>(sLattice, omega, superGeometry, 4);
 
   // initialisation
   AnalyticalConst3D<T, T> roh(1.);
@@ -216,7 +214,7 @@ void setBoundaryValues(SuperLattice3D<T, DESCRIPTOR>& sLattice,
 void getResults(SuperGeometry3D<T>& superGeometry,
                 SuperLattice3D<T, DESCRIPTOR>& sLattice,
                 UnitConverter<T, DESCRIPTOR> const& converter,
-                AnalyticalF3D<T, S>& magForce, AnalyticalF3D<T, S>& magField,
+                AnalyticalF3D<T,BaseType<T>>& magForce, AnalyticalF3D<T,BaseType<T>>& magField,
                 SuperParticleSystem3D<T, PARTICLE>& spSys,
                 SuperParticleSysVtuWriterMag<T>& particleOut, Timer<double>& timer, int& iT,
                 int& itConsoleOutputFluid, int& itVtkOutputFluid,
@@ -310,12 +308,12 @@ int main(int argc, char* argv[])
 
   // converter contains parameters of particle simulation
   UnitConverterFromResolutionAndRelaxationTime<T, DESCRIPTOR> const converterParticles(
-  int {converter->getResolution()},    // resolution: number of voxels per charPhysL
-  (T) tau_particles, // latticeRelaxationTime: relaxation time, has to be greater than 0.5!
-  (T) converter->getCharPhysLength(), // (hydraulic raius [m]) charPhysLength: reference length of simulation geometry
-  (T) converter->getCharPhysVelocity(), // charPhysVelocity: maximal/highest expected velocity during simulation in __m / s__
-  (T) converter->getPhysViscosity(),  // physViscosity: physical kinematic viscosity in __m^2 / s__
-  (T) converter->getPhysDensity()   // physDensity: physical density in __kg / m^3__
+    int {converter->getResolution()},    // resolution: number of voxels per charPhysL
+    (T) tau_particles, // latticeRelaxationTime: relaxation time, has to be greater than 0.5!
+    (T) converter->getCharPhysLength(), // (hydraulic raius [m]) charPhysLength: reference length of simulation geometry
+    (T) converter->getCharPhysVelocity(), // charPhysVelocity: maximal/highest expected velocity during simulation in __m / s__
+    (T) converter->getPhysViscosity(),  // physViscosity: physical kinematic viscosity in __m^2 / s__
+    (T) converter->getPhysDensity()   // physDensity: physical density in __kg / m^3__
   );
 
   clout << "particle converter: ..." << std::endl;
@@ -357,7 +355,7 @@ int main(int argc, char* argv[])
   int itStartScaleT = converter->getLatticeTime(physStartScT);
   int itParticleT = converterParticles.getLatticeTime(physParticleT);
 
-  int itConsoleOutputFluid = itFluidNST / 10. , itVtkOutputFluid = itFluidNST / 4.;
+  int itConsoleOutputFluid = itFluidNST / 10., itVtkOutputFluid = itFluidNST / 4.;
   int itConsoleOutputMagParticles = itParticleT / 75., itVtkOutputMagParticles = itParticleT / 249.;
 
   clout << "Fluid: physFluidNST = " << physFluidNST << "s itFluidNST = "
@@ -411,17 +409,9 @@ int main(int argc, char* argv[])
   BGKdynamics<T, DESCRIPTOR> bulkDynamics((1. / converter->getLatticeRelaxationTime()),
                                           instances::getBulkMomenta<T, DESCRIPTOR>());
 
-  // choose between local and non-local boundary condition
-  sOnLatticeBoundaryCondition3D<T, DESCRIPTOR> sOnBoundaryCondition(sLattice);
-  createInterpBoundaryCondition3D<T, DESCRIPTOR>(sOnBoundaryCondition);
-
-  // for the velocity field around the wire
-  sOffLatticeBoundaryCondition3D<T, DESCRIPTOR> sOffBoundaryCondition(sLattice);
-  createBouzidiBoundaryCondition3D<T, DESCRIPTOR>(sOffBoundaryCondition);
-
   // gives dynamics to cells
-  prepareLattice(sLattice, *converter, wire, bulkDynamics, sOnBoundaryCondition,
-                 sOffBoundaryCondition, superGeometry);
+  //prepareLattice and setBoundaryConditions
+  prepareLattice(sLattice, *converter, wire, bulkDynamics,  superGeometry);
 
   /// === 4th Step: Prepare Lagrange Particles
 
@@ -525,8 +515,13 @@ int main(int argc, char* argv[])
   std::vector<T> pAVel = { 0., 0., 0. }; // angular velocity
   std::vector<T> pTrq = { 0., 0., 0. }; // torque
   std::vector<T> pDMoment = { -1., 0., 0. }; // orientation mag. dipole moment
-  if(!util::nearZero(util::norm(pDMoment))){util::normalize(pDMoment);}
-  else {clout << "Norm of pDMoment near zero!" << endl; exit(0);}
+  if (!util::nearZero(util::norm(pDMoment))) {
+    util::normalize(pDMoment);
+  }
+  else {
+    clout << "Norm of pDMoment near zero!" << endl;
+    exit(0);
+  }
 
   // magnetic particle magPartTemplate is used as copy template
   PARTICLE<T> magPartTemplate(pPos, pVel, pMass, pRadius, 0, pDMoment, pAVel, pTrq, pMag, 1);
@@ -591,9 +586,10 @@ int main(int argc, char* argv[])
     timerFluid.stop();
     timerFluid.printSummary();
 
-  } else {
+  }
+  else {
+    sLattice.postLoad();
     sLattice.communicate();
-    sLattice.collideAndStream();
     sLattice.getStatistics().print(iT, converter->getPhysTime(iT));
   }
 

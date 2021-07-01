@@ -24,7 +24,7 @@
 #include "unitConverter.h"
 #include "unitConverter.hh"
 #include "dynamics/latticeDescriptors.h"
- 
+
 //#include "dynamics/advectionDiffusionLatticeDescriptors.h"
 //#include "dynamics/advectionDiffusionLatticeDescriptors.hh"
 

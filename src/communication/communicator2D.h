@@ -67,6 +67,7 @@ private:
   /// Indicates if there was an initialization done
   bool _initDone;
 public:
+  ~Communicator2D() {};
   /// Constructor
   Communicator2D(SuperStructure2D<T>& superStructure);
   /// Initializes the cuboid neighbourhoods
@@ -89,9 +90,6 @@ public:
   void receive();
   /// Writes all data to the block lattices of the super structure
   void write();
-
-  /// Access to internal data for the tests
-  std::vector<CuboidNeighbourhood2D<T>>& get_nh();
 };
 
 }  // namespace olb

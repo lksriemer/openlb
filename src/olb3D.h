@@ -7,6 +7,7 @@
 #include <io/io3D.h>
 #include <utilities/utilities3D.h>
 #include <particles/particles3D.h>
+#include <particles/particleSpecializations/particleSpecializations3D.h>
 #include <particles/forces/forces.h>
 #include <particles/boundaries/boundaries.h>
 #include <particles/contactDetection/sortAlgorithms.h>

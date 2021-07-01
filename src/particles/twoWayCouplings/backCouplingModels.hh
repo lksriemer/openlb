@@ -78,20 +78,17 @@ bool CubicDeltaBackCouplingModel<T,Lattice,Particle>::operator() (Particle<T>* p
   // reading the force from the value stored inside the particle
   std::vector<T> physForceP = p->getStoreForce(); // physical force acting on the particle
 
-  T latticeForceP[3] = {T(), T(), T()}; // dimensionless force acting on the particle
-  latticeForceP[0] = physForceP[0] / this->_converter.getConversionFactorForce();
-  latticeForceP[1] = physForceP[1] / this->_converter.getConversionFactorForce();
-  latticeForceP[2] = physForceP[2] / this->_converter.getConversionFactorForce();
+  T latticeForceP[3] = { physForceP[0] / this->_converter.getConversionFactorForce(),
+                         physForceP[1] / this->_converter.getConversionFactorForce(),
+                         physForceP[2] / this->_converter.getConversionFactorForce() }; // dimensionless force acting on the particle
 
-  T physPosP[3] = {T(), T(), T()}; // particle's physical position
-  physPosP[0] = (p->getPos()[0]);
-  physPosP[1] = (p->getPos()[1]);
-  physPosP[2] = (p->getPos()[2]);
+  T physPosP[3] = { p->getPos()[0],
+                    p->getPos()[1],
+                    p->getPos()[2] }; // particle's physical position
 
   // particle's dimensionless position, rounded at neighbouring voxel
   int latticeRoundedPosP[3] = {0, 0, 0};
-  this->_sLattice.getCuboidGeometry().get(globic).getLatticeR (
-           latticeRoundedPosP, physPosP );
+  this->_sLattice.getCuboidGeometry().get(globic).getLatticeR( latticeRoundedPosP, physPosP );
 
   // smooth Dirac delta
   this->_cubicDeltaFunctional->operator() (_delta, physPosP, globic);
@@ -142,29 +139,23 @@ bool LocalBackCouplingModel<T,Lattice,Particle>::operator() (Particle<T>* p, int
   // reading the force from the value stored inside the particle
   std::vector<T> physForceP = p->getStoreForce(); // physical force acting on the particle
 
-  T latticeForceP[3] = {T(), T(), T()}; // dimensionless force acting on the particle
-  latticeForceP[0] = physForceP[0] / this->_converter.getConversionFactorForce();
-  latticeForceP[1] = physForceP[1] / this->_converter.getConversionFactorForce();
-  latticeForceP[2] = physForceP[2] / this->_converter.getConversionFactorForce();
+  T latticeForceP[3] = { physForceP[0] / this->_converter.getConversionFactorForce(),
+                         physForceP[1] / this->_converter.getConversionFactorForce(),
+                         physForceP[2] / this->_converter.getConversionFactorForce() }; // dimensionless force acting on the particle
 
-  T physPosP[3] = {T(), T(), T()}; // particle's physical position
-  physPosP[0] = (p->getPos()[0]);
-  physPosP[1] = (p->getPos()[1]);
-  physPosP[2] = (p->getPos()[2]);
+  T physPosP[3] = { (p->getPos()[0]),
+                    (p->getPos()[1]),
+                    (p->getPos()[2]) }; // particle's physical position
 
   // particle's dimensionless position, rounded at neighbouring voxel
   int latticeRoundedPosP[3] = {0, 0, 0};
-  this->_sLattice.getCuboidGeometry().get(globic).getLatticeR (
-           latticeRoundedPosP, physPosP );
+  this->_sLattice.getCuboidGeometry().get(globic).getLatticeR( latticeRoundedPosP, physPosP );
 
-  if (this->_sGeometry.getBlockGeometry(locIC).getMaterial(
-        latticeRoundedPosP[0], latticeRoundedPosP[1],
-        latticeRoundedPosP[2]) == material) {
+  if (this->_sGeometry.getBlockGeometry(locIC).getMaterial( latticeRoundedPosP[0], latticeRoundedPosP[1], latticeRoundedPosP[2] ) == material) {
 
-    T F[3] = {T(), T(), T()}; // dimensionless smoothed force
-    F[0] = -latticeForceP[0] / (T)(subCycles);
-    F[1] = -latticeForceP[1] / (T)(subCycles);
-    F[2] = -latticeForceP[2] / (T)(subCycles);
+    T F[3] = { -latticeForceP[0] / (T)(subCycles),
+               -latticeForceP[1] / (T)(subCycles),
+               -latticeForceP[2] / (T)(subCycles) };  // dimensionless smoothed force
 
     this->_sLattice.getBlockLattice(locIC).get (
              latticeRoundedPosP[0],
@@ -195,31 +186,22 @@ bool NonLocalBaseBackCouplingModel<T,Lattice,Particle>::operator() (Particle<T>*
 
   // reading the force from the value stored inside the particle
   std::vector<T> physForceP = p->getStoreForce(); // physical force acting on the particle
-  T latticeForceP[3] = {T(), T(), T()}; // dimensionless force acting on the particle
-  latticeForceP[0] = physForceP[0] / this->_converter.getConversionFactorForce();
-  latticeForceP[1] = physForceP[1] / this->_converter.getConversionFactorForce();
-  latticeForceP[2] = physForceP[2] / this->_converter.getConversionFactorForce();
+  T latticeForceP[3] = { physForceP[0] / this->_converter.getConversionFactorForce(),
+                         physForceP[1] / this->_converter.getConversionFactorForce(),
+                         physForceP[2] / this->_converter.getConversionFactorForce() }; // dimensionless force acting on the particle
 
   // Updating force through voxels within kernel smoothing length from the bubble's position
-  for (int i=0; i<this->_smoothingFunctional.getSize(); i++) {
-
-    // Position of the iterated voxel
-    int iLatticePosF[3] = {0, 0, 0};
-    this->_smoothingFunctional.getLatticePos(iLatticePosF, i);
+  for (auto&& i : this->_smoothingFunctional.getData()) {
 
     // Updating iterated voxel
-    if (this->_sGeometry.getBlockGeometry(locIC).getMaterial(
-          iLatticePosF[0], iLatticePosF[1],
-          iLatticePosF[2]) == material) {
+    if ( this->_sGeometry.getBlockGeometry(locIC).getMaterial(i.latticePos[0], i.latticePos[1], i.latticePos[2]) == material ) {
 
       // Weighted force acting on the iterated voxel
-      T F[3] = {T(), T(), T()}; // dimensionless smoothed force
-      F[0] = -latticeForceP[0] * this->_smoothingFunctional.getWeight(i) / (T)(subCycles);
-      F[1] = -latticeForceP[1] * this->_smoothingFunctional.getWeight(i) / (T)(subCycles);
-      F[2] = -latticeForceP[2] * this->_smoothingFunctional.getWeight(i) / (T)(subCycles);
+      T F[3] = { -latticeForceP[0] * i.weight / (T)(subCycles),
+                 -latticeForceP[1] * i.weight / (T)(subCycles),
+                 -latticeForceP[2] * i.weight / (T)(subCycles) }; // dimensionless smoothed force
 
-      this->_sLattice.getBlockLattice(locIC).get (
-              iLatticePosF[0], iLatticePosF[1], iLatticePosF[2] ).template addField<descriptors::FORCE>( F );
+      this->_sLattice.getBlockLattice(locIC).get ( i.latticePos[0], i.latticePos[1], i.latticePos[2] ).template addField<descriptors::FORCE>( F );
     }
   }
   return true;

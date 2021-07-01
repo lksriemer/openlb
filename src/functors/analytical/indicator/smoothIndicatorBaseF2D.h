@@ -113,7 +113,7 @@ public:
   const Vector<S,2>& getVel() const;
   const Vector<S,2>& getAcc() const;
   const Vector<S,2>& getAcc2() const;
-  const Vector<S,2>& getForce() const;
+  const Vector<S,2>& getHydrodynamicForce() const;
   const Vector<S,4>& getRotationMatrix() const;
   const S& getCircumRadius() const;
   const S& getTheta() const;
@@ -128,7 +128,7 @@ public:
   void setVel(Vector<S,2> vel);
   void setAcc(Vector<S,2> acc);
   void setAcc2(Vector<S,2> acc2);
-  void setForce(Vector<S,2> force);
+  void setHydrodynamicForce(Vector<S,2> force);
   void setRotationMatrix(Vector<S,4> rotMat);
   void setTheta(S theta);
   void setOmega(S omega);

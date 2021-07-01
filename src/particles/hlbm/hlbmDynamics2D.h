@@ -44,42 +44,48 @@ private:
   Vector<T,2> _accExt;
   bool _escapeFromDomain=false;
   bool _oldWallCollision=true;
+  Vector<bool,2> _periodicity;
+  bool _useZetaField=false;
 
 public:
   ParticleDynamics2D(SuperLattice2D<T, DESCRIPTOR>& sLattice,
                      UnitConverter<T,DESCRIPTOR> const& converter,
                      SuperGeometry2D<T>& superGeometry,
-                     T lengthX, T lengthY, Vector<T,2> accExt = Vector<T,2> (0.,0.))
+                     T lengthX, T lengthY, Vector<T,2> accExt = Vector<T,2> (0.,0.),
+                     Vector<bool,2> periodicity = Vector<bool,2> (false,false) )
     : _sLattice(sLattice),
       _converter(converter),
       _superGeometry(superGeometry),
       _lengthX(lengthX),
       _lengthY(lengthY),
-      _accExt(accExt)
+      _accExt(accExt),
+      _periodicity(periodicity)
   {}
 
   ParticleDynamics2D(SuperLattice2D<T, DESCRIPTOR>& sLattice,
                      UnitConverter<T,DESCRIPTOR> const& converter,
                      SuperGeometry2D<T>& superGeometry, std::shared_ptr<IndicatorF2D<T> > indicatorF,
                      bool escapeFromDomain, bool oldWallCollision=false,
-                     Vector<T,2> accExt = Vector<T,2> (0.,0.))
+                     Vector<T,2> accExt = Vector<T,2> (0.,0.),
+                     Vector<bool,2> periodicity = Vector<bool,2> (false,false) )
     : _sLattice(sLattice),
       _converter(converter),
       _superGeometry(superGeometry),
       _indicatorF(indicatorF),
       _accExt(accExt),
       _escapeFromDomain(escapeFromDomain),
-      _oldWallCollision(oldWallCollision)
+      _oldWallCollision(oldWallCollision),
+      _periodicity(periodicity)
   {}
 
-  void addCircle(Vector< T, 2> center, T radius, T density, T epsilon,
-                 Vector<S,2> vel = Vector<S,2> (0.,0.));
+  void addCircle(Vector<T,2> center, T radius, T density, T epsilon,
+                 Vector<BaseType<T>,2> vel = Vector<BaseType<T>,2> (0.,0.));
 
-  void addCuboid(Vector< T, 2> center, T xLength, T yLength, T density,
-                 T epsilon, T theta=0, Vector<S,2> vel = Vector<S,2> (0.,0.));
+  void addCuboid(Vector<T,2> center, T xLength, T yLength, T density,
+                 T epsilon, T theta=0, Vector<BaseType<T>,2> vel = Vector<BaseType<T>,2> (0.,0.));
 
   void addTriangle(Vector< T, 2> center, T radius, T density, T epsilon,
-                   T theta, Vector<S,2> vel = Vector<S,2> (0.,0.));
+                   T theta, Vector<BaseType<T>,2> vel = Vector<BaseType<T>,2> (0.,0.));
 
   void addParticle(SmoothIndicatorF2D<T, T, true>& indicator);
 
@@ -97,11 +103,26 @@ public:
 
   void simulateTimestep(std::string name);
 
+  // currently only for single particle / uniform movement
+  void simulatePrescribedVelocity(std::string name, const Vector<T,2>& vel, const T angularVel);
+
+  void calculateDragLiftCoefficients(SmoothIndicatorF2D<T, T, true>& indicator, Vector<T,2>& coeff, const Vector<T,2>& fluidVel = Vector<T,2> (0.,0.) );
+
   void print();
 
   void load(std::string filename, T epsilon);
 
   void save(std::string filename);
+
+//  void lennardJonesColl(SmoothIndicatorF2D<T, T>& indicator, const std::vector<T>& pos2, T delta = 0.)
+
+//  void addCollisionModel(SmoothIndicatorF2D<T,T,true>& indicator, SmoothIndicatorF2D<T,T,true>& indicator2);
+
+//  void eulerIntegration(SmoothIndicatorF2D<T,T,true>& indicator);
+
+//  void addParticleColl(SmoothIndicatorF2D<T,T,true>& indicator, SmoothIndicatorF2D<T,T,true>& indicator2, T delta);
+
+  void setZetaFieldUsage(bool useZetaField);
 
 };
 

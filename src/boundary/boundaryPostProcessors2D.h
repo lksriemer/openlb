@@ -52,7 +52,7 @@ public:
   }
   void process(BlockLattice2D<T,DESCRIPTOR>& blockLattice) override;
   void processSubDomain ( BlockLattice2D<T,DESCRIPTOR>& blockLattice,
-                                  int x0_, int x1_, int y0_, int y1_ ) override;
+                          int x0_, int x1_, int y0_, int y1_ ) override;
 private:
   template<int deriveDirection>
   void interpolateGradients (
@@ -88,7 +88,7 @@ public:
   }
   void process(BlockLattice2D<T,DESCRIPTOR>& blockLattice) override;
   void processSubDomain ( BlockLattice2D<T,DESCRIPTOR>& blockLattice,
-                                  int x0_, int x1_, int y0_, int y1_ ) override;
+                          int x0_, int x1_, int y0_, int y1_ ) override;
 private:
   int x0, x1, y0, y1;
   T*** saveCell;
@@ -123,7 +123,7 @@ public:
   }
   void process(BlockLattice2D<T,DESCRIPTOR>& blockLattice) override;
   void processSubDomain ( BlockLattice2D<T,DESCRIPTOR>& blockLattice,
-                                  int x0_, int x1_, int y0_, int y1_ ) override;
+                          int x0_, int x1_, int y0_, int y1_ ) override;
 private:
   int reflectionPop[DESCRIPTOR::q];
   int x0, x1, y0, y1;
@@ -159,7 +159,7 @@ public:
   }
   void process(BlockLattice2D<T,DESCRIPTOR>& blockLattice) override;
   void processSubDomain ( BlockLattice2D<T,DESCRIPTOR>& blockLattice,
-                                  int x0_, int x1_, int y0_, int y1_ ) override;
+                          int x0_, int x1_, int y0_, int y1_ ) override;
 private:
   int reflectionPop[DESCRIPTOR::q];
   int x0, x1, y0, y1;
@@ -198,7 +198,7 @@ public:
   }
   void process(BlockLattice2D<T,DESCRIPTOR>& blockLattice) override;
   void processSubDomain(BlockLattice2D<T,DESCRIPTOR>& blockLattice,
-                                int x0_,int x1_,int y0_,int y1_ ) override;
+                        int x0_,int x1_,int y0_,int y1_ ) override;
 private:
   int x, y;
 };
@@ -212,15 +212,15 @@ public:
 };
 
 
-/// PostProcessor for the wetting boundary condition in the free energy model. This is 
-/// required to set rho on the boundary (using the denisty of the neighbouring cell in 
-/// direction of inwards facing normal at the boundary), as the coupling between the 
+/// PostProcessor for the wetting boundary condition in the free energy model. This is
+/// required to set rho on the boundary (using the denisty of the neighbouring cell in
+/// direction of inwards facing normal at the boundary), as the coupling between the
 /// lattices requires the calculation of a density gradient.
 template<typename T, typename DESCRIPTOR>
 class FreeEnergyWallProcessor2D : public LocalPostProcessor2D<T, DESCRIPTOR> {
 public:
   FreeEnergyWallProcessor2D(int x0_, int x1_, int y0_, int y1_,
-          int discreteNormalX_, int discreteNormalY_, T addend_);
+                            int discreteNormalX_, int discreteNormalY_, T addend_);
   int extent() const override
   {
     return 2;
@@ -231,7 +231,7 @@ public:
   }
   void process(BlockLattice2D<T,DESCRIPTOR>& blockLattice) override;
   void processSubDomain(BlockLattice2D<T,DESCRIPTOR>& blockLattice,
-                                int x0_,int x1_,int y0_,int y1_ ) override;
+                        int x0_,int x1_,int y0_,int y1_ ) override;
 private:
   int x0, x1, y0, y1;
   int discreteNormalX, discreteNormalY;
@@ -243,7 +243,7 @@ template<typename T, typename DESCRIPTOR>
 class FreeEnergyWallProcessorGenerator2D : public PostProcessorGenerator2D<T, DESCRIPTOR> {
 public:
   FreeEnergyWallProcessorGenerator2D(int x0_, int x1_, int y0_, int y1_,
-          int discreteNormalX_, int discreteNormalY_, T addend_);
+                                     int discreteNormalX_, int discreteNormalY_, T addend_);
   PostProcessor2D<T,DESCRIPTOR>* generate() const override;
   PostProcessorGenerator2D<T,DESCRIPTOR>*  clone() const override;
 private:
@@ -255,7 +255,7 @@ private:
 
 /// PostProcessor for the chemical potential boundary condition in the free energy model.
 /// The chemical potentials on the boundary are set equal to the chemical potential on the
-/// fluid cell normal to the boundary. This is necessary because the coupling between the 
+/// fluid cell normal to the boundary. This is necessary because the coupling between the
 /// lattices requires the calculation of the gradient of the chemical potential.
 ///
 /// It would be preferable if this were implemented as a lattice coupling that ran
@@ -265,7 +265,7 @@ template<typename T, typename DESCRIPTOR>
 class FreeEnergyChemPotBoundaryProcessor2D : public LocalPostProcessor2D<T, DESCRIPTOR> {
 public:
   FreeEnergyChemPotBoundaryProcessor2D(int x0_, int x1_, int y0_, int y1_,
-          int discreteNormalX_, int discreteNormalY_, int latticeNumber_);
+                                       int discreteNormalX_, int discreteNormalY_, int latticeNumber_);
   int extent() const override
   {
     return 2;
@@ -276,7 +276,7 @@ public:
   }
   void process(BlockLattice2D<T,DESCRIPTOR>& blockLattice) override;
   void processSubDomain(BlockLattice2D<T,DESCRIPTOR>& blockLattice,
-                                int x0_,int x1_,int y0_,int y1_ ) override;
+                        int x0_,int x1_,int y0_,int y1_ ) override;
 private:
   int x0, x1, y0, y1;
   int discreteNormalX, discreteNormalY;
@@ -288,7 +288,7 @@ template<typename T,typename DESCRIPTOR>
 class FreeEnergyChemPotBoundaryProcessorGenerator2D : public PostProcessorGenerator2D<T, DESCRIPTOR> {
 public:
   FreeEnergyChemPotBoundaryProcessorGenerator2D(int x0_, int x1_, int y0_, int y1_,
-          int discreteNormalX_, int discreteNormalY_, int latticeNumber_);
+      int discreteNormalX_, int discreteNormalY_, int latticeNumber_);
   PostProcessor2D<T,DESCRIPTOR>* generate() const override;
   PostProcessorGenerator2D<T,DESCRIPTOR>*  clone() const override;
 private:
@@ -298,14 +298,14 @@ private:
 };
 
 
-/// PostProcessor for pressure / velocity outflow boundaries in the free energy model. 
+/// PostProcessor for pressure / velocity outflow boundaries in the free energy model.
 /// The density / order parameters are prescribed to the outflow nodes such that they
 /// obey the local-velocity convective boundary condition given in Lou, Gou, Shi (2013).
 template<typename T, typename DESCRIPTOR>
 class FreeEnergyConvectiveProcessor2D : public LocalPostProcessor2D<T, DESCRIPTOR> {
 public:
   FreeEnergyConvectiveProcessor2D(int x0_, int x1_, int y0_, int y1_,
-          int discreteNormalX_, int discreteNormalY_);
+                                  int discreteNormalX_, int discreteNormalY_);
   int extent() const override
   {
     return 2;
@@ -316,7 +316,7 @@ public:
   }
   void process(BlockLattice2D<T,DESCRIPTOR>& blockLattice) override;
   void processSubDomain(BlockLattice2D<T,DESCRIPTOR>& blockLattice,
-                                int x0_,int x1_,int y0_,int y1_ ) override;
+                        int x0_,int x1_,int y0_,int y1_ ) override;
 private:
   int x0, x1, y0, y1;
   int discreteNormalX, discreteNormalY;
@@ -327,7 +327,7 @@ template<typename T, typename DESCRIPTOR>
 class FreeEnergyConvectiveProcessorGenerator2D : public PostProcessorGenerator2D<T, DESCRIPTOR> {
 public:
   FreeEnergyConvectiveProcessorGenerator2D(int x0_, int x1_, int y0_, int y1_,
-          int discreteNormalX_, int discreteNormalY_);
+      int discreteNormalX_, int discreteNormalY_);
   PostProcessor2D<T,DESCRIPTOR>* generate() const override;
   PostProcessorGenerator2D<T,DESCRIPTOR>*  clone() const override;
 private:

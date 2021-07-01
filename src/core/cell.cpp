@@ -28,8 +28,12 @@
 #include "cell.hh"
 #include "dynamics/latticeDescriptors.h"
  
-
 namespace olb {
+
+template class ConstCell<double, descriptors::D2Q9<>>;
 template class Cell<double, descriptors::D2Q9<>>;
+
+template class ConstCell<double, descriptors::D3Q19<>>;
 template class Cell<double, descriptors::D3Q19<>>;
+
 }

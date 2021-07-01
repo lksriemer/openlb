@@ -1,3 +1,26 @@
+/*  This file is part of the OpenLB library
+ *
+ *  Copyright (C) 2019 Mathias J. Krause, Maximilian Gaedtke, Marc Haußmann, Davide Dapelo, Jonathan Jeppener-Haltenhoff
+ *  E-mail contact: info@openlb.net
+ *  The most recent release of OpenLB can be downloaded at
+ *  <http://www.openlb.net/>
+ *
+ *  This program is free software; you can redistribute it and/or
+ *  modify it under the terms of the GNU General Public License
+ *  as published by the Free Software Foundation; either version 2
+ *  of the License, or (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public
+ *  License along with this program; if not, write to the Free
+ *  Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+ *  Boston, MA  02110-1301, USA.
+*/
+
 #ifndef BENCHMARK_UTIL_HH
 #define BENCHMARK_UTIL_HH
 
@@ -46,7 +69,7 @@ template<typename T>
 void ValueTracer<T>::takeValue(T val, bool doPrint)
 {
   _values.push_back(val);
-  if ((int)_values.size() > abs(_deltaT)) {
+  if ((int)_values.size() > std::abs(_deltaT)) {
     _values.erase(_values.begin());
     if (doPrint && _t%_deltaT==0) {
       T average = computeAverage();
@@ -62,7 +85,7 @@ void ValueTracer<T>::resetScale(T u, T L)
 {
   _t = _t%_deltaT;
   _deltaT = (int) (L/u/2.);
-  if ( (int)_values.size() > abs(_deltaT) ) {
+  if ( (int)_values.size() > std::abs(_deltaT) ) {
     _values.erase(_values.begin(), _values.begin() + (_values.size()-_deltaT) );
   }
 }
@@ -79,7 +102,7 @@ void ValueTracer<T>::resetValues()
 template<typename T>
 bool ValueTracer<T>::hasConverged() const
 {
-  if ((int)_values.size() < abs(_deltaT)) {
+  if ((int)_values.size() < std::abs(_deltaT)) {
     return false;
   } else {
     T average = computeAverage();
@@ -95,7 +118,7 @@ bool ValueTracer<T>::hasConverged() const
 template<typename T>
 bool ValueTracer<T>::convergenceCheck() const
 {
-  if ((int)_values.size() < abs(_deltaT)) {
+  if ((int)_values.size() < std::abs(_deltaT)) {
     return false;
   } else {
     T average = computeAverage();
@@ -111,7 +134,7 @@ bool ValueTracer<T>::convergenceCheck() const
 template<typename T>
 bool ValueTracer<T>::hasConvergedMinMax() const
 {
-  if ((int)_values.size() < abs(_deltaT)) {
+  if ((int)_values.size() < std::abs(_deltaT)) {
     return false;
   } else {
     T minEl = *min_element(_values.begin(), _values.end());
@@ -322,6 +345,43 @@ int CircularBuffer<T>::getSize()
   return _size;
 }
 
+/////////// Class ExponentialMovingAverage //////////////
+template<typename T, typename S>
+ExponentialMovingAverage<T,S>::ExponentialMovingAverage(
+  const std::function<T(int)> smoothingFactorFunction)
+  : AnalyticalF1D<T,S>(1),
+    _smoothingFactorFunction(smoothingFactorFunction),
+    _EMA(0),
+    _noOfEntries(0) {}
+
+template<typename T, typename S>
+void ExponentialMovingAverage<T,S>::takeValue(const T val)
+{
+  if (_noOfEntries == 0) {
+    _noOfEntries++;
+    _EMA = val;
+
+  }
+  else {
+    _noOfEntries++;
+    S smoothingFactor = _smoothingFactorFunction(_noOfEntries);
+    _EMA = val* smoothingFactor + _EMA * (1 - smoothingFactor);
+  }
+}
+
+template<typename T, typename S>
+void ExponentialMovingAverage<T,S>::resetNoOfEntries()
+{
+  _noOfEntries = 0;
+}
+
+
+template<typename T, typename S>
+bool ExponentialMovingAverage<T,S>::operator()(T output[], const S x[])
+{
+  output[0] = _EMA;
+  return true;
+}
 
 } // namespace util
 

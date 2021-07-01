@@ -58,9 +58,9 @@ typedef double T;
 //#define Krause
 
 #ifdef ShearSmagorinsky
-#define DESCRIPTOR ShearSmagorinskyD3Q19Descriptor
+typedef D3Q19<AV_SHEAR> DESCRIPTOR;
 #else
-#define DESCRIPTOR D3Q19<>
+typedef D3Q19<> DESCRIPTOR;
 #endif
 
 // Parameters for the simulation setup
@@ -83,7 +83,8 @@ protected:
   T dx;
 
 public:
-  TurbulentVelocity3D( UnitConverter<T,_DESCRIPTOR> const& converter, int mode=0 ) : AnalyticalF3D<T,T>( 3 ) {
+  TurbulentVelocity3D( UnitConverter<T,_DESCRIPTOR> const& converter, int mode=0 ) : AnalyticalF3D<T,T>( 3 )
+  {
     _mode = mode;
     u0 = converter.getCharLatticeVelocity();
     rho = converter.getPhysDensity();
@@ -95,7 +96,8 @@ public:
     this->getName() = "turbulentVelocity3d";
   };
 
-  bool operator()( T output[], const S input[] ) override {
+  bool operator()( T output[], const BaseType<T> input[] ) override
+  {
     T y = input[1];
     T z = input[2];
     // block profile inititalization
@@ -126,7 +128,8 @@ public:
 };
 
 
-void prepareGeometry( UnitConverter<T,DESCRIPTOR> const& converter, IndicatorF3D<T>& indicator, SuperGeometry3D<T>& superGeometry ) {
+void prepareGeometry( UnitConverter<T,DESCRIPTOR> const& converter, IndicatorF3D<T>& indicator, SuperGeometry3D<T>& superGeometry )
+{
 
   OstreamManager clout( std::cout,"prepareGeometry" );
   clout << "Prepare Geometry ..." << std::endl;
@@ -194,9 +197,8 @@ void prepareGeometry( UnitConverter<T,DESCRIPTOR> const& converter, IndicatorF3D
 void prepareLattice( SuperLattice3D<T,DESCRIPTOR>& sLattice,
                      UnitConverter<T,DESCRIPTOR> const& converter,
                      Dynamics<T, DESCRIPTOR>& bulkDynamics,
-                     sOnLatticeBoundaryCondition3D<T,DESCRIPTOR>& bc,
-                     sOffLatticeBoundaryCondition3D<T,DESCRIPTOR>& offBc,
-                     SuperGeometry3D<T>& superGeometry ) {
+                     SuperGeometry3D<T>& superGeometry )
+{
 
 
 
@@ -216,14 +218,15 @@ void prepareLattice( SuperLattice3D<T,DESCRIPTOR>& sLattice,
   // Material=2 -->bounce back
   sLattice.defineDynamics( superGeometry, 2, &instances::getBounceBack<T, DESCRIPTOR>() );
 
-  bc.addVelocityBoundary( superGeometry, 3, omega );
-  bc.addPressureBoundary( superGeometry, 4, omega );
+  setInterpolatedVelocityBoundary<T,DESCRIPTOR>(sLattice, omega, superGeometry, 3);
+  setInterpolatedPressureBoundary<T,DESCRIPTOR>(sLattice, omega, superGeometry, 4);
 
   clout << "Prepare Lattice ... OK" << std::endl;
 }
 
 void setBoundaryValues( UnitConverter<T,DESCRIPTOR> const&converter,
-                        SuperLattice3D<T,DESCRIPTOR>& lattice, SuperGeometry3D<T>& superGeometry, int iT ) {
+                        SuperLattice3D<T,DESCRIPTOR>& lattice, SuperGeometry3D<T>& superGeometry, int iT )
+{
 
   OstreamManager clout( std::cout,"setBoundaryValues" );
 
@@ -249,7 +252,8 @@ void setBoundaryValues( UnitConverter<T,DESCRIPTOR> const&converter,
 
 void getResults( SuperLattice3D<T, DESCRIPTOR>& sLattice,
                  UnitConverter<T,DESCRIPTOR> const& converter, int iT,
-                 SuperGeometry3D<T>& superGeometry, Timer<T>& timer ) {
+                 SuperGeometry3D<T>& superGeometry, Timer<T>& timer )
+{
 
   OstreamManager clout( std::cout,"getResults" );
   SuperVTMwriter3D<T> vtmWriter( "nozzle3d" );
@@ -275,7 +279,7 @@ void getResults( SuperLattice3D<T, DESCRIPTOR>& sLattice,
     vtmWriter.write( iT );
 
     SuperEuklidNorm3D<T, DESCRIPTOR> normVel( velocity );
-    BlockReduction3D2D<T> planeReduction( normVel, {0, 1, 0} );
+    BlockReduction3D2D<T> planeReduction( normVel, Vector<T,3>({0, 1, 0}) );
     // write output as JPEG
     heatmap::write(planeReduction, iT);
   }
@@ -290,7 +294,8 @@ void getResults( SuperLattice3D<T, DESCRIPTOR>& sLattice,
 
 
 
-int main( int argc, char* argv[] ) {
+int main( int argc, char* argv[] )
+{
 
   // === 1st Step: Initialization ===
 
@@ -348,20 +353,15 @@ int main( int argc, char* argv[] ) {
       0.05);
 #endif
 
-  sOnLatticeBoundaryCondition3D<T, DESCRIPTOR> sBoundaryCondition( sLattice );
-  createInterpBoundaryCondition3D<T, DESCRIPTOR> ( sBoundaryCondition );
 
-  sOffLatticeBoundaryCondition3D<T, DESCRIPTOR> sOffBoundaryCondition( sLattice );
-  createBouzidiBoundaryCondition3D<T, DESCRIPTOR> ( sOffBoundaryCondition );
-
-  prepareLattice( sLattice, converter, *bulkDynamics, sBoundaryCondition, sOffBoundaryCondition, superGeometry );
+  prepareLattice( sLattice, converter, *bulkDynamics, superGeometry );
 
   // === 4th Step: Main Loop with Timer ===
 
   Timer<T> timer( converter.getLatticeTime( maxPhysT ), superGeometry.getStatistics().getNvoxel() );
   timer.start();
 
-  for ( int iT = 0; iT <= converter.getLatticeTime( maxPhysT ); ++iT ) {
+  for ( std::size_t iT = 0; iT <= converter.getLatticeTime( maxPhysT ); ++iT ) {
     // === 5ath Step: Apply filter
 #ifdef ADM
     SuperLatticeADM3D<T, DESCRIPTOR> admF( sLattice, 0.01, 2 );

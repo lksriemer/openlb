@@ -34,7 +34,7 @@
 namespace olb {
 
 template <typename T, typename S>
-Musker<T,S>::Musker(T nu, T y, T rho) : AnalyticalF1D<T,S>(1), _nu(nu), _y(y),_rho(rho)
+Musker<T,S>::Musker(T nu, T y, T rho) : AnalyticalF<1,T,S>(1), _nu(nu), _y(y),_rho(rho)
 {
   this->getName() = "Musker";
 }
@@ -62,7 +62,7 @@ bool Musker<T,S>::operator()(T output[], const S tau_w[])
 }
 
 template <typename T, typename S>
-PowerLawProfile<T,S>::PowerLawProfile(T nu, T u2, T y2, T y1, T rho) : AnalyticalF1D<T,S>(2), _nu(nu), _u2(u2), _y2(y2), _y1(y1), _rho(rho)
+PowerLawProfile<T,S>::PowerLawProfile(T nu, T u2, T y2, T y1, T rho) : AnalyticalF<1,T,S>(2), _nu(nu), _u2(u2), _y2(y2), _y1(y1), _rho(rho)
 {
   this->getName() = "PowerLawProfile";
 }
@@ -77,10 +77,12 @@ bool PowerLawProfile<T,S>::operator()(T output[], const S input[])
   if (y_plus > 30.0) {
     output[0] = tau_w;
     output[1] = u_tau * 8.3 * pow(y_plus, 1./7.);
-  } else if (y_plus < 30.0  && y_plus > 5.) {
+  }
+  else if (y_plus < 30.0  && y_plus > 5.) {
     output[0] = tau_w;
     output[1] = u_tau * (-2.81742 + 4.85723 * log(y_plus));
-  } else {
+  }
+  else {
     output[0] = 2.*_u2 * _rho * _nu / _y2;
     if (output[0] < 0.) {
       output[0]*=-1.;
@@ -96,15 +98,16 @@ bool PowerLawProfile<T,S>::operator()(T output[], const S input[])
 ////////  WallFunctionBoundaryProcessor3D ////////////////////////////////
 template<typename T, typename DESCRIPTOR>
 WallFunctionBoundaryProcessor3D<T,DESCRIPTOR>::WallFunctionBoundaryProcessor3D(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_,
-                                                                            BlockGeometryStructure3D<T>& blockGeometryStructure,
-                                                                            std::vector<int> discreteNormal, std::vector<int> missingIndices,
-                                                                            UnitConverter<T, DESCRIPTOR> const& converter, wallFunctionParam<T> const& wallFunctionParam,
-                                                                            IndicatorF3D<T>* geoIndicator)
+    BlockGeometryStructure3D<T>& blockGeometryStructure,
+    std::vector<int> discreteNormal, std::vector<int> missingIndices,
+    UnitConverter<T, DESCRIPTOR> const& converter, wallFunctionParam<T> const& wallFunctionParam,
+    IndicatorF3D<T>* geoIndicator)
   : x0(x0_), x1(x1_), y0(y0_), y1(y1_), z0(z0_), z1(z1_),
     _blockGeometryStructure(blockGeometryStructure),
     _discreteNormal(discreteNormal), _missingIndices(missingIndices),
     _converter(converter), _wallFunctionParam(wallFunctionParam)
 {
+  this->getName() = "WallFunctionBoundaryProcessor3D";
   // Define Direction and orientatation
   discreteNormalX = _discreteNormal[0];
   discreteNormalY = _discreteNormal[1];
@@ -116,17 +119,21 @@ WallFunctionBoundaryProcessor3D<T,DESCRIPTOR>::WallFunctionBoundaryProcessor3D(i
     if (discreteNormalX != 0) {
       orientation = discreteNormalX;
       direction = 0;
-    } else if (discreteNormalY != 0) {
+    }
+    else if (discreteNormalY != 0) {
       orientation = discreteNormalY;
       direction = 1;
-    } else if (discreteNormalZ != 0) {
+    }
+    else if (discreteNormalZ != 0) {
       orientation = discreteNormalZ;
       direction = 2;
     }
-  } else if (Type_BC == 2) { // Edge
+  }
+  else if (Type_BC == 2) {   // Edge
     orientation = 0;
     direction = 0;
-  } else if (Type_BC == 3) { // Corner
+  }
+  else if (Type_BC == 3) {   // Corner
     orientation = 0;
     direction = 0;
   }
@@ -143,7 +150,8 @@ WallFunctionBoundaryProcessor3D<T,DESCRIPTOR>::WallFunctionBoundaryProcessor3D(i
     unit_normal[0] = discreteNormalX / normal_norm;
     unit_normal[1] = discreteNormalY / normal_norm;
     unit_normal[2] = discreteNormalZ / normal_norm;
-  } else {
+  }
+  else {
     calculateWallDistances(geoIndicator);
     if (y_1 > 2. || std::isnan(unit_normal[0]) || std::isnan(unit_normal[1]) || std::isnan(unit_normal[2])) {
       y_1 = 0.5; // Default half-way Bounce-Back distance - [m] DESCRIPTOR units
@@ -194,7 +202,7 @@ void WallFunctionBoundaryProcessor3D<T,DESCRIPTOR>::processSubDomain(BlockLattic
 }
 
 template<typename T, typename DESCRIPTOR>
-void WallFunctionBoundaryProcessor3D<T,DESCRIPTOR>::getIndices(int index, int value , std::vector<int>& indices)
+void WallFunctionBoundaryProcessor3D<T,DESCRIPTOR>::getIndices(int index, int value, std::vector<int>& indices)
 {
   for (int iVel=0; iVel<DESCRIPTOR::q; ++iVel) {
     if (descriptors::c<DESCRIPTOR>(iVel,index)==value) {
@@ -206,6 +214,8 @@ void WallFunctionBoundaryProcessor3D<T,DESCRIPTOR>::getIndices(int index, int va
 template<typename T, typename DESCRIPTOR>
 void WallFunctionBoundaryProcessor3D<T,DESCRIPTOR>::calculateWallDistances(IndicatorF3D<T>* indicator)
 {
+  using S = BaseType<T>;
+
   T physR[3];
   int iX = x0;
   int iY = y1;
@@ -243,7 +253,8 @@ void WallFunctionBoundaryProcessor3D<T,DESCRIPTOR>::calculateWallDistances(Indic
         smallestDistance = distance;
         smallestDistance_i = i;
         firstHit = false;
-      } else {
+      }
+      else {
         if (distance < smallestDistance) {
           smallestDistance = distance;
           smallestDistance_i = i;
@@ -261,24 +272,26 @@ void WallFunctionBoundaryProcessor3D<T,DESCRIPTOR>::calculateWallDistances(Indic
   if (smallestDistance_i == 0 || smallestDistance_i == 1 ) {
     direction2[1] = direction2[0] * scaling;
     direction3[2] = direction3[0] * scaling;
-  } else if (smallestDistance_i == 2 || smallestDistance_i == 3 ) {
+  }
+  else if (smallestDistance_i == 2 || smallestDistance_i == 3 ) {
     direction2[0] = direction2[1] * scaling;
     direction3[2] = direction3[1] * scaling;
-  } else {
+  }
+  else {
     direction2[0] = direction2[2] * scaling;
     direction3[1] = direction3[2] * scaling;
   }
 
-  Vector<S,3> directionN = direction*(1/const_cast<Vector<S,3>&> (direction).norm());
+  Vector<S,3> directionN = direction*(1/norm(direction));
   Vector<S,3> POS(origin + smallestDistance*directionN); //Point on Surface
 
   indicator->distance(distance, origin, direction2);
-  Vector<S,3> direction2N = direction2*(1/const_cast<Vector<S,3>&> (direction2).norm());
+  Vector<S,3> direction2N = direction2*(1/norm(direction2));
   Vector<S,3> POS2(origin + distance*direction2N); //Point on Surface
 
   indicator->distance(distance, origin, direction3);
 
-  Vector<S,3> direction3N = direction3*(1/const_cast<Vector<S,3>&> (direction3).norm());
+  Vector<S,3> direction3N = direction3*(1/norm(direction3));
   Vector<S,3> POS3(origin + distance*direction3N); //Point on Surface
 
   Vector<S,3> vec1 (POS - POS2);
@@ -313,17 +326,20 @@ void WallFunctionBoundaryProcessor3D<T,DESCRIPTOR>::VelGradFromSecondOrderFD(boo
       for (int Dim=0; Dim<DESCRIPTOR::d; Dim++) {
         VelGrad[Dim] = fd::BSGradient(Vel_BC[Dim], Vel_1[Dim], Vel_2[Dim]); // Backward second-order velocity gradient
       }
-    } else { // orientation == -1
+    }
+    else {   // orientation == -1
       for (int Dim=0; Dim<DESCRIPTOR::d; Dim++) {
         VelGrad[Dim] = fd::FSGradient(Vel_BC[Dim], Vel_1[Dim], Vel_2[Dim]); // Forward second-order velocity gradient
       }
     }
-  } else {
+  }
+  else {
     if (orientation == 1) {
       for (int Dim=0; Dim<DESCRIPTOR::d; Dim++) {
         VelGrad[Dim] = fd::centralGradient(Vel_1[Dim], Vel_2[Dim]); // central second-order velocity gradient: centralGradient( y(x+1), y(x-1) )
       }
-    } else { // orientation == -1
+    }
+    else {   // orientation == -1
       for (int Dim=0; Dim<DESCRIPTOR::d; Dim++) {
         VelGrad[Dim] = fd::centralGradient(Vel_2[Dim], Vel_1[Dim]); // central second-order velocity gradient: centralGradient( y(x+1), y(x-1) )
       }
@@ -351,28 +367,31 @@ void WallFunctionBoundaryProcessor3D<T,DESCRIPTOR>::computeVelocityGradientTenso
 
 template<typename T, typename DESCRIPTOR>
 void WallFunctionBoundaryProcessor3D<T,DESCRIPTOR>::computeNeighborsU(BlockLattice3D<T,DESCRIPTOR>& blockLattice, int x, int y, int z,
-                                                                             T u_x1[DESCRIPTOR::d], T u_x2[DESCRIPTOR::d], T u_y1[DESCRIPTOR::d], T u_y2[DESCRIPTOR::d], T u_z1[DESCRIPTOR::d], T u_z2[DESCRIPTOR::d])
+    T u_x1[DESCRIPTOR::d], T u_x2[DESCRIPTOR::d], T u_y1[DESCRIPTOR::d], T u_y2[DESCRIPTOR::d], T u_z1[DESCRIPTOR::d], T u_z2[DESCRIPTOR::d])
 {
   using namespace olb::util::tensorIndices3D;
   // Computation of local external velocity around lattice node (x,y,z)
   if (direction == 0) {
     blockLattice.get(x -   discreteNormalX, y, z).computeU(u_x1);
     blockLattice.get(x - 2*discreteNormalX, y, z).computeU(u_x2);
-  } else {
+  }
+  else {
     ComputeUWall(blockLattice, x + discreteNormalY + discreteNormalZ, y, z, u_x1);
     ComputeUWall(blockLattice, x - discreteNormalY - discreteNormalZ, y, z, u_x2);
   }
   if (direction == 1) {
     blockLattice.get(x, y -   discreteNormalY, z).computeU(u_y1);
     blockLattice.get(x, y - 2*discreteNormalY, z).computeU(u_y2);
-  } else {
+  }
+  else {
     ComputeUWall(blockLattice, x, y + discreteNormalX + discreteNormalZ, z, u_y1);
     ComputeUWall(blockLattice, x, y - discreteNormalX - discreteNormalZ, z, u_y2);
   }
   if (direction == 2) {
     blockLattice.get(x, y, z -   discreteNormalZ).computeU(u_z1);
     blockLattice.get(x, y, z - 2*discreteNormalZ).computeU(u_z2);
-  } else {
+  }
+  else {
     ComputeUWall(blockLattice, x, y, z + discreteNormalX + discreteNormalY, u_z1);
     ComputeUWall(blockLattice, x, y, z - discreteNormalX - discreteNormalY, u_z2);
   }
@@ -390,29 +409,32 @@ void WallFunctionBoundaryProcessor3D<T,DESCRIPTOR>::computeVelocityGradient(Bloc
 
 template<typename T, typename DESCRIPTOR>
 void WallFunctionBoundaryProcessor3D<T,DESCRIPTOR>::computeNeighborsRho(BlockLattice3D<T,DESCRIPTOR>& blockLattice, int x, int y, int z,
-                                                                               T u_x1[DESCRIPTOR::d], T u_x2[DESCRIPTOR::d], T u_y1[DESCRIPTOR::d], T u_y2[DESCRIPTOR::d], T u_z1[DESCRIPTOR::d], T u_z2[DESCRIPTOR::d],
-                                                                               T& rho_x1, T& rho_x2, T& rho_y1, T& rho_y2, T& rho_z1, T& rho_z2)
+    T u_x1[DESCRIPTOR::d], T u_x2[DESCRIPTOR::d], T u_y1[DESCRIPTOR::d], T u_y2[DESCRIPTOR::d], T u_z1[DESCRIPTOR::d], T u_z2[DESCRIPTOR::d],
+    T& rho_x1, T& rho_x2, T& rho_y1, T& rho_y2, T& rho_z1, T& rho_z2)
 {
   using namespace olb::util::tensorIndices3D;
   // Computation of local external velocity around lattice node (x,y,z)
   if (direction == 0) {
     rho_x1 = blockLattice.get(x -   discreteNormalX, y, z).computeRho();
     rho_x2 = blockLattice.get(x - 2*discreteNormalX, y, z).computeRho();
-  } else {
+  }
+  else {
     ComputeRhoWall(blockLattice, blockLattice.get(x + discreteNormalY + discreteNormalZ, y, z), x + discreteNormalY + discreteNormalZ, y, z, u_x1, rho_x1);
     ComputeRhoWall(blockLattice, blockLattice.get(x - discreteNormalY - discreteNormalZ, y, z), x - discreteNormalY - discreteNormalZ, y, z, u_x2, rho_x2);
   }
   if (direction == 1) {
     rho_y1 = blockLattice.get(x, y -   discreteNormalY, z).computeRho();
     rho_y2 = blockLattice.get(x, y - 2*discreteNormalY, z).computeRho();
-  } else {
+  }
+  else {
     ComputeRhoWall(blockLattice, blockLattice.get(x, y - discreteNormalX - discreteNormalZ, z), x, y - discreteNormalX - discreteNormalZ, z, u_y1, rho_y1);
     ComputeRhoWall(blockLattice, blockLattice.get(x, y - discreteNormalX - discreteNormalZ, z), x, y - discreteNormalX - discreteNormalZ, z, u_y2, rho_y2);
   }
   if (direction == 2) {
     rho_z1 = blockLattice.get(x, y, z -   discreteNormalZ).computeRho();
     rho_z2 = blockLattice.get(x, y, z - 2*discreteNormalZ).computeRho();
-  } else {
+  }
+  else {
     ComputeRhoWall(blockLattice, blockLattice.get(x, y, z + discreteNormalX + discreteNormalY), x, y, z + discreteNormalX + discreteNormalY, u_z1, rho_z1);
     ComputeRhoWall(blockLattice, blockLattice.get(x, y, z - discreteNormalX - discreteNormalY), x, y, z - discreteNormalX - discreteNormalY, u_z2, rho_z2);
   }
@@ -420,8 +442,8 @@ void WallFunctionBoundaryProcessor3D<T,DESCRIPTOR>::computeNeighborsRho(BlockLat
 
 template<typename T, typename DESCRIPTOR>
 void WallFunctionBoundaryProcessor3D<T,DESCRIPTOR>::computeNeighborsRhoU(BlockLattice3D<T,DESCRIPTOR>& blockLattice, int x, int y, int z,
-                                                                                T u_x1[DESCRIPTOR::d], T u_x2[DESCRIPTOR::d], T u_y1[DESCRIPTOR::d], T u_y2[DESCRIPTOR::d], T u_z1[DESCRIPTOR::d], T u_z2[DESCRIPTOR::d],
-                                                                                T& rho_x1, T& rho_x2, T& rho_y1, T& rho_y2, T& rho_z1, T& rho_z2)
+    T u_x1[DESCRIPTOR::d], T u_x2[DESCRIPTOR::d], T u_y1[DESCRIPTOR::d], T u_y2[DESCRIPTOR::d], T u_z1[DESCRIPTOR::d], T u_z2[DESCRIPTOR::d],
+    T& rho_x1, T& rho_x2, T& rho_y1, T& rho_y2, T& rho_z1, T& rho_z2)
 {
   // Computation of neighbor velocity around lattice node (x,y,z)
   computeNeighborsU(blockLattice, x, y, z, u_x1, u_x2, u_y1, u_y2, u_z1, u_z2);
@@ -436,7 +458,7 @@ void WallFunctionBoundaryProcessor3D<T,DESCRIPTOR>::ComputeUWall(BlockLattice3D<
 {
   /// === Computation of velocity with Musker Profile - Malaspinas and Sagaut (2014) === ///
   using namespace olb::util::tensorIndices3D;
-  Cell<T,DESCRIPTOR>& cell = blockLattice.get(x,y,z);
+  Cell<T,DESCRIPTOR> cell = blockLattice.get(x,y,z);
 
   /// === STEP 2 : compute u_2 and rho_2 (neighbor node) -> [m/s] - [m] DESCRIPTOR units
   T u_2[DESCRIPTOR::d]; // Velocity to the neighbord lattice in the normal inward direction
@@ -481,7 +503,7 @@ void WallFunctionBoundaryProcessor3D<T,DESCRIPTOR>::ComputeUWall(BlockLattice3D<
       // Musker profile for boundary node using the molecular viscosity and the characteristic density in lattice units
       Musker<T,T> musker_u2_Lat_MolVis(Mol_Lat_Nu, y_2, rho_lat);
       util::Newton1D<T> newton(musker_u2_Lat_MolVis,u2);
-      T tau_w_guess = *(cell.template getFieldPointer<descriptors::TAU_W>());
+      T tau_w_guess = cell.template getField<descriptors::TAU_W>();
       tau_w[0] = newton.solve(tau_w_guess,false); // Computation of local wall shear stress
 
       if (std::isnan(tau_w[0])) {
@@ -502,7 +524,8 @@ void WallFunctionBoundaryProcessor3D<T,DESCRIPTOR>::ComputeUWall(BlockLattice3D<
       Musker<T,T> musker_u1_Lat_MolVis(Mol_Lat_Nu, y_1, rho_lat);
       musker_u1_Lat_MolVis(u1,tau_w);
 
-    } else {
+    }
+    else {
       // Werner and Wengle profile for boundary node using the molecular viscosity and the characteristic density in lattice units
       PowerLawProfile<T,T> PLP (Mol_Lat_Nu, u2, y_2, y_1, rho_lat);
       T input [1];
@@ -511,7 +534,8 @@ void WallFunctionBoundaryProcessor3D<T,DESCRIPTOR>::ComputeUWall(BlockLattice3D<
       tau_w[0] = output[0];
       u1[0] = output[1];
     }
-  } else {
+  }
+  else {
     u1[0] = 0.;
   }
   // save tau_w for next step
@@ -522,8 +546,9 @@ void WallFunctionBoundaryProcessor3D<T,DESCRIPTOR>::ComputeUWall(BlockLattice3D<
   u[2] = e_x_loc[2] * u1[0];
 
   if (_wallFunctionParam.bodyForce) {
+    auto force = cell.template getFieldPointer<descriptors::FORCE>();
     for (int iDim=0; iDim<DESCRIPTOR::d; ++iDim) {
-      u[iDim] -= cell.template getFieldPointer<descriptors::FORCE>()[iDim]/2.;
+      u[iDim] -= force[iDim] / 2.;
     }
   }
 }
@@ -554,22 +579,22 @@ template<typename T, typename DESCRIPTOR>
 void WallFunctionBoundaryProcessor3D<T,DESCRIPTOR>::ComputeTauEff(BlockLattice3D<T,DESCRIPTOR>& blockLattice, Cell<T,DESCRIPTOR>& cell, int x, int y, int z, T u_bc[DESCRIPTOR::d])
 {
 
-    T u_z[3];
-    T u_z2[3];
-    blockLattice.get(x -   discreteNormalX, y -   discreteNormalY, z -   discreteNormalZ).computeU(u_z);
-    blockLattice.get(x - 2*discreteNormalX, y - 2*discreteNormalY, z - 2*discreteNormalZ).computeU(u_z2);
+  T u_z[3];
+  T u_z2[3];
+  blockLattice.get(x -   discreteNormalX, y -   discreteNormalY, z -   discreteNormalZ).computeU(u_z);
+  blockLattice.get(x - 2*discreteNormalX, y - 2*discreteNormalY, z - 2*discreteNormalZ).computeU(u_z2);
 
-    T y_bc = 0.5; // Default half-way Bounce-Back distance - [m] DESCRIPTOR units
-    if (_wallFunctionParam.latticeWalldistance > 0.) {
-      y_bc = _wallFunctionParam.latticeWalldistance; // [m] DESCRIPTOR units
-    }
-    T normal_norm = sqrt(discreteNormalX * discreteNormalX +
-                         discreteNormalY * discreteNormalY +
-                         discreteNormalZ * discreteNormalZ); // l2 norm : magnitude of the vector
-    y_bc *= normal_norm;
-    T tau_w = cell.template getFieldPointer<descriptors::TAU_W>()[0];
+  T y_bc = 0.5; // Default half-way Bounce-Back distance - [m] DESCRIPTOR units
+  if (_wallFunctionParam.latticeWalldistance > 0.) {
+    y_bc = _wallFunctionParam.latticeWalldistance; // [m] DESCRIPTOR units
+  }
+  T normal_norm = sqrt(discreteNormalX * discreteNormalX +
+                       discreteNormalY * discreteNormalY +
+                       discreteNormalZ * discreteNormalZ); // l2 norm : magnitude of the vector
+  y_bc *= normal_norm;
+  T tau_w = cell.template getField<descriptors::TAU_W>();
 
-    T tau_eff;
+  T tau_eff;
 
   if (_wallFunctionParam.curved == true || orientation == 0) {
     T inv_normal_norm = 1. / normal_norm;
@@ -598,7 +623,8 @@ void WallFunctionBoundaryProcessor3D<T,DESCRIPTOR>::ComputeTauEff(BlockLattice3D
       e_x_loc[0] = u_2_parallel[0] * inv_u_2_parallel_norm;
       e_x_loc[1] = u_2_parallel[1] * inv_u_2_parallel_norm;
       e_x_loc[2] = u_2_parallel[2] * inv_u_2_parallel_norm;
-    } else {
+    }
+    else {
       e_x_loc[0] = T(-discreteNormalX);
       e_x_loc[1] = T(-discreteNormalY);
       e_x_loc[2] = T(-discreteNormalZ);
@@ -618,10 +644,11 @@ void WallFunctionBoundaryProcessor3D<T,DESCRIPTOR>::ComputeTauEff(BlockLattice3D
          e_x_loc[2] * u_z2[2];
 
     computeVanDriestTauEff(y_bc, tau_w, u1, u2, u3, tau_eff);
-  } else {
+  }
+  else {
     computeVanDriestTauEff(y_bc, tau_w, u_bc[direction], u_z[direction], u_z2[direction], tau_eff);
   }
-    cell.template defineField<descriptors::TAU_EFF>(&(tau_eff));
+  cell.template defineField<descriptors::TAU_EFF>(&(tau_eff));
 
 }
 
@@ -636,14 +663,16 @@ void WallFunctionBoundaryProcessor3D<T,DESCRIPTOR>::ComputeRhoWall(BlockLattice3
     T u_bc_Perpendicular = 0.;
     if (_wallFunctionParam.bodyForce) {
       T u_bc_tmp[DESCRIPTOR::d];
-      for (int iDim = 0; iDim<DESCRIPTOR::d; ++iDim){
-        u_bc_tmp[iDim] = u_bc[iDim] - cell.template getFieldPointer<descriptors::FORCE>()[iDim] / 2.;
+      auto force = cell.template getFieldPointer<descriptors::FORCE>();
+      for (int iDim = 0; iDim<DESCRIPTOR::d; ++iDim) {
+        u_bc_tmp[iDim] = u_bc[iDim] - force[iDim] / 2.;
       }
-      for (int iDim = 0; iDim<DESCRIPTOR::d; ++iDim){
+      for (int iDim = 0; iDim<DESCRIPTOR::d; ++iDim) {
         u_bc_Perpendicular += u_bc_tmp[iDim]*unit_normal[iDim];
       }
-    } else {
-      for (int iDim = 0; iDim<DESCRIPTOR::d; ++iDim){
+    }
+    else {
+      for (int iDim = 0; iDim<DESCRIPTOR::d; ++iDim) {
         u_bc_Perpendicular += u_bc[iDim]*unit_normal[iDim];
       }
     }
@@ -659,13 +688,15 @@ void WallFunctionBoundaryProcessor3D<T,DESCRIPTOR>::ComputeRhoWall(BlockLattice3
     }
 
     rho_bc = ((T)2*rhoNormal+rhoOnWall+(T)1) /
-          ((T)1+u_bc_Perpendicular);
+             ((T)1+u_bc_Perpendicular);
 
-  } else if (_wallFunctionParam.rhoMethod == 1) { // Extrapolation Fluid
+  }
+  else if (_wallFunctionParam.rhoMethod == 1) {   // Extrapolation Fluid
 
     rho_bc = blockLattice.get(x - discreteNormalX, y - discreteNormalY, z - discreteNormalZ).computeRho();
 
-  } else if (_wallFunctionParam.rhoMethod == 2) { // constant rho
+  }
+  else if (_wallFunctionParam.rhoMethod == 2) {   // constant rho
     rho_bc = 1.;
   }
 }
@@ -707,7 +738,7 @@ void WallFunctionBoundaryProcessor3D<T,DESCRIPTOR>::computeFneqRNEBB(Cell<T,DESC
     fneq_bc[iPop] = cell[iPop] - dynamics -> computeEquilibrium(iPop,rho_bc,u_bc,uSqr_bc);
   }
   for (unsigned fIndex=0; fIndex<normalInwardsIndices.size(); ++fIndex) {
-    fneq_bc[normalInwardsIndices[fIndex]] = fneq_bc[DESCRIPTOR::opposite[normalInwardsIndices[fIndex]]];
+    fneq_bc[normalInwardsIndices[fIndex]] = fneq_bc[descriptors::opposite<DESCRIPTOR>(normalInwardsIndices[fIndex])];
   }
 
   computeRFneqfromFneq(fneq_bc);
@@ -716,7 +747,7 @@ void WallFunctionBoundaryProcessor3D<T,DESCRIPTOR>::computeFneqRNEBB(Cell<T,DESC
 template<typename T, typename DESCRIPTOR>
 void WallFunctionBoundaryProcessor3D<T,DESCRIPTOR>::computeFneqENeq(BlockLattice3D<T,DESCRIPTOR>& blockLattice, Cell<T,DESCRIPTOR>& cell, int x, int y, int z, T u_bc[DESCRIPTOR::d], T rho_bc, T fneq_bc[DESCRIPTOR::q])
 {
-  Cell<T,DESCRIPTOR>& cell_fluid =  blockLattice.get(x - discreteNormalX, y - discreteNormalY, z - discreteNormalZ);
+  Cell<T,DESCRIPTOR> cell_fluid =  blockLattice.get(x - discreteNormalX, y - discreteNormalY, z - discreteNormalZ);
   Dynamics<T,DESCRIPTOR>* dynamics_fluid = cell_fluid.getDynamics();
   T rho_fluid, u_fluid[DESCRIPTOR::d];
   cell_fluid.computeRhoU(rho_fluid,u_fluid);
@@ -733,7 +764,7 @@ void WallFunctionBoundaryProcessor3D<T,DESCRIPTOR>::computeFneqRSOFD(BlockLattic
   T Velocity_Grad[DESCRIPTOR::d][DESCRIPTOR::d];
   computeVelocityGradient(blockLattice, x, y, z, u_bc, Velocity_Grad);
   // Creation of strain Rate
-  T tau_eff = cell.template getFieldPointer<descriptors::TAU_EFF>()[0];
+  T tau_eff = cell.template getField<descriptors::TAU_EFF>();
   T Factor = -1.*tau_eff*rho_bc/descriptors::invCs2<T,DESCRIPTOR>();
   int iPi = 0;
   for (int Alpha=0; Alpha<DESCRIPTOR::d; ++Alpha) {
@@ -746,10 +777,7 @@ void WallFunctionBoundaryProcessor3D<T,DESCRIPTOR>::computeFneqRSOFD(BlockLattic
   if (_wallFunctionParam.bodyForce) {
     // Force tensor
     //Creation of body force tensor (rho/2.)*(G_alpha*U_beta + U_alpha*G_Beta)
-    T F[DESCRIPTOR::d];
-    for (int iDim = 0; iDim < DESCRIPTOR::d; ++iDim) {
-      F[iDim] = cell.template getFieldPointer<descriptors::FORCE>()[iDim];
-    }
+    auto F = cell.template getField<descriptors::FORCE>();
 
     iPi = 0;
     for (int Alpha=0; Alpha<DESCRIPTOR::d; ++Alpha) {
@@ -776,16 +804,19 @@ void WallFunctionBoundaryProcessor3D<T,DESCRIPTOR>::ComputeFneqWall(BlockLattice
   if (_wallFunctionParam.fneqMethod == 0) {
     computeFneqRNEBB(cell, u_bc, rho_bc, fneq_bc);
 
-  //extrapolation NEQ (Guo Zhaoli)
-  } else if (_wallFunctionParam.fneqMethod == 1) {
+    //extrapolation NEQ (Guo Zhaoli)
+  }
+  else if (_wallFunctionParam.fneqMethod == 1) {
     computeFneqENeq(blockLattice, cell, x, y, z, u_bc, rho_bc, fneq_bc);
 
-  //Regularized second order finite Differnce
-  } else if (_wallFunctionParam.fneqMethod == 2) {
+    //Regularized second order finite Differnce
+  }
+  else if (_wallFunctionParam.fneqMethod == 2) {
     computeFneqRSOFD(blockLattice, cell, x, y, z, u_bc, rho_bc, fneq_bc);
 
-  //equilibrium scheme
-  } else if (_wallFunctionParam.fneqMethod == 3) {
+    //equilibrium scheme
+  }
+  else if (_wallFunctionParam.fneqMethod == 3) {
     for (int iPop=0; iPop < DESCRIPTOR::q; ++iPop) {
       fneq_bc[iPop] = 0.;
     }
@@ -796,7 +827,7 @@ void WallFunctionBoundaryProcessor3D<T,DESCRIPTOR>::ComputeFneqWall(BlockLattice
 template<typename T, typename DESCRIPTOR>
 void WallFunctionBoundaryProcessor3D<T,DESCRIPTOR>::ComputeWallFunction(BlockLattice3D<T,DESCRIPTOR>& blockLattice, int x, int y, int z)
 {
-  Cell<T,DESCRIPTOR>& cell_bc = blockLattice.get(x,y,z);
+  Cell<T,DESCRIPTOR> cell_bc = blockLattice.get(x,y,z);
   T rho_bc = 0.;
   T u_bc[DESCRIPTOR::d];
   T fneq_bc[DESCRIPTOR::q];
@@ -844,9 +875,9 @@ void WallFunctionBoundaryProcessor3D<T,DESCRIPTOR>::process(BlockLattice3D<T,DES
 
 template<typename T, typename DESCRIPTOR>
 WallFunctionBoundaryProcessorGenerator3D<T,DESCRIPTOR>::WallFunctionBoundaryProcessorGenerator3D(int x0, int x1, int y0, int y1, int z0, int z1, BlockGeometryStructure3D<T>& blockGeometryStructure,
-                                                                                              std::vector<int> discreteNormal, std::vector<int> missingIndices,
-                                                                                              UnitConverter<T, DESCRIPTOR> const& converter, wallFunctionParam<T> const& wallFunctionParam,
-                                                                                              IndicatorF3D<T>* geoIndicator)
+    std::vector<int> discreteNormal, std::vector<int> missingIndices,
+    UnitConverter<T, DESCRIPTOR> const& converter, wallFunctionParam<T> const& wallFunctionParam,
+    IndicatorF3D<T>* geoIndicator)
   : PostProcessorGenerator3D<T,DESCRIPTOR>(x0, x1, y0, y1, z0, z1),
     _blockGeometryStructure(blockGeometryStructure),
     _discreteNormal(discreteNormal), _missingIndices(missingIndices),
@@ -858,8 +889,8 @@ PostProcessor3D<T,DESCRIPTOR>*
 WallFunctionBoundaryProcessorGenerator3D<T,DESCRIPTOR>::generate() const
 {
   return new WallFunctionBoundaryProcessor3D<T,DESCRIPTOR>( this->x0, this->x1, this->y0, this->y1, this->z0, this->z1,
-                                                         _blockGeometryStructure, _discreteNormal, _missingIndices,
-                                                         _converter, _wallFunctionParam, _geoIndicator);
+         _blockGeometryStructure, _discreteNormal, _missingIndices,
+         _converter, _wallFunctionParam, _geoIndicator);
 }
 
 template<typename T, typename DESCRIPTOR>
@@ -867,8 +898,8 @@ PostProcessorGenerator3D<T,DESCRIPTOR>*
 WallFunctionBoundaryProcessorGenerator3D<T,DESCRIPTOR>::clone() const
 {
   return new WallFunctionBoundaryProcessorGenerator3D<T,DESCRIPTOR> (this->x0, this->x1, this->y0, this->y1, this->z0, this->z1,
-                                                                  _blockGeometryStructure, _discreteNormal, _missingIndices,
-                                                                  _converter, _wallFunctionParam, _geoIndicator);
+         _blockGeometryStructure, _discreteNormal, _missingIndices,
+         _converter, _wallFunctionParam, _geoIndicator);
 }
 
 }  // namespace olb

@@ -30,10 +30,11 @@
 
 #include "functors/lattice/reductionF3D.h"
 #include "twoWayHelperFunctionals.h"
+#include "smoothingFunctionals3D.h"
 
 namespace olb {
 
-/** Abstact base class for LocalBaseCouplingModel.
+/** Abstact base class for all the forward-coupling models
   * Its raison d'etre consists of not being templetized in Lattice.
   */
 template<typename T, template<typename V> class Particle>
@@ -41,6 +42,32 @@ class ForwardCouplingModel {
 public:
   /// Class operator to apply the coupling, for overload.
   virtual bool operator() (Particle<T>* p, int globic)=0;
+protected:
+  /// Constructor
+  ForwardCouplingModel( SuperGeometry3D<T>& sGeometry, DragModel<T, Particle>& dragModel );
+  SuperGeometry3D<T>& _sGeometry;
+  DragModel<T, Particle>& _dragModel; // reference to a drag model
+};
+
+/** Abstact base class for all the local/non-local forward-coupling models.
+  * Adding the templatization in Lattice.
+  */
+template<typename T, typename Lattice, template<typename V> class Particle>
+class BaseForwardCouplingModel : public ForwardCouplingModel<T,Particle> {
+protected:
+  /// Constructor
+  BaseForwardCouplingModel ( UnitConverter<T, Lattice>& converter,
+                         SuperLattice3D<T, Lattice>& sLattice,
+                         SuperGeometry3D<T>& sGeometry,
+                         DragModel<T, Particle>& dragModel );
+  UnitConverter<T, Lattice>& _converter; // reference to a UnitConverter
+  SuperLattice3D<T, Lattice>& _sLattice; // reference to a lattice
+  // Functional to interpolate lattice density at particle's location
+  std::shared_ptr<SuperLatticeInterpDensity3Degree3D<T, Lattice> > _interpLatticeDensity;
+  // Functional to interpolate lattice velocity at particle's location
+  std::shared_ptr<SuperLatticeInterpPhysVelocity3D<T, Lattice> > _interpLatticeVelocity;
+  // Momentum-exchange helper functional
+  std::shared_ptr<TwoWayHelperFunctional<T, Lattice> > _momentumExchange;
 };
 
 /** Abstact class for all the local forward-coupling models,
@@ -48,26 +75,17 @@ public:
   * Input parameters in attice units.
   */
 template<typename T, typename Lattice, template<typename V> class Particle>
-class LocalBaseForwardCouplingModel : public ForwardCouplingModel<T,Particle> {
+class LocalBaseForwardCouplingModel : public BaseForwardCouplingModel<T,Lattice,Particle> {
 public:
   /// Class operator to apply the coupling, for overload.
   virtual bool operator() (Particle<T>* p, int globic) override;
+  //virtual bool operator() (SuperParticleSystem3D<T,Particle>& spSys) override;
 protected:
   /// Constructor
   LocalBaseForwardCouplingModel ( UnitConverter<T, Lattice>& converter,
                          SuperLattice3D<T, Lattice>& sLattice,
                          SuperGeometry3D<T>& sGeometry,
                          DragModel<T, Particle>& dragModel );
-  SuperGeometry3D<T>& _sGeometry;
-  UnitConverter<T, Lattice>& _converter; // reference to a UnitConverter
-  SuperLattice3D<T, Lattice>& _sLattice; // reference to a lattice
-  DragModel<T, Particle>& _dragModel; // reference to a drag model
-  // Functional to interpolate lattice density at particle's location
-  std::shared_ptr<SuperLatticeInterpDensity3Degree3D<T, Lattice> > _interpLatticeDensity;
-  // Functional to interpolate lattice velocity at particle's location
-  std::shared_ptr<SuperLatticeInterpPhysVelocity3D<T, Lattice> > _interpLatticeVelocity;
-  // Momentum-exchange helper functional
-  std::shared_ptr<TwoWayHelperFunctional<T, Lattice> > _momentumExchange;
 };
 
 /** Class for a naive forward-coupling model.
@@ -101,10 +119,11 @@ public:
   * Input parameters in attice units.
   */
 template<typename T, typename Lattice, template<typename V> class Particle>
-class NonLocalBaseForwardCouplingModel : public ForwardCouplingModel<T,Particle> {
+class NonLocalBaseForwardCouplingModel : public BaseForwardCouplingModel<T,Lattice,Particle> {
 public:
   /// Class operator to apply the coupling, for overload.
   virtual bool operator() (Particle<T>* p, int globic) override;
+//  virtual bool operator() (SuperParticleSystem3D<T,Particle>& spSys) override;
 protected:
   /// Constructor
   NonLocalBaseForwardCouplingModel ( UnitConverter<T, Lattice>& converter,
@@ -112,19 +131,7 @@ protected:
                               SuperGeometry3D<T>& sGeometry,
                               DragModel<T, Particle>& dragModel,
                               SmoothingFunctional<T, Lattice>& smoothingFunctional );
-  SuperGeometry3D<T>& _sGeometry;
-  UnitConverter<T, Lattice>& _converter; // reference to a UnitConverter
-  SuperLattice3D<T, Lattice>& _sLattice; // reference to a lattice
-  DragModel<T, Particle>& _dragModel; // reference to a drag model
   SmoothingFunctional<T, Lattice>& _smoothingFunctional; // Functional to treat non-local smoothing
-  // Functional to interpolate lattice density at particle's location.
-  // It is assumed that it returns the exact value for the exact cell's location!
-  std::shared_ptr<SuperLatticeInterpDensity3Degree3D<T, Lattice> > _interpLatticeDensity;
-  // Functional to interpolate lattice velocity at particle's location
-  // It is assumed that it returns the exact value for the exact cell's location!
-  std::shared_ptr<SuperLatticeInterpPhysVelocity3D<T, Lattice> > _interpLatticeVelocity;
-  // Momentum-exchange helper functional
-  std::shared_ptr<TwoWayHelperFunctional<T, Lattice> > _momentumExchange;
 };
 
 /** Class for a naive, non-local forward-coupling model as in Sungkorn et al. (2011), but with
@@ -140,6 +147,25 @@ public:
                                  SuperGeometry3D<T>& sGeometry,
                                  DragModel<T, Particle>& dragModel,
                                  SmoothingFunctional<T, Lattice>& smoothingFunctional );
+};
+
+/** Class for a forward-coupling model as in Evrard, Denner and van Wachem (2019), but with
+  * an extra-normalization of the smoothing function.
+  * Input parameters in attice units.
+  */
+template<typename T, typename Lattice, template<typename V> class Particle>
+class vanWachemForwardCouplingModel : public BaseForwardCouplingModel<T,Lattice,Particle> {
+public:
+  /// Constructor
+  vanWachemForwardCouplingModel ( UnitConverter<T, Lattice>& converter,
+                                 SuperLattice3D<T, Lattice>& sLattice,
+                                 SuperGeometry3D<T>& sGeometry,
+                                 DragModel<T, Particle>& dragModel,
+                                 SmoothingFunctional<T, Lattice>& smoothingFunctional, int nVoxelInterpPoints );
+  /// Class operator to apply the coupling, for overload.
+  virtual bool operator() (Particle<T>* p, int globic) override;
+protected:
+  SmoothingFunctional<T, Lattice>& _smoothingFunctional; // Functional to treat non-local smoothing
 };
 
 

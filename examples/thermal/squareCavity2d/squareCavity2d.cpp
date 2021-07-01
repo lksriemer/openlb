@@ -38,11 +38,11 @@ typedef double T;
 // #define SMAGORINSKY
 
 #ifdef SMAGORINSKY
-  #define NSDESCRIPTOR D2Q9<FORCE,TAU_EFF>
-  #define TDESCRIPTOR D2Q5<VELOCITY,TAU_EFF>
+typedef D2Q9<FORCE,TAU_EFF> NSDESCRIPTOR;
+typedef D2Q5<VELOCITY,TAU_EFF> TDESCRIPTOR;
 #else
-  #define NSDESCRIPTOR D2Q9<FORCE>
-  #define TDESCRIPTOR D2Q5<VELOCITY>
+typedef D2Q9<FORCE> NSDESCRIPTOR;
+typedef D2Q5<VELOCITY> TDESCRIPTOR;
 #endif
 
 // Parameters for the simulation setup
@@ -182,8 +182,6 @@ void prepareLattice( ThermalUnitConverter<T, NSDESCRIPTOR, TDESCRIPTOR> const& c
                      SuperLattice2D<T, TDESCRIPTOR>& ADlattice,
                      ForcedBGKdynamics<T, NSDESCRIPTOR> &bulkDynamics,
                      Dynamics<T, TDESCRIPTOR>& advectionDiffusionBulkDynamics,
-                     sOnLatticeBoundaryCondition2D<T,NSDESCRIPTOR>& NSboundaryCondition,
-                     sOnLatticeBoundaryCondition2D<T,TDESCRIPTOR>& TboundaryCondition,
                      SuperGeometry2D<T>& superGeometry )
 {
 
@@ -203,8 +201,8 @@ void prepareLattice( ThermalUnitConverter<T, NSDESCRIPTOR, TDESCRIPTOR> const& c
   NSlattice.defineDynamics(superGeometry, 4, &instances::getBounceBack<T, NSDESCRIPTOR>());
 
   /// sets boundary
-  TboundaryCondition.addTemperatureBoundary(superGeometry.getMaterialIndicator({2, 3}), Tomega);
-  NSboundaryCondition.addVelocityBoundary(superGeometry.getMaterialIndicator({2, 3}), omega);
+  setAdvectionDiffusionTemperatureBoundary<T, TDESCRIPTOR>(ADlattice, Tomega, superGeometry.getMaterialIndicator({2, 3}));
+  setLocalVelocityBoundary<T,NSDESCRIPTOR>(NSlattice, omega, superGeometry.getMaterialIndicator({2, 3}));
 
   /// define initial conditions
   AnalyticalConst2D<T,T> rho(1.);
@@ -425,71 +423,71 @@ void getResults( ThermalUnitConverter<T, NSDESCRIPTOR, TDESCRIPTOR> const& conve
       std::fstream fs;
       fs.open("output.txt",
               std::fstream::in | std::fstream::out | std::fstream::app);
-       fs << "Comparison against De Vahl Davis (1983):" << endl;
-    if (Ra == 1e3) {
-      fs << "xVelocity in yDir=" <<  outputVelX[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength() << "; error(rel)=" << (T) fabs((LitVelocity3[0] - outputVelX[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength()) / LitVelocity3[0]) << endl;
-      fs << "yVelocity in xDir=" <<  outputVelY[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength() << "; error(rel)=" << (T) fabs((LitVelocity3[1] - outputVelY[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength()) / LitVelocity3[1]) << endl;
-      fs << "yMaxVel / xMaxVel="  <<  outputVelY[0] / outputVelX[0] << "; error(rel)=" << (T) fabs((LitVelocity3[2] - outputVelY[0] / outputVelX[0])  / LitVelocity3[2]) << endl;
-      fs << "yCoord of xMaxVel=" <<  outputVelX[1]/lx << "; error(rel)=" << (T) fabs((LitPosition3[0] - outputVelX[1] / lx) / LitPosition3[0]) << endl;
-      fs << "xCoord of yMaxVel=" <<   outputVelY[1]/lx << "; error(rel)=" << (T) fabs((LitPosition3[1] - outputVelY[1] / lx) / LitPosition3[1]) << endl;
-      fs << "Nusselt=" <<  nusselt << "; error(rel)=" << (T) fabs((LitNusselt3 - nusselt) / nusselt) << endl;
-    }
-    else if (Ra == 1e4) {
-      fs << "xVelocity in yDir=" <<  outputVelX[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength() << "; error(rel)=" << (T) fabs((LitVelocity4[0] - outputVelX[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength()) / LitVelocity4[0]) << endl;
-      fs << "yVelocity in xDir=" <<  outputVelY[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength() << "; error(rel)=" << (T) fabs((LitVelocity4[1] - outputVelY[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength()) / LitVelocity4[1]) << endl;
-      fs << "yMaxVel / xMaxVel="  <<  outputVelY[0] / outputVelX[0] << "; error(rel)=" << (T) fabs((LitVelocity4[2] - outputVelY[0] / outputVelX[0])  / LitVelocity4[2]) << endl;
-      fs << "yCoord of xMaxVel=" <<  outputVelX[1]/lx << "; error(rel)=" << (T) fabs((LitPosition4[0] - outputVelX[1] / lx) / LitPosition4[0]) << endl;
-      fs << "xCoord of yMaxVel=" <<   outputVelY[1]/lx << "; error(rel)=" << (T) fabs((LitPosition4[1] - outputVelY[1] / lx) / LitPosition4[1]) << endl;
-      fs << "Nusselt=" <<  nusselt << "; error(rel)=" << (T) fabs((LitNusselt4 - nusselt) / nusselt) << endl;
-    }
-    else if (Ra == 1e5) {
-      fs << "xVelocity in yDir=" <<  outputVelX[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength() << "; error(rel)=" << (T) fabs((LitVelocity5[0] - outputVelX[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength()) / LitVelocity5[0]) << endl;
-      fs << "yVelocity in xDir=" <<  outputVelY[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength() << "; error(rel)=" << (T) fabs((LitVelocity5[1] - outputVelY[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength()) / LitVelocity5[1]) << endl;
-      fs << "yMaxVel / xMaxVel="  <<  outputVelY[0] / outputVelX[0] << "; error(rel)=" << (T) fabs((LitVelocity5[2] - outputVelY[0] / outputVelX[0])  / LitVelocity5[2]) << endl;
-      fs << "yCoord of xMaxVel=" <<  outputVelX[1]/lx << "; error(rel)=" << (T) fabs((LitPosition5[0] - outputVelX[1] / lx) / LitPosition5[0]) << endl;
-      fs << "xCoord of yMaxVel=" <<   outputVelY[1]/lx << "; error(rel)=" << (T) fabs((LitPosition5[1] - outputVelY[1] / lx) / LitPosition5[1]) << endl;
-      fs << "Nusselt=" <<  nusselt << "; error(rel)=" << (T) fabs((LitNusselt5 - nusselt) / nusselt) << endl;
-    }
-    else if (Ra == 1e6) {
-      fs << "xVelocity in yDir=" <<  outputVelX[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength() << "; error(rel)=" << (T) fabs((LitVelocity6[0] - outputVelX[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength()) / LitVelocity6[0]) << endl;
-      fs << "yVelocity in xDir=" <<  outputVelY[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength() << "; error(rel)=" << (T) fabs((LitVelocity6[1] - outputVelY[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength()) / LitVelocity6[1]) << endl;
-      fs << "yMaxVel / xMaxVel="  <<  outputVelY[0] / outputVelX[0] << "; error(rel)=" << (T) fabs((LitVelocity6[2] - outputVelY[0] / outputVelX[0])  / LitVelocity6[2]) << endl;
-      fs << "yCoord of xMaxVel=" <<  outputVelX[1]/lx << "; error(rel)=" << (T) fabs((LitPosition6[0] - outputVelX[1] / lx) / LitPosition6[0]) << endl;
-      fs << "xCoord of yMaxVel=" <<   outputVelY[1]/lx << "; error(rel)=" << (T) fabs((LitPosition6[1] - outputVelY[1] / lx) / LitPosition6[1]) << endl;
-      fs << "Nusselt=" <<  nusselt << "; error(rel)=" << (T) fabs((LitNusselt6 - nusselt) / nusselt) << endl;
-    }
-    else if (Ra == 1e7) {
-      fs << "xVelocity in yDir=" <<  outputVelX[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength() << "; error(rel)=" << (T) fabs((LitVelocity7[0] - outputVelX[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength()) / LitVelocity7[0]) << endl;
-      fs << "yVelocity in xDir=" <<  outputVelY[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength() << "; error(rel)=" << (T) fabs((LitVelocity7[1] - outputVelY[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength()) / LitVelocity7[1]) << endl;
-      fs << "yMaxVel / xMaxVel="  <<  outputVelY[0] / outputVelX[0] << "; error(rel)=" << (T) fabs((LitVelocity7[2] - outputVelY[0] / outputVelX[0])  / LitVelocity7[2]) << endl;
-      fs << "yCoord of xMaxVel=" <<  outputVelX[1]/lx << "; error(rel)=" << (T) fabs((LitPosition7[0] - outputVelX[1] / lx) / LitPosition7[0]) << endl;
-      fs << "xCoord of yMaxVel=" <<   outputVelY[1]/lx << "; error(rel)=" << (T) fabs((LitPosition7[1] - outputVelY[1] / lx) / LitPosition7[1]) << endl;
-      fs << "Nusselt=" <<  nusselt << "; error(rel)=" << (T) fabs((LitNusselt7 - nusselt) / nusselt) << endl;
-    }
-    else if (Ra == 1e8) {
-      fs << "xVelocity in yDir=" <<  outputVelX[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength() << "; error(rel)=" << (T) fabs((LitVelocity8[0] - outputVelX[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength()) / LitVelocity8[0]) << endl;
-      fs << "yVelocity in xDir=" <<  outputVelY[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength() << "; error(rel)=" << (T) fabs((LitVelocity8[1] - outputVelY[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength()) / LitVelocity8[1]) << endl;
-      fs << "yMaxVel / xMaxVel="  <<  outputVelY[0] / outputVelX[0] << "; error(rel)=" << (T) fabs((LitVelocity8[2] - outputVelY[0] / outputVelX[0])  / LitVelocity8[2]) << endl;
-      fs << "yCoord of xMaxVel=" <<  outputVelX[1]/lx << "; error(rel)=" << (T) fabs((LitPosition8[0] - outputVelX[1] / lx) / LitPosition8[0]) << endl;
-      fs << "xCoord of yMaxVel=" <<   outputVelY[1]/lx << "; error(rel)=" << (T) fabs((LitPosition8[1] - outputVelY[1] / lx) / LitPosition8[1]) << endl;
-      fs << "Nusselt=" <<  nusselt << "; error(rel)=" << (T) fabs((LitNusselt8 - nusselt) / nusselt) << endl;
-    }
-    else if (Ra == 1e9) {
-      fs << "xVelocity in yDir=" <<  outputVelX[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength() << "; error(rel)=" << (T) fabs((LitVelocity9[0] - outputVelX[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength()) / LitVelocity9[0]) << endl;
-      fs << "yVelocity in xDir=" <<  outputVelY[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength() << "; error(rel)=" << (T) fabs((LitVelocity9[1] - outputVelY[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength()) / LitVelocity9[1]) << endl;
-      fs << "yMaxVel / xMaxVel="  <<  outputVelY[0] / outputVelX[0] << "; error(rel)=" << (T) fabs((LitVelocity9[2] - outputVelY[0] / outputVelX[0])  / LitVelocity9[2]) << endl;
-      fs << "yCoord of xMaxVel=" <<  outputVelX[1]/lx << "; error(rel)=" << (T) fabs((LitPosition9[0] - outputVelX[1] / lx) / LitPosition9[0]) << endl;
-      fs << "xCoord of yMaxVel=" <<   outputVelY[1]/lx << "; error(rel)=" << (T) fabs((LitPosition9[1] - outputVelY[1] / lx) / LitPosition9[1]) << endl;
-      fs << "Nusselt=" <<  nusselt << "; error(rel)=" << (T) fabs((LitNusselt9 - nusselt) / nusselt) << endl;
-    }
-    else if (Ra == 1e10) {
-      fs << "xVelocity in yDir=" <<  outputVelX[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength() << "; error(rel)=" << (T) fabs((LitVelocity10[0] - outputVelX[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength()) / LitVelocity10[0]) << endl;
-      fs << "yVelocity in xDir=" <<  outputVelY[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength() << "; error(rel)=" << (T) fabs((LitVelocity10[1] - outputVelY[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength()) / LitVelocity10[1]) << endl;
-      fs << "yMaxVel / xMaxVel="  <<  outputVelY[0] / outputVelX[0] << "; error(rel)=" << (T) fabs((LitVelocity10[2] - outputVelY[0] / outputVelX[0])  / LitVelocity10[2]) << endl;
-      fs << "yCoord of xMaxVel=" <<  outputVelX[1]/lx << "; error(rel)=" << (T) fabs((LitPosition10[0] - outputVelX[1] / lx) / LitPosition10[0]) << endl;
-      fs << "xCoord of yMaxVel=" <<   outputVelY[1]/lx << "; error(rel)=" << (T) fabs((LitPosition10[1] - outputVelY[1] / lx) / LitPosition10[1]) << endl;
-      fs << "Nusselt=" <<  nusselt << "; error(rel)=" << (T) fabs((LitNusselt10 - nusselt) / nusselt) << endl;
-     }
+      fs << "Comparison against De Vahl Davis (1983):" << endl;
+      if (Ra == 1e3) {
+        fs << "xVelocity in yDir=" <<  outputVelX[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength() << "; error(rel)=" << (T) fabs((LitVelocity3[0] - outputVelX[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength()) / LitVelocity3[0]) << endl;
+        fs << "yVelocity in xDir=" <<  outputVelY[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength() << "; error(rel)=" << (T) fabs((LitVelocity3[1] - outputVelY[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength()) / LitVelocity3[1]) << endl;
+        fs << "yMaxVel / xMaxVel="  <<  outputVelY[0] / outputVelX[0] << "; error(rel)=" << (T) fabs((LitVelocity3[2] - outputVelY[0] / outputVelX[0])  / LitVelocity3[2]) << endl;
+        fs << "yCoord of xMaxVel=" <<  outputVelX[1]/lx << "; error(rel)=" << (T) fabs((LitPosition3[0] - outputVelX[1] / lx) / LitPosition3[0]) << endl;
+        fs << "xCoord of yMaxVel=" <<   outputVelY[1]/lx << "; error(rel)=" << (T) fabs((LitPosition3[1] - outputVelY[1] / lx) / LitPosition3[1]) << endl;
+        fs << "Nusselt=" <<  nusselt << "; error(rel)=" << (T) fabs((LitNusselt3 - nusselt) / nusselt) << endl;
+      }
+      else if (Ra == 1e4) {
+        fs << "xVelocity in yDir=" <<  outputVelX[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength() << "; error(rel)=" << (T) fabs((LitVelocity4[0] - outputVelX[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength()) / LitVelocity4[0]) << endl;
+        fs << "yVelocity in xDir=" <<  outputVelY[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength() << "; error(rel)=" << (T) fabs((LitVelocity4[1] - outputVelY[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength()) / LitVelocity4[1]) << endl;
+        fs << "yMaxVel / xMaxVel="  <<  outputVelY[0] / outputVelX[0] << "; error(rel)=" << (T) fabs((LitVelocity4[2] - outputVelY[0] / outputVelX[0])  / LitVelocity4[2]) << endl;
+        fs << "yCoord of xMaxVel=" <<  outputVelX[1]/lx << "; error(rel)=" << (T) fabs((LitPosition4[0] - outputVelX[1] / lx) / LitPosition4[0]) << endl;
+        fs << "xCoord of yMaxVel=" <<   outputVelY[1]/lx << "; error(rel)=" << (T) fabs((LitPosition4[1] - outputVelY[1] / lx) / LitPosition4[1]) << endl;
+        fs << "Nusselt=" <<  nusselt << "; error(rel)=" << (T) fabs((LitNusselt4 - nusselt) / nusselt) << endl;
+      }
+      else if (Ra == 1e5) {
+        fs << "xVelocity in yDir=" <<  outputVelX[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength() << "; error(rel)=" << (T) fabs((LitVelocity5[0] - outputVelX[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength()) / LitVelocity5[0]) << endl;
+        fs << "yVelocity in xDir=" <<  outputVelY[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength() << "; error(rel)=" << (T) fabs((LitVelocity5[1] - outputVelY[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength()) / LitVelocity5[1]) << endl;
+        fs << "yMaxVel / xMaxVel="  <<  outputVelY[0] / outputVelX[0] << "; error(rel)=" << (T) fabs((LitVelocity5[2] - outputVelY[0] / outputVelX[0])  / LitVelocity5[2]) << endl;
+        fs << "yCoord of xMaxVel=" <<  outputVelX[1]/lx << "; error(rel)=" << (T) fabs((LitPosition5[0] - outputVelX[1] / lx) / LitPosition5[0]) << endl;
+        fs << "xCoord of yMaxVel=" <<   outputVelY[1]/lx << "; error(rel)=" << (T) fabs((LitPosition5[1] - outputVelY[1] / lx) / LitPosition5[1]) << endl;
+        fs << "Nusselt=" <<  nusselt << "; error(rel)=" << (T) fabs((LitNusselt5 - nusselt) / nusselt) << endl;
+      }
+      else if (Ra == 1e6) {
+        fs << "xVelocity in yDir=" <<  outputVelX[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength() << "; error(rel)=" << (T) fabs((LitVelocity6[0] - outputVelX[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength()) / LitVelocity6[0]) << endl;
+        fs << "yVelocity in xDir=" <<  outputVelY[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength() << "; error(rel)=" << (T) fabs((LitVelocity6[1] - outputVelY[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength()) / LitVelocity6[1]) << endl;
+        fs << "yMaxVel / xMaxVel="  <<  outputVelY[0] / outputVelX[0] << "; error(rel)=" << (T) fabs((LitVelocity6[2] - outputVelY[0] / outputVelX[0])  / LitVelocity6[2]) << endl;
+        fs << "yCoord of xMaxVel=" <<  outputVelX[1]/lx << "; error(rel)=" << (T) fabs((LitPosition6[0] - outputVelX[1] / lx) / LitPosition6[0]) << endl;
+        fs << "xCoord of yMaxVel=" <<   outputVelY[1]/lx << "; error(rel)=" << (T) fabs((LitPosition6[1] - outputVelY[1] / lx) / LitPosition6[1]) << endl;
+        fs << "Nusselt=" <<  nusselt << "; error(rel)=" << (T) fabs((LitNusselt6 - nusselt) / nusselt) << endl;
+      }
+      else if (Ra == 1e7) {
+        fs << "xVelocity in yDir=" <<  outputVelX[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength() << "; error(rel)=" << (T) fabs((LitVelocity7[0] - outputVelX[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength()) / LitVelocity7[0]) << endl;
+        fs << "yVelocity in xDir=" <<  outputVelY[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength() << "; error(rel)=" << (T) fabs((LitVelocity7[1] - outputVelY[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength()) / LitVelocity7[1]) << endl;
+        fs << "yMaxVel / xMaxVel="  <<  outputVelY[0] / outputVelX[0] << "; error(rel)=" << (T) fabs((LitVelocity7[2] - outputVelY[0] / outputVelX[0])  / LitVelocity7[2]) << endl;
+        fs << "yCoord of xMaxVel=" <<  outputVelX[1]/lx << "; error(rel)=" << (T) fabs((LitPosition7[0] - outputVelX[1] / lx) / LitPosition7[0]) << endl;
+        fs << "xCoord of yMaxVel=" <<   outputVelY[1]/lx << "; error(rel)=" << (T) fabs((LitPosition7[1] - outputVelY[1] / lx) / LitPosition7[1]) << endl;
+        fs << "Nusselt=" <<  nusselt << "; error(rel)=" << (T) fabs((LitNusselt7 - nusselt) / nusselt) << endl;
+      }
+      else if (Ra == 1e8) {
+        fs << "xVelocity in yDir=" <<  outputVelX[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength() << "; error(rel)=" << (T) fabs((LitVelocity8[0] - outputVelX[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength()) / LitVelocity8[0]) << endl;
+        fs << "yVelocity in xDir=" <<  outputVelY[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength() << "; error(rel)=" << (T) fabs((LitVelocity8[1] - outputVelY[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength()) / LitVelocity8[1]) << endl;
+        fs << "yMaxVel / xMaxVel="  <<  outputVelY[0] / outputVelX[0] << "; error(rel)=" << (T) fabs((LitVelocity8[2] - outputVelY[0] / outputVelX[0])  / LitVelocity8[2]) << endl;
+        fs << "yCoord of xMaxVel=" <<  outputVelX[1]/lx << "; error(rel)=" << (T) fabs((LitPosition8[0] - outputVelX[1] / lx) / LitPosition8[0]) << endl;
+        fs << "xCoord of yMaxVel=" <<   outputVelY[1]/lx << "; error(rel)=" << (T) fabs((LitPosition8[1] - outputVelY[1] / lx) / LitPosition8[1]) << endl;
+        fs << "Nusselt=" <<  nusselt << "; error(rel)=" << (T) fabs((LitNusselt8 - nusselt) / nusselt) << endl;
+      }
+      else if (Ra == 1e9) {
+        fs << "xVelocity in yDir=" <<  outputVelX[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength() << "; error(rel)=" << (T) fabs((LitVelocity9[0] - outputVelX[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength()) / LitVelocity9[0]) << endl;
+        fs << "yVelocity in xDir=" <<  outputVelY[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength() << "; error(rel)=" << (T) fabs((LitVelocity9[1] - outputVelY[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength()) / LitVelocity9[1]) << endl;
+        fs << "yMaxVel / xMaxVel="  <<  outputVelY[0] / outputVelX[0] << "; error(rel)=" << (T) fabs((LitVelocity9[2] - outputVelY[0] / outputVelX[0])  / LitVelocity9[2]) << endl;
+        fs << "yCoord of xMaxVel=" <<  outputVelX[1]/lx << "; error(rel)=" << (T) fabs((LitPosition9[0] - outputVelX[1] / lx) / LitPosition9[0]) << endl;
+        fs << "xCoord of yMaxVel=" <<   outputVelY[1]/lx << "; error(rel)=" << (T) fabs((LitPosition9[1] - outputVelY[1] / lx) / LitPosition9[1]) << endl;
+        fs << "Nusselt=" <<  nusselt << "; error(rel)=" << (T) fabs((LitNusselt9 - nusselt) / nusselt) << endl;
+      }
+      else if (Ra == 1e10) {
+        fs << "xVelocity in yDir=" <<  outputVelX[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength() << "; error(rel)=" << (T) fabs((LitVelocity10[0] - outputVelX[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength()) / LitVelocity10[0]) << endl;
+        fs << "yVelocity in xDir=" <<  outputVelY[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength() << "; error(rel)=" << (T) fabs((LitVelocity10[1] - outputVelY[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength()) / LitVelocity10[1]) << endl;
+        fs << "yMaxVel / xMaxVel="  <<  outputVelY[0] / outputVelX[0] << "; error(rel)=" << (T) fabs((LitVelocity10[2] - outputVelY[0] / outputVelX[0])  / LitVelocity10[2]) << endl;
+        fs << "yCoord of xMaxVel=" <<  outputVelX[1]/lx << "; error(rel)=" << (T) fabs((LitPosition10[0] - outputVelX[1] / lx) / LitPosition10[0]) << endl;
+        fs << "xCoord of yMaxVel=" <<   outputVelY[1]/lx << "; error(rel)=" << (T) fabs((LitPosition10[1] - outputVelY[1] / lx) / LitPosition10[1]) << endl;
+        fs << "Nusselt=" <<  nusselt << "; error(rel)=" << (T) fabs((LitNusselt10 - nusselt) / nusselt) << endl;
+      }
     }
   }
 }
@@ -502,9 +500,9 @@ int main(int argc, char *argv[])
   olbInit(&argc, &argv);
   singleton::directories().setOutputDir("./tmp/");
 
-  #ifndef SMAGORINSKY
+#ifndef SMAGORINSKY
   T tau = 0.9;
-  #endif
+#endif
   N = 32;
 
   if (argc>=2) {
@@ -531,9 +529,9 @@ int main(int argc, char *argv[])
   }
   if (Ra==1e6) {
     charU *= LitVelocity6[1];
-  N = 512;
+    N = 512;
   }
-   if (Ra==1e7) {
+  if (Ra==1e7) {
     charU *= LitVelocity7[1];
   }
   if (Ra==1e8) {
@@ -549,11 +547,11 @@ int main(int argc, char *argv[])
 
   ThermalUnitConverter<T, NSDESCRIPTOR, TDESCRIPTOR> converter(
     (T) lx / N,
-    #ifdef SMAGORINSKY
+#ifdef SMAGORINSKY
     (T) 2.*0.056/charU*lx/N,
-    #else
+#else
     (T) (tau - 0.5) / descriptors::invCs2<T,NSDESCRIPTOR>() * pow((lx/N),2) / 15.126e-6,
-    #endif
+#endif
     (T) lx,
     (T) charU,
     (T) 15.126e-6,
@@ -589,11 +587,7 @@ int main(int argc, char *argv[])
   SuperLattice2D<T, TDESCRIPTOR> ADlattice(superGeometry);
   SuperLattice2D<T, NSDESCRIPTOR> NSlattice(superGeometry);
 
-  sOnLatticeBoundaryCondition2D<T, NSDESCRIPTOR> NSboundaryCondition(NSlattice);
-  createLocalBoundaryCondition2D<T, NSDESCRIPTOR>(NSboundaryCondition);
 
-  sOnLatticeBoundaryCondition2D<T, TDESCRIPTOR> TboundaryCondition(ADlattice);
-  createAdvectionDiffusionBoundaryCondition2D<T, TDESCRIPTOR>(TboundaryCondition);
 
 #ifdef SMAGORINSKY
   ExternalTauEffLESForcedBGKdynamics<T, NSDESCRIPTOR> NSbulkDynamics(
@@ -621,25 +615,26 @@ int main(int argc, char *argv[])
   T boussinesqForcePrefactor = 9.81 / converter.getConversionFactorVelocity() * converter.getConversionFactorTime() *
                                converter.getCharPhysTemperatureDifference() * converter.getPhysThermalExpansionCoefficient();
 
-  #ifdef SMAGORINSKY
+#ifdef SMAGORINSKY
   SmagorinskyBoussinesqCouplingGenerator2D<T,NSDESCRIPTOR>
   coupling(0, converter.getLatticeLength(lx), 0, converter.getLatticeLength(lx),
-           boussinesqForcePrefactor, converter.getLatticeTemperature(Tcold), 1., dir, 0.87);
-  #else
+           boussinesqForcePrefactor, converter.getLatticeTemperature(Tcold), 1., dir, 0.87, NSbulkDynamics.getPreFactor());
+#else
   NavierStokesAdvectionDiffusionCouplingGenerator2D<T,NSDESCRIPTOR>
   coupling(0, converter.getLatticeLength(lx), 0, converter.getLatticeLength(lx),
            boussinesqForcePrefactor, converter.getLatticeTemperature(Tcold), 1., dir);
-  #endif
+#endif
 
   NSlattice.addLatticeCoupling(superGeometry, 1, coupling, ADlattice);
 
+  //prepareLattice and setBoundaryCondition
   prepareLattice(converter,
                  NSlattice, ADlattice,
                  NSbulkDynamics, TbulkDynamics,
-                 NSboundaryCondition, TboundaryCondition, superGeometry );
+                 superGeometry );
 
 
-  #ifdef SMAGORINSKY
+#ifdef SMAGORINSKY
   SuperVTMwriter2D<T> vtkWriter("thermalNaturalConvection2D");
 
   SuperLatticePhysTemperature2D<T,NSDESCRIPTOR, TDESCRIPTOR> sTemp(ADlattice,converter);
@@ -649,7 +644,7 @@ int main(int argc, char *argv[])
   SuperLatticeTimeAveragedF2D<T> sAveragedVel(sVel);
   SuperLatticeTimeAveragedCrossCorrelationF2D<T> sAveragedTempVelCross(sTemp,sVel);
   SuperLatticeTimeAveragedCrossCorrelationF2D<T> sAveragedVelVelCross(sVel,sVel);
-  #endif
+#endif
 
   /// === 4th Step: Main Loop with Timer ===
   Timer<T> timer(converter.getLatticeTime(maxPhysT), superGeometry.getStatistics().getNvoxel() );
@@ -657,7 +652,7 @@ int main(int argc, char *argv[])
 
   util::ValueTracer<T> converge(6,epsilon);
   bool converged = false;
-  for (int iT = 0; iT < converter.getLatticeTime(maxPhysT); ++iT) {
+  for (std::size_t iT = 0; iT < converter.getLatticeTime(maxPhysT); ++iT) {
 
     if (converge.hasConverged() && !converged) {
       converged = true;
@@ -676,12 +671,13 @@ int main(int argc, char *argv[])
     ADlattice.collideAndStream();
 
     /// === 7th Step: Computation and Output of the Results ===
-    if ( !converged )
+    if ( !converged ) {
       getResults(converter, NSlattice, ADlattice, iT, superGeometry, timer, converge.hasConverged());
+    }
     if (!converged && iT % 1000 == 0) {
       converge.takeValue(computeNusselt(superGeometry, NSlattice, ADlattice),true);
     }
-    #ifdef SMAGORINSKY
+#ifdef SMAGORINSKY
     if (converged && iT % statisticsIntervall == 0) {
       NSlattice.communicate();
       ADlattice.communicate();
@@ -689,18 +685,19 @@ int main(int argc, char *argv[])
       sAveragedVel.addEnsemble();
       sAveragedTempVelCross.addEnsemble();
       sAveragedVelVelCross.addEnsemble();
-      if ( sAveragedTemp.getEnsembles() >= statisticsEnsembles )
+      if ( sAveragedTemp.getEnsembles() >= statisticsEnsembles ) {
         break;
+      }
     }
-    #endif
+#endif
   }
 
-  #ifdef SMAGORINSKY
+#ifdef SMAGORINSKY
   vtkWriter.write(sAveragedTemp);
   vtkWriter.write(sAveragedVel);
   vtkWriter.write(sTemp);
   vtkWriter.write(sVel);
-  #endif
+#endif
 
   timer.stop();
   timer.printSummary();

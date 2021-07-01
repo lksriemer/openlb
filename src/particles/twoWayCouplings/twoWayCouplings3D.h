@@ -26,6 +26,8 @@
  *  Groups all the 3D include files in the twoWayCoupling folder.
  */
 
+#include "ReynoldsNumbers3D.h"
+#include "smoothingFunctionals3D.h"
 #include "twoWayHelperFunctionals.h"
 #include "dragModels3D.h"
 #include "forwardCouplingModels3D.h"

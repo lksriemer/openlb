@@ -27,7 +27,7 @@
 #include "blockLatticeView2D.h"
 #include "blockLatticeView2D.hh"
 #include "dynamics/latticeDescriptors.h"
- 
+
 
 namespace olb {
 

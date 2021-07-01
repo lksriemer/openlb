@@ -39,11 +39,11 @@ public:
   /// Constructor
   PorousForcedBGKdynamics(T omega_, Momenta<T,DESCRIPTOR>& momenta_);
   void computeU (
-    Cell<T,DESCRIPTOR> const& cell,
+    ConstCell<T,DESCRIPTOR>& cell,
     T u[DESCRIPTOR::d] ) const override;
   /// Compute fluid velocity and particle density on the cell.
   void computeRhoU (
-    Cell<T,DESCRIPTOR> const& cell,
+    ConstCell<T,DESCRIPTOR>& cell,
     T& rho, T u[DESCRIPTOR::d]) const override;
 
   /// Collision step

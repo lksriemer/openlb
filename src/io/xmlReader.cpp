@@ -49,7 +49,8 @@ XMLreader::XMLreader( TiXmlNode* pParent)
   _warningsOn = true;
   if (singleton::mpi().isMainProcessor()) {
     mainProcessorIni(pParent);
-  } else {
+  }
+  else {
     slaveProcessorIni();
   }
 }
@@ -75,7 +76,8 @@ XMLreader::XMLreader(const std::string& fName)
     mainProcessorIni(doc);
     delete doc;
 #ifdef PARALLEL_MODE_MPI  // parallel program execution
-  } else {
+  }
+  else {
     slaveProcessorIni();
   }
 #endif
@@ -130,7 +132,8 @@ void XMLreader::mainProcessorIni( TiXmlNode* pParent )
 #endif
     if ( type==TiXmlNode::TINYXML_ELEMENT ) {
       _children.push_back( new XMLreader( pChild ) );
-    } else if ( type==TiXmlNode::TINYXML_TEXT ) {
+    }
+    else if ( type==TiXmlNode::TINYXML_TEXT ) {
       _text = pChild->ToText()->ValueStr();
 #ifdef PARALLEL_MODE_MPI  // parallel program execution
       singleton::mpi().bCast(&_text,1);
@@ -155,7 +158,8 @@ void XMLreader::slaveProcessorIni()
     singleton::mpi().bCast(&key, size);
     singleton::mpi().bCast(&value, size);
     _attributes[key] = value;
-  } while (key != "");
+  }
+  while (key != "");
 #endif
 
   int type=0;
@@ -165,12 +169,14 @@ void XMLreader::slaveProcessorIni()
 #endif
     if ( type==TiXmlNode::TINYXML_ELEMENT ) {
       _children.push_back( new XMLreader( nullptr ) );
-    } else if ( type==TiXmlNode::TINYXML_TEXT ) {
+    }
+    else if ( type==TiXmlNode::TINYXML_TEXT ) {
 #ifdef PARALLEL_MODE_MPI  // parallel program execution
       singleton::mpi().bCast(&_text,1);
 #endif
     }
-  } while (type != TiXmlNode::TINYXML_UNKNOWN);
+  }
+  while (type != TiXmlNode::TINYXML_UNKNOWN);
 }
 
 void XMLreader::print(int indent) const
@@ -233,10 +239,12 @@ bool XMLreader::read<bool>(bool& value, bool verboseOn, bool exitIfMissing) cons
   if (!word.compare("true") || (word=="1")) {
     value = true;
     return true;
-  } else if (!word.compare("false") || (word=="0")) {
+  }
+  else if (!word.compare("false") || (word=="0")) {
     value=false;
     return true;
-  } else {
+  }
+  else {
     if ( verboseOn ) {
       std::stringstream ss;
       ss << ( value ? "true" : "false" );
@@ -286,12 +294,12 @@ bool XMLreader::read<std::string>(std::string& entry, bool verboseOn, bool exitI
   }
   std::stringstream valueStr(_text);
   std::string tmp = std::string();
-   if (!(valueStr >> tmp)) {
-      std::stringstream ss;
-      ss << entry;
-      printWarning("string", ss.str(), verboseOn, exitIfMissing);
-      return false;
-    }
+  if (!(valueStr >> tmp)) {
+    std::stringstream ss;
+    ss << entry;
+    printWarning("string", ss.str(), verboseOn, exitIfMissing);
+    return false;
+  }
 
   entry = _text;
   return true;

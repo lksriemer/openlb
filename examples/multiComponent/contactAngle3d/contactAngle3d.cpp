@@ -46,7 +46,7 @@ using namespace olb::graphics;
 using namespace std;
 
 typedef double T;
-#define DESCRIPTOR D3Q19<CHEM_POTENTIAL,FORCE>
+typedef D3Q19<CHEM_POTENTIAL,FORCE> DESCRIPTOR;
 
 // Parameters for the simulation setup
 const int N  = 75;
@@ -69,8 +69,9 @@ const bool calcAngle = true;
 T angle_prev = 90.;
 
 
-void prepareGeometry( SuperGeometry3D<T>& superGeometry, 
-                      UnitConverter<T, DESCRIPTOR>& converter) {
+void prepareGeometry( SuperGeometry3D<T>& superGeometry,
+                      UnitConverter<T, DESCRIPTOR>& converter)
+{
 
   OstreamManager clout( std::cout,"prepareGeometry" );
   clout << "Prepare Geometry ..." << std::endl;
@@ -95,13 +96,12 @@ void prepareLattice( SuperLattice3D<T, DESCRIPTOR>& sLattice1,
                      Dynamics<T, DESCRIPTOR>& bulkDynamics1,
                      Dynamics<T, DESCRIPTOR>& bulkDynamics2,
                      UnitConverter<T, DESCRIPTOR>& converter,
-                     SuperGeometry3D<T>& superGeometry,
-                     sOnLatticeBoundaryCondition3D<T,DESCRIPTOR>& sOnBC1,
-                     sOnLatticeBoundaryCondition3D<T,DESCRIPTOR>& sOnBC2 ) {
+                     SuperGeometry3D<T>& superGeometry)
+{
 
   OstreamManager clout( std::cout,"prepareLattice" );
   clout << "Prepare Lattice ..." << std::endl;
- 
+
   // Define lattice Dynamics
   sLattice1.defineDynamics( superGeometry, 0, &instances::getNoDynamics<T, DESCRIPTOR>() );
   sLattice2.defineDynamics( superGeometry, 0, &instances::getNoDynamics<T, DESCRIPTOR>() );
@@ -111,8 +111,10 @@ void prepareLattice( SuperLattice3D<T, DESCRIPTOR>& sLattice1,
   sLattice2.defineDynamics( superGeometry, 2, &instances::getNoDynamics<T, DESCRIPTOR>() );
 
   // Add wall boundary
-  sOnBC1.addFreeEnergyWallBoundary( superGeometry, 2, alpha, kappa1, kappa2, h1, h2, 1 );
-  sOnBC2.addFreeEnergyWallBoundary( superGeometry, 2, alpha, kappa1, kappa2, h1, h2, 2 );
+
+  setFreeEnergyWallBoundary<T,DESCRIPTOR>(sLattice1, superGeometry, 2, alpha, kappa1, kappa2, h1, h2, 1);
+  setFreeEnergyWallBoundary<T,DESCRIPTOR>(sLattice2, superGeometry, 2, alpha, kappa1, kappa2, h1, h2, 2);
+
 
   // Bulk initial conditions
   // Define spherical domain for fluid 2
@@ -124,7 +126,7 @@ void prepareLattice( SuperLattice3D<T, DESCRIPTOR>& sLattice1,
 
   AnalyticalIdentity3D<T,T> rho( one );
   AnalyticalIdentity3D<T,T> phi( one - sphere - sphere );
-  
+
   sLattice1.iniEquilibrium( superGeometry, 1, rho, zeroVelocity );
   sLattice2.iniEquilibrium( superGeometry, 1, phi, zeroVelocity );
 
@@ -143,7 +145,8 @@ void prepareLattice( SuperLattice3D<T, DESCRIPTOR>& sLattice1,
 
 void prepareCoupling( SuperLattice3D<T, DESCRIPTOR>& sLattice1,
                       SuperLattice3D<T, DESCRIPTOR>& sLattice2,
-                      SuperGeometry3D<T>& superGeometry ) {
+                      SuperGeometry3D<T>& superGeometry )
+{
 
   OstreamManager clout( std::cout,"prepareCoupling" );
   clout << "Add lattice coupling" << endl;
@@ -168,7 +171,8 @@ void prepareCoupling( SuperLattice3D<T, DESCRIPTOR>& sLattice1,
 void getResults( SuperLattice3D<T, DESCRIPTOR>& sLattice1,
                  SuperLattice3D<T, DESCRIPTOR>& sLattice2, int iT,
                  SuperGeometry3D<T>& superGeometry, Timer<T>& timer,
-                 UnitConverter<T, DESCRIPTOR> converter ) {
+                 UnitConverter<T, DESCRIPTOR> converter )
+{
 
   OstreamManager clout( std::cout,"getResults" );
   SuperVTMwriter3D<T> vtmWriter( "contactAngle3d" );
@@ -197,7 +201,7 @@ void getResults( SuperLattice3D<T, DESCRIPTOR>& sLattice1,
   if ( iT%vtkIter==0 ) {
     AnalyticalConst3D<T,T> half_( 0.5 );
     SuperLatticeFfromAnalyticalF3D<T, DESCRIPTOR> half(half_, sLattice1);
-    
+
     SuperLatticeVelocity3D<T, DESCRIPTOR> velocity( sLattice1 );
     SuperLatticeDensity3D<T, DESCRIPTOR> rho( sLattice1 );
     rho.getName() = "rho";
@@ -228,7 +232,7 @@ void getResults( SuperLattice3D<T, DESCRIPTOR>& sLattice1,
       T height2 = 0.;
 
       double pos[3] = {0., nxy/2., dx};
-      for(int ix=0; ix<N; ix++) {
+      for (int ix=0; ix<N; ix++) {
         T phi1, phi2;
         pos[0] = ix * dx;
         interpolPhi( &phi1, pos );
@@ -241,7 +245,7 @@ void getResults( SuperLattice3D<T, DESCRIPTOR>& sLattice1,
       }
 
       pos[2] = 3.*dx;
-      for(int ix=0; ix<N; ix++) {
+      for (int ix=0; ix<N; ix++) {
         T phi1, phi2;
         pos[0] = ix * dx;
         interpolPhi( &phi1, pos );
@@ -254,7 +258,7 @@ void getResults( SuperLattice3D<T, DESCRIPTOR>& sLattice1,
       }
 
       pos[0] = nxy / 2.;
-      for(int iz=2; iz<Nz; iz++) {
+      for (int iz=2; iz<Nz; iz++) {
         T phi1, phi2;
         pos[2] = iz * dx;
         interpolPhi( &phi1, pos );
@@ -274,7 +278,9 @@ void getResults( SuperLattice3D<T, DESCRIPTOR>& sLattice1,
       T radius = (4.*height2*height2 + base2*base2) / ( 8.*height2 );
       T angle_rad = pi + atan( 0.5*base / (radius - height) );
       T angle = angle_rad * 180. / pi;
-      if ( angle > 180. ) angle -= 180.;
+      if ( angle > 180. ) {
+        angle -= 180.;
+      }
 
       // Calculate theoretical contact angle
       T ak1 = alpha * kappa1;
@@ -288,13 +294,14 @@ void getResults( SuperLattice3D<T, DESCRIPTOR>& sLattice1,
       clout << "----->>>>> Contact angle: " << angle << " ; ";
       clout << "Analytical contact angle: " << angle_an <<  std::endl;
       clout << "----->>>>> Difference to previous: " << angle-angle_prev << std::endl;
-      angle_prev = angle;   
+      angle_prev = angle;
     }
   }
 }
 
 
-int main( int argc, char *argv[] ) {
+int main( int argc, char *argv[] )
+{
 
   // === 1st Step: Initialization ===
 
@@ -348,18 +355,14 @@ int main( int argc, char *argv[] ) {
     converter.getLatticeRelaxationFrequency(), gama,
     instances::getBulkMomenta<T,DESCRIPTOR>() );
 
-  sOnLatticeBoundaryCondition3D<T,DESCRIPTOR> sOnBC1( sLattice1 );
-  sOnLatticeBoundaryCondition3D<T,DESCRIPTOR> sOnBC2( sLattice2 );
-  createLocalBoundaryCondition3D<T,DESCRIPTOR> (sOnBC1);
-  createLocalBoundaryCondition3D<T,DESCRIPTOR> (sOnBC2);
-
+  //prepareLattice and set boundaryConditions
   prepareLattice( sLattice1, sLattice2, bulkDynamics1, bulkDynamics2,
-                  converter, superGeometry, sOnBC1, sOnBC2 );
+                  converter, superGeometry);
 
   prepareCoupling( sLattice1, sLattice2, superGeometry);
 
-  SuperExternal3D<T, DESCRIPTOR,CHEM_POTENTIAL> sExternal1 (superGeometry, sLattice1, sLattice1.getOverlap() );
-  SuperExternal3D<T, DESCRIPTOR,CHEM_POTENTIAL> sExternal2 (superGeometry, sLattice2, sLattice2.getOverlap() );
+  SuperField3D<T, DESCRIPTOR,CHEM_POTENTIAL> sExternal1 (superGeometry, sLattice1, sLattice1.getOverlap() );
+  SuperField3D<T, DESCRIPTOR,CHEM_POTENTIAL> sExternal2 (superGeometry, sLattice2, sLattice2.getOverlap() );
 
   // === 4th Step: Main Loop with Timer ===
   int iT = 0;

@@ -47,7 +47,7 @@ using namespace olb::graphics;
 using namespace olb::util;
 
 typedef double T;
-#define DESCRIPTOR D3Q19<>
+typedef D3Q19<> DESCRIPTOR;
 #define PARTICLE Particle3D
 
 #ifndef M_PI
@@ -129,8 +129,6 @@ void prepareGeometry( UnitConverter<T,DESCRIPTOR> const& converter,
 void prepareLattice( SuperLattice3D<T, DESCRIPTOR>& sLattice,
                      UnitConverter<T,DESCRIPTOR> const& converter, Dynamics<T, DESCRIPTOR>&
                      bulkDynamics,
-                     sOnLatticeBoundaryCondition3D<T, DESCRIPTOR>& bc,
-                     sOffLatticeBoundaryCondition3D<T, DESCRIPTOR>& offBc,
                      STLreader<T>& stlReader, SuperGeometry3D<T>& superGeometry )
 {
 
@@ -158,9 +156,9 @@ void prepareLattice( SuperLattice3D<T, DESCRIPTOR>& sLattice,
   sLattice.defineDynamics( superGeometry, 5, &bulkDynamics );
 
   // Setting of the boundary conditions
-  bc.addPressureBoundary( superGeometry, 3, omega );
-  bc.addVelocityBoundary( superGeometry, 4, omega );
-  bc.addVelocityBoundary( superGeometry, 5, omega );
+  setInterpolatedPressureBoundary<T,DESCRIPTOR>(sLattice, omega, superGeometry, 3);
+  setInterpolatedVelocityBoundary<T,DESCRIPTOR>(sLattice, omega, superGeometry, 4);
+  setInterpolatedVelocityBoundary<T,DESCRIPTOR>(sLattice, omega ,superGeometry, 5);
 
   clout << "Prepare Lattice ... OK" << std::endl;
   return;
@@ -225,7 +223,7 @@ void setBoundaryValues( SuperLattice3D<T, DESCRIPTOR>& sLattice,
 
 // Computes the pressure drop between voxels before and after the cylinder
 bool getResults( SuperLattice3D<T, DESCRIPTOR>& sLattice,
-                 UnitConverter<T,DESCRIPTOR> const& converter, int iT, int iTperiod,
+                 UnitConverter<T,DESCRIPTOR> const& converter, std::size_t iT, int iTperiod,
                  SuperGeometry3D<T>& superGeometry,
                  Timer<double>& fluidTimer, STLreader<T>& stlReader,
                  SuperParticleSystem3D<T, PARTICLE>& supParticleSystem,
@@ -246,7 +244,7 @@ bool getResults( SuperLattice3D<T, DESCRIPTOR>& sLattice,
   vtmWriterStartTime.addFunctor( velocity );
   vtmWriterStartTime.addFunctor( pressure );
 
-  int fluidMaxT = converter.getLatticeTime( fluidMaxPhysT );
+  std::size_t fluidMaxT = converter.getLatticeTime( fluidMaxPhysT );
 
   if ( iT == 0 ) {
     SuperLatticeGeometry3D<T, DESCRIPTOR> geometry( sLattice, superGeometry );
@@ -392,15 +390,8 @@ int main( int argc, char* argv[] )
   BGKdynamics<T, DESCRIPTOR> bulkDynamics( converter.getLatticeRelaxationFrequency(),
       instances::getBulkMomenta<T, DESCRIPTOR>() );
 
-  sOnLatticeBoundaryCondition3D<T, DESCRIPTOR> sBoundaryCondition( sLattice );
-  createInterpBoundaryCondition3D<T, DESCRIPTOR>( sBoundaryCondition );
-
-  sOffLatticeBoundaryCondition3D<T, DESCRIPTOR> sOffBoundaryCondition(
-    sLattice );
-  createBouzidiBoundaryCondition3D<T, DESCRIPTOR>( sOffBoundaryCondition );
-
-  prepareLattice( sLattice, converter, bulkDynamics, sBoundaryCondition,
-                  sOffBoundaryCondition, stlReader, superGeometry );
+  //prepareLattice and setBoundaryConditions
+  prepareLattice( sLattice, converter, bulkDynamics, stlReader, superGeometry );
 
   // === 3.1 Step: Particles ===
   clout << "Prepare Particles ..." << std::endl;
@@ -452,7 +443,7 @@ int main( int argc, char* argv[] )
                                noOfParticles );
   fluidTimer.start();
 
-  int iT = 0;
+  std::size_t iT = 0;
   // amount of timesteps when getResults rewrites data
   int iTperiod = converter.getLatticeTime( .2 );
 

@@ -42,11 +42,7 @@ BlockLatticeKnudsen2D<T, DESCRIPTOR>::BlockLatticeKnudsen2D(
 template<typename T, typename DESCRIPTOR>
 bool BlockLatticeKnudsen2D<T, DESCRIPTOR>::operator()(T output[], const int input[])
 {
-  if (input[0] < 0 || input[1] < 0 || input[0] >= this->_blockLattice.getNx() || input[1] >= this->_blockLattice.getNy()) {
-    return false;
-  }
-
-  const auto& cell = this->_blockLattice.get(input[0], input[1]);
+  ConstCell<T,DESCRIPTOR> cell = this->_blockLattice.get(input[0], input[1]);
 
   T rho  = { };
   T u[2] = { };
@@ -98,12 +94,12 @@ bool BlockLatticeRefinementMetricKnudsen2D<T, DESCRIPTOR>::operator()(T output[]
 
   const T blockC = blockSum / cellCount;
 
-  output[0] = std::nearbyint(std::log2(blockC / _knudsen));
+  output[0] = std::log2(blockC / _knudsen);
 
   if ( output[0] <= 0. || blockC <= 0. ) {
     output[0] = 0.;
   }
-
+ 
   return true;
 }
 
@@ -114,12 +110,12 @@ bool BlockLatticeRefinementMetricKnudsen2D<T, DESCRIPTOR>::operator()(
   T measuredKnudsen[1] { };
   BlockLatticeKnudsen2D<T, DESCRIPTOR>::operator()(measuredKnudsen, input);
 
-  output[0] = std::nearbyint(std::log2(measuredKnudsen[0] / _knudsen));
-
+  output[0] = std::log2(measuredKnudsen[0] / _knudsen);
+  
   if ( output[0] <= 0. || measuredKnudsen[0] <= 0. ) {
     output[0] = 0.;
   }
-
+  
   return true;
 }
 

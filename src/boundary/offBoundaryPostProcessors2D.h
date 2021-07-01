@@ -47,7 +47,7 @@ public:
   }
   void process(BlockLattice2D<T,DESCRIPTOR>& blockLattice) override;
   void processSubDomain(BlockLattice2D<T,DESCRIPTOR>& blockLattice,
-                                int x0_, int x1_, int y0_, int y1_ ) override;
+                        int x0_, int x1_, int y0_, int y1_ ) override;
 private:
   int x, y;
   int xN, yN, xB, yB;
@@ -69,7 +69,7 @@ public:
   }
   void process(BlockLattice2D<T,DESCRIPTOR>& blockLattice) override;
   void processSubDomain(BlockLattice2D<T,DESCRIPTOR>& blockLattice,
-                                int x0_, int x1_, int y0_, int y1_ ) override;
+                        int x0_, int x1_, int y0_, int y1_ ) override;
 private:
   int x, y;
   int xN, yN;
@@ -91,7 +91,7 @@ public:
   }
   void process(BlockLattice2D<T,DESCRIPTOR>& blockLattice) override;
   void processSubDomain(BlockLattice2D<T,DESCRIPTOR>& blockLattice,
-                                int x0_, int x1_, int y0_, int y1_ ) override;
+                        int x0_, int x1_, int y0_, int y1_ ) override;
 private:
   int x, y;
   int xN, yN, xB, yB;
@@ -114,7 +114,7 @@ public:
   }
   void process(BlockLattice2D<T,DESCRIPTOR>& blockLattice) override;
   void processSubDomain(BlockLattice2D<T,DESCRIPTOR>& blockLattice,
-                                int x0_, int x1_, int y0_, int y1_ ) override;
+                        int x0_, int x1_, int y0_, int y1_ ) override;
 private:
   int x, y;
   int xN, yN;
@@ -136,7 +136,7 @@ public:
   }
   void process(BlockLattice2D<T,DESCRIPTOR>& blockLattice) override;
   void processSubDomain(BlockLattice2D<T,DESCRIPTOR>& blockLattice,
-                                int x0_, int x1_, int y0_, int y1_ ) override;
+                        int x0_, int x1_, int y0_, int y1_ ) override;
 private:
   int x, y;
   int xN, yN;
@@ -157,7 +157,7 @@ public:
   }
   void process(BlockLattice2D<T,DESCRIPTOR>& blockLattice) override;
   void processSubDomain(BlockLattice2D<T,DESCRIPTOR>& blockLattice,
-                                int x0_, int x1_, int y0_, int y1_ ) override;
+                        int x0_, int x1_, int y0_, int y1_ ) override;
 private:
   int x, y;
   bool _streamDirections[DESCRIPTOR::q];

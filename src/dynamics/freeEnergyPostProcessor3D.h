@@ -68,6 +68,8 @@ public:
   void processSubDomain(BlockLattice3D<T,DESCRIPTOR>& blockLattice,
                         int x0_, int x1_, int y0_, int y1_, int z0_, int z1_) override;
 private:
+  using RHO_CACHE = descriptors::DESCRIPTOR_FIELD_BASE<3, 0, 0>;
+
   int x0, x1, y0, y1, z0, z1;
   T alpha, kappa1, kappa2, kappa3;
   std::vector<SpatiallyExtendedObject3D*> partners;

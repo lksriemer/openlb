@@ -32,9 +32,11 @@
 #include <numeric>
 #include "dynamics.h"
 #include "core/cell.h"
+#include "core/cellD.h"
 #include "lbHelpers.h"
 #include "firstOrderLbHelpers.h"
 #include "d3q13Helpers.h"
+#include "rtlbmDescriptors.h"
 
 namespace olb {
 
@@ -54,6 +56,20 @@ void Dynamics<T,DESCRIPTOR>::iniEquilibrium(Cell<T,DESCRIPTOR>& cell, T rho, con
     cell[iPop] = computeEquilibrium(iPop, rho, u, uSqr);
   }
 }
+
+template<typename T, typename DESCRIPTOR>
+void Dynamics<T,DESCRIPTOR>::iniRegularized(
+  Cell<T,DESCRIPTOR>&cell,
+  T rho,
+  const T u[DESCRIPTOR::d],
+  const T pi[util::TensorVal<DESCRIPTOR >::n])
+{
+  T uSqr = util::normSqr<T,DESCRIPTOR::d>(u);
+  for (int iPop=0; iPop<DESCRIPTOR::q; ++iPop) {
+    cell[iPop] = computeEquilibrium(iPop, rho, u, uSqr) + firstOrderLbHelpers<T,DESCRIPTOR>::fromPiToFneq(iPop, pi);
+  }
+}
+
 
 template<typename T, typename DESCRIPTOR>
 void Dynamics<T,DESCRIPTOR>::setBoundaryIntersection(int iPop, T distance)
@@ -83,22 +99,36 @@ T Dynamics<T,DESCRIPTOR>::getVelocityCoefficient(int iPop)
   return 0;
 }
 
+template <typename T, typename DESCRIPTOR>
+std::string& Dynamics<T,DESCRIPTOR>::getName()
+{
+  return _name;
+}
+
+template <typename T, typename DESCRIPTOR>
+std::string const& Dynamics<T,DESCRIPTOR>::getName() const
+{
+  return _name;
+}
+
 ////////////////////// Class BasicDynamics ////////////////////////
 
 template<typename T, typename DESCRIPTOR>
 BasicDynamics<T,DESCRIPTOR>::BasicDynamics(Momenta<T,DESCRIPTOR>& momenta)
   : _momenta(momenta)
-{ }
+{
+  this->getName() = "BasicDynamics";  
+}
 
 template<typename T, typename DESCRIPTOR>
-T BasicDynamics<T,DESCRIPTOR>::computeRho(Cell<T,DESCRIPTOR> const& cell) const
+T BasicDynamics<T,DESCRIPTOR>::computeRho(ConstCell<T,DESCRIPTOR>& cell) const
 {
   return _momenta.computeRho(cell);
 }
 
 template<typename T, typename DESCRIPTOR>
 void BasicDynamics<T,DESCRIPTOR>::computeU (
-  Cell<T,DESCRIPTOR> const& cell,
+  ConstCell<T,DESCRIPTOR>& cell,
   T u[DESCRIPTOR::d]) const
 {
   _momenta.computeU(cell, u);
@@ -106,7 +136,7 @@ void BasicDynamics<T,DESCRIPTOR>::computeU (
 
 template<typename T, typename DESCRIPTOR>
 void BasicDynamics<T,DESCRIPTOR>::computeJ (
-  Cell<T,DESCRIPTOR> const& cell,
+  ConstCell<T,DESCRIPTOR>& cell,
   T j[DESCRIPTOR::d]) const
 {
   _momenta.computeJ(cell, j);
@@ -114,7 +144,7 @@ void BasicDynamics<T,DESCRIPTOR>::computeJ (
 
 template<typename T, typename DESCRIPTOR>
 void BasicDynamics<T,DESCRIPTOR>::computeStress (
-  Cell<T,DESCRIPTOR> const& cell,
+  ConstCell<T,DESCRIPTOR>& cell,
   T rho, const T u[DESCRIPTOR::d],
   T pi[util::TensorVal<DESCRIPTOR >::n] ) const
 {
@@ -123,7 +153,7 @@ void BasicDynamics<T,DESCRIPTOR>::computeStress (
 
 template<typename T, typename DESCRIPTOR>
 void BasicDynamics<T,DESCRIPTOR>::computeRhoU (
-  Cell<T,DESCRIPTOR> const& cell,
+  ConstCell<T,DESCRIPTOR>& cell,
   T& rho, T u[DESCRIPTOR::d]) const
 {
   _momenta.computeRhoU(cell, rho, u);
@@ -131,7 +161,7 @@ void BasicDynamics<T,DESCRIPTOR>::computeRhoU (
 
 template<typename T, typename DESCRIPTOR>
 void BasicDynamics<T,DESCRIPTOR>::computeAllMomenta (
-  Cell<T,DESCRIPTOR> const& cell,
+  ConstCell<T,DESCRIPTOR>& cell,
   T& rho, T u[DESCRIPTOR::d],
   T pi[util::TensorVal<DESCRIPTOR >::n] ) const
 {
@@ -181,7 +211,9 @@ BGKdynamics<T,DESCRIPTOR>::BGKdynamics (
   T omega, Momenta<T,DESCRIPTOR>& momenta )
   : BasicDynamics<T,DESCRIPTOR>(momenta),
     _omega(omega)
-{ }
+{
+  this->getName() = "BGKdynamics";  
+}
 
 template<typename T, typename DESCRIPTOR>
 void BGKdynamics<T,DESCRIPTOR>::collide (
@@ -217,7 +249,9 @@ TRTdynamics<T,DESCRIPTOR>::TRTdynamics (
   T omega, Momenta<T,DESCRIPTOR>& momenta, T magicParameter )
   : BasicDynamics<T,DESCRIPTOR>(momenta),
     _omega(omega), _omega2(1/(magicParameter/(1/omega-0.5)+0.5)), _magicParameter(magicParameter)
-{ }
+{
+  this->getName() = "TRTdynamics";  
+}
 
 template<typename T, typename DESCRIPTOR>
 void TRTdynamics<T,DESCRIPTOR>::collide (
@@ -268,7 +302,9 @@ ConstRhoBGKdynamics<T,DESCRIPTOR>::ConstRhoBGKdynamics (
   T omega, Momenta<T,DESCRIPTOR>& momenta )
   : BasicDynamics<T,DESCRIPTOR>(momenta),
     _omega(omega)
-{ }
+{
+  this->getName() = "ConstRhoBGKdynamics";  
+}
 
 template<typename T, typename DESCRIPTOR>
 void ConstRhoBGKdynamics<T,DESCRIPTOR>::collide (
@@ -307,7 +343,9 @@ template<typename T, typename DESCRIPTOR>
 IncBGKdynamics<T,DESCRIPTOR>::IncBGKdynamics (
   T omega, Momenta<T,DESCRIPTOR>& momenta )
   : BasicDynamics<T,DESCRIPTOR>(momenta), _omega(omega)
-{ }
+{
+  this->getName() = "IncBGKdynamics";  
+}
 
 template<typename T, typename DESCRIPTOR>
 void IncBGKdynamics<T,DESCRIPTOR>::collide (
@@ -346,7 +384,9 @@ RLBdynamics<T,DESCRIPTOR>::RLBdynamics (
   T omega, Momenta<T,DESCRIPTOR>& momenta )
   : BasicDynamics<T,DESCRIPTOR>(momenta),
     _omega(omega)
-{ }
+{
+  this->getName() = "RLBdynamics";  
+}
 
 template<typename T, typename DESCRIPTOR>
 void RLBdynamics<T,DESCRIPTOR>::collide (
@@ -378,7 +418,9 @@ CombinedRLBdynamics<T,DESCRIPTOR,Dynamics>::CombinedRLBdynamics (
   T omega, Momenta<T,DESCRIPTOR>& momenta )
   : BasicDynamics<T,DESCRIPTOR>(momenta),
     _boundaryDynamics(omega, momenta)
-{ }
+{
+  this->getName() = "CombinedRLBdynamics";  
+}
 
 template<typename T, typename DESCRIPTOR, typename Dynamics>
 T CombinedRLBdynamics<T,DESCRIPTOR,Dynamics>::
@@ -430,25 +472,26 @@ ForcedBGKdynamics<T,DESCRIPTOR>::ForcedBGKdynamics (
   T omega, Momenta<T,DESCRIPTOR>& momenta )
   : BasicDynamics<T,DESCRIPTOR>(momenta), _omega(omega)
 {
+  this->getName() = "ForcedBGKdynamics";  
   OLB_PRECONDITION( DESCRIPTOR::template provides<descriptors::FORCE>() );
 }
 
 template<typename T, typename DESCRIPTOR>
-void ForcedBGKdynamics<T,DESCRIPTOR>::computeU (Cell<T,DESCRIPTOR> const& cell, T u[DESCRIPTOR::d] ) const
+void ForcedBGKdynamics<T,DESCRIPTOR>::computeU (ConstCell<T,DESCRIPTOR>& cell, T u[DESCRIPTOR::d] ) const
 {
   T rho;
   this->_momenta.computeRhoU(cell, rho, u);
-  const T* force = cell.template getFieldPointer<descriptors::FORCE>();
+  auto force = cell.template getFieldPointer<descriptors::FORCE>();
   for (int iVel=0; iVel < DESCRIPTOR::d; ++iVel) {
     u[iVel] += force[iVel] / (T)2.;
   }
 }
 
 template<typename T, typename DESCRIPTOR>
-void ForcedBGKdynamics<T,DESCRIPTOR>::computeRhoU (Cell<T,DESCRIPTOR> const& cell, T& rho, T u[DESCRIPTOR::d] ) const
+void ForcedBGKdynamics<T,DESCRIPTOR>::computeRhoU (ConstCell<T,DESCRIPTOR>& cell, T& rho, T u[DESCRIPTOR::d] ) const
 {
   this->_momenta.computeRhoU(cell, rho, u);
-  const T* force = cell.template getFieldPointer<descriptors::FORCE>();
+  auto force = cell.template getFieldPointer<descriptors::FORCE>();
   for (int iVel=0; iVel<DESCRIPTOR::d; ++iVel) {
     u[iVel] += force[iVel] / (T)2.;
   }
@@ -462,7 +505,7 @@ void ForcedBGKdynamics<T,DESCRIPTOR>::collide (
 {
   T rho, u[DESCRIPTOR::d];
   this->_momenta.computeRhoU(cell, rho, u);
-  const T* force = cell.template getFieldPointer<descriptors::FORCE>();
+  auto force = cell.template getFieldPointer<descriptors::FORCE>();
   for (int iVel=0; iVel<DESCRIPTOR::d; ++iVel) {
     u[iVel] += force[iVel] / (T)2.;
   }
@@ -493,11 +536,12 @@ ForcedKupershtokhBGKdynamics<T,DESCRIPTOR>::ForcedKupershtokhBGKdynamics (
   T omega, Momenta<T,DESCRIPTOR>& momenta )
   : BasicDynamics<T,DESCRIPTOR>(momenta), _omega(omega)
 {
+  this->getName() = "ForcedKupershtokhBGKdynamics";  
   OLB_PRECONDITION( DESCRIPTOR::template provides<descriptors::FORCE>() );
 }
 
 template<typename T, typename DESCRIPTOR>
-void ForcedKupershtokhBGKdynamics<T,DESCRIPTOR>::computeU (Cell<T,DESCRIPTOR> const& cell, T u[DESCRIPTOR::d] ) const
+void ForcedKupershtokhBGKdynamics<T,DESCRIPTOR>::computeU (ConstCell<T,DESCRIPTOR>& cell, T u[DESCRIPTOR::d] ) const
 {
   T rho;
   this->_momenta.computeRhoU(cell, rho, u);
@@ -507,7 +551,7 @@ void ForcedKupershtokhBGKdynamics<T,DESCRIPTOR>::computeU (Cell<T,DESCRIPTOR> co
 }
 
 template<typename T, typename DESCRIPTOR>
-void ForcedKupershtokhBGKdynamics<T,DESCRIPTOR>::computeRhoU (Cell<T,DESCRIPTOR> const& cell, T& rho, T u[DESCRIPTOR::d] ) const
+void ForcedKupershtokhBGKdynamics<T,DESCRIPTOR>::computeRhoU (ConstCell<T,DESCRIPTOR>& cell, T& rho, T u[DESCRIPTOR::d] ) const
 {
   this->_momenta.computeRhoU(cell, rho, u);
   for (int iVel=0; iVel<DESCRIPTOR::d; ++iVel) {
@@ -523,7 +567,7 @@ void ForcedKupershtokhBGKdynamics<T,DESCRIPTOR>::collide (
 {
   T rho, u[DESCRIPTOR::d], uPlusDeltaU[DESCRIPTOR::d];
   this->_momenta.computeRhoU(cell, rho, u);
-  T* force = cell.template getFieldPointer<descriptors::FORCE>();
+  auto force = cell.template getFieldPointer<descriptors::FORCE>();
   T uSqr = lbHelpers<T,DESCRIPTOR>::bgkCollision(cell, rho, u, _omega);
 
   for (int iVel=0; iVel<DESCRIPTOR::d; ++iVel) {
@@ -533,7 +577,7 @@ void ForcedKupershtokhBGKdynamics<T,DESCRIPTOR>::collide (
 
   for (int iPop=0; iPop < DESCRIPTOR::q; ++iPop) {
     cell[iPop] += lbHelpers<T, DESCRIPTOR>::equilibrium(iPop, rho, uPlusDeltaU, uPlusDeltaUSqr)
-                - lbHelpers<T, DESCRIPTOR>::equilibrium(iPop, rho, u, uSqr);
+                  - lbHelpers<T, DESCRIPTOR>::equilibrium(iPop, rho, u, uSqr);
   }
 
   statistics.incrementStats(rho, uSqr);
@@ -552,15 +596,101 @@ void ForcedKupershtokhBGKdynamics<T,DESCRIPTOR>::setOmega(T omega)
 }
 
 
+////////////////////// Class ForcedIncBGKdynamics //////////////////////////
+
+/** \param omega relaxation parameter, related to the dynamic viscosity
+ *  \param momenta a Momenta object to know how to compute velocity momenta
+ */
+template<typename T, typename DESCRIPTOR>
+ForcedIncBGKdynamics<T,DESCRIPTOR>::ForcedIncBGKdynamics (
+  T omega, Momenta<T,DESCRIPTOR>& momenta )
+  : ForcedBGKdynamics<T,DESCRIPTOR>(omega, momenta)
+{ }
+
+
+template<typename T, typename DESCRIPTOR>
+T ForcedIncBGKdynamics<T,DESCRIPTOR>::computeEquilibrium(int iPop, T rho, const T u[DESCRIPTOR::d], T uSqr) const
+{
+  T p = rho / descriptors::invCs2<T,DESCRIPTOR>();
+  return lbDynamicsHelpers<T,DESCRIPTOR>::incEquilibrium(iPop, u, uSqr, p);
+}
+
+template<typename T, typename DESCRIPTOR>
+void ForcedIncBGKdynamics<T,DESCRIPTOR>::computeU (ConstCell<T,DESCRIPTOR>& cell, T u[DESCRIPTOR::d] ) const
+{
+  this->_momenta.computeJ(cell, u);
+  auto force = cell.template getFieldPointer<descriptors::FORCE>();
+  for (int iVel=0; iVel < DESCRIPTOR::d; ++iVel) {
+    u[iVel] += force[iVel] / (T)2.;
+  }
+}
+
+template<typename T, typename DESCRIPTOR>
+void ForcedIncBGKdynamics<T,DESCRIPTOR>::computeRhoU (ConstCell<T,DESCRIPTOR>& cell, T& rho, T u[DESCRIPTOR::d] ) const
+{
+  rho = this->_momenta.computeRho(cell);
+  this->_momenta.computeJ(cell, u);
+  auto force = cell.template getFieldPointer<descriptors::FORCE>();
+  for (int iVel=0; iVel<DESCRIPTOR::d; ++iVel) {
+    u[iVel] += force[iVel] / (T)2.;
+  }
+}
+
+template<typename T, typename DESCRIPTOR>
+void ForcedIncBGKdynamics<T,DESCRIPTOR>::collide (
+  Cell<T,DESCRIPTOR>& cell,
+  LatticeStatistics<T>& statistics )
+{
+  T rho = this->_momenta.computeRho(cell);
+  T p = rho / descriptors::invCs2<T,DESCRIPTOR>();
+  T u[DESCRIPTOR::d];
+  this->_momenta.computeJ(cell, u);
+  auto force = cell.template getFieldPointer<descriptors::FORCE>();
+  for (int iVel=0; iVel<DESCRIPTOR::d; ++iVel) {
+    u[iVel] += force[iVel] / (T)2.;
+  }
+  T uSqr = lbHelpers<T,DESCRIPTOR>::incBgkCollision(cell, p, u, this->_omega);
+  lbHelpers<T,DESCRIPTOR>::addExternalForce(cell, u, this->_omega, 1.0);
+  statistics.incrementStats(p, uSqr);
+}
+
+template<typename T, typename DESCRIPTOR>
+ExternalTauForcedIncBGKdynamics<T,DESCRIPTOR>::ExternalTauForcedIncBGKdynamics (
+  T omega, Momenta<T,DESCRIPTOR>& momenta )
+  : ForcedIncBGKdynamics<T,DESCRIPTOR>(omega, momenta)
+{ }
+
+template<typename T, typename DESCRIPTOR>
+void ExternalTauForcedIncBGKdynamics<T,DESCRIPTOR>::collide (
+  Cell<T,DESCRIPTOR>& cell,
+  LatticeStatistics<T>& statistics )
+{
+  T omega = 1.0 / cell.template getField<descriptors::TAU_EFF>();
+
+  T rho = this->_momenta.computeRho(cell);
+  T p = rho / descriptors::invCs2<T,DESCRIPTOR>();
+  T u[DESCRIPTOR::d];
+  this->_momenta.computeJ(cell, u);
+  auto force = cell.template getFieldPointer<descriptors::FORCE>();
+  for (int iVel=0; iVel<DESCRIPTOR::d; ++iVel) {
+    u[iVel] += force[iVel] / (T)2.;
+  }
+  T uSqr = lbHelpers<T,DESCRIPTOR>::incBgkCollision(cell, p, u, omega);
+  lbHelpers<T,DESCRIPTOR>::addExternalForce(cell, u, omega, 1.0);
+  statistics.incrementStats(p, uSqr);
+}
+
+
 /** \param omega relaxation parameter, related to the dynamic viscosity
  *  \param momenta Momenta object to know how to compute velocity momenta
  *  \param sink counterpart of a source term
  */
 template<typename T, typename DESCRIPTOR>
 PoissonDynamics<T,DESCRIPTOR>::PoissonDynamics (
-  T omega, Momenta<T,DESCRIPTOR>& momenta , T sink)
+  T omega, Momenta<T,DESCRIPTOR>& momenta, T sink)
   : BasicDynamics<T,DESCRIPTOR>(momenta), _omega(omega), _sink(sink)
 {
+  this->getName() = "PoissonDynamics";  
 }
 
 template<typename T, typename DESCRIPTOR>
@@ -571,13 +701,13 @@ T PoissonDynamics<T,DESCRIPTOR>::computeEquilibrium( int iPop, T rho, const T u[
 
 
 template<typename T, typename DESCRIPTOR>
-T PoissonDynamics<T,DESCRIPTOR>::computeRho(Cell<T,DESCRIPTOR> const& cell) const
+T PoissonDynamics<T,DESCRIPTOR>::computeRho(ConstCell<T,DESCRIPTOR>& cell) const
 {
   return lbHelpers<T,DESCRIPTOR>::computeRho(cell);
 }
 
 template<typename T, typename DESCRIPTOR>
-void PoissonDynamics<T,DESCRIPTOR>::computeU(Cell<T,DESCRIPTOR> const& cell, T u[DESCRIPTOR::d]) const
+void PoissonDynamics<T,DESCRIPTOR>::computeU(ConstCell<T,DESCRIPTOR>& cell, T u[DESCRIPTOR::d]) const
 {
   for ( int iDim = 0; iDim < DESCRIPTOR::d; iDim++ ) {
     u[iDim] = T();
@@ -585,14 +715,14 @@ void PoissonDynamics<T,DESCRIPTOR>::computeU(Cell<T,DESCRIPTOR> const& cell, T u
 }
 
 template<typename T, typename DESCRIPTOR>
-void PoissonDynamics<T,DESCRIPTOR>::computeJ(Cell<T,DESCRIPTOR> const& cell, T j[DESCRIPTOR::d]) const
+void PoissonDynamics<T,DESCRIPTOR>::computeJ(ConstCell<T,DESCRIPTOR>& cell, T j[DESCRIPTOR::d]) const
 {
   lbHelpers<T,DESCRIPTOR>::computeJ(cell, j);
 }
 
 template<typename T, typename DESCRIPTOR>
-void PoissonDynamics<T,DESCRIPTOR>::computeStress(Cell<T,DESCRIPTOR> const& cell, T rho,
-  const T u[DESCRIPTOR::d], T pi[util::TensorVal<DESCRIPTOR>::n] ) const
+void PoissonDynamics<T,DESCRIPTOR>::computeStress(ConstCell<T,DESCRIPTOR>& cell, T rho,
+    const T u[DESCRIPTOR::d], T pi[util::TensorVal<DESCRIPTOR>::n] ) const
 {
   for ( int iDim = 0; iDim < DESCRIPTOR::d; iDim++ ) {
     pi[iDim] = T();
@@ -600,15 +730,15 @@ void PoissonDynamics<T,DESCRIPTOR>::computeStress(Cell<T,DESCRIPTOR> const& cell
 }
 
 template<typename T, typename DESCRIPTOR>
-void PoissonDynamics<T,DESCRIPTOR>::computeRhoU( Cell<T,DESCRIPTOR> const& cell, T& rho, T u[DESCRIPTOR::d]) const
+void PoissonDynamics<T,DESCRIPTOR>::computeRhoU( ConstCell<T,DESCRIPTOR>& cell, T& rho, T u[DESCRIPTOR::d]) const
 {
   rho = computeRho(cell);
   computeU(cell, u);
 }
 
 template<typename T, typename DESCRIPTOR>
-void PoissonDynamics<T,DESCRIPTOR>::computeAllMomenta( Cell<T,DESCRIPTOR> const& cell, T &rho,
-  T u[DESCRIPTOR::q], T pi[util::TensorVal<DESCRIPTOR>::n] ) const
+void PoissonDynamics<T,DESCRIPTOR>::computeAllMomenta( ConstCell<T,DESCRIPTOR>& cell, T &rho,
+    T u[DESCRIPTOR::q], T pi[util::TensorVal<DESCRIPTOR>::n] ) const
 {
   rho = computeRho(cell);
   computeU(cell, u);
@@ -621,24 +751,14 @@ void PoissonDynamics<T,DESCRIPTOR>::collide( Cell<T,DESCRIPTOR>& cell, LatticeSt
 {
   T rho = computeRho(cell);
 
-  for ( int iPop = 0; iPop < DESCRIPTOR::q; ++iPop ) {
-     cell[iPop] = (1 - _omega) * (cell[iPop] + descriptors::t<T,DESCRIPTOR>(iPop))
-                   + _omega * descriptors::t<T,DESCRIPTOR>(iPop) * rho
-                   - _sink*(cell[iPop] + descriptors::t<T,DESCRIPTOR>(iPop)) - descriptors::t<T,DESCRIPTOR>(iPop);
+  for ( int iPop = 0; iPop < descriptors::q<DESCRIPTOR>(); ++iPop ) {
+    cell[iPop] =
+      (cell[iPop] + descriptors::t<T,DESCRIPTOR>(iPop))
+      - _omega*( (cell[iPop] + descriptors::t<T,DESCRIPTOR>(iPop)) - descriptors::t<T,DESCRIPTOR>(iPop) * rho )
+      - _sink*(cell[iPop] + descriptors::t<T,DESCRIPTOR>(iPop))
+      - descriptors::t<T,DESCRIPTOR>(iPop);
   }
 
-//  // add spherical harmonic definition f_i = 3*pi/4 *density + pi/4 *flux \cdot e_i
-//  T density_post_collision =  lbDynamicsHelpers<T,DESCRIPTOR>::computeRho(cell);
-//  T flux_post_collision[DESCRIPTOR::q];
-//  lbDynamicsHelpers<T,DESCRIPTOR>::computeJ(cell,flux_post_collision);
-//  T s = flux_post_collision[0]*descriptors::t<T,DESCRIPTOR>(0)+
-//        flux_post_collision[1]*descriptors::t<T,DESCRIPTOR>(1)+
-//        flux_post_collision[2]*descriptors::t<T,DESCRIPTOR>(2);
-//  std::cout << "s " << s << std::endl;
-//  for ( int iPop = 0; iPop < DESCRIPTOR::q; ++iPop ) {
-//    cell[iPop] = 3*M_PI/4. *density_post_collision
-//               + M_PI/4. *s;
-//  }
   statistics.incrementStats(rho, 0);
 }
 
@@ -657,26 +777,31 @@ void PoissonDynamics<T,DESCRIPTOR>::setOmega(T omega)
 
 template<typename T, typename DESCRIPTOR>
 P1Dynamics<T,DESCRIPTOR>::P1Dynamics (
-  T omega, Momenta<T,DESCRIPTOR>& momenta , T absorption, T scattering)
+  T omega, Momenta<T,DESCRIPTOR>& momenta, T absorption, T scattering)
   : BasicDynamics<T,DESCRIPTOR>(momenta), _omega(omega), _absorption(absorption), _scattering(scattering)
 {
+  this->getName() = "P1Dynamics";  
 }
 
 template<typename T, typename DESCRIPTOR>
 T P1Dynamics<T,DESCRIPTOR>::computeEquilibrium( int iPop, T rho, const T u[DESCRIPTOR::d], T uSqr ) const
 {
-  return descriptors::t<T,DESCRIPTOR>(iPop) * rho - descriptors::t<T,DESCRIPTOR>(iPop);
+  std::array<T,DESCRIPTOR::d> u_array;
+  for (int iDim = 0; iDim < DESCRIPTOR::d; iDim++) {
+    u_array[iDim] = u[iDim];
+  }
+  return lbHelpers<T,DESCRIPTOR>::equilibriumP1( iPop, rho, u_array );
 }
 
 
 template<typename T, typename DESCRIPTOR>
-T P1Dynamics<T,DESCRIPTOR>::computeRho(Cell<T,DESCRIPTOR> const& cell) const
+T P1Dynamics<T,DESCRIPTOR>::computeRho(ConstCell<T,DESCRIPTOR>& cell) const
 {
   return lbHelpers<T,DESCRIPTOR>::computeRho(cell);
 }
 
 template<typename T, typename DESCRIPTOR>
-void P1Dynamics<T,DESCRIPTOR>::computeU(Cell<T,DESCRIPTOR> const& cell, T u[DESCRIPTOR::d]) const
+void P1Dynamics<T,DESCRIPTOR>::computeU(ConstCell<T,DESCRIPTOR>& cell, T u[DESCRIPTOR::d]) const
 {
   for ( int iDim = 0; iDim < DESCRIPTOR::d; iDim++ ) {
     u[iDim] = T();
@@ -684,14 +809,28 @@ void P1Dynamics<T,DESCRIPTOR>::computeU(Cell<T,DESCRIPTOR> const& cell, T u[DESC
 }
 
 template<typename T, typename DESCRIPTOR>
-void P1Dynamics<T,DESCRIPTOR>::computeJ(Cell<T,DESCRIPTOR> const& cell, T j[DESCRIPTOR::d]) const
+void P1Dynamics<T,DESCRIPTOR>::computeJ(ConstCell<T,DESCRIPTOR>& cell, T j[DESCRIPTOR::d]) const
 {
-  lbHelpers<T,DESCRIPTOR>::computeJ(cell, j);
+  std::array<T,DESCRIPTOR::q> cellShifted;
+  for (int iPop = 0; iPop <DESCRIPTOR::q; ++iPop) {
+    cellShifted[iPop] = cell[iPop] + descriptors::t<T,DESCRIPTOR>(iPop);
+  }
+  std::array<T,DESCRIPTOR::d> moment1;
+  moment1.fill( T(0) );
+  // sum_j v_j f_j
+  for (int iPop = 0; iPop < DESCRIPTOR::q; ++iPop) {
+    for (int iDim = 0; iDim < DESCRIPTOR::d; ++iDim) {
+      moment1[iDim] += descriptors::c<DESCRIPTOR>(iPop,iDim)*cellShifted[iPop];
+    }
+  }
+  for (int iDim = 0; iDim < DESCRIPTOR::d; ++iDim) {
+    j[iDim] = moment1[iDim];
+  }
 }
 
 template<typename T, typename DESCRIPTOR>
-void P1Dynamics<T,DESCRIPTOR>::computeStress(Cell<T,DESCRIPTOR> const& cell, T rho,
-  const T u[DESCRIPTOR::d], T pi[util::TensorVal<DESCRIPTOR>::n] ) const
+void P1Dynamics<T,DESCRIPTOR>::computeStress(ConstCell<T,DESCRIPTOR>& cell, T rho,
+    const T u[DESCRIPTOR::d], T pi[util::TensorVal<DESCRIPTOR>::n] ) const
 {
   for ( int iDim = 0; iDim < DESCRIPTOR::d; iDim++ ) {
     pi[iDim] = T();
@@ -699,15 +838,15 @@ void P1Dynamics<T,DESCRIPTOR>::computeStress(Cell<T,DESCRIPTOR> const& cell, T r
 }
 
 template<typename T, typename DESCRIPTOR>
-void P1Dynamics<T,DESCRIPTOR>::computeRhoU( Cell<T,DESCRIPTOR> const& cell, T& rho, T u[DESCRIPTOR::d]) const
+void P1Dynamics<T,DESCRIPTOR>::computeRhoU( ConstCell<T,DESCRIPTOR>& cell, T& rho, T u[DESCRIPTOR::d]) const
 {
   rho = computeRho(cell);
   computeU(cell, u);
 }
 
 template<typename T, typename DESCRIPTOR>
-void P1Dynamics<T,DESCRIPTOR>::computeAllMomenta( Cell<T,DESCRIPTOR> const& cell, T &rho,
-  T u[DESCRIPTOR::q], T pi[util::TensorVal<DESCRIPTOR>::n] ) const
+void P1Dynamics<T,DESCRIPTOR>::computeAllMomenta( ConstCell<T,DESCRIPTOR>& cell, T &rho,
+    T u[DESCRIPTOR::q], T pi[util::TensorVal<DESCRIPTOR>::n] ) const
 {
   rho = computeRho(cell);
   computeU(cell, u);
@@ -722,34 +861,21 @@ void P1Dynamics<T,DESCRIPTOR>::collide( Cell<T,DESCRIPTOR>& cell, LatticeStatist
 
   // compute equilibrium f^eq_i eq. (5.32) from DOI:10.1002/9780470177013
 
-  // ----move to computeEq
   // give me a std::array, please
   std::array<T,DESCRIPTOR::q> cellShifted;
   for (int iPop = 0; iPop <DESCRIPTOR::q; ++iPop) {
     cellShifted[iPop] = cell[iPop] + descriptors::t<T,DESCRIPTOR>(iPop);
   }
   double moment0 = std::accumulate(cellShifted.begin(),cellShifted.end(), T(0));
+  T mom1[DESCRIPTOR::d];
+  computeJ(cell, mom1);
   std::array<T,DESCRIPTOR::d> moment1;
-  moment1.fill( T(0) );
-  // sum_j v_j f_j
-  for (int iPop = 0; iPop < DESCRIPTOR::q; ++iPop) {
-    for (int iDim = 0; iDim < DESCRIPTOR::d; ++iDim) {
-      moment1[iDim] += descriptors::c<DESCRIPTOR>(iPop,iDim)*cellShifted[iPop];
-    }
-  }
-  // do scalar product in eq. sum_j v_j f_j * v_i
-  std::array<T,DESCRIPTOR::q> moment1_v;
-  moment1_v.fill( T(0) );
-  for (int iPop = 0; iPop < DESCRIPTOR::q; ++iPop) {
-    // scalar product
-    for (int iDim = 0; iDim < DESCRIPTOR::d; ++iDim) {
-      moment1_v[iPop] += moment1[iDim]*descriptors::c<DESCRIPTOR>(iPop,iDim);
-    }
+  for (int iDim = 0; iDim < DESCRIPTOR::d; ++iDim) {
+    moment1[iDim] = mom1[iDim];
   }
   std::array<T,DESCRIPTOR::q> fEq;
   for (int iPop = 0; iPop < DESCRIPTOR::q; ++iPop) {
-    fEq[iPop] = descriptors::t<T,DESCRIPTOR>(iPop) *(moment0 +moment1_v[iPop]);
-    //fEq[iPop] = 1./(4*M_PI) *moment0 +3./(4*M_PI) * moment1_v[iPop] -descriptors::t<T,DESCRIPTOR>(iPop);
+    fEq[iPop] = lbHelpers<T,DESCRIPTOR>::equilibriumP1( iPop, moment0, moment1 ) +descriptors::t<T,DESCRIPTOR>(iPop);
   }
 
 
@@ -757,8 +883,8 @@ void P1Dynamics<T,DESCRIPTOR>::collide( Cell<T,DESCRIPTOR>& cell, LatticeStatist
   for (int iPop = 0; iPop <DESCRIPTOR::q; ++iPop) {
     relaxCell[iPop] =
       cellShifted[iPop]
-      - _scattering*(cellShifted[iPop] - fEq[iPop])
-      - (_absorption+_scattering)*descriptors::t<T,DESCRIPTOR>(iPop)*cellShifted[iPop];
+      - _scattering*descriptors::norm_c<T,DESCRIPTOR>(iPop)*(cellShifted[iPop] - fEq[iPop])
+      - _absorption*descriptors::norm_c<T,DESCRIPTOR>(iPop)*cellShifted[iPop];
   }
 
   for (int iPop = 0; iPop <DESCRIPTOR::q; ++iPop) {
@@ -800,7 +926,7 @@ void ResettingForcedBGKdynamics<T,DESCRIPTOR>::collide (
 {
   T rho, u[DESCRIPTOR::d];
   this->_momenta.computeRhoU(cell, rho, u);
-  T* force = cell.template getFieldPointer<descriptors::FORCE>();
+  auto force = cell.template getFieldPointer<descriptors::FORCE>();
   if ( !util::nearZero(force[0]) || !util::nearZero(force[1]) || !util::nearZero(force[2]) ) // TODO: unnecessary??
     for (int iVel=0; iVel<DESCRIPTOR::d; ++iVel) {
       u[iVel] += force[iVel] / (T)2.;
@@ -833,7 +959,7 @@ ForcedShanChenBGKdynamics<T,DESCRIPTOR>::ForcedShanChenBGKdynamics (
 }
 
 template<typename T, typename DESCRIPTOR>
-void ForcedShanChenBGKdynamics<T,DESCRIPTOR>::computeU (Cell<T,DESCRIPTOR> const& cell, T u[DESCRIPTOR::d] ) const
+void ForcedShanChenBGKdynamics<T,DESCRIPTOR>::computeU (ConstCell<T,DESCRIPTOR>& cell, T u[DESCRIPTOR::d] ) const
 {
   T rho;
   this->_momenta.computeRhoU(cell, rho, u);
@@ -843,7 +969,7 @@ void ForcedShanChenBGKdynamics<T,DESCRIPTOR>::computeU (Cell<T,DESCRIPTOR> const
 }
 
 template<typename T, typename DESCRIPTOR>
-void ForcedShanChenBGKdynamics<T,DESCRIPTOR>::computeRhoU (Cell<T,DESCRIPTOR> const& cell, T& rho, T u[DESCRIPTOR::d] ) const
+void ForcedShanChenBGKdynamics<T,DESCRIPTOR>::computeRhoU (ConstCell<T,DESCRIPTOR>& cell, T& rho, T u[DESCRIPTOR::d] ) const
 {
   this->_momenta.computeRhoU(cell, rho, u);
   for (int iVel=0; iVel<DESCRIPTOR::d; ++iVel) {
@@ -858,7 +984,7 @@ void ForcedShanChenBGKdynamics<T,DESCRIPTOR>::collide (
 {
   T rho, u[DESCRIPTOR::d];
   this->_momenta.computeRhoU(cell, rho, u);
-  T* force = cell.template getFieldPointer<descriptors::FORCE>();
+  auto force = cell.template getFieldPointer<descriptors::FORCE>();
   for (int iVel=0; iVel<DESCRIPTOR::d; ++iVel) {
     u[iVel] += force[iVel] /  this->getOmega();
   }
@@ -883,11 +1009,12 @@ ForcedTRTdynamics<T,DESCRIPTOR>::ForcedTRTdynamics (
   : BasicDynamics<T,DESCRIPTOR>(momenta),
     _omega(omega), _omega2(1/(magicParameter/(1/omega-0.5)+0.5)), _magicParameter(magicParameter)
 {
+  this->getName() = "ForcedTRTdynamics";  
   OLB_PRECONDITION( DESCRIPTOR::template provides<descriptors::FORCE>() );
 }
 
 template<typename T, typename DESCRIPTOR>
-void ForcedTRTdynamics<T,DESCRIPTOR>::computeU (Cell<T,DESCRIPTOR> const& cell, T u[DESCRIPTOR::d] ) const
+void ForcedTRTdynamics<T,DESCRIPTOR>::computeU (ConstCell<T,DESCRIPTOR>& cell, T u[DESCRIPTOR::d] ) const
 {
   T rho;
   this->_momenta.computeRhoU(cell, rho, u);
@@ -897,7 +1024,7 @@ void ForcedTRTdynamics<T,DESCRIPTOR>::computeU (Cell<T,DESCRIPTOR> const& cell, 
 }
 
 template<typename T, typename DESCRIPTOR>
-void ForcedTRTdynamics<T,DESCRIPTOR>::computeRhoU (Cell<T,DESCRIPTOR> const& cell, T& rho, T u[DESCRIPTOR::d] ) const
+void ForcedTRTdynamics<T,DESCRIPTOR>::computeRhoU (ConstCell<T,DESCRIPTOR>& cell, T& rho, T u[DESCRIPTOR::d] ) const
 {
   this->_momenta.computeRhoU(cell, rho, u);
   for (int iVel=0; iVel<DESCRIPTOR::d; ++iVel) {
@@ -913,7 +1040,7 @@ void ForcedTRTdynamics<T,DESCRIPTOR>::collide (
 {
   T rho, u[DESCRIPTOR::d];
   this->_momenta.computeRhoU(cell, rho, u);
-  T* force = cell.template getFieldPointer<descriptors::FORCE>();
+  auto force = cell.template getFieldPointer<descriptors::FORCE>();
   for (int iVel=0; iVel<DESCRIPTOR::d; ++iVel) {
     u[iVel] += force[iVel] / (T)2.;
   }
@@ -958,6 +1085,7 @@ D3Q13dynamics<T,DESCRIPTOR>::D3Q13dynamics (
   T omega, Momenta<T,DESCRIPTOR>& momenta )
   : BasicDynamics<T,DESCRIPTOR>(momenta)
 {
+  this->getName() = "D3Q13dynamics";  
   setOmega(omega);
 }
 
@@ -965,7 +1093,7 @@ template<typename T, typename DESCRIPTOR>
 T D3Q13dynamics<T,DESCRIPTOR>::computeEquilibrium(int iPop, T rho, const T u[DESCRIPTOR::d], T uSqr) const
 {
   // To get at the equilibrium, execute collision with relaxation parameters 1
-  Cell<T,DESCRIPTOR> tmp;
+  CellD<T,DESCRIPTOR> tmp;
   for (int pop=0; pop<DESCRIPTOR::q; ++pop) {
     tmp[pop] = descriptors::t<T,DESCRIPTOR>(pop);
   }
@@ -1002,7 +1130,7 @@ void D3Q13dynamics<T,DESCRIPTOR>::setOmega(T omega)
 
 template<typename T, typename DESCRIPTOR>
 void Momenta<T,DESCRIPTOR>::computeRhoU (
-  Cell<T,DESCRIPTOR> const& cell,
+  ConstCell<T,DESCRIPTOR>& cell,
   T& rho, T u[DESCRIPTOR::d]) const
 {
   rho = this->computeRho(cell);
@@ -1012,7 +1140,7 @@ void Momenta<T,DESCRIPTOR>::computeRhoU (
 
 template<typename T, typename DESCRIPTOR>
 void Momenta<T,DESCRIPTOR>::computeAllMomenta (
-  Cell<T,DESCRIPTOR> const& cell,
+  ConstCell<T,DESCRIPTOR>& cell,
   T& rho, T u[DESCRIPTOR::d],
   T pi[util::TensorVal<DESCRIPTOR >::n] ) const
 {
@@ -1033,27 +1161,27 @@ void Momenta<T,DESCRIPTOR>::defineRhoU (
 ////////////////////// Class BulkMomenta //////////////////////////
 
 template<typename T, typename DESCRIPTOR>
-T BulkMomenta<T,DESCRIPTOR>::computeRho(Cell<T,DESCRIPTOR> const& cell) const
+T BulkMomenta<T,DESCRIPTOR>::computeRho(ConstCell<T,DESCRIPTOR>& cell) const
 {
   return lbHelpers<T,DESCRIPTOR>::computeRho(cell);
 }
 
 template<typename T, typename DESCRIPTOR>
-void BulkMomenta<T,DESCRIPTOR>::computeU(Cell<T,DESCRIPTOR> const& cell, T u[DESCRIPTOR::d]) const
+void BulkMomenta<T,DESCRIPTOR>::computeU(ConstCell<T,DESCRIPTOR>& cell, T u[DESCRIPTOR::d]) const
 {
   T dummyRho;
   lbHelpers<T,DESCRIPTOR>::computeRhoU(cell, dummyRho, u);
 }
 
 template<typename T, typename DESCRIPTOR>
-void BulkMomenta<T,DESCRIPTOR>::computeJ(Cell<T,DESCRIPTOR> const& cell, T j[DESCRIPTOR::d]) const
+void BulkMomenta<T,DESCRIPTOR>::computeJ(ConstCell<T,DESCRIPTOR>& cell, T j[DESCRIPTOR::d]) const
 {
   lbHelpers<T,DESCRIPTOR>::computeJ(cell, j);
 }
 
 template<typename T, typename DESCRIPTOR>
 void BulkMomenta<T,DESCRIPTOR>::computeStress (
-  Cell<T,DESCRIPTOR> const& cell,
+  ConstCell<T,DESCRIPTOR>& cell,
   T rho, const T u[DESCRIPTOR::d],
   T pi[util::TensorVal<DESCRIPTOR >::n] ) const
 {
@@ -1062,7 +1190,7 @@ void BulkMomenta<T,DESCRIPTOR>::computeStress (
 
 template<typename T, typename DESCRIPTOR>
 void BulkMomenta<T,DESCRIPTOR>::computeRhoU (
-  Cell<T,DESCRIPTOR> const& cell,
+  ConstCell<T,DESCRIPTOR>& cell,
   T& rho, T u[DESCRIPTOR::d] ) const
 {
   lbHelpers<T,DESCRIPTOR>::computeRhoU(cell, rho,u);
@@ -1070,7 +1198,7 @@ void BulkMomenta<T,DESCRIPTOR>::computeRhoU (
 
 template<typename T, typename DESCRIPTOR>
 void BulkMomenta<T,DESCRIPTOR>::computeAllMomenta (
-  Cell<T,DESCRIPTOR> const& cell,
+  ConstCell<T,DESCRIPTOR>& cell,
   T& rho, T u[DESCRIPTOR::d],
   T pi[util::TensorVal<DESCRIPTOR >::n] ) const
 {
@@ -1140,25 +1268,25 @@ void BulkMomenta<T,DESCRIPTOR>::defineAllMomenta (
 ////////////////////// Class ExternalVelocityMomenta //////////////////////////
 
 template<typename T, typename DESCRIPTOR>
-T ExternalVelocityMomenta<T,DESCRIPTOR>::computeRho(Cell<T,DESCRIPTOR> const& cell) const
+T ExternalVelocityMomenta<T,DESCRIPTOR>::computeRho(ConstCell<T,DESCRIPTOR>& cell) const
 {
   return lbHelpers<T,DESCRIPTOR>::computeRho(cell);
 }
 
 template<typename T, typename DESCRIPTOR>
-void ExternalVelocityMomenta<T,DESCRIPTOR>::computeU(Cell<T,DESCRIPTOR> const& cell, T u[DESCRIPTOR::d]) const
+void ExternalVelocityMomenta<T,DESCRIPTOR>::computeU(ConstCell<T,DESCRIPTOR>& cell, T u[DESCRIPTOR::d]) const
 {
-  const T* uExt = cell.template getFieldPointer<descriptors::VELOCITY>();
+  auto uExt = cell.template getFieldPointer<descriptors::VELOCITY>();
   for (int iD=0; iD < DESCRIPTOR::d; ++iD) {
     u[iD] = uExt[iD];
   }
 }
 
 template<typename T, typename DESCRIPTOR>
-void ExternalVelocityMomenta<T,DESCRIPTOR>::computeJ(Cell<T,DESCRIPTOR> const& cell, T j[DESCRIPTOR::d]) const
+void ExternalVelocityMomenta<T,DESCRIPTOR>::computeJ(ConstCell<T,DESCRIPTOR>& cell, T j[DESCRIPTOR::d]) const
 {
-  const auto rho  = computeRho(cell);
-  const T*   uExt = cell.template getFieldPointer<descriptors::VELOCITY>();
+  const auto rho = computeRho(cell);
+  auto uExt = cell.template getFieldPointer<descriptors::VELOCITY>();
   for (int iD=0; iD < DESCRIPTOR::d; ++iD) {
     j[iD] = uExt[iD] * rho;
   }
@@ -1166,7 +1294,7 @@ void ExternalVelocityMomenta<T,DESCRIPTOR>::computeJ(Cell<T,DESCRIPTOR> const& c
 
 template<typename T, typename DESCRIPTOR>
 void ExternalVelocityMomenta<T,DESCRIPTOR>::computeStress (
-  Cell<T,DESCRIPTOR> const& cell,
+  ConstCell<T,DESCRIPTOR>& cell,
   T rho, const T u[DESCRIPTOR::d],
   T pi[util::TensorVal<DESCRIPTOR >::n] ) const
 {
@@ -1175,7 +1303,7 @@ void ExternalVelocityMomenta<T,DESCRIPTOR>::computeStress (
 
 template<typename T, typename DESCRIPTOR>
 void ExternalVelocityMomenta<T,DESCRIPTOR>::computeRhoU (
-  Cell<T,DESCRIPTOR> const& cell,
+  ConstCell<T,DESCRIPTOR>& cell,
   T& rho, T u[DESCRIPTOR::d] ) const
 {
   rho = computeRho(cell);
@@ -1184,7 +1312,7 @@ void ExternalVelocityMomenta<T,DESCRIPTOR>::computeRhoU (
 
 template<typename T, typename DESCRIPTOR>
 void ExternalVelocityMomenta<T,DESCRIPTOR>::computeAllMomenta (
-  Cell<T,DESCRIPTOR> const& cell,
+  ConstCell<T,DESCRIPTOR>& cell,
   T& rho, T u[DESCRIPTOR::d],
   T pi[util::TensorVal<DESCRIPTOR >::n] ) const
 {
@@ -1211,7 +1339,7 @@ void ExternalVelocityMomenta<T,DESCRIPTOR>::defineU (
   Cell<T,DESCRIPTOR>& cell,
   const T u[DESCRIPTOR::d])
 {
-  T* const uExt = cell.template getFieldPointer<descriptors::VELOCITY>();
+  auto uExt = cell.template getFieldPointer<descriptors::VELOCITY>();
   for (int iD=0; iD<DESCRIPTOR::d; ++iD) {
     uExt[iD] = u[iD];
   }
@@ -1245,6 +1373,7 @@ void ExternalVelocityMomenta<T,DESCRIPTOR>::defineAllMomenta (
 template<typename T, typename DESCRIPTOR>
 BounceBack<T,DESCRIPTOR>::BounceBack()
 {
+  this->getName() = "BounceBack";  
   _rhoFixed=false;
 }
 
@@ -1252,6 +1381,7 @@ template<typename T, typename DESCRIPTOR>
 BounceBack<T,DESCRIPTOR>::BounceBack(T rho)
   :_rho(rho)
 {
+  this->getName() = "BounceBack";    
   _rhoFixed=true;
 }
 
@@ -1267,7 +1397,7 @@ void BounceBack<T,DESCRIPTOR>::collide (
 }
 
 template<typename T, typename DESCRIPTOR>
-T BounceBack<T,DESCRIPTOR>::computeRho(Cell<T,DESCRIPTOR> const& cell) const
+T BounceBack<T,DESCRIPTOR>::computeRho(ConstCell<T,DESCRIPTOR>& cell) const
 {
 
   if (_rhoFixed) {
@@ -1278,7 +1408,7 @@ T BounceBack<T,DESCRIPTOR>::computeRho(Cell<T,DESCRIPTOR> const& cell) const
 
 template<typename T, typename DESCRIPTOR>
 void BounceBack<T,DESCRIPTOR>::computeU (
-  Cell<T,DESCRIPTOR> const& cell,
+  ConstCell<T,DESCRIPTOR>& cell,
   T u[DESCRIPTOR::d]) const
 {
   for (int iD=0; iD<DESCRIPTOR::d; ++iD) {
@@ -1288,7 +1418,7 @@ void BounceBack<T,DESCRIPTOR>::computeU (
 
 template<typename T, typename DESCRIPTOR>
 void BounceBack<T,DESCRIPTOR>::computeJ (
-  Cell<T,DESCRIPTOR> const& cell,
+  ConstCell<T,DESCRIPTOR>& cell,
   T j[DESCRIPTOR::d]) const
 {
   for (int iD=0; iD<DESCRIPTOR::d; ++iD) {
@@ -1298,7 +1428,7 @@ void BounceBack<T,DESCRIPTOR>::computeJ (
 
 template<typename T, typename DESCRIPTOR>
 void BounceBack<T,DESCRIPTOR>::computeStress (
-  Cell<T,DESCRIPTOR> const& cell,
+  ConstCell<T,DESCRIPTOR>& cell,
   T rho, const T u[DESCRIPTOR::d],
   T pi[util::TensorVal<DESCRIPTOR >::n] ) const
 {
@@ -1309,7 +1439,7 @@ void BounceBack<T,DESCRIPTOR>::computeStress (
 
 template<typename T, typename DESCRIPTOR>
 void BounceBack<T,DESCRIPTOR>::computeRhoU (
-  Cell<T,DESCRIPTOR> const& cell,
+  ConstCell<T,DESCRIPTOR>& cell,
   T& rho, T u[DESCRIPTOR::d]) const
 {
   rho = computeRho(cell);
@@ -1318,7 +1448,7 @@ void BounceBack<T,DESCRIPTOR>::computeRhoU (
 
 template<typename T, typename DESCRIPTOR>
 void BounceBack<T,DESCRIPTOR>::computeAllMomenta (
-  Cell<T,DESCRIPTOR> const& cell,
+  ConstCell<T,DESCRIPTOR>& cell,
   T& rho, T u[DESCRIPTOR::d],
   T pi[util::TensorVal<DESCRIPTOR >::n] ) const
 {
@@ -1365,6 +1495,7 @@ void BounceBack<T,DESCRIPTOR>::setOmega(T omega)
 template<typename T, typename DESCRIPTOR>
 BounceBackVelocity<T,DESCRIPTOR>::BounceBackVelocity(const T u[DESCRIPTOR::d])
 {
+  this->getName() = "BounceBackVelocity";  
   _rhoFixed=false;
   for (int iD=0; iD<DESCRIPTOR::d; ++iD) {
     _u[iD] = u[iD];
@@ -1375,6 +1506,7 @@ template<typename T, typename DESCRIPTOR>
 BounceBackVelocity<T,DESCRIPTOR>::BounceBackVelocity(const T rho, const T u[DESCRIPTOR::d])
   :_rho(rho)
 {
+  this->getName() = "BounceBackVelocity";  
   _rhoFixed=true;
   for (int iD=0; iD<DESCRIPTOR::d; ++iD) {
     _u[iD] = u[iD];
@@ -1397,7 +1529,7 @@ void BounceBackVelocity<T,DESCRIPTOR>::collide (
 }
 
 template<typename T, typename DESCRIPTOR>
-T BounceBackVelocity<T,DESCRIPTOR>::computeRho(Cell<T,DESCRIPTOR> const& cell) const
+T BounceBackVelocity<T,DESCRIPTOR>::computeRho(ConstCell<T,DESCRIPTOR>& cell) const
 {
   if (_rhoFixed) {
     return _rho;
@@ -1407,7 +1539,7 @@ T BounceBackVelocity<T,DESCRIPTOR>::computeRho(Cell<T,DESCRIPTOR> const& cell) c
 
 template<typename T, typename DESCRIPTOR>
 void BounceBackVelocity<T,DESCRIPTOR>::computeU (
-  Cell<T,DESCRIPTOR> const& cell,
+  ConstCell<T,DESCRIPTOR>& cell,
   T u[DESCRIPTOR::d]) const
 {
   for (int iD=0; iD<DESCRIPTOR::d; ++iD) {
@@ -1417,7 +1549,7 @@ void BounceBackVelocity<T,DESCRIPTOR>::computeU (
 
 template<typename T, typename DESCRIPTOR>
 void BounceBackVelocity<T,DESCRIPTOR>::computeJ (
-  Cell<T,DESCRIPTOR> const& cell,
+  ConstCell<T,DESCRIPTOR>& cell,
   T j[DESCRIPTOR::d]) const
 {
   for (int iD=0; iD<DESCRIPTOR::d; ++iD) {
@@ -1427,7 +1559,7 @@ void BounceBackVelocity<T,DESCRIPTOR>::computeJ (
 
 template<typename T, typename DESCRIPTOR>
 void BounceBackVelocity<T,DESCRIPTOR>::computeStress (
-  Cell<T,DESCRIPTOR> const& cell,
+  ConstCell<T,DESCRIPTOR>& cell,
   T rho, const T u[DESCRIPTOR::d],
   T pi[util::TensorVal<DESCRIPTOR >::n] ) const
 {
@@ -1438,7 +1570,7 @@ void BounceBackVelocity<T,DESCRIPTOR>::computeStress (
 
 template<typename T, typename DESCRIPTOR>
 void BounceBackVelocity<T,DESCRIPTOR>::computeRhoU (
-  Cell<T,DESCRIPTOR> const& cell,
+  ConstCell<T,DESCRIPTOR>& cell,
   T& rho, T u[DESCRIPTOR::d]) const
 {
   rho = computeRho(cell);
@@ -1447,7 +1579,7 @@ void BounceBackVelocity<T,DESCRIPTOR>::computeRhoU (
 
 template<typename T, typename DESCRIPTOR>
 void BounceBackVelocity<T,DESCRIPTOR>::computeAllMomenta (
-  Cell<T,DESCRIPTOR> const& cell,
+  ConstCell<T,DESCRIPTOR>& cell,
   T& rho, T u[DESCRIPTOR::d],
   T pi[util::TensorVal<DESCRIPTOR >::n] ) const
 {
@@ -1500,6 +1632,7 @@ void BounceBackVelocity<T,DESCRIPTOR>::setOmega(T omega)
 template<typename T, typename DESCRIPTOR>
 BounceBackAnti<T,DESCRIPTOR>::BounceBackAnti()
 {
+  this->getName() = "BounceBackAnti";  
   _rhoFixed = false;
   _rho = T(1);
 }
@@ -1508,6 +1641,7 @@ template<typename T, typename DESCRIPTOR>
 BounceBackAnti<T,DESCRIPTOR>::BounceBackAnti(const T rho)
   :_rho(rho)
 {
+  this->getName() = "BounceBackAnti";   
   _rhoFixed = true;
 }
 
@@ -1533,7 +1667,7 @@ void BounceBackAnti<T,DESCRIPTOR>::collide (
 }
 
 template<typename T, typename DESCRIPTOR>
-T BounceBackAnti<T,DESCRIPTOR>::computeRho(Cell<T,DESCRIPTOR> const& cell) const
+T BounceBackAnti<T,DESCRIPTOR>::computeRho(ConstCell<T,DESCRIPTOR>& cell) const
 {
 
   if (_rhoFixed) {
@@ -1544,7 +1678,7 @@ T BounceBackAnti<T,DESCRIPTOR>::computeRho(Cell<T,DESCRIPTOR> const& cell) const
 
 template<typename T, typename DESCRIPTOR>
 void BounceBackAnti<T,DESCRIPTOR>::computeU (
-  Cell<T,DESCRIPTOR> const& cell,
+  ConstCell<T,DESCRIPTOR>& cell,
   T u[DESCRIPTOR::d]) const
 {
   for (int iD=0; iD<DESCRIPTOR::d; ++iD) {
@@ -1554,7 +1688,7 @@ void BounceBackAnti<T,DESCRIPTOR>::computeU (
 
 template<typename T, typename DESCRIPTOR>
 void BounceBackAnti<T,DESCRIPTOR>::computeJ (
-  Cell<T,DESCRIPTOR> const& cell,
+  ConstCell<T,DESCRIPTOR>& cell,
   T j[DESCRIPTOR::d]) const
 {
   computeU(cell, j);
@@ -1565,7 +1699,7 @@ void BounceBackAnti<T,DESCRIPTOR>::computeJ (
 
 template<typename T, typename DESCRIPTOR>
 void BounceBackAnti<T,DESCRIPTOR>::computeStress (
-  Cell<T,DESCRIPTOR> const& cell,
+  ConstCell<T,DESCRIPTOR>& cell,
   T rho, const T u[DESCRIPTOR::d],
   T pi[util::TensorVal<DESCRIPTOR >::n] ) const
 {
@@ -1576,7 +1710,7 @@ void BounceBackAnti<T,DESCRIPTOR>::computeStress (
 
 template<typename T, typename DESCRIPTOR>
 void BounceBackAnti<T,DESCRIPTOR>::computeRhoU (
-  Cell<T,DESCRIPTOR> const& cell,
+  ConstCell<T,DESCRIPTOR>& cell,
   T& rho, T u[DESCRIPTOR::d]) const
 {
   rho = computeRho(cell);
@@ -1585,7 +1719,7 @@ void BounceBackAnti<T,DESCRIPTOR>::computeRhoU (
 
 template<typename T, typename DESCRIPTOR>
 void BounceBackAnti<T,DESCRIPTOR>::computeAllMomenta (
-  Cell<T,DESCRIPTOR> const& cell,
+  ConstCell<T,DESCRIPTOR>& cell,
   T& rho, T u[DESCRIPTOR::d],
   T pi[util::TensorVal<DESCRIPTOR >::n] ) const
 {
@@ -1638,6 +1772,7 @@ void BounceBackAnti<T,DESCRIPTOR>::setOmega(T omega)
 template<typename T, typename DESCRIPTOR>
 PartialBounceBack<T,DESCRIPTOR>::PartialBounceBack(T rf) : _rf(rf)
 {
+  this->getName() = "PartialBounceBack";  
 }
 
 template<typename T, typename DESCRIPTOR>
@@ -1658,12 +1793,263 @@ void PartialBounceBack<T,DESCRIPTOR>::collide( Cell<T,DESCRIPTOR>& cell, Lattice
 }
 
 
+////////////////////// Class EquilibirumBoundaryFirstOrder ///////////////////////////
+
+template<typename T, typename DESCRIPTOR>
+EquilibirumBoundaryFirstOrder<T,DESCRIPTOR>::EquilibirumBoundaryFirstOrder(const T rho, const T u[DESCRIPTOR::d])
+  :_rho(rho)
+{
+  this->getName() = "EquilibirumBoundaryFirstOrder";  
+  for (int iD=0; iD<DESCRIPTOR::d; ++iD) {
+    _u[iD] = u[iD];
+  }
+}
+
+template<typename T, typename DESCRIPTOR>
+void EquilibirumBoundaryFirstOrder<T,DESCRIPTOR>::collide (
+  Cell<T,DESCRIPTOR>& cell,
+  LatticeStatistics<T>& statistics )
+{
+  const T uSqr = util::normSqr<T, DESCRIPTOR::d>(_u);
+
+  for ( int iPop = 0; iPop < DESCRIPTOR::q; ++iPop ) {
+    cell[iPop] = lbHelpers<T, DESCRIPTOR>::equilibriumFirstOrder(iPop, _rho, _u);
+  }
+
+  statistics.incrementStats(_rho, uSqr);
+}
+
+template<typename T, typename DESCRIPTOR>
+T EquilibirumBoundaryFirstOrder<T,DESCRIPTOR>::computeRho(ConstCell<T,DESCRIPTOR>& cell) const
+{
+  return _rho;
+}
+
+template<typename T, typename DESCRIPTOR>
+void EquilibirumBoundaryFirstOrder<T,DESCRIPTOR>::computeU (
+  ConstCell<T,DESCRIPTOR>& cell,
+  T u[DESCRIPTOR::d]) const
+{
+  for (int iD=0; iD<DESCRIPTOR::d; ++iD) {
+    u[iD] = _u[iD];
+  }
+}
+
+template<typename T, typename DESCRIPTOR>
+void EquilibirumBoundaryFirstOrder<T,DESCRIPTOR>::computeJ (
+  ConstCell<T,DESCRIPTOR>& cell,
+  T j[DESCRIPTOR::d]) const
+{
+  for (int iD=0; iD<DESCRIPTOR::d; ++iD) {
+    j[iD] = _rho * _u[iD];
+  }
+}
+
+template<typename T, typename DESCRIPTOR>
+void EquilibirumBoundaryFirstOrder<T,DESCRIPTOR>::computeStress (
+  ConstCell<T,DESCRIPTOR>& cell,
+  T rho, const T u[DESCRIPTOR::d],
+  T pi[util::TensorVal<DESCRIPTOR >::n] ) const
+{
+  for (int iPi=0; iPi<util::TensorVal<DESCRIPTOR >::n; ++iPi) {
+    pi[iPi] = T();//std::numeric_limits<T>::signaling_NaN();
+  }
+}
+
+template<typename T, typename DESCRIPTOR>
+void EquilibirumBoundaryFirstOrder<T,DESCRIPTOR>::computeRhoU (
+  ConstCell<T,DESCRIPTOR>& cell,
+  T& rho, T u[DESCRIPTOR::d]) const
+{
+  rho = computeRho(cell);
+  computeU(cell, u);
+}
+
+template<typename T, typename DESCRIPTOR>
+void EquilibirumBoundaryFirstOrder<T,DESCRIPTOR>::computeAllMomenta (
+  ConstCell<T,DESCRIPTOR>& cell,
+  T& rho, T u[DESCRIPTOR::d],
+  T pi[util::TensorVal<DESCRIPTOR >::n] ) const
+{
+  computeRhoU(cell, rho, u);
+  computeStress(cell, rho, u, pi);
+}
+
+template<typename T, typename DESCRIPTOR>
+void EquilibirumBoundaryFirstOrder<T,DESCRIPTOR>::defineRho(Cell<T,DESCRIPTOR>& cell, T rho)
+{
+  _rho = rho;
+}
+
+template<typename T, typename DESCRIPTOR>
+void EquilibirumBoundaryFirstOrder<T,DESCRIPTOR>::defineU (
+  Cell<T,DESCRIPTOR>& cell,
+  const T u[DESCRIPTOR::d])
+{
+  for (int iD=0; iD<DESCRIPTOR::d; ++iD) {
+    _u[iD] = u[iD];
+  }
+}
+
+template<typename T, typename DESCRIPTOR>
+void EquilibirumBoundaryFirstOrder<T,DESCRIPTOR>::defineRhoU (
+  Cell<T,DESCRIPTOR>& cell,
+  T rho, const T u[DESCRIPTOR::d])
+{
+  defineRho(cell, rho);
+  defineU(cell, u);
+}
+
+template<typename T, typename DESCRIPTOR>
+void EquilibirumBoundaryFirstOrder<T,DESCRIPTOR>::defineAllMomenta (
+  Cell<T,DESCRIPTOR>& cell,
+  T rho, const T u[DESCRIPTOR::d],
+  const T pi[util::TensorVal<DESCRIPTOR >::n] )
+{ }
+
+template<typename T, typename DESCRIPTOR>
+T EquilibirumBoundaryFirstOrder<T,DESCRIPTOR>::getOmega() const
+{
+  return T();//std::numeric_limits<T>::signaling_NaN();
+}
+
+template<typename T, typename DESCRIPTOR>
+void EquilibirumBoundaryFirstOrder<T,DESCRIPTOR>::setOmega(T omega)
+{ }
+
+
+////////////////////// Class EquilibirumBoundarySecondOrder ///////////////////////////
+
+template<typename T, typename DESCRIPTOR>
+EquilibirumBoundarySecondOrder<T,DESCRIPTOR>::EquilibirumBoundarySecondOrder(const T rho, const T u[DESCRIPTOR::d])
+  :_rho(rho)
+{
+  this->getName() = "EquilibirumBoundarySecondOrder";  
+  for (int iD=0; iD<DESCRIPTOR::d; ++iD) {
+    _u[iD] = u[iD];
+  }
+}
+
+template<typename T, typename DESCRIPTOR>
+void EquilibirumBoundarySecondOrder<T,DESCRIPTOR>::collide (
+  Cell<T,DESCRIPTOR>& cell,
+  LatticeStatistics<T>& statistics )
+{
+  const T uSqr = util::normSqr<T, DESCRIPTOR::d>(_u);
+
+  for ( int iPop = 0; iPop < DESCRIPTOR::q; ++iPop ) {
+    cell[iPop] = lbHelpers<T, DESCRIPTOR>::equilibrium(iPop, _rho, _u, uSqr);
+  }
+
+  statistics.incrementStats(_rho, uSqr);
+}
+
+template<typename T, typename DESCRIPTOR>
+T EquilibirumBoundarySecondOrder<T,DESCRIPTOR>::computeRho(ConstCell<T,DESCRIPTOR>& cell) const
+{
+  return _rho;
+}
+
+template<typename T, typename DESCRIPTOR>
+void EquilibirumBoundarySecondOrder<T,DESCRIPTOR>::computeU (
+  ConstCell<T,DESCRIPTOR>& cell,
+  T u[DESCRIPTOR::d]) const
+{
+  for (int iD=0; iD<DESCRIPTOR::d; ++iD) {
+    u[iD] = _u[iD];
+  }
+}
+
+template<typename T, typename DESCRIPTOR>
+void EquilibirumBoundarySecondOrder<T,DESCRIPTOR>::computeJ (
+  ConstCell<T,DESCRIPTOR>& cell,
+  T j[DESCRIPTOR::d]) const
+{
+  for (int iD=0; iD<DESCRIPTOR::d; ++iD) {
+    j[iD] = _rho * _u[iD];
+  }
+}
+
+template<typename T, typename DESCRIPTOR>
+void EquilibirumBoundarySecondOrder<T,DESCRIPTOR>::computeStress (
+  ConstCell<T,DESCRIPTOR>& cell,
+  T rho, const T u[DESCRIPTOR::d],
+  T pi[util::TensorVal<DESCRIPTOR >::n] ) const
+{
+  for (int iPi=0; iPi<util::TensorVal<DESCRIPTOR >::n; ++iPi) {
+    pi[iPi] = T();//std::numeric_limits<T>::signaling_NaN();
+  }
+}
+
+template<typename T, typename DESCRIPTOR>
+void EquilibirumBoundarySecondOrder<T,DESCRIPTOR>::computeRhoU (
+  ConstCell<T,DESCRIPTOR>& cell,
+  T& rho, T u[DESCRIPTOR::d]) const
+{
+  rho = computeRho(cell);
+  computeU(cell, u);
+}
+
+template<typename T, typename DESCRIPTOR>
+void EquilibirumBoundarySecondOrder<T,DESCRIPTOR>::computeAllMomenta (
+  ConstCell<T,DESCRIPTOR>& cell,
+  T& rho, T u[DESCRIPTOR::d],
+  T pi[util::TensorVal<DESCRIPTOR >::n] ) const
+{
+  computeRhoU(cell, rho, u);
+  computeStress(cell, rho, u, pi);
+}
+
+template<typename T, typename DESCRIPTOR>
+void EquilibirumBoundarySecondOrder<T,DESCRIPTOR>::defineRho(Cell<T,DESCRIPTOR>& cell, T rho)
+{
+  _rho = rho;
+}
+
+template<typename T, typename DESCRIPTOR>
+void EquilibirumBoundarySecondOrder<T,DESCRIPTOR>::defineU (
+  Cell<T,DESCRIPTOR>& cell,
+  const T u[DESCRIPTOR::d])
+{
+  for (int iD=0; iD<DESCRIPTOR::d; ++iD) {
+    _u[iD] = u[iD];
+  }
+}
+
+template<typename T, typename DESCRIPTOR>
+void EquilibirumBoundarySecondOrder<T,DESCRIPTOR>::defineRhoU (
+  Cell<T,DESCRIPTOR>& cell,
+  T rho, const T u[DESCRIPTOR::d])
+{
+  defineRho(cell, rho);
+  defineU(cell, u);
+}
+
+template<typename T, typename DESCRIPTOR>
+void EquilibirumBoundarySecondOrder<T,DESCRIPTOR>::defineAllMomenta (
+  Cell<T,DESCRIPTOR>& cell,
+  T rho, const T u[DESCRIPTOR::d],
+  const T pi[util::TensorVal<DESCRIPTOR >::n] )
+{ }
+
+template<typename T, typename DESCRIPTOR>
+T EquilibirumBoundarySecondOrder<T,DESCRIPTOR>::getOmega() const
+{
+  return T();//std::numeric_limits<T>::signaling_NaN();
+}
+
+template<typename T, typename DESCRIPTOR>
+void EquilibirumBoundarySecondOrder<T,DESCRIPTOR>::setOmega(T omega)
+{ }
+
+
 
 ////////////////////// Class NoDynamics ///////////////////////////
 
 template<typename T, typename DESCRIPTOR>
 NoDynamics<T,DESCRIPTOR>::NoDynamics(T rho) :_rho(rho)
 {
+  this->getName() = "NoDynamics";  
 }
 
 template<typename T, typename DESCRIPTOR>
@@ -1679,14 +2065,14 @@ void NoDynamics<T,DESCRIPTOR>::collide (
 { }
 
 template<typename T, typename DESCRIPTOR>
-T NoDynamics<T,DESCRIPTOR>::computeRho(Cell<T,DESCRIPTOR> const& cell) const
+T NoDynamics<T,DESCRIPTOR>::computeRho(ConstCell<T,DESCRIPTOR>& cell) const
 {
   return _rho;
 }
 
 template<typename T, typename DESCRIPTOR>
 void NoDynamics<T,DESCRIPTOR>::computeU (
-  Cell<T,DESCRIPTOR> const& cell,
+  ConstCell<T,DESCRIPTOR>& cell,
   T u[DESCRIPTOR::d]) const
 {
   for (int iD=0; iD<DESCRIPTOR::d; ++iD) {
@@ -1696,7 +2082,7 @@ void NoDynamics<T,DESCRIPTOR>::computeU (
 
 template<typename T, typename DESCRIPTOR>
 void NoDynamics<T,DESCRIPTOR>::computeJ (
-  Cell<T,DESCRIPTOR> const& cell,
+  ConstCell<T,DESCRIPTOR>& cell,
   T j[DESCRIPTOR::d]) const
 {
   for (int iD=0; iD<DESCRIPTOR::d; ++iD) {
@@ -1706,7 +2092,7 @@ void NoDynamics<T,DESCRIPTOR>::computeJ (
 
 template<typename T, typename DESCRIPTOR>
 void NoDynamics<T,DESCRIPTOR>::computeStress (
-  Cell<T,DESCRIPTOR> const& cell,
+  ConstCell<T,DESCRIPTOR>& cell,
   T rho, const T u[DESCRIPTOR::d],
   T pi[util::TensorVal<DESCRIPTOR >::n] ) const
 {
@@ -1717,7 +2103,7 @@ void NoDynamics<T,DESCRIPTOR>::computeStress (
 
 template<typename T, typename DESCRIPTOR>
 void NoDynamics<T,DESCRIPTOR>::computeRhoU (
-  Cell<T,DESCRIPTOR> const& cell,
+  ConstCell<T,DESCRIPTOR>& cell,
   T& rho, T u[DESCRIPTOR::d]) const
 {
   rho = computeRho(cell);
@@ -1726,7 +2112,7 @@ void NoDynamics<T,DESCRIPTOR>::computeRhoU (
 
 template<typename T, typename DESCRIPTOR>
 void NoDynamics<T,DESCRIPTOR>::computeAllMomenta (
-  Cell<T,DESCRIPTOR> const& cell,
+  ConstCell<T,DESCRIPTOR>& cell,
   T& rho, T u[DESCRIPTOR::d],
   T pi[util::TensorVal<DESCRIPTOR >::n] ) const
 {
@@ -1772,6 +2158,7 @@ void NoDynamics<T,DESCRIPTOR>::setOmega(T omega)
 template<typename T, typename DESCRIPTOR>
 OffDynamics<T,DESCRIPTOR>::OffDynamics(const T _location[DESCRIPTOR::d])
 {
+  this->getName() = "OffDynamics";  
   typedef DESCRIPTOR L;
   for (int iD = 0; iD < L::d; iD++) {
     location[iD] = _location[iD];
@@ -1790,6 +2177,7 @@ OffDynamics<T,DESCRIPTOR>::OffDynamics(const T _location[DESCRIPTOR::d])
 template<typename T, typename DESCRIPTOR>
 OffDynamics<T,DESCRIPTOR>::OffDynamics(const T _location[DESCRIPTOR::d], T _distances[DESCRIPTOR::q])
 {
+  this->getName() = "OffDynamics";  
   typedef DESCRIPTOR L;
   for (int iD = 0; iD < L::d; iD++) {
     location[iD] = _location[iD];
@@ -1806,7 +2194,7 @@ OffDynamics<T,DESCRIPTOR>::OffDynamics(const T _location[DESCRIPTOR::d], T _dist
 }
 
 template<typename T, typename DESCRIPTOR>
-T OffDynamics<T,DESCRIPTOR>::computeRho(Cell<T,DESCRIPTOR> const& cell) const
+T OffDynamics<T,DESCRIPTOR>::computeRho(ConstCell<T,DESCRIPTOR>& cell) const
 {
   /*typedef DESCRIPTOR L;
   T rhoTmp = T();
@@ -1826,7 +2214,7 @@ T OffDynamics<T,DESCRIPTOR>::computeRho(Cell<T,DESCRIPTOR> const& cell) const
 }
 
 template<typename T, typename DESCRIPTOR>
-void OffDynamics<T,DESCRIPTOR>::computeU(Cell<T,DESCRIPTOR> const& cell, T u[DESCRIPTOR::d] ) const
+void OffDynamics<T,DESCRIPTOR>::computeU(ConstCell<T,DESCRIPTOR>& cell, T u[DESCRIPTOR::d] ) const
 {
   typedef DESCRIPTOR L;
   for (int iD = 0; iD < L::d; iD++) {
@@ -1940,6 +2328,7 @@ T OffDynamics<T,DESCRIPTOR>::getVelocityCoefficient(int iPop)
 template<typename T, typename DESCRIPTOR>
 ZeroDistributionDynamics<T,DESCRIPTOR>::ZeroDistributionDynamics()
 {
+  this->getName() = "ZeroDistributionDynamics";  
 }
 
 template<typename T, typename DESCRIPTOR>
@@ -1953,7 +2342,7 @@ void ZeroDistributionDynamics<T,DESCRIPTOR>::collide (
 }
 
 template<typename T, typename DESCRIPTOR>
-T ZeroDistributionDynamics<T,DESCRIPTOR>::computeRho(Cell<T,DESCRIPTOR> const& cell) const
+T ZeroDistributionDynamics<T,DESCRIPTOR>::computeRho(ConstCell<T,DESCRIPTOR>& cell) const
 {
   return lbHelpers<T,DESCRIPTOR>::computeRho(cell);
 }
@@ -1990,7 +2379,6 @@ PartialBounceBack<T,DESCRIPTOR>& getPartialBounceBack(const double rf)
   return partialBounceBackSingleton;
 }
 
-
 template<typename T, typename DESCRIPTOR>
 BounceBackVelocity<T,DESCRIPTOR>& getBounceBackVelocity(const double rho, const double u[DESCRIPTOR::d])
 {
@@ -2003,6 +2391,20 @@ BounceBackAnti<T,DESCRIPTOR>& getBounceBackAnti(const double rho)
 {
   static BounceBackAnti<T,DESCRIPTOR> bounceBackSingleton(rho);
   return bounceBackSingleton;
+}
+
+template<typename T, typename DESCRIPTOR>
+EquilibirumBoundaryFirstOrder<T,DESCRIPTOR>& getEquilibirumBoundaryFirstOrder(const double rho, const double u[DESCRIPTOR::d])
+{
+  static EquilibirumBoundaryFirstOrder<T,DESCRIPTOR> equilibirumBoundaryFirstOrderSingleton(rho, u);
+  return equilibirumBoundaryFirstOrderSingleton;
+}
+
+template<typename T, typename DESCRIPTOR>
+EquilibirumBoundarySecondOrder<T,DESCRIPTOR>& getEquilibirumBoundarySecondOrder(const double rho, const double u[DESCRIPTOR::d])
+{
+  static EquilibirumBoundarySecondOrder<T,DESCRIPTOR> equilibirumBoundarySecondOrderSingleton(rho, u);
+  return equilibirumBoundarySecondOrderSingleton;
 }
 
 template<typename T, typename DESCRIPTOR>

@@ -30,6 +30,7 @@
 #include "momentaOnBoundaries3D.h"
 #include "dynamics/lbHelpers.h"
 #include "dynamics/firstOrderLbHelpers.h"
+#include "core/cellD.h"
 
 namespace olb {
 
@@ -58,7 +59,7 @@ InnerEdgeVelBM3D(const T u_[DESCRIPTOR::d])
 template<typename T, typename DESCRIPTOR,
          int plane, int normal1, int normal2>
 T InnerEdgeVelBM3D<T,DESCRIPTOR,plane,normal1,normal2>::computeRho (
-  Cell<T,DESCRIPTOR> const& cell ) const
+  ConstCell<T,DESCRIPTOR>& cell ) const
 {
   T rho1 = velocityBMRho<T, DESCRIPTOR, direction1, normal1>(cell, _u);
   T rho2 = velocityBMRho<T, DESCRIPTOR, direction2, normal2>(cell, _u);
@@ -68,7 +69,7 @@ T InnerEdgeVelBM3D<T,DESCRIPTOR,plane,normal1,normal2>::computeRho (
 template<typename T, typename DESCRIPTOR,
          int plane, int normal1, int normal2>
 void InnerEdgeVelBM3D<T,DESCRIPTOR,plane,normal1,normal2>::computeU (
-  Cell<T,DESCRIPTOR> const& cell,
+  ConstCell<T,DESCRIPTOR>& cell,
   T u[DESCRIPTOR::d] ) const
 {
   for (int iD=0; iD<DESCRIPTOR::d; ++iD) {
@@ -79,7 +80,7 @@ void InnerEdgeVelBM3D<T,DESCRIPTOR,plane,normal1,normal2>::computeU (
 template<typename T, typename DESCRIPTOR,
          int plane, int normal1, int normal2>
 void InnerEdgeVelBM3D<T,DESCRIPTOR,plane,normal1,normal2>::computeJ (
-  Cell<T,DESCRIPTOR> const& cell,
+  ConstCell<T,DESCRIPTOR>& cell,
   T j[DESCRIPTOR::d] ) const
 {
   T rho = computeRho(cell);
@@ -142,7 +143,7 @@ template<typename T, typename DESCRIPTOR,
          int plane, int normal1, int normal2>
 void InnerEdgeVelBM3D<T,DESCRIPTOR,plane,normal1,normal2>::
 computeStress (
-  Cell<T,DESCRIPTOR> const& cell,
+  ConstCell<T,DESCRIPTOR>& cell,
   T rho, const T u[DESCRIPTOR::d],
   T pi[util::TensorVal<DESCRIPTOR >::n] ) const
 {
@@ -150,7 +151,7 @@ computeStress (
 
   T uSqr = util::normSqr<T,DESCRIPTOR::d>(u);
 
-  Cell<T,DESCRIPTOR> newCell(cell);
+  CellD<T,DESCRIPTOR> newCell(cell);
   for (int iPop=0; iPop<DESCRIPTOR::q; ++iPop) {
     if ( (descriptors::c<DESCRIPTOR>(iPop,direction1) == -normal1) &&
          (descriptors::c<DESCRIPTOR>(iPop,direction2) == -normal2) ) {
@@ -188,7 +189,7 @@ InnerCornerVelBM3D<T,DESCRIPTOR,normalX,normalY,normalZ>::InnerCornerVelBM3D (
 template<typename T, typename DESCRIPTOR,
          int normalX, int normalY, int normalZ>
 T InnerCornerVelBM3D<T,DESCRIPTOR,normalX,normalY,normalZ>::computeRho (
-  Cell<T,DESCRIPTOR> const& cell ) const
+  ConstCell<T,DESCRIPTOR>& cell ) const
 {
   T rhoX = velocityBMRho<T, DESCRIPTOR, 0, normalX>(cell, _u);
   T rhoY = velocityBMRho<T, DESCRIPTOR, 1, normalY>(cell, _u);
@@ -199,7 +200,7 @@ T InnerCornerVelBM3D<T,DESCRIPTOR,normalX,normalY,normalZ>::computeRho (
 template<typename T, typename DESCRIPTOR,
          int normalX, int normalY, int normalZ>
 void InnerCornerVelBM3D<T,DESCRIPTOR,normalX,normalY,normalZ>::computeU (
-  Cell<T,DESCRIPTOR> const& cell,
+  ConstCell<T,DESCRIPTOR>& cell,
   T u[DESCRIPTOR::d] ) const
 {
   for (int iD=0; iD<DESCRIPTOR::d; ++iD) {
@@ -210,7 +211,7 @@ void InnerCornerVelBM3D<T,DESCRIPTOR,normalX,normalY,normalZ>::computeU (
 template<typename T, typename DESCRIPTOR,
          int normalX, int normalY, int normalZ>
 void InnerCornerVelBM3D<T,DESCRIPTOR,normalX,normalY,normalZ>::computeJ (
-  Cell<T,DESCRIPTOR> const& cell,
+  ConstCell<T,DESCRIPTOR>& cell,
   T j[DESCRIPTOR::d] ) const
 {
   T rho = computeRho(cell);
@@ -271,12 +272,12 @@ void InnerCornerVelBM3D<T,DESCRIPTOR,normalX,normalY,normalZ>::defineAllMomenta 
 template<typename T, typename DESCRIPTOR,
          int normalX, int normalY, int normalZ>
 void InnerCornerVelBM3D<T,DESCRIPTOR,normalX,normalY,normalZ>::computeStress (
-  Cell<T,DESCRIPTOR> const& cell,
+  ConstCell<T,DESCRIPTOR>& cell,
   T rho, const T u[DESCRIPTOR::d],
   T pi[util::TensorVal<DESCRIPTOR >::n] ) const
 {
   typedef lbHelpers<T,DESCRIPTOR> lbH;
-  Cell<T,DESCRIPTOR> newCell(cell);
+  CellD<T,DESCRIPTOR> newCell(cell);
   int v[DESCRIPTOR::d] = { -normalX, -normalY, -normalZ };
   int unknownF  = util::findVelocity<DESCRIPTOR >(v);
 

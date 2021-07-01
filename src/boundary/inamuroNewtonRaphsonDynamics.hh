@@ -33,7 +33,7 @@
 
 namespace olb {
 
- 
+
 
 template<typename T, typename DESCRIPTOR, typename Dynamics, int direction, int orientation>
 InamuroNewtonRaphsonDynamics<T,DESCRIPTOR,Dynamics,direction,orientation>::InamuroNewtonRaphsonDynamics (
@@ -42,6 +42,7 @@ InamuroNewtonRaphsonDynamics<T,DESCRIPTOR,Dynamics,direction,orientation>::Inamu
     _boundaryDynamics(omega, momenta),
     clout(std::cout,"InamuroNewtonRaphsonDynamics")
 {
+  this->getName() = "InamuroNewtonRaphsonDynamics";
   _xi[0] = (T)1;
   for (int iDim = 1; iDim < DESCRIPTOR::d; ++iDim) {
     _xi[iDim] = T();
@@ -132,7 +133,8 @@ void InamuroNewtonRaphsonDynamics<T,DESCRIPTOR,Dynamics,direction,orientation>::
     if (direction == iDim) {
       ++counterDim;
       uCs[iDim] = u[iDim];
-    } else {
+    }
+    else {
       uCs[iDim] = u[iDim] + _xi[iDim+1-counterDim];
     }
   }
@@ -160,7 +162,7 @@ void InamuroNewtonRaphsonDynamics<T,DESCRIPTOR,Dynamics,direction,orientation>::
 
 template<typename T, typename DESCRIPTOR, typename Dynamics, int direction, int orientation>
 void InamuroNewtonRaphsonDynamics<T,DESCRIPTOR,Dynamics,direction,orientation>::
-computeApproxMomentum(T approxMomentum[DESCRIPTOR::d],const Cell<T,DESCRIPTOR> &cell,
+computeApproxMomentum(T approxMomentum[DESCRIPTOR::d], ConstCell<T,DESCRIPTOR>& cell,
                       const T &rho, const T u[DESCRIPTOR::d], const T xi[DESCRIPTOR::d],
                       const std::vector<int> knownIndexes,const std::vector<int> missingIndexes)
 {
@@ -172,7 +174,8 @@ computeApproxMomentum(T approxMomentum[DESCRIPTOR::d],const Cell<T,DESCRIPTOR> &
     if (direction == iDim) {
       ++counter;
       csVel[iDim] = u[iDim];
-    } else {
+    }
+    else {
       csVel[iDim] = u[iDim] + xi[iDim+1-counter];
     }
   }
@@ -220,7 +223,8 @@ void InamuroNewtonRaphsonDynamics<T,DESCRIPTOR,Dynamics,direction,orientation>::
     if (direction == iDim) {
       ++counter;
       csVel[iDim] = u[iDim];
-    } else {
+    }
+    else {
       csVel[iDim] = u[iDim] + xi[iDim+1-counter];
     }
   }
@@ -251,7 +255,8 @@ void InamuroNewtonRaphsonDynamics<T,DESCRIPTOR,Dynamics,direction,orientation>::
   for (int iDim = 0; iDim < L::d; ++iDim) {
     if (direction == iDim) {
       ++counter;
-    } else {
+    }
+    else {
       for (unsigned iPop = 0; iPop < missingIndexes.size(); ++iPop) {
         T temp = T();
         for (int jDim = 0; jDim < L::d; ++jDim) {
@@ -282,7 +287,8 @@ void InamuroNewtonRaphsonDynamics<T,DESCRIPTOR,Dynamics,direction,orientation>::
   for (int iDim = 0; iDim < L::d; ++iDim) {
     if (direction == iDim) {
       ++counter;
-    } else {
+    }
+    else {
       for (unsigned iPop = 0; iPop < missingIndexes.size(); ++iPop) {
         T temp = T();
         for (int jDim = 0; jDim < L::d; ++jDim) {
@@ -396,7 +402,8 @@ invert(const T a[2][2],T invA[2][2])
       clout << std::endl;
     }
     return false;
-  } else {
+  }
+  else {
     invA[0][0] = a[1][1];
     invA[1][1] = a[0][0];
 
@@ -428,7 +435,8 @@ bool InamuroNewtonRaphsonDynamics<T,DESCRIPTOR,Dynamics,direction,orientation>::
       clout << std::endl;
     }
     return false;
-  } else {
+  }
+  else {
     invA[0][0] = a[1][1]*a[2][2]-a[1][2]*a[2][1];
     invA[0][1] = a[0][2]*a[2][1]-a[0][1]*a[2][2];
     invA[0][2] = a[0][1]*a[1][2]-a[0][2]*a[1][1];

@@ -26,6 +26,7 @@
 #define FRAME_CHANGE_F_3D_HH
 
 #include<cmath>
+#include <random>
 
 #include "frameChangeF3D.h"
 #include "frameChangeF2D.h"
@@ -238,30 +239,30 @@ bool CirclePowerLaw3D<T>::operator()(T output[], const T x[])
 
 template <typename T>
 CirclePowerLawTurbulent3D<T>::CirclePowerLawTurbulent3D(std::vector<T> center, std::vector<T> normal,
-    T maxVelocity, T radius, T n, T scale)
-  : CirclePowerLaw3D<T>(center, normal, maxVelocity, radius, n, scale) { }
+    T maxVelocity, T radius, T n, T turbulenceIntensity, T scale)
+  : CirclePowerLaw3D<T>(center, normal, maxVelocity, radius, n, scale), _turbulenceIntensity(turbulenceIntensity), _generator(_rd()), _dist(0.0, 1.0) { }
 
 template <typename T>
 CirclePowerLawTurbulent3D<T>::CirclePowerLawTurbulent3D(T center0, T center1, T center2, T normal0,
-    T normal1, T normal2, T radius, T maxVelocity, T n, T scale)
-  : CirclePowerLaw3D<T>(center0, center1, center2, normal0, normal1, normal2, radius, maxVelocity, n, scale) { }
+    T normal1, T normal2, T radius, T maxVelocity, T n, T turbulenceIntensity, T scale)
+  : CirclePowerLaw3D<T>(center0, center1, center2, normal0, normal1, normal2, radius, maxVelocity, n, scale), _turbulenceIntensity(turbulenceIntensity), _generator(_rd()), _dist(0.0, 1.0) { }
 
 template <typename T>
 CirclePowerLawTurbulent3D<T>::CirclePowerLawTurbulent3D(SuperGeometry3D<T>& superGeometry,
-    int material, T maxVelocity, T n, T scale)
-  : CirclePowerLaw3D<T>(superGeometry, material, maxVelocity, n, scale) { }
+    int material, T maxVelocity, T n, T turbulenceIntensity, T scale)
+  : CirclePowerLaw3D<T>(superGeometry, material, maxVelocity, n, scale), _turbulenceIntensity(turbulenceIntensity), _generator(_rd()), _dist(0.0, 1.0) { }
 
 template <typename T>
-CirclePowerLawTurbulent3D<T>::CirclePowerLawTurbulent3D(bool useMeanVelocity, std::vector<T> axisPoint, std::vector<T> axisDirection,  T Velocity, T radius, T n, T scale)
-  : CirclePowerLawTurbulent3D(axisPoint, axisDirection, Velocity, radius, n, scale)
+CirclePowerLawTurbulent3D<T>::CirclePowerLawTurbulent3D(bool useMeanVelocity, std::vector<T> axisPoint, std::vector<T> axisDirection,  T Velocity, T radius, T n, T turbulenceIntensity, T scale)
+  : CirclePowerLawTurbulent3D(axisPoint, axisDirection, Velocity, radius, n, turbulenceIntensity, scale)
 {
   if (useMeanVelocity) {
     this->_maxVelocity = ((1. + 1./n) * (2. + 1./n)) / 2. * Velocity;
   }
 }
 template <typename T>
-CirclePowerLawTurbulent3D<T>::CirclePowerLawTurbulent3D(bool useMeanVelocity, T center0, T center1, T center2, T normal0, T normal1, T normal2, T radius, T Velocity, T n, T scale)
-  : CirclePowerLawTurbulent3D(center0, center1, center2, normal0, normal1, normal2, radius, Velocity, n, scale)
+CirclePowerLawTurbulent3D<T>::CirclePowerLawTurbulent3D(bool useMeanVelocity, T center0, T center1, T center2, T normal0, T normal1, T normal2, T radius, T Velocity, T n, T turbulenceIntensity, T scale)
+  : CirclePowerLawTurbulent3D(center0, center1, center2, normal0, normal1, normal2, radius, Velocity, n, turbulenceIntensity, scale)
 {
   if (useMeanVelocity) {
     this->_maxVelocity = ((1. + 1./n) * (2. + 1./n)) / 2. * Velocity;
@@ -269,8 +270,8 @@ CirclePowerLawTurbulent3D<T>::CirclePowerLawTurbulent3D(bool useMeanVelocity, T 
 }
 
 template <typename T>
-CirclePowerLawTurbulent3D<T>::CirclePowerLawTurbulent3D(bool useMeanVelocity, SuperGeometry3D<T>& superGeometry, int material, T Velocity, T n, T scale)
-  : CirclePowerLawTurbulent3D(superGeometry, material, Velocity, n, scale)
+CirclePowerLawTurbulent3D<T>::CirclePowerLawTurbulent3D(bool useMeanVelocity, SuperGeometry3D<T>& superGeometry, int material, T Velocity, T n, T turbulenceIntensity, T scale)
+  : CirclePowerLawTurbulent3D(superGeometry, material, Velocity, n, turbulenceIntensity, scale)
 {
   if (useMeanVelocity) {
     this->_maxVelocity = ((1. + 1./n) * (2. + 1./n)) / 2. * Velocity;
@@ -280,24 +281,30 @@ CirclePowerLawTurbulent3D<T>::CirclePowerLawTurbulent3D(bool useMeanVelocity, Su
 template <typename T>
 bool CirclePowerLawTurbulent3D<T>::operator()(T output[], const T x[])
 {
+  T meanVelocity = this->_maxVelocity * 2.0 / ((1. + 1./this->_n) * (2. + 1./this->_n));
+
   if ( 1.-sqrt((x[1]-this->_center[1])*(x[1]-this->_center[1])+(x[2]-this->_center[2])*(x[2]-this->_center[2]))/this->_radius < 0.) {
     output[0] = T();
   } else {
     output[0] = this->_scale*this->_maxVelocity*this->_normal[0]*
                 (pow(1.-sqrt((x[1]-this->_center[1])*(x[1]-this->_center[1])+(x[2]-this->_center[2])*(x[2]-this->_center[2]))/this->_radius, 1./this->_n));
+    output[0] += _dist(_generator) * _turbulenceIntensity * meanVelocity;
   }
   if ( 1.-sqrt((x[0]-this->_center[0])*(x[0]-this->_center[0])+(x[2]-this->_center[2])*(x[2]-this->_center[2]))/this->_radius < 0.) {
     output[1] = T();
   } else {
     output[1] = this->_scale*this->_maxVelocity*this->_normal[1]*
                 (pow(1.-sqrt((x[0]-this->_center[0])*(x[0]-this->_center[0])+(x[2]-this->_center[2])*(x[2]-this->_center[2]))/this->_radius, 1./this->_n));
+    output[1] += _dist(_generator) * _turbulenceIntensity * meanVelocity;
   }
   if ( 1.-sqrt((x[1]-this->_center[1])*(x[1]-this->_center[1])+(x[0]-this->_center[0])*(x[0]-this->_center[0]))/this->_radius < 0.) {
     output[2] = T();
   } else {
     output[2] = this->_scale*this->_maxVelocity*this->_normal[2]*
                 (pow(1.-sqrt((x[1]-this->_center[1])*(x[1]-this->_center[1])+(x[0]-this->_center[0])*(x[0]-this->_center[0]))/this->_radius, 1./this->_n));
+    output[2] += _dist(_generator) * _turbulenceIntensity * meanVelocity;
   }
+
   return true;
 }
 
@@ -602,11 +609,11 @@ bool AngleBetweenVectors3D<T, S>::operator()(T output[], const S x[])
     n_x[0] = x[0];
     n_x[1] = x[1];
     n_x[2] = x[2];
-    n_x.normalize();
+    n_x = normalize(n_x);
   }
 
   Vector<T, 3> n_ref(_referenceVector);
-  n_ref.normalize();
+  n_ref = normalize(n_ref);
   Vector<T, 3> cross = crossProduct3D(n_x, n_ref);
   T n_dot = n_x * n_ref;
 
@@ -625,13 +632,13 @@ bool AngleBetweenVectors3D<T, S>::operator()(T output[], const S x[])
   // angle in (0,Pi) or (Pi,2Pi), if n_x, n_ref not opposite or equal
   else {
     Vector<T, 3> n_cross(cross);
-    n_cross.normalize();
-    T normal = cross.norm();
+    n_cross = normalize(n_cross);
+    T normal = norm(cross);
     Vector<T, 3> n_orient;
 
-    if ( !util::nearZero(orientation.norm()) ) {
+    if ( !util::nearZero(norm(orientation)) ) {
       n_orient = orientation;
-      n_orient.normalize();
+      n_orient = normalize(n_orient);
     } else {
       std::cout << "orientation vector does not fit" << std::endl;
     }
@@ -666,9 +673,9 @@ template<typename T, typename S>
 bool RotationRoundAxis3D<T, S>::operator()(T output[], const S x[])
 {
   Vector<T, 3> n(_rotAxisDirection);
-  if ( !util::nearZero(n.norm()) && n.norm() > 0 ) {
+  if ( !util::nearZero(norm(n)) && norm(n) > 0 ) {
     //std::cout<< "Rotation axis: " << _rotAxisDirection[0] << " " << _rotAxisDirection[1] << " " << _rotAxisDirection[2] << std::endl;
-    n.normalize();
+    n = normalize(n);
     // translation
     Vector<T, 3> x_tmp;
     for (int i = 0; i < 3; ++i) {
@@ -797,7 +804,7 @@ bool CartesianToCylinder3D<T, S>::operator()(T output[], const S x[])
 
   Vector<T, 3> normal = crossProduct3D(axisDirection, e3);
   Vector<T, 3> normalAxisDir(axisDirection);
-  normalAxisDir.normalize();
+  normalAxisDir = normalize(normalAxisDir);
 
   // if axis has to be rotated
   if (!( util::nearZero(normalAxisDir[0]) && util::nearZero(normalAxisDir[1]) && util::nearZero(normalAxisDir[2]-1) )) {
@@ -926,7 +933,7 @@ bool CartesianToSpherical3D<T, S>::operator()(T output[], const S x[])
   Vector<T,3> normal = crossProduct3D(axisDirection,e3);
 
   Vector<T,3> normalAxisDir = axisDirection;
-  normalAxisDir.normalize();
+  normalAxisDir = normalize(normalAxisDir);
   Vector<T,3> cross;
   // if axis has to be rotated
   if ( !( util::nearZero(normalAxisDir[0]) && util::nearZero(normalAxisDir[1]) && util::nearZero(normalAxisDir[2]-1) ) ) {
@@ -960,7 +967,7 @@ bool CartesianToSpherical3D<T, S>::operator()(T output[], const S x[])
 
   car2pol(output, x_rot);
   output[0] = distance;
-  output[2] = acos(x[2]/output[0]);  // angle between z-axis and r-vector
+  output[2] = acos(difference[2]/output[0]);  // angle between z-axis and r-vector
 
   return true;  // output[0] = radius, output[1] = phi, output[2] = theta
 }
@@ -999,7 +1006,7 @@ bool MagneticForceFromCylinder3D<T, S>::operator()(T output[], const S x[])
   Vector<T, 3> magneticForcePolar;
   T outputTmp[3] = {T(), T(), T()};
   Vector<T, 3> normalAxis(_car2cyl.getAxisDirection());
-  normalAxis.normalize();
+  normalAxis = normalize(normalAxis);
 
   Vector<T, 3> relPosition;
   relPosition[0] = (x[0] - _car2cyl.getCartesianOrigin()[0]);
@@ -1078,7 +1085,7 @@ bool MagneticFieldFromCylinder3D<T, S>::operator()(T output[], const S x[])
   Vector<T, 3> magneticFieldPolar;
   T outputTmp[3] = {T(), T(), T()};
   Vector<T, 3> normalAxis(_car2cyl.getAxisDirection());
-  normalAxis.normalize();
+  normalAxis = normalize(normalAxis);
 
   Vector<T, 3> relPosition;
   relPosition[0] = (x[0] - _car2cyl.getCartesianOrigin()[0]);

@@ -75,11 +75,11 @@ void SuperLatticeTimeAveragedF3D<T>::addEnsemble()
           i[1] = iX - _sData.getOverlap();
           i[2] = iY - _sData.getOverlap();
           i[3] = iZ - _sData.getOverlap();
-          BaseType tmp[_sFunctor.getTargetDim()];
+          BaseType<T> tmp[_sFunctor.getTargetDim()];
           _sFunctor(tmp, i);
           for (int iDim=0; iDim<_sFunctor.getTargetDim(); iDim++) {
-            _sData.get(iCloc).get(iX, iY, iZ, iDim) += (BaseType)(tmp[iDim]) ;
-            _sDataP2.get(iCloc).get(iX, iY, iZ, iDim) += (BaseType)(tmp[iDim]) *(BaseType)(tmp[iDim]) ;
+            _sData.get(iCloc).get(iX, iY, iZ, iDim) += (BaseType<T>)(tmp[iDim]) ;
+            _sDataP2.get(iCloc).get(iX, iY, iZ, iDim) += (BaseType<T>)(tmp[iDim]) *(BaseType<T>)(tmp[iDim]) ;
           }
         }
       }
@@ -96,7 +96,7 @@ int SuperLatticeTimeAveragedF3D<T>::getBlockFSize() const
 
 template <typename T>
 SuperLatticeTimeAveragedCrossCorrelationF3D<T>::SuperLatticeTimeAveragedCrossCorrelationF3D(SuperF3D<T,T>& sFunctorM,SuperF3D<T,T>& sFunctorN)
-  : SuperF3D<T,T>(sFunctorM.getSuperStructure(),sFunctorM.getTargetDim()*sFunctorN.getTargetDim()),_sFunctorM(sFunctorM),_sFunctorN(sFunctorN), _ensembles(0), _sDataM(_sFunctorM.getSuperStructure().getCuboidGeometry(),_sFunctorM.getSuperStructure().getLoadBalancer(),_sFunctorM.getSuperStructure().getOverlap(),_sFunctorM.getTargetDim()),_sDataN(_sFunctorN.getSuperStructure().getCuboidGeometry(),_sFunctorN.getSuperStructure().getLoadBalancer(),_sFunctorN.getSuperStructure().getOverlap(),_sFunctorN.getTargetDim()),_sDataMN(_sFunctorM.getSuperStructure().getCuboidGeometry(),_sFunctorM.getSuperStructure().getLoadBalancer(),_sFunctorM.getSuperStructure().getOverlap(),_sFunctorM.getTargetDim()*_sFunctorN.getTargetDim())
+  : SuperF3D<T,T>(sFunctorM.getSuperStructure(),sFunctorM.getTargetDim()*sFunctorN.getTargetDim()),_ensembles(0), _sFunctorM(sFunctorM), _sFunctorN(sFunctorN), _sDataM(_sFunctorM.getSuperStructure().getCuboidGeometry(),_sFunctorM.getSuperStructure().getLoadBalancer(),_sFunctorM.getSuperStructure().getOverlap(),_sFunctorM.getTargetDim()),_sDataN(_sFunctorN.getSuperStructure().getCuboidGeometry(),_sFunctorN.getSuperStructure().getLoadBalancer(),_sFunctorN.getSuperStructure().getOverlap(),_sFunctorN.getTargetDim()),_sDataMN(_sFunctorM.getSuperStructure().getCuboidGeometry(),_sFunctorM.getSuperStructure().getLoadBalancer(),_sFunctorM.getSuperStructure().getOverlap(),_sFunctorM.getTargetDim()*_sFunctorN.getTargetDim())
 {
   this->getName() = "Time Averaged Corss Correlation " + _sFunctorM.getName()+"-"+_sFunctorN.getName();
 };
@@ -117,22 +117,22 @@ void SuperLatticeTimeAveragedCrossCorrelationF3D<T>::addEnsemble()
           i[1] = iX - _sDataMN.getOverlap();
           i[2] = iY - _sDataMN.getOverlap();
           i[3] = iZ - _sDataMN.getOverlap();
-          BaseType tmpN[_sFunctorN.getTargetDim()];
-          BaseType tmpM[_sFunctorM.getTargetDim()];
+          BaseType<T> tmpN[_sFunctorN.getTargetDim()];
+          BaseType<T> tmpM[_sFunctorM.getTargetDim()];
           _sFunctorN(tmpN, i);
           _sFunctorM(tmpM, i);
           iDimMN=0;
           for (int iDimM=0; iDimM<_sFunctorM.getTargetDim(); iDimM++) {
             for (int iDimN=0; iDimN<_sFunctorN.getTargetDim(); iDimN++) {
-              _sDataMN.get(iCloc).get(iX, iY, iZ, iDimMN) += (BaseType)(tmpM[iDimM])*(BaseType)(tmpN[iDimN]) ;
+              _sDataMN.get(iCloc).get(iX, iY, iZ, iDimMN) += (BaseType<T>)(tmpM[iDimM])*(BaseType<T>)(tmpN[iDimN]) ;
               iDimMN++;
             }
           }
           for (int iDim=0; iDim<_sFunctorN.getTargetDim(); iDim++) {
-            _sDataN.get(iCloc).get(iX, iY, iZ, iDim) += (BaseType)(tmpN[iDim]) ;
+            _sDataN.get(iCloc).get(iX, iY, iZ, iDim) += (BaseType<T>)(tmpN[iDim]) ;
           }
           for (int iDim=0; iDim<_sFunctorM.getTargetDim(); iDim++) {
-            _sDataM.get(iCloc).get(iX, iY, iZ, iDim) += (BaseType)(tmpM[iDim]) ;
+            _sDataM.get(iCloc).get(iX, iY, iZ, iDim) += (BaseType<T>)(tmpM[iDim]) ;
           }
         }
       }
@@ -170,7 +170,7 @@ bool SuperLatticeTimeAveraged3DL2Norm<T>::operator() (T output[], const int inpu
   output[0]=0;
   CuboidGeometry3D<T>& geometry = _sFunctorM.getSuperStructure().getCuboidGeometry();
 
-  int inputTmp[3];
+  int inputTmp[4];
   T tmpM[_sFunctorM.getTargetDim()];
   T tmpN[_sFunctorN.getTargetDim()];
   for (int iC = 0; iC < _sFunctorM.getSuperStructure().getLoadBalancer().size(); ++iC) {
@@ -178,15 +178,18 @@ bool SuperLatticeTimeAveraged3DL2Norm<T>::operator() (T output[], const int inpu
 
     const int nX     = cuboid.getNx();
     const int nY     = cuboid.getNy();
+    const int nZ     = cuboid.getNz();
 
     inputTmp[0] = _sFunctorM.getSuperStructure().getLoadBalancer().glob(iC);
 
     for (inputTmp[1] = 0; inputTmp[1] < nX; ++inputTmp[1]) {
       for (inputTmp[2] = 0; inputTmp[2] < nY; ++inputTmp[2]) {
-        _sFunctorM(tmpM, inputTmp);
-        _sFunctorN(tmpN, inputTmp);
-        for (int iDim = 0; iDim < _sFunctorM.getTargetDim()/2; ++iDim) {
-          output[0]  += (tmpM[iDim]-tmpN[iDim])*(tmpM[iDim]-tmpN[iDim]);
+        for (inputTmp[3] = 0; inputTmp[3] < nZ; ++inputTmp[3]) {
+          _sFunctorM(tmpM, inputTmp);
+          _sFunctorN(tmpN, inputTmp);
+          for (int iDim = 0; iDim < _sFunctorM.getTargetDim()/2; ++iDim) {
+            output[0]  += (tmpM[iDim]-tmpN[iDim])*(tmpM[iDim]-tmpN[iDim]);
+          }
         }
 
       }

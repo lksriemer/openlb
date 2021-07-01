@@ -54,43 +54,6 @@ struct MRT : public CATEGORY, public DESCRIPTOR_TAG { };
 
 }
 
-using MRTD2Q5Descriptor = D2Q5<tag::MRT>;
-
-/// Advection Diffusion MRT D2Q5
-/**
- * Based on: Liu, Q., & He, Y. L. (2015). Double multiple-relaxation-time lattice Boltzmann model
- *           for solid–liquid phase change with natural convection in porous media.
- *           Physica A: Statistical Mechanics and its Applications, 438, 94-106.
- **/
-using AdvectionDiffusionMRTD2Q5Descriptor = D2Q5<tag::MRT,VELOCITY>;
-
-/// MRT D2Q9 lattice. The numbering follows the one in "Viscous flow computations
-/// with the method of lattice Boltzmann equation", D. Yu, L.-S. Luo, W. Shi,
-/// Progress in Aerospace Sciences 39, (2003), p. 329-367
-using MRTD2Q9Descriptor = D2Q9<tag::MRT>;
-
-using ForcedMRTD2Q9Descriptor = D2Q9<tag::MRT,FORCE>;
-
-using MRTD3Q7Descriptor = D3Q7<tag::MRT>;
-
-/// Advection Diffusion MRT D3Q7
-/**
- * Based on: Wu, H., Wang, J., & Tao, Z. (2011). Passive heat transfer in a turbulent
- *           channel flow simulation using large eddy simulation based on the lattice
- *           Boltzmann method framework.
- *           International Journal of Heat and Fluid Flow, 32(6), 1111-1119.
- *
- * There are some differences in respect to the order of the columns based on the lattice directions
- **/
-using AdvectionDiffusionMRTD3Q7Descriptor = D3Q7<tag::MRT,VELOCITY>;
-
-/// MRT D3Q19 lattice. The numbering follows the one in "Multiple-relaxation-
-/// time lattice Boltzmann models in three dimensions", D. D'Humières,
-/// I. Ginzburg, M. Krafzcyk, P. Lallemand, L.-S. Luo,
-/// Phil. Trans. R. Soc. Lond. A (2002) 660, p. 437-451
-using MRTD3Q19Descriptor = D3Q19<tag::MRT>;
-
-using ForcedMRTD3Q19Descriptor = D3Q19<tag::MRT,FORCE>;
 
 
 namespace mrt_data {
@@ -124,6 +87,12 @@ constexpr int shearViscIndexes[shearIndexes<D,Q>] = {};
 template <unsigned D, unsigned Q>
 constexpr int bulkViscIndex = {};
 
+/// Advection Diffusion MRT D2Q5
+/**
+ * Based on: Liu, Q., & He, Y. L. (2015). Double multiple-relaxation-time lattice Boltzmann model
+ *           for solid–liquid phase change with natural convection in porous media.
+ *           Physica A: Statistical Mechanics and its Applications, 438, 94-106.
+ **/
 template <>
 constexpr Fraction M<2,5>[5][5] = {
   { 1, 1, 1, 1, 1},
@@ -133,6 +102,9 @@ constexpr Fraction M<2,5>[5][5] = {
   { 0, 1,-1, 1,-1}
 };
 
+/// MRT D2Q9 lattice. The numbering follows the one in "Viscous flow computations
+/// with the method of lattice Boltzmann equation", D. Yu, L.-S. Luo, W. Shi,
+/// Progress in Aerospace Sciences 39, (2003), p. 329-367
 template <>
 constexpr Fraction M<2,9>[9][9] = {
   { 1,  1,  1,  1,  1,  1,  1,  1,  1},
@@ -146,6 +118,15 @@ constexpr Fraction M<2,9>[9][9] = {
   { 0, -1,  0,  1,  0, -1,  0,  1,  0}
 };
 
+/// Advection Diffusion MRT D3Q7
+/**
+ * Based on: Wu, H., Wang, J., & Tao, Z. (2011). Passive heat transfer in a turbulent
+ *           channel flow simulation using large eddy simulation based on the lattice
+ *           Boltzmann method framework.
+ *           International Journal of Heat and Fluid Flow, 32(6), 1111-1119.
+ *
+ * There are some differences in respect to the order of the columns based on the lattice directions
+ **/
 template <>
 constexpr Fraction M<3,7>[7][7] = {
   //  Li, Yang et al 2016: The directions are modified for the OpenLB definition
@@ -158,6 +139,10 @@ constexpr Fraction M<3,7>[7][7] = {
   {0,  0,  1,  0, -1,  1, -1}
 };
 
+/// MRT D3Q19 lattice. The numbering follows the one in "Multiple-relaxation-
+/// time lattice Boltzmann models in three dimensions", D. D'Humières,
+/// I. Ginzburg, M. Krafzcyk, P. Lallemand, L.-S. Luo,
+/// Phil. Trans. R. Soc. Lond. A (2002) 660, p. 437-451
 template <>
 constexpr Fraction M<3,19>[19][19] = {
   {  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1},

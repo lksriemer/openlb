@@ -7,6 +7,7 @@
 #include <io/io3D.hh>
 #include <utilities/utilities3D.hh>
 #include <particles/particles3D.hh>
+#include <particles/particleSpecializations/particleSpecializations3D.hh>
 #include <particles/forces/forces.hh>
 #include <particles/boundaries/boundaries.hh>
 #include <particles/twoWayCouplings/twoWayCouplings3D.hh>

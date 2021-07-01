@@ -24,7 +24,7 @@
 #include "postProcessing.h"
 #include "postProcessing.hh"
 #include "dynamics/latticeDescriptors.h"
- 
+
 
 namespace olb {
 

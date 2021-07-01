@@ -44,7 +44,9 @@ ChopardDynamics<T,DESCRIPTOR>::ChopardDynamics (
   : BasicDynamics<T,DESCRIPTOR>(momenta_),
     vs2(vs2_),
     omega(omega_)
-{ }
+{
+  this->getName() = "ChopardDynamics";  
+}
 
 /** With this constructor, the speed of sound is vs2 = cs2
  *  \param omega_ relaxation parameter, related to the dynamic viscosity
@@ -56,7 +58,9 @@ ChopardDynamics<T,DESCRIPTOR>::ChopardDynamics (
   : BasicDynamics<T,DESCRIPTOR>(momenta_),
     vs2((T)1/descriptors::invCs2<T,DESCRIPTOR>()),
     omega(omega_)
-{ }
+{
+  this->getName() = "ChopardDynamics";  
+}
 
 template<typename T, typename DESCRIPTOR>
 T ChopardDynamics<T,DESCRIPTOR>::computeEquilibrium

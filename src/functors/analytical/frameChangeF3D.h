@@ -27,6 +27,7 @@
 
 #include<vector>
 #include<string>
+#include <random>
 
 #include "analyticalF.h"
 
@@ -191,14 +192,20 @@ public:
 /// n=7 is used for many flow applications
 template <typename T>
 class CirclePowerLawTurbulent3D : public CirclePowerLaw3D<T> {
-public:
-  CirclePowerLawTurbulent3D(std::vector<T> axisPoint_, std::vector<T> axisDirection,  T maxVelocity, T radius, T n, T scale = T(1));
-  CirclePowerLawTurbulent3D(T center0, T center1, T center2, T normal0, T normal1, T normal2, T radius, T maxVelocity, T n, T scale = T(1));
-  CirclePowerLawTurbulent3D(SuperGeometry3D<T>& superGeometry, int material, T maxVelocity, T n, T scale = T(1));
+private:
+  T _turbulenceIntensity;
+  std::random_device _rd;
+  std::mt19937 _generator;
+  std::normal_distribution<T> _dist;
 
-  CirclePowerLawTurbulent3D(bool useMeanVelocity, std::vector<T> axisPoint, std::vector<T> axisDirection,  T Velocity, T radius, T n, T scale = T(1));
-  CirclePowerLawTurbulent3D(bool useMeanVelocity, T center0, T center1, T center2, T normal0, T normal1, T normal2, T radius, T Velocity, T n, T scale = T(1));
-  CirclePowerLawTurbulent3D(bool useMeanVelocity, SuperGeometry3D<T>& superGeometry, int material, T Velocity, T n, T scale = T(1));
+public:
+  CirclePowerLawTurbulent3D(std::vector<T> axisPoint_, std::vector<T> axisDirection,  T maxVelocity, T radius, T n = 7, T turbulenceIntensity = 0.05, T scale = T(1));
+  CirclePowerLawTurbulent3D(T center0, T center1, T center2, T normal0, T normal1, T normal2, T radius, T maxVelocity, T n = 7, T turbulenceIntensity = 0.05, T scale = T(1));
+  CirclePowerLawTurbulent3D(SuperGeometry3D<T>& superGeometry, int material, T maxVelocity, T n = 7, T turbulenceIntensity = 0.05, T scale = T(1));
+
+  CirclePowerLawTurbulent3D(bool useMeanVelocity, std::vector<T> axisPoint, std::vector<T> axisDirection,  T Velocity, T radius, T n = 7, T turbulenceIntensity = 0.05, T scale = T(1));
+  CirclePowerLawTurbulent3D(bool useMeanVelocity, T center0, T center1, T center2, T normal0, T normal1, T normal2, T radius, T Velocity, T n = 7, T turbulenceIntensity = 0.05, T scale = T(1));
+  CirclePowerLawTurbulent3D(bool useMeanVelocity, SuperGeometry3D<T>& superGeometry, int material, T Velocity, T n = 7, T turbulenceIntensity = 0.05, T scale = T(1));
 
   bool operator()(T output[], const T x[]) override;
 };
@@ -227,7 +234,7 @@ protected:
 
 public:
  CirclePoiseuilleStrainRate3D(UnitConverter<T, DESCRIPTOR> const& converter, T ly);
- bool operator()(T output[], const T input[]);
+ bool operator()(T output[], const T input[]) override;
 };
 
 /**
@@ -513,7 +520,7 @@ public:
                               T Mw
                              );
   /// operator writes the magnetic force in a point x round a cylindrical wire into output field
-  bool operator()(T output[], const S x[]);
+  bool operator()(T output[], const S x[]) override;
 };
 
 } // end namespace olb

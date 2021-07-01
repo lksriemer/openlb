@@ -37,19 +37,29 @@ class ParticleSystem3D;
 
 template<typename T, template<typename U> class PARTICLETYPE>
 class SimpleReflectBoundary3D : public Boundary3D<T, PARTICLETYPE> {
-
 public:
   SimpleReflectBoundary3D(T dT, SuperGeometry3D<T>& sg, std::set<int> materials);
   ~SimpleReflectBoundary3D() override {};
   void applyBoundary(typename std::deque<PARTICLETYPE<T> >::iterator& p, ParticleSystem3D<T, PARTICLETYPE>& psSys) override;
-
 private:
   T _dT;
   SuperGeometry3D<T>& _sg;
   std::set<int> _materials;
   std::set<int>::iterator _matIter;
+};
 
-
+template<typename T, template<typename U> class PARTICLETYPE>
+class ReflectBoundary3D : public Boundary3D<T, PARTICLETYPE> {
+public:
+  ReflectBoundary3D(T dT, SuperGeometry3D<T>& sg, std::set<int> materials);
+  ~ReflectBoundary3D() override {};
+  void applyBoundary(typename std::deque<PARTICLETYPE<T> >::iterator& p, ParticleSystem3D<T, PARTICLETYPE>& psSys) override;
+private:
+  Vector<T,3> computeDiscreteNormal(int latticeR[]);
+  T _dT;
+  SuperGeometry3D<T>& _sg;
+  std::set<int> _materials;
+  std::set<int>::iterator _matIter;
 };
 
 }

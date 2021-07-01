@@ -199,7 +199,7 @@ bool AnalyticalFfromBlockF3D<T,W>::operator()(W output[], const T physC[])
 
     Vector<T,3> physRiC;
     Vector<T,3> physCv(physC);
-    _cuboid.getPhysR(physRiC.data, locX, locY, locZ);
+    _cuboid.getPhysR(physRiC.data(), locX, locY, locZ);
 
     // compute weights
     Vector<W,3> d = (physCv - physRiC) * (1. / _cuboid.getDeltaR());
@@ -357,7 +357,7 @@ bool AnalyticalFfromSuperF3D<T,W>::operator()(W output[], const T physC[])
 
         Vector<T,3> physRiC;
         Vector<T,3> physCv(physC);
-        cuboid.getPhysR(physRiC.data, locX, locY, locZ);
+        cuboid.getPhysR(physRiC.data(), locX, locY, locZ);
 
         // compute weights
         Vector<W,3> d = (physCv - physRiC) * (1. / cuboid.getDeltaR());

@@ -101,7 +101,7 @@ public:
       _physViscosity(physViscosity),
       _physDensity(physDensity),
       _charPhysPressure(charPhysPressure),
-      _resolution((int)(_charPhysLength / _conversionLength + 0.5)),
+      _resolution((size_t)(_charPhysLength / _conversionLength + 0.5)),
       _latticeRelaxationTime( (_physViscosity / _conversionViscosity * descriptors::invCs2<T,DESCRIPTOR>()) + 0.5 ),
       _charLatticeVelocity( _charPhysVelocity / _conversionVelocity ),
       clout(std::cout,"UnitConverter")
@@ -129,8 +129,7 @@ public:
   template <typename DESCRIPTOR_>
   constexpr T getLatticeRelaxationFrequencyFromDiffusivity( const T physDiffusivity ) const
   {
-    T latticeDiffusivity = physDiffusivity / _conversionViscosity;
-    return 1.0 / ( latticeDiffusivity * descriptors::invCs2<T,DESCRIPTOR_>() + 0.5 );
+    return 1.0 / ( physDiffusivity / _conversionViscosity * descriptors::invCs2<T,DESCRIPTOR_>() + 0.5 );
   }
   /// return characteristic length in physical units
   constexpr T getCharPhysLength(  ) const
@@ -201,14 +200,14 @@ public:
   }
 
   /// conversion from lattice to  physical time
-  constexpr T getPhysTime( int latticeTime ) const
+  constexpr T getPhysTime( size_t latticeTime ) const
   {
     return _conversionTime * latticeTime;
   }
   /// conversion from physical to lattice time
-  constexpr int getLatticeTime( T physTime ) const
+  constexpr size_t getLatticeTime( T physTime ) const
   {
-    return int(physTime / _conversionTime + 0.5);
+    return size_t(physTime / _conversionTime + 0.5);
   }
   /// access (read-only) to private member variable
   constexpr T getConversionFactorTime() const
@@ -249,8 +248,7 @@ public:
   }
   constexpr T getLatticeDensityFromPhysPressure( T physPressure ) const
   {
-    T latticePressure = getLatticePressure( physPressure );
-    return util::densityFromPressure<T,DESCRIPTOR>( latticePressure);
+    return util::densityFromPressure<T,DESCRIPTOR>( getLatticePressure( physPressure ) );
   }
   /// access (read-only) to private member variable
   constexpr T getConversionFactorDensity() const
@@ -323,7 +321,8 @@ public:
   }
   /// nice terminal output for conversion factors, characteristical and physical data
   virtual void print() const;
-
+  void print(std::ostream& fout) const;
+  
   void write(std::string const& fileName = "unitConverter") const;
 
 protected:
@@ -345,7 +344,7 @@ protected:
   const T _charPhysPressure;      // kg / m s^2
 
   // lattice units, discretization parameters
-  const int _resolution;
+  const size_t _resolution;
   const T _latticeRelaxationTime;
   const T _charLatticeVelocity;   //
 
@@ -361,7 +360,7 @@ template <typename T, typename DESCRIPTOR>
 class UnitConverterFromResolutionAndRelaxationTime : public UnitConverter<T, DESCRIPTOR> {
 public:
   constexpr UnitConverterFromResolutionAndRelaxationTime(
-    int resolution,
+    size_t resolution,
     T latticeRelaxationTime,
     T charPhysLength,
     T charPhysVelocity,
@@ -383,7 +382,7 @@ template <typename T, typename DESCRIPTOR>
 class UnitConverterFromResolutionAndLatticeVelocity : public UnitConverter<T, DESCRIPTOR> {
 public:
   constexpr UnitConverterFromResolutionAndLatticeVelocity(
-    int resolution,
+    size_t resolution,
     T charLatticeVelocity,
     T charPhysLength,
     T charPhysVelocity,

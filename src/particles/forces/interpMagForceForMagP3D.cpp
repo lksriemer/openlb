@@ -26,7 +26,7 @@
 /// (J. Lindner et al. / Computers and Chemical Engineering 54 (2013) 111-121)
 
 #include "dynamics/latticeDescriptors.h"
- 
+
 #include "particles/particle3D.h"
 #include "particles/particle3D.hh"
 #include "interpMagForceForMagP3D.h"

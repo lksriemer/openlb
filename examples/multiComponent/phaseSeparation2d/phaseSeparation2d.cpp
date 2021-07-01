@@ -41,7 +41,7 @@ using namespace olb::graphics;
 using namespace std;
 
 typedef double T;
-#define DESCRIPTOR ShanChenDynOmegaForcedD2Q9Descriptor
+typedef D2Q9<VELOCITY,FORCE,EXTERNAL_FORCE,OMEGA> DESCRIPTOR;
 
 
 // Parameters for the simulation setup
@@ -51,7 +51,8 @@ const int ny   = 201;
 
 
 // Stores geometry information in form of material numbers
-void prepareGeometry( SuperGeometry2D<T>& superGeometry ) {
+void prepareGeometry( SuperGeometry2D<T>& superGeometry )
+{
 
   OstreamManager clout( std::cout,"prepareGeometry" );
   clout << "Prepare Geometry ..." << std::endl;
@@ -73,7 +74,8 @@ void prepareGeometry( SuperGeometry2D<T>& superGeometry ) {
 // Set up the geometry of the simulation
 void prepareLattice( SuperLattice2D<T, DESCRIPTOR>& sLattice,
                      Dynamics<T, DESCRIPTOR>& bulkDynamics1,
-                     SuperGeometry2D<T>& superGeometry ) {
+                     SuperGeometry2D<T>& superGeometry )
+{
 
   // Material=1 -->bulk dynamics
   sLattice.defineDynamics( superGeometry, 1, &bulkDynamics1 );
@@ -96,7 +98,8 @@ void prepareLattice( SuperLattice2D<T, DESCRIPTOR>& sLattice,
 
 // Output to console and files
 void getResults( SuperLattice2D<T, DESCRIPTOR>& sLattice, int iT,
-                 SuperGeometry2D<T>& superGeometry, Timer<T>& timer ) {
+                 SuperGeometry2D<T>& superGeometry, Timer<T>& timer )
+{
 
   OstreamManager clout( std::cout,"getResults" );
 
@@ -142,7 +145,8 @@ void getResults( SuperLattice2D<T, DESCRIPTOR>& sLattice, int iT,
   }
 }
 
-int main( int argc, char *argv[] ) {
+int main( int argc, char *argv[] )
+{
 
   // === 1st Step: Initialization ===
   olbInit( &argc, &argv );

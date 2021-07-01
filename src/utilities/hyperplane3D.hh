@@ -26,6 +26,7 @@
 
 #include "hyperplane3D.h"
 #include "core/olbDebug.h"
+#include "utilities/vectorHelpers.h"
 
 namespace olb {
 
@@ -35,8 +36,7 @@ Hyperplane3D<T>& Hyperplane3D<T>::spannedBy(const Vector<T,3>& a, const Vector<T
 {
   u = a;
   v = b;
-  normal = crossProduct3D(a,b);
-  normal.normalize();
+  normal = normalize(crossProduct3D(a,b));
 
   OLB_POSTCONDITION(util::nearZero(util::dotProduct3D(u,v)));
   OLB_POSTCONDITION(util::nearZero(util::dotProduct3D(u,normal)));
@@ -65,10 +65,9 @@ Hyperplane3D<T>& Hyperplane3D<T>::normalTo(const Vector<T,3>& n)
     u = {normal[2], T(), -normal[0]};
   }
 
-  v = crossProduct3D(normal,u);
-  u.normalize();
-  v.normalize();
-  normal.normalize();
+  v = normalize(crossProduct3D(normal,u));
+  u = normalize(u);
+  normal = normalize(normal);
 
   OLB_POSTCONDITION(util::nearZero(util::dotProduct3D(u,v)));
   OLB_POSTCONDITION(util::nearZero(util::dotProduct3D(u,normal)));

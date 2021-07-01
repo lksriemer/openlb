@@ -47,14 +47,18 @@ PorousAdvectionDiffusionBGKdynamics<T, DESCRIPTOR>::PorousAdvectionDiffusionBGKd
   T omega, Momenta<T, DESCRIPTOR>& momenta, T tSolid )
   : BasicDynamics<T, DESCRIPTOR>( momenta ),
     _omega(omega), _tSolid(tSolid)
-{ }
+{
+  this->getName() = "PorousAdvectionDiffusionBGKdynamics";  
+}
 
 template<typename T, typename DESCRIPTOR>
 PorousAdvectionDiffusionBGKdynamics<T, DESCRIPTOR>::PorousAdvectionDiffusionBGKdynamics (
   const UnitConverter<T,DESCRIPTOR>& converter, Momenta<T, DESCRIPTOR>& momenta, T tSolid )
   : BasicDynamics<T, DESCRIPTOR>( momenta ),
     _omega(converter.getLatticeRelaxationFrequency()), _tSolid(tSolid)
-{ }
+{
+  this->getName() = "PorousAdvectionDiffusionBGKdynamics";  
+}
 
 template<typename T, typename DESCRIPTOR>
 T PorousAdvectionDiffusionBGKdynamics<T, DESCRIPTOR>::computeEquilibrium( int iPop, T rho,
@@ -66,19 +70,18 @@ T PorousAdvectionDiffusionBGKdynamics<T, DESCRIPTOR>::computeEquilibrium( int iP
 
 
 template<typename T, typename DESCRIPTOR>
-void PorousAdvectionDiffusionBGKdynamics<T, DESCRIPTOR>::collide( Cell<T, DESCRIPTOR>& cell,
+void PorousAdvectionDiffusionBGKdynamics<T, DESCRIPTOR>::collide( Cell<T,DESCRIPTOR>& cell,
     LatticeStatistics<T>& statistics ) 
 {
   T temperature = this->_momenta.computeRho( cell );
 
   // apply temperature scaling
-  T* porosity = cell.template getFieldPointer<descriptors::POROSITY>();
-  temperature = scaleTemp(temperature, porosity[0]);
+  auto porosity = cell.template getField<descriptors::POROSITY>();
+  temperature = scaleTemp(temperature, porosity);
 
-  const T* u = cell.template getFieldPointer<descriptors::VELOCITY>();
+  auto u = cell.template getField<descriptors::VELOCITY>();
 
-  T uSqr = lbHelpers<T, DESCRIPTOR>::
-           bgkCollision( cell, temperature, u, _omega );
+  T uSqr = lbHelpers<T, DESCRIPTOR>::bgkCollision(cell, temperature, u.data(), _omega);
 
   statistics.incrementStats( temperature, uSqr );
 }
@@ -96,7 +99,7 @@ void PorousAdvectionDiffusionBGKdynamics<T, DESCRIPTOR>::setOmega( T omega )
 }
 
 template<typename T, typename DESCRIPTOR>
-T PorousAdvectionDiffusionBGKdynamics<T,DESCRIPTOR>::computeRho(const Cell<T,DESCRIPTOR>& cell) const
+T PorousAdvectionDiffusionBGKdynamics<T,DESCRIPTOR>::computeRho(ConstCell<T,DESCRIPTOR>& cell) const
 {
   //T rho = this->_momenta.computeRho(cell);
   //const T* porosity = cell.template getFieldPointer<descriptors::POROSITY>();

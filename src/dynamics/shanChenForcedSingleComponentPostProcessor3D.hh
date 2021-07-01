@@ -39,17 +39,21 @@ namespace olb {
 template<typename T, typename DESCRIPTOR>
 ShanChenForcedSingleComponentPostProcessor3D <T,DESCRIPTOR>::
 ShanChenForcedSingleComponentPostProcessor3D(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_,
-    T G_, std::vector<T> rho0_, AnalyticalF1D<T,T>& iP_,
+    T G_, std::vector<T> rho0_, AnalyticalF<1,T,T>& iP_,
     std::vector<SpatiallyExtendedObject3D*> partners_)
   :  x0(x0_), x1(x1_), y0(y0_), y1(y1_), z0(z0_), z1(z1_), G(G_), rho0(rho0_), interactionPotential(iP_), partners(partners_)
-{ }
+{
+  this->getName() = "ShanChenForcedSingleComponentPostProcessor3D";  
+}
 
 template<typename T, typename DESCRIPTOR>
 ShanChenForcedSingleComponentPostProcessor3D <T,DESCRIPTOR>::
-ShanChenForcedSingleComponentPostProcessor3D(T G_, std::vector<T> rho0_, AnalyticalF1D<T,T>& iP_,
+ShanChenForcedSingleComponentPostProcessor3D(T G_, std::vector<T> rho0_, AnalyticalF<1,T,T>& iP_,
     std::vector<SpatiallyExtendedObject3D*> partners_)
   :  x0(0), x1(0), y0(0), y1(0), z0(0), z1(0), G(G_), rho0(rho0_), interactionPotential(iP_), partners(partners_)
-{ }
+{
+  this->getName() = "ShanChenForcedSingleComponentPostProcessor3D";
+}
 
 template<typename T, typename DESCRIPTOR>
 void ShanChenForcedSingleComponentPostProcessor3D<T,DESCRIPTOR>::
@@ -62,14 +66,8 @@ processSubDomain( BlockLattice3D<T,DESCRIPTOR>& blockLattice,
   if ( util::intersect ( x0, x1, y0, y1, z0, z1,
                          x0_, x1_, y0_, y1_, z0_, z1_,
                          newX0, newX1, newY0, newY1, newZ0, newZ1 ) ) {
-    int nx = newX1-newX0+3; // include a one-cell boundary
-    int ny = newY1-newY0+3; // include a one-cell boundary
-    int nz = newZ1-newZ0+3; // include a one-cell boundary
-    int offsetX = newX0-1;
-    int offsetY = newY0-1;
-    int offsetZ = newZ0-1;
 
-    BlockData3D<T,T> rhoField1(nx,ny,nz);
+    auto& rhoField = blockLattice.template getDynamicFieldArray<RHO_CACHE>()[0];
 
     // Compute density and velocity on every site of first lattice, and store result
     //   in external scalars; envelope cells are included, because they are needed
@@ -77,8 +75,8 @@ processSubDomain( BlockLattice3D<T,DESCRIPTOR>& blockLattice,
     for (int iX=newX0-1; iX<=newX1+1; ++iX) {
       for (int iY=newY0-1; iY<=newY1+1; ++iY) {
         for (int iZ=newZ0-1; iZ<=newZ1+1; ++iZ) {
-          Cell<T,DESCRIPTOR>& cell = blockLattice.get(iX,iY,iZ);
-          rhoField1.get(iX-offsetX, iY-offsetY, iZ-offsetZ) = cell.computeRho()*rho0[0];
+          Cell<T,DESCRIPTOR> cell = blockLattice.get(iX,iY,iZ);
+          rhoField[cell.getCellId()] = cell.computeRho()*rho0[0];
         }
       }
     }
@@ -86,47 +84,42 @@ processSubDomain( BlockLattice3D<T,DESCRIPTOR>& blockLattice,
     for (int iX=newX0; iX<=newX1; ++iX) {
       for (int iY=newY0; iY<=newY1; ++iY) {
         for (int iZ=newZ0; iZ<=newZ1; ++iZ) {
-          Cell<T,DESCRIPTOR>& blockCell   = blockLattice.get(iX,iY,iZ);
+          Cell<T,DESCRIPTOR> blockCell   = blockLattice.get(iX,iY,iZ);
 
-          T* j = blockCell.template getFieldPointer<descriptors::VELOCITY>();
-          lbHelpers<T,DESCRIPTOR>::computeJ(blockCell,j);
+          auto j = blockCell.template getField<descriptors::VELOCITY>();
+          lbHelpers<T,DESCRIPTOR>::computeJ(blockCell,j.data());
+          blockCell.template setField<descriptors::VELOCITY>(j);
 
           T blockOmega   = blockLattice.getDynamics(iX, iY, iZ)->getOmega();
 
           // Computation of the common velocity, shared among the two populations
-          T rhoTot = rhoField1.get(iX-offsetX, iY-offsetY, iZ-offsetZ)*blockOmega;
+          T rhoTot = rhoField[blockCell.getCellId()]*blockOmega;
 
-          T uTot[DESCRIPTOR::d];
-          T *blockU = blockCell.template getFieldPointer<descriptors::VELOCITY>(); // contains precomputed value rho*u
-          for (int iD = 0; iD < DESCRIPTOR::d; ++iD) {
-            uTot[iD] = (blockU[iD]*rho0[0]*blockOmega) / rhoTot;
-          }
+          Vector<T, 3> uTot;
+          auto blockU = blockCell.template getFieldPointer<descriptors::VELOCITY>(); // contains precomputed value rho*u
+          uTot = (blockU*rho0[0]*blockOmega) / rhoTot;
 
           // Computation of the interaction potential
-          T rhoBlockContribution[L::d]   = {T(), T(), T()};
+          Vector<T, 3> rhoBlockContribution;
           T psi;
-          interactionPotential(&psi, &rhoField1.get(iX-offsetX, iY-offsetY, iZ-offsetZ));
+          interactionPotential(&psi, &rhoField[blockCell.getCellId()]);
           for (int iPop = 0; iPop < L::q; ++iPop) {
             int nextX = iX + descriptors::c<L>(iPop,0);
             int nextY = iY + descriptors::c<L>(iPop,1);
             int nextZ = iZ + descriptors::c<L>(iPop,2);
             T blockRho;
-            interactionPotential(&blockRho, &rhoField1.get(nextX-offsetX, nextY-offsetY, nextZ-offsetZ));
-            for (int iD = 0; iD < L::d; ++iD) {
-              rhoBlockContribution[iD]   += psi * blockRho * descriptors::c<L>(iPop,iD)* descriptors::t<T,L>(iPop);
-            }
+            interactionPotential(&blockRho, &rhoField[blockLattice.getCellId(nextX, nextY, nextZ)]);
+            rhoBlockContribution += psi * blockRho * descriptors::c<L>(iPop)* descriptors::t<T,L>(iPop);
           }
 
           // Computation and storage of the final velocity, consisting
           //   of u and the momentum difference due to interaction
           //   potential plus external force
-          T *blockForce = blockCell.template getFieldPointer<descriptors::FORCE>();
-          T *externalBlockForce = blockCell.template getFieldPointer<descriptors::EXTERNAL_FORCE>();
+          auto externalBlockForce = blockCell.template getFieldPointer<descriptors::EXTERNAL_FORCE>();
 
-          for (int iD = 0; iD < L::d; ++iD) {
-            blockU[iD] = uTot[iD];
-            blockForce[iD] = externalBlockForce[iD] - G*rhoBlockContribution[iD]/rhoField1.get(iX-offsetX, iY-offsetY, iZ-offsetZ);
-          }
+          blockCell.template setField<descriptors::VELOCITY>(uTot);
+          blockCell.template setField<descriptors::FORCE>(externalBlockForce
+            - G*rhoBlockContribution/rhoField[blockCell.getCellId()]);
         }
       }
     }
@@ -145,13 +138,13 @@ process(BlockLattice3D<T,DESCRIPTOR>& blockLattice)
 
 template<typename T, typename DESCRIPTOR>
 ShanChenForcedSingleComponentGenerator3D<T,DESCRIPTOR>::ShanChenForcedSingleComponentGenerator3D (
-  int x0_, int x1_, int y0_, int y1_, int z0_, int z1_, T G_, std::vector<T> rho0_, AnalyticalF1D<T,T>& iP_)
+  int x0_, int x1_, int y0_, int y1_, int z0_, int z1_, T G_, std::vector<T> rho0_, AnalyticalF<1,T,T>& iP_)
   : LatticeCouplingGenerator3D<T,DESCRIPTOR>(x0_, x1_, y0_, y1_, z0_, z1_), G(G_), rho0(rho0_), interactionPotential(iP_)
 { }
 
 template<typename T, typename DESCRIPTOR>
 ShanChenForcedSingleComponentGenerator3D<T,DESCRIPTOR>::ShanChenForcedSingleComponentGenerator3D (
-  T G_, std::vector<T> rho0_, AnalyticalF1D<T,T>& iP_)
+  T G_, std::vector<T> rho0_, AnalyticalF<1,T,T>& iP_)
   : LatticeCouplingGenerator3D<T,DESCRIPTOR>(0, 0, 0, 0, 0, 0), G(G_), rho0(rho0_), interactionPotential(iP_)
 { }
 

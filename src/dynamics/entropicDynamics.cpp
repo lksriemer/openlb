@@ -28,7 +28,7 @@
 #include "entropicDynamics.h"
 #include "entropicDynamics.hh"
 #include "latticeDescriptors.h"
- 
+
 
 namespace olb {
 

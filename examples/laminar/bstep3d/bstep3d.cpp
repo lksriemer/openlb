@@ -44,7 +44,7 @@ using namespace olb::graphics;
 using namespace std;
 
 typedef double T;
-#define DESCRIPTOR D3Q19<>
+typedef D3Q19<> DESCRIPTOR;
 
 
 // Parameters for the simulation setup
@@ -102,7 +102,6 @@ void prepareGeometry( UnitConverter<T,DESCRIPTOR> const& converter,
 void prepareLattice( UnitConverter<T,DESCRIPTOR> const& converter,
                      SuperLattice3D<T,DESCRIPTOR>& sLattice,
                      Dynamics<T, DESCRIPTOR>& bulkDynamics,
-                     sOnLatticeBoundaryCondition3D<T,DESCRIPTOR>& bc,
                      SuperGeometry3D<T>& superGeometry )
 {
 
@@ -124,8 +123,14 @@ void prepareLattice( UnitConverter<T,DESCRIPTOR> const& converter,
   sLattice.defineDynamics( superGeometry, 2, &instances::getBounceBack<T, DESCRIPTOR>() );
 
   // Setting of the boundary conditions
-  bc.addVelocityBoundary( superGeometry, 3, omega );
-  bc.addPressureBoundary( superGeometry, 4, omega );
+
+	//if local boundary conditions are chosen
+	setLocalVelocityBoundary<T,DESCRIPTOR>(sLattice, omega, superGeometry, 3);
+	setLocalPressureBoundary<T,DESCRIPTOR>(sLattice, omega, superGeometry, 4);
+
+	//if interpolated boundary conditions are chosen
+	//setInterpolatedVelocityBoundary<T,DESCRIPTOR>(sLattice, omega, superGeometry, 3);
+	//setInterpolatedPressureBoundary<T,DESCRIPTOR>(sLattice, omega, superGeometry, 4);
 
   // Initial conditions
   AnalyticalConst3D<T,T> ux( 0. );
@@ -288,12 +293,8 @@ int main( int argc, char* argv[] )
     instances::getBulkMomenta<T,DESCRIPTOR>()
   );
 
-  // choose between local and non-local boundary condition
-  sOnLatticeBoundaryCondition3D<T,DESCRIPTOR> sBoundaryCondition( sLattice );
-  // createInterpBoundaryCondition3D<T,DESCRIPTOR>(sBoundaryCondition);
-  createLocalBoundaryCondition3D<T,DESCRIPTOR>( sBoundaryCondition );
-
-  prepareLattice( converter, sLattice, bulkDynamics, sBoundaryCondition, superGeometry );
+  //prepareLattice and set boundaryConditions
+	prepareLattice( converter, sLattice, bulkDynamics, superGeometry );
 
   // === 4th Step: Main Loop with Timer ===
   clout << "starting simulation..." << endl;
@@ -310,7 +311,7 @@ int main( int argc, char* argv[] )
     600,
     BlockDataSyncMode::ReduceOnly);
 
-  for ( int iT = 0; iT < converter.getLatticeTime( maxPhysT ); ++iT ) {
+  for ( std::size_t iT = 0; iT < converter.getLatticeTime( maxPhysT ); ++iT ) {
 
     // === 5th Step: Definition of Initial and Boundary Conditions ===
     setBoundaryValues( converter, sLattice, iT, superGeometry );

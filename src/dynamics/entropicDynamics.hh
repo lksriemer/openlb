@@ -47,7 +47,9 @@ EntropicEqDynamics<T,DESCRIPTOR>::EntropicEqDynamics (
   T omega_, Momenta<T,DESCRIPTOR>& momenta_ )
   : BasicDynamics<T,DESCRIPTOR>(momenta_),
     omega(omega_)
-{ }
+{
+  this->getName() = "EntropicEqDynamics";  
+}
 
 template<typename T, typename DESCRIPTOR>
 T EntropicEqDynamics<T,DESCRIPTOR>::computeEquilibrium(int iPop, T rho, const T u[DESCRIPTOR::d], T uSqr) const
@@ -98,7 +100,9 @@ ForcedEntropicEqDynamics<T,DESCRIPTOR>::ForcedEntropicEqDynamics (
   T omega_, Momenta<T,DESCRIPTOR>& momenta_ )
   : BasicDynamics<T,DESCRIPTOR>(momenta_),
     omega(omega_)
-{ }
+{
+  this->getName() = "ForcedEntropicEqDynamics";  
+}
 
 template<typename T, typename DESCRIPTOR>
 T ForcedEntropicEqDynamics<T,DESCRIPTOR>::computeEquilibrium(int iPop, T rho, const T u[DESCRIPTOR::d], T uSqr) const
@@ -157,7 +161,9 @@ EntropicDynamics<T,DESCRIPTOR>::EntropicDynamics (
   T omega_, Momenta<T,DESCRIPTOR>& momenta_ )
   : BasicDynamics<T,DESCRIPTOR>(momenta_),
     omega(omega_)
-{ }
+{
+  this->getName() = "EntropicDynamics";  
+}
 
 template<typename T, typename DESCRIPTOR>
 T EntropicDynamics<T,DESCRIPTOR>::computeEquilibrium(int iPop, T rho, const T u[DESCRIPTOR::d], T uSqr) const
@@ -294,7 +300,9 @@ ForcedEntropicDynamics<T,DESCRIPTOR>::ForcedEntropicDynamics (
   T omega_, Momenta<T,DESCRIPTOR>& momenta_ )
   : BasicDynamics<T,DESCRIPTOR>(momenta_),
     omega(omega_)
-{ }
+{
+  this->getName() = "ForcedEntropicDynamics";  
+}
 
 template<typename T, typename DESCRIPTOR>
 T ForcedEntropicDynamics<T,DESCRIPTOR>::computeEquilibrium(int iPop, T rho, const T u[DESCRIPTOR::d], T uSqr) const

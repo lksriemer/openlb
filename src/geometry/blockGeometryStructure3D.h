@@ -58,25 +58,20 @@ template<typename T> class IndicatorF3D;
  * This class is intended to be derived from.
  */
 template<typename T>
-class BlockGeometryStructure3D {
-
+class BlockGeometryStructure3D : public BlockStructure3D {
 protected:
   /// Number of the cuboid, default=-1
   int _iCglob;
   /// Statistic class
   BlockGeometryStatistics3D<T> _statistics;
-
   /// class specific output stream
   mutable OstreamManager clout;
 
 public:
   /// Constructor
-  BlockGeometryStructure3D(int iCglob=-1);
+  BlockGeometryStructure3D(int nX, int nY, int nZ, int iCglob=-1);
   /// dtor
   virtual ~BlockGeometryStructure3D() {};
-
-  /// Returns the underlying block structure
-  virtual BlockStructure3D& getBlockStructure() = 0;
 
   /// Read only access to the global iC number which is given !=-1 if the block geometries are part of a super geometry
   virtual int const& getIcGlob() const;
@@ -87,28 +82,25 @@ public:
 
   /// Returns the position of the block origin which is the node (iX=0/iY=0/iZ=0) in physical units (meter)
   virtual Vector<T,3> getOrigin() const = 0;
-  /// Returns the extend in x direction of the block in lattice units
-  virtual int getNx() const = 0;
-  /// Returns the extend in y direction of the block in lattice units
-  virtual int getNy() const = 0;
-  /// Returns the extend in z direction of the block in lattice units
-  virtual int getNz() const = 0;
   /// Returns the extend of the block in lattice units
-  virtual Vector<int,3> const getExtend() const;
+  virtual Vector<int,3> getExtend() const;
   /// Returns the spacing in physical units (meter)
-  virtual const T getDeltaR() const = 0;
+  virtual T getDeltaR() const = 0;
 
   /// Transforms lattice to physical coordinates (wrapped from cuboid geometry)
   virtual void getPhysR(T physR[3], const int& iX, const int& iY, const int& iZ) const = 0;
   /// Transforms lattice to physical coordinates (wrapped from cuboid geometry)
   virtual void getPhysR(T physR[3], const int latticeR[3]) const;
 
+  Vector<T,3> getPhysR(int iX, int iY, int iZ) {
+    T physR[3];
+    getPhysR(physR, iX, iY, iZ);
+    return Vector<T,3>(physR);
+  }
+
   // TODO to be removed old once
   /// returns the (iX,iY,iZ) entry in the 3D scalar field
   virtual int getMaterial(int iX, int iY, int iZ) const = 0;
-
-  /// Returns true iff lattice location is inside block geometry
-  virtual bool isInside(int iX, int iY, int iZ) const;
 
   /// Write access to a material number
   virtual int& get(int iX, int iY, int iZ) = 0;

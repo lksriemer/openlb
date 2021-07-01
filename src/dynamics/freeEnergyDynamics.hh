@@ -35,21 +35,23 @@ FreeEnergyBGKdynamics<T,DESCRIPTOR>::FreeEnergyBGKdynamics (
   T omega_, T gamma_, Momenta<T,DESCRIPTOR>& momenta )
   : BasicDynamics<T,DESCRIPTOR>(momenta),
     omega(omega_), gamma(gamma_)
-{ }
+{ 
+  this->getName() = "FreeEnergyBGKdynamics";  
+}
 
 template<typename T, typename DESCRIPTOR>
 void FreeEnergyBGKdynamics<T,DESCRIPTOR>::collide (
   Cell<T,DESCRIPTOR>& cell,
   LatticeStatistics<T>& statistics )
 {
-  T rho, u[DESCRIPTOR::d];
+  T u[DESCRIPTOR::d] { };
   for(int iDim=0; iDim<DESCRIPTOR::d; iDim++) {
     u[iDim] = cell.template getFieldPointer<descriptors::FORCE>()[iDim];
   }
-  rho = this->_momenta.computeRho(cell);
+  T rho = this->_momenta.computeRho(cell);
   T uSqr = lbHelpers<T,DESCRIPTOR>::bgkCollision(cell, rho, u, omega);
   statistics.incrementStats(rho, uSqr);
-  T tmp = gamma * descriptors::invCs2<T,DESCRIPTOR>() * cell.template getFieldPointer<descriptors::CHEM_POTENTIAL>()[0];
+  T tmp = gamma * descriptors::invCs2<T,DESCRIPTOR>() * cell.template getField<descriptors::CHEM_POTENTIAL>();
   for(int iPop=1; iPop < DESCRIPTOR::q; ++iPop) {
     cell[iPop] -= omega * descriptors::t<T,DESCRIPTOR>(iPop) * (rho - tmp);
   }
@@ -85,7 +87,7 @@ void FreeEnergyBGKdynamics<T,DESCRIPTOR>::setOmega(T omega_)
 
 template<typename T, typename DESCRIPTOR>
 void FreeEnergyBGKdynamics<T,DESCRIPTOR>::computeRhoU (
-  Cell<T,DESCRIPTOR> const& cell, T& rho, T u[DESCRIPTOR::d]) const
+  ConstCell<T,DESCRIPTOR>& cell, T& rho, T u[DESCRIPTOR::d]) const
 {
   rho = this->_momenta.computeRho(cell);
   computeU(cell, u);
@@ -93,7 +95,7 @@ void FreeEnergyBGKdynamics<T,DESCRIPTOR>::computeRhoU (
 
 template<typename T, typename DESCRIPTOR>
 void FreeEnergyBGKdynamics<T,DESCRIPTOR>::computeU (
-  Cell<T,DESCRIPTOR> const& cell, T u[DESCRIPTOR::d]) const
+  ConstCell<T,DESCRIPTOR>& cell, T u[DESCRIPTOR::d]) const
 {
   for (int iVel=0; iVel<DESCRIPTOR::d; ++iVel) {
     u[iVel] = cell.template getFieldPointer<descriptors::FORCE>()[iVel];
@@ -106,7 +108,9 @@ void FreeEnergyBGKdynamics<T,DESCRIPTOR>::computeU (
 template<typename T, typename DESCRIPTOR>
 FreeEnergyWallDynamics<T,DESCRIPTOR>::FreeEnergyWallDynamics ()
   : BounceBack<T,DESCRIPTOR> ()
-{ }
+{
+  this->getName() = "FreeEnergyWallDynamics";  
+}
 
 template<typename T, typename DESCRIPTOR>
 T FreeEnergyWallDynamics<T,DESCRIPTOR>::computeEquilibrium(
@@ -138,7 +142,9 @@ template<typename T, typename DESCRIPTOR, int direction, int orientation>
 FreeEnergyInletOutletDynamics<T,DESCRIPTOR,direction,orientation>::FreeEnergyInletOutletDynamics (
   T omega_, Momenta<T,DESCRIPTOR>& momenta )
   : BasicDynamics<T,DESCRIPTOR>(momenta), omega(omega_)
-{ }
+{
+  this->getName() = "FreeEnergyInletOutletDynamics";  
+}
 
 template<typename T, typename DESCRIPTOR, int direction, int orientation>
 void FreeEnergyInletOutletDynamics<T,DESCRIPTOR,direction,orientation>::collide (
@@ -201,14 +207,14 @@ void FreeEnergyInletOutletDynamics<T,DESCRIPTOR,direction,orientation>::setOmega
 
 template<typename T, typename DESCRIPTOR, int direction, int orientation>
 T FreeEnergyInletOutletDynamics<T,DESCRIPTOR,direction,orientation>::computeRho(
-  Cell<T,DESCRIPTOR> const& cell) const
+  ConstCell<T,DESCRIPTOR>& cell) const
 {
-  return cell.template getField<descriptors::FORCE>()[0];
+  return cell.template getFieldPointer<descriptors::FORCE>()[0];
 }
 
 template<typename T, typename DESCRIPTOR, int direction, int orientation>
 void FreeEnergyInletOutletDynamics<T,DESCRIPTOR,direction,orientation>::computeU (
-  Cell<T,DESCRIPTOR> const& cell, T u[DESCRIPTOR::d]) const
+  ConstCell<T,DESCRIPTOR>& cell, T u[DESCRIPTOR::d]) const
 {
   for (int iVel=0; iVel<DESCRIPTOR::d; ++iVel) {
     u[iVel] = 0.;
@@ -218,7 +224,7 @@ void FreeEnergyInletOutletDynamics<T,DESCRIPTOR,direction,orientation>::computeU
 
 template<typename T, typename DESCRIPTOR, int direction, int orientation>
 void FreeEnergyInletOutletDynamics<T,DESCRIPTOR,direction,orientation>::computeRhoU (
-  Cell<T,DESCRIPTOR> const& cell, T& rho, T u[DESCRIPTOR::d]) const
+  ConstCell<T,DESCRIPTOR>& cell, T& rho, T u[DESCRIPTOR::d]) const
 {
   rho = computeRho(cell);
   computeU(cell, u);
