@@ -14,8 +14,8 @@
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
  *
- *  You should have received a copy of the GNU General Public 
- *  License along with this program; if not, write to the Free 
+ *  You should have received a copy of the GNU General Public
+ *  License along with this program; if not, write to the Free
  *  Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  *  Boston, MA  02110-1301, USA.
 */
@@ -46,63 +46,63 @@ namespace olb {
  * aformentioned relations are taken as given to enable a few
  * optimizations.
 */
-namespace descriptors 
+namespace descriptors
 {
 //===========================================================================//
 //=================== AdvectionDiffusion Lattice Descriptors=================//
 //===========================================================================//
-    
-    /// D2Q5 lattice
-    template <typename T> struct D2Q5DescriptorBase
-    {
-        typedef D2Q5DescriptorBase<T> BaseDescriptor;
-        enum { d = 2, q = 5 };      ///< number of dimensions/distr. functions
-		static const int vicinity;  ///< size of neighborhood
-        static const int c[q][d];   ///< lattice directions
-        static const T t[q];        ///< lattice weights
-        static const T invCs2;      ///< inverse square of speed of sound
-    };
-    
-    struct Velocity2dDescriptor {
-        static const int numScalars = 2;
-        static const int numSpecies = 1;
-        static const int velocityBeginsAt = 0;
-        static const int sizeOfVelocity   = 2;
-    };
-    
-    struct Velocity2dBase {
-        typedef Velocity2dDescriptor ExternalField;
-    };
-    
-    struct Velocity3dDescriptor {
-        static const int numScalars = 3;
-        static const int numSpecies = 1;
-        static const int velocityBeginsAt = 0;
-        static const int sizeOfVelocity   = 3;
-    };
-    
-    struct Velocity3dBase {
-        typedef Velocity3dDescriptor ExternalField;
-    };
-    
-    /// AD D2Q5 lattice
-    template <typename T> struct AdvectionDiffusionD2Q5Descriptor
-        : public D2Q5DescriptorBase<T>, public Velocity2dBase
-    {  };
-    
-    /// D3Q7 lattice
-    template <typename T> struct D3Q7DescriptorBase {
-        typedef D3Q7DescriptorBase<T> BaseDescriptor;
-        enum { d = 3, q = 7 };     ///< number of dimensions/distr. functions
-		static const int vicinity;  ///< size of neighborhood
-        static const int c[q][d];   ///< lattice directions
-        static const T t[q];        ///< lattice weights
-        static const T invCs2;      ///< inverse square of speed of sound
-    };
 
-    template <typename T> struct AdvectionDiffusionD3Q7Descriptor 
+/// D2Q5 lattice
+template <typename T> struct D2Q5DescriptorBase
+{
+  typedef D2Q5DescriptorBase<T> BaseDescriptor;
+  enum { d = 2, q = 5 };      ///< number of dimensions/distr. functions
+  static const int vicinity;  ///< size of neighborhood
+  static const int c[q][d];   ///< lattice directions
+  static const T t[q];        ///< lattice weights
+  static const T invCs2;      ///< inverse square of speed of sound
+};
+
+struct Velocity2dDescriptor {
+  static const int numScalars = 2;
+  static const int numSpecies = 1;
+  static const int velocityBeginsAt = 0;
+  static const int sizeOfVelocity   = 2;
+};
+
+struct Velocity2dBase {
+  typedef Velocity2dDescriptor ExternalField;
+};
+
+struct Velocity3dDescriptor {
+  static const int numScalars = 3;
+  static const int numSpecies = 1;
+  static const int velocityBeginsAt = 0;
+  static const int sizeOfVelocity   = 3;
+};
+
+struct Velocity3dBase {
+  typedef Velocity3dDescriptor ExternalField;
+};
+
+/// AD D2Q5 lattice
+template <typename T> struct AdvectionDiffusionD2Q5Descriptor
+    : public D2Q5DescriptorBase<T>, public Velocity2dBase
+  {  };
+
+/// D3Q7 lattice
+template <typename T> struct D3Q7DescriptorBase {
+  typedef D3Q7DescriptorBase<T> BaseDescriptor;
+  enum { d = 3, q = 7 };     ///< number of dimensions/distr. functions
+  static const int vicinity;  ///< size of neighborhood
+  static const int c[q][d];   ///< lattice directions
+  static const T t[q];        ///< lattice weights
+  static const T invCs2;      ///< inverse square of speed of sound
+};
+
+template <typename T> struct AdvectionDiffusionD3Q7Descriptor
     : public D3Q7DescriptorBase<T>, public Velocity3dBase
-    {  };
+  {  };
 
 }  // namespace descriptors
 

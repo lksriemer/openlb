@@ -394,7 +394,7 @@ is entirely based on templates, no linking is be needed.
 <tr>
 	<td><pre>template &lt;class ForwardIterator, class Generator&gt;
 void par_generate(ForwardIterator first, ForwardIterator last, Generator gen,
-		  const unsigned P = omp_get_max_threads())</pre></td>
+		  const std::size_t P = omp_get_max_threads())</pre></td>
 	<td></td>
 </tr>
 </table>
@@ -434,7 +434,7 @@ void par_generate(ForwardIterator first, ForwardIterator last, Generator gen,
 <pre>template &lt;class InputIterator1, class InputIterator2&gt;
 typename ::std::iterator_traits&lt;InputIterator1&gt;::value_type
 L1(InputIterator1 first1, InputIterator1 last1,
-   InputIterator2 first2, const unsigned P = omp_get_max_threads())
+   InputIterator2 first2, const std::size_t P = omp_get_max_threads())
 </pre></td>
 	<td>"Manhattan" distance between two sets of data.</td>
 </tr>
@@ -443,7 +443,7 @@ L1(InputIterator1 first1, InputIterator1 last1,
 <pre>template &lt;class InputIterator1, class InputIterator2&gt;
 typename ::std::iterator_traits&lt;InputIterator1&gt;::value_type
 L2(InputIterator1 first1, InputIterator1 last1,
-   InputIterator2 first2, const unsigned P = omp_get_max_threads())
+   InputIterator2 first2, const std::size_t P = omp_get_max_threads())
 </pre></td>
 	<td>"Euclidean" distance between two sets of data.</td>
 </tr>
@@ -451,7 +451,7 @@ L2(InputIterator1 first1, InputIterator1 last1,
 	<td><pre>template &lt;class InputIterator&gt;
 typename ::std::iterator_traits&lt;InputIterator&gt;::value_type
 L2(InputIterator first, InputIterator last,
-   const unsigned P = omp_get_max_threads())</pre></td>
+   const std::size_t P = omp_get_max_threads())</pre></td>
 	<td>Euclidean vector length.</td>
 </tr>
 <tr>
@@ -460,7 +460,7 @@ template &lt;class Iterator, class T,
 	   class UnaryFunction, class BinaryFunction&gt;
 T transform_accumulate(Iterator first, Iterator last, T init,
 		UnaryFunction unary_op, BinaryFunction binary_op,
-		const unsigned P = omp_get_max_threads())</pre></td>
+		const std::size_t P = omp_get_max_threads())</pre></td>
 	<td>A combination of <i>transform</i> and accumulate. Applies
 		<i>unary_op</i> to every element in the range
 		<i>[first ... last]</i>, and accumulates the results using
@@ -472,7 +472,7 @@ T transform_accumulate(Iterator first, Iterator last, T init,
 template &lt;class Iterator, class T, class UnaryFunction&gt;
 T transform_accumulate(Iterator first, Iterator last, T init,
 			UnaryFunction unary_op,
-			const unsigned P = omp_get_max_threads())</pre></td>
+			const std::size_t P = omp_get_max_threads())</pre></td>
 	<td>A combination of <i>transform</i> and accumulate. Applies
 		<i>unary_op</i> to every element in the range
 		<i>[first ... last]</i>, and accumulates by addition.</td>

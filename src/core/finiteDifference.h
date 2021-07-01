@@ -15,8 +15,8 @@
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
  *
- *  You should have received a copy of the GNU General Public 
- *  License along with this program; if not, write to the Free 
+ *  You should have received a copy of the GNU General Public
+ *  License along with this program; if not, write to the Free
  *  Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  *  Boston, MA  02110-1301, USA.
 */
@@ -26,33 +26,33 @@
 
 namespace olb {
 
-    namespace fd {
+namespace fd {
 
-        /// Second-order central gradient (u_p1 = u(x+1))
-        template<typename T>
-        T centralGradient(T u_p1, T u_m1) {
-            return (u_p1 - u_m1) / (T)2;
-        }
+/// Second-order central gradient (u_p1 = u(x+1))
+template<typename T>
+T centralGradient(T u_p1, T u_m1) {
+  return (u_p1 - u_m1) / (T)2;
+}
 
-        /// Second-order asymmetric gradient (u_1 = u(x+1))
-        template<typename T>
-        T boundaryGradient(T u_0, T u_1, T u_2) {
-            return (-(T)3*u_0 + (T)4*u_1 - (T)1*u_2) / (T)2;
-        }
+/// Second-order asymmetric gradient (u_1 = u(x+1))
+template<typename T>
+T boundaryGradient(T u_0, T u_1, T u_2) {
+  return (-(T)3*u_0 + (T)4*u_1 - (T)1*u_2) / (T)2;
+}
 
-        /// Value at u_0 for which asymmetric gradient is zero (u_1 = u(x+1))
-        template<typename T>
-        T boundaryZeroGradient(T u_1, T u_2) {
-            return (T)4/(T)3*u_1 - (T)1/(T)3*u_2;
-        }
+/// Value at u_0 for which asymmetric gradient is zero (u_1 = u(x+1))
+template<typename T>
+T boundaryZeroGradient(T u_1, T u_2) {
+  return (T)4/(T)3*u_1 - (T)1/(T)3*u_2;
+}
 
-        /// Linear interpolation (yields u0 at pos=0 and u1 at pos=1)
-        template<typename T>
-        T linearInterpolate(T u_0, T u_1, T pos) {
-            return ((T)1-pos)*u_0 + pos*u_1;
-        }
+/// Linear interpolation (yields u0 at pos=0 and u1 at pos=1)
+template<typename T>
+T linearInterpolate(T u_0, T u_1, T pos) {
+  return ((T)1-pos)*u_0 + pos*u_1;
+}
 
-    }  // namespace fd
+}  // namespace fd
 
 }  // namespace olb
 

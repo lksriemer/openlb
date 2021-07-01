@@ -15,8 +15,8 @@
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
  *
- *  You should have received a copy of the GNU General Public 
- *  License along with this program; if not, write to the Free 
+ *  You should have received a copy of the GNU General Public
+ *  License along with this program; if not, write to the Free
  *  Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  *  Boston, MA  02110-1301, USA.
  */
@@ -33,6 +33,7 @@
 #include <string>
 
 #include "blockGeometry2D.h"
+#include "io/ostreamManager.h"
 
 /// All OpenLB code is contained in this namespace.
 namespace olb {
@@ -40,70 +41,73 @@ namespace olb {
 class BlockGeometryStatistics2D {
 
 private:
-    /// Input file name
-    BlockGeometry2D* _blockGeometry;
+  /// class specific cout
+  mutable OstreamManager clout;
+  /// Input file name
+  BlockGeometry2D* _blockGeometry;
 
-    /// Number of voxels in each direction
-    int _nX, _nY;
+  /// Number of voxels in each direction
+  int _nX, _nY;
 
-    /// Size of ghost voxel layer
-    int _offset;
+  /// Size of ghost voxel layer
+  int _offset;
 
-    /// Spacing
-    double _h;
+  /// Spacing
+  double _h;
 
-    std::map<unsigned short, int> _material2n;
-    std::map<unsigned short, std::vector<int> > _material2min;
-    std::map<unsigned short, std::vector<int> > _material2max;
+  std::map<unsigned short, int> _material2n;
+  std::map<unsigned short, std::vector<int> > _material2min;
+  std::map<unsigned short, std::vector<int> > _material2max;
 
 public:
-    /// Constructor
-    BlockGeometryStatistics2D(BlockGeometry2D* blockGeometry) {
-        reInit(blockGeometry);
+  /// Constructor
+  BlockGeometryStatistics2D(BlockGeometry2D* blockGeometry)
+    : clout(std::cout,"BlockGeometryStatistics2D") {
+    reInit(blockGeometry);
+  }
+  ;
+  /// Destructor
+  ~BlockGeometryStatistics2D() {
+  }
+  ;
+
+  /// reinitializes the blockGeometryStatistics (without checking the offset!!!!!!!)
+  void reInit(BlockGeometry2D* blockGeometry) {
+    _blockGeometry = blockGeometry;
+    _material2n = std::map<unsigned short, int>();
+    _nX = blockGeometry->getNx();
+    _nY = blockGeometry->getNy();
+    _h = blockGeometry->getSpacing();
+    _offset = blockGeometry->getOffset();
+
+    for (int iX = 0; iX < _nX; ++iX) {
+      for (int iY = 0; iY < _nY; ++iY) {
+        takeStatistics(iX, iY);
+      }
     }
-    ;
-    /// Destructor
-    ~BlockGeometryStatistics2D() {
-    }
-    ;
+  }
+  ;
 
-    /// reinitializes the blockGeometryStatistics (without checking the offset!!!!!!!)
-    void reInit(BlockGeometry2D* blockGeometry) {
-        _blockGeometry = blockGeometry;
-        _material2n = std::map<unsigned short, int>();
-        _nX = blockGeometry->getNx();
-        _nY = blockGeometry->getNy();
-        _h = blockGeometry->getSpacing();
-        _offset = blockGeometry->getOffset();
+  void takeStatistics(int iX, int iY);
 
-        for (int iX = 0; iX < _nX; ++iX) {
-            for (int iY = 0; iY < _nY; ++iY) {
-                takeStatistics(iX, iY);
-            }
-        }
-    }
-    ;
+  /// counts the number of voxels for the different boundary conditions (plus the number of inner and outer voxels)
+  void countVoxel();
 
-    void takeStatistics(int iX, int iY);
+  /// returns normal that points into the fluid for paraxial surfaces
+  std::vector<int> computeNormal(int iX, int iY);
 
-    /// counts the number of voxels for the different boundary conditions (plus the number of inner and outer voxels)
-    void countVoxel();
+  /// returns the number of voxels for a boundary condition type
+  int getNVoxel(int bcType);
 
-    /// returns normal that points into the fluid for paraxial surfaces
-    std::vector<int> computeNormal(int iX, int iY);
+  std::vector<int> getMin(unsigned short material);
 
-    /// returns the number of voxels for a boundary condition type
-    int getNVoxel(int bcType);
+  std::vector<int> getMax(unsigned short material);
 
-    std::vector<int> getMin(unsigned short material);
+  std::vector<int> getNCo(unsigned short material);
 
-    std::vector<int> getMax(unsigned short material);
+  std::vector<int> getType(int iX, int iY);
 
-    std::vector<int> getNCo(unsigned short material);
-
-    std::vector<int> getType(int iX, int iY);
-
-    BlockGeometry2D* getBlockGeometry();
+  BlockGeometry2D* getBlockGeometry();
 
 };
 

@@ -110,6 +110,13 @@ by CVMLCPP. An example project is given below.
 </tr>
 
 <tr>
+	<td><pre>  fast  </pre></td>
+	<td>Enable optimization, disable asserts. The selected optimizations 
+	include options	that are CPU-specific for the current host, and possibly
+	mathematical approximations.</td>
+</tr>
+
+<tr>
 	<td><pre>  debug  </pre></td>
 	<td>Disable optimization, enable debugging symbols and asserts.</td>
 </tr>
@@ -210,15 +217,20 @@ settings here. It could look like this:</p>
 ##########################
 ## Parameters for Users ##
 ##########################
+VERSION=20110728
 
 # Install directory (used by CVMLCPP's build system)
 TARGET=/where/you/want/this/software/to/be/installed
+# For Debian/Ubuntu packaging, uncomment next line
+#TARGET=$(DESTDIR)/usr
 
 # Number of jobs to launch in parallel (used by CVMLCPP's build system)
 NCPU=2
 
 # Installation directory of CVMLCPP
 export CVMLCPP_PREFIX=/where/cvmlcpp/is/currently/installed
+# For Debian/Ubuntu packaging, uncomment next line
+#export CVMLCPP_PREFIX=/usr
 
 #################################
 ## Users: Do not change below! ##
@@ -236,6 +248,10 @@ include ${CVMLCPP_PREFIX}/share/cvmlcpp/build/Makefile.build
 uninstall:
 	rm -f $(TARGET)/lib/libili.a $(TARGET)/lib/libili.so
 	rm -rf $(TARGET)/include/ililib $(TARGET)/share/doc/ililib
+
+post-install:
+	mv $(TARGET)/lib/libili.so $(TARGET)/lib/libili.so.$(VERSION)
+	ln -s libili.so.$(VERSION) $(TARGET)/lib/libili.so
 
 </pre>
 

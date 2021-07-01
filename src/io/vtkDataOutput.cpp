@@ -14,8 +14,8 @@
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
  *
- *  You should have received a copy of the GNU General Public 
- *  License along with this program; if not, write to the Free 
+ *  You should have received a copy of the GNU General Public
+ *  License along with this program; if not, write to the Free
  *  Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  *  Boston, MA  02110-1301, USA.
 */
@@ -31,125 +31,125 @@
 #include "base64.hh"
 
 namespace olb {
-    
+
 ////////// class VtkDataWriter3D ////////////////////////////////////////
 
 VtkDataWriter3D::VtkDataWriter3D(std::string const& fileName_)
-    : fileName(fileName_),
-      ostr(0)
+  : fileName(fileName_),
+    ostr(0)
 {
-    if (singleton::mpi().isMainProcessor()) {
-        ostr = new std::ofstream(fileName.c_str());
-        if (!(*ostr)) {
-            std::cerr << "could not open file " <<  fileName << "\n";
-            return;
-        }
+  if (singleton::mpi().isMainProcessor()) {
+    ostr = new std::ofstream(fileName.c_str());
+    if (!(*ostr)) {
+      std::cerr << "could not open file " <<  fileName << "\n";
+      return;
     }
+  }
 }
 
 VtkDataWriter3D::~VtkDataWriter3D() {
-    delete ostr;
+  delete ostr;
 }
 
 void VtkDataWriter3D::writeHeader(int x0, int x1, int y0, int y1, int z0, int z1,
                                   double originX, double originY, double originZ, double deltaX)
 {
-    if (singleton::mpi().isMainProcessor()) {
-        (*ostr) << "<?xml version=\"1.0\"?>\n";
-        (*ostr) << "<VTKFile type=\"ImageData\" version=\"0.1\" byte_order=\"LittleEndian\">\n";
-        (*ostr) << "<ImageData WholeExtent=\""
-                << x0 << " " << x1 << " "
-                << y0 << " " << y1 << " "
-                << z0 << " " << z1 << "\" "
-                << "Origin=\""
-                << originX << " " << originY << " " << originZ << "\" "
-                << "Spacing=\""
-                << deltaX << " " << deltaX << " " << deltaX << "\">\n";
-    }
+  if (singleton::mpi().isMainProcessor()) {
+    (*ostr) << "<?xml version=\"1.0\"?>\n";
+    (*ostr) << "<VTKFile type=\"ImageData\" version=\"0.1\" byte_order=\"LittleEndian\">\n";
+    (*ostr) << "<ImageData WholeExtent=\""
+            << x0 << " " << x1 << " "
+            << y0 << " " << y1 << " "
+            << z0 << " " << z1 << "\" "
+            << "Origin=\""
+            << originX << " " << originY << " " << originZ << "\" "
+            << "Spacing=\""
+            << deltaX << " " << deltaX << " " << deltaX << "\">\n";
+  }
 }
 
 void VtkDataWriter3D::startPiece(int x0, int x1, int y0, int y1, int z0, int z1) {
-    if (singleton::mpi().isMainProcessor()) {
-        (*ostr) << "<Piece Extent=\""
-                << x0 << " " << x1 << " "
-                << y0 << " " << y1 << " "
-                << z0 << " " << z1 << "\">\n";
-        (*ostr) << "<PointData>\n";
-    }
+  if (singleton::mpi().isMainProcessor()) {
+    (*ostr) << "<Piece Extent=\""
+            << x0 << " " << x1 << " "
+            << y0 << " " << y1 << " "
+            << z0 << " " << z1 << "\">\n";
+    (*ostr) << "<PointData>\n";
+  }
 }
 
 void VtkDataWriter3D::endPiece() {
-    if (singleton::mpi().isMainProcessor()) {
-        (*ostr) << "</PointData>\n";
-        (*ostr) << "</Piece>\n";
-    }
+  if (singleton::mpi().isMainProcessor()) {
+    (*ostr) << "</PointData>\n";
+    (*ostr) << "</Piece>\n";
+  }
 }
 
 void VtkDataWriter3D::writeFooter() {
-    if (singleton::mpi().isMainProcessor()) {
-        (*ostr) << "</ImageData>\n";
-        (*ostr) << "</VTKFile>\n";
-    }
+  if (singleton::mpi().isMainProcessor()) {
+    (*ostr) << "</ImageData>\n";
+    (*ostr) << "</VTKFile>\n";
+  }
 }
 
 template<>
 std::string VtkTypeNames<bool>::getBaseName() {
-    return "Int";
+  return "Int";
 }
 
 template<>
 std::string VtkTypeNames<char>::getBaseName() {
-    return "Int";
+  return "Int";
 }
 
 template<>
 std::string VtkTypeNames<unsigned char>::getBaseName() {
-    return "UInt";
+  return "UInt";
 }
 
 template<>
 std::string VtkTypeNames<short int>::getBaseName() {
-    return "Int";
+  return "Int";
 }
 
 template<>
 std::string VtkTypeNames<unsigned short int>::getBaseName() {
-    return "UInt";
+  return "UInt";
 }
 
 template<>
 std::string VtkTypeNames<int>::getBaseName() {
-    return "Int";
+  return "Int";
 }
 
 template<>
 std::string VtkTypeNames<unsigned int>::getBaseName() {
-    return "UInt";
+  return "UInt";
 }
 
 template<>
 std::string VtkTypeNames<long int>::getBaseName() {
-    return "Int";
+  return "Int";
 }
 
 template<>
 std::string VtkTypeNames<unsigned long int>::getBaseName() {
-    return "UInt";
+  return "UInt";
 }
 
 template<>
 std::string VtkTypeNames<float>::getBaseName() {
-    return "Float";
+  return "Float";
 }
 
 template<>
 std::string VtkTypeNames<double>::getBaseName() {
-    return "Float";
+  return "Float";
 }
 
 template<>
 std::string VtkTypeNames<long double>::getBaseName() {
-    return "Float";
+  return "Float";
 }
 
 }

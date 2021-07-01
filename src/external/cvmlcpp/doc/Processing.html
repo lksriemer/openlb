@@ -62,7 +62,7 @@ which requires linking extra libraries as explained in the documentation of
 bool convolute( const Array_t&lt;Tlhs, N&gt; &amp;lhs,
 		const Array_t&lt;Trhs, N&gt; &amp;rhs,
 		Array_t&lt;Tresult, N&gt; &amp;result,
-		unsigned threads = 0u)
+		std::size_t threads = 0u)
 </pre>
 	</td>
 	<td>Convolution of two <i>N</i>-dimensional arrays <i>lhs</i> and
@@ -77,7 +77,7 @@ bool convolute( const Array_t&lt;Tlhs, N&gt; &amp;lhs,
 bool convolute( const Array_t&lt;Tlhs, N&gt; &amp;lhs,
 		const std::vector&lt;Array_t&lt;Trhs, N&gt; &gt; &amp;rhs,
 		std::vector&lt;Array_t&lt;Tresult, N&gt; &gt; &amp;result,
-		unsigned threads = 0u)
+		std::size_t threads = 0u)
 </pre>
 	</td>
 	<td>Convolution of <i>N</i>-dimensional arrays <i>lhs</i> and
@@ -96,7 +96,7 @@ bool convolute( const Array_t&lt;Tlhs, N&gt; &amp;lhs,
 bool correlate( const Array_t&lt;Tlhs, N&gt; &amp;lhs,
 		const Array_t&lt;Trhs, N&gt; &amp;rhs,
 		Array_t&lt;Tresult, N&gt; &amp;result,
-		unsigned threads = 0u)
+		std::size_t threads = 0u)
 </pre>
 	</td>
 	<td>Correlation of two <i>N</i>-dimensional arrays <i>lhs</i> and
@@ -111,7 +111,7 @@ bool correlate( const Array_t&lt;Tlhs, N&gt; &amp;lhs,
 bool correlate( const Array_t&lt;Tlhs, N&gt; &amp;lhs,
 		const std::vector&lt;Array_t&lt;Trhs, N&gt; &gt; &amp;rhs,
 		std::vector&lt;Array_t&lt;Tresult, N&gt; &gt; &amp;result,
-		unsigned threads = 0u)
+		std::size_t threads = 0u)
 </pre>
 	</td>
 	<td>Correlation of <i>N</i>-dimensional arrays <i>lhs</i> and
@@ -127,7 +127,7 @@ bool correlate( const Array_t&lt;Tlhs, N&gt; &amp;lhs,
 <pre>
 bool autocorrelate(const Array_t&lt;Tlhs, N&gt; &amp;lhs,
 		   Array_t&lt;Tresult, N&gt; &amp;result,
-		   unsigned threads = 0u)
+		   std::size_t threads = 0u)
 </pre>
 	</td>
 	<td>Auto-correlation of two <i>N</i>-dimensional array <i>lhs</i>,
@@ -141,7 +141,7 @@ bool autocorrelate(const Array_t&lt;Tlhs, N&gt; &amp;lhs,
 <pre>
 bool autocorrelate(const std::vector&lt;Array_t&lt;Trhs, N&gt; &gt; &amp;lhs,
 		   std::vector&lt;Array_t&lt;Tresult, N&gt; &gt; &amp;result,
-		   unsigned threads = 0u)
+		   std::size_t threads = 0u)
 </pre>
 	</td>
 	<td>Auto-correlation of all <i>N</i>-dimensional arrays in <i>lhs</i>, 
@@ -155,7 +155,7 @@ bool autocorrelate(const std::vector&lt;Array_t&lt;Trhs, N&gt; &gt; &amp;lhs,
 	<td>
 <pre>bool localAvg( Array_t&lt;Tlhs, N&gt; &amp;lhs, const int radius,
 		Array_t&lt;Tresult, N&gt; &amp;result,
-		unsigned threads = 0u)
+		std::size_t threads = 0u)
 </pre>
 	</td>
 	<td>Computes the local average for all elements in <i>lhs</i> using
@@ -168,7 +168,7 @@ bool autocorrelate(const std::vector&lt;Array_t&lt;Trhs, N&gt; &gt; &amp;lhs,
 	<td>
 <pre>bool localAvg( std::vector&lt;Array_t&lt;Tlhs, N&gt; &gt; &amp;lhs, const int radius,
 		std::vector&lt;Array_t&lt;Tresult, N&gt; &gt; &amp;result,
-		unsigned threads = 0u)
+		std::size_t threads = 0u)
 </pre>
 	</td>
 	<td>Computes the local average for all elements in all <i>N</i>-dimensional 
@@ -187,13 +187,13 @@ bool autocorrelate(const std::vector&lt;Array_t&lt;Trhs, N&gt; &gt; &amp;lhs,
 <h3>Convolution</h3>
 
 <pre>
-const unsigned dims [] = {256u, 256u};
+const std::size_t dims [] = {256u, 256u};
 Matrix&lt;int, 2u&gt; image(dims);
 
 // Read image
 ...
 
-const unsigned maskDims [] = {5, 5};
+const std::size_t maskDims [] = {5, 5};
 Matrix&lt;float, 2u&gt; mask(maskDims, 1.0/25.0);
 
 Matrix&lt;float, 2u&gt; result(dims);

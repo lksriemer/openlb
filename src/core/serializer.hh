@@ -15,8 +15,8 @@
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
  *
- *  You should have received a copy of the GNU General Public 
- *  License along with this program; if not, write to the Free 
+ *  You should have received a copy of the GNU General Public
+ *  License along with this program; if not, write to the Free
  *  Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  *  Boston, MA  02110-1301, USA.
 */
@@ -36,89 +36,89 @@ namespace olb {
 
 template<typename T>
 ScalingSerializer<T>::ScalingSerializer(DataSerializer<T> const& baseSerializer_, T scalingFactor_)
-    : baseSerializer(baseSerializer_),
-      scalingFactor(scalingFactor_)
+  : baseSerializer(baseSerializer_),
+    scalingFactor(scalingFactor_)
 { }
 
 template<typename T>
 size_t ScalingSerializer<T>::getSize() const {
-    return baseSerializer.getSize();
+  return baseSerializer.getSize();
 }
 
 template<typename T>
 const T* ScalingSerializer<T>::getNextDataBuffer(size_t& bufferSize) const {
-    const T* unscaledBuffer = baseSerializer.getNextDataBuffer(bufferSize);
-    scaledBuffer.resize(bufferSize);
-    for (size_t iBuffer=0; iBuffer<bufferSize; ++iBuffer) {
-        scaledBuffer[iBuffer] = unscaledBuffer[iBuffer] * scalingFactor;
-    }
-    return &scaledBuffer[0];
+  const T* unscaledBuffer = baseSerializer.getNextDataBuffer(bufferSize);
+  scaledBuffer.resize(bufferSize);
+  for (size_t iBuffer=0; iBuffer<bufferSize; ++iBuffer) {
+    scaledBuffer[iBuffer] = unscaledBuffer[iBuffer] * scalingFactor;
+  }
+  return &scaledBuffer[0];
 }
 
 template<typename T>
 bool ScalingSerializer<T>::isEmpty() const {
-    return baseSerializer.isEmpty();
+  return baseSerializer.isEmpty();
 }
 
 ////////// class TypeConversionSerializer ////////////////////////////
 
 template<typename T, typename TConv>
 TypeConversionSerializer<T,TConv>::TypeConversionSerializer (
-        DataSerializer<T> const& baseSerializer_)
-    : baseSerializer(baseSerializer_)
+  DataSerializer<T> const& baseSerializer_)
+  : baseSerializer(baseSerializer_)
 { }
 
 template<typename T, typename TConv>
 size_t TypeConversionSerializer<T,TConv>::getSize() const {
-    return baseSerializer.getSize();
+  return baseSerializer.getSize();
 }
 
 template<typename T, typename TConv>
 const TConv* TypeConversionSerializer<T,TConv>::getNextDataBuffer(size_t& bufferSize) const {
-    const T* originalBuffer = baseSerializer.getNextDataBuffer(bufferSize);
-    convBuffer.resize(bufferSize);
-    for (size_t iBuffer=0; iBuffer<bufferSize; ++iBuffer) {
-        convBuffer[iBuffer] = static_cast<TConv>( originalBuffer[iBuffer] );
-    }
-    return &convBuffer[0];
+  const T* originalBuffer = baseSerializer.getNextDataBuffer(bufferSize);
+  convBuffer.resize(bufferSize);
+  for (size_t iBuffer=0; iBuffer<bufferSize; ++iBuffer) {
+    convBuffer[iBuffer] = static_cast<TConv>( originalBuffer[iBuffer] );
+  }
+  return &convBuffer[0];
 }
 
 template<typename T, typename TConv>
 bool TypeConversionSerializer<T,TConv>::isEmpty() const {
-    return baseSerializer.isEmpty();
+  return baseSerializer.isEmpty();
 }
 
 /// Specialization of TypeConversionSerializer in case T==TConv, for efficiency reasons
 template<typename T>
 class TypeConversionSerializer<T,T> : public DataSerializer<T> {
 public:
-    TypeConversionSerializer(DataSerializer<T> const& baseSerializer_);
-    virtual size_t getSize() const;
-    virtual const T* getNextDataBuffer(size_t& bufferSize) const;
-    virtual bool isEmpty() const;
+  TypeConversionSerializer(DataSerializer<T> const& baseSerializer_);
+  virtual size_t getSize() const;
+  virtual const T* getNextDataBuffer(size_t& bufferSize) const;
+  virtual bool isEmpty() const;
 private:
-    DataSerializer<T> const& baseSerializer;
+  DataSerializer<T> const& baseSerializer;
 };
 
 template<typename T>
 TypeConversionSerializer<T,T>::TypeConversionSerializer (
-        DataSerializer<T> const& baseSerializer_)
-    : baseSerializer(baseSerializer_)
+  DataSerializer<T> const& baseSerializer_)
+  : baseSerializer(baseSerializer_)
 { }
 
 template<typename T>
 size_t TypeConversionSerializer<T,T>::getSize() const {
-    return baseSerializer.getSize();
+  return baseSerializer.getSize();
 }
 
 template<typename T>
 const T* TypeConversionSerializer<T,T>::getNextDataBuffer(size_t& bufferSize) const {
-    return baseSerializer.getNextDataBuffer(bufferSize);
+  return baseSerializer.getNextDataBuffer(bufferSize);
 }
 
 template<typename T>
 bool TypeConversionSerializer<T,T>::isEmpty() const {
-    return baseSerializer.isEmpty();
+  return baseSerializer.isEmpty();
 }
 
 
@@ -126,38 +126,38 @@ bool TypeConversionSerializer<T,T>::isEmpty() const {
 
 template<typename T>
 void copySerializedData(DataSerializer<T> const& serializer, DataUnSerializer<T>& unSerializer) {
-    OLB_PRECONDITION( serializer.getSize() == unSerializer.getSize() );
-    size_t writePos = 0, readPos = 0;
-    size_t serializerBufferSize =0, unSerializerBufferSize =0;
-    const T* serializerBuffer =0;
-    T* unSerializerBuffer =0;
-    while (!unSerializer.isFull()) {
-        if (readPos==serializerBufferSize) {
-            serializerBuffer = serializer.getNextDataBuffer(serializerBufferSize);
-            readPos = 0;
-        }
-        if (writePos==unSerializerBufferSize) {
-            unSerializerBuffer = unSerializer.getNextDataBuffer(unSerializerBufferSize);
-            writePos = 0;
-        }
-
-        size_t remainToRead = (ptrdiff_t)serializerBufferSize - (ptrdiff_t)readPos;
-        size_t remainToWrite = (ptrdiff_t)unSerializerBufferSize - (ptrdiff_t)writePos;
-        size_t nextChunk = std::min(remainToRead, remainToWrite);
-        for (size_t iChunk=0; iChunk<nextChunk; ++iChunk, ++readPos, ++writePos) {
-            if (singleton::mpi().isMainProcessor()) {
-                unSerializerBuffer[writePos] = serializerBuffer[readPos];
-            }
-        }
-        if (writePos==unSerializerBufferSize) {
-            unSerializer.commitData();
-        }
+  OLB_PRECONDITION( serializer.getSize() == unSerializer.getSize() );
+  size_t writePos = 0, readPos = 0;
+  size_t serializerBufferSize =0, unSerializerBufferSize =0;
+  const T* serializerBuffer =0;
+  T* unSerializerBuffer =0;
+  while (!unSerializer.isFull()) {
+    if (readPos==serializerBufferSize) {
+      serializerBuffer = serializer.getNextDataBuffer(serializerBufferSize);
+      readPos = 0;
     }
+    if (writePos==unSerializerBufferSize) {
+      unSerializerBuffer = unSerializer.getNextDataBuffer(unSerializerBufferSize);
+      writePos = 0;
+    }
+
+    size_t remainToRead = (std::ptrdiff_t)serializerBufferSize - (std::ptrdiff_t)readPos;
+    size_t remainToWrite = (std::ptrdiff_t)unSerializerBufferSize - (std::ptrdiff_t)writePos;
+    size_t nextChunk = std::min(remainToRead, remainToWrite);
+    for (size_t iChunk=0; iChunk<nextChunk; ++iChunk, ++readPos, ++writePos) {
+      if (singleton::mpi().isMainProcessor()) {
+        unSerializerBuffer[writePos] = serializerBuffer[readPos];
+      }
+    }
+    if (writePos==unSerializerBufferSize) {
+      unSerializer.commitData();
+    }
+  }
 }
 
 template<typename T>
 void copyDataBlock(Serializable<T> const& from, Serializable<T>& to, IndexOrdering::OrderingT ordering) {
-    copySerializedData(from.getSerializer(ordering), to.getUnSerializer(ordering));
+  copySerializedData(from.getSerializer(ordering), to.getUnSerializer(ordering));
 }
 
 }  // namespace olb

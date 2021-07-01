@@ -15,8 +15,8 @@
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
  *
- *  You should have received a copy of the GNU General Public 
- *  License along with this program; if not, write to the Free 
+ *  You should have received a copy of the GNU General Public
+ *  License along with this program; if not, write to the Free
  *  Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  *  Boston, MA  02110-1301, USA.
 */
@@ -30,56 +30,56 @@
 namespace olb {
 
 namespace IndexOrdering {
-    typedef enum {forward, backward, memorySaving} OrderingT;
+typedef enum {forward, backward, memorySaving} OrderingT;
 }
 
 template<typename T>
 struct DataSerializer {
-    virtual ~DataSerializer() { }
-    virtual size_t getSize() const =0;
-    virtual const T* getNextDataBuffer(size_t& bufferSize) const =0;
-    virtual bool isEmpty() const =0;
+  virtual ~DataSerializer() { }
+  virtual std::size_t getSize() const =0;
+  virtual const T* getNextDataBuffer(std::size_t& bufferSize) const =0;
+  virtual bool isEmpty() const =0;
 };
 
 template<typename T>
 struct DataUnSerializer {
-    virtual ~DataUnSerializer() { }
-    virtual size_t getSize() const =0;
-    virtual T* getNextDataBuffer(size_t& bufferSize) =0;
-    virtual void commitData() =0;
-    virtual bool isFull() const =0;
+  virtual ~DataUnSerializer() { }
+  virtual std::size_t getSize() const =0;
+  virtual T* getNextDataBuffer(std::size_t& bufferSize) =0;
+  virtual void commitData() =0;
+  virtual bool isFull() const =0;
 };
 
 template<typename T>
 class ScalingSerializer : public DataSerializer<T> {
 public:
-    ScalingSerializer(DataSerializer<T> const& baseSerializer_, T scalingFactor_);
-    virtual size_t getSize() const;
-    virtual const T* getNextDataBuffer(size_t& bufferSize) const;
-    virtual bool isEmpty() const;
+  ScalingSerializer(DataSerializer<T> const& baseSerializer_, T scalingFactor_);
+  virtual std::size_t getSize() const;
+  virtual const T* getNextDataBuffer(std::size_t& bufferSize) const;
+  virtual bool isEmpty() const;
 private:
-    DataSerializer<T> const& baseSerializer;
-    mutable std::vector<T> scaledBuffer;
-    T scalingFactor;
+  DataSerializer<T> const& baseSerializer;
+  mutable std::vector<T> scaledBuffer;
+  T scalingFactor;
 };
 
 template<typename T, typename TConv>
 class TypeConversionSerializer : public DataSerializer<TConv> {
 public:
-    TypeConversionSerializer(DataSerializer<T> const& baseSerializer_);
-    virtual size_t getSize() const;
-    virtual const TConv* getNextDataBuffer(size_t& bufferSize) const;
-    virtual bool isEmpty() const;
+  TypeConversionSerializer(DataSerializer<T> const& baseSerializer_);
+  virtual std::size_t getSize() const;
+  virtual const TConv* getNextDataBuffer(std::size_t& bufferSize) const;
+  virtual bool isEmpty() const;
 private:
-    DataSerializer<T> const& baseSerializer;
-    mutable std::vector<TConv> convBuffer;
+  DataSerializer<T> const& baseSerializer;
+  mutable std::vector<TConv> convBuffer;
 };
 
 template<typename T>
 struct Serializable {
-    virtual ~Serializable() { };
-    virtual DataSerializer<T> const& getSerializer(IndexOrdering::OrderingT ordering) const =0;
-    virtual DataUnSerializer<T>& getUnSerializer(IndexOrdering::OrderingT ordering) =0;
+  virtual ~Serializable() { };
+  virtual DataSerializer<T> const& getSerializer(IndexOrdering::OrderingT ordering) const =0;
+  virtual DataUnSerializer<T>& getUnSerializer(IndexOrdering::OrderingT ordering) =0;
 };
 
 template<typename T>

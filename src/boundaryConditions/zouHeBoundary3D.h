@@ -15,8 +15,8 @@
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
  *
- *  You should have received a copy of the GNU General Public 
- *  License along with this program; if not, write to the Free 
+ *  You should have received a copy of the GNU General Public
+ *  License along with this program; if not, write to the Free
  *  Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  *  Boston, MA  02110-1301, USA.
 */
@@ -32,12 +32,12 @@ namespace olb {
 
 template<typename T, template<typename U> class Lattice, typename MixinDynamics>
 OnLatticeBoundaryCondition3D<T,Lattice>*
-    createZouHeBoundaryCondition3D(BlockStructure3D<T,Lattice>& block);
+createZouHeBoundaryCondition3D(BlockStructure3D<T,Lattice>& block);
 
 template<typename T, template<typename U> class Lattice>
 OnLatticeBoundaryCondition3D<T,Lattice>*
 createZouHeBoundaryCondition3D(BlockStructure3D<T,Lattice>& block) {
-    return createZouHeBoundaryCondition3D<T,Lattice,BGKdynamics<T,Lattice> >(block);
+  return createZouHeBoundaryCondition3D<T,Lattice,BGKdynamics<T,Lattice> >(block);
 }
 
 

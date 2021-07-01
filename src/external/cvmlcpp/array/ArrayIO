@@ -160,8 +160,7 @@ bool readArray(Array<T, N, Aux> &array, const std::string fileName)
 		// Normal procedure: read one big binary blob
 		f.read(reinterpret_cast<char*>(&(*ArrayTraits::begin(array))),
 			sizeof(T) * ArrayTraits::size(array));
-		ok = ( static_cast<unsigned>(f.gcount()) ==
-				(sizeof(T) * ArrayTraits::size(array)) );
+		ok = static_cast<std::size_t>(f.gcount()) == sizeof(T)*ArrayTraits::size(array);
 	}
 	else
 	{

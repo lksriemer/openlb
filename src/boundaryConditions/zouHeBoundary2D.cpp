@@ -15,8 +15,8 @@
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
  *
- *  You should have received a copy of the GNU General Public 
- *  License along with this program; if not, write to the Free 
+ *  You should have received a copy of the GNU General Public
+ *  License along with this program; if not, write to the Free
  *  Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  *  Boston, MA  02110-1301, USA.
 */
@@ -34,17 +34,17 @@
 namespace olb {
 
 template class BoundaryConditionInstantiator2D
-    <
-        double, descriptors::D2Q9Descriptor,
+<
+double, descriptors::D2Q9Descriptor,
         ZouHeBoundaryManager2D < double, descriptors::D2Q9Descriptor,
-                                 BGKdynamics<double,descriptors::D2Q9Descriptor> >
-    >;
+        BGKdynamics<double,descriptors::D2Q9Descriptor> >
+        >;
 
 template OnLatticeBoundaryCondition2D<double,descriptors::D2Q9Descriptor>*
-    createZouHeBoundaryCondition2D < double,descriptors::D2Q9Descriptor,
-                                     BGKdynamics<double,descriptors::D2Q9Descriptor> >
-   (
-        BlockStructure2D<double,descriptors::D2Q9Descriptor>& block
-   );
+createZouHeBoundaryCondition2D < double,descriptors::D2Q9Descriptor,
+                               BGKdynamics<double,descriptors::D2Q9Descriptor> >
+                               (
+                                 BlockStructure2D<double,descriptors::D2Q9Descriptor>& block
+                               );
 
 }  // namespace olb

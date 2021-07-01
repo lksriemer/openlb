@@ -15,8 +15,8 @@
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
  *
- *  You should have received a copy of the GNU General Public 
- *  License along with this program; if not, write to the Free 
+ *  You should have received a copy of the GNU General Public
+ *  License along with this program; if not, write to the Free
  *  Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  *  Boston, MA  02110-1301, USA.
 */
@@ -32,50 +32,50 @@
 
 namespace olb {
 
-    template class Dynamics<double, descriptors::D2Q9Descriptor>;
-    template class Momenta<double, descriptors::D2Q9Descriptor>;
-    template class BasicDynamics<double, descriptors::D2Q9Descriptor>;
-    template class BGKdynamics<double, descriptors::D2Q9Descriptor>;
-    template class ConstRhoBGKdynamics<double, descriptors::D2Q9Descriptor>;
-    template class IncBGKdynamics<double, descriptors::D2Q9Descriptor>;
-    template class RLBdynamics<double, descriptors::D2Q9Descriptor>;
-    template class CombinedRLBdynamics<double, descriptors::D2Q9Descriptor,
-                      RLBdynamics<double, descriptors::D2Q9Descriptor> >;
-    template class CombinedRLBdynamics<double, descriptors::D2Q9Descriptor,
-                      BGKdynamics<double, descriptors::D2Q9Descriptor> >;
-    template class BulkMomenta<double, descriptors::D2Q9Descriptor>;
-    template class BounceBack<double, descriptors::D2Q9Descriptor>;
-    template class NoDynamics<double, descriptors::D2Q9Descriptor>;
+template class Dynamics<double, descriptors::D2Q9Descriptor>;
+template class Momenta<double, descriptors::D2Q9Descriptor>;
+template class BasicDynamics<double, descriptors::D2Q9Descriptor>;
+template class BGKdynamics<double, descriptors::D2Q9Descriptor>;
+template class ConstRhoBGKdynamics<double, descriptors::D2Q9Descriptor>;
+template class IncBGKdynamics<double, descriptors::D2Q9Descriptor>;
+template class RLBdynamics<double, descriptors::D2Q9Descriptor>;
+template class CombinedRLBdynamics<double, descriptors::D2Q9Descriptor,
+         RLBdynamics<double, descriptors::D2Q9Descriptor> >;
+template class CombinedRLBdynamics<double, descriptors::D2Q9Descriptor,
+         BGKdynamics<double, descriptors::D2Q9Descriptor> >;
+template class BulkMomenta<double, descriptors::D2Q9Descriptor>;
+template class BounceBack<double, descriptors::D2Q9Descriptor>;
+template class NoDynamics<double, descriptors::D2Q9Descriptor>;
 
-    template class Dynamics<double, descriptors::D3Q19Descriptor>;
-    template class Momenta<double, descriptors::D3Q19Descriptor>;
-    template class BasicDynamics<double, descriptors::D3Q19Descriptor>;
-    template class BGKdynamics<double, descriptors::D3Q19Descriptor>;
-    template class ConstRhoBGKdynamics<double, descriptors::D3Q19Descriptor>;
-    template class IncBGKdynamics<double, descriptors::D3Q19Descriptor>;
-    template class RLBdynamics<double, descriptors::D3Q19Descriptor>;
-    template class CombinedRLBdynamics<double, descriptors::D3Q19Descriptor,
-                      RLBdynamics<double, descriptors::D3Q19Descriptor> >;
-    template class CombinedRLBdynamics<double, descriptors::D3Q19Descriptor,
-                      BGKdynamics<double, descriptors::D3Q19Descriptor> >;
-    template class BulkMomenta<double, descriptors::D3Q19Descriptor>;
-    template class BounceBack<double, descriptors::D3Q19Descriptor>;
-    template class NoDynamics<double, descriptors::D3Q19Descriptor>;
+template class Dynamics<double, descriptors::D3Q19Descriptor>;
+template class Momenta<double, descriptors::D3Q19Descriptor>;
+template class BasicDynamics<double, descriptors::D3Q19Descriptor>;
+template class BGKdynamics<double, descriptors::D3Q19Descriptor>;
+template class ConstRhoBGKdynamics<double, descriptors::D3Q19Descriptor>;
+template class IncBGKdynamics<double, descriptors::D3Q19Descriptor>;
+template class RLBdynamics<double, descriptors::D3Q19Descriptor>;
+template class CombinedRLBdynamics<double, descriptors::D3Q19Descriptor,
+         RLBdynamics<double, descriptors::D3Q19Descriptor> >;
+template class CombinedRLBdynamics<double, descriptors::D3Q19Descriptor,
+         BGKdynamics<double, descriptors::D3Q19Descriptor> >;
+template class BulkMomenta<double, descriptors::D3Q19Descriptor>;
+template class BounceBack<double, descriptors::D3Q19Descriptor>;
+template class NoDynamics<double, descriptors::D3Q19Descriptor>;
 
-    namespace instances {
+namespace instances {
 
-        template BulkMomenta<double, descriptors::D2Q9Descriptor>& getBulkMomenta();
+template BulkMomenta<double, descriptors::D2Q9Descriptor>& getBulkMomenta();
 
-        template BounceBack<double, descriptors::D2Q9Descriptor>& getBounceBack();
+template BounceBack<double, descriptors::D2Q9Descriptor>& getBounceBack();
 
-        template NoDynamics<double, descriptors::D2Q9Descriptor>& getNoDynamics();
+template NoDynamics<double, descriptors::D2Q9Descriptor>& getNoDynamics();
 
-        template BulkMomenta<double, descriptors::D3Q19Descriptor>& getBulkMomenta();
+template BulkMomenta<double, descriptors::D3Q19Descriptor>& getBulkMomenta();
 
-        template BounceBack<double, descriptors::D3Q19Descriptor>& getBounceBack();
+template BounceBack<double, descriptors::D3Q19Descriptor>& getBounceBack();
 
-        template NoDynamics<double, descriptors::D3Q19Descriptor>& getNoDynamics();
+template NoDynamics<double, descriptors::D3Q19Descriptor>& getNoDynamics();
 
-    }
+}
 
 }

@@ -15,15 +15,15 @@
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
  *
- *  You should have received a copy of the GNU General Public 
- *  License along with this program; if not, write to the Free 
+ *  You should have received a copy of the GNU General Public
+ *  License along with this program; if not, write to the Free
  *  Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  *  Boston, MA  02110-1301, USA.
 */
 
 /** \file
  * Data analysis (formerly known as BlockStatistics) on 3D BlockStructures -- template instantiation.
- */ 
+ */
 
 #include "dataAnalysis3D.h"
 #include "dataAnalysis3D.hh"
@@ -32,8 +32,8 @@
 
 namespace olb {
 
-    template struct AnalysisFieldsImpl3D<double, descriptors::D3Q19Descriptor>;
-    template struct AnalysisFields3D<double, descriptors::D3Q19Descriptor>;
-    template class DataAnalysis3D<double, descriptors::D3Q19Descriptor>;
+template struct AnalysisFieldsImpl3D<double, descriptors::D3Q19Descriptor>;
+template struct AnalysisFields3D<double, descriptors::D3Q19Descriptor>;
+template class DataAnalysis3D<double, descriptors::D3Q19Descriptor>;
 
 }

@@ -26,7 +26,7 @@
 <h1>Release Notes</h1>
 
 <!-- Template
-<h2>Release 2010--</h2>
+<h2>Release 2012--</h2>
 
 <h3>Changelog</h3>
 <ul>
@@ -39,6 +39,109 @@
 </ul>
 
 -->
+<h2>Release 2011-11-10</h2>
+
+<h3>Changelog</h3>
+<ul>
+	<li>various: Fixes for C++11 compatibility</li>
+	<li>base/DirectoryTokenizer: Fixes for boost filesystem v2 vs. v3 breakage</li>
+	<li>volume/Geometry: fixes for numerical issues</li>
+</ul>
+
+<h3>Open issues</h3>
+<ul>
+	<li>volume/SurfaceExtractor: order of points in facets leads to wrong normals</li>
+	<li>volume/Voxelizer: The distances() function for octrees does not
+	give a meaningful return value.</li>
+	<li>build: The Sun compiler has too many bugs to compile most of
+	the CVMLCPP library.</li>
+	<li>build: The OpenWatcom compiler is currently too outdated to be used.</li>
+</ul>
+
+
+<h2>Release 2011-09-23</h2>
+
+<h3>Changelog</h3>
+<ul>
+	<li>base/Matrix: documented binocdfinv()</li>
+	<li>base/Matrix: fixes for SymmetricMatrix</li>
+	<li>omptl/omptl_algorithm: improved parallel sort()</li>
+</ul>
+
+<h3>Open issues</h3>
+<ul>
+	<li>volume/SurfaceExtractor: order of points in facets leads to wrong normals</li>
+	<li>volume/Voxelizer: The distances() function for octrees does not
+	give a meaningful return value.</li>
+	<li>build: The Sun compiler has too many bugs to compile most of
+	the CVMLCPP library.</li>
+	<li>build: The OpenWatcom compiler is currently too outdated to be used.</li>
+</ul>
+
+<h2>Release 2011-08-03</h2>
+
+<h3>Changelog</h3>
+<ul>
+	<li>omptl/*extentions*: rename to exten<b>s</b>ions</li>
+	<li>omptl/omptl_numeric_extensions.h: bugfixes, bugs reported by Robert Rumpf</li>
+	<li>omptl/omptl_tools.h: Bugfix for bugs introduced in Release 2011-07-28</li>
+	<li>omptl/omptl_algorithm: deprecated, include &lt;omptl/algorithm&gt; instead</li>
+	<li>omptl/omptl_numeric: deprecated, include &lt;omptl/numeric&gt; instead</li>
+</ul>
+
+<h3>Open issues</h3>
+<ul>
+	<li>volume/SurfaceExtractor: order of points in facets leads to wrong normals</li>
+	<li>volume/Voxelizer: The distances() function for octrees does not
+	give a meaningful return value.</li>
+	<li>build: The Sun compiler has too many bugs to compile most of
+	the CVMLCPP library.</li>
+	<li>build: The OpenWatcom compiler is currently too outdated to be used.</li>
+</ul>
+
+<h2>Release 2011-07-28</h2>
+
+<h3>Changelog</h3>
+<ul>
+	<li>base/Meta: bugfix for C++0x code for array_traits</li>
+	<li>Makefile, build/Makefile.build: added "post-install" target</li>
+	<li>debian/*: versioned shared libraries</li>
+	<li>omptl/omptl_tools.h: bugfixes, bugs reported by Robert Rumpf</li>
+</ul>
+
+<h3>Open issues</h3>
+<ul>
+	<li>volume/SurfaceExtractor: order of points in facets leads to wrong normals</li>
+	<li>volume/Voxelizer: The distances() function for octrees does not
+	give a meaningful return value.</li>
+	<li>build: The Sun compiler has too many bugs to compile most of
+	the CVMLCPP library.</li>
+	<li>build: The OpenWatcom compiler is currently too outdated to be used.</li>
+</ul>
+
+<h2>Release 2011-03-11</h2>
+
+<h3>Changelog</h3>
+<ul>
+	<li>base/DirectoryTokenizer: added current_directory()</li>
+	<li>base/DirectoryTokenizer: rewritten using boost::filesystem</li>
+	<li>base/Matrix: Support for C++0X-style initializer lists</li>
+	<li>base/Matrix: Added new constructor to SymmetricMatrix</li>
+	<li>base/Matrix: Updated iterator behaviour SymmetricMatrix</li>
+	<li>build: increased compatibility of 'release' mode</li>
+	<li>build: added a 'fast' mode</li>
+	<li>added debian packaging</li>
+</ul>
+
+<h3>Open issues</h3>
+<ul>
+	<li>volume/SurfaceExtractor: order of points in facets leads to wrong normals</li>
+	<li>volume/Voxelizer: The distances() function for octrees does not
+	give a meaningful return value.</li>
+	<li>build: The Sun compiler has too many bugs to compile most of
+	the CVMLCPP library.</li>
+	<li>build: The OpenWatcom compiler is currently too outdated to be used.</li>
+</ul>
 
 <h2>Release 2010-11-15</h2>
 

@@ -29,6 +29,8 @@
 namespace cvmlcpp
 {
 
+namespace detail
+{
 
 // Adaptor for Rotator3D, for Facet-Normals
 // Include dirty hack to avoid const-ness of pairs from maps.
@@ -68,6 +70,8 @@ class GeoRotator
 		Rotator3D<Vector> _rotator;
 };
 
+} // end namespace detail
+
 template <typename T>
 Geometry<T>::Geometry()
 {
@@ -78,6 +82,26 @@ template <typename T>
 Geometry<T>::Geometry(const Geometry &that)
 {
 	*this = that;
+}
+
+template <typename T>
+void Geometry<T>::swap(Geometry &that)
+{
+	_points.swap(that._points);
+	_pointKeyMap.swap(that._pointKeyMap);
+	_facets.swap(that._facets);
+	_facetKeyMap.swap(that._facetKeyMap);
+	_pointFacetMap.swap(that._pointFacetMap);
+	_pointNormals.swap(that._pointNormals);
+	_dirtyFacetNormals.swap(that._dirtyFacetNormals);
+	_dirtyPointNormals.swap(that._dirtyPointNormals);
+	std::swap(_min, that._min);
+	std::swap(_max, that._max);
+	std::swap(_minMaxDirty, that._minMaxDirty);
+	std::swap( _facetNormalsDirty, that._facetNormalsDirty);
+	std::swap(_pointNormalsDirty, that._pointNormalsDirty);
+	std::swap(_ptKeygen, that._ptKeygen);
+	std::swap(_ftKeygen, that._ftKeygen);
 }
 
 template <typename T>
@@ -149,121 +173,184 @@ Geometry<T> &Geometry<T>::operator=(const Geometry &that)
 	return *this;
 }
 
+
 template <typename T>
-template <typename SortedPointsIterator, typename PointIDIterator>
-Geometry<T>::Geometry(	const SortedPointsIterator ptBegin,
-			const SortedPointsIterator ptEnd,
-			const PointIDIterator idBegin)
+template <typename PointIterator, typename NormalIterator>
+Geometry<T>::Geometry(const PointIterator begin, const PointIterator end, const NormalIterator normals_begin)
 {
-	this->loadPoints(ptBegin, ptEnd, idBegin);
+	this->loadGeometry(begin, end, normals_begin);
 }
 
 template <typename T>
-template <typename SortedPointsIterator, typename PointIDIterator>
-void Geometry<T>::loadPoints(const SortedPointsIterator pointBegin,
-			     const SortedPointsIterator pointEnd,
-			     const PointIDIterator idBegin)
+template <typename PointIterator, typename NormalIterator>
+bool Geometry<T>::loadGeometry(const PointIterator begin, const PointIterator end, const NormalIterator norm_begin)
 {
 	this->clear();
-	assert(_ptKeygen.count() == 0u);
+
+	// Each facet consist of 3 points, so nr of points must be multiple of 3
+	if ( std::distance(begin, end) % 3 != 0 )
+		return false;
+
+	// Create sorted list of unique points
+	std::vector<point_type> uniq_pts(begin, end);
+	typedef typename std::vector<point_type>::iterator Pt_It;
+	std::sort(uniq_pts.begin(), uniq_pts.end());
+	const Pt_It uniq_end = std::unique(uniq_pts.begin(), uniq_pts.end());
+	uniq_pts.resize(std::distance(uniq_pts.begin(), uniq_end));
+	assert(uniq_pts.end() == uniq_end);
 
 	/*
 	 * Create balanced tree of points
 	 */
-	typedef std::pair<SortedPointsIterator,
-			  SortedPointsIterator> PtRange;
-	std::vector<PtRange> ptRange[2];
+	std::vector< std::pair<Pt_It, Pt_It> > ptRange[2];
 	unsigned e = 0;
 	unsigned o = 1;
-	ptRange[e].push_back(PtRange(pointBegin, pointEnd));
+	ptRange[e].push_back(std::make_pair(uniq_pts.begin(), uniq_pts.end()));
+	std::vector<std::size_t> pt_keys(uniq_pts.size());
 	while (!ptRange[e].empty())
 	{
 		assert(ptRange[o].empty());
-		for (typename std::vector<PtRange>::const_iterator
+		for (typename std::vector< std::pair<Pt_It, Pt_It> >::const_iterator
 		     it = ptRange[e].begin(); it != ptRange[e].end(); ++it)
 		{
-			const SortedPointsIterator begin1 = it->first;
-			const SortedPointsIterator end2   = it->second;
+			const PointIterator begin1 = it->first;
+			const PointIterator end2   = it->second;
 
 			const std::size_t dist = std::distance(begin1, end2);
 
-			const SortedPointsIterator middle = begin1 + dist / 2u;
-			_points.insert(*middle);
+			const PointIterator middle = begin1 + dist / 2u;
+			const std::size_t pt_key = _ptKeygen();
 
-			const SortedPointsIterator end1   = middle;
-			const SortedPointsIterator begin2 = middle + 1;
+			typedef typename std::set<point_type>::const_iterator PSI;
+			const  std::pair<PSI, bool> insert_result = _points.insert(*middle);
+			assert(insert_result.second); // inserted point should be a new element
+
+			typedef typename std::map<std::size_t, PSI>::const_iterator MSI;
+
+			#ifndef NDEBUG
+			const std::pair<MSI, bool> map_insert_result =
+			#endif
+				_pointKeyMap.insert( std::make_pair(pt_key, insert_result.first) );
+			assert(map_insert_result.second); // should be a new key
+
+			// Save key for this unique point
+			const std::size_t index = std::distance(uniq_pts.begin(), middle);
+			assert(index < uniq_pts.size());
+			pt_keys[index] = pt_key;
+
+			const PointIterator end1   = middle;
+			const PointIterator begin2 = middle + 1;
 
 			if (begin1 != end1)
-				ptRange[o].push_back(PtRange(begin1, end1));
+				ptRange[o].push_back( std::make_pair(begin1, end1) );
 			if (begin2 != end2)
-				ptRange[o].push_back(PtRange(begin2, end2));
+				ptRange[o].push_back( std::make_pair(begin2, end2) );
 		}
 		ptRange[e].clear();
-		using std::swap;
-		swap(o, e);
+		std::swap(o, e);
 	}
 
 	/*
-	 *
+	 * Gather Facets
 	 */
-	const std::size_t nPoints = _points.size();
-	typedef typename std::iterator_traits<SortedPointsIterator>::difference_type difference_t;
-	assert(difference_t(nPoints) == std::distance(pointBegin, pointEnd));
-
-	std::vector<point_iterator> pointIterators(nPoints);
-	std::size_t index = 0u;
-	for (point_iterator pIt = _points.begin(); pIt != _points.end(); ++pIt)
-		pointIterators[index++] = pIt;
-
-
-	// Generate and sort ID's for points. Points and ID's are now aligned
-	PointIDIterator idEnd = idBegin;
-	for (std::size_t i = 0; i < nPoints; ++i, ++idEnd)
-		*idEnd = _ptKeygen();
-	omptl::sort(idBegin, idEnd);
-
-	/*
-	 * Create balanced tree of iterators-to-points
-	 */
-	typedef std::pair<PointIDIterator, PointIDIterator> IDRange;
-	std::vector<IDRange> idRange[2];
-	e = 0;
-	o = 1;
-	idRange[e].push_back(IDRange(idBegin, idEnd));
-	while (!idRange[e].empty())
+	const std::size_t NFacets = std::distance(begin, end) / 3u;
+	//std::cerr << "loadGeometry() NFacets = "<< NFacets << std::endl;
+	std::vector<facet_type> facets( (NFacets) ); //, facet_type(0, 0, 0));
+#ifdef _OPENMP
+	#pragma omp parallel for
+#endif
+	for (int f = 0; f < int(NFacets); ++f) // For each facet ...
 	{
-		assert(idRange[o].empty());
-		for (typename std::vector<IDRange>::const_iterator
-		     it = idRange[e].begin(); it != idRange[e].end(); ++it)
+		for (std::size_t p = 0; p < 3; ++p) // ... there are 3 pts in input
 		{
-			const PointIDIterator begin1 = it->first;
-			const PointIDIterator end2   = it->second;
+			assert(begin + 3*f+p < end);
+			const point_type pt = *(begin + 3*f+p); // index of pt is 3*f+p
 
-			const std::size_t dist   = std::distance(begin1, end2);
-			const PointIDIterator middle = begin1 + dist / 2u;
+			// Find this point of the facet in the vector of unique points
+			const Pt_It pti = std::lower_bound(uniq_pts.begin(), uniq_pts.end(), pt);
+			assert(pti != uniq_pts.end());
+			assert(pt == *pti);
 
-			const std::size_t offset = std::distance(idBegin, middle);
-			_pointKeyMap[*middle] = pointIterators[offset];
-			_dirtyPointNormals.insert(*middle);
+			// Index in uniq_pts corresponds to index in pt_keys
+			std::size_t uniq_index = std::distance(uniq_pts.begin(), pti);
+			assert(uniq_index < uniq_pts.size());
 
-			const PointIDIterator end1   = middle;
-			const PointIDIterator begin2 = middle + 1;
+			// So the key of the point goes into the facet
+			assert(uniq_index < pt_keys.size());
+			assert(p < facets[f].size());
+			facets[f][p] = pt_keys[uniq_index]; // BUG HERE
+		}
+		facets[f].normal() = *(norm_begin+f); // Add normal too
+	}
+//std::cerr << "loadGeometry() inserted "<< counter << " points and " << (counter / 3) << " facets"<<std::endl;
+
+	std::sort(facets.begin(), facets.end());
+	typedef typename std::vector<facet_type>::iterator FI;
+	const FI facets_end =
+		std::unique(facets.begin(), facets.end());
+	facets.resize( std::distance(facets.begin(), facets_end));
+//std::cerr<< "Unique facets " << facets.size() << std::endl;
+//exit(0);
+	/*
+	 * Create balanced tree of facets
+	 */
+	assert(_facets.empty());
+	assert(_facetKeyMap.empty());
+	assert(_pointFacetMap.empty());
+	std::vector< std::pair<FI, FI> > fRange[2];
+	e = 0;
+	o = 1 - e;
+	fRange[e].push_back( std::make_pair(facets.begin(), facets.end()) );
+	while (!fRange[e].empty())
+	{
+		assert(fRange[o].empty());
+		for (typename std::vector< std::pair<FI, FI> >::const_iterator
+		     it = fRange[e].begin(); it != fRange[e].end(); ++it)
+		{
+			const FI begin1 = it->first;
+			const FI end2   = it->second;
+
+			const std::size_t dist = std::distance(begin1, end2);
+
+			const FI middle = begin1 + dist / 2u;
+
+			const facet_type &current_facet = *middle;
+
+			typedef typename std::set<facet_type>:: const_iterator FSCI;
+			const std::pair<FSCI, bool> facet_insert_result = _facets.insert( current_facet );
+			assert(facet_insert_result.second);
+
+			const std::size_t facet_key = _ftKeygen();
+			_facetKeyMap.insert( std::make_pair(facet_key, facet_insert_result.first) );
+
+			for (std::size_t p = 0; p < 3; ++p)
+				_pointFacetMap[current_facet[p]].insert(facet_key);
+
+			const FI end1   = middle;
+			const FI begin2 = middle + 1;
 
 			if (begin1 != end1)
-				idRange[o].push_back(IDRange(begin1, end1));
+				fRange[o].push_back( std::make_pair(begin1, end1) );
 			if (begin2 != end2)
-				idRange[o].push_back(IDRange(begin2, end2));
+				fRange[o].push_back( std::make_pair(begin2, end2) );
 		}
-		idRange[e].clear();
+		fRange[e].clear();
 		using std::swap;
 		swap(o, e);
 	}
+
+	for (facet_iterator fIt = _facets.begin(); fIt != _facets.end(); ++fIt)
+		_dirtyPointNormals.insert(fIt->begin(), fIt->end());
+
+	assert(_ftKeygen.count() == this->nrFacets());
+	assert(facets.size() == this->nrFacets());
 
 	_minMaxDirty = true;
 	this->setNormalsDirty();
 
-	assert(_ptKeygen.count() == this->nrPoints());
+	return true;
 }
+
 
 template <typename T>
 bool Geometry<T>::operator==(const Geometry &that) const
@@ -375,7 +462,10 @@ const typename Geometry<T>::point_type &Geometry<T>::
 point(const std::size_t key) const
 {
 	// Internal Consistency check
-	assert(_pointKeyMap.size() == _points.size());
+
+	// Not true: after scale/translation operations, certain points may be
+	// "merged" but known under both original keys
+	//assert(_pointKeyMap.size() == _points.size());
 
 	// User has asked for non-existent key ?
 	assert(_pointKeyMap.find(key) != _pointKeyMap.end());
@@ -523,8 +613,7 @@ template <typename T>
 std::size_t Geometry<T>::addFacet(const std::size_t a,
 				const std::size_t b, const std::size_t c)
 {
-	const std::size_t fpts [] = {a, b, c};
-	return this->addFacet(facet_type(fpts, fpts+3));
+	return this->addFacet(facet_type(a, b, c));
 }
 
 template <typename T>
@@ -580,131 +669,10 @@ std::size_t Geometry<T>::addFacet(const facet_type &facet)
 }
 
 template <typename T>
-template <typename SortedFacetsIterator,
-		typename FacetIDIterator>
-void Geometry<T>::loadFacets(const SortedFacetsIterator facetBegin,
-			     const SortedFacetsIterator facetEnd,
-			     const FacetIDIterator idBegin)
-{
-	// Clean out old facet data
-	_ftKeygen.reset();
-	_facets.clear();
-	_facetKeyMap.clear();
-	_pointFacetMap.clear();
-	this->setNormalsDirty();
-
-	/*
-	 * Create balanced tree of facets
-	 */
-	typedef std::pair<SortedFacetsIterator,
-			  SortedFacetsIterator> FRange;
-	std::vector<FRange> fRange[2];
-	unsigned e = 0;
-	unsigned o = 1 - e;
-	fRange[e].push_back(FRange(facetBegin, facetEnd));
-	while (!fRange[e].empty())
-	{
-		assert(fRange[o].empty());
-		for (typename std::vector<FRange>::const_iterator
-		     it = fRange[e].begin(); it != fRange[e].end(); ++it)
-		{
-			const SortedFacetsIterator begin1 = it->first;
-			const SortedFacetsIterator end2   = it->second;
-
-			const std::size_t dist = std::distance(begin1, end2);
-
-			const SortedFacetsIterator middle = begin1 + dist / 2u;
-			_facets.insert(*middle);
-			if (_dirtyPointNormals.size() < this->nrPoints())
-			{
-				_dirtyPointNormals.insert((*middle)[A]);
-				_dirtyPointNormals.insert((*middle)[B]);
-				_dirtyPointNormals.insert((*middle)[C]);
-			}
-
-			const SortedFacetsIterator end1   = middle;
-			const SortedFacetsIterator begin2 = middle + 1;
-
-			if (begin1 != end1)
-				fRange[o].push_back(FRange(begin1, end1));
-			if (begin2 != end2)
-				fRange[o].push_back(FRange(begin2, end2));
-		}
-		fRange[e].clear();
-		using std::swap;
-		swap(o, e);
-	}
-
-	/*
-	 *
-	 */
-	const std::size_t nFacets = _facets.size();
-	std::vector<facet_iterator> facetIterators(nFacets);
-	std::size_t index = 0u;
-	for (facet_iterator fIt = _facets.begin(); fIt != _facets.end(); ++fIt)
-	{
-		facetIterators[index++] = fIt;
-		_dirtyPointNormals.insert(fIt->begin(), fIt->end());
-	}
-
-
-	// Generate and sort ID's for points. Points and ID's are now aligned
-	FacetIDIterator idEnd = idBegin;
-	for (std::size_t i = 0; i < nFacets; ++i, ++idEnd)
-		*idEnd = _ftKeygen();
-	omptl::sort(idBegin, idEnd);
-
-	/*
-	 * Create balanced tree of iterators-to-facets
-	 */
-	typedef std::pair<FacetIDIterator, FacetIDIterator> IDRange;
-	std::vector<IDRange> idRange[2];
-	e = 0;
-	o = 1;
-	idRange[e].push_back(IDRange(idBegin, idEnd));
-	while (!idRange[e].empty())
-	{
-		assert(idRange[o].empty());
-		for (typename std::vector<IDRange>::const_iterator
-		     it = idRange[e].begin(); it != idRange[e].end(); ++it)
-		{
-			const FacetIDIterator begin1 = it->first;
-			const FacetIDIterator end2   = it->second;
-
-			const std::size_t dist   = std::distance(begin1, end2);
-			const FacetIDIterator middle = begin1 + dist / 2u;
-
-			const std::size_t offset = std::distance(idBegin, middle);
-			_facetKeyMap[*middle] = facetIterators[offset];
-
-			for (std::size_t p = 0; p < 3; ++p)
-				_pointFacetMap[(*facetIterators[offset])[p]]
-						.insert(*middle);
-
-			const FacetIDIterator end1   = middle;
-			const FacetIDIterator begin2 = middle + 1;
-
-			if (begin1 != end1)
-				idRange[o].push_back(IDRange(begin1, end1));
-			if (begin2 != end2)
-				idRange[o].push_back(IDRange(begin2, end2));
-		}
-		idRange[e].clear();
-		using std::swap;
-		swap(o, e);
-	}
-
-	assert(_ftKeygen.count() == this->nrFacets());
-	assert(nFacets == this->nrFacets());
-}
-
-template <typename T>
 bool Geometry<T>::updateFacet(	const std::size_t key, const std::size_t a,
 				const std::size_t b, const std::size_t c)
 {
-	const std::size_t fpts [] = {a, b, c};
-	const facet_type facet = facet_type(fpts, fpts+3);
-	return this->updateFacet(key, facet);
+	return this->updateFacet(key, facet_type(a, b, c));
 }
 
 template <typename T>
@@ -750,16 +718,17 @@ bool Geometry<T>::eraseFacet(const std::size_t key)
 	if (fkIt == _facetKeyMap.end())
 		return false;
 
-	for (typename facet_type::const_triangle_iterator fIt =
-	     fkIt->second->begin(); fIt != fkIt->second->end(); ++fIt)
-		_pointFacetMap[*fIt].erase(key);
+	// Remove from mapping for each point
+	const facet_type facet = *fkIt->second;
+	_pointFacetMap[facet[0]].erase(key);
+	_pointFacetMap[facet[1]].erase(key);
+	_pointFacetMap[facet[2]].erase(key);
 
 	_dirtyFacetNormals.erase(key);
 	_facets.erase(fkIt->second);
 	_facetKeyMap.erase(fkIt);
 
 	this->setNormalsDirty();
-
 
 	return true;
 }
@@ -816,7 +785,7 @@ void Geometry<T>::scale(const T factor)
 
 	// Bogus user input ?
 	assert(factor > 0.0);
-
+/*
 	// Very dirty, but should be safe, provided factor > 0
 	for (const_point_iterator it = this->pointsBegin();
 	     it != this->pointsEnd(); ++it)
@@ -824,6 +793,68 @@ void Geometry<T>::scale(const T factor)
 		point_type * p = const_cast<point_type *>(&(*it));
 		*p = *it * factor;
 	}
+*/
+	typedef typename std::map<std::size_t, point_iterator>::const_iterator PKMap_It;
+	typedef typename std::set<point_type>::const_iterator PSet_It;
+	std::set<point_type> new_points;
+	std::map<std::size_t, point_iterator> new_pointKeyMap;
+
+	std::vector<point_iterator> pt_its;
+	for (PKMap_It pk_it = _pointKeyMap.begin(); pk_it != _pointKeyMap.end(); ++pk_it)
+	{
+		const point_iterator pt_it = pk_it->second;
+		assert( std::find(pt_its.begin(), pt_its.end(), pt_it) == pt_its.end() );
+		pt_its.push_back(pt_it);
+	}
+
+	KeyGenerator<std::size_t> reGen;
+	for (std::size_t i = 0u; i < _ptKeygen.count(); ++i)
+	{
+		const std::size_t key = reGen.generate();
+
+		const PKMap_It pkit = _pointKeyMap.find(key);
+
+		if (pkit != _pointKeyMap.end())
+		{
+			assert(pkit->first == key);
+			assert(new_pointKeyMap.find(key) == new_pointKeyMap.end());
+			assert(_pointKeyMap.find(key) != _pointKeyMap.end());
+
+			const point_iterator pt_it = pkit->second;
+			const point_type point = *pt_it;
+			assert(_pointKeyMap.erase(key) == 1);
+			assert(_points.erase(point) == 1);
+			const point_type new_point = point * factor;
+/*
+			PSet_It new_pt_it = new_points.find(new_point);
+			if (new_pt_it != new_points.end())
+			{
+				std::cout << "Found " << new_point << " was "<< factor << " * " << point << std::endl;
+
+				//PKMap_It it = new_pointKeyMap.find(new_pt_it);
+				for (PKMap_It it = new_pointKeyMap.begin(); it != new_pointKeyMap.end(); it++)
+				{
+					//assert(it != new_pointKeyMap.end());
+					//assert(it->second == new_pt_it);
+					if (it->second == new_pt_it)
+					{
+						std::size_t old_key = it->first;
+						const point_type old_point = *_pointKeyMap[old_key];
+						std::cout << "Other point was " << old_point << std::endl;
+					}
+				}
+			}
+*/
+			//assert(new_points.find(new_point) == new_points.end());
+			const std::pair<const_point_iterator, bool>
+					insResult = new_points.insert(new_point);
+			//assert(insResult.second); // Points should be unique
+			new_pointKeyMap.insert(std::make_pair(key, insResult.first));
+		}
+	}
+	_points.swap(new_points);
+	_pointKeyMap.swap(new_pointKeyMap);
+	//assert(_points.size() == _pointKeyMap.size());
 
 /*
 	std::map<std::size_t, point_type> tempPts;
@@ -882,13 +913,82 @@ void Geometry<T>::translate(const Vector &v)
 	if (!( (std::abs(v[X])>e) || (std::abs(v[Y])>e) || (std::abs(v[Z])>e) ))
 		return;
 
-	typedef std::pair<std::size_t, point_type> pPair;
+	std::set<point_type> new_points;
+	std::map<std::size_t, point_iterator> new_pointKeyMap;
+/*
+	// Useless test of uniqueness. Points can be known under different
+	// keys after "merging" due to numerical issues.
+	std::vector<point_iterator> pt_its;
+	for (typename std::map<std::size_t, point_iterator>::const_iterator
+	     pkit = _pointKeyMap.begin(); pkit != _pointKeyMap.end(); ++pkit)
+	{
+		const point_iterator pt_it = pkit->second;
+		assert( std::find(pt_its.begin(), pt_its.end(), pt_it) == pt_its.end() );
+		pt_its.push_back(pt_it);
+	}
+*/
+	KeyGenerator<std::size_t> reGen;
+	for (std::size_t i = 0u; i < _ptKeygen.count(); ++i)
+	{
+		const std::size_t key = reGen.generate();
+
+		const typename std::map<std::size_t, point_iterator>::const_iterator
+			pkit = _pointKeyMap.find(key);
+
+		if (pkit != _pointKeyMap.end())
+		{
+			assert(pkit->first == key);
+			assert(new_pointKeyMap.find(key) == new_pointKeyMap.end());
+			assert(_pointKeyMap.find(key) != _pointKeyMap.end());
+
+			const point_iterator pt_it = pkit->second;
+			const point_type point = *pt_it;
+			//assert(_pointKeyMap.erase(key) == 1);
+			//assert(_points.erase(point) == 1);
+			const point_type new_point = point + v;
+
+/*			if (new_points.find(new_point) != new_points.end())
+				std::cout << "Found " << new_point << " was "<< point << " + " << v << std::endl;
+
+			PSet_It new_pt_it = new_points.find(new_point);
+			if (new_pt_it != new_points.end())
+			{
+				std::cout << "Found " << new_point << " was "<< factor << " * " << point << std::endl;
+
+				//PKMap_It it = new_pointKeyMap.find(new_pt_it);
+				for (PKMap_It it = new_pointKeyMap.begin(); it != new_pointKeyMap.end(); it++)
+				{
+					//assert(it != new_pointKeyMap.end());
+					//assert(it->second == new_pt_it);
+					if (it->second == new_pt_it)
+					{
+						std::size_t old_key = it->first;
+						const point_type old_point = *_pointKeyMap[old_key];
+						std::cout << "Other point was " << old_point << std::endl;
+					}
+				}
+			}
+*/
+			//assert(new_points.find(new_point) == new_points.end());
+			const std::pair<const_point_iterator, bool>
+					insResult = new_points.insert(new_point);
+			//assert(insResult.second); // Points should be unique
+			new_pointKeyMap.insert(std::make_pair(key, insResult.first));
+		}
+	}
+	_points.swap(new_points);
+	_pointKeyMap.swap(new_pointKeyMap);
+	//assert(_points.size() == _pointKeyMap.size());
+
+/*	typedef std::pair<std::size_t, point_type> pPair;
 	std::vector<pPair> tempPts;
 
 	// Translate points and store in temporary map
 	for (const_pointkey_iterator it = _pointKeyMap.begin();
 	     it != _pointKeyMap.end(); ++it)
-		tempPts.push_back(pPair(it->first, *it->second + v));
+	{
+		tempPts.push_back(std::make_pair(it->first, *it->second + v));
+	}
 
 	// Delete old set of points
 	assert(_ptKeygen.count() >= this->nrPoints());
@@ -912,14 +1012,13 @@ void Geometry<T>::translate(const Vector &v)
 			// Insert
 			std::pair<const_point_iterator, bool>
 				insResult = _points.insert(it->second);
-			assert(insResult.second); // Should be impossible
+			//assert(insResult.second); // Should be impossible
 
 			// Update keymap
-			_pointKeyMap.insert(std::pair<std::size_t, point_iterator>
-						(it->first, insResult.first));
+			_pointKeyMap.insert(std::make_pair(key, insResult.first));
 		}
 	}
-	assert(reGen.count() == _ptKeygen.count());
+*/	assert(reGen.count() == _ptKeygen.count());
 
 	// Fix min & max
 	if (!_minMaxDirty)
@@ -957,7 +1056,7 @@ void Geometry<T>::rotate(const std::size_t axis, const T angle)
 	typedef std::pair<std::size_t, point_type> pPair;
 	std::vector<pPair> tempPts;
 
-	GeoRotator<point_type> grp((axis), angle);
+	detail::GeoRotator<point_type> grp((axis), angle);
 
 	for (const_pointkey_iterator it = _pointKeyMap.begin();
 	     it != _pointKeyMap.end(); ++it)
@@ -993,7 +1092,7 @@ void Geometry<T>::rotate(const std::size_t axis, const T angle)
 	 * Rotate Normals
 	 */
 	std::for_each(_facets.begin(), _facets.end(),
-			GeoFacetNormRotator<facet_type>(axis, angle));
+			detail::GeoFacetNormRotator<facet_type>(axis, angle));
 
 	/*
 	 * Rotate Point-Normals
@@ -1001,10 +1100,10 @@ void Geometry<T>::rotate(const std::size_t axis, const T angle)
 	std::map<std::size_t, vector_type> newPtNormals;
 	typedef MapPairOperateInserter<
 				std::map<std::size_t, vector_type>,
-				GeoRotator<vector_type> > PointNormsInserter;
+				detail::GeoRotator<vector_type> > PointNormsInserter;
 
 
-	GeoRotator<vector_type> grv(axis, angle);
+	detail::GeoRotator<vector_type> grv(axis, angle);
 	PointNormsInserter pni((newPtNormals), grv);
 	std::for_each(_pointNormals.begin(), _pointNormals.end(), pni);
 

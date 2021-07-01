@@ -112,9 +112,11 @@ EXAMPLEDIRS     := examples/bstep2d \
                    examples/thermal3d
 
 INCLUDEDIRS     := src \
-				   src/external \
+		   src/external \
                    src/external/cvmlcpp \
-				   src/external/boost
+		   src/external/boost \
+		   src/external/kaffpa
+			
 
 BUILDTYPEDIRS   := build/precompiled \
                    build/generic

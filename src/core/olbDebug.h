@@ -15,8 +15,8 @@
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
  *
- *  You should have received a copy of the GNU General Public 
- *  License along with this program; if not, write to the Free 
+ *  You should have received a copy of the GNU General Public
+ *  License along with this program; if not, write to the Free
  *  Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  *  Boston, MA  02110-1301, USA.
 */
@@ -30,22 +30,22 @@
 
 #ifdef OLB_DEBUG
 
-    #define OLB_ASSERT( COND, MESSAGE )             \
-        if ( !(COND) ) {                            \
-            std::cerr << (MESSAGE) << std::endl;    \
-        }                                           \
-        assert( COND );
+#define OLB_ASSERT( COND, MESSAGE )             \
+  if ( !(COND) ) {                            \
+    std::cerr << (MESSAGE) << std::endl;    \
+  }                                           \
+  assert( COND );
 
-    #define OLB_PRECONDITION( COND )  assert( COND );
-    #define OLB_POSTCONDITION( COND ) assert( COND );
-    #define OLB_STATECHECK( A,B )     assert( (A) == (B) );
+#define OLB_PRECONDITION( COND )  assert( COND );
+#define OLB_POSTCONDITION( COND ) assert( COND );
+#define OLB_STATECHECK( A,B )     assert( (A) == (B) );
 
 #else
 
-    #define OLB_ASSERT( COND, MESSAGE )
-    #define OLB_PRECONDITION( COND )
-    #define OLB_POSTCONDITION( COND )
-    #define OLB_STATECHECK( A,B )
+#define OLB_ASSERT( COND, MESSAGE )
+#define OLB_PRECONDITION( COND )
+#define OLB_POSTCONDITION( COND )
+#define OLB_STATECHECK( A,B )
 
 #endif  // OLB_DEBUG
 

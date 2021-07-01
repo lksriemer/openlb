@@ -14,8 +14,8 @@
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
  *
- *  You should have received a copy of the GNU General Public 
- *  License along with this program; if not, write to the Free 
+ *  You should have received a copy of the GNU General Public
+ *  License along with this program; if not, write to the Free
  *  Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  *  Boston, MA  02110-1301, USA.
 */
@@ -40,98 +40,98 @@ namespace olb {
 
 template<typename T, template<typename U> class Lattice>
 NavierStokesAdvectionDiffusionCouplingPostProcessor2D<T,Lattice>::
-        NavierStokesAdvectionDiffusionCouplingPostProcessor2D(int x0_, int x1_, int y0_, int y1_,
-                                    T gravity_, T T0_, T deltaTemp_, std::vector<T> dir_,
-                                    std::vector<SpatiallyExtendedObject2D* > partners_)
-    :  x0(x0_), x1(x1_), y0(y0_), y1(y1_), 
-       gravity(gravity_), T0(T0_), deltaTemp(deltaTemp_),
-       dir(dir_), partners(partners_)
+NavierStokesAdvectionDiffusionCouplingPostProcessor2D(int x0_, int x1_, int y0_, int y1_,
+    T gravity_, T T0_, T deltaTemp_, std::vector<T> dir_,
+    std::vector<SpatiallyExtendedObject2D* > partners_)
+  :  x0(x0_), x1(x1_), y0(y0_), y1(y1_),
+     gravity(gravity_), T0(T0_), deltaTemp(deltaTemp_),
+     dir(dir_), partners(partners_)
 {
-    // we normalize the direction of force vector
-    T normDir = T();
-    for (unsigned iD = 0; iD < dir.size(); ++iD)
-    {
-        normDir += dir[iD]*dir[iD];
-    }
-    normDir = sqrt(normDir);
-    for (unsigned iD = 0; iD < dir.size(); ++iD)
-    {
-        dir[iD] /= normDir;
-    }
+  // we normalize the direction of force vector
+  T normDir = T();
+  for (unsigned iD = 0; iD < dir.size(); ++iD)
+  {
+    normDir += dir[iD]*dir[iD];
+  }
+  normDir = sqrt(normDir);
+  for (unsigned iD = 0; iD < dir.size(); ++iD)
+  {
+    dir[iD] /= normDir;
+  }
 }
 
 template<typename T, template<typename U> class Lattice>
 void NavierStokesAdvectionDiffusionCouplingPostProcessor2D<T,Lattice>::
-    processSubDomain(BlockLattice2D<T,Lattice>& blockLattice,
-                     int x0_, int x1_, int y0_, int y1_)
+processSubDomain(BlockLattice2D<T,Lattice>& blockLattice,
+                 int x0_, int x1_, int y0_, int y1_)
 {
-    typedef Lattice<T> L;
-    enum {
-            velOffset =
-                AdvectionDiffusionD2Q5Descriptor<T>::ExternalField::velocityBeginsAt,
-            forceOffset = ForcedD2Q9Descriptor<T>::ExternalField::forceBeginsAt
-         };
-    
-    BlockLattice2D<T,AdvectionDiffusionD2Q5Descriptor> *tPartner = 
-            dynamic_cast<BlockLattice2D<T,AdvectionDiffusionD2Q5Descriptor> *>(partners[0]);
-           
-    int newX0, newX1, newY0, newY1;
-    if ( util::intersect (
-                x0, x1, y0, y1, 
-                x0_, x1_, y0_, y1_,
-                newX0, newX1, newY0, newY1 ) )
-    {
+  typedef Lattice<T> L;
+  enum {
+    velOffset =
+    AdvectionDiffusionD2Q5Descriptor<T>::ExternalField::velocityBeginsAt,
+    forceOffset = ForcedD2Q9Descriptor<T>::ExternalField::forceBeginsAt
+  };
 
-        for (int iX=newX0; iX<=newX1; ++iX) 
+  BlockLattice2D<T,AdvectionDiffusionD2Q5Descriptor> *tPartner =
+    dynamic_cast<BlockLattice2D<T,AdvectionDiffusionD2Q5Descriptor> *>(partners[0]);
+
+  int newX0, newX1, newY0, newY1;
+  if ( util::intersect (
+         x0, x1, y0, y1,
+         x0_, x1_, y0_, y1_,
+         newX0, newX1, newY0, newY1 ) )
+  {
+
+    for (int iX=newX0; iX<=newX1; ++iX)
+    {
+      for (int iY=newY0; iY<=newY1; ++iY)
+      {
+        // Velocity coupling
+        T *u = tPartner->get(iX,iY).getExternal(velOffset);
+        blockLattice.get(iX,iY).computeU(u);
+
+        // computation of the bousinessq force
+
+        T *force = blockLattice.get(iX,iY).getExternal(forceOffset);
+        T temperature = tPartner->get(iX,iY).computeRho();
+        T rho = blockLattice.get(iX,iY).computeRho();
+        for (unsigned iD = 0; iD < L::d; ++iD)
         {
-            for (int iY=newY0; iY<=newY1; ++iY) 
-            {
-                // Velocity coupling
-                T *u = tPartner->get(iX,iY).getExternal(velOffset);
-                blockLattice.get(iX,iY).computeU(u);
-                
-                // computation of the bousinessq force
-                
-                T *force = blockLattice.get(iX,iY).getExternal(forceOffset);
-                T temperature = tPartner->get(iX,iY).computeRho();
-                T rho = blockLattice.get(iX,iY).computeRho();
-                for (unsigned iD = 0; iD < L::d; ++iD)
-                {
-                    force[iD] = gravity * rho * (temperature - T0) / deltaTemp * dir[iD];
-                }
-            }
+          force[iD] = gravity * rho * (temperature - T0) / deltaTemp * dir[iD];
         }
+      }
     }
+  }
 }
 
 template<typename T, template<typename U> class Lattice>
 void NavierStokesAdvectionDiffusionCouplingPostProcessor2D<T,Lattice>::
-    process(BlockLattice2D<T,Lattice>& blockLattice)
+process(BlockLattice2D<T,Lattice>& blockLattice)
 {
-    processSubDomain(blockLattice, x0, x1, y0, y1);
+  processSubDomain(blockLattice, x0, x1, y0, y1);
 }
 
 /// LatticeCouplingGenerator for advectionDiffusion coupling
 
 template<typename T, template<typename U> class Lattice>
 NavierStokesAdvectionDiffusionCouplingGenerator2D<T,Lattice>::
-        NavierStokesAdvectionDiffusionCouplingGenerator2D(int x0_, int x1_, int y0_, int y1_,
-            T gravity_, T T0_, T deltaTemp_, std::vector<T> dir_)
-    : LatticeCouplingGenerator2D<T,Lattice>(x0_, x1_, y0_, y1_),
-     gravity(gravity_), T0(T0_), deltaTemp(deltaTemp_), dir(dir_)
+NavierStokesAdvectionDiffusionCouplingGenerator2D(int x0_, int x1_, int y0_, int y1_,
+    T gravity_, T T0_, T deltaTemp_, std::vector<T> dir_)
+  : LatticeCouplingGenerator2D<T,Lattice>(x0_, x1_, y0_, y1_),
+    gravity(gravity_), T0(T0_), deltaTemp(deltaTemp_), dir(dir_)
 { }
 
 template<typename T, template<typename U> class Lattice>
 PostProcessor2D<T,Lattice>* NavierStokesAdvectionDiffusionCouplingGenerator2D<T,Lattice>::generate (
-                                std::vector<SpatiallyExtendedObject2D* > partners) const
+  std::vector<SpatiallyExtendedObject2D* > partners) const
 {
-    return new NavierStokesAdvectionDiffusionCouplingPostProcessor2D<T,Lattice>(
-            this->x0,this->x1,this->y0,this->y1, gravity, T0, deltaTemp, dir,partners);
+  return new NavierStokesAdvectionDiffusionCouplingPostProcessor2D<T,Lattice>(
+           this->x0,this->x1,this->y0,this->y1, gravity, T0, deltaTemp, dir,partners);
 }
 
 template<typename T, template<typename U> class Lattice>
 LatticeCouplingGenerator2D<T,Lattice>* NavierStokesAdvectionDiffusionCouplingGenerator2D<T,Lattice>::clone() const {
-    return new NavierStokesAdvectionDiffusionCouplingGenerator2D<T,Lattice>(*this);
+  return new NavierStokesAdvectionDiffusionCouplingGenerator2D<T,Lattice>(*this);
 }
 
 }  // namespace olb

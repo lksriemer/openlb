@@ -36,6 +36,10 @@
 #include <cvmlcpp/base/use_omp.h>
 #include <omptl/omptl_algorithm>
 
+#ifdef __GXX_EXPERIMENTAL_CXX0X__
+#include <initializer_list>
+#endif
+
 namespace cvmlcpp
 {
 
@@ -558,7 +562,7 @@ class _RefMatrix
 		std::tr1::array<std::size_t, D>::const_iterator _extents;
 		const typename
 		std::tr1::array<std::size_t, D>::const_iterator _dimsMult;
-		mutable DataHolder &_data;
+		DataHolder &_data;
 		const std::size_t _offset;
 };
 
@@ -619,7 +623,7 @@ class _RefMatrix<T, 1u, DataHolder>
 	private:
 		const typename
 		std::tr1::array<std::size_t, 1u>::const_iterator _extents;
-		mutable DataHolder &_data;
+		DataHolder &_data;
 		const std::size_t _offset;
 };
 
@@ -647,13 +651,12 @@ class MatrixImpl
 
 		template <typename Iterator>
 		MatrixImpl(const Iterator extentsIt) : colMajor_(false),
-			_data(std::accumulate(extentsIt, D+extentsIt, 1u,
+			_data(std::accumulate(extentsIt, std::ptrdiff_t(D)+extentsIt, 1u,
 					std::multiplies<std::size_t>()))
 		{
 			typedef typename
 			std::iterator_traits<Iterator>::difference_type diff_t;
-			std::copy(extentsIt, diff_t(D) + extentsIt,
-				 _extents.begin());
+			std::copy(extentsIt, diff_t(D) + extentsIt, _extents.begin());
 
 			this->computeDimsMult();
 		}
@@ -833,23 +836,19 @@ class MatrixImpl<T, 1u, DataHolder>
 
 		friend class _RefMatrix<T, 1u, DataHolder>;
 
-		MatrixImpl(bool colMajor = false)
-		{ _extents[0] = 0u; }
+		MatrixImpl() { _extents[0] = 0u; }
 
 		template <typename Iterator>
 		MatrixImpl(Iterator extentsIt) : _data(*extentsIt)
 		{ _extents[0] = *extentsIt; }
 
 		template <typename Iterator>
-		MatrixImpl(Iterator extentsIt, const T &value,
-			   const bool colMajor = false) :
+		MatrixImpl(Iterator extentsIt, const T &value) :
 			_data(*extentsIt, value)
 		{ _extents[0] = *extentsIt; }
 
 		std::size_t size() const
-		{
-			return _extents[0];
-		}
+		{ return _extents[0]; }
 
 		std::tr1::array<std::size_t, 1u>::const_iterator extents() const
 		{ return _extents.begin(); }
@@ -923,10 +922,9 @@ class Matrix
 	public:
 		typedef T value_type;
 		typedef typename MatrixImpl<T,D,DataHolder>::iterator iterator;
-		typedef typename MatrixImpl<T,D,DataHolder>::const_iterator
-								const_iterator;
-		typedef typename MatrixImpl<T,D,DataHolder>::slice_type
-								slice_type;
+		typedef typename MatrixImpl<T,D,DataHolder>::const_iterator const_iterator;
+		typedef typename MatrixImpl<T,D,DataHolder>::slice_type	slice_type;
+		typedef Matrix* pointer;
 
 		typedef Matrix& reference;
 		typedef const Matrix& const_reference;
@@ -939,6 +937,7 @@ class Matrix
 		explicit Matrix(const Iterator extentsIt) :
 			matrix_(new MatrixImpl<T, D, DataHolder>(extentsIt))
 		{ }
+
 
 		template <typename Iterator>
 		explicit Matrix(const Iterator extentsIt, const T &value,
@@ -954,6 +953,27 @@ class Matrix
 			matrix_(new MatrixImpl<T,D,DataHolder>(extentsIt,
 					beginData, endData, colMajor))
 		{ }
+
+#ifdef __GXX_EXPERIMENTAL_CXX0X__
+		template <typename U>
+		explicit Matrix(const std::initializer_list<U> init_list) :
+			matrix_(new MatrixImpl<T,D,DataHolder>(init_list.begin()))
+		{ }
+		template <typename U>
+		explicit Matrix(const std::initializer_list<U> init_list, const T &value,
+			const bool colMajor = false) :
+			matrix_(new MatrixImpl<T,D,DataHolder>(init_list.begin(),
+							value, colMajor))
+		{ }
+
+		template <typename U, typename Iterator2>
+		explicit Matrix(const std::initializer_list<U> init_list,
+			const Iterator2 beginData, const Iterator2 endData,
+			bool colMajor = false) :
+			matrix_(new MatrixImpl<T,D,DataHolder>(init_list.begin(),
+					beginData, endData, colMajor))
+		{ }
+#endif
 
 		Matrix(const Matrix &m) :
 			matrix_(m.matrix_)
@@ -1044,6 +1064,7 @@ class Matrix
 		mutable std::tr1::shared_ptr<MatrixImpl<T,D,DataHolder> > matrix_;
 };
 
+
 template <typename T, class DataHolder>
 class Matrix<T, 1u, DataHolder>
 {
@@ -1057,9 +1078,7 @@ class Matrix<T, 1u, DataHolder>
 		typedef typename MatrixImpl<T, 1u, DataHolder>::const_reference
 								const_reference;
 
-		Matrix(bool colMajor = false) :
-			matrix_(new MatrixImpl<T , 1u, DataHolder>(colMajor))
-		{ }
+		Matrix() : matrix_(new MatrixImpl<T , 1u, DataHolder>()) { }
 
 		template <typename Iterator>
 		Matrix(const Iterator extentsIt) :
@@ -1069,8 +1088,7 @@ class Matrix<T, 1u, DataHolder>
 		template <typename Iterator>
 		Matrix(const Iterator extentsIt, const T &value,
 			const bool colMajor = false) :
-			matrix_(new MatrixImpl<T, 1u,DataHolder>(extentsIt,
-							value, colMajor))
+			matrix_(new MatrixImpl<T, 1u,DataHolder>(extentsIt, value))
 		{ }
 
 		template <typename Iterator1, typename Iterator2>
@@ -1078,8 +1096,29 @@ class Matrix<T, 1u, DataHolder>
 			const Iterator2 beginData, const Iterator2 endData,
 			bool colMajor = false) :
 			matrix_(new MatrixImpl<T, 1u, DataHolder>(extentsIt,
-					beginData, endData, colMajor))
+					beginData, endData))
 		{ }
+
+#ifdef __GXX_EXPERIMENTAL_CXX0X__
+		template <typename U>
+		explicit Matrix(const std::initializer_list<U> init_list,
+				const bool colMajor = false) :
+			matrix_(new MatrixImpl<T,1u,DataHolder>(init_list.begin()))
+		{ }
+		template <typename U>
+		explicit Matrix(const std::initializer_list<U> init_list,
+				const T &value, const bool colMajor = false) :
+			matrix_(new MatrixImpl<T,1u,DataHolder>(init_list.begin(), value))
+		{ }
+
+		template <typename U, typename Iterator>
+		explicit Matrix(const std::initializer_list<U> init_list,
+			const Iterator beginData, const Iterator endData,
+			bool colMajor = false) :
+			matrix_(new MatrixImpl<T,1u,DataHolder>(init_list.begin(),
+					beginData, endData))
+		{ }
+#endif
 
 		Matrix(const Matrix &m) :
 			matrix_(m.matrix_)
@@ -1434,58 +1473,220 @@ class DynamicMatrix
 		std::tr1::shared_ptr<DynamicMatrixImpl<T> > matrix_;
 };
 
+} //  end namespace cvmlcpp
+
+/********************
+ * SYMMETRIC MATRIX *
+ ********************/
+
+// Forward declaration
+namespace cvmlcpp{ namespace detail { template <typename T> class SymmetricMatrixConstIterator; } }
+
 template <typename T>
-class SymmetricMatrix
+bool operator!=( const cvmlcpp::detail::SymmetricMatrixConstIterator<T> &lhs,
+		 const cvmlcpp::detail::SymmetricMatrixConstIterator<T> &rhs)
+{
+	return lhs.index_ != rhs.index_ || lhs.m_ != rhs.m_;
+}
+
+template <typename T>
+bool operator==( const cvmlcpp::detail::SymmetricMatrixConstIterator<T> &lhs,
+		 const cvmlcpp::detail::SymmetricMatrixConstIterator<T> &rhs)
+{ return !(lhs != rhs); }
+
+namespace cvmlcpp
+{
+
+/*
+ * Iterators
+ */
+namespace detail
+{
+
+template <typename T>
+class SymmetricMatrixImpl;
+
+template <typename T>
+class SymmetricMatrixIterator
 {
 	public:
 		typedef T value_type;
-		typedef typename std::vector<T>::iterator iterator;
-		typedef typename std::vector<T>::const_iterator const_iterator;
+		typedef std::ptrdiff_t difference_type;
+		typedef std::random_access_iterator_tag iterator_category;
+		typedef typename std::vector<T>::pointer pointer;
+		typedef typename std::vector<T>::reference reference;
 
-		SymmetricMatrix(const std::size_t rank = 0) :
+		reference operator*() const
+		{
+			assert(index_ >= 0);
+			assert(std::size_t(index_) < m_.rank()*m_.rank());
+			const std::ptrdiff_t r = index_ / m_.rank();
+			const std::ptrdiff_t c = index_ % m_.rank();
+
+			return m_(r, c);
+		}
+
+		SymmetricMatrixIterator operator++()
+		{ ++this->index_; return *this; }
+
+		SymmetricMatrixIterator operator++(int)
+		{
+			SymmetricMatrixIterator it(*this);
+			++(*this);
+			return it;
+		}
+
+		template <typename U>
+		SymmetricMatrixIterator operator+=(const U v)
+		{ this->index_ += v; return *this; }
+
+		template <typename U>
+		SymmetricMatrixIterator operator-=(const U v)
+		{ this->index_ -= v; return *this; }
+
+		template <typename U>
+		SymmetricMatrixIterator operator+(const U v) const
+		{ return SymmetricMatrixIterator(const_cast<SymmetricMatrixIterator<T> *>(this)->m_, this->index_+v); }
+
+		template <typename U>
+		SymmetricMatrixIterator operator-(const U v) const
+		{ return SymmetricMatrixIterator(const_cast<SymmetricMatrixIterator<T> *>(this)->m_, this->index_-v); }
+
+		operator std::ptrdiff_t() const { return index_; }
+
+	private:
+		SymmetricMatrix<T> m_;
+		std::ptrdiff_t index_;
+		friend class SymmetricMatrixConstIterator<T>;
+		friend class SymmetricMatrix<T>;
+		SymmetricMatrixIterator(SymmetricMatrix<T> &m, const std::ptrdiff_t index = 0) :
+			m_(m), index_(index) { }
+};
+
+template <typename T>
+class SymmetricMatrixConstIterator
+{
+	public:
+		typedef T value_type;
+		typedef std::ptrdiff_t			difference_type;
+		typedef std::random_access_iterator_tag iterator_category;
+		typedef const T* pointer;
+		typedef const T& reference;
+
+		SymmetricMatrixConstIterator(const SymmetricMatrixIterator<T> &it) :
+			m_(it.m_), index_(it.index_) { }
+
+		reference operator*() const
+		{
+			assert(index_ >= 0);
+			assert(std::size_t(index_) < m_.rank()*m_.rank());
+			const std::ptrdiff_t r = index_ / m_.rank();
+			const std::ptrdiff_t c = index_ % m_.rank();
+
+			return m_(r, c);
+		}
+
+		SymmetricMatrixConstIterator operator++()
+		{ ++this->index_; return *this; }
+
+		SymmetricMatrixConstIterator operator++(int)
+		{
+			SymmetricMatrixConstIterator it(*this);
+			++(*this);
+			return it;
+		}
+
+		template <typename U>
+		SymmetricMatrixConstIterator operator+=(const U v)
+		{ this->index_ += v; return *this; }
+
+		template <typename U>
+		SymmetricMatrixConstIterator operator+(const U v) const
+		{ return SymmetricMatrixConstIterator(this->m_, this->index_+v); }
+
+		template <typename U>
+		SymmetricMatrixConstIterator operator-(const U v) const
+		{ return SymmetricMatrixConstIterator(this->m_, this->index_-v); }
+
+		operator std::ptrdiff_t() const { return index_; }
+
+	private:
+		const SymmetricMatrix<T> m_;
+		std::ptrdiff_t index_;
+//		friend bool operator!=<>(const SymmetricMatrixConstIterator<T> &lhs,
+//					 const SymmetricMatrixConstIterator<T> &rhs);
+		template <class U> friend bool operator!=(const SymmetricMatrixConstIterator<U> &lhs,
+					 const SymmetricMatrixConstIterator<U> &rhs);
+		friend class SymmetricMatrix<T>;
+		SymmetricMatrixConstIterator(const SymmetricMatrix<T> &m, const std::ptrdiff_t index = 0) :
+			m_(m), index_(index) { }
+};
+
+template <typename T>
+class SymmetricMatrixImpl
+{
+	public:
+		typedef T value_type;
+		typedef typename detail::SymmetricMatrixIterator<T> iterator;
+		typedef typename detail::SymmetricMatrixConstIterator<T> const_iterator;
+		typedef typename std::vector<T>::reference reference;
+		typedef typename std::vector<T>::iterator row_iterator;
+		typedef typename std::vector<T>::const_iterator const_row_iterator;
+
+		SymmetricMatrixImpl(const std::size_t rank = 0) :
 		n_(rank), data_(rank*(rank+1u)/2u) { }
+
+		SymmetricMatrixImpl(const std::size_t rank, const T value) :
+		n_(rank), data_(rank*(rank+1u)/2u, value) { }
 
 		void resize(const std::size_t rank)
 		{ n_ = rank; data_.resize( rank*(rank+1u)/2u ); }
 
 		std::size_t size() const { return data_.size(); }
-		std::size_t rank() const { return n_; }
+		std::size_t rank() const
+		{
+			// verify with ABC-formula
+			assert(std::sqrt(1.f+8.f*data_.size()) == n_*2.f + 1.f);
+			return n_;
+		}
 
-		// Iterators over all data
-		const iterator begin() { return data_.begin(); }
-		const iterator end()   { return data_.end(); }
-		const const_iterator begin() const { return data_.begin(); }
-		const const_iterator end()   const { return data_.end(); }
-
+		const SymmetricMatrixImpl operator=(const T value)
+		{
+			std::fill(data_.begin(), data_.end(), value);
+			return *this;
+		}
 		/*
 		 * Iterators per row
 		 */
-		const iterator begin(const std::size_t row)
-		{ return data_.begin() + this->index(row, 0); }
+		row_iterator begin(const std::size_t row)
+		{ return data_.begin() + this->index(row, row); }
 
-		const iterator end(const std::size_t row)
-		{ return data_.end() + this->index(row, n_-row); }
+		row_iterator end(const std::size_t row)
+		{ return this->begin(row) + n_-row; }
 
-		const const_iterator begin(const std::size_t row) const
-		{ return data_.begin() + this->index(row, 0); }
+		const_row_iterator begin(const std::size_t row) const
+		{ return data_.begin() + this->index(row, row); }
 
-		const const_iterator end(const std::size_t row) const
-		{ return data_.end() + this->index(row, n_-row); }
+		const_row_iterator end(const std::size_t row) const
+		{ return this->begin(row) + n_-row; }
 
 		// Individual data access
-		T &operator()(const std::size_t row, const std::size_t column)
-		{ return data_[this->index(row, column)]; }
-		const T &operator()(const std::size_t row,
-				    const std::size_t column) const
+		reference operator()(const std::size_t row, const std::size_t column)
 		{ return data_[this->index(row, column)]; }
 
-		void swap(SymmetricMatrix that)
+		const reference operator()(const std::size_t row,
+					   const std::size_t column) const
+		{ return data_[this->index(row, column)]; }
+/*
+		void swap(SymmetricMatrixImpl &that)
 		{
-			std::swap(this->n_, that.n);
+			std::swap(this->n_, that.n_);
 			this->data_.swap(that.data_);
 		}
-
+*/
 	private:
+		friend class detail::SymmetricMatrixIterator<T>;
+		friend class detail::SymmetricMatrixConstIterator<T>;
 		std::size_t n_;
 		std::vector<T> data_;
 
@@ -1493,33 +1694,86 @@ class SymmetricMatrix
 				  const std::size_t column) const
 		{
 			assert( (n_+1)*n_/2 == data_.size() );
-			assert(row < n_);
-			assert(column < n_);
 
 			const std::size_t r = std::min(row, column);
 			const std::size_t c = std::max(row, column) - r;
+			assert(r <= c);
+			assert(r < n_);
+			assert(c <= n_); // inclusive to find index of end() element
 
+			// Offset: index of the diagonal element of row r
+			// in data_
 			const std::size_t offset = (2u*n_-r+1)*(r/2u) +
 					( (r&1) ? (n_-(r-1u)/2u) : 0 );
-/*
-			std::size_t o = 0;
-			for (std::size_t i = 0; i < r; ++i)
-				o += n_-i;
-//			const std::size_t offset = o;
-
-if ( (!(offset + c < data_.size())) || (o!=offset) )
-{
-	std::cout << "n: "<<n_ << " size: " << data_.size() << " r: "
-		<< r << " c: " << c << " offset: " << offset
-		<< " o: " << o << " idx: "
-		<< (offset + c) << std::endl;
-}
-assert(o==offset);
-*/
 			assert(offset + c < data_.size());
 
 			return offset + c;
 		}
+};
+
+} // end namespace detail
+
+template <typename T>
+class SymmetricMatrix
+{
+	public:
+		typedef T value_type;
+		typedef typename detail::SymmetricMatrixImpl<T>::iterator iterator;
+		typedef typename detail::SymmetricMatrixImpl<T>::const_iterator const_iterator;
+		typedef typename detail::SymmetricMatrixImpl<T>::reference reference;
+		typedef typename detail::SymmetricMatrixImpl<T>::iterator row_iterator;
+		typedef typename detail::SymmetricMatrixImpl<T>::const_iterator const_row_iterator;
+
+		SymmetricMatrix(const std::size_t rank = 0) :
+			p(new detail::SymmetricMatrixImpl<T>(rank)) { assert(p); }
+
+		SymmetricMatrix(const std::size_t rank, const T value) :
+			p(new detail::SymmetricMatrixImpl<T>(rank, value)) { assert(p);}
+
+		void resize(const std::size_t rank) { assert(p); p->resize(rank); }
+
+		std::size_t size() const { return p->size(); }
+		std::size_t rank() const { return p->rank(); }
+
+		// Iterators over all data
+		iterator begin() { return iterator(*this); }
+		iterator end()   { return iterator(*this, this->rank()*this->rank()); }
+		const_iterator begin() const { return const_iterator(*this); }
+		const_iterator end()   const { return const_iterator(*this,  this->rank()*this->rank()); }
+
+		const SymmetricMatrix operator=(const T value)
+		{
+			*p = value;
+			return *this;
+		}
+
+		/*
+		 * Iterators per row
+		 */
+		row_iterator begin(const std::size_t row)
+		{ return p->begin(row); }
+
+		row_iterator end(const std::size_t row)
+		{ return p->end(row); }
+
+		const_row_iterator begin(const std::size_t row) const
+		{ return p->begin(row); }
+
+		const_row_iterator end(const std::size_t row) const
+		{ return p->end(row); }
+
+		// Individual data access
+		reference operator()(const std::size_t row, const std::size_t column)
+		{ return (*p)(row, column); }
+
+		const reference operator()(const std::size_t row,
+					   const std::size_t column) const
+		{ return (*p)(row, column); }
+
+		void swap(SymmetricMatrix &that) { std::swap(this->p, that.p); }
+
+	private:
+		std::tr1::shared_ptr<detail::SymmetricMatrixImpl<T> > p;
 };
 
 
@@ -1559,4 +1813,11 @@ void swap(cvmlcpp::SymmetricMatrix<T> &lhs, cvmlcpp::SymmetricMatrix<T> &rhs)
 }
 
 } // namespace std
-
+/*
+template <typename T>
+bool operator!=( const cvmlcpp::detail::SymmetricMatrixConstIterator<T> &lhs,
+		 const cvmlcpp::detail::SymmetricMatrixConstIterator<T> &rhs)
+{
+	return lhs.index_ != rhs.index_ || lhs.m_ != rhs.m_;
+}
+*/

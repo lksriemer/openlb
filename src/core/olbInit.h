@@ -15,8 +15,8 @@
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
  *
- *  You should have received a copy of the GNU General Public 
- *  License along with this program; if not, write to the Free 
+ *  You should have received a copy of the GNU General Public
+ *  License along with this program; if not, write to the Free
  *  Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  *  Boston, MA  02110-1301, USA.
 */
@@ -28,26 +28,32 @@
 #define OLB_INIT_H
 
 #include "complexGrids/mpiManager/mpiManager.h"
+#include "io/ostreamManager.h"
 #include "io/parallelIO.h"
 #include "ompManager.h"
 
 namespace olb {
 
 inline void olbInit(int *argc, char ***argv, bool verbose=false) {
-    singleton::mpi().init(argc, argv, verbose);
-#ifdef PARALLEL_MODE_MPI
-    /*ParBuf *newCoutBuf = new ParBuf(std::cout.rdbuf());
-    ParBuf *newClogBuf = new ParBuf(std::clog.rdbuf());
-    ParBuf *newCinBuf  = new ParBuf(std::cin.rdbuf());
 
-    std::cout.rdbuf(newCoutBuf);
-    std::clog.rdbuf(newClogBuf);
-    std::cin. rdbuf(newCinBuf);*/
+// create an OstreamManager object in order to enable multi output
+  olb::OstreamManager clout(std::cout,"olbInit");
+  clout.setMultiOutput(verbose);
+  singleton::mpi().init(argc, argv);
+
+#ifdef PARALLEL_MODE_MPI
+  /*ParBuf *newCoutBuf = new ParBuf(std::cout.rdbuf());
+  ParBuf *newClogBuf = new ParBuf(std::clog.rdbuf());
+  ParBuf *newCinBuf  = new ParBuf(std::cin.rdbuf());
+
+  std::cout.rdbuf(newCoutBuf);
+  std::clog.rdbuf(newClogBuf);
+  std::cin. rdbuf(newCinBuf);*/
 #endif
 
 #ifdef PARALLEL_MODE_OMP
-    #pragma omp parallel
-        omp.init();
+  #pragma omp parallel
+  omp.init();
 #endif
 
 }

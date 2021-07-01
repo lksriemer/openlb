@@ -1,6 +1,6 @@
 /*  This file is part of the OpenLB library
  *
- *  Copyright (C) 2008 Andrea Parmigiani, Orestis Malaspinas, 
+ *  Copyright (C) 2008 Andrea Parmigiani, Orestis Malaspinas,
  *  Jonas Latt
  *  E-mail contact: info@openlb.net
  *  The most recent release of OpenLB can be downloaded at
@@ -16,8 +16,8 @@
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
  *
- *  You should have received a copy of the GNU General Public 
- *  License along with this program; if not, write to the Free 
+ *  You should have received a copy of the GNU General Public
+ *  License along with this program; if not, write to the Free
  *  Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  *  Boston, MA  02110-1301, USA.
 */
@@ -37,61 +37,61 @@ namespace olb {
 
 namespace descriptors {
 
-    // Shan-Chen D2Q9 ////////////////////////////////////////////////////////////
+// Shan-Chen D2Q9 ////////////////////////////////////////////////////////////
 
-    template<typename T>
-    const int ForcedShanChenD2Q9Descriptor<T>::c
-        [ForcedShanChenD2Q9Descriptor<T>::q][ForcedShanChenD2Q9Descriptor<T>::d] =
-        {
-            { 0, 0},
-            {-1, 1}, {-1, 0}, {-1,-1}, { 0,-1},
-            { 1,-1}, { 1, 0}, { 1, 1}, { 0, 1}
-        };
+template<typename T>
+const int ForcedShanChenD2Q9Descriptor<T>::c
+[ForcedShanChenD2Q9Descriptor<T>::q][ForcedShanChenD2Q9Descriptor<T>::d] =
+{
+  { 0, 0},
+  {-1, 1}, {-1, 0}, {-1,-1}, { 0,-1},
+  { 1,-1}, { 1, 0}, { 1, 1}, { 0, 1}
+};
 
-    template<typename T>
-    const T ForcedShanChenD2Q9Descriptor<T>::t[ForcedShanChenD2Q9Descriptor<T>::q] =
-        {
-            (T)4/(T)9, (T)1/(T)36, (T)1/(T)9, (T)1/(T)36, (T)1/(T)9,
-                       (T)1/(T)36, (T)1/(T)9, (T)1/(T)36, (T)1/(T)9
-        };
+template<typename T>
+const T ForcedShanChenD2Q9Descriptor<T>::t[ForcedShanChenD2Q9Descriptor<T>::q] =
+{
+  (T)4/(T)9, (T)1/(T)36, (T)1/(T)9, (T)1/(T)36, (T)1/(T)9,
+  (T)1/(T)36, (T)1/(T)9, (T)1/(T)36, (T)1/(T)9
+};
 
-    template<typename T>
-    const T ForcedShanChenD2Q9Descriptor<T>::invCs2 = (T)3;
+template<typename T>
+const T ForcedShanChenD2Q9Descriptor<T>::invCs2 = (T)3;
 
 
-    // Shan-Chen D3Q19 ///////////////////////////////////////////////////////////
+// Shan-Chen D3Q19 ///////////////////////////////////////////////////////////
 
-    template<typename T>
-    const int ForcedShanChenD3Q19Descriptor<T>::c
-        [ForcedShanChenD3Q19Descriptor<T>::q][ForcedShanChenD3Q19Descriptor<T>::d] =
-        {
-            { 0, 0, 0},
+template<typename T>
+const int ForcedShanChenD3Q19Descriptor<T>::c
+[ForcedShanChenD3Q19Descriptor<T>::q][ForcedShanChenD3Q19Descriptor<T>::d] =
+{
+  { 0, 0, 0},
 
-            {-1, 0, 0}, { 0,-1, 0}, { 0, 0,-1},
-            {-1,-1, 0}, {-1, 1, 0}, {-1, 0,-1},
-            {-1, 0, 1}, { 0,-1,-1}, { 0,-1, 1},
+  {-1, 0, 0}, { 0,-1, 0}, { 0, 0,-1},
+  {-1,-1, 0}, {-1, 1, 0}, {-1, 0,-1},
+  {-1, 0, 1}, { 0,-1,-1}, { 0,-1, 1},
 
-            { 1, 0, 0}, { 0, 1, 0}, { 0, 0, 1},
-            { 1, 1, 0}, { 1,-1, 0}, { 1, 0, 1},
-            { 1, 0,-1}, { 0, 1, 1}, { 0, 1,-1}
-        }; 
- 
-    template<typename T>
-    const T ForcedShanChenD3Q19Descriptor<T>::t[ForcedShanChenD3Q19Descriptor<T>::q] =
-        {
-            (T)1/(T)3,
+  { 1, 0, 0}, { 0, 1, 0}, { 0, 0, 1},
+  { 1, 1, 0}, { 1,-1, 0}, { 1, 0, 1},
+  { 1, 0,-1}, { 0, 1, 1}, { 0, 1,-1}
+};
 
-            (T)1/(T)18, (T)1/(T)18, (T)1/(T)18, 
-            (T)1/(T)36, (T)1/(T)36, (T)1/(T)36,
-            (T)1/(T)36, (T)1/(T)36, (T)1/(T)36,
+template<typename T>
+const T ForcedShanChenD3Q19Descriptor<T>::t[ForcedShanChenD3Q19Descriptor<T>::q] =
+{
+  (T)1/(T)3,
 
-            (T)1/(T)18, (T)1/(T)18, (T)1/(T)18, 
-            (T)1/(T)36, (T)1/(T)36, (T)1/(T)36,
-            (T)1/(T)36, (T)1/(T)36, (T)1/(T)36
-        };
+  (T)1/(T)18, (T)1/(T)18, (T)1/(T)18,
+  (T)1/(T)36, (T)1/(T)36, (T)1/(T)36,
+  (T)1/(T)36, (T)1/(T)36, (T)1/(T)36,
 
-    template<typename T>
-    const T ForcedShanChenD3Q19Descriptor<T>::invCs2 = (T)3;
+  (T)1/(T)18, (T)1/(T)18, (T)1/(T)18,
+  (T)1/(T)36, (T)1/(T)36, (T)1/(T)36,
+  (T)1/(T)36, (T)1/(T)36, (T)1/(T)36
+};
+
+template<typename T>
+const T ForcedShanChenD3Q19Descriptor<T>::invCs2 = (T)3;
 
 
 

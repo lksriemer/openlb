@@ -14,8 +14,8 @@
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
  *
- *  You should have received a copy of the GNU General Public 
- *  License along with this program; if not, write to the Free 
+ *  You should have received a copy of the GNU General Public
+ *  License along with this program; if not, write to the Free
  *  Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  *  Boston, MA  02110-1301, USA.
 */
@@ -41,15 +41,15 @@ const T MinReduction<T>::neutralElement = std::numeric_limits<T>::max();
 
 template<typename T>
 void MinReduction<T>::takeElement(T const& element) {
-    if (element < minimum) {
-            minimum = element;
-    }
+  if (element < minimum) {
+    minimum = element;
+  }
 }
 
 template<typename T>
 void MinReduction<T>::reduceParallel() {
-#ifdef PARALLEL_MODE_MPI    
-    singleton::mpi().reduceAndBcast(minimum, MPI_MIN);
+#ifdef PARALLEL_MODE_MPI
+  singleton::mpi().reduceAndBcast(minimum, MPI_MIN);
 #endif
 }
 
@@ -60,15 +60,15 @@ const T MaxReduction<T>::neutralElement = std::numeric_limits<T>::min();
 
 template<typename T>
 void MaxReduction<T>::takeElement(T const& element) {
-    if (element > maximum) {
-            maximum = element;
-    }
+  if (element > maximum) {
+    maximum = element;
+  }
 }
 
 template<typename T>
 void MaxReduction<T>::reduceParallel() {
 #ifdef PARALLEL_MODE_MPI
-    singleton::mpi().reduceAndBcast(maximum, MPI_MAX);
+  singleton::mpi().reduceAndBcast(maximum, MPI_MAX);
 #endif
 }
 
@@ -79,22 +79,22 @@ const T AverageReduction<T>::neutralElement = T();
 
 template<typename T>
 void AverageReduction<T>::takeElement(T const& element) {
-    average += element;
-    weight++;
+  average += element;
+  weight++;
 }
 
 template<typename T>
 void AverageReduction<T>::reduceParallel() {
-#ifdef PARALLEL_MODE_MPI    
-    singleton::mpi().reduceAndBcast(average, MPI_SUM);
-    singleton::mpi().reduceAndBcast(weight, MPI_SUM);
+#ifdef PARALLEL_MODE_MPI
+  singleton::mpi().reduceAndBcast(average, MPI_SUM);
+  singleton::mpi().reduceAndBcast(weight, MPI_SUM);
 #endif
 }
 
 template<typename T>
 T AverageReduction<T>::getResult() const {
-    if (weight<1e-12) return T();
-    return average / weight;
+  if (weight<1e-12) return T();
+  return average / weight;
 }
 
 //////// Class NormSqrReduction //////////////////////////////////
@@ -104,53 +104,53 @@ const T NormSqrReduction<T>::neutralElement = T();
 
 template<typename T>
 void NormSqrReduction<T>::takeElement(T const& element) {
-    normSqr += element*element;
-    weight++;
+  normSqr += element*element;
+  weight++;
 }
 
 template<typename T>
 void NormSqrReduction<T>::reduceParallel() {
-#ifdef PARALLEL_MODE_MPI    
-    singleton::mpi().reduceAndBcast(normSqr, MPI_SUM);
-    singleton::mpi().reduceAndBcast(weight, MPI_SUM);
+#ifdef PARALLEL_MODE_MPI
+  singleton::mpi().reduceAndBcast(normSqr, MPI_SUM);
+  singleton::mpi().reduceAndBcast(weight, MPI_SUM);
 #endif
 }
 
 template<typename T>
 T NormSqrReduction<T>::getResult() const {
-    if (weight<1e-12) return T();
-    return normSqr / weight;
+  if (weight<1e-12) return T();
+  return normSqr / weight;
 }
 
 //////// Free reduction functions //////////////////////////////////
 
 template<typename T, template<typename U> class ScalarField>
 T computeMin(ScalarField<T> const& field) {
-    MinReduction<T> minReduction;
-    return field.computeReduction(minReduction);
+  MinReduction<T> minReduction;
+  return field.computeReduction(minReduction);
 }
 
 template<typename T, template<typename U> class ScalarField>
 T computeMax(ScalarField<T> const& field) {
-    MaxReduction<T> maxReduction;
-    return field.computeReduction(maxReduction);
+  MaxReduction<T> maxReduction;
+  return field.computeReduction(maxReduction);
 }
 
 template<typename T, template<typename U> class ScalarField>
 T computeAverage(ScalarField<T> const& field) {
-    AverageReduction<T> averageReduction;
-    return field.computeReduction(averageReduction);
+  AverageReduction<T> averageReduction;
+  return field.computeReduction(averageReduction);
 }
 
 template<typename T, template<typename U> class ScalarField>
 T computeNormSqr(ScalarField<T> const& field) {
-    NormSqrReduction<T> normSqrReduction;
-    return field.computeReduction(normSqrReduction);
+  NormSqrReduction<T> normSqrReduction;
+  return field.computeReduction(normSqrReduction);
 }
 
 template<typename T, template<typename U> class ScalarField>
 T computeRMS(ScalarField<T> const& field) {
-    return sqrt(computeNormSqr(field));
+  return sqrt(computeNormSqr(field));
 }
 
 } // namespace olb

@@ -125,23 +125,23 @@ void loadFacets(const SortedFacetsIterator facetBegin,
 </tr>
 
 <tr>
-	<td><pre>unsigned nrFacets() const</pre></td>
+	<td><pre>std::size_t nrFacets() const</pre></td>
 	<td>Get total number of facets.</td>
 </tr>
 
 <tr>
-	<td><pre>unsigned nrPoints() const</pre></td>
+	<td><pre>std::size_t nrPoints() const</pre></td>
 	<td>Get total number of points.</td>
 </tr>
 
 <tr>
-	<td><pre>value_type min(const unsigned dim) const</pre></td>
+	<td><pre>value_type min(const std::size_t dim) const</pre></td>
 	<td>Get minimum coordinates of all points in dimension "dim".
 Return value is undefined if the geometry doesn't contain any points.</td>
 </tr>
 
 <tr>
-	<td><pre>value_type max(const unsigned dim) const</pre></td>
+	<td><pre>value_type max(const std::size_t dim) const</pre></td>
 	<td>Get maximum coordinates of all points in dimension "dim".
 Return value is undefined if the geometry doesn't contain any points.</td>
 </tr>
@@ -168,99 +168,99 @@ Return value is undefined if the geometry doesn't contain any points.</td>
 
 <tr>
 	<td>
-	<pre>const facet_type &amp;facet(const unsigned key) const</pre></td>
+	<pre>const facet_type &amp;facet(const std::size_t key) const</pre></td>
 	<td>Returns the facet with the given key.</td>
 </tr>
 
 <tr>
 	<td>
-	<pre>const vector_type &amp;facetNormal(const unsigned key) const</pre>
+	<pre>const vector_type &amp;facetNormal(const std::size_t key) const</pre>
 	</td>
 	<td>Returns the normal of the facet with the given key.</td>
 </tr>
 
 <tr>
 	<td>
-	<pre>const vector_type &amp;pointNormal(const unsigned key) const</pre>
+	<pre>const vector_type &amp;pointNormal(const std::size_t key) const</pre>
 	</td>
 	<td>Returns the normal of the point with the given key.</td>
 </tr>
 
 <tr>
 	<td>
-	<pre>const point_type &amp;point(const unsigned key) const</pre>
+	<pre>const point_type &amp;point(const std::size_t key) const</pre>
 	</td>
 	<td>Returns a read-only reference to the point with the given key.</td>
 </tr>
 
 <tr>
-	<td><pre>const std::set&lt;unsigned&gt;
-&amp;facetsHavingPoint(const unsigned key) const</pre></td>
+	<td><pre>const std::set&lt;std::size_t&gt;
+&amp;facetsHavingPoint(const std::size_t key) const</pre></td>
 	<td>Returns a set of keys of facets that contain the point with the
 	given key.</td>
 </tr>
 
 <tr>
-	<td><pre>unsigned addPoint(const value_type &amp;x,
+	<td><pre>std::size_t addPoint(const value_type &amp;x,
 		const value_type &amp;y,
 		const value_type &amp;z)</pre></td>
 	<td>Add a point <i>(x, y, z)</i>, returns a key for the new point.</td>
 </tr>
 
 <tr>
-	<td><pre>unsigned addPoint(const point_type &amp;p)</pre></td>
+	<td><pre>std::size_t addPoint(const point_type &amp;p)</pre></td>
 	<td>Add point <i>p</i>, returns a key.</td>
 </tr>
 
 <tr>
 	<td>
-	<pre>bool updatePoint(const unsigned key, const point_type &amp;p)
+	<pre>bool updatePoint(const std::size_t key, const point_type &amp;p)
 	</pre>
 	</td>
 	<td>Alter the point with the given key to equal <i>p</i>.</td>
 </tr>
 
 <tr>
-	<td><pre>bool updatePoint(const unsigned key, const value_type &amp;x,
+	<td><pre>bool updatePoint(const std::size_t key, const value_type &amp;x,
 		 const value_type &amp;y, const value_type &amp;z)</pre></td>
 	<td>Alter the point with the given key to equal <i>(x, y, z)</i>.</td>
 </tr>
 
 <tr>
-	<td><pre>bool erasePoint(const unsigned key)</pre></td>
+	<td><pre>bool erasePoint(const std::size_t key)</pre></td>
 	<td>Remove the point with the given key. Fails if the point is part of a
 	facet.</td>
 </tr>
 
 <tr>
-	<td><pre>unsigned addFacet(const unsigned a,
-		const unsigned b,
-		const unsigned c)</pre></td>
+	<td><pre>std::size_t addFacet(const std::size_t a,
+		const std::size_t b,
+		const std::size_t c)</pre></td>
 	<td>Add a facet with points with keys "a", "b" and "c", returns a key
 	for the new facet.</td>
 </tr>
 
 <tr>
-	<td><pre>unsigned addFacet(const facet_type &amp;facet)</pre></td>
+	<td><pre>std::size_t addFacet(const facet_type &amp;facet)</pre></td>
 	<td>Add a facet, returns a key for the new facet.</td>
 </tr>
 
 <tr>
-	<td><pre>bool updateFacet(const unsigned key, const unsigned a,
-		 const unsigned b, const unsigned c)</pre></td>
+	<td><pre>bool updateFacet(const std::size_t key, const std::size_t a,
+		 const std::size_t b, const std::size_t c)</pre></td>
 	<td>Update the facet with the given key to contain points with keys
 	"a", "b" and "c".</td>
 </tr>
 
 <tr>
 	<td>
-	<pre>bool updateFacet(const unsigned key, const facet_type &amp;f)
+	<pre>bool updateFacet(const std::size_t key, const facet_type &amp;f)
 	</pre></td>
 	<td>Update the facet with the given key to "f".</td>
 </tr>
 
 <tr>
-	<td><pre>bool eraseFacet(const unsigned key)</pre></td>
+	<td><pre>bool eraseFacet(const std::size_t key)</pre></td>
 	<td>Erase the facet with the given key.</td>
 </tr>
 
@@ -303,7 +303,7 @@ Return value is undefined if the geometry doesn't contain any points.</td>
 
 <tr>
 	<td>
-	<pre>void rotate(const unsigned axis, const value_type angle)</pre></td>
+	<pre>void rotate(const std::size_t axis, const value_type angle)</pre></td>
 	<td>Rotate "angle" radials along "axis".</td>
 </tr>
 

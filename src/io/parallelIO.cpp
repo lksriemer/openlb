@@ -15,8 +15,8 @@
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
  *
- *  You should have received a copy of the GNU General Public 
- *  License along with this program; if not, write to the Free 
+ *  You should have received a copy of the GNU General Public
+ *  License along with this program; if not, write to the Free
  *  Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  *  Boston, MA  02110-1301, USA.
 */
@@ -86,7 +86,7 @@ ParBuf::uflow() {
 #ifdef PARALLEL_MODE_MPI
   }
   if (mode==normal) {
-      singleton::mpi().bCast(&value, 1);
+    singleton::mpi().bCast(&value, 1);
   }
 #endif
   return value;
@@ -110,7 +110,7 @@ ParBuf::underflow() {
 
 std::streamsize
 ParBuf::xsgetn (char* s, std::streamsize num) {
-    std::streamsize sizeRead=0;
+  std::streamsize sizeRead=0;
 #ifdef PARALLEL_MODE_MPI
   if (singleton::mpi().isMainProcessor()) {
 #endif
@@ -118,10 +118,10 @@ ParBuf::xsgetn (char* s, std::streamsize num) {
 #ifdef PARALLEL_MODE_MPI
   }
   if (mode==normal) {
-      int intSizeRead = (int) sizeRead;
-      singleton::mpi().bCast(&intSizeRead, 1);
-      singleton::mpi().bCast(s, intSizeRead);
-      sizeRead = (std::streamsize) intSizeRead;
+    int intSizeRead = (int) sizeRead;
+    singleton::mpi().bCast(&intSizeRead, 1);
+    singleton::mpi().bCast(s, intSizeRead);
+    sizeRead = (std::streamsize) intSizeRead;
   }
 #endif
   return sizeRead;
@@ -137,7 +137,7 @@ olb_ofstream::olb_ofstream() : std::ostream(NULL), fbuf(), mybuf(&fbuf) {
 
 olb_ofstream::olb_ofstream(const char * filename, openmode mode)
   : std::ostream(NULL), fbuf(), mybuf(&fbuf)
-{ 
+{
   init(&mybuf);
   open(filename, mode);
 }
@@ -199,7 +199,7 @@ olb_ifstream::olb_ifstream() : std::istream(NULL), fbuf(), mybuf(&fbuf) {
 
 olb_ifstream::olb_ifstream(const char * filename, openmode mode)
   : std::istream(NULL), fbuf(), mybuf(&fbuf)
-{ 
+{
   init(&mybuf);
   open(filename, mode);
 }
@@ -261,7 +261,7 @@ olb_fstream::olb_fstream() : std::iostream(NULL), fbuf(), mybuf(&fbuf) {
 
 olb_fstream::olb_fstream(const char * filename, openmode mode)
   : std::iostream(NULL), fbuf(), mybuf(&fbuf)
-{ 
+{
   init(&mybuf);
   open(filename, mode);
 }

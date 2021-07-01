@@ -30,14 +30,14 @@
 #include <cvmlcpp/base/StringTools>
 #include <omptl/omptl_algorithm>
 
-#include <cvmlcpp/volume/VolumeHelpers.h>
-
 namespace cvmlcpp
 {
 
+namespace detail
+{
 
 template <typename T>
-bool _writeSTLBinary(const Geometry<T> &geometry, std::ofstream &f)
+bool writeSTLBinary(const Geometry<T> &geometry, std::ofstream &f)
 {
 	typedef typename Geometry<T>::point_type	point_type;
 	typedef typename Geometry<T>::vector_type	vector_type;
@@ -72,31 +72,14 @@ bool _writeSTLBinary(const Geometry<T> &geometry, std::ofstream &f)
 }
 
 template <typename T>
-bool writeSTL(const Geometry<T> &geometry, const std::string fileName,
- 		const bool binary)
-{
-	bool ok = false;
-
-	if (binary)
-	{
-		std::ofstream f(fileName.c_str(), std::ios::out|std::ios::binary);
-		if (!f.good())
-			return false;
-		ok = _writeSTLBinary(geometry, f);
-		f.close();
-	}
-
-	return ok;
-}
-
-template <typename T>
-bool _readSTLASCII(Geometry<T> &geometry, std::ifstream &f)
+bool readSTLASCII(Geometry<T> &geometry, std::ifstream &f)
 {
 	typedef typename Geometry<T>::point_type	point_type;
 	typedef typename Geometry<T>::vector_type	vector_type;
 	typedef typename Geometry<T>::facet_type	facet_type;
 
-	std::vector<IndexPoint<T> > idxPoints;
+	std::vector<Point3D<T> > points;
+	//std::vector<IndexPoint<T> > idxPoints;
 	std::vector<vector_type>    normals;
 
 	std::string input;
@@ -113,7 +96,7 @@ bool _readSTLASCII(Geometry<T> &geometry, std::ifstream &f)
 	// Read first facet
 	f >> input; to_lower(input);
 
-	std::size_t pIndex = 0;
+	//std::size_t pIndex = 0;
 	while ((input != "endsolid") && (f.good()))
 	{
 		if (input != "facet") // We must have read "facet"
@@ -161,26 +144,34 @@ bool _readSTLASCII(Geometry<T> &geometry, std::ifstream &f)
 
 			fPoint3D pt;
 			f >> pt[X]; f >> pt[Y]; f >> pt[Z];
-
+/*
 			IndexPoint<T> ipt;
 			ipt.i = pIndex++;
 			ipt.p = pt;
 			idxPoints.push_back(ipt);
+*/
+			points.push_back(pt);
 		}
-		assert(idxPoints.size() >= 3);
-		assert(idxPoints.size() % 3 == 0);
+		assert(points.size() >= 3);
+		assert(points.size() % 3 == 0);
 
 		// Recompute normal if needed
 		const float norm = dotProduct(normal, normal);
 		if (!(norm > 0.0))
 		{
 			// recompute
-			const unsigned a = idxPoints.size() - 3;
+/*			const unsigned a = idxPoints.size() - 3;
 			const unsigned b = idxPoints.size() - 2;
 			const unsigned c = idxPoints.size() - 1;
 			const vector_type ab = idxPoints[b].p - idxPoints[a].p;
 			const vector_type ac = idxPoints[c].p - idxPoints[a].p;
-			normal = crossProduct(ab, ac);
+*/
+			const unsigned a = points.size() - 3;
+			const unsigned b = points.size() - 2;
+			const unsigned c = points.size() - 1;
+			const vector_type ab = points[b] - points[a];
+			const vector_type ac = points[c] - points[a];
+ 			normal = crossProduct(ab, ac);
 			normal /= modulus(normal);
 		}
 
@@ -209,13 +200,17 @@ bool _readSTLASCII(Geometry<T> &geometry, std::ifstream &f)
 	if (f.fail())
 		return false;
 
-	_constructGeometry(geometry, idxPoints, normals);
+	//detail::constructGeometry(geometry, idxPoints, normals);
+	//detail::constructGeometry(geometry, points);
+	Geometry<T> g(points.begin(), points.end(), normals.begin());
+	using std::swap;
+	swap(g, geometry);
 
 	return true;
 }
 
 template <typename T>
-bool _readSTLBinary(Geometry<T> &geometry, std::ifstream &f)
+bool readSTLBinary(Geometry<T> &geometry, std::ifstream &f)
 {
 	typedef typename Geometry<T>::point_type	point_type;
 	typedef typename Geometry<T>::vector_type	vector_type;
@@ -234,7 +229,7 @@ bool _readSTLBinary(Geometry<T> &geometry, std::ifstream &f)
 		return false;
 
 	const unsigned nPoints = 3u * nFacets;
-	std::vector<IndexPoint<T> > idxPoints(nPoints);
+	std::vector<Point3D<T> > points(nPoints);
 	std::vector<vector_type> normals(nFacets);
 
 	for (int i = 0; i < nFacets; ++i)
@@ -249,13 +244,12 @@ bool _readSTLBinary(Geometry<T> &geometry, std::ifstream &f)
 		for (unsigned j = 0; j < 3; j++)
 		{
 			const unsigned ptIndex = 3u*i + j;
-			idxPoints[3u*i + j].i = ptIndex;
 			std::copy(&buf[3u*j+3u], &buf[3u*j+3u] + 3u,
-				  idxPoints[ptIndex].p.begin());
+				  points[ptIndex].begin());
 
 			// Test: double point in facet ?
 // 			for (unsigned k = 0; k < j; ++k)
-// 				if (idxPoints[3u*i+k].p == idxPoints[ptIndex].p)
+// 				if (points[3u*i+k] == points[ptIndex])
 // 					return false;
 		}
 
@@ -270,15 +264,38 @@ bool _readSTLBinary(Geometry<T> &geometry, std::ifstream &f)
 			const unsigned a = 3*i;
 			const unsigned b = 3*i+1;
 			const unsigned c = 3*i+2;
-			const vector_type ab = idxPoints[b].p - idxPoints[a].p;
-			const vector_type ac = idxPoints[c].p - idxPoints[a].p;
+			const vector_type ab = points[b] - points[a];
+			const vector_type ac = points[c] - points[a];
 			normals[i] = crossProduct(ab, ac);
 			normals[i] /= modulus(normals[i]);
 		}
 	}
+	//std::cout << "readio "<< points.size() << "  " << normals.size()  << std::endl;
 
-	_constructGeometry(geometry, idxPoints, normals);
+	geometry.loadGeometry(points.begin(), points.end(), normals.begin());
+	//std::cout << "geometry "<< geometry.nrPoints() << "  " << geometry.nrFacets()  << std::endl;
+
 	return true;
+}
+
+} // namespace detail
+
+template <typename T>
+bool writeSTL(const Geometry<T> &geometry, const std::string fileName,
+ 		const bool binary)
+{
+	bool ok = false;
+
+	if (binary)
+	{
+		std::ofstream f(fileName.c_str(), std::ios::out|std::ios::binary);
+		if (!f.good())
+			return false;
+		ok = detail::writeSTLBinary(geometry, f);
+		f.close();
+	}
+
+	return ok;
 }
 
 template <typename T>
@@ -298,20 +315,19 @@ bool readSTL(Geometry<T> &geometry, const std::string fileName)
 	{
 		f.seekg(0, std::ios::beg);
 		if(f.good())
-			result = _readSTLASCII (geometry, f);
+			result = detail::readSTLASCII (geometry, f);
 	}
 	else
 	{
 		f.close();
 		f.open(fileName.c_str(), std::ios::in|std::ios::binary);
 		if(f.good())
-			result = _readSTLBinary(geometry, f);
+			result = detail::readSTLBinary(geometry, f);
 	}
 
 	f.close();
 
 	return result;
 }
-
 
 } // namespace cvmlcpp

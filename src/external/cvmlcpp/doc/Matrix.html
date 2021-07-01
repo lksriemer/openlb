@@ -37,7 +37,7 @@ neighbouring values are identical!</i>
 </p>
 
 Matrices can be in <a href='http://en.wikipedia.org/wiki/Row-major_order'>
-row-major<a/> (C-style) or column-major(FORTRAN/Matlab-style)</a>
+row-major (C-style) or column-major(FORTRAN/Matlab-style)</a>
 addressing modes.
 
 <h2>Interface</h2>
@@ -46,12 +46,11 @@ addressing modes.
 
 In the following table, one may read <i>CompressedMatrix</i> for <i>Matrix</i>.
 The exact definition is:
-<pre>  
-template &lt;typename T, unsigned Dimensions&gt;
+<pre>
+template &lt;typename T, std::size_t Dimensions&gt;
 class Matrix;
-  </pre>
+</pre>
 
-<p>
 <table border='1'>
 <tr>
 	<td><pre>  value_type  </pre></td>
@@ -75,14 +74,14 @@ class Matrix;
 	<td><pre>  template &lt;typename Iterator&gt;
   Matrix(Iterator extentsIt)  </pre></td>
 	<td>Constructor, dimensions as prescribed in the range indicated by
-	"extentsIt".</td>
+	<i>extentsIt</i>.</td>
 </tr>
 
 <tr>
 	<td><pre>  template &lt;typename Iterator&gt;
   Matrix(Iterator extentsIt, const T value, bool colMajor = false)  </pre></td>
 	<td>Constructor, dimensions as prescribed in the range indicated by
-	"extentsIt", filled with "value". Parameter <i>colMajor</i> allows
+	<i>extentsIt</i>, filled with "value". Parameter <i>colMajor</i> allows
 	one to use colums-major addressing in stead of row-major addressing.
 	</td>
 </tr>
@@ -93,7 +92,37 @@ class Matrix;
 	 const Iterator2 beginData, const Iterator2 endData,
 	 bool colMajor = false)  </pre></td>
 	<td>Constructor, dimensions as prescribed in the range indicated by
-	"extentsIt". The Matrix is filled with values from the range
+	<i>extentsIt</i>. The Matrix is filled with values from the range
+	<i>beginData</i> to <i>endData</i>. Parameter <i>colMajor</i>
+	allows one to use colums-major addressing in stead of row-major
+	addressing.
+	</td>
+</tr>
+
+<tr>
+	<td><pre>  template &lt;typename U&gt;
+  Matrix(const std::initializer_list&lt;U&gt; init_list)  </pre></td>
+	<td>Constructor, dimensions as prescribed in the range indicated by
+	the <i>initializer_list init_list</i>.</td>
+</tr>
+
+<tr>
+	<td><pre>  template &lt;typename U&gt;
+  Matrix(const std::initializer_list&lt;U&gt; init_list,
+  	 const T value, bool colMajor = false)  </pre></td>
+	<td>Constructor, dimensions as prescribed in the range indicated by
+	the <i>initializer_list init_list</i>, filled with <i>value</i>. Parameter <i>colMajor</i> allows
+	one to use colums-major addressing in stead of row-major addressing.
+	</td>
+</tr>
+
+<tr>
+	<td><pre>  template &lt;typename U, typename Iterator&gt;
+  Matrix(const std::initializer_list&lt;U&gt; init_list,
+	 const Iterator beginData, const Iterator endData,
+	 bool colMajor = false)  </pre></td>
+	<td>Constructor, dimensions as prescribed in the range indicated by
+	the <i>initializer_list init_list</i>. The Matrix is filled with values from the range
 	 <i>beginData</i> to <i>endData</i>. Parameter <i>colMajor</i>
 	allows one to use colums-major addressing in stead of row-major
 	addressing.
@@ -101,7 +130,7 @@ class Matrix;
 </tr>
 
 <tr>
-	<td><pre>  unsigned size() const  </pre></td>
+	<td><pre>  std::size_t size() const  </pre></td>
 	<td>Number of elements in the Matrix.</td>
 </tr>
 
@@ -116,16 +145,22 @@ class Matrix;
 	<td>Change the size and shape of the Matrix according to the extents
 	given in the range indicated by "extentsIt".</td>
 </tr>
+<tr>
+	<td><pre>template &lt;typename U&gt;
+  void resize(const std::initializer_list&lt;U&gt; size_list)</pre></td>
+	<td>Change the size and shape of the Matrix according to the extents
+	given in the <i>initializer_list size_list</i>.</td>
+</tr>
 
 <tr>
 	<td><pre>  Matrix&lt;T, Dimensions-1&gt;
-  &amp;operator[] (const unsigned index)  </pre></td>
+  &amp;operator[] (const std::size_t index)  </pre></td>
 	<td>Returns a reference to a Matrix with one less dimension.</td>
 </tr>
 
 <tr>
 	<td><pre>  const Matrix&lt;T, Dimensions-1&gt;
-  &amp;operator[] (const unsigned index) const  </pre></td>
+  &amp;operator[] (const std::size_t index) const  </pre></td>
 	<td>Returns a reference to a const Matrix with one less dimension.</td>
 </tr>
 
@@ -150,7 +185,7 @@ class Matrix;
 </tr>
 <!--
 <tr>
-	<td><pre>  unsigned mem_size() const  </pre></td>
+	<td><pre>  std::size_t mem_size() const  </pre></td>
 	<td>The size of the memory foot-print in bytes of the Matrix.</td>
 </tr>
 -->
@@ -178,7 +213,6 @@ class Matrix;
 The <i>DynamicMatrix</i> can have any dimension chosen during runtime, and the
 dimensionality can be changed during runtime if desired.
 
-<p>
 <table border='1'>
 <tr>
 	<td><pre>  value_type  </pre></td>
@@ -207,25 +241,25 @@ dimensionality can be changed during runtime if desired.
 	<td>.</td>
 </tr>
 <tr>
-	<td><pre>  unsigned size() const  </pre></td>
+	<td><pre>  std::size_t size() const  </pre></td>
 	<td>Returns the number of elements in the entire matrix.</td>
 </tr>
 <tr>
-	<td><pre>  unsigned dimensions() const  </pre></td>
+	<td><pre>  std::size_t dimensions() const  </pre></td>
 	<td>Returns the current number of dimensions of the matrix.</td>
 </tr>
 <tr>
 	<td>
-<pre>  std::vector&lt;unsigned&gt;::const_iterator extents() const  </pre></td>
+<pre>  std::vector&lt;std::size_t&gt;::const_iterator extents() const  </pre></td>
 	<td>.</td>
 </tr>
 <tr>
-	<td><pre>  slice_type &amp;operator[](unsigned index)  </pre></td>
+	<td><pre>  slice_type &amp;operator[](std::size_t index)  </pre></td>
 	<td>.</td>
 </tr>
 <tr>
 	<td>
-<pre>  const slice_type &amp;operator[](unsigned index) const  </pre></td>
+<pre>  const slice_type &amp;operator[](std::size_t index) const  </pre></td>
 	<td>.</td>
 </tr>
 <tr>
@@ -256,19 +290,22 @@ dimensionality can be changed during runtime if desired.
 	<td>Completely empty the matrix, set to zero all extents in all dimensions.</td>
 </tr>
 
-
 </table>
-</p>
 
 <h3>SymmetricMatrix</h3>
 
 <p>
-A <i>SymmetricMatrix</i> is an <i>n</i>-by-<i>n</i> 2-dimensional matrix where
-that is equal to its transpose, i.e. an element at <i>(x, y)</i> is the same as
+A <i>SymmetricMatrix</i> is an <i>n</i>-by-<i>n</i> 2-dimensional matrix that 
+is equal to its transpose, i.e. an element at <i>(x, y)</i> is the same as
 the element at <i>(y, x)</i>.
 </p>
 
-<p>
+<p>In the context of a <i>SymmetricMatrix</i>, there is a distiction between
+<i>physical</i> elements, i.e. memory locations, and <i>logical</i> elements, 
+which are positions in the matrix. In short, the two logical elements <i>(x, y)</i>
+and <i>(y, x)</i> refer to one physical element.
+</p>
+
 <table border='1'>
 <tr>
 	<td><pre>  value_type  </pre></td>
@@ -276,11 +313,20 @@ the element at <i>(y, x)</i>.
 </tr>
 <tr>
 	<td><pre>  iterator  </pre></td>
-	<td>The iterator type of this Matrix.</td>
+	<td>This type of read/write iterator iterates over the <i>rank()*rank()</i> logical elements in the matrix.</td>
 </tr>
 <tr>
 	<td><pre>  const_iterator  </pre></td>
-	<td>The const_iterator type of this Matrix, for read-only access.</td>
+	<td>The const_iterator type of this Matrix, for read-only access. This type of iterator iterates over 
+	the <i>rank()*rank()</i> logical elements in the matrix.</td>
+</tr>
+<tr>
+	<td><pre>  row_iterator  </pre></td>
+	<td>A special iterator type of for rows in the Matrix. This type of iterator iterates over the physical elements in a row the matrix.</td>
+</tr>
+<tr>
+	<td><pre>  const_row_iterator  </pre></td>
+	<td>A special const_iterator type of for rows in the Matrix. This type of iterator iterates over the physical elements in a row of the matrix.</td>
 </tr>
 
 <tr>
@@ -289,11 +335,17 @@ the element at <i>(y, x)</i>.
 </tr>
 
 <tr>
-	<td><pre>  unsigned size() const  </pre></td>
-	<td>Returns the number of elements in the entire matrix.</td>
+	<td><pre>  SymmetricMatrix(const std::size_t rank, const T value)  </pre></td>
+	<td>Construct a SymmetricMatrix with <i>rank</i> rows and columns, and
+	fills it entirely with the given <i>value</i>.</td>
+</tr>
+
+<tr>
+	<td><pre>  std::size_t size() const  </pre></td>
+	<td>Returns the number of physical elements in memory, i.e. <i>rank()*(rank()+1)/2</i>.</td>
 </tr>
 <tr>
-	<td><pre>  unsigned rank() const  </pre></td>
+	<td><pre>  std::size_t rank() const  </pre></td>
 	<td>Returns the number of rows, which is equal to the number of
 	columns.</td>
 </tr>
@@ -302,43 +354,61 @@ the element at <i>(y, x)</i>.
 	<td>Resize to an rank-by-rank matrix.</td>
 </tr>
 <tr>
-	<td><pre>  iterator begin()  </pre></td>
-	<td>Begin iterator over all elements.</td>
+	<td><pre>  const SymmetricMatrix operator=(const T value)  </pre></td>
+	<td>Fill the entire Matrix with the given <i>value</i>.</td>
 </tr>
 <tr>
-	<td><pre>  iterator end()  </pre></td>
-	<td>End iterator over all elements.</td>
+	<td><pre>  T &amp;operator()(const std::size_t row, const std::size_t column)  </pre></td>
+	<td>Return reference to an element in the matrix. If <i>row</i> and <i>column</i> would be 
+	swapped, the same physical element would be returned.</td>
 </tr>
 <tr>
-	<td><pre>  const_iterator begin() const 
-</pre></td>
-	<td>Begin read-only iterator over all elements.</td>
-</tr>
-<tr>
-	<td><pre>  const_iterator end() const  </pre></td>
-	<td>End read-only iterator over all elements.</td>
+	<td><pre>  const T &amp;operator()(const std::size_t row, const std::size_t column) const  </pre></td>
+	<td>Return read-only reference to an element in the matrix. If
+	<i>row</i> and <i>column</i> are swapped, the same physical element is returned.</td>
 </tr>
 
 <tr>
 	<td><pre>  iterator begin()  </pre></td>
-	<td>Begin iterator over all elements.</td>
+	<td>Begin iterator over all <i>rank-by-rank</i> logical elements in the matrix.</td>
 </tr>
 <tr>
 	<td><pre>  iterator end()  </pre></td>
-	<td>End iterator over all elements.</td>
+	<td>End iterator over all logical elements.</td>
 </tr>
 <tr>
 	<td><pre>  const_iterator begin() const  </pre></td>
-	<td>Begin read-only iterator over all elements.</td>
+	<td>Begin read-only iterator over all <i>rank-by-rank</i> logical elements.</td>
 </tr>
 <tr>
 	<td><pre>  const_iterator end() const  </pre></td>
-	<td>End read-only iterator over all elements.</td>
+	<td>End read-only iterator over all logical elements.</td>
 </tr>
 
+<tr>
+	<td><pre>  row_iterator begin(const std::size_t row)  </pre></td>
+	<td>Begin iterator over the physical elements in the indicated <i>row</i>. 
+	The length of the range is <i>rank-row</i>.</td>
+</tr>
+<tr>
+	<td><pre>  row_iterator end(const std::size_t row)  </pre></td>
+	<td>End iterator over the physical elements in the indicated <i>row</i>.</td>
+</tr>
+<tr>
+	<td><pre>  const_row_iterator begin(const std::size_t row) const  </pre></td>
+	<td>Begin read-only iterator over the physical elements in the indicated <i>row</i>.
+	The length of the range is <i>rank-row</i>.</td>
+</tr>
+<tr>
+	<td><pre>  const_row_iterator end(const std::size_t row) const  </pre></td>
+	<td>End read-only iterator over the physical elements in the indicated <i>row</i>.</td>
+</tr>
+<tr>
+	<td><pre>  void swap(SymmetricMatrix that) </pre></td>
+	<td>Swap this matix with <i>that</i> one.</td>
+</tr>
 
 </table>
-</p>
 
 
 <br/>

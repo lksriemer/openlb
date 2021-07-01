@@ -15,8 +15,8 @@
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
  *
- *  You should have received a copy of the GNU General Public 
- *  License along with this program; if not, write to the Free 
+ *  You should have received a copy of the GNU General Public
+ *  License along with this program; if not, write to the Free
  *  Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  *  Boston, MA  02110-1301, USA.
 */
@@ -36,42 +36,42 @@ namespace olb {
 template<typename T, template<typename U> class Lattice>
 class ChopardDynamics : public BasicDynamics<T,Lattice> {
 public:
-    /// Constructor
-    ChopardDynamics(T vs2_, T omega_, Momenta<T,Lattice>& momenta_);
-    ChopardDynamics(T omega_, Momenta<T,Lattice>& momenta_);
-    /// Clone the object on its dynamic type.
-    virtual ChopardDynamics<T,Lattice>* clone() const;
-    /// Compute equilibrium distribution function
-    virtual T computeEquilibrium(int iPop, T rho, const T u[Lattice<T>::d], T uSqr) const;
-    /// Initialize cell at equilibrium distribution
-    virtual void iniEquilibrium(Cell<T,Lattice>& cell, T rho, const T u[Lattice<T>::d]);
-    /// Collision step
-    virtual void collide(Cell<T,Lattice>& cell,
-                         LatticeStatistics<T>& statistics_);
-    /// Collide with fixed velocity
-    virtual void staticCollide(Cell<T,Lattice>& cell,
-                               const T u[Lattice<T>::d],
-                               LatticeStatistics<T>& statistics_);
-    /// Get local relaxation parameter of the dynamics
-    virtual T getOmega() const;
-    /// Set local relaxation parameter of the dynamics
-    virtual void setOmega(T omega_);
-    /// Get local value of any parameter
-    virtual T getParameter(int whichParameter) const;
-    /// Set local value of any parameter
-    virtual void setParameter(int whichParameter, T value);
-    /// Set local speed of sound
-    void setVs2(T vs2_);
-    /// Get local speed of sound
-    T    getVs2() const;
+  /// Constructor
+  ChopardDynamics(T vs2_, T omega_, Momenta<T,Lattice>& momenta_);
+  ChopardDynamics(T omega_, Momenta<T,Lattice>& momenta_);
+  /// Clone the object on its dynamic type.
+  virtual ChopardDynamics<T,Lattice>* clone() const;
+  /// Compute equilibrium distribution function
+  virtual T computeEquilibrium(int iPop, T rho, const T u[Lattice<T>::d], T uSqr) const;
+  /// Initialize cell at equilibrium distribution
+  virtual void iniEquilibrium(Cell<T,Lattice>& cell, T rho, const T u[Lattice<T>::d]);
+  /// Collision step
+  virtual void collide(Cell<T,Lattice>& cell,
+                       LatticeStatistics<T>& statistics_);
+  /// Collide with fixed velocity
+  virtual void staticCollide(Cell<T,Lattice>& cell,
+                             const T u[Lattice<T>::d],
+                             LatticeStatistics<T>& statistics_);
+  /// Get local relaxation parameter of the dynamics
+  virtual T getOmega() const;
+  /// Set local relaxation parameter of the dynamics
+  virtual void setOmega(T omega_);
+  /// Get local value of any parameter
+  virtual T getParameter(int whichParameter) const;
+  /// Set local value of any parameter
+  virtual void setParameter(int whichParameter, T value);
+  /// Set local speed of sound
+  void setVs2(T vs2_);
+  /// Get local speed of sound
+  T    getVs2() const;
 public:
-    static T chopardBgkCollision (
-            Cell<T,Lattice>& cell, T rho, const T u[Lattice<T>::d], T vs2, T omega);
-    static T chopardEquilibrium (
-        int iPop, T rho, const T u[Lattice<T>::d], T uSqr, T vs2 );
+  static T chopardBgkCollision (
+    Cell<T,Lattice>& cell, T rho, const T u[Lattice<T>::d], T vs2, T omega);
+  static T chopardEquilibrium (
+    int iPop, T rho, const T u[Lattice<T>::d], T uSqr, T vs2 );
 private:
-    T vs2;    ///< speed of sound
-    T omega;  ///< relaxation parameter
+  T vs2;    ///< speed of sound
+  T omega;  ///< relaxation parameter
 };
 
 }

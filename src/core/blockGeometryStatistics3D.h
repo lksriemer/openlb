@@ -15,8 +15,8 @@
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
  *
- *  You should have received a copy of the GNU General Public 
- *  License along with this program; if not, write to the Free 
+ *  You should have received a copy of the GNU General Public
+ *  License along with this program; if not, write to the Free
  *  Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  *  Boston, MA  02110-1301, USA.
  */
@@ -36,6 +36,7 @@
 //#include "olb3D.hh"
 
 #include "blockGeometry3D.h"
+#include "io/ostreamManager.h"
 
 //#include "core/dataFields3D.h"
 
@@ -47,7 +48,7 @@ namespace olb {
 /** Doku A cuboid structure is given by a number of cuboids. To represent
  * a connected domain it is required that the distance between two
  * neighbooring cuboids is less than the smallest delta of them.
- * 
+ *
  * WARNING:
  * At the moment there are only cuboids with a constant delta possible
  * and the distance between two neighbooring cuboids must be delta
@@ -60,90 +61,94 @@ namespace olb {
 class BlockGeometryStatistics3D {
 
 private:
-    /// Input file name
-    BlockGeometry3D* _blockGeometry;
+  /// class specific cout
+  mutable OstreamManager clout;
 
-    /// Number of voxels in each direction
-    int _nX, _nY, _nZ;
+  /// Input file name
+  BlockGeometry3D* _blockGeometry;
 
-    /// Size of ghost voxel layer
-    int _offset;
+  /// Number of voxels in each direction
+  int _nX, _nY, _nZ;
 
-    /// Spacing
-    double _h;
+  /// Size of ghost voxel layer
+  int _offset;
 
-    std::map<unsigned short, int> _material2n;
-    std::map<unsigned short, std::vector<int> > _material2min;
-    std::map<unsigned short, std::vector<int> > _material2max;
+  /// Spacing
+  double _h;
+
+  std::map<unsigned short, int> _material2n;
+  std::map<unsigned short, std::vector<int> > _material2min;
+  std::map<unsigned short, std::vector<int> > _material2max;
 
 public:
-    /// Constructor
-    BlockGeometryStatistics3D(BlockGeometry3D* blockGeometry) {
-        reInit(blockGeometry);
-    }
-    ;
-    /// Destructor
-    ~BlockGeometryStatistics3D() {
-    }
-    ;
+  /// Constructor
+  BlockGeometryStatistics3D(BlockGeometry3D* blockGeometry)
+    : clout(std::cout,"BlockGeometryStatistics3D") {
+    reInit(blockGeometry);
+  }
+  ;
+  /// Destructor
+  ~BlockGeometryStatistics3D() {
+  }
+  ;
 
-    /// reinitializes the blockGeometryStatistics (without checking the offset!!!!!!!)
-    void reInit(BlockGeometry3D* blockGeometry) {
-        _blockGeometry = blockGeometry;
-        _material2n = std::map<unsigned short, int>();
-        _nX = blockGeometry->getNx();
-        _nY = blockGeometry->getNy();
-        _nZ = blockGeometry->getNz();
-        _h = blockGeometry->getSpacing();
-        _offset = blockGeometry->getOffset();
+  /// reinitializes the blockGeometryStatistics (without checking the offset!!!!!!!)
+  void reInit(BlockGeometry3D* blockGeometry) {
+    _blockGeometry = blockGeometry;
+    _material2n = std::map<unsigned short, int>();
+    _nX = blockGeometry->getNx();
+    _nY = blockGeometry->getNy();
+    _nZ = blockGeometry->getNz();
+    _h = blockGeometry->getSpacing();
+    _offset = blockGeometry->getOffset();
 
-        for (int iX = 0; iX < _nX; ++iX) {
-            for (int iY = 0; iY < _nY; ++iY) {
-                for (int iZ = 0; iZ < _nZ; ++iZ) {
-                    takeStatistics(iX, iY, iZ);
-                }
-            }
+    for (int iX = 0; iX < _nX; ++iX) {
+      for (int iY = 0; iY < _nY; ++iY) {
+        for (int iZ = 0; iZ < _nZ; ++iZ) {
+          takeStatistics(iX, iY, iZ);
         }
+      }
     }
-    ;
+  }
+  ;
 
-    void takeStatistics(int iX, int iY, int iZ);
+  void takeStatistics(int iX, int iY, int iZ);
 
-    /// counts the number of voxels for the different boundary conditions (plus the number of inner and outer voxels)
-    void countVoxel();
+  /// counts the number of voxels for the different boundary conditions (plus the number of inner and outer voxels)
+  void countVoxel();
 
-    /// returns normal that points into the fluid for paraxial surfaces
-    std::vector<int> computeNormal(int iX, int iY, int iZ);
+  /// returns normal that points into the fluid for paraxial surfaces
+  std::vector<int> computeNormal(int iX, int iY, int iZ);
 
-    /// returns the number of voxels for a boundary condition type
-    int getNVoxel(int bcType);
+  /// returns the number of voxels for a boundary condition type
+  int getNVoxel(int bcType);
 
-    std::vector<int> getMin(unsigned short material);
+  std::vector<int> getMin(unsigned short material);
 
-    std::vector<int> getMax(unsigned short material);
+  std::vector<int> getMax(unsigned short material);
 
-    std::vector<int> getNCo(unsigned short material);
+  std::vector<int> getNCo(unsigned short material);
 
-    std::vector<int> getType(int iX, int iY, int iZ);
+  std::vector<int> getType(int iX, int iY, int iZ);
 
-    std::vector<int> checkExtraBoundary(std::vector<int> discreteNormal,
-            std::vector<int> discreteNormal2);
+  std::vector<int> checkExtraBoundary(std::vector<int> discreteNormal,
+                                      std::vector<int> discreteNormal2);
 
-    void getBoundaryTypes();
-
-
-
-    /// replace one material with another
-    void regionGrowing(unsigned short material, int seedX, int seedY, int seedZ, int offsetX, int offsetY, int offsetZ, std::map<std::vector<int>, int >& tmp);
+  void getBoundaryTypes();
 
 
 
+  /// replace one material with another
+  void regionGrowing(unsigned short material, int seedX, int seedY, int seedZ, int offsetX, int offsetY, int offsetZ, std::map<std::vector<int>, int >& tmp);
 
-    bool check(unsigned short material, int iX, int iY, int iZ, unsigned offsetX, unsigned offsetY, unsigned offsetZ);
 
-    bool find(unsigned short material, unsigned offsetX, unsigned offsetY, unsigned offsetZ, int& iX, int& iY, int& iZ);
 
-    BlockGeometry3D* getBlockGeometry();
+
+  bool check(unsigned short material, int iX, int iY, int iZ, unsigned offsetX, unsigned offsetY, unsigned offsetZ);
+
+  bool find(unsigned short material, unsigned offsetX, unsigned offsetY, unsigned offsetZ, int& iX, int& iY, int& iZ);
+
+  BlockGeometry3D* getBlockGeometry();
 
 };
 

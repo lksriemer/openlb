@@ -15,15 +15,15 @@
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
  *
- *  You should have received a copy of the GNU General Public 
- *  License along with this program; if not, write to the Free 
+ *  You should have received a copy of the GNU General Public
+ *  License along with this program; if not, write to the Free
  *  Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  *  Boston, MA  02110-1301, USA.
 */
 
 /** \file
  * Data analysis 2D MultiBlockStructures -- header file.
- */ 
+ */
 
 #ifndef MULTI_DATA_ANALYSIS_2D_H
 #define MULTI_DATA_ANALYSIS_2D_H
@@ -37,50 +37,50 @@ namespace olb {
 
 template<typename T, template<typename U> class Lattice>
 struct MultiAnalysisFieldsImpl2D {
-    MultiAnalysisFieldsImpl2D(MultiDataDistribution2D const& distribution);
-    MultiTensorField2D<T,2> velField;
-    MultiTensorField2D<T,2> momentumField;
-    MultiScalarField2D<T>   pressureField;
-    MultiScalarField2D<T>   velNormField;
-    MultiScalarField2D<T>   vortField;
-    MultiTensorField2D<T,3> strainRateField;
-    MultiTensorField2D<T,3> stressField;
-    MultiScalarField2D<T>   divRhoUField;
-    MultiScalarField2D<T>   poissonField;
-    MultiTensorField2D<T,Lattice<T>::q > populationField;
+  MultiAnalysisFieldsImpl2D(MultiDataDistribution2D const& distribution);
+  MultiTensorField2D<T,2> velField;
+  MultiTensorField2D<T,2> momentumField;
+  MultiScalarField2D<T>   pressureField;
+  MultiScalarField2D<T>   velNormField;
+  MultiScalarField2D<T>   vortField;
+  MultiTensorField2D<T,3> strainRateField;
+  MultiTensorField2D<T,3> stressField;
+  MultiScalarField2D<T>   divRhoUField;
+  MultiScalarField2D<T>   poissonField;
+  MultiTensorField2D<T,Lattice<T>::q > populationField;
 };
 
 /// Data analysis on serial block lattices, using serial data fields
 template<typename T, template<typename U> class Lattice>
 class MultiDataAnalysis2D : public DataAnalysisBase2D<T,Lattice> {
 public:
-    MultiDataAnalysis2D(MultiBlockLattice2D<T,Lattice> const& block_);
-    ~MultiDataAnalysis2D();
+  MultiDataAnalysis2D(MultiBlockLattice2D<T,Lattice> const& block_);
+  ~MultiDataAnalysis2D();
 public:
-    virtual void reset() const;
+  virtual void reset() const;
 
-    virtual TensorFieldBase2D<T,2> const& getVelocity() const;
-    virtual TensorFieldBase2D<T,2> const& getMomentum() const;
-    virtual ScalarFieldBase2D<T> const& getPressure() const;
-    virtual ScalarFieldBase2D<T> const& getVorticity() const;
-    virtual ScalarFieldBase2D<T> const& getVelocityNorm() const;
-    virtual TensorFieldBase2D<T,3> const& getStrainRate() const;
-    virtual TensorFieldBase2D<T,3> const& getStrainRateFromStress() const;
-    virtual ScalarFieldBase2D<T> const& getDivRhoU() const;
-    virtual ScalarFieldBase2D<T> const& getPoissonTerm() const;
-    virtual TensorFieldBase2D<T,Lattice<T>::q > const& getPopulations() const;
+  virtual TensorFieldBase2D<T,2> const& getVelocity() const;
+  virtual TensorFieldBase2D<T,2> const& getMomentum() const;
+  virtual ScalarFieldBase2D<T> const& getPressure() const;
+  virtual ScalarFieldBase2D<T> const& getVorticity() const;
+  virtual ScalarFieldBase2D<T> const& getVelocityNorm() const;
+  virtual TensorFieldBase2D<T,3> const& getStrainRate() const;
+  virtual TensorFieldBase2D<T,3> const& getStrainRateFromStress() const;
+  virtual ScalarFieldBase2D<T> const& getDivRhoU() const;
+  virtual ScalarFieldBase2D<T> const& getPoissonTerm() const;
+  virtual TensorFieldBase2D<T,Lattice<T>::q > const& getPopulations() const;
 
-    virtual T computeMeanEnstrophy() const;
-    virtual T computeMeanEnstrophy2() const;
+  virtual T computeMeanEnstrophy() const;
+  virtual T computeMeanEnstrophy2() const;
 
-    virtual int getNx() const { return block.getNx(); }
-    virtual int getNy() const { return block.getNy(); }
+  virtual int getNx() const { return block.getNx(); }
+  virtual int getNy() const { return block.getNy(); }
 private:
-    MultiDataAnalysis2D(MultiDataAnalysis2D<T,Lattice> const& rhs);
+  MultiDataAnalysis2D(MultiDataAnalysis2D<T,Lattice> const& rhs);
 private:
-    MultiBlockLattice2D<T,Lattice> const& block;
-    std::vector<DataAnalysis2D<T,Lattice> const*>  perBlockAnalysis;
-    mutable MultiAnalysisFieldsImpl2D<T,Lattice> fields;
+  MultiBlockLattice2D<T,Lattice> const& block;
+  std::vector<DataAnalysis2D<T,Lattice> const*>  perBlockAnalysis;
+  mutable MultiAnalysisFieldsImpl2D<T,Lattice> fields;
 };
 
 }  // namespace olb;

@@ -402,29 +402,38 @@ T binomial(const T n, const T k)
 	return detail::Binomial<std::tr1::is_integral<T>::value>::binomial(n, k);
 }
 
-template <typename T, typename U>
-U binopmf(const T n, const T k, const U p)
+template <typename T>
+T binopmf(const std::size_t n, const std::size_t k, const T p)
 {
+	BOOST_STATIC_ASSERT(!std::numeric_limits<T>::is_integer);
 	assert(n >= k);
 	assert(p >= 0);
 	assert(p <= 1);
 	using std::pow;
-	return binomial(n, k) * pow(p, U(k)) * pow( U(1)-p, U(n-k) );
+
+	const std::size_t max_bits_needed_for_binomial = (n+1)/2 * (log2(n)+1);
+		
+	const T binomial_n_k = (max_bits_needed_for_binomial < CHAR_BIT * sizeof(std::size_t) ) ?
+		binomial(n, k) : // fast integer binomial
+		binomial(T(n), T(k));  // FP binomial, no overflow
+
+	return binomial_n_k * pow(p, T(k)) * pow( T(1)-p, T(n-k) );
 }
 
-template <typename T, typename U>
-U binocdf(const T n, const T k, const U p)
+template <typename T>
+T binocdf(const std::size_t n, const std::size_t k, const T p)
 {
+	BOOST_STATIC_ASSERT(!std::numeric_limits<T>::is_integer);
 	assert(n >= k);
 	assert(p >= 0);
 	assert(p <= 1);
 
 	T bin = 1;
-	U result = 0;
-	U pk = 1;
+	T result = 0;
+	T pk = 1;
 	using std::pow;
-	U pnk = pow(U(1)-p, U(n));
-	for (T i = 0; i < k; ++i)
+	T pnk = pow(T(1)-p, T(n));
+	for (std::size_t i = 0; i < k; ++i)
 
 	{
 		result += U(bin) * pk * pnk;
@@ -433,16 +442,17 @@ U binocdf(const T n, const T k, const U p)
 		bin /= (i+1);  //((i+1) / g);
 //		assert(bin == binomial(n, i+1)); // can be triggered by numerical issues
 		pk  *= p;
-		pnk /= U(1)-p;
+		pnk /= T(1)-p;
 	}
 	result += bin * pk * pnk;
 
 	return result;
 }
 
-template <typename T>
-std::size_t binocdfinv(const T p_arg, const std::size_t n, const T p)
+template <typename T, typename U>
+std::size_t binocdfinv(const T p_arg, const std::size_t n, const U p)
 {
+	BOOST_STATIC_ASSERT(!std::numeric_limits<T>::is_integer);
 	assert(n > 0);
 
 	assert(p_arg >= 0.0);
@@ -452,11 +462,11 @@ std::size_t binocdfinv(const T p_arg, const std::size_t n, const T p)
 	assert(p <= 1.0);
 
 	std::size_t result = 0;
-	T cdf = binopdf(0, n, p);
+	T cdf = binopmf(0, n, p);
 	while ( (cdf < p_arg) && (result < n) )
 	{
 		++result;
-		cdf += binopdf(result, n, p);
+		cdf += binopmf(result, n, p);
 	}
 	assert(result <= n);
 	return result;
@@ -1195,6 +1205,7 @@ void identity_matrix(Array_t<T, 2u, A> &m, const std::size_t N)
  * Matrix inversion routine.
  * Uses lu_factorize and lu_substitute in uBLAS to invert a matrix
  */
+
 template<class T, class F, class A>
 bool invert(boost::numeric::ublas::matrix<T, F, A>& m)
 {
@@ -1202,14 +1213,15 @@ bool invert(boost::numeric::ublas::matrix<T, F, A>& m)
 
  	// create a working copy of the input
  	ublas::matrix<T> a(m);
+
  	// create a permutation matrix for the LU-factorization
  	ublas::permutation_matrix<std::size_t> pm(a.size1());
 
  	// perform LU-factorization
- 	int res = lu_factorize(a, pm);
-        if( res != 0 ) return false;
+ 	if (ublas::lu_factorize(a, pm)) // returns zero on success
+		return false;
 
- 	// create identity_matrix matrix of "inverse"
+	// create identity_matrix matrix of "inverse"
  	m.assign(ublas::identity_matrix<T>(a.size1()));
 
  	// backsubstitute to get the inverse
@@ -1428,10 +1440,28 @@ bool leastSquaresFit(const Array_t<Ta, 2, Aux> &A, const YVector_t &y,
 */
 	boost::numeric::ublas::matrix<Ta> AtAinv = //At * A2;
 		boost::numeric::ublas::prod(At, A2);
-
+/*
+	std::cout << "AtA" << std::endl;
+	for (std::size_t i = 0u; i < AtAinv.size1(); ++i)
+	{
+		for (std::size_t j = 0u; j < AtAinv.size2(); ++j)
+	    		std::cout << AtAinv(i,j) << " ";
+		std::cout << std::endl;
+	}
+	std::cout << std::endl;
+*/
 	if (!invert(AtAinv))
 		return false;
 /*
+	std::cout << "AtAinv" << std::endl;
+	for (std::size_t i = 0u; i < AtAinv.size1(); ++i)
+	{
+		for (std::size_t j = 0u; j < AtAinv.size2(); ++j)
+	    		std::cout << AtAinv(i,j) << " ";
+		std::cout << std::endl;
+	}
+	std::cout << std::endl;
+*//*
 	std::cout << "AtAinv" << std::endl;
 	for (std::size_t i = 0u; i < AtAinv.extents()[X]; ++i)
 	{
@@ -1441,6 +1471,7 @@ bool leastSquaresFit(const Array_t<Ta, 2, Aux> &A, const YVector_t &y,
 	}
 	std::cout << std::endl;
 */
+
 //	Array_t<Ta, 2, Aux> B;
 //	mat_mat_mult(AtAinv, At, B);
 /*	std::cout << "B" << std::endl;

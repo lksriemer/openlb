@@ -1,4 +1,4 @@
-// Copyright (C) 2007 Fokko Beekhof
+// Copyright (C) 2007-2011 Fokko Beekhof
 // Email contact: Fokko.Beekhof@unige.ch
 
 // The OMPTL library is free software; you can redistribute it and/or
@@ -51,9 +51,9 @@ L2(InputIterator first, InputIterator last, const unsigned P = _Pfunc::Pfunc());
 } // namespace
 
 #ifdef _OPENMP
-  #include <omptl/omptl_numeric_extentions_par.h>
+  #include <omptl/omptl_numeric_extensions_par.h>
 #else
-  #include <omptl/omptl_numeric_extentions_ser.h>
+  #include <omptl/omptl_numeric_extensions_ser.h>
 #endif
 
 namespace omptl

@@ -15,8 +15,8 @@
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
  *
- *  You should have received a copy of the GNU General Public 
- *  License along with this program; if not, write to the Free 
+ *  You should have received a copy of the GNU General Public
+ *  License along with this program; if not, write to the Free
  *  Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  *  Boston, MA  02110-1301, USA.
 */
@@ -36,37 +36,37 @@ template<typename T, template<typename U> class Lattice,
 class InnerEdgeVelBM3D : public DirichletBoundaryMomenta<T,Lattice>
 {
 public:
-    enum { direction1 = (plane+1)%3, direction2 = (plane+2)%3 };
+  enum { direction1 = (plane+1)%3, direction2 = (plane+2)%3 };
 public:
-    /// Default Constructor: initialization to zero
-    InnerEdgeVelBM3D();
-    /// Constructor with boundary initialization
-    InnerEdgeVelBM3D(const T u_[Lattice<T>::d]);
+  /// Default Constructor: initialization to zero
+  InnerEdgeVelBM3D();
+  /// Constructor with boundary initialization
+  InnerEdgeVelBM3D(const T u_[Lattice<T>::d]);
 
-    virtual T computeRho(Cell<T,Lattice> const& cell) const;
-    virtual void computeU (
-        Cell<T,Lattice> const& cell,
-        T u[Lattice<T>::d] ) const;
-    virtual void computeJ (
-        Cell<T,Lattice> const& cell,
-        T j[Lattice<T>::d] ) const;
-    void computeU(T u[Lattice<T>::d]) const;
-    virtual void defineRho(Cell<T,Lattice>& cell, T rho) ;
-    virtual void defineU(Cell<T,Lattice>& cell,
-                         const T u[Lattice<T>::d]) ;
-    void defineU(const T u[Lattice<T>::d]);
-    virtual void defineAllMomenta (
-        Cell<T,Lattice>& cell,
-        T rho, const T u[Lattice<T>::d],
-        const T pi[util::TensorVal<Lattice<T> >::n] );
-    /// Stress tensor
-    virtual void computeStress (
-            Cell<T,Lattice> const& cell,
-            T rho, const T u[Lattice<T>::d],
-            T pi[util::TensorVal<Lattice<T> >::n] ) const;
+  virtual T computeRho(Cell<T,Lattice> const& cell) const;
+  virtual void computeU (
+    Cell<T,Lattice> const& cell,
+    T u[Lattice<T>::d] ) const;
+  virtual void computeJ (
+    Cell<T,Lattice> const& cell,
+    T j[Lattice<T>::d] ) const;
+  void computeU(T u[Lattice<T>::d]) const;
+  virtual void defineRho(Cell<T,Lattice>& cell, T rho) ;
+  virtual void defineU(Cell<T,Lattice>& cell,
+                       const T u[Lattice<T>::d]) ;
+  void defineU(const T u[Lattice<T>::d]);
+  virtual void defineAllMomenta (
+    Cell<T,Lattice>& cell,
+    T rho, const T u[Lattice<T>::d],
+    const T pi[util::TensorVal<Lattice<T> >::n] );
+  /// Stress tensor
+  virtual void computeStress (
+    Cell<T,Lattice> const& cell,
+    T rho, const T u[Lattice<T>::d],
+    T pi[util::TensorVal<Lattice<T> >::n] ) const;
 private:
-    RegularizedVelocityBM<T,Lattice,direction1,normal1> momenta1;
-    RegularizedVelocityBM<T,Lattice,direction2,normal2> momenta2;
+  RegularizedVelocityBM<T,Lattice,direction1,normal1> momenta1;
+  RegularizedVelocityBM<T,Lattice,direction2,normal2> momenta2;
 };
 
 
@@ -75,36 +75,36 @@ template<typename T, template<typename U> class Lattice,
 class InnerCornerVelBM3D : public DirichletBoundaryMomenta<T,Lattice>
 {
 public:
-    /// Default Constructor: initialization to zero
-    InnerCornerVelBM3D();
-    /// Constructor with boundary initialization
-    InnerCornerVelBM3D(const T u_[Lattice<T>::d]);
+  /// Default Constructor: initialization to zero
+  InnerCornerVelBM3D();
+  /// Constructor with boundary initialization
+  InnerCornerVelBM3D(const T u_[Lattice<T>::d]);
 
-    virtual T computeRho(Cell<T,Lattice> const& cell) const;
-    virtual void computeU (
-        Cell<T,Lattice> const& cell,
-        T u[Lattice<T>::d] ) const;
-    virtual void computeJ (
-        Cell<T,Lattice> const& cell,
-        T j[Lattice<T>::d] ) const;
-    void computeU(T u[Lattice<T>::d]) const;
-    virtual void defineRho(Cell<T,Lattice>& cell, T rho) ;
-    virtual void defineU(Cell<T,Lattice>& cell,
-                         const T u[Lattice<T>::d]) ;
-    void defineU(const T u[Lattice<T>::d]);
-    virtual void defineAllMomenta (
-        Cell<T,Lattice>& cell,
-        T rho, const T u[Lattice<T>::d],
-        const T pi[util::TensorVal<Lattice<T> >::n] );
-    /// Stress tensor
-    virtual void computeStress (
-            Cell<T,Lattice> const& cell,
-            T rho, const T u[Lattice<T>::d],
-            T pi[util::TensorVal<Lattice<T> >::n] ) const;
+  virtual T computeRho(Cell<T,Lattice> const& cell) const;
+  virtual void computeU (
+    Cell<T,Lattice> const& cell,
+    T u[Lattice<T>::d] ) const;
+  virtual void computeJ (
+    Cell<T,Lattice> const& cell,
+    T j[Lattice<T>::d] ) const;
+  void computeU(T u[Lattice<T>::d]) const;
+  virtual void defineRho(Cell<T,Lattice>& cell, T rho) ;
+  virtual void defineU(Cell<T,Lattice>& cell,
+                       const T u[Lattice<T>::d]) ;
+  void defineU(const T u[Lattice<T>::d]);
+  virtual void defineAllMomenta (
+    Cell<T,Lattice>& cell,
+    T rho, const T u[Lattice<T>::d],
+    const T pi[util::TensorVal<Lattice<T> >::n] );
+  /// Stress tensor
+  virtual void computeStress (
+    Cell<T,Lattice> const& cell,
+    T rho, const T u[Lattice<T>::d],
+    T pi[util::TensorVal<Lattice<T> >::n] ) const;
 private:
-    RegularizedVelocityBM<T,Lattice,0,normalX> xMomenta;
-    RegularizedVelocityBM<T,Lattice,1,normalY> yMomenta;
-    RegularizedVelocityBM<T,Lattice,2,normalZ> zMomenta;
+  RegularizedVelocityBM<T,Lattice,0,normalX> xMomenta;
+  RegularizedVelocityBM<T,Lattice,1,normalY> yMomenta;
+  RegularizedVelocityBM<T,Lattice,2,normalZ> zMomenta;
 };
 
 }

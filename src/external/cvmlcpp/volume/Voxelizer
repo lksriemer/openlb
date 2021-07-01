@@ -801,7 +801,7 @@ template <template <typename Tm, std::size_t D, typename Aux> class Matrix_t,
 	typename Tf, typename Tg, typename A>
 bool fractionVoxelize(const Geometry<Tg>  &geometry,
 	Matrix_t<Tf, 3u, A> &matrix, const double voxelSize,
-	const unsigned samples = 16u, const std::size_t pad=0u)
+	const std::size_t samples = 16u, const std::size_t pad=0u)
 {
 	clear(matrix);
 	if (geometry.nrFacets() < 2)

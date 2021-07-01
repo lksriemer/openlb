@@ -15,8 +15,8 @@
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
  *
- *  You should have received a copy of the GNU General Public 
- *  License along with this program; if not, write to the Free 
+ *  You should have received a copy of the GNU General Public
+ *  License along with this program; if not, write to the Free
  *  Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  *  Boston, MA  02110-1301, USA.
 */
@@ -41,17 +41,17 @@ template class ExtendedStraightFdBoundaryPostProcessor2D<double, descriptors::D2
 template class ExtendedStraightFdBoundaryProcessorGenerator2D<double, descriptors::D2Q9Descriptor, 1,-1>;
 
 template class BoundaryConditionInstantiator2D
-    <
-        double, descriptors::D2Q9Descriptor,
+<
+double, descriptors::D2Q9Descriptor,
         ExtendedFdBoundaryManager2D < double, descriptors::D2Q9Descriptor,
-                                      BGKdynamics<double,descriptors::D2Q9Descriptor> >
-    >;
+        BGKdynamics<double,descriptors::D2Q9Descriptor> >
+        >;
 
 template OnLatticeBoundaryCondition2D<double,descriptors::D2Q9Descriptor>*
-    createExtendedFdBoundaryCondition2D < double,descriptors::D2Q9Descriptor,
-                                          BGKdynamics<double,descriptors::D2Q9Descriptor> >
-   (
-        BlockStructure2D<double,descriptors::D2Q9Descriptor>& block
-   );
+createExtendedFdBoundaryCondition2D < double,descriptors::D2Q9Descriptor,
+                                    BGKdynamics<double,descriptors::D2Q9Descriptor> >
+                                    (
+                                      BlockStructure2D<double,descriptors::D2Q9Descriptor>& block
+                                    );
 
 }  // namespace olb

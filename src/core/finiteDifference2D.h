@@ -15,8 +15,8 @@
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
  *
- *  You should have received a copy of the GNU General Public 
- *  License along with this program; if not, write to the Free 
+ *  You should have received a copy of the GNU General Public
+ *  License along with this program; if not, write to the Free
  *  Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  *  Boston, MA  02110-1301, USA.
 */
@@ -30,108 +30,108 @@ namespace olb {
 
 namespace fd {
 
-    template<typename T, template<typename U> class Lattice,
-             int direction, int orientation,
-             bool orthogonal>
-    struct DirectedGradients2D {
-        static void interpolateVector(T velDeriv[Lattice<T>::d],
-                                      BlockLattice2D<T,Lattice> const& blockLattice,
-                                      int iX, int iY);
-        static void interpolateScalar(T& rhoDeriv,
-                                      BlockLattice2D<T,Lattice> const& blockLattice,
-                                      int iX, int iY);
-    };
+template<typename T, template<typename U> class Lattice,
+         int direction, int orientation,
+         bool orthogonal>
+struct DirectedGradients2D {
+  static void interpolateVector(T velDeriv[Lattice<T>::d],
+                                BlockLattice2D<T,Lattice> const& blockLattice,
+                                int iX, int iY);
+  static void interpolateScalar(T& rhoDeriv,
+                                BlockLattice2D<T,Lattice> const& blockLattice,
+                                int iX, int iY);
+};
 
-    // Implementation for orthogonal==true; i.e. the derivative is along
-    // the boundary normal.
-    template<typename T, template<typename U> class Lattice,
-             int direction, int orientation>
-    struct DirectedGradients2D<T, Lattice, direction, orientation, true> {
-        static void interpolateVector(T velDeriv[Lattice<T>::d],
-                                      BlockLattice2D<T,Lattice> const& blockLattice,
-                                      int iX, int iY)
-        {
-            using namespace fd;
+// Implementation for orthogonal==true; i.e. the derivative is along
+// the boundary normal.
+template<typename T, template<typename U> class Lattice,
+         int direction, int orientation>
+struct DirectedGradients2D<T, Lattice, direction, orientation, true> {
+  static void interpolateVector(T velDeriv[Lattice<T>::d],
+                                BlockLattice2D<T,Lattice> const& blockLattice,
+                                int iX, int iY)
+  {
+    using namespace fd;
 
-            T u0[Lattice<T>::d], u1[Lattice<T>::d], u2[Lattice<T>::d];
-            
-            blockLattice.get(iX,iY).computeU(u0);
-            blockLattice.get (
-                iX+(direction==0 ? (-orientation):0),
-                iY+(direction==1 ? (-orientation):0) ).computeU(u1);
-            blockLattice.get (
-                iX+(direction==0 ? (-2*orientation):0),
-                iY+(direction==1 ? (-2*orientation):0) ).computeU(u2);
+    T u0[Lattice<T>::d], u1[Lattice<T>::d], u2[Lattice<T>::d];
 
-            for (int iD=0; iD<Lattice<T>::d; ++iD) {
-                velDeriv[iD] = -orientation * boundaryGradient(u0[iD], u1[iD], u2[iD]);
-            }
-        }
+    blockLattice.get(iX,iY).computeU(u0);
+    blockLattice.get (
+      iX+(direction==0 ? (-orientation):0),
+      iY+(direction==1 ? (-orientation):0) ).computeU(u1);
+    blockLattice.get (
+      iX+(direction==0 ? (-2*orientation):0),
+      iY+(direction==1 ? (-2*orientation):0) ).computeU(u2);
 
-        static void interpolateScalar(T& rhoDeriv,
-                                      BlockLattice2D<T,Lattice> const& blockLattice,
-                                      int iX, int iY)
-        {
-            using namespace fd;
+    for (int iD=0; iD<Lattice<T>::d; ++iD) {
+      velDeriv[iD] = -orientation * boundaryGradient(u0[iD], u1[iD], u2[iD]);
+    }
+  }
 
-            T rho0 = blockLattice.get(iX,iY).computeRho();
-            T rho1 = blockLattice.get (
-                          iX+(direction==0 ? (-orientation):0),
-                          iY+(direction==1 ? (-orientation):0) ).computeRho();
-            T rho2 = blockLattice.get (
-                            iX+(direction==0 ? (-2*orientation):0),
-                        iY+(direction==1 ? (-2*orientation):0) ).computeRho();
+  static void interpolateScalar(T& rhoDeriv,
+                                BlockLattice2D<T,Lattice> const& blockLattice,
+                                int iX, int iY)
+  {
+    using namespace fd;
 
-            rhoDeriv = -orientation * boundaryGradient(rho0, rho1, rho2);
+    T rho0 = blockLattice.get(iX,iY).computeRho();
+    T rho1 = blockLattice.get (
+               iX+(direction==0 ? (-orientation):0),
+               iY+(direction==1 ? (-orientation):0) ).computeRho();
+    T rho2 = blockLattice.get (
+               iX+(direction==0 ? (-2*orientation):0),
+               iY+(direction==1 ? (-2*orientation):0) ).computeRho();
 
-        }
-    };
+    rhoDeriv = -orientation * boundaryGradient(rho0, rho1, rho2);
+
+  }
+};
 
 
-    // Implementation for orthogonal==false; i.e. the derivative is aligned
-    // with the boundary.
-    template<typename T, template<typename U> class Lattice,
-             int direction, int orientation>
-    struct DirectedGradients2D<T, Lattice, direction, orientation, false> {
-        static void interpolateVector(T velDeriv[Lattice<T>::d],
-                                      BlockLattice2D<T,Lattice> const& blockLattice,
-                                      int iX, int iY)
-        {
-            using namespace fd;
+// Implementation for orthogonal==false; i.e. the derivative is aligned
+// with the boundary.
+template<typename T, template<typename U> class Lattice,
+         int direction, int orientation>
+struct DirectedGradients2D<T, Lattice, direction, orientation, false> {
+  static void interpolateVector(T velDeriv[Lattice<T>::d],
+                                BlockLattice2D<T,Lattice> const& blockLattice,
+                                int iX, int iY)
+  {
+    using namespace fd;
 
-            T u_p1[Lattice<T>::d], u_m1[Lattice<T>::d];
-            
-            int deriveDirection = 1-direction;
-            blockLattice.get (
-                iX+(deriveDirection==0 ? 1:0),
-                iY+(deriveDirection==1 ? 1:0) ).computeU(u_p1);
-            blockLattice.get (
-                iX+(deriveDirection==0 ? (-1):0),
-                iY+(deriveDirection==1 ? (-1):0) ).computeU(u_m1);
+    T u_p1[Lattice<T>::d], u_m1[Lattice<T>::d];
 
-            for (int iD=0; iD<Lattice<T>::d; ++iD) {
-                 velDeriv[iD] = fd::centralGradient(u_p1[iD],u_m1[iD]);
-            }
-        }
+    int deriveDirection = 1-direction;
+    blockLattice.get (
+      iX+(deriveDirection==0 ? 1:0),
+      iY+(deriveDirection==1 ? 1:0) ).computeU(u_p1);
+    blockLattice.get (
+      iX+(deriveDirection==0 ? (-1):0),
+      iY+(deriveDirection==1 ? (-1):0) ).computeU(u_m1);
 
-        static void  interpolateScalar(T& rhoDeriv,
-                                       BlockLattice2D<T,Lattice> const& blockLattice,
-                                       int iX, int iY)
-        {
-            using namespace fd;
+    for (int iD=0; iD<Lattice<T>::d; ++iD) {
+      velDeriv[iD] = fd::centralGradient(u_p1[iD],u_m1[iD]);
+    }
+  }
 
-            int deriveDirection = 1-direction;
-            T rho_p1 = blockLattice.get (
-                          iX+(deriveDirection==0 ? 1:0),
-                          iY+(deriveDirection==1 ? 1:0) ).computeRho();
-            T rho_m1 = blockLattice.get (
-                          iX+(deriveDirection==0 ? (-1):0),
-                          iY+(deriveDirection==1 ? (-1):0) ).computeRho();
+  static void  interpolateScalar(T& rhoDeriv,
+                                 BlockLattice2D<T,Lattice> const& blockLattice,
+                                 int iX, int iY)
+  {
+    using namespace fd;
 
-            rhoDeriv = centralGradient(rho_p1, rho_m1);
+    int deriveDirection = 1-direction;
+    T rho_p1 = blockLattice.get (
+                 iX+(deriveDirection==0 ? 1:0),
+                 iY+(deriveDirection==1 ? 1:0) ).computeRho();
+    T rho_m1 = blockLattice.get (
+                 iX+(deriveDirection==0 ? (-1):0),
+                 iY+(deriveDirection==1 ? (-1):0) ).computeRho();
 
-        }
-    };
+    rhoDeriv = centralGradient(rho_p1, rho_m1);
+
+  }
+};
 
 }  // namespace fd
 

@@ -14,8 +14,8 @@
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
  *
- *  You should have received a copy of the GNU General Public 
- *  License along with this program; if not, write to the Free 
+ *  You should have received a copy of the GNU General Public
+ *  License along with this program; if not, write to the Free
  *  Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  *  Boston, MA  02110-1301, USA.
 */
@@ -34,175 +34,175 @@ namespace olb {
 ////////////////////// function createRegularDataDistribution /////////////////////
 
 MultiDataDistribution3D createRegularDataDistribution (
-        int nx, int ny, int nz, int numBlocksX, int numBlocksY, int numBlocksZ,
-        int envelopeWidth )
+  int nx, int ny, int nz, int numBlocksX, int numBlocksY, int numBlocksZ,
+  int envelopeWidth )
 {
-    MultiDataDistribution3D dataDistribution(nx, ny, nz);
-    int posX = 0;
-    int iBlock = 0;
-    for (int iBlockX=0; iBlockX<numBlocksX; ++iBlockX) {
-        int lx = nx / numBlocksX;
-        if (iBlockX < nx%numBlocksX) ++lx;
-        int posY = 0;
-        for (int iBlockY=0; iBlockY<numBlocksY; ++iBlockY) {
-            int ly = ny / numBlocksY;
-            if (iBlockY < ny%numBlocksY) ++ly;
-            int posZ = 0;
-            for (int iBlockZ=0; iBlockZ<numBlocksZ; ++iBlockZ) {
-                int lz = nz / numBlocksZ;
-                if (iBlockZ < nz%numBlocksZ) ++lz;
-                dataDistribution.addBlock(posX, posX+lx-1, posY, posY+ly-1, posZ, posZ+lz-1,
-                                          envelopeWidth, iBlock++);
-                posZ += lz;
-            }
-            posY += ly;
-        }
-        posX += lx;
+  MultiDataDistribution3D dataDistribution(nx, ny, nz);
+  int posX = 0;
+  int iBlock = 0;
+  for (int iBlockX=0; iBlockX<numBlocksX; ++iBlockX) {
+    int lx = nx / numBlocksX;
+    if (iBlockX < nx%numBlocksX) ++lx;
+    int posY = 0;
+    for (int iBlockY=0; iBlockY<numBlocksY; ++iBlockY) {
+      int ly = ny / numBlocksY;
+      if (iBlockY < ny%numBlocksY) ++ly;
+      int posZ = 0;
+      for (int iBlockZ=0; iBlockZ<numBlocksZ; ++iBlockZ) {
+        int lz = nz / numBlocksZ;
+        if (iBlockZ < nz%numBlocksZ) ++lz;
+        dataDistribution.addBlock(posX, posX+lx-1, posY, posY+ly-1, posZ, posZ+lz-1,
+                                  envelopeWidth, iBlock++);
+        posZ += lz;
+      }
+      posY += ly;
     }
-    return dataDistribution;
+    posX += lx;
+  }
+  return dataDistribution;
 }
 
 MultiDataDistribution3D createRegularDataDistribution(int nx, int ny, int nz, int envelopeWidth) {
-    std::vector<int> repartition = algorithm::evenRepartition(singleton::mpi().getSize(), 3);
-    return createRegularDataDistribution ( nx, ny, nz,
-                                           repartition[0], repartition[1], repartition[2],
-                                           envelopeWidth );
+  std::vector<int> repartition = algorithm::evenRepartition(singleton::mpi().getSize(), 3);
+  return createRegularDataDistribution ( nx, ny, nz,
+                                         repartition[0], repartition[1], repartition[2],
+                                         envelopeWidth );
 }
 
-   
+
 // template instantiation for CellTypeField3D
 template class ScalarField3D<unsigned char>;
 
 MultiDataDistribution3D createXSlicedDataDistribution3D (
-        CellTypeField3D const& cellTypeField,
-        int numBlocks,
-        int envelopeWidth )
+  CellTypeField3D const& cellTypeField,
+  int numBlocks,
+  int envelopeWidth )
 {
-    int nX = cellTypeField.getNx();
-    int nY = cellTypeField.getNy();
-    int nZ = cellTypeField.getNz();
-    
-    std::vector<int> numActivePerSlice;
-    int numActiveTotal = 0;
-    for(int iX=0; iX<nX; iX++) {
-        int numActiveCurrentSlice = 0;
-        for (int iY=0; iY<nY; iY++) {
-            for (int iZ=0; iZ<nZ; iZ++) {
-                if (cellTypeField.get(iX,iY,iZ) > 0) numActiveCurrentSlice++;
-            }
-        }
-        numActivePerSlice.push_back(numActiveCurrentSlice);
-        numActiveTotal += numActiveCurrentSlice;
+  int nX = cellTypeField.getNx();
+  int nY = cellTypeField.getNy();
+  int nZ = cellTypeField.getNz();
+
+  std::vector<int> numActivePerSlice;
+  int numActiveTotal = 0;
+  for(int iX=0; iX<nX; iX++) {
+    int numActiveCurrentSlice = 0;
+    for (int iY=0; iY<nY; iY++) {
+      for (int iZ=0; iZ<nZ; iZ++) {
+        if (cellTypeField.get(iX,iY,iZ) > 0) numActiveCurrentSlice++;
+      }
     }
-    int numActivePerBlock = numActiveTotal / numBlocks;
-    
-    MultiDataDistribution3D dataDistribution(nX, nY, nZ);
-    
-    int iX=0;
-    for (int iBlock=0; iBlock<numBlocks; ++iBlock) {
-        int posX = iX;
-        int numActiveCurrentBlock = 0;
-        while (numActiveCurrentBlock<numActivePerBlock && iX<nX) {
-            numActiveCurrentBlock += numActivePerSlice[iX];
-            iX++;
-        }
-        dataDistribution.addBlock(posX, iX-1, 0, nY-1, 0, nZ-1, envelopeWidth, iBlock);
+    numActivePerSlice.push_back(numActiveCurrentSlice);
+    numActiveTotal += numActiveCurrentSlice;
+  }
+  int numActivePerBlock = numActiveTotal / numBlocks;
+
+  MultiDataDistribution3D dataDistribution(nX, nY, nZ);
+
+  int iX=0;
+  for (int iBlock=0; iBlock<numBlocks; ++iBlock) {
+    int posX = iX;
+    int numActiveCurrentBlock = 0;
+    while (numActiveCurrentBlock<numActivePerBlock && iX<nX) {
+      numActiveCurrentBlock += numActivePerSlice[iX];
+      iX++;
     }
-    return dataDistribution;
+    dataDistribution.addBlock(posX, iX-1, 0, nY-1, 0, nZ-1, envelopeWidth, iBlock);
+  }
+  return dataDistribution;
 }
 
 MultiDataDistribution3D createYSlicedDataDistribution3D (
-        CellTypeField3D const& cellTypeField,
-        int numBlocks,
-        int envelopeWidth )
+  CellTypeField3D const& cellTypeField,
+  int numBlocks,
+  int envelopeWidth )
 {
-    int nX = cellTypeField.getNx();
-    int nY = cellTypeField.getNy();
-    int nZ = cellTypeField.getNz();
-    
-    std::vector<int> numActivePerSlice;
-    int numActiveTotal = 0;
-    for (int iY=0; iY<nY; iY++) {
-        int numActiveCurrentSlice = 0;
-        for(int iX=0; iX<nX; iX++) {
-            for(int iZ=0; iZ<nZ; iZ++) {
-                if (cellTypeField.get(iX,iY,iZ) > 0) numActiveCurrentSlice++;
-            }
-        }
-        numActivePerSlice.push_back(numActiveCurrentSlice);
-        numActiveTotal += numActiveCurrentSlice;
+  int nX = cellTypeField.getNx();
+  int nY = cellTypeField.getNy();
+  int nZ = cellTypeField.getNz();
+
+  std::vector<int> numActivePerSlice;
+  int numActiveTotal = 0;
+  for (int iY=0; iY<nY; iY++) {
+    int numActiveCurrentSlice = 0;
+    for(int iX=0; iX<nX; iX++) {
+      for(int iZ=0; iZ<nZ; iZ++) {
+        if (cellTypeField.get(iX,iY,iZ) > 0) numActiveCurrentSlice++;
+      }
     }
-    int numActivePerBlock = numActiveTotal / numBlocks;
-    
-    MultiDataDistribution3D dataDistribution(nX, nY, nZ);
-    
-    int iY=0;
-    for (int iBlock=0; iBlock<numBlocks; ++iBlock) {
-        int posY = iY;
-        int numActiveCurrentBlock = 0;
-        while (numActiveCurrentBlock<numActivePerBlock && iY<nY) {
-            numActiveCurrentBlock += numActivePerSlice[iY];
-            iY++;
-        }
-        dataDistribution.addBlock( 0, nX-1, posY, iY-1, 0, nZ-1, envelopeWidth, iBlock);
+    numActivePerSlice.push_back(numActiveCurrentSlice);
+    numActiveTotal += numActiveCurrentSlice;
+  }
+  int numActivePerBlock = numActiveTotal / numBlocks;
+
+  MultiDataDistribution3D dataDistribution(nX, nY, nZ);
+
+  int iY=0;
+  for (int iBlock=0; iBlock<numBlocks; ++iBlock) {
+    int posY = iY;
+    int numActiveCurrentBlock = 0;
+    while (numActiveCurrentBlock<numActivePerBlock && iY<nY) {
+      numActiveCurrentBlock += numActivePerSlice[iY];
+      iY++;
     }
-    return dataDistribution;
+    dataDistribution.addBlock( 0, nX-1, posY, iY-1, 0, nZ-1, envelopeWidth, iBlock);
+  }
+  return dataDistribution;
 }
 
 MultiDataDistribution3D createZSlicedDataDistribution3D (
-        CellTypeField3D const& cellTypeField,
-        int numBlocks,
-        int envelopeWidth )
+  CellTypeField3D const& cellTypeField,
+  int numBlocks,
+  int envelopeWidth )
 {
-    int nX = cellTypeField.getNx();
-    int nY = cellTypeField.getNy();
-    int nZ = cellTypeField.getNz();
-    
-    std::vector<int> numActivePerSlice;
-    int numActiveTotal = 0;
-    for(int iZ=0; iZ<nZ; iZ++) {
-        int numActiveCurrentSlice = 0;
-        for(int iX=0; iX<nX; iX++) {
-            for (int iY=0; iY<nY; iY++) {
-                if (cellTypeField.get(iX,iY,iZ) > 0) numActiveCurrentSlice++;
-            }
-        }
-        numActivePerSlice.push_back(numActiveCurrentSlice);
-        numActiveTotal += numActiveCurrentSlice;
+  int nX = cellTypeField.getNx();
+  int nY = cellTypeField.getNy();
+  int nZ = cellTypeField.getNz();
+
+  std::vector<int> numActivePerSlice;
+  int numActiveTotal = 0;
+  for(int iZ=0; iZ<nZ; iZ++) {
+    int numActiveCurrentSlice = 0;
+    for(int iX=0; iX<nX; iX++) {
+      for (int iY=0; iY<nY; iY++) {
+        if (cellTypeField.get(iX,iY,iZ) > 0) numActiveCurrentSlice++;
+      }
     }
-    int numActivePerBlock = numActiveTotal / numBlocks;    
-    
-    MultiDataDistribution3D dataDistribution(nX, nY, nZ);
-    
-    int iZ=0;
-    for (int iBlock=0; iBlock<numBlocks; ++iBlock) {
-        int posZ = iZ;
-        int numActiveCurrentBlock = 0;
-        while (numActiveCurrentBlock<numActivePerBlock && iZ<nZ) {
-            numActiveCurrentBlock += numActivePerSlice[iZ];
-            iZ++;
-        }
-        dataDistribution.addBlock( 0, nX-1, 0, nY-1, posZ, iZ-1, envelopeWidth, iBlock);
+    numActivePerSlice.push_back(numActiveCurrentSlice);
+    numActiveTotal += numActiveCurrentSlice;
+  }
+  int numActivePerBlock = numActiveTotal / numBlocks;
+
+  MultiDataDistribution3D dataDistribution(nX, nY, nZ);
+
+  int iZ=0;
+  for (int iBlock=0; iBlock<numBlocks; ++iBlock) {
+    int posZ = iZ;
+    int numActiveCurrentBlock = 0;
+    while (numActiveCurrentBlock<numActivePerBlock && iZ<nZ) {
+      numActiveCurrentBlock += numActivePerSlice[iZ];
+      iZ++;
     }
-    return dataDistribution;
+    dataDistribution.addBlock( 0, nX-1, 0, nY-1, posZ, iZ-1, envelopeWidth, iBlock);
+  }
+  return dataDistribution;
 }
 
 MultiDataDistribution3D createXSlicedDataDistribution3D (
-        CellTypeField3D const& cellTypeField, int envelopeWidth)
+  CellTypeField3D const& cellTypeField, int envelopeWidth)
 {
-	return createXSlicedDataDistribution3D(cellTypeField, singleton::mpi().getSize(), envelopeWidth);
+  return createXSlicedDataDistribution3D(cellTypeField, singleton::mpi().getSize(), envelopeWidth);
 }
 
 MultiDataDistribution3D createYSlicedDataDistribution3D (
-        CellTypeField3D const& cellTypeField, int envelopeWidth)
+  CellTypeField3D const& cellTypeField, int envelopeWidth)
 {
-	return createYSlicedDataDistribution3D(cellTypeField, singleton::mpi().getSize(), envelopeWidth);
+  return createYSlicedDataDistribution3D(cellTypeField, singleton::mpi().getSize(), envelopeWidth);
 }
 
 MultiDataDistribution3D createZSlicedDataDistribution3D (
-        CellTypeField3D const& cellTypeField, int envelopeWidth)
+  CellTypeField3D const& cellTypeField, int envelopeWidth)
 {
-	return createZSlicedDataDistribution3D(cellTypeField, singleton::mpi().getSize(), envelopeWidth);
+  return createZSlicedDataDistribution3D(cellTypeField, singleton::mpi().getSize(), envelopeWidth);
 }
 
 }  // namespace olb

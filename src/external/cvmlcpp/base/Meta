@@ -26,10 +26,11 @@
 #include <limits>
 
 #include <tr1/array>
-#define __aligned__   ignored
 #include <tr1/type_traits>
-#undef __aligned__
 
+#ifdef __GXX_EXPERIMENTAL_CXX0X__
+#include <initializer_list>
+#endif
 
 #ifdef USE_THRUST
 #include <thrust/copy.h>
@@ -399,6 +400,15 @@ struct array_traits<Matrix, T, N, Aux>
 	static array_type create(InputIterator input, const T &value)
 	{ return array_type(input, value); }
 
+#ifdef __GXX_EXPERIMENTAL_CXX0X__
+	template <typename U>
+	static array_type create(const std::initializer_list<U> init_list)
+	{ return create(init_list.begin() ); }
+	template <typename U>
+	static array_type create(const std::initializer_list<U> init_list, const T &value)
+	{ return create(init_list.begin(), value); }
+#endif
+
 	static std::size_t size(const array_type &a) { return a.size(); }
 
 	template <typename InputIterator>
@@ -417,6 +427,13 @@ struct array_traits<Matrix, T, N, Aux>
 			a.resize(it, preserve);
 		return true;
 	}
+#ifdef __GXX_EXPERIMENTAL_CXX0X__
+	template <typename U>
+	static bool resize(Matrix<T, 1u, Aux> &a,
+			   const std::initializer_list<U> init_list,
+			   bool preserve = false)
+	{ return resize(a, init_list.begin(), preserve); }
+#endif
 
 	template <typename MatrixOrReference>
 	static typename std::tr1::array<std::size_t, N>::const_iterator
@@ -454,6 +471,15 @@ struct array_traits<Matrix, T, 1u, Aux>
 	static array_type create(InputIterator input, const T &value)
 	{ return array_type(input, value); }
 
+#ifdef __GXX_EXPERIMENTAL_CXX0X__
+	template <typename U>
+	static array_type create(const std::initializer_list<U> init_list)
+	{ return create(init_list.begin() ); }
+	template <typename U>
+	static array_type create(const std::initializer_list<U> init_list, const T &value)
+	{ return create(init_list.begin(), value); }
+#endif
+
 	static std::size_t size(const array_type &a) { return a.size(); }
 
 	template <typename InputIterator>
@@ -472,6 +498,13 @@ struct array_traits<Matrix, T, 1u, Aux>
 			a.resize(it, preserve);
 		return true;
 	}
+#ifdef __GXX_EXPERIMENTAL_CXX0X__
+	template <typename U>
+	static bool resize(Matrix<T, 1u, Aux> &a,
+			   const std::initializer_list<U> init_list,
+			   bool preserve = false)
+	{ return resize(a, init_list.begin(), preserve); }
+#endif
 
 	template <typename MatrixOrReference>
 	static typename std::tr1::array<std::size_t, 1u>::const_iterator
@@ -554,6 +587,15 @@ struct array_traits<boost::multi_array, T, N, Aux>
 		return a;
 	}
 
+#ifdef __GXX_EXPERIMENTAL_CXX0X__
+	template <typename U>
+	static array_type create(const std::initializer_list<U> init_list)
+	{ return create(init_list.begin() ); }
+	template <typename U>
+	static array_type create(const std::initializer_list<U> init_list, const T &value)
+	{ return create(init_list.begin(), value); }
+#endif
+
 	static std::size_t size(const array_type &a){ return a.num_elements(); }
 
 	template <typename InputIterator>
@@ -575,6 +617,13 @@ struct array_traits<boost::multi_array, T, N, Aux>
 
 		return true;
 	}
+#ifdef __GXX_EXPERIMENTAL_CXX0X__
+	template <typename U>
+	static bool resize(boost::multi_array<T, 1u, Aux> &a,
+			   const std::initializer_list<U> init_list,
+			   bool preserve = false)
+	{ return resize(a, init_list.begin(), preserve); }
+#endif
 
 	template <typename MatrixOrReference>
 	static const typename boost::multi_array<T, N+1u, Aux>::size_type *
@@ -621,6 +670,15 @@ struct array_traits<boost::multi_array, T, 1u, Aux>
 		return a;
 	}
 
+#ifdef __GXX_EXPERIMENTAL_CXX0X__
+	template <typename U>
+	static array_type create(const std::initializer_list<U> init_list)
+	{ return create(init_list.begin() ); }
+	template <typename U>
+	static array_type create(const std::initializer_list<U> init_list, const T &value)
+	{ return create(init_list.begin(), value); }
+#endif
+
 	static std::size_t size(const array_type &a){ return a.num_elements(); }
 
 	template <typename InputIterator>
@@ -642,6 +700,13 @@ struct array_traits<boost::multi_array, T, 1u, Aux>
 
 		return true;
 	}
+#ifdef __GXX_EXPERIMENTAL_CXX0X__
+	template <typename U>
+	static bool resize(boost::multi_array<T, 1u, Aux> &a,
+			   const std::initializer_list<U> init_list,
+			   bool preserve = false)
+	{ return resize(a, init_list.begin(), preserve); }
+#endif
 
 	template <typename MatrixOrReference>
 	static const typename boost::multi_array<T, 2u, Aux>::size_type*
@@ -695,6 +760,15 @@ struct array_traits<BlitzArray, T, N, Aux>
 		return a;
 	}
 
+#ifdef __GXX_EXPERIMENTAL_CXX0X__
+	template <typename U>
+	static array_type create(const std::initializer_list<U> init_list)
+	{ return create(init_list.begin() ); }
+	template <typename U>
+	static array_type create(const std::initializer_list<U> init_list, const T &value)
+	{ return create(init_list.begin(), value); }
+#endif
+
 	static std::size_t size(const array_type &a) { return a.size(); }
 
 	template <typename InputIterator>
@@ -710,6 +784,13 @@ struct array_traits<BlitzArray, T, N, Aux>
 
 		return true;
 	}
+#ifdef __GXX_EXPERIMENTAL_CXX0X__
+	template <typename U>
+	static bool resize(BlitzArray<T, 1u, Aux> &a,
+			   const std::initializer_list<U> init_list,
+			   bool preserve = false)
+	{ return resize(a, init_list.begin(), preserve); }
+#endif
 
 	template <typename MatrixOrReference>
 	//~ static typename blitz::TinyVector<std::size_t, N>::const_iterator
@@ -757,6 +838,15 @@ struct array_traits<BlitzArray, T, 1u, Aux>
 		return a;
 	}
 
+#ifdef __GXX_EXPERIMENTAL_CXX0X__
+	template <typename U>
+	static array_type create(const std::initializer_list<U> init_list)
+	{ return create(init_list.begin() ); }
+	template <typename U>
+	static array_type create(const std::initializer_list<U> init_list, const T &value)
+	{ return create(init_list.begin(), value); }
+#endif
+
 	static std::size_t size(const array_type &a) { return a.size(); }
 
 	template <typename InputIterator>
@@ -772,6 +862,13 @@ struct array_traits<BlitzArray, T, 1u, Aux>
 
 		return true;
 	}
+#ifdef __GXX_EXPERIMENTAL_CXX0X__
+	template <typename U>
+	static bool resize(BlitzArray<T, 1u, Aux> &a,
+			   const std::initializer_list<U> init_list,
+			   bool preserve = false)
+	{ return resize(a, init_list.begin(), preserve); }
+#endif
 
 	template <typename MatrixOrReference>
 //	static typename blitz::TinyVector<std::size_t, 1u>::const_iterator

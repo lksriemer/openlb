@@ -15,8 +15,8 @@
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
  *
- *  You should have received a copy of the GNU General Public 
- *  License along with this program; if not, write to the Free 
+ *  You should have received a copy of the GNU General Public
+ *  License along with this program; if not, write to the Free
  *  Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  *  Boston, MA  02110-1301, USA.
 */
@@ -35,37 +35,37 @@ namespace olb {
 
 template<typename T>
 struct MultiDataFieldHandler3D {
-    virtual ~MultiDataFieldHandler3D() { }
-    virtual int getNx() const =0;
-    virtual int getNy() const =0;
-    virtual int getNz() const =0;
-    virtual MultiDataDistribution3D const& getMultiDataDistribution() const =0;
-    virtual bool getLocalEnvelope(int iBlock, int& lx, int& ly, int& lz) const =0;
-    virtual T reduceSum(T localSum) const =0;
-    virtual T reduceAverage(T localAverage, T localWeight) const =0;
-    virtual T reduceMin(T localMin) const =0;
-    virtual T reduceMax(T localMax) const =0;
-    virtual void broadCastScalar(T& scalar, int fromBlock) const =0;
-    virtual void broadCastVector(T* vect, int size, int fromBlock) const =0;
+  virtual ~MultiDataFieldHandler3D() { }
+  virtual int getNx() const =0;
+  virtual int getNy() const =0;
+  virtual int getNz() const =0;
+  virtual MultiDataDistribution3D const& getMultiDataDistribution() const =0;
+  virtual bool getLocalEnvelope(int iBlock, int& lx, int& ly, int& lz) const =0;
+  virtual T reduceSum(T localSum) const =0;
+  virtual T reduceAverage(T localAverage, T localWeight) const =0;
+  virtual T reduceMin(T localMin) const =0;
+  virtual T reduceMax(T localMax) const =0;
+  virtual void broadCastScalar(T& scalar, int fromBlock) const =0;
+  virtual void broadCastVector(T* vect, int size, int fromBlock) const =0;
 };
 
 template<typename T>
 class SerialMultiDataFieldHandler3D : public MultiDataFieldHandler3D<T> {
 public:
-    SerialMultiDataFieldHandler3D(MultiDataDistribution3D const& dataDistribution_);
-    virtual int getNx() const;
-    virtual int getNy() const;
-    virtual int getNz() const;
-    virtual MultiDataDistribution3D const& getMultiDataDistribution() const;
-    virtual bool getLocalEnvelope(int iBlock, int& lx, int& ly, int& lz) const;
-    virtual T reduceSum(T localSum) const;
-    virtual T reduceAverage(T localAverage, T localWeight) const;
-    virtual T reduceMin(T localMin) const;
-    virtual T reduceMax(T localMax) const;
-    virtual void broadCastScalar(T& scalar, int fromBlock) const;
-    virtual void broadCastVector(T* vect, int size, int fromBlock) const;
+  SerialMultiDataFieldHandler3D(MultiDataDistribution3D const& dataDistribution_);
+  virtual int getNx() const;
+  virtual int getNy() const;
+  virtual int getNz() const;
+  virtual MultiDataDistribution3D const& getMultiDataDistribution() const;
+  virtual bool getLocalEnvelope(int iBlock, int& lx, int& ly, int& lz) const;
+  virtual T reduceSum(T localSum) const;
+  virtual T reduceAverage(T localAverage, T localWeight) const;
+  virtual T reduceMin(T localMin) const;
+  virtual T reduceMax(T localMax) const;
+  virtual void broadCastScalar(T& scalar, int fromBlock) const;
+  virtual void broadCastVector(T* vect, int size, int fromBlock) const;
 private:
-    MultiDataDistribution3D dataDistribution;
+  MultiDataDistribution3D dataDistribution;
 };
 
 
@@ -73,20 +73,20 @@ private:
 template<typename T>
 class ParallelMultiDataFieldHandler3D : public MultiDataFieldHandler3D<T> {
 public:
-    ParallelMultiDataFieldHandler3D(MultiDataDistribution3D const& dataDistribution_);
-    virtual int getNx() const;
-    virtual int getNy() const;
-    virtual int getNz() const;
-    virtual MultiDataDistribution3D const& getMultiDataDistribution() const;
-    virtual bool getLocalEnvelope(int iBlock, int& lx, int& ly, int& lz) const;
-    virtual T reduceSum(T localSum) const;
-    virtual T reduceAverage(T localAverage, T localWeight) const;
-    virtual T reduceMin(T localMin) const;
-    virtual T reduceMax(T localMax) const;
-    virtual void broadCastScalar(T& scalar, int fromBlock) const;
-    virtual void broadCastVector(T* vect, int size, int fromBlock) const;
+  ParallelMultiDataFieldHandler3D(MultiDataDistribution3D const& dataDistribution_);
+  virtual int getNx() const;
+  virtual int getNy() const;
+  virtual int getNz() const;
+  virtual MultiDataDistribution3D const& getMultiDataDistribution() const;
+  virtual bool getLocalEnvelope(int iBlock, int& lx, int& ly, int& lz) const;
+  virtual T reduceSum(T localSum) const;
+  virtual T reduceAverage(T localAverage, T localWeight) const;
+  virtual T reduceMin(T localMin) const;
+  virtual T reduceMax(T localMax) const;
+  virtual void broadCastScalar(T& scalar, int fromBlock) const;
+  virtual void broadCastVector(T* vect, int size, int fromBlock) const;
 private:
-    MultiDataDistribution3D dataDistribution;
+  MultiDataDistribution3D dataDistribution;
 };
 #endif
 

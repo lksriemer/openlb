@@ -12,8 +12,8 @@
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
  *
- *  You should have received a copy of the GNU General Public 
- *  License along with this program; if not, write to the Free 
+ *  You should have received a copy of the GNU General Public
+ *  License along with this program; if not, write to the Free
  *  Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  *  Boston, MA  02110-1301, USA.
 */
@@ -30,6 +30,7 @@
 #include <vector>
 #endif
 #include <string>
+#include "io/ostreamManager.h"
 
 
 namespace olb {
@@ -43,166 +44,167 @@ namespace singleton {
 
 class MpiNonBlockingHelper {
 private:
-    /// Size of the vector _mpiRequest/_mpiStatus
-    unsigned _size;
-    /// vector of MPI_Request
-    MPI_Request *_mpiRequest;
-    /// vector of MPI_Status
-    MPI_Status *_mpiStatus;
+  /// Size of the vector _mpiRequest/_mpiStatus
+  unsigned _size;
+  /// vector of MPI_Request
+  MPI_Request *_mpiRequest;
+  /// vector of MPI_Status
+  MPI_Status *_mpiStatus;
 public:
-    /// Constructor
-    MpiNonBlockingHelper();
-    /// Copy construction
-    MpiNonBlockingHelper(MpiNonBlockingHelper const& rhs);
-    /// Copy assignment
-    MpiNonBlockingHelper operator=(MpiNonBlockingHelper rhs);
-    /// Destructor
-    ~MpiNonBlockingHelper();
+  /// Constructor
+  MpiNonBlockingHelper();
+  /// Copy construction
+  MpiNonBlockingHelper(MpiNonBlockingHelper const& rhs);
+  /// Copy assignment
+  MpiNonBlockingHelper operator=(MpiNonBlockingHelper rhs);
+  /// Destructor
+  ~MpiNonBlockingHelper();
 
-    /// Allocates memory
-    void allocate(unsigned i);
-    /// Frees memory
-    void free();
+  /// Allocates memory
+  void allocate(unsigned i);
+  /// Frees memory
+  void free();
 
-    /// Returns the size of the vector _mpiRequest/_mpiStatus
-    unsigned const& get_size() const;
-    /// Read and write access _mpiRequest
-    MPI_Request* get_mpiRequest() const;
-    /// Read and write access _mpiStatus
-    MPI_Status* get_mpiStatus() const;
+  /// Returns the size of the vector _mpiRequest/_mpiStatus
+  unsigned const& get_size() const;
+  /// Read and write access _mpiRequest
+  MPI_Request* get_mpiRequest() const;
+  /// Read and write access _mpiStatus
+  MPI_Status* get_mpiStatus() const;
 };
 
 /// Wrapper functions that simplify the use of MPI
 
 class MpiManager {
 public:
-    /// Initializes the mpi manager
-    void init(int *argc, char ***argv, bool verbose=false);
-    /// Returns the number of processes
-    int getSize() const;
-    /// Returns the process ID
-    int getRank() const;
-    /// Returns process ID of main processor
-    int bossId() const;
-    /// Tells whether current processor is main processor
-    bool isMainProcessor() const;
-    /// Returns universal MPI-time in seconds
-    double getTime() const;
+  /// Initializes the mpi manager
+  void init(int *argc, char ***argv);
+  /// Returns the number of processes
+  int getSize() const;
+  /// Returns the process ID
+  int getRank() const;
+  /// Returns process ID of main processor
+  int bossId() const;
+  /// Tells whether current processor is main processor
+  bool isMainProcessor() const;
+  /// Returns universal MPI-time in seconds
+  double getTime() const;
 
-    /// Synchronizes the processes
-    void barrier(MPI_Comm comm = MPI_COMM_WORLD);
+  /// Synchronizes the processes
+  void barrier(MPI_Comm comm = MPI_COMM_WORLD);
 
-    /// Sends data at *buf, blocking
-    template <typename T>
-    void send(T *buf, int count, int dest, int tag = 0, MPI_Comm comm = MPI_COMM_WORLD);
+  /// Sends data at *buf, blocking
+  template <typename T>
+  void send(T *buf, int count, int dest, int tag = 0, MPI_Comm comm = MPI_COMM_WORLD);
 
-    /// Sends data at *buf, non blocking
-    template <typename T>
-    void iSend(T *buf, int count, int dest, MPI_Request* request, int tag = 0, MPI_Comm comm = MPI_COMM_WORLD);
+  /// Sends data at *buf, non blocking
+  template <typename T>
+  void iSend(T *buf, int count, int dest, MPI_Request* request, int tag = 0, MPI_Comm comm = MPI_COMM_WORLD);
 
-    /// Sends data at *buf, non blocking and request free
-    template <typename T>
-    void iSendRequestFree(T *buf, int count, int dest, int tag = 0, MPI_Comm comm = MPI_COMM_WORLD);
+  /// Sends data at *buf, non blocking and request free
+  template <typename T>
+  void iSendRequestFree(T *buf, int count, int dest, int tag = 0, MPI_Comm comm = MPI_COMM_WORLD);
 
-    /// Receives data at *buf, blocking
-    template <typename T>
-    void receive(T *buf, int count, int source, int tag = 0, MPI_Comm comm = MPI_COMM_WORLD);
+  /// Receives data at *buf, blocking
+  template <typename T>
+  void receive(T *buf, int count, int source, int tag = 0, MPI_Comm comm = MPI_COMM_WORLD);
 
-    /// Receives data at *buf, non blocking
-    template <typename T>
-    void iRecv(T *buf, int count, int source, MPI_Request* request, int tag = 0, MPI_Comm comm = MPI_COMM_WORLD);
+  /// Receives data at *buf, non blocking
+  template <typename T>
+  void iRecv(T *buf, int count, int source, MPI_Request* request, int tag = 0, MPI_Comm comm = MPI_COMM_WORLD);
 
-    /// Send and receive data between two partners
-    template <typename T>
-    void sendRecv(T *sendBuf, T *recvBuf, int count, int dest, int source, int tag = 0,
-                  MPI_Comm comm = MPI_COMM_WORLD);
+  /// Send and receive data between two partners
+  template <typename T>
+  void sendRecv(T *sendBuf, T *recvBuf, int count, int dest, int source, int tag = 0,
+                MPI_Comm comm = MPI_COMM_WORLD);
 
-    /// Sends data to master processor
-    template <typename T>
-    void sendToMaster(T* sendBuf, int sendCount, bool iAmRoot, MPI_Comm comm = MPI_COMM_WORLD);
+  /// Sends data to master processor
+  template <typename T>
+  void sendToMaster(T* sendBuf, int sendCount, bool iAmRoot, MPI_Comm comm = MPI_COMM_WORLD);
 
-    /// Scatter data from one processor over multiple processors
-    template <typename T>
-    void scatterV(T *sendBuf, T *recvBuf, int* sendCounts, int root = 0, MPI_Comm comm = MPI_COMM_WORLD);
+  /// Scatter data from one processor over multiple processors
+  template <typename T>
+  void scatterV(T *sendBuf, T *recvBuf, int* sendCounts, int root = 0, MPI_Comm comm = MPI_COMM_WORLD);
 
-    /// Gather data from multiple processors to one processor
-    template <typename T>
-    void gatherV(T* sendBuf, T* recvBuf, int *recvCounts, int root = 0, MPI_Comm comm = MPI_COMM_WORLD);
+  /// Gather data from multiple processors to one processor
+  template <typename T>
+  void gatherV(T* sendBuf, T* recvBuf, int *recvCounts, int root = 0, MPI_Comm comm = MPI_COMM_WORLD);
 
 
-    /// Broadcast data from one processor to multiple processors
-    template <typename T>
-    void bCast(T* sendBuf, int sendCount, int root = 0, MPI_Comm comm = MPI_COMM_WORLD);
+  /// Broadcast data from one processor to multiple processors
+  template <typename T>
+  void bCast(T* sendBuf, int sendCount, int root = 0, MPI_Comm comm = MPI_COMM_WORLD);
 
-    /// Broadcast data when root is unknown to other processors
-    template <typename T>
-    void bCastThroughMaster(T* sendBuf, int sendCount, bool iAmRoot, MPI_Comm comm = MPI_COMM_WORLD);
+  /// Broadcast data when root is unknown to other processors
+  template <typename T>
+  void bCastThroughMaster(T* sendBuf, int sendCount, bool iAmRoot, MPI_Comm comm = MPI_COMM_WORLD);
 
-	/// Special case for broadcasting strings. Memory handling is automatic. 
-	void bCast( std::string& message, int root = 0 ); 
+  /// Special case for broadcasting strings. Memory handling is automatic.
+  void bCast( std::string& message, int root = 0 );
 
-    /// Reduction operation toward one processor
-    template <typename T>
-    void reduce(T sendVal, T& recvVal, MPI_Op op, int root = 0, MPI_Comm = MPI_COMM_WORLD);
+  /// Reduction operation toward one processor
+  template <typename T>
+  void reduce(T sendVal, T& recvVal, MPI_Op op, int root = 0, MPI_Comm = MPI_COMM_WORLD);
 
-    /// Element-per-element reduction of a vector of data
-    template <typename T>
-    void reduceVect(std::vector<T>& sendVal, std::vector<T>& recvVal,
-                    MPI_Op op, int root = 0, MPI_Comm comm = MPI_COMM_WORLD);
+  /// Element-per-element reduction of a vector of data
+  template <typename T>
+  void reduceVect(std::vector<T>& sendVal, std::vector<T>& recvVal,
+                  MPI_Op op, int root = 0, MPI_Comm comm = MPI_COMM_WORLD);
 
-    /// Reduction operation, followed by a broadcast
-    template <typename T>
-    void reduceAndBcast(T& reductVal, MPI_Op op, int root = 0, MPI_Comm comm = MPI_COMM_WORLD);
+  /// Reduction operation, followed by a broadcast
+  template <typename T>
+  void reduceAndBcast(T& reductVal, MPI_Op op, int root = 0, MPI_Comm comm = MPI_COMM_WORLD);
 
-    /// Complete a non-blocking MPI operation
-    void wait(MPI_Request* request, MPI_Status* status);
+  /// Complete a non-blocking MPI operation
+  void wait(MPI_Request* request, MPI_Status* status);
 
-    /// Complete a series of non-blocking MPI operations
-    void waitAll(MpiNonBlockingHelper& mpiNbHelper);
+  /// Complete a series of non-blocking MPI operations
+  void waitAll(MpiNonBlockingHelper& mpiNbHelper);
 
 private:
-    /// Implementation code for Scatter
-    template <typename T>
-    void scatterv_impl(T *sendBuf, int* sendCounts, int* displs,
-                       T* recvBuf, int recvCount, int root, MPI_Comm comm);
+  /// Implementation code for Scatter
+  template <typename T>
+  void scatterv_impl(T *sendBuf, int* sendCounts, int* displs,
+                     T* recvBuf, int recvCount, int root, MPI_Comm comm);
 
-    /// Implementation code for Gather
-    template <typename T>
-    void gatherv_impl(T* sendBuf, int sendCount, T* recvBuf, int* recvCounts, int* displs,
-                      int root, MPI_Comm comm);
+  /// Implementation code for Gather
+  template <typename T>
+  void gatherv_impl(T* sendBuf, int sendCount, T* recvBuf, int* recvCounts, int* displs,
+                    int root, MPI_Comm comm);
 private:
-    MpiManager();
-    ~MpiManager();
+  MpiManager();
+  ~MpiManager();
 private:
-    int numTasks, taskId;
-    bool ok;
+  int numTasks, taskId;
+  bool ok;
+  mutable OstreamManager clout;
 
-friend MpiManager& mpi();
+  friend MpiManager& mpi();
 };
 
 #else
 
 class MpiManager {
 public:
-    /// Initializes the mpi manager
-    void init(int *argc, char ***argv, bool verbose=false) { }
-    /// Returns the number of processes
-    int getSize() const { return 1; }
-    /// Returns the process ID
-    int getRank() const { return 0; }
-    /// Returns process ID of main processor
-    int bossId() const { return 0; }
-    /// Tells whether current processor is main processor
-    bool isMainProcessor() const { return true; }
+  /// Initializes the mpi manager
+  void init(int *argc, char ***argv, bool verbose=false) { }
+  /// Returns the number of processes
+  int getSize() const { return 1; }
+  /// Returns the process ID
+  int getRank() const { return 0; }
+  /// Returns process ID of main processor
+  int bossId() const { return 0; }
+  /// Tells whether current processor is main processor
+  bool isMainProcessor() const { return true; }
 
-friend MpiManager& mpi();
+  friend MpiManager& mpi();
 };
 
 #endif  // PARALLEL_MODE_MPI
 
 inline MpiManager& mpi() {
-    static MpiManager instance;
-    return instance;
+  static MpiManager instance;
+  return instance;
 }
 
 }  // namespace singleton

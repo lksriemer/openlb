@@ -15,8 +15,8 @@
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
  *
- *  You should have received a copy of the GNU General Public 
- *  License along with this program; if not, write to the Free 
+ *  You should have received a copy of the GNU General Public
+ *  License along with this program; if not, write to the Free
  *  Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  *  Boston, MA  02110-1301, USA.
 */
@@ -28,32 +28,32 @@ namespace olb {
 namespace algorithm {
 
 std::vector<int> primeFactor(int value) {
-    std::vector<int> primeFactors;
-    int testFactor = 2;
-    while (testFactor <= value) {
-        if (value%testFactor==0) {
-            value /= testFactor;
-            primeFactors.push_back(testFactor);
-        }
-        else {
-            ++testFactor;
-        }
+  std::vector<int> primeFactors;
+  int testFactor = 2;
+  while (testFactor <= value) {
+    if (value%testFactor==0) {
+      value /= testFactor;
+      primeFactors.push_back(testFactor);
     }
-    return primeFactors;
+    else {
+      ++testFactor;
+    }
+  }
+  return primeFactors;
 }
 
 std::vector<int> evenRepartition(int value, int d) {
-    std::vector<int> primeFactors = primeFactor(value);
-    std::vector<int> repartition(d);
-    for (int iRep=0; iRep<d; ++iRep) {
-        repartition[iRep] = 1;
-    }
-    int iDim=0;
-    for (int iPrime=(int)(primeFactors.size()-1); iPrime>=0; --iPrime) {
-        repartition[iDim] *= primeFactors[iPrime];
-        iDim = (iDim+1)%d;
-    }
-    return repartition;
+  std::vector<int> primeFactors = primeFactor(value);
+  std::vector<int> repartition(d);
+  for (int iRep=0; iRep<d; ++iRep) {
+    repartition[iRep] = 1;
+  }
+  int iDim=0;
+  for (int iPrime=(int)(primeFactors.size()-1); iPrime>=0; --iPrime) {
+    repartition[iDim] *= primeFactors[iPrime];
+    iDim = (iDim+1)%d;
+  }
+  return repartition;
 }
 
 }

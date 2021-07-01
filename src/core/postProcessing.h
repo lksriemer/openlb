@@ -15,8 +15,8 @@
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
  *
- *  You should have received a copy of the GNU General Public 
- *  License along with this program; if not, write to the Free 
+ *  You should have received a copy of the GNU General Public
+ *  License along with this program; if not, write to the Free
  *  Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  *  Boston, MA  02110-1301, USA.
 */
@@ -30,6 +30,7 @@
 #include <vector>
 #include "spatiallyExtendedObject2D.h"
 #include "spatiallyExtendedObject3D.h"
+#include "io/ostreamManager.h"
 
 namespace olb {
 
@@ -52,11 +53,11 @@ class BlockLattice3D;
 
 template<typename T>
 struct Reductor {
-    virtual ~Reductor() { } 
-    virtual void subscribeSum(T& element) =0;
-    virtual void subscribeAverage(size_t const& weight, T& element) =0;
-    virtual void subscribeMin(T& element) =0;
-    virtual void subscribeMax(T& element) =0;
+  virtual ~Reductor() { }
+  virtual void subscribeSum(T& element) =0;
+  virtual void subscribeAverage(size_t const& weight, T& element) =0;
+  virtual void subscribeMin(T& element) =0;
+  virtual void subscribeMax(T& element) =0;
 };
 
 
@@ -65,71 +66,71 @@ struct Reductor {
 /// Interface of 2D post-processing steps.
 template<typename T, template<typename U> class Lattice>
 struct PostProcessor2D {
-    virtual ~PostProcessor2D() { }
-    /// Execute post-processing step
-    virtual void process(BlockLattice2D<T,Lattice>& blockLattice) =0;
-    /// Execute post-processing step on a sublattice
-    virtual void processSubDomain(BlockLattice2D<T,Lattice>& blockLattice,
-                                  int x0_, int x1_, int y0_, int y1_) =0;
-    /// Extent of application area (0 for purely local operations)
-    virtual int extent() const =0;
-    /// Extent of application area along a direction (0 or 1)
-    virtual int extent(int direction) const =0;
-    virtual bool hasReductions() const =0;
-    virtual void subscribeReductions(BlockLattice2D<T,Lattice>& blockLattice,
-                                     Reductor<T>* reductor) =0;
+  virtual ~PostProcessor2D() { }
+  /// Execute post-processing step
+  virtual void process(BlockLattice2D<T,Lattice>& blockLattice) =0;
+  /// Execute post-processing step on a sublattice
+  virtual void processSubDomain(BlockLattice2D<T,Lattice>& blockLattice,
+                                int x0_, int x1_, int y0_, int y1_) =0;
+  /// Extent of application area (0 for purely local operations)
+  virtual int extent() const =0;
+  /// Extent of application area along a direction (0 or 1)
+  virtual int extent(int direction) const =0;
+  virtual bool hasReductions() const =0;
+  virtual void subscribeReductions(BlockLattice2D<T,Lattice>& blockLattice,
+                                   Reductor<T>* reductor) =0;
 };
 
 template<typename T, template<typename U> class Lattice>
 class PostProcessorGenerator2D {
 public:
-    PostProcessorGenerator2D(int x0_, int x1_, int y0_, int y1_);
-    virtual ~PostProcessorGenerator2D() { }
-    void shift(int deltaX, int deltaY);
-    bool extract(int x0_, int x1_, int y0_, int y1_);
-    virtual PostProcessor2D<T,Lattice>* generate() const =0;
-    virtual PostProcessorGenerator2D<T,Lattice>* clone() const =0;
+  PostProcessorGenerator2D(int x0_, int x1_, int y0_, int y1_);
+  virtual ~PostProcessorGenerator2D() { }
+  void shift(int deltaX, int deltaY);
+  bool extract(int x0_, int x1_, int y0_, int y1_);
+  virtual PostProcessor2D<T,Lattice>* generate() const =0;
+  virtual PostProcessorGenerator2D<T,Lattice>* clone() const =0;
 protected:
-    int x0, x1, y0, y1;
+  int x0, x1, y0, y1;
 };
 
 template<typename T, template<typename U> class Lattice>
 class LatticeCouplingGenerator2D {
 public:
-    LatticeCouplingGenerator2D(int x0_, int x1_, int y0_, int y1_);
-    virtual ~LatticeCouplingGenerator2D() { }
-    void shift(int deltaX, int deltaY);
-    bool extract(int x0_, int x1_, int y0_, int y1_);
-    virtual PostProcessor2D<T,Lattice>* generate(std::vector<SpatiallyExtendedObject2D*> partners) const =0;
-    virtual LatticeCouplingGenerator2D<T,Lattice>* clone() const =0;
+  LatticeCouplingGenerator2D(int x0_, int x1_, int y0_, int y1_);
+  virtual ~LatticeCouplingGenerator2D() { }
+  void shift(int deltaX, int deltaY);
+  bool extract(int x0_, int x1_, int y0_, int y1_);
+  virtual PostProcessor2D<T,Lattice>* generate(std::vector<SpatiallyExtendedObject2D*> partners) const =0;
+  virtual LatticeCouplingGenerator2D<T,Lattice>* clone() const =0;
 protected:
-    int x0, x1, y0, y1;
+  int x0, x1, y0, y1;
 };
 
 
 template<typename T, template<typename U> class Lattice>
 struct LocalPostProcessor2D : public PostProcessor2D<T,Lattice> {
-    virtual bool hasReductions() const { return false; }
-    virtual void subscribeReductions(BlockLattice2D<T,Lattice>& blockLattice,
-                                     Reductor<T>* reductor)
-    { }
+  virtual bool hasReductions() const { return false; }
+  virtual void subscribeReductions(BlockLattice2D<T,Lattice>& blockLattice,
+                                   Reductor<T>* reductor)
+  { }
 };
 
 template<typename T, template<typename U> class Lattice>
 struct GlobalPostProcessor2D : public PostProcessor2D<T,Lattice> {
-    virtual bool hasReductions() const { return true; }
-    virtual void process(BlockLattice2D<T,Lattice>& blockLattice) =0;
-    virtual void processSubDomain(BlockLattice2D<T,Lattice>& blockLattice,
-                                  int x0_, int x1_, int y0_, int y1_ )
-    {
-        this -> process(blockLattice);
-    }
-    virtual int extent() const {
-        return 0;
-    }
-    virtual int extent(int direction) const {
-        return 0;
-    }
+  virtual bool hasReductions() const { return true; }
+  virtual void process(BlockLattice2D<T,Lattice>& blockLattice) =0;
+  virtual void processSubDomain(BlockLattice2D<T,Lattice>& blockLattice,
+                                int x0_, int x1_, int y0_, int y1_ )
+  {
+    this -> process(blockLattice);
+  }
+  virtual int extent() const {
+    return 0;
+  }
+  virtual int extent(int direction) const {
+    return 0;
+  }
 };
 
 
@@ -137,76 +138,76 @@ struct GlobalPostProcessor2D : public PostProcessor2D<T,Lattice> {
 
 template<typename T, template<typename U> class Lattice>
 struct PostProcessor3D {
-    virtual ~PostProcessor3D() { }
-    /// Execute post-processing step
-    virtual void process(BlockLattice3D<T,Lattice>& blockLattice) =0;
-        /// Execute post-processing step on a sublattice
-    virtual void processSubDomain(BlockLattice3D<T,Lattice>& blockLattice,
-                                  int x0_, int x1_, int y0_, int y1_,
-                         int z0_, int z1_ ) =0;
-    /// Extent of application area (0 for purely local operations)
-    virtual int extent() const =0;
-    /// Extent of application area along a direction (0 or 1)
-    virtual int extent(int direction) const =0;
-    virtual bool hasReductions() const =0;
-    virtual void subscribeReductions(BlockLattice3D<T,Lattice>& blockLattice,
-                                     Reductor<T>* reductor) =0;
+  virtual ~PostProcessor3D() { }
+  /// Execute post-processing step
+  virtual void process(BlockLattice3D<T,Lattice>& blockLattice) =0;
+  /// Execute post-processing step on a sublattice
+  virtual void processSubDomain(BlockLattice3D<T,Lattice>& blockLattice,
+                                int x0_, int x1_, int y0_, int y1_,
+                                int z0_, int z1_ ) =0;
+  /// Extent of application area (0 for purely local operations)
+  virtual int extent() const =0;
+  /// Extent of application area along a direction (0 or 1)
+  virtual int extent(int direction) const =0;
+  virtual bool hasReductions() const =0;
+  virtual void subscribeReductions(BlockLattice3D<T,Lattice>& blockLattice,
+                                   Reductor<T>* reductor) =0;
 };
 
 template<typename T, template<typename U> class Lattice>
 class PostProcessorGenerator3D {
 public:
-    PostProcessorGenerator3D( int x0_, int x1_, int y0_, int y1_,
-                              int z0_, int z1_ );
-    virtual ~PostProcessorGenerator3D() { }
-    void shift(int deltaX, int deltaY, int deltaZ);
-    bool extract(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_);
-    virtual PostProcessor3D<T,Lattice>* generate() const =0;
-    virtual PostProcessorGenerator3D<T,Lattice>* clone() const =0;
+  PostProcessorGenerator3D( int x0_, int x1_, int y0_, int y1_,
+                            int z0_, int z1_ );
+  virtual ~PostProcessorGenerator3D() { }
+  void shift(int deltaX, int deltaY, int deltaZ);
+  bool extract(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_);
+  virtual PostProcessor3D<T,Lattice>* generate() const =0;
+  virtual PostProcessorGenerator3D<T,Lattice>* clone() const =0;
 protected:
-    int x0, x1, y0, y1, z0, z1;
+  int x0, x1, y0, y1, z0, z1;
 };
 
 
 template<typename T, template<typename U> class Lattice>
 class LatticeCouplingGenerator3D {
 public:
-    LatticeCouplingGenerator3D( int x0_, int x1_, int y0_, int y1_,
-                                int z0_, int z1_ );
-    virtual ~LatticeCouplingGenerator3D() { }
-    void shift(int deltaX, int deltaY, int deltaZ);
-    bool extract(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_);
-    virtual PostProcessor3D<T,Lattice>* generate(std::vector<SpatiallyExtendedObject3D*> partners) const =0;
-    virtual LatticeCouplingGenerator3D<T,Lattice>* clone() const =0;
+  LatticeCouplingGenerator3D( int x0_, int x1_, int y0_, int y1_,
+                              int z0_, int z1_ );
+  virtual ~LatticeCouplingGenerator3D() { }
+  void shift(int deltaX, int deltaY, int deltaZ);
+  bool extract(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_);
+  virtual PostProcessor3D<T,Lattice>* generate(std::vector<SpatiallyExtendedObject3D*> partners) const =0;
+  virtual LatticeCouplingGenerator3D<T,Lattice>* clone() const =0;
 protected:
-    int x0, x1, y0, y1, z0, z1;
+  int x0, x1, y0, y1, z0, z1;
 };
 
 
 template<typename T, template<typename U> class Lattice>
 struct LocalPostProcessor3D : public PostProcessor3D<T,Lattice> {
-    virtual bool hasReductions() const { return false; }
-    virtual void subscribeReductions(BlockLattice3D<T,Lattice>& blockLattice,
-                                     Reductor<T>* reductor)
-    { }
+  virtual bool hasReductions() const { return false; }
+  virtual void subscribeReductions(BlockLattice3D<T,Lattice>& blockLattice,
+                                   Reductor<T>* reductor)
+  { }
 };
 
 template<typename T, template<typename U> class Lattice>
 struct GlobalPostProcessor3D : public PostProcessor3D<T,Lattice> {
-    virtual bool hasReductions() const { return true; }
-    virtual void process(BlockLattice3D<T,Lattice>& blockLattice) =0;
-    virtual void processSubDomain(BlockLattice3D<T,Lattice>& blockLattice,
-                                  int x0_, int x1_, int y0_, int y1_,
-                                  int z0_, int z1_ )
-    {
-        this -> process(blockLattice);
-    }
-    virtual int extent() const {
-        return 0;
-    }
-    virtual int extent(int direction) const {
-        return 0;
-    }
+  virtual bool hasReductions() const { return true; }
+  virtual void process(BlockLattice3D<T,Lattice>& blockLattice) =0;
+  virtual void processSubDomain(BlockLattice3D<T,Lattice>& blockLattice,
+                                int x0_, int x1_, int y0_, int y1_,
+                                int z0_, int z1_ )
+  {
+    this -> process(blockLattice);
+  }
+  virtual int extent() const {
+    return 0;
+  }
+  virtual int extent(int direction) const {
+    return 0;
+  }
 };
 
 
@@ -216,99 +217,101 @@ struct GlobalPostProcessor3D : public PostProcessor3D<T,Lattice> {
 template<typename T>
 class LatticeStatistics {
 public:
-    enum { avRho=0, avEnergy=1 } AverageT;
-    enum { maxU=0 } MaxT;
+  enum { avRho=0, avEnergy=1 } AverageT;
+  enum { maxU=0 } MaxT;
 public:
-    LatticeStatistics();
-    ~LatticeStatistics();
-    void reset();
-    void reset(T average_rho_, T average_energy_, T maxU_, size_t numCells_);
+  LatticeStatistics();
+  ~LatticeStatistics();
+  void reset();
+  void reset(T average_rho_, T average_energy_, T maxU_, size_t numCells_);
 
-    int subscribeAverage();
-    int subscribeSum();
-    int subscribeMin();
-    int subscribeMax();
+  int subscribeAverage();
+  int subscribeSum();
+  int subscribeMin();
+  int subscribeMax();
 
-    void incrementStats(T rho, T uSqr) {
-        tmpAv[avRho]    += rho;
-        tmpAv[avEnergy] += uSqr;
-        if (uSqr > tmpMax[maxU]) {
-            tmpMax[maxU] = uSqr;
-        }
-        ++tmpNumCells;
+  void incrementStats(T rho, T uSqr) {
+    tmpAv[avRho]    += rho;
+    tmpAv[avEnergy] += uSqr;
+    if (uSqr > tmpMax[maxU]) {
+      tmpMax[maxU] = uSqr;
     }
-    void gatherAverage(int whichAverage, T value);
-    void gatherSum(int whichSum, T value);
-    void gatherMin(int whichMin, T value);
-    void gatherMax(int whichMax, T value);
-    void incrementStats();
-    T getAverageRho()        const { return averageVect[avRho]; }
-    T getAverageEnergy()     const { return averageVect[avEnergy]; }
-    T getMaxU()              const { return maxVect[maxU]; }
-    size_t const& getNumCells() const { return numCells; }
+    ++tmpNumCells;
+  }
+  void gatherAverage(int whichAverage, T value);
+  void gatherSum(int whichSum, T value);
+  void gatherMin(int whichMin, T value);
+  void gatherMax(int whichMax, T value);
+  void incrementStats();
+  T getAverageRho()        const { return averageVect[avRho]; }
+  T getAverageEnergy()     const { return averageVect[avEnergy]; }
+  T getMaxU()              const { return maxVect[maxU]; }
+  size_t const& getNumCells() const { return numCells; }
 
-    T getAverage(int whichAverage) const;
-    T getSum(int whichSum) const;
-    T getMin(int whichMin) const;
-    T getMax(int whichMax) const;
+  T getAverage(int whichAverage) const;
+  T getSum(int whichSum) const;
+  T getMin(int whichMin) const;
+  T getMax(int whichMax) const;
 
-    std::vector<T>& getAverageVect() { return averageVect; }
-    std::vector<T>& getSumVect() { return sumVect; }
-    std::vector<T>& getMinVect() { return minVect; }
-    std::vector<T>& getMaxVect() { return maxVect; }
+  std::vector<T>& getAverageVect() { return averageVect; }
+  std::vector<T>& getSumVect() { return sumVect; }
+  std::vector<T>& getMinVect() { return minVect; }
+  std::vector<T>& getMaxVect() { return maxVect; }
 
-    void incrementTime() { ++latticeTime; };
-    void resetTime(size_t value=0) { latticeTime=value; } ;
-    size_t getTime() const { return latticeTime; };
+  void incrementTime() { ++latticeTime; };
+  void resetTime(size_t value=0) { latticeTime=value; } ;
+  size_t getTime() const { return latticeTime; };
+  void print(int iterationStep, T physicalTime=-1) const;
 private:
-    void initialize();
+  void initialize();
 private:
-    // variables for internal computations
-    std::vector<T> tmpAv, tmpSum, tmpMin, tmpMax;
-    size_t tmpNumCells;
-    // variables containing the public result
-    std::vector<T> averageVect, sumVect, minVect, maxVect;
-    size_t numCells;
-    size_t latticeTime;
-    bool firstCall;
+  mutable OstreamManager clout;
+  // variables for internal computations
+  std::vector<T> tmpAv, tmpSum, tmpMin, tmpMax;
+  size_t tmpNumCells;
+  // variables containing the public result
+  std::vector<T> averageVect, sumVect, minVect, maxVect;
+  size_t numCells;
+  size_t latticeTime;
+  bool firstCall;
 };
 
 template<typename T, template<typename U> class Lattice>
 struct StatisticsPostProcessor2D : public GlobalPostProcessor2D<T,Lattice>
 {
-    StatisticsPostProcessor2D();
-    virtual void process(BlockLattice2D<T,Lattice>& blockLattice);
-    virtual void subscribeReductions(BlockLattice2D<T,Lattice>& blockLattice,
-                                     Reductor<T>* reductor);
+  StatisticsPostProcessor2D();
+  virtual void process(BlockLattice2D<T,Lattice>& blockLattice);
+  virtual void subscribeReductions(BlockLattice2D<T,Lattice>& blockLattice,
+                                   Reductor<T>* reductor);
 };
 
 template<typename T, template<typename U> class Lattice>
 class StatPPGenerator2D
-    : public PostProcessorGenerator2D<T,Lattice>
+  : public PostProcessorGenerator2D<T,Lattice>
 {
 public:
-    StatPPGenerator2D();
-    virtual PostProcessor2D<T,Lattice>* generate() const;
-    virtual PostProcessorGenerator2D<T,Lattice>* clone() const;
+  StatPPGenerator2D();
+  virtual PostProcessor2D<T,Lattice>* generate() const;
+  virtual PostProcessorGenerator2D<T,Lattice>* clone() const;
 };
 
 template<typename T, template<typename U> class Lattice>
 struct StatisticsPostProcessor3D : public GlobalPostProcessor3D<T,Lattice>
 {
-    StatisticsPostProcessor3D();
-    virtual void process(BlockLattice3D<T,Lattice>& blockLattice);
-    virtual void subscribeReductions(BlockLattice3D<T,Lattice>& blockLattice,
-                                     Reductor<T>* reductor);
+  StatisticsPostProcessor3D();
+  virtual void process(BlockLattice3D<T,Lattice>& blockLattice);
+  virtual void subscribeReductions(BlockLattice3D<T,Lattice>& blockLattice,
+                                   Reductor<T>* reductor);
 };
 
 template<typename T, template<typename U> class Lattice>
 class StatPPGenerator3D
-    : public PostProcessorGenerator3D<T,Lattice>
+  : public PostProcessorGenerator3D<T,Lattice>
 {
 public:
-    StatPPGenerator3D();
-    virtual PostProcessor3D<T,Lattice>* generate() const;
-    virtual PostProcessorGenerator3D<T,Lattice>* clone() const;
+  StatPPGenerator3D();
+  virtual PostProcessor3D<T,Lattice>* generate() const;
+  virtual PostProcessorGenerator3D<T,Lattice>* clone() const;
 };
 
 

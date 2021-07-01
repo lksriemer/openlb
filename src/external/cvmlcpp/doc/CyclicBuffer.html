@@ -48,22 +48,22 @@ CyclicBuffer&lt;T&gt;;
 </tr>
 
 <tr>
-	<td><pre>CyclicBuffer&lt;T&gt;(const unsigned N = 64u)</pre></td>
+	<td><pre>CyclicBuffer&lt;T&gt;(const std::size_t N = 64u)</pre></td>
 	<td>Constructor,<i>N</i> is the desired capacity of the buffer.</td>
 </tr>
 
 <tr>
-	<td><pre>unsigned size() cons</pre></td>
+	<td><pre>std::size_t size() cons</pre></td>
 	<td>Number of element currently in the buffer.</td>
 </tr>
 
 <tr>
-	<td><pre>unsigned capacity() const</pre></td>
+	<td><pre>std::size_t capacity() const</pre></td>
 	<td>Maximum capacity of the buffer.</td>
 </tr>
 
 <tr>
-	<td><pre>void resize(const unsigned N)</pre></td>
+	<td><pre>void resize(const std::size_t N)</pre></td>
 	<td>Change the capacity of the buffer.</td>
 </tr>
 
@@ -83,7 +83,7 @@ CyclicBuffer&lt;T&gt;;
 </tr>
 
 <tr>
-	<td><pre>value_type operator[](const unsigned index) const</pre></td>
+	<td><pre>value_type operator[](const std::size_t index) const</pre></td>
 	<td>Access previously stored elements. For <i>index</i> equal to
 	zero, retrieve the last added element; for <i>index</i> equals one,
 	return the last-but-one added element; et cetera.</td>

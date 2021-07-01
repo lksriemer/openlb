@@ -15,8 +15,8 @@
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
  *
- *  You should have received a copy of the GNU General Public 
- *  License along with this program; if not, write to the Free 
+ *  You should have received a copy of the GNU General Public
+ *  License along with this program; if not, write to the Free
  *  Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  *  Boston, MA  02110-1301, USA.
 */
@@ -46,17 +46,17 @@ template class ExtendedFdPlaneBoundaryProcessorGenerator3D<double, descriptors::
 
 
 template class BoundaryConditionInstantiator3D
-    <
-        double, descriptors::D3Q19Descriptor,
+<
+double, descriptors::D3Q19Descriptor,
         ExtendedFdBoundaryManager3D < double, descriptors::D3Q19Descriptor,
-                                      BGKdynamics<double,descriptors::D3Q19Descriptor> >
-    >;
+        BGKdynamics<double,descriptors::D3Q19Descriptor> >
+        >;
 
 template OnLatticeBoundaryCondition3D<double,descriptors::D3Q19Descriptor>*
-    createExtendedFdBoundaryCondition3D < double,descriptors::D3Q19Descriptor,
-                                          BGKdynamics<double,descriptors::D3Q19Descriptor> >
-   (
-        BlockStructure3D<double,descriptors::D3Q19Descriptor>& block
-   );
+createExtendedFdBoundaryCondition3D < double,descriptors::D3Q19Descriptor,
+                                    BGKdynamics<double,descriptors::D3Q19Descriptor> >
+                                    (
+                                      BlockStructure3D<double,descriptors::D3Q19Descriptor>& block
+                                    );
 
 }  // namespace olb

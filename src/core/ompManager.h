@@ -15,8 +15,8 @@
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
  *
- *  You should have received a copy of the GNU General Public 
- *  License along with this program; if not, write to the Free 
+ *  You should have received a copy of the GNU General Public
+ *  License along with this program; if not, write to the Free
  *  Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  *  Boston, MA  02110-1301, USA.
 */
@@ -24,26 +24,26 @@
 #ifndef OMP_MANAGER_H
 #define OMP_MANAGER_H
 
-    #ifdef PARALLEL_MODE_OMP
+#ifdef PARALLEL_MODE_OMP
 
-        class ompManager {
+class ompManager {
 
-            // This must be "public" since gcc "threadprived"
-	    // requires that the class ompManager is of pod-type,
-            // hence "privat" is not allowed. That is a bug in gcc.
-            public:  
-                int size;
-                int rank;
-            public:
-                void init();
-                int get_size() const;
-                int get_rank() const;
-                void set_dynamic(int dynamicThreads); 
-        };
+  // This must be "public" since gcc "threadprived"
+  // requires that the class ompManager is of pod-type,
+  // hence "privat" is not allowed. That is a bug in gcc.
+public:
+  int size;
+  int rank;
+public:
+  void init();
+  int get_size() const;
+  int get_rank() const;
+  void set_dynamic(int dynamicThreads);
+};
 
-        extern ompManager omp;
-        #pragma omp threadprivate (omp)
+extern ompManager omp;
+#pragma omp threadprivate (omp)
 
-    #endif
+#endif
 
 #endif

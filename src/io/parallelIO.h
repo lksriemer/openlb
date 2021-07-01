@@ -15,8 +15,8 @@
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
  *
- *  You should have received a copy of the GNU General Public 
- *  License along with this program; if not, write to the Free 
+ *  You should have received a copy of the GNU General Public
+ *  License along with this program; if not, write to the Free
  *  Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  *  Boston, MA  02110-1301, USA.
 */
@@ -34,7 +34,7 @@ namespace olb {
 
 class ParBuf : public std::streambuf {
 public:
-  typedef enum{normal, serial} Modes;
+  typedef enum {normal, serial} Modes;
   // There are two modes for proceeding of parallel i/o:
   // - normal: the default mode. all nodes write data, and all
   //           nodes receive data; this mode requests broadcasting.
@@ -91,7 +91,7 @@ class olb_fstream : public std::iostream {
 public:
   olb_fstream();
   explicit olb_fstream(const char * filename,
-                    openmode mode = in | out );
+                       openmode mode = in | out );
   ~olb_fstream();
 
   std::streambuf* rdbuf() const;

@@ -15,38 +15,38 @@
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
  *
- *  You should have received a copy of the GNU General Public 
- *  License along with this program; if not, write to the Free 
+ *  You should have received a copy of the GNU General Public
+ *  License along with this program; if not, write to the Free
  *  Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  *  Boston, MA  02110-1301, USA.
 */
 
 
-    #ifdef PARALLEL_MODE_OMP
+#ifdef PARALLEL_MODE_OMP
 
-        #include <omp.h>
-        #include "ompManager.h"
+#include <omp.h>
+#include "ompManager.h"
 
-        void ompManager::init() {
-            set_dynamic(0);
-            size = omp_get_max_threads();
-            rank = omp_get_thread_num();
-        }
+void ompManager::init() {
+  set_dynamic(0);
+  size = omp_get_max_threads();
+  rank = omp_get_thread_num();
+}
 
-        int ompManager::get_size() const {
-            return size;
-        }
+int ompManager::get_size() const {
+  return size;
+}
 
-        int ompManager::get_rank() const { 
-            return rank; 
-        }
+int ompManager::get_rank() const {
+  return rank;
+}
 
-        void ompManager::set_dynamic(int dynamicThreads) { 
-            omp_set_dynamic(dynamicThreads);
-        }
+void ompManager::set_dynamic(int dynamicThreads) {
+  omp_set_dynamic(dynamicThreads);
+}
 
-        ompManager omp;
+ompManager omp;
 
-    #endif
+#endif
 
 

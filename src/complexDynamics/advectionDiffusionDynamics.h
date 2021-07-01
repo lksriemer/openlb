@@ -14,8 +14,8 @@
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
  *
- *  You should have received a copy of the GNU General Public 
- *  License along with this program; if not, write to the Free 
+ *  You should have received a copy of the GNU General Public
+ *  License along with this program; if not, write to the Free
  *  Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  *  Boston, MA  02110-1301, USA.
 */
@@ -39,25 +39,25 @@ namespace olb {
 template<typename T, template<typename U> class Lattice>
 class AdvectionDiffusionRLBdynamics : public BasicDynamics<T,Lattice> {
 public:
-    /// Constructor
-    AdvectionDiffusionRLBdynamics(T omega_, Momenta<T,Lattice>& momenta_);
-    /// Clone the object on its dynamic type.
-    virtual AdvectionDiffusionRLBdynamics<T,Lattice>* clone() const;
-    /// Compute equilibrium distribution function
-    virtual T computeEquilibrium(int iPop, T rho, const T u[Lattice<T>::d], T uSqr) const;
-    /// Collision step
-    virtual void collide(Cell<T,Lattice>& cell,
-                         LatticeStatistics<T>& statistics );
-    /// Collide with fixed velocity
-    virtual void staticCollide(Cell<T,Lattice>& cell,
-                               const T u[Lattice<T>::d],
-                               LatticeStatistics<T>& statistics );
-    /// Get local relaxation parameter of the dynamics
-    virtual T getOmega() const;
-    /// Set local relaxation parameter of the dynamics
-    virtual void setOmega(T omega_);
+  /// Constructor
+  AdvectionDiffusionRLBdynamics(T omega_, Momenta<T,Lattice>& momenta_);
+  /// Clone the object on its dynamic type.
+  virtual AdvectionDiffusionRLBdynamics<T,Lattice>* clone() const;
+  /// Compute equilibrium distribution function
+  virtual T computeEquilibrium(int iPop, T rho, const T u[Lattice<T>::d], T uSqr) const;
+  /// Collision step
+  virtual void collide(Cell<T,Lattice>& cell,
+                       LatticeStatistics<T>& statistics );
+  /// Collide with fixed velocity
+  virtual void staticCollide(Cell<T,Lattice>& cell,
+                             const T u[Lattice<T>::d],
+                             LatticeStatistics<T>& statistics );
+  /// Get local relaxation parameter of the dynamics
+  virtual T getOmega() const;
+  /// Set local relaxation parameter of the dynamics
+  virtual void setOmega(T omega_);
 private:
-    T omega;  ///< relaxation parameter
+  T omega;  ///< relaxation parameter
 };
 
 // ========= the BGK advection diffusion dynamics ========//
@@ -67,25 +67,25 @@ private:
 template<typename T, template<typename U> class Lattice>
 class AdvectionDiffusionBGKdynamics : public BasicDynamics<T,Lattice> {
 public:
-    /// Constructor
-    AdvectionDiffusionBGKdynamics(T omega_, Momenta<T,Lattice>& momenta_);
-    /// Clone the object on its dynamic type.
-    virtual AdvectionDiffusionBGKdynamics<T,Lattice>* clone() const;
-    /// Compute equilibrium distribution function
-    virtual T computeEquilibrium(int iPop, T rho, const T u[Lattice<T>::d], T uSqr) const;
-    /// Collision step
-    virtual void collide(Cell<T,Lattice>& cell,
-                         LatticeStatistics<T>& statistics );
-    /// Collide with fixed velocity
-    virtual void staticCollide(Cell<T,Lattice>& cell,
-                               const T u[Lattice<T>::d],
-                               LatticeStatistics<T>& statistics );
-    /// Get local relaxation parameter of the dynamics
-    virtual T getOmega() const;
-    /// Set local relaxation parameter of the dynamics
-    virtual void setOmega(T omega_);
+  /// Constructor
+  AdvectionDiffusionBGKdynamics(T omega_, Momenta<T,Lattice>& momenta_);
+  /// Clone the object on its dynamic type.
+  virtual AdvectionDiffusionBGKdynamics<T,Lattice>* clone() const;
+  /// Compute equilibrium distribution function
+  virtual T computeEquilibrium(int iPop, T rho, const T u[Lattice<T>::d], T uSqr) const;
+  /// Collision step
+  virtual void collide(Cell<T,Lattice>& cell,
+                       LatticeStatistics<T>& statistics );
+  /// Collide with fixed velocity
+  virtual void staticCollide(Cell<T,Lattice>& cell,
+                             const T u[Lattice<T>::d],
+                             LatticeStatistics<T>& statistics );
+  /// Get local relaxation parameter of the dynamics
+  virtual T getOmega() const;
+  /// Set local relaxation parameter of the dynamics
+  virtual void setOmega(T omega_);
 private:
-    T omega;  ///< relaxation parameter
+  T omega;  ///< relaxation parameter
 };
 
 

@@ -15,8 +15,8 @@
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
  *
- *  You should have received a copy of the GNU General Public 
- *  License along with this program; if not, write to the Free 
+ *  You should have received a copy of the GNU General Public
+ *  License along with this program; if not, write to the Free
  *  Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  *  Boston, MA  02110-1301, USA.
 */
@@ -42,60 +42,60 @@ namespace olb {
 
 template<typename T>
 SerialMultiDataFieldHandler2D<T>::SerialMultiDataFieldHandler2D (
-        MultiDataDistribution2D const& dataDistribution_ )
-    : dataDistribution(dataDistribution_)
+  MultiDataDistribution2D const& dataDistribution_ )
+  : dataDistribution(dataDistribution_)
 { }
 
 template<typename T>
 int SerialMultiDataFieldHandler2D<T>::getNx() const {
-    return dataDistribution.getNx();
+  return dataDistribution.getNx();
 }
 template<typename T>
 int SerialMultiDataFieldHandler2D<T>::getNy() const {
-    return dataDistribution.getNy();
+  return dataDistribution.getNy();
 }
 
 template<typename T>
 MultiDataDistribution2D const& SerialMultiDataFieldHandler2D<T>::getMultiDataDistribution() const {
-    return dataDistribution;
+  return dataDistribution;
 }
 
 template<typename T>
 bool SerialMultiDataFieldHandler2D<T>::getLocalEnvelope(int iBlock, int& lx, int& ly) const {
-    BlockParameters2D const& parameters = dataDistribution.getBlockParameters(iBlock);
-    lx = parameters.getEnvelopeLx();
-    ly = parameters.getEnvelopeLy();
-    return true;
+  BlockParameters2D const& parameters = dataDistribution.getBlockParameters(iBlock);
+  lx = parameters.getEnvelopeLx();
+  ly = parameters.getEnvelopeLy();
+  return true;
 }
 
 template<typename T>
 T SerialMultiDataFieldHandler2D<T>::reduceSum (T localSum) const {
-    return localSum;
+  return localSum;
 }
 
 template<typename T>
 T SerialMultiDataFieldHandler2D<T>::reduceAverage (T localAverage, T localWeight) const {
-    return localAverage;
+  return localAverage;
 }
 
 template<typename T>
 T SerialMultiDataFieldHandler2D<T>::reduceMin (T localMin) const {
-    return localMin;
+  return localMin;
 }
 
 template<typename T>
 T SerialMultiDataFieldHandler2D<T>::reduceMax (T localMax) const {
-    return localMax;
+  return localMax;
 }
 
 template<typename T>
 void SerialMultiDataFieldHandler2D<T>::broadCastScalar(T& scalar, int fromBlock) const {
-    // Nothing to do in the serial case
+  // Nothing to do in the serial case
 }
 
 template<typename T>
 void SerialMultiDataFieldHandler2D<T>::broadCastVector(T* vect, int size, int fromBlock) const {
-    // Nothing to do in the serial case
+  // Nothing to do in the serial case
 }
 
 
@@ -105,84 +105,84 @@ void SerialMultiDataFieldHandler2D<T>::broadCastVector(T* vect, int size, int fr
 
 template<typename T>
 ParallelMultiDataFieldHandler2D<T>::ParallelMultiDataFieldHandler2D (
-        MultiDataDistribution2D const& dataDistribution_ )
-    : dataDistribution(dataDistribution_)
+  MultiDataDistribution2D const& dataDistribution_ )
+  : dataDistribution(dataDistribution_)
 { }
 
 template<typename T>
 int ParallelMultiDataFieldHandler2D<T>::getNx() const {
-    return dataDistribution.getNx();
+  return dataDistribution.getNx();
 }
 template<typename T>
 int ParallelMultiDataFieldHandler2D<T>::getNy() const {
-    return dataDistribution.getNy();
+  return dataDistribution.getNy();
 }
 
 template<typename T>
 MultiDataDistribution2D const& ParallelMultiDataFieldHandler2D<T>::getMultiDataDistribution() const {
-    return dataDistribution;
+  return dataDistribution;
 }
 
 template<typename T>
 bool ParallelMultiDataFieldHandler2D<T>::getLocalEnvelope(int iBlock, int& lx, int& ly) const {
-    BlockParameters2D const& parameters = dataDistribution.getBlockParameters(iBlock);
-    if ( parameters.getProcId() == singleton::mpi().getRank() ) {
-        lx = parameters.getEnvelopeLx();
-        ly = parameters.getEnvelopeLy();
-        return true;
-    }
-    else {
-        lx = ly = 0;
-        return false;
-    }
+  BlockParameters2D const& parameters = dataDistribution.getBlockParameters(iBlock);
+  if ( parameters.getProcId() == singleton::mpi().getRank() ) {
+    lx = parameters.getEnvelopeLx();
+    ly = parameters.getEnvelopeLy();
+    return true;
+  }
+  else {
+    lx = ly = 0;
+    return false;
+  }
 }
 
 template<typename T>
 T ParallelMultiDataFieldHandler2D<T>::reduceSum(T localSum) const {
-    T globalSum;
-    singleton::mpi().reduce(localSum, globalSum, MPI_SUM);
-    singleton::mpi().bCast(&globalSum, 1);
-    return globalSum;
+  T globalSum;
+  singleton::mpi().reduce(localSum, globalSum, MPI_SUM);
+  singleton::mpi().bCast(&globalSum, 1);
+  return globalSum;
 }
 
 template<typename T>
 T ParallelMultiDataFieldHandler2D<T>::reduceAverage(T localAverage, T localWeight) const {
-    T sumAverage, sumWeights;
-    singleton::mpi().reduce(localAverage*localWeight, sumAverage, MPI_SUM);
-    singleton::mpi().reduce(localWeight, sumWeights, MPI_SUM);
-    if (singleton::mpi().isMainProcessor() && sumWeights>1.e-12) {
-        sumAverage /= sumWeights;
-    }
-    singleton::mpi().bCast(&sumAverage, 1);
-    return sumAverage;
+  T sumAverage, sumWeights;
+  singleton::mpi().reduce(localAverage*localWeight, sumAverage, MPI_SUM);
+  singleton::mpi().reduce(localWeight, sumWeights, MPI_SUM);
+  if (singleton::mpi().isMainProcessor() && sumWeights>1.e-12) {
+    sumAverage /= sumWeights;
+  }
+  singleton::mpi().bCast(&sumAverage, 1);
+  return sumAverage;
 }
 
 template<typename T>
 T ParallelMultiDataFieldHandler2D<T>::reduceMin(T localMin) const {
-    T globalMin;
-    singleton::mpi().reduce(localMin, globalMin, MPI_MIN);
-    singleton::mpi().bCast(&globalMin, 1);
-    return globalMin;
+  T globalMin;
+  singleton::mpi().reduce(localMin, globalMin, MPI_MIN);
+  singleton::mpi().bCast(&globalMin, 1);
+  return globalMin;
 }
 
 template<typename T>
 T ParallelMultiDataFieldHandler2D<T>::reduceMax(T localMax) const {
-    T globalMax;
-    singleton::mpi().reduce(localMax, globalMax, MPI_MAX);
-    singleton::mpi().bCast(&globalMax, 1);
-    return globalMax;
+  T globalMax;
+  singleton::mpi().reduce(localMax, globalMax, MPI_MAX);
+  singleton::mpi().bCast(&globalMax, 1);
+  return globalMax;
 }
 
 template<typename T>
 void ParallelMultiDataFieldHandler2D<T>::broadCastScalar(T& scalar, int fromBlock) const {
-    int fromProc = dataDistribution.getBlockParameters(fromBlock).getProcId();
-    singleton::mpi().bCast(&scalar, 1, fromProc);
+  int fromProc = dataDistribution.getBlockParameters(fromBlock).getProcId();
+  singleton::mpi().bCast(&scalar, 1, fromProc);
 }
 
 template<typename T>
 void ParallelMultiDataFieldHandler2D<T>::broadCastVector(T* vect, int size, int fromBlock) const {
-    int fromProc = dataDistribution.getBlockParameters(fromBlock).getProcId();
-    singleton::mpi().bCast(vect, size, fromProc);
+  int fromProc = dataDistribution.getBlockParameters(fromBlock).getProcId();
+  singleton::mpi().bCast(vect, size, fromProc);
 }
 
 #endif  // PARALLEL_MODE_MPI

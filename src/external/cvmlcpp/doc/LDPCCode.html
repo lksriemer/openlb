@@ -130,7 +130,7 @@ Any code offers the following interface:
 The most commonly used decoding scheme, belief propagation, is implemented in
 the <i>BPLDPCCode</i>, defined as:
 <pre>
-template &lt;typename T, unsigned N, unsigned K&gt;
+template &lt;typename T, std::size_t N, std::size_t K&gt;
 class BPLDPCCode;
 </pre>
 Belief propagation is a sub-optimal and numerically unstable but computationally
@@ -141,7 +141,7 @@ feasible algorithm, and is hence the recommended choice for decoding.
 BPLDPCCode offers the following constructors:
 <table border='1'>
 <tr>
-	<td><pre>BPLDPCCode(const unsigned maxIterations = 1024u)</pre></td>
+	<td><pre>BPLDPCCode(const std::size_t maxIterations = 1024u)</pre></td>
 	<td>This constructor will automatically create a generator matrix and
 	requires <i>K</i> to be a power of two and <i>N</i> to be a multiple
 	of <i>K</i>. The belief propagation algorithm will stop on convergeance,
@@ -149,7 +149,7 @@ BPLDPCCode offers the following constructors:
 </tr>
 <tr>
 	<td><pre>BPLDPCCode(const G &amp;generator,
-	   const unsigned maxIterations = 1024u)</pre></td>
+	   const std::size_t maxIterations = 1024u)</pre></td>
 	<td>The code will be defined by the user-supplied generator matrix
 	<i>generator</i>. The belief propagation algorithm will stop on
 	convergeance, or after <i>maxIterations</i> iterations.</td>
@@ -163,7 +163,7 @@ BPLDPCCode offers the following constructors:
 For reference, a maximum-likelihood decoder is implemented in the
 <i>MLLDPCCode</i>:
 <pre>
-template &lt;typename T, unsigned N, unsigned K&gt;
+template &lt;typename T, std::size_t N, std::size_t K&gt;
 class MLLDPCCode;
 </pre>
 </p>

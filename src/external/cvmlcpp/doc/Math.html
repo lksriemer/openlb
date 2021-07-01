@@ -80,13 +80,21 @@ library is available from the <a href='Functors.html'>Functors</a> section.
 <tr>
 	<td><pre>    template &lt;typename T, typename U&gt;
   U binopmf(const T n, const T k, const U p)  </pre></td>
-	<td>Probability mass function for the binomial distribution.</td>
+	<td>Probability mass function for the binomial distribution for <i>k</i> experiments
+	where <i>n</i> is the total number of experiments and <i>p</i> is the probability of success per experiment.</td>
 </tr>
 <tr>
 	<td><pre>    template &lt;typename T, typename U&gt;
   U binocdf(const T n, const T k, const U p)  </pre></td>
-	<td>Cumulative distribution function for the binomial distribution.</td>
+	<td>Cumulative distribution function of the binomial distribution for <i>k</i> experiments
+	where <i>n</i> is the total number of experiments and <i>p</i> is the probability of success per experiment.</td>
 </tr>
+<tr>
+	<td><pre>  template &lt;typename T&gt;
+  std::size_t binocdfinv(const T p_arg, const std::size_t n, const T p)  </pre></td>
+	<td>Inverse of the binocdf, returns lowest number <i>k</i> for which <i>binocdf(n, k, p)</i> &ge; <i>p_arg</i>.</td>
+</tr>
+
 <!--
 <tr>
 	<td><pre>    </pre></td>
@@ -272,24 +280,24 @@ There are two definitions of the classic method:
 <pre>
 template &lt;class Function, class Derivative&gt;
 bool doNewtonRaphson(const Function &amp;f, const Derivative &amp;d, Function::value_type &amp;x,
-		     unsigned N = 100000u);
+		     std::size_t N = 100000u);
 </pre>
 <pre>
 template &lt;class Function&gt;
-bool doNewtonRaphson(const Function &amp;f, Function::value_type &amp;x, unsigned N = 100000u);
+bool doNewtonRaphson(const Function &amp;f, Function::value_type &amp;x, std::size_t N = 100000u);
 </pre>
 And there are two that involve a fixed range into which <i>x</i> is clamped:
 <pre>
 template &lt;class Function, class Derivative&gt;
 bool doNewtonRaphson(const Function &amp;f, const Derivative &amp;d, Function::value_type &amp;x,
 		     const Function::value_type &amp;low, const Function::value_type &amp;high,
-		     unsigned N = 100000u);
+		     std::size_t N = 100000u);
 </pre>
 <pre>
 template &lt;class Function&gt;
 bool doNewtonRaphson(const Function &amp;f, Function::value_type &amp;x,
 		     const Function::value_type &amp;low, const Function::value_type &amp;high,
-		     unsigned N = 100000u);
+		     std::size_t N = 100000u);
 </pre>
 The first form requires a user-defined function <i>Derivative d</i>, which must
 be the derivative of <i>Function f</i>. The second form does not require a
@@ -377,7 +385,7 @@ The method has the following definition:
 <pre>
 template &lt;class Function&gt;
 void doRungeKutta(const Function &amp;f, const Function::value_type t0,
-		  const Function::value_type tN, const unsigned N,
+		  const Function::value_type tN, const std::size_t N,
 		  const Function::value_type y0,
 		  std::vector&lt;Function::value_type&gt; &amp;y);
 </pre>
@@ -413,7 +421,7 @@ The parameters are defined as follows:
 	</tr>
 
 	<tr>
-	<td><pre>  const unsigned N  </pre></td>
+	<td><pre>  const std::size_t N  </pre></td>
 	<td>The number of iterations.</td>
 	</tr>
 

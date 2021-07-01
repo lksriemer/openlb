@@ -15,8 +15,8 @@
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
  *
- *  You should have received a copy of the GNU General Public 
- *  License along with this program; if not, write to the Free 
+ *  You should have received a copy of the GNU General Public
+ *  License along with this program; if not, write to the Free
  *  Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  *  Boston, MA  02110-1301, USA.
 */
@@ -44,31 +44,31 @@ template<typename T, template<typename U> class Lattice, int direction, int orie
 class ExtendedStraightFdBoundaryPostProcessor2D : public LocalPostProcessor2D<T,Lattice>
 {
 public:
-    ExtendedStraightFdBoundaryPostProcessor2D(int x0_, int x1_, int y0_, int y1_);
-    virtual int extent() const { return 1; }
-    virtual int extent(int whichDirection) const { return 1; }
-    virtual void process(BlockLattice2D<T,Lattice>& blockLattice);
-    virtual void processSubDomain(BlockLattice2D<T,Lattice>& blockLattice,
-                                  int x0_, int x1_, int y0_, int y1_ );
+  ExtendedStraightFdBoundaryPostProcessor2D(int x0_, int x1_, int y0_, int y1_);
+  virtual int extent() const { return 1; }
+  virtual int extent(int whichDirection) const { return 1; }
+  virtual void process(BlockLattice2D<T,Lattice>& blockLattice);
+  virtual void processSubDomain(BlockLattice2D<T,Lattice>& blockLattice,
+                                int x0_, int x1_, int y0_, int y1_ );
 private:
-    template<int deriveDirection>
-    void interpolateGradients(BlockLattice2D<T,Lattice> const& blockLattice,
-                              T velDeriv[Lattice<T>::d], int iX, int iY) const;
-    template<int deriveDirection>
-    void interpolateGradients (
-            BlockLattice2D<T,Lattice> const& blockLattice,T& rhoDeriv, 
-            int iX, int iY ) const;
+  template<int deriveDirection>
+  void interpolateGradients(BlockLattice2D<T,Lattice> const& blockLattice,
+                            T velDeriv[Lattice<T>::d], int iX, int iY) const;
+  template<int deriveDirection>
+  void interpolateGradients (
+    BlockLattice2D<T,Lattice> const& blockLattice,T& rhoDeriv,
+    int iX, int iY ) const;
 private:
-    int x0, x1, y0, y1;
+  int x0, x1, y0, y1;
 };
 
 template<typename T, template<typename U> class Lattice, int direction, int orientation>
 class ExtendedStraightFdBoundaryProcessorGenerator2D : public PostProcessorGenerator2D<T,Lattice>
 {
 public:
-    ExtendedStraightFdBoundaryProcessorGenerator2D(int x0_, int x1_, int y0_, int y1_);
-    virtual PostProcessor2D<T,Lattice>* generate() const; 
-    virtual PostProcessorGenerator2D<T,Lattice>*  clone() const;
+  ExtendedStraightFdBoundaryProcessorGenerator2D(int x0_, int x1_, int y0_, int y1_);
+  virtual PostProcessor2D<T,Lattice>* generate() const;
+  virtual PostProcessorGenerator2D<T,Lattice>*  clone() const;
 };
 
 
@@ -76,13 +76,13 @@ public:
 
 template<typename T, template<typename U> class Lattice, typename MixinDynamics>
 OnLatticeBoundaryCondition2D<T,Lattice>*
-    createExtendedFdBoundaryCondition2D(BlockStructure2D<T,Lattice>& block);
+createExtendedFdBoundaryCondition2D(BlockStructure2D<T,Lattice>& block);
 
 template<typename T, template<typename U> class Lattice>
 OnLatticeBoundaryCondition2D<T,Lattice>*
-    createExtendedFdBoundaryCondition2D(BlockStructure2D<T,Lattice>& block)
+createExtendedFdBoundaryCondition2D(BlockStructure2D<T,Lattice>& block)
 {
-    return createExtendedFdBoundaryCondition2D<T,Lattice,BGKdynamics<T,Lattice> >(block);
+  return createExtendedFdBoundaryCondition2D<T,Lattice,BGKdynamics<T,Lattice> >(block);
 }
 
 }  // namespace olb

@@ -15,8 +15,8 @@
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
  *
- *  You should have received a copy of the GNU General Public 
- *  License along with this program; if not, write to the Free 
+ *  You should have received a copy of the GNU General Public
+ *  License along with this program; if not, write to the Free
  *  Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  *  Boston, MA  02110-1301, USA.
 */
@@ -29,9 +29,9 @@
 #ifndef CUBOID_GEOMETRY_2D_HH
 #define CUBOID_GEOMETRY_2D_HH
 
+#include <vector>
 #include <iostream>
 #include <math.h>
-#include <vector>
 #include "cuboid2D.h"
 #include "cuboidGeometry2D.h"
 
@@ -41,24 +41,31 @@ namespace olb {
 ////////////////////// Class CuboidGeometry2D /////////////////////////
 
 template<typename T>
+CuboidGeometry2D<T>::CuboidGeometry2D()
+  : clout(std::cout,"CuboidGeometry2D")
+{}
+
+template<typename T>
 CuboidGeometry2D<T>::CuboidGeometry2D(T globPosX, T globPosY, T delta,
-                                            int nX, int nY, int nC) {
-    //_cuboids.reserve(10000);
-    _motherCuboid = Cuboid2D<T>(globPosX, globPosY, delta, nX, nY);
-    Cuboid2D<T> cuboid(0, 0, 1, nX, nY);
-    add(cuboid);
-    split(0, nC);
+                                      int nX, int nY, int nC)
+  : clout(std::cout,"CuboidGeometry2D")
+{
+  //_cuboids.reserve(10000);
+  _motherCuboid = Cuboid2D<T>(globPosX, globPosY, delta, nX, nY);
+  Cuboid2D<T> cuboid(0, 0, 1, nX, nY);
+  add(cuboid);
+  split(0, nC);
 }
 
 
 template<typename T>
 Cuboid2D<T>& CuboidGeometry2D<T>::get_cuboid(int i) {
-    return _cuboids[i];
+  return _cuboids[i];
 }
 
 template<typename T>
 Cuboid2D<T> const& CuboidGeometry2D<T>::get_cuboid(int i) const {
-    return _cuboids[i]; 
+  return _cuboids[i];
 }
 
 
@@ -67,219 +74,231 @@ int CuboidGeometry2D<T>::get_nC() const { return _cuboids.size(); }
 
 template<typename T>
 T CuboidGeometry2D<T>::get_minRatio() const {
-    T minRatio = 1.;
-    for (unsigned i=0; i<_cuboids.size(); i++) {
-        if((T)_cuboids[i].get_nX()/(T)_cuboids[i].get_nY() < minRatio) {
-            minRatio = (T)_cuboids[i].get_nX()/(T)_cuboids[i].get_nY();
-        }
+  T minRatio = 1.;
+  for (unsigned i=0; i<_cuboids.size(); i++) {
+    if((T)_cuboids[i].get_nX()/(T)_cuboids[i].get_nY() < minRatio) {
+      minRatio = (T)_cuboids[i].get_nX()/(T)_cuboids[i].get_nY();
     }
-    return minRatio;
+  }
+  return minRatio;
 }
 
 template<typename T>
 T CuboidGeometry2D<T>::get_maxRatio() const {
-    T maxRatio = 1.;
-    for (unsigned i=0; i<_cuboids.size(); i++) {
-        if((T)_cuboids[i].get_nX()/(T)_cuboids[i].get_nY() > maxRatio) {
-            maxRatio = (T)_cuboids[i].get_nX()/(T)_cuboids[i].get_nY();
-        }
+  T maxRatio = 1.;
+  for (unsigned i=0; i<_cuboids.size(); i++) {
+    if((T)_cuboids[i].get_nX()/(T)_cuboids[i].get_nY() > maxRatio) {
+      maxRatio = (T)_cuboids[i].get_nX()/(T)_cuboids[i].get_nY();
     }
-    return maxRatio;
+  }
+  return maxRatio;
 }
 
 template<typename T>
 T CuboidGeometry2D<T>::get_minVolume() const {
-    T minVolume = _cuboids[0].get_volume();
-    for (unsigned i=0; i<_cuboids.size(); i++) {
-        if(_cuboids[i].get_volume() < minVolume) {
-            minVolume = _cuboids[i].get_volume();
-        }
+  T minVolume = _cuboids[0].get_volume();
+  for (unsigned i=0; i<_cuboids.size(); i++) {
+    if(_cuboids[i].get_volume() < minVolume) {
+      minVolume = _cuboids[i].get_volume();
     }
-    return minVolume;
+  }
+  return minVolume;
 }
 
 template<typename T>
 T CuboidGeometry2D<T>::get_maxVolume() const {
-    T maxVolume = _cuboids[0].get_volume();
-    for (unsigned i=0; i<_cuboids.size(); i++) {
-        if(_cuboids[i].get_volume() > maxVolume) {
-            maxVolume = _cuboids[i].get_volume();
-        }
+  T maxVolume = _cuboids[0].get_volume();
+  for (unsigned i=0; i<_cuboids.size(); i++) {
+    if(_cuboids[i].get_volume() > maxVolume) {
+      maxVolume = _cuboids[i].get_volume();
     }
-    return maxVolume;
+  }
+  return maxVolume;
 }
 
 template<typename T>
 int CuboidGeometry2D<T>::get_minNodes() const {
-    int minNodes = _cuboids[0].get_nNodesVolume();
-    for (unsigned i=0; i<_cuboids.size(); i++) {
-        if(_cuboids[i].get_nNodesVolume() < minNodes) {
-            minNodes = _cuboids[i].get_nNodesVolume();
-        }
+  int minNodes = _cuboids[0].get_nNodesVolume();
+  for (unsigned i=0; i<_cuboids.size(); i++) {
+    if(_cuboids[i].get_nNodesVolume() < minNodes) {
+      minNodes = _cuboids[i].get_nNodesVolume();
     }
-    return minNodes;
+  }
+  return minNodes;
 }
 
 template<typename T>
 int CuboidGeometry2D<T>::get_maxNodes() const {
-    int maxNodes = _cuboids[0].get_nNodesVolume();
-    for (unsigned i=0; i<_cuboids.size(); i++) {
-        if(_cuboids[i].get_nNodesVolume() > maxNodes) {
-            maxNodes = _cuboids[i].get_nNodesVolume();
-        }
+  int maxNodes = _cuboids[0].get_nNodesVolume();
+  for (unsigned i=0; i<_cuboids.size(); i++) {
+    if(_cuboids[i].get_nNodesVolume() > maxNodes) {
+      maxNodes = _cuboids[i].get_nNodesVolume();
     }
-    return maxNodes;
+  }
+  return maxNodes;
 }
 
 template<typename T>
 T CuboidGeometry2D<T>::get_minDelta() const {
-    T minDelta = _cuboids[0].get_delta();
-    for (unsigned i=0; i<_cuboids.size(); i++) {
-        if(_cuboids[i].get_delta() < minDelta) {
-            minDelta = _cuboids[i].get_delta();
-        }
+  T minDelta = _cuboids[0].get_delta();
+  for (unsigned i=0; i<_cuboids.size(); i++) {
+    if(_cuboids[i].get_delta() < minDelta) {
+      minDelta = _cuboids[i].get_delta();
     }
-    return minDelta;
+  }
+  return minDelta;
 }
 
 template<typename T>
 T CuboidGeometry2D<T>::get_maxDelta() const {
-    T maxDelta = _cuboids[0].get_delta();
-    for (unsigned i=0; i<_cuboids.size(); i++) {
-        if(_cuboids[i].get_delta() > maxDelta) {
-            maxDelta = _cuboids[i].get_delta();
-        }
+  T maxDelta = _cuboids[0].get_delta();
+  for (unsigned i=0; i<_cuboids.size(); i++) {
+    if(_cuboids[i].get_delta() > maxDelta) {
+      maxDelta = _cuboids[i].get_delta();
     }
-    return maxDelta;
+  }
+  return maxDelta;
 }
 
 template<typename T>
 Cuboid2D<T> CuboidGeometry2D<T>::get_motherC() const {
 
-    /*Cuboid2D<T> found;
-    if(_cuboids.size()==0) {
-        found.init(0, 0, 0, 0, 0);
-        return found;
-    }
+  /*Cuboid2D<T> found;
+  if(_cuboids.size()==0) {
+      found.init(0, 0, 0, 0, 0);
+      return found;
+  }
 
-    T delta = _cuboids[0].get_delta();
-    T globPosXmin = _cuboids[0].get_globPosX();
-    T globPosYmin = _cuboids[0].get_globPosY();
-    T globPosXmax = _cuboids[0].get_globPosX() + delta*(_cuboids[0].get_nX()-1);
-    T globPosYmax = _cuboids[0].get_globPosY() + delta*(_cuboids[0].get_nY()-1);
+  T delta = _cuboids[0].get_delta();
+  T globPosXmin = _cuboids[0].get_globPosX();
+  T globPosYmin = _cuboids[0].get_globPosY();
+  T globPosXmax = _cuboids[0].get_globPosX() + delta*(_cuboids[0].get_nX()-1);
+  T globPosYmax = _cuboids[0].get_globPosY() + delta*(_cuboids[0].get_nY()-1);
 
-    for (unsigned i=1; i<_cuboids.size(); i++) {
-        if(delta > _cuboids[i].get_delta() ) {
-            delta = _cuboids[i].get_delta();
-        }
-        if(globPosXmin > _cuboids[i].get_globPosX() ) {
-            globPosXmin = _cuboids[i].get_globPosX();
-        }
-        if(globPosYmin > _cuboids[i].get_globPosY() ) {
-            globPosYmin = _cuboids[i].get_globPosY();
-        }
-        if(globPosXmax < _cuboids[i].get_globPosX() 
-                            + delta*(_cuboids[i].get_nX()-1)) {
-            globPosXmax = _cuboids[i].get_globPosX() 
-                            + delta*(_cuboids[i].get_nX()-1);
-        }
-        if(globPosYmax < _cuboids[i].get_globPosY() 
-                            + delta*(_cuboids[i].get_nY()-1)) {
-            globPosYmax = _cuboids[i].get_globPosY() 
-                            + delta*(_cuboids[i].get_nY()-1);
-        }
-    }
-    int nX = int(ceil((globPosXmax - globPosXmin)/delta))+1;
-    int nY = int(ceil((globPosYmax - globPosYmin)/delta))+1;
+  for (unsigned i=1; i<_cuboids.size(); i++) {
+      if(delta > _cuboids[i].get_delta() ) {
+          delta = _cuboids[i].get_delta();
+      }
+      if(globPosXmin > _cuboids[i].get_globPosX() ) {
+          globPosXmin = _cuboids[i].get_globPosX();
+      }
+      if(globPosYmin > _cuboids[i].get_globPosY() ) {
+          globPosYmin = _cuboids[i].get_globPosY();
+      }
+      if(globPosXmax < _cuboids[i].get_globPosX()
+                          + delta*(_cuboids[i].get_nX()-1)) {
+          globPosXmax = _cuboids[i].get_globPosX()
+                          + delta*(_cuboids[i].get_nX()-1);
+      }
+      if(globPosYmax < _cuboids[i].get_globPosY()
+                          + delta*(_cuboids[i].get_nY()-1)) {
+          globPosYmax = _cuboids[i].get_globPosY()
+                          + delta*(_cuboids[i].get_nY()-1);
+      }
+  }
+  int nX = int(ceil((globPosXmax - globPosXmin)/delta))+1;
+  int nY = int(ceil((globPosYmax - globPosYmin)/delta))+1;
 
-    found.init(globPosXmin, globPosYmin, delta, nX, nY); 
+  found.init(globPosXmin, globPosYmin, delta, nX, nY);
 
-    return found;*/
-    return _motherCuboid;
+  return found;*/
+  return _motherCuboid;
 }
 
 template<typename T>
 void CuboidGeometry2D<T>::printStatistics() const {
-    std::cout << "---Cuboid Stucture Statistics---" << std::endl; 
-    std::cout << " Number of Cuboids: " << "\t" << get_nC() << std::endl;
-    std::cout << " Delta (min): " << "\t" << "\t" << get_minDelta() << std::endl;
-    std::cout << "       (max): " << "\t" << "\t" << get_maxDelta() << std::endl;
-    std::cout << " Ratio (min): " << "\t" << "\t" << get_minRatio() << std::endl;
-    std::cout << "       (max): " << "\t" << "\t" << get_maxRatio() << std::endl;
-    std::cout << " Nodes (min): " << "\t" << "\t" << get_minNodes() << std::endl;
-    std::cout << "       (max): " << "\t" << "\t" << get_maxNodes() << std::endl;
-    std::cout << "--------------------------------" << std::endl;
+  clout << "---Cuboid Stucture Statistics---" << std::endl;
+  clout << " Number of Cuboids: " << "\t" << get_nC() << std::endl;
+  clout << " Delta (min): " << "\t" << "\t" << get_minDelta() << std::endl;
+  clout << "       (max): " << "\t" << "\t" << get_maxDelta() << std::endl;
+  clout << " Ratio (min): " << "\t" << "\t" << get_minRatio() << std::endl;
+  clout << "       (max): " << "\t" << "\t" << get_maxRatio() << std::endl;
+  clout << " Nodes (min): " << "\t" << "\t" << get_minNodes() << std::endl;
+  clout << "       (max): " << "\t" << "\t" << get_maxNodes() << std::endl;
+  clout << "--------------------------------" << std::endl;
 }
 
-
 template<typename T>
-int CuboidGeometry2D<T>::get_iC(T globX, T globY) const {
-    unsigned i;
-    int tempX, tempY;
-    for (i=0; i<_cuboids.size(); i++) {
-        if (_cuboids[i].checkPoint(globX, globY, tempX, tempY)) return (int)i;
-    }
-    return (int)i;
+int CuboidGeometry2D<T>::get_iC(T globX, T globY, int offset) const {
+  unsigned i;
+  for (i=0; i<_cuboids.size(); i++) {
+    if (_cuboids[i].checkPoint(globX, globY, offset)) return (int)i;
+  }
+  return (int)i;
 }
 
 template<typename T>
 int CuboidGeometry2D<T>::get_iC(T globX, T globY, int orientationX, int orientationY) const {
-    unsigned i;
-    for (i=0; i<_cuboids.size(); i++) {
-        if (_cuboids[i].checkPoint(globX, globY) &&
-            _cuboids[i].checkPoint(globX + orientationX/_cuboids[i].get_delta(),
-                         globY + orientationY/_cuboids[i].get_delta())) {
-           return (int)i;
-        }
+  unsigned i;
+  for (i=0; i<_cuboids.size(); i++) {
+    if (_cuboids[i].checkPoint(globX, globY) &&
+        _cuboids[i].checkPoint(globX + orientationX/_cuboids[i].get_delta(),
+                               globY + orientationY/_cuboids[i].get_delta())) {
+      return (int)i;
     }
-    return (int)i;
+  }
+  return (int)i;
 }
 
 
 template<typename T>
 void CuboidGeometry2D<T>::add(Cuboid2D<T> cuboid) {
 
-    _cuboids.push_back(cuboid);
+  _cuboids.push_back(cuboid);
 }
 
 template<typename T>
 void CuboidGeometry2D<T>::remove(int iC) {
 
-    _cuboids.erase(_cuboids.begin() + iC);
+  _cuboids.erase(_cuboids.begin() + iC);
 }
 
 template<typename T>
 void CuboidGeometry2D<T>::remove(olb::ScalarField2D<int>* geometryData) {
 
-    std::vector<Cuboid2D<T> > cuboids;
-    unsigned size = _cuboids.size();
+  std::vector<Cuboid2D<T> > cuboids;
+  unsigned size = _cuboids.size();
 
-    std::vector<bool> allZero;
-    for (unsigned i=0; i < size; i++) {
-        allZero.push_back(1);
-        for (int iX=0; iX<_cuboids[i].get_nX(); iX++) {
-            for (int iY=0; iY<_cuboids[i].get_nY(); iY++) {
-                if (geometryData->get(_cuboids[i].get_globPosX()+iX,
-                 _cuboids[i].get_globPosY()+iY)!=0 ) allZero[i] = 0;
-            }
-        }
+  std::vector<bool> allZero;
+  for (unsigned i=0; i < size; i++) {
+    allZero.push_back(1);
+    for (int iX=0; iX<_cuboids[i].get_nX(); iX++) {
+      for (int iY=0; iY<_cuboids[i].get_nY(); iY++) {
+        if (geometryData->get(_cuboids[i].get_globPosX()+iX,
+                              _cuboids[i].get_globPosY()+iY)!=0 ) allZero[i] = 0;
+      }
     }
-    for (unsigned i=0;i<size;i++) {
-        if (!allZero[i] ) cuboids.push_back(_cuboids[i]);
-    }
-    _cuboids.clear();
-    for (unsigned i=0;i<cuboids.size();i++) {
-        _cuboids.push_back(cuboids[i]);
-    }
+  }
+  for (unsigned i=0; i<size; i++) {
+    if (!allZero[i] ) cuboids.push_back(_cuboids[i]);
+  }
+  _cuboids.clear();
+  for (unsigned i=0; i<cuboids.size(); i++) {
+    _cuboids.push_back(cuboids[i]);
+  }
 }
 
 template<typename T>
 void CuboidGeometry2D<T>::split(int iC, int p) {
 
-    Cuboid2D<T> temp(_cuboids[iC].get_globPosX(),_cuboids[iC].get_globPosY(),
-        _cuboids[iC].get_delta(), _cuboids[iC].get_nX(), _cuboids[iC].get_nY());
-    temp.divide(p, _cuboids);
-    remove(iC);
+  Cuboid2D<T> temp(_cuboids[iC].get_globPosX(),_cuboids[iC].get_globPosY(),
+                   _cuboids[iC].get_delta(), _cuboids[iC].get_nX(), _cuboids[iC].get_nY());
+  temp.divide(p, _cuboids);
+  remove(iC);
+}
+
+template<typename T>
+void CuboidGeometry2D<T>::get_cuboidNeighbourhood(int cuboid, std::vector<int> neighbours, int offset) {
+  for (int iC=0; iC<get_nC(); iC++) {
+    if(cuboid == iC) continue;
+    T globX = get_cuboid(iC).get_globPosX();
+    T globY = get_cuboid(iC).get_globPosY();
+    T nX = get_cuboid(iC).get_nX();
+    T nY = get_cuboid(iC).get_nY();
+    if(get_cuboid(cuboid).checkInters(globX, globX+nX, globY, globY+nY, offset)) {
+      neighbours.push_back(iC);
+    }
+  }
 }
 
 

@@ -15,8 +15,8 @@
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
  *
- *  You should have received a copy of the GNU General Public 
- *  License along with this program; if not, write to the Free 
+ *  You should have received a copy of the GNU General Public
+ *  License along with this program; if not, write to the Free
  *  Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  *  Boston, MA  02110-1301, USA.
 */
@@ -47,11 +47,11 @@ namespace olb {
 /** The communication between the block lattices is done by two
  * communicators. One (_commStream) is responible to provide the data for
  * the streaming the other (_commBC) for the non-local boundary conditions.
- * To simplify the code structure ghost cells in an overlap of size 
+ * To simplify the code structure ghost cells in an overlap of size
  * (_overlap) is indrocuced. It depends on the non-locality of the
  * boundary conditions but is at least one because of the streaming
  *
- * The algorithm is parallelized with mpi. The load balancer (_load) 
+ * The algorithm is parallelized with mpi. The load balancer (_load)
  * distributes the block lattices to processes.
  *
  * WARNING: For unstructured grids there is an iterpolation needed
@@ -70,145 +70,153 @@ template<typename T, template<typename U> class Lattice> class Communicator2D;
 template<typename T, template<typename U> class Lattice>
 class SuperLattice2D {
 
-    private:
-        /// Lattices with ghost cell layer of size overlap
-        std::vector<BlockLattice2D<T,Lattice> >     _blockLattices;
-        /// View of the lattices without overlap
-        std::vector<BlockLatticeView2D<T,Lattice> > _lattices;
-        /// The grid structure is stored here 
-        CuboidGeometry2D<T>&                        _cGeometry;
-        /// Size of ghost cell layer (must be greater than 1 and 
-        /// greater_overlapBC, default =1)
-        int                                         _overlap;
-        /// This communicator handels the communication for the streaming
-        Communicator2D<T,Lattice>                   _commStream;
-        /// This communicator handels the communication for the postprocessors
-        Communicator2D<T,Lattice>                   _commBC;
-        /// Specifies if there is communication for non local boundary conditions
-        /// needed. It is automatically swichted on if overlapBC >= 1 by the
-        /// calling the constructer. (default =false)
-        bool                                        _commBC_on;
-        /// Distribution of the coboids of the cuboid structure
-        loadBalancer                                _load;
-        /// Statistic of the super structure
-        LatticeStatistics<T>                        *_statistics;
-        /// Specifies if there is statistic calculated. It is always 
-        /// needed for the ConstRhoBGK dynamics. (default =true)
-        bool                                        _statistics_on;
-    public:
-        /// Construction of a super structure
-        SuperLattice2D(CuboidGeometry2D<T>& cGeometry, int overlapBC = 0);
+private:
+  /// Lattices with ghost cell layer of size overlap
+  std::vector<BlockLattice2D<T,Lattice> >     _blockLattices;
+  /// View of the lattices without overlap
+  std::vector<BlockLatticeView2D<T,Lattice> > _lattices;
+  /// The grid structure is stored here
+  CuboidGeometry2D<T>&                        _cGeometry;
+  /// Size of ghost cell layer (must be greater than 1 and
+  /// greater_overlapBC, default =1)
+  int                                         _overlap;
+  /// This communicator handels the communication for the streaming
+  Communicator2D<T,Lattice>                   _commStream;
+  /// This communicator handels the communication for the postprocessors
+  Communicator2D<T,Lattice>                   _commBC;
+  /// Specifies if there is communication for non local boundary conditions
+  /// needed. It is automatically swichted on if overlapBC >= 1 by the
+  /// calling the constructer. (default =false)
+  bool                                        _commBC_on;
+  /// Distribution of the coboids of the cuboid structure
+  loadBalancer                                _load;
+  /// Statistic of the super structure
+  LatticeStatistics<T>                        *_statistics;
+  /// Specifies if there is statistic calculated. It is always
+  /// needed for the ConstRhoBGK dynamics. (default =true)
+  bool                                        _statistics_on;
+public:
+  /// Construction of a super structure
+  SuperLattice2D(CuboidGeometry2D<T>& cGeometry, int overlapBC = 0);
 
-        /// Read and write access to a block lattice
-        BlockLattice2D<T,Lattice>& get_blockLattice(int i)
-           { return _blockLattices[i]; };
-        /// Read only access to a block lattice
-        BlockLattice2D<T,Lattice> const& get_blockLattice(int i) const
-           { return _blockLattices[i]; };
-        /// Read and write access to a lattice (block lattice view, one
-        /// without overlap).
-        BlockLatticeView2D<T,Lattice>& get_lattice(int i)
-           { return _lattices[i]; };
-        /// Read only access to a lattice
-        BlockLatticeView2D<T,Lattice> const& get_lattice(int i) const
-           { return _lattices[i]; };
-        /// Read and write access to a block lattice
-        CuboidGeometry2D<T>& get_cGeometry()
-           { return _cGeometry; };
-        /// Read only access to a block lattice
-        CuboidGeometry2D<T> const& get_cGeometry() const
-           { return _cGeometry; };
-        /// Read only access to the overlap
-        int get_overlap() const 
-           { return _overlap;};
-        /// Read and write access to the streaming communicator
-        Communicator2D<T,Lattice>& get_commStream()
-           { return _commStream; };
-        /// Read only access to the streaming communicator
-        Communicator2D<T,Lattice> const& get_commStream() const
-           { return _commStream; };
-        /// Read and write access to the boundary communicator
-        Communicator2D<T,Lattice>& get_commBC()
-           { return _commBC; };
-        /// Read only access to the boundary communicator
-        Communicator2D<T,Lattice> const& get_commBC() const
-           { return _commBC; };
-        /// Read and write access to the load balancer
-        loadBalancer& get_load()
-           { return _load; };
-        /// Read only access to the load balancer
-        loadBalancer const& get_load() const
-           { return _load; };
-        /// Return a handle to the LatticeStatistics object
-        LatticeStatistics<T>& getStatistics();
-        /// Return a constant handle to the LatticeStatistics object
-        LatticeStatistics<T> const& getStatistics() const;
+  /// Read and write access to a block lattice
+  BlockLattice2D<T,Lattice>& get_blockLattice(int i)
+  { return _blockLattices[i]; };
+  /// Read only access to a block lattice
+  BlockLattice2D<T,Lattice> const& get_blockLattice(int i) const
+  { return _blockLattices[i]; };
+  /// Read and write access to a lattice (block lattice view, one
+  /// without overlap).
+  BlockLatticeView2D<T,Lattice>& get_lattice(int i)
+  { return _lattices[i]; };
+  /// Read only access to a lattice
+  BlockLatticeView2D<T,Lattice> const& get_lattice(int i) const
+  { return _lattices[i]; };
+  /// Read and write access to a block lattice
+  CuboidGeometry2D<T>& get_cGeometry()
+  { return _cGeometry; };
+  /// Read only access to a block lattice
+  CuboidGeometry2D<T> const& get_cGeometry() const
+  { return _cGeometry; };
+  /// Read only access to the overlap
+  int get_overlap() const
+  { return _overlap;};
+  /// Read and write access to the streaming communicator
+  Communicator2D<T,Lattice>& get_commStream()
+  { return _commStream; };
+  /// Read only access to the streaming communicator
+  Communicator2D<T,Lattice> const& get_commStream() const
+  { return _commStream; };
+  /// Read and write access to the boundary communicator
+  Communicator2D<T,Lattice>& get_commBC()
+  { return _commBC; };
+  /// Read only access to the boundary communicator
+  Communicator2D<T,Lattice> const& get_commBC() const
+  { return _commBC; };
+  /// Read and write access to the load balancer
+  loadBalancer& get_load()
+  { return _load; };
+  /// Read only access to the load balancer
+  loadBalancer const& get_load() const
+  { return _load; };
+  /// Return a handle to the LatticeStatistics object
+  LatticeStatistics<T>& getStatistics();
+  /// Return a constant handle to the LatticeStatistics object
+  LatticeStatistics<T> const& getStatistics() const;
 
-        /// Write access to lattice cells that returns false if
-        /// iX/iY is not in any of the cuboids
-        bool set(T iX, T iY, Cell<T,Lattice> const& cell);
-        /// Read only access to lattice cells that returns false if
-        /// iX/iY is not in any of the cuboids
-        bool get(T iX, T iY, Cell<T,Lattice>& cell) const;
-        /// Initialize all lattice cells to become ready for simulation
-        void initialize();
-        /// Defines the dynamics on a rectangular domain
+  /// Write access to lattice cells that returns false if
+  /// iX/iY is not in any of the cuboids
+  bool set(T iX, T iY, Cell<T,Lattice> const& cell);
+  /// Read only access to lattice cells that returns false if
+  /// iX/iY is not in any of the cuboids
+  bool get(T iX, T iY, Cell<T,Lattice>& cell) const;
+  /// Initialize all lattice cells to become ready for simulation
+  void initialize();
+  /// Defines the dynamics on a rectangular domain
 
-        void defineDynamics (T x0, T x1, T y0, T y1, 
-                             Dynamics<T,Lattice>* dynamics );
+  void defineDynamics (T x0, T x1, T y0, T y1,
+                       Dynamics<T,Lattice>* dynamics );
 
-        /// Defines the dynamics on a rectangular domain by material
-        void defineDynamics(BlockGeometryStatistics2D* blockGeoSta, T x0, T x1,
-                T y0, T y1, Dynamics<T, Lattice>* dynamics,
-                int material);
+  /// Defines the dynamics on a rectangular domain by material
+  void defineDynamics(BlockGeometryStatistics2D* blockGeoSta, T x0, T x1,
+                      T y0, T y1, Dynamics<T, Lattice>* dynamics,
+                      int material);
 
-        /// Defines the dynamics by material
-        void defineDynamics(BlockGeometryStatistics2D* blockGeoSta, Dynamics<T,
-                Lattice>* dynamics, int material);
+  /// Defines the dynamics by material
+  void defineDynamics(BlockGeometryStatistics2D* blockGeoSta, Dynamics<T,
+                      Lattice>* dynamics, int material);
 
-        /// Defines rho on a rectangular domain
-        void defineRhoU (T x0, T x1, T y0, T y1,
-                             T rho, const T u[Lattice<T>::d] );
-        /// Defines rho on a rectangular domain
-        void defineRho (T x0, T x1, T y0, T y1,
-                             T rho );
-        /// Defines u on a rectangular domain
-        void defineU (T x0, T x1, T y0, T y1,
-                             const T u[Lattice<T>::d] );
-        /// Initializes the equilibrium
-        void iniEquilibrium (T x0, T x1, T y0, T y1, 
-                             T rho, const T u[Lattice<T>::d] );
+  /// Defines rho on a rectangular domain
+  void defineRhoU (T x0, T x1, T y0, T y1,
+                   T rho, const T u[Lattice<T>::d] );
+  /// Defines rho on a rectangular domain
+  void defineRho (T x0, T x1, T y0, T y1,
+                  T rho );
+  /// Defines u on a rectangular domain
+  void defineU (T x0, T x1, T y0, T y1,
+                const T u[Lattice<T>::d] );
+  /// Defines an external field on a rectangular domain
+  void defineExternalField (T x0, T x1, T y0, T y1,
+                            int fieldBeginsAt, int sizeOfField, T* field );
+  /// Initializes the equilibrium
+  void iniEquilibrium (T x0, T x1, T y0, T y1,
+                       T rho, const T u[Lattice<T>::d] );
 
-        /// Apply collision step to a rectangular domain
-        void collide(T x0, T x1, T y0, T y1);
-        /// Apply collision step to the whole domain
-        void collide();
-        /// TO BE DONE: Apply collision step to a rectangular domain,
-        /// with fixed velocity
-        // void staticCollide(T x0, T x1, T y0, T y1,
-        //                  TensorField2D<T,2> const& u);
-        /// TO BE DONE: Apply collision step to the whole domain, 
-        /// with fixed velocity
-        // void staticCollide(TensorField2D<T,2> const& u);
-        /// Apply streaming step to a rectangular domain
-        void stream(T x0, T x1, T y0, T y1);
-        /// Apply streaming step to the whole domain
-        void stream();
-        /// TO BE DONE: Apply first collision, then streaming step
-        /// to a rectangular domain
-        // void collideAndStream(T x0, T x1, T y0, T y1);
-        /// Apply first collision, then streaming step
-        /// to the whole domain
-        void collideAndStream();
-        /// Switches Statistics on (default on)
-        void statisticsOn() {_statistics_on = true;};
-        /// Switches Statistics off (default on). That speeds up
-        /// the execution time.
-        void statisticsOff() {_statistics_on = false;};
+  /// Apply collision step to a rectangular domain
+  void collide(T x0, T x1, T y0, T y1);
+  /// Apply collision step to the whole domain
+  void collide();
+  /// TO BE DONE: Apply collision step to a rectangular domain,
+  /// with fixed velocity
+  // void staticCollide(T x0, T x1, T y0, T y1,
+  //                  TensorField2D<T,2> const& u);
+  /// TO BE DONE: Apply collision step to the whole domain,
+  /// with fixed velocity
+  // void staticCollide(TensorField2D<T,2> const& u);
+  /// Apply streaming step to a rectangular domain
+  void stream(T x0, T x1, T y0, T y1);
+  /// Apply streaming step to the whole domain
+  void stream();
+  /// TO BE DONE: Apply first collision, then streaming step
+  /// to a rectangular domain
+  // void collideAndStream(T x0, T x1, T y0, T y1);
+  /// Apply first collision, then streaming step
+  /// to the whole domain
+  void collideAndStream();
+  /// Subtract a constant offset from the density within the whole domain
+  void stripeOffDensityOffset (int x0_, int x1_, int y0_, int y1_,
+                               T offset );
+  /// Subtract a constant offset from the density within a rect. domain
+  void stripeOffDensityOffset(T offset);
+  /// Switches Statistics on (default on)
+  void statisticsOn() {_statistics_on = true;};
+  /// Switches Statistics off (default on). That speeds up
+  /// the execution time.
+  void statisticsOff() {_statistics_on = false;};
 
-    private:
-        /// Resets and reduce the statistics
-        void reset_statistics();
+private:
+  /// Resets and reduce the statistics
+  void reset_statistics();
 };
 
 } // namespace olb

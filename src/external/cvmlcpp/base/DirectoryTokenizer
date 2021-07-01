@@ -19,13 +19,7 @@
  ***************************************************************************/
 
 #ifndef CVMLCPP_DIRECTORY_TOKENIZER
-#define CVMLCPP_DIRECTORY_TOKENIZER 1
-
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <unistd.h>
-
-#include <dirent.h>
+#define CVMLCPP_DIRECTORY_TOKENIZER
 
 #include <cassert>
 #include <cstdio>
@@ -34,204 +28,108 @@
 #include <cstring>
 #include <vector>
 
+#include <boost/filesystem.hpp>
+
+#ifndef BOOST_FILESYSTEM_VERSION
+#define BOOST_FILESYSTEM_VERSION 2
+#endif
+
 namespace cvmlcpp
 {
-
-template <std::size_t N>
-class _StringStack
-{
-	public:
-		_StringStack()
-		{
-			_end.push_back(0u);
-			_str[0] = 0;
-		}
-
-		void pop()
-		{
-			assert(_end.size() > 1u);
-			_end.pop_back();
-			_str[_end.back()] = 0;
-		}
-
-		bool push(const char * const buf)
-		{
-			const std::size_t n = _end.back();
-			std::size_t l = N - n;
-			if (l == 0)
-				return false;
-
-			char *p = _str + n;
-			const char *q = buf;
-			while (*q)
-			{
-				*p = *q;
-				++q;
-				++p;
-				if (--l == 0u)
-					return false;
-			}
-			*p = 0; // zero-terminate
-			_end.push_back(n + (q - buf) );
-			return true;
-		}
-
-		const char * c_str() const { return _str; }
-
-		std::size_t depth() const { return _end.size() - 1u; }
-
-	private:
-		char _str[N];
-		std::vector<std::size_t> _end;
-		std::size_t _length;
-};
 
 class DirectoryTokenizer
 {
 	public:
-		DirectoryTokenizer(std::string rootDirectory,
-				   std::size_t maxDepth = 255u) :
-			 _maxDepth(maxDepth), _ok(false), _complete(false)
+		DirectoryTokenizer(std::string rootDirectory) : _ok(false),
+			current_directory_error("DirectoryTokenizer NOT OK, no current_directory")
 		{
-			DIR * parent = opendir(rootDirectory.c_str());
-
-			_ok = static_cast<bool>(parent);
-
+			using namespace boost::filesystem; 
+			path p(rootDirectory);
+			_ok = is_directory(p); 
 			if (_ok)
 			{
-				_prefix.push(rootDirectory.c_str());
-				_prefix.push("/");
-
-				_directories.push_back(parent);
-				_entries.push_back(0);
+				directory_entry_stack.push_back( directory_iterator(p) );
+				current_directory_.push_back( rootDirectory );
 			}
-
-		}
-
-		~DirectoryTokenizer()
-		{
-			std::for_each(_directories.begin(), _directories.end(),
-					std::ptr_fun(closedir));
 		}
 
 		bool next(std::string &fileName)
 		{
 			fileName.clear();
 
-			if ( (!_ok) || (_complete) )
+			if ( !this->ok() )
 				return false;
 
-			assert(!_entries.empty());
 			const bool foundFile = this->findNextFile();
 			if (foundFile)
-				fileName.assign(_entries.back()->d_name);
-
-			_complete = !foundFile;
-
+			{
+#if BOOST_FILESYSTEM_VERSION >= 3
+				fileName = current_entry.path().filename().string();
+#else
+				fileName = current_entry.path().filename();
+#endif
+			}
 			return foundFile;
 		}
 
 		bool ok() const { return _ok; }
 
-		bool complete() const { return _complete; }
-
+		const std::string &current_directory() const
+		{ return this->ok() ? current_directory_.back() : current_directory_error; }
+		
 	private:
-	const std::size_t _maxDepth;
-	bool _ok, _complete;
-	std::vector<struct dirent *> _entries;
-	std::vector<DIR *> _directories;
-	_StringStack<16384u> _prefix;
+		bool _ok;
+		std::vector<boost::filesystem::directory_iterator> directory_entry_stack;
+		std::vector<std::string> current_directory_;
+		boost::filesystem::directory_entry current_entry;
+		const std::string current_directory_error;
 
-	bool findNextFile()
-	{
-		assert(_entries.size() == _directories.size());
-		assert(_prefix.depth() == 2u * _entries.size());
-		assert(!_directories.empty());
-		assert(_ok);
-
-		// Prepare next entry
-		while (!_directories.empty())
+		bool findNextFile()
 		{
-			assert(_entries.size() == _directories.size());
-			assert(_prefix.depth() == 2u * _entries.size());
-			assert(!_directories.empty());
+			assert(!directory_entry_stack.empty());
 			assert(_ok);
-// printf("PREFIX: %s (%u %u)\n", _prefix.c_str(),
-// 		_prefix.depth(), _entries.size());
+	
+			using namespace boost::filesystem; 
 
-			_entries.back() = readdir(_directories.back());
-			if (!_entries.back())
+			// Prepare next entry
+			while ( directory_entry_stack[0] != directory_iterator() )
 			{
-				// RV non-zero - end of dir or error.
-				closedir(_directories.back());
-				_directories.pop_back();
-				_entries.pop_back();
-				_prefix.pop(); // slash
-				_prefix.pop(); // name
-// printf("POP: %s\n", _prefix.c_str());
-				continue;
-			}
+				assert(!directory_entry_stack.empty());
+				assert(_ok);
 
-// printf("NAME: %s\n", _entries.back()->d_name);
-			// Only do _deeper_ in the tree
-			if (!std::strcmp(_entries.back()->d_name, ".") ||
-			    !std::strcmp(_entries.back()->d_name, ".."))
-			{
-// printf("SKIP\n");
-				continue;
-			}
-
-			bool isDir = false; // Just an initial value
-#if defined _DIRENT_HAVE_D_TYPE && defined DT_DIR && defined DT_UNKNOWN
-			if (_entries.back()->d_type == DT_DIR)
-				isDir = true;
-			else if (_entries.back()->d_type == DT_UNKNOWN)
-#endif
-			{
-// printf("STAT: dirtype was %d\n", _entries.back()->d_type);
-
-				_prefix.push(_entries.back()->d_name);
-
-				struct stat entryInfo;
-				if (stat(_prefix.c_str(), &entryInfo) != 0)
+				// End of current directory ?
+				if (directory_entry_stack.back() == directory_iterator())
 				{
-					std::perror("stat");
-// printf("STAT FAILED: %s\n", _prefix.c_str());
-					_prefix.pop();
+					// Cannot escape from root directory
+					if (directory_entry_stack.size() > 1)
+					{
+						directory_entry_stack.pop_back();
+						current_directory_.pop_back();
+//						assert(directory_entry_stack.back() != directory_iterator());
+//						current_directory_ = directory_entry_stack.back()->path().parent_path().string();
+					}
 					continue;
 				}
-				_prefix.pop();
-				isDir = S_ISDIR(entryInfo.st_mode);
-			}
+				
+				assert(directory_entry_stack.back() != directory_iterator());
+				current_entry = *directory_entry_stack.back();
+				++directory_entry_stack.back();
 
-			if (isDir)
-			{
-				if (_directories.size() < _maxDepth)
+				if (is_directory(current_entry.path()))
 				{
-					_prefix.push(_entries.back()->d_name);
-
-					// Found directory - Enter it
-					DIR * child = opendir(_prefix.c_str());
-
-					if (child)
-					{
-						_directories.push_back(child);
-						_entries.push_back(0);
-						_prefix.push("/");
-// printf("PUSH: %s\n", _prefix.c_str());
-					}
+					// enter the directory
+					directory_entry_stack.push_back( directory_iterator(current_entry.path()) );
+					current_directory_.push_back( current_entry.path().string() );
 				}
- 			}
-			else
-			{
-// printf("FOUND: %s\n", _entries.back()->d_name);
-				// Found a file!
-				return true;
+				else if (is_regular_file(current_entry.path()))
+				{
+					// Found a file!
+					return true;
+				}
 			}
+	
+			return false; // No files left
 		}
-
-		return false; // No files left
-	}
 };
 
 } // namespace

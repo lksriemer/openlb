@@ -15,8 +15,8 @@
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
  *
- *  You should have received a copy of the GNU General Public 
- *  License along with this program; if not, write to the Free 
+ *  You should have received a copy of the GNU General Public
+ *  License along with this program; if not, write to the Free
  *  Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  *  Boston, MA  02110-1301, USA.
 */
@@ -32,56 +32,56 @@
 namespace olb {
 
 namespace singleton {
-    
+
 class Directories {
 public:
-    void setOlbDir(std::string olbDir_) {
-        olbDir = olbDir_;
-    }
-    void setOutputDir(std::string outputDir) {
-        setLogOutDir(outputDir);
-        setImageOutDir(outputDir);
-        setVtkOutDir(outputDir);
-    }
-    void setLogOutDir(std::string logOutDir_) {
-        logOutDir = logOutDir_;
-    }
-    void setImageOutDir(std::string imageOutDir_) {
-        imageOutDir = imageOutDir_;
-    }
-    void setVtkOutDir(std::string vtkOutDir_) {
-        vtkOutDir = vtkOutDir_;
-    }
-    std::string getOlbDir() const {
-        return olbDir;
-    }
-    std::string getLogOutDir() const {
-        return logOutDir;
-    }
-    std::string getImageOutDir() const {
-        return imageOutDir;
-    }
-    std::string getVtkOutDir() const {
-        return vtkOutDir;
-    }
+  void setOlbDir(std::string olbDir_) {
+    olbDir = olbDir_;
+  }
+  void setOutputDir(std::string outputDir) {
+    setLogOutDir(outputDir);
+    setImageOutDir(outputDir);
+    setVtkOutDir(outputDir);
+  }
+  void setLogOutDir(std::string logOutDir_) {
+    logOutDir = logOutDir_;
+  }
+  void setImageOutDir(std::string imageOutDir_) {
+    imageOutDir = imageOutDir_;
+  }
+  void setVtkOutDir(std::string vtkOutDir_) {
+    vtkOutDir = vtkOutDir_;
+  }
+  std::string getOlbDir() const {
+    return olbDir;
+  }
+  std::string getLogOutDir() const {
+    return logOutDir;
+  }
+  std::string getImageOutDir() const {
+    return imageOutDir;
+  }
+  std::string getVtkOutDir() const {
+    return vtkOutDir;
+  }
 private:
-    Directories() {
-        setOlbDir("");
-        setOutputDir("");
-    }
-    ~Directories() { }
+  Directories() {
+    setOlbDir("");
+    setOutputDir("");
+  }
+  ~Directories() { }
 private:
-    std::string olbDir;
-    std::string logOutDir;
-    std::string imageOutDir;
-    std::string vtkOutDir;
+  std::string olbDir;
+  std::string logOutDir;
+  std::string imageOutDir;
+  std::string vtkOutDir;
 
-friend Directories& directories();
+  friend Directories& directories();
 };
 
 inline Directories& directories() {
-    static Directories singleton;
-    return singleton;
+  static Directories singleton;
+  return singleton;
 }
 
 }  // namespace singleton

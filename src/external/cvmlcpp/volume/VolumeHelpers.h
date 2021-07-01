@@ -34,6 +34,9 @@
 namespace cvmlcpp
 {
 
+namespace detail
+{
+
 template <typename T>
 struct IndexPoint
 {
@@ -55,7 +58,34 @@ struct IndexPoint
 // same order; i.e. for normal[i], the corresponding points are idxPoints[3*i],
 // idxPoints[3*i+1] and idxPoints[3*i+2]
 template <typename T>
-bool _constructGeometry(Geometry<T> &geometry,
+bool constructGeometry(Geometry<T> &geometry, std::vector<Point3D<T> > &points)
+{
+	typedef typename Geometry<T>::point_type	point_type;
+	typedef typename Geometry<T>::vector_type	vector_type;
+	typedef typename Geometry<T>::facet_type	facet_type;
+
+	assert(points.size() % 3 == 0);
+	if (points.size() % 3 != 0)
+		return false;
+
+	geometry.clear();
+
+	for (std::size_t i = 0; i < points.size(); i+=3)
+	{
+		const std::size_t a = geometry.addPoint( points[i  ] );
+		const std::size_t b = geometry.addPoint( points[i+1] );
+		const std::size_t c = geometry.addPoint( points[i+2] );
+		geometry.addFacet(a, b, c);
+	}
+
+	return true;
+}
+
+// Pre: each consequetive 3 idxPoints form a facet, and the normals are in the
+// same order; i.e. for normal[i], the corresponding points are idxPoints[3*i],
+// idxPoints[3*i+1] and idxPoints[3*i+2]
+template <typename T>
+bool constructGeometry(Geometry<T> &geometry,
 			std::vector<IndexPoint<T> > &idxPoints,
 			std::vector<typename Geometry<T>::vector_type> &normals)
 {
@@ -111,6 +141,8 @@ bool _constructGeometry(Geometry<T> &geometry,
 
 	return true;
 }
+
+} // namespace
 
 } // namespace
 

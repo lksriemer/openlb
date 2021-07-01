@@ -9,6 +9,7 @@ CLG='clang'
 NIL='none'
 
 RELEASE_MODE='release'
+FAST_MODE='fast'
 DEBUG_MODE='debug'
 
 # Parameters, to be passed by command line
@@ -30,6 +31,26 @@ COMPILERS = {	GCC : 'g++',
 LINKERS = COMPILERS
 
 RELEASEFLAGS = {
+		GCC : '-pipe -I. -Wall -O3 -funroll-loops -fopenmp -DNDEBUG',
+		ICC : '-I. -O3 -funroll-loops -axN -openmp -ipo -DNDEBUG',
+		O64 : '-I. -Wall -O3 -DNDEBUG -fopenmp -ipa -apo',
+		SUN : '-I. -xopenmp=parallel -fast -native -library=stlport4 \
+			-features=tmplife -features=tmplrefstatic \
+			-Qoption ccfe -complextmplexp',
+		WTC : '-x c++ -I. -mtune=686 -fptune=686 -Wall \
+			-Wc,-xs -O3 -fsigned-char -funroll-loops -mthreads \
+			-frerun-optimizer -DNDEBUG',
+		CLG : '-pipe -I. -DNDEBUG' }
+
+RELEASELDFLAGS = {
+		GCC : '-fopenmp',
+		ICC : '-openmp',
+		O64 : '-fopenmp',
+		SUN : '',
+		WTC : '',
+		CLG : ''}
+
+FASTFLAGS = {
 		GCC : '-pipe -I. -Wall -O3 -funroll-loops -fopenmp \
 			-march=native -DNDEBUG',
 		ICC : '-I. -O3 -funroll-loops -axN -openmp -ipo -DNDEBUG',
@@ -42,7 +63,7 @@ RELEASEFLAGS = {
 			-frerun-optimizer -DNDEBUG',
 		CLG : '-pipe -I. -DNDEBUG' }
 
-RELEASELDFLAGS = {
+FASTLDFLAGS = {
 		GCC : '-fopenmp',
 		ICC : '-openmp',
 		O64 : '-fopenmp',

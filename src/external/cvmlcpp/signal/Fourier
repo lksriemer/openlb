@@ -28,9 +28,7 @@
 #include <string>
 
 #include <tr1/memory>
-#define __aligned__   ignored
 #include <tr1/type_traits>
-#undef __aligned__
 
 #include <cvmlcpp/math/Math>
 #include <cvmlcpp/base/Meta>

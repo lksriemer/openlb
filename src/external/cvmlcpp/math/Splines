@@ -214,7 +214,7 @@ class NaturalCubicSpline<T, 1>
 		std::size_t size() const { return s.size(); }
 
 		const Polynomial<T, 3> &
-		operator [](const unsigned patch) const
+		operator [](const std::size_t patch) const
 		{ return s[patch]; }
 
 		typename std::vector<Polynomial<T, 3> >::const_iterator

@@ -14,8 +14,8 @@
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
  *
- *  You should have received a copy of the GNU General Public 
- *  License along with this program; if not, write to the Free 
+ *  You should have received a copy of the GNU General Public
+ *  License along with this program; if not, write to the Free
  *  Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  *  Boston, MA  02110-1301, USA.
 */
@@ -41,89 +41,89 @@ template<typename T, class Descriptor> struct adLbDynamicsHelpers;
 /// All helper functions are inside this structure
 template<typename T, template<typename U> class Lattice>
 struct advectionDiffusionLbHelpers {
-    
-    static T equilibrium(int iPop, T rho, const T u[Lattice<T>::d]) {
-        return adLbDynamicsHelpers<T,typename Lattice<T>::BaseDescriptor>
-            ::equilibrium(iPop, rho, u);
-    }
-    
-    static T rlbCollision(Cell<T,Lattice>& cell, T rho, const T u[Lattice<T>::d], T omega)
-    {
-        return adLbDynamicsHelpers<T,typename Lattice<T>::BaseDescriptor>
-            ::rlbCollision(&cell[0], rho, u, omega);
-    }
 
-    static T bgkCollision(Cell<T,Lattice>& cell, T rho, const T u[Lattice<T>::d], T omega)
-    {
-        return adLbDynamicsHelpers<T,typename Lattice<T>::BaseDescriptor>
-            ::bgkCollision(&cell[0], rho, u, omega);
-    }
+  static T equilibrium(int iPop, T rho, const T u[Lattice<T>::d]) {
+    return adLbDynamicsHelpers<T,typename Lattice<T>::BaseDescriptor>
+           ::equilibrium(iPop, rho, u);
+  }
+
+  static T rlbCollision(Cell<T,Lattice>& cell, T rho, const T u[Lattice<T>::d], T omega)
+  {
+    return adLbDynamicsHelpers<T,typename Lattice<T>::BaseDescriptor>
+           ::rlbCollision(&cell[0], rho, u, omega);
+  }
+
+  static T bgkCollision(Cell<T,Lattice>& cell, T rho, const T u[Lattice<T>::d], T omega)
+  {
+    return adLbDynamicsHelpers<T,typename Lattice<T>::BaseDescriptor>
+           ::bgkCollision(&cell[0], rho, u, omega);
+  }
 };
-    
+
 /// All helper functions are inside this structure
 template<typename T, class Descriptor>
 struct adLbDynamicsHelpers {
-    /// equilibrium distribution
-    static T equilibrium( int iPop, T rho, const T u[Descriptor::d])
+  /// equilibrium distribution
+  static T equilibrium( int iPop, T rho, const T u[Descriptor::d])
+  {
+    T c_u = T();
+    for (int iD=0; iD < Descriptor::d; ++iD)
     {
-        T c_u = T();
-        for (int iD=0; iD < Descriptor::d; ++iD)
-        {
-            c_u += (T)Descriptor::c[iPop][iD] * u[iD];
-        }
-        return rho*Descriptor::t[iPop]*((T)1 + c_u*Descriptor::invCs2)-Descriptor::t[iPop];
+      c_u += (T)Descriptor::c[iPop][iD] * u[iD];
+    }
+    return rho*Descriptor::t[iPop]*((T)1 + c_u*Descriptor::invCs2)-Descriptor::t[iPop];
+  }
+
+  /// RLB advection diffusion collision step
+  static T rlbCollision( T* cell,
+                         T rho, const T u[Descriptor::d],
+                         T omega)
+  {
+    const T uSqr = util::normSqr<T,Descriptor::d>(u);
+    // First-order moment for the regularization
+    T j1[Descriptor::d];
+    for (int iD=0; iD<Descriptor::d; ++iD)
+    {
+      j1[iD] = T();
     }
 
-    /// RLB advection diffusion collision step
-    static T rlbCollision( T* cell,
-                           T rho, const T u[Descriptor::d],
-                           T omega)
+    T fEq[Descriptor::q];
+    for (int iPop=0; iPop<Descriptor::q; ++iPop)
     {
-        const T uSqr = util::normSqr<T,Descriptor::d>(u);
-        // First-order moment for the regularization
-        T j1[Descriptor::d];
-        for (int iD=0; iD<Descriptor::d; ++iD) 
-        {
-            j1[iD] = T();
-        }
-    
-        T fEq[Descriptor::q];
-        for (int iPop=0; iPop<Descriptor::q; ++iPop) 
-        {
-            fEq[iPop] = adLbDynamicsHelpers<T,Descriptor>::equilibrium(iPop, rho, u);
-            for (int iD=0; iD<Descriptor::d; ++iD) {
-                j1[iD] += Descriptor::c[iPop][iD]*(cell[iPop]-fEq[iPop]);
-            }
-        }
+      fEq[iPop] = adLbDynamicsHelpers<T,Descriptor>::equilibrium(iPop, rho, u);
+      for (int iD=0; iD<Descriptor::d; ++iD) {
+        j1[iD] += Descriptor::c[iPop][iD]*(cell[iPop]-fEq[iPop]);
+      }
+    }
 
-        // Collision step
-    	for (int iPop=0; iPop<Descriptor::q; ++iPop) 
-	    {
-    		T fNeq = T();
-    		for (int iD=0; iD<Descriptor::d; ++iD) 
-	    	{
-    	        fNeq += Descriptor::c[iPop][iD]*j1[iD];
-        	}
-	        fNeq *= Descriptor::t[iPop] * Descriptor::invCs2;
-    	    cell[iPop] = fEq[iPop] + ((T)1-omega)*fNeq;
-    	}
-        return uSqr;
-    }
-    
-    /// BGK advection diffusion collision step
-    static T bgkCollision( T* cell,
-                                  T rho, const T u[Descriptor::d],
-                                  T omega)
+    // Collision step
+    for (int iPop=0; iPop<Descriptor::q; ++iPop)
     {
-        const T uSqr = util::normSqr<T,Descriptor::d>(u);
-        for (int iPop=0; iPop < Descriptor::q; ++iPop)
-        {
-            cell[iPop] *= (T)1-omega;
-            cell[iPop] += omega * adLbDynamicsHelpers<T,Descriptor>::equilibrium (
-                    iPop, rho, u); // uses linear equilibrium
-        }
-        return uSqr;
+      T fNeq = T();
+      for (int iD=0; iD<Descriptor::d; ++iD)
+      {
+        fNeq += Descriptor::c[iPop][iD]*j1[iD];
+      }
+      fNeq *= Descriptor::t[iPop] * Descriptor::invCs2;
+      cell[iPop] = fEq[iPop] + ((T)1-omega)*fNeq;
     }
+    return uSqr;
+  }
+
+  /// BGK advection diffusion collision step
+  static T bgkCollision( T* cell,
+                         T rho, const T u[Descriptor::d],
+                         T omega)
+  {
+    const T uSqr = util::normSqr<T,Descriptor::d>(u);
+    for (int iPop=0; iPop < Descriptor::q; ++iPop)
+    {
+      cell[iPop] *= (T)1-omega;
+      cell[iPop] += omega * adLbDynamicsHelpers<T,Descriptor>::equilibrium (
+                      iPop, rho, u); // uses linear equilibrium
+    }
+    return uSqr;
+  }
 
 };
 

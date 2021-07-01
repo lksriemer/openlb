@@ -14,10 +14,10 @@ do
 	case "$1" in
 		'gcc')
 			g++ -Wall -I.. -O2 -g -DUSE_THREADS \
-				-fopenmp \
+				-fopenmp -std=c++0x \
 				-funroll-loops -march=native -lfftw3 \
 				-lfftw3_threads -lfftw3f -lfftw3f_threads \
-				-lfftw3l -lfftw3l_threads -lpthread -L.. \
+				-lfftw3l -lfftw3l_threads -lpthread -lboost_filesystem -L.. \
 				-lcvmlcpp $i
 		;;
 
@@ -27,7 +27,7 @@ do
 			icc -I.. -ipo -O3 -g -DUSE_THREADS \
 				-openmp -funroll-loops -axN \
 				-L.. -lcvmlcpp -lfftw3 -lfftw3_threads \
-				-lfftw3f -lfftw3f_threads $i
+				-lfftw3f -lfftw3f_threads -lboost_filesystem $i
 		;;
 
 		'open64')
@@ -35,16 +35,16 @@ do
 				-mp -lfftw3 \
 				-lfftw3_threads -lfftw3f -lfftw3f_threads \
 				-lfftw3l -lfftw3l_threads -lpthread -L.. \
-				-lcvmlcpp $i
+				-lcvmlcpp -lboost_filesystem $i
 		;;
 
 		'clang')
 			clang -Wall -I.. -O2 -g -DUSE_THREADS \
-				-fopenmp \
+				-fopenmp -std=c++0x \
 				-funroll-loops -march=native -lfftw3 \
 				-lfftw3_threads -lfftw3f -lfftw3f_threads \
 				-lfftw3l -lfftw3l_threads -lpthread -L.. \
-				-lcvmlcpp $i
+				-lcvmlcpp -lboost_filesystem $i
 		;;
 
 		'suncc')
@@ -54,7 +54,7 @@ do
 				-fast -lfftw3 \
 				-lfftw3_threads -lfftw3f -lfftw3f_threads \
 				-lfftw3l -lfftw3l_threads -lpthread -L.. \
-				-lcvmlcpp $i
+				-lcvmlcpp -lboost_filesystem $i
 		;;
 
 		'watcom')
@@ -62,13 +62,13 @@ do
 				-O3 -fsigned-char -funroll-loops -mthreads \
 				-frerun-optimizer -lfftw3 -lfftw3_threads \
 				-lfftw3f -lfftw3f_threads -lfftw3l \
-				-lfftw3l_threads -lpthread -L.. -lcvmlcpp $i
+				-lfftw3l_threads -lpthread -lboost_filesystem -L.. -lcvmlcpp $i
 		;;
 
 		*)
 			${CXX} ${CXXFLAGS} -lfftw3 -lfftw3_threads \
                                 -lfftw3f -lfftw3f_threads -lfftw3l \
-                                -lfftw3l_threads -lpthread -L.. -lcvmlcpp $i
+                                -lfftw3l_threads -lpthread -lboost_filesystem -L.. -lcvmlcpp $i
 
 #			echo Specify "gcc", "icc", "open64" or "clang"
 #			echo Options "suncc" and "watcom" are available but these compilers are broken

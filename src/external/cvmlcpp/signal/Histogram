@@ -26,6 +26,8 @@
 #include <map>
 #include <functional>
 
+#include <cvmlcpp/math/Math>
+
 namespace cvmlcpp
 {
 
@@ -154,9 +156,9 @@ class Histogram
 		{
 			const double frac = 	double(value) /
 					double(_maxValue-_minValue);
-			const std::size_t bin = std::min(_nrBins - 1u,
-						static_cast<std::size_t>
-						(frac * double(_nrBins)));
+			const std::size_t bin = 
+				round_cast<std::size_t>( frac * (_nrBins-1) );
+			assert(bin < _nrBins);
 			++_hist[bin];
 			++_elements;
 		}

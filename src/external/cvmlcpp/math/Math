@@ -26,9 +26,7 @@
 #include <cmath>
 #include <vector>
 
-#define __aligned__   ignored
 #include <tr1/type_traits>
-#undef __aligned__
 
 namespace cvmlcpp
 {
@@ -107,11 +105,14 @@ T gcd(T u, T v);
 template <typename T>
 T binomial(const T n, const T k);
 
-template <typename T, typename U>
-U binopmf(const T n, const T k, const U p);
+template <typename T>
+T binopmf(const std::size_t n, const std::size_t k, const T p);
+
+template <typename T>
+T binocdf(const std::size_t n, const std::size_t k, const T p);
 
 template <typename T, typename U>
-U binocdf(const T n, const T k, const U p);
+std::size_t binocdfinv(const T p_arg, const std::size_t n, const U p);
 
 /**
  * Famous Constants
@@ -160,7 +161,7 @@ T generalizedGaussianShape(Iterator begin, Iterator end,
 			   const T avg, const T init);
 
 /**
- * 
+ *
  */
 
 template <class Function, class Derivative>
@@ -296,7 +297,7 @@ void transpose(Array_t<T, 2u, A> &m);
 /*
  * Linear Least Squares.
  * Finds an x such that y = Ax + e, where "e" is a minimized error.
- * 
+ *
  * "A" is the Design matrix; "y" are the observation, and "x" will be the
  * vector of estimated parameters.
  */

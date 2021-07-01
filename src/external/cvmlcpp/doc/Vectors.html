@@ -37,7 +37,7 @@ example, does not have iterators.
 
 The definitions are:
 <pre>
-template &lt;typename T, unsigned DIMS&gt;
+template &lt;typename T, std::size_t DIMS&gt;
 class StaticVector;
 </pre>
 and
@@ -49,7 +49,7 @@ are the most common.
 
 There are similar Vectors whose values are kept in sorted order:
 <pre>
-template &lt;typename T, unsigned DIMS&gt;
+template &lt;typename T, std::size_t DIMS&gt;
 class StaticSortedVector
 </pre>
 <pre>
@@ -140,7 +140,7 @@ almost identical. In the following table, substitute "Vector" with either one.
 </tr>
 
 <tr>
-	<td><pre>  value_type &amp;operator[] (unsigned index)  </pre></td>
+	<td><pre>  value_type &amp;operator[] (std::size_t index)  </pre></td>
 	<td>Access one element.</td>
 </tr>
 
@@ -159,7 +159,7 @@ almost identical. In the following table, substitute "Vector" with either one.
 </tr>
 
 <tr>
-	<td><pre>  unsigned size() const</td>
+	<td><pre>  std::size_t size() const</td>
 	<td>The number of dimensions</td>
 </tr>
 
@@ -190,18 +190,18 @@ almost identical. In the following table, substitute "Vector" with either one.
 
 <table border='1'>
 <tr>
-	<td><pre>  DynamicVector(const unsigned DIMS)  </pre></td>
+	<td><pre>  DynamicVector(const std::size_t DIMS)  </pre></td>
 	<td>Construct a DynamicVector with DIMS dimensions.</td>
 </tr>
 
 <tr>
-	<td><pre>  DynamicVector(const unsigned DIMS, const T value)  </pre></td>
+	<td><pre>  DynamicVector(const std::size_t DIMS, const T value)  </pre></td>
 	<td>Construct a DynamicVector with DIMS dimension and set all elements
 		to 'value'.</td>
 </tr>
 
 <tr>
-	<td><pre>  void resize(const unsigned DIMS)  </pre></td>
+	<td><pre>  void resize(const std::size_t DIMS)  </pre></td>
 	<td>Change the number of dimensions.</td>
 </tr>
 </table>
@@ -285,7 +285,7 @@ Note that StaticVector&lt;bool&gt; does <b>not</b> support operator{+, -, *, /, 
 </tr>
 
 <tr>
-	<td><pre>  void setElement(unsigned index, bool value)  </pre></td>
+	<td><pre>  void setElement(std::size_t index, bool value)  </pre></td>
 	<td>Set a bit to the given value.</td>
 </tr>
 
@@ -300,12 +300,12 @@ Note that StaticVector&lt;bool&gt; does <b>not</b> support operator{+, -, *, /, 
 </tr>
 
 <tr>
-	<td><pre>  void flip(const unsigned index)  </pre></td>
+	<td><pre>  void flip(const std::size_t index)  </pre></td>
 	<td>Flip bit at "index".</td>
 </tr>
 
 <tr>
-	<td><pre>  unsigned count() const  </pre></td>
+	<td><pre>  std::size_t count() const  </pre></td>
 	<td>Return the number of bits set to 1.</td>
 </tr>
 
@@ -350,7 +350,7 @@ Note that StaticVector&lt;bool&gt; does <b>not</b> support operator{+, -, *, /, 
 </tr>
 
 <tr>
-	<td><pre>  unsigned size()  </pre></td>
+	<td><pre>  std::size_t size()  </pre></td>
 	<td>Returns the number of dimensions of the vector.</td>
 </tr>
 
@@ -399,7 +399,7 @@ In the following table, read either "StaticSortedVector" or
 </tr>
 
 <tr>
-	<td><pre>  const value_type operator[] (unsigned index) const  </pre></td>
+	<td><pre>  const value_type operator[] (std::size_t index) const  </pre></td>
 	<td></td>
 </tr>
 
@@ -415,7 +415,7 @@ In the following table, read either "StaticSortedVector" or
 </tr>
 
 <tr>
-	<td><pre>  unsigned size()  </pre></td>
+	<td><pre>  std::size_t size()  </pre></td>
 	<td>Returns the number of dimensions of the SortedVector.</td>
 </tr>
 

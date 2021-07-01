@@ -59,7 +59,7 @@ it is <i>not</i> thread-safe.
 </tr>
 
 <tr>
-	<td><pre>unsigned count() const</pre></td>
+	<td><pre>std::size_t count() const</pre></td>
 	<td>Returns the number of generated values.</td>
 </tr>
 
@@ -68,7 +68,7 @@ it is <i>not</i> thread-safe.
 <h2>KeyGenerator</h2>
 
 <p>
-The class <b>template &lt;typename T = unsigned&gt; KeyGenerator</b> generates
+The class <b>template &lt;typename T = std::size_t&gt; KeyGenerator</b> generates
 keys for binary-tree-based structures such as STL's
 <a href="http://www.sgi.com/tech/stl/Map.html">map</a>. It is <i>not</i>
 thread-safe.
@@ -96,7 +96,7 @@ reset() function allows a reset to the initial state.
 </tr>
 
 <tr>
-	<td><pre>template &lt;typename T = unsigned&gt;
+	<td><pre>template &lt;typename T = std::size_t&gt;
 KeyGenerator()</pre></td>
 	<td>Constructor.</td>
 </tr>
@@ -117,7 +117,7 @@ KeyGenerator()</pre></td>
 </tr>
 
 <tr>
-	<td><pre>unsigned count() const</pre></td>
+	<td><pre>std::size_t count() const</pre></td>
 	<td>Returns the number of generated values.</td>
 </tr>
 
@@ -126,7 +126,7 @@ KeyGenerator()</pre></td>
 <h2>IncGenerator</h2>
 
 <p>
-The class <b>template &lt;typename T = unsigned&gt; IncGenerator</b> generates
+The class <b>template &lt;typename T = std::size_t&gt; IncGenerator</b> generates
 incremental values: 0, 1, 2, .... It is <i>not</i> thread-safe.
 </p>
 
@@ -143,7 +143,7 @@ reset() function allows a reset to the initial state.
 </tr>
 
 <tr>
-	<td><pre>template &lt;typename T = unsigned&gt;
+	<td><pre>template &lt;typename T = std::size_t&gt;
 IncGenerator()</pre></td>
 	<td>Constructor.</td>
 </tr>
@@ -164,7 +164,7 @@ IncGenerator()</pre></td>
 </tr>
 
 <tr>
-	<td><pre>unsigned count() const</pre></td>
+	<td><pre>std::size_t count() const</pre></td>
 	<td>Returns the number of generated values.</td>
 </tr>
 
@@ -179,19 +179,19 @@ of code:
 #include &lt;cvmlcpp/math/Euclid&gt;
 #include &lt;cvmlcpp/base/IDGenerators&gt;
 
-std::map&lt;unsigned, dPoint3D&gt; doubleMap;
+std::map&lt;std::size_t, dPoint3D&gt; doubleMap;
 
-KeyGenerator&lt;unsigned&gt; kGen;
+KeyGenerator&lt;std::size_t&gt; kGen;
 
-for (unsigned i = 0; i &lt; N; ++i)
+for (std::size_t i = 0; i &lt; N; ++i)
 {
 	dPoint3D d;
 
 	// Option A
-	doubleMap.insert(std::pair&lt;unsigned, double&gt;(i, d));
+	doubleMap.insert(std::pair&lt;std::size_t, double&gt;(i, d));
 
 	// Option B
-	doubleMap.insert(std::pair&lt;unsigned, double&gt;(kGen(), d));
+	doubleMap.insert(std::pair&lt;std::size_t, double&gt;(kGen(), d));
 }
 
 </pre>

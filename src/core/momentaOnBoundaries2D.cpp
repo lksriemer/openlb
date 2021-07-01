@@ -15,8 +15,8 @@
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
  *
- *  You should have received a copy of the GNU General Public 
- *  License along with this program; if not, write to the Free 
+ *  You should have received a copy of the GNU General Public
+ *  License along with this program; if not, write to the Free
  *  Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  *  Boston, MA  02110-1301, USA.
 */
@@ -32,44 +32,44 @@
 #include "latticeDescriptors.hh"
 
 namespace olb {
-    template class EquilibriumBM<double, descriptors::D2Q9Descriptor>;
+template class EquilibriumBM<double, descriptors::D2Q9Descriptor>;
 
-    template class FixedVelocityBM<double, descriptors::D2Q9Descriptor>;
+template class FixedVelocityBM<double, descriptors::D2Q9Descriptor>;
 
-    template class FreeStressBM<double, descriptors::D2Q9Descriptor>;
+template class FreeStressBM<double, descriptors::D2Q9Descriptor>;
 
-    template class VelocityBM<double, descriptors::D2Q9Descriptor, 0, 1>;
-    template class VelocityBM<double, descriptors::D2Q9Descriptor, 0, -1>;
-    template class VelocityBM<double, descriptors::D2Q9Descriptor, 1, 1>;
-    template class VelocityBM<double, descriptors::D2Q9Descriptor, 1, -1>;
+template class VelocityBM<double, descriptors::D2Q9Descriptor, 0, 1>;
+template class VelocityBM<double, descriptors::D2Q9Descriptor, 0, -1>;
+template class VelocityBM<double, descriptors::D2Q9Descriptor, 1, 1>;
+template class VelocityBM<double, descriptors::D2Q9Descriptor, 1, -1>;
 
-    template class RegularizedVelocityBM<double, descriptors::D2Q9Descriptor, 0, 1>;
-    template class RegularizedVelocityBM<double, descriptors::D2Q9Descriptor, 0, -1>;
-    template class RegularizedVelocityBM<double, descriptors::D2Q9Descriptor, 1, 1>;
-    template class RegularizedVelocityBM<double, descriptors::D2Q9Descriptor, 1, -1>;
+template class RegularizedVelocityBM<double, descriptors::D2Q9Descriptor, 0, 1>;
+template class RegularizedVelocityBM<double, descriptors::D2Q9Descriptor, 0, -1>;
+template class RegularizedVelocityBM<double, descriptors::D2Q9Descriptor, 1, 1>;
+template class RegularizedVelocityBM<double, descriptors::D2Q9Descriptor, 1, -1>;
 
-    template class RegularizedPressureBM<double, descriptors::D2Q9Descriptor, 0, 1>;
-    template class RegularizedPressureBM<double, descriptors::D2Q9Descriptor, 0, -1>;
-    template class RegularizedPressureBM<double, descriptors::D2Q9Descriptor, 1, 1>;
-    template class RegularizedPressureBM<double, descriptors::D2Q9Descriptor, 1, -1>;
+template class RegularizedPressureBM<double, descriptors::D2Q9Descriptor, 0, 1>;
+template class RegularizedPressureBM<double, descriptors::D2Q9Descriptor, 0, -1>;
+template class RegularizedPressureBM<double, descriptors::D2Q9Descriptor, 1, 1>;
+template class RegularizedPressureBM<double, descriptors::D2Q9Descriptor, 1, -1>;
 
-    template class PressureBM<double, descriptors::D2Q9Descriptor, 0, 1>;
-    template class PressureBM<double, descriptors::D2Q9Descriptor, 0, -1>;
-    template class PressureBM<double, descriptors::D2Q9Descriptor, 1, 1>;
-    template class PressureBM<double, descriptors::D2Q9Descriptor, 1, -1>;
+template class PressureBM<double, descriptors::D2Q9Descriptor, 0, 1>;
+template class PressureBM<double, descriptors::D2Q9Descriptor, 0, -1>;
+template class PressureBM<double, descriptors::D2Q9Descriptor, 1, 1>;
+template class PressureBM<double, descriptors::D2Q9Descriptor, 1, -1>;
 
-    template class InnerCornerVelBM2D<double, descriptors::D2Q9Descriptor, 1, 1>;
-    template class InnerCornerVelBM2D<double, descriptors::D2Q9Descriptor, 1, -1>;
-    template class InnerCornerVelBM2D<double, descriptors::D2Q9Descriptor, -1, 1>;
-    template class InnerCornerVelBM2D<double, descriptors::D2Q9Descriptor, -1, -1>;
+template class InnerCornerVelBM2D<double, descriptors::D2Q9Descriptor, 1, 1>;
+template class InnerCornerVelBM2D<double, descriptors::D2Q9Descriptor, 1, -1>;
+template class InnerCornerVelBM2D<double, descriptors::D2Q9Descriptor, -1, 1>;
+template class InnerCornerVelBM2D<double, descriptors::D2Q9Descriptor, -1, -1>;
 
-    template class BasicDirichletBM<double, descriptors::D2Q9Descriptor, VelocityBM, 0, 1>;
-    template class BasicDirichletBM<double, descriptors::D2Q9Descriptor, VelocityBM, 0, -1>;
-    template class BasicDirichletBM<double, descriptors::D2Q9Descriptor, VelocityBM, 1, 1>;
-    template class BasicDirichletBM<double, descriptors::D2Q9Descriptor, VelocityBM, 1, -1>;
+template class BasicDirichletBM<double, descriptors::D2Q9Descriptor, VelocityBM, 0, 1>;
+template class BasicDirichletBM<double, descriptors::D2Q9Descriptor, VelocityBM, 0, -1>;
+template class BasicDirichletBM<double, descriptors::D2Q9Descriptor, VelocityBM, 1, 1>;
+template class BasicDirichletBM<double, descriptors::D2Q9Descriptor, VelocityBM, 1, -1>;
 
-    template class BasicDirichletBM<double, descriptors::D2Q9Descriptor, PressureBM, 0, 1>;
-    template class BasicDirichletBM<double, descriptors::D2Q9Descriptor, PressureBM, 0, -1>;
-    template class BasicDirichletBM<double, descriptors::D2Q9Descriptor, PressureBM, 1, 1>;
-    template class BasicDirichletBM<double, descriptors::D2Q9Descriptor, PressureBM, 1, -1>;
+template class BasicDirichletBM<double, descriptors::D2Q9Descriptor, PressureBM, 0, 1>;
+template class BasicDirichletBM<double, descriptors::D2Q9Descriptor, PressureBM, 0, -1>;
+template class BasicDirichletBM<double, descriptors::D2Q9Descriptor, PressureBM, 1, 1>;
+template class BasicDirichletBM<double, descriptors::D2Q9Descriptor, PressureBM, 1, -1>;
 }

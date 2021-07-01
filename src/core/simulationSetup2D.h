@@ -15,8 +15,8 @@
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
  *
- *  You should have received a copy of the GNU General Public 
- *  License along with this program; if not, write to the Free 
+ *  You should have received a copy of the GNU General Public
+ *  License along with this program; if not, write to the Free
  *  Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  *  Boston, MA  02110-1301, USA.
 */
@@ -29,29 +29,29 @@
 
 namespace olb {
 
-    template <typename T, template<typename U> class Lattice>
-    void iniFirstOrder2D(BlockLatticeView2D<T,Lattice> lattice);
+template <typename T, template<typename U> class Lattice>
+void iniFirstOrder2D(BlockLatticeView2D<T,Lattice> lattice);
 
-    template <typename T, template<typename U> class Lattice>
-    void convergeFixedVelocity(BlockLattice2D<T,Lattice>& lattice,
-                               T epsilon, int step=10);
+template <typename T, template<typename U> class Lattice>
+void convergeFixedVelocity(BlockLattice2D<T,Lattice>& lattice,
+                           T epsilon, int step=10);
 
-    template <typename T, template<typename U> class Lattice>
-    void iniPressure2D(BlockLatticeView2D<T,Lattice> lattice,
-                       T epsilon, T lambda=1.8);
+template <typename T, template<typename U> class Lattice>
+void iniPressure2D(BlockLatticeView2D<T,Lattice> lattice,
+                   T epsilon, T lambda=1.8);
 
-    template <typename T, template<typename U> class Lattice>
-    void computePressure2D(ScalarField2D<T> const& poissonTerm,
-                           ScalarField2D<T>& pressure,
-                           T epsilon, T lambda);
+template <typename T, template<typename U> class Lattice>
+void computePressure2D(ScalarField2D<T> const& poissonTerm,
+                       ScalarField2D<T>& pressure,
+                       T epsilon, T lambda);
 
-    template <typename T, template<typename U> class Lattice>
-    void testLaplace(BlockLatticeView2D<T,Lattice> lattice,
-                       T epsilon, T lambda=1.8);
+template <typename T, template<typename U> class Lattice>
+void testLaplace(BlockLatticeView2D<T,Lattice> lattice,
+                 T epsilon, T lambda=1.8);
 
-    template <typename T, template<typename U> class Lattice>
-    void testLiShi(BlockLattice2D<T,Lattice>& lattice,
-                       T epsilon, T lambda=1.8);
+template <typename T, template<typename U> class Lattice>
+void testLiShi(BlockLattice2D<T,Lattice>& lattice,
+               T epsilon, T lambda=1.8);
 
 }  // namespace olb
 

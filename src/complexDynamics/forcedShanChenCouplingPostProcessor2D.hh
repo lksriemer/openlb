@@ -14,8 +14,8 @@
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
  *
- *  You should have received a copy of the GNU General Public 
- *  License along with this program; if not, write to the Free 
+ *  You should have received a copy of the GNU General Public
+ *  License along with this program; if not, write to the Free
  *  Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  *  Boston, MA  02110-1301, USA.
 */
@@ -34,111 +34,113 @@ namespace olb {
 
 template<typename T, template<typename U> class Lattice>
 ForcedShanChenCouplingPostProcessor2D <T,Lattice>::
-    ForcedShanChenCouplingPostProcessor2D(int x0_, int x1_, int y0_, int y1_, T G_,
-                                       std::vector<SpatiallyExtendedObject2D*> partners_)
-    :  x0(x0_), x1(x1_), y0(y0_), y1(y1_), G(G_), partners(partners_)
+ForcedShanChenCouplingPostProcessor2D(int x0_, int x1_, int y0_, int y1_, T G_,
+                                      std::vector<SpatiallyExtendedObject2D*> partners_)
+  :  x0(x0_), x1(x1_), y0(y0_), y1(y1_), G(G_), partners(partners_)
 { }
 
 template<typename T, template<typename U> class Lattice>
 void ForcedShanChenCouplingPostProcessor2D<T,Lattice>::
-    processSubDomain( BlockLattice2D<T,Lattice>& blockLattice,
-                      int x0_, int x1_, int y0_, int y1_ )
+processSubDomain( BlockLattice2D<T,Lattice>& blockLattice,
+                  int x0_, int x1_, int y0_, int y1_ )
 {
-    typedef Lattice<T> L;
-    enum {
-        uOffset     = L::ExternalField::velocityBeginsAt,
-        forceOffset = L::ExternalField::forceBeginsAt
-    };
-    
-    BlockLattice2D<T,Lattice> *partnerLattice = dynamic_cast<BlockLattice2D<T,Lattice> *>(partners[0]);
+  typedef Lattice<T> L;
+  enum {
+    uOffset     = L::ExternalField::velocityBeginsAt,
+    forceOffset = L::ExternalField::forceBeginsAt
+  };
 
-    int newX0, newX1, newY0, newY1;
-    if ( util::intersect ( x0, x1, y0, y1, 
-                           x0_, x1_, y0_, y1_,
-                           newX0, newX1, newY0, newY1 ) )
-    {
-        int nx = newX1-newX0+3; // include a one-cell boundary
-        int ny = newY1-newY0+3; // include a one-cell boundary
-        int offsetX = newX0-1;
-        int offsetY = newY0-1;
-        ScalarField2D<T> rhoField1(nx, ny); rhoField1.construct();
-        ScalarField2D<T> rhoField2(nx, ny); rhoField2.construct();
-        // Compute density and velocity on every site of first lattice, and store result
-        //   in external scalars; envelope cells are included, because they are needed
-        //   to compute the interaction potential in what follows.
-        for (int iX=newX0-1; iX<=newX1+1; ++iX) {
-            for (int iY=newY0-1; iY<=newY1+1; ++iY) {
-                Cell<T,Lattice>& cell = blockLattice.get(iX,iY);
-                rhoField1.get(iX-offsetX, iY-offsetY) = cell.computeRho();
-                T* j = cell.getExternal(uOffset);
-                lbHelpers<T,Lattice>::computeJ(cell,j);
-            }
-        }
+  BlockLattice2D<T,Lattice> *partnerLattice = dynamic_cast<BlockLattice2D<T,Lattice> *>(partners[0]);
 
-        // Compute density and velocity on every site of second lattice, and store result
-        //   in external scalars; envelope cells are included, because they are needed
-        //   to compute the interaction potential in what follows.
-        for (int iX=newX0-1; iX<=newX1+1; ++iX) {
-            for (int iY=newY0-1; iY<=newY1+1; ++iY) {
-                Cell<T,Lattice>& cell = partnerLattice->get(iX,iY);
-                rhoField2.get(iX-offsetX, iY-offsetY) = cell.computeRho();
-                T* j = cell.getExternal(uOffset);
-                lbHelpers<T,Lattice>::computeJ(cell,j);
-            }
-        }
-
-        for (int iX=newX0; iX<=newX1; ++iX) {
-            for (int iY=newY0; iY<=newY1; ++iY) {
-                Cell<T,Lattice>& blockCell   = blockLattice.get(iX,iY);
-                Cell<T,Lattice>& partnerCell = partnerLattice->get(iX,iY);
-
-                // Computation of the common velocity, shared among the two populations
-                T rhoTot = rhoField1.get(iX-offsetX, iY-offsetY) +
-                           rhoField2.get(iX-offsetX, iY-offsetY);
-                T uTot[Lattice<T>::d];
-                T *blockU = blockCell.getExternal(uOffset);      // contains precomputed value rho*u
-                T *partnerU = partnerCell.getExternal(uOffset);  // contains precomputed value rho*u
-                for (int iD = 0; iD < Lattice<T>::d; ++iD) {
-                    uTot[iD] = (blockU[iD] + partnerU[iD]) / rhoTot;
-                }
-
-                // Computation of the interaction potential
-                T rhoBlockContribution[L::d]   = {T(), T()};
-                T rhoPartnerContribution[L::d] = {T(), T()};
-                for (int iPop = 0; iPop < L::q; ++iPop) {
-                    int nextX = iX + L::c[iPop][0];
-                    int nextY = iY + L::c[iPop][1];
-                    T blockRho   = rhoField1.get(nextX-offsetX, nextY-offsetY);
-                    T partnerRho = rhoField2.get(nextX-offsetX, nextY-offsetY);
-                    for (int iD = 0; iD < L::d; ++iD) {
-                        rhoBlockContribution[iD]   += blockRho * L::c[iPop][iD];
-                        rhoPartnerContribution[iD] += partnerRho * L::c[iPop][iD];
-                    }
-                }
-
-                // Computation and storage of the final velocity, consisting
-                //   of u and the momentum difference due to interaction
-                //   potential plus external force
-                T *blockForce   = blockCell.getExternal(forceOffset);
-                T *partnerForce = partnerCell.getExternal(forceOffset);
-                T blockOmega   = blockCell.getDynamics()->getOmega();
-                T partnerOmega = partnerCell.getDynamics()->getOmega();
-                for (int iD = 0; iD < L::d; ++iD) {
-                    blockU[iD] = uTot[iD] + 1./blockOmega *
-                                     (blockForce[iD] - G * rhoPartnerContribution[iD] );
-                    partnerU[iD] = uTot[iD] + 1./partnerOmega *
-                                     (partnerForce[iD] - G * rhoBlockContribution[iD] );
-                }
-            }
-        }
+  int newX0, newX1, newY0, newY1;
+  if ( util::intersect ( x0, x1, y0, y1,
+                         x0_, x1_, y0_, y1_,
+                         newX0, newX1, newY0, newY1 ) )
+  {
+    int nx = newX1-newX0+3; // include a one-cell boundary
+    int ny = newY1-newY0+3; // include a one-cell boundary
+    int offsetX = newX0-1;
+    int offsetY = newY0-1;
+    ScalarField2D<T> rhoField1(nx, ny);
+    rhoField1.construct();
+    ScalarField2D<T> rhoField2(nx, ny);
+    rhoField2.construct();
+    // Compute density and velocity on every site of first lattice, and store result
+    //   in external scalars; envelope cells are included, because they are needed
+    //   to compute the interaction potential in what follows.
+    for (int iX=newX0-1; iX<=newX1+1; ++iX) {
+      for (int iY=newY0-1; iY<=newY1+1; ++iY) {
+        Cell<T,Lattice>& cell = blockLattice.get(iX,iY);
+        rhoField1.get(iX-offsetX, iY-offsetY) = cell.computeRho();
+        T* j = cell.getExternal(uOffset);
+        lbHelpers<T,Lattice>::computeJ(cell,j);
+      }
     }
+
+    // Compute density and velocity on every site of second lattice, and store result
+    //   in external scalars; envelope cells are included, because they are needed
+    //   to compute the interaction potential in what follows.
+    for (int iX=newX0-1; iX<=newX1+1; ++iX) {
+      for (int iY=newY0-1; iY<=newY1+1; ++iY) {
+        Cell<T,Lattice>& cell = partnerLattice->get(iX,iY);
+        rhoField2.get(iX-offsetX, iY-offsetY) = cell.computeRho();
+        T* j = cell.getExternal(uOffset);
+        lbHelpers<T,Lattice>::computeJ(cell,j);
+      }
+    }
+
+    for (int iX=newX0; iX<=newX1; ++iX) {
+      for (int iY=newY0; iY<=newY1; ++iY) {
+        Cell<T,Lattice>& blockCell   = blockLattice.get(iX,iY);
+        Cell<T,Lattice>& partnerCell = partnerLattice->get(iX,iY);
+
+        // Computation of the common velocity, shared among the two populations
+        T rhoTot = rhoField1.get(iX-offsetX, iY-offsetY) +
+                   rhoField2.get(iX-offsetX, iY-offsetY);
+        T uTot[Lattice<T>::d];
+        T *blockU = blockCell.getExternal(uOffset);      // contains precomputed value rho*u
+        T *partnerU = partnerCell.getExternal(uOffset);  // contains precomputed value rho*u
+        for (int iD = 0; iD < Lattice<T>::d; ++iD) {
+          uTot[iD] = (blockU[iD] + partnerU[iD]) / rhoTot;
+        }
+
+        // Computation of the interaction potential
+        T rhoBlockContribution[L::d]   = {T(), T()};
+        T rhoPartnerContribution[L::d] = {T(), T()};
+        for (int iPop = 0; iPop < L::q; ++iPop) {
+          int nextX = iX + L::c[iPop][0];
+          int nextY = iY + L::c[iPop][1];
+          T blockRho   = rhoField1.get(nextX-offsetX, nextY-offsetY);
+          T partnerRho = rhoField2.get(nextX-offsetX, nextY-offsetY);
+          for (int iD = 0; iD < L::d; ++iD) {
+            rhoBlockContribution[iD]   += blockRho * L::c[iPop][iD];
+            rhoPartnerContribution[iD] += partnerRho * L::c[iPop][iD];
+          }
+        }
+
+        // Computation and storage of the final velocity, consisting
+        //   of u and the momentum difference due to interaction
+        //   potential plus external force
+        T *blockForce   = blockCell.getExternal(forceOffset);
+        T *partnerForce = partnerCell.getExternal(forceOffset);
+        T blockOmega   = blockCell.getDynamics()->getOmega();
+        T partnerOmega = partnerCell.getDynamics()->getOmega();
+        for (int iD = 0; iD < L::d; ++iD) {
+          blockU[iD] = uTot[iD] + 1./blockOmega *
+                       (blockForce[iD] - G * rhoPartnerContribution[iD] );
+          partnerU[iD] = uTot[iD] + 1./partnerOmega *
+                         (partnerForce[iD] - G * rhoBlockContribution[iD] );
+        }
+      }
+    }
+  }
 }
 
 template<typename T, template<typename U> class Lattice>
 void ForcedShanChenCouplingPostProcessor2D<T,Lattice>::
-    process(BlockLattice2D<T,Lattice>& blockLattice)
+process(BlockLattice2D<T,Lattice>& blockLattice)
 {
-    processSubDomain(blockLattice, x0, x1, y0, y1);
+  processSubDomain(blockLattice, x0, x1, y0, y1);
 }
 
 
@@ -146,21 +148,21 @@ void ForcedShanChenCouplingPostProcessor2D<T,Lattice>::
 
 template<typename T, template<typename U> class Lattice>
 ForcedShanChenCouplingGenerator2D<T,Lattice>::ForcedShanChenCouplingGenerator2D (
-        int x0_, int x1_, int y0_, int y1_, T G_ )
-    : LatticeCouplingGenerator2D<T,Lattice>(x0_, x1_, y0_, y1_), G(G_)
+  int x0_, int x1_, int y0_, int y1_, T G_ )
+  : LatticeCouplingGenerator2D<T,Lattice>(x0_, x1_, y0_, y1_), G(G_)
 { }
 
 template<typename T, template<typename U> class Lattice>
 PostProcessor2D<T,Lattice>* ForcedShanChenCouplingGenerator2D<T,Lattice>::generate (
-                                std::vector<SpatiallyExtendedObject2D*> partners) const
+  std::vector<SpatiallyExtendedObject2D*> partners) const
 {
-    return new ForcedShanChenCouplingPostProcessor2D<T,Lattice>(
-            this->x0,this->x1,this->y0,this->y1,G, partners);
+  return new ForcedShanChenCouplingPostProcessor2D<T,Lattice>(
+           this->x0,this->x1,this->y0,this->y1,G, partners);
 }
 
 template<typename T, template<typename U> class Lattice>
 LatticeCouplingGenerator2D<T,Lattice>* ForcedShanChenCouplingGenerator2D<T,Lattice>::clone() const {
-    return new ForcedShanChenCouplingGenerator2D<T,Lattice>(*this);
+  return new ForcedShanChenCouplingGenerator2D<T,Lattice>(*this);
 }
 
 

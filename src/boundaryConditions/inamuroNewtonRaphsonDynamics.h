@@ -15,8 +15,8 @@
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
  *
- *  You should have received a copy of the GNU General Public 
- *  License along with this program; if not, write to the Free 
+ *  You should have received a copy of the GNU General Public
+ *  License along with this program; if not, write to the Free
  *  Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  *  Boston, MA  02110-1301, USA.
 */
@@ -25,6 +25,7 @@
 #define INAMURO_NEWTON_RAPHSON_DYNAMICS_H
 
 #include "core/dynamics.h"
+#include "io/ostreamManager.h"
 
 namespace olb {
 
@@ -39,53 +40,54 @@ template<typename T, template<typename U> class Lattice, typename Dynamics, int 
 class InamuroNewtonRaphsonDynamics : public BasicDynamics<T,Lattice>
 {
 public:
-    /// Constructor
-    InamuroNewtonRaphsonDynamics(T omega_, Momenta<T,Lattice>& momenta_);
-    /// Clone the object on its dynamic type.
-    virtual InamuroNewtonRaphsonDynamics<T, Lattice, Dynamics, direction, orientation>* clone() const;
-    /// Compute equilibrium distribution function
-    virtual T computeEquilibrium(int iPop, T rho, const T u[Lattice<T>::d], T uSqr) const;
-    /// Collision step
-    virtual void collide(Cell<T,Lattice>& cell,
-                         LatticeStatistics<T>& statistics);
-    /// Collide with fixed velocity
-    virtual void staticCollide(Cell<T,Lattice>& cell,
-                               const T u[Lattice<T>::d],
-                               LatticeStatistics<T>& statistics);
-    /// Get local relaxation parameter of the dynamics
-    virtual T getOmega() const;
-    /// Set local relaxation parameter of the dynamics
-    virtual void setOmega(T omega_);
-    /// Get local value of any parameter
-    virtual T getParameter(int whichParameter) const;
-    /// Set local value of any parameter
-    virtual void setParameter(int whichParameter, T value);
+  /// Constructor
+  InamuroNewtonRaphsonDynamics(T omega_, Momenta<T,Lattice>& momenta_);
+  /// Clone the object on its dynamic type.
+  virtual InamuroNewtonRaphsonDynamics<T, Lattice, Dynamics, direction, orientation>* clone() const;
+  /// Compute equilibrium distribution function
+  virtual T computeEquilibrium(int iPop, T rho, const T u[Lattice<T>::d], T uSqr) const;
+  /// Collision step
+  virtual void collide(Cell<T,Lattice>& cell,
+                       LatticeStatistics<T>& statistics);
+  /// Collide with fixed velocity
+  virtual void staticCollide(Cell<T,Lattice>& cell,
+                             const T u[Lattice<T>::d],
+                             LatticeStatistics<T>& statistics);
+  /// Get local relaxation parameter of the dynamics
+  virtual T getOmega() const;
+  /// Set local relaxation parameter of the dynamics
+  virtual void setOmega(T omega_);
+  /// Get local value of any parameter
+  virtual T getParameter(int whichParameter) const;
+  /// Set local value of any parameter
+  virtual void setParameter(int whichParameter, T value);
 
-    void computeApproxMomentum(T approxMomentum[Lattice<T>::d],
-        const Cell<T,Lattice> &cell,
-        const T &rho, const T u[Lattice<T>::d], const T xi[Lattice<T>::d],
-        const std::vector<int> knownIndexes,const std::vector<int> missingIndexes);
+  void computeApproxMomentum(T approxMomentum[Lattice<T>::d],
+                             const Cell<T,Lattice> &cell,
+                             const T &rho, const T u[Lattice<T>::d], const T xi[Lattice<T>::d],
+                             const std::vector<int> knownIndexes,const std::vector<int> missingIndexes);
 
-    /// compute the error (L^2 norm of (u-uApprox))
-    T computeError(const T &rho,const T u[Lattice<T>::d], const T approxMomentum[Lattice<T>::d]);
+  /// compute the error (L^2 norm of (u-uApprox))
+  T computeError(const T &rho,const T u[Lattice<T>::d], const T approxMomentum[Lattice<T>::d]);
 
-    void computeGradGradError(T gradGradError[Lattice<T>::d][Lattice<T>::d],
-        T gradError[Lattice<T>::d],
-        const T &rho, const T u[Lattice<T>::d],const T xi[Lattice<T>::d],
-        const T approxMomentum[Lattice<T>::d],
-        const std::vector<int> missingIndexes);
+  void computeGradGradError(T gradGradError[Lattice<T>::d][Lattice<T>::d],
+                            T gradError[Lattice<T>::d],
+                            const T &rho, const T u[Lattice<T>::d],const T xi[Lattice<T>::d],
+                            const T approxMomentum[Lattice<T>::d],
+                            const std::vector<int> missingIndexes);
 
-    /// compute the new xi with the newton raphson algorithm
-    bool newtonRaphson(T xi[Lattice<T>::d],
-        const T gradError[Lattice<T>::d],
-        const T gradGradError[Lattice<T>::d][Lattice<T>::d]);
+  /// compute the new xi with the newton raphson algorithm
+  bool newtonRaphson(T xi[Lattice<T>::d],
+                     const T gradError[Lattice<T>::d],
+                     const T gradGradError[Lattice<T>::d][Lattice<T>::d]);
 
-    bool invert(const T a[2][2],T b[2][2]);
+  bool invert(const T a[2][2],T b[2][2]);
 
-    bool invert(const T a[3][3],T b[3][3]);
+  bool invert(const T a[3][3],T b[3][3]);
 private:
-    Dynamics boundaryDynamics;
-    T xi[Lattice<T>::d];
+  Dynamics boundaryDynamics;
+  T xi[Lattice<T>::d];
+  mutable OstreamManager clout;
 };
 
 }

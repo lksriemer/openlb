@@ -25,8 +25,6 @@
 #include <cvmlcpp/base/Meta>
 #include <cvmlcpp/volume/Geometry>
 
-#include <cvmlcpp/volume/VolumeHelpers.h>
-
 #ifdef _OPENMP
 #include <omp.h>
 #endif
@@ -34,8 +32,11 @@
 namespace cvmlcpp
 {
 
-extern unsigned	 _pairTable[][2];
-extern unsigned	 _edgeTable[];
+namespace detail
+{
+
+extern int  _pairTable[][2];
+extern int  _edgeTable[];
 extern char _triTable[][16];
 
 /**
@@ -81,6 +82,9 @@ class MatrixSurfaceAdaptor_
 	private:
 		const Matrix_t<Ti, 3u, A> &matrix_;
 };
+
+} // end namespace detail
+
 /*
 template <typename Ti>
 class OctreeSurfaceAdaptor_
@@ -100,6 +104,7 @@ class OctreeSurfaceAdaptor_
 		const DTree<Ti, 3u> &octree_;
 };
 */
+
 template <class Adapter, typename Tg>
 void extractSurfaceFromAdapter(const Adapter &adapter,
 			   Geometry<Tg> &geometry, const double isolevel)
@@ -113,12 +118,12 @@ void extractSurfaceFromAdapter(const Adapter &adapter,
 
 	std::size_t dim[3];
 	adapter.dims(dim);
-	
+
 	geometry.clear();
 	if (dim[X] < 1 || dim[Y] < 1 || dim[Z] < 1 )
 		return;
 
-	std::vector<std::vector<Point3D<typename Geometry<Tg>::value_type> > > points(dim[X]-1);
+	std::vector<std::vector<Point3D<Tg> > > points(dim[X]-1);
 	std::vector<std::vector<vector_type> > normals(dim[X]-1);
 
 #ifdef _OPENMP
@@ -127,16 +132,17 @@ void extractSurfaceFromAdapter(const Adapter &adapter,
 	const Adapter matrix = adapter;
 #endif
 
+	//int invs = 0;
 	#ifdef _OPENMP
-	#pragma omp parallel for
+	#pragma omp parallel for //reduction (+:invs)
 	#endif
 	for (int x = 0u; x < int(dim[X]-1); ++x)
 	{
-#ifdef _OPENMP
+		#ifdef _OPENMP
 		const Adapter &matrix = adapters[omp_get_thread_num()];
-#endif
+		#endif
 		voxel_type val[8];
-	
+
 		for (std::size_t y = 0u; y < dim[Y] - 1u; ++y)
 		{
 			// Boundary conditions
@@ -144,7 +150,7 @@ void extractSurfaceFromAdapter(const Adapter &adapter,
 			val[3] = matrix(  x,   y, 0);
 			val[6] = matrix(x+1, y+1, 0);
 			val[7] = matrix(  x, y+1, 0);
-		
+
 			for (std::size_t z = 0u; z < dim[Z] - 1u; ++z)
 			{
 				val[0] = val[3];
@@ -155,15 +161,15 @@ void extractSurfaceFromAdapter(const Adapter &adapter,
 				val[7] = matrix(  x, y+1, z+1);
 				val[5] = val[6];
 				val[6] = matrix(x+1, y+1, z+1);
-		/*		val[0] = matrix(    x,    y,    z);
-				val[1] = matrix(x + 1,    y,    z);
-				val[2] = matrix(x + 1,    y,z + 1);
-				val[3] = matrix(    x,    y,z + 1);
-				val[4] = matrix(    x,y + 1,    z);
-				val[5] = matrix(x + 1,y + 1,    z);
-				val[6] = matrix(x + 1,y + 1,z + 1);
-				val[7] = matrix(    x,y + 1,z + 1);
-		*/
+				assert(val[0] == matrix(    x,    y,    z));
+				assert(val[1] == matrix(x + 1,    y,    z));
+				assert(val[2] == matrix(x + 1,    y,z + 1));
+				assert(val[3] == matrix(    x,    y,z + 1));
+				assert(val[4] == matrix(    x,y + 1,    z));
+				assert(val[5] == matrix(x + 1,y + 1,    z));
+				assert(val[6] == matrix(x + 1,y + 1,z + 1));
+				assert(val[7] == matrix(    x,y + 1,z + 1));
+
 				// Determine the index into the edge table which
 				// tells us which vertices are inside of the
 				// surface
@@ -171,24 +177,26 @@ void extractSurfaceFromAdapter(const Adapter &adapter,
 				for (unsigned i = 0u; i < 8u; ++i)
 					if (val[i] < isolevel)
 						cubeIndex |= (1u << i);
-		
+
 				// Cube is entirely in/out of the surface
+				using namespace cvmlcpp::detail;
 				if (_edgeTable[cubeIndex] == 0u)
 					continue;
-		
+
 				// Prepare points of cube relative to point in matrix.
 				static
 				const typename iPoint3D::value_type offset [8] [3] = {
 					{0, 0, 0}, {1, 0, 0}, {1, 0, 1}, {0, 0, 1},
 					{0, 1, 0}, {1, 1, 0}, {1, 1, 1}, {0, 1, 1} };
-		
+
 				const iPoint3D here(std::size_t(x), y, z);
 				iPoint3D pts[8];
 				for (unsigned i = 0; i < 8; ++i)
 					pts[i] = here.jmp(offset[i][X], offset[i][Y], offset[i][Z]);
-		
+
 				// Find the vertices where the surface intersects the cube
-				typename Geometry<Tg>::point_type vertlist[12];
+				typedef typename Geometry<Tg>::point_type point_t;
+				point_t vertlist[12];
 				for (std::size_t i = 0; i < 12u; ++i)
 					if (_edgeTable[cubeIndex] & (1u << i))
 						_VertexInterp(isolevel,
@@ -196,84 +204,84 @@ void extractSurfaceFromAdapter(const Adapter &adapter,
 							pts[_pairTable[i][1]],
 							val[_pairTable[i][0]],
 							val[_pairTable[i][1]], vertlist[i]);
-		
+
 				// Prepare points and facets
 				for (unsigned i = 0u; _triTable[cubeIndex][i] != -1; i += 3u)
 				{
+					assert(_triTable[cubeIndex][i+1] != -1);
+					assert(_triTable[cubeIndex][i+2] != -1);
+
 					// Determine points
-					for (std::size_t j = 0u; j < 3u; ++j)
-						points[x].push_back(vertlist[int(_triTable[cubeIndex][i+j])]);
-		
+					const point_t a = vertlist[int(_triTable[cubeIndex][i  ])];
+					const point_t b = vertlist[int(_triTable[cubeIndex][i+1])];
+					const point_t c = vertlist[int(_triTable[cubeIndex][i+2])];
+
 					// Compute normal
-					const std::size_t a  = points[x].size() - 3;
-					const std::size_t b  = points[x].size() - 2;
-					const std::size_t c  = points[x].size() - 1;
-					const vector_type ab = points[x][b] - points[x][a];
-					const vector_type ac = points[x][c] - points[x][a];
-					vector_type normal   = crossProduct(ab, ac);
+					vector_type normal = crossProduct(b-a, c-a);
 					normal /= modulus(normal);
-		
+
 					// check normal orientation
-					const vector_type center =
-						(points[x][a]+points[x][b]+points[x][c])/Tg(3.0);
+					const vector_type center = (a+b+c) / Tg(3.0);
 					const vector_type loc = normal + center;
-		
-					const std::size_t xx = clamp(round_cast<std::size_t>(loc[X]),
-								 std::size_t(0), dim[X]-1);
-					const std::size_t yy = clamp(round_cast<std::size_t>(loc[Y]),
-								 std::size_t(0), dim[Y]-1);
-					const std::size_t zz = clamp(round_cast<std::size_t>(loc[Z]),
-								 std::size_t(0), dim[Z]-1);
-		
-					if (matrix(xx, yy, zz) > isolevel)
+
+					const std::size_t xx = x + (normal.x() >= 0);
+					const std::size_t yy = y + (normal.y() >= 0);
+					const std::size_t zz = z + (normal.z() >= 0);
+
+					const bool invert = matrix(xx, yy, zz) < isolevel;
+					if (invert)
 					{
-						normal *= -1.0;
-						// reverse order of points
-						using std::swap;
-						swap(points[x][b], points[x][c]);
+						std::cout << "("<<x<<", "<<y<<", "<<z<<") --> ("<<xx<<", "<<yy<<", "<<zz<<") " << matrix(xx, yy, zz) << std::endl;
+						std::cout << "ABC " << a << b << c << std::endl;
+						std::cout << "normal " << normal << " complement " << crossProduct(c-a, b-a) << std::endl;
+						for (int k = 0; k < 8; ++k)
+							std::cout << k << " " << val[k] << std::endl;
+						std::cout << std::endl;
 					}
-		
+
+					if (invert)
+					{
+						++invs;
+						normal *= -1.0;
+						using std::swap; // reverse order of points
+						swap(b, c);
+					}
+
+					// Save facet
 					normals[x].push_back(normal);
+
+					points[x].push_back(a);
+					points[x].push_back(b);
+					points[x].push_back(c);
 				}
 			}
 		}
 	}
-	
-	//
-	std::vector<std::size_t> cumSizes(points.size()+1);
-	cumSizes[0] = 0;
-	for (std::size_t i = 1; i < cumSizes.size(); ++i)
-		cumSizes[i] = cumSizes[i-1] + points[i-1].size();
+	//std::cout << invs << std::endl;
+	std::size_t Npoints = points[0].size();
+	for (std::size_t i = 1; i < points.size(); ++i)
+		Npoints += points[i].size();
+	assert(Npoints % 3 == 0);
 
-	typedef IndexPoint<typename Geometry<Tg>::value_type> IdxPoint;
-	std::vector<IdxPoint> idxPoints(cumSizes.back());
-#ifdef _OPENMP
-#pragma omp parallel for
+	std::vector<Point3D<Tg> > all_points;
+	all_points.reserve(Npoints);
+	for (std::size_t i = 0; i < points.size(); ++i)
+		all_points.insert(all_points.end(), points[i].begin(), points[i].end());
+
+#ifndef NDEBUG
+	std::size_t Nfacets = facets[0].size();
+	for (std::size_t i = 1; i < facets.size(); ++i)
+		Nfacets += facets[i].size();
+	assert(Npoints % 3 == Nfacets);
 #endif
-	for (int x = 0u; x < int(points.size()); ++x)
-	{
-		std::size_t pIndex = cumSizes[x];
-		for (std::size_t i = 0; i < points[x].size(); ++i, ++pIndex)
-			idxPoints[pIndex] = (IdxPoint( (pIndex),  points[x][i] ));
-	}
 
-	//
-	cumSizes.resize(normals.size()+1);
-	cumSizes[0] = 0;
-	for (std::size_t i = 1; i < cumSizes.size(); ++i)
-		cumSizes[i] = cumSizes[i-1] + normals[i-1].size();
-	std::vector<vector_type> allNormals(cumSizes.back());
-#ifdef _OPENMP
-#pragma omp parallel for
-#endif
-	for (int x = 0u; x < int(normals.size()); ++x)
-	{
-		std::size_t pIndex = cumSizes[x];
-		for (std::size_t i = 0; i < normals[x].size(); ++i, ++pIndex)
-			allNormals[pIndex] = normals[x][i];
-	}
+	std::vector<vector_type> all_normals;
+	all_normals.reserve(Npoints / 3);
+	for (std::size_t i = 0; i < normals.size(); ++i)
+		all_normals.insert(all_normals.end(), normals[i].begin(), normals[i].end());
 
-	_constructGeometry(geometry, idxPoints, allNormals);
+	geometry.loadGeometry(all_points.begin(), all_points.end(), all_normals.begin());
+
 }
 
 template <
@@ -282,7 +290,7 @@ template <
 void extractSurface(const Matrix_t<Ti, 3u, A> &matrix,
 		    Geometry<Tg> &geometry, const double isolevel = 0.5)
 {
-	extractSurfaceFromAdapter(MatrixSurfaceAdaptor_<Matrix_t, Ti, A>((matrix)), geometry, isolevel);
+	extractSurfaceFromAdapter(detail::MatrixSurfaceAdaptor_<Matrix_t, Ti, A>((matrix)), geometry, isolevel);
 }
 
 /*

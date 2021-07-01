@@ -58,7 +58,7 @@ namespace cvmlcpp
    *    - all allocation calls posix_memalign
    *    - all deallocation calls free
    */
-template<typename _Tp, unsigned N = 4u>
+template<typename _Tp, std::size_t N = 4u>
 class AlignAllocator
 {
 	public:
@@ -136,6 +136,12 @@ class AlignAllocator
 		construct(pointer __p, const _Tp& __val)
 		{ ::new(__p) value_type(__val); }
 
+#ifdef __GXX_EXPERIMENTAL_CXX0X__
+		template<typename... _Args>
+		void construct(pointer __p, _Args&&... __args)
+		{ ::new((void *)__p) _Tp(std::forward<_Args>(__args)...); }
+#endif
+
 		void destroy(pointer __p) { __p->~_Tp(); }
 
 	private:
@@ -170,12 +176,12 @@ class AlignAllocator
 
 };
 
-template<typename _Tp, unsigned N>
+template<typename _Tp, std::size_t N>
 inline bool
 operator==(const AlignAllocator<_Tp, N>&, const AlignAllocator<_Tp, N>&)
 { return true; }
 
-template<typename _Tp, unsigned N>
+template<typename _Tp, std::size_t N>
 inline bool
 operator!=(const AlignAllocator<_Tp, N>&, const AlignAllocator<_Tp, N>&)
 { return false; }

@@ -40,7 +40,7 @@ fall into certain bins.
 <p>
 Iterators providing access to the elements of a Histogram are all read-only.
 Dereferencing an iterator yields a type
-'const std::pair&lt;unsigned int, unsigned int&gt;' where 'first' is the number
+'const std::pair&lt;std::size_t, std::size_t&gt;' where 'first' is the number
 of the bin, and 'second' in the number of times an element fell into the bin.
 </p>
 
@@ -62,21 +62,21 @@ of the bin, and 'second' in the number of times an element fell into the bin.
 </tr>
 
 <tr>
-	<td><pre>Histogram(const unsigned nrBins =
-			std::numeric_limits&lt;unsigned&gt;::max(),
+	<td><pre>Histogram(const std::size_t nrBins =
+			std::numeric_limits&lt;std::size_t&gt;::max(),
 	  const value_type minValue = value_type(0),
 	  const value_type maxValue =
 			std::numeric_limits&lt;value_type&gt;::max())</pre></td>
 	<td>Default constructor, by default, the number of bins is
-		std::numeric_limits&lt;unsigned&gt;::max(), <i>minValue</i> is zero
+		std::numeric_limits&lt;std::size_t&gt;::max(), <i>minValue</i> is zero
 		and <i>maxValue</i> is
-		std::numeric_limits&lt;unsigned&gt;::max().</td>
+		std::numeric_limits&lt;std::size_t&gt;::max().</td>
 </tr>
 
 <tr>
 	<td><pre>template &lt;typename InputIterator&gt;
 Histogram(const InputIterator first, const InputIterator last,
-	  const unsigned nrBins,
+	  const std::size_t nrBins,
 	  const value_type minValue = value_type(0),
 	  const value_type maxValue =
 			 std::numeric_limits&lt;value_type&gt;::max())</pre></td>
@@ -85,18 +85,18 @@ Histogram(const InputIterator first, const InputIterator last,
 </tr>
 
 <tr>
-	<td><pre>unsigned size() const</pre></td>
+	<td><pre>std::size_t size() const</pre></td>
 	<td>Returns the number of non-empty bins.</td>
 </tr>
 
 <tr>
-	<td><pre>unsigned maxSize() const</pre></td>
+	<td><pre>std::size_t maxSize() const</pre></td>
 	<td>Returns the maximum number of non-empty bins, i.e. the largest
 		value that size() can return.</td>
 </tr>
 
 <tr>
-	<td><pre>unsigned elements() const</pre></td>
+	<td><pre>std::size_t elements() const</pre></td>
 	<td>The number of elements that has been inserted, or the sum of
 		all bins.</td>
 </tr>
@@ -110,7 +110,7 @@ atLeastPercentGreater(const double percentElements) const</pre></td>
 </tr>
 
 <tr>
-	<td><pre>const_iterator atLeastGreater(const unsigned elements) const</pre></td>
+	<td><pre>const_iterator atLeastGreater(const std::size_t elements) const</pre></td>
 	<td>Returns an iterator to a bin such that the sum of the previous
 		bins at least equals <i>elements</i>.</td>
 </tr>
@@ -125,7 +125,7 @@ atMostPercentGreater(const double percentElements) const</pre></td>
 
 <tr>
 	<td><pre>const_reverse_iterator
-atMostGreater(const unsigned elements) const</pre></td>
+atMostGreater(const std::size_t elements) const</pre></td>
 	<td>Returns an iterator to a bin such that there are at least
 	<i>elements</i> in the bins higher than the returned bin.</td>
 </tr>
@@ -161,7 +161,7 @@ void insert(const InputIterator first, const InputIterator last,
 </tr>
 
 <tr>
-	<td><pre>float operator()(const unsigned bin) const</pre></td>
+	<td><pre>float operator()(const std::size_t bin) const</pre></td>
 	<td>The fraction of the all the elements that are in <i>bin</i>.</td>
 </tr>
 

@@ -14,8 +14,8 @@
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
  *
- *  You should have received a copy of the GNU General Public 
- *  License along with this program; if not, write to the Free 
+ *  You should have received a copy of the GNU General Public
+ *  License along with this program; if not, write to the Free
  *  Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  *  Boston, MA  02110-1301, USA.
 */
@@ -39,17 +39,17 @@ namespace olb {
 
 template<typename T, template<typename U> class Lattice>
 T AdvectionDiffusionBulkMomenta<T,Lattice>::computeRho(Cell<T,Lattice> const& cell) const {
-    return lbHelpers<T,Lattice>::computeRho(cell);
+  return lbHelpers<T,Lattice>::computeRho(cell);
 }
 
 template<typename T, template<typename U> class Lattice>
 void AdvectionDiffusionBulkMomenta<T,Lattice>::computeU(Cell<T,Lattice> const& cell, T u[Lattice<T>::d]) const
 {
-    const T *u_ = cell.getExternal(Lattice<T>::ExternalField::velocityBeginsAt);
-    for (int iD = 0; iD < Lattice<T>::d; ++iD)
-    {
-        u[iD] = u_[iD];
-    }
+  const T *u_ = cell.getExternal(Lattice<T>::ExternalField::velocityBeginsAt);
+  for (int iD = 0; iD < Lattice<T>::d; ++iD)
+  {
+    u[iD] = u_[iD];
+  }
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -59,110 +59,110 @@ void AdvectionDiffusionBulkMomenta<T,Lattice>::computeJ(Cell<T,Lattice> const& c
 
 template<typename T, template<typename U> class Lattice>
 void AdvectionDiffusionBulkMomenta<T,Lattice>::computeStress (
-            Cell<T,Lattice> const& cell,
-            T rho, const T u[Lattice<T>::d],
-            T pi[util::TensorVal<Lattice<T> >::n] ) const
+  Cell<T,Lattice> const& cell,
+  T rho, const T u[Lattice<T>::d],
+  T pi[util::TensorVal<Lattice<T> >::n] ) const
 {
 }
 
 template<typename T, template<typename U> class Lattice>
 void AdvectionDiffusionBulkMomenta<T,Lattice>::computeRhoU (
-        Cell<T,Lattice> const& cell,
-        T& rho, T u[Lattice<T>::d] ) const
+  Cell<T,Lattice> const& cell,
+  T& rho, T u[Lattice<T>::d] ) const
 {
-    rho = cell.computeRho();
-    const T *u_ = cell.getExternal(Lattice<T>::ExternalField::velocityBeginsAt);
-    for (int iD = 0; iD < Lattice<T>::d; ++iD)
-    {
-        u[iD] = u_[iD];
-    }
+  rho = cell.computeRho();
+  const T *u_ = cell.getExternal(Lattice<T>::ExternalField::velocityBeginsAt);
+  for (int iD = 0; iD < Lattice<T>::d; ++iD)
+  {
+    u[iD] = u_[iD];
+  }
 }
 
 template<typename T, template<typename U> class Lattice>
 void AdvectionDiffusionBulkMomenta<T,Lattice>::computeAllMomenta (
-        Cell<T,Lattice> const& cell,
-        T& rho, T u[Lattice<T>::d],
-        T pi[util::TensorVal<Lattice<T> >::n] ) const
+  Cell<T,Lattice> const& cell,
+  T& rho, T u[Lattice<T>::d],
+  T pi[util::TensorVal<Lattice<T> >::n] ) const
 {
-    rho = cell.computeRho();
-    const T *u_ = cell.getExternal(Lattice<T>::ExternalField::velocityBeginsAt);
-    for (int iD = 0; iD < Lattice<T>::d; ++iD)
-    {
-        u[iD] = u_[iD];
-    }
+  rho = cell.computeRho();
+  const T *u_ = cell.getExternal(Lattice<T>::ExternalField::velocityBeginsAt);
+  for (int iD = 0; iD < Lattice<T>::d; ++iD)
+  {
+    u[iD] = u_[iD];
+  }
 }
 
 template<typename T, template<typename U> class Lattice>
 void AdvectionDiffusionBulkMomenta<T,Lattice>::defineRho(Cell<T,Lattice>& cell, T rho) {
-    T *u = cell.getExternal(Lattice<T>::ExternalField::velocityBeginsAt);
-    T uSqr = util::normSqr<T,Lattice<T>::d>(u);
-    for (int iPop=0; iPop < Lattice<T>::q; ++iPop) {
-        cell[iPop] = cell.getDynamics()->computeEquilibrium(iPop,rho,u,uSqr);
-    }
+  T *u = cell.getExternal(Lattice<T>::ExternalField::velocityBeginsAt);
+  T uSqr = util::normSqr<T,Lattice<T>::d>(u);
+  for (int iPop=0; iPop < Lattice<T>::q; ++iPop) {
+    cell[iPop] = cell.getDynamics()->computeEquilibrium(iPop,rho,u,uSqr);
+  }
 }
 
 template<typename T, template<typename U> class Lattice>
 void AdvectionDiffusionBulkMomenta<T,Lattice>::defineU (
-    Cell<T,Lattice>& cell,
-    const T u[Lattice<T>::d])
+  Cell<T,Lattice>& cell,
+  const T u[Lattice<T>::d])
 {
-    T rho = cell.computeRho();
-    T *u_ = cell.getExternal(Lattice<T>::ExternalField::velocityBeginsAt);
-    for (int iD = 0; iD < Lattice<T>::d; ++iD)
-    {
-        u_[iD] = u[iD];
-    }
-    T uSqr = util::normSqr<T,Lattice<T>::d>(u);
-    for (int iPop=0; iPop < Lattice<T>::q; ++iPop)
-    {
-        cell[iPop] = cell.getDynamics()->computeEquilibrium(iPop,rho,u,uSqr);
-    }
+  T rho = cell.computeRho();
+  T *u_ = cell.getExternal(Lattice<T>::ExternalField::velocityBeginsAt);
+  for (int iD = 0; iD < Lattice<T>::d; ++iD)
+  {
+    u_[iD] = u[iD];
+  }
+  T uSqr = util::normSqr<T,Lattice<T>::d>(u);
+  for (int iPop=0; iPop < Lattice<T>::q; ++iPop)
+  {
+    cell[iPop] = cell.getDynamics()->computeEquilibrium(iPop,rho,u,uSqr);
+  }
 }
 
 template<typename T, template<typename U> class Lattice>
 void AdvectionDiffusionBulkMomenta<T,Lattice>::defineRhoU (
-    Cell<T,Lattice>& cell,
-    T rho, const T u[Lattice<T>::d])
+  Cell<T,Lattice>& cell,
+  T rho, const T u[Lattice<T>::d])
 {
-    T *u_ = cell.getExternal(Lattice<T>::ExternalField::velocityBeginsAt);
-    for (int iD = 0; iD < Lattice<T>::d; ++iD)
-    {
-        u_[iD] = u[iD];
-    }
-    T uSqr = T();
-    for (int iPop = 0; iPop < Lattice<T>::q; ++iPop)
-    {
-        cell[iPop] = cell.getDynamics()->computeEquilibrium(iPop,rho,u,uSqr);
-    }
+  T *u_ = cell.getExternal(Lattice<T>::ExternalField::velocityBeginsAt);
+  for (int iD = 0; iD < Lattice<T>::d; ++iD)
+  {
+    u_[iD] = u[iD];
+  }
+  T uSqr = T();
+  for (int iPop = 0; iPop < Lattice<T>::q; ++iPop)
+  {
+    cell[iPop] = cell.getDynamics()->computeEquilibrium(iPop,rho,u,uSqr);
+  }
 }
 
 template<typename T, template<typename U> class Lattice>
 void AdvectionDiffusionBulkMomenta<T,Lattice>::defineAllMomenta (
-        Cell<T,Lattice>& cell,
-        T rho, const T u[Lattice<T>::d],
-        const T pi[util::TensorVal<Lattice<T> >::n] )
+  Cell<T,Lattice>& cell,
+  T rho, const T u[Lattice<T>::d],
+  const T pi[util::TensorVal<Lattice<T> >::n] )
 {
-    T *u_ = cell.getExternal(Lattice<T>::ExternalField::velocityBeginsAt);
-    for (int iD = 0; iD < Lattice<T>::d; ++iD)
-    {
-        u_[iD] = u[iD];
-    }
-    T uSqr = T();
-    for (int iPop = 0; iPop < Lattice<T>::q; ++iPop)
-    {
-        cell[iPop] = cell.getDynamics()->computeEquilibrium(iPop,rho,u,uSqr);
-    }
+  T *u_ = cell.getExternal(Lattice<T>::ExternalField::velocityBeginsAt);
+  for (int iD = 0; iD < Lattice<T>::d; ++iD)
+  {
+    u_[iD] = u[iD];
+  }
+  T uSqr = T();
+  for (int iPop = 0; iPop < Lattice<T>::q; ++iPop)
+  {
+    cell[iPop] = cell.getDynamics()->computeEquilibrium(iPop,rho,u,uSqr);
+  }
 }
 
 /////////////// Singletons //////////////////////////////////
 
 namespace instances {
 
-    template<typename T, template<typename U> class Lattice>
-    AdvectionDiffusionBulkMomenta<T,Lattice>& getAdvectionDiffusionBulkMomenta() {
-        static AdvectionDiffusionBulkMomenta<T,Lattice> bulkMomentaSingleton;
-        return bulkMomentaSingleton;
-    }
+template<typename T, template<typename U> class Lattice>
+AdvectionDiffusionBulkMomenta<T,Lattice>& getAdvectionDiffusionBulkMomenta() {
+  static AdvectionDiffusionBulkMomenta<T,Lattice> bulkMomentaSingleton;
+  return bulkMomentaSingleton;
+}
 }
 
 }

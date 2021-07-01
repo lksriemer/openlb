@@ -15,8 +15,8 @@
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
  *
- *  You should have received a copy of the GNU General Public 
- *  License along with this program; if not, write to the Free 
+ *  You should have received a copy of the GNU General Public
+ *  License along with this program; if not, write to the Free
  *  Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  *  Boston, MA  02110-1301, USA.
 */
@@ -32,13 +32,13 @@ namespace olb {
 
 template<typename T, template<typename U> class Lattice, typename MixinDynamics>
 OnLatticeBoundaryCondition2D<T,Lattice>*
-    createInamuroBoundaryCondition2D(BlockStructure2D<T,Lattice>& block);
+createInamuroBoundaryCondition2D(BlockStructure2D<T,Lattice>& block);
 
 template<typename T, template<typename U> class Lattice>
 OnLatticeBoundaryCondition2D<T,Lattice>*
-    createInamuroBoundaryCondition2D(BlockStructure2D<T,Lattice>& block)
+createInamuroBoundaryCondition2D(BlockStructure2D<T,Lattice>& block)
 {
-    return createInamuroBoundaryCondition2D<T,Lattice,BGKdynamics<T,Lattice> >(block);
+  return createInamuroBoundaryCondition2D<T,Lattice,BGKdynamics<T,Lattice> >(block);
 }
 
 }

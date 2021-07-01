@@ -29,6 +29,9 @@
 namespace omptl
 {
 
+namespace detail
+{
+
 template <class IteratorTag>
 struct _Accumulate
 {
@@ -37,13 +40,12 @@ struct _Accumulate
 			T par_init, BinaryFunction binary_op, const unsigned P)
 	{
 		assert(P > 0u);
-		if (_linear_serial_is_faster(first, last, P))
+		if (detail::_linear_serial_is_faster(first, last, P))
 			return ::std::accumulate(first, last, init, binary_op);
 		assert(2*(int)P <= std::distance(first, last));
 
-		::std::vector< ::std::pair<InputIterator, InputIterator> >
-			partitions(P);
-		::omptl::_partition_range(first, last, partitions, P);
+		::std::vector< ::std::pair<InputIterator, InputIterator> > partitions(P);
+		::omptl::detail::_partition_range(first, last, partitions, P);
 
 		::std::vector<T> results(P);
 		#pragma omp parallel for
@@ -88,7 +90,7 @@ struct _AccumulateOp<T, InputIterator, ::std::plus<T> >
 			BinaryFunction binary_op, const unsigned P)
 	{
 		assert(P > 0u);
-		return ::omptl::_Accumulate< typename
+		return ::omptl::detail::_Accumulate< typename
 		::std::iterator_traits<InputIterator>::iterator_category>::
 			accumulate(first, last, init, T(0), binary_op, P);
 	}
@@ -103,18 +105,20 @@ struct _AccumulateOp<T, InputIterator, ::std::multiplies<T> >
 			BinaryFunction binary_op, const unsigned P)
 	{
 		assert(P > 0u);
-		return ::omptl::_Accumulate<typename
+		return ::omptl::detail::_Accumulate<typename
 		::std::iterator_traits<InputIterator>::iterator_category>::
 			accumulate(first, last, init, T(1), binary_op, P);
 	}
 };
 
+} // end namespace detail
+
 template <class InputIterator, class T, class BinaryFunction>
 T accumulate(InputIterator first, InputIterator last, T init,
-             BinaryFunction binary_op, const unsigned P)
+	     BinaryFunction binary_op, const unsigned P)
 {
 	assert(P > 0u);
-	return ::omptl::_AccumulateOp<T, InputIterator, BinaryFunction>::
+	return ::omptl::detail::_AccumulateOp<T, InputIterator, BinaryFunction>::
 		accumulate(first, last, init, binary_op, P);
 }
 
@@ -141,6 +145,9 @@ OutputIterator adjacent_difference(InputIterator first, InputIterator last,
 	return ::std::adjacent_difference(first, last, result);
 }
 
+namespace detail
+{
+
 template <class Iterator1Tag, class Iterator2Tag>
 struct _InnerProduct
 {
@@ -151,8 +158,7 @@ struct _InnerProduct
 				BinaryFunction1 binary_op1,
 				BinaryFunction2 binary_op2, const unsigned P)
 	{
-		return ::std::inner_product(first1, last1, first2, init,
-					    binary_op1, binary_op2);
+		return ::std::inner_product(first1, last1, first2, init, binary_op1, binary_op2);
 	}
 
 	template <class Iterator1, class Iterator2, class T,
@@ -163,24 +169,22 @@ struct _InnerProduct
 				BinaryFunction2 binary_op2, const unsigned P)
 	{
 		assert(P > 0u);
-		if (_linear_serial_is_faster(first1, last1, P))
-			return ::std::inner_product(first1, last1, first2,
-						init, binary_op1, binary_op2);
+		if (detail::_linear_serial_is_faster(first1, last1, P))
+			return ::std::inner_product(first1, last1, first2, init, binary_op1, binary_op2);
 
 		assert(2*(int)P <= std::distance(first1, last1));
 
-		::std::vector< ::std::pair<Iterator1, Iterator1> >
-			partitions1(P);
-		::omptl::_partition_range(first1, last1, partitions1, P);
+		::std::vector< ::std::pair<Iterator1, Iterator1> > partitions1(P);
+		::omptl::detail::_partition_range(first1, last1, partitions1, P);
 		::std::vector<Iterator2> partitions2(P);
-		::omptl::_copy_partitions(partitions1, first2, partitions2, P);
+		::omptl::detail::_copy_partitions(partitions1, first2, partitions2, P);
 
 		#pragma omp parallel for reduction(+:init)
 		for (int t = 0; t < int(P); ++t)
-			init += ::std::inner_product( partitions1[t].first,
-							partitions1[t].second,
-							partitions2[t], T(0.0),
-							binary_op1, binary_op2);
+			init += ::std::inner_product(partitions1[t].first,
+						     partitions1[t].second,
+						     partitions2[t], T(0.0),
+						     binary_op1, binary_op2);
 
 		return init;
 	}
@@ -196,8 +200,7 @@ struct _InnerProduct< ::std::input_iterator_tag, Iterator2Tag>
 		BinaryFunction1 binary_op1, BinaryFunction2 binary_op2,
 		const unsigned P)
 	{
-		return ::std::inner_product(first1, last1, first2, init,
-				    binary_op1, binary_op2);
+		return ::std::inner_product(first1, last1, first2, init, binary_op1, binary_op2);
 	}
 };
 
@@ -211,8 +214,7 @@ struct _InnerProduct<Iterator1Tag, ::std::input_iterator_tag>
 		BinaryFunction1 binary_op1, BinaryFunction2 binary_op2,
 		const unsigned P)
 	{
-		return ::std::inner_product(first1, last1, first2, init,
-				    binary_op1, binary_op2);
+		return ::std::inner_product(first1, last1, first2, init, binary_op1, binary_op2);
 	}
 };
 
@@ -226,11 +228,11 @@ struct _InnerProduct< ::std::input_iterator_tag, ::std::input_iterator_tag >
 		BinaryFunction1 binary_op1, BinaryFunction2 binary_op2,
 		const unsigned P)
 	{
-		return ::std::inner_product(first1, last1, first2, init,
-				    binary_op1, binary_op2);
+		return ::std::inner_product(first1, last1, first2, init, binary_op1, binary_op2);
 	}
 };
 
+} // end namespace detail
 
 template <class InputIterator1, class InputIterator2, class T,
           class BinaryFunction1, class BinaryFunction2>
@@ -239,7 +241,7 @@ T inner_product(InputIterator1 first1, InputIterator1 last1,
 		BinaryFunction1 binary_op1, BinaryFunction2 binary_op2,
 		const unsigned P)
 {
-	return _InnerProduct<
+	return detail::_InnerProduct<
 	typename ::std::iterator_traits<InputIterator1>::iterator_category,
 	typename ::std::iterator_traits<InputIterator2>::iterator_category>
 			::inner_product(first1, last1, first2, init,

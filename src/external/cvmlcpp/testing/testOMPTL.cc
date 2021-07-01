@@ -212,9 +212,13 @@ void doTest(std::vector<int> &p, std::vector<int> &q)
 
 int main()
 {
+	const int N = 2000;
 	std::vector<int> p, q;
 
-	for (int i = 0; i < 100; ++i)
+	p.reserve(N);
+	q.reserve(N);
+
+	for (int i = 0; i < N; ++i)
 	{
 // std::cout << i << std::endl;
 		p.clear();

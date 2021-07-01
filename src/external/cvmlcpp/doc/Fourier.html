@@ -196,7 +196,7 @@ arrays of upto three dimensions.<br />
 <pre>  bool doDFT(const ArrayIn&lt;Tin, N&gt; &amp;in,&nbsp;&nbsp;&nbsp;&nbsp;
 	     ArrayOut&lt;Tout, N&gt; &amp;out,
 	     bool forward = true,
-	     unsigned threads = 1u)  </pre></td>
+	     std::size_t threads = 1u)  </pre></td>
 	<td>Computes the Discrete Fourier Transform of the data in <i>in</i>,
 	and stores the result in <i>out</i>. If <i>forward</i> is <b>true</b>,
 	the forward transform is computed, otherwise the inverse transform. The
@@ -270,8 +270,8 @@ interface:
 <pre>
   DFT(ArrayIn&lt;std::complex&lt;float_type&gt;, N, Aux&gt; &amp;in, 
       ArrayOut&lt;std::complex&lt;float_type&gt;, N, Aux&gt; &amp;out,
-      bool forward = true, unsigned flags = FFTW_ESTIMATE,
-      unsigned threads = 0u)  </pre></td>
+      bool forward = true, std::size_t flags = FFTW_ESTIMATE,
+      std::size_t threads = 0u)  </pre></td>
 	<td>Constructor. Takes as input a matrix <i>in</i>, as output a
 	matrix <i>out</i>. By default, when <i>forward</i> is true, a forward
 	transform is planned, otherwise an inverse transform is planned.
@@ -287,7 +287,7 @@ interface:
 <pre>
   DFT(ArrayIn&lt;float_type, N, Aux&gt; &amp;in, 
       ArrayOut&lt;std::complex&lt;T&gt;, N, Aux&gt; &amp;out,
-      unsigned flags = FFTW_ESTIMATE, unsigned threads = 0u)  </pre></td>
+      std::size_t flags = FFTW_ESTIMATE, std::size_t threads = 0u)  </pre></td>
 	<td>Constructor. Takes as input a matrix <i>in</i>, as output a
 	matrix <i>out</i>. By default, when <i>forward</i> is true, a forward
 	transform is planned, otherwise an inverse transform is planned.
@@ -303,8 +303,8 @@ interface:
 <pre>
   DFT(ArrayIn&lt;std::complex&lt;float_type&gt;, N, Aux&gt; &amp;in,
       ArrayOut&lt;float_type, N, Aux&gt; &amp;out,
-      bool forward = true, unsigned flags = FFTW_ESTIMATE,
-      unsigned threads = 0u)  </pre></td>
+      bool forward = true, std::size_t flags = FFTW_ESTIMATE,
+      std::size_t threads = 0u)  </pre></td>
 	<td>Constructor. Takes as input a matrix <i>in</i>, as output a
 	matrix <i>out</i>. By default, when <i>forward</i> is true, a forward
 	transform is planned, otherwise an inverse transform is planned.
@@ -333,7 +333,7 @@ interface:
 
 <tr>
 	<td>
-	<pre>  static unsigned optimalSize(const unsigned ext)  </pre></td>
+	<pre>  static std::size_t optimalSize(const std::size_t ext)  </pre></td>
 	<td>
 	Given a size of a dimension of a matrix, returns a suggestion
 	for a size, possibly larger, that might give better performance.
@@ -379,9 +379,9 @@ int main()
 	Matrix&lt;double, 2&gt; in(dims, data, data+size);
 
 	// Print the data Matrix
-	for (unsigned x = 0; x &lt; in.extent(X); ++x)
+	for (std::size_t x = 0; x &lt; in.extent(X); ++x)
 	{
-		for (unsigned y = 0; y &lt; in.extent(Y); ++y)
+		for (std::size_t y = 0; y &lt; in.extent(Y); ++y)
 			std::cout &lt;&lt; in[x][y] &lt;&lt; "   ";
 		std::cout &lt;&lt; std::endl;
 	}
@@ -394,7 +394,7 @@ int main()
 	doDFT(in, out);
 
 	// Print the Complex Matrix
-	for (unsigned x = 0; x &lt; out.extent(X); ++x)
+	for (std::size_t x = 0; x &lt; out.extent(X); ++x)
 	{
 		/*
 		 * The Complex Matrix contains almost half of the elements
@@ -402,11 +402,11 @@ int main()
 		 * 'k' to 'k/2+1'. The "missing" elements are simply the
 		 * complex conjugated of the given elements.
 		 */
-		for (unsigned y = 0; y &lt; out.extent(Y); ++y)
+		for (std::size_t y = 0; y &lt; out.extent(Y); ++y)
 			std::cout &lt;&lt; out[x][y] &lt;&lt; "   ";
 
 		// Print the "missing" elements.
-		for (unsigned y = 1; y &lt; out.extent(Y); ++y)
+		for (std::size_t y = 1; y &lt; out.extent(Y); ++y)
 			std::cout &lt;&lt; std::conj(out[x][out.extent(Y)-y]) &lt;&lt; " ";
 		std::cout &lt;&lt; std::endl;
 	}

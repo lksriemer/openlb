@@ -15,8 +15,8 @@
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
  *
- *  You should have received a copy of the GNU General Public 
- *  License along with this program; if not, write to the Free 
+ *  You should have received a copy of the GNU General Public
+ *  License along with this program; if not, write to the Free
  *  Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  *  Boston, MA  02110-1301, USA.
 */
@@ -27,32 +27,32 @@
 namespace olb {
 
 struct AnalysisFlags3D {
-    bool velFieldComputed;
-    bool momentumFieldComputed;
-    bool pressureFieldComputed;
-    bool velNormFieldComputed;
-    bool vortFieldComputed;
-    bool vortNormFieldComputed;
-    bool strainRateFieldComputed;
-    bool stressFieldComputed;
-    bool divRhoUFieldComputed;
-    bool poissonFieldComputed;
-    bool populationFieldComputed;
-    void reset();
+  bool velFieldComputed;
+  bool momentumFieldComputed;
+  bool pressureFieldComputed;
+  bool velNormFieldComputed;
+  bool vortFieldComputed;
+  bool vortNormFieldComputed;
+  bool strainRateFieldComputed;
+  bool stressFieldComputed;
+  bool divRhoUFieldComputed;
+  bool poissonFieldComputed;
+  bool populationFieldComputed;
+  void reset();
 };
 
 struct AnalysisFlags2D {
-    bool velFieldComputed;
-    bool momentumFieldComputed;
-    bool pressureFieldComputed;
-    bool velNormFieldComputed;
-    bool vortFieldComputed;
-    bool strainRateFieldComputed;
-    bool stressFieldComputed;
-    bool divRhoUFieldComputed;
-    bool poissonFieldComputed;
-    bool populationFieldComputed;
-    void reset();
+  bool velFieldComputed;
+  bool momentumFieldComputed;
+  bool pressureFieldComputed;
+  bool velNormFieldComputed;
+  bool vortFieldComputed;
+  bool strainRateFieldComputed;
+  bool stressFieldComputed;
+  bool divRhoUFieldComputed;
+  bool poissonFieldComputed;
+  bool populationFieldComputed;
+  void reset();
 };
 
 

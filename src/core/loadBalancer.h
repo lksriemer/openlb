@@ -15,8 +15,8 @@
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
  *
- *  You should have received a copy of the GNU General Public 
- *  License along with this program; if not, write to the Free 
+ *  You should have received a copy of the GNU General Public
+ *  License along with this program; if not, write to the Free
  *  Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  *  Boston, MA  02110-1301, USA.
 */
@@ -27,33 +27,36 @@
 
 #include <vector>
 #include <map>
+#include "../io/ostreamManager.h"
+
 
 namespace olb {
 
 class loadBalancer {
-    private:
-        int locChunkSize;
-        int firstGlobNum;
-        int lastGlobNum;
-        std::map<int,int> _loc;
-        std::vector<int> _glob;
-        std::map<int,int> _rank;
-    public:
-        loadBalancer() {};
-        loadBalancer(int rank, int size, int globChunkSize, int offset);
-        void init_chunkD(int rank, int size, int globChunkSize, int offset);
-        int get_locChunkSize() const;
-        int get_firstGlobNum() const;
-        int get_lastGlobNum() const;
-        int loc(const int& glob);
-        int loc(int glob) const;
-        int glob(int loc) const;
-        int rank(const int& glob);
-        int rank(int glob) const;
-        int size();
-        int size() const;
-    }; 
+protected:
+  int locChunkSize;
+  int firstGlobNum;
+  int lastGlobNum;
+  std::map<int,int> _loc;
+  std::vector<int> _glob;
+  std::map<int,int> _rank;
+public:
+  loadBalancer() {}
+  loadBalancer(int rank, int size, int globChunkSize, int offset);
+  virtual void init_chunkD(int rank, int size, int globChunkSize, int offset);
+  int get_locChunkSize() const;
+  int get_firstGlobNum() const;
+  int get_lastGlobNum() const;
+  int loc(const int& glob);
+  int loc(int glob) const;
+  int glob(int loc) const;
+  int rank(const int& glob);
+  int rank(int glob) const;
+  int size();
+  int size() const;
+  void debug() const;
+};
 
 }  // namespace olb
 
-#endif 
+#endif

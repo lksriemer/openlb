@@ -15,8 +15,8 @@
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
  *
- *  You should have received a copy of the GNU General Public 
- *  License along with this program; if not, write to the Free 
+ *  You should have received a copy of the GNU General Public
+ *  License along with this program; if not, write to the Free
  *  Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  *  Boston, MA  02110-1301, USA.
 */
@@ -25,7 +25,7 @@
  * A collection of dynamics classes (e.g. BGK) with which a Cell object
  * can be instantiated -- template instantiation.
  */
- 
+
 #include "core/dynamics.h"
 #include "core/dynamics.hh"
 #include "mrtDynamics.h"
@@ -35,42 +35,42 @@
 
 namespace olb {
 
-    // 2D
-    template class Dynamics<double, descriptors::MRTD2Q9Descriptor>;
-    template class Momenta<double, descriptors::MRTD2Q9Descriptor>;
-    template class BasicDynamics<double, descriptors::MRTD2Q9Descriptor>;
-    template class MRTdynamics<double, descriptors::MRTD2Q9Descriptor>;
-    template class BulkMomenta<double, descriptors::MRTD2Q9Descriptor>;
-    template class BounceBack<double, descriptors::MRTD2Q9Descriptor>;
-    template class NoDynamics<double, descriptors::MRTD2Q9Descriptor>;
-    
-    // 3D
-    template class Dynamics<double, descriptors::MRTD3Q19Descriptor>;
-    template class Momenta<double, descriptors::MRTD3Q19Descriptor>;
-    template class BasicDynamics<double, descriptors::MRTD3Q19Descriptor>;
-    template class MRTdynamics<double, descriptors::MRTD3Q19Descriptor>;
-    template class BulkMomenta<double, descriptors::MRTD3Q19Descriptor>;
-    template class BounceBack<double, descriptors::MRTD3Q19Descriptor>;
-    template class NoDynamics<double, descriptors::MRTD3Q19Descriptor>;
+// 2D
+template class Dynamics<double, descriptors::MRTD2Q9Descriptor>;
+template class Momenta<double, descriptors::MRTD2Q9Descriptor>;
+template class BasicDynamics<double, descriptors::MRTD2Q9Descriptor>;
+template class MRTdynamics<double, descriptors::MRTD2Q9Descriptor>;
+template class BulkMomenta<double, descriptors::MRTD2Q9Descriptor>;
+template class BounceBack<double, descriptors::MRTD2Q9Descriptor>;
+template class NoDynamics<double, descriptors::MRTD2Q9Descriptor>;
 
-    namespace instances {
+// 3D
+template class Dynamics<double, descriptors::MRTD3Q19Descriptor>;
+template class Momenta<double, descriptors::MRTD3Q19Descriptor>;
+template class BasicDynamics<double, descriptors::MRTD3Q19Descriptor>;
+template class MRTdynamics<double, descriptors::MRTD3Q19Descriptor>;
+template class BulkMomenta<double, descriptors::MRTD3Q19Descriptor>;
+template class BounceBack<double, descriptors::MRTD3Q19Descriptor>;
+template class NoDynamics<double, descriptors::MRTD3Q19Descriptor>;
 
-        // 2D
-        template BulkMomenta<double, descriptors::MRTD2Q9Descriptor>& getBulkMomenta();
+namespace instances {
 
-        template BounceBack<double, descriptors::MRTD2Q9Descriptor>& getBounceBack();
+// 2D
+template BulkMomenta<double, descriptors::MRTD2Q9Descriptor>& getBulkMomenta();
 
-        template NoDynamics<double, descriptors::MRTD2Q9Descriptor>& getNoDynamics();
-        
-        // 3D
-        template BulkMomenta<double, descriptors::MRTD3Q19Descriptor>& getBulkMomenta();
+template BounceBack<double, descriptors::MRTD2Q9Descriptor>& getBounceBack();
 
-        template BounceBack<double, descriptors::MRTD3Q19Descriptor>& getBounceBack();
+template NoDynamics<double, descriptors::MRTD2Q9Descriptor>& getNoDynamics();
 
-        template NoDynamics<double, descriptors::MRTD3Q19Descriptor>& getNoDynamics();
-        
-        
+// 3D
+template BulkMomenta<double, descriptors::MRTD3Q19Descriptor>& getBulkMomenta();
 
-    }
+template BounceBack<double, descriptors::MRTD3Q19Descriptor>& getBounceBack();
+
+template NoDynamics<double, descriptors::MRTD3Q19Descriptor>& getNoDynamics();
+
+
+
+}
 
 }

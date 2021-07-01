@@ -15,8 +15,8 @@
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
  *
- *  You should have received a copy of the GNU General Public 
- *  License along with this program; if not, write to the Free 
+ *  You should have received a copy of the GNU General Public
+ *  License along with this program; if not, write to the Free
  *  Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  *  Boston, MA  02110-1301, USA.
 */
@@ -43,14 +43,14 @@ template<bool areEqual> struct DistinctUint;
 
 template<>
 struct DistinctUint<true> {
-    typedef unsigned char T1;
-    typedef size_t T2;
+  typedef unsigned char T1;
+  typedef size_t T2;
 };
 
 template<>
 struct DistinctUint<false> {
-    typedef unsigned int T1;
-    typedef size_t T2;
+  typedef unsigned int T1;
+  typedef size_t T2;
 };
 
 typedef DistinctUint<sizeof(unsigned int)==sizeof(size_t)>::T1 T1;

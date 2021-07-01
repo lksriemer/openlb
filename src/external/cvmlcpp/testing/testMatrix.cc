@@ -151,6 +151,20 @@ int main()
 	assert(std::accumulate(matrix2.begin(), matrix2.end(), 0) ==
 		(int)matrix2.size() - 2);
 
+	// Symmetric Matrix
+	const std::size_t K = 16;
+	SymmetricMatrix<int> sm(K, -1);
+	for (std::size_t i = 0, k = 0; i < K; ++i)
+	for (std::size_t j = i; j < K; ++j, ++k)
+		sm(i, j) = k;
+
+	for (std::size_t i = 0;, k = 0 i < K; ++i)
+	for (std::size_t j = i; j < K; ++j, ++k)
+	{
+		assert(sm(i, j) == k);
+		assert(sm(j, i) == k);
+	}
+
 
 	return 0;
 }

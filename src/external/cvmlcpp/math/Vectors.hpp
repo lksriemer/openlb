@@ -26,9 +26,7 @@
 #include <iterator>
 
 #include <tr1/array>
-#define __aligned__   ignored
 #include <tr1/type_traits>
-#undef __aligned__
 
 #include <cvmlcpp/base/stl_cstdint.h>
 

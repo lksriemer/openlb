@@ -44,6 +44,7 @@ precompiled    := blockLattice2D \
                   dynamics \
                   latticeDescriptors \
                   loadBalancer \
+                  heuristicLoadBalancer \
                   momentaOnBoundaries2D \
                   momentaOnBoundaries3D \
                   ompManager \
@@ -60,4 +61,5 @@ precompiled    := blockLattice2D \
                   blockGeometry3D \
                   blockGeometry2D \
                   blockGeometryStatistics3D \
-                  blockGeometryStatistics2D
+                  blockGeometryStatistics2D \
+                  units

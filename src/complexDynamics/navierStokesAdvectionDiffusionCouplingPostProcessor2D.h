@@ -14,8 +14,8 @@
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
  *
- *  You should have received a copy of the GNU General Public 
- *  License along with this program; if not, write to the Free 
+ *  You should have received a copy of the GNU General Public
+ *  License along with this program; if not, write to the Free
  *  Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  *  Boston, MA  02110-1301, USA.
 */
@@ -47,34 +47,34 @@ template<typename T, template<typename U> class Lattice>
 class NavierStokesAdvectionDiffusionCouplingPostProcessor2D : public LocalPostProcessor2D<T,Lattice>
 {
 public:
-    NavierStokesAdvectionDiffusionCouplingPostProcessor2D(int x0_, int x1_, int y0_, int y1_,
-            T gravity_, T T0_, T deltaTemp_, std::vector<T> dir_,
-            std::vector<SpatiallyExtendedObject2D* > partners_);
-    virtual int extent() const { return 0; }
-    virtual int extent(int whichDirection) const { return 0; }
-    virtual void process(BlockLattice2D<T,Lattice>& blockLattice);
-    virtual void processSubDomain(BlockLattice2D<T,Lattice>& blockLattice,
-                                  int x0_, int x1_, int y0_, int y1_);
+  NavierStokesAdvectionDiffusionCouplingPostProcessor2D(int x0_, int x1_, int y0_, int y1_,
+      T gravity_, T T0_, T deltaTemp_, std::vector<T> dir_,
+      std::vector<SpatiallyExtendedObject2D* > partners_);
+  virtual int extent() const { return 0; }
+  virtual int extent(int whichDirection) const { return 0; }
+  virtual void process(BlockLattice2D<T,Lattice>& blockLattice);
+  virtual void processSubDomain(BlockLattice2D<T,Lattice>& blockLattice,
+                                int x0_, int x1_, int y0_, int y1_);
 private:
-    int x0, x1, y0, y1;
-    T gravity, T0, deltaTemp;
-    std::vector<T> dir;
-    
-    std::vector<SpatiallyExtendedObject2D*> partners;
+  int x0, x1, y0, y1;
+  T gravity, T0, deltaTemp;
+  std::vector<T> dir;
+
+  std::vector<SpatiallyExtendedObject2D*> partners;
 };
 
 template<typename T, template<typename U> class Lattice>
 class NavierStokesAdvectionDiffusionCouplingGenerator2D : public LatticeCouplingGenerator2D<T,Lattice>
 {
 public:
-    NavierStokesAdvectionDiffusionCouplingGenerator2D(int x0_, int x1_, int y0_, int y1_,
-            T gravity_, T T0_, T deltaTemp_, std::vector<T> dir_);
-    virtual PostProcessor2D<T,Lattice>* generate(std::vector<SpatiallyExtendedObject2D* > partners) const;
-    virtual LatticeCouplingGenerator2D<T,Lattice>* clone() const;
+  NavierStokesAdvectionDiffusionCouplingGenerator2D(int x0_, int x1_, int y0_, int y1_,
+      T gravity_, T T0_, T deltaTemp_, std::vector<T> dir_);
+  virtual PostProcessor2D<T,Lattice>* generate(std::vector<SpatiallyExtendedObject2D* > partners) const;
+  virtual LatticeCouplingGenerator2D<T,Lattice>* clone() const;
 
 private:
-    T gravity, T0, deltaTemp;
-    std::vector<T> dir;
+  T gravity, T0, deltaTemp;
+  std::vector<T> dir;
 };
 
 

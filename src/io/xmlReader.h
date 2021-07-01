@@ -15,8 +15,8 @@
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
  *
- *  You should have received a copy of the GNU General Public 
- *  License along with this program; if not, write to the Free 
+ *  You should have received a copy of the GNU General Public
+ *  License along with this program; if not, write to the Free
  *  Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  *  Boston, MA  02110-1301, USA.
 */
@@ -26,7 +26,9 @@
  */
 #ifndef XML_IO_H
 #define XML_IO_H
-
+#ifdef ADT
+template <class T, unsigned DIM> class ADf;
+#endif
 #include <string>
 #include <vector>
 #include <iostream>
@@ -34,113 +36,131 @@
 #define TIXML_USE_STL
 #include "external/tinyxml/tinyxml.h"
 #include "complexGrids/mpiManager/mpiManager.h"
+#include "io/ostreamManager.h"
 
 namespace olb {
 
 class XMLreader {
 public:
-	/*
-	 * Constructs a new XMLreader from another XMLreader
-	 * \param pParent The new root node for the XMLreader
-	 */
-	XMLreader( TiXmlNode* pParent );
+  /**
+   * Constructs a new XMLreader from another XMLreader
+   * \param pParent The new root node for the XMLreader
+   */
+  XMLreader( TiXmlNode* pParent );
 
-	/*
-	 * Constructs a new XMLreader from a file
-	 * \param fName The XML file name
-	 */
-	XMLreader( const std::string& fName );
+  /**
+   * Constructs a new XMLreader from a file
+   * \param fName The XML file name
+   */
+  XMLreader( const std::string& fName );
 
-	/*
-	 * destructor
-	 */
-	~XMLreader();
+  /**
+   * destructor
+   */
+  ~XMLreader();
 
-	/*
-	 * Prints out the XML structure read in, mostly for debugging purposes
-	 */
-	void print(int indent) const;
+  /**
+   * Prints out the XML structure read in, mostly for debugging purposes
+   */
+  void print(int indent) const;
 
-	/*
-	 * Read a value from the xml file
-	 * \param reference to return the value
-	 * \return returns the value
-	 */
-	template <typename T> bool read(T& value) const;
-	template <typename T> bool read(std::vector<T>& value) const;
+  /**
+   * Read a value from the xml file
+   * \param reference to return the value
+   * \return returns the value
+   */
+  template <typename T> bool read(T& value) const;
+#ifdef ADT
+  template <typename T,unsigned DIM> bool read(ADf<T,DIM>& value) const;
+#endif
+  template <typename T> bool read(std::vector<T>& value) const;
 
-	template <typename T> T get() const;
+  template <typename T> T get() const;
 
-	/*
-	 * Return a Subtree placed at name
-	 * \param name The name from which to take the subtree
-	 */
-	XMLreader const& operator[] (std::string name) const;
+  /**
+   * Return a Subtree placed at name
+   * \param name The name from which to take the subtree
+   */
+  XMLreader const& operator[] (std::string name) const;
 
-	/*
-	 * Return an iterator for this level at the tree
-	 */
-	std::vector<XMLreader*>::const_iterator begin() const;
+  /**
+   * Return an iterator for this level at the tree
+   */
+  std::vector<XMLreader*>::const_iterator begin() const;
 
-	/* 
-	 * Return an iterator end element 
-	 */
-	std::vector<XMLreader*>::const_iterator end() const;
+  /**
+   * Return an iterator end element
+   */
+  std::vector<XMLreader*>::const_iterator end() const;
 
-	/*
-	 * return the name of the element
-	 */
-	std::string getName() const;
+  /**
+   * return the name of the element
+   */
+  std::string getName() const;
 private:
-	void mainProcessorIni(TiXmlNode* pParent);
-	void slaveProcessorIni();
-	XMLreader();
-private: 
-	std::string name;
-	std::string text;
-	std::vector<XMLreader*> children;
-	static XMLreader notFound;
+  void mainProcessorIni(TiXmlNode* pParent);
+  void slaveProcessorIni();
+  XMLreader();
+private:
+  mutable OstreamManager clout;
+  std::string name;
+  std::string text;
+  std::vector<XMLreader*> children;
+  static XMLreader notFound;
 };
 
 template <typename T>
 bool XMLreader::read(T& value) const {
-    std::stringstream valueStr(text);
-    T tmp = T();
-    if (!(valueStr >> tmp)) {
-        std::cout << std::string("Cannot read value from XML element ") << name;
-        return false;
-    }
-    value = tmp;
-    return true;
+  std::stringstream valueStr(text);
+  T tmp = T();
+  if (!(valueStr >> tmp)) {
+    clout << std::string("Error: cannot read value from XML element ") << name << std::endl;
+    return false;
+  }
+  value = tmp;
+  return true;
 }
 
+#ifdef ADT
+template <typename T, unsigned DIM>
+bool XMLreader::read(ADf<T,DIM>& value) const {
+  std::stringstream valueStr(text);
+  T tmp = T();
+  if (!(valueStr >> tmp)) {
+    clout << std::string("Error: cannot read value from XML element ") << name << std::endl;
+    return false;
+  }
+  value = ADf<T,DIM>(tmp);
+  return true;
+}
+#endif
 
 template <typename T>
 bool XMLreader::read(std::vector<T>& values) const {
-    std::stringstream multiValueStr(text);
-    std::string word;
-    std::vector<T> tmp(values);
-    while (multiValueStr>>word) {
-        std::stringstream valueStr(word);
-        T value;
-        if (!(valueStr >> value)) {
-            std::cout << std::string("Cannot read value array from XML element ") << name;
-            return false;
-        }
-        tmp.push_back(value);
+  std::stringstream multiValueStr(text);
+  std::string word;
+  std::vector<T> tmp(values);
+  while (multiValueStr>>word) {
+    std::stringstream valueStr(word);
+    T value;
+    if (!(valueStr >> value)) {
+      clout << std::string("Error: cannot read value array from XML element ") << name << std::endl;
+      return false;
     }
-    values.swap(tmp);
-    return true;
+    tmp.push_back(value);
+  }
+  values.swap(tmp);
+  return true;
 }
 
 template <typename T>
 T XMLreader::get() const {
-    std::stringstream valueStr(text);
-    T tmp = T();
-    if (!(valueStr >> tmp)) { 
-	std::cerr << "Cannot read value from XML element " << name;
-    }
-    return tmp;
+  std::stringstream valueStr(text);
+  T tmp = T();
+  if (!(valueStr >> tmp)) {
+    clout << "Error: cannot read value from XML element " << name << std::endl;
+  }
+  return tmp;
 }
 
 }  // namespace olb

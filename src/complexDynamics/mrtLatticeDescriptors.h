@@ -15,8 +15,8 @@
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
  *
- *  You should have received a copy of the GNU General Public 
- *  License along with this program; if not, write to the Free 
+ *  You should have received a copy of the GNU General Public
+ *  License along with this program; if not, write to the Free
  *  Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  *  Boston, MA  02110-1301, USA.
 */
@@ -49,46 +49,46 @@ namespace olb {
 */
 namespace descriptors {
 
-    /// MRT D2Q9 lattice. The numbering follows the one in "Viscous flow computations
-    /// with the method of lattice Boltzmann equation", D. Yu, L.-S. Luo, W. Shi,
-    /// Progress in Aerospace Sciences 39, (2003), p. 329-367
-    template <typename T>
-    struct MRTD2Q9DescriptorBase : public D2Q9DescriptorBase<T>
-    {
-        enum { d_ = 2, q_ = 9 };     ///< number of dimensions/distr. functions
-        static const T M[q_][q_];    // Matrix of base change between f and moments : moments=M.f
-        static const T invM[q_][q_]; // inverse of base change matrix : f=invM.moments
-        static const T S[q_];       // relaxation times
-        enum {shearIndexes = 2};
-        static const int shearViscIndexes[shearIndexes]; // relevant indexes of r. t. for shear viscosity
-        static const int bulkViscIndex  = 2; // relevant index of r. t. for bulk viscosity
-    };
-    
-    /// MRT D3Q19 lattice. The numbering follows the one in "Multiple-relaxation-
-    /// time lattice Boltzmann models in three dimensions", D. D'Humières, 
-    /// I. Ginzburg, M. Krafzcyk, P. Lallemand, L.-S. Luo,
-    /// Phil. Trans. R. Soc. Lond. A (2002) 660, p. 437-451
-    template <typename T>
-    struct MRTD3Q19DescriptorBase : public D3Q19DescriptorBase<T>
-    {
-        enum { d_ = 3, q_ = 19 };     ///< number of dimensions/distr. functions
-        static const T M[q_][q_];    // Matrix of base change between f and moments : moments=M.f
-        static const T invM[q_][q_]; // inverse of base change matrix : f=invM.moments
-        static const T S[q_];       // relaxation times
-        enum {shearIndexes = 5};
-        static const int shearViscIndexes[shearIndexes]; // relevant indexes of r. t. for shear viscosity
-        static const int bulkViscIndex  = 1; // relevant index of r. t. for bulk viscosity
-    };
+/// MRT D2Q9 lattice. The numbering follows the one in "Viscous flow computations
+/// with the method of lattice Boltzmann equation", D. Yu, L.-S. Luo, W. Shi,
+/// Progress in Aerospace Sciences 39, (2003), p. 329-367
+template <typename T>
+struct MRTD2Q9DescriptorBase : public D2Q9DescriptorBase<T>
+{
+  enum { d_ = 2, q_ = 9 };     ///< number of dimensions/distr. functions
+  static const T M[q_][q_];    // Matrix of base change between f and moments : moments=M.f
+  static const T invM[q_][q_]; // inverse of base change matrix : f=invM.moments
+  static const T S[q_];       // relaxation times
+  enum {shearIndexes = 2};
+  static const int shearViscIndexes[shearIndexes]; // relevant indexes of r. t. for shear viscosity
+  static const int bulkViscIndex  = 2; // relevant index of r. t. for bulk viscosity
+};
 
-    template <typename T>
-    struct MRTD2Q9Descriptor
-        : public MRTD2Q9DescriptorBase<T>, public NoExternalFieldBase
-    { };
+/// MRT D3Q19 lattice. The numbering follows the one in "Multiple-relaxation-
+/// time lattice Boltzmann models in three dimensions", D. D'Humières,
+/// I. Ginzburg, M. Krafzcyk, P. Lallemand, L.-S. Luo,
+/// Phil. Trans. R. Soc. Lond. A (2002) 660, p. 437-451
+template <typename T>
+struct MRTD3Q19DescriptorBase : public D3Q19DescriptorBase<T>
+{
+  enum { d_ = 3, q_ = 19 };     ///< number of dimensions/distr. functions
+  static const T M[q_][q_];    // Matrix of base change between f and moments : moments=M.f
+  static const T invM[q_][q_]; // inverse of base change matrix : f=invM.moments
+  static const T S[q_];       // relaxation times
+  enum {shearIndexes = 5};
+  static const int shearViscIndexes[shearIndexes]; // relevant indexes of r. t. for shear viscosity
+  static const int bulkViscIndex  = 1; // relevant index of r. t. for bulk viscosity
+};
 
-    template <typename T>
-    struct MRTD3Q19Descriptor
-        : public MRTD3Q19DescriptorBase<T>, public NoExternalFieldBase
-    { };
+template <typename T>
+struct MRTD2Q9Descriptor
+    : public MRTD2Q9DescriptorBase<T>, public NoExternalFieldBase
+  { };
+
+template <typename T>
+struct MRTD3Q19Descriptor
+    : public MRTD3Q19DescriptorBase<T>, public NoExternalFieldBase
+  { };
 
 
 }  // namespace descriptors

@@ -14,8 +14,8 @@
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
  *
- *  You should have received a copy of the GNU General Public 
- *  License along with this program; if not, write to the Free 
+ *  You should have received a copy of the GNU General Public
+ *  License along with this program; if not, write to the Free
  *  Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  *  Boston, MA  02110-1301, USA.
 */
@@ -36,19 +36,19 @@ namespace olb {
 template<typename T, template<typename U> class Lattice, class MixinDynamics>
 class AdvectionDiffusionBoundaryManager2D {
 public:
-    template<int direction, int orientation> static Momenta<T,Lattice>*
-        getTemperatureBoundaryMomenta();
-    template<int direction, int orientation> static Dynamics<T,Lattice>*
-        getTemperatureBoundaryDynamics(T omega, Momenta<T,Lattice>& momenta);
-    template<int direction, int orientation> static PostProcessorGenerator2D<T,Lattice>*
-        getTemperatureBoundaryProcessor(int x0, int x1, int y0, int y1);
+  template<int direction, int orientation> static Momenta<T,Lattice>*
+  getTemperatureBoundaryMomenta();
+  template<int direction, int orientation> static Dynamics<T,Lattice>*
+  getTemperatureBoundaryDynamics(T omega, Momenta<T,Lattice>& momenta);
+  template<int direction, int orientation> static PostProcessorGenerator2D<T,Lattice>*
+  getTemperatureBoundaryProcessor(int x0, int x1, int y0, int y1);
 
-    template<int xNormal, int yNormal> static Momenta<T,Lattice>*
-        getTemperatureCornerMomenta();
-    template<int xNormal, int yNormal> static Dynamics<T,Lattice>*
-        getTemperatureCornerDynamics(T omega, Momenta<T,Lattice>& momenta);
-    template<int xNormal, int yNormal> static PostProcessorGenerator2D<T,Lattice>*
-        getTemperatureCornerProcessor(int x, int y);
+  template<int xNormal, int yNormal> static Momenta<T,Lattice>*
+  getTemperatureCornerMomenta();
+  template<int xNormal, int yNormal> static Dynamics<T,Lattice>*
+  getTemperatureCornerDynamics(T omega, Momenta<T,Lattice>& momenta);
+  template<int xNormal, int yNormal> static PostProcessorGenerator2D<T,Lattice>*
+  getTemperatureCornerProcessor(int x, int y);
 
 };
 
@@ -58,26 +58,26 @@ public:
 template<typename T, template<typename U> class Lattice, class MixinDynamics>
 template<int direction, int orientation>
 Momenta<T,Lattice>*
-    AdvectionDiffusionBoundaryManager2D<T,Lattice,MixinDynamics>::getTemperatureBoundaryMomenta()
+AdvectionDiffusionBoundaryManager2D<T,Lattice,MixinDynamics>::getTemperatureBoundaryMomenta()
 {
-    return new EquilibriumBM<T,Lattice>;
+  return new EquilibriumBM<T,Lattice>;
 }
 
 template<typename T, template<typename U> class Lattice, class MixinDynamics>
 template<int direction, int orientation>
 Dynamics<T,Lattice>* AdvectionDiffusionBoundaryManager2D<T,Lattice,MixinDynamics>::
-    getTemperatureBoundaryDynamics(T omega, Momenta<T,Lattice>& momenta)
+getTemperatureBoundaryDynamics(T omega, Momenta<T,Lattice>& momenta)
 {
-    return new AdvectionDiffusionBoundariesDynamics<T,Lattice,MixinDynamics,direction,orientation>(omega, momenta);
+  return new AdvectionDiffusionBoundariesDynamics<T,Lattice,MixinDynamics,direction,orientation>(omega, momenta);
 }
 
 template<typename T, template<typename U> class Lattice, class MixinDynamics>
 template<int direction, int orientation>
 PostProcessorGenerator2D<T,Lattice>*
-    AdvectionDiffusionBoundaryManager2D<T,Lattice,MixinDynamics>::
-        getTemperatureBoundaryProcessor(int x0, int x1, int y0, int y1)
+AdvectionDiffusionBoundaryManager2D<T,Lattice,MixinDynamics>::
+getTemperatureBoundaryProcessor(int x0, int x1, int y0, int y1)
 {
-    return 0;
+  return 0;
 }
 
 //==================  Corners ================================
@@ -85,17 +85,17 @@ PostProcessorGenerator2D<T,Lattice>*
 template<typename T, template<typename U> class Lattice, class MixinDynamics>
 template<int xNormal, int yNormal>
 Momenta<T,Lattice>*
-    AdvectionDiffusionBoundaryManager2D<T,Lattice,MixinDynamics>::getTemperatureCornerMomenta()
+AdvectionDiffusionBoundaryManager2D<T,Lattice,MixinDynamics>::getTemperatureCornerMomenta()
 {
-    return new EquilibriumBM<T,Lattice>;
+  return new EquilibriumBM<T,Lattice>;
 }
 
 template<typename T, template<typename U> class Lattice, class MixinDynamics>
 template<int xNormal, int yNormal>
 Dynamics<T,Lattice>* AdvectionDiffusionBoundaryManager2D<T,Lattice,MixinDynamics>::
-    getTemperatureCornerDynamics(T omega, Momenta<T,Lattice>& momenta)
+getTemperatureCornerDynamics(T omega, Momenta<T,Lattice>& momenta)
 {
-    return new AdvectionDiffusionCornerDynamics2D<T,Lattice,MixinDynamics,xNormal,yNormal>(omega, momenta);
+  return new AdvectionDiffusionCornerDynamics2D<T,Lattice,MixinDynamics,xNormal,yNormal>(omega, momenta);
 }
 
 
@@ -103,20 +103,20 @@ Dynamics<T,Lattice>* AdvectionDiffusionBoundaryManager2D<T,Lattice,MixinDynamics
 template<typename T, template<typename U> class Lattice, class MixinDynamics>
 template<int xNormal, int yNormal>
 PostProcessorGenerator2D<T,Lattice>*
-    AdvectionDiffusionBoundaryManager2D<T,Lattice,MixinDynamics>::
-        getTemperatureCornerProcessor(int x, int y)
+AdvectionDiffusionBoundaryManager2D<T,Lattice,MixinDynamics>::
+getTemperatureCornerProcessor(int x, int y)
 {
-    return 0;
+  return 0;
 }
 
 ////////// Factory functions //////////////////////////////////////////////////
 
 template<typename T, template<typename U> class Lattice, typename MixinDynamics>
-OnLatticeAdvectionDiffusionBoundaryCondition2D<T,Lattice>* 
-        createAdvectionDiffusionBoundaryCondition2D(BlockStructure2D<T,Lattice>& block)
+OnLatticeAdvectionDiffusionBoundaryCondition2D<T,Lattice>*
+createAdvectionDiffusionBoundaryCondition2D(BlockStructure2D<T,Lattice>& block)
 {
-    return new AdvectionDiffusionBoundaryConditionInstantiator2D<T, Lattice,
-                   AdvectionDiffusionBoundaryManager2D<T,Lattice, MixinDynamics> > (block);
+  return new AdvectionDiffusionBoundaryConditionInstantiator2D<T, Lattice,
+         AdvectionDiffusionBoundaryManager2D<T,Lattice, MixinDynamics> > (block);
 }
 
 

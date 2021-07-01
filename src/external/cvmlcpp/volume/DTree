@@ -38,13 +38,10 @@
 namespace cvmlcpp
 {
 
-template <typename T, std::size_t D>
-class DTree;
+template <typename T, std::size_t D> class DTree;
 
-template <typename T, std::size_t D>
-class DTreeBranchNode;
-template <typename T, std::size_t D>
-class DTreeLeafNode;
+template <typename T, std::size_t D> class DTreeBranchNode;
+template <typename T, std::size_t D> class DTreeLeafNode;
 
 class NoParentException: public std::exception
 {
@@ -102,7 +99,8 @@ template <> struct SizeType<4>
 template <std::size_t D>
 struct DTreeHelper
 {
-	static const unsigned DimBytes = D / CHAR_BIT + (D % CHAR_BIT) ? 1 : 0;
+//	static const unsigned DimBytes = D / CHAR_BIT + (D % CHAR_BIT) ? 1 : 0;
+	static const unsigned DimBytes = D / CHAR_BIT + ( D-CHAR_BIT*(D/CHAR_BIT)) ? 1 : 0;
 	typedef typename SizeType<DimBytes>::type index_small_t;
 	typedef typename SizeType<DimBytes>::rtype index_t;
 
@@ -111,8 +109,10 @@ struct DTreeHelper
 	static const unsigned max_index_bits = (size_bits - depth_bits) / D;
 	static const unsigned depth_offset = size_bits - depth_bits;
 
+//	static const unsigned depth_bytes = max_index_bits / CHAR_BIT +
+//					   (max_index_bits % CHAR_BIT) ? 1 : 0;
 	static const unsigned depth_bytes = max_index_bits / CHAR_BIT +
-					   (max_index_bits % CHAR_BIT) ? 1 : 0;
+					   (max_index_bits-CHAR_BIT*(max_index_bits/CHAR_BIT) ) ? 1 : 0;
 	public: typedef typename SizeType<depth_bytes>::utype depth_t;
 };
 
@@ -227,6 +227,11 @@ class DTreeBranchNode : public DTreeNode<T, D>
 
 		virtual ~DTreeBranchNode() { }
 
+		// for SWIG
+		NodePtr &node(const std::size_t i){ return children_[i]; }
+		const NodePtr &node(const std::size_t i) const
+		{ return children_[i]; }
+
 		NodePtr &operator[](const std::size_t i){ return children_[i]; }
 		const NodePtr &operator[](const std::size_t i) const
 		{ return children_[i]; }
@@ -278,28 +283,36 @@ class DTreeProxy
 		typedef typename Node::BranchPtr BranchPtr;
 
 		friend class DTree<T, D>;
+#ifndef SWIG
 		friend std::istream& operator>> <> (std::istream& i_stream, DTree<T, D> &tree)
 				throw(InvalidDTreeXML);
-
+#endif
 	public:
 		DTreeProxy(NodePtr &node, NodePtr &root) :
 			node_(&node), root_(&root) { }
 
-		T& operator()() throw(BranchNodeException)
+		// For SWIG
+		T& value() throw(BranchNodeException)
 		{
-			return const_cast<T&>(
-				(*static_cast<const DTreeProxy*>(this))());
+			if (!(*node_)->isLeaf())
+				throw(BranchNodeException());
+			return dynamic_cast<LeafPtr>(node_->get())->value();
 		}
+		const T& value() const throw(BranchNodeException)
+		{ return const_cast<DTreeProxy*>(this)->value(); }
 
-		const T& operator()() const throw(BranchNodeException)
+		T& operator()() throw(BranchNodeException)
 		{
 			if (!(*node_)->isLeaf())
 				throw(BranchNodeException());
 			return dynamic_cast<LeafPtr>(node_->get())->value();
 		}
 
-		DTreeProxy operator[](const index_t i)
-					throw(LeafNodeException)
+		const T& operator()() const throw(BranchNodeException)
+		{ return (*const_cast<DTreeProxy*>(this))(); }
+
+		// For SWIG
+		DTreeProxy node(const index_t i) throw(LeafNodeException)
 		{
 			if ((*node_)->isLeaf())
 				throw(LeafNodeException());
@@ -309,10 +322,17 @@ class DTreeProxy
 		 	return DTreeProxy(
 			    (*dynamic_cast<BranchPtr>(node_->get()))[i], *root_);
 		}
+		const DTreeProxy node(const index_t i) const
+					throw(LeafNodeException)
+		{ return const_cast<DTreeProxy*>(this)->node(i); }
 
+		DTreeProxy operator[](const index_t i)
+					throw(LeafNodeException)
+		{ return this->node(i); }
 		const DTreeProxy operator[](const index_t i) const
 					throw(LeafNodeException)
-		{ return (*const_cast<DTreeProxy*>(this))[i]; }
+		{ return const_cast<DTreeProxy*>(this)->node(i); }
+
 
 		template <typename U>
 		void expand(const U value) throw(BranchNodeException)
@@ -494,9 +514,15 @@ class DTree
 			root_(new DTreeLeafNode<T, D>(value)) { }
 
 		DNode operator[](const index_t i) throw(LeafNodeException)
-		{ return this->root()[i]; }
+		{ return this->node(i); }
 		const DNode operator[](const index_t i) const
-			throw(LeafNodeException) { return this->root()[i]; }
+			throw(LeafNodeException) { return this->node(i); }
+
+		// For SWIG
+		DNode node(const index_t i) throw(LeafNodeException)
+		{ return this->root().node(i); }
+		const DNode node(const index_t i) const
+			throw(LeafNodeException) { return this->root().node(i); }
 
 		DNode root() { return DNode( root_, root_ ); }
 		const DNode root() const { return DNode( root_, root_ ); }
@@ -504,8 +530,12 @@ class DTree
 		operator DNode() { return this->root(); }
 		operator const DNode() const { return this->root(); }
 
-		T& operator()() { return this->root()(); }
-		const T& operator()() const { return this->root()(); }
+		// For SWIG
+		void set(const T value) throw(BranchNodeException) { this->root()() = value; }
+		const T value() const { return this->root()(); }
+
+		T& operator()() throw(BranchNodeException) { return this->root()(); }
+		const T& operator()() const throw(BranchNodeException) { return this->root()(); }
 
 		template <typename U>
 		void collapse(const U value) throw(LeafNodeException)

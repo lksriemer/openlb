@@ -347,7 +347,7 @@ but let the calculations be performed as floats.
 </tr>
 <tr>
 	<td>
-	<pre>  Rotator3D&lt;Vector&gt;(unsigned axis, register_type angle)  </pre>
+	<pre>  Rotator3D&lt;Vector&gt;(std::size_t axis, register_type angle)  </pre>
 	</td>
 	<td>Constructor. Vectors will be rotated <i>angle</i> radians around the
 	given <i>axis</i>.</td>
@@ -455,7 +455,7 @@ Models the function <i>y = ax^2 + bx + c</i>.
 </p>
 <br />
 
-<h4><pre>  template &lt;typename T, unsigned n&gt;
+<h4><pre>  template &lt;typename T, std::size_t n&gt;
 class Polynomial  </pre></h4>
 
 Models an <i>n</i>th degree polynomial function. Keep in mind that an

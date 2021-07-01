@@ -29,55 +29,86 @@ namespace cvmlcpp
 {
 
 // With normal vector included
-template <class Triangle, typename T>
-class Facet : public Triangle
+template <typename I, typename T>
+class Facet : public std::tr1::array<I, 3>
 {
 	public:
 		typedef T		value_type;
-		typedef Triangle	triange_type;
+		typedef std::tr1::array<I, 3>	triange_type;
 		typedef Point3D<T>	normal_type;
 
-		typedef typename Triangle::const_iterator
-						const_triangle_iterator;
-		typedef typename normal_type::iterator normal_iterator;
-		typedef typename normal_type::const_iterator
-							const_normal_iterator;
+		typedef typename triange_type::iterator iterator;
+		typedef typename triange_type::const_iterator const_iterator;
 
-		Facet() {}
+		Facet()  : _norm(0) { }
 
-		Facet(	const const_triangle_iterator first,
-			const const_triangle_iterator last) :
-				triange_type(first, last)
+		template <typename U>
+		Facet(const U a, const U b, const U c, const normal_type normal = 0) : _norm(normal)
 		{
-			std::fill(_norm.begin(), _norm.end(), 0);
+			(*this)[0] = a;
+			(*this)[1] = b;
+			(*this)[2] = c;
 		}
 
-		Facet(	const const_triangle_iterator first,
-			const const_triangle_iterator last,
-			const normal_type &normal) :
-				triange_type(first, last), _norm(normal)
-		{ }
-
-		Facet(	const const_triangle_iterator first,
-			const const_triangle_iterator last,
-			  const_normal_iterator normalFirst,
-			  const_normal_iterator normalLast) :
-				triange_type(first, last),
-				_norm(normalFirst, normalLast)
-		{ }
-
-		template <typename It, class Vect>
-		void set(It first, It last, const Vect &normal)
+		template <typename U>
+		void set(const U a, const U b, const U c)
 		{
-			triange_type::set(first, last);
-			_norm.load(normal.begin(), normal.end());
+			(*this)[0] = a;
+			(*this)[1] = b;
+			(*this)[2] = c;
 		}
 
 		const normal_type &normal() const { return _norm; }
 		normal_type &normal() { return _norm; }
 
+		bool has(const T point) const
+		{
+			return  (*this)[0] == point ||
+				(*this)[1] == point ||
+				(*this)[2] == point;
+		}
+
+		bool operator==(const Facet &that) const
+		{
+			return this->has(that[0]) && this->has(that[1]) && this->has(that[2]);
+		}
+
+		bool operator!=(const Facet &that) const
+		{ return !( (*this) == that ); }
+
+/*
+		USING THIS CODE CAUSES MEMORY CORRUPTION ISSUES TO APPEAR !!!
+		virtual bool operator<(const Facet &that) const
+		{
+			using std::min;
+			using std::max;
+			const T this_min = min(min((*this)[0], (*this)[1]), (*this)[2]);
+			const T that_min = min(min(that[0], that[1]), that[2]);
+
+			if (this_min < that_min)
+				return true;
+			else if (that_min > this_min)
+				return false;
+
+			const T this_middle = min(max((*this)[0], (*this)[1]), (*this)[2]);
+			const T that_middle = min(max(that[0], that[1]), that[2]);
+
+			if (this_middle < that_middle)
+				return true;
+			else if (that_middle > this_middle)
+				return false;
+
+			const T this_max = max(max((*this)[0], (*this)[1]), (*this)[2]);
+			const T that_max = max(max(that[0], that[1]), that[2]);
+
+			if (this_max < that_max)
+				return true;
+
+			return false;
+		}
+*/
 	private:
-		normal_type _norm;
+ 		normal_type _norm;
 };
 
 } // namespace

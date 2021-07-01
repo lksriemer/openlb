@@ -63,7 +63,7 @@ int main()
 		const std::vector<OctTreeInt::index_t>
 			trail = tree[0][i].index_trail();
 		assert(trail[0] == 0);
-		assert(trail[1] == i);
+		assert(trail[1] == int(i));
 
 		OctTreeInt::DNode node = tree.root();
 		for (std::size_t j = 0; j < trail.size(); ++j)

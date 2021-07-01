@@ -15,8 +15,8 @@
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
  *
- *  You should have received a copy of the GNU General Public 
- *  License along with this program; if not, write to the Free 
+ *  You should have received a copy of the GNU General Public
+ *  License along with this program; if not, write to the Free
  *  Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  *  Boston, MA  02110-1301, USA.
 */
@@ -33,71 +33,71 @@ namespace graphics {
 
 template <typename T>
 struct ScalarFunction {
-    virtual ~ScalarFunction() { }
-    virtual T operator() (T x) const =0;
-    virtual ScalarFunction<T>* clone() const=0;
+  virtual ~ScalarFunction() { }
+  virtual T operator() (T x) const =0;
+  virtual ScalarFunction<T>* clone() const=0;
 };
 
 template <typename T>
 class LinearFunction : public ScalarFunction<T> {
 public:
-    LinearFunction(T x1_, T x2_, T y1_, T y2_);
-    virtual T operator() (T x) const;
-    virtual LinearFunction<T>* clone() const;
+  LinearFunction(T x1_, T x2_, T y1_, T y2_);
+  virtual T operator() (T x) const;
+  virtual LinearFunction<T>* clone() const;
 private:
-    T x1, x2, y1, y2;
+  T x1, x2, y1, y2;
 };
 
 template <typename T>
 class PowerLawFunction : public ScalarFunction<T> {
 public:
-    PowerLawFunction(T x1_, T x2_, T y1_, T y2_, T b_);
-    virtual T operator() (T x) const;
-    virtual PowerLawFunction<T>* clone() const;
+  PowerLawFunction(T x1_, T x2_, T y1_, T y2_, T b_);
+  virtual T operator() (T x) const;
+  virtual PowerLawFunction<T>* clone() const;
 private:
-    T x1, x2, y1, y2;
-    T b;
+  T x1, x2, y1, y2;
+  T b;
 };
 
 template <typename T>
 struct Piece {
-    Piece(T closedBegin_, T openEnd_) : closedBegin(closedBegin_), openEnd(openEnd_)
-    { }
-    T closedBegin, openEnd;
+  Piece(T closedBegin_, T openEnd_) : closedBegin(closedBegin_), openEnd(openEnd_)
+  { }
+  T closedBegin, openEnd;
 };
 
 template <typename T>
 class PiecewiseFunction : public ScalarFunction<T> {
 public:
-    PiecewiseFunction() { }
-    ~PiecewiseFunction();
-    PiecewiseFunction(PiecewiseFunction<T> const& rhs);
-    PiecewiseFunction<T>& operator=(PiecewiseFunction<T> const& rhs);
-    void swap(PiecewiseFunction<T>& rhs);
-    void addPiece(Piece<T> piece, ScalarFunction<T>* f);
-    virtual T operator() (T x) const;
-    virtual PiecewiseFunction<T>* clone() const;
+  PiecewiseFunction() { }
+  ~PiecewiseFunction();
+  PiecewiseFunction(PiecewiseFunction<T> const& rhs);
+  PiecewiseFunction<T>& operator=(PiecewiseFunction<T> const& rhs);
+  void swap(PiecewiseFunction<T>& rhs);
+  void addPiece(Piece<T> piece, ScalarFunction<T>* f);
+  virtual T operator() (T x) const;
+  virtual PiecewiseFunction<T>* clone() const;
 private:
-    std::vector<Piece<T> > pieces;
-    std::vector<ScalarFunction<T>*> functions;
+  std::vector<Piece<T> > pieces;
+  std::vector<ScalarFunction<T>*> functions;
 };
 
 template <typename T>
 struct rgb {
-    rgb(T r_, T g_, T b_) : r(r_), g(g_), b(b_)
-    { }
-    T r,g,b;
+  rgb(T r_, T g_, T b_) : r(r_), g(g_), b(b_)
+  { }
+  T r,g,b;
 };
 
 template <typename T>
 class ColorMap {
 public:
-    ColorMap(PiecewiseFunction<T> const& red_,
-             PiecewiseFunction<T> const& green_,
-             PiecewiseFunction<T> const& blue_);
-    rgb<T> get(T x) const;
+  ColorMap(PiecewiseFunction<T> const& red_,
+           PiecewiseFunction<T> const& green_,
+           PiecewiseFunction<T> const& blue_);
+  rgb<T> get(T x) const;
 private:
-    PiecewiseFunction<T> red, green, blue;
+  PiecewiseFunction<T> red, green, blue;
 };
 
 namespace mapGenerators {

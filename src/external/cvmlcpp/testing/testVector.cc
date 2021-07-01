@@ -32,7 +32,7 @@ int main()
 
 	StaticVector<int, 3u> v2 = v1 + 3;
 	v2 += d1;
-	StaticVector<int, 3u> v2 = v1 + 3 + d1;
+	StaticVector<int, 3u> v3 = v1 + 3 + d1;
 std::cout << "error: no match for ‘operator==’ in ‘9 == v2’" << std::endl;
 //	assert(9 == v2);
 

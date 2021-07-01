@@ -40,7 +40,7 @@ template <class Iterator,class T, class UnaryFunction, class BinaryFunction>
 T _par_transform_accumulate(Iterator first, Iterator last,
 			const T init, const T par_init,
 			UnaryFunction unary_op, BinaryFunction binary_op,
-			const unsigned P = omp_get_max_threads())
+			const unsigned P)
 {
 	assert(P > 0u);
 	if (_linear_serial_is_faster(first, last, P))
@@ -49,7 +49,7 @@ T _par_transform_accumulate(Iterator first, Iterator last,
 	assert(2*(int)P <= std::distance(first, last));
 
 	::std::vector< ::std::pair<Iterator, Iterator> > partitions(P);
-	::omptl::_partition_range(first, last, partitions, P);
+	_partition_range(first, last, partitions, P);
 
 	::std::vector<T> results(P);
 	#pragma omp parallel for
@@ -66,7 +66,7 @@ template <class Iterator, class T, class UnaryFunction>
 T _transform_accumulate(Iterator first, Iterator last,
 		const T init, UnaryFunction unary_op,
 		::std::plus<typename UnaryFunction::result_type> binary_op,
-		const unsigned P = omp_get_max_threads())
+		const unsigned P)
 {
 	return ::omptl::detail::_par_transform_accumulate(first, last, init,
 				typename UnaryFunction::result_type(0),
@@ -77,7 +77,7 @@ template <class Iterator, class T, class UnaryFunction>
 T _transform_accumulate(Iterator first, Iterator last, const T init,
 		UnaryFunction unary_op,
 		::std::multiplies<typename UnaryFunction::result_type>binary_op,
-		const unsigned P = omp_get_max_threads())
+		const unsigned P)
 {
 	return ::omptl::detail::_par_transform_accumulate(first, last, init,
 				typename UnaryFunction::result_type(1),
@@ -87,7 +87,7 @@ T _transform_accumulate(Iterator first, Iterator last, const T init,
 template <class Iterator, class T, class UnaryFunction, class BinaryFunction>
 T _transform_accumulate(Iterator first, Iterator last, const T init,
 			UnaryFunction unary_op, BinaryFunction binary_op,
-			const unsigned P = omp_get_max_threads())
+			const unsigned P)
 {
 	return ::omptl::detail::_ser_transform_accumulate(first, last, init,
 						  unary_op,binary_op);
@@ -101,7 +101,7 @@ struct _TransformAccumulate
 	static typename BinaryFunction::result_type
 	transform_accumulate(Iterator first, Iterator last, const T init,
 			UnaryFunction unary_op, BinaryFunction binary_op,
-			const unsigned P = omp_get_max_threads())
+			const unsigned P)
 	{
 		return ::omptl::detail::_transform_accumulate(first, last, init,
 							unary_op, binary_op, P);
@@ -116,7 +116,7 @@ struct _TransformAccumulate< ::std::input_iterator_tag >
 	static typename BinaryFunction::result_type
 	transform_accumulate(Iterator first, Iterator last, const T init,
 			UnaryFunction unary_op, BinaryFunction binary_op,
-			const unsigned P = omp_get_max_threads())
+			const unsigned P)
 	{
 		return ::omptl::detail::_ser_transform_accumulate(first, last, init,
 							  unary_op, binary_op);
@@ -128,7 +128,7 @@ struct _TransformAccumulate< ::std::input_iterator_tag >
 template <class Iterator, class T, class UnaryFunction, class BinaryFunction>
 T transform_accumulate(Iterator first, Iterator last, const T init,
 			UnaryFunction unary_op, BinaryFunction binary_op,
-			const unsigned P = omp_get_max_threads())
+			const unsigned P)
 {
 	return ::omptl::detail::_TransformAccumulate
 	<typename ::std::iterator_traits<Iterator>::iterator_category>
@@ -139,7 +139,7 @@ T transform_accumulate(Iterator first, Iterator last, const T init,
 template <class Iterator, class T, class UnaryFunction>
 T transform_accumulate(Iterator first, Iterator last,
 			const T init, UnaryFunction unary_op,
-			const unsigned P=omp_get_max_threads())
+			const unsigned P)
 {
 	typedef typename UnaryFunction::result_type RT;
 	return ::omptl::transform_accumulate(first, last, init, unary_op,

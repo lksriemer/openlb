@@ -469,7 +469,7 @@ int main()
 	// Expanding a node without giving a value copies the current value
 	// to all new children.
 	tree.root().expand();
-	for (unsigned i = 0; i &lt; OctTreeInt::N; ++i)
+	for (std::size_t i = 0; i &lt; OctTreeInt::N; ++i)
 		assert(tree[i]() == 5);
 
 	// Change one leaf node of the root and expand it to a branch node.

@@ -14,8 +14,8 @@
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
  *
- *  You should have received a copy of the GNU General Public 
- *  License along with this program; if not, write to the Free 
+ *  You should have received a copy of the GNU General Public
+ *  License along with this program; if not, write to the Free
  *  Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  *  Boston, MA  02110-1301, USA.
 */
@@ -36,34 +36,34 @@ namespace olb {
 template<typename T, template<typename U> class Lattice>
 class OnLatticeAdvectionDiffusionBoundaryCondition2D {
 public:
-    virtual ~OnLatticeAdvectionDiffusionBoundaryCondition2D() { }
+  virtual ~OnLatticeAdvectionDiffusionBoundaryCondition2D() { }
 
-    virtual void addTemperatureBoundary0N(int x0, int x1, int y0, int y1,T omega) =0;
-    virtual void addTemperatureBoundary0P(int x0, int x1, int y0, int y1,T omega) =0;
-    virtual void addTemperatureBoundary1N(int x0, int x1, int y0, int y1,T omega) =0;
-    virtual void addTemperatureBoundary1P(int x0, int x1, int y0, int y1,T omega) =0;
-    
-    virtual void addTemperatureCornerNN(int x, int y, T omega) =0;
-    virtual void addTemperatureCornerNP(int x, int y, T omega) =0;
-    virtual void addTemperatureCornerPN(int x, int y, T omega) =0;
-    virtual void addTemperatureCornerPP(int x, int y, T omega) =0;
+  virtual void addTemperatureBoundary0N(int x0, int x1, int y0, int y1,T omega) =0;
+  virtual void addTemperatureBoundary0P(int x0, int x1, int y0, int y1,T omega) =0;
+  virtual void addTemperatureBoundary1N(int x0, int x1, int y0, int y1,T omega) =0;
+  virtual void addTemperatureBoundary1P(int x0, int x1, int y0, int y1,T omega) =0;
 
-    BlockStructure2D<T,Lattice>& getBlock();
-    BlockStructure2D<T,Lattice> const& getBlock() const;
+  virtual void addTemperatureCornerNN(int x, int y, T omega) =0;
+  virtual void addTemperatureCornerNP(int x, int y, T omega) =0;
+  virtual void addTemperatureCornerPN(int x, int y, T omega) =0;
+  virtual void addTemperatureCornerPP(int x, int y, T omega) =0;
+
+  BlockStructure2D<T,Lattice>& getBlock();
+  BlockStructure2D<T,Lattice> const& getBlock() const;
 };
 
 //////  Factory function for Regularized Thermal BC
 
 template<typename T, template<typename U> class Lattice, typename MixinDynamics>
 OnLatticeAdvectionDiffusionBoundaryCondition2D<T,Lattice>*
-    createAdvectionDiffusionBoundaryCondition2D(BlockStructure2D<T,Lattice>& block);
+createAdvectionDiffusionBoundaryCondition2D(BlockStructure2D<T,Lattice>& block);
 
 template<typename T, template<typename U> class Lattice>
 OnLatticeAdvectionDiffusionBoundaryCondition2D<T,Lattice>*
-        createAdvectionDiffusionBoundaryCondition2D(BlockStructure2D<T,Lattice>& block)
+createAdvectionDiffusionBoundaryCondition2D(BlockStructure2D<T,Lattice>& block)
 {
-    return createAdvectionDiffusionBoundaryCondition2D<T,Lattice,
-            AdvectionDiffusionRLBdynamics<T,Lattice> >(block);
+  return createAdvectionDiffusionBoundaryCondition2D<T,Lattice,
+         AdvectionDiffusionRLBdynamics<T,Lattice> >(block);
 }
 
 

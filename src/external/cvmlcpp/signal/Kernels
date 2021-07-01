@@ -19,7 +19,7 @@
  ***************************************************************************/
 
 #ifndef CVMLCPP_KERNELS
-#define CVMLCPP_KERNELS 1
+#define CVMLCPP_KERNELS
 
 #include <cvmlcpp/base/Functors>
 #include <cvmlcpp/base/Matrix>

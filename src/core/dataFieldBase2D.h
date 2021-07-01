@@ -14,8 +14,8 @@
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
  *
- *  You should have received a copy of the GNU General Public 
- *  License along with this program; if not, write to the Free 
+ *  You should have received a copy of the GNU General Public
+ *  License along with this program; if not, write to the Free
  *  Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  *  Boston, MA  02110-1301, USA.
 */
@@ -37,48 +37,48 @@ namespace olb {
 template<typename T>
 class ScalarFieldBase2D : public Serializable<T>, public SpatiallyExtendedObject2D {
 public:
-    virtual ~ScalarFieldBase2D() { }
+  virtual ~ScalarFieldBase2D() { }
 public:
-    virtual bool isConstructed() const =0;
-    virtual void construct() =0;
-    virtual void deConstruct() =0;
-    virtual void reset() =0;
-    virtual int getNx() const =0;
-    virtual int getNy() const =0;
-    virtual size_t getSize() const =0;
-    virtual T& get(int iX, int iY) =0;
-    virtual T const& get(int iX, int iY) const =0;
-    virtual T computeReduction(DataReduction<T>& reduction) const =0;
-    virtual DataSerializer<T> const& getSubSerializer (
-            int x0_, int x1_, int y0_, int y1_,
-            IndexOrdering::OrderingT ordering ) const =0;
-    virtual DataUnSerializer<T>& getSubUnSerializer (
-            int x0_, int x1_, int y0_, int y1_,
-            IndexOrdering::OrderingT ordering ) =0;
+  virtual bool isConstructed() const =0;
+  virtual void construct() =0;
+  virtual void deConstruct() =0;
+  virtual void reset() =0;
+  virtual int getNx() const =0;
+  virtual int getNy() const =0;
+  virtual size_t getSize() const =0;
+  virtual T& get(int iX, int iY) =0;
+  virtual T const& get(int iX, int iY) const =0;
+  virtual T computeReduction(DataReduction<T>& reduction) const =0;
+  virtual DataSerializer<T> const& getSubSerializer (
+    int x0_, int x1_, int y0_, int y1_,
+    IndexOrdering::OrderingT ordering ) const =0;
+  virtual DataUnSerializer<T>& getSubUnSerializer (
+    int x0_, int x1_, int y0_, int y1_,
+    IndexOrdering::OrderingT ordering ) =0;
 };
 
 template<typename T, int nDim>
 class TensorFieldBase2D : public Serializable<T>, public SpatiallyExtendedObject2D {
 public:
-    typedef T Tensor[nDim];
+  typedef T Tensor[nDim];
 public:
-    virtual ~TensorFieldBase2D() { }
+  virtual ~TensorFieldBase2D() { }
 public:
-    virtual bool isConstructed() const =0;
-    virtual void construct() =0;
-    virtual void deConstruct() =0;
-    virtual void reset() =0;
-    virtual int getNx() const =0;
-    virtual int getNy() const =0;
-    virtual Tensor& get(int iX, int iY) =0;
-    virtual Tensor const& get(int iX, int iY) const =0;
-    virtual ScalarFieldBase2D<T> const& extractComponent(int whichDim) const =0;
-    virtual DataSerializer<T> const& getSubSerializer (
-            int x0_, int x1_, int y0_, int y1_,
-            IndexOrdering::OrderingT ordering ) const =0;
-    virtual DataUnSerializer<T>& getSubUnSerializer (
-            int x0_, int x1_, int y0_, int y1_,
-            IndexOrdering::OrderingT ordering ) =0;
+  virtual bool isConstructed() const =0;
+  virtual void construct() =0;
+  virtual void deConstruct() =0;
+  virtual void reset() =0;
+  virtual int getNx() const =0;
+  virtual int getNy() const =0;
+  virtual Tensor& get(int iX, int iY) =0;
+  virtual Tensor const& get(int iX, int iY) const =0;
+  virtual ScalarFieldBase2D<T> const& extractComponent(int whichDim) const =0;
+  virtual DataSerializer<T> const& getSubSerializer (
+    int x0_, int x1_, int y0_, int y1_,
+    IndexOrdering::OrderingT ordering ) const =0;
+  virtual DataUnSerializer<T>& getSubUnSerializer (
+    int x0_, int x1_, int y0_, int y1_,
+    IndexOrdering::OrderingT ordering ) =0;
 };
 
 } // end namespace olb

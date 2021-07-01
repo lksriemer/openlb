@@ -14,8 +14,8 @@
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
  *
- *  You should have received a copy of the GNU General Public 
- *  License along with this program; if not, write to the Free 
+ *  You should have received a copy of the GNU General Public
+ *  License along with this program; if not, write to the Free
  *  Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  *  Boston, MA  02110-1301, USA.
 */
@@ -55,25 +55,25 @@ template double computeNormSqr<double, ScalarField3D>(ScalarField3D<double> cons
 template double computeRMS<double, ScalarField3D>(ScalarField3D<double> const& field);
 
 template double computeMin<double,MultiScalarField2D> (
-        MultiScalarField2D<double> const& field );
+  MultiScalarField2D<double> const& field );
 template double computeMax<double,MultiScalarField2D> (
-        MultiScalarField2D<double> const& field );
+  MultiScalarField2D<double> const& field );
 template double computeAverage<double,MultiScalarField2D> (
-        MultiScalarField2D<double> const& field );
+  MultiScalarField2D<double> const& field );
 template double computeNormSqr<double,MultiScalarField2D> (
-        MultiScalarField2D<double> const& field );
+  MultiScalarField2D<double> const& field );
 template double computeRMS<double,MultiScalarField2D> (
-        MultiScalarField2D<double> const& field );
+  MultiScalarField2D<double> const& field );
 
 template double computeMin<double,MultiScalarField3D> (
-        MultiScalarField3D<double> const& field );
+  MultiScalarField3D<double> const& field );
 template double computeMax<double,MultiScalarField3D> (
-        MultiScalarField3D<double> const& field );
+  MultiScalarField3D<double> const& field );
 template double computeAverage<double,MultiScalarField3D> (
-        MultiScalarField3D<double> const& field );
+  MultiScalarField3D<double> const& field );
 template double computeNormSqr<double,MultiScalarField3D> (
-        MultiScalarField3D<double> const& field );
+  MultiScalarField3D<double> const& field );
 template double computeRMS<double,MultiScalarField3D> (
-        MultiScalarField3D<double> const& field );
+  MultiScalarField3D<double> const& field );
 
 }  // namespace olb

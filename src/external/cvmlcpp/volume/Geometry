@@ -39,7 +39,8 @@ class Geometry
 	public:
 		typedef T				 value_type;
 		typedef Point3D<value_type>		 point_type;
-		typedef Facet<IndexTriangle, value_type> facet_type;
+		//typedef Facet<IndexTriangle, value_type> facet_type;
+		typedef Facet<std::size_t, T>		 facet_type;
 		typedef typename facet_type::normal_type vector_type;
 		typedef typename std::set<facet_type>::const_iterator
 							 const_facet_iterator;
@@ -55,15 +56,18 @@ class Geometry
 		Geometry &operator=(const Geometry &that);
 
 		// Must be Random-Acess-Iterators!
-		template <typename SortedPointsIterator,
+/*		template <typename SortedPointsIterator,
 			  typename PointIDIterator>
 		Geometry(const SortedPointsIterator ptBegin,
 			 const SortedPointsIterator ptEnd,
 			 const PointIDIterator idBegin);
+*/
+		template <typename PointIterator, typename NormalIterator>
+		Geometry(const PointIterator begin, const PointIterator end, const NormalIterator norm_begin);
 
 		/**
-			Destructor
-		*/
+		 *	Destructor
+		 */
 		virtual ~Geometry();
 
 		/**
@@ -117,11 +121,11 @@ class Geometry
 				  &facetsHavingPoint(const std::size_t key) const;
 
 		// Must be Random-Acess-Iterators!
-		template <typename SortedPointsIterator,
-			  typename PointIDIterator>
-		void loadPoints(const SortedPointsIterator pointBegin,
-			 	const SortedPointsIterator pointEnd,
-			 	const PointIDIterator idBegin);
+		// nr of points must be a multiple of 3 - 3 for each facet
+		// nr of normals must be 1 per facet
+		template <typename PointIterator, typename NormalIterator>
+		bool loadGeometry(const PointIterator begin, const PointIterator end,
+						const NormalIterator normals_begin);
 
 		std::size_t addPoint(const value_type &x,
 				     const value_type &y,
@@ -141,12 +145,6 @@ class Geometry
 				  const std::size_t c);
 
 		std::size_t addFacet(const facet_type &facet);
-
-		template <typename SortedFacetsIterator,
-			  typename FacetIDIterator>
-		void loadFacets(const SortedFacetsIterator facetBegin,
-			      const SortedFacetsIterator facetEnd,
-			      const FacetIDIterator idBegin);
 
 		bool updateFacet(const std::size_t key, const std::size_t a,
 				 const std::size_t b, const std::size_t c);
@@ -189,6 +187,8 @@ class Geometry
 		bool operator!=(const Geometry &that) const
 		{ return !( (*this) == that ); }
 
+		void swap(Geometry &that);
+
 	private:
 		typedef typename std::set<point_type>::iterator point_iterator;
 		typedef typename std::map<std::size_t,
@@ -196,8 +196,6 @@ class Geometry
 							const_pointkey_iterator;
 		typedef typename std::map<std::size_t, point_iterator>::iterator
 							pointkey_iterator;
-		std::set<point_type> _points;
-		mutable std::map<std::size_t, point_iterator> _pointKeyMap;
 
 		typedef typename std::set<facet_type>::iterator facet_iterator;
 		typedef typename std::map<std::size_t,
@@ -205,6 +203,9 @@ class Geometry
 							const_facetkey_iterator;
 		typedef typename std::map<std::size_t, facet_iterator>::iterator
 							facetkey_iterator;
+
+		std::set<point_type> _points;
+		mutable std::map<std::size_t, point_iterator> _pointKeyMap;
 		std::set<facet_type> _facets;
 		mutable std::map<std::size_t, facet_iterator> _facetKeyMap;
 
@@ -231,5 +232,13 @@ class Geometry
 } // namespace cvmlcpp
 
 #include <cvmlcpp/volume/Geometry.hpp>
+
+namespace std
+{
+
+template <typename T>
+void swap(cvmlcpp::Geometry<T> &g1, cvmlcpp::Geometry<T> &g2) { g1.swap(g2); }
+
+}
 
 #endif

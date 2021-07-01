@@ -71,7 +71,7 @@ the accepted matrix types.
   bool voxelize(const Geometry&lt;Tg&gt; &amp;geometry,
 		matrix_type&lt;voxel_type, 3&gt; &amp;voxels,
 		const value_type voxelSize = 1.0,
-		const unsigned	 pad = 0u,
+		const std::size_t	 pad = 0u,
 		const voxel_type inside = 1,
 		const voxel_type outside = 0);                  </pre></td>
 	<td>Voxelize a given geometry and store a representation in voxels
@@ -98,8 +98,8 @@ the accepted matrix types.
   bool fractionVoxelize(const Geometry&lt;Tg&gt;  &amp;geometry,       &nbsp;
 			Matrix_t&lt;Tf, 3u, A&gt; &amp;voxelFractions,
 			const double voxelSize,
-			unsigned samples = 16u,
-			unsigned pad = 0u)&nbsp;&nbsp;&nbsp;&nbsp;</pre></td>
+			std::size_t samples = 16u,
+			std::size_t pad = 0u)&nbsp;&nbsp;&nbsp;&nbsp;</pre></td>
 	<td>Voxelize a given geometry and store a representation in fractions of
 		voxels in a 3D matrix.<br />
 	The size of the geometry and the voxels, together with the padding,
@@ -311,15 +311,15 @@ Geometry&lt;float&gt; geometry;
 readSTL(geometry, "cube.stl");
 
 Matrix&lt;float, 3u&gt; fract;
-unsigned pad = 1;
-unsigned samples = 4;
+std::size_t pad = 1;
+std::size_t samples = 4;
 double voxelSize = 0.1;
 fractionVoxelize(geometry, fract, voxelSize, samples, pad);
 
 double weight = 0.0;
-for (unsigned x = 0u; x &lt; 12; ++x)
-for (unsigned y = 0u; y &lt; 12; ++y)
-for (unsigned z = 0u; z &lt; 12; ++z)
+for (std::size_t x = 0u; x &lt; 12; ++x)
+for (std::size_t y = 0u; y &lt; 12; ++y)
+for (std::size_t z = 0u; z &lt; 12; ++z)
 	weight += fract[x][y][z];
 assert(std::abs(weight - 1000.0) &lt; 0.1);
 </pre>
@@ -333,7 +333,7 @@ readSTL(geometry, "cube.stl");
 // Calculate a proper voxel size
 const double nrVoxels = 1024;
 double maxGeometrySize = 0.0;
-for (unsigned d = 0; d &lt; 3; ++d)
+for (std::size_t d = 0; d &lt; 3; ++d)
 	maxGeometrySize = std::max(maxGeometrySize, double(geometry.max(d))-double(geometry.min(d)));
 const double voxelSize = maxGeometrySize / nrVoxels;
 
