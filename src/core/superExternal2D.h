@@ -55,13 +55,13 @@ public:
   SuperExternal2D(SuperGeometry2D<T>& superGeometry,
                   SuperLattice2D<T,Lattice>& sLattice,
                   int offset, int size, int overlap);
-  void communicate(bool verbose=true);
+  void communicate(bool verbose=true) override;
   /// Write access to the memory of the data of the super structure
-  virtual bool* operator() (int iCloc, int iX, int iY, int iData);
+  bool* operator() (int iCloc, int iX, int iY, int iData) override;
   /// Read only access to the dim of the data of the super structure
-  virtual int getDataSize() const;
+  int getDataSize() const override;
   /// Read only access to the data type dim of the data of the super structure
-  virtual int getDataTypeSize() const;
+  int getDataTypeSize() const override;
 };
 
 } // namespace olb

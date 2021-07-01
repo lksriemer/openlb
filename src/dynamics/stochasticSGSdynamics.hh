@@ -146,9 +146,7 @@ void StochasticSGSdynamics<T,Lattice>::collide(
   }
 
   T uSqr = mrtHelpers<T,Lattice>::mrtSGSCollision(cell, rho, u, newOmega, invM_S_SGS);
-  if (cell.takesStatistics()) {
-    statistics.incrementStats(rho, uSqr);
-  }
+  statistics.incrementStats(rho, uSqr);
 }
 
 
@@ -194,9 +192,7 @@ void StochasticSGSdynamics<T,Lattice>::collide(
 //     }
 
 //   T uSqr = mrtHelpers<T,Lattice>::mrtSGSCollision(cell, rho, u, newOmega, invM_S_SGS);
-//   if (cell.takesStatistics()) {
-//     statistics.incrementStats(rho, uSqr);
-//   }
+//   statistics.incrementStats(rho, uSqr);
 // }
 
 
@@ -238,7 +234,7 @@ T StochasticSGSdynamics<T,Lattice>::getRandBMTrans(
       y = 2.0*rand()/RAND_MAX - 1;
 
       r = x*x + y*y;
-    } while (r == 0.0 || r > 1.0);
+    } while ( util::nearZero(r) || r > 1.0);
     {
       double d = sqrt(-2.0*log(r)/r);
       double n1 = x*d;

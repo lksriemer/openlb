@@ -32,6 +32,8 @@
 
 namespace olb {
 
+using namespace descriptors;
+
 /**
 * Class for the coupling between a Navier-Stokes (NS) lattice and an
 * Advection-Diffusion (AD) lattice.
@@ -50,23 +52,30 @@ public:
   NavierStokesAdvectionDiffusionCouplingPostProcessor2D(int x0_, int x1_, int y0_, int y1_,
       T gravity_, T T0_, T deltaTemp_, std::vector<T> dir_,
       std::vector<SpatiallyExtendedObject2D* > partners_);
-  virtual int extent() const
+  int extent() const override
   {
     return 0;
   }
-  virtual int extent(int whichDirection) const
+  int extent(int whichDirection) const override
   {
     return 0;
   }
-  virtual void process(BlockLattice2D<T,Lattice>& blockLattice);
-  virtual void processSubDomain(BlockLattice2D<T,Lattice>& blockLattice,
-                                int x0_, int x1_, int y0_, int y1_);
+  void process(BlockLattice2D<T,Lattice>& blockLattice) override;
+  void processSubDomain(BlockLattice2D<T,Lattice>& blockLattice,
+                                int x0_, int x1_, int y0_, int y1_) override;
 private:
+  typedef Lattice<T> L;
   int x0, x1, y0, y1;
   T gravity, T0, deltaTemp;
   std::vector<T> dir;
+  BlockLattice2D<T,AdvectionDiffusionD2Q5Descriptor> *tPartner;
+  T forcePrefactor[L::d];
 
   std::vector<SpatiallyExtendedObject2D*> partners;
+  enum {
+    velOffset = AdvectionDiffusionD2Q5Descriptor<T>::ExternalField::velocityBeginsAt,
+    forceOffset = ForcedD2Q9Descriptor<T>::ExternalField::forceBeginsAt
+  };
 };
 
 template<typename T, template<typename U> class Lattice>
@@ -74,8 +83,8 @@ class NavierStokesAdvectionDiffusionCouplingGenerator2D : public LatticeCoupling
 public:
   NavierStokesAdvectionDiffusionCouplingGenerator2D(int x0_, int x1_, int y0_, int y1_,
       T gravity_, T T0_, T deltaTemp_, std::vector<T> dir_);
-  virtual PostProcessor2D<T,Lattice>* generate(std::vector<SpatiallyExtendedObject2D* > partners) const;
-  virtual LatticeCouplingGenerator2D<T,Lattice>* clone() const;
+  PostProcessor2D<T,Lattice>* generate(std::vector<SpatiallyExtendedObject2D* > partners) const override;
+  LatticeCouplingGenerator2D<T,Lattice>* clone() const override;
 
 private:
   T gravity, T0, deltaTemp;

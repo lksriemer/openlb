@@ -21,6 +21,8 @@
  *  Boston, MA  02110-1301, USA.
 */
 
+#include "dynamics/latticeDescriptors.h"
+#include "dynamics/latticeDescriptors.hh"
 #include "particles/particle3D.h"
 #include "particles/particle3D.hh"
 #include "buoyancyForce3D.h"
@@ -28,6 +30,6 @@
 
 namespace olb {
 
-template class BuoyancyForce3D<double,Particle3D>;
+template class BuoyancyForce3D<double,Particle3D,descriptors::D3Q19Descriptor>;
 
 }  // namespace olb

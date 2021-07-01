@@ -56,7 +56,7 @@ public:
    * \param maxDepth Maximal depth of tree
    * \param overlap Triangles within rad+overlap are added to this Octree
    */
-  Octree(Vector<T,3> center, T rad, STLmesh<T>* mesh, short maxDepth, T overlap = 0., Octree<T>* parent=NULL);
+  Octree(Vector<T,3> center, T rad, STLmesh<T>* mesh, short maxDepth, T overlap = 0., Octree<T>* parent=nullptr);
   /// Destructor destructs
   ~Octree();
   /// Find the node containing the first param with remaining maxDepth

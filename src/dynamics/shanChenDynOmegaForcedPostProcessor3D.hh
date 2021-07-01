@@ -114,8 +114,8 @@ processSubDomain( BlockLattice3D<T,Lattice>& blockLattice,
           j = partnerCell.getExternal(uOffset);
           lbHelpers<T,Lattice>::computeJ(partnerCell,j);
 
-          T blockOmega   = *(blockCell.getExternal(L::ExternalField::omegaBeginsAt)); //blockCell.getDynamics()->getOmega();
-          T partnerOmega = *(partnerCell.getExternal(L::ExternalField::omegaBeginsAt)); //partnerCell.getDynamics()->getOmega();
+          T blockOmega   = *(blockCell.getExternal(L::ExternalField::omegaBeginsAt)); //blockLattice.getDynamics(iX, iY, iZ)->getOmega();
+          T partnerOmega = *(partnerCell.getExternal(L::ExternalField::omegaBeginsAt)); //partnerLattice.getDynamics(iX, iY, iZ)->getOmega();
           // Computation of the common velocity, shared among the two populations
           T rhoTot = rhoField1.get(iX-offsetX, iY-offsetY, iZ-offsetZ)*blockOmega +
                      rhoField2.get(iX-offsetX, iY-offsetY, iZ-offsetZ)*partnerOmega;

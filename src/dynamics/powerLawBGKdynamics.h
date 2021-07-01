@@ -44,15 +44,15 @@ public:
   PowerLawBGKdynamics(T omega_, Momenta<T,Lattice>& momenta_, T m_=0.1, T n_=.5, T dt_=T(0.0016));
 
   /// Collision step
-  virtual void collide(Cell<T,Lattice>& cell,
-                       LatticeStatistics<T>& statistics_);
+  void collide(Cell<T,Lattice>& cell,
+                       LatticeStatistics<T>& statistics_) override;
   /// Collide with fixed velocity
-  virtual void staticCollide(Cell<T,Lattice>& cell,
+  void staticCollide(Cell<T,Lattice>& cell,
                              const T u[Lattice<T>::d],
-                             LatticeStatistics<T>& statistics_);
+                             LatticeStatistics<T>& statistics_) override;
 
   /// Set local relaxation parameter of the dynamics
-  virtual void setOmega(T omega_);
+  void setOmega(T omega_) override;
 
   /// Get local powerLaw relaxation parameter of the dynamics
   virtual T getPowerLawOmega(Cell<T,Lattice>& cell_);

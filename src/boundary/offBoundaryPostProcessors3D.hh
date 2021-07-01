@@ -147,8 +147,9 @@ template<typename T, template<typename U> class Lattice>
 void VelocityBouzidiLinearPostProcessor3D<T,Lattice>::
 process(BlockLattice3D<T,Lattice>& blockLattice)
 {
-  T u = ufrac*blockLattice.get(xN, yN, zN).getDynamics()->getVelocityCoefficient(iPop);
-  blockLattice.get(xN, yN, zN).getDynamics()->defineRho( blockLattice.get(xN, yN, zN), blockLattice.get(x, y, z).computeRho() );
+  Dynamics<T,Lattice>* dynamics = blockLattice.getDynamics(xN, yN, zN);
+  T u = ufrac*dynamics->getVelocityCoefficient(iPop);
+  dynamics->defineRho( blockLattice.get(xN, yN, zN), blockLattice.get(x, y, z).computeRho() );
   T j = u;// * blockLattice.get(x, y, z).computeRho();
   blockLattice.get(x, y, z)[opp] = q*blockLattice.get(xN, yN, zN)[iPop] +
                                    (1-q)*blockLattice.get(xB, yB, zB)[iPop2] + j;
@@ -229,8 +230,9 @@ template<typename T, template<typename U> class Lattice>
 void VelocityBounceBackPostProcessor3D<T,Lattice>::
 process(BlockLattice3D<T,Lattice>& blockLattice)
 {
-  T u = blockLattice.get(xN, yN, zN).getDynamics()->getVelocityCoefficient(iPop);
-  blockLattice.get(xN, yN, zN).getDynamics()->defineRho( blockLattice.get(xN, yN, zN), blockLattice.get(x, y, z).computeRho() );
+  Dynamics<T,Lattice>* dynamics = blockLattice.getDynamics(xN, yN, zN);
+  T u = dynamics->getVelocityCoefficient(iPop);
+  dynamics->defineRho( blockLattice.get(xN, yN, zN), blockLattice.get(x, y, z).computeRho() );
   T j = u;//*blockLattice.get(x, y, z).computeRho();
   blockLattice.get(x, y, z)[opp] = blockLattice.get(xN, yN, zN)[iPop] + j;
 }

@@ -27,14 +27,12 @@
 #ifndef SUPER_DATA_2D_HH
 #define SUPER_DATA_2D_HH
 
-
 #include "superData2D.h"
 #include "geometry/cuboid2D.h"
 #include "geometry/cuboidGeometry2D.h"
-#include "functors/superBaseF2D.h"
+#include "functors/lattice/superBaseF2D.h"
 
 namespace olb {
-
 
 
 template<typename T, typename BaseType>

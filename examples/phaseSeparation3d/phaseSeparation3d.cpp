@@ -124,12 +124,12 @@ void getResults( SuperLattice3D<T, DESCRIPTOR>& sLattice, int iT,
 
   // Writes the vtk files
   if ( iT%vtkIter==0 ) {
-    clout << "Writing VTK..." << std::endl;
+    clout << "Writing VTK and JPEG..." << std::endl;
     vtmWriter.write( iT );
 
-    BlockLatticeReduction3D<T, DESCRIPTOR> planeReduction( density, 0, 0, -1 );
-    BlockGifWriter<T> gifWriter;
-    gifWriter.write( planeReduction, iT, "density" );
+    BlockReduction3D2D<T> planeReduction( density, {0, 0, 1} );
+    // write output as JPEG
+    heatmap::write(planeReduction, iT);
   }
 
   // Writes output on the console
@@ -215,4 +215,3 @@ int main( int argc, char *argv[] ) {
   timer.stop();
   timer.printSummary();
 }
-

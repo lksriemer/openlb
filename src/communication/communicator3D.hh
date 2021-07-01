@@ -94,7 +94,7 @@ void Communicator3D<T>::init()
         temp.physR[0] = _nh[iC].get_inCell(i).physR[0];
         temp.physR[1] = _nh[iC].get_inCell(i).physR[1];
         temp.physR[2] = _nh[iC].get_inCell(i).physR[2];
-        _superStructure.getCuboidGeometry().getLatticeR(temp.latticeR,temp.physR);
+        _superStructure.getCuboidGeometry().getLatticeR(temp.latticeR, temp.physR);
         temp.latticeR[0]    = _superStructure.getLoadBalancer().glob(iC);
         _nh[_superStructure.getLoadBalancer().loc(ID)].add_outCell(temp);
       }

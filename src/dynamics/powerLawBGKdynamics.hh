@@ -70,9 +70,7 @@ void PowerLawBGKdynamics<T,Lattice>::collide (
   T uSqr = lbHelpers<T,Lattice>::bgkCollision(cell, rho, u, newOmega);
   // save new omega to dyn. omega descriptor
   cell.getExternal(Lattice<T>::ExternalField::omegaBeginsAt)[0] = newOmega; //compute with dynamic omega
-  if (cell.takesStatistics()) {
-    statistics.incrementStats(rho, uSqr);
-  }
+  statistics.incrementStats(rho, uSqr);
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -85,15 +83,13 @@ void PowerLawBGKdynamics<T,Lattice>::staticCollide (
   this->_momenta.computeAllMomenta(cell, rho, uTemp, pi);
   T newOmega = computeOmega(this->getOmega(), preFactor, rho, pi);
   T uSqr = lbHelpers<T,Lattice>::bgkCollision(cell, rho, u, newOmega);
-  if (cell.takesStatistics()) {
-    statistics.incrementStats(rho, uSqr);
-  }
+  statistics.incrementStats(rho, uSqr);
 }
 
 template<typename T, template<typename U> class Lattice>
 void PowerLawBGKdynamics<T,Lattice>::setOmega(T omega)
 {
-  this->setOmega(omega);
+  this->BGKdynamics<T,Lattice>::setOmega(omega);
   preFactor = computePreFactor(omega, smagoConst);
 }
 
@@ -179,9 +175,7 @@ void PowerLawForcedBGKdynamics<T,Lattice>::collide (
   lbHelpers<T,Lattice>::addExternalForce(cell, u, newOmega, rho);
   // save new omega to dyn. omega descriptor
   cell.getExternal(Lattice<T>::ExternalField::omegaBeginsAt)[0] = newOmega; //compute with dynamic omega
-  if (cell.takesStatistics()) {
-    statistics.incrementStats(rho, uSqr);
-  }
+  statistics.incrementStats(rho, uSqr);
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -195,9 +189,7 @@ void PowerLawForcedBGKdynamics<T,Lattice>::staticCollide (
   T newOmega = computeOmega(this->getOmega(), preFactor, rho, pi);
   T uSqr = lbHelpers<T,Lattice>::bgkCollision(cell, rho, u, newOmega);
   lbHelpers<T,Lattice>::addExternalForce(cell, u, newOmega, rho);
-  if (cell.takesStatistics()) {
-    statistics.incrementStats(rho, uSqr);
-  }
+  statistics.incrementStats(rho, uSqr);
 }
 
 template<typename T, template<typename U> class Lattice>

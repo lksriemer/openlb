@@ -89,9 +89,9 @@ public:
   void deConstruct();
   void reset();
   /// read and write access to data element [iX][iY][iSize]
-  virtual BaseType& get(int iX, int iY, int iSize=0);
+  BaseType& get(int iX, int iY, int iSize=0);
   /// read only access to data element [iX][iY][iSize]
-  virtual BaseType const& get(int iX, int iY, int iSize=0) const;
+  BaseType const& get(int iX, int iY, int iSize=0) const;
   /// \return dataElement _rawData[ind], read and write
   BaseType& operator[] (int ind);
   /// \return dataElement _rawData[ind], read only
@@ -104,21 +104,19 @@ public:
   BaseType getMin();
   /// \return _rawData array
   BaseType* getRawData() const;
-  /// \return _field
-  BaseType*** getField() const;
   /// \return length of array _rawData or equivalent nX*nY*size
   virtual size_t getDataSize() const;
   /// Read only access to the dim of the data of the super structure
   int getSize() const;
   /// Number of data blocks for the serializable interface
-  virtual std::size_t getNblock() const
+  std::size_t getNblock() const override
   {
     return 4;
   };
   /// Binary size for the serializer
-  virtual std::size_t getSerializableSize() const;
+  std::size_t getSerializableSize() const override;
   /// Returns a pointer to the memory of the current block and its size for the serializable interface
-  virtual bool* getBlock(std::size_t iBlock, std::size_t& sizeBlock, bool loadingMode);
+  bool* getBlock(std::size_t iBlock, std::size_t& sizeBlock, bool loadingMode) override;
 private:
   void allocateMemory(); // TODO
   void releaseMemory();

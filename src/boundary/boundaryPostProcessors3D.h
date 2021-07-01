@@ -42,17 +42,17 @@ template<typename T, template<typename U> class Lattice, int direction, int orie
 class PlaneFdBoundaryProcessor3D : public LocalPostProcessor3D<T,Lattice> {
 public:
   PlaneFdBoundaryProcessor3D (int x0_, int x1_, int y0_, int y1_, int z0_, int z1_);
-  virtual int extent() const
+  int extent() const override
   {
     return 1;
   }
-  virtual int extent(int whichDirection) const
+  int extent(int whichDirection) const override
   {
     return 1;
   }
-  virtual void process(BlockLattice3D<T,Lattice>& blockLattice);
-  virtual void processSubDomain(BlockLattice3D<T,Lattice>& blockLattice,
-                                int x0_, int x1_, int y0_, int y1_, int z0_, int z1_ );
+  void process(BlockLattice3D<T,Lattice>& blockLattice) override;
+  void processSubDomain(BlockLattice3D<T,Lattice>& blockLattice,
+                                int x0_, int x1_, int y0_, int y1_, int z0_, int z1_ ) override;
 private:
   template<int deriveDirection>
   void interpolateGradients (
@@ -66,8 +66,8 @@ template<typename T, template<typename U> class Lattice, int direction, int orie
 class PlaneFdBoundaryProcessorGenerator3D : public PostProcessorGenerator3D<T,Lattice> {
 public:
   PlaneFdBoundaryProcessorGenerator3D(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_);
-  virtual PostProcessor3D<T,Lattice>* generate() const;
-  virtual PostProcessorGenerator3D<T,Lattice>*  clone() const;
+  PostProcessor3D<T,Lattice>* generate() const override;
+  PostProcessorGenerator3D<T,Lattice>*  clone() const override;
 };
 
 
@@ -78,18 +78,18 @@ template<typename T, template<typename U> class Lattice, int direction, int orie
 class StraightConvectionBoundaryProcessor3D : public LocalPostProcessor3D<T,Lattice> {
 public:
   StraightConvectionBoundaryProcessor3D(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_, T* uAv_ = NULL);
-  ~StraightConvectionBoundaryProcessor3D();
-  virtual int extent() const
+  ~StraightConvectionBoundaryProcessor3D() override;
+  int extent() const override
   {
     return 1;
   }
-  virtual int extent(int whichDirection) const
+  int extent(int whichDirection) const override
   {
     return 1;
   }
-  virtual void process(BlockLattice3D<T,Lattice>& blockLattice);
-  virtual void processSubDomain ( BlockLattice3D<T,Lattice>& blockLattice,
-                                  int x0_, int x1_, int y0_, int y1_ , int z0_, int z1_);
+  void process(BlockLattice3D<T,Lattice>& blockLattice) override;
+  void processSubDomain ( BlockLattice3D<T,Lattice>& blockLattice,
+                                  int x0_, int x1_, int y0_, int y1_ , int z0_, int z1_) override;
 private:
   int x0, x1, y0, y1, z0, z1;
   T**** saveCell;
@@ -100,8 +100,8 @@ template<typename T, template<typename U> class Lattice, int direction, int orie
 class StraightConvectionBoundaryProcessorGenerator3D : public PostProcessorGenerator3D<T,Lattice> {
 public:
   StraightConvectionBoundaryProcessorGenerator3D(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_, T* uAv_ = NULL);
-  virtual PostProcessor3D<T,Lattice>* generate() const;
-  virtual PostProcessorGenerator3D<T,Lattice>*  clone() const;
+  PostProcessor3D<T,Lattice>* generate() const override;
+  PostProcessorGenerator3D<T,Lattice>*  clone() const override;
 private:
   T* uAv;
 };
@@ -119,18 +119,18 @@ public:
 public:
   OuterVelocityEdgeProcessor3D (
     int x0_, int x1_, int y0_, int y1_, int z0_, int z1_ );
-  virtual int extent() const
+  int extent() const override
   {
     return 2;
   }
-  virtual int extent(int whichDirection) const
+  int extent(int whichDirection) const override
   {
     return 2;
   }
-  virtual void process(BlockLattice3D<T,Lattice>& blockLattice);
-  virtual void processSubDomain(BlockLattice3D<T,Lattice>& blockLattice,
+  void process(BlockLattice3D<T,Lattice>& blockLattice) override;
+  void processSubDomain(BlockLattice3D<T,Lattice>& blockLattice,
                                 int x0_, int x1_, int y0_, int y1_,
-                                int z0_, int z1_ );
+                                int z0_, int z1_ ) override;
 private:
   T getNeighborRho(int x, int y, int z, int step1, int step2,
                    BlockLattice3D<T,Lattice> const& blockLattice);
@@ -149,8 +149,8 @@ class OuterVelocityEdgeProcessorGenerator3D
 public:
   OuterVelocityEdgeProcessorGenerator3D(int x0_, int x1_, int y0_, int y1_,
                                         int z0_, int z1_);
-  virtual PostProcessor3D<T,Lattice>* generate() const;
-  virtual PostProcessorGenerator3D<T,Lattice>*  clone() const;
+  PostProcessor3D<T,Lattice>* generate() const override;
+  PostProcessorGenerator3D<T,Lattice>*  clone() const override;
 };
 
 
@@ -159,18 +159,18 @@ template<typename T, template<typename U> class Lattice,
 class OuterVelocityCornerProcessor3D : public LocalPostProcessor3D<T,Lattice> {
 public:
   OuterVelocityCornerProcessor3D(int x_, int y_, int z_);
-  virtual int extent() const
+  int extent() const override
   {
     return 2;
   }
-  virtual int extent(int whichDirection) const
+  int extent(int whichDirection) const override
   {
     return 2;
   }
-  virtual void process(BlockLattice3D<T,Lattice>& blockLattice);
-  virtual void processSubDomain(BlockLattice3D<T,Lattice>& blockLattice,
+  void process(BlockLattice3D<T,Lattice>& blockLattice) override;
+  void processSubDomain(BlockLattice3D<T,Lattice>& blockLattice,
                                 int x0_, int x1_, int y0_, int y1_,
-                                int z0_, int z1_ );
+                                int z0_, int z1_ ) override;
 private:
   int x,y,z;
 };
@@ -181,8 +181,8 @@ class OuterVelocityCornerProcessorGenerator3D
   : public PostProcessorGenerator3D<T,Lattice> {
 public:
   OuterVelocityCornerProcessorGenerator3D(int x_, int y_, int z_);
-  virtual PostProcessor3D<T,Lattice>* generate() const;
-  virtual PostProcessorGenerator3D<T,Lattice>*  clone() const;
+  PostProcessor3D<T,Lattice>* generate() const override;
+  PostProcessorGenerator3D<T,Lattice>*  clone() const override;
 };
 
 /**
@@ -193,17 +193,17 @@ template<typename T, template<typename U> class Lattice>
 class SlipBoundaryProcessor3D : public LocalPostProcessor3D<T,Lattice> {
 public:
   SlipBoundaryProcessor3D(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_, int discreteNormalX_, int discreteNormalY_, int discreteNormalZ_);
-  virtual int extent() const
+  int extent() const override
   {
     return 0;
   }
-  virtual int extent(int whichDirection) const
+  int extent(int whichDirection) const override
   {
     return 0;
   }
-  virtual void process(BlockLattice3D<T,Lattice>& blockLattice);
-  virtual void processSubDomain ( BlockLattice3D<T,Lattice>& blockLattice,
-                                  int x0_, int x1_, int y0_, int y1_, int z0_, int z1_ );
+  void process(BlockLattice3D<T,Lattice>& blockLattice) override;
+  void processSubDomain ( BlockLattice3D<T,Lattice>& blockLattice,
+                                  int x0_, int x1_, int y0_, int y1_, int z0_, int z1_ ) override;
 private:
   int reflectionPop[Lattice<T>::q];
   int x0, x1, y0, y1, z0, z1;
@@ -214,8 +214,8 @@ template<typename T, template<typename U> class Lattice>
 class SlipBoundaryProcessorGenerator3D : public PostProcessorGenerator3D<T,Lattice> {
 public:
   SlipBoundaryProcessorGenerator3D(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_, int discreteNormalX_, int discreteNormalY_, int discreteNormalZ_);
-  virtual PostProcessor3D<T,Lattice>* generate() const;
-  virtual PostProcessorGenerator3D<T,Lattice>*  clone() const;
+  PostProcessor3D<T,Lattice>* generate() const override;
+  PostProcessorGenerator3D<T,Lattice>*  clone() const override;
 private:
   int discreteNormalX;
   int discreteNormalY;

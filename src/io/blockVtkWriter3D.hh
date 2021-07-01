@@ -81,6 +81,7 @@ void BlockVTKwriter3D<T>::write(int iT)
       }
     }
     closePreamble( fullNameVti );
+    clearAddedFunctors();
   }
 }
 
@@ -253,7 +254,7 @@ void BlockVTKwriter3D<T>::writeRawDataBinary(const std::string& fullNameVti,
   unsigned int uintBinarySize = (unsigned int)binarySize;
   sizeEncoder.encode(&uintBinarySize, 1);
   //  write numbers from functor
-  Base64Encoder<float>* dataEncoder = 0;
+  Base64Encoder<float>* dataEncoder = nullptr;
   dataEncoder = new Base64Encoder<float>( ofstr, fullSize );
 
   int i[3] = {int()};

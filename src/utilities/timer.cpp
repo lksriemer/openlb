@@ -23,13 +23,17 @@
 
 #include "timer.h"
 #include "timer.hh"
+#include "dynamics/latticeDescriptors.h"
 
 namespace olb {
 
 namespace util {
 
 template class Timer<double>;
-template Timer<double>* createTimer(XMLreader& param, const LBconverter<double>& converter, int numLatticePoints);
+template Timer<double>* createTimer(XMLreader& param, const UnitConverter<double,descriptors::D3Q19Descriptor>& converter, size_t numLatticePoints);
+template Timer<double>* createTimer(XMLreader& param, const UnitConverter<double,descriptors::D2Q9Descriptor>& converter, size_t numLatticePoints);
+
+
 
 }
 

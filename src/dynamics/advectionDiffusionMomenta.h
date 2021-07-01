@@ -28,7 +28,8 @@
 #ifndef ADVECTION_DIFFUSION_MOMENTA_H
 #define ADVECTION_DIFFUSION_MOMENTA_H
 
-#include "advectionDiffusionLatticeDescriptors.h"
+#include "latticeDescriptors.h"
+//#include "advectionDiffusionLatticeDescriptors.h"
 
 namespace olb {
 
@@ -36,43 +37,43 @@ namespace olb {
 template<typename T, template<typename U> class Lattice>
 struct AdvectionDiffusionBulkMomenta : public Momenta<T,Lattice> {
   /// Compute particle density on the cell.
-  virtual T computeRho(Cell<T,Lattice> const& cell) const;
+  T computeRho(Cell<T,Lattice> const& cell) const override;
   /// Compute fluid velocity on the cell.
-  virtual void computeU (
+  void computeU (
     Cell<T,Lattice> const& cell,
-    T u[Lattice<T>::d] ) const;
+    T u[Lattice<T>::d] ) const override;
   /// Compute fluid momentum on the cell.
-  virtual void computeJ (
+  void computeJ (
     Cell<T,Lattice> const& cell,
-    T j[Lattice<T>::d] ) const;
+    T j[Lattice<T>::d] ) const override;
   /// Compute components of the stress tensor on the cell.
-  virtual void computeStress (
+  void computeStress (
     Cell<T,Lattice> const& cell,
     T rho, const T u[Lattice<T>::d],
-    T pi[util::TensorVal<Lattice<T> >::n] ) const;
+    T pi[util::TensorVal<Lattice<T> >::n] ) const override;
   /// Compute fluid velocity and particle density on the cell.
-  virtual void computeRhoU (
+  void computeRhoU (
     Cell<T,Lattice> const& cell,
-    T& rho, T u[Lattice<T>::d]) const;
+    T& rho, T u[Lattice<T>::d]) const override;
   /// Compute all momenta on the cell, up to second order.
-  virtual void computeAllMomenta (
+  void computeAllMomenta (
     Cell<T,Lattice> const& cell,
     T& rho, T u[Lattice<T>::d],
-    T pi[util::TensorVal<Lattice<T> >::n] ) const;
+    T pi[util::TensorVal<Lattice<T> >::n] ) const override;
   /// Set particle density on the cell.
-  virtual void defineRho(Cell<T,Lattice>& cell, T rho);
+  void defineRho(Cell<T,Lattice>& cell, T rho) override;
   /// Set fluid velocity on the cell.
-  virtual void defineU(Cell<T,Lattice>& cell,
-                       const T u[Lattice<T>::d]);
+  void defineU(Cell<T,Lattice>& cell,
+                       const T u[Lattice<T>::d]) override;
   /// Define fluid velocity and particle density on the cell.
-  virtual void defineRhoU (
+  void defineRhoU (
     Cell<T,Lattice>& cell,
-    T rho, const T u[Lattice<T>::d]);
+    T rho, const T u[Lattice<T>::d]) override;
   /// Define all momenta on the cell, up to second order.
-  virtual void defineAllMomenta (
+  void defineAllMomenta (
     Cell<T,Lattice>& cell,
     T rho, const T u[Lattice<T>::d],
-    const T pi[util::TensorVal<Lattice<T> >::n] );
+    const T pi[util::TensorVal<Lattice<T> >::n] ) override;
 };
 
 namespace instances {

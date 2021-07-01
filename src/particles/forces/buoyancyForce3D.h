@@ -26,7 +26,7 @@
 
 #include "particles/particleSystem3D.h"
 #include "forces.h"
-#include "core/units.h"
+#include "core/unitConverter.h"
 //#include "../../functors/superLatticeLocalF3D.h"
 
 
@@ -35,22 +35,22 @@ namespace olb {
 template<typename T, template<typename U> class PARTICLETYPE>
 class ParticleSystem3D;
 
-template<typename T, template<typename U> class PARTICLETYPE>
+template<typename T, template<typename U> class PARTICLETYPE, template<typename W> class DESCRIPTOR>
 class BuoyancyForce3D: public Force3D<T, PARTICLETYPE> {
 
 public:
-  BuoyancyForce3D(LBconverter<T> const& converter, std::vector<T> direction,
+  BuoyancyForce3D(UnitConverter<T,DESCRIPTOR> const& converter, std::vector<T> direction,
                   T g = 9.81);
-  virtual ~BuoyancyForce3D() { };
+  ~BuoyancyForce3D() override { };
   void applyForce(typename std::deque<PARTICLETYPE<T> >::iterator p, int pInt,
-                  ParticleSystem3D<T, PARTICLETYPE>& psSys);
+                  ParticleSystem3D<T, PARTICLETYPE>& psSys) override;
 
 //  void computeForce(int pInt, ParticleSystem3D<T, PARTICLETYPE>* psSys,
 //                    T force[3]);
 private:
-  LBconverter<T> const& _converter;
   std::vector<T> _direction;
   T _g;
+  T _physDensity;
 };
 
 }

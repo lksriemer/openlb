@@ -69,8 +69,8 @@ const int M = 1;                 // time discretization refinement
 const int inflowProfileMode = 0; // block profile (mode=0), power profile (mode=1)
 const T maxPhysT = 200.;         // max. simulation time in s, SI unit
 
-template <typename T, typename S>
-class TurbulentVelocity3D : public AnalyticalF3D<T,S> {
+template <typename T, template <typename U> class DESCRIPTOR>
+class TurbulentVelocity3D : public AnalyticalF3D<T,T> {
 
 protected:
   // block profile (mode=0), power profile (mode=1)
@@ -83,19 +83,19 @@ protected:
   T dx;
 
 public:
-  TurbulentVelocity3D( LBconverter<S> const& converter, int mode=0 ) : AnalyticalF3D<T,S>( 3 ) {
+  TurbulentVelocity3D( UnitConverter<T,DESCRIPTOR> const& converter, int mode=0 ) : AnalyticalF3D<T,T>( 3 ) {
     _mode = mode;
-    u0 = converter.getLatticeU();
-    rho = converter.getCharRho();
-    nu = converter.getCharNu();
-    charL = converter.getCharL();
-    p0 = converter.getCharPressure();
-    dx = converter.getLatticeL();
+    u0 = converter.getCharLatticeVelocity();
+    rho = converter.getPhysDensity();
+    nu = converter.getPhysViscosity();
+    charL = converter.getCharPhysLength();
+    p0 = converter.getCharPhysPressure();
+    dx = converter.getConversionFactorLength();
 
     this->getName() = "turbulentVelocity3d";
   };
 
-  bool operator()( T output[], const S input[] ) {
+  bool operator()( T output[], const S input[] ) override {
     T y = input[1];
     T z = input[2];
     // block profile inititalization
@@ -126,7 +126,7 @@ public:
 };
 
 
-void prepareGeometry( LBconverter<T> const& converter, IndicatorF3D<T>& indicator, SuperGeometry3D<T>& superGeometry ) {
+void prepareGeometry( UnitConverter<T,DESCRIPTOR> const& converter, IndicatorF3D<T>& indicator, SuperGeometry3D<T>& superGeometry ) {
 
   OstreamManager clout( std::cout,"prepareGeometry" );
   clout << "Prepare Geometry ..." << std::endl;
@@ -135,49 +135,49 @@ void prepareGeometry( LBconverter<T> const& converter, IndicatorF3D<T>& indicato
   superGeometry.rename( 0,2,indicator );
 
   Vector<T,3> origin( T(),
-                      5.5*converter.getCharL()+converter.getLatticeL(),
-                      5.5*converter.getCharL()+converter.getLatticeL() );
+                      5.5*converter.getCharPhysLength()+converter.getConversionFactorLength(),
+                      5.5*converter.getCharPhysLength()+converter.getConversionFactorLength() );
 
-  Vector<T,3> extend( 4.*converter.getCharL()+5*converter.getLatticeL(),
-                      5.5*converter.getCharL()+converter.getLatticeL(),
-                      5.5*converter.getCharL()+converter.getLatticeL() );
+  Vector<T,3> extend( 4.*converter.getCharPhysLength()+5*converter.getConversionFactorLength(),
+                      5.5*converter.getCharPhysLength()+converter.getConversionFactorLength(),
+                      5.5*converter.getCharPhysLength()+converter.getConversionFactorLength() );
 
-  IndicatorCylinder3D<T> inletCylinder( extend, origin, converter.getCharL() );
+  IndicatorCylinder3D<T> inletCylinder( extend, origin, converter.getCharPhysLength() );
   superGeometry.rename( 2,1,inletCylinder );
 
 
-  origin[0]=4.*converter.getCharL();
-  origin[1]=5.5*converter.getCharL()+converter.getLatticeL();
-  origin[2]=5.5*converter.getCharL()+converter.getLatticeL();
+  origin[0]=4.*converter.getCharPhysLength();
+  origin[1]=5.5*converter.getCharPhysLength()+converter.getConversionFactorLength();
+  origin[2]=5.5*converter.getCharPhysLength()+converter.getConversionFactorLength();
 
-  extend[0]=54.*converter.getCharL();
-  extend[1]=5.5*converter.getCharL()+converter.getLatticeL();
-  extend[2]=5.5*converter.getCharL()+converter.getLatticeL();
+  extend[0]=54.*converter.getCharPhysLength();
+  extend[1]=5.5*converter.getCharPhysLength()+converter.getConversionFactorLength();
+  extend[2]=5.5*converter.getCharPhysLength()+converter.getConversionFactorLength();
 
-  IndicatorCylinder3D<T> injectionTube( extend, origin, 5.5*converter.getCharL() );
+  IndicatorCylinder3D<T> injectionTube( extend, origin, 5.5*converter.getCharPhysLength() );
   superGeometry.rename( 2,1,injectionTube );
 
-  origin[0]=converter.getLatticeL();
-  origin[1]=5.5*converter.getCharL()+converter.getLatticeL();
-  origin[2]=5.5*converter.getCharL()+converter.getLatticeL();
+  origin[0]=converter.getConversionFactorLength();
+  origin[1]=5.5*converter.getCharPhysLength()+converter.getConversionFactorLength();
+  origin[2]=5.5*converter.getCharPhysLength()+converter.getConversionFactorLength();
 
   extend[0]=T();
-  extend[1]=5.5*converter.getCharL()+converter.getLatticeL();
-  extend[2]=5.5*converter.getCharL()+converter.getLatticeL();
+  extend[1]=5.5*converter.getCharPhysLength()+converter.getConversionFactorLength();
+  extend[2]=5.5*converter.getCharPhysLength()+converter.getConversionFactorLength();
 
-  IndicatorCylinder3D<T> cylinderIN( extend, origin, converter.getCharL() );
+  IndicatorCylinder3D<T> cylinderIN( extend, origin, converter.getCharPhysLength() );
   superGeometry.rename( 1,3,cylinderIN );
 
 
-  origin[0]=54.*converter.getCharL()-converter.getLatticeL();
-  origin[1]=5.5*converter.getCharL()+converter.getLatticeL();
-  origin[2]=5.5*converter.getCharL()+converter.getLatticeL();
+  origin[0]=54.*converter.getCharPhysLength()-converter.getConversionFactorLength();
+  origin[1]=5.5*converter.getCharPhysLength()+converter.getConversionFactorLength();
+  origin[2]=5.5*converter.getCharPhysLength()+converter.getConversionFactorLength();
 
-  extend[0]=54.*converter.getCharL();
-  extend[1]=5.5*converter.getCharL()+converter.getLatticeL();
-  extend[2]=5.5*converter.getCharL()+converter.getLatticeL();
+  extend[0]=54.*converter.getCharPhysLength();
+  extend[1]=5.5*converter.getCharPhysLength()+converter.getConversionFactorLength();
+  extend[2]=5.5*converter.getCharPhysLength()+converter.getConversionFactorLength();
 
-  IndicatorCylinder3D<T> cylinderOUT( extend, origin, 5.5*converter.getCharL() );
+  IndicatorCylinder3D<T> cylinderOUT( extend, origin, 5.5*converter.getCharPhysLength() );
   superGeometry.rename( 1,4,cylinderOUT );
 
   // Removes all not needed boundary voxels outside the surface
@@ -192,7 +192,7 @@ void prepareGeometry( LBconverter<T> const& converter, IndicatorF3D<T>& indicato
 }
 
 void prepareLattice( SuperLattice3D<T,DESCRIPTOR>& sLattice,
-                     LBconverter<T> const& converter,
+                     UnitConverter<T,DESCRIPTOR> const& converter,
                      Dynamics<T, DESCRIPTOR>& bulkDynamics,
                      sOnLatticeBoundaryCondition3D<T,DESCRIPTOR>& bc,
                      sOffLatticeBoundaryCondition3D<T,DESCRIPTOR>& offBc,
@@ -203,7 +203,7 @@ void prepareLattice( SuperLattice3D<T,DESCRIPTOR>& sLattice,
   OstreamManager clout( std::cout,"prepareLattice" );
   clout << "Prepare Lattice ..." << std::endl;
 
-  const T omega = converter.getOmega();
+  const T omega = converter.getLatticeRelaxationFrequency();
 
   // Material=0 -->do nothing
   sLattice.defineDynamics( superGeometry, 0, &instances::getNoDynamics<T, DESCRIPTOR>() );
@@ -225,7 +225,7 @@ void prepareLattice( SuperLattice3D<T,DESCRIPTOR>& sLattice,
   clout << "Prepare Lattice ... OK" << std::endl;
 }
 
-void setBoundaryValues( LBconverter<T> const&converter,
+void setBoundaryValues( UnitConverter<T,DESCRIPTOR> const&converter,
                         SuperLattice3D<T,DESCRIPTOR>& lattice, SuperGeometry3D<T>& superGeometry, int iT ) {
 
   OstreamManager clout( std::cout,"setBoundaryValues" );
@@ -236,8 +236,8 @@ void setBoundaryValues( LBconverter<T> const&converter,
     AnalyticalConst3D<T,T> uF( velocity );
 
     // Seeding of random fluctuations and definition of the velocity field
-    srand( time( NULL ) );
-    TurbulentVelocity3D <T,T> uSol( converter, inflowProfileMode );
+    srand( time( nullptr ) );
+    TurbulentVelocity3D<T,DESCRIPTOR> uSol( converter, inflowProfileMode );
 
     lattice.iniEquilibrium( superGeometry, 1, rhoF, uF );
     lattice.iniEquilibrium( superGeometry, 2, rhoF, uF );
@@ -253,7 +253,7 @@ void setBoundaryValues( LBconverter<T> const&converter,
 }
 
 void getResults( SuperLattice3D<T, DESCRIPTOR>& sLattice,
-                 LBconverter<T>& converter, int iT,
+                 UnitConverter<T,DESCRIPTOR> const& converter, int iT,
                  SuperGeometry3D<T>& superGeometry, Timer<T>& timer ) {
 
   OstreamManager clout( std::cout,"getResults" );
@@ -271,7 +271,7 @@ void getResults( SuperLattice3D<T, DESCRIPTOR>& sLattice,
   }
 
   // Writes the vtk files
-  if ( iT%converter.numTimeSteps( maxPhysT/100. )==0 ) {
+  if ( iT%converter.getLatticeTime( maxPhysT/100. )==0 ) {
     // Create the data-reading functors...
     SuperLatticePhysVelocity3D<T, DESCRIPTOR> velocity( sLattice, converter );
     SuperLatticePhysPressure3D<T, DESCRIPTOR> pressure( sLattice, converter );
@@ -280,17 +280,16 @@ void getResults( SuperLattice3D<T, DESCRIPTOR>& sLattice,
     vtmWriter.write( iT );
 
     SuperEuklidNorm3D<T, DESCRIPTOR> normVel( velocity );
-    BlockLatticeReduction3D<T, DESCRIPTOR> planeReduction( normVel, 0, 1, 0 );
-    BlockGifWriter<T> gifWriter;
-    //gifWriter.write(planeReduction, 0, 5., iT, "vel"); //static scale
-    gifWriter.write( planeReduction, iT, "vel" ); // scaled
+    BlockReduction3D2D<T> planeReduction( normVel, {0, 1, 0} );
+    // write output as JPEG
+    heatmap::write(planeReduction, iT);
   }
 
   // Writes output on the console
-  if ( iT%converter.numTimeSteps( maxPhysT/200. )==0 ) {
+  if ( iT%converter.getLatticeTime( maxPhysT/200. )==0 ) {
     timer.update( iT );
     timer.printStep();
-    sLattice.getStatistics().print( iT, converter.physTime( iT ) );
+    sLattice.getStatistics().print( iT, converter.getPhysTime( iT ) );
   }
 }
 
@@ -306,23 +305,25 @@ int main( int argc, char* argv[] ) {
   // display messages from every single mpi process
   // clout.setMultiOutput(true);
 
-  LBconverter<T> converter(
-    ( int ) 3,                             // dim
-    ( T )   1./N,                          // latticeL
-    ( T )   0.01/M,                        // latticeU
-    ( T )   1./5000.,                      // charNu
-    ( T )   1,                             // charL = 1
-    ( T )   1.                             // charU = 1
+  UnitConverterFromResolutionAndRelaxationTime<T, DESCRIPTOR> const converter(
+    int {N},        // resolution: number of voxels per charPhysL
+    (T)   0.500018, // latticeRelaxationTime: relaxation time, have to be greater than 0.5!
+    (T)   1,        // charPhysLength: reference length of simulation geometry
+    (T)   1,        // charPhysVelocity: maximal/highest expected velocity during simulation in __m / s__
+    (T)   0.0002,   // physViscosity: physical kinematic viscosity in __m^2 / s__
+    (T)   1.0       // physDensity: physical density in __kg / m^3__
   );
+  // Prints the converter log as console output
   converter.print();
-  writeLogFile( converter, "nozzle3d" );
+  // Writes the converter log in a file
+  converter.write("nozzle3d");
 
   Vector<T,3> origin;
-  Vector<T,3> extend( 54.*converter.getCharL(), 11.*converter.getCharL()+2.*converter.getLatticeL(), 11.*converter.getCharL()+2.*converter.getLatticeL() );
+  Vector<T,3> extend( 54.*converter.getCharPhysLength(), 11.*converter.getCharPhysLength()+2.*converter.getConversionFactorLength(), 11.*converter.getCharPhysLength()+2.*converter.getConversionFactorLength() );
 
   IndicatorCuboid3D<T> cuboid( extend,origin );
 
-  CuboidGeometry3D<T> cuboidGeometry( cuboid, converter.getLatticeL(), singleton::mpi().getSize() );
+  CuboidGeometry3D<T> cuboidGeometry( cuboid, converter.getConversionFactorLength(), singleton::mpi().getSize() );
   HeuristicLoadBalancer<T> loadBalancer( cuboidGeometry );
 
   // === 2nd Step: Prepare Geometry ===
@@ -335,20 +336,20 @@ int main( int argc, char* argv[] ) {
   SuperLattice3D<T, DESCRIPTOR> sLattice( superGeometry );
 
   Dynamics<T, DESCRIPTOR>* bulkDynamics;
-
+  const T omega = converter.getLatticeRelaxationFrequency();
 #if defined(RLB)
-  bulkDynamics = new RLBdynamics<T, DESCRIPTOR>( converter.getOmega(), instances::getBulkMomenta<T, DESCRIPTOR>() );
+  bulkDynamics = new RLBdynamics<T, DESCRIPTOR>( omega, instances::getBulkMomenta<T, DESCRIPTOR>() );
 #elif defined(Smagorinsky)
-  bulkDynamics = new SmagorinskyBGKdynamics<T, DESCRIPTOR>( converter.getOmega(), instances::getBulkMomenta<T, DESCRIPTOR>(),
+  bulkDynamics = new SmagorinskyBGKdynamics<T, DESCRIPTOR>( omega, instances::getBulkMomenta<T, DESCRIPTOR>(),
       0.15);
 #elif defined(ShearSmagorinsky)
-  bulkDynamics = new ShearSmagorinskyBGKdynamics<T, DESCRIPTOR>( converter.getOmega(), instances::getBulkMomenta<T, DESCRIPTOR>(),
+  bulkDynamics = new ShearSmagorinskyBGKdynamics<T, DESCRIPTOR>( omega, instances::getBulkMomenta<T, DESCRIPTOR>(),
       0.15);
 #elif defined(Krause)
-  bulkDynamics = new KrauseBGKdynamics<T, DESCRIPTOR>( converter.getOmega(), instances::getBulkMomenta<T, DESCRIPTOR>(),
+  bulkDynamics = new KrauseBGKdynamics<T, DESCRIPTOR>( omega, instances::getBulkMomenta<T, DESCRIPTOR>(),
       0.15);
 #else //ConsitentStrainSmagorinsky
-  bulkDynamics = new ConStrainSmagorinskyBGKdynamics<T, DESCRIPTOR>( converter.getOmega(), instances::getBulkMomenta<T, DESCRIPTOR>(),
+  bulkDynamics = new ConStrainSmagorinskyBGKdynamics<T, DESCRIPTOR>( omega, instances::getBulkMomenta<T, DESCRIPTOR>(),
       0.05);
 #endif
 
@@ -362,10 +363,10 @@ int main( int argc, char* argv[] ) {
 
   // === 4th Step: Main Loop with Timer ===
 
-  Timer<T> timer( converter.numTimeSteps( maxPhysT ), superGeometry.getStatistics().getNvoxel() );
+  Timer<T> timer( converter.getLatticeTime( maxPhysT ), superGeometry.getStatistics().getNvoxel() );
   timer.start();
 
-  for ( int iT = 0; iT <= converter.numTimeSteps( maxPhysT ); ++iT ) {
+  for ( int iT = 0; iT <= converter.getLatticeTime( maxPhysT ); ++iT ) {
     // === 5ath Step: Apply filter
 #ifdef ADM
     SuperLatticeADM3D<T, DESCRIPTOR> admF( sLattice, 0.01, 2 );
@@ -384,6 +385,3 @@ int main( int argc, char* argv[] ) {
   timer.printSummary();
   delete bulkDynamics;
 }
-
-
-

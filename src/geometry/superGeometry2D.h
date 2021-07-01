@@ -53,7 +53,7 @@
 #include "geometry/blockGeometryView2D.h"
 #include "communication/superStructure2D.h"
 #include "communication/loadBalancer.h"
-#include "functors/indicator/indicatorF2D.h"
+#include "functors/lattice/indicator/indicatorF2D.h"
 #include "io/ostreamManager.h"
 
 
@@ -64,6 +64,7 @@ template<typename T> class CuboidGeometry2D;
 template<typename T> class BlockGeometry2D;
 template<typename T> class BlockGeometryView2D;
 template<typename T> class IndicatorF2D;
+template<typename T> class SuperIndicatorF2D;
 template<typename T> class SuperStructure2D;
 template<typename T> class SuperGeometryStatistics2D;
 
@@ -90,11 +91,11 @@ public:
   SuperGeometry2D& operator=(SuperGeometry2D const& rhs);
 
   /// Interface for the communicator class: Write access to the memory of the data of the super structure
-  bool* operator() (int iCloc, int iX, int iY, int iData);
+  bool* operator() (int iCloc, int iX, int iY, int iData) override;
   /// Interface for the communicator class: Read only access to the dim of the data of the super structure
-  int getDataSize() const;
+  int getDataSize() const override;
   /// Interface for the communicator class: Read only access to the data type dim of the data of the super structure
-  int getDataTypeSize() const;
+  int getDataTypeSize() const override;
 
   /// Write access to the material numbers, error handling: stops the program if data is not available
   int& set(int iCglob, int iXloc, int iYloc); //TODO to be removed set->get, problem: with get calling wrong function
@@ -118,13 +119,13 @@ public:
   void getPhysR(T output[2], const int iCglob, const int iX, const int iY) const;
 
   /// Read and write access to a single extended block geometry
-  BlockGeometryStructure2D<T>& getExtendedBlockGeometry(int locIC);
+  BlockGeometry2D<T>& getExtendedBlockGeometry(int locIC);
   /// Read only access to a single extended block geometry
-  BlockGeometryStructure2D<T> const& getExtendedBlockGeometry(int locIC) const;
+  BlockGeometry2D<T> const& getExtendedBlockGeometry(int locIC) const;
   /// Read and write access to a single block geometry
-  BlockGeometryStructure2D<T>& getBlockGeometry(int locIC);
+  BlockGeometryView2D<T>& getBlockGeometry(int locIC);
   /// Read only access to a single block geometry
-  BlockGeometryStructure2D<T> const& getBlockGeometry(int locIC) const;
+  BlockGeometryView2D<T> const& getBlockGeometry(int locIC) const;
 
   /// Returns the statistics object
   SuperGeometryStatistics2D<T>& getStatistics();
@@ -159,6 +160,34 @@ public:
 
   /// Prints some information about the super geometry
   void print();
+
+  template<template<typename> class Indicator, typename... Args>
+  std::unique_ptr<SuperIndicatorF2D<T>> getIndicator(Args&&... args)
+  {
+    static_assert(std::is_base_of<SuperIndicatorF2D<T>, Indicator<T>>::value,
+                  "Indicator to be constructed is SuperIndicatorF2D implementation");
+
+    return std::unique_ptr<SuperIndicatorF2D<T>>(
+             new Indicator<T>(*this, std::forward<Args>(args)...)
+           );
+  }
+
+  /**
+   * Returns a material indicator using the given vector of materials
+   *
+   * \param  materials Materials to be indicated
+   * \returns          Unique ownership of the constructed indicator.
+   *                   May be stored or passed directly to e.g. defineDynamics
+   **/
+  std::unique_ptr<SuperIndicatorF2D<T>> getMaterialIndicator(std::vector<int>&& materials);
+  /**
+   * Returns a material indicator using a single material number
+   *
+   * \param material Material to be indicated
+   * \returns        Unique ownership of the constructed indicator.
+   *                 May be stored or passed directly to e.g. defineDynamics
+   **/
+  std::unique_ptr<SuperIndicatorF2D<T>> getMaterialIndicator(int material);
 };
 
 } // namespace olb

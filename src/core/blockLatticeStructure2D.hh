@@ -228,33 +228,43 @@ template<typename T, template<typename U> class Lattice>
 void BlockLatticeStructure2D<T,Lattice>::setExternalParticleField(BlockGeometryStructure2D<T>& blockGeometry, AnalyticalF2D<T,T>& velocity, ParticleIndicatorF2D<T,T>& sIndicator)
 {
 
-  int start[2] = {0}, span[2] = {0};
-  for (int k=0; k<2; k++) {
-    start[k] = (sIndicator.getPos()[k]+sIndicator.getMin()[k] - blockGeometry.getOrigin()[k]) / blockGeometry.getDeltaR();
-    if (start[k] < 0) {
-      start[k] = 0;
-    }
-    span[k] = (sIndicator.getMax()[k] - sIndicator.getMin()[k])/blockGeometry.getDeltaR() + 3;
-    if (span[k] + start[k] > blockGeometry.getExtend()[k]) {
-      span[k] = blockGeometry.getExtend()[k] - start[k];
-    }
-  }
+  // check for intersection of cuboid and indicator
+  if (blockGeometry.getOrigin()[0] <= sIndicator.getCircumRadius() + sIndicator.getPos()[0]
+      && blockGeometry.getOrigin()[1] <= sIndicator.getCircumRadius() + sIndicator.getPos()[1]
+      && sIndicator.getPos()[0] - sIndicator.getCircumRadius() <= blockGeometry.getOrigin()[0] + blockGeometry.getExtend()[0] * blockGeometry.getDeltaR()
+      && sIndicator.getPos()[1] - sIndicator.getCircumRadius() <= blockGeometry.getOrigin()[1] + blockGeometry.getExtend()[1] * blockGeometry.getDeltaR()) {
 
-  T foo[3] = {T(), T(), T()}; /// Contains foo[0]=vel0; foo[1]=vel1; foo[2]=porosity
-  T physR[2]= {T(),T()};
-  T porosity[1] = {T()};
-  for (int iX = start[0]; iX < start[0]+span[0]; iX++) {
-    for (int iY = start[1]; iY < start[1]+span[1]; iY++) {
-      blockGeometry.getPhysR(physR, iX,iY);
-      sIndicator(porosity, physR);
-      if (porosity[0]>0.) {
-        velocity(foo,physR);
-        foo[0] *= porosity[0];
-        foo[1] *= porosity[0];
-        foo[2] = porosity[0];
-        get(iX,iY).addExternalField(1,3, foo);
-        porosity[0] = 1.-porosity[0];
-        get(iX,iY).multiplyExternalField(0,1, porosity);
+    int start[2] = {0}, span[2] = {0};
+    T invDeltaR = 1./blockGeometry.getDeltaR();
+    for (int k=0; k<2; k++) {
+      start[k] = int( (sIndicator.getPos()[k]-sIndicator.getCircumRadius() - blockGeometry.getOrigin()[k]) * invDeltaR );
+      if (start[k] < 0) {
+        start[k] = 0;
+      }
+      span[k] = int( (2.*sIndicator.getCircumRadius())*invDeltaR + 3 );
+      if (span[k] + start[k] > blockGeometry.getExtend()[k]) {
+        span[k] = blockGeometry.getExtend()[k] - start[k];
+      } else if ( (sIndicator.getPos()[k] - sIndicator.getCircumRadius() - blockGeometry.getOrigin()[k]) < 0. ) {
+        span[k] = (sIndicator.getPos()[k] + sIndicator.getCircumRadius() - blockGeometry.getOrigin()[k]) * invDeltaR + 3;
+      }
+    }
+
+    T foo[3] = {T(), T(), T()}; /// Contains foo[0]=vel0; foo[1]=vel1; foo[2]=porosity
+    T physR[2]= {T(),T()};
+    T porosity[1] = {T()};
+    for (int iX = start[0]; iX < start[0]+span[0]; iX++) {
+      for (int iY = start[1]; iY < start[1]+span[1]; iY++) {
+        blockGeometry.getPhysR(physR, iX,iY);
+        sIndicator(porosity, physR);
+        if (!util::nearZero(porosity[0])) {
+          velocity(foo,physR);
+          foo[0] *= porosity[0];
+          foo[1] *= porosity[0];
+          foo[2] = porosity[0];
+          get(iX,iY).addExternalField(1,3, foo);
+          porosity[0] = 1.-porosity[0];
+          get(iX,iY).multiplyExternalField(0,1, porosity);
+        }
       }
     }
   }

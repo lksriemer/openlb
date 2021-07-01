@@ -56,7 +56,9 @@ void MaterialBoundary3D<T, PARTICLETYPE>::applyBoundary(
   int latticeR[3] = { 0 };
   _sg.getCuboidGeometry().get(p->getCuboid()).getFloorLatticeR(latticeR, &p->getPos()[0]);
   // Read only access to the material numbers of nodes around particle position
-  const BlockGeometryStructure3D<T>& bg = _sg.getExtendedBlockGeometry(_sg.getLoadBalancer().loc(p->getCuboid()));
+  const BlockGeometryStructure3D<T>& bg = _sg.getExtendedBlockGeometry(
+      _sg.getLoadBalancer().loc(p->getCuboid()));
+  // + overlap is because of lower boundaries, latticeR has to be shifted up
   int iX = latticeR[0]+_sg.getOverlap();
   int iY = latticeR[1]+_sg.getOverlap();
   int iZ = latticeR[2]+_sg.getOverlap();

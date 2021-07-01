@@ -40,56 +40,11 @@
 #include "communication/loadBalancer.h"
 #include "superLattice2D.h"
 #include "io/base64.h"
-#include "functors/superBaseF2D.h"
+#include "functors/lattice/superBaseF2D.h"
+#include "functors/lattice/indicator/superIndicatorBaseF2D.h"
 #include "io/serializerIO.h"
 
 namespace olb {
-
-
-template<typename T, template<typename U> class Lattice>
-SuperLattice2D<T, Lattice>::SuperLattice2D(CuboidGeometry2D<T>& cGeometry,
-    LoadBalancer<T>& lb, int overlapBC, int overlapRefinement)
-  : SuperStructure2D<T>(cGeometry, lb), _overlapRefinement(overlapRefinement),
-    _commStream(*this) ,_commBC(*this)
-{
-  if (overlapBC >= 1) {
-    _commBC_on = true;
-    this->_overlap = overlapBC;
-  } else {
-    _commBC_on = false;
-    this->_overlap = 1;
-  }
-
-  _commStream.init_nh();
-  _commStream.add_cells(1);
-  _commStream.init();
-
-  this->_communicator.init_nh();
-  this->_communicator.add_cells(this->_overlap);
-  this->_communicator.init();
-
-  _extendedBlockLattices.reserve(this->_loadBalancer.size());
-  for (int iC = 0; iC < this->_loadBalancer.size(); ++iC) {
-    int nX = this->_cuboidGeometry.get(this->_loadBalancer.glob(iC)).getNx() + 2 * this->_overlap;
-    int nY = this->_cuboidGeometry.get(this->_loadBalancer.glob(iC)).getNy() + 2 * this->_overlap;
-
-    _extendedBlockLattices.emplace_back(nX, nY);
-  }
-  for (int iC = 0; iC < this->_loadBalancer.size(); ++iC) {
-    BlockLatticeView2D<T, Lattice> lattice(_extendedBlockLattices[iC], this->_overlap,
-                                           _extendedBlockLattices[iC].getNx() - this->_overlap - 1, this->_overlap,
-                                           _extendedBlockLattices[iC].getNy() - this->_overlap - 1);
-    _blockLattices.push_back(lattice);
-  }
-  _statistics = new LatticeStatistics<T> ;
-  _statistics_on = true;
-
-  if (_commBC_on) {
-    _commBC.init_nh();
-  }
-
-  this->_communicationNeeded=true;
-}
 
 template<typename T, template<typename U> class Lattice>
 SuperLattice2D<T, Lattice>::SuperLattice2D(SuperGeometry2D<T>& superGeometry,
@@ -101,7 +56,8 @@ SuperLattice2D<T, Lattice>::SuperLattice2D(SuperGeometry2D<T>& superGeometry,
   if (overlapBC >= 1) {
     _commBC_on = true;
     this->_overlap = overlapBC;
-  } else {
+  }
+  else {
     _commBC_on = false;
     this->_overlap = 1;
   }
@@ -197,7 +153,7 @@ bool SuperLattice2D<T,Lattice>::get(T iX, T iY, Cell<T,Lattice>& cell) const
 }
 
 template<typename T, template<typename U> class Lattice>
-Cell<T,Lattice> SuperLattice2D<T,Lattice>::get(int iC, T locX, T locY) const
+Cell<T,Lattice> SuperLattice2D<T,Lattice>::get(int iC, int locX, int locY) const
 {
   Cell<T,Lattice> cell;
 #ifdef PARALLEL_MODE_MPI
@@ -220,7 +176,6 @@ Cell<T,Lattice> SuperLattice2D<T,Lattice>::get(int iC, T locX, T locY) const
 template<typename T, template<typename U> class Lattice>
 void SuperLattice2D<T,Lattice>::initialize()
 {
-
   if (_commBC_on) {
     _commBC.init();
   }
@@ -235,16 +190,34 @@ template<typename T, template<typename U> class Lattice>
 void SuperLattice2D<T, Lattice>::defineDynamics(SuperGeometry2D<T>& superGeometry,
     int material, Dynamics<T, Lattice>* dynamics)
 {
-
   for (int iC = 0; iC < this->_loadBalancer.size(); ++iC) {
     _extendedBlockLattices[iC].defineDynamics(superGeometry.getExtendedBlockGeometry(iC), material, dynamics);
   }
 }
 
 template<typename T, template<typename U> class Lattice>
+void SuperLattice2D<T, Lattice>::defineDynamics(
+  SuperIndicatorF2D<T>& indicator, Dynamics<T, Lattice>* dynamics)
+{
+  for (int iC = 0; iC < this->_loadBalancer.size(); ++iC) {
+    _extendedBlockLattices[iC].defineDynamics(
+      indicator.getBlockIndicatorF(iC),
+      this->getOverlap(),
+      dynamics
+    );
+  }
+}
+
+template<typename T, template<typename U> class Lattice>
+void SuperLattice2D<T,Lattice>::defineDynamics(
+  std::unique_ptr<SuperIndicatorF2D<T>> const& indicator, Dynamics<T, Lattice>* dynamics)
+{
+  this->defineDynamics(*indicator, dynamics);
+}
+
+template<typename T, template<typename U> class Lattice>
 void SuperLattice2D<T,Lattice>::defineRhoU(T x0, T x1, T y0, T y1, T rho, const T u[Lattice<T>::d] )
 {
-
   int locX0, locX1, locY0, locY1;
   for (int iC=0; iC<this->_loadBalancer.size(); ++iC) {
     if (this->_cuboidGeometry.get(this->_loadBalancer.glob(iC)).checkInters(x0, x1, y0, y1, locX0, locX1, locY0, locY1, this->_overlap)) {

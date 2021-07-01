@@ -41,17 +41,17 @@ template<typename T, template<typename U> class Lattice, int direction, int orie
 class ExtendedFdPlaneBoundaryPostProcessor3D : public LocalPostProcessor3D<T,Lattice> {
 public:
   ExtendedFdPlaneBoundaryPostProcessor3D (int x0_, int x1_, int y0_, int y1_, int z0_, int z1_);
-  virtual int extent() const
+  int extent() const override
   {
     return 1;
   }
-  virtual int extent(int whichDirection) const
+  int extent(int whichDirection) const override
   {
     return 1;
   }
-  virtual void process(BlockLattice3D<T,Lattice>& blockLattice);
-  virtual void processSubDomain(BlockLattice3D<T,Lattice>& blockLattice,
-                                int x0_, int x1_, int y0_, int y1_, int z0_, int z1_);
+  void process(BlockLattice3D<T,Lattice>& blockLattice) override;
+  void processSubDomain(BlockLattice3D<T,Lattice>& blockLattice,
+                                int x0_, int x1_, int y0_, int y1_, int z0_, int z1_) override;
 private:
   template<int deriveDirection>
   void interpolateGradients( BlockLattice3D<T,Lattice> const& blockLattice,
@@ -69,23 +69,15 @@ class ExtendedFdPlaneBoundaryProcessorGenerator3D
   : public PostProcessorGenerator3D<T,Lattice> {
 public:
   ExtendedFdPlaneBoundaryProcessorGenerator3D(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_);
-  virtual PostProcessor3D<T,Lattice>* generate() const;
-  virtual PostProcessorGenerator3D<T,Lattice>*  clone() const;
+  PostProcessor3D<T,Lattice>* generate() const override;
+  PostProcessorGenerator3D<T,Lattice>*  clone() const override;
 };
 
 
 ////////// Factory function for Extended Finite Difference BC ///////////////////////////////
 
-template<typename T, template<typename U> class Lattice, typename MixinDynamics>
-OnLatticeBoundaryCondition3D<T,Lattice>*
-createExtendedFdBoundaryCondition3D(BlockLatticeStructure3D<T,Lattice>& block);
-
-template<typename T, template<typename U> class Lattice>
-OnLatticeBoundaryCondition3D<T,Lattice>*
-createExtendedFdBoundaryCondition3D(BlockLatticeStructure3D<T,Lattice>& block)
-{
-  return createExtendedFdBoundaryCondition3D<T,Lattice,BGKdynamics<T,Lattice> >(block);
-}
+template<typename T, template<typename U> class Lattice, typename MixinDynamics=BGKdynamics<T,Lattice> >
+OnLatticeBoundaryCondition3D<T,Lattice>* createExtendedFdBoundaryCondition3D(BlockLatticeStructure3D<T,Lattice>& block);
 
 }
 

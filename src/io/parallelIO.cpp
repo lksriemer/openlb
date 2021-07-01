@@ -137,13 +137,13 @@ ParBuf::xsgetn (char* s, std::streamsize num)
 // Class olb_ofstream
 ///////////////////////////////////////////////////////////////////
 
-olb_ofstream::olb_ofstream() : std::ostream(NULL), fbuf(), mybuf(&fbuf)
+olb_ofstream::olb_ofstream() : std::ostream(nullptr), fbuf(), mybuf(&fbuf)
 {
   this->init(&mybuf);
 }
 
 olb_ofstream::olb_ofstream(const char * filename, openmode mode)
-  : std::ostream(NULL), fbuf(), mybuf(&fbuf)
+  : std::ostream(nullptr), fbuf(), mybuf(&fbuf)
 {
   init(&mybuf);
   open(filename, mode);
@@ -204,13 +204,13 @@ olb_ofstream::close()
 // Class olb_ifstream
 ///////////////////////////////////////////////////////////////////
 
-olb_ifstream::olb_ifstream() : std::istream(NULL), fbuf(), mybuf(&fbuf)
+olb_ifstream::olb_ifstream() : std::istream(nullptr), fbuf(), mybuf(&fbuf)
 {
   init(&mybuf);
 }
 
 olb_ifstream::olb_ifstream(const char * filename, openmode mode)
-  : std::istream(NULL), fbuf(), mybuf(&fbuf)
+  : std::istream(nullptr), fbuf(), mybuf(&fbuf)
 {
   init(&mybuf);
   open(filename, mode);
@@ -271,13 +271,13 @@ olb_ifstream::close()
 // Class olb_fstream
 ///////////////////////////////////////////////////////////////////
 
-olb_fstream::olb_fstream() : std::iostream(NULL), fbuf(), mybuf(&fbuf)
+olb_fstream::olb_fstream() : std::iostream(nullptr), fbuf(), mybuf(&fbuf)
 {
   this->init(&mybuf);
 }
 
 olb_fstream::olb_fstream(const char * filename, openmode mode)
-  : std::iostream(NULL), fbuf(), mybuf(&fbuf)
+  : std::iostream(nullptr), fbuf(), mybuf(&fbuf)
 {
   init(&mybuf);
   open(filename, mode);

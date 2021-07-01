@@ -43,9 +43,12 @@ namespace olb {
  * \param cGeometry     cuboid geometry to base the load balance on
  * \param blockGeometry used to determine number of full and empty cells if given
  * \param ratioFullEmpty time it takes for full cells in relation to empty cells
+ *
+ * This class has a virtual method call in its destructor and should therefore
+ * not be used as a base class.
  */
 template<typename T>
-class HeuristicLoadBalancer : public LoadBalancer<T> {
+class HeuristicLoadBalancer final : public LoadBalancer<T> {
 private:
   // Handles the MPI communication
 #ifdef PARALLEL_MODE_MPI
@@ -59,23 +62,23 @@ private:
 public:
   HeuristicLoadBalancer() {};
 
-  virtual ~HeuristicLoadBalancer();
+  ~HeuristicLoadBalancer() override;
 
-  HeuristicLoadBalancer(CuboidGeometry3D<T>& cGeometry3d, const double ratioFullEmpty=3.7);
+  HeuristicLoadBalancer(CuboidGeometry3D<T>& cGeometry3d, const double ratioFullEmpty=3.7, const double weightEmpty=.0);
 
-  HeuristicLoadBalancer(CuboidGeometry2D<T>& cGeometry2d, const double ratioFullEmpty=3.7);
+  HeuristicLoadBalancer(CuboidGeometry2D<T>& cGeometry2d, const double ratioFullEmpty=3.7, const double weightEmpty=.0);
 
-  virtual void reInit(CuboidGeometry3D<T>& cGeometry3d, const double ratioFullEmpty=3.7);
+  void reInit(CuboidGeometry3D<T>& cGeometry3d, const double ratioFullEmpty=3.7, const double weightEmpty=.0) override;
 
-  virtual void reInit(CuboidGeometry2D<T>& cGeometry2d, const double ratioFullEmpty=3.7);
+  void reInit(CuboidGeometry2D<T>& cGeometry2d, const double ratioFullEmpty=3.7, const double weightEmpty=.0) override;
 
   /// Swap method
   void swap(HeuristicLoadBalancer<T>& loadBalancer);
 
   /// Write itself into Stringstream
-  void writeToStream(std::ostream& stream);
+  void writeToStream(std::ostream& stream) override;
   /// Write itself into File
-  void writeToFile(std::string fileName);
+  void writeToFile(std::string fileName) override;
 };
 }  // namespace olb
 

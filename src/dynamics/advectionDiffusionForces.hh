@@ -28,22 +28,25 @@
 
 namespace olb {
 
-template<typename T, template<typename U> class Lattice>
-advDiffDragForce3D<T,Lattice>::advDiffDragForce3D(LBconverter<T> const& converter_, T St_)
+template<typename T, template<typename U> class Lattice,
+template<typename U> class ADLattice>
+advDiffDragForce3D<T,Lattice,ADLattice>::advDiffDragForce3D(UnitConverter<T,Lattice> const& converter_, T St_)
 {
   initArg = 8;
-  dragCoeff = (converter_.getCharU()*converter_.physTime()) / (St_ * converter_.getCharL());
+  dragCoeff = (converter_.getCharPhysVelocity()*converter_.getConversionFactorTime()) / (St_ * converter_.getCharPhysLength());
 }
 
-template<typename T, template<typename U> class Lattice>
-advDiffDragForce3D<T,Lattice>::advDiffDragForce3D(LBconverter<T> const& converter_, T pRadius_, T pRho_)
+template<typename T, template<typename U> class Lattice,
+template<typename U> class ADLattice>
+advDiffDragForce3D<T,Lattice,ADLattice>::advDiffDragForce3D(UnitConverter<T,Lattice> const& converter_, T pRadius_, T pRho_)
 {
   initArg = 8;
-  dragCoeff = (9.*converter_.getCharNu()*converter_.getCharRho()*converter_.physTime()) / (2.*pRho_*pRadius_*pRadius_);
+  dragCoeff = (9.*converter_.getPhysViscosity()*converter_.getPhysDensity()*converter_.getConversionFactorTime()) / (2.*pRho_*pRadius_*pRadius_);
 }
 
-template<typename T, template<typename U> class Lattice>
-void advDiffDragForce3D<T,Lattice>::applyForce(T force[], Cell<T,Lattice> *nsCell, Cell<T,descriptors::particleAdvectionDiffusionD3Q7Descriptor> *adCell, T vel[], int latticeR[])
+template<typename T, template<typename U> class Lattice,
+template<typename U> class ADLattice>
+void advDiffDragForce3D<T,Lattice,ADLattice>::applyForce(T force[], Cell<T,Lattice> *nsCell, Cell<T,ADLattice> *adCell, T vel[], int latticeR[])
 {
   T velF[3] = {0.,0.,0.};
   nsCell->computeU(velF);
@@ -52,18 +55,20 @@ void advDiffDragForce3D<T,Lattice>::applyForce(T force[], Cell<T,Lattice> *nsCel
   }
 }
 
-template<typename T, template<typename U> class Lattice>
-advDiffRotatingForce3D<T,Lattice>::advDiffRotatingForce3D(SuperGeometry3D<T>& superGeometry_,
-    const LBconverter<T>& converter_, std::vector<T> axisPoint_, std::vector<T> axisDirection_,
+template<typename T, template<typename U> class Lattice,
+template<typename U> class ADLattice>
+advDiffRotatingForce3D<T,Lattice,ADLattice>::advDiffRotatingForce3D(SuperGeometry3D<T>& superGeometry_,
+    const UnitConverter<T,Lattice>& converter_, std::vector<T> axisPoint_, std::vector<T> axisDirection_,
     T w_, T* frac_, bool centrifugeForceOn_, bool coriolisForceOn_) :
   sg(superGeometry_), axisPoint(axisPoint_), axisDirection(axisDirection_),
   w(w_), frac(frac_), centrifugeForceOn(centrifugeForceOn_), coriolisForceOn(coriolisForceOn_)
 {
-  invMassLessForce = converter_.physTime() * converter_.physTime() / converter_.physLength();
+  invMassLessForce = converter_.getConversionFactorTime() * converter_.getConversionFactorTime() / converter_.getConversionFactorLength();
 }
 
-template<typename T, template<typename U> class Lattice>
-void advDiffRotatingForce3D<T,Lattice>::applyForce(T force[], Cell<T,Lattice> *nsCell, Cell<T,descriptors::particleAdvectionDiffusionD3Q7Descriptor> *adCell, T vel[], int latticeR[])
+template<typename T, template<typename U> class Lattice,
+template<typename U> class ADLattice>
+void advDiffRotatingForce3D<T,Lattice,ADLattice>::applyForce(T force[], Cell<T,Lattice> *nsCell, Cell<T,ADLattice> *adCell, T vel[], int latticeR[])
 {
   std::vector<T> F_centri(3,0);
   std::vector<T> F_coriolis(3,0);

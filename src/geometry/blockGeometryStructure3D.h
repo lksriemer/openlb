@@ -29,8 +29,8 @@
 #define BLOCK_GEOMETRY_STRUCTURE_3D_H
 
 #include <vector>
-#include "functors/indicator/indicatorBaseF3D.h"
-#include "functors/indicator/indicatorF3D.h"
+#include "functors/lattice/indicator/indicatorBaseF3D.h"
+#include "functors/lattice/indicator/indicatorF3D.h"
 #include "geometry/blockGeometryStatistics3D.h"
 #include "io/ostreamManager.h"
 
@@ -73,7 +73,7 @@ public:
   /// Constructor
   BlockGeometryStructure3D(int iCglob=-1);
   /// dtor
-  ~BlockGeometryStructure3D() {};
+  virtual ~BlockGeometryStructure3D() {};
 
 
   /// Read only access to the global iC number which is given !=-1 if the block geometries are part of a super geometry
@@ -84,7 +84,7 @@ public:
   virtual BlockGeometryStatistics3D<T> const& getStatistics(bool verbose=true) const = 0;
 
   /// Returns the position of the block origin which is the node (iX=0/iY=0/iZ=0) in physical units (meter)
-  virtual Vector<T,3> const getOrigin() const = 0;
+  virtual Vector<T,3> getOrigin() const = 0;
   /// Returns the extend in x direction of the block in lattice units
   virtual int getNx() const = 0;
   /// Returns the extend in y direction of the block in lattice units

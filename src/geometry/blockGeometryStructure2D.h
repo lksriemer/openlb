@@ -30,7 +30,8 @@
 
 #include <vector>
 #include <list>
-#include "functors/indicator/indicatorF2D.h"
+
+#include "functors/lattice/indicator/indicatorF2D.h"
 #include "geometry/blockGeometryStatistics2D.h"
 #include "io/ostreamManager.h"
 
@@ -79,13 +80,13 @@ public:
   virtual BlockGeometryStatistics2D<T> const& getStatistics(bool verbose=true) const = 0;
 
   /// Returns the position of the block origin which is the node (iX=0/iY=0) in physical units (meter)
-  virtual std::vector<T> const getOrigin() const = 0;
+  virtual Vector<T,2> getOrigin() const = 0;
   /// Returns the extend in x direction of the block in lattice units
   virtual int getNx() const = 0;
   /// Returns the extend in y direction of the block in lattice units
   virtual int getNy() const = 0;
   /// Returns the extend of the block in lattice units
-  virtual std::vector<int> const getExtend() const;
+  virtual Vector<int,2> const getExtend() const;
   /// Returns the spacing in physical units (meter)
   virtual const T getDeltaR() const = 0;
 

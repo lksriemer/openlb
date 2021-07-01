@@ -26,107 +26,102 @@
 #define BOUNDARY_INSTANTIATOR_3D_H
 
 #include "boundaryCondition3D.h"
-#include "geometry/blockGeometry3D.h"
-#include "geometry/blockGeometryStatistics3D.h"
+#include "boundaryPostProcessors3D.h"
 #include "io/ostreamManager.h"
 
 namespace olb {
 
-template<typename T> class BlockGeometryStatistics3D;
 
 template<typename T, template<typename U> class Lattice, class BoundaryManager>
 class BoundaryConditionInstantiator3D : public OnLatticeBoundaryCondition3D<T,Lattice> {
 public:
   BoundaryConditionInstantiator3D( BlockLatticeStructure3D<T,Lattice>& block_ );
-  ~BoundaryConditionInstantiator3D();
+  ~BoundaryConditionInstantiator3D() override;
 
-  void addVelocityBoundary0N(int x0, int x1, int y0, int y1, int z0, int z1, T omega);
-  void addVelocityBoundary0P(int x0, int x1, int y0, int y1, int z0, int z1, T omega);
-  void addVelocityBoundary1N(int x0, int x1, int y0, int y1, int z0, int z1, T omega);
-  void addVelocityBoundary1P(int x0, int x1, int y0, int y1, int z0, int z1, T omega);
-  void addVelocityBoundary2N(int x0, int x1, int y0, int y1, int z0, int z1, T omega);
-  void addVelocityBoundary2P(int x0, int x1, int y0, int y1, int z0, int z1, T omega);
+  void addVelocityBoundary0N(int x0, int x1, int y0, int y1, int z0, int z1, T omega) override;
+  void addVelocityBoundary0P(int x0, int x1, int y0, int y1, int z0, int z1, T omega) override;
+  void addVelocityBoundary1N(int x0, int x1, int y0, int y1, int z0, int z1, T omega) override;
+  void addVelocityBoundary1P(int x0, int x1, int y0, int y1, int z0, int z1, T omega) override;
+  void addVelocityBoundary2N(int x0, int x1, int y0, int y1, int z0, int z1, T omega) override;
+  void addVelocityBoundary2P(int x0, int x1, int y0, int y1, int z0, int z1, T omega) override;
 
   void addSlipBoundary(int x0, int x1, int y0, int y1, int z0, int z1, int discreteNormalX, int discreteNormalY, int discreteNormalZ);
 
-  void addPressureBoundary0N(int x0, int x1, int y0, int y1, int z0, int z1, T omega);
-  void addPressureBoundary0P(int x0, int x1, int y0, int y1, int z0, int z1, T omega);
-  void addPressureBoundary1N(int x0, int x1, int y0, int y1, int z0, int z1, T omega);
-  void addPressureBoundary1P(int x0, int x1, int y0, int y1, int z0, int z1, T omega);
-  void addPressureBoundary2N(int x0, int x1, int y0, int y1, int z0, int z1, T omega);
-  void addPressureBoundary2P(int x0, int x1, int y0, int y1, int z0, int z1, T omega);
+  void addPressureBoundary0N(int x0, int x1, int y0, int y1, int z0, int z1, T omega) override;
+  void addPressureBoundary0P(int x0, int x1, int y0, int y1, int z0, int z1, T omega) override;
+  void addPressureBoundary1N(int x0, int x1, int y0, int y1, int z0, int z1, T omega) override;
+  void addPressureBoundary1P(int x0, int x1, int y0, int y1, int z0, int z1, T omega) override;
+  void addPressureBoundary2N(int x0, int x1, int y0, int y1, int z0, int z1, T omega) override;
+  void addPressureBoundary2P(int x0, int x1, int y0, int y1, int z0, int z1, T omega) override;
 
-  void addConvectionBoundary0N(int x0, int x1, int y0, int y1, int z0, int z1, T omega, T* uAv=NULL);
-  void addConvectionBoundary0P(int x0, int x1, int y0, int y1, int z0, int z1, T omega, T* uAv=NULL);
-  void addConvectionBoundary1N(int x0, int x1, int y0, int y1, int z0, int z1, T omega, T* uAv=NULL);
-  void addConvectionBoundary1P(int x0, int x1, int y0, int y1, int z0, int z1, T omega, T* uAv=NULL);
-  void addConvectionBoundary2N(int x0, int x1, int y0, int y1, int z0, int z1, T omega, T* uAv=NULL);
-  void addConvectionBoundary2P(int x0, int x1, int y0, int y1, int z0, int z1, T omega, T* uAv=NULL);
+  void addConvectionBoundary0N(int x0, int x1, int y0, int y1, int z0, int z1, T omega, T* uAv=NULL) override;
+  void addConvectionBoundary0P(int x0, int x1, int y0, int y1, int z0, int z1, T omega, T* uAv=NULL) override;
+  void addConvectionBoundary1N(int x0, int x1, int y0, int y1, int z0, int z1, T omega, T* uAv=NULL) override;
+  void addConvectionBoundary1P(int x0, int x1, int y0, int y1, int z0, int z1, T omega, T* uAv=NULL) override;
+  void addConvectionBoundary2N(int x0, int x1, int y0, int y1, int z0, int z1, T omega, T* uAv=NULL) override;
+  void addConvectionBoundary2P(int x0, int x1, int y0, int y1, int z0, int z1, T omega, T* uAv=NULL) override;
 
-  void addExternalVelocityEdge0NN(int x0, int x1, int y0, int y1, int z0, int z1, T omega);
-  void addExternalVelocityEdge0NP(int x0, int x1, int y0, int y1, int z0, int z1, T omega);
-  void addExternalVelocityEdge0PN(int x0, int x1, int y0, int y1, int z0, int z1, T omega);
-  void addExternalVelocityEdge0PP(int x0, int x1, int y0, int y1, int z0, int z1, T omega);
-  void addExternalVelocityEdge1NN(int x0, int x1, int y0, int y1, int z0, int z1, T omega);
-  void addExternalVelocityEdge1NP(int x0, int x1, int y0, int y1, int z0, int z1, T omega);
-  void addExternalVelocityEdge1PN(int x0, int x1, int y0, int y1, int z0, int z1, T omega);
-  void addExternalVelocityEdge1PP(int x0, int x1, int y0, int y1, int z0, int z1, T omega);
-  void addExternalVelocityEdge2NN(int x0, int x1, int y0, int y1, int z0, int z1, T omega);
-  void addExternalVelocityEdge2NP(int x0, int x1, int y0, int y1, int z0, int z1, T omega);
-  void addExternalVelocityEdge2PN(int x0, int x1, int y0, int y1, int z0, int z1, T omega);
-  void addExternalVelocityEdge2PP(int x0, int x1, int y0, int y1, int z0, int z1, T omega);
+  void addExternalVelocityEdge0NN(int x0, int x1, int y0, int y1, int z0, int z1, T omega) override;
+  void addExternalVelocityEdge0NP(int x0, int x1, int y0, int y1, int z0, int z1, T omega) override;
+  void addExternalVelocityEdge0PN(int x0, int x1, int y0, int y1, int z0, int z1, T omega) override;
+  void addExternalVelocityEdge0PP(int x0, int x1, int y0, int y1, int z0, int z1, T omega) override;
+  void addExternalVelocityEdge1NN(int x0, int x1, int y0, int y1, int z0, int z1, T omega) override;
+  void addExternalVelocityEdge1NP(int x0, int x1, int y0, int y1, int z0, int z1, T omega) override;
+  void addExternalVelocityEdge1PN(int x0, int x1, int y0, int y1, int z0, int z1, T omega) override;
+  void addExternalVelocityEdge1PP(int x0, int x1, int y0, int y1, int z0, int z1, T omega) override;
+  void addExternalVelocityEdge2NN(int x0, int x1, int y0, int y1, int z0, int z1, T omega) override;
+  void addExternalVelocityEdge2NP(int x0, int x1, int y0, int y1, int z0, int z1, T omega) override;
+  void addExternalVelocityEdge2PN(int x0, int x1, int y0, int y1, int z0, int z1, T omega) override;
+  void addExternalVelocityEdge2PP(int x0, int x1, int y0, int y1, int z0, int z1, T omega) override;
 
-  void addInternalVelocityEdge0NN(int x0, int x1, int y0, int y1, int z0, int z1, T omega);
-  void addInternalVelocityEdge0NP(int x0, int x1, int y0, int y1, int z0, int z1, T omega);
-  void addInternalVelocityEdge0PN(int x0, int x1, int y0, int y1, int z0, int z1, T omega);
-  void addInternalVelocityEdge0PP(int x0, int x1, int y0, int y1, int z0, int z1, T omega);
-  void addInternalVelocityEdge1NN(int x0, int x1, int y0, int y1, int z0, int z1, T omega);
-  void addInternalVelocityEdge1NP(int x0, int x1, int y0, int y1, int z0, int z1, T omega);
-  void addInternalVelocityEdge1PN(int x0, int x1, int y0, int y1, int z0, int z1, T omega);
-  void addInternalVelocityEdge1PP(int x0, int x1, int y0, int y1, int z0, int z1, T omega);
-  void addInternalVelocityEdge2NN(int x0, int x1, int y0, int y1, int z0, int z1, T omega);
-  void addInternalVelocityEdge2NP(int x0, int x1, int y0, int y1, int z0, int z1, T omega);
-  void addInternalVelocityEdge2PN(int x0, int x1, int y0, int y1, int z0, int z1, T omega);
-  void addInternalVelocityEdge2PP(int x0, int x1, int y0, int y1, int z0, int z1, T omega);
+  void addInternalVelocityEdge0NN(int x0, int x1, int y0, int y1, int z0, int z1, T omega) override;
+  void addInternalVelocityEdge0NP(int x0, int x1, int y0, int y1, int z0, int z1, T omega) override;
+  void addInternalVelocityEdge0PN(int x0, int x1, int y0, int y1, int z0, int z1, T omega) override;
+  void addInternalVelocityEdge0PP(int x0, int x1, int y0, int y1, int z0, int z1, T omega) override;
+  void addInternalVelocityEdge1NN(int x0, int x1, int y0, int y1, int z0, int z1, T omega) override;
+  void addInternalVelocityEdge1NP(int x0, int x1, int y0, int y1, int z0, int z1, T omega) override;
+  void addInternalVelocityEdge1PN(int x0, int x1, int y0, int y1, int z0, int z1, T omega) override;
+  void addInternalVelocityEdge1PP(int x0, int x1, int y0, int y1, int z0, int z1, T omega) override;
+  void addInternalVelocityEdge2NN(int x0, int x1, int y0, int y1, int z0, int z1, T omega) override;
+  void addInternalVelocityEdge2NP(int x0, int x1, int y0, int y1, int z0, int z1, T omega) override;
+  void addInternalVelocityEdge2PN(int x0, int x1, int y0, int y1, int z0, int z1, T omega) override;
+  void addInternalVelocityEdge2PP(int x0, int x1, int y0, int y1, int z0, int z1, T omega) override;
 
-  void addExternalVelocityCornerNNN(int x, int y, int z, T omega);
-  void addExternalVelocityCornerNNP(int x, int y, int z, T omega);
-  void addExternalVelocityCornerNPN(int x, int y, int z, T omega);
-  void addExternalVelocityCornerNPP(int x, int y, int z, T omega);
-  void addExternalVelocityCornerPNN(int x, int y, int z, T omega);
-  void addExternalVelocityCornerPNP(int x, int y, int z, T omega);
-  void addExternalVelocityCornerPPN(int x, int y, int z, T omega);
-  void addExternalVelocityCornerPPP(int x, int y, int z, T omega);
+  void addExternalVelocityCornerNNN(int x, int y, int z, T omega) override;
+  void addExternalVelocityCornerNNP(int x, int y, int z, T omega) override;
+  void addExternalVelocityCornerNPN(int x, int y, int z, T omega) override;
+  void addExternalVelocityCornerNPP(int x, int y, int z, T omega) override;
+  void addExternalVelocityCornerPNN(int x, int y, int z, T omega) override;
+  void addExternalVelocityCornerPNP(int x, int y, int z, T omega) override;
+  void addExternalVelocityCornerPPN(int x, int y, int z, T omega) override;
+  void addExternalVelocityCornerPPP(int x, int y, int z, T omega) override;
 
-  void addInternalVelocityCornerNNN(int x, int y, int z, T omega);
-  void addInternalVelocityCornerNNP(int x, int y, int z, T omega);
-  void addInternalVelocityCornerNPN(int x, int y, int z, T omega);
-  void addInternalVelocityCornerNPP(int x, int y, int z, T omega);
-  void addInternalVelocityCornerPNN(int x, int y, int z, T omega);
-  void addInternalVelocityCornerPNP(int x, int y, int z, T omega);
-  void addInternalVelocityCornerPPN(int x, int y, int z, T omega);
-  void addInternalVelocityCornerPPP(int x, int y, int z, T omega);
+  void addInternalVelocityCornerNNN(int x, int y, int z, T omega) override;
+  void addInternalVelocityCornerNNP(int x, int y, int z, T omega) override;
+  void addInternalVelocityCornerNPN(int x, int y, int z, T omega) override;
+  void addInternalVelocityCornerNPP(int x, int y, int z, T omega) override;
+  void addInternalVelocityCornerPNN(int x, int y, int z, T omega) override;
+  void addInternalVelocityCornerPNP(int x, int y, int z, T omega) override;
+  void addInternalVelocityCornerPPN(int x, int y, int z, T omega) override;
+  void addInternalVelocityCornerPPP(int x, int y, int z, T omega) override;
 
   void addVelocityBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int material, int x0, int x1, int y0, int y1, int z0, int z1,
-                           T omega);
-  void addVelocityBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int material, T omega);
+                           T omega) override;
+  void addVelocityBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int material, T omega) override;
 
-  void addSlipBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int material, int x0, int x1, int y0, int y1, int z0, int z1);
-  void addSlipBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int material);
+  void addSlipBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int material, int x0, int x1, int y0, int y1, int z0, int z1) override;
+  void addSlipBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int material) override;
 
   void addPressureBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int material, int x0, int x1, int y0, int y1, int z0, int z1,
-                           T omega);
-  void addPressureBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int material, T omega);
+                           T omega) override;
+  void addPressureBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int material, T omega) override;
 
   void addConvectionBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int material, int x0, int x1, int y0, int y1, int z0, int z1,
-                             T omega, T* uAv=NULL);
-  void addConvectionBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int material, T omega, T* uAv=NULL);
+                             T omega, T* uAv=NULL) override;
+  void addConvectionBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int material, T omega, T* uAv=NULL) override;
 
-  BlockLatticeStructure3D<T,Lattice>& getBlock();
-  BlockLatticeStructure3D<T,Lattice> const& getBlock() const;
-
-  void outputOn();
-  void outputOff();
+  void outputOn() override;
+  void outputOff() override;
 
 private:
   template<int direction, int orientation>
@@ -144,7 +139,7 @@ private:
   template<int normalX, int normalY, int normalZ>
   void addInternalVelocityCorner(int x, int y, int z, T omega);
 private:
-  BlockLatticeStructure3D<T,Lattice>& block;
+  BlockLatticeStructure3D<T,Lattice>& _block;
   std::vector<Momenta<T,Lattice>*>  momentaVector;
   std::vector<Dynamics<T,Lattice>*> dynamicsVector;
   bool _output;
@@ -156,18 +151,18 @@ private:
 
 template<typename T, template<typename U> class Lattice, class BoundaryManager>
 BoundaryConditionInstantiator3D<T,Lattice,BoundaryManager>::BoundaryConditionInstantiator3D (
-  BlockLatticeStructure3D<T,Lattice>& block_)
-  : block(block_), _output(false), clout(std::cout,"BoundaryConditionInstantiator3D")
+  BlockLatticeStructure3D<T,Lattice>& block)
+  : _block(block), _output(false), clout(std::cout,"BoundaryConditionInstantiator3D")
 { }
 
 template<typename T, template<typename U> class Lattice, class BoundaryManager>
 BoundaryConditionInstantiator3D<T,Lattice,BoundaryManager>::~BoundaryConditionInstantiator3D()
 {
-  for (unsigned iDynamics=0; iDynamics<dynamicsVector.size(); ++iDynamics) {
-    delete dynamicsVector[iDynamics];
+  for (auto &iDynamics : dynamicsVector) {
+    delete iDynamics;
   }
-  for (unsigned iMomenta=0; iMomenta<dynamicsVector.size(); ++iMomenta) {
-    delete momentaVector[iMomenta];
+  for (auto &iMomenta : momentaVector) {
+    delete iMomenta;
   }
 }
 
@@ -185,7 +180,7 @@ addVelocityBoundary(int x0, int x1, int y0, int y1, int z0, int z1, T omega)
           = BoundaryManager::template getVelocityBoundaryMomenta<direction,orientation>();
         Dynamics<T,Lattice>* dynamics
           = BoundaryManager::template getVelocityBoundaryDynamics<direction,orientation>(omega, *momenta);
-        this->getBlock().defineDynamics(iX,iX,iY,iY,iZ,iZ, dynamics);
+        _block.defineDynamics(iX,iX,iY,iY,iZ,iZ, dynamics);
         momentaVector.push_back(momenta);
         dynamicsVector.push_back(dynamics);
         if (_output) {
@@ -198,7 +193,7 @@ addVelocityBoundary(int x0, int x1, int y0, int y1, int z0, int z1, T omega)
   PostProcessorGenerator3D<T,Lattice>* postProcessor
     = BoundaryManager::template getVelocityBoundaryProcessor<direction,orientation>(x0,x1, y0,y1, z0,z1);
   if (postProcessor) {
-    this->getBlock().addPostProcessor(*postProcessor);
+    _block.addPostProcessor(*postProcessor);
   }
 }
 
@@ -222,7 +217,7 @@ void BoundaryConditionInstantiator3D<T, Lattice, BoundaryManager>::addSlipBounda
 
   PostProcessorGenerator3D<T, Lattice>* postProcessor = new SlipBoundaryProcessorGenerator3D<T, Lattice>(x0, x1, y0, y1, z0, z1, discreteNormalX, discreteNormalY, discreteNormalZ);
   if (postProcessor) {
-    this->getBlock().addPostProcessor(*postProcessor);
+    _block.addPostProcessor(*postProcessor);
   }
 }
 
@@ -242,7 +237,7 @@ addPressureBoundary(int x0, int x1, int y0, int y1, int z0, int z1, T omega)
           = BoundaryManager::template getPressureBoundaryMomenta<direction,orientation>();
         Dynamics<T,Lattice>* dynamics
           = BoundaryManager::template getPressureBoundaryDynamics<direction,orientation>(omega, *momenta);
-        this->getBlock().defineDynamics(iX,iX,iY,iY,iZ,iZ, dynamics);
+        _block.defineDynamics(iX,iX,iY,iY,iZ,iZ, dynamics);
         momentaVector.push_back(momenta);
         dynamicsVector.push_back(dynamics);
         if (_output) {
@@ -255,7 +250,7 @@ addPressureBoundary(int x0, int x1, int y0, int y1, int z0, int z1, T omega)
   PostProcessorGenerator3D<T,Lattice>* postProcessor
     = BoundaryManager::template getPressureBoundaryProcessor<direction,orientation>(x0,x1, y0,y1, z0,z1);
   if (postProcessor) {
-    this->getBlock().addPostProcessor(*postProcessor);
+    _block.addPostProcessor(*postProcessor);
   }
 }
 
@@ -281,7 +276,7 @@ addConvectionBoundary(int x0, int x1, int y0, int y1, int z0, int z1, T omega, T
   PostProcessorGenerator3D<T,Lattice>* postProcessor
     = BoundaryManager::template getConvectionBoundaryProcessor<direction,orientation>(x0,x1, y0,y1, z0,z1, uAv);
   if (postProcessor) {
-    this->getBlock().addPostProcessor(*postProcessor);
+    _block.addPostProcessor(*postProcessor);
   }
 }
 
@@ -302,7 +297,7 @@ addExternalVelocityEdge(int x0, int x1, int y0, int y1, int z0, int z1, T omega)
           = BoundaryManager::template getExternalVelocityEdgeMomenta<plane,normal1,normal2>();
         Dynamics<T,Lattice>* dynamics
           = BoundaryManager::template getExternalVelocityEdgeDynamics<plane,normal1,normal2>(omega, *momenta);
-        this->getBlock().defineDynamics(iX,iX,iY,iY,iZ,iZ, dynamics);
+        _block.defineDynamics(iX,iX,iY,iY,iZ,iZ, dynamics);
         momentaVector.push_back(momenta);
         dynamicsVector.push_back(dynamics);
         if (_output) {
@@ -315,7 +310,7 @@ addExternalVelocityEdge(int x0, int x1, int y0, int y1, int z0, int z1, T omega)
   PostProcessorGenerator3D<T,Lattice>* postProcessor
     = BoundaryManager::template getExternalVelocityEdgeProcessor<plane,normal1,normal2>(x0,x1, y0,y1, z0,z1);
   if (postProcessor) {
-    this->getBlock().addPostProcessor(*postProcessor);
+    _block.addPostProcessor(*postProcessor);
   }
 }
 
@@ -342,7 +337,7 @@ addInternalVelocityEdge(int x0, int x1, int y0, int y1, int z0, int z1, T omega)
           = BoundaryManager::template getInternalVelocityEdgeMomenta<plane,normal1,normal2>();
         Dynamics<T,Lattice>* dynamics
           = BoundaryManager::template getInternalVelocityEdgeDynamics<plane,normal1,normal2>(omega, *momenta);
-        this->getBlock().defineDynamics(iX,iX,iY,iY,iZ,iZ, dynamics);
+        _block.defineDynamics(iX,iX,iY,iY,iZ,iZ, dynamics);
         momentaVector.push_back(momenta);
         dynamicsVector.push_back(dynamics);
         if (_output) {
@@ -355,7 +350,7 @@ addInternalVelocityEdge(int x0, int x1, int y0, int y1, int z0, int z1, T omega)
   PostProcessorGenerator3D<T,Lattice>* postProcessor
     = BoundaryManager::template getInternalVelocityEdgeProcessor<plane,normal1,normal2>(x0,x1, y0,y1, z0,z1);
   if (postProcessor) {
-    this->getBlock().addPostProcessor(*postProcessor);
+    _block.addPostProcessor(*postProcessor);
   }
 }
 
@@ -370,7 +365,7 @@ addExternalVelocityCorner(int x, int y, int z, T omega)
   Dynamics<T,Lattice>* dynamics
     = BoundaryManager::template getExternalVelocityCornerDynamics<xNormal,yNormal,zNormal>(omega, *momenta);
 
-  this->getBlock().defineDynamics(x,x,y,y,z,z, dynamics);
+  _block.defineDynamics(x,x,y,y,z,z, dynamics);
 
   momentaVector.push_back(momenta);
   dynamicsVector.push_back(dynamics);
@@ -378,7 +373,7 @@ addExternalVelocityCorner(int x, int y, int z, T omega)
   PostProcessorGenerator3D<T,Lattice>* postProcessor
     = BoundaryManager::template getExternalVelocityCornerProcessor<xNormal,yNormal,zNormal>(x, y, z);
   if (postProcessor) {
-    this->getBlock().addPostProcessor(*postProcessor);
+    _block.addPostProcessor(*postProcessor);
   }
   if (_output) {
     clout << "addExternalVelocityCorner<" << xNormal << ", " << yNormal << ", " << zNormal << ">(" << x << ", " << y << ", "<< z << omega << " )" << std::endl;
@@ -395,7 +390,7 @@ addInternalVelocityCorner(int x, int y, int z, T omega)
   Dynamics<T,Lattice>* dynamics
     = BoundaryManager::template getInternalVelocityCornerDynamics<xNormal,yNormal,zNormal>(omega, *momenta);
 
-  this->getBlock().defineDynamics(x,x,y,y,z,z, dynamics);
+  _block.defineDynamics(x,x,y,y,z,z, dynamics);
 
   momentaVector.push_back(momenta);
   dynamicsVector.push_back(dynamics);
@@ -403,7 +398,7 @@ addInternalVelocityCorner(int x, int y, int z, T omega)
   PostProcessorGenerator3D<T,Lattice>* postProcessor
     = BoundaryManager::template getInternalVelocityCornerProcessor<xNormal,yNormal,zNormal>(x, y, z);
   if (postProcessor) {
-    this->getBlock().addPostProcessor(*postProcessor);
+    _block.addPostProcessor(*postProcessor);
   }
   if (_output) {
     clout << "addInternalVelocityCorner<" << xNormal << ", " << yNormal << ", " << zNormal << ">(" << x << ", " << y << ", "<< z << omega << " )" << std::endl;
@@ -422,296 +417,157 @@ addVelocityBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int mat
         if (blockGeometryStructure.getMaterial(iX, iY, iZ)==material) {
           discreteNormal = blockGeometryStructure.getStatistics().getType(iX,iY,iZ);
           if (discreteNormal[0] == 0) {
-
             if (discreteNormal[1] != 0 && discreteNormal[1] == -1) {
-
               addVelocityBoundary<0,-1>(iX,iX,iY,iY,iZ,iZ, omega);
-
             }
-
             else if (discreteNormal[1] != 0 && discreteNormal[1] == 1) {
-
               addVelocityBoundary<0,1>(iX,iX,iY,iY,iZ,iZ, omega);
-
             }
-
             else if (discreteNormal[2] != 0 && discreteNormal[2] == -1) {
-
               addVelocityBoundary<1,-1>(iX,iX,iY,iY,iZ,iZ, omega);
-
             }
-
             else if (discreteNormal[2] != 0 && discreteNormal[2] == 1) {
-
               addVelocityBoundary<1,1>(iX,iX,iY,iY,iZ,iZ, omega);
-
             }
-
-
             else if (discreteNormal[3] != 0 && discreteNormal[3] == -1) {
-
               addVelocityBoundary<2,-1>(iX,iX,iY,iY,iZ,iZ, omega);
-
             }
-
             else if (discreteNormal[3] != 0 && discreteNormal[3] == 1) {
-
               addVelocityBoundary<2,1>(iX,iX,iY,iY,iZ,iZ, omega);
-
             }
           }
 
           else if (discreteNormal[0] == 1) {
-
             if (discreteNormal[1] == 1 && discreteNormal[2] == 1 && discreteNormal[3] == 1) {
-
               addExternalVelocityCorner<1,1,1>(iX,iY,iZ, omega);
-
             }
-
             else if (discreteNormal[1] == 1 && discreteNormal[2] == -1 && discreteNormal[3] == 1) {
-
               addExternalVelocityCorner<1,-1,1>(iX,iY,iZ, omega);
-
             }
-
             else if (discreteNormal[1] == 1 && discreteNormal[2] == 1 && discreteNormal[3] == -1) {
-
               addExternalVelocityCorner<1,1,-1>(iX,iY,iZ, omega);
-
             }
-
             else if (discreteNormal[1] == 1 && discreteNormal[2] == -1 && discreteNormal[3] == -1) {
-
               addExternalVelocityCorner<1,-1,-1>(iX,iY,iZ, omega);
-
             }
-
             else if (discreteNormal[1] == -1 && discreteNormal[2] == 1 && discreteNormal[3] == 1) {
-
               addExternalVelocityCorner<-1,1,1>(iX,iY,iZ, omega);
-
             }
-
             else if (discreteNormal[1] == -1 && discreteNormal[2] == -1 && discreteNormal[3] == 1) {
-
               addExternalVelocityCorner<-1,-1,1>(iX,iY,iZ, omega);
-
             }
-
             else if (discreteNormal[1] == -1 && discreteNormal[2] == 1 && discreteNormal[3] == -1) {
-
               addExternalVelocityCorner<-1,1,-1>(iX,iY,iZ, omega);
-
             }
-
             else if (discreteNormal[1] == -1 && discreteNormal[2] == -1 && discreteNormal[3] == -1) {
-
               addExternalVelocityCorner<-1,-1,-1>(iX,iY,iZ, omega);
-
             }
             ///                     addExternalVelocityCorner<discreteNormal[1],discreteNormal[2],discreteNormal[3]>(iX,iY,iZ, omega);
           }
 
           else if (discreteNormal[0] == 2) {
-
             if (discreteNormal[1] == 1 && discreteNormal[2] == 1 && discreteNormal[3] == 1) {
-
               addInternalVelocityCorner<1,1,1>(iX,iY,iZ, omega);
-
             }
-
             else if (discreteNormal[1] == 1 && discreteNormal[2] == -1 && discreteNormal[3] == 1) {
-
               addExternalVelocityCorner<1,-1,1>(iX,iY,iZ, omega);
-
             }
-
             else if (discreteNormal[1] == 1 && discreteNormal[2] == 1 && discreteNormal[3] == -1) {
-
               addInternalVelocityCorner<1,1,-1>(iX,iY,iZ, omega);
-
             }
-
             else if (discreteNormal[1] == 1 && discreteNormal[2] == -1 && discreteNormal[3] == -1) {
-
               addInternalVelocityCorner<1,-1,-1>(iX,iY,iZ, omega);
-
             }
-
             else if (discreteNormal[1] == -1 && discreteNormal[2] == 1 && discreteNormal[3] == 1) {
-
               addInternalVelocityCorner<-1,1,1>(iX,iY,iZ, omega);
-
             }
-
             else if (discreteNormal[1] == -1 && discreteNormal[2] == -1 && discreteNormal[3] == 1) {
-
               addInternalVelocityCorner<-1,-1,1>(iX,iY,iZ, omega);
-
             }
-
             else if (discreteNormal[1] == -1 && discreteNormal[2] == 1 && discreteNormal[3] == -1) {
-
               addInternalVelocityCorner<-1,1,-1>(iX,iY,iZ, omega);
-
             }
-
             else if (discreteNormal[1] == -1 && discreteNormal[2] == -1 && discreteNormal[3] == -1) {
-
               addInternalVelocityCorner<-1,-1,-1>(iX,iY,iZ, omega);
-
             }
             ///                     addInternalVelocityCorner<discreteNormal[1],discreteNormal[2],discreteNormal[3]>(iX,iY,iZ, omega);
           }
 
           else if (discreteNormal[0] == 3) {
-
             if (discreteNormal[1] == 0 && discreteNormal[2] == 1 && discreteNormal[3] == 1) {
-
               addExternalVelocityEdge<0,1,1>(iX,iX,iY,iY,iZ,iZ, omega);
-
             }
-
             else if (discreteNormal[1] == 0 && discreteNormal[2] == -1 && discreteNormal[3] == 1) {
-
               addExternalVelocityEdge<0,-1,1>(iX,iX,iY,iY,iZ,iZ, omega);
-
             }
-
             else if (discreteNormal[1] == 0 && discreteNormal[2] == 1 && discreteNormal[3] == -1) {
-
               addExternalVelocityEdge<0,1,-1>(iX,iX,iY,iY,iZ,iZ, omega);
-
             }
-
             else if (discreteNormal[1] == 0 && discreteNormal[2] == -1 && discreteNormal[3] == -1) {
-
               addExternalVelocityEdge<0,-1,-1>(iX,iX,iY,iY,iZ,iZ, omega);
-
             }
-
             else if (discreteNormal[1] == 1 && discreteNormal[2] == 0 && discreteNormal[3] == 1) {
-
               addExternalVelocityEdge<1,1,1>(iX,iX,iY,iY,iZ,iZ, omega);
-
             }
-
             else if (discreteNormal[1] == -1 && discreteNormal[2] == 0 && discreteNormal[3] == 1) {
-
               addExternalVelocityEdge<1,1,-1>(iX,iX,iY,iY,iZ,iZ, omega);
-
             }
-
             else if (discreteNormal[1] == 1 && discreteNormal[2] == 0 && discreteNormal[3] == -1) {
-
               addExternalVelocityEdge<1,-1,1>(iX,iX,iY,iY,iZ,iZ, omega);
-
             }
-
             else if (discreteNormal[1] == -1 && discreteNormal[2] == 0 && discreteNormal[3] == -1) {
-
               addExternalVelocityEdge<1,-1,-1>(iX,iX,iY,iY,iZ,iZ, omega);
-
             }
-
             else if (discreteNormal[1] == 1 && discreteNormal[2] == 1 && discreteNormal[3] == 0) {
-
               addExternalVelocityEdge<2,1,1>(iX,iX,iY,iY,iZ,iZ, omega);
-
             }
-
             else if (discreteNormal[1] == -1 && discreteNormal[2] == 1 && discreteNormal[3] == 0) {
-
               addExternalVelocityEdge<2,-1,1>(iX,iX,iY,iY,iZ,iZ, omega);
-
             }
-
             else if (discreteNormal[1] == 1 && discreteNormal[2] == -1 && discreteNormal[3] == 0) {
-
               addExternalVelocityEdge<2,1,-1>(iX,iX,iY,iY,iZ,iZ, omega);
-
             }
-
             else if (discreteNormal[1] == -1 && discreteNormal[2] == -1 && discreteNormal[3] == 0) {
-
               addExternalVelocityEdge<2,-1,-1>(iX,iX,iY,iY,iZ,iZ, omega);
-
             }
           }
 
           else if (discreteNormal[0] == 4) {
-
             if (discreteNormal[1] == 0 && discreteNormal[2] == 1 && discreteNormal[3] == 1) {
-
               addInternalVelocityEdge<0,1,1>(iX,iX,iY,iY,iZ,iZ, omega);
-
             }
-
             else if (discreteNormal[1] == 0 && discreteNormal[2] == -1 && discreteNormal[3] == 1) {
-
               addInternalVelocityEdge<0,-1,1>(iX,iX,iY,iY,iZ,iZ, omega);
-
             }
-
             else if (discreteNormal[1] == 0 && discreteNormal[2] == 1 && discreteNormal[3] == -1) {
-
               addInternalVelocityEdge<0,1,-1>(iX,iX,iY,iY,iZ,iZ, omega);
-
             }
-
             else if (discreteNormal[1] == 0 && discreteNormal[2] == -1 && discreteNormal[3] == -1) {
-
               addInternalVelocityEdge<0,-1,-1>(iX,iX,iY,iY,iZ,iZ, omega);
-
             }
-
             else if (discreteNormal[1] == 1 && discreteNormal[2] == 0 && discreteNormal[3] == 1) {
-
               addInternalVelocityEdge<1,1,1>(iX,iX,iY,iY,iZ,iZ, omega);
-
             }
-
             else if (discreteNormal[1] == -1 && discreteNormal[2] == 0 && discreteNormal[3] == 1) {
-
               addInternalVelocityEdge<1,1,-1>(iX,iX,iY,iY,iZ,iZ, omega);
-
             }
-
             else if (discreteNormal[1] == 1 && discreteNormal[2] == 0 && discreteNormal[3] == -1) {
-
               addInternalVelocityEdge<1,-1,1>(iX,iX,iY,iY,iZ,iZ, omega);
-
             }
-
             else if (discreteNormal[1] == -1 && discreteNormal[2] == 0 && discreteNormal[3] == -1) {
-
               addInternalVelocityEdge<1,-1,-1>(iX,iX,iY,iY,iZ,iZ, omega);
-
             }
-
             else if (discreteNormal[1] == 1 && discreteNormal[2] == 1 && discreteNormal[3] == 0) {
-
               addInternalVelocityEdge<2,1,1>(iX,iX,iY,iY,iZ,iZ, omega);
-
             }
-
             else if (discreteNormal[1] == -1 && discreteNormal[2] == 1 && discreteNormal[3] == 0) {
-
               addInternalVelocityEdge<2,-1,1>(iX,iX,iY,iY,iZ,iZ, omega);
-
             }
-
             else if (discreteNormal[1] == 1 && discreteNormal[2] == -1 && discreteNormal[3] == 0) {
-
               addInternalVelocityEdge<2,1,-1>(iX,iX,iY,iY,iZ,iZ, omega);
-
             }
-
             else if (discreteNormal[1] == -1 && discreteNormal[2] == -1 && discreteNormal[3] == 0) {
-
               addInternalVelocityEdge<2,-1,-1>(iX,iX,iY,iY,iZ,iZ, omega);
-
             }
           }
         }
@@ -724,9 +580,7 @@ template<typename T, template<typename U> class Lattice, class BoundaryManager>
 void BoundaryConditionInstantiator3D<T,Lattice,BoundaryManager>::
 addVelocityBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int material, T omega)
 {
-
   addVelocityBoundary(blockGeometryStructure, material, 0, blockGeometryStructure.getNx()-1, 0, blockGeometryStructure.getNy()-1, 0, blockGeometryStructure.getNz()-1, omega);
-
 }
 
 // Slip BC
@@ -745,7 +599,7 @@ void BoundaryConditionInstantiator3D<T, Lattice, BoundaryManager>::addSlipBounda
             addSlipBoundary(iX, iX, iY, iY, iZ, iZ, discreteNormal[1], discreteNormal[2], discreteNormal[3]);
           } else {
             clout << "Warning: Could not addSlipBoundary (" << iX << ", " << iY << ", " << iZ << "), discreteNormal=(" << discreteNormal[0] <<","<< discreteNormal[1] <<","<< discreteNormal[2] <<","<< discreteNormal[3] <<"), set to bounceBack" << std::endl;
-            this->getBlock().defineDynamics(iX, iY, iZ, &instances::getBounceBack<T, Lattice>() );
+            _block.defineDynamics(iX, iY, iZ, &instances::getBounceBack<T, Lattice>() );
           }
         }
       }
@@ -775,46 +629,26 @@ addPressureBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int mat
       for (int iZ = z0; iZ <= z1; iZ++) {
 
         if (blockGeometryStructure.getMaterial(iX, iY, iZ)==material) {
-
           discreteNormal = blockGeometryStructure.getStatistics().getType(iX,iY,iZ);
 
           if (discreteNormal[0] == 0) {
-
             if (discreteNormal[1] != 0 && discreteNormal[1] == -1) {
-
               addPressureBoundary<0,-1>(iX,iX,iY,iY,iZ,iZ, omega);
-
             }
-
             else if (discreteNormal[1] != 0 && discreteNormal[1] == 1) {
-
               addPressureBoundary<0,1>(iX,iX,iY,iY,iZ,iZ, omega);
-
             }
-
             else if (discreteNormal[2] != 0 && discreteNormal[2] == -1) {
-
               addPressureBoundary<1,-1>(iX,iX,iY,iY,iZ,iZ, omega);
-
             }
-
             else if (discreteNormal[2] != 0 && discreteNormal[2] == 1) {
-
               addPressureBoundary<1,1>(iX,iX,iY,iY,iZ,iZ, omega);
-
             }
-
-
             else if (discreteNormal[3] != 0 && discreteNormal[3] == -1) {
-
               addPressureBoundary<2,-1>(iX,iX,iY,iY,iZ,iZ, omega);
-
             }
-
             else if (discreteNormal[3] != 0 && discreteNormal[3] == 1) {
-
               addPressureBoundary<2,1>(iX,iX,iY,iY,iZ,iZ, omega);
-
             }
           }
         }
@@ -844,46 +678,27 @@ addConvectionBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int m
       for (int iZ = z0; iZ <= z1; iZ++) {
 
         if (blockGeometryStructure.getMaterial(iX, iY, iZ)==material) {
-
           discreteNormal = blockGeometryStructure.getStatistics().getType(iX,iY,iZ);
 
           if (discreteNormal[0] == 0) {
-
             if (discreteNormal[1] != 0 && discreteNormal[1] == -1) {
-
               addConvectionBoundary<0,-1>(iX,iX,iY,iY,iZ,iZ, omega, uAv);
-
             }
-
             else if (discreteNormal[1] != 0 && discreteNormal[1] == 1) {
-
               addConvectionBoundary<0,1>(iX,iX,iY,iY,iZ,iZ, omega, uAv);
-
             }
-
             else if (discreteNormal[2] != 0 && discreteNormal[2] == -1) {
-
               addConvectionBoundary<1,-1>(iX,iX,iY,iY,iZ,iZ, omega, uAv);
-
             }
-
             else if (discreteNormal[2] != 0 && discreteNormal[2] == 1) {
-
               addConvectionBoundary<1,1>(iX,iX,iY,iY,iZ,iZ, omega, uAv);
-
             }
-
 
             else if (discreteNormal[3] != 0 && discreteNormal[3] == -1) {
-
               addConvectionBoundary<2,-1>(iX,iX,iY,iY,iZ,iZ, omega, uAv);
-
             }
-
             else if (discreteNormal[3] != 0 && discreteNormal[3] == 1) {
-
               addConvectionBoundary<2,1>(iX,iX,iY,iY,iZ,iZ, omega, uAv);
-
             }
           }
         }
@@ -1317,19 +1132,6 @@ void BoundaryConditionInstantiator3D<T,Lattice,BoundaryManager>::
 addInternalVelocityCornerPPP(int x, int y, int z, T omega)
 {
   addInternalVelocityCorner< 1, 1, 1>(x,y,z, omega);
-}
-
-
-template<typename T, template<typename U> class Lattice, class BoundaryManager>
-BlockLatticeStructure3D<T,Lattice>& BoundaryConditionInstantiator3D<T,Lattice,BoundaryManager>::getBlock()
-{
-  return block;
-}
-
-template<typename T, template<typename U> class Lattice, class BoundaryManager>
-BlockLatticeStructure3D<T,Lattice> const& BoundaryConditionInstantiator3D<T,Lattice,BoundaryManager>::getBlock() const
-{
-  return block;
 }
 
 template<typename T, template<typename U> class Lattice, class BoundaryManager>

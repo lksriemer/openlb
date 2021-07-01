@@ -31,11 +31,12 @@
 
 #include <vector>
 #include <list>
+
 #include "offBoundaryCondition2D.h"
 #include "superOffBoundaryCondition2D.h"
 #include "core/superLattice2D.h"
 #include "core/util.h"
-#include "functors/analyticalF.h"
+#include "functors/analytical/analyticalF.h"
 
 namespace olb {
 

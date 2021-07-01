@@ -141,8 +141,9 @@ template<typename T, template<typename U> class Lattice>
 void VelocityBouzidiLinearPostProcessor2D<T,Lattice>::
 process(BlockLattice2D<T,Lattice>& blockLattice)
 {
-  T u = ufrac*blockLattice.get(xN, yN).getDynamics()->getVelocityCoefficient(iPop);
-  blockLattice.get(xN, yN).getDynamics()->defineRho( blockLattice.get(xN, yN), blockLattice.get(x, y).computeRho() );
+  Dynamics<T,Lattice>* dynamics = blockLattice.getDynamics(xN, yN);
+  T u = ufrac*dynamics->getVelocityCoefficient(iPop);
+  dynamics->defineRho( blockLattice.get(xN, yN), blockLattice.get(x, y).computeRho() );
   T j = u;// * blockLattice.get(x, y).computeRho();
   blockLattice.get(x, y)[opp] = q*blockLattice.get(xN, yN)[iPop] +
                                 (1-q)*blockLattice.get(xB, yB)[iPop2] + j;
@@ -222,8 +223,9 @@ template<typename T, template<typename U> class Lattice>
 void VelocityBounceBackPostProcessor2D<T,Lattice>::
 process(BlockLattice2D<T,Lattice>& blockLattice)
 {
-  T u = blockLattice.get(xN, yN).getDynamics()->getVelocityCoefficient(iPop);
-  blockLattice.get(xN, yN).getDynamics()->defineRho( blockLattice.get(xN, yN), blockLattice.get(x, y).computeRho() );
+  Dynamics<T,Lattice>* dynamics = blockLattice.getDynamics(xN, yN);
+  T u = dynamics->getVelocityCoefficient(iPop);
+  dynamics->defineRho( blockLattice.get(xN, yN), blockLattice.get(x, y).computeRho() );
   T j = u;//*blockLattice.get(x, y).computeRho();
   blockLattice.get(x, y)[opp] = blockLattice.get(xN, yN)[iPop] + j;
 }
@@ -260,8 +262,9 @@ template<typename T, template<typename U> class Lattice>
 void AntiBounceBackPostProcessor2D<T,Lattice>::
 process(BlockLattice2D<T,Lattice>& blockLattice)
 {
-  /*T u = blockLattice.get(xN, yN).getDynamics()->getVelocityCoefficient(iPop);
-  blockLattice.get(xN, yN).getDynamics()->defineRho( blockLattice.get(xN, yN), blockLattice.get(x, y).computeRho() );*/
+  /*Dynamics<T,Lattice>* dynamics = blockLattice.getDynamics(xN, yN);
+  T u = dynamics->getVelocityCoefficient(iPop);
+  dynamics->defineRho( blockLattice.get(xN, yN), blockLattice.get(x, y).computeRho() );*/
   //T j = u;//*blockLattice.get(x, y).computeRho();
   if (Lattice<T>::c[iPop][1]==0) {
     blockLattice.get(x, y)[opp] = -blockLattice.get(xN, yN)[iPop];  // + j;

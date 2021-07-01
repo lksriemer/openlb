@@ -28,8 +28,6 @@
 #define LATTICE_STATISTICS_H
 
 #include <vector>
-//#include "spatiallyExtendedObject2D.h"
-//#include "spatiallyExtendedObject3D.h"
 #include "io/ostreamManager.h"
 
 namespace olb {
@@ -52,71 +50,30 @@ public:
   int subscribeMin();
   int subscribeMax();
 
-  void incrementStats(T rho, T uSqr)
-  {
-    tmpAv[avRho]    += rho;
-    tmpAv[avEnergy] += uSqr;
-    if (uSqr > tmpMax[maxU]) {
-      tmpMax[maxU] = uSqr;
-    }
-    ++tmpNumCells;
-  }
+  void incrementStats(T rho, T uSqr);
   void gatherAverage(int whichAverage, T value);
   void gatherSum(int whichSum, T value);
   void gatherMin(int whichMin, T value);
   void gatherMax(int whichMax, T value);
   void incrementStats();
-  T getAverageRho()        const
-  {
-    return averageVect[avRho];
-  }
-  T getAverageEnergy()     const
-  {
-    return averageVect[avEnergy];
-  }
-  T getMaxU()              const
-  {
-    return maxVect[maxU];
-  }
-  size_t const& getNumCells() const
-  {
-    return numCells;
-  }
+  T getAverageRho() const;
+  T getAverageEnergy() const;
+  T getMaxU() const;
+  size_t const& getNumCells() const;
 
   T getAverage(int whichAverage) const;
   T getSum(int whichSum) const;
   T getMin(int whichMin) const;
   T getMax(int whichMax) const;
 
-  std::vector<T>& getAverageVect()
-  {
-    return averageVect;
-  }
-  std::vector<T>& getSumVect()
-  {
-    return sumVect;
-  }
-  std::vector<T>& getMinVect()
-  {
-    return minVect;
-  }
-  std::vector<T>& getMaxVect()
-  {
-    return maxVect;
-  }
+  std::vector<T>& getAverageVect();
+  std::vector<T>& getSumVect();
+  std::vector<T>& getMinVect();
+  std::vector<T>& getMaxVect();
 
-  void incrementTime()
-  {
-    ++latticeTime;
-  };
-  void resetTime(size_t value=0)
-  {
-    latticeTime=value;
-  } ;
-  size_t getTime() const
-  {
-    return latticeTime;
-  };
+  void incrementTime();
+  void resetTime(size_t value=0);
+  size_t getTime() const;
   void print(int iterationStep, T physicalTime=-1) const;
   void initialize();
 private:

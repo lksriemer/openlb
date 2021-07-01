@@ -31,6 +31,8 @@
 #include <vector>
 #include <math.h>
 #include "io/ostreamManager.h"
+#include "core/vector.h"
+#include "core/olbDebug.h"
 
 /// All OpenLB code is contained in this namespace.
 namespace olb {
@@ -56,7 +58,7 @@ private:
   /// Number of nodes in the direction x and y and the refinement Level
   int _nX, _nY;
   /// Number of full cells
-  int _weight;
+  size_t _weight;
   /// refinement level, _delta = _delta0^_refinementLevel
   int _refinementLevel;
 
@@ -67,7 +69,7 @@ public:
   /// Construction of a cuboid
   Cuboid2D(T globPosX, T globPosY, T delta, int nX, int nY, int refinementLevel=0);
   /// Construction of a cuboid vector version
-  Cuboid2D(std::vector<T> origin, T delta, std::vector<int> extend, int refinementLevel=0);
+  Cuboid2D(Vector<T,2> origin, T delta, Vector<int,2> extend, int refinementLevel=0);
   /// Copy constructor
   Cuboid2D(Cuboid2D<T> const& rhs, int overlap=0);
   /// Copy assignment
@@ -78,7 +80,7 @@ public:
   T get_globPosX() const;
   T get_globPosY() const;
   /// Read only access to left lower corner coordinates
-  std::vector<T> const getOrigin() const;
+  Vector<T,2> const getOrigin() const;
   /// Read access to the distance of cuboid nodes
   T getDeltaR() const;
   /// Read access to cuboid width
@@ -86,12 +88,12 @@ public:
   /// Read access to cuboid height
   int getNy() const;
   /// Read only access to the number of voxels in every dimension
-  std::vector<int> const getExtend() const;
+  Vector<int,2> const getExtend() const;
 
   /// Returns the volume of the cuboid
   T getPhysVolume() const;
   /// Returns the number of Nodes in the volume
-  int getLatticeVolume() const;
+  size_t getLatticeVolume() const;
   /// Returns the perimeter of the cuboid
   T getPhysPerimeter() const;
   /// Returns the number of Nodes at the perimeter
@@ -102,11 +104,8 @@ public:
   void getPhysR(T physR[2], const int latticeR[2]) const;
   void getPhysR(T physR[2], const int& iX, const int& iY) const;
 
-  void getLatticeR(int latticeR[2], const T physR[2]) const
-  {
-    latticeR[0] = (int)floor( (physR[0] - _globPosX )/_delta +.5);
-    latticeR[1] = (int)floor( (physR[1] - _globPosY )/_delta +.5);
-  }
+  void getLatticeR(int latticeR[2], const T physR[2]) const;
+  void getLatticeR(int latticeR[2], const Vector<T,2>& physR) const;
 
   void getFloorLatticeR(const std::vector<T>& physR, std::vector<int>& latticeR) const
   {
@@ -120,15 +119,9 @@ public:
   }
 
   /// Returns the number of full cells
-  int getWeight() const
-  {
-    /*TODO*/ return 1;
-  };
+  size_t getWeight() const;
   /// Sets the number of full cells
-  void setWeight(int fullCells)
-  {
-    /*TODO*/
-  };
+  void setWeight(size_t fullCells);
 
   /// Checks whether a point (globX/globY) is contained in the cuboid
   /// extended with an layer of size overlap*delta
@@ -140,6 +133,9 @@ public:
   /// Checks whether there is an intersection with the cuboid extended
   /// with an layer of size overlap*delta
   bool checkInters(T globX0, T globX1, T globY0, T globY1, int overlap = 0) const;
+  /// Checks whether a given point intersects the cuboid extended
+  /// by a layer of size overlap*delta
+  bool checkInters(T globX, T globY, int overlap = 0) const;
   /// Checks whether there is an intersection and returns the local
   /// active node range which can be empty by means of locX0=1, locX1=0,
   /// locY0=1, locY1=0 of the cuboid extended with an layer of size

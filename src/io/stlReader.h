@@ -36,8 +36,8 @@
 
 #include "communication/loadBalancer.h"
 #include "geometry/cuboidGeometry3D.h"
-#include "functors/indicator/indicatorF3D.h"
-#include "functors/indicator/indicatorBaseF3D.h"
+#include "functors/lattice/indicator/indicatorF3D.h"
+#include "functors/lattice/indicator/indicatorBaseF3D.h"
 #include "utilities/vectorHelpers.h"
 #include "octree.h"
 #include "core/vector.h"
@@ -54,7 +54,7 @@ class Octree;
 template<typename T>
 struct STLpoint {
   /// Constructor constructs
-  STLpoint() : r(3, T()) {};
+  STLpoint() : r() {};
   /// Operator= equals
   STLpoint<T>& operator=(STLpoint<T> const& rhs)
   {
@@ -94,7 +94,7 @@ struct STLtriangle {
 
 public:
   /// Constructor constructs
-  STLtriangle():point(3, STLpoint<T>()), normal(3,T()), uBeta(3,T()), uGamma(3,T()), d(T()), kBeta(T()), kGamma(T()) {};
+  STLtriangle():point(3, STLpoint<T>()), normal(T()), uBeta(T()), uGamma(T()), d(T()), kBeta(T()), kGamma(T()) {};
   /// CopyConstructor copies
   STLtriangle(STLtriangle<T> const& tri):point(tri.point), normal(tri.normal), uBeta(tri.uBeta), uGamma(tri.uGamma), d(tri.d), kBeta(tri.kBeta), kGamma(tri.kGamma) {};
   /// Operator= equals
@@ -227,7 +227,7 @@ public:
   STLreader(const std::string fName, T voxelSize, T stlSize=1, unsigned short int method=2,
             bool verbose = false, T overlap=0., T max=0.);
 
-  ~STLreader();
+  ~STLreader() override;
   /// Returns whether node is inside or not.
   bool operator() (bool output[], const T input[]) override;
 

@@ -26,6 +26,8 @@
  */
 
 #include "benchmarkUtil.h"
-#include "olbAlgorithms.h"
 #include "timer.h"
 #include "vectorHelpers.h"
+#include "functorPtr.h"
+#include "hyperplane3D.h"
+#include "hyperplaneLattice3D.h"

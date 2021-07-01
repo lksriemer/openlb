@@ -58,11 +58,10 @@ typedef double T;
 
 
 // Parameters for the simulation setup
-const int N = 2;        // resolution of the model
-const int M = 1;        // time discretization refinement
+const int N = 20;       // resolution of the model
 const T Re = 20.;       // Reynolds number
 const T maxPhysT = 16.; // max. simulation time in s, SI unit
-const T L = 0.01/N;     // latticeL
+const T L = 0.1/N;      // latticeL
 const T lengthX = 2.2;
 const T lengthY = .41+L;
 const T centerCylinderX = 0.2;
@@ -71,8 +70,9 @@ const T radiusCylinder = 0.05;
 
 
 // Stores geometry information in form of material numbers
-void prepareGeometry( LBconverter<T> const& converter,
-                      SuperGeometry2D<T>& superGeometry ) {
+void prepareGeometry( UnitConverter<T, DESCRIPTOR> const& converter,
+                      SuperGeometry2D<T>& superGeometry )
+{
 
   OstreamManager clout( std::cout,"prepareGeometry" );
   clout << "Prepare Geometry ..." << std::endl;
@@ -109,16 +109,17 @@ void prepareGeometry( LBconverter<T> const& converter,
 
 // Set up the geometry of the simulation
 void prepareLattice( SuperLattice2D<T,DESCRIPTOR>& sLattice,
-                     LBconverter<T> const& converter,
+                     UnitConverter<T, DESCRIPTOR> const& converter,
                      Dynamics<T, DESCRIPTOR>& bulkDynamics,
                      sOnLatticeBoundaryCondition2D<T,DESCRIPTOR>& sBoundaryCondition,
                      sOffLatticeBoundaryCondition2D<T,DESCRIPTOR>& offBc,
-                     SuperGeometry2D<T>& superGeometry ) {
+                     SuperGeometry2D<T>& superGeometry )
+{
 
   OstreamManager clout( std::cout,"prepareLattice" );
   clout << "Prepare Lattice ..." << std::endl;
 
-  const T omega = converter.getOmega();
+  const T omega = converter.getLatticeRelaxationFrequency();
 
   // Material=0 -->do nothing
   sLattice.defineDynamics( superGeometry, 0, &instances::getNoDynamics<T, DESCRIPTOR>() );
@@ -171,13 +172,14 @@ void prepareLattice( SuperLattice2D<T,DESCRIPTOR>& sLattice,
 
 // Generates a slowly increasing inflow for the first iTMaxStart timesteps
 void setBoundaryValues( SuperLattice2D<T, DESCRIPTOR>& sLattice,
-                        LBconverter<T> const& converter, int iT,
-                        SuperGeometry2D<T>& superGeometry ) {
+                        UnitConverter<T, DESCRIPTOR> const& converter, int iT,
+                        SuperGeometry2D<T>& superGeometry )
+{
 
   OstreamManager clout( std::cout,"setBoundaryValues" );
 
   // No of time steps for smooth start-up
-  int iTmaxStart = converter.numTimeSteps( maxPhysT*0.4 );
+  int iTmaxStart = converter.getLatticeTime( maxPhysT*0.4 );
   int iTupdate = 5;
 
   if ( iT%iTupdate==0 && iT<= iTmaxStart ) {
@@ -191,7 +193,7 @@ void setBoundaryValues( SuperLattice2D<T, DESCRIPTOR>& sLattice,
     T iTvec[1] = {T( iT )};
     T frac[1] = {};
     StartScale( frac,iTvec );
-    T maxVelocity = converter.getLatticeU()*3./2.*frac[0];
+    T maxVelocity = converter.getCharLatticeVelocity()*3./2.*frac[0];
     T distance2Wall = L/2.;
     Poiseuille2D<T> poiseuilleU( superGeometry, 3, maxVelocity, distance2Wall );
 
@@ -201,8 +203,9 @@ void setBoundaryValues( SuperLattice2D<T, DESCRIPTOR>& sLattice,
 
 // Computes the pressure drop between the voxels before and after the cylinder
 void getResults( SuperLattice2D<T, DESCRIPTOR>& sLattice,
-                 LBconverter<T> const& converter, int iT,
-                 SuperGeometry2D<T>& superGeometry, Timer<T>& timer ) {
+                 UnitConverter<T, DESCRIPTOR> const& converter, int iT,
+                 SuperGeometry2D<T>& superGeometry, Timer<T>& timer )
+{
 
   OstreamManager clout( std::cout,"getResults" );
 
@@ -212,8 +215,8 @@ void getResults( SuperLattice2D<T, DESCRIPTOR>& sLattice,
   vtmWriter.addFunctor( velocity );
   vtmWriter.addFunctor( pressure );
 
-  const int vtkIter  = converter.numTimeSteps( .3 );
-  const int statIter = converter.numTimeSteps( .1 );
+  const int vtkIter  = converter.getLatticeTime( .3 );
+  const int statIter = converter.getLatticeTime( .1 );
 
   if ( iT == 0 ) {
     // Writes the geometry, cuboid no. and rank no. as vti file for visualization
@@ -232,10 +235,9 @@ void getResults( SuperLattice2D<T, DESCRIPTOR>& sLattice,
     vtmWriter.write( iT );
 
     SuperEuklidNorm2D<T, DESCRIPTOR> normVel( velocity );
-    BlockLatticeReduction2D<T, DESCRIPTOR> planeReduction( normVel );
-    BlockGifWriter<T> gifWriter;
-    //gifWriter.write(planeReduction, 0, 0.7, iT, "vel"); //static scale
-    gifWriter.write( planeReduction, iT, "vel" ); // scaled
+    BlockReduction2D2D<T> planeReduction( normVel, 600, BlockDataSyncMode::ReduceOnly );
+    // write output as JPEG
+    heatmap::write(planeReduction, iT);
   }
 
   // Gnuplot constructor (must be static!)
@@ -243,7 +245,7 @@ void getResults( SuperLattice2D<T, DESCRIPTOR>& sLattice,
   static Gnuplot<T> gplot( "drag" );
 
   // write pdf at last time step
-  if ( iT == converter.numTimeSteps( maxPhysT )-1 ) {
+  if ( iT == converter.getLatticeTime( maxPhysT )-1 ) {
     // writes pdf
     gplot.writePDF();
   }
@@ -255,10 +257,10 @@ void getResults( SuperLattice2D<T, DESCRIPTOR>& sLattice,
     timer.printStep();
 
     // Lattice statistics console output
-    sLattice.getStatistics().print( iT,converter.physTime( iT ) );
+    sLattice.getStatistics().print( iT,converter.getPhysTime( iT ) );
 
     // Drag, lift, pressure drop
-    AnalyticalFfromSuperLatticeF2D<T, DESCRIPTOR> intpolatePressure( pressure, true );
+    AnalyticalFfromSuperF2D<T> intpolatePressure( pressure, true );
     SuperLatticePhysDrag2D<T,DESCRIPTOR> drag( sLattice, superGeometry, 5, converter );
 
 
@@ -287,7 +289,7 @@ void getResults( SuperLattice2D<T, DESCRIPTOR>& sLattice,
     clout << "; drag=" << _drag[0] << "; lift=" << _drag[1] << endl;
 
     // set data for gnuplot: input={xValue, yValue(s), names (optional), position of key (optional)}
-    gplot.setData( converter.physTime( iT ), {_drag[0], 5.58}, {"drag(openLB)", "drag(schaeferTurek)"}, "bottom right" );
+    gplot.setData( converter.getPhysTime( iT ), {_drag[0], 5.58}, {"drag(openLB)", "drag(schaeferTurek)"}, "bottom right", {'l','l'} );
     // writes a png in one file for every timestep, if the file is open it can be used as a "liveplot"
     gplot.writePNG();
 
@@ -299,7 +301,8 @@ void getResults( SuperLattice2D<T, DESCRIPTOR>& sLattice,
   }
 }
 
-int main( int argc, char* argv[] ) {
+int main( int argc, char* argv[] )
+{
 
   // === 1st Step: Initialization ===
   olbInit( &argc, &argv );
@@ -308,17 +311,18 @@ int main( int argc, char* argv[] ) {
   // display messages from every single mpi process
   //clout.setMultiOutput(true);
 
-  LBconverter<T> converter(
-    ( int ) 2,                             // dim
-    ( T )   L,                             // latticeL_
-    ( T )   0.02/M,                        // latticeU_
-    ( T )   0.2*2.*radiusCylinder/Re,      // charNu_
-    ( T )   2*radiusCylinder,              // charL_ = 1
-    ( T )   0.2                            // charU_ = 1
+  UnitConverterFromResolutionAndRelaxationTime<T, DESCRIPTOR> const converter(
+    int {N},                        // resolution: number of voxels per charPhysL
+    (T)   0.56,                     // latticeRelaxationTime: relaxation time, have to be greater than 0.5!
+    (T)   2.0*radiusCylinder,       // charPhysLength: reference length of simulation geometry
+    (T)   0.2,                      // charPhysVelocity: maximal/highest expected velocity during simulation in __m / s__
+    (T)   0.2*2.*radiusCylinder/Re, // physViscosity: physical kinematic viscosity in __m^2 / s__
+    (T)   1.0                       // physDensity: physical density in __kg / m^3__
   );
+  // Prints the converter log as console output
   converter.print();
-  writeLogFile( converter, "cylinder2d" );
-
+  // Writes the converter log in a file
+  converter.write("cylinder2d");
 
   // === 2rd Step: Prepare Geometry ===
   Vector<T,2> extend( lengthX,lengthY );
@@ -344,7 +348,7 @@ int main( int argc, char* argv[] ) {
   // === 3rd Step: Prepare Lattice ===
   SuperLattice2D<T, DESCRIPTOR> sLattice( superGeometry );
 
-  BGKdynamics<T, DESCRIPTOR> bulkDynamics( converter.getOmega(), instances::getBulkMomenta<T, DESCRIPTOR>() );
+  BGKdynamics<T, DESCRIPTOR> bulkDynamics( converter.getLatticeRelaxationFrequency(), instances::getBulkMomenta<T, DESCRIPTOR>() );
 
   // choose between local and non-local boundary condition
   sOnLatticeBoundaryCondition2D<T,DESCRIPTOR> sBoundaryCondition( sLattice );
@@ -358,11 +362,10 @@ int main( int argc, char* argv[] ) {
 
   // === 4th Step: Main Loop with Timer ===
   clout << "starting simulation..." << endl;
-  Timer<T> timer( converter.numTimeSteps( maxPhysT ), superGeometry.getStatistics().getNvoxel() );
+  Timer<T> timer( converter.getLatticeTime( maxPhysT ), superGeometry.getStatistics().getNvoxel() );
   timer.start();
 
-  for ( int iT = 0; iT < converter.numTimeSteps( maxPhysT ); ++iT ) {
-
+  for ( int iT = 0; iT < converter.getLatticeTime( maxPhysT ); ++iT ) {
     // === 5th Step: Definition of Initial and Boundary Conditions ===
     setBoundaryValues( sLattice, converter, iT, superGeometry );
 

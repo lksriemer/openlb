@@ -37,10 +37,22 @@ namespace descriptors {
 //template class DescriptorBase<3>;
 //template class DescriptorBase<9>;
 //template class DescriptorBase<19>;
+
+template struct D2Q5DescriptorBase<double>;
+template struct AdvectionDiffusionD2Q5Descriptor<double>;
+template struct AdvectionDiffusionMRTD2Q5DescriptorBase<double>;
+template struct AdvectionDiffusionMRTD2Q5Descriptor<double>;
 template struct D2Q9DescriptorBase<double>;
 template struct D2Q9Descriptor<double>;
+template struct D3Q7DescriptorBase<double>;
+template struct AdvectionDiffusionD3Q7Descriptor<double>;
+template struct AdvectionDiffusionMRTD3Q7DescriptorBase<double>;
+template struct AdvectionDiffusionMRTD3Q7Descriptor<double>;
+template struct D3Q13DescriptorBase<double>;
+template struct D3Q15DescriptorBase<double>;
 template struct D3Q19DescriptorBase<double>;
 template struct D3Q19Descriptor<double>;
+template struct D3Q27DescriptorBase<double>;
 }
 }
 

@@ -28,6 +28,10 @@
 
 #include <utility>
 #include <string>
+#include <array>
+#include <iomanip>
+#include <ios>
+#include <iostream>
 #include "io/fileName.h"
 #include "superParticleSystem3D.h"
 
@@ -40,12 +44,11 @@ namespace olb {
 template<typename T, template<typename U> class PARTICLETYPE>
 SuperParticleSystem3D<T, PARTICLETYPE>::SuperParticleSystem3D(
   CuboidGeometry3D<T>& cuboidGeometry, LoadBalancer<T>& loadBalancer,
-  SuperGeometry3D<T>& superGeometry, LBconverter<T>& conv)
+  SuperGeometry3D<T>& superGeometry)
   : SuperStructure3D<T>(cuboidGeometry, loadBalancer,
                         superGeometry.getOverlap()),
     clout(std::cout, "SuperParticleSystem3d"),
     _superGeometry(superGeometry),
-    _conv(conv),
     _overlap(0)
 {
   init();
@@ -53,13 +56,12 @@ SuperParticleSystem3D<T, PARTICLETYPE>::SuperParticleSystem3D(
 
 template<typename T, template<typename U> class PARTICLETYPE>
 SuperParticleSystem3D<T, PARTICLETYPE>::SuperParticleSystem3D(
-  SuperGeometry3D<T>& superGeometry, LBconverter<T>& conv)
+  SuperGeometry3D<T>& superGeometry)
   : SuperStructure3D<T>(superGeometry.getCuboidGeometry(),
                         superGeometry.getLoadBalancer(),
                         superGeometry.getOverlap()),
     clout(std::cout, "SuperParticleSystem3d"),
     _superGeometry(superGeometry),
-    _conv(conv),
     _overlap(0)
 {
   init();
@@ -73,13 +75,13 @@ void SuperParticleSystem3D<T, PARTICLETYPE>::init()
 
   _stopSorting = 0;
 
-#if PARALLEL_MODE_MPI
+#ifdef PARALLEL_MODE_MPI
   rank = singleton::mpi().getRank();
   size = singleton::mpi().getSize();
 #endif
   for (int i = 0; i < this->_cuboidGeometry.getNc(); ++i) {
     if (this->_loadBalancer.rank(i) == rank) {
-      auto dummy = new ParticleSystem3D<T, PARTICLETYPE>(_superGeometry, _conv);
+      auto dummy = new ParticleSystem3D<T, PARTICLETYPE>(_superGeometry);
       this->_cuboidGeometry.get(i).getOrigin().toStdVector()[0];
       std::vector<T> physPos = this->_cuboidGeometry.get(i).getOrigin().toStdVector();
       std::vector<T> physExtend(3, 0);
@@ -94,7 +96,7 @@ void SuperParticleSystem3D<T, PARTICLETYPE>::init()
     }
   }
 
-#if PARALLEL_MODE_MPI
+#ifdef PARALLEL_MODE_MPI
   for (int i=0; i<this->_cuboidGeometry.getNc(); ++i) {
     if (this->_loadBalancer.rank(i) == rank) {
       std::vector<int> dummy;
@@ -124,11 +126,10 @@ template<typename T, template<typename U> class PARTICLETYPE>
 SuperParticleSystem3D<T, PARTICLETYPE>::SuperParticleSystem3D(
   SuperParticleSystem3D<T, PARTICLETYPE>& spSys)
   : SuperStructure3D<T>(spSys._cuboidGeometry, spSys._loadBalancer,
-                        spSys._overlap),
+                        int(spSys._overlap)),
     clout(std::cout, "SuperParticleSystem3d"),
     _pSystems(spSys._pSystems),
     _superGeometry(spSys._superGeometry),
-    _conv(spSys._conv),
     _rankNeighbours(spSys._rankNeighbours),
     _overlap(spSys._overlap)
 {
@@ -138,11 +139,10 @@ template<typename T, template<typename U> class PARTICLETYPE>
 SuperParticleSystem3D<T, PARTICLETYPE>::SuperParticleSystem3D(
   SuperParticleSystem3D<T, PARTICLETYPE> const& spSys)
   : SuperStructure3D<T>(spSys._cuboidGeometry, spSys._loadBalancer,
-                        spSys._overlap),
+                        int(spSys._overlap)),
     clout(std::cout, "SuperParticleSystem3d"),
     _pSystems(spSys._pSystems),
     _superGeometry(spSys._superGeometry),
-    _conv(spSys._conv),
     _rankNeighbours(spSys._rankNeighbours),
     _overlap(spSys._overlap)
 {
@@ -152,10 +152,9 @@ template<typename T, template<typename U> class PARTICLETYPE>
 SuperParticleSystem3D<T, PARTICLETYPE>::SuperParticleSystem3D(
   SuperParticleSystem3D<T, PARTICLETYPE> && spSys)
   : SuperStructure3D<T>(spSys._cuboidGeometry, spSys._loadBalancer,
-                        spSys._overlap),
+                        int(spSys._overlap)),
     clout(std::cout, "SuperParticleSystem3d"),
     _superGeometry(spSys._superGeometry),
-    _conv(spSys._conv),
     _rankNeighbours(spSys._rankNeighbours),
     _overlap(spSys._overlap)
 {
@@ -203,6 +202,151 @@ void SuperParticleSystem3D<T, PARTICLETYPE>::captureEscapeRate(
         << "; escapeRate=" << sum / globalNumOfParticles() << std::endl;
 }
 
+// Output_txt.file for tracer particles (particles that have an id != 0
+/* _filename is filename of output txt-file
+ * _file is contact to output file
+ *  */
+template<typename T, template<typename U> class PARTICLETYPE>
+void SuperParticleSystem3D<T, PARTICLETYPE>::getOutput(std::string _filename,
+    int it, T conversionFactorTime, unsigned short _properties )
+{
+
+  enum particleProperties
+    : unsigned short {position = 1,
+                    velocity = 2,
+                    radius = 4,
+                    mass = 8,
+                    force = 16,
+                    storeForce = 32,
+                   };
+
+  /// initialize Parameters for the desired ParticleOutput:
+  /// ID, Radius, Position, Velocity, Force, storeForces
+  std::vector < T > id, rad;
+  std::vector<std::array<T, 3>> pos, vel, forces, storeForces;
+  /// initialize iteration Parameters for the loops
+  int k, j, numOfTracerParticles = globalNumOfTracerParticles();
+  int m = 0;
+  /// setPrecision for the decimal places in the txtOutputFile
+  std::setprecision(9);
+  /// set size of list in correlation to the number of TracerParticles
+  for (k = 0; k < numOfTracerParticles; k++) {
+    id.push_back(T());
+    rad.push_back(T());
+    pos.push_back( { T(), T(), T() });
+    vel.push_back( { T(), T(), T() });
+    forces.push_back( { T(), T(), T() });
+    storeForces.push_back( { T(), T(), T() });
+  }
+
+  k = 0;
+  /// get Information about each Particle in each particleSystem
+  std::vector<ParticleSystem3D<T, PARTICLETYPE>*> _pSystems = getPSystems();
+  for (unsigned int pS = 0; pS < _pSystems.size(); ++pS) {
+    std::deque<PARTICLETYPE<T>*> particles =
+      _pSystems[pS]->getParticlesPointer();
+    for (auto p : particles) {
+      if (p->getID() != 0) {
+        /// check whether it is a tracerParticle(!=0) or not (==0)
+        id[k] = p->getID();
+        rad[k] = p->getRad();
+        for (j = 0; j < 3; j++) { /// loop for each coordinate [x,y,z]
+          pos[k][j] = p->getPos()[j];
+          vel[k][j] = p->getVel()[j];
+          forces[k][j] = p->getForce()[j];
+          storeForces[k][j] = p->getStoreForce()[j];
+        }
+        p->resetStoreForce();
+        k++;
+        p++;
+      }
+    }
+  }
+
+#ifdef PARALLEL_MODE_MPI
+  /// prepare data vectors for parallel computing (mpi)
+  for (m = 0; m < numOfTracerParticles; m++) {
+    singleton::mpi().reduceAndBcast(id[m], MPI_SUM);
+    singleton::mpi().reduceAndBcast(rad[m], MPI_SUM);
+    for (j = 0; j < 3; j++) { /// loop for each coordinate [x,y,z]
+      singleton::mpi().reduceAndBcast(pos[m][j], MPI_SUM);
+      singleton::mpi().reduceAndBcast(vel[m][j], MPI_SUM);
+      singleton::mpi().reduceAndBcast(forces[m][j], MPI_SUM);
+      singleton::mpi().reduceAndBcast(storeForces[m][j], MPI_SUM);
+    }
+  }
+#endif
+
+  /// Particle Output to txtFile just on main process ID (==0)
+  if (!singleton::mpi().getRank()) {
+    std::ofstream _file;
+
+    int i = 0;
+    if (it == 0) {
+      /// write headers of each column at timeStep zero
+      /// after header name, there is the number of the column
+      _file.open(_filename, std::ios::out | std::ios::trunc);
+      _file << "Timestep" << i + 1 << " " << "physTime" << i + 2;
+      i = i + 2;
+
+      for (m = 0; m < numOfTracerParticles; m++) {
+        _file << " id" << i + 1;
+        i = i + 1;
+        _file << " rad" << i + 1;
+        i = i + 1;
+        if (_properties & particleProperties::position) {
+          _file << " pos0_" << i + 1 << " pos1_" << " pos2_" << i + 3;
+          i = i + 3;
+        }
+        if (_properties & particleProperties::force) {
+          _file << " forc0_" << i + 1 << " forc1_" << i + 2 << " forc2_"
+                << i + 3;
+          i = i + 3;
+        }
+        if (_properties & particleProperties::velocity) {
+          _file << " vel0_" << i + 1 << " vel1_" << i + 2 << " vel2_" << i + 3;
+          i = i + 3;
+        }
+        if (_properties & particleProperties::storeForce) {
+          _file << " hforc0_" << i + 1 << " hforc1_" << i + 2 << " hforc2_"
+                << i + 3;
+          i = i + 3;
+        }
+      }
+      _file << "\n";
+      _file.close();
+    }
+
+    if (it >= 0) {
+      /// write the results in regart to the above defined headers
+      _file.open(_filename, std::ios::out | std::ios::app);
+      _file << it << " " << conversionFactorTime*it << " ";
+
+      for (m = 0; m < numOfTracerParticles; m++) {
+        _file << id[m] << " ";
+        _file << rad[m] << " ";
+        if (_properties & particleProperties::position) {
+          _file << pos[m][0] << " " << pos[m][1] << " " << pos[m][2] << " ";
+        }
+        if (_properties & particleProperties::force) {
+          _file << forces[m][0] << " " << forces[m][1] << " " << forces[m][2]
+                << " ";
+        }
+        if (_properties & particleProperties::velocity) {
+          _file << vel[m][0] << " " << vel[m][1] << " " << vel[m][2] << " ";
+        }
+        if (_properties & particleProperties::storeForce) {
+          _file << storeForces[m][0] << " " << storeForces[m][1] << " "
+                << storeForces[m][2] << " ";
+        }
+      }
+    }
+    _file << "\n";
+    _file.close();
+  }
+}
+
+
 template<typename T, template<typename U> class PARTICLETYPE>
 std::vector<ParticleSystem3D<T, PARTICLETYPE>*>& SuperParticleSystem3D<T,
     PARTICLETYPE>::getPSystems()    //+*
@@ -211,7 +355,7 @@ std::vector<ParticleSystem3D<T, PARTICLETYPE>*>& SuperParticleSystem3D<T,
 }
 
 template<typename T, template<typename U> class PARTICLETYPE>
-void SuperParticleSystem3D<T, PARTICLETYPE>::simulate(T dT)
+void SuperParticleSystem3D<T, PARTICLETYPE>::simulate(T dT, bool scale)
 {
 
   //  for (auto pS : _pSystems) {
@@ -259,7 +403,7 @@ void SuperParticleSystem3D<T, PARTICLETYPE>::simulate(T dT)
     pS->_contactDetection->sort();
     _stopSorting += clock() - delta;
 
-    pS->simulate(dT);
+    pS->simulate(dT, scale);
     pS->computeBoundary();
 
   }
@@ -269,6 +413,11 @@ void SuperParticleSystem3D<T, PARTICLETYPE>::simulate(T dT)
 template<typename T, template<typename U> class PARTICLETYPE>
 void SuperParticleSystem3D<T, PARTICLETYPE>::setOverlap(T overlap)
 {
+  if ( int(overlap)+1 > _superGeometry.getOverlap() ) {
+    clout << "Overlap of SuperParticleSystem3D should be < overlap "
+          "of SuperStructure3D" << std::endl;
+    exit(-1);
+  }
   _overlap = overlap;
 }
 
@@ -287,7 +436,7 @@ int SuperParticleSystem3D<T, PARTICLETYPE>::numOfPSystems()
 template<typename T, template<typename U> class PARTICLETYPE>
 int SuperParticleSystem3D<T, PARTICLETYPE>::globalNumOfParticles()
 {
-#if PARALLEL_MODE_MPI
+#ifdef PARALLEL_MODE_MPI
   int buffer = rankNumOfParticles();
   singleton::mpi().reduceAndBcast(buffer, MPI_SUM);
   return buffer;
@@ -299,7 +448,7 @@ int SuperParticleSystem3D<T, PARTICLETYPE>::globalNumOfParticles()
 template<typename T, template<typename U> class PARTICLETYPE>
 int SuperParticleSystem3D<T, PARTICLETYPE>::globalNumOfShadowParticles()
 {
-#if PARALLEL_MODE_MPI
+#ifdef PARALLEL_MODE_MPI
   int buffer = rankNumOfShadowParticles();
   singleton::mpi().reduceAndBcast(buffer, MPI_SUM);
   return buffer;
@@ -351,7 +500,7 @@ int SuperParticleSystem3D<T, PARTICLETYPE>::countLocMaterial(int mat)
 template<typename T, template<typename U> class PARTICLETYPE>
 int SuperParticleSystem3D<T, PARTICLETYPE>::countMaterial(int mat)
 {
-#if PARALLEL_MODE_MPI
+#ifdef PARALLEL_MODE_MPI
   int buffer = countLocMaterial(mat);
   singleton::mpi().reduceAndBcast(buffer, MPI_SUM);
   return buffer;
@@ -363,13 +512,42 @@ int SuperParticleSystem3D<T, PARTICLETYPE>::countMaterial(int mat)
 template<typename T, template<typename U> class PARTICLETYPE>
 int SuperParticleSystem3D<T, PARTICLETYPE>::globalNumOfActiveParticles()
 {
-#if PARALLEL_MODE_MPI
+#ifdef PARALLEL_MODE_MPI
   int buffer = rankNumOfActiveParticles();
   singleton::mpi().reduceAndBcast(buffer, MPI_SUM);
   return buffer;
 #else
   return rankNumOfActiveParticles();
 #endif
+}
+
+template<typename T, template<typename U> class PARTICLETYPE>
+int SuperParticleSystem3D<T, PARTICLETYPE>::globalNumOfTracerParticles()
+{
+#if PARALLEL_MODE_MPI
+  int buffer = rankNumOfTracerParticles();
+  singleton::mpi().reduceAndBcast(buffer, MPI_SUM);
+  return buffer;
+#else
+  return rankNumOfTracerParticles();
+#endif
+}
+
+template<typename T, template<typename U> class PARTICLETYPE>
+int SuperParticleSystem3D<T, PARTICLETYPE>::rankNumOfTracerParticles()
+{
+  int num=0;
+  for (auto pS : _pSystems) {
+    std::deque<PARTICLETYPE<T>*> particles = pS->getParticlesPointer();
+    int pSNum = 0;
+    for (auto p : particles) {
+      if (p->getID() != 0) {
+        pSNum++;
+      }
+    }
+    num += pSNum;
+  }
+  return num;
 }
 
 // TODO class olb::ParticleSystem3D<double, olb::Particle3D>’ has no member named ‘radiusDistribution
@@ -430,12 +608,12 @@ void SuperParticleSystem3D<T, PARTICLETYPE>::setVelToAnalyticalVel(
 template<typename T, template<typename U> class PARTICLETYPE>
 bool SuperParticleSystem3D<T, PARTICLETYPE>::findCuboid(PARTICLETYPE<T> &p)
 {
-  return findCuboid(p, _overlap);
+  return findCuboid(p, int(_overlap));
 }
 
 template<typename T, template<typename U> class PARTICLETYPE>
 bool SuperParticleSystem3D<T, PARTICLETYPE>::findCuboid(PARTICLETYPE<T> &p,
-    T overlap)
+    int overlap)
 {
   int C = this->_cuboidGeometry.get_iC(p.getPos()[0], p.getPos()[1],
                                        p.getPos()[2], overlap);
@@ -462,6 +640,8 @@ template<typename T, template<typename U> class PARTICLETYPE>
 bool SuperParticleSystem3D<T, PARTICLETYPE>::checkCuboid(PARTICLETYPE<T>& p,
     T overlap, int iC)
 {
+  // Checks whether particle is contained in the cuboid
+  // extended with an layer of size overlap*delta
   return this->_cuboidGeometry.get(iC).physCheckPoint(p.getPos()[0],
          p.getPos()[1],
          p.getPos()[2], overlap);
@@ -478,18 +658,29 @@ void SuperParticleSystem3D<T, PARTICLETYPE>::updateParticleDistribution()
   _relocateShadow.clear();
 #endif
   for (unsigned int pS = 0; pS < _pSystems.size(); ++pS) {
+
     _pSystems[pS]->_shadowParticles.clear();
     auto par = _pSystems[pS]->_particles.begin();
+
     while (par != _pSystems[pS]->_particles.end()) {
-      //Check if particle is still in his cuboid
+
+      //Check if particle is still in its cuboid
       if (checkCuboid(*par, 0)) {
 #ifdef shadows
-        //If yes --> check if its inside boundary layer
+        // Check if its inside boundary layer of its cuboid
         if (!(checkCuboid(*par, -_overlap))) {
+
           std::set<int> sendTo;
+          // Run through all cuboids to search the one that
+          // shares its boundary with the cuboid containing the particle
           for (int iC = 0; iC < this->_cuboidGeometry.getNc(); iC++) {
+            // Check if iC is neighbor cuboid in which overlap the particle is
+            // located
             if (par->getCuboid() != iC && checkCuboid(*par, _overlap, iC)) {
+              // rank is the processing thread of the global cuboid number iC
               int rank = this->_loadBalancer.rank(iC);
+              // insert rank into sendTo, if sendTo does not already contain
+              // rank for the actual particle
               if (!sendTo.count(rank)) {
                 _relocateShadow.insert(std::make_pair(rank, (*par)));
                 sendTo.insert(rank);
@@ -500,13 +691,36 @@ void SuperParticleSystem3D<T, PARTICLETYPE>::updateParticleDistribution()
 #endif
         //If not --> find new cuboid
       } else {
+        // check to which cuboid particle is located
+        // and give new cuboid to par
         findCuboid(*par, 0);
+        // gives particle the new cuboid number where it is now located to
         _relocate.insert(
           std::make_pair(this->_loadBalancer.rank(par->getCuboid()), (*par)));
+#ifdef shadows
+        // If the new particle position is in boundary layer
+        // If yes --> check if its inside boundary layer
+        if (!(checkCuboid(*par, -_overlap))) {
+          // yes, particle is in boundary layer
+          std::set<int> sendTo;
+          for (int iC = 0; iC < this->_cuboidGeometry.getNc(); iC++) {
+            // checks if iC is neighbor cuboid in whose overlap the particle
+            // is located
+            if (par->getCuboid() != iC && checkCuboid(*par, _overlap, iC)) {
+              int rank = this->_loadBalancer.rank(iC);
+              if (!sendTo.count(rank)) {
+                // shadow particle (copy of original) is inserted for iC
+                // but just with information of rank, not of cuboid!
+                _relocateShadow.insert(std::make_pair(rank, (*par)));
+                sendTo.insert(rank);
+              }
+            }
+          }
+        }
+#endif
         par = _pSystems[pS]->_particles.erase(par);
         par--;
       }
-      //      }
       par++;
     }
   }
@@ -514,31 +728,51 @@ void SuperParticleSystem3D<T, PARTICLETYPE>::updateParticleDistribution()
 #ifdef PARALLEL_MODE_MPI
   singleton::MpiNonBlockingHelper mpiNbHelper;
   //mpiNbHelper.allocate(_rankNeighbours.size());
+
   int k=0;
 
   /* Serialize particles */
+  // it is: std::map<int, std::vector<double> > _send_buffer
   _send_buffer.clear();
+
+  // fill std::map<int, std::vector<double> > _send_buffer with
+  // particle properties of particles in _relocate
+
+  // buffer size equals number of particle properties
   T buffer[PARTICLETYPE<T>::serialPartSize];
+  // insert all regular particles of _relocate into _send_buffer
   for (auto rN : _relocate) {
+    // second element in rN is (*par)
+    // write particle properties into buffer
     rN.second.serialize(buffer);
-    _send_buffer[rN.first].insert(_send_buffer[rN.first].end(), buffer, buffer+PARTICLETYPE<T>::serialPartSize);
+    // first element in rN is rank
+    // it is: std::map<int, std::vector<double> > _send_buffer;
+    // enlarge the _send_buffer element (rank), which is of vector type, with
+    // new elements of buffer (begin: buffer, end: buffer + serialPartSize)
+    _send_buffer[rN.first].insert(_send_buffer[rN.first].end(),
+                                  buffer, buffer+PARTICLETYPE<T>::serialPartSize);
   }
 
   /*Send Particles */
   k=0;
+  // noSends contains number of neighboring cuboids
   int noSends = 0;
+  // it is: std::list<int> _rankNeighbours, rank of neighboring cuboids
   for (auto rN : _rankNeighbours) {
+    // if there are particles contained in _send_buffer, increase noSends
     if (_send_buffer[rN].size() > 0) {
       ++noSends;
     }
   }
-//  int noSends = _send_buffer.size();
+  //  int noSends = _send_buffer.size();
   if (noSends > 0) {
     mpiNbHelper.allocate(noSends);
-//    cout << mpiNbHelper.get_size() << std::endl;
+    //    cout << mpiNbHelper.get_size() << std::endl;
     for (auto rN : _rankNeighbours) {
       if (_send_buffer[rN].size() > 0) {
-        singleton::mpi().iSend<double>(&_send_buffer[rN][0], _relocate.count(rN)*PARTICLETYPE<T>::serialPartSize, rN,&mpiNbHelper.get_mpiRequest()[k++], 1);
+        singleton::mpi().iSend<double>(&_send_buffer[rN][0],
+                                       _relocate.count(rN)*PARTICLETYPE<T>::serialPartSize,
+                                       rN, &mpiNbHelper.get_mpiRequest()[k++], 1);
       }
     }
   }
@@ -563,6 +797,7 @@ void SuperParticleSystem3D<T, PARTICLETYPE>::updateParticleDistribution()
           PARTICLETYPE<T> p;
           p.unserialize(&recv_buffer[iPar]);
           if (singleton::mpi().getRank() == this->_loadBalancer.rank(p.getCuboid())) {
+            // particle added to pSystem with local cuboid number on actual thread
             _pSystems[this->_loadBalancer.loc(p.getCuboid())]->addParticle(p);
           }
         }
@@ -583,7 +818,8 @@ void SuperParticleSystem3D<T, PARTICLETYPE>::updateParticleDistribution()
   for (auto rN : _relocateShadow) {
     //    std::vector<T> buffer = rN.second.serialize();
     rN.second.serialize(buffer);
-    _send_buffer[rN.first].insert(_send_buffer[rN.first].end(), buffer, buffer+PARTICLETYPE<T>::serialPartSize);
+    _send_buffer[rN.first].insert(_send_buffer[rN.first].end(),
+                                  buffer, buffer+PARTICLETYPE<T>::serialPartSize);
   }
 
   /*Send Particles */
@@ -593,11 +829,13 @@ void SuperParticleSystem3D<T, PARTICLETYPE>::updateParticleDistribution()
     mpiNbHelper.allocate(noSends);
     for (auto rN : _rankNeighbours) {
       if (_send_buffer[rN].size() > 0) {
-        singleton::mpi().iSend<double>(&_send_buffer[rN][0], _relocateShadow.count(rN)*PARTICLETYPE<T>::serialPartSize, rN,&mpiNbHelper.get_mpiRequest()[k++], 4);
+        singleton::mpi().iSend<double>(&_send_buffer[rN][0],
+                                       _relocateShadow.count(rN)*PARTICLETYPE<T>::serialPartSize,
+                                       rN, &mpiNbHelper.get_mpiRequest()[k++], 4);
       }
     }
   }
-
+  /*Receive and add particles*/
   singleton::mpi().barrier();
   k=0;
   flag = 0;
@@ -616,6 +854,8 @@ void SuperParticleSystem3D<T, PARTICLETYPE>::updateParticleDistribution()
         singleton::mpi().receive(recv_buffer, number_amount, rN, 4);
         for (int iPar=0; iPar<number_amount; iPar+=PARTICLETYPE<T>::serialPartSize) {
           //          std::cout << "Particle unserialized" << std::endl;
+          // par contains information of shadow particle
+          // par is already shadow particle !!
           PARTICLETYPE<T> p;
           p.unserialize(&recv_buffer[iPar]);
           addShadowParticle(p);
@@ -640,11 +880,14 @@ void SuperParticleSystem3D<T, PARTICLETYPE>::updateParticleDistribution()
 #endif
   mpiNbHelper.free();
 #else
-
   for (auto& par : _relocate) {
+    // _relocate contains make_pair(rank, (*par))
+    // therefore par.second is pointer to particle par
     addParticle(par.second);
   }
   for (auto& par : _relocateShadow) {
+    // _relocateShadow contains make_pair(rank, (*par))
+    // therefore par.second is pointer to particle par
     addShadowParticle(par.second);
   }
 #endif
@@ -654,7 +897,7 @@ template<typename T, template<typename U> class PARTICLETYPE>
 void SuperParticleSystem3D<T, PARTICLETYPE>::addParticle(PARTICLETYPE<T>& p)
 {
   if (findCuboid(p)) {
-#if PARALLEL_MODE_MPI
+#ifdef PARALLEL_MODE_MPI
     if (singleton::mpi().getRank() == this->_loadBalancer.rank(p.getCuboid())) {
       _pSystems[this->_loadBalancer.loc(p.getCuboid())]->addParticle(p);
     } else {
@@ -685,7 +928,7 @@ void SuperParticleSystem3D<T, PARTICLETYPE>::addParticle(
     pos[2] = ind.getMin()[2]
              + (T) (rand() % 100000) / 100000. * (ind.getMax()[2] - ind.getMin()[2]);
 
-#if PARALLEL_MODE_MPI
+#ifdef PARALLEL_MODE_MPI
     singleton::mpi().bCast(&*pos.begin(), 3);
 #endif
 
@@ -715,11 +958,13 @@ void SuperParticleSystem3D<T, PARTICLETYPE>::addParticle(
 }
 
 template<typename T, template<typename U> class PARTICLETYPE>
-void SuperParticleSystem3D<T, PARTICLETYPE>::addParticle(std::set<int> material, int no, T mas,
+void SuperParticleSystem3D<T, PARTICLETYPE>::addParticle(std::set<int>
+material, int no, T mas,
     T rad, std::vector<T> vel)
 {
-  srand(time(0));
-  std::vector<T> pos(3, 0.), min(3, std::numeric_limits<T>::max()), max(3, std::numeric_limits<T>::min());
+  srand(time(nullptr));
+  std::vector<T> pos(3, 0.), min(3, std::numeric_limits<T>::max()),
+      max(3, std::numeric_limits<T>::min());
   std::vector<T> tmpMin(3, 0.), tmpMax(3, 0.);
   std::set<int>::iterator it = material.begin();
   for (; it!=material.end(); ++it) {
@@ -735,8 +980,8 @@ void SuperParticleSystem3D<T, PARTICLETYPE>::addParticle(std::set<int> material,
 //  cout << "Min: " << min[0] << " " << min[1] << " " << min[2] << std::endl;
 //  cout << "Max: " << max[0] << " " << max[1] << " " << max[2] << std::endl;
   for (int i = 0; i < 3; i++) {
-    min[i] -= _conv.getLatticeL();
-    max[i] += 2 * _conv.getLatticeL();
+    min[i] -= this->_cuboidGeometry.get(0).getDeltaR();
+    max[i] += 2 * this->_cuboidGeometry.get(0).getDeltaR();
   }
   no += globalNumOfParticles();
   while (globalNumOfParticles() < no) {
@@ -744,7 +989,7 @@ void SuperParticleSystem3D<T, PARTICLETYPE>::addParticle(std::set<int> material,
     pos[1] = min[1] + (T) (rand() % 100000) / 100000. * (max[1] - min[1]);
     pos[2] = min[2] + (T) (rand() % 100000) / 100000. * (max[2] - min[2]);
 
-#if PARALLEL_MODE_MPI
+#ifdef PARALLEL_MODE_MPI
     singleton::mpi().bCast(&*pos.begin(), 3);
 #endif
 
@@ -794,7 +1039,7 @@ void SuperParticleSystem3D<T, PARTICLETYPE>::addParticle(
     pos[2] = ind.getMin()[2]
              + (T) (rand() % 100000) / 100000. * (ind.getMax()[2] - ind.getMin()[2]);
 
-#if PARALLEL_MODE_MPI
+#ifdef PARALLEL_MODE_MPI
     singleton::mpi().bCast(&*pos.begin(), 3);
 #endif
 
@@ -848,6 +1093,98 @@ void SuperParticleSystem3D<T, PARTICLETYPE>::addParticle(
 }
 
 template<typename T, template<typename U> class PARTICLETYPE>
+void SuperParticleSystem3D<T, PARTICLETYPE>::addParticleEquallyDistributed(
+  IndicatorCuboid3D<T>& cuboid, T pMass, T pRad,/* number of particles on x, y, z axis*/
+  int nox, int noy, int noz, std::vector<T> vel)
+{
+  std::vector < T > pos(3, 0.);
+  Vector<T, 3> minPos(cuboid.getMin());
+  bool indic[1] = { false };
+
+  std::cout << "Number of particles to create: nox*noy*noz = "
+      << nox * noy * noz << std::endl;
+
+  T xlength = cuboid.getMax()[0] - cuboid.getMin()[0];
+  T ylength = cuboid.getMax()[1] - cuboid.getMin()[1];
+  T zlength = cuboid.getMax()[2] - cuboid.getMin()[2];
+  int modNox = nox - 1, modNoy = noy - 1, modNoz = noz - 1;
+  if (nox == 1) {
+    modNox = 1;
+  }
+  if (noy == 1) {
+    modNoy = 1;
+  }
+  if (noz == 1) {
+    modNoz = 1;
+  }
+
+  for (int i = 0; i < nox; ++i) {
+    pos[0] = minPos[0] + (T) (i) * xlength / modNox;
+    for (int j = 0; j < noy; ++j) {
+      pos[1] = minPos[1] + (T) (j) * ylength / modNoy;
+      for (int k = 0; k < noz; ++k) {
+        pos[2] = minPos[2] + (T) (k) * zlength / modNoz;
+
+        if (cuboid(indic, &pos[0])) {
+          PARTICLETYPE<T> p(pos, vel, pMass, pRad);
+           addParticle(p);
+         }
+       }
+     }
+   }
+  std::cout << "Number of created particles = "
+      << globalNumOfParticles() << std::endl;
+}
+
+
+template<typename T, template<typename U> class PARTICLETYPE>
+void SuperParticleSystem3D<T, PARTICLETYPE>::addTracerParticle(
+    IndicatorF3D<T>& ind, T idTP, T mas, T rad, int noTP, std::vector<T> vel)
+{
+  srand(clock());
+  std::vector < T > pos(3, 0.);
+  bool indic[1] = { false };
+
+  noTP += globalNumOfTracerParticles();
+  while (globalNumOfTracerParticles() < noTP) {
+    pos[0] = ind.getMin()[0]
+        + (T) (rand() % 100000) / 100000. * (ind.getMax()[0] - ind.getMin()[0]);
+    pos[1] = ind.getMin()[1]
+        + (T) (rand() % 100000) / 100000. * (ind.getMax()[1] - ind.getMin()[1]);
+    pos[2] = ind.getMin()[2]
+        + (T) (rand() % 100000) / 100000. * (ind.getMax()[2] - ind.getMin()[2]);
+
+#ifdef PARALLEL_MODE_MPI
+    singleton::mpi().bCast(&*pos.begin(), 3);
+#endif
+
+    int x0, y0, z0, C;
+    std::vector<int> locLat(4, 0);
+    if (this->_cuboidGeometry.getFloorLatticeR(pos, locLat)) {
+      C = locLat[0];
+      if (this->_loadBalancer.rank(C) == singleton::mpi().getRank()) {
+        x0 = locLat[1];
+        y0 = locLat[2];
+        z0 = locLat[3];
+        if (_superGeometry.get(C, x0, y0, z0) == 1
+            && _superGeometry.get(C, x0, y0 + 1, z0) == 1
+            && _superGeometry.get(C, x0, y0, z0 + 1) == 1
+            && _superGeometry.get(C, x0, y0 + 1, z0 + 1) == 1
+            && _superGeometry.get(C, x0 + 1, y0, z0) == 1
+            && _superGeometry.get(C, x0 + 1, y0 + 1, z0) == 1
+            && _superGeometry.get(C, x0 + 1, y0, z0 + 1) == 1
+            && _superGeometry.get(C, x0 + 1, y0 + 1, z0 + 1) == 1
+            && ind(indic, &pos[0])
+            && !util::nearZero(idTP)) {
+          PARTICLETYPE<T> p(pos, vel, mas, rad, idTP);
+          addParticle(p);
+        }
+      }
+    }
+  }
+}
+
+template<typename T, template<typename U> class PARTICLETYPE>
 void SuperParticleSystem3D<T, PARTICLETYPE>::addParticleWithDistance(
   IndicatorCuboid3D<T>& ind, T pMass, T pRad, std::vector<T> vel,
   T conc, T minDist, bool checkDist)
@@ -885,7 +1222,7 @@ void SuperParticleSystem3D<T, PARTICLETYPE>::addParticleWithDistance(
     pos[2] = ind.getMin()[2]
              + (T) (rand() % 100000) / 100000. * (ind.getMax()[2] - ind.getMin()[2]);
 
-#if PARALLEL_MODE_MPI
+#ifdef PARALLEL_MODE_MPI
     singleton::mpi().bCast(&*pos.begin(), 3);
 #endif
 
@@ -1004,7 +1341,7 @@ void SuperParticleSystem3D<T, PARTICLETYPE>::saveToFile(std::string name)
     }
     fout.close();
   }
-#if PARALLEL_MODE_MPI
+#ifdef PARALLEL_MODE_MPI
   if (rank > 0) {
     int prev = rank - 1;
     int buffer = 0;
@@ -1015,7 +1352,7 @@ void SuperParticleSystem3D<T, PARTICLETYPE>::saveToFile(std::string name)
   for (auto pS : _pSystems) {
     pS->saveToFile(fullName);
   }
-#if PARALLEL_MODE_MPI
+#ifdef PARALLEL_MODE_MPI
   if (rank < size - 1) {
     int next = rank + 1;
     int buffer = 0;
@@ -1099,7 +1436,7 @@ void SuperParticleSystem3D<T, PARTICLETYPE>::setContactDetection(
 //template<typename T>
 //class SuperRotParticleSystem3D : public SuperParticleSystem3D<T, RotatingParticle3D> {
 // public:
-//  SuperRotParticleSystem3D(SuperGeometry3D<T>& sg, LBconverter<T>& conv): SuperParticleSystem3D<T, RotatingParticle3D>(sg, conv)
+//  SuperRotParticleSystem3D(SuperGeometry3D<T>& sg, UnitConverter<T,DESCRIPTOR>& conv): SuperParticleSystem3D<T, RotatingParticle3D>(sg, conv)
 //  {};
 //  void simulate(T dT) {
 //   for (auto pS : this->_pSystems) {

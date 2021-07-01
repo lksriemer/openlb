@@ -51,13 +51,13 @@ const T lx1   = 5.0;    // length of step in meter
 const T ly1   = 0.75;   // height of step in meter
 const T lx0   = 20.0;   // length of channel in meter
 const T ly0   = 1.5;    // height of channel in meter
-const int N = 1;        // resolution of the model
-const int M = 1;        // time discretization refinement
+const int N = 60;        // resolution of the model
+const int M = 50;        // resolution of the model
 const T maxPhysT = 40.; // max. simulation time in s, SI unit
 
 
 // Stores geometry information in form of material numbers
-void prepareGeometry( LBconverter<T> const& converter,
+void prepareGeometry( UnitConverter<T,DESCRIPTOR> const& converter,
                       SuperGeometry2D<T>& superGeometry ) {
   OstreamManager clout( std::cout,"prepareGeometry" );
   clout << "Prepare Geometry ..." << std::endl;
@@ -95,7 +95,7 @@ void prepareGeometry( LBconverter<T> const& converter,
 }
 
 // Set up the geometry of the simulation
-void prepareLattice( LBconverter<T> const& converter,
+void prepareLattice( UnitConverter<T,DESCRIPTOR> const& converter,
                      SuperLattice2D<T,DESCRIPTOR>& sLattice,
                      Dynamics<T,DESCRIPTOR>& bulkDynamics,
                      sOnLatticeBoundaryCondition2D<T,DESCRIPTOR>& bc,
@@ -115,8 +115,8 @@ void prepareLattice( LBconverter<T> const& converter,
   sLattice.defineDynamics( superGeometry, 4, &bulkDynamics );
 
   // Setting of the boundary conditions
-  bc.addVelocityBoundary( superGeometry, 3, converter.getOmega() );
-  bc.addPressureBoundary( superGeometry, 4, converter.getOmega() );
+  bc.addVelocityBoundary( superGeometry, 3, converter.getLatticeRelaxationFrequency() );
+  bc.addPressureBoundary( superGeometry, 4, converter.getLatticeRelaxationFrequency() );
 
   // Initial conditions
   AnalyticalConst2D<T,T> ux( 0. );
@@ -139,13 +139,13 @@ void prepareLattice( LBconverter<T> const& converter,
 }
 
 // Generates a slowly increasing inflow for the first iTMaxStart timesteps
-void setBoundaryValues( LBconverter<T> const& converter,
+void setBoundaryValues( UnitConverter<T,DESCRIPTOR> const& converter,
                         SuperLattice2D<T,DESCRIPTOR>& sLattice, int iT,
                         SuperGeometry2D<T>& superGeometry ) {
   OstreamManager clout( std::cout,"setBoundaryValues" );
 
   // time for smooth start-up
-  int iTmaxStart = converter.numTimeSteps( maxPhysT*0.2 );
+  int iTmaxStart = converter.getLatticeTime( maxPhysT*0.2 );
   int iTupdate = 5;
 
   if ( iT%iTupdate == 0 && iT<= iTmaxStart ) {
@@ -157,8 +157,8 @@ void setBoundaryValues( LBconverter<T> const& converter,
     int iTvec[1] = {iT};
     T frac[1] = {};
     StartScale( frac,iTvec );
-    T maxVelocity = converter.getLatticeU()*3./2.*frac[0];
-    T distance2Wall = converter.getLatticeL()/2.;
+    T maxVelocity = converter.getCharLatticeVelocity()*3./2.*frac[0];
+    T distance2Wall = converter.getConversionFactorLength()/2.;
     Poiseuille2D<T> poiseuilleU( superGeometry, 3, maxVelocity, distance2Wall );
     // define lattice speed on inflow
     sLattice.defineU( superGeometry, 3, poiseuilleU );
@@ -167,8 +167,10 @@ void setBoundaryValues( LBconverter<T> const& converter,
 
 // write data to termimal and file system
 void getResults( SuperLattice2D<T,DESCRIPTOR>& sLattice,
-                 LBconverter<T> const& converter, int iT,
-                 SuperGeometry2D<T>& superGeometry, Timer<T>& timer ) {
+                 UnitConverter<T,DESCRIPTOR> const& converter, int iT,
+                 SuperGeometry2D<T>& superGeometry, Timer<T>& timer,
+                 SuperPlaneIntegralFluxVelocity2D<T>& velocityFlux,
+                 SuperPlaneIntegralFluxPressure2D<T>& pressureFlux ) {
   OstreamManager clout( std::cout,"getResults" );
   SuperVTMwriter2D<T> vtmWriter( "bstep2d" );
 
@@ -184,7 +186,7 @@ void getResults( SuperLattice2D<T,DESCRIPTOR>& sLattice,
   }
 
   // Writes every 0.2  seconds
-  if ( iT%converter.numTimeSteps( 0.2 )==0 ) {
+  if ( iT%converter.getLatticeTime( 0.2 )==0 ) {
     SuperLatticePhysVelocity2D<T,DESCRIPTOR> velocity( sLattice, converter );
     SuperLatticePhysPressure2D<T,DESCRIPTOR> pressure( sLattice, converter );
     vtmWriter.addFunctor( velocity );
@@ -193,23 +195,25 @@ void getResults( SuperLattice2D<T,DESCRIPTOR>& sLattice,
     vtmWriter.write( iT );
     sLattice.communicate();
     SuperEuklidNorm2D<T,DESCRIPTOR> normVel( velocity );
-    BlockLatticeReduction2D<T,DESCRIPTOR> planeReduction( normVel );
-    BlockGifWriter<T> gifWriter;
-    // write image to file system
-    gifWriter.write( planeReduction, iT, "vel" );
+    BlockReduction2D2D<T> planeReduction( normVel, 600, BlockDataSyncMode::ReduceOnly );
+    // write output as JPEG
+    heatmap::write(planeReduction, iT);
   }
 
   // Writes every 0.1 simulated
-  if ( iT%converter.numTimeSteps( 0.1 )==0 ) {
+  if ( iT%converter.getLatticeTime( 0.1 )==0 ) {
+    velocityFlux.print();
+    pressureFlux.print();
+
     // write to terminal
     timer.update( iT );
     timer.printStep();
     // Lattice statistics console output
-    sLattice.getStatistics().print( iT,converter.physTime( iT ) );
+    sLattice.getStatistics().print( iT,converter.getPhysTime( iT ) );
   }
 
   // Saves lattice data
-  if ( iT%converter.numTimeSteps( 1 )==0 && iT>0 ) {
+  if ( iT%converter.getLatticeTime( 1 )==0 && iT>0 ) {
     clout << "Checkpointing the system at t=" << iT << std::endl;
     sLattice.save( "bstep2d.checkpoint" );
     // The data can be reloaded using
@@ -224,15 +228,18 @@ int main( int argc, char* argv[] ) {
   singleton::directories().setOutputDir( "./tmp/" );  // set output directory
   OstreamManager clout( std::cout, "main" );
 
-  LBconverter<T> converter(
-    ( int ) 2,                             // dim
-    ( T )   1./60./N,                      // latticeL_
-    ( T )   2e-2/M,                        // latticeU_
-    ( T )   1./500.,                       // charNu_
-    ( T )   1.                             // charL_ = 1,
+  UnitConverter<T,DESCRIPTOR> converter(
+    (T)   1./N,     // physDeltaX: spacing between two lattice cells in __m__
+    (T)   1./(M*N), // physDeltaT: time step in __s__
+    (T)   1.,       // charPhysLength: reference length of simulation geometry
+    (T)   1.,       // charPhysVelocity: maximal/highest expected velocity during simulation in __m / s__
+    (T)   1./500.,  // physViscosity: physical kinematic viscosity in __m^2 / s__
+    (T)   1.        // physDensity: physical density in __kg / m^3__
   );
+  // Prints the converter log as console output
   converter.print();
-  writeLogFile( converter, "bstep2d" );
+  // Writes the converter log in a file
+  converter.write("bstep2d");
 
   // === 2nd Step: Prepare Geometry ===
   Vector<T,2> extend( lx0, ly0);
@@ -245,7 +252,7 @@ int main( int argc, char* argv[] ) {
 #else
   const int noOfCuboids = 6;
 #endif
-  CuboidGeometry2D<T> cuboidGeometry( cuboid, converter.getLatticeL(), noOfCuboids );
+  CuboidGeometry2D<T> cuboidGeometry( cuboid, converter.getConversionFactorLength(), noOfCuboids );
 
   // Instantiation of a loadBalancer
   HeuristicLoadBalancer<T> loadBalancer( cuboidGeometry );
@@ -260,7 +267,7 @@ int main( int argc, char* argv[] ) {
   SuperLattice2D<T,DESCRIPTOR> sLattice( superGeometry );
 
   BGKdynamics<T,DESCRIPTOR> bulkDynamics (
-    converter.getOmega(),
+    converter.getLatticeRelaxationFrequency(),
     instances::getBulkMomenta<T,DESCRIPTOR>()
   );
 
@@ -271,18 +278,22 @@ int main( int argc, char* argv[] ) {
 
   prepareLattice( converter, sLattice, bulkDynamics, sBoundaryCondition, superGeometry );
 
+  // instantiate reusable functors
+  SuperPlaneIntegralFluxVelocity2D<T> velocityFlux( sLattice, converter, superGeometry, {19.,1.}, {0.,1.} );
+  SuperPlaneIntegralFluxPressure2D<T> pressureFlux( sLattice, converter, superGeometry, {19.,1.}, {0.,1.} );
+
   // === 4th Step: Main Loop with Timer ===
   clout << "starting simulation..." << std::endl;
-  Timer<T> timer( converter.numTimeSteps( maxPhysT ), superGeometry.getStatistics().getNvoxel() );
+  Timer<T> timer( converter.getLatticeTime( maxPhysT ), superGeometry.getStatistics().getNvoxel() );
   timer.start();
 
-  for ( int iT = 0; iT < converter.numTimeSteps( maxPhysT ); ++iT ) {
+  for ( int iT = 0; iT < converter.getLatticeTime( maxPhysT ); ++iT ) {
     // === 5th Step: Definition of Initial and Boundary Conditions ===
     setBoundaryValues( converter, sLattice, iT, superGeometry );
     // === 6th Step: Collide and Stream Execution ===
     sLattice.collideAndStream();
     // === 7th Step: Computation and Output of the Results ===
-    getResults( sLattice, converter, iT, superGeometry, timer );
+    getResults( sLattice, converter, iT, superGeometry, timer, velocityFlux, pressureFlux );
   }
 
   timer.stop();

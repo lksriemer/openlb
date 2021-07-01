@@ -3,7 +3,6 @@
 #include <dynamics/dynamics3D.hh>
 #include <core/core3D.hh>
 #include <functors/functors3D.hh>
-#include <functors/indicator/indicator3D.hh>
 #include <geometry/geometry3D.hh>
 #include <io/io3D.hh>
 #include <utilities/utilities3D.hh>

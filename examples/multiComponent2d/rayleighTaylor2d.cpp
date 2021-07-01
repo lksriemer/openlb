@@ -220,9 +220,9 @@ void getResults( SuperLattice2D<T, DESCRIPTOR>&    sLatticeTwo,
     vtmWriter.addFunctor( density );
     vtmWriter.write( iT );
 
-    BlockLatticeReduction2D<T, DESCRIPTOR> planeReduction( density );
-    BlockGifWriter<T> gifWriter;
-    gifWriter.write( planeReduction, iT, "density" );
+    BlockReduction2D2D<T> planeReduction( density, 600, BlockDataSyncMode::ReduceOnly );
+    // write output as JPEG
+    heatmap::write(planeReduction, iT);
 
     clout << "Writing VTK ... OK" << std::endl;
   }

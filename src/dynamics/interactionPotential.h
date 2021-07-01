@@ -51,7 +51,7 @@ class PsiEqualsRho : public AnalyticalF1D<T,S> {
 private:
 public:
   PsiEqualsRho();
-  bool operator() (T psi[], const S rho[]);
+  bool operator() (T psi[], const S rho[]) override;
 };
 
 // established -- only singlecomponent flow
@@ -63,7 +63,7 @@ private:
   T _psiZero;
 public:
   ShanChen94(T rhoZero=200., T psiZero=4.);
-  bool operator() (T psi[], const S rho[]);
+  bool operator() (T psi[], const S rho[]) override;
 };
 
 template <typename T, typename S>
@@ -94,7 +94,7 @@ private:
   T _t;
 public:
   CarnahanStarling(T G, T a=1., T b=4., T tr=.7);
-  bool operator() (T psi[], const S rho[]);
+  bool operator() (T psi[], const S rho[]) override;
   // second operator allows to incorporate temperature changes
   bool operator() (T psi[], const S rho[], const S t[]);
 };

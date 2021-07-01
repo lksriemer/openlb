@@ -63,6 +63,7 @@ public:
   void setImageOutDir(std::string imageOutDir_)
   {
     createDirectory(imageOutDir_);
+    createDirectory(imageOutDir_+"data/");
     imageOutDir = imageOutDir_;
   }
   void setVtkOutDir(std::string vtkOutDir_)

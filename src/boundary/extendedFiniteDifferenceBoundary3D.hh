@@ -31,6 +31,7 @@
 #include "dynamics/lbHelpers.h"
 #include "dynamics/firstOrderLbHelpers.h"
 #include "boundaryInstantiator3D.h"
+#include "momentaOnBoundaries3D.h"
 
 
 namespace olb {
@@ -83,7 +84,7 @@ processSubDomain(BlockLattice3D<T,Lattice>& blockLattice,
           rhoGradU[z][y] = rho *dz_U[y];
           rhoGradU[z][z] = rho *dz_U[z];
 
-          T omega = cell.getDynamics() -> getOmega();
+          T omega = blockLattice.getDynamics(iX, iY, iZ) -> getOmega();
           T sToPi = - (T)1 / Lattice<T>::invCs2 / omega;
           T pi[util::TensorVal<Lattice<T> >::n];
 
@@ -333,7 +334,7 @@ PostProcessorGenerator3D<T,Lattice>*
 ExtendedFdBoundaryManager3D<T,Lattice,MixinDynamics>::
 getConvectionBoundaryProcessor(int x0, int x1, int y0, int y1, int z0, int z1, T* uAv)
 {
-  return 0;
+  return nullptr;
 }
 
 template<typename T, template<typename U> class Lattice, class MixinDynamics>
@@ -385,7 +386,7 @@ PostProcessorGenerator3D<T,Lattice>*
 ExtendedFdBoundaryManager3D<T,Lattice,MixinDynamics>::
 getInternalVelocityEdgeProcessor(int x0, int x1, int y0, int y1, int z0, int z1)
 {
-  return 0;
+  return nullptr;
 }
 
 template<typename T, template<typename U> class Lattice, class MixinDynamics>
@@ -437,7 +438,7 @@ PostProcessorGenerator3D<T,Lattice>*
 ExtendedFdBoundaryManager3D<T,Lattice,MixinDynamics>::
 getInternalVelocityCornerProcessor(int x, int y, int z)
 {
-  return 0;
+  return nullptr;
 }
 
 

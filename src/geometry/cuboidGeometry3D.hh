@@ -35,8 +35,9 @@
 #include <algorithm>
 #include <set>
 #include <limits>
+
 #include "geometry/cuboidGeometry3D.h"
-#include "functors/indicator/indicatorF3D.h"
+#include "functors/lattice/indicator/indicatorF3D.h"
 #include "communication/loadBalancer.h"
 
 
@@ -46,6 +47,7 @@ template<typename T>
 CuboidGeometry3D<T>::CuboidGeometry3D()
   : _motherCuboid(0,0,0,0,0,0,0), _periodicityOn(false), clout(std::cout, "CuboidGeometry3D")
 {
+  _cuboids.reserve(2);
   add(_motherCuboid);
   split(0, 1);
 }
@@ -56,6 +58,7 @@ CuboidGeometry3D<T>::CuboidGeometry3D(T originX, T originY, T originZ, T deltaR,
   : _motherCuboid(originX, originY, originZ, deltaR, nX, nY, nZ),
     _periodicityOn(false), clout(std::cout, "CuboidGeometry3D")
 {
+  _cuboids.reserve(nC+2);
   add(_motherCuboid);
   split(0, nC);
 }
@@ -66,6 +69,7 @@ CuboidGeometry3D<T>::CuboidGeometry3D(std::vector<T> origin, T deltaR,
   : CuboidGeometry3D(origin[0], origin[1], origin[2], deltaR,
                      extent[0], extent[1], extent[2], nC)
 {
+  _cuboids.reserve(nC+2);
 }
 
 template<typename T>
@@ -76,9 +80,102 @@ CuboidGeometry3D<T>::CuboidGeometry3D(IndicatorF3D<T>& indicatorF, T voxelSize, 
                    (int)((indicatorF.getMax()[2] - indicatorF.getMin()[2]) / voxelSize + 1.5)),
     _periodicityOn(false), clout(std::cout, "CuboidGeometry3D")
 {
+  _cuboids.reserve(nC+2);
   add(_motherCuboid);
   split(0, nC);
   shrink(indicatorF);
+}
+
+
+template<typename T>
+CuboidGeometry3D<T>::CuboidGeometry3D(IndicatorF3D<T>& indicatorF, T voxelSize, int nC, std::string minimizeBy)
+  : _motherCuboid( indicatorF.getMin()[0],  indicatorF.getMin()[1], indicatorF.getMin()[2], voxelSize,
+                   (int)((indicatorF.getMax()[0] - indicatorF.getMin()[0]) / voxelSize + 1.5),
+                   (int)((indicatorF.getMax()[1] - indicatorF.getMin()[1]) / voxelSize + 1.5),
+                   (int)((indicatorF.getMax()[2] - indicatorF.getMin()[2]) / voxelSize + 1.5)),
+    _periodicityOn(false), clout(std::cout, "CuboidGeometry3D")
+{
+  _cuboids.reserve(nC+2);
+  add(_motherCuboid);
+
+  if ( minimizeBy == "volume" ) {
+    // Search for the largest multiplier not dividable by two
+    int initalNc = nC;
+    while ( initalNc % 2 == 0 ) {
+      initalNc /= 2;
+    }
+
+    // Split evenly in initalNc many cuboids and shrink all
+    split(0, initalNc);
+    shrink(indicatorF);
+
+    while ( getNc() < nC ) {
+      // clout << "Starting with " << getNc() << " Cuboids." << std::endl;
+      // Search for the largest child cuboid
+      T iCVolume[getNc()];
+      int maxiC = 0;
+      for (int iC = 0; iC < getNc(); iC++) {
+        iCVolume[iC] = get(iC).getLatticeVolume();
+        if ( iCVolume[iC] > iCVolume[maxiC] ) {
+          maxiC = iC;
+        }
+        // clout << "Cuboid #" << iC << " with volume " << iCVolume[iC] << " and weight " << get(iC).getWeight() << std::endl;
+      }
+      // clout << "Found maximum volume cuboid #" << maxiC << " with volume " << iCVolume[maxiC] << std::endl;
+
+      // looking for largest extend, because halfing the cuboid by its largest extend will result in the smallest surface and therfore in the least comminication cells
+      if ( get(maxiC).getNx() >= get(maxiC).getNy() && get(maxiC).getNx() >= get(maxiC).getNz()) {
+        // clout << "Cut in x direction!" << std::endl;
+        get(maxiC).divide(2,1,1,_cuboids);
+      }
+      else if ( get(maxiC).getNy() >= get(maxiC).getNx() && get(maxiC).getNy() >= get(maxiC).getNz()) {
+        // clout << "Cut in y direction!" << std::endl;
+        get(maxiC).divide(1,2,1,_cuboids);
+      }
+      else {
+        // clout << "Cut in z direction!" << std::endl;
+        get(maxiC).divide(1,1,2,_cuboids);
+      }
+      remove(maxiC);
+      // shrink the two new cuboids
+      shrink(_cuboids.size()-2,indicatorF);
+      shrink(_cuboids.size()-1,indicatorF);
+    }
+
+  }
+  else if ( minimizeBy == "weight" ) {
+
+    setWeights(indicatorF);
+
+    // conduct a prime factorisation for the number of cuboids nC
+    std::vector<int> factors;
+    int initalNc = nC;
+    // iterate over the prime numbes from 0 to 100 (may have to be extended)
+    for ( int i : {
+            2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71
+          } ) {
+      while ( initalNc % i == 0 ) {
+        initalNc /= i;
+        factors.push_back(i);
+      }
+    }
+
+    // recursively split the current cuboids by each prime factor
+    for ( int i = factors.size() - 1; i >= 0; i-- ) {
+      int currentNc = _cuboids.size();
+      for ( int iC = 0; iC < currentNc; iC++ ) {
+        // clout << "split cuboid number #" << iC << " in " << factors[i] << " parts" << std::endl;
+        splitByWeight(iC, factors[i], indicatorF);
+        shrink(indicatorF);
+      }
+      for ( int iC = 0; iC < currentNc; iC++ ) {
+        // clout << "delet cuboid number #" << iC << std::endl;
+        remove(0);
+      }
+    }
+
+  }
+
 }
 
 template<typename T>
@@ -154,13 +251,40 @@ int CuboidGeometry3D<T>::get_iC(T x, T y, T z, int orientationX, int orientation
 }
 
 template<typename T>
-bool CuboidGeometry3D<T>::getC(std::vector<T> physR, int& iC) const
+bool CuboidGeometry3D<T>::getC(T physR[3], int& iC) const
 {
-  int iCtmp = get_iC(physR[0], physR[1], physR[2]);
+  const int iCtmp = get_iC(physR[0], physR[1], physR[2]);
   if (iCtmp < getNc()) {
     iC = iCtmp;
     return true;
-  } else {
+  }
+  else {
+    return false;
+  }
+}
+
+template<typename T>
+bool CuboidGeometry3D<T>::getC(std::vector<T> physR, int& iC) const
+{
+  const int iCtmp = get_iC(physR);
+  if (iCtmp < getNc()) {
+    iC = iCtmp;
+    return true;
+  }
+  else {
+    return false;
+  }
+}
+
+template<typename T>
+bool CuboidGeometry3D<T>::getC(const Vector<T,3>& physR, int& iC) const
+{
+  const int iCtmp = get_iC(physR);
+  if (iCtmp < getNc()) {
+    iC = iCtmp;
+    return true;
+  }
+  else {
     return false;
   }
 }
@@ -175,7 +299,8 @@ bool CuboidGeometry3D<T>::getLatticeR(int latticeR[4], const T physR[3]) const
     latticeR[2] = (int)floor( (physR[1] - _cuboids[latticeR[0]].getOrigin()[1] ) / _cuboids[latticeR[0]].getDeltaR() + .5);
     latticeR[3] = (int)floor( (physR[2] - _cuboids[latticeR[0]].getOrigin()[2] ) / _cuboids[latticeR[0]].getDeltaR() + .5);
     return true;
-  } else {
+  }
+  else {
     return false;
   }
 }
@@ -190,11 +315,28 @@ bool CuboidGeometry3D<T>::getFloorLatticeR(const std::vector<T>& physR, std::vec
     latticeR[2] = (int)floor( (physR[1] - _cuboids[latticeR[0]].getOrigin()[1] ) / _cuboids[latticeR[0]].getDeltaR() );
     latticeR[3] = (int)floor( (physR[2] - _cuboids[latticeR[0]].getOrigin()[2] ) / _cuboids[latticeR[0]].getDeltaR() );
     return true;
-  } else {
+  }
+  else {
     return false;
   }
 }
 
+template<typename T>
+bool CuboidGeometry3D<T>::getFloorLatticeR(
+  const Vector<T,3>& physR, Vector<int,4>& latticeR) const
+{
+  int iCtmp = get_iC(physR[0], physR[1], physR[2]);
+  if (iCtmp < getNc()) {
+    latticeR[0] = iCtmp;
+    latticeR[1] = (int)floor( (physR[0] - _cuboids[latticeR[0]].getOrigin()[0] ) / _cuboids[latticeR[0]].getDeltaR() );
+    latticeR[2] = (int)floor( (physR[1] - _cuboids[latticeR[0]].getOrigin()[1] ) / _cuboids[latticeR[0]].getDeltaR() );
+    latticeR[3] = (int)floor( (physR[2] - _cuboids[latticeR[0]].getOrigin()[2] ) / _cuboids[latticeR[0]].getDeltaR() );
+    return true;
+  }
+  else {
+    return false;
+  }
+}
 
 template<typename T>
 void CuboidGeometry3D<T>::getPhysR(T physR[3], const int& iCglob, const int& iX, const int& iY, const int& iZ) const
@@ -202,15 +344,16 @@ void CuboidGeometry3D<T>::getPhysR(T physR[3], const int& iCglob, const int& iX,
   _cuboids[iCglob].getPhysR(physR, iX, iY, iZ);
   for (int iDim = 0; iDim < 3; iDim++) {
     if (_periodicityOn[iDim]) {
-      //std::cout << iDim << _periodicityOn[iDim] <<":"<< _motherCuboid.getDeltaR()*(_motherCuboid.getExtend()[iDim]) << std::endl;
+      //std::cout << "!!! " << iDim << _periodicityOn[iDim] <<":"<< _motherCuboid.getDeltaR()*(_motherCuboid.getExtend()[iDim]) << std::endl;
       physR[iDim] = remainder( physR[iDim] - _motherCuboid.getOrigin()[iDim]
-                               + _motherCuboid.getDeltaR() * (_motherCuboid.getExtend()[iDim]) ,
+                               + _motherCuboid.getDeltaR() * (_motherCuboid.getExtend()[iDim]),
                                _motherCuboid.getDeltaR() * (_motherCuboid.getExtend()[iDim]));
       // solving the rounding error problem for double
       if ( physR[iDim]*physR[iDim] < 0.001 * _motherCuboid.getDeltaR()*_motherCuboid.getDeltaR() ) {
         if ( physR[iDim] > 0 ) {
           physR[iDim] = _motherCuboid.getDeltaR() * (_motherCuboid.getExtend()[iDim]);
-        } else {
+        }
+        else {
           physR[iDim] = T();
         }
       }
@@ -484,9 +627,9 @@ T CuboidGeometry3D<T>::getMaxPhysVolume() const
 }
 
 template<typename T>
-int CuboidGeometry3D<T>::getMinLatticeVolume() const
+size_t CuboidGeometry3D<T>::getMinLatticeVolume() const
 {
-  int minNodes = _cuboids[0].getLatticeVolume();
+  size_t minNodes = _cuboids[0].getLatticeVolume();
   for (unsigned i = 0; i < _cuboids.size(); i++) {
     if (_cuboids[i].getLatticeVolume() < minNodes) {
       minNodes = _cuboids[i].getLatticeVolume();
@@ -496,12 +639,36 @@ int CuboidGeometry3D<T>::getMinLatticeVolume() const
 }
 
 template<typename T>
-int CuboidGeometry3D<T>::getMaxLatticeVolume() const
+size_t CuboidGeometry3D<T>::getMaxLatticeVolume() const
 {
-  int maxNodes = _cuboids[0].getLatticeVolume();
+  size_t maxNodes = _cuboids[0].getLatticeVolume();
   for (unsigned i = 0; i < _cuboids.size(); i++) {
     if (_cuboids[i].getLatticeVolume() > maxNodes) {
       maxNodes = _cuboids[i].getLatticeVolume();
+    }
+  }
+  return maxNodes;
+}
+
+template<typename T>
+size_t CuboidGeometry3D<T>::getMinLatticeWeight() const
+{
+  size_t minNodes = _cuboids[0].getWeight();
+  for (unsigned i = 0; i < _cuboids.size(); i++) {
+    if (_cuboids[i].getWeight() < minNodes) {
+      minNodes = _cuboids[i].getWeight();
+    }
+  }
+  return minNodes;
+}
+
+template<typename T>
+size_t CuboidGeometry3D<T>::getMaxLatticeWeight() const
+{
+  size_t maxNodes = _cuboids[0].getWeight();
+  for (unsigned i = 0; i < _cuboids.size(); i++) {
+    if (_cuboids[i].getWeight() > maxNodes) {
+      maxNodes = _cuboids[i].getWeight();
     }
   }
   return maxNodes;
@@ -593,68 +760,72 @@ void CuboidGeometry3D<T>::remove(IndicatorF3D<T>& indicatorF)
 }
 
 template<typename T>
-void CuboidGeometry3D<T>::shrink(IndicatorF3D<T>& indicatorF)
+void CuboidGeometry3D<T>::shrink(int iC, IndicatorF3D<T>& indicatorF)
 {
-
-  //IndicatorIdentity3D<T> tmpIndicatorF(indicatorF);
-  int newX, newY, newZ, maxX, maxY, maxZ;
-  int nC = getNc();
   int latticeR[4];
   T physR[3];
   bool inside[1];
-  for (int iC = nC - 1; iC >= 0; iC--) {
-    latticeR[0] = iC;
-    int fullCells = 0;
-    int xN = get(iC).getNx();
-    int yN = get(iC).getNy();
-    int zN = get(iC).getNz();
-    maxX = 0;
-    maxY = 0;
-    maxZ = 0;
-    newX = xN - 1;
-    newY = yN - 1;
-    newZ = zN - 1;
-    for (int iX = 0; iX < xN; iX++) {
-      for (int iY = 0; iY < yN; iY++) {
-        for (int iZ = 0; iZ < zN; iZ++) {
-          latticeR[1] = iX;
-          latticeR[2] = iY;
-          latticeR[3] = iZ;
-          getPhysR(physR,latticeR);
-          indicatorF(inside,physR);
-          if (inside[0]) {
-            fullCells++;
-            maxX = std::max(maxX, iX);
-            maxY = std::max(maxY, iY);
-            maxZ = std::max(maxZ, iZ);
-            newX = std::min(newX, iX);
-            newY = std::min(newY, iY);
-            newZ = std::min(newZ, iZ);
-          }
+
+  latticeR[0] = iC;
+  size_t fullCells = 0;
+  int xN = get(iC).getNx();
+  int yN = get(iC).getNy();
+  int zN = get(iC).getNz();
+  int maxX = 0;
+  int maxY = 0;
+  int maxZ = 0;
+  int newX = xN - 1;
+  int newY = yN - 1;
+  int newZ = zN - 1;
+  for (int iX = 0; iX < xN; iX++) {
+    for (int iY = 0; iY < yN; iY++) {
+      for (int iZ = 0; iZ < zN; iZ++) {
+        latticeR[1] = iX;
+        latticeR[2] = iY;
+        latticeR[3] = iZ;
+        getPhysR(physR,latticeR);
+        indicatorF(inside,physR);
+        if (inside[0]) {
+          fullCells++;
+          maxX = std::max(maxX, iX);
+          maxY = std::max(maxY, iY);
+          maxZ = std::max(maxZ, iZ);
+          newX = std::min(newX, iX);
+          newY = std::min(newY, iY);
+          newZ = std::min(newZ, iZ);
         }
       }
     }
-    //    if (maxX+2 < xN) maxX+=2; else if (maxX+1 < xN) maxX+=1;
-    //    if (maxY+2 < yN) maxY+=2; else if (maxY+1 < yN) maxY+=1;
-    //    if (maxZ+2 < zN) maxZ+=2; else if (maxZ+1 < zN) maxZ+=1;
-    //
-    //    if (newX-2 >= 0) newX-=2; else if (newX-1 >= 0) newX-=1;
-    //    if (newY-2 >= 0) newY-=2; else if (newY-1 >= 0) newY-=1;
-    //    if (newZ-2 >= 0) newZ-=2; else if (newZ-1 >= 0) newZ-=1;
+  }
+  //    if (maxX+2 < xN) maxX+=2; else if (maxX+1 < xN) maxX+=1;
+  //    if (maxY+2 < yN) maxY+=2; else if (maxY+1 < yN) maxY+=1;
+  //    if (maxZ+2 < zN) maxZ+=2; else if (maxZ+1 < zN) maxZ+=1;
+  //
+  //    if (newX-2 >= 0) newX-=2; else if (newX-1 >= 0) newX-=1;
+  //    if (newY-2 >= 0) newY-=2; else if (newY-1 >= 0) newY-=1;
+  //    if (newZ-2 >= 0) newZ-=2; else if (newZ-1 >= 0) newZ-=1;
 
-    if (fullCells > 0) {
-      get(iC).setWeight(fullCells);
-      _cuboids[iC].resize(newX, newY, newZ, maxX - newX + 1, maxY - newY + 1, maxZ - newZ + 1);
-    } else {
-      remove(iC);
-    }
+  if (fullCells > 0) {
+    get(iC).setWeight(fullCells);
+    _cuboids[iC].resize(newX, newY, newZ, maxX - newX + 1, maxY - newY + 1, maxZ - newZ + 1);
+  }
+  else {
+    remove(iC);
+  }
+}
+
+template<typename T>
+void CuboidGeometry3D<T>::shrink(IndicatorF3D<T>& indicatorF)
+{
+  for (int iC = getNc() - 1; iC >= 0; iC--) {
+    shrink(iC, indicatorF);
   }
   // shrink mother cuboid
   Vector<T,3> minPhysR = getMinPhysR();
   Vector<T,3> maxPhysR = getMaxPhysR();
   T minDelataR = getMinDeltaR();
   _motherCuboid = Cuboid3D<T>(minPhysR[0], minPhysR[1], minPhysR[2], minDelataR,
-                              (int)((maxPhysR[0]-minPhysR[0])/minDelataR + 0.5) ,
+                              (int)((maxPhysR[0]-minPhysR[0])/minDelataR + 0.5),
                               (int)((maxPhysR[1]-minPhysR[1])/minDelataR + 0.5),
                               (int)((maxPhysR[2]-minPhysR[2])/minDelataR + 0.5));
 }
@@ -669,6 +840,182 @@ void CuboidGeometry3D<T>::split(int iC, int p)
                    _cuboids[iC].getNx(), _cuboids[iC].getNy(), _cuboids[iC].getNz());
   temp.divide(p, _cuboids);
   remove(iC);
+}
+
+
+template<typename T>
+void CuboidGeometry3D<T>::splitByWeight(int iC, int p, IndicatorF3D<T>& indicatorF)
+{
+  T averageWeight = get(iC).getWeight() / (T) p;
+  // clout << "Mother " << get(iC).getWeight() << " " << averageWeight << std::endl;
+  Cuboid3D<T> temp(_cuboids[iC].getOrigin()[0], _cuboids[iC].getOrigin()[1],
+                   _cuboids[iC].getOrigin()[2],  _cuboids[iC].getDeltaR(),
+                   _cuboids[iC].getNx(), _cuboids[iC].getNy(), _cuboids[iC].getNz());
+
+  int latticeR[4];
+  T physR[3];
+  latticeR[0] = iC;
+  int xN = get(iC).getNx();
+  int yN = get(iC).getNy();
+  int zN = get(iC).getNz();
+  T deltaR = get(iC).getDeltaR();
+  int fullCells = 0;
+
+  Vector<T, 3> globPos_child = get(iC).getOrigin();
+  std::vector<int> extend_child = {xN, yN, zN};
+  int localPos_child = 0;
+
+  // looking for largest extend, because halfing the cuboid by its largest extend will result in the smallest surface and therfore in the least comminication cells
+  if ( get(iC).getNx() >= get(iC).getNy() && get(iC).getNx() >= get(iC).getNz()) {
+    // clout << "Cut in x direction!" << std::endl;
+
+    // for each child cuboid search for the optimal cutting plane
+    for ( int iChild = 0; iChild < p - 1; iChild++) {
+      fullCells = 0;
+      int fullCells_minusOne = 0;
+
+      for (int iX = localPos_child; iX < xN; iX++) {
+        fullCells_minusOne = fullCells;
+        for (int iY = 0; iY < yN; iY++) {
+          for (int iZ = 0; iZ < zN; iZ++) {
+            latticeR[1] = iX;
+            latticeR[2] = iY;
+            latticeR[3] = iZ;
+            getPhysR(physR,latticeR);
+            bool inside[1];
+            indicatorF(inside,physR);
+            if (inside[0]) {
+              fullCells++;
+            }
+          }
+        }
+        // the optimal cutting plane is determined, so that the child cuboid's cells inside the indicator are the closest to the total cells inside the indicator per number of children
+        if ( fullCells >= averageWeight ) {
+          if ( (fullCells - averageWeight) > (averageWeight - fullCells_minusOne) ) {
+            iX--;
+          }
+          // clout << "found optimal iX = " << iX << std::endl;
+          extend_child[0] = iX - localPos_child + 1;
+
+          Cuboid3D<T> child(globPos_child[0], globPos_child[1], globPos_child[2], deltaR, extend_child[0], extend_child[1], extend_child[2]);
+          _cuboids.push_back(child);
+
+          globPos_child[0] += extend_child[0]*deltaR;
+          localPos_child += extend_child[0] + 1;
+          // clout << "added child " << iChild << " of " << p << std::endl;
+
+          break;
+        }
+      }
+
+    }
+
+    extend_child[0] = xN - localPos_child + p - 1;
+
+    Cuboid3D<T> child(globPos_child[0], globPos_child[1], globPos_child[2], deltaR, extend_child[0], extend_child[1], extend_child[2]);
+    _cuboids.push_back(child);
+
+    // clout << "added last child of " << p << std::endl;
+
+  }
+  else if ( get(iC).getNy() >= get(iC).getNx() && get(iC).getNy() >= get(iC).getNz()) {
+    // clout << "Cut in y direction!" << std::endl;
+
+    for ( int iChild = 0; iChild < p - 1; iChild++) {
+      fullCells = 0;
+      int fullCells_minusOne = 0;
+
+      for (int iY = localPos_child; iY < yN; iY++) {
+        fullCells_minusOne = fullCells;
+        for (int iX = 0; iX < xN; iX++) {
+          for (int iZ = 0; iZ < zN; iZ++) {
+            latticeR[1] = iX;
+            latticeR[2] = iY;
+            latticeR[3] = iZ;
+            getPhysR(physR,latticeR);
+            bool inside[1];
+            indicatorF(inside,physR);
+            if (inside[0]) {
+              fullCells++;
+            }
+          }
+        }
+        if ( fullCells >= averageWeight ) {
+          if ( (fullCells - averageWeight) > (averageWeight - fullCells_minusOne) ) {
+            iY--;
+          }
+          // clout << "found optimal iY = " << iY << std::endl;
+          extend_child[1] = iY - localPos_child + 1;
+
+          Cuboid3D<T> child(globPos_child[0], globPos_child[1], globPos_child[2], deltaR, extend_child[0], extend_child[1], extend_child[2]);
+          _cuboids.push_back(child);
+
+          globPos_child[1] += extend_child[1]*deltaR;
+          localPos_child += extend_child[1] + 1;
+          // clout << "added child " << iChild << " of " << p << std::endl;
+
+          break;
+        }
+      }
+
+    }
+
+    extend_child[1] = yN - localPos_child + p - 1;
+
+    Cuboid3D<T> child(globPos_child[0], globPos_child[1], globPos_child[2], deltaR, extend_child[0], extend_child[1], extend_child[2]);
+    _cuboids.push_back(child);
+
+    // clout << "added last child of " << p << std::endl;
+  }
+  else {
+    // clout << "Cut in z direction!" << std::endl;
+
+    for ( int iChild = 0; iChild < p - 1; iChild++) {
+      fullCells = 0;
+      int fullCells_minusOne = 0;
+
+      for (int iZ = localPos_child; iZ < zN; iZ++) {
+        fullCells_minusOne = fullCells;
+        for (int iY = 0; iY < yN; iY++) {
+          for (int iX = 0; iX < xN; iX++) {
+            latticeR[1] = iX;
+            latticeR[2] = iY;
+            latticeR[3] = iZ;
+            getPhysR(physR,latticeR);
+            bool inside[1];
+            indicatorF(inside,physR);
+            if (inside[0]) {
+              fullCells++;
+            }
+          }
+        }
+        if ( fullCells >= averageWeight ) {
+          if ( (fullCells - averageWeight) > (averageWeight - fullCells_minusOne) ) {
+            iZ--;
+          }
+          // clout << "found optimal iZ = " << iZ << std::endl;
+          extend_child[2] = iZ - localPos_child + 1;
+
+          Cuboid3D<T> child(globPos_child[0], globPos_child[1], globPos_child[2], deltaR, extend_child[0], extend_child[1], extend_child[2]);
+          _cuboids.push_back(child);
+
+          globPos_child[2] += extend_child[2]*deltaR;
+          localPos_child += extend_child[2] + 1;
+          // clout << "added child " << iChild << " of " << p << std::endl;
+
+          break;
+        }
+      }
+
+    }
+
+    extend_child[2] = zN - localPos_child + p - 1;
+
+    Cuboid3D<T> child(globPos_child[0], globPos_child[1], globPos_child[2], deltaR, extend_child[0], extend_child[1], extend_child[2]);
+    _cuboids.push_back(child);
+
+    // clout << "added last child of " << p << std::endl;
+  }
 }
 
 
@@ -704,16 +1051,15 @@ void CuboidGeometry3D<T>::setWeights(IndicatorF3D<T>& indicatorF)
 {
 
   //IndicatorIdentity3D<T> tmpIndicatorF(indicatorF);
-  int xN, yN, zN;
   int nC = getNc();
   int latticeR[4];
   T physR[3];
   for ( int iC = nC - 1; iC >= 0; iC--) { // assemble neighbourhood information
     latticeR[0] = iC;
-    xN  = get(iC).getNx();
-    yN  = get(iC).getNy();
-    zN  = get(iC).getNz();
-    int fullCells = 0;
+    int xN = get(iC).getNx();
+    int yN = get(iC).getNy();
+    int zN = get(iC).getNz();
+    size_t fullCells = 0;
     for (int iX = 0; iX < xN; iX++) {
       for (int iY = 0; iY < yN; iY++) {
         for (int iZ = 0; iZ < zN; iZ++) {
@@ -731,7 +1077,8 @@ void CuboidGeometry3D<T>::setWeights(IndicatorF3D<T>& indicatorF)
     }
     if (fullCells > 0) {
       get(iC).setWeight(fullCells);
-    } else {
+    }
+    else {
       remove(iC);
     }
   }
@@ -778,12 +1125,14 @@ void CuboidGeometry3D<T>::print() const
 {
   clout << "---Cuboid Stucture Statistics---" << std::endl;
   clout << " Number of Cuboids: " << "\t" << getNc() << std::endl;
-  clout << " Delta (min): " << "\t" << "\t" << getMinDeltaR() << std::endl;
-  clout << "       (max): " << "\t" << "\t" << getMaxDeltaR() << std::endl;
-  clout << " Ratio (min): " << "\t" << "\t" << getMinRatio() << std::endl;
-  clout << "       (max): " << "\t" << "\t" << getMaxRatio() << std::endl;
-  clout << " Nodes (min): " << "\t" << "\t" << getMinLatticeVolume() << std::endl;
-  clout << "       (max): " << "\t" << "\t" << getMaxLatticeVolume() << std::endl;
+  clout << " Delta  (min): " << "\t" << "\t" << getMinDeltaR() << std::endl;
+  clout << "        (max): " << "\t" << "\t" << getMaxDeltaR() << std::endl;
+  clout << " Ratio  (min): " << "\t" << "\t" << getMinRatio() << std::endl;
+  clout << "        (max): " << "\t" << "\t" << getMaxRatio() << std::endl;
+  clout << " Nodes  (min): " << "\t" << "\t" << getMinLatticeVolume() << std::endl;
+  clout << "        (max): " << "\t" << "\t" << getMaxLatticeVolume() << std::endl;
+  clout << " Weight (min): " << "\t" << "\t" << getMinLatticeWeight() << std::endl;
+  clout << "        (max): " << "\t" << "\t" << getMaxLatticeWeight() << std::endl;
   clout << "--------------------------------" << std::endl;
 }
 

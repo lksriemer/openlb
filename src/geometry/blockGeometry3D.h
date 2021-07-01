@@ -49,7 +49,7 @@ namespace olb {
  * This class is not intended to be derived from.
  */
 template<typename T>
-class BlockGeometry3D : public BlockData3D<T,int>, public BlockGeometryStructure3D<T> {
+class BlockGeometry3D final : public BlockData3D<T,int>, public BlockGeometryStructure3D<T> {
 
 private:
   /// Cuboid which charaterizes the block geometry
@@ -73,7 +73,7 @@ public:
   BlockGeometryStatistics3D<T> const& getStatistics(bool verbose=true) const override;
 
   /// Read only access to the origin position given in SI units (meter)
-  Vector<T,3> const getOrigin() const override;
+  Vector<T,3> getOrigin() const override;
   /// Read only access to the voxel size given in SI units (meter)
   const T getDeltaR() const override;
   /// Returns the extend (number of voxels) in X-direction
@@ -82,10 +82,10 @@ public:
   int getNy() const override;
   /// Returns the extend (number of voxels) in Z-direction
   int getNz() const override;
-  /// Write access to a material number, inherited from BlockGeometryStructure3D
-  int& get(int iX, int iY, int iZ) override;
-  /// Read only access to a material number, inherited from BlockGeometryStructure3D
-  int const& get(int iX, int iY, int iZ) const override;
+  /// Write access to a material number
+  int& get(int iX, int iY, int iZ) override;  // override BlockGeometryStructure3D::get() by linking to BlockData3D<T,int>::get()
+  /// Read only access to a material number
+  int const& get(int iX, int iY, int iZ) const override;  // override BlockGeometryStructure3D::get() by linking to BlockData3D<T,int>::get()
   /// returns the (iX,iY,iZ) entry in the 3D scalar field
   int getMaterial(int iX, int iY, int iZ) const override; // TODO old
 

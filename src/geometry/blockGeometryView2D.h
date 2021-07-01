@@ -51,7 +51,7 @@ template<typename T> class BlockGeometryStatistics2D;
 template<typename T> class BlockGeometryStructure2D;
 
 template<typename T>
-class BlockGeometryView2D : public BlockGeometryStructure2D<T> {
+class BlockGeometryView2D final : public BlockGeometryStructure2D<T>, public BlockStructure2D {
 
 private:
   // Points to the structure where this view class is viewing at
@@ -72,33 +72,33 @@ public:
   ~BlockGeometryView2D();
 
   /// Write access to the associated block statistic
-  BlockGeometryStatistics2D<T>& getStatistics(bool verbose=true);
+  BlockGeometryStatistics2D<T>& getStatistics(bool verbose=true) override;
   /// Read only access to the associated block statistic
-  BlockGeometryStatistics2D<T> const& getStatistics(bool verbose=true) const;
+  BlockGeometryStatistics2D<T> const& getStatistics(bool verbose=true) const override;
 
   /// Read only access to the origin position given in SI units (meter)
-  std::vector<T> const getOrigin() const;
+  Vector<T,2> getOrigin() const override;
   /// Read only access to the voxel size given in SI units (meter)
-  const T getDeltaR() const;
+  const T getDeltaR() const override;
   /// Returns the extend (number of voxels) in X-direction
-  int getNx() const;
+  int getNx() const override;
   /// Returns the extend (number of voxels) in Y-direction
-  int getNy() const;
+  int getNy() const override;
 
   /// Write access to a material number
-  int& get(int iX, int iY);
+  int& get(int iX, int iY) override;
   /// Read only access to a material number
-  int const& get(int iX, int iY) const;
+  int const& get(int iX, int iY) const override;
   /// returns the (iX,iY,iZ) entry in the 2D scalar field
-  int getMaterial(int iX, int iY) const; // TODO old
+  int getMaterial(int iX, int iY) const override; // TODO old
 
   /// Transforms lattice to physical coordinates (wrapped from cuboid geometry)
-  void getPhysR(T physR[2], const int& iX, const int& iY) const;
+  void getPhysR(T physR[2], const int& iX, const int& iY) const override;
 
   /// Adds a pointer to the list of dependent statistic classes
-  void addToStatisticsList(bool* statisticStatus);
+  void addToStatisticsList(bool* statisticStatus) override;
   /// Removes a pointer from the list of dependent statistic classes if existing
-  void removeFromStatisticsList(bool* statisticStatus);
+  void removeFromStatisticsList(bool* statisticStatus) override;
 };
 
 } // namespace olb

@@ -1,6 +1,6 @@
 #  This file is part of the OpenLB library
 #
-#  Copyright (C) 2007 Mathias Krause
+#  Copyright (C) 2017 Markus Mohrhard
 #  E-mail contact: info@openlb.net
 #  The most recent release of OpenLB can be downloaded at
 #  <http://www.openlb.net/>
@@ -21,117 +21,87 @@
 #  Boston, MA  02110-1301, USA.
 
 ###########################################################################
-###########################################################################
 
-include Makefile.inc
+## installing the configuration makefile
 
-###########################################################################
-## all
+## the variable is just here to ensure that the Makefile is copied if it does not exist yet
 
-all: lib
+ROOT := .
 
-###########################################################################
-## compile
+include global.mk
 
-compile:
-	@for i in $(SUBDIRS); \
-	do \
-	  (cd $$i; \
-           echo "-------------------------------------------------------------"; \
-           echo "-- Entering $$i (compile)"; \
-           $(MAKE) compile; \
-           echo "-- Leaving $$i (compile)"; \
-           echo "-------------------------------------------------------------") \
-	done
+CLEANTARGETS :=
 
-###########################################################################
-## depend
+SAMPLESCLEAN :=
 
-depend:
-	@for i in $(SUBDIRS); \
-	do \
-	  (cd $$i; \
-           echo "-------------------------------------------------------------"; \
-           echo "-- Entering $$i (depend)"; \
-           $(MAKE) depend; \
-           echo "-- Leaving $$i (depend)"; \
-           echo "-------------------------------------------------------------") \
-	done
+LIB_OBJECTS := 
+
+SAMPLES :=
+
+TESTS :=
+
+BENCHMARKS :=
+
+EXTRA_IDIR :=
+
+DEPS := $(shell find $(DEPENDDIR)/*/ -name *.d)
+
+INCLUDEDIR := $(foreach d,$(INCLUDEDIRS),-I./$(d))
 
 ###########################################################################
-## clean
+## Building libolb.a and the  
 
-clean:
-	@rm -f *~ core
-	@for i in $(BUILDTYPEDIRS); \
-	do \
-	  (cd $$i; \
-           echo "-------------------------------------------------------------"; \
-           echo "-- Clean object, dependencies and library files in $$i"; \
-           rm -f lib/*.a; \
-           rm -f dep/*.d; \
-           rm -f obj/*.o; \
-           echo "-------------------------------------------------------------") \
-	done
+all: compile
 
-cleanbuild:
-	@echo "-------------------------------------------------------------";
-	@echo "-- Clean object, dependencies and library files in ´"$(BUILDTYPE)"'";
-	@echo "-------------------------------------------------------------";
-	@rm -f $(LIBDIR)/*.a
-	@rm -f $(DEPENDDIR)/*.d
-	@rm -f $(OBJDIR)/*.o
-	@for i in $(SUBDIRS); \
-	do \
-	  (cd $$i; \
-           echo "-------------------------------------------------------------"; \
-           echo "-- Entering $$i (clean)"; \
-           $(MAKE) clean; \
-           echo "-- Leaving $$i (clean)"; \
-           echo "-------------------------------------------------------------") \
-	done
+include $(addsuffix /module.mk, $(SUBDIRS))
 
-cleansamples:
-	@for i in $(EXAMPLEDIRS); \
-	do \
-	  (cd $$i; \
-           echo "-------------------------------------------------------------"; \
-           echo "-- Entering $$i (clean)"; \
-           $(MAKE) clean; \
-           echo "-- Leaving $$i (clean)"; \
-           echo "-------------------------------------------------------------") \
-	done
+include $(addsuffix /module.mk, $(EXAMPLEDIRS))
+
+include $(addsuffix /module.mk, $(TESTDIRS))
+
+include $(foreach dependency_file,$(LIB_OBJECTS:.o=.d), $(wildcard $(subst $(OBJDIR)/,$(DEPENDDIR)/,$(dependency_file))))
+
+compile: lib
+
+$(OBJDIR)/%.o: %.cpp | $(DEPENDDIR)/%.d
+	@mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) -DTIXML_USE_STL $(INCLUDEDIR) -c $< -o $@
+
+lib: $(LIBDIR)/lib$(LIB).a $(LIBDIR)/libz.a
+
+$(LIBDIR)/lib$(LIB).a: $(LIB_OBJECTS)
+	@mkdir -p $(LIBDIR)
+	@$(ARPRG) -rusv $(LIBDIR)/lib$(LIB).a $(LIB_OBJECTS) > /dev/null
+
+.PRECIOUS: $(DEPENDDIR)/%.d
+
+$(DEPENDDIR)/%.d : %.cpp
+	@mkdir -p $(dir $@)
+	@$(SHELL) -ec '$(CXX) -M $(CXXFLAGS) $(INCLUDEDIR) $(EXTRA_IDIR) $< \
+	    | sed -e "s!$(basename $(notdir $@))\.o!$(OBJDIR)/$*.o!1" > $@;'
 
 ###########################################################################
-## lib
+## removing generated files
 
-lib: depend compile $(LIBDIR)/lib$(LIB).a $(LIBDIR)/libz.a
-$(LIBDIR)/lib$(LIB).a: $(wildcard $(OBJDIR)/*.o)
-	@echo Build lib$(LIB).a:
-	@$(ARPRG) -rusv $(LIBDIR)/lib$(LIB).a $(OBJDIR)/*.o
+cleansamples: $(SAMPLESCLEAN)
 
-$(LIBDIR)/libz.a: src/external/zlib/libz.a
-	@cp src/external/zlib/libz.a $(LIBDIR)/libz.a
+cleanbuild cleanlib:
+	@rm -f $(LIB_OBJECTS) &> /dev/null || true
+	@rm -f $(LIBDIR)/lib$(LIB).a &> /dev/null || true
 
-###########################################################################
-## examples
+clean: $(CLEANTARGETS) cleanlib
+	@rm -r -f $(shell find $(DEPENDDIR) -name *.d) &> /dev/null || true
 
-samples:
-	@for i in $(EXAMPLEDIRS); \
-	do \
-	  (cd $$i; \
-           echo "-------------------------------------------------------------"; \
-           echo "-- Entering $$i (make examples)"; \
-           $(MAKE) all; \
-           echo "-- Leaving $$i (make examples)"; \
-           echo "-------------------------------------------------------------") \
-	done
 
-###########################################################################
+## handling of the examples
+
+samples: lib $(SAMPLES)
+
+############################yy###############################################
 ## user guide documentation
 
 userguide:
-	@cd doc/olb-ug-latest/; \
+	@cd doc/userGuide/; \
 	latexmk -pdf -silent -f olb-ug.tex
 
 ###########################################################################
@@ -141,10 +111,12 @@ doxygen:
 	doxygen doc/DoxygenConfig
 
 ###########################################################################
-## makefile options file
+## checking whether to automatically install the git hook
+GITDEPEND := $(shell test -d ".git" && echo .git/hooks/pre-commit)
 
-Makefile.inc:
-	cp Makefile.git.inc Makefile.inc
-
-###########################################################################
-###########################################################################
+ifneq ($(strip $(GITDEPEND)),)
+.git/hooks/pre-commit: hooks/pre-commit
+	@echo Installing git hook
+	cp hooks/pre-commit .git/hooks/pre-commit
+	chmod +x .git/hooks/pre-commit
+endif

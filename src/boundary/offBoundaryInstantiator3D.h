@@ -45,39 +45,39 @@ class OffBoundaryConditionInstantiator3D: public OffLatticeBoundaryCondition3D<T
   Lattice> {
 public:
   OffBoundaryConditionInstantiator3D(BlockLatticeStructure3D<T, Lattice>& block_, T epsFraction_ = 0.0001);
-  ~OffBoundaryConditionInstantiator3D();
+  ~OffBoundaryConditionInstantiator3D() override;
 
-  void addOnePointZeroVelocityBoundary(int x, int y, int z, int iPop, T dist);
-  void addTwoPointZeroVelocityBoundary(int x, int y, int z, int iPop, T dist);
+  void addOnePointZeroVelocityBoundary(int x, int y, int z, int iPop, T dist) override;
+  void addTwoPointZeroVelocityBoundary(int x, int y, int z, int iPop, T dist) override;
 
-  void addOnePointVelocityBoundary(int x, int y, int z, int iPop, T dist);
-  void addTwoPointVelocityBoundary(int x, int y, int z, int iPop, T dist);
+  void addOnePointVelocityBoundary(int x, int y, int z, int iPop, T dist) override;
+  void addTwoPointVelocityBoundary(int x, int y, int z, int iPop, T dist) override;
 
-  virtual void addOffDynamics(int x, int y, int z, T location[Lattice<T>::d]);
-  virtual void addOffDynamics(int x, int y, int z, T location[Lattice<T>::d], T distances[Lattice<T>::q]);
-  virtual void addOffDynamics(BlockGeometryStructure3D<T>& blockGeometryStructure, int material);
+  void addOffDynamics(int x, int y, int z, T location[Lattice<T>::d]) override;
+  void addOffDynamics(int x, int y, int z, T location[Lattice<T>::d], T distances[Lattice<T>::q]) override;
+  void addOffDynamics(BlockGeometryStructure3D<T>& blockGeometryStructure, int material) override;
 
-  void addZeroVelocityBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int x, int y, int z, int iPop, T dist);
+  void addZeroVelocityBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int x, int y, int z, int iPop, T dist) override;
   void addZeroVelocityBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int x, int y, int z, T distances[Lattice<T>::q]);
   void addZeroVelocityBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int iX, int iY, int iZ, IndicatorF3D<T>& indicator, std::list<int> bulkMaterials = std::list<int>(1,1));
-  void addZeroVelocityBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int material, IndicatorF3D<T>& indicator, std::list<int> bulkMaterials = std::list<int>(1,1));
+  void addZeroVelocityBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int material, IndicatorF3D<T>& indicator, std::list<int> bulkMaterials = std::list<int>(1,1)) override;
 
   void addVelocityBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int x, int y, int z, int iPop, T dist);
   void addVelocityBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int x, int y, int z, T distances[Lattice<T>::q]);
   void addVelocityBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int iX, int iY, int iZ, IndicatorF3D<T>& indicator, std::list<int> bulkMaterials = std::list<int>(1,1));
-  void addVelocityBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int material, IndicatorF3D<T>& indicator, std::list<int> bulkMaterials = std::list<int>(1,1));
+  void addVelocityBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int material, IndicatorF3D<T>& indicator, std::list<int> bulkMaterials = std::list<int>(1,1)) override;
 
   void setBoundaryIntersection(int iX, int iY, int iZ, int iPop, T distance);
   bool getBoundaryIntersection(int iX, int iY, int iZ, int iPop, T point[Lattice<T>::d]);
 
-  virtual void defineU(int iX, int iY, int iZ, int iPop, const T u[Lattice<T>::d]);
-  virtual void defineU(BlockGeometryStructure3D<T>& blockGeometryStructure, int material, AnalyticalF3D<T,T>& u, std::list<int> bulkMaterials = std::list<int>(1,1) );
+  void defineU(int iX, int iY, int iZ, int iPop, const T u[Lattice<T>::d]) override;
+  void defineU(BlockGeometryStructure3D<T>& blockGeometryStructure, int material, AnalyticalF3D<T,T>& u, std::list<int> bulkMaterials = std::list<int>(1,1) ) override;
 
-  void outputOn();
-  void outputOff();
+  void outputOn() override;
+  void outputOff() override;
 
-  virtual BlockLatticeStructure3D<T, Lattice>& getBlock();
-  virtual BlockLatticeStructure3D<T, Lattice> const& getBlock() const;
+  BlockLatticeStructure3D<T, Lattice>& getBlock() override;
+  BlockLatticeStructure3D<T, Lattice> const& getBlock() const override;
 private:
   BlockLatticeStructure3D<T, Lattice>& block;
   //std::vector<Momenta<T, Lattice>*> momentaVector;
@@ -488,7 +488,7 @@ void OffBoundaryConditionInstantiator3D<T, Lattice, BoundaryManager>::
 setBoundaryIntersection(int iX, int iY, int iZ, int iPop, T distance)
 {
 
-  this->getBlock().get(iX,iY,iZ).getDynamics()->setBoundaryIntersection(iPop, distance);
+  this->getBlock().getDynamics(iX, iY, iZ)->setBoundaryIntersection(iPop, distance);
   if (_output) {
     clout << "setBoundaryIntersection(" << iX << ", " << iY << ", " << iZ << " )" << std::endl;
   }
@@ -499,7 +499,7 @@ bool OffBoundaryConditionInstantiator3D<T, Lattice, BoundaryManager>::
 getBoundaryIntersection(int iX, int iY, int iZ, int iPop, T point[Lattice<T>::d])
 {
 
-  return this->getBlock().get(iX,iY,iZ).getDynamics()->getBoundaryIntersection(iPop, point);
+  return this->getBlock().getDynamics(iX, iY, iZ)->getBoundaryIntersection(iPop, point);
 }
 
 
@@ -507,7 +507,7 @@ template<typename T, template<typename U> class Lattice, class BoundaryManager>
 void OffBoundaryConditionInstantiator3D<T, Lattice, BoundaryManager>::defineU(int iX, int iY, int iZ, int iPop, const T u[Lattice<T>::d])
 {
 
-  this->getBlock().get(iX,iY,iZ).getDynamics()->defineU(iPop, u);
+  this->getBlock().getDynamics(iX, iY, iZ)->defineU(iPop, u);
   if (_output) {
     clout << "defineU(" << iX << ", " << iY << ", " << iZ << " )" << std::endl;
   }

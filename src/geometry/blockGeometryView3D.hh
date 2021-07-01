@@ -36,19 +36,23 @@
 namespace olb {
 
 template<typename T>
-BlockGeometryView3D<T>::BlockGeometryView3D
-(BlockGeometryStructure3D<T>& originalBlockGeometry, int x0, int x1, int y0,
- int y1, int z0, int z1)
+BlockGeometryView3D<T>::BlockGeometryView3D(
+  BlockGeometryStructure3D<T>& originalBlockGeometry,
+  int x0, int x1, int y0,
+  int y1, int z0, int z1)
   : BlockGeometryStructure3D<T>(originalBlockGeometry.getIcGlob()),
-    _originalBlockGeometry(&originalBlockGeometry), _x0(x0), _y0(y0), _z0(z0),
-    _nx(x1-x0+1), _ny(y1-y0+1), _nz(z1-z0+1)
+    BlockStructure3D(x1-x0+1, y1-y0+1, z1-z0+1),
+    _originalBlockGeometry(&originalBlockGeometry),
+    _x0(x0), _y0(y0), _z0(z0)
 {
   this->_statistics = BlockGeometryStatistics3D<T>(this);
   addToStatisticsList( &(this->_statistics.getStatisticsStatus()) );
 }
 
 template<typename T>
-BlockGeometryView3D<T>::BlockGeometryView3D(BlockGeometryView3D const& rhs) : BlockGeometryStructure3D<T>(rhs)
+BlockGeometryView3D<T>::BlockGeometryView3D(BlockGeometryView3D const& rhs)
+  : BlockGeometryStructure3D<T>(rhs),
+    BlockStructure3D(0,0,0)
 {
   _originalBlockGeometry = rhs._originalBlockGeometry;
   _x0 = rhs._x0;
@@ -98,7 +102,7 @@ BlockGeometryStatistics3D<T> const& BlockGeometryView3D<T>::getStatistics(bool v
 }
 
 template<typename T>
-Vector<T,3> const BlockGeometryView3D<T>::getOrigin() const
+Vector<T,3> BlockGeometryView3D<T>::getOrigin() const
 {
   Vector<T,3> origin(_originalBlockGeometry->getOrigin());
   origin[0] += _x0 * getDeltaR();

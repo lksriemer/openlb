@@ -35,6 +35,7 @@
 
 #include "particle3D.h"
 #include "particleSystem3D.h"
+#include "functors/analytical/frameChangeF3D.h"
 //#include "../functors/frameChangeF3D.h" //check
 //#include "../utilities/vectorHelpers.h" //check
 
@@ -46,10 +47,9 @@ namespace olb {
 
 template<typename T, template<typename U> class PARTICLETYPE>
 ParticleSystem3D<T, PARTICLETYPE>::ParticleSystem3D(
-  SuperGeometry3D<T>& superGeometry, LBconverter<T>& conv)
+  SuperGeometry3D<T>& superGeometry)
   : clout(std::cout, "ParticleSystem3D"),
     _superGeometry(superGeometry),
-    _converter(conv),
     _contactDetection(new ContactDetection<T, PARTICLETYPE>(*this)),
     _sim(this)
 {
@@ -60,7 +60,6 @@ ParticleSystem3D<T, PARTICLETYPE>::ParticleSystem3D(
   const ParticleSystem3D<T, PARTICLETYPE>& pS)
   : clout(std::cout, "ParticleSystem3D"),
     _superGeometry(pS._superGeometry),
-    _converter(pS._converter),
     _contactDetection(new ContactDetection<T, PARTICLETYPE>(*this)),
     _sim(this),
     _physPos(pS._physPos),
@@ -75,7 +74,6 @@ ParticleSystem3D<T, PARTICLETYPE>::ParticleSystem3D(
   ParticleSystem3D<T, PARTICLETYPE> && pS)
   :     clout(std::cout, "ParticleSystem3D"),
         _superGeometry(pS._superGeometry),
-        _converter(pS._converter),
         _contactDetection(new ContactDetection<T, PARTICLETYPE>(*this)),
         _sim(this),
         _physPos(pS._physPos),
@@ -286,9 +284,9 @@ void ParticleSystem3D<T, PARTICLETYPE>::computeBoundary()
 }
 
 template<typename T, template<typename U> class PARTICLETYPE>
-void ParticleSystem3D<T, PARTICLETYPE>::simulate(T dT)
+void ParticleSystem3D<T, PARTICLETYPE>::simulate(T dT, bool scale)
 {
-  _sim.simulate(dT);
+  _sim.simulate(dT, scale);
 }
 
 template<typename T, template<typename U> class PARTICLETYPE>
@@ -318,30 +316,48 @@ int ParticleSystem3D<T, PARTICLETYPE>::countMaterial(int mat)
 }
 
 template<typename T, template<typename U> class PARTICLETYPE>
-void ParticleSystem3D<T, PARTICLETYPE>::explicitEuler(T dT)
+void ParticleSystem3D<T, PARTICLETYPE>::explicitEuler(T dT, bool scale)
 {
+
+  T maxDeltaR = _superGeometry.getCuboidGeometry().getMaxDeltaR();
+  T maxFactor = T();
+
   for (auto& p : _particles) {
     if (p.getActive()) {
       for (int i = 0; i < 3; i++) {
         p.getVel()[i] += p.getForce()[i] * p.getInvMass() * dT;
         p.getPos()[i] += p.getVel()[i] * dT;
-
-        // if particles are too fast, e.g. material boundary can not work anymore
-#ifdef OLB_DEBUG
-        if (p.getVel()[i] * dT > _superGeometry.getCuboidGeometry().getMaxDeltaR()) {
-          std::cout << " PROBLEM: particle speed too high rel. to delta of "
-                    "lattice: "<< std::endl;
-          std::cout << "p.getVel()[i]*dT: " << i <<" "<< p.getVel()[i] * dT;
-          std::cout << "MaxDeltaR(): " <<
-                    _superGeometry.getCuboidGeometry().getMaxDeltaR() << std::endl;
-          exit(-1);
+        // computation of direction depending maxFactor to scale velocity value
+        // to keep velocity small enough for simulation
+        if (fabs(p.getVel()[i]) > fabs(maxDeltaR / dT)) {
+          maxFactor = std::max(maxFactor, fabs(p.getVel()[i] / maxDeltaR * dT));
         }
-#endif
       }
+      // scaling of velocity values
+      // if particles are too fast, e.g. material boundary can not work anymore
+      if ( !util::nearZero(maxFactor) && scale) {
+        std::cout << "particle velocity is scaled because of reached limit"
+                  << std::endl;
+        for (int i = 0; i < 3; i++) {
+          p.getPos()[i] -= p.getVel()[i] * dT; // position set back
+          p.getVel()[i] /= maxFactor; // scale velocity value
+          p.getPos()[i] += p.getVel()[i] * dT;
+        }
+      }
+      // if particles are too fast, e.g. material boundary can not work anymore
+//#ifdef OLB_DEBUG
+//      if (p.getVel()[i] * dT > _superGeometry.getCuboidGeometry().getMaxDeltaR()) {
+//        std::cout << " PROBLEM: particle speed too high rel. to delta of "
+//                  "lattice: "<< std::endl;
+//        std::cout << "p.getVel()[i]*dT: " << i <<" "<< p.getVel()[i] * dT;
+//        std::cout << "MaxDeltaR(): " <<
+//                  _superGeometry.getCuboidGeometry().getMaxDeltaR() << std::endl;
+//        exit(-1);
+//      }
+//#endif
     }
   }
 }
-
 
 //template<typename T, template<typename U> class PARTICLETYPE>
 //void ParticleSystem3D<T, PARTICLETYPE>::integrateTorque(T dT)
@@ -653,6 +669,48 @@ void ParticleSystem3D<T, PARTICLETYPE>::rungeKutta4_4(T dT)
 }
 */
 
+template<typename T, template<typename U> class PARTICLETYPE>
+std::deque<PARTICLETYPE<T>*> ParticleSystem3D<T, PARTICLETYPE>::
+getParticlesPointer()
+{
+  std::deque<PARTICLETYPE<T>*> pointerParticles;
+  for (int i = 0; i < (int) _particles.size(); i++) {
+    pointerParticles.push_back(&_particles[i]);
+  }
+  return pointerParticles;
+}
+
+template<typename T, template<typename U> class PARTICLETYPE>
+std::list<std::shared_ptr<Force3D<T, PARTICLETYPE> > >
+ParticleSystem3D<T, PARTICLETYPE>::getForcesPointer()
+{
+  return _forces;
+}
+
+template<typename T, template<typename U> class PARTICLETYPE>
+std::deque<PARTICLETYPE<T>*> ParticleSystem3D<T, PARTICLETYPE>::
+getAllParticlesPointer()
+{
+  std::deque<PARTICLETYPE<T>*> pointerParticles;
+  int i = 0;
+  for (; i < (int) _particles.size(); i++) {
+    pointerParticles.push_back(&_particles[i]);
+  }
+  for (; i < (int) (_particles.size() + _shadowParticles.size()); i++) {
+    pointerParticles.push_back(&_shadowParticles[i - _particles.size()]);
+  }
+  return pointerParticles;
+}
+
+template<typename T, template<typename U> class PARTICLETYPE>
+std::deque<PARTICLETYPE<T>*> ParticleSystem3D<T, PARTICLETYPE>::
+getShadowParticlesPointer(){
+   std::deque<PARTICLETYPE<T>*> pointerParticles;
+   for (int i = 0; i < (int) (_shadowParticles.size()); i++) {
+      pointerParticles.push_back(&_shadowParticles[i]);
+    }
+   return pointerParticles;
+ }
 
 template<typename T, template<typename U> class PARTICLETYPE>
 void ParticleSystem3D<T, PARTICLETYPE>::saveToFile(std::string fullName)

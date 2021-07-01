@@ -75,12 +75,6 @@ MRTdynamics<T,Lattice>::MRTdynamics (
 }
 
 template<typename T, template<typename U> class Lattice>
-MRTdynamics<T,Lattice>* MRTdynamics<T,Lattice>::clone() const
-{
-  return new MRTdynamics<T,Lattice>(*this);
-}
-
-template<typename T, template<typename U> class Lattice>
 T MRTdynamics<T,Lattice>::computeEquilibrium(int iPop, T rho, const T u[Lattice<T>::d], T uSqr) const
 {
   return lbHelpers<T,Lattice>::equilibrium(iPop, rho, u, uSqr);
@@ -99,9 +93,7 @@ void MRTdynamics<T,Lattice>::collide (
 
   T uSqr = mrtH::mrtCollision(cell,rho,u,invM_S);
 
-  if (cell.takesStatistics()) {
-    statistics.incrementStats(rho, uSqr);
-  }
+  statistics.incrementStats(rho, uSqr);
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -114,9 +106,7 @@ void MRTdynamics<T,Lattice>::staticCollide (
 
   T rho = T(1);
   T uSqr = mrtH::mrtCollision(cell, rho, u, invM_S);
-  if (cell.takesStatistics()) {
-    statistics.incrementStats(rho, uSqr);
-  }
+  statistics.incrementStats(rho, uSqr);
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -186,9 +176,7 @@ void MRTdynamics2<T,Lattice>::collide (
 
   T uSqr = mrtH::mrtCollision(cell,rho,u,invM_S_2);
 
-  if (cell.takesStatistics()) {
-    statistics.incrementStats(rho, uSqr);
-  }
+  statistics.incrementStats(rho, uSqr);
 }
 
 
@@ -214,9 +202,7 @@ void ForcedMRTdynamics<T,Lattice>::collide (
   T uSqr = mrtH::mrtCollision(cell,rho,u,this->invM_S);
   mrtH::addExternalForce(cell, rho, u, this->invM_S);
 
-  if (cell.takesStatistics()) {
-    statistics.incrementStats(rho, uSqr);
-  }
+  statistics.incrementStats(rho, uSqr);
 }
 
 

@@ -48,7 +48,7 @@ void STLtriangle<T>::init()
   Vector<T,3> A = point[0].r;
   Vector<T,3> B = point[1].r;
   Vector<T,3> C = point[2].r;
-  Vector<T,3> b(3, T()), c(3, T());
+  Vector<T,3> b, c;
   T bb = 0., bc = 0., cc = 0.;
 
   for (int i = 0; i < 3; i++) {

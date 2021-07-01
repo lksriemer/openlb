@@ -25,7 +25,6 @@
 #define NAVIER_STOKES_ADVECTION_DIFFUSION_COUPLING_POST_PROCESSOR_2D_HH
 
 #include "latticeDescriptors.h"
-#include "advectionDiffusionLatticeDescriptors.h"
 #include "navierStokesAdvectionDiffusionCouplingPostProcessor2D.h"
 #include "core/blockLattice2D.h"
 #include "core/util.h"
@@ -57,6 +56,12 @@ NavierStokesAdvectionDiffusionCouplingPostProcessor2D(int x0_, int x1_, int y0_,
   for (unsigned iD = 0; iD < dir.size(); ++iD) {
     dir[iD] /= normDir;
   }
+
+  for (unsigned iD = 0; iD < dir.size(); ++iD) {
+    forcePrefactor[iD] = gravity * dir[iD];
+  }
+
+  tPartner = dynamic_cast<BlockLattice2D<T,AdvectionDiffusionD2Q5Descriptor> *>(partners[0]);
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -64,15 +69,6 @@ void NavierStokesAdvectionDiffusionCouplingPostProcessor2D<T,Lattice>::
 processSubDomain(BlockLattice2D<T,Lattice>& blockLattice,
                  int x0_, int x1_, int y0_, int y1_)
 {
-  typedef Lattice<T> L;
-  enum {
-    velOffset =
-      AdvectionDiffusionD2Q5Descriptor<T>::ExternalField::velocityBeginsAt,
-    forceOffset = ForcedD2Q9Descriptor<T>::ExternalField::forceBeginsAt
-  };
-
-  BlockLattice2D<T,AdvectionDiffusionD2Q5Descriptor> *tPartner =
-    dynamic_cast<BlockLattice2D<T,AdvectionDiffusionD2Q5Descriptor> *>(partners[0]);
 
   int newX0, newX1, newY0, newY1;
   if ( util::intersect (
@@ -87,12 +83,10 @@ processSubDomain(BlockLattice2D<T,Lattice>& blockLattice,
         blockLattice.get(iX,iY).computeU(u);
 
         // computation of the bousinessq force
-
         T *force = blockLattice.get(iX,iY).getExternal(forceOffset);
-        T temperature = tPartner->get(iX,iY).computeRho();
-        T rho = blockLattice.get(iX,iY).computeRho();
+        T temperatureDifference = tPartner->get(iX,iY).computeRho() - T0;
         for (unsigned iD = 0; iD < L::d; ++iD) {
-          force[iD] = gravity * rho * (temperature - T0) / deltaTemp * dir[iD];
+          force[iD] = forcePrefactor[iD] * temperatureDifference;
         }
       }
     }

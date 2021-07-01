@@ -53,6 +53,12 @@ inline bool nearZero(const T& a)
   }
 }
 
+template<typename T>
+inline bool approxEqual(const T& a, const T& b)
+{
+    return nearZero<T>(a - b);
+}
+
 template <class T>
 inline void copyN(T c[], const T a[], const unsigned dim)
 {
@@ -110,6 +116,20 @@ T norm2(const std::vector<T>& a)
     v += a[iD]*a[iD];
   }
   return v;
+}
+
+/// dot product, only valid in 3d
+template <typename T>
+T dotProduct3D(const Vector<T,3>& a, const Vector<T,3>& b)
+{
+  return a[0]*b[0] + a[1]*b[1] + a[2]*b[2];
+}
+
+/// dot product, only valid in 2d
+template <typename T>
+T dotProduct2D(const Vector<T,2>& a, const Vector<T,2>& b)
+{
+  return a[0]*b[0] + a[1]*b[1];
 }
 
 /// returns a normalized vector, works for arbitrary lengths

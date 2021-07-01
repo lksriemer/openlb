@@ -39,8 +39,9 @@
 #include "geometry/superGeometry3D.h"
 #include "communication/superStructure3D.h"
 #include "communication/loadBalancer.h"
-#include "functors/indicator/indicatorF3D.h"
-#include "functors/indicator/indicCalcF3D.h"
+#include "functors/lattice/indicator/indicatorF3D.h"
+#include "functors/lattice/indicator/superIndicatorF3D.h"
+#include "functors/lattice/indicator/indicCalcF3D.h"
 #include "io/ostreamManager.h"
 
 namespace olb {
@@ -233,27 +234,27 @@ void  SuperGeometry3D<T>::getPhysR(T physR[3], const int latticeR[4]) const
 
 
 template<typename T>
-BlockGeometryStructure3D<T>& SuperGeometry3D<T>::getExtendedBlockGeometry(int locIC)
+BlockGeometry3D<T>& SuperGeometry3D<T>::getExtendedBlockGeometry(int locIC)
 {
   _statistics.getStatisticsStatus() = true;
   return _extendedBlockGeometries[locIC];
 }
 
 template<typename T>
-BlockGeometryStructure3D<T> const& SuperGeometry3D<T>::getExtendedBlockGeometry(int locIC) const
+BlockGeometry3D<T> const& SuperGeometry3D<T>::getExtendedBlockGeometry(int locIC) const
 {
   return _extendedBlockGeometries[locIC];
 }
 
 template<typename T>
-BlockGeometryStructure3D<T>& SuperGeometry3D<T>::getBlockGeometry(int locIC)
+BlockGeometryView3D<T>& SuperGeometry3D<T>::getBlockGeometry(int locIC)
 {
   _statistics.getStatisticsStatus() = true;
   return _blockGeometries[locIC];
 }
 
 template<typename T>
-BlockGeometryStructure3D<T> const& SuperGeometry3D<T>::getBlockGeometry(int locIC) const
+BlockGeometryView3D<T> const& SuperGeometry3D<T>::getBlockGeometry(int locIC) const
 {
   return _blockGeometries[locIC];
 }
@@ -518,6 +519,20 @@ void SuperGeometry3D<T>::print()
   this->_cuboidGeometry.print();
   getStatistics().print();
 }
+
+template<typename T>
+std::unique_ptr<SuperIndicatorF3D<T>> SuperGeometry3D<T>::getMaterialIndicator(
+  std::vector<int>&& materials) {
+  return this->getIndicator<SuperIndicatorMaterial3D>(
+    std::forward<std::vector<int>>(materials));
+}
+
+template<typename T>
+std::unique_ptr<SuperIndicatorF3D<T>> SuperGeometry3D<T>::getMaterialIndicator(
+  int material) {
+  return this->getMaterialIndicator(std::vector<int>{ material });
+}
+
 
 } // namespace olb
 

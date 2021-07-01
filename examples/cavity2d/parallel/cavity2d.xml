@@ -3,19 +3,17 @@
     <Name>cavity2d</Name>
     <dim>2</dim>
     <OlbDir>../../</OlbDir>
-    <DiscParam>
-      <latticeL>0.0078125</latticeL>
-      <latticeU>0.1</latticeU>
-    </DiscParam>
-    <PhysParam>
-      <MaxTime>120</MaxTime>
-      <charL>1</charL>
-      <charU>1</charU>
-      <viscosityType>Kinematic viscosity</viscosityType>
-      <charNu>0.001</charNu>
-      <charRho>1</charRho>
-      <charPressure>0</charPressure>
-    </PhysParam>
+    <Discretization>
+	    <Resolution>128</Resolution>
+	    <LatticeRelaxationTime>0.5384</LatticeRelaxationTime>
+    </Discretization>
+    <PhysParameters>
+      <PhysMaxTime>100</PhysMaxTime>
+      <CharPhysLength>1</CharPhysLength>
+      <CharPhysVelocity>1</CharPhysVelocity>
+      <PhysViscosity>0.001</PhysViscosity>
+      <PhysDensity>1</PhysDensity>
+    </PhysParameters>
     <ConvergenceCheck>
       <interval>1</interval>
       <residuum>1e-3</residuum>
@@ -34,7 +32,7 @@
     </VisualizationVTK>
     <VisualizationImages>
       <Filename>cavity2dimage</Filename>
-      <SaveTime>1</SaveTime>
+      <SaveTime>5</SaveTime>
     </VisualizationImages>
     <Timer>
       <PrintMode>0</PrintMode>

@@ -64,7 +64,7 @@ processSubDomain(BlockLattice2D<T,Lattice>& blockLattice, int x0_, int x1_, int 
       T dx_u[Lattice<T>::d], dy_u[Lattice<T>::d];
       for (int iY=newY0; iY<=newY1; ++iY) {
         Cell<T,Lattice>& cell = blockLattice.get(iX,iY);
-        Dynamics<T,Lattice>* dynamics = cell.getDynamics();
+        Dynamics<T,Lattice>* dynamics = blockLattice.getDynamics(iX, iY);
 
         T rho, u[Lattice<T>::d];
         cell.computeRhoU(rho,u);
@@ -75,7 +75,7 @@ processSubDomain(BlockLattice2D<T,Lattice>& blockLattice, int x0_, int x1_, int 
         T dy_ux = dy_u[0];
         T dx_uy = dx_u[1];
         T dy_uy = dy_u[1];
-        T omega = cell.getDynamics() -> getOmega();
+        T omega = dynamics->getOmega();
         T sToPi = - rho / Lattice<T>::invCs2 / omega;
         T pi[util::TensorVal<Lattice<T> >::n];
         pi[xx] = (T)2 * dx_ux * sToPi;
@@ -214,7 +214,7 @@ processSubDomain(BlockLattice2D<T,Lattice>& blockLattice, int x0_, int x1_, int 
         rho2 = T(1);
         T uDelta[2];
         T uAverage = rho0*u0[direction];
-        if (uAv!=NULL) {
+        if (uAv!=nullptr) {
           uAverage = *uAv;
         }
         uDelta[0]=-uAverage*0.5*(3*rho0*u0[0]-4*rho1*u1[0]+rho2*u2[0]);
@@ -271,78 +271,28 @@ SlipBoundaryProcessor2D(int x0_, int x1_, int y0_, int y1_, int discreteNormalX,
   : x0(x0_), x1(x1_), y0(y0_), y1(y1_)
 {
   OLB_PRECONDITION(x0==x1 || y0==y1);
-
-  T normalX;
-  T normalY;
-
-
-  if (discreteNormalX*.3827 + discreteNormalY*0.9239>0 ) {
-    normalX = .3827;
-    normalY = 0.9239;
-  } else {
-    normalX = -.3827;
-    normalY = -0.9239;
-  }
-
-
-  //T norm0 = sqrt(discreteNormalX*discreteNormalX + discreteNormalY*discreteNormalY);
-  //normalX = discreteNormalX/norm0;
-  //normalY = discreteNormalY/norm0;
-
-
   reflectionPop[0] = 0;
-  reflectionPop2[0] = 0;
   for (int iPop = 1; iPop < Lattice<T>::q; iPop++) {
     reflectionPop[iPop] = 0;
     // iPop are the directions which ointing into the fluid, discreteNormal is pointing outwarts
     if (Lattice<T>::c[iPop][0]*discreteNormalX + Lattice<T>::c[iPop][1]*discreteNormalY < 0) {
       // std::cout << "-----" <<s td::endl;
-      T mirrorDirection0;
-      T mirrorDirection1;
-
-      mirrorDirection0 = (Lattice<T>::c[iPop][0] - 2.*(Lattice<T>::c[iPop][0]*normalX + Lattice<T>::c[iPop][1]*normalY )*normalX);
-      mirrorDirection1 = (Lattice<T>::c[iPop][1] - 2.*(Lattice<T>::c[iPop][0]*normalX + Lattice<T>::c[iPop][1]*normalY )*normalY);
-
-
-      T norm = sqrt(mirrorDirection0*mirrorDirection0 + mirrorDirection1*mirrorDirection1);
-
-      mirrorDirection0 /= norm;
-      mirrorDirection1 /= norm;
-
-      std::cout << normalX << "NNN" << normalY << std::endl;
-      std::cout << mirrorDirection0 << "/" << mirrorDirection1 << std::endl;
+      int mirrorDirection0;
+      int mirrorDirection1;
+      int mult = 1;
+      if (discreteNormalX*discreteNormalY==0) {
+        mult = 2;
+      }
+      mirrorDirection0 = (Lattice<T>::c[iPop][0] - mult*(Lattice<T>::c[iPop][0]*discreteNormalX + Lattice<T>::c[iPop][1]*discreteNormalY )*discreteNormalX);
+      mirrorDirection1 = (Lattice<T>::c[iPop][1] - mult*(Lattice<T>::c[iPop][0]*discreteNormalX + Lattice<T>::c[iPop][1]*discreteNormalY )*discreteNormalY);
 
       // computes mirror jPop
-//      bool found = false;
-      int tmp = 0;
-      reflectionPop[iPop] = 0;
-      for (reflectionPop[iPop] = 1; reflectionPop[iPop] < Lattice<T>::q; reflectionPop[iPop]++) {
-        //if (reflectionPop[iPop] == Lattice<T>::q-1) reflectionPop2[iPop] = 1;
-        if ((Lattice<T>::c[reflectionPop[iPop] ][0]*discreteNormalX + Lattice<T>::c[reflectionPop[iPop] ][1]*discreteNormalY) > 0.) {
-          T norm2 = sqrt(Lattice<T>::c[reflectionPop[iPop]][0]*Lattice<T>::c[reflectionPop[iPop]][0] + Lattice<T>::c[reflectionPop[iPop]][1]*Lattice<T>::c[reflectionPop[iPop]][1]);
-
-          if (fabs(Lattice<T>::c[reflectionPop[iPop]][0]/norm2 - mirrorDirection0) + fabs(Lattice<T>::c[reflectionPop[iPop]][1]/norm2 - mirrorDirection1) < 0.1) {
-//            found = true;
-            tmp = reflectionPop[iPop];
-            std::cout <<iPop << " to "<< reflectionPop[iPop] <<" for discreteNormal= "<< normalX << "/"<< normalY <<std::endl;
-            break;
-          }
-          /*for (reflectionPop2[iPop] = 1; reflectionPop2[iPop] < Lattice<T>::q && !found && reflectionPop2[iPop]!=reflectionPop[iPop]; reflectionPop2[iPop]++) {
-
-            if (fabs((Lattice<T>::c[reflectionPop[iPop]][0]*mirrorDirection0 + Lattice<T>::c[reflectionPop[iPop]][1]*mirrorDirection1)/sqrt(Lattice<T>::c[reflectionPop[iPop]][0]*Lattice<T>::c[reflectionPop[iPop]][0]+Lattice<T>::c[reflectionPop[iPop]][1]*Lattice<T>::c[reflectionPop[iPop]][1])
-          - (Lattice<T>::c[reflectionPop2[iPop]][0]*mirrorDirection0 + Lattice<T>::c[reflectionPop2[iPop]][1]*mirrorDirection1)/sqrt(Lattice<T>::c[reflectionPop2[iPop]][0]*Lattice<T>::c[reflectionPop2[iPop]][0]+Lattice<T>::c[reflectionPop2[iPop]][1]*Lattice<T>::c[reflectionPop2[iPop]][1])) < 0.01) {
-             found = true;
-            }
-          }
-          }*/
-        } else if ((Lattice<T>::c[reflectionPop[iPop] ][0]*discreteNormalX + Lattice<T>::c[reflectionPop[iPop] ][1]*discreteNormalY) < 0.) {
-//          found = true;
-          tmp = 9;
+      for (reflectionPop[iPop] = 1; reflectionPop[iPop] < Lattice<T>::q ; reflectionPop[iPop]++) {
+        if (Lattice<T>::c[reflectionPop[iPop]][0]==mirrorDirection0 && Lattice<T>::c[reflectionPop[iPop]][1]==mirrorDirection1 ) {
           break;
         }
       }
-      reflectionPop[iPop] = tmp;
-      //std::cout <<iPop << " to "<< "jPop" <<" for discreteNormal= "<< reflectionPop[iPop] << "/"<<reflectionPop2[iPop] <<std::endl;
+      //std::cout <<iPop << " to "<< jPop <<" for discreteNormal= "<< discreteNormalX << "/"<<discreteNormalY <<std::endl;
     }
   }
 }
@@ -364,18 +314,9 @@ processSubDomain(BlockLattice2D<T,Lattice>& blockLattice, int x0_, int x1_, int 
     for (iX=newX0; iX<=newX1; ++iX) {
       for (int iY=newY0; iY<=newY1; ++iY) {
         for (int iPop = 1; iPop < Lattice<T>::q ; ++iPop) {
-          if (reflectionPop[iPop]==9 ) {
-            ;
-          } else if (reflectionPop[iPop]!=0 ) {
+          if (reflectionPop[iPop]!=0) {
             //do reflection
-//if ( blockLattice.get(iX,iY)[reflectionPop[iPop]] < 0.02) {
-            //std::cout << blockLattice.get(iX,iY)[iPop] <<"->"<< blockLattice.get(iX,iY)[reflectionPop[iPop]] <<std::endl;
-
-            blockLattice.get(iX,iY)[iPop] = blockLattice.get(iX,iY)[reflectionPop[iPop]];// - Lattice<T>::t[reflectionPop[iPop]] + Lattice<T>::t[iPop];
-            //        }
-            //blockLattice.get(iX,iY)[iPop] = 0.5*blockLattice.get(iX,iY)[reflectionPop[iPop]] + 0.5*blockLattice.get(iX,iY)[reflectionPop2[iPop]];
-          } else {
-            blockLattice.get(iX,iY)[iPop]=0.;
+            blockLattice.get(iX,iY)[iPop] = blockLattice.get(iX,iY)[reflectionPop[iPop]];
           }
         }
       }
@@ -445,7 +386,7 @@ process(BlockLattice2D<T,Lattice>& blockLattice)
   T dy_uy = dy_u[1];
 
   Cell<T,Lattice>& cell = blockLattice.get(x,y);
-  Dynamics<T,Lattice>* dynamics = cell.getDynamics();
+  Dynamics<T,Lattice>* dynamics = blockLattice.getDynamics(x, y);
   T omega = dynamics -> getOmega();
 
   T sToPi = - rho / Lattice<T>::invCs2 / omega;

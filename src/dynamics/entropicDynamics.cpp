@@ -32,6 +32,9 @@
 
 namespace olb {
 
+template class EntropicEqDynamics<double, descriptors::D2Q9Descriptor>;
+template class EntropicEqDynamics<double, descriptors::D3Q19Descriptor>;
+
 template class EntropicDynamics<double, descriptors::D2Q9Descriptor>;
 template class EntropicDynamics<double, descriptors::D3Q19Descriptor>;
 

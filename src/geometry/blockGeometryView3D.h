@@ -29,17 +29,18 @@
 #define BLOCK_GEOMETRY_VIEW_3D_H
 
 #include <vector>
+
+#include "core/blockStructure3D.h"
 #include "geometry/blockGeometry3D.h"
 #include "geometry/blockGeometryStatistics3D.h"
 #include "geometry/blockGeometryStructure3D.h"
 
-/// All OpenLB code is contained in this namespace.
 namespace olb {
 
 /// Representation of a block geometry view
-/** This class is derived from block geometry structure. It
- * holds a poniter to another block geometry structure. It operates
- * as a structure on a smaller intersection of teh greater structure.
+/** This class is derived from block structure and block geometry structure.
+ * It holds a pointer to another block geometry structure. It operates
+ * as a structure on a smaller intersection of the greater structure.
  * It presents a volume of voxels where different types are
  * given my material numbers which is imporant e.g. to work
  * with different boundaries (like for inflow/output regions).
@@ -50,16 +51,17 @@ namespace olb {
 template<typename T> class BlockGeometryStatistics3D;
 template<typename T> class BlockGeometryStructure3D;
 
+/*
+ * This class needs to be final as addToStatisticsList and removeFromStatisticsList in the constructor don't dispatch to derived classes.
+ */
 template<typename T>
-class BlockGeometryView3D : public BlockGeometryStructure3D<T> {
+class BlockGeometryView3D final : public BlockGeometryStructure3D<T>, public BlockStructure3D {
 
 private:
   // Points to the structure where this view class is viewing at
   BlockGeometryStructure3D<T>* _originalBlockGeometry;
   // Offset of the data field with respect to the data of the original geometry
   int _x0, _y0, _z0;
-  // Dimension of the view cuboid
-  int _nx, _ny, _nz;
 
 public:
   /// Constructor
@@ -69,38 +71,38 @@ public:
   /// Copy assignment
   BlockGeometryView3D& operator=(BlockGeometryView3D const& rhs);
   /// Destructor
-  ~BlockGeometryView3D();
+  ~BlockGeometryView3D() override;
 
   /// Write access to the associated block statistic
-  BlockGeometryStatistics3D<T>& getStatistics(bool verbose=true);
+  BlockGeometryStatistics3D<T>& getStatistics(bool verbose=true) override;
   /// Read only access to the associated block statistic
-  BlockGeometryStatistics3D<T> const& getStatistics(bool verbose=true) const;
+  BlockGeometryStatistics3D<T> const& getStatistics(bool verbose=true) const override;
 
   /// Read only access to the origin position given in SI units (meter)
-  Vector<T,3> const getOrigin() const;
+  Vector<T,3> getOrigin() const override;
   /// Read only access to the voxel size given in SI units (meter)
-  const T getDeltaR() const;
+  const T getDeltaR() const override;
   /// Returns the extend (number of voxels) in X-direction
-  int getNx() const;
+  int getNx() const override;
   /// Returns the extend (number of voxels) in Y-direction
-  int getNy() const;
+  int getNy() const override;
   /// Returns the extend (number of voxels) in Z-direction
-  int getNz() const;
+  int getNz() const override;
 
   /// Write access to a material number
-  int& get(int iX, int iY, int iZ);
+  int& get(int iX, int iY, int iZ) override;
   /// Read only access to a material number
-  int const& get(int iX, int iY, int iZ) const;
+  int const& get(int iX, int iY, int iZ) const override;
   /// returns the (iX,iY,iZ) entry in the 3D scalar field
-  int getMaterial(int iX, int iY, int iZ) const; // TODO old
+  int getMaterial(int iX, int iY, int iZ) const override; // TODO old
 
   /// Transforms lattice to physical coordinates (wrapped from cuboid geometry)
-  void getPhysR(T physR[3], const int& iX, const int& iY, const int& iZ) const;
+  void getPhysR(T physR[3], const int& iX, const int& iY, const int& iZ) const override;
 
   /// Adds a pointer to the list of dependent statistic classes
-  void addToStatisticsList(bool* statisticStatus);
+  void addToStatisticsList(bool* statisticStatus) override;
   /// Removes a pointer from the list of dependent statistic classes if existing
-  void removeFromStatisticsList(bool* statisticStatus);
+  void removeFromStatisticsList(bool* statisticStatus) override;
 };
 
 } // namespace olb

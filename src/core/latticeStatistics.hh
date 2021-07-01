@@ -26,6 +26,7 @@
 
 #include "blockLattice2D.h"
 #include "blockLattice3D.h"
+#include "latticeStatistics.h"
 #include <cmath>
 #include <numeric>
 #include <limits>
@@ -184,6 +185,17 @@ int LatticeStatistics<T>::subscribeMax()
 }
 
 template<typename T>
+void LatticeStatistics<T>::incrementStats(T rho, T uSqr)
+{
+  tmpAv[avRho]    += rho;
+  tmpAv[avEnergy] += uSqr;
+  if (uSqr > tmpMax[maxU]) {
+    tmpMax[maxU] = uSqr;
+  }
+  ++tmpNumCells;
+}
+
+template<typename T>
 void LatticeStatistics<T>::gatherAverage(int whichAverage, T value)
 {
   OLB_PRECONDITION( whichAverage < (int) tmpAv.size() );
@@ -222,6 +234,30 @@ void LatticeStatistics<T>::incrementStats()
 }
 
 template<typename T>
+T LatticeStatistics<T>::getAverageRho() const
+{
+  return averageVect[avRho];
+}
+
+template<typename T>
+T LatticeStatistics<T>::getAverageEnergy() const
+{
+  return averageVect[avEnergy];
+}
+
+template<typename T>
+T LatticeStatistics<T>::getMaxU() const
+{
+  return maxVect[maxU];
+}
+
+template<typename T>
+size_t const& LatticeStatistics<T>::getNumCells() const
+{
+  return numCells;
+}
+
+template<typename T>
 T LatticeStatistics<T>::getAverage(int whichAverage) const
 {
   OLB_PRECONDITION( whichAverage < (int) tmpAv.size() );
@@ -247,6 +283,48 @@ T LatticeStatistics<T>::getMax(int whichMax) const
 {
   OLB_PRECONDITION( whichMax < (int) tmpMax.size() );
   return maxVect[whichMax];
+}
+
+template<typename T>
+std::vector<T>& LatticeStatistics<T>::getAverageVect()
+{
+  return averageVect;
+}
+
+template<typename T>
+std::vector<T>& LatticeStatistics<T>::getSumVect()
+{
+  return sumVect;
+}
+
+template<typename T>
+std::vector<T>& LatticeStatistics<T>::getMinVect()
+{
+  return minVect;
+}
+
+template<typename T>
+std::vector<T>& LatticeStatistics<T>::getMaxVect()
+{
+  return maxVect;
+}
+
+template<typename T>
+void LatticeStatistics<T>::incrementTime()
+{
+  ++latticeTime;
+}
+
+template<typename T>
+void LatticeStatistics<T>::resetTime(size_t value)
+{
+  latticeTime=value;
+}
+
+template<typename T>
+size_t LatticeStatistics<T>::getTime() const
+{
+  return latticeTime;
 }
 
 template<typename T>

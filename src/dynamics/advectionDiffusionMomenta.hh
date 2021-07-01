@@ -32,7 +32,7 @@
 #include <limits>
 #include "dynamics/dynamics.h"
 #include "core/cell.h"
-#include "advectionDiffusionLbHelpers.h"
+#include "lbHelpers.h"
 
 namespace olb {
 
@@ -95,9 +95,8 @@ template<typename T, template<typename U> class Lattice>
 void AdvectionDiffusionBulkMomenta<T,Lattice>::defineRho(Cell<T,Lattice>& cell, T rho)
 {
   T *u = cell.getExternal(Lattice<T>::ExternalField::velocityBeginsAt);
-  T uSqr = util::normSqr<T,Lattice<T>::d>(u);
   for (int iPop=0; iPop < Lattice<T>::q; ++iPop) {
-    cell[iPop] = cell.getDynamics()->computeEquilibrium(iPop,rho,u,uSqr);
+    cell[iPop] = lbHelpers<T, Lattice>::equilibriumFirstOrder( iPop, rho, u );
   }
 }
 
@@ -111,9 +110,8 @@ void AdvectionDiffusionBulkMomenta<T,Lattice>::defineU (
   for (int iD = 0; iD < Lattice<T>::d; ++iD) {
     u_[iD] = u[iD];
   }
-  T uSqr = util::normSqr<T,Lattice<T>::d>(u);
   for (int iPop=0; iPop < Lattice<T>::q; ++iPop) {
-    cell[iPop] = cell.getDynamics()->computeEquilibrium(iPop,rho,u,uSqr);
+    cell[iPop] = lbHelpers<T, Lattice>::equilibriumFirstOrder( iPop, rho, u );
   }
 }
 
@@ -126,9 +124,8 @@ void AdvectionDiffusionBulkMomenta<T,Lattice>::defineRhoU (
   for (int iD = 0; iD < Lattice<T>::d; ++iD) {
     u_[iD] = u[iD];
   }
-  T uSqr = T();
   for (int iPop = 0; iPop < Lattice<T>::q; ++iPop) {
-    cell[iPop] = cell.getDynamics()->computeEquilibrium(iPop,rho,u,uSqr);
+    cell[iPop] = lbHelpers<T, Lattice>::equilibriumFirstOrder( iPop, rho, u );
   }
 }
 
@@ -142,9 +139,8 @@ void AdvectionDiffusionBulkMomenta<T,Lattice>::defineAllMomenta (
   for (int iD = 0; iD < Lattice<T>::d; ++iD) {
     u_[iD] = u[iD];
   }
-  T uSqr = T();
   for (int iPop = 0; iPop < Lattice<T>::q; ++iPop) {
-    cell[iPop] = cell.getDynamics()->computeEquilibrium(iPop,rho,u,uSqr);
+    cell[iPop] = lbHelpers<T, Lattice>::equilibriumFirstOrder( iPop, rho, u );
   }
 }
 

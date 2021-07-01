@@ -25,7 +25,6 @@
 #ifndef BOUNDARY3D_HH
 #define BOUNDARY3D_HH
 
-#include "core/units.h"
 #include "boundary3D.h"
 
 namespace olb {

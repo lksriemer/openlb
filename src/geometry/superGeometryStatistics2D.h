@@ -91,7 +91,7 @@ public:
   bool const & getStatisticsStatus() const;
 
   /// Updates the statistics if it is really needed
-  void update(bool verbose=true);
+  void update(bool verbose=false);
 
   /// Returns the number of different materials
   int getNmaterials();

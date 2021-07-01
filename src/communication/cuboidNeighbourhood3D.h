@@ -62,34 +62,14 @@ struct Cell3D {
 
   bool operator==(Cell3D const& rhs) const
   {
-    return latticeR[0]==rhs.latticeR[0] && latticeR[1]==rhs.latticeR[1] && latticeR[2]==rhs.latticeR[2] && latticeR[3]==rhs.latticeR[3];
+      return latticeR == rhs.latticeR;
   };
 
   /// Copy constructor
-  Cell3D(Cell3D const& rhs)
-  {
-    latticeR[0] = rhs.latticeR[0];
-    latticeR[1] = rhs.latticeR[1];
-    latticeR[2] = rhs.latticeR[2];
-    latticeR[3] = rhs.latticeR[3];
-    physR[0] = rhs.physR[0];
-    physR[1] = rhs.physR[1];
-    physR[2] = rhs.physR[2];
-  }
-  ;
+  Cell3D(Cell3D const& rhs) = default;
 
   /// Copy assignment
-  Cell3D& operator=(Cell3D const& rhs)
-  {
-    latticeR[0] = rhs.latticeR[0];
-    latticeR[1] = rhs.latticeR[1];
-    latticeR[2] = rhs.latticeR[2];
-    latticeR[3] = rhs.latticeR[3];
-    physR[0] = rhs.physR[0];
-    physR[1] = rhs.physR[1];
-    physR[2] = rhs.physR[2];
-    return *this;
-  };
+  Cell3D& operator=(Cell3D const& rhs) = default;
 
 };
 

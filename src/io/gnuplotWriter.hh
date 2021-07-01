@@ -52,13 +52,15 @@ Gnuplot<T>::Gnuplot(std::string name, bool liveplot)
 }
 
 /// writes the data and plot file for two doubles (x and y)
+/// plotType indicates whether you want a linegraph 'l' (default) or a scatterplot 'p' (default: 'l')
 template< typename T >
-void Gnuplot<T>::setData(T xValue, T yValue, std::string name, std::string key)
+void Gnuplot<T>::setData(T xValue, T yValue, std::string name, std::string key, char plotType)
 {
   if (_init) {
     _dataSize = 1;
     _key = key;
-    _nameList = {name};
+    _names = {name};
+    _plotTypes = {plotType};
 
     if (_liveplot) {
       writePlotFile("plot");
@@ -76,24 +78,33 @@ void Gnuplot<T>::setData(T xValue, T yValue, std::string name, std::string key)
 
 /// writes the data and plot file for two doubles (x and y), where x is increasing integer
 template< typename T >
-void Gnuplot<T>::setData(bool noXvalue, T yValue, std::string name, std::string key)
+void Gnuplot<T>::setData(bool noXvalue, T yValue, std::string name, std::string key, char plotType)
 {
   T xValue = _time;
-  setData(xValue, yValue, name, key);
+  setData(xValue, yValue, name, key, {plotType});
   _time++;
 }
 
-/// writes the data and plot file for a double and a list of doubles (x and y1,y2,...)
+/// writes the data and plot file for a double and a vector of doubles (x and y1,y2,...)
+/// plotType indicates whether you want a linegraph 'l' (default) or a scatterplot 'p': (default: {'l','l'})
+/// The position in the vector 'plotType'{'l', 'p'} is linked to the rank of the y-axis (y1, y2) :
+/// y1 is plotted in form of a line plot & y2 is plotted in form of a scatterplot
 template< typename T >
-void Gnuplot<T>::setData(T xValue, std::list<T> yValues, std::list<std::string> names, std::string key)
+void Gnuplot<T>::setData(T xValue, std::vector<T> yValues, std::vector<std::string> names, std::string key, std::vector<char> plotType)
 {
   if (_init) {
     _dataSize = yValues.size();
     _key = key;
-    _nameList = names;
-    if (_nameList.size() != _dataSize) {
-      for (unsigned int i = 0; i < _dataSize - 1; i++) {
-        _nameList.push_back("");
+    _names = names;
+    _plotTypes = plotType;
+    if (_names.size() < _dataSize) {
+      for (unsigned int i = _names.size(); i < _dataSize; i++) {
+        _names.push_back("");
+      }
+    }
+    if (_plotTypes.size() < _dataSize) {
+      for (unsigned int i = _plotTypes.size(); i < _dataSize; i++) {
+        _plotTypes.push_back('l');
       }
     }
     if (_liveplot) {
@@ -110,12 +121,12 @@ void Gnuplot<T>::setData(T xValue, std::list<T> yValues, std::list<std::string> 
   return;
 }
 
-/// writes the data and plot file for a double and a list of doubles (x and y1,y2,...), where x is increasing integer
+/// writes the data and plot file for a double and a vector of doubles (x and y1,y2,...), where x is increasing integer
 template< typename T >
-void Gnuplot<T>::setData(bool noXvalue, std::list<T> yValues, std::list<std::string> names, std::string key)
+void Gnuplot<T>::setData(bool noXvalue, std::vector<T> yValues, std::vector<std::string> names, std::string key, std::vector<char> plotType)
 {
   T xValue = _time;
-  setData(xValue, yValues, names, key);
+  setData(xValue, yValues, names, key, plotType);
   _time++;
 }
 
@@ -133,23 +144,29 @@ void Gnuplot<T>::writePDF()
 
 
 /// writes PNGs
-/// usage: first argument: numbering of png file, second argument: range for the x axis
+/// usage: first argument: numbering of png file
+/// second argument: range for the x axis
+/// thrid argument: specifies the name of the plot in case the user wants to
+/// create more than one plot with the simulation results (default: plotName = "")
 /// no arguments: writes consecutive numbers with adaptive xrange
 template< typename T >
-void Gnuplot<T>::writePNG(int iT, double xRange)
+void Gnuplot<T>::writePNG(int iT, double xRange, std::string plotName)
 {
   if (!_init) {
     _iT = iT;
     _xRange = xRange;
 
-    writePlotFile("png");
-    startGnuplot("plotPNG");
+    /// initialize the writePlotFile for Gnuplot with the type and the name of the output data
+    writePlotFile("png", plotName);
+    startGnuplot("plotPNG", plotName);
   }
   return;
 }
 
+/// plotName specifies the name of the plot in case the user wants to create more than
+/// one plot with the simulation results (default: plotName = "")
 template< typename T >
-void Gnuplot<T>::writePlotFile(std::string type)
+void Gnuplot<T>::writePlotFile(std::string type, std::string plotName)
 {
   if (singleton::mpi().getRank() == _rank ) {
     std::ofstream fout;
@@ -160,7 +177,7 @@ void Gnuplot<T>::writePlotFile(std::string type)
     } else if (type == "pdf") {
       plotFile = singleton::directories().getGnuplotOutDir()+"data/plotPDF.p";
     } else if (type == "png") {
-      plotFile = singleton::directories().getGnuplotOutDir()+"data/plotPNG.p";
+      plotFile = singleton::directories().getGnuplotOutDir()+"data/plotPNG"+plotName+".p";
     } else {
       std::cout << "WARNING: invalid Gnuplot type={'', 'plot'; 'pdf', 'png'}" << std::endl;
       exit(-1);
@@ -184,11 +201,15 @@ void Gnuplot<T>::writePlotFile(std::string type)
       }
       fout <<".png'" << "\n";
     }
-    std::list<std::string>::iterator string = _nameList.begin();
-    fout << "plot '"<<_dataFile<<"' u 1:2 w l t '"<< *string << "'";
+    /// set the x and y label of the Plot
+    fout << "set xlabel '" << _xLabel << "'" << "\n";
+    fout << "set ylabel '" << _yLabel << "'" << "\n";
+
+    /// vector which holds the information about the plotType
+    /// (e.g. scatterplot 'p' or lineplot 'l': default {'l','l'})
+    fout << "plot '"<<_dataFile<<"' u 1:2 w " << _plotTypes[0] << " t '"<< _names[0] << "'";
     for (unsigned int i = 0; i < _dataSize-1; ++i) {
-      ++string;
-      fout << ", '"<<_dataFile<<"' u 1:" << i+3 << " w l t '" << *string << "'";
+      fout << ", '"<<_dataFile<<"' u 1:" << i+3 << " w " << _plotTypes[i+1] << " t '" << _names[i+1] << "'";
     }
     fout << "\n";
     if (_liveplot && type=="plot") {
@@ -218,19 +239,26 @@ void Gnuplot<T>::writeDataFile(T xValue, T yValue)
   return;
 }
 
-
-/// writes the data file for one double and a list of doubles (x and y1,y2,...)
+/// set Label of the gnuplotPlot; xLabel and yLabel
 template< typename T >
-void Gnuplot<T>::writeDataFile(T xValue, std::list<T> list)
+void Gnuplot<T>::setLabel(std::string xLabel, std::string yLabel)
+{
+  _xLabel = xLabel;
+  _yLabel = yLabel;
+}
+
+
+/// writes the data file for one double and a vector of doubles (x and y1,y2,...)
+template< typename T >
+void Gnuplot<T>::writeDataFile(T xValue, std::vector<T> yValues)
 {
   if (singleton::mpi().getRank() == _rank) {
     std::ofstream fout;
     fout.precision(6);
     fout.open(_dataFile.c_str(), std::ios::app);
     fout << xValue;
-    typename std::list<T>::iterator yValue;
-    for ( yValue = list.begin(); yValue!=list.end(); ++yValue) {
-      fout << " " << *yValue;
+    for (unsigned int i = 0; i < yValues.size(); i++) {
+      fout << " " << yValues[i];
     }
     fout << "\n";
     fout.close();
@@ -240,8 +268,10 @@ void Gnuplot<T>::writeDataFile(T xValue, std::list<T> list)
 
 
 /// system command to start gnuplot (LINUX ONLY!)
+/// plotName indicates the name of the plot in case the user wants to create
+/// more than one plot with the simulation results (default: plotName = "")
 template< typename T >
-void Gnuplot<T>::startGnuplot(std::string plotFile)
+void Gnuplot<T>::startGnuplot(std::string plotFile, std::string plotName)
 {
 #ifdef WIN32
   std::cout << "GNUPLOT WORKS ONLT WITH LINUX" << std::endl;
@@ -250,11 +280,10 @@ void Gnuplot<T>::startGnuplot(std::string plotFile)
 #endif
 #ifndef WIN32
   if (singleton::mpi().getRank() == _rank) {
-    if (!system(NULL)) {
+    if (!system(nullptr)) {
       exit (EXIT_FAILURE);
     }
-
-    const std::string command = "gnuplot -persistent "+_dir+"data/"+plotFile+".p > /dev/null &";
+    const std::string command = "gnuplot -persistent "+_dir+"data/"+plotFile+plotName+".p > /dev/null &";
     if ( system(command.c_str()) ) {
       std::cout << "Error at GnuplotWriter" << std::endl;
     }
@@ -265,4 +294,3 @@ void Gnuplot<T>::startGnuplot(std::string plotFile)
 }  // namespace olb
 
 #endif
-

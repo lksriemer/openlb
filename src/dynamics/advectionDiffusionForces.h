@@ -24,11 +24,12 @@
 #ifndef ADVECTION_DIFFUSION_FORCES_H
 #define ADVECTION_DIFFUSION_FORCES_H
 
-#include "core/units.h"
+#include "core/unitConverter.h"
 
 namespace olb {
 
-template<typename T, template<typename U> class Lattice>
+template<typename T, template<typename U> class Lattice,
+template<typename U> class ADLattice=descriptors::ParticleAdvectionDiffusionD3Q7Descriptor>
 class advectionDiffusionForce3D {
 public:
   advectionDiffusionForce3D()
@@ -36,7 +37,7 @@ public:
     initArg = 0;
   };
   virtual ~advectionDiffusionForce3D() {};
-  virtual void applyForce(T force[], Cell<T,Lattice> *nsCell, Cell<T,descriptors::particleAdvectionDiffusionD3Q7Descriptor> *adCell, T vel[], int latticeR[])=0;
+  virtual void applyForce(T force[], Cell<T,Lattice> *nsCell, Cell<T,ADLattice> *adCell, T vel[], int latticeR[])=0;
   int getInitArg()
   {
     return initArg;
@@ -45,32 +46,34 @@ private:
   int initArg;
 };
 
-template<typename T, template<typename U> class Lattice>
-class advDiffDragForce3D : public advectionDiffusionForce3D<T,Lattice> {
+template<typename T, template<typename U> class Lattice,
+template<typename U> class ADLattice=descriptors::ParticleAdvectionDiffusionD3Q7Descriptor>
+class advDiffDragForce3D : public advectionDiffusionForce3D<T,Lattice,ADLattice> {
 public:
-  advDiffDragForce3D(LBconverter<T> const& converter_, T St_);
-  advDiffDragForce3D(LBconverter<T> const& converter_, T pRadius_, T pRho_);
-  virtual ~advDiffDragForce3D() {};
-  void applyForce(T force[], Cell<T,Lattice> *nsCell, Cell<T,descriptors::particleAdvectionDiffusionD3Q7Descriptor> *adCell, T vel[], int latticeR[]);
+  advDiffDragForce3D(UnitConverter<T,Lattice> const& converter_, T St_);
+  advDiffDragForce3D(UnitConverter<T,Lattice> const& converter_, T pRadius_, T pRho_);
+  ~advDiffDragForce3D() override {};
+  void applyForce(T force[], Cell<T,Lattice> *nsCell, Cell<T,ADLattice> *adCell, T vel[], int latticeR[]) override;
 
 private:
   int initArg;
   T dragCoeff;
 };
 
-template<typename T, template<typename U> class Lattice>
-class advDiffRotatingForce3D : public advectionDiffusionForce3D<T,Lattice> {
+template<typename T, template<typename U> class Lattice,
+template<typename U> class ADLattice=descriptors::ParticleAdvectionDiffusionD3Q7Descriptor>
+class advDiffRotatingForce3D : public advectionDiffusionForce3D<T,Lattice,ADLattice> {
 public:
   advDiffRotatingForce3D(SuperGeometry3D<T>& superGeometry_,
-                         const LBconverter<T>& converter_,
+                         const UnitConverter<T,Lattice>& converter_,
                          std::vector<T> axisPoint_,
                          std::vector<T> axisDirection_,
                          T w_, T* frac_,
                          bool centrifugeForceOn_ = true,
                          bool coriolisForceOn_ = true);
-  advDiffRotatingForce3D(LBconverter<T> const& converter_, T pRadius_, T pRho_);
+  advDiffRotatingForce3D(UnitConverter<T,Lattice> const& converter_, T pRadius_, T pRho_);
   virtual ~advDiffRotatingForce3D() {};
-  void applyForce(T force[], Cell<T,Lattice> *nsCell, Cell<T,descriptors::particleAdvectionDiffusionD3Q7Descriptor> *adCell, T vel[], int latticeR[]);
+  void applyForce(T force[], Cell<T,Lattice> *nsCell, Cell<T,ADLattice> *adCell, T vel[], int latticeR[]);
 
 protected:
   SuperGeometry3D<T>& sg;

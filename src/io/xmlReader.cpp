@@ -58,7 +58,7 @@ XMLreader::XMLreader(const std::string& fName)
   : clout("XMLreader")
 {
   _warningsOn = true;
-  TiXmlDocument* doc = 0;
+  TiXmlDocument* doc = nullptr;
   int loadOK = false;
 #ifdef PARALLEL_MODE_MPI  // parallel program execution
   if (singleton::mpi().isMainProcessor()) {
@@ -102,7 +102,7 @@ void XMLreader::mainProcessorIni( TiXmlNode* pParent )
 #endif
 
   TiXmlAttribute* attr = pParent->ToElement()->FirstAttribute();
-  while (attr != 0) {
+  while (attr != nullptr) {
 #ifdef PARALLEL_MODE_MPI  // parallel program execution
     int size = 0;
     std::string* key = const_cast<std::string*>(&attr->NameTStr());
@@ -123,7 +123,7 @@ void XMLreader::mainProcessorIni( TiXmlNode* pParent )
 
   TiXmlNode * pChild;
   int type = 0;
-  for ( pChild = pParent->FirstChild(); pChild != 0; pChild = pChild->NextSibling()) {
+  for ( pChild = pParent->FirstChild(); pChild != nullptr; pChild = pChild->NextSibling()) {
     type = pChild->Type();
 #ifdef PARALLEL_MODE_MPI  // parallel program execution
     singleton::mpi().bCast(&type, 1);
@@ -164,7 +164,7 @@ void XMLreader::slaveProcessorIni()
     singleton::mpi().bCast(&type, 1);
 #endif
     if ( type==TiXmlNode::TINYXML_ELEMENT ) {
-      _children.push_back( new XMLreader( 0 ) );
+      _children.push_back( new XMLreader( nullptr ) );
     } else if ( type==TiXmlNode::TINYXML_TEXT ) {
 #ifdef PARALLEL_MODE_MPI  // parallel program execution
       singleton::mpi().bCast(&_text,1);

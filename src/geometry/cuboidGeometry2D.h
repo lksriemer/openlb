@@ -88,13 +88,17 @@ public:
   void setPeriodicity(bool periodicityX, bool periodicityY);
 
   /// Returns true and the cuboid number of the nearest lattice position to the given physical position if the physical position is within any of the cuboids with an overlap of 1/2*delta belonging to the cuboid geometry
-  bool getC(std::vector<T> physR, int& iC) const; //TODO new one
+  bool getC(std::vector<T> physR, int& iC) const;
+  /// Returns true and the cuboid number of the nearest lattice position to the given physical position if the physical position is within any of the cuboids with an overlap of 1/2*delta belonging to the cuboid geometry
+  bool getC(const Vector<T,2>& physR, int& iC) const;
   /// Returns true and the nearest lattice position to the given physical position if the physical position is within any of the cuboids with an overlap of 1/2*delta belonging to the cuboid geometry
   bool getLatticeR(std::vector<T> physR, std::vector<int>& latticeR) const;
   bool getLatticeR(int latticeR[], const T physR[]) const;
 
   /// Returns true and the floor lattice position to the given physical position if the physical position is within any of the cuboids with an overlap of 1/2*delta belonging to the cuboid geometry
   bool getFloorLatticeR(std::vector<T> physR, std::vector<int>& latticeR) const;
+  /// Returns true and the floor lattice position to the given physical position if the physical position is within any of the cuboids with an overlap of 1/2*delta belonging to the cuboid geometry
+  bool getFloorLatticeR(const Vector<T,2>& physR, Vector<int,3>& latticeR) const;
   /// Returns the physical position to the given lattice position respecting periodicity for the overlap nodes which are not in the mother cuboid for the case the flag periodicityOn[iDim]=true if the physical position is within any of the cuboids with an overlap of 1/2*delta belonging to the cuboid geometry
   std::vector<T> getPhysR(int iCglob, int iX, int iY) const;
   /// Returns the physical position to the given lattice position respecting periodicity for the overlap nodes which are not in the mother cuboid for the case the flag periodicityOn[iDim]=true
@@ -115,8 +119,8 @@ public:
   T getMinPhysVolume() const;
   T getMaxPhysVolume() const;
   /// Returns the maximum/minimum number of nodes in the structure
-  int getMinLatticeVolume() const;
-  int getMaxLatticeVolume() const;
+  size_t getMinLatticeVolume() const;
+  size_t getMaxLatticeVolume() const;
   /// Returns the maximum/minimum delata in the structure
   T getMinDeltaR() const;
   T getMaxDeltaR() const;

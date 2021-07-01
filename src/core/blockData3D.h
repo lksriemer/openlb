@@ -89,30 +89,28 @@ public:
   /// Write access to the memory of the data of the block data where (iX, iY, iZ) is the point providing the data iData
   bool* operator() (int iX, int iY, int iZ, int iData);
   /// read and write access to data element [iX][iY][iZ][iSize]
-  virtual BaseType& get(int iX, int iY, int iZ, int iSize=0);
+  BaseType& get(int iX, int iY, int iZ, int iSize=0);
   /// read only access to data element [iX][iY][iZ][iSize]
-  virtual BaseType const& get(int iX, int iY, int iZ, int iSize=0) const;
+  BaseType const& get(int iX, int iY, int iZ, int iSize=0) const;
   /// \return max of data, for vector valued data it determines the max component
   BaseType getMax();
   /// \return min of data, for vector valued data it determines the max component
   BaseType getMin();
   /// \return _rawData array
   BaseType* getRawData() const;
-  /// \return _field
-  BaseType**** getField() const;
   /// Number of all variables in the data field
   virtual size_t getDataSize() const;
   /// \return _size, the dimension of an data element
   int getSize() const;
   /// Number of data blocks for the serializable interface
-  virtual std::size_t getNblock() const
+  std::size_t getNblock() const override
   {
     return 5;
   };
   /// Binary size for the serializer
-  virtual std::size_t getSerializableSize() const;
+  std::size_t getSerializableSize() const override;
   /// Returns a pointer to the memory of the current block and its size for the serializable interface
-  virtual bool* getBlock(std::size_t iBlock, std::size_t& sizeBlock, bool loadingMode);
+  bool* getBlock(std::size_t iBlock, std::size_t& sizeBlock, bool loadingMode) override;
 private:
   /// Memory Management
   void allocateMemory();

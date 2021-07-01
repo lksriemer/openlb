@@ -45,15 +45,15 @@ class EquilibriumBM : public DirichletBoundaryMomenta<T,Lattice> {
 public:
   EquilibriumBM();
   EquilibriumBM( T rho, const T u[Lattice<T>::d] );
-  virtual T computeRho( Cell<T,Lattice> const& cell ) const;
-  virtual void computeU( Cell<T,Lattice> const& cell, T u[Lattice<T>::d] ) const;
-  virtual void computeJ( Cell<T,Lattice> const& cell, T j[Lattice<T>::d] ) const;
-  virtual void computeStress( Cell<T,Lattice> const& cell, T rho, const T u[Lattice<T>::d],
-                              T pi[util::TensorVal<Lattice<T> >::n] ) const;
-  virtual void defineRho( Cell<T,Lattice>& cell, T rho);
-  virtual void defineU( Cell<T,Lattice>& cell, const T u[Lattice<T>::d]);
-  virtual void defineAllMomenta( Cell<T,Lattice>& cell, T rho, const T u[Lattice<T>::d],
-                                 const T pi[util::TensorVal<Lattice<T> >::n] );
+  T computeRho( Cell<T,Lattice> const& cell ) const override;
+  void computeU( Cell<T,Lattice> const& cell, T u[Lattice<T>::d] ) const override;
+  void computeJ( Cell<T,Lattice> const& cell, T j[Lattice<T>::d] ) const override;
+  void computeStress( Cell<T,Lattice> const& cell, T rho, const T u[Lattice<T>::d],
+                              T pi[util::TensorVal<Lattice<T> >::n] ) const override;
+  void defineRho( Cell<T,Lattice>& cell, T rho) override;
+  void defineU( Cell<T,Lattice>& cell, const T u[Lattice<T>::d]) override;
+  void defineAllMomenta( Cell<T,Lattice>& cell, T rho, const T u[Lattice<T>::d],
+                                 const T pi[util::TensorVal<Lattice<T> >::n] ) override;
 private:
   T _rho;
   T _u[Lattice<T>::d];   ///< value of the velocity on the boundary
@@ -68,15 +68,15 @@ public:
   /// Constructor with boundary initialization
   VelocityBM(const T u[Lattice<T>::d]);
 
-  virtual T computeRho(Cell<T,Lattice> const& cell) const;
-  virtual void computeU ( Cell<T,Lattice> const& cell, T u[Lattice<T>::d] ) const;
-  virtual void computeJ ( Cell<T,Lattice> const& cell, T j[Lattice<T>::d] ) const;
+  T computeRho(Cell<T,Lattice> const& cell) const override;
+  void computeU ( Cell<T,Lattice> const& cell, T u[Lattice<T>::d] ) const override;
+  void computeJ ( Cell<T,Lattice> const& cell, T j[Lattice<T>::d] ) const override;
   void computeU(T u[Lattice<T>::d]) const;
-  virtual void defineRho(Cell<T,Lattice>& cell, T rho) ;
-  virtual void defineU(Cell<T,Lattice>& cell, const T u[Lattice<T>::d]) ;
+  void defineRho(Cell<T,Lattice>& cell, T rho) override ;
+  void defineU(Cell<T,Lattice>& cell, const T u[Lattice<T>::d]) override ;
   void defineU(const T u[Lattice<T>::d]);
-  virtual void defineAllMomenta( Cell<T,Lattice>& cell, T rho, const T u[Lattice<T>::d],
-                                 const T pi[util::TensorVal<Lattice<T> >::n] );
+  void defineAllMomenta( Cell<T,Lattice>& cell, T rho, const T u[Lattice<T>::d],
+                                 const T pi[util::TensorVal<Lattice<T> >::n] ) override;
 private:
   T _u[Lattice<T>::d];   ///< value of the velocity on the boundary
 };
@@ -90,15 +90,15 @@ public:
   /// Constructor with boundary initialization
   PressureBM(const T values_[Lattice<T>::d]);
 
-  virtual T computeRho(Cell<T,Lattice> const& cell) const;
+  T computeRho(Cell<T,Lattice> const& cell) const override;
   T computeRho() const;
-  virtual void computeU( Cell<T,Lattice> const& cell, T u[Lattice<T>::d] ) const;
-  virtual void computeJ( Cell<T,Lattice> const& cell, T j[Lattice<T>::d] ) const;
-  virtual void defineRho(Cell<T,Lattice>& cell, T rho);
+  void computeU( Cell<T,Lattice> const& cell, T u[Lattice<T>::d] ) const override;
+  void computeJ( Cell<T,Lattice> const& cell, T j[Lattice<T>::d] ) const override;
+  void defineRho(Cell<T,Lattice>& cell, T rho) override;
   void defineRho(T rho);
-  virtual void defineU(Cell<T,Lattice>& cell, const T u[Lattice<T>::d]);
-  virtual void defineAllMomenta( Cell<T,Lattice>& cell, T rho, const T u[Lattice<T>::d],
-                                 const T pi[util::TensorVal<Lattice<T> >::n] );
+  void defineU(Cell<T,Lattice>& cell, const T u[Lattice<T>::d]) override;
+  void defineAllMomenta( Cell<T,Lattice>& cell, T rho, const T u[Lattice<T>::d],
+                                 const T pi[util::TensorVal<Lattice<T> >::n] ) override;
 private:
   /// Velocity/Density on boundary.
   /** Contains velocity on the boundary, except for values[direction] that
@@ -111,8 +111,8 @@ private:
 template<typename T, template<typename U> class Lattice>
 class FreeStressBM : virtual public DirichletBoundaryMomenta<T,Lattice> {
 public:
-  virtual void computeStress( Cell<T,Lattice> const& cell, T rho, const T u[Lattice<T>::d],
-                              T pi[util::TensorVal<Lattice<T> >::n] ) const;
+  void computeStress( Cell<T,Lattice> const& cell, T rho, const T u[Lattice<T>::d],
+                              T pi[util::TensorVal<Lattice<T> >::n] ) const override;
 };
 
 /// Use special trick to compute u resp. rho, but compute pi from part. distr. functions
@@ -130,8 +130,8 @@ template<typename T, template<typename U> class Lattice, int direction, int orie
 class RegularizedBM : virtual public DirichletBoundaryMomenta<T,Lattice> {
 public:
   /// Stress tensor
-  virtual void computeStress( Cell<T,Lattice> const& cell, T rho, const T u[Lattice<T>::d],
-                              T pi[util::TensorVal<Lattice<T> >::n] ) const;
+  void computeStress( Cell<T,Lattice> const& cell, T rho, const T u[Lattice<T>::d],
+                              T pi[util::TensorVal<Lattice<T> >::n] ) const override;
 };
 
 /// Regularized velocity boundary node
@@ -159,19 +159,19 @@ public:
 template<typename T, template<typename U> class Lattice>
 class FixedVelocityBM : public Momenta<T,Lattice> {
 public:
-  virtual T computeRho(Cell<T,Lattice> const& cell) const;
-  virtual void computeU( Cell<T,Lattice> const& cell, T u[Lattice<T>::d] ) const;
-  virtual void computeJ( Cell<T,Lattice> const& cell, T j[Lattice<T>::d] ) const;
-  virtual void computeStress( Cell<T,Lattice> const& cell, T rho, const T u[Lattice<T>::d],
-                              T pi[util::TensorVal<Lattice<T> >::n] ) const;
-  virtual void computeRhoU( Cell<T,Lattice> const& cell, T& rho, T u[Lattice<T>::d]) const;
-  virtual void computeAllMomenta( Cell<T,Lattice> const& cell, T& rho, T u[Lattice<T>::d],
-                                  T pi[util::TensorVal<Lattice<T> >::n] ) const;
-  virtual void defineRho(Cell<T,Lattice>& cell, T rho);
-  virtual void defineU(Cell<T,Lattice>& cell, const T u[Lattice<T>::d]);
-  virtual void defineRhoU( Cell<T,Lattice>& cell, T rho, const T u[Lattice<T>::d]);
-  virtual void defineAllMomenta( Cell<T,Lattice>& cell, T rho, const T u[Lattice<T>::d],
-                                 const T pi[util::TensorVal<Lattice<T> >::n] );
+  T computeRho(Cell<T,Lattice> const& cell) const override;
+  void computeU( Cell<T,Lattice> const& cell, T u[Lattice<T>::d] ) const override;
+  void computeJ( Cell<T,Lattice> const& cell, T j[Lattice<T>::d] ) const override;
+  void computeStress( Cell<T,Lattice> const& cell, T rho, const T u[Lattice<T>::d],
+                              T pi[util::TensorVal<Lattice<T> >::n] ) const override;
+  void computeRhoU( Cell<T,Lattice> const& cell, T& rho, T u[Lattice<T>::d]) const override;
+  void computeAllMomenta( Cell<T,Lattice> const& cell, T& rho, T u[Lattice<T>::d],
+                                  T pi[util::TensorVal<Lattice<T> >::n] ) const override;
+  void defineRho(Cell<T,Lattice>& cell, T rho) override;
+  void defineU(Cell<T,Lattice>& cell, const T u[Lattice<T>::d]) override;
+  void defineRhoU( Cell<T,Lattice>& cell, T rho, const T u[Lattice<T>::d]) override;
+  void defineAllMomenta( Cell<T,Lattice>& cell, T rho, const T u[Lattice<T>::d],
+                                 const T pi[util::TensorVal<Lattice<T> >::n] ) override;
 private:
   BulkMomenta<T,Lattice> _basicMomenta;
   T _fixU[Lattice<T>::d];

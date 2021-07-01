@@ -31,7 +31,7 @@
 #include "olbDebug.h"
 #include "blockData3D.h"
 #include "geometry/cuboid3D.h"
-#include "functors/blockBaseF3D.h"
+#include "functors/lattice/blockBaseF3D.h"
 
 namespace olb {
 
@@ -84,7 +84,7 @@ BlockData3D<T,BaseType>::BlockData3D(BlockF3D<BaseType>& rhs)
 
 template<typename T, typename BaseType>
 BlockData3D<T,BaseType>::BlockData3D(BlockData3D<T,BaseType> const& rhs)
-  : BlockStructure3D(rhs._nx, rhs._ny, rhs._nz), _size(rhs._size), _rawData(0), _field(0)
+  : BlockStructure3D(rhs._nx, rhs._ny, rhs._nz), _size(rhs._size), _rawData(nullptr), _field(nullptr)
 {
   if (rhs.isConstructed()) {
     construct();
@@ -275,12 +275,6 @@ template<typename T, typename BaseType>
 BaseType* BlockData3D<T,BaseType>::getRawData() const
 {
   return _rawData;
-}
-
-template<typename T, typename BaseType>
-BaseType**** BlockData3D<T,BaseType>::getField() const
-{
-  return _field;
 }
 
 template<typename T, typename BaseType>

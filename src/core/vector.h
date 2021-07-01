@@ -31,8 +31,10 @@
 
 #include <iostream>
 #include <cstring>
+#include <type_traits>
 #include "util.h"
 #include "math.h"
+#include "olbDebug.h"
 
 typedef double S;
 
@@ -45,28 +47,14 @@ typedef double S;
 #define BaseType S
 #endif
 
-
-
 namespace olb {
-
-
-
-
-/// descriptor base
-template <unsigned Size = 3>
-class DescriptorBase {
-
-protected:
-  /// number of dimensions
-  enum { size = Size };
-};
 
 /** Efficient implementation of a vector class.
  * Static size.
  * Default value of vector element is T(0)
  */
 template <typename T, unsigned Size>
-class Vector : public DescriptorBase<Size> {
+class Vector {
 public:
   /// number of dimensions
   T data[Size];
@@ -76,7 +64,7 @@ public:
   /// Constructor from std::vector<T>
   Vector(const std::vector<T>& v);
   /// Construct with all entries as explicit scalar
-  Vector(const T& s = T());
+  explicit Vector(const T& s = T());
   /// Construct 2D, 2 explicit arguments
   Vector(const T& a, const T& b);
   /// Construct 3D, 3 explicit arguments
@@ -119,24 +107,22 @@ public:
 
 
 template <typename T, unsigned Size>
-inline Vector<T, Size>::Vector(const T ar[Size]) : DescriptorBase<Size>()
+inline Vector<T, Size>::Vector(const T ar[Size])
 {
-  for (unsigned i = 0; i < Size; ++i) {
-    data[i] = ar[i];
-  }
+  //static_assert(std::is_trivially_copyable<T>::value, "Only trivially copyable objects can safely be copied by memcpy");
+  std::memcpy( data, ar, Size*sizeof(T));
 }
 
 template <typename T, unsigned Size>
-inline Vector<T, Size>::Vector(const std::vector<T>& v) : DescriptorBase<Size>()
+inline Vector<T, Size>::Vector(const std::vector<T>& v)
 {
-  //OLB_PRECONDITION(v.size() == Size);
-  for (unsigned i = 0; i < Size; ++i) {
-    data[i] = (T)v[i];
-  }
+  OLB_PRECONDITION(v.size() == Size);
+  //static_assert(std::is_trivially_copyable<T>::value, "Only trivially copyable objects can safely be copied by memcpy");
+  std::memcpy( data, v.data(), Size*sizeof(T));
 }
 
 template <typename T, unsigned Size>
-inline Vector<T, Size>::Vector(const T& s) : DescriptorBase<Size>()
+inline Vector<T, Size>::Vector(const T& s)
 {
   for (unsigned i = 0; i < Size; ++i) {
     data[i] = s;
@@ -144,34 +130,34 @@ inline Vector<T, Size>::Vector(const T& s) : DescriptorBase<Size>()
 }
 
 template <typename T, unsigned Size>
-inline Vector<T, Size>::Vector(const T& a, const T& b) : DescriptorBase<Size>()
+inline Vector<T, Size>::Vector(const T& a, const T& b)
 {
-  //OLB_PRECONDITION(this->size == 2S);
+  OLB_PRECONDITION(Size == 2);
   data[0] = a;
   data[1] = b;
 }
 
 template <typename T, unsigned Size>
-inline Vector<T, Size>::Vector(const T& a, const T& b, const T& c) : DescriptorBase<Size>()
+inline Vector<T, Size>::Vector(const T& a, const T& b, const T& c)
 {
-  //OLB_PRECONDITION(this->size == 3);
+  OLB_PRECONDITION(Size == 3);
   data[0] = a;
   data[1] = b;
   data[2] = c;
 }
 
 template <typename T, unsigned Size>
-inline Vector<T, Size>::Vector(const Vector<T,Size>& v) : DescriptorBase<Size>()
+inline Vector<T, Size>::Vector(const Vector<T,Size>& v)
 {
+  //static_assert(std::is_trivially_copyable<T>::value, "Only trivially copyable objects can safely be copied by memcpy");
   std::memcpy( data, v.data, Size*sizeof(T));
 }
 
 template <typename T, unsigned Size>
 inline Vector<T, Size>& Vector<T, Size>::operator= (const Vector<T,Size>& v)
 {
-  for (unsigned i = 0; i < Size; ++i) {
-    data[i] = v[i];
-  }
+  //static_assert(std::is_trivially_copyable<T>::value, "Only trivially copyable objects can safely be copied by memcpy");
+  std::memcpy( data, v.data, Size*sizeof(T));
   return *this;
 }
 
@@ -240,12 +226,14 @@ template <typename T, unsigned Size>
 inline T& Vector<T, Size>::operator[](unsigned n)
 
 {
+  OLB_PRECONDITION(n < Size);
   return data[n];
 }
 
 template <typename T, unsigned Size>
 inline const T& Vector<T, Size>::operator[](const unsigned n) const
 {
+  OLB_PRECONDITION(n < Size);
   return data[n];
 }
 

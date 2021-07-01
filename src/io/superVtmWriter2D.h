@@ -32,7 +32,7 @@
 #include <sstream>
 #include <vector>
 #include "io/ostreamManager.h"
-#include "functors/superBaseF2D.h"
+#include "functors/lattice/superBaseF2D.h"
 
 namespace olb {
 
@@ -50,7 +50,7 @@ namespace olb {
 template<typename T, typename W=T>
 class SuperVTMwriter2D {
 public:
-  SuperVTMwriter2D( std::string name );
+  SuperVTMwriter2D( std::string name, bool binary = true );
   ///  writes functors stored in pointerVec
   ///  every thread writes a vti file with data from his cuboids
   ///  the vti files are linked in a pvd file
@@ -63,11 +63,11 @@ public:
   ///  put functor to _pointerVec
   ///  to simplify writing process of several functors
   void addFunctor(SuperF2D<T,W>& f);
-  ///  to clear stored functors, not yet used due to lack of necessity
-  void clearAddedFunctors();
   /// getter for _name
   std::string getName() const;
 private:
+  ///  to clear stored functors, not yet used due to lack of necessity
+  void clearAddedFunctors();
   ///  performes <VTKFile ...>, <ImageData ...>, <PieceExtent ...> and <PointData ...>
   void preambleVTI(const std::string& fullName, int x0, int y0, int x1, int y1,
                    T originX, T originY, T delta);
@@ -88,9 +88,12 @@ private:
   ///  *** nasty function ***
   void dataPVDmaster(int iT, const std::string& fullNamePVDMaster,
                      const std::string& namePiece);
-  ///  writes given functor f, base64
+  ///  writes given functor f, ascii
   void dataArray(const std::string& fullName, SuperF2D<T,W>& f,
                  int iC, int nx, int ny);
+  ///  writes given functor f, base 64
+  void dataArrayBinary(const std::string& fullName, SuperF2D<T,W>& f,
+                       int iC, int nx, int ny);
   ///  performes </PointData> and </Piece>
   void closePiece(const std::string& fullNamePiece);
 private:
@@ -101,6 +104,7 @@ private:
   std::string _name;
   ///  holds added functor, to simplify the use of write function
   std::vector< SuperF2D<T,W>* > _pointerVec;
+  bool _binary =true;
 };
 
 

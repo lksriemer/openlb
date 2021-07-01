@@ -28,7 +28,6 @@
 #include <deque>
 #include "io/ostreamManager.h"
 #include "particles/particleSystem3D.h"
-#include "core/units.h"
 
 namespace olb {
 

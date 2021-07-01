@@ -128,7 +128,7 @@ PostProcessorGenerator2D<T,Lattice>*
 RegularizedBoundaryManager2D<T,Lattice,MixinDynamics>::
 getVelocityBoundaryProcessor(int x0, int x1, int y0, int y1)
 {
-  return 0;
+  return nullptr;
 }
 
 template<typename T, template<typename U> class Lattice, class MixinDynamics>
@@ -153,7 +153,7 @@ PostProcessorGenerator2D<T,Lattice>*
 RegularizedBoundaryManager2D<T,Lattice,MixinDynamics>::
 getPressureBoundaryProcessor(int x0, int x1, int y0, int y1)
 {
-  return 0;
+  return nullptr;
 }
 
 template<typename T, template<typename U> class Lattice, class MixinDynamics>
@@ -162,7 +162,7 @@ PostProcessorGenerator2D<T,Lattice>*
 RegularizedBoundaryManager2D<T,Lattice,MixinDynamics>::
 getConvectionBoundaryProcessor(int x0, int x1, int y0, int y1, T* uAv)
 {
-  return 0;
+  return nullptr;
 }
 
 template<typename T, template<typename U> class Lattice, class MixinDynamics>
@@ -212,7 +212,7 @@ PostProcessorGenerator2D<T,Lattice>*
 RegularizedBoundaryManager2D<T,Lattice,MixinDynamics>::getInternalVelocityCornerProcessor
 (int x, int y)
 {
-  return 0;
+  return nullptr;
 }
 
 
@@ -325,7 +325,7 @@ template<int xNormal, int yNormal>
 PostProcessorGenerator2D<T,Lattice>*
 InterpolationBoundaryManager2D<T,Lattice,MixinDynamics>::getInternalVelocityCornerProcessor (int x, int y)
 {
-  return 0;
+  return nullptr;
 }
 
 

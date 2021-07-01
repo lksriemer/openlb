@@ -42,27 +42,27 @@ public:
   /// Constructor with boundary initialization
   InnerEdgeVelBM3D(const T u_[Lattice<T>::d]);
 
-  virtual T computeRho(Cell<T,Lattice> const& cell) const;
-  virtual void computeU (
+  T computeRho(Cell<T,Lattice> const& cell) const override;
+  void computeU (
     Cell<T,Lattice> const& cell,
-    T u[Lattice<T>::d] ) const;
-  virtual void computeJ (
+    T u[Lattice<T>::d] ) const override;
+  void computeJ (
     Cell<T,Lattice> const& cell,
-    T j[Lattice<T>::d] ) const;
+    T j[Lattice<T>::d] ) const override;
   void computeU(T u[Lattice<T>::d]) const;
-  virtual void defineRho(Cell<T,Lattice>& cell, T rho) ;
-  virtual void defineU(Cell<T,Lattice>& cell,
-                       const T u[Lattice<T>::d]) ;
+  void defineRho(Cell<T,Lattice>& cell, T rho) override ;
+  void defineU(Cell<T,Lattice>& cell,
+                       const T u[Lattice<T>::d]) override ;
   void defineU(const T u[Lattice<T>::d]);
-  virtual void defineAllMomenta (
+  void defineAllMomenta (
     Cell<T,Lattice>& cell,
     T rho, const T u[Lattice<T>::d],
-    const T pi[util::TensorVal<Lattice<T> >::n] );
+    const T pi[util::TensorVal<Lattice<T> >::n] ) override;
   /// Stress tensor
-  virtual void computeStress (
+  void computeStress (
     Cell<T,Lattice> const& cell,
     T rho, const T u[Lattice<T>::d],
-    T pi[util::TensorVal<Lattice<T> >::n] ) const;
+    T pi[util::TensorVal<Lattice<T> >::n] ) const override;
 private:
   RegularizedVelocityBM<T,Lattice,direction1,normal1> momenta1;
   RegularizedVelocityBM<T,Lattice,direction2,normal2> momenta2;
@@ -78,27 +78,27 @@ public:
   /// Constructor with boundary initialization
   InnerCornerVelBM3D(const T u_[Lattice<T>::d]);
 
-  virtual T computeRho(Cell<T,Lattice> const& cell) const;
-  virtual void computeU (
+  T computeRho(Cell<T,Lattice> const& cell) const override;
+  void computeU (
     Cell<T,Lattice> const& cell,
-    T u[Lattice<T>::d] ) const;
-  virtual void computeJ (
+    T u[Lattice<T>::d] ) const override;
+  void computeJ (
     Cell<T,Lattice> const& cell,
-    T j[Lattice<T>::d] ) const;
+    T j[Lattice<T>::d] ) const override;
   void computeU(T u[Lattice<T>::d]) const;
-  virtual void defineRho(Cell<T,Lattice>& cell, T rho) ;
-  virtual void defineU(Cell<T,Lattice>& cell,
-                       const T u[Lattice<T>::d]) ;
+  void defineRho(Cell<T,Lattice>& cell, T rho) override ;
+  void defineU(Cell<T,Lattice>& cell,
+                       const T u[Lattice<T>::d]) override ;
   void defineU(const T u[Lattice<T>::d]);
-  virtual void defineAllMomenta (
+  void defineAllMomenta (
     Cell<T,Lattice>& cell,
     T rho, const T u[Lattice<T>::d],
-    const T pi[util::TensorVal<Lattice<T> >::n] );
+    const T pi[util::TensorVal<Lattice<T> >::n] ) override;
   /// Stress tensor
-  virtual void computeStress (
+  void computeStress (
     Cell<T,Lattice> const& cell,
     T rho, const T u[Lattice<T>::d],
-    T pi[util::TensorVal<Lattice<T> >::n] ) const;
+    T pi[util::TensorVal<Lattice<T> >::n] ) const override;
 private:
   RegularizedVelocityBM<T,Lattice,0,normalX> xMomenta;
   RegularizedVelocityBM<T,Lattice,1,normalY> yMomenta;

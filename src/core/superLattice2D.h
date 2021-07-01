@@ -25,7 +25,6 @@
  * The description of a 2D super lattice -- header file.
  */
 
-
 #ifndef SUPER_LATTICE_2D_H
 #define SUPER_LATTICE_2D_H
 
@@ -38,11 +37,8 @@
 #include "serializer.h"
 #include "communication/superStructure2D.h"
 
-
 /// All OpenLB code is contained in this namespace.
 namespace olb {
-
-
 
 template<typename T> class Communicator2D;
 template<typename T> class CuboidGeometry2D;
@@ -52,6 +48,7 @@ template<typename T> class LoadBalancer;
 template<typename T> class SuperGeometry2D;
 template<typename T, template<typename U> class Lattice> class SuperLatticeF2D;
 template<typename T> class SuperStructure2D;
+template<typename T> class SuperIndicatorF2D;
 
 
 /// A super lattice combines a number of block lattices that are ordered
@@ -101,10 +98,8 @@ private:
   bool                                        _statistics_on;
 public:
   /// Construction of a super lattice
-  SuperLattice2D(CuboidGeometry2D<T>& cGeometry,
-                 LoadBalancer<T>& lb, int overlapBC=0, int overlapRefinement=0);
-
   SuperLattice2D(SuperGeometry2D<T>& superGeometry, int overlapRefinement=0);
+  SuperLattice2D(const SuperLattice2D&) = delete;
   ~SuperLattice2D();
   /// Read and write access to a block lattice
   BlockLattice2D<T,Lattice>& getExtendedBlockLattice(int locIC)
@@ -162,20 +157,20 @@ public:
   bool get(T iX, T iY, Cell<T,Lattice>& cell) const;
   /// Read only access to lattice cells over the cuboid number
   /// and local coordinates   WARNING!!! NO ERROR HANDLING IMPLEMENTED!!!
-  Cell<T,Lattice> get(int iC, T locX, T locY) const;
+  Cell<T,Lattice> get(int iC, int locX, int locY) const;
 
   /// Write access to the memory of the data of the super structure
-  virtual bool* operator() (int iCloc, int iX, int iY, int iData)
+  bool* operator() (int iCloc, int iX, int iY, int iData) override
   {
     return (bool*)&getExtendedBlockLattice(iCloc).get(iX+this->_overlap, iY+this->_overlap)[iData];
   };
   /// Read only access to the dim of the data of the super structure
-  virtual int getDataSize() const
+  int getDataSize() const override
   {
     return Lattice<T>::q;
   };
   /// Read only access to the data type dim of the data of the super structure
-  virtual int getDataTypeSize() const
+  int getDataTypeSize() const override
   {
     return sizeof(T);
   };
@@ -184,6 +179,10 @@ public:
 
   /// Defines the dynamics by material
   void defineDynamics(SuperGeometry2D<T>& superGeometry, int material, Dynamics<T,Lattice>* dynamics);
+  /// Defines the dynamics on a domain described by an indicator reference
+  void defineDynamics(SuperIndicatorF2D<T>& indicator, Dynamics<T,Lattice>* dynamics);
+  /// Defines the dynamics on a domain described by an indicator pointer
+  void defineDynamics(std::unique_ptr<SuperIndicatorF2D<T>> const& indicator, Dynamics<T, Lattice>* dynamics);
   /// Defines rho on a rectangular domain
   void defineRhoU (T x0, T x1, T y0, T y1, T rho, const T u[Lattice<T>::d] );
   /// Defines rho and u on a domain with a particular material number
@@ -276,11 +275,11 @@ public:
   //void communicate(bool verbose=true);
 
   /// Number of data blocks for the serializable interface
-  virtual std::size_t getNblock() const;
+  std::size_t getNblock() const override;
   /// Binary size for the serializer
-  virtual std::size_t getSerializableSize() const;
+  std::size_t getSerializableSize() const override;
   /// Return a pointer to the memory of the current block and its size for the serializable interface
-  virtual bool* getBlock(std::size_t iBlock, std::size_t& sizeBlock, bool loadingMode);
+  bool* getBlock(std::size_t iBlock, std::size_t& sizeBlock, bool loadingMode) override;
 private:
   /// Resets and reduce the statistics
   void reset_statistics();

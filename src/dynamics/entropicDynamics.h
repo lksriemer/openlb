@@ -1,6 +1,6 @@
 /*  This file is part of the OpenLB library
  *
- *  Copyright (C) 2006, 2007 Orestis Malaspinas, Jonas Latt
+ *  Copyright (C) 2006, 2007, 2017 Orestis Malaspinas, Jonas Latt, Mathias J. Krause
  *  E-mail contact: info@openlb.net
  *  The most recent release of OpenLB can be downloaded at
  *  <http://www.openlb.net/>
@@ -22,9 +22,16 @@
 */
 
 /** \file
- * A collection of dynamics classes (e.g. BGK) with which a Cell object
+ * A collection of entropic dynamics classes (e.g. EntropicEq,
+ * ForcedEntropicEq, Entropic, ForcedEntropic) with which a Cell object
  * can be instantiated -- header file.
+ *
+ * Entropic Modell:
+ * Ansumali, Santosh, Iliya V. Karlin, and Hans Christian Öttinger
+ * Minimal entropic kinetic models for hydrodynamics
+ * EPL (Europhysics Letters) 63.6 (2003): 798
  */
+
 #ifndef ENTROPIC_LB_DYNAMICS_H
 #define ENTROPIC_LB_DYNAMICS_H
 
@@ -37,12 +44,33 @@ template<typename T, template<typename U> class Lattice> class Cell;
 
 /// Implementation of the entropic collision step
 template<typename T, template<typename U> class Lattice>
-class EntropicDynamics : public BasicDynamics<T,Lattice> {
+class EntropicEqDynamics : public BasicDynamics<T,Lattice> {
 public:
   /// Constructor
-  EntropicDynamics(T omega_, Momenta<T,Lattice>& momenta_);
-  /// Clone the object on its dynamic type.
-  virtual EntropicDynamics<T,Lattice>* clone() const;
+  EntropicEqDynamics(T omega_, Momenta<T,Lattice>& momenta_);
+  /// Compute equilibrium distribution function
+  T computeEquilibrium(int iPop, T rho, const T u[Lattice<T>::d], T uSqr) const override;
+  /// Collision step
+  void collide(Cell<T,Lattice>& cell,
+                       LatticeStatistics<T>& statistics_) override;
+  /// Collide with fixed velocity
+  void staticCollide(Cell<T,Lattice>& cell,
+                             const T u[Lattice<T>::d],
+                             LatticeStatistics<T>& statistics_) override;
+  /// Get local relaxation parameter of the dynamics
+  T getOmega() const override;
+  /// Set local relaxation parameter of the dynamics
+  void setOmega(T omega_) override;
+private:
+  T omega;  ///< relaxation parameter
+};
+
+/// Implementation of the forced entropic collision step
+template<typename T, template<typename U> class Lattice>
+class ForcedEntropicEqDynamics : public BasicDynamics<T,Lattice> {
+public:
+  /// Constructor
+  ForcedEntropicEqDynamics(T omega_, Momenta<T,Lattice>& momenta_);
   /// Compute equilibrium distribution function
   virtual T computeEquilibrium(int iPop, T rho, const T u[Lattice<T>::d], T uSqr) const;
   /// Collision step
@@ -56,6 +84,33 @@ public:
   virtual T getOmega() const;
   /// Set local relaxation parameter of the dynamics
   virtual void setOmega(T omega_);
+private:
+  T omega;  ///< relaxation parameter
+
+  static const int forceBeginsAt = Lattice<T>::ExternalField::forceBeginsAt;
+  static const int sizeOfForce   = Lattice<T>::ExternalField::sizeOfForce;
+};
+
+/// Implementation of the entropic collision step
+
+template<typename T, template<typename U> class Lattice>
+class EntropicDynamics : public BasicDynamics<T,Lattice> {
+public:
+  /// Constructor
+  EntropicDynamics(T omega_, Momenta<T,Lattice>& momenta_);
+  /// Compute equilibrium distribution function
+  T computeEquilibrium(int iPop, T rho, const T u[Lattice<T>::d], T uSqr) const override;
+  /// Collision step
+  void collide(Cell<T,Lattice>& cell,
+                       LatticeStatistics<T>& statistics_) override;
+  /// Collide with fixed velocity
+  void staticCollide(Cell<T,Lattice>& cell,
+                             const T u[Lattice<T>::d],
+                             LatticeStatistics<T>& statistics_) override;
+  /// Get local relaxation parameter of the dynamics
+  T getOmega() const override;
+  /// Set local relaxation parameter of the dynamics
+  void setOmega(T omega_) override;
 private:
   /// computes the entropy function H(f)=sum_i f_i*ln(f_i/t_i)
   T computeEntropy(const T f[]);
@@ -76,8 +131,6 @@ class ForcedEntropicDynamics : public BasicDynamics<T,Lattice> {
 public:
   /// Constructor
   ForcedEntropicDynamics(T omega_, Momenta<T,Lattice>& momenta_);
-  /// Clone the object on its dynamic type.
-  virtual ForcedEntropicDynamics<T,Lattice>* clone() const;
   /// Compute equilibrium distribution function
   virtual T computeEquilibrium(int iPop, T rho, const T u[Lattice<T>::d], T uSqr) const;
   /// Collision step
@@ -107,7 +160,6 @@ private:
   static const int forceBeginsAt = Lattice<T>::ExternalField::forceBeginsAt;
   static const int sizeOfForce   = Lattice<T>::ExternalField::sizeOfForce;
 };
-
 }
 
 #endif

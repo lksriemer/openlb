@@ -31,10 +31,9 @@
 #ifndef STOKESDRAGFORCE_3D_H
 #define STOKESDRAGFORCE_3D_H
 
-#include "functors/superLatticeLocalF3D.h"
+#include "functors/lattice/superLatticeLocalF3D.h"
 #include "particles/particleSystem3D.h"
 #include "force3D.h"
-#include "core/units.h"
 
 namespace olb {
 
@@ -44,11 +43,11 @@ public:
   /// Constructor, FluidVelocity, physicalTimeStep, physicalDynamicViscosity
   StokesDragForce3D(SuperLatticeInterpPhysVelocity3D<T, DESCRIPTOR>& getVel, T dT, T mu);
   /// Constructor using values from converter
-  StokesDragForce3D(SuperLatticeInterpPhysVelocity3D<T, DESCRIPTOR>& getVel, LBconverter<T> const& converter);
+  StokesDragForce3D(SuperLatticeInterpPhysVelocity3D<T, DESCRIPTOR>& getVel, UnitConverter<T,DESCRIPTOR> const& converter);
   /// Destructor
-  virtual ~StokesDragForce3D() {}
-  virtual void applyForce(typename std::deque<PARTICLETYPE<T> >::iterator p,
-                          int pInt, ParticleSystem3D<T, PARTICLETYPE>& psSys);
+  ~StokesDragForce3D() override {}
+  void applyForce(typename std::deque<PARTICLETYPE<T> >::iterator p,
+                          int pInt, ParticleSystem3D<T, PARTICLETYPE>& psSys) override;
 
   /// Compute Force for subgrid scale particles
   void computeForce(int pInt, ParticleSystem3D<T, PARTICLETYPE>* psSys,

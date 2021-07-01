@@ -31,12 +31,12 @@
 
 #include <vector>
 #include <list>
+
 #include "offBoundaryCondition2D.h"
 #include "geometry/superGeometry2D.h"
 #include "core/superLattice2D.h"
 #include "io/ostreamManager.h"
-#include "functors/analyticalF.h"
-
+#include "functors/analytical/analyticalF.h"
 
 /// All OpenLB code is contained in this namespace.
 namespace olb {
@@ -109,15 +109,8 @@ private:
   bool _output;
 };
 
-template<typename T, template<typename U> class Lattice, typename MixinDynamics>
+template<typename T, template<typename U> class Lattice, typename MixinDynamics=BGKdynamics<T,Lattice> >
 void createBouzidiBoundaryCondition2D(sOffLatticeBoundaryCondition2D<T,Lattice>& sBC);
-
-template<typename T, template<typename U> class Lattice>
-void createBouzidiBoundaryCondition2D(sOffLatticeBoundaryCondition2D<T,Lattice>& sBC)
-{
-  createBouzidiBoundaryCondition2D<T,Lattice,BGKdynamics<T,Lattice> > (sBC);
-}
-
 
 template<typename T, template<typename U> class Lattice>
 void createBounceBackBoundaryCondition2D(sOffLatticeBoundaryCondition2D<T,Lattice>& sBC);

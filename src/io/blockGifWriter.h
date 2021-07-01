@@ -27,7 +27,7 @@
 #include <iomanip>
 #include "io/colormaps.h"
 #include "io/ostreamManager.h"
-#include "functors/blockBaseF2D.h"
+#include "functors/lattice/blockBaseF2D.h"
 
 
 namespace olb {

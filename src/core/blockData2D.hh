@@ -31,7 +31,7 @@
 #include "olbDebug.h"
 #include "blockData2D.h"
 #include "geometry/cuboid2D.h"
-#include "functors/blockBaseF2D.h"
+#include "functors/lattice/blockBaseF2D.h"
 
 
 namespace olb {
@@ -40,7 +40,6 @@ namespace olb {
 template<typename T, typename BaseType>
 BlockData2D<T,BaseType>::BlockData2D() : BlockStructure2D(0,0), _size(0), _rawData(nullptr), _field(nullptr)
 {
-//  std::cout << "/// Block2D ctor" << std::endl;
   construct();
 }
 
@@ -48,7 +47,6 @@ template<typename T, typename BaseType>
 BlockData2D<T,BaseType>::BlockData2D(Cuboid2D<T>& cuboid, int size)
   : BlockStructure2D(cuboid.getNx(), cuboid.getNy()), _size(size), _rawData(nullptr), _field(nullptr)
 {
-//  std::cout << "/// Block2D ctor" << std::endl;
   construct();
 }
 
@@ -56,7 +54,6 @@ template<typename T, typename BaseType>
 BlockData2D<T,BaseType>::BlockData2D(int nx, int ny, int size)
   : BlockStructure2D(nx, ny), _size(size), _rawData(nullptr), _field(nullptr)
 {
-//  std::cout << "/// Block2D ctor" << std::endl;
   construct();
 }
 
@@ -71,7 +68,6 @@ BlockData2D<T,BaseType>::BlockData2D(BlockF2D<BaseType>& rhs)
   : BlockStructure2D(rhs.getBlockStructure().getNx(), rhs.getBlockStructure().getNy()),
     _size(rhs.getTargetDim())
 {
-//  std::cout << "/// Block2D copy ctor" << std::endl;
   construct();
   int i[2];
   for (i[0] = 0; i[0] < this->_nx; ++i[0]) {
@@ -85,12 +81,8 @@ template<typename T, typename BaseType>
 BlockData2D<T,BaseType>::BlockData2D(BlockData2D<T,BaseType> const& rhs)
   : BlockStructure2D(rhs._nx, rhs._ny), _size(rhs._size), _rawData(nullptr), _field(nullptr)
 {
-//  std::cout << "/// Block2D const copy ctor" << std::endl;
   if (rhs.isConstructed()) {
     construct();
-//    for (size_t iData = 0; iData < getDataSize(); ++iData) {
-//      (*this)[iData] = rhs[iData];
-//    }
     std::copy( rhs._rawData, rhs._rawData + getDataSize(), _rawData );
   }
 }
@@ -98,7 +90,6 @@ BlockData2D<T,BaseType>::BlockData2D(BlockData2D<T,BaseType> const& rhs)
 template<typename T, typename BaseType>
 BlockData2D<T,BaseType>& BlockData2D<T,BaseType>::operator=(BlockData2D<T,BaseType> const& rhs)
 {
-//  std::cout << "/// Block2D const copy operator" << std::endl;
   BlockData2D<T,BaseType> tmp(rhs);
   swap(tmp);
   return *this;
@@ -108,8 +99,8 @@ BlockData2D<T,BaseType>& BlockData2D<T,BaseType>::operator=(BlockData2D<T,BaseTy
 template<typename T, typename BaseType>
 BlockData2D<T,BaseType>& BlockData2D<T,BaseType>::operator=(BlockData2D<T,BaseType>&& rhs)
 {
-  std::cout << "/// Move Operator BlockData2D" << std::endl;
-  if (this != &rhs) {
+  if (this == &rhs) {
+      return *this;
   }
 //  this->releaseMemory();  // free data of object this
 
@@ -132,7 +123,6 @@ template<typename T, typename BaseType>
 BlockData2D<T,BaseType>::BlockData2D(BlockData2D<T,BaseType>&& rhs)
   : BlockStructure2D(rhs._nx, rhs._ny), _size(0), _rawData(nullptr), _field(nullptr)
 {
-  std::cout << "/// Move Ctor BlockData2D" << std::endl;
   *this = std::move(rhs); // https://msdn.microsoft.com/de-de/library/dd293665.aspx
 }
 
@@ -273,12 +263,6 @@ BaseType* BlockData2D<T,BaseType>::getRawData() const
 }
 
 template<typename T, typename BaseType>
-BaseType*** BlockData2D<T,BaseType>::getField() const
-{
-  return _field;
-}
-
-template<typename T, typename BaseType>
 size_t BlockData2D<T,BaseType>::getDataSize() const
 {
   return (size_t)(this->_nx) * (size_t)(this->_ny) * (size_t)(_size);
@@ -289,7 +273,6 @@ int BlockData2D<T,BaseType>::getSize() const
 {
   return _size;
 }
-
 
 template<typename T, typename BaseType>
 size_t BlockData2D<T,BaseType>::getSerializableSize() const

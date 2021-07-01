@@ -150,15 +150,10 @@ void BlockLatticeView3D<T,Lattice>::defineDynamics (
 }
 
 template<typename T, template<typename U> class Lattice>
-void BlockLatticeView3D<T,Lattice>::specifyStatisticsStatus (
-  int x0_, int x1_, int y0_, int y1_, int z0_, int z1_, bool status )
+Dynamics<T,Lattice>* BlockLatticeView3D<T,Lattice>::getDynamics (
+        int iX, int iY, int iZ)
 {
-  originalLattice->specifyStatisticsStatus (
-    x0_+x0, x1_+x0,
-    y0_+y0, y1_+y0,
-    z0_+z0, z1_+z0,
-    status );
-
+    return originalLattice->getDynamics(iX+x0, iY+y0, iZ+z0);
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -176,11 +171,11 @@ void BlockLatticeView3D<T,Lattice>::collide()
 {
   originalLattice->collide( x0, x0+this->_nx-1, y0, y0+this->_ny-1, z0, z0+this->_nz-1);
 }
-/*
+
 template<typename T, template<typename U> class Lattice>
 void BlockLatticeView3D<T,Lattice>::staticCollide (
   int x0_, int x1_, int y0_, int y1_, int z0_, int z1_,
-  TensorFieldBase3D<T,3> const& u)
+  BlockData3D<T,T> const& u)
 {
   originalLattice->staticCollide( x0_+x0, x1_+x0,
                                   y0_+y0, y1_+y0,
@@ -190,11 +185,11 @@ void BlockLatticeView3D<T,Lattice>::staticCollide (
 
 template<typename T, template<typename U> class Lattice>
 void BlockLatticeView3D<T,Lattice>::staticCollide (
-  TensorFieldBase3D<T,3> const& u )
+  BlockData3D<T,T> const& u )
 {
   originalLattice->staticCollide( x0, x0+this->_nx-1, y0, y0+this->_ny-1,
                                   z0, z0+this->_nz-1, u);
-}*/
+}
 
 template<typename T, template<typename U> class Lattice>
 void BlockLatticeView3D<T,Lattice>::stream(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_)
@@ -243,6 +238,13 @@ T BlockLatticeView3D<T,Lattice>::computeAverageDensity() const
 {
   return originalLattice->computeAverageDensity (
            x0, x0+this->_nx-1, y0, y0+this->_ny-1, z0, z0+this->_nz-1 );
+}
+
+template<typename T, template<typename U> class Lattice>
+void BlockLatticeView3D<T,Lattice>::computeStress(int iX, int iY, int iZ,
+        T pi[util::TensorVal<Lattice<T> >::n])
+{
+    originalLattice->computeStress(iX + x0, iY + y0, iZ + z0, pi);
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -350,27 +352,6 @@ LatticeStatistics<T> const& BlockLatticeView3D<T,Lattice>::getStatistics() const
 {
   return originalLattice->getStatistics();
 }
-
-template<typename T, template<typename U> class Lattice>
-SpatiallyExtendedObject3D* BlockLatticeView3D<T,Lattice>::getComponent(int iBlock)
-{
-  OLB_PRECONDITION( iBlock==0 );
-  return this;
-}
-
-template<typename T, template<typename U> class Lattice>
-SpatiallyExtendedObject3D const* BlockLatticeView3D<T,Lattice>::getComponent(int iBlock) const
-{
-  OLB_PRECONDITION( iBlock==0 );
-  return this;
-}
-
-template<typename T, template<typename U> class Lattice>
-multiPhysics::MultiPhysicsId BlockLatticeView3D<T,Lattice>::getMultiPhysicsId() const
-{
-  return multiPhysics::getMultiPhysicsBlockId<T,Lattice>();
-}
-
 
 }  // namespace olb
 

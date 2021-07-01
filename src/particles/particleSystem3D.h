@@ -27,12 +27,11 @@
 #include <deque>
 #include "contactDetection/contactDetection.h"
 #include "geometry/superGeometry3D.h"
-#include "core/units.h"
 #include "core/blockLatticeStructure3D.h"
 #include "forces/force3D.h"
-#include "functors/analyticalF.h"
+#include "functors/analytical/analyticalF.h"
 #include "boundaries/boundary3D.h"
-#include "functors/frameChangeF3D.h"
+#include "functors/lattice/latticeFrameChangeF3D.h"
 #include "utilities/vectorHelpers.h"
 
 namespace olb {
@@ -60,10 +59,10 @@ public:
     : _pSys(ps)
   {
   }
-  inline void simulate(T dT)
+  inline void simulate(T dT, bool scale=false)
   {
     _pSys->computeForce();
-    _pSys->explicitEuler(dT);
+    _pSys->explicitEuler(dT, scale);
     //_pSys->rungeKutta4(dT);
   }
 private:
@@ -79,10 +78,10 @@ public:
     : _pSys(ps)
   {
   }
-  inline void simulate(T dT)
+  inline void simulate(T dT, bool scale=false)
   {
     _pSys->computeForce();
-    _pSys->explicitEuler(dT);
+    _pSys->explicitEuler(dT, scale);
     _pSys->integrateTorque(dT);
   }
 private:
@@ -96,11 +95,11 @@ public:
     : _pSys(ps)
   {
   }
-  inline void simulate(T dT)
+  inline void simulate(T dT, bool scale=false)
   {
     _pSys->resetMag();
     _pSys->computeForce();
-    _pSys->explicitEuler(dT);
+    _pSys->explicitEuler(dT, scale);
     // calculates changes in orientation (dipole moment direction)
     // due to torque moments induced in
     // interpMagForceForMagP3D & magneticForceForMagP3D
@@ -120,7 +119,7 @@ public:
   /// Default constructor for ParticleSystem
   ParticleSystem3D() = default;
   /// Constructor for ParticleSystem
-  ParticleSystem3D(SuperGeometry3D<T>&, LBconverter<T>& conv);
+  ParticleSystem3D(SuperGeometry3D<T>&);
   /// Copy constructor for ParticleSystem
   ParticleSystem3D(const ParticleSystem3D<T, PARTICLETYPE>& pS);
   /// Move constructor for ParticleSystem
@@ -128,7 +127,7 @@ public:
   /// Destructor for ParticleSystem
   virtual ~ParticleSystem3D() {}
 
-  virtual void simulate(T deltatime);
+  virtual void simulate(T deltatime, bool scale = false);
 
   /// Get number of particles in ParticleSystem
   int size();
@@ -151,6 +150,7 @@ public:
   void addBoundary(std::shared_ptr<Boundary3D<T, PARTICLETYPE> > pF);
 
   /// Get reference to a particle in the ParticleSystem
+  /// runs over all particles incl. shadow particles
   PARTICLETYPE<T>& operator[](const int i);
   const PARTICLETYPE<T>& operator[](const int i) const;
 
@@ -197,16 +197,34 @@ public:
   //std::map<T, int> radiusDistribution();
 
   /// Integration method: explicit Euler
-  void explicitEuler(T dT);
+  /// if scale = true, velocity is scaled to maximal velocity
+  /// maximal velocity = _superGeometry.getCuboidGeometry().getMaxDeltaR()/dT
+  void explicitEuler(T dT, bool scale = false);
 
   ContactDetection<T, PARTICLETYPE>* getDetection()
   {
     return _contactDetection;
   }
+
+  /// returns deque of pointer to particles (not shadow particles)
+  /// contained in a particleSystem3D
+  std::deque<PARTICLETYPE<T>*> getParticlesPointer();
+  /// returns deque of pointer to all particles (incl. shadow particles)
+  /// contained in a particleSystem3D
+  std::deque<PARTICLETYPE<T>*> getAllParticlesPointer();
+  /// returns deque of pointer to all shadow particles
+  /// contained in a particleSystem3D
+  std::deque<PARTICLETYPE<T>*> getShadowParticlesPointer();
+
+  /// returns deque of particles (no shadow particles)
+  /// contained in a particleSystem3D
   std::deque<PARTICLETYPE<T>> getParticles()
   {
     return _particles;
   }
+
+  /// returns shared pointer of forces
+  std::list<std::shared_ptr<Force3D<T, PARTICLETYPE> > > getForcesPointer();
 
 protected:
   void integrateTorque(T dT);
@@ -217,7 +235,6 @@ protected:
 
   mutable OstreamManager clout;
   SuperGeometry3D<T>& _superGeometry;
-  LBconverter<T>& _converter;
   ContactDetection<T, PARTICLETYPE>* _contactDetection;
   SimulateParticles<T, PARTICLETYPE> _sim;
 

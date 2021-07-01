@@ -27,10 +27,11 @@
 
 #include "superGeometry2D.h"
 #include "superGeometry2D.hh"
-#include "functors/indicator/indicatorF2D.h"
+#include "functors/lattice/indicator/indicatorF2D.h"
 
 namespace olb {
 
 template class IndicatorF2D<double>;
 template class SuperGeometry2D<double>;
+
 }

@@ -36,6 +36,7 @@ precompiled    :=  base64 \
                    colormaps \
                    fileName \
                    gnuplotWriter \
+                   gnuplotHeatMapWriter \
                    ostreamManager \
                    parallelIO \
                    serializerIO \

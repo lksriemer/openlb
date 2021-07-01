@@ -110,7 +110,7 @@ class BaseVTIreader3D : public BaseVTIreader<T> {
 public:
   BaseVTIreader3D(const std::string& fName, std::string dName,
                   const std::string class_name="BaseVTIreader3D");
-  virtual ~BaseVTIreader3D() {};
+  ~BaseVTIreader3D() override {};
 protected:
   /// Reads cuboid from piece node
   void readCuboid(Cuboid3D<T>& cuboid, XMLreader* piece);
@@ -125,7 +125,7 @@ template<typename T, typename BaseType>
 class BlockVTIreader3D : public BaseVTIreader3D<T,BaseType> {
 public:
   BlockVTIreader3D(const std::string& fName, const std::string dName);
-  virtual ~BlockVTIreader3D() {};
+  ~BlockVTIreader3D() override {};
   BlockData3D<T,BaseType>& getBlockData();
   Cuboid3D<T>& getCuboid();
 protected:
@@ -142,7 +142,7 @@ private:
   SuperData3D<T,BaseType>* _superData;
 public:
   SuperVTIreader3D(const std::string& fName, const std::string dName);
-  virtual ~SuperVTIreader3D();
+  ~SuperVTIreader3D() override;
   SuperData3D<T,BaseType>& getSuperData();
   CuboidGeometry3D<T>& getCuboidGeometry();
   LoadBalancer<T>& getLoadBalancer();

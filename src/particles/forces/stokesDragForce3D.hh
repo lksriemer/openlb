@@ -44,16 +44,14 @@ StokesDragForce3D<T, PARTICLETYPE, DESCRIPTOR>::StokesDragForce3D(SuperLatticeIn
 }
 
 template<typename T, template<typename U> class PARTICLETYPE, template<typename W> class DESCRIPTOR>
-StokesDragForce3D<T, PARTICLETYPE, DESCRIPTOR>::StokesDragForce3D(SuperLatticeInterpPhysVelocity3D<T, DESCRIPTOR>& getVel, LBconverter<T> const& converter)
+StokesDragForce3D<T, PARTICLETYPE, DESCRIPTOR>::StokesDragForce3D(SuperLatticeInterpPhysVelocity3D<T, DESCRIPTOR>& getVel, UnitConverter<T,DESCRIPTOR> const& converter)
   : Force3D<T, PARTICLETYPE>(),
     _getVel(getVel)
 {
   //implicit formulation
-  _C1 = 6. * M_PI * converter.getDynamicViscosity() * converter.physTime();
-  _mu = converter.getDynamicViscosity();
-  // explicit formulation
-  //  _C1 = 6. * M_PI * converter.getDynamicViscosity();
-  _dTinv = 1. / converter.physTime();
+  _C1 = 6. * M_PI *  converter.getPhysViscosity()*converter.getPhysDensity() * converter.getConversionFactorTime();
+  _mu = converter.getPhysViscosity()*converter.getPhysDensity();
+  _dTinv = 1. / converter.getConversionFactorTime();
 }
 
 /// 6 Pi r mu (u_f-u_p)

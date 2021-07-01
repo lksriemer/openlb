@@ -30,17 +30,9 @@ namespace olb {
 
 ////////// Factory function for Zou/He BC ///////////////////////////////////////////
 
-template<typename T, template<typename U> class Lattice, typename MixinDynamics>
+template<typename T, template<typename U> class Lattice, typename MixinDynamics=BGKdynamics<T,Lattice> >
 OnLatticeBoundaryCondition3D<T,Lattice>*
 createZouHeBoundaryCondition3D(BlockLatticeStructure3D<T,Lattice>& block);
-
-template<typename T, template<typename U> class Lattice>
-OnLatticeBoundaryCondition3D<T,Lattice>*
-createZouHeBoundaryCondition3D(BlockLatticeStructure3D<T,Lattice>& block)
-{
-  return createZouHeBoundaryCondition3D<T,Lattice,BGKdynamics<T,Lattice> >(block);
-}
-
 
 
 }

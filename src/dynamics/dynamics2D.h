@@ -25,13 +25,8 @@
  * Groups all the 2D include files in the complexDynamics directory.
 */
 
-
-#include "advectionDiffusionBoundaries.h"
-#include "advectionDiffusionBoundaryCondition2D.h"
 #include "advectionDiffusionDynamics.h"
-#include "advectionDiffusionLatticeDescriptors.h"
 #include "advectionDiffusionMomenta.h"
-#include "advectionDiffusionUnits.h"
 #include "ADMlatticeDescriptors.h"
 #include "chopardDynamics.h"
 #include "dynamics.h"
@@ -39,11 +34,15 @@
 #include "dynSmagorinskyLatticeDescriptors.h"
 #include "entropicDynamics.h"
 #include "entropicLbHelpers.h"
+#include "guoZhaoLatticeDescriptors.h"
+#include "guoZhaoLbHelpers.h"
+#include "guoZhaoDynamics.h"
 #include "interactionPotential.h"
 #include "latticeDescriptors.h"
 #include "mrtDynamics.h"
 #include "mrtLatticeDescriptors.h"
 #include "navierStokesAdvectionDiffusionCouplingPostProcessor2D.h"
+#include "navierStokesAdvectionDiffusionMRTCouplingPostProcessor2D.h"
 #include "porousBGKdynamics.h"
 #include "porousLatticeDescriptors.h"
 #include "powerLawBGKdynamics.h"
@@ -53,5 +52,7 @@
 #include "shanChenForcedSingleComponentPostProcessor2D.h"
 #include "shearSmagorinskyLatticeDescriptors.h"
 #include "smagorinskyBGKdynamics.h"
+#include "smagorinskyGuoZhaoDynamics.h"
 #include "smagorinskyMRTdynamics.h"
 #include "stochasticSGSdynamics.h"
+#include "superGuoZhaoPostProcessor2D.h"

@@ -23,29 +23,4 @@
 
 generic        :=
 
-precompiled    := analyticalBaseF \
-                  analyticalF \
-                  analyticCalcF \
-                  blockBaseF2D \
-                  blockBaseF3D \
-                  blockCalcF2D \
-                  blockCalcF3D \
-                  blockLatticeIntegralF2D \
-                  blockLatticeIntegralF3D \
-                  blockLatticeLocalF2D \
-                  blockLatticeLocalF3D \
-                  blockLatticeReduction2D \
-                  frameChangeF2D \
-                  frameChangeF3D \
-                  genericF \
-                  interpolationF2D \
-                  interpolationF3D \
-                  superBaseF2D \
-                  superBaseF3D \
-                  superCalcF2D \
-                  superCalcF3D \
-                  superLatticeIntegralF2D \
-                  superLatticeIntegralF3D \
-                  superLatticeLocalF2D \
-                  superLatticeLocalF3D \
-                  turbulentF3D
+precompiled    := genericF

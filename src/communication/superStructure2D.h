@@ -82,6 +82,8 @@ public:
   LoadBalancer<T> const& getLoadBalancer() const;
   /// Communicates the data in the overlap
   virtual void communicate(bool verbose=false);
+
+  void initCommunication();
 };
 
 } // namespace olb

@@ -39,8 +39,9 @@
 #include "geometry/superGeometry2D.h"
 #include "communication/superStructure2D.h"
 #include "communication/loadBalancer.h"
-#include "functors/indicator/indicatorF2D.h"
-#include "functors/indicator/indicCalcF2D.h"
+#include "functors/lattice/indicator/indicatorF2D.h"
+#include "functors/lattice/indicator/indicCalcF2D.h"
+#include "functors/lattice/indicator/superIndicatorF2D.h"
 #include "io/ostreamManager.h"
 
 namespace olb {
@@ -136,7 +137,8 @@ int& SuperGeometry2D<T>::set(int iCglob, int iXloc, int iYloc)
     this->_communicationNeeded = true;
     _statistics.getStatisticsStatus() = true;
     return _extendedBlockGeometries[this->getLoadBalancer().loc(iCglob)].get(iXloc+this->_overlap, iYloc+this->_overlap);
-  } else {
+  }
+  else {
     std::cout << "error: write access to data which is not available in the any block geometry";
     exit(-1);
     //return 0;
@@ -148,7 +150,8 @@ int const& SuperGeometry2D<T>::get(int iCglob, int iXloc, int iYloc) const
 {
   if ( this->getLoadBalancer().rank(iCglob) == singleton::mpi().getRank() ) {
     return _extendedBlockGeometries[this->getLoadBalancer().loc(iCglob)].get(iXloc+this->_overlap, iYloc+this->_overlap);
-  } else {
+  }
+  else {
     std::cout << "error: read only access to data which is not available in the any block geometry, returning 0 as default" << std::endl;
     exit(-1);
     //return 0;
@@ -211,27 +214,27 @@ void SuperGeometry2D<T>::getPhysR(T output[2], const int iCglob, const int iX, c
 }
 
 template<typename T>
-BlockGeometryStructure2D<T>& SuperGeometry2D<T>::getExtendedBlockGeometry(int locIC)
+BlockGeometry2D<T>& SuperGeometry2D<T>::getExtendedBlockGeometry(int locIC)
 {
   _statistics.getStatisticsStatus() = true;
   return _extendedBlockGeometries[locIC];
 }
 
 template<typename T>
-BlockGeometryStructure2D<T> const& SuperGeometry2D<T>::getExtendedBlockGeometry(int locIC) const
+BlockGeometry2D<T> const& SuperGeometry2D<T>::getExtendedBlockGeometry(int locIC) const
 {
   return _extendedBlockGeometries[locIC];
 }
 
 template<typename T>
-BlockGeometryStructure2D<T>& SuperGeometry2D<T>::getBlockGeometry(int locIC)
+BlockGeometryView2D<T>& SuperGeometry2D<T>::getBlockGeometry(int locIC)
 {
   _statistics.getStatisticsStatus() = true;
   return _blockGeometries[locIC];
 }
 
 template<typename T>
-BlockGeometryStructure2D<T> const& SuperGeometry2D<T>::getBlockGeometry(int locIC) const
+BlockGeometryView2D<T> const& SuperGeometry2D<T>::getBlockGeometry(int locIC) const
 {
   return _blockGeometries[locIC];
 }
@@ -374,7 +377,8 @@ bool SuperGeometry2D<T>::checkForErrors(bool verbose)
   if (verbose) {
     if (error) {
       this->clout << "error!" << std::endl;
-    } else {
+    }
+    else {
       this->clout << "the model is correct!" << std::endl;
     }
   }
@@ -420,7 +424,8 @@ void SuperGeometry2D<T>::rename(int fromM, int toM, unsigned offsetX, unsigned o
     }
     _statistics.getStatisticsStatus() = true;
     this->_communicationNeeded = true;
-  } else {
+  }
+  else {
     clout << "error rename only implemented for offset<=overlap" << std::endl;
   }
 }
@@ -437,7 +442,8 @@ void SuperGeometry2D<T>::rename(int fromM, int toM, int testM, std::vector<int> 
     }
     _statistics.getStatisticsStatus() = true;
     this->_communicationNeeded = true;
-  } else {
+  }
+  else {
     clout << "error rename only implemented for |testDirection[i]|<=overlap" << std::endl;
   }
 }
@@ -460,7 +466,8 @@ void SuperGeometry2D<T>::rename(int fromBcMat, int toBcMat, int fluidMat,
     }
     _statistics.getStatisticsStatus() = true;
     this->_communicationNeeded = true;
-  } else {
+  }
+  else {
     clout << "error rename only implemented for overlap>=2" << std::endl;
   }
 }
@@ -471,6 +478,20 @@ void SuperGeometry2D<T>::print()
 {
   this->_cuboidGeometry.print();
   getStatistics().print();
+}
+
+template<typename T>
+std::unique_ptr<SuperIndicatorF2D<T>> SuperGeometry2D<T>::getMaterialIndicator(
+                                     std::vector<int>&& materials)
+{
+  return this->getIndicator<SuperIndicatorMaterial2D>(
+           std::forward<std::vector<int>>(materials));
+}
+
+template<typename T>
+std::unique_ptr<SuperIndicatorF2D<T>> SuperGeometry2D<T>::getMaterialIndicator(int material)
+{
+  return this->getMaterialIndicator(std::vector<int> { material });
 }
 
 } // namespace olb

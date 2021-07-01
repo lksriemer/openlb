@@ -26,13 +26,11 @@
 #ifndef BOUNDARY_CONDITION_3D_H
 #define BOUNDARY_CONDITION_3D_H
 
-#include "core/blockLatticeStructure3D.h"
-#include "momentaOnBoundaries3D.h"
-#include "boundaryPostProcessors3D.h"
 #include "dynamics/dynamics.h"
-#include "geometry/blockGeometryStatistics3D.h"
 
 namespace olb {
+
+template<typename T> class BlockGeometryStructure3D;
 
 template<typename T, template<typename U> class Lattice>
 class OnLatticeBoundaryCondition3D {
@@ -104,9 +102,6 @@ public:
   virtual void addInternalVelocityCornerPPN(int x, int y, int z, T omega) =0;
   virtual void addInternalVelocityCornerPPP(int x, int y, int z, T omega) =0;
 
-  virtual BlockLatticeStructure3D<T,Lattice>& getBlock() =0;
-  virtual BlockLatticeStructure3D<T,Lattice> const& getBlock() const =0;
-
   /// adds a pressure or velocity boundary for one material and a range (x0-x1, y0-y1, z0-z1) or the whole geometry
   virtual void addVelocityBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int material, int x0, int x1, int y0, int y1, int z0, int z1, T omega) =0;
   virtual void addVelocityBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int material, T omega) =0;
@@ -125,27 +120,11 @@ public:
 
 ////////// Factory functions //////////////////////////////////////////////////
 
-template<typename T, template<typename U> class Lattice, typename MixinDynamics>
-OnLatticeBoundaryCondition3D<T,Lattice>*
-createLocalBoundaryCondition3D(BlockLatticeStructure3D<T,Lattice>& block);
+template<typename T, template<typename U> class Lattice, typename MixinDynamics=RLBdynamics<T,Lattice>>
+OnLatticeBoundaryCondition3D<T,Lattice>* createLocalBoundaryCondition3D(BlockLatticeStructure3D<T,Lattice>& block);
 
-template<typename T, template<typename U> class Lattice, typename MixinDynamics>
-OnLatticeBoundaryCondition3D<T,Lattice>*
-createInterpBoundaryCondition3D(BlockLatticeStructure3D<T,Lattice>& block);
-
-template<typename T, template<typename U> class Lattice>
-OnLatticeBoundaryCondition3D<T,Lattice>*
-createLocalBoundaryCondition3D(BlockLatticeStructure3D<T,Lattice>& block)
-{
-  return createLocalBoundaryCondition3D<T,Lattice,RLBdynamics<T,Lattice> >(block);
-}
-
-template<typename T, template<typename U> class Lattice>
-OnLatticeBoundaryCondition3D<T,Lattice>*
-createInterpBoundaryCondition3D(BlockLatticeStructure3D<T,Lattice>& block)
-{
-  return createInterpBoundaryCondition3D<T,Lattice,BGKdynamics<T,Lattice> >(block);
-}
+template<typename T, template<typename U> class Lattice, typename MixinDynamics=BGKdynamics<T,Lattice>>
+OnLatticeBoundaryCondition3D<T,Lattice>* createInterpBoundaryCondition3D(BlockLatticeStructure3D<T,Lattice>& block);
 
 }
 

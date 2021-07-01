@@ -22,7 +22,7 @@
 */
 
 /** \file
- * Efficient 2D specializations for lbHelpers2D.h
+ * Efficient 2D specializations for lbHelpersD2Q9.h
  */
 #ifndef FIRST_ORDER_LB_HELPERS_2D_H
 #define FIRST_ORDER_LB_HELPERS_2D_H

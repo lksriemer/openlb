@@ -43,7 +43,4 @@ template void createBouzidiBoundaryCondition3D
 <double,descriptors::D3Q19Descriptor,
  BGKdynamics<double,descriptors::D3Q19Descriptor> >
 (sOffLatticeBoundaryCondition3D<double,descriptors::D3Q19Descriptor>& sBC);
-template void createBouzidiBoundaryCondition3D
-<double,descriptors::D3Q19Descriptor>
-(sOffLatticeBoundaryCondition3D<double,descriptors::D3Q19Descriptor>& sBC);
 }

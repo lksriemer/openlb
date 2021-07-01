@@ -42,17 +42,17 @@ template<typename T, template<typename U> class Lattice, int direction, int orie
 class StraightFdBoundaryProcessor2D : public LocalPostProcessor2D<T,Lattice> {
 public:
   StraightFdBoundaryProcessor2D(int x0_, int x1_, int y0_, int y1_);
-  virtual int extent() const
+  int extent() const override
   {
     return 1;
   }
-  virtual int extent(int whichDirection) const
+  int extent(int whichDirection) const override
   {
     return 1;
   }
-  virtual void process(BlockLattice2D<T,Lattice>& blockLattice);
-  virtual void processSubDomain ( BlockLattice2D<T,Lattice>& blockLattice,
-                                  int x0_, int x1_, int y0_, int y1_ );
+  void process(BlockLattice2D<T,Lattice>& blockLattice) override;
+  void processSubDomain ( BlockLattice2D<T,Lattice>& blockLattice,
+                                  int x0_, int x1_, int y0_, int y1_ ) override;
 private:
   template<int deriveDirection>
   void interpolateGradients (
@@ -66,8 +66,8 @@ template<typename T, template<typename U> class Lattice, int direction, int orie
 class StraightFdBoundaryProcessorGenerator2D : public PostProcessorGenerator2D<T,Lattice> {
 public:
   StraightFdBoundaryProcessorGenerator2D(int x0_, int x1_, int y0_, int y1_);
-  virtual PostProcessor2D<T,Lattice>* generate() const;
-  virtual PostProcessorGenerator2D<T,Lattice>*  clone() const;
+  PostProcessor2D<T,Lattice>* generate() const override;
+  PostProcessorGenerator2D<T,Lattice>*  clone() const override;
 };
 
 /**
@@ -77,18 +77,18 @@ template<typename T, template<typename U> class Lattice, int direction, int orie
 class StraightConvectionBoundaryProcessor2D : public LocalPostProcessor2D<T,Lattice> {
 public:
   StraightConvectionBoundaryProcessor2D(int x0_, int x1_, int y0_, int y1_, T* uAv_ = NULL);
-  ~StraightConvectionBoundaryProcessor2D();
-  virtual int extent() const
+  ~StraightConvectionBoundaryProcessor2D() override;
+  int extent() const override
   {
     return 1;
   }
-  virtual int extent(int whichDirection) const
+  int extent(int whichDirection) const override
   {
     return 1;
   }
-  virtual void process(BlockLattice2D<T,Lattice>& blockLattice);
-  virtual void processSubDomain ( BlockLattice2D<T,Lattice>& blockLattice,
-                                  int x0_, int x1_, int y0_, int y1_ );
+  void process(BlockLattice2D<T,Lattice>& blockLattice) override;
+  void processSubDomain ( BlockLattice2D<T,Lattice>& blockLattice,
+                                  int x0_, int x1_, int y0_, int y1_ ) override;
 private:
   int x0, x1, y0, y1;
   T*** saveCell;
@@ -99,8 +99,8 @@ template<typename T, template<typename U> class Lattice, int direction, int orie
 class StraightConvectionBoundaryProcessorGenerator2D : public PostProcessorGenerator2D<T,Lattice> {
 public:
   StraightConvectionBoundaryProcessorGenerator2D(int x0_, int x1_, int y0_, int y1_, T* uAv_ = NULL);
-  virtual PostProcessor2D<T,Lattice>* generate() const;
-  virtual PostProcessorGenerator2D<T,Lattice>*  clone() const;
+  PostProcessor2D<T,Lattice>* generate() const override;
+  PostProcessorGenerator2D<T,Lattice>*  clone() const override;
 private:
   T* uAv;
 };
@@ -113,20 +113,19 @@ template<typename T, template<typename U> class Lattice>
 class SlipBoundaryProcessor2D : public LocalPostProcessor2D<T,Lattice> {
 public:
   SlipBoundaryProcessor2D(int x0_, int x1_, int y0_, int y1_, int discreteNormalX_, int discreteNormalY_);
-  virtual int extent() const
+  int extent() const override
   {
     return 0;
   }
-  virtual int extent(int whichDirection) const
+  int extent(int whichDirection) const override
   {
     return 0;
   }
-  virtual void process(BlockLattice2D<T,Lattice>& blockLattice);
-  virtual void processSubDomain ( BlockLattice2D<T,Lattice>& blockLattice,
-                                  int x0_, int x1_, int y0_, int y1_ );
+  void process(BlockLattice2D<T,Lattice>& blockLattice) override;
+  void processSubDomain ( BlockLattice2D<T,Lattice>& blockLattice,
+                                  int x0_, int x1_, int y0_, int y1_ ) override;
 private:
   int reflectionPop[Lattice<T>::q];
-  int reflectionPop2[Lattice<T>::q];
   int x0, x1, y0, y1;
 };
 
@@ -135,8 +134,8 @@ template<typename T, template<typename U> class Lattice>
 class SlipBoundaryProcessorGenerator2D : public PostProcessorGenerator2D<T,Lattice> {
 public:
   SlipBoundaryProcessorGenerator2D(int x0_, int x1_, int y0_, int y1_, int discreteNormalX_, int discreteNormalY_);
-  virtual PostProcessor2D<T,Lattice>* generate() const;
-  virtual PostProcessorGenerator2D<T,Lattice>*  clone() const;
+  PostProcessor2D<T,Lattice>* generate() const override;
+  PostProcessorGenerator2D<T,Lattice>*  clone() const override;
 private:
   int discreteNormalX;
   int discreteNormalY;
@@ -151,17 +150,17 @@ template<typename T, template<typename U> class Lattice, int xNormal,int yNormal
 class OuterVelocityCornerProcessor2D : public LocalPostProcessor2D<T, Lattice> {
 public:
   OuterVelocityCornerProcessor2D(int x_, int y_);
-  virtual int extent() const
+  int extent() const override
   {
     return 2;
   }
-  virtual int extent(int whichDirection) const
+  int extent(int whichDirection) const override
   {
     return 2;
   }
-  virtual void process(BlockLattice2D<T,Lattice>& blockLattice);
-  virtual void processSubDomain(BlockLattice2D<T,Lattice>& blockLattice,
-                                int x0_,int x1_,int y0_,int y1_ );
+  void process(BlockLattice2D<T,Lattice>& blockLattice) override;
+  void processSubDomain(BlockLattice2D<T,Lattice>& blockLattice,
+                                int x0_,int x1_,int y0_,int y1_ ) override;
 private:
   int x, y;
 };
@@ -170,8 +169,8 @@ template<typename T, template<typename U> class Lattice, int xNormal,int yNormal
 class OuterVelocityCornerProcessorGenerator2D : public PostProcessorGenerator2D<T, Lattice> {
 public:
   OuterVelocityCornerProcessorGenerator2D(int x_, int y_);
-  virtual PostProcessor2D<T,Lattice>* generate() const;
-  virtual PostProcessorGenerator2D<T,Lattice>*  clone() const;
+  PostProcessor2D<T,Lattice>* generate() const override;
+  PostProcessorGenerator2D<T,Lattice>*  clone() const override;
 };
 
 }

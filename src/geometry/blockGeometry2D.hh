@@ -31,8 +31,6 @@
 
 #include "geometry/blockGeometry2D.h"
 
-
-
 namespace olb {
 
 template<typename T>
@@ -86,7 +84,7 @@ BlockGeometryStatistics2D<T> const& BlockGeometry2D<T>::getStatistics(bool verbo
 }
 
 template<typename T>
-std::vector<T> const BlockGeometry2D<T>::getOrigin() const
+Vector<T,2> BlockGeometry2D<T>::getOrigin() const
 {
   return _cuboid.getOrigin();
 }
@@ -114,13 +112,13 @@ template<typename T>
 int& BlockGeometry2D<T>::get(int iX, int iY)
 {
   resetStatistics();
-  return this->_field[iX][iY][0];
+  return BlockData2D<T,int>::get(iX,iY);
 }
 
 template<typename T>
 int const& BlockGeometry2D<T>::get(int iX, int iY) const
 {
-  return this->_field[iX][iY][0];
+  return BlockData2D<T,int>::get(iX,iY);
 }
 
 template<typename T>
@@ -130,7 +128,7 @@ int BlockGeometry2D<T>::getMaterial(int iX, int iY) const
   if (iX < 0 || iX + 1 > getNx() || iY < 0 || iY + 1 > getNy() ) {
     material = 0;
   } else {
-    material = this->_field[iX][iY][0];
+    material = BlockData2D<T,int>::get(iX,iY);
   }
   return material;
 }

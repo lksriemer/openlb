@@ -85,16 +85,9 @@ public:
 * Create specific off lattice boundary conditions
 */
 
-template<typename T, template<typename U> class Lattice, typename MixinDynamics>
+template<typename T, template<typename U> class Lattice, typename MixinDynamics=BGKdynamics<T,Lattice> >
 OffLatticeBoundaryCondition3D<T,Lattice>*
 createBouzidiBoundaryCondition3D(BlockLatticeStructure3D<T,Lattice>& block);
-
-template<typename T, template<typename U> class Lattice>
-OffLatticeBoundaryCondition3D<T,Lattice>*
-createBouzidiBoundaryCondition3D(BlockLatticeStructure3D<T,Lattice>& block)
-{
-  return createBouzidiBoundaryCondition3D<T,Lattice,BGKdynamics<T,Lattice> >(block);
-}
 
 }
 

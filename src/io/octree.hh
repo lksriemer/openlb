@@ -121,7 +121,7 @@ Octree<T>::~Octree()
 template <typename T>
 void Octree<T>::findTriangles(T overlap)
 {
-  if (_parent == NULL) {
+  if (_parent == nullptr) {
     _triangles.reserve(_mesh->triangleSize());
     for (unsigned int i=0; i<_mesh->triangleSize(); ++i) {
       if (AABBTri(_mesh->getTri(i))) {
@@ -275,7 +275,7 @@ Octree<T>* Octree<T>::find(const Vector<T,3>& pt,const int& maxDepth)
       clout << "Center: " << std::setprecision(10) << _center[0] << " " << _center[1] << " " << _center[2] << " " << std::endl;
       clout << "Radius: "  << std::setprecision(10)<< _radius << std::endl;
       //throw std::runtime_error("[Octree->find] Point outside of geometry.");
-      return NULL;
+      return nullptr;
     }
   } else {
     if (pt[0] < _center[0]) {
@@ -378,7 +378,7 @@ void Octree<T>::checkRay(const Vector<T,3>& pt,const Vector<T,3>& dir, unsigned 
     if (_mesh->getTri(_triangles[k]).testRayIntersect(pt, dirNormed, q, a, 0.) && a<1.) {
       bool newpoint=true;
       for (unsigned int i=0; i<qs.size(); i++) {
-        newpoint &= ( !util::nearZero(q[0]-qs[i][0]) || !util::nearZero((q[1]-qs[i][1]) || !util::nearZero(q[2]-qs[i][2])) );
+        newpoint &= ( !util::nearZero(q[0]-qs[i][0]) || !util::nearZero(q[1]-qs[i][1]) || !util::nearZero(q[2]-qs[i][2]) );
       }
       if (newpoint) {
         qs.push_back(q);

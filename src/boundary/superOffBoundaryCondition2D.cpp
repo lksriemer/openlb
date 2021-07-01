@@ -44,10 +44,6 @@ template void createBouzidiBoundaryCondition2D
  BGKdynamics<double,descriptors::D2Q9Descriptor> >
 (sOffLatticeBoundaryCondition2D<double,descriptors::D2Q9Descriptor>& sBC);
 
-template void createBouzidiBoundaryCondition2D
-<double,descriptors::D2Q9Descriptor>
-(sOffLatticeBoundaryCondition2D<double,descriptors::D2Q9Descriptor>& sBC);
-
 
 template void createBounceBackBoundaryCondition2D
 <double,descriptors::D2Q9Descriptor>

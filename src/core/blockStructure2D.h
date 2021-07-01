@@ -30,11 +30,10 @@
 
 namespace olb {
 
-/** An empty hull with left bottom corner at (0,0,0).
+/** An empty hull with left bottom corner at (0,0).
  *
  * \param _nx extension in x direction
  * \param _ny extension in y direction
- * \param _nz extension in z direction
  *
  */
 class BlockStructure2D {
@@ -46,16 +45,15 @@ protected:
 public:
   BlockStructure2D(int nx, int ny) : _nx(nx), _ny(ny) {};
   /// Read only access to block width
-  virtual int getNx() const
+  int getNx() const
   {
     return _nx;
   };
   /// Read only access to block height
-  virtual int getNy() const
+  int getNy() const
   {
     return _ny;
   };
-  virtual ~BlockStructure2D() { }
 };
 
 }  // namespace olb

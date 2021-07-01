@@ -42,8 +42,8 @@ template <typename T>
 class LinearFunction : public ScalarFunction<T> {
 public:
   LinearFunction(T x1_, T x2_, T y1_, T y2_);
-  virtual T operator() (T x) const;
-  virtual LinearFunction<T>* clone() const;
+  T operator() (T x) const override;
+  LinearFunction<T>* clone() const override;
 private:
   T x1, x2, y1, y2;
 };
@@ -52,8 +52,8 @@ template <typename T>
 class PowerLawFunction : public ScalarFunction<T> {
 public:
   PowerLawFunction(T x1_, T x2_, T y1_, T y2_, T b_);
-  virtual T operator() (T x) const;
-  virtual PowerLawFunction<T>* clone() const;
+  T operator() (T x) const override;
+  PowerLawFunction<T>* clone() const override;
 private:
   T x1, x2, y1, y2;
   T b;
@@ -71,13 +71,13 @@ template <typename T>
 class PiecewiseFunction : public ScalarFunction<T> {
 public:
   PiecewiseFunction() { }
-  ~PiecewiseFunction();
+  ~PiecewiseFunction() override;
   PiecewiseFunction(PiecewiseFunction<T> const& rhs);
   PiecewiseFunction<T>& operator=(PiecewiseFunction<T> const& rhs);
   void swap(PiecewiseFunction<T>& rhs);
   void addPiece(Piece<T> piece, ScalarFunction<T>* f);
-  virtual T operator() (T x) const;
-  virtual PiecewiseFunction<T>* clone() const;
+  T operator() (T x) const override;
+  PiecewiseFunction<T>* clone() const override;
 private:
   std::vector<Piece<T> > pieces;
   std::vector<ScalarFunction<T>*> functions;

@@ -71,7 +71,7 @@ template <typename T> struct ShearSmagorinskyD3Q19Descriptor
 /////////////////////////////////////////////////////////////////////////////////
 // 3D Descriptors for flow with Forced Shear-Improved Smagorinsky
 
-struct ForcedShearSmagorinsky3dDescriptor {
+struct ShearSmagorinskyForced3dDescriptor {
   static const int numScalars = 4;
   static const int numSpecies = 2;
   static const int avShearIsAt = 0;
@@ -80,12 +80,12 @@ struct ForcedShearSmagorinsky3dDescriptor {
   static const int sizeOfForce      = 3;
 };
 
-struct ForcedShearSmagorinsky3dDescriptorBase {
-  typedef ForcedShearSmagorinsky3dDescriptor ExternalField;
+struct ShearSmagorinskyForced3dDescriptorBase {
+  typedef ShearSmagorinskyForced3dDescriptor ExternalField;
 };
 
-template <typename T> struct ForcedShearSmagorinskyD3Q19Descriptor
-  : public D3Q19DescriptorBase<T>, public ForcedShearSmagorinsky3dDescriptorBase {
+template <typename T> struct ShearSmagorinskyForcedD3Q19Descriptor
+  : public D3Q19DescriptorBase<T>, public ShearSmagorinskyForced3dDescriptorBase {
 };
 
 /////////////////////////////////////////////////////////////////////////////////
@@ -108,6 +108,88 @@ struct ForcedShearWallSmagorinsky3dDescriptorBase {
 
 template <typename T> struct ForcedShearWallSmagorinskyD3Q19Descriptor
   : public D3Q19DescriptorBase<T>, public ForcedShearWallSmagorinsky3dDescriptorBase {
+};
+
+/////////////////////////////////////////////////////////////////////////////////
+// 3D Descriptors for flow with Shear-Improved Kalman Finitie Difference Smagorinsky
+
+struct FDKalmanShearSmagorinsky3dDescriptor {
+  static const int numScalars = 23;
+  static const int numSpecies = 4;
+  static const int ErrorCovarianceIsAt = 0;
+  static const int sizeOfErrorCovariance = 1;
+  static const int VarianceIsAt = 1;
+  static const int sizeOfVariance = 1;
+  static const int velocityIsAt = 2;
+  static const int sizeOfVelocity = 3;
+  static const int FilteredvelGradIsAt = 5;
+  static const int sizeOfFilteredVelGrad = 9;
+  static const int velGradIsAt = 14;
+  static const int sizeOfVelGrad = 9;
+};
+
+struct FDKalmanShearSmagorinsky3dDescriptorBase {
+  typedef FDKalmanShearSmagorinsky3dDescriptor ExternalField;
+};
+
+template <typename T> struct FDKalmanShearSmagorinskyD3Q19Descriptor
+  : public D3Q19DescriptorBase<T>, public FDKalmanShearSmagorinsky3dDescriptorBase {
+};
+
+/////////////////////////////////////////////////////////////////////////////////
+// 3D Descriptors for flow with Shear-Improved Kalman Finitie Difference Smagorinsky
+
+struct FDKalmanShearSmagorinskyForced3dDescriptor {
+  static const int numScalars = 26;
+  static const int numSpecies = 5;
+  static const int ErrorCovarianceIsAt = 0;
+  static const int sizeOfErrorCovariance = 1;
+  static const int VarianceIsAt = 1;
+  static const int sizeOfVariance = 1;
+  static const int velocityIsAt = 2;
+  static const int sizeOfVelocity = 3;
+  static const int FilteredvelGradIsAt = 5;
+  static const int sizeOfFilteredVelGrad = 9;
+  static const int velGradIsAt = 14;
+  static const int sizeOfVelGrad = 9;
+  static const int forceBeginsAt    = 23;
+  static const int sizeOfForce      = 3;
+};
+
+struct FDKalmanShearSmagorinskyForced3dDescriptorBase {
+  typedef FDKalmanShearSmagorinskyForced3dDescriptor ExternalField;
+};
+
+template <typename T> struct FDKalmanShearSmagorinskyForcedD3Q19Descriptor
+  : public D3Q19DescriptorBase<T>, public FDKalmanShearSmagorinskyForced3dDescriptorBase {
+};
+
+////////////////////////////////////////////////////
+// Kalman filter : Adaptive exponential smoothing //
+////////////////////////////////////////////////////
+// 3D Descriptors for flow with Shear-Improved Smagorinsky - Kalman Filter
+// Boudet et al. (2016) A Kalman filter adapted of the estimation of mean gradients
+//   in the a large-eddy simulation of unsteady turbulent flows.
+
+struct KalmanShearSmagorinsky3dDescriptor {
+  static const int numScalars = 22;
+  static const int numSpecies = 4;
+  static const int ErrorCovarianceIsAt = 1;
+  static const int sizeOfErrorCovariance = 1;
+  static const int VarianceIsAt = 2;
+  static const int sizeOfVariance = 1;
+  static const int TauSgsIsAt = 3;
+  static const int sizeOfTauSgs = 1;
+  static const int FilteredPopulationIsAt = 4;
+  static const int sizeOfFilteredPopulation = 19;
+};
+
+struct KalmanShearSmagorinsky3dDescriptorBase {
+  typedef KalmanShearSmagorinsky3dDescriptor ExternalField;
+};
+
+template <typename T> struct KalmanShearSmagorinskyD3Q19Descriptor
+  : public D3Q19DescriptorBase<T>, public KalmanShearSmagorinsky3dDescriptorBase {
 };
 
 

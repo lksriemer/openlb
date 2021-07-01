@@ -89,8 +89,6 @@ void BlockLatticeView2D<T,Lattice>::swap (
 template<typename T, template<typename U> class Lattice>
 Cell<T,Lattice>& BlockLatticeView2D<T,Lattice>::get(int iX, int iY)
 {
-  OLB_PRECONDITION(iX<this->_nx);
-  OLB_PRECONDITION(iY<this->_ny);
   return originalLattice->get(iX+x0, iY+y0);
 }
 
@@ -98,8 +96,6 @@ template<typename T, template<typename U> class Lattice>
 Cell<T,Lattice> const& BlockLatticeView2D<T,Lattice>::get (
   int iX, int iY ) const
 {
-  OLB_PRECONDITION(iX<this->_nx);
-  OLB_PRECONDITION(iY<this->_ny);
   return originalLattice->get(iX+x0, iY+y0);
 }
 
@@ -128,13 +124,10 @@ void BlockLatticeView2D<T,Lattice>::defineDynamics (
 }
 
 template<typename T, template<typename U> class Lattice>
-void BlockLatticeView2D<T,Lattice>::specifyStatisticsStatus (
-  int x0_, int x1_, int y0_, int y1_, bool status )
+Dynamics<T,Lattice>* BlockLatticeView2D<T,Lattice>::getDynamics (
+  int iX, int iY)
 {
-  originalLattice->specifyStatisticsStatus(
-    x0_+x0, x1_+x0,
-    y0_+y0, y1_+y0,
-    status );
+  return originalLattice->getDynamics( iX+x0, iY+y0 );
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -208,6 +201,12 @@ template<typename T, template<typename U> class Lattice>
 T BlockLatticeView2D<T,Lattice>::computeAverageDensity() const
 {
   return originalLattice->computeAverageDensity( x0, x0+this->_nx-1, y0, y0+this->_ny-1);
+}
+
+template<typename T, template<typename U> class Lattice>
+void BlockLatticeView2D<T,Lattice>::computeStress(int iX, int iY, T pi[util::TensorVal<Lattice<T> >::n])
+{
+    originalLattice->computeStress( iX + x0, iY + y0, pi);
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -307,26 +306,6 @@ template<typename T, template<typename U> class Lattice>
 LatticeStatistics<T> const& BlockLatticeView2D<T,Lattice>::getStatistics() const
 {
   return originalLattice->getStatistics();
-}
-
-template<typename T, template<typename U> class Lattice>
-SpatiallyExtendedObject2D* BlockLatticeView2D<T,Lattice>::getComponent(int iBlock)
-{
-  OLB_PRECONDITION( iBlock==0 );
-  return this;
-}
-
-template<typename T, template<typename U> class Lattice>
-SpatiallyExtendedObject2D const* BlockLatticeView2D<T,Lattice>::getComponent(int iBlock) const
-{
-  OLB_PRECONDITION( iBlock==0 );
-  return this;
-}
-
-template<typename T, template<typename U> class Lattice>
-multiPhysics::MultiPhysicsId BlockLatticeView2D<T,Lattice>::getMultiPhysicsId() const
-{
-  return multiPhysics::getMultiPhysicsBlockId<T,Lattice>();
 }
 
 }  // namespace olb

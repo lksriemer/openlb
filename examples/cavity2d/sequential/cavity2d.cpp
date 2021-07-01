@@ -47,14 +47,14 @@ using namespace std;
 typedef double T;
 #define DESCRIPTOR D2Q9Descriptor
 
-void prepareLattice( LBconverter<T> const* converter,
+void prepareLattice( UnitConverter<T,DESCRIPTOR> const& converter,
                      BlockLatticeStructure2D<T,DESCRIPTOR>& lattice,
                      Dynamics<T, DESCRIPTOR>& bulkDynamics,
                      OnLatticeBoundaryCondition2D<T,DESCRIPTOR>& bc ) {
 
   const int nx = lattice.getNx();
   const int ny = lattice.getNy();
-  const T omega = converter->getOmega();
+  const T omega = converter.getLatticeRelaxationFrequency();
 
   // link lattice with dynamics for collision step
   lattice.defineDynamics( 0,nx-1, 0,ny-1, &bulkDynamics );
@@ -75,7 +75,7 @@ void prepareLattice( LBconverter<T> const* converter,
   bc.addExternalVelocityCornerPP( nx-1,ny-1, omega );
 }
 
-void setBoundaryValues( LBconverter<T> const* converter,
+void setBoundaryValues( UnitConverter<T,DESCRIPTOR> const& converter,
                         BlockLatticeStructure2D<T,DESCRIPTOR>& lattice, int iT ) {
 
   if ( iT==0 ) {
@@ -94,7 +94,7 @@ void setBoundaryValues( LBconverter<T> const* converter,
 
     // set non-zero velocity for upper boundary cells
     for ( int iX=1; iX<nx-1; ++iX ) {
-      T u = converter->getLatticeU();
+      T u = converter.getCharLatticeVelocity();
       T vel[] = { u, T() };
       lattice.get( iX,ny-1 ).defineRhoU( ( T )1, vel );
       lattice.get( iX,ny-1 ).iniEquilibrium( ( T )1, vel );
@@ -106,27 +106,29 @@ void setBoundaryValues( LBconverter<T> const* converter,
 }
 
 void getResults( BlockLatticeStructure2D<T,DESCRIPTOR>& lattice,
-                 LBconverter<T> const* converter, int iT, Timer<T>* timer,
+                 UnitConverter<T,DESCRIPTOR> const& converter, int iT, Timer<T>* timer,
                  const T logT, const T imSave, const T vtkSave,
                  std::string filenameGif, std::string filenameVtk,
                  const int timerPrintMode, const int timerTimeSteps, bool converged ) {
+
   // Get statistics
-  if ( iT%converter->numTimeSteps( logT )==0 || converged ) {
-    lattice.getStatistics().print( iT, converter->physTime( iT ) );
+  if ( iT%converter.getLatticeTime( logT )==0 || converged ) {
+    lattice.getStatistics().print( iT, converter.getPhysTime( iT ) );
   }
 
-  if ( iT%timerTimeSteps==0 || converged ) {
+//  if ( iT%timerTimeSteps==0 || converged ) {
+  if ( iT%timerTimeSteps==0 ) {
     timer->print( iT,timerPrintMode );
   }
 
   BlockVTKwriter2D<T> vtkWriter( filenameVtk );
-  BlockLatticePhysVelocity2D<T,DESCRIPTOR> velocity( lattice,*converter );
-  BlockLatticePhysPressure2D<T,DESCRIPTOR> pressure( lattice,*converter );
+  BlockLatticePhysVelocity2D<T,DESCRIPTOR> velocity( lattice,converter );
+  BlockLatticePhysPressure2D<T,DESCRIPTOR> pressure( lattice,converter );
   vtkWriter.addFunctor( velocity );
   vtkWriter.addFunctor( pressure );
 
   // Writes the Gif files
-  if ( ( iT%converter->numTimeSteps( imSave )==0 && iT>0 ) || converged ) {
+  if ( ( iT%converter.getLatticeTime( imSave )==0 && iT>0 ) || converged ) {
     BlockEuklidNorm2D<T,DESCRIPTOR> normVel( velocity );
     BlockGifWriter<T> gifWriter;
     gifWriter.write( normVel, 0, 3, iT, filenameVtk );
@@ -134,7 +136,7 @@ void getResults( BlockLatticeStructure2D<T,DESCRIPTOR>& lattice,
   }
 
   // Writes the VTK files
-  if ( ( iT%converter->numTimeSteps( vtkSave )==0 && iT>0 ) || converged ) {
+  if ( ( iT%converter.getLatticeTime( vtkSave )==0 && iT>0 ) || converged ) {
     vtkWriter.write( iT );
   }
 }
@@ -149,71 +151,74 @@ int main( int argc, char* argv[] ) {
   string fName( "cavity2d.xml" );
   XMLreader config( fName );
 
-  std::string olbdir = config["Application"]["OlbDir"].get<std::string>();
-  std::string outputdir = config["Output"]["OutputDir"].get<std::string>();
+  std::string olbdir = "../../";  //config["Application"]["OlbDir"].get<std::string>();
+  std::string outputdir = "./tmp/"; //config["Output"]["OutputDir"].get<std::string>();
   singleton::directories().setOlbDir( olbdir );
   singleton::directories().setOutputDir( outputdir );
 
   // call creator functions using xml data
-  LBconverter<T>* converter = createLBconverter<T>( config );
+  UnitConverter<T,DESCRIPTOR>* converter = createUnitConverter<T,DESCRIPTOR>( config );
+  // Prints the converter log as console output
   converter->print();
-  writeLogFile( *converter, config["Output"]["Log"]["Filename"].get<std::string>() );
+  // Writes the converter log in a file
+  converter->write("cavity2d");
 
-  int N = converter->numNodes();
+  int N = converter->getLatticeLength(1) + 1; // number of voxels in x,y,z direction
   Timer<T>* timer = createTimer<T>( config, *converter, N*N );
 
   // === 3rd Step: Prepare Lattice ===
-  T logT = config["Output"]["Log"]["SaveTime"].get<T>();
-  T imSave = config["Output"]["VisualizationImages"]["SaveTime"].get<T>();
-  T vtkSave = config["Output"]["VisualizationVTK"]["SaveTime"].get<T>();
-  T maxPhysT = config["Application"]["PhysParam"]["MaxTime"].get<T>();
-  int timerSkipType = config["Output"]["Timer"]["SkipType"].get<T>();
-  int timerPrintMode = config["Output"]["Timer"]["PrintMode"].get<int>();
+  T logT = 0.1;   //config["Output"]["Log"]["SaveTime"].get<T>();
+  T imSave = 1;   //config["Output"]["VisualizationImages"]["SaveTime"].get<T>();
+  T vtkSave = 1;  //config["Output"]["VisualizationVTK"]["SaveTime"].get<T>();
+  T maxPhysT = 100; //config["Application"]["PhysParam"]["MaxTime"].get<T>();
+  int timerSkipType = 0;  //config["Output"]["Timer"]["SkipType"].get<T>();
+  int timerPrintMode = 0; //config["Output"]["Timer"]["PrintMode"].get<int>();
   int timerTimeSteps = 1;
 
   if ( timerSkipType == 0 ) {
-    timerTimeSteps=converter->numTimeSteps( config["Output"]["Timer"]["PhysTime"].get<T>() );
-  } else {
-    config["Output"]["Timer"]["TimeSteps"].read( timerTimeSteps );
+    timerTimeSteps = converter->getLatticeTime( .1 );
   }
+//  else {
+//    config["Output"]["Timer"]["TimeSteps"].read( timerTimeSteps );
+//  }
 
-  std::string filenameGif = config["Output"]["VisualizationImages"]["Filename"].get<std::string>();
-  std::string filenameVtk = config["Output"]["VisualizationVTK"]["Filename"].get<std::string>();
+
+  std::string filenameGif = "cavity2dimage";  //config["Output"]["VisualizationImages"]["Filename"].get<std::string>();
+  std::string filenameVtk = "cavity2dvtk";    //config["Output"]["VisualizationVTK"]["Filename"].get<std::string>();
 
   BlockLattice2D<T, DESCRIPTOR> lattice( N, N );
 
   ConstRhoBGKdynamics<T, DESCRIPTOR> bulkDynamics (
-    converter->getOmega(),
+    converter->getLatticeRelaxationFrequency(),
     instances::getBulkMomenta<T,DESCRIPTOR>()
   );
 
   OnLatticeBoundaryCondition2D<T,DESCRIPTOR>*
   boundaryCondition = createInterpBoundaryCondition2D<T,DESCRIPTOR,ConstRhoBGKdynamics<T,DESCRIPTOR> >( lattice );
 
-  prepareLattice( converter, lattice, bulkDynamics, *boundaryCondition );
+  prepareLattice( *converter, lattice, bulkDynamics, *boundaryCondition );
 
   // === 4th Step: Main Loop with Timer ===
 
-  T interval = converter->numTimeSteps( config["Application"]["ConvergenceCheck"]["interval"].get<T>() );
-  T epsilon = config["Application"]["ConvergenceCheck"]["residuum"].get<T>();
+  int interval = converter->getLatticeTime( 1 /*config["Application"]["ConvergenceCheck"]["interval"].get<T>()*/ );
+  T epsilon = 1e-3; //config["Application"]["ConvergenceCheck"]["residuum"].get<T>();
   util::ValueTracer<T> converge( interval, epsilon );
 
   timer->start();
-  for ( int iT=0; iT <= converter->numTimeSteps( maxPhysT ); ++iT ) {
-
+  for ( int iT=0; iT <= converter->getLatticeTime( maxPhysT ); ++iT ) {
     if ( converge.hasConverged() ) {
       clout << "Simulation converged." << endl;
-      getResults( lattice, converter, iT, timer, logT, imSave, vtkSave, filenameGif, filenameVtk, timerPrintMode, timerTimeSteps, converge.hasConverged() );
+      getResults( lattice, *converter, iT, timer, logT, imSave, vtkSave, filenameGif, filenameVtk, timerPrintMode, timerTimeSteps, converge.hasConverged() );
 
       break;
     }
 
     // === 5th Step: Definition of Initial and Boundary Conditions ===
-    setBoundaryValues( converter, lattice, iT );
+    setBoundaryValues( *converter, lattice, iT );
     // === 6th Step: Collide and Stream Execution ===
     lattice.collideAndStream();
     // === 7th Step: Computation and Output of the Results ===
-    getResults( lattice, converter, iT, timer, logT, imSave, vtkSave, filenameGif, filenameVtk, timerPrintMode, timerTimeSteps, converge.hasConverged() );
+    getResults( lattice, *converter, iT, timer, logT, imSave, vtkSave, filenameGif, filenameVtk, timerPrintMode, timerTimeSteps, converge.hasConverged() );
     converge.takeValue( lattice.getStatistics().getAverageEnergy(), true );
   }
 

@@ -32,28 +32,13 @@ namespace olb {
 namespace util {
 
 template<typename T>
-Timer<T>::Timer()
-  : clout(std::cout,"Timer")
+Timer<T>::Timer(int maxTimeSteps, size_t numFluidCells)
+  : clout(std::cout,"Timer"),
+    deltaTS(0), curTS(0), maxTS(maxTimeSteps),
+    numFC(numFluidCells), rtRemMs(1) // avoids some stupid numbers in first call of printStep() (not for T=double)
+
 {
   tp = nullptr;
-}
-
-template<typename T>
-Timer<T>::Timer(int maxTimeSteps, int numFluidCells, bool *p, int size_p)
-  : clout(std::cout,"Timer")
-{
-  tp = nullptr;
-  initialize(maxTimeSteps, numFluidCells, p, size_p);
-}
-
-template<typename T>
-void Timer<T>::initialize(int maxTimeSteps, int numFluidCells, bool *p, int size_p)
-{
-  deltaTS=0;
-  curTS=0;
-  rtRemMs=1; // avoids some stupid numbers in first call of printStep() (not for T=double)
-  maxTS = maxTimeSteps;
-  numFC = numFluidCells;
 }
 
 template<typename T>
@@ -62,7 +47,7 @@ T Timer<T>::timevalDiffTimeMs(timeval end, timeval start)
   T msDiff;
   msDiff = 1000*(end.tv_sec - start.tv_sec)
            +(end.tv_usec-start.tv_usec)/1000;
-  return msDiff;
+  return std::max<T>(msDiff, 1.0);
 }
 
 template<typename T>
@@ -98,8 +83,8 @@ template<typename T>
 void Timer<T>::start()
 {
   sTimeStart = time(tp);          // time in s
-  gettimeofday(&msTimeStart, 0);  // time in ms
-  gettimeofday(&msTimeCur, 0);    // time in ms, here only necessary for MLUP-calculations
+  gettimeofday(&msTimeStart, nullptr);  // time in ms
+  gettimeofday(&msTimeCur, nullptr);    // time in ms, here only necessary for MLUP-calculations
   cpuTimeStart = clock();         //cpu-time
 }
 
@@ -110,7 +95,7 @@ void Timer<T>::update(int currentTimeStep)    // Is int sufficient? Is it possib
   cpuTimeCur = clock();           // CPU-time
   sTimeCur   = time(tp);          // time in s
   msTimeLast = msTimeCur;
-  gettimeofday(&msTimeCur, 0);    // time in ms
+  gettimeofday(&msTimeCur, nullptr);    // time in ms
 
   // calculate and update missing time-values
   deltaTS = currentTimeStep - curTS;      // this makes multiple calls
@@ -135,7 +120,7 @@ void Timer<T>::stop()
 {
   cpuTimeEnd = clock();           // cpu-time
   sTimeEnd = time(tp);            // time in s
-  gettimeofday(&msTimeEnd, 0);    // time in ms
+  gettimeofday(&msTimeEnd, nullptr);    // time in ms
 }
 
 template<typename T>
@@ -243,45 +228,35 @@ void Timer<T>::printShortSummary()
 
 // Factory function /////////////////////////////////
 
-template<typename T>
-Timer<T>* createTimer(XMLreader& param, const LBconverter<T>& converter, int numLatticePoints)
+template<typename T, template<typename U> class DESCRIPTOR>
+Timer<T>* createTimer(XMLreader& param, const UnitConverter<T,DESCRIPTOR>& converter, size_t numLatticePoints)
 {
   OstreamManager clout(std::cout,"createTimer");
 
   // initialize parameters with some default values
-  int dim = 0;
   T physMaxT = T();
   T physStartT = T();
-  int numNodes = numLatticePoints;
 
   // fetch xml Data and error handling
-  if ( ! param["Application"]["PhysParam"]["MaxTime"].read(physMaxT) ) {
-    clout << "PhysMaxTime not found" << std::endl;
+  if ( ! param["Application"]["PhysParameters"]["PhysMaxTime"].read(physMaxT) ) {
+    if ( ! param["Application"]["PhysParam"]["MaxTime"].read(physStartT) ) {
+      clout << "PhysMaxTime not found" << std::endl;
+    }
+    else
+    {
+      clout << "Application::PhysParam::MaxTime needs to be renamed to Application::PhysParameters::PhysMaxTime" << std::endl;
+    }
   }
 //  if ( ! param["Application"]["PhysParam"]["MaxStartTime"].read(physStartT) ) {
 //    clout << "PhysStartTime not found" << std::endl;
 //  }
-  if ( ! param["Application"]["dim"].read(dim) ) {
-    clout << "dim not found" << std::endl;
-  }
 
   // variable processing according to the constructor
-  int maxT = converter.numTimeSteps(physMaxT) + converter.numTimeSteps(physStartT);
-  switch (dim) {
-  case 2:
-    return new Timer<T>(maxT,numNodes);
-    break;
-  case 3:
-    return new Timer<T>(maxT,numNodes);
-    break;
-  default:
-    clout << "Error: unknown dimension " << dim << std::endl;
-    break;
-  }
+  int maxT = converter.getLatticeTime(physMaxT) + converter.getLatticeTime(physStartT);
 
   //return some default values that produce reasonable output (e.g.
   // zero); in best case there should be no output at all (TODO)
-  return new Timer<T>(0,0);
+  return new Timer<T>(maxT, numLatticePoints);
 }
 
 } // namespace util

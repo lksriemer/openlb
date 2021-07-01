@@ -59,27 +59,11 @@ ChopardDynamics<T,Lattice>::ChopardDynamics (
 { }
 
 template<typename T, template<typename U> class Lattice>
-ChopardDynamics<T,Lattice>* ChopardDynamics<T,Lattice>::clone() const
-{
-  return new ChopardDynamics<T,Lattice>(*this);
-}
-
-template<typename T, template<typename U> class Lattice>
 T ChopardDynamics<T,Lattice>::computeEquilibrium
 (int iPop, T rho, const T u[Lattice<T>::d], T uSqr) const
 {
   return chopardEquilibrium(iPop, rho, u, uSqr, vs2);
 }
-
-template<typename T, template<typename U> class Lattice>
-void ChopardDynamics<T,Lattice>::iniEquilibrium(Cell<T,Lattice>& cell, T rho, const T u[Lattice<T>::d])
-{
-  T uSqr = util::normSqr<T,Lattice<T>::d>(u);
-  for (int iPop=0; iPop<Lattice<T>::q; ++iPop) {
-    cell[iPop] = computeEquilibrium(iPop, rho, u, uSqr);
-  }
-}
-
 
 template<typename T, template<typename U> class Lattice>
 void ChopardDynamics<T,Lattice>::collide (
@@ -89,9 +73,7 @@ void ChopardDynamics<T,Lattice>::collide (
   T rho, u[Lattice<T>::d];
   this->_momenta.computeRhoU(cell, rho, u);
   T uSqr = chopardBgkCollision(cell, rho, u, vs2, omega);
-  if (cell.takesStatistics()) {
-    statistics.incrementStats(rho, uSqr);
-  }
+  statistics.incrementStats(rho, uSqr);
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -103,9 +85,7 @@ void ChopardDynamics<T,Lattice>::staticCollide (
   T rho;
   rho = this->_momenta.computeRho(cell);
   T uSqr = chopardBgkCollision(cell, rho, u, vs2, omega);
-  if (cell.takesStatistics()) {
-    statistics.incrementStats(rho, uSqr);
-  }
+  statistics.incrementStats(rho, uSqr);
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -119,30 +99,6 @@ void ChopardDynamics<T,Lattice>::setOmega(T omega_)
 {
   omega = omega_;
 }
-
-template<typename T, template<typename U> class Lattice>
-T ChopardDynamics<T,Lattice>::getParameter(int whichParameter) const
-{
-  switch (whichParameter) {
-  case dynamicParams::omega_shear     :
-    return getOmega();
-  case dynamicParams::sqrSpeedOfSound :
-    return getVs2();
-  };
-  return 0.;
-}
-
-template<typename T, template<typename U> class Lattice>
-void ChopardDynamics<T,Lattice>::setParameter(int whichParameter, T value)
-{
-  switch (whichParameter) {
-  case dynamicParams::omega_shear     :
-    setOmega(value);
-  case dynamicParams::sqrSpeedOfSound :
-    setVs2(value);
-  };
-}
-
 
 template<typename T, template<typename U> class Lattice>
 T ChopardDynamics<T,Lattice>::getVs2() const

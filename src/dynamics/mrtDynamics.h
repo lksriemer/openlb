@@ -41,21 +41,19 @@ class MRTdynamics : public BasicDynamics<T,Lattice> {
 public:
   /// Constructor
   MRTdynamics(T omega_, Momenta<T,Lattice>& momenta_);
-  /// Clone the object on its dynamic type.
-  virtual MRTdynamics<T,Lattice>* clone() const;
   /// Compute equilibrium distribution function
-  virtual T computeEquilibrium(int iPop, T rho, const T u[Lattice<T>::d], T uSqr) const;
+  T computeEquilibrium(int iPop, T rho, const T u[Lattice<T>::d], T uSqr) const override;
   /// Collision step
-  virtual void collide(Cell<T,Lattice>& cell,
-                       LatticeStatistics<T>& statistics_);
+  void collide(Cell<T,Lattice>& cell,
+                       LatticeStatistics<T>& statistics_) override;
   /// Collide with fixed velocity
-  virtual void staticCollide(Cell<T,Lattice>& cell,
+  void staticCollide(Cell<T,Lattice>& cell,
                              const T u[Lattice<T>::d],
-                             LatticeStatistics<T>& statistics_);
+                             LatticeStatistics<T>& statistics_) override;
   /// Get local relaxation parameter of the dynamics
-  virtual T getOmega() const;
+  T getOmega() const override;
   /// Set local relaxation parameter of the dynamics
-  virtual void setOmega(T omega_);
+  void setOmega(T omega_) override;
   /// Get local relaxation parameter of the dynamics
   T getLambda() const;
   /// Set local relaxation parameter of the dynamics

@@ -93,11 +93,11 @@ public:
   virtual BaseType const& get(int iC, int iX, int iY, int iData=0) const;
 
   /// Write access to the memory of the data of the super structure where (iX, iY, iZ) is the point providing the data iData in the block iCloc
-  virtual bool* operator() (int iCloc, int iX, int iY, int iData);
+  bool* operator() (int iCloc, int iX, int iY, int iData) override;
   /// Read only access to the dim of the data of the super structure
-  virtual int getDataSize() const;
+  int getDataSize() const override;
   /// Read only access to the data type dim of the data of the super structure
-  virtual int getDataTypeSize() const;
+  int getDataTypeSize() const override;
 };
 
 

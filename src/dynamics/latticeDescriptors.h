@@ -82,6 +82,8 @@ struct NoExternalField {
   static const int numSpecies = 0;
   static const int forceBeginsAt = 0;
   static const int sizeOfForce   = 0;
+  static const int velocityBeginsAt = 0;
+  static const int sizeOfVelocity   = 0;
 };
 
 struct NoExternalFieldBase {
@@ -170,6 +172,74 @@ public:
   }
 };
 
+struct Velocity2dDescriptor {
+  static const int numScalars = 2;
+  static const int numSpecies = 1;
+  static const int velocityBeginsAt = 0;
+  static const int sizeOfVelocity   = 2;
+};
+
+struct Velocity2dBase {
+  typedef Velocity2dDescriptor ExternalField;
+};
+
+struct Velocity3dDescriptor {
+  static const int numScalars = 3;
+  static const int numSpecies = 1;
+  static const int velocityBeginsAt = 0;
+  static const int sizeOfVelocity   = 3;
+};
+
+struct Velocity3dBase {
+  typedef Velocity3dDescriptor ExternalField;
+};
+
+struct ParticleAdvectionDiffusion3dDescriptor {
+  static const int numScalars = 6;
+  static const int numSpecies = 2;
+  static const int velocityBeginsAt = 0;
+  static const int sizeOfVelocity   = 3;
+  static const int velocity2BeginsAt = 3;
+  static const int sizeOfVelocity2   = 3;
+};
+
+struct ParticleAdvectionDiffusion3dDescriptorBase {
+  typedef ParticleAdvectionDiffusion3dDescriptor ExternalField;
+};
+
+/// D2Q5 lattice
+template <typename T> struct D2Q5DescriptorBase {
+  typedef D2Q5DescriptorBase<T> BaseDescriptor;
+  enum { d = 2, q = 5 };      ///< number of dimensions/distr. functions
+  static const int vicinity;  ///< size of neighborhood
+  static const int c[q][d];   ///< lattice directions
+  static const int opposite[q]; ///< opposite entry
+  static const T t[q];        ///< lattice weights
+  static const T invCs2;      ///< inverse square of speed of sound
+};
+
+/// D2Q5 lattice lattice for advection-diffusion problems (MRT)
+template <typename T>
+struct AdvectionDiffusionMRTD2Q5DescriptorBase {
+  typedef AdvectionDiffusionMRTD2Q5DescriptorBase<T> BaseDescriptor;
+  enum { d = 2, q = 5 };          // number of dimensions/distr. functions
+  static const int vicinity;      // size of neighborhood
+  static const int c[q][d];       // lattice directions
+  static const T t[q];            // lattice weights
+  static const int opposite[q];   // opposite entry
+  static const T M[q][q];         // Matrix of base change between f and moments : moments=M.f
+  static const T invM[q][q];      // inverse of base change matrix : f=invM.moments
+  static const T S[q];            // relaxation times
+  enum { shearIndexes = 2 };
+  static const int shearViscIndexes[shearIndexes]; // relevant indexes of r. t. for shear viscosity
+  static const int bulkViscIndex = 2; // relevant index of r. t. for bulk viscosity
+  static const T invCs2;              // inverse square of speed of sound
+};
+
+template <typename T> struct AdvectionDiffusionMRTD2Q5Descriptor
+    : public AdvectionDiffusionMRTD2Q5DescriptorBase<T>, public Velocity2dBase {
+};
+
 
 /// D2Q9 lattice
 template <typename T> struct D2Q9DescriptorBase {
@@ -180,6 +250,44 @@ template <typename T> struct D2Q9DescriptorBase {
   static const int opposite[q]; ///< opposite entry
   static const T t[q];        ///< lattice weights
   static const T invCs2;      ///< inverse square of speed of sound
+};
+
+/// D3Q7 lattice
+template <typename T> struct D3Q7DescriptorBase {
+  typedef D3Q7DescriptorBase<T> BaseDescriptor;
+  enum { d = 3, q = 7 };     ///< number of dimensions/distr. functions
+  static const int vicinity;  ///< size of neighborhood
+  static const int c[q][d];   ///< lattice directions
+  static const int opposite[q]; ///< opposite entry
+  static const T t[q];        ///< lattice weights
+  static const T invCs2;      ///< inverse square of speed of sound
+};
+
+/// D3Q7 lattice for advection-diffusion problems (MRT)
+template <typename T>
+struct AdvectionDiffusionMRTD3Q7DescriptorBase {
+  typedef AdvectionDiffusionMRTD3Q7DescriptorBase<T> BaseDescriptor;
+  enum { d = 3, q = 7 };          // number of dimensions/distr. functions
+  static const int vicinity;      // size of neighborhood
+  static const int c[q][d];       // lattice directions
+  static const T t[q];            // lattice weights
+  static const int opposite[q];   // opposite entry
+  static const T M[q][q];         // Matrix of base change between f and moments : moments=M.f
+  static const T invM[q][q];      // inverse of base change matrix : f=invM.moments
+  static const T S[q];            // relaxation times
+  static const T S_2[q];          // relaxation times
+  enum { shearIndexes = 3 };
+  static const int shearViscIndexes[shearIndexes]; // relevant indexes of r. t. for shear viscosity
+  static const int bulkViscIndex = 1; // relevant index of r. t. for bulk viscosity
+  static const T invCs2;              // inverse square of speed of sound
+};
+
+template <typename T> struct AdvectionDiffusionMRTD3Q7Descriptor
+    : public AdvectionDiffusionMRTD3Q7DescriptorBase<T>, public Velocity3dBase {
+};
+
+template <typename T> struct ParticleAdvectionDiffusionMRTD3Q7Descriptor
+    : public D3Q7DescriptorBase<T>, public ParticleAdvectionDiffusion3dDescriptorBase {
 };
 
 /// D3Q13 lattice
@@ -228,6 +336,10 @@ template <typename T> struct D3Q27DescriptorBase {
   static const T invCs2;      ///< inverse square of speed of sound
 };
 
+template <typename T>struct AdvectionDiffusionD2Q5Descriptor
+  : public D2Q5DescriptorBase<T>, public Velocity2dBase {
+};
+
 template <typename T> struct D2Q9Descriptor
   : public D2Q9DescriptorBase<T>, public NoExternalFieldBase {
 };
@@ -238,6 +350,14 @@ template <typename T> struct ForcedD2Q9Descriptor
 
 template <typename T> struct V6ForcedD2Q9Descriptor
   : public D2Q9DescriptorBase<T>, public V6Force2dDescriptorBase {
+};
+
+template <typename T> struct AdvectionDiffusionD3Q7Descriptor
+  : public D3Q7DescriptorBase<T>, public Velocity3dBase {
+};
+
+template <typename T> struct ParticleAdvectionDiffusionD3Q7Descriptor
+  : public D3Q7DescriptorBase<T>, public ParticleAdvectionDiffusion3dDescriptorBase {
 };
 
 template <typename T> struct D3Q13Descriptor
@@ -267,6 +387,11 @@ template <typename T> struct ForcedD3Q19Descriptor
 template <typename T> struct V12ForcedD3Q19Descriptor
   : public D3Q19DescriptorBase<T>, public V12Force3dDescriptorBase {
 };
+
+template <typename T> struct ParticleAdvectionDiffusionD3Q19Descriptor
+  : public D3Q19DescriptorBase<T>, public ParticleAdvectionDiffusion3dDescriptorBase {
+};
+
 
 template <typename T> struct D3Q27Descriptor
   : public D3Q27DescriptorBase<T>, public NoExternalFieldBase {

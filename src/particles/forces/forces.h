@@ -31,4 +31,5 @@
 #include "weightForce3D.h"
 #include "buoyancyForce3D.h"
 #include "hertzMindlinDeresiewicz3D.h"
+#include "transferExternalForce3D.h"
 

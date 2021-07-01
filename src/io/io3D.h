@@ -29,6 +29,7 @@
 #include "blockVtkWriter3D.h"
 #include "colormaps.h"
 #include "fileName.h"
+#include "gnuplotHeatMapWriter.h"
 #include "gnuplotWriter.h"
 #include "ostreamManager.h"
 #include "parallelIO.h"

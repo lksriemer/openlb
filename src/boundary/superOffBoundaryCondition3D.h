@@ -35,7 +35,7 @@
 #include "geometry/superGeometry3D.h"
 #include "core/superLattice3D.h"
 #include "io/ostreamManager.h"
-#include "functors/analyticalF.h"
+#include "functors/analytical/analyticalF.h"
 
 
 /// All OpenLB code is contained in this namespace.
@@ -74,22 +74,10 @@ public:
   /// Adds needed Cells to the Communicator _commBC in SuperLattice
   void addPoints2CommBC(SuperGeometry3D<T>& superGeometry, int material);
 
-  SuperLattice3D<T,Lattice>& getSuperLattice()
-  {
-    return _sLattice;
-  };
-  std::vector<OffLatticeBoundaryCondition3D<T,Lattice>* >& getBlockBCs()
-  {
-    return _blockBCs;
-  };
-  int getOverlap()
-  {
-    return _overlap;
-  };
-  void setOverlap(int overlap)
-  {
-    _overlap = overlap;
-  };
+  SuperLattice3D<T,Lattice>& getSuperLattice();
+  std::vector<OffLatticeBoundaryCondition3D<T,Lattice>* >& getBlockBCs();
+  int getOverlap();
+  void setOverlap(int overlap);
 
   void outputOn();
   void outputOff();
@@ -103,14 +91,9 @@ private:
   bool _output;
 };
 
-template<typename T, template<typename U> class Lattice, typename MixinDynamics>
+template<typename T, template<typename U> class Lattice, typename MixinDynamics=BGKdynamics<T,Lattice> >
 void createBouzidiBoundaryCondition3D(sOffLatticeBoundaryCondition3D<T,Lattice>& sBC);
 
-template<typename T, template<typename U> class Lattice>
-void createBouzidiBoundaryCondition3D(sOffLatticeBoundaryCondition3D<T,Lattice>& sBC)
-{
-  createBouzidiBoundaryCondition3D<T,Lattice,BGKdynamics<T,Lattice> > (sBC);
-}
 
 }  // namespace olb
 

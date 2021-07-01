@@ -41,26 +41,20 @@ class InamuroNewtonRaphsonDynamics : public BasicDynamics<T,Lattice> {
 public:
   /// Constructor
   InamuroNewtonRaphsonDynamics(T omega, Momenta<T,Lattice>& momenta);
-  /// Clone the object on its dynamic type.
-  virtual InamuroNewtonRaphsonDynamics<T, Lattice, Dynamics, direction, orientation>* clone() const;
   /// Compute equilibrium distribution function
-  virtual T computeEquilibrium(int iPop, T rho, const T u[Lattice<T>::d], T uSqr) const;
+  T computeEquilibrium(int iPop, T rho, const T u[Lattice<T>::d], T uSqr) const override;
   /// Collision step
-  virtual void collide(Cell<T,Lattice>& cell,
-                       LatticeStatistics<T>& statistics);
+  void collide(Cell<T,Lattice>& cell,
+                       LatticeStatistics<T>& statistics) override;
   /// Collide with fixed velocity
-  virtual void staticCollide(Cell<T,Lattice>& cell,
+  void staticCollide(Cell<T,Lattice>& cell,
                              const T u[Lattice<T>::d],
-                             LatticeStatistics<T>& statistics);
+                             LatticeStatistics<T>& statistics) override;
   /// Get local relaxation parameter of the dynamics
-  virtual T getOmega() const;
+  T getOmega() const override;
   /// Set local relaxation parameter of the dynamics
-  virtual void setOmega(T omega);
-  /// Get local value of any parameter
-  virtual T getParameter(int whichParameter) const;
-  /// Set local value of any parameter
-  virtual void setParameter(int whichParameter, T value);
-
+  void setOmega(T omega) override;
+private:
   void computeApproxMomentum(T approxMomentum[Lattice<T>::d],
                              const Cell<T,Lattice> &cell,
                              const T &rho, const T u[Lattice<T>::d], const T xi[Lattice<T>::d],
@@ -83,7 +77,7 @@ public:
   bool invert(const T a[2][2],T b[2][2]);
 
   bool invert(const T a[3][3],T b[3][3]);
-private:
+
   Dynamics _boundaryDynamics;
   T _xi[Lattice<T>::d];
   mutable OstreamManager clout;

@@ -35,7 +35,6 @@ template <class T, unsigned DIM> class ADf;
 #include <sstream>
 #include <map>
 #include <typeinfo>
-#define TIXML_USE_STL
 #include "external/tinyxml/tinyxml.h"
 #include "io/ostreamManager.h"
 

@@ -82,27 +82,14 @@ public:
 
 ////////// Factory functions //////////////////////////////////////////////////
 
-template<typename T, template<typename U> class Lattice, typename MixinDynamics>
+template<typename T, template<typename U> class Lattice, typename MixinDynamics=RLBdynamics<T,Lattice> >
 OnLatticeBoundaryCondition2D<T,Lattice>*
 createLocalBoundaryCondition2D(BlockLatticeStructure2D<T,Lattice>& block);
 
-template<typename T, template<typename U> class Lattice, typename MixinDynamics>
+template<typename T, template<typename U> class Lattice, typename MixinDynamics=BGKdynamics<T,Lattice> >
 OnLatticeBoundaryCondition2D<T,Lattice>*
 createInterpBoundaryCondition2D(BlockLatticeStructure2D<T,Lattice>& block);
 
-template<typename T, template<typename U> class Lattice>
-OnLatticeBoundaryCondition2D<T,Lattice>*
-createLocalBoundaryCondition2D(BlockLatticeStructure2D<T,Lattice>& block)
-{
-  return createLocalBoundaryCondition2D<T,Lattice,RLBdynamics<T,Lattice> >(block);
-}
-
-template<typename T, template<typename U> class Lattice>
-OnLatticeBoundaryCondition2D<T,Lattice>*
-createInterpBoundaryCondition2D(BlockLatticeStructure2D<T,Lattice>& block)
-{
-  return createInterpBoundaryCondition2D<T,Lattice,BGKdynamics<T,Lattice> >(block);
-}
 
 }
 

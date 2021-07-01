@@ -56,43 +56,25 @@ inline int sign(T val)
 }
 
 template <typename T>
-inline T clamp_low(T val, T a)
-{
-  return val < a ? a : val;
-}
-
-template <typename T>
-inline T clamp_high(T val, T b)
-{
-  return val > b ? b : val;
-}
-
-template <typename T>
-inline T clamp(T val, T a, T b)
-{
-  return val < a ? a : (val > b ? b : val);
-}
-
-template <typename T>
-inline bool aligned_to_x(std::vector<T> vec)
+inline bool aligned_to_x(const std::vector<T>& vec)
 {
   return (vec[0]!=0 and vec[1]==0 and vec[2]==0);
 }
 
 template <typename T>
-inline bool aligned_to_y(std::vector<T> vec)
+inline bool aligned_to_y(const std::vector<T>& vec)
 {
   return (vec[0]==0 and vec[1]!=0 and vec[2]==0);
 }
 
 template <typename T>
-inline bool aligned_to_z(std::vector<T> vec)
+inline bool aligned_to_z(const std::vector<T>& vec)
 {
   return (vec[0]==0 and vec[1]==0 and vec[2]!=0);
 }
 
 template <typename T>
-inline bool aligned_to_grid(std::vector<T> vec)
+inline bool aligned_to_grid(const std::vector<T>& vec)
 {
   return (aligned_to_x<T>(vec) or
           aligned_to_y<T>(vec) or
@@ -274,7 +256,7 @@ std::vector<int> const& subIndexOutgoing()
   return subIndexOutgoingSingleton.indices;
 }
 
-///finds all rthe remaining indexes of a lattice given some other indexes
+///finds all the remaining indexes of a lattice given some other indexes
 template <typename Descriptor>
 std::vector<int> remainingIndexes(const std::vector<int> &indices)
 {
@@ -293,46 +275,144 @@ std::vector<int> remainingIndexes(const std::vector<int> &indices)
   return remaining;
 }
 
-/// finds the indexes outgoing from a 2D corner
-template <typename Descriptor, int xNormal, int yNormal>
-class SubIndexOutgoingCorner2D {
+template <typename Descriptor, int plane, int normal1, int normal2>
+class SubIndexOutgoing3DonEdges {
 private:
-  SubIndexOutgoingCorner2D()
+  SubIndexOutgoing3DonEdges()
+  {
+    int normalX,normalY,normalZ;
+    typedef Descriptor L;
+
+    switch (plane) {
+    case 0: {
+      normalX=0;
+      if (normal1==1) {
+        normalY= 1;
+      } else {
+        normalY=-1;
+      }
+      if (normal2==1) {
+        normalZ= 1;
+      } else {
+        normalZ=-1;
+      }
+    }
+    case 1: {
+      normalY=0;
+      if (normal1==1) {
+        normalX= 1;
+      } else {
+        normalX=-1;
+      }
+      if (normal2==1) {
+        normalZ= 1;
+      } else {
+        normalZ=-1;
+      }
+    }
+    case 2: {
+      normalZ=0;
+      if (normal1==1) {
+        normalX= 1;
+      } else {
+        normalX=-1;
+      }
+      if (normal2==1) {
+        normalY= 1;
+      } else {
+        normalY=-1;
+      }
+    }
+    }
+
+    // add zero velocity
+    //knownIndexes.push_back(0);
+    // compute scalar product with boundary normal for all other velocities
+    for (int iP=1; iP<L::q; ++iP) {
+      if (L::c[iP][0]*normalX + L::c[iP][1]*normalY + L::c[iP][2]*normalZ<0) {
+        indices.push_back(iP);
+      }
+    }
+  }
+  std::vector<int> indices;
+
+  template <typename Descriptor_,  int plane_, int normal1_, int normal2_>
+  friend std::vector<int> const& subIndexOutgoing3DonEdges();
+};
+
+template <typename Descriptor,  int plane, int normal1, int normal2>
+std::vector<int> const& subIndexOutgoing3DonEdges()
+{
+  static SubIndexOutgoing3DonEdges<Descriptor,  plane, normal1, normal2> subIndexOutgoing3DonEdgesSingleton;
+  return subIndexOutgoing3DonEdgesSingleton.indices;
+}
+
+// For 2D Corners
+template <typename Descriptor, int normalX, int normalY>
+class SubIndexOutgoing2DonCorners {
+private:
+  SubIndexOutgoing2DonCorners()
   {
     typedef Descriptor L;
 
-    int vect[L::d] = {xNormal, yNormal};
-    std::vector<int> knownIndexes;
-    knownIndexes.push_back(util::findVelocity<L>(vect));
-    vect[0] = xNormal;
-    vect[1] = 0;
-    knownIndexes.push_back(util::findVelocity<L>(vect));
-    vect[0] = 0;
-    vect[1] = yNormal;
-    knownIndexes.push_back(util::findVelocity<L>(vect));
-    vect[0] = 0;
-    vect[1] = 0;
-    knownIndexes.push_back(util::findVelocity<L>(vect));
-    indices = util::remainingIndexes<L>(knownIndexes);
+    // add zero velocity
+    //knownIndexes.push_back(0);
+    // compute scalar product with boundary normal for all other velocities
+    for (int iPop=1; iPop<L::q; ++iPop) {
+      if (L::c[iPop][0]*normalX + L::c[iPop][1]*normalY<0) {
+        indices.push_back(iPop);
+      }
+    }
   }
 
   std::vector<int> indices;
 
-  template <typename Descriptor_, int direction_, int orientation_>
-  friend std::vector<int> const& subIndexOutgoingCorner2D();
+  template <typename Descriptor_,  int normalX_, int normalY_>
+  friend std::vector<int> const& subIndexOutgoing2DonCorners();
 };
 
-template <typename Descriptor, int xNormal, int yNormal>
-std::vector<int> const& subIndexOutgoingCorner2D()
+template <typename Descriptor,  int normalX, int normalY>
+std::vector<int> const& subIndexOutgoing2DonCorners()
 {
-  static SubIndexOutgoingCorner2D<Descriptor, xNormal, yNormal> subIndexOutgoingCorner2DSingleton;
-  return subIndexOutgoingCorner2DSingleton.indices;
+  static SubIndexOutgoing2DonCorners<Descriptor, normalX, normalY> subIndexOutgoing2DonCornersSingleton;
+  return subIndexOutgoing2DonCornersSingleton.indices;
+}
+
+// For 3D Corners
+template <typename Descriptor, int normalX, int normalY, int normalZ>
+class SubIndexOutgoing3DonCorners {
+private:
+  SubIndexOutgoing3DonCorners()
+  {
+    typedef Descriptor L;
+
+    // add zero velocity
+    //knownIndexes.push_back(0);
+    // compute scalar product with boundary normal for all other velocities
+    for (int iP=1; iP<L::q; ++iP) {
+      if (L::c[iP][0]*normalX + L::c[iP][1]*normalY + L::c[iP][2]*normalZ<0) {
+        indices.push_back(iP);
+      }
+    }
+  }
+
+  std::vector<int> indices;
+
+  template <typename Descriptor_,  int normalX_, int normalY_, int normalZ_>
+  friend std::vector<int> const& subIndexOutgoing3DonCorners();
+};
+
+template <typename Descriptor,  int normalX, int normalY, int normalZ>
+std::vector<int> const& subIndexOutgoing3DonCorners()
+{
+  static SubIndexOutgoing3DonCorners<Descriptor, normalX, normalY, normalZ> subIndexOutgoing3DonCornersSingleton;
+  return subIndexOutgoing3DonCornersSingleton.indices;
 }
 
 /// Util Function for Wall Model of Malaspinas
 /// get link with smallest angle to a vector
 template <typename T, template <typename U> class DESCRIPTOR>
-int get_nearest_link(std::vector<T> vec)
+int get_nearest_link(const std::vector<T>& vec)
 {
   T max=-1;
   int max_index = 0;
@@ -353,6 +433,22 @@ enum { xx=0, xy=1, yy=2 };
 
 namespace tensorIndices3D {
 enum { xx=0, xy=1, xz=2, yy=3, yz=4, zz=5 };
+}
+
+/// compute lattice density from lattice pressure
+template <typename T, template <typename U> class DESCRIPTOR>
+T densityFromPressure( T latticePressure )
+{
+  // rho = p / c_s^2 + 1
+  return latticePressure * DESCRIPTOR<T>::invCs2 + 1.0;
+}
+
+/// compute lattice pressure from lattice density
+template <typename T, template <typename U> class DESCRIPTOR>
+T pressureFromDensity( T latticeDensity )
+{
+  // p = (rho - 1) * c_s^2
+  return (latticeDensity - 1.0) / DESCRIPTOR<T>::invCs2;
 }
 
 }  // namespace util

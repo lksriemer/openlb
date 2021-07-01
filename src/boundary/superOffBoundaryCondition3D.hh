@@ -35,7 +35,7 @@
 #include "superOffBoundaryCondition3D.h"
 #include "core/superLattice3D.h"
 #include "core/util.h"
-#include "functors/analyticalF.h"
+#include "functors/analytical/analyticalF.h"
 
 namespace olb {
 
@@ -85,17 +85,24 @@ template<typename T, template<typename U> class Lattice>
 void sOffLatticeBoundaryCondition3D<T,Lattice>::addZeroVelocityBoundary(SuperGeometry3D<T>& superGeometry, int material,
     IndicatorF3D<T>& indicator, std::list<int> bulkMaterials)
 {
-  clout << "epsFraction=" << _epsFraction << std::endl;
-  clout.setMultiOutput(true);
+  if (_output) {
+    clout << "epsFraction=" << _epsFraction << std::endl;
+    clout.setMultiOutput(true);
+  }
   int nCloc = _sLattice.getLoadBalancer().size();
   for (int iCloc = 0; iCloc < nCloc; iCloc++) {
-    clout << "Cuboid globiC " << _sLattice.getLoadBalancer().glob(iCloc)
-          << " starts to read distances for ZeroVelocity Boundary..." << std::endl;
+    if (_output) {
+      clout << "Cuboid globiC " << _sLattice.getLoadBalancer().glob(iCloc)
+        << " starts to read distances for ZeroVelocity Boundary..." << std::endl;
+    }
     _blockBCs[iCloc]->addZeroVelocityBoundary(superGeometry.getExtendedBlockGeometry(iCloc), material, indicator, bulkMaterials);
-    clout << "Cuboid globiC " << _sLattice.getLoadBalancer().glob(iCloc)
-          << " finished reading distances for ZeroVelocity Boundary." << std::endl;
+    if (_output) {
+      clout << "Cuboid globiC " << _sLattice.getLoadBalancer().glob(iCloc)
+        << " finished reading distances for ZeroVelocity Boundary." << std::endl;
+    }
   }
-  clout.setMultiOutput(false);
+  if (_output)
+    clout.setMultiOutput(false);
   addPoints2CommBC(superGeometry, material);
 }
 
@@ -103,17 +110,24 @@ template<typename T, template<typename U> class Lattice>
 void sOffLatticeBoundaryCondition3D<T,Lattice>::
 addVelocityBoundary(SuperGeometry3D<T>& superGeometry, int material, IndicatorF3D<T>& indicator, std::list<int> bulkMaterials)
 {
-  clout << "epsFraction=" << _epsFraction << std::endl;
-  clout.setMultiOutput(true);
+  if (_output) {
+    clout << "epsFraction=" << _epsFraction << std::endl;
+    clout.setMultiOutput(true);
+  }
   int nC = _sLattice.getLoadBalancer().size();
   for (int iCloc = 0; iCloc < nC; iCloc++) {
-    clout << "Cuboid globiC " << _sLattice.getLoadBalancer().glob(iCloc)
-          << " starts to read distances for Velocity Boundary..." << std::endl;
+    if (_output) {
+      clout << "Cuboid globiC " << _sLattice.getLoadBalancer().glob(iCloc)
+        << " starts to read distances for Velocity Boundary..." << std::endl;
+    }
     _blockBCs[iCloc]->addVelocityBoundary(superGeometry.getExtendedBlockGeometry(iCloc), material, indicator, bulkMaterials);
-    clout << "Cuboid globiC " << _sLattice.getLoadBalancer().glob(iCloc)
-          << " finished reading distances for Velocity Boundary." << std::endl;
+    if (_output) {
+      clout << "Cuboid globiC " << _sLattice.getLoadBalancer().glob(iCloc)
+        << " finished reading distances for Velocity Boundary." << std::endl;
+    }
   }
-  clout.setMultiOutput(false);
+  if (_output)
+    clout.setMultiOutput(false);
   addPoints2CommBC(superGeometry, material);
 }
 
@@ -180,6 +194,30 @@ addPoints2CommBC(SuperGeometry3D<T>& superGeometry, int material)
       }
     }
   }
+}
+
+template<typename T, template<typename U> class Lattice>
+SuperLattice3D<T,Lattice>& sOffLatticeBoundaryCondition3D<T,Lattice>::getSuperLattice()
+{
+  return _sLattice;
+}
+
+template<typename T, template<typename U> class Lattice>
+std::vector<OffLatticeBoundaryCondition3D<T,Lattice>* >& sOffLatticeBoundaryCondition3D<T,Lattice>::getBlockBCs()
+{
+  return _blockBCs;
+}
+
+template<typename T, template<typename U> class Lattice>
+int sOffLatticeBoundaryCondition3D<T,Lattice>::getOverlap()
+{
+  return _overlap;
+}
+
+template<typename T, template<typename U> class Lattice>
+void sOffLatticeBoundaryCondition3D<T,Lattice>::setOverlap(int overlap)
+{
+  _overlap = overlap;
 }
 
 template<typename T, template<typename U> class Lattice>

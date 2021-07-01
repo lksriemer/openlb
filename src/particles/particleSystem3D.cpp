@@ -27,7 +27,7 @@
 #include "particleSystem3D.hh"
 #include "dynamics/latticeDescriptors.h"
 #include "dynamics/latticeDescriptors.hh"
-#include "functors/superLatticeLocalF3D.h"
+#include "functors/lattice/superLatticeLocalF3D.h"
 
 namespace olb {
 

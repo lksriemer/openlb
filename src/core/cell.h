@@ -80,7 +80,6 @@ public:
   T, typename Lattice<T>::ExternalField > External;
 private:
   External             external;  ///< external scalars
-  bool                 takesStat; ///< is statistics taken?
   Dynamics<T,Lattice>* dynamics;  ///< local LB dynamics
 
 public:
@@ -89,30 +88,6 @@ public:
   /// Constructor, to be used whenever possible.
   Cell(Dynamics<T,Lattice>* dynamics_);
 public:
-  /// Attribute all f-values from another cell to the present one.
-  /** \return a reference to *this
-   */
-  Cell<T,Lattice>& attributeF(Cell<T,Lattice> const& rhs)
-  {
-    for (unsigned iPop=0; iPop < Lattice<T>::q; ++iPop) {
-      this->f[iPop] = rhs.f[iPop];
-    }
-    return *this;
-  };
-  /// Attribute all f-values and external scalars from another cell to the present one.
-  /** \return a reference to *this
-   * This is similar to the assignment operator operator= (which is
-   * created by default and copies all the f's, as well as the dynamics
-   * object), except that the dynamics object is not copied.
-   */
-  Cell<T,Lattice>& attributeValues(Cell<T,Lattice> const& rhs)
-  {
-    attributeF(rhs);
-    for (int iExt=0; iExt < Lattice<T>::ExternalField::numScalars; ++iExt) {
-      *external.get(iExt) = *rhs.external.get(iExt);
-    }
-    return *this;
-  };
   /// Get a pointer to an external field
   T* getExternal(int offset)
   {
@@ -134,16 +109,6 @@ public:
   Dynamics<T,Lattice> const* getDynamics() const;
   /// Get a non-modifiable pointer to the dynamics
   Dynamics<T,Lattice>* getDynamics();
-  /// Request whether this cell does statistics measurements
-  bool takesStatistics() const
-  {
-    return takesStat;
-  }
-  /// Specify whether this cell does statistics measurements
-  void specifyStatisticsStatus(bool status)
-  {
-    takesStat = status;
-  }
 
   // The following helper functions forward the function call
   // to the Dynamics object
@@ -159,13 +124,6 @@ public:
   {
     OLB_PRECONDITION( dynamics );
     dynamics->staticCollide(*this, u, statistics);
-  }
-
-  /// Compute equilibrium distribution function
-  T computeEquilibrium(int iPop, T rho, const T u[Lattice<T>::d], T uSqr) const
-  {
-    OLB_PRECONDITION( dynamics );
-    return dynamics->computeEquilibrium(iPop, rho, u, uSqr);
   }
 
   /// Compute particle density on the cell.
@@ -215,17 +173,6 @@ public:
     OLB_PRECONDITION( dynamics );
     dynamics->computeAllMomenta(*this, rho, u, pi);
   }
-  /// Access particle populations through the dynamics object.
-  /** This method is similar to operator[]: it delivers the
-   * value of the particle populations. This time, those values
-   * are however computed through a virtual call to the dynamics
-   * object.
-   */
-  void computePopulations(T* f_) const
-  {
-    OLB_PRECONDITION( dynamics );
-    dynamics->computePopulations(*this, f_);
-  }
   /// Access external fields through the dynamics object.
   /** This method is similar to getExternal(): it delivers the
    * value of the external fields. This time, those values
@@ -234,8 +181,11 @@ public:
    */
   void computeExternalField(int pos, int size, T* ext) const
   {
-    OLB_PRECONDITION( dynamics );
-    dynamics->computeExternalField(*this, pos, size, ext);
+    OLB_PRECONDITION(pos+size <= Lattice<T>::ExternalField::numScalars);
+    T const* externalData = this->getExternal(pos);
+    for (int iExt=0; iExt<size; ++iExt) {
+      ext[iExt] = externalData[iExt];
+    }
   }
   /// Set particle density on the cell.
   /** \param rho particle density
@@ -253,16 +203,6 @@ public:
     OLB_PRECONDITION( dynamics );
     dynamics->defineU(*this, u);
   }
-  /// Set components of the stress tensor on the cell.
-  /** \param pi stress tensor */
-  void defineStress (
-    const T pi[util::TensorVal<Lattice<T> >::n])
-  {
-    OLB_PRECONDITION( dynamics );
-    T rho, u[Lattice<T>::d];
-    dynamics->computeRhoU(*this, rho, u);
-    dynamics->defineAllMomenta(*this, rho, u, pi);
-  }
   /// Define fluid velocity and particle density on the cell.
   /** \param rho particle density
    *  \param u fluid velocity
@@ -272,39 +212,28 @@ public:
     OLB_PRECONDITION( dynamics );
     dynamics->defineRhoU(*this, rho, u);
   }
-  /// Define all momenta on the celll, up to second order.
-  /** \param rho particle density
-   *  \param u fluid velocity
-   *  \param pi stress tensor
-   */
-  void defineAllMomenta (
-    T rho, const T u[Lattice<T>::d],
-    const T pi[util::TensorVal<Lattice<T> >::n] )
-  {
-    OLB_PRECONDITION( dynamics );
-    dynamics->defineAllMomenta(*this, rho, u, pi);
-  }
   /// Define particle populations through the dynamics object.
   /** This method is similar to operator[]: it modifies the
-   * value of the particle populations. This time, those values
-   * are however accessed through a virtual call to the dynamics
-   * object.
+   * value of all the particle populations.
    */
   void definePopulations(const T* f_)
   {
-    OLB_PRECONDITION( dynamics );
-    dynamics->definePopulations(*this, f_);
+    for (int iPop = 0; iPop < Lattice<T>::q; ++iPop)
+    {
+      this->f[iPop] = f_[iPop];
+    }
   }
   /// Define external fields through the dynamics object.
   /** This method is similar to getExternal(): it accesses the
-   * value of the external fields. This time, those values
-   * are however accessed through a virtual call to the dynamics
-   * object.
+   * value of the external fields.
    */
   void defineExternalField(int pos, int size, const T* ext)
   {
-    OLB_PRECONDITION( dynamics );
-    dynamics->defineExternalField(*this, pos, size, ext);
+    OLB_PRECONDITION(pos+size <= Lattice<T>::ExternalField::numScalars);
+    T* externalData = this->getExternal(pos);
+    for (int iExt=0; iExt<size; ++iExt) {
+      externalData[iExt] = ext[iExt];
+    }
   }
   /// Add external fields through the dynamics object.
   /** Similar to defineExternalField(),but instead of replacing existing values
@@ -312,8 +241,11 @@ public:
    */
   inline void addExternalField(int pos, int size, const T* ext)
   {
-    OLB_PRECONDITION( dynamics );
-    dynamics->addExternalField(*this, pos, size, ext);
+    OLB_PRECONDITION(pos+size <= Lattice<T>::ExternalField::numScalars);
+    T* externalData = this->getExternal(pos);
+    for (int iExt=0; iExt<size; ++iExt) {
+      externalData[iExt] += ext[iExt];
+    }
   }
   /// Add external fields through the dynamics object.
   /** Similar to defineExternalField(),but instead of replacing existing values
@@ -321,8 +253,11 @@ public:
    */
   inline void multiplyExternalField(int pos, int size, const T* ext)
   {
-    OLB_PRECONDITION( dynamics );
-    dynamics->multiplyExternalField(*this, pos, size, ext);
+    OLB_PRECONDITION(pos+size <= Lattice<T>::ExternalField::numScalars);
+    T* externalData = this->getExternal(pos);
+    for (int iExt=0; iExt<size; ++iExt) {
+      externalData[iExt] *= ext[iExt];
+    }
   }
   /// Initialize all f values to their local equilibrium
   void iniEquilibrium(T rho, const T u[Lattice<T>::d])
@@ -336,14 +271,17 @@ public:
   void unSerialize(T const* data);
 
   /// \return the number of data blocks for the serializable interface
-  std::size_t getNblock() const
+  std::size_t getNblock() const override
   {
-    return 3;
+    if (Lattice<T>::ExternalField::numScalars)
+      return 2;
+    else
+      return 1;
   };
   /// Binary size for the serializer
-  virtual std::size_t getSerializableSize() const;
+  std::size_t getSerializableSize() const override;
   /// \return a pointer to the memory of the current block and its size for the serializable interface
-  bool* getBlock(std::size_t iBlock, std::size_t& sizeBlock, bool loadingMode);
+  bool* getBlock(std::size_t iBlock, std::size_t& sizeBlock, bool loadingMode) override;
 
 private:
   void iniPop();
@@ -353,7 +291,7 @@ private:
 template<typename T, template<typename U> class Lattice>
 struct WriteCellFunctional {
   virtual ~WriteCellFunctional() { };
-  virtual void apply(Cell<T,Lattice>& cell) const =0;
+  virtual void apply(Cell<T,Lattice>& cell, int pos[Lattice<T>::d]) const =0;
 };
 
 }  // namespace olb

@@ -19,114 +19,129 @@ namespace util {
 /////////// Class ValueTracer ////////////////////////
 
 template<typename T>
-ValueTracer<T>::ValueTracer(T u, T L, T _epsilon)
-  : deltaT((int)(L/u/2.)),
-    epsilon(_epsilon),
-    t(0),
-    converged(false),
+ValueTracer<T>::ValueTracer(T u, T L, T epsilon)
+  : _deltaT((int)(L/u/2.)),
+    _epsilon(epsilon),
+    _t(0),
+    _converged(false),
     clout(std::cout,"ValueTracer")
 { }
 
 template<typename T>
-ValueTracer<T>::ValueTracer(int _deltaT, T _epsilon)
-  : deltaT(_deltaT),
-    epsilon(_epsilon),
-    t(0),
-    converged(false),
+ValueTracer<T>::ValueTracer(int deltaT, T epsilon)
+  : _deltaT(deltaT),
+    _epsilon(epsilon),
+    _t(0),
+    _converged(false),
     clout(std::cout,"ValueTracer")
 { }
 
 template<typename T>
 int ValueTracer<T>::getDeltaT() const
 {
-  return deltaT;
+  return _deltaT;
 }
 
 template<typename T>
 void ValueTracer<T>::takeValue(T val, bool doPrint)
 {
-  values.push_back(val);
-  if ((int)values.size() > abs(deltaT)) {
-    values.erase(values.begin());
-    if (doPrint && t%deltaT==0) {
+  _values.push_back(val);
+  if ((int)_values.size() > abs(_deltaT)) {
+    _values.erase(_values.begin());
+    if (doPrint && _t%_deltaT==0) {
       T average = computeAverage();
       T stdDev = computeStdDev(average);
       clout << "average=" << average << "; stdDev/average=" << stdDev/average << std::endl;
     }
   }
-  ++t;
+  ++_t;
 }
 
 template<typename T>
 void ValueTracer<T>::resetScale(T u, T L)
 {
-  t = t%deltaT;
-  deltaT = (int) (L/u/2.);
-  if ( (int)values.size() > abs(deltaT) ) {
-    values.erase(values.begin(), values.begin() + (values.size()-deltaT) );
+  _t = _t%_deltaT;
+  _deltaT = (int) (L/u/2.);
+  if ( (int)_values.size() > abs(_deltaT) ) {
+    _values.erase(_values.begin(), _values.begin() + (_values.size()-_deltaT) );
   }
 }
 
 template<typename T>
 void ValueTracer<T>::resetValues()
 {
-  t = 0;
-  if ((int)values.size() > 0) {
-    values.erase(values.begin(), values.begin() + values.size() );
+  _t = 0;
+  if ((int)_values.size() > 0) {
+    _values.erase(_values.begin(), _values.begin() + _values.size() );
   }
 }
 
 template<typename T>
 bool ValueTracer<T>::hasConverged() const
 {
-  if ((int)values.size() < abs(deltaT)) {
+  if ((int)_values.size() < abs(_deltaT)) {
     return false;
   } else {
     T average = computeAverage();
     T stdDev = computeStdDev(average);
     if (!std::isnan(stdDev/average)) {
-      return stdDev/average < epsilon;
+      return stdDev/average < _epsilon;
     } else {
       clout << "simulation diverged." << std::endl;
       return true;
     }
   }
 }
-
+template<typename T>
+bool ValueTracer<T>::convergenceCheck() const
+{
+  if ((int)_values.size() < abs(_deltaT)) {
+    return false;
+  } else {
+    T average = computeAverage();
+    T stdDev = computeStdDev(average);
+    if (!std::isnan(stdDev/average)) {
+      return stdDev/average < _epsilon;
+    } else {
+      clout << "simulation diverged." << std::endl;
+      return false;
+    }
+  }
+}
 template<typename T>
 bool ValueTracer<T>::hasConvergedMinMax() const
 {
-  if ((int)values.size() < abs(deltaT)) {
+  if ((int)_values.size() < abs(_deltaT)) {
     return false;
   } else {
-    T minEl = *min_element(values.begin(), values.end());
-    T maxEl = *max_element(values.begin(), values.end());
+    T minEl = *min_element(_values.begin(), _values.end());
+    T maxEl = *max_element(_values.begin(), _values.end());
     T average = computeAverage();
-    return (maxEl - minEl)/average < epsilon;
+    return (maxEl - minEl)/average < _epsilon;
   }
 }
 
 template<typename T>
 T ValueTracer<T>::computeAverage() const
 {
-  return accumulate(values.begin(), values.end(), 0.) / values.size();
+  return std::accumulate(_values.begin(), _values.end(), 0.) / _values.size();
 }
 
 template<typename T>
 T ValueTracer<T>::computeStdDev(T average) const
 {
-  int n = values.size();
+  int n = _values.size();
   T sqrDev = 0.;
   for (int i=0; i<n; ++i) {
-    sqrDev += (values[i]-average)*(values[i]-average);
+    sqrDev += (_values[i]-average)*(_values[i]-average);
   }
   return sqrt(sqrDev/(n-1));
 }
 
 template<typename T>
-void ValueTracer<T>::setEpsilon(T epsilon_)
+void ValueTracer<T>::setEpsilon(T epsilon)
 {
-  epsilon = epsilon_;
+  _epsilon = epsilon;
 }
 
 

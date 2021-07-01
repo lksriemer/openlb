@@ -42,12 +42,6 @@ InamuroAnalyticalDynamics<T,Lattice,Dynamics,direction,orientation>::InamuroAnal
 { }
 
 template<typename T, template<typename U> class Lattice, typename Dynamics, int direction, int orientation>
-InamuroAnalyticalDynamics<T,Lattice,Dynamics,direction,orientation>* InamuroAnalyticalDynamics<T,Lattice, Dynamics, direction, orientation>::clone() const
-{
-  return new InamuroAnalyticalDynamics<T,Lattice,Dynamics,direction,orientation>(*this);
-}
-
-template<typename T, template<typename U> class Lattice, typename Dynamics, int direction, int orientation>
 T InamuroAnalyticalDynamics<T,Lattice, Dynamics, direction, orientation>::
 computeEquilibrium(int iPop, T rho, const T u[Lattice<T>::d], T uSqr) const
 {
@@ -77,7 +71,7 @@ void InamuroAnalyticalDynamics<T,Lattice,Dynamics,direction,orientation>::collid
 
   for (unsigned iPop = 0; iPop < missInd.size(); ++iPop) {
     int numOfNonNullComp = 0;
-    for (int iDim = 0; iDim < L:: d; ++iDim) {
+    for (int iDim = 0; iDim < L::d; ++iDim) {
       numOfNonNullComp += abs(L::c[missInd[iPop]][iDim]);
     }
 
@@ -167,7 +161,7 @@ void InamuroAnalyticalDynamics<T,Lattice,Dynamics,direction,orientation>::static
 
   for (unsigned iPop = 0; iPop < missInd.size(); ++iPop) {
     int numOfNonNullComp = 0;
-    for (int iDim = 0; iDim < L:: d; ++iDim) {
+    for (int iDim = 0; iDim < L::d; ++iDim) {
       numOfNonNullComp += abs(L::c[missInd[iPop]][iDim]);
     }
 
@@ -247,18 +241,6 @@ template<typename T, template<typename U> class Lattice, typename Dynamics, int 
 void InamuroAnalyticalDynamics<T,Lattice,Dynamics,direction,orientation>::setOmega(T omega_)
 {
   boundaryDynamics.setOmega(omega_);
-}
-
-template<typename T, template<typename U> class Lattice, typename Dynamics, int direction, int orientation>
-T InamuroAnalyticalDynamics<T,Lattice,Dynamics,direction,orientation>::getParameter(int whichParameter) const
-{
-  return boundaryDynamics.getParameter(whichParameter);
-}
-
-template<typename T, template<typename U> class Lattice, typename Dynamics, int direction, int orientation>
-void InamuroAnalyticalDynamics<T,Lattice,Dynamics,direction,orientation>::setParameter(int whichParameter, T value)
-{
-  boundaryDynamics.setParameter(whichParameter, value);
 }
 
 

@@ -32,6 +32,7 @@
 
 #include "geometry/superGeometry2D.h"
 #include "geometry/superGeometryStatistics2D.h"
+#include "core/olbDebug.h"
 
 namespace olb {
 
@@ -332,9 +333,13 @@ std::vector<T> SuperGeometryStatistics2D<T>::computeNormal(int material)
   }
 #endif
 
-  for (int iDim=0; iDim<2; iDim++) {
-    normal[iDim] /= getNvoxel(material);
+  int nVoxel = getNvoxel(material);
+  if (nVoxel != 0) {
+    for (int iDim=0; iDim<2; iDim++) {
+      normal[iDim] /= nVoxel;
+    }
   }
+  OLB_ASSERT(nVoxel || (normal[0] == 0 && normal[1] == 0), "if no voxels found we expect the normal to be zero");
 
   T norm = sqrt(normal[0]*normal[0]+normal[1]*normal[1]);
   if (norm>0.) {

@@ -50,17 +50,17 @@ public:
       std::vector<T> rho0_,
       AnalyticalF1D<T,T>& iP_,
       std::vector<SpatiallyExtendedObject2D*> partners_);
-  virtual int extent() const
+  int extent() const override
   {
     return 1;
   }
-  virtual int extent(int whichDirection) const
+  int extent(int whichDirection) const override
   {
     return 1;
   }
-  virtual void process(BlockLattice2D<T,Lattice>& blockLattice);
-  virtual void processSubDomain(BlockLattice2D<T,Lattice>& blockLattice,
-                                int x0_, int x1_, int y0_, int y1_);
+  void process(BlockLattice2D<T,Lattice>& blockLattice) override;
+  void processSubDomain(BlockLattice2D<T,Lattice>& blockLattice,
+                                int x0_, int x1_, int y0_, int y1_) override;
 private:
   int x0, x1, y0, y1;
   T G;
@@ -74,8 +74,8 @@ class ShanChenForcedSingleComponentGenerator2D : public LatticeCouplingGenerator
 public:
   ShanChenForcedSingleComponentGenerator2D(int x0_, int x1_, int y0_, int y1_, T G_, std::vector<T> rho0_, AnalyticalF1D<T,T>& iP_);
   ShanChenForcedSingleComponentGenerator2D(T G_, std::vector<T> rho0_, AnalyticalF1D<T,T>& iP_);
-  virtual PostProcessor2D<T,Lattice>* generate(std::vector<SpatiallyExtendedObject2D*> partners) const;
-  virtual LatticeCouplingGenerator2D<T,Lattice>* clone() const;
+  PostProcessor2D<T,Lattice>* generate(std::vector<SpatiallyExtendedObject2D*> partners) const override;
+  LatticeCouplingGenerator2D<T,Lattice>* clone() const override;
 private:
   T G;
   std::vector<T> rho0;

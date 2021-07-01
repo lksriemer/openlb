@@ -43,17 +43,15 @@ namespace olb {
 
 template<typename T>
 Cuboid2D<T>::Cuboid2D(T globPosX, T globPosY, T delta ,int nX, int nY, int refinementLevel)
-  : clout(std::cout,"Cuboid2D")
+  : _weight(std::numeric_limits<size_t>::max()), clout(std::cout,"Cuboid2D")
 {
-  _weight = -1;
   init(globPosX, globPosY, delta, nX, nY, refinementLevel);
 }
 
 template<typename T>
-Cuboid2D<T>::Cuboid2D(std::vector<T> origin, T delta, std::vector<int> extend, int refinementLevel)
-  : clout(std::cout,"Cuboid2D")
+Cuboid2D<T>::Cuboid2D(Vector<T,2> origin, T delta, Vector<int,2> extend, int refinementLevel)
+  : _weight(std::numeric_limits<size_t>::max()), clout(std::cout,"Cuboid2D")
 {
-  _weight = -1;
   this->init(origin[0], origin[1], delta, extend[0], extend[1], refinementLevel);
 }
 
@@ -102,12 +100,9 @@ T Cuboid2D<T>::get_globPosY() const
 }
 
 template<typename T>
-std::vector<T> const Cuboid2D<T>::getOrigin() const
+Vector<T,2> const Cuboid2D<T>::getOrigin() const
 {
-  std::vector<T> origin(2,T());
-  origin[0] = _globPosX;
-  origin[1] = _globPosY;
-  return origin;
+  return Vector<T,2> (_globPosX,_globPosY);
 }
 
 template<typename T>
@@ -129,12 +124,9 @@ int Cuboid2D<T>::getNy() const
 }
 
 template<typename T>
-std::vector<int> const Cuboid2D<T>::getExtend() const
+Vector<int,2> const Cuboid2D<T>::getExtend() const
 {
-  std::vector<int> extend(2,T());
-  extend[0] = _nX;
-  extend[1] = _nY;
-  return extend;
+  return Vector<int,2> (_nX, _nY);
 }
 
 template<typename T>
@@ -144,9 +136,9 @@ T Cuboid2D<T>::getPhysVolume() const
 }
 
 template<typename T>
-int Cuboid2D<T>::getLatticeVolume() const
+size_t Cuboid2D<T>::getLatticeVolume() const
 {
-  return _nY*_nX;
+  return static_cast<size_t>(_nY)*static_cast<size_t>(_nX);
 }
 
 template<typename T>
@@ -189,6 +181,19 @@ void Cuboid2D<T>::getPhysR(T physR[2], const int& iX, const int& iY) const
   physR[1] = _globPosY + iY*_delta;
 }
 
+template<typename T>
+void Cuboid2D<T>::getLatticeR(int latticeR[2], const T physR[2]) const
+{
+  latticeR[0] = (int)floor( (physR[0] - _globPosX )/_delta +.5);
+  latticeR[1] = (int)floor( (physR[1] - _globPosY )/_delta +.5);
+}
+
+template<typename T>
+void Cuboid2D<T>::getLatticeR(int latticeR[2], const Vector<T,2>& physR) const
+{
+  latticeR[0] = (int)floor( (physR[0] - _globPosX )/_delta +.5);
+  latticeR[1] = (int)floor( (physR[1] - _globPosY )/_delta +.5);
+}
 
 template<typename T>
 bool Cuboid2D<T>::checkPoint(T globX, T globY, int overlap) const
@@ -232,6 +237,12 @@ bool Cuboid2D<T>::checkInters(T globX0, T globX1, T globY0, T globY1, int overla
     return false;
   }
   return true;
+}
+
+template<typename T>
+bool Cuboid2D<T>::checkInters(T globX, T globY, int overlap) const
+{
+  return checkInters(globX, globX, globY, globY, overlap);
 }
 
 template<typename T>
@@ -358,7 +369,7 @@ void Cuboid2D<T>::resize(int iX, int iY, int nX, int nY)
 template<typename T>
 void Cuboid2D<T>::refineToLevel(unsigned int level)
 {
-  T leveldiffabs = pow(2, (int)(level - _refinementLevel) );
+  int leveldiffabs = int (std::pow(2, level - _refinementLevel ));
   _delta /= (T)(leveldiffabs);
   _nX *= leveldiffabs;
   _nY *= leveldiffabs;
@@ -390,6 +401,22 @@ template<typename T>
 int Cuboid2D<T>::get_refinementLevel() const
 {
   return _refinementLevel;
+}
+
+template<typename T>
+size_t Cuboid2D<T>::getWeight() const
+{
+  if (_weight == std::numeric_limits<size_t>::max()) {
+    return getLatticeVolume();
+  } else {
+    return _weight;
+  }
+}
+
+template<typename T>
+void Cuboid2D<T>::setWeight(size_t fullCells)
+{
+  _weight = fullCells;
 }
 
 

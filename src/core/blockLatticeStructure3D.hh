@@ -29,7 +29,7 @@
 
 
 #include "blockLatticeStructure3D.h"
-#include "functors/indicator/indicatorBaseF3D.hh"
+#include "functors/lattice/indicator/blockIndicatorBaseF3D.hh"
 
 namespace olb {
 
@@ -133,10 +133,31 @@ void BlockLatticeStructure3D<T,Lattice>::defineExternalField(
   delete[] fieldTmp;
 }
 
+template<typename T, template<typename U> class Lattice>
+void BlockLatticeStructure3D<T,Lattice>::defineExternalField(
+  BlockIndicatorF3D<T>& indicator, int overlap,
+  int fieldBeginsAt, int sizeOfField, AnalyticalF3D<T,T>& field)
+{
+  T physR[3] = {T(),T(),T()};
+  T* fieldTmp = new T [sizeOfField];
+  for (int iX = 0; iX < getNx(); iX++) {
+    for (int iY = 0; iY < getNy(); iY++) {
+      for (int iZ = 0; iZ < getNz(); iZ++) {
+        const int blockLocation[3] = { iX-overlap, iY-overlap, iZ-overlap };
+        if (indicator(blockLocation)) {
+          indicator.getBlockGeometry().getPhysR(physR,iX,iY,iZ);
+          field(fieldTmp,physR);
+          get(iX,iY,iZ).defineExternalField(fieldBeginsAt, sizeOfField, fieldTmp);
+        }
+      }
+    }
+  }
+  delete[] fieldTmp;
+}
 
 template<typename T, template<typename U> class Lattice>
 void BlockLatticeStructure3D<T,Lattice>::defineExternalField(
-  BlockGeometryStructure3D<T>& blockGeometry, IndicatorSphere3D<T>& indicator, int fieldBeginsAt,
+  BlockGeometryStructure3D<T>& blockGeometry, IndicatorF3D<T>& indicator, int fieldBeginsAt,
   int sizeOfField, AnalyticalF3D<T,T>& field)
 {
   bool inside;
@@ -203,7 +224,7 @@ void BlockLatticeStructure3D<T, Lattice>::setExternalParticleField(
 template<typename T, template<typename U> class Lattice>
 void BlockLatticeStructure3D<T,Lattice>::iniEquilibrium(
   BlockGeometryStructure3D<T>& blockGeometry, int material,
-  AnalyticalF3D<T,T>& rho , AnalyticalF3D<T,T>& u)
+  AnalyticalF3D<T,T>& rho, AnalyticalF3D<T,T>& u)
 {
   T physR[3] = {T(),T(),T()};
   T uTmp[3] = {T(),T(),T()};

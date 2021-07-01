@@ -53,6 +53,12 @@ struct lbHelpers {
            ::equilibrium(iPop, rho, u, uSqr);
   }
 
+  static T equilibriumFirstOrder(int iPop, T rho, const T u[Lattice<T>::d])
+  {
+    return lbDynamicsHelpers<T,typename Lattice<T>::BaseDescriptor>
+           ::equilibriumFirstOrder(iPop, rho, u);
+  }
+
   static T incEquilibrium(int iPop, const T j[Lattice<T>::d], const T jSqr, const T pressure)
   {
     return lbDynamicsHelpers<T,typename Lattice<T>::BaseDescriptor>
@@ -62,8 +68,7 @@ struct lbHelpers {
   static void computeFneq ( Cell<T,Lattice> const& cell,
                             T fNeq[Lattice<T>::q], T rho, const T u[Lattice<T>::d] )
   {
-    lbDynamicsHelpers<T,typename Lattice<T>::BaseDescriptor>
-    ::computeFneq(cell, fNeq, rho, u);
+    lbDynamicsHelpers<T,typename Lattice<T>::BaseDescriptor>::computeFneq(cell, fNeq, rho, u);
   }
 
   static T bgkCollision(Cell<T,Lattice>& cell, T const& rho, const T u[Lattice<T>::d], T const& omega)
@@ -77,11 +82,43 @@ struct lbHelpers {
     const T uSqr = util::normSqr<T,Lattice<T>::d>(u);
     for (int iPop=0; iPop < Lattice<T>::q; ++iPop) {
       cell[iPop] *= (T)1-omega[iPop];
-      cell[iPop] += omega[iPop] * lbDynamicsHelpers<T,typename Lattice<T>::BaseDescriptor>::equilibrium (
-                      iPop, rho, u, uSqr );
+      cell[iPop] += omega[iPop] * lbDynamicsHelpers<T,typename Lattice<T>::BaseDescriptor>::equilibrium (iPop, rho, u, uSqr );
     }
     return uSqr;
   }
+
+  //====================================
+  /*
+   * Helpers included from the adLbDynamicsHelpers
+   */
+  static T rlbCollision( Cell<T, Lattice>& cell, T rho, const T u[Lattice<T>::d], T omega )
+  {
+    return lbDynamicsHelpers<T, typename Lattice<T>::BaseDescriptor>
+           ::rlbCollision( cell, rho, u, omega );
+  }
+
+  static T sinkCollision( Cell<T, Lattice>& cell, T intensity, T omega, T sink )
+  {
+    return lbDynamicsHelpers<T, typename Lattice<T>::BaseDescriptor>
+           ::sinkCollision( cell, intensity, omega, sink );
+  }
+
+  static T anisoCollision( Cell<T, Lattice>& cell, T intensity, T absorption, T scattering )
+  {
+    return lbDynamicsHelpers<T, typename Lattice<T>::BaseDescriptor>
+           ::anisoCollision( cell, intensity, absorption, scattering );
+  }
+
+  //====================================
+  /*
+   * Helpers included from the advectionDiffusionMRTlbHelpers
+   */
+  static T mrtCollision( Cell<T, Lattice>& cell, T const& rho, const T u[Lattice<T>::d], T invM_S[Lattice<T>::q][Lattice<T>::q] ) {
+
+    return lbDynamicsHelpers<T, typename Lattice<T>::BaseDescriptor>
+           ::mrtCollision(cell, rho, u, invM_S );
+  }
+  //====================================
 
   static T incBgkCollision(Cell<T,Lattice>& cell, T pressure, const T j[Lattice<T>::d], T omega)
   {
@@ -168,11 +205,22 @@ struct lbDynamicsHelpers {
     for (int iD=0; iD < Descriptor::d; ++iD) {
       c_u += Descriptor::c[iPop][iD]*u[iD];
     }
-    return rho * Descriptor::t[iPop] * (
-             (T)1 + Descriptor::invCs2 * c_u +
-             Descriptor::invCs2 * Descriptor::invCs2/(T)2 * c_u*c_u -
-             Descriptor::invCs2/(T)2 * uSqr
-           ) - Descriptor::t[iPop];
+    return rho * Descriptor::t[iPop] * ( (T)1 + Descriptor::invCs2 * c_u
+                                              + Descriptor::invCs2 * Descriptor::invCs2 * (T)0.5 * c_u *c_u
+                                              - Descriptor::invCs2 * (T)0.5 * uSqr )
+                                              - Descriptor::t[iPop];
+  }
+
+  /// First order computation of equilibrium distribution
+  // TODO AP: check if this equilibrium function is the needed one
+  // -> 12.09.2017: the implementation is taken from advectionDiffusionLbHelpers.h
+  static T equilibriumFirstOrder(int iPop, T rho, const T u[Descriptor::d])
+  {
+    T c_u = T();
+    for (int iD=0; iD < Descriptor::d; ++iD) {
+      c_u += Descriptor::c[iPop][iD]*u[iD];
+    }
+    return rho * Descriptor::t[iPop] * ( (T)1 + c_u * Descriptor::invCs2 ) - Descriptor::t[iPop];
   }
 
   static T incEquilibrium( int iPop, const T j[Descriptor::d],
@@ -183,7 +231,8 @@ struct lbDynamicsHelpers {
       c_j += Descriptor::c[iPop][iD]*j[iD];
     }
     T rho = (T)1 + pressure*Descriptor::invCs2;
-    return Descriptor::t[iPop] * ( rho +
+
+    return Descriptor::t[iPop] * ( Descriptor::invCs2 * pressure +
                                    Descriptor::invCs2 * c_j +
                                    Descriptor::invCs2 * Descriptor::invCs2/(T)2 * c_j*c_j -
                                    Descriptor::invCs2/(T)2 * jSqr
@@ -204,8 +253,7 @@ struct lbDynamicsHelpers {
     const T uSqr = util::normSqr<T,Descriptor::d>(u);
     for (int iPop=0; iPop < Descriptor::q; ++iPop) {
       cell[iPop] *= (T)1-omega;
-      cell[iPop] += omega * lbDynamicsHelpers<T,Descriptor>::equilibrium (
-                      iPop, rho, u, uSqr );
+      cell[iPop] += omega * lbDynamicsHelpers<T,Descriptor>::equilibrium(iPop, rho, u, uSqr );
     }
     return uSqr;
   }
@@ -234,6 +282,140 @@ struct lbDynamicsHelpers {
     }
     return uSqr;
   }
+
+  //========================================
+
+  /// RLB advection diffusion collision step
+  static T rlbCollision(CellBase<T, Descriptor>& cell, T rho, const T u[Descriptor::d], T omega )
+  {
+    const T uSqr = util::normSqr<T, Descriptor::d>( u );
+    // First-order moment for the regularization
+    T j1[Descriptor::d];
+    for ( int iD = 0; iD < Descriptor::d; ++iD ) {
+      j1[iD] = T();
+    }
+
+    T fEq[Descriptor::q];
+    for ( int iPop = 0; iPop < Descriptor::q; ++iPop ) {
+      fEq[iPop] = lbDynamicsHelpers<T, Descriptor>::equilibriumFirstOrder( iPop, rho, u );
+      for ( int iD = 0; iD < Descriptor::d; ++iD ) {
+        j1[iD] += Descriptor::c[iPop][iD] * ( cell[iPop] - fEq[iPop] );
+      }
+    }
+
+    // Collision step
+    for ( int iPop = 0; iPop < Descriptor::q; ++iPop ) {
+      T fNeq = T();
+      for ( int iD = 0; iD < Descriptor::d; ++iD ) {
+        fNeq += Descriptor::c[iPop][iD] * j1[iD];
+      }
+      fNeq *= Descriptor::t[iPop] * Descriptor::invCs2;
+      cell[iPop] = fEq[iPop] + ( (T)1 - omega ) * fNeq;
+    }
+    return uSqr;
+  }
+
+  /// Paper: Mink et al. 2016 DOI: 10.1016/j.jocs.2016.03.014
+  static T sinkCollision(CellBase<T, Descriptor>& cell, T intensity, T omega, T sink){
+    // collision step only valid for D3Q7 lattices
+    // spezialisation implemented in lbHelpersD3Q7.h
+    for ( int iPop = 0; iPop < Descriptor::q; ++iPop ) {
+      cell[iPop] = (1 - omega) * (cell[iPop] + Descriptor::t[iPop])
+                    + omega * Descriptor::t[iPop] * intensity
+                    - sink*(cell[iPop] + Descriptor::t[iPop]) - Descriptor::t[iPop];
+    }
+    return T(0);
+  }
+
+  static T anisoCollision(CellBase<T, Descriptor>& cell, T intensity, T absorption, T scattering)
+  {
+    //    T rho[Descriptor::q];
+    //    for (int iPop = 0; iPop < Descriptor::q; ++iPop) {
+    //      rho[iPop] = T(0);
+    //    }
+    //
+    //    for (int iPop = 0; iPop < Descriptor::q; iPop++) {
+    //      for ( int jPop = 0; jPop < Descriptor::q; ++jPop ) {
+    //        rho[iPop] += (cell[jPop] + Descriptor::t[jPop]); // * Descriptor::henyeyPhaseFunction[jPop][iPop];
+    //      }
+    //    }
+
+    //    double feq = adLbDynamicsHelpers<T, Descriptor>::equilibriumFirstOrder(iPop, rhoBGK, 0.0);
+    //    for (int iPop = 0; iPop < Descriptor::q; ++iPop) {
+    //      cell[iPop] = (cell[iPop] + Descriptor::t[iPop])
+    //                   - ( cell[iPop] + Descriptor::t[iPop] - intensity * Descriptor::t[iPop] )
+    //                   - absorption/scattering * scaling * ( cell[iPop] + Descriptor::t[iPop] )
+    //                   - Descriptor::t[iPop];
+    //    }
+
+    for (int iPop = 0; iPop < Descriptor::q; ++iPop) {
+      cell[iPop] = (cell[iPop] + Descriptor::t[iPop])
+                  - scattering * ( cell[iPop] + Descriptor::t[iPop] - intensity * Descriptor::t[iPop] )
+                  - absorption * ( cell[iPop] + Descriptor::t[iPop] )
+                  - Descriptor::t[iPop];
+    }
+    return T(0);
+  }
+
+  //====================================
+  /*
+   * Helpers included from the advectionDiffusionMRTlbHelpers
+   */
+///// Computation of all equilibrium distribution (in momenta space)
+  static void computeMomentaEquilibrium( T momentaEq[Descriptor::q], T rho, const T u[Descriptor::d], T uSqr )
+  {
+    for (int iPop = 0; iPop < Descriptor::q; ++iPop) {
+      momentaEq[iPop] = T();
+      for (int jPop = 0; jPop < Descriptor::q; ++jPop) {
+        momentaEq[iPop] += Descriptor::M[iPop][jPop] *
+                (lbDynamicsHelpers<T, Descriptor>::equilibrium(jPop,rho,u,uSqr) + Descriptor::t[jPop]);
+      }
+    }
+  }
+
+  static void computeMomenta(T momenta[Descriptor::q], CellBase<T, Descriptor>& cell)
+  {
+    for (int iPop = 0; iPop < Descriptor::q; ++iPop) {
+      momenta[iPop] = T();
+      for (int jPop = 0; jPop < Descriptor::q; ++jPop) {
+        momenta[iPop] += Descriptor::M[iPop][jPop] *
+                         (cell[jPop] + Descriptor::t[jPop]);
+      }
+    }
+  }
+
+  static T mrtCollision( CellBase<T,Descriptor>& cell, T const& rho, const T u[Descriptor::d], T invM_S[Descriptor::q][Descriptor::q] )
+  {
+    //// Implemented in advectionDiffusionMRTlbHelpers2D.h and advectionDiffusionMRTlbHelpers3D.h
+    T uSqr = util::normSqr<T, Descriptor::d>(u);
+    T momenta[Descriptor::q];
+    T momentaEq[Descriptor::q];
+
+    computeMomenta(momenta, cell);
+    computeMomentaEquilibrium(momentaEq, rho, u, uSqr);
+
+//    std::cout << "momenta = ";
+//    for (int i=0; i < Descriptor::q; ++i) {
+//        std::cout << momenta[i] << ", ";
+//    }
+//    std::cout << std::endl;
+
+//    std::cout << "momentaEq = ";
+//    for (int i=0; i < Descriptor::q; ++i) {
+//        std::cout << momentaEq[i] << ", ";
+//    }
+//    std::cout << std::endl;
+
+    for (int iPop = 0; iPop < Descriptor::q; ++iPop) {
+      T collisionTerm = T();
+      for (int jPop = 0; jPop < Descriptor::q; ++jPop) {
+        collisionTerm += invM_S[iPop][jPop] * (momenta[jPop] - momentaEq[jPop]);
+      }
+      cell[iPop] -= collisionTerm;
+    }
+    return uSqr;
+  }
+  //========================================
 
   /// Computation of density
   static T computeRho(CellBase<T,Descriptor> const& cell)
@@ -461,7 +643,11 @@ struct BoundaryHelpers {
 // it to be precompiled so that in both the precompiled and the
 // "include-everything" version, the compiler can apply all the
 // optimizations it wants.
-#include "lbHelpers2D.h"
-#include "lbHelpers3D.h"
+#include "lbHelpersD2Q5.h"
+#include "lbHelpersD2Q9.h"
+#include "lbHelpersD3Q7.h"
+#include "lbHelpersD3Q15.h"
+#include "lbHelpersD3Q19.h"
+#include "lbHelpersD3Q27.h"
 
 #endif

@@ -46,18 +46,18 @@ template <typename T> class Cuboid3D;
 
 template<typename T>
 HeuristicLoadBalancer<T>::HeuristicLoadBalancer(CuboidGeometry3D<T>& cGeometry3d,
-    const double ratioFullEmpty)
+    const double ratioFullEmpty, const double weightEmpty)
   : _ratioFullEmpty(ratioFullEmpty)
 {
-  reInit(cGeometry3d, ratioFullEmpty);
+  reInit(cGeometry3d, ratioFullEmpty, weightEmpty);
 }
 
 template<typename T>
 HeuristicLoadBalancer<T>::HeuristicLoadBalancer(CuboidGeometry2D<T>& cGeometry2d,
-    const double ratioFullEmpty)
+    const double ratioFullEmpty, const double weightEmpty)
   : _ratioFullEmpty(ratioFullEmpty)
 {
-  reInit(cGeometry2d, ratioFullEmpty);
+  reInit(cGeometry2d, ratioFullEmpty, weightEmpty);
 }
 
 template<typename T>
@@ -80,7 +80,7 @@ void HeuristicLoadBalancer<T>::swap(HeuristicLoadBalancer<T>& loadBalancer)
 
 
 template<typename T>
-void HeuristicLoadBalancer<T>::reInit(CuboidGeometry3D<T>& cGeometry3d, const double ratioFullEmpty)
+void HeuristicLoadBalancer<T>::reInit(CuboidGeometry3D<T>& cGeometry3d, const double ratioFullEmpty, const double weightEmpty)
 {
   _ratioFullEmpty = ratioFullEmpty;
   this->_glob.clear();
@@ -117,7 +117,7 @@ void HeuristicLoadBalancer<T>::reInit(CuboidGeometry3D<T>& cGeometry3d, const do
     for ( int iC = 0; iC < nC; iC++) { // assemble neighbourhood information
 
       int fullCells = _cGeometry3d->get(iC).getWeight();
-      vwgt[iC] = (_cGeometry3d->get(iC).getLatticeVolume() - fullCells) + (ratioFullEmpty * fullCells);
+      vwgt[iC] = int(weightEmpty*(_cGeometry3d->get(iC).getLatticeVolume() - fullCells)) + int(ratioFullEmpty * fullCells);
     }
 
     int maxLoad = -1;
@@ -222,7 +222,7 @@ void HeuristicLoadBalancer<T>::reInit(CuboidGeometry3D<T>& cGeometry3d, const do
 }
 
 template<typename T>
-void HeuristicLoadBalancer<T>::reInit(CuboidGeometry2D<T>& cGeometry2d, const double ratioFullEmpty)
+void HeuristicLoadBalancer<T>::reInit(CuboidGeometry2D<T>& cGeometry2d, const double ratioFullEmpty, const double weightEmpty)
 {
   _ratioFullEmpty = ratioFullEmpty;
   this->_glob.clear();
@@ -232,7 +232,7 @@ void HeuristicLoadBalancer<T>::reInit(CuboidGeometry2D<T>& cGeometry2d, const do
   int nC = _cGeometry2d->getNc();
 #ifdef PARALLEL_MODE_MPI
   rank = singleton::mpi().getRank();
-  size = singleton::mpi().getSize();
+  size = std::max<int>(singleton::mpi().getSize(), 1);
 #endif
   std::vector<Cell2D<T> > inCells;
   //int xN, yN;
@@ -259,7 +259,7 @@ void HeuristicLoadBalancer<T>::reInit(CuboidGeometry2D<T>& cGeometry2d, const do
     for ( int iC = 0; iC < nC; iC++) { // assemble neighbourhood information
 
       int fullCells = _cGeometry2d->get(iC).getWeight();
-      vwgt[iC] = (_cGeometry2d->get(iC).getLatticeVolume() - fullCells) + (ratioFullEmpty * fullCells);
+      vwgt[iC] = int(weightEmpty*(_cGeometry2d->get(iC).getLatticeVolume() - fullCells)) + int(ratioFullEmpty * fullCells);
 
     }
 

@@ -51,17 +51,17 @@ public:
   //template <typename T>
   //BlockStructure3D(Cuboid3D<T> cuboid) : _nx(cuboid.getNx()), _ny(cuboid.getNy()), _nz(cuboid.getNz()) {};
   /// Read only access to block width
-  virtual int getNx() const
+  int getNx() const
   {
     return _nx;
   };
   /// Read only access to block height
-  virtual int getNy() const
+  int getNy() const
   {
     return _ny;
   };
   /// Read only access to block height
-  virtual int getNz() const
+  int getNz() const
   {
     return _nz;
   };

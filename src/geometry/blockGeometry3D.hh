@@ -87,7 +87,7 @@ BlockGeometryStatistics3D<T> const& BlockGeometry3D<T>::getStatistics(bool verbo
 }
 
 template<typename T>
-Vector<T,3> const BlockGeometry3D<T>::getOrigin() const
+Vector<T,3> BlockGeometry3D<T>::getOrigin() const
 {
   return _cuboid.getOrigin();
 }
@@ -121,13 +121,13 @@ template<typename T>
 int& BlockGeometry3D<T>::get(int iX, int iY, int iZ)
 {
   resetStatistics();
-  return this->_field[iX][iY][iZ][0];
+  return BlockData3D<T,int>::get(iX,iY,iZ,0);
 }
 
 template<typename T>
 int const& BlockGeometry3D<T>::get(int iX, int iY, int iZ) const
 {
-  return this->_field[iX][iY][iZ][0];
+  return BlockData3D<T,int>::get(iX,iY,iZ,0);
 }
 
 template<typename T>
@@ -138,7 +138,7 @@ int BlockGeometry3D<T>::getMaterial(int iX, int iY, int iZ) const
       + 1 > getNy() || iZ < 0 || iZ + 1 > getNz()) {
     material = 0;
   } else {
-    material = this->_field[iX][iY][iZ][0];
+    material = BlockData3D<T,int>::get(iX,iY,iZ,0);
   }
   return material;
 }

@@ -25,14 +25,9 @@
  * Groups all the 3D include files in the complexDynamics directory.
 */
 
-
-#include "advectionDiffusionBoundaries.h"
-#include "advectionDiffusionBoundaryCondition3D.h"
 #include "advectionDiffusionDynamics.h"
 #include "advectionDiffusionForces.h"
-#include "advectionDiffusionLatticeDescriptors.h"
 #include "advectionDiffusionMomenta.h"
-#include "advectionDiffusionUnits.h"
 #include "ADMlatticeDescriptors.h"
 #include "chopardDynamics.h"
 #include "dynamics.h"
@@ -45,9 +40,12 @@
 #include "mrtDynamics.h"
 #include "mrtLatticeDescriptors.h"
 #include "navierStokesAdvectionDiffusionCouplingPostProcessor3D.h"
+#include "navierStokesAdvectionDiffusionMRTCouplingPostProcessor3D.h"
 #include "porousBGKdynamics.h"
 #include "porousLatticeDescriptors.h"
 #include "powerLawBGKdynamics.h"
+#include "rtlbmDescriptors.h"
+#include "rtlbmDynamics.h"
 #include "shanChenDynOmegaForcedPostProcessor3D.h"
 #include "shanChenForcedLatticeDescriptors.h"
 #include "shanChenForcedPostProcessor3D.h"
@@ -56,3 +54,4 @@
 #include "smagorinskyBGKdynamics.h"
 #include "smagorinskyMRTdynamics.h"
 #include "stochasticSGSdynamics.h"
+#include "WALELatticeDescriptors.h"

@@ -44,17 +44,17 @@ template<typename T, template<typename U> class Lattice, int direction, int orie
 class ExtendedStraightFdBoundaryPostProcessor2D : public LocalPostProcessor2D<T,Lattice> {
 public:
   ExtendedStraightFdBoundaryPostProcessor2D(int x0_, int x1_, int y0_, int y1_);
-  virtual int extent() const
+  int extent() const override
   {
     return 1;
   }
-  virtual int extent(int whichDirection) const
+  int extent(int whichDirection) const override
   {
     return 1;
   }
-  virtual void process(BlockLattice2D<T,Lattice>& blockLattice);
-  virtual void processSubDomain(BlockLattice2D<T,Lattice>& blockLattice,
-                                int x0_, int x1_, int y0_, int y1_ );
+  void process(BlockLattice2D<T,Lattice>& blockLattice) override;
+  void processSubDomain(BlockLattice2D<T,Lattice>& blockLattice,
+                                int x0_, int x1_, int y0_, int y1_ ) override;
 private:
   template<int deriveDirection>
   void interpolateGradients(BlockLattice2D<T,Lattice> const& blockLattice,
@@ -71,23 +71,16 @@ template<typename T, template<typename U> class Lattice, int direction, int orie
 class ExtendedStraightFdBoundaryProcessorGenerator2D : public PostProcessorGenerator2D<T,Lattice> {
 public:
   ExtendedStraightFdBoundaryProcessorGenerator2D(int x0_, int x1_, int y0_, int y1_);
-  virtual PostProcessor2D<T,Lattice>* generate() const;
-  virtual PostProcessorGenerator2D<T,Lattice>*  clone() const;
+  PostProcessor2D<T,Lattice>* generate() const override;
+  PostProcessorGenerator2D<T,Lattice>*  clone() const override;
 };
 
 
 ////////// Factory function for Extended Finite Difference BC ///////////////////////////////
 
-template<typename T, template<typename U> class Lattice, typename MixinDynamics>
+template<typename T, template<typename U> class Lattice, typename MixinDynamics=BGKdynamics<T,Lattice> >
 OnLatticeBoundaryCondition2D<T,Lattice>*
 createExtendedFdBoundaryCondition2D(BlockLatticeStructure2D<T,Lattice>& block);
-
-template<typename T, template<typename U> class Lattice>
-OnLatticeBoundaryCondition2D<T,Lattice>*
-createExtendedFdBoundaryCondition2D(BlockLatticeStructure2D<T,Lattice>& block)
-{
-  return createExtendedFdBoundaryCondition2D<T,Lattice,BGKdynamics<T,Lattice> >(block);
-}
 
 }  // namespace olb
 

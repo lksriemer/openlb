@@ -29,15 +29,16 @@
 #define SUPER_BOUNDARY_CONDITION_3D_H
 
 #include <vector>
-#include "boundaryCondition3D.h"
-#include "dynamics/advectionDiffusionBoundaryCondition3D.h"
-#include "geometry/superGeometryStatistics3D.h"
-#include "core/superLattice3D.h"
 #include "io/ostreamManager.h"
 #include "extendedFiniteDifferenceBoundary3D.h"
 
 /// All OpenLB code is contained in this namespace.
 namespace olb {
+
+template<typename T, template<typename U> class Lattice> class OnLatticeAdvectionDiffusionBoundaryCondition3D;
+template<typename T, template<typename U> class Lattice> class OnLatticeBoundaryCondition3D;
+template<typename T, template<typename U> class Lattice> class SuperLattice3D;
+template<typename T> class SuperGeometry3D;
 
 /// A helper for initialising 3D boundaries for super lattices.
 /** Here we have methods that initializes the local postprocessors and the
@@ -48,17 +49,10 @@ namespace olb {
  */
 template<typename T, template<typename U> class Lattice>
 class sOnLatticeBoundaryCondition3D {
-
 public:
-  /// Constructor
   sOnLatticeBoundaryCondition3D(SuperLattice3D<T, Lattice>& sLattice);
-  /// Copy construction
-  sOnLatticeBoundaryCondition3D(
-    sOnLatticeBoundaryCondition3D<T, Lattice> const& rhs);
-  /// Copy assignment
-  sOnLatticeBoundaryCondition3D operator=(sOnLatticeBoundaryCondition3D<T,
-                                          Lattice> rhs);
-  /// Destructor
+  sOnLatticeBoundaryCondition3D(sOnLatticeBoundaryCondition3D<T, Lattice> const& rhs);
+  sOnLatticeBoundaryCondition3D operator=(sOnLatticeBoundaryCondition3D<T,Lattice> rhs);
   ~sOnLatticeBoundaryCondition3D();
 
   void addVelocityBoundary(SuperGeometry3D<T>& superGeometry, int material, T omega);
@@ -66,7 +60,6 @@ public:
   void addPressureBoundary(SuperGeometry3D<T>& superGeometry, int material, T omega);
   void addConvectionBoundary(SuperGeometry3D<T>& superGeometry, int material, T omega, T* uAv=NULL);
   void addTemperatureBoundary(SuperGeometry3D<T>& superGeometry, int material, T omega);
-  void addDiffuseReflectionBoundary(SuperGeometry3D<T>& superGeometry, int material, T omega, T zeta);
   void addConvectionBoundary(SuperGeometry3D<T>& superGeometry, int material);
   void addExtFieldBoundary(SuperGeometry3D<T>& superGeometry, int material, int offset);
   void addZeroDistributionBoundary(SuperGeometry3D<T>& superGeometry, int material);
@@ -74,34 +67,14 @@ public:
   /// Adds needed Cells to the Communicator _commBC in SuperLattice
   void addPoints2CommBC(SuperGeometry3D<T>& superGeometry, int material);
 
-  SuperLattice3D<T, Lattice>& getSuperLattice()
-  {
-    return _sLattice;
-  };
-
-  std::vector<OnLatticeBoundaryCondition3D<T, Lattice>*>& getBlockBCs()
-  {
-    return _blockBCs;
-  };
-
-  std::vector<OnLatticeAdvectionDiffusionBoundaryCondition3D<T, Lattice>*>& getADblockBCs()
-  {
-    return _ADblockBCs;
-  };
-
-  int getOverlap()
-  {
-    return _overlap;
-  };
-
-  void setOverlap(int overlap)
-  {
-    _overlap = overlap;
-  };
+  SuperLattice3D<T, Lattice>& getSuperLattice();
+  std::vector<OnLatticeBoundaryCondition3D<T, Lattice>*>& getBlockBCs();
+  std::vector<OnLatticeAdvectionDiffusionBoundaryCondition3D<T, Lattice>*>& getADblockBCs();
+  int getOverlap();
+  void setOverlap(int overlap);
 
   void outputOn();
   void outputOff();
-
 
 private:
   mutable OstreamManager clout;
@@ -112,37 +85,18 @@ private:
   bool _output;
 };
 
-template<typename T, template<typename U> class Lattice, typename MixinDynamics>
-void createLocalBoundaryCondition3D(
-  sOnLatticeBoundaryCondition3D<T, Lattice>& sBC);
 
-template<typename T, template<typename U> class Lattice, typename MixinDynamics>
-void createInterpBoundaryCondition3D(
-  sOnLatticeBoundaryCondition3D<T, Lattice>& sBC);
-
-template<typename T, template<typename U> class Lattice, typename MixinDynamics>
-void createExtFdBoundaryCondition3D(
-  sOnLatticeBoundaryCondition3D<T, Lattice>& sBC);
-
+////////////////// Factory functions //////////////////////////////////
 
 template<typename T, template<typename U> class Lattice>
-void createLocalBoundaryCondition3D(
-  sOnLatticeBoundaryCondition3D<T, Lattice>& sBC)
-{
-  createLocalBoundaryCondition3D<T, Lattice, RLBdynamics<T, Lattice> > (sBC);
-}
-template<typename T, template<typename U> class Lattice>
-void createInterpBoundaryCondition3D(
-  sOnLatticeBoundaryCondition3D<T, Lattice>& sBC)
-{
-  createInterpBoundaryCondition3D<T, Lattice, BGKdynamics<T, Lattice> > (sBC);
-}
-template<typename T, template<typename U> class Lattice>
-void createExtFdBoundaryCondition3D(
-  sOnLatticeBoundaryCondition3D<T, Lattice>& sBC)
-{
-  createInterpBoundaryCondition3D<T, Lattice, BGKdynamics<T, Lattice> > (sBC);
-}
+void createLocalBoundaryCondition3D(sOnLatticeBoundaryCondition3D<T, Lattice>& sBC);
+
+template<typename T, template<typename U> class Lattice, typename MixinDynamics=BGKdynamics<T,Lattice> >
+void createInterpBoundaryCondition3D(sOnLatticeBoundaryCondition3D<T, Lattice>& sBC);
+
+template<typename T, template<typename U> class Lattice, typename MixinDynamics=BGKdynamics<T,Lattice> >
+void createExtFdBoundaryCondition3D(sOnLatticeBoundaryCondition3D<T, Lattice>& sBC);
+
 
 } // namespace olb
 

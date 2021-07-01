@@ -40,7 +40,7 @@ private:
   static bool multiOutput;
 public:
   OMBuf();
-  ~OMBuf();
+  ~OMBuf() override;
   OMBuf(const OMBuf& rhs);
   OMBuf& operator=(const OMBuf& rhs);
   void swap(OMBuf& rhs);
@@ -50,7 +50,7 @@ public:
   /** 1) first Output "[text] ", then the buffer,<br>
     * 2) reset the buffer<br>
     * 3) and flush the actual output stream*/
-  virtual int sync();
+  int sync() override;
 };
 
 /// class for marking output with some text
@@ -96,7 +96,7 @@ public:
   // Copy assignment
   OstreamManager& operator=(const OstreamManager& rhs);
   // Destructor
-  ~OstreamManager();
+  ~OstreamManager() override;
   /// enable message output for all MPI processes, disabled by default
   void setMultiOutput(bool b);
 };

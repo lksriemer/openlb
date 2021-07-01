@@ -38,49 +38,49 @@ class BoundaryConditionInstantiator2D: public OnLatticeBoundaryCondition2D<T,
   Lattice> {
 public:
   BoundaryConditionInstantiator2D(BlockLatticeStructure2D<T, Lattice>& block_);
-  ~BoundaryConditionInstantiator2D();
+  ~BoundaryConditionInstantiator2D() override;
 
-  void addVelocityBoundary0N(int x0, int x1, int y0, int y1, T omega);
-  void addVelocityBoundary0P(int x0, int x1, int y0, int y1, T omega);
-  void addVelocityBoundary1N(int x0, int x1, int y0, int y1, T omega);
-  void addVelocityBoundary1P(int x0, int x1, int y0, int y1, T omega);
+  void addVelocityBoundary0N(int x0, int x1, int y0, int y1, T omega) override;
+  void addVelocityBoundary0P(int x0, int x1, int y0, int y1, T omega) override;
+  void addVelocityBoundary1N(int x0, int x1, int y0, int y1, T omega) override;
+  void addVelocityBoundary1P(int x0, int x1, int y0, int y1, T omega) override;
 
   void addSlipBoundary(int x0, int x1, int y0, int y1, int discreteNormalX, int discreteNormalY);
 
-  void addPressureBoundary0N(int x0, int x1, int y0, int y1, T omega);
-  void addPressureBoundary0P(int x0, int x1, int y0, int y1, T omega);
-  void addPressureBoundary1N(int x0, int x1, int y0, int y1, T omega);
-  void addPressureBoundary1P(int x0, int x1, int y0, int y1, T omega);
+  void addPressureBoundary0N(int x0, int x1, int y0, int y1, T omega) override;
+  void addPressureBoundary0P(int x0, int x1, int y0, int y1, T omega) override;
+  void addPressureBoundary1N(int x0, int x1, int y0, int y1, T omega) override;
+  void addPressureBoundary1P(int x0, int x1, int y0, int y1, T omega) override;
 
-  void addConvectionBoundary0N(int x0, int x1, int y0, int y1, T omega, T* uAv=NULL);
-  void addConvectionBoundary0P(int x0, int x1, int y0, int y1, T omega, T* uAv=NULL);
-  void addConvectionBoundary1N(int x0, int x1, int y0, int y1, T omega, T* uAv=NULL);
-  void addConvectionBoundary1P(int x0, int x1, int y0, int y1, T omega, T* uAv=NULL);
+  void addConvectionBoundary0N(int x0, int x1, int y0, int y1, T omega, T* uAv=NULL) override;
+  void addConvectionBoundary0P(int x0, int x1, int y0, int y1, T omega, T* uAv=NULL) override;
+  void addConvectionBoundary1N(int x0, int x1, int y0, int y1, T omega, T* uAv=NULL) override;
+  void addConvectionBoundary1P(int x0, int x1, int y0, int y1, T omega, T* uAv=NULL) override;
 
-  void addExternalVelocityCornerNN(int x, int y, T omega);
-  void addExternalVelocityCornerNP(int x, int y, T omega);
-  void addExternalVelocityCornerPN(int x, int y, T omega);
-  void addExternalVelocityCornerPP(int x, int y, T omega);
+  void addExternalVelocityCornerNN(int x, int y, T omega) override;
+  void addExternalVelocityCornerNP(int x, int y, T omega) override;
+  void addExternalVelocityCornerPN(int x, int y, T omega) override;
+  void addExternalVelocityCornerPP(int x, int y, T omega) override;
 
-  void addInternalVelocityCornerNN(int x, int y, T omega);
-  void addInternalVelocityCornerNP(int x, int y, T omega);
-  void addInternalVelocityCornerPN(int x, int y, T omega);
-  void addInternalVelocityCornerPP(int x, int y, T omega);
+  void addInternalVelocityCornerNN(int x, int y, T omega) override;
+  void addInternalVelocityCornerNP(int x, int y, T omega) override;
+  void addInternalVelocityCornerPN(int x, int y, T omega) override;
+  void addInternalVelocityCornerPP(int x, int y, T omega) override;
 
-  void addVelocityBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int material, int x0, int x1, int y0, int y1, T omega);
-  void addVelocityBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int material, T omega);
-  void addSlipBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int material, int x0, int x1, int y0, int y1);
-  void addSlipBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int material);
-  void addPressureBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int material, int x0, int x1, int y0, int y1, T omega);
-  void addPressureBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int material, T omega);
-  void addConvectionBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int material, int x0, int x1, int y0, int y1, T omega, T* uAv=NULL);
-  void addConvectionBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int material, T omega, T* uAv=NULL);
+  void addVelocityBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int material, int x0, int x1, int y0, int y1, T omega) override;
+  void addVelocityBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int material, T omega) override;
+  void addSlipBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int material, int x0, int x1, int y0, int y1) override;
+  void addSlipBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int material) override;
+  void addPressureBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int material, int x0, int x1, int y0, int y1, T omega) override;
+  void addPressureBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int material, T omega) override;
+  void addConvectionBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int material, int x0, int x1, int y0, int y1, T omega, T* uAv=NULL) override;
+  void addConvectionBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int material, T omega, T* uAv=NULL) override;
 
-  void outputOn();
-  void outputOff();
+  void outputOn() override;
+  void outputOff() override;
 
-  virtual BlockLatticeStructure2D<T, Lattice>& getBlock();
-  virtual BlockLatticeStructure2D<T, Lattice> const& getBlock() const;
+  BlockLatticeStructure2D<T, Lattice>& getBlock() override;
+  BlockLatticeStructure2D<T, Lattice> const& getBlock() const override;
 private:
   template<int direction, int orientation>
   void addVelocityBoundary(int x0, int x1, int y0, int y1, T omega);
@@ -112,11 +112,11 @@ BoundaryConditionInstantiator2D<T, Lattice, BoundaryManager>::BoundaryConditionI
 template<typename T, template<typename U> class Lattice, class BoundaryManager>
 BoundaryConditionInstantiator2D<T, Lattice, BoundaryManager>::~BoundaryConditionInstantiator2D()
 {
-  for (unsigned iDynamics = 0; iDynamics < dynamicsVector.size(); ++iDynamics) {
-    delete dynamicsVector[iDynamics];
+  for (auto &iDynamics : dynamicsVector) {
+    delete iDynamics;
   }
-  for (unsigned iMomenta = 0; iMomenta < dynamicsVector.size(); ++iMomenta) {
-    delete momentaVector[iMomenta];
+  for (auto &iMomenta : momentaVector) {
+    delete iMomenta;
   }
 }
 

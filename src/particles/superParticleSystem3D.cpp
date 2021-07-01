@@ -23,13 +23,12 @@
 
 #include "dynamics/latticeDescriptors.h"
 #include "dynamics/latticeDescriptors.hh"
-#include "functors/superLatticeLocalF3D.h"
-#include "functors/superLatticeLocalF3D.hh"
+#include "functors/lattice/superLatticeLocalF3D.h"
+#include "functors/lattice/superLatticeLocalF3D.hh"
 #include "particle3D.h"
 #include "particle3D.hh"
 #include "superParticleSystem3D.h"
 #include "superParticleSystem3D.hh"
-#include "functors/superLatticeLocalF3D.h"
 
 namespace olb {
 

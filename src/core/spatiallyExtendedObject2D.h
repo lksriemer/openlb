@@ -25,15 +25,11 @@
 #ifndef SPATIALLY_EXTENDED_OBJECT_2D_H
 #define SPATIALLY_EXTENDED_OBJECT_2D_H
 
-#include "multiPhysics.h"
 
 namespace olb {
 
 struct SpatiallyExtendedObject2D {
   virtual ~SpatiallyExtendedObject2D() { }
-  virtual SpatiallyExtendedObject2D* getComponent(int iBlock) =0;
-  virtual SpatiallyExtendedObject2D const* getComponent(int iBlock) const =0;
-  virtual multiPhysics::MultiPhysicsId getMultiPhysicsId() const =0;
 };
 
 } // namespace olb

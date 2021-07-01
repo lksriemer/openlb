@@ -48,7 +48,7 @@ namespace olb {
  *
  */
 template<typename T>
-class BlockGeometry2D : public BlockData2D<T,int>, public BlockGeometryStructure2D<T> {
+class BlockGeometry2D  final : public BlockData2D<T,int>, public BlockGeometryStructure2D<T> {
 
 private:
   /// Cuboid which charaterizes the block geometry
@@ -72,7 +72,7 @@ public:
   BlockGeometryStatistics2D<T> const& getStatistics(bool verbose=true) const override;
 
   /// Read only access to the origin position given in SI units (meter)
-  std::vector<T> const getOrigin() const override;
+  Vector<T,2> getOrigin() const override;
   /// Read only access to the voxel size given in SI units (meter)
   const T getDeltaR() const override;
   /// Returns the extend (number of voxels) in X-direction
@@ -81,10 +81,10 @@ public:
   int getNy() const override;
 
   /// Write access to a material number
-  int& get(int iX, int iY) override;
+  int& get(int iX, int iY) override;  // override BlockGeometryStructure2D::get() by linking to BlockData2D<T,int>::get()
   /// Read only access to a material number
-  int const& get(int iX, int iY) const override;
-  /// returns the (iX,iY,iZ) entry in the 2D scalar field
+  int const& get(int iX, int iY) const override;  // override BlockGeometryStructure2D::get() by linking to BlockData2D<T,int>::get()
+  /// returns the (iX,iY) entry in the 2D scalar field
   int getMaterial(int iX, int iY) const override; // TODO old
 
   /// Transforms lattice to physical coordinates (wrapped from cuboid geometry)

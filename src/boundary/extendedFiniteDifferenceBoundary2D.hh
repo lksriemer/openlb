@@ -78,7 +78,7 @@ processSubDomain(BlockLattice2D<T,Lattice>& blockLattice, int x0_, int x1_, int 
         rhoGradU[y][x] = rho * dy_U[x];
         rhoGradU[y][y] = rho * dy_U[y];
 
-        T omega = cell.getDynamics() -> getOmega();
+        T omega = blockLattice.getDynamics(iX, iY) -> getOmega();
         T sToPi = - (T)1 / Lattice<T>::invCs2 / omega;
 
         T pi[util::TensorVal<Lattice<T> >::n];
@@ -294,7 +294,7 @@ PostProcessorGenerator2D<T,Lattice>*
 ExtendedFdBoundaryManager2D<T,Lattice,MixinDynamics>::
 getConvectionBoundaryProcessor(int x0, int x1, int y0, int y1, T* uAv)
 {
-  return 0;
+  return nullptr;
 }
 
 template<typename T, template<typename U> class Lattice, class MixinDynamics>
@@ -342,7 +342,7 @@ template<int xNormal, int yNormal>
 PostProcessorGenerator2D<T,Lattice>*
 ExtendedFdBoundaryManager2D<T,Lattice,MixinDynamics>::getInternalVelocityCornerProcessor (int x, int y)
 {
-  return 0;
+  return nullptr;
 }
 
 

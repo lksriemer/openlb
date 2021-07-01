@@ -32,7 +32,7 @@
 #include <sstream>
 #include <vector>
 #include "io/ostreamManager.h"
-#include "functors/superBaseF3D.h"
+#include "functors/lattice/superBaseF3D.h"
 
 namespace olb {
 
@@ -50,7 +50,7 @@ namespace olb {
 template<typename T, typename W=T>
 class SuperVTMwriter3D {
 public:
-  SuperVTMwriter3D( std::string name );
+  SuperVTMwriter3D( const std::string& name, bool binary=true, bool compress=true );
   ///  writes functors stored in pointerVec
   ///  every thread writes a vti file with data from his cuboids
   ///  the vti files are linked in a pvd file
@@ -63,14 +63,14 @@ public:
   ///  put functor to _pointerVec
   ///  to simplify writing process of several functors
   void addFunctor(SuperF3D<T,W>& f);
-  ///  to clear stored functors, not yet used due to lack of necessity
-  void clearAddedFunctors();
   /// getter for _name
   std::string getName() const;
 private:
+  ///  to clear stored functors, not yet used due to lack of necessity
+  void clearAddedFunctors();
   ///  performes <VTKFile ...>, <ImageData ...>, <PieceExtent ...> and <PointData ...>
-  void preambleVTI(const std::string& fullName, int x0, int y0, int z0, int x1,
-                   int y1, int z1, T originX, T originY, T originZ, T delta);
+  void preambleVTI(const std::string& fullName, const Vector<int,3> extent0, const Vector<int,3> extent1,
+                   T origin[], const T delta);
   ///  performes </ImageData> and </VTKFile>
   void closeVTI(const std::string& fullNamePiece);
   ///  performes <VTKFile ...> and <Collection>
@@ -88,9 +88,9 @@ private:
   ///  *** nasty function ***
   void dataPVDmaster(int iT, const std::string& fullNamePVDMaster,
                      const std::string& namePiece);
-  ///  writes given functor f, base64
+  ///  writes given functor f, ascii or base64 or zLib
   void dataArray(const std::string& fullName, SuperF3D<T,W>& f,
-                 int iC, int nx, int ny, int nz);
+                 int iC, const Vector<int,3> extent1);
   ///  performes </PointData> and </Piece>
   void closePiece(const std::string& fullNamePiece);
 private:
@@ -98,9 +98,13 @@ private:
   ///  default is false, call createMasterFile() and it will be true
   bool _createFile;
   ///  determines the name of .vti and .pvd per iT
-  std::string _name;
+  std::string const _name;
   ///  holds added functor, to simplify the use of write function
   std::vector< SuperF3D<T,W>* > _pointerVec;
+  ///  writing data base64 encoded
+  bool _binary;
+  ///  writing data zLib compressed
+  bool _compress;
 };
 
 

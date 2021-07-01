@@ -46,55 +46,51 @@ public:
   BlockLatticeView2D(BlockLatticeStructure2D<T,Lattice>& originalLattice_);
   BlockLatticeView2D(BlockLatticeStructure2D<T,Lattice>& originalLattice_,
                      int x0_, int x1_, int y0_, int y1_);
-  ~BlockLatticeView2D();
+  ~BlockLatticeView2D() override;
   BlockLatticeView2D(BlockLatticeView2D const& rhs);
   BlockLatticeView2D<T,Lattice>& operator=
   (BlockLatticeView2D<T,Lattice> const& rhs);
   void swap(BlockLatticeView2D<T,Lattice>& rhs);
 
-  virtual Cell<T,Lattice>& get(int iX, int iY);
-  virtual Cell<T,Lattice> const& get(int iX, int iY) const;
-  virtual void initialize();
-  virtual void defineDynamics (
+  Cell<T,Lattice>& get(int iX, int iY) override;
+  Cell<T,Lattice> const& get(int iX, int iY) const override;
+  void initialize() override;
+  void defineDynamics (
     int x0_, int x1_, int y0_, int y1_,
-    Dynamics<T,Lattice>* dynamics );
-  virtual void defineDynamics(int iX, int iY, Dynamics<T,Lattice>* dynamics );
-  virtual void specifyStatisticsStatus (
-    int x0_, int x1_, int y0_, int y1_, bool status );
-  virtual void collide(int x0_, int x1_, int y0_, int y1_);
-  virtual void collide();
+    Dynamics<T,Lattice>* dynamics ) override;
+  void defineDynamics(int iX, int iY, Dynamics<T,Lattice>* dynamics ) override;
+  Dynamics<T,Lattice>* getDynamics(int iX, int iY) override;
+  void collide(int x0_, int x1_, int y0_, int y1_) override;
+  void collide() override;
   /*virtual void staticCollide (int x0, int x1, int y0, int y1,
                               TensorFieldBase2D<T,2> const& u);
   virtual void staticCollide (TensorFieldBase2D<T,2> const& u);*/
-  virtual void stream(int x0_, int x1_, int y0_, int y1_);
-  virtual void collideAndStream(int x0_, int x1_, int y0_, int y1_);
-  virtual void stream(bool periodic=false);
-  virtual void collideAndStream(bool periodic=false);
-  virtual T computeAverageDensity(int x0_, int x1_, int y0_, int y1_) const;
-  virtual T computeAverageDensity() const;
-  virtual void stripeOffDensityOffset (
-    int x0_, int x1_, int y0_, int y1_, T offset );
-  virtual void stripeOffDensityOffset(T offset);
-  virtual void forAll(int x0_, int x1_, int y0_, int y1_,
-                      WriteCellFunctional<T,Lattice> const& application);
-  virtual void forAll(WriteCellFunctional<T,Lattice> const& application);
-  virtual void addPostProcessor (
-    PostProcessorGenerator2D<T,Lattice> const& ppGen);
-  virtual void resetPostProcessors();
-  virtual void postProcess(int x0_, int x1_, int y0_, int y1_);
-  virtual void postProcess();
-  virtual void addLatticeCoupling (
+  void stream(int x0_, int x1_, int y0_, int y1_) override;
+  void collideAndStream(int x0_, int x1_, int y0_, int y1_) override;
+  void stream(bool periodic=false) override;
+  void collideAndStream(bool periodic=false) override;
+  T computeAverageDensity(int x0_, int x1_, int y0_, int y1_) const override;
+  T computeAverageDensity() const override;
+  void computeStress(int iX, int iY, T pi[util::TensorVal<Lattice<T> >::n]) override;
+  void stripeOffDensityOffset (
+    int x0_, int x1_, int y0_, int y1_, T offset ) override;
+  void stripeOffDensityOffset(T offset) override;
+  void forAll(int x0_, int x1_, int y0_, int y1_,
+                      WriteCellFunctional<T,Lattice> const& application) override;
+  void forAll(WriteCellFunctional<T,Lattice> const& application) override;
+  void addPostProcessor (
+    PostProcessorGenerator2D<T,Lattice> const& ppGen) override;
+  void resetPostProcessors() override;
+  void postProcess(int x0_, int x1_, int y0_, int y1_) override;
+  void postProcess() override;
+  void addLatticeCoupling (
     LatticeCouplingGenerator2D<T,Lattice> const& lcGen,
-    std::vector<SpatiallyExtendedObject2D*> partners );
-  virtual void executeCoupling(int x0_, int x1_, int y0_, int y1_);
-  virtual void executeCoupling();
-  virtual void subscribeReductions(Reductor<T>& reductor);
-  virtual LatticeStatistics<T>& getStatistics();
-  virtual LatticeStatistics<T> const& getStatistics() const;
-
-  virtual SpatiallyExtendedObject2D* getComponent(int iBlock);
-  virtual SpatiallyExtendedObject2D const* getComponent(int iBlock) const;
-  virtual multiPhysics::MultiPhysicsId getMultiPhysicsId() const;
+    std::vector<SpatiallyExtendedObject2D*> partners ) override;
+  void executeCoupling(int x0_, int x1_, int y0_, int y1_) override;
+  void executeCoupling() override;
+  void subscribeReductions(Reductor<T>& reductor) override;
+  LatticeStatistics<T>& getStatistics() override;
+  LatticeStatistics<T> const& getStatistics() const override;
 private:
   BlockLatticeStructure2D<T,Lattice>  *originalLattice;
   int                          x0, y0;

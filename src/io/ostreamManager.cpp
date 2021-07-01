@@ -37,7 +37,7 @@ namespace olb {
 bool OMBuf::multiOutput = 0;
 
 OMBuf::OMBuf()
-  : output(NULL), text("")
+  : output(nullptr), text("")
 { }
 
 OMBuf::~OMBuf()

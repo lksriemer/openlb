@@ -43,13 +43,6 @@ ZouHeDynamics<T,Lattice,Dynamics,direction,orientation>::ZouHeDynamics (
 { }
 
 template<typename T, template<typename U> class Lattice, typename Dynamics, int direction, int orientation>
-ZouHeDynamics<T,Lattice,Dynamics,direction,orientation>*
-ZouHeDynamics<T,Lattice, Dynamics, direction, orientation>::clone() const
-{
-  return new ZouHeDynamics<T,Lattice,Dynamics,direction,orientation>(*this);
-}
-
-template<typename T, template<typename U> class Lattice, typename Dynamics, int direction, int orientation>
 T ZouHeDynamics<T,Lattice, Dynamics, direction, orientation>::
 computeEquilibrium(int iPop, T rho, const T u[Lattice<T>::d], T uSqr) const
 {
@@ -78,7 +71,7 @@ void ZouHeDynamics<T,Lattice,Dynamics,direction,orientation>::collide (
   std::vector<int> missingDiagonalIndexes = missingIndexes;
   for (unsigned iPop = 0; iPop < missingIndexes.size(); ++iPop) {
     int numOfNonNullComp = 0;
-    for (int iDim = 0; iDim < L:: d; ++iDim) {
+    for (int iDim = 0; iDim < L::d; ++iDim) {
       numOfNonNullComp += abs(L::c[missingIndexes[iPop]][iDim]);
     }
 
@@ -109,7 +102,7 @@ void ZouHeDynamics<T,Lattice,Dynamics,direction,orientation>::collide (
   lbH::computeRhoU(cell,falseRho,falseU);
 
   T diff[L::d];
-  for (int iDim = 0; iDim < L:: d; ++iDim) {
+  for (int iDim = 0; iDim < L::d; ++iDim) {
     diff[iDim] = (rho*u[iDim] - falseRho*falseU[iDim])/ (T)missingDiagonalIndexes.size();
   }
 
@@ -139,7 +132,7 @@ void ZouHeDynamics<T,Lattice,Dynamics,direction,orientation>::staticCollide (
 
   for (unsigned iPop = 0; iPop < missingIndexes.size(); ++iPop) {
     int numOfNonNullComp = 0;
-    for (int iDim = 0; iDim < L:: d; ++iDim) {
+    for (int iDim = 0; iDim < L::d; ++iDim) {
       numOfNonNullComp += abs(L::c[missingIndexes[iPop]][iDim]);
     }
 
@@ -163,7 +156,7 @@ void ZouHeDynamics<T,Lattice,Dynamics,direction,orientation>::staticCollide (
   lbH::computeRhoU(cell,falseRho,falseU);
 
   T diff[L::d];
-  for (int iDim = 0; iDim < L:: d; ++iDim) {
+  for (int iDim = 0; iDim < L::d; ++iDim) {
     diff[iDim] = (rho*u[iDim] - falseRho*falseU[iDim])/ (T)missingDiagonalIndexes.size();
   }
 
@@ -187,18 +180,6 @@ template<typename T, template<typename U> class Lattice, typename Dynamics, int 
 void ZouHeDynamics<T,Lattice,Dynamics,direction,orientation>::setOmega(T omega_)
 {
   boundaryDynamics.setOmega(omega_);
-}
-
-template<typename T, template<typename U> class Lattice, typename Dynamics, int direction, int orientation>
-T ZouHeDynamics<T,Lattice,Dynamics,direction,orientation>::getParameter(int whichParameter) const
-{
-  return boundaryDynamics.getParameter(whichParameter);
-}
-
-template<typename T, template<typename U> class Lattice, typename Dynamics, int direction, int orientation>
-void ZouHeDynamics<T,Lattice,Dynamics,direction,orientation>::setParameter(int whichParameter, T value)
-{
-  boundaryDynamics.setParameter(whichParameter, value);
 }
 
 

@@ -1,6 +1,6 @@
 /*  This file is part of the OpenLB library
  *
- *  Copyright (C) 2006, 2007 Orestis Malaspinas, Jonas Latt
+ *  Copyright (C) 2006, 2007, 2017 Orestis Malaspinas, Jonas Latt, Mathias J. Krause
  *  E-mail contact: info@openlb.net
  *  The most recent release of OpenLB can be downloaded at
  *  <http://www.openlb.net/>
@@ -22,7 +22,7 @@
 */
 
 /** \file
- * A collection of dynamics classes (e.g. BGK) with which a Cell object
+ * A collection of entropic dynamics classes (e.g. Entropic, ForcedEntropic, Entropic, ForcedEntropic) with which a Cell object
  * can be instantiated -- generic implementation.
  */
 #ifndef ENTROPIC_LB_DYNAMICS_HH
@@ -37,6 +37,156 @@
 namespace olb {
 
 //==============================================================================//
+/////////////////////////// Class EntropicEqDynamics ///////////////////////////////
+//==============================================================================//
+/** \param omega_ relaxation parameter, related to the dynamic viscosity
+ *  \param momenta_ a Momenta object to know how to compute velocity momenta
+ */
+template<typename T, template<typename U> class Lattice>
+EntropicEqDynamics<T,Lattice>::EntropicEqDynamics (
+  T omega_, Momenta<T,Lattice>& momenta_ )
+  : BasicDynamics<T,Lattice>(momenta_),
+    omega(omega_)
+{ }
+
+template<typename T, template<typename U> class Lattice>
+T EntropicEqDynamics<T,Lattice>::computeEquilibrium(int iPop, T rho, const T u[Lattice<T>::d], T uSqr) const
+{
+  return entropicLbHelpers<T,Lattice>::equilibrium(iPop,rho,u);
+}
+
+template<typename T, template<typename U> class Lattice>
+void EntropicEqDynamics<T,Lattice>::collide (
+  Cell<T,Lattice>& cell,
+  LatticeStatistics<T>& statistics )
+{
+  typedef Lattice<T> L;
+  typedef entropicLbHelpers<T,Lattice> eLbH;
+
+  T rho, u[Lattice<T>::d];
+  this->_momenta.computeRhoU(cell, rho, u);
+  T uSqr = util::normSqr<T,L::d>(u);
+
+  for (int iPop=0; iPop < Lattice<T>::q; ++iPop) {
+    cell[iPop] += omega * (eLbH::equilibrium(iPop,rho,u) - cell[iPop]);
+  }
+
+  statistics.incrementStats(rho, uSqr);
+}
+
+template<typename T, template<typename U> class Lattice>
+void EntropicEqDynamics<T,Lattice>::staticCollide (
+  Cell<T,Lattice>& cell,
+  const T u[Lattice<T>::d],
+  LatticeStatistics<T>& statistics )
+{
+  typedef Lattice<T> L;
+  typedef entropicLbHelpers<T,Lattice> eLbH;
+
+  T rho = this->_momenta.computeRho(cell);
+  T uSqr = util::normSqr<T,L::d>(u);
+
+  for (int iPop=0; iPop < Lattice<T>::q; ++iPop) {
+    cell[iPop] += omega * (eLbH::equilibrium(iPop,rho,u) - cell[iPop]);
+  }
+
+  statistics.incrementStats(rho, uSqr);
+}
+
+template<typename T, template<typename U> class Lattice>
+T EntropicEqDynamics<T,Lattice>::getOmega() const
+{
+  return omega;
+}
+
+template<typename T, template<typename U> class Lattice>
+void EntropicEqDynamics<T,Lattice>::setOmega(T omega_)
+{
+  omega = omega_;
+}
+
+
+//====================================================================//
+//////////////////// Class ForcedEntropicEqDynamics //////////////////////
+//====================================================================//
+
+/** \param omega_ relaxation parameter, related to the dynamic viscosity
+ */
+template<typename T, template<typename U> class Lattice>
+ForcedEntropicEqDynamics<T,Lattice>::ForcedEntropicEqDynamics (
+  T omega_, Momenta<T,Lattice>& momenta_ )
+  : BasicDynamics<T,Lattice>(momenta_),
+    omega(omega_)
+{ }
+
+template<typename T, template<typename U> class Lattice>
+T ForcedEntropicEqDynamics<T,Lattice>::computeEquilibrium(int iPop, T rho, const T u[Lattice<T>::d], T uSqr) const
+{
+  return entropicLbHelpers<T,Lattice>::equilibrium(iPop,rho,u);
+}
+
+
+template<typename T, template<typename U> class Lattice>
+void ForcedEntropicEqDynamics<T,Lattice>::collide (
+  Cell<T,Lattice>& cell,
+  LatticeStatistics<T>& statistics )
+{
+  typedef Lattice<T> L;
+  typedef entropicLbHelpers<T,Lattice> eLbH;
+
+  T rho, u[Lattice<T>::d];
+  this->_momenta.computeRhoU(cell, rho, u);
+
+  T* force = cell.getExternal(forceBeginsAt);
+  for (int iDim=0; iDim<Lattice<T>::d; ++iDim) {
+    u[iDim] += force[iDim] / (T)2.;
+  }
+  T uSqr = util::normSqr<T,L::d>(u);
+
+  for (int iPop=0; iPop < Lattice<T>::q; ++iPop) {
+    cell[iPop] += omega * (eLbH::equilibrium(iPop,rho,u) - cell[iPop]);
+  }
+
+  lbHelpers<T,Lattice>::addExternalForce(cell, u, omega);
+
+  statistics.incrementStats(rho, uSqr);
+}
+
+template<typename T, template<typename U> class Lattice>
+void ForcedEntropicEqDynamics<T,Lattice>::staticCollide (
+  Cell<T,Lattice>& cell,
+  const T u[Lattice<T>::d],
+  LatticeStatistics<T>& statistics )
+{
+  typedef Lattice<T> L;
+  typedef entropicLbHelpers<T,Lattice> eLbH;
+
+  T rho = this->_momenta.computeRho(cell);
+  T uSqr = util::normSqr<T,L::d>(u);
+
+  for (int iPop=0; iPop < Lattice<T>::q; ++iPop) {
+    cell[iPop] += omega * (eLbH::equilibrium(iPop,rho,u) - cell[iPop]);
+  }
+
+  lbHelpers<T,Lattice>::addExternalForce(cell, u, omega);
+
+  statistics.incrementStats(rho, uSqr);
+}
+
+template<typename T, template<typename U> class Lattice>
+T ForcedEntropicEqDynamics<T,Lattice>::getOmega() const
+{
+  return omega;
+}
+
+template<typename T, template<typename U> class Lattice>
+void ForcedEntropicEqDynamics<T,Lattice>::setOmega(T omega_)
+{
+  omega = omega_;
+}
+
+
+//==============================================================================//
 /////////////////////////// Class EntropicDynamics ///////////////////////////////
 //==============================================================================//
 /** \param omega_ relaxation parameter, related to the dynamic viscosity
@@ -48,12 +198,6 @@ EntropicDynamics<T,Lattice>::EntropicDynamics (
   : BasicDynamics<T,Lattice>(momenta_),
     omega(omega_)
 { }
-
-template<typename T, template<typename U> class Lattice>
-EntropicDynamics<T,Lattice>* EntropicDynamics<T,Lattice>::clone() const
-{
-  return new EntropicDynamics<T,Lattice>(*this);
-}
 
 template<typename T, template<typename U> class Lattice>
 T EntropicDynamics<T,Lattice>::computeEquilibrium(int iPop, T rho, const T u[Lattice<T>::d], T uSqr) const
@@ -99,9 +243,7 @@ void EntropicDynamics<T,Lattice>::collide (
     cell[iPop] += omegaTot * (fEq[iPop]-L::t[iPop]);
   }
 
-  if (cell.takesStatistics()) {
-    statistics.incrementStats(rho, uSqr);
-  }
+  statistics.incrementStats(rho, uSqr);
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -142,9 +284,7 @@ void EntropicDynamics<T,Lattice>::staticCollide (
     cell[iPop] += omegaTot * (fEq[iPop]-L::t[iPop]);
   }
 
-  if (cell.takesStatistics()) {
-    statistics.incrementStats(rho, uSqr);
-  }
+  statistics.incrementStats(rho, uSqr);
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -238,12 +378,6 @@ ForcedEntropicDynamics<T,Lattice>::ForcedEntropicDynamics (
 { }
 
 template<typename T, template<typename U> class Lattice>
-ForcedEntropicDynamics<T,Lattice>* ForcedEntropicDynamics<T,Lattice>::clone() const
-{
-  return new ForcedEntropicDynamics<T,Lattice>(*this);
-}
-
-template<typename T, template<typename U> class Lattice>
 T ForcedEntropicDynamics<T,Lattice>::computeEquilibrium(int iPop, T rho, const T u[Lattice<T>::d], T uSqr) const
 {
   return entropicLbHelpers<T,Lattice>::equilibrium(iPop,rho,u);
@@ -294,9 +428,7 @@ void ForcedEntropicDynamics<T,Lattice>::collide (
   }
   lbHelpers<T,Lattice>::addExternalForce(cell, u, omegaTot);
 
-  if (cell.takesStatistics()) {
-    statistics.incrementStats(rho, uSqr);
-  }
+  statistics.incrementStats(rho, uSqr);
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -339,9 +471,7 @@ void ForcedEntropicDynamics<T,Lattice>::staticCollide (
   }
   lbHelpers<T,Lattice>::addExternalForce(cell, u, omegaTot);
 
-  if (cell.takesStatistics()) {
-    statistics.incrementStats(rho, uSqr);
-  }
+  statistics.incrementStats(rho, uSqr);
 }
 
 template<typename T, template<typename U> class Lattice>

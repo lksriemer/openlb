@@ -30,7 +30,7 @@
 #include <stdio.h>
 #include "io/ostreamManager.h"
 #include "io/xmlReader.h"
-#include "core/units.h"
+#include "core/unitConverter.h"
 
 namespace olb {
 
@@ -64,7 +64,6 @@ The template type T denotes the internal representation of time differences (in 
 */
 
 /* BUGS:
-- first time step yields some crazy numbers in remaining time if Template parameter is double
 - cavity2d with 20 seconds yields average MLUPs values much smaller than the ones 'live in computation' (with T=int, due to integer overflow)
 */
 
@@ -90,7 +89,7 @@ private:
   // Input-parameter of the algorithm to compute remaining runtimes and performance (actually constants)
   int curTS;      // current lattice time step
   int maxTS;      // total number of lattice time steps that are intended to be computed
-  int numFC;      // number of fluid cells (depending from size and dimension of the domain)
+  size_t numFC;      // number of fluid cells (depending from size and dimension of the domain)
 
   // parameter-prefixes for output
   /* prefix-explanation:
@@ -105,19 +104,8 @@ private:
   T      rtPasMs, rtRemMs, rtTotMs;   // times in ms
 
 public:
-  Timer();
-
-  /// initializes timer with the given values, abbreviation to Timer() + initialize(int,int,bool,int)
-  Timer(int maxTimeSteps, int numFluidCells=1, bool* p=nullptr, int size_p=0);
-
-  /// Initialization with all necessary values for time measurement
-  /**
-   \param maxTimeSteps maximum number of time steps (=max value for the loop around LatticeCollideAndStream()),
-   \param numFluidCells number of fluid cells (for performance measurement or rather benchmark),
-   \param *p input parameter(s) for control of timer output (as vector or whatever fits, to be implemented later)
-   \param size_p size of *p
-  */
-  void initialize(int maxTimeSteps, int numFluidCells=1, bool* p=nullptr, int size_p=0);
+  /// initializes timer with the given values, abbreviation to Timer() + initialize(int,int)
+  Timer(int maxTimeSteps, size_t numFluidCells=1);
 
   /// returns the time difference between two timeval objects in ms
   /** The timeval data type is used in the variables for ms-time measurement. \sa getTotalRealTimeMs*/
@@ -177,9 +165,9 @@ public:
 };
 
 // Factory function /////////////////////////////////
-template<typename T>
+template<typename T, template<typename U> class DESCRIPTOR>
 // Timer<T>* createTimer(XMLreader& param);
-Timer<T>* createTimer(XMLreader& param, const LBconverter<T>& converter, int numLatticePoints);
+Timer<T>* createTimer(XMLreader& param, const UnitConverter<T,DESCRIPTOR>& converter, size_t numLatticePoints);
 /////////////////////////////////////////////////////
 
 } // namespace util

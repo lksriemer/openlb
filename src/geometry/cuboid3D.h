@@ -33,7 +33,7 @@
 
 #include "core/serializer.h"
 #include "io/ostreamManager.h"
-#include "functors/indicator/indicatorF3D.h"
+#include "functors/lattice/indicator/indicatorF3D.h"
 
 
 /// All OpenLB code is contained in this namespace.
@@ -63,7 +63,7 @@ private:
   /// Number of nodes in the direction x and y
   int _nX, _nY, _nZ;
   /// Number of full cells
-  int _weight;
+  size_t _weight;
   /// refinement level, _delta = _delta0^_refinementLevel
   int _refinementLevel;
 
@@ -103,15 +103,15 @@ public:
   /// Returns the actual value of weight (-1 for getLatticeVolume())
   int getWeightValue() const;
   /// Returns the number of full cells
-  int getWeight() const;
+  size_t getWeight() const;
   /// Sets the number of full cells
-  void setWeight(int fullCells);
+  void setWeight(size_t fullCells);
   /// Returns the refinementLevel
   int getRefinementLevel() const;
   /// Sets the refinementLevel
   void setRefinementLevel(int refLevel);
   /// Returns the number of Nodes in the volume
-  int getLatticeVolume() const;
+  size_t getLatticeVolume() const;
   /// Returns the perimeter of the cuboid
   T getPhysPerimeter() const;
   /// Returns the number of Nodes at the perimeter
@@ -134,6 +134,8 @@ public:
   void getPhysR(T physR[3], const int& iX, const int& iY, const int& iZ) const;
 
   void getLatticeR(int latticeR[3], const T physR[3]) const;
+  void getLatticeR(int latticeR[3], const Vector<T,3>& physR) const;
+
   void getFloorLatticeR(const std::vector<T>& physR, std::vector<int>& latticeR) const;
   void getFloorLatticeR(int latticeR[3], const T physR[3]) const;
 
@@ -149,6 +151,9 @@ public:
   /// Checks whether there is an intersection with the cuboid extended
   /// with an layer of size overlap*delta
   bool checkInters(T globX0, T globX1, T globY0, T globY1, T globZ0, T globZ1, int overlap = 0) const;
+  /// Checks whether a given point intersects the cuboid extended
+  /// by a layer of size overlap*delta
+  bool checkInters(T globX, T globY, T globZ, int overlap = 0) const;
   /// Checks whether there is an intersection and returns the local
   /// active node range which can be empty by means of locX0=1, locX1=0,
   /// locY0=1, locY1=0, locZ0=1; locZ1=0 of the cuboid extended with an
@@ -156,9 +161,9 @@ public:
   bool checkInters(T globX0, T globX1, T globY0, T globY1, T globZ0, T globZ1,
                    int &locX0, int &locX1, int &locY0, int &locY1, int &locZ0, int &locZ1,
                    int overlap = 0) const;
-  /// Divides the cuboid in p*q*r cuboids and add the to the given vector
+  /// Divides the cuboid in p*q*r cuboids of equal volume and add them to the given vector
   void divide(int p, int q, int r, std::vector<Cuboid3D<T> > &childrenC) const;
-  /// Divides the cuboid in p cuboids and add them to the given vector
+  /// Divides the cuboid in p cuboids of equal volume and add them to the given vector
   void divide(int p, std::vector<Cuboid3D<T> > &childrenC) const;
 
   /// resize the cuboid to the passed size

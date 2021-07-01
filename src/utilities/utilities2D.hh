@@ -27,3 +27,6 @@
 
 #include "benchmarkUtil.hh"
 #include "timer.hh"
+#include "functorPtr.hh"
+#include "hyperplane2D.hh"
+#include "hyperplaneLattice2D.hh"

@@ -44,12 +44,12 @@ public:
   Modes   getMode() const;
   void    setMode(Modes _mode);
 protected:
-  virtual int_type overflow (int_type c);
-  virtual std::streamsize xsputn(const char* s, std::streamsize num);
+  int_type overflow (int_type c) override;
+  std::streamsize xsputn(const char* s, std::streamsize num) override;
 
-  virtual int_type uflow();
-  virtual int_type underflow();
-  virtual std::streamsize xsgetn (char* s, std::streamsize num);
+  int_type uflow() override;
+  int_type underflow() override;
+  std::streamsize xsgetn (char* s, std::streamsize num) override;
 private:
   std::streambuf* originalBuf;
   Modes      mode;
@@ -60,7 +60,7 @@ public:
   olb_ofstream();
   explicit olb_ofstream(const char * filename,
                         openmode mode = out | trunc );
-  ~olb_ofstream();
+  ~olb_ofstream() override;
 
   std::streambuf* rdbuf() const;
   bool is_open();
@@ -76,7 +76,7 @@ public:
   olb_ifstream();
   explicit olb_ifstream(const char * filename,
                         openmode mode = in );
-  ~olb_ifstream();
+  ~olb_ifstream() override;
 
   std::streambuf* rdbuf() const;
   bool is_open();
@@ -92,7 +92,7 @@ public:
   olb_fstream();
   explicit olb_fstream(const char * filename,
                        openmode mode = in | out );
-  ~olb_fstream();
+  ~olb_fstream() override;
 
   std::streambuf* rdbuf() const;
   bool is_open();

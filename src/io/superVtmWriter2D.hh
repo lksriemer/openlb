@@ -46,8 +46,8 @@ namespace olb {
 
 
 template<typename T, typename W>
-SuperVTMwriter2D<T,W>::SuperVTMwriter2D( std::string name)
-  : clout( std::cout,"SuperVTMwriter2D" ), _createFile(false), _name(name)
+SuperVTMwriter2D<T,W>::SuperVTMwriter2D( std::string name, bool binary )
+  : clout( std::cout,"SuperVTMwriter2D" ), _createFile(false), _name(name), _binary(binary)
 {}
 
 template<typename T, typename W>
@@ -104,11 +104,17 @@ void SuperVTMwriter2D<T,W>::write(int iT)
 
       preambleVTI(fullNameVTI, -1,-1,nx,ny, originPhysR[0],originPhysR[1], delta);
       for (auto it : _pointerVec) {
-        dataArray(fullNameVTI, (*it), load.glob(iCloc), nx,ny);
+        if(_binary) {
+          dataArrayBinary(fullNameVTI, (*it), load.glob(iCloc), nx,ny);
+        } else {
+          dataArray(fullNameVTI, (*it), load.glob(iCloc), nx,ny);
+        }
       }
       closePiece(fullNameVTI);
       closeVTI(fullNameVTI);
     }
+    // empty std::vector of functors
+    clearAddedFunctors();
   }
 }
 
@@ -159,8 +165,11 @@ void SuperVTMwriter2D<T,W>::write(SuperF2D<T,W>& f, int iT)
     cGeometry.getPhysR(originPhysR,originLatticeR);
 
     preambleVTI(fullNameVTI, -1,-1, nx,ny, originPhysR[0],originPhysR[1], delta);
-
-    dataArray(fullNameVTI, f, load.glob(iCloc), nx,ny);
+    if(_binary) {
+      dataArrayBinary(fullNameVTI, f, load.glob(iCloc), nx,ny);
+    } else {
+      dataArray(fullNameVTI, f, load.glob(iCloc), nx,ny);
+    }
     closePiece(fullNameVTI);
     closeVTI(fullNameVTI);
   } // cuboid
@@ -208,7 +217,7 @@ template<typename T, typename W>
 void SuperVTMwriter2D<T,W>::preambleVTI (const std::string& fullName,
     int x0, int y0, int x1, int y1, T originX, T originY, T delta)
 {
-  std::ofstream fout(fullName.c_str(), std::ios::trunc);
+  std::ofstream fout(fullName, std::ios::trunc);
   if (!fout) {
     clout << "Error: could not open " << fullName << std::endl;
   }
@@ -232,7 +241,7 @@ void SuperVTMwriter2D<T,W>::preambleVTI (const std::string& fullName,
 template<typename T, typename W>
 void SuperVTMwriter2D<T,W>::closeVTI(const std::string& fullNamePiece)
 {
-  std::ofstream fout(fullNamePiece.c_str(), std::ios::app );
+  std::ofstream fout(fullNamePiece, std::ios::app );
   if (!fout) {
     clout << "Error: could not open " << fullNamePiece << std::endl;
   }
@@ -244,7 +253,7 @@ void SuperVTMwriter2D<T,W>::closeVTI(const std::string& fullNamePiece)
 template<typename T, typename W>
 void SuperVTMwriter2D<T,W>::preamblePVD(const std::string& fullNamePVD)
 {
-  std::ofstream fout(fullNamePVD.c_str(), std::ios::trunc);
+  std::ofstream fout(fullNamePVD, std::ios::trunc);
   if (!fout) {
     clout << "Error: could not open " << fullNamePVD << std::endl;
   }
@@ -258,7 +267,7 @@ void SuperVTMwriter2D<T,W>::preamblePVD(const std::string& fullNamePVD)
 template<typename T, typename W>
 void SuperVTMwriter2D<T,W>::closePVD(const std::string& fullNamePVD)
 {
-  std::ofstream fout(fullNamePVD.c_str(), std::ios::app );
+  std::ofstream fout(fullNamePVD, std::ios::app );
   if (!fout) {
     clout << "Error: could not open " << fullNamePVD << std::endl;
   }
@@ -270,7 +279,7 @@ void SuperVTMwriter2D<T,W>::closePVD(const std::string& fullNamePVD)
 template<typename T, typename W>
 void SuperVTMwriter2D<T,W>::preambleVTM(const std::string& fullNamePVD)
 {
-  std::ofstream fout(fullNamePVD.c_str(), std::ios::trunc);
+  std::ofstream fout(fullNamePVD, std::ios::trunc);
   if (!fout) {
     clout << "Error: could not open " << fullNamePVD << std::endl;
   }
@@ -284,7 +293,7 @@ void SuperVTMwriter2D<T,W>::preambleVTM(const std::string& fullNamePVD)
 template<typename T, typename W>
 void SuperVTMwriter2D<T,W>::closeVTM(const std::string& fullNamePVD)
 {
-  std::ofstream fout(fullNamePVD.c_str(), std::ios::app );
+  std::ofstream fout(fullNamePVD, std::ios::app );
   if (!fout) {
     clout << "Error: could not open " << fullNamePVD << std::endl;
   }
@@ -297,7 +306,7 @@ template<typename T, typename W>
 void SuperVTMwriter2D<T,W>::dataVTM(int iC, const std::string& fullNamePVD,
                                     const std::string& namePiece)
 {
-  std::ofstream fout(fullNamePVD.c_str(), std::ios::app);
+  std::ofstream fout(fullNamePVD, std::ios::app);
   if (!fout) {
     clout << "Error: could not open " << fullNamePVD << std::endl;
   }
@@ -313,7 +322,7 @@ void SuperVTMwriter2D<T,W>::dataPVDmaster(int iT,
     const std::string& fullNamePVDMaster,
     const std::string& namePiece)
 {
-  std::ofstream fout(fullNamePVDMaster.c_str(), std::ios::in | std::ios::out | std::ios::ate);
+  std::ofstream fout(fullNamePVDMaster, std::ios::in | std::ios::out | std::ios::ate);
   if (fout) {
     fout.seekp(-25,std::ios::end);    // jump -25 form the end of file to overwrite closePVD
 
@@ -331,11 +340,48 @@ template<typename T, typename W>
 void SuperVTMwriter2D<T,W>::dataArray(const std::string& fullName,
                                       SuperF2D<T,W>& f, int iC, int nx, int ny)
 {
-  const char* fileName = fullName.c_str();
-
-  std::ofstream fout( fileName, std::ios::out | std::ios::app );
+  std::ofstream fout( fullName, std::ios::out | std::ios::app );
   if (!fout) {
-    clout << "Error: could not open " << fileName << std::endl;
+    clout << "Error: could not open " << fullName << std::endl;
+  }
+
+  fout << "<DataArray " ;
+  if (f.getTargetDim() == 1) {
+    fout << "type=\"Float32\" Name=\"" << f.getName() <<"\">\n";
+  }
+  if (f.getTargetDim() != 1) {
+    fout << "type=\"Float32\" Name=\"" << f.getName() << "\" "
+         << "NumberOfComponents=\"" << f.getTargetDim() <<"\">\n";
+  }
+
+  int i[3] = {iC, 0, 0};
+  W evaluated[f.getTargetDim()];
+  for (int iDim = 0; iDim < f.getTargetDim(); ++iDim) {
+    evaluated[iDim] = W();
+  }
+  // since cuboid has been blowed up by 1 [every dimension]
+  // looping from -1 to ny (= ny+1, as passed)
+  std::vector<int> tmpVec( 3,int(0) );
+  for (i[2]=-1; i[2] < ny+1; ++i[2]) {
+    for (i[1]=-1; i[1] < nx+1; ++i[1]) {
+      f(evaluated,i);
+      for (int iDim = 0; iDim < f.getTargetDim(); ++iDim) {
+        //  tmpVec = {iC,iX,iY,iZ};  // std=c++11
+        fout <<  evaluated[iDim] << " ";
+      }
+    }
+  }
+  fout << "</DataArray>\n";
+  fout.close();
+}
+
+template<typename T, typename W>
+void SuperVTMwriter2D<T,W>::dataArrayBinary(const std::string& fullName,
+                                            SuperF2D<T,W>& f, int iC, int nx, int ny)
+{
+  std::ofstream fout( fullName, std::ios::out | std::ios::app );
+  if (!fout) {
+    clout << "Error: could not open " << fullName << std::endl;
   }
 
   fout << "<DataArray ";
@@ -349,9 +395,9 @@ void SuperVTMwriter2D<T,W>::dataArray(const std::string& fullName,
   }
   fout.close();
 
-  std::ofstream ofstr( fileName, std::ios::out | std::ios::app | std::ios::binary );
+  std::ofstream ofstr( fullName, std::ios::out | std::ios::app | std::ios::binary );
   if (!ofstr) {
-    clout << "Error: could not open " << fileName << std::endl;
+    clout << "Error: could not open " << fullName << std::endl;
   }
 
   size_t fullSize = f.getTargetDim() * (nx+2) * (ny+2);    //  how many numbers to write
@@ -382,9 +428,9 @@ void SuperVTMwriter2D<T,W>::dataArray(const std::string& fullName,
   dataEncoder->encode( &bufferFloat[0], fullSize );
   ofstr.close();
 
-  std::ofstream ffout( fileName,  std::ios::out | std::ios::app );
+  std::ofstream ffout( fullName,  std::ios::out | std::ios::app );
   if (!ffout) {
-    clout << "Error: could not open " << fileName << std::endl;
+    clout << "Error: could not open " << fullName << std::endl;
   }
   ffout << "\n</DataArray>\n";
   ffout.close();
@@ -394,7 +440,7 @@ void SuperVTMwriter2D<T,W>::dataArray(const std::string& fullName,
 template<typename T, typename W>
 void SuperVTMwriter2D<T,W>::closePiece(const std::string& fullNamePiece)
 {
-  std::ofstream fout(fullNamePiece.c_str(), std::ios::app );
+  std::ofstream fout(fullNamePiece, std::ios::app );
   if (!fout) {
     clout << "Error: could not open " << fullNamePiece << std::endl;
   }

@@ -45,12 +45,9 @@ int const& BlockGeometryStructure2D<T>::getIcGlob() const
 }
 
 template<typename T>
-std::vector<int> const BlockGeometryStructure2D<T>::getExtend() const
+Vector<int,2> const BlockGeometryStructure2D<T>::getExtend() const
 {
-  std::vector<int> extend(2,T());
-  extend[0] = getNx();
-  extend[1] = getNy();
-  return extend;
+  return  Vector<int,2> (getNx(), getNy());
 }
 
 template<typename T>

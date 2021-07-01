@@ -53,7 +53,7 @@
 #include "geometry/blockGeometryView3D.h"
 #include "communication/superStructure3D.h"
 #include "communication/loadBalancer.h"
-#include "functors/indicator/indicatorF3D.h"
+#include "functors/lattice/indicator/indicatorF3D.h"
 #include "io/ostreamManager.h"
 
 
@@ -64,6 +64,7 @@ template<typename T> class CuboidGeometry3D;
 template<typename T> class BlockGeometry3D;
 template<typename T> class BlockGeometryView3D;
 template<typename T> class IndicatorF3D;
+template<typename T> class SuperIndicatorF3D;
 template<typename T> class SuperStructure3D;
 template<typename T> class SuperGeometryStatistics3D;
 
@@ -90,11 +91,11 @@ public:
   SuperGeometry3D& operator=(SuperGeometry3D const& rhs);
 
   /// Interface for the communicator class: Write access to the memory of the data of the super structure
-  bool* operator() (int iCloc, int iX, int iY, int iZ, int iData);
+  bool* operator() (int iCloc, int iX, int iY, int iZ, int iData) override;
   /// Interface for the communicator class: Read only access to the dim of the data of the super structure
-  int getDataSize() const;
+  int getDataSize() const override;
   /// Interface for the communicator class: Read only access to the data type dim of the data of the super structure
-  int getDataTypeSize() const;
+  int getDataTypeSize() const override;
 
   /// Write access to the material numbers, error handling: stops the program if data is not available
   int& set(int iCglob, int iXloc, int iYloc, int iZloc); //TODO to be removed set->get, problem: with get calling wrong function
@@ -121,13 +122,13 @@ public:
   void getPhysR(T physR[3], const int latticeR[4]) const;
 
   /// Read and write access to a single extended block geometry
-  BlockGeometryStructure3D<T>& getExtendedBlockGeometry(int locIC);
+  BlockGeometry3D<T>& getExtendedBlockGeometry(int locIC);
   /// Read only access to a single extended block geometry
-  BlockGeometryStructure3D<T> const& getExtendedBlockGeometry(int locIC) const;
+  BlockGeometry3D<T> const& getExtendedBlockGeometry(int locIC) const;
   /// Read and write access to a single block geometry
-  BlockGeometryStructure3D<T>& getBlockGeometry(int locIC);
+  BlockGeometryView3D<T>& getBlockGeometry(int locIC);
   /// Read only access to a single block geometry
-  BlockGeometryStructure3D<T> const& getBlockGeometry(int locIC) const;
+  BlockGeometryView3D<T> const& getBlockGeometry(int locIC) const;
 
   /// Returns the statistics object
   SuperGeometryStatistics3D<T>& getStatistics();
@@ -163,6 +164,35 @@ public:
 
   /// Prints some information about the super geometry
   void print();
+
+  template<template<typename> class Indicator, typename... Args>
+  std::unique_ptr<SuperIndicatorF3D<T>> getIndicator(Args&&... args)
+  {
+    static_assert(std::is_base_of<SuperIndicatorF3D<T>, Indicator<T>>::value,
+                  "Indicator to be constructed is SuperIndicatorF3D implementation");
+
+    return std::unique_ptr<SuperIndicatorF3D<T>>(
+             new Indicator<T>(*this, std::forward<Args>(args)...)
+           );
+  }
+
+  /**
+   * Returns a material indicator using the given vector of materials
+   *
+   * \param  materials Materials to be indicated
+   * \returns          Unique ownership of the constructed indicator.
+   *                   May be stored or passed directly to e.g. defineDynamics
+   **/
+  std::unique_ptr<SuperIndicatorF3D<T>> getMaterialIndicator(std::vector<int>&& materials);
+  /**
+   * Returns a material indicator using a single material number
+   *
+   * \param material Material to be indicated
+   * \returns        Unique ownership of the constructed indicator.
+   *                 May be stored or passed directly to e.g. defineDynamics
+   **/
+  std::unique_ptr<SuperIndicatorF3D<T>> getMaterialIndicator(int material);
+
 };
 
 } // namespace olb

@@ -26,6 +26,8 @@
 
 #include <string>
 #include <iostream>
+#include <vector>
+
 #include "particle3D.h"
 
 namespace olb {
@@ -73,7 +75,7 @@ Particle3D<T>::Particle3D(const Particle3D<T>& p)
     _cuboid(p._cuboid),
     _id(p._id),
     _active(p._active),
-    _storeForce(3,0.)
+    _storeForce(p._storeForce)
 {
   _invMas = 1. / _mas;
   // RK4
@@ -100,6 +102,7 @@ Particle3D<T>::Particle3D(std::vector<T> pos, std::vector<T> vel, T mas, T rad, 
 //  _velocities = std::vector<std::vector<T> > (4, std::vector<T> (3, T() ));
 //  _forces = std::vector<std::vector<T> > (4, std::vector<T> (3, T() ));
 }
+
 template<typename T>
 inline void Particle3D<T>::addForce(std::vector<T>& force)
 {
@@ -107,17 +110,11 @@ inline void Particle3D<T>::addForce(std::vector<T>& force)
     _force[i] += force[i];
   }
 }
-
+// set and get force
 template<typename T>
 inline void Particle3D<T>::setForce(std::vector<T>& force)
 {
   _force = force;
-}
-
-template<typename T>
-inline std::vector<T>& Particle3D<T>::getForce()
-{
-  return _force;
 }
 
 template<typename T>
@@ -128,16 +125,21 @@ inline void Particle3D<T>::resetForce()
   }
 }
 
+// set and get storedForce
 template<typename T>
-inline void Particle3D<T>::setStoredForce(std::vector<T>& force)
+inline void Particle3D<T>::setStoreForce(std::vector<T>& storeForce)
 {
-  _storeForce = force;
+  for (int i = 0; i < 3; i++) {
+    _storeForce[i] = storeForce[i];
+  }
 }
 
 template<typename T>
-inline std::vector<T>& Particle3D<T>::getStoredForce()
+inline void Particle3D<T>::resetStoreForce()
 {
-  return _storeForce;
+  for (int i = 0; i < 3; i++) {
+    _storeForce[i] = T(0);
+  }
 }
 
 template<typename T>
@@ -153,6 +155,10 @@ void Particle3D<T>::serialize(T serial[])
   serial[11] = _cuboid;
   serial[12] = _active;
   serial[13] = _id;
+
+  for (int i = 0; i < 3; i++) {
+    serial[i + 14] = _storeForce[i];
+  }
 }
 
 template<typename T>
@@ -165,10 +171,14 @@ void Particle3D<T>::unserialize(T* data)
   }
   _mas = data[9];
   _rad = data[10];
-  _cuboid = data[11];
+  _cuboid = int(data[11]);
   _active = data[12];
   _invMas = 1. / _mas;
   _id = data[13];
+
+  for (int i = 0; i < 3; i++) {
+    _storeForce[i] = data[i + 14];
+  }
 }
 
 template<typename T>
@@ -292,7 +302,7 @@ void AggParticle3D<T>::unserialize(T* data)
   }
   this->_mas = data[9];
   this->_rad = data[10];
-  this->_cuboid = data[11];
+  this->_cuboid = int(data[11]);
   this->_active = (bool) data[12];
   _aggl = (bool) data[13];
 }
@@ -353,7 +363,7 @@ void RotatingParticle3D<T>::unserialize(T* data)
   }
   this->_mas = data[9];
   this->_rad = data[10];
-  this->_cuboid = data[11];
+  this->_cuboid = int(data[11]);
   this->_active = (bool) data[12];
   _aVel[0] = (bool) data[13];
   _aVel[1] = (bool) data[14];
@@ -467,7 +477,7 @@ void MagneticParticle3D<T>::unserialize(T* data)
   }
   this->_mas = data[9];
   this->_rad = data[10];
-  this->_cuboid = data[11];
+  this->_cuboid = int(data[11]);
   this->_active = (bool) data[12];
   this->_id = (int) data[13];
   _dMoment[0] = data[14];

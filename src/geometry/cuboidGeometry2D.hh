@@ -33,7 +33,7 @@
 #include <iostream>
 #include <math.h>
 #include "geometry/cuboidGeometry2D.h"
-#include "functors/indicator/indicatorF2D.h"
+#include "functors/lattice/indicator/indicatorF2D.h"
 
 namespace olb {
 
@@ -119,6 +119,18 @@ bool CuboidGeometry2D<T>::getC(std::vector<T> physR, int& iC) const
 }
 
 template<typename T>
+bool CuboidGeometry2D<T>::getC(const Vector<T,2>& physR, int& iC) const
+{
+  int iCtmp = get_iC(physR[0], physR[1]);
+  if (iCtmp < getNc()) {
+    iC = iCtmp;
+    return true;
+  } else {
+    return false;
+  }
+}
+
+template<typename T>
 bool CuboidGeometry2D<T>::getLatticeR(std::vector<T> physR, std::vector<int>& latticeR) const
 {
   return getLatticeR(&latticeR[0], &physR[0]);
@@ -149,6 +161,21 @@ bool CuboidGeometry2D<T>::getLatticeR(int latticeR[], const T physR[]) const
 
 template<typename T>
 bool CuboidGeometry2D<T>::getFloorLatticeR(std::vector<T> physR, std::vector<int>& latticeR) const
+{
+  int iCtmp = get_iC(physR[0], physR[1]);
+  if (iCtmp < getNc()) {
+    latticeR[0] = iCtmp;
+    latticeR[1] = (int)floor( (physR[0] - _cuboids[latticeR[0]].getOrigin()[0] ) / _cuboids[latticeR[0]].getDeltaR() );
+    latticeR[2] = (int)floor( (physR[1] - _cuboids[latticeR[0]].getOrigin()[1] ) / _cuboids[latticeR[0]].getDeltaR() );
+    return true;
+  } else {
+    return false;
+  }
+}
+
+template<typename T>
+bool CuboidGeometry2D<T>::getFloorLatticeR(
+  const Vector<T,2>& physR, Vector<int,3>& latticeR) const
 {
   int iCtmp = get_iC(physR[0], physR[1]);
   if (iCtmp < getNc()) {
@@ -241,9 +268,9 @@ template<typename T>
 T CuboidGeometry2D<T>::getMinRatio() const
 {
   T minRatio = 1.;
-  for (unsigned i = 0; i < _cuboids.size(); i++) {
-    if ((T)_cuboids[i].getNx() / (T)_cuboids[i].getNy() < minRatio) {
-      minRatio = (T)_cuboids[i].getNx() / (T)_cuboids[i].getNy();
+  for ( auto& cuboid : _cuboids ) {
+    if ((T)cuboid.getNx() / (T)cuboid.getNy() < minRatio) {
+      minRatio = (T)cuboid.getNx() / (T)cuboid.getNy();
     }
   }
   return minRatio;
@@ -264,7 +291,7 @@ T CuboidGeometry2D<T>::getMaxRatio() const
 template<typename T>
 std::vector<T> CuboidGeometry2D<T>::getMinPhysR() const
 {
-  std::vector<T> output(_cuboids[0].getOrigin());
+  Vector<T,2> output(_cuboids[0].getOrigin());
   for (unsigned i = 0; i < _cuboids.size(); i++) {
     if (_cuboids[i].getOrigin()[0] < output[0]) {
       output[0] = _cuboids[i].getOrigin()[0];
@@ -273,13 +300,13 @@ std::vector<T> CuboidGeometry2D<T>::getMinPhysR() const
       output[1] = _cuboids[i].getOrigin()[1];
     }
   }
-  return output;
+  return std::vector<T> {output[0],output[1]};
 }
 
 template<typename T>
 std::vector<T> CuboidGeometry2D<T>::getMaxPhysR() const
 {
-  std::vector<T> output(_cuboids[0].getOrigin());
+  Vector<T,2> output(_cuboids[0].getOrigin());
   output[0] += _cuboids[0].getNx()*_cuboids[0].getDeltaR();
   output[1] += _cuboids[0].getNy()*_cuboids[0].getDeltaR();
   for (unsigned i = 0; i < _cuboids.size(); i++) {
@@ -290,7 +317,7 @@ std::vector<T> CuboidGeometry2D<T>::getMaxPhysR() const
       output[1] = _cuboids[i].getOrigin()[1] + _cuboids[i].getNy()*_cuboids[i].getDeltaR();
     }
   }
-  return output;
+  return std::vector<T> {output[0],output[1]};
 }
 
 template<typename T>
@@ -318,9 +345,9 @@ T CuboidGeometry2D<T>::getMaxPhysVolume() const
 }
 
 template<typename T>
-int CuboidGeometry2D<T>::getMinLatticeVolume() const
+size_t CuboidGeometry2D<T>::getMinLatticeVolume() const
 {
-  int minNodes = _cuboids[0].getLatticeVolume();
+  size_t minNodes = _cuboids[0].getLatticeVolume();
   for (unsigned i = 0; i < _cuboids.size(); i++) {
     if (_cuboids[i].getLatticeVolume() < minNodes) {
       minNodes = _cuboids[i].getLatticeVolume();
@@ -330,9 +357,9 @@ int CuboidGeometry2D<T>::getMinLatticeVolume() const
 }
 
 template<typename T>
-int CuboidGeometry2D<T>::getMaxLatticeVolume() const
+size_t CuboidGeometry2D<T>::getMaxLatticeVolume() const
 {
-  int maxNodes = _cuboids[0].getLatticeVolume();
+  size_t maxNodes = _cuboids[0].getLatticeVolume();
   for (unsigned i = 0; i < _cuboids.size(); i++) {
     if (_cuboids[i].getLatticeVolume() > maxNodes) {
       maxNodes = _cuboids[i].getLatticeVolume();

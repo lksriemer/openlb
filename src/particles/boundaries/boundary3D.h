@@ -27,7 +27,6 @@
 
 #include "particles/particleSystem3D.h"
 #include "particles/particleSystem3D.h"
-#include "core/units.h"
 #include "io/ostreamManager.h"
 
 namespace olb {

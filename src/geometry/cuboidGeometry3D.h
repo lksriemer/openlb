@@ -86,6 +86,8 @@ public:
   CuboidGeometry3D(std::vector<T> origin, T deltaR, std::vector<int> extent, int nC=1);
   /// Constructs a cuboid structure with a uniform spacing of voxelSize which consists of  nC cuboids, the cuboids not needed are removed and too big ones are shrinked
   CuboidGeometry3D(IndicatorF3D<T>& indicatorF, T voxelSize, int nC=1);
+  /// Constructs a cuboid structure with a uniform spacing of voxelSize which consists of nC cuboids, the cuboids not needed are removed and too big ones are shrinked. Uses an iterative method: Halves the largest child cuboid until the set number of cuboids is reached. Largest cuboid is determined by either volume or weight as choosen in minimizeBy.
+  CuboidGeometry3D(IndicatorF3D<T>& indicatorF, T voxelSize, int nC, std::string minimizeBy);
   /// Destructs CuboidGeometry
   virtual ~CuboidGeometry3D();
 
@@ -113,11 +115,17 @@ public:
   /// must be satisfied
   int get_iC(T globX, T globY, T globZ, int orientationX, int orientationY, int orientationZ) const; //TODO old ones
   /// Returns true and the cuboid number of the nearest lattice position to the given physical position if the physical position is within any of the cuboids with an overlap of 1/2*delta belonging to the cuboid geometry
+  bool getC(T physR[3], int& iC) const;
+  /// Returns true and the cuboid number of the nearest lattice position to the given physical position if the physical position is within any of the cuboids with an overlap of 1/2*delta belonging to the cuboid geometry
   bool getC(std::vector<T> physR, int& iC) const; //TODO new one
+  /// Returns true and the cuboid number of the nearest lattice position to the given physical position if the physical position is within any of the cuboids with an overlap of 1/2*delta belonging to the cuboid geometry
+  bool getC(const Vector<T,3>& physR, int& iC) const;
   /// Returns true and the nearest lattice position to the given physical position if the physical position is within any of the cuboids with an overlap of 1/2*delta belonging to the cuboid geometry
   bool getLatticeR(int latticeR[4], const T physR[3]) const;
   /// Returns true and the floor lattice position to the given physical position if the physical position is within any of the cuboids with an overlap of 1/2*delta belonging to the cuboid geometry
   bool getFloorLatticeR(const std::vector<T>& physR, std::vector<int>& latticeR) const;
+  /// Returns true and the floor lattice position to the given physical position if the physical position is within any of the cuboids with an overlap of 1/2*delta belonging to the cuboid geometry
+  bool getFloorLatticeR(const Vector<T,3>& physR, Vector<int,4>& latticeR) const;
   /// Returns the physical position to the given lattice position respecting periodicity for the overlap nodes which are not in the mother cuboid for the case the flag periodicityOn[iDim]=true if the   physical position is within any of the cuboids with an overlap of 1/2*delta belonging to the cuboid geometry
   void getPhysR(T physR[3], const int& iCglob,  const int& iX, const int& iY, const int& iZ) const;
   /// Returns the physical position to the given lattice position respecting periodicity for the overlap nodes which are not in the mother cuboid for the case the flag periodicityOn[iDim]=true
@@ -140,9 +148,13 @@ public:
   /// Returns the maximum volume in the structure
   T getMaxPhysVolume() const;
   /// Returns the minimum number of nodes in the structure
-  int getMinLatticeVolume() const;
+  size_t getMinLatticeVolume() const;
   /// Returns the maximum number of nodes in the structure
-  int getMaxLatticeVolume() const;
+  size_t getMaxLatticeVolume() const;
+  /// Returns the minimum number of nodes in the structure inside the indicator
+  size_t getMinLatticeWeight() const;
+  /// Returns the maximum number of nodes in the structure inside the indicator
+  size_t getMaxLatticeWeight() const;
   /// Returns the minimum delta in the structure
   T getMinDeltaR() const;
   /// Returns the maximum delta in the structure
@@ -167,21 +179,25 @@ public:
   }
   /// Adds a cuboid
   void add(Cuboid3D<T> cuboid);
-  /// Splits cuboid iC, removes it and adds p cuboids
+  /// Splits cuboid iC, removes it and adds p cuboids of same volume
   void split(int iC, int p);
+  /// Splits cuboid iC, removes it and adds p cuboids of same weight
+  void splitByWeight(int iC, int p, IndicatorF3D<T>& indicatorF);
   /// Removes the cuboid iC
   void remove(int iC);
   /// Removes all cuboids where indicatorF = 0
   void remove(IndicatorF3D<T>& indicatorF);
+  /// Shrink cuboid iC so that no empty planes are left
+  void shrink(int iC, IndicatorF3D<T>& indicatorF);
   /// Shrink all cuboids so that no empty planes are left
   void shrink(IndicatorF3D<T>& indicatorF);
 
   /// Number of data blocks for the serializer interface
-  size_t getNblock() const;
+  size_t getNblock() const override;
   /// Binary size for the serializer interface
-  size_t getSerializableSize() const;
+  size_t getSerializableSize() const override;
   /// Return a pointer to the memory of the current block and its size for the serializable interface
-  bool* getBlock(std::size_t iBlock, std::size_t& sizeBlock, bool loadingMode);
+  bool* getBlock(std::size_t iBlock, std::size_t& sizeBlock, bool loadingMode) override;
 
   /// Prints cuboid geometry details
   void print() const;
@@ -225,17 +241,11 @@ CuboidGeometry3D<T>* createCuboidGeometry(std::string fileName)
 
   XMLreader reader(fname);
 
-  std::vector<T> origin;
-  std::vector<int> extent;
-  T deltaR;
-  int weight;
-  int refinementLevel;
-
-  origin = getDataFromTag<T>(reader["CuboidGeometry"], "origin", 3);
-  extent = getDataFromTag<int>(reader["CuboidGeometry"], "extent", 3);
-  deltaR = getDataFromTag<T>(reader["CuboidGeometry"], "deltaR", 1)[0];
-  weight = getDataFromTag<int>(reader["CuboidGeometry"], "weight", 1)[0];
-  refinementLevel = getDataFromTag<int>(reader["CuboidGeometry"], "refinementLevel", 1)[0];
+  std::vector<T> origin = getDataFromTag<T>(reader["CuboidGeometry"], "origin", 3);
+  std::vector<int> extent = getDataFromTag<int>(reader["CuboidGeometry"], "extent", 3);
+  T deltaR = getDataFromTag<T>(reader["CuboidGeometry"], "deltaR", 1)[0];
+  size_t weight = getDataFromTag<size_t>(reader["CuboidGeometry"], "weight", 1)[0];
+  int refinementLevel = getDataFromTag<int>(reader["CuboidGeometry"], "refinementLevel", 1)[0];
 
   CuboidGeometry3D<T>* cGeo = new CuboidGeometry3D<T> (origin, deltaR, extent);
   cGeo->getMotherCuboid().setRefinementLevel(refinementLevel);

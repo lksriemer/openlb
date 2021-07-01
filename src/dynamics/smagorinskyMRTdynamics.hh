@@ -92,9 +92,7 @@ void SmagorinskyMRTdynamics<T,Lattice>::collide(
   }
 
   T uSqr = mrtHelpers<T,Lattice>::mrtSGSCollision(cell, rho, u, newOmega, invM_S_SGS);
-  if (cell.takesStatistics()) {
-    statistics.incrementStats(rho, uSqr);
-  }
+  statistics.incrementStats(rho, uSqr);
 }
 
 
@@ -114,9 +112,7 @@ void SmagorinskyMRTdynamics<T,Lattice>::staticCollide(
   }
 
   T uSqr = mrtHelpers<T,Lattice>::mrtSGSCollision(cell, rho, u, newOmega, invM_S_SGS);
-  if (cell.takesStatistics()) {
-    statistics.incrementStats(rho, uSqr);
-  }
+  statistics.incrementStats(rho, uSqr);
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -180,9 +176,7 @@ void SmagorinskyForcedMRTdynamics<T,Lattice>::collide(
 
   mrtHelpers<T,Lattice>::addExternalForce(cell, rho, u, this->invM_S_SGS);
 
-  if (cell.takesStatistics()) {
-    statistics.incrementStats(rho, uSqr);
-  }
+  statistics.incrementStats(rho, uSqr);
 }
 
 }

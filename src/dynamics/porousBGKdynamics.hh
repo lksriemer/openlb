@@ -57,9 +57,7 @@ void PorousBGKdynamics<T,Lattice>::collide (
     u[i] *= porosity[0];
   }
   T uSqr = lbHelpers<T,Lattice>::bgkCollision(cell, rho, u, omega);
-  if (cell.takesStatistics()) {
-    statistics.incrementStats(rho, uSqr);
-  }
+  statistics.incrementStats(rho, uSqr);
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -102,9 +100,7 @@ void ExtendedPorousBGKdynamics<T,Lattice>::collide (
     u[i] += (1.-porosity[0]) * localVelocity[i];
   }
   T uSqr = lbHelpers<T,Lattice>::bgkCollision(cell, rho, u, omega);
-  if (cell.takesStatistics()) {
-    statistics.incrementStats(rho, uSqr);
-  }
+  statistics.incrementStats(rho, uSqr);
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -151,9 +147,8 @@ void SubgridParticleBGKdynamics<T,Lattice>::collide (
     u[i] += extVelocity[i];
   }
   T uSqr = lbHelpers<T,Lattice>::bgkCollision(cell, rho, u, omega);
-  if (cell.takesStatistics()) {
-    statistics.incrementStats(rho, uSqr);
-  }
+
+  statistics.incrementStats(rho, uSqr);
   for (int i=0; i < 4; ++i) {
     cell.getExternal(0)[i] = 0; //_fieldTmp[i];
   }
@@ -195,9 +190,7 @@ void PorousParticleBGKdynamics<T,Lattice>::collide (
     }
   }
   T uSqr = lbHelpers<T,Lattice>::bgkCollision(cell, rho, u, omega);
-  if (cell.takesStatistics()) {
-    statistics.incrementStats(rho, uSqr);
-  }
+  statistics.incrementStats(rho, uSqr);
 
   external[0] = 1.;
   for (int i=1; i < Lattice<T>::d+2; ++i) {
@@ -252,9 +245,7 @@ void KrauseHBGKdynamics<T,Lattice>::collide (
     }
   }
   T uSqr = lbHelpers<T,Lattice>::bgkCollision(cell, rho, u, newOmega);
-  if (cell.takesStatistics()) {
-    statistics.incrementStats(rho, uSqr);
-  }
+  statistics.incrementStats(rho, uSqr);
 
   for (int i=0; i < 4; ++i) {
     cell.getExternal(0)[i] = _fieldTmp[i];
@@ -326,9 +317,7 @@ void ParticlePorousBGKdynamics<T,Lattice>::collide (
     u[i] += localVelocity[i];
   }
   T uSqr = lbHelpers<T,Lattice>::bgkCollision(cell, rho, u, omega);
-  if (cell.takesStatistics()) {
-    statistics.incrementStats(rho, uSqr);
-  }
+  statistics.incrementStats(rho, uSqr);
 
 //  *cell.getExternal(porosityIsAt) = 1;
 //  *cell.getExternal(localDragBeginsAt) = 0.;
@@ -371,9 +360,7 @@ void SmallParticleBGKdynamics<T,Lattice>::collide (
     u[i] += localVelocity[i];
   }
   T uSqr = lbHelpers<T,Lattice>::bgkCollision(cell, rho, u, omega);
-  if (cell.takesStatistics()) {
-    statistics.incrementStats(rho, uSqr);
-  }
+  statistics.incrementStats(rho, uSqr);
 }
 
 template<typename T, template<typename U> class Lattice>

@@ -35,8 +35,8 @@
 #include "cell.h"
 #include "superLattice3D.h"
 #include "io/base64.h"
-#include "functors/analyticalF.h"
-#include "functors/superBaseF3D.h"
+#include "functors/analytical/analyticalF.h"
+#include "functors/lattice/superBaseF3D.h"
 #include "io/serializerIO.h"
 #include "geometry/superGeometry3D.h"
 #include "communication/loadBalancer.h"
@@ -47,16 +47,17 @@ namespace olb {
 
 ////////////////////// Class SuperLattice3D /////////////////////////
 
-
 template<typename T, template<typename U> class Lattice>
-SuperLattice3D<T, Lattice>::SuperLattice3D(CuboidGeometry3D<T>& cGeometry,
-    LoadBalancer<T>& lb, int overlapBC)
-  : SuperStructure3D<T>(cGeometry, lb), _commStream(*this) ,_commBC(*this)
+SuperLattice3D<T, Lattice>::SuperLattice3D(SuperGeometry3D<T>& superGeometry)
+  : SuperStructure3D<T>(superGeometry.getCuboidGeometry(), superGeometry.getLoadBalancer()),
+    _commStream(*this), _commBC(*this)
 {
+  int overlapBC = superGeometry.getOverlap();
   if (overlapBC >= 1) {
     _commBC_on = true;
     this->_overlap = overlapBC;
-  } else {
+  }
+  else {
     _commBC_on = false;
     this->_overlap = 1;
   }
@@ -75,7 +76,7 @@ SuperLattice3D<T, Lattice>::SuperLattice3D(CuboidGeometry3D<T>& cGeometry,
     int nY = this->_cuboidGeometry.get(this->_loadBalancer.glob(iC)).getNy() + 2 * this->_overlap;
     int nZ = this->_cuboidGeometry.get(this->_loadBalancer.glob(iC)).getNz() + 2 * this->_overlap;
 
-    _extendedBlockLattices.emplace_back(nX, nY, nZ);
+    _extendedBlockLattices.emplace_back(nX, nY, nZ, superGeometry.getExtendedBlockGeometry(iC));
   }
   for (int iC = 0; iC < this->_loadBalancer.size(); ++iC) {
     BlockLatticeView3D<T, Lattice> lattice(_extendedBlockLattices[iC], this->_overlap,
@@ -92,14 +93,6 @@ SuperLattice3D<T, Lattice>::SuperLattice3D(CuboidGeometry3D<T>& cGeometry,
   }
 
   this->_communicationNeeded=true;
-}
-
-template<typename T, template<typename U> class Lattice>
-SuperLattice3D<T, Lattice>::SuperLattice3D(SuperGeometry3D<T>& superGeometry)
-  : SuperLattice3D(superGeometry.getCuboidGeometry(),
-                   superGeometry.getLoadBalancer(),
-                   superGeometry.getOverlap())
-{
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -173,7 +166,7 @@ bool SuperLattice3D<T, Lattice>::get(T iX, T iY, T iZ, Cell<T, Lattice>& cell) c
 }
 
 template<typename T, template<typename U> class Lattice>
-Cell<T,Lattice> SuperLattice3D<T,Lattice>::get(int iC, T locX, T locY, T locZ) const
+Cell<T,Lattice> SuperLattice3D<T,Lattice>::get(int iC, int locX, int locY, int locZ) const
 {
   Cell<T,Lattice> cell;
 #ifdef PARALLEL_MODE_MPI
@@ -196,9 +189,7 @@ Cell<T,Lattice> SuperLattice3D<T,Lattice>::get(int iC, T locX, T locY, T locZ) c
 template<typename T, template<typename U> class Lattice>
 Cell<T,Lattice> SuperLattice3D<T,Lattice>::get(std::vector<int> latticeR) const
 {
-  Cell<T,Lattice> cell;
-  cell = _blockLattices[this->_loadBalancer.loc(latticeR[0])].get(latticeR[1],latticeR[2],latticeR[3]);
-  return cell;
+  return _blockLattices[this->_loadBalancer.loc(latticeR[0])].get(latticeR[1],latticeR[2],latticeR[3]);
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -224,6 +215,26 @@ template<typename T, template<typename U> class Lattice> void SuperLattice3D<T,
   for (int iC = 0; iC < this->_loadBalancer.size(); ++iC) {
     _extendedBlockLattices[iC].defineDynamics(sGeometry.getExtendedBlockGeometry(iC), material, dynamics);
   }
+}
+
+template<typename T, template<typename U> class Lattice>
+void SuperLattice3D<T,Lattice>::defineDynamics(
+  SuperIndicatorF3D<T>& indicator, Dynamics<T, Lattice>* dynamics)
+{
+  for (int iC = 0; iC < this->_loadBalancer.size(); ++iC) {
+    _extendedBlockLattices[iC].defineDynamics(
+      indicator.getBlockIndicatorF(iC),
+      this->getOverlap(),
+      dynamics
+    );
+  }
+}
+
+template<typename T, template<typename U> class Lattice>
+void SuperLattice3D<T,Lattice>::defineDynamics(
+  std::unique_ptr<SuperIndicatorF3D<T>> const& indicator, Dynamics<T, Lattice>* dynamics)
+{
+  this->defineDynamics(*indicator, dynamics);
 }
 
 template<typename T, template<typename U> class Lattice> void SuperLattice3D<T,
@@ -258,6 +269,7 @@ template<typename T, template<typename U> class Lattice> void SuperLattice3D<T,L
   }
 }
 
+
 template<typename T, template<typename U> class Lattice>
 void SuperLattice3D<T,Lattice>::defineExternalField( SuperGeometry3D<T>& sGeometry,
     int material, int fieldBeginsAt, int sizeOfField, AnalyticalF3D<T,T>& field)
@@ -268,10 +280,28 @@ void SuperLattice3D<T,Lattice>::defineExternalField( SuperGeometry3D<T>& sGeomet
   }
 }
 
+template<typename T, template<typename U> class Lattice>
+void SuperLattice3D<T,Lattice>::defineExternalField( SuperIndicatorF3D<T>& indicator,
+    int fieldBeginsAt, int sizeOfField, AnalyticalF3D<T,T>& field)
+{
+  for (int iC = 0; iC < this->_loadBalancer.size(); ++iC) {
+    _extendedBlockLattices[iC].defineExternalField(
+      indicator.getBlockIndicatorF(iC), this->getOverlap(),
+      fieldBeginsAt, sizeOfField, field);
+  }
+}
+
+template<typename T, template<typename U> class Lattice>
+void SuperLattice3D<T,Lattice>::defineExternalField(
+  std::unique_ptr<SuperIndicatorF3D<T>> const& indicator,
+  int fieldBeginsAt, int sizeOfField, AnalyticalF3D<T,T>& field)
+{
+  this->defineExternalField(*indicator, fieldBeginsAt, sizeOfField, field);
+}
 
 template<typename T, template<typename U> class Lattice>
 void SuperLattice3D<T,Lattice>::defineExternalField( SuperGeometry3D<T>& sGeometry,
-    IndicatorSphere3D<T>& indicator, int fieldBeginsAt, int sizeOfField, AnalyticalF3D<T,T>& field)
+    IndicatorF3D<T>& indicator, int fieldBeginsAt, int sizeOfField, AnalyticalF3D<T,T>& field)
 {
   for (int iC = 0; iC < this->_loadBalancer.size(); ++iC) {
     _extendedBlockLattices[iC].defineExternalField(sGeometry.getExtendedBlockGeometry(iC),
@@ -279,10 +309,9 @@ void SuperLattice3D<T,Lattice>::defineExternalField( SuperGeometry3D<T>& sGeomet
   }
 }
 
-
 template<typename T, template<typename U> class Lattice>
 void SuperLattice3D<T,Lattice>::defineExternalField( SuperGeometry3D<T>& sGeometry,
-    int material, int fieldBeginsAt, int sizeOfField, SuperLatticeF3D<T,Lattice>& field)
+    int material, int fieldBeginsAt, int sizeOfField, SuperF3D<T,T>& field)
 {
   if (sGeometry.getStatistics().getNvoxel(material)!=0) {
     int overlap = sGeometry.getOverlap();
@@ -341,6 +370,15 @@ void SuperLattice3D<T, Lattice>::collide()
 {
   for (int iC = 0; iC < this->_loadBalancer.size(); ++iC) {
     _blockLattices[iC].collide();
+  }
+  this->_communicationNeeded = true;
+}
+
+template<typename T, template<typename U> class Lattice>
+void SuperLattice3D<T, Lattice>::staticCollide(SuperData3D<T, T> const& u)
+{
+  for (int iC = 0; iC < this->_loadBalancer.size(); ++iC) {
+    _blockLattices[iC].staticCollide(u.get(iC));
   }
   this->_communicationNeeded = true;
 }

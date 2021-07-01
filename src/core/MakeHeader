@@ -23,7 +23,7 @@
 
 generic        := blockStructure2D \
                   blockStructure3D \
-                  multiPhysics
+                  radiativeUnitConverter
 
 
 precompiled    := blockStructure2D \
@@ -38,9 +38,9 @@ precompiled    := blockStructure2D \
                   blockLatticeView3D \
                   cell \
                   latticeStatistics \
-                  multiPhysics \
                   postProcessing2D \
                   postProcessing3D \
+                  radiativeUnitConverter \
                   serializer \
                   superData2D \
                   superData3D \
@@ -48,5 +48,4 @@ precompiled    := blockStructure2D \
                   superExternal3D \
                   superLattice2D \
                   superLattice3D \
-                  units
-
+                  unitConverter

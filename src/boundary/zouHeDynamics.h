@@ -41,24 +41,18 @@ class ZouHeDynamics : public BasicDynamics<T,Lattice> {
 public:
   /// Constructor
   ZouHeDynamics(T omega_, Momenta<T,Lattice>& momenta_);
-  /// Clone the object on its dynamic type.
-  virtual ZouHeDynamics<T, Lattice, Dynamics, direction, orientation>* clone() const;
   /// Compute equilibrium distribution function
-  virtual T computeEquilibrium(int iPop, T rho, const T u[Lattice<T>::d], T uSqr) const;
+  T computeEquilibrium(int iPop, T rho, const T u[Lattice<T>::d], T uSqr) const override;
   /// Collision step
-  virtual void collide(Cell<T,Lattice>& cell, LatticeStatistics<T>& statistics);
+  void collide(Cell<T,Lattice>& cell, LatticeStatistics<T>& statistics) override;
   /// Collide with fixed velocity
-  virtual void staticCollide(Cell<T,Lattice>& cell,
+  void staticCollide(Cell<T,Lattice>& cell,
                              const T u[Lattice<T>::d],
-                             LatticeStatistics<T>& statistics);
+                             LatticeStatistics<T>& statistics) override;
   /// Get local relaxation parameter of the dynamics
-  virtual T getOmega() const;
+  T getOmega() const override;
   /// Set local relaxation parameter of the dynamics
-  virtual void setOmega(T omega_);
-  /// Get local value of any parameter
-  virtual T getParameter(int whichParameter) const;
-  /// Set local value of any parameter
-  virtual void setParameter(int whichParameter, T value);
+  void setOmega(T omega_) override;
 private:
   Dynamics boundaryDynamics;
 };

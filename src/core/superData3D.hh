@@ -29,7 +29,7 @@
 
 #include <numeric>
 #include "superData3D.h"
-#include "functors/superBaseF3D.h"
+#include "functors/lattice/superBaseF3D.h"
 #include "geometry/cuboid3D.h"
 
 namespace olb {

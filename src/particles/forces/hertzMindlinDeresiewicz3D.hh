@@ -38,9 +38,9 @@ namespace olb {
 template<typename T, template<typename U> class PARTICLETYPE, template<
            typename W> class DESCRIPTOR>
 HertzMindlinDeresiewicz3D<T, PARTICLETYPE, DESCRIPTOR>::HertzMindlinDeresiewicz3D(
-  T G1, T G2, T v1, T v2, T scale1, T scale2) :
+  T G1, T G2, T v1, T v2, T scale1, T scale2, bool validationKruggelEmden) :
   Force3D<T, PARTICLETYPE>(), _G1(G1), _G2(G2), _v1(v1), _v2(v2), _scale1(
-    scale1), _scale2(scale2)
+    scale1), _scale2(scale2), _validationKruggelEmden(validationKruggelEmden)
 {
   // E-Modul Particle
   E1 = 2 * (1 + _v1) * _G1;
@@ -61,22 +61,32 @@ void HertzMindlinDeresiewicz3D<T, PARTICLETYPE, DESCRIPTOR>::applyForce(
   typename std::deque<PARTICLETYPE<T> >::iterator p, int pInt,
   ParticleSystem3D<T, PARTICLETYPE>& pSys)
 {
+  T force[3] = {T(), T(), T()};
+  computeForce(p, pInt, pSys, force);
 
+  p->getForce()[0] += force[0];
+  p->getForce()[1] += force[1];
+  p->getForce()[2] += force[2];
+}
+
+template<typename T, template<typename U> class PARTICLETYPE, template<
+           typename W> class DESCRIPTOR>
+void HertzMindlinDeresiewicz3D<T, PARTICLETYPE, DESCRIPTOR>::computeForce(
+  typename std::deque<PARTICLETYPE<T> >::iterator p, int pInt,
+  ParticleSystem3D<T, PARTICLETYPE>& pSys, T force[3])
+{
   std::vector<std::pair<size_t, T>> ret_matches;
   // kind of contactDetection has to be chosen in application
   pSys.getContactDetection()->getMatches(pInt, ret_matches);
 
-  const PARTICLETYPE<T>* p2 = NULL;
-
-  typename std::vector<std::pair<size_t, T> >::iterator it =
-    ret_matches.begin();
+  const PARTICLETYPE<T>* p2 = nullptr;
 
   // iterator walks through number of neighbored particles = ret_matches
-  for (; it != ret_matches.end(); it++) {
-    if (it->second != 0) {
-      p2 = &pSys[it->first];
+  for (const auto& it : ret_matches) {
+    if (!util::nearZero(it.second)) {
+      p2 = &pSys[it.first];
       // overlap
-      T delta = (p2->getRad() + p->getRad()) - sqrt(it->second);
+      T delta = (p2->getRad() + p->getRad()) - sqrt(it.second);
 
       // equivalent mass
       T M = p->getMass() * p2->getMass() / (p->getMass() + p2->getMass());
@@ -96,7 +106,7 @@ void HertzMindlinDeresiewicz3D<T, PARTICLETYPE, DESCRIPTOR>::applyForce(
       _d[1] = p2->getPos()[1] - p->getPos()[1];
       _d[2] = p2->getPos()[2] - p->getPos()[2];
 
-      if (util::norm(_d) != T(0)) {
+     if ( !util::nearZero(util::norm(_d)) ) {
         _normal = util::normalize(_d);
       } else {
         return;
@@ -120,13 +130,16 @@ void HertzMindlinDeresiewicz3D<T, PARTICLETYPE, DESCRIPTOR>::applyForce(
       _velT[1] = _velR[1] - _velN[1];
       _velT[2] = _velR[2] - _velN[2];
 
-      if (pow(p2->getRad() + p->getRad(), 2) > it->second) { // overlap
+      if (pow(p2->getRad() + p->getRad(), 2) > it.second) { // overlap
 
         // Force normal
         // spring constant in normal direction
         // (Alberto Di Renzo∗ , Francesco Paolo Di Maio, Chemical Engineering Science 59 (2004) 525 – 541)
-        // Konstante kn aus (H. Kruggel-Endem, Powder Technology 171 (2007) 157-173) Table 3 / Brass Partikel
+        // constant kn from H. Kruggel-Endem
         T kn = 4 / 3. * sqrt(R) * eE;
+        if (_validationKruggelEmden) {
+          kn = 7.35e9;  // to compare to Kruggel-Emden
+        }
 
         // part of mechanical force of spring in normal direction
         // Hertz Contact (P. A. Langston, Powder Technology 85 (1995))
@@ -139,8 +152,11 @@ void HertzMindlinDeresiewicz3D<T, PARTICLETYPE, DESCRIPTOR>::applyForce(
         // damped linear spring (Cundall, Strack 1979)
         // (K.W. Chu, A.B. Yu, Powder Technology 179 (2008) 104 – 114)
         // damper constant in normal direction
-        // Konstante eta_n aus (H. Kruggel-Endem, Powder Technology 171 (2007) 157-173) Table 3 / Brass Partikel
+        // constant eta_n from H. Kruggel-Endem
         T eta_n = 0.3 * sqrt(4.5 * M * sqrt(delta) * kn);
+        if (_validationKruggelEmden) {
+          eta_n = 1.96e5;  // to compare to Kruggel-Emden
+        }
 
         std::vector < T > Fd_n(3, T());
         Fd_n[0] = -eta_n * _velN[0]*sqrt(delta);
@@ -168,9 +184,9 @@ void HertzMindlinDeresiewicz3D<T, PARTICLETYPE, DESCRIPTOR>::applyForce(
 
         // entire force
         // factor _scale to prevent instability
-        p->getForce()[0] += _scale1 * F_n[0] + _scale2 * F_t[0];
-        p->getForce()[1] += _scale1 * F_n[1] + _scale2 * F_t[1];
-        p->getForce()[2] += _scale1 * F_n[2] + _scale2 * F_t[2];
+        force[0] = _scale1 * F_n[0] + _scale2 * F_t[0];
+        force[1] = _scale1 * F_n[1] + _scale2 * F_t[1];
+        force[2] = _scale1 * F_n[2] + _scale2 * F_t[2];
       }
     }
   }

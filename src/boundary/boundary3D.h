@@ -35,6 +35,8 @@
 #include "momentaOnBoundaries3D.h"
 #include "offBoundaryCondition3D.h"
 #include "offBoundaryPostProcessors3D.h"
+#include "rtlbmBoundary.h"
+#include "rtlbmBoundaryDynamics.h"
 #include "superBoundaryCondition3D.h"
 #include "superOffBoundaryCondition3D.h"
 #include "zouHeBoundary3D.h"

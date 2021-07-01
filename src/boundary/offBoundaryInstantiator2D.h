@@ -47,47 +47,47 @@ class OffBoundaryConditionInstantiator2D: public OffLatticeBoundaryCondition2D<T
   Lattice> {
 public:
   OffBoundaryConditionInstantiator2D(BlockLatticeStructure2D<T, Lattice>& block_, T epsFraction_ = 0.0001);
-  ~OffBoundaryConditionInstantiator2D();
+  ~OffBoundaryConditionInstantiator2D() override;
 
-  void addOnePointZeroVelocityBoundary(int x, int y, int iPop, T dist);
-  void addTwoPointZeroVelocityBoundary(int x, int y, int iPop, T dist);
+  void addOnePointZeroVelocityBoundary(int x, int y, int iPop, T dist) override;
+  void addTwoPointZeroVelocityBoundary(int x, int y, int iPop, T dist) override;
 
-  void addOnePointVelocityBoundary(int x, int y, int iPop, T dist);
-  void addTwoPointVelocityBoundary(int x, int y, int iPop, T dist);
+  void addOnePointVelocityBoundary(int x, int y, int iPop, T dist) override;
+  void addTwoPointVelocityBoundary(int x, int y, int iPop, T dist) override;
 
-  virtual void addOffDynamics(int x, int y, T location[Lattice<T>::d]);
-  virtual void addOffDynamics(int x, int y, T location[Lattice<T>::d], T distances[Lattice<T>::q]);
-  virtual void addOffDynamics(BlockGeometryStructure2D<T>& blockGeometryStructure, int material);
+  void addOffDynamics(int x, int y, T location[Lattice<T>::d]) override;
+  void addOffDynamics(int x, int y, T location[Lattice<T>::d], T distances[Lattice<T>::q]) override;
+  void addOffDynamics(BlockGeometryStructure2D<T>& blockGeometryStructure, int material) override;
 
-  void addZeroVelocityBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int x, int y, int iPop, T dist);
+  void addZeroVelocityBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int x, int y, int iPop, T dist) override;
   void addZeroVelocityBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int x, int y, T distances[Lattice<T>::q]);
   void addZeroVelocityBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int iX, int iY, IndicatorF2D<T>& indicator, std::list<int> bulkMaterials = std::list<int>(1,1));
-  void addZeroVelocityBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int material, IndicatorF2D<T>& indicator, std::list<int> bulkMaterials = std::list<int>(1,1));
-  void addZeroVelocityBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int material, std::list<int> bulkMaterials = std::list<int>(1,1));
+  void addZeroVelocityBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int material, IndicatorF2D<T>& indicator, std::list<int> bulkMaterials = std::list<int>(1,1)) override;
+  void addZeroVelocityBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int material, std::list<int> bulkMaterials = std::list<int>(1,1)) override;
 
   void addVelocityBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int x, int y, int iPop, T dist);
   void addVelocityBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int x, int y, T distances[Lattice<T>::q]);
   void addVelocityBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int iX, int iY, IndicatorF2D<T>& indicator, std::list<int> bulkMaterials = std::list<int>(1,1));
-  void addVelocityBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int material, IndicatorF2D<T>& indicator, std::list<int> bulkMaterials = std::list<int>(1,1));
-  void addVelocityBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int material, std::list<int> bulkMaterials = std::list<int>(1,1));
+  void addVelocityBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int material, IndicatorF2D<T>& indicator, std::list<int> bulkMaterials = std::list<int>(1,1)) override;
+  void addVelocityBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int material, std::list<int> bulkMaterials = std::list<int>(1,1)) override;
 
-  void addPressureBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int material, IndicatorF2D<T>& indicator, std::list<int> bulkMaterials = std::list<int>(1,1));
-  void addPressureBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int material, std::list<int> bulkMaterials = std::list<int>(1,1));
+  void addPressureBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int material, IndicatorF2D<T>& indicator, std::list<int> bulkMaterials = std::list<int>(1,1)) override;
+  void addPressureBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int material, std::list<int> bulkMaterials = std::list<int>(1,1)) override;
 
   void setBoundaryIntersection(int iX, int iY, int iPop, T distance);
   bool getBoundaryIntersection(int iX, int iY, int iPop, T point[Lattice<T>::d]);
 
-  virtual void defineU(int iX, int iY, int iPop, const T u[Lattice<T>::d]);
-  virtual void defineU(BlockGeometryStructure2D<T>& blockGeometryStructure, int material, AnalyticalF2D<T,T>& u, std::list<int> bulkMaterials = std::list<int>(1,1) );
+  void defineU(int iX, int iY, int iPop, const T u[Lattice<T>::d]) override;
+  void defineU(BlockGeometryStructure2D<T>& blockGeometryStructure, int material, AnalyticalF2D<T,T>& u, std::list<int> bulkMaterials = std::list<int>(1,1) ) override;
 
-  virtual void defineRho(int iX, int iY, int iPop, const T rho);
-  virtual void defineRho(BlockGeometryStructure2D<T>& blockGeometryStructure, int material, AnalyticalF2D<T,T>& rho, std::list<int> bulkMaterials = std::list<int>(1,1) );
+  void defineRho(int iX, int iY, int iPop, const T rho) override;
+  void defineRho(BlockGeometryStructure2D<T>& blockGeometryStructure, int material, AnalyticalF2D<T,T>& rho, std::list<int> bulkMaterials = std::list<int>(1,1) ) override;
 
-  void outputOn();
-  void outputOff();
+  void outputOn() override;
+  void outputOff() override;
 
-  virtual BlockLatticeStructure2D<T, Lattice>& getBlock();
-  virtual BlockLatticeStructure2D<T, Lattice> const& getBlock() const;
+  BlockLatticeStructure2D<T, Lattice>& getBlock() override;
+  BlockLatticeStructure2D<T, Lattice> const& getBlock() const override;
 private:
   BlockLatticeStructure2D<T, Lattice>& block;
   //std::vector<Momenta<T, Lattice>*> momentaVector;
@@ -617,7 +617,7 @@ void OffBoundaryConditionInstantiator2D<T, Lattice, BoundaryManager>::
 setBoundaryIntersection(int iX, int iY, int iPop, T distance)
 {
 
-  this->getBlock().get(iX,iY).getDynamics()->setBoundaryIntersection(iPop, distance);
+  this->getBlock().getDynamics(iX, iY)->setBoundaryIntersection(iPop, distance);
   if (_output) {
     clout << "setBoundaryIntersection(" << iX << ", " << iY << " )" << std::endl;
   }
@@ -628,7 +628,7 @@ bool OffBoundaryConditionInstantiator2D<T, Lattice, BoundaryManager>::
 getBoundaryIntersection(int iX, int iY, int iPop, T point[Lattice<T>::d])
 {
 
-  return this->getBlock().get(iX,iY).getDynamics()->getBoundaryIntersection(iPop, point);
+  return this->getBlock().getDynamics(iX, iY)->getBoundaryIntersection(iPop, point);
 }
 
 
@@ -636,7 +636,7 @@ template<typename T, template<typename U> class Lattice, class BoundaryManager>
 void OffBoundaryConditionInstantiator2D<T, Lattice, BoundaryManager>::defineU(int iX, int iY, int iPop, const T u[Lattice<T>::d])
 {
 
-  this->getBlock().get(iX,iY).getDynamics()->defineU(iPop, u);
+  this->getBlock().getDynamics(iX, iY)->defineU(iPop, u);
   if (_output) {
     clout << "defineU(" << iX << ", " << iY << " )" << std::endl;
   }
@@ -646,7 +646,7 @@ template<typename T, template<typename U> class Lattice, class BoundaryManager>
 void OffBoundaryConditionInstantiator2D<T, Lattice, BoundaryManager>::defineRho(int iX, int iY, int iPop, const T rho)
 {
 
-  this->getBlock().get(iX,iY).getDynamics()->defineRho(iPop, rho);
+  this->getBlock().getDynamics(iX, iY)->defineRho(iPop, rho);
   if (_output) {
     clout << "defineRho(" << iX << ", " << iY << " )" << std::endl;
   }

@@ -30,7 +30,7 @@
 #define BLOCK_VTK_WRITER_2D_H
 
 #include "io/ostreamManager.h"
-#include "functors/blockBaseF2D.h"
+#include "functors/lattice/blockBaseF2D.h"
 
 namespace olb {
 
@@ -59,9 +59,9 @@ public:
   ///  put functor to _pointerVec
   ///  to simplify writing process of several functors
   void addFunctor( BlockF2D<T>& f );
+private:
   ///  to clear stored functors
   void clearAddedFunctors();
-private:
   ///  writes <VTKFile .... >, <ImageData ... >, <Piece ... > and <PointData Scalar="..." >
   void preamble( const std::string& fullName, int nx,int ny, T originX=0, T originY=0, T originZ=0);
   ///  writes </PointData>, </Piece>, </ImageData> and  </VTKFile>

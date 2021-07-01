@@ -71,23 +71,13 @@ struct Cell2D {
 
   bool operator==(Cell2D const& rhs) const
   {
-    return latticeR[0]==rhs.latticeR[0] && latticeR[1]==rhs.latticeR[1] && latticeR[2]==rhs.latticeR[2];
+      return latticeR == rhs.latticeR;
   };
 
-  Cell2D(Cell2D const& rhs)
-  {
-    latticeR = rhs.latticeR;
-    physR  = rhs.physR;
-  }
-  ;
+  Cell2D(Cell2D const& rhs) = default;
 
   /// Copy assignment
-  Cell2D& operator=(Cell2D const& rhs)
-  {
-    latticeR = rhs.latticeR;
-    physR = rhs.physR;
-    return *this;
-  };
+  Cell2D& operator=(Cell2D const& rhs) = default;
 
 };
 

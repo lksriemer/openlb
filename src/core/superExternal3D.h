@@ -59,19 +59,19 @@ public:
                   int offset, int size, int overlap);
   void communicate(bool verbose=true);
   /// Write access to the memory of the data of the super structure
-  virtual bool* operator() (int iCloc, int iX, int iY, int iZ ,int iData)
+  bool* operator() (int iCloc, int iX, int iY, int iZ ,int iData) override
   {
     return (bool*)_sLattice.getExtendedBlockLattice(iCloc).get(iX+_overlap,
            iY+_overlap,
            iZ+_overlap).getExternal(_offset);
   };
   /// Read only access to the dim of the data of the super structure
-  virtual int getDataSize() const
+  int getDataSize() const override
   {
     return _size;
   };
   /// Read only access to the data type dim of the data of the super structure
-  virtual int getDataTypeSize() const
+  int getDataTypeSize() const override
   {
     return sizeof(T);
   };

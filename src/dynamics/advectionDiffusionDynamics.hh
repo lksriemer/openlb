@@ -1,6 +1,6 @@
 /*  This file is part of the OpenLB library
  *
- *  Copyright (C) 2008,2015 Orestis Malaspinas, Andrea Parmigiani, Albert Mink
+ *  Copyright (C) 2008 Orestis Malaspinas, Andrea Parmigiani
  *  E-mail contact: info@openlb.net
  *  The most recent release of OpenLB can be downloaded at
  *  <http://www.openlb.net/>
@@ -31,7 +31,6 @@
 #include <algorithm>
 #include <limits>
 #include "advectionDiffusionDynamics.h"
-#include "advectionDiffusionLbHelpers.h"
 
 namespace olb {
 
@@ -53,16 +52,10 @@ AdvectionDiffusionRLBdynamics<T, Lattice>::AdvectionDiffusionRLBdynamics (
 { }
 
 template<typename T, template<typename U> class Lattice>
-AdvectionDiffusionRLBdynamics<T, Lattice>* AdvectionDiffusionRLBdynamics<T, Lattice>::clone() const
-{
-  return new AdvectionDiffusionRLBdynamics<T, Lattice>( *this );
-}
-
-template<typename T, template<typename U> class Lattice>
 T AdvectionDiffusionRLBdynamics<T, Lattice>::computeEquilibrium( int iPop, T rho,
     const T u[Lattice<T>::d], T uSqr ) const
 {
-  return advectionDiffusionLbHelpers<T, Lattice>::equilibrium( iPop, rho, u );
+  return lbHelpers<T, Lattice>::equilibriumFirstOrder( iPop, rho, u );
 }
 
 
@@ -74,12 +67,10 @@ void AdvectionDiffusionRLBdynamics<T, Lattice>::collide( Cell<T, Lattice>& cell,
 
   const T* u = cell.getExternal( Lattice<T>::ExternalField::velocityBeginsAt );
 
-  T uSqr = advectionDiffusionLbHelpers<T, Lattice>::
+  T uSqr = lbHelpers<T, Lattice>::
            rlbCollision( cell, temperature, u, omega );
 
-  if ( cell.takesStatistics() ) {
-    statistics.incrementStats( temperature, uSqr );
-  }
+  statistics.incrementStats( temperature, uSqr );
 }
 
 
@@ -115,16 +106,17 @@ AdvectionDiffusionBGKdynamics<T, Lattice>::AdvectionDiffusionBGKdynamics (
 { }
 
 template<typename T, template<typename U> class Lattice>
-AdvectionDiffusionBGKdynamics<T, Lattice>* AdvectionDiffusionBGKdynamics<T, Lattice>::clone() const
-{
-  return new AdvectionDiffusionBGKdynamics<T,Lattice>( *this );
-}
+AdvectionDiffusionBGKdynamics<T, Lattice>::AdvectionDiffusionBGKdynamics (
+  const UnitConverter<T,Lattice>& converter, Momenta<T, Lattice>& momenta )
+  : BasicDynamics<T, Lattice>( momenta ),
+    _omega(converter.getLatticeRelaxationFrequency())
+{ }
 
 template<typename T, template<typename U> class Lattice>
 T AdvectionDiffusionBGKdynamics<T, Lattice>::computeEquilibrium( int iPop, T rho,
     const T u[Lattice<T>::d], T uSqr ) const
 {
-  return advectionDiffusionLbHelpers<T,Lattice>::equilibrium( iPop, rho, u );
+  return lbHelpers<T, Lattice>::equilibriumFirstOrder( iPop, rho, u );
 }
 
 
@@ -135,12 +127,10 @@ void AdvectionDiffusionBGKdynamics<T, Lattice>::collide( Cell<T, Lattice>& cell,
   T temperature = this->_momenta.computeRho( cell );
   const T* u = cell.getExternal(Lattice<T>::ExternalField::velocityBeginsAt);
 
-  T uSqr = advectionDiffusionLbHelpers<T, Lattice>::
+  T uSqr = lbHelpers<T, Lattice>::
            bgkCollision( cell, temperature, u, _omega );
 
-  if ( cell.takesStatistics() ) {
-    statistics.incrementStats( temperature, uSqr );
-  }
+  statistics.incrementStats( temperature, uSqr );
 }
 
 
@@ -165,119 +155,6 @@ void AdvectionDiffusionBGKdynamics<T, Lattice>::setOmega( T omega )
 }
 
 
-//==================================================================//
-//============= BGK Model for Advection diffusion plus sink term ===//
-//==================================================================//
-
-template<typename T, template<typename U> class Lattice>
-AdDiSinkBGKdynamics<T,Lattice>::AdDiSinkBGKdynamics
-( T omega, Momenta<T,Lattice>& momenta, T sink )
-  : BasicDynamics<T, Lattice>( momenta ), _omega(omega), _sink(sink)
-{ }
-
-template<typename T, template<typename U> class Lattice>
-AdDiSinkBGKdynamics<T, Lattice>* AdDiSinkBGKdynamics<T, Lattice>::clone() const
-{
-  return new AdDiSinkBGKdynamics<T, Lattice>( *this );
-}
-
-template<typename T, template<typename U> class Lattice>
-T AdDiSinkBGKdynamics<T, Lattice>::computeEquilibrium
-( int iPop, T rho, const T u[Lattice<T>::d], T uSqr ) const
-{
-  return advectionDiffusionLbHelpers<T, Lattice>::equilibrium( iPop, rho, u );
-}
-
-
-template<typename T, template<typename U> class Lattice>
-void AdDiSinkBGKdynamics<T, Lattice>::collide
-( Cell<T, Lattice>& cell, LatticeStatistics<T>& statistics )
-{
-  T intensity = this->_momenta.computeRho( cell );
-  T uSqr = advectionDiffusionLbHelpers<T,Lattice>::sinkCollision( cell, intensity, _omega, _sink );
-  if ( cell.takesStatistics() ) {
-    statistics.incrementStats( intensity, uSqr );
-  }
-}
-
-template<typename T, template<typename U> class Lattice>
-void AdDiSinkBGKdynamics<T, Lattice>::staticCollide( Cell<T, Lattice>& cell,
-    const T u[Lattice<T>::d], LatticeStatistics<T>& statistics )
-{
-  assert( false );
-}
-
-template<typename T, template<typename U> class Lattice>
-T AdDiSinkBGKdynamics<T, Lattice>::getOmega() const
-{
-  return _omega;
-}
-
-template<typename T, template<typename U> class Lattice>
-void AdDiSinkBGKdynamics<T, Lattice>::setOmega( T omega )
-{
-  _omega = omega;
-}
-
-
-//==================================================================//
-//============= BGK Model for Advection diffusion anisotropic ===//
-//==================================================================//
-
-template<typename T, template<typename U> class Lattice>
-AdDiAnisoBGKdynamics<T, Lattice>::AdDiAnisoBGKdynamics
-( T omega, Momenta<T, Lattice>& momenta, T singleScatAlbedo, T extinctionCoeff)
-  : BasicDynamics<T, Lattice>(momenta), _omega(omega), _singleScatAlbedo(singleScatAlbedo),
-    _extinctionCoeff(extinctionCoeff)
-{ }
-
-template<typename T, template<typename U> class Lattice>
-AdDiAnisoBGKdynamics<T, Lattice>* AdDiAnisoBGKdynamics<T, Lattice>::clone() const
-{
-  return new AdDiAnisoBGKdynamics<T,Lattice>( *this );
-}
-
-template<typename T, template<typename U> class Lattice>
-T AdDiAnisoBGKdynamics<T, Lattice>::computeEquilibrium
-( int iPop, T rho, const T u[Lattice<T>::d], T uSqr ) const
-{
-  return advectionDiffusionLbHelpers<T,Lattice>::equilibrium( iPop, rho, u );
-}
-
-
-template<typename T, template<typename U> class Lattice>
-void AdDiAnisoBGKdynamics<T, Lattice>::collide
-( Cell<T, Lattice>& cell, LatticeStatistics<T>& statistics )
-{
-  T temperature = this->_momenta.computeRho(cell );
-//  T uSqr = advectionDiffusionLbHelpers<T,Lattice>::sinkCollision( cell, temperature, omega, 0. );
-  T uSqr = advectionDiffusionLbHelpers<T, Lattice>::
-           anisoCollision( cell, temperature, _singleScatAlbedo, _extinctionCoeff);
-  if ( cell.takesStatistics() ) {
-    statistics.incrementStats( temperature, uSqr );
-  }
-}
-
-template<typename T, template<typename U> class Lattice>
-void AdDiAnisoBGKdynamics<T, Lattice>::staticCollide( Cell<T, Lattice>& cell,
-    const T u[Lattice<T>::d], LatticeStatistics<T>& statistics )
-{
-  assert( false );
-}
-
-template<typename T, template<typename U> class Lattice>
-T AdDiAnisoBGKdynamics<T, Lattice>::getOmega() const
-{
-  return _omega;
-}
-
-template<typename T, template<typename U> class Lattice>
-void AdDiAnisoBGKdynamics<T, Lattice>::setOmega( T omega )
-{
-  _omega = omega;
-}
-
-
 //==================================================================================//
 //=========== BGK Model for Advection diffusion with Stokes drag and Smagorinsky====//
 //==================================================================================//
@@ -296,10 +173,8 @@ void SmagorinskyParticleAdvectionDiffusionBGKdynamics<T, Lattice>::collide(Cell<
   int offset = (statistics.getTime() % 2 == 0) ? Lattice<T>::ExternalField::velocityBeginsAt : Lattice<T>::ExternalField::velocity2BeginsAt;
   const T* u = cell.getExternal(offset);
   T newOmega = computeOmega(this->getOmega(), preFactor, temperature, pi);
-  T uSqr = advectionDiffusionLbHelpers<T,Lattice>::bgkCollision(cell, temperature, u, newOmega);
-  if (cell.takesStatistics()) {
-    statistics.incrementStats(temperature, uSqr);
-  }
+  T uSqr = lbHelpers<T,Lattice>::bgkCollision(cell, temperature, u, newOmega);
+  statistics.incrementStats(temperature, uSqr);
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -365,12 +240,75 @@ void ParticleAdvectionDiffusionBGKdynamics<T, Lattice>::collide( Cell<T, Lattice
   T temperature = this->_momenta.computeRho( cell );
   int offset = (statistics.getTime() % 2 == 0) ? Lattice<T>::ExternalField::velocityBeginsAt : Lattice<T>::ExternalField::velocity2BeginsAt;
   const T* u = cell.getExternal(offset);
-  T uSqr = advectionDiffusionLbHelpers<T, Lattice>::
+  T uSqr = lbHelpers<T, Lattice>::
            bgkCollision( cell, temperature, u, omega );
-  if ( cell.takesStatistics() ) {
-    statistics.incrementStats( temperature, uSqr );
-  }
+  statistics.incrementStats( temperature, uSqr );
 }
+
+
+//==================================================================//
+//================= MRT Model for Advection diffusion ==============//
+//==================================================================//
+
+template<typename T, template<typename U> class Lattice>
+AdvectionDiffusionMRTdynamics<T, Lattice>::AdvectionDiffusionMRTdynamics(
+    T omega, Momenta<T, Lattice>& momenta) :
+    BasicDynamics<T, Lattice>(momenta), _omega(omega) {
+  T rt[Lattice<T>::q]; // relaxation times vector.
+  for (int iPop = 0; iPop < Lattice<T>::q; ++iPop) {
+    rt[iPop] = Lattice<T>::S[iPop];
+  }
+  for (int iPop = 0; iPop < Lattice<T>::shearIndexes; ++iPop) {
+    rt[Lattice<T>::shearViscIndexes[iPop]] = omega;
+  }
+  for (int iPop = 0; iPop < Lattice<T>::q; ++iPop) {
+    for (int jPop = 0; jPop < Lattice<T>::q; ++jPop) {
+      invM_S[iPop][jPop] = T();
+      for (int kPop = 0; kPop < Lattice<T>::q; ++kPop) {
+        if (kPop == jPop) {
+          invM_S[iPop][jPop] += Lattice<T>::invM[iPop][kPop] * rt[kPop];
+        }
+      }
+    }
+  }
+
+}
+
+template<typename T, template<typename U> class Lattice>
+T AdvectionDiffusionMRTdynamics<T, Lattice>::computeEquilibrium(int iPop, T rho,
+    const T u[Lattice<T>::d], T uSqr) const {
+  return lbHelpers<T, Lattice>::equilibrium(iPop, rho, u, uSqr);
+}
+
+template<typename T, template<typename U> class Lattice>
+void AdvectionDiffusionMRTdynamics<T, Lattice>::collide(Cell<T, Lattice>& cell,
+    LatticeStatistics<T>& statistics) {
+  T temperature = this->_momenta.computeRho(cell);
+  const T* u = cell.getExternal(Lattice<T>::ExternalField::velocityBeginsAt);
+
+  T uSqr = lbHelpers<T, Lattice>::mrtCollision(cell, temperature, u, invM_S);
+
+  statistics.incrementStats(temperature, uSqr);
+}
+
+template<typename T, template<typename U> class Lattice>
+void AdvectionDiffusionMRTdynamics<T, Lattice>::staticCollide(
+    Cell<T, Lattice>& cell, const T u[Lattice<T>::d],
+    LatticeStatistics<T>& statistics) {
+  assert(false);
+}
+
+template<typename T, template<typename U> class Lattice>
+T AdvectionDiffusionMRTdynamics<T, Lattice>::getOmega() const {
+  return _omega;
+}
+
+template<typename T, template<typename U> class Lattice>
+void AdvectionDiffusionMRTdynamics<T, Lattice>::setOmega(T omega) {
+  _omega = omega;
+}
+
+
 
 } // namespace olb
 

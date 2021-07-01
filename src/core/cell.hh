@@ -42,7 +42,7 @@ namespace olb {
  */
 template<typename T, template<typename U> class Lattice>
 Cell<T,Lattice>::Cell()
-  : takesStat(true), dynamics(0)
+  : dynamics(nullptr)
 {
   iniPop();
   iniExternal();
@@ -55,7 +55,7 @@ Cell<T,Lattice>::Cell()
  */
 template<typename T, template<typename U> class Lattice>
 Cell<T,Lattice>::Cell(Dynamics<T,Lattice>* dynamics_)
-  : takesStat(true), dynamics(dynamics_)
+  : dynamics(dynamics_)
 {
   iniPop();
   iniExternal();
@@ -135,8 +135,7 @@ void Cell<T,Lattice>::unSerialize(T const* data)
 template<typename T, template<typename U> class Lattice>
 std::size_t Cell<T,Lattice>::getSerializableSize() const
 {
-  return sizeof(bool) // takesStat
-         + sizeof(T) * Lattice<T>::q // this->f
+  return sizeof(T) * Lattice<T>::q // this->f
          + sizeof(T) * Lattice<T>::ExternalField::numScalars; // externals
 }
 
@@ -148,9 +147,9 @@ bool* Cell<T,Lattice>::getBlock(std::size_t iBlock, std::size_t& sizeBlock, bool
   bool* dataPtr = nullptr;
 
   this->registerVar(iBlock, sizeBlock, currentBlock, dataPtr, this->f[0], Lattice<T>::q);
-  this->registerVar(iBlock, sizeBlock, currentBlock, dataPtr, takesStat);
-  this->registerVar(iBlock, sizeBlock, currentBlock, dataPtr, *(external.get(0)),
-                    Lattice<T>::ExternalField::numScalars);
+  if (Lattice<T>::ExternalField::numScalars)
+    this->registerVar(iBlock, sizeBlock, currentBlock, dataPtr, *(external.get(0)),
+        Lattice<T>::ExternalField::numScalars);
 
   return dataPtr;
 }

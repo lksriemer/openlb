@@ -27,10 +27,11 @@
 
 #include "superGeometry3D.h"
 #include "superGeometry3D.hh"
-#include "functors/indicator/indicatorF3D.h"
+#include "functors/lattice/indicator/indicatorF3D.h"
 
 namespace olb {
 
 template class IndicatorF3D<double>;
 template class SuperGeometry3D<double>;
+
 }

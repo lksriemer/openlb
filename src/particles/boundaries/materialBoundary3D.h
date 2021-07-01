@@ -26,11 +26,9 @@
 
 #include <set>
 
-#include "core/units.h"
 #include "geometry/superGeometry3D.h"
 #include "particles/particleSystem3D.h"
 #include "boundary3D.h"
-#include "core/units.h"
 
 namespace olb {
 
@@ -54,7 +52,7 @@ public:
   /// Constructor with set of material numbers
   MaterialBoundary3D(SuperGeometry3D<T>& sg,
                      std::set<int> material);
-  virtual ~MaterialBoundary3D()
+  ~MaterialBoundary3D() override
   {
   }
   /// Add a single material number
@@ -70,9 +68,9 @@ public:
     }
   }
   /// Apply the boundary condition
-  virtual void applyBoundary(
+  void applyBoundary(
     typename std::deque<PARTICLETYPE<T> >::iterator& p,
-    ParticleSystem3D<T, PARTICLETYPE>& psSys);
+    ParticleSystem3D<T, PARTICLETYPE>& psSys) override;
 
 private:
   SuperGeometry3D<T>& _sg;

@@ -28,6 +28,7 @@
 #include "blockGifWriter.hh"
 #include "blockVtkWriter3D.hh"
 #include "colormaps.hh"
+#include "gnuplotHeatMapWriter.hh"
 #include "gnuplotWriter.hh"
 #include "serializerIO.hh"
 #include "stlReader.hh"

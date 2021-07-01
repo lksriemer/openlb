@@ -58,14 +58,18 @@ typedef double T;
 // Choose your turbulent model of choice
 //#define RLB
 #define Smagorinsky
+//#define WALE
 //#define ConsistentStrainSmagorinsky
 //#define ShearSmagorinsky
 //#define Krause
+//#define DNS
 
 #define finiteDiff //for N<256
 
 #ifdef ShearSmagorinsky
 #define DESCRIPTOR ShearSmagorinskyD3Q19Descriptor
+#elif defined (WALE)
+#define DESCRIPTOR WALED3Q19Descriptor
 #else
 #define DESCRIPTOR D3Q19Descriptor
 #endif
@@ -77,7 +81,7 @@ const T volume = pow(2. * pi, 3.); // volume of the 2pi periodic box
 
 // Parameters for the simulation setup
 const T maxPhysT = 10;    // max. simulation time in s, SI unit
-int N = 128;              // resolution of the model
+int N = 128;               // resolution of the model
 T Re = 800;               // defined as 1/kinematic viscosity
 T smagoConst = 0.1;       // Smagorisky Constant, for ConsistentStrainSmagorinsky smagoConst = 0.033
 T vtkSave = 0.25;         // time interval in s for vtk output
@@ -86,20 +90,20 @@ T gnuplotSave = 0.1;      // time interval in s for gnuplot output
 bool plotDNS = true;      //available for Re=800, Re=1600, Re=3000 (maxPhysT<=10)
 vector<vector<T>> values_DNS;
 
-template <typename T, typename S>
-class Tgv3D : public AnalyticalF3D<T,S> {
+template <typename T, template <typename U> class DESCRIPTOR>
+class Tgv3D : public AnalyticalF3D<T,T> {
 
 protected:
   T u0;
 
 // initial solution of the TGV
 public:
-  Tgv3D(LBconverter<S> const& converter, T frac) : AnalyticalF3D<T,S>(3)
+  Tgv3D(UnitConverter<T, DESCRIPTOR> const& converter, T frac) : AnalyticalF3D<T,S>(3)
   {
-    u0 = converter.getLatticeU();
+    u0 = converter.getCharLatticeVelocity();
   };
 
-  bool operator()(T output[], const S input[])
+  bool operator()(T output[], const S input[]) override
   {
     T x = input[0];
     T y = input[1];
@@ -134,7 +138,7 @@ void prepareGeometry(SuperGeometry3D<T>& superGeometry)
 
 // Set up the geometry of the simulation
 void prepareLattice(SuperLattice3D<T,DESCRIPTOR>& sLattice,
-                    LBconverter<T> const& converter,
+                    UnitConverter<T,DESCRIPTOR> const& converter,
                     Dynamics<T, DESCRIPTOR>& bulkDynamics,
                     SuperGeometry3D<T>& superGeometry)
 {
@@ -152,13 +156,13 @@ void prepareLattice(SuperLattice3D<T,DESCRIPTOR>& sLattice,
 }
 
 void setBoundaryValues(SuperLattice3D<T, DESCRIPTOR>& sLattice,
-                       LBconverter<T> const& converter,
+                       UnitConverter<T,DESCRIPTOR> const& converter,
                        SuperGeometry3D<T>& superGeometry)
 {
   OstreamManager clout(std::cout,"setBoundaryValues");
 
   AnalyticalConst3D<T,T> rho(1.);
-  Tgv3D<T,T> uSol(converter, 1);
+  Tgv3D<T,DESCRIPTOR> uSol(converter, 1);
 
   sLattice.defineRhoU(superGeometry, 1, rho, uSol);
   sLattice.iniEquilibrium(superGeometry, 1, rho, uSol);
@@ -167,16 +171,20 @@ void setBoundaryValues(SuperLattice3D<T, DESCRIPTOR>& sLattice,
 }
 
 // Interpolate the data points to the output interval
-void getDNSValues() {
+void getDNSValues()
+{
   string file_name;
   //Brachet, Marc E., et al. "Small-scale structure of the Taylor–Green vortex." Journal of Fluid Mechanics 130 (1983): 411-452; Figure 7
   if (abs(Re - 800.0) < numeric_limits<T>::epsilon() && maxPhysT <= 10.0 + numeric_limits<T>::epsilon()) {
     file_name= "Re800_Brachet.inp";
-  } else if (abs(Re - 1600.0) < numeric_limits<T>::epsilon() && maxPhysT <= 10.0 + numeric_limits<T>::epsilon()) {
+  }
+  else if (abs(Re - 1600.0) < numeric_limits<T>::epsilon() && maxPhysT <= 10.0 + numeric_limits<T>::epsilon()) {
     file_name = "Re1600_Brachet.inp";
-  } else if (abs(Re - 3000.0) < numeric_limits<T>::epsilon() && maxPhysT <= 10.0 + numeric_limits<T>::epsilon()) {
+  }
+  else if (abs(Re - 3000.0) < numeric_limits<T>::epsilon() && maxPhysT <= 10.0 + numeric_limits<T>::epsilon()) {
     file_name = "Re3000_Brachet.inp";
-  } else {
+  }
+  else {
     std::cout<<"Reynolds number not supported or maxPhysT>10: DNS plot will be disabled"<<std::endl;
     plotDNS = false;
     return;
@@ -184,20 +192,18 @@ void getDNSValues() {
   std::ifstream data(file_name);
   std::string line;
   std::vector<vector<T>> parsedDat;
-  while(std::getline(data, line))
-  {
-      std::stringstream lineStream(line);
-      std::string cell;
-      std::vector<T> parsedRow;
-      while(std::getline(lineStream, cell, ' '))
-      {
-         parsedRow.push_back(atof(cell.c_str()));
+  while (std::getline(data, line)) {
+    std::stringstream lineStream(line);
+    std::string cell;
+    std::vector<T> parsedRow;
+    while (std::getline(lineStream, cell, ' ')) {
+      parsedRow.push_back(atof(cell.c_str()));
 
-      }
-      if (parsedDat.size() > 0 && parsedRow.size() > 1) {
-        parsedRow.push_back((parsedRow[1] - parsedDat[parsedDat.size() - 1][1]) / (parsedRow[0] - parsedDat[parsedDat.size()-1][0]));
-        parsedRow.push_back(parsedDat[parsedDat.size()-1][1] - parsedRow[2] * parsedDat[parsedDat.size()-1][0]);
-      }
+    }
+    if (parsedDat.size() > 0 && parsedRow.size() > 1) {
+      parsedRow.push_back((parsedRow[1] - parsedDat[parsedDat.size() - 1][1]) / (parsedRow[0] - parsedDat[parsedDat.size()-1][0]));
+      parsedRow.push_back(parsedDat[parsedDat.size()-1][1] - parsedRow[2] * parsedDat[parsedDat.size()-1][0]);
+    }
 
     parsedDat.push_back(parsedRow);
   }
@@ -206,16 +212,19 @@ void getDNSValues() {
   for (int i=0; i < steps; i++) {
     std::vector<T> inValues_temp;
     inValues_temp.push_back(i * gnuplotSave);
-    if (inValues_temp[0] < parsedDat[0][0]){
+    if (inValues_temp[0] < parsedDat[0][0]) {
       inValues_temp.push_back(parsedDat[1][2] * inValues_temp[0] + parsedDat[1][3]);
-    } else if (inValues_temp[0] > parsedDat[parsedDat.size()-1][0]) {
+    }
+    else if (inValues_temp[0] > parsedDat[parsedDat.size()-1][0]) {
       inValues_temp.push_back(parsedDat[parsedDat.size()-1][2] * inValues_temp[0] +
-                                parsedDat[parsedDat.size()-1][3]);
-    } else {
+                              parsedDat[parsedDat.size()-1][3]);
+    }
+    else {
 
-      for(uint j=0;j < parsedDat.size()-1; j++)  {
-        if (inValues_temp[0] > parsedDat[j][0] && inValues_temp[0] < parsedDat[j+1][0])
+      for (size_t j=0; j < parsedDat.size()-1; j++)  {
+        if (inValues_temp[0] > parsedDat[j][0] && inValues_temp[0] < parsedDat[j+1][0]) {
           inValues_temp.push_back(parsedDat[j+1][2] * inValues_temp[0] + parsedDat[j+1][3]);
+        }
       }
     }
     values_DNS.push_back(inValues_temp);
@@ -225,8 +234,9 @@ void getDNSValues() {
 
 
 void getResults(SuperLattice3D<T, DESCRIPTOR>& sLattice,
-                LBconverter<T> const& converter, int iT,
-                SuperGeometry3D<T>& superGeometry, Timer<double>& timer)
+                UnitConverter<T,DESCRIPTOR> const& converter, int iT,
+                SuperGeometry3D<T>& superGeometry, Timer<double>& timer,
+                Dynamics<T, DESCRIPTOR>* bulkDynamics)
 {
   OstreamManager clout(std::cout,"getResults");
 
@@ -246,52 +256,69 @@ void getResults(SuperLattice3D<T, DESCRIPTOR>& sLattice,
       getDNSValues();
     }
   }
-  if (iT%converter.numTimeSteps(vtkSave) == 0) {
+  if (iT%converter.getLatticeTime(vtkSave) == 0) {
     SuperLatticePhysVelocity3D<T, DESCRIPTOR> velocity(sLattice, converter);
     SuperLatticePhysPressure3D<T, DESCRIPTOR> pressure(sLattice, converter);
     vtmWriter.addFunctor( velocity );
     vtmWriter.addFunctor( pressure );
     vtmWriter.write(iT);
+
+    // write output of velocity as JPEG
+    SuperEuklidNorm3D<T, DESCRIPTOR> normVel( velocity );
+    BlockReduction3D2D<T> planeReduction( normVel, {0, 0, 1} );
+    heatmap::write(planeReduction, iT);
+
     timer.update(iT);
     timer.printStep(2);
-    sLattice.getStatistics().print(iT,iT*converter.getDeltaT());
+    sLattice.getStatistics().print(iT,converter.getPhysTime( iT ));
   }
 
   static Gnuplot<T> gplot("Turbulence_Dissipation_Rate");
 
-  if (iT%converter.numTimeSteps(gnuplotSave) == 0) {
-
-#if defined (finiteDiff)
-    SuperLatticePhysDissipationFD3D<T, DESCRIPTOR> diss(sLattice, converter);
-    SuperLatticePhysEffectiveDissipationFD3D<T, DESCRIPTOR> effectiveDiss(sLattice, converter, smagoConst);
-#else
-    SuperLatticePhysDissipation3D<T, DESCRIPTOR> diss(sLattice, converter);
-    SuperLatticePhysEffevtiveDissipation3D<T, DESCRIPTOR> effectiveDiss(sLattice, converter, smagoConst);
-#endif
-    SuperIntegral3D<T> integralDiss(diss, superGeometry, 1);
-    SuperIntegral3D<T> integralEffectiveDiss(effectiveDiss, superGeometry, 1);
+  if (iT%converter.getLatticeTime(gnuplotSave) == 0) {
 
     int input[3];
     T output[1];
 
+#if defined (finiteDiff)
+    std::list<int> matNumber;
+    matNumber.push_back(1);
+    SuperLatticePhysDissipationFD3D<T, DESCRIPTOR> diss(superGeometry, sLattice, matNumber, converter);
+#if !defined (DNS)
+    SuperLatticePhysEffectiveDissipationFD3D<T, DESCRIPTOR> effectiveDiss(superGeometry, sLattice, matNumber,
+                                                                          converter, *(dynamic_cast<LESDynamics<T,DESCRIPTOR>*>(bulkDynamics)));
+#endif
+#else
+    SuperLatticePhysDissipation3D<T, DESCRIPTOR> diss(sLattice, converter);
+#if !defined (DNS)
+    SuperLatticePhysEffevtiveDissipation3D<T, DESCRIPTOR> effectiveDiss(sLattice, converter, smagoConst, *(dynamic_cast<LESDynamics<T,DESCRIPTOR>*>(bulkDynamics)));
+#endif
+#endif
+    SuperIntegral3D<T> integralDiss(diss, superGeometry, 1);
     integralDiss(output, input);
     T diss_mol = output[0];
     diss_mol /= volume;
+    T diss_eff = diss_mol;
+
+#if !defined (DNS)
+    SuperIntegral3D<T> integralEffectiveDiss(effectiveDiss, superGeometry, 1);
     integralEffectiveDiss(output, input);
-    T diss_eff = output[0];
+    diss_eff = output[0];
     diss_eff /= volume;
+#endif
+
     T diss_eddy = diss_eff - diss_mol;
     if(plotDNS==true) {
-      int step = converter.physTime(iT) / gnuplotSave + 0.5;
-      gplot.setData(converter.physTime(iT), {diss_mol, diss_eddy, diss_eff, values_DNS[step][1]}, {"molecular dissipation rate", "eddy dissipation rate", "effective dissipation rate" ,"Brachet et al."}, "bottom right");
+     int step = converter.getPhysTime(iT) / gnuplotSave + 0.5;
+     gplot.setData(converter.getPhysTime(iT), {diss_mol, diss_eddy, diss_eff, values_DNS[step][1]}, {"molecular dissipation rate", "eddy dissipation rate", "effective dissipation rate" ,"Brachet et al."}, "bottom right");
     } else {
-      gplot.setData(converter.physTime(iT), {diss_mol, diss_eddy, diss_eff}, {"molecular dissipation rate", "eddy dissipation rate", "effective dissipation rate"}, "bottom right");
+     gplot.setData(converter.getPhysTime(iT), {diss_mol, diss_eddy, diss_eff}, {"molecular dissipation rate", "eddy dissipation rate", "effective dissipation rate"}, "bottom right");
     }
     gplot.writePNG();
   }
 
   /// write pdf at last time step
-  if (iT == converter.numTimeSteps(maxPhysT)-1) {
+  if (iT == converter.getLatticeTime(maxPhysT)-1) {
     gplot.writePDF();
   }
   return;
@@ -303,18 +330,20 @@ int main(int argc, char* argv[])
   /// === 1st Step: Initialization ===
   olbInit(&argc, &argv);
   singleton::directories().setOutputDir("./tmp/");
+  OstreamManager clout( std::cout,"main" );
 
-  LBconverter<T> converter(
-    (int) 3,           // dim
-    (T)   2*pi/N,      // latticeL_
-    (T)   0.1,         // latticeU_
-    (T)   1./Re,       // charNu_
-    (T)   1.,          // charL_ = 1
-    (T)   1.           // charU_ = 1
+  UnitConverterFromResolutionAndRelaxationTime<T,DESCRIPTOR> converter(
+    int {int(std::nearbyint(N/(2*pi)))},        // resolution: number of voxels per charPhysL
+    (T)   0.507639, // latticeRelaxationTime: relaxation time, have to be greater than 0.5!
+    (T)   1,        // charPhysLength: reference length of simulation geometry
+    (T)   1,        // charPhysVelocity: maximal/highest expected velocity during simulation in __m / s__
+    (T)   1./Re,    // physViscosity: physical kinematic viscosity in __m^2 / s__
+    (T)   1.0       // physDensity: physical density in __kg / m^3__
   );
+  // Prints the converter log as console output
   converter.print();
-  // Writes the converter log file
-  writeLogFile(converter, "tgv3d");
+  // Writes the converter log in a file
+  converter.write("tgv3d");
 
 #ifdef PARALLEL_MODE_MPI
   const int noOfCuboids = 2 * singleton::mpi().getSize();
@@ -322,7 +351,7 @@ int main(int argc, char* argv[])
   const int noOfCuboids = 1;
 #endif
 
-  CuboidGeometry3D<T> cuboidGeometry(0, 0, 0, converter.getLatticeL(), N, N, N, noOfCuboids);
+  CuboidGeometry3D<T> cuboidGeometry(0, 0, 0, converter.getConversionFactorLength(), N, N, N, noOfCuboids);
 
   cuboidGeometry.setPeriodicity(true, true, true);
 
@@ -336,38 +365,53 @@ int main(int argc, char* argv[])
   SuperLattice3D<T, DESCRIPTOR> sLattice(superGeometry);
 
   Dynamics<T, DESCRIPTOR>* bulkDynamics;
-
+  const T omega = converter.getLatticeRelaxationFrequency();
 #if defined(RLB)
-  bulkDynamics = new RLBdynamics<T, DESCRIPTOR>(converter.getOmega(), instances::getBulkMomenta<T, DESCRIPTOR>());
-#elif defined(Smagorinsky)
-  bulkDynamics = new SmagorinskyBGKdynamics<T, DESCRIPTOR>(converter.getOmega(), instances::getBulkMomenta<T, DESCRIPTOR>(),
+  bulkDynamics = new RLBdynamics<T, DESCRIPTOR>(omega, instances::getBulkMomenta<T, DESCRIPTOR>());
+#elif defined(DNS)
+  bulkDynamics = new BGKdynamics<T, DESCRIPTOR>(omega, instances::getBulkMomenta<T, DESCRIPTOR>());
+#elif defined(WALE)
+  bulkDynamics = new WALEBGKdynamics<T, DESCRIPTOR>(omega, instances::getBulkMomenta<T, DESCRIPTOR>(),
       smagoConst);
 #elif defined(ShearSmagorinsky)
-  bulkDynamics = new ShearSmagorinskyBGKdynamics<T, DESCRIPTOR>(converter.getOmega(), instances::getBulkMomenta<T, DESCRIPTOR>(),
+  bulkDynamics = new ShearSmagorinskyBGKdynamics<T, DESCRIPTOR>(omega, instances::getBulkMomenta<T, DESCRIPTOR>(),
       smagoConst);
 #elif defined(Krause)
-  bulkDynamics = new KrauseBGKdynamics<T, DESCRIPTOR>(converter.getOmega(), instances::getBulkMomenta<T, DESCRIPTOR>(),
+  bulkDynamics = new KrauseBGKdynamics<T, DESCRIPTOR>(omega, instances::getBulkMomenta<T, DESCRIPTOR>(),
       smagoConst);
 #elif defined(ConsistentStrainSmagorinsky)
-  bulkDynamics = new ConStrainSmagorinskyBGKdynamics<T, DESCRIPTOR>(converter.getOmega(), instances::getBulkMomenta<T, DESCRIPTOR>(),
+  bulkDynamics = new ConStrainSmagorinskyBGKdynamics<T, DESCRIPTOR>(omega, instances::getBulkMomenta<T, DESCRIPTOR>(),
       smagoConst);
 #else //DNS Simulation
-  bulkDynamics = new BGKdynamics<T, DESCRIPTOR>(converter.getOmega(), instances::getBulkMomenta<T, DESCRIPTOR>());
+
+  bulkDynamics = new SmagorinskyBGKdynamics<T, DESCRIPTOR>(omega, instances::getBulkMomenta<T, DESCRIPTOR>(),
+      smagoConst);
 #endif
 
   prepareLattice(sLattice, converter, *bulkDynamics, superGeometry);
 
+#if defined(WALE)
+  SuperLatticeF3D<T, DESCRIPTOR>* functor;
+  std::list<int> mat;
+  mat.push_back(1);
+  functor = new SuperLatticeVelocityGradientFD3D<T, DESCRIPTOR>(superGeometry, sLattice, mat);
+#endif
+
   /// === 4th Step: Main Loop with Timer ===
-  Timer<double> timer(converter.numTimeSteps(maxPhysT), superGeometry.getStatistics().getNvoxel() );
+  Timer<double> timer(converter.getLatticeTime(maxPhysT), superGeometry.getStatistics().getNvoxel() );
   timer.start();
 
   // === 5th Step: Definition of Initial and Boundary Conditions ===
   setBoundaryValues(sLattice, converter, superGeometry);
 
-  for (int iT = 0; iT <= converter.numTimeSteps(maxPhysT); ++iT) {
+  for (int iT = 0; iT <= converter.getLatticeTime(maxPhysT); ++iT) {
+#if defined(WALE)
+    sLattice.defineExternalField(superGeometry, 1,
+                                 DESCRIPTOR<T>::ExternalField::veloGradIsAt,DESCRIPTOR<T>::ExternalField::sizeOfVeloGrad, *functor);
+#endif
 
     /// === 6th Step: Computation and Output of the Results ===
-    getResults(sLattice, converter, iT, superGeometry, timer);
+    getResults(sLattice, converter, iT, superGeometry, timer, bulkDynamics);
 
     /// === 7th Step: Collide and Stream Execution ===
     sLattice.collideAndStream();

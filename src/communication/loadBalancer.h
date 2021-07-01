@@ -92,17 +92,17 @@ public:
   bool operator==(const LoadBalancer<T>& rhs) const;
 
   /// Number of data blocks for the serializable interface
-  virtual std::size_t getNblock() const;
+  std::size_t getNblock() const override;
   /// Binary size for the serializer
-  virtual std::size_t getSerializableSize() const;
+  std::size_t getSerializableSize() const override;
   /// Return a pointer to the memory of the current block and its size for the serializable interface
-  virtual bool* getBlock(std::size_t iBlock, std::size_t& sizeBlock, bool loadingMode);
+  bool* getBlock(std::size_t iBlock, std::size_t& sizeBlock, bool loadingMode) override;
 
   void print(bool multiOutput = false) const;
 
-  virtual void reInit(CuboidGeometry3D<T>& cGeometry3d, const double ratioFullEmpty=3.7) {}
+  virtual void reInit(CuboidGeometry3D<T>& cGeometry3d, const double ratioFullEmpty=1., const double weightEmpty=.0) {}
 
-  virtual void reInit(CuboidGeometry2D<T>& cGeometry2d, const double ratioFullEmpty=3.7) {}
+  virtual void reInit(CuboidGeometry2D<T>& cGeometry2d, const double ratioFullEmpty=1., const double weightEmpty=.0) {}
 
   /// Write itself into Stringstream
   virtual void writeToStream(std::ostream& stream)

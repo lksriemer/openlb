@@ -39,6 +39,8 @@
 
 namespace olb {
 
+template <typename T, typename BaseType> class BlockData2D;
+
 namespace singleton {
 
 
@@ -175,7 +177,9 @@ public:
 #endif
 
   /// Special case for broadcasting strings. Memory handling is automatic.
-  void bCast( std::string& message, int root = 0 );
+  void bCast(std::string& message, int root = 0);
+  /// Special case for broadcasting BlockData2D
+  void bCast(BlockData2D<double,double>& sendData, int root = 0, MPI_Comm comm = MPI_COMM_WORLD);
 
   /// Reduction operation toward one processor
   template <typename T>

@@ -48,17 +48,17 @@ public:
   ShanChenForcedPostProcessor3D (
     T G_, std::vector<T> rho0_,
     AnalyticalF1D<T,T>& iP_, std::vector<SpatiallyExtendedObject3D*> partners_);
-  virtual int extent() const
+  int extent() const override
   {
     return 1;
   }
-  virtual int extent(int whichDirection) const
+  int extent(int whichDirection) const override
   {
     return 1;
   }
-  virtual void process(BlockLattice3D<T,Lattice>& blockLattice);
-  virtual void processSubDomain(BlockLattice3D<T,Lattice>& blockLattice,
-                                int x0_, int x1_, int y0_, int y1_, int z0_, int z1_);
+  void process(BlockLattice3D<T,Lattice>& blockLattice) override;
+  void processSubDomain(BlockLattice3D<T,Lattice>& blockLattice,
+                                int x0_, int x1_, int y0_, int y1_, int z0_, int z1_) override;
 private:
   int x0, x1, y0, y1, z0, z1;
   T G;
@@ -72,8 +72,8 @@ class ShanChenForcedGenerator3D : public LatticeCouplingGenerator3D<T,Lattice> {
 public:
   ShanChenForcedGenerator3D(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_, T G_, std::vector<T> rho0_, AnalyticalF1D<T,T>& iP_);
   ShanChenForcedGenerator3D(T G_, std::vector<T> rho0_, AnalyticalF1D<T,T>& iP_);
-  virtual PostProcessor3D<T,Lattice>* generate(std::vector<SpatiallyExtendedObject3D*> partners) const;
-  virtual LatticeCouplingGenerator3D<T,Lattice>* clone() const;
+  PostProcessor3D<T,Lattice>* generate(std::vector<SpatiallyExtendedObject3D*> partners) const override;
+  LatticeCouplingGenerator3D<T,Lattice>* clone() const override;
 private:
   T G;
   std::vector<T> rho0;

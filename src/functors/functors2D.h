@@ -25,20 +25,6 @@
  * Groups all include files for the directory genericFunctions.
  */
 
-#include "analyticalBaseF.h"
-#include "analyticalF.h"
-#include "analyticCalcF.h"
-#include "blockBaseF2D.h"
-#include "blockCalcF2D.h"
-#include "blockLatticeIntegralF2D.h"
-#include "blockLatticeLocalF2D.h"
-#include "blockLatticeReduction2D.h"
-#include "frameChangeF2D.h"
-#include "frameChangeF3D.h"
-#include "fringe2D.h"
 #include "genericF.h"
-#include "interpolationF2D.h"
-#include "superBaseF2D.h"
-#include "superCalcF2D.h"
-#include "superLatticeIntegralF2D.h"
-#include "superLatticeLocalF2D.h"
+#include "analytical/functors2D.h"
+#include "lattice/functors2D.h"

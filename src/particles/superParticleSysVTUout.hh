@@ -933,7 +933,7 @@ void SuperParticleSysVtuWriterMag<T>::dataArrayBinary(
     fout.close();
 
     std::ofstream ofstr(fullName.c_str(),
-                              std::ios::out | std::ios::app | std::ios::binary);
+                        std::ios::out | std::ios::app | std::ios::binary);
     if (!ofstr) {
       this->clout << "Error: could not open " << fullName << std::endl;
     }
@@ -946,7 +946,7 @@ void SuperParticleSysVtuWriterMag<T>::dataArrayBinary(
     sizeEncoder.encode(&uintBinarySize, 1);
     //  write numbers from functor
     Base64Encoder<float> dataEncoder(ofstr,
-        fullSize);
+                                     fullSize);
     for (auto pS : this->_psys._pSystems) {
       for (auto p : pS->_particles) {
         for (int iDim = 0; iDim < 3; ++iDim) {
@@ -966,7 +966,7 @@ void SuperParticleSysVtuWriterMag<T>::dataArrayBinary(
     fout.close();
 
     std::ofstream ofstr(fullName.c_str(),
-                              std::ios::out | std::ios::app | std::ios::binary);
+                        std::ios::out | std::ios::app | std::ios::binary);
     if (!ofstr) {
       this->clout << "Error: could not open " << fullName << std::endl;
     }
@@ -979,7 +979,7 @@ void SuperParticleSysVtuWriterMag<T>::dataArrayBinary(
     sizeEncoder.encode(&uintBinarySize, 1);
     //  write numbers from functor
     Base64Encoder<float> dataEncoder(ofstr,
-        fullSize);
+                                     fullSize);
     for (auto pS : this->_psys._pSystems) {
       for (auto p : pS->_particles) {
         for (int iDim = 0; iDim < 3; ++iDim) {

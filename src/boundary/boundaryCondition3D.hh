@@ -29,6 +29,7 @@
 
 #include "boundaryCondition3D.h"
 #include "boundaryInstantiator3D.h"
+#include "momentaOnBoundaries3D.h"
 
 namespace olb {
 
@@ -155,7 +156,7 @@ PostProcessorGenerator3D<T,Lattice>*
 RegularizedBoundaryManager3D<T,Lattice,MixinDynamics>::
 getVelocityBoundaryProcessor(int x0, int x1, int y0, int y1, int z0, int z1)
 {
-  return 0;
+  return nullptr;
 }
 
 template<typename T, template<typename U> class Lattice, class MixinDynamics>
@@ -180,7 +181,7 @@ PostProcessorGenerator3D<T,Lattice>*
 RegularizedBoundaryManager3D<T,Lattice,MixinDynamics>::
 getPressureBoundaryProcessor(int x0, int x1, int y0, int y1, int z0, int z1)
 {
-  return 0;
+  return nullptr;
 }
 
 template<typename T, template<typename U> class Lattice, class MixinDynamics>
@@ -189,7 +190,7 @@ PostProcessorGenerator3D<T,Lattice>*
 RegularizedBoundaryManager3D<T,Lattice,MixinDynamics>::
 getConvectionBoundaryProcessor(int x0, int x1, int y0, int y1, int z0, int z1, T* uAv)
 {
-  return 0;
+  return nullptr;
 }
 
 
@@ -242,7 +243,7 @@ PostProcessorGenerator3D<T,Lattice>*
 RegularizedBoundaryManager3D<T,Lattice,MixinDynamics>::
 getInternalVelocityEdgeProcessor(int x0, int x1, int y0, int y1, int z0, int z1)
 {
-  return 0;
+  return nullptr;
 }
 
 template<typename T, template<typename U> class Lattice, class MixinDynamics>
@@ -294,7 +295,7 @@ PostProcessorGenerator3D<T,Lattice>*
 RegularizedBoundaryManager3D<T,Lattice,MixinDynamics>::
 getInternalVelocityCornerProcessor(int x, int y, int z)
 {
-  return 0;
+  return nullptr;
 }
 
 
@@ -411,7 +412,7 @@ PostProcessorGenerator3D<T,Lattice>*
 InterpolationBoundaryManager3D<T,Lattice,MixinDynamics>::
 getInternalVelocityEdgeProcessor(int x0, int x1, int y0, int y1, int z0, int z1)
 {
-  return 0;
+  return nullptr;
 }
 
 template<typename T, template<typename U> class Lattice, class MixinDynamics>
@@ -463,7 +464,7 @@ PostProcessorGenerator3D<T,Lattice>*
 InterpolationBoundaryManager3D<T,Lattice,MixinDynamics>::
 getInternalVelocityCornerProcessor(int x, int y, int z)
 {
-  return 0;
+  return nullptr;
 }
 
 

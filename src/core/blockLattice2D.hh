@@ -35,6 +35,7 @@
 #include "util.h"
 #include "communication/loadBalancer.h"
 #include "communication/blockLoadBalancer.h"
+#include "functors/lattice/indicator/blockIndicatorF2D.h"
 
 namespace olb {
 
@@ -83,66 +84,6 @@ BlockLattice2D<T,Lattice>::~BlockLattice2D()
 #else
   delete statistics;
 #endif
-}
-
-/** The whole data of the lattice is duplicated. This includes
- * both particle distribution function and external fields.
- * \warning The dynamics objects and postProcessors are not copied
- * \param rhs the lattice to be duplicated
- */
-template<typename T, template<typename U> class Lattice>
-BlockLattice2D<T,Lattice>::BlockLattice2D(BlockLattice2D<T,Lattice> const& rhs)
-  : BlockLatticeStructure2D<T,Lattice>(rhs._nx,rhs._ny)
-{
-  allocateMemory();
-  resetPostProcessors();
-  for (int iX=0; iX<this->_nx; ++iX) {
-    for (int iY=0; iY<this->_ny; ++iY) {
-      grid[iX][iY] = rhs.grid[iX][iY];
-    }
-  }
-#ifdef PARALLEL_MODE_OMP
-  statistics = new LatticeStatistics<T>* [3*omp.get_size()];
-  #pragma omp parallel
-  {
-    statistics[omp.get_rank() + omp.get_size()]
-      = new LatticeStatistics<T>;
-    statistics[omp.get_rank()] = new LatticeStatistics<T> (**rhs.statistics);
-    statistics[omp.get_rank() + 2*omp.get_size()]
-      = new LatticeStatistics<T>;
-  }
-#else
-  statistics = new LatticeStatistics<T> (*rhs.statistics);
-#endif
-}
-
-/** The current lattice is deallocated, then the lattice from the rhs
- * is duplicated. This includes both particle distribution function
- * and external fields.
- * \warning The dynamics objects and postProcessors are not copied
- * \param rhs the lattice to be duplicated
- */
-template<typename T, template<typename U> class Lattice>
-BlockLattice2D<T,Lattice>& BlockLattice2D<T,Lattice>::operator= (
-  BlockLattice2D<T,Lattice> const& rhs )
-{
-  BlockLattice2D<T,Lattice> tmp(rhs);
-  swap(tmp);
-  return *this;
-}
-
-/** The swap is efficient, in the sense that only pointers to the
- * lattice are copied, and not the lattice itself.
- */
-template<typename T, template<typename U> class Lattice>
-void BlockLattice2D<T,Lattice>::swap(BlockLattice2D& rhs)
-{
-  std::swap(this->_nx, rhs._nx);
-  std::swap(this->_ny, rhs._ny);
-  std::swap(rawData, rhs.rawData);
-  std::swap(grid, rhs.grid);
-  postProcessors.swap(rhs.postProcessors);
-  std::swap(statistics, rhs.statistics);
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -197,19 +138,23 @@ void BlockLattice2D<T,Lattice>::defineDynamics (
 }
 
 template<typename T, template<typename U> class Lattice>
-void BlockLattice2D<T,Lattice>::specifyStatisticsStatus (
-  int x0, int x1, int y0, int y1, bool status )
+void BlockLattice2D<T,Lattice>::defineDynamics (
+  BlockIndicatorF2D<T>& indicator, int overlap, Dynamics<T,Lattice>* dynamics)
 {
-  OLB_PRECONDITION(x0>=0 && x1<this->_nx);
-  OLB_PRECONDITION(x1>=x0);
-  OLB_PRECONDITION(y0>=0 && y1<this->_ny);
-  OLB_PRECONDITION(y1>=y0);
-
-  for (int iX=x0; iX<=x1; ++iX) {
-    for (int iY=y0; iY<=y1; ++iY) {
-      grid[iX][iY].specifyStatisticsStatus(status);
+  for (int iX=0; iX<this->_nx; ++iX) {
+    for (int iY=0; iY<this->_ny; ++iY) {
+      const int blockLocation[2] = { iX-overlap, iY-overlap };
+      if (indicator(blockLocation)) {
+        grid[iX][iY].defineDynamics(dynamics);
+      }
     }
   }
+}
+
+template<typename T, template<typename U> class Lattice>
+Dynamics<T,Lattice>* BlockLattice2D<T,Lattice>::getDynamics (int iX, int iY)
+{
+  return grid[iX][iY].getDynamics();
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -395,6 +340,12 @@ T BlockLattice2D<T,Lattice>::computeAverageDensity() const
 }
 
 template<typename T, template<typename U> class Lattice>
+void BlockLattice2D<T,Lattice>::computeStress(int iX, int iY, T pi[util::TensorVal<Lattice<T>>::n])
+{
+    grid[iX][iY].computeStress(pi);
+}
+
+template<typename T, template<typename U> class Lattice>
 void BlockLattice2D<T,Lattice>::stripeOffDensityOffset ( int x0, int x1, int y0, int y1, T offset )
 {
   for (int iX=x0; iX<=x1; ++iX) {
@@ -418,7 +369,8 @@ void BlockLattice2D<T,Lattice>::forAll (
 {
   for (int iX=x0; iX<=x1; ++iX) {
     for (int iY=y0; iY<=y1; ++iY) {
-      application.apply( get(iX,iY) );
+      int pos[] = {iX, iY};
+      application.apply( get(iX,iY), pos );
     }
   }
 }
@@ -710,28 +662,6 @@ void BlockLattice2D<T,Lattice>::makePeriodic()
   periodicEdge(vicinity,maxX-vicinity, maxY-vicinity+1,maxY);
 }
 
-template<typename T, template<typename U> class Lattice>
-SpatiallyExtendedObject2D* BlockLattice2D<T,Lattice>::getComponent(int iBlock)
-{
-  OLB_PRECONDITION( iBlock==0 );
-  return this;
-}
-
-template<typename T, template<typename U> class Lattice>
-SpatiallyExtendedObject2D const* BlockLattice2D<T,Lattice>::getComponent(int iBlock) const
-{
-  OLB_PRECONDITION( iBlock==0 );
-  return this;
-}
-
-template<typename T, template<typename U> class Lattice>
-multiPhysics::MultiPhysicsId BlockLattice2D<T,Lattice>::getMultiPhysicsId() const
-{
-  return multiPhysics::getMultiPhysicsBlockId<T,Lattice>();
-}
-
-
-
 //// OpenMP implementation of the method bulkCollideAndStream,
 //   by Mathias Krause                                         ////
 
@@ -791,7 +721,8 @@ void BlockLattice2D<T,Lattice>::bulkCollideAndStream (
         }
       }
     }
-  } else {
+  }
+  else {
     for (int iX=x0; iX<=x1; ++iX) {
       for (int iY=y0; iY<=y1; ++iY) {
         grid[iX][iY].collide(getStatistics());

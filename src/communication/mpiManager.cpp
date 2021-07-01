@@ -29,6 +29,10 @@
 #include <iostream>
 #include <algorithm>
 
+#ifndef OLB_PRECOMPILED
+#include "core/blockData2D.hh"
+#endif
+
 namespace olb {
 
 namespace singleton {
@@ -722,6 +726,15 @@ void MpiManager::bCast<std::string>(std::string* sendBuf, int sendCount, int roo
   delete [] buffer;
 }
 
+void MpiManager::bCast(BlockData2D<double,double>& sendData, int root, MPI_Comm comm)
+{
+  if (!ok) {
+    return;
+  }
+  MPI_Bcast(static_cast<void*>(sendData.getRawData()),
+            sendData.getDataSize(), MPI_DOUBLE, root, comm);
+}
+
 template <>
 void MpiManager::bCastThroughMaster<bool>(bool* sendBuf, int sendCount, bool iAmRoot, MPI_Comm comm)
 {
@@ -847,25 +860,6 @@ void MpiManager::reduce<double>(double& sendVal, double& recvVal,  MPI_Op op, in
              static_cast<void*>(&recvVal), 1, MPI_DOUBLE, op, root, comm);
 }
 
-template <>
-void MpiManager::reduce<BlockData2D<int,int> >(BlockData2D<int,int>& sendVal, BlockData2D<int,int>& recvVal,  MPI_Op op, int root, MPI_Comm comm)
-{
-  if (!ok) {
-    return;
-  }
-  MPI_Reduce(static_cast<void*>(&(sendVal.get(0,0)) ),
-             static_cast<void*>(&(recvVal.get(0,0)) ), sendVal.getDataSize(), MPI_INT, op, root, comm);
-}
-
-template <>
-void MpiManager::reduce<BlockData2D<int,double> >(BlockData2D<int,double>& sendVal, BlockData2D<int,double>& recvVal,  MPI_Op op, int root, MPI_Comm comm)
-{
-  if (!ok) {
-    return;
-  }
-  MPI_Reduce(static_cast<void*>(&(sendVal.get(0,0)) ),
-             static_cast<void*>(&(recvVal.get(0,0)) ), sendVal.getDataSize(), MPI_INT, op, root, comm);
-}
 
 template <>
 void MpiManager::reduce<BlockData2D<double,int> >(BlockData2D<double,int>& sendVal, BlockData2D<double,int>& recvVal,  MPI_Op op, int root, MPI_Comm comm)
@@ -873,8 +867,9 @@ void MpiManager::reduce<BlockData2D<double,int> >(BlockData2D<double,int>& sendV
   if (!ok) {
     return;
   }
-  MPI_Reduce(static_cast<void*>(&(sendVal.get(0,0)) ),
-             static_cast<void*>(&(recvVal.get(0,0)) ), sendVal.getDataSize(), MPI_DOUBLE, op, root, comm);
+  MPI_Reduce(static_cast<void*>(sendVal.getRawData()),
+             static_cast<void*>(recvVal.getRawData()),
+             sendVal.getDataSize(), MPI_DOUBLE, op, root, comm);
 }
 
 template <>
@@ -883,8 +878,9 @@ void MpiManager::reduce<BlockData2D<double,double> >(BlockData2D<double,double>&
   if (!ok) {
     return;
   }
-  MPI_Reduce(static_cast<void*>(&(sendVal.get(0,0)) ),
-             static_cast<void*>(&(recvVal.get(0,0)) ), sendVal.getDataSize(), MPI_DOUBLE, op, root, comm);
+  MPI_Reduce(static_cast<void*>(sendVal.getRawData()),
+             static_cast<void*>(recvVal.getRawData()),
+             sendVal.getDataSize(), MPI_DOUBLE, op, root, comm);
 }
 
 /*template <>
@@ -1016,11 +1012,43 @@ void MpiManager::reduceAndBcast<long>(long& reductVal, MPI_Op op, int root, MPI_
   if (!ok) {
     return;
   }
-  double recvVal;
+  long recvVal;
   MPI_Reduce(&reductVal, &recvVal, 1, MPI_LONG, op, root, comm);
   reductVal = recvVal;
   MPI_Bcast(&reductVal, 1, MPI_LONG, root, comm);
 
+}
+
+template <>
+void MpiManager::reduceAndBcast<unsigned long>(unsigned long& reductVal, MPI_Op op, int root, MPI_Comm comm)
+{
+  if (!ok) {
+    return;
+  }
+  unsigned long recvVal;
+  MPI_Reduce(&reductVal, &recvVal, 1, MPI_UNSIGNED_LONG, op, root, comm);
+  reductVal = recvVal;
+  MPI_Bcast(&reductVal, 1, MPI_UNSIGNED_LONG, root, comm);
+
+}
+
+template <>
+void MpiManager::reduceAndBcast<BlockData2D<double,double>>(BlockData2D<double,double>& reductVal, MPI_Op op, int root, MPI_Comm comm)
+{
+  if (!ok) {
+    return;
+  }
+
+  BlockData2D<double,double> recvVal(reductVal.getNx(), reductVal.getNy());
+
+  MPI_Reduce(static_cast<void*>(reductVal.getRawData()),
+             static_cast<void*>(recvVal.getRawData()),
+             reductVal.getDataSize(), MPI_DOUBLE, op, root, comm);
+
+  reductVal.swap(recvVal);
+
+  MPI_Bcast(static_cast<void*>(reductVal.getRawData()),
+            reductVal.getDataSize(), MPI_DOUBLE, root, comm);
 }
 
 void MpiManager::wait(MPI_Request* request, MPI_Status* status)

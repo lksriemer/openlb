@@ -27,11 +27,12 @@
 #include <fstream>
 #include <string>
 #include <vector>
+
 #include "io/blockGifWriter.h"
 #include "io/fileName.h"
-#include "functors/blockLatticeReduction2D.h"
 #include "utilities/vectorHelpers.h"
-
+#include "core/singleton.h"
+#include "communication/mpiManager.h"
 
 namespace olb {
 

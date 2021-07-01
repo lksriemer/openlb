@@ -26,7 +26,6 @@
 
 #include "forces.h"
 #include "particles/particleSystem3D.h"
-#include "core/units.h"
 
 namespace olb {
 
@@ -38,8 +37,8 @@ class WeightForce3D : public Force3D<T, PARTICLETYPE> {
 
 public:
   WeightForce3D(std::vector<T> direction, T g = 9.81);
-  virtual ~WeightForce3D() {};
-  void applyForce(typename std::deque<PARTICLETYPE<T> >::iterator p,  int pInt,ParticleSystem3D<T, PARTICLETYPE>& psSys);
+  ~WeightForce3D() override {};
+  void applyForce(typename std::deque<PARTICLETYPE<T> >::iterator p,  int pInt,ParticleSystem3D<T, PARTICLETYPE>& psSys) override;
 
 private:
   std::vector<T> _direction;

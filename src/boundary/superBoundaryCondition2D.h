@@ -31,7 +31,7 @@
 
 #include <vector>
 #include "boundaryCondition2D.h"
-#include "dynamics/advectionDiffusionBoundaryCondition2D.h"     // -> for AdvectionDiffusion
+#include "advectionDiffusionBoundaryCondition2D.h"     // -> for AdvectionDiffusion
 #include "geometry/blockGeometryStatistics2D.h"
 #include "core/superLattice2D.h"
 #include "io/ostreamManager.h"
@@ -107,22 +107,14 @@ private:
 };
 
 
-template<typename T, template<typename U> class Lattice, typename MixinDynamics>
+template<typename T, template<typename U> class Lattice, typename MixinDynamics=RLBdynamics<T,Lattice> >
 void createLocalBoundaryCondition2D(sOnLatticeBoundaryCondition2D<T,Lattice>& sBC);
 
-template<typename T, template<typename U> class Lattice, typename MixinDynamics>
+template<typename T, template<typename U> class Lattice, typename MixinDynamics=BGKdynamics<T,Lattice> >
 void createInterpBoundaryCondition2D(sOnLatticeBoundaryCondition2D<T,Lattice>& sBC);
 
-template<typename T, template<typename U> class Lattice>
-void createLocalBoundaryCondition2D(sOnLatticeBoundaryCondition2D<T,Lattice>& sBC)
-{
-  createLocalBoundaryCondition2D<T,Lattice,RLBdynamics<T,Lattice> > (sBC);
-}
-template<typename T, template<typename U> class Lattice>
-void createInterpBoundaryCondition2D(sOnLatticeBoundaryCondition2D<T,Lattice>& sBC)
-{
-  createInterpBoundaryCondition2D<T,Lattice,BGKdynamics<T,Lattice> > (sBC);
-}
+template<typename T, template<typename U> class Lattice, typename MixinDynamics=BGKdynamics<T,Lattice> >
+void createExtFdBoundaryCondition2D(sOnLatticeBoundaryCondition2D<T, Lattice>& sBC);
 
 }  // namespace olb
 

@@ -35,7 +35,7 @@
 #include "spatiallyExtendedObject2D.h"
 #include "geometry/blockGeometryStructure2D.h"
 #include "latticeStatistics.h"
-#include "functors/analyticalF.h"
+#include "functors/analytical/analyticalF.h"
 
 
 namespace olb {
@@ -50,7 +50,7 @@ template<typename T, template<typename U> class Lattice>
 class BlockLatticeStructure2D : public BlockStructure2D, public SpatiallyExtendedObject2D {
 public:
   BlockLatticeStructure2D(int nx, int ny) : BlockStructure2D(nx,ny) {};
-  virtual ~BlockLatticeStructure2D() { }
+  ~BlockLatticeStructure2D() override { }
 public:
   virtual void defineDynamics(BlockGeometryStructure2D<T>& blockGeometry, int material,
                               Dynamics<T,Lattice>* dynamics);
@@ -91,8 +91,7 @@ public:
   virtual void defineDynamics(int x0_, int x1_, int y0_, int y1_,
                               Dynamics<T,Lattice>* dynamics ) =0;
   virtual void defineDynamics(int iX, int iY, Dynamics<T,Lattice>* dynamics ) =0;
-  virtual void specifyStatisticsStatus(int x0_, int x1_, int y0_, int y1_,
-                                       bool status ) =0;
+  virtual Dynamics<T,Lattice>* getDynamics(int iX, int iY) = 0;
   virtual void collide(int x0_, int x1_, int y0_, int y1_) =0;
   virtual void collide() =0;
   /*virtual void staticCollide(int x0, int x1, int y0, int y1,
@@ -104,6 +103,7 @@ public:
   virtual void collideAndStream(bool periodic=false) =0;
   virtual T computeAverageDensity(int x0_, int x1_, int y0_, int y1_) const =0;
   virtual T computeAverageDensity() const =0;
+  virtual void computeStress(int iX, int iY, T pi[util::TensorVal<Lattice<T> >::n]) = 0;
   virtual void stripeOffDensityOffset(int x0_, int x1_, int y0_, int y1_,
                                       T offset ) =0;
   virtual void stripeOffDensityOffset(T offset) =0;

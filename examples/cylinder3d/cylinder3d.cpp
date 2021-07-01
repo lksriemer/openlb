@@ -59,14 +59,13 @@ typedef double T;
 
 
 // Parameters for the simulation setup
-const int N = 1;        // resolution of the model
-const int M = 1;        // time discretization refinement
+const int N = 10;        // resolution of the model
 const T Re = 20.;       // Reynolds number
 const T maxPhysT = 16.; // max. simulation time in s, SI unit
 
 
 // Stores data from stl file in geometry in form of material numbers
-void prepareGeometry( LBconverter<T> const& converter, IndicatorF3D<T>& indicator,
+void prepareGeometry( UnitConverter<T,DESCRIPTOR> const& converter, IndicatorF3D<T>& indicator,
                       STLreader<T>& stlReader, SuperGeometry3D<T>& superGeometry ) {
 
   OstreamManager clout( std::cout,"prepareGeometry" );
@@ -77,27 +76,27 @@ void prepareGeometry( LBconverter<T> const& converter, IndicatorF3D<T>& indicato
   superGeometry.clean();
 
   Vector<T,3> origin = superGeometry.getStatistics().getMinPhysR( 2 );
-  origin[1] += converter.getLatticeL()/2.;
-  origin[2] += converter.getLatticeL()/2.;
+  origin[1] += converter.getConversionFactorLength()/2.;
+  origin[2] += converter.getConversionFactorLength()/2.;
 
   Vector<T,3> extend = superGeometry.getStatistics().getMaxPhysR( 2 );
-  extend[1] = extend[1]-origin[1]-converter.getLatticeL()/2.;
-  extend[2] = extend[2]-origin[2]-converter.getLatticeL()/2.;
+  extend[1] = extend[1]-origin[1]-converter.getConversionFactorLength()/2.;
+  extend[2] = extend[2]-origin[2]-converter.getConversionFactorLength()/2.;
 
   // Set material number for inflow
-  origin[0] = superGeometry.getStatistics().getMinPhysR( 2 )[0]-converter.getLatticeL();
-  extend[0] = 2*converter.getLatticeL();
+  origin[0] = superGeometry.getStatistics().getMinPhysR( 2 )[0]-converter.getConversionFactorLength();
+  extend[0] = 2*converter.getConversionFactorLength();
   IndicatorCuboid3D<T> inflow( extend,origin );
   superGeometry.rename( 2,3,inflow );
 
   // Set material number for outflow
-  origin[0] = superGeometry.getStatistics().getMaxPhysR( 2 )[0]-converter.getLatticeL();
-  extend[0] = 2*converter.getLatticeL();
+  origin[0] = superGeometry.getStatistics().getMaxPhysR( 2 )[0]-converter.getConversionFactorLength();
+  extend[0] = 2*converter.getConversionFactorLength();
   IndicatorCuboid3D<T> outflow( extend,origin );
   superGeometry.rename( 2,4,outflow );
 
   // Set material number for cylinder
-  origin[0] = superGeometry.getStatistics().getMinPhysR( 2 )[0]+converter.getLatticeL();
+  origin[0] = superGeometry.getStatistics().getMinPhysR( 2 )[0]+converter.getConversionFactorLength();
   extend[0] = ( superGeometry.getStatistics().getMaxPhysR( 2 )[0]-superGeometry.getStatistics().getMinPhysR( 2 )[0] )/2.;
   IndicatorCuboid3D<T> cylinder( extend,origin );
   superGeometry.rename( 2,5,cylinder );
@@ -113,7 +112,7 @@ void prepareGeometry( LBconverter<T> const& converter, IndicatorF3D<T>& indicato
 
 // Set up the geometry of the simulation
 void prepareLattice( SuperLattice3D<T,DESCRIPTOR>& sLattice,
-                     LBconverter<T> const& converter,
+                     UnitConverter<T,DESCRIPTOR> const& converter,
                      Dynamics<T, DESCRIPTOR>& bulkDynamics,
                      sOnLatticeBoundaryCondition3D<T,DESCRIPTOR>& bc,
                      sOffLatticeBoundaryCondition3D<T,DESCRIPTOR>& offBc,
@@ -123,7 +122,7 @@ void prepareLattice( SuperLattice3D<T,DESCRIPTOR>& sLattice,
   OstreamManager clout( std::cout,"prepareLattice" );
   clout << "Prepare Lattice ..." << std::endl;
 
-  const T omega = converter.getOmega();
+  const T omega = converter.getLatticeRelaxationFrequency();
 
   // Material=0 -->do nothing
   sLattice.defineDynamics( superGeometry, 0, &instances::getNoDynamics<T, DESCRIPTOR>() );
@@ -150,8 +149,8 @@ void prepareLattice( SuperLattice3D<T,DESCRIPTOR>& sLattice,
 
   // Initial conditions
   AnalyticalConst3D<T,T> rhoF( 1 );
-  std::vector<T> velocity( 3,T() );
-  AnalyticalConst3D<T,T> uF( velocity );
+  Vector<T,3> velocityV;
+  AnalyticalConst3D<T,T> uF(velocityV);
 
   // Initialize all values of distribution functions to their local equilibrium
   sLattice.defineRhoU( superGeometry, 1, rhoF, uF );
@@ -169,13 +168,13 @@ void prepareLattice( SuperLattice3D<T,DESCRIPTOR>& sLattice,
 
 // Generates a slowly increasing inflow for the first iTMaxStart timesteps
 void setBoundaryValues( SuperLattice3D<T, DESCRIPTOR>& sLattice,
-                        LBconverter<T> const& converter, int iT,
+                        UnitConverter<T,DESCRIPTOR> const& converter, int iT,
                         SuperGeometry3D<T>& superGeometry ) {
 
   OstreamManager clout( std::cout,"setBoundaryValues" );
 
   // No of time steps for smooth start-up
-  int iTmaxStart = converter.numTimeSteps( maxPhysT*0.4 );
+  int iTmaxStart = converter.getLatticeTime( maxPhysT*0.4 );
   int iTupdate = 30;
 
   if ( iT%iTupdate == 0 && iT <= iTmaxStart ) {
@@ -190,9 +189,9 @@ void setBoundaryValues( SuperLattice3D<T, DESCRIPTOR>& sLattice,
     T frac[1] = {};
     StartScale( frac,iTvec );
     std::vector<T> maxVelocity( 3,0 );
-    maxVelocity[0] = 2.25*frac[0]*converter.getLatticeU();
+    maxVelocity[0] = 2.25*frac[0]*converter.getCharLatticeVelocity();
 
-    T distance2Wall = converter.getLatticeL()/2.;
+    T distance2Wall = converter.getConversionFactorLength()/2.;
     RectanglePoiseuille3D<T> poiseuilleU( superGeometry, 3, maxVelocity, distance2Wall, distance2Wall, distance2Wall );
     sLattice.defineU( superGeometry, 3, poiseuilleU );
 
@@ -202,7 +201,7 @@ void setBoundaryValues( SuperLattice3D<T, DESCRIPTOR>& sLattice,
 
 // Computes the pressure drop between the voxels before and after the cylinder
 void getResults( SuperLattice3D<T, DESCRIPTOR>& sLattice,
-                 LBconverter<T>& converter, int iT,
+                 UnitConverter<T,DESCRIPTOR> const& converter, int iT,
                  SuperGeometry3D<T>& superGeometry, Timer<T>& timer,
                  STLreader<T>& stlReader ) {
 
@@ -216,8 +215,8 @@ void getResults( SuperLattice3D<T, DESCRIPTOR>& sLattice,
   vtmWriter.addFunctor( pressure );
   vtmWriter.addFunctor( yPlus );
 
-  const int vtkIter  = converter.numTimeSteps( .3 );
-  const int statIter = converter.numTimeSteps( .1 );
+  const int vtkIter  = converter.getLatticeTime( .3 );
+  const int statIter = converter.getLatticeTime( .1 );
 
   if ( iT==0 ) {
     // Writes the geometry, cuboid no. and rank no. as vti file for visualization
@@ -236,10 +235,9 @@ void getResults( SuperLattice3D<T, DESCRIPTOR>& sLattice,
     vtmWriter.write( iT );
 
     SuperEuklidNorm3D<T, DESCRIPTOR> normVel( velocity );
-    BlockLatticeReduction3D<T, DESCRIPTOR> planeReduction( normVel, 0, 0, -1 );
-    BlockGifWriter<T> gifWriter;
-    //gifWriter.write(planeReduction, 0, 0.7, iT, "vel"); //static scale
-    gifWriter.write( planeReduction, iT, "vel" ); // scaled
+    BlockReduction3D2D<T> planeReduction( normVel, {0, 0, 1} );
+    // write output as JPEG
+    heatmap::write(planeReduction, iT);
   }
 
   // Writes output on the console
@@ -249,7 +247,7 @@ void getResults( SuperLattice3D<T, DESCRIPTOR>& sLattice,
     timer.printStep();
 
     // Lattice statistics console output
-    sLattice.getStatistics().print( iT,converter.physTime( iT ) );
+    sLattice.getStatistics().print( iT,converter.getPhysTime( iT ) );
 
     // Drag, lift, pressure drop
     AnalyticalFfromSuperF3D<T> intpolatePressure( pressure, true );
@@ -263,8 +261,8 @@ void getResults( SuperLattice3D<T, DESCRIPTOR>& sLattice,
       point1[i] = point1V[i];
       point2[i] = point2V[i];
     }
-    point1[0] = superGeometry.getStatistics().getMinPhysR( 5 )[0] - converter.getLatticeL();
-    point2[0] = superGeometry.getStatistics().getMaxPhysR( 5 )[0] + converter.getLatticeL();
+    point1[0] = superGeometry.getStatistics().getMinPhysR( 5 )[0] - converter.getConversionFactorLength();
+    point2[0] = superGeometry.getStatistics().getMaxPhysR( 5 )[0] + converter.getConversionFactorLength();
 
     T p1, p2;
     intpolatePressure( &p1,point1 );
@@ -298,24 +296,26 @@ int main( int argc, char* argv[] ) {
   // display messages from every single mpi process
   //clout.setMultiOutput(true);
 
-  LBconverter<T> converter(
-    ( int ) 3,                             // dim
-    ( T )   0.01/N,                        // latticeL_
-    ( T )   0.02/M,                        // latticeU_
-    ( T )   0.2*2.*0.05/Re,                // charNu_
-    ( T )   0.1,                           // charL_ = 1
-    ( T )   0.2                            // charU_ = 1
+  UnitConverterFromResolutionAndRelaxationTime<T, DESCRIPTOR> const converter(
+    int {N},              // resolution: number of voxels per charPhysL
+    (T)   0.53,           // latticeRelaxationTime: relaxation time, have to be greater than 0.5!
+    (T)   0.1,            // charPhysLength: reference length of simulation geometry
+    (T)   0.2,            // charPhysVelocity: maximal/highest expected velocity during simulation in __m / s__
+    (T)   0.2*2.*0.05/Re, // physViscosity: physical kinematic viscosity in __m^2 / s__
+    (T)   1.0             // physDensity: physical density in __kg / m^3__
   );
+  // Prints the converter log as console output
   converter.print();
-  writeLogFile( converter, "cylinder3d" );
+  // Writes the converter log in a file
+  converter.write("cylinder3d");
 
 
   // === 2nd Step: Prepare Geometry ===
 
   // Instantiation of the STLreader class
   // file name, voxel size in meter, stl unit in meter, outer voxel no., inner voxel no.
-  STLreader<T> stlReader( "cylinder3d.stl", converter.getLatticeL(), 0.001 );
-  IndicatorLayer3D<T> extendedDomain( stlReader, converter.getLatticeL() );
+  STLreader<T> stlReader( "cylinder3d.stl", converter.getConversionFactorLength(), 0.001 );
+  IndicatorLayer3D<T> extendedDomain( stlReader, converter.getConversionFactorLength() );
 
   // Instantiation of a cuboidGeometry with weights
 #ifdef PARALLEL_MODE_MPI
@@ -323,7 +323,7 @@ int main( int argc, char* argv[] ) {
 #else
   const int noOfCuboids = 7;
 #endif
-  CuboidGeometry3D<T> cuboidGeometry( extendedDomain, converter.getLatticeL(), noOfCuboids );
+  CuboidGeometry3D<T> cuboidGeometry( extendedDomain, converter.getConversionFactorLength(), noOfCuboids );
 
   // Instantiation of a loadBalancer
   HeuristicLoadBalancer<T> loadBalancer( cuboidGeometry );
@@ -335,7 +335,7 @@ int main( int argc, char* argv[] ) {
 
   // === 3rd Step: Prepare Lattice ===
   SuperLattice3D<T, DESCRIPTOR> sLattice( superGeometry );
-  BGKdynamics<T, DESCRIPTOR> bulkDynamics( converter.getOmega(), instances::getBulkMomenta<T, DESCRIPTOR>() );
+  BGKdynamics<T, DESCRIPTOR> bulkDynamics( converter.getLatticeRelaxationFrequency(), instances::getBulkMomenta<T, DESCRIPTOR>() );
 
   // choose between local and non-local boundary condition
   sOnLatticeBoundaryCondition3D<T,DESCRIPTOR> sBoundaryCondition( sLattice );
@@ -349,10 +349,10 @@ int main( int argc, char* argv[] ) {
 
   // === 4th Step: Main Loop with Timer ===
   clout << "starting simulation..." << endl;
-  Timer<T> timer( converter.numTimeSteps( maxPhysT ), superGeometry.getStatistics().getNvoxel() );
+  Timer<T> timer( converter.getLatticeTime( maxPhysT ), superGeometry.getStatistics().getNvoxel() );
   timer.start();
 
-  for ( int iT = 0; iT < converter.numTimeSteps( maxPhysT ); ++iT ) {
+  for ( int iT = 0; iT < converter.getLatticeTime( maxPhysT ); ++iT ) {
 
     // === 5th Step: Definition of Initial and Boundary Conditions ===
     setBoundaryValues( sLattice, converter, iT, superGeometry );

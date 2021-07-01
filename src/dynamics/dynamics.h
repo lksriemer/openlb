@@ -35,17 +35,6 @@
 
 namespace olb {
 
-namespace dynamicParams {
-// Use 0-99 for relaxation parameters
-const int omega_shear = 0;
-const int omega_bulk  = 1;
-
-// Use 100-199 for material constants
-const int sqrSpeedOfSound = 100; // Speed of sound squared
-const int sqrInvSpeedOfSound = 101; // Inverse speed of sound squared
-
-// Use 1000 and higher for custom user-defined constants
-}
 
 template<typename T, template<typename U> class Lattice> class Cell;
 
@@ -54,8 +43,6 @@ template<typename T, template<typename U> class Lattice>
 struct Dynamics {
   /// Destructor: virtual to enable inheritance
   virtual ~Dynamics() { }
-  /// Clone the object on its dynamic type.
-  virtual Dynamics<T,Lattice>* clone() const =0;
   /// Implementation of the collision step
   virtual void collide(Cell<T,Lattice>& cell,
                        LatticeStatistics<T>& statistics_) =0;
@@ -64,9 +51,9 @@ struct Dynamics {
                              const T u[Lattice<T>::d],
                              LatticeStatistics<T>& statistics_) =0;
   /// Compute equilibrium distribution function
-  virtual T computeEquilibrium(int iPop, T rho, const T u[Lattice<T>::d], T uSqr) const =0;
+  virtual T computeEquilibrium(int iPop, T rho, const T u[Lattice<T>::d], T uSqr) const;
   /// Initialize cell at equilibrium distribution
-  virtual void iniEquilibrium(Cell<T,Lattice>& cell, T rho, const T u[Lattice<T>::d]);
+  void iniEquilibrium(Cell<T,Lattice>& cell, T rho, const T u[Lattice<T>::d]);
   /// Compute particle density on the cell.
   /** \return particle density
    */
@@ -103,15 +90,6 @@ struct Dynamics {
     Cell<T,Lattice> const& cell,
     T& rho, T u[Lattice<T>::d],
     T pi[util::TensorVal<Lattice<T> >::n] ) const =0;
-  /// Access particle populations through the dynamics object.
-  /** Default implementation: access cell directly.
-   */
-  virtual void computePopulations(Cell<T,Lattice> const& cell, T* f) const;
-  /// Access external fields through the dynamics object.
-  /** Default implementation: access cell directly.
-   */
-  virtual void computeExternalField (
-    Cell<T,Lattice> const& cell, int pos, int size, T* ext ) const;
   /// Set particle density on the cell.
   /** \param rho particle density
    */
@@ -145,32 +123,10 @@ struct Dynamics {
     Cell<T,Lattice>& cell,
     T rho, const T u[Lattice<T>::d],
     const T pi[util::TensorVal<Lattice<T> >::n] ) =0;
-  /// Define particle populations through the dynamics object.
-  /** Default implementation: access cell directly.
-   */
-  virtual void definePopulations(Cell<T,Lattice>& cell, const T* f);
-  /// Define external fields through the dynamics object.
-  /** Default implementation: access cell directly.
-   */
-  virtual void defineExternalField(Cell<T,Lattice>& cell, int pos, int size, const T* ext);
-  /// Add external fields through the dynamics object.
-  /** Similar to defineExternalField(),but instead of replacing existing values
-   *  ext is added to existing values.
-   */
-  virtual void addExternalField(Cell<T,Lattice>& cell, int pos, int size, const T* ext);
-  /// Add external fields through the dynamics object.
-  /** Similar to defineExternalField(),but instead of replacing existing values
-   *  ext is multiplied to existing values.
-   */
-  virtual void multiplyExternalField(Cell<T,Lattice>& cell, int pos, int size, const T* ext);
   /// Get local relaxation parameter of the dynamics
   virtual T getOmega() const =0;
   /// Set local relaxation parameter of the dynamics
   virtual void setOmega(T omega) =0;
-  /// Get local value of any parameter
-  virtual T getParameter(int whichParameter) const;
-  /// Set local value of any parameter
-  virtual void setParameter(int whichParameter, T value);
 };
 
 /// Interface for classes that compute velocity momenta
@@ -232,45 +188,80 @@ public:
   /// Must be contructed with an object of type Momenta
   BasicDynamics(Momenta<T,Lattice>& momenta);
   /// Implemented via the Momenta object
-  virtual T computeRho(Cell<T,Lattice> const& cell) const;
+  T computeRho(Cell<T,Lattice> const& cell) const override;
   /// Implemented via the Momenta object
-  virtual void computeU (
+  void computeU (
     Cell<T,Lattice> const& cell,
-    T u[Lattice<T>::d] ) const;
+    T u[Lattice<T>::d] ) const override;
   /// Implemented via the Momenta object
-  virtual void computeJ (
+  void computeJ (
     Cell<T,Lattice> const& cell,
-    T j[Lattice<T>::d] ) const;
+    T j[Lattice<T>::d] ) const override;
   /// Implemented via the Momenta object
-  virtual void computeStress (
+  void computeStress (
     Cell<T,Lattice> const& cell,
     T rho, const T u[Lattice<T>::d],
-    T pi[util::TensorVal<Lattice<T> >::n] ) const;
+    T pi[util::TensorVal<Lattice<T> >::n] ) const override;
   /// Implemented via the Momenta object
-  virtual void computeRhoU (
+  void computeRhoU (
     Cell<T,Lattice> const& cell,
-    T& rho, T u[Lattice<T>::d]) const;
+    T& rho, T u[Lattice<T>::d]) const override;
   /// Implemented via the Momenta object
-  virtual void computeAllMomenta (
+  void computeAllMomenta (
     Cell<T,Lattice> const& cell,
     T& rho, T u[Lattice<T>::d],
-    T pi[util::TensorVal<Lattice<T> >::n] ) const;
+    T pi[util::TensorVal<Lattice<T> >::n] ) const override;
   /// Implemented via the Momenta object
-  virtual void defineRho(Cell<T,Lattice>& cell, T rho);
+  void defineRho(Cell<T,Lattice>& cell, T rho) override;
   /// Implemented via the Momenta object
-  virtual void defineU(Cell<T,Lattice>& cell,
-                       const T u[Lattice<T>::d]);
+  void defineU(Cell<T,Lattice>& cell,
+                       const T u[Lattice<T>::d]) override;
   /// Implemented via the Momenta object
-  virtual void defineRhoU (
+  void defineRhoU (
     Cell<T,Lattice>& cell,
-    T rho, const T u[Lattice<T>::d]);
+    T rho, const T u[Lattice<T>::d]) override;
   /// Implemented via the Momenta object
-  virtual void defineAllMomenta (
+  void defineAllMomenta (
     Cell<T,Lattice>& cell,
     T rho, const T u[Lattice<T>::d],
-    const T pi[util::TensorVal<Lattice<T> >::n] );
+    const T pi[util::TensorVal<Lattice<T> >::n] ) override;
 protected:
   Momenta<T,Lattice>& _momenta;  ///< computation of velocity momenta
+};
+
+/// Implementation of a generic dynamics to realize a pressure drop at a periodic boundary
+template<typename T, template<typename U> class Lattice, typename BaseDynamics>
+class PeriodicPressureDynamics : public BaseDynamics {
+
+public:
+  /// Constructor
+  PeriodicPressureDynamics(BaseDynamics& baseDynamics, T densityOffset, int nx, int ny, int nz=0) : BaseDynamics(baseDynamics), _densityOffset(densityOffset), _nx(nx), _ny(ny), _nz(nz) {};
+
+  /// Implementation of the collision step
+  void collide(Cell<T,Lattice>& cell,
+                       LatticeStatistics<T>& statistics_) override{
+    BaseDynamics::collide(cell,statistics_);
+    for (int iPop=0; iPop < Lattice<T>::q; ++iPop) {
+      if ( ((_nx==1 || _nx==-1) && Lattice<T>::c[iPop][0]==_nx) || ((_ny==1 || _ny==-1) && Lattice<T>::c[iPop][1]==_ny) || (Lattice<T>::d==3 && !_nz && Lattice<T>::c[iPop][2]==_nz) ) {
+        cell[iPop] += (cell[iPop] + Lattice<T>::t[iPop])*_densityOffset;
+      }
+    }
+};
+  /// Collide with fixed velocity
+  void staticCollide(Cell<T,Lattice>& cell,
+                             const T u[Lattice<T>::d],
+                             LatticeStatistics<T>& statistics_) override {
+    BaseDynamics::staticCollide(cell,u,statistics_);
+  for (int iPop=0; iPop < Lattice<T>::q; ++iPop) {
+    if ( ((_nx==1 || _nx==-1) && Lattice<T>::c[iPop][0]==_nx) || ((_ny==1 || _ny==-1) && Lattice<T>::c[iPop][1]==_ny) || (Lattice<T>::d==3 && !_nz && Lattice<T>::c[iPop][2]==_nz) ) {
+      cell[iPop] += (cell[iPop] + Lattice<T>::t[iPop])*_densityOffset;
+    }
+  }
+};
+
+private:
+  T _densityOffset;
+  int _nx, _ny, _nz;
 };
 
 /// Implementation of the BGK collision step
@@ -279,23 +270,42 @@ class BGKdynamics : public BasicDynamics<T,Lattice> {
 public:
   /// Constructor
   BGKdynamics(T omega, Momenta<T,Lattice>& momenta);
-  /// Clone the object on its dynamic type.
-  virtual BGKdynamics<T,Lattice>* clone() const;
-  /// Compute equilibrium distribution function
-  virtual T computeEquilibrium(int iPop, T rho, const T u[Lattice<T>::d], T uSqr) const;
   /// Collision step
-  virtual void collide(Cell<T,Lattice>& cell,
-                       LatticeStatistics<T>& statistics_);
+  void collide(Cell<T,Lattice>& cell,
+                       LatticeStatistics<T>& statistics_) override;
   /// Collide with fixed velocity
-  virtual void staticCollide(Cell<T,Lattice>& cell,
+  void staticCollide(Cell<T,Lattice>& cell,
                              const T u[Lattice<T>::d],
-                             LatticeStatistics<T>& statistics_);
+                             LatticeStatistics<T>& statistics_) override;
   /// Get local relaxation parameter of the dynamics
-  virtual T getOmega() const;
+  T getOmega() const override;
   /// Set local relaxation parameter of the dynamics
-  virtual void setOmega(T omega);
+  void setOmega(T omega) override;
 private:
   T _omega;  ///< relaxation parameter
+};
+
+/// Implementation of the TRT collision step
+template<typename T, template<typename U> class Lattice>
+class TRTdynamics : public BasicDynamics<T,Lattice> {
+public:
+  /// Constructor
+  TRTdynamics(T omega, Momenta<T,Lattice>& momenta, T magicParameter);
+  /// Collision step
+  void collide(Cell<T,Lattice>& cell,
+                       LatticeStatistics<T>& statistics_) override;
+  /// Collide with fixed velocity
+  void staticCollide(Cell<T,Lattice>& cell,
+                             const T u[Lattice<T>::d],
+                             LatticeStatistics<T>& statistics_) override;
+  /// Get local relaxation parameter of the dynamics
+  T getOmega() const override;
+  /// Set local relaxation parameter of the dynamics
+  void setOmega(T omega) override;
+private:
+  T _omega;  ///< relaxation parameter
+  T _omega2; /// relaxation parameter for odd moments
+  T _magicParameter;
 };
 
 /// Implementation of the pressure-corrected BGK collision step
@@ -304,21 +314,17 @@ class ConstRhoBGKdynamics : public BasicDynamics<T,Lattice> {
 public:
   /// Constructor
   ConstRhoBGKdynamics(T omega, Momenta<T,Lattice>& momenta);
-  /// Clone the object on its dynamic type.
-  virtual ConstRhoBGKdynamics<T,Lattice>* clone() const;
-  /// Compute equilibrium distribution function
-  virtual T computeEquilibrium(int iPop, T rho, const T u[Lattice<T>::d], T uSqr) const;
   /// Collision step
-  virtual void collide(Cell<T,Lattice>& cell,
-                       LatticeStatistics<T>& statistics_);
+  void collide(Cell<T,Lattice>& cell,
+                       LatticeStatistics<T>& statistics_) override;
   /// Collide with fixed velocity
-  virtual void staticCollide(Cell<T,Lattice>& cell,
+  void staticCollide(Cell<T,Lattice>& cell,
                              const T u[Lattice<T>::d],
-                             LatticeStatistics<T>& statistics_);
+                             LatticeStatistics<T>& statistics_) override;
   /// Get local relaxation parameter of the dynamics
-  virtual T getOmega() const;
+  T getOmega() const override;
   /// Set local relaxation parameter of the dynamics
-  virtual void setOmega(T omega);
+  void setOmega(T omega) override;
 private:
   T _omega;  ///< relaxation parameter
 };
@@ -329,21 +335,17 @@ class IncBGKdynamics : public BasicDynamics<T,Lattice> {
 public:
   /// Constructor
   IncBGKdynamics(T omega, Momenta<T,Lattice>& momenta);
-  /// Clone the object on its dynamic type.
-  virtual IncBGKdynamics<T,Lattice>* clone() const;
-  /// Compute equilibrium distribution function
-  virtual T computeEquilibrium(int iPop, T rho, const T u[Lattice<T>::d], T uSqr) const;
   /// Collision step
-  virtual void collide(Cell<T,Lattice>& cell,
-                       LatticeStatistics<T>& statistics_);
+  void collide(Cell<T,Lattice>& cell,
+                       LatticeStatistics<T>& statistics_) override;
   /// Collide with fixed velocity
-  virtual void staticCollide(Cell<T,Lattice>& cell,
+  void staticCollide(Cell<T,Lattice>& cell,
                              const T u[Lattice<T>::d],
-                             LatticeStatistics<T>& statistics_);
+                             LatticeStatistics<T>& statistics_) override;
   /// Get local relaxation parameter of the dynamics
-  virtual T getOmega() const;
+  T getOmega() const override;
   /// Set local relaxation parameter of the dynamics
-  virtual void setOmega(T omega);
+  void setOmega(T omega) override;
 private:
   T _omega;  ///< relaxation parameter
 };
@@ -360,21 +362,17 @@ class RLBdynamics : public BasicDynamics<T,Lattice> {
 public:
   /// Constructor
   RLBdynamics(T omega, Momenta<T,Lattice>& momenta);
-  /// Clone the object on its dynamic type.
-  virtual RLBdynamics<T,Lattice>* clone() const;
-  /// Compute equilibrium distribution function
-  virtual T computeEquilibrium(int iPop, T rho, const T u[Lattice<T>::d], T uSqr) const;
   /// Collision step
-  virtual void collide(Cell<T,Lattice>& cell,
-                       LatticeStatistics<T>& statistics_);
+  void collide(Cell<T,Lattice>& cell,
+                       LatticeStatistics<T>& statistics_) override;
   /// Collide with fixed velocity
-  virtual void staticCollide(Cell<T,Lattice>& cell,
+  void staticCollide(Cell<T,Lattice>& cell,
                              const T u[Lattice<T>::d],
-                             LatticeStatistics<T>& statistics_);
+                             LatticeStatistics<T>& statistics_) override;
   /// Get local relaxation parameter of the dynamics
-  virtual T getOmega() const;
+  T getOmega() const override;
   /// Set local relaxation parameter of the dynamics
-  virtual void setOmega(T omega);
+  void setOmega(T omega) override;
 private:
   T _omega;  ///< relaxation parameter
 };
@@ -385,25 +383,19 @@ class CombinedRLBdynamics : public BasicDynamics<T,Lattice> {
 public:
   /// Constructor
   CombinedRLBdynamics(T omega, Momenta<T,Lattice>& momenta);
-  /// Clone the object on its dynamic type.
-  virtual CombinedRLBdynamics<T, Lattice, Dynamics>* clone() const;
   /// Compute equilibrium distribution function
-  virtual T computeEquilibrium(int iPop, T rho, const T u[Lattice<T>::d], T uSqr) const;
+  T computeEquilibrium(int iPop, T rho, const T u[Lattice<T>::d], T uSqr) const override;
   /// Collision step
-  virtual void collide(Cell<T,Lattice>& cell,
-                       LatticeStatistics<T>& statistics_);
+  void collide(Cell<T,Lattice>& cell,
+                       LatticeStatistics<T>& statistics_) override;
   /// Collide with fixed velocity
-  virtual void staticCollide(Cell<T,Lattice>& cell,
+  void staticCollide(Cell<T,Lattice>& cell,
                              const T u[Lattice<T>::d],
-                             LatticeStatistics<T>& statistics_);
+                             LatticeStatistics<T>& statistics_) override;
   /// Get local relaxation parameter of the dynamics
-  virtual T getOmega() const;
+  T getOmega() const override;
   /// Set local relaxation parameter of the dynamics
-  virtual void setOmega(T omega);
-  /// Get local value of any parameter
-  virtual T getParameter(int whichParameter) const;
-  /// Set local value of any parameter
-  virtual void setParameter(int whichParameter, T value);
+  void setOmega(T omega) override;
 private:
   Dynamics _boundaryDynamics;
 };
@@ -414,29 +406,56 @@ class ForcedBGKdynamics : public BasicDynamics<T,Lattice> {
 public:
   /// Constructor
   ForcedBGKdynamics(T omega, Momenta<T,Lattice>& momenta);
-  /// Clone the object on its dynamic type.
-  virtual ForcedBGKdynamics<T,Lattice>* clone() const;
   ///  Compute fluid velocity on the cell.
-  virtual void computeU (
+  void computeU (
     Cell<T,Lattice> const& cell,
-    T u[Lattice<T>::d] ) const;
+    T u[Lattice<T>::d] ) const override;
   /// Compute fluid velocity and particle density on the cell.
-  virtual void computeRhoU (
+  void computeRhoU (
     Cell<T,Lattice> const& cell,
-    T& rho, T u[Lattice<T>::d]) const;
-  /// Compute equilibrium distribution function
-  virtual T computeEquilibrium(int iPop, T rho, const T u[Lattice<T>::d], T uSqr) const;
+    T& rho, T u[Lattice<T>::d]) const override;
   /// Collision step
-  virtual void collide(Cell<T,Lattice>& cell,
-                       LatticeStatistics<T>& statistics_);
+  void collide(Cell<T,Lattice>& cell,
+                       LatticeStatistics<T>& statistics_) override;
   /// Collide with fixed velocity
-  virtual void staticCollide(Cell<T,Lattice>& cell,
+  void staticCollide(Cell<T,Lattice>& cell,
                              const T u[Lattice<T>::d],
-                             LatticeStatistics<T>& statistics_);
+                             LatticeStatistics<T>& statistics_) override;
   /// Get local relaxation parameter of the dynamics
-  virtual T getOmega() const;
+  T getOmega() const override;
   /// Set local relaxation parameter of the dynamics
-  virtual void setOmega(T omega);
+  void setOmega(T omega) override;
+protected:
+  T _omega;  ///< relaxation parameter
+  static const int forceBeginsAt = Lattice<T>::ExternalField::forceBeginsAt;
+  static const int sizeOfForce   = Lattice<T>::ExternalField::sizeOfForce;
+};
+
+/// Implementation of the BGK collision step with external force
+template<typename T, template<typename U> class Lattice>
+class ForcedKupershtokhBGKdynamics : public BasicDynamics<T,Lattice> {
+public:
+  /// Constructor
+  ForcedKupershtokhBGKdynamics(T omega, Momenta<T,Lattice>& momenta);
+  ///  Compute fluid velocity on the cell.
+  void computeU (
+    Cell<T,Lattice> const& cell,
+    T u[Lattice<T>::d] ) const override;
+  /// Compute fluid velocity and particle density on the cell.
+  void computeRhoU (
+    Cell<T,Lattice> const& cell,
+    T& rho, T u[Lattice<T>::d]) const override;
+  /// Collision step
+  void collide(Cell<T,Lattice>& cell,
+                       LatticeStatistics<T>& statistics_) override;
+  /// Collide with fixed velocity
+  void staticCollide(Cell<T,Lattice>& cell,
+                             const T u[Lattice<T>::d],
+                             LatticeStatistics<T>& statistics_) override;
+  /// Get local relaxation parameter of the dynamics
+  T getOmega() const override;
+  /// Set local relaxation parameter of the dynamics
+  void setOmega(T omega) override;
 protected:
   T _omega;  ///< relaxation parameter
   static const int forceBeginsAt = Lattice<T>::ExternalField::forceBeginsAt;
@@ -449,8 +468,8 @@ class ResettingForcedBGKdynamics : public ForcedBGKdynamics<T,Lattice> {
 public:
   ResettingForcedBGKdynamics(T omega, Momenta<T,Lattice>& momenta);
   /// Collision step
-  virtual void collide(Cell<T,Lattice>& cell,
-                       LatticeStatistics<T>& statistics_);
+  void collide(Cell<T,Lattice>& cell,
+                       LatticeStatistics<T>& statistics_) override;
   inline void setForce(T force[3])
   {
 //    _frc[0] = force[0];
@@ -471,16 +490,16 @@ public:
   /// Constructor
   ForcedShanChenBGKdynamics(T omega, Momenta<T,Lattice>& momenta);
   ///  Compute fluid velocity on the cell.
-  virtual void computeU (
+  void computeU (
     Cell<T,Lattice> const& cell,
-    T u[Lattice<T>::d] ) const;
+    T u[Lattice<T>::d] ) const override;
   /// Compute fluid velocity and particle density on the cell.
-  virtual void computeRhoU (
+  void computeRhoU (
     Cell<T,Lattice> const& cell,
-    T& rho, T u[Lattice<T>::d]) const;
+    T& rho, T u[Lattice<T>::d]) const override;
   /// Collision step
-  virtual void collide(Cell<T,Lattice>& cell,
-                       LatticeStatistics<T>& statistics_);
+  void collide(Cell<T,Lattice>& cell,
+                       LatticeStatistics<T>& statistics_) override;
 };
 
 /// Implementation of the 3D D3Q13 dynamics
@@ -493,21 +512,19 @@ class D3Q13dynamics : public BasicDynamics<T,Lattice> {
 public:
   /// Constructor
   D3Q13dynamics(T omega, Momenta<T,Lattice>& momenta);
-  /// Clone the object on its dynamic type.
-  virtual D3Q13dynamics<T,Lattice>* clone() const;
   /// Compute equilibrium distribution function
-  virtual T computeEquilibrium(int iPop, T rho, const T u[Lattice<T>::d], T uSqr) const;
+  T computeEquilibrium(int iPop, T rho, const T u[Lattice<T>::d], T uSqr) const override;
   /// Collision step
-  virtual void collide(Cell<T,Lattice>& cell,
-                       LatticeStatistics<T>& statistics_);
+  void collide(Cell<T,Lattice>& cell,
+                       LatticeStatistics<T>& statistics_) override;
   /// Collide with fixed velocity
-  virtual void staticCollide(Cell<T,Lattice>& cell,
+  void staticCollide(Cell<T,Lattice>& cell,
                              const T u[Lattice<T>::d],
-                             LatticeStatistics<T>& statistics_);
+                             LatticeStatistics<T>& statistics_) override;
   /// Get local relaxation parameter of the dynamics
-  virtual T getOmega() const;
+  T getOmega() const override;
   /// Set local relaxation parameter of the dynamics
-  virtual void setOmega(T omega);
+  void setOmega(T omega) override;
 private:
   T lambda_nu;        ///< first relaxation parameter
   T lambda_nu_prime;  ///< second relaxation parameter
@@ -517,86 +534,86 @@ private:
 template<typename T, template<typename U> class Lattice>
 struct BulkMomenta : public Momenta<T,Lattice> {
   /// Compute particle density on the cell.
-  virtual T computeRho(Cell<T,Lattice> const& cell) const;
+  T computeRho(Cell<T,Lattice> const& cell) const override;
   /// Compute fluid velocity on the cell.
-  virtual void computeU (
+  void computeU (
     Cell<T,Lattice> const& cell,
-    T u[Lattice<T>::d] ) const;
+    T u[Lattice<T>::d] ) const override;
   /// Compute fluid momentum on the cell.
-  virtual void computeJ (
+  void computeJ (
     Cell<T,Lattice> const& cell,
-    T j[Lattice<T>::d] ) const;
+    T j[Lattice<T>::d] ) const override;
   /// Compute components of the stress tensor on the cell.
-  virtual void computeStress (
+  void computeStress (
     Cell<T,Lattice> const& cell,
     T rho, const T u[Lattice<T>::d],
-    T pi[util::TensorVal<Lattice<T> >::n] ) const;
+    T pi[util::TensorVal<Lattice<T> >::n] ) const override;
   /// Compute fluid velocity and particle density on the cell.
-  virtual void computeRhoU (
+  void computeRhoU (
     Cell<T,Lattice> const& cell,
-    T& rho, T u[Lattice<T>::d]) const;
+    T& rho, T u[Lattice<T>::d]) const override;
   /// Compute all momenta on the cell, up to second order.
-  virtual void computeAllMomenta (
+  void computeAllMomenta (
     Cell<T,Lattice> const& cell,
     T& rho, T u[Lattice<T>::d],
-    T pi[util::TensorVal<Lattice<T> >::n] ) const;
+    T pi[util::TensorVal<Lattice<T> >::n] ) const override;
   /// Set particle density on the cell.
-  virtual void defineRho(Cell<T,Lattice>& cell, T rho);
+  void defineRho(Cell<T,Lattice>& cell, T rho) override;
   /// Set fluid velocity on the cell.
-  virtual void defineU(Cell<T,Lattice>& cell,
-                       const T u[Lattice<T>::d]);
+  void defineU(Cell<T,Lattice>& cell,
+                       const T u[Lattice<T>::d]) override;
   /// Define fluid velocity and particle density on the cell.
-  virtual void defineRhoU (
+  void defineRhoU (
     Cell<T,Lattice>& cell,
-    T rho, const T u[Lattice<T>::d]);
+    T rho, const T u[Lattice<T>::d]) override;
   /// Define all momenta on the cell, up to second order.
-  virtual void defineAllMomenta (
+  void defineAllMomenta (
     Cell<T,Lattice>& cell,
     T rho, const T u[Lattice<T>::d],
-    const T pi[util::TensorVal<Lattice<T> >::n] );
+    const T pi[util::TensorVal<Lattice<T> >::n] ) override;
 };
 
 /// Velocity is stored in external scalar (and computed e.g. in a PostProcessor)
 template<typename T, template<typename U> class Lattice>
 struct ExternalVelocityMomenta : public Momenta<T,Lattice> {
   /// Compute particle density on the cell.
-  virtual T computeRho(Cell<T,Lattice> const& cell) const;
+  T computeRho(Cell<T,Lattice> const& cell) const override;
   /// Compute fluid velocity on the cell.
-  virtual void computeU (
+  void computeU (
     Cell<T,Lattice> const& cell,
-    T u[Lattice<T>::d] ) const;
+    T u[Lattice<T>::d] ) const override;
   /// Compute fluid momentum on the cell.
-  virtual void computeJ (
+  void computeJ (
     Cell<T,Lattice> const& cell,
-    T j[Lattice<T>::d] ) const;
+    T j[Lattice<T>::d] ) const override;
   /// Compute components of the stress tensor on the cell.
-  virtual void computeStress (
+  void computeStress (
     Cell<T,Lattice> const& cell,
     T rho, const T u[Lattice<T>::d],
-    T pi[util::TensorVal<Lattice<T> >::n] ) const;
+    T pi[util::TensorVal<Lattice<T> >::n] ) const override;
   /// Compute fluid velocity and particle density on the cell.
-  virtual void computeRhoU (
+  void computeRhoU (
     Cell<T,Lattice> const& cell,
-    T& rho, T u[Lattice<T>::d]) const;
+    T& rho, T u[Lattice<T>::d]) const override;
   /// Compute all momenta on the cell, up to second order.
-  virtual void computeAllMomenta (
+  void computeAllMomenta (
     Cell<T,Lattice> const& cell,
     T& rho, T u[Lattice<T>::d],
-    T pi[util::TensorVal<Lattice<T> >::n] ) const;
+    T pi[util::TensorVal<Lattice<T> >::n] ) const override;
   /// Set particle density on the cell.
-  virtual void defineRho(Cell<T,Lattice>& cell, T rho);
+  void defineRho(Cell<T,Lattice>& cell, T rho) override;
   /// Set fluid velocity on the cell.
-  virtual void defineU(Cell<T,Lattice>& cell,
-                       const T u[Lattice<T>::d]);
+  void defineU(Cell<T,Lattice>& cell,
+                       const T u[Lattice<T>::d]) override;
   /// Define fluid velocity and particle density on the cell.
-  virtual void defineRhoU (
+  void defineRhoU (
     Cell<T,Lattice>& cell,
-    T rho, const T u[Lattice<T>::d]);
+    T rho, const T u[Lattice<T>::d]) override;
   /// Define all momenta on the cell, up to second order.
-  virtual void defineAllMomenta (
+  void defineAllMomenta (
     Cell<T,Lattice>& cell,
     T rho, const T u[Lattice<T>::d],
-    const T pi[util::TensorVal<Lattice<T> >::n] );
+    const T pi[util::TensorVal<Lattice<T> >::n] ) override;
 };
 
 /// Implementation of "bounce-back" dynamics
@@ -614,57 +631,53 @@ public:
   BounceBack();
   /// You may fix a fictitious density value on bounce-back nodes via this constructor.
   BounceBack(T rho);
-  /// Clone the object on its dynamic type.
-  virtual BounceBack<T,Lattice>* clone() const;
-  /// Yields 0;
-  virtual T computeEquilibrium(int iPop, T rho, const T u[Lattice<T>::d], T uSqr) const;
   /// Collision step
-  virtual void collide(Cell<T,Lattice>& cell,
-                       LatticeStatistics<T>& statistics_);
+  void collide(Cell<T,Lattice>& cell,
+                       LatticeStatistics<T>& statistics_) override;
   /// Collide with fixed velocity
-  virtual void staticCollide(Cell<T,Lattice>& cell,
+  void staticCollide(Cell<T,Lattice>& cell,
                              const T u[Lattice<T>::d],
-                             LatticeStatistics<T>& statistics_);
+                             LatticeStatistics<T>& statistics_) override;
   /// Yields 1;
-  virtual T computeRho(Cell<T,Lattice> const& cell) const;
+  T computeRho(Cell<T,Lattice> const& cell) const override;
   /// Yields 0;
-  virtual void computeU (
+  void computeU (
     Cell<T,Lattice> const& cell,
-    T u[Lattice<T>::d] ) const;
+    T u[Lattice<T>::d] ) const override;
   /// Yields 0;
-  virtual void computeJ (
+  void computeJ (
     Cell<T,Lattice> const& cell,
-    T j[Lattice<T>::d] ) const;
+    T j[Lattice<T>::d] ) const override;
   /// Yields NaN
-  virtual void computeStress (
+  void computeStress (
     Cell<T,Lattice> const& cell,
     T rho, const T u[Lattice<T>::d],
-    T pi[util::TensorVal<Lattice<T> >::n] ) const;
-  virtual void computeRhoU (
+    T pi[util::TensorVal<Lattice<T> >::n] ) const override;
+  void computeRhoU (
     Cell<T,Lattice> const& cell,
-    T& rho, T u[Lattice<T>::d]) const;
-  virtual void computeAllMomenta (
+    T& rho, T u[Lattice<T>::d]) const override;
+  void computeAllMomenta (
     Cell<T,Lattice> const& cell,
     T& rho, T u[Lattice<T>::d],
-    T pi[util::TensorVal<Lattice<T> >::n] ) const;
+    T pi[util::TensorVal<Lattice<T> >::n] ) const override;
   /// Does nothing
-  virtual void defineRho(Cell<T,Lattice>& cell, T rho);
+  void defineRho(Cell<T,Lattice>& cell, T rho) override;
   /// Does nothing
-  virtual void defineU(Cell<T,Lattice>& cell,
-                       const T u[Lattice<T>::d]);
+  void defineU(Cell<T,Lattice>& cell,
+                       const T u[Lattice<T>::d]) override;
   /// Does nothing
-  virtual void defineRhoU (
+  void defineRhoU (
     Cell<T,Lattice>& cell,
-    T rho, const T u[Lattice<T>::d]);
+    T rho, const T u[Lattice<T>::d]) override;
   /// Does nothing
-  virtual void defineAllMomenta (
+  void defineAllMomenta (
     Cell<T,Lattice>& cell,
     T rho, const T u[Lattice<T>::d],
-    const T pi[util::TensorVal<Lattice<T> >::n] );
+    const T pi[util::TensorVal<Lattice<T> >::n] ) override;
   /// Yields NaN
-  virtual T getOmega() const;
+  T getOmega() const override;
   /// Does nothing
-  virtual void setOmega(T omega);
+  void setOmega(T omega) override;
 private:
   T _rho;
   bool _rhoFixed;
@@ -686,58 +699,54 @@ public:
   BounceBackVelocity(const T u[Lattice<T>::d]);
   /// You may fix a fictitious density value on bounce-back nodes via this constructor.
   BounceBackVelocity(const T rho, const T u[Lattice<T>::d]);
-  /// Clone the object on its dynamic type.
-  virtual BounceBackVelocity<T,Lattice>* clone() const;
-  /// Yields 0;
-  virtual T computeEquilibrium(int iPop, T rho, const T u[Lattice<T>::d], T uSqr) const;
   /// Collision step, bounce back with a fixed velocity _u
-  virtual void collide(Cell<T,Lattice>& cell,
-                       LatticeStatistics<T>& statistics_);
+  void collide(Cell<T,Lattice>& cell,
+                       LatticeStatistics<T>& statistics_) override;
   /// Collide with fixed velocity
-  virtual void staticCollide(Cell<T,Lattice>& cell,
+  void staticCollide(Cell<T,Lattice>& cell,
                              const T u[Lattice<T>::d],
-                             LatticeStatistics<T>& statistics_);
+                             LatticeStatistics<T>& statistics_) override;
   /// Retuns rho (if defined else zero)
-  virtual T computeRho(Cell<T,Lattice> const& cell) const;
+  T computeRho(Cell<T,Lattice> const& cell) const override;
   /// Retuns _u
-  virtual void computeU (
+  void computeU (
     Cell<T,Lattice> const& cell,
-    T u[Lattice<T>::d] ) const;
+    T u[Lattice<T>::d] ) const override;
   /// Retuns rho (if defined else zero) times _u
-  virtual void computeJ (
+  void computeJ (
     Cell<T,Lattice> const& cell,
-    T j[Lattice<T>::d] ) const;
+    T j[Lattice<T>::d] ) const override;
   /// Yields NaN
-  virtual void computeStress (
+  void computeStress (
     Cell<T,Lattice> const& cell,
     T rho, const T u[Lattice<T>::d],
-    T pi[util::TensorVal<Lattice<T> >::n] ) const;
+    T pi[util::TensorVal<Lattice<T> >::n] ) const override;
   /// Retuns rho (if defined else zero) and _u
-  virtual void computeRhoU (
+  void computeRhoU (
     Cell<T,Lattice> const& cell,
-    T& rho, T u[Lattice<T>::d]) const;
-  virtual void computeAllMomenta (
+    T& rho, T u[Lattice<T>::d]) const override;
+  void computeAllMomenta (
     Cell<T,Lattice> const& cell,
     T& rho, T u[Lattice<T>::d],
-    T pi[util::TensorVal<Lattice<T> >::n] ) const;
+    T pi[util::TensorVal<Lattice<T> >::n] ) const override;
   /// Devines the velocity rho
-  virtual void defineRho(Cell<T,Lattice>& cell, T rho);
+  void defineRho(Cell<T,Lattice>& cell, T rho) override;
   /// Devines the velocity _u
-  virtual void defineU(Cell<T,Lattice>& cell,
-                       const T u[Lattice<T>::d]);
+  void defineU(Cell<T,Lattice>& cell,
+                       const T u[Lattice<T>::d]) override;
   /// Devines rho and _u
-  virtual void defineRhoU (
+  void defineRhoU (
     Cell<T,Lattice>& cell,
-    T rho, const T u[Lattice<T>::d]);
+    T rho, const T u[Lattice<T>::d]) override;
   /// Does nothing
-  virtual void defineAllMomenta (
+  void defineAllMomenta (
     Cell<T,Lattice>& cell,
     T rho, const T u[Lattice<T>::d],
-    const T pi[util::TensorVal<Lattice<T> >::n] );
+    const T pi[util::TensorVal<Lattice<T> >::n] ) override;
   /// Yields NaN
-  virtual T getOmega() const;
+  T getOmega() const override;
   /// Does nothing
-  virtual void setOmega(T omega);
+  void setOmega(T omega) override;
 private:
   T _rho;
   bool _rhoFixed;
@@ -760,77 +769,73 @@ public:
   BounceBackAnti();
   /// You may fix a fictitious density value on bounce-back nodes via this constructor.
   BounceBackAnti(T rho);
-  /// Clone the object on its dynamic type.
-  virtual BounceBackAnti<T,Lattice>* clone() const;
-  /// Yields 0;
-  virtual T computeEquilibrium(int iPop, T rho, const T u[Lattice<T>::d], T uSqr) const;
   /// Collision step, bounce back with a fixed velocity _u
-  virtual void collide(Cell<T,Lattice>& cell,
-                       LatticeStatistics<T>& statistics_);
+  void collide(Cell<T,Lattice>& cell,
+                       LatticeStatistics<T>& statistics_) override;
   /// Collide with fixed velocity
-  virtual void staticCollide(Cell<T,Lattice>& cell,
+  void staticCollide(Cell<T,Lattice>& cell,
                              const T u[Lattice<T>::d],
-                             LatticeStatistics<T>& statistics_);
+                             LatticeStatistics<T>& statistics_) override;
   /// Retuns rho (if defined else zero)
-  virtual T computeRho(Cell<T,Lattice> const& cell) const;
+  T computeRho(Cell<T,Lattice> const& cell) const override;
   /// Retuns _u
-  virtual void computeU (
+  void computeU (
     Cell<T,Lattice> const& cell,
-    T u[Lattice<T>::d] ) const;
+    T u[Lattice<T>::d] ) const override;
   /// Retuns rho (if defined else zero) times _u
-  virtual void computeJ (
+  void computeJ (
     Cell<T,Lattice> const& cell,
-    T j[Lattice<T>::d] ) const;
+    T j[Lattice<T>::d] ) const override;
   /// Yields NaN
-  virtual void computeStress (
+  void computeStress (
     Cell<T,Lattice> const& cell,
     T rho, const T u[Lattice<T>::d],
-    T pi[util::TensorVal<Lattice<T> >::n] ) const;
+    T pi[util::TensorVal<Lattice<T> >::n] ) const override;
   /// Retuns rho (if defined else zero) and _u
-  virtual void computeRhoU (
+  void computeRhoU (
     Cell<T,Lattice> const& cell,
-    T& rho, T u[Lattice<T>::d]) const;
-  virtual void computeAllMomenta (
+    T& rho, T u[Lattice<T>::d]) const override;
+  void computeAllMomenta (
     Cell<T,Lattice> const& cell,
     T& rho, T u[Lattice<T>::d],
-    T pi[util::TensorVal<Lattice<T> >::n] ) const;
+    T pi[util::TensorVal<Lattice<T> >::n] ) const override;
   /// Devines the velocity rho
-  virtual void defineRho(Cell<T,Lattice>& cell, T rho);
+  void defineRho(Cell<T,Lattice>& cell, T rho) override;
   /// Devines the velocity _u
-  virtual void defineU(Cell<T,Lattice>& cell,
-                       const T u[Lattice<T>::d]);
+  void defineU(Cell<T,Lattice>& cell,
+                       const T u[Lattice<T>::d]) override;
   /// Devines rho and _u
-  virtual void defineRhoU (
+  void defineRhoU (
     Cell<T,Lattice>& cell,
-    T rho, const T u[Lattice<T>::d]);
+    T rho, const T u[Lattice<T>::d]) override;
   /// Does nothing
-  virtual void defineAllMomenta (
+  void defineAllMomenta (
     Cell<T,Lattice>& cell,
     T rho, const T u[Lattice<T>::d],
-    const T pi[util::TensorVal<Lattice<T> >::n] );
+    const T pi[util::TensorVal<Lattice<T> >::n] ) override;
   /// Yields NaN
-  virtual T getOmega() const;
+  T getOmega() const override;
   /// Does nothing
-  virtual void setOmega(T omega);
+  void setOmega(T omega) override;
 private:
   T _rho;
   bool _rhoFixed;
   T _u[Lattice<T>::d];
 };
 
-/** Robin Boundary for Diffusion Equation
- * documentation Hiorth, Lad, Evje and Skjæveland 2008
+
+/** Corresponds to macro Robin boundary, micro Fresnel surface
+ *  Motivated by Hiorth et al. 2008; doi 10.1002/fld.1822
  */
 template<typename T, template<typename U> class Lattice>
-class BounceBackReflective : public BounceBack<T,Lattice> {
+class PartialBounceBack final: public BounceBack<T,Lattice> {
 public:
-  BounceBackReflective(T zeta);
-  virtual T computeEquilibrium( int iPop, T rho, const T u[Lattice<T>::d], T uSqr ) const;
+  PartialBounceBack(T rf);
+  T computeEquilibrium( int iPop, T rho, const T u[Lattice<T>::d], T uSqr ) const override;
   /// Collision step
-  virtual void collide(Cell<T,Lattice>& cell,
-                       LatticeStatistics<T>& statistics_) final;
+  void collide(Cell<T,Lattice>& cell, LatticeStatistics<T>& statistics_) override;
 private:
-  T _zeta;
+  T _rf;
 };
 
 
@@ -840,57 +845,55 @@ class NoDynamics : public Dynamics<T,Lattice> {
 public:
   /// You may fix a fictitious density value on no dynamics node via this constructor.
   NoDynamics(T rho = T(1) );
-  /// Clone the object on its dynamic type.
-  virtual NoDynamics<T,Lattice>* clone() const;
   /// Yields 0;
-  virtual T computeEquilibrium(int iPop, T rho, const T u[Lattice<T>::d], T uSqr) const;
+  T computeEquilibrium(int iPop, T rho, const T u[Lattice<T>::d], T uSqr) const override;
   /// Collision step
-  virtual void collide(Cell<T,Lattice>& cell,
-                       LatticeStatistics<T>& statistics_);
+  void collide(Cell<T,Lattice>& cell,
+                       LatticeStatistics<T>& statistics_) override;
   /// Collide with fixed velocity
-  virtual void staticCollide(Cell<T,Lattice>& cell,
+  void staticCollide(Cell<T,Lattice>& cell,
                              const T u[Lattice<T>::d],
-                             LatticeStatistics<T>& statistics_);
+                             LatticeStatistics<T>& statistics_) override;
   /// Yields 1;
-  virtual T computeRho(Cell<T,Lattice> const& cell) const;
+  T computeRho(Cell<T,Lattice> const& cell) const override;
   /// Yields 0;
-  virtual void computeU (
+  void computeU (
     Cell<T,Lattice> const& cell,
-    T u[Lattice<T>::d] ) const;
+    T u[Lattice<T>::d] ) const override;
   /// Yields 0;
-  virtual void computeJ (
+  void computeJ (
     Cell<T,Lattice> const& cell,
-    T j[Lattice<T>::d] ) const;
+    T j[Lattice<T>::d] ) const override;
   /// Yields NaN
-  virtual void computeStress (
+  void computeStress (
     Cell<T,Lattice> const& cell,
     T rho, const T u[Lattice<T>::d],
-    T pi[util::TensorVal<Lattice<T> >::n] ) const;
-  virtual void computeRhoU (
+    T pi[util::TensorVal<Lattice<T> >::n] ) const override;
+  void computeRhoU (
     Cell<T,Lattice> const& cell,
-    T& rho, T u[Lattice<T>::d]) const;
-  virtual void computeAllMomenta (
+    T& rho, T u[Lattice<T>::d]) const override;
+  void computeAllMomenta (
     Cell<T,Lattice> const& cell,
     T& rho, T u[Lattice<T>::d],
-    T pi[util::TensorVal<Lattice<T> >::n] ) const;
+    T pi[util::TensorVal<Lattice<T> >::n] ) const override;
   /// Does nothing
-  virtual void defineRho(Cell<T,Lattice>& cell, T rho);
+  void defineRho(Cell<T,Lattice>& cell, T rho) override;
   /// Does nothing
-  virtual void defineU(Cell<T,Lattice>& cell,
-                       const T u[Lattice<T>::d]);
+  void defineU(Cell<T,Lattice>& cell,
+                       const T u[Lattice<T>::d]) override;
   /// Does nothing
-  virtual void defineRhoU (
+  void defineRhoU (
     Cell<T,Lattice>& cell,
-    T rho, const T u[Lattice<T>::d]);
+    T rho, const T u[Lattice<T>::d]) override;
   /// Does nothing
-  virtual void defineAllMomenta (
+  void defineAllMomenta (
     Cell<T,Lattice>& cell,
     T rho, const T u[Lattice<T>::d],
-    const T pi[util::TensorVal<Lattice<T> >::n] );
+    const T pi[util::TensorVal<Lattice<T> >::n] ) override;
   /// Yields NaN
-  virtual T getOmega() const;
+  T getOmega() const override;
   /// Does nothing
-  virtual void setOmega(T omega);
+  void setOmega(T omega) override;
 
 private:
   /// Default rho=1
@@ -908,25 +911,25 @@ public:
   /// Constructor
   OffDynamics(const T _location[Lattice<T>::d], T _distances[Lattice<T>::q]);
   /// Returns local stored rho which is updated if the bc is used as velocity!=0 condition
-  virtual T computeRho(Cell<T,Lattice> const& cell) const;
+  T computeRho(Cell<T,Lattice> const& cell) const override;
   /// Returns an average of the locally stored u
-  virtual void computeU(Cell<T,Lattice> const& cell, T u[Lattice<T>::d] ) const;
+  void computeU(Cell<T,Lattice> const& cell, T u[Lattice<T>::d] ) const override;
   /// Set Intersection of the link and the boundary
-  virtual void setBoundaryIntersection(int iPop, T distance);
+  void setBoundaryIntersection(int iPop, T distance) override;
   /// Get Intersection of the link and the boundary
-  virtual bool getBoundaryIntersection(int iPop, T intersection[Lattice<T>::d]);
+  bool getBoundaryIntersection(int iPop, T intersection[Lattice<T>::d]) override;
   /// Set particle density on the cell.
-  virtual void defineRho(Cell<T,Lattice>& cell, T rho);
+  void defineRho(Cell<T,Lattice>& cell, T rho) override;
   /// Set single velocity
-  virtual void defineRho(int iPop, T rho);
+  void defineRho(int iPop, T rho) override;
   /// Set fluid velocity on the cell.
-  virtual void defineU(Cell<T,Lattice>& cell, const T u[Lattice<T>::d]);
+  void defineU(Cell<T,Lattice>& cell, const T u[Lattice<T>::d]) override;
   /// Set constant velocity
-  virtual void defineU(const T u[Lattice<T>::d]);
+  void defineU(const T u[Lattice<T>::d]) override;
   /// Set single velocity
-  virtual void defineU(int iPop, const T u[Lattice<T>::d]);
+  void defineU(int iPop, const T u[Lattice<T>::d]) override;
   /// Get VelocitySummand for Bouzidi-Boundary Condition
-  virtual T getVelocityCoefficient(int iPop);
+  T getVelocityCoefficient(int iPop) override;
 
 private:
   T _rho;
@@ -943,13 +946,11 @@ class ZeroDistributionDynamics : public NoDynamics<T,Lattice> {
 public:
   /// Constructor.
   ZeroDistributionDynamics();
-  /// Clone the object on its dynamic type.
-  virtual ZeroDistributionDynamics<T,Lattice>* clone() const;
   /// Collision step
-  virtual void collide(Cell<T,Lattice>& cell,
-                       LatticeStatistics<T>& statistics_);
+  void collide(Cell<T,Lattice>& cell,
+                       LatticeStatistics<T>& statistics_) override;
   /// Yields 1
-  virtual T computeRho(Cell<T,Lattice> const& cell) const;
+  T computeRho(Cell<T,Lattice> const& cell) const override;
 };
 
 
@@ -963,6 +964,9 @@ ExternalVelocityMomenta<T,Lattice>& getExternalVelocityMomenta();
 
 template<typename T, template<typename U> class Lattice>
 BounceBack<T,Lattice>& getBounceBack();
+
+template<typename T, template<typename U> class Lattice>
+PartialBounceBack<T,Lattice>& getPartialBounceBack(const double rf);
 
 template<typename T, template<typename U> class Lattice>
 BounceBackVelocity<T,Lattice>& getBounceBackVelocity(const double rho, const double u[Lattice<T>::d]);

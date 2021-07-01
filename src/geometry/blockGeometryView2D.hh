@@ -40,6 +40,7 @@ BlockGeometryView2D<T>::BlockGeometryView2D
 (BlockGeometryStructure2D<T>& originalBlockGeometry, int x0, int x1, int y0,
  int y1)
   : BlockGeometryStructure2D<T>(originalBlockGeometry.getIcGlob()),
+    BlockStructure2D(x1-x0+1, y1-y0+1),
     _originalBlockGeometry(&originalBlockGeometry), _x0(x0), _y0(y0),
     _nx(x1-x0+1), _ny(y1-y0+1)
 {
@@ -48,7 +49,9 @@ BlockGeometryView2D<T>::BlockGeometryView2D
 }
 
 template<typename T>
-BlockGeometryView2D<T>::BlockGeometryView2D(BlockGeometryView2D const& rhs) : BlockGeometryStructure2D<T>(rhs)
+BlockGeometryView2D<T>::BlockGeometryView2D(BlockGeometryView2D const& rhs)
+  : BlockGeometryStructure2D<T>(rhs),
+    BlockStructure2D(0,0)
 {
   _originalBlockGeometry = rhs._originalBlockGeometry;
   _x0 = rhs._x0;
@@ -94,11 +97,11 @@ BlockGeometryStatistics2D<T> const& BlockGeometryView2D<T>::getStatistics(bool v
 }
 
 template<typename T>
-std::vector<T> const BlockGeometryView2D<T>::getOrigin() const
+Vector<T,2> BlockGeometryView2D<T>::getOrigin() const
 {
-  std::vector<T> origin(_originalBlockGeometry->getOrigin());
-  origin[0] += _x0*getDeltaR();
-  origin[1] += _y0*getDeltaR();
+  Vector<T,2> origin;
+  origin[0] = _originalBlockGeometry->getOrigin()[0] + _x0*getDeltaR();
+  origin[1] = _originalBlockGeometry->getOrigin()[1] + _y0*getDeltaR();
   return origin;
 }
 

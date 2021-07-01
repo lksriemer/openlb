@@ -36,6 +36,92 @@ namespace olb {
 
 namespace descriptors {
 
+// AdvectionDiffusion D2Q5 //////////////////////////////////////////////
+
+template<typename T>
+const int D2Q5DescriptorBase<T>::c[D2Q5DescriptorBase<T>::q][D2Q5DescriptorBase<T>::d] = {
+  { 0, 0},
+  {-1, 0}, {0, -1}, {1,0}, { 0,1}
+};
+
+template<typename T>
+const int D2Q5DescriptorBase<T>::opposite[D2Q5DescriptorBase<T>::q] = {
+  0, 3, 4, 1, 2
+};
+
+template<typename T>
+const int D2Q5DescriptorBase<T>::vicinity = 1;
+
+template<typename T>
+const T D2Q5DescriptorBase<T>::invCs2 = (T)3;
+
+template<typename T>
+const T D2Q5DescriptorBase<T>::t[D2Q5DescriptorBase<T>::q] = {
+  (T)1-(T)2/invCs2,
+  (T)1/(invCs2*(T)2), (T)1/(invCs2*(T)2),
+  (T)1/(invCs2*(T)2), (T)1/(invCs2*(T)2)
+};
+
+// D2Q5 AdvectionDiffusionMRT ////////////////////////////////////////////////////////////
+/*
+ * Based on: Liu, Q., & He, Y. L. (2015). Double multiple-relaxation-time lattice Boltzmann model
+ *           for solid–liquid phase change with natural convection in porous media.
+ *           Physica A: Statistical Mechanics and its Applications, 438, 94-106.
+ */
+
+template<typename T>
+const int AdvectionDiffusionMRTD2Q5DescriptorBase<T>::c
+[AdvectionDiffusionMRTD2Q5DescriptorBase<T>::q][AdvectionDiffusionMRTD2Q5DescriptorBase<T>::d] = {
+  { 0, 0},
+  {-1, 0},
+  { 0,-1},
+  { 1, 0},
+  { 0, 1}
+};
+
+template<typename T>
+const int AdvectionDiffusionMRTD2Q5DescriptorBase<T>::opposite[AdvectionDiffusionMRTD2Q5DescriptorBase<T>::q] = {
+  0, 3, 4, 1, 2
+};
+
+template<typename T>
+const int AdvectionDiffusionMRTD2Q5DescriptorBase<T>::vicinity = 1;
+
+template<typename T>
+const T AdvectionDiffusionMRTD2Q5DescriptorBase<T>::M[AdvectionDiffusionMRTD2Q5DescriptorBase<T>::q][AdvectionDiffusionMRTD2Q5DescriptorBase<T>::q] = {
+  {(T)1 , (T)1, (T)1, (T)1, (T)1},
+  {T()  ,-(T)1, T() , (T)1, T() },
+  {T()  , T() ,-(T)1, T() , (T)1},
+  {-(T)4, (T)1, (T)1, (T)1, (T)1},
+  {T()  , (T)1,-(T)1, (T)1,-(T)1}
+};
+
+template<typename T>
+const T AdvectionDiffusionMRTD2Q5DescriptorBase<T>::invM[AdvectionDiffusionMRTD2Q5DescriptorBase<T>::q][AdvectionDiffusionMRTD2Q5DescriptorBase<T>::q] = {
+  {(T)1/(T)5,   T(),         T(),        -(T)1/(T)5,    T()},
+  {(T)1/(T)5,  -(T)1/(T)2,   T(),         (T)1/(T)20,   (T)1/(T)4},
+  {(T)1/(T)5,   T(),        -(T)1/(T)2,   (T)1/(T)20,  -(T)1/(T)4},
+  {(T)1/(T)5,   (T)1/(T)2,   T(),         (T)1/(T)20,   (T)1/(T)4},
+  {(T)1/(T)5,   T(),         (T)1/(T)2,   (T)1/(T)20,  -(T)1/(T)4}
+};
+
+template<typename T>
+const T AdvectionDiffusionMRTD2Q5DescriptorBase<T>::S[AdvectionDiffusionMRTD2Q5DescriptorBase<T>::q] =
+{T(), T(), T(), (T)1.5, (T)1.5};
+
+template<typename T>
+const int AdvectionDiffusionMRTD2Q5DescriptorBase<T>::shearViscIndexes[AdvectionDiffusionMRTD2Q5DescriptorBase<T>::shearIndexes] = {1, 2};
+
+template<typename T>
+const T AdvectionDiffusionMRTD2Q5DescriptorBase<T>::invCs2 = (T)3;
+
+template<typename T>
+const T AdvectionDiffusionMRTD2Q5DescriptorBase<T>::t[AdvectionDiffusionMRTD2Q5DescriptorBase<T>::q] = {
+  (T)1-(T)2/invCs2,
+  (T)1/(invCs2*(T)2), (T)1/(invCs2*(T)2),
+  (T)1/(invCs2*(T)2), (T)1/(invCs2*(T)2)
+};
+
 // D2Q9 ////////////////////////////////////////////////////////////
 
 template<typename T>
@@ -63,6 +149,156 @@ const T D2Q9DescriptorBase<T>::t[D2Q9DescriptorBase<T>::q] = {
 
 template<typename T>
 const T D2Q9DescriptorBase<T>::invCs2 = (T)3;
+
+// AdvectionDiffusion D3Q7 ////////////////////////////////////////////////////
+
+template<typename T>
+const int D3Q7DescriptorBase<T>::c[D3Q7DescriptorBase<T>::q][D3Q7DescriptorBase<T>::d] = {
+  { 0, 0, 0},
+
+  {-1, 0, 0}, {0,-1, 0},
+  { 0, 0,-1}, {1, 0, 0},
+  { 0, 1, 0}, {0, 0, 1},
+};
+
+template<typename T>
+const int D3Q7DescriptorBase<T>::opposite[D3Q7DescriptorBase<T>::q] = {
+  0, 4, 5, 6, 1, 2, 3
+};
+
+template<typename T>
+const int D3Q7DescriptorBase<T>::vicinity = 1;
+
+template<typename T>
+const T D3Q7DescriptorBase<T>::invCs2 = (T)4;
+
+template<typename T>
+const T D3Q7DescriptorBase<T>::t[D3Q7DescriptorBase<T>::q] = {
+  (T)1 -(T)3 / invCs2,
+
+  (T)1/(invCs2*(T)2), (T)1/(invCs2*(T)2), (T)1/(invCs2*(T)2),
+  (T)1/(invCs2*(T)2), (T)1/(invCs2*(T)2), (T)1/(invCs2*(T)2)
+};
+
+
+
+// D3Q7 AdvectionDiffusionMRT ////////////////////////////////////////////////////////////
+/*
+ * Based on: Wu, H., Wang, J., & Tao, Z. (2011). Passive heat transfer in a turbulent
+ *           channel flow simulation using large eddy simulation based on the lattice
+ *           Boltzmann method framework.
+ *           International Journal of Heat and Fluid Flow, 32(6), 1111-1119.
+ *
+ * There are some differences in respect to the order of the columns based on the lattice directions
+ *
+ * TODO @AP: Check the D3Q7 M and invM matrices, if they are consistent to the OpenLB lattice directions
+ */
+template<typename T>
+const int AdvectionDiffusionMRTD3Q7DescriptorBase<T>::c
+[AdvectionDiffusionMRTD3Q7DescriptorBase<T>::q][AdvectionDiffusionMRTD3Q7DescriptorBase<T>::d] = {
+      { 0, 0, 0},
+      {-1, 0, 0},
+      { 0,-1, 0},
+      { 0, 0,-1},
+      { 1, 0, 0},
+      { 0, 1, 0},
+      { 0, 0, 1},
+};
+
+template<typename T>
+const int AdvectionDiffusionMRTD3Q7DescriptorBase<T>::opposite[AdvectionDiffusionMRTD3Q7DescriptorBase<T>::q] = {
+  0, 4, 5, 6, 1, 2, 3
+};
+
+template<typename T>
+const int AdvectionDiffusionMRTD3Q7DescriptorBase<T>::vicinity = 1;
+
+template<typename T>
+const T AdvectionDiffusionMRTD3Q7DescriptorBase<T>::M[AdvectionDiffusionMRTD3Q7DescriptorBase<T>::q][AdvectionDiffusionMRTD3Q7DescriptorBase<T>::q] = {
+//  Maria Lloret OpenLB Guide: In my oppinion the matrix is wrong taking the OpenLB definition for lattice directions
+//  {(T)1,  (T)1,   (T)1,   (T)1,   (T)1,   (T)1,   (T)1},
+//  {T(),   -(T)1,  T(),    T(),    (T)1,   T(),    T() },
+//  {T(),   T(),    -(T)1,  T(),    T(),    (T)1,   T() },
+//  {T(),   T(),    T(),    -(T)1,  T(),    T(),    (T)1},
+//  {-(T)6, (T)1,   (T)1,   (T)1,   (T)1,   (T)1,   (T)1},
+//  {T(),   (T)1,   -(T)1,  T(),    (T)1,   -(T)1,   T()},
+//  {T(),   (T)1,   (T)1,   -(T)2,  (T)1,   (T)1,   -(T)2}
+
+//  Wu et.al 2011: The directions are modified for the OpenLB definition // might not be correct
+//    {(T)1,  (T)1,   (T)1,   (T)1,   (T)1,   (T)1,   (T)1 },
+//    {T(),   (T)1,   T(),   -(T)1,   T(),    T(),    T()  },
+//    {T(),   T(),   -(T)1,   T(),    T(),    (T)1,   T()  },
+//    {T(),   T(),    T(),    T(),    (T)1,   T(),    -(T)1},
+//    {-(T)6, (T)1,   (T)1,   (T)1,   (T)1,   (T)1,   (T)1 },
+//    {T(),   (T)1,  -(T)1,   (T)1,   T(),    -(T)1,  T()  },
+//    {T(),   (T)1,   (T)1,   (T)1,   (T)2,   (T)1,   -(T)2}
+
+//  Li, Yang et al 2016: The directions are modified for the OpenLB definition
+    {(T)1,  (T)1,   (T)1,   (T)1,   (T)1,   (T)1,   (T)1 },
+    {T(),   (T)1,   T(),    -(T)1,  T(),    T(),    T()  },
+    {T(),   T(),    -(T)1,  T(),    T(),    (T)1,   T()  },
+    {T(),   T(),    T(),    T(),    (T)1,   T(),    -(T)1},
+    {(T)6,  -(T)1,  -(T)1,  -(T)1,  -(T)1,  -(T)1,  -(T)1},
+    {T(),   (T)2,   -(T)1,  (T)2,   -(T)1,  -(T)1,  -(T)1},
+    {T(),   T(),    (T)1,   T(),    -(T)1,  (T)1,   -(T)1}
+
+};
+
+template<typename T>
+const T AdvectionDiffusionMRTD3Q7DescriptorBase<T>::invM[AdvectionDiffusionMRTD3Q7DescriptorBase<T>::q][AdvectionDiffusionMRTD3Q7DescriptorBase<T>::q] = {
+//  Maria Lloret OpenLB Guide: In my oppinion the matrix is wrong taking the OpenLB definition for lattice directions
+//  {(T)1/(T)7,   T(),          T(),          T(),        -(T)1/(T)7,     T(),          T()},
+//  {(T)1/(T)7,   -(T)1/(T)2,   T(),          T(),        (T)1/(T)42,     (T)1/(T)4,    (T)1/(T)12},
+//  {(T)1/(T)7,   T(),          -(T)1/(T)2,   T(),        (T)1/(T)42,     -(T)1/(T)4,   (T)1/(T)12},
+//  {(T)1/(T)7,   T(),          T(),          -(T)1/(T)2, (T)1/(T)42,     T(),          -(T)1/(T)6},
+//  {(T)1/(T)7,  (T)1/(T)2,     T(),          T(),        (T)1/(T)42,     (T)1/(T)4,    (T)1/(T)12},
+//  {(T)1/(T)7,   T(),          (T)1/(T)2,    T(),        (T)1/(T)42,     -(T)1/(T)4,   (T)1/(T)12},
+//  {(T)1/(T)7,   T(),          T(),          (T)1/(T)2,  (T)1/(T)42,     T(),          -(T)1/(T)6}
+
+//  Wu et.al 2011: The directions are modified for the OpenLB definition // might not be correct
+//    {(T)1/(T)7,   T(),          T(),          T(),        -(T)1/(T)7,     T(),              T()},
+//    {(T)1/(T)7,   (T)1/(T)2,    T(),          T(),        (T)1/(T)42,     (T)1/(T)4,        (T)1/(T)12},
+//    {(T)1/(T)7,   T(),          -(T)1/(T)2,   T(),        (T)1/(T)42,     -(T)1/(T)4,       (T)1/(T)12},
+//    {(T)1/(T)7,   -(T)1/(T)2,   T(),          T(),        (T)1/(T)42,     (T)1/(T)4,        (T)1/(T)12},
+//    {(T)1/(T)7,   T(),          T(),          (T)1/(T)2,  (T)1/(T)42,     T(),              -(T)1/(T)6},
+//    {(T)1/(T)7,   T(),          (T)1/(T)2,    T(),        (T)1/(T)42,     -(T)1/(T)4,       (T)1/(T)12},
+//    {(T)1/(T)7,   T(),          T(),          -(T)1/(T)2, (T)1/(T)42,     T(),              -(T)1/(T)6}
+
+//  Li, Yang et al 2016: The directions are modified for the OpenLB definition
+    {(T)1/(T)7,   T(),          T(),          T(),        (T)1/(T)7,       T(),              T()},
+    {(T)1/(T)7,   (T)1/(T)2,    T(),          T(),        -(T)1/(T)42,     (T)1/(T)6,        T()},
+    {(T)1/(T)7,   T(),          -(T)1/(T)2,   T(),        -(T)1/(T)42,     -(T)1/(T)12,      (T)1/(T)4},
+    {(T)1/(T)7,   -(T)1/(T)2,   T(),          T(),        -(T)1/(T)42,     (T)1/(T)6,        T()},
+    {(T)1/(T)7,   T(),          T(),          (T)1/(T)2,  -(T)1/(T)42,     -(T)1/(T)12,      -(T)1/(T)4},
+    {(T)1/(T)7,   T(),          (T)1/(T)2,    T(),        -(T)1/(T)42,     -(T)1/(T)12,      (T)1/(T)4},
+    {(T)1/(T)7,   T(),          T(),          -(T)1/(T)2, -(T)1/(T)42,     -(T)1/(T)12,      -(T)1/(T)4}
+
+};
+
+template<typename T>
+const T AdvectionDiffusionMRTD3Q7DescriptorBase<T>::S[AdvectionDiffusionMRTD3Q7DescriptorBase<T>::q] = {
+  // Original MRT Relaxation times
+  /*s0*/  T(),  // rho (conserved)
+  /*s1*/  T(),  // Function of the thermal diffusivity: S_a = 1/t_a = 1/(4*a + 1/2)
+  /*s2*/  T(),  // Function of the thermal diffusivity: S_a = 1/t_a = 1/(4*a + 1/2)
+  /*s3*/  T(),  // Function of the thermal diffusivity: S_a = 1/t_a = 1/(4*a + 1/2)
+  /*s4*/  (T)1.9,
+  /*s5*/  (T)1.9,
+  /*s6*/  (T)1.9
+};
+
+template<typename T>
+const int AdvectionDiffusionMRTD3Q7DescriptorBase<T>::shearViscIndexes[AdvectionDiffusionMRTD3Q7DescriptorBase<T>::shearIndexes] = {1, 2, 3};
+
+template<typename T>
+const T AdvectionDiffusionMRTD3Q7DescriptorBase<T>::invCs2 = (T)4;
+
+template<typename T>
+const T AdvectionDiffusionMRTD3Q7DescriptorBase<T>::t[AdvectionDiffusionMRTD3Q7DescriptorBase<T>::q] = {
+  (T)1-(T)3/invCs2,
+  (T)1/(invCs2*(T)2), (T)1/(invCs2*(T)2), (T)1/(invCs2*(T)2),
+  (T)1/(invCs2*(T)2), (T)1/(invCs2*(T)2), (T)1/(invCs2*(T)2)
+};
 
 // D3Q13 ///////////////////////////////////////////////////////////
 
@@ -234,6 +470,7 @@ const T D3Q27DescriptorBase<T>::t[D3Q27DescriptorBase<T>::q] = {
 
 template<typename T>
 const T D3Q27DescriptorBase<T>::invCs2 = (T)3;
+
 
 }  // namespace descriptors
 

@@ -31,15 +31,14 @@
 #include "communication/loadBalancer.h"
 #include "communication/mpiManager.h"
 #include "core/superLattice3D.h"
-#include "core/units.h"
 #include "forces/force3D.h"
-#include "functors/indicator/indicatorBaseF3D.h"
-#include "functors/analyticalF.h"
+#include "functors/lattice/indicator/indicatorBaseF3D.h"
+#include "functors/analytical/analyticalF.h"
 #include "geometry/cuboidGeometry3D.h"
 #include "geometry/superGeometry3D.h"
 #include "particleSystem3D.h"
 #include "superParticleSysVTUout.h"
-#include "functors/superLatticeLocalF3D.h"
+#include "functors/lattice/superLatticeLocalF3D.h"
 
 namespace olb {
 
@@ -78,9 +77,8 @@ public:
 
   /// Constructor for SuperParticleSystem
   SuperParticleSystem3D(CuboidGeometry3D<T>& cuboidGeometry,
-                        LoadBalancer<T>& loadBalancer, SuperGeometry3D<T>&,
-                        LBconverter<T>& conv);
-  SuperParticleSystem3D(SuperGeometry3D<T>&, LBconverter<T>& conv);
+                        LoadBalancer<T>& loadBalancer, SuperGeometry3D<T>&);
+  SuperParticleSystem3D(SuperGeometry3D<T>&);
 
   /// Copy Constructor for SuperParticleSystem
   SuperParticleSystem3D(SuperParticleSystem3D<T, PARTICLETYPE>& spSys);
@@ -88,7 +86,10 @@ public:
 
   /// Move Constructor for SuperParticleSystem
   SuperParticleSystem3D(SuperParticleSystem3D<T, PARTICLETYPE> && spSys);
-
+  /// Destructor
+  ~SuperParticleSystem3D() override
+  {
+  }
 
   /// Add a Particle to SuperParticleSystem
   void addParticle(PARTICLETYPE<T> &p);
@@ -100,8 +101,13 @@ public:
                    std::vector<T> vel= {0.,0.,0.});
   /// Add a number of identical Particles equally distributed in a given Material Number
   void addParticle(std::set<int>  material, int no, T mas, T rad, std::vector<T> vel = {0.,0.,0.});
+  void addParticleEquallyDistributed(IndicatorCuboid3D<T>& cuboid, T pMass,
+    T pRad,/* number of particles on x, y, z axis*/
+    int nox, int noy, int noz, std::vector<T> vel= {0.,0.,0.});
   /// Add Particles form a File. Save using saveToFile(std::string name)
   void addParticlesFromFile(std::string name, T mass, T radius);
+  /// Add a number of Particles with a certain ID (TracerParticle) equally distributed in a given IndicatorF3D
+  void addTracerParticle(IndicatorF3D<T>& ind, T idTP, T mas, T rad, int noTP = 1, std::vector<T> vel= {0.,0.,0.});
   /// Removes all particles from System
   void clearParticles();
 
@@ -116,10 +122,11 @@ public:
                                bool checkDist // check whether minDist is choosen too large
                               );
 
-  /// Integrate on Timestep dT
-  void simulate(T dT);
+  /// Integrate on Timestep dT, scale = true keeps the particle velocity in stable range
+  void simulate(T dT, bool scale = false);
 
-  /// Set overlap of ParticleSystems
+  /// Set overlap of ParticleSystems, overlap has to be in lattice units
+  /// particle system _overlap+1 <= _superGeometry.getOverlap()
   void setOverlap(T);
   /// Get overlap of ParticleSystems
   T getOverlap();
@@ -139,6 +146,10 @@ public:
   int rankNumOfShadowParticles();
   /// Get number of active particles computed on this node
   int rankNumOfActiveParticles();
+  /// Get number of TracerParticles computed on this node
+  int rankNumOfTracerParticles();
+  /// Get number of TracerParticles computed on this node
+  int globalNumOfTracerParticles();
 
   /// Get ParticleSystems
   std::vector<ParticleSystem3D<T, PARTICLETYPE>*> getParticleSystems();
@@ -178,23 +189,23 @@ public:
   /// console output of escape (E), capture (C) rate for material numbers mat
   void captureEscapeRate(std::list<int> mat);
 
-  /// Not relevant. But class must inherit from SuperStructure3D so we are forced to implement these functions.
-  virtual bool* operator()(int iCloc, int iX, int iY, int iZ, int iData)
-  {
-    return 0;
-  }
-  virtual int getDataSize() const
-  {
-    return 0;
-  }
-  virtual int getDataTypeSize() const
-  {
-    return 0;
-  }
+  /// Get Output of particleMovement
+  /// Write the data of the particle movement into an txtFile
+  void getOutput(std::string filename, int iT, T conversionFactorTime,
+      unsigned short particleProperties);
 
-  /// Destructor
-  virtual ~SuperParticleSystem3D()
+  /// Not relevant. But class must inherit from SuperStructure3D so we are forced to implement these functions.
+  bool* operator()(int iCloc, int iX, int iY, int iZ, int iData) override
   {
+    return nullptr;
+  }
+  int getDataSize() const override
+  {
+    return 0;
+  }
+  int getDataTypeSize() const override
+  {
+    return 0;
   }
 
   /// Particle-Fluid interaction for subgrid scale particles
@@ -204,13 +215,18 @@ public:
   //  void resetFluid(SuperLattice3D<T, DESCRIPTOR>& sLattice);
 
   /// returns the Stokes number
-  T getStokes(LBconverter<T>& conv, T pRho, T rad)
+  template<template<typename V> class DESCRIPTOR>
+  T getStokes(UnitConverter<T,DESCRIPTOR>& conv, T pRho, T rad)
   {
-    return pRho*std::pow(2.*rad,2)*conv.getCharU()/(18.*conv.getCharL()*(conv.getCharNu()*conv.getCharRho()));
+    return pRho*std::pow(2.*rad,2)*conv.getCharPhysVelocity()/(18.*conv.getCharPhysLength()*(conv.getPhysViscosity()*conv.getPhysDensity()));
   };
 
   friend class SuperParticleSysVtuWriter<T, PARTICLETYPE> ;
   friend class SuperParticleSysVtuWriterMag<T> ;
+
+  enum particleProperties
+    : unsigned short {position = 1, velocity = 2, radius = 4, mass = 8,
+                      force = 16, storeForce = 32};
 
 protected:
   mutable OstreamManager clout;
@@ -221,9 +237,10 @@ protected:
   /// Redistribute particles on compute nodes
   void updateParticleDistribution();
   /// Find the cuboid the particle is on.
-  bool findCuboid(PARTICLETYPE<T>&, T overlap);
+  bool findCuboid(PARTICLETYPE<T>&, int overlap);
   bool findCuboid(PARTICLETYPE<T>&);
   /// Check if particle is still on cuboid
+  // TODO overlap caste to int
   bool checkCuboid(PARTICLETYPE<T>& p, T overlap);
   bool checkCuboid(PARTICLETYPE<T>& p, T overlap, int iC);
   int countLocMaterial(int mat);
@@ -235,12 +252,12 @@ protected:
   std::vector<ParticleSystem3D<T, PARTICLETYPE>*> _pSystems;
   /// The superGeometry
   SuperGeometry3D<T>& _superGeometry;
-  /// The converter
-  LBconverter<T>& _conv;
   /// Rank of neighbouring cuboids
   std::list<int> _rankNeighbours;
   /// Numbers of neighbouring cuboids
   std::vector<std::vector<int> > _cuboidNeighbours;
+  // TODO: !attention! here T _overlap; class SuperStructure3D<T> has int _overlap
+  // but superParticleSystem<T, PARTICLETYPE<T>> overlap is of type T
   T _overlap;
   /// temporary variables
   std::map<int, std::vector<double> > _send_buffer;

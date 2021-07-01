@@ -1,6 +1,6 @@
 /*  This file is part of the OpenLB library
  *
- *  Copyright (C) 2008,2015 Orestis Malaspinas, Andrea Parmigiani, Albert Mink
+ *  Copyright (C) 2008 Orestis Malaspinas, Andrea Parmigiani
  *  E-mail contact: info@openlb.net
  *  The most recent release of OpenLB can be downloaded at
  *  <http://www.openlb.net/>
@@ -28,7 +28,7 @@
 #ifndef ADVECTION_DIFFUSION_DYNAMICS_H
 #define ADVECTION_DIFFUSION_DYNAMICS_H
 
-#include "advectionDiffusionLatticeDescriptors.h"
+#include "latticeDescriptors.h"
 #include "dynamics/dynamics.h"
 
 namespace olb {
@@ -40,19 +40,17 @@ class AdvectionDiffusionRLBdynamics : public BasicDynamics<T, Lattice> {
 public:
   /// Constructor
   AdvectionDiffusionRLBdynamics( T omega_, Momenta<T, Lattice>& momenta_ );
-  /// Clone the object on its dynamic type.
-  virtual AdvectionDiffusionRLBdynamics<T, Lattice>* clone() const;
   /// Compute equilibrium distribution function
-  virtual T computeEquilibrium( int iPop, T rho, const T u[Lattice<T>::d], T uSqr ) const;
+  T computeEquilibrium( int iPop, T rho, const T u[Lattice<T>::d], T uSqr ) const override;
   /// Collision step
-  virtual void collide( Cell<T, Lattice>& cell, LatticeStatistics<T>& statistics );
+  void collide( Cell<T, Lattice>& cell, LatticeStatistics<T>& statistics ) override;
   /// Collide with fixed velocity
-  virtual void staticCollide( Cell<T, Lattice>& cell, const T u[Lattice<T>::d],
-                              LatticeStatistics<T>& statistics );
+  void staticCollide( Cell<T, Lattice>& cell, const T u[Lattice<T>::d],
+                              LatticeStatistics<T>& statistics ) override;
   /// Get local relaxation parameter of the dynamics
-  virtual T getOmega() const;
+  T getOmega() const override;
   /// Set local relaxation parameter of the dynamics
-  virtual void setOmega( T omega_ );
+  void setOmega( T omega_ ) override;
 private:
   T omega;  ///< relaxation parameter
 };
@@ -64,92 +62,21 @@ class AdvectionDiffusionBGKdynamics : public BasicDynamics<T, Lattice> {
 public:
   /// Constructor
   AdvectionDiffusionBGKdynamics( T omega, Momenta<T, Lattice>& momenta );
-  /// Clone the object on its dynamic type.
-  virtual AdvectionDiffusionBGKdynamics<T, Lattice>* clone() const;
+  AdvectionDiffusionBGKdynamics( const UnitConverter<T,Lattice>& converter, Momenta<T, Lattice>& momenta );
   /// Compute equilibrium distribution function
-  virtual T computeEquilibrium( int iPop, T rho, const T u[Lattice<T>::d], T uSqr ) const;
+  T computeEquilibrium( int iPop, T rho, const T u[Lattice<T>::d], T uSqr ) const override;
   /// Collision step
-  virtual void collide( Cell<T, Lattice>& cell, LatticeStatistics<T>& statistics );
+  void collide( Cell<T, Lattice>& cell, LatticeStatistics<T>& statistics ) override;
   /// Collide with fixed velocity
-  virtual void staticCollide( Cell<T, Lattice>& cell, const T u[Lattice<T>::d],
-                              LatticeStatistics<T>& statistics );
+  void staticCollide( Cell<T, Lattice>& cell, const T u[Lattice<T>::d],
+                              LatticeStatistics<T>& statistics ) override;
   /// Get local relaxation parameter of the dynamics
-  virtual T getOmega() const;
+  T getOmega() const override;
   /// Set local relaxation parameter of the dynamics
-  virtual void setOmega( T omega );
+  void setOmega( T omega ) override;
 private:
   T _omega;  ///< relaxation parameter
 };
-
-/**
- * Solves diffusion equation with additional sink term, according to Albert Mink et al 2016.
- *
- * \f[ \Delta \Phi = \frac{\sigma_a}{D} * \Phi \f]
- * where diffusion coefficient D is given by:
- * \f$ D = \frac{1}{3(\sigma_a + \sigma_s)} \f$
- * absorption and scattering coefficient:
- * \f$ \sigma_a \f$ and \f$ \sigma_s \f$
- *
- * \param omega       is relaxation parameter and always set to 1, since the above equation is divided by diffusionsCoeff.
- * \param sink        corresponds to the sink factor (grid independent), given by \f$ \frac{\sigma_a}{8*D} * N^{-2} \f$
- */
-template<typename T, template<typename U> class Lattice>
-class AdDiSinkBGKdynamics : public BasicDynamics<T, Lattice> {
-public:
-  /// Constructor
-  AdDiSinkBGKdynamics( T omega, Momenta<T, Lattice>& momenta, T sink );
-  /// Clone the object on its dynamic type.
-  virtual AdDiSinkBGKdynamics<T, Lattice>* clone() const;
-  /// Compute equilibrium distribution function
-  virtual T computeEquilibrium( int iPop, T rho, const T u[Lattice<T>::d], T uSqr ) const;
-  /// Collision step
-  virtual void collide( Cell<T, Lattice>& cell, LatticeStatistics<T>& statistics );
-  /// Collide with fixed velocity
-  virtual void staticCollide( Cell<T, Lattice>& cell, const T u[Lattice<T>::d],
-                              LatticeStatistics<T>& statistics );
-  /// Get local relaxation parameter of the dynamics
-  virtual T getOmega() const;
-  /// Set local relaxation parameter of the dynamics
-  virtual void setOmega( T omega );
-private:
-  T _omega;
-  T _sink;
-};
-
-
-/**
- * Solves RTE according Christopher McHardy et al 2016.
- * absorption and scattering coefficient:
- * \f$ \sigma_a \f$ and \f$ \sigma_s \f$
- *
- * \param omega             change into beta the extinction coefficient
- * \param singleScatAlbedo  is the single scattering albedo, given by \f$ \frac{\sigma_s}{sigma_a + sigma_s} \f$
- */
-template<typename T, template<typename U> class Lattice>
-class AdDiAnisoBGKdynamics : public BasicDynamics<T, Lattice> {
-public:
-  /// Constructor
-  AdDiAnisoBGKdynamics( T omega, Momenta<T,Lattice>& momenta, T singleScatAlbedo, T extinctionCoeff);
-  /// Clone the object on its dynamic type.
-  virtual AdDiAnisoBGKdynamics<T, Lattice>* clone() const;
-  /// Compute equilibrium distribution function
-  virtual T computeEquilibrium( int iPop, T rho2, const T u[Lattice<T>::d], T uSqr ) const override;
-  /// Collision step
-  virtual void collide( Cell<T, Lattice>& cell, LatticeStatistics<T>& statistics ) override;
-  /// Collide with fixed velocity
-  virtual void staticCollide( Cell<T, Lattice>& cell, const T u[Lattice<T>::d],
-                              LatticeStatistics<T>& statistics );
-  /// Get local relaxation parameter of the dynamics
-  virtual T getOmega() const override;
-  /// Set local relaxation parameter of the dynamics
-  virtual void setOmega( T omega ) override;
-private:
-  T _omega;
-  T _singleScatAlbedo;
-  T _extinctionCoeff;
-};
-
-
 
 // ========= the BGK advection diffusion Stokes drag dynamics with a Smagorinsky turbulence model ========//
 /// This approach contains a slight error in the diffusion term.
@@ -192,9 +119,35 @@ public:
   /// Constructor
   ParticleAdvectionDiffusionBGKdynamics(T omega_, Momenta<T,Lattice>& momenta_);
   /// Collision step
-  virtual void collide(Cell<T,Lattice>& cell, LatticeStatistics<T>& statistics );
+  void collide(Cell<T,Lattice>& cell, LatticeStatistics<T>& statistics ) override;
 private:
   T omega;  ///< relaxation parameter
+};
+
+
+// ========= the MRT advection diffusion dynamics ========//
+/// This approach is based on the multi-distribution LBM model.
+/// The couplintg is done using the Boussinesq approximation
+template<typename T, template<typename U> class Lattice>
+class AdvectionDiffusionMRTdynamics : public BasicDynamics<T, Lattice> {
+public:
+  /// Constructor
+  AdvectionDiffusionMRTdynamics( T omega, Momenta<T, Lattice>& momenta );
+  /// Compute equilibrium distribution function
+  T computeEquilibrium( int iPop, T rho, const T u[Lattice<T>::d], T uSqr ) const override;
+  /// Collision step
+  void collide( Cell<T, Lattice>& cell, LatticeStatistics<T>& statistics ) override;
+  /// Collide with fixed velocity
+  void staticCollide( Cell<T, Lattice>& cell, const T u[Lattice<T>::d],
+                              LatticeStatistics<T>& statistics ) override;
+  /// Get local relaxation parameter of the dynamics
+  T getOmega() const override;
+  /// Set local relaxation parameter of the dynamics
+  void setOmega( T omega ) override;
+private:
+  T _omega;  ///< relaxation parameter
+protected:
+  T invM_S[Lattice<T>::q][Lattice<T>::q]; ///< inverse relaxation times matrix
 };
 
 } // namespace olb

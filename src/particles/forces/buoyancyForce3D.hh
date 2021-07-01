@@ -33,12 +33,12 @@
 
 namespace olb {
 
-template<typename T, template<typename U> class PARTICLETYPE>
-BuoyancyForce3D<T, PARTICLETYPE>::BuoyancyForce3D(
-  LBconverter<T> const& converter,
+template<typename T, template<typename U> class PARTICLETYPE, template<typename W> class DESCRIPTOR>
+BuoyancyForce3D<T, PARTICLETYPE, DESCRIPTOR>::BuoyancyForce3D(
+  UnitConverter<T,DESCRIPTOR> const& converter,
   std::vector<T> direction, T g) :
-  Force3D<T, PARTICLETYPE>(), _converter(converter),
-  _direction(direction), _g(g)
+  Force3D<T, PARTICLETYPE>(),
+  _direction(direction), _g(g), _physDensity(converter.getPhysDensity() )
 {
   T directionNorm = sqrt(
                       pow(_direction[0], 2.) + pow(_direction[1], 2.)
@@ -48,8 +48,8 @@ BuoyancyForce3D<T, PARTICLETYPE>::BuoyancyForce3D(
   }
 }
 
-template<typename T, template<typename U> class PARTICLETYPE>
-void BuoyancyForce3D< T, PARTICLETYPE>::applyForce(
+template<typename T, template<typename U> class PARTICLETYPE, template<typename W> class DESCRIPTOR>
+void BuoyancyForce3D<T, PARTICLETYPE, DESCRIPTOR>::applyForce(
   typename std::deque<PARTICLETYPE<T> >::iterator p, int pInt,
   ParticleSystem3D<T, PARTICLETYPE>& psSys)
 {
@@ -57,7 +57,7 @@ void BuoyancyForce3D< T, PARTICLETYPE>::applyForce(
   // acts in direction opposite to weight force of particle
 
   T factor = 4. / 3. * M_PI * std::pow(p->getRad(), 3) * _g
-             * _converter.getCharRho();
+             * _physDensity;
   for (int j = 0; j < 3; ++j) {
     p->getForce()[j] -= factor * _direction[j];
   }

@@ -29,14 +29,15 @@
 
 #include <vector>
 #include "cell.h"
+#include "blockData3D.h"
 #include "blockStructure3D.h"
 #include "postProcessing.h"
 #include "serializer.h"
 #include "spatiallyExtendedObject3D.h"
 #include "geometry/blockGeometryStructure3D.h"
 #include "latticeStatistics.h"
-#include "functors/analyticalF.h"
-#include "functors/indicator/indicatorBaseF3D.h"
+#include "functors/analytical/analyticalF.h"
+#include "functors/lattice/indicator/indicatorBaseF3D.h"
 
 
 namespace olb {
@@ -45,6 +46,7 @@ template<typename T, typename S> class AnalyticalF3D;
 template<typename T, template<typename U> class Lattice> struct Dynamics;
 template<typename T, template<typename U> class Lattice> class Cell;
 template<typename T, template<typename U> class Lattice> struct WriteCellFunctional;
+template<typename T> class BlockIndicatorF3D;
 template<typename T> class IndicatorSphere3D;
 template<typename T> class BlockGeometryStructure3D;
 
@@ -56,7 +58,7 @@ template<typename T, template<typename U> class Lattice>
 class BlockLatticeStructure3D : public BlockStructure3D, public SpatiallyExtendedObject3D {
 public:
   BlockLatticeStructure3D(int nx, int ny, int nz) : BlockStructure3D(nx,ny,nz) {};
-  virtual ~BlockLatticeStructure3D() { }
+  ~BlockLatticeStructure3D() override { }
 public:
   virtual void defineRho(BlockGeometryStructure3D<T>& blockGeometry, int material,
                          AnalyticalF3D<T,T>& rho);
@@ -69,8 +71,11 @@ public:
   virtual void defineExternalField(BlockGeometryStructure3D<T>& blockGeometry,
                                    int material, int fieldBeginsAt, int sizeOfField,
                                    AnalyticalF3D<T,T>& field);
+  virtual void defineExternalField(BlockIndicatorF3D<T>& indicator, int overlap,
+                                   int fieldBeginsAt, int sizeOfField,
+                                   AnalyticalF3D<T,T>& field);
   virtual void defineExternalField(BlockGeometryStructure3D<T>& blockGeometry,
-                                   IndicatorSphere3D<T>& indicator, int fieldBeginsAt, int sizeOfField,
+                                   IndicatorF3D<T>& indicator, int fieldBeginsAt, int sizeOfField,
                                    AnalyticalF3D<T,T>& field);
   virtual void setExternalParticleField(BlockGeometryStructure3D<T>& blockGeometry, AnalyticalF3D<T,T>& velocity, ParticleIndicatorF3D<T,T>& sIndicator);
 
@@ -85,13 +90,12 @@ public:
   virtual void defineDynamics(int iX, int iY, int iZ, Dynamics<T,Lattice>* dynamics ) =0;
   virtual void defineDynamics(BlockGeometryStructure3D<T>& blockGeometry,
                               int material, Dynamics<T,Lattice>* dynamics)=0;
-  virtual void specifyStatisticsStatus(int x0_, int x1_, int y0_, int y1_,
-                                       int z0_, int z1_, bool status) =0;
+  virtual Dynamics<T,Lattice>* getDynamics(int iX, int iY, int iZ) = 0;
   virtual void collide(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_) =0;
   virtual void collide() =0;
-  /*virtual void staticCollide(int x0_, int x1_, int y0_, int y1_, int z0_,
-                             int z1_, TensorFieldBase3D<T,3> const& u) =0;
-  virtual void staticCollide( TensorFieldBase3D<T,3> const& u) =0;*/
+  virtual void staticCollide(int x0_, int x1_, int y0_, int y1_, int z0_,
+                             int z1_, BlockData3D<T,T> const& u) =0;
+  virtual void staticCollide( BlockData3D<T,T> const& u) =0;
   virtual void stream(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_) =0;
   virtual void stream(bool periodic=false) =0;
   virtual void collideAndStream(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_) =0;
@@ -99,6 +103,7 @@ public:
   virtual T computeAverageDensity(int x0_, int x1_, int y0_, int y1_, int z0_,
                                   int z1_) const =0;
   virtual T computeAverageDensity() const =0;
+  virtual void computeStress(int iX, int iY, int iZ, T pi[util::TensorVal<Lattice<T> >::n]) = 0;
   virtual void stripeOffDensityOffset(int x0_, int x1_, int y0_, int y1_, int z0_,
                                       int z1_, T offset) =0;
   virtual void stripeOffDensityOffset(T offset) =0;

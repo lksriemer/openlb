@@ -31,21 +31,19 @@
 #include <vector>
 #include "blockLattice3D.h"
 #include "blockLatticeView3D.h"
+#include "superData3D.h"
 #include "communication/communicator3D.h"
 #include "postProcessing.h"
 #include "serializer.h"
 #include "communication/superStructure3D.h"
 
-
 /// All OpenLB code is contained in this namespace.
 namespace olb {
-
-
-
 
 template<typename T, template<typename U> class Lattice> class SuperLatticeF3D;
 template<typename T, typename S> class AnalyticalF3D;
 template<typename T> class SuperGeometry3D;
+template<typename T> class SuperIndicatorF3D;
 template<typename T> class LoadBalancer;
 template<typename T> class CuboidGeometry3D;
 template <typename T> class IndicatorSphere3D;
@@ -98,11 +96,9 @@ private:
 
 public:
   /// Construction of a super lattice
-  SuperLattice3D(CuboidGeometry3D<T>& cGeometry,
-                 LoadBalancer<T>& lb, int overlapBC = 0);
-
   SuperLattice3D(SuperGeometry3D<T>& superGeometry);
-  ~SuperLattice3D();
+  SuperLattice3D(const SuperLattice3D&) = delete;
+  ~SuperLattice3D() override;
   /// Read and write access to a block lattice
   BlockLattice3D<T, Lattice>& getExtendedBlockLattice(int locIC)
   {
@@ -155,21 +151,21 @@ public:
   bool get(T iX, T iY, T iZ, Cell<T, Lattice>& cell) const;
   /// Read only access to lattice cells over the cuboid number
   /// and local coordinates   WARNING!!! NO ERROR HANDLING IMPLEMENTED!!!
-  Cell<T,Lattice> get(int iC, T locX, T locY, T locZ) const;
+  Cell<T,Lattice> get(int iC, int locX, int locY, int locZ) const;
   Cell<T,Lattice> get(std::vector<int> latticeR) const;
 
   /// Write access to the memory of the data of the super structure
-  virtual bool* operator() (int iCloc, int iX, int iY, int iZ, int iData)
+  bool* operator() (int iCloc, int iX, int iY, int iZ, int iData) override
   {
     return (bool*)&getExtendedBlockLattice(iCloc).get(iX+this->_overlap, iY+this->_overlap, iZ+this->_overlap)[iData];
   };
   /// Read only access to the dim of the data of the super structure
-  virtual int getDataSize() const
+  int getDataSize() const override
   {
     return Lattice<T>::q;
   };
   /// Read only access to the data type dim of the data of the super structure
-  virtual int getDataTypeSize() const
+  int getDataTypeSize() const override
   {
     return sizeof(T);
   };
@@ -179,6 +175,12 @@ public:
   /// Defines the dynamics on a domain with a particular material number
   void defineDynamics(SuperGeometry3D<T>& sGeometry, int material,
                       Dynamics<T, Lattice>* dynamics);
+
+  /// Defines the dynamics on a domain described by an indicator reference
+  void defineDynamics(SuperIndicatorF3D<T>& indicator, Dynamics<T, Lattice>* dynamics);
+  /// Defines the dynamics on a domain described by an indicator pointer
+  void defineDynamics(std::unique_ptr<SuperIndicatorF3D<T>> const& indicator, Dynamics<T, Lattice>* dynamics);
+
   /// Defines rho on a domain with a particular material number
   void defineRho(SuperGeometry3D<T>& sGeometry, int material, AnalyticalF3D<T,T>& rho);
   /// Defines u on a domain with a particular material number
@@ -187,15 +189,23 @@ public:
   void defineRhoU(SuperGeometry3D<T>& sGeometry, int material, AnalyticalF3D<T,T>& rho, AnalyticalF3D<T,T>& u);
   // Defines a Population on a domain with a particular material number
   void definePopulations(SuperGeometry3D<T>& sGeometry, int material, AnalyticalF3D<T,T>& Pop);
+
   /// Defines an external field on a domain with a particular material number
   void defineExternalField(SuperGeometry3D<T>& sGeometry, int material,
                            int fieldBeginsAt, int sizeOfField, AnalyticalF3D<T,T>& field);
-  /// Defines an external field on a IndicatorCircle domain
-  void defineExternalField(SuperGeometry3D<T>& sGeometry, IndicatorSphere3D<T>& indicator,
+  /// Defines an external field on a domain described by an indicator reference
+  void defineExternalField(SuperIndicatorF3D<T>& indicator,
+                           int fieldBeginsAt, int sizeOfField, AnalyticalF3D<T,T>& field);
+  /// Defines an external field on a domain described by an indicator pointer
+  void defineExternalField(std::unique_ptr<SuperIndicatorF3D<T>> const& indicator,
+                           int fieldBeginsAt, int sizeOfField, AnalyticalF3D<T,T>& field);
+  /// Defines an external field on a Indicator domain
+  void defineExternalField(SuperGeometry3D<T>& sGeometry, IndicatorF3D<T>& indicator,
                            int fieldBeginsAt, int sizeOfField, AnalyticalF3D<T,T>& field);
   /// Defines an external field on a domain with a particular material number
   void defineExternalField(SuperGeometry3D<T>& sGeometry, int material,
-                           int fieldBeginsAt, int sizeOfField, SuperLatticeF3D<T,Lattice>& field);
+                           int fieldBeginsAt, int sizeOfField, SuperF3D<T,T>& field);
+
   void setExternalParticleField(SuperGeometry3D<T>& sGeometry, AnalyticalF3D<T,T>& velocity,
                                 ParticleIndicatorF3D<T,T>& sIndicator);
   /// Initializes by equilibrium on a domain with a particular material number
@@ -206,13 +216,9 @@ public:
   void collide(T x0, T x1, T y0, T y1, T z0, T z1);
   /// Apply collision step to the whole domain
   void collide();
-  /// TO BE DONE: Apply collision step to a rectangular domain,
+  /// Apply collision step to the whole domain,
   /// with fixed velocity
-  // void staticCollide(T x0, T x1, T y0, T y1, T z0, T z1,
-  //                  TensorField3D<T,3> const& u);
-  /// TO BE DONE: Apply collision step to the whole domain,
-  /// with fixed velocity
-  // void staticCollide(TensorField3D<T,3> const& u);
+  void staticCollide(SuperData3D<T, T> const& u);
   /// Apply streaming step to a rectangular domain
   void stream(T x0, T x1, T y0, T y1, T z0, T z1);
   /// Apply streaming step to the whole domain
@@ -249,11 +255,11 @@ public:
   void executeCoupling();
 
   /// Number of data blocks for the serializable interface
-  virtual std::size_t getNblock() const;
+  std::size_t getNblock() const override;
   /// Binary size for the serializer
-  virtual std::size_t getSerializableSize() const;
+  std::size_t getSerializableSize() const override;
   /// Return a pointer to the memory of the current block and its size for the serializable interface
-  virtual bool* getBlock(std::size_t iBlock, std::size_t& sizeBlock, bool loadingMode);
+  bool* getBlock(std::size_t iBlock, std::size_t& sizeBlock, bool loadingMode) override;
 
 private:
   /// Resets and reduce the statistics

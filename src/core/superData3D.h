@@ -60,7 +60,7 @@ protected:
   std::vector< BlockData3D<T,BaseType> > _extendedBlockData;
 public:
   /// dtor
-  virtual ~SuperData3D();
+  ~SuperData3D() override;
   /// Simple constructor with size
   SuperData3D(int size=1);
   /// This constructor should be commonly used
@@ -97,18 +97,18 @@ public:
   virtual BaseType const& get(int iC, int iX, int iY, int iZ, int iData=0) const;
 
   /// Write access to the memory of the data of the super structure where (iX, iY, iZ) is the point providing the data iData in the block iCloc
-  virtual bool* operator() (int iCloc, int iX, int iY, int iZ, int iData);
+  bool* operator() (int iCloc, int iX, int iY, int iZ, int iData) override;
   /// Read only access to the dim of the data of the super structure
-  virtual int getDataSize() const;
+  int getDataSize() const override;
   /// Read only access to the data type dim of the data of the super structure
-  virtual int getDataTypeSize() const;
+  int getDataTypeSize() const override;
 
   /// Number of data blocks for the serializable interface
-  virtual std::size_t getNblock() const;
+  std::size_t getNblock() const override;
   /// Binary size for the serializer
-  virtual std::size_t getSerializableSize() const;
+  std::size_t getSerializableSize() const override;
   /// Returns a pointer to the memory of the current block and its size for the serializable interface
-  virtual bool* getBlock(std::size_t iBlock, std::size_t& sizeBlock, bool loadingMode);
+  bool* getBlock(std::size_t iBlock, std::size_t& sizeBlock, bool loadingMode) override;
 };
 
 

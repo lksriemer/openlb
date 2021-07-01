@@ -49,13 +49,6 @@ InamuroNewtonRaphsonDynamics<T,Lattice,Dynamics,direction,orientation>::InamuroN
 }
 
 template<typename T, template<typename U> class Lattice, typename Dynamics, int direction, int orientation>
-InamuroNewtonRaphsonDynamics<T,Lattice,Dynamics,direction,orientation>*
-InamuroNewtonRaphsonDynamics<T,Lattice, Dynamics, direction, orientation>::clone() const
-{
-  return new InamuroNewtonRaphsonDynamics<T,Lattice,Dynamics,direction,orientation>(*this);
-}
-
-template<typename T, template<typename U> class Lattice, typename Dynamics, int direction, int orientation>
 T InamuroNewtonRaphsonDynamics<T,Lattice, Dynamics, direction, orientation>::
 computeEquilibrium(int iPop, T rho, const T u[Lattice<T>::d], T uSqr) const
 {
@@ -256,19 +249,6 @@ void InamuroNewtonRaphsonDynamics<T,Lattice,Dynamics,direction,orientation>::set
 {
   _boundaryDynamics.setOmega(omega);
 }
-
-template<typename T, template<typename U> class Lattice, typename Dynamics, int direction, int orientation>
-T InamuroNewtonRaphsonDynamics<T,Lattice,Dynamics,direction,orientation>::getParameter(int whichParameter) const
-{
-  return _boundaryDynamics.getParameter(whichParameter);
-}
-
-template<typename T, template<typename U> class Lattice, typename Dynamics, int direction, int orientation>
-void InamuroNewtonRaphsonDynamics<T,Lattice,Dynamics,direction,orientation>::setParameter(int whichParameter, T value)
-{
-  _boundaryDynamics.setParameter(whichParameter, value);
-}
-
 
 template<typename T, template<typename U> class Lattice, typename Dynamics, int direction, int orientation>
 void InamuroNewtonRaphsonDynamics<T,Lattice,Dynamics,direction,orientation>::

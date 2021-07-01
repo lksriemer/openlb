@@ -29,13 +29,14 @@
 #define BLOCK_LATTICE_3D_HH
 
 #include <algorithm>
+
+#include "util.h"
 #include "blockLattice3D.h"
+#include "functors/lattice/indicator/blockIndicatorF3D.h"
 #include "dynamics/dynamics.h"
 #include "dynamics/lbHelpers.h"
-#include "util.h"
 #include "communication/loadBalancer.h"
 #include "communication/blockLoadBalancer.h"
-
 
 namespace olb {
 
@@ -46,8 +47,9 @@ namespace olb {
  *  \param nz_ lattice depth (third index)
  */
 template<typename T, template<typename U> class Lattice>
-BlockLattice3D<T,Lattice>::BlockLattice3D(int nx, int ny, int nz)
-  : BlockLatticeStructure3D<T,Lattice>(nx,ny,nz)
+BlockLattice3D<T,Lattice>::BlockLattice3D(int nx, int ny, int nz, BlockGeometry3D<T>& geometry)
+  : BlockLatticeStructure3D<T,Lattice>(nx,ny,nz),
+  geometry_(geometry)
 {
   allocateMemory();
   resetPostProcessors();
@@ -86,70 +88,6 @@ BlockLattice3D<T,Lattice>::~BlockLattice3D()
 #else
   delete statistics;
 #endif
-}
-
-/** The whole data of the lattice is duplicated. This includes
- * both particle distribution function and external fields.
- * \warning The dynamics objects and postProcessors are not copied
- * \param rhs the lattice to be duplicated
- */
-template<typename T, template<typename U> class Lattice>
-BlockLattice3D<T,Lattice>::BlockLattice3D(BlockLattice3D<T,Lattice> const& rhs)
-  :  BlockLatticeStructure3D<T,Lattice>(rhs._nx,rhs._ny,rhs._nz)
-{
-  allocateMemory();
-  resetPostProcessors();
-  for (int iX=0; iX<this->_nx; ++iX) {
-    for (int iY=0; iY<this->_ny; ++iY) {
-      for (int iZ=0; iZ<this->_nz; ++iZ) {
-        grid[iX][iY][iZ] = rhs.grid[iX][iY][iZ];
-      }
-    }
-  }
-#ifdef PARALLEL_MODE_OMP
-  statistics = new LatticeStatistics<T>* [3*omp.get_size()];
-  #pragma omp parallel
-  {
-    statistics[omp.get_rank() + omp.get_size()]
-      = new LatticeStatistics<T>;
-    statistics[omp.get_rank()] = new LatticeStatistics<T> (**rhs.statistics);
-    statistics[omp.get_rank() + 2*omp.get_size()]
-      = new LatticeStatistics<T>;
-  }
-#else
-  statistics = new LatticeStatistics<T> (*rhs.statistics);
-  statistics->initialize();
-#endif
-}
-
-/** The current lattice is deallocated, then the lattice from the rhs
- * is duplicated. This includes both particle distribution function
- * and external fields.
- * \warning The dynamics objects and postProcessors are not copied
- * \param rhs the lattice to be duplicated
- */
-template<typename T, template<typename U> class Lattice>
-BlockLattice3D<T,Lattice>& BlockLattice3D<T,Lattice>::operator= (
-  BlockLattice3D<T,Lattice> const& rhs )
-{
-  BlockLattice3D<T,Lattice> tmp(rhs);
-  swap(tmp);
-  return *this;
-}
-
-/** The swap is efficient, in the sense that only pointers to the
- * lattice are copied, and not the lattice itself.
- */
-template<typename T, template<typename U> class Lattice>
-void BlockLattice3D<T,Lattice>::swap(BlockLattice3D& rhs)
-{
-  std::swap(this->_nx, rhs._nx);
-  std::swap(this->_ny, rhs._ny);
-  std::swap(this->_nz, rhs._nz);
-  std::swap(rawData, rhs.rawData);
-  std::swap(grid, rhs.grid);
-  postProcessors.swap(rhs.postProcessors);
-  std::swap(statistics, rhs.statistics);
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -212,23 +150,26 @@ void BlockLattice3D<T,Lattice>::defineDynamics (
 }
 
 template<typename T, template<typename U> class Lattice>
-void BlockLattice3D<T,Lattice>::specifyStatisticsStatus (
-  int x0, int x1, int y0, int y1, int z0, int z1, bool status)
+void BlockLattice3D<T,Lattice>::defineDynamics (
+  BlockIndicatorF3D<T>& indicator, int overlap, Dynamics<T,Lattice>* dynamics)
 {
-  OLB_PRECONDITION(x0>=0 && x1<this->_nx);
-  OLB_PRECONDITION(x1>=x0);
-  OLB_PRECONDITION(y0>=0 && y1<this->_ny);
-  OLB_PRECONDITION(y1>=y0);
-  OLB_PRECONDITION(z0>=0 && z1<this->_nz);
-  OLB_PRECONDITION(z1>=z0);
-
-  for (int iX=x0; iX<=x1; ++iX) {
-    for (int iY=y0; iY<=y1; ++iY) {
-      for (int iZ=z0; iZ<=z1; ++iZ) {
-        grid[iX][iY][iZ].specifyStatisticsStatus(status);
+  for (int iX=0; iX<this->_nx; ++iX) {
+    for (int iY=0; iY<this->_ny; ++iY) {
+      for (int iZ=0; iZ<this->_nz; ++iZ) {
+        const int blockLocation[3] = { iX-overlap, iY-overlap, iZ-overlap };
+        if (indicator(blockLocation)) {
+          grid[iX][iY][iZ].defineDynamics(dynamics);
+        }
       }
     }
   }
+}
+
+template<typename T, template<typename U> class Lattice>
+Dynamics<T,Lattice>* BlockLattice3D<T,Lattice>::getDynamics (
+        int iX, int iY, int iZ)
+{
+    return grid[iX][iY][iZ].getDynamics();
 }
 
 /**
@@ -271,11 +212,11 @@ void BlockLattice3D<T,Lattice>::collide()
  * A useful method for initializing the flow field to a given velocity
  * profile.
  */
-/*
+
 template<typename T, template<typename U> class Lattice>
 void BlockLattice3D<T,Lattice>::staticCollide (
   int x0, int x1, int y0, int y1, int z0, int z1,
-  TensorFieldBase3D<T,3> const& u )
+  BlockData3D<T,T> const& u )
 {
   OLB_PRECONDITION(x0>=0 && x1<this->_nx);
   OLB_PRECONDITION(x1>=x0);
@@ -291,21 +232,22 @@ void BlockLattice3D<T,Lattice>::staticCollide (
   for (iX=x0; iX<=x1; ++iX) {
     for (int iY=y0; iY<=y1; ++iY) {
       for (int iZ=z0; iZ<=z1; ++iZ) {
-        grid[iX][iY][iZ].staticCollide(u.get(iX,iY,iZ), getStatistics());
+        grid[iX][iY][iZ].staticCollide(&(u.get(iX,iY,iZ)), getStatistics());
         grid[iX][iY][iZ].revert();
       }
     }
   }
 }
-*/
+
 
 /** \sa collide(int,int,int,int) */
-/*
+
 template<typename T, template<typename U> class Lattice>
-void BlockLattice3D<T,Lattice>::staticCollide(TensorFieldBase3D<T,3> const& u) {
+void BlockLattice3D<T,Lattice>::staticCollide(BlockData3D<T,T> const& u)
+{
   staticCollide(0, this->_nx-1, 0, this->_ny-1, 0, this->_nz-1, u);
 }
-*/
+
 
 /** The distribution function never leave the rectangular domain. On the
  * domain boundaries, the (outgoing) distribution functions that should
@@ -420,6 +362,13 @@ T BlockLattice3D<T,Lattice>::computeAverageDensity() const
 }
 
 template<typename T, template<typename U> class Lattice>
+void BlockLattice3D<T,Lattice>::computeStress(int iX, int iY, int iZ,
+T pi[util::TensorVal<Lattice<T> >::n])
+{
+    grid[iX][iY][iZ].computeStress(pi);
+}
+
+template<typename T, template<typename U> class Lattice>
 void BlockLattice3D<T,Lattice>::stripeOffDensityOffset (
   int x0, int x1, int y0, int y1, int z0, int z1, T offset )
 {
@@ -464,7 +413,8 @@ void BlockLattice3D<T,Lattice>::forAll (
   for (int iX=x0; iX<=x1; ++iX) {
     for (int iY=y0; iY<=y1; ++iY) {
       for (int iZ=z0; iZ<=z1; ++iZ) {
-        application.apply( get(iX,iY,iZ) );
+        int pos[] = {iX, iY, iZ};
+        application.apply( get(iX,iY,iZ), pos );
       }
     }
   }
@@ -765,27 +715,6 @@ void BlockLattice3D<T,Lattice>::periodicSurface (
 }
 
 template<typename T, template<typename U> class Lattice>
-SpatiallyExtendedObject3D* BlockLattice3D<T,Lattice>::getComponent(int iBlock)
-{
-  OLB_PRECONDITION( iBlock==0 );
-  return this;
-}
-
-template<typename T, template<typename U> class Lattice>
-SpatiallyExtendedObject3D const* BlockLattice3D<T,Lattice>::getComponent(int iBlock) const
-{
-  OLB_PRECONDITION( iBlock==0 );
-  return this;
-}
-
-template<typename T, template<typename U> class Lattice>
-multiPhysics::MultiPhysicsId BlockLattice3D<T,Lattice>::getMultiPhysicsId() const
-{
-  return multiPhysics::getMultiPhysicsBlockId<T,Lattice>();
-}
-
-
-template<typename T, template<typename U> class Lattice>
 std::size_t BlockLattice3D<T,Lattice>::getNblock() const
 {
   return 3 + rawData[0].getNblock() * this->_nx * this->_ny * this->_nz;
@@ -812,6 +741,11 @@ bool* BlockLattice3D<T,Lattice>::getBlock(std::size_t iBlock, std::size_t& sizeB
                                     (size_t) this->_nx * this->_ny * this->_nz, loadingMode);
 
   return dataPtr;
+}
+
+template<typename T, template<typename U> class Lattice>
+int BlockLattice3D<T,Lattice>::getMaterial(int iX, int iY, int iZ) {
+  return geometry_.getMaterial(iX, iY, iZ);
 }
 
 //// OpenMP implementation of the method bulkCollideAndStream,

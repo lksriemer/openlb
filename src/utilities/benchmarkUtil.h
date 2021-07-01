@@ -2,8 +2,8 @@
 #define BENCHMARK_UTIL_H
 
 #include <deque>
-#include "../io/ostreamManager.h"
-#include "../functors/analyticalF.h"
+#include "io/ostreamManager.h"
+#include "functors/analytical/analyticalF.h"
 
 namespace olb {
 
@@ -20,14 +20,18 @@ namespace util {
 template<typename T>
 class ValueTracer {
 public:
-  /// The only constructor.
+  /// Ctor.
   /** \param u The characteristic velocity of the system, for
    *          computation of the characteristic time scale.
    * \param L The characteristic length of the system, for
    *          computation of the characteristic time scale.
-   * \param _epsilon Precision of the convergence.
+   * \param epsilon Precision of the convergence.
    */
   ValueTracer(T u, T L, T epsilon);
+  /// Ctor.
+  /** \param deltaT   corresponds to iteration steps (averaging)
+  \*  \param epsilon  allowed derivation of quantity
+  */
   ValueTracer(int deltaT, T epsilon);
   /// Change values of u and L to update characteristic scales of the system.
   void resetScale(T u, T L);
@@ -40,16 +44,18 @@ public:
   /// Test for convergence, with respect to stdDev.
   bool hasConverged() const;
   /// Test for convergence, with respect to difference between min and max value;
+  bool convergenceCheck() const;
+  /// Test for convergence, with respect to difference between min and max value;
   bool hasConvergedMinMax() const;
   T computeAverage() const;
   T computeStdDev(T average) const;
-  void setEpsilon(T epsilon_);
+  void setEpsilon(T epsilon);
 private:
-  int    deltaT;
-  T      epsilon;
-  int    t;
-  bool   converged;
-  std::deque<T> values;
+  int    _deltaT;
+  T      _epsilon;
+  int    _t;
+  bool   _converged;
+  std::deque<T> _values;
   mutable OstreamManager clout;
 };
 

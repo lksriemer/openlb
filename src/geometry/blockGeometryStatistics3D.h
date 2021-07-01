@@ -88,7 +88,7 @@ public:
   std::map<int, int> getMaterial2n();
 
   /// Updates the statistics if it is really needed
-  void update(bool verbose=true);
+  void update(bool verbose=false);
 
   /// Returns the number of different materials
   int getNmaterials();
@@ -112,7 +112,7 @@ public:
   std::vector<T> getPhysRadius(int material);
   /// Returns the center position
   std::vector<T> getCenterPhysR(int material);
-  /// Returns the boundary type which is characterized by a discrte normal (c.f. Zimny)
+  /// Returns the boundary type which is characterized by a discrete normal (c.f. Zimny)
   std::vector<int> getType(int iX, int iY, int iZ);
 
   /// Returns normal that points into the fluid for paraxial surfaces

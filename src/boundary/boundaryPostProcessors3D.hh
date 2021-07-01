@@ -29,6 +29,7 @@
 #include "core/blockLattice3D.h"
 #include "dynamics/firstOrderLbHelpers.h"
 #include "core/util.h"
+#include "utilities/vectorHelpers.h"
 
 namespace olb {
 
@@ -64,8 +65,8 @@ processSubDomain(BlockLattice3D<T,Lattice>& blockLattice,
       for (int iY=newY0; iY<=newY1; ++iY) {
         for (int iZ=newZ0; iZ<=newZ1; ++iZ) {
           Cell<T,Lattice>& cell = blockLattice.get(iX,iY,iZ);
-          Dynamics<T,Lattice>* dynamics = cell.getDynamics();
-          T rho, u[Lattice<T>:: d];
+          Dynamics<T,Lattice>* dynamics = blockLattice.getDynamics(iX, iY, iZ);
+          T rho, u[Lattice<T>::d];
           cell.computeRhoU(rho,u);
 
           interpolateGradients<0> ( blockLattice, dx_u, iX, iY, iZ );
@@ -80,7 +81,7 @@ processSubDomain(BlockLattice3D<T,Lattice>& blockLattice,
           T dx_uz = dx_u[2];
           T dy_uz = dy_u[2];
           T dz_uz = dz_u[2];
-          T omega = cell.getDynamics()->getOmega();
+          T omega = dynamics->getOmega();
           T sToPi = - rho / Lattice<T>::invCs2 / omega;
           T pi[util::TensorVal<Lattice<T> >::n];
           pi[xx] = (T)2 * dx_ux * sToPi;
@@ -163,7 +164,8 @@ StraightConvectionBoundaryProcessor3D(int x0_, int x1_, int y0_, int y1_, int z0
       for (int iZ=0; iZ<=z1_-z0_; ++iZ) {
         saveCell[iX][iY][iZ] = new T [(size_t)(Lattice<T>::q)];
         for (int iPop=0; iPop<Lattice<T>::q; ++iPop) {
-          saveCell[iX][iY][iZ][iPop] = T();
+          // default set to -1 in order to avoid wrong results at first call
+          saveCell[iX][iY][iZ][iPop] = T(-1);
         }
       }
     }
@@ -206,7 +208,10 @@ processSubDomain(BlockLattice3D<T,Lattice>& blockLattice, int x0_, int x1_, int 
           Cell<T,Lattice>& cell = blockLattice.get(iX,iY,iZ);
           for (int iPop = 0; iPop < Lattice<T>::q ; ++iPop) {
             if (Lattice<T>::c[iPop][direction]==-orientation) {
-              cell[iPop] = saveCell[iX-newX0][iY-newY0][iZ-newZ0][iPop];
+              // using default -1 avoids wrong first call
+              if (!util::nearZero(1 + saveCell[iX-newX0][iY-newY0][iZ-newZ0][iPop]) ) {
+                cell[iPop] = saveCell[iX-newX0][iY-newY0][iZ-newZ0][iPop];
+              }
             }
           }
 
@@ -231,7 +236,7 @@ processSubDomain(BlockLattice3D<T,Lattice>& blockLattice, int x0_, int x1_, int 
 
           T uDelta[3];
           T uAverage = rho0*u0[direction];
-          if (uAv!=NULL) {
+          if (uAv!=nullptr) {
             uAverage = *uAv * rho0;
           }
           uDelta[0]=-uAverage*0.5*(3*rho0*u0[0]-4*rho1*u1[0]+rho2*u2[0]);
@@ -316,7 +321,7 @@ processSubDomain(BlockLattice3D<T,Lattice>& blockLattice,
       for (int iY=newY0; iY<=newY1; ++iY) {
         for (int iZ=newZ0; iZ<=newZ1; ++iZ) {
           Cell<T,Lattice>& cell = blockLattice.get(iX,iY,iZ);
-          Dynamics<T,Lattice>* dynamics = cell.getDynamics();
+          Dynamics<T,Lattice>* dynamics = blockLattice.getDynamics(iX, iY, iZ);
 
           T rho10 = getNeighborRho(iX,iY,iZ,1,0, blockLattice);
           T rho01 = getNeighborRho(iX,iY,iZ,0,1, blockLattice);
@@ -427,7 +432,7 @@ process(BlockLattice3D<T,Lattice>& blockLattice)
 {
   using namespace olb::util::tensorIndices3D;
   Cell<T,Lattice>& cell = blockLattice.get(x,y,z);
-  Dynamics<T,Lattice>* dynamics = cell.getDynamics();
+  Dynamics<T,Lattice>* dynamics = blockLattice.getDynamics(x, y, z);
 
   T rho100 = blockLattice.get(x - 1*xNormal, y - 0*yNormal, z - 0*zNormal).computeRho();
   T rho010 = blockLattice.get(x - 0*xNormal, y - 1*yNormal, z - 0*zNormal).computeRho();
@@ -527,11 +532,18 @@ SlipBoundaryProcessor3D(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_, in
       int mirrorDirection0;
       int mirrorDirection1;
       int mirrorDirection2;
-      T mult = 2. / (T)(discreteNormalX*discreteNormalX + discreteNormalY*discreteNormalY + discreteNormalZ*discreteNormalZ);
+      int mult = 2 / (discreteNormalX*discreteNormalX + discreteNormalY*discreteNormalY + discreteNormalZ*discreteNormalZ);
 
       mirrorDirection0 = (Lattice<T>::c[iPop][0] - mult*(Lattice<T>::c[iPop][0]*discreteNormalX + Lattice<T>::c[iPop][1]*discreteNormalY + Lattice<T>::c[iPop][2]*discreteNormalZ)*discreteNormalX);
       mirrorDirection1 = (Lattice<T>::c[iPop][1] - mult*(Lattice<T>::c[iPop][0]*discreteNormalX + Lattice<T>::c[iPop][1]*discreteNormalY + Lattice<T>::c[iPop][2]*discreteNormalZ)*discreteNormalY);
       mirrorDirection2 = (Lattice<T>::c[iPop][2] - mult*(Lattice<T>::c[iPop][0]*discreteNormalX + Lattice<T>::c[iPop][1]*discreteNormalY + Lattice<T>::c[iPop][2]*discreteNormalZ)*discreteNormalZ);
+
+      // bounce back for the case discreteNormalX = discreteNormalY = discreteNormalZ = 1, that is mult=0
+      if (mult == 0) {
+        mirrorDirection0 = -Lattice<T>::c[iPop][0];
+        mirrorDirection1 = -Lattice<T>::c[iPop][1];
+        mirrorDirection2 = -Lattice<T>::c[iPop][2];
+      }
 
       // computes mirror jPop
       for (reflectionPop[iPop] = 1; reflectionPop[iPop] < Lattice<T>::q ; reflectionPop[iPop]++) {
