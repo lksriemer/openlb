@@ -27,7 +27,6 @@
 #define POST_PROCESSING_H
 
 #include <vector>
-#include "ompManager.h"
 #include "spatiallyExtendedObject2D.h"
 #include "spatiallyExtendedObject3D.h"
 
@@ -221,21 +220,12 @@ public:
     void reset();
     void reset(T average_rho_, T average_energy_, T maxU_, int numCells_);
     void gatherStats(T rho, T uSqr) {
-        #ifdef PARALLEL_MODE_OMP
-            OMPsum_rho[omp.get_rank()] += rho;
-            OMPsum_uSqr[omp.get_rank()] += uSqr;
-            if (uSqr > OMPmax_uSqr[omp.get_rank()]) {
-                OMPmax_uSqr[omp.get_rank()] = uSqr;
-            }
-            ++OMPnumCells[omp.get_rank()];
-        #else
-            sum_rho += rho;
-            sum_uSqr += uSqr;
-            if (uSqr > max_uSqr) {
-                max_uSqr = uSqr;
-            }
-            ++sum_nCells;
-        #endif
+        sum_rho += rho;
+        sum_uSqr += uSqr;
+        if (uSqr > max_uSqr) {
+            max_uSqr = uSqr;
+        }
+        ++sum_nCells;
     }
     T getAverageRho()        const { return average_rho;}
     T getAverageEnergy()     const { return average_energy;}
@@ -248,11 +238,6 @@ public:
 private:
     void initialize();
 private:
-    #ifdef PARALLEL_MODE_OMP
-        T *OMPsum_rho, *OMPsum_uSqr, *OMPmax_uSqr;
-        int *OMPnumCells;
-        int OMPnumThreats;
-    #endif
     // variables for internal computations
     T sum_rho, sum_uSqr, max_uSqr;
     int sum_nCells;

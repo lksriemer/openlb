@@ -40,7 +40,6 @@ MultiBlockLattice2D<T,Lattice>::MultiBlockLattice2D(MultiDataDistribution2D cons
     : locatedBlock(0),
       statisticsOn(true),
       periodicCommunicationOn(true),
-      dummyCell(&dummyDynamics),
       serializer(0), unSerializer(0),
       serializerPolicy(*this), unSerializerPolicy(*this),
       dataAnalysis(0)
@@ -79,7 +78,6 @@ MultiBlockLattice2D<T,Lattice>::MultiBlockLattice2D(MultiBlockLattice2D<T,Lattic
     : locatedBlock(rhs.locatedBlock),
       statisticsOn(rhs.statisticsOn),
       periodicCommunicationOn(rhs.periodicCommunicationOn),
-      dummyCell(&dummyDynamics),
       serializer(0), unSerializer(0),
       serializerPolicy(*this), unSerializerPolicy(*this),
       dataAnalysis(0)
@@ -133,49 +131,35 @@ void MultiBlockLattice2D<T,Lattice>::swap(MultiBlockLattice2D<T,Lattice>& rhs) {
 template<typename T, template<typename U> class Lattice>
 Cell<T,Lattice>& MultiBlockLattice2D<T,Lattice>::get(int iX, int iY) {
     std::vector<int> foundId;
-    locatedBlock = multiBlockHandler -> locateLocally(iX, iY, foundId, locatedBlock);
-    if (foundId.empty()) { 
-        return dummyCell;
-    }
+    bool hasBulkCell;
+    locatedBlock = multiBlockHandler -> locateLocally(iX, iY, foundId, hasBulkCell, locatedBlock);
     returnCells.clear();
     for (unsigned iBlock=0; iBlock<foundId.size(); ++iBlock) {
         int foundBlock = foundId[iBlock];
-        if (blockLattices[foundBlock]) {
-            BlockParameters2D const& param = getParameters(foundBlock);
-            returnCells.push_back (
-                         &blockLattices[foundBlock] -> get ( param.toLocalX(iX),
-                                                             param.toLocalY(iY) )
-            );
-        }
-        else {
-            returnCells.push_back(0);
-        }
+        BlockParameters2D const& param = getParameters(foundBlock);
+        returnCells.push_back (
+                     &blockLattices[foundBlock] -> get ( param.toLocalX(iX),
+                                                         param.toLocalY(iY) )
+        );
     }
-    return multiBlockHandler -> getDistributedCell(returnCells);
+    return multiBlockHandler -> getDistributedCell(returnCells, hasBulkCell);
 }
 
 template<typename T, template<typename U> class Lattice>
 Cell<T,Lattice> const& MultiBlockLattice2D<T,Lattice>::get(int iX, int iY) const {
     std::vector<int> foundId;
-    locatedBlock = multiBlockHandler -> locateLocally(iX, iY, foundId, locatedBlock);
-    if (foundId.empty()) { 
-        return dummyCell;
-    }
+    bool hasBulkCell;
+    locatedBlock = multiBlockHandler -> locateLocally(iX, iY, foundId, hasBulkCell, locatedBlock);
     constReturnCells.clear();
     for (unsigned iBlock=0; iBlock<foundId.size(); ++iBlock) {
         int foundBlock = foundId[iBlock];
-        if (blockLattices[foundBlock]) {
-            BlockParameters2D const& param = getParameters(foundBlock);
-            constReturnCells.push_back(
-                         &blockLattices[foundBlock] -> get ( param.toLocalX(iX),
-                                                             param.toLocalY(iY) )
-            );
-        }
-        else {
-            returnCells.push_back(0);
-        }
+        BlockParameters2D const& param = getParameters(foundBlock);
+        constReturnCells.push_back(
+                     &blockLattices[foundBlock] -> get ( param.toLocalX(iX),
+                                                         param.toLocalY(iY) )
+        );
     }
-    return multiBlockHandler -> getDistributedCell(returnCells);
+    return multiBlockHandler -> getDistributedCell(returnCells, hasBulkCell);
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -366,6 +350,7 @@ T MultiBlockLattice2D<T,Lattice>::computeAverageDensity(int x0_, int x1_, int y0
     if (sumWeights > 1.e-12) {
         sumDensities /= sumWeights;
     }
+    multiBlockHandler->reduceAverage(sumDensities, sumWeights);
     return sumDensities;
 }
 

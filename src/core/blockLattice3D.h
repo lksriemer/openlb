@@ -187,7 +187,11 @@ private:
     Cell<T,Lattice>      *rawData;
     Cell<T,Lattice>      ***grid;
     PostProcVector       postProcessors;
-    LatticeStatistics<T> *statistics;
+    #ifdef PARALLEL_MODE_OMP
+        LatticeStatistics<T> **statistics;
+    #else
+        LatticeStatistics<T> *statistics;
+    #endif
     mutable BlockLatticeSerializer3D<T,Lattice>* serializer;
     mutable BlockLatticeUnSerializer3D<T,Lattice>* unSerializer;
     DataAnalysis3D<T,Lattice> *dataAnalysis;

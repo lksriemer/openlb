@@ -1,6 +1,8 @@
 /*  This file is part of the OpenLB library
  *
- *  Copyright (C) 2007 The OpenLB project
+ *  Copyright (C) 2006, 2007 Jonas Latt
+ *  Address: Rue General Dufour 24,  1211 Geneva 4, Switzerland 
+ *  E-mail: jonas.latt@gmail.com
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
@@ -19,34 +21,18 @@
 */
 
 /** \file
- * Wrapper functions that simplify the use of MPI, template instatiations
+ * A collection of dynamics classes (e.g. BGK) with which a Cell object
+ * can be instantiated -- template instantiation.
  */
-
-#include "mpiManager.h"
-#include "io/parallelIO.h"
+ 
+#include "chopardDynamics.h"
+#include "chopardDynamics.hh"
+#include "core/latticeDescriptors.h"
+#include "core/latticeDescriptors.hh"
 
 namespace olb {
 
-namespace singleton {
-    MpiManager& mpi() {
-        static MpiManager instance;
-        return instance;
-}
+    template class ChopardDynamics<double, descriptors::D2Q9Descriptor>;
+    template class ChopardDynamics<double, descriptors::D3Q19Descriptor>;
 
 }
-
-void olbInit(int *argc, char ***argv, bool verbous) {
-    singleton::mpi().init(argc, argv, verbous);
-#ifdef PARALLEL_MODE_MPI
-    ParBuf *newCoutBuf = new ParBuf(std::cout.rdbuf());
-    ParBuf *newClogBuf = new ParBuf(std::clog.rdbuf());
-    ParBuf *newCinBuf  = new ParBuf(std::cin.rdbuf());
-
-    std::cout.rdbuf(newCoutBuf);
-    std::clog.rdbuf(newClogBuf);
-    std::cin. rdbuf(newCinBuf);
-#endif
-}
-
-}
-

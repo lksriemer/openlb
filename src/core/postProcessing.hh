@@ -27,7 +27,6 @@
 #include "blockLattice2D.h"
 #include "blockLattice3D.h"
 #include "util.h"
-#include "ompManager.h"
 
 namespace olb {
 
@@ -40,31 +39,10 @@ LatticeStatistics<T>::LatticeStatistics() {
 
 template<typename T>
 LatticeStatistics<T>::~LatticeStatistics() {
-    #ifdef PARALLEL_MODE_OMP
-        delete OMPsum_rho;
-        delete OMPsum_uSqr;
-        delete OMPmax_uSqr;
-        delete OMPnumCells;
-    #endif
 }
 
 template<typename T>
 void LatticeStatistics<T>::reset() {
-    #ifdef PARALLEL_MODE_OMP
-        for (int i=0; i<OMPnumThreats; i++) {
-            sum_rho += OMPsum_rho[i];
-            sum_uSqr += OMPsum_uSqr[i];
-            if (OMPmax_uSqr[i] > max_uSqr) {
-                max_uSqr = OMPmax_uSqr[i];
-            }
-            sum_nCells += OMPnumCells[i];
-            OMPsum_rho[i]  = T();
-            OMPsum_uSqr[i] = T();
-            OMPmax_uSqr[i] = T();
-            OMPnumCells[i] = 0;
-        }
-    #endif
-
     // avoid division by zero
     if (sum_nCells == 0) {
         average_rho = T();
@@ -113,20 +91,6 @@ void LatticeStatistics<T>::reset (
 
 template<typename T>
 void LatticeStatistics<T>::initialize() {
-    #ifdef PARALLEL_MODE_OMP
-        OMPnumThreats = omp.get_size();
-        OMPsum_rho    = new T [OMPnumThreats];
-        OMPsum_uSqr   = new T [OMPnumThreats];
-        OMPmax_uSqr   = new T [OMPnumThreats];
-        OMPnumCells   = new int[OMPnumThreats];
-        firstCall = true;
-        for (int i=0; i<OMPnumThreats; i++) {
-            OMPsum_rho[i]  = T();
-            OMPsum_uSqr[i] = T();
-            OMPmax_uSqr[i] = T();
-            OMPnumCells[i] = 0;
-        }
-    #endif
 
     sum_rho  = T();
     sum_uSqr = T();
@@ -222,12 +186,57 @@ template<typename T, template<typename U> class Lattice>
 StatisticsPostProcessor2D<T,Lattice>::StatisticsPostProcessor2D()
 { }
 
+#ifndef PARALLEL_MODE_OMP
 template<typename T, template<typename U> class Lattice>
 void StatisticsPostProcessor2D<T,Lattice>::process (
         BlockLattice2D<T,Lattice>& blockLattice )
 {
     blockLattice.getStatistics().reset();
 }
+#endif
+
+
+#ifdef PARALLEL_MODE_OMP
+template<typename T, template<typename U> class Lattice>
+void StatisticsPostProcessor2D<T,Lattice>::process (
+        BlockLattice2D<T,Lattice>& blockLattice )
+{
+        #pragma omp parallel
+            blockLattice.getStatistics().reset();
+
+        int numCells     = 0;
+        T average_rho    = T();
+        T average_energy = T();
+        T maxU           = T();
+
+        #pragma omp parallel
+        {
+            #pragma omp critical
+            {
+                numCells       += blockLattice.getStatistics().getNumCells();
+                average_rho    += blockLattice.getStatistics().getAverageRho()
+                                *blockLattice.getStatistics().getNumCells();
+                average_energy += blockLattice.getStatistics().getAverageEnergy()
+                                *blockLattice.getStatistics().getNumCells();
+                if (maxU<blockLattice.getStatistics().getMaxU())
+                    maxU        = blockLattice.getStatistics().getMaxU();
+            }
+        }
+        if (numCells==0) {
+            // avoid division by zero
+            average_rho = T();
+            average_energy = T();
+            maxU = T();
+            numCells = 0;
+        }
+        else {
+            average_rho    = average_rho / numCells;
+            average_energy = average_energy / numCells;
+        }
+        #pragma omp parallel
+            blockLattice.getStatistics().reset(average_rho,average_energy, maxU, numCells);
+}
+#endif
 
 template<typename T, template<typename U> class Lattice>
 void StatisticsPostProcessor2D<T,Lattice>::
@@ -358,12 +367,56 @@ template<typename T, template<typename U> class Lattice>
 StatisticsPostProcessor3D<T,Lattice>::StatisticsPostProcessor3D()
 { }
 
+#ifndef PARALLEL_MODE_OMP
 template<typename T, template<typename U> class Lattice>
 void StatisticsPostProcessor3D<T,Lattice>::process (
         BlockLattice3D<T,Lattice>& blockLattice )
 {
     blockLattice.getStatistics().reset();
 }
+#endif
+
+#ifdef PARALLEL_MODE_OMP
+template<typename T, template<typename U> class Lattice>
+void StatisticsPostProcessor3D<T,Lattice>::process (
+        BlockLattice3D<T,Lattice>& blockLattice )
+{
+        #pragma omp parallel
+            blockLattice.getStatistics().reset();
+
+        int numCells     = 0;
+        T average_rho    = T();
+        T average_energy = T();
+        T maxU           = T();
+
+        #pragma omp parallel
+        {
+            #pragma omp critical
+            {
+                numCells       += blockLattice.getStatistics().getNumCells();
+                average_rho    += blockLattice.getStatistics().getAverageRho()
+                                *blockLattice.getStatistics().getNumCells();
+                average_energy += blockLattice.getStatistics().getAverageEnergy()
+                                *blockLattice.getStatistics().getNumCells();
+                if (maxU<blockLattice.getStatistics().getMaxU())
+                    maxU        = blockLattice.getStatistics().getMaxU();
+            }
+        }
+        if (numCells==0) {
+            // avoid division by zero
+            average_rho = T();
+            average_energy = T();
+            maxU = T();
+            numCells = 0;
+        }
+        else {
+            average_rho    = average_rho / numCells;
+            average_energy = average_energy / numCells;
+        }
+        #pragma omp parallel
+            blockLattice.getStatistics().reset(average_rho,average_energy, maxU, numCells);
+}
+#endif
 
 template<typename T, template<typename U> class Lattice>
 void StatisticsPostProcessor3D<T,Lattice>::

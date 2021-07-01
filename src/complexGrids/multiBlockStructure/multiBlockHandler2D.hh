@@ -144,14 +144,16 @@ void SerialMultiBlockHandler2D<T,Lattice>::connectBoundaries (
 }
 
 template<typename T, template<typename U> class Lattice>
-Cell<T,Lattice>& SerialMultiBlockHandler2D<T,Lattice>::getDistributedCell(std::vector<Cell<T,Lattice>*>& baseCell) const
+Cell<T,Lattice>& SerialMultiBlockHandler2D<T,Lattice>::getDistributedCell (
+        std::vector<Cell<T,Lattice>*>& baseCell, bool hasBulkCell ) const
 {
     OLB_PRECONDITION( baseCell.size()>0 && baseCell[0] );
     return *baseCell[0];
 }
 
 template<typename T, template<typename U> class Lattice>
-Cell<T,Lattice> const& SerialMultiBlockHandler2D<T,Lattice>::getDistributedCell(std::vector<Cell<T,Lattice> const*>& baseCell) const
+Cell<T,Lattice> const& SerialMultiBlockHandler2D<T,Lattice>::getDistributedCell (
+        std::vector<Cell<T,Lattice> const*>& baseCell, bool hasBulkCell ) const
 {
     OLB_PRECONDITION( baseCell.size()>0 && baseCell[0] );
     return *baseCell[0];
@@ -159,8 +161,10 @@ Cell<T,Lattice> const& SerialMultiBlockHandler2D<T,Lattice>::getDistributedCell(
 
 template<typename T, template<typename U> class Lattice>
 int SerialMultiBlockHandler2D<T,Lattice>::locateLocally(int iX, int iY,
-                                                        std::vector<int>& foundId, int guess) const
+                                                        std::vector<int>& foundId,
+                                                        bool& hasBulkCell, int guess) const
 {
+    hasBulkCell = true;
     return dataDistribution.locateInEnvelopes(iX,iY, foundId, guess);
 }
 
@@ -422,27 +426,30 @@ void ParallelMultiBlockHandler2D<T,Lattice>::connectBoundaries (
 }
 
 template<typename T, template<typename U> class Lattice>
-Cell<T,Lattice>& ParallelMultiBlockHandler2D<T,Lattice>::getDistributedCell(std::vector<Cell<T,Lattice>*>& baseCell) const
+Cell<T,Lattice>& ParallelMultiBlockHandler2D<T,Lattice>::getDistributedCell (
+        std::vector<Cell<T,Lattice>*>& baseCell, bool hasBulkCell ) const
 {
     delete parallelDynamics;
-    parallelDynamics = new ParallelDynamics<T,Lattice>(baseCell);
+    parallelDynamics = new ParallelDynamics<T,Lattice>(baseCell, hasBulkCell);
     distributedCell.defineDynamics(parallelDynamics);
     return distributedCell;
 }
 
 template<typename T, template<typename U> class Lattice>
-Cell<T,Lattice> const& ParallelMultiBlockHandler2D<T,Lattice>::getDistributedCell(std::vector<Cell<T,Lattice> const*>& baseCell) const
+Cell<T,Lattice> const& ParallelMultiBlockHandler2D<T,Lattice>::getDistributedCell (
+        std::vector<Cell<T,Lattice> const*>& baseCell, bool hasBulkCell ) const
 {
     delete parallelDynamics;
-    parallelDynamics = new ConstParallelDynamics<T,Lattice>(baseCell);
+    parallelDynamics = new ConstParallelDynamics<T,Lattice>(baseCell, hasBulkCell);
     distributedCell.defineDynamics(parallelDynamics);
     return distributedCell;
 }
 
 template<typename T, template<typename U> class Lattice>
 int ParallelMultiBlockHandler2D<T,Lattice>::locateLocally(int iX, int iY, std::vector<int>& foundId,
-                                                          int guess) const
+                                                          bool& hasBulkCell, int guess) const
 {
+    hasBulkCell = false;
     if (!util::contained(iX,iY,
                 boundingBox.x0, boundingBox.x1, boundingBox.y0, boundingBox.y1) )
     {
@@ -451,7 +458,15 @@ int ParallelMultiBlockHandler2D<T,Lattice>::locateLocally(int iX, int iY, std::v
     for (int iBlock=0; iBlock < (int)myBlocks.size(); ++iBlock) {
         BlockCoordinates2D const& coord = dataDistribution.getBlockParameters(myBlocks[iBlock]).getEnvelope();
         if (util::contained(iX, iY, coord.x0, coord.x1, coord.y0, coord.y1)) {
-            foundId.push_back(myBlocks[iBlock]);
+            BlockCoordinates2D const& bulk =
+                dataDistribution.getBlockParameters(myBlocks[iBlock]).getBulk();
+            if (util::contained(iX, iY, bulk.x0, bulk.x1, bulk.y0, bulk.y1)) {
+                hasBulkCell = true;
+                foundId.insert(foundId.begin(),myBlocks[iBlock]);
+            }
+            else {
+                foundId.push_back(myBlocks[iBlock]);
+            }
         }
     }
     return -1;

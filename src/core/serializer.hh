@@ -66,7 +66,7 @@ void copySerializedData(DataSerializer<T> const& serializer, DataUnSerializer<T>
     int serializerBufferSize =0, unSerializerBufferSize =0;
     const T* serializerBuffer =0;
     T* unSerializerBuffer =0;
-    while (!serializer.isEmpty()) {
+    while (!unSerializer.isFull()) {
         if (readPos==serializerBufferSize) {
             serializerBuffer = serializer.getNextDataBuffer(serializerBufferSize);
             readPos = 0;

@@ -27,7 +27,6 @@
 
 #ifdef PARALLEL_MODE_MPI
 #include "mpi.h"
-#include "io/parallelIO.h"
 #include <vector>
 #endif
 
@@ -200,21 +199,6 @@ inline MpiManager& mpi() {
 }
 
 }  // namespace singleton
-
-inline void olbInit(int *argc, char ***argv, bool verbous=false) {
-    singleton::mpi().init(argc, argv, verbous);
-#ifdef PARALLEL_MODE_MPI
-    ParBuf *newCoutBuf = new ParBuf(std::cout.rdbuf());
-    ParBuf *newCerrBuf = new ParBuf(std::cerr.rdbuf());
-    ParBuf *newClogBuf = new ParBuf(std::clog.rdbuf());
-    ParBuf *newCinBuf  = new ParBuf(std::cin.rdbuf());
-
-    std::cout.rdbuf(newCoutBuf);
-    std::cerr.rdbuf(newCerrBuf);
-    std::clog.rdbuf(newClogBuf);
-    std::cin. rdbuf(newCinBuf);
-#endif
-}
 
 
 }  // namespace olb

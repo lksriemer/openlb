@@ -54,8 +54,14 @@ void StraightFdBoundaryProcessor2D<T,Lattice,direction,orientation>::
                 x0_, x1_, y0_, y1_,
                 newX0, newX1, newY0, newY1 ) )
     {
-        T dx_u[Lattice<T>::d], dy_u[Lattice<T>::d];
-        for (int iX=newX0; iX<=newX1; ++iX) {
+
+        int iX;
+
+        #ifdef PARALLEL_MODE_OMP
+        #pragma omp parallel for
+        #endif
+        for (iX=newX0; iX<=newX1; ++iX) {
+            T dx_u[Lattice<T>::d], dy_u[Lattice<T>::d];
             for (int iY=newY0; iY<=newY1; ++iY) {
                 Cell<T,Lattice>& cell = blockLattice.get(iX,iY);
                 Dynamics<T,Lattice>* dynamics = cell.getDynamics();

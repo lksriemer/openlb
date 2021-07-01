@@ -25,6 +25,7 @@
 #ifdef PARALLEL_MODE_MPI
 
 #include "mpiManager.h"
+#include <iostream>
 
 namespace olb {
 

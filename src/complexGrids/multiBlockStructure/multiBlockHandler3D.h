@@ -52,9 +52,12 @@ struct MultiBlockHandler3D {
     virtual void broadCastScalar(T& scalar, int fromBlock) const =0;
     virtual void broadCastVector(T vect[Lattice<T>::d], int fromBlock) const =0;
     virtual void connectBoundaries(BlockVector3D& lattices, bool periodicCommunication) const =0;
-    virtual Cell<T,Lattice>& getDistributedCell(std::vector<Cell<T,Lattice>*>& baseCell) const =0;
-    virtual Cell<T,Lattice> const& getDistributedCell(std::vector<Cell<T,Lattice> const*>& baseCell) const =0;
-    virtual int locateLocally(int iX, int iY, int iZ, std::vector<int>& foundId, int guess=0) const =0;
+    virtual Cell<T,Lattice>& getDistributedCell(std::vector<Cell<T,Lattice>*>& baseCell,
+                                                bool hasBulkCell) const =0;
+    virtual Cell<T,Lattice> const& getDistributedCell(std::vector<Cell<T,Lattice> const*>& baseCell,
+                                                      bool hasBulkCell) const =0;
+    virtual int locateLocally(int iX, int iY, int iZ, std::vector<int>& foundId,
+                              bool& hasBulkCell, int guess=0) const =0;
 };
 
 template<typename T, template<typename U> class Lattice>
@@ -76,9 +79,12 @@ public:
     virtual void broadCastScalar(T& scalar, int fromBlock) const;
     virtual void broadCastVector(T vect[Lattice<T>::d], int fromBlock) const;
     virtual void connectBoundaries(BlockVector3D& lattices, bool periodicCommunication) const;
-    virtual Cell<T,Lattice>& getDistributedCell(std::vector<Cell<T,Lattice>*>& baseCell) const;
-    virtual Cell<T,Lattice> const& getDistributedCell(std::vector<Cell<T,Lattice> const*>& baseCell) const;
-    virtual int locateLocally(int iX, int iY, int iZ, std::vector<int>& foundId, int guess=0) const;
+    virtual Cell<T,Lattice>& getDistributedCell(std::vector<Cell<T,Lattice>*>& baseCell,
+                                                bool hasBulkCell) const;
+    virtual Cell<T,Lattice> const& getDistributedCell(std::vector<Cell<T,Lattice> const*>& baseCell,
+                                                      bool hasBulkCell) const;
+    virtual int locateLocally(int iX, int iY, int iZ, std::vector<int>& foundId,
+                              bool& hasBulkCell, int guess=0) const;
 private:
     void copyOverlap(Overlap3D const& overlap, BlockVector3D& lattices) const;
 private:
@@ -126,9 +132,12 @@ public:
     virtual void broadCastScalar(T& scalar, int fromBlock) const;
     virtual void broadCastVector(T vect[Lattice<T>::d], int fromBlock) const;
     virtual void connectBoundaries(BlockVector3D& lattices, bool periodicCommunication) const;
-    virtual Cell<T,Lattice>& getDistributedCell(std::vector<Cell<T,Lattice>*>& baseCell) const;
-    virtual Cell<T,Lattice> const& getDistributedCell(std::vector<Cell<T,Lattice> const*>& baseCell) const;
-    virtual int locateLocally(int iX, int iY, int iZ, std::vector<int>& foundId, int guess=0) const;
+    virtual Cell<T,Lattice>& getDistributedCell(std::vector<Cell<T,Lattice>*>& baseCell,
+                                                bool hasBulkCell) const;
+    virtual Cell<T,Lattice> const& getDistributedCell(std::vector<Cell<T,Lattice> const*>& baseCell,
+                                                      bool hasBulkCell) const;
+    virtual int locateLocally(int iX, int iY, int iZ, std::vector<int>& foundId,
+                              bool& hasBulkCell, int guess=0) const;
 private:
     void computeLocallyRelevantBlocks();
 private:

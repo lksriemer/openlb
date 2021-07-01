@@ -34,7 +34,6 @@
 
 namespace olb {
 
-template<typename T>
 class VtkDataWriter3D {
 public:
     VtkDataWriter3D(std::string const& fileName_);
@@ -44,6 +43,7 @@ public:
     void startPiece(int x0, int x1, int y0, int y1, int z0, int z1);
     void endPiece();
     void writeFooter();
+    template <typename T>
     void writeDataField(DataSerializer<T> const& serializer, std::string const& name, T scalingFactor, int nDim);
 private:
     VtkDataWriter3D(VtkDataWriter3D const& rhs);

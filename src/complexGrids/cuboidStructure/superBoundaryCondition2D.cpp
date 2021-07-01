@@ -25,6 +25,7 @@
  */
 
 
+#include "complexGrids/mpiManager/mpiManager.h"
 #include "superBoundaryCondition2D.h"
 #include "superBoundaryCondition2D.hh"
 #include "core/latticeDescriptors.h"

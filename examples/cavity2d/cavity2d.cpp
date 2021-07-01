@@ -92,13 +92,7 @@ void writeGifs(BlockLattice2D<T,D2Q9Descriptor>& lattice,
 }
 
 int main(int argc, char* argv[]) {
-
     olbInit(&argc, &argv);
-
-    #ifdef PARALLEL_MODE_OMP
-        #pragma omp parallel
-            omp.init();
-    #endif
 
     singleton::directories().setOlbDir("../../");
     singleton::directories().setOutputDir("./tmp/");

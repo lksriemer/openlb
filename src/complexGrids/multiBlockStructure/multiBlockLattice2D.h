@@ -136,7 +136,6 @@ private:
     bool periodicCommunicationOn;
     MultiBlockReductor<T> reductor;
     NoDynamics<T,Lattice> dummyDynamics;
-    mutable Cell<T,Lattice> dummyCell;
     mutable std::vector<Cell<T,Lattice>*> returnCells;
     mutable std::vector<Cell<T,Lattice> const*> constReturnCells;
     mutable MultiSerializer2D<T>* serializer;

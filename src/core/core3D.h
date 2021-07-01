@@ -23,6 +23,7 @@
 /** \file
  * Groups all the include files for basic 3D dynamics.
  */
+#include "olbInit.h"
 #include "multiPhysics.h"
 #include "singleton.h"
 #include "units.h"

@@ -40,7 +40,6 @@ MultiBlockLattice3D<T,Lattice>::MultiBlockLattice3D(MultiDataDistribution3D cons
     : locatedBlock(0),
       statisticsOn(true),
       periodicCommunicationOn(true),
-      dummyCell(&dummyDynamics),
       serializer(0), unSerializer(0),
       serializerPolicy(*this), unSerializerPolicy(*this),
       dataAnalysis(0)
@@ -79,7 +78,6 @@ MultiBlockLattice3D<T,Lattice>::MultiBlockLattice3D(MultiBlockLattice3D<T,Lattic
     : locatedBlock(rhs.locatedBlock),
       statisticsOn(rhs.statisticsOn),
       periodicCommunicationOn(rhs.periodicCommunicationOn),
-      dummyCell(&dummyDynamics),
       serializer(0), unSerializer(0),
       serializerPolicy(*this), unSerializerPolicy(*this),
       dataAnalysis(0)
@@ -135,51 +133,37 @@ void MultiBlockLattice3D<T,Lattice>::swap (
 template<typename T, template<typename U> class Lattice>
 Cell<T,Lattice>& MultiBlockLattice3D<T,Lattice>::get(int iX, int iY, int iZ) {
     std::vector<int> foundId;
-    locatedBlock = multiBlockHandler -> locateLocally(iX, iY, iZ, foundId, locatedBlock);
-    if (foundId.empty()) {
-        return dummyCell;
-    }
+    bool hasBulkCell;
+    locatedBlock = multiBlockHandler -> locateLocally(iX, iY, iZ, foundId, hasBulkCell, locatedBlock);
     returnCells.clear();
     for (unsigned iBlock=0; iBlock<foundId.size(); ++iBlock) {
         int foundBlock = foundId[iBlock];
-        if (blockLattices[foundBlock]) {
-            BlockParameters3D const& param = getParameters(foundBlock);
-            returnCells.push_back (
-                         &blockLattices[foundBlock] -> get ( param.toLocalX(iX),
-                                                             param.toLocalY(iY),
-                                                             param.toLocalZ(iZ) )
-            );
-        }
-        else {
-            returnCells.push_back(0);
-        }
+        BlockParameters3D const& param = getParameters(foundBlock);
+        returnCells.push_back (
+                     &blockLattices[foundBlock] -> get ( param.toLocalX(iX),
+                                                         param.toLocalY(iY),
+                                                         param.toLocalZ(iZ) )
+        );
     }
-    return multiBlockHandler -> getDistributedCell(returnCells);
+    return multiBlockHandler -> getDistributedCell(returnCells, hasBulkCell);
 }
 
 template<typename T, template<typename U> class Lattice>
 Cell<T,Lattice> const& MultiBlockLattice3D<T,Lattice>::get(int iX, int iY, int iZ) const {
     std::vector<int> foundId;
-    locatedBlock = multiBlockHandler -> locateLocally(iX, iY, iZ, foundId, locatedBlock);
-    if (foundId.empty()) {
-        return dummyCell;
-    }
+    bool hasBulkCell;
+    locatedBlock = multiBlockHandler -> locateLocally(iX, iY, iZ, foundId, hasBulkCell, locatedBlock);
     constReturnCells.clear();
     for (unsigned iBlock=0; iBlock<foundId.size(); ++iBlock) {
         int foundBlock = foundId[iBlock];
-        if (blockLattices[foundBlock]) {
-            BlockParameters3D const& param = getParameters(foundBlock);
-            constReturnCells.push_back(
-                         &blockLattices[foundBlock] -> get ( param.toLocalX(iX),
-                                                             param.toLocalY(iY),
-                                                             param.toLocalZ(iZ) )
-            );
-        }
-        else {
-            returnCells.push_back(0);
-        }
+        BlockParameters3D const& param = getParameters(foundBlock);
+        constReturnCells.push_back(
+                     &blockLattices[foundBlock] -> get ( param.toLocalX(iX),
+                                                         param.toLocalY(iY),
+                                                         param.toLocalZ(iZ) )
+        );
     }
-    return multiBlockHandler -> getDistributedCell(returnCells);
+    return multiBlockHandler -> getDistributedCell(returnCells, hasBulkCell);
 }
 
 
@@ -373,6 +357,7 @@ T MultiBlockLattice3D<T,Lattice>::computeAverageDensity(int x0_, int x1_, int y0
     if (sumWeights > 1.e-12) {
         sumDensities /= sumWeights;
     }
+    multiBlockHandler->reduceAverage(sumDensities, sumWeights);
     return sumDensities;
 }
 

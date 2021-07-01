@@ -54,9 +54,13 @@ void PlaneFdBoundaryProcessor3D<T,Lattice,direction,orientation>::
                 x0_, x1_, y0_, y1_, z0_, z1_,
                 newX0, newX1, newY0, newY1, newZ0, newZ1 ) )
     {
+        int iX;
 
-        T dx_u[Lattice<T>::d], dy_u[Lattice<T>::d], dz_u[Lattice<T>::d];
-        for (int iX=newX0; iX<=newX1; ++iX) {
+        #ifdef PARALLEL_MODE_OMP
+        #pragma omp parallel for
+        #endif
+        for (iX=newX0; iX<=newX1; ++iX) {
+            T dx_u[Lattice<T>::d], dy_u[Lattice<T>::d], dz_u[Lattice<T>::d];
             for (int iY=newY0; iY<=newY1; ++iY) {
                 for (int iZ=newZ0; iZ<=newZ1; ++iZ) {
                     Cell<T,Lattice>& cell = blockLattice.get(iX,iY,iZ);
@@ -168,7 +172,12 @@ void OuterVelocityEdgeProcessor3D<T,Lattice, plane,normal1,normal2>::
                            x0_, x1_, y0_, y1_, z0_, z1_,
                            newX0, newX1, newY0, newY1, newZ0, newZ1 ) )
     {
-        for (int iX=newX0; iX<=newX1; ++iX) {
+        int iX;
+
+        #ifdef PARALLEL_MODE_OMP
+        #pragma omp parallel for
+        #endif
+        for (iX=newX0; iX<=newX1; ++iX) {
             for (int iY=newY0; iY<=newY1; ++iY) {
                 for (int iZ=newZ0; iZ<=newZ1; ++iZ) {
                     Cell<T,Lattice>& cell = blockLattice.get(iX,iY,iZ);

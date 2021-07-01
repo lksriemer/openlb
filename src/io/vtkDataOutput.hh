@@ -57,77 +57,12 @@ std::string VtkTypeNames<T>::getName() {
     return tName;
 }
 
+
 ////////// class VtkDataWriter3D ////////////////////////////////////////
 
 template<typename T>
-VtkDataWriter3D<T>::VtkDataWriter3D(std::string const& fileName_)
-    : fileName(fileName_),
-      ostr(0)
-{
-    if (singleton::mpi().isMainProcessor()) {
-        ostr = new std::ofstream(fileName.c_str());
-        if (!(*ostr)) {
-            std::cerr << "could not open file " <<  fileName << "\n";
-            return;
-        }
-    }
-}
-
-template<typename T>
-VtkDataWriter3D<T>::~VtkDataWriter3D() {
-    delete ostr;
-}
-
-template<typename T>    
-void VtkDataWriter3D<T>::writeHeader(int x0, int x1, int y0, int y1, int z0, int z1,
-                                     double originX, double originY, double originZ, double deltaX)
-{
-    if (singleton::mpi().isMainProcessor()) {
-        (*ostr) << "<?xml version=\"1.0\"?>\n";
-        (*ostr) << "<VTKFile type=\"ImageData\" version=\"0.1\" byte_order=\"LittleEndian\">\n";
-        (*ostr) << "<ImageData WholeExtent=\""
-                << x0 << " " << x1 << " "
-                << y0 << " " << y1 << " "
-                << z0 << " " << z1 << "\" "
-                << "Origin=\""
-                << originX << " " << originY << " " << originZ << "\" "
-                << "Spacing=\""
-                << deltaX << " " << deltaX << " " << deltaX << "\">\n";
-    }
-}
-
-template<typename T>
-void VtkDataWriter3D<T>::startPiece(int x0, int x1, int y0, int y1, int z0, int z1)
-{
-    if (singleton::mpi().isMainProcessor()) {
-        (*ostr) << "<Piece Extent=\""
-                << x0 << " " << x1 << " "
-                << y0 << " " << y1 << " "
-                << z0 << " " << z1 << "\">\n";
-        (*ostr) << "<PointData>\n";
-    }
-}
-
-template<typename T>
-void VtkDataWriter3D<T>::endPiece()
-{
-    if (singleton::mpi().isMainProcessor()) {
-        (*ostr) << "</PointData>\n";
-        (*ostr) << "</Piece>\n";
-    }
-}
-
-template<typename T>
-void VtkDataWriter3D<T>::writeFooter() {
-    if (singleton::mpi().isMainProcessor()) {
-        (*ostr) << "</ImageData>\n";
-        (*ostr) << "</VTKFile>\n";
-    }
-}
-
-template<typename T>
-void VtkDataWriter3D<T>::writeDataField(DataSerializer<T> const& serializer,
-                                        std::string const& name, T scalingFactor, int nDim)
+void VtkDataWriter3D::writeDataField(DataSerializer<T> const& serializer,
+                                     std::string const& name, T scalingFactor, int nDim)
 {
     if (singleton::mpi().isMainProcessor()) {
         (*ostr) << "<DataArray type=\"" << VtkTypeNames<T>::getName()
@@ -168,7 +103,7 @@ template<typename T> void writeVTKData3D (
         T deltaX, T deltaT )
 {
     std::string fullName = singleton::directories().getVtkOutDir() + fName+".vti";
-    VtkDataWriter3D<T> vtiOut(fullName);
+    VtkDataWriter3D vtiOut(fullName);
     int nx = scalarField.getNx();
     int ny = scalarField.getNy();
     int nz = scalarField.getNz();

@@ -157,7 +157,7 @@ void SerialMultiBlockHandler3D<T,Lattice>::connectBoundaries (
 
 template<typename T, template<typename U> class Lattice>
 Cell<T,Lattice>& SerialMultiBlockHandler3D<T,Lattice>::
-    getDistributedCell(std::vector<Cell<T,Lattice>*>& baseCell) const
+    getDistributedCell(std::vector<Cell<T,Lattice>*>& baseCell, bool hasBulkCell) const
 {
     OLB_PRECONDITION( baseCell.size()>0 && baseCell[0] );
     return *baseCell[0];
@@ -165,7 +165,7 @@ Cell<T,Lattice>& SerialMultiBlockHandler3D<T,Lattice>::
 
 template<typename T, template<typename U> class Lattice>
 Cell<T,Lattice> const& SerialMultiBlockHandler3D<T,Lattice>::
-    getDistributedCell(std::vector<Cell<T,Lattice> const*>& baseCell) const
+    getDistributedCell(std::vector<Cell<T,Lattice> const*>& baseCell, bool hasBulkCell) const
 {
     OLB_PRECONDITION( baseCell.size()>0 && baseCell[0] );
     return *baseCell[0];
@@ -173,8 +173,10 @@ Cell<T,Lattice> const& SerialMultiBlockHandler3D<T,Lattice>::
 
 template<typename T, template<typename U> class Lattice>
 int SerialMultiBlockHandler3D<T,Lattice>::locateLocally(int iX, int iY, int iZ,
-                                                        std::vector<int>& foundId, int guess) const
+                                                        std::vector<int>& foundId,
+                                                        bool& hasBulkCell, int guess) const
 {
+    hasBulkCell = true;
     return dataDistribution.locateInEnvelopes(iX,iY,iZ, foundId, guess);
 }
 
@@ -453,28 +455,29 @@ void ParallelMultiBlockHandler3D<T,Lattice>::connectBoundaries (
 
 template<typename T, template<typename U> class Lattice>
 Cell<T,Lattice>& ParallelMultiBlockHandler3D<T,Lattice>::
-    getDistributedCell(std::vector<Cell<T,Lattice>*>& baseCell) const
+    getDistributedCell(std::vector<Cell<T,Lattice>*>& baseCell, bool hasBulkCell) const
 {
     delete parallelDynamics;
-    parallelDynamics = new ParallelDynamics<T,Lattice>(baseCell);
+    parallelDynamics = new ParallelDynamics<T,Lattice>(baseCell, hasBulkCell);
     distributedCell.defineDynamics(parallelDynamics);
     return distributedCell;
 }
 
 template<typename T, template<typename U> class Lattice>
 Cell<T,Lattice> const& ParallelMultiBlockHandler3D<T,Lattice>::
-    getDistributedCell(std::vector<Cell<T,Lattice> const*>& baseCell) const
+    getDistributedCell(std::vector<Cell<T,Lattice> const*>& baseCell, bool hasBulkCell) const
 {
     delete parallelDynamics;
-    parallelDynamics = new ConstParallelDynamics<T,Lattice>(baseCell);
+    parallelDynamics = new ConstParallelDynamics<T,Lattice>(baseCell, hasBulkCell);
     distributedCell.defineDynamics(parallelDynamics);
     return distributedCell;
 }
 
 template<typename T, template<typename U> class Lattice>
 int ParallelMultiBlockHandler3D<T,Lattice>::locateLocally(int iX, int iY, int iZ, std::vector<int>& foundId,
-                                                          int guess) const
+                                                          bool& hasBulkCell, int guess) const
 {
+    hasBulkCell = false;
     if (!util::contained(iX,iY,iZ,
                 boundingBox.x0, boundingBox.x1, boundingBox.y0, boundingBox.y1,
                 boundingBox.z0, boundingBox.z1) )
@@ -484,6 +487,12 @@ int ParallelMultiBlockHandler3D<T,Lattice>::locateLocally(int iX, int iY, int iZ
     for (int iBlock=0; iBlock < (int)myBlocks.size(); ++iBlock) {
         BlockCoordinates3D const& coord = dataDistribution.getBlockParameters(myBlocks[iBlock]).getEnvelope();
         if (util::contained(iX, iY, iZ, coord.x0, coord.x1, coord.y0, coord.y1, coord.z0, coord.z1)) {
+            BlockCoordinates3D const& bulk =
+                dataDistribution.getBlockParameters(myBlocks[iBlock]).getBulk();
+            if (util::contained(iX, iY, iZ, bulk.x0, bulk.x1, bulk.y0, bulk.y1, bulk.z0, bulk.z1)) {
+                hasBulkCell = true;
+                foundId.insert(foundId.begin(),myBlocks[iBlock]);
+            }
             foundId.push_back(myBlocks[iBlock]);
         }
     }

@@ -52,7 +52,18 @@ BlockLattice2D<T,Lattice>::BlockLattice2D(int nx_, int ny_)
 {
     allocateMemory();
     resetPostProcessors();
-    statistics = new LatticeStatistics<T>;
+    #ifdef PARALLEL_MODE_OMP
+        statistics = new LatticeStatistics<T>* [3*omp.get_size()];
+        #pragma omp parallel
+        {   statistics[omp.get_rank() + omp.get_size()]
+                                       = new LatticeStatistics<T>;
+            statistics[omp.get_rank()] = new LatticeStatistics<T>;
+            statistics[omp.get_rank() + 2*omp.get_size()]
+                                       = new LatticeStatistics<T>;
+        }
+    #else
+        statistics = new LatticeStatistics<T>;
+    #endif
 }
 
 /** During destruction, the memory for the lattice and the contained
@@ -64,7 +75,15 @@ BlockLattice2D<T,Lattice>::~BlockLattice2D()
 {
     releaseMemory();
     clearPostProcessors();
-    delete statistics;
+    #ifdef PARALLEL_MODE_OMP
+        #pragma omp parallel
+        {
+            delete statistics[omp.get_rank()];
+        }
+        delete statistics;
+    #else
+        delete statistics;
+    #endif
     delete serializer;
     delete unSerializer;
     delete dataAnalysis;
@@ -89,7 +108,18 @@ BlockLattice2D<T,Lattice>::BlockLattice2D(BlockLattice2D<T,Lattice> const& rhs)
             grid[iX][iY] = rhs.grid[iX][iY];
         }
     }
-    statistics = new LatticeStatistics<T> (*rhs.statistics);
+    #ifdef PARALLEL_MODE_OMP
+        statistics = new LatticeStatistics<T>* [3*omp.get_size()];
+        #pragma omp parallel
+        {   statistics[omp.get_rank() + omp.get_size()]
+                                       = new LatticeStatistics<T>;
+            statistics[omp.get_rank()] = new LatticeStatistics<T> (**rhs.statistics);
+            statistics[omp.get_rank() + 2*omp.get_size()]
+                                       = new LatticeStatistics<T>;
+        }
+    #else
+        statistics = new LatticeStatistics<T> (*rhs.statistics);
+    #endif
 }
 
 /** The current lattice is deallocated, then the lattice from the rhs
@@ -173,12 +203,12 @@ void BlockLattice2D<T,Lattice>::collide(int x0, int x1, int y0, int y1) {
     OLB_PRECONDITION(y0>=0 && y1<ny);
     OLB_PRECONDITION(y1>=y0);
 
-    int iX, iY;
+    int iX;
     #ifdef PARALLEL_MODE_OMP
-    #pragma omp parallel for private (iY) schedule(dynamic,1)
+    #pragma omp parallel for schedule(dynamic,1)
     #endif
     for (iX=x0; iX<=x1; ++iX) {
-        for (iY=y0; iY<=y1; ++iY) {
+        for (int iY=y0; iY<=y1; ++iY) {
             grid[iX][iY].collide(getStatistics());
             grid[iX][iY].revert();
         }
@@ -204,13 +234,13 @@ void BlockLattice2D<T,Lattice>::staticCollide(int x0, int x1, int y0, int y1,
     OLB_PRECONDITION(y0>=0 && y1<ny);
     OLB_PRECONDITION(y1>=y0);
 
-    int iX, iY;
+    int iX;
 
     #ifdef PARALLEL_MODE_OMP
-    #pragma omp parallel for private (iY) schedule(dynamic,1)
+    #pragma omp parallel for schedule(dynamic,1)
     #endif
     for (iX=x0; iX<=x1; ++iX) {
-        for (iY=y0; iY<=y1; ++iY) {
+        for (int iY=y0; iY<=y1; ++iY) {
             grid[iX][iY].staticCollide(u.get(iX,iY), getStatistics());
             grid[iX][iY].revert();
         }
@@ -399,14 +429,22 @@ void BlockLattice2D<T,Lattice>::subscribeReductions(Reductor<T>& reductor) {
 template<typename T, template<typename U> class Lattice>
 LatticeStatistics<T>& BlockLattice2D<T,Lattice>::getStatistics()
 {
-    return *statistics;
+    #ifdef PARALLEL_MODE_OMP
+        return *statistics[omp.get_rank()];
+    #else
+        return *statistics;
+    #endif
 }
 
 template<typename T, template<typename U> class Lattice>
 LatticeStatistics<T> const&
     BlockLattice2D<T,Lattice>::getStatistics() const
 {
-    return *statistics;
+    #ifdef PARALLEL_MODE_OMP
+        return *statistics[omp.get_rank()];
+    #else
+        return *statistics;
+    #endif
 }
 
 template<typename T, template<typename U> class Lattice>
@@ -445,14 +483,14 @@ void BlockLattice2D<T,Lattice>::boundaryStream (
     OLB_PRECONDITION(y0>=lim_y0 && y1<=lim_y1);
     OLB_PRECONDITION(y1>=y0);
 
-    int iX, iY, iPop;
+    int iX;
 
     #ifdef PARALLEL_MODE_OMP
-    #pragma omp parallel for private(iY,iPop)
+    #pragma omp parallel for
     #endif
     for (iX=x0; iX<=x1; ++iX) {
-        for (iY=y0; iY<=y1; ++iY) {
-            for (iPop=1; iPop<=Lattice<T>::q/2; ++iPop) {
+        for (int iY=y0; iY<=y1; ++iY) {
+            for (int iPop=1; iPop<=Lattice<T>::q/2; ++iPop) {
                 int nextX = iX + Lattice<T>::c[iPop][0];
                 int nextY = iY + Lattice<T>::c[iPop][1];
                 if (nextX>=lim_x0 && nextX<=lim_x1 && nextY>=lim_y0 && nextY<=lim_y1) {
@@ -478,13 +516,13 @@ void BlockLattice2D<T,Lattice>::bulkStream (
     OLB_PRECONDITION(y0>=0 && y1<ny);
     OLB_PRECONDITION(y1>=y0);
 
-    int iX, iY, iPop;
+    int iX;
     #ifdef PARALLEL_MODE_OMP
-    #pragma omp parallel for private(iY,iPop)
+    #pragma omp parallel for
     #endif
     for (iX=x0; iX<=x1; ++iX) {
-        for (iY=y0; iY<=y1; ++iY) {
-            for (iPop=1; iPop<=Lattice<T>::q/2; ++iPop) {
+        for (int iY=y0; iY<=y1; ++iY) {
+            for (int iPop=1; iPop<=Lattice<T>::q/2; ++iPop) {
                 int nextX = iX + Lattice<T>::c[iPop][0];
                 int nextY = iY + Lattice<T>::c[iPop][1];
                 std::swap(grid[iX][iY][iPop+Lattice<T>::q/2],

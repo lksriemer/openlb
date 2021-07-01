@@ -21,6 +21,8 @@
 */
 
 #include "complexGrids/mpiManager/mpiManager.h"
+#include "core/serializer.h"
+#include "core/serializer.hh"
 #include "vtkDataOutput.h"
 #include "vtkDataOutput.hh"
 #include "serializerIO.h"
@@ -29,8 +31,74 @@
 #include "base64.hh"
 
 namespace olb {
+    
+////////// class VtkDataWriter3D ////////////////////////////////////////
 
-template class VtkDataWriter3D<double>;
+VtkDataWriter3D::VtkDataWriter3D(std::string const& fileName_)
+    : fileName(fileName_),
+      ostr(0)
+{
+    if (singleton::mpi().isMainProcessor()) {
+        ostr = new std::ofstream(fileName.c_str());
+        if (!(*ostr)) {
+            std::cerr << "could not open file " <<  fileName << "\n";
+            return;
+        }
+    }
+}
+
+VtkDataWriter3D::~VtkDataWriter3D() {
+    delete ostr;
+}
+
+void VtkDataWriter3D::writeHeader(int x0, int x1, int y0, int y1, int z0, int z1,
+                                  double originX, double originY, double originZ, double deltaX)
+{
+    if (singleton::mpi().isMainProcessor()) {
+        (*ostr) << "<?xml version=\"1.0\"?>\n";
+        (*ostr) << "<VTKFile type=\"ImageData\" version=\"0.1\" byte_order=\"LittleEndian\">\n";
+        (*ostr) << "<ImageData WholeExtent=\""
+                << x0 << " " << x1 << " "
+                << y0 << " " << y1 << " "
+                << z0 << " " << z1 << "\" "
+                << "Origin=\""
+                << originX << " " << originY << " " << originZ << "\" "
+                << "Spacing=\""
+                << deltaX << " " << deltaX << " " << deltaX << "\">\n";
+    }
+}
+
+void VtkDataWriter3D::startPiece(int x0, int x1, int y0, int y1, int z0, int z1) {
+    if (singleton::mpi().isMainProcessor()) {
+        (*ostr) << "<Piece Extent=\""
+                << x0 << " " << x1 << " "
+                << y0 << " " << y1 << " "
+                << z0 << " " << z1 << "\">\n";
+        (*ostr) << "<PointData>\n";
+    }
+}
+
+void VtkDataWriter3D::endPiece() {
+    if (singleton::mpi().isMainProcessor()) {
+        (*ostr) << "</PointData>\n";
+        (*ostr) << "</Piece>\n";
+    }
+}
+
+void VtkDataWriter3D::writeFooter() {
+    if (singleton::mpi().isMainProcessor()) {
+        (*ostr) << "</ImageData>\n";
+        (*ostr) << "</VTKFile>\n";
+    }
+}
+
+template
+void VtkDataWriter3D::writeDataField (
+        DataSerializer<double> const& serializer, std::string const& name, double scalingFactor, int nDim );
+
+template
+void VtkDataWriter3D::writeDataField (
+        DataSerializer<int> const& serializer, std::string const& name, int scalingFactor, int nDim );
 
 template void writeVTKData3D<double> (
         std::string const& fName,
