@@ -1,6 +1,6 @@
 /*  This file is part of the OpenLB library
  *
- *  Copyright (C) 2006, 2007 Jonas Latt
+ *  Copyright (C) 2006, 2007 Orestis Malaspinas, Jonas Latt
  *  Address: Rue General Dufour 24,  1211 Geneva 4, Switzerland 
  *  E-mail: jonas.latt@gmail.com
  *
@@ -20,20 +20,28 @@
  *  Boston, MA  02110-1301, USA.
 */
 
-/** \file
- * serializer and unserializer -- template instantiation.
- */
+#ifndef STRAIGHT_BOUZIDI_BOUNDARY_2D_H
+#define STRAIGHT_BOUZIDI_BOUNDARY_2D_H
 
-#include "complexGrids/mpiManager/mpiManager.h"
-#include "serializer.h"
-#include "serializer.hh"
+#include "core/boundaryCondition2D.h"
 
 namespace olb {
 
-template class ScalingSerializer<double>;
-template void copySerializedData<double>(DataSerializer<double> const& serializer,
-                                         DataUnSerializer<double>& unSerializer);
-template void copyDataBlock<double>(Serializable<double> const& from, Serializable<double>& to,
-                                    IndexOrdering::OrderingT ordering);
+////////// Factory function for Zou/He BC ///////////////////////////////////////////
 
-}  // namespace olb
+template<typename T, template<typename U> class Lattice, typename MixinDynamics>
+OnLatticeBoundaryCondition2D<T,Lattice>*
+    createYoungBoundaryCondition2D(BlockStructure2D<T,Lattice>& block);
+
+template<typename T, template<typename U> class Lattice>
+OnLatticeBoundaryCondition2D<T,Lattice>*
+createYoungBoundaryCondition2D(BlockStructure2D<T,Lattice>& block) {
+    return createYoungBoundaryCondition2D<T,Lattice,BGKdynamics<T,Lattice> >(block);
+}
+
+
+
+}
+
+
+#endif

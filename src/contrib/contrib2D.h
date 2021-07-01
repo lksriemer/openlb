@@ -1,8 +1,6 @@
 /*  This file is part of the OpenLB library
  *
- *  Copyright (C) 2006, 2007 Jonas Latt
- *  Address: Rue General Dufour 24,  1211 Geneva 4, Switzerland 
- *  E-mail: jonas.latt@gmail.com
+ *  Copyright (C) 2007 the OpenLB project
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
@@ -21,19 +19,11 @@
 */
 
 /** \file
- * serializer and unserializer -- template instantiation.
+ * Groups all the 2D include files in the contrib directory.
  */
 
-#include "complexGrids/mpiManager/mpiManager.h"
-#include "serializer.h"
-#include "serializer.hh"
-
-namespace olb {
-
-template class ScalingSerializer<double>;
-template void copySerializedData<double>(DataSerializer<double> const& serializer,
-                                         DataUnSerializer<double>& unSerializer);
-template void copyDataBlock<double>(Serializable<double> const& from, Serializable<double>& to,
-                                    IndexOrdering::OrderingT ordering);
-
-}  // namespace olb
+#include "keepIncomingBoundary2D.h"
+#include "keepIncomingDynamics.h"
+#include "twoBlockLatticePostProcessing.h"
+#include "straightBouzidiBoundary2D.h"
+#include "straightBouzidiDynamics.h"

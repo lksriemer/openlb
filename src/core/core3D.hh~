@@ -21,19 +21,23 @@
 */
 
 /** \file
- * serializer and unserializer -- template instantiation.
+ * Groups all the generic implementation files for basic 3D dynamics.
  */
-
-#include "complexGrids/mpiManager/mpiManager.h"
-#include "serializer.h"
+#include "latticeDescriptors.hh"
+#include "cell.hh"
+#include "dynamics.hh"
+#include "momentaOnBoundaries.hh"
+#include "momentaOnBoundaries3D.hh"
+#include "postProcessing.hh"
+#include "dataFields2D.hh"
+#include "dataFields3D.hh"
 #include "serializer.hh"
-
-namespace olb {
-
-template class ScalingSerializer<double>;
-template void copySerializedData<double>(DataSerializer<double> const& serializer,
-                                         DataUnSerializer<double>& unSerializer);
-template void copyDataBlock<double>(Serializable<double> const& from, Serializable<double>& to,
-                                    IndexOrdering::OrderingT ordering);
-
-}  // namespace olb
+#include "boundaryPostProcessors3D.hh"
+#include "blockLattice3D.hh"
+#include "blockLatticeView3D.hh"
+#include "blockStatistics3D.hh"
+#include "boundaryCondition3D.hh"
+#include "simulationSetup3D.hh"
+#include "imageCreator.hh"
+#include "dataAnalysis3D.hh"
+#include "dataReductions.hh"

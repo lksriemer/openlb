@@ -118,8 +118,10 @@ ParBuf::xsgetn (char* s, std::streamsize num) {
 #ifdef PARALLEL_MODE_MPI
   }
   if (mode==normal) {
-      singleton::mpi().bCast(&sizeRead, 1);
-      singleton::mpi().bCast(s, sizeRead);
+      int intSizeRead = (int) sizeRead;
+      singleton::mpi().bCast(&intSizeRead, 1);
+      singleton::mpi().bCast(s, intSizeRead);
+      sizeRead = (std::streamsize) intSizeRead;
   }
 #endif
   return sizeRead;

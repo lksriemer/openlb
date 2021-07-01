@@ -87,7 +87,8 @@ SUBDIRS         := src/core \
                    src/complexGrids/cuboidStructure \
                    src/complexGrids/multiBlockStructure \
                    src/utilities \
-                   src/io
+                   src/io \
+                   src/contrib
 
 EXAMPLEDIRS     := examples/bstep2d \
                    examples/bstep3d \

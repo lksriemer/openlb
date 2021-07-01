@@ -1,6 +1,6 @@
 /*  This file is part of the OpenLB library
  *
- *  Copyright (C) 2007, Jonas Latt
+ *  Copyright (C) 2007 Jonas Latt
  *  Address: Rue General Dufour 24,  1211 Geneva 4, Switzerland 
  *  E-mail: jonas.latt@gmail.com
  *
@@ -24,6 +24,7 @@
 #ifndef SERIALIZER_HH
 #define SERIALIZER_HH
 
+#include "complexGrids/mpiManager/mpiManager.h"
 #include "serializer.h"
 #include "olbDebug.h"
 #include <algorithm>
@@ -78,8 +79,10 @@ void copySerializedData(DataSerializer<T> const& serializer, DataUnSerializer<T>
         int remainToRead = serializerBufferSize - readPos;
         int remainToWrite = unSerializerBufferSize - writePos;
         int nextChunk = std::min(remainToRead, remainToWrite);
-        for(int iChunk=0; iChunk<nextChunk; ++iChunk, ++readPos, ++writePos) {
-            unSerializerBuffer[writePos] = serializerBuffer[readPos];
+        if (singleton::mpi().isMainProcessor()) {
+            for (int iChunk=0; iChunk<nextChunk; ++iChunk, ++readPos, ++writePos) {
+                unSerializerBuffer[writePos] = serializerBuffer[readPos];
+            }
         }
         if (writePos==unSerializerBufferSize) {
             unSerializer.commitData();

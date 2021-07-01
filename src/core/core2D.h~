@@ -21,19 +21,30 @@
 */
 
 /** \file
- * serializer and unserializer -- template instantiation.
+ * Groups all the include files for basic 2D dynamics.
  */
-
-#include "complexGrids/mpiManager/mpiManager.h"
+#include "singleton.h"
+#include "units.h"
+#include "latticeDescriptors.h"
+#include "dynamics.h"
+#include "cell.h"
+#include "momentaOnBoundaries.h"
+#include "momentaOnBoundaries2D.h"
+#include "postProcessing.h"
+#include "dataFieldBase2D.h"
+#include "dataFields2D.h"
 #include "serializer.h"
-#include "serializer.hh"
-
-namespace olb {
-
-template class ScalingSerializer<double>;
-template void copySerializedData<double>(DataSerializer<double> const& serializer,
-                                         DataUnSerializer<double>& unSerializer);
-template void copyDataBlock<double>(Serializable<double> const& from, Serializable<double>& to,
-                                    IndexOrdering::OrderingT ordering);
-
-}  // namespace olb
+#include "blockStructure2D.h"
+#include "boundaryPostProcessors2D.h"
+#include "blockLattice2D.h"
+#include "blockLatticeView2D.h"
+#include "blockStatistics2D.h"
+#include "boundaryCondition2D.h"
+#include "simulationSetup2D.h"
+#include "imageCreator.h"
+#include "ompManager.h"
+#include "loadBalancer.h"
+#include "analysisFlags.h"
+#include "dataAnalysisBase2D.h"
+#include "dataAnalysis2D.h"
+#include "dataReductions.h"
