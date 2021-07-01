@@ -30,12 +30,13 @@
 #include <unistd.h>
 #include "core/singleton.h"
 #include "io/fileName.h"
+#include "unitConverter.h"
 
 /// All OpenLB code is contained in this namespace.
 namespace olb {
 
-template <typename T, template<typename U> class Lattice>
-void UnitConverter<T, Lattice>::print() const
+template <typename T, typename DESCRIPTOR>
+void UnitConverter<T, DESCRIPTOR>::print() const
 {
   clout << "----------------- UnitConverter information -----------------" << std::endl;
   clout << "-- Parameters:" << std::endl;
@@ -48,7 +49,9 @@ void UnitConverter<T, Lattice>::print() const
   clout << "Phys. kinematic viscosity(m^2/s): charNu=         " << getPhysViscosity() << std::endl;
   clout << "Phys. density(kg/m^d):            charRho=        " << getPhysDensity() << std::endl;
   clout << "Characteristical pressure(N/m^2): charPressure=   " << getCharPhysPressure() << std::endl;
+  clout << "Mach number:                      machNumber=     " << getMachNumber() << std::endl;
   clout << "Reynolds number:                  reynoldsNumber= " << getReynoldsNumber() << std::endl;
+  clout << "Knudsen number:                   knudsenNumber=  " << getKnudsenNumber() << std::endl;
 
   clout << std::endl;
   clout << "-- Conversion factors:" << std::endl;
@@ -65,8 +68,8 @@ void UnitConverter<T, Lattice>::print() const
 
 }
 
-template <typename T, template<typename U> class Lattice>
-void UnitConverter<T, Lattice>::write(std::string const& fileName) const
+template <typename T, typename DESCRIPTOR>
+void UnitConverter<T, DESCRIPTOR>::write(std::string const& fileName) const
 {
   std::string dataFile = singleton::directories().getLogOutDir() + fileName + ".dat";
 
@@ -87,7 +90,9 @@ void UnitConverter<T, Lattice>::write(std::string const& fileName) const
     fout << "Phys. kinematic viscosity(m^2/s): charNu=         " << getPhysViscosity()             << "\n";
     fout << "Phys. density(kg/m^d):            charRho=        " << getPhysDensity()               << "\n";
     fout << "Characteristical pressure(N/m^2): charPressure=   " << getCharPhysPressure()          << "\n";
-    fout << "Reynolds number:                  reynoldsNumber= " << getReynoldsNumber() << std::endl;
+    fout << "Mach number:                      machNumber=     " << getMachNumber()                << "\n";
+    fout << "Reynolds number:                  reynoldsNumber= " << getReynoldsNumber()            << "\n";
+    fout << "Knudsen number:                   knudsenNumber=  " << getKnudsenNumber()             << std::endl;
     fout << "\n";
     fout << "-- Conversion factors:"                                                               << "\n";
     fout << "Voxel length(m):                  physDeltaX=     " << getConversionFactorLength() << std::endl;
@@ -105,8 +110,8 @@ void UnitConverter<T, Lattice>::write(std::string const& fileName) const
   }
 }
 
-template<typename T, template<typename U> class Lattice>
-UnitConverter<T, Lattice>* createUnitConverter(XMLreader const& params)
+template<typename T, typename DESCRIPTOR>
+UnitConverter<T, DESCRIPTOR>* createUnitConverter(XMLreader const& params)
 {
   OstreamManager clout(std::cout,"createUnitConverter");
   params.setWarningsOn(false);
@@ -145,13 +150,24 @@ UnitConverter<T, Lattice>* createUnitConverter(XMLreader const& params)
           physDeltaX = charPhysVelocity / charLatticeVelocity * physDeltaT;
         }
         else if (params["Application"]["Discretization"]["LatticeRelaxationTime"].read(latticeRelaxationTime,false)) {
-          physDeltaX = physViscosity * charLatticeVelocity / charPhysVelocity * Lattice<T>::invCs2 / (latticeRelaxationTime - 0.5);
+          physDeltaX = physViscosity * charLatticeVelocity / charPhysVelocity * descriptors::invCs2<T,DESCRIPTOR>() / (latticeRelaxationTime - 0.5);
         }
       }
     }
     else {
       // found resolution
       physDeltaX = charPhysLength / resolution;
+
+      if (params["Application"]["Discretization"]["CharLatticeVelocity"].read(charLatticeVelocity,false)) {
+        latticeRelaxationTime = physViscosity * charLatticeVelocity * descriptors::invCs2<T,DESCRIPTOR>() * resolution + 0.5;
+      }
+      else {
+        if (!params["Application"]["Discretization"]["LatticeRelaxationTime"].read(latticeRelaxationTime,false)) {
+          clout << "Error: Have not found LatticeRelaxationTime and was not able to derive it using CharLatticeVelocity"
+                << std::endl;
+          exit (1);
+        }
+      }
     }
   }
   // found physDeltaX
@@ -170,11 +186,11 @@ UnitConverter<T, Lattice>* createUnitConverter(XMLreader const& params)
     }
     else {
       // found latticeRelaxationTime
-      physDeltaT = (latticeRelaxationTime - 0.5) / Lattice<T>::invCs2 * physDeltaX * physDeltaX / physViscosity;
+      physDeltaT = (latticeRelaxationTime - 0.5) / descriptors::invCs2<T,DESCRIPTOR>() * physDeltaX * physDeltaX / physViscosity;
     }
   }
 
-  return new UnitConverter<T, Lattice>(physDeltaX, physDeltaT, charPhysLength, charPhysVelocity, physViscosity, physDensity, charPhysPressure);
+  return new UnitConverter<T, DESCRIPTOR>(physDeltaX, physDeltaT, charPhysLength, charPhysVelocity, physViscosity, physDensity, charPhysPressure);
 }
 
 }  // namespace olb

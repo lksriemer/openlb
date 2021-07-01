@@ -75,6 +75,8 @@ public:
   unsigned const& get_size() const;
   /// Read and write access _mpiRequest
   MPI_Request* get_mpiRequest() const;
+  /// Get the specified request (in DEBUG mode includes a size check)
+  MPI_Request* get_mpiRequest(int i) const;
   /// Read and write access _mpiStatus
   MPI_Status* get_mpiStatus() const;
 

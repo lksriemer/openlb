@@ -1,6 +1,6 @@
 /*  This file is part of the OpenLB library
  *
- *  Copyright (C) 2006-2008 Jonas Latt
+ *  Copyright (C) 2006-2018 Jonas Latt, Adrian Kummerlaender
  *  E-mail contact: info@openlb.net
  *  The most recent release of OpenLB can be downloaded at
  *  <http://www.openlb.net/>
@@ -27,105 +27,167 @@
 #ifndef BLOCK_LATTICE_STRUCTURE_3D_HH
 #define BLOCK_LATTICE_STRUCTURE_3D_HH
 
-
 #include "blockLatticeStructure3D.h"
-#include "functors/lattice/indicator/blockIndicatorBaseF3D.hh"
+#include "functors/lattice/indicator/blockIndicatorBaseF3D.h"
+#include "functors/lattice/indicator/blockIndicatorF3D.h"
 
 namespace olb {
 
-template<typename T, template<typename U> class Lattice>
-void BlockLatticeStructure3D<T,Lattice>::defineRho(
+template<typename T, typename DESCRIPTOR>
+void BlockLatticeStructure3D<T,DESCRIPTOR>::defineRho(
+  BlockIndicatorF3D<T>& indicator, AnalyticalF3D<T,T>& rho)
+{
+  T physR[3] = { };
+  T rhoTmp = T();
+  for (int iX = 0; iX < getNx(); ++iX) {
+    for (int iY = 0; iY < getNy(); ++iY) {
+      for (int iZ = 0; iZ < getNz(); ++iZ) {
+        if (indicator(iX, iY, iZ)) {
+          indicator.getBlockGeometryStructure().getPhysR(physR, iX, iY, iZ);
+          rho(&rhoTmp,physR);
+          get(iX, iY, iZ).defineRho(rhoTmp);
+        }
+      }
+    }
+  }
+}
+
+template<typename T, typename DESCRIPTOR>
+void BlockLatticeStructure3D<T,DESCRIPTOR>::defineRho(
   BlockGeometryStructure3D<T>& blockGeometry, int material, AnalyticalF3D<T,T>& rho)
 {
-  T rhoTmp;
-  T physR[3] = {T(),T(),T()};
-  for (int iX = 0; iX < getNx(); iX++) {
-    for (int iY = 0; iY < getNy(); iY++) {
-      for (int iZ = 0; iZ < getNz(); iZ++) {
-        if (blockGeometry.getMaterial(iX, iY, iZ) == material) {
-          blockGeometry.getPhysR(physR, iX,iY,iZ);
-          rho(&rhoTmp,physR);
-          get(iX,iY,iZ).defineRho(rhoTmp);
+  BlockIndicatorMaterial3D<T> indicator(blockGeometry, material);
+  defineRho(indicator, rho);
+}
+
+template<typename T, typename DESCRIPTOR>
+void BlockLatticeStructure3D<T,DESCRIPTOR>::defineU(
+  BlockIndicatorF3D<T>& indicator, AnalyticalF3D<T,T>& u)
+{
+  T physR[3] = { };
+  T uTmp[3] = { };
+  for (int iX = 0; iX < getNx(); ++iX) {
+    for (int iY = 0; iY < getNy(); ++iY) {
+      for (int iZ = 0; iZ < getNz(); ++iZ) {
+        if (indicator(iX, iY, iZ)) {
+          indicator.getBlockGeometryStructure().getPhysR(physR, iX, iY, iZ);
+          u(uTmp,physR);
+          get(iX, iY, iZ).defineU(uTmp);
         }
       }
     }
   }
 }
 
-template<typename T, template<typename U> class Lattice>
-void BlockLatticeStructure3D<T,Lattice>::defineU(
+template<typename T, typename DESCRIPTOR>
+void BlockLatticeStructure3D<T,DESCRIPTOR>::defineU(
   BlockGeometryStructure3D<T>& blockGeometry, int material, AnalyticalF3D<T,T>& u)
 {
-  T uTmp[3];
-  T physR[3] = {T(),T(),T()};
-  for (int iX = 0; iX < getNx(); iX++) {
-    for (int iY = 0; iY < getNy(); iY++) {
-      for (int iZ = 0; iZ < getNz(); iZ++) {
-        if (blockGeometry.getMaterial(iX, iY, iZ) == material) {
-          blockGeometry.getPhysR(physR, iX,iY,iZ);
+  BlockIndicatorMaterial3D<T> indicator(blockGeometry, material);
+  defineU(indicator, u);
+}
+
+template<typename T, typename DESCRIPTOR>
+void BlockLatticeStructure3D<T,DESCRIPTOR>::defineRhoU(
+  BlockIndicatorF3D<T>& indicator,
+  AnalyticalF3D<T,T>& rho, AnalyticalF3D<T,T>& u)
+{
+  T physR[3] = { };
+  T uTmp[3] = { };
+  T rhoTmp = T();
+  for (int iX = 0; iX < getNx(); ++iX) {
+    for (int iY = 0; iY < getNy(); ++iY) {
+      for (int iZ = 0; iZ < getNz(); ++iZ) {
+        if (indicator(iX, iY, iZ)) {
+          indicator.getBlockGeometryStructure().getPhysR(physR, iX, iY, iZ);
+          rho(&rhoTmp,physR);
           u(uTmp,physR);
-          get(iX,iY,iZ).defineU(uTmp);
+          get(iX, iY, iZ).defineRhoU(rhoTmp,uTmp);
         }
       }
     }
   }
 }
 
-template<typename T, template<typename U> class Lattice>
-void BlockLatticeStructure3D<T,Lattice>::defineRhoU(
+template<typename T, typename DESCRIPTOR>
+void BlockLatticeStructure3D<T,DESCRIPTOR>::defineRhoU(
   BlockGeometryStructure3D<T>& blockGeometry, int material,
   AnalyticalF3D<T,T>& rho, AnalyticalF3D<T,T>& u)
 {
-  T rhoTmp;
-  T uTmp[3];
-  T physR[3] = {T(),T(),T()};
-  for (int iX = 0; iX < getNx(); iX++) {
-    for (int iY = 0; iY < getNy(); iY++) {
-      for (int iZ = 0; iZ < getNz(); iZ++) {
-        if (blockGeometry.getMaterial(iX, iY, iZ) == material) {
-          blockGeometry.getPhysR(physR, iX,iY,iZ);
-          rho(&rhoTmp,physR);
-          u(uTmp,physR);
-          get(iX,iY,iZ).defineRhoU(rhoTmp,uTmp);
+  BlockIndicatorMaterial3D<T> indicator(blockGeometry, material);
+  defineRhoU(indicator, rho, u);
+}
+
+template<typename T, typename DESCRIPTOR>
+void BlockLatticeStructure3D<T,DESCRIPTOR>::definePopulations(
+  BlockIndicatorF3D<T>& indicator, AnalyticalF3D<T,T>& Pop)
+{
+  T physR[3] = { };
+  T PopTmp[DESCRIPTOR::q];
+  for (int iX = 0; iX < getNx(); ++iX) {
+    for (int iY = 0; iY < getNy(); ++iY) {
+      for (int iZ = 0; iZ < getNz(); ++iZ) {
+        if (indicator(iX, iY, iZ)) {
+          indicator.getBlockGeometryStructure().getPhysR(physR, iX, iY, iZ);
+          Pop(PopTmp,physR);
+          get(iX, iY, iZ).definePopulations(PopTmp);
         }
       }
     }
   }
 }
 
-template<typename T, template<typename U> class Lattice>
-void BlockLatticeStructure3D<T,Lattice>::definePopulations(
+template<typename T, typename DESCRIPTOR>
+void BlockLatticeStructure3D<T,DESCRIPTOR>::definePopulations(
   BlockGeometryStructure3D<T>& blockGeometry, int material, AnalyticalF3D<T,T>& Pop)
 {
-  T physR[3] = {T(),T(),T()};
-  T PopTmp[Lattice<T>::q];
-  for (int iX = 0; iX < getNx(); iX++) {
-    for (int iY = 0; iY < getNy(); iY++) {
-      for (int iZ = 0; iZ < getNz(); iZ++) {
-        if (blockGeometry.getMaterial(iX, iY, iZ) == material) {
-          blockGeometry.getPhysR(physR, iX,iY,iZ);
-          Pop(PopTmp,physR);
-          get(iX,iY,iZ).definePopulations(PopTmp);
+  BlockIndicatorMaterial3D<T> indicator(blockGeometry, material);
+  definePopulations(indicator, Pop);
+}
+
+template<typename T, typename DESCRIPTOR>
+void BlockLatticeStructure3D<T,DESCRIPTOR>::definePopulations(
+  BlockIndicatorF3D<T>& indicator, BlockF3D<T>& Pop)
+{
+  int latticeR[3];
+  T PopTmp[DESCRIPTOR::q];
+  for (int iX = 0; iX < getNx(); ++iX) {
+    for (int iY = 0; iY < getNy(); ++iY) {
+      for (int iZ = 0; iZ < getNz(); ++iZ) {
+        if (indicator(iX, iY, iZ)) {
+          latticeR[0] = iX;
+          latticeR[1] = iY;
+          latticeR[2] = iZ;
+          Pop(PopTmp,latticeR);
+          get(iX, iY, iZ).definePopulations(PopTmp);
         }
       }
     }
   }
 }
 
-template<typename T, template<typename U> class Lattice>
-void BlockLatticeStructure3D<T,Lattice>::defineExternalField(
-  BlockGeometryStructure3D<T>& blockGeometry, int material, int fieldBeginsAt,
-  int sizeOfField, AnalyticalF3D<T,T>& field)
+template<typename T, typename DESCRIPTOR>
+void BlockLatticeStructure3D<T,DESCRIPTOR>::definePopulations(
+  BlockGeometryStructure3D<T>& blockGeometry, int material, BlockF3D<T>& Pop)
 {
-  T physR[3] = {T(),T(),T()};
-  T* fieldTmp = new T [sizeOfField];
-  for (int iX = 0; iX < getNx(); iX++) {
-    for (int iY = 0; iY < getNy(); iY++) {
-      for (int iZ = 0; iZ < getNz(); iZ++) {
-        if (blockGeometry.getMaterial(iX, iY, iZ) == material) {
-          blockGeometry.getPhysR(physR, iX,iY,iZ);
-          field(fieldTmp,physR);
-          get(iX,iY,iZ).defineExternalField(fieldBeginsAt,sizeOfField, fieldTmp);
+  BlockIndicatorMaterial3D<T> indicator(blockGeometry, material);
+  definePopulations(indicator, Pop);
+}
+
+template<typename T, typename DESCRIPTOR>
+template<typename FIELD>
+void BlockLatticeStructure3D<T,DESCRIPTOR>::defineField(
+  BlockIndicatorF3D<T>& indicator, AnalyticalF3D<T,T>& field)
+{
+  T* fieldTmp = new T[DESCRIPTOR::template size<FIELD>()];
+  T physR[3] = { };
+  for (int iX = 0; iX < getNx(); ++iX) {
+    for (int iY = 0; iY < getNy(); ++iY) {
+      for (int iZ = 0; iZ < getNz(); ++iZ) {
+        if (indicator(iX, iY, iZ)) {
+          indicator.getBlockGeometryStructure().getPhysR(physR, iX, iY, iZ);
+          field(fieldTmp, physR);
+          get(iX, iY, iZ).template defineField<FIELD>(fieldTmp);
         }
       }
     }
@@ -133,115 +195,110 @@ void BlockLatticeStructure3D<T,Lattice>::defineExternalField(
   delete[] fieldTmp;
 }
 
-template<typename T, template<typename U> class Lattice>
-void BlockLatticeStructure3D<T,Lattice>::defineExternalField(
-  BlockIndicatorF3D<T>& indicator, int overlap,
-  int fieldBeginsAt, int sizeOfField, AnalyticalF3D<T,T>& field)
+template<typename T, typename DESCRIPTOR>
+template<typename FIELD>
+void BlockLatticeStructure3D<T,DESCRIPTOR>::defineField(
+  BlockGeometryStructure3D<T>& blockGeometry, int material,
+  AnalyticalF3D<T,T>& field)
 {
-  T physR[3] = {T(),T(),T()};
-  T* fieldTmp = new T [sizeOfField];
-  for (int iX = 0; iX < getNx(); iX++) {
-    for (int iY = 0; iY < getNy(); iY++) {
-      for (int iZ = 0; iZ < getNz(); iZ++) {
-        const int blockLocation[3] = { iX-overlap, iY-overlap, iZ-overlap };
-        if (indicator(blockLocation)) {
-          indicator.getBlockGeometry().getPhysR(physR,iX,iY,iZ);
-          field(fieldTmp,physR);
-          get(iX,iY,iZ).defineExternalField(fieldBeginsAt, sizeOfField, fieldTmp);
+  BlockIndicatorMaterial3D<T> indicator(blockGeometry, material);
+  defineField<FIELD>(indicator, field);
+}
+
+template<typename T, typename DESCRIPTOR>
+template<typename FIELD>
+void BlockLatticeStructure3D<T,DESCRIPTOR>::defineField(
+  BlockGeometryStructure3D<T>& blockGeometry, IndicatorF3D<T>& indicatorF,
+  AnalyticalF3D<T,T>& field)
+{
+  BlockIndicatorFfromIndicatorF3D<T> indicator(indicatorF, blockGeometry);
+  defineField<FIELD>(indicator, field);
+}
+
+template<typename T, typename DESCRIPTOR>
+void BlockLatticeStructure3D<T,DESCRIPTOR>::iniEquilibrium(
+  BlockIndicatorF3D<T>& indicator,
+  AnalyticalF3D<T,T>& rho, AnalyticalF3D<T,T>& u)
+{
+  T physR[3] = { };
+  T uTmp[3] = { };
+  T rhoTmp = T();
+  for (int iX = 0; iX < getNx(); ++iX) {
+    for (int iY = 0; iY < getNy(); ++iY) {
+      for (int iZ = 0; iZ < getNz(); ++iZ) {
+        if (indicator(iX, iY, iZ)) {
+          indicator.getBlockGeometryStructure().getPhysR(physR, iX, iY, iZ);
+          u(uTmp, physR);
+          rho(&rhoTmp, physR);
+          get(iX, iY, iZ).iniEquilibrium(rhoTmp, uTmp);
         }
       }
     }
   }
-  delete[] fieldTmp;
 }
 
-template<typename T, template<typename U> class Lattice>
-void BlockLatticeStructure3D<T,Lattice>::defineExternalField(
-  BlockGeometryStructure3D<T>& blockGeometry, IndicatorF3D<T>& indicator, int fieldBeginsAt,
-  int sizeOfField, AnalyticalF3D<T,T>& field)
+template<typename T, typename DESCRIPTOR>
+void BlockLatticeStructure3D<T,DESCRIPTOR>::iniEquilibrium(
+  BlockGeometryStructure3D<T>& blockGeometry, int material,
+  AnalyticalF3D<T,T>& rho, AnalyticalF3D<T,T>& u)
 {
-  bool inside;
-  T physR[3] = {T(),T(),T()};
-  T* fieldTmp = new T [sizeOfField];
-  for (int iX = 0; iX < getNx(); iX++) {
-    for (int iY = 0; iY < getNy(); iY++) {
-      for (int iZ = 0; iZ < getNz(); iZ++) {
-        blockGeometry.getPhysR(physR, iX,iY,iZ);
-        indicator(&inside, physR);
-        if (inside) {
-          field(fieldTmp,physR);
-          get(iX,iY,iZ).defineExternalField(fieldBeginsAt,sizeOfField, fieldTmp);
-        }
-      }
-    }
-  }
-  delete[] fieldTmp;
+  BlockIndicatorMaterial3D<T> indicator(blockGeometry, material);
+  iniEquilibrium(indicator, rho, u);
 }
 
-
-template<typename T, template<typename U> class Lattice>
-void BlockLatticeStructure3D<T, Lattice>::setExternalParticleField(
+#ifndef OLB_PRECOMPILED
+template<typename T, typename DESCRIPTOR>
+void BlockLatticeStructure3D<T, DESCRIPTOR>::setExternalParticleField(
   BlockGeometryStructure3D<T>& blockGeometry,
-  AnalyticalF3D<T, T>& velocity, ParticleIndicatorF3D<T, T>& sIndicator)
+  AnalyticalF3D<T, T>& velocity, SmoothIndicatorF3D<T,T,true>& sIndicator)
 {
-  T foo[4] = { T(), T(), T(), T() }; /// Contains foo[0]=vel0; foo[1]=vel1; foo[2]=vel2; foo[3]=porosity
-  T physR[3] = { T(), T(), T() };
-  T porosity[1] = { T() };
-  for (int iX = 0; iX < this->_nx; iX++) {
-    for (int iY = 0; iY < this->_ny; iY++) {
-      for (int iZ = 0; iZ < this->_nz; iZ++) {
-        blockGeometry.getPhysR(physR, iX, iY, iZ);
-//        if (physR[0] > sIndicator.getMin()[0]
-//            && physR[0] < sIndicator.getMax()[0]
-//            && physR[1] > sIndicator.getMin()[1]
-//            && physR[1] < sIndicator.getMax()[1]) {
-        // TODO quick and dirty
-        if (physR[0] < sIndicator.getPos()[0]+sIndicator.getMax()[0] &&
-            physR[1] < sIndicator.getPos()[1]+sIndicator.getMax()[1] &&
-            physR[2] < sIndicator.getPos()[2]+sIndicator.getMax()[2] &&
-            physR[0] > sIndicator.getPos()[0]+sIndicator.getMin()[0] &&
-            physR[1] > sIndicator.getPos()[1]+sIndicator.getMin()[1] &&
-            physR[2] > sIndicator.getPos()[2]+sIndicator.getMin()[2]
-           ) {
+  
+  int start[3] = {0};
+  int end[3] = {0};
+  // check for intersection of cuboid and indicator
+  Cuboid3D<T> tmpCuboid(blockGeometry.getOrigin()[0], blockGeometry.getOrigin()[1], blockGeometry.getOrigin()[2], blockGeometry.getDeltaR(), blockGeometry.getNx(), blockGeometry.getNy(), blockGeometry.getNz());
+  T posXmin = sIndicator.getPos()[0] - sIndicator.getCircumRadius();
+  T posXmax = sIndicator.getPos()[0] + sIndicator.getCircumRadius();
+  T posYmin = sIndicator.getPos()[1] - sIndicator.getCircumRadius();
+  T posYmax = sIndicator.getPos()[1] + sIndicator.getCircumRadius();
+  T posZmin = sIndicator.getPos()[2] - sIndicator.getCircumRadius();
+  T posZmax = sIndicator.getPos()[2] + sIndicator.getCircumRadius();
+  if(tmpCuboid.checkInters(posXmin, posXmax, posYmin, posYmax, posZmin, posZmax,
+                           start[0], end[0], start[1], end[1], start[2], end[2]))
+  {
+    for (int k=0; k<3; k++) {
+      start[k] -= 1;
+      if(start[k] < 0) start[k] = 0;
+      end[k] += 2;
+      if(end[k] > blockGeometry.getExtend()[k]) end[k] = blockGeometry.getExtend()[k];
+    }
+
+    T foo[4] = { }; /// Contains foo[0]=vel0; foo[1]=vel1; foo[2]=vel2; foo[3]=porosity
+    T physR[3] = { };
+    T porosity[1] = { };
+   
+    for (int iX = start[0]; iX < end[0]; ++iX) {
+      for (int iY = start[1]; iY < end[1]; ++iY) {
+        for (int iZ = start[2]; iZ < end[2]; ++iZ) {
+          blockGeometry.getPhysR(physR, iX, iY, iZ);
           sIndicator(porosity, physR);
-//          std::cout << porosity[0] << std::endl;
-          if (porosity[0] > 0.) {
+          if (!util::nearZero(porosity[0])) {
             velocity(foo, physR);
             foo[0] *= porosity[0];
             foo[1] *= porosity[0];
             foo[2] *= porosity[0];
             foo[3] = porosity[0];
-            get(iX, iY, iZ).addExternalField(1, 4, foo);
+            get(iX, iY, iZ).template addField<descriptors::VELOCITY_NUMERATOR>(foo);
+            get(iX, iY, iZ).template addField<descriptors::VELOCITY_DENOMINATOR>(&foo[3]);
             porosity[0] = 1. - porosity[0];
-            get(iX, iY, iZ).multiplyExternalField(0, 1, porosity);
+            *(get(iX, iY, iZ).template getFieldPointer<descriptors::POROSITY>()) *= porosity[0];
           }
         }
       }
     }
   }
 }
-
-template<typename T, template<typename U> class Lattice>
-void BlockLatticeStructure3D<T,Lattice>::iniEquilibrium(
-  BlockGeometryStructure3D<T>& blockGeometry, int material,
-  AnalyticalF3D<T,T>& rho, AnalyticalF3D<T,T>& u)
-{
-  T physR[3] = {T(),T(),T()};
-  T uTmp[3] = {T(),T(),T()};
-  T rhoTmp = T();
-  for (int iX = 0; iX < getNx(); iX++) {
-    for (int iY = 0; iY < getNy(); iY++) {
-      for (int iZ = 0; iZ < getNz(); iZ++) {
-        if (blockGeometry.getMaterial(iX, iY, iZ) == material) {
-          blockGeometry.getPhysR(physR,iX,iY,iZ);
-          u(uTmp,physR);
-          rho(&rhoTmp,physR);
-          get(iX,iY,iZ).iniEquilibrium(rhoTmp,uTmp);
-        }
-      }
-    }
-  }
-}
+#endif
 
 }  // namespace olb
 

@@ -1,6 +1,6 @@
 /*  This file is part of the OpenLB library
  *
- *  Copyright (C) 2014 Albert Mink, Mathias J. Krause, Adrian Kummerländer
+ *  Copyright (C) 2014 Albert Mink, Mathias J. Krause, Adrian Kummerlaender
  *  E-mail contact: info@openlb.net
  *  The most recent release of OpenLB can be downloaded at
  *  <http://www.openlb.net/>
@@ -88,20 +88,6 @@ public:
 };
 
 
-/// sums over all cells of a certain indicator
-template <typename T>
-class SuperSumIndicator2D final : public SuperF2D<T> {
-private:
-  SuperF2D<T>& _f;
-  SuperGeometry2D<T>& _superGeometry;
-  ParticleIndicatorF2D<T,T>& _indicator;
-public:
-  SuperSumIndicator2D(SuperF2D<T>& f, SuperGeometry2D<T>& superGeometry,
-                      ParticleIndicatorF2D<T,T>& indicator);
-  bool operator() (T output[], const int input[]) override;
-};
-
-
 template <typename T>
 class SuperIntegral2D final : public SuperF2D<T> {
 private:
@@ -123,7 +109,7 @@ private:
   const int             _material;
   const T _latticeL;
 public:
-  template<template<typename U> class DESCRIPTOR>
+  template<typename DESCRIPTOR>
   SuperGeometryFaces2D(SuperGeometry2D<T>& superGeometry, const int material, const UnitConverter<T,DESCRIPTOR>& converter);
   SuperGeometryFaces2D(SuperGeometry2D<T>& superGeometry, const int material, T latticeL);
   bool operator() (T output[], const int input[]) override;
@@ -131,25 +117,22 @@ public:
 
 
 /// functor counts to get the discrete surface for a material no. in direction (1,0,0), (0,1,0), (0,0,1), (-1,0,0), (0,-1,0), (0,0,-1) and total surface, then it converts it into phys units
-template <typename T>
+template <typename T, bool HLBM>
 class SuperGeometryFacesIndicator2D final : public GenericF<T,int> {
 private:
   SuperGeometry2D<T>&   _superGeometry;
-  SmoothIndicatorCircle2D<T,T>& _indicator;
+  SmoothIndicatorF2D<T,T,HLBM>& _indicator;
   const int             _material;
   T _latticeL;
 public:
-  template<template<typename U> class DESCRIPTOR>
-  SuperGeometryFacesIndicator2D(SuperGeometry2D<T>& superGeometry, SmoothIndicatorCircle2D<T,T>& indicator, const int material,
-                                const UnitConverter<T,DESCRIPTOR>& converter);
-  SuperGeometryFacesIndicator2D(SuperGeometry2D<T>& superGeometry, SmoothIndicatorCircle2D<T,T>& indicator, const int material,
-                                T latticeL);
+  SuperGeometryFacesIndicator2D(SuperGeometry2D<T>& superGeometry, SmoothIndicatorF2D<T,T,HLBM>& indicator, const int material,
+                                T deltaX);
   bool operator() (T output[], const int input[]) override;
 };
 
 
 /// functor to get pointwise phys force acting on a boundary with a given material on local lattice
-template <typename T, template <typename U> class DESCRIPTOR>
+template <typename T, typename DESCRIPTOR>
 class SuperLatticePhysDrag2D final : public SuperLatticePhysF2D<T,DESCRIPTOR> {
 private:
   SuperGeometry2D<T>& _superGeometry;
@@ -161,40 +144,12 @@ public:
   bool operator() (T output[], const int input[]) override;
 };
 
-/// functor to get pointwise phys force acting on a boundary with a given indicator on local lattice
-template <typename T, template <typename U> class DESCRIPTOR>
-class SuperLatticePhysDragIndicator2D final : public SuperLatticePhysF2D<T,DESCRIPTOR> {
-private:
-  SuperGeometry2D<T>& _superGeometry;
-  ParticleIndicatorF2D<T,T>& _indicator;
-public:
-  SuperLatticePhysDragIndicator2D(SuperLattice2D<T,DESCRIPTOR>& sLattice,
-                                  SuperGeometry2D<T>& superGeometry,
-                                  ParticleIndicatorF2D<T,T>& indicator,
-                                  const UnitConverter<T,DESCRIPTOR>& converter);
-  bool operator() (T output[], const int input[]);
-};
-
-/// functor to get pointwise phys force acting on a boundary with a given indicator on local lattice
-template <typename T, template <typename U> class DESCRIPTOR>
-class SuperLatticePhysDragIndicator2D_2 final : public SuperLatticePhysF2D<T,DESCRIPTOR> {
-private:
-  SuperGeometry2D<T>& _superGeometry;
-  SmoothIndicatorF2D<T,T>& _indicator;
-public:
-  SuperLatticePhysDragIndicator2D_2(SuperLattice2D<T,DESCRIPTOR>& sLattice,
-                                    SuperGeometry2D<T>& superGeometry,
-                                    SmoothIndicatorF2D<T,T>& indicator,
-                                    const UnitConverter<T,DESCRIPTOR>& converter);
-  bool operator() (T output[], const int input[]);
-};
-
 
 /**
  *  functor to get pointwise phys force acting on a boundary with a given material on local lattice
  *  see: Caiazzo, Junk: Boundary Forces in lattice Boltzmann: Analysis of MEA
  */
-template <typename T, template <typename U> class DESCRIPTOR>
+template <typename T, typename DESCRIPTOR>
 class SuperLatticePhysCorrDrag2D final : public SuperLatticePhysF2D<T,DESCRIPTOR> {
 private:
   SuperGeometry2D<T>& _superGeometry;

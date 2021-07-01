@@ -32,7 +32,7 @@
 
 namespace olb {
 
-using namespace descriptors;
+ 
 
 /**
 * Class for the coupling between a Navier-Stokes (NS) lattice and an
@@ -46,8 +46,8 @@ using namespace descriptors;
 //======================================================================
 // ========Regularized NSDiffusion Coupling 2D ====================//
 //======================================================================
-template<typename T, template<typename U> class Lattice>
-class NavierStokesAdvectionDiffusionCouplingPostProcessor2D : public LocalPostProcessor2D<T,Lattice> {
+template<typename T, typename DESCRIPTOR>
+class NavierStokesAdvectionDiffusionCouplingPostProcessor2D : public LocalPostProcessor2D<T,DESCRIPTOR> {
 public:
   NavierStokesAdvectionDiffusionCouplingPostProcessor2D(int x0_, int x1_, int y0_, int y1_,
       T gravity_, T T0_, T deltaTemp_, std::vector<T> dir_,
@@ -60,37 +60,124 @@ public:
   {
     return 0;
   }
-  void process(BlockLattice2D<T,Lattice>& blockLattice) override;
-  void processSubDomain(BlockLattice2D<T,Lattice>& blockLattice,
+  void process(BlockLattice2D<T,DESCRIPTOR>& blockLattice) override;
+  void processSubDomain(BlockLattice2D<T,DESCRIPTOR>& blockLattice,
                                 int x0_, int x1_, int y0_, int y1_) override;
 private:
-  typedef Lattice<T> L;
+  typedef DESCRIPTOR L;
   int x0, x1, y0, y1;
   T gravity, T0, deltaTemp;
   std::vector<T> dir;
-  BlockLattice2D<T,AdvectionDiffusionD2Q5Descriptor> *tPartner;
+  BlockLattice2D<T,descriptors::D2Q5<descriptors::VELOCITY>> *tPartner;
   T forcePrefactor[L::d];
 
   std::vector<SpatiallyExtendedObject2D*> partners;
-  enum {
-    velOffset = AdvectionDiffusionD2Q5Descriptor<T>::ExternalField::velocityBeginsAt,
-    forceOffset = ForcedD2Q9Descriptor<T>::ExternalField::forceBeginsAt
-  };
 };
 
-template<typename T, template<typename U> class Lattice>
-class NavierStokesAdvectionDiffusionCouplingGenerator2D : public LatticeCouplingGenerator2D<T,Lattice> {
+template<typename T, typename DESCRIPTOR>
+class NavierStokesAdvectionDiffusionCouplingGenerator2D : public LatticeCouplingGenerator2D<T,DESCRIPTOR> {
 public:
   NavierStokesAdvectionDiffusionCouplingGenerator2D(int x0_, int x1_, int y0_, int y1_,
       T gravity_, T T0_, T deltaTemp_, std::vector<T> dir_);
-  PostProcessor2D<T,Lattice>* generate(std::vector<SpatiallyExtendedObject2D* > partners) const override;
-  LatticeCouplingGenerator2D<T,Lattice>* clone() const override;
+  PostProcessor2D<T,DESCRIPTOR>* generate(std::vector<SpatiallyExtendedObject2D* > partners) const override;
+  LatticeCouplingGenerator2D<T,DESCRIPTOR>* clone() const override;
 
 private:
   T gravity, T0, deltaTemp;
   std::vector<T> dir;
 };
 
+template<typename T, typename DESCRIPTOR>
+class SmagorinskyBoussinesqCouplingPostProcessor2D : public LocalPostProcessor2D<T,DESCRIPTOR> {
+public:
+  SmagorinskyBoussinesqCouplingPostProcessor2D(int x0_, int x1_, int y0_, int y1_,
+      T gravity_, T T0_, T deltaTemp_, std::vector<T> dir_, T PrTurb_,
+      std::vector<SpatiallyExtendedObject2D* > partners_);
+  int extent() const override
+  {
+    return 0;
+  }
+  int extent(int whichDirection) const override
+  {
+    return 0;
+  }
+  void process(BlockLattice2D<T,DESCRIPTOR>& blockLattice) override;
+  void processSubDomain(BlockLattice2D<T,DESCRIPTOR>& blockLattice,
+                                int x0_, int x1_, int y0_, int y1_) override;
+private:
+  typedef DESCRIPTOR L;
+  int x0, x1, y0, y1;
+  T gravity, T0, deltaTemp;
+  std::vector<T> dir;
+  T PrTurb;
+  BlockLattice2D<T,descriptors::D2Q5<descriptors::VELOCITY,descriptors::TAU_EFF>> *tPartner;
+  T forcePrefactor[L::d];
+  T tauTurbADPrefactor;
+
+  std::vector<SpatiallyExtendedObject2D*> partners;
+  enum {
+    velOffset = descriptors::D2Q5<descriptors::VELOCITY,descriptors::TAU_EFF>::template index<descriptors::VELOCITY>(),
+    forceOffset = descriptors::D2Q9<descriptors::FORCE,descriptors::TAU_EFF>::template index<descriptors::FORCE>(),
+    tauADoffset = descriptors::D2Q5<descriptors::VELOCITY,descriptors::TAU_EFF>::template index<descriptors::TAU_EFF>(),
+    tauNSoffset = descriptors::D2Q9<descriptors::FORCE,descriptors::TAU_EFF>::template index<descriptors::TAU_EFF>()
+  };
+};
+
+template<typename T, typename DESCRIPTOR>
+class SmagorinskyBoussinesqCouplingGenerator2D : public LatticeCouplingGenerator2D<T,DESCRIPTOR> {
+public:
+  SmagorinskyBoussinesqCouplingGenerator2D(int x0_, int x1_, int y0_, int y1_,
+      T gravity_, T T0_, T deltaTemp_, std::vector<T> dir_, T PrTurb_);
+  PostProcessor2D<T,DESCRIPTOR>* generate(std::vector<SpatiallyExtendedObject2D* > partners) const override;
+  LatticeCouplingGenerator2D<T,DESCRIPTOR>* clone() const override;
+
+private:
+  T gravity, T0, deltaTemp;
+  std::vector<T> dir;
+  T PrTurb;
+};
+
+template<typename T, typename DESCRIPTOR>
+class MixedScaleBoussinesqCouplingPostProcessor2D : public LocalPostProcessor2D<T,DESCRIPTOR> {
+public:
+  MixedScaleBoussinesqCouplingPostProcessor2D(int x0_, int x1_, int y0_, int y1_,
+      T gravity_, T T0_, T deltaTemp_, std::vector<T> dir_, T PrTurb_,
+      std::vector<SpatiallyExtendedObject2D* > partners_);
+  int extent() const override
+  {
+    return 0;
+  }
+  int extent(int whichDirection) const override
+  {
+    return 0;
+  }
+  void process(BlockLattice2D<T,DESCRIPTOR>& blockLattice) override;
+  void processSubDomain(BlockLattice2D<T,DESCRIPTOR>& blockLattice,
+                                int x0_, int x1_, int y0_, int y1_) override;
+private:
+  typedef DESCRIPTOR L;
+  int x0, x1, y0, y1;
+  T gravity, T0, deltaTemp, PrTurb;
+  std::vector<T> dir;
+  BlockLattice2D<T,descriptors::D2Q5<descriptors::VELOCITY,descriptors::TAU_EFF,descriptors::CUTOFF_HEAT_FLUX>> *tPartner;
+  T forcePrefactor[L::d];
+  T tauTurbADPrefactor;
+
+  std::vector<SpatiallyExtendedObject2D*> partners;
+};
+
+template<typename T, typename DESCRIPTOR>
+class MixedScaleBoussinesqCouplingGenerator2D : public LatticeCouplingGenerator2D<T,DESCRIPTOR> {
+public:
+  MixedScaleBoussinesqCouplingGenerator2D(int x0_, int x1_, int y0_, int y1_,
+      T gravity_, T T0_, T deltaTemp_, std::vector<T> dir_, T PrTurb_);
+  PostProcessor2D<T,DESCRIPTOR>* generate(std::vector<SpatiallyExtendedObject2D* > partners) const override;
+  LatticeCouplingGenerator2D<T,DESCRIPTOR>* clone() const override;
+
+private:
+  T gravity, T0, deltaTemp, PrTurb;
+  std::vector<T> dir;
+};
 
 }
 

@@ -44,8 +44,6 @@ precompiled    := blockStructure2D \
                   serializer \
                   superData2D \
                   superData3D \
-                  superExternal2D \
-                  superExternal3D \
                   superLattice2D \
                   superLattice3D \
                   unitConverter

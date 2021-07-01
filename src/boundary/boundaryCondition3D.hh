@@ -33,266 +33,266 @@
 
 namespace olb {
 
-template<typename T, template<typename U> class Lattice, class MixinDynamics>
+template<typename T, typename DESCRIPTOR, class MixinDynamics>
 class RegularizedBoundaryManager3D {
 public:
-  template<int direction, int orientation> static Momenta<T,Lattice>*
+  template<int direction, int orientation> static Momenta<T,DESCRIPTOR>*
   getVelocityBoundaryMomenta();
-  template<int direction, int orientation> static Dynamics<T,Lattice>*
-  getVelocityBoundaryDynamics(T omega, Momenta<T,Lattice>& momenta);
-  template<int direction, int orientation> static PostProcessorGenerator3D<T,Lattice>*
+  template<int direction, int orientation> static Dynamics<T,DESCRIPTOR>*
+  getVelocityBoundaryDynamics(T omega, Momenta<T,DESCRIPTOR>& momenta);
+  template<int direction, int orientation> static PostProcessorGenerator3D<T,DESCRIPTOR>*
   getVelocityBoundaryProcessor(int x0, int x1, int y0, int y1, int z0, int z1);
 
-  template<int direction, int orientation> static Momenta<T,Lattice>*
+  template<int direction, int orientation> static Momenta<T,DESCRIPTOR>*
   getPressureBoundaryMomenta();
-  template<int direction, int orientation> static Dynamics<T,Lattice>*
-  getPressureBoundaryDynamics(T omega, Momenta<T,Lattice>& momenta);
-  template<int direction, int orientation> static PostProcessorGenerator3D<T,Lattice>*
+  template<int direction, int orientation> static Dynamics<T,DESCRIPTOR>*
+  getPressureBoundaryDynamics(T omega, Momenta<T,DESCRIPTOR>& momenta);
+  template<int direction, int orientation> static PostProcessorGenerator3D<T,DESCRIPTOR>*
   getPressureBoundaryProcessor(int x0, int x1, int y0, int y1, int z0, int z1);
 
-  template<int direction, int orientation> static PostProcessorGenerator3D<T,Lattice>*
+  template<int direction, int orientation> static PostProcessorGenerator3D<T,DESCRIPTOR>*
   getConvectionBoundaryProcessor(int x0, int x1, int y0, int y1, int z0, int z1, T* uAv=NULL);
 
-  template<int plane, int normal1, int normal2> static Momenta<T,Lattice>*
+  template<int plane, int normal1, int normal2> static Momenta<T,DESCRIPTOR>*
   getExternalVelocityEdgeMomenta();
-  template<int plane, int normal1, int normal2> static Dynamics<T,Lattice>*
-  getExternalVelocityEdgeDynamics(T omega, Momenta<T,Lattice>& momenta);
-  template<int plane, int normal1, int normal2> static PostProcessorGenerator3D<T,Lattice>*
+  template<int plane, int normal1, int normal2> static Dynamics<T,DESCRIPTOR>*
+  getExternalVelocityEdgeDynamics(T omega, Momenta<T,DESCRIPTOR>& momenta);
+  template<int plane, int normal1, int normal2> static PostProcessorGenerator3D<T,DESCRIPTOR>*
   getExternalVelocityEdgeProcessor(int x0, int x1, int y0, int y1, int z0, int z1);
 
-  template<int plane, int normal1, int normal2> static Momenta<T,Lattice>*
+  template<int plane, int normal1, int normal2> static Momenta<T,DESCRIPTOR>*
   getInternalVelocityEdgeMomenta();
-  template<int plane, int normal1, int normal2> static Dynamics<T,Lattice>*
-  getInternalVelocityEdgeDynamics(T omega, Momenta<T,Lattice>& momenta);
-  template<int plane, int normal1, int normal2> static PostProcessorGenerator3D<T,Lattice>*
+  template<int plane, int normal1, int normal2> static Dynamics<T,DESCRIPTOR>*
+  getInternalVelocityEdgeDynamics(T omega, Momenta<T,DESCRIPTOR>& momenta);
+  template<int plane, int normal1, int normal2> static PostProcessorGenerator3D<T,DESCRIPTOR>*
   getInternalVelocityEdgeProcessor(int x0, int x1, int y0, int y1, int z0, int z1);
 
-  template<int xNormal, int yNormal, int zNormal> static Momenta<T,Lattice>*
+  template<int xNormal, int yNormal, int zNormal> static Momenta<T,DESCRIPTOR>*
   getExternalVelocityCornerMomenta();
-  template<int xNormal, int yNormal, int zNormal> static Dynamics<T,Lattice>*
-  getExternalVelocityCornerDynamics(T omega, Momenta<T,Lattice>& momenta);
-  template<int xNormal, int yNormal, int zNormal> static PostProcessorGenerator3D<T,Lattice>*
+  template<int xNormal, int yNormal, int zNormal> static Dynamics<T,DESCRIPTOR>*
+  getExternalVelocityCornerDynamics(T omega, Momenta<T,DESCRIPTOR>& momenta);
+  template<int xNormal, int yNormal, int zNormal> static PostProcessorGenerator3D<T,DESCRIPTOR>*
   getExternalVelocityCornerProcessor(int x, int y, int z);
 
-  template<int xNormal, int yNormal, int zNormal> static Momenta<T,Lattice>*
+  template<int xNormal, int yNormal, int zNormal> static Momenta<T,DESCRIPTOR>*
   getInternalVelocityCornerMomenta();
-  template<int xNormal, int yNormal, int zNormal> static Dynamics<T,Lattice>*
-  getInternalVelocityCornerDynamics(T omega, Momenta<T,Lattice>& momenta);
-  template<int xNormal, int yNormal, int zNormal> static PostProcessorGenerator3D<T,Lattice>*
+  template<int xNormal, int yNormal, int zNormal> static Dynamics<T,DESCRIPTOR>*
+  getInternalVelocityCornerDynamics(T omega, Momenta<T,DESCRIPTOR>& momenta);
+  template<int xNormal, int yNormal, int zNormal> static PostProcessorGenerator3D<T,DESCRIPTOR>*
   getInternalVelocityCornerProcessor(int x, int y, int z);
 };
 
-template<typename T, template<typename U> class Lattice, class MixinDynamics>
+template<typename T, typename DESCRIPTOR, class MixinDynamics>
 class InterpolationBoundaryManager3D {
 public:
-  template<int direction, int orientation> static Momenta<T,Lattice>*
+  template<int direction, int orientation> static Momenta<T,DESCRIPTOR>*
   getVelocityBoundaryMomenta();
-  template<int direction, int orientation> static Dynamics<T,Lattice>*
-  getVelocityBoundaryDynamics(T omega, Momenta<T,Lattice>& momenta);
-  template<int direction, int orientation> static PostProcessorGenerator3D<T,Lattice>*
+  template<int direction, int orientation> static Dynamics<T,DESCRIPTOR>*
+  getVelocityBoundaryDynamics(T omega, Momenta<T,DESCRIPTOR>& momenta);
+  template<int direction, int orientation> static PostProcessorGenerator3D<T,DESCRIPTOR>*
   getVelocityBoundaryProcessor(int x0, int x1, int y0, int y1, int z0, int z1);
 
-  template<int direction, int orientation> static Momenta<T,Lattice>*
+  template<int direction, int orientation> static Momenta<T,DESCRIPTOR>*
   getPressureBoundaryMomenta();
-  template<int direction, int orientation> static Dynamics<T,Lattice>*
-  getPressureBoundaryDynamics(T omega, Momenta<T,Lattice>& momenta);
-  template<int direction, int orientation> static PostProcessorGenerator3D<T,Lattice>*
+  template<int direction, int orientation> static Dynamics<T,DESCRIPTOR>*
+  getPressureBoundaryDynamics(T omega, Momenta<T,DESCRIPTOR>& momenta);
+  template<int direction, int orientation> static PostProcessorGenerator3D<T,DESCRIPTOR>*
   getPressureBoundaryProcessor(int x0, int x1, int y0, int y1, int z0, int z1);
 
-  template<int direction, int orientation> static PostProcessorGenerator3D<T,Lattice>*
+  template<int direction, int orientation> static PostProcessorGenerator3D<T,DESCRIPTOR>*
   getConvectionBoundaryProcessor(int x0, int x1, int y0, int y1, int z0, int z1, T* uAv=NULL);
 
-  template<int plane, int normal1, int normal2> static Momenta<T,Lattice>*
+  template<int plane, int normal1, int normal2> static Momenta<T,DESCRIPTOR>*
   getExternalVelocityEdgeMomenta();
-  template<int plane, int normal1, int normal2> static Dynamics<T,Lattice>*
-  getExternalVelocityEdgeDynamics(T omega, Momenta<T,Lattice>& momenta);
-  template<int plane, int normal1, int normal2> static PostProcessorGenerator3D<T,Lattice>*
+  template<int plane, int normal1, int normal2> static Dynamics<T,DESCRIPTOR>*
+  getExternalVelocityEdgeDynamics(T omega, Momenta<T,DESCRIPTOR>& momenta);
+  template<int plane, int normal1, int normal2> static PostProcessorGenerator3D<T,DESCRIPTOR>*
   getExternalVelocityEdgeProcessor(int x0, int x1, int y0, int y1, int z0, int z1);
 
-  template<int plane, int normal1, int normal2> static Momenta<T,Lattice>*
+  template<int plane, int normal1, int normal2> static Momenta<T,DESCRIPTOR>*
   getInternalVelocityEdgeMomenta();
-  template<int plane, int normal1, int normal2> static Dynamics<T,Lattice>*
-  getInternalVelocityEdgeDynamics(T omega, Momenta<T,Lattice>& momenta);
-  template<int plane, int normal1, int normal2> static PostProcessorGenerator3D<T,Lattice>*
+  template<int plane, int normal1, int normal2> static Dynamics<T,DESCRIPTOR>*
+  getInternalVelocityEdgeDynamics(T omega, Momenta<T,DESCRIPTOR>& momenta);
+  template<int plane, int normal1, int normal2> static PostProcessorGenerator3D<T,DESCRIPTOR>*
   getInternalVelocityEdgeProcessor(int x0, int x1, int y0, int y1, int z0, int z1);
 
-  template<int xNormal, int yNormal, int zNormal> static Momenta<T,Lattice>*
+  template<int xNormal, int yNormal, int zNormal> static Momenta<T,DESCRIPTOR>*
   getExternalVelocityCornerMomenta();
-  template<int xNormal, int yNormal, int zNormal> static Dynamics<T,Lattice>*
-  getExternalVelocityCornerDynamics(T omega, Momenta<T,Lattice>& momenta);
-  template<int xNormal, int yNormal, int zNormal> static PostProcessorGenerator3D<T,Lattice>*
+  template<int xNormal, int yNormal, int zNormal> static Dynamics<T,DESCRIPTOR>*
+  getExternalVelocityCornerDynamics(T omega, Momenta<T,DESCRIPTOR>& momenta);
+  template<int xNormal, int yNormal, int zNormal> static PostProcessorGenerator3D<T,DESCRIPTOR>*
   getExternalVelocityCornerProcessor(int x, int y, int z);
 
-  template<int xNormal, int yNormal, int zNormal> static Momenta<T,Lattice>*
+  template<int xNormal, int yNormal, int zNormal> static Momenta<T,DESCRIPTOR>*
   getInternalVelocityCornerMomenta();
-  template<int xNormal, int yNormal, int zNormal> static Dynamics<T,Lattice>*
-  getInternalVelocityCornerDynamics(T omega, Momenta<T,Lattice>& momenta);
-  template<int xNormal, int yNormal, int zNormal> static PostProcessorGenerator3D<T,Lattice>*
+  template<int xNormal, int yNormal, int zNormal> static Dynamics<T,DESCRIPTOR>*
+  getInternalVelocityCornerDynamics(T omega, Momenta<T,DESCRIPTOR>& momenta);
+  template<int xNormal, int yNormal, int zNormal> static PostProcessorGenerator3D<T,DESCRIPTOR>*
   getInternalVelocityCornerProcessor(int x, int y, int z);
 };
 
 
 ////////// RegularizedBoundaryManager3D /////////////////////////////////////////
 
-template<typename T, template<typename U> class Lattice, class MixinDynamics>
+template<typename T, typename DESCRIPTOR, class MixinDynamics>
 template<int direction, int orientation>
-Momenta<T,Lattice>*
-RegularizedBoundaryManager3D<T,Lattice,MixinDynamics>::getVelocityBoundaryMomenta()
+Momenta<T,DESCRIPTOR>*
+RegularizedBoundaryManager3D<T,DESCRIPTOR,MixinDynamics>::getVelocityBoundaryMomenta()
 {
-  return new RegularizedVelocityBM<T,Lattice, direction,orientation>;
+  return new RegularizedVelocityBM<T,DESCRIPTOR, direction,orientation>;
 }
 
-template<typename T, template<typename U> class Lattice, class MixinDynamics>
+template<typename T, typename DESCRIPTOR, class MixinDynamics>
 template<int direction, int orientation>
-Dynamics<T,Lattice>* RegularizedBoundaryManager3D<T,Lattice,MixinDynamics>::
-getVelocityBoundaryDynamics(T omega, Momenta<T,Lattice>& momenta)
+Dynamics<T,DESCRIPTOR>* RegularizedBoundaryManager3D<T,DESCRIPTOR,MixinDynamics>::
+getVelocityBoundaryDynamics(T omega, Momenta<T,DESCRIPTOR>& momenta)
 {
-  return new CombinedRLBdynamics<T,Lattice, MixinDynamics>(omega, momenta);
+  return new CombinedRLBdynamics<T,DESCRIPTOR, MixinDynamics>(omega, momenta);
 }
 
-template<typename T, template<typename U> class Lattice, class MixinDynamics>
+template<typename T, typename DESCRIPTOR, class MixinDynamics>
 template<int direction, int orientation>
-PostProcessorGenerator3D<T,Lattice>*
-RegularizedBoundaryManager3D<T,Lattice,MixinDynamics>::
+PostProcessorGenerator3D<T,DESCRIPTOR>*
+RegularizedBoundaryManager3D<T,DESCRIPTOR,MixinDynamics>::
 getVelocityBoundaryProcessor(int x0, int x1, int y0, int y1, int z0, int z1)
 {
   return nullptr;
 }
 
-template<typename T, template<typename U> class Lattice, class MixinDynamics>
+template<typename T, typename DESCRIPTOR, class MixinDynamics>
 template<int direction, int orientation>
-Momenta<T,Lattice>*
-RegularizedBoundaryManager3D<T,Lattice,MixinDynamics>::getPressureBoundaryMomenta()
+Momenta<T,DESCRIPTOR>*
+RegularizedBoundaryManager3D<T,DESCRIPTOR,MixinDynamics>::getPressureBoundaryMomenta()
 {
-  return new RegularizedPressureBM<T,Lattice, direction,orientation>;
+  return new RegularizedPressureBM<T,DESCRIPTOR, direction,orientation>;
 }
 
-template<typename T, template<typename U> class Lattice, class MixinDynamics>
+template<typename T, typename DESCRIPTOR, class MixinDynamics>
 template<int direction, int orientation>
-Dynamics<T,Lattice>* RegularizedBoundaryManager3D<T,Lattice,MixinDynamics>::
-getPressureBoundaryDynamics(T omega, Momenta<T,Lattice>& momenta)
+Dynamics<T,DESCRIPTOR>* RegularizedBoundaryManager3D<T,DESCRIPTOR,MixinDynamics>::
+getPressureBoundaryDynamics(T omega, Momenta<T,DESCRIPTOR>& momenta)
 {
-  return new CombinedRLBdynamics<T,Lattice, MixinDynamics>(omega, momenta);
+  return new CombinedRLBdynamics<T,DESCRIPTOR, MixinDynamics>(omega, momenta);
 }
 
-template<typename T, template<typename U> class Lattice, class MixinDynamics>
+template<typename T, typename DESCRIPTOR, class MixinDynamics>
 template<int direction, int orientation>
-PostProcessorGenerator3D<T,Lattice>*
-RegularizedBoundaryManager3D<T,Lattice,MixinDynamics>::
+PostProcessorGenerator3D<T,DESCRIPTOR>*
+RegularizedBoundaryManager3D<T,DESCRIPTOR,MixinDynamics>::
 getPressureBoundaryProcessor(int x0, int x1, int y0, int y1, int z0, int z1)
 {
   return nullptr;
 }
 
-template<typename T, template<typename U> class Lattice, class MixinDynamics>
+template<typename T, typename DESCRIPTOR, class MixinDynamics>
 template<int direction, int orientation>
-PostProcessorGenerator3D<T,Lattice>*
-RegularizedBoundaryManager3D<T,Lattice,MixinDynamics>::
+PostProcessorGenerator3D<T,DESCRIPTOR>*
+RegularizedBoundaryManager3D<T,DESCRIPTOR,MixinDynamics>::
 getConvectionBoundaryProcessor(int x0, int x1, int y0, int y1, int z0, int z1, T* uAv)
 {
   return nullptr;
 }
 
 
-template<typename T, template<typename U> class Lattice, class MixinDynamics>
+template<typename T, typename DESCRIPTOR, class MixinDynamics>
 template<int plane, int normal1, int normal2>
-Momenta<T,Lattice>*
-RegularizedBoundaryManager3D<T,Lattice,MixinDynamics>::getExternalVelocityEdgeMomenta()
+Momenta<T,DESCRIPTOR>*
+RegularizedBoundaryManager3D<T,DESCRIPTOR,MixinDynamics>::getExternalVelocityEdgeMomenta()
 {
-  return new FixedVelocityBM<T,Lattice>;
+  return new FixedVelocityBM<T,DESCRIPTOR>;
 }
 
-template<typename T, template<typename U> class Lattice, class MixinDynamics>
+template<typename T, typename DESCRIPTOR, class MixinDynamics>
 template<int plane, int normal1, int normal2>
-Dynamics<T,Lattice>*
-RegularizedBoundaryManager3D<T,Lattice,MixinDynamics>::
-getExternalVelocityEdgeDynamics(T omega, Momenta<T,Lattice>& momenta)
+Dynamics<T,DESCRIPTOR>*
+RegularizedBoundaryManager3D<T,DESCRIPTOR,MixinDynamics>::
+getExternalVelocityEdgeDynamics(T omega, Momenta<T,DESCRIPTOR>& momenta)
 {
   return new MixinDynamics(omega, momenta);
 }
 
-template<typename T, template<typename U> class Lattice, class MixinDynamics>
+template<typename T, typename DESCRIPTOR, class MixinDynamics>
 template<int plane, int normal1, int normal2>
-PostProcessorGenerator3D<T,Lattice>*
-RegularizedBoundaryManager3D<T,Lattice,MixinDynamics>::
+PostProcessorGenerator3D<T,DESCRIPTOR>*
+RegularizedBoundaryManager3D<T,DESCRIPTOR,MixinDynamics>::
 getExternalVelocityEdgeProcessor(int x0, int x1, int y0, int y1, int z0, int z1)
 {
-  return new OuterVelocityEdgeProcessorGenerator3D<T,Lattice, plane,normal1,normal2>(x0,x1, y0,y1, z0,z1);
+  return new OuterVelocityEdgeProcessorGenerator3D<T,DESCRIPTOR, plane,normal1,normal2>(x0,x1, y0,y1, z0,z1);
 }
 
-template<typename T, template<typename U> class Lattice, class MixinDynamics>
+template<typename T, typename DESCRIPTOR, class MixinDynamics>
 template<int plane, int normal1, int normal2>
-Momenta<T,Lattice>*
-RegularizedBoundaryManager3D<T,Lattice,MixinDynamics>::getInternalVelocityEdgeMomenta()
+Momenta<T,DESCRIPTOR>*
+RegularizedBoundaryManager3D<T,DESCRIPTOR,MixinDynamics>::getInternalVelocityEdgeMomenta()
 {
-  return new InnerEdgeVelBM3D<T,Lattice, plane,normal1,normal2>;
+  return new InnerEdgeVelBM3D<T,DESCRIPTOR, plane,normal1,normal2>;
 }
 
-template<typename T, template<typename U> class Lattice, class MixinDynamics>
+template<typename T, typename DESCRIPTOR, class MixinDynamics>
 template<int plane, int normal1, int normal2>
-Dynamics<T,Lattice>*
-RegularizedBoundaryManager3D<T,Lattice,MixinDynamics>::
-getInternalVelocityEdgeDynamics(T omega, Momenta<T,Lattice>& momenta)
+Dynamics<T,DESCRIPTOR>*
+RegularizedBoundaryManager3D<T,DESCRIPTOR,MixinDynamics>::
+getInternalVelocityEdgeDynamics(T omega, Momenta<T,DESCRIPTOR>& momenta)
 {
-  return new CombinedRLBdynamics<T,Lattice, MixinDynamics>(omega, momenta);
+  return new CombinedRLBdynamics<T,DESCRIPTOR, MixinDynamics>(omega, momenta);
 }
 
-template<typename T, template<typename U> class Lattice, class MixinDynamics>
+template<typename T, typename DESCRIPTOR, class MixinDynamics>
 template<int plane, int normal1, int normal2>
-PostProcessorGenerator3D<T,Lattice>*
-RegularizedBoundaryManager3D<T,Lattice,MixinDynamics>::
+PostProcessorGenerator3D<T,DESCRIPTOR>*
+RegularizedBoundaryManager3D<T,DESCRIPTOR,MixinDynamics>::
 getInternalVelocityEdgeProcessor(int x0, int x1, int y0, int y1, int z0, int z1)
 {
   return nullptr;
 }
 
-template<typename T, template<typename U> class Lattice, class MixinDynamics>
+template<typename T, typename DESCRIPTOR, class MixinDynamics>
 template<int xNormal, int yNormal, int zNormal>
-Momenta<T,Lattice>*
-RegularizedBoundaryManager3D<T,Lattice,MixinDynamics>::getExternalVelocityCornerMomenta()
+Momenta<T,DESCRIPTOR>*
+RegularizedBoundaryManager3D<T,DESCRIPTOR,MixinDynamics>::getExternalVelocityCornerMomenta()
 {
-  return new FixedVelocityBM<T,Lattice>;
+  return new FixedVelocityBM<T,DESCRIPTOR>;
 }
 
-template<typename T, template<typename U> class Lattice, class MixinDynamics>
+template<typename T, typename DESCRIPTOR, class MixinDynamics>
 template<int xNormal, int yNormal, int zNormal>
-Dynamics<T,Lattice>*
-RegularizedBoundaryManager3D<T,Lattice,MixinDynamics>::
-getExternalVelocityCornerDynamics(T omega, Momenta<T,Lattice>& momenta)
+Dynamics<T,DESCRIPTOR>*
+RegularizedBoundaryManager3D<T,DESCRIPTOR,MixinDynamics>::
+getExternalVelocityCornerDynamics(T omega, Momenta<T,DESCRIPTOR>& momenta)
 {
   return new MixinDynamics(omega, momenta);
 }
 
-template<typename T, template<typename U> class Lattice, class MixinDynamics>
+template<typename T, typename DESCRIPTOR, class MixinDynamics>
 template<int xNormal, int yNormal, int zNormal>
-PostProcessorGenerator3D<T,Lattice>*
-RegularizedBoundaryManager3D<T,Lattice,MixinDynamics>::
+PostProcessorGenerator3D<T,DESCRIPTOR>*
+RegularizedBoundaryManager3D<T,DESCRIPTOR,MixinDynamics>::
 getExternalVelocityCornerProcessor(int x, int y, int z)
 {
-  return new OuterVelocityCornerProcessorGenerator3D<T,Lattice, xNormal,yNormal,zNormal> (x,y,z);
+  return new OuterVelocityCornerProcessorGenerator3D<T,DESCRIPTOR, xNormal,yNormal,zNormal> (x,y,z);
 }
 
-template<typename T, template<typename U> class Lattice, class MixinDynamics>
+template<typename T, typename DESCRIPTOR, class MixinDynamics>
 template<int xNormal, int yNormal, int zNormal>
-Momenta<T,Lattice>*
-RegularizedBoundaryManager3D<T,Lattice,MixinDynamics>::getInternalVelocityCornerMomenta()
+Momenta<T,DESCRIPTOR>*
+RegularizedBoundaryManager3D<T,DESCRIPTOR,MixinDynamics>::getInternalVelocityCornerMomenta()
 {
-  return new InnerCornerVelBM3D<T,Lattice, xNormal,yNormal,zNormal>;
+  return new InnerCornerVelBM3D<T,DESCRIPTOR, xNormal,yNormal,zNormal>;
 }
 
-template<typename T, template<typename U> class Lattice, class MixinDynamics>
+template<typename T, typename DESCRIPTOR, class MixinDynamics>
 template<int xNormal, int yNormal, int zNormal>
-Dynamics<T,Lattice>*
-RegularizedBoundaryManager3D<T,Lattice,MixinDynamics>::
-getInternalVelocityCornerDynamics(T omega, Momenta<T,Lattice>& momenta)
+Dynamics<T,DESCRIPTOR>*
+RegularizedBoundaryManager3D<T,DESCRIPTOR,MixinDynamics>::
+getInternalVelocityCornerDynamics(T omega, Momenta<T,DESCRIPTOR>& momenta)
 {
-  return new CombinedRLBdynamics<T,Lattice, MixinDynamics>(omega, momenta);
+  return new CombinedRLBdynamics<T,DESCRIPTOR, MixinDynamics>(omega, momenta);
 }
 
-template<typename T, template<typename U> class Lattice, class MixinDynamics>
+template<typename T, typename DESCRIPTOR, class MixinDynamics>
 template<int xNormal, int yNormal, int zNormal>
-PostProcessorGenerator3D<T,Lattice>*
-RegularizedBoundaryManager3D<T,Lattice,MixinDynamics>::
+PostProcessorGenerator3D<T,DESCRIPTOR>*
+RegularizedBoundaryManager3D<T,DESCRIPTOR,MixinDynamics>::
 getInternalVelocityCornerProcessor(int x, int y, int z)
 {
   return nullptr;
@@ -301,189 +301,481 @@ getInternalVelocityCornerProcessor(int x, int y, int z)
 
 ////////// InterpolationBoundaryManager3D /////////////////////////////////////////
 
-template<typename T, template<typename U> class Lattice, class MixinDynamics>
+template<typename T, typename DESCRIPTOR, class MixinDynamics>
 template<int direction, int orientation>
-Momenta<T,Lattice>*
-InterpolationBoundaryManager3D<T,Lattice,MixinDynamics>::getVelocityBoundaryMomenta()
+Momenta<T,DESCRIPTOR>*
+InterpolationBoundaryManager3D<T,DESCRIPTOR,MixinDynamics>::getVelocityBoundaryMomenta()
 {
-  return new BasicDirichletBM<T,Lattice,VelocityBM, direction,orientation>;
+  return new BasicDirichletBM<T,DESCRIPTOR,VelocityBM, direction,orientation>;
 }
 
-template<typename T, template<typename U> class Lattice, class MixinDynamics>
+template<typename T, typename DESCRIPTOR, class MixinDynamics>
 template<int direction, int orientation>
-Dynamics<T,Lattice>* InterpolationBoundaryManager3D<T,Lattice,MixinDynamics>::
-getVelocityBoundaryDynamics(T omega, Momenta<T,Lattice>& momenta)
+Dynamics<T,DESCRIPTOR>* InterpolationBoundaryManager3D<T,DESCRIPTOR,MixinDynamics>::
+getVelocityBoundaryDynamics(T omega, Momenta<T,DESCRIPTOR>& momenta)
 {
   return new MixinDynamics(omega, momenta);
 }
 
-template<typename T, template<typename U> class Lattice, class MixinDynamics>
+template<typename T, typename DESCRIPTOR, class MixinDynamics>
 template<int direction, int orientation>
-PostProcessorGenerator3D<T,Lattice>*
-InterpolationBoundaryManager3D<T,Lattice,MixinDynamics>::
+PostProcessorGenerator3D<T,DESCRIPTOR>*
+InterpolationBoundaryManager3D<T,DESCRIPTOR,MixinDynamics>::
 getVelocityBoundaryProcessor(int x0, int x1, int y0, int y1, int z0, int z1)
 {
   return new PlaneFdBoundaryProcessorGenerator3D
-         <T,Lattice, direction,orientation>(x0,x1, y0,y1, z0,z1);
+         <T,DESCRIPTOR, direction,orientation>(x0,x1, y0,y1, z0,z1);
 }
 
-template<typename T, template<typename U> class Lattice, class MixinDynamics>
+template<typename T, typename DESCRIPTOR, class MixinDynamics>
 template<int direction, int orientation>
-Momenta<T,Lattice>*
-InterpolationBoundaryManager3D<T,Lattice,MixinDynamics>::getPressureBoundaryMomenta()
+Momenta<T,DESCRIPTOR>*
+InterpolationBoundaryManager3D<T,DESCRIPTOR,MixinDynamics>::getPressureBoundaryMomenta()
 {
-  return new BasicDirichletBM<T,Lattice,PressureBM, direction,orientation>;
+  return new BasicDirichletBM<T,DESCRIPTOR,PressureBM, direction,orientation>;
 }
 
-template<typename T, template<typename U> class Lattice, class MixinDynamics>
+template<typename T, typename DESCRIPTOR, class MixinDynamics>
 template<int direction, int orientation>
-Dynamics<T,Lattice>* InterpolationBoundaryManager3D<T,Lattice,MixinDynamics>::
-getPressureBoundaryDynamics(T omega, Momenta<T,Lattice>& momenta)
+Dynamics<T,DESCRIPTOR>* InterpolationBoundaryManager3D<T,DESCRIPTOR,MixinDynamics>::
+getPressureBoundaryDynamics(T omega, Momenta<T,DESCRIPTOR>& momenta)
 {
   return new MixinDynamics(omega, momenta);
 }
 
-template<typename T, template<typename U> class Lattice, class MixinDynamics>
+template<typename T, typename DESCRIPTOR, class MixinDynamics>
 template<int direction, int orientation>
-PostProcessorGenerator3D<T,Lattice>*
-InterpolationBoundaryManager3D<T,Lattice,MixinDynamics>::
+PostProcessorGenerator3D<T,DESCRIPTOR>*
+InterpolationBoundaryManager3D<T,DESCRIPTOR,MixinDynamics>::
 getPressureBoundaryProcessor(int x0, int x1, int y0, int y1, int z0, int z1)
 {
   return new PlaneFdBoundaryProcessorGenerator3D
-         <T,Lattice, direction,orientation>(x0, x1, y0, y1, z0, z1);
+         <T,DESCRIPTOR, direction,orientation>(x0, x1, y0, y1, z0, z1);
 }
 
-template<typename T, template<typename U> class Lattice, class MixinDynamics>
+template<typename T, typename DESCRIPTOR, class MixinDynamics>
 template<int direction, int orientation>
-PostProcessorGenerator3D<T,Lattice>*
-InterpolationBoundaryManager3D<T,Lattice,MixinDynamics>::
+PostProcessorGenerator3D<T,DESCRIPTOR>*
+InterpolationBoundaryManager3D<T,DESCRIPTOR,MixinDynamics>::
 getConvectionBoundaryProcessor(int x0, int x1, int y0, int y1, int z0, int z1, T* uAv)
 {
   return new StraightConvectionBoundaryProcessorGenerator3D
-         <T,Lattice,direction,orientation>(x0, x1, y0, y1, z0, z1, uAv);
+         <T,DESCRIPTOR,direction,orientation>(x0, x1, y0, y1, z0, z1, uAv);
 }
 
-template<typename T, template<typename U> class Lattice, class MixinDynamics>
+template<typename T, typename DESCRIPTOR, class MixinDynamics>
 template<int plane, int normal1, int normal2>
-Momenta<T,Lattice>*
-InterpolationBoundaryManager3D<T,Lattice,MixinDynamics>::getExternalVelocityEdgeMomenta()
+Momenta<T,DESCRIPTOR>*
+InterpolationBoundaryManager3D<T,DESCRIPTOR,MixinDynamics>::getExternalVelocityEdgeMomenta()
 {
-  return new FixedVelocityBM<T,Lattice>;
+  return new FixedVelocityBM<T,DESCRIPTOR>;
 }
 
-template<typename T, template<typename U> class Lattice, class MixinDynamics>
+template<typename T, typename DESCRIPTOR, class MixinDynamics>
 template<int plane, int normal1, int normal2>
-Dynamics<T,Lattice>*
-InterpolationBoundaryManager3D<T,Lattice,MixinDynamics>::
-getExternalVelocityEdgeDynamics(T omega, Momenta<T,Lattice>& momenta)
+Dynamics<T,DESCRIPTOR>*
+InterpolationBoundaryManager3D<T,DESCRIPTOR,MixinDynamics>::
+getExternalVelocityEdgeDynamics(T omega, Momenta<T,DESCRIPTOR>& momenta)
 {
   return new MixinDynamics(omega, momenta);
 }
 
-template<typename T, template<typename U> class Lattice, class MixinDynamics>
+template<typename T, typename DESCRIPTOR, class MixinDynamics>
 template<int plane, int normal1, int normal2>
-PostProcessorGenerator3D<T,Lattice>*
-InterpolationBoundaryManager3D<T,Lattice,MixinDynamics>::
+PostProcessorGenerator3D<T,DESCRIPTOR>*
+InterpolationBoundaryManager3D<T,DESCRIPTOR,MixinDynamics>::
 getExternalVelocityEdgeProcessor(int x0, int x1, int y0, int y1, int z0, int z1)
 {
-  return new OuterVelocityEdgeProcessorGenerator3D<T,Lattice, plane,normal1,normal2>(x0,x1, y0,y1, z0,z1);
+  return new OuterVelocityEdgeProcessorGenerator3D<T,DESCRIPTOR, plane,normal1,normal2>(x0,x1, y0,y1, z0,z1);
 }
 
-template<typename T, template<typename U> class Lattice, class MixinDynamics>
+template<typename T, typename DESCRIPTOR, class MixinDynamics>
 template<int plane, int normal1, int normal2>
-Momenta<T,Lattice>*
-InterpolationBoundaryManager3D<T,Lattice,MixinDynamics>::getInternalVelocityEdgeMomenta()
+Momenta<T,DESCRIPTOR>*
+InterpolationBoundaryManager3D<T,DESCRIPTOR,MixinDynamics>::getInternalVelocityEdgeMomenta()
 {
-  return new InnerEdgeVelBM3D<T,Lattice, plane,normal1,normal2>;
+  return new InnerEdgeVelBM3D<T,DESCRIPTOR, plane,normal1,normal2>;
 }
 
-template<typename T, template<typename U> class Lattice, class MixinDynamics>
+template<typename T, typename DESCRIPTOR, class MixinDynamics>
 template<int plane, int normal1, int normal2>
-Dynamics<T,Lattice>*
-InterpolationBoundaryManager3D<T,Lattice,MixinDynamics>::
-getInternalVelocityEdgeDynamics(T omega, Momenta<T,Lattice>& momenta)
+Dynamics<T,DESCRIPTOR>*
+InterpolationBoundaryManager3D<T,DESCRIPTOR,MixinDynamics>::
+getInternalVelocityEdgeDynamics(T omega, Momenta<T,DESCRIPTOR>& momenta)
 {
-  return new CombinedRLBdynamics<T,Lattice, MixinDynamics>(omega, momenta);
+  return new CombinedRLBdynamics<T,DESCRIPTOR, MixinDynamics>(omega, momenta);
 }
 
-template<typename T, template<typename U> class Lattice, class MixinDynamics>
+template<typename T, typename DESCRIPTOR, class MixinDynamics>
 template<int plane, int normal1, int normal2>
-PostProcessorGenerator3D<T,Lattice>*
-InterpolationBoundaryManager3D<T,Lattice,MixinDynamics>::
+PostProcessorGenerator3D<T,DESCRIPTOR>*
+InterpolationBoundaryManager3D<T,DESCRIPTOR,MixinDynamics>::
 getInternalVelocityEdgeProcessor(int x0, int x1, int y0, int y1, int z0, int z1)
 {
   return nullptr;
 }
 
-template<typename T, template<typename U> class Lattice, class MixinDynamics>
+template<typename T, typename DESCRIPTOR, class MixinDynamics>
 template<int xNormal, int yNormal, int zNormal>
-Momenta<T,Lattice>*
-InterpolationBoundaryManager3D<T,Lattice,MixinDynamics>::getExternalVelocityCornerMomenta()
+Momenta<T,DESCRIPTOR>*
+InterpolationBoundaryManager3D<T,DESCRIPTOR,MixinDynamics>::getExternalVelocityCornerMomenta()
 {
-  return new FixedVelocityBM<T,Lattice>;
+  return new FixedVelocityBM<T,DESCRIPTOR>;
 }
 
-template<typename T, template<typename U> class Lattice, class MixinDynamics>
+template<typename T, typename DESCRIPTOR, class MixinDynamics>
 template<int xNormal, int yNormal, int zNormal>
-Dynamics<T,Lattice>*
-InterpolationBoundaryManager3D<T,Lattice,MixinDynamics>::
-getExternalVelocityCornerDynamics(T omega, Momenta<T,Lattice>& momenta)
+Dynamics<T,DESCRIPTOR>*
+InterpolationBoundaryManager3D<T,DESCRIPTOR,MixinDynamics>::
+getExternalVelocityCornerDynamics(T omega, Momenta<T,DESCRIPTOR>& momenta)
 {
   return new MixinDynamics(omega, momenta);
 }
 
-template<typename T, template<typename U> class Lattice, class MixinDynamics>
+template<typename T, typename DESCRIPTOR, class MixinDynamics>
 template<int xNormal, int yNormal, int zNormal>
-PostProcessorGenerator3D<T,Lattice>*
-InterpolationBoundaryManager3D<T,Lattice,MixinDynamics>::
+PostProcessorGenerator3D<T,DESCRIPTOR>*
+InterpolationBoundaryManager3D<T,DESCRIPTOR,MixinDynamics>::
 getExternalVelocityCornerProcessor(int x, int y, int z)
 {
-  return new OuterVelocityCornerProcessorGenerator3D<T,Lattice, xNormal,yNormal,zNormal> (x,y,z);
+  return new OuterVelocityCornerProcessorGenerator3D<T,DESCRIPTOR, xNormal,yNormal,zNormal> (x,y,z);
 }
 
-template<typename T, template<typename U> class Lattice, class MixinDynamics>
+template<typename T, typename DESCRIPTOR, class MixinDynamics>
 template<int xNormal, int yNormal, int zNormal>
-Momenta<T,Lattice>*
-InterpolationBoundaryManager3D<T,Lattice,MixinDynamics>::getInternalVelocityCornerMomenta()
+Momenta<T,DESCRIPTOR>*
+InterpolationBoundaryManager3D<T,DESCRIPTOR,MixinDynamics>::getInternalVelocityCornerMomenta()
 {
-  return new InnerCornerVelBM3D<T,Lattice, xNormal,yNormal,zNormal>;
+  return new InnerCornerVelBM3D<T,DESCRIPTOR, xNormal,yNormal,zNormal>;
 }
 
-template<typename T, template<typename U> class Lattice, class MixinDynamics>
+template<typename T, typename DESCRIPTOR, class MixinDynamics>
 template<int xNormal, int yNormal, int zNormal>
-Dynamics<T,Lattice>*
-InterpolationBoundaryManager3D<T,Lattice,MixinDynamics>::
-getInternalVelocityCornerDynamics(T omega, Momenta<T,Lattice>& momenta)
+Dynamics<T,DESCRIPTOR>*
+InterpolationBoundaryManager3D<T,DESCRIPTOR,MixinDynamics>::
+getInternalVelocityCornerDynamics(T omega, Momenta<T,DESCRIPTOR>& momenta)
 {
-  return new CombinedRLBdynamics<T,Lattice, MixinDynamics>(omega, momenta);
+  return new CombinedRLBdynamics<T,DESCRIPTOR, MixinDynamics>(omega, momenta);
 }
 
-template<typename T, template<typename U> class Lattice, class MixinDynamics>
+template<typename T, typename DESCRIPTOR, class MixinDynamics>
 template<int xNormal, int yNormal, int zNormal>
-PostProcessorGenerator3D<T,Lattice>*
-InterpolationBoundaryManager3D<T,Lattice,MixinDynamics>::
+PostProcessorGenerator3D<T,DESCRIPTOR>*
+InterpolationBoundaryManager3D<T,DESCRIPTOR,MixinDynamics>::
 getInternalVelocityCornerProcessor(int x, int y, int z)
 {
   return nullptr;
 }
 
+////////// Convenience wrappers for boundary functions ////////////////////////
+
+template<typename T, typename DESCRIPTOR>
+void OnLatticeBoundaryCondition3D<T, DESCRIPTOR>::addVelocityBoundary(
+  BlockGeometryStructure3D<T>& blockGeometryStructure, int material,
+  int x0, int x1, int y0, int y1, int z0, int z1,
+  T omega)
+{
+  BlockIndicatorMaterial3D<T> indicator(blockGeometryStructure, material);
+  addVelocityBoundary(indicator, x0, x1, y0, y1, z0, z1, omega);
+}
+
+template<typename T, typename DESCRIPTOR>
+void OnLatticeBoundaryCondition3D<T, DESCRIPTOR>::addVelocityBoundary(
+  BlockIndicatorF3D<T>& indicator, T omega, bool includeOuterCells)
+{
+  auto& blockGeometryStructure = indicator.getBlockGeometryStructure();
+  const int margin = includeOuterCells ? 0 : 1;
+  addVelocityBoundary(indicator,
+                      margin, blockGeometryStructure.getNx()-1 -margin,
+                      margin, blockGeometryStructure.getNy()-1 -margin,
+                      margin, blockGeometryStructure.getNz()-1 -margin,
+                      omega);
+}
+
+template<typename T, typename DESCRIPTOR>
+void OnLatticeBoundaryCondition3D<T, DESCRIPTOR>::addVelocityBoundary(
+  BlockGeometryStructure3D<T>& blockGeometryStructure, int material,
+  T omega, bool includeOuterCells)
+{
+  BlockIndicatorMaterial3D<T> indicator(blockGeometryStructure, material);
+  addVelocityBoundary(indicator, omega, includeOuterCells);
+}
+
+template<typename T, typename DESCRIPTOR>
+void OnLatticeBoundaryCondition3D<T, DESCRIPTOR>::addSlipBoundary(
+  BlockGeometryStructure3D<T>& blockGeometryStructure, int material,
+  int x0, int x1, int y0, int y1, int z0, int z1)
+{
+  BlockIndicatorMaterial3D<T> indicator(blockGeometryStructure, material);
+  addSlipBoundary(indicator, x0, x1, y0, y1, z0, z1);
+}
+
+template<typename T, typename DESCRIPTOR>
+void OnLatticeBoundaryCondition3D<T, DESCRIPTOR>::addSlipBoundary(
+  BlockIndicatorF3D<T>& indicator, bool includeOuterCells)
+{
+  auto& blockGeometryStructure = indicator.getBlockGeometryStructure();
+  const int margin = includeOuterCells ? 0 : 1;
+  addSlipBoundary(indicator,
+                  margin, blockGeometryStructure.getNx()-1 -margin,
+                  margin, blockGeometryStructure.getNy()-1 -margin,
+                  margin, blockGeometryStructure.getNz()-1 -margin);
+}
+
+template<typename T, typename DESCRIPTOR>
+void OnLatticeBoundaryCondition3D<T, DESCRIPTOR>::addSlipBoundary(
+  BlockGeometryStructure3D<T>& blockGeometryStructure, int material, bool includeOuterCells)
+{
+  BlockIndicatorMaterial3D<T> indicator(blockGeometryStructure, material);
+  addSlipBoundary(indicator, includeOuterCells);
+}
+
+template<typename T, typename DESCRIPTOR>
+void OnLatticeBoundaryCondition3D<T, DESCRIPTOR>::addPartialSlipBoundary(
+  T tuner, BlockGeometryStructure3D<T>& blockGeometryStructure, int material,
+  int x0, int x1, int y0, int y1, int z0, int z1)
+{
+  BlockIndicatorMaterial3D<T> indicator(blockGeometryStructure, material);
+  addPartialSlipBoundary(tuner, indicator, x0, x1, y0, y1, z0, z1);
+}
+
+template<typename T, typename DESCRIPTOR>
+void OnLatticeBoundaryCondition3D<T, DESCRIPTOR>::addPartialSlipBoundary(
+  T tuner, BlockIndicatorF3D<T>& indicator, bool includeOuterCells)
+{
+  auto& blockGeometryStructure = indicator.getBlockGeometryStructure();
+  const int margin = includeOuterCells ? 0 : 1;
+  addPartialSlipBoundary(tuner, indicator,
+                         margin, blockGeometryStructure.getNx()-1 -margin,
+                         margin, blockGeometryStructure.getNy()-1 -margin,
+                         margin, blockGeometryStructure.getNz()-1 -margin);
+}
+
+template<typename T, typename DESCRIPTOR>
+void OnLatticeBoundaryCondition3D<T, DESCRIPTOR>::addPartialSlipBoundary(
+  T tuner, BlockGeometryStructure3D<T>& blockGeometryStructure, int material, bool includeOuterCells)
+{
+  BlockIndicatorMaterial3D<T> indicator(blockGeometryStructure, material);
+  addPartialSlipBoundary(tuner, indicator, includeOuterCells);
+}
+
+template<typename T, typename DESCRIPTOR>
+void OnLatticeBoundaryCondition3D<T, DESCRIPTOR>::addWallFunctionBoundary(
+  BlockGeometryStructure3D<T>& blockGeometryStructure, int material,
+  int x0, int x1, int y0, int y1, int z0, int z1,
+  UnitConverter<T, DESCRIPTOR> const& converter,
+  wallFunctionParam<T> const& wallFunctionParam,
+  IndicatorF3D<T>*            geoIndicator)
+{
+  BlockIndicatorMaterial3D<T> indicator(blockGeometryStructure, material);
+  addWallFunctionBoundary(indicator,
+                          x0, y1, y0, y1, z0, z1,
+                          converter, wallFunctionParam, geoIndicator);
+}
+
+template<typename T, typename DESCRIPTOR>
+void OnLatticeBoundaryCondition3D<T, DESCRIPTOR>::addWallFunctionBoundary(
+  BlockIndicatorF3D<T>& indicator,
+  UnitConverter<T, DESCRIPTOR> const& converter,
+  wallFunctionParam<T> const& wallFunctionParam,
+  IndicatorF3D<T>*            geoIndicator,
+  bool includeOuterCells)
+{
+  auto& blockGeometryStructure = indicator.getBlockGeometryStructure();
+  const int margin = includeOuterCells ? 0 : 1;
+  addWallFunctionBoundary(indicator,
+                          margin, blockGeometryStructure.getNx()-1 -margin,
+                          margin, blockGeometryStructure.getNy()-1 -margin,
+                          margin, blockGeometryStructure.getNz()-1 -margin,
+                          converter, wallFunctionParam, geoIndicator);
+}
+
+template<typename T, typename DESCRIPTOR>
+void OnLatticeBoundaryCondition3D<T, DESCRIPTOR>::addWallFunctionBoundary(
+  BlockGeometryStructure3D<T>& blockGeometryStructure, int material,
+  UnitConverter<T, DESCRIPTOR> const& converter,
+  wallFunctionParam<T> const& wallFunctionParam,
+  IndicatorF3D<T>*            geoIndicator,
+  bool includeOuterCells)
+{
+  BlockIndicatorMaterial3D<T> indicator(blockGeometryStructure, material);
+  addWallFunctionBoundary(indicator, converter, wallFunctionParam, geoIndicator, includeOuterCells);
+}
+
+template<typename T, typename DESCRIPTOR>
+void OnLatticeBoundaryCondition3D<T, DESCRIPTOR>::addPressureBoundary(
+  BlockGeometryStructure3D<T>& blockGeometryStructure, int material,
+  int x0, int x1, int y0, int y1, int z0, int z1,
+  T omega)
+{
+  BlockIndicatorMaterial3D<T> indicator(blockGeometryStructure, material);
+  addPressureBoundary(indicator, x0, x1, y0, y1, z0, z1, omega);
+}
+
+template<typename T, typename DESCRIPTOR>
+void OnLatticeBoundaryCondition3D<T, DESCRIPTOR>::addPressureBoundary(
+  BlockIndicatorF3D<T>& indicator, T omega, bool includeOuterCells)
+{
+  auto& blockGeometryStructure = indicator.getBlockGeometryStructure();
+  const int margin = includeOuterCells ? 0 : 1;
+  addPressureBoundary(indicator,
+                      margin, blockGeometryStructure.getNx()-1 -margin,
+                      margin, blockGeometryStructure.getNy()-1 -margin,
+                      margin, blockGeometryStructure.getNz()-1 -margin,
+                      omega);
+}
+
+template<typename T, typename DESCRIPTOR>
+void OnLatticeBoundaryCondition3D<T, DESCRIPTOR>::addPressureBoundary(
+  BlockGeometryStructure3D<T>& blockGeometryStructure, int material,
+  T omega, bool includeOuterCells)
+{
+  BlockIndicatorMaterial3D<T> indicator(blockGeometryStructure, material);
+  addPressureBoundary(indicator, omega, includeOuterCells);
+}
+
+template<typename T, typename DESCRIPTOR>
+void OnLatticeBoundaryCondition3D<T, DESCRIPTOR>::addConvectionBoundary(
+  BlockGeometryStructure3D<T>& blockGeometryStructure, int material,
+  int x0, int x1, int y0, int y1, int z0, int z1,
+  T omega, T* uAv)
+{
+  BlockIndicatorMaterial3D<T> indicator(blockGeometryStructure, material);
+  addConvectionBoundary(indicator, x0, x1, y0, y1, z0, z1, omega, uAv);
+}
+
+template<typename T, typename DESCRIPTOR>
+void OnLatticeBoundaryCondition3D<T, DESCRIPTOR>::addConvectionBoundary(
+  BlockIndicatorF3D<T>& indicator, T omega, T* uAv, bool includeOuterCells)
+{
+  auto& blockGeometryStructure = indicator.getBlockGeometryStructure();
+  const int margin = includeOuterCells ? 0 : 1;
+  addConvectionBoundary(indicator,
+                        margin, blockGeometryStructure.getNx()-1 -margin,
+                        margin, blockGeometryStructure.getNy()-1 -margin,
+                        margin, blockGeometryStructure.getNz()-1 -margin,
+                        omega, uAv);
+}
+
+template<typename T, typename DESCRIPTOR>
+void OnLatticeBoundaryCondition3D<T, DESCRIPTOR>::addConvectionBoundary(
+  BlockGeometryStructure3D<T>& blockGeometryStructure, int material, T omega, T* uAv, bool includeOuterCells)
+{
+  BlockIndicatorMaterial3D<T> indicator(blockGeometryStructure, material);
+  addConvectionBoundary(indicator, omega, uAv, includeOuterCells);
+}
+
+template<typename T, typename DESCRIPTOR>
+void OnLatticeBoundaryCondition3D<T, DESCRIPTOR>::addFreeEnergyWallBoundary(
+  BlockGeometryStructure3D<T>& blockGeometryStructure, int material,
+  int x0, int x1, int y0, int y1, int z0, int z1, T addend, int latticeNumber)
+{
+  BlockIndicatorMaterial3D<T> indicator(blockGeometryStructure, material);
+  addFreeEnergyWallBoundary(indicator, x0, x1, y0, y1, z0, z1, addend, latticeNumber);
+}
+
+template<typename T, typename DESCRIPTOR>
+void OnLatticeBoundaryCondition3D<T, DESCRIPTOR>::addFreeEnergyWallBoundary(
+  BlockIndicatorF3D<T>& indicator, T addend, int latticeNumber, bool includeOuterCells)
+{
+  auto& blockGeometryStructure = indicator.getBlockGeometryStructure();
+  const int margin = includeOuterCells ? 0 : 1;
+  addFreeEnergyWallBoundary(indicator,
+                      margin, blockGeometryStructure.getNx()-1 -margin,
+                      margin, blockGeometryStructure.getNy()-1 -margin,
+                      margin, blockGeometryStructure.getNz()-1 -margin,
+                      addend, latticeNumber);
+}
+
+template<typename T, typename DESCRIPTOR>
+void OnLatticeBoundaryCondition3D<T, DESCRIPTOR>::addFreeEnergyWallBoundary(
+  BlockGeometryStructure3D<T>& blockGeometryStructure, int material, T addend,
+  int latticeNumber, bool includeOuterCells)
+{
+  BlockIndicatorMaterial3D<T> indicator(blockGeometryStructure, material);
+  addFreeEnergyWallBoundary(indicator, addend, latticeNumber, includeOuterCells);
+}
+
+template<typename T, typename DESCRIPTOR>
+void OnLatticeBoundaryCondition3D<T, DESCRIPTOR>::addFreeEnergyInletBoundary(
+  BlockGeometryStructure3D<T>& blockGeometryStructure, int material,
+  int x0, int x1, int y0, int y1, int z0, int z1, T omega, std::string type, int latticeNumber)
+{
+  BlockIndicatorMaterial3D<T> indicator(blockGeometryStructure, material);
+  addFreeEnergyInletBoundary(indicator, x0, x1, y0, y1, z0, z1, omega, type, latticeNumber);
+}
+
+template<typename T, typename DESCRIPTOR>
+void OnLatticeBoundaryCondition3D<T, DESCRIPTOR>::addFreeEnergyInletBoundary(
+  BlockIndicatorF3D<T>& indicator, T omega, std::string type,
+  int latticeNumber, bool includeOuterCells)
+{
+  auto& blockGeometryStructure = indicator.getBlockGeometryStructure();
+  const int margin = includeOuterCells ? 0 : 1;
+  addFreeEnergyInletBoundary(indicator,
+                      margin, blockGeometryStructure.getNx()-1 -margin,
+                      margin, blockGeometryStructure.getNy()-1 -margin,
+                      margin, blockGeometryStructure.getNz()-1 -margin,
+                      omega, type, latticeNumber);
+}
+
+template<typename T, typename DESCRIPTOR>
+void OnLatticeBoundaryCondition3D<T, DESCRIPTOR>::addFreeEnergyInletBoundary(
+  BlockGeometryStructure3D<T>& blockGeometryStructure, int material, 
+  T omega, std::string type, int latticeNumber, bool includeOuterCells)
+{
+  BlockIndicatorMaterial3D<T> indicator(blockGeometryStructure, material);
+  addFreeEnergyInletBoundary(indicator, omega, type, latticeNumber, includeOuterCells);
+}
+
+template<typename T, typename DESCRIPTOR>
+void OnLatticeBoundaryCondition3D<T, DESCRIPTOR>::addFreeEnergyOutletBoundary(
+  BlockGeometryStructure3D<T>& blockGeometryStructure, int material,
+  int x0, int x1, int y0, int y1, int z0, int z1, T omega, std::string type, int latticeNumber)
+{
+  BlockIndicatorMaterial3D<T> indicator(blockGeometryStructure, material);
+  addFreeEnergyOutletBoundary(indicator, x0, x1, y0, y1, z0, z1, omega, type, latticeNumber);
+}
+
+template<typename T, typename DESCRIPTOR>
+void OnLatticeBoundaryCondition3D<T, DESCRIPTOR>::addFreeEnergyOutletBoundary(
+  BlockIndicatorF3D<T>& indicator, T omega, std::string type,
+  int latticeNumber, bool includeOuterCells)
+{
+  auto& blockGeometryStructure = indicator.getBlockGeometryStructure();
+  const int margin = includeOuterCells ? 0 : 1;
+  addFreeEnergyOutletBoundary(indicator,
+                      margin, blockGeometryStructure.getNx()-1 -margin,
+                      margin, blockGeometryStructure.getNy()-1 -margin,
+                      margin, blockGeometryStructure.getNz()-1 -margin,
+                      omega, type, latticeNumber);
+}
+
+template<typename T, typename DESCRIPTOR>
+void OnLatticeBoundaryCondition3D<T, DESCRIPTOR>::addFreeEnergyOutletBoundary(
+  BlockGeometryStructure3D<T>& blockGeometryStructure, int material,
+  T omega, std::string type, int latticeNumber, bool includeOuterCells)
+{
+  BlockIndicatorMaterial3D<T> indicator(blockGeometryStructure, material);
+  addFreeEnergyOutletBoundary(indicator, omega, type, latticeNumber, includeOuterCells);
+}
 
 ////////// Factory functions //////////////////////////////////////////////////
 
-template<typename T, template<typename U> class Lattice, typename MixinDynamics>
-OnLatticeBoundaryCondition3D<T,Lattice>* createLocalBoundaryCondition3D(BlockLatticeStructure3D<T,Lattice>& block)
+template<typename T, typename DESCRIPTOR, typename MixinDynamics>
+OnLatticeBoundaryCondition3D<T,DESCRIPTOR>* createLocalBoundaryCondition3D(BlockLatticeStructure3D<T,DESCRIPTOR>& block)
 {
   return new BoundaryConditionInstantiator3D <
-         T, Lattice,
-         RegularizedBoundaryManager3D<T,Lattice, MixinDynamics> > (block);
+         T, DESCRIPTOR,
+         RegularizedBoundaryManager3D<T,DESCRIPTOR, MixinDynamics> > (block);
 }
 
-template<typename T, template<typename U> class Lattice, typename MixinDynamics>
-OnLatticeBoundaryCondition3D<T,Lattice>* createInterpBoundaryCondition3D(BlockLatticeStructure3D<T,Lattice>& block)
+template<typename T, typename DESCRIPTOR, typename MixinDynamics>
+OnLatticeBoundaryCondition3D<T,DESCRIPTOR>* createInterpBoundaryCondition3D(BlockLatticeStructure3D<T,DESCRIPTOR>& block)
 {
   return new BoundaryConditionInstantiator3D <
-         T, Lattice,
-         InterpolationBoundaryManager3D<T,Lattice, MixinDynamics> > (block);
+         T, DESCRIPTOR,
+         InterpolationBoundaryManager3D<T,DESCRIPTOR, MixinDynamics> > (block);
 }
 
 }  // namespace olb

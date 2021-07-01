@@ -26,7 +26,7 @@
 #include "particleSystem3D.h"
 #include "particleSystem3D.hh"
 #include "dynamics/latticeDescriptors.h"
-#include "dynamics/latticeDescriptors.hh"
+ 
 #include "functors/lattice/superLatticeLocalF3D.h"
 
 namespace olb {
@@ -41,8 +41,8 @@ template class ParticleSystem3D<double, MagneticParticle3D>;
 template<>
 template<>
 void ParticleSystem3D<double,Particle3D>::
-setVelToFluidVel<descriptors::D3Q19Descriptor>(
-  SuperLatticeInterpPhysVelocity3D<double, descriptors::D3Q19Descriptor>& fVel)
+setVelToFluidVel<descriptors::D3Q19<>>(
+  SuperLatticeInterpPhysVelocity3D<double, descriptors::D3Q19<>>& fVel)
 {
   for (auto& p : _particles) {
     if (p.getActive()) {
@@ -54,8 +54,8 @@ setVelToFluidVel<descriptors::D3Q19Descriptor>(
 template<>
 template<>
 void ParticleSystem3D<double,MagneticParticle3D>::
-setVelToFluidVel<descriptors::D3Q19Descriptor>(
-  SuperLatticeInterpPhysVelocity3D<double, descriptors::D3Q19Descriptor>& fVel)
+setVelToFluidVel<descriptors::D3Q19<>>(
+  SuperLatticeInterpPhysVelocity3D<double, descriptors::D3Q19<>>& fVel)
 {
   for (auto& p : _particles) {
     if (p.getActive()) {
@@ -68,8 +68,8 @@ setVelToFluidVel<descriptors::D3Q19Descriptor>(
 template<>
 template<>
 void ParticleSystem3D<double,Particle3D>::
-setVelToFluidVel<descriptors::ForcedD3Q19Descriptor>(
-  SuperLatticeInterpPhysVelocity3D<double, descriptors::ForcedD3Q19Descriptor>& fVel)
+setVelToFluidVel<descriptors::D3Q19<descriptors::FORCE>>(
+  SuperLatticeInterpPhysVelocity3D<double, descriptors::D3Q19<descriptors::FORCE>>& fVel)
 {
   for (auto& p : _particles) {
     if (p.getActive()) {
@@ -81,8 +81,8 @@ setVelToFluidVel<descriptors::ForcedD3Q19Descriptor>(
 template<>
 template<>
 void ParticleSystem3D<double,MagneticParticle3D>::
-setVelToFluidVel<descriptors::ForcedD3Q19Descriptor>(
-  SuperLatticeInterpPhysVelocity3D<double, descriptors::ForcedD3Q19Descriptor>& fVel)
+setVelToFluidVel<descriptors::D3Q19<descriptors::FORCE>>(
+  SuperLatticeInterpPhysVelocity3D<double, descriptors::D3Q19<descriptors::FORCE>>& fVel)
 {
   for (auto& p : _particles) {
     if (p.getActive()) {

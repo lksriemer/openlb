@@ -45,5 +45,7 @@ precompiled    := boundaryCondition2D \
                   superOffBoundaryCondition3D \
                   zouHeBoundary2D \
                   zouHeBoundary3D \
-                  zouHeDynamics
+                  zouHeDynamics \
+                  advectionDiffusionBoundaryCondition2D \
+                  advectionDiffusionBoundaryCondition3D
 

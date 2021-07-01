@@ -112,8 +112,13 @@ public:
   std::vector<T> getPhysRadius(int material);
   /// Returns the center position
   std::vector<T> getCenterPhysR(int material);
-  /// Returns the boundary type which is characterized by a discrete normal (c.f. Zimny)
-  std::vector<int> getType(int iX, int iY, int iZ);
+  /* Returns the boundary type which is characterized by a discrete normal (c.f. Zimny)
+   * 0 element:   flat, corner or edge
+   * 1 element:   orientation -1, 0 or 1
+   * 2 element:   orientation -1, 0 or 1
+   * 3 element:   orientation -1, 0 or 1
+   */
+  std::vector<int> getType(int iX, int iY, int iZ, bool anyNormal = false);
 
   /// Returns normal that points into the fluid for paraxial surfaces
   std::vector<int> computeNormal(int iX, int iY, int iZ);

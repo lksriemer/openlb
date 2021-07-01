@@ -28,6 +28,7 @@ namespace olb {
 
 namespace util {
 
+template class CircularBuffer<double>;
 template class ValueTracer<double>;
 template class BisectStepper<double>;
 template class Newton1D<double>;

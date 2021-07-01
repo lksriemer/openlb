@@ -25,7 +25,7 @@
 #define ANALYTICAL_BASE_F_H
 
 #include "functors/genericF.h"
-#include "functors/lattice/indicator/indicatorBaseF3D.h"
+#include "functors/analytical/indicator/indicatorBaseF3D.h"
 
 /**
  *  The functor dimensions are given by F: S^m -> T^n  (S=source, T=target)
@@ -39,6 +39,9 @@ namespace olb {
 // 2nd level classes
 // note: for LatticeFunctions the number indicates the SOURCE dimension,
 //       target dim depends on return variable type, so std::vector<T> is used
+
+template<typename T, typename S> class AnalyticalIdentity2D;
+template<typename T, typename S> class AnalyticalIdentity3D;
 
 
 /// AnalyticalF1D are applications from 1D to XD, where X is set by the constructor.
@@ -61,6 +64,8 @@ protected:
   // n denotes the target dimension
   AnalyticalF2D(int n);
 public:
+  using identity_functor_type = AnalyticalIdentity2D<T,S>;
+
   AnalyticalF2D<T,S>& operator-(AnalyticalF2D<T,S>& rhs);
   AnalyticalF2D<T,S>& operator+(AnalyticalF2D<T,S>& rhs);
   AnalyticalF2D<T,S>& operator*(AnalyticalF2D<T,S>& rhs);
@@ -74,6 +79,8 @@ protected:
   // n denotes the target dimension
   AnalyticalF3D(int n);
 public:
+  using identity_functor_type = AnalyticalIdentity3D<T,S>;
+
   AnalyticalF3D<T,S>& operator-(AnalyticalF3D<T,S>& rhs);
   AnalyticalF3D<T,S>& operator+(AnalyticalF3D<T,S>& rhs);
   AnalyticalF3D<T,S>& operator*(AnalyticalF3D<T,S>& rhs);

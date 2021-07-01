@@ -83,6 +83,11 @@ BlockGeometryView2D<T>::~BlockGeometryView2D()
   removeFromStatisticsList( &(this->_statistics.getStatisticsStatus()) );
 }
 
+template<typename T>
+BlockStructure2D& BlockGeometryView2D<T>::getBlockStructure()
+{
+  return *this;
+}
 
 template<typename T>
 BlockGeometryStatistics2D<T>& BlockGeometryView2D<T>::getStatistics(bool verbose)

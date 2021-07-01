@@ -53,8 +53,9 @@
 #include "geometry/blockGeometryView3D.h"
 #include "communication/superStructure3D.h"
 #include "communication/loadBalancer.h"
-#include "functors/lattice/indicator/indicatorF3D.h"
+#include "functors/analytical/indicator/indicatorF3D.h"
 #include "io/ostreamManager.h"
+#include "utilities/functorPtr.h"
 
 
 /// All OpenLB code is contained in this namespace.
@@ -154,13 +155,15 @@ public:
   /// replace one material with another
   void rename(int fromM, int toM);
   /// replace one material that fulfills an indicator functor condition with another
-  void rename(int fromM, int toM, IndicatorF3D<T>& condition);
+  void rename(int fromM, int toM, FunctorPtr<IndicatorF3D<T>>&& condition);
   /// replace one material with another respecting an offset (overlap)
   void rename(int fromM, int toM, unsigned offsetX, unsigned offsetY, unsigned offsetZ);
   /// renames all voxels of material fromM to toM if the number of voxels given by testDirection is of material testM
   void rename(int fromM, int toM, int testM, std::vector<int> testDirection);
   /// renames all boundary voxels of material fromBcMat to toBcMat if two neighbour voxel in the direction of the discrete normal are fluid voxel with material fluidM in the region where the indicator function is fulfilled
-  void rename(int fromBcMat, int toBcMat, int fluidMat, IndicatorF3D<T>& condition);
+  void rename(int fromBcMat, int toBcMat, int fluidMat, FunctorPtr<IndicatorF3D<T>>&& condition);
+  /// Copy a layer of material numbers inside an indicator in a discrete normal direction
+  void copyMaterialLayer(IndicatorF3D<T>& condition, int discreteNormal[3], int numberOfLayers=3);
 
   /// Prints some information about the super geometry
   void print();

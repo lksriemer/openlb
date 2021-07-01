@@ -85,7 +85,7 @@ bool ValueTracer<T>::hasConverged() const
     T average = computeAverage();
     T stdDev = computeStdDev(average);
     if (!std::isnan(stdDev/average)) {
-      return stdDev/average < _epsilon;
+      return fabs(stdDev/average) < _epsilon;
     } else {
       clout << "simulation diverged." << std::endl;
       return true;
@@ -101,7 +101,7 @@ bool ValueTracer<T>::convergenceCheck() const
     T average = computeAverage();
     T stdDev = computeStdDev(average);
     if (!std::isnan(stdDev/average)) {
-      return stdDev/average < _epsilon;
+      return fabs(stdDev/average) < _epsilon;
     } else {
       clout << "simulation diverged." << std::endl;
       return false;
@@ -275,6 +275,53 @@ T TrapezRuleInt1D<T>::integrate(T min, T max, int nSteps)
 
   return integral[0];
 }
+
+/////////// Class CircularBuffer ////////////////////////
+template<typename T>
+CircularBuffer<T>::CircularBuffer(int size)
+  : _size(size)
+{}
+
+template<typename T>
+void CircularBuffer<T>::insert(T entry)
+{
+  _data.push_back(entry);
+  if (_data.size() > static_cast<unsigned int>(_size) ) {
+    _data.erase( _data.begin() );
+  }
+}
+
+template<typename T>
+T CircularBuffer<T>::average()
+{
+  T avg = T();
+  for (auto i=_data.begin(); i!=_data.end(); i++) {
+    avg += *i;
+  }
+  avg *= 1. / _data.size();
+  return avg;
+}
+
+template<typename T>
+T& CircularBuffer<T>::get(int pos)
+{
+  if (pos < 0) {
+    return _data.back();
+  }
+
+  if (pos >= _size) {
+    return _data.front();
+  }
+
+  return _data[_size - 1 - pos];;
+}
+
+template<typename T>
+int CircularBuffer<T>::getSize()
+{
+  return _size;
+}
+
 
 } // namespace util
 

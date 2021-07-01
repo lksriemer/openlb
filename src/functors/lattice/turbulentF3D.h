@@ -31,7 +31,7 @@
 #include "blockLatticeLocalF3D.h"
 #include "superLatticeLocalF3D.h"
 #include "core/unitConverter.h"
-#include "indicator/indicatorBaseF3D.h"
+#include "functors/analytical/indicator/indicatorBaseF3D.h"
 
 
 /** These are functors used for turbulent flows. Some like AMD have an execute member
@@ -41,7 +41,7 @@
 namespace olb {
 
 /// functor to get pointwise yPlus from rho, shear stress and local density on local lattices
-template <typename T, template <typename U> class DESCRIPTOR>
+template <typename T, typename DESCRIPTOR>
 class SuperLatticeYplus3D : public SuperLatticePhysF3D<T,DESCRIPTOR> {
 private:
   SuperGeometry3D<T>& _superGeometry;
@@ -56,7 +56,7 @@ public:
 
 /// functor to get pointwise explicit filtering on local lattice, if globIC is not on
 /// the local processor, the returned vector is empty
-/*template <typename T, template <typename U> class DESCRIPTOR>
+/*template <typename T, typename DESCRIPTOR>
 class BlockLatticeADM3D : public BlockLatticeF3D<T,DESCRIPTOR> {
 protected:
   T _sigma;
@@ -70,15 +70,11 @@ public:
   void execute(const int input[]);
   void execute();
 
-  private:
-  const  int _localAvDissBeginsAt = DESCRIPTOR<T>::ExternalField::localAvDissBeginsAt;
-  const  int _localAvTKEBeginsAt = DESCRIPTOR<T>::ExternalField::localAvTKEBeginsAt;
-
 };
 
 /// functor to get pointwise ecplicit filter on local lattice, if globIC is not on
 /// the local processor, the returned vector is empty
-template <typename T, template <typename U> class DESCRIPTOR>
+template <typename T, typename DESCRIPTOR>
 class SuperLatticeADM3D : public SuperLatticeF3D<T,DESCRIPTOR> {
 protected:
   T _sigma;
@@ -121,7 +117,7 @@ public:
   bool operator() (T output[], const int input[]) override;
 };
 
-template <typename T, template <typename U> class DESCRIPTOR>
+template <typename T, typename DESCRIPTOR>
 class BlockPhysFiniteDifference3D : public BlockF3D<T> {
 private:
   BlockF3D<T>& _blockFinDiff;
@@ -134,7 +130,7 @@ public:
 
 /// functor to get pointwise explicit filter on local lattice, if globIC is not on
 /// the local processor, the returned vector is empty
-template <typename T, template <typename U> class DESCRIPTOR>
+template <typename T, typename DESCRIPTOR>
 class SuperPhysFiniteDifference3D : public SuperF3D<T> {
 private:
   SuperFiniteDifference3D<T> _sFinDiff;
@@ -144,7 +140,7 @@ public:
   bool operator() (T output[], const int input[]) override;
 };
 
-template <typename T, template <typename U> class DESCRIPTOR>
+template <typename T, typename DESCRIPTOR>
 class BlockLatticeVelocityGradientFD3D : public BlockLatticeF3D<T,DESCRIPTOR> {
 private:
   BlockF3D<T>& _blockFinDiff;
@@ -154,7 +150,7 @@ public:
   bool operator() (T output[], const int input[]);
 };
 
-template <typename T, template <typename U> class DESCRIPTOR>
+template <typename T, typename DESCRIPTOR>
 class BlockLatticeExternalVelocityGradientFD3D : public BlockLatticeF3D<T,DESCRIPTOR> {
 private:
   BlockF3D<T>& _blockFinDiff;
@@ -166,7 +162,7 @@ public:
 
 /// functor to get pointwise explicit filter on local lattice, if globIC is not on
 /// the local processor, the returned vector is empty
-template <typename T, template <typename U> class DESCRIPTOR>
+template <typename T, typename DESCRIPTOR>
 class SuperLatticeVelocityGradientFD3D : public SuperLatticeF3D<T,DESCRIPTOR> {
 private:
   SuperLatticeVelocity3D<T,DESCRIPTOR> _sVelocity;
@@ -178,7 +174,7 @@ public:
 
 /// functor to get pointwise explicit filter on local lattice, if globIC is not on
 /// the local processor, the returned vector is empty
-template <typename T, template <typename U> class DESCRIPTOR>
+template <typename T, typename DESCRIPTOR>
 class SuperLatticeExternalVelocityGradientFD3D : public SuperLatticeF3D<T,DESCRIPTOR> {
 private:
   SuperLatticeExternalVelocity3D<T,DESCRIPTOR> _sVelocity;
@@ -189,7 +185,7 @@ public:
 };
 
 
-template <typename T, template <typename U> class DESCRIPTOR>
+template <typename T, typename DESCRIPTOR>
 class BlockLatticePhysVelocityGradientFD3D : public BlockLatticeF3D<T,DESCRIPTOR> {
 private:
   BlockF3D<T>& _blockFinDiff;
@@ -201,7 +197,7 @@ public:
 
 /// functor to get pointwise explicit filter on local lattice, if globIC is not on
 /// the local processor, the returned vector is empty
-template <typename T, template <typename U> class DESCRIPTOR>
+template <typename T, typename DESCRIPTOR>
 class SuperLatticePhysVelocityGradientFD3D : public SuperLatticeF3D<T,DESCRIPTOR> {
 private:
   SuperLatticePhysVelocity3D<T,DESCRIPTOR> _sVelocity;
@@ -212,7 +208,7 @@ public:
   bool operator() (T output[], const int input[]) override;
 };
 
-template <typename T, template <typename U> class DESCRIPTOR>
+template <typename T, typename DESCRIPTOR>
 class BlockLatticeStrainRateFD3D : public BlockLatticeF3D<T,DESCRIPTOR> {
 private:
   BlockF3D<T>& _blockVeloGrad;
@@ -223,7 +219,7 @@ public:
 
 /// functor to get pointwise explicit filter on local lattice, if globIC is not on
 /// the local processor, the returned vector is empty
-template <typename T, template <typename U> class DESCRIPTOR>
+template <typename T, typename DESCRIPTOR>
 class SuperLatticeStrainRateFD3D : public SuperLatticeF3D<T,DESCRIPTOR> {
 private:
   SuperLatticeVelocityGradientFD3D<T,DESCRIPTOR> _sVeloGrad;
@@ -232,7 +228,7 @@ public:
   bool operator() (T output[], const int input[]);
 };
 
-template <typename T, template <typename U> class DESCRIPTOR>
+template <typename T, typename DESCRIPTOR>
 class BlockLatticePhysStrainRateFD3D : public BlockLatticeF3D<T,DESCRIPTOR> {
 private:
   BlockF3D<T>& _blockVeloGrad;
@@ -244,7 +240,7 @@ public:
 
 /// functor to get pointwise explicit filter on local lattice, if globIC is not on
 /// the local processor, the returned vector is empty
-template <typename T, template <typename U> class DESCRIPTOR>
+template <typename T, typename DESCRIPTOR>
 class SuperLatticePhysStrainRateFD3D : public SuperLatticeF3D<T,DESCRIPTOR> {
 private:
   SuperLatticePhysVelocityGradientFD3D<T,DESCRIPTOR> _sVeloGrad;
@@ -254,7 +250,7 @@ public:
   bool operator() (T output[], const int input[]);
 };
 
-template <typename T, template <typename U> class DESCRIPTOR>
+template <typename T, typename DESCRIPTOR>
 class BlockLatticeDissipationFD3D : public BlockLatticeF3D<T,DESCRIPTOR> {
 private:
   BlockF3D<T>& _blockVeloGrad;
@@ -266,7 +262,7 @@ public:
 
 /// functor to get pointwise explicit filter on local lattice, if globIC is not on
 /// the local processor, the returned vector is empty
-template <typename T, template <typename U> class DESCRIPTOR>
+template <typename T, typename DESCRIPTOR>
 class SuperLatticeDissipationFD3D : public SuperLatticeF3D<T,DESCRIPTOR> {
 private:
   SuperLatticeVelocityGradientFD3D<T,DESCRIPTOR> _sVeloGrad;
@@ -276,7 +272,7 @@ public:
   bool operator() (T output[], const int input[]);
 };
 
-template <typename T, template <typename U> class DESCRIPTOR>
+template <typename T, typename DESCRIPTOR>
 class BlockLatticePhysDissipationFD3D : public BlockLatticeF3D<T,DESCRIPTOR> {
 private:
   BlockF3D<T>& _blockVeloGrad;
@@ -288,7 +284,7 @@ public:
 
 /// functor to get pointwise explicit filter on local lattice, if globIC is not on
 /// the local processor, the returned vector is empty
-template <typename T, template <typename U> class DESCRIPTOR>
+template <typename T, typename DESCRIPTOR>
 class SuperLatticePhysDissipationFD3D : public SuperLatticeF3D<T,DESCRIPTOR> {
 private:
   SuperLatticePhysVelocityGradientFD3D<T,DESCRIPTOR> _sVeloGrad;
@@ -298,7 +294,7 @@ public:
   bool operator() (T output[], const int input[]) override;
 };
 
-template <typename T, template <typename U> class DESCRIPTOR>
+template <typename T, typename DESCRIPTOR>
 class BlockLatticeEffectiveDissipationFD3D : public BlockLatticeF3D<T,DESCRIPTOR> {
 private:
   BlockF3D<T>& _blockVeloGrad;
@@ -312,7 +308,7 @@ public:
 
 /// functor to get pointwise explicit filter on local lattice, if globIC is not on
 /// the local processor, the returned vector is empty
-template <typename T, template <typename U> class DESCRIPTOR>
+template <typename T, typename DESCRIPTOR>
 class SuperLatticeEffectiveDissipationFD3D : public SuperLatticeF3D<T,DESCRIPTOR> {
 private:
   SuperLatticeVelocityGradientFD3D<T,DESCRIPTOR> _sVeloGrad;
@@ -323,7 +319,7 @@ public:
   bool operator() (T output[], const int input[]);
 };
 
-template <typename T, template <typename U> class DESCRIPTOR>
+template <typename T, typename DESCRIPTOR>
 class BlockLatticePhysEffectiveDissipationFD3D : public BlockLatticeF3D<T,DESCRIPTOR> {
 private:
   BlockF3D<T>& _blockVeloGrad;
@@ -337,7 +333,7 @@ public:
 
 /// functor to get pointwise explicit filter on local lattice, if globIC is not on
 /// the local processor, the returned vector is empty
-template <typename T, template <typename U> class DESCRIPTOR>
+template <typename T, typename DESCRIPTOR>
 class SuperLatticePhysEffectiveDissipationFD3D : public SuperLatticeF3D<T,DESCRIPTOR> {
 private:
   SuperLatticePhysVelocityGradientFD3D<T,DESCRIPTOR> _sVeloGrad;
@@ -348,7 +344,7 @@ public:
   bool operator() (T output[], const int input[]) override;
 };
 
-template <typename T, template <typename U> class DESCRIPTOR>
+template <typename T, typename DESCRIPTOR>
 class BlockLatticeVorticityFD3D : public BlockLatticeF3D<T,DESCRIPTOR> {
 private:
   BlockF3D<T>& _blockVeloGrad;
@@ -359,7 +355,7 @@ public:
 
 /// functor to get pointwise explicit filter on local lattice, if globIC is not on
 /// the local processor, the returned vector is empty
-template <typename T, template <typename U> class DESCRIPTOR>
+template <typename T, typename DESCRIPTOR>
 class SuperLatticeVorticityFD3D : public SuperLatticeF3D<T,DESCRIPTOR> {
 private:
   SuperLatticeVelocityGradientFD3D<T,DESCRIPTOR> _sVeloGrad;
@@ -368,7 +364,7 @@ public:
   bool operator() (T output[], const int input[]);
 };
 
-template <typename T, template <typename U> class DESCRIPTOR>
+template <typename T, typename DESCRIPTOR>
 class BlockLatticePhysVorticityFD3D : public BlockLatticeF3D<T,DESCRIPTOR> {
 private:
   BlockF3D<T>& _blockVeloGrad;
@@ -380,7 +376,7 @@ public:
 
 /// functor to get pointwise explicit filter on local lattice, if globIC is not on
 /// the local processor, the returned vector is empty
-template <typename T, template <typename U> class DESCRIPTOR>
+template <typename T, typename DESCRIPTOR>
 class SuperLatticePhysVorticityFD3D : public SuperLatticeF3D<T,DESCRIPTOR> {
 private:
   SuperLatticePhysVelocityGradientFD3D<T,DESCRIPTOR> _sVeloGrad;
@@ -390,7 +386,28 @@ public:
   bool operator() (T output[], const int input[]);
 };
 
-template <typename T, template <typename U> class DESCRIPTOR>
+/// functor that returns pointwise the enstrophy
+template <typename T, typename DESCRIPTOR>
+class BlockLatticePhysEnstrophyFD3D : public BlockLatticeF3D<T,DESCRIPTOR> {
+private:
+  BlockF3D<T>& _blockVeloGrad;
+  const UnitConverter<T,DESCRIPTOR>& _converter;
+public:
+  BlockLatticePhysEnstrophyFD3D(BlockLatticeStructure3D<T,DESCRIPTOR>& blockLattice, BlockF3D<T>& blockVeloGrad, const  UnitConverter<T,DESCRIPTOR>& converter);
+  bool operator() (T output[], const int input[]);
+};
+
+template <typename T, typename DESCRIPTOR>
+class SuperLatticePhysEnstrophyFD3D : public SuperLatticeF3D<T,DESCRIPTOR> {
+private:
+  SuperLatticePhysVelocityGradientFD3D<T,DESCRIPTOR> _sVeloGrad;
+  const UnitConverter<T,DESCRIPTOR>& _converter;
+public:
+  SuperLatticePhysEnstrophyFD3D(SuperGeometry3D<T>& sGeometry, SuperLattice3D<T,DESCRIPTOR>& sLattice, std::list<int>& matNumber, const  UnitConverter<T,DESCRIPTOR>& converter);
+  bool operator() (T output[], const int input[]);
+};
+
+template <typename T, typename DESCRIPTOR>
 class BlockLatticePhysStressFD3D : public BlockLatticeF3D<T,DESCRIPTOR> {
 private:
   BlockF3D<T>& _blockStrainRate;
@@ -402,7 +419,7 @@ public:
 
 /// functor to get pointwise explicit filter on local lattice, if globIC is not on
 /// the local processor, the returned vector is empty
-template <typename T, template <typename U> class DESCRIPTOR>
+template <typename T, typename DESCRIPTOR>
 class SuperLatticePhysStressFD3D : public SuperLatticeF3D<T,DESCRIPTOR> {
 private:
   SuperLatticePhysStrainRateFD3D<T,DESCRIPTOR> _sStrainRate;
@@ -412,14 +429,31 @@ public:
   bool operator() (T output[], const int input[]);
 };
 
+/// functor that returns pointwise the turbulent, kinetic energy
+template <typename T, typename DESCRIPTOR>
+class BlockIsotropicHomogeneousTKE3D : public BlockLatticeF3D<T,DESCRIPTOR> {
+private:
+  BlockF3D<T>& _blockVelocity;
+
+public:
+  BlockIsotropicHomogeneousTKE3D(BlockLatticeStructure3D<T,DESCRIPTOR>& blockLattice, BlockF3D<T>& f);
+  bool operator() (T output[], const int input[]);
+};
+
+template <typename T, typename DESCRIPTOR>
+class SuperIsotropicHomogeneousTKE3D : public SuperLatticeF3D<T,DESCRIPTOR> {
+private:
+  SuperLatticePhysVelocity3D<T,DESCRIPTOR> _sVelocity;
+  const UnitConverter<T,DESCRIPTOR>& _converter;
+public:
+  SuperIsotropicHomogeneousTKE3D( SuperLattice3D<T,DESCRIPTOR>& sLattice, const UnitConverter<T,DESCRIPTOR>& converter);
+  bool operator() (T output[], const int input[]);
+};
 
 /*
-template <typename T, template <typename U> class DESCRIPTOR>
+template <typename T, typename DESCRIPTOR>
 class BlockLatticeSigmaADM3D : public BlockLatticeF3D<T,DESCRIPTOR> {
 protected:
-
-  private:
-  const  int _localSigmaADMBeginsAt = DESCRIPTOR<T>::ExternalField::localSigmaADMBeginsAt;
 public:
   BlockLatticeSigmaADM3D(BlockLatticeStructure3D<T,DESCRIPTOR>& blockLattice);
   bool operator() (T output[], const int input[]);
@@ -427,7 +461,7 @@ public:
 
 /// functor to get pointwise explicit filter on local lattice, if globIC is not on
 /// the local processor, the returned vector is empty
-template <typename T, template <typename U> class DESCRIPTOR>
+template <typename T, typename DESCRIPTOR>
 class SuperLatticeSigmaADM3D : public SuperLatticeF3D<T,DESCRIPTOR> {
 protected:
 public:

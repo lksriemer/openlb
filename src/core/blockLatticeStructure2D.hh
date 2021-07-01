@@ -1,6 +1,6 @@
 /*  This file is part of the OpenLB library
  *
- *  Copyright (C) 2006-2008 Jonas Latt
+ *  Copyright (C) 2006-2018 Jonas Latt, Adrian Kummerlaender
  *  E-mail contact: info@openlb.net
  *  The most recent release of OpenLB can be downloaded at
  *  <http://www.openlb.net/>
@@ -27,289 +27,303 @@
 #ifndef BLOCK_LATTICE_STRUCTURE_2D_HH
 #define BLOCK_LATTICE_STRUCTURE_2D_HH
 
-#include <vector>
 #include "blockLatticeStructure2D.h"
+#include "functors/lattice/indicator/blockIndicatorBaseF2D.hh"
+#include "functors/lattice/indicator/blockIndicatorF2D.hh"
 
 
 namespace olb {
 
 
-template<typename T, template<typename U> class Lattice>
-void BlockLatticeStructure2D<T,Lattice>::defineDynamics(
-  BlockGeometryStructure2D<T>& blockGeometry, int material,
-  Dynamics<T,Lattice>* dynamics)
+template<typename T, typename DESCRIPTOR>
+void BlockLatticeStructure2D<T,DESCRIPTOR>::defineRho(
+  BlockIndicatorF2D<T>& indicator, AnalyticalF2D<T,T>& rho)
 {
-  for (int iX = 0; iX < this->_nx; iX++) {
-    for (int iY = 0; iY < this->_ny; iY++) {
-      if (blockGeometry.getMaterial(iX, iY) == material) {
-        get(iX,iY).defineDynamics(dynamics);
+  T physR[2] = { };
+  T rhoTmp = T();
+  for (int iX = 0; iX < getNx(); ++iX) {
+    for (int iY = 0; iY < getNy(); ++iY) {
+      if (indicator(iX, iY)) {
+        indicator.getBlockGeometryStructure().getPhysR(physR, iX, iY);
+        rho(&rhoTmp, physR);
+        get(iX, iY).defineRho(rhoTmp);
       }
     }
   }
 }
 
-template<typename T, template<typename U> class Lattice>
-void BlockLatticeStructure2D<T,Lattice>::defineRho(
+template<typename T, typename DESCRIPTOR>
+void BlockLatticeStructure2D<T,DESCRIPTOR>::defineRho(
   BlockGeometryStructure2D<T>& blockGeometry, int material, AnalyticalF2D<T,T>& rho)
 {
-  T rhoTmp;
-  T physR[2]= {T(),T()};
-  for (int iX = 0; iX < this->_nx; iX++) {
-    for (int iY = 0; iY < this->_ny; iY++) {
-      if (blockGeometry.getMaterial(iX, iY) == material) {
-        blockGeometry.getPhysR(physR, iX,iY);
-        rho(&rhoTmp,physR);
-        get(iX,iY).defineRho(rhoTmp);
+  BlockIndicatorMaterial2D<T> indicator(blockGeometry, material);
+  defineRho(indicator, rho);
+}
+
+template<typename T, typename DESCRIPTOR>
+void BlockLatticeStructure2D<T,DESCRIPTOR>::defineU(
+  BlockIndicatorF2D<T>& indicator, AnalyticalF2D<T,T>& u)
+{
+  T physR[2] = { };
+  T uTmp[2] = { };
+  const auto& geometry = indicator.getBlockGeometryStructure();
+  for (int iX = 0; iX < getNx(); ++iX) {
+    for (int iY = 0; iY < getNy(); ++iY) {
+      if (indicator(iX, iY)) {
+        geometry.getPhysR(physR, iX, iY);
+        u(uTmp, physR);
+        get(iX, iY).defineU(uTmp);
       }
     }
   }
 }
 
-template<typename T, template<typename U> class Lattice>
-void BlockLatticeStructure2D<T,Lattice>::defineU(
+template<typename T, typename DESCRIPTOR>
+void BlockLatticeStructure2D<T,DESCRIPTOR>::defineU(
   BlockGeometryStructure2D<T>& blockGeometry, int material, AnalyticalF2D<T,T>& u)
 {
-  T uTmp[2];
-  T physR[2]= {T(),T()};
-  for (int iX = 0; iX < this->_nx; iX++) {
-    for (int iY = 0; iY < this->_ny; iY++) {
-      if (blockGeometry.getMaterial(iX, iY) == material) {
-        blockGeometry.getPhysR(physR, iX,iY);
-        u(uTmp,physR);
-        get(iX,iY).defineU(uTmp);
-      }
-    }
-  }
+  BlockIndicatorMaterial2D<T> indicator(blockGeometry, material);
+  defineU(indicator, u);
 }
 
-template<typename T, template<typename U> class Lattice>
-void BlockLatticeStructure2D<T,Lattice>::defineRhoU(BlockGeometryStructure2D<T>& blockGeometry,
-    int material, AnalyticalF2D<T,T>& rho, AnalyticalF2D<T,T>& u)
+template<typename T, typename DESCRIPTOR>
+void BlockLatticeStructure2D<T,DESCRIPTOR>::defineRhoU(
+  BlockIndicatorF2D<T>& indicator,
+  AnalyticalF2D<T,T>& rho, AnalyticalF2D<T,T>& u)
 {
-  T rhoTmp;
-  T uTmp[2];
-  T physR[2]= {T(),T()};
-  for (int iX = 0; iX < this->_nx; iX++) {
-    for (int iY = 0; iY < this->_ny; iY++) {
-      if (blockGeometry.getMaterial(iX, iY) == material) {
-        blockGeometry.getPhysR(physR, iX,iY);
-        rho(&rhoTmp,physR);
-        u(uTmp,physR);
-        get(iX,iY).defineRhoU(rhoTmp,uTmp);
+  T physR[2] = { };
+  T uTmp[2] = { };
+  T rhoTmp = T();
+  for (int iX = 0; iX < getNx(); ++iX) {
+    for (int iY = 0; iY < getNy(); ++iY) {
+      if (indicator(iX, iY)) {
+        indicator.getBlockGeometryStructure().getPhysR(physR, iX, iY);
+        rho(&rhoTmp, physR);
+        u(uTmp, physR);
+        get(iX, iY).defineRhoU(rhoTmp, uTmp);
       }
     }
   }
 }
 
-template<typename T, template<typename U> class Lattice>
-void BlockLatticeStructure2D<T,Lattice>::definePopulations(
+template<typename T, typename DESCRIPTOR>
+void BlockLatticeStructure2D<T,DESCRIPTOR>::defineRhoU(
+  BlockGeometryStructure2D<T>& blockGeometry, int material,
+  AnalyticalF2D<T,T>& rho, AnalyticalF2D<T,T>& u)
+{
+  BlockIndicatorMaterial2D<T> indicator(blockGeometry, material);
+  defineRhoU(indicator, rho, u);
+}
+
+template<typename T, typename DESCRIPTOR>
+void BlockLatticeStructure2D<T,DESCRIPTOR>::definePopulations(
+  BlockIndicatorF2D<T>& indicator, AnalyticalF2D<T,T>& Pop)
+{
+  T physR[2] = { };
+  T PopTmp[DESCRIPTOR::q];
+  for (int iX = 0; iX < getNx(); ++iX) {
+    for (int iY = 0; iY < getNy(); ++iY) {
+      if (indicator(iX, iY)) {
+        indicator.getBlockGeometryStructure().getPhysR(physR, iX, iY);
+        Pop(PopTmp, physR);
+        get(iX, iY).definePopulations(PopTmp);
+      }
+    }
+  }
+}
+
+template<typename T, typename DESCRIPTOR>
+void BlockLatticeStructure2D<T,DESCRIPTOR>::definePopulations(
   BlockGeometryStructure2D<T>& blockGeometry, int material, AnalyticalF2D<T,T>& Pop)
 {
-  T physR[2]= {T(),T()};
-  T PopTmp[Lattice<T>::q];
-  for (int iX = 0; iX < this->_nx; iX++) {
-    for (int iY = 0; iY < this->_ny; iY++) {
-      if (blockGeometry.getMaterial(iX, iY) == material) {
-        blockGeometry.getPhysR(physR, iX,iY);
-        Pop(PopTmp,physR);
-        get(iX,iY).definePopulations(PopTmp);
-      }
-    }
-  }
+  BlockIndicatorMaterial2D<T> indicator(blockGeometry, material);
+  definePopulations(indicator, Pop);
 }
 
-template<typename T, template<typename U> class Lattice>
-void BlockLatticeStructure2D<T,Lattice>::defineExternalField(
-  BlockGeometryStructure2D<T>& blockGeometry, int material, int fieldBeginsAt,
-  int sizeOfField, AnalyticalF2D<T,T>& field)
+template<typename T, typename DESCRIPTOR>
+template<typename FIELD>
+void BlockLatticeStructure2D<T,DESCRIPTOR>::defineField(
+  BlockIndicatorF2D<T>& indicator, AnalyticalF2D<T,T>& field)
 {
-  T physR[2]= {T(),T()};
-  T* fieldTmp = new T [sizeOfField];
-  for (int iX = 0; iX < this->_nx; iX++) {
-    for (int iY = 0; iY < this->_ny; iY++) {
-      if (blockGeometry.getMaterial(iX, iY) == material) {
-        blockGeometry.getPhysR(physR, iX,iY);
-        field(fieldTmp,physR);
-        get(iX,iY).defineExternalField(fieldBeginsAt,sizeOfField, fieldTmp);
+  T* fieldTmp = new T[DESCRIPTOR::template size<FIELD>()];
+  T physR[2] = { };
+  for (int iX = 0; iX < getNx(); ++iX) {
+    for (int iY = 0; iY < getNy(); ++iY) {
+      if (indicator(iX, iY)) {
+        indicator.getBlockGeometryStructure().getPhysR(physR, iX, iY);
+        field(fieldTmp, physR);
+        get(iX, iY).template defineField<FIELD>(fieldTmp);
       }
     }
   }
   delete[] fieldTmp;
 }
 
-template<typename T, template<typename U> class Lattice>
-void BlockLatticeStructure2D<T,Lattice>::defineExternalField(
-  BlockGeometryStructure2D<T>& blockGeometry, IndicatorF2D<T>& indicator, int fieldBeginsAt,
-  int sizeOfField, AnalyticalF2D<T,T>& field)
+template<typename T, typename DESCRIPTOR>
+template<typename FIELD>
+void BlockLatticeStructure2D<T,DESCRIPTOR>::defineField(
+  BlockGeometryStructure2D<T>& blockGeometry, int material, AnalyticalF2D<T,T>& field)
 {
-  T* fieldTmp = new T [sizeOfField];
-  bool inside;
-  T physR[2]= {T(),T()};
-  for (int iX = 0; iX < this->_nx; iX++) {
-    for (int iY = 0; iY < this->_ny; iY++) {
-      blockGeometry.getPhysR(physR, iX,iY);
-      indicator(&inside, &physR[0]);
-      if (inside) {
-        field(fieldTmp,physR);
-        get(iX,iY).defineExternalField(fieldBeginsAt,sizeOfField, fieldTmp);
-      }
-    }
-  }
-  delete[] fieldTmp;
+  BlockIndicatorMaterial2D<T> indicator(blockGeometry, material);
+  defineField<FIELD>(indicator, field);
 }
 
-template<typename T, template<typename U> class Lattice>
-void BlockLatticeStructure2D<T,Lattice>::addExternalField(
-  BlockGeometryStructure2D<T>& blockGeometry, IndicatorF2D<T>& indicator, int fieldBeginsAt,
-  int sizeOfField, AnalyticalF2D<T,T>& field)
+template<typename T, typename DESCRIPTOR>
+template<typename FIELD>
+void BlockLatticeStructure2D<T,DESCRIPTOR>::defineField(
+  BlockGeometryStructure2D<T>& blockGeometry, IndicatorF2D<T>& indicatorF,
+  AnalyticalF2D<T,T>& field)
 {
-  T* fieldTmp = new T [sizeOfField];
+  BlockIndicatorFfromIndicatorF2D<T> indicator(indicatorF, blockGeometry);
+  defineField<FIELD>(indicator, field);
+}
+
+template<typename T, typename DESCRIPTOR>
+template<typename FIELD>
+void BlockLatticeStructure2D<T,DESCRIPTOR>::addField(
+  BlockGeometryStructure2D<T>& blockGeometry, IndicatorF2D<T>& indicator,
+  AnalyticalF2D<T,T>& field)
+{
+  T* fieldTmp = new T[DESCRIPTOR::template size<FIELD>()];
+  T physR[2] = { };
   bool inside;
-  T physR[2]= {T(),T()};
-  for (int iX = 0; iX < this->_nx; iX++) {
-    for (int iY = 0; iY < this->_ny; iY++) {
-      blockGeometry.getPhysR(physR, iX,iY);
+  for (int iX = 0; iX < getNx(); ++iX) {
+    for (int iY = 0; iY < getNy(); ++iY) {
+      blockGeometry.getPhysR(physR, iX, iY);
       indicator(&inside, &(physR[0]));
       if (inside) {
         field(fieldTmp,physR);
-        get(iX,iY).addExternalField(fieldBeginsAt,sizeOfField, fieldTmp);
+        get(iX, iY).template addField<FIELD>(fieldTmp);
       }
     }
   }
   delete[] fieldTmp;
 }
 
-template<typename T, template<typename U> class Lattice>
-void BlockLatticeStructure2D<T,Lattice>::addExternalField(
-  BlockGeometryStructure2D<T>& blockGeometry, IndicatorF2D<T>& indicator, int fieldBeginsAt,
-  int sizeOfField, AnalyticalF2D<T,T>& field, AnalyticalF2D<T,T>& porous)
+template<typename T, typename DESCRIPTOR>
+template<typename FIELD>
+void BlockLatticeStructure2D<T,DESCRIPTOR>::addField(
+  BlockGeometryStructure2D<T>& blockGeometry, IndicatorF2D<T>& indicator,
+  AnalyticalF2D<T,T>& field, AnalyticalF2D<T,T>& porous)
 {
-  T* fieldTmp = new T [sizeOfField];
+  T* fieldTmp = new T[DESCRIPTOR::template size<FIELD>()];
   bool inside;
-  T physR[2]= {T(),T()};
-  T porousA[1] = {T()};
-  for (int iX = 0; iX < this->_nx; iX++) {
-    for (int iY = 0; iY < this->_ny; iY++) {
-      blockGeometry.getPhysR(physR, iX,iY);
+  T physR[2] = { };
+  T porousA[1] = { };
+  for (int iX = 0; iX < getNx(); ++iX) {
+    for (int iY = 0; iY < getNy(); ++iY) {
+      blockGeometry.getPhysR(physR, iX, iY);
       indicator(&inside, physR);
       if (inside) {
         porous(porousA, physR);
         field(fieldTmp,physR);
-        for (int i = 0; i<sizeOfField; ++i) {
+        for (int i = 0; i < DESCRIPTOR::template size<FIELD>(); ++i) {
           fieldTmp[i] *= porousA[0];
         }
-        get(iX,iY).addExternalField(fieldBeginsAt,sizeOfField, fieldTmp);
+        get(iX, iY).template addField<FIELD>(fieldTmp);
       }
     }
   }
   delete[] fieldTmp;
 }
 
-template<typename T, template<typename U> class Lattice>
-void BlockLatticeStructure2D<T,Lattice>::resetExternalParticleField(
-  BlockGeometryStructure2D<T>& blockGeometry, IndicatorF2D<T>& indicator)
-{
-  T physR[2]= {T(),T()};
-  T fieldTmp[4] = {T(1), T(), T(), T()};
-  for (int iX = 0; iX < this->_nx; iX++) {
-    for (int iY = 0; iY < this->_ny; iY++) {
-      blockGeometry.getPhysR(physR, iX,iY);
-      if (indicator.getMin()[0] < physR[0] &&
-          indicator.getMin()[1] < physR[1] &&
-          indicator.getMax()[0] > physR[0] &&
-          indicator.getMax()[1] > physR[1]) {
-        get(iX,iY).defineExternalField(0,4, fieldTmp);
-      }
-    }
-  }
-}
-
-template<typename T, template<typename U> class Lattice>
-void BlockLatticeStructure2D<T,Lattice>::setExternalParticleField(BlockGeometryStructure2D<T>& blockGeometry, AnalyticalF2D<T,T>& velocity, ParticleIndicatorF2D<T,T>& sIndicator)
+#ifndef OLB_PRECOMPILED
+template<typename T, typename DESCRIPTOR>
+void BlockLatticeStructure2D<T,DESCRIPTOR>::setExternalParticleField(BlockGeometryStructure2D<T>& blockGeometry, AnalyticalF2D<T,T>& velocity, SmoothIndicatorF2D<T,T,true>& sIndicator)
 {
 
+  int start[2] = {0};
+  int end[2] = {0};
   // check for intersection of cuboid and indicator
-  if (blockGeometry.getOrigin()[0] <= sIndicator.getCircumRadius() + sIndicator.getPos()[0]
-      && blockGeometry.getOrigin()[1] <= sIndicator.getCircumRadius() + sIndicator.getPos()[1]
-      && sIndicator.getPos()[0] - sIndicator.getCircumRadius() <= blockGeometry.getOrigin()[0] + blockGeometry.getExtend()[0] * blockGeometry.getDeltaR()
-      && sIndicator.getPos()[1] - sIndicator.getCircumRadius() <= blockGeometry.getOrigin()[1] + blockGeometry.getExtend()[1] * blockGeometry.getDeltaR()) {
+  Cuboid2D<T> tmpCuboid(blockGeometry.getOrigin()[0], blockGeometry.getOrigin()[1], blockGeometry.getDeltaR(), blockGeometry.getNx(), blockGeometry.getNy());
+  T posXmin = sIndicator.getPos()[0] - sIndicator.getCircumRadius();
+  T posXmax = sIndicator.getPos()[0] + sIndicator.getCircumRadius();
+  T posYmin = sIndicator.getPos()[1] - sIndicator.getCircumRadius();
+  T posYmax = sIndicator.getPos()[1] + sIndicator.getCircumRadius();
+  if(tmpCuboid.checkInters(posXmin, posXmax, posYmin, posYmax, start[0], end[0], start[1], end[1])) {
 
-    int start[2] = {0}, span[2] = {0};
-    T invDeltaR = 1./blockGeometry.getDeltaR();
     for (int k=0; k<2; k++) {
-      start[k] = int( (sIndicator.getPos()[k]-sIndicator.getCircumRadius() - blockGeometry.getOrigin()[k]) * invDeltaR );
-      if (start[k] < 0) {
-        start[k] = 0;
-      }
-      span[k] = int( (2.*sIndicator.getCircumRadius())*invDeltaR + 3 );
-      if (span[k] + start[k] > blockGeometry.getExtend()[k]) {
-        span[k] = blockGeometry.getExtend()[k] - start[k];
-      } else if ( (sIndicator.getPos()[k] - sIndicator.getCircumRadius() - blockGeometry.getOrigin()[k]) < 0. ) {
-        span[k] = (sIndicator.getPos()[k] + sIndicator.getCircumRadius() - blockGeometry.getOrigin()[k]) * invDeltaR + 3;
-      }
+      start[k] -= 1;
+      if(start[k] < 0) start[k] = 0;
+      end[k] += 2;
+      if(end[k] > blockGeometry.getExtend()[k]) end[k] = blockGeometry.getExtend()[k];
     }
 
-    T foo[3] = {T(), T(), T()}; /// Contains foo[0]=vel0; foo[1]=vel1; foo[2]=porosity
-    T physR[2]= {T(),T()};
-    T porosity[1] = {T()};
-    for (int iX = start[0]; iX < start[0]+span[0]; iX++) {
-      for (int iY = start[1]; iY < start[1]+span[1]; iY++) {
-        blockGeometry.getPhysR(physR, iX,iY);
+    T foo[3] = { }; /// Contains foo[0]=vel0; foo[1]=vel1; foo[2]=porosity
+    T physR[2]= { };
+    T porosity[1] = { };
+    for (int iX = start[0]; iX < end[0]; ++iX) {
+      for (int iY = start[1]; iY < end[1]; ++iY) {
+        blockGeometry.getPhysR(physR, iX, iY);
         sIndicator(porosity, physR);
         if (!util::nearZero(porosity[0])) {
+          // TODO: Check / adapt to use descriptor fields
           velocity(foo,physR);
           foo[0] *= porosity[0];
           foo[1] *= porosity[0];
           foo[2] = porosity[0];
-          get(iX,iY).addExternalField(1,3, foo);
+          get(iX, iY).template addField<descriptors::VELOCITY_NUMERATOR>(foo);
+          get(iX, iY).template addField<descriptors::VELOCITY_DENOMINATOR>(&foo[2]);
           porosity[0] = 1.-porosity[0];
-          get(iX,iY).multiplyExternalField(0,1, porosity);
+          *(get(iX, iY).template getFieldPointer<descriptors::POROSITY>()) *= porosity[0];
         }
       }
     }
   }
 }
+#endif
 
-template<typename T, template<typename U> class Lattice>
-void BlockLatticeStructure2D<T,Lattice>::multiplyExternalField(
-  BlockGeometryStructure2D<T>& blockGeometry, IndicatorF2D<T>& indicator, int fieldBeginsAt,
-  int sizeOfField, AnalyticalF2D<T,T>& field)
+template<typename T, typename DESCRIPTOR>
+template<typename FIELD>
+void BlockLatticeStructure2D<T,DESCRIPTOR>::multiplyField(
+  BlockGeometryStructure2D<T>& blockGeometry, IndicatorF2D<T>& indicator,
+  AnalyticalF2D<T,T>& field)
 {
-  T* fieldTmp = new T [sizeOfField];
+  T* fieldTmp = new T [DESCRIPTOR::template size<FIELD>()];
   bool inside;
-  T physR[3]= {T(),T(),T()};
-  for (int iX = 0; iX < this->_nx; iX++) {
-    for (int iY = 0; iY < this->_ny; iY++) {
-      blockGeometry.getPhysR(physR, iX,iY);
+  T physR[3] = { };
+  for (int iX = 0; iX < getNx(); ++iX) {
+    for (int iY = 0; iY < getNy(); ++iY) {
+      blockGeometry.getPhysR(physR, iX, iY);
       indicator(&inside, &(physR[0]));
       if (inside) {
-        field(fieldTmp,physR);
-        get(iX,iY).multiplyExternalField(fieldBeginsAt,sizeOfField, fieldTmp);
+        field(fieldTmp, physR);
+        get(iX, iY).template multiplyField<FIELD>(fieldTmp);
       }
     }
   }
   delete[] fieldTmp;
 }
 
-template<typename T, template<typename U> class Lattice>
-void BlockLatticeStructure2D<T,Lattice>::iniEquilibrium(
-  BlockGeometryStructure2D<T>& blockGeometry, int material,
-  AnalyticalF2D<T,T>& rho , AnalyticalF2D<T,T>& u)
+template<typename T, typename DESCRIPTOR>
+void BlockLatticeStructure2D<T,DESCRIPTOR>::iniEquilibrium(
+  BlockIndicatorF2D<T>& indicator,
+  AnalyticalF2D<T,T>& rho, AnalyticalF2D<T,T>& u)
 {
-  T physR[2]= {T(),T()};
-  for (int iX = 0; iX < this->_nx; iX++) {
-    for (int iY = 0; iY < this->_ny; iY++) {
-      if (blockGeometry.getMaterial(iX, iY) == material) {
-        blockGeometry.getPhysR(physR,iX,iY);
-        T uTmp[] = {T(),T()};
-        u(uTmp,physR);
-        T rhoTmp = T();
-        rho(&rhoTmp,physR);
-        get(iX,iY).iniEquilibrium(rhoTmp,uTmp);
+  T physR[2] = { };
+  T uTmp[2] = { };
+  T rhoTmp = T();
+  for (int iX = 0; iX < getNx(); ++iX) {
+    for (int iY = 0; iY < getNy(); ++iY) {
+      if (indicator(iX, iY)) {
+        indicator.getBlockGeometryStructure().getPhysR(physR, iX, iY);
+        u(uTmp, physR);
+        rho(&rhoTmp, physR);
+        get(iX, iY).iniEquilibrium(rhoTmp, uTmp);
       }
     }
   }
 }
+
+template<typename T, typename DESCRIPTOR>
+void BlockLatticeStructure2D<T,DESCRIPTOR>::iniEquilibrium(
+  BlockGeometryStructure2D<T>& blockGeometry, int material,
+  AnalyticalF2D<T,T>& rho, AnalyticalF2D<T,T>& u)
+{
+  BlockIndicatorMaterial2D<T> indicator(blockGeometry, material);
+  iniEquilibrium(indicator, rho, u);
+}
+
 
 }  // namespace olb
 

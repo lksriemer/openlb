@@ -25,8 +25,8 @@
  * Groups all the 3D include files in the boundaryConditions directory.
  */
 
-#include "boundaryCondition3D.hh"
-#include "boundaryPostProcessors3D.hh"
+#include "boundaryCondition3D.h"
+#include "boundaryPostProcessors3D.h"
 #include "extendedFiniteDifferenceBoundary3D.h"
 #include "inamuroAnalyticalDynamics.h"
 #include "inamuroBoundary3D.h"
@@ -39,5 +39,6 @@
 #include "rtlbmBoundaryDynamics.h"
 #include "superBoundaryCondition3D.h"
 #include "superOffBoundaryCondition3D.h"
+#include "wallFunctionBoundaryPostProcessors3D.h"
 #include "zouHeBoundary3D.h"
 #include "zouHeDynamics.h"

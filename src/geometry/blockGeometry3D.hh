@@ -75,6 +75,12 @@ BlockGeometry3D<T>& BlockGeometry3D<T>::operator=(BlockGeometry3D const& rhs)
 }
 
 template<typename T>
+BlockStructure3D& BlockGeometry3D<T>::getBlockStructure()
+{
+  return *this;
+}
+
+template<typename T>
 BlockGeometryStatistics3D<T>& BlockGeometry3D<T>::getStatistics(bool verbose)
 {
   return this->_statistics;
@@ -315,7 +321,7 @@ void BlockGeometry3D<T>::reInit(T x0, T y0, T z0, T h, int nX, int nY, int nZ,
 template<typename T>
 void BlockGeometry3D<T>::resetStatistics()
 {
-  for (std::list<bool*>::iterator it = _statisticsUpdateNeeded.begin(); it != _statisticsUpdateNeeded.end(); it++) {
+  for (std::list<bool*>::iterator it = _statisticsUpdateNeeded.begin(); it != _statisticsUpdateNeeded.end(); ++it) {
     **it = true;
   }
 }

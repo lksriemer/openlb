@@ -35,18 +35,18 @@
 
 namespace olb {
 
-template<typename T, template<typename U> class Lattice, class dynamicsManager>
+template<typename T, typename DESCRIPTOR, class dynamicsManager>
 class SuperGuoZhaoInstantiator2D {
 public:
-  SuperGuoZhaoInstantiator2D (SuperLattice2D<T, Lattice>& sLattice_);
+  SuperGuoZhaoInstantiator2D (SuperLattice2D<T, DESCRIPTOR>& sLattice_);
   void definePorousFields(AnalyticalF2D<T,T>& epsilon_, AnalyticalF2D<T,T>& K_);
   void defineEpsilon(SuperGeometry2D<T>& sGeometry, int material, AnalyticalF2D<T,T>& epsilon);
-  void defineK(UnitConverter<T,Lattice> const& converter, SuperGeometry2D<T>& sGeometry, int material, AnalyticalF2D<T,T>& K);
-  void defineNu(UnitConverter<T,Lattice> const& converter, SuperGeometry2D<T>& sGeometry, int material);
-  void defineBodyForce(UnitConverter<T,Lattice> const& converter, SuperGeometry2D<T>& sGeometry, int material, AnalyticalF2D<T,T>& bodyForce);
+  void defineK(UnitConverter<T,DESCRIPTOR> const& converter, SuperGeometry2D<T>& sGeometry, int material, AnalyticalF2D<T,T>& K);
+  void defineNu(UnitConverter<T,DESCRIPTOR> const& converter, SuperGeometry2D<T>& sGeometry, int material);
+  void defineBodyForce(UnitConverter<T,DESCRIPTOR> const& converter, SuperGeometry2D<T>& sGeometry, int material, AnalyticalF2D<T,T>& bodyForce);
 
 private:
-  SuperLattice2D<T, Lattice>& sLattice;
+  SuperLattice2D<T, DESCRIPTOR>& sLattice;
 };
 
 }

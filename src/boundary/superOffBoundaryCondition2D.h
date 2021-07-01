@@ -37,6 +37,7 @@
 #include "core/superLattice2D.h"
 #include "io/ostreamManager.h"
 #include "functors/analytical/analyticalF.h"
+#include "utilities/functorPtr.h"
 
 /// All OpenLB code is contained in this namespace.
 namespace olb {
@@ -48,43 +49,85 @@ namespace olb {
  *
  * This class is not intended to be derived from.
  */
-
-template<typename T, template<typename U> class Lattice>
+template<typename T, typename DESCRIPTOR>
 class sOffLatticeBoundaryCondition2D {
-
 public:
   /// Constructor
-  sOffLatticeBoundaryCondition2D(SuperLattice2D<T,Lattice>& sLattice, T epsFraction_ = 0.0001);
+  sOffLatticeBoundaryCondition2D(SuperLattice2D<T,DESCRIPTOR>& sLattice, T epsFraction_ = 0.0001);
   /// Copy construction
-  sOffLatticeBoundaryCondition2D(sOffLatticeBoundaryCondition2D<T,Lattice> const& rhs);
+  sOffLatticeBoundaryCondition2D(sOffLatticeBoundaryCondition2D<T,DESCRIPTOR> const& rhs);
   /// Copy assignment
-  sOffLatticeBoundaryCondition2D operator=(sOffLatticeBoundaryCondition2D<T,Lattice> rhs);
+  sOffLatticeBoundaryCondition2D operator=(sOffLatticeBoundaryCondition2D<T,DESCRIPTOR> rhs);
   /// Destructor
   ~sOffLatticeBoundaryCondition2D();
 
-  /// Automatically sets offDynamics with boundary links and post processors using an indicator function and material number
-  /// Add offDynamics with initialisation of boundary links and the corresponding post processors
-  /// Note: Uses information of the second neighbours of the cell (x,y,z)
-  /// Add post processors. Ensure that offDynamics are defined!
-  void addVelocityBoundary(SuperGeometry2D<T>& superGeometry, int material, IndicatorF2D<T>& indicator, std::list<int> bulkMaterials = std::list<int>(1,1));
-  void addZeroVelocityBoundary(SuperGeometry2D<T>& superGeometry, int material, IndicatorF2D<T>& indicator, std::list<int> bulkMaterials = std::list<int>(1,1));
-  void addPressureBoundary(SuperGeometry2D<T>& superGeometry, int material, IndicatorF2D<T>& indicator, std::list<int> bulkMaterials = std::list<int>(1,1));
+  /// Set offDynamics with boundary links and post processors using indicators
+  /**
+   * Add offDynamics with initialisation of boundary links and the corresponding
+   * post processors
+   * Note: Uses information of the second neighbours of the cell (x,y)
+   * Add post processors. Ensure that offDynamics are defined!
+   *
+   * \param boundaryIndicator Indicator describing boundary cells
+   * \param bulkIndicator     Indicator describing bulk cells
+   * \param geometryIndicator Indicator describing the geometry to be bounded
+   **/
+  void addVelocityBoundary(FunctorPtr<SuperIndicatorF2D<T>>&& boundaryIndicator,
+                           FunctorPtr<SuperIndicatorF2D<T>>&& bulkIndicator,
+                           IndicatorF2D<T>&                   geometryIndicator);
+  void addVelocityBoundary(SuperGeometry2D<T>& superGeometry, int material,
+                           IndicatorF2D<T>& geometryIndicator,
+                           std::vector<int> bulkMaterials = std::vector<int>(1,1));
+  void addVelocityBoundary(FunctorPtr<SuperIndicatorF2D<T>>&& boundaryIndicator,
+                           FunctorPtr<SuperIndicatorF2D<T>>&& bulkIndicator);
+  void addVelocityBoundary(SuperGeometry2D<T>& superGeometry, int material,
+                           std::vector<int> bulkMaterials = std::vector<int>(1,1));
 
-  void addVelocityBoundary(SuperGeometry2D<T>& superGeometry, int material, std::list<int> bulkMaterials = std::list<int>(1,1));
-  void addZeroVelocityBoundary(SuperGeometry2D<T>& superGeometry, int material,  std::list<int> bulkMaterials = std::list<int>(1,1));
-  void addPressureBoundary(SuperGeometry2D<T>& superGeometry, int material,  std::list<int> bulkMaterials = std::list<int>(1,1));
+  void addZeroVelocityBoundary(FunctorPtr<SuperIndicatorF2D<T>>&& boundaryIndicator,
+                               FunctorPtr<SuperIndicatorF2D<T>>&& bulkIndicator,
+                               IndicatorF2D<T>&                   geometryIndicator);
+  void addZeroVelocityBoundary(SuperGeometry2D<T>& superGeometry, int material,
+                               IndicatorF2D<T>& geometryIndicator,
+                               std::vector<int> bulkMaterials = std::vector<int>(1,1));
+  void addZeroVelocityBoundary(FunctorPtr<SuperIndicatorF2D<T>>&& boundaryIndicator,
+                               FunctorPtr<SuperIndicatorF2D<T>>&& bulkIndicator);
+  void addZeroVelocityBoundary(SuperGeometry2D<T>& superGeometry, int material,
+                               std::vector<int> bulkMaterials = std::vector<int>(1,1));
 
-  void defineRho(SuperGeometry2D<T>& superGeometry, int material, AnalyticalF2D<T,T>& rho, std::list<int> bulkMaterials = std::list<int>(1,1) );
-  void defineU(SuperGeometry2D<T>& superGeometry, int material, AnalyticalF2D<T,T>& u, std::list<int> bulkMaterials = std::list<int>(1,1) );
+  void addPressureBoundary(FunctorPtr<SuperIndicatorF2D<T>>&& boundaryIndicator,
+                           FunctorPtr<SuperIndicatorF2D<T>>&& bulkIndicator,
+                           IndicatorF2D<T>& geometryIndicator);
+  void addPressureBoundary(SuperGeometry2D<T>& superGeometry, int material,
+                           IndicatorF2D<T>& geometryIndicator,
+                           std::vector<int> bulkMaterials = std::vector<int>(1,1));
+  void addPressureBoundary(FunctorPtr<SuperIndicatorF2D<T>>&& boundaryIndicator,
+                           FunctorPtr<SuperIndicatorF2D<T>>&& bulkIndicator);
+  void addPressureBoundary(SuperGeometry2D<T>& superGeometry, int material,
+                           std::vector<int> bulkMaterials = std::vector<int>(1,1));
+
+  void defineU(FunctorPtr<SuperIndicatorF2D<T>>&& indicator,
+               FunctorPtr<SuperIndicatorF2D<T>>&& bulkIndicator,
+               AnalyticalF2D<T,T>& u);
+  void defineU(SuperGeometry2D<T>& superGeometry, int material,
+               AnalyticalF2D<T,T>& u,
+               std::vector<int> bulkMaterials = std::vector<int>(1,1));
+
+  void defineRho(FunctorPtr<SuperIndicatorF2D<T>>&& indicator,
+                 FunctorPtr<SuperIndicatorF2D<T>>&& bulkIndicator,
+                 AnalyticalF2D<T,T>&                rho);
+  void defineRho(SuperGeometry2D<T>& superGeometry, int material,
+                 AnalyticalF2D<T,T>& rho,
+                 std::vector<int> bulkMaterials = std::vector<int>(1,1));
 
   /// Adds needed Cells to the Communicator _commBC in SuperLattice
+  void addPoints2CommBC(FunctorPtr<SuperIndicatorF2D<T>>&& indicator);
   void addPoints2CommBC(SuperGeometry2D<T>& superGeometry, int material);
 
-  SuperLattice2D<T,Lattice>& getSuperLattice()
+  SuperLattice2D<T,DESCRIPTOR>& getSuperLattice()
   {
     return _sLattice;
   };
-  std::vector<OffLatticeBoundaryCondition2D<T,Lattice>* >& getBlockBCs()
+  std::vector<OffLatticeBoundaryCondition2D<T,DESCRIPTOR>* >& getBlockBCs()
   {
     return _blockBCs;
   };
@@ -102,18 +145,18 @@ public:
 
 private:
   mutable OstreamManager clout;
-  SuperLattice2D<T,Lattice>& _sLattice;
-  std::vector<OffLatticeBoundaryCondition2D<T,Lattice>* > _blockBCs;
+  SuperLattice2D<T,DESCRIPTOR>& _sLattice;
+  std::vector<OffLatticeBoundaryCondition2D<T,DESCRIPTOR>* > _blockBCs;
   T _epsFraction;
   int _overlap;
   bool _output;
 };
 
-template<typename T, template<typename U> class Lattice, typename MixinDynamics=BGKdynamics<T,Lattice> >
-void createBouzidiBoundaryCondition2D(sOffLatticeBoundaryCondition2D<T,Lattice>& sBC);
+template<typename T, typename DESCRIPTOR, typename MixinDynamics=BGKdynamics<T,DESCRIPTOR> >
+void createBouzidiBoundaryCondition2D(sOffLatticeBoundaryCondition2D<T,DESCRIPTOR>& sBC);
 
-template<typename T, template<typename U> class Lattice>
-void createBounceBackBoundaryCondition2D(sOffLatticeBoundaryCondition2D<T,Lattice>& sBC);
+template<typename T, typename DESCRIPTOR>
+void createBounceBackBoundaryCondition2D(sOffLatticeBoundaryCondition2D<T,DESCRIPTOR>& sBC);
 
 }  // namespace olb
 

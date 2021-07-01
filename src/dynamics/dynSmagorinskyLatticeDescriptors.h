@@ -32,39 +32,12 @@ namespace descriptors {
 
 // 2D Descriptors for flow through DynSmagorinsky media
 
-struct DynSmagorinsky2dDescriptor {
-  static const int numScalars = 1;
-  static const int numSpecies = 1;
-  static const int smagoConstIsAt = 0;
-  static const int sizeOfSmagoConst = 1;
-};
-
-struct DynSmagorinsky2dDescriptorBase {
-  typedef DynSmagorinsky2dDescriptor ExternalField;
-};
-
-template <typename T> struct DynSmagorinskyD2Q9Descriptor
-  : public D2Q9DescriptorBase<T>, public DynSmagorinsky2dDescriptorBase {
-};
-
+using DynSmagorinskyD2Q9Descriptor = D2Q9<SMAGO_CONST>;
 
 /////////////////////////////////////////////////////////////////////////////////
 // 3D Descriptors for flow through DynSmagorinsky media
 
-struct DynSmagorinsky3dDescriptor {
-  static const int numScalars = 1;
-  static const int numSpecies = 1;
-  static const int smagoConstIsAt = 0;
-  static const int sizeOfSmagoConst = 1;
-};
-
-struct DynSmagorinsky3dDescriptorBase {
-  typedef DynSmagorinsky3dDescriptor ExternalField;
-};
-
-template <typename T> struct DynSmagorinskyD3Q19Descriptor
-  : public D3Q19DescriptorBase<T>, public DynSmagorinsky3dDescriptorBase {
-};
+using DynSmagorinskyD3Q19Descriptor = D3Q19<SMAGO_CONST>;
 
 
 } // namespace descriptors

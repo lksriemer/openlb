@@ -42,69 +42,28 @@ namespace olb {
 
 namespace descriptors {
 
-struct DynOmegaDescriptor {
-  static const int numScalars = 1;
-  static const int numSpecies = 1;
-  static const int omegaBeginsAt = 0;
-  static const int sizeOfOmega = 1;
-};
-
-struct DynOmegaDescriptorBase {
-  typedef DynOmegaDescriptor ExternalField;
-};
-
 
 /// 2D Descriptors for modells with variable omega
 
-struct ForcedDynOmega2dDescriptor {
-  static const int numScalars = 3;
-  static const int numSpecies = 2;
-  static const int omegaBeginsAt = 0;
-  static const int sizeOfOmega = 1;
-  static const int forceBeginsAt = 1;
-  static const int sizeOfForce   = 2;
-};
+/// extended descriptor for porous particles and power-law rheology - 2D
 
-struct ForcedDynOmega2dDescriptorBase {
-  typedef ForcedDynOmega2dDescriptor ExternalField;
-};
+using DynOmegaD2Q9Descriptor = D2Q9<OMEGA>;
+using ForcedDynOmegaD2Q9Descriptor =  D2Q9<FORCE,OMEGA>;
 
-
-template <typename T>
-struct DynOmegaD2Q9Descriptor
-  : public D2Q9DescriptorBase<T>, public DynOmegaDescriptorBase {
-};
-
-template <typename T>
-struct ForcedDynOmegaD2Q9Descriptor
-  : public D2Q9DescriptorBase<T>, public ForcedDynOmega2dDescriptorBase {
-};
-
+using DynOmegaPorousParticleD2Q9Descriptor = D2Q9<POROSITY,VELOCITY_NUMERATOR,VELOCITY_DENOMINATOR,OMEGA>;
 
 /// 3D Descriptors for modells with variable omega
 
-struct ForcedDynOmega3dDescriptor {
-  static const int numScalars = 4;
-  static const int numSpecies = 2;
-  static const int omegaBeginsAt = 0;
-  static const int sizeOfOmega = 1;
-  static const int forceBeginsAt = 1;
-  static const int sizeOfForce   = 3;
-};
+/// extended descriptor for porous particles and power-law rheology - 3D
 
-struct ForcedDynOmega3dDescriptorBase {
-  typedef ForcedDynOmega3dDescriptor ExternalField;
-};
+using DynOmegaD3Q19Descriptor = D3Q19<OMEGA>;
+using DynOmegaD3Q27Descriptor = D3Q27<OMEGA>;
 
-template <typename T>
-struct DynOmegaD3Q19Descriptor
-  : public D3Q19DescriptorBase<T>, public DynOmegaDescriptorBase {
-};
+using ForcedDynOmegaD3Q19Descriptor = D3Q19<OMEGA,FORCE>;
+using ForcedDynOmegaD3Q27Descriptor = D3Q27<OMEGA,FORCE>;
 
-template <typename T>
-struct ForcedDynOmegaD3Q19Descriptor
-  : public D3Q19DescriptorBase<T>, public ForcedDynOmega3dDescriptorBase {
-};
+using DynOmegaPorousParticleD3Q19Descriptor = D3Q19<POROSITY,VELOCITY_NUMERATOR,VELOCITY_DENOMINATOR,OMEGA>;
+using DynOmegaPorousParticleD3Q27Descriptor = D3Q27<POROSITY,VELOCITY_NUMERATOR,VELOCITY_DENOMINATOR,OMEGA>;
 
 
 } // namespace descriptors

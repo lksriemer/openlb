@@ -21,12 +21,14 @@
  *  Boston, MA  02110-1301, USA.
 */
 
-/** \file A helper for initialising 3D boundaries -- header file.  */
+/** \file
+ * A helper for initialising 3D boundaries -- header file.
+ */
 
 #ifndef OFF_BOUNDARY_CONDITION_3D_H
 #define OFF_BOUNDARY_CONDITION_3D_H
 
-#include <list>
+#include <vector>
 #include "core/blockLatticeStructure3D.h"
 #include "core/blockLatticeStructure3D.h"
 #include "offBoundaryCondition3D.h"
@@ -39,7 +41,7 @@ namespace olb {
 * This class provides a general off lattice boundary condition
 */
 
-template<typename T, template<typename U> class Lattice>
+template<typename T, typename DESCRIPTOR>
 class OffLatticeBoundaryCondition3D {
 
 protected:
@@ -54,26 +56,44 @@ public:
   virtual void addOnePointVelocityBoundary(int x, int y, int z, int iPop, T dist) =0;
   virtual void addTwoPointVelocityBoundary(int x, int y, int z, int iPop, T dist) =0;
 
+  virtual void addOffDynamics(int x, int y, int z, T location[DESCRIPTOR::d]) =0;
+  virtual void addOffDynamics(int x, int y, int z, T location[DESCRIPTOR::d], T distances[DESCRIPTOR::q]) =0;
 
-  virtual void addOffDynamics(int x, int y, int z, T location[Lattice<T>::d]) =0;
-  virtual void addOffDynamics(int x, int y, int z, T location[Lattice<T>::d], T distances[Lattice<T>::q]) =0;
-  virtual void addOffDynamics(BlockGeometryStructure3D<T>& blockGeometryStructure, int material) =0;
+  virtual void addZeroVelocityBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure,
+                                       int x, int y, int z, int iPop, T dist) =0;
+  virtual void defineU(int iX, int iY, int iZ, int iPop, const T u[DESCRIPTOR::d]) =0;
 
+  virtual void addOffDynamics(BlockIndicatorF3D<T>& indicator) =0;
+  virtual void addZeroVelocityBoundary(BlockIndicatorF3D<T>& boundaryIndicator,
+                                       BlockIndicatorF3D<T>& bulkIndicator,
+                                       IndicatorF3D<T>&      geometryIndicator) =0;
+  virtual void addVelocityBoundary(BlockIndicatorF3D<T>& boundaryIndicator,
+                                   BlockIndicatorF3D<T>& bulkIndicator,
+                                   IndicatorF3D<T>&      geometryIndicator) =0;
+  virtual void defineU(BlockIndicatorF3D<T>& indicator,
+                       BlockIndicatorF3D<T>& bulkIndicator,
+                       AnalyticalF3D<T,T>&   u) =0;
 
-  virtual void addZeroVelocityBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int x, int y, int z, int iPop, T dist) =0;
-  virtual void addZeroVelocityBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int material, IndicatorF3D<T>& indicator, std::list<int> bulkMaterials = std::list<int>(1,1)) =0;
+  /**
+   * \name Convenience wrappers for boundary functions
+   * \{
+   **/
 
-  //virtual void addZeroVelocityBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int material, IndicatorF3D<T>& indicator) =0;
+  void addOffDynamics(BlockGeometryStructure3D<T>& blockGeometryStructure, int material);
+  void addZeroVelocityBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int material,
+                               IndicatorF3D<T>& geometryIndicator,
+                               std::vector<int> bulkMaterials = std::vector<int>(1,1));
+  void addVelocityBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int material,
+                           IndicatorF3D<T>& indicator,
+                           std::vector<int> bulkMaterials = std::vector<int>(1,1));
+  void defineU(BlockGeometryStructure3D<T>& blockGeometryStructure, int material,
+               AnalyticalF3D<T,T>& u,
+               std::vector<int> bulkMaterials = std::vector<int>(1,1) );
 
-  //virtual void addVelocityBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int x, int y, int z, int iPop, T dist) =0;
-  //virtual void addVelocityBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int x, int y, int z, T distances[Lattice<T>::q]) =0;
-  virtual void addVelocityBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int material, IndicatorF3D<T>& indicator, std::list<int> bulkMaterials = std::list<int>(1,1)) =0;
+  ///\}
 
-  virtual void defineU(int iX, int iY, int iZ, int iPop, const T u[Lattice<T>::d]) =0;
-  virtual void defineU(BlockGeometryStructure3D<T>& blockGeometryStructure, int material, AnalyticalF3D<T,T>& u, std::list<int> bulkMaterials = std::list<int>(1,1) ) =0;
-
-  virtual BlockLatticeStructure3D<T,Lattice>& getBlock() =0;
-  virtual BlockLatticeStructure3D<T,Lattice> const& getBlock() const =0;
+  virtual BlockLatticeStructure3D<T,DESCRIPTOR>& getBlock() =0;
+  virtual BlockLatticeStructure3D<T,DESCRIPTOR> const& getBlock() const =0;
 
   virtual void outputOn() =0;
   virtual void outputOff() =0;
@@ -85,9 +105,9 @@ public:
 * Create specific off lattice boundary conditions
 */
 
-template<typename T, template<typename U> class Lattice, typename MixinDynamics=BGKdynamics<T,Lattice> >
-OffLatticeBoundaryCondition3D<T,Lattice>*
-createBouzidiBoundaryCondition3D(BlockLatticeStructure3D<T,Lattice>& block);
+template<typename T, typename DESCRIPTOR, typename MixinDynamics=BGKdynamics<T,DESCRIPTOR> >
+OffLatticeBoundaryCondition3D<T,DESCRIPTOR>*
+createBouzidiBoundaryCondition3D(BlockLatticeStructure3D<T,DESCRIPTOR>& block);
 
 }
 

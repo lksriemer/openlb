@@ -159,7 +159,11 @@ public:
   /// Initializes _outC and _outN
   void init_outCN();
   /// Initialization Helper
-  void bufSend_inCells();
+#ifdef PARALLEL_MODE_MPI
+  void bufSend_inCells(singleton::MpiNonBlockingHelper& helper);
+#else
+  void bufSend_inCells() {}
+#endif
   /// Initialization Helper
   void recWrite_outCells();
   /// Finishes a communication step

@@ -37,8 +37,8 @@ namespace olb {
 //=====================================================================================
 //==============  NavierStokesAdvectionDiffusionMRTCouplingPostProcessor3D ===========
 //=====================================================================================
-template<typename T, template<typename U> class Lattice>
-NavierStokesAdvectionDiffusionMRTCouplingPostProcessor3D<T,Lattice>::
+template<typename T, typename DESCRIPTOR>
+NavierStokesAdvectionDiffusionMRTCouplingPostProcessor3D<T,DESCRIPTOR>::
 NavierStokesAdvectionDiffusionMRTCouplingPostProcessor3D(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_,
     T gravity_, T T0_, T deltaTemp_, std::vector<T> dir_,
     std::vector<SpatiallyExtendedObject3D* > partners_)
@@ -57,20 +57,20 @@ NavierStokesAdvectionDiffusionMRTCouplingPostProcessor3D(int x0_, int x1_, int y
   }
 }
 
-template<typename T, template<typename U> class Lattice>
-void NavierStokesAdvectionDiffusionMRTCouplingPostProcessor3D<T,Lattice>::
-processSubDomain(BlockLattice3D<T,Lattice>& blockLattice,
+template<typename T, typename DESCRIPTOR>
+void NavierStokesAdvectionDiffusionMRTCouplingPostProcessor3D<T,DESCRIPTOR>::
+processSubDomain(BlockLattice3D<T,DESCRIPTOR>& blockLattice,
                  int x0_, int x1_, int y0_, int y1_, int z0_, int z1_)
 {
-  typedef Lattice<T> L;
+  typedef DESCRIPTOR L;
   enum {x,y,z};
   enum {
-    velOffset = AdvectionDiffusionMRTD3Q7Descriptor<T>::ExternalField::velocityBeginsAt,
-    forceOffset = Lattice<T>::ExternalField::forceBeginsAt
+    velOffset = descriptors::AdvectionDiffusionMRTD3Q7Descriptor::template index<descriptors::VELOCITY>(),
+    forceOffset = DESCRIPTOR::template index<descriptors::FORCE>()
   };
 
-  BlockLattice3D<T,AdvectionDiffusionMRTD3Q7Descriptor> *tPartner =
-    dynamic_cast<BlockLattice3D<T,AdvectionDiffusionMRTD3Q7Descriptor> *>(partners[0]);
+  BlockLattice3D<T,descriptors::AdvectionDiffusionMRTD3Q7Descriptor> *tPartner =
+    dynamic_cast<BlockLattice3D<T,descriptors::AdvectionDiffusionMRTD3Q7Descriptor> *>(partners[0]);
 
   int newX0, newX1, newY0, newY1, newZ0, newZ1;
   if ( util::intersect (
@@ -82,12 +82,12 @@ processSubDomain(BlockLattice3D<T,Lattice>& blockLattice,
       for (int iY=newY0; iY<=newY1; ++iY) {
         for (int iZ=newZ0; iZ<=newZ1; ++iZ) {
           //                  Velocity coupling
-          T *u = tPartner->get(iX,iY,iZ).getExternal(velOffset);
+          T *u = tPartner->get(iX,iY,iZ).template getFieldPointer<descriptors::VELOCITY>();
           blockLattice.get(iX,iY,iZ).computeU(u);
 
           //coupling between the temperature and navier stokes.
 
-          T *force = blockLattice.get(iX,iY,iZ).getExternal(forceOffset);
+          T *force = blockLattice.get(iX,iY,iZ).template getFieldPointer<descriptors::FORCE>();
           T temperature = tPartner->get(iX,iY,iZ).computeRho();
           T rho = blockLattice.get(iX,iY,iZ).computeRho();
           for (unsigned iD = 0; iD < L::d; ++iD) {
@@ -99,9 +99,9 @@ processSubDomain(BlockLattice3D<T,Lattice>& blockLattice,
   }
 }
 
-template<typename T, template<typename U> class Lattice>
-void NavierStokesAdvectionDiffusionMRTCouplingPostProcessor3D<T,Lattice>::
-process(BlockLattice3D<T,Lattice>& blockLattice)
+template<typename T, typename DESCRIPTOR>
+void NavierStokesAdvectionDiffusionMRTCouplingPostProcessor3D<T,DESCRIPTOR>::
+process(BlockLattice3D<T,DESCRIPTOR>& blockLattice)
 {
   processSubDomain(blockLattice, x0, x1, y0, y1, z0, z1);
 }
@@ -110,34 +110,38 @@ process(BlockLattice3D<T,Lattice>& blockLattice)
 //==============  StokesDragCouplingPostProcessor3D ===========
 //=====================================================================================
 
-template<typename T, template<typename U> class Lattice,
-template<typename U> class ADLattice>
-AdvectionDiffusionParticleMRTCouplingPostProcessor3D<T,Lattice,ADLattice>::
+template<typename T, typename DESCRIPTOR,
+typename ADLattice>
+AdvectionDiffusionParticleMRTCouplingPostProcessor3D<T,DESCRIPTOR,ADLattice>::
 AdvectionDiffusionParticleMRTCouplingPostProcessor3D(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_, int iC_,
     int offset_, std::vector<SpatiallyExtendedObject3D* > partners_,
-    std::vector<std::reference_wrapper<advectionDiffusionForce3D<T, Lattice, ADLattice> > > forces_)
+    std::vector<std::reference_wrapper<AdvectionDiffusionForce3D<T, DESCRIPTOR, ADLattice> > > forces_)
   :  x0(x0_), x1(x1_), y0(y0_), y1(y1_), z0(z0_), z1(z1_), iC(iC_), offset(offset_), forces(forces_)
 {
   BlockLattice3D<T,ADLattice> *partnerLattice =
     dynamic_cast<BlockLattice3D<T,ADLattice> *>(partners_[0]);
   adCell = &partnerLattice->get(x0,y0,z0);
-  vel = partnerLattice->get(x0,y0,z0).getExternal(offset);
-  vel_new = partnerLattice->get(x0,y0,z0).getExternal(offset);
-  velXp = partnerLattice->get(x0+1,y0,z0).getExternal(offset);
-  velXn = partnerLattice->get(x0-1,y0,z0).getExternal(offset);
-  velYp = partnerLattice->get(x0,y0+1,z0).getExternal(offset);
-  velYn = partnerLattice->get(x0,y0-1,z0).getExternal(offset);
-  velZp = partnerLattice->get(x0,y0,z0+1).getExternal(offset);
-  velZn = partnerLattice->get(x0,y0,z0-1).getExternal(offset);
+  vel = partnerLattice->get(x0,y0,z0)[offset];
+  vel_new = partnerLattice->get(x0,y0,z0)[offset];
+  velXp = partnerLattice->get(x0+1,y0,z0)[offset];
+  velXn = partnerLattice->get(x0-1,y0,z0)[offset];
+  velYp = partnerLattice->get(x0,y0+1,z0)[offset];
+  velYn = partnerLattice->get(x0,y0-1,z0)[offset];
+  velZp = partnerLattice->get(x0,y0,z0+1)[offset];
+  velZn = partnerLattice->get(x0,y0,z0-1)[offset];
 }
 
-template<typename T, template<typename U> class Lattice,
-template<typename U> class ADLattice>
-void AdvectionDiffusionParticleMRTCouplingPostProcessor3D<T,Lattice,ADLattice>::
-processSubDomain(BlockLattice3D<T,Lattice>& blockLattice,
+template<typename T, typename DESCRIPTOR,
+typename ADLattice>
+void AdvectionDiffusionParticleMRTCouplingPostProcessor3D<T,DESCRIPTOR,ADLattice>::
+processSubDomain(BlockLattice3D<T,DESCRIPTOR>& blockLattice,
                  int x0_, int x1_, int y0_, int y1_, int z0_, int z1_)
 {
   int newX0, newX1, newY0, newY1, newZ0, newZ1;
+
+  int off = (par) ? 3 : 0;
+  int off2 = (par) ? 0 : 3;
+
   if ( util::intersect (
          x0, x1, y0, y1, z0, z1,
          x0_, x1_, y0_, y1_, z0_, z1_,
@@ -146,8 +150,7 @@ processSubDomain(BlockLattice3D<T,Lattice>& blockLattice,
     for (int iX=newX0; iX<=newX1; ++iX) {
       for (int iY=newY0; iY<=newY1; ++iY) {
         for (int iZ=newZ0; iZ<=newZ1; ++iZ) {
-          int off = (par) ? 3 : 0;
-          int off2 = (par) ? 0 : 3;
+
           int latticeR[4] = {iC, iX, iY, iZ};
           T velGrad[3] = {0.,0.,0.};
           T forceValue[3] = {0.,0.,0.};
@@ -186,87 +189,88 @@ processSubDomain(BlockLattice3D<T,Lattice>& blockLattice,
               velGrad[2] += vel[2+off]*(vel[2+off]-velZn[2+off]);
             }
 
-            for (advectionDiffusionForce3D<T, Lattice,ADLattice>& f : forces) {
+            for (AdvectionDiffusionForce3D<T, DESCRIPTOR,ADLattice>& f : forces) {
               f.applyForce(forceValue, nsCell, adCell, &vel[off], latticeR);
             }
 
             // compute new particle velocity
-            for (int i=0; i < Lattice<T>::d; i++) {
+            for (int i=0; i < DESCRIPTOR::d; i++) {
               vel_new[i+off2] = vel[i+off] + forceValue[i] - velGrad[i];
             }
           } else {
             nsCell->computeU(velF);
-            for (int i = 0; i < Lattice<T>::d; i++) {
-              vel_new[i + off2] = velF[i];
+            T scaleFactor = T(1);
+            for (int i = 0; i < DESCRIPTOR::d; i++) {
+              vel_new[i + off2] = velF[i] * scaleFactor;
             }
           }
-          par = !par;
         }
       }
     }
   }
+  par = !par;
 }
 
-template<typename T, template<typename U> class Lattice,
-template<typename U> class ADLattice>
-void AdvectionDiffusionParticleMRTCouplingPostProcessor3D<T,Lattice,ADLattice>::
-process(BlockLattice3D<T,Lattice>& blockLattice)
+template<typename T, typename DESCRIPTOR,
+typename ADLattice>
+void AdvectionDiffusionParticleMRTCouplingPostProcessor3D<T,DESCRIPTOR,ADLattice>::
+process(BlockLattice3D<T,DESCRIPTOR>& blockLattice)
 {
   processSubDomain(blockLattice, x0, x1, y0, y1, z0, z1);
 }
 
 // LatticeCouplingGenerator for advectionDiffusion coupling
 
-template<typename T, template<typename U> class Lattice>
-NavierStokesAdvectionDiffusionMRTCouplingGenerator3D<T,Lattice>::
+template<typename T, typename DESCRIPTOR>
+NavierStokesAdvectionDiffusionMRTCouplingGenerator3D<T,DESCRIPTOR>::
 NavierStokesAdvectionDiffusionMRTCouplingGenerator3D(int x0_, int x1_, int y0_, int y1_,int z0_, int z1_,
     T gravity_, T T0_, T deltaTemp_, std::vector<T> dir_)
-  : LatticeCouplingGenerator3D<T,Lattice>(x0_, x1_, y0_, y1_, z0_, z1_),
+  : LatticeCouplingGenerator3D<T,DESCRIPTOR>(x0_, x1_, y0_, y1_, z0_, z1_),
     gravity(gravity_), T0(T0_), deltaTemp(deltaTemp_), dir(dir_)
 { }
 
-template<typename T, template<typename U> class Lattice>
-PostProcessor3D<T,Lattice>* NavierStokesAdvectionDiffusionMRTCouplingGenerator3D<T,Lattice>::generate (
+template<typename T, typename DESCRIPTOR>
+PostProcessor3D<T,DESCRIPTOR>* NavierStokesAdvectionDiffusionMRTCouplingGenerator3D<T,DESCRIPTOR>::generate (
   std::vector<SpatiallyExtendedObject3D* > partners) const
 {
-  return new NavierStokesAdvectionDiffusionMRTCouplingPostProcessor3D<T,Lattice>(
+  return new NavierStokesAdvectionDiffusionMRTCouplingPostProcessor3D<T,DESCRIPTOR>(
            this->x0,this->x1,this->y0,this->y1,this->z0,this->z1, gravity, T0, deltaTemp, dir,partners);
 }
 
-template<typename T, template<typename U> class Lattice>
-LatticeCouplingGenerator3D<T,Lattice>* NavierStokesAdvectionDiffusionMRTCouplingGenerator3D<T,Lattice>::clone() const
+template<typename T, typename DESCRIPTOR>
+LatticeCouplingGenerator3D<T,DESCRIPTOR>* NavierStokesAdvectionDiffusionMRTCouplingGenerator3D<T,DESCRIPTOR>::clone() const
 {
-  return new NavierStokesAdvectionDiffusionMRTCouplingGenerator3D<T,Lattice>(*this);
+  return new NavierStokesAdvectionDiffusionMRTCouplingGenerator3D<T,DESCRIPTOR>(*this);
 }
 
 // LatticeCouplingGenerator for one-way advectionDiffusion coupling with Stokes drag
 
-template<typename T, template<typename U> class Lattice,
-template<typename U> class ADLattice>
-AdvectionDiffusionParticleMRTCouplingGenerator3D<T,Lattice,ADLattice>::
+template<typename T, typename DESCRIPTOR,
+typename ADLattice>
+AdvectionDiffusionParticleMRTCouplingGenerator3D<T,DESCRIPTOR,ADLattice>::
 AdvectionDiffusionParticleMRTCouplingGenerator3D(int offset_)
-  : LatticeCouplingGenerator3D<T,Lattice>(0, 0, 0, 0, 0, 0), offset(offset_)
+  : LatticeCouplingGenerator3D<T,DESCRIPTOR>(0, 0, 0, 0, 0, 0), offset(offset_)
 { }
 
-template<typename T, template<typename U> class Lattice,
-template<typename U> class ADLattice>
-PostProcessor3D<T,Lattice>* AdvectionDiffusionParticleMRTCouplingGenerator3D<T,Lattice,ADLattice>::generate (
+template<typename T, typename DESCRIPTOR,
+typename ADLattice>
+PostProcessor3D<T,DESCRIPTOR>* AdvectionDiffusionParticleMRTCouplingGenerator3D<T,DESCRIPTOR,ADLattice>::generate (
   std::vector<SpatiallyExtendedObject3D* > partners) const
 {
-  return new AdvectionDiffusionParticleMRTCouplingPostProcessor3D<T,Lattice,ADLattice>(this->x0,this->x1,this->y0,this->y1,this->z0,this->z1, this->iC, offset, partners, ADforces);
+  return new AdvectionDiffusionParticleMRTCouplingPostProcessor3D<T,DESCRIPTOR,ADLattice>(this->x0,this->x1,this->y0,this->y1,this->z0,this->z1, this->iC, offset, partners, ADforces);
 }
 
-template<typename T, template<typename U> class Lattice,
-template<typename U> class ADLattice>
-LatticeCouplingGenerator3D<T,Lattice>* AdvectionDiffusionParticleMRTCouplingGenerator3D<T,Lattice,ADLattice>::clone() const
+template<typename T, typename DESCRIPTOR,
+typename ADLattice>
+LatticeCouplingGenerator3D<T,DESCRIPTOR>* AdvectionDiffusionParticleMRTCouplingGenerator3D<T,DESCRIPTOR,ADLattice>::clone() const
 {
-  return new AdvectionDiffusionParticleMRTCouplingGenerator3D<T,Lattice,ADLattice>(*this);
+  return new AdvectionDiffusionParticleMRTCouplingGenerator3D<T,DESCRIPTOR,ADLattice>(*this);
 }
 
-template<typename T, template<typename U> class Lattice,
-template<typename U> class ADLattice>
-void AdvectionDiffusionParticleMRTCouplingGenerator3D<T,Lattice,ADLattice>::addForce(
-    advectionDiffusionForce3D<T,Lattice,ADLattice> &force)
+template<typename T, typename DESCRIPTOR,
+typename ADLattice>
+void AdvectionDiffusionParticleMRTCouplingGenerator3D<T,DESCRIPTOR,ADLattice>::addForce(
+    AdvectionDiffusionForce3D<T,DESCRIPTOR,ADLattice> &force)
 {
   ADforces.push_back(force);
 }

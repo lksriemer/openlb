@@ -32,9 +32,11 @@
 #include "cell.hh"
 #include "latticeStatistics.hh"
 #include "postProcessing.hh"
+#include "powerLawUnitConverter.hh"
 #include "serializer.hh"
 #include "superData2D.hh"
 #include "superLattice2D.hh"
 #include "superExternal2D.hh"
 #include "unitConverter.hh"
+#include "thermalUnitConverter.hh"
 

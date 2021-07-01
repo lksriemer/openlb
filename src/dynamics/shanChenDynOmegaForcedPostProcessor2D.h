@@ -39,8 +39,8 @@ namespace olb {
 // ===========Shan Chen coupling without wall interaction===================//
 // =========================================================================//
 
-template<typename T, template<typename U> class Lattice>
-class ShanChenDynOmegaForcedPostProcessor2D : public LocalPostProcessor2D<T,Lattice> {
+template<typename T, typename DESCRIPTOR>
+class ShanChenDynOmegaForcedPostProcessor2D : public LocalPostProcessor2D<T,DESCRIPTOR> {
 public:
   ShanChenDynOmegaForcedPostProcessor2D(int x0_, int x1_, int y0_, int y1_, T G_,
                                         std::vector<T> rho0_, AnalyticalF1D<T,T>& iP_,
@@ -56,8 +56,8 @@ public:
   {
     return 1;
   }
-  virtual void process(BlockLattice2D<T,Lattice>& blockLattice);
-  virtual void processSubDomain(BlockLattice2D<T,Lattice>& blockLattice,
+  virtual void process(BlockLattice2D<T,DESCRIPTOR>& blockLattice);
+  virtual void processSubDomain(BlockLattice2D<T,DESCRIPTOR>& blockLattice,
                                 int x0_, int x1_, int y0_, int y1_);
 private:
   int x0, x1, y0, y1;
@@ -67,13 +67,13 @@ private:
   std::vector<SpatiallyExtendedObject2D*> partners;
 };
 
-template<typename T, template<typename U> class Lattice>
-class ShanChenDynOmegaForcedGenerator2D : public LatticeCouplingGenerator2D<T,Lattice> {
+template<typename T, typename DESCRIPTOR>
+class ShanChenDynOmegaForcedGenerator2D : public LatticeCouplingGenerator2D<T,DESCRIPTOR> {
 public:
   ShanChenDynOmegaForcedGenerator2D(int x0_, int x1_, int y0_, int y1_, T G_, std::vector<T> rho0_, AnalyticalF1D<T,T>& iP_);
   ShanChenDynOmegaForcedGenerator2D(T G_, std::vector<T> rho0_, AnalyticalF1D<T,T>& iP_);
-  virtual PostProcessor2D<T,Lattice>* generate(std::vector<SpatiallyExtendedObject2D*> partners) const;
-  virtual LatticeCouplingGenerator2D<T,Lattice>* clone() const;
+  virtual PostProcessor2D<T,DESCRIPTOR>* generate(std::vector<SpatiallyExtendedObject2D*> partners) const;
+  virtual LatticeCouplingGenerator2D<T,DESCRIPTOR>* clone() const;
 private:
   T G;
   std::vector<T> rho0;

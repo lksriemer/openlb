@@ -27,26 +27,25 @@
 
 namespace olb {
 
-template class BlockLatticeDissipation2D<double,descriptors::D2Q9Descriptor>;
-template class BlockLatticePhysDissipation2D<double,descriptors::D2Q9Descriptor>;
-template class BlockLatticeDensity2D<double,descriptors::D2Q9Descriptor>;
-template class BlockLatticeVelocity2D<double,descriptors::D2Q9Descriptor>;
-template class BlockLatticePhysStrainRate2D<double,descriptors::D2Q9Descriptor>;
-template class BlockLatticePhysWallShearStress2D<double,descriptors::D2Q9Descriptor>;
-template class BlockLatticeGeometry2D<double,descriptors::D2Q9Descriptor>;
-template class BlockLatticeRank2D<double,descriptors::D2Q9Descriptor>;
-template class BlockLatticeCuboid2D<double,descriptors::D2Q9Descriptor>;
-template class BlockLatticePhysPressure2D<double,descriptors::D2Q9Descriptor>;
-template class BlockLatticePhysVelocity2D<double,descriptors::D2Q9Descriptor>;
-//template class BlockLatticePhysExternalPorosity2D<double,descriptors::D2Q9Descriptor>;
-//template class BlockLatticePhysExternalVelocity2D<double,descriptors::D2Q9Descriptor>;
-template class BlockLatticePhysBoundaryForce2D<double,descriptors::D2Q9Descriptor>;
-template class BlockLatticePhysCorrBoundaryForce2D<double,descriptors::D2Q9Descriptor>;
-template class BlockLatticePorosity2D<double,descriptors::D2Q9Descriptor>;
-template class BlockLatticePhysPermeability2D<double,descriptors::D2Q9Descriptor>;
-template class BlockLatticePhysDarcyForce2D<double,descriptors::D2Q9Descriptor>;
-template class BlockLatticeAverage2D<double,descriptors::D2Q9Descriptor>;
-template class BlockEuklidNorm2D<double,descriptors::D2Q9Descriptor>;
-template class BlockLatticeMomentumExchangeForce2D<double,descriptors::D2Q9Descriptor>;
-
+template class BlockLatticeDissipation2D<double,descriptors::D2Q9<>>;
+template class BlockLatticePhysDissipation2D<double,descriptors::D2Q9<>>;
+template class BlockLatticeDensity2D<double,descriptors::D2Q9<>>;
+template class BlockLatticeVelocity2D<double,descriptors::D2Q9<>>;
+template class BlockLatticePhysStrainRate2D<double,descriptors::D2Q9<>>;
+template class BlockLatticePhysWallShearStress2D<double,descriptors::D2Q9<>>;
+template class BlockLatticeGeometry2D<double,descriptors::D2Q9<>>;
+template class BlockLatticeRank2D<double,descriptors::D2Q9<>>;
+template class BlockLatticeCuboid2D<double,descriptors::D2Q9<>>;
+template class BlockLatticePhysPressure2D<double,descriptors::D2Q9<>>;
+template class BlockLatticePhysVelocity2D<double,descriptors::D2Q9<>>;
+//template class BlockLatticePhysExternalPorosity2D<double,descriptors::D2Q9<>>;
+//template class BlockLatticePhysExternalVelocity2D<double,descriptors::D2Q9<>>;
+template class BlockLatticePhysBoundaryForce2D<double,descriptors::D2Q9<>>;
+template class BlockLatticePhysCorrBoundaryForce2D<double,descriptors::D2Q9<>>;
+template class BlockLatticePorosity2D<double,descriptors::D2Q9<>>;
+template class BlockLatticePhysPermeability2D<double,descriptors::D2Q9<>>;
+template class BlockLatticePhysDarcyForce2D<double,descriptors::D2Q9<>>;
+template class BlockLatticeAverage2D<double,descriptors::D2Q9<>>;
+template class BlockEuklidNorm2D<double,descriptors::D2Q9<>>;
+template class BlockLatticeIndicatorSmoothIndicatorIntersection2D<double,descriptors::D2Q9<>,false>;
 } // end namespace olb

@@ -72,6 +72,12 @@ BlockGeometry2D<T>& BlockGeometry2D<T>::operator=(BlockGeometry2D const& rhs)
 }
 
 template<typename T>
+BlockStructure2D& BlockGeometry2D<T>::getBlockStructure()
+{
+  return *this;
+}
+
+template<typename T>
 BlockGeometryStatistics2D<T>& BlockGeometry2D<T>::getStatistics(bool verbose)
 {
   return this->_statistics;

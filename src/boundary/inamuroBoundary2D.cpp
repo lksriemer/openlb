@@ -28,23 +28,23 @@
 #include "core/postProcessing.h"
 #include "core/postProcessing.hh"
 #include "dynamics/latticeDescriptors.h"
-#include "dynamics/latticeDescriptors.hh"
+ 
 
 
 namespace olb {
 
 template class BoundaryConditionInstantiator2D
 <
-  double, descriptors::D2Q9Descriptor,
-  InamuroBoundaryManager2D < double, descriptors::D2Q9Descriptor,
-                             BGKdynamics<double,descriptors::D2Q9Descriptor> >
+  double, descriptors::D2Q9<>,
+  InamuroBoundaryManager2D < double, descriptors::D2Q9<>,
+                             BGKdynamics<double,descriptors::D2Q9<>> >
   >;
 
-template OnLatticeBoundaryCondition2D<double,descriptors::D2Q9Descriptor>*
-createInamuroBoundaryCondition2D < double,descriptors::D2Q9Descriptor,
-                                 BGKdynamics<double,descriptors::D2Q9Descriptor> >
+template OnLatticeBoundaryCondition2D<double,descriptors::D2Q9<>>*
+createInamuroBoundaryCondition2D < double,descriptors::D2Q9<>,
+                                 BGKdynamics<double,descriptors::D2Q9<>> >
                                  (
-                                   BlockLatticeStructure2D<double,descriptors::D2Q9Descriptor>& block
+                                   BlockLatticeStructure2D<double,descriptors::D2Q9<>>& block
                                  );
 
 }  // namespace olb

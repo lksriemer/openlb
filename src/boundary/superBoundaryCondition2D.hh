@@ -33,23 +33,24 @@
 #include "extendedFiniteDifferenceBoundary2D.h"
 #include "superBoundaryCondition2D.h"
 #include "core/superLattice2D.h"
+#include "functors/lattice/indicator/superIndicatorF2D.h"
 
 namespace olb {
 
 ///////// class superBoundaryCondition2D ///////////////////////////////
 
-template<typename T, template<typename U> class Lattice>
-sOnLatticeBoundaryCondition2D<T, Lattice>::sOnLatticeBoundaryCondition2D(
-  SuperLattice2D<T, Lattice>& sLattice) :
+template<typename T, typename DESCRIPTOR>
+sOnLatticeBoundaryCondition2D<T, DESCRIPTOR>::sOnLatticeBoundaryCondition2D(
+  SuperLattice2D<T, DESCRIPTOR>& sLattice) :
   clout(std::cout,"sOnLatticeBoundaryCondition2D"),
   _sLattice(sLattice),
   _output(false)
 {
 }
 
-template<typename T, template<typename U> class Lattice>
-sOnLatticeBoundaryCondition2D<T, Lattice>::sOnLatticeBoundaryCondition2D(
-  sOnLatticeBoundaryCondition2D<T, Lattice> const& rhs) :
+template<typename T, typename DESCRIPTOR>
+sOnLatticeBoundaryCondition2D<T, DESCRIPTOR>::sOnLatticeBoundaryCondition2D(
+  sOnLatticeBoundaryCondition2D<T, DESCRIPTOR> const& rhs) :
   clout(std::cout,"sOnLatticeBoundaryCondition2D"),
   _sLattice(rhs._sLattice),
   _output(false)
@@ -59,117 +60,339 @@ sOnLatticeBoundaryCondition2D<T, Lattice>::sOnLatticeBoundaryCondition2D(
   _overlap = rhs._overlap;
 }
 
-template<typename T, template<typename U> class Lattice>
-sOnLatticeBoundaryCondition2D<T, Lattice> sOnLatticeBoundaryCondition2D<T,
-                              Lattice>::operator=(sOnLatticeBoundaryCondition2D<T, Lattice> rhs)
+template<typename T, typename DESCRIPTOR>
+sOnLatticeBoundaryCondition2D<T, DESCRIPTOR> sOnLatticeBoundaryCondition2D<T,
+                              DESCRIPTOR>::operator=(sOnLatticeBoundaryCondition2D<T, DESCRIPTOR> rhs)
 {
 
-  sOnLatticeBoundaryCondition2D<T, Lattice> tmp(rhs);
+  sOnLatticeBoundaryCondition2D<T, DESCRIPTOR> tmp(rhs);
   return tmp;
 }
 
-template<typename T, template<typename U> class Lattice>
-sOnLatticeBoundaryCondition2D<T, Lattice>::~sOnLatticeBoundaryCondition2D()
+template<typename T, typename DESCRIPTOR>
+sOnLatticeBoundaryCondition2D<T, DESCRIPTOR>::~sOnLatticeBoundaryCondition2D()
 {
-
-  for (unsigned iC = 0; iC < _blockBCs.size(); iC++) {
-    delete _blockBCs[iC];
-  }
+  //for (unsigned iC = 0; iC < _blockBCs.size(); iC++) {
+  //  delete _blockBCs[iC];
+  //}
 }
 
 
-template<typename T, template<typename U> class Lattice>
-void sOnLatticeBoundaryCondition2D<T, Lattice>::addVelocityBoundary(
+template<typename T, typename DESCRIPTOR>
+void sOnLatticeBoundaryCondition2D<T, DESCRIPTOR>::addVelocityBoundary(
+  FunctorPtr<SuperIndicatorF2D<T>>&& indicator, T omega)
+{
+  bool includeOuterCells = false;
+  if (indicator->getSuperGeometry().getOverlap() == 1) {
+    includeOuterCells = true;
+    clout << "WARNING: overlap == 1, boundary conditions set on overlap despite unknown neighbor materials" << std::endl;
+  }
+  for (int iCloc = 0; iCloc < _sLattice.getLoadBalancer().size(); ++iCloc) {
+    _blockBCs[iCloc]->addVelocityBoundary(
+      indicator->getExtendedBlockIndicatorF(iCloc), omega, includeOuterCells);
+  }
+  addPoints2CommBC(std::forward<decltype(indicator)>(indicator));
+}
+
+template<typename T, typename DESCRIPTOR>
+void sOnLatticeBoundaryCondition2D<T, DESCRIPTOR>::addVelocityBoundary(
   SuperGeometry2D<T>& superGeometry, int material, T omega)
 {
-
-  int nC = _sLattice.getLoadBalancer().size();
-  for (int iCloc = 0; iCloc < nC; iCloc++) {
-    _blockBCs[iCloc]->addVelocityBoundary(superGeometry.getExtendedBlockGeometry(iCloc), material, omega);
-  }
-  addPoints2CommBC(superGeometry, material);
+  addVelocityBoundary(superGeometry.getMaterialIndicator(material), omega);
 }
 
-template<typename T, template<typename U> class Lattice>
-void sOnLatticeBoundaryCondition2D<T, Lattice>::addSlipBoundary(
+template<typename T, typename DESCRIPTOR>
+void sOnLatticeBoundaryCondition2D<T, DESCRIPTOR>::addSlipBoundary(
+  FunctorPtr<SuperIndicatorF2D<T>>&& indicator)
+{
+  bool includeOuterCells = false;
+  if (indicator->getSuperGeometry().getOverlap() == 1) {
+    includeOuterCells = true;
+    clout << "WARNING: overlap == 1, boundary conditions set on overlap despite unknown neighbor materials" << std::endl;
+  }
+  for (int iCloc = 0; iCloc < _sLattice.getLoadBalancer().size(); ++iCloc) {
+    _blockBCs[iCloc]->addSlipBoundary(indicator->getExtendedBlockIndicatorF(iCloc), includeOuterCells);
+  }
+  addPoints2CommBC(std::forward<decltype(indicator)>(indicator));
+}
+
+template<typename T, typename DESCRIPTOR>
+void sOnLatticeBoundaryCondition2D<T, DESCRIPTOR>::addSlipBoundary(
   SuperGeometry2D<T>& superGeometry, int material)
 {
-
-  int nC = _sLattice.getLoadBalancer().size();
-  for (int iCloc = 0; iCloc < nC; iCloc++) {
-    _blockBCs[iCloc]->addSlipBoundary(superGeometry.getExtendedBlockGeometry(iCloc), material);
-  }
-  addPoints2CommBC(superGeometry, material);
+  addSlipBoundary(superGeometry.getMaterialIndicator(material));
 }
 
-template<typename T, template<typename U> class Lattice>
-void sOnLatticeBoundaryCondition2D<T, Lattice>::addTemperatureBoundary(
+template<typename T, typename DESCRIPTOR>
+void sOnLatticeBoundaryCondition2D<T, DESCRIPTOR>::addPartialSlipBoundary(
+  T tuner, FunctorPtr<SuperIndicatorF2D<T>>&& indicator)
+{
+  bool includeOuterCells = false;
+  if (indicator->getSuperGeometry().getOverlap() == 1) {
+    includeOuterCells = true;
+    clout << "WARNING: overlap == 1, boundary conditions set on overlap despite unknown neighbor materials" << std::endl;
+  }
+  for (int iCloc = 0; iCloc < _sLattice.getLoadBalancer().size(); ++iCloc) {
+    _blockBCs[iCloc]->addPartialSlipBoundary(
+      tuner, indicator->getExtendedBlockIndicatorF(iCloc), includeOuterCells);
+  }
+  addPoints2CommBC(std::forward<decltype(indicator)>(indicator));
+}
+
+template<typename T, typename DESCRIPTOR>
+void sOnLatticeBoundaryCondition2D<T, DESCRIPTOR>::addPartialSlipBoundary(
+  T tuner, SuperGeometry2D<T>& superGeometry, int material)
+{
+  addPartialSlipBoundary(tuner, superGeometry.getMaterialIndicator(material));
+}
+
+template<typename T, typename DESCRIPTOR>
+void sOnLatticeBoundaryCondition2D<T, DESCRIPTOR>::addTemperatureBoundary(
+  FunctorPtr<SuperIndicatorF2D<T>>&& indicator, T omega)
+{
+  bool includeOuterCells = false;
+  if (indicator->getSuperGeometry().getOverlap() == 1) {
+    includeOuterCells = true;
+    clout << "WARNING: overlap == 1, boundary conditions set on overlap despite unknown neighbor materials" << std::endl;
+  }
+  for (int iCloc = 0; iCloc < _sLattice.getLoadBalancer().size(); ++iCloc) {
+    _ADblockBCs[iCloc]->addTemperatureBoundary(
+      indicator->getExtendedBlockIndicatorF(iCloc), omega, includeOuterCells);
+  }
+  addPoints2CommBC(std::forward<decltype(indicator)>(indicator));
+}
+
+template<typename T, typename DESCRIPTOR>
+void sOnLatticeBoundaryCondition2D<T, DESCRIPTOR>::addTemperatureBoundary(
   SuperGeometry2D<T>& superGeometry, int material, T omega)
 {
-
-  int nC = _sLattice.getLoadBalancer().size();
-  for (int iCloc = 0; iCloc < nC; iCloc++) {
-    _ADblockBCs[iCloc]->addTemperatureBoundary(superGeometry.getExtendedBlockGeometry(iCloc), material, omega);
-  }
-  addPoints2CommBC(superGeometry, material);
+  addTemperatureBoundary(superGeometry.getMaterialIndicator(material), omega);
 }
 
-template<typename T, template<typename U> class Lattice>
-void sOnLatticeBoundaryCondition2D<T, Lattice>::addPressureBoundary(
+template<typename T, typename DESCRIPTOR>
+void sOnLatticeBoundaryCondition2D<T, DESCRIPTOR>::addRegularizedTemperatureBoundary(
+  FunctorPtr<SuperIndicatorF2D<T>>&& indicator, T omega)
+{
+  for (int iCloc = 0; iCloc < _sLattice.getLoadBalancer().size(); ++iCloc) {
+    _ADblockBCs[iCloc]->addRegularizedTemperatureBoundary(
+      indicator->getExtendedBlockIndicatorF(iCloc), omega);
+  }
+  addPoints2CommBC(std::forward<decltype(indicator)>(indicator));
+}
+
+template<typename T, typename DESCRIPTOR>
+void sOnLatticeBoundaryCondition2D<T, DESCRIPTOR>::addRegularizedTemperatureBoundary(
   SuperGeometry2D<T>& superGeometry, int material, T omega)
 {
-
-  int nC = _sLattice.getLoadBalancer().size();
-  for (int iCloc = 0; iCloc < nC; iCloc++) {
-    _blockBCs[iCloc]->addPressureBoundary(superGeometry.getExtendedBlockGeometry(iCloc), material, omega);
-  }
-  addPoints2CommBC(superGeometry, material);
+  addRegularizedTemperatureBoundary(superGeometry.getMaterialIndicator(material), omega);
 }
 
-template<typename T, template<typename U> class Lattice>
-void sOnLatticeBoundaryCondition2D<T, Lattice>::addConvectionBoundary(
+template<typename T, typename DESCRIPTOR>
+void sOnLatticeBoundaryCondition2D<T, DESCRIPTOR>::addRegularizedHeatFluxBoundary(
+  FunctorPtr<SuperIndicatorF2D<T>>&& indicator, T omega, T *heatFlux)
+{
+  for (int iCloc = 0; iCloc < _sLattice.getLoadBalancer().size(); ++iCloc) {
+    _ADblockBCs[iCloc]->addRegularizedHeatFluxBoundary(
+      indicator->getExtendedBlockIndicatorF(iCloc), omega, heatFlux);
+  }
+  addPoints2CommBC(std::forward<decltype(indicator)>(indicator));
+}
+
+template<typename T, typename DESCRIPTOR>
+void sOnLatticeBoundaryCondition2D<T, DESCRIPTOR>::addRegularizedHeatFluxBoundary(
+  SuperGeometry2D<T>& superGeometry, int material, T omega, T *heatFlux)
+{
+  addRegularizedHeatFluxBoundary(superGeometry.getMaterialIndicator(material), omega, heatFlux);
+}
+
+template<typename T, typename DESCRIPTOR>
+void sOnLatticeBoundaryCondition2D<T, DESCRIPTOR>::addPressureBoundary(
+  FunctorPtr<SuperIndicatorF2D<T>>&& indicator, T omega)
+{
+  bool includeOuterCells = false;
+  if (indicator->getSuperGeometry().getOverlap() == 1) {
+    includeOuterCells = true;
+    clout << "WARNING: overlap == 1, boundary conditions set on overlap despite unknown neighbor materials" << std::endl;
+  }
+  for (int iCloc = 0; iCloc < _sLattice.getLoadBalancer().size(); ++iCloc) {
+    _blockBCs[iCloc]->addPressureBoundary(
+      indicator->getExtendedBlockIndicatorF(iCloc), omega, includeOuterCells);
+  }
+  addPoints2CommBC(std::forward<decltype(indicator)>(indicator));
+}
+
+template<typename T, typename DESCRIPTOR>
+void sOnLatticeBoundaryCondition2D<T, DESCRIPTOR>::addPressureBoundary(
+  SuperGeometry2D<T>& superGeometry, int material, T omega)
+{
+  addPressureBoundary(superGeometry.getMaterialIndicator(material), omega);
+}
+
+template<typename T, typename DESCRIPTOR>
+void sOnLatticeBoundaryCondition2D<T, DESCRIPTOR>::addConvectionBoundary(
+  FunctorPtr<SuperIndicatorF2D<T>>&& indicator, T omega, T* uAv)
+{
+  bool includeOuterCells = false;
+  if (indicator->getSuperGeometry().getOverlap() == 1) {
+    includeOuterCells = true;
+    clout << "WARNING: overlap == 1, boundary conditions set on overlap despite unknown neighbor materials" << std::endl;
+  }
+  for (int iCloc = 0; iCloc < _sLattice.getLoadBalancer().size(); ++iCloc) {
+    _blockBCs[iCloc]->addConvectionBoundary(
+      indicator->getExtendedBlockIndicatorF(iCloc), omega, uAv, includeOuterCells);
+  }
+  addPoints2CommBC(std::forward<decltype(indicator)>(indicator));
+}
+
+template<typename T, typename DESCRIPTOR>
+void sOnLatticeBoundaryCondition2D<T, DESCRIPTOR>::addConvectionBoundary(
   SuperGeometry2D<T>& superGeometry, int material, T omega, T* uAv)
 {
-
-  int nC = _sLattice.getLoadBalancer().size();
-  for (int iCloc = 0; iCloc < nC; iCloc++) {
-    _blockBCs[iCloc]->addConvectionBoundary(superGeometry.getExtendedBlockGeometry(iCloc), material, omega, uAv);
-  }
-  addPoints2CommBC(superGeometry, material);
+  addConvectionBoundary(superGeometry.getMaterialIndicator(material),
+                        omega, uAv);
 }
 
 
-template<typename T, template<typename U> class Lattice>
-void sOnLatticeBoundaryCondition2D<T, Lattice>::addPoints2CommBC(SuperGeometry2D<T>& superGeometry, int material)
+template<typename T, typename DESCRIPTOR>
+void sOnLatticeBoundaryCondition2D<T, DESCRIPTOR>::addFreeEnergyWallBoundary(
+  FunctorPtr<SuperIndicatorF2D<T>>&& indicator, T alpha, T kappa1, T kappa2, T h1, T h2, int latticeNumber)
 {
+  bool includeOuterCells = false;
+  if (indicator->getSuperGeometry().getOverlap() == 1) {
+    includeOuterCells = true;
+    clout << "WARNING: overlap == 1, boundary conditions set on overlap despite unknown neighbor materials" << std::endl;
+  }
+  T addend = 0;
+  if(latticeNumber==1)
+    addend = 1./(alpha*alpha) * ( (h1/kappa1) + (h2/kappa2) );
+  else if(latticeNumber==2)
+    addend = 1./(alpha*alpha) * ( (h1/kappa1) + (-h2/kappa2) );
+  else if(latticeNumber==3)
+    addend = 1./(alpha*alpha) * ( (h1/kappa1) + (h2/kappa2) );
+  for (int iCloc = 0; iCloc < _sLattice.getLoadBalancer().size(); ++iCloc) {
+    _blockBCs[iCloc]->addFreeEnergyWallBoundary(
+      indicator->getExtendedBlockIndicatorF(iCloc), addend, latticeNumber, includeOuterCells);
+  }
+  addPoints2CommBC(std::forward<decltype(indicator)>(indicator));
+}
 
-  if (_overlap != 0) {
-    int nC = _sLattice.getLoadBalancer().size();
-    for (int iCloc = 0; iCloc < nC; iCloc++) {
-      int nX = superGeometry.getBlockGeometry(iCloc).getNx();
-      int nY = superGeometry.getBlockGeometry(iCloc).getNy();
+template<typename T, typename DESCRIPTOR>
+void sOnLatticeBoundaryCondition2D<T, DESCRIPTOR>::addFreeEnergyWallBoundary(
+  SuperGeometry2D<T>& superGeometry, int material, T alpha, T kappa1, T kappa2, T h1, T h2, int latticeNumber)
+{
+  addFreeEnergyWallBoundary(superGeometry.getMaterialIndicator(material),
+                            alpha, kappa1, kappa2, h1, h2, latticeNumber);
+}
 
-      for (int iX=-_overlap; iX<nX+_overlap; iX++) {
-        for (int iY=-_overlap; iY<nY+_overlap; iY++) {
-          if (iX < 0 || iX > nX - 1 ||
-              iY < 0 || iY > nY - 1 ) {
-            int found = false;
-            if (superGeometry.getBlockGeometry(iCloc).getMaterial(iX,iY)!=0) {
-              for (int iXo=-_overlap; iXo<=_overlap; iXo++) {
-                for (int iYo=-_overlap; iYo<=_overlap; iYo++) {
-                  int nextX = iXo + iX;
-                  int nextY = iYo + iY;
-                  if (superGeometry.getBlockGeometry(iCloc).getMaterial(nextX,nextY)==material) {
-                    _sLattice.get_commBC().add_cell(iCloc, iX, iY);
-                    //std::cout << "found:" <<iX<<"/"<<iY<<"/"<<iZ<<std::endl;
-                    found = true;
-                  }
-                  if (found) {
-                    break;
-                  }
-                }
-                if (found) {
-                  break;
+
+template<typename T, typename DESCRIPTOR>
+void sOnLatticeBoundaryCondition2D<T, DESCRIPTOR>::addFreeEnergyWallBoundary(
+  FunctorPtr<SuperIndicatorF2D<T>>&& indicator, T alpha,
+  T kappa1, T kappa2, T kappa3, T h1, T h2, T h3, int latticeNumber)
+{
+  bool includeOuterCells = false;
+  if (indicator->getSuperGeometry().getOverlap() == 1) {
+    includeOuterCells = true;
+    clout << "WARNING: overlap == 1, boundary conditions set on overlap despite unknown neighbor materials" << std::endl;
+  }
+  T addend = 0;
+  if(latticeNumber==1)
+    addend = 1./(alpha*alpha) * ( (h1/kappa1) + (h2/kappa2) + (h3/kappa3) );
+  else if(latticeNumber==2)
+    addend = 1./(alpha*alpha) * ( (h1/kappa1) + (-h2/kappa2) );
+  else if(latticeNumber==3)
+    addend = 1./(alpha*alpha) * ( (h3/kappa3) );
+  for (int iCloc = 0; iCloc < _sLattice.getLoadBalancer().size(); ++iCloc) {
+    _blockBCs[iCloc]->addFreeEnergyWallBoundary(
+      indicator->getExtendedBlockIndicatorF(iCloc), addend, latticeNumber, includeOuterCells);
+  }
+  addPoints2CommBC(std::forward<decltype(indicator)>(indicator));
+}
+
+template<typename T, typename DESCRIPTOR>
+void sOnLatticeBoundaryCondition2D<T, DESCRIPTOR>::addFreeEnergyWallBoundary(
+  SuperGeometry2D<T>& superGeometry, int material, T alpha,
+  T kappa1, T kappa2, T kappa3, T h1, T h2, T h3, int latticeNumber)
+{
+  addFreeEnergyWallBoundary(superGeometry.getMaterialIndicator(material),
+                            alpha, kappa1, kappa2, kappa3, h1, h2, h3, latticeNumber);
+}
+
+
+template<typename T, typename DESCRIPTOR>
+void sOnLatticeBoundaryCondition2D<T, DESCRIPTOR>::addFreeEnergyInletBoundary(
+  FunctorPtr<SuperIndicatorF2D<T>>&& indicator, T omega, std::string type, int latticeNumber)
+{
+  bool includeOuterCells = false;
+  if (indicator->getSuperGeometry().getOverlap() == 1) {
+    includeOuterCells = true;
+    clout << "WARNING: overlap == 1, boundary conditions set on overlap despite unknown neighbor materials" << std::endl;
+  }
+  for (int iCloc = 0; iCloc < _sLattice.getLoadBalancer().size(); ++iCloc) {
+    _blockBCs[iCloc]->addFreeEnergyInletBoundary(
+      indicator->getExtendedBlockIndicatorF(iCloc), omega, type, latticeNumber, includeOuterCells);
+  }
+  addPoints2CommBC(std::forward<decltype(indicator)>(indicator));
+}
+
+template<typename T, typename DESCRIPTOR>
+void sOnLatticeBoundaryCondition2D<T, DESCRIPTOR>::addFreeEnergyInletBoundary(
+  SuperGeometry2D<T>& superGeometry, int material, T omega, std::string type, int latticeNumber)
+{
+  addFreeEnergyInletBoundary(superGeometry.getMaterialIndicator(material), omega, type, latticeNumber);
+}
+
+
+template<typename T, typename DESCRIPTOR>
+void sOnLatticeBoundaryCondition2D<T, DESCRIPTOR>::addFreeEnergyOutletBoundary(
+  FunctorPtr<SuperIndicatorF2D<T>>&& indicator, T omega, std::string type, int latticeNumber)
+{
+  bool includeOuterCells = false;
+  if (indicator->getSuperGeometry().getOverlap() == 1) {
+    includeOuterCells = true;
+    clout << "WARNING: overlap == 1, boundary conditions set on overlap despite unknown neighbor materials" << std::endl;
+  }
+  for (int iCloc = 0; iCloc < _sLattice.getLoadBalancer().size(); ++iCloc) {
+    _blockBCs[iCloc]->addFreeEnergyOutletBoundary(
+      indicator->getExtendedBlockIndicatorF(iCloc), omega, type, latticeNumber, includeOuterCells);
+  }
+  addPoints2CommBC(std::forward<decltype(indicator)>(indicator));
+}
+
+template<typename T, typename DESCRIPTOR>
+void sOnLatticeBoundaryCondition2D<T, DESCRIPTOR>::addFreeEnergyOutletBoundary(
+  SuperGeometry2D<T>& superGeometry, int material, T omega, std::string type, int latticeNumber)
+{
+  addFreeEnergyOutletBoundary(superGeometry.getMaterialIndicator(material), omega, type, latticeNumber);
+}
+
+
+template<typename T, typename DESCRIPTOR>
+void sOnLatticeBoundaryCondition2D<T, DESCRIPTOR>::addPoints2CommBC(
+  FunctorPtr<SuperIndicatorF2D<T>>&& indicator)
+{
+  if (_overlap == 0) {
+    return;
+  }
+
+  SuperGeometry2D<T>& superGeometry = indicator->getSuperGeometry();
+  for (int iCloc = 0; iCloc < _sLattice.getLoadBalancer().size(); ++iCloc) {
+    const int nX = superGeometry.getBlockGeometry(iCloc).getNx();
+    const int nY = superGeometry.getBlockGeometry(iCloc).getNy();
+
+    for (int iX = -_overlap; iX < nX+_overlap; ++iX) {
+      for (int iY = -_overlap; iY < nY+_overlap; ++iY) {
+        if (iX < 0 || iX > nX - 1 ||
+            iY < 0 || iY > nY - 1 ) { // if within overlap
+          if (superGeometry.getBlockGeometry(iCloc).getMaterial(iX,iY) != 0) {
+            bool found = false;
+            for (int iXo = -_overlap; iXo <= _overlap && !found; ++iXo) {
+              for (int iYo = -_overlap; iYo <= _overlap && !found; ++iYo) {
+                const int nextX = iXo + iX;
+                const int nextY = iYo + iY;
+                if (indicator->getBlockIndicatorF(iCloc)(nextX, nextY)) {
+                  _sLattice.get_commBC().add_cell(iCloc, iX, iY);
+                  found = true;
                 }
               }
             }
@@ -180,56 +403,63 @@ void sOnLatticeBoundaryCondition2D<T, Lattice>::addPoints2CommBC(SuperGeometry2D
   }
 }
 
+template<typename T, typename DESCRIPTOR>
+void sOnLatticeBoundaryCondition2D<T, DESCRIPTOR>::addPoints2CommBC(
+  SuperGeometry2D<T>& superGeometry, int material)
+{
+  addPoints2CommBC(superGeometry.getMaterialIndicator(material));
+}
+
 ////////////////// Factory functions //////////////////////////////////
 
-template<typename T, template<typename U> class Lattice, typename MixinDynamics>
+template<typename T, typename DESCRIPTOR, typename MixinDynamics>
 void createLocalBoundaryCondition2D(
-  sOnLatticeBoundaryCondition2D<T, Lattice>& sBC)
+  sOnLatticeBoundaryCondition2D<T, DESCRIPTOR>& sBC)
 {
 
   int nC = sBC.getSuperLattice().getLoadBalancer().size();
   sBC.setOverlap(0);
   for (int iC = 0; iC < nC; iC++) {
-    OnLatticeBoundaryCondition2D<T, Lattice>* blockBC =
+    OnLatticeBoundaryCondition2D<T, DESCRIPTOR>* blockBC =
       createLocalBoundaryCondition2D(
         sBC.getSuperLattice().getExtendedBlockLattice(iC));
     sBC.getBlockBCs().push_back(blockBC);
   }
 }
 
-template<typename T, template<typename U> class Lattice, typename MixinDynamics>
+template<typename T, typename DESCRIPTOR, typename MixinDynamics>
 void createInterpBoundaryCondition2D(
-  sOnLatticeBoundaryCondition2D<T, Lattice>& sBC)
+  sOnLatticeBoundaryCondition2D<T, DESCRIPTOR>& sBC)
 {
 
   int nC = sBC.getSuperLattice().getLoadBalancer().size();
   sBC.setOverlap(1);
   for (int iC = 0; iC < nC; iC++) {
-    OnLatticeBoundaryCondition2D<T, Lattice>* blockBC =
-      createInterpBoundaryCondition2D<T,Lattice,MixinDynamics>(
+    OnLatticeBoundaryCondition2D<T, DESCRIPTOR>* blockBC =
+      createInterpBoundaryCondition2D<T,DESCRIPTOR,MixinDynamics>(
         sBC.getSuperLattice().getExtendedBlockLattice(iC));
     sBC.getBlockBCs().push_back(blockBC);
   }
 }
 
-template<typename T, template<typename U> class Lattice, typename MixinDynamics>
+template<typename T, typename DESCRIPTOR, typename MixinDynamics>
 void createExtFdBoundaryCondition2D(
-  sOnLatticeBoundaryCondition2D<T, Lattice>& sBC)
+  sOnLatticeBoundaryCondition2D<T, DESCRIPTOR>& sBC)
 {
 
   int nC = sBC.getSuperLattice().getLoadBalancer().size();
   sBC.setOverlap(1);
   for (int iC = 0; iC < nC; iC++) {
-    OnLatticeBoundaryCondition2D<T, Lattice>* blockBC =
-      createExtendedFdBoundaryCondition2D<T,Lattice,MixinDynamics>(
+    OnLatticeBoundaryCondition2D<T, DESCRIPTOR>* blockBC =
+      createExtendedFdBoundaryCondition2D<T,DESCRIPTOR,MixinDynamics>(
         sBC.getSuperLattice().getExtendedBlockLattice(iC));
     sBC.getBlockBCs().push_back(blockBC);
   }
 }
 
 //////////////// Output functions //////////////////////////////////
-template<typename T, template<typename U> class Lattice>
-void sOnLatticeBoundaryCondition2D<T, Lattice>::outputOn()
+template<typename T, typename DESCRIPTOR>
+void sOnLatticeBoundaryCondition2D<T, DESCRIPTOR>::outputOn()
 {
   _output = true;
   int nC = _sLattice.getLoadBalancer().size();
@@ -238,8 +468,8 @@ void sOnLatticeBoundaryCondition2D<T, Lattice>::outputOn()
   }
 }
 
-template<typename T, template<typename U> class Lattice>
-void sOnLatticeBoundaryCondition2D<T, Lattice>::outputOff()
+template<typename T, typename DESCRIPTOR>
+void sOnLatticeBoundaryCondition2D<T, DESCRIPTOR>::outputOff()
 {
   _output = false;
   int nC = _sLattice.getLoadBalancer().size();

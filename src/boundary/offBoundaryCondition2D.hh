@@ -39,158 +39,268 @@ namespace olb {
 
 ////////// BouzidiBoundaryManager2D /////////////////////////////////////////
 
-template<typename T, template<typename U> class Lattice, class MixinDynamics>
+template<typename T, typename DESCRIPTOR, class MixinDynamics>
 class BouzidiBoundaryManager2D {
 public:
 
-  static PostProcessorGenerator2D<T,Lattice>*
+  static PostProcessorGenerator2D<T,DESCRIPTOR>*
   getOnePointZeroVelocityBoundaryProcessor(int iX, int iY, int iPop, T dist);
-  static PostProcessorGenerator2D<T,Lattice>*
+  static PostProcessorGenerator2D<T,DESCRIPTOR>*
   getTwoPointZeroVelocityBoundaryProcessor(int iX, int iY, int iPop, T dist);
-  static PostProcessorGenerator2D<T,Lattice>*
+  static PostProcessorGenerator2D<T,DESCRIPTOR>*
   getOnePointVelocityBoundaryProcessor(int iX, int iY, int iPop, T dist);
-  static PostProcessorGenerator2D<T,Lattice>*
+  static PostProcessorGenerator2D<T,DESCRIPTOR>*
   getTwoPointVelocityBoundaryProcessor(int iX, int iY, int iPop, T dist);
-  static Dynamics<T,Lattice>*
-  getOffDynamics(T location[Lattice<T>::d]);
-  static Dynamics<T,Lattice>*
-  getOffDynamics(T location[Lattice<T>::d], T distances[Lattice<T>::q]);
+  static Dynamics<T,DESCRIPTOR>*
+  getOffDynamics(T location[DESCRIPTOR::d]);
+  static Dynamics<T,DESCRIPTOR>*
+  getOffDynamics(T location[DESCRIPTOR::d], T distances[DESCRIPTOR::q]);
 };
 
 
-template<typename T, template<typename U> class Lattice, class MixinDynamics>
-PostProcessorGenerator2D<T,Lattice>*
-BouzidiBoundaryManager2D<T,Lattice,MixinDynamics>::
+template<typename T, typename DESCRIPTOR, class MixinDynamics>
+PostProcessorGenerator2D<T,DESCRIPTOR>*
+BouzidiBoundaryManager2D<T,DESCRIPTOR,MixinDynamics>::
 getOnePointZeroVelocityBoundaryProcessor(int iX, int iY, int iPop, T dist)
 {
   return new ZeroVelocityBounceBackPostProcessorGenerator2D
-         <T, Lattice>(iX, iY, iPop, dist);
+         <T, DESCRIPTOR>(iX, iY, iPop, dist);
 }
 
-template<typename T, template<typename U> class Lattice, class MixinDynamics>
-PostProcessorGenerator2D<T,Lattice>*
-BouzidiBoundaryManager2D<T,Lattice,MixinDynamics>::
+template<typename T, typename DESCRIPTOR, class MixinDynamics>
+PostProcessorGenerator2D<T,DESCRIPTOR>*
+BouzidiBoundaryManager2D<T,DESCRIPTOR,MixinDynamics>::
 getTwoPointZeroVelocityBoundaryProcessor(int iX, int iY, int iPop, T dist)
 {
   return new ZeroVelocityBouzidiLinearPostProcessorGenerator2D
-         <T, Lattice>(iX, iY, iPop, dist);
+         <T, DESCRIPTOR>(iX, iY, iPop, dist);
 }
 
-template<typename T, template<typename U> class Lattice, class MixinDynamics>
-PostProcessorGenerator2D<T,Lattice>*
-BouzidiBoundaryManager2D<T,Lattice,MixinDynamics>::
+template<typename T, typename DESCRIPTOR, class MixinDynamics>
+PostProcessorGenerator2D<T,DESCRIPTOR>*
+BouzidiBoundaryManager2D<T,DESCRIPTOR,MixinDynamics>::
 getOnePointVelocityBoundaryProcessor(int iX, int iY, int iPop, T dist)
 {
   return new VelocityBounceBackPostProcessorGenerator2D
-         <T, Lattice>(iX, iY, iPop, dist);
+         <T, DESCRIPTOR>(iX, iY, iPop, dist);
 }
 
-template<typename T, template<typename U> class Lattice, class MixinDynamics>
-PostProcessorGenerator2D<T,Lattice>*
-BouzidiBoundaryManager2D<T,Lattice,MixinDynamics>::
+template<typename T, typename DESCRIPTOR, class MixinDynamics>
+PostProcessorGenerator2D<T,DESCRIPTOR>*
+BouzidiBoundaryManager2D<T,DESCRIPTOR,MixinDynamics>::
 getTwoPointVelocityBoundaryProcessor(int iX, int iY, int iPop, T dist)
 {
   return new VelocityBouzidiLinearPostProcessorGenerator2D
-         <T, Lattice>(iX, iY, iPop, dist);
+         <T, DESCRIPTOR>(iX, iY, iPop, dist);
 }
 
-template<typename T, template<typename U> class Lattice, class MixinDynamics>
-Dynamics<T,Lattice>*
-BouzidiBoundaryManager2D<T,Lattice,MixinDynamics>::
-getOffDynamics(T location[Lattice<T>::d])
+template<typename T, typename DESCRIPTOR, class MixinDynamics>
+Dynamics<T,DESCRIPTOR>*
+BouzidiBoundaryManager2D<T,DESCRIPTOR,MixinDynamics>::
+getOffDynamics(T location[DESCRIPTOR::d])
 {
-  return new OffDynamics<T, Lattice>(location);
+  return new OffDynamics<T, DESCRIPTOR>(location);
 }
 
-template<typename T, template<typename U> class Lattice, class MixinDynamics>
-Dynamics<T,Lattice>*
-BouzidiBoundaryManager2D<T,Lattice,MixinDynamics>::
-getOffDynamics(T location[Lattice<T>::d], T distances[Lattice<T>::q])
+template<typename T, typename DESCRIPTOR, class MixinDynamics>
+Dynamics<T,DESCRIPTOR>*
+BouzidiBoundaryManager2D<T,DESCRIPTOR,MixinDynamics>::
+getOffDynamics(T location[DESCRIPTOR::d], T distances[DESCRIPTOR::q])
 {
-  return new OffDynamics<T, Lattice>(location, distances);
+  return new OffDynamics<T, DESCRIPTOR>(location, distances);
 }
 
 ////////// BounceBackBoundaryManager2D /////////////////////////////////////////
 
-template<typename T, template<typename U> class Lattice>
+template<typename T, typename DESCRIPTOR>
 class BounceBackBoundaryManager2D {
 public:
 
-  static PostProcessorGenerator2D<T,Lattice>*
+  static PostProcessorGenerator2D<T,DESCRIPTOR>*
   getOnePointZeroVelocityBoundaryProcessor(int iX, int iY, int iPop, T dist);
-  static PostProcessorGenerator2D<T,Lattice>*
+  static PostProcessorGenerator2D<T,DESCRIPTOR>*
   getTwoPointZeroVelocityBoundaryProcessor(int iX, int iY, int iPop, T dist);
-  static PostProcessorGenerator2D<T,Lattice>*
+  static PostProcessorGenerator2D<T,DESCRIPTOR>*
   getOnePointVelocityBoundaryProcessor(int iX, int iY, int iPop, T dist);
-  static PostProcessorGenerator2D<T,Lattice>*
+  static PostProcessorGenerator2D<T,DESCRIPTOR>*
   getTwoPointVelocityBoundaryProcessor(int iX, int iY, int iPop, T dist);
-  static Dynamics<T,Lattice>*
-  getOffDynamics(T location[Lattice<T>::d]);
-  static Dynamics<T,Lattice>*
-  getOffDynamics(T location[Lattice<T>::d], T distances[Lattice<T>::q]);
+  static Dynamics<T,DESCRIPTOR>*
+  getOffDynamics(T location[DESCRIPTOR::d]);
+  static Dynamics<T,DESCRIPTOR>*
+  getOffDynamics(T location[DESCRIPTOR::d], T distances[DESCRIPTOR::q]);
 };
 
-template<typename T, template<typename U> class Lattice>
-PostProcessorGenerator2D<T,Lattice>*
-BounceBackBoundaryManager2D<T,Lattice>::
+template<typename T, typename DESCRIPTOR>
+PostProcessorGenerator2D<T,DESCRIPTOR>*
+BounceBackBoundaryManager2D<T,DESCRIPTOR>::
 getOnePointZeroVelocityBoundaryProcessor(int iX, int iY, int iPop, T dist)
 {
   return new ZeroVelocityBounceBackPostProcessorGenerator2D
-         <T, Lattice>(iX, iY, iPop, dist);
+         <T, DESCRIPTOR>(iX, iY, iPop, dist);
 }
 
-template<typename T, template<typename U> class Lattice>
-PostProcessorGenerator2D<T,Lattice>*
-BounceBackBoundaryManager2D<T,Lattice>::
+template<typename T, typename DESCRIPTOR>
+PostProcessorGenerator2D<T,DESCRIPTOR>*
+BounceBackBoundaryManager2D<T,DESCRIPTOR>::
 getTwoPointZeroVelocityBoundaryProcessor(int iX, int iY, int iPop, T dist)
 {
   return new ZeroVelocityBouzidiLinearPostProcessorGenerator2D
-         <T, Lattice>(iX, iY, iPop, dist);
+         <T, DESCRIPTOR>(iX, iY, iPop, dist);
 }
 
-template<typename T, template<typename U> class Lattice>
-PostProcessorGenerator2D<T,Lattice>*
-BounceBackBoundaryManager2D<T,Lattice>::
+template<typename T, typename DESCRIPTOR>
+PostProcessorGenerator2D<T,DESCRIPTOR>*
+BounceBackBoundaryManager2D<T,DESCRIPTOR>::
 getOnePointVelocityBoundaryProcessor(int iX, int iY, int iPop, T dist)
 {
   return new VelocityBounceBackPostProcessorGenerator2D
-         <T, Lattice>(iX, iY, iPop, dist);
+         <T, DESCRIPTOR>(iX, iY, iPop, dist);
 }
 
-template<typename T, template<typename U> class Lattice>
-PostProcessorGenerator2D<T,Lattice>*
-BounceBackBoundaryManager2D<T,Lattice>::
+template<typename T, typename DESCRIPTOR>
+PostProcessorGenerator2D<T,DESCRIPTOR>*
+BounceBackBoundaryManager2D<T,DESCRIPTOR>::
 getTwoPointVelocityBoundaryProcessor(int iX, int iY, int iPop, T dist)
 {
   return new VelocityBouzidiLinearPostProcessorGenerator2D
-         <T, Lattice>(iX, iY, iPop, dist);
+         <T, DESCRIPTOR>(iX, iY, iPop, dist);
 }
 
-template<typename T, template<typename U> class Lattice>
-Dynamics<T,Lattice>*
-BounceBackBoundaryManager2D<T,Lattice>::
-getOffDynamics(T location[Lattice<T>::d])
+template<typename T, typename DESCRIPTOR>
+Dynamics<T,DESCRIPTOR>*
+BounceBackBoundaryManager2D<T,DESCRIPTOR>::
+getOffDynamics(T location[DESCRIPTOR::d])
 {
-  return new OffDynamics<T, Lattice>(location);
+  return new OffDynamics<T, DESCRIPTOR>(location);
 }
 
-template<typename T, template<typename U> class Lattice>
-Dynamics<T,Lattice>*
-BounceBackBoundaryManager2D<T,Lattice>::
-getOffDynamics(T location[Lattice<T>::d], T distances[Lattice<T>::q])
+template<typename T, typename DESCRIPTOR>
+Dynamics<T,DESCRIPTOR>*
+BounceBackBoundaryManager2D<T,DESCRIPTOR>::
+getOffDynamics(T location[DESCRIPTOR::d], T distances[DESCRIPTOR::q])
 {
-  return new OffDynamics<T, Lattice>(location, distances);
+  return new OffDynamics<T, DESCRIPTOR>(location, distances);
 }
+
+////////// Convenience wrappers for boundary functions ////////////////////////
+
+template<typename T, typename DESCRIPTOR>
+void OffLatticeBoundaryCondition2D<T, DESCRIPTOR>::addOffDynamics(
+  BlockGeometryStructure2D<T>& blockGeometryStructure, int material)
+{
+  BlockIndicatorMaterial2D<T> indicator(blockGeometryStructure, material);
+  addOffDynamics(indicator);
+}
+
+template<typename T, typename DESCRIPTOR>
+void OffLatticeBoundaryCondition2D<T, DESCRIPTOR>::addZeroVelocityBoundary(
+  BlockGeometryStructure2D<T>& blockGeometryStructure, int iX, int iY,
+  IndicatorF2D<T>& geometryIndicator, std::vector<int> bulkMaterials)
+{
+  BlockIndicatorMaterial2D<T> bulkIndicator(blockGeometryStructure, bulkMaterials);
+  addZeroVelocityBoundary(blockGeometryStructure, iX, iY,
+                          bulkIndicator, geometryIndicator);
+}
+
+template<typename T, typename DESCRIPTOR>
+void OffLatticeBoundaryCondition2D<T, DESCRIPTOR>::addZeroVelocityBoundary(
+  BlockGeometryStructure2D<T>& blockGeometryStructure, int material,
+  IndicatorF2D<T>& geometryIndicator, std::vector<int> bulkMaterials)
+{
+  BlockIndicatorMaterial2D<T> boundaryIndicator(blockGeometryStructure, material);
+  BlockIndicatorMaterial2D<T> bulkIndicator(blockGeometryStructure, bulkMaterials);
+  addZeroVelocityBoundary(boundaryIndicator,
+                          bulkIndicator,
+                          geometryIndicator);
+}
+
+template<typename T, typename DESCRIPTOR>
+void OffLatticeBoundaryCondition2D<T, DESCRIPTOR>::addZeroVelocityBoundary(
+  BlockGeometryStructure2D<T>& blockGeometryStructure, int material, std::vector<int> bulkMaterials)
+{
+  BlockIndicatorMaterial2D<T> boundaryIndicator(blockGeometryStructure, material);
+  BlockIndicatorMaterial2D<T> bulkIndicator(blockGeometryStructure, bulkMaterials);
+  addZeroVelocityBoundary(boundaryIndicator, bulkIndicator);
+}
+
+template<typename T, typename DESCRIPTOR>
+void OffLatticeBoundaryCondition2D<T, DESCRIPTOR>::addVelocityBoundary(
+  BlockGeometryStructure2D<T>& blockGeometryStructure, int iX, int iY,
+  IndicatorF2D<T>& geometryIndicator, std::vector<int> bulkMaterials)
+{
+  BlockIndicatorMaterial2D<T> bulkIndicator(blockGeometryStructure, bulkMaterials);
+  addVelocityBoundary(blockGeometryStructure, iX, iY,
+                      bulkIndicator, geometryIndicator);
+}
+
+template<typename T, typename DESCRIPTOR>
+void OffLatticeBoundaryCondition2D<T, DESCRIPTOR>::addVelocityBoundary(
+  BlockGeometryStructure2D<T>& blockGeometryStructure, int material, IndicatorF2D<T>& geometryIndicator, std::vector<int> bulkMaterials)
+{
+  BlockIndicatorMaterial2D<T> boundaryIndicator(blockGeometryStructure, material);
+  BlockIndicatorMaterial2D<T> bulkIndicator(blockGeometryStructure, bulkMaterials);
+  addVelocityBoundary(boundaryIndicator, bulkIndicator, geometryIndicator);
+}
+
+template<typename T, typename DESCRIPTOR>
+void OffLatticeBoundaryCondition2D<T, DESCRIPTOR>::addVelocityBoundary(
+  BlockGeometryStructure2D<T>& blockGeometryStructure, int material, std::vector<int> bulkMaterials)
+{
+  BlockIndicatorMaterial2D<T> boundaryIndicator(blockGeometryStructure, material);
+  BlockIndicatorMaterial2D<T> bulkIndicator(blockGeometryStructure, bulkMaterials);
+  addVelocityBoundary(boundaryIndicator, bulkIndicator);
+}
+
+template<typename T, typename DESCRIPTOR>
+void OffLatticeBoundaryCondition2D<T, DESCRIPTOR>::addPressureBoundary(
+  BlockGeometryStructure2D<T>& blockGeometryStructure, int material,
+  IndicatorF2D<T>& geometryIndicator, std::vector<int> bulkMaterials)
+{
+  BlockIndicatorMaterial2D<T> boundaryIndicator(blockGeometryStructure, material);
+  BlockIndicatorMaterial2D<T> bulkIndicator(blockGeometryStructure, bulkMaterials);
+  addPressureBoundary(boundaryIndicator, bulkIndicator, geometryIndicator);
+}
+
+template<typename T, typename DESCRIPTOR>
+void OffLatticeBoundaryCondition2D<T, DESCRIPTOR>::addPressureBoundary(
+  BlockGeometryStructure2D<T>& blockGeometryStructure, int material, std::vector<int> bulkMaterials)
+{
+  BlockIndicatorMaterial2D<T> boundaryIndicator(blockGeometryStructure, material);
+  BlockIndicatorMaterial2D<T> bulkIndicator(blockGeometryStructure, bulkMaterials);
+  addPressureBoundary(boundaryIndicator, bulkIndicator);
+}
+
+template<typename T, typename DESCRIPTOR>
+void OffLatticeBoundaryCondition2D<T, DESCRIPTOR>::
+defineU(BlockGeometryStructure2D<T>& blockGeometryStructure, int material,
+        AnalyticalF2D<T,T>& u, std::vector<int> bulkMaterials)
+{
+  BlockIndicatorMaterial2D<T> indicator(blockGeometryStructure, material);
+  BlockIndicatorMaterial2D<T> bulkIndicator(blockGeometryStructure, bulkMaterials);
+  defineU(indicator, bulkIndicator, u);
+}
+
+template<typename T, typename DESCRIPTOR>
+void OffLatticeBoundaryCondition2D<T, DESCRIPTOR>::
+defineRho(BlockGeometryStructure2D<T>& blockGeometryStructure, int material,
+          AnalyticalF2D<T,T>& rho, std::vector<int> bulkMaterials)
+{
+  BlockIndicatorMaterial2D<T> indicator(blockGeometryStructure, material);
+  BlockIndicatorMaterial2D<T> bulkIndicator(blockGeometryStructure, bulkMaterials);
+  defineRho(indicator, bulkIndicator, rho);
+}
+
+
 
 ////////// Factory functions //////////////////////////////////////////////////
 
-template<typename T, template<typename U> class Lattice, typename MixinDynamics>
-OffLatticeBoundaryCondition2D<T,Lattice>*
-createBouzidiBoundaryCondition2D(BlockLatticeStructure2D<T,Lattice>& block)
+template<typename T, typename DESCRIPTOR, typename MixinDynamics>
+OffLatticeBoundaryCondition2D<T,DESCRIPTOR>*
+createBouzidiBoundaryCondition2D(BlockLatticeStructure2D<T,DESCRIPTOR>& block)
 {
   return new OffBoundaryConditionInstantiator2D <
-         T, Lattice,
-         BouzidiBoundaryManager2D<T,Lattice, MixinDynamics> > (block);
+         T, DESCRIPTOR,
+         BouzidiBoundaryManager2D<T,DESCRIPTOR, MixinDynamics> > (block);
 }
 
 

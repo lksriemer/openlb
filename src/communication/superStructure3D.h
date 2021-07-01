@@ -84,9 +84,10 @@ public:
   LoadBalancer<T>& getLoadBalancer();
   /// Read only access to the load balancer
   LoadBalancer<T> const& getLoadBalancer() const;
-
   /// Communicates the data in the overlap
   void communicate(bool verbose=false);
+
+  void initCommunication();
 };
 
 } // namespace olb

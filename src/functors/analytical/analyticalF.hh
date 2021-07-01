@@ -232,6 +232,15 @@ AnalyticalConst2D<T,S>::AnalyticalConst2D(T value0, T value1) : AnalyticalF2D<T,
 }
 
 template <typename T, typename S>
+AnalyticalConst2D<T,S>::AnalyticalConst2D(T value0, T value1, T value2) : AnalyticalF2D<T,S>(3)
+{
+  _c.push_back(value0);
+  _c.push_back(value1);
+  _c.push_back(value2);
+  this->getName() = "const";
+}
+
+template <typename T, typename S>
 bool AnalyticalConst2D<T,S>::operator()(T output[], const S x[])
 {
   for (unsigned i = 0; i < _c.size(); ++i) {
@@ -322,26 +331,19 @@ bool AnalyticalRandom2D<T,S>::operator()(T output[], const S x[])
   return true;
 }
 
-template <typename T, typename S>
-ParticleU2D<T,S>::ParticleU2D(ParticleIndicatorF2D<T,T>& indicator, std::vector<T>& u, T& omega)
-  :AnalyticalF2D<T,S>(2), _indicator(indicator), _u(u), _omega(omega)
+template <typename T, typename S, typename DESCRIPTOR>
+ParticleU2D<T,S,DESCRIPTOR>::ParticleU2D(SmoothIndicatorF2D<T,T,true>& indicator, UnitConverter<T,DESCRIPTOR> const& converter)
+  :AnalyticalF2D<T,S>(2), _indicator(indicator), _converter(converter)
 {
   this->getName() = "ParticleU";
 }
 
-template <typename T, typename S>
-bool ParticleU2D<T,S>::operator()(T output[], const S input[])
+template <typename T, typename S, typename DESCRIPTOR>
+bool ParticleU2D<T,S,DESCRIPTOR>::operator()(T output[], const S input[])
 {
-  //T inside[1];
-  output[0] = T();
-  output[1] = T();
-
-  //_indicator(inside, input);
-  //if (inside[0] != 0) {
-
-  //two dimensions: u = U + w x r = (Ux, Uy, 0) + (0,0,w) x (x,y,0) = (Ux, Uy, 0) + (-wy, wx, 0)
-  output[0] = _u[0] - _omega*(input[1] - _indicator.getPos()[1]);
-  output[1] = _u[1] + _omega*(input[0] - _indicator.getPos()[0]);
+  //two dimensions: u = U + w x r = (Ux, Uy, 0) + (0,0,w) x (X,Y,0) = (Ux, Uy, 0) + (-w*Y, w*X, 0)
+  output[0] = _converter.getLatticeVelocity( _indicator.getVel()[0] - _indicator.getOmega() * (input[1] - _indicator.getPos()[1]) );
+  output[1] = _converter.getLatticeVelocity( _indicator.getVel()[1] + _indicator.getOmega() * (input[0] - _indicator.getPos()[0]) );
 
   return true;
 }
@@ -370,7 +372,6 @@ bool AnalyticalComposed3D<T,S>::operator()(T output[], const S x[])
   output[2]=outputTmp2[0];
   return true;
 }
-
 
 template <typename T, typename S>
 AnalyticalConst3D<T,S>::AnalyticalConst3D(const std::vector<T>& value)
@@ -512,35 +513,35 @@ bool AnalyticalScaled3D<T,S>::operator()(T output[], const S x[])
 
 
 // see Mink et al. 2016 in Sec.3.1.
-template <typename T, typename S, template <typename U> class DESCRIPTOR>
+template <typename T, typename S, typename DESCRIPTOR>
 PLSsolution3D<T,S,DESCRIPTOR>::PLSsolution3D(RadiativeUnitConverter<T,DESCRIPTOR> const& converter)
   : AnalyticalF3D<T,S>(1),
-    _physSigmaEff(sqrt( converter.getPhysAbsorption() / converter.getPhysDiffusionCoefficient() )),
-    _physDiffusionCoefficient(converter.getPhysDiffusionCoefficient())
+    _physSigmaEff(std::sqrt( converter.getPhysAbsorption() / converter.getPhysDiffusion() )),
+    _physDiffusionCoefficient(converter.getPhysDiffusion())
 {
   this->getName() = "PLSsolution3D";
 }
 
-template <typename T, typename S, template <typename U> class DESCRIPTOR>
+template <typename T, typename S, typename DESCRIPTOR>
 bool PLSsolution3D<T,S,DESCRIPTOR>::operator()(T output[1], const S x[3])
 {
-  double r = sqrt( x[0]*x[0] + x[1]*x[1] + x[2]*x[2] );
-  output[0] = 1. / (4.0*M_PI*_physDiffusionCoefficient*r) *exp(-_physSigmaEff * r);
+  double r = std::sqrt( x[0]*x[0] + x[1]*x[1] + x[2]*x[2] );
+  output[0] = 1. / (4.0*M_PI*_physDiffusionCoefficient*r) *std::exp(-_physSigmaEff * r);
   return true;
 }
 
 
-template <typename T, typename S, template <typename U> class DESCRIPTOR>
+template <typename T, typename S, typename DESCRIPTOR>
 LightSourceCylindrical3D<T,S,DESCRIPTOR>::LightSourceCylindrical3D(RadiativeUnitConverter<T,DESCRIPTOR> const& converter, Vector<T,3> center)
   : AnalyticalF3D<T,S>(1),
-    _physSigmaEff(sqrt( converter.getPhysAbsorption() / converter.getPhysDiffusionCoefficient() )),
-    _physDiffusionCoefficient(converter.getPhysDiffusionCoefficient()),
+    _physSigmaEff(sqrt( converter.getPhysAbsorption() / converter.getPhysDiffusion() )),
+    _physDiffusionCoefficient(converter.getPhysDiffusion()),
     _center(center)
 {
   this->getName() = "LightSourceCylindrical3D";
 }
 
-template <typename T, typename S, template <typename U> class DESCRIPTOR>
+template <typename T, typename S, typename DESCRIPTOR>
 bool LightSourceCylindrical3D<T,S,DESCRIPTOR>::operator()(T output[1], const S x[3])
 {
   double r = sqrt( (x[0]-_center[0])*(x[0]-_center[0]) + (x[1]-_center[1])*(x[1]-_center[1]) );
@@ -600,28 +601,29 @@ bool GaussianHillTimeEvolution2D<T,S>::operator()(T output[1], const S x[2])
 }
 
 
-template <typename T, typename S>
-ParticleU3D<T,S>::ParticleU3D(ParticleIndicatorF3D<T,T>& indicator,
-                              std::vector<T>& u, std::vector<T>& omega)
-  : AnalyticalF3D<T,S>(1), _indicator(indicator), _u(u), _omega(omega)
+template <typename T, typename S, typename DESCRIPTOR>
+ParticleU3D<T,S,DESCRIPTOR>::ParticleU3D(SmoothIndicatorF3D<T,T,true>& indicator, UnitConverter<T,DESCRIPTOR> const& converter)
+  :AnalyticalF3D<T,S>(3), _indicator(indicator), _converter(converter)
 {
   this->getName() = "ParticleU";
 }
 
-
-template <typename T, typename S>
-bool ParticleU3D<T,S>::operator()(T output[], const S input[])
+template <typename T, typename S, typename DESCRIPTOR>
+bool ParticleU3D<T,S,DESCRIPTOR>::operator()(T output[], const S input[])
 {
-  if (_indicator(output, input) != 0) {
-    output[0] = _u[0] + ( _omega[1]*(input[2] - _indicator.getPos()[2]) - _omega[2]*(input[1] - _indicator.getPos()[1]) );
-    output[1] = _u[1] + ( _omega[2]*(input[0] - _indicator.getPos()[0]) - _omega[0]*(input[2] - _indicator.getPos()[2]) );
-    output[2] = _u[2] + ( _omega[0]*(input[1] - _indicator.getPos()[1]) - _omega[1]*(input[0] - _indicator.getPos()[0]) );
-  }
+  //three dimensions: u = U + w x r = (Ux, Uy, Uz) + (wx,wy,wz) x (X,Y,Z) = (Ux, Uy, Uz) + (wy*Z-wz*Y, wz*X-wx*Z, wx*Y-wy*X)
+  output[0] = _converter.getLatticeVelocity( _indicator.getVel()[0] +
+             ( _indicator.getOmega()[1]*(input[2] - _indicator.getPos()[2])
+             - _indicator.getOmega()[2]*(input[1] - _indicator.getPos()[1]) ) );
+  output[1] = _converter.getLatticeVelocity( _indicator.getVel()[1] +
+             ( _indicator.getOmega()[2]*(input[0] - _indicator.getPos()[0])
+             - _indicator.getOmega()[0]*(input[2] - _indicator.getPos()[2]) ) );
+  output[2] = _converter.getLatticeVelocity( _indicator.getVel()[2] +
+             ( _indicator.getOmega()[0]*(input[1] - _indicator.getPos()[1])
+             - _indicator.getOmega()[1]*(input[0] - _indicator.getPos()[0]) ) );
+
   return true;
 }
-
-
-
 
 } // end namespace olb
 

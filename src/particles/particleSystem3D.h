@@ -24,6 +24,16 @@
 #ifndef PARTICLE_SYSTEM_3D_H
 #define PARTICLE_SYSTEM_3D_H
 
+// Enables particle collision functions
+// CollisionModels: Can be used as an alternative to a mechanic contact force
+// #define CollisionModels
+// CollisionModelsCombindedWithMechContactForce: Can be used in combination with
+// a mechanic contact force
+// #define CollisionModelsCombindedWithMechContactForce
+
+#include <set>
+#include <vector>
+#include <list>
 #include <deque>
 #include "contactDetection/contactDetection.h"
 #include "geometry/superGeometry3D.h"
@@ -33,10 +43,11 @@
 #include "boundaries/boundary3D.h"
 #include "functors/lattice/latticeFrameChangeF3D.h"
 #include "utilities/vectorHelpers.h"
+#include "twoWayCouplings/twoWayCouplings3D.h"
 
 namespace olb {
 
-template<typename T, template<typename U> class DESCRIPTOR>
+template<typename T, typename DESCRIPTOR>
 class SuperLatticeInterpPhysVelocity3D;
 
 template<typename T, template<typename U> class PARTICLETYPE>
@@ -59,12 +70,46 @@ public:
     : _pSys(ps)
   {
   }
-  inline void simulate(T dT, bool scale=false)
+  inline void simulate(T dT, bool scale = false)
   {
     _pSys->computeForce();
     _pSys->explicitEuler(dT, scale);
     //_pSys->rungeKutta4(dT);
   }
+  inline void simulate(T dT, std::set<int> sActivityOfParticle, bool scale = false) {simulate(dT, scale);}
+  inline void simulateWithTwoWayCoupling_Mathias ( T dT,
+                                    ForwardCouplingModel<T,PARTICLETYPE>& forwardCoupling,
+                                    BackCouplingModel<T,PARTICLETYPE>& backCoupling,
+                                    int material, int subSteps = 1, bool scale = false )
+  {
+    for (int iSubStep=1; iSubStep<=subSteps; iSubStep++) {
+      if (! _pSys->executeForwardCoupling(forwardCoupling) ) {
+        std::cout << " on substep " << iSubStep << std::endl;
+        singleton::exit(1);
+      }
+      _pSys->computeForce();
+      _pSys->explicitEuler(dT/(T)(subSteps), scale);
+      //_pSys->rungeKutta4(dT/(T)(subSteps));
+    }
+    _pSys->executeBackwardCoupling(backCoupling, material);
+  }
+  inline void simulateWithTwoWayCoupling_Davide ( T dT,
+                                    ForwardCouplingModel<T,PARTICLETYPE>& forwardCoupling,
+                                    BackCouplingModel<T,PARTICLETYPE>& backCoupling,
+                                    int material, int subSteps = 1, bool scale = false )
+  {
+    for (int iSubStep=1; iSubStep<=subSteps; iSubStep++) {
+      if (! _pSys->executeForwardCoupling(forwardCoupling) ) {
+        std::cout << " on substep " << iSubStep << std::endl;
+        singleton::exit(1);
+      }
+      _pSys->executeBackwardCoupling(backCoupling, material, subSteps);
+      _pSys->computeForce();
+      _pSys->explicitEuler(dT/(T)(subSteps), scale);
+      //_pSys->rungeKutta4(dT/(T)(subSteps));
+    }
+  }
+
 private:
   ParticleSystem3D<T, PARTICLETYPE>* _pSys;
 
@@ -78,7 +123,7 @@ public:
     : _pSys(ps)
   {
   }
-  inline void simulate(T dT, bool scale=false)
+  inline void simulate(T dT, bool scale = false)
   {
     _pSys->computeForce();
     _pSys->explicitEuler(dT, scale);
@@ -95,17 +140,69 @@ public:
     : _pSys(ps)
   {
   }
-  inline void simulate(T dT, bool scale=false)
+
+  inline void simulate(T dT, bool scale = false)
   {
     _pSys->resetMag();
     _pSys->computeForce();
     _pSys->explicitEuler(dT, scale);
-    // calculates changes in orientation (dipole moment direction)
-    // due to torque moments induced in
-    // interpMagForceForMagP3D & magneticForceForMagP3D
     _pSys->integrateTorqueMag(dT);
 
+#ifdef CollisionModels
+    _pSys->partialElasticImpact(0.67);
+#endif
   }
+  inline void simulateWithTwoWayCoupling_Mathias ( T dT,
+                                    ForwardCouplingModel<T,MagneticParticle3D>& forwardCoupling,
+                                    BackCouplingModel<T,MagneticParticle3D>& backCoupling,
+                                    int material, int subSteps = 1, bool scale = false )
+  {
+    for (int iSubStep=1; iSubStep<=subSteps; iSubStep++) {
+      if (! _pSys->executeForwardCoupling(forwardCoupling) ) {
+        std::cout << " on substep " << iSubStep << std::endl;
+        singleton::exit(1);
+      }
+      _pSys->computeForce();
+      _pSys->explicitEuler(dT/(T)(subSteps), scale);
+      //_pSys->rungeKutta4(dT/(T)(subSteps));
+    }
+    _pSys->executeBackwardCoupling(backCoupling, material);
+  }
+  inline void simulateWithTwoWayCoupling_Davide ( T dT,
+                                    ForwardCouplingModel<T,MagneticParticle3D>& forwardCoupling,
+                                    BackCouplingModel<T,MagneticParticle3D>& backCoupling,
+                                    int material, int subSteps = 1, bool scale = false )
+  {
+    for (int iSubStep=1; iSubStep<=subSteps; iSubStep++) {
+      if (! _pSys->executeForwardCoupling(forwardCoupling) ) {
+        std::cout << " on substep " << iSubStep << std::endl;
+        singleton::exit(1);
+      }
+      _pSys->computeForce();
+      _pSys->explicitEuler(dT/(T)(subSteps), scale);
+      //_pSys->rungeKutta4(dT/(T)(subSteps));
+      _pSys->executeBackwardCoupling(backCoupling, material, subSteps);
+    }
+  }
+
+//   multiple collision models
+  inline void simulate(T dT, std::set<int> sActivityOfParticle , bool scale = false)
+  {
+
+    _pSys->resetMag(sActivityOfParticle);
+    _pSys->computeForce(sActivityOfParticle);
+    _pSys->explicitEuler(dT, sActivityOfParticle, scale);
+    _pSys->integrateTorqueMag(dT, sActivityOfParticle);
+
+#ifdef CollisionModels
+    _pSys->partialElasticImpact(0.67);
+#endif
+
+#ifdef CollisionModelsCombindedWithMechContactForce
+    _pSys->partialElasticImpactForCombinationWithMechContactForce(0.67);
+#endif
+  }
+
 private:
   ParticleSystem3D<T, MagneticParticle3D>* _pSys;
 
@@ -119,7 +216,7 @@ public:
   /// Default constructor for ParticleSystem
   ParticleSystem3D() = default;
   /// Constructor for ParticleSystem
-  ParticleSystem3D(SuperGeometry3D<T>&);
+  ParticleSystem3D(int iGeometry, SuperGeometry3D<T>& superGeometry);
   /// Copy constructor for ParticleSystem
   ParticleSystem3D(const ParticleSystem3D<T, PARTICLETYPE>& pS);
   /// Move constructor for ParticleSystem
@@ -128,6 +225,18 @@ public:
   virtual ~ParticleSystem3D() {}
 
   virtual void simulate(T deltatime, bool scale = false);
+  virtual void simulateWithTwoWayCoupling_Mathias ( T dT,
+                                    ForwardCouplingModel<T,PARTICLETYPE>& forwardCoupling,
+                                    BackCouplingModel<T,PARTICLETYPE>& backCoupling,
+                                    int material, int subSteps, bool scale );
+  virtual void simulateWithTwoWayCoupling_Davide ( T dT,
+                                    ForwardCouplingModel<T,PARTICLETYPE>& forwardCoupling,
+                                    BackCouplingModel<T,PARTICLETYPE>& backCoupling,
+                                    int material, int subSteps, bool scale );
+  // multiple collision models
+  virtual void simulate(T deltatime, std::set<int> sActivityOfParticle, bool scale = false);
+
+  void printDeep(std::string message="");
 
   /// Get number of particles in ParticleSystem
   int size();
@@ -155,11 +264,11 @@ public:
   const PARTICLETYPE<T>& operator[](const int i) const;
 
   /// Set velocity of all particles to fluid velocity
-  template<template<typename V> class DESCRIPTOR>
+  template<typename DESCRIPTOR>
   void setVelToFluidVel(SuperLatticeInterpPhysVelocity3D<T, DESCRIPTOR> &);
 
   /// Set particle velocity to analytical velocity (e.g. as inital condition
-  void setVelToAnalyticalVel(AnalyticalConst3D<T,T>&);
+  void setVelToAnalyticalVel(AnalyticalConst3D<T, T>&);
 
   /// Set global coordinates and extends of Particlesystem (SI units)
   void setPosExt(std::vector<T> physPos, std::vector<T> physExtend);
@@ -173,6 +282,18 @@ public:
 
   /// Compute all forces on particles
   void computeForce();
+  // multiple collision models
+  void computeForce(std::set<int> sActivityOfParticle) {computeForce();};
+
+  /// Stores old particle positions - is used in ..._ActExt
+  void setStoredValues();
+
+  /// Sorts the vector of neighbour Particles by increasing distance
+  struct getMinDistPart {
+    bool operator() (std::pair<size_t, T> i, std::pair<size_t, T> j) { return (i.second < j.second);}
+  } getMinDistPartObj;
+  void getMinDistParticle (std::vector<std::pair<size_t, T>> ret_matches);
+
   /// Compute boundary contact
   void computeBoundary();
 
@@ -200,12 +321,20 @@ public:
   /// if scale = true, velocity is scaled to maximal velocity
   /// maximal velocity = _superGeometry.getCuboidGeometry().getMaxDeltaR()/dT
   void explicitEuler(T dT, bool scale = false);
+  // multiple collision models
+  void explicitEuler(T dT, std::set<int> sActivityOfParticle, bool scale = false) {explicitEuler(dT, scale);};
+  bool executeForwardCoupling(ForwardCouplingModel<T,PARTICLETYPE>& forwardCoupling);
+  bool executeBackwardCoupling(BackCouplingModel<T,PARTICLETYPE>& backwardCoupling, int material, int subSteps=1);
 
   ContactDetection<T, PARTICLETYPE>* getDetection()
   {
     return _contactDetection;
   }
 
+  int getIGeometry()
+  {
+    return _iGeometry;
+  }
   /// returns deque of pointer to particles (not shadow particles)
   /// contained in a particleSystem3D
   std::deque<PARTICLETYPE<T>*> getParticlesPointer();
@@ -226,19 +355,47 @@ public:
   /// returns shared pointer of forces
   std::list<std::shared_ptr<Force3D<T, PARTICLETYPE> > > getForcesPointer();
 
+  /// Deque of Lists of agglomerated particles
+  std::deque<std::list<PARTICLETYPE<T>*>> _Agglomerates;
+
 protected:
   void integrateTorque(T dT);
   void integrateTorqueMag(T dT) {};
+  // multiple collision models
+  void integrateTorqueMag(T dT, std::set<int> sActivityOfParticle) {};
   void resetMag() {};
+  // multiple collision models
+  void resetMag(std::set<int> sActivityOfParticle) {};
+
+  /// Collision models: Todo: enable for paralle mode
+  /// Resets existing particle overlaps in the event of a collision
+  void setOverlapZero() {};
+  /// For the combined use of setOverlapZero() and a mechanic contact force
+  void setOverlapZeroForCombinationWithMechContactForce() {};
+  /// Resets existing particle overlaps in the event of a collision
+  /// and applies the physics of an partial elastic impact
+  void partialElasticImpact(T restitutionCoeff) {};
+  /// Applies the physics of an partial elastic impact while multiple
+  /// particle overlapping only to the particles with the least separation distance
+  void partialElasticImpactV2(T restitutionCoeff) {};
+  /// For the combined use of partialElasticImpact() and a mechanic contact force
+  void partialElasticImpactForCombinationWithMechContactForce(T restitutionCoeff) {};
+  
+  /// Detects and manages particle agglomerates
+  void findAgglomerates() {};
+  /// Adds new generated particles to the list of non agglomerated Particles
+  void initAggloParticles() {};
 
   void addShadowParticle(PARTICLETYPE<T>& p);
 
   mutable OstreamManager clout;
+  int _iGeometry = -1;
   SuperGeometry3D<T>& _superGeometry;
   ContactDetection<T, PARTICLETYPE>* _contactDetection;
   SimulateParticles<T, PARTICLETYPE> _sim;
 
   std::deque<PARTICLETYPE<T> > _particles;
+
   std::deque<PARTICLETYPE<T> > _shadowParticles;
   std::list<std::shared_ptr<Force3D<T, PARTICLETYPE> > > _forces;
   std::list<std::shared_ptr<Boundary3D<T, PARTICLETYPE> > > _boundaries;
@@ -266,9 +423,34 @@ protected:
 template<>
 void ParticleSystem3D<double, MagneticParticle3D>::integrateTorqueMag(double dT);
 template<>
+void ParticleSystem3D<double, MagneticParticle3D>::integrateTorqueMag(double dT, std::set<int> sActivityOfParticle);
+template<>
 void ParticleSystem3D<double, MagneticParticle3D>::computeForce();
 template<>
+void ParticleSystem3D<double, MagneticParticle3D>::computeForce(std::set<int> sActivityOfParticle);
+template<>
 void ParticleSystem3D<double, MagneticParticle3D>::resetMag();
+template<>
+void ParticleSystem3D<double, MagneticParticle3D>::resetMag(std::set<int> sActivityOfParticle);
+template<>
+void ParticleSystem3D<double, MagneticParticle3D>::explicitEuler(double dT, bool scale);
+template<>
+void ParticleSystem3D<double, MagneticParticle3D>::explicitEuler(double dT, std::set<int> sActivityOfParticle, bool scale);
+
+template<>
+void ParticleSystem3D<double, MagneticParticle3D>::setOverlapZero();
+template<>
+void ParticleSystem3D<double, MagneticParticle3D>::setOverlapZeroForCombinationWithMechContactForce();
+template<>
+void ParticleSystem3D<double, MagneticParticle3D>::partialElasticImpact(double restitutionCoeff);
+template<>
+void ParticleSystem3D<double, MagneticParticle3D>::partialElasticImpactV2(double restitutionCoeff);
+template<>
+void ParticleSystem3D<double, MagneticParticle3D>::partialElasticImpactForCombinationWithMechContactForce(double restitutionCoeff);
+template<>
+void ParticleSystem3D<double, MagneticParticle3D>::findAgglomerates();
+template<>
+void ParticleSystem3D<double, MagneticParticle3D>::initAggloParticles();
 
 }  //namespace olb
 #endif /* PARTICLE_SYSTEM_3D_H */

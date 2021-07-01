@@ -152,7 +152,7 @@ void writeHeatMapPlotFile(detailParam<T>& param) {
   fout << "} else {";
   fout << "set terminal png " << "size " << 1920  << "," << 1080 << "font \",25\"" << "\n";
   fout << "set output '"<< param.pngPath << "'"<< "\n";
-  fout << "}";
+  fout << "}" << "\n";
   fout << "set pm3d map" << "\n";
   fout << "unset key" << "\n";
   fout << "set size ratio -1" << "\n";

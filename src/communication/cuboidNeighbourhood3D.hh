@@ -230,19 +230,15 @@ void CuboidNeighbourhood3D<T>::init_inCN()
 #ifdef PARALLEL_MODE_MPI
   int counter=0;
   for (int i=0; i<_nC; i++) {
-    int dRank = _superStructure.getLoadBalancer().rank(i);
-    if ( singleton::mpi().getRank() != dRank ) {
-      counter++;
-    }
+    // int dRank = _superStructure.getLoadBalancer().rank(i);
+    counter++;
   }
   _mpiNbHelper.allocate(counter);
   counter=0;
   for (int i=0; i<_nC; i++) {
     int dRank = _superStructure.getLoadBalancer().rank(i);
-    if ( singleton::mpi().getRank() != dRank ) {
-      singleton::mpi().iSend(&_tempInCN[i] , 1, dRank, &_mpiNbHelper.get_mpiRequest()[counter], _iCglob);
-      counter++;
-    }
+    singleton::mpi().iSend(&_tempInCN[i] , 1, dRank, _mpiNbHelper.get_mpiRequest(counter), _iCglob);
+    counter++;
   }
 #endif
 
@@ -267,9 +263,7 @@ void CuboidNeighbourhood3D<T>::init_outCN()
   for (int i=0; i<_nC; i++) {
 #ifdef PARALLEL_MODE_MPI
     int sRank = _superStructure.getLoadBalancer().rank(i);
-    if ( singleton::mpi().getRank() != sRank ) {
-      singleton::mpi().receive(&temp[i], 1, sRank, i);
-    }
+    singleton::mpi().receive(&temp[i], 1, sRank, i);
 #endif
     if (temp[i]!=0) {
       _outC.push_back(i);
@@ -282,12 +276,12 @@ void CuboidNeighbourhood3D<T>::init_outCN()
   _initOutCNdone = true;
 }
 
+#ifdef PARALLEL_MODE_MPI
 template<typename T>
-void CuboidNeighbourhood3D<T>::bufSend_inCells()
+void CuboidNeighbourhood3D<T>::bufSend_inCells(singleton::MpiNonBlockingHelper& helper)
 {
 
-#ifdef PARALLEL_MODE_MPI
-  _mpiNbHelper.free();
+  helper.free();
 
   std::vector<int> temp(_nC,0);
   for (unsigned i=0; i<_inCells.size(); i++) {
@@ -307,18 +301,18 @@ void CuboidNeighbourhood3D<T>::bufSend_inCells()
     counter++;
   }
 
-  _mpiNbHelper.allocate(counter);
+  helper.allocate(counter);
   counter=0;
   for (unsigned iC=0; iC<_inC.size(); iC++) {
     int dRank = _superStructure.getLoadBalancer().rank(_inC[iC]);
     //if ( singleton::mpi().getRank() != dRank ) {
     singleton::mpi().iSend( _inDataCoordinates[_inC[iC]],
-                            _inN[iC]*3, dRank, &_mpiNbHelper.get_mpiRequest()[counter], _iCglob);
+                            _inN[iC]*3, dRank, helper.get_mpiRequest(counter), _iCglob);
     counter++;
     //}
   }
-#endif
 }
+#endif
 
 template<typename T>
 void CuboidNeighbourhood3D<T>::recWrite_outCells()
@@ -380,7 +374,7 @@ void CuboidNeighbourhood3D<T>::send_outData()
   for (unsigned iC=0; iC<_outC.size(); iC++) {
     int dRank = _superStructure.getLoadBalancer().rank(_outC[iC]);
     singleton::mpi().iSend( _outData[_outC[iC]],
-                            _outN[iC]*_nData*_nDataType, dRank, &_mpiNbHelper.get_mpiRequest()[iC], _iCglob);
+                            _outN[iC]*_nData*_nDataType, dRank, _mpiNbHelper.get_mpiRequest(iC), _iCglob);
   }
 #endif
 }

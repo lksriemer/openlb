@@ -31,6 +31,7 @@
 #include <algorithm>
 #include <limits>
 #include "advectionDiffusionDynamics.h"
+#include "dynamics/lbHelpers.h"
 
 namespace olb {
 
@@ -44,114 +45,249 @@ namespace olb {
 //============= Regularized Model for Advection diffusion===========//
 //==================================================================//
 
-template<typename T, template<typename U> class Lattice>
-AdvectionDiffusionRLBdynamics<T, Lattice>::AdvectionDiffusionRLBdynamics (
-  T omega_, Momenta<T, Lattice>& momenta_ )
-  : BasicDynamics<T, Lattice>( momenta_ ),
+template<typename T, typename DESCRIPTOR>
+AdvectionDiffusionRLBdynamics<T, DESCRIPTOR>::AdvectionDiffusionRLBdynamics (
+  T omega_, Momenta<T, DESCRIPTOR>& momenta_ )
+  : BasicDynamics<T, DESCRIPTOR>( momenta_ ),
     omega( omega_ )
 { }
 
-template<typename T, template<typename U> class Lattice>
-T AdvectionDiffusionRLBdynamics<T, Lattice>::computeEquilibrium( int iPop, T rho,
-    const T u[Lattice<T>::d], T uSqr ) const
+template<typename T, typename DESCRIPTOR>
+T AdvectionDiffusionRLBdynamics<T, DESCRIPTOR>::computeEquilibrium( int iPop, T rho,
+    const T u[DESCRIPTOR::d], T uSqr ) const
 {
-  return lbHelpers<T, Lattice>::equilibriumFirstOrder( iPop, rho, u );
+  return lbHelpers<T, DESCRIPTOR>::equilibriumFirstOrder( iPop, rho, u );
 }
 
 
-template<typename T, template<typename U> class Lattice>
-void AdvectionDiffusionRLBdynamics<T, Lattice>::collide( Cell<T, Lattice>& cell,
+template<typename T, typename DESCRIPTOR>
+void AdvectionDiffusionRLBdynamics<T, DESCRIPTOR>::collide( Cell<T, DESCRIPTOR>& cell,
     LatticeStatistics<T>& statistics )
 {
   T temperature = this->_momenta.computeRho( cell );
 
-  const T* u = cell.getExternal( Lattice<T>::ExternalField::velocityBeginsAt );
+  const T* u = cell.template getFieldPointer<descriptors::VELOCITY>();
 
-  T uSqr = lbHelpers<T, Lattice>::
+  T uSqr = lbHelpers<T, DESCRIPTOR>::
            rlbCollision( cell, temperature, u, omega );
 
   statistics.incrementStats( temperature, uSqr );
 }
 
-
-template<typename T, template<typename U> class Lattice>
-void AdvectionDiffusionRLBdynamics<T, Lattice>::staticCollide( Cell<T, Lattice>& cell,
-    const T u[Lattice<T>::d] ,
-    LatticeStatistics<T>& statistics )
-{
-  assert( false );
-}
-
-template<typename T, template<typename U> class Lattice>
-T AdvectionDiffusionRLBdynamics<T, Lattice>::getOmega() const
+template<typename T, typename DESCRIPTOR>
+T AdvectionDiffusionRLBdynamics<T, DESCRIPTOR>::getOmega() const
 {
   return omega;
 }
 
-template<typename T, template<typename U> class Lattice>
-void AdvectionDiffusionRLBdynamics<T, Lattice>::setOmega( T omega_ )
+template<typename T, typename DESCRIPTOR>
+void AdvectionDiffusionRLBdynamics<T, DESCRIPTOR>::setOmega( T omega_ )
 {
   omega = omega_;
+}
+
+
+////////////////////// Class CombinedAdvectionDiffusionRLBdynamics /////////////////////////
+
+template<typename T, typename DESCRIPTOR, typename Dynamics>
+CombinedAdvectionDiffusionRLBdynamics<T,DESCRIPTOR,Dynamics>::CombinedAdvectionDiffusionRLBdynamics (
+  T omega, Momenta<T,DESCRIPTOR>& momenta )
+  : BasicDynamics<T,DESCRIPTOR>(momenta),
+    _boundaryDynamics(omega, momenta)
+{ }
+
+template<typename T, typename DESCRIPTOR, typename Dynamics>
+T CombinedAdvectionDiffusionRLBdynamics<T,DESCRIPTOR,Dynamics>::
+computeEquilibrium(int iPop, T rho, const T u[DESCRIPTOR::d], T uSqr) const
+{
+  return lbHelpers<T, DESCRIPTOR>::equilibriumFirstOrder( iPop, rho, u );
+}
+
+template<typename T, typename DESCRIPTOR, typename Dynamics>
+void CombinedAdvectionDiffusionRLBdynamics<T,DESCRIPTOR,Dynamics>::collide (
+  Cell<T,DESCRIPTOR>& cell,
+  LatticeStatistics<T>& statistics )
+{
+  typedef DESCRIPTOR L;
+
+  T temperature = this->_momenta.computeRho( cell );
+  const T* u = cell.template getFieldPointer<descriptors::VELOCITY>();
+
+  T jNeq[DESCRIPTOR::d];
+  // this->_momenta.computeJ( cell, jNeq );
+  dynamic_cast<AdvectionDiffusionBoundaryMomenta<T,DESCRIPTOR>&>(this->_momenta).computeJneq( cell, jNeq );
+  // cout << jNeq[0] << " " << jNeq[1] << " " << u[0] << " " << u[1] << endl;
+  // stripe of equilibrium part u * T
+  // for ( int iD = 0; iD < DESCRIPTOR::d; ++iD ) {
+  //   jNeq[iD] -= u[iD] * temperature;
+  // }
+  // cout << jNeq[0] << " " << jNeq[1] << " " << u[0] << " " << u[1] << endl;
+
+  for (int iPop = 0; iPop < L::q; ++iPop) {
+    cell[iPop] = lbHelpers<T, DESCRIPTOR>::equilibriumFirstOrder( iPop, temperature, u )
+                 + firstOrderLbHelpers<T,DESCRIPTOR>::fromJneqToFneq(iPop, jNeq);
+    // cout << firstOrderLbHelpers<T,DESCRIPTOR>::fromJneqToFneq(iPop,jNeq) << " ";
+  }
+  // cout << endl;
+  // lbHelpers<T,DESCRIPTOR>::computeJ(cell, jNeq);
+  // cout << jNeq[0] << " " << jNeq[1] << " " << u[0] << " " << u[1] << endl;
+
+  _boundaryDynamics.collide(cell, statistics);
+  // lbHelpers<T,DESCRIPTOR>::computeJ(cell, jNeq);
+  // cout << jNeq[0] << " " << jNeq[1] << " " << u[0] << " " << u[1] << endl;
+}
+
+template<typename T, typename DESCRIPTOR, typename Dynamics>
+T CombinedAdvectionDiffusionRLBdynamics<T,DESCRIPTOR,Dynamics>::getOmega() const
+{
+  return _boundaryDynamics.getOmega();
+}
+
+template<typename T, typename DESCRIPTOR, typename Dynamics>
+void CombinedAdvectionDiffusionRLBdynamics<T,DESCRIPTOR,Dynamics>::setOmega(T omega)
+{
+  _boundaryDynamics.setOmega(omega);
 }
 
 //==================================================================//
 //============= BGK Model for Advection diffusion===========//
 //==================================================================//
 
-template<typename T, template<typename U> class Lattice>
-AdvectionDiffusionBGKdynamics<T, Lattice>::AdvectionDiffusionBGKdynamics (
-  T omega, Momenta<T, Lattice>& momenta )
-  : BasicDynamics<T, Lattice>( momenta ),
+template<typename T, typename DESCRIPTOR>
+AdvectionDiffusionBGKdynamics<T, DESCRIPTOR>::AdvectionDiffusionBGKdynamics (
+  T omega, Momenta<T, DESCRIPTOR>& momenta )
+  : BasicDynamics<T, DESCRIPTOR>( momenta ),
     _omega(omega)
 { }
 
-template<typename T, template<typename U> class Lattice>
-AdvectionDiffusionBGKdynamics<T, Lattice>::AdvectionDiffusionBGKdynamics (
-  const UnitConverter<T,Lattice>& converter, Momenta<T, Lattice>& momenta )
-  : BasicDynamics<T, Lattice>( momenta ),
+template<typename T, typename DESCRIPTOR>
+AdvectionDiffusionBGKdynamics<T, DESCRIPTOR>::AdvectionDiffusionBGKdynamics (
+  const UnitConverter<T,DESCRIPTOR>& converter, Momenta<T, DESCRIPTOR>& momenta )
+  : BasicDynamics<T, DESCRIPTOR>( momenta ),
     _omega(converter.getLatticeRelaxationFrequency())
 { }
 
-template<typename T, template<typename U> class Lattice>
-T AdvectionDiffusionBGKdynamics<T, Lattice>::computeEquilibrium( int iPop, T rho,
-    const T u[Lattice<T>::d], T uSqr ) const
+template<typename T, typename DESCRIPTOR>
+T AdvectionDiffusionBGKdynamics<T, DESCRIPTOR>::computeEquilibrium( int iPop, T rho,
+    const T u[DESCRIPTOR::d], T uSqr ) const
 {
-  return lbHelpers<T, Lattice>::equilibriumFirstOrder( iPop, rho, u );
+  return lbHelpers<T, DESCRIPTOR>::equilibriumFirstOrder( iPop, rho, u );
 }
 
 
-template<typename T, template<typename U> class Lattice>
-void AdvectionDiffusionBGKdynamics<T, Lattice>::collide( Cell<T, Lattice>& cell,
+template<typename T, typename DESCRIPTOR>
+void AdvectionDiffusionBGKdynamics<T, DESCRIPTOR>::collide( Cell<T, DESCRIPTOR>& cell,
     LatticeStatistics<T>& statistics )
 {
   T temperature = this->_momenta.computeRho( cell );
-  const T* u = cell.getExternal(Lattice<T>::ExternalField::velocityBeginsAt);
+  const T* u = cell.template getFieldPointer<descriptors::VELOCITY>();
 
-  T uSqr = lbHelpers<T, Lattice>::
+  T uSqr = lbHelpers<T, DESCRIPTOR>::
            bgkCollision( cell, temperature, u, _omega );
 
   statistics.incrementStats( temperature, uSqr );
 }
 
-
-template<typename T, template<typename U> class Lattice>
-void AdvectionDiffusionBGKdynamics<T, Lattice>::staticCollide( Cell<T, Lattice>& cell,
-    const T u[Lattice<T>::d] ,
-    LatticeStatistics<T>& statistics )
-{
-  assert( false );
-}
-
-template<typename T, template<typename U> class Lattice>
-T AdvectionDiffusionBGKdynamics<T, Lattice>::getOmega() const
+template<typename T, typename DESCRIPTOR>
+T AdvectionDiffusionBGKdynamics<T, DESCRIPTOR>::getOmega() const
 {
   return _omega;
 }
 
-template<typename T, template<typename U> class Lattice>
-void AdvectionDiffusionBGKdynamics<T, Lattice>::setOmega( T omega )
+template<typename T, typename DESCRIPTOR>
+void AdvectionDiffusionBGKdynamics<T, DESCRIPTOR>::setOmega( T omega )
 {
   _omega = omega;
+}
+
+
+//==================================================================//
+//============= TRT Model for Advection diffusion===========//
+//==================================================================//
+
+template<typename T, typename DESCRIPTOR>
+AdvectionDiffusionTRTdynamics<T, DESCRIPTOR>::AdvectionDiffusionTRTdynamics (
+  T omega, Momenta<T, DESCRIPTOR>& momenta, T magicParameter )
+  : AdvectionDiffusionBGKdynamics<T, DESCRIPTOR>( omega, momenta ),
+    _omega2(1/(magicParameter/(1/omega-0.5)+0.5)), _magicParameter(magicParameter)
+{ }
+
+template<typename T, typename DESCRIPTOR>
+void AdvectionDiffusionTRTdynamics<T, DESCRIPTOR>::collide( Cell<T, DESCRIPTOR>& cell,
+    LatticeStatistics<T>& statistics )
+{
+  T temperature = this->_momenta.computeRho( cell );
+  const T* u = cell.template getFieldPointer<descriptors::VELOCITY>();
+
+  T fPlus[DESCRIPTOR::q], fMinus[DESCRIPTOR::q];
+  T fEq[DESCRIPTOR::q], fEqPlus[DESCRIPTOR::q], fEqMinus[DESCRIPTOR::q];
+
+  for (int iPop=0; iPop < DESCRIPTOR::q; ++iPop) {
+    fPlus[iPop] = 0.5 * ( cell[iPop] + cell[descriptors::opposite<DESCRIPTOR>(iPop)] );
+    fMinus[iPop] = 0.5 * ( cell[iPop] - cell[descriptors::opposite<DESCRIPTOR>(iPop)] );
+    fEq[iPop] = lbHelpers<T, DESCRIPTOR>::equilibriumFirstOrder(iPop, temperature, u);
+  }
+  for (int iPop=0; iPop < DESCRIPTOR::q; ++iPop) {
+    fEqPlus[iPop] = 0.5 * ( fEq[iPop] + fEq[descriptors::opposite<DESCRIPTOR>(iPop)] );
+    fEqMinus[iPop] = 0.5 * ( fEq[iPop] - fEq[descriptors::opposite<DESCRIPTOR>(iPop)] );
+  }
+  for (int iPop=0; iPop < DESCRIPTOR::q; ++iPop) {
+    cell[iPop] -= _omega2 * (fPlus[iPop] - fEqPlus[iPop]) + this->_omega * (fMinus[iPop] - fEqMinus[iPop]);
+  }
+
+  statistics.incrementStats( temperature, 0. );
+}
+
+
+
+//==================================================================//
+//============= BGK Model for Advection diffusion with source ===========//
+//==================================================================//
+
+template<typename T, typename DESCRIPTOR>
+SourcedAdvectionDiffusionBGKdynamics<T, DESCRIPTOR>::SourcedAdvectionDiffusionBGKdynamics (
+  T omega, Momenta<T, DESCRIPTOR>& momenta )
+  : AdvectionDiffusionBGKdynamics<T, DESCRIPTOR>( omega, momenta ), _omegaMod(1. - 0.5 * omega)
+{
+  OLB_PRECONDITION( DESCRIPTOR::template provides<descriptors::SOURCE>() );
+}
+
+
+template<typename T, typename DESCRIPTOR>
+void SourcedAdvectionDiffusionBGKdynamics<T, DESCRIPTOR>::collide( Cell<T, DESCRIPTOR>& cell,
+    LatticeStatistics<T>& statistics )
+{
+  const T* u = cell.template getFieldPointer<descriptors::VELOCITY>();
+  const T* source = cell.template getFieldPointer<descriptors::SOURCE>();
+  const T temperature = this->_momenta.computeRho( cell ) + 0.5 * source[0];
+
+  T uSqr = lbHelpers<T, DESCRIPTOR>::
+           bgkCollision( cell, temperature, u, this->_omega );
+
+  // Q / t_i = ( 1 - 0.5*_omega) * q
+  const T sourceMod = source[0] * _omegaMod;
+  for ( int iPop = 0; iPop < DESCRIPTOR::q; iPop++ ) {
+    cell[iPop] += sourceMod * descriptors::t<T,DESCRIPTOR>(iPop);
+  }
+
+  statistics.incrementStats( temperature, uSqr );
+}
+
+template<typename T, typename DESCRIPTOR>
+T SourcedAdvectionDiffusionBGKdynamics<T,DESCRIPTOR>::computeRho(Cell<T,DESCRIPTOR> const& cell) const
+{
+  const T* source = cell.template getFieldPointer<descriptors::SOURCE>();
+  return this->_momenta.computeRho( cell ) + 0.5 * source[0];
+}
+
+template<typename T, typename DESCRIPTOR>
+void SourcedAdvectionDiffusionBGKdynamics<T,DESCRIPTOR>::computeRhoU (
+  Cell<T,DESCRIPTOR> const& cell,
+  T& rho, T u[DESCRIPTOR::d]) const
+{
+  this->_momenta.computeRhoU( cell, rho, u );
+  const T* source = cell.template getFieldPointer<descriptors::SOURCE>();
+  rho += 0.5 * source[0] * _omegaMod;
 }
 
 
@@ -159,57 +295,49 @@ void AdvectionDiffusionBGKdynamics<T, Lattice>::setOmega( T omega )
 //=========== BGK Model for Advection diffusion with Stokes drag and Smagorinsky====//
 //==================================================================================//
 
-template<typename T, template<typename U> class Lattice>
-SmagorinskyParticleAdvectionDiffusionBGKdynamics<T, Lattice>::SmagorinskyParticleAdvectionDiffusionBGKdynamics (
-  T omega_, Momenta<T,Lattice>& momenta_, T smagoConst_, T dx_, T dt_)
-  : AdvectionDiffusionBGKdynamics<T,Lattice>(omega_,momenta_), smagoConst(smagoConst_), preFactor(computePreFactor(omega_,smagoConst_, dx_, dt_) )
+template<typename T, typename DESCRIPTOR>
+SmagorinskyParticleAdvectionDiffusionBGKdynamics<T, DESCRIPTOR>::SmagorinskyParticleAdvectionDiffusionBGKdynamics (
+  T omega_, Momenta<T,DESCRIPTOR>& momenta_, T smagoConst_, T dx_, T dt_)
+  : AdvectionDiffusionBGKdynamics<T,DESCRIPTOR>(omega_,momenta_), smagoConst(smagoConst_), preFactor(computePreFactor(omega_,smagoConst_, dx_, dt_) )
 { }
 
-template<typename T, template<typename U> class Lattice>
-void SmagorinskyParticleAdvectionDiffusionBGKdynamics<T, Lattice>::collide(Cell<T,Lattice>& cell, LatticeStatistics<T>& statistics )
+template<typename T, typename DESCRIPTOR>
+void SmagorinskyParticleAdvectionDiffusionBGKdynamics<T, DESCRIPTOR>::collide(Cell<T,DESCRIPTOR>& cell, LatticeStatistics<T>& statistics )
 {
-  T temperature, uad[Lattice<T>::d], pi[util::TensorVal<Lattice<T> >::n];
+  T temperature, uad[DESCRIPTOR::d], pi[util::TensorVal<DESCRIPTOR >::n];
   this->_momenta.computeAllMomenta(cell, temperature, uad, pi);
-  int offset = (statistics.getTime() % 2 == 0) ? Lattice<T>::ExternalField::velocityBeginsAt : Lattice<T>::ExternalField::velocity2BeginsAt;
-  const T* u = cell.getExternal(offset);
+  const T* u = (statistics.getTime() % 2 == 0) ? cell.template getFieldPointer<descriptors::VELOCITY>() : cell.template getFieldPointer<descriptors::VELOCITY2>();
   T newOmega = computeOmega(this->getOmega(), preFactor, temperature, pi);
-  T uSqr = lbHelpers<T,Lattice>::bgkCollision(cell, temperature, u, newOmega);
+  T uSqr = lbHelpers<T,DESCRIPTOR>::bgkCollision(cell, temperature, u, newOmega);
   statistics.incrementStats(temperature, uSqr);
 }
 
-template<typename T, template<typename U> class Lattice>
-void SmagorinskyParticleAdvectionDiffusionBGKdynamics<T, Lattice>::staticCollide(Cell<T,Lattice>& cell, const T u[Lattice<T>::d],
-    LatticeStatistics<T>& statistics )
+template<typename T, typename DESCRIPTOR>
+T SmagorinskyParticleAdvectionDiffusionBGKdynamics<T, DESCRIPTOR>::getSmagorinskyOmega(Cell<T,DESCRIPTOR>& cell)
 {
-  assert( false );
-}
-
-template<typename T, template<typename U> class Lattice>
-T SmagorinskyParticleAdvectionDiffusionBGKdynamics<T, Lattice>::getSmagorinskyOmega(Cell<T,Lattice>& cell)
-{
-  T temperature, uTemp[Lattice<T>::d], pi[util::TensorVal<Lattice<T> >::n];
+  T temperature, uTemp[DESCRIPTOR::d], pi[util::TensorVal<DESCRIPTOR >::n];
   this->_momenta.computeAllMomenta(cell, temperature, uTemp, pi);
   T newOmega = computeOmega(this->getOmega(), preFactor, temperature, pi);
   return newOmega;
 }
 
-template<typename T, template<typename U> class Lattice>
-void SmagorinskyParticleAdvectionDiffusionBGKdynamics<T, Lattice>::setOmega(T omega_)
+template<typename T, typename DESCRIPTOR>
+void SmagorinskyParticleAdvectionDiffusionBGKdynamics<T, DESCRIPTOR>::setOmega(T omega_)
 {
   preFactor = computePreFactor(omega_, smagoConst, dx, dt);
 }
 
-template<typename T, template<typename U> class Lattice>
-T SmagorinskyParticleAdvectionDiffusionBGKdynamics<T, Lattice>::computePreFactor(T omega_, T smagoConst_, T dx_, T dt_)
+template<typename T, typename DESCRIPTOR>
+T SmagorinskyParticleAdvectionDiffusionBGKdynamics<T, DESCRIPTOR>::computePreFactor(T omega_, T smagoConst_, T dx_, T dt_)
 {
-  return (T)(smagoConst_*smagoConst_*dx_*dx_)*Lattice<T>::invCs2/dt_*4*sqrt(2);
+  return (T)(smagoConst_*smagoConst_*dx_*dx_)*descriptors::invCs2<T,DESCRIPTOR>()/dt_*4*sqrt(2);
 }
 
-template<typename T, template<typename U> class Lattice>
-T SmagorinskyParticleAdvectionDiffusionBGKdynamics<T, Lattice>::computeOmega(T omega0, T preFactor_, T rho, T pi[util::TensorVal<Lattice<T> >::n] )
+template<typename T, typename DESCRIPTOR>
+T SmagorinskyParticleAdvectionDiffusionBGKdynamics<T, DESCRIPTOR>::computeOmega(T omega0, T preFactor_, T rho, T pi[util::TensorVal<DESCRIPTOR >::n] )
 {
   T PiNeqNormSqr = pi[0]*pi[0] + 2.0*pi[1]*pi[1] + pi[2]*pi[2];
-  if (util::TensorVal<Lattice<T> >::n == 6) {
+  if (util::TensorVal<DESCRIPTOR >::n == 6) {
     PiNeqNormSqr += pi[2]*pi[2] + pi[3]*pi[3] + 2*pi[4]*pi[4] +pi[5]*pi[5];
   }
   T PiNeqNorm    = sqrt(PiNeqNormSqr);
@@ -227,20 +355,19 @@ T SmagorinskyParticleAdvectionDiffusionBGKdynamics<T, Lattice>::computeOmega(T o
 //=========== BGK Model for Advection diffusion with Stokes Drag ====//
 //==================================================================//
 
-template<typename T, template<typename U> class Lattice>
-ParticleAdvectionDiffusionBGKdynamics<T, Lattice>::ParticleAdvectionDiffusionBGKdynamics (
-  T omega_, Momenta<T, Lattice>& momenta_ )
-  : AdvectionDiffusionBGKdynamics<T,Lattice>(omega_,momenta_), omega( omega_ )
+template<typename T, typename DESCRIPTOR>
+ParticleAdvectionDiffusionBGKdynamics<T, DESCRIPTOR>::ParticleAdvectionDiffusionBGKdynamics (
+  T omega_, Momenta<T, DESCRIPTOR>& momenta_ )
+  : AdvectionDiffusionBGKdynamics<T,DESCRIPTOR>(omega_,momenta_), omega( omega_ )
 { }
 
-template<typename T, template<typename U> class Lattice>
-void ParticleAdvectionDiffusionBGKdynamics<T, Lattice>::collide( Cell<T, Lattice>& cell,
+template<typename T, typename DESCRIPTOR>
+void ParticleAdvectionDiffusionBGKdynamics<T, DESCRIPTOR>::collide( Cell<T, DESCRIPTOR>& cell,
     LatticeStatistics<T>& statistics )
 {
   T temperature = this->_momenta.computeRho( cell );
-  int offset = (statistics.getTime() % 2 == 0) ? Lattice<T>::ExternalField::velocityBeginsAt : Lattice<T>::ExternalField::velocity2BeginsAt;
-  const T* u = cell.getExternal(offset);
-  T uSqr = lbHelpers<T, Lattice>::
+  const T* u = (statistics.getTime() % 2 == 0) ? cell.template getFieldPointer<descriptors::VELOCITY>() : cell.template getFieldPointer<descriptors::VELOCITY2>();
+  T uSqr = lbHelpers<T, DESCRIPTOR>::
            bgkCollision( cell, temperature, u, omega );
   statistics.incrementStats( temperature, uSqr );
 }
@@ -250,23 +377,24 @@ void ParticleAdvectionDiffusionBGKdynamics<T, Lattice>::collide( Cell<T, Lattice
 //================= MRT Model for Advection diffusion ==============//
 //==================================================================//
 
-template<typename T, template<typename U> class Lattice>
-AdvectionDiffusionMRTdynamics<T, Lattice>::AdvectionDiffusionMRTdynamics(
-    T omega, Momenta<T, Lattice>& momenta) :
-    BasicDynamics<T, Lattice>(momenta), _omega(omega) {
-  T rt[Lattice<T>::q]; // relaxation times vector.
-  for (int iPop = 0; iPop < Lattice<T>::q; ++iPop) {
-    rt[iPop] = Lattice<T>::S[iPop];
+template<typename T, typename DESCRIPTOR>
+AdvectionDiffusionMRTdynamics<T, DESCRIPTOR>::AdvectionDiffusionMRTdynamics(
+  T omega, Momenta<T, DESCRIPTOR>& momenta) :
+  BasicDynamics<T, DESCRIPTOR>(momenta), _omega(omega)
+{
+  T rt[DESCRIPTOR::q]; // relaxation times vector.
+  for (int iPop = 0; iPop < DESCRIPTOR::q; ++iPop) {
+    rt[iPop] = descriptors::s<T,DESCRIPTOR>(iPop);
   }
-  for (int iPop = 0; iPop < Lattice<T>::shearIndexes; ++iPop) {
-    rt[Lattice<T>::shearViscIndexes[iPop]] = omega;
+  for (int iPop = 0; iPop < descriptors::shearIndexes<DESCRIPTOR>(); ++iPop) {
+    rt[descriptors::shearViscIndexes<DESCRIPTOR>(iPop)] = omega;
   }
-  for (int iPop = 0; iPop < Lattice<T>::q; ++iPop) {
-    for (int jPop = 0; jPop < Lattice<T>::q; ++jPop) {
+  for (int iPop = 0; iPop < DESCRIPTOR::q; ++iPop) {
+    for (int jPop = 0; jPop < DESCRIPTOR::q; ++jPop) {
       invM_S[iPop][jPop] = T();
-      for (int kPop = 0; kPop < Lattice<T>::q; ++kPop) {
+      for (int kPop = 0; kPop < DESCRIPTOR::q; ++kPop) {
         if (kPop == jPop) {
-          invM_S[iPop][jPop] += Lattice<T>::invM[iPop][kPop] * rt[kPop];
+          invM_S[iPop][jPop] += descriptors::invM<T,DESCRIPTOR>(iPop,kPop) * rt[kPop];
         }
       }
     }
@@ -274,37 +402,34 @@ AdvectionDiffusionMRTdynamics<T, Lattice>::AdvectionDiffusionMRTdynamics(
 
 }
 
-template<typename T, template<typename U> class Lattice>
-T AdvectionDiffusionMRTdynamics<T, Lattice>::computeEquilibrium(int iPop, T rho,
-    const T u[Lattice<T>::d], T uSqr) const {
-  return lbHelpers<T, Lattice>::equilibrium(iPop, rho, u, uSqr);
+template<typename T, typename DESCRIPTOR>
+T AdvectionDiffusionMRTdynamics<T, DESCRIPTOR>::computeEquilibrium(int iPop, T rho,
+    const T u[DESCRIPTOR::d], T uSqr) const
+{
+  return lbHelpers<T, DESCRIPTOR>::equilibrium(iPop, rho, u, uSqr);
 }
 
-template<typename T, template<typename U> class Lattice>
-void AdvectionDiffusionMRTdynamics<T, Lattice>::collide(Cell<T, Lattice>& cell,
-    LatticeStatistics<T>& statistics) {
+template<typename T, typename DESCRIPTOR>
+void AdvectionDiffusionMRTdynamics<T, DESCRIPTOR>::collide(Cell<T, DESCRIPTOR>& cell,
+    LatticeStatistics<T>& statistics)
+{
   T temperature = this->_momenta.computeRho(cell);
-  const T* u = cell.getExternal(Lattice<T>::ExternalField::velocityBeginsAt);
+  const T* u = cell.template getFieldPointer<descriptors::VELOCITY>();
 
-  T uSqr = lbHelpers<T, Lattice>::mrtCollision(cell, temperature, u, invM_S);
+  T uSqr = lbHelpers<T, DESCRIPTOR>::mrtCollision(cell, temperature, u, invM_S);
 
   statistics.incrementStats(temperature, uSqr);
 }
 
-template<typename T, template<typename U> class Lattice>
-void AdvectionDiffusionMRTdynamics<T, Lattice>::staticCollide(
-    Cell<T, Lattice>& cell, const T u[Lattice<T>::d],
-    LatticeStatistics<T>& statistics) {
-  assert(false);
-}
-
-template<typename T, template<typename U> class Lattice>
-T AdvectionDiffusionMRTdynamics<T, Lattice>::getOmega() const {
+template<typename T, typename DESCRIPTOR>
+T AdvectionDiffusionMRTdynamics<T, DESCRIPTOR>::getOmega() const
+{
   return _omega;
 }
 
-template<typename T, template<typename U> class Lattice>
-void AdvectionDiffusionMRTdynamics<T, Lattice>::setOmega(T omega) {
+template<typename T, typename DESCRIPTOR>
+void AdvectionDiffusionMRTdynamics<T, DESCRIPTOR>::setOmega(T omega)
+{
   _omega = omega;
 }
 

@@ -24,9 +24,12 @@
 #ifndef SUPER_LATTICE_LOCAL_F_2D_H
 #define SUPER_LATTICE_LOCAL_F_2D_H
 
-#include<vector>
+#include <vector>
+
 #include "superBaseF2D.h"
 #include "core/superLattice2D.h"
+#include "indicator/superIndicatorBaseF2D.h"
+#include "utilities/functorPtr.h"
 
 /** Note: Throughout the whole source code directory genericFunctions, the
  *  template parameters for i/o dimensions are:
@@ -44,7 +47,7 @@ template<typename T> class SuperGeometry2D;
 
 
 /// functor to get pointwise dissipation density on local lattices
-template <typename T, template <typename U> class DESCRIPTOR>
+template <typename T, typename DESCRIPTOR>
 class SuperLatticeDissipation2D final : public SuperLatticeF2D<T,DESCRIPTOR> {
 private:
   const UnitConverter<T,DESCRIPTOR>& _converter;
@@ -55,7 +58,7 @@ public:
 };
 
 /// functor to get pointwise dissipation density on local lattices
-template <typename T, template <typename U> class DESCRIPTOR>
+template <typename T, typename DESCRIPTOR>
 class SuperLatticePhysDissipation2D final : public SuperLatticePhysF2D<T,DESCRIPTOR> {
 public:
   SuperLatticePhysDissipation2D(SuperLattice2D<T,DESCRIPTOR>& sLattice,
@@ -64,7 +67,7 @@ public:
 };
 
 /// functor to get pointwise density rho on local lattices
-template <typename T, template <typename U> class DESCRIPTOR>
+template <typename T, typename DESCRIPTOR>
 class SuperLatticeDensity2D final : public SuperLatticeF2D<T,DESCRIPTOR> {
 public:
   SuperLatticeDensity2D(SuperLattice2D<T,DESCRIPTOR>& sLattice);
@@ -73,7 +76,7 @@ public:
 
 
 /// functor to get pointwise velocity on local lattice
-template <typename T, template <typename U> class DESCRIPTOR>
+template <typename T, typename DESCRIPTOR>
 class SuperLatticeVelocity2D final : public SuperLatticeF2D<T,DESCRIPTOR> {
 public:
   SuperLatticeVelocity2D(SuperLattice2D<T,DESCRIPTOR>& sLattice);
@@ -82,7 +85,7 @@ public:
 
 /// functor to get pointwise phys strain rate on local lattice
 /// s_ij = 1/2*(du_idr_j + du_jdr_i)
-template <typename T, template <typename U> class DESCRIPTOR>
+template <typename T, typename DESCRIPTOR>
 class SuperLatticePhysStrainRate2D final : public SuperLatticePhysF2D<T,DESCRIPTOR> {
 public:
   SuperLatticePhysStrainRate2D(SuperLattice2D<T,DESCRIPTOR>& sLattice,
@@ -90,8 +93,8 @@ public:
   bool operator() (T output[], const int input[]) override;
 };
 
-/// functor to get pointwise wall shear stress on local lattice
-template <typename T, template <typename U> class DESCRIPTOR>
+/// functor to get pointwise phys wall shear stress with a given material on local lattice
+template <typename T, typename DESCRIPTOR>
 class SuperLatticePhysWallShearStress2D final : public SuperLatticePhysF2D<T,DESCRIPTOR> {
 private:
   SuperGeometry2D<T>& _superGeometry;
@@ -99,13 +102,14 @@ private:
 public:
   SuperLatticePhysWallShearStress2D(SuperLattice2D<T,DESCRIPTOR>& sLattice,
                                     SuperGeometry2D<T>& superGeometry, const int material,
-                                    const UnitConverter<T,DESCRIPTOR>& converter);
+                                    const UnitConverter<T,DESCRIPTOR>& converter,
+                                    IndicatorF2D<T>& indicator);
   bool operator() (T output[], const int input[]) override;
 };
 
 
 /// functor to get pointwise the material no. presenting the geometry on local lattice
-template <typename T, template <typename U> class DESCRIPTOR>
+template <typename T, typename DESCRIPTOR>
 class SuperLatticeGeometry2D final : public SuperLatticeF2D<T,DESCRIPTOR> {
 private:
   SuperGeometry2D<T>& _superGeometry;
@@ -118,7 +122,7 @@ public:
 
 
 /// functor to get pointwise the rank no. + 1 on local lattice
-template <typename T, template <typename U> class DESCRIPTOR>
+template <typename T, typename DESCRIPTOR>
 class SuperLatticeRank2D final : public SuperLatticeF2D<T,DESCRIPTOR> {
 public:
   SuperLatticeRank2D(SuperLattice2D<T,DESCRIPTOR>& sLattice);
@@ -127,7 +131,7 @@ public:
 
 
 /// functor to get pointwise the cuboid no. + 1 on local lattice
-template <typename T, template <typename U> class DESCRIPTOR>
+template <typename T, typename DESCRIPTOR>
 class SuperLatticeCuboid2D final : public SuperLatticeF2D<T,DESCRIPTOR> {
 public:
   SuperLatticeCuboid2D(SuperLattice2D<T,DESCRIPTOR>& sLattice);
@@ -136,7 +140,7 @@ public:
 
 
 /// functor to get pointwise phys pressure from rho on local lattices
-template <typename T, template <typename U> class DESCRIPTOR>
+template <typename T, typename DESCRIPTOR>
 class SuperLatticePhysPressure2D final : public SuperLatticePhysF2D<T,DESCRIPTOR> {
 public:
   SuperLatticePhysPressure2D(SuperLattice2D<T,DESCRIPTOR>& sLattice,
@@ -146,7 +150,7 @@ public:
 
 
 /// functor to get pointwise phys velocity on local lattice
-template <typename T, template <typename U> class DESCRIPTOR>
+template <typename T, typename DESCRIPTOR>
 class SuperLatticePhysVelocity2D final : public SuperLatticePhysF2D<T,DESCRIPTOR> {
 public:
   SuperLatticePhysVelocity2D(SuperLattice2D<T,DESCRIPTOR>& sLattice,
@@ -154,7 +158,7 @@ public:
   bool operator() (T output[], const int input[]) override;
 };
 
-template <typename T, template <typename U> class DESCRIPTOR>
+template <typename T, typename DESCRIPTOR>
 class SuperLatticePhysExternalPorosity2D final : public SuperLatticePhysF2D<T,DESCRIPTOR> {
 public:
   SuperLatticePhysExternalPorosity2D(SuperLattice2D<T,DESCRIPTOR>& sLattice,
@@ -162,7 +166,14 @@ public:
   bool operator() (T output[], const int input[]);
 };
 
-template <typename T, template <typename U> class DESCRIPTOR>
+template <typename T, typename DESCRIPTOR, typename FIELD>
+class SuperLatticeField2D final : public SuperLatticeF2D<T,DESCRIPTOR> {
+public:
+  SuperLatticeField2D(SuperLattice2D<T,DESCRIPTOR>& sLattice);
+  bool operator() (T output[], const int input[]);
+};
+
+template <typename T, typename DESCRIPTOR>
 class SuperLatticePhysExternalVelocity2D final : public SuperLatticePhysF2D<T,DESCRIPTOR> {
 public:
   SuperLatticePhysExternalVelocity2D(SuperLattice2D<T,DESCRIPTOR>& sLattice,
@@ -170,7 +181,7 @@ public:
   bool operator() (T output[], const int input[]);
 };
 
-template <typename T, template <typename U> class DESCRIPTOR>
+template <typename T, typename DESCRIPTOR>
 class SuperLatticePhysExternalParticleVelocity2D final : public SuperLatticePhysF2D<T,DESCRIPTOR> {
 public:
   SuperLatticePhysExternalParticleVelocity2D(SuperLattice2D<T,DESCRIPTOR>& sLattice,
@@ -179,50 +190,33 @@ public:
 };
 
 /// functor to get pointwise phys force acting on a boundary with a given material on local lattice
-template <typename T, template <typename U> class DESCRIPTOR>
-class SuperLatticePhysBoundaryForce2D final : public SuperLatticePhysF2D<T,DESCRIPTOR> {
+template <typename T, typename DESCRIPTOR>
+class SuperLatticePhysBoundaryForce2D : public SuperLatticePhysF2D<T,DESCRIPTOR> {
 private:
-  SuperGeometry2D<T>& _superGeometry;
-  const int _material;
+  FunctorPtr<SuperIndicatorF2D<T>> _indicatorF;
 public:
+  SuperLatticePhysBoundaryForce2D(SuperLattice2D<T,DESCRIPTOR>&      sLattice,
+                                  FunctorPtr<SuperIndicatorF2D<T>>&& indicatorF,
+                                  const UnitConverter<T,DESCRIPTOR>& converter);
   SuperLatticePhysBoundaryForce2D(SuperLattice2D<T,DESCRIPTOR>& sLattice,
                                   SuperGeometry2D<T>& superGeometry, const int material,
                                   const UnitConverter<T,DESCRIPTOR>& converter);
   bool operator() (T output[], const int input[]) override;
 };
 
-
-/// functor to get pointwise phys force acting on a boundary with a given indicator on local lattice
-template <typename T, template <typename U> class DESCRIPTOR>
-class SuperLatticePhysBoundaryForceIndicator2D final : public SuperLatticePhysF2D<T,DESCRIPTOR> {
-private:
-  SuperGeometry2D<T>& _superGeometry;
-  ParticleIndicatorF2D<T,T>& _indicator;
+/// functor to get pointwise phys force for the PSM dynamics
+template <typename T, typename DESCRIPTOR>
+class SuperLatticePSMPhysForce2D : public SuperLatticePhysF2D<T,DESCRIPTOR> {
 public:
-  SuperLatticePhysBoundaryForceIndicator2D(SuperLattice2D<T,DESCRIPTOR>& sLattice,
-      SuperGeometry2D<T>& superGeometry,
-      ParticleIndicatorF2D<T,T>& indicator,
-      const UnitConverter<T,DESCRIPTOR>& converter);
+  SuperLatticePSMPhysForce2D(SuperLattice2D<T,DESCRIPTOR>&      sLattice,
+                             const UnitConverter<T,DESCRIPTOR>& converter,
+                             int mode_);
   bool operator() (T output[], const int input[]) override;
-};
-
-/// functor to get pointwise phys force acting on a boundary with a given indicator on local lattice
-template <typename T, template <typename U> class DESCRIPTOR>
-class SuperLatticePhysVolumeForceIndicator2D final : public SuperLatticePhysF2D<T,DESCRIPTOR> {
-private:
-  SuperGeometry2D<T>& _superGeometry;
-  SmoothIndicatorF2D<T,T>& _indicator;
-public:
-  SuperLatticePhysVolumeForceIndicator2D(SuperLattice2D<T,DESCRIPTOR>& sLattice,
-                                         SuperGeometry2D<T>& superGeometry,
-                                         SmoothIndicatorF2D<T,T>& indicator,
-                                         const UnitConverter<T,DESCRIPTOR>& converter);
-  bool operator() (T output[], const int input[]);
 };
 
 /// functor to get pointwise phys force acting on a boundary with a given material on local lattice
 /// see: Caiazzo, Junk: Boundary Forces in lattice Boltzmann: Analysis of MEA
-template <typename T, template <typename U> class DESCRIPTOR>
+template <typename T, typename DESCRIPTOR>
 class SuperLatticePhysCorrBoundaryForce2D final : public SuperLatticePhysF2D<T,DESCRIPTOR> {
 private:
   SuperGeometry2D<T>& _superGeometry;
@@ -236,7 +230,7 @@ public:
 
 /// functor to get pointwise, lattice-dependent porosity values in [0,1]
 /// in combination with (Extended)PorousBGKdynamics: 0->solid, 1->fluid
-template <typename T, template <typename U> class DESCRIPTOR>
+template <typename T, typename DESCRIPTOR>
 class SuperLatticePorosity2D final : public SuperLatticePhysF2D<T,DESCRIPTOR> {
 private:
   SuperGeometry2D<T>& _superGeometry;
@@ -248,10 +242,27 @@ public:
   bool operator() (T output[], const int input[]) override;
 };
 
+/// functor to get pointwise an approx. for the volume fraction
+template <typename T, typename DESCRIPTOR>
+class SuperLatticeVolumeFractionApproximation2D final : public SuperLatticeF2D<T,DESCRIPTOR> {
+public:
+  SuperLatticeVolumeFractionApproximation2D(SuperLattice2D<T,DESCRIPTOR>& sLattice, SuperGeometry2D<T>& superGeometry,
+      IndicatorF2D<T>& indicator, int refinementLevel, const UnitConverter<T,DESCRIPTOR>& converter, bool insideOut = false);
+  bool operator() (T output[], const int input[]);
+};
+
+/// functor to get pointwise an approx. for the volume fraction
+template <typename T, typename DESCRIPTOR>
+class SuperLatticeVolumeFractionPolygonApproximation2D final : public SuperLatticeF2D<T,DESCRIPTOR> {
+public:
+  SuperLatticeVolumeFractionPolygonApproximation2D(SuperLattice2D<T,DESCRIPTOR>& sLattice, SuperGeometry2D<T>& superGeometry,
+      IndicatorF2D<T>& indicator, const UnitConverter<T,DESCRIPTOR>& converter, bool insideOut = false);
+  bool operator() (T output[], const int input[]);
+};
 
 /// functor to get pointwise mesh-independent permeability values in (0,inf)  in combination with (Extended)PorousBGKdynamics
 /// note: result is cropped to 999999
-template <typename T, template <typename U> class DESCRIPTOR>
+template <typename T, typename DESCRIPTOR>
 class SuperLatticePhysPermeability2D final : public SuperLatticePhysF2D<T,DESCRIPTOR> {
 private:
   SuperGeometry2D<T>& _superGeometry;
@@ -265,7 +276,7 @@ public:
 
 
 /// computes pointwise -nu/K*u on the lattice, can be used with SuperSum2D as objective
-template <typename T, template <typename U> class DESCRIPTOR>
+template <typename T, typename DESCRIPTOR>
 class SuperLatticePhysDarcyForce2D final : public SuperLatticePhysF2D<T,DESCRIPTOR> {
 private:
   SuperGeometry2D<T>& _superGeometry;
@@ -278,24 +289,8 @@ public:
 };
 
 
-/// functor to get a pointwise local average of a passed functor with a given material and radius on local lattice
-/// the output data must be of the same size and dimension like f
-template <typename T, template <typename U> class DESCRIPTOR>
-class SuperLatticeAverage2D final : public SuperLatticeF2D<T,DESCRIPTOR> {
-private:
-  SuperLatticeF2D<T,DESCRIPTOR>& _f;
-  SuperGeometry2D<T>& _superGeometry;
-  const int _material;
-  T _radius;
-public:
-  SuperLatticeAverage2D(SuperLatticeF2D<T,DESCRIPTOR>& f,
-                        SuperGeometry2D<T>& superGeometry, const int material, T _radius);
-  bool operator() (T output[], const int input[]) override;
-};
-
-
 /// functor that returns pointwise the l2-norm, e.g. of a velocity
-template <typename T, template <typename U> class DESCRIPTOR>
+template <typename T, typename DESCRIPTOR>
 class SuperEuklidNorm2D final : public SuperLatticeF2D<T,DESCRIPTOR> {
 private:
   SuperLatticeF2D<T,DESCRIPTOR>& _f;
@@ -306,29 +301,75 @@ public:
 
 
 /// functor to get pointwise phys temperature from rho on local lattices
-template <typename T, template <typename U> class DESCRIPTOR, template <typename V> class ThermalDESCRIPTOR>
-class SuperLatticePhysTemperature2D final : public SuperLatticeThermalPhysF2D<T,DESCRIPTOR,ThermalDESCRIPTOR> {
+template <typename T, typename DESCRIPTOR, typename TDESCRIPTOR>
+class SuperLatticePhysTemperature2D final : public SuperLatticeThermalPhysF2D<T,DESCRIPTOR,TDESCRIPTOR> {
 public:
-  SuperLatticePhysTemperature2D(SuperLattice2D<T,ThermalDESCRIPTOR>& sLattice,
-                                ThermalUnitConverter<T,DESCRIPTOR,ThermalDESCRIPTOR> const& converter);
+  SuperLatticePhysTemperature2D(SuperLattice2D<T,TDESCRIPTOR>& sLattice,
+                                ThermalUnitConverter<T,DESCRIPTOR,TDESCRIPTOR> const& converter);
   bool operator() (T output[], const int input[]);
 };
 
 
-/// functor that returns forces acting on a particle surface, returns for every particle 0,1: translational force, 3: torque, 4: number of voxels
-template <typename T, template <typename U> class DESCRIPTOR>
-class SuperLatticeMomentumExchangeForce2D final : public SuperLatticePhysF2D<T,DESCRIPTOR> {
-private:
-  SuperGeometry2D<T>& _superGeometry;
-  std::vector<ParticleIndicatorF2D<T,T>* >& _vectorOfIndicator;
+/** Functor that returns forces acting on a particle surface, returns data in output for every particle in a row (described are return values for the first particle).
+ * \return output[0]-output[1] translational force - physical units
+ * \return output[3] torque - physical units
+ * \return output[4] number of voxels
+ */
+template <typename T, typename DESCRIPTOR>
+class SuperLatticePorousMomentumLossForce2D final : public SuperLatticePhysF2D<T,DESCRIPTOR> {
 public:
-  SuperLatticeMomentumExchangeForce2D(SuperLattice2D<T,DESCRIPTOR>& sLattice,
+  SuperLatticePorousMomentumLossForce2D(SuperLattice2D<T,DESCRIPTOR>& sLattice,
                                       SuperGeometry2D<T>& superGeometry,
-                                      std::vector<ParticleIndicatorF2D<T,T>* >& indicator,
+                                      std::vector<SmoothIndicatorF2D<T,T,true>* >& indicator,
                                       const UnitConverter<T,DESCRIPTOR>& converter);
   bool operator() (T output[], const int input[]) override;
 };
 
-} // end namespace olb
 
+/// functor to get pointwise heat flux on local lattice
+template <typename T, typename DESCRIPTOR, typename TDESCRIPTOR>
+class SuperLatticePhysHeatFlux2D final : public SuperLatticeThermalPhysF2D<T,DESCRIPTOR,TDESCRIPTOR> {
+public:
+  SuperLatticePhysHeatFlux2D(SuperLattice2D<T,TDESCRIPTOR>& sLattice,
+                             const ThermalUnitConverter<T,DESCRIPTOR,TDESCRIPTOR>& converter);
+  bool operator() (T output[], const int input[]) override;
+};
+
+/// functor that returns 1 if SmoothIndicatorF A intersects IndicatorF B; otherwise, 0
+template <typename T, typename DESCRIPTOR, bool HLBM>
+class SuperLatticeIndicatorSmoothIndicatorIntersection2D final : public SuperLatticeF2D<T,DESCRIPTOR> {
+public:
+  SuperLatticeIndicatorSmoothIndicatorIntersection2D(SuperLattice2D<T,DESCRIPTOR>& sLattice,
+                             SuperGeometry2D<T>& superGeometry,
+                             IndicatorF2D<T>& normalInd, SmoothIndicatorF2D<T,T,HLBM>& smoothInd );
+  bool operator() (T output[], const int input[]) override;
+};
+
+/// functor to get pointwise porosity on local lattice for Guo & Zhao (2002)'s model
+template <typename T, typename DESCRIPTOR>
+class SuperLatticeGuoZhaoEpsilon2D final : public SuperLatticeF2D<T,DESCRIPTOR> {
+public:
+  SuperLatticeGuoZhaoEpsilon2D(SuperLattice2D<T,DESCRIPTOR>& sLattice);
+  bool operator() (T output[], const int input[]) override;
+};
+
+/// functor to get pointwise porous conductivity on local lattice for Guo & Zhao (2002)'s model
+template <typename T, typename DESCRIPTOR>
+class SuperLatticeGuoZhaoPhysK2D final : public SuperLatticePhysF2D<T,DESCRIPTOR> {
+public:
+  SuperLatticeGuoZhaoPhysK2D(SuperLattice2D<T,DESCRIPTOR>& sLattice,
+                             const UnitConverter<T,DESCRIPTOR>& converter);
+  bool operator() (T output[], const int input[]) override;
+};
+
+/// functor to get pointwise body force on local lattice for Guo & Zhao (2002)'s model
+template <typename T, typename DESCRIPTOR>
+class SuperLatticeGuoZhaoPhysBodyForce2D final : public SuperLatticePhysF2D<T,DESCRIPTOR> {
+public:
+  SuperLatticeGuoZhaoPhysBodyForce2D(SuperLattice2D<T,DESCRIPTOR>& sLattice,
+                                     const UnitConverter<T,DESCRIPTOR>& converter);
+  bool operator() (T output[], const int input[]) override;
+};
+
+} // end namespace olb
 #endif

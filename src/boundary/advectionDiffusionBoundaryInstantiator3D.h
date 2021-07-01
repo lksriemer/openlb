@@ -21,7 +21,10 @@
  *  Boston, MA  02110-1301, USA.
 */
 
-/** \file A helper for initialising 3D boundaries -- header file.  */
+/** \file
+ * A helper for initialising 3D boundaries -- header file.
+ */
+
 #ifndef ADVECTION_DIFFUSION_BOUNDARY_INSTANTIATOR_3D_H
 #define ADVECTION_DIFFUSION_BOUNDARY_INSTANTIATOR_3D_H
 
@@ -34,24 +37,25 @@ namespace olb {
 *  Additionally it detects orientation of plate, direction of corner, ...
 *  Empose boundary model through template class BoundaryManager.
 */
-template<typename T, template<typename U> class Lattice, class BoundaryManager>
-class AdvectionDiffusionBoundaryConditionInstantiator3D : public OnLatticeAdvectionDiffusionBoundaryCondition3D<T,Lattice> {
+template<typename T, typename DESCRIPTOR, class BoundaryManager>
+class AdvectionDiffusionBoundaryConditionInstantiator3D : public OnLatticeAdvectionDiffusionBoundaryCondition3D<T,DESCRIPTOR> {
 public:
-  AdvectionDiffusionBoundaryConditionInstantiator3D( BlockLatticeStructure3D<T,Lattice>& block );
+  AdvectionDiffusionBoundaryConditionInstantiator3D( BlockLatticeStructure3D<T,DESCRIPTOR>& block );
   ~AdvectionDiffusionBoundaryConditionInstantiator3D() override;
 
-  //  determines whether it is a corner, edge or plane boundary
-  void addTemperatureBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int material, int x0, int x1, int y0, int y1, int z0, int z1, T omega) override;
-  void addTemperatureBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int material, T omega) override;
+  void addTemperatureBoundary(BlockIndicatorF3D<T>& indicator,
+                              int x0, int x1, int y0, int y1, int z0, int z1,
+                              T omega) override;
 
-  void addConvectionBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int material, int x0, int x1, int y0, int y1, int z0, int z1) override;
-  void addConvectionBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int material) override;
+  void addConvectionBoundary(BlockIndicatorF3D<T>& indicator,
+                             int x0, int x1, int y0, int y1, int z0, int z1) override;
 
-  void addZeroDistributionBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int material, int x0, int x1, int y0, int y1, int z0, int z1) override;
-  void addZeroDistributionBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int material) override;
+  void addExtFieldBoundary(BlockIndicatorF3D<T>& indicator,
+                           int offset,
+                           int x0, int x1, int y0, int y1, int z0, int z1) override;
 
-  void addExtFieldBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int material, int offset, int x0, int x1, int y0, int y1, int z0, int z1) override;
-  void addExtFieldBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int material, int offset) override;
+  void addZeroDistributionBoundary(BlockIndicatorF3D<T>& indicator,
+                                   int x0, int x1, int y0, int y1, int z0, int z1) override;
 
 private:
   template<int direction, int orientation>
@@ -62,9 +66,9 @@ private:
   void addTemperatureBoundaryCorner(int x, int y, int z, T omega);
 
 private:
-  BlockLatticeStructure3D<T,Lattice>& _block;
-  std::vector<Momenta<T,Lattice>*>  momentaVector;
-  std::vector<Dynamics<T,Lattice>*> dynamicsVector;
+  BlockLatticeStructure3D<T,DESCRIPTOR>& _block;
+  std::vector<Momenta<T,DESCRIPTOR>*>  momentaVector;
+  std::vector<Dynamics<T,DESCRIPTOR>*> dynamicsVector;
 };
 
 

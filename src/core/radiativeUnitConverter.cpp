@@ -26,7 +26,7 @@
  */
 
 
-#include "core/unitConverter.h"
+#include "core/radiativeUnitConverter.h"
 
 // definition required only by cygwin
 #ifndef M_PI

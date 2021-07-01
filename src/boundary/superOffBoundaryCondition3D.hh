@@ -36,23 +36,24 @@
 #include "core/superLattice3D.h"
 #include "core/util.h"
 #include "functors/analytical/analyticalF.h"
+#include "functors/lattice/indicator/superIndicatorF3D.h"
 
 namespace olb {
 
 ///////// class superOffBoundaryCondition3D ///////////////////////////////
 
-template<typename T, template<typename U> class Lattice>
-sOffLatticeBoundaryCondition3D<T,Lattice>::
-sOffLatticeBoundaryCondition3D (SuperLattice3D<T,Lattice>& sLattice, T epsFraction )
+template<typename T, typename DESCRIPTOR>
+sOffLatticeBoundaryCondition3D<T,DESCRIPTOR>::sOffLatticeBoundaryCondition3D(
+  SuperLattice3D<T,DESCRIPTOR>& sLattice, T epsFraction )
   : clout(std::cout,"sOffLatticeBoundaryCondition3D"),
     _sLattice(sLattice),
     _epsFraction(epsFraction),
     _output(false)
 {}
 
-template<typename T, template<typename U> class Lattice>
-sOffLatticeBoundaryCondition3D<T,Lattice>::
-sOffLatticeBoundaryCondition3D(sOffLatticeBoundaryCondition3D<T,Lattice> const& rhs)
+template<typename T, typename DESCRIPTOR>
+sOffLatticeBoundaryCondition3D<T,DESCRIPTOR>::sOffLatticeBoundaryCondition3D(
+  sOffLatticeBoundaryCondition3D<T,DESCRIPTOR> const& rhs)
   : clout(std::cout,"sOffLatticeBoundaryCondition3D"),
     _sLattice(rhs._sLattice),
     _epsFraction(rhs._epsFraction),
@@ -62,129 +63,177 @@ sOffLatticeBoundaryCondition3D(sOffLatticeBoundaryCondition3D<T,Lattice> const& 
   _overlap = rhs._overlap;
 }
 
-template<typename T, template<typename U> class Lattice>
-sOffLatticeBoundaryCondition3D<T,Lattice> sOffLatticeBoundaryCondition3D<T,Lattice>::operator=(
-  sOffLatticeBoundaryCondition3D<T,Lattice> rhs)
+template<typename T, typename DESCRIPTOR>
+sOffLatticeBoundaryCondition3D<T,DESCRIPTOR> sOffLatticeBoundaryCondition3D<T,DESCRIPTOR>::operator=(
+  sOffLatticeBoundaryCondition3D<T,DESCRIPTOR> rhs)
 {
-
-  sOffLatticeBoundaryCondition3D<T,Lattice> tmp(rhs);
+  sOffLatticeBoundaryCondition3D<T,DESCRIPTOR> tmp(rhs);
   return tmp;
 }
 
-template<typename T, template<typename U> class Lattice>
-sOffLatticeBoundaryCondition3D<T,Lattice>::
-~sOffLatticeBoundaryCondition3D()
+template<typename T, typename DESCRIPTOR>
+sOffLatticeBoundaryCondition3D<T,DESCRIPTOR>::~sOffLatticeBoundaryCondition3D()
 {
-
   for (unsigned iC=0; iC<_blockBCs.size(); iC++) {
     delete _blockBCs[iC];
   }
 }
 
-template<typename T, template<typename U> class Lattice>
-void sOffLatticeBoundaryCondition3D<T,Lattice>::addZeroVelocityBoundary(SuperGeometry3D<T>& superGeometry, int material,
-    IndicatorF3D<T>& indicator, std::list<int> bulkMaterials)
+template<typename T, typename DESCRIPTOR>
+void sOffLatticeBoundaryCondition3D<T,DESCRIPTOR>::addVelocityBoundary(
+  FunctorPtr<SuperIndicatorF3D<T>>&& boundaryIndicator,
+  FunctorPtr<SuperIndicatorF3D<T>>&& bulkIndicator,
+  IndicatorF3D<T>&                   geometryIndicator)
 {
   if (_output) {
     clout << "epsFraction=" << _epsFraction << std::endl;
     clout.setMultiOutput(true);
   }
-  int nCloc = _sLattice.getLoadBalancer().size();
-  for (int iCloc = 0; iCloc < nCloc; iCloc++) {
+  for (int iCloc = 0; iCloc < _sLattice.getLoadBalancer().size(); ++iCloc) {
     if (_output) {
       clout << "Cuboid globiC " << _sLattice.getLoadBalancer().glob(iCloc)
-        << " starts to read distances for ZeroVelocity Boundary..." << std::endl;
+            << " starts to read distances for Velocity Boundary..." << std::endl;
     }
-    _blockBCs[iCloc]->addZeroVelocityBoundary(superGeometry.getExtendedBlockGeometry(iCloc), material, indicator, bulkMaterials);
+    _blockBCs[iCloc]->addVelocityBoundary(
+      boundaryIndicator->getExtendedBlockIndicatorF(iCloc),
+      bulkIndicator->getExtendedBlockIndicatorF(iCloc),
+      geometryIndicator);
     if (_output) {
       clout << "Cuboid globiC " << _sLattice.getLoadBalancer().glob(iCloc)
-        << " finished reading distances for ZeroVelocity Boundary." << std::endl;
+            << " finished reading distances for Velocity Boundary." << std::endl;
     }
   }
-  if (_output)
+  if (_output) {
     clout.setMultiOutput(false);
-  addPoints2CommBC(superGeometry, material);
+  }
+  addPoints2CommBC(std::forward<decltype(boundaryIndicator)>(boundaryIndicator));
 }
 
-template<typename T, template<typename U> class Lattice>
-void sOffLatticeBoundaryCondition3D<T,Lattice>::
-addVelocityBoundary(SuperGeometry3D<T>& superGeometry, int material, IndicatorF3D<T>& indicator, std::list<int> bulkMaterials)
+template<typename T, typename DESCRIPTOR>
+void sOffLatticeBoundaryCondition3D<T,DESCRIPTOR>::addVelocityBoundary(
+  SuperGeometry3D<T>& superGeometry, int material,
+  IndicatorF3D<T>& geometryIndicator, std::vector<int> bulkMaterials)
+{
+  addVelocityBoundary(superGeometry.getMaterialIndicator(material),
+                      superGeometry.getMaterialIndicator(std::move(bulkMaterials)),
+                      geometryIndicator);
+}
+
+template<typename T, typename DESCRIPTOR>
+void sOffLatticeBoundaryCondition3D<T,DESCRIPTOR>::addZeroVelocityBoundary(
+  FunctorPtr<SuperIndicatorF3D<T>>&& boundaryIndicator,
+  FunctorPtr<SuperIndicatorF3D<T>>&& bulkIndicator,
+  IndicatorF3D<T>&                   geometryIndicator)
 {
   if (_output) {
     clout << "epsFraction=" << _epsFraction << std::endl;
     clout.setMultiOutput(true);
   }
-  int nC = _sLattice.getLoadBalancer().size();
-  for (int iCloc = 0; iCloc < nC; iCloc++) {
+  for (int iCloc = 0; iCloc < _sLattice.getLoadBalancer().size(); ++iCloc) {
     if (_output) {
       clout << "Cuboid globiC " << _sLattice.getLoadBalancer().glob(iCloc)
-        << " starts to read distances for Velocity Boundary..." << std::endl;
+            << " starts to read distances for ZeroVelocity Boundary..." << std::endl;
     }
-    _blockBCs[iCloc]->addVelocityBoundary(superGeometry.getExtendedBlockGeometry(iCloc), material, indicator, bulkMaterials);
+    _blockBCs[iCloc]->addZeroVelocityBoundary(
+      boundaryIndicator->getExtendedBlockIndicatorF(iCloc),
+      bulkIndicator->getExtendedBlockIndicatorF(iCloc),
+      geometryIndicator);
     if (_output) {
       clout << "Cuboid globiC " << _sLattice.getLoadBalancer().glob(iCloc)
-        << " finished reading distances for Velocity Boundary." << std::endl;
+            << " finished reading distances for ZeroVelocity Boundary." << std::endl;
     }
   }
-  if (_output)
+  if (_output) {
     clout.setMultiOutput(false);
-  addPoints2CommBC(superGeometry, material);
+  }
+  addPoints2CommBC(std::forward<decltype(boundaryIndicator)>(boundaryIndicator));
 }
 
-
-template<typename T, template<typename U> class Lattice>
-void sOffLatticeBoundaryCondition3D<T,Lattice>::
-defineU(SuperGeometry3D<T>& superGeometry, int material, AnalyticalF3D<T,T>& u, std::list<int> bulkMaterials )
+template<typename T, typename DESCRIPTOR>
+void sOffLatticeBoundaryCondition3D<T,DESCRIPTOR>::addZeroVelocityBoundary(
+  FunctorPtr<SuperIndicatorF3D<T>>&& boundaryIndicator,
+  IndicatorF3D<T>& geometryIndicator, std::vector<int> bulkMaterials)
 {
+  SuperGeometry3D<T>& superGeometry = boundaryIndicator->getSuperGeometry();
+  addZeroVelocityBoundary(
+    std::forward<decltype(boundaryIndicator)>(boundaryIndicator),
+    superGeometry.getMaterialIndicator(std::move(bulkMaterials)),
+    geometryIndicator);
+}
 
-  int nC = _sLattice.getLoadBalancer().size();
-  for (int iCloc = 0; iCloc < nC; iCloc++) {
-    _blockBCs[iCloc]->defineU(superGeometry.getExtendedBlockGeometry(iCloc), material, u, bulkMaterials );
+template<typename T, typename DESCRIPTOR>
+void sOffLatticeBoundaryCondition3D<T,DESCRIPTOR>::addZeroVelocityBoundary(
+  SuperGeometry3D<T>& superGeometry, int material,
+  IndicatorF3D<T>& geometryIndicator, std::vector<int> bulkMaterials)
+{
+  addZeroVelocityBoundary(superGeometry.getMaterialIndicator(material),
+                          geometryIndicator,
+                          bulkMaterials);
+}
+
+template<typename T, typename DESCRIPTOR>
+void sOffLatticeBoundaryCondition3D<T,DESCRIPTOR>::defineU(
+  FunctorPtr<SuperIndicatorF3D<T>>&& boundaryIndicator,
+  FunctorPtr<SuperIndicatorF3D<T>>&& bulkIndicator,
+  AnalyticalF3D<T,T>& u)
+{
+  for (int iCloc = 0; iCloc < _sLattice.getLoadBalancer().size(); ++iCloc) {
+    _blockBCs[iCloc]->defineU(boundaryIndicator->getExtendedBlockIndicatorF(iCloc),
+                              bulkIndicator->getExtendedBlockIndicatorF(iCloc),
+                              u);
   }
 }
 
-
-template<typename T, template<typename U> class Lattice>
-void sOffLatticeBoundaryCondition3D<T,Lattice>::
-addPoints2CommBC(SuperGeometry3D<T>& superGeometry, int material)
+template<typename T, typename DESCRIPTOR>
+void sOffLatticeBoundaryCondition3D<T,DESCRIPTOR>::defineU(
+  FunctorPtr<SuperIndicatorF3D<T>>&& boundaryIndicator,
+  AnalyticalF3D<T,T>& u, std::vector<int> bulkMaterials)
 {
+  defineU(std::forward<decltype(boundaryIndicator)>(boundaryIndicator),
+          boundaryIndicator->getSuperGeometry().getMaterialIndicator(std::move(bulkMaterials)),
+          u);
+}
 
-  if (_overlap != 0) {
-    int nC = _sLattice.getLoadBalancer().size();
-    for (int iCloc = 0; iCloc < nC; iCloc++) {
-      int nX = superGeometry.getBlockGeometry(iCloc).getNx();
-      int nY = superGeometry.getBlockGeometry(iCloc).getNy();
-      int nZ = superGeometry.getBlockGeometry(iCloc).getNz();
+template<typename T, typename DESCRIPTOR>
+void sOffLatticeBoundaryCondition3D<T,DESCRIPTOR>::defineU(
+  SuperGeometry3D<T>& superGeometry, int material,
+  AnalyticalF3D<T,T>& u, std::vector<int> bulkMaterials)
+{
+  defineU(superGeometry.getMaterialIndicator(material), u, bulkMaterials);
+}
 
-      for (int iX=-_overlap; iX<nX+_overlap; iX++) {
-        for (int iY=-_overlap; iY<nY+_overlap; iY++) {
-          for (int iZ=-_overlap; iZ<nZ+_overlap; iZ++) {
-            if (iX < 0 || iX > nX - 1 ||
-                iY < 0 || iY > nY - 1 ||
-                iZ < 0 || iZ > nZ - 1 ) {
-              int found = false;
-              if (superGeometry.getBlockGeometry(iCloc).getMaterial(iX,iY,iZ)!=0) {
-                for (int iXo=-_overlap; iXo<=_overlap; iXo++) {
-                  for (int iYo=-_overlap; iYo<=_overlap; iYo++) {
-                    for (int iZo=-_overlap; iZo<=_overlap; iZo++) {
-                      int nextX = iXo + iX;
-                      int nextY = iYo + iY;
-                      int nextZ = iZo + iZ;
-                      if (superGeometry.getBlockGeometry(iCloc).getMaterial(nextX,nextY,nextZ)==material) {
-                        _sLattice.get_commBC().add_cell(iCloc, iX, iY, iZ);
-                        //std::cout << "found:" <<iX<<"/"<<iY<<"/"<<iZ<<std::endl;
-                        found = true;
-                      }
-                      if (found) {
-                        break;
-                      }
+template<typename T, typename DESCRIPTOR>
+void sOffLatticeBoundaryCondition3D<T,DESCRIPTOR>::addPoints2CommBC(
+  FunctorPtr<SuperIndicatorF3D<T>>&& indicator)
+{
+  if (_overlap == 0) {
+    return;
+  }
+
+  SuperGeometry3D<T>& superGeometry = indicator->getSuperGeometry();
+  for (int iCloc = 0; iCloc < _sLattice.getLoadBalancer().size(); ++iCloc) {
+    const int nX = superGeometry.getBlockGeometry(iCloc).getNx();
+    const int nY = superGeometry.getBlockGeometry(iCloc).getNy();
+    const int nZ = superGeometry.getBlockGeometry(iCloc).getNz();
+
+    for (int iX=-_overlap; iX<nX+_overlap; ++iX) {
+      for (int iY=-_overlap; iY<nY+_overlap; ++iY) {
+        for (int iZ=-_overlap; iZ<nZ+_overlap; ++iZ) {
+          if (iX < 0 || iX > nX - 1 ||
+              iY < 0 || iY > nY - 1 ||
+              iZ < 0 || iZ > nZ - 1 ) { // is inside boundary
+            int found = false;
+            if (superGeometry.getBlockGeometry(iCloc).getMaterial(iX,iY,iZ) != 0) {
+              for (int iXo=-_overlap; iXo<=_overlap && !found; ++iXo) {
+                for (int iYo=-_overlap; iYo<=_overlap && !found; ++iYo) {
+                  for (int iZo=-_overlap; iZo<=_overlap && !found; ++iZo) {
+                    const int nextX = iXo + iX;
+                    const int nextY = iYo + iY;
+                    const int nextZ = iZo + iZ;
+                    if (indicator->getBlockIndicatorF(iCloc)(nextX, nextY, nextZ)) {
+                      _sLattice.get_commBC().add_cell(iCloc, iX, iY, iZ);
+                      found = true;
                     }
-                    if (found) {
-                      break;
-                    }
-                  }
-                  if (found) {
-                    break;
                   }
                 }
               }
@@ -196,32 +245,39 @@ addPoints2CommBC(SuperGeometry3D<T>& superGeometry, int material)
   }
 }
 
-template<typename T, template<typename U> class Lattice>
-SuperLattice3D<T,Lattice>& sOffLatticeBoundaryCondition3D<T,Lattice>::getSuperLattice()
+template<typename T, typename DESCRIPTOR>
+void sOffLatticeBoundaryCondition3D<T,DESCRIPTOR>::addPoints2CommBC(
+  SuperGeometry3D<T>& superGeometry, int material)
+{
+  addPoints2CommBC(superGeometry.getMaterialIndicator(material));
+}
+
+template<typename T, typename DESCRIPTOR>
+SuperLattice3D<T,DESCRIPTOR>& sOffLatticeBoundaryCondition3D<T,DESCRIPTOR>::getSuperLattice()
 {
   return _sLattice;
 }
 
-template<typename T, template<typename U> class Lattice>
-std::vector<OffLatticeBoundaryCondition3D<T,Lattice>* >& sOffLatticeBoundaryCondition3D<T,Lattice>::getBlockBCs()
+template<typename T, typename DESCRIPTOR>
+std::vector<OffLatticeBoundaryCondition3D<T,DESCRIPTOR>* >& sOffLatticeBoundaryCondition3D<T,DESCRIPTOR>::getBlockBCs()
 {
   return _blockBCs;
 }
 
-template<typename T, template<typename U> class Lattice>
-int sOffLatticeBoundaryCondition3D<T,Lattice>::getOverlap()
+template<typename T, typename DESCRIPTOR>
+int sOffLatticeBoundaryCondition3D<T,DESCRIPTOR>::getOverlap()
 {
   return _overlap;
 }
 
-template<typename T, template<typename U> class Lattice>
-void sOffLatticeBoundaryCondition3D<T,Lattice>::setOverlap(int overlap)
+template<typename T, typename DESCRIPTOR>
+void sOffLatticeBoundaryCondition3D<T,DESCRIPTOR>::setOverlap(int overlap)
 {
   _overlap = overlap;
 }
 
-template<typename T, template<typename U> class Lattice>
-void sOffLatticeBoundaryCondition3D<T,Lattice>::outputOn()
+template<typename T, typename DESCRIPTOR>
+void sOffLatticeBoundaryCondition3D<T,DESCRIPTOR>::outputOn()
 {
   _output = true;
   int nC = _sLattice.getLoadBalancer().size();
@@ -230,8 +286,8 @@ void sOffLatticeBoundaryCondition3D<T,Lattice>::outputOn()
   }
 }
 
-template<typename T, template<typename U> class Lattice>
-void sOffLatticeBoundaryCondition3D<T,Lattice>::outputOff()
+template<typename T, typename DESCRIPTOR>
+void sOffLatticeBoundaryCondition3D<T,DESCRIPTOR>::outputOff()
 {
   _output = false;
   int nC = _sLattice.getLoadBalancer().size();
@@ -242,15 +298,15 @@ void sOffLatticeBoundaryCondition3D<T,Lattice>::outputOff()
 
 ////////////////// Factory functions //////////////////////////////////
 
-template<typename T, template<typename U> class Lattice, typename MixinDynamics>
-void createBouzidiBoundaryCondition3D(sOffLatticeBoundaryCondition3D<T,Lattice>& sBC)
+template<typename T, typename DESCRIPTOR, typename MixinDynamics>
+void createBouzidiBoundaryCondition3D(sOffLatticeBoundaryCondition3D<T,DESCRIPTOR>& sBC)
 {
 
   int nC = sBC.getSuperLattice().getLoadBalancer().size();
   sBC.setOverlap(1);
   for (int iC=0; iC<nC; iC++) {
-    OffLatticeBoundaryCondition3D<T,Lattice>* blockBC
-      = createBouzidiBoundaryCondition3D<T,Lattice,MixinDynamics>(sBC.getSuperLattice().getExtendedBlockLattice(iC));
+    OffLatticeBoundaryCondition3D<T,DESCRIPTOR>* blockBC
+      = createBouzidiBoundaryCondition3D<T,DESCRIPTOR,MixinDynamics>(sBC.getSuperLattice().getExtendedBlockLattice(iC));
     sBC.getBlockBCs().push_back(blockBC);
   }
 }
@@ -258,4 +314,3 @@ void createBouzidiBoundaryCondition3D(sOffLatticeBoundaryCondition3D<T,Lattice>&
 }  // namespace olb
 
 #endif
-

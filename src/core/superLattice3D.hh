@@ -1,5 +1,4 @@
 /*  This file is part of the OpenLB library
- *
  *  Copyright (C) 2007 Mathias J. Krause
  *  E-mail contact: info@openlb.net
  *  The most recent release of OpenLB can be downloaded at
@@ -37,6 +36,7 @@
 #include "io/base64.h"
 #include "functors/analytical/analyticalF.h"
 #include "functors/lattice/superBaseF3D.h"
+#include "functors/lattice/indicator/superIndicatorF3D.h"
 #include "io/serializerIO.h"
 #include "geometry/superGeometry3D.h"
 #include "communication/loadBalancer.h"
@@ -47,8 +47,8 @@ namespace olb {
 
 ////////////////////// Class SuperLattice3D /////////////////////////
 
-template<typename T, template<typename U> class Lattice>
-SuperLattice3D<T, Lattice>::SuperLattice3D(SuperGeometry3D<T>& superGeometry)
+template<typename T, typename DESCRIPTOR>
+SuperLattice3D<T, DESCRIPTOR>::SuperLattice3D(SuperGeometry3D<T>& superGeometry)
   : SuperStructure3D<T>(superGeometry.getCuboidGeometry(), superGeometry.getLoadBalancer()),
     _commStream(*this), _commBC(*this)
 {
@@ -79,11 +79,12 @@ SuperLattice3D<T, Lattice>::SuperLattice3D(SuperGeometry3D<T>& superGeometry)
     _extendedBlockLattices.emplace_back(nX, nY, nZ, superGeometry.getExtendedBlockGeometry(iC));
   }
   for (int iC = 0; iC < this->_loadBalancer.size(); ++iC) {
-    BlockLatticeView3D<T, Lattice> lattice(_extendedBlockLattices[iC], this->_overlap,
-                                           _extendedBlockLattices[iC].getNx() - this->_overlap - 1, this->_overlap,
-                                           _extendedBlockLattices[iC].getNy() - this->_overlap - 1, this->_overlap,
-                                           _extendedBlockLattices[iC].getNz() - this->_overlap - 1);
-    _blockLattices.push_back(lattice);
+    _blockLattices.emplace_back(
+      _extendedBlockLattices[iC],
+      this->_overlap, _extendedBlockLattices[iC].getNx() - this->_overlap - 1,
+      this->_overlap, _extendedBlockLattices[iC].getNy() - this->_overlap - 1,
+      this->_overlap, _extendedBlockLattices[iC].getNz() - this->_overlap - 1
+    );
   }
   _statistics = new LatticeStatistics<T> ;
   _statistics_on = true;
@@ -95,14 +96,14 @@ SuperLattice3D<T, Lattice>::SuperLattice3D(SuperGeometry3D<T>& superGeometry)
   this->_communicationNeeded=true;
 }
 
-template<typename T, template<typename U> class Lattice>
-SuperLattice3D<T,Lattice>::~SuperLattice3D ()
+template<typename T, typename DESCRIPTOR>
+SuperLattice3D<T,DESCRIPTOR>::~SuperLattice3D ()
 {
   delete _statistics;
 }
 
-template<typename T, template<typename U> class Lattice>
-bool SuperLattice3D<T, Lattice>::set(T iX, T iY, T iZ, Cell<T, Lattice> const& cell)
+template<typename T, typename DESCRIPTOR>
+bool SuperLattice3D<T, DESCRIPTOR>::set(T iX, T iY, T iZ, Cell<T, DESCRIPTOR> const& cell)
 {
   bool found = false;
   int locX, locY, locZ;
@@ -118,8 +119,8 @@ bool SuperLattice3D<T, Lattice>::set(T iX, T iY, T iZ, Cell<T, Lattice> const& c
 }
 
 // Note: The dynamics of the cell are not communicated here
-template<typename T, template<typename U> class Lattice>
-bool SuperLattice3D<T, Lattice>::get(T iX, T iY, T iZ, Cell<T, Lattice>& cell) const
+template<typename T, typename DESCRIPTOR>
+bool SuperLattice3D<T, DESCRIPTOR>::get(T iX, T iY, T iZ, Cell<T, DESCRIPTOR>& cell) const
 {
   int locX = 0;
   int locY = 0;
@@ -145,7 +146,7 @@ bool SuperLattice3D<T, Lattice>::get(T iX, T iY, T iZ, Cell<T, Lattice>& cell) c
   }*/
 
 #ifdef PARALLEL_MODE_MPI
-  const int sizeOfCell = Lattice<T>::q + Lattice<T>::ExternalField::numScalars;
+  const int sizeOfCell = DESCRIPTOR::size();
   T* cellData = new T[sizeOfCell];
 
   if (found) {
@@ -165,12 +166,12 @@ bool SuperLattice3D<T, Lattice>::get(T iX, T iY, T iZ, Cell<T, Lattice>& cell) c
   return found;
 }
 
-template<typename T, template<typename U> class Lattice>
-Cell<T,Lattice> SuperLattice3D<T,Lattice>::get(int iC, int locX, int locY, int locZ) const
+template<typename T, typename DESCRIPTOR>
+Cell<T,DESCRIPTOR> SuperLattice3D<T,DESCRIPTOR>::get(int iC, int locX, int locY, int locZ) const
 {
-  Cell<T,Lattice> cell;
+  Cell<T,DESCRIPTOR> cell;
 #ifdef PARALLEL_MODE_MPI
-  const int sizeOfCell = Lattice<T>::q + Lattice<T>::ExternalField::numScalars;
+  const int sizeOfCell = DESCRIPTOR::size();
   T* cellData = new T[sizeOfCell];
 
   if (this->_loadBalancer.rank(iC)==singleton::mpi().getRank()) {
@@ -186,14 +187,14 @@ Cell<T,Lattice> SuperLattice3D<T,Lattice>::get(int iC, int locX, int locY, int l
   return cell;
 }
 
-template<typename T, template<typename U> class Lattice>
-Cell<T,Lattice> SuperLattice3D<T,Lattice>::get(std::vector<int> latticeR) const
+template<typename T, typename DESCRIPTOR>
+Cell<T,DESCRIPTOR> SuperLattice3D<T,DESCRIPTOR>::get(std::vector<int> latticeR) const
 {
   return _blockLattices[this->_loadBalancer.loc(latticeR[0])].get(latticeR[1],latticeR[2],latticeR[3]);
 }
 
-template<typename T, template<typename U> class Lattice>
-void SuperLattice3D<T, Lattice>::initialize()
+template<typename T, typename DESCRIPTOR>
+void SuperLattice3D<T, DESCRIPTOR>::initialize()
 {
   if (_commBC_on) {
     _commBC.init();
@@ -209,109 +210,113 @@ void SuperLattice3D<T, Lattice>::initialize()
   this->_communicationNeeded = true;
 }
 
-template<typename T, template<typename U> class Lattice> void SuperLattice3D<T,
-         Lattice>::defineDynamics(SuperGeometry3D<T>& sGeometry, int material, Dynamics<T, Lattice>* dynamics)
-{
-  for (int iC = 0; iC < this->_loadBalancer.size(); ++iC) {
-    _extendedBlockLattices[iC].defineDynamics(sGeometry.getExtendedBlockGeometry(iC), material, dynamics);
-  }
-}
-
-template<typename T, template<typename U> class Lattice>
-void SuperLattice3D<T,Lattice>::defineDynamics(
-  SuperIndicatorF3D<T>& indicator, Dynamics<T, Lattice>* dynamics)
+template<typename T, typename DESCRIPTOR>
+void SuperLattice3D<T,DESCRIPTOR>::defineDynamics(
+  FunctorPtr<SuperIndicatorF3D<T>>&& indicator, Dynamics<T, DESCRIPTOR>* dynamics)
 {
   for (int iC = 0; iC < this->_loadBalancer.size(); ++iC) {
     _extendedBlockLattices[iC].defineDynamics(
-      indicator.getBlockIndicatorF(iC),
-      this->getOverlap(),
-      dynamics
-    );
+      indicator->getExtendedBlockIndicatorF(iC), dynamics);
   }
 }
 
-template<typename T, template<typename U> class Lattice>
-void SuperLattice3D<T,Lattice>::defineDynamics(
-  std::unique_ptr<SuperIndicatorF3D<T>> const& indicator, Dynamics<T, Lattice>* dynamics)
+template<typename T, typename DESCRIPTOR>
+void SuperLattice3D<T, DESCRIPTOR>::defineDynamics(
+  SuperGeometry3D<T>& sGeometry, int material, Dynamics<T, DESCRIPTOR>* dynamics)
 {
-  this->defineDynamics(*indicator, dynamics);
+  defineDynamics(sGeometry.getMaterialIndicator(material), dynamics);
 }
 
-template<typename T, template<typename U> class Lattice> void SuperLattice3D<T,
-         Lattice>::defineRho(SuperGeometry3D<T>& sGeometry, int material, AnalyticalF3D<T,T>& rho)
+template<typename T, typename DESCRIPTOR>
+void SuperLattice3D<T, DESCRIPTOR>::defineRho(
+  FunctorPtr<SuperIndicatorF3D<T>>&& indicator, AnalyticalF3D<T,T>& rho)
 {
   for (int iC = 0; iC < this->_loadBalancer.size(); ++iC) {
-    _extendedBlockLattices[iC].defineRho(sGeometry.getExtendedBlockGeometry(iC), material, rho);
+    _extendedBlockLattices[iC].defineRho(indicator->getExtendedBlockIndicatorF(iC),
+                                         rho);
   }
 }
 
-template<typename T, template<typename U> class Lattice> void SuperLattice3D<T,
-         Lattice>::defineU(SuperGeometry3D<T>& sGeometry, int material, AnalyticalF3D<T,T>& u)
+template<typename T, typename DESCRIPTOR>
+void SuperLattice3D<T, DESCRIPTOR>::defineRho(
+  SuperGeometry3D<T>& sGeometry, int material, AnalyticalF3D<T,T>& rho)
+{
+  defineRho(sGeometry.getMaterialIndicator(material), rho);
+}
+
+template<typename T, typename DESCRIPTOR>
+void SuperLattice3D<T, DESCRIPTOR>::defineU(
+  FunctorPtr<SuperIndicatorF3D<T>>&& indicator, AnalyticalF3D<T,T>& u)
 {
   for (int iC = 0; iC < this->_loadBalancer.size(); ++iC) {
-    _extendedBlockLattices[iC].defineU(sGeometry.getExtendedBlockGeometry(iC), material, u);
+    _extendedBlockLattices[iC].defineU(indicator->getExtendedBlockIndicatorF(iC),
+                                       u);
   }
 }
 
-template<typename T, template<typename U> class Lattice> void SuperLattice3D<T,
-         Lattice>::defineRhoU(SuperGeometry3D<T>& sGeometry, int material, AnalyticalF3D<T,T>& rho, AnalyticalF3D<T,T>& u)
+template<typename T, typename DESCRIPTOR>
+void SuperLattice3D<T, DESCRIPTOR>::defineU(
+  SuperGeometry3D<T>& sGeometry, int material, AnalyticalF3D<T,T>& u)
+{
+  defineU(sGeometry.getMaterialIndicator(material), u);
+}
+
+template<typename T, typename DESCRIPTOR>
+void SuperLattice3D<T, DESCRIPTOR>::defineRhoU(FunctorPtr<SuperIndicatorF3D<T>>&& indicator,
+    AnalyticalF3D<T,T>& rho, AnalyticalF3D<T,T>& u)
 {
   for (int iC = 0; iC < this->_loadBalancer.size(); ++iC) {
-    _extendedBlockLattices[iC].defineRhoU(sGeometry.getExtendedBlockGeometry(iC), material, rho, u);
+    _extendedBlockLattices[iC].defineRhoU(indicator->getExtendedBlockIndicatorF(iC),
+                                          rho, u);
   }
 }
 
-template<typename T, template<typename U> class Lattice> void SuperLattice3D<T,Lattice>::definePopulations(
+template<typename T, typename DESCRIPTOR>
+void SuperLattice3D<T, DESCRIPTOR>::defineRhoU(SuperGeometry3D<T>& sGeometry, int material,
+    AnalyticalF3D<T,T>& rho, AnalyticalF3D<T,T>& u)
+{
+  defineRhoU(sGeometry.getMaterialIndicator(material), rho, u);
+}
+
+template<typename T, typename DESCRIPTOR>
+void SuperLattice3D<T,DESCRIPTOR>::definePopulations(
+  FunctorPtr<SuperIndicatorF3D<T>>&& indicator, AnalyticalF3D<T,T>& Pop)
+{
+  for (int iC = 0; iC < this->_loadBalancer.size(); ++iC) {
+    _extendedBlockLattices[iC].definePopulations(
+      indicator->getExtendedBlockIndicatorF(iC), Pop);
+  }
+}
+
+template<typename T, typename DESCRIPTOR>
+void SuperLattice3D<T,DESCRIPTOR>::definePopulations(
   SuperGeometry3D<T>& sGeometry, int material, AnalyticalF3D<T,T>& Pop)
 {
+  definePopulations(sGeometry.getMaterialIndicator(material), Pop);
+}
+
+template<typename T, typename DESCRIPTOR>
+void SuperLattice3D<T,DESCRIPTOR>::definePopulations(
+  FunctorPtr<SuperIndicatorF3D<T>>&& indicator, SuperF3D<T,T>& Pop)
+{
   for (int iC = 0; iC < this->_loadBalancer.size(); ++iC) {
-    _extendedBlockLattices[iC].definePopulations(sGeometry.getExtendedBlockGeometry(iC), material, Pop);
+    _extendedBlockLattices[iC].definePopulations(
+      indicator->getExtendedBlockIndicatorF(iC), Pop.getBlockF(iC));
   }
 }
 
-
-template<typename T, template<typename U> class Lattice>
-void SuperLattice3D<T,Lattice>::defineExternalField( SuperGeometry3D<T>& sGeometry,
-    int material, int fieldBeginsAt, int sizeOfField, AnalyticalF3D<T,T>& field)
+template<typename T, typename DESCRIPTOR>
+void SuperLattice3D<T,DESCRIPTOR>::definePopulations(
+  SuperGeometry3D<T>& sGeometry, int material, SuperF3D<T,T>& Pop)
 {
-  for (int iC = 0; iC < this->_loadBalancer.size(); ++iC) {
-    _extendedBlockLattices[iC].defineExternalField(sGeometry.getExtendedBlockGeometry(iC),
-        material, fieldBeginsAt, sizeOfField, field);
-  }
+  definePopulations(sGeometry.getMaterialIndicator(material), Pop);
 }
 
-template<typename T, template<typename U> class Lattice>
-void SuperLattice3D<T,Lattice>::defineExternalField( SuperIndicatorF3D<T>& indicator,
-    int fieldBeginsAt, int sizeOfField, AnalyticalF3D<T,T>& field)
-{
-  for (int iC = 0; iC < this->_loadBalancer.size(); ++iC) {
-    _extendedBlockLattices[iC].defineExternalField(
-      indicator.getBlockIndicatorF(iC), this->getOverlap(),
-      fieldBeginsAt, sizeOfField, field);
-  }
-}
 
-template<typename T, template<typename U> class Lattice>
-void SuperLattice3D<T,Lattice>::defineExternalField(
-  std::unique_ptr<SuperIndicatorF3D<T>> const& indicator,
-  int fieldBeginsAt, int sizeOfField, AnalyticalF3D<T,T>& field)
-{
-  this->defineExternalField(*indicator, fieldBeginsAt, sizeOfField, field);
-}
-
-template<typename T, template<typename U> class Lattice>
-void SuperLattice3D<T,Lattice>::defineExternalField( SuperGeometry3D<T>& sGeometry,
-    IndicatorF3D<T>& indicator, int fieldBeginsAt, int sizeOfField, AnalyticalF3D<T,T>& field)
-{
-  for (int iC = 0; iC < this->_loadBalancer.size(); ++iC) {
-    _extendedBlockLattices[iC].defineExternalField(sGeometry.getExtendedBlockGeometry(iC),
-        indicator, fieldBeginsAt, sizeOfField, field);
-  }
-}
-
-template<typename T, template<typename U> class Lattice>
-void SuperLattice3D<T,Lattice>::defineExternalField( SuperGeometry3D<T>& sGeometry,
-    int material, int fieldBeginsAt, int sizeOfField, SuperF3D<T,T>& field)
+template<typename T, typename DESCRIPTOR>
+template <typename FIELD>
+void SuperLattice3D<T,DESCRIPTOR>::defineField(
+  SuperGeometry3D<T>& sGeometry, int material, SuperF3D<T,T>& field)
 {
   if (sGeometry.getStatistics().getNvoxel(material)!=0) {
     int overlap = sGeometry.getOverlap();
@@ -327,13 +332,10 @@ void SuperLattice3D<T,Lattice>::defineExternalField( SuperGeometry3D<T>& sGeomet
           for (int iY=y0; iY<=y1; ++iY) {
             for (int iZ=z0; iZ<=z1; ++iZ) {
               if (sGeometry.getExtendedBlockGeometry(iC).getMaterial(iX,iY,iZ) == material) {
-                T fieldTmp[sizeOfField];
+                T fieldTmp[DESCRIPTOR::template size<FIELD>()];
                 int inputTmp[4]= {this->_loadBalancer.glob(iC),iX-overlap,iY-overlap,iZ-overlap};
                 field(fieldTmp,inputTmp);
-                //              for (int i=0; i<sizeOfField; i++) {
-                //                fieldTmp[i] = field(this->_loadBalancer.glob(iC),iX-overlap,iY-overlap,iZ-overlap)[i];
-                //              }
-                _extendedBlockLattices[iC].get(iX,iY,iZ).defineExternalField(fieldBeginsAt,sizeOfField, fieldTmp);
+                _extendedBlockLattices[iC].get(iX,iY,iZ).template defineField<FIELD>(fieldTmp);
               }
             }
           }
@@ -343,30 +345,49 @@ void SuperLattice3D<T,Lattice>::defineExternalField( SuperGeometry3D<T>& sGeomet
   }
 }
 
-
-template<typename T, template<typename U> class Lattice>
-void SuperLattice3D<T,Lattice>::setExternalParticleField(SuperGeometry3D<T>& sGeometry,
-    AnalyticalF3D<T,T>& velocity, ParticleIndicatorF3D<T,T>& sIndicator)
+template<typename T, typename DESCRIPTOR>
+template <typename FIELD>
+void SuperLattice3D<T,DESCRIPTOR>::defineField(SuperGeometry3D<T>& sGeometry, IndicatorF3D<T>& indicator,
+    AnalyticalF3D<T,T>& field)
 {
-  for (int iC = 0; iC < this->_loadBalancer.size(); ++iC) {
-    _extendedBlockLattices[iC].setExternalParticleField(sGeometry.getExtendedBlockGeometry(iC), velocity, sIndicator);
-  }
+  SuperIndicatorFfromIndicatorF3D<T> indicatorF(indicator, sGeometry);
+  defineField<FIELD>(indicatorF, field);
 }
 
-
-
-template<typename T, template<typename U> class Lattice>
-void SuperLattice3D<T,Lattice>::iniEquilibrium( SuperGeometry3D<T>& sGeometry,
-    int material, AnalyticalF3D<T,T>& rho, AnalyticalF3D<T,T>& u)
+template<typename T, typename DESCRIPTOR>
+void SuperLattice3D<T,DESCRIPTOR>::iniEquilibrium(
+  FunctorPtr<SuperIndicatorF3D<T>>&& indicator,
+  AnalyticalF3D<T,T>& rho, AnalyticalF3D<T,T>& u)
 {
   for (int iC = 0; iC < this->_loadBalancer.size(); ++iC) {
-    _extendedBlockLattices[iC].iniEquilibrium(sGeometry.getExtendedBlockGeometry(iC), material, rho, u);
+    _extendedBlockLattices[iC].iniEquilibrium(
+      indicator->getExtendedBlockIndicatorF(iC), rho, u);
   }
   this->_communicationNeeded = true;
 }
 
-template<typename T, template<typename U> class Lattice>
-void SuperLattice3D<T, Lattice>::collide()
+template<typename T, typename DESCRIPTOR>
+void SuperLattice3D<T,DESCRIPTOR>::iniEquilibrium(
+  SuperGeometry3D<T>& sGeometry, int material,
+  AnalyticalF3D<T,T>& rho, AnalyticalF3D<T,T>& u)
+{
+  iniEquilibrium(sGeometry.getMaterialIndicator(material), rho, u);
+}
+
+#ifndef OLB_PRECOMPILED
+template<typename T, typename DESCRIPTOR>
+void SuperLattice3D<T,DESCRIPTOR>::setExternalParticleField(SuperGeometry3D<T>& sGeometry,
+    AnalyticalF3D<T,T>& velocity, SmoothIndicatorF3D<T,T,true>& sIndicator)
+{
+  for (int iC = 0; iC < this->_loadBalancer.size(); ++iC) {
+    _extendedBlockLattices[iC].setExternalParticleField(
+      sGeometry.getExtendedBlockGeometry(iC), velocity, sIndicator);
+  }
+}
+#endif
+
+template<typename T, typename DESCRIPTOR>
+void SuperLattice3D<T, DESCRIPTOR>::collide()
 {
   for (int iC = 0; iC < this->_loadBalancer.size(); ++iC) {
     _blockLattices[iC].collide();
@@ -374,17 +395,8 @@ void SuperLattice3D<T, Lattice>::collide()
   this->_communicationNeeded = true;
 }
 
-template<typename T, template<typename U> class Lattice>
-void SuperLattice3D<T, Lattice>::staticCollide(SuperData3D<T, T> const& u)
-{
-  for (int iC = 0; iC < this->_loadBalancer.size(); ++iC) {
-    _blockLattices[iC].staticCollide(u.get(iC));
-  }
-  this->_communicationNeeded = true;
-}
-
-template<typename T, template<typename U> class Lattice>
-void SuperLattice3D<T, Lattice>::collide(T x0, T x1, T y0, T y1, T z0, T z1)
+template<typename T, typename DESCRIPTOR>
+void SuperLattice3D<T, DESCRIPTOR>::collide(T x0, T x1, T y0, T y1, T z0, T z1)
 {
   int locX0, locX1, locY0, locY1, locZ0, locZ1;
   for (int iC = 0; iC < this->_loadBalancer.size(); ++iC) {
@@ -396,8 +408,8 @@ void SuperLattice3D<T, Lattice>::collide(T x0, T x1, T y0, T y1, T z0, T z1)
   this->_communicationNeeded = true;
 }
 
-template<typename T, template<typename U> class Lattice>
-void SuperLattice3D<T, Lattice>::stream()
+template<typename T, typename DESCRIPTOR>
+void SuperLattice3D<T, DESCRIPTOR>::stream()
 {
   _commStream.send();
   _commStream.receive();
@@ -424,8 +436,8 @@ void SuperLattice3D<T, Lattice>::stream()
   this->_communicationNeeded = true;
 }
 
-template<typename T, template<typename U> class Lattice>
-void SuperLattice3D<T, Lattice>::stream(T x0, T x1, T y0, T y1, T z0, T z1)
+template<typename T, typename DESCRIPTOR>
+void SuperLattice3D<T, DESCRIPTOR>::stream(T x0, T x1, T y0, T y1, T z0, T z1)
 {
   _commStream.send();
   _commStream.receive();
@@ -453,8 +465,8 @@ void SuperLattice3D<T, Lattice>::stream(T x0, T x1, T y0, T y1, T z0, T z1)
   this->_communicationNeeded = true;
 }
 
-template<typename T, template<typename U> class Lattice>
-void SuperLattice3D<T, Lattice>::collideAndStream()
+template<typename T, typename DESCRIPTOR>
+void SuperLattice3D<T, DESCRIPTOR>::collideAndStream()
 {
   for (int iC = 0; iC < this->_loadBalancer.size(); ++iC) {
     int x1 = _blockLattices[iC].getNx() - 1;
@@ -537,7 +549,7 @@ void SuperLattice3D<T, Lattice>::collideAndStream()
     _commBC.send();
     _commBC.receive();
     _commBC.write();
-    //SuperLattice3D<T, Lattice>::communicate();
+    //SuperLattice3D<T, DESCRIPTOR>::communicate();
   }
 
   for (int iC = 0; iC < this->_loadBalancer.size(); ++iC) {
@@ -549,8 +561,8 @@ void SuperLattice3D<T, Lattice>::collideAndStream()
   this->_communicationNeeded = true;
 }
 
-template<typename T, template<typename U> class Lattice>
-void SuperLattice3D<T,Lattice>::stripeOffDensityOffset ( int x0, int x1, int y0,
+template<typename T, typename DESCRIPTOR>
+void SuperLattice3D<T,DESCRIPTOR>::stripeOffDensityOffset ( int x0, int x1, int y0,
     int y1, int z0, int z1, T offset )
 {
 
@@ -565,8 +577,8 @@ void SuperLattice3D<T,Lattice>::stripeOffDensityOffset ( int x0, int x1, int y0,
   this->_communicationNeeded = true;
 }
 
-template<typename T, template<typename U> class Lattice>
-void SuperLattice3D<T,Lattice>::stripeOffDensityOffset(T offset)
+template<typename T, typename DESCRIPTOR>
+void SuperLattice3D<T,DESCRIPTOR>::stripeOffDensityOffset(T offset)
 {
   for (int iC = 0; iC < this->_loadBalancer.size(); ++iC) {
     _extendedBlockLattices[iC].stripeOffDensityOffset(offset);
@@ -574,21 +586,21 @@ void SuperLattice3D<T,Lattice>::stripeOffDensityOffset(T offset)
   this->_communicationNeeded = true;
 }
 
-template<typename T, template<typename U> class Lattice>
-LatticeStatistics<T>& SuperLattice3D<T, Lattice>::getStatistics()
+template<typename T, typename DESCRIPTOR>
+LatticeStatistics<T>& SuperLattice3D<T, DESCRIPTOR>::getStatistics()
 {
   return *_statistics;
 }
 
-template<typename T, template<typename U> class Lattice>
-LatticeStatistics<T> const& SuperLattice3D<T, Lattice>::getStatistics() const
+template<typename T, typename DESCRIPTOR>
+LatticeStatistics<T> const& SuperLattice3D<T, DESCRIPTOR>::getStatistics() const
 {
   return *_statistics;
 }
 
 
-template<typename T, template<typename U> class Lattice>
-void SuperLattice3D<T, Lattice>::reset_statistics()
+template<typename T, typename DESCRIPTOR>
+void SuperLattice3D<T, DESCRIPTOR>::reset_statistics()
 {
   T weight;
   T sum_weight = 0;
@@ -633,57 +645,139 @@ void SuperLattice3D<T, Lattice>::reset_statistics()
 }
 
 
-template<typename T, template<typename U> class Lattice>
-template<template<typename U> class Slattice>
-void SuperLattice3D<T, Lattice>::addLatticeCoupling( SuperGeometry3D<T>& sGeometry,
-    int material, LatticeCouplingGenerator3D<T, Lattice> const& lcGen,
-    SuperLattice3D<T,Slattice>& partnerLattice)
+template<typename T, typename DESCRIPTOR>
+template<typename Slattice>
+void SuperLattice3D<T, DESCRIPTOR>::addLatticeCoupling( LatticeCouplingGenerator3D<T, DESCRIPTOR> const& lcGen, SuperLattice3D<T,Slattice>& partnerLattice)
 {
   for (int iC = 0; iC < this->_loadBalancer.size(); ++iC) {
     std::vector< SpatiallyExtendedObject3D* > partnerOne;
     partnerOne.push_back(&partnerLattice.getExtendedBlockLattice(iC));
 
-    int nx = _extendedBlockLattices[iC].getNx();
-    int ny = _extendedBlockLattices[iC].getNy();
-    int nz = _extendedBlockLattices[iC].getNz();
+    int nx = getExtendedBlockLattice(iC).getNx();
+    int ny = getExtendedBlockLattice(iC).getNy();
+    int nz = getExtendedBlockLattice(iC).getNz();
 
-    //    for (int iX = _overlap; iX < nx-_overlap; ++iX) {
-    //      for (int iY = _overlap; iY < ny-_overlap; ++iY) {
-    //        for (int iZ = _overlap; iZ < nz-_overlap; ++iZ) {
-    for (int iX = 1; iX < nx-1; ++iX) {
-      for (int iY = 1; iY < ny-1; ++iY) {
-        for (int iZ = 1; iZ < nz-1; ++iZ) {
+    LatticeCouplingGenerator3D<T, DESCRIPTOR> *extractedLcGen = lcGen.clone();
+    extractedLcGen->reset(1, nx-2, 1, ny-2, 1, nz-2);
+    getExtendedBlockLattice(iC).addLatticeCoupling(*extractedLcGen, partnerOne);
 
-          LatticeCouplingGenerator3D<T, Lattice> *extractedLcGen = lcGen.clone();
-
-          /*int iXglob = iX-this->_overlap+this->_cuboidGeometry.get(this->_loadBalancer.glob(iC)).get_globPosX();
-          int iYglob = iY-this->_overlap+this->_cuboidGeometry.get(this->_loadBalancer.glob(iC)).get_globPosY();
-          int iZglob = iZ-this->_overlap+this->_cuboidGeometry.get(this->_loadBalancer.glob(iC)).get_globPosZ();
-          if (extractedLcGen->extract(iXglob, iXglob, iYglob, iYglob, iZglob, iZglob) ) {
-            if (sGeometry.getMaterial(iXglob, iYglob, iZglob) == material) {
-              extractedLcGen->shift(iX-iXglob, iY-iYglob, iZ-iZglob);
-              _extendedBlockLattices[iC].addLatticeCoupling(*extractedLcGen, partnerOne );
-            }
-          }
-          */
-          //TODO done quick and dirty
-          if (extractedLcGen->extract(0, 0, 0, 0, 0, 0) ) {
-            if (sGeometry.get(this->_loadBalancer.glob(iC), iX-this->_overlap, iY-this->_overlap, iZ-this->_overlap) == material) {
-              extractedLcGen->shift(iX, iY, iZ, this->_loadBalancer.glob(iC));
-              _extendedBlockLattices[iC].addLatticeCoupling(*extractedLcGen, partnerOne);
-            }
-          }
-          delete extractedLcGen;
-        }
-      }
-    }
+    delete extractedLcGen;
   }
   return;
 }
 
 
-template<typename T, template<typename U> class Lattice>
-void SuperLattice3D<T, Lattice>::executeCoupling()
+template<typename T, typename DESCRIPTOR>
+template<typename Slattice>
+void SuperLattice3D<T, DESCRIPTOR>::addLatticeCoupling(
+  FunctorPtr<SuperIndicatorF3D<T>>&& indicator,
+  LatticeCouplingGenerator3D<T, DESCRIPTOR> const& lcGen,
+  SuperLattice3D<T,Slattice>& partnerLattice)
+{
+  for (int iC = 0; iC < this->_loadBalancer.size(); ++iC) {
+    std::vector<SpatiallyExtendedObject3D*> partnerOne;
+    partnerOne.push_back(&partnerLattice.getExtendedBlockLattice(iC));
+
+    for (int iX = 1; iX < _extendedBlockLattices[iC].getNx()-1; ++iX) {
+      for (int iY = 1; iY < _extendedBlockLattices[iC].getNy()-1; ++iY) {
+        for (int iZ = 1; iZ < _extendedBlockLattices[iC].getNz()-1; ++iZ) {
+          std::unique_ptr<LatticeCouplingGenerator3D<T, DESCRIPTOR>> extractedLcGen{
+            lcGen.clone() };
+          //TODO done quick and dirty
+          if (extractedLcGen->extract(0, 0, 0, 0, 0, 0) ) {
+            if (indicator->getExtendedBlockIndicatorF(iC)(iX, iY, iZ)) {
+              extractedLcGen->shift(iX, iY, iZ, this->_loadBalancer.glob(iC));
+              _extendedBlockLattices[iC].addLatticeCoupling(*extractedLcGen, partnerOne);
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+template<typename T, typename DESCRIPTOR>
+template<typename Slattice>
+void SuperLattice3D<T, DESCRIPTOR>::addLatticeCoupling(
+  SuperGeometry3D<T>& sGeometry, int material,
+  LatticeCouplingGenerator3D<T, DESCRIPTOR> const& lcGen,
+  SuperLattice3D<T,Slattice>& partnerLattice)
+{
+  addLatticeCoupling(sGeometry.getMaterialIndicator(material),
+                     lcGen, partnerLattice);
+}
+
+template<typename T, typename DESCRIPTOR>
+template<typename Slattice>
+void SuperLattice3D<T, DESCRIPTOR>::addLatticeCoupling(
+  LatticeCouplingGenerator3D<T, DESCRIPTOR> const& lcGen,
+  std::vector<SuperLattice3D<T,Slattice>*> partnerLattices)
+{
+  for (int iC = 0; iC < this->_loadBalancer.size(); ++iC) {
+    std::vector< SpatiallyExtendedObject3D* > partners;
+    for (auto partnerLattice: partnerLattices) {
+      partners.push_back(&partnerLattice->getExtendedBlockLattice(iC));
+    }
+
+    int nx = getExtendedBlockLattice(iC).getNx();
+    int ny = getExtendedBlockLattice(iC).getNy();
+    int nz = getExtendedBlockLattice(iC).getNz();
+
+    LatticeCouplingGenerator3D<T, DESCRIPTOR> *extractedLcGen = lcGen.clone();
+    extractedLcGen->reset(1, nx-2, 1, ny-2, 1, nz-2);
+    getExtendedBlockLattice(iC).addLatticeCoupling(*extractedLcGen, partners);
+
+    delete extractedLcGen;
+  }
+  return;
+}
+
+
+template<typename T, typename DESCRIPTOR>
+template<typename Slattice>
+void SuperLattice3D<T, DESCRIPTOR>::addLatticeCoupling(
+  FunctorPtr<SuperIndicatorF3D<T>>&& indicator,
+  LatticeCouplingGenerator3D<T, DESCRIPTOR> const& lcGen,
+  std::vector<SuperLattice3D<T,Slattice>*> partnerLattices)
+{
+  for (int iC = 0; iC < this->_loadBalancer.size(); ++iC) {
+    std::vector< SpatiallyExtendedObject3D* > partners;
+    for (auto partnerLattice: partnerLattices) {
+      partners.push_back(&partnerLattice->getExtendedBlockLattice(iC));
+    }
+
+    for (int iX = 1; iX < _extendedBlockLattices[iC].getNx()-1; ++iX) {
+      for (int iY = 1; iY < _extendedBlockLattices[iC].getNy()-1; ++iY) {
+        for (int iZ = 1; iZ < _extendedBlockLattices[iC].getNz()-1; ++iZ) {
+          std::unique_ptr<LatticeCouplingGenerator3D<T, DESCRIPTOR>> extractedLcGen{
+            lcGen.clone() };
+          //TODO done quick and dirty
+          if (extractedLcGen->extract(0, 0, 0, 0, 0, 0) ) {
+            if (indicator->getExtendedBlockIndicatorF(iC)(iX, iY, iZ)) {
+              extractedLcGen->shift(iX, iY, iZ, this->_loadBalancer.glob(iC));
+              _extendedBlockLattices[iC].addLatticeCoupling(*extractedLcGen, partners);
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+template<typename T, typename DESCRIPTOR>
+template<typename Slattice>
+void SuperLattice3D<T, DESCRIPTOR>::addLatticeCoupling(
+  SuperGeometry3D<T>& sGeometry, int material,
+  LatticeCouplingGenerator3D<T, DESCRIPTOR> const& lcGen,
+  std::vector<SuperLattice3D<T,Slattice>*> partnerLattices)
+{
+  addLatticeCoupling(sGeometry.getMaterialIndicator(material),
+                     lcGen, partnerLattices);
+}
+
+
+template<typename T, typename DESCRIPTOR>
+void SuperLattice3D<T, DESCRIPTOR>::executeCoupling()
 {
   for (int iC = 0; iC < this->_loadBalancer.size(); ++iC) {
     _extendedBlockLattices[iC].executeCoupling();
@@ -693,23 +787,23 @@ void SuperLattice3D<T, Lattice>::executeCoupling()
 }
 
 
-template<typename T, template<typename U> class Lattice>
-std::size_t SuperLattice3D<T,Lattice>::getNblock() const
+template<typename T, typename DESCRIPTOR>
+std::size_t SuperLattice3D<T,DESCRIPTOR>::getNblock() const
 {
   return std::accumulate(_extendedBlockLattices.begin(), _extendedBlockLattices.end(), size_t(0),
                          Serializable::sumNblock());
 }
 
 
-template<typename T, template<typename U> class Lattice>
-std::size_t SuperLattice3D<T,Lattice>::getSerializableSize() const
+template<typename T, typename DESCRIPTOR>
+std::size_t SuperLattice3D<T,DESCRIPTOR>::getSerializableSize() const
 {
   return std::accumulate(_extendedBlockLattices.begin(), _extendedBlockLattices.end(), size_t(0),
                          Serializable::sumSerializableSize());
 }
 
-template<typename T, template<typename U> class Lattice>
-bool* SuperLattice3D<T,Lattice>::getBlock(std::size_t iBlock, std::size_t& sizeBlock, bool loadingMode)
+template<typename T, typename DESCRIPTOR>
+bool* SuperLattice3D<T,DESCRIPTOR>::getBlock(std::size_t iBlock, std::size_t& sizeBlock, bool loadingMode)
 {
   std::size_t currentBlock = 0;
   bool* dataPtr = nullptr;

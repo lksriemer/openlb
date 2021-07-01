@@ -30,17 +30,17 @@
 #include "superOffBoundaryCondition3D.h"
 #include "superOffBoundaryCondition3D.hh"
 #include "dynamics/latticeDescriptors.h"
-#include "dynamics/latticeDescriptors.hh"
+ 
 #include "dynamics/dynamics.h"
 #include "dynamics/dynamics.hh"
 
 namespace olb {
 
 template class sOffLatticeBoundaryCondition3D
-<double, descriptors::D3Q19Descriptor>;
+<double, descriptors::D3Q19<>>;
 
 template void createBouzidiBoundaryCondition3D
-<double,descriptors::D3Q19Descriptor,
- BGKdynamics<double,descriptors::D3Q19Descriptor> >
-(sOffLatticeBoundaryCondition3D<double,descriptors::D3Q19Descriptor>& sBC);
+<double,descriptors::D3Q19<>,
+ BGKdynamics<double,descriptors::D3Q19<>> >
+(sOffLatticeBoundaryCondition3D<double,descriptors::D3Q19<>>& sBC);
 }

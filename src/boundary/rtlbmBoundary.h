@@ -29,23 +29,33 @@
 
 namespace olb {
 
-// blockLattice creator
-template<typename T, template<typename U> class Lattice>
-OnLatticeAdvectionDiffusionBoundaryCondition3D<T,Lattice>* createRtlbmBoundaryCondition3D( BlockLatticeStructure3D<T,Lattice>& block );
-
-// superLattice creator
-template<typename T, template<typename U> class Lattice>
-void createRtlbmBoundaryCondition3D(sOnLatticeBoundaryCondition3D<T,Lattice>& sBC);
-
+template<typename T, typename DESCRIPTOR> class sOnLatticeBoundaryCondition3D;
+template<typename T, typename DESCRIPTOR> class BlockLatticeStructure3D;
 
 // blockLattice creator
-template<typename T, template<typename U> class Lattice>
-OnLatticeAdvectionDiffusionBoundaryCondition3D<T,Lattice>* createRtlbmDiffuseBoundaryCondition3D( BlockLatticeStructure3D<T,Lattice>& block );
+template<typename T, typename DESCRIPTOR>
+OnLatticeAdvectionDiffusionBoundaryCondition3D<T,DESCRIPTOR>* createRtlbmDiffuseBoundaryCondition3D( BlockLatticeStructure3D<T,DESCRIPTOR>& block );
 
 // superLattice creator
-template<typename T, template<typename U> class Lattice>
-void createRtlbmDiffuseBoundaryCondition3D(sOnLatticeBoundaryCondition3D<T,Lattice>& sBC);
+template<typename T, typename DESCRIPTOR>
+void createRtlbmDiffuseBoundaryCondition3D(sOnLatticeBoundaryCondition3D<T,DESCRIPTOR>& sBC);
 
+
+// blockLattice creator
+template<typename T, typename DESCRIPTOR>
+OnLatticeAdvectionDiffusionBoundaryCondition3D<T,DESCRIPTOR>* createRtlbmDiffuseConstBoundaryCondition3D( BlockLatticeStructure3D<T,DESCRIPTOR>& block );
+
+// superLattice creator
+template<typename T, typename DESCRIPTOR>
+void createRtlbmDiffuseConstBoundaryCondition3D(sOnLatticeBoundaryCondition3D<T,DESCRIPTOR>& sBC);
+
+// blockLattice creator
+template<typename T, typename DESCRIPTOR>
+OnLatticeAdvectionDiffusionBoundaryCondition3D<T,DESCRIPTOR>* createRtlbmDirectedBoundaryCondition3D( BlockLatticeStructure3D<T,DESCRIPTOR>& block );
+
+// superLattice creator
+template<typename T, typename DESCRIPTOR>
+void createRtlbmDirectedBoundaryCondition3D(sOnLatticeBoundaryCondition3D<T,DESCRIPTOR>& sBC);
 }  // namespace olb
 
 #endif

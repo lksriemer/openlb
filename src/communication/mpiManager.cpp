@@ -26,12 +26,14 @@
 
 #include "communication/mpiManager.h"
 #include "core/blockData2D.h"
+#include "core/olbDebug.h"
 #include <iostream>
 #include <algorithm>
 
 #ifndef OLB_PRECOMPILED
 #include "core/blockData2D.hh"
 #endif
+
 
 namespace olb {
 
@@ -1130,6 +1132,12 @@ unsigned const& MpiNonBlockingHelper::get_size() const
 MPI_Request* MpiNonBlockingHelper::get_mpiRequest() const
 {
   return _mpiRequest;
+}
+
+MPI_Request* MpiNonBlockingHelper::get_mpiRequest(int i) const
+{
+  assert(size_t(i) < _size);
+  return &_mpiRequest[i];
 }
 
 MPI_Status* MpiNonBlockingHelper::get_mpiStatus() const

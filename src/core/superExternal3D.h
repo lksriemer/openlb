@@ -39,36 +39,34 @@ namespace olb {
 
 
 template<typename T> class Communicator3D;
-template<typename T, template<typename U> class Lattice> class SuperLatticeF3D;
+template<typename T, typename DESCRIPTOR> class SuperLatticeF3D;
 template<typename T> class Communicator3D;
 template<typename T> class SuperGeometry3D;
 
 /// A super external field is needed to communicate values of the external field
-template<typename T, template<typename U> class Lattice>
+template<typename T, typename DESCRIPTOR, typename FIELD>
 class SuperExternal3D : public SuperStructure3D<T> {
 
 private:
-  int _offset;
-  int _size;
   int _overlap;
-  SuperLattice3D<T, Lattice>& _sLattice;
+  SuperLattice3D<T, DESCRIPTOR>& _sLattice;
 
 public:
   /// Construction of a super external field
-  SuperExternal3D(SuperGeometry3D<T>& superGeometry, SuperLattice3D<T,Lattice>& sLattice,
-                  int offset, int size, int overlap);
+  SuperExternal3D(SuperGeometry3D<T>& superGeometry, SuperLattice3D<T,DESCRIPTOR>& sLattice,
+                  int overlap);
   void communicate(bool verbose=true);
   /// Write access to the memory of the data of the super structure
   bool* operator() (int iCloc, int iX, int iY, int iZ ,int iData) override
   {
-    return (bool*)_sLattice.getExtendedBlockLattice(iCloc).get(iX+_overlap,
+    return (bool*) _sLattice.getExtendedBlockLattice(iCloc).get(iX+_overlap,
            iY+_overlap,
-           iZ+_overlap).getExternal(_offset);
+           iZ+_overlap).template getFieldPointer<FIELD>();
   };
   /// Read only access to the dim of the data of the super structure
   int getDataSize() const override
   {
-    return _size;
+    return DESCRIPTOR::template size<FIELD>();
   };
   /// Read only access to the data type dim of the data of the super structure
   int getDataTypeSize() const override

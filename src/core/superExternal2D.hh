@@ -40,39 +40,39 @@ namespace olb {
 ////////////////////// Class SuperExternal2D /////////////////////////
 
 
-template<typename T, template<typename U> class Lattice>
-SuperExternal2D<T, Lattice>::SuperExternal2D(SuperGeometry2D<T>& superGeometry,
-    SuperLattice2D<T, Lattice>& sLattice, int offset, int size, int overlap)
+template<typename T, typename DESCRIPTOR, typename FIELD>
+SuperExternal2D<T,DESCRIPTOR,FIELD>::SuperExternal2D(SuperGeometry2D<T>& superGeometry,
+    SuperLattice2D<T, DESCRIPTOR>& sLattice, int overlap)
   : SuperStructure2D<T>(superGeometry.getCuboidGeometry(), superGeometry.getLoadBalancer()),
-    _offset(offset), _size(size), _overlap(overlap), _sLattice(sLattice)
+    _overlap(overlap), _sLattice(sLattice)
 {
   this->_communicator.init_nh();
   this->_communicator.add_cells(this->_overlap);
   this->_communicator.init();
 }
 
-template<typename T, template<typename U> class Lattice>
-void SuperExternal2D<T,Lattice>::communicate(bool verbose)
+template<typename T, typename DESCRIPTOR, typename FIELD>
+void SuperExternal2D<T,DESCRIPTOR,FIELD>::communicate(bool verbose)
 {
   this->_communicator.send();
   this->_communicator.receive();
   this->_communicator.write();
 }
 
-template<typename T, template<typename U> class Lattice>
-bool* SuperExternal2D<T, Lattice>::operator() (int iCloc, int iX, int iY, int iData)
+template<typename T, typename DESCRIPTOR, typename FIELD>
+bool* SuperExternal2D<T,DESCRIPTOR,FIELD>::operator() (int iCloc, int iX, int iY, int iData)
 {
-  return (bool*)_sLattice.getExtendedBlockLattice(iCloc).get(iX+_overlap, iY+_overlap).getExternal(_offset);
+  return (bool*) _sLattice.getExtendedBlockLattice(iCloc).get(iX+_overlap, iY+_overlap).template getFieldPointer<FIELD>();
 }
 
-template<typename T, template<typename U> class Lattice>
-int SuperExternal2D<T, Lattice>::getDataSize() const
+template<typename T, typename DESCRIPTOR, typename FIELD>
+int SuperExternal2D<T,DESCRIPTOR,FIELD>::getDataSize() const
 {
-  return _size;
+  return DESCRIPTOR::template size<FIELD>();
 }
 
-template<typename T, template<typename U> class Lattice>
-int SuperExternal2D<T, Lattice>::getDataTypeSize() const
+template<typename T, typename DESCRIPTOR, typename FIELD>
+int SuperExternal2D<T,DESCRIPTOR,FIELD>::getDataTypeSize() const
 {
   return sizeof(T);
 }

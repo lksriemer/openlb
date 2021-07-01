@@ -40,9 +40,10 @@
 
 namespace olb {
 
-template<typename T, template<typename U> class Lattice> class SuperLattice2D;
+template<typename T, typename DESCRIPTOR> class SuperLattice2D;
 template<typename T, typename BaseType> class SuperData2D;
 template<typename T> class SuperStructure2D;
+template<typename T, typename W> class SuperIdentity2D;
 template<typename T> class BlockF2D;
 
 /// represents all functors that operate on a SuperStructure2D<T> in general
@@ -59,6 +60,8 @@ protected:
    **/
   std::vector<std::unique_ptr<BlockF2D<W>>> _blockF;
 public:
+  using identity_functor_type = SuperIdentity2D<T,W>;
+
   SuperF2D<T,W>& operator-(SuperF2D<T,W>& rhs);
   SuperF2D<T,W>& operator+(SuperF2D<T,W>& rhs);
   SuperF2D<T,W>& operator*(SuperF2D<T,W>& rhs);
@@ -83,25 +86,23 @@ public:
   /// Constructor from `SuperData2D` - stores `_superData` reference
   SuperDataF2D(SuperData2D<T,BaseType>& superData);
   /// Operator for this functor - copies data from `_superData` object into output
-  bool operator() (T output[], const int input[]);
+  bool operator() (BaseType output[], const int input[]);
   /// Getter for `_superData`
   SuperData2D<T,BaseType>& getSuperData();
 };
 
 /// identity functor for memory management
 template <typename T, typename W>
-class SuperIdentity2D final : public SuperF2D<T,W> {
+class SuperIdentity2D : public SuperF2D<T,W> {
 protected:
-  SuperF2D<T,W>& _f;
+  FunctorPtr<SuperF2D<T,W>> _f;
 public:
-  SuperIdentity2D(SuperF2D<T,W>& f);
-  //  ~SuperLatticeIdentity2D();
-  // access operator should not delete f, since f still has the identity as child
+  SuperIdentity2D(FunctorPtr<SuperF2D<T,W>>&& f);
   bool operator() (W output[], const int input[]) override;
 };
 
 /// represents all functors that operate on a SuperLattice in general, e.g. getVelocity(), getForce(), getPressure()
-template <typename T, template <typename U> class DESCRIPTOR>
+template <typename T, typename DESCRIPTOR>
 class SuperLatticeF2D : public SuperF2D<T,T> {
 protected:
   SuperLatticeF2D(SuperLattice2D<T,DESCRIPTOR>& superLattice, int targetDim);
@@ -111,8 +112,8 @@ public:
   SuperLattice2D<T,DESCRIPTOR>& getSuperLattice();
 };
 
-/// represents all functors that operate on a Lattice with output in Phys, e.g. physVelocity(), physForce(), physPressure()
-template <typename T, template <typename U> class DESCRIPTOR>
+/// represents all functors that operate on a DESCRIPTOR with output in Phys, e.g. physVelocity(), physForce(), physPressure()
+template <typename T, typename DESCRIPTOR>
 class SuperLatticePhysF2D : public SuperLatticeF2D<T,DESCRIPTOR> {
 protected:
   SuperLatticePhysF2D(SuperLattice2D<T,DESCRIPTOR>& sLattice,
@@ -122,15 +123,15 @@ public:
   UnitConverter<T,DESCRIPTOR> const& getConverter() const;
 };
 
-/// represents all thermal functors that operate on a Lattice with output in Phys, e.g. physTemperature(), physHeatFlux()
-template <typename T, template <typename U> class DESCRIPTOR, template <typename V> class ThermalDESCRIPTOR>
-class SuperLatticeThermalPhysF2D : public SuperLatticeF2D<T,ThermalDESCRIPTOR> {
+/// represents all thermal functors that operate on a DESCRIPTOR with output in Phys, e.g. physTemperature(), physHeatFlux()
+template <typename T, typename DESCRIPTOR, typename TDESCRIPTOR>
+class SuperLatticeThermalPhysF2D : public SuperLatticeF2D<T,TDESCRIPTOR> {
 protected:
-  SuperLatticeThermalPhysF2D(SuperLattice2D<T,ThermalDESCRIPTOR>& sLattice,
-                             const ThermalUnitConverter<T,DESCRIPTOR,ThermalDESCRIPTOR>& converter, int targetDim);
-  const ThermalUnitConverter<T,DESCRIPTOR,ThermalDESCRIPTOR>& _converter;
+  SuperLatticeThermalPhysF2D(SuperLattice2D<T,TDESCRIPTOR>& sLattice,
+                             const ThermalUnitConverter<T,DESCRIPTOR,TDESCRIPTOR>& converter, int targetDim);
+  const ThermalUnitConverter<T,DESCRIPTOR,TDESCRIPTOR>& _converter;
 public:
-  ThermalUnitConverter<T,DESCRIPTOR,ThermalDESCRIPTOR> const& getConverter() const;
+  ThermalUnitConverter<T,DESCRIPTOR,TDESCRIPTOR> const& getConverter() const;
 };
 
 } // end namespace olb

@@ -39,22 +39,20 @@ namespace olb {
 
 template<typename T> class Communicator2D;
 template<typename T> class SuperGeometry2D;
-template<typename T, template<typename U> class Lattice> class SuperLattice2D;
+template<typename T, typename DESCRIPTOR> class SuperLattice2D;
 template<typename T> class SuperStructure2D;
 
 /// A super external field is needed to communicate values of the external field
-template<typename T, template<typename U> class Lattice>
+template<typename T, typename DESCRIPTOR, typename FIELD>
 class SuperExternal2D : public SuperStructure2D<T> {
 private:
-  int _offset;
-  int _size;
   int _overlap;
-  SuperLattice2D<T, Lattice>& _sLattice;
+  SuperLattice2D<T, DESCRIPTOR>& _sLattice;
 public:
   /// Construction of a super external field
   SuperExternal2D(SuperGeometry2D<T>& superGeometry,
-                  SuperLattice2D<T,Lattice>& sLattice,
-                  int offset, int size, int overlap);
+                  SuperLattice2D<T,DESCRIPTOR>& sLattice,
+                  int overlap);
   void communicate(bool verbose=true) override;
   /// Write access to the memory of the data of the super structure
   bool* operator() (int iCloc, int iX, int iY, int iData) override;

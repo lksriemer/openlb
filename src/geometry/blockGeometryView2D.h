@@ -69,7 +69,10 @@ public:
   /// Copy assignment
   BlockGeometryView2D& operator=(BlockGeometryView2D const& rhs);
   /// Destructor
-  ~BlockGeometryView2D();
+  ~BlockGeometryView2D() override;
+
+  /// Returns the underlying block structure
+  BlockStructure2D& getBlockStructure() override;
 
   /// Write access to the associated block statistic
   BlockGeometryStatistics2D<T>& getStatistics(bool verbose=true) override;

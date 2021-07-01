@@ -38,21 +38,21 @@ namespace olb {
 
 ///////////  ExtendedStraightFdBoundaryPostProcessor2D ///////////////////////////////////
 
-template<typename T, template<typename U> class Lattice, int direction, int orientation>
-ExtendedStraightFdBoundaryPostProcessor2D<T,Lattice,direction,orientation>::
+template<typename T, typename DESCRIPTOR, int direction, int orientation>
+ExtendedStraightFdBoundaryPostProcessor2D<T,DESCRIPTOR,direction,orientation>::
 ExtendedStraightFdBoundaryPostProcessor2D(int x0_, int x1_, int y0_, int y1_)
   : x0(x0_), x1(x1_), y0(y0_), y1(y1_)
 {
   OLB_PRECONDITION(x0==x1 || y0==y1);
 }
 
-template<typename T, template<typename U> class Lattice, int direction, int orientation>
-void ExtendedStraightFdBoundaryPostProcessor2D<T,Lattice,direction,orientation>::
-processSubDomain(BlockLattice2D<T,Lattice>& blockLattice, int x0_, int x1_, int y0_, int y1_)
+template<typename T, typename DESCRIPTOR, int direction, int orientation>
+void ExtendedStraightFdBoundaryPostProcessor2D<T,DESCRIPTOR,direction,orientation>::
+processSubDomain(BlockLattice2D<T,DESCRIPTOR>& blockLattice, int x0_, int x1_, int y0_, int y1_)
 {
   using namespace olb::util::tensorIndices2D;
-  typedef lbHelpers<T,Lattice> lbH;
-  typedef Lattice<T> L;
+  typedef lbHelpers<T,DESCRIPTOR> lbH;
+  typedef DESCRIPTOR L;
   enum {x,y};
 
   int newX0, newX1, newY0, newY1;
@@ -62,11 +62,11 @@ processSubDomain(BlockLattice2D<T,Lattice>& blockLattice, int x0_, int x1_, int 
          newX0, newX1, newY0, newY1 ) ) {
     for (int iX=newX0; iX<=newX1; ++iX) {
       for (int iY=newY0; iY<=newY1; ++iY) {
-        Cell<T,Lattice>& cell = blockLattice.get(iX,iY);
+        Cell<T,DESCRIPTOR>& cell = blockLattice.get(iX,iY);
         T rho, u[L::d];
         cell.computeRhoU(rho,u);
 
-        T uSqr = util::normSqr<T,Lattice<T>::d>(u);
+        T uSqr = util::normSqr<T,DESCRIPTOR::d>(u);
 
         T dx_U[L::d], dy_U[L::d];
         interpolateGradients<0>(blockLattice, dx_U, iX, iY);
@@ -79,9 +79,9 @@ processSubDomain(BlockLattice2D<T,Lattice>& blockLattice, int x0_, int x1_, int 
         rhoGradU[y][y] = rho * dy_U[y];
 
         T omega = blockLattice.getDynamics(iX, iY) -> getOmega();
-        T sToPi = - (T)1 / Lattice<T>::invCs2 / omega;
+        T sToPi = - (T)1 / descriptors::invCs2<T,DESCRIPTOR>() / omega;
 
-        T pi[util::TensorVal<Lattice<T> >::n];
+        T pi[util::TensorVal<DESCRIPTOR >::n];
         pi[xx] = (T)2 * rhoGradU[x][x] * sToPi;
         pi[yy] = (T)2 * rhoGradU[y][y] * sToPi;
         pi[xy] = (rhoGradU[x][y] + rhoGradU[y][x]) * sToPi;
@@ -96,7 +96,7 @@ processSubDomain(BlockLattice2D<T,Lattice>& blockLattice, int x0_, int x1_, int 
         for (int iPop = 0; iPop < L::q; ++iPop) {
           T cGradRhoUU = T();
           for (int iAlpha=0; iAlpha < L::d; ++iAlpha) {
-            cGradRhoUU += L::c[iPop][iAlpha] * (
+            cGradRhoUU += descriptors::c<L>(iPop,iAlpha) * (
                             dx_rho*u[iAlpha]*u[x] +
                             dx_U[iAlpha]*rho*u[x] +
                             dx_U[x]*rho*u[iAlpha] + //end of dx derivatice
@@ -110,11 +110,11 @@ processSubDomain(BlockLattice2D<T,Lattice>& blockLattice, int x0_, int x1_, int 
           T cDivRhoUU[L::d][L::d]; //first step towards QcdivRhoUU
           for (int iAlpha = 0; iAlpha < L::d; ++iAlpha) {
             for (int iBeta = 0; iBeta < L::d; ++iBeta) {
-              cDivRhoUU[iAlpha][iBeta] = L::c[iPop][x] *
+              cDivRhoUU[iAlpha][iBeta] = descriptors::c<L>(iPop,x) *
                                          (dx_rho*u[iAlpha]*u[iBeta] +
                                           dx_U[iAlpha]*rho*u[iBeta] +
                                           dx_U[iBeta]*rho*u[iAlpha])
-                                         + L::c[iPop][y] *
+                                         + descriptors::c<L>(iPop,y) *
                                          (dy_rho*u[iAlpha]*u[iBeta] +
                                           dy_U[iAlpha]*rho*u[iBeta] +
                                           dy_U[iBeta]*rho*u[iAlpha]);
@@ -128,12 +128,12 @@ processSubDomain(BlockLattice2D<T,Lattice>& blockLattice, int x0_, int x1_, int 
           T qRhoGradU = T();
           for (int iAlpha = 0; iAlpha < L::d; ++iAlpha) {
             for (int iBeta = 0; iBeta < L::d; ++iBeta) {
-              int ci_ci = L::c[iPop][iAlpha]*L::c[iPop][iBeta];
+              int ci_ci = descriptors::c<L>(iPop,iAlpha)*descriptors::c<L>(iPop,iBeta);
               qCdivRhoUU  += ci_ci * cDivRhoUU[iAlpha][iBeta];
               qRhoGradU   += ci_ci * rhoGradU[iAlpha][iBeta];
               if (iAlpha == iBeta) {
-                qCdivRhoUU -= cDivRhoUU[iAlpha][iBeta]/L::invCs2;
-                qRhoGradU  -= rhoGradU[iAlpha][iBeta]/L::invCs2;
+                qCdivRhoUU -= cDivRhoUU[iAlpha][iBeta]/descriptors::invCs2<T,L>();
+                qRhoGradU  -= rhoGradU[iAlpha][iBeta]/descriptors::invCs2<T,L>();
               }
             }
           }
@@ -141,206 +141,206 @@ processSubDomain(BlockLattice2D<T,Lattice>& blockLattice, int x0_, int x1_, int 
           // we then can reconstruct the value of the populations
           // according to the complete C-E expansion term
           cell[iPop] = lbH::equilibrium(iPop,rho,u,uSqr)
-                       - L::t[iPop] * L::invCs2 / omega
-                       * (qRhoGradU - cGradRhoUU + 0.5*L::invCs2*qCdivRhoUU);
+                       - descriptors::t<T,L>(iPop) * descriptors::invCs2<T,L>() / omega
+                       * (qRhoGradU - cGradRhoUU + 0.5*descriptors::invCs2<T,L>()*qCdivRhoUU);
         }
       }
     }
   }
 }
 
-template<typename T, template<typename U> class Lattice, int direction, int orientation>
-void ExtendedStraightFdBoundaryPostProcessor2D<T,Lattice,direction,orientation>::
-process(BlockLattice2D<T,Lattice>& blockLattice)
+template<typename T, typename DESCRIPTOR, int direction, int orientation>
+void ExtendedStraightFdBoundaryPostProcessor2D<T,DESCRIPTOR,direction,orientation>::
+process(BlockLattice2D<T,DESCRIPTOR>& blockLattice)
 {
   processSubDomain(blockLattice, x0, x1, y0, y1);
 }
 
-template<typename T, template<typename U> class Lattice, int direction, int orientation>
+template<typename T, typename DESCRIPTOR, int direction, int orientation>
 template<int deriveDirection>
-void ExtendedStraightFdBoundaryPostProcessor2D<T,Lattice,direction,orientation>::
-interpolateGradients(BlockLattice2D<T,Lattice> const& blockLattice,
-                     T velDeriv[Lattice<T>::d], int iX, int iY) const
+void ExtendedStraightFdBoundaryPostProcessor2D<T,DESCRIPTOR,direction,orientation>::
+interpolateGradients(BlockLattice2D<T,DESCRIPTOR> const& blockLattice,
+                     T velDeriv[DESCRIPTOR::d], int iX, int iY) const
 {
-  fd::DirectedGradients2D<T, Lattice, direction, orientation, direction==deriveDirection>::
+  fd::DirectedGradients2D<T, DESCRIPTOR, direction, orientation, direction==deriveDirection>::
   interpolateVector(velDeriv, blockLattice, iX, iY);
 }
 
-template<typename T, template<typename U> class Lattice, int direction, int orientation>
+template<typename T, typename DESCRIPTOR, int direction, int orientation>
 template<int deriveDirection>
-void ExtendedStraightFdBoundaryPostProcessor2D<T,Lattice,direction,orientation>::
-interpolateGradients(BlockLattice2D<T,Lattice> const& blockLattice, T& rhoDeriv, int iX, int iY) const
+void ExtendedStraightFdBoundaryPostProcessor2D<T,DESCRIPTOR,direction,orientation>::
+interpolateGradients(BlockLattice2D<T,DESCRIPTOR> const& blockLattice, T& rhoDeriv, int iX, int iY) const
 {
-  fd::DirectedGradients2D<T, Lattice, direction, orientation, direction==deriveDirection>::
+  fd::DirectedGradients2D<T, DESCRIPTOR, direction, orientation, direction==deriveDirection>::
   interpolateScalar(rhoDeriv, blockLattice, iX, iY);
 }
 
 
 ////////  ExtendedStraightFdBoundaryPostProcessorGenerator ////////////////////////////////
 
-template<typename T, template<typename U> class Lattice, int direction, int orientation>
-ExtendedStraightFdBoundaryProcessorGenerator2D<T,Lattice,direction,orientation>::
+template<typename T, typename DESCRIPTOR, int direction, int orientation>
+ExtendedStraightFdBoundaryProcessorGenerator2D<T,DESCRIPTOR,direction,orientation>::
 ExtendedStraightFdBoundaryProcessorGenerator2D(int x0_, int x1_, int y0_, int y1_)
-  : PostProcessorGenerator2D<T,Lattice>(x0_, x1_, y0_, y1_)
+  : PostProcessorGenerator2D<T,DESCRIPTOR>(x0_, x1_, y0_, y1_)
 { }
 
-template<typename T, template<typename U> class Lattice, int direction, int orientation>
-PostProcessor2D<T,Lattice>*
-ExtendedStraightFdBoundaryProcessorGenerator2D<T,Lattice,direction,orientation>::generate() const
+template<typename T, typename DESCRIPTOR, int direction, int orientation>
+PostProcessor2D<T,DESCRIPTOR>*
+ExtendedStraightFdBoundaryProcessorGenerator2D<T,DESCRIPTOR,direction,orientation>::generate() const
 {
-  return new ExtendedStraightFdBoundaryPostProcessor2D<T,Lattice,direction,orientation>
+  return new ExtendedStraightFdBoundaryPostProcessor2D<T,DESCRIPTOR,direction,orientation>
          ( this->x0, this->x1, this->y0, this->y1 );
 }
 
-template<typename T, template<typename U> class Lattice, int direction, int orientation>
-PostProcessorGenerator2D<T,Lattice>*
-ExtendedStraightFdBoundaryProcessorGenerator2D<T,Lattice,direction,orientation>::clone() const
+template<typename T, typename DESCRIPTOR, int direction, int orientation>
+PostProcessorGenerator2D<T,DESCRIPTOR>*
+ExtendedStraightFdBoundaryProcessorGenerator2D<T,DESCRIPTOR,direction,orientation>::clone() const
 {
-  return new ExtendedStraightFdBoundaryProcessorGenerator2D<T,Lattice,direction,orientation>
+  return new ExtendedStraightFdBoundaryProcessorGenerator2D<T,DESCRIPTOR,direction,orientation>
          (this->x0, this->x1, this->y0, this->y1);
 }
 
 
 ////////// Class ExtendedFdBoundaryManager2D /////////////////////////////////////////
 
-template<typename T, template<typename U> class Lattice, class MixinDynamics>
+template<typename T, typename DESCRIPTOR, class MixinDynamics>
 class ExtendedFdBoundaryManager2D {
 public:
-  template<int direction, int orientation> static Momenta<T,Lattice>*
+  template<int direction, int orientation> static Momenta<T,DESCRIPTOR>*
   getVelocityBoundaryMomenta();
-  template<int direction, int orientation> static Dynamics<T,Lattice>*
-  getVelocityBoundaryDynamics(T omega, Momenta<T,Lattice>& momenta);
-  template<int direction, int orientation> static PostProcessorGenerator2D<T,Lattice>*
+  template<int direction, int orientation> static Dynamics<T,DESCRIPTOR>*
+  getVelocityBoundaryDynamics(T omega, Momenta<T,DESCRIPTOR>& momenta);
+  template<int direction, int orientation> static PostProcessorGenerator2D<T,DESCRIPTOR>*
   getVelocityBoundaryProcessor(int x0, int x1, int y0, int y1);
 
-  template<int direction, int orientation> static Momenta<T,Lattice>*
+  template<int direction, int orientation> static Momenta<T,DESCRIPTOR>*
   getPressureBoundaryMomenta();
-  template<int direction, int orientation> static Dynamics<T,Lattice>*
-  getPressureBoundaryDynamics(T omega, Momenta<T,Lattice>& momenta);
-  template<int direction, int orientation> static PostProcessorGenerator2D<T,Lattice>*
+  template<int direction, int orientation> static Dynamics<T,DESCRIPTOR>*
+  getPressureBoundaryDynamics(T omega, Momenta<T,DESCRIPTOR>& momenta);
+  template<int direction, int orientation> static PostProcessorGenerator2D<T,DESCRIPTOR>*
   getPressureBoundaryProcessor(int x0, int x1, int y0, int y1);
 
-  template<int direction, int orientation> static PostProcessorGenerator2D<T,Lattice>*
+  template<int direction, int orientation> static PostProcessorGenerator2D<T,DESCRIPTOR>*
   getConvectionBoundaryProcessor(int x0, int x1, int y0, int y1, T* uAv=NULL);
 
-  template<int xNormal, int yNormal> static Momenta<T,Lattice>*
+  template<int xNormal, int yNormal> static Momenta<T,DESCRIPTOR>*
   getExternalVelocityCornerMomenta();
-  template<int xNormal, int yNormal> static Dynamics<T,Lattice>*
-  getExternalVelocityCornerDynamics(T omega, Momenta<T,Lattice>& momenta);
-  template<int xNormal, int yNormal> static PostProcessorGenerator2D<T,Lattice>*
+  template<int xNormal, int yNormal> static Dynamics<T,DESCRIPTOR>*
+  getExternalVelocityCornerDynamics(T omega, Momenta<T,DESCRIPTOR>& momenta);
+  template<int xNormal, int yNormal> static PostProcessorGenerator2D<T,DESCRIPTOR>*
   getExternalVelocityCornerProcessor(int x, int y);
 
-  template<int xNormal, int yNormal> static Momenta<T,Lattice>*
+  template<int xNormal, int yNormal> static Momenta<T,DESCRIPTOR>*
   getInternalVelocityCornerMomenta();
-  template<int xNormal, int yNormal> static Dynamics<T,Lattice>*
-  getInternalVelocityCornerDynamics(T omega, Momenta<T,Lattice>& momenta);
-  template<int xNormal, int yNormal> static PostProcessorGenerator2D<T,Lattice>*
+  template<int xNormal, int yNormal> static Dynamics<T,DESCRIPTOR>*
+  getInternalVelocityCornerDynamics(T omega, Momenta<T,DESCRIPTOR>& momenta);
+  template<int xNormal, int yNormal> static PostProcessorGenerator2D<T,DESCRIPTOR>*
   getInternalVelocityCornerProcessor(int x, int y);
 };
 
 
-template<typename T, template<typename U> class Lattice, class MixinDynamics>
+template<typename T, typename DESCRIPTOR, class MixinDynamics>
 template<int direction, int orientation>
-Momenta<T,Lattice>* ExtendedFdBoundaryManager2D<T,Lattice,MixinDynamics>::getVelocityBoundaryMomenta()
+Momenta<T,DESCRIPTOR>* ExtendedFdBoundaryManager2D<T,DESCRIPTOR,MixinDynamics>::getVelocityBoundaryMomenta()
 {
-  return new BasicDirichletBM<T,Lattice,VelocityBM,direction,orientation>;
+  return new BasicDirichletBM<T,DESCRIPTOR,VelocityBM,direction,orientation>;
 }
 
-template<typename T, template<typename U> class Lattice, class MixinDynamics>
+template<typename T, typename DESCRIPTOR, class MixinDynamics>
 template<int direction, int orientation>
-Dynamics<T,Lattice>* ExtendedFdBoundaryManager2D<T,Lattice,MixinDynamics>::
-getVelocityBoundaryDynamics(T omega, Momenta<T,Lattice>& momenta)
+Dynamics<T,DESCRIPTOR>* ExtendedFdBoundaryManager2D<T,DESCRIPTOR,MixinDynamics>::
+getVelocityBoundaryDynamics(T omega, Momenta<T,DESCRIPTOR>& momenta)
 {
   return new MixinDynamics(omega, momenta);
 }
 
-template<typename T, template<typename U> class Lattice, class MixinDynamics>
+template<typename T, typename DESCRIPTOR, class MixinDynamics>
 template<int direction, int orientation>
-PostProcessorGenerator2D<T,Lattice>* ExtendedFdBoundaryManager2D<T,Lattice,MixinDynamics>::
+PostProcessorGenerator2D<T,DESCRIPTOR>* ExtendedFdBoundaryManager2D<T,DESCRIPTOR,MixinDynamics>::
 getVelocityBoundaryProcessor(int x0, int x1, int y0, int y1)
 {
-  return new ExtendedStraightFdBoundaryProcessorGenerator2D<T,Lattice,direction,orientation>
+  return new ExtendedStraightFdBoundaryProcessorGenerator2D<T,DESCRIPTOR,direction,orientation>
          (x0, x1, y0, y1);
 }
 
-template<typename T, template<typename U> class Lattice, class MixinDynamics>
+template<typename T, typename DESCRIPTOR, class MixinDynamics>
 template<int direction, int orientation>
-Momenta<T,Lattice>* ExtendedFdBoundaryManager2D<T,Lattice,MixinDynamics>::getPressureBoundaryMomenta()
+Momenta<T,DESCRIPTOR>* ExtendedFdBoundaryManager2D<T,DESCRIPTOR,MixinDynamics>::getPressureBoundaryMomenta()
 {
-  return new BasicDirichletBM<T,Lattice,PressureBM,direction,orientation>;
+  return new BasicDirichletBM<T,DESCRIPTOR,PressureBM,direction,orientation>;
 }
 
-template<typename T, template<typename U> class Lattice, class MixinDynamics>
+template<typename T, typename DESCRIPTOR, class MixinDynamics>
 template<int direction, int orientation>
-Dynamics<T,Lattice>* ExtendedFdBoundaryManager2D<T,Lattice,MixinDynamics>::
-getPressureBoundaryDynamics(T omega, Momenta<T,Lattice>& momenta)
+Dynamics<T,DESCRIPTOR>* ExtendedFdBoundaryManager2D<T,DESCRIPTOR,MixinDynamics>::
+getPressureBoundaryDynamics(T omega, Momenta<T,DESCRIPTOR>& momenta)
 {
   return new MixinDynamics(omega, momenta);
 }
 
-template<typename T, template<typename U> class Lattice, class MixinDynamics>
+template<typename T, typename DESCRIPTOR, class MixinDynamics>
 template<int direction, int orientation>
-PostProcessorGenerator2D<T,Lattice>*
-ExtendedFdBoundaryManager2D<T,Lattice,MixinDynamics>::
+PostProcessorGenerator2D<T,DESCRIPTOR>*
+ExtendedFdBoundaryManager2D<T,DESCRIPTOR,MixinDynamics>::
 getPressureBoundaryProcessor(int x0, int x1, int y0, int y1)
 {
-  return new ExtendedStraightFdBoundaryProcessorGenerator2D<T,Lattice,direction,orientation>
+  return new ExtendedStraightFdBoundaryProcessorGenerator2D<T,DESCRIPTOR,direction,orientation>
          (x0, x1, y0, y1);
 }
 
-template<typename T, template<typename U> class Lattice, class MixinDynamics>
+template<typename T, typename DESCRIPTOR, class MixinDynamics>
 template<int direction, int orientation>
-PostProcessorGenerator2D<T,Lattice>*
-ExtendedFdBoundaryManager2D<T,Lattice,MixinDynamics>::
+PostProcessorGenerator2D<T,DESCRIPTOR>*
+ExtendedFdBoundaryManager2D<T,DESCRIPTOR,MixinDynamics>::
 getConvectionBoundaryProcessor(int x0, int x1, int y0, int y1, T* uAv)
 {
   return nullptr;
 }
 
-template<typename T, template<typename U> class Lattice, class MixinDynamics>
+template<typename T, typename DESCRIPTOR, class MixinDynamics>
 template<int xNormal, int yNormal>
-Momenta<T,Lattice>*
-ExtendedFdBoundaryManager2D<T,Lattice,MixinDynamics>::getExternalVelocityCornerMomenta()
+Momenta<T,DESCRIPTOR>*
+ExtendedFdBoundaryManager2D<T,DESCRIPTOR,MixinDynamics>::getExternalVelocityCornerMomenta()
 {
-  return new FixedVelocityBM<T,Lattice>;
+  return new FixedVelocityBM<T,DESCRIPTOR>;
 }
 
-template<typename T, template<typename U> class Lattice, class MixinDynamics>
+template<typename T, typename DESCRIPTOR, class MixinDynamics>
 template<int xNormal, int yNormal>
-Dynamics<T,Lattice>* ExtendedFdBoundaryManager2D<T,Lattice,MixinDynamics>::
-getExternalVelocityCornerDynamics(T omega, Momenta<T,Lattice>& momenta)
+Dynamics<T,DESCRIPTOR>* ExtendedFdBoundaryManager2D<T,DESCRIPTOR,MixinDynamics>::
+getExternalVelocityCornerDynamics(T omega, Momenta<T,DESCRIPTOR>& momenta)
 {
   return new MixinDynamics(omega, momenta);
 }
 
-template<typename T, template<typename U> class Lattice, class MixinDynamics>
+template<typename T, typename DESCRIPTOR, class MixinDynamics>
 template<int xNormal, int yNormal>
-PostProcessorGenerator2D<T,Lattice>*
-ExtendedFdBoundaryManager2D<T,Lattice,MixinDynamics>::getExternalVelocityCornerProcessor(int x, int y)
+PostProcessorGenerator2D<T,DESCRIPTOR>*
+ExtendedFdBoundaryManager2D<T,DESCRIPTOR,MixinDynamics>::getExternalVelocityCornerProcessor(int x, int y)
 {
-  return new OuterVelocityCornerProcessorGenerator2D<T,Lattice, xNormal,yNormal> (x,y);
+  return new OuterVelocityCornerProcessorGenerator2D<T,DESCRIPTOR, xNormal,yNormal> (x,y);
 }
 
-template<typename T, template<typename U> class Lattice, class MixinDynamics>
+template<typename T, typename DESCRIPTOR, class MixinDynamics>
 template<int xNormal, int yNormal>
-Momenta<T,Lattice>*
-ExtendedFdBoundaryManager2D<T,Lattice,MixinDynamics>::getInternalVelocityCornerMomenta()
+Momenta<T,DESCRIPTOR>*
+ExtendedFdBoundaryManager2D<T,DESCRIPTOR,MixinDynamics>::getInternalVelocityCornerMomenta()
 {
-  return new InnerCornerVelBM2D<T,Lattice, xNormal,yNormal>;
+  return new InnerCornerVelBM2D<T,DESCRIPTOR, xNormal,yNormal>;
 }
 
-template<typename T, template<typename U> class Lattice, class MixinDynamics>
+template<typename T, typename DESCRIPTOR, class MixinDynamics>
 template<int xNormal, int yNormal>
-Dynamics<T,Lattice>* ExtendedFdBoundaryManager2D<T,Lattice,MixinDynamics>::
-getInternalVelocityCornerDynamics(T omega, Momenta<T,Lattice>& momenta)
+Dynamics<T,DESCRIPTOR>* ExtendedFdBoundaryManager2D<T,DESCRIPTOR,MixinDynamics>::
+getInternalVelocityCornerDynamics(T omega, Momenta<T,DESCRIPTOR>& momenta)
 {
-  return new CombinedRLBdynamics<T,Lattice, MixinDynamics>(omega, momenta);
+  return new CombinedRLBdynamics<T,DESCRIPTOR, MixinDynamics>(omega, momenta);
 }
 
-template<typename T, template<typename U> class Lattice, class MixinDynamics>
+template<typename T, typename DESCRIPTOR, class MixinDynamics>
 template<int xNormal, int yNormal>
-PostProcessorGenerator2D<T,Lattice>*
-ExtendedFdBoundaryManager2D<T,Lattice,MixinDynamics>::getInternalVelocityCornerProcessor (int x, int y)
+PostProcessorGenerator2D<T,DESCRIPTOR>*
+ExtendedFdBoundaryManager2D<T,DESCRIPTOR,MixinDynamics>::getInternalVelocityCornerProcessor (int x, int y)
 {
   return nullptr;
 }
@@ -348,13 +348,13 @@ ExtendedFdBoundaryManager2D<T,Lattice,MixinDynamics>::getInternalVelocityCornerP
 
 ////////// Factory functions //////////////////////////////////////////////////
 
-template<typename T, template<typename U> class Lattice, typename MixinDynamics>
-OnLatticeBoundaryCondition2D<T,Lattice>*
-createExtendedFdBoundaryCondition2D(BlockLatticeStructure2D<T,Lattice>& block)
+template<typename T, typename DESCRIPTOR, typename MixinDynamics>
+OnLatticeBoundaryCondition2D<T,DESCRIPTOR>*
+createExtendedFdBoundaryCondition2D(BlockLatticeStructure2D<T,DESCRIPTOR>& block)
 {
   return new BoundaryConditionInstantiator2D <
-         T, Lattice,
-         ExtendedFdBoundaryManager2D<T,Lattice, MixinDynamics> > (block);
+         T, DESCRIPTOR,
+         ExtendedFdBoundaryManager2D<T,DESCRIPTOR, MixinDynamics> > (block);
 }
 
 

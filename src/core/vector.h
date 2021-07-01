@@ -89,6 +89,8 @@ public:
   Vector& operator -= (const T& s);
   /// multiply by scalar
   Vector& operator *= (const T& s);
+  /// divide by scalar
+  Vector& operator /= (const T& s);
   /// equal operator returns true if all components match
   bool operator == (const Vector<T, Size>& v);
   /// unequal operator returns true if at least one components differs
@@ -198,6 +200,15 @@ inline Vector<T, Size>& Vector<T, Size>::operator*= (const T& s)
 }
 
 template <typename T, unsigned Size>
+inline Vector<T, Size>& Vector<T, Size>::operator/= (const T& s)
+{
+  for (unsigned i = 0; i < Size; ++i) {
+    data[i] /= s;
+  }
+  return *this;
+}
+
+template <typename T, unsigned Size>
 inline Vector<T, Size>& Vector<T, Size>::operator-= (const T& s)
 {
   for (unsigned i = 0; i < Size; ++i) {
@@ -287,7 +298,8 @@ inline std::ostream& operator << (std::ostream& os, const Vector<T,Size>& o)
       os << o[i] << " ";
     }
     os << o[Size-1]<<"]";
-  } else {
+  }
+  else {
     os << "[empty]";
   }
   return os;
@@ -347,6 +359,16 @@ inline Vector<T, Size> operator+ (const Vector<T, Size>& a, const Vector<T, Size
   return Vector<T, Size>(a)+=b;
 }
 
+template <typename T, typename W, unsigned Size>
+inline Vector<decltype(T{}+W{}), Size> operator+ (const Vector<T, Size>& a, const Vector<W, Size>& b)
+{
+  Vector<decltype(T{}+W{}), Size> result;
+  for (unsigned i = 0; i < Size; ++i) {
+    result[i] = a[i] + b[i];
+  }
+  return result;
+}
+
 // MINUS
 template <class T, unsigned Size>
 inline Vector<T, Size> operator- (const BaseType& a, const Vector<T, Size>& b)
@@ -364,6 +386,16 @@ template <class T, unsigned Size>
 inline Vector<T, Size> operator- (const Vector<T, Size>& a, const Vector<T, Size>& b)
 {
   return Vector<T, Size>(a)-=b;
+}
+
+template <typename T, typename W, unsigned Size>
+inline Vector<decltype(T{}-W{}), Size> operator- (const Vector<T, Size>& a, const Vector<W, Size>& b)
+{
+  Vector<decltype(T{}-W{}), Size> result;
+  for (unsigned i = 0; i < Size; ++i) {
+    result[i] = a[i] - b[i];
+  }
+  return result;
 }
 
 // MULTIPLY
@@ -387,6 +419,13 @@ inline T operator* (const Vector<T, Size>& a, const Vector<T, Size>& b)
     scalarProduct += a[iD]*b[iD];
   }
   return scalarProduct;
+}
+
+// DIVIDE
+template <class T, unsigned Size>
+inline Vector<T, Size> operator/ (const Vector<T, Size>& a, const BaseType& b)
+{
+  return Vector<T, Size>(a)/=b;
 }
 
 /// < Operator returns true if all components are smaller

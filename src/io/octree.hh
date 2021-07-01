@@ -438,7 +438,7 @@ void Octree<T>::write(const Vector<T,3>& pt,const std::string no)
     }
     f << "solid ascii" << std::endl << std::flush;
     std::vector<unsigned int>::iterator it = _triangles.begin();
-    for (; it != _triangles.end(); it++) {
+    for (; it != _triangles.end(); ++it) {
       f << "facet normal" << _mesh->getTri(*it).normal[0] << " "  << _mesh->getTri(*it).normal[1] << " "  << _mesh->getTri(*it).normal[2] << " " <<std::endl;
       f << "    outer loop\n";
       f << "        vertex " << _mesh->getTri(*it).point[0].r[0] << " " << _mesh->getTri(*it).point[0].r[1] << " " << _mesh->getTri(*it).point[0].r[2] << "\n";
@@ -469,7 +469,7 @@ void Octree<T>::write(const int depth,const std::string no)
     }
     f << "solid ascii" << std::endl << std::flush;
     std::vector<unsigned int>::iterator it = _triangles.begin();
-    for (; it != _triangles.end(); it++) {
+    for (; it != _triangles.end(); ++it) {
       f << "facet normal" << _mesh->getTri(*it).normal[0] << " "  << _mesh->getTri(*it).normal[1] << " "  << _mesh->getTri(*it).normal[2] << " " <<std::endl;
       f << "    outer loop\n";
       f << "        vertex " << _mesh->getTri(*it).point[0].r[0] << " " << _mesh->getTri(*it).point[0].r[1] << " " << _mesh->getTri(*it).point[0].r[2] << "\n";

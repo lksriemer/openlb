@@ -228,7 +228,7 @@ void Timer<T>::printShortSummary()
 
 // Factory function /////////////////////////////////
 
-template<typename T, template<typename U> class DESCRIPTOR>
+template<typename T, typename DESCRIPTOR>
 Timer<T>* createTimer(XMLreader& param, const UnitConverter<T,DESCRIPTOR>& converter, size_t numLatticePoints)
 {
   OstreamManager clout(std::cout,"createTimer");

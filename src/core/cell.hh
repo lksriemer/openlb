@@ -1,6 +1,7 @@
 /*  This file is part of the OpenLB library
  *
- *  Copyright (C) 2006, 2007 Jonas Latt
+ *  Copyright (C) 2006-2007 Jonas Latt
+ *                2015-2019 Mathias J. Krause, Adrian Kummerlaender
  *  E-mail contact: info@openlb.net
  *  The most recent release of OpenLB can be downloaded at
  *  <http://www.openlb.net/>
@@ -30,6 +31,7 @@
 #include <algorithm>
 #include "cell.h"
 #include "util.h"
+#include "dynamics/lbHelpers.h"
 
 namespace olb {
 
@@ -40,12 +42,11 @@ namespace olb {
  * be used directly after construction; the method defineDynamics()
  * must be used first.
  */
-template<typename T, template<typename U> class Lattice>
-Cell<T,Lattice>::Cell()
+template<typename T, typename DESCRIPTOR>
+Cell<T,DESCRIPTOR>::Cell()
   : dynamics(nullptr)
 {
-  iniPop();
-  iniExternal();
+  initializeData();
 }
 
 /** This constructor initializes the dynamics, but not the values
@@ -53,103 +54,101 @@ Cell<T,Lattice>::Cell()
  * owned by the Cell object, the user must ensure its proper
  * destruction and a sufficient life time.
  */
-template<typename T, template<typename U> class Lattice>
-Cell<T,Lattice>::Cell(Dynamics<T,Lattice>* dynamics_)
+template<typename T, typename DESCRIPTOR>
+Cell<T,DESCRIPTOR>::Cell(Dynamics<T,DESCRIPTOR>* dynamics_)
   : dynamics(dynamics_)
 {
-  iniPop();
-  iniExternal();
+  initializeData();
 }
 
-template<typename T, template<typename U> class Lattice>
-void Cell<T,Lattice>::defineDynamics(Dynamics<T,Lattice>* dynamics_)
+template<typename T, typename DESCRIPTOR>
+void Cell<T,DESCRIPTOR>::defineDynamics(Dynamics<T,DESCRIPTOR>* dynamics_)
 {
   dynamics = dynamics_;
 }
 
-template<typename T, template<typename U> class Lattice>
-Dynamics<T,Lattice> const* Cell<T,Lattice>::getDynamics() const
+template<typename T, typename DESCRIPTOR>
+Dynamics<T,DESCRIPTOR> const* Cell<T,DESCRIPTOR>::getDynamics() const
 {
   OLB_PRECONDITION(dynamics);
   return dynamics;
 }
 
-template<typename T, template<typename U> class Lattice>
-Dynamics<T,Lattice>* Cell<T,Lattice>::getDynamics()
+template<typename T, typename DESCRIPTOR>
+Dynamics<T,DESCRIPTOR>* Cell<T,DESCRIPTOR>::getDynamics()
 {
   OLB_PRECONDITION(dynamics);
   return dynamics;
 }
 
-template<typename T, template<typename U> class Lattice>
-void Cell<T,Lattice>::revert()
+template<typename T, typename DESCRIPTOR>
+void Cell<T,DESCRIPTOR>::computeFeq(T fEq[descriptors::q<DESCRIPTOR>()]) const
 {
-  for (int iPop=1; iPop<=Lattice<T>::q/2; ++iPop) {
-    std::swap(this->f[iPop],this->f[iPop+Lattice<T>::q/2]);
+  T rho{};
+  T u[2] {};
+  computeRhoU(rho, u);
+  const T uSqr = u[0]*u[0] + u[1]*u[1];
+  for (int iPop=0; iPop < descriptors::q<DESCRIPTOR>(); ++iPop) {
+    fEq[iPop] = lbHelpers<T,DESCRIPTOR>::equilibrium(iPop, rho, u, uSqr);
   }
 }
 
-template<typename T, template<typename U> class Lattice>
-void Cell<T,Lattice>::iniPop()
+template <typename T, typename DESCRIPTOR>
+void Cell<T,DESCRIPTOR>::computeFneq(T fNeq[descriptors::q<DESCRIPTOR>()]) const
 {
-  for (int iPop=0; iPop<Lattice<T>::q; ++iPop) {
-    this->f[iPop] = T();
+  T rho{};
+  T u[2] {};
+  computeRhoU(rho, u);
+  lbHelpers<T,DESCRIPTOR>::computeFneq(*this, fNeq, rho, u);
+}
+
+template<typename T, typename DESCRIPTOR>
+void Cell<T,DESCRIPTOR>::revert()
+{
+  for (int iPop=1; iPop<=descriptors::q<DESCRIPTOR>()/2; ++iPop) {
+    std::swap(this->data[iPop],this->data[iPop+descriptors::q<DESCRIPTOR>()/2]);
   }
 }
 
-template<typename T, template<typename U> class Lattice>
-void Cell<T,Lattice>::iniExternal()
+template<typename T, typename DESCRIPTOR>
+void Cell<T,DESCRIPTOR>::initializeData()
 {
-  for (int iData=0; iData<Lattice<T>::ExternalField::numScalars; ++iData) {
-    *external.get(iData) = T();
+  for (int iPop=0; iPop<DESCRIPTOR::size(); ++iPop) {
+    this->data[iPop] = T();
   }
 }
 
-template<typename T, template<typename U> class Lattice>
-void Cell<T,Lattice>::serialize(T* data) const
+template<typename T, typename DESCRIPTOR>
+void Cell<T,DESCRIPTOR>::serialize(T* data) const
 {
-  const int q = Lattice<T>::q;
-  const int numExt = Lattice<T>::ExternalField::numScalars;
-  for (int iPop=0; iPop<q; ++iPop) {
-    data[iPop] = this->f[iPop];
-  }
-  for (int iExternal=0; iExternal < numExt; ++iExternal) {
-    data[iExternal+q] = *external.get(iExternal);
+  for (int i=0; i < DESCRIPTOR::size(); ++i) {
+    data[i] = this->data[i];
   }
 }
 
-template<typename T, template<typename U> class Lattice>
-void Cell<T,Lattice>::unSerialize(T const* data)
+template<typename T, typename DESCRIPTOR>
+void Cell<T,DESCRIPTOR>::unSerialize(T const* data)
 {
-  const int q = Lattice<T>::q;
-  const int numExt = Lattice<T>::ExternalField::numScalars;
-  for (int iPop=0; iPop<q; ++iPop) {
-    this->f[iPop] = data[iPop];
-  }
-  for (int iExternal=0; iExternal < numExt; ++iExternal) {
-    *external.get(iExternal) = data[iExternal+q];
+  for (int i=0; i < DESCRIPTOR::size(); ++i) {
+    this->data[i] = data[i];
   }
 }
 
 
-template<typename T, template<typename U> class Lattice>
-std::size_t Cell<T,Lattice>::getSerializableSize() const
+template<typename T, typename DESCRIPTOR>
+std::size_t Cell<T,DESCRIPTOR>::getSerializableSize() const
 {
-  return sizeof(T) * Lattice<T>::q // this->f
-         + sizeof(T) * Lattice<T>::ExternalField::numScalars; // externals
+  return sizeof(T) * DESCRIPTOR::size();
 }
 
 
-template<typename T, template<typename U> class Lattice>
-bool* Cell<T,Lattice>::getBlock(std::size_t iBlock, std::size_t& sizeBlock, bool loadingMode)
+template<typename T, typename DESCRIPTOR>
+bool* Cell<T,DESCRIPTOR>::getBlock(std::size_t iBlock, std::size_t& sizeBlock, bool loadingMode)
 {
   std::size_t currentBlock = 0;
   bool* dataPtr = nullptr;
 
-  this->registerVar(iBlock, sizeBlock, currentBlock, dataPtr, this->f[0], Lattice<T>::q);
-  if (Lattice<T>::ExternalField::numScalars)
-    this->registerVar(iBlock, sizeBlock, currentBlock, dataPtr, *(external.get(0)),
-        Lattice<T>::ExternalField::numScalars);
+  this->registerVar(iBlock, sizeBlock, currentBlock, dataPtr, this->data[0], DESCRIPTOR::size());
 
   return dataPtr;
 }

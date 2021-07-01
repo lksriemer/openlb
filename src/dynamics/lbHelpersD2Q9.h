@@ -32,36 +32,39 @@
 namespace olb {
 
 // Efficient specialization for D2Q9 base lattice
-template<typename T>
-struct lbDynamicsHelpers<T, descriptors::D2Q9DescriptorBase<T> > {
+template<typename T, typename... FIELDS>
+struct lbDynamicsHelpers<T, descriptors::D2Q9<FIELDS...> > {
+  using SpecializedCellBase = CellBase<T,descriptors::D2Q9<FIELDS...>>;
 
-  static T equilibrium( int iPop, T rho, const T u[2], T uSqr )
+  using SpecializedDescriptor = descriptors::D2Q9<FIELDS...>;
+
+  static T equilibrium(int iPop, T rho, const T u[2], T uSqr)
   {
-    typedef descriptors::D2Q9DescriptorBase<T> L;
-    T c_u = L::c[iPop][0]*u[0] + L::c[iPop][1]*u[1];
-    return rho * L::t[iPop] * (
+    typedef descriptors::D2Q9<> L;
+    T c_u = descriptors::c<L>(iPop,0)*u[0] + descriptors::c<L>(iPop,1)*u[1];
+    return rho * descriptors::t<T,L>(iPop) * (
              1. + 3.*c_u + 4.5*c_u*c_u - 1.5*uSqr )
-           - L::t[iPop];
+           - descriptors::t<T,L>(iPop);
   }
 
-  static T equilibriumFirstOrder( int iPop, T rho, const T u[2] )
+  static T equilibriumFirstOrder(int iPop, T rho, const T u[2])
    {
-     typedef descriptors::D2Q9DescriptorBase<T> L;
-     T c_u = L::c[iPop][0] * u[0] + L::c[iPop][1] * u[1];
+     typedef descriptors::D2Q9<> L;
+     T c_u = descriptors::c<L>(iPop,0) * u[0] + descriptors::c<L>(iPop,1) * u[1];
 
-     return rho * L::t[iPop] * ( ( T )1 + c_u * L::invCs2 ) - L::t[iPop];
+     return rho * descriptors::t<T,L>(iPop) * ( ( T )1 + c_u * descriptors::invCs2<T,L>() ) - descriptors::t<T,L>(iPop);
    }
 
-  static T incEquilibrium( int iPop, const T j[2], const T jSqr, const T pressure )
+  static T incEquilibrium(int iPop, const T j[2], const T jSqr, const T pressure)
   {
-    typedef descriptors::D2Q9DescriptorBase<T> L;
-    T c_j = L::c[iPop][0]*j[0] + L::c[iPop][1]*j[1];
-    return L::t[iPop] * (
+    typedef descriptors::D2Q9<> L;
+    T c_j = descriptors::c<L>(iPop,0)*j[0] + descriptors::c<L>(iPop,1)*j[1];
+    return descriptors::t<T,L>(iPop) * (
              3.*pressure + 3.*c_j + 4.5*c_j*c_j - 1.5*jSqr )
-           - L::t[iPop];
+           - descriptors::t<T,L>(iPop);
   }
 
-  static void computeFneq ( CellBase<T,descriptors::D2Q9DescriptorBase<T> > const& cell, T fNeq[9], T rho, const T u[2] )
+  static void computeFneq(SpecializedCellBase const& cell, T fNeq[9], T rho, const T u[2])
   {
     const T uSqr = u[0]*u[0] + u[1]*u[1];
     for (int iPop=0; iPop < 9; ++iPop) {
@@ -69,7 +72,7 @@ struct lbDynamicsHelpers<T, descriptors::D2Q9DescriptorBase<T> > {
     }
   }
 
-  static T bgkCollision ( CellBase<T,descriptors::D2Q9DescriptorBase<T> >& cell, T const& rho, const T u[2], T const& omega)
+  static T bgkCollision(SpecializedCellBase& cell, T const& rho, const T u[2], T const& omega)
   {
     T uxSqr = u[0]*u[0];
     T uySqr = u[1]*u[1];
@@ -119,32 +122,32 @@ struct lbDynamicsHelpers<T, descriptors::D2Q9DescriptorBase<T> > {
     return uxSqr + uySqr;
   }
 
-  static T incBgkCollision (CellBase<T,descriptors::D2Q9DescriptorBase<T> >& cell, T pressure, const T j[2], T omega)
+  static T incBgkCollision(SpecializedCellBase& cell, T pressure, const T j[2], T omega)
   {
-    const T jSqr = util::normSqr<T,descriptors::D2Q9DescriptorBase<T>::d>(j);
-    for (int iPop=0; iPop < descriptors::D2Q9DescriptorBase<T>::q; ++iPop) {
+    const T jSqr = util::normSqr<T,descriptors::D2Q9<>::d>(j);
+    for (int iPop=0; iPop < descriptors::D2Q9<>::q; ++iPop) {
       cell[iPop] *= (T)1-omega;
-      cell[iPop] += omega * lbHelpers<T,descriptors::D2Q9DescriptorBase>::incEquilibrium (
+      cell[iPop] += omega * lbHelpers<T,SpecializedDescriptor>::incEquilibrium (
                       iPop, j, jSqr, pressure );
     }
     return jSqr;
   }
 
-  static T constRhoBgkCollision(CellBase<T,descriptors::D2Q9DescriptorBase<T> >& cell, T rho, const T u[2], T ratioRho, T omega)
+  static T constRhoBgkCollision(SpecializedCellBase& cell, T rho, const T u[2], T ratioRho, T omega)
   {
-    const T uSqr = util::normSqr<T,descriptors::D2Q9DescriptorBase<T>::d>(u);
-    for (int iPop=0; iPop < descriptors::D2Q9DescriptorBase<T>::q; ++iPop) {
-      T feq = lbHelpers<T,descriptors::D2Q9DescriptorBase>::equilibrium(iPop, rho, u, uSqr );
-      cell[iPop] = ratioRho*(feq+descriptors::D2Q9DescriptorBase<T>::t[iPop])
-                   -descriptors::D2Q9DescriptorBase<T>::t[iPop] +
+    const T uSqr = util::normSqr<T,descriptors::D2Q9<>::d>(u);
+    for (int iPop=0; iPop < descriptors::D2Q9<>::q; ++iPop) {
+      T feq = lbHelpers<T,SpecializedDescriptor>::equilibrium(iPop, rho, u, uSqr );
+      cell[iPop] = ratioRho*(feq+descriptors::t<T,SpecializedDescriptor>(iPop))
+                   -descriptors::t<T,SpecializedDescriptor>(iPop) +
                    ((T)1-omega)*(cell[iPop]-feq);
     }
     return uSqr;
   }
 
 
-  static void partial_rho ( CellBase<T,descriptors::D2Q9DescriptorBase<T> > const& cell,
-                            T& lineX_P1, T& lineX_0, T& lineX_M1, T& lineY_P1, T& lineY_M1 )
+  static void partial_rho(SpecializedCellBase const& cell,
+                          T& lineX_P1, T& lineX_0, T& lineX_M1, T& lineY_P1, T& lineY_M1)
   {
     lineX_P1  = cell[5] + cell[6] + cell[7];
     lineX_0   = cell[0] + cell[4] + cell[8];
@@ -154,14 +157,14 @@ struct lbDynamicsHelpers<T, descriptors::D2Q9DescriptorBase<T> > {
     lineY_M1  = cell[3] + cell[4] + cell[5];
   }
 
-  static T computeRho(CellBase<T,descriptors::D2Q9DescriptorBase<T> > const& cell)
+  static T computeRho(SpecializedCellBase const& cell)
   {
     T rho = cell[0] + cell[1] + cell[2] + cell[3] + cell[4]
             + cell[5] + cell[6] + cell[7] + cell[8] + (T)1;
     return rho;
   }
 
-  static void computeRhoU(CellBase<T,descriptors::D2Q9DescriptorBase<T> > const& cell, T& rho, T u[2])
+  static void computeRhoU(SpecializedCellBase const& cell, T& rho, T u[2])
   {
     T lineX_P1, lineX_0, lineX_M1, lineY_P1, lineY_M1;
     partial_rho(cell, lineX_P1, lineX_0, lineX_M1, lineY_P1, lineY_M1);
@@ -172,7 +175,7 @@ struct lbDynamicsHelpers<T, descriptors::D2Q9DescriptorBase<T> > {
     u[1]  = (lineY_P1 - lineY_M1)*invRho;
   }
 
-  static void computeRhoJ(CellBase<T,descriptors::D2Q9DescriptorBase<T> > const& cell, T& rho, T j[2])
+  static void computeRhoJ(SpecializedCellBase const& cell, T& rho, T j[2])
   {
     T lineX_P1, lineX_0, lineX_M1, lineY_P1, lineY_M1;
     partial_rho(cell, lineX_P1, lineX_0, lineX_M1, lineY_P1, lineY_M1);
@@ -182,7 +185,7 @@ struct lbDynamicsHelpers<T, descriptors::D2Q9DescriptorBase<T> > {
     j[1]  = (lineY_P1 - lineY_M1);
   }
 
-  static void computeJ(CellBase<T,descriptors::D2Q9DescriptorBase<T> > const& cell, T j[2] )
+  static void computeJ(SpecializedCellBase const& cell, T j[2] )
   {
     T lineX_P1, lineX_M1, lineY_P1, lineY_M1;
 
@@ -195,9 +198,9 @@ struct lbDynamicsHelpers<T, descriptors::D2Q9DescriptorBase<T> > {
     j[1]  = (lineY_P1 - lineY_M1);
   }
 
-  static void computeStress(CellBase<T,descriptors::D2Q9DescriptorBase<T> > const& cell, T rho, const T u[2], T pi[3])
+  static void computeStress(SpecializedCellBase const& cell, T rho, const T u[2], T pi[3])
   {
-    typedef descriptors::D2Q9DescriptorBase<T> L;
+    typedef descriptors::D2Q9<> L;
     // Workaround for Intel(r) compiler 9.1;
     // "using namespace util::tensorIndices2D" is not sufficient
     using util::tensorIndices2D::xx;
@@ -207,14 +210,14 @@ struct lbDynamicsHelpers<T, descriptors::D2Q9DescriptorBase<T> > {
     T lineX_P1, lineX_0, lineX_M1, lineY_P1, lineY_M1;
     partial_rho(cell, lineX_P1, lineX_0, lineX_M1, lineY_P1, lineY_M1);
 
-    pi[xx] = lineX_P1+lineX_M1 - 1./L::invCs2*(rho-(T)1) - rho*u[0]*u[0];
-    pi[yy] = lineY_P1+lineY_M1 - 1./L::invCs2*(rho-(T)1) - rho*u[1]*u[1];
+    pi[xx] = lineX_P1+lineX_M1 - 1./descriptors::invCs2<T,L>()*(rho-(T)1) - rho*u[0]*u[0];
+    pi[yy] = lineY_P1+lineY_M1 - 1./descriptors::invCs2<T,L>()*(rho-(T)1) - rho*u[1]*u[1];
     pi[xy] = -cell[1] + cell[3] - cell[5] + cell[7]   - rho*u[0]*u[1];
   }
 
-  static void computeAllMomenta(CellBase<T,descriptors::D2Q9DescriptorBase<T> > const& cell, T& rho, T u[2], T pi[3] )
+  static void computeAllMomenta(SpecializedCellBase const& cell, T& rho, T u[2], T pi[3] )
   {
-    typedef descriptors::D2Q9DescriptorBase<T> L;
+    typedef descriptors::D2Q9<> L;
     // Workaround for Intel(r) compiler 9.1;
     // "using namespace util::tensorIndices2D" is not sufficient
     using util::tensorIndices2D::xx;
@@ -231,12 +234,12 @@ struct lbDynamicsHelpers<T, descriptors::D2Q9DescriptorBase<T> > {
     u[0]  = rhoU0/rho;
     u[1]  = rhoU1/rho;
 
-    pi[xx] = lineX_P1 + lineX_M1 - 1./L::invCs2*(rho-(T)1) - rhoU0*u[0];
-    pi[yy] = lineY_P1 + lineY_M1 - 1./L::invCs2*(rho-(T)1) - rhoU1*u[1];
+    pi[xx] = lineX_P1 + lineX_M1 - 1./descriptors::invCs2<T,L>()*(rho-(T)1) - rhoU0*u[0];
+    pi[yy] = lineY_P1 + lineY_M1 - 1./descriptors::invCs2<T,L>()*(rho-(T)1) - rhoU1*u[1];
     pi[xy] = -cell[1] + cell[3] - cell[5] + cell[7]        - rhoU0*u[1];
   }
 
-  static void modifyVelocity(CellBase<T,descriptors::D2Q9DescriptorBase<T> > const& cell, const T newU[2])
+  static void modifyVelocity(SpecializedCellBase const& cell, const T newU[2])
   {
     T rho, oldU[2];
     computeRhoU(cell, rho, oldU);
@@ -249,20 +252,18 @@ struct lbDynamicsHelpers<T, descriptors::D2Q9DescriptorBase<T> > {
     }
   }
 
-};  //struct lbHelpers<D2Q9DescriptorBase>
+};  //struct lbHelpers<D2Q9>
 
 // Efficient specialization for D2Q9 lattice with force
 template<typename T>
-struct lbExternalHelpers<T, descriptors::ForcedD2Q9Descriptor> {
+struct lbExternalHelpers<T, descriptors::D2Q9<descriptors::FORCE>> {
 
   static void addExternalForce(
-    Cell<T,descriptors::ForcedD2Q9Descriptor>& cell,
-    const T u[descriptors::ForcedD2Q9Descriptor<T>::d], T omega, T amplitude)
+    Cell<T,descriptors::D2Q9<descriptors::FORCE>>& cell,
+    const T u[descriptors::D2Q9<descriptors::FORCE>::d], T omega, T amplitude)
   {
-    static const int forceBeginsAt
-      = descriptors::ForcedD2Q9Descriptor<T>::ExternalField::forceBeginsAt;
-    T* force = cell.getExternal(forceBeginsAt);
-    T mu = amplitude*((T)1-omega/(T)2);
+    const T* force = cell.template getFieldPointer<descriptors::FORCE>();
+    const T  mu = amplitude*((T)1-omega/(T)2);
 
     cell[0] += mu *(T)4/(T)3  *( force[0] * (-  u[0]             ) +
                                  force[1] * (        -   u[1]    )   );
@@ -289,10 +290,10 @@ struct lbExternalHelpers<T, descriptors::ForcedD2Q9Descriptor> {
 //   (operations applying to the whole lattice)
 
 template<typename T>
-struct lbLatticeHelpers<T, descriptors::D2Q9Descriptor> {
+struct lbLatticeHelpers<T, descriptors::D2Q9<>> {
 
   static void swapAndStreamCell (
-    Cell<T,descriptors::D2Q9Descriptor> **grid,
+    Cell<T,descriptors::D2Q9<>> **grid,
     int iX, int iY, int nX, int nY, int iPop, T& fTmp )
   {
     fTmp                 = grid[iX][iY][iPop];
@@ -302,7 +303,7 @@ struct lbLatticeHelpers<T, descriptors::D2Q9Descriptor> {
   }
 
   static void swapAndStream2D (
-    Cell<T,descriptors::D2Q9Descriptor> **grid, int iX, int iY )
+    Cell<T,descriptors::D2Q9<>> **grid, int iX, int iY )
   {
     T fTmp;
     swapAndStreamCell(grid, iX, iY, iX-1, iY+1, 1, fTmp);
@@ -313,10 +314,10 @@ struct lbLatticeHelpers<T, descriptors::D2Q9Descriptor> {
 };
 
 template<typename T>
-struct lbLatticeHelpers<T, descriptors::ForcedD2Q9Descriptor> {
+struct lbLatticeHelpers<T, descriptors::D2Q9<descriptors::FORCE>> {
 
   static void swapAndStreamCell (
-    Cell<T,descriptors::ForcedD2Q9Descriptor> **grid,
+    Cell<T,descriptors::D2Q9<descriptors::FORCE>> **grid,
     int iX, int iY, int nX, int nY, int iPop, T& fTmp )
   {
     fTmp                 = grid[iX][iY][iPop];
@@ -326,7 +327,7 @@ struct lbLatticeHelpers<T, descriptors::ForcedD2Q9Descriptor> {
   }
 
   static void swapAndStream2D (
-    Cell<T,descriptors::ForcedD2Q9Descriptor> **grid, int iX, int iY )
+    Cell<T,descriptors::D2Q9<descriptors::FORCE>> **grid, int iX, int iY )
   {
     T fTmp;
     swapAndStreamCell(grid, iX, iY, iX-1, iY+1, 1, fTmp);

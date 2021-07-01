@@ -36,6 +36,7 @@
 #include "communication/loadBalancer.h"
 #include "communication/blockLoadBalancer.h"
 #include "functors/lattice/indicator/blockIndicatorF2D.h"
+#include "communication/ompManager.h"
 
 namespace olb {
 
@@ -44,9 +45,9 @@ namespace olb {
 /** \param nx lattice width (first index)
  *  \param ny lattice height (second index)
  */
-template<typename T, template<typename U> class Lattice>
-BlockLattice2D<T,Lattice>::BlockLattice2D(int nx, int ny)
-  : BlockLatticeStructure2D<T,Lattice>(nx,ny)
+template<typename T, typename DESCRIPTOR>
+BlockLattice2D<T,DESCRIPTOR>::BlockLattice2D(int nx, int ny)
+  : BlockLatticeStructure2D<T,DESCRIPTOR>(nx,ny)
 {
   allocateMemory();
   resetPostProcessors();
@@ -69,8 +70,8 @@ BlockLattice2D<T,Lattice>::BlockLattice2D(int nx, int ny)
  * cells is released. However, the dynamics objects pointed to by
  * the cells must be deleted manually by the user.
  */
-template<typename T, template<typename U> class Lattice>
-BlockLattice2D<T,Lattice>::~BlockLattice2D()
+template<typename T, typename DESCRIPTOR>
+BlockLattice2D<T,DESCRIPTOR>::~BlockLattice2D()
 {
   releaseMemory();
   clearPostProcessors();
@@ -86,10 +87,16 @@ BlockLattice2D<T,Lattice>::~BlockLattice2D()
 #endif
 }
 
-template<typename T, template<typename U> class Lattice>
-void BlockLattice2D<T,Lattice>::initialize()
+template<typename T, typename DESCRIPTOR>
+void BlockLattice2D<T,DESCRIPTOR>::initialize()
 {
   postProcess();
+}
+
+template<typename T, typename DESCRIPTOR>
+Dynamics<T,DESCRIPTOR>* BlockLattice2D<T,DESCRIPTOR>::getDynamics (int iX, int iY)
+{
+  return grid[iX][iY].getDynamics();
 }
 
 /** The dynamics object is not duplicated: all cells of the rectangular
@@ -98,9 +105,9 @@ void BlockLattice2D<T,Lattice>::initialize()
  * The dynamics object is not owned by the BlockLattice2D object, its
  * memory management is in charge of the user.
  */
-template<typename T, template<typename U> class Lattice>
-void BlockLattice2D<T,Lattice>::defineDynamics (
-  int x0, int x1, int y0, int y1, Dynamics<T,Lattice>* dynamics )
+template<typename T, typename DESCRIPTOR>
+void BlockLattice2D<T,DESCRIPTOR>::defineDynamics (
+  int x0, int x1, int y0, int y1, Dynamics<T,DESCRIPTOR>* dynamics )
 {
   OLB_PRECONDITION(x0>=0 && x1<this->_nx);
   OLB_PRECONDITION(x1>=x0);
@@ -114,22 +121,9 @@ void BlockLattice2D<T,Lattice>::defineDynamics (
   }
 }
 
-template<typename T, template<typename U> class Lattice>
-void BlockLattice2D<T,Lattice>::defineDynamics(
-  BlockGeometryStructure2D<T>& blockGeometry, int material, Dynamics<T,Lattice>* dynamics)
-{
-  for (int iX = 0; iX < this->_nx; ++iX) {
-    for (int iY = 0; iY < this->_ny; ++iY) {
-      if (blockGeometry.getMaterial(iX, iY) == material) {
-        get(iX,iY).defineDynamics(dynamics);
-      }
-    }
-  }
-}
-
-template<typename T, template<typename U> class Lattice>
-void BlockLattice2D<T,Lattice>::defineDynamics (
-  int iX, int iY, Dynamics<T,Lattice>* dynamics )
+template<typename T, typename DESCRIPTOR>
+void BlockLattice2D<T,DESCRIPTOR>::defineDynamics (
+  int iX, int iY, Dynamics<T,DESCRIPTOR>* dynamics )
 {
   OLB_PRECONDITION(iX>=0 && iX<this->_nx);
   OLB_PRECONDITION(iY>=0 && iY<this->_ny);
@@ -137,28 +131,30 @@ void BlockLattice2D<T,Lattice>::defineDynamics (
   grid[iX][iY].defineDynamics(dynamics);
 }
 
-template<typename T, template<typename U> class Lattice>
-void BlockLattice2D<T,Lattice>::defineDynamics (
-  BlockIndicatorF2D<T>& indicator, int overlap, Dynamics<T,Lattice>* dynamics)
+template<typename T, typename DESCRIPTOR>
+void BlockLattice2D<T,DESCRIPTOR>::defineDynamics (
+  BlockIndicatorF2D<T>& indicator, Dynamics<T,DESCRIPTOR>* dynamics)
 {
-  for (int iX=0; iX<this->_nx; ++iX) {
-    for (int iY=0; iY<this->_ny; ++iY) {
-      const int blockLocation[2] = { iX-overlap, iY-overlap };
-      if (indicator(blockLocation)) {
-        grid[iX][iY].defineDynamics(dynamics);
+  int latticeR[2];
+  for (latticeR[0] = 0; latticeR[0] < this->_nx; ++latticeR[0]) {
+    for (latticeR[1] = 0; latticeR[1] < this->_ny; ++latticeR[1]) {
+      if (indicator(latticeR)) {
+        get(latticeR).defineDynamics(dynamics);
       }
     }
   }
 }
 
-template<typename T, template<typename U> class Lattice>
-Dynamics<T,Lattice>* BlockLattice2D<T,Lattice>::getDynamics (int iX, int iY)
+template<typename T, typename DESCRIPTOR>
+void BlockLattice2D<T,DESCRIPTOR>::defineDynamics(
+  BlockGeometryStructure2D<T>& blockGeometry, int material, Dynamics<T,DESCRIPTOR>* dynamics)
 {
-  return grid[iX][iY].getDynamics();
+  BlockIndicatorMaterial2D<T> indicator(blockGeometry, std::vector<int>(1, material));
+  defineDynamics(indicator, dynamics);
 }
 
-template<typename T, template<typename U> class Lattice>
-void BlockLattice2D<T,Lattice>::collide(int x0, int x1, int y0, int y1)
+template<typename T, typename DESCRIPTOR>
+void BlockLattice2D<T,DESCRIPTOR>::collide(int x0, int x1, int y0, int y1)
 {
   OLB_PRECONDITION(x0>=0 && x1<this->_nx);
   OLB_PRECONDITION(x1>=x0);
@@ -178,48 +174,11 @@ void BlockLattice2D<T,Lattice>::collide(int x0, int x1, int y0, int y1)
 }
 
 /** \sa collide(int,int,int,int) */
-template<typename T, template<typename U> class Lattice>
-void BlockLattice2D<T,Lattice>::collide()
+template<typename T, typename DESCRIPTOR>
+void BlockLattice2D<T,DESCRIPTOR>::collide()
 {
   collide(0, this->_nx-1, 0, this->_ny-1);
 }
-
-/**
- * A useful method for initializing the flow field to a given velocity
- * profile.
- */
-/*
-template<typename T, template<typename U> class Lattice>
-void BlockLattice2D<T,Lattice>::staticCollide(int x0, int x1, int y0, int y1,
-    TensorFieldBase2D<T,2> const& u)
-{
-  OLB_PRECONDITION(x0>=0 && x1<this->_nx);
-  OLB_PRECONDITION(x1>=x0);
-  OLB_PRECONDITION(y0>=0 && y1<this->_ny);
-  OLB_PRECONDITION(y1>=y0);
-
-  int iX;
-
-#ifdef PARALLEL_MODE_OMP
-  #pragma omp parallel for schedule(dynamic,1)
-#endif
-  for (iX=x0; iX<=x1; ++iX) {
-    for (int iY=y0; iY<=y1; ++iY) {
-      grid[iX][iY].staticCollide(u.get(iX,iY), getStatistics());
-      grid[iX][iY].revert();
-    }
-  }
-}
-*/
-
-/** \sa collide(int,int,int,int) */
-/*
-template<typename T, template<typename U> class Lattice>
-void BlockLattice2D<T,Lattice>::staticCollide(TensorFieldBase2D<T,2> const& u)
-{
-  staticCollide(0, this->_nx-1, 0, this->_ny-1, u);
-}
-*/
 
 /** The distribution functions never leave the rectangular domain. On the
  * domain boundaries, the (outgoing) distribution functions that should
@@ -229,15 +188,15 @@ void BlockLattice2D<T,Lattice>::staticCollide(TensorFieldBase2D<T,2> const& u)
  * must explicitly call the method postProcess().
  * \sa stream()
  */
-template<typename T, template<typename U> class Lattice>
-void BlockLattice2D<T,Lattice>::stream(int x0, int x1, int y0, int y1)
+template<typename T, typename DESCRIPTOR>
+void BlockLattice2D<T,DESCRIPTOR>::stream(int x0, int x1, int y0, int y1)
 {
   OLB_PRECONDITION(x0>=0 && x1<this->_nx);
   OLB_PRECONDITION(x1>=x0);
   OLB_PRECONDITION(y0>=0 && y1<this->_ny);
   OLB_PRECONDITION(y1>=y0);
 
-  static const int vicinity = Lattice<T>::vicinity;
+  static const int vicinity = descriptors::vicinity<DESCRIPTOR>();
 
   bulkStream(x0+vicinity,x1-vicinity,y0+vicinity,y1-vicinity);
 
@@ -251,8 +210,8 @@ void BlockLattice2D<T,Lattice>::stream(int x0, int x1, int y0, int y1)
  * invoked.
  * \sa stream(int,int,int,int)
  */
-template<typename T, template<typename U> class Lattice>
-void BlockLattice2D<T,Lattice>::stream(bool periodic)
+template<typename T, typename DESCRIPTOR>
+void BlockLattice2D<T,DESCRIPTOR>::stream(bool periodic)
 {
   stream(0, this->_nx-1, 0, this->_ny-1);
 
@@ -272,15 +231,15 @@ void BlockLattice2D<T,Lattice>::stream(bool periodic)
  * must explicitly call the method postProcess().
  * \sa collideAndStream()
  */
-template<typename T, template<typename U> class Lattice>
-void BlockLattice2D<T,Lattice>::collideAndStream(int x0, int x1, int y0, int y1)
+template<typename T, typename DESCRIPTOR>
+void BlockLattice2D<T,DESCRIPTOR>::collideAndStream(int x0, int x1, int y0, int y1)
 {
   OLB_PRECONDITION(x0>=0 && x1<this->_nx);
   OLB_PRECONDITION(x1>=x0);
   OLB_PRECONDITION(y0>=0 && y1<this->_ny);
   OLB_PRECONDITION(y1>=y0);
 
-  static const int vicinity = Lattice<T>::vicinity;
+  static const int vicinity = descriptors::vicinity<DESCRIPTOR>();
 
   // First, do the collision on cells within a boundary envelope of width
   // equal to the range of the lattice vectors (e.g. 1 for D2Q9)
@@ -306,8 +265,8 @@ void BlockLattice2D<T,Lattice>::collideAndStream(int x0, int x1, int y0, int y1)
 /** At the end of this method, the post-processing steps are automatically
  * invoked.
  * \sa collideAndStream(int,int,int,int) */
-template<typename T, template<typename U> class Lattice>
-void BlockLattice2D<T,Lattice>::collideAndStream(bool periodic)
+template<typename T, typename DESCRIPTOR>
+void BlockLattice2D<T,DESCRIPTOR>::collideAndStream(bool periodic)
 {
   collideAndStream(0, this->_nx-1, 0, this->_ny-1);
 
@@ -319,13 +278,13 @@ void BlockLattice2D<T,Lattice>::collideAndStream(bool periodic)
   getStatistics().incrementTime();
 }
 
-template<typename T, template<typename U> class Lattice>
-T BlockLattice2D<T,Lattice>::computeAverageDensity ( int x0, int x1, int y0, int y1) const
+template<typename T, typename DESCRIPTOR>
+T BlockLattice2D<T,DESCRIPTOR>::computeAverageDensity ( int x0, int x1, int y0, int y1) const
 {
   T sumRho = T();
   for (int iX=x0; iX<=x1; ++iX) {
     for (int iY=y0; iY<=y1; ++iY) {
-      T rho, u[Lattice<T>::d];
+      T rho, u[DESCRIPTOR::d];
       get(iX,iY).computeRhoU(rho, u);
       sumRho += rho;
     }
@@ -333,39 +292,39 @@ T BlockLattice2D<T,Lattice>::computeAverageDensity ( int x0, int x1, int y0, int
   return sumRho / (T)(x1-x0+1) / (T)(y1-y0+1);
 }
 
-template<typename T, template<typename U> class Lattice>
-T BlockLattice2D<T,Lattice>::computeAverageDensity() const
+template<typename T, typename DESCRIPTOR>
+T BlockLattice2D<T,DESCRIPTOR>::computeAverageDensity() const
 {
   return computeAverageDensity(0, this->_nx-1, 0, this->_ny-1);
 }
 
-template<typename T, template<typename U> class Lattice>
-void BlockLattice2D<T,Lattice>::computeStress(int iX, int iY, T pi[util::TensorVal<Lattice<T>>::n])
+template<typename T, typename DESCRIPTOR>
+void BlockLattice2D<T,DESCRIPTOR>::computeStress(int iX, int iY, T pi[util::TensorVal<DESCRIPTOR>::n])
 {
-    grid[iX][iY].computeStress(pi);
+  grid[iX][iY].computeStress(pi);
 }
 
-template<typename T, template<typename U> class Lattice>
-void BlockLattice2D<T,Lattice>::stripeOffDensityOffset ( int x0, int x1, int y0, int y1, T offset )
+template<typename T, typename DESCRIPTOR>
+void BlockLattice2D<T,DESCRIPTOR>::stripeOffDensityOffset ( int x0, int x1, int y0, int y1, T offset )
 {
   for (int iX=x0; iX<=x1; ++iX) {
     for (int iY=y0; iY<=y1; ++iY) {
-      for (int iPop=0; iPop<Lattice<T>::q; ++iPop) {
-        get(iX,iY)[iPop] -= Lattice<T>::t[iPop] * offset;
+      for (int iPop=0; iPop<DESCRIPTOR::q; ++iPop) {
+        get(iX,iY)[iPop] -= descriptors::t<T,DESCRIPTOR>(iPop) * offset;
       }
     }
   }
 }
 
-template<typename T, template<typename U> class Lattice>
-void BlockLattice2D<T,Lattice>::stripeOffDensityOffset(T offset)
+template<typename T, typename DESCRIPTOR>
+void BlockLattice2D<T,DESCRIPTOR>::stripeOffDensityOffset(T offset)
 {
   stripeOffDensityOffset(0, this->_nx-1, 0, this->_ny-1, offset);
 }
 
-template<typename T, template<typename U> class Lattice>
-void BlockLattice2D<T,Lattice>::forAll (
-  int x0, int x1, int y0, int y1, WriteCellFunctional<T,Lattice> const& application )
+template<typename T, typename DESCRIPTOR>
+void BlockLattice2D<T,DESCRIPTOR>::forAll (
+  int x0, int x1, int y0, int y1, WriteCellFunctional<T,DESCRIPTOR> const& application )
 {
   for (int iX=x0; iX<=x1; ++iX) {
     for (int iY=y0; iY<=y1; ++iY) {
@@ -375,30 +334,29 @@ void BlockLattice2D<T,Lattice>::forAll (
   }
 }
 
-template<typename T, template<typename U> class Lattice>
-void BlockLattice2D<T,Lattice>::forAll(WriteCellFunctional<T,Lattice> const& application)
+template<typename T, typename DESCRIPTOR>
+void BlockLattice2D<T,DESCRIPTOR>::forAll(WriteCellFunctional<T,DESCRIPTOR> const& application)
 {
   forAll(0, this->_nx-1, 0, this->_ny-1, application);
 }
 
-
-template<typename T, template<typename U> class Lattice>
-void BlockLattice2D<T,Lattice>::addPostProcessor (
-  PostProcessorGenerator2D<T,Lattice> const& ppGen )
+template<typename T, typename DESCRIPTOR>
+void BlockLattice2D<T,DESCRIPTOR>::addPostProcessor (
+  PostProcessorGenerator2D<T,DESCRIPTOR> const& ppGen )
 {
   postProcessors.push_back(ppGen.generate());
 }
 
-template<typename T, template<typename U> class Lattice>
-void BlockLattice2D<T,Lattice>::resetPostProcessors()
+template<typename T, typename DESCRIPTOR>
+void BlockLattice2D<T,DESCRIPTOR>::resetPostProcessors()
 {
   clearPostProcessors();
-  StatPPGenerator2D<T,Lattice> statPPGenerator;
+  StatPPGenerator2D<T,DESCRIPTOR> statPPGenerator;
   addPostProcessor(statPPGenerator);
 }
 
-template<typename T, template<typename U> class Lattice>
-void BlockLattice2D<T,Lattice>::clearPostProcessors()
+template<typename T, typename DESCRIPTOR>
+void BlockLattice2D<T,DESCRIPTOR>::clearPostProcessors()
 {
   typename PostProcVector::iterator ppIt = postProcessors.begin();
   for (; ppIt != postProcessors.end(); ++ppIt) {
@@ -407,48 +365,48 @@ void BlockLattice2D<T,Lattice>::clearPostProcessors()
   postProcessors.clear();
 }
 
-template<typename T, template<typename U> class Lattice>
-void BlockLattice2D<T,Lattice>::postProcess()
+template<typename T, typename DESCRIPTOR>
+void BlockLattice2D<T,DESCRIPTOR>::postProcess()
 {
   for (unsigned iPr=0; iPr<postProcessors.size(); ++iPr) {
     postProcessors[iPr] -> process(*this);
   }
 }
 
-template<typename T, template<typename U> class Lattice>
-void BlockLattice2D<T,Lattice>::postProcess(int x0_, int x1_, int y0_, int y1_)
+template<typename T, typename DESCRIPTOR>
+void BlockLattice2D<T,DESCRIPTOR>::postProcess(int x0_, int x1_, int y0_, int y1_)
 {
   for (unsigned iPr=0; iPr<postProcessors.size(); ++iPr) {
     postProcessors[iPr] -> processSubDomain(*this, x0_, x1_, y0_, y1_);
   }
 }
 
-template<typename T, template<typename U> class Lattice>
-void BlockLattice2D<T,Lattice>::addLatticeCoupling (
-  LatticeCouplingGenerator2D<T,Lattice> const& lcGen,
+template<typename T, typename DESCRIPTOR>
+void BlockLattice2D<T,DESCRIPTOR>::addLatticeCoupling (
+  LatticeCouplingGenerator2D<T,DESCRIPTOR> const& lcGen,
   std::vector<SpatiallyExtendedObject2D*> partners )
 {
   latticeCouplings.push_back(lcGen.generate(partners));
 }
 
-template<typename T, template<typename U> class Lattice>
-void BlockLattice2D<T,Lattice>::executeCoupling()
+template<typename T, typename DESCRIPTOR>
+void BlockLattice2D<T,DESCRIPTOR>::executeCoupling()
 {
   for (unsigned iPr=0; iPr<latticeCouplings.size(); ++iPr) {
     latticeCouplings[iPr] -> process(*this);
   }
 }
 
-template<typename T, template<typename U> class Lattice>
-void BlockLattice2D<T,Lattice>::executeCoupling(int x0_, int x1_, int y0_, int y1_)
+template<typename T, typename DESCRIPTOR>
+void BlockLattice2D<T,DESCRIPTOR>::executeCoupling(int x0_, int x1_, int y0_, int y1_)
 {
   for (unsigned iPr=0; iPr<latticeCouplings.size(); ++iPr) {
     latticeCouplings[iPr] -> processSubDomain(*this, x0_, x1_, y0_, y1_);
   }
 }
 
-template<typename T, template<typename U> class Lattice>
-void BlockLattice2D<T,Lattice>::clearLatticeCouplings()
+template<typename T, typename DESCRIPTOR>
+void BlockLattice2D<T,DESCRIPTOR>::clearLatticeCouplings()
 {
   typename PostProcVector::iterator ppIt = latticeCouplings.begin();
   for (; ppIt != latticeCouplings.end(); ++ppIt) {
@@ -457,17 +415,8 @@ void BlockLattice2D<T,Lattice>::clearLatticeCouplings()
   latticeCouplings.clear();
 }
 
-
-template<typename T, template<typename U> class Lattice>
-void BlockLattice2D<T,Lattice>::subscribeReductions(Reductor<T>& reductor)
-{
-  for (unsigned iPr=0; iPr<postProcessors.size(); ++iPr) {
-    postProcessors[iPr] -> subscribeReductions(*this, &reductor);
-  }
-}
-
-template<typename T, template<typename U> class Lattice>
-LatticeStatistics<T>& BlockLattice2D<T,Lattice>::getStatistics()
+template<typename T, typename DESCRIPTOR>
+LatticeStatistics<T>& BlockLattice2D<T,DESCRIPTOR>::getStatistics()
 {
 #ifdef PARALLEL_MODE_OMP
   return *statistics[omp.get_rank()];
@@ -476,8 +425,8 @@ LatticeStatistics<T>& BlockLattice2D<T,Lattice>::getStatistics()
 #endif
 }
 
-template<typename T, template<typename U> class Lattice>
-LatticeStatistics<T> const& BlockLattice2D<T,Lattice>::getStatistics() const
+template<typename T, typename DESCRIPTOR>
+LatticeStatistics<T> const& BlockLattice2D<T,DESCRIPTOR>::getStatistics() const
 {
 #ifdef PARALLEL_MODE_OMP
   return *statistics[omp.get_rank()];
@@ -486,21 +435,21 @@ LatticeStatistics<T> const& BlockLattice2D<T,Lattice>::getStatistics() const
 #endif
 }
 
-template<typename T, template<typename U> class Lattice>
-void BlockLattice2D<T,Lattice>::allocateMemory()
+template<typename T, typename DESCRIPTOR>
+void BlockLattice2D<T,DESCRIPTOR>::allocateMemory()
 {
   // The conversions to size_t ensure 64-bit compatibility. Note that
   //   nx and ny are of type int, which might by 32-bit types, even on
   //   64-bit platforms. Therefore, nx*ny may lead to a type overflow.
-  rawData = new Cell<T,Lattice> [(size_t)(this->_nx)*(size_t)(this->_ny)];
-  grid    = new Cell<T,Lattice>* [(size_t)(this->_nx)];
+  rawData = new Cell<T,DESCRIPTOR> [(size_t)(this->_nx)*(size_t)(this->_ny)];
+  grid    = new Cell<T,DESCRIPTOR>* [(size_t)(this->_nx)];
   for (int iX=0; iX<this->_nx; ++iX) {
     grid[iX] = rawData + (size_t)iX*(size_t)(this->_ny);
   }
 }
 
-template<typename T, template<typename U> class Lattice>
-void BlockLattice2D<T,Lattice>::releaseMemory()
+template<typename T, typename DESCRIPTOR>
+void BlockLattice2D<T,DESCRIPTOR>::releaseMemory()
 {
   delete [] rawData;
   delete [] grid;
@@ -512,8 +461,8 @@ void BlockLattice2D<T,Lattice>::releaseMemory()
  * \sa stream(int,int,int,int)
  * \sa stream()
  */
-template<typename T, template<typename U> class Lattice>
-void BlockLattice2D<T,Lattice>::boundaryStream (
+template<typename T, typename DESCRIPTOR>
+void BlockLattice2D<T,DESCRIPTOR>::boundaryStream (
   int lim_x0, int lim_x1, int lim_y0, int lim_y1,
   int x0, int x1, int y0, int y1 )
 {
@@ -534,11 +483,11 @@ void BlockLattice2D<T,Lattice>::boundaryStream (
 #endif
   for (iX=x0; iX<=x1; ++iX) {
     for (int iY=y0; iY<=y1; ++iY) {
-      for (int iPop=1; iPop<=Lattice<T>::q/2; ++iPop) {
-        int nextX = iX + Lattice<T>::c[iPop][0];
-        int nextY = iY + Lattice<T>::c[iPop][1];
+      for (int iPop=1; iPop<=DESCRIPTOR::q/2; ++iPop) {
+        int nextX = iX + descriptors::c<DESCRIPTOR>(iPop,0);
+        int nextY = iY + descriptors::c<DESCRIPTOR>(iPop,1);
         if (nextX>=lim_x0 && nextX<=lim_x1 && nextY>=lim_y0 && nextY<=lim_y1) {
-          std::swap(grid[iX][iY][iPop+Lattice<T>::q/2],
+          std::swap(grid[iX][iY][iPop+DESCRIPTOR::q/2],
                     grid[nextX][nextY][iPop]);
         }
       }
@@ -551,8 +500,8 @@ void BlockLattice2D<T,Lattice>::boundaryStream (
  * \sa stream(int,int,int,int)
  * \sa stream()
  */
-template<typename T, template<typename U> class Lattice>
-void BlockLattice2D<T,Lattice>::bulkStream (
+template<typename T, typename DESCRIPTOR>
+void BlockLattice2D<T,DESCRIPTOR>::bulkStream (
   int x0, int x1, int y0, int y1 )
 {
   OLB_PRECONDITION(x0>=0 && x1<this->_nx);
@@ -566,10 +515,10 @@ void BlockLattice2D<T,Lattice>::bulkStream (
 #endif
   for (iX=x0; iX<=x1; ++iX) {
     for (int iY=y0; iY<=y1; ++iY) {
-      for (int iPop=1; iPop<=Lattice<T>::q/2; ++iPop) {
-        int nextX = iX + Lattice<T>::c[iPop][0];
-        int nextY = iY + Lattice<T>::c[iPop][1];
-        std::swap(grid[iX][iY][iPop+Lattice<T>::q/2],
+      for (int iPop=1; iPop<=DESCRIPTOR::q/2; ++iPop) {
+        int nextX = iX + descriptors::c<DESCRIPTOR>(iPop,0);
+        int nextY = iY + descriptors::c<DESCRIPTOR>(iPop,1);
+        std::swap(grid[iX][iY][iPop+DESCRIPTOR::q/2],
                   grid[nextX][nextY][iPop]);
       }
     }
@@ -583,8 +532,8 @@ void BlockLattice2D<T,Lattice>::bulkStream (
  * \sa collideAndStream(int,int,int,int)
  * \sa collideAndStream()
  */
-template<typename T, template<typename U> class Lattice>
-void BlockLattice2D<T,Lattice>::bulkCollideAndStream (
+template<typename T, typename DESCRIPTOR>
+void BlockLattice2D<T,DESCRIPTOR>::bulkCollideAndStream (
   int x0, int x1, int y0, int y1 )
 {
   OLB_PRECONDITION(x0>=0 && x1<this->_nx);
@@ -595,29 +544,26 @@ void BlockLattice2D<T,Lattice>::bulkCollideAndStream (
   for (int iX=x0; iX<=x1; ++iX) {
     for (int iY=y0; iY<=y1; ++iY) {
       grid[iX][iY].collide(getStatistics());
-      lbHelpers<T,Lattice>::swapAndStream2D(grid, iX, iY);
+      lbHelpers<T,DESCRIPTOR>::swapAndStream2D(grid, iX, iY);
     }
   }
 }
 #endif // not defined PARALLEL_MODE_OMP
 
-
-template<typename T, template<typename U> class Lattice>
-std::size_t BlockLattice2D<T,Lattice>::getNblock() const
+template<typename T, typename DESCRIPTOR>
+std::size_t BlockLattice2D<T,DESCRIPTOR>::getNblock() const
 {
   return 2 + rawData[0].getNblock() * this->_nx * this->_ny;
 }
 
-
-template<typename T, template<typename U> class Lattice>
-std::size_t BlockLattice2D<T,Lattice>::getSerializableSize() const
+template<typename T, typename DESCRIPTOR>
+std::size_t BlockLattice2D<T,DESCRIPTOR>::getSerializableSize() const
 {
   return 2 * sizeof(int) + rawData[0].getSerializableSize() * this->_nx * this->_ny;
 }
 
-
-template<typename T, template<typename U> class Lattice>
-bool* BlockLattice2D<T,Lattice>::getBlock(std::size_t iBlock, std::size_t& sizeBlock, bool loadingMode)
+template<typename T, typename DESCRIPTOR>
+bool* BlockLattice2D<T,DESCRIPTOR>::getBlock(std::size_t iBlock, std::size_t& sizeBlock, bool loadingMode)
 {
   std::size_t currentBlock = 0;
   bool* dataPtr = nullptr;
@@ -629,20 +575,20 @@ bool* BlockLattice2D<T,Lattice>::getBlock(std::size_t iBlock, std::size_t& sizeB
   return dataPtr;
 }
 
-template<typename T, template<typename U> class Lattice>
-void BlockLattice2D<T,Lattice>::periodicEdge(int x0, int x1, int y0, int y1)
+template<typename T, typename DESCRIPTOR>
+void BlockLattice2D<T,DESCRIPTOR>::periodicEdge(int x0, int x1, int y0, int y1)
 {
   for (int iX=x0; iX<=x1; ++iX) {
     for (int iY=y0; iY<=y1; ++iY) {
-      for (int iPop=1; iPop<=Lattice<T>::q/2; ++iPop) {
-        int nextX = iX + Lattice<T>::c[iPop][0];
-        int nextY = iY + Lattice<T>::c[iPop][1];
+      for (int iPop=1; iPop<=DESCRIPTOR::q/2; ++iPop) {
+        int nextX = iX + descriptors::c<DESCRIPTOR>(iPop,0);
+        int nextY = iY + descriptors::c<DESCRIPTOR>(iPop,1);
         if ( nextX<0 || nextX>=this->_nx ||
              nextY<0 || nextY>=this->_ny ) {
           nextX = (nextX+this->_nx)%this->_nx;
           nextY = (nextY+this->_ny)%this->_ny;
           std::swap (
-            grid[iX][iY][iPop+Lattice<T>::q/2],
+            grid[iX][iY][iPop+DESCRIPTOR::q/2],
             grid[nextX][nextY][iPop] );
         }
       }
@@ -650,10 +596,10 @@ void BlockLattice2D<T,Lattice>::periodicEdge(int x0, int x1, int y0, int y1)
   }
 }
 
-template<typename T, template<typename U> class Lattice>
-void BlockLattice2D<T,Lattice>::makePeriodic()
+template<typename T, typename DESCRIPTOR>
+void BlockLattice2D<T,DESCRIPTOR>::makePeriodic()
 {
-  static const int vicinity = Lattice<T>::vicinity;
+  static const int vicinity = descriptors::vicinity<DESCRIPTOR>();
   int maxX = this->_nx-1;
   int maxY = this->_ny-1;
   periodicEdge(0,vicinity-1, 0,maxY);
@@ -666,8 +612,8 @@ void BlockLattice2D<T,Lattice>::makePeriodic()
 //   by Mathias Krause                                         ////
 
 #ifdef PARALLEL_MODE_OMP
-template<typename T, template<typename U> class Lattice>
-void BlockLattice2D<T,Lattice>::bulkCollideAndStream (
+template<typename T, typename DESCRIPTOR>
+void BlockLattice2D<T,DESCRIPTOR>::bulkCollideAndStream (
   int x0, int x1, int y0, int y1 )
 {
   OLB_PRECONDITION(x0>=0 && x1<this->_nx);
@@ -693,13 +639,13 @@ void BlockLattice2D<T,Lattice>::bulkCollideAndStream (
         for (iY=y0; iY<=y1; ++iY) {
           grid[iX][iY].collide(getStatistics());
           /** The method beneath doesnt work with Intel compiler 9.1044 and 9.1046 for Itanium prozessors
-           *    lbHelpers<T,Lattice>::swapAndStream2D(grid, iX, iY);
+           *    lbHelpers<T,DESCRIPTOR>::swapAndStream2D(grid, iX, iY);
            *  Therefore we use:
            */
-          int half = Lattice<T>::q/2;
+          int half = DESCRIPTOR::q/2;
           for (int iPop=1; iPop<=half; ++iPop) {
-            int nextX = iX + Lattice<T>::c[iPop][0];
-            int nextY = iY + Lattice<T>::c[iPop][1];
+            int nextX = iX + descriptors::c<DESCRIPTOR>(iPop,0);
+            int nextY = iY + descriptors::c<DESCRIPTOR>(iPop,1);
             T fTmp                   = grid[iX][iY][iPop];
             grid[iX][iY][iPop]       = grid[iX][iY][iPop+half];
             grid[iX][iY][iPop+half]  = grid[nextX][nextY][iPop];
@@ -713,10 +659,10 @@ void BlockLattice2D<T,Lattice>::bulkCollideAndStream (
       iX=loadbalance.firstGlobNum();
       for (iY=y0; iY<=y1; ++iY)
       {
-        for (iPop=1; iPop<=Lattice<T>::q/2; ++iPop) {
-          int nextX = iX + Lattice<T>::c[iPop][0];
-          int nextY = iY + Lattice<T>::c[iPop][1];
-          std::swap(grid[iX][iY][iPop+Lattice<T>::q/2],
+        for (iPop=1; iPop<=DESCRIPTOR::q/2; ++iPop) {
+          int nextX = iX + descriptors::c<DESCRIPTOR>(iPop,0);
+          int nextY = iY + descriptors::c<DESCRIPTOR>(iPop,1);
+          std::swap(grid[iX][iY][iPop+DESCRIPTOR::q/2],
                     grid[nextX][nextY][iPop]);
         }
       }
@@ -726,13 +672,12 @@ void BlockLattice2D<T,Lattice>::bulkCollideAndStream (
     for (int iX=x0; iX<=x1; ++iX) {
       for (int iY=y0; iY<=y1; ++iY) {
         grid[iX][iY].collide(getStatistics());
-        lbHelpers<T,Lattice>::swapAndStream2D(grid, iX, iY);
+        lbHelpers<T,DESCRIPTOR>::swapAndStream2D(grid, iX, iY);
       }
     }
   }
 }
 #endif // defined PARALLEL_MODE_OMP
-
 
 }  // namespace olb
 

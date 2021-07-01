@@ -37,8 +37,8 @@ namespace olb {
 //=====================================================================================
 //==============  NavierStokesAdvectionDiffusionMRTCouplingPostProcessor2D ============
 //=====================================================================================
-template<typename T, template<typename U> class Lattice>
-NavierStokesAdvectionDiffusionMRTCouplingPostProcessor2D<T,Lattice>::
+template<typename T, typename DESCRIPTOR>
+NavierStokesAdvectionDiffusionMRTCouplingPostProcessor2D<T,DESCRIPTOR>::
 NavierStokesAdvectionDiffusionMRTCouplingPostProcessor2D(int x0_, int x1_, int y0_, int y1_,
     T gravity_, T T0_, T deltaTemp_, std::vector<T> dir_,
     std::vector<SpatiallyExtendedObject2D* > partners_)
@@ -57,20 +57,19 @@ NavierStokesAdvectionDiffusionMRTCouplingPostProcessor2D(int x0_, int x1_, int y
   }
 }
 
-template<typename T, template<typename U> class Lattice>
-void NavierStokesAdvectionDiffusionMRTCouplingPostProcessor2D<T,Lattice>::
-processSubDomain(BlockLattice2D<T,Lattice>& blockLattice,
+template<typename T, typename DESCRIPTOR>
+void NavierStokesAdvectionDiffusionMRTCouplingPostProcessor2D<T,DESCRIPTOR>::
+processSubDomain(BlockLattice2D<T,DESCRIPTOR>& blockLattice,
                  int x0_, int x1_, int y0_, int y1_)
 {
-  typedef Lattice<T> L;
+  typedef DESCRIPTOR L;
   enum {
-    velOffset =
-      AdvectionDiffusionMRTD2Q5Descriptor<T>::ExternalField::velocityBeginsAt,
-    forceOffset = ForcedMRTD2Q9Descriptor<T>::ExternalField::forceBeginsAt
+    velOffset = descriptors::AdvectionDiffusionMRTD2Q5Descriptor::index<descriptors::VELOCITY>(),
+    forceOffset = descriptors::ForcedMRTD2Q9Descriptor::index<descriptors::FORCE>()
   };
 
-  BlockLattice2D<T,AdvectionDiffusionMRTD2Q5Descriptor> *tPartner =
-    dynamic_cast<BlockLattice2D<T,AdvectionDiffusionMRTD2Q5Descriptor> *>(partners[0]);
+  BlockLattice2D<T,descriptors::AdvectionDiffusionMRTD2Q5Descriptor> *tPartner =
+    dynamic_cast<BlockLattice2D<T,descriptors::AdvectionDiffusionMRTD2Q5Descriptor> *>(partners[0]);
 
   int newX0, newX1, newY0, newY1;
   if ( util::intersect (
@@ -81,12 +80,12 @@ processSubDomain(BlockLattice2D<T,Lattice>& blockLattice,
     for (int iX=newX0; iX<=newX1; ++iX) {
       for (int iY=newY0; iY<=newY1; ++iY) {
         // Velocity coupling
-        T *u = tPartner->get(iX,iY).getExternal(velOffset);
+        T *u = tPartner->get(iX,iY).template getFieldPointer<descriptors::VELOCITY>();
         blockLattice.get(iX,iY).computeU(u);
 
         // computation of the bousinessq force
 
-        T *force = blockLattice.get(iX,iY).getExternal(forceOffset);
+        T *force = blockLattice.get(iX,iY).template getFieldPointer<descriptors::FORCE>();
         T temperature = tPartner->get(iX,iY).computeRho();
         T rho = blockLattice.get(iX,iY).computeRho();
         for (unsigned iD = 0; iD < L::d; ++iD) {
@@ -99,35 +98,35 @@ processSubDomain(BlockLattice2D<T,Lattice>& blockLattice,
   // cout << endl << endl;
 }
 
-template<typename T, template<typename U> class Lattice>
-void NavierStokesAdvectionDiffusionMRTCouplingPostProcessor2D<T,Lattice>::
-process(BlockLattice2D<T,Lattice>& blockLattice)
+template<typename T, typename DESCRIPTOR>
+void NavierStokesAdvectionDiffusionMRTCouplingPostProcessor2D<T,DESCRIPTOR>::
+process(BlockLattice2D<T,DESCRIPTOR>& blockLattice)
 {
   processSubDomain(blockLattice, x0, x1, y0, y1);
 }
 
 /// LatticeCouplingGenerator for advectionDiffusion coupling
 
-template<typename T, template<typename U> class Lattice>
-NavierStokesAdvectionDiffusionMRTCouplingGenerator2D<T,Lattice>::
+template<typename T, typename DESCRIPTOR>
+NavierStokesAdvectionDiffusionMRTCouplingGenerator2D<T,DESCRIPTOR>::
 NavierStokesAdvectionDiffusionMRTCouplingGenerator2D(int x0_, int x1_, int y0_, int y1_,
     T gravity_, T T0_, T deltaTemp_, std::vector<T> dir_)
-  : LatticeCouplingGenerator2D<T,Lattice>(x0_, x1_, y0_, y1_),
+  : LatticeCouplingGenerator2D<T,DESCRIPTOR>(x0_, x1_, y0_, y1_),
     gravity(gravity_), T0(T0_), deltaTemp(deltaTemp_), dir(dir_)
 { }
 
-template<typename T, template<typename U> class Lattice>
-PostProcessor2D<T,Lattice>* NavierStokesAdvectionDiffusionMRTCouplingGenerator2D<T,Lattice>::generate (
+template<typename T, typename DESCRIPTOR>
+PostProcessor2D<T,DESCRIPTOR>* NavierStokesAdvectionDiffusionMRTCouplingGenerator2D<T,DESCRIPTOR>::generate (
   std::vector<SpatiallyExtendedObject2D* > partners) const
 {
-  return new NavierStokesAdvectionDiffusionMRTCouplingPostProcessor2D<T,Lattice>(
+  return new NavierStokesAdvectionDiffusionMRTCouplingPostProcessor2D<T,DESCRIPTOR>(
            this->x0,this->x1,this->y0,this->y1, gravity, T0, deltaTemp, dir,partners);
 }
 
-template<typename T, template<typename U> class Lattice>
-LatticeCouplingGenerator2D<T,Lattice>* NavierStokesAdvectionDiffusionMRTCouplingGenerator2D<T,Lattice>::clone() const
+template<typename T, typename DESCRIPTOR>
+LatticeCouplingGenerator2D<T,DESCRIPTOR>* NavierStokesAdvectionDiffusionMRTCouplingGenerator2D<T,DESCRIPTOR>::clone() const
 {
-  return new NavierStokesAdvectionDiffusionMRTCouplingGenerator2D<T,Lattice>(*this);
+  return new NavierStokesAdvectionDiffusionMRTCouplingGenerator2D<T,DESCRIPTOR>(*this);
 }
 
 }  // namespace olb

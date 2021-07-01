@@ -22,7 +22,7 @@
 */
 
 #include "dynamics/latticeDescriptors.h"
-#include "dynamics/latticeDescriptors.hh"
+ 
 #include "functors/lattice/superLatticeLocalF3D.h"
 #include "functors/lattice/superLatticeLocalF3D.hh"
 #include "particle3D.h"
@@ -32,15 +32,15 @@
 
 namespace olb {
 
-template class SuperParticleSystem3D<double,Particle3D>;
+template class SuperParticleSystem3D<double, Particle3D>;
 
-template class SuperParticleSystem3D<double,MagneticParticle3D>;
+template class SuperParticleSystem3D<double, MagneticParticle3D>;
 
 template<>
 template<>
-void SuperParticleSystem3D<double,Particle3D>::
-setVelToFluidVel<descriptors::D3Q19Descriptor>(
-  SuperLatticeInterpPhysVelocity3D<double, descriptors::D3Q19Descriptor>& fVel)
+void SuperParticleSystem3D<double, Particle3D>::
+setVelToFluidVel<descriptors::D3Q19<>>(
+  SuperLatticeInterpPhysVelocity3D<double, descriptors::D3Q19<>>& fVel)
 {
   for (auto pS : _pSystems) {
     pS->setVelToFluidVel(fVel);
@@ -49,9 +49,9 @@ setVelToFluidVel<descriptors::D3Q19Descriptor>(
 
 template<>
 template<>
-void SuperParticleSystem3D<double,MagneticParticle3D>::
-setVelToFluidVel<descriptors::D3Q19Descriptor>(
-  SuperLatticeInterpPhysVelocity3D<double, descriptors::D3Q19Descriptor>& fVel)
+void SuperParticleSystem3D<double, MagneticParticle3D>::
+setVelToFluidVel<descriptors::D3Q19<>>(
+  SuperLatticeInterpPhysVelocity3D<double, descriptors::D3Q19<>>& fVel)
 {
   for (auto pS : _pSystems) {
     pS->setVelToFluidVel(fVel);
@@ -61,9 +61,9 @@ setVelToFluidVel<descriptors::D3Q19Descriptor>(
 #ifndef OLB_PRECOMPILED
 template<>
 template<>
-void SuperParticleSystem3D<double,Particle3D>::
-setVelToFluidVel<descriptors::ForcedD3Q19Descriptor>(
-  SuperLatticeInterpPhysVelocity3D<double, descriptors::ForcedD3Q19Descriptor>& fVel)
+void SuperParticleSystem3D<double, Particle3D>::
+setVelToFluidVel<descriptors::D3Q19<descriptors::FORCE>>(
+  SuperLatticeInterpPhysVelocity3D<double, descriptors::D3Q19<descriptors::FORCE>>& fVel)
 {
   for (auto pS : _pSystems) {
     pS->setVelToFluidVel(fVel);
@@ -72,9 +72,9 @@ setVelToFluidVel<descriptors::ForcedD3Q19Descriptor>(
 
 template<>
 template<>
-void SuperParticleSystem3D<double,MagneticParticle3D>::
-setVelToFluidVel<descriptors::ForcedD3Q19Descriptor>(
-  SuperLatticeInterpPhysVelocity3D<double, descriptors::ForcedD3Q19Descriptor>& fVel)
+void SuperParticleSystem3D<double, MagneticParticle3D>::
+setVelToFluidVel<descriptors::D3Q19<descriptors::FORCE>>(
+  SuperLatticeInterpPhysVelocity3D<double, descriptors::D3Q19<descriptors::FORCE>>& fVel)
 {
   for (auto pS : _pSystems) {
     pS->setVelToFluidVel(fVel);

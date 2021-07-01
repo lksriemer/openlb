@@ -24,8 +24,6 @@
 
 ## installing the configuration makefile
 
-## the variable is just here to ensure that the Makefile is copied if it does not exist yet
-
 ROOT := .
 
 include global.mk

@@ -30,26 +30,26 @@
 #include "superBoundaryCondition2D.h"
 #include "superBoundaryCondition2D.hh"
 #include "dynamics/latticeDescriptors.h"
-#include "dynamics/latticeDescriptors.hh"
+ 
 #include "dynamics/dynamics.h"
 #include "dynamics/dynamics.hh"
 
 namespace olb {
 
 template class sOnLatticeBoundaryCondition2D
-<double, descriptors::D2Q9Descriptor>;
+<double, descriptors::D2Q9<>>;
 
 template void createLocalBoundaryCondition2D
-<double,descriptors::D2Q9Descriptor,
- RLBdynamics<double,descriptors::D2Q9Descriptor> >
-(sOnLatticeBoundaryCondition2D<double,descriptors::D2Q9Descriptor>& sBC);
+<double,descriptors::D2Q9<>,
+ RLBdynamics<double,descriptors::D2Q9<>> >
+(sOnLatticeBoundaryCondition2D<double,descriptors::D2Q9<>>& sBC);
 
 template void createInterpBoundaryCondition2D
-<double,descriptors::D2Q9Descriptor,
- BGKdynamics<double,descriptors::D2Q9Descriptor> >
-(sOnLatticeBoundaryCondition2D<double,descriptors::D2Q9Descriptor>& sBC);
+<double,descriptors::D2Q9<>,
+ BGKdynamics<double,descriptors::D2Q9<>> >
+(sOnLatticeBoundaryCondition2D<double,descriptors::D2Q9<>>& sBC);
 template void createInterpBoundaryCondition2D
-<double,descriptors::D2Q9Descriptor,
- ConstRhoBGKdynamics<double,descriptors::D2Q9Descriptor> >
-(sOnLatticeBoundaryCondition2D<double,descriptors::D2Q9Descriptor>& sBC);
+<double,descriptors::D2Q9<>,
+ ConstRhoBGKdynamics<double,descriptors::D2Q9<>> >
+(sOnLatticeBoundaryCondition2D<double,descriptors::D2Q9<>>& sBC);
 }

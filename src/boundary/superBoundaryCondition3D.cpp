@@ -29,27 +29,27 @@
 #include "superBoundaryCondition3D.h"
 #include "superBoundaryCondition3D.hh"
 #include "dynamics/latticeDescriptors.h"
-#include "dynamics/latticeDescriptors.hh"
+ 
 #include "dynamics/dynamics.h"
 #include "dynamics/dynamics.hh"
 
 namespace olb {
 
-template class sOnLatticeBoundaryCondition3D<double, descriptors::D3Q19Descriptor>;
+template class sOnLatticeBoundaryCondition3D<double, descriptors::D3Q19<>>;
 
 
-template void createLocalBoundaryCondition3D<double,descriptors::D3Q19Descriptor>
-(sOnLatticeBoundaryCondition3D<double,descriptors::D3Q19Descriptor>& sBC);
+template void createLocalBoundaryCondition3D<double,descriptors::D3Q19<>>
+(sOnLatticeBoundaryCondition3D<double,descriptors::D3Q19<>>& sBC);
 
 
-template void createInterpBoundaryCondition3D<double,descriptors::D3Q19Descriptor,BGKdynamics<double,descriptors::D3Q19Descriptor> >
-(sOnLatticeBoundaryCondition3D<double,descriptors::D3Q19Descriptor>& sBC);
+template void createInterpBoundaryCondition3D<double,descriptors::D3Q19<>,BGKdynamics<double,descriptors::D3Q19<>> >
+(sOnLatticeBoundaryCondition3D<double,descriptors::D3Q19<>>& sBC);
 
-template void createInterpBoundaryCondition3D<double,descriptors::D3Q19Descriptor,ConstRhoBGKdynamics<double,descriptors::D3Q19Descriptor> >
-(sOnLatticeBoundaryCondition3D<double,descriptors::D3Q19Descriptor>& sBC);
+template void createInterpBoundaryCondition3D<double,descriptors::D3Q19<>,ConstRhoBGKdynamics<double,descriptors::D3Q19<>> >
+(sOnLatticeBoundaryCondition3D<double,descriptors::D3Q19<>>& sBC);
 
 
-template void createExtFdBoundaryCondition3D<double,descriptors::D3Q19Descriptor,BGKdynamics<double,descriptors::D3Q19Descriptor> >
-(sOnLatticeBoundaryCondition3D<double,descriptors::D3Q19Descriptor>& sBC);
+template void createExtFdBoundaryCondition3D<double,descriptors::D3Q19<>,BGKdynamics<double,descriptors::D3Q19<>> >
+(sOnLatticeBoundaryCondition3D<double,descriptors::D3Q19<>>& sBC);
 
 }

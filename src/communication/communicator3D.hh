@@ -106,17 +106,18 @@ void Communicator3D<T>::init()
   }
 
 #ifdef PARALLEL_MODE_MPI
+  singleton::MpiNonBlockingHelper helper;
   for (int iC=0; iC<_superStructure.getLoadBalancer().size(); iC++) {
     _nh[iC].finish_comm();
   }
   for (int iC=0; iC<_superStructure.getLoadBalancer().size(); iC++) {
-    _nh[iC].bufSend_inCells();
+    _nh[iC].bufSend_inCells(helper);
   }
   for (int iC=0; iC<_superStructure.getLoadBalancer().size(); iC++) {
     _nh[iC].recWrite_outCells();
   }
   for (int iC=0; iC<_superStructure.getLoadBalancer().size(); iC++) {
-    _nh[iC].finish_comm();
+    singleton::mpi().waitAll(helper);
   }
 #endif
 }

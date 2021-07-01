@@ -99,10 +99,10 @@ void SuperData3D<T,BaseType>::allocateMemory()
   for (int iCloc=0; iCloc < this->getLoadBalancer().size(); ++iCloc) {
     int iCglob = this->getLoadBalancer().glob(iCloc);
     Cuboid3D<T> extendedCuboid(this->getCuboidGeometry().get(iCglob), this->getOverlap());
-    _extendedBlockData.push_back(BlockData3D<T, BaseType>(extendedCuboid.getNx(),
-                                 extendedCuboid.getNy(),
-                                 extendedCuboid.getNz(),
-                                 _size));
+    _extendedBlockData.emplace_back(extendedCuboid.getNx(),
+                                    extendedCuboid.getNy(),
+                                    extendedCuboid.getNz(),
+                                    _size);
   }
 };
 
@@ -120,7 +120,8 @@ void SuperData3D<T,BaseType>::swap(std::vector< BlockData3D<T,BaseType> >& block
   // Needed for vtiReader: After building geometry, vtiReader builds Block Data vector
   if ( blockDatas.size() == 0 ) {
     _size = 1;
-  } else {
+  }
+  else {
     _size = blockDatas[0].getSize();
   }
   std::swap(_extendedBlockData, blockDatas);

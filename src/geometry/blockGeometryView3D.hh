@@ -88,6 +88,11 @@ BlockGeometryView3D<T>::~BlockGeometryView3D()
   removeFromStatisticsList( &(this->_statistics.getStatisticsStatus()) );
 }
 
+template<typename T>
+BlockStructure3D& BlockGeometryView3D<T>::getBlockStructure()
+{
+  return *this;
+}
 
 template<typename T>
 BlockGeometryStatistics3D<T>& BlockGeometryView3D<T>::getStatistics(bool verbose)

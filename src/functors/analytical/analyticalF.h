@@ -39,8 +39,8 @@
 
 namespace olb {
 
-template<typename T, typename S> class SmoothIndicatorSphere3D;
-template<typename T,  template<typename U> class Lattice> class RadiativeUnitConverter;
+template<typename T, typename S, bool> class SmoothIndicatorSphere3D;
+template<typename T,  typename DESCRIPTOR> class RadiativeUnitConverter;
 
 ////////////////////////////////////////////////////////////////////////////////
 ////////implementation of several 1d,2d,3d functors (analyticalFXD)/////////////
@@ -153,6 +153,7 @@ private:
 public:
   AnalyticalConst2D(T value);
   AnalyticalConst2D(T value0, T value1);
+  AnalyticalConst2D(T value0, T value1, T value2);
   AnalyticalConst2D(const std::vector<T>& value);
   bool operator() (T output[], const S x[]) override;
 };
@@ -190,14 +191,18 @@ public:
   bool operator() (T output[], const S x[]);
 };
 
-template <typename T, typename S>
+/** Computes resulting velocity of an object from translational and rotational velocity.
+ * \param indicator Class defining the object (needs to be a SmoothIndicatorF2D<T,T,true>)
+ * \param u translational velocity of the object - expected in lattice units
+ * \param omega rotational velocity of the object - expected in lattice units
+ */
+template <typename T, typename S, typename DESCRIPTOR>
 class ParticleU2D : public AnalyticalF2D<T,S> {
 protected:
-  ParticleIndicatorF2D<T,T>& _indicator;
-  std::vector<T> _u;
-  T _omega;
+  SmoothIndicatorF2D<T,T,true>& _indicator;
+  UnitConverter<T,DESCRIPTOR> const& _converter;
 public:
-  ParticleU2D(ParticleIndicatorF2D<T,T>& indicator, std::vector<T>& u, T& omega);
+  ParticleU2D(SmoothIndicatorF2D<T,T,true>& indicator, UnitConverter<T,DESCRIPTOR> const& converter);
   bool operator()(T output[], const S input[]);
 };
 
@@ -264,7 +269,7 @@ public:
 };
 
 /// see Mink et al. 2016 in Sec.3.1.
-template <typename T, typename S, template <typename U> class DESCRIPTOR>
+template <typename T, typename S, typename DESCRIPTOR>
 class PLSsolution3D : public AnalyticalF3D<T,S> {
 private:
   T _physSigmaEff;
@@ -275,7 +280,7 @@ public:
 };
 
 /// light source as a cylinder along z-axis
-template <typename T, typename S, template <typename U> class DESCRIPTOR>
+template <typename T, typename S, typename DESCRIPTOR>
 class LightSourceCylindrical3D : public AnalyticalF3D<T,S> {
 private:
   T _physSigmaEff;
@@ -302,19 +307,6 @@ public:
   bool operator()(T output[1], const S x[3]) override;
 };
 
-// TODO Comment
-template <typename T, typename S>
-class ParticleU3D : public AnalyticalF3D<T,S> {
-protected:
-  ParticleIndicatorF3D<T,T>& _indicator;
-  std::vector<T> _u;
-  std::vector<T> _omega;
-public:
-  ParticleU3D(ParticleIndicatorF3D<T,T>& indicator, std::vector<T>& u, std::vector<T>& omega);
-  bool operator()(T output[], const S input[]);
-};
-
-
 /// 8.6.1 Gauss Hill inital values
 template <typename T, typename S>
 class GaussianHill2D : public AnalyticalF2D<T,S> {
@@ -326,7 +318,6 @@ public:
   GaussianHill2D(T sigma, Vector<T,2> x0, T c0);
   bool operator()(T output[1], const S x[2]) override;
 };
-
 
 /// 8.6.1 Gauss Hill time evolution
 template <typename T, typename S>
@@ -341,6 +332,21 @@ private:
 public:
   GaussianHillTimeEvolution2D(T sigma0, T D, T t, Vector<T,2> x0, Vector<T,2> u, T c0);
   bool operator()(T output[1], const S x[2]) override;
+};
+
+/** Computes resulting velocity of an object from translational and rotational velocity.
+ * \param indicator Class defining the object (needs to be a SmoothIndicatorF3D)
+ * \param u translational velocity of the object - expected in lattice units
+ * \param omega rotational velocity of the object - expected in lattice units
+ */
+template <typename T, typename S, typename DESCRIPTOR>
+class ParticleU3D : public AnalyticalF3D<T,S> {
+protected:
+  SmoothIndicatorF3D<T, T, true>& _indicator;
+  UnitConverter<T,DESCRIPTOR> const& _converter;
+public:
+  ParticleU3D(SmoothIndicatorF3D<T, T, true>& indicator, UnitConverter<T,DESCRIPTOR> const& converter);
+  bool operator()(T output[], const S input[]);
 };
 
 } // end namespace olb

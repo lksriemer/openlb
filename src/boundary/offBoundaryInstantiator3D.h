@@ -21,7 +21,10 @@
  *  Boston, MA  02110-1301, USA.
  */
 
-/** \file A helper for initialising 3D boundaries -- header file.  */
+/** \file
+ * A helper for initialising 3D boundaries -- header file.
+ */
+
 #ifndef OFF_BOUNDARY_INSTANTIATOR_3D_H
 #define OFF_BOUNDARY_INSTANTIATOR_3D_H
 
@@ -32,19 +35,20 @@
 #include "io/ostreamManager.h"
 #include "core/util.h"
 #include "io/stlReader.h"
+#include "functors/lattice/indicator/blockIndicatorF3D.h"
 
 namespace olb {
 
 /**
 * This class gets the needed processors from BoundaryManager and adds them
-* to the Processor Vector of the Lattice
+* to the Processor Vector of the DESCRIPTOR
 */
 
-template<typename T, template<typename U> class Lattice, class BoundaryManager>
+template<typename T, typename DESCRIPTOR, class BoundaryManager>
 class OffBoundaryConditionInstantiator3D: public OffLatticeBoundaryCondition3D<T,
-  Lattice> {
+  DESCRIPTOR> {
 public:
-  OffBoundaryConditionInstantiator3D(BlockLatticeStructure3D<T, Lattice>& block_, T epsFraction_ = 0.0001);
+  OffBoundaryConditionInstantiator3D(BlockLatticeStructure3D<T, DESCRIPTOR>& block_, T epsFraction_ = 0.0001);
   ~OffBoundaryConditionInstantiator3D() override;
 
   void addOnePointZeroVelocityBoundary(int x, int y, int z, int iPop, T dist) override;
@@ -53,65 +57,67 @@ public:
   void addOnePointVelocityBoundary(int x, int y, int z, int iPop, T dist) override;
   void addTwoPointVelocityBoundary(int x, int y, int z, int iPop, T dist) override;
 
-  void addOffDynamics(int x, int y, int z, T location[Lattice<T>::d]) override;
-  void addOffDynamics(int x, int y, int z, T location[Lattice<T>::d], T distances[Lattice<T>::q]) override;
-  void addOffDynamics(BlockGeometryStructure3D<T>& blockGeometryStructure, int material) override;
+  void addOffDynamics(int x, int y, int z, T location[DESCRIPTOR::d]) override;
+  void addOffDynamics(int x, int y, int z, T location[DESCRIPTOR::d], T distances[DESCRIPTOR::q]) override;
+  void addOffDynamics(BlockIndicatorF3D<T>& indicator) override;
 
   void addZeroVelocityBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int x, int y, int z, int iPop, T dist) override;
-  void addZeroVelocityBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int x, int y, int z, T distances[Lattice<T>::q]);
-  void addZeroVelocityBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int iX, int iY, int iZ, IndicatorF3D<T>& indicator, std::list<int> bulkMaterials = std::list<int>(1,1));
-  void addZeroVelocityBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int material, IndicatorF3D<T>& indicator, std::list<int> bulkMaterials = std::list<int>(1,1)) override;
+  void addZeroVelocityBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int x, int y, int z, T distances[DESCRIPTOR::q]);
+  void addZeroVelocityBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int iX, int iY, int iZ, IndicatorF3D<T>& geometryIndicator, BlockIndicatorF3D<T>& bulkIndicator);
+  void addZeroVelocityBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int iX, int iY, int iZ, IndicatorF3D<T>& geometryIndicator, std::vector<int> bulkMaterials = std::vector<int>(1,1));
+  void addZeroVelocityBoundary(BlockIndicatorF3D<T>& boundaryIndicator, BlockIndicatorF3D<T>& bulkIndicator, IndicatorF3D<T>& geometryIndicator) override;
 
   void addVelocityBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int x, int y, int z, int iPop, T dist);
-  void addVelocityBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int x, int y, int z, T distances[Lattice<T>::q]);
-  void addVelocityBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int iX, int iY, int iZ, IndicatorF3D<T>& indicator, std::list<int> bulkMaterials = std::list<int>(1,1));
-  void addVelocityBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int material, IndicatorF3D<T>& indicator, std::list<int> bulkMaterials = std::list<int>(1,1)) override;
+  void addVelocityBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int x, int y, int z, T distances[DESCRIPTOR::q]);
+  void addVelocityBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int iX, int iY, int iZ, IndicatorF3D<T>& geometryIndicator, BlockIndicatorF3D<T>& bulkIndicator);
+  void addVelocityBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int iX, int iY, int iZ, IndicatorF3D<T>& geometryIndicator, std::vector<int> bulkMaterials = std::vector<int>(1,1));
+  void addVelocityBoundary(BlockIndicatorF3D<T>& boundaryIndicator, BlockIndicatorF3D<T>& bulkIndicator, IndicatorF3D<T>& geometryIndicator) override;
 
   void setBoundaryIntersection(int iX, int iY, int iZ, int iPop, T distance);
-  bool getBoundaryIntersection(int iX, int iY, int iZ, int iPop, T point[Lattice<T>::d]);
+  bool getBoundaryIntersection(int iX, int iY, int iZ, int iPop, T point[DESCRIPTOR::d]);
 
-  void defineU(int iX, int iY, int iZ, int iPop, const T u[Lattice<T>::d]) override;
-  void defineU(BlockGeometryStructure3D<T>& blockGeometryStructure, int material, AnalyticalF3D<T,T>& u, std::list<int> bulkMaterials = std::list<int>(1,1) ) override;
+  void defineU(int iX, int iY, int iZ, int iPop, const T u[DESCRIPTOR::d]) override;
+  void defineU(BlockIndicatorF3D<T>& indicator, BlockIndicatorF3D<T>& bulkIndicator, AnalyticalF3D<T,T>& u) override;
 
   void outputOn() override;
   void outputOff() override;
 
-  BlockLatticeStructure3D<T, Lattice>& getBlock() override;
-  BlockLatticeStructure3D<T, Lattice> const& getBlock() const override;
+  BlockLatticeStructure3D<T, DESCRIPTOR>& getBlock() override;
+  BlockLatticeStructure3D<T, DESCRIPTOR> const& getBlock() const override;
 private:
-  BlockLatticeStructure3D<T, Lattice>& block;
-  //std::vector<Momenta<T, Lattice>*> momentaVector;
-  std::vector<Dynamics<T, Lattice>*> dynamicsVector;
+  BlockLatticeStructure3D<T, DESCRIPTOR>& block;
+  //std::vector<Momenta<T, DESCRIPTOR>*> momentaVector;
+  std::vector<Dynamics<T, DESCRIPTOR>*> dynamicsVector;
   bool _output;
   mutable OstreamManager clout;
 };
 
 ///////// class OffBoundaryConditionInstantiator3D ////////////////////////
 
-template<typename T, template<typename U> class Lattice, class BoundaryManager>
-BlockLatticeStructure3D<T, Lattice>& OffBoundaryConditionInstantiator3D<T, Lattice,
+template<typename T, typename DESCRIPTOR, class BoundaryManager>
+BlockLatticeStructure3D<T, DESCRIPTOR>& OffBoundaryConditionInstantiator3D<T, DESCRIPTOR,
                         BoundaryManager>::getBlock()
 {
   return block;
 }
 
-template<typename T, template<typename U> class Lattice, class BoundaryManager>
-BlockLatticeStructure3D<T, Lattice> const& OffBoundaryConditionInstantiator3D<T, Lattice,
+template<typename T, typename DESCRIPTOR, class BoundaryManager>
+BlockLatticeStructure3D<T, DESCRIPTOR> const& OffBoundaryConditionInstantiator3D<T, DESCRIPTOR,
                         BoundaryManager>::getBlock() const
 {
   return block;
 }
 
-template<typename T, template<typename U> class Lattice, class BoundaryManager>
-OffBoundaryConditionInstantiator3D<T, Lattice, BoundaryManager>::OffBoundaryConditionInstantiator3D(
-  BlockLatticeStructure3D<T, Lattice>& block_, T epsFraction_) :
+template<typename T, typename DESCRIPTOR, class BoundaryManager>
+OffBoundaryConditionInstantiator3D<T, DESCRIPTOR, BoundaryManager>::OffBoundaryConditionInstantiator3D(
+  BlockLatticeStructure3D<T, DESCRIPTOR>& block_, T epsFraction_) :
   block(block_), _output(false), clout(std::cout,"BoundaryConditionInstantiator3D")
 {
   this->_epsFraction = epsFraction_;
 }
 
-template<typename T, template<typename U> class Lattice, class BoundaryManager>
-OffBoundaryConditionInstantiator3D<T, Lattice, BoundaryManager>::~OffBoundaryConditionInstantiator3D()
+template<typename T, typename DESCRIPTOR, class BoundaryManager>
+OffBoundaryConditionInstantiator3D<T, DESCRIPTOR, BoundaryManager>::~OffBoundaryConditionInstantiator3D()
 {
   for (unsigned iDynamics = 0; iDynamics < dynamicsVector.size(); ++iDynamics) {
     delete dynamicsVector[iDynamics];
@@ -122,11 +128,11 @@ OffBoundaryConditionInstantiator3D<T, Lattice, BoundaryManager>::~OffBoundaryCon
   }*/
 }
 
-template<typename T, template<typename U> class Lattice, class BoundaryManager>
-void OffBoundaryConditionInstantiator3D<T, Lattice, BoundaryManager>::addOnePointZeroVelocityBoundary(
+template<typename T, typename DESCRIPTOR, class BoundaryManager>
+void OffBoundaryConditionInstantiator3D<T, DESCRIPTOR, BoundaryManager>::addOnePointZeroVelocityBoundary(
   int x, int y, int z, int iPop, T dist)
 {
-  PostProcessorGenerator3D<T, Lattice>* postProcessor =
+  PostProcessorGenerator3D<T, DESCRIPTOR>* postProcessor =
     BoundaryManager::getOnePointZeroVelocityBoundaryProcessor
     (x, y, z, iPop, dist);
   if (postProcessor) {
@@ -134,11 +140,11 @@ void OffBoundaryConditionInstantiator3D<T, Lattice, BoundaryManager>::addOnePoin
   }
 }
 
-template<typename T, template<typename U> class Lattice, class BoundaryManager>
-void OffBoundaryConditionInstantiator3D<T, Lattice, BoundaryManager>::addTwoPointZeroVelocityBoundary(
+template<typename T, typename DESCRIPTOR, class BoundaryManager>
+void OffBoundaryConditionInstantiator3D<T, DESCRIPTOR, BoundaryManager>::addTwoPointZeroVelocityBoundary(
   int x, int y, int z, int iPop, T dist)
 {
-  PostProcessorGenerator3D<T, Lattice>* postProcessor =
+  PostProcessorGenerator3D<T, DESCRIPTOR>* postProcessor =
     BoundaryManager::getTwoPointZeroVelocityBoundaryProcessor
     (x, y, z, iPop, dist);
   if (postProcessor) {
@@ -146,11 +152,11 @@ void OffBoundaryConditionInstantiator3D<T, Lattice, BoundaryManager>::addTwoPoin
   }
 }
 
-template<typename T, template<typename U> class Lattice, class BoundaryManager>
-void OffBoundaryConditionInstantiator3D<T, Lattice, BoundaryManager>::addOnePointVelocityBoundary(
+template<typename T, typename DESCRIPTOR, class BoundaryManager>
+void OffBoundaryConditionInstantiator3D<T, DESCRIPTOR, BoundaryManager>::addOnePointVelocityBoundary(
   int x, int y, int z, int iPop, T dist)
 {
-  PostProcessorGenerator3D<T, Lattice>* postProcessor =
+  PostProcessorGenerator3D<T, DESCRIPTOR>* postProcessor =
     BoundaryManager::getOnePointVelocityBoundaryProcessor
     (x, y, z, iPop, dist);
   if (postProcessor) {
@@ -158,11 +164,11 @@ void OffBoundaryConditionInstantiator3D<T, Lattice, BoundaryManager>::addOnePoin
   }
 }
 
-template<typename T, template<typename U> class Lattice, class BoundaryManager>
-void OffBoundaryConditionInstantiator3D<T, Lattice, BoundaryManager>::addTwoPointVelocityBoundary(
+template<typename T, typename DESCRIPTOR, class BoundaryManager>
+void OffBoundaryConditionInstantiator3D<T, DESCRIPTOR, BoundaryManager>::addTwoPointVelocityBoundary(
   int x, int y, int z, int iPop, T dist)
 {
-  PostProcessorGenerator3D<T, Lattice>* postProcessor =
+  PostProcessorGenerator3D<T, DESCRIPTOR>* postProcessor =
     BoundaryManager::getTwoPointVelocityBoundaryProcessor
     (x, y, z, iPop, dist);
   if (postProcessor) {
@@ -170,66 +176,67 @@ void OffBoundaryConditionInstantiator3D<T, Lattice, BoundaryManager>::addTwoPoin
   }
 }
 
-template<typename T, template<typename U> class Lattice, class BoundaryManager>
-void OffBoundaryConditionInstantiator3D<T, Lattice, BoundaryManager>::addOffDynamics(
-  int x, int y, int z, T location[Lattice<T>::d])
+template<typename T, typename DESCRIPTOR, class BoundaryManager>
+void OffBoundaryConditionInstantiator3D<T, DESCRIPTOR, BoundaryManager>::addOffDynamics(
+  int x, int y, int z, T location[DESCRIPTOR::d])
 {
-  Dynamics<T,Lattice>* dynamics
+  Dynamics<T,DESCRIPTOR>* dynamics
     = BoundaryManager::getOffDynamics(location);
   this->getBlock().defineDynamics(x,x,y,y,z,z, dynamics);
   dynamicsVector.push_back(dynamics);
 }
 
-template<typename T, template<typename U> class Lattice, class BoundaryManager>
-void OffBoundaryConditionInstantiator3D<T, Lattice, BoundaryManager>::addOffDynamics(
-  int x, int y, int z, T location[Lattice<T>::d], T distances[Lattice<T>::q])
+template<typename T, typename DESCRIPTOR, class BoundaryManager>
+void OffBoundaryConditionInstantiator3D<T, DESCRIPTOR, BoundaryManager>::addOffDynamics(
+  int x, int y, int z, T location[DESCRIPTOR::d], T distances[DESCRIPTOR::q])
 {
-  Dynamics<T,Lattice>* dynamics
+  Dynamics<T,DESCRIPTOR>* dynamics
     = BoundaryManager::getOffDynamics(location, distances);
   this->getBlock().defineDynamics(x,x,y,y,z,z, dynamics);
   dynamicsVector.push_back(dynamics);
 }
 
-template<typename T, template<typename U> class Lattice, class BoundaryManager>
-void OffBoundaryConditionInstantiator3D<T, Lattice, BoundaryManager>::addOffDynamics(
-  BlockGeometryStructure3D<T>& blockGeometryStructure, int material)
+template<typename T, typename DESCRIPTOR, class BoundaryManager>
+void OffBoundaryConditionInstantiator3D<T, DESCRIPTOR, BoundaryManager>::addOffDynamics(
+  BlockIndicatorF3D<T>& indicator)
 {
-  if (blockGeometryStructure.getStatistics().getNvoxel(material)!=0) {
-    const int x0 = blockGeometryStructure.getStatistics().getMinLatticeR(material)[0];
-    const int y0 = blockGeometryStructure.getStatistics().getMinLatticeR(material)[1];
-    const int z0 = blockGeometryStructure.getStatistics().getMinLatticeR(material)[2];
-    const int x1 = blockGeometryStructure.getStatistics().getMaxLatticeR(material)[0];
-    const int y1 = blockGeometryStructure.getStatistics().getMaxLatticeR(material)[1];
-    const int z1 = blockGeometryStructure.getStatistics().getMaxLatticeR(material)[2];
-    for (int ix = x0; ix <= x1; ix++)
-      for (int iy = y0; iy <= y1; iy++)
-        for (int iz = z0; iz <= z1; iz++)
-          if (blockGeometryStructure.getMaterial(ix,iy,iz) == material ) {
-            T location[Lattice<T>::d];
-            blockGeometryStructure.getPhysR(location, ix,iy,iz);
-            addOffDynamics(ix, iy, iz, location);
+  if ( !indicator.isEmpty() ) {
+    const Vector<int,3> min = indicator.getMin();
+    const Vector<int,3> max = indicator.getMax();
+
+    for (int iX = min[0]; iX <= max[0]; ++iX) {
+      for (int iY = min[1]; iY <= max[1]; ++iY) {
+        for (int iZ = min[2]; iZ <= max[2]; ++iZ) {
+          if (indicator(iX,iY,iZ)) {
+            T location[DESCRIPTOR::d];
+            indicator.getBlockGeometryStructure().getPhysR(location, iX,iY,iZ);
+            addOffDynamics(iX, iY, iZ, location);
           }
+        }
+      }
+    }
   }
 }
 
-template<typename T, template<typename U> class Lattice, class BoundaryManager>
-void OffBoundaryConditionInstantiator3D<T, Lattice, BoundaryManager>::addZeroVelocityBoundary(
+template<typename T, typename DESCRIPTOR, class BoundaryManager>
+void OffBoundaryConditionInstantiator3D<T, DESCRIPTOR, BoundaryManager>::addZeroVelocityBoundary(
   BlockGeometryStructure3D<T>& blockGeometryStructure, int x, int y, int z, int iPop, T dist)
 {
-  const int* c = Lattice<T>::c[iPop];
+  const Vector<int,3> c = descriptors::c<DESCRIPTOR>(iPop);
   if (blockGeometryStructure.getMaterial(x-c[0], y-c[1], z-c[2]) != 1) {
     addOnePointZeroVelocityBoundary(x, y, z, iPop, dist);
-  } else {
+  }
+  else {
     addTwoPointZeroVelocityBoundary(x, y, z, iPop, dist);
   }
 }
 
-template<typename T, template<typename U> class Lattice, class BoundaryManager>
-void OffBoundaryConditionInstantiator3D<T, Lattice, BoundaryManager>::
-addZeroVelocityBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int x, int y, int z, T distances[Lattice<T>::q])
+template<typename T, typename DESCRIPTOR, class BoundaryManager>
+void OffBoundaryConditionInstantiator3D<T, DESCRIPTOR, BoundaryManager>::
+addZeroVelocityBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int x, int y, int z, T distances[DESCRIPTOR::q])
 {
-  typedef Lattice<T> L;
-  //T location[Lattice<T>::d];
+  typedef DESCRIPTOR L;
+  //T location[DESCRIPTOR::d];
   //location[0] = blockGeometryStructure.physCoordX(x);
   //location[1] = blockGeometryStructure.physCoordY(y);
   //location[2] = blockGeometryStructure.physCoordZ(z);
@@ -244,102 +251,104 @@ addZeroVelocityBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int
 
   for (int iPop = 1; iPop < L::q ; ++iPop) {
     if ( !util::nearZero(distances[iPop]+1) ) {
-      const int* c = L::c[iPop];
+      const Vector<int,3> c = descriptors::c<DESCRIPTOR>(iPop);
       addZeroVelocityBoundary(blockGeometryStructure, x-c[0], y-c[1], z-c[2], iPop, distances[iPop]);
     }
   }
 }
 
-template<typename T, template<typename U> class Lattice, class BoundaryManager>
-void OffBoundaryConditionInstantiator3D<T, Lattice, BoundaryManager>::addZeroVelocityBoundary(
-  BlockGeometryStructure3D<T>& blockGeometryStructure, int iX, int iY, int iZ, IndicatorF3D<T>& indicator, std::list<int> bulkMaterials)
+template<typename T, typename DESCRIPTOR, class BoundaryManager>
+void OffBoundaryConditionInstantiator3D<T, DESCRIPTOR, BoundaryManager>::addZeroVelocityBoundary(
+  BlockGeometryStructure3D<T>& blockGeometryStructure, int iX, int iY, int iZ,
+  IndicatorF3D<T>& geometryIndicator, BlockIndicatorF3D<T>& bulkIndicator)
 {
-
-  T distances[Lattice<T>::q];
-  for (int iPop = 1; iPop < Lattice<T>::q ; ++iPop) {
+  T distances[DESCRIPTOR::q];
+  for (int iPop = 1; iPop < DESCRIPTOR::q ; ++iPop) {
     distances[iPop] = -1;
   }
 
-  for (int iPop = 1; iPop < Lattice<T>::q ; ++iPop) {
-    const int* c = Lattice<T>::c[iPop];
+  for (int iPop = 1; iPop < DESCRIPTOR::q ; ++iPop) {
+    const Vector<int,3> c = descriptors::c<DESCRIPTOR>(iPop);
     const int iXn = iX + c[0];
     const int iYn = iY + c[1];
     const int iZn = iZ + c[2];
-    std::list<int>::iterator mat;
-    for (mat=bulkMaterials.begin(); mat!=bulkMaterials.end(); ++mat) {
-      if (blockGeometryStructure.getMaterial(iXn,iYn,iZn) == *mat ) {
-        T dist = -1;
-        T physR[3];
-        blockGeometryStructure.getPhysR(physR,iXn,iYn,iZn);
-        T voxelSize=blockGeometryStructure.getDeltaR();
+    if (blockGeometryStructure.isInside(iXn,iYn,iZn) && bulkIndicator(iXn,iYn,iZn)) {
+      T dist = -1;
+      T physR[3];
+      blockGeometryStructure.getPhysR(physR,iXn,iYn,iZn);
+      T voxelSize=blockGeometryStructure.getDeltaR();
 
-        Vector<T,3> physC(physR);
+      Vector<T,3> physC(physR);
 
-        Vector<T,3> direction(-voxelSize*c[0],-voxelSize*c[1],-voxelSize*c[2]);
-        T cPhysNorm = voxelSize*sqrt(c[0]*c[0]+c[1]*c[1]+c[2]*c[2]);
+      Vector<T,3> direction(-voxelSize*c[0],-voxelSize*c[1],-voxelSize*c[2]);
+      T cPhysNorm = voxelSize*sqrt(c[0]*c[0]+c[1]*c[1]+c[2]*c[2]);
 
-        if (!indicator.distance(dist,physC,direction,blockGeometryStructure.getIcGlob() ) ) {
-          T epsX = voxelSize*c[0]*this->_epsFraction;
-          T epsY = voxelSize*c[1]*this->_epsFraction;
-          T epsZ = voxelSize*c[2]*this->_epsFraction;
+      if (!geometryIndicator.distance(dist,physC,direction,blockGeometryStructure.getIcGlob() ) ) {
+        T epsX = voxelSize*c[0]*this->_epsFraction;
+        T epsY = voxelSize*c[1]*this->_epsFraction;
+        T epsZ = voxelSize*c[2]*this->_epsFraction;
 
-          Vector<T,3> physC2(physC);
-          physC2[0] += epsX;
-          physC2[1] += epsY;
-          physC2[2] += epsZ;
-          Vector<T,3> direction2(direction);
-          direction2[0] -= 2.*epsX;
-          direction2[1] -= 2.*epsY;
-          direction2[2] -= 2.*epsZ;
+        Vector<T,3> physC2(physC);
+        physC2[0] += epsX;
+        physC2[1] += epsY;
+        physC2[2] += epsZ;
+        Vector<T,3> direction2(direction);
+        direction2[0] -= 2.*epsX;
+        direction2[1] -= 2.*epsY;
+        direction2[2] -= 2.*epsZ;
 
-          if ( !indicator.distance(dist,physC2,direction2,blockGeometryStructure.getIcGlob())) {
-            clout << "ERROR: no boundary found at (" << iXn << "," << iYn << "," << iZn <<") ~ ("
-                  << physR[0] << "," << physR[1] << "," << physR[2] <<"), "
-                  << "in direction " << util::opposite<Lattice<T> >(iPop)
-                  << std::endl;
-            //blockGeometryStructure.printNode(iXn,iYn,iZn);
-            //  exit(-1);
-          }
-          T distNew = (dist - sqrt(epsX*epsX+epsY*epsY+epsZ*epsZ))/cPhysNorm;
-          if (distNew < 0.5) {
-            dist = 0;
-          } else {
-            dist = 0.5 * cPhysNorm;
-            //dist = cPhysNorm;
-            clout << "WARNING: distance at (" << iXn << "," << iYn << "," << iZn <<") ~ ("
-                  << physR[0] << "," << physR[1] << "," << physR[2] <<"), "
-                  << "in direction " << util::opposite<Lattice<T> >(iPop) << ": "
-                  << distNew
-                  << " rounded to "
-                  << dist/cPhysNorm
-                  << std::endl;
-          } // else if
-        } // if
-        distances[util::opposite<Lattice<T> >(iPop)] = dist/cPhysNorm;
-      } // bulkMaterials if
-    } // bulkMaterials loop
-  } // iPop
+        if ( !geometryIndicator.distance(dist,physC2,direction2,blockGeometryStructure.getIcGlob())) {
+          clout << "ERROR: no boundary found at (" << iXn << "," << iYn << "," << iZn <<") ~ ("
+                << physR[0] << "," << physR[1] << "," << physR[2] <<"), "
+                << "in direction " << util::opposite<DESCRIPTOR >(iPop)
+                << std::endl;
+        }
+        T distNew = (dist - sqrt(epsX*epsX+epsY*epsY+epsZ*epsZ))/cPhysNorm;
+        if (distNew < 0.5) {
+          dist = 0;
+        }
+        else {
+          dist = 0.5 * cPhysNorm;
+          clout << "WARNING: distance at (" << iXn << "," << iYn << "," << iZn <<") ~ ("
+                << physR[0] << "," << physR[1] << "," << physR[2] <<"), "
+                << "in direction " << util::opposite<DESCRIPTOR >(iPop) << ": "
+                << distNew
+                << " rounded to "
+                << dist/cPhysNorm
+                << std::endl;
+        }
+      }
+      distances[util::opposite<DESCRIPTOR >(iPop)] = dist/cPhysNorm;
+    } // bulkMaterials if
+  } // iPop loop
   addZeroVelocityBoundary(blockGeometryStructure, iX, iY, iZ, distances);
-} //method
+}
 
-template<typename T, template<typename U> class Lattice, class BoundaryManager>
-void OffBoundaryConditionInstantiator3D<T, Lattice, BoundaryManager>::addZeroVelocityBoundary(
-  BlockGeometryStructure3D<T>& blockGeometryStructure, int material, IndicatorF3D<T>& indicator, std::list<int> bulkMaterials)
+template<typename T, typename DESCRIPTOR, class BoundaryManager>
+void OffBoundaryConditionInstantiator3D<T, DESCRIPTOR, BoundaryManager>::addZeroVelocityBoundary(
+  BlockGeometryStructure3D<T>& blockGeometryStructure, int iX, int iY, int iZ,
+  IndicatorF3D<T>& geometryIndicator, std::vector<int> bulkMaterials)
 {
+  BlockIndicatorMaterial3D<T> bulkIndicator(blockGeometryStructure, bulkMaterials);
+  addZeroVelocityBoundary(blockGeometryStructure, iX, iY, iZ,
+                          geometryIndicator,
+                          bulkIndicator);
+}
 
-  if (blockGeometryStructure.getStatistics().getNvoxel(material)!=0) {
-    const int x0 = blockGeometryStructure.getStatistics().getMinLatticeR(material)[0];
-    const int y0 = blockGeometryStructure.getStatistics().getMinLatticeR(material)[1];
-    const int z0 = blockGeometryStructure.getStatistics().getMinLatticeR(material)[2];
-    const int x1 = blockGeometryStructure.getStatistics().getMaxLatticeR(material)[0];
-    const int y1 = blockGeometryStructure.getStatistics().getMaxLatticeR(material)[1];
-    const int z1 = blockGeometryStructure.getStatistics().getMaxLatticeR(material)[2];
+template<typename T, typename DESCRIPTOR, class BoundaryManager>
+void OffBoundaryConditionInstantiator3D<T, DESCRIPTOR, BoundaryManager>::addZeroVelocityBoundary(
+  BlockIndicatorF3D<T>& boundaryIndicator, BlockIndicatorF3D<T>& bulkIndicator, IndicatorF3D<T>& geometryIndicator)
+{
+  if ( !boundaryIndicator.isEmpty() ) {
+    const Vector<int,3> min = boundaryIndicator.getMin();
+    const Vector<int,3> max = boundaryIndicator.getMax();
 
-    for (int iX = x0; iX <= x1; iX++) {
-      for (int iY = y0; iY <= y1; iY++) {
-        for (int iZ = z0; iZ <= z1; iZ++) {
-          if (blockGeometryStructure.getMaterial(iX,iY,iZ) == material ) {
-            addZeroVelocityBoundary(blockGeometryStructure, iX, iY, iZ, indicator, bulkMaterials);
+    for (int iX = min[0]; iX <= max[0]; ++iX) {
+      for (int iY = min[1]; iY <= max[1]; ++iY) {
+        for (int iZ = min[2]; iZ <= max[2]; ++iZ) {
+          if (boundaryIndicator(iX,iY,iZ)) {
+            addZeroVelocityBoundary(boundaryIndicator.getBlockGeometryStructure(), iX, iY, iZ,
+                                    geometryIndicator, bulkIndicator);
           }
         }
       }
@@ -348,28 +357,28 @@ void OffBoundaryConditionInstantiator3D<T, Lattice, BoundaryManager>::addZeroVel
 }
 
 
-template<typename T, template<typename U> class Lattice, class BoundaryManager>
-void OffBoundaryConditionInstantiator3D<T, Lattice, BoundaryManager>::addVelocityBoundary(
+template<typename T, typename DESCRIPTOR, class BoundaryManager>
+void OffBoundaryConditionInstantiator3D<T, DESCRIPTOR, BoundaryManager>::addVelocityBoundary(
   BlockGeometryStructure3D<T>& blockGeometryStructure, int x, int y, int z, int iPop, T dist)
 {
-  const int* c = Lattice<T>::c[iPop];
+  const Vector<int,3> c = descriptors::c<DESCRIPTOR>(iPop);
   if (blockGeometryStructure.getMaterial(x-c[0], y-c[1], z-c[2]) != 1) {
     addOnePointVelocityBoundary(x, y, z, iPop, dist);
-  } else {
+  }
+  else {
     addTwoPointVelocityBoundary(x, y, z, iPop, dist);
   }
 }
 
-template<typename T, template<typename U> class Lattice, class BoundaryManager>
-void OffBoundaryConditionInstantiator3D<T, Lattice, BoundaryManager>::
-addVelocityBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int x, int y, int z, T distances[Lattice<T>::q])
+template<typename T, typename DESCRIPTOR, class BoundaryManager>
+void OffBoundaryConditionInstantiator3D<T, DESCRIPTOR, BoundaryManager>::
+addVelocityBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int x, int y, int z, T distances[DESCRIPTOR::q])
 {
-  typedef Lattice<T> L;
-  T location[Lattice<T>::d];
+  T location[DESCRIPTOR::d];
   blockGeometryStructure.getPhysR(location, x,y,z);
-  T distancesCopy[L::q];
+  T distancesCopy[DESCRIPTOR::q];
   T spacing = blockGeometryStructure.getDeltaR();
-  for (int iPop = 1; iPop < L::q ; ++iPop) {
+  for (int iPop = 1; iPop < DESCRIPTOR::q ; ++iPop) {
     distancesCopy[iPop] = spacing*(1.-distances[iPop]);
     if ( util::nearZero(distances[iPop]+1) ) {
       distancesCopy[iPop] = -1;
@@ -377,104 +386,108 @@ addVelocityBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int x, 
   }
   addOffDynamics(x, y, z, location, distancesCopy);
 
-  for (int iPop = 1; iPop < L::q ; ++iPop) {
+  for (int iPop = 1; iPop < DESCRIPTOR::q ; ++iPop) {
     if (!util::nearZero(distances[iPop]+1)) {
-      const int* c = L::c[iPop];
+      const Vector<int,3> c = descriptors::c<DESCRIPTOR>(iPop);
       addVelocityBoundary(blockGeometryStructure, x-c[0], y-c[1], z-c[2], iPop, distances[iPop]);
     }
   }
 }
 
 
-template<typename T, template<typename U> class Lattice, class BoundaryManager>
-void OffBoundaryConditionInstantiator3D<T, Lattice, BoundaryManager>::addVelocityBoundary(
-  BlockGeometryStructure3D<T>& blockGeometryStructure, int iX, int iY, int iZ, IndicatorF3D<T>& indicator, std::list<int> bulkMaterials)
+template<typename T, typename DESCRIPTOR, class BoundaryManager>
+void OffBoundaryConditionInstantiator3D<T, DESCRIPTOR, BoundaryManager>::addVelocityBoundary(
+  BlockGeometryStructure3D<T>& blockGeometryStructure, int iX, int iY, int iZ,
+  IndicatorF3D<T>& geometryIndicator, BlockIndicatorF3D<T>& bulkIndicator)
 {
-
-  T distances[Lattice<T>::q];
-  for (int iPop = 1; iPop < Lattice<T>::q ; ++iPop) {
+  T distances[DESCRIPTOR::q];
+  for (int iPop = 1; iPop < DESCRIPTOR::q ; ++iPop) {
     distances[iPop] = -1;
   }
 
-  for (int iPop = 1; iPop < Lattice<T>::q ; ++iPop) {
-    const int* c = Lattice<T>::c[iPop];
+  for (int iPop = 1; iPop < DESCRIPTOR::q ; ++iPop) {
+    const Vector<int,3> c = descriptors::c<DESCRIPTOR>(iPop);
     const int iXn = iX + c[0];
     const int iYn = iY + c[1];
     const int iZn = iZ + c[2];
-    std::list<int>::iterator mat;
-    for (mat=bulkMaterials.begin(); mat!=bulkMaterials.end(); ++mat) {
-      if (blockGeometryStructure.getMaterial(iXn,iYn,iZn) == *mat ) {
-        T dist = -1;
-        T physR[3];
-        blockGeometryStructure.getPhysR(physR,iXn,iYn,iZn);
-        T voxelSize=blockGeometryStructure.getDeltaR();
+    if (blockGeometryStructure.isInside(iXn,iYn,iZn) && bulkIndicator(iXn,iYn,iZn)) {
+      T dist = -1;
+      T physR[3];
+      blockGeometryStructure.getPhysR(physR,iXn,iYn,iZn);
+      T voxelSize=blockGeometryStructure.getDeltaR();
 
-        Vector<T,3> physC(physR);
-        Vector<T,3> direction(-voxelSize*c[0],-voxelSize*c[1],-voxelSize*c[2]);
-        T cPhysNorm = voxelSize*sqrt(c[0]*c[0]+c[1]*c[1]+c[2]*c[2]);
+      Vector<T,3> physC(physR);
+      Vector<T,3> direction(-voxelSize*c[0],-voxelSize*c[1],-voxelSize*c[2]);
+      T cPhysNorm = voxelSize*sqrt(c[0]*c[0]+c[1]*c[1]+c[2]*c[2]);
 
-        if (!indicator.distance(dist,physC,direction,blockGeometryStructure.getIcGlob() ) ) {
-          T epsX = voxelSize*c[0]*this->_epsFraction;
-          T epsY = voxelSize*c[1]*this->_epsFraction;
-          T epsZ = voxelSize*c[2]*this->_epsFraction;
+      if (!geometryIndicator.distance(dist,physC,direction,blockGeometryStructure.getIcGlob() ) ) {
+        T epsX = voxelSize*c[0]*this->_epsFraction;
+        T epsY = voxelSize*c[1]*this->_epsFraction;
+        T epsZ = voxelSize*c[2]*this->_epsFraction;
 
-          Vector<T,3> physC2(physC);
-          physC2[0] += epsX;
-          physC2[1] += epsY;
-          physC2[2] += epsZ;
-          Vector<T,3> direction2(direction);
-          direction2[0] -= 2.*epsX;
-          direction2[1] -= 2.*epsY;
-          direction2[2] -= 2.*epsZ;
+        Vector<T,3> physC2(physC);
+        physC2[0] += epsX;
+        physC2[1] += epsY;
+        physC2[2] += epsZ;
+        Vector<T,3> direction2(direction);
+        direction2[0] -= 2.*epsX;
+        direction2[1] -= 2.*epsY;
+        direction2[2] -= 2.*epsZ;
 
-          if ( !indicator.distance(dist,physC2,direction2,blockGeometryStructure.getIcGlob())) {
-            clout << "ERROR: no boundary found at (" << iXn << "," << iYn << "," << iZn <<") ~ ("
-                  << physR[0] << "," << physR[1] << "," << physR[2] <<"), "
-                  << "in direction " << util::opposite<Lattice<T> >(iPop)
-                  << std::endl;
-            //blockGeometryStructure.printNode(iXn,iYn,iZn);
-            //  exit(-1);
-          }
-          T distNew = (dist - sqrt(epsX*epsX+epsY*epsY+epsZ*epsZ))/cPhysNorm;
-          if (distNew < 0.5) {
-            dist = 0;
-          } else {
-            dist = 0.5 * cPhysNorm;
-            //dist = cPhysNorm;
-            clout << "WARNING: distance at (" << iXn << "," << iYn << "," << iZn <<") ~ ("
-                  << physR[0] << "," << physR[1] << "," << physR[2] <<"), "
-                  << "in direction " << util::opposite<Lattice<T> >(iPop) << ": "
-                  << distNew
-                  << " rounded to "
-                  << dist/cPhysNorm
-                  << std::endl;
-          } // else if
-        } // if
-        distances[util::opposite<Lattice<T> >(iPop)] = dist/cPhysNorm;
-      } // bulkMaterials if
-    } // bulkMaterials loop
-  } // iPop
+        if ( !geometryIndicator.distance(dist,physC2,direction2,blockGeometryStructure.getIcGlob())) {
+          clout << "ERROR: no boundary found at (" << iXn << "," << iYn << "," << iZn <<") ~ ("
+                << physR[0] << "," << physR[1] << "," << physR[2] <<"), "
+                << "in direction " << util::opposite<DESCRIPTOR >(iPop)
+                << std::endl;
+        }
+        T distNew = (dist - sqrt(epsX*epsX+epsY*epsY+epsZ*epsZ))/cPhysNorm;
+        if (distNew < 0.5) {
+          dist = 0;
+        }
+        else {
+          dist = 0.5 * cPhysNorm;
+          clout << "WARNING: distance at (" << iXn << "," << iYn << "," << iZn <<") ~ ("
+                << physR[0] << "," << physR[1] << "," << physR[2] <<"), "
+                << "in direction " << util::opposite<DESCRIPTOR >(iPop) << ": "
+                << distNew
+                << " rounded to "
+                << dist/cPhysNorm
+                << std::endl;
+        }
+      }
+      distances[util::opposite<DESCRIPTOR >(iPop)] = dist/cPhysNorm;
+    } // bulk indicator if
+  } // iPop loop
   addVelocityBoundary(blockGeometryStructure, iX, iY, iZ, distances);
-} //method
+}
 
-template<typename T, template<typename U> class Lattice, class BoundaryManager>
-void OffBoundaryConditionInstantiator3D<T, Lattice, BoundaryManager>::addVelocityBoundary(
-  BlockGeometryStructure3D<T>& blockGeometryStructure, int material, IndicatorF3D<T>& indicator, std::list<int> bulkMaterials)
+template<typename T, typename DESCRIPTOR, class BoundaryManager>
+void OffBoundaryConditionInstantiator3D<T, DESCRIPTOR, BoundaryManager>::addVelocityBoundary(
+  BlockGeometryStructure3D<T>& blockGeometryStructure, int iX, int iY, int iZ,
+  IndicatorF3D<T>& geometryIndicator, std::vector<int> bulkMaterials)
 {
+  BlockIndicatorMaterial3D<T> bulkIndicator(blockGeometryStructure, bulkMaterials);
+  addVelocityBoundary(blockGeometryStructure, iX, iY, iZ,
+                      geometryIndicator,
+                      bulkIndicator);
+}
 
-  if (blockGeometryStructure.getStatistics().getNvoxel(material)!=0) {
-    const int x0 = blockGeometryStructure.getStatistics().getMinLatticeR(material)[0];
-    const int y0 = blockGeometryStructure.getStatistics().getMinLatticeR(material)[1];
-    const int z0 = blockGeometryStructure.getStatistics().getMinLatticeR(material)[2];
-    const int x1 = blockGeometryStructure.getStatistics().getMaxLatticeR(material)[0];
-    const int y1 = blockGeometryStructure.getStatistics().getMaxLatticeR(material)[1];
-    const int z1 = blockGeometryStructure.getStatistics().getMaxLatticeR(material)[2];
+template<typename T, typename DESCRIPTOR, class BoundaryManager>
+void OffBoundaryConditionInstantiator3D<T, DESCRIPTOR, BoundaryManager>::addVelocityBoundary(
+  BlockIndicatorF3D<T>& boundaryIndicator,
+  BlockIndicatorF3D<T>& bulkIndicator,
+  IndicatorF3D<T>&      geometryIndicator)
+{
+  if ( !boundaryIndicator.isEmpty() ) {
+    const Vector<int,3> min = boundaryIndicator.getMin();
+    const Vector<int,3> max = boundaryIndicator.getMax();
 
-    for (int iX = x0; iX <= x1; iX++) {
-      for (int iY = y0; iY <= y1; iY++) {
-        for (int iZ = z0; iZ <= z1; iZ++) {
-          if (blockGeometryStructure.getMaterial(iX,iY,iZ) == material ) {
-            addVelocityBoundary(blockGeometryStructure, iX, iY, iZ, indicator, bulkMaterials);
+    for (int iX = min[0]; iX <= max[0]; ++iX) {
+      for (int iY = min[1]; iY <= max[1]; ++iY) {
+        for (int iZ = min[2]; iZ <= max[2]; ++iZ) {
+          if (boundaryIndicator(iX,iY,iZ)) {
+            addVelocityBoundary(bulkIndicator.getBlockGeometryStructure(), iX, iY, iZ,
+                                geometryIndicator, bulkIndicator);
           }
         }
       }
@@ -483,74 +496,59 @@ void OffBoundaryConditionInstantiator3D<T, Lattice, BoundaryManager>::addVelocit
 }
 
 
-template<typename T, template<typename U> class Lattice, class BoundaryManager>
-void OffBoundaryConditionInstantiator3D<T, Lattice, BoundaryManager>::
+template<typename T, typename DESCRIPTOR, class BoundaryManager>
+void OffBoundaryConditionInstantiator3D<T, DESCRIPTOR, BoundaryManager>::
 setBoundaryIntersection(int iX, int iY, int iZ, int iPop, T distance)
 {
-
   this->getBlock().getDynamics(iX, iY, iZ)->setBoundaryIntersection(iPop, distance);
   if (_output) {
     clout << "setBoundaryIntersection(" << iX << ", " << iY << ", " << iZ << " )" << std::endl;
   }
 }
 
-template<typename T, template<typename U> class Lattice, class BoundaryManager>
-bool OffBoundaryConditionInstantiator3D<T, Lattice, BoundaryManager>::
-getBoundaryIntersection(int iX, int iY, int iZ, int iPop, T point[Lattice<T>::d])
+template<typename T, typename DESCRIPTOR, class BoundaryManager>
+bool OffBoundaryConditionInstantiator3D<T, DESCRIPTOR, BoundaryManager>::
+getBoundaryIntersection(int iX, int iY, int iZ, int iPop, T point[DESCRIPTOR::d])
 {
-
   return this->getBlock().getDynamics(iX, iY, iZ)->getBoundaryIntersection(iPop, point);
 }
 
 
-template<typename T, template<typename U> class Lattice, class BoundaryManager>
-void OffBoundaryConditionInstantiator3D<T, Lattice, BoundaryManager>::defineU(int iX, int iY, int iZ, int iPop, const T u[Lattice<T>::d])
+template<typename T, typename DESCRIPTOR, class BoundaryManager>
+void OffBoundaryConditionInstantiator3D<T, DESCRIPTOR, BoundaryManager>::
+defineU(int iX, int iY, int iZ, int iPop, const T u[DESCRIPTOR::d])
 {
-
   this->getBlock().getDynamics(iX, iY, iZ)->defineU(iPop, u);
   if (_output) {
     clout << "defineU(" << iX << ", " << iY << ", " << iZ << " )" << std::endl;
   }
 }
 
-template<typename T, template<typename U> class Lattice, class BoundaryManager>
-void OffBoundaryConditionInstantiator3D<T, Lattice, BoundaryManager>::defineU(BlockGeometryStructure3D<T>& blockGeometryStructure, int material, AnalyticalF3D<T,T>& u, std::list<int> bulkMaterials )
+template<typename T, typename DESCRIPTOR, class BoundaryManager>
+void OffBoundaryConditionInstantiator3D<T, DESCRIPTOR, BoundaryManager>::defineU(
+  BlockIndicatorF3D<T>& indicator, BlockIndicatorF3D<T>& bulkIndicator, AnalyticalF3D<T,T>& u)
 {
+  if ( !indicator.isEmpty() ) {
+    const Vector<int,3> min = indicator.getMin();
+    const Vector<int,3> max = indicator.getMax();
 
-  if (blockGeometryStructure.getStatistics().getNvoxel(material)!=0) {
-    const int x0 = blockGeometryStructure.getStatistics().getMinLatticeR(material)[0];
-    const int y0 = blockGeometryStructure.getStatistics().getMinLatticeR(material)[1];
-    const int z0 = blockGeometryStructure.getStatistics().getMinLatticeR(material)[2];
-    const int x1 = blockGeometryStructure.getStatistics().getMaxLatticeR(material)[0];
-    const int y1 = blockGeometryStructure.getStatistics().getMaxLatticeR(material)[1];
-    const int z1 = blockGeometryStructure.getStatistics().getMaxLatticeR(material)[2];
-
-    for (int iX = x0; iX <= x1; iX++) {
-      for (int iY = y0; iY <= y1; iY++) {
-        for (int iZ = z0; iZ <= z1; iZ++) {
-
-          if (blockGeometryStructure.getMaterial(iX, iY, iZ) == material) {
-            for (int q = 1; q < Lattice<T>::q ; ++q) {
+    for (int iX = min[0]; iX <= max[0]; ++iX) {
+      for (int iY = min[1]; iY <= max[1]; ++iY) {
+        for (int iZ = min[2]; iZ <= max[2]; ++iZ) {
+          if (indicator(iX, iY, iZ)) {
+            for (int q = 1; q < DESCRIPTOR::q ; ++q) {
               // Get direction
-              const int* c = Lattice<T>::c[q];
-              int iXn = iX + c[0];
-              int iYn = iY + c[1];
-              int iZn = iZ + c[2];
-              std::list<int>::iterator i;
-              for (i=bulkMaterials.begin(); i!=bulkMaterials.end(); ++i) {
-                if (blockGeometryStructure.getMaterial(iXn, iYn, iZn) == *i) {
-                  T intersection[3] = { T(), T() ,T() }; // coord. of intersection
-                  int opp = util::opposite<Lattice<T> >(q);
-                  if (this->getBoundaryIntersection(iX, iY, iZ, opp, intersection) ) {
-                    //                    std::vector<double> intersection2;
-                    //                    intersection2.push_back(intersection[0]);
-                    //                    intersection2.push_back(intersection[1]);
-                    //                    intersection2.push_back(intersection[2]);
-                    //                    T vel[] = {u(intersection2)[0], u(intersection2)[1], u(intersection2)[2]};
-                    T vel[3]= {T(),T(),T()};
-                    u(vel,intersection);
-                    this->defineU(iX, iY, iZ, opp, vel);
-                  }
+              const int iXn = iX + descriptors::c<DESCRIPTOR>(q,0);
+              const int iYn = iY + descriptors::c<DESCRIPTOR>(q,1);
+              const int iZn = iZ + descriptors::c<DESCRIPTOR>(q,2);
+              if (bulkIndicator.getBlockGeometryStructure().isInside(iXn,iYn,iZn) &&
+                  bulkIndicator(iXn,iYn,iZn)) {
+                T intersection[3] = { };
+                const int opp = util::opposite<DESCRIPTOR>(q);
+                if (this->getBoundaryIntersection(iX, iY, iZ, opp, intersection)) {
+                  T vel[3]= { };
+                  u(vel, intersection);
+                  this->defineU(iX, iY, iZ, opp, vel);
                 }
               }
             }
@@ -561,14 +559,14 @@ void OffBoundaryConditionInstantiator3D<T, Lattice, BoundaryManager>::defineU(Bl
   }
 }
 
-template<typename T, template<typename U> class Lattice, class BoundaryManager>
-void OffBoundaryConditionInstantiator3D<T, Lattice, BoundaryManager>::outputOn()
+template<typename T, typename DESCRIPTOR, class BoundaryManager>
+void OffBoundaryConditionInstantiator3D<T, DESCRIPTOR, BoundaryManager>::outputOn()
 {
   _output = true;
 }
 
-template<typename T, template<typename U> class Lattice, class BoundaryManager>
-void OffBoundaryConditionInstantiator3D<T, Lattice, BoundaryManager>::outputOff()
+template<typename T, typename DESCRIPTOR, class BoundaryManager>
+void OffBoundaryConditionInstantiator3D<T, DESCRIPTOR, BoundaryManager>::outputOff()
 {
   _output = false;
 }

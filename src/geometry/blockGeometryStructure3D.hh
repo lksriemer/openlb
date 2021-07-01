@@ -30,6 +30,7 @@
 
 #include <math.h>
 #include "geometry/blockGeometryStructure3D.h"
+#include "functors/analytical/indicator/indicatorF3D.h"
 
 
 namespace olb {
@@ -55,6 +56,14 @@ void BlockGeometryStructure3D<T>::getPhysR(T physR[3], const int latticeR[3]) co
 {
   getPhysR(physR, latticeR[0], latticeR[1], latticeR[2]);
   return;
+}
+
+template<typename T>
+bool BlockGeometryStructure3D<T>::isInside(int iX, int iY, int iZ) const
+{
+  return 0 <= iX && iX < getNx() &&
+         0 <= iY && iY < getNy() &&
+         0 <= iZ && iZ < getNz();
 }
 
 template<typename T>
@@ -539,7 +548,8 @@ bool BlockGeometryStructure3D<T>::checkForErrors(bool verbose) const
   if (verbose) {
     if (error) {
       this->clout << "error!" << std::endl;
-    } else {
+    }
+    else {
       this->clout << "the model is correct!" << std::endl;
     }
   }
@@ -695,6 +705,31 @@ void BlockGeometryStructure3D<T>::rename(int fromM, int toM, int fluidM, Indicat
     }
   }
 }
+
+template<typename T>
+void BlockGeometryStructure3D<T>::copyMaterialLayer(IndicatorF3D<T>& condition, int discreteNormal[3], int numberOfLayers)
+{
+  T physR[3];
+  for (int iX = 0; iX < getNx(); iX++) {
+    for (int iY = 0; iY < getNy(); iY++) {
+      for (int iZ = 0; iZ < getNz(); iZ++) {
+        getPhysR(physR, iX,iY,iZ);
+        bool inside[1];
+        condition(inside, physR);
+        if (inside[0]) {
+          for (int i = 0; i < numberOfLayers; i++) {
+            if (0 <= iX + i * discreteNormal[0] && iX + i * discreteNormal[0] < getNx() &&
+                0 <= iY + i * discreteNormal[1] && iY + i * discreteNormal[1] < getNy() &&
+                0 <= iZ + i * discreteNormal[2] && iZ + i * discreteNormal[2] < getNz()) {
+              get(iX + i * discreteNormal[0], iY + i * discreteNormal[1], iZ + i * discreteNormal[2]) = get(iX, iY, iZ);
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
 
 template<typename T>
 void BlockGeometryStructure3D<T>::regionGrowing(int fromM, int toM, int seedX, int seedY,

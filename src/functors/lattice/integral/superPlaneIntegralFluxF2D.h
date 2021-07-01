@@ -1,6 +1,6 @@
 /*  This file is part of the OpenLB library
  *
- *  Copyright (C) 2018 Adrian Kummerländer
+ *  Copyright (C) 2018 Adrian Kummerlaender
  *  E-mail contact: info@openlb.net
  *  The most recent release of OpenLB can be downloaded at
  *  <http://www.openlb.net/>
@@ -41,10 +41,10 @@ namespace olb {
  * The appropropriate SuperLatticePhysF2D derived functor is then instantiated
  * internally as defined by the template argument F.
  **/
-template<typename T, template<typename, template<typename> class> class F>
+template<typename T, template<typename, typename> class F>
 class SuperPlaneIntegralFluxF2D : public SuperPlaneIntegralF2D<T> {
 public:
-  template<template<typename> class DESCRIPTOR>
+  template<typename DESCRIPTOR>
   SuperPlaneIntegralFluxF2D(SuperLattice2D<T, DESCRIPTOR>&     sLattice,
                             const UnitConverter<T,DESCRIPTOR>& converter,
                             SuperGeometry2D<T>& geometry,
@@ -53,7 +53,7 @@ public:
                             FunctorPtr<IndicatorF2D<T>>&&      subplaneIndicator,
                             BlockDataReductionMode mode=BlockDataReductionMode::Analytical);
 
-  template<template<typename> class DESCRIPTOR>
+  template<typename DESCRIPTOR>
   SuperPlaneIntegralFluxF2D(SuperLattice2D<T, DESCRIPTOR>&     sLattice,
                             const UnitConverter<T,DESCRIPTOR>& converter,
                             SuperGeometry2D<T>&    geometry,
@@ -61,7 +61,7 @@ public:
                             FunctorPtr<SuperIndicatorF2D<T>>&& integrationIndicator,
                             FunctorPtr<IndicatorF2D<T>>&&      subplaneIndicator,
                             BlockDataReductionMode mode=BlockDataReductionMode::Analytical);
-  template<template<typename> class DESCRIPTOR>
+  template<typename DESCRIPTOR>
   SuperPlaneIntegralFluxF2D(SuperLattice2D<T, DESCRIPTOR>&     sLattice,
                             const UnitConverter<T,DESCRIPTOR>& converter,
                             SuperGeometry2D<T>&     geometry,
@@ -69,7 +69,7 @@ public:
                             FunctorPtr<SuperIndicatorF2D<T>>&& integrationIndicator,
                             BlockDataReductionMode mode=BlockDataReductionMode::Analytical);
 
-  template<template<typename> class DESCRIPTOR>
+  template<typename DESCRIPTOR>
   SuperPlaneIntegralFluxF2D(SuperLattice2D<T, DESCRIPTOR>&     sLattice,
                             const UnitConverter<T,DESCRIPTOR>& converter,
                             SuperGeometry2D<T>& geometry,
@@ -77,7 +77,7 @@ public:
                             const Vector<T,2>& u,
                             std::vector<int> materials,
                             BlockDataReductionMode mode=BlockDataReductionMode::Analytical);
-  template<template<typename> class DESCRIPTOR>
+  template<typename DESCRIPTOR>
   SuperPlaneIntegralFluxF2D(SuperLattice2D<T, DESCRIPTOR>&     sLattice,
                             const UnitConverter<T,DESCRIPTOR>& converter,
                             SuperGeometry2D<T>& geometry,

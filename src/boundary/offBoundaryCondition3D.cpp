@@ -24,21 +24,23 @@
 #include "offBoundaryCondition3D.h"
 #include "offBoundaryCondition3D.hh"
 #include "dynamics/latticeDescriptors.h"
-#include "dynamics/latticeDescriptors.hh"
+ 
 
 namespace olb {
 
+template class OffLatticeBoundaryCondition3D<double, descriptors::D3Q19<>>;
+
 template class OffBoundaryConditionInstantiator3D
 <
-  double, descriptors::D3Q19Descriptor,
-  BouzidiBoundaryManager3D < double, descriptors::D3Q19Descriptor,
-                             BGKdynamics<double,descriptors::D3Q19Descriptor> >
+  double, descriptors::D3Q19<>,
+  BouzidiBoundaryManager3D < double, descriptors::D3Q19<>,
+                             BGKdynamics<double,descriptors::D3Q19<>> >
   >;
 
-template OffLatticeBoundaryCondition3D<double,descriptors::D3Q19Descriptor>*
-createBouzidiBoundaryCondition3D < double,descriptors::D3Q19Descriptor,
-                                 BGKdynamics<double,descriptors::D3Q19Descriptor> >
+template OffLatticeBoundaryCondition3D<double,descriptors::D3Q19<>>*
+createBouzidiBoundaryCondition3D < double,descriptors::D3Q19<>,
+                                 BGKdynamics<double,descriptors::D3Q19<>> >
                                  (
-                                   BlockLatticeStructure3D<double,descriptors::D3Q19Descriptor>& block
+                                   BlockLatticeStructure3D<double,descriptors::D3Q19<>>& block
                                  );
 }

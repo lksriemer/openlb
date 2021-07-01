@@ -174,6 +174,12 @@ void Communicator2D<T>::write()
   }
 }
 
+template<typename T>
+std::vector<CuboidNeighbourhood2D<T> >& Communicator2D<T>::get_nh()
+{
+  return _nh;
+}
+
 }
 
 #endif

@@ -89,6 +89,9 @@ public:
   void receive();
   /// Writes all data to the block lattices of the super structure
   void write();
+
+  /// Access to internal data for the tests
+  std::vector<CuboidNeighbourhood2D<T>>& get_nh();
 };
 
 }  // namespace olb

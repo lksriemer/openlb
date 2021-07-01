@@ -35,15 +35,12 @@
 #include "latticeStatistics.h"
 #include "serializer.h"
 
-
-
 /// All OpenLB code is contained in this namespace.
 namespace olb {
 
 template<typename T> class BlockGeometryStructure2D;
-template<typename T, template<typename U> class Lattice> struct Dynamics;
+template<typename T, typename DESCRIPTOR> struct Dynamics;
 template<typename T> class BlockIndicatorF2D;
-
 
 /** A regular lattice for highly efficient 2D LB dynamics.
  * A block lattice contains a regular array of Cell objects and
@@ -51,15 +48,15 @@ template<typename T> class BlockIndicatorF2D;
  *
  * This class is not intended to be derived from.
  */
-template<typename T, template<typename U> class Lattice>
-class BlockLattice2D final : public BlockLatticeStructure2D<T,Lattice>, public Serializable {
+template<typename T, typename DESCRIPTOR>
+class BlockLattice2D final : public BlockLatticeStructure2D<T,DESCRIPTOR>, public Serializable {
 public:
-  typedef std::vector<PostProcessor2D<T,Lattice>*> PostProcVector;
+  typedef std::vector<PostProcessor2D<T,DESCRIPTOR>*> PostProcVector;
 private:
   /// Actual data array
-  Cell<T,Lattice>      *rawData;
+  Cell<T,DESCRIPTOR>      *rawData;
   /// 3D-Array pointing to rawData; grid[iX] points to beginning of y-array in rawData
-  Cell<T,Lattice>      **grid;
+  Cell<T,DESCRIPTOR>      **grid;
   PostProcVector       postProcessors, latticeCouplings;
 #ifdef PARALLEL_MODE_OMP
   LatticeStatistics<T> **statistics;
@@ -73,21 +70,26 @@ public:
   /// Destruction of the lattice
   ~BlockLattice2D() override;
   /// Copy construction
-  BlockLattice2D(BlockLattice2D<T,Lattice> const& rhs) = delete;
+  BlockLattice2D(BlockLattice2D<T,DESCRIPTOR> const& rhs) = delete;
   // Move constructor
   BlockLattice2D(BlockLattice2D&&) = default;
   /// Copy assignment
-  BlockLattice2D& operator=(BlockLattice2D<T,Lattice> const& rhs) = delete;
+  BlockLattice2D& operator=(BlockLattice2D<T,DESCRIPTOR> const& rhs) = delete;
 public:
   /// Read/write access to lattice cells
-  Cell<T,Lattice>& get(int iX, int iY) override
+  Cell<T,DESCRIPTOR>& get(int iX, int iY) override
   {
     OLB_PRECONDITION(iX<this->_nx);
     OLB_PRECONDITION(iY<this->_ny);
     return grid[iX][iY];
   }
+  /// Read/write access to lattice cells
+  Cell<T,DESCRIPTOR>& get(int latticeR[]) override
+  {
+    return get(latticeR[0], latticeR[1]);
+  }
   /// Read only access to lattice cells
-  Cell<T,Lattice> const& get(int iX, int iY) const override
+  Cell<T,DESCRIPTOR> const& get(int iX, int iY) const override
   {
     OLB_PRECONDITION(iX<this->_nx);
     OLB_PRECONDITION(iY<this->_ny);
@@ -95,33 +97,24 @@ public:
   }
   /// Initialize the lattice cells to become ready for simulation
   void initialize() override;
+  /// Get the dynamics for the specific point
+  Dynamics<T,DESCRIPTOR>* getDynamics(int iX, int iY) override;
   /// Define the dynamics on a rectangular domain
   void defineDynamics (int x0, int x1, int y0, int y1,
-                               Dynamics<T,Lattice>* dynamics ) override;
-  void defineDynamics(BlockGeometryStructure2D<T>& blockGeometry, int material,
-                              Dynamics<T,Lattice>* dynamics) override;
-  /// Get the dynamics for the specific point
-  Dynamics<T,Lattice>* getDynamics(int iX, int iY) override;
+                       Dynamics<T,DESCRIPTOR>* dynamics ) override;
   /// Define the dynamics on a lattice site
-  void defineDynamics(int iX, int iY, Dynamics<T,Lattice>* dynamics) override;
-  /**
-   * Define the dynamics by indicator
-   *
-   * \param indicator Block indicator describing the target domain
-   * \param overlap   Overlap of the underlying block geometry
-   * \param dynamics  Dynamics to be defined
-   **/
-  virtual void defineDynamics(BlockIndicatorF2D<T>& indicator, int overlap, Dynamics<T,Lattice>* dynamics);
+  void defineDynamics(int iX, int iY, Dynamics<T,DESCRIPTOR>* dynamics) override;
+  /// Define the dynamics on a domain described by an indicator
+  void defineDynamics(BlockIndicatorF2D<T>& indicator,
+                      Dynamics<T,DESCRIPTOR>* dynamics);
+  /// Define the dynamics on a domain described by a material number
+  void defineDynamics(BlockGeometryStructure2D<T>& blockGeometry, int material,
+                      Dynamics<T,DESCRIPTOR>* dynamics);
 
   /// Apply collision step to a rectangular domain
   void collide(int x0, int x1, int y0, int y1) override;
   /// Apply collision step to the whole domain
   void collide() override;
-  /// Apply collision step to a rectangular domain, with fixed velocity
-  /*virtual void staticCollide (int x0, int x1, int y0, int y1,
-                              TensorFieldBase2D<T,2> const& u);
-  /// Apply collision step to the whole domain, with fixed velocity
-  virtual void staticCollide(TensorFieldBase2D<T,2> const& u);*/
   /// Apply streaming step to a rectangular domain
   void stream(int x0, int x1, int y0, int y1) override;
   /// Apply streaming step to the whole domain
@@ -135,7 +128,7 @@ public:
   /// Compute the average density within the whole domain
   T computeAverageDensity() const override;
   /// Compute components of the stress tensor on the cell.
-  void computeStress(int iX, int iY, T pi[util::TensorVal<Lattice<T> >::n]) override;
+  void computeStress(int iX, int iY, T pi[util::TensorVal<DESCRIPTOR >::n]) override;
   /// Subtract a constant offset from the density within the whole domain
   void stripeOffDensityOffset (
     int x0, int x1, int y0, int y1, T offset ) override;
@@ -143,11 +136,11 @@ public:
   void stripeOffDensityOffset(T offset) override;
   /// Apply an operation to all cells of a sub-domain
   void forAll(int x0_, int x1_, int y0_, int y1_,
-                      WriteCellFunctional<T,Lattice> const& application) override;
+              WriteCellFunctional<T,DESCRIPTOR> const& application) override;
   /// Apply an operation to all cells
-  void forAll(WriteCellFunctional<T,Lattice> const& application) override;
+  void forAll(WriteCellFunctional<T,DESCRIPTOR> const& application) override;
   /// Add a non-local post-processing step
-  void addPostProcessor (    PostProcessorGenerator2D<T,Lattice> const& ppGen ) override;
+  void addPostProcessor (    PostProcessorGenerator2D<T,DESCRIPTOR> const& ppGen ) override;
   /// Clean up all non-local post-processing steps
   void resetPostProcessors() override;
   /// Execute post-processing on a sub-lattice
@@ -155,14 +148,12 @@ public:
   /// Execute post-processing steps
   void postProcess() override;
   /// Add a non-local post-processing step which couples together lattices
-  void addLatticeCoupling( LatticeCouplingGenerator2D<T,Lattice> const& lcGen,
-                                   std::vector<SpatiallyExtendedObject2D*> partners ) override;
+  void addLatticeCoupling( LatticeCouplingGenerator2D<T,DESCRIPTOR> const& lcGen,
+                           std::vector<SpatiallyExtendedObject2D*> partners ) override;
   /// Execute couplings on a sub-lattice
   void executeCoupling(int x0_, int x1_, int y0_, int y1_) override;
   /// Execute couplings
   void executeCoupling() override;
-  /// Subscribe postProcessors for reduction operations
-  void subscribeReductions(Reductor<T>& reductor) override;
   /// Return a handle to the LatticeStatistics object
   LatticeStatistics<T>& getStatistics() override;
   /// Return a constant handle to the LatticeStatistics object
@@ -196,7 +187,6 @@ private:
   void periodicEdge(int x0, int x1, int y0, int y1);
   void makePeriodic();
 };
-
 
 }  // namespace olb
 

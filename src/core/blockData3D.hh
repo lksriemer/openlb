@@ -69,7 +69,7 @@ BlockData3D<T,BaseType>::BlockData3D(BlockF3D<BaseType>& rhs)
   : BlockStructure3D(rhs.getBlockStructure().getNx(),
                      rhs.getBlockStructure().getNy(),
                      rhs.getBlockStructure().getNz()),
-    _size(rhs.getTargetDim())//, _rawData(0), _field(0)
+    _size(rhs.getTargetDim()), _rawData(nullptr), _field(nullptr)
 {
   construct();
   int i[3];
@@ -235,6 +235,18 @@ template<typename T, typename BaseType>
 bool* BlockData3D<T,BaseType>::operator() (int iX, int iY, int iZ, int iData)
 {
   return (bool*)&_field[iX][iY][iZ][iData];
+}
+
+template<typename T, typename BaseType>
+bool BlockData3D<T,BaseType>::operator() (T output[], const int input[])
+{
+  if ( input[0] >= 0 && input[1] >= 0 && input[2] >= 0 && input[0] < this->_nx && input[1] < this->_ny && input[2] < this->_nz ) {
+    for (int i=0; i < _size; i++)
+      output[i] = _field[input[0]][input[1]][input[2]][i];
+    return true;
+  } else {
+    return false;
+  }
 }
 
 template<typename T, typename BaseType>

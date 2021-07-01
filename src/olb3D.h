@@ -9,3 +9,6 @@
 #include <particles/particles3D.h>
 #include <particles/forces/forces.h>
 #include <particles/boundaries/boundaries.h>
+#include <particles/contactDetection/sortAlgorithms.h>
+#include <particles/twoWayCouplings/twoWayCouplings3D.h>
+#include <particles/hlbm/hlbmDynamics3D.h>

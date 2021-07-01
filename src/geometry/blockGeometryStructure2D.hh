@@ -30,6 +30,7 @@
 
 #include <math.h>
 #include "geometry/blockGeometryStructure2D.h"
+#include "functors/lattice/indicator/blockIndicatorBaseF2D.h"
 
 
 namespace olb {
@@ -76,13 +77,13 @@ int BlockGeometryStructure2D<T>::clean(bool verbose)
   for (int iX = 0; iX < getNx(); iX++) {
     for (int iY = 0; iY < getNy(); iY++) {
       if (get(iX, iY) != 1 && get(iX, iY)!= 0) {
-        if (   getMaterial(iX    , iY) != 1
+        if (   getMaterial(iX, iY) != 1
                && getMaterial(iX + 1, iY) != 1
                && getMaterial(iX - 1, iY) != 1
-               && getMaterial(iX    , iY + 1) != 1
+               && getMaterial(iX, iY + 1) != 1
                && getMaterial(iX + 1, iY + 1) != 1
                && getMaterial(iX - 1, iY + 1) != 1
-               && getMaterial(iX    , iY - 1) != 1
+               && getMaterial(iX, iY - 1) != 1
                && getMaterial(iX + 1, iY - 1) != 1
                && getMaterial(iX - 1, iY - 1) != 1 ) {
           get(iX, iY) = 0;
@@ -106,10 +107,10 @@ int BlockGeometryStructure2D<T>::outerClean(bool verbose)
       if (get(iX, iY) == 1) {
         if (   getMaterial(iX + 1, iY) == 0
                || getMaterial(iX - 1, iY) == 0
-               || getMaterial(iX    , iY + 1) == 0
+               || getMaterial(iX, iY + 1) == 0
                || getMaterial(iX + 1, iY + 1) == 0
                || getMaterial(iX - 1, iY + 1) == 0
-               || getMaterial(iX    , iY - 1) == 0
+               || getMaterial(iX, iY - 1) == 0
                || getMaterial(iX + 1, iY - 1) == 0
                || getMaterial(iX - 1, iY - 1) == 0 ) {
           get(iX, iY) = 0;
@@ -228,20 +229,58 @@ int BlockGeometryStructure2D<T>::innerClean(int fromM, bool verbose)
 }
 
 template<typename T>
-template<typename V, template<typename U> class Lattice >
-bool BlockGeometryStructure2D<T>::findStreamDirections(int iX, int iY, int material, std::list<int>   bulkMaterials, bool streamDirections[])
+void BlockGeometryStructure2D<T>::reset(IndicatorF2D<T>& domain)
 {
+  for (int iX = 0; iX < getNx(); iX++) {
+    for (int iY = 0; iY < getNy(); iY++) {
+      T physR[2] { };
+      getPhysR(physR, iX, iY);
+      if (domain(physR)) {
+        get(iX, iY) = 0;
+      }
+    }
+  }
+}
 
+template<typename T>
+template<typename V, typename DESCRIPTOR >
+bool BlockGeometryStructure2D<T>::findStreamDirections(
+  int iX, int iY,
+  BlockIndicatorF2D<T>& boundaryIndicator, BlockIndicatorF2D<T>& bulkIndicator,
+  bool streamDirections[])
+{
+  if (boundaryIndicator(iX, iY)) {
+    bool found = false;
+    streamDirections[0] = false;
+    for (int iPop = 1; iPop < DESCRIPTOR::q ; ++iPop) {
+      streamDirections[iPop] = false;
+      if (bulkIndicator(iX + descriptors::c<DESCRIPTOR >(iPop,0), iY + descriptors::c<DESCRIPTOR >(iPop,1))) {
+        streamDirections[iPop] = true;
+        found = true;
+      }
+    }
+    return found;
+  }
+  else {
+    return false;
+  }
+}
+
+template<typename T>
+template<typename V, typename DESCRIPTOR >
+bool BlockGeometryStructure2D<T>::findStreamDirections(int iX, int iY, int material, std::list<int> bulkMaterials, bool streamDirections[])
+{
   bool found = false;
   if (getMaterial(iX, iY) != material) {
     return false;
-  } else {
+  }
+  else {
     std::list<int>::iterator mat;
     streamDirections[0] = false;
-    for (int iPop = 1; iPop < Lattice<T>::q ; ++iPop) {
+    for (int iPop = 1; iPop < DESCRIPTOR::q ; ++iPop) {
       streamDirections[iPop] = false;
       for (mat=bulkMaterials.begin(); !streamDirections[iPop] && mat!=bulkMaterials.end(); ++mat) {
-        if (getMaterial(iX + Lattice<V>::c[iPop][0], iY + Lattice<V>::c[iPop][1]) == *mat ) {
+        if (getMaterial(iX + descriptors::c<DESCRIPTOR >(iPop,0), iY + descriptors::c<DESCRIPTOR >(iPop,1)) == *mat ) {
           streamDirections[iPop] = true;
           found = true;
         }
@@ -293,10 +332,10 @@ bool BlockGeometryStructure2D<T>::checkForErrors(bool verbose) const
       if (get(iX, iY) == 0) {
         if (   getMaterial(iX + 1, iY) == 1
                || getMaterial(iX - 1, iY) == 1
-               || getMaterial(iX    , iY + 1) == 1
+               || getMaterial(iX, iY + 1) == 1
                || getMaterial(iX + 1, iY + 1) == 1
                || getMaterial(iX - 1, iY + 1) == 1
-               || getMaterial(iX    , iY - 1) == 1
+               || getMaterial(iX, iY - 1) == 1
                || getMaterial(iX + 1, iY - 1) == 1
                || getMaterial(iX - 1, iY - 1) == 1 ) {
           error = true;
@@ -307,7 +346,8 @@ bool BlockGeometryStructure2D<T>::checkForErrors(bool verbose) const
   if (verbose) {
     if (error) {
       this->clout << "error!" << std::endl;
-    } else {
+    }
+    else {
       this->clout << "the model is correct!" << std::endl;
     }
   }

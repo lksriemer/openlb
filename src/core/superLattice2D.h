@@ -36,17 +36,18 @@
 #include "postProcessing.h"
 #include "serializer.h"
 #include "communication/superStructure2D.h"
+#include "utilities/functorPtr.h"
 
 /// All OpenLB code is contained in this namespace.
 namespace olb {
 
 template<typename T> class Communicator2D;
 template<typename T> class CuboidGeometry2D;
-template<typename T, template<typename U> class Lattice> class BlockLattice2D;
-template<typename T, template<typename U> class Lattice> class BlockLatticeView2D;
+template<typename T, typename DESCRIPTOR> class BlockLattice2D;
+template<typename T, typename DESCRIPTOR> class BlockLatticeView2D;
 template<typename T> class LoadBalancer;
 template<typename T> class SuperGeometry2D;
-template<typename T, template<typename U> class Lattice> class SuperLatticeF2D;
+template<typename T, typename DESCRIPTOR> class SuperLatticeF2D;
 template<typename T> class SuperStructure2D;
 template<typename T> class SuperIndicatorF2D;
 
@@ -71,14 +72,14 @@ template<typename T> class SuperIndicatorF2D;
  *
  * This class is not intended to be derived from.
  */
-template<typename T, template<typename U> class Lattice>
+template<typename T, typename DESCRIPTOR>
 class SuperLattice2D : public SuperStructure2D<T>, public BufferSerializable {
 
 private:
   /// Lattices with ghost cell layer of size overlap
-  std::vector<BlockLattice2D<T,Lattice> >     _extendedBlockLattices;
+  std::vector<BlockLattice2D<T,DESCRIPTOR> >     _extendedBlockLattices;
   /// View of the lattices without overlap
-  std::vector<BlockLatticeView2D<T,Lattice> > _blockLattices;
+  std::vector<BlockLatticeView2D<T,DESCRIPTOR> > _blockLattices;
 
   /// Size of the refinement overlap
   int                                         _overlapRefinement;
@@ -102,23 +103,23 @@ public:
   SuperLattice2D(const SuperLattice2D&) = delete;
   ~SuperLattice2D();
   /// Read and write access to a block lattice
-  BlockLattice2D<T,Lattice>& getExtendedBlockLattice(int locIC)
+  BlockLattice2D<T,DESCRIPTOR>& getExtendedBlockLattice(int locIC)
   {
     return _extendedBlockLattices[locIC];
   };
   /// Read only access to a block lattice
-  BlockLattice2D<T,Lattice> const& getExtendedBlockLattice(int locIC) const
+  BlockLattice2D<T,DESCRIPTOR> const& getExtendedBlockLattice(int locIC) const
   {
     return _extendedBlockLattices[locIC];
   };
   /// Read and write access to a lattice (block lattice view, one
   /// without overlap).
-  BlockLatticeView2D<T,Lattice>& getBlockLattice(int locIC)
+  BlockLatticeView2D<T,DESCRIPTOR>& getBlockLattice(int locIC)
   {
     return _blockLattices[locIC];
   };
   /// Read only access to a lattice
-  BlockLatticeView2D<T,Lattice> const& getBlockLattice(int locIC) const
+  BlockLatticeView2D<T,DESCRIPTOR> const& getBlockLattice(int locIC) const
   {
     return _blockLattices[locIC];
   };
@@ -151,13 +152,17 @@ public:
 
   /// Write access to lattice cells that returns false if
   /// iX/iY is not in any of the cuboids
-  bool set(T iX, T iY, Cell<T,Lattice> const& cell);
+  bool set(T iX, T iY, Cell<T,DESCRIPTOR> const& cell);
+
+  void set(Vector<int,3> pos, const Cell<T,DESCRIPTOR>& cell);
+  void get(Vector<int,3> pos, Cell<T,DESCRIPTOR>& cell) const;
+
   /// Read only access to lattice cells that returns false if
   /// iX/iY is not in any of the cuboids
-  bool get(T iX, T iY, Cell<T,Lattice>& cell) const;
+  bool get(T iX, T iY, Cell<T,DESCRIPTOR>& cell) const;
   /// Read only access to lattice cells over the cuboid number
   /// and local coordinates   WARNING!!! NO ERROR HANDLING IMPLEMENTED!!!
-  Cell<T,Lattice> get(int iC, int locX, int locY) const;
+  Cell<T,DESCRIPTOR> get(int iC, int locX, int locY) const;
 
   /// Write access to the memory of the data of the super structure
   bool* operator() (int iCloc, int iX, int iY, int iData) override
@@ -167,7 +172,7 @@ public:
   /// Read only access to the dim of the data of the super structure
   int getDataSize() const override
   {
-    return Lattice<T>::q;
+    return DESCRIPTOR::q;
   };
   /// Read only access to the data type dim of the data of the super structure
   int getDataTypeSize() const override
@@ -177,52 +182,98 @@ public:
   /// Initialize all lattice cells to become ready for simulation
   void initialize();
 
-  /// Defines the dynamics by material
-  void defineDynamics(SuperGeometry2D<T>& superGeometry, int material, Dynamics<T,Lattice>* dynamics);
-  /// Defines the dynamics on a domain described by an indicator reference
-  void defineDynamics(SuperIndicatorF2D<T>& indicator, Dynamics<T,Lattice>* dynamics);
-  /// Defines the dynamics on a domain described by an indicator pointer
-  void defineDynamics(std::unique_ptr<SuperIndicatorF2D<T>> const& indicator, Dynamics<T, Lattice>* dynamics);
+  /// Defines the dynamics on a domain described by an indicator
+  void defineDynamics(FunctorPtr<SuperIndicatorF2D<T>>&& indicator, Dynamics<T, DESCRIPTOR>* dynamics);
+  /// Defines the dynamics by material number
+  void defineDynamics(SuperGeometry2D<T>& superGeometry, int material, Dynamics<T,DESCRIPTOR>* dynamics);
+
   /// Defines rho on a rectangular domain
-  void defineRhoU (T x0, T x1, T y0, T y1, T rho, const T u[Lattice<T>::d] );
+  void defineRhoU (T x0, T x1, T y0, T y1, T rho, const T u[DESCRIPTOR::d] );
+  /// Defines rho and u on a domain described by an indicator
+  void defineRhoU(FunctorPtr<SuperIndicatorF2D<T>>&& indicator,
+                  AnalyticalF2D<T,T>& rho, AnalyticalF2D<T,T>& u);
   /// Defines rho and u on a domain with a particular material number
   void defineRhoU(SuperGeometry2D<T>& sGeometry, int material,
                   AnalyticalF2D<T,T>& rho, AnalyticalF2D<T,T>& u);
+
   /// Defines rho on a rectangular domain
   void defineRho (T x0, T x1, T y0, T y1, T rho );
+  /// Defines rho on a domain described by an indicator
+  void defineRho(FunctorPtr<SuperIndicatorF2D<T>>&& indicator, AnalyticalF2D<T,T>& rho);
   /// Defines rho on a domain with a particular material number
   void defineRho(SuperGeometry2D<T>& sGeometry, int material, AnalyticalF2D<T,T>& rho);
+
   /// Defines u on a rectangular domain
-  void defineU (T x0, T x1, T y0, T y1, const T u[Lattice<T>::d] );
+  void defineU (T x0, T x1, T y0, T y1, const T u[DESCRIPTOR::d] );
+  /// Defines u on a domain described by an indicator
+  void defineU(FunctorPtr<SuperIndicatorF2D<T>>&& indicator, AnalyticalF2D<T,T>& u);
   /// Defines u on a domain with a particular material number
   void defineU(SuperGeometry2D<T>& sGeometry, int material, AnalyticalF2D<T,T>& u);
-  // Defines a Population on a domain with a particular material number
+
+  // Defines a population on a domain described by an indicator
+  void definePopulations(FunctorPtr<SuperIndicatorF2D<T>>&& indicator, AnalyticalF2D<T,T>& Pop);
+  // Defines a population on a domain with a particular material number
   void definePopulations(SuperGeometry2D<T>& sGeometry, int material, AnalyticalF2D<T,T>& Pop);
-  /// Defines an external field on a rectangular domain
-  void defineExternalField (T x0, T x1, T y0, T y1, int fieldBeginsAt, int sizeOfField, T* field );
-  /// Defines an external field on a domain with a particular material number
-  void defineExternalField(SuperGeometry2D<T>& sGeometry, int material,
-                           int fieldBeginsAt, int sizeOfField, AnalyticalF2D<T,T>& field);
-  /// Defines an external field on a domain with a particular indicator
-  void defineExternalField(SuperGeometry2D<T>& sGeometry, IndicatorF2D<T>& indicator,
-                           int fieldBeginsAt, int sizeOfField, AnalyticalF2D<T,T>& field);
-  /// Resets an external Particle Field
-  void resetExternalParticleField(SuperGeometry2D<T>& sGeometry, IndicatorF2D<T>& indicator);
+
+  /// Defines a field on a rectangular domain
+  template <typename FIELD>
+  void defineField (T x0, T x1, T y0, T y1, T* field );
+  /// Defines a field on a domain described by an indicator
+  template <typename FIELD>
+  void defineField(FunctorPtr<SuperIndicatorF2D<T>>&& indicator,
+                   SuperLatticeF2D<T,DESCRIPTOR>& field);
+  /// Defines a field on a domain with a particular material number
+  template <typename FIELD>
+  void defineField(SuperGeometry2D<T>& sGeometry, int material,
+                   SuperLatticeF2D<T,DESCRIPTOR>& field);
+
+  /// Defines a field on a domain described by an indicator
+  template <typename FIELD>
+  void defineField(FunctorPtr<SuperIndicatorF2D<T>>&& indicator,
+                   AnalyticalF2D<T,T>& field)
+  {
+    for (int iC = 0; iC < this->_loadBalancer.size(); ++iC) {
+      _extendedBlockLattices[iC].template defineField<FIELD>(
+        indicator->getExtendedBlockIndicatorF(iC), field);
+    }
+  }
+
+  /// Defines a field on a domain with a particular material number
+  template <typename FIELD>
+  void defineField(SuperGeometry2D<T>& sGeometry, int material,
+                   AnalyticalF2D<T,T>& field)
+  {
+    defineField<FIELD>(sGeometry.getMaterialIndicator(material), field);
+  }
+
+  /// Defines a field on a indicated domain
+  template <typename FIELD>
+  void defineField(SuperGeometry2D<T>& sGeometry, IndicatorF2D<T>& indicator,
+                   AnalyticalF2D<T,T>& field);
+#ifndef OLB_PRECOMPILED
   void setExternalParticleField(SuperGeometry2D<T>& sGeometry, AnalyticalF2D<T,T>& velocity,
-                                ParticleIndicatorF2D<T,T>& sIndicator);
-  void addExternalField(SuperGeometry2D<T>& sGeometry, IndicatorF2D<T>& indicator,
-                        int fieldBeginsAt, int sizeOfField, AnalyticalF2D<T,T>& field);
-  void addExternalField(SuperGeometry2D<T>& sGeometry, IndicatorF2D<T>& indicator,
-                        int fieldBeginsAt, int sizeOfField, AnalyticalF2D<T,T>& field,
-                        AnalyticalF2D<T,T>& porous);
-  void multiplyExternalField(SuperGeometry2D<T>& sGeometry, IndicatorF2D<T>& indicator,
-                             int fieldBeginsAt, int sizeOfField, AnalyticalF2D<T,T>& field);
-  /// Defines an external field on a domain with a particular material number
-  void defineExternalField(SuperGeometry2D<T>& sGeometry, int material, int fieldBeginsAt,
-                           int sizeOfField, SuperLatticeF2D<T,Lattice>& field);
+                                SmoothIndicatorF2D<T,T,true>& sIndicator);
+#else
+  void setExternalParticleField(SuperGeometry2D<T>& sGeometry, AnalyticalF2D<T,T>& velocity,
+                                SmoothIndicatorF2D<T,T,true>& sIndicator) {};
+#endif
+
+  template <typename FIELD>
+  void addField(SuperGeometry2D<T>& sGeometry, IndicatorF2D<T>& indicator,
+                AnalyticalF2D<T,T>& field);
+  template <typename FIELD>
+  void addField(SuperGeometry2D<T>& sGeometry, IndicatorF2D<T>& indicator,
+                AnalyticalF2D<T,T>& field,
+                AnalyticalF2D<T,T>& porous);
+  template <typename FIELD>
+  void multiplyField(SuperGeometry2D<T>& sGeometry, IndicatorF2D<T>& indicator,
+                     AnalyticalF2D<T,T>& field);
 
   /// Initializes the equilibrium
-  void iniEquilibrium (T x0, T x1, T y0, T y1, T rho, const T u[Lattice<T>::d] );
+  void iniEquilibrium (T x0, T x1, T y0, T y1, T rho, const T u[DESCRIPTOR::d] );
+  /// Initializes the equilibrium on a domain described by an indicator
+  void iniEquilibrium(FunctorPtr<SuperIndicatorF2D<T>>&& indicator,
+                      AnalyticalF2D<T,T>& rho, AnalyticalF2D<T,T>& u);
   /// Initializes the equilibrium on a domain with a particular material number
   void iniEquilibrium(SuperGeometry2D<T>& sGeometry, int material,
                       AnalyticalF2D<T,T>& rho, AnalyticalF2D<T,T>& u);
@@ -231,13 +282,6 @@ public:
   void collide(T x0, T x1, T y0, T y1);
   /// Apply collision step to the whole domain
   void collide();
-  /// TO BE DONE: Apply collision step to a rectangular domain,
-  /// with fixed velocity
-  // void staticCollide(T x0, T x1, T y0, T y1,
-  //                  TensorField2D<T,2> const& u);
-  /// TO BE DONE: Apply collision step to the whole domain,
-  /// with fixed velocity
-  // void staticCollide(TensorField2D<T,2> const& u);
   /// Apply streaming step to a rectangular domain
   void stream(T x0, T x1, T y0, T y1);
   /// Apply streaming step to the whole domain
@@ -265,11 +309,34 @@ public:
   };
 
   /// Adds a coupling generator for one partner superLattice
-  template<template<typename U> class Slattice>
-  void addLatticeCoupling(SuperGeometry2D<T>& sGeometry, int material,
-                          LatticeCouplingGenerator2D<T, Lattice> const& lcGen,
+  template<typename Slattice>
+  void addLatticeCoupling(LatticeCouplingGenerator2D<T, DESCRIPTOR> const& lcGen,
                           SuperLattice2D<T,Slattice>& partnerLattice );
-  /// Executes coupling generatur for one partner superLattice
+  /// Adds a coupling generator for one partner superLattice
+  template<typename Slattice>
+  void addLatticeCoupling(FunctorPtr<SuperIndicatorF2D<T>>&& indicator,
+                          LatticeCouplingGenerator2D<T, DESCRIPTOR> const& lcGen,
+                          SuperLattice2D<T,Slattice>& partnerLattice );
+  /// Adds a coupling generator for one partner superLattice
+  template<typename Slattice>
+  void addLatticeCoupling(SuperGeometry2D<T>& sGeometry, int material,
+                          LatticeCouplingGenerator2D<T, DESCRIPTOR> const& lcGen,
+                          SuperLattice2D<T,Slattice>& partnerLattice );
+  /// Adds a coupling generator for a multiple partner superLattice
+  template<typename Slattice>
+  void addLatticeCoupling(LatticeCouplingGenerator2D<T, DESCRIPTOR> const& lcGen,
+                          std::vector<SuperLattice2D<T,Slattice>*> partnerLattices );
+  /// Adds a coupling generator for a multiple partner superLattice
+  template<typename Slattice>
+  void addLatticeCoupling(FunctorPtr<SuperIndicatorF2D<T>>&& indicator,
+                          LatticeCouplingGenerator2D<T, DESCRIPTOR> const& lcGen,
+                          std::vector<SuperLattice2D<T,Slattice>*> partnerLattices );
+  /// Adds a coupling generator for a multiple partner superLattice
+  template<typename Slattice>
+  void addLatticeCoupling(SuperGeometry2D<T>& sGeometry, int material,
+                          LatticeCouplingGenerator2D<T, DESCRIPTOR> const& lcGen,
+                          std::vector<SuperLattice2D<T,Slattice>*> partnerLattices );
+  /// Executes coupling generator for one partner superLattice
   void executeCoupling();
 
   //void communicate(bool verbose=true);

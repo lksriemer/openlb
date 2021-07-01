@@ -47,6 +47,10 @@ ifeq ($(PARALLEL_MODE), HYBRID)
    LDFLAGS  := $(OMPFLAGS) $(LDFLAGS)
 endif
 
+LDFLAGS += $(if $(filter $(FEATURES), OPENBLAS),-lopenblas)
+
+CXXFLAGS += $(foreach feature,$(FEATURES),-DFEATURE_$(feature))
+
 ###########################################################################
 ## defines shell
 
@@ -81,36 +85,45 @@ SUBDIRS         := src/boundary \
                    src/particles \
                    src/particles/forces \
                    src/particles/boundaries \
-                   src/utilities
+                   src/utilities \
 
-EXAMPLEDIRS     := examples/aorta3d \
-                   examples/bifurcation3d/eulerEuler \
-                   examples/bifurcation3d/eulerLagrange \
-                   examples/bstep2d \
-                   examples/bstep3d \
-                   examples/cavity2d/sequential \
-                   examples/cavity2d/parallel \
-                   examples/cavity3d/sequential \
-                   examples/cavity3d/parallel \
-                   examples/cylinder2d \
-                   examples/cylinder3d \
-                   examples/multiComponent2d \
-                   examples/multiComponent3d \
-                   examples/nozzle3d \
-                   examples/phaseSeparation2d \
-                   examples/phaseSeparation3d \
-                   examples/poiseuille2d \
-                   examples/poiseuille3d \
-                   examples/porousPoiseuille2d \
-                   examples/powerLaw2d \
-                   examples/tgv3d \
-                   examples/thermalFlows/porousPlate2d \
-                   examples/thermalFlows/porousPlate3d \
-                   examples/thermalFlows/rayleighBenard2d \
-                   examples/thermalFlows/rayleighBenard3d \
-                   examples/thermalFlows/squareCavity2d \
-                   examples/thermalFlows/squareCavity3d \
-                   examples/venturi3d
+EXAMPLEDIRS     := examples/laminar/bstep2d \
+                   examples/laminar/bstep3d \
+                   examples/laminar/cavity2d/sequential \
+                   examples/laminar/cavity2d/parallel \
+                   examples/laminar/cavity3d/sequential \
+                   examples/laminar/cavity3d/parallel \
+                   examples/laminar/cylinder2d \
+                   examples/laminar/cylinder3d \
+                   examples/laminar/poiseuille2d \
+                   examples/laminar/poiseuille3d \
+                   examples/laminar/powerLaw2d \
+                   examples/multiComponent/contactAngle2d \
+                   examples/multiComponent/contactAngle3d \
+                   examples/multiComponent/microFluidics2d \
+                   examples/multiComponent/phaseSeparation2d \
+                   examples/multiComponent/phaseSeparation3d \
+                   examples/multiComponent/rayleighTaylor2d \
+                   examples/multiComponent/rayleighTaylor3d \
+                   examples/multiComponent/youngLaplace2d \
+                   examples/multiComponent/youngLaplace3d \
+                   examples/particles/bifurcation3d/eulerEuler \
+                   examples/particles/bifurcation3d/eulerLagrange \
+                   examples/particles/dkt2d \
+                   examples/particles/magneticParticles3d \
+                   examples/particles/settlingCube3d \
+                   examples/porousMedia/porousPoiseuille2d \
+                   examples/porousMedia/porousPoiseuille3d \
+                   examples/thermal/porousPlate2d \
+                   examples/thermal/porousPlate3d \
+                   examples/thermal/rayleighBenard2d \
+                   examples/thermal/rayleighBenard3d \
+                   examples/thermal/squareCavity2d \
+                   examples/thermal/squareCavity3d \
+                   examples/turbulence/aorta3d \
+                   examples/turbulence/nozzle3d \
+                   examples/turbulence/tgv3d \
+                   examples/turbulence/venturi3d \
 
 INCLUDEDIRS     := src \
                    src/ \

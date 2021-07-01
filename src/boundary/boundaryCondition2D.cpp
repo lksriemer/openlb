@@ -28,43 +28,45 @@
 #include "momentaOnBoundaries2D.h"
 #include "momentaOnBoundaries2D.hh"
 #include "dynamics/latticeDescriptors.h"
-#include "dynamics/latticeDescriptors.hh"
+ 
 
 namespace olb {
 
-template class BoundaryConditionInstantiator2D<double, descriptors::D2Q9Descriptor,
-    RegularizedBoundaryManager2D < double, descriptors::D2Q9Descriptor,
-                                   RLBdynamics<double,descriptors::D2Q9Descriptor> > >;
+template class OnLatticeBoundaryCondition2D<double, descriptors::D2Q9<>>;
 
-template OnLatticeBoundaryCondition2D<double,descriptors::D2Q9Descriptor>*
-createLocalBoundaryCondition2D < double,descriptors::D2Q9Descriptor,
-                               RLBdynamics<double,descriptors::D2Q9Descriptor> >
+template class BoundaryConditionInstantiator2D<double, descriptors::D2Q9<>,
+    RegularizedBoundaryManager2D < double, descriptors::D2Q9<>,
+                                   RLBdynamics<double,descriptors::D2Q9<>> > >;
+
+template OnLatticeBoundaryCondition2D<double,descriptors::D2Q9<>>*
+createLocalBoundaryCondition2D < double,descriptors::D2Q9<>,
+                               RLBdynamics<double,descriptors::D2Q9<>> >
                                (
-                                 BlockLatticeStructure2D<double,descriptors::D2Q9Descriptor>& block
+                                 BlockLatticeStructure2D<double,descriptors::D2Q9<>>& block
                                );
 
-template OnLatticeBoundaryCondition2D<double,descriptors::D2Q9Descriptor>*
-createLocalBoundaryCondition2D < double,descriptors::D2Q9Descriptor,
-                               BGKdynamics<double,descriptors::D2Q9Descriptor> >
+template OnLatticeBoundaryCondition2D<double,descriptors::D2Q9<>>*
+createLocalBoundaryCondition2D < double,descriptors::D2Q9<>,
+                               BGKdynamics<double,descriptors::D2Q9<>> >
                                (
-                                 BlockLatticeStructure2D<double,descriptors::D2Q9Descriptor>& block
+                                 BlockLatticeStructure2D<double,descriptors::D2Q9<>>& block
                                );
 
-template class BoundaryConditionInstantiator2D<double, descriptors::D2Q9Descriptor,
-    InterpolationBoundaryManager2D < double, descriptors::D2Q9Descriptor,
-                                     BGKdynamics<double,descriptors::D2Q9Descriptor> > >;
+template class BoundaryConditionInstantiator2D<double, descriptors::D2Q9<>,
+    InterpolationBoundaryManager2D < double, descriptors::D2Q9<>,
+                                     BGKdynamics<double,descriptors::D2Q9<>> > >;
 
-template OnLatticeBoundaryCondition2D<double,descriptors::D2Q9Descriptor>*
-createInterpBoundaryCondition2D < double,descriptors::D2Q9Descriptor,
-                                BGKdynamics<double,descriptors::D2Q9Descriptor> >
+template OnLatticeBoundaryCondition2D<double,descriptors::D2Q9<>>*
+createInterpBoundaryCondition2D < double,descriptors::D2Q9<>,
+                                BGKdynamics<double,descriptors::D2Q9<>> >
                                 (
-                                  BlockLatticeStructure2D<double,descriptors::D2Q9Descriptor>& block
+                                  BlockLatticeStructure2D<double,descriptors::D2Q9<>>& block
                                 );
 
-template OnLatticeBoundaryCondition2D<double,descriptors::D2Q9Descriptor>*
-createInterpBoundaryCondition2D < double,descriptors::D2Q9Descriptor,
-                                ConstRhoBGKdynamics<double,descriptors::D2Q9Descriptor> >
+template OnLatticeBoundaryCondition2D<double,descriptors::D2Q9<>>*
+createInterpBoundaryCondition2D < double,descriptors::D2Q9<>,
+                                ConstRhoBGKdynamics<double,descriptors::D2Q9<>> >
                                 (
-                                  BlockLatticeStructure2D<double,descriptors::D2Q9Descriptor>& block
+                                  BlockLatticeStructure2D<double,descriptors::D2Q9<>>& block
                                 );
 }

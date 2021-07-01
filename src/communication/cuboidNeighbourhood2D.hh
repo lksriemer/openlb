@@ -105,6 +105,12 @@ int CuboidNeighbourhood2D<T>::get_inCellsSize() const
 }
 
 template<typename T>
+int CuboidNeighbourhood2D<T>::get_outCellsSize() const
+{
+  return _outCells.size();
+}
+
+template<typename T>
 int const& CuboidNeighbourhood2D<T>::get_inC(int i) const
 {
   return _inC[i];

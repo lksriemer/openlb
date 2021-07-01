@@ -31,116 +31,63 @@
 
 #include "core/blockData3D.h"
 #include "core/unitConverter.h"
-#include "functors/lattice/indicator/indicatorBaseF2D.h"
-#include "functors/lattice/indicator/indicatorBaseF3D.h"
+#include "functors/analytical/indicator/indicatorBaseF2D.h"
+#include "functors/analytical/indicator/indicatorBaseF3D.h"
 
 namespace olb {
 
-
-template<typename T, typename S> class SmoothIndicatorF3D;
-
-///////////////////////////SmoothIndicatorF/////////////////////////////////////
-
-/// implements a smooth sphere in 3D with an _epsilon sector
-template<typename T, typename S>
-class SmoothIndicatorSphere3D: public SmoothIndicatorF3D<T, S> {
-private:
-  S _innerRad;
-  S _outerRad;
-  S _epsilon;
-public:
-  SmoothIndicatorSphere3D(Vector<S, 3> center, S radius, S epsilon, S mass);
-  SmoothIndicatorSphere3D(const SmoothIndicatorSphere3D<T, S>& rhs);
-  bool operator()(T output[], const S input[]) override;
-  Vector<S, 3>& getCenter() override;
-  S getRadius() override;
-  S getDiam() override;
-};
-
-/// implements a smooth cylinder in 3D with an _epsilon sector
-template <typename T, typename S>
-class SmoothIndicatorCylinder3D : public SmoothIndicatorF3D<T,S> {
-private:
-  Vector<S,3> _center1;
-  Vector<S,3> _center2;
-  Vector<S,3> _I;
-  Vector<S,3> _J;
-  Vector<S,3> _K;
-  S _length;
-  S _radius2;
-  S _epsilon;
-public:
-  SmoothIndicatorCylinder3D(Vector<S,3> center1, Vector<S,3> center2,
-                            S radius, S epsilon);
-  bool operator() (T output[], const S input[]) override;
-};
-
-/// implements a smooth cone in 3D with an _epsilon sector
-template <typename T, typename S>
-class SmoothIndicatorCone3D : public SmoothIndicatorF3D<T,S> {
-private:
-  Vector<S,3> _center1;
-  Vector<S,3> _center2;
-  Vector<S,3> _I;
-  Vector<S,3> _J;
-  Vector<S,3> _K;
-  S _length;
-  S _radius1;
-  S _radius2; /**< The 2nd radius is optional: if not defined, _center2 is the vertex of the cone */
-  S _epsilon;
-public:
-  SmoothIndicatorCone3D(Vector<S,3> center1, Vector<S,3> center2,
-                        S radius1, S radius2, S epsilon);
-  bool operator() (T output[], const S input[]) override;
-};
-
-
-
-///////////////////////////ParticleIndicatorF/////////////////////////////////////
-
-/// implements a smooth sphere in 3D with an _epsilon sector for particle simulations
-template<typename T, typename S>
-class ParticleIndicatorSphere3D: public ParticleIndicatorF3D<T, S> {
-public:
-  ParticleIndicatorSphere3D(Vector<S, 3> center, S radius, S epsilon, S mass);
-  bool operator()(T output[], const S input[]) override;
-};
-
-/** implements a smooth particle cuboid in 3D with an _epsilon sector.
- * TODO construct by density
- * TODO rotation seems weird
- */
-template <typename T, typename S>
-class ParticleIndicatorCuboid3D : public ParticleIndicatorF3D<T, S> {
+/// implements a smooth particle cuboid in 3D with an _epsilon sector. 
+template <typename T, typename S, bool HLBM=false>
+class SmoothIndicatorCuboid3D final: public SmoothIndicatorF3D<T, S, HLBM> {
 private:
   S _xLength;
   S _yLength;
   S _zLength;
 public:
-  ParticleIndicatorCuboid3D(Vector<S,3> center, S xLength, S yLength, S zLength, S mass, S epsilon, Vector<S,3> theta);
-  bool operator()(T output[],const S x[]);
+  SmoothIndicatorCuboid3D(Vector<S,3> center, S xLength, S yLength, S zLength, S epsilon, Vector<S,3> theta = Vector<S,3> (0.,0.,0.), S density=0, Vector<S,3> vel = Vector<S,3> (0.,0.,0.));
+  bool operator()(T output[],const S input[]) override;
 };
 
-/** implements a smooth particle of shape given by in indicator (e.g. STL) in 3D with an _epsilon sector.
- * TODO construct by density
- * TODO check correctness of center and mofi
- */
-template <typename T, typename S, template<typename U> class DESCRIPTOR>
-class ParticleIndicatorCustom3D : public ParticleIndicatorF3D<T, S> {
+/// implements a smooth sphere in 3D with an _epsilon sector 
+template <typename T, typename S, bool HLBM=false>
+class SmoothIndicatorSphere3D final: public SmoothIndicatorF3D<T, S, HLBM> {
 private:
-  // _center is the local center, _startPos the center at the start
-  Vector<T,3> _center;
-  // _latticeCenter gives the center in local lattice coordinates
-  Vector<int,3> _latticeCenter;
-  BlockData3D<T, T> _blockData;
-  UnitConverter<T,DESCRIPTOR> const& _converter;
-
+  S _radius;
 public:
-  // for now epsilon has to be chosen to be latticeL
-  ParticleIndicatorCustom3D(UnitConverter<T,DESCRIPTOR> const& converter, IndicatorF3D<T>& ind, Vector<T,3> center, T rhoP, T epsilon, Vector<T,3> theta);
-  bool operator() (T output[], const S input[]);
+  SmoothIndicatorSphere3D(Vector<S, 3> center, S radius, S epsilon, S density=0, Vector<S,3> vel = Vector<S,3> (0.,0.,0.));
+  bool operator()(T output[], const S input[]) override;
 };
 
+/// implements a smooth particle cylinder in 3D with an _epsilon sector.
+template <typename T, typename S, bool HLBM=false>
+class SmoothIndicatorCylinder3D final: public SmoothIndicatorF3D<T, S, HLBM> {
+private:
+  S _radius;
+  S _length;
+  void initIndicatorCylinder3D(Vector<S,3> normal, Vector<S,3> theta, S density, Vector<S,3> vel);
+public:
+  SmoothIndicatorCylinder3D(Vector<S,3> pointA, Vector<S,3> pointB, S radius, S epsilon, Vector<S,3> theta = Vector<S,3> (0.,0.,0.), S density=0, Vector<S,3> vel = Vector<S,3> (0.,0.,0.));
+  SmoothIndicatorCylinder3D(Vector<S,3> center, Vector<S,3> normal, S radius, S length, S epsilon, Vector<S,3> theta = Vector<S,3> (0.,0.,0.), S density=0, Vector<S,3> vel = Vector<S,3> (0.,0.,0.));
+  bool operator()(T output[], const S input[]) override;
+};
+
+/// implements a smooth particle cone in 3D with an _epsilon sector
+template <typename T, typename S, bool HLBM=false>
+class SmoothIndicatorCone3D : public SmoothIndicatorF3D<T, S, HLBM> {
+private:
+  S _length;
+  S _radiusA;
+  S _radiusB;
+  void initIndicatorCone3D(Vector<S,3> normal, Vector<S,3> theta, S density, Vector<S,3> vel);
+public:
+  SmoothIndicatorCone3D(Vector<S,3> pointA, Vector<S,3> pointB,
+                        S radiusA, S radiusB, S epsilon, Vector<S,3> theta = Vector<S,3> (0.,0.,0.), S density=0, 
+                        Vector<S,3> vel = Vector<S,3> (0.,0.,0.));
+  SmoothIndicatorCone3D(Vector<S,3> center, Vector<S,3> normal, S lenght,
+                        S radiusA, S radiusB, S epsilon, Vector<S,3> theta = Vector<S,3> (0.,0.,0.), 
+                        S density=0, Vector<S,3> vel = Vector<S,3> (0.,0.,0.));
+  bool operator() (T output[], const S input[]) override;
+};
 
 }
 

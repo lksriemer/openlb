@@ -30,6 +30,7 @@
 #include "offBoundaryCondition3D.h"
 #include "offBoundaryInstantiator3D.h"
 #include "offBoundaryPostProcessors3D.h"
+#include "functors/lattice/indicator/blockIndicatorF3D.h"
 
 namespace olb {
 
@@ -37,87 +38,127 @@ namespace olb {
 * Boundary Managers provide specific Boundary Processors by creating them
 */
 
-template<typename T, template<typename U> class Lattice, class MixinDynamics>
+template<typename T, typename DESCRIPTOR, class MixinDynamics>
 class BouzidiBoundaryManager3D {
 public:
 
-  static PostProcessorGenerator3D<T,Lattice>*
+  static PostProcessorGenerator3D<T,DESCRIPTOR>*
   getOnePointZeroVelocityBoundaryProcessor(int x, int y, int z, int iPop, T dist);
-  static PostProcessorGenerator3D<T,Lattice>*
+  static PostProcessorGenerator3D<T,DESCRIPTOR>*
   getTwoPointZeroVelocityBoundaryProcessor(int x, int y, int z, int iPop, T dist);
-  static PostProcessorGenerator3D<T,Lattice>*
+  static PostProcessorGenerator3D<T,DESCRIPTOR>*
   getOnePointVelocityBoundaryProcessor(int x, int y, int z, int iPop, T dist);
-  static PostProcessorGenerator3D<T,Lattice>*
+  static PostProcessorGenerator3D<T,DESCRIPTOR>*
   getTwoPointVelocityBoundaryProcessor(int x, int y, int z, int iPop, T dist);
-  static Dynamics<T,Lattice>*
-  getOffDynamics(T location[Lattice<T>::d]);
-  static Dynamics<T,Lattice>*
-  getOffDynamics(T location[Lattice<T>::d], T distances[Lattice<T>::q]);
+  static Dynamics<T,DESCRIPTOR>*
+  getOffDynamics(T location[DESCRIPTOR::d]);
+  static Dynamics<T,DESCRIPTOR>*
+  getOffDynamics(T location[DESCRIPTOR::d], T distances[DESCRIPTOR::q]);
 };
 
 ////////// BouzidiBoundaryManager3D /////////////////////////////////////////
 
-template<typename T, template<typename U> class Lattice, class MixinDynamics>
-PostProcessorGenerator3D<T,Lattice>*
-BouzidiBoundaryManager3D<T,Lattice,MixinDynamics>::
+template<typename T, typename DESCRIPTOR, class MixinDynamics>
+PostProcessorGenerator3D<T,DESCRIPTOR>*
+BouzidiBoundaryManager3D<T,DESCRIPTOR,MixinDynamics>::
 getOnePointZeroVelocityBoundaryProcessor(int x, int y, int z, int iPop, T dist)
 {
   return new ZeroVelocityBounceBackPostProcessorGenerator3D
-         <T, Lattice>(x, y, z, iPop, dist);
+         <T, DESCRIPTOR>(x, y, z, iPop, dist);
 }
 
-template<typename T, template<typename U> class Lattice, class MixinDynamics>
-PostProcessorGenerator3D<T,Lattice>*
-BouzidiBoundaryManager3D<T,Lattice,MixinDynamics>::
+template<typename T, typename DESCRIPTOR, class MixinDynamics>
+PostProcessorGenerator3D<T,DESCRIPTOR>*
+BouzidiBoundaryManager3D<T,DESCRIPTOR,MixinDynamics>::
 getTwoPointZeroVelocityBoundaryProcessor(int x, int y, int z, int iPop, T dist)
 {
   return new ZeroVelocityBouzidiLinearPostProcessorGenerator3D
-         <T, Lattice>(x, y, z, iPop, dist);
+         <T, DESCRIPTOR>(x, y, z, iPop, dist);
 }
 
-template<typename T, template<typename U> class Lattice, class MixinDynamics>
-PostProcessorGenerator3D<T,Lattice>*
-BouzidiBoundaryManager3D<T,Lattice,MixinDynamics>::
+template<typename T, typename DESCRIPTOR, class MixinDynamics>
+PostProcessorGenerator3D<T,DESCRIPTOR>*
+BouzidiBoundaryManager3D<T,DESCRIPTOR,MixinDynamics>::
 getOnePointVelocityBoundaryProcessor(int x, int y, int z, int iPop, T dist)
 {
   return new VelocityBounceBackPostProcessorGenerator3D
-         <T, Lattice>(x, y, z, iPop, dist);
+         <T, DESCRIPTOR>(x, y, z, iPop, dist);
 }
 
-template<typename T, template<typename U> class Lattice, class MixinDynamics>
-PostProcessorGenerator3D<T,Lattice>*
-BouzidiBoundaryManager3D<T,Lattice,MixinDynamics>::
+template<typename T, typename DESCRIPTOR, class MixinDynamics>
+PostProcessorGenerator3D<T,DESCRIPTOR>*
+BouzidiBoundaryManager3D<T,DESCRIPTOR,MixinDynamics>::
 getTwoPointVelocityBoundaryProcessor(int x, int y, int z, int iPop, T dist)
 {
   return new VelocityBouzidiLinearPostProcessorGenerator3D
-         <T, Lattice>(x, y, z, iPop, dist);
+         <T, DESCRIPTOR>(x, y, z, iPop, dist);
 }
 
-template<typename T, template<typename U> class Lattice, class MixinDynamics>
-Dynamics<T,Lattice>*
-BouzidiBoundaryManager3D<T,Lattice,MixinDynamics>::
-getOffDynamics(T location[Lattice<T>::d])
+template<typename T, typename DESCRIPTOR, class MixinDynamics>
+Dynamics<T,DESCRIPTOR>*
+BouzidiBoundaryManager3D<T,DESCRIPTOR,MixinDynamics>::
+getOffDynamics(T location[DESCRIPTOR::d])
 {
-  return new OffDynamics<T, Lattice>(location);
+  return new OffDynamics<T, DESCRIPTOR>(location);
 }
 
-template<typename T, template<typename U> class Lattice, class MixinDynamics>
-Dynamics<T,Lattice>*
-BouzidiBoundaryManager3D<T,Lattice,MixinDynamics>::
-getOffDynamics(T location[Lattice<T>::d], T distances[Lattice<T>::q])
+template<typename T, typename DESCRIPTOR, class MixinDynamics>
+Dynamics<T,DESCRIPTOR>*
+BouzidiBoundaryManager3D<T,DESCRIPTOR,MixinDynamics>::
+getOffDynamics(T location[DESCRIPTOR::d], T distances[DESCRIPTOR::q])
 {
-  return new OffDynamics<T, Lattice>(location, distances);
+  return new OffDynamics<T, DESCRIPTOR>(location, distances);
+}
+
+////////// Convenience wrappers for boundary functions ////////////////////////
+
+template<typename T, typename DESCRIPTOR>
+void OffLatticeBoundaryCondition3D<T, DESCRIPTOR>::addOffDynamics(
+  BlockGeometryStructure3D<T>& blockGeometryStructure, int material)
+{
+  BlockIndicatorMaterial3D<T> indicator(blockGeometryStructure, material);
+  addOffDynamics(indicator);
+}
+
+template<typename T, typename DESCRIPTOR>
+void OffLatticeBoundaryCondition3D<T, DESCRIPTOR>::addZeroVelocityBoundary(
+  BlockGeometryStructure3D<T>& blockGeometryStructure, int material,
+  IndicatorF3D<T>& geometryIndicator, std::vector<int> bulkMaterials)
+{
+  BlockIndicatorMaterial3D<T> bulkIndicator(blockGeometryStructure, bulkMaterials);
+  BlockIndicatorMaterial3D<T> boundaryIndicator(blockGeometryStructure, material);
+  addZeroVelocityBoundary(boundaryIndicator, bulkIndicator, geometryIndicator);
+}
+
+template<typename T, typename DESCRIPTOR>
+void OffLatticeBoundaryCondition3D<T, DESCRIPTOR>::addVelocityBoundary(
+  BlockGeometryStructure3D<T>& blockGeometryStructure, int material,
+  IndicatorF3D<T>& geometryIndicator, std::vector<int> bulkMaterials)
+{
+  BlockIndicatorMaterial3D<T> boundaryIndicator(blockGeometryStructure, material);
+  BlockIndicatorMaterial3D<T> bulkIndicator(blockGeometryStructure, bulkMaterials);
+  addVelocityBoundary(boundaryIndicator, bulkIndicator, geometryIndicator);
+}
+
+template<typename T, typename DESCRIPTOR>
+void OffLatticeBoundaryCondition3D<T, DESCRIPTOR>::defineU(
+  BlockGeometryStructure3D<T>& blockGeometryStructure, int material,
+  AnalyticalF3D<T,T>& u, std::vector<int> bulkMaterials)
+{
+  BlockIndicatorMaterial3D<T> indicator(blockGeometryStructure, material);
+  BlockIndicatorMaterial3D<T> bulkIndicator(blockGeometryStructure, bulkMaterials);
+  defineU(indicator, bulkIndicator, u);
 }
 
 ////////// Factory functions //////////////////////////////////////////////////
 
-template<typename T, template<typename U> class Lattice, typename MixinDynamics>
-OffLatticeBoundaryCondition3D<T,Lattice>*
-createBouzidiBoundaryCondition3D(BlockLatticeStructure3D<T,Lattice>& block)
+template<typename T, typename DESCRIPTOR, typename MixinDynamics>
+OffLatticeBoundaryCondition3D<T,DESCRIPTOR>*
+createBouzidiBoundaryCondition3D(BlockLatticeStructure3D<T,DESCRIPTOR>& block)
 {
   return new OffBoundaryConditionInstantiator3D <
-         T, Lattice,
-         BouzidiBoundaryManager3D<T,Lattice, MixinDynamics> > (block);
+         T, DESCRIPTOR,
+         BouzidiBoundaryManager3D<T,DESCRIPTOR, MixinDynamics> > (block);
 }
 
 }  // namespace olb

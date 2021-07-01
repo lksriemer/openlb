@@ -30,22 +30,22 @@
 #include "superOffBoundaryCondition2D.h"
 #include "superOffBoundaryCondition2D.hh"
 #include "dynamics/latticeDescriptors.h"
-#include "dynamics/latticeDescriptors.hh"
+ 
 #include "dynamics/dynamics.h"
 #include "dynamics/dynamics.hh"
 
 namespace olb {
 
 template class sOffLatticeBoundaryCondition2D
-<double, descriptors::D2Q9Descriptor>;
+<double, descriptors::D2Q9<>>;
 
 template void createBouzidiBoundaryCondition2D
-<double,descriptors::D2Q9Descriptor,
- BGKdynamics<double,descriptors::D2Q9Descriptor> >
-(sOffLatticeBoundaryCondition2D<double,descriptors::D2Q9Descriptor>& sBC);
+<double,descriptors::D2Q9<>,
+ BGKdynamics<double,descriptors::D2Q9<>> >
+(sOffLatticeBoundaryCondition2D<double,descriptors::D2Q9<>>& sBC);
 
 
 template void createBounceBackBoundaryCondition2D
-<double,descriptors::D2Q9Descriptor>
-(sOffLatticeBoundaryCondition2D<double,descriptors::D2Q9Descriptor>& sBC);
+<double,descriptors::D2Q9<>>
+(sOffLatticeBoundaryCondition2D<double,descriptors::D2Q9<>>& sBC);
 }

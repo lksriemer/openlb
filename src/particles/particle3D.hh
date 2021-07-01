@@ -26,7 +26,10 @@
 
 #include <string>
 #include <iostream>
+#include <set>
 #include <vector>
+#include <list>
+#include <deque>
 
 #include "particle3D.h"
 
@@ -42,7 +45,7 @@ Particle3D<T>::Particle3D()
     _cuboid(0),
     _id(0),
     _active(false),
-    _storeForce(3,0.)
+    _storeForce(3, 0.)
 {
 }
 
@@ -56,7 +59,7 @@ Particle3D<T>::Particle3D(std::vector<T> pos, T mas, T rad, int id)
     _cuboid(0),
     _id(id),
     _active(true),
-    _storeForce(3,0.)
+    _storeForce(3, 0.)
 {
   _invMas = 1. / _mas;
   // RK4
@@ -94,7 +97,7 @@ Particle3D<T>::Particle3D(std::vector<T> pos, std::vector<T> vel, T mas, T rad, 
     _cuboid(0),
     _id(id),
     _active(true),
-    _storeForce(3,0.)
+    _storeForce(3, 0.)
 {
   _vel.resize(12, 0.);
   // RK4
@@ -116,7 +119,6 @@ inline void Particle3D<T>::setForce(std::vector<T>& force)
 {
   _force = force;
 }
-
 template<typename T>
 inline void Particle3D<T>::resetForce()
 {
@@ -159,6 +161,10 @@ void Particle3D<T>::serialize(T serial[])
   for (int i = 0; i < 3; i++) {
     serial[i + 14] = _storeForce[i];
   }
+
+  // for (int i = 0; i < 17; i++) {
+  //   cout << "serialize " << i << ": " << serial[i]  << " tn: " << typeid(serial[i]).name() << endl;
+  // }
 }
 
 template<typename T>
@@ -179,6 +185,10 @@ void Particle3D<T>::unserialize(T* data)
   for (int i = 0; i < 3; i++) {
     _storeForce[i] = data[i + 14];
   }
+
+  // for (int i = 0; i < 17; i++) {
+  //   cout << "unserialize " << i << ": " << data[i] << " tn: " << typeid(data[i]).name() << endl;
+  // }
 }
 
 template<typename T>
@@ -187,6 +197,19 @@ void Particle3D<T>::print()
   std::cout << "Pos " << _pos[0] << " " << _pos[1] << " " << _pos[2] << " " << "Vel "
             << _vel[0] << " " << _vel[1] << " " << _vel[2] << " " << _cuboid
             << std::endl;
+}
+
+template<typename T>
+void Particle3D<T>::printDeep(std::string message)
+{
+    std::cout << message <<  " Particle ID " << this->getID()
+              << " rad "         << this->getRad()
+              << " mass "        << this->getMass()
+              << " invMass "     << this->getInvMass()
+              << " force "       << this->getForce()[0] << " " << this->getForce()[1] << " " << this->getForce()[2]
+              << " storeForce "  << this->getStoreForce()[0] << " " << this->getStoreForce()[1] << " " << this->getStoreForce()[2]
+              << " ";
+        this->print();
 }
 
 template<typename T>
@@ -376,26 +399,37 @@ void RotatingParticle3D<T>::unserialize(T* data)
 
 template<typename T>
 MagneticParticle3D<T>::MagneticParticle3D()
-  : Particle3D<T>::Particle3D(), _dMoment(3, T()), _aVel(3, T()), _torque(3, T()), _magnetisation(T()), _aDamping(T())
+  : Particle3D<T>::Particle3D(), _dMoment(3, T()), _aVel(3, T()), _torque(3, T()), _magnetisation(T())
 {
-}
 
-template<typename T>
-MagneticParticle3D<T>::MagneticParticle3D(std::vector<T> pos, T mas, T rad, int id)
-  : Particle3D<T>::Particle3D(pos, mas, rad), _dMoment(3, T()), _aVel(3, T()), _torque(3, T()), _magnetisation(T()), _aDamping(T())
-{
 }
 
 template<typename T>
 MagneticParticle3D<T>::MagneticParticle3D(const MagneticParticle3D<T>& p)
-  : Particle3D<T>::Particle3D(p), _dMoment(p._dMoment), _aVel(p._aVel), _torque(p._torque), _magnetisation(p._magnetisation), _aDamping(p._aDamping)
+  : Particle3D<T>::Particle3D(p), _dMoment(p._dMoment), _aVel(p._aVel), _torque(p._torque), _magnetisation(p._magnetisation), _sActivity(p._sActivity) 
 {
 }
 
 template<typename T>
 MagneticParticle3D<T>::MagneticParticle3D(std::vector<T> pos, std::vector<T> vel, T mas,
     T rad, int id)
-  : Particle3D<T>::Particle3D(pos, vel, mas, rad), _dMoment(3, T()), _aVel(3, T()), _torque(3, T()), _magnetisation(T()), _aDamping(T())
+  : Particle3D<T>::Particle3D(pos, vel, mas, rad), _dMoment(3, T()), _aVel(3, T()), _torque(3, T()), _magnetisation(T())
+{
+}
+
+template<typename T>
+MagneticParticle3D<T>::MagneticParticle3D(std::vector<T> pos, std::vector<T> vel, T mas, T rad, int id,
+    std::vector<T> dMoment, std::vector<T> aVel, std::vector<T> torque, T magnetisation)
+  : Particle3D<T>::Particle3D(pos, vel, mas, rad, id),
+    _dMoment(dMoment), _aVel(aVel), _torque(torque), _magnetisation(magnetisation)
+{
+}
+
+template<typename T>
+MagneticParticle3D<T>::MagneticParticle3D(std::vector<T> pos, std::vector<T> vel, T mas, T rad, int id,
+    std::vector<T> dMoment, std::vector<T> aVel, std::vector<T> torque, T magnetisation, int sActivity)
+  : Particle3D<T>::Particle3D(pos, vel, mas, rad, id),
+    _dMoment(dMoment), _aVel(aVel), _torque(torque), _magnetisation(magnetisation), _sActivity(sActivity)
 {
 }
 
@@ -435,14 +469,23 @@ inline void MagneticParticle3D<T>::setMagnetisation(T magnetisation)
 }
 
 template<typename T>
-inline void MagneticParticle3D<T>::setADamping(T aDamping)
+inline void MagneticParticle3D<T>::setSActivity(int sActivity)
 {
-  _aDamping = aDamping;
+  _sActivity = sActivity;
 }
+
+template<typename T>
+inline void MagneticParticle3D<T>::setAggloItr(typename std::deque<std::list<MagneticParticle3D<T>*>>::iterator aggloItr)
+{
+  _aggloItr = aggloItr;
+}
+
+
 
 template<typename T>
 void MagneticParticle3D<T>::serialize(T serial[])
 {
+
   for (int i = 0; i < 3; i++) {
     serial[i] = this->_pos[i];
     serial[i + 3] = this->_vel[i];
@@ -450,26 +493,24 @@ void MagneticParticle3D<T>::serialize(T serial[])
   }
   serial[9] = this->_mas;
   serial[10] = this->_rad;
-  serial[11] = this->_cuboid;
+  serial[11] = (double) this->_cuboid;
   serial[12] = (double) this->_active;
   serial[13] = (double) this->_id;
-  serial[14] = _dMoment[0];
-  serial[15] = _dMoment[1];
-  serial[16] = _dMoment[2];
-  serial[17] = _aVel[0];
-  serial[18] = _aVel[1];
-  serial[19] = _aVel[2];
-  serial[20] = _torque[0];
-  serial[21] = _torque[1];
-  serial[22] = _torque[2];
-  serial[23] = _magnetisation;
-  serial[24] = _aDamping;
+  for (int i = 0; i < 3; i++) {
+    serial[i + 14] = this->_storeForce[i];
+    serial[i + 17] = _dMoment[i];
+    serial[i + 20] = _aVel[i];
+    serial[i + 23] = _torque[i];
+  }
+  serial[26] = _magnetisation;
+  serial[27] = (double) _sActivity;
 
 }
 
 template<typename T>
 void MagneticParticle3D<T>::unserialize(T* data)
 {
+
   for (int i = 0; i < 3; i++) {
     this->_pos[i] = data[i];
     this->_vel[i] = data[i + 3];
@@ -477,20 +518,17 @@ void MagneticParticle3D<T>::unserialize(T* data)
   }
   this->_mas = data[9];
   this->_rad = data[10];
-  this->_cuboid = int(data[11]);
+  this->_cuboid = (int) data[11];
   this->_active = (bool) data[12];
   this->_id = (int) data[13];
-  _dMoment[0] = data[14];
-  _dMoment[1] = data[15];
-  _dMoment[2] = data[16];
-  _aVel[0] = data[17];
-  _aVel[1] = data[18];
-  _aVel[2] = data[19];
-  _torque[0] = data[20];
-  _torque[1] = data[21];
-  _torque[2] = data[22];
-  _magnetisation = data[23];
-  _aDamping = data[24];
+  for (int i = 0; i < 3; i++) {
+    this->_storeForce[i] = data[i + 14];
+    _dMoment[i] = data[i + 17];
+    _aVel[i] = data[i + 20];
+    _torque[i] = data[i + 23];
+  }
+  _magnetisation = data[26];
+  _sActivity = (int) data[27];
 
 }
 

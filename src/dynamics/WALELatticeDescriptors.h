@@ -36,24 +36,15 @@ namespace descriptors {
 /////////////////////////////////////////////////////////////////////////////////
 // 3D Descriptors for flow with Wall Adaptive Local Eddy Viscosity (WALE)
 
-struct WALE3dDescriptor {
-  static const int numScalars = 10;
-  static const int numSpecies = 2;
-  static const int EffectiveOmegaIsAt = 0;
-  static const int sizeOfEffectiveOmega = 1;
-  static const int veloGradIsAt = 1;
-  static const int sizeOfVeloGrad = 9;
-};
+using WALED3Q19Descriptor = D3Q19<EFFECTIVE_OMEGA,VELO_GRAD>;
 
-struct WALE3dDescriptorBase {
-  typedef WALE3dDescriptor ExternalField;
-};
+using WALED3Q27Descriptor = D3Q27<EFFECTIVE_OMEGA,VELO_GRAD>;
 
-template <typename T> struct WALED3Q19Descriptor
-  : public D3Q19DescriptorBase<T>, public WALE3dDescriptorBase {
-};
+/// WALE 3D Forced
 
+using WALEForcedD3Q19Descriptor = D3Q19<EFFECTIVE_OMEGA,VELO_GRAD,FORCE>;
 
+using WALEForcedD3Q27Descriptor = D3Q27<EFFECTIVE_OMEGA,VELO_GRAD,FORCE>;
 
 
 } // namespace descriptors

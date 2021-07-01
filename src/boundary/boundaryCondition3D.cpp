@@ -28,29 +28,31 @@
 #include "momentaOnBoundaries3D.h"
 #include "momentaOnBoundaries3D.hh"
 #include "dynamics/latticeDescriptors.h"
-#include "dynamics/latticeDescriptors.hh"
+ 
 
 namespace olb {
 
-template class BoundaryConditionInstantiator3D<double, descriptors::D3Q19Descriptor, RegularizedBoundaryManager3D<double,descriptors::D3Q19Descriptor,RLBdynamics<double,descriptors::D3Q19Descriptor> > >;
+template class OnLatticeBoundaryCondition3D<double, descriptors::D3Q19<>>;
 
-template OnLatticeBoundaryCondition3D<double,descriptors::D3Q19Descriptor>*
-createLocalBoundaryCondition3D<double, descriptors::D3Q19Descriptor, RLBdynamics<double,descriptors::D3Q19Descriptor> >
-  ( BlockLatticeStructure3D<double,descriptors::D3Q19Descriptor>& block );
+template class BoundaryConditionInstantiator3D<double, descriptors::D3Q19<>, RegularizedBoundaryManager3D<double,descriptors::D3Q19<>,RLBdynamics<double,descriptors::D3Q19<>> > >;
 
-template OnLatticeBoundaryCondition3D<double,descriptors::D3Q19Descriptor>*
-createLocalBoundaryCondition3D < double,descriptors::D3Q19Descriptor, BGKdynamics<double,descriptors::D3Q19Descriptor> >
- ( BlockLatticeStructure3D<double,descriptors::D3Q19Descriptor>& block );
+template OnLatticeBoundaryCondition3D<double,descriptors::D3Q19<>>*
+createLocalBoundaryCondition3D<double, descriptors::D3Q19<>, RLBdynamics<double,descriptors::D3Q19<>> >
+  ( BlockLatticeStructure3D<double,descriptors::D3Q19<>>& block );
+
+template OnLatticeBoundaryCondition3D<double,descriptors::D3Q19<>>*
+createLocalBoundaryCondition3D < double,descriptors::D3Q19<>, BGKdynamics<double,descriptors::D3Q19<>> >
+ ( BlockLatticeStructure3D<double,descriptors::D3Q19<>>& block );
 
 
-template class BoundaryConditionInstantiator3D<double, descriptors::D3Q19Descriptor, InterpolationBoundaryManager3D<double,descriptors::D3Q19Descriptor,BGKdynamics<double,descriptors::D3Q19Descriptor> > >;
+template class BoundaryConditionInstantiator3D<double, descriptors::D3Q19<>, InterpolationBoundaryManager3D<double,descriptors::D3Q19<>,BGKdynamics<double,descriptors::D3Q19<>> > >;
 
-template OnLatticeBoundaryCondition3D<double,descriptors::D3Q19Descriptor>*
-createInterpBoundaryCondition3D <double, descriptors::D3Q19Descriptor, BGKdynamics<double,descriptors::D3Q19Descriptor> >
-  ( BlockLatticeStructure3D<double,descriptors::D3Q19Descriptor>& block );
+template OnLatticeBoundaryCondition3D<double,descriptors::D3Q19<>>*
+createInterpBoundaryCondition3D <double, descriptors::D3Q19<>, BGKdynamics<double,descriptors::D3Q19<>> >
+  ( BlockLatticeStructure3D<double,descriptors::D3Q19<>>& block );
 
-template OnLatticeBoundaryCondition3D<double,descriptors::D3Q19Descriptor>*
-createInterpBoundaryCondition3D<double, descriptors::D3Q19Descriptor, ConstRhoBGKdynamics<double,descriptors::D3Q19Descriptor> >
-  ( BlockLatticeStructure3D<double,descriptors::D3Q19Descriptor>& block );
+template OnLatticeBoundaryCondition3D<double,descriptors::D3Q19<>>*
+createInterpBoundaryCondition3D<double, descriptors::D3Q19<>, ConstRhoBGKdynamics<double,descriptors::D3Q19<>> >
+  ( BlockLatticeStructure3D<double,descriptors::D3Q19<>>& block );
 
 }

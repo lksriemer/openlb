@@ -24,25 +24,27 @@
 #include "offBoundaryCondition2D.h"
 #include "offBoundaryCondition2D.hh"
 #include "dynamics/latticeDescriptors.h"
-#include "dynamics/latticeDescriptors.hh"
+ 
 
 namespace olb {
 
-template class OffBoundaryConditionInstantiator2D
-<double, descriptors::D2Q9Descriptor, BouzidiBoundaryManager2D < double, descriptors::D2Q9Descriptor, BGKdynamics<double,descriptors::D2Q9Descriptor> > >;
+template class OffLatticeBoundaryCondition2D<double, descriptors::D2Q9<>>;
 
 template class OffBoundaryConditionInstantiator2D
-<double, descriptors::D2Q9Descriptor, BounceBackBoundaryManager2D < double, descriptors::D2Q9Descriptor> >;
+<double, descriptors::D2Q9<>, BouzidiBoundaryManager2D < double, descriptors::D2Q9<>, BGKdynamics<double,descriptors::D2Q9<>> > >;
 
-template OffLatticeBoundaryCondition2D<double,descriptors::D2Q9Descriptor>*
-createBouzidiBoundaryCondition2D < double,descriptors::D2Q9Descriptor,
-                                 BGKdynamics<double,descriptors::D2Q9Descriptor> >
+template class OffBoundaryConditionInstantiator2D
+<double, descriptors::D2Q9<>, BounceBackBoundaryManager2D < double, descriptors::D2Q9<>> >;
+
+template OffLatticeBoundaryCondition2D<double,descriptors::D2Q9<>>*
+createBouzidiBoundaryCondition2D < double,descriptors::D2Q9<>,
+                                 BGKdynamics<double,descriptors::D2Q9<>> >
                                  (
-                                   BlockLatticeStructure2D<double,descriptors::D2Q9Descriptor>& block
+                                   BlockLatticeStructure2D<double,descriptors::D2Q9<>>& block
                                  );
 
-template OffLatticeBoundaryCondition2D<double,descriptors::D2Q9Descriptor>*
-createBounceBackBoundaryCondition2D < double,descriptors::D2Q9Descriptor>
-(BlockLatticeStructure2D<double,descriptors::D2Q9Descriptor>& block);
+template OffLatticeBoundaryCondition2D<double,descriptors::D2Q9<>>*
+createBounceBackBoundaryCondition2D < double,descriptors::D2Q9<>>
+(BlockLatticeStructure2D<double,descriptors::D2Q9<>>& block);
 }
 

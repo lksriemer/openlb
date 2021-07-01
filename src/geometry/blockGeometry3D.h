@@ -67,6 +67,9 @@ public:
   /// Copy assignment
   BlockGeometry3D& operator=(BlockGeometry3D const& rhs);
 
+  /// Returns the underlying block structure
+  BlockStructure3D& getBlockStructure() override;
+
   /// Write access to the associated block statistic
   BlockGeometryStatistics3D<T>& getStatistics(bool verbose=true) override;
   /// Read only access to the associated block statistic

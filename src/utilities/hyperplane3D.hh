@@ -1,6 +1,6 @@
 /*  This file is part of the OpenLB library
  *
- *  Copyright (C) 2017 Adrian Kummerländer
+ *  Copyright (C) 2017 Adrian Kummerlaender
  *  E-mail contact: info@openlb.net
  *  The most recent release of OpenLB can be downloaded at
  *  <http://www.openlb.net/>
@@ -36,6 +36,7 @@ Hyperplane3D<T>& Hyperplane3D<T>::spannedBy(const Vector<T,3>& a, const Vector<T
   u = a;
   v = b;
   normal = crossProduct3D(a,b);
+  normal.normalize();
 
   OLB_POSTCONDITION(util::nearZero(util::dotProduct3D(u,v)));
   OLB_POSTCONDITION(util::nearZero(util::dotProduct3D(u,normal)));
@@ -67,6 +68,7 @@ Hyperplane3D<T>& Hyperplane3D<T>::normalTo(const Vector<T,3>& n)
   v = crossProduct3D(normal,u);
   u.normalize();
   v.normalize();
+  normal.normalize();
 
   OLB_POSTCONDITION(util::nearZero(util::dotProduct3D(u,v)));
   OLB_POSTCONDITION(util::nearZero(util::dotProduct3D(u,normal)));

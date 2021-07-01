@@ -73,3 +73,43 @@ SAMPLESCLEAN += $(1)_clean \
 SAMPLES += $(1)
 
 endef
+
+# define the target patterns necessary for the tests
+# These are:
+# 	* runTest -> executing a test binary
+# 	* compileTest -> generate the object file for a test file
+# 	* linkTest -> link the test object file with the test framework and libolb.a
+define runTest
+$(1) : $(2)
+	$(2)
+
+.PHONY: $(1)
+endef
+
+define compileTest
+$(OBJDIR)/$(1).o : $(1).cpp $(SHARED_TEST_HEADER)
+	@echo $$@
+	mkdir -p $$(dir $$@)
+	$(CXX) $(CXXFLAGS) $(INCLUDEDIR) -DPATH='"$$(realpath $$(dir $$<))/"' -DGTEST_HAS_PTHREAD=0 -I./$(UNIT_TEST_DIR) -I./tests/external/gtest/include -c $$< -o $$@
+
+$(DEPENDDIR)/$(1).d : $(1).cpp
+	@mkdir -p $$(dir $$@)
+	@$(SHELL) -ec '$(CXX) -M $(CXXFLAGS) $(INCLUDEDIR) -I./$(UNIT_TEST_DIR) -I./tests/external/gtest/include $(EXTRA_IDIR) $$< \
+	    | sed -e "s!$(notdir $(1)).o!$(OBJDIR)/$(1).o!1" > $$@;'
+
+include $(wildcard $(DEPENDDIR)/$(1).d)
+
+endef
+
+define linkTest
+$(1) : $(OBJDIR)/$(1).o $(DEPENDDIR)/$(1).d $(LIBDIR)/gtest_main.a $(LIBDIR)/lib$(LIB).a $(LIBDIR)/libz.a
+	$(CXX) $(LDFLAGS) $$< -L./$(LIBDIR) $(LIBS) -l:gtest_main.a -o $$@
+
+$(1)_clean :
+		@rm -f $(1) &> /dev/null || true
+		@rm -f $(OBJDIR)/$(1).o &> /dev/null || true
+		@rm -f $(DEPENDDIR)/$(1).d &> /dev/null || true
+
+CLEANTARGETS += $(1)_clean
+
+endef

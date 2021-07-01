@@ -1,6 +1,6 @@
 /*  This file is part of the OpenLB library
  *
- *  Copyright (C) 2017 Adrian Kummerländer
+ *  Copyright (C) 2017 Adrian Kummerlaender
  *  E-mail contact: info@openlb.net
  *  The most recent release of OpenLB can be downloaded at
  *  <http://www.openlb.net/>
@@ -37,16 +37,44 @@ int HyperplaneLattice3D<T>::computeMaxLatticeDistance(Cuboid3D<T>&& cuboid) cons
 
   T maxPhysDistance = T();
   T tmp;
+  Vector<T,3> tmpO;
+  Vector<T,3> tmpE;
 
-  for (int iDim = 0; iDim < 3; ++iDim) {
-    tmp = std::abs(origin[iDim] - _origin[iDim]);
-    if (maxPhysDistance < tmp) {
+  for(int iDim=0; iDim<3; ++iDim){
+  tmpO[iDim] = origin[iDim] - _origin[iDim];
+  tmpE[iDim] = origin[iDim] + extend[iDim]*deltaR - _origin[iDim];
+  }
+  tmp = sqrt(tmpO[0]*tmpO[0] + tmpO[1]*tmpO[1] + tmpO[2]*tmpO[2]);
+  if (maxPhysDistance < tmp) {
       maxPhysDistance = tmp;
-    }
-    tmp = std::abs(origin[iDim] + extend[iDim]*deltaR - _origin[iDim]);
-    if (maxPhysDistance < tmp) {
+  }
+  tmp = sqrt((tmpE[0]*tmpE[0] + tmpO[1]*tmpO[1] + tmpO[2]*tmpO[2]));
+  if (maxPhysDistance < tmp) {
       maxPhysDistance = tmp;
-    }
+  }
+  tmp = sqrt(tmpO[0]*tmpO[0] + tmpE[1]*tmpE[1] + tmpO[2]*tmpO[2]);
+  if (maxPhysDistance < tmp) {
+      maxPhysDistance = tmp;
+  }
+  tmp = sqrt(tmpO[0]*tmpO[0] + tmpO[1]*tmpO[1] + tmpE[2]*tmpE[2]);
+  if (maxPhysDistance < tmp) {
+      maxPhysDistance = tmp;
+  }
+  tmp = sqrt(tmpO[0]*tmpO[0] + tmpE[1]*tmpE[1] + tmpE[2]*tmpE[2]);
+  if (maxPhysDistance < tmp) {
+      maxPhysDistance = tmp;
+  }
+  tmp = sqrt(tmpE[0]*tmpE[0] + tmpO[1]*tmpO[1] + tmpE[2]*tmpE[2]);
+  if (maxPhysDistance < tmp) {
+      maxPhysDistance = tmp;
+  }
+  tmp = sqrt(tmpE[0]*tmpE[0] + tmpE[1]*tmpE[1] + tmpO[2]*tmpO[2]);
+  if (maxPhysDistance < tmp) {
+      maxPhysDistance = tmp;
+  }
+  tmp = sqrt(tmpE[0]*tmpE[0] + tmpE[1]*tmpE[1] + tmpE[2]*tmpE[2]);
+  if (maxPhysDistance < tmp) {
+      maxPhysDistance = tmp;
   }
 
   return int(maxPhysDistance/_h) + 1;

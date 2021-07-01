@@ -107,7 +107,7 @@ Poiseuille2D<T>::Poiseuille2D(SuperGeometry2D<T>& superGeometry, int material, T
 }
 
 
-template <typename T, typename S, template <typename U> class DESCRIPTOR>
+template <typename T, typename S, typename DESCRIPTOR>
 PoiseuilleStrainRate2D<T,S,DESCRIPTOR>::PoiseuilleStrainRate2D(UnitConverter<T,DESCRIPTOR> const& converter, T ly)
   : AnalyticalF2D<T,S>(4), _lengthY(ly), _maxVelocity(converter.getCharPhysVelocity())
 {
@@ -115,7 +115,7 @@ PoiseuilleStrainRate2D<T,S,DESCRIPTOR>::PoiseuilleStrainRate2D(UnitConverter<T,D
 }
 
 
-template <typename T, typename S, template <typename U> class DESCRIPTOR>
+template <typename T, typename S, typename DESCRIPTOR>
 bool PoiseuilleStrainRate2D<T,S,DESCRIPTOR>::operator()(T output[], const S input[])
 {
   T y = input[1];
@@ -129,6 +129,35 @@ bool PoiseuilleStrainRate2D<T,S,DESCRIPTOR>::operator()(T output[], const S inpu
   output[1] = (DuDy + DvDx)/2.;
   output[2] = (DvDx + DuDy)/2.;
   output[3] = (DvDy + DvDy)/2.;
+
+  return true;
+};
+
+template <typename T>
+AnalyticalPorousVelocity2D<T>::AnalyticalPorousVelocity2D(std::vector<T> axisDirection_, T K_, T mu_, T gradP_, T radius_, T eps_)
+  :  AnalyticalF2D<T,T>(2), axisDirection(axisDirection_), K(K_), mu(mu_), gradP(gradP_),radius(radius_), eps(eps_)
+{
+  this->getName() = "AnalyticalPorousVelocity2D";
+};
+
+
+template <typename T>
+T AnalyticalPorousVelocity2D<T>::getPeakVelocity()
+{
+  T uMax = K / mu*gradP*(1. - 1./(cosh((sqrt(1./K))*radius)));
+
+  return uMax/eps;
+};
+
+
+template <typename T>
+bool AnalyticalPorousVelocity2D<T>::operator()(T output[], const T input[])
+{
+  output[0] = K / mu*gradP*(1. - (cosh((sqrt(1./K))*(input[1] - radius)))/(cosh((sqrt(1./K))*radius)));
+  output[1] = K / mu*gradP*(1. - (cosh((sqrt(1./K))*(input[0] - radius)))/(cosh((sqrt(1./K))*radius)));
+
+  output[0] *= axisDirection[0]/eps;
+  output[1] *= axisDirection[1]/eps;
 
   return true;
 };

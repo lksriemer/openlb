@@ -36,46 +36,79 @@
 #include "core/superLattice3D.h"
 #include "io/ostreamManager.h"
 #include "functors/analytical/analyticalF.h"
+#include "utilities/functorPtr.h"
 
 
 /// All OpenLB code is contained in this namespace.
 namespace olb {
 
+template<typename T> class SuperIndicatorF3D;
+
 /// A helper for initialising 3D boundaries for super lattices.
-/** Here we have methods that initializes for a given global
+/**
+ * Here we have methods that initializes for a given global
  * point or global range the local postprocessors and the
  * communicator (_commBC in SuperLattice) for boundary conditions.
  *
  * This class is not intended to be derived from.
  */
-
-template<typename T, template<typename U> class Lattice>
+template<typename T, typename DESCRIPTOR>
 class sOffLatticeBoundaryCondition3D {
-
 public:
   /// Constructor
-  sOffLatticeBoundaryCondition3D(SuperLattice3D<T,Lattice>& sLattice, T epsFraction_ = 0.0001);
+  sOffLatticeBoundaryCondition3D(SuperLattice3D<T,DESCRIPTOR>& sLattice, T epsFraction_ = 0.0001);
   /// Copy construction
-  sOffLatticeBoundaryCondition3D(sOffLatticeBoundaryCondition3D<T,Lattice> const& rhs);
+  sOffLatticeBoundaryCondition3D(sOffLatticeBoundaryCondition3D<T,DESCRIPTOR> const& rhs);
   /// Copy assignment
-  sOffLatticeBoundaryCondition3D operator=(sOffLatticeBoundaryCondition3D<T,Lattice> rhs);
+  sOffLatticeBoundaryCondition3D operator=(sOffLatticeBoundaryCondition3D<T,DESCRIPTOR> rhs);
   /// Destructor
   ~sOffLatticeBoundaryCondition3D();
 
-  /// Automatically sets offDynamics with boundary links and post processors using an indicator function and material number
-  /// Add offDynamics with initialisation of boundary links and the corresponding post processors
-  /// Note: Uses information of the second neighbours of the cell (x,y,z)
-  /// Add post processors. Ensure that offDynamics are defined!
-  void addVelocityBoundary(SuperGeometry3D<T>& superGeometry, int material, IndicatorF3D<T>& indicator, std::list<int> bulkMaterials = std::list<int>(1,1));
-  void addZeroVelocityBoundary(SuperGeometry3D<T>& superGeometry, int material, IndicatorF3D<T>& indicator, std::list<int> bulkMaterials = std::list<int>(1,1));
+  /// Set offDynamics with boundary links and post processors using indicators
+  /**
+   * Add offDynamics with initialisation of boundary links and the corresponding
+   * post processors
+   * Note: Uses information of the second neighbours of the cell (x,y,z)
+   * Add post processors. Ensure that offDynamics are defined!
+   *
+   * \param boundaryIndicator Indicator describing boundary cells
+   * \param bulkIndicator     Indicator describing bulk cells
+   * \param geometryIndicator Indicator describing the geometry to be bounded
+   **/
+  void addVelocityBoundary(FunctorPtr<SuperIndicatorF3D<T>>&& boundaryIndicator,
+                           FunctorPtr<SuperIndicatorF3D<T>>&& bulkIndicator,
+                           IndicatorF3D<T>&                   geometryIndicator);
+  void addVelocityBoundary(SuperGeometry3D<T>& superGeometry, int material,
+                           IndicatorF3D<T>& indicator,
+                           std::vector<int> bulkMaterials = std::vector<int>(1,1));
 
-  void defineU(SuperGeometry3D<T>& superGeometry, int material, AnalyticalF3D<T,T>& u, std::list<int> bulkMaterials = std::list<int>(1,1) );
+  void addZeroVelocityBoundary(FunctorPtr<SuperIndicatorF3D<T>>&& boundaryIndicator,
+                               FunctorPtr<SuperIndicatorF3D<T>>&& bulkIndicator,
+                               IndicatorF3D<T>&                   geometryIndicator);
+  void addZeroVelocityBoundary(FunctorPtr<SuperIndicatorF3D<T>>&& boundaryIndicator,
+                               IndicatorF3D<T>&                   geometryIndicator,
+                               std::vector<int> bulkMaterials = std::vector<int>(1,1));
+  void addZeroVelocityBoundary(SuperGeometry3D<T>& superGeometry, int material,
+                               IndicatorF3D<T>& geometryIndicator,
+                               std::vector<int> bulkMaterials = std::vector<int>(1,1));
 
+  void defineU(FunctorPtr<SuperIndicatorF3D<T>>&& indicator,
+               FunctorPtr<SuperIndicatorF3D<T>>&& bulkIndicator,
+               AnalyticalF3D<T,T>& u);
+  void defineU(FunctorPtr<SuperIndicatorF3D<T>>&& indicator,
+               AnalyticalF3D<T,T>& u,
+               std::vector<int> bulkMaterials = std::vector<int>(1,1) );
+  void defineU(SuperGeometry3D<T>& superGeometry, int material,
+               AnalyticalF3D<T,T>& u,
+               std::vector<int> bulkMaterials = std::vector<int>(1,1) );
+
+  /// Adds needed Cells to the Communicator _commBC in SuperLattice
+  void addPoints2CommBC(FunctorPtr<SuperIndicatorF3D<T>>&& indicator);
   /// Adds needed Cells to the Communicator _commBC in SuperLattice
   void addPoints2CommBC(SuperGeometry3D<T>& superGeometry, int material);
 
-  SuperLattice3D<T,Lattice>& getSuperLattice();
-  std::vector<OffLatticeBoundaryCondition3D<T,Lattice>* >& getBlockBCs();
+  SuperLattice3D<T,DESCRIPTOR>& getSuperLattice();
+  std::vector<OffLatticeBoundaryCondition3D<T,DESCRIPTOR>* >& getBlockBCs();
   int getOverlap();
   void setOverlap(int overlap);
 
@@ -84,15 +117,15 @@ public:
 
 private:
   mutable OstreamManager clout;
-  SuperLattice3D<T,Lattice>& _sLattice;
-  std::vector<OffLatticeBoundaryCondition3D<T,Lattice>* > _blockBCs;
+  SuperLattice3D<T,DESCRIPTOR>& _sLattice;
+  std::vector<OffLatticeBoundaryCondition3D<T,DESCRIPTOR>* > _blockBCs;
   T _epsFraction;
   int _overlap;
   bool _output;
 };
 
-template<typename T, template<typename U> class Lattice, typename MixinDynamics=BGKdynamics<T,Lattice> >
-void createBouzidiBoundaryCondition3D(sOffLatticeBoundaryCondition3D<T,Lattice>& sBC);
+template<typename T, typename DESCRIPTOR, typename MixinDynamics=BGKdynamics<T,DESCRIPTOR> >
+void createBouzidiBoundaryCondition3D(sOffLatticeBoundaryCondition3D<T,DESCRIPTOR>& sBC);
 
 
 }  // namespace olb

@@ -30,23 +30,21 @@
 
 #include "latticeDescriptors.h"
 #include "dynamics/dynamics.h"
+#include "core/unitConverter.h"
 
 namespace olb {
 
 // ========= the RLB advection diffusion dynamics ========//
 /// it uses the regularized approximation that can be found in the thesis of J. Latt (2007).
-template<typename T, template<typename U> class Lattice>
-class AdvectionDiffusionRLBdynamics : public BasicDynamics<T, Lattice> {
+template<typename T, typename DESCRIPTOR>
+class AdvectionDiffusionRLBdynamics : public BasicDynamics<T, DESCRIPTOR> {
 public:
   /// Constructor
-  AdvectionDiffusionRLBdynamics( T omega_, Momenta<T, Lattice>& momenta_ );
+  AdvectionDiffusionRLBdynamics( T omega_, Momenta<T, DESCRIPTOR>& momenta_ );
   /// Compute equilibrium distribution function
-  T computeEquilibrium( int iPop, T rho, const T u[Lattice<T>::d], T uSqr ) const override;
+  T computeEquilibrium( int iPop, T rho, const T u[DESCRIPTOR::d], T uSqr ) const override;
   /// Collision step
-  void collide( Cell<T, Lattice>& cell, LatticeStatistics<T>& statistics ) override;
-  /// Collide with fixed velocity
-  void staticCollide( Cell<T, Lattice>& cell, const T u[Lattice<T>::d],
-                              LatticeStatistics<T>& statistics ) override;
+  void collide( Cell<T, DESCRIPTOR>& cell, LatticeStatistics<T>& statistics ) override;
   /// Get local relaxation parameter of the dynamics
   T getOmega() const override;
   /// Set local relaxation parameter of the dynamics
@@ -55,43 +53,94 @@ private:
   T omega;  ///< relaxation parameter
 };
 
-// ========= the BGK advection diffusion dynamics ========//
-/// This approach contains a slight error in the diffusion term.
-template<typename T, template<typename U> class Lattice>
-class AdvectionDiffusionBGKdynamics : public BasicDynamics<T, Lattice> {
+/// Implementation of Regularized BGK collision, followed by any Dynamics
+template<typename T, typename DESCRIPTOR, typename Dynamics>
+class CombinedAdvectionDiffusionRLBdynamics : public BasicDynamics<T,DESCRIPTOR> {
 public:
   /// Constructor
-  AdvectionDiffusionBGKdynamics( T omega, Momenta<T, Lattice>& momenta );
-  AdvectionDiffusionBGKdynamics( const UnitConverter<T,Lattice>& converter, Momenta<T, Lattice>& momenta );
+  CombinedAdvectionDiffusionRLBdynamics(T omega, Momenta<T,DESCRIPTOR>& momenta);
   /// Compute equilibrium distribution function
-  T computeEquilibrium( int iPop, T rho, const T u[Lattice<T>::d], T uSqr ) const override;
+  T computeEquilibrium(int iPop, T rho, const T u[DESCRIPTOR::d], T uSqr) const override;
   /// Collision step
-  void collide( Cell<T, Lattice>& cell, LatticeStatistics<T>& statistics ) override;
-  /// Collide with fixed velocity
-  void staticCollide( Cell<T, Lattice>& cell, const T u[Lattice<T>::d],
-                              LatticeStatistics<T>& statistics ) override;
+  void collide(Cell<T,DESCRIPTOR>& cell,
+                       LatticeStatistics<T>& statistics_) override;
+  /// Get local relaxation parameter of the dynamics
+  T getOmega() const override;
+  /// Set local relaxation parameter of the dynamics
+  void setOmega(T omega) override;
+private:
+  Dynamics _boundaryDynamics;
+};
+
+// ========= the BGK advection diffusion dynamics ========//
+/// This approach contains a slight error in the diffusion term.
+template<typename T, typename DESCRIPTOR>
+class AdvectionDiffusionBGKdynamics : public BasicDynamics<T, DESCRIPTOR> {
+public:
+  /// Constructor
+  AdvectionDiffusionBGKdynamics( T omega, Momenta<T, DESCRIPTOR>& momenta );
+  AdvectionDiffusionBGKdynamics( const UnitConverter<T,DESCRIPTOR>& converter, Momenta<T, DESCRIPTOR>& momenta );
+  /// Compute equilibrium distribution function
+  T computeEquilibrium( int iPop, T rho, const T u[DESCRIPTOR::d], T uSqr ) const override;
+  /// Collision step
+  void collide( Cell<T, DESCRIPTOR>& cell, LatticeStatistics<T>& statistics ) override;
   /// Get local relaxation parameter of the dynamics
   T getOmega() const override;
   /// Set local relaxation parameter of the dynamics
   void setOmega( T omega ) override;
-private:
+protected:
   T _omega;  ///< relaxation parameter
+};
+
+
+
+// ========= the TRT advection diffusion dynamics ========//
+/// This approach contains a slight error in the diffusion term.
+template<typename T, typename DESCRIPTOR>
+class AdvectionDiffusionTRTdynamics : public AdvectionDiffusionBGKdynamics<T, DESCRIPTOR> {
+public:
+  /// Constructor
+  AdvectionDiffusionTRTdynamics( T omega, Momenta<T, DESCRIPTOR>& momenta, T magicParameter );
+  /// Collision step
+  void collide( Cell<T, DESCRIPTOR>& cell, LatticeStatistics<T>& statistics ) override;
+protected:
+  T _omega2; /// relaxation parameter for odd moments
+  T _magicParameter;
+};
+
+
+// ======= BGK advection diffusion dynamics with source term  ======//
+// following Seta, T. (2013). Implicit temperature-correction-based
+// immersed-boundary thermal lattice Boltzmann method for the simulation
+// of natural convection. Physical Review E, 87(6), 063304.
+template<typename T, typename DESCRIPTOR>
+class SourcedAdvectionDiffusionBGKdynamics : public AdvectionDiffusionBGKdynamics<T,DESCRIPTOR> {
+public:
+  /// Constructor
+  SourcedAdvectionDiffusionBGKdynamics(T omega_, Momenta<T,DESCRIPTOR>& momenta_ );
+  /// Collision step
+  virtual void collide(Cell<T,DESCRIPTOR>& cell, LatticeStatistics<T>& statistics ) override;
+  /// Compute Density
+  T computeRho(Cell<T,DESCRIPTOR> const& cell) const override;
+  /// Compute fluid velocity and particle density on the cell.
+  void computeRhoU (
+    Cell<T,DESCRIPTOR> const& cell,
+    T& rho, T u[DESCRIPTOR::d]) const override;
+private:
+  const T _omegaMod;
 };
 
 // ========= the BGK advection diffusion Stokes drag dynamics with a Smagorinsky turbulence model ========//
 /// This approach contains a slight error in the diffusion term.
-template<typename T, template<typename U> class Lattice>
-class SmagorinskyParticleAdvectionDiffusionBGKdynamics : public olb::AdvectionDiffusionBGKdynamics<T,Lattice> {
+template<typename T, typename DESCRIPTOR>
+class SmagorinskyParticleAdvectionDiffusionBGKdynamics : public olb::AdvectionDiffusionBGKdynamics<T,DESCRIPTOR> {
 public:
   /// Constructor
-  SmagorinskyParticleAdvectionDiffusionBGKdynamics(T omega_, Momenta<T,Lattice>& momenta_, T smagoConst_, T dx_, T dt_);
+  SmagorinskyParticleAdvectionDiffusionBGKdynamics(T omega_, Momenta<T,DESCRIPTOR>& momenta_, T smagoConst_, T dx_, T dt_);
   /// Collision step
-  virtual void collide(Cell<T,Lattice>& cell, LatticeStatistics<T>& statistics );
-  /// Collide with fixed velocity
-  virtual void staticCollide(Cell<T,Lattice>& cell, const T u[Lattice<T>::d],
-                             LatticeStatistics<T>& statistics );
+  virtual void collide(Cell<T,DESCRIPTOR>& cell, LatticeStatistics<T>& statistics );
   /// Get local smagorinsky relaxation parameter of the dynamics
-  virtual T getSmagorinskyOmega(Cell<T,Lattice>& cell);
+  virtual T getSmagorinskyOmega(Cell<T,DESCRIPTOR>& cell);
   /// Set local relaxation parameter of the dynamics
   virtual void setOmega(T omega_);
 
@@ -99,7 +148,7 @@ private:
   /// Computes a constant prefactor in order to speed up the computation
   T computePreFactor(T omega_, T smagoConst_, T dx_, T dt_);
   /// Computes the local smagorinsky relaxation parameter
-  T computeOmega(T omega0, T preFacto_r, T rho, T pi[util::TensorVal<Lattice<T> >::n] );
+  T computeOmega(T omega0, T preFacto_r, T rho, T pi[util::TensorVal<DESCRIPTOR >::n] );
 
   /// effective collision time based upon Smagorisnky approach
   T tau_eff;
@@ -113,13 +162,13 @@ private:
 
 // ========= the BGK advection diffusion Stokes drag dynamics  ========//
 /// This approach contains a slight error in the diffusion term.
-template<typename T, template<typename U> class Lattice>
-class ParticleAdvectionDiffusionBGKdynamics : public olb::AdvectionDiffusionBGKdynamics<T,Lattice> {
+template<typename T, typename DESCRIPTOR>
+class ParticleAdvectionDiffusionBGKdynamics : public olb::AdvectionDiffusionBGKdynamics<T,DESCRIPTOR> {
 public:
   /// Constructor
-  ParticleAdvectionDiffusionBGKdynamics(T omega_, Momenta<T,Lattice>& momenta_);
+  ParticleAdvectionDiffusionBGKdynamics(T omega_, Momenta<T,DESCRIPTOR>& momenta_);
   /// Collision step
-  void collide(Cell<T,Lattice>& cell, LatticeStatistics<T>& statistics ) override;
+  void collide(Cell<T,DESCRIPTOR>& cell, LatticeStatistics<T>& statistics ) override;
 private:
   T omega;  ///< relaxation parameter
 };
@@ -128,18 +177,15 @@ private:
 // ========= the MRT advection diffusion dynamics ========//
 /// This approach is based on the multi-distribution LBM model.
 /// The couplintg is done using the Boussinesq approximation
-template<typename T, template<typename U> class Lattice>
-class AdvectionDiffusionMRTdynamics : public BasicDynamics<T, Lattice> {
+template<typename T, typename DESCRIPTOR>
+class AdvectionDiffusionMRTdynamics : public BasicDynamics<T, DESCRIPTOR> {
 public:
   /// Constructor
-  AdvectionDiffusionMRTdynamics( T omega, Momenta<T, Lattice>& momenta );
+  AdvectionDiffusionMRTdynamics( T omega, Momenta<T, DESCRIPTOR>& momenta );
   /// Compute equilibrium distribution function
-  T computeEquilibrium( int iPop, T rho, const T u[Lattice<T>::d], T uSqr ) const override;
+  T computeEquilibrium( int iPop, T rho, const T u[DESCRIPTOR::d], T uSqr ) const override;
   /// Collision step
-  void collide( Cell<T, Lattice>& cell, LatticeStatistics<T>& statistics ) override;
-  /// Collide with fixed velocity
-  void staticCollide( Cell<T, Lattice>& cell, const T u[Lattice<T>::d],
-                              LatticeStatistics<T>& statistics ) override;
+  void collide( Cell<T, DESCRIPTOR>& cell, LatticeStatistics<T>& statistics ) override;
   /// Get local relaxation parameter of the dynamics
   T getOmega() const override;
   /// Set local relaxation parameter of the dynamics
@@ -147,7 +193,7 @@ public:
 private:
   T _omega;  ///< relaxation parameter
 protected:
-  T invM_S[Lattice<T>::q][Lattice<T>::q]; ///< inverse relaxation times matrix
+  T invM_S[DESCRIPTOR::q][DESCRIPTOR::q]; ///< inverse relaxation times matrix
 };
 
 } // namespace olb

@@ -21,24 +21,28 @@
  *  Boston, MA  02110-1301, USA.
 */
 
-/** \file A helper for initialising 2D boundaries -- header file.  */
+/** \file
+ * A helper for initialising 2D boundaries -- header file.
+ */
+
 #ifndef ADVECTION_DIFFUSION_BOUNDARY_CONDITION_2D_H
 #define ADVECTION_DIFFUSION_BOUNDARY_CONDITION_2D_H
 
 #include "momentaOnBoundaries2D.h"
+#include "advectionDiffusionMomentaOnBoundaries.h"
 #include "dynamics/dynamics.h"
 #include "dynamics/advectionDiffusionDynamics.h"
-#include "superBoundaryCondition2D.h"
+#include "functors/lattice/indicator/blockIndicatorBaseF2D.h"
 
 #include <vector>
 #include <list>
 
 namespace olb {
 
-template<typename T, template<typename U> class Lattice>
+template<typename T, typename DESCRIPTOR>
 class sOnLatticeBoundaryCondition2D;
 
-template<typename T, template<typename U> class Lattice>
+template<typename T, typename DESCRIPTOR>
 class OnLatticeAdvectionDiffusionBoundaryCondition2D {
 public:
   virtual ~OnLatticeAdvectionDiffusionBoundaryCondition2D() { }
@@ -53,24 +57,98 @@ public:
   virtual void addTemperatureCornerPN(int x, int y, T omega) =0;
   virtual void addTemperatureCornerPP(int x, int y, T omega) =0;
 
-  BlockLatticeStructure2D<T,Lattice>& getBlock();
-  BlockLatticeStructure2D<T,Lattice> const& getBlock() const;
+  BlockLatticeStructure2D<T,DESCRIPTOR>& getBlock();
+  BlockLatticeStructure2D<T,DESCRIPTOR> const& getBlock() const;
+
+  /// Add temperature boundary for indicated cells in range
+  virtual void addTemperatureBoundary(BlockIndicatorF2D<T>& indicator,
+                                      int x0, int x1, int y0, int y1,
+                                      T omega) =0;
+
+  /**
+   * \name Convenience wrappers for temperature boundary functions
+   * \{
+   **/
+
+  void addTemperatureBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int material,
+                              int x0, int x1, int y0, int y1,
+                              T omega);
+  void addTemperatureBoundary(BlockIndicatorF2D<T>& indicator,
+                              T omega, bool includeOuterCells=false);
+  void addTemperatureBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int material,
+                              T omega, bool includeOuterCells=false);
+
+  ///\}
 
   /// adds a temperature boundary for one material or a range (x0-x1, y0-y1, z0-z1)
-  virtual void addTemperatureBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int material, int x0, int x1, int y0, int y1, T omega) =0;
-  virtual void addTemperatureBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int material, T omega) =0;
+  virtual void addRegularizedTemperatureBoundary(BlockIndicatorF2D<T>& indicator, int x0, int x1, int y0, int y1, T omega) =0;
+  virtual void addRegularizedTemperatureBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int material, int x0, int x1, int y0, int y1, T omega) =0;
+  virtual void addRegularizedTemperatureBoundary(BlockIndicatorF2D<T>& indicator, T omega) =0;
+  virtual void addRegularizedTemperatureBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int material, T omega) =0;
+
+  virtual void addRegularizedHeatFluxBoundary(BlockIndicatorF2D<T>& indicator, int x0, int x1, int y0, int y1, T omega, T *heatFlux) =0;
+  virtual void addRegularizedHeatFluxBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int material, int x0, int x1, int y0, int y1, T omega, T *heatFlux) =0;
+  virtual void addRegularizedHeatFluxBoundary(BlockIndicatorF2D<T>& indicator, T omega, T *heatFlux) =0;
+  virtual void addRegularizedHeatFluxBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int material, T omega, T *heatFlux) =0;
+};
+
+template<typename T, typename DESCRIPTOR, class MixinDynamics>
+class AdvectionDiffusionBoundaryManager2D {
+public:
+  template<int direction, int orientation> static Momenta<T,DESCRIPTOR>*
+  getTemperatureBoundaryMomenta();
+  template<int direction, int orientation> static Dynamics<T,DESCRIPTOR>*
+  getTemperatureBoundaryDynamics(T omega, Momenta<T,DESCRIPTOR>& momenta);
+  template<int direction, int orientation> static PostProcessorGenerator2D<T,DESCRIPTOR>*
+  getTemperatureBoundaryProcessor(int x0, int x1, int y0, int y1);
+
+  template<int xNormal, int yNormal> static Momenta<T,DESCRIPTOR>*
+  getTemperatureCornerMomenta();
+  template<int xNormal, int yNormal> static Dynamics<T,DESCRIPTOR>*
+  getTemperatureCornerDynamics(T omega, Momenta<T,DESCRIPTOR>& momenta);
+  template<int xNormal, int yNormal> static PostProcessorGenerator2D<T,DESCRIPTOR>*
+  getTemperatureCornerProcessor(int x, int y);
+
+
+  template<int direction, int orientation> static Momenta<T,DESCRIPTOR>*
+  getRegularizedTemperatureBoundaryMomenta();
+  template<int direction, int orientation> static Dynamics<T,DESCRIPTOR>*
+  getRegularizedTemperatureBoundaryDynamics(T omega, Momenta<T,DESCRIPTOR>& momenta);
+  template<int direction, int orientation> static PostProcessorGenerator2D<T,DESCRIPTOR>*
+  getRegularizedTemperatureBoundaryProcessor(int x0, int x1, int y0, int y1);
+
+  template<int xNormal, int yNormal> static Momenta<T,DESCRIPTOR>*
+  getRegularizedTemperatureCornerMomenta();
+  template<int xNormal, int yNormal> static Dynamics<T,DESCRIPTOR>*
+  getRegularizedTemperatureCornerDynamics(T omega, Momenta<T,DESCRIPTOR>& momenta);
+  template<int xNormal, int yNormal> static PostProcessorGenerator2D<T,DESCRIPTOR>*
+  getRegularizedTemperatureCornerProcessor(int x, int y);
+
+  template<int direction, int orientation> static Momenta<T,DESCRIPTOR>*
+  getRegularizedHeatFluxBoundaryMomenta(T *heatFlux);
+  template<int direction, int orientation> static Dynamics<T,DESCRIPTOR>*
+  getRegularizedHeatFluxBoundaryDynamics(T omega, Momenta<T,DESCRIPTOR>& momenta);
+  template<int direction, int orientation> static PostProcessorGenerator2D<T,DESCRIPTOR>*
+  getRegularizedHeatFluxBoundaryProcessor(int x0, int x1, int y0, int y1);
+
+  template<int xNormal, int yNormal> static Momenta<T,DESCRIPTOR>*
+  getRegularizedHeatFluxCornerMomenta();
+  template<int xNormal, int yNormal> static Dynamics<T,DESCRIPTOR>*
+  getRegularizedHeatFluxCornerDynamics(T omega, Momenta<T,DESCRIPTOR>& momenta);
+  template<int xNormal, int yNormal> static PostProcessorGenerator2D<T,DESCRIPTOR>*
+  getRegularizedHeatFluxCornerProcessor(int x, int y);
 };
 
 //////  Factory function for Regularized Thermal BC
 
 /// blockLattice creator
-template<typename T, template<typename U> class Lattice, typename MixinDynamics=AdvectionDiffusionRLBdynamics<T,Lattice> >
-OnLatticeAdvectionDiffusionBoundaryCondition2D<T,Lattice>*
-createAdvectionDiffusionBoundaryCondition2D(BlockLatticeStructure2D<T,Lattice>& block);
+template<typename T, typename DESCRIPTOR, typename MixinDynamics=AdvectionDiffusionRLBdynamics<T,DESCRIPTOR> >
+OnLatticeAdvectionDiffusionBoundaryCondition2D<T,DESCRIPTOR>*
+createAdvectionDiffusionBoundaryCondition2D(BlockLatticeStructure2D<T,DESCRIPTOR>& block);
 
 /// superLattice creator, calls createAdvectionDiffusionBoundaryCondidtion3D from above.
-template<typename T, template<typename U> class Lattice, typename MixinDynamics=AdvectionDiffusionRLBdynamics<T,Lattice> >
-void createAdvectionDiffusionBoundaryCondition2D(sOnLatticeBoundaryCondition2D<T, Lattice>& sBC);
+template<typename T, typename DESCRIPTOR, typename MixinDynamics=AdvectionDiffusionRLBdynamics<T,DESCRIPTOR> >
+void createAdvectionDiffusionBoundaryCondition2D(sOnLatticeBoundaryCondition2D<T, DESCRIPTOR>& sBC);
 
 
 } //namespace olb

@@ -39,8 +39,7 @@
 #include "geometry/superGeometry2D.h"
 #include "communication/superStructure2D.h"
 #include "communication/loadBalancer.h"
-#include "functors/lattice/indicator/indicatorF2D.h"
-#include "functors/lattice/indicator/indicCalcF2D.h"
+#include "functors/analytical/indicator/indicatorF2D.h"
 #include "functors/lattice/indicator/superIndicatorF2D.h"
 #include "io/ostreamManager.h"
 
@@ -385,6 +384,16 @@ bool SuperGeometry2D<T>::checkForErrors(bool verbose)
   return error;
 }
 
+template<typename T>
+void SuperGeometry2D<T>::reset(IndicatorF2D<T>& domain)
+{
+  this->communicate();
+  for (unsigned iC = 0; iC < _extendedBlockGeometries.size(); ++iC) {
+    _blockGeometries[iC].reset(domain);
+  }
+  _statistics.getStatisticsStatus() = true;
+  this->_communicationNeeded = true;
+}
 
 template<typename T>
 void SuperGeometry2D<T>::rename(int fromM, int toM)
@@ -403,8 +412,6 @@ void SuperGeometry2D<T>::rename(int fromM, int toM, IndicatorF2D<T>& condition)
 {
 
   this->communicate();
-  //  call Identity to prevent deleting
-  IndicatorIdentity2D<T> tmpCondition(condition);
 
   for (unsigned iC=0; iC<_extendedBlockGeometries.size(); iC++) {
     _extendedBlockGeometries[iC].rename(fromM,toM,condition);
@@ -454,8 +461,6 @@ void SuperGeometry2D<T>::rename(int fromBcMat, int toBcMat, int fluidMat,
 {
   if (this->_overlap>1) {
     this->communicate();
-    //  call Identity to prevent deleting
-    IndicatorIdentity2D<T> tmpCondition(condition);
     rename(fromBcMat, toBcMat, condition);
     std::vector<int> testDirection = this->getStatistics().computeDiscreteNormal(toBcMat);
 

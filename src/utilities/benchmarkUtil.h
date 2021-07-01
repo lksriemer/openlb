@@ -114,6 +114,29 @@ public:
   T integrate(T min, T max, int nSteps);
 };
 
+/** Simple circular buffer to compute average and other quantities
+ *  over pre-defined temporal windows.
+ *  Works with every T supporting += (T or scalar), and /= (scalar) operations,
+ *  including double and Vector<double, size>.
+ */
+template<typename T>
+class CircularBuffer {
+public:
+  CircularBuffer(int size);
+  /// insert a new entry ed eventually erases the oldest one
+  void insert(T entry);
+  /// average over all the entries
+  T average();
+  /// get reference to the last entry for pos=0, the second-to-last for pos=1, and so on
+  T& get(int pos);
+  /// return size of the buffer
+  int getSize();
+  
+private:
+  int _size;
+  std::vector<T> _data;
+};
+
 } // namespace util
 
 } // namespace olb

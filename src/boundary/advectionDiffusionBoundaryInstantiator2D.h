@@ -21,19 +21,23 @@
  *  Boston, MA  02110-1301, USA.
 */
 
-/** \file A helper for initialising 2D boundaries -- header file.  */
+/** \file
+ * A helper for initialising 2D boundaries -- header file.
+ */
+
 #ifndef ADVECTION_DIFFUSION_BOUNDARY_INSTANTIATOR_2D_H
 #define ADVECTION_DIFFUSION_BOUNDARY_INSTANTIATOR_2D_H
 
 #include "advectionDiffusionBoundaryCondition2D.h"
 #include "advectionDiffusionBoundaryCondition2D.hh"
+#include "functors/lattice/indicator/blockIndicatorF2D.h"
 
 namespace olb {
 
-template<typename T, template<typename U> class Lattice, class BoundaryManager>
-class AdvectionDiffusionBoundaryConditionInstantiator2D : public OnLatticeAdvectionDiffusionBoundaryCondition2D<T,Lattice> {
+template<typename T, typename DESCRIPTOR, class BoundaryManager>
+class AdvectionDiffusionBoundaryConditionInstantiator2D : public OnLatticeAdvectionDiffusionBoundaryCondition2D<T,DESCRIPTOR> {
 public:
-  AdvectionDiffusionBoundaryConditionInstantiator2D( BlockLatticeStructure2D<T,Lattice>& block_ );
+  AdvectionDiffusionBoundaryConditionInstantiator2D( BlockLatticeStructure2D<T,DESCRIPTOR>& block_ );
   ~AdvectionDiffusionBoundaryConditionInstantiator2D() override;
 
   void addTemperatureBoundary0N(int x0, int x1, int y0, int y1, T omega) override;
@@ -46,32 +50,52 @@ public:
   void addTemperatureCornerPN(int x, int y, T omega) override;
   void addTemperatureCornerPP(int x, int y, T omega) override;
 
-  virtual BlockLatticeStructure2D<T,Lattice>& getBlock();
-  virtual BlockLatticeStructure2D<T,Lattice> const& getBlock() const;
+  virtual BlockLatticeStructure2D<T,DESCRIPTOR>& getBlock();
+  virtual BlockLatticeStructure2D<T,DESCRIPTOR> const& getBlock() const;
 
-  void addTemperatureBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int material, int x0, int x1, int y0, int y1, T omega) override;
-  void addTemperatureBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int material, T omega) override;
+  void addTemperatureBoundary(BlockIndicatorF2D<T>& indicator, int x0, int x1, int y0, int y1, T omega) override;
+
+  void addRegularizedTemperatureBoundary(BlockIndicatorF2D<T>& indicator, int x0, int x1, int y0, int y1, T omega) override;
+  void addRegularizedTemperatureBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int material, int x0, int x1, int y0, int y1, T omega) override;
+  void addRegularizedTemperatureBoundary(BlockIndicatorF2D<T>& indicator, T omega) override;
+  void addRegularizedTemperatureBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int material, T omega) override;
+
+  void addRegularizedHeatFluxBoundary(BlockIndicatorF2D<T>& indicator, int x0, int x1, int y0, int y1, T omega, T *heatFlux) override;
+  void addRegularizedHeatFluxBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int material, int x0, int x1, int y0, int y1, T omega, T *heatFlux) override;
+  void addRegularizedHeatFluxBoundary(BlockIndicatorF2D<T>& indicator, T omega, T *heatFlux) override;
+  void addRegularizedHeatFluxBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int material, T omega, T *heatFlux) override;
+
 private:
   template<int direction, int orientation>
   void addTemperatureBoundary(int x0, int x1, int y0, int y1, T omega);
   template<int normalX, int normalY>
   void addTemperatureCorner(int x, int y, T omega);
-private:
-  BlockLatticeStructure2D<T,Lattice>& block;
-  std::vector<Momenta<T,Lattice>*>  momentaVector;
-  std::vector<Dynamics<T,Lattice>*> dynamicsVector;
+
+  template<int direction, int orientation>
+  void addRegularizedTemperatureBoundary(int x0, int x1, int y0, int y1, T omega);
+  template<int normalX, int normalY>
+  void addRegularizedTemperatureCorner(int x, int y, T omega);
+
+  template<int direction, int orientation>
+  void addRegularizedHeatFluxBoundary(int x0, int x1, int y0, int y1, T omega, T *heatFlux);
+  template<int normalX, int normalY>
+  void addRegularizedHeatFluxCorner(int x, int y, T omega);
+
+  BlockLatticeStructure2D<T,DESCRIPTOR>& block;
+  std::vector<Momenta<T,DESCRIPTOR>*>  momentaVector;
+  std::vector<Dynamics<T,DESCRIPTOR>*> dynamicsVector;
 };
 
 ///////// class AdvectionDiffusionBoundaryConditionInstantiator2D ////////////////////////
 
-template<typename T, template<typename U> class Lattice, class BoundaryManager>
-AdvectionDiffusionBoundaryConditionInstantiator2D<T,Lattice,BoundaryManager>::AdvectionDiffusionBoundaryConditionInstantiator2D (
-  BlockLatticeStructure2D<T,Lattice>& block_)
+template<typename T, typename DESCRIPTOR, class BoundaryManager>
+AdvectionDiffusionBoundaryConditionInstantiator2D<T,DESCRIPTOR,BoundaryManager>::AdvectionDiffusionBoundaryConditionInstantiator2D (
+  BlockLatticeStructure2D<T,DESCRIPTOR>& block_)
   : block(block_)
 { }
 
-template<typename T, template<typename U> class Lattice, class BoundaryManager>
-AdvectionDiffusionBoundaryConditionInstantiator2D<T,Lattice,BoundaryManager>::~AdvectionDiffusionBoundaryConditionInstantiator2D()
+template<typename T, typename DESCRIPTOR, class BoundaryManager>
+AdvectionDiffusionBoundaryConditionInstantiator2D<T,DESCRIPTOR,BoundaryManager>::~AdvectionDiffusionBoundaryConditionInstantiator2D()
 {
   for (unsigned iDynamics=0; iDynamics<dynamicsVector.size(); ++iDynamics) {
     delete dynamicsVector[iDynamics];
@@ -81,18 +105,18 @@ AdvectionDiffusionBoundaryConditionInstantiator2D<T,Lattice,BoundaryManager>::~A
   }
 }
 
-template<typename T, template<typename U> class Lattice, class BoundaryManager>
+template<typename T, typename DESCRIPTOR, class BoundaryManager>
 template<int direction, int orientation>
-void AdvectionDiffusionBoundaryConditionInstantiator2D<T,Lattice,BoundaryManager>::
+void AdvectionDiffusionBoundaryConditionInstantiator2D<T,DESCRIPTOR,BoundaryManager>::
 addTemperatureBoundary(int x0, int x1, int y0, int y1, T omega)
 {
   OLB_PRECONDITION(x0==x1 || y0==y1);
 
   for (int iX=x0; iX<=x1; ++iX) {
     for (int iY=y0; iY<=y1; ++iY) {
-      Momenta<T,Lattice>* momenta
+      Momenta<T,DESCRIPTOR>* momenta
         = BoundaryManager::template getTemperatureBoundaryMomenta<direction,orientation>();
-      Dynamics<T,Lattice>* dynamics
+      Dynamics<T,DESCRIPTOR>* dynamics
         = BoundaryManager::template getTemperatureBoundaryDynamics<direction,orientation>(omega, *momenta);
       this->getBlock().defineDynamics(iX,iX,iY,iY, dynamics);
       momentaVector.push_back(momenta);
@@ -100,27 +124,26 @@ addTemperatureBoundary(int x0, int x1, int y0, int y1, T omega)
     }
   }
 
-  PostProcessorGenerator2D<T,Lattice>* postProcessor
+  PostProcessorGenerator2D<T,DESCRIPTOR>* postProcessor
     = BoundaryManager::template getTemperatureBoundaryProcessor<direction,orientation>(x0,x1, y0,y1);
   if (postProcessor) {
     this->getBlock().addPostProcessor(*postProcessor);
   }
 }
 
-
-template<typename T, template<typename U> class Lattice, class BoundaryManager>
+template<typename T, typename DESCRIPTOR, class BoundaryManager>
 template<int xNormal, int yNormal>
-void AdvectionDiffusionBoundaryConditionInstantiator2D<T,Lattice,BoundaryManager>::
+void AdvectionDiffusionBoundaryConditionInstantiator2D<T,DESCRIPTOR,BoundaryManager>::
 addTemperatureCorner(int x, int y, T omega)
 {
-  Momenta<T,Lattice>* momenta
+  Momenta<T,DESCRIPTOR>* momenta
     = BoundaryManager::template getTemperatureCornerMomenta<xNormal,yNormal>();
-  Dynamics<T,Lattice>* dynamics
+  Dynamics<T,DESCRIPTOR>* dynamics
     = BoundaryManager::template getTemperatureCornerDynamics<xNormal,yNormal>(omega, *momenta);
 
   this->getBlock().defineDynamics(x,x,y,y, dynamics);
 
-  PostProcessorGenerator2D<T,Lattice>* postProcessor
+  PostProcessorGenerator2D<T,DESCRIPTOR>* postProcessor
     = BoundaryManager::template getTemperatureCornerProcessor<xNormal,yNormal>(x, y);
   if (postProcessor) {
     this->getBlock().addPostProcessor(*postProcessor);
@@ -129,125 +152,367 @@ addTemperatureCorner(int x, int y, T omega)
 
 
 
-template<typename T, template<typename U> class Lattice, class BoundaryManager>
-void AdvectionDiffusionBoundaryConditionInstantiator2D<T,Lattice,BoundaryManager>::
-addTemperatureBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int material, int x0, int x1, int y0, int y1, T omega)
+
+template<typename T, typename DESCRIPTOR, class BoundaryManager>
+template<int direction, int orientation>
+void AdvectionDiffusionBoundaryConditionInstantiator2D<T,DESCRIPTOR,BoundaryManager>::
+addRegularizedTemperatureBoundary(int x0, int x1, int y0, int y1, T omega)
+{
+  OLB_PRECONDITION(x0==x1 || y0==y1);
+
+  for (int iX=x0; iX<=x1; ++iX) {
+    for (int iY=y0; iY<=y1; ++iY) {
+      Momenta<T,DESCRIPTOR>* momenta
+        = BoundaryManager::template getRegularizedTemperatureBoundaryMomenta<direction,orientation>();
+      Dynamics<T,DESCRIPTOR>* dynamics
+        = BoundaryManager::template getRegularizedTemperatureBoundaryDynamics<direction,orientation>(omega, *momenta);
+      this->getBlock().defineDynamics(iX,iX,iY,iY, dynamics);
+      momentaVector.push_back(momenta);
+      dynamicsVector.push_back(dynamics);
+    }
+  }
+
+  PostProcessorGenerator2D<T,DESCRIPTOR>* postProcessor
+    = BoundaryManager::template getRegularizedTemperatureBoundaryProcessor<direction,orientation>(x0,x1, y0,y1);
+  if (postProcessor) {
+    this->getBlock().addPostProcessor(*postProcessor);
+  }
+}
+
+template<typename T, typename DESCRIPTOR, class BoundaryManager>
+template<int xNormal, int yNormal>
+void AdvectionDiffusionBoundaryConditionInstantiator2D<T,DESCRIPTOR,BoundaryManager>::
+addRegularizedTemperatureCorner(int x, int y, T omega)
+{
+  Momenta<T,DESCRIPTOR>* momenta
+    = BoundaryManager::template getRegularizedTemperatureCornerMomenta<xNormal,yNormal>();
+  Dynamics<T,DESCRIPTOR>* dynamics
+    = BoundaryManager::template getRegularizedTemperatureCornerDynamics<xNormal,yNormal>(omega, *momenta);
+
+  this->getBlock().defineDynamics(x,x,y,y, dynamics);
+
+  PostProcessorGenerator2D<T,DESCRIPTOR>* postProcessor
+    = BoundaryManager::template getRegularizedTemperatureCornerProcessor<xNormal,yNormal>(x, y);
+  if (postProcessor) {
+    this->getBlock().addPostProcessor(*postProcessor);
+  }
+}
+
+
+
+template<typename T, typename DESCRIPTOR, class BoundaryManager>
+template<int direction, int orientation>
+void AdvectionDiffusionBoundaryConditionInstantiator2D<T,DESCRIPTOR,BoundaryManager>::
+addRegularizedHeatFluxBoundary(int x0, int x1, int y0, int y1, T omega, T *heatFlux)
+{
+  OLB_PRECONDITION(x0==x1 || y0==y1);
+
+  for (int iX=x0; iX<=x1; ++iX) {
+    for (int iY=y0; iY<=y1; ++iY) {
+      Momenta<T,DESCRIPTOR>* momenta
+        = BoundaryManager::template getRegularizedHeatFluxBoundaryMomenta<direction,orientation>(heatFlux);
+      Dynamics<T,DESCRIPTOR>* dynamics
+        = BoundaryManager::template getRegularizedHeatFluxBoundaryDynamics<direction,orientation>(omega, *momenta);
+      this->getBlock().defineDynamics(iX,iX,iY,iY, dynamics);
+      momentaVector.push_back(momenta);
+      dynamicsVector.push_back(dynamics);
+    }
+  }
+
+  PostProcessorGenerator2D<T,DESCRIPTOR>* postProcessor
+    = BoundaryManager::template getRegularizedHeatFluxBoundaryProcessor<direction,orientation>(x0,x1, y0,y1);
+  if (postProcessor) {
+    this->getBlock().addPostProcessor(*postProcessor);
+  }
+}
+
+template<typename T, typename DESCRIPTOR, class BoundaryManager>
+template<int xNormal, int yNormal>
+void AdvectionDiffusionBoundaryConditionInstantiator2D<T,DESCRIPTOR,BoundaryManager>::
+addRegularizedHeatFluxCorner(int x, int y, T omega)
+{
+  Momenta<T,DESCRIPTOR>* momenta
+    = BoundaryManager::template getRegularizedHeatFluxCornerMomenta<xNormal,yNormal>();
+  Dynamics<T,DESCRIPTOR>* dynamics
+    = BoundaryManager::template getRegularizedHeatFluxCornerDynamics<xNormal,yNormal>(omega, *momenta);
+
+  this->getBlock().defineDynamics(x,x,y,y, dynamics);
+
+  PostProcessorGenerator2D<T,DESCRIPTOR>* postProcessor
+    = BoundaryManager::template getRegularizedHeatFluxCornerProcessor<xNormal,yNormal>(x, y);
+  if (postProcessor) {
+    this->getBlock().addPostProcessor(*postProcessor);
+  }
+}
+
+
+
+
+template<typename T, typename DESCRIPTOR, class BoundaryManager>
+void AdvectionDiffusionBoundaryConditionInstantiator2D<T,DESCRIPTOR,BoundaryManager>::
+addTemperatureBoundary(BlockIndicatorF2D<T>& indicator,
+                       int x0, int x1, int y0, int y1, T omega)
 {
   std::vector<int> discreteNormal(3,0);
-  for (int iX = x0; iX <= x1; iX++) {
-    for (int iY = y0; iY <= y1; iY++) {
-
-      if (blockGeometryStructure.getMaterial(iX, iY)==material) {
-        discreteNormal = blockGeometryStructure.getStatistics().getType(iX,iY);
+  for (int iX = x0; iX <= x1; ++iX) {
+    for (int iY = y0; iY <= y1; ++iY) {
+      if (indicator(iX, iY)) {
+        discreteNormal = indicator.getBlockGeometryStructure().getStatistics().getType(iX,iY);
         if (discreteNormal[0] == 0) {
-
           if (discreteNormal[1] == 1) {
             addTemperatureBoundary<0,1>(iX,iX,iY,iY, omega);
-          } else if (discreteNormal[1] == -1) {
+          }
+          else if (discreteNormal[1] == -1) {
             addTemperatureBoundary<0,-1>(iX,iX,iY,iY, omega);
-          } else if (discreteNormal[2] == 1) {
+          }
+          else if (discreteNormal[2] == 1) {
             addTemperatureBoundary<1,1>(iX,iX,iY,iY, omega);
-          } else if (discreteNormal[2] == -1) {
+          }
+          else if (discreteNormal[2] == -1) {
             addTemperatureBoundary<1,-1>(iX,iX,iY,iY, omega);
           }
         }
-
         else if (discreteNormal[0] == 1) {
-
           if (discreteNormal[1] == 1 && discreteNormal[2] == 1) {
             addTemperatureCorner<1,1>(iX,iY, omega);
-          } else if (discreteNormal[1] == 1 && discreteNormal[2] == -1) {
+          }
+          else if (discreteNormal[1] == 1 && discreteNormal[2] == -1) {
             addTemperatureCorner<1,-1>(iX,iY, omega);
-          } else if (discreteNormal[1] == -1 && discreteNormal[2] == 1) {
+          }
+          else if (discreteNormal[1] == -1 && discreteNormal[2] == 1) {
             addTemperatureCorner<-1,1>(iX,iY, omega);
-          } else if (discreteNormal[1] == -1 && discreteNormal[2] == -1) {
+          }
+          else if (discreteNormal[1] == -1 && discreteNormal[2] == -1) {
             addTemperatureCorner<-1,-1>(iX,iY, omega);
           }
-
         }
-
       }
     }
   }
 }
 
-template<typename T, template<typename U> class Lattice, class BoundaryManager>
-void AdvectionDiffusionBoundaryConditionInstantiator2D<T,Lattice,BoundaryManager>::
-addTemperatureBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int material, T omega)
+
+
+
+template<typename T, typename DESCRIPTOR, class BoundaryManager>
+void AdvectionDiffusionBoundaryConditionInstantiator2D<T,DESCRIPTOR,BoundaryManager>::
+addRegularizedTemperatureBoundary(BlockIndicatorF2D<T>& indicator,
+                       int x0, int x1, int y0, int y1, T omega)
 {
+  std::vector<int> discreteNormal(3,0);
+  for (int iX = x0; iX <= x1; ++iX) {
+    for (int iY = y0; iY <= y1; ++iY) {
+      if (indicator(iX, iY)) {
+        discreteNormal = indicator.getBlockGeometryStructure().getStatistics().getType(iX,iY);
+        // cout << discreteNormal[0] << " " << discreteNormal[1] << " " << discreteNormal[2] << endl;
+        if (discreteNormal[0] == 0) {
+          if (discreteNormal[1] == 1) {
+            addRegularizedTemperatureBoundary<0,1>(iX,iX,iY,iY, omega);
+          }
+          else if (discreteNormal[1] == -1) {
+            addRegularizedTemperatureBoundary<0,-1>(iX,iX,iY,iY, omega);
+          }
+          else if (discreteNormal[2] == 1) {
+            addRegularizedTemperatureBoundary<1,1>(iX,iX,iY,iY, omega);
+          }
+          else if (discreteNormal[2] == -1) {
+            addRegularizedTemperatureBoundary<1,-1>(iX,iX,iY,iY, omega);
+          }
+        }
+        else if (discreteNormal[0] == 1) {
+          if (discreteNormal[1] == 1 && discreteNormal[2] == 1) {
+            addRegularizedTemperatureCorner<1,1>(iX,iY, omega);
+          }
+          else if (discreteNormal[1] == 1 && discreteNormal[2] == -1) {
+            addRegularizedTemperatureCorner<1,-1>(iX,iY, omega);
+          }
+          else if (discreteNormal[1] == -1 && discreteNormal[2] == 1) {
+            addRegularizedTemperatureCorner<-1,1>(iX,iY, omega);
+          }
+          else if (discreteNormal[1] == -1 && discreteNormal[2] == -1) {
+            addRegularizedTemperatureCorner<-1,-1>(iX,iY, omega);
+          }
+        }
+      }
+    }
+  }
+}
 
-  addTemperatureBoundary(blockGeometryStructure, material, 0, blockGeometryStructure.getNx(), 0, blockGeometryStructure.getNy(), omega);
+template<typename T, typename DESCRIPTOR, class BoundaryManager>
+void AdvectionDiffusionBoundaryConditionInstantiator2D<T,DESCRIPTOR,BoundaryManager>::
+addRegularizedTemperatureBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int material,
+                       int x0, int x1, int y0, int y1, T omega)
+{
+  BlockIndicatorMaterial2D<T> indicator(blockGeometryStructure, material);
+  addRegularizedTemperatureBoundary(indicator, x0, x1, y0, y1, omega);
+}
 
+template<typename T, typename DESCRIPTOR, class BoundaryManager>
+void AdvectionDiffusionBoundaryConditionInstantiator2D<T,DESCRIPTOR,BoundaryManager>::
+addRegularizedTemperatureBoundary(BlockIndicatorF2D<T>& indicator, T omega)
+{
+  auto& blockGeometryStructure = indicator.getBlockGeometryStructure();
+  addRegularizedTemperatureBoundary(indicator,
+                         0, blockGeometryStructure.getNx()-1,
+                         0, blockGeometryStructure.getNy()-1,
+                         omega);
+}
+
+template<typename T, typename DESCRIPTOR, class BoundaryManager>
+void AdvectionDiffusionBoundaryConditionInstantiator2D<T,DESCRIPTOR,BoundaryManager>::
+addRegularizedTemperatureBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int material, T omega)
+{
+  BlockIndicatorMaterial2D<T> indicator(blockGeometryStructure, material);
+  addRegularizedTemperatureBoundary(indicator,
+                         0, blockGeometryStructure.getNx()-1,
+                         0, blockGeometryStructure.getNy()-1,
+                         omega);
 }
 
 
 
-template<typename T, template<typename U> class Lattice, class BoundaryManager>
-void AdvectionDiffusionBoundaryConditionInstantiator2D<T,Lattice,BoundaryManager>::
+template<typename T, typename DESCRIPTOR, class BoundaryManager>
+void AdvectionDiffusionBoundaryConditionInstantiator2D<T,DESCRIPTOR,BoundaryManager>::
+addRegularizedHeatFluxBoundary(BlockIndicatorF2D<T>& indicator,
+                       int x0, int x1, int y0, int y1, T omega, T *heatFlux)
+{
+  std::vector<int> discreteNormal(3,0);
+  for (int iX = x0; iX <= x1; ++iX) {
+    for (int iY = y0; iY <= y1; ++iY) {
+      if (indicator(iX, iY)) {
+        discreteNormal = indicator.getBlockGeometryStructure().getStatistics().getType(iX,iY);
+        // cout << discreteNormal[0] << " " << discreteNormal[1] << " " << discreteNormal[2] << endl;
+        if (discreteNormal[0] == 0) {
+          if (discreteNormal[1] == 1) {
+            addRegularizedHeatFluxBoundary<0,1>(iX,iX,iY,iY, omega, heatFlux);
+          }
+          else if (discreteNormal[1] == -1) {
+            addRegularizedHeatFluxBoundary<0,-1>(iX,iX,iY,iY, omega, heatFlux);
+          }
+          else if (discreteNormal[2] == 1) {
+            addRegularizedHeatFluxBoundary<1,1>(iX,iX,iY,iY, omega, heatFlux);
+          }
+          else if (discreteNormal[2] == -1) {
+            addRegularizedHeatFluxBoundary<1,-1>(iX,iX,iY,iY, omega, heatFlux);
+          }
+        }
+        else if (discreteNormal[0] == 1) {
+          if (discreteNormal[1] == 1 && discreteNormal[2] == 1) {
+            addRegularizedHeatFluxCorner<1,1>(iX,iY, omega);
+          }
+          else if (discreteNormal[1] == 1 && discreteNormal[2] == -1) {
+            addRegularizedHeatFluxCorner<1,-1>(iX,iY, omega);
+          }
+          else if (discreteNormal[1] == -1 && discreteNormal[2] == 1) {
+            addRegularizedHeatFluxCorner<-1,1>(iX,iY, omega);
+          }
+          else if (discreteNormal[1] == -1 && discreteNormal[2] == -1) {
+            addRegularizedHeatFluxCorner<-1,-1>(iX,iY, omega);
+          }
+        }
+      }
+    }
+  }
+}
+
+template<typename T, typename DESCRIPTOR, class BoundaryManager>
+void AdvectionDiffusionBoundaryConditionInstantiator2D<T,DESCRIPTOR,BoundaryManager>::
+addRegularizedHeatFluxBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int material,
+                       int x0, int x1, int y0, int y1, T omega, T *heatFlux)
+{
+  BlockIndicatorMaterial2D<T> indicator(blockGeometryStructure, material);
+  addRegularizedHeatFluxBoundary(indicator, x0, x1, y0, y1, omega, heatFlux);
+}
+
+template<typename T, typename DESCRIPTOR, class BoundaryManager>
+void AdvectionDiffusionBoundaryConditionInstantiator2D<T,DESCRIPTOR,BoundaryManager>::
+addRegularizedHeatFluxBoundary(BlockIndicatorF2D<T>& indicator, T omega, T *heatFlux)
+{
+  auto& blockGeometryStructure = indicator.getBlockGeometryStructure();
+  addRegularizedHeatFluxBoundary(indicator,
+                         0, blockGeometryStructure.getNx()-1,
+                         0, blockGeometryStructure.getNy()-1,
+                         omega, heatFlux);
+}
+
+template<typename T, typename DESCRIPTOR, class BoundaryManager>
+void AdvectionDiffusionBoundaryConditionInstantiator2D<T,DESCRIPTOR,BoundaryManager>::
+addRegularizedHeatFluxBoundary(BlockGeometryStructure2D<T>& blockGeometryStructure, int material, T omega, T *heatFlux)
+{
+  BlockIndicatorMaterial2D<T> indicator(blockGeometryStructure, material);
+  addRegularizedHeatFluxBoundary(indicator,
+                         0, blockGeometryStructure.getNx()-1,
+                         0, blockGeometryStructure.getNy()-1,
+                         omega, heatFlux);
+}
+
+
+template<typename T, typename DESCRIPTOR, class BoundaryManager>
+void AdvectionDiffusionBoundaryConditionInstantiator2D<T,DESCRIPTOR,BoundaryManager>::
 addTemperatureBoundary0N(int x0, int x1, int y0, int y1, T omega)
 {
   addTemperatureBoundary<0,-1>(x0,x1,y0,y1, omega);
 }
 
-template<typename T, template<typename U> class Lattice, class BoundaryManager>
-void AdvectionDiffusionBoundaryConditionInstantiator2D<T,Lattice,BoundaryManager>::
+template<typename T, typename DESCRIPTOR, class BoundaryManager>
+void AdvectionDiffusionBoundaryConditionInstantiator2D<T,DESCRIPTOR,BoundaryManager>::
 addTemperatureBoundary0P(int x0, int x1, int y0, int y1, T omega)
 {
   addTemperatureBoundary<0,1>(x0,x1,y0,y1, omega);
 }
 
-template<typename T, template<typename U> class Lattice, class BoundaryManager>
-void AdvectionDiffusionBoundaryConditionInstantiator2D<T,Lattice,BoundaryManager>::
+template<typename T, typename DESCRIPTOR, class BoundaryManager>
+void AdvectionDiffusionBoundaryConditionInstantiator2D<T,DESCRIPTOR,BoundaryManager>::
 addTemperatureBoundary1N(int x0, int x1, int y0, int y1, T omega)
 {
   addTemperatureBoundary<1,-1>(x0,x1,y0,y1, omega);
 }
 
-template<typename T, template<typename U> class Lattice, class BoundaryManager>
-void AdvectionDiffusionBoundaryConditionInstantiator2D<T,Lattice,BoundaryManager>::
+template<typename T, typename DESCRIPTOR, class BoundaryManager>
+void AdvectionDiffusionBoundaryConditionInstantiator2D<T,DESCRIPTOR,BoundaryManager>::
 addTemperatureBoundary1P(int x0, int x1, int y0, int y1, T omega)
 {
   addTemperatureBoundary<1,1>(x0,x1,y0,y1, omega);
 }
 
 
-template<typename T, template<typename U> class Lattice, class BoundaryManager>
-void AdvectionDiffusionBoundaryConditionInstantiator2D<T,Lattice,BoundaryManager>::
+template<typename T, typename DESCRIPTOR, class BoundaryManager>
+void AdvectionDiffusionBoundaryConditionInstantiator2D<T,DESCRIPTOR,BoundaryManager>::
 addTemperatureCornerNN(int x, int y, T omega)
 {
   addTemperatureCorner<-1,-1>(x,y, omega);
 }
 
-template<typename T, template<typename U> class Lattice, class BoundaryManager>
-void AdvectionDiffusionBoundaryConditionInstantiator2D<T,Lattice,BoundaryManager>::
+template<typename T, typename DESCRIPTOR, class BoundaryManager>
+void AdvectionDiffusionBoundaryConditionInstantiator2D<T,DESCRIPTOR,BoundaryManager>::
 addTemperatureCornerNP(int x, int y, T omega)
 {
   addTemperatureCorner<-1,1>(x,y, omega);
 }
 
-template<typename T, template<typename U> class Lattice, class BoundaryManager>
-void AdvectionDiffusionBoundaryConditionInstantiator2D<T,Lattice,BoundaryManager>::
+template<typename T, typename DESCRIPTOR, class BoundaryManager>
+void AdvectionDiffusionBoundaryConditionInstantiator2D<T,DESCRIPTOR,BoundaryManager>::
 addTemperatureCornerPN(int x, int y, T omega)
 {
   addTemperatureCorner<1,-1>(x,y, omega);
 }
 
-template<typename T, template<typename U> class Lattice, class BoundaryManager>
-void AdvectionDiffusionBoundaryConditionInstantiator2D<T,Lattice,BoundaryManager>::
+template<typename T, typename DESCRIPTOR, class BoundaryManager>
+void AdvectionDiffusionBoundaryConditionInstantiator2D<T,DESCRIPTOR,BoundaryManager>::
 addTemperatureCornerPP(int x, int y, T omega)
 {
   addTemperatureCorner<1,1>(x,y, omega);
 }
 
 
-template<typename T, template<typename U> class Lattice, class BoundaryManager>
-BlockLatticeStructure2D<T,Lattice>& AdvectionDiffusionBoundaryConditionInstantiator2D<T,Lattice,BoundaryManager>::getBlock()
+template<typename T, typename DESCRIPTOR, class BoundaryManager>
+BlockLatticeStructure2D<T,DESCRIPTOR>& AdvectionDiffusionBoundaryConditionInstantiator2D<T,DESCRIPTOR,BoundaryManager>::getBlock()
 {
   return block;
 }
 
-template<typename T, template<typename U> class Lattice, class BoundaryManager>
-BlockLatticeStructure2D<T,Lattice> const& AdvectionDiffusionBoundaryConditionInstantiator2D<T,Lattice,BoundaryManager>::getBlock() const
+template<typename T, typename DESCRIPTOR, class BoundaryManager>
+BlockLatticeStructure2D<T,DESCRIPTOR> const& AdvectionDiffusionBoundaryConditionInstantiator2D<T,DESCRIPTOR,BoundaryManager>::getBlock() const
 {
   return block;
 }

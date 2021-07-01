@@ -26,7 +26,7 @@
 */
 
 /** \file
- * Descriptor for all types of 2D and 3D lattices for the Guo-Zhao
+ * DESCRIPTORBASE for all types of 2D and 3D lattices for the Guo-Zhao
  * porous model. In principle, thanks
  * to the fact that the OpenLB code is generic, it is sufficient to
  * write a new descriptor when a new type of lattice is to be used.
@@ -38,6 +38,7 @@
 
 #include <vector>
 #include "core/olbDebug.h"
+#include "dynamics/latticeDescriptors.h"
 
 namespace olb {
 
@@ -55,24 +56,9 @@ namespace olb {
 */
 namespace descriptors {
 
-struct GuoZhao2dDescriptor {
-  static const int numScalars = 7;
-  static const int numSpecies = 5;
-  static const int forceBeginsAt = 0;
-  static const int epsilonAt = 2;
-  static const int KAt = 3;
-  static const int nuAt = 4;
-  static const int bodyForceBeginsAt = 5;
-  static const int sizeOfForce   = 2;
-};
+using GuoZhaoD2Q9Descriptor = D2Q9<FORCE,EPSILON,K,NU,BODY_FORCE>;
 
-struct GuoZhao2dDescriptorBase {
-  typedef GuoZhao2dDescriptor ExternalField;
-};
-
-template <typename T> struct GuoZhaoD2Q9Descriptor
-    : public D2Q9DescriptorBase<T>, public GuoZhao2dDescriptorBase {
-};
+using GuoZhaoD3Q19Descriptor = D3Q19<FORCE,EPSILON,K,NU,BODY_FORCE>;
 
 }  // namespace descriptors
 

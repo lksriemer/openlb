@@ -32,24 +32,26 @@
 namespace olb {
 
 // Efficient specialization for D3Q15 lattice
-template<typename T>
-struct lbDynamicsHelpers<T, descriptors::D3Q15DescriptorBase<T> > {
+template<typename T, typename... FIELDS>
+struct lbDynamicsHelpers<T, descriptors::D3Q15<FIELDS...> > {
+  using SpecializedCellBase   = CellBase<T,descriptors::D3Q15<FIELDS...>>;
+  using SpecializedDescriptor = descriptors::D3Q15<FIELDS...>;
 
   static T equilibrium( int iPop, T rho, const T u[3], const T uSqr )
   {
-    typedef descriptors::D3Q15DescriptorBase<T> L;
-    T c_u = L::c[iPop][0]*u[0] + L::c[iPop][1]*u[1] + L::c[iPop][2]*u[2];
-    return rho * L::t[iPop] * ( 1. + 3.*c_u + 4.5*c_u*c_u - 1.5*uSqr ) - L::t[iPop];
+    typedef descriptors::D3Q15<> L;
+    T c_u = descriptors::c<L>(iPop,0)*u[0] + descriptors::c<L>(iPop,1)*u[1] + descriptors::c<L>(iPop,2)*u[2];
+    return rho * descriptors::t<T,L>(iPop) * ( 1. + 3.*c_u + 4.5*c_u*c_u - 1.5*uSqr ) - descriptors::t<T,L>(iPop);
   }
 
   static T incEquilibrium(int iPop, const T j[3], const T jSqr, const T pressure)
   {
-    typedef descriptors::D3Q15DescriptorBase<T> L;
-    T c_j = L::c[iPop][0]*j[0] + L::c[iPop][1]*j[1] + L::c[iPop][2]*j[2];
-    return L::t[iPop] * ( 3.*pressure + 3.*c_j + 4.5*c_j*c_j - 1.5*jSqr ) - L::t[iPop];
+    typedef descriptors::D3Q15<> L;
+    T c_j = descriptors::c<L>(iPop,0)*j[0] + descriptors::c<L>(iPop,1)*j[1] + descriptors::c<L>(iPop,2)*j[2];
+    return descriptors::t<T,L>(iPop) * ( 3.*pressure + 3.*c_j + 4.5*c_j*c_j - 1.5*jSqr ) - descriptors::t<T,L>(iPop);
   }
 
-  static void computeFneq(CellBase<T,descriptors::D3Q15DescriptorBase<T> > const& cell, T fNeq[15], T rho, const T u[3] )
+  static void computeFneq(SpecializedCellBase const& cell, T fNeq[15], T rho, const T u[3] )
   {
     const T uSqr = u[0]*u[0] + u[1]*u[1] + u[2]*u[2];
     for (int iPop=0; iPop < 15; ++iPop) {
@@ -57,43 +59,43 @@ struct lbDynamicsHelpers<T, descriptors::D3Q15DescriptorBase<T> > {
     }
   }
 
-  static T bgkCollision(CellBase<T,descriptors::D3Q15DescriptorBase<T> >& cell, T const& rho, const T u[3], T const& omega)
+  static T bgkCollision(SpecializedCellBase& cell, T const& rho, const T u[3], T const& omega)
   {
     const T uSqr = u[0]*u[0] + u[1]*u[1] + u[2]*u[2];
     for (int iPop=0; iPop < 15; ++iPop) {
       cell[iPop] *= (T)1-omega;
       cell[iPop] += omega *
-                    lbDynamicsHelpers<T,descriptors::D3Q15DescriptorBase<T> >::equilibrium(iPop, rho, u, uSqr);
+                    lbDynamicsHelpers<T,SpecializedDescriptor >::equilibrium(iPop, rho, u, uSqr);
     }
     return uSqr;
   }
 
-  static T incBgkCollision(CellBase<T,descriptors::D3Q15DescriptorBase<T> >& cell, T pressure, const T j[3], T omega)
+  static T incBgkCollision(SpecializedCellBase& cell, T pressure, const T j[3], T omega)
   {
-    const T jSqr = util::normSqr<T,descriptors::D3Q15DescriptorBase<T>::d>(j);
-    for (int iPop=0; iPop < descriptors::D3Q15DescriptorBase<T>::q; ++iPop) {
+    const T jSqr = util::normSqr<T,SpecializedDescriptor::d>(j);
+    for (int iPop=0; iPop < SpecializedDescriptor::q; ++iPop) {
       cell[iPop] *= (T)1-omega;
-      cell[iPop] += omega * lbDynamicsHelpers<T,descriptors::D3Q15DescriptorBase<T> >::incEquilibrium (
+      cell[iPop] += omega * lbDynamicsHelpers<T,SpecializedDescriptor >::incEquilibrium (
                       iPop, j, jSqr, pressure );
     }
     return jSqr;
   }
 
-  static T constRhoBgkCollision(CellBase<T,descriptors::D3Q15DescriptorBase<T> >& cell, T rho, const T u[3], T ratioRho, T omega)
+  static T constRhoBgkCollision(SpecializedCellBase& cell, T rho, const T u[3], T ratioRho, T omega)
   {
-    const T uSqr = util::normSqr<T,descriptors::D3Q15DescriptorBase<T>::d>(u);
-    for (int iPop=0; iPop < descriptors::D3Q15DescriptorBase<T>::q; ++iPop) {
-      T feq = lbHelpers<T,descriptors::D3Q15DescriptorBase>::
+    const T uSqr = util::normSqr<T,SpecializedDescriptor::d>(u);
+    for (int iPop=0; iPop < SpecializedDescriptor::q; ++iPop) {
+      T feq = lbHelpers<T,descriptors::D3Q15<>>::
               equilibrium(iPop, rho, u, uSqr );
       cell[iPop] =
-        ratioRho*(feq+descriptors::D3Q15DescriptorBase<T>::t[iPop])
-        -descriptors::D3Q15DescriptorBase<T>::t[iPop] +
+        ratioRho*(feq+descriptors::t<T,SpecializedDescriptor>(iPop))
+        -descriptors::t<T,SpecializedDescriptor>(iPop) +
         ((T)1-omega)*(cell[iPop]-feq);
     }
     return uSqr;
   }
 
-  static void partial_rho(CellBase<T,descriptors::D3Q15DescriptorBase<T> > const& cell,
+  static void partial_rho(SpecializedCellBase const& cell,
                           T& surfX_M1, T& surfX_0, T& surfX_P1,
                           T& surfY_M1, T& surfY_P1, T& surfZ_M1, T& surfZ_P1 )
   {
@@ -108,7 +110,7 @@ struct lbDynamicsHelpers<T, descriptors::D3Q15DescriptorBase<T> > {
     surfZ_P1 = cell[5] + cell[7] + cell[10] + cell[11] + cell[13];
   }
 
-  static T computeRho(CellBase<T,descriptors::D3Q15DescriptorBase<T> > const& cell)
+  static T computeRho(SpecializedCellBase const& cell)
   {
     T rho = cell[0] + cell[1] + cell[2] + cell[3] + cell[4]
             + cell[5] + cell[6] + cell[7] + cell[8]
@@ -117,7 +119,7 @@ struct lbDynamicsHelpers<T, descriptors::D3Q15DescriptorBase<T> > {
     return rho;
   }
 
-  static void computeRhoU(CellBase<T,descriptors::D3Q15DescriptorBase<T> > const& cell, T& rho, T u[3])
+  static void computeRhoU(SpecializedCellBase const& cell, T& rho, T u[3])
   {
     T surfX_M1, surfX_0, surfX_P1,
     surfY_M1, surfY_P1, surfZ_M1, surfZ_P1;
@@ -132,7 +134,7 @@ struct lbDynamicsHelpers<T, descriptors::D3Q15DescriptorBase<T> > {
     u[2]  = ( surfZ_P1 - surfZ_M1 ) / rho;
   }
 
-  static void computeRhoJ(CellBase<T,descriptors::D3Q15DescriptorBase<T> > const& cell, T& rho, T j[3])
+  static void computeRhoJ(SpecializedCellBase const& cell, T& rho, T j[3])
   {
     T surfX_M1, surfX_0, surfX_P1,
     surfY_M1, surfY_P1, surfZ_M1, surfZ_P1;
@@ -147,7 +149,7 @@ struct lbDynamicsHelpers<T, descriptors::D3Q15DescriptorBase<T> > {
     j[2]  = ( surfZ_P1 - surfZ_M1 );
   }
 
-  static void computeJ(CellBase<T,descriptors::D3Q15DescriptorBase<T> > const& cell, T j[3])
+  static void computeJ(SpecializedCellBase const& cell, T j[3])
   {
     T surfX_M1, surfX_P1, surfY_M1, surfY_P1, surfZ_M1, surfZ_P1;
 
@@ -165,9 +167,9 @@ struct lbDynamicsHelpers<T, descriptors::D3Q15DescriptorBase<T> > {
     j[2]  = ( surfZ_P1 - surfZ_M1 );
   }
 
-  static void computeStress(CellBase<T,descriptors::D3Q15DescriptorBase<T> > const& cell, T rho, const T u[3], T pi[6])
+  static void computeStress(SpecializedCellBase const& cell, T rho, const T u[3], T pi[6])
   {
-    typedef descriptors::D3Q15DescriptorBase<T> L;
+    typedef descriptors::D3Q15<> L;
     using namespace util::tensorIndices3D;
 
     T surfX_M1, surfX_0, surfX_P1,
@@ -176,9 +178,9 @@ struct lbDynamicsHelpers<T, descriptors::D3Q15DescriptorBase<T> > {
     partial_rho(cell, surfX_M1, surfX_0, surfX_P1,
                 surfY_M1, surfY_P1, surfZ_M1, surfZ_P1);
 
-    pi[xx] = surfX_P1+surfX_M1 - 1./L::invCs2*(rho-(T)1) - rho*u[0]*u[0];
-    pi[yy] = surfY_P1+surfY_M1 - 1./L::invCs2*(rho-(T)1) - rho*u[1]*u[1];
-    pi[zz] = surfZ_P1+surfZ_M1 - 1./L::invCs2*(rho-(T)1) - rho*u[2]*u[2];
+    pi[xx] = surfX_P1+surfX_M1 - 1./descriptors::invCs2<T,L>()*(rho-(T)1) - rho*u[0]*u[0];
+    pi[yy] = surfY_P1+surfY_M1 - 1./descriptors::invCs2<T,L>()*(rho-(T)1) - rho*u[1]*u[1];
+    pi[zz] = surfZ_P1+surfZ_M1 - 1./descriptors::invCs2<T,L>()*(rho-(T)1) - rho*u[2]*u[2];
 
     pi[xy] =   cell[4] + cell[5] - cell[6]  - cell[7]
                + cell[11] + cell[12] - cell[13] - cell[14] - rho*u[0]*u[1];
@@ -189,9 +191,9 @@ struct lbDynamicsHelpers<T, descriptors::D3Q15DescriptorBase<T> > {
 
   }
 
-  static void computeAllMomenta(CellBase<T,descriptors::D3Q15DescriptorBase<T> > const& cell, T& rho, T u[3], T pi[6])
+  static void computeAllMomenta(SpecializedCellBase const& cell, T& rho, T u[3], T pi[6])
   {
-    typedef descriptors::D3Q15DescriptorBase<T> L;
+    typedef descriptors::D3Q15<> L;
     using namespace util::tensorIndices3D;
 
     T surfX_M1, surfX_0, surfX_P1,
@@ -209,9 +211,9 @@ struct lbDynamicsHelpers<T, descriptors::D3Q15DescriptorBase<T> > {
     u[1] = rhoU1 / rho;
     u[2] = rhoU2 / rho;
 
-    pi[xx] = surfX_P1+surfX_M1 - 1./L::invCs2*(rho-(T)1) - rhoU0*u[0];
-    pi[yy] = surfY_P1+surfY_M1 - 1./L::invCs2*(rho-(T)1) - rhoU1*u[1];
-    pi[zz] = surfZ_P1+surfZ_M1 - 1./L::invCs2*(rho-(T)1) - rhoU2*u[2];
+    pi[xx] = surfX_P1+surfX_M1 - 1./descriptors::invCs2<T,L>()*(rho-(T)1) - rhoU0*u[0];
+    pi[yy] = surfY_P1+surfY_M1 - 1./descriptors::invCs2<T,L>()*(rho-(T)1) - rhoU1*u[1];
+    pi[zz] = surfZ_P1+surfZ_M1 - 1./descriptors::invCs2<T,L>()*(rho-(T)1) - rhoU2*u[2];
 
     pi[xy] =   cell[4] + cell[5] - cell[6]  - cell[7]
                + cell[11] + cell[12] - cell[13] - cell[14] - rhoU0*u[1];
@@ -221,7 +223,7 @@ struct lbDynamicsHelpers<T, descriptors::D3Q15DescriptorBase<T> > {
                + cell[11] - cell[12] - cell[13] + cell[14] - rhoU1*u[2];
   }
 
-  static void modifyVelocity(CellBase<T,descriptors::D3Q19DescriptorBase<T> >& cell, const T newU[3])
+  static void modifyVelocity(SpecializedCellBase& cell, const T newU[3])
   {
     T rho, oldU[3];
     computeRhoU(cell, rho, oldU);
@@ -241,9 +243,9 @@ struct lbDynamicsHelpers<T, descriptors::D3Q15DescriptorBase<T> > {
 //   (operations applying to the whole lattice)
 
 template<typename T>
-struct lbLatticeHelpers<T, descriptors::D3Q15Descriptor> {
+struct lbLatticeHelpers<T, descriptors::D3Q15<>> {
   static void swapAndStreamCell (
-    Cell<T,descriptors::D3Q15Descriptor> ***grid,
+    Cell<T,descriptors::D3Q15<>> ***grid,
     int iX, int iY, int iZ, int nX, int nY, int nZ, int iPop, T& fTmp )
   {
     fTmp                     = grid[iX][iY][iZ][iPop];
@@ -252,7 +254,7 @@ struct lbLatticeHelpers<T, descriptors::D3Q15Descriptor> {
     grid[nX][nY][nZ][iPop]   = fTmp;
   }
 
-  static void swapAndStream3D(Cell<T,descriptors::D3Q15Descriptor> ***grid,
+  static void swapAndStream3D(Cell<T,descriptors::D3Q15<>> ***grid,
                               int iX, int iY, int iZ)
   {
     T fTmp;
@@ -269,10 +271,10 @@ struct lbLatticeHelpers<T, descriptors::D3Q15Descriptor> {
 };
 
 template<typename T>
-struct lbLatticeHelpers<T, descriptors::ForcedD3Q15Descriptor> {
+struct lbLatticeHelpers<T, descriptors::D3Q15<descriptors::FORCE>> {
 
   static void swapAndStreamCell (
-    Cell<T,descriptors::D3Q15Descriptor> ***grid,
+    Cell<T,descriptors::D3Q15<>> ***grid,
     int iX, int iY, int iZ, int nX, int nY, int nZ, int iPop, T& fTmp )
   {
     fTmp                     = grid[iX][iY][iZ][iPop];
@@ -281,7 +283,7 @@ struct lbLatticeHelpers<T, descriptors::ForcedD3Q15Descriptor> {
     grid[nX][nY][nZ][iPop]   = fTmp;
   }
 
-  static void swapAndStream3D(Cell<T,descriptors::D3Q15Descriptor> ***grid,
+  static void swapAndStream3D(Cell<T,descriptors::D3Q15<>> ***grid,
                               int iX, int iY, int iZ)
   {
     T fTmp;

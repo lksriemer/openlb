@@ -31,7 +31,7 @@
 #include <vector>
 #include <list>
 
-#include "functors/lattice/indicator/indicatorF2D.h"
+#include "functors/analytical/indicator/indicatorF2D.h"
 #include "geometry/blockGeometryStatistics2D.h"
 #include "io/ostreamManager.h"
 
@@ -40,6 +40,7 @@
 namespace olb {
 
 template<typename T> class BlockGeometryStatistics2D;
+template<typename T> class BlockIndicatorF2D;
 
 /// Representation of a block geometry structure
 /** This pure virtual class provides an interface for the classes
@@ -71,6 +72,11 @@ protected:
 public:
   /// Constructor
   BlockGeometryStructure2D(int iCglob=-1);
+  /// Destructor
+  virtual ~BlockGeometryStructure2D() {};
+
+  /// Returns the underlying block structure
+  virtual BlockStructure2D& getBlockStructure() = 0;
 
   /// Read only access to the global iC number which is given !=-1 if the block geometries are part of a super geometry
   virtual int const& getIcGlob() const;
@@ -117,8 +123,17 @@ public:
   /// Changes all materials with material fromM to 1 if there is a non robust constiallation
   virtual int innerClean(int fromM, bool verbose=true);
 
+  /// Resets all cell materials inside of a domain to 0
+  virtual void reset(IndicatorF2D<T>& domain);
+
+  /// Returns true if there is at least one stream direction found for a boundary voxel with coordinates (iX,iY) and if its neighbor is a bulk voxel.
+  /**
+   * It further fills the vector streamDirection with true if this direction is pointing to a bulk voxel.
+   **/
+  template<typename V, typename DESCRIPTOR >
+  bool findStreamDirections(int iX, int iY, BlockIndicatorF2D<T>& boundaryIndicator, BlockIndicatorF2D<T>& bulkIndicator, bool streamDirections[]);
   /// Returns true if there is at least one stream diection found for a voxel with coordinates (iX,iY) of material and if the neighbouring material is one of the bulkMaterials in the list. It further fills the vector streamDirection with true if this direction is pointing to a bulkMaterial.
-  template<typename V, template<typename U> class Lattice >
+  template<typename V, typename DESCRIPTOR >
   bool findStreamDirections(int iX, int iY, int material, std::list<int> bulkMaterials, bool streamDirections[]);
   /// Returns the coordinates (iX,iY) of a voxel with a given material number (material) if there exists an neighbourhood of size (offsetX,offsetY) only with voxels of the  given material number
   virtual bool find(int material, unsigned offsetX, unsigned offsetY, int& iX, int& iY);

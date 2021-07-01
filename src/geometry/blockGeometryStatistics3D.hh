@@ -204,7 +204,7 @@ std::vector<T> BlockGeometryStatistics3D<T>::getCenterPhysR(int material)
 }
 
 template<typename T>
-std::vector<int> BlockGeometryStatistics3D<T>::getType(int iX, int iY, int iZ)
+std::vector<int> BlockGeometryStatistics3D<T>::getType(int iX, int iY, int iZ, bool anyNormal)
 {
 
   update();
@@ -1190,11 +1190,19 @@ std::vector<int> BlockGeometryStatistics3D<T>::getType(int iX, int iY, int iZ)
     }
 
     // special boundary conditions
-    if (discreteNormal2 != nullVector) {
-      discreteNormal
-        = checkExtraBoundary(discreteNormal, discreteNormal2);
+    if (discreteNormal2 != nullVector && anyNormal == false) {
+      discreteNormal = checkExtraBoundary(discreteNormal, discreteNormal2);
     }
   }
+
+  if (discreteNormal[1] == 0 && discreteNormal[2] == 0 && discreteNormal[3] == 0) {
+    clout<<"WARNING: no discreteNormal is found"<<std::endl;
+  } else if (_blockGeometry->getMaterial(iX-discreteNormal[1], iY-discreteNormal[2], iZ-discreteNormal[3]) != 1) {
+#ifdef OLB_DEBUG
+    clout<<"WARNING: discreteNormal is not pointing outside the fluid. Use option: anyNormal"<<std::endl;
+#endif
+  }
+
   return discreteNormal;
 }
 
@@ -1418,7 +1426,7 @@ std::vector<int> BlockGeometryStatistics3D<T>::checkExtraBoundary(
 
   for (int i = 1; i < 4; i++) {
     if (discreteNormal[i] == discreteNormal2[i]) {
-      Data[i - 1] = (-1) * discreteNormal2[i];
+      Data[i - 1] = discreteNormal[i];
       Data[i + 2] = 1;
     } else if (discreteNormal[i] * discreteNormal2[i] == -1) {
       Data[i - 1] = 0;

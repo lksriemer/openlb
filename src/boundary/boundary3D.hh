@@ -25,8 +25,8 @@
  * Groups all the generic 3D template files in the boundaryConditions directory.
  */
 
-#include "boundaryCondition3D.h"
-#include "boundaryPostProcessors3D.h"
+#include "boundaryCondition3D.hh"
+#include "boundaryPostProcessors3D.hh"
 #include "extendedFiniteDifferenceBoundary3D.hh"
 #include "inamuroAnalyticalDynamics.hh"
 #include "inamuroBoundary3D.hh"
@@ -39,6 +39,7 @@
 #include "rtlbmBoundaryDynamics.hh"
 #include "superBoundaryCondition3D.hh"
 #include "superOffBoundaryCondition3D.hh"
+#include "wallFunctionBoundaryPostProcessors3D.hh"
 #include "zouHeBoundary3D.hh"
 #include "zouHeDynamics.hh"
 

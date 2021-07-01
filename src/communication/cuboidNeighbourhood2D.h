@@ -146,6 +146,7 @@ public:
   int const& get_inC(int i) const;
   /// Returns the number of cells in _inC
   int get_inCsize() const;
+  int get_outCellsSize() const;
   /// Read and write access to **_inData
   bool** get_inData();
   /// Read and write access to **_outData

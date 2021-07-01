@@ -9,3 +9,5 @@
 #include <particles/particles3D.hh>
 #include <particles/forces/forces.hh>
 #include <particles/boundaries/boundaries.hh>
+#include <particles/twoWayCouplings/twoWayCouplings3D.hh>
+#include <particles/hlbm/hlbmDynamics3D.hh>

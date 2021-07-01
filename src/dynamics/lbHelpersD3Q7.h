@@ -35,32 +35,36 @@ namespace olb {
 
 /** partial template specialization for D3Q7DescriptorBase.
  */
-template<typename T>
-struct lbDynamicsHelpers< T,descriptors::D3Q7DescriptorBase<T> > {
+template<typename T, typename... FIELDS>
+struct lbDynamicsHelpers<T, descriptors::D3Q7<FIELDS...> > {
+  using SpecializedCellBase = CellBase<T,descriptors::D3Q7<FIELDS...>>;
+
+  template <typename>
+  using SpecializedDescriptor = descriptors::D3Q7<FIELDS...>;
 
   static T equilibrium( int iPop, T rho, const T u[3], T uSqr )
   {
-    typedef descriptors::D3Q7DescriptorBase<T> L;
-    T c_u = L::c[iPop][0]*u[0] + L::c[iPop][1]*u[1];
-    return rho * L::t[iPop] * (
+    typedef descriptors::D3Q7<> L;
+    T c_u = descriptors::c<L>(iPop,0)*u[0] + descriptors::c<L>(iPop,1)*u[1];
+    return rho * descriptors::t<T,L>(iPop) * (
              1. + 3.*c_u + 4.5*c_u*c_u - 1.5*uSqr )
-           - L::t[iPop];
+           - descriptors::t<T,L>(iPop);
   }
 
   static T equilibriumFirstOrder( int iPop, T rho, const T u[3] )
   {
-    typedef descriptors::D3Q7DescriptorBase<T> L;
-    T c_u = L::c[iPop][0] * u[0] + L::c[iPop][1] * u[1] + L::c[iPop][2] * u[2];
-    return rho*L::t[iPop]*((T)1 + c_u*L::invCs2)-L::t[iPop];
+    typedef descriptors::D3Q7<> L;
+    T c_u = descriptors::c<L>(iPop,0) * u[0] + descriptors::c<L>(iPop,1) * u[1] + descriptors::c<L>(iPop,2) * u[2];
+    return rho*descriptors::t<T,L>(iPop)*((T)1 + c_u*descriptors::invCs2<T,L>())-descriptors::t<T,L>(iPop);
   }
 
   /// RLB advection diffusion collision step
-  static T rlbCollision( CellBase<T,descriptors::D3Q7DescriptorBase<T> >& cell, T rho, const T u[3], T omega )
+  static T rlbCollision( SpecializedCellBase& cell, T rho, const T u[3], T omega )
   {
-    typedef descriptors::D3Q7DescriptorBase<T> L;
+    typedef descriptors::D3Q7<> L;
     const T uSqr = u[0] * u[0] + u[1] * u[1] + u[2] * u[2];
 
-    const T Cs2 = (T)1 / L::invCs2;
+    const T Cs2 = (T)1 / descriptors::invCs2<T,L>();
 
     T rho_1 = rho - (T)1;
     cell[0] = ( (T)1 - (T)3 * Cs2 ) * rho_1; //f[0]=(1-3c_s^2)(rho-1)
@@ -92,7 +96,7 @@ struct lbDynamicsHelpers< T,descriptors::D3Q7DescriptorBase<T> > {
   }
 
   // BGK advection diffusion collision step
-  static T bgkCollision( CellBase<T,descriptors::D3Q7DescriptorBase<T> >& cell, T rho, const T u[3], T omega )
+  static T bgkCollision( SpecializedCellBase& cell, T rho, const T u[3], T omega )
   {
     const T Cs2 = 0.25;
     const T uSqr = u[0] * u[0] + u[1] * u[1] + u[2] * u[2];
@@ -118,7 +122,7 @@ struct lbDynamicsHelpers< T,descriptors::D3Q7DescriptorBase<T> > {
 
   /// Paper: Mink et al. 2016 DOI: 10.1016/j.jocs.2016.03.014
   /// omega is expected to be one
-  static T sinkCollision( CellBase<T,descriptors::D3Q7DescriptorBase<T> >& cell, T intensity, T omega, T sink )
+  static T sinkCollision( SpecializedCellBase& cell, T intensity, T omega, T sink )
   {
     // fi = (1-w) fi + w fi^{eq} - absorption fi;
     // where fi^{eq} = rho ti and t0 = 1/4, t1=...t6=1/8
@@ -136,78 +140,6 @@ struct lbDynamicsHelpers< T,descriptors::D3Q7DescriptorBase<T> > {
     cell[6] = omega_ * ( cell[6] + ti ) + omega * intensity * ti - sink * ( cell[6] + ti ) - ti;
     return 0.0;
   }
-
-    static void computeFneq (
-      CellBase<T,descriptors::D3Q7DescriptorBase<T> > const& cell, T fNeq[7], T rho, const T u[3] )
-    {
-      const T uSqr = u[0]*u[0] + u[1]*u[1] + u[2]*u[2];
-#ifdef OLB_DEBUG
-      std::cout << "WARNING: Second order equilibrium function is used for the calculation of the non-equilibrium parts!" << std::endl;
-#endif
-      for (int iPop=0; iPop < 7; ++iPop) {
-        fNeq[iPop] = cell[iPop] - equilibrium(iPop, rho, u, uSqr);
-      }
-    }
-
-    static T computeRho(CellBase<T,descriptors::D3Q7DescriptorBase<T> > const& cell)
-    {
-      T rho = cell[0] + cell[1] + cell[2] + cell[3] + cell[4] + cell[5] + cell[6] + (T)1;
-      return rho;
-    }
-
-    static void computeRhoU(CellBase<T,descriptors::D3Q7DescriptorBase<T> > const& cell, T& rho, T u[3])
-    {
-       rho =  cell[0] + cell[1] + cell[2] + cell[3] + cell[4] + cell[5] + cell[6] + (T)1;
-       T invRho= 1./rho;
-
-       u[0]  = ( cell[4] - cell[1] )*invRho;
-       u[1]  = ( cell[5] - cell[2] )*invRho;
-       u[2]  = ( cell[6] - cell[3] )*invRho;
-    }
-
-    static void computeRhoJ(CellBase<T,descriptors::D3Q7DescriptorBase<T> > const& cell, T& rho, T j[3])
-    {
-      rho =  cell[0] + cell[1] + cell[2] + cell[3] + cell[4] + cell[5] + cell[6] + (T)1;
-
-      j[0]  = ( cell[4] - cell[1] );
-      j[1]  = ( cell[5] - cell[2] );
-      j[2]  = ( cell[6] - cell[3] );
-    }
-
-    static void computeJ(CellBase<T,descriptors::D3Q7DescriptorBase<T> > const& cell, T j[3])
-    {
-      j[0]  = ( cell[4] - cell[1] );
-      j[1]  = ( cell[5] - cell[2] );
-      j[2]  = ( cell[6] - cell[3] );
-    }
-
-    static void computeStress(CellBase<T,descriptors::D3Q7DescriptorBase<T> > const& cell, T rho, const T u[3], T pi[6])
-    {
-      // printf("ERROR: Stress tensor not defined in D3Q7!\n");
-    }
-
-};
-
-
-// Efficient specialization for D2Q5 base lattice
-template<typename T>
-struct lbDynamicsHelpers<T, descriptors::AdvectionDiffusionMRTD3Q7DescriptorBase<T> > {
-
-static T equilibrium( int iPop, T rho, const T u[3], T uSqr )
-{
-  typedef descriptors::AdvectionDiffusionMRTD3Q7DescriptorBase<T> L;
-  T c_u = L::c[iPop][0]*u[0] + L::c[iPop][1]*u[1];
-  return rho * L::t[iPop] * (
-           1. + 3.*c_u + 4.5*c_u*c_u - 1.5*uSqr )
-         - L::t[iPop];
-}
-
-static T equilibriumFirstOrder( int iPop, T rho, const T u[3] )
-{
-  typedef descriptors::AdvectionDiffusionMRTD3Q7DescriptorBase<T> L;
-  T c_u = L::c[iPop][0] * u[0] + L::c[iPop][1] * u[1] + L::c[iPop][2] * u[2];
-  return rho*L::t[iPop]*((T)1 + c_u*L::invCs2)-L::t[iPop];
-}
 
 // MRT advection-diffusion functions
 static void computeMomentaEquilibrium(T momentaEq[7], T rho, const T u[3], T uSqr) {
@@ -230,7 +162,8 @@ static void computeMomentaEquilibrium(T momentaEq[7], T rho, const T u[3], T uSq
     momentaEq[6] = T();
   }
 
-  static void computeMomenta(T momenta[7], CellBase<T, descriptors::AdvectionDiffusionMRTD3Q7DescriptorBase<T> > const& cell) {
+  static void computeMomenta(T momenta[7], SpecializedCellBase const& cell)
+  {
     /* The implementation is based on the "Passive heat transfer
      * in a turbulent channel flow simulation using large eddy
      * simulation based on the lattice Boltzmann method framework"
@@ -255,7 +188,7 @@ static void computeMomentaEquilibrium(T momentaEq[7], T rho, const T u[3], T uSq
     momenta[6] = cell[2] - cell[4] + cell[5] - cell[6];
   }
 
-  static T mrtCollision( CellBase<T, descriptors::AdvectionDiffusionMRTD3Q7DescriptorBase<T> >& cell, const T rho, const T u[3], const T invM_S[7][7])
+  static T mrtCollision( SpecializedCellBase& cell, const T rho, const T u[3], const T invM_S[7][7])
   {
     T uSqr = util::normSqr<T, 3>(u);
     T momenta[7];
@@ -313,55 +246,59 @@ static void computeMomentaEquilibrium(T momentaEq[7], T rho, const T u[3], T uSq
     return uSqr;
   }
 
-  static void computeFneq (
-    CellBase<T,descriptors::AdvectionDiffusionMRTD3Q7DescriptorBase<T> > const& cell, T fNeq[7], T rho, const T u[3] )
-  {
-    const T uSqr = u[0]*u[0] + u[1]*u[1] + u[2]*u[2];
-#ifdef OLB_DEBUG
-    std::cout << "WARNING: Second order equilibrium function is used for the calculation of the non-equilibrium parts!" << std::endl;
-#endif
-    for (int iPop=0; iPop < 7; ++iPop) {
-      fNeq[iPop] = cell[iPop] - equilibrium(iPop, rho, u, uSqr);
+    static void computeFneq (
+      SpecializedCellBase const& cell, T fNeq[7], T rho, const T u[3] )
+    {
+      // std::cout << "WARNING: First order equilibrium function is used for the calculation of the non-equilibrium parts!" << std::endl;
+      for (int iPop=0; iPop < 7; ++iPop) {
+        fNeq[iPop] = cell[iPop] - equilibriumFirstOrder(iPop, rho, u);
+      }
     }
-  }
 
-  static T computeRho(CellBase<T,descriptors::AdvectionDiffusionMRTD3Q7DescriptorBase<T> > const& cell)
-  {
-    T rho = cell[0] + cell[1] + cell[2] + cell[3] + cell[4] + cell[5] + cell[6] + (T)1;
-    return rho;
-  }
+    static T computeRho(SpecializedCellBase const& cell)
+    {
+      T rho = cell[0] + cell[1] + cell[2] + cell[3] + cell[4] + cell[5] + cell[6] + (T)1;
+      return rho;
+    }
 
-  static void computeRhoU(CellBase<T,descriptors::AdvectionDiffusionMRTD3Q7DescriptorBase<T> > const& cell, T& rho, T u[3])
-  {
-     rho =  cell[0] + cell[1] + cell[2] + cell[3] + cell[4] + cell[5] + cell[6] + (T)1;
-     T invRho= 1./rho;
+    static void computeRhoU(SpecializedCellBase const& cell, T& rho, T u[3])
+    {
+       rho =  cell[0] + cell[1] + cell[2] + cell[3] + cell[4] + cell[5] + cell[6] + (T)1;
+       T invRho= 1./rho;
 
-     u[0]  = ( cell[4] - cell[1] )*invRho;
-     u[1]  = ( cell[5] - cell[2] )*invRho;
-     u[2]  = ( cell[6] - cell[3] )*invRho;
-  }
+       u[0]  = ( cell[4] - cell[1] )*invRho;
+       u[1]  = ( cell[5] - cell[2] )*invRho;
+       u[2]  = ( cell[6] - cell[3] )*invRho;
+    }
 
-  static void computeRhoJ(CellBase<T,descriptors::AdvectionDiffusionMRTD3Q7DescriptorBase<T> > const& cell, T& rho, T j[3])
-  {
-    rho =  cell[0] + cell[1] + cell[2] + cell[3] + cell[4] + cell[5] + cell[6] + (T)1;
+    static void computeRhoJ(SpecializedCellBase const& cell, T& rho, T j[3])
+    {
+      rho =  cell[0] + cell[1] + cell[2] + cell[3] + cell[4] + cell[5] + cell[6] + (T)1;
 
-    j[0]  = ( cell[4] - cell[1] );
-    j[1]  = ( cell[5] - cell[2] );
-    j[2]  = ( cell[6] - cell[3] );
-  }
+      j[0]  = ( cell[4] - cell[1] );
+      j[1]  = ( cell[5] - cell[2] );
+      j[2]  = ( cell[6] - cell[3] );
+    }
 
-  static void computeJ(CellBase<T,descriptors::AdvectionDiffusionMRTD3Q7DescriptorBase<T> > const& cell, T j[3])
-  {
-    j[0]  = ( cell[4] - cell[1] );
-    j[1]  = ( cell[5] - cell[2] );
-    j[2]  = ( cell[6] - cell[3] );
-  }
+    static void computeJ(SpecializedCellBase const& cell, T j[3])
+    {
+      j[0]  = ( cell[4] - cell[1] );
+      j[1]  = ( cell[5] - cell[2] );
+      j[2]  = ( cell[6] - cell[3] );
+    }
 
-  static void computeStress(CellBase<T,descriptors::AdvectionDiffusionMRTD3Q7DescriptorBase<T> > const& cell, T rho, const T u[3], T pi[6])
-  {
-    // printf("ERROR: Stress tensor not defined in D3Q7!\n");
-  }
-};//struct lbHelpers<AdvectionDiffusionMRTD3Q7DescriptorBase>
+    static void computeStress(SpecializedCellBase const& cell, T rho, const T u[3], T pi[6])
+    {
+      // printf("ERROR: Stress tensor not defined in D3Q7!\n");
+    }
+
+    static void computeAllMomenta(SpecializedCellBase const& cell, T& rho, T u[3], T pi[6])
+    {
+      assert(false);
+    }
+
+};
+
 
 }  // namespace olb
 

@@ -30,9 +30,9 @@ namespace olb {
 
 ////////// Factory function for Inamuro BC ///////////////////////////////////////////
 
-template<typename T, template<typename U> class Lattice, typename MixinDynamics=BGKdynamics<T,Lattice> >
-OnLatticeBoundaryCondition2D<T,Lattice>*
-createInamuroBoundaryCondition2D(BlockLatticeStructure2D<T,Lattice>& block);
+template<typename T, typename DESCRIPTOR, typename MixinDynamics=BGKdynamics<T,DESCRIPTOR> >
+OnLatticeBoundaryCondition2D<T,DESCRIPTOR>*
+createInamuroBoundaryCondition2D(BlockLatticeStructure2D<T,DESCRIPTOR>& block);
 
 
 }

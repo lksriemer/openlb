@@ -53,7 +53,7 @@
 #include "geometry/blockGeometryView2D.h"
 #include "communication/superStructure2D.h"
 #include "communication/loadBalancer.h"
-#include "functors/lattice/indicator/indicatorF2D.h"
+#include "functors/analytical/indicator/indicatorF2D.h"
 #include "io/ostreamManager.h"
 
 
@@ -146,6 +146,9 @@ public:
   int innerClean(int material, bool verbose=true);
   /// check for errors (searches for all outer voxels (=0) with an inner voxel (=1) as a direct neighbour)
   bool checkForErrors(bool verbose=true);
+
+  /// reset all cell materials inside of a domain to 0
+  void reset(IndicatorF2D<T>& domain);
 
   /// replace one material with another
   void rename(int fromM, int toM);

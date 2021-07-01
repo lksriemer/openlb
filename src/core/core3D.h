@@ -34,6 +34,7 @@
 #include "latticeStatistics.h"
 #include "olbInit.h"
 #include "postProcessing.h"
+#include "powerLawUnitConverter.h"
 #include "radiativeUnitConverter.h"
 #include "serializer.h"
 #include "singleton.h"
