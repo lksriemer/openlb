@@ -25,12 +25,11 @@
 // natural convection of air in a square cavity in 3D
 
 #include "olb3D.h"
-#include "olb3D.hh"   // use only generic version!
+#include "olb3D.hh"
 
 using namespace olb;
 using namespace olb::descriptors;
 using namespace olb::graphics;
-using namespace std;
 
 typedef double T;
 
@@ -67,16 +66,16 @@ T LitNusselt5 = 4.509;
 T LitNusselt6 = 8.817;
 
 /// Compute the nusselt number at the left wall
-T computeNusselt(SuperGeometry3D<T>& superGeometry,
-                 SuperLattice3D<T, NSDESCRIPTOR>& NSlattice,
-                 SuperLattice3D<T, TDESCRIPTOR>& ADlattice)
+T computeNusselt(SuperGeometry<T,3>& superGeometry,
+                 SuperLattice<T, NSDESCRIPTOR>& NSlattice,
+                 SuperLattice<T, TDESCRIPTOR>& ADlattice)
 {
   int voxel = 0, material = 0;
   T T_x = 0, T_xplus1 = 0, T_xplus2 = 0;
   T q = 0;
 
   for (int iC = 0; iC < NSlattice.getLoadBalancer().size(); iC++) {
-    int ny = NSlattice.getBlockLattice(iC).getNy();
+    int ny = NSlattice.getBlock(iC).getNy();
 
     int iX = 0;
     int iZ = 1;
@@ -84,9 +83,9 @@ T computeNusselt(SuperGeometry3D<T>& superGeometry,
     for (int iY = 0; iY < ny; ++iY) {
       material = superGeometry.getBlockGeometry(iC).getMaterial(iX,iY,iZ);
 
-      T_x = ADlattice.getBlockLattice(iC).get(iX,iY,iZ).computeRho();
-      T_xplus1 = ADlattice.getBlockLattice(iC).get(iX+1,iY,iZ).computeRho();
-      T_xplus2 = ADlattice.getBlockLattice(iC).get(iX+2,iY,iZ).computeRho();
+      T_x = ADlattice.getBlock(iC).get(iX,iY,iZ).computeRho();
+      T_xplus1 = ADlattice.getBlock(iC).get(iX+1,iY,iZ).computeRho();
+      T_xplus2 = ADlattice.getBlock(iC).get(iX+2,iY,iZ).computeRho();
 
       if ( material == 2 ) {
         q += (3.0*T_x - 4.0*T_xplus1 + 1.0*T_xplus2)/2.0*N;
@@ -104,7 +103,7 @@ T computeNusselt(SuperGeometry3D<T>& superGeometry,
 }
 
 /// Stores geometry information in form of material numbers
-void prepareGeometry(SuperGeometry3D<T>& superGeometry,
+void prepareGeometry(SuperGeometry<T,3>& superGeometry,
                      ThermalUnitConverter<T, NSDESCRIPTOR, TDESCRIPTOR> &converter)
 {
 
@@ -161,11 +160,9 @@ void prepareGeometry(SuperGeometry3D<T>& superGeometry,
 }
 
 void prepareLattice( ThermalUnitConverter<T, NSDESCRIPTOR, TDESCRIPTOR> &converter,
-                     SuperLattice3D<T, NSDESCRIPTOR>& NSlattice,
-                     SuperLattice3D<T, TDESCRIPTOR>& ADlattice,
-                     Dynamics<T, NSDESCRIPTOR> &bulkDynamics,
-                     Dynamics<T, TDESCRIPTOR>& advectionDiffusionBulkDynamics,
-                     SuperGeometry3D<T>& superGeometry )
+                     SuperLattice<T, NSDESCRIPTOR>& NSlattice,
+                     SuperLattice<T, TDESCRIPTOR>& ADlattice,
+                     SuperGeometry<T,3>& superGeometry )
 {
 
   OstreamManager clout(std::cout,"prepareLattice");
@@ -175,14 +172,14 @@ void prepareLattice( ThermalUnitConverter<T, NSDESCRIPTOR, TDESCRIPTOR> &convert
   T Tomega  = converter.getLatticeThermalRelaxationFrequency();
 
   /// define lattice Dynamics
-  ADlattice.defineDynamics(superGeometry, 0, &instances::getNoDynamics<T, TDESCRIPTOR>());
-  NSlattice.defineDynamics(superGeometry, 0, &instances::getNoDynamics<T, NSDESCRIPTOR>());
+  ADlattice.defineDynamics<NoDynamics>(superGeometry, 0);
+  NSlattice.defineDynamics<NoDynamics>(superGeometry, 0);
 
-  ADlattice.defineDynamics(superGeometry.getMaterialIndicator({1, 2, 3}), &advectionDiffusionBulkDynamics);
-  ADlattice.defineDynamics(superGeometry, 4, &instances::getBounceBack<T, TDESCRIPTOR>());
+  ADlattice.defineDynamics<AdvectionDiffusionBGKdynamics>(superGeometry.getMaterialIndicator({1, 2, 3}));
+  ADlattice.defineDynamics<BounceBack>(superGeometry, 4);
 
-  NSlattice.defineDynamics(superGeometry.getMaterialIndicator({1, 2, 3}), &bulkDynamics);
-  NSlattice.defineDynamics(superGeometry, 4, &instances::getBounceBack<T, NSDESCRIPTOR>());
+  NSlattice.defineDynamics<ForcedBGKdynamics>(superGeometry.getMaterialIndicator({1, 2, 3}));
+  NSlattice.defineDynamics<BounceBack>(superGeometry, 4);
 
   /// sets boundary
   setAdvectionDiffusionTemperatureBoundary<T,TDESCRIPTOR>(ADlattice, Tomega, superGeometry.getMaterialIndicator({2, 3}));
@@ -210,6 +207,9 @@ void prepareLattice( ThermalUnitConverter<T, NSDESCRIPTOR, TDESCRIPTOR> &convert
   ADlattice.defineRho(superGeometry, 3, T_cold);
   ADlattice.iniEquilibrium(superGeometry, 3, T_cold, u0);
 
+  NSlattice.setParameter<descriptors::OMEGA>(omega);
+  ADlattice.setParameter<descriptors::OMEGA>(Tomega);
+
   /// Make the lattice ready for simulation
   NSlattice.initialize();
   ADlattice.initialize();
@@ -218,9 +218,9 @@ void prepareLattice( ThermalUnitConverter<T, NSDESCRIPTOR, TDESCRIPTOR> &convert
 }
 
 void setBoundaryValues(ThermalUnitConverter<T, NSDESCRIPTOR, TDESCRIPTOR> &converter,
-                       SuperLattice3D<T, NSDESCRIPTOR>& NSlattice,
-                       SuperLattice3D<T, TDESCRIPTOR>& ADlattice,
-                       int iT, SuperGeometry3D<T>& superGeometry)
+                       SuperLattice<T, NSDESCRIPTOR>& NSlattice,
+                       SuperLattice<T, TDESCRIPTOR>& ADlattice,
+                       int iT, SuperGeometry<T,3>& superGeometry)
 {
 
   // nothing to do here
@@ -228,10 +228,10 @@ void setBoundaryValues(ThermalUnitConverter<T, NSDESCRIPTOR, TDESCRIPTOR> &conve
 }
 
 void getResults(ThermalUnitConverter<T, NSDESCRIPTOR, TDESCRIPTOR> &converter,
-                SuperLattice3D<T, NSDESCRIPTOR>& NSlattice,
-                SuperLattice3D<T, TDESCRIPTOR>& ADlattice, int iT,
-                SuperGeometry3D<T>& superGeometry,
-                Timer<T>& timer,
+                SuperLattice<T, NSDESCRIPTOR>& NSlattice,
+                SuperLattice<T, TDESCRIPTOR>& ADlattice, int iT,
+                SuperGeometry<T,3>& superGeometry,
+                util::Timer<T>& timer,
                 bool converged)
 {
 
@@ -334,38 +334,38 @@ void getResults(ThermalUnitConverter<T, NSDESCRIPTOR, TDESCRIPTOR> &converter,
     }
 
     // compare to De Vahl Davis' benchmark solutions
-    clout << "Comparison against De Vahl Davis (1983):" << endl;
+    clout << "Comparison against De Vahl Davis (1983):" << std::endl;
     if (Ra == 1e3) {
-      clout << "xVelocity in yDir=" <<  outputVelX[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength() << "; error(rel)=" << (T) fabs((LitVelocity3[0] - outputVelX[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength()) / LitVelocity3[0]) << endl;
-      clout << "yVelocity in xDir=" <<  outputVelY[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength() << "; error(rel)=" << (T) fabs((LitVelocity3[1] - outputVelY[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength()) / LitVelocity3[1]) << endl;
-      clout << "yMaxVel / xMaxVel="  <<  outputVelY[0] / outputVelX[0] << "; error(rel)=" << (T) fabs((LitVelocity3[2] - outputVelY[0] / outputVelX[0])  / LitVelocity3[2]) << endl;
-      clout << "yCoord of xMaxVel=" <<  outputVelX[1]/lx << "; error(rel)=" << (T) fabs((LitPosition3[0] - outputVelX[1] / lx) / LitPosition3[0]) << endl;
-      clout << "xCoord of yMaxVel=" <<   outputVelY[1]/lx << "; error(rel)=" << (T) fabs((LitPosition3[1] - outputVelY[1] / lx) / LitPosition3[1]) << endl;
-      clout << "Nusselt=" <<  nusselt << "; error(rel)=" << (T) fabs((LitNusselt3 - nusselt) / nusselt) << endl;
+      clout << "xVelocity in yDir=" <<  outputVelX[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength() << "; error(rel)=" << (T) util::fabs((LitVelocity3[0] - outputVelX[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength()) / LitVelocity3[0]) << std::endl;
+      clout << "yVelocity in xDir=" <<  outputVelY[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength() << "; error(rel)=" << (T) util::fabs((LitVelocity3[1] - outputVelY[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength()) / LitVelocity3[1]) << std::endl;
+      clout << "yMaxVel / xMaxVel="  <<  outputVelY[0] / outputVelX[0] << "; error(rel)=" << (T) util::fabs((LitVelocity3[2] - outputVelY[0] / outputVelX[0])  / LitVelocity3[2]) << std::endl;
+      clout << "yCoord of xMaxVel=" <<  outputVelX[1]/lx << "; error(rel)=" << (T) util::fabs((LitPosition3[0] - outputVelX[1] / lx) / LitPosition3[0]) << std::endl;
+      clout << "xCoord of yMaxVel=" <<   outputVelY[1]/lx << "; error(rel)=" << (T) util::fabs((LitPosition3[1] - outputVelY[1] / lx) / LitPosition3[1]) << std::endl;
+      clout << "Nusselt=" <<  nusselt << "; error(rel)=" << (T) util::fabs((LitNusselt3 - nusselt) / nusselt) << std::endl;
     }
     else if (Ra == 1e4) {
-      clout << "xVelocity in yDir=" <<  outputVelX[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength() << "; error(rel)=" << (T) fabs((LitVelocity4[0] - outputVelX[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength()) / LitVelocity4[0]) << endl;
-      clout << "yVelocity in xDir=" <<  outputVelY[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength() << "; error(rel)=" << (T) fabs((LitVelocity4[1] - outputVelY[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength()) / LitVelocity4[1]) << endl;
-      clout << "yMaxVel / xMaxVel="  <<  outputVelY[0] / outputVelX[0] << "; error(rel)=" << (T) fabs((LitVelocity4[2] - outputVelY[0] / outputVelX[0])  / LitVelocity4[2]) << endl;
-      clout << "yCoord of xMaxVel=" <<  outputVelX[1]/lx << "; error(rel)=" << (T) fabs((LitPosition4[0] - outputVelX[1] / lx) / LitPosition4[0]) << endl;
-      clout << "xCoord of yMaxVel=" <<   outputVelY[1]/lx << "; error(rel)=" << (T) fabs((LitPosition4[1] - outputVelY[1] / lx) / LitPosition4[1]) << endl;
-      clout << "Nusselt=" <<  nusselt << "; error(rel)=" << (T) fabs((LitNusselt4 - nusselt) / nusselt) << endl;
+      clout << "xVelocity in yDir=" <<  outputVelX[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength() << "; error(rel)=" << (T) util::fabs((LitVelocity4[0] - outputVelX[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength()) / LitVelocity4[0]) << std::endl;
+      clout << "yVelocity in xDir=" <<  outputVelY[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength() << "; error(rel)=" << (T) util::fabs((LitVelocity4[1] - outputVelY[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength()) / LitVelocity4[1]) << std::endl;
+      clout << "yMaxVel / xMaxVel="  <<  outputVelY[0] / outputVelX[0] << "; error(rel)=" << (T) util::fabs((LitVelocity4[2] - outputVelY[0] / outputVelX[0])  / LitVelocity4[2]) << std::endl;
+      clout << "yCoord of xMaxVel=" <<  outputVelX[1]/lx << "; error(rel)=" << (T) util::fabs((LitPosition4[0] - outputVelX[1] / lx) / LitPosition4[0]) << std::endl;
+      clout << "xCoord of yMaxVel=" <<   outputVelY[1]/lx << "; error(rel)=" << (T) util::fabs((LitPosition4[1] - outputVelY[1] / lx) / LitPosition4[1]) << std::endl;
+      clout << "Nusselt=" <<  nusselt << "; error(rel)=" << (T) util::fabs((LitNusselt4 - nusselt) / nusselt) << std::endl;
     }
     else if (Ra == 1e5) {
-      clout << "xVelocity in yDir=" <<  outputVelX[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength() << "; error(rel)=" << (T) fabs((LitVelocity5[0] - outputVelX[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength()) / LitVelocity5[0]) << endl;
-      clout << "yVelocity in xDir=" <<  outputVelY[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength() << "; error(rel)=" << (T) fabs((LitVelocity5[1] - outputVelY[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength()) / LitVelocity5[1]) << endl;
-      clout << "yMaxVel / xMaxVel="  <<  outputVelY[0] / outputVelX[0] << "; error(rel)=" << (T) fabs((LitVelocity5[2] - outputVelY[0] / outputVelX[0])  / LitVelocity5[2]) << endl;
-      clout << "yCoord of xMaxVel=" <<  outputVelX[1]/lx << "; error(rel)=" << (T) fabs((LitPosition5[0] - outputVelX[1] / lx) / LitPosition5[0]) << endl;
-      clout << "xCoord of yMaxVel=" <<   outputVelY[1]/lx << "; error(rel)=" << (T) fabs((LitPosition5[1] - outputVelY[1] / lx) / LitPosition5[1]) << endl;
-      clout << "Nusselt=" <<  nusselt << "; error(rel)=" << (T) fabs((LitNusselt5 - nusselt) / nusselt) << endl;
+      clout << "xVelocity in yDir=" <<  outputVelX[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength() << "; error(rel)=" << (T) util::fabs((LitVelocity5[0] - outputVelX[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength()) / LitVelocity5[0]) << std::endl;
+      clout << "yVelocity in xDir=" <<  outputVelY[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength() << "; error(rel)=" << (T) util::fabs((LitVelocity5[1] - outputVelY[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength()) / LitVelocity5[1]) << std::endl;
+      clout << "yMaxVel / xMaxVel="  <<  outputVelY[0] / outputVelX[0] << "; error(rel)=" << (T) util::fabs((LitVelocity5[2] - outputVelY[0] / outputVelX[0])  / LitVelocity5[2]) << std::endl;
+      clout << "yCoord of xMaxVel=" <<  outputVelX[1]/lx << "; error(rel)=" << (T) util::fabs((LitPosition5[0] - outputVelX[1] / lx) / LitPosition5[0]) << std::endl;
+      clout << "xCoord of yMaxVel=" <<   outputVelY[1]/lx << "; error(rel)=" << (T) util::fabs((LitPosition5[1] - outputVelY[1] / lx) / LitPosition5[1]) << std::endl;
+      clout << "Nusselt=" <<  nusselt << "; error(rel)=" << (T) util::fabs((LitNusselt5 - nusselt) / nusselt) << std::endl;
     }
     else if (Ra == 1e6) {
-      clout << "xVelocity in yDir=" <<  outputVelX[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength() << "; error(rel)=" << (T) fabs((LitVelocity6[0] - outputVelX[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength()) / LitVelocity6[0]) << endl;
-      clout << "yVelocity in xDir=" <<  outputVelY[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength() << "; error(rel)=" << (T) fabs((LitVelocity6[1] - outputVelY[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength()) / LitVelocity6[1]) << endl;
-      clout << "yMaxVel / xMaxVel="  <<  outputVelY[0] / outputVelX[0] << "; error(rel)=" << (T) fabs((LitVelocity6[2] - outputVelY[0] / outputVelX[0])  / LitVelocity6[2]) << endl;
-      clout << "yCoord of xMaxVel=" <<  outputVelX[1]/lx << "; error(rel)=" << (T) fabs((LitPosition6[0] - outputVelX[1] / lx) / LitPosition6[0]) << endl;
-      clout << "xCoord of yMaxVel=" <<   outputVelY[1]/lx << "; error(rel)=" << (T) fabs((LitPosition6[1] - outputVelY[1] / lx) / LitPosition6[1]) << endl;
-      clout << "Nusselt=" <<  nusselt << "; error(rel)=" << (T) fabs((LitNusselt6 - nusselt) / nusselt) << endl;
+      clout << "xVelocity in yDir=" <<  outputVelX[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength() << "; error(rel)=" << (T) util::fabs((LitVelocity6[0] - outputVelX[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength()) / LitVelocity6[0]) << std::endl;
+      clout << "yVelocity in xDir=" <<  outputVelY[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength() << "; error(rel)=" << (T) util::fabs((LitVelocity6[1] - outputVelY[0] / converter.getPhysThermalDiffusivity() * converter.getCharPhysLength()) / LitVelocity6[1]) << std::endl;
+      clout << "yMaxVel / xMaxVel="  <<  outputVelY[0] / outputVelX[0] << "; error(rel)=" << (T) util::fabs((LitVelocity6[2] - outputVelY[0] / outputVelX[0])  / LitVelocity6[2]) << std::endl;
+      clout << "yCoord of xMaxVel=" <<  outputVelX[1]/lx << "; error(rel)=" << (T) util::fabs((LitPosition6[0] - outputVelX[1] / lx) / LitPosition6[0]) << std::endl;
+      clout << "xCoord of yMaxVel=" <<   outputVelY[1]/lx << "; error(rel)=" << (T) util::fabs((LitPosition6[1] - outputVelY[1] / lx) / LitPosition6[1]) << std::endl;
+      clout << "Nusselt=" <<  nusselt << "; error(rel)=" << (T) util::fabs((LitNusselt6 - nusselt) / nusselt) << std::endl;
     }
   }
 }
@@ -384,7 +384,7 @@ int main(int argc, char *argv[])
     Ra = atof(argv[1]);
   }
 
-  lx  = pow(Ra * 15.126e-6 * 15.126e-6 / Pr / 9.81 / (Thot - Tcold) / 0.00341, (T) 1/3);  // length of the square
+  lx  = util::pow(Ra * 15.126e-6 * 15.126e-6 / Pr / 9.81 / (Thot - Tcold) / 0.00341, (T) 1/3);  // length of the square
   T charU = 1.0 / lx /( Pr * 25.684e-3 / 15.126e-6 / 1.0 * 1.0 / 25.684e-3);
 
   if (Ra==1e3) {
@@ -406,7 +406,7 @@ int main(int argc, char *argv[])
 
   ThermalUnitConverter<T, NSDESCRIPTOR, TDESCRIPTOR> converter(
     (T) lx / N,
-    (T) (tau - 0.5) / descriptors::invCs2<T,NSDESCRIPTOR>() * pow((lx/N),2) / 15.126e-6,
+    (T) (tau - 0.5) / descriptors::invCs2<T,NSDESCRIPTOR>() * util::pow((lx/N),2) / 15.126e-6,
     (T) lx,
     (T) charU,
     (T) 15.126e-6,
@@ -435,23 +435,16 @@ int main(int argc, char *argv[])
   HeuristicLoadBalancer<T> loadBalancer(cuboidGeometry);
 
   /// Instantiation of a superGeometry
-  SuperGeometry3D<T> superGeometry(cuboidGeometry, loadBalancer, 2);
+  SuperGeometry<T,3> superGeometry(cuboidGeometry, loadBalancer);
 
   prepareGeometry(superGeometry, converter);
 
   /// === 3rd Step: Prepare Lattice ===
 
-  SuperLattice3D<T, TDESCRIPTOR> ADlattice(superGeometry);
-  SuperLattice3D<T, NSDESCRIPTOR> NSlattice(superGeometry);
+  SuperLattice<T, TDESCRIPTOR> ADlattice(superGeometry);
+  SuperLattice<T, NSDESCRIPTOR> NSlattice(superGeometry);
 
 
-  ForcedBGKdynamics<T, NSDESCRIPTOR> NSbulkDynamics(
-    converter.getLatticeRelaxationFrequency(),
-    instances::getBulkMomenta<T,NSDESCRIPTOR>());
-
-  AdvectionDiffusionBGKdynamics<T, TDESCRIPTOR> TbulkDynamics (
-    converter.getLatticeThermalRelaxationFrequency(),
-    instances::getAdvectionDiffusionBulkMomenta<T,TDESCRIPTOR>());
 
   // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!//
   // This coupling must be necessarily be put on the Navier-Stokes lattice!!
@@ -469,22 +462,18 @@ int main(int argc, char *argv[])
   NSlattice.addLatticeCoupling(coupling, ADlattice);
 
   //prepareLattice and setBoundaryCondition
-  prepareLattice(converter,
-                 NSlattice, ADlattice,
-                 NSbulkDynamics, TbulkDynamics,
-                 superGeometry );
-
+  prepareLattice(converter, NSlattice, ADlattice, superGeometry);
 
 
   /// === 4th Step: Main Loop with Timer ===
-  Timer<T> timer(converter.getLatticeTime(maxPhysT), superGeometry.getStatistics().getNvoxel() );
+  util::Timer<T> timer(converter.getLatticeTime(maxPhysT), superGeometry.getStatistics().getNvoxel() );
   timer.start();
 
   util::ValueTracer<T> converge(6,epsilon);
   for (std::size_t iT = 0; iT < converter.getLatticeTime(maxPhysT); ++iT) {
 
     if (converge.hasConverged()) {
-      clout << "Simulation converged." << endl;
+      clout << "Simulation converged." << std::endl;
       clout << "Time " << iT << "." << std::endl;
 
       getResults(converter, NSlattice, ADlattice, iT, superGeometry, timer, converge.hasConverged());

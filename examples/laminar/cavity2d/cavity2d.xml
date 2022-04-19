@@ -10,6 +10,7 @@
     <PhysParameters>
       <PhysMaxTime>100</PhysMaxTime>
       <CharPhysLength>1</CharPhysLength>
+      <CharPhysPressure> 0. </CharPhysPressure>
       <CharPhysVelocity>1</CharPhysVelocity>
       <PhysViscosity>0.001</PhysViscosity>
       <PhysDensity>1</PhysDensity>

@@ -36,11 +36,8 @@
  */
 
 #include "olb3D.h"
-#ifndef OLB_PRECOMPILED // Unless precompiled version is used,
 #include "olb3D.hh"   // include full template code;
-#endif
 
-using namespace std;
 using namespace olb;
 using namespace olb::descriptors;
 using namespace olb::graphics;
@@ -54,15 +51,15 @@ typedef D3Q19<> DESCRIPTOR;
 #define M_PI 3.14159265358979323846
 #endif
 
-const T Re = 50;                   // Reynolds number
+const T Re = 50;                    // Reynolds number
 const int N = 19;                   // resolution of the model
-const T radius = 1.5e-4;           // particles radius
-const T partRho = 998.2;           //particles density
+const T radius = 1.5e-4;            // particles radius
+const T partRho = 998.2;            // particles density
 
-const T fluidMaxPhysT = T( 5 );    // max. fluid simulation time in s, SI unit
+const T fluidMaxPhysT = T( 5 );     // max. fluid simulation time in s, SI unit
 const T particleMaxPhysT = T( 10 ); // max. particle simulation time in s, SI unit
 
-const int noOfParticles = 1000;    // total number of inserted particles
+const int noOfParticles = 1000;     // total number of inserted particles
 
 // center of inflow and outflow regions [m]
 Vector<T, 3> inletCenter( T(), T(), 0.0786395 );
@@ -83,7 +80,7 @@ Vector<T, 3> outletNormal1( -0.483331, -0.0102764, 0.875377 );
 
 void prepareGeometry( UnitConverter<T,DESCRIPTOR> const& converter,
                       IndicatorF3D<T>& indicator, STLreader<T>& stlReader,
-                      SuperGeometry3D<T>& superGeometry )
+                      SuperGeometry<T,3>& superGeometry )
 {
 
   OstreamManager clout( std::cout, "prepareGeometry" );
@@ -126,10 +123,9 @@ void prepareGeometry( UnitConverter<T,DESCRIPTOR> const& converter,
   return;
 }
 
-void prepareLattice( SuperLattice3D<T, DESCRIPTOR>& sLattice,
-                     UnitConverter<T,DESCRIPTOR> const& converter, Dynamics<T, DESCRIPTOR>&
-                     bulkDynamics,
-                     STLreader<T>& stlReader, SuperGeometry3D<T>& superGeometry )
+void prepareLattice( SuperLattice<T, DESCRIPTOR>& sLattice,
+                     UnitConverter<T,DESCRIPTOR> const& converter,
+                     STLreader<T>& stlReader, SuperGeometry<T,3>& superGeometry )
 {
 
   OstreamManager clout( std::cout, "prepareLattice" );
@@ -138,36 +134,36 @@ void prepareLattice( SuperLattice3D<T, DESCRIPTOR>& sLattice,
   const T omega = converter.getLatticeRelaxationFrequency();
 
   // Material=0 -->do nothing
-  sLattice.defineDynamics( superGeometry, 0,
-                           &instances::getNoDynamics<T, DESCRIPTOR>() );
+  sLattice.defineDynamics<NoDynamics>(superGeometry, 0);
 
   // Material=1 -->bulk dynamics
-  sLattice.defineDynamics( superGeometry, 1, &bulkDynamics );
+  sLattice.defineDynamics<BGKdynamics>(superGeometry, 1);
 
   // Material=2 -->bounce back
-  sLattice.defineDynamics( superGeometry, 2,
-                           &instances::getBounceBack<T, DESCRIPTOR>() );
+  sLattice.defineDynamics<BounceBack>(superGeometry, 2);
 
   // Material=3 -->bulk dynamics (inflow)
-  sLattice.defineDynamics( superGeometry, 3, &bulkDynamics );
+  sLattice.defineDynamics<BGKdynamics>(superGeometry, 3);
 
   // Material=4 -->bulk dynamics (outflow)
-  sLattice.defineDynamics( superGeometry, 4, &bulkDynamics );
-  sLattice.defineDynamics( superGeometry, 5, &bulkDynamics );
+  sLattice.defineDynamics<BGKdynamics>(superGeometry, 4);
+  sLattice.defineDynamics<BGKdynamics>(superGeometry, 5);
 
   // Setting of the boundary conditions
   setInterpolatedPressureBoundary<T,DESCRIPTOR>(sLattice, omega, superGeometry, 3);
   setInterpolatedVelocityBoundary<T,DESCRIPTOR>(sLattice, omega, superGeometry, 4);
-  setInterpolatedVelocityBoundary<T,DESCRIPTOR>(sLattice, omega ,superGeometry, 5);
+  setInterpolatedVelocityBoundary<T,DESCRIPTOR>(sLattice, omega,superGeometry, 5);
+
+  sLattice.setParameter<descriptors::OMEGA>(omega);
 
   clout << "Prepare Lattice ... OK" << std::endl;
   return;
 }
 
-// Generates a slowly increasing sinuidal inflow for the first iTMax timesteps
-void setBoundaryValues( SuperLattice3D<T, DESCRIPTOR>& sLattice,
+// Generates a slowly increasing sinusoidal inflow for the first iTMax timesteps
+void setBoundaryValues( SuperLattice<T, DESCRIPTOR>& sLattice,
                         UnitConverter<T,DESCRIPTOR> const& converter, int iT, T maxPhysT,
-                        SuperGeometry3D<T>& superGeometry )
+                        SuperGeometry<T,3>& superGeometry )
 {
 
   OstreamManager clout( std::cout, "setBoundaryValues" );
@@ -204,7 +200,7 @@ void setBoundaryValues( SuperLattice3D<T, DESCRIPTOR>& sLattice,
     T frac[1] = { T( 0 ) };
     startScale( frac, iTvec );
     T maxVelocity = frac[0] * converter.getCharLatticeVelocity() * 3. / 4.
-                    * std::pow( inletRadius, 2 ) / std::pow( outletRadius0, 2 );
+                    * util::pow( inletRadius, 2 ) / util::pow( outletRadius0, 2 );
 
     CirclePoiseuille3D<T> poiseuilleU4( outletCenter0[0], outletCenter0[1],
                                         outletCenter0[2], outletNormal0[0],
@@ -222,9 +218,9 @@ void setBoundaryValues( SuperLattice3D<T, DESCRIPTOR>& sLattice,
 }
 
 // Computes the pressure drop between voxels before and after the cylinder
-bool getResults( SuperLattice3D<T, DESCRIPTOR>& sLattice,
+bool getResults( SuperLattice<T, DESCRIPTOR>& sLattice,
                  UnitConverter<T,DESCRIPTOR> const& converter, std::size_t iT, int iTperiod,
-                 SuperGeometry3D<T>& superGeometry,
+                 SuperGeometry<T,3>& superGeometry,
                  Timer<double>& fluidTimer, STLreader<T>& stlReader,
                  SuperParticleSystem3D<T, PARTICLE>& supParticleSystem,
                  T radii, T partRho, Timer<double>& particleTimer,
@@ -266,7 +262,7 @@ bool getResults( SuperLattice3D<T, DESCRIPTOR>& sLattice,
           << "; St=" << ( 2.*partRho*radius*radius*converter.getCharPhysVelocity() ) / ( 9.*converter.getPhysViscosity()*converter.getPhysDensity()*converter.getCharPhysLength() ) << std::endl;
   }
 
-  // Writes the vtk and gif files
+  // Writes the .vtk and .gif files
   if ( iT % iTperiod == 0 ) {
     if ( !fluidExists && iT <= fluidMaxT ) {
       vtmWriterStartTime.write(iT);
@@ -276,7 +272,7 @@ bool getResults( SuperLattice3D<T, DESCRIPTOR>& sLattice,
       heatmap::write(planeReduction, iT);
     }
     if (iT > fluidMaxT) {
-      // only write vtk-files after the fluid calculation is finished
+      // only write .vtk-files after the fluid calculation is finished
       vtmWriter.write(iT - fluidMaxT);
     }
   }
@@ -330,7 +326,7 @@ bool getResults( SuperLattice3D<T, DESCRIPTOR>& sLattice,
     // console output of escape (E), capture (C) rate for material numbers mat
     supParticleSystem.captureEscapeRate( {4,5} );
 
-    // only write vtk-files after the fluid calculation is finished
+    // only write .vtk-files after the fluid calculation is finished
     supParticleWriter.write( iT - fluidMaxT );
 
     // true as long as certain amount of active particles
@@ -371,7 +367,7 @@ int main( int argc, char* argv[] )
                                       converter.getConversionFactorLength() );
 
   // Instantiation of an empty cuboidGeometry
-  int noOfCuboids = std::max( 16, 4 * singleton::mpi().getSize() );
+  int noOfCuboids = util::max( 16, 4 * singleton::mpi().getSize() );
 
   CuboidGeometry3D<T> cuboidGeometry( extendedDomain, converter.getConversionFactorLength(),
                                       noOfCuboids );
@@ -379,19 +375,17 @@ int main( int argc, char* argv[] )
   // Instantiation of an empty loadBalancer
   HeuristicLoadBalancer<T> loadBalancer( cuboidGeometry );
   // Default instantiation of superGeometry
-  SuperGeometry3D<T> superGeometry( cuboidGeometry, loadBalancer, 2 );
+  SuperGeometry<T,3> superGeometry( cuboidGeometry, loadBalancer, 3 );
 
   prepareGeometry( converter, extendedDomain, stlReader, superGeometry );
 
   // === 3rd Step: Prepare Lattice ===
 
-  SuperLattice3D<T, DESCRIPTOR> sLattice( superGeometry );
+  SuperLattice<T, DESCRIPTOR> sLattice( superGeometry );
 
-  BGKdynamics<T, DESCRIPTOR> bulkDynamics( converter.getLatticeRelaxationFrequency(),
-      instances::getBulkMomenta<T, DESCRIPTOR>() );
 
   //prepareLattice and setBoundaryConditions
-  prepareLattice( sLattice, converter, bulkDynamics, stlReader, superGeometry );
+  prepareLattice( sLattice, converter, stlReader, superGeometry );
 
   // === 3.1 Step: Particles ===
   clout << "Prepare Particles ..." << std::endl;
@@ -408,13 +402,13 @@ int main( int argc, char* argv[] )
 
   SuperLatticeInterpPhysVelocity3D<T, DESCRIPTOR> getVel( sLattice, converter );
 
-  auto stokesDragForce = make_shared
+  auto stokesDragForce = std::make_shared
                          < StokesDragForce3D<T, PARTICLE, DESCRIPTOR>
                          > ( getVel, converter );
 
   // material numbers where particles should be reflected
   std::set<int> boundMaterial = { 2, 4, 5};
-  auto materialBoundary = make_shared
+  auto materialBoundary = std::make_shared
                           < MaterialBoundary3D<T, PARTICLE>
                           > ( superGeometry, boundMaterial );
 
@@ -430,7 +424,7 @@ int main( int argc, char* argv[] )
   IndicatorCylinder3D<T> inletCylinder( inflowCircle, 0.01 *
                                         converter.getConversionFactorLength() );
   supParticleSystem.addParticle( inletCylinder, 4. / 3. * M_PI *
-                                 std::pow( radius, 3 ) * partRho, radius, noOfParticles );
+                                 util::pow( radius, 3 ) * partRho, radius, noOfParticles );
 
   clout << "Prepare Particles ... OK" << std::endl;
 
@@ -487,7 +481,7 @@ int main( int argc, char* argv[] )
   }
 
   // after the fluid calculation, particle simulation starts
-  supParticleSystem.setVelToFluidVel( getVel );
+  //supParticleSystem.setVelToFluidVel( getVel );
   particleTimer.start();
 
   for ( ; iT <= converter.getLatticeTime( fluidMaxPhysT + particleMaxPhysT ); ++iT ) {

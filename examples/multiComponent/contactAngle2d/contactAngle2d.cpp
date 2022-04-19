@@ -34,16 +34,11 @@
  */
 
 #include "olb2D.h"
-#include "olb2D.hh"   // use only generic version!
-#include <cstdlib>
-#include <iostream>
-#include <fstream>
-#include <math.h>
+#include "olb2D.hh"
 
 using namespace olb;
 using namespace olb::descriptors;
 using namespace olb::graphics;
-using namespace std;
 
 typedef double T;
 typedef D2Q9<CHEM_POTENTIAL,FORCE> DESCRIPTOR;
@@ -61,7 +56,7 @@ const T gama = 10.;      // For mobility of interface [lattice units]
 const T h1 =  0.0001448; // Contact angle 100 degrees [lattice units]
 const T h2 = -0.0001448; // Contact angle 100 degrees [lattice units]
 
-const int maxIter = 70000;
+const int maxIter = 10000;
 const int vtkIter  = 1000;
 const int statIter = 1000;
 const bool calcAngle = true;
@@ -69,7 +64,7 @@ const bool calcAngle = true;
 T angle_prev = 90.;
 
 
-void prepareGeometry( SuperGeometry2D<T>& superGeometry,
+void prepareGeometry( SuperGeometry<T,2>& superGeometry,
                       UnitConverter<T, DESCRIPTOR>& converter)
 {
 
@@ -91,28 +86,25 @@ void prepareGeometry( SuperGeometry2D<T>& superGeometry,
 }
 
 
-void prepareLattice( SuperLattice2D<T, DESCRIPTOR>& sLattice1,
-                     SuperLattice2D<T, DESCRIPTOR>& sLattice2,
-                     Dynamics<T, DESCRIPTOR>& bulkDynamics1,
-                     Dynamics<T, DESCRIPTOR>& bulkDynamics2,
+void prepareLattice( SuperLattice<T, DESCRIPTOR>& sLattice1,
+                     SuperLattice<T, DESCRIPTOR>& sLattice2,
                      UnitConverter<T, DESCRIPTOR>& converter,
-                     SuperGeometry2D<T>& superGeometry)
+                     SuperGeometry<T,2>& superGeometry)
 {
 
   OstreamManager clout( std::cout,"prepareLattice" );
   clout << "Prepare Lattice ..." << std::endl;
 
   // Define lattice Dynamics
-  sLattice1.defineDynamics( superGeometry, 0, &instances::getNoDynamics<T, DESCRIPTOR>() );
-  sLattice2.defineDynamics( superGeometry, 0, &instances::getNoDynamics<T, DESCRIPTOR>() );
-  sLattice1.defineDynamics( superGeometry, 1, &bulkDynamics1 );
-  sLattice2.defineDynamics( superGeometry, 1, &bulkDynamics2 );
-  sLattice1.defineDynamics( superGeometry, 2, &instances::getNoDynamics<T, DESCRIPTOR>() );
-  sLattice2.defineDynamics( superGeometry, 2, &instances::getNoDynamics<T, DESCRIPTOR>() );
+  sLattice1.defineDynamics<NoDynamics>(superGeometry.getMaterialIndicator({0,2}));
+  sLattice2.defineDynamics<NoDynamics>(superGeometry.getMaterialIndicator({0,2}));
+
+  sLattice1.defineDynamics<ForcedBGKdynamics>(superGeometry, 1);
+  sLattice2.defineDynamics<FreeEnergyBGKdynamics>(superGeometry, 1);
 
   // Add wall boundary
-  setFreeEnergyWallBoundary(sLattice1, superGeometry, 2, alpha, kappa1, kappa2, h1, h2 , 1);
-  setFreeEnergyWallBoundary(sLattice2, superGeometry, 2, alpha, kappa1, kappa2, h1, h2 , 2);
+  setFreeEnergyWallBoundary(sLattice1, superGeometry, 2, alpha, kappa1, kappa2, h1, h2, 1);
+  setFreeEnergyWallBoundary(sLattice2, superGeometry, 2, alpha, kappa1, kappa2, h1, h2, 2);
 
   // Bulk initial conditions
   // Define circular domain for fluid 2
@@ -120,16 +112,25 @@ void prepareLattice( SuperLattice2D<T, DESCRIPTOR>& sLattice1,
   AnalyticalConst2D<T,T> zeroVelocity( v );
 
   AnalyticalConst2D<T,T> one( 1.0 );
-  SmoothIndicatorCircle2D<T,T> circle( {nx/2., 0.}, radius, 10.*alpha );
+  IndicatorCircle2D<T> ind({nx/2., 0.}, radius);
+  SmoothIndicatorCircle2D<T,T> circle( ind, 10.*alpha );
 
   AnalyticalIdentity2D<T,T> rho( one );
   AnalyticalIdentity2D<T,T> phi( one - circle - circle );
+
+  sLattice1.defineRho( superGeometry, 2, rho );
+  sLattice2.defineRho( superGeometry, 2, phi );
 
   sLattice1.iniEquilibrium( superGeometry, 1, rho, zeroVelocity );
   sLattice2.iniEquilibrium( superGeometry, 1, phi, zeroVelocity );
 
   sLattice1.iniEquilibrium( superGeometry, 2, rho, zeroVelocity );
   sLattice2.iniEquilibrium( superGeometry, 2, phi, zeroVelocity );
+
+  sLattice1.setParameter<descriptors::OMEGA>( converter.getLatticeRelaxationFrequency() );
+
+  sLattice2.setParameter<descriptors::OMEGA>( converter.getLatticeRelaxationFrequency() );
+  sLattice2.setParameter<collision::FreeEnergy::GAMMA>( gama );
 
   sLattice1.initialize();
   sLattice2.initialize();
@@ -141,13 +142,13 @@ void prepareLattice( SuperLattice2D<T, DESCRIPTOR>& sLattice1,
 }
 
 
-void prepareCoupling( SuperLattice2D<T, DESCRIPTOR>& sLattice1,
-                      SuperLattice2D<T, DESCRIPTOR>& sLattice2,
-                      SuperGeometry2D<T>& superGeometry )
+void prepareCoupling( SuperLattice<T, DESCRIPTOR>& sLattice1,
+                      SuperLattice<T, DESCRIPTOR>& sLattice2,
+                      SuperGeometry<T,2>& superGeometry )
 {
 
   OstreamManager clout( std::cout,"prepareCoupling" );
-  clout << "Add lattice coupling" << endl;
+  clout << "Add lattice coupling" << std::endl;
 
   // Add the lattice couplings (not to the solid nodes)
   // The chemical potential coupling must come before the force coupling
@@ -158,13 +159,26 @@ void prepareCoupling( SuperLattice2D<T, DESCRIPTOR>& sLattice1,
   sLattice1.addLatticeCoupling( superGeometry, 1, coupling1, sLattice2 );
   sLattice2.addLatticeCoupling( superGeometry, 1, coupling2, sLattice1 );
 
-  clout << "Add lattice coupling ... OK!" << endl;
+  {
+    auto& communicator = sLattice1.getCommunicator(PostCoupling());
+    communicator.requestField<CHEM_POTENTIAL>();
+    communicator.requestOverlap(sLattice1.getOverlap());
+    communicator.exchangeRequests();
+  }
+  {
+    auto& communicator = sLattice2.getCommunicator(PreCoupling());
+    communicator.requestField<CHEM_POTENTIAL>();
+    communicator.requestOverlap(sLattice2.getOverlap());
+    communicator.exchangeRequests();
+  }
+
+  clout << "Add lattice coupling ... OK!" << std::endl;
 }
 
 
-void getResults( SuperLattice2D<T, DESCRIPTOR>& sLattice1,
-                 SuperLattice2D<T, DESCRIPTOR>& sLattice2, int iT,
-                 SuperGeometry2D<T>& superGeometry, Timer<T>& timer,
+void getResults( SuperLattice<T, DESCRIPTOR>& sLattice1,
+                 SuperLattice<T, DESCRIPTOR>& sLattice2, int iT,
+                 SuperGeometry<T,2>& superGeometry, util::Timer<T>& timer,
                  UnitConverter<T, DESCRIPTOR> converter )
 {
 
@@ -270,7 +284,7 @@ void getResults( SuperLattice2D<T, DESCRIPTOR>& sLattice1,
       T height = height1 + 1.;
       T base = base1 + 2 * (radius - height1) / base1;
       T radius = (4.*height2*height2 + base2*base2) / ( 8.*height2 );
-      T angle_rad = pi + atan( 0.5*base / (radius - height) );
+      T angle_rad = pi + util::atan( 0.5*base / (radius - height) );
       T angle = angle_rad * 180. / pi;
       if ( angle > 180. ) {
         angle -= 180.;
@@ -280,10 +294,10 @@ void getResults( SuperLattice2D<T, DESCRIPTOR>& sLattice1,
       T ak1 = alpha * kappa1;
       T ak2 = alpha * kappa2;
       T k12 = kappa1 + kappa2;
-      T num1 = pow(ak1 + 4 * h1, 1.5) - pow(ak1 - 4 * h1, 1.5);
-      T num2 = pow(ak2 + 4 * h2, 1.5) - pow(ak2 - 4 * h2, 1.5);
-      T angle_an = 180 / pi * acos(num2 / (2 * k12 * sqrt(ak2)) - \
-                                   num1 / (2 * k12 * sqrt(ak1)));
+      T num1 = util::pow(ak1 + 4 * h1, 1.5) - util::pow(ak1 - 4 * h1, 1.5);
+      T num2 = util::pow(ak2 + 4 * h2, 1.5) - util::pow(ak2 - 4 * h2, 1.5);
+      T angle_an = 180 / pi * util::acos(num2 / (2 * k12 * util::sqrt(ak2)) - \
+                                         num1 / (2 * k12 * util::sqrt(ak1)));
 
       clout << "----->>>>> Contact angle: " << angle << " ; ";
       clout << "Analytical contact angle: " << angle_an <<  std::endl;
@@ -333,35 +347,23 @@ int main( int argc, char *argv[] )
   loadBalancer.print();
 
   // Instantiation of superGeometry
-  SuperGeometry2D<T> superGeometry( cGeometry,loadBalancer );
+  SuperGeometry<T,2> superGeometry( cGeometry,loadBalancer );
 
   prepareGeometry( superGeometry, converter );
 
   // === 3rd Step: Prepare Lattice ===
-  SuperLattice2D<T, DESCRIPTOR> sLattice1( superGeometry );
-  SuperLattice2D<T, DESCRIPTOR> sLattice2( superGeometry );
-
-  ForcedBGKdynamics<T, DESCRIPTOR> bulkDynamics1 (
-    converter.getLatticeRelaxationFrequency(),
-    instances::getBulkMomenta<T,DESCRIPTOR>() );
-
-  FreeEnergyBGKdynamics<T, DESCRIPTOR> bulkDynamics2 (
-    converter.getLatticeRelaxationFrequency(), gama,
-    instances::getBulkMomenta<T,DESCRIPTOR>() );
+  SuperLattice<T, DESCRIPTOR> sLattice1( superGeometry );
+  SuperLattice<T, DESCRIPTOR> sLattice2( superGeometry );
 
   //prepareLattice and set boundaryConditions
-  prepareLattice( sLattice1, sLattice2, bulkDynamics1, bulkDynamics2,
-                  converter, superGeometry);
+  prepareLattice( sLattice1, sLattice2, converter, superGeometry);
 
   prepareCoupling( sLattice1, sLattice2, superGeometry);
 
-  SuperField2D<T,DESCRIPTOR,CHEM_POTENTIAL> sExternal1 (superGeometry, sLattice1, sLattice1.getOverlap() );
-  SuperField2D<T,DESCRIPTOR,CHEM_POTENTIAL> sExternal2 (superGeometry, sLattice2, sLattice2.getOverlap() );
-
   // === 4th Step: Main Loop with Timer ===
   int iT = 0;
-  clout << "starting simulation..." << endl;
-  Timer<T> timer( maxIter, superGeometry.getStatistics().getNvoxel() );
+  clout << "starting simulation..." << std::endl;
+  util::Timer<T> timer( maxIter, superGeometry.getStatistics().getNvoxel() );
   timer.start();
 
   for ( iT=0; iT<=maxIter; ++iT ) {
@@ -372,14 +374,8 @@ int main( int argc, char *argv[] )
     sLattice1.collideAndStream();
     sLattice2.collideAndStream();
 
-    // MPI communication for lattice data
-    sLattice1.communicate();
-    sLattice2.communicate();
-
     // Execute coupling between the two lattices
     sLattice1.executeCoupling();
-    sExternal1.communicate();
-    sExternal2.communicate();
     sLattice2.executeCoupling();
   }
 

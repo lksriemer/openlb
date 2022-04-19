@@ -1,64 +1,54 @@
-#  This file is part of the OpenLB library
+# OpenLB build configuration
 #
-#  Copyright (C) 2017 Markus Mohrhard, Mathias Krause
-#  E-mail contact: info@openlb.net
-#  The most recent release of OpenLB can be downloaded at
-#  <http://www.openlb.net/>
+# This file sets up the necessary build flags for compiling OpenLB with
+# the GNU C++ compiler and sequential execution. For more complex setups
+# edit this file or consult the example configs provided in `config/`.
 #
-#  This program is free software; you can redistribute it and/or
-#  modify it under the terms of the GNU General Public License
-#  as published by the Free Software Foundation; either version 2
-#  of the License, or (at your option) any later version.
-#
-#  This program is distributed in the hope that it will be useful,
-#  but WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#  GNU General Public License for more details.
-#
-#  You should have received a copy of the GNU General Public
-#  License along with this program; if not, write to the Free
-#  Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
-#  Boston, MA  02110-1301, USA.
+# Basic usage:
+#  - Edit variables to fit desired configuration
+#  - Run `make clean; make` to clean up any previous artifacts and compile the dependencies
+#  - Switch to example directory, e.g. `examples/laminar/poiseuille2d`
+#  - Run `make`
+#  - Start the simulation using `./poiseuille2d`
 
-###########################################################################
-###########################################################################
-
+# Compiler to use for C++ files, change to `mpic++` when using OpenMPI and GCC
 CXX             := g++
-#CXX             := icpc -D__aligned__=ignored
-#CXX             := mpiCC
-#CXX             := mpic++
+# Compiler to use for C files (used for emebedded dependencies)
+CC              := gcc
 
-CC              := gcc                                          # necessary for zlib, for Intel use icc
+# Suggested optimized build flags for GCC, consult `config/` for further examples
+CXXFLAGS        := -O3 -Wall -march=native -mtune=native
+# Uncomment to add debug symbols and enable runtime asserts
+#CXXFLAGS        += -g -DOLB_DEBUG
 
-OPTIM           := -O3 -Wall -march=native -mtune=native        # for gcc
-#OPTIM           := -O3 -Wall -xHost                            # for Intel compiler
-#OPTIM           := -O3 -Wall -xHost -ipo                       # optional for Intel compiler
-DEBUG           := -g -Wall -DOLB_DEBUG
-
-CXXFLAGS        := $(OPTIM)
-#CXXFLAGS        := $(DEBUG)
-
-# compilation requires support for C++14
+# OpenLB requires support for C++17
 # works in:
-#  * gcc 5 or later      (https://gcc.gnu.org/projects/cxx-status.html#cxx14)
-#  * icc 17.0 or later   (https://software.intel.com/en-us/articles/c14-features-supported-by-intel-c-compiler)
-#  * clang 3.4 or later  (https://clang.llvm.org/cxx_status.html#cxx14)
-CXXFLAGS        += -std=c++14
+#  * gcc 9 or later      (https://gcc.gnu.org/projects/cxx-status.html#cxx17)
+#  * icc 19.0 or later   (https://software.intel.com/en-us/articles/c17-features-supported-by-intel-c-compiler)
+#  * clang 7 or later  (https://clang.llvm.org/cxx_status.html#cxx17)
+CXXFLAGS        += -std=c++17
 
-ARPRG           := ar
-#ARPRG           := xiar                  # mandatory for intel compiler
-
+# optional linker flags
 LDFLAGS         :=
 
+# Parallelization mode, must be one of: OFF, MPI, OMP, HYBRID
+# Note that for MPI and HYBRID the compiler also needs to be adapted.
+# See e.g. `config/cpu_gcc_openmpi.mk`
 PARALLEL_MODE   := OFF
-#PARALLEL_MODE   := MPI
-#PARALLEL_MODE   := OMP
-#PARALLEL_MODE   := HYBRID
 
+# optional MPI and OpenMP flags
 MPIFLAGS        :=
 OMPFLAGS        := -fopenmp
 
-#BUILDTYPE       := precompiled
-BUILDTYPE       := generic
+# Options: CPU_SISD, CPU_SIMD, GPU_CUDA
+# Both CPU_SIMD and GPU_CUDA require system-specific adjustment of compiler flags.
+# See e.g. `config/cpu_simd_intel_mpi.mk` or `config/gpu_only.mk` for examples.
+# CPU_SISD must always be present.
+PLATFORMS       := CPU_SISD
 
+# Any entries are passed to the compiler as `-DFEATURE_*` declarations
+# Used to enable some alternative code paths and dependencies
 FEATURES        :=
+
+# Set to OFF if libz and tinyxml are provided by the system (optional)
+USE_EMBEDDED_DEPENDENCIES := ON

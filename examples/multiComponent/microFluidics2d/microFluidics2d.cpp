@@ -36,15 +36,11 @@
  */
 
 #include "olb2D.h"
-#include "olb2D.hh"   // use only generic version!
-#include <cstdlib>
-#include <iostream>
-#include <fstream>
+#include "olb2D.hh"
 
 using namespace olb;
 using namespace olb::descriptors;
 using namespace olb::graphics;
-using namespace std;
 
 typedef double T;
 typedef D2Q9<CHEM_POTENTIAL,FORCE> DESCRIPTOR;
@@ -85,7 +81,7 @@ const int vtkIter  = 1000;
 const int statIter = 2000;
 
 
-void prepareGeometry( SuperGeometry2D<T>& superGeometry )
+void prepareGeometry( SuperGeometry<T,2>& superGeometry )
 {
   OstreamManager clout( std::cout,"prepareGeometry" );
   clout << "Prepare Geometry ..." << std::endl;
@@ -98,7 +94,7 @@ void prepareGeometry( SuperGeometry2D<T>& superGeometry )
   IndicatorIdentity2D<T> channel( section1 + section2 + section3 + section4 + section5 );
 
   superGeometry.rename( 0, 2, channel );
-  superGeometry.rename( 2,1,1,1 );
+  superGeometry.rename( 2,1,{1,1} );
 
   // Inlets and outlet
   IndicatorCuboid2D<T> inlet1 ( dx, yl1, {0., ny/2.} );
@@ -122,55 +118,52 @@ void prepareGeometry( SuperGeometry2D<T>& superGeometry )
 }
 
 
-void prepareLattice( SuperLattice2D<T, DESCRIPTOR>& sLattice1,
-                     SuperLattice2D<T, DESCRIPTOR>& sLattice2,
-                     SuperLattice2D<T, DESCRIPTOR>& sLattice3,
-                     Dynamics<T, DESCRIPTOR>& bulkDynamics1,
-                     Dynamics<T, DESCRIPTOR>& bulkDynamics2,
-                     Dynamics<T, DESCRIPTOR>& bulkDynamics3,
+void prepareLattice( SuperLattice<T, DESCRIPTOR>& sLattice1,
+                     SuperLattice<T, DESCRIPTOR>& sLattice2,
+                     SuperLattice<T, DESCRIPTOR>& sLattice3,
                      UnitConverter<T, DESCRIPTOR>& converter,
-                     SuperGeometry2D<T>& superGeometry )
+                     SuperGeometry<T,2>& superGeometry )
 {
 
   OstreamManager clout( std::cout,"prepareLattice" );
   clout << "Prepare Lattice ..." << std::endl;
 
   // define lattice dynamics
-  sLattice1.defineDynamics( superGeometry, 0, &instances::getNoDynamics<T, DESCRIPTOR>() );
-  sLattice2.defineDynamics( superGeometry, 0, &instances::getNoDynamics<T, DESCRIPTOR>() );
-  sLattice3.defineDynamics( superGeometry, 0, &instances::getNoDynamics<T, DESCRIPTOR>() );
+  sLattice1.defineDynamics<NoDynamics>(superGeometry, 0);
+  sLattice2.defineDynamics<NoDynamics>(superGeometry, 0);
+  sLattice3.defineDynamics<NoDynamics>(superGeometry, 0);
 
-  sLattice1.defineDynamics( superGeometry, 1, &bulkDynamics1 );
-  sLattice2.defineDynamics( superGeometry, 1, &bulkDynamics2 );
-  sLattice3.defineDynamics( superGeometry, 1, &bulkDynamics3 );
+  sLattice1.defineDynamics<ForcedBGKdynamics>(superGeometry, 1);
+  sLattice2.defineDynamics<FreeEnergyBGKdynamics>(superGeometry, 1);
+  sLattice3.defineDynamics<FreeEnergyBGKdynamics>(superGeometry, 1);
 
-  sLattice1.defineDynamics( superGeometry, 2, &instances::getNoDynamics<T, DESCRIPTOR>() );
-  sLattice2.defineDynamics( superGeometry, 2, &instances::getNoDynamics<T, DESCRIPTOR>() );
-  sLattice3.defineDynamics( superGeometry, 2, &instances::getNoDynamics<T, DESCRIPTOR>() );
+  sLattice1.defineDynamics<NoDynamics>(superGeometry, 2);
+  sLattice2.defineDynamics<NoDynamics>(superGeometry, 2);
+  sLattice3.defineDynamics<NoDynamics>(superGeometry, 2);
 
-  sLattice1.defineDynamics( superGeometry, 3, &instances::getNoDynamics<T, DESCRIPTOR>() );
-  sLattice2.defineDynamics( superGeometry, 3, &instances::getNoDynamics<T, DESCRIPTOR>() );
-  sLattice3.defineDynamics( superGeometry, 3, &instances::getNoDynamics<T, DESCRIPTOR>() );
+  sLattice1.defineDynamics<NoDynamics>(superGeometry, 3);
+  sLattice2.defineDynamics<NoDynamics>(superGeometry, 3);
+  sLattice3.defineDynamics<NoDynamics>(superGeometry, 3);
 
-  sLattice1.defineDynamics( superGeometry, 4, &instances::getNoDynamics<T, DESCRIPTOR>() );
-  sLattice2.defineDynamics( superGeometry, 4, &instances::getNoDynamics<T, DESCRIPTOR>() );
-  sLattice3.defineDynamics( superGeometry, 4, &instances::getNoDynamics<T, DESCRIPTOR>() );
+  sLattice1.defineDynamics<NoDynamics>(superGeometry, 4);
+  sLattice2.defineDynamics<NoDynamics>(superGeometry, 4);
+  sLattice3.defineDynamics<NoDynamics>(superGeometry, 4);
 
-  sLattice1.defineDynamics( superGeometry, 5, &instances::getNoDynamics<T, DESCRIPTOR>() );
-  sLattice2.defineDynamics( superGeometry, 5, &instances::getNoDynamics<T, DESCRIPTOR>() );
-  sLattice3.defineDynamics( superGeometry, 5, &instances::getNoDynamics<T, DESCRIPTOR>() );
+  sLattice1.defineDynamics<NoDynamics>(superGeometry, 5);
+  sLattice2.defineDynamics<NoDynamics>(superGeometry, 5);
+  sLattice3.defineDynamics<NoDynamics>(superGeometry, 5);
 
-  sLattice1.defineDynamics( superGeometry, 6, &instances::getNoDynamics<T, DESCRIPTOR>() );
-  sLattice2.defineDynamics( superGeometry, 6, &instances::getNoDynamics<T, DESCRIPTOR>() );
-  sLattice3.defineDynamics( superGeometry, 6, &instances::getNoDynamics<T, DESCRIPTOR>() );
+  sLattice1.defineDynamics<NoDynamics>(superGeometry, 6);
+  sLattice2.defineDynamics<NoDynamics>(superGeometry, 6);
+  sLattice3.defineDynamics<NoDynamics>(superGeometry, 6);
 
-  sLattice1.defineDynamics( superGeometry, 7, &instances::getNoDynamics<T, DESCRIPTOR>() );
-  sLattice2.defineDynamics( superGeometry, 7, &instances::getNoDynamics<T, DESCRIPTOR>() );
-  sLattice3.defineDynamics( superGeometry, 7, &instances::getNoDynamics<T, DESCRIPTOR>() );
+  sLattice1.defineDynamics<NoDynamics>(superGeometry, 7);
+  sLattice2.defineDynamics<NoDynamics>(superGeometry, 7);
+  sLattice3.defineDynamics<NoDynamics>(superGeometry, 7);
 
-  sLattice1.defineDynamics( superGeometry, 8, &instances::getNoDynamics<T, DESCRIPTOR>() );
-  sLattice2.defineDynamics( superGeometry, 8, &instances::getNoDynamics<T, DESCRIPTOR>() );
-  sLattice3.defineDynamics( superGeometry, 8, &instances::getNoDynamics<T, DESCRIPTOR>() );
+  sLattice1.defineDynamics<NoDynamics>(superGeometry, 8);
+  sLattice2.defineDynamics<NoDynamics>(superGeometry, 8);
+  sLattice3.defineDynamics<NoDynamics>(superGeometry, 8);
 
   // add wall boundary
   setFreeEnergyWallBoundary<T,DESCRIPTOR>(sLattice1, superGeometry, 2, alpha, kappa1, kappa2, kappa3, h1, h2, h3, 1);
@@ -206,8 +199,10 @@ void prepareLattice( SuperLattice2D<T, DESCRIPTOR>& sLattice1,
 
   AnalyticalConst2D<T,T> zero ( 0. );
   AnalyticalConst2D<T,T> one ( 1. );
-  SmoothIndicatorCuboid2D<T,T> section1( {xl1/2., ny/2.}, xl1+dx, ny, 0. );
-  SmoothIndicatorCuboid2D<T,T> section2( {xl1 + (xl2 + xl3)/2., ny/2.}, xl2 + xl3, ny, 0. );
+  IndicatorCuboid2D<T> ind1(xl1+dx, ny, {xl1/2., ny/2.});
+  SmoothIndicatorCuboid2D<T,T> section1( ind1, 0. );
+  IndicatorCuboid2D<T> ind2(xl2 + xl3, ny, {xl1 + (xl2 + xl3)/2., ny/2.});
+  SmoothIndicatorCuboid2D<T,T> section2( ind2, 0. );
 
   AnalyticalIdentity2D<T,T> c1( section1 );
   AnalyticalIdentity2D<T,T> c2( section2 );
@@ -248,6 +243,12 @@ void prepareLattice( SuperLattice2D<T, DESCRIPTOR>& sLattice1,
   sLattice2.defineRho( outletIndicator, phiOutlet );
   sLattice3.defineRho( outletIndicator, psiOutlet );
 
+  sLattice1.setParameter<descriptors::OMEGA>(omega);
+  sLattice2.setParameter<descriptors::OMEGA>(omega);
+  sLattice2.setParameter<collision::FreeEnergy::GAMMA>(gama);
+  sLattice3.setParameter<descriptors::OMEGA>(omega);
+  sLattice3.setParameter<collision::FreeEnergy::GAMMA>(gama);
+
   // initialise lattices
   sLattice1.initialize();
   sLattice2.initialize();
@@ -257,17 +258,36 @@ void prepareLattice( SuperLattice2D<T, DESCRIPTOR>& sLattice1,
   sLattice2.communicate();
   sLattice3.communicate();
 
+  {
+    auto& communicator = sLattice1.getCommunicator(PostPostProcess());
+    communicator.requestField<POPULATION>();
+    communicator.requestOverlap(sLattice1.getOverlap());
+    communicator.exchangeRequests();
+  }
+  {
+    auto& communicator = sLattice2.getCommunicator(PostPostProcess());
+    communicator.requestField<POPULATION>();
+    communicator.requestOverlap(sLattice2.getOverlap());
+    communicator.exchangeRequests();
+  }
+  {
+    auto& communicator = sLattice3.getCommunicator(PostPostProcess());
+    communicator.requestField<POPULATION>();
+    communicator.requestOverlap(sLattice3.getOverlap());
+    communicator.exchangeRequests();
+  }
+
   clout << "Prepare Lattice ... OK" << std::endl;
 }
 
 
-void prepareCoupling(SuperLattice2D<T, DESCRIPTOR>& sLattice1,
-                     SuperLattice2D<T, DESCRIPTOR>& sLattice2,
-                     SuperLattice2D<T, DESCRIPTOR>& sLattice3,
-                     SuperGeometry2D<T>& superGeometry)
+void prepareCoupling(SuperLattice<T, DESCRIPTOR>& sLattice1,
+                     SuperLattice<T, DESCRIPTOR>& sLattice2,
+                     SuperLattice<T, DESCRIPTOR>& sLattice3,
+                     SuperGeometry<T,2>& superGeometry)
 {
   OstreamManager clout( std::cout,"prepareCoupling" );
-  clout << "Add lattice coupling" << endl;
+  clout << "Add lattice coupling" << std::endl;
 
   // Bulk couplings
   FreeEnergyChemicalPotentialGenerator2D<T,DESCRIPTOR> coupling2( alpha, kappa1, kappa2, kappa3 );
@@ -291,14 +311,33 @@ void prepareCoupling(SuperLattice2D<T, DESCRIPTOR>& sLattice1,
   sLattice2.addLatticeCoupling<DESCRIPTOR>( superGeometry, 7, coupling4, {&sLattice1, &sLattice3} );
   sLattice2.addLatticeCoupling<DESCRIPTOR>( superGeometry, 8, coupling4, {&sLattice1, &sLattice3} );
 
-  clout << "Add lattice coupling ... OK!" << endl;
+  {
+    auto& communicator = sLattice1.getCommunicator(PostCoupling());
+    communicator.requestField<CHEM_POTENTIAL>();
+    communicator.requestOverlap(sLattice1.getOverlap());
+    communicator.exchangeRequests();
+  }
+  {
+    auto& communicator = sLattice2.getCommunicator(PreCoupling());
+    communicator.requestField<CHEM_POTENTIAL>();
+    communicator.requestOverlap(sLattice2.getOverlap());
+    communicator.exchangeRequests();
+  }
+  {
+    auto& communicator = sLattice3.getCommunicator(PreCoupling());
+    communicator.requestField<CHEM_POTENTIAL>();
+    communicator.requestOverlap(sLattice3.getOverlap());
+    communicator.exchangeRequests();
+  }
+
+  clout << "Add lattice coupling ... OK!" << std::endl;
 }
 
 
-void getResults( SuperLattice2D<T, DESCRIPTOR>& sLattice1,
-                 SuperLattice2D<T, DESCRIPTOR>& sLattice2,
-                 SuperLattice2D<T, DESCRIPTOR>& sLattice3, int iT,
-                 SuperGeometry2D<T>& superGeometry, Timer<T>& timer,
+void getResults( SuperLattice<T, DESCRIPTOR>& sLattice1,
+                 SuperLattice<T, DESCRIPTOR>& sLattice2,
+                 SuperLattice<T, DESCRIPTOR>& sLattice3, int iT,
+                 SuperGeometry<T,2>& superGeometry, util::Timer<T>& timer,
                  UnitConverter<T, DESCRIPTOR> converter)
 {
 
@@ -391,37 +430,24 @@ int main( int argc, char *argv[] )
   loadBalancer.print();
 
   // Instantiation of superGeometry
-  SuperGeometry2D<T> superGeometry( cGeometry,loadBalancer );
+  SuperGeometry<T,2> superGeometry( cGeometry,loadBalancer );
 
   prepareGeometry( superGeometry );
 
   // === 3rd Step: Prepare Lattice ===
-  SuperLattice2D<T, DESCRIPTOR> sLattice1( superGeometry );
-  SuperLattice2D<T, DESCRIPTOR> sLattice2( superGeometry );
-  SuperLattice2D<T, DESCRIPTOR> sLattice3( superGeometry );
-
-  ForcedBGKdynamics<T, DESCRIPTOR> bulkDynamics1 (
-    converter.getLatticeRelaxationFrequency(),
-    instances::getBulkMomenta<T,DESCRIPTOR>() );
-
-  FreeEnergyBGKdynamics<T, DESCRIPTOR> bulkDynamics23 (
-    converter.getLatticeRelaxationFrequency(), gama,
-    instances::getBulkMomenta<T,DESCRIPTOR>() );
+  SuperLattice<T, DESCRIPTOR> sLattice1( superGeometry );
+  SuperLattice<T, DESCRIPTOR> sLattice2( superGeometry );
+  SuperLattice<T, DESCRIPTOR> sLattice3( superGeometry );
 
   //prepareLattice and set boundaryConditions
-  prepareLattice( sLattice1, sLattice2, sLattice3, bulkDynamics1, bulkDynamics23,
-                  bulkDynamics23, converter, superGeometry );
+  prepareLattice( sLattice1, sLattice2, sLattice3, converter, superGeometry );
 
   prepareCoupling( sLattice1, sLattice2, sLattice3, superGeometry );
 
-  SuperField2D<T,DESCRIPTOR,CHEM_POTENTIAL> sExternal1 (superGeometry, sLattice1, sLattice1.getOverlap() );
-  SuperField2D<T,DESCRIPTOR,CHEM_POTENTIAL> sExternal2 (superGeometry, sLattice2, sLattice2.getOverlap() );
-  SuperField2D<T,DESCRIPTOR,CHEM_POTENTIAL> sExternal3 (superGeometry, sLattice3, sLattice3.getOverlap() );
-
   // === 4th Step: Main Loop with Timer ===
   int iT = 0;
-  clout << "starting simulation..." << endl;
-  Timer<T> timer( maxIter, superGeometry.getStatistics().getNvoxel() );
+  clout << "starting simulation..." << std::endl;
+  util::Timer<T> timer( maxIter, superGeometry.getStatistics().getNvoxel() );
   timer.start();
 
   for ( iT=0; iT<maxIter; ++iT ) {
@@ -433,17 +459,10 @@ int main( int argc, char *argv[] )
     sLattice2.collideAndStream();
     sLattice3.collideAndStream();
 
-    // MPI communication for lattice data
-    sLattice1.communicate();
-    sLattice2.communicate();
-    sLattice3.communicate();
-
     // Execute coupling between the two lattices
     sLattice1.executeCoupling();
-    sExternal1.communicate();
-    sExternal2.communicate();
-    sExternal3.communicate();
     sLattice2.executeCoupling();
+    sLattice3.executeCoupling();
   }
 
   timer.stop();

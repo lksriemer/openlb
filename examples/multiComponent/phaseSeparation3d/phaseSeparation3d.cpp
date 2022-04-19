@@ -31,17 +31,15 @@
 
 
 #include "olb3D.h"
-#include "olb3D.hh"   // use only generic version!
-#include <cstdlib>
-#include <iostream>
+#include "olb3D.hh"
 
 using namespace olb;
 using namespace olb::descriptors;
 using namespace olb::graphics;
-using namespace std;
 
-typedef double T;
-typedef D3Q19<VELOCITY,FORCE,EXTERNAL_FORCE,OMEGA> DESCRIPTOR;
+using T = double;
+using DESCRIPTOR = D3Q19<VELOCITY,FORCE,EXTERNAL_FORCE,OMEGA>;
+using BulkDynamics = ForcedShanChenBGKdynamics<T,DESCRIPTOR,momenta::ExternalVelocityTuple>;
 
 
 // Parameters for the simulation setup
@@ -52,7 +50,7 @@ const int nz   = 76;
 
 
 // Stores geometry information in form of material numbers
-void prepareGeometry( SuperGeometry3D<T>& superGeometry )
+void prepareGeometry( SuperGeometry<T,3>& superGeometry )
 {
 
   OstreamManager clout( std::cout,"prepareGeometry" );
@@ -73,13 +71,13 @@ void prepareGeometry( SuperGeometry3D<T>& superGeometry )
 }
 
 // Set up the geometry of the simulation
-void prepareLattice( SuperLattice3D<T, DESCRIPTOR>& sLattice,
-                     Dynamics<T, DESCRIPTOR>& bulkDynamics1,
-                     SuperGeometry3D<T>& superGeometry )
+void prepareLattice( SuperLattice<T, DESCRIPTOR>& sLattice,
+                     SuperGeometry<T,3>& superGeometry )
 {
+  const T omega1 = 1.0;
 
   // Material=1 -->bulk dynamics
-  sLattice.defineDynamics( superGeometry, 1, &bulkDynamics1 );
+  sLattice.defineDynamics<BulkDynamics>( superGeometry, 1);
 
   // Initial conditions
   AnalyticalConst3D<T,T> noise( .01 );
@@ -93,13 +91,15 @@ void prepareLattice( SuperLattice3D<T, DESCRIPTOR>& sLattice,
   sLattice.defineRhoU( superGeometry, 1, newRho, zeroVelocity );
   sLattice.iniEquilibrium( superGeometry, 1, newRho, zeroVelocity );
 
+  sLattice.setParameter<descriptors::OMEGA>(omega1);
+
   // Make the lattice ready for simulation
   sLattice.initialize();
 }
 
 // Output to console and files
-void getResults( SuperLattice3D<T, DESCRIPTOR>& sLattice, int iT,
-                 SuperGeometry3D<T>& superGeometry, Timer<T>& timer )
+void getResults( SuperLattice<T, DESCRIPTOR>& sLattice, int iT,
+                 SuperGeometry<T,3>& superGeometry, util::Timer<T>& timer )
 {
 
   OstreamManager clout( std::cout,"getResults" );
@@ -127,10 +127,9 @@ void getResults( SuperLattice3D<T, DESCRIPTOR>& sLattice, int iT,
 
   // Writes the vtk files
   if ( iT%vtkIter==0 ) {
-    clout << "Writing VTK and JPEG..." << std::endl;
     vtmWriter.write( iT );
 
-    BlockReduction3D2D<T> planeReduction( density, Vector<T,3>({0, 0, 1}) );
+    BlockReduction3D2D<T> planeReduction( density, {0, 0, 1} );
     // write output as JPEG
     heatmap::write(planeReduction, iT);
   }
@@ -156,7 +155,6 @@ int main( int argc, char *argv[] )
   // display messages from every single mpi process
   //clout.setMultiOutput(true);
 
-  const T omega1 = 1.0;
   const T G      = -1.;
 
   // === 2rd Step: Prepare Geometry ===
@@ -176,15 +174,13 @@ int main( int argc, char *argv[] )
   HeuristicLoadBalancer<T> loadBalancer( cuboidGeometry );
 
   // Instantiation of a superGeometry
-  SuperGeometry3D<T> superGeometry( cuboidGeometry,loadBalancer,2 );
+  SuperGeometry<T,3> superGeometry( cuboidGeometry,loadBalancer,2 );
 
   prepareGeometry( superGeometry );
 
   // === 3rd Step: Prepare Lattice ===
-  SuperLattice3D<T, DESCRIPTOR> sLattice( superGeometry );
+  SuperLattice<T, DESCRIPTOR> sLattice( superGeometry );
 
-  ForcedShanChenBGKdynamics<T, DESCRIPTOR> bulkDynamics1 (
-    omega1, instances::getExternalVelocityMomenta<T,DESCRIPTOR>() );
 
   std::vector<T> rho0;
   rho0.push_back( 1 );
@@ -194,12 +190,12 @@ int main( int argc, char *argv[] )
 
   sLattice.addLatticeCoupling( coupling, sLattice );
 
-  prepareLattice( sLattice, bulkDynamics1, superGeometry );
+  prepareLattice( sLattice, superGeometry );
 
   // === 4th Step: Main Loop ===
   int iT = 0;
-  clout << "starting simulation..." << endl;
-  Timer<T> timer( maxIter, superGeometry.getStatistics().getNvoxel() );
+  clout << "starting simulation..." << std::endl;
+  util::Timer<T> timer( maxIter, superGeometry.getStatistics().getNvoxel() );
   timer.start();
 
   for ( iT = 0; iT < maxIter; ++iT ) {

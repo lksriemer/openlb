@@ -1,3 +1,29 @@
+/*  Lattice Boltzmann sample, written in C++, using the OpenLB
+ *  library
+ *
+ *  Copyright (C) 2006-2021 Nicolas Hafen, Robin Trunk, Mathias J. Krause
+ *  E-mail contact: info@openlb.net
+ *  The most recent release of OpenLB can be downloaded at
+ *  <http://www.openlb.net/>
+ *
+ *  This program is free software; you can redistribute it and/or
+ *  modify it under the terms of the GNU General Public License
+ *  as published by the Free Software Foundation; either version 2
+ *  of the License, or (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public
+ *  License along with this program; if not, write to the Free
+ *  Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+ *  Boston, MA  02110-1301, USA.
+ */
+
+
+
 /* dkt2d.cpp:
  * The case examines the settling of two circles under gravity
  * in a surrounding fluid. The rectangular domain is limited
@@ -18,23 +44,26 @@
  * to print simulation results.
  */
 
+#define NEW_FRAMEWORK
+
 
 #include "olb2D.h"
-#include "olb2D.hh"   // include full template code
-
-#include <vector>
-#include <cmath>
-#include <iostream>
-#include <fstream>
+#include "olb2D.hh"
 
 using namespace olb;
 using namespace olb::descriptors;
 using namespace olb::graphics;
+using namespace olb::particles;
+using namespace olb::particles::dynamics;
 using namespace olb::util;
-using namespace std;
 
 typedef double T;
-typedef D2Q9<POROSITY,VELOCITY_NUMERATOR,VELOCITY_DENOMINATOR> DESCRIPTOR;
+
+//Define lattice type
+typedef PorousParticleD2Q9Descriptor DESCRIPTOR;
+
+//Define particle type
+typedef ResolvedCircle2D PARTICLETYPE;
 
 #define WriteVTK
 #define WriteGnuPlot
@@ -65,13 +94,13 @@ T radiusP = 0.001;
 Vector<T,2> accExt = {.0, -9.81 * (1. - 1000. / rhoP)};
 
 void prepareGeometry(UnitConverter<T,DESCRIPTOR> const& converter,
-                     SuperGeometry2D<T>& superGeometry)
+                     SuperGeometry<T,2>& superGeometry)
 {
   OstreamManager clout(std::cout, "prepareGeometry");
   clout << "Prepare Geometry ..." << std::endl;
 
   superGeometry.rename(0, 2);
-  superGeometry.rename(2, 1, 1, 1);
+  superGeometry.rename(2, 1, {1, 1});
 
   superGeometry.clean();
   superGeometry.innerClean();
@@ -82,24 +111,25 @@ void prepareGeometry(UnitConverter<T,DESCRIPTOR> const& converter,
 }
 
 void prepareLattice(
-  SuperLattice2D<T, DESCRIPTOR>& sLattice, UnitConverter<T,DESCRIPTOR> const& converter,
-  Dynamics<T, DESCRIPTOR>& designDynamics,
-  SuperGeometry2D<T>& superGeometry)
+  SuperLattice<T, DESCRIPTOR>& sLattice, UnitConverter<T,DESCRIPTOR> const& converter,
+  SuperGeometry<T,2>& superGeometry)
 {
   OstreamManager clout(std::cout, "prepareLattice");
   clout << "Prepare Lattice ..." << std::endl;
 
   /// Material=0 -->do nothing
-  sLattice.defineDynamics(superGeometry, 0, &instances::getNoDynamics<T, DESCRIPTOR>());
-  sLattice.defineDynamics(superGeometry, 1, &designDynamics);
-  sLattice.defineDynamics(superGeometry, 2, &instances::getBounceBack<T, DESCRIPTOR>());
+  sLattice.defineDynamics<NoDynamics>(superGeometry, 0);
+  sLattice.defineDynamics<PorousParticleBGKdynamics>(superGeometry, 1);
+  sLattice.defineDynamics<BounceBack>(superGeometry, 2);
+
+  sLattice.setParameter<descriptors::OMEGA>(converter.getLatticeRelaxationFrequency());
 
   clout << "Prepare Lattice ... OK" << std::endl;
 }
 
-void setBoundaryValues(SuperLattice2D<T, DESCRIPTOR>& sLattice,
+void setBoundaryValues(SuperLattice<T, DESCRIPTOR>& sLattice,
                        UnitConverter<T,DESCRIPTOR> const& converter,
-                       SuperGeometry2D<T>& superGeometry)
+                       SuperGeometry<T,2>& superGeometry)
 {
   OstreamManager clout(std::cout, "setBoundaryValues");
 
@@ -120,9 +150,10 @@ void setBoundaryValues(SuperLattice2D<T, DESCRIPTOR>& sLattice,
   sLattice.initialize();
 }
 
-void getResults(SuperLattice2D<T, DESCRIPTOR>& sLattice,
+void getResults(SuperLattice<T, DESCRIPTOR>& sLattice,
                 UnitConverter<T,DESCRIPTOR> const& converter, int iT,
-                SuperGeometry2D<T>& superGeometry, Timer<double>& timer, SmoothIndicatorF2D<T,T,true> &particle1, SmoothIndicatorF2D<T,T,true> &particle2)
+                SuperGeometry<T,2>& superGeometry, Timer<double>& timer,
+                ParticleSystem<T,PARTICLETYPE>& particleSystem )
 {
   OstreamManager clout(std::cout, "getResults");
 
@@ -131,9 +162,13 @@ void getResults(SuperLattice2D<T, DESCRIPTOR>& sLattice,
   SuperLatticePhysVelocity2D<T, DESCRIPTOR> velocity(sLattice, converter);
   SuperLatticePhysPressure2D<T, DESCRIPTOR> pressure(sLattice, converter);
   SuperLatticePhysExternalPorosity2D<T, DESCRIPTOR> externalPor(sLattice, converter);
+  SuperLatticeMomentumExchangeForceLocal<T, DESCRIPTOR, PARTICLETYPE> momentumExchange(
+    sLattice, converter, superGeometry, particleSystem);
+
   vtkWriter.addFunctor(velocity);
   vtkWriter.addFunctor(pressure);
   vtkWriter.addFunctor(externalPor);
+  vtkWriter.addFunctor(momentumExchange);
 
   if (iT == 0) {
     converter.write("dkt");
@@ -151,19 +186,27 @@ void getResults(SuperLattice2D<T, DESCRIPTOR>& sLattice,
   }
 #endif
 
+
+  auto particleA = particleSystem.get( 0 );
+  auto particleB = particleSystem.get( 1 );
+
 #ifdef WriteGnuPlot
   if (iT % converter.getLatticeTime(iTwrite) == 0) {
     if (singleton::mpi().getRank() == 0) {
 
-      ofstream myfile;
-      myfile.open (gnuplotFilename.c_str(), ios::app);
+      std::ofstream myfile;
+      myfile.open (gnuplotFilename.c_str(), std::ios::app);
+      T p2PosY = particleB.getField<GENERAL,POSITION>()[1];
+      T p1PosY = particleA.getField<GENERAL,POSITION>()[1];
+      T p2PosX = particleB.getField<GENERAL,POSITION>()[0];
+      T p1PosX = particleA.getField<GENERAL,POSITION>()[0];
       myfile
           << converter.getPhysTime(iT) << " "
           << std::setprecision(9)
-          << particle2.getPos()[1] << " "
-          << particle1.getPos()[1] << " "
-          << particle2.getPos()[0] << " "
-          << particle1.getPos()[0] << endl;
+          << p2PosY << " "
+          << p1PosY << " "
+          << p2PosX << " "
+          << p1PosX << std::endl;
       myfile.close();
     }
   }
@@ -174,6 +217,10 @@ void getResults(SuperLattice2D<T, DESCRIPTOR>& sLattice,
     timer.update(iT);
     timer.printStep();
     sLattice.getStatistics().print(iT, converter.getPhysTime(iT));
+    for (std::size_t iP=0; iP<particleSystem.size(); ++iP) {
+      auto particle = particleSystem.get(iP);
+      io::printResolvedParticleInfo(particle);
+    }
   }
 
   return;
@@ -210,41 +257,68 @@ int main(int argc, char* argv[])
 #endif
 
   HeuristicLoadBalancer<T> loadBalancer(cuboidGeometry);
-  SuperGeometry2D<T> superGeometry(cuboidGeometry, loadBalancer, 2);
+  SuperGeometry<T,2> superGeometry(cuboidGeometry, loadBalancer, 2);
   prepareGeometry(converter, superGeometry);
 
   /// === 3rd Step: Prepare Lattice ===
-  SuperLattice2D<T, DESCRIPTOR> sLattice(superGeometry);
-  PorousParticleBGKdynamics<T, DESCRIPTOR> designDynamics(converter.getLatticeRelaxationFrequency(), instances::getBulkMomenta<T, DESCRIPTOR>());
+  SuperLattice<T, DESCRIPTOR> sLattice(superGeometry);
 
-  prepareLattice(sLattice, converter, designDynamics, superGeometry);
+  prepareLattice(sLattice, converter, superGeometry);
 
   /// === 4th Step: Main Loop with Timer ===
   Timer<double> timer(converter.getLatticeTime(maxPhysT), superGeometry.getStatistics().getNvoxel());
   timer.start();
 
-  ParticleDynamics2D<T, DESCRIPTOR> particle(sLattice, converter, superGeometry, lengthX, lengthY, accExt);
-  SmoothIndicatorCircle2D<T,T,true> circle2(center1, radiusP, eps*converter.getConversionFactorLength(), rhoP);
-  SmoothIndicatorCircle2D<T,T,true> circle1(center2, radiusP, eps*converter.getConversionFactorLength(), rhoP);
-  particle.addParticle(circle2);
-  particle.addParticle(circle1);
+  // Create ParticleSystem
+  ParticleSystem<T,PARTICLETYPE> particleSystem;
 
-  SuperField2D<T,DESCRIPTOR,POROSITY> superExt1(superGeometry, sLattice, sLattice.getOverlap());
-  SuperField2D<T,DESCRIPTOR,VELOCITY_NUMERATOR> superExt2(superGeometry, sLattice, sLattice.getOverlap());
-  SuperField2D<T,DESCRIPTOR,VELOCITY_DENOMINATOR> superExt3(superGeometry, sLattice, sLattice.getOverlap());
+  //Create particle manager handling coupling, gravity and particle dynamics
+  ParticleManager<T,DESCRIPTOR,PARTICLETYPE> particleManager(
+    particleSystem, superGeometry, sLattice, converter, accExt);
+
+  T epsilon = eps*converter.getConversionFactorLength();
+  T radius = radiusP;
+
+  // Create Particle 1
+  creators::addResolvedCircle2D( particleSystem, center1,
+                                 radius, epsilon, rhoP );
+
+  // Create Particle 2
+  creators::addResolvedCircle2D( particleSystem, center2,
+                                 radius, epsilon, rhoP );
+
+  // Create and assign resolved particle dynamics
+  VerletParticleDynamics<T,PARTICLETYPE> particleDynamics;
+  for (std::size_t iP=0; iP<particleSystem.size(); ++iP) {
+    particleSystem.defineDynamics( iP, &particleDynamics );
+  }
 
   /// === 5th Step: Definition of Initial and Boundary Conditions ===
   setBoundaryValues(sLattice, converter, superGeometry);
 
+  {
+    auto& communicator = sLattice.getCommunicator(PostPostProcess());
+    communicator.requestOverlap(sLattice.getOverlap());
+    communicator.requestFields<POROSITY,VELOCITY_NUMERATOR,VELOCITY_DENOMINATOR>();
+    communicator.exchangeRequests();
+  }
+
   clout << "MaxIT: " << converter.getLatticeTime(maxPhysT) << std::endl;
   for (std::size_t iT = 0; iT < converter.getLatticeTime(maxPhysT)+10; ++iT) {
-    particle.simulateTimestep("verlet");
-    getResults(sLattice, converter, iT, superGeometry, timer, circle1, circle2);
-    sLattice.collideAndStream();
-    superExt1.communicate();
-    superExt2.communicate();
-    superExt3.communicate();
 
+    // Execute particle manager
+    particleManager.execute<
+      couple_lattice_to_particles<T,DESCRIPTOR,PARTICLETYPE>,
+      apply_gravity<T,PARTICLETYPE>,
+      process_dynamics<T,PARTICLETYPE>,
+      couple_particles_to_lattice<T,DESCRIPTOR,PARTICLETYPE>
+    >();
+
+    // Get Results
+    getResults(sLattice, converter, iT, superGeometry, timer, particleSystem);
+
+    // Collide and stream
+    sLattice.collideAndStream();
   }
 
   // Run Gnuplot
@@ -254,7 +328,7 @@ int main(int argc, char* argv[])
     }
     int ret = system("gnuplot dkt.p");
     if (ret == -1) {
-      clout << "Writing Gnuplot failed!" << endl;
+      clout << "Writing Gnuplot failed!" << std::endl;
     }
   }
 

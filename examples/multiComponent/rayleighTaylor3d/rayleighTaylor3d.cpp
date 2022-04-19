@@ -31,14 +31,11 @@
 
 
 #include "olb3D.h"
-#include "olb3D.hh"   // use only generic version!
-#include <cstdlib>
-#include <iostream>
+#include "olb3D.hh"
 
 using namespace olb;
 using namespace olb::descriptors;
 using namespace olb::graphics;
-using namespace std;
 
 typedef double T;
 typedef D3Q19<VELOCITY,FORCE,EXTERNAL_FORCE,OMEGA> DESCRIPTOR;
@@ -52,7 +49,7 @@ const int maxIter  = 4000;
 
 
 // Stores geometry information in form of material numbers
-void prepareGeometry( SuperGeometry3D<T>& superGeometry )
+void prepareGeometry( SuperGeometry<T,3>& superGeometry )
 {
 
   OstreamManager clout( std::cout,"prepareGeometry" );
@@ -87,17 +84,18 @@ void prepareGeometry( SuperGeometry3D<T>& superGeometry )
 }
 
 
-void prepareLattice( SuperLattice3D<T, DESCRIPTOR>& sLatticeOne,
-                     SuperLattice3D<T, DESCRIPTOR>& sLatticeTwo,
-                     Dynamics<T, DESCRIPTOR>& bulkDynamics1,
-                     Dynamics<T, DESCRIPTOR>& bulkDynamics2,
-                     Dynamics<T, DESCRIPTOR>& bounceBackRho0,
-                     Dynamics<T, DESCRIPTOR>& bounceBackRho1,
-                     SuperGeometry3D<T>& superGeometry )
+void prepareLattice( SuperLattice<T, DESCRIPTOR>& sLatticeOne,
+                     SuperLattice<T, DESCRIPTOR>& sLatticeTwo,
+                     SuperGeometry<T,3>& superGeometry )
 {
 
   OstreamManager clout( std::cout,"prepareLattice" );
   clout << "Prepare Lattice ..." << std::endl;
+
+  const T omega1 = 1.0;
+  const T omega2 = 1.0;
+  AnalyticalConst3D<T,T> rho0(0.0);
+  AnalyticalConst3D<T,T> rho1(1.0);
 
   // The setup is: periodicity along horizontal direction, bounce-back on top
   // and bottom. The upper half is initially filled with fluid 1 + random noise,
@@ -105,29 +103,42 @@ void prepareLattice( SuperLattice3D<T, DESCRIPTOR>& sLatticeOne,
   // directed downwards.
 
   // define lattice Dynamics
-  sLatticeOne.defineDynamics( superGeometry, 0, &instances::getNoDynamics<T, DESCRIPTOR>() );
-  sLatticeTwo.defineDynamics( superGeometry, 0, &instances::getNoDynamics<T, DESCRIPTOR>() );
+  sLatticeOne.defineDynamics<NoDynamics>(superGeometry, 0);
+  sLatticeTwo.defineDynamics<NoDynamics>(superGeometry, 0);
 
-  sLatticeOne.defineDynamics( superGeometry, 1, &bulkDynamics1 );
-  sLatticeOne.defineDynamics( superGeometry, 2, &bulkDynamics1 );
-  sLatticeOne.defineDynamics( superGeometry, 3, &bulkDynamics1 );
-  sLatticeOne.defineDynamics( superGeometry, 4, &bulkDynamics1 );
-  sLatticeTwo.defineDynamics( superGeometry, 1, &bulkDynamics2 );
-  sLatticeTwo.defineDynamics( superGeometry, 2, &bulkDynamics2 );
-  sLatticeTwo.defineDynamics( superGeometry, 3, &bulkDynamics2 );
-  sLatticeTwo.defineDynamics( superGeometry, 4, &bulkDynamics2 );
+  using BulkDynamics = ForcedBGKdynamics<T,DESCRIPTOR,momenta::ExternalVelocityTuple>;
 
-  sLatticeOne.defineDynamics( superGeometry, 3, &bounceBackRho0 );
-  sLatticeTwo.defineDynamics( superGeometry, 3, &bounceBackRho1 );
-  sLatticeOne.defineDynamics( superGeometry, 4, &bounceBackRho1 );
-  sLatticeTwo.defineDynamics( superGeometry, 4, &bounceBackRho0 );
+  sLatticeOne.defineDynamics<BulkDynamics>(superGeometry, 1);
+  sLatticeOne.defineDynamics<BulkDynamics>(superGeometry, 2);
+  sLatticeOne.defineDynamics<BulkDynamics>(superGeometry, 3);
+  sLatticeOne.defineDynamics<BulkDynamics>(superGeometry, 4);
+  sLatticeTwo.defineDynamics<BulkDynamics>(superGeometry, 1);
+  sLatticeTwo.defineDynamics<BulkDynamics>(superGeometry, 2);
+  sLatticeTwo.defineDynamics<BulkDynamics>(superGeometry, 3);
+  sLatticeTwo.defineDynamics<BulkDynamics>(superGeometry, 4);
+
+  sLatticeOne.defineDynamics<BounceBack>(superGeometry, 3);
+  sLatticeOne.defineDynamics<BounceBack>(superGeometry, 4);
+  sLatticeTwo.defineDynamics<BounceBack>(superGeometry, 3);
+  sLatticeTwo.defineDynamics<BounceBack>(superGeometry, 4);
+
+  sLatticeOne.setParameter<descriptors::OMEGA>(omega1);
+  sLatticeTwo.setParameter<descriptors::OMEGA>(omega2);
+
+  // A bounce-back node with fictitious density 0, which is experienced by the partner fluid
+  sLatticeOne.defineRho(superGeometry, 3, rho0);
+  sLatticeTwo.defineRho(superGeometry, 4, rho0);
+  // A bounce-back node with fictitious density 0, which is experienced by the partner fluid
+  sLatticeOne.defineRho(superGeometry, 4, rho1);
+  sLatticeTwo.defineRho(superGeometry, 3, rho1);
+
 
   clout << "Prepare Lattice ... OK" << std::endl;
 }
 
-void setBoundaryValues( SuperLattice3D<T, DESCRIPTOR>& sLatticeOne,
-                        SuperLattice3D<T, DESCRIPTOR>& sLatticeTwo,
-                        T force, int iT, SuperGeometry3D<T>& superGeometry )
+void setBoundaryValues( SuperLattice<T, DESCRIPTOR>& sLatticeOne,
+                        SuperLattice<T, DESCRIPTOR>& sLatticeTwo,
+                        T force, int iT, SuperGeometry<T,3>& superGeometry )
 {
 
   if ( iT==0 ) {
@@ -159,27 +170,15 @@ void setBoundaryValues( SuperLattice3D<T, DESCRIPTOR>& sLatticeOne,
     sLatticeTwo.defineRhoU( superGeometry, 2, zero, zeroV );
     sLatticeTwo.iniEquilibrium( superGeometry, 2, zero, zeroV );
 
-    /*sLatticeOne.defineRhoU(superGeometry, 3, zero, zeroV);
-    sLatticeOne.iniEquilibrium(superGeometry, 3, zero, zeroV);
-    sLatticeOne.defineField<descriptors:::EXTERNAL_FORCE>(superGeometry, 3, f);
-    sLatticeTwo.defineRhoU(superGeometry, 3, one, zeroV);
-    sLatticeTwo.iniEquilibrium(superGeometry, 3, one, zeroV);
-
-    sLatticeOne.defineRhoU(superGeometry, 4, one, zeroV);
-    sLatticeOne.iniEquilibrium(superGeometry, 4, one, zeroV);
-    sLatticeOne.defineField<descriptors:::EXTERNAL_FORCE>(superGeometry, 4, f);
-    sLatticeTwo.defineRhoU(superGeometry, 4, zero, zeroV);
-    sLatticeTwo.iniEquilibrium(superGeometry, 4, zero, zeroV);*/
-
     // Make the lattice ready for simulation
     sLatticeOne.initialize();
     sLatticeTwo.initialize();
   }
 }
 
-void getResults( SuperLattice3D<T, DESCRIPTOR>& sLatticeTwo,
-                 SuperLattice3D<T, DESCRIPTOR>& sLatticeOne, int iT,
-                 SuperGeometry3D<T>& superGeometry, Timer<T>& timer )
+void getResults( SuperLattice<T, DESCRIPTOR>& sLatticeTwo,
+                 SuperLattice<T, DESCRIPTOR>& sLatticeOne, int iT,
+                 SuperGeometry<T,3>& superGeometry, util::Timer<T>& timer )
 {
 
   OstreamManager clout( std::cout,"getResults" );
@@ -236,8 +235,6 @@ int main( int argc, char *argv[] )
   singleton::directories().setOutputDir( "./tmp/" );
   OstreamManager clout( std::cout,"main" );
 
-  const T omega1 = 1.0;
-  const T omega2 = 1.0;
   const T G      = 3.;
   T force        = 7./( T )ny/( T )ny;
 
@@ -254,26 +251,15 @@ int main( int argc, char *argv[] )
 
   HeuristicLoadBalancer<T> loadBalancer( cGeometry );
 
-  SuperGeometry3D<T> superGeometry( cGeometry,loadBalancer,2 );
+  SuperGeometry<T,3> superGeometry( cGeometry,loadBalancer,2 );
 
   prepareGeometry( superGeometry );
 
   // === 3rd Step: Prepare Lattice ===
 
-  SuperLattice3D<T, DESCRIPTOR> sLatticeOne( superGeometry );
-  SuperLattice3D<T, DESCRIPTOR> sLatticeTwo( superGeometry );
+  SuperLattice<T, DESCRIPTOR> sLatticeOne( superGeometry );
+  SuperLattice<T, DESCRIPTOR> sLatticeTwo( superGeometry );
 
-  ForcedBGKdynamics<T, DESCRIPTOR> bulkDynamics1 (
-    omega1, instances::getExternalVelocityMomenta<T,DESCRIPTOR>() );
-  ForcedBGKdynamics<T, DESCRIPTOR> bulkDynamics2 (
-    omega2, instances::getExternalVelocityMomenta<T,DESCRIPTOR>() );
-
-  // A bounce-back node with fictitious density 1,
-  //   which is experienced by the partner fluid
-  BounceBack<T, DESCRIPTOR> bounceBackRho1( 1. );
-  // A bounce-back node with fictitious density 0,
-  //   which is experienced by the partner fluid
-  BounceBack<T, DESCRIPTOR> bounceBackRho0( 0. );
 
   std::vector<T> rho0;
   rho0.push_back( 1 );
@@ -283,13 +269,12 @@ int main( int argc, char *argv[] )
 
   sLatticeOne.addLatticeCoupling(coupling, sLatticeTwo );
 
-  prepareLattice( sLatticeOne, sLatticeTwo, bulkDynamics1, bulkDynamics2,
-                  bounceBackRho0, bounceBackRho1, superGeometry );
+  prepareLattice( sLatticeOne, sLatticeTwo, superGeometry );
 
   // === 4th Step: Main Loop with Timer ===
   int iT = 0;
-  clout << "starting simulation..." << endl;
-  Timer<T> timer( maxIter, superGeometry.getStatistics().getNvoxel() );
+  clout << "starting simulation..." << std::endl;
+  util::Timer<T> timer( maxIter, superGeometry.getStatistics().getNvoxel() );
   timer.start();
 
   for ( iT=0; iT<maxIter; ++iT ) {

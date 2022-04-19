@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Script to run the example with three different values for maxU and collect the output.
 

@@ -38,11 +38,6 @@
 #include "olb3D.h"
 #include "olb3D.hh"   // include full template code
 
-#include <vector>
-#include <cmath>
-#include <iostream>
-#include <random>
-
 using namespace olb;
 using namespace olb::descriptors;
 using namespace olb::util;
@@ -51,7 +46,7 @@ typedef double T;
 typedef WallFunctionForcedD3Q19Descriptor DESCRIPTOR;
 
 // Mathmatical constants
-const T pi = std::acos(-1);
+const T pi = util::acos(-1);
 
 // Parameters for the simulation setup
 const int N = 18;
@@ -103,7 +98,7 @@ T fluxUpdates = 4000;
 // physical simulated length adapted for lattice distance to boundary in meters
 const T adaptedPhysSimulatedLength = 2 * physRefL - 2 * ((2. / T(N + 2 * latticeWallDistance)) * latticeWallDistance);
 // Characteristic physical mean bulk velocity from Dean correlations in meters - Malaspinas and Sagaut (2014)
-const T charPhysU = ( pow((8.0/0.073), (4.0/7.0)) * pow((T)ReTau, (8.0/7.0)) ) * charPhysNu / (2. * physRefL);
+const T charPhysU = ( util::pow((8.0/0.073), (4.0/7.0)) * util::pow((T)ReTau, (8.0/7.0)) ) * charPhysNu / (2. * physRefL);
 // Time of the simulation in seconds
 const T charPhysT = physRefL / (ReTau * charPhysNu / physRefL);
 
@@ -112,16 +107,25 @@ const T physStatisticsTime = 40. * charPhysT ;  // statistics sampling time in s
 const T maxPhysT = physConvergeTime + physStatisticsTime; // max. simulation time in seconds
 const T statisticsSave = 1./25.;    // time between statistics samples in seconds
 
+// seed the rng with time if SEED_WITH_TIME is set, otherwise just use a fixed seed.
+#if defined SEED_WITH_TIME
+#include <chrono>
+auto seed = std::chrono::system_clock().now().time_since_epoch().count();
+std::default_random_engine generator(seed);
+#else
+std::default_random_engine generator(0x1337533DAAAAAAAA);
+#endif
+
 // Compute mean lattice velocity from musker wallfunction
 T computeLatticeVelocity()
 {
   T Ma_max = 0.1;
-  T c_s = 1/sqrt(3.0);
+  T c_s = 1/util::sqrt(3.0);
   T latticeUMax = Ma_max * c_s;
   Musker<T,T> musker_tmp(charPhysNu, physRefL, 1.);
   T charPhysU_tau = ReTau * charPhysNu / physRefL;
   T tau_w[1];
-  tau_w[0] = pow(charPhysU_tau,2.);
+  tau_w[0] = util::pow(charPhysU_tau,2.);
   T charPhysUMax[1];
   musker_tmp(charPhysUMax,tau_w);
   T latticeU = charPhysU * latticeUMax / charPhysUMax[0];
@@ -154,11 +158,12 @@ public:
 
   bool operator()(T output[], const S input[])
   {
-    double nRandom1 = rand()/(double)RAND_MAX*(b-a) + a;
-    double nRandom2 = rand()/(double)RAND_MAX*(b-a) + a;
-    double nRandom3 = rand()/(double)RAND_MAX*(b-a) + a;
+    std::uniform_real_distribution<T> distribution(a, b);
+    T nRandom1 = distribution(generator);
+    T nRandom2 = distribution(generator);
+    T nRandom3 = distribution(generator);
 
-    T u_calc = maxVelocity*pow(((obst_r-abs(input[2] - obst_z))/obst_r), 1./7.);
+    T u_calc = maxVelocity*util::pow(((obst_r-util::abs(input[2] - obst_z))/obst_r), 1./7.);
 
     output[0] = turbulenceIntensity*nRandom1*maxVelocity + u_calc;
     output[1] = turbulenceIntensity*nRandom2*maxVelocity;
@@ -193,7 +198,7 @@ public:
 
   bool operator()(T output[], const S input[])
   {
-    output[0] = pow(utau, 2)/h2 + (um - aveVelocity)*um/h2;
+    output[0] = util::pow(utau, 2)/h2 + (um - aveVelocity)*um/h2;
     output[1] = 0;
     output[2] = 0;
 
@@ -201,22 +206,22 @@ public:
   };
 };
 
-void prepareGeometry(SuperGeometry3D<T>& superGeometry, IndicatorF3D<T>& indicator,
+void prepareGeometry(SuperGeometry<T,3>& superGeometry, IndicatorF3D<T>& indicator,
                      UnitConverter<T,DESCRIPTOR> const& converter)
 {
   OstreamManager clout(std::cout,"prepareGeometry");
   clout << "Prepare Geometry ..." << std::endl;
 
   superGeometry.rename(0,2,indicator);
-  superGeometry.rename(2,1,0,0,1);
+  superGeometry.rename(2,1,{0,0,1});
   superGeometry.clean();
   superGeometry.innerClean();
   superGeometry.checkForErrors();
 
   superGeometry.print();
 
-  std::vector<T> PhyMax = superGeometry.getStatistics().getMaxPhysR(2);
-  std::vector<T> PhyMin = superGeometry.getStatistics().getMinPhysR(2);
+  olb::Vector<T, 3> PhyMax = superGeometry.getStatistics().getMaxPhysR(2);
+  olb::Vector<T, 3> PhyMin = superGeometry.getStatistics().getMinPhysR(2);
   clout << "Dimension of the channel in meters: x = " << PhyMax[0] - PhyMin[0];
   clout << " ; y = " << PhyMax[1] - PhyMin[1];
   clout << " ; z = " << PhyMax[2] - PhyMin[2] << std::endl;
@@ -225,9 +230,9 @@ void prepareGeometry(SuperGeometry3D<T>& superGeometry, IndicatorF3D<T>& indicat
 }
 
 // set up initial conditions
-void setInitialConditions(SuperLattice3D<T, DESCRIPTOR>& sLattice,
+void setInitialConditions(SuperLattice<T, DESCRIPTOR>& sLattice,
                           UnitConverter<T,DESCRIPTOR> const& converter,
-                          SuperGeometry3D<T>& superGeometry,
+                          SuperGeometry<T,3>& superGeometry,
                           AnalyticalScaled3D<T, T>& forceSolScaled,
                           TrackedForcing3D<T, T>& forceSol)
 {
@@ -258,7 +263,7 @@ void setInitialConditions(SuperLattice3D<T, DESCRIPTOR>& sLattice,
   // Tau_w Initialization
   T tau_w_guess = 0.0; // Wall shear stress in phys units
   AnalyticalConst3D<T, T> tau_w_ini(tau_w_guess);
-  AnalyticalScaled3D<T, T> tau_w_ini_scaled(tau_w_ini, 1. / ( converter.getConversionFactorForce() * pow(converter.getConversionFactorLength(),2.) ) );
+  AnalyticalScaled3D<T, T> tau_w_ini_scaled(tau_w_ini, 1. / ( converter.getConversionFactorForce() * util::pow(converter.getConversionFactorLength(),2.) ) );
 
   sLattice.defineField<TAU_W>(superGeometry, 1, tau_w_ini_scaled);
   sLattice.defineField<TAU_W>(superGeometry, 2, tau_w_ini_scaled);
@@ -267,11 +272,9 @@ void setInitialConditions(SuperLattice3D<T, DESCRIPTOR>& sLattice,
 }
 
 // Set up the geometry of the simulation
-void prepareLattice(SuperLattice3D<T,DESCRIPTOR>& sLattice,
+void prepareLattice(SuperLattice<T,DESCRIPTOR>& sLattice,
                     UnitConverter<T,DESCRIPTOR> const& converter,
-                    Dynamics<T, DESCRIPTOR>& bulkDynamics,
-                    Dynamics<T, DESCRIPTOR>& boundaryDynamics,
-                    SuperGeometry3D<T>& superGeometry,
+                    SuperGeometry<T,3>& superGeometry,
                     AnalyticalScaled3D<T, T>& forceSolScaled,
                     TrackedForcing3D<T, T>& forceSol,
                     wallFunctionParam<T> const& wallFunctionParam
@@ -282,15 +285,18 @@ void prepareLattice(SuperLattice3D<T,DESCRIPTOR>& sLattice,
   clout << "Prepare Lattice ..." << std::endl;
 
   /// Material=0 -->do nothing
-  sLattice.defineDynamics(superGeometry, 0, &instances::getNoDynamics<T, DESCRIPTOR>());
+  sLattice.defineDynamics<NoDynamics>(superGeometry, 0);
   /// Material=1 -->bulk dynamics
-  sLattice.defineDynamics(superGeometry, 1, &bulkDynamics);
+  sLattice.defineDynamics<SmagorinskyForcedBGKdynamics>(superGeometry, 1);
   /// Material = 2 --> boundary node + wallfunction
-  sLattice.defineDynamics(superGeometry, 2, &boundaryDynamics);
+  sLattice.defineDynamics<ExternalTauEffLESForcedBGKdynamics>(superGeometry, 2);
   setWallFunctionBoundary<T,DESCRIPTOR>(sLattice, superGeometry, 2, converter, wallFunctionParam);
 
   /// === Set Initial Conditions == ///
   setInitialConditions(sLattice, converter, superGeometry, forceSolScaled, forceSol);
+
+  sLattice.setParameter<descriptors::OMEGA>( converter.getLatticeRelaxationFrequency() );
+  sLattice.setParameter<collision::LES::Smagorinsky>(0.12);
 
   // Make the lattice ready for simulation
   sLattice.initialize();
@@ -299,9 +305,9 @@ void prepareLattice(SuperLattice3D<T,DESCRIPTOR>& sLattice,
 }
 
 /// Computes the pressure drop between the voxels before and after the cylinder
-void getResults(SuperLattice3D<T, DESCRIPTOR>& sLattice,
+void getResults(SuperLattice<T, DESCRIPTOR>& sLattice,
                 UnitConverter<T,DESCRIPTOR> const& converter, size_t iT,
-                SuperGeometry3D<T>& superGeometry, Timer<double>& timer,
+                SuperGeometry<T,3>& superGeometry, Timer<double>& timer,
                 SuperLatticeTimeAveragedF3D<T>& sAveragedVel)
 {
   OstreamManager clout(std::cout, "getResults");
@@ -384,8 +390,8 @@ int main(int argc, char* argv[])
   clout << "Lattice statistics save period: " << converter.getLatticeTime(statisticsSave) << std::endl;
   clout << "----------------------------------------------------------------------" << std::endl;
   clout << "Channel height(m): " << adaptedPhysSimulatedLength << std::endl;
-  clout << "y+ value: " << (ReTau * converter.getPhysViscosity() / (physRefL)) * ((2. / T(N + 2 * latticeWallDistance)) * latticeWallDistance)/ converter.getPhysViscosity() << endl;
-  clout << "y+ value spacing: " << (ReTau * converter.getPhysViscosity() / (physRefL)) * (converter.getPhysDeltaX()) / converter.getPhysViscosity() << endl;
+  clout << "y+ value: " << (ReTau * converter.getPhysViscosity() / (physRefL)) * ((2. / T(N + 2 * latticeWallDistance)) * latticeWallDistance)/ converter.getPhysViscosity() << std::endl;
+  clout << "y+ value spacing: " << (ReTau * converter.getPhysViscosity() / (physRefL)) * (converter.getPhysDeltaX()) / converter.getPhysViscosity() << std::endl;
   clout << "----------------------------------------------------------------------" << std::endl;
 
 #ifdef PARALLEL_MODE_MPI
@@ -406,16 +412,12 @@ int main(int argc, char* argv[])
 
   HeuristicLoadBalancer<T> loadBalancer( cuboidGeometry );
 
-  SuperGeometry3D<T> superGeometry(cuboidGeometry, loadBalancer, 2);
+  SuperGeometry<T,3> superGeometry(cuboidGeometry, loadBalancer);
 
   prepareGeometry(superGeometry, cuboid, converter);
 
   /// === 3rd Step: Prepare Lattice ===
-  SuperLattice3D<T, DESCRIPTOR> sLattice(superGeometry);
-
-  SmagorinskyForcedBGKdynamics<T, DESCRIPTOR> bulkDynamics (converter.getLatticeRelaxationFrequency(), instances::getBulkMomenta<T,DESCRIPTOR>(), 0.12);
-
-  ExternalTauEffLESForcedBGKdynamics<T, DESCRIPTOR> boundaryDynamics (converter.getLatticeRelaxationFrequency(), instances::getBulkMomenta<T,DESCRIPTOR>());
+  SuperLattice<T, DESCRIPTOR> sLattice(superGeometry);
 
   //forcing of the channel
   TrackedForcing3D<T,T> forceSol(converter, ReTau);
@@ -448,7 +450,7 @@ int main(int argc, char* argv[])
   wallFunctionParam.vonKarman = 0.375;
   wallFunctionParam.curved = false;
 
-  prepareLattice(sLattice, converter, bulkDynamics, boundaryDynamics, superGeometry,
+  prepareLattice(sLattice, converter, superGeometry,
                  forceSolScaled, forceSol, wallFunctionParam);
 
   SuperPlaneIntegralFluxVelocity3D<T> velFlux(sLattice, converter, superGeometry, center, normal, materials,

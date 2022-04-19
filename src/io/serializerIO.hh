@@ -27,11 +27,13 @@
 #include "serializerIO.h"
 #include "base64.h"
 #include "core/olbDebug.h"
+
 #include <limits>
 #include <istream>
 #include <ostream>
 #include <fstream>
 #include <sstream>
+#include <cstring>
 
 namespace olb {
 
@@ -39,20 +41,21 @@ void serializer2ostr(Serializer& serializer, std::ostream& ostr, bool enforceUin
 {
   serializer.resetCounter();
   // write binary size into first integer of stream
-  size_t binarySize = serializer.getSize();
+  std::size_t binarySize = serializer.getSize();
   if (enforceUint) {
     Base64Encoder<unsigned int> sizeEncoder(ostr, 1);
     OLB_PRECONDITION(binarySize <= std::numeric_limits<unsigned int>::max());
     unsigned int uintBinarySize = (unsigned int)binarySize;
     sizeEncoder.encode(&uintBinarySize, 1);
-  } else {
-    Base64Encoder<size_t> sizeEncoder(ostr, 1);
+  }
+  else {
+    Base64Encoder<std::size_t> sizeEncoder(ostr, 1);
     sizeEncoder.encode(&binarySize, 1);
   }
 
   Base64Encoder<bool> dataEncoder (ostr, binarySize);
 
-  size_t blockSize;
+  std::size_t blockSize;
   const bool* dataBuffer = nullptr;
   while (dataBuffer = serializer.getNextBlock(blockSize, false), dataBuffer != nullptr) {
     dataEncoder.encode(dataBuffer, blockSize);
@@ -62,18 +65,19 @@ void serializer2ostr(Serializer& serializer, std::ostream& ostr, bool enforceUin
 
 void istr2serializer(Serializer& serializer, std::istream& istr, bool enforceUint)
 {
-  //size_t binarySize = serializer.getSize();
+  //std::size_t binarySize = serializer.getSize();
   serializer.resetCounter();
 
   // read binary size from first integer of stream
-  size_t binarySize;
+  std::size_t binarySize;
   if (enforceUint) {
     unsigned int uintBinarySize;
     Base64Decoder<unsigned int> sizeDecoder(istr, 1);
     sizeDecoder.decode(&uintBinarySize, 1);
     binarySize = uintBinarySize;
-  } else {
-    Base64Decoder<size_t> sizeDecoder(istr, 1);
+  }
+  else {
+    Base64Decoder<std::size_t> sizeDecoder(istr, 1);
     sizeDecoder.decode(&binarySize, 1);
   }
   //OLB_PRECONDITION(binarySize == serializer.getSize());
@@ -81,10 +85,34 @@ void istr2serializer(Serializer& serializer, std::istream& istr, bool enforceUin
 
   Base64Decoder<bool> dataDecoder(istr, binarySize);
 
-  size_t blockSize;
+  std::size_t blockSize;
   bool* dataBuffer = nullptr;
   while (dataBuffer = serializer.getNextBlock(blockSize, true), dataBuffer != nullptr) {
     dataDecoder.decode(dataBuffer, blockSize);
+  }
+  serializer.resetCounter();
+}
+
+void serializer2buffer(Serializer& serializer, std::uint8_t* buffer)
+{
+  serializer.resetCounter();
+  std::size_t blockSize;
+  const bool* dataBuffer = nullptr;
+  while (dataBuffer = serializer.getNextBlock(blockSize, false), dataBuffer != nullptr) {
+    std::memcpy(buffer, dataBuffer, blockSize);
+    buffer += blockSize;
+  }
+  serializer.resetCounter();
+}
+
+void buffer2serializer(Serializer& serializer, const std::uint8_t* buffer)
+{
+  serializer.resetCounter();
+  std::size_t blockSize;
+  bool* dataBuffer = nullptr;
+  while (dataBuffer = serializer.getNextBlock(blockSize, true), dataBuffer != nullptr) {
+    std::memcpy(dataBuffer, buffer, blockSize);
+    buffer += blockSize;
   }
   serializer.resetCounter();
 }

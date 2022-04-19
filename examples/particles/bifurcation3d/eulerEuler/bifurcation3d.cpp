@@ -37,9 +37,8 @@
  */
 
 #include "olb3D.h"
-#include "olb3D.hh"   // use only generic version!
+#include "olb3D.hh"
 
-using namespace std;
 using namespace olb;
 using namespace olb::descriptors;
 using namespace olb::graphics;
@@ -74,7 +73,7 @@ Vector<T,3> outletNormal1( -0.483331, -0.0102764, 0.875377 );
 
 void prepareGeometry( UnitConverter<T,NSDESCRIPTOR> const& converter,
                       IndicatorF3D<T>& indicator, STLreader<T>& stlReader,
-                      SuperGeometry3D<T>& superGeometry )
+                      SuperGeometry<T,3>& superGeometry )
 {
 
   OstreamManager clout( std::cout, "prepareGeometry" );
@@ -115,12 +114,10 @@ void prepareGeometry( UnitConverter<T,NSDESCRIPTOR> const& converter,
   return;
 }
 
-void prepareLattice( SuperLattice3D<T, NSDESCRIPTOR>& sLatticeNS,
-                     SuperLattice3D<T, ADDESCRIPTOR>& sLatticeAD,
+void prepareLattice( SuperLattice<T, NSDESCRIPTOR>& sLatticeNS,
+                     SuperLattice<T, ADDESCRIPTOR>& sLatticeAD,
                      UnitConverter<T,NSDESCRIPTOR> const& converter,
-                     Dynamics<T, NSDESCRIPTOR>& bulkDynamics,
-                     Dynamics<T, ADDESCRIPTOR>& bulkDynamicsAD,
-                     SuperGeometry3D<T>& superGeometry,
+                     SuperGeometry<T,3>& superGeometry,
                      T omegaAD )
 {
 
@@ -130,27 +127,27 @@ void prepareLattice( SuperLattice3D<T, NSDESCRIPTOR>& sLatticeNS,
   const T omega = converter.getLatticeRelaxationFrequency();
 
   // Material=0 --> do nothing
-  sLatticeNS.defineDynamics( superGeometry, 0, &instances::getNoDynamics<T, NSDESCRIPTOR>() );
-  sLatticeAD.defineDynamics( superGeometry, 0, &instances::getNoDynamics<T, ADDESCRIPTOR>() );
+  sLatticeNS.defineDynamics<NoDynamics>(superGeometry, 0);
+  sLatticeAD.defineDynamics<NoDynamics>(superGeometry, 0);
 
   // Material=1 --> bulk dynamics
   // Material=3 --> bulk dynamics (inflow)
   auto inflowIndicator = superGeometry.getMaterialIndicator({1, 3});
-  sLatticeNS.defineDynamics( inflowIndicator, &bulkDynamics );
-  sLatticeAD.defineDynamics( inflowIndicator, &bulkDynamicsAD );
+  sLatticeNS.defineDynamics<BGKdynamics>(inflowIndicator);
+  sLatticeAD.defineDynamics<ParticleAdvectionDiffusionBGKdynamics>(inflowIndicator);
 
   // Material=2 --> bounce-back / zero distribution dynamics
-  sLatticeNS.defineDynamics( superGeometry, 2, &instances::getBounceBack<T, NSDESCRIPTOR>() );
-  sLatticeAD.defineDynamics( superGeometry, 2, &instances::getZeroDistributionDynamics<T, ADDESCRIPTOR>() );
+  sLatticeNS.defineDynamics<BounceBack>(superGeometry, 2);
+  sLatticeAD.defineDynamics<ZeroDistributionDynamics>(superGeometry, 2);
 
   // Material=4,5 -->bulk dynamics / do-nothing (outflow)
   auto outflowIndicator = superGeometry.getMaterialIndicator({4, 5});
-  sLatticeNS.defineDynamics( outflowIndicator, &bulkDynamics );
-  sLatticeAD.defineDynamics( outflowIndicator, &instances::getNoDynamics<T, ADDESCRIPTOR>() );
+  sLatticeNS.defineDynamics<BGKdynamics>(outflowIndicator);
+  sLatticeAD.defineDynamics<NoDynamics>(outflowIndicator);
 
   // Material=6 --> bounce-back / bounce-back
-  sLatticeNS.defineDynamics( superGeometry, 6, &instances::getBounceBack<T, NSDESCRIPTOR>() );
-  sLatticeAD.defineDynamics( superGeometry, 6, &instances::getBounceBack<T, ADDESCRIPTOR>() );
+  sLatticeNS.defineDynamics<BounceBack>(superGeometry, 6);
+  sLatticeAD.defineDynamics<BounceBack>(superGeometry, 6);
 
   // Setting of the boundary conditions
   setInterpolatedPressureBoundary<T,NSDESCRIPTOR>(sLatticeNS, omega, superGeometry, 3);
@@ -172,17 +169,27 @@ void prepareLattice( SuperLattice3D<T, NSDESCRIPTOR>& sLatticeNS,
   sLatticeAD.defineRho( superGeometry, 3, rho1 );
   sLatticeAD.iniEquilibrium( superGeometry.getMaterialIndicator({1, 2, 4, 5, 6}), rho0, u0 );
 
+  sLatticeNS.setParameter<descriptors::OMEGA>(omega);
+  sLatticeAD.setParameter<descriptors::OMEGA>(omegaAD);
+
   // Lattice initialize
   sLatticeNS.initialize();
   sLatticeAD.initialize();
+
+  {
+    auto& communicator = sLatticeAD.getCommunicator(PostCoupling());
+    communicator.requestField<descriptors::VELOCITY>();
+    communicator.requestOverlap(sLatticeAD.getOverlap());
+    communicator.exchangeRequests();
+  }
 
   clout << "Prepare Lattice ... OK" << std::endl;
   return;
 }
 
-void setBoundaryValues( SuperLattice3D<T, NSDESCRIPTOR>& sLatticeNS,
+void setBoundaryValues( SuperLattice<T, NSDESCRIPTOR>& sLatticeNS,
                         UnitConverter<T,NSDESCRIPTOR> const& converter, int iT,
-                        SuperGeometry3D<T>& superGeometry )
+                        SuperGeometry<T,3>& superGeometry )
 {
 
   OstreamManager clout( std::cout, "setBoundaryValues" );
@@ -190,8 +197,8 @@ void setBoundaryValues( SuperLattice3D<T, NSDESCRIPTOR>& sLatticeNS,
   // No of time steps for smooth start-up
   int iTmaxStart = converter.getLatticeTime( 0.8*maxPhysT );
   // Set inflow velocity
-  T maxVelocity = converter.getCharLatticeVelocity() * 3. / 4. * std::pow(
-                    inletRadius, 2 ) / std::pow( outletRadius0, 2 );
+  T maxVelocity = converter.getCharLatticeVelocity() * 3. / 4. * util::pow(
+                    inletRadius, 2 ) / util::pow( outletRadius0, 2 );
   if ( iT % iTperiod == 0 ) {
     if ( iT <= iTmaxStart ) {
       SinusStartScale<T, int> startScale( iTmaxStart, T( 1 ) );
@@ -216,10 +223,10 @@ void setBoundaryValues( SuperLattice3D<T, NSDESCRIPTOR>& sLatticeNS,
   }
 }
 
-void getResults( SuperLattice3D<T, NSDESCRIPTOR>& sLatticeNS,
-                 SuperLattice3D<T, ADDESCRIPTOR>& sLatticeAD,
+void getResults( SuperLattice<T, NSDESCRIPTOR>& sLatticeNS,
+                 SuperLattice<T, ADDESCRIPTOR>& sLatticeAD,
                  UnitConverter<T,NSDESCRIPTOR> const& converter, int iT,
-                 SuperGeometry3D<T>& superGeometry,
+                 SuperGeometry<T,3>& superGeometry,
                  Timer<double>& timer )
 {
 
@@ -231,7 +238,7 @@ void getResults( SuperLattice3D<T, NSDESCRIPTOR>& sLatticeNS,
 
   SuperLatticePhysPressure3D<T, NSDESCRIPTOR> pressure( sLatticeNS, converter );
   SuperLatticeDensity3D<T, ADDESCRIPTOR> particles( sLatticeAD );
-  SuperLatticePhysExternal3D<T, ADDESCRIPTOR, descriptors::VELOCITY> extField(
+  SuperLatticePhysField3D<T, ADDESCRIPTOR, descriptors::VELOCITY> extField(
     sLatticeAD, converter.getConversionFactorVelocity());
 
   vtmWriter.addFunctor( velocity );
@@ -363,35 +370,29 @@ int main( int argc, char* argv[] )
   IndicatorLayer3D<T> extendedDomain( stlReader,converter.getConversionFactorLength() );
 
   // Instantiation of an empty cuboidGeometry
-  int noOfCuboids = std::max( 20, singleton::mpi().getSize() );
+  int noOfCuboids = util::max( 20, singleton::mpi().getSize() );
   CuboidGeometry3D<T> cuboidGeometry( extendedDomain, converter.getConversionFactorLength(),
                                       noOfCuboids, "weight" );
   cuboidGeometry.printExtended();
   clout << "min / max ratio (volume) = " << (T) cuboidGeometry.getMinLatticeVolume()
-        / cuboidGeometry.getMaxLatticeVolume() << endl;
+        / cuboidGeometry.getMaxLatticeVolume() << std::endl;
   clout << "min / max ratio (weight) = " << (T) cuboidGeometry.getMinLatticeWeight()
-        / cuboidGeometry.getMaxLatticeWeight() << endl;
+        / cuboidGeometry.getMaxLatticeWeight() << std::endl;
 
   // Instantiation of an empty loadBalancer
   HeuristicLoadBalancer<T> loadBalancer( cuboidGeometry );
   // Default instantiation of superGeometry
-  SuperGeometry3D<T> superGeometry( cuboidGeometry, loadBalancer, 2 );
+  SuperGeometry<T,3> superGeometry( cuboidGeometry, loadBalancer, 3 );
 
   prepareGeometry( converter, extendedDomain, stlReader, superGeometry );
 
   // === 3rd Step: Prepare Lattice ===
-  SuperLattice3D<T, NSDESCRIPTOR> sLatticeNS( superGeometry );
-  SuperLattice3D<T, ADDESCRIPTOR> sLatticeAD( superGeometry );
-  SuperField3D<T, ADDESCRIPTOR, descriptors::VELOCITY> sField( superGeometry, sLatticeAD, sLatticeAD.getOverlap() );
+  SuperLattice<T, NSDESCRIPTOR> sLatticeNS( superGeometry );
+  SuperLattice<T, ADDESCRIPTOR> sLatticeAD( superGeometry );
 
-  BGKdynamics<T, NSDESCRIPTOR> bulkDynamics( converter.getLatticeRelaxationFrequency(),
-      instances::getBulkMomenta<T, NSDESCRIPTOR>() );
-  ParticleAdvectionDiffusionBGKdynamics<T, ADDESCRIPTOR> bulkDynamicsAD ( omegaAD,
-      instances::getBulkMomenta<T,ADDESCRIPTOR>() );
 
   //prepareLattice and setBoundaryConditions
-  prepareLattice( sLatticeNS, sLatticeAD, converter, bulkDynamics, bulkDynamicsAD,
-                 superGeometry, omegaAD );
+  prepareLattice( sLatticeNS, sLatticeAD, converter, superGeometry, omegaAD );
 
   AdvectionDiffusionParticleCouplingGenerator3D<T,NSDESCRIPTOR,ADDESCRIPTOR,VELOCITY,VELOCITY2> coupling;
 
@@ -404,11 +405,12 @@ int main( int argc, char* argv[] )
                        superGeometry.getStatistics().getNvoxel() );
   timer.start();
 
-  for ( std::size_t iT = 0; iT <= converter.getLatticeTime( maxPhysT ); ++iT ) {
+  for (std::size_t iT = 0; iT <= converter.getLatticeTime(maxPhysT); ++iT) {
+    sLatticeAD.setParameter<descriptors::LATTICE_TIME>(iT);
     getResults( sLatticeNS, sLatticeAD, converter, iT, superGeometry, timer );
     setBoundaryValues( sLatticeNS, converter, iT, superGeometry );
     sLatticeNS.executeCoupling();
-    sField.communicate();
+    sLatticeAD.executeCoupling();
     sLatticeNS.collideAndStream();
     sLatticeAD.collideAndStream();
   }

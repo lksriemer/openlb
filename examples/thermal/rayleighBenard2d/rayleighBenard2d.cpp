@@ -30,12 +30,11 @@
 
 
 #include "olb2D.h"
-#include "olb2D.hh"   // use only generic version!
+#include "olb2D.hh"
 
 using namespace olb;
 using namespace olb::descriptors;
 using namespace olb::graphics;
-using namespace std;
 
 typedef double T;
 
@@ -56,7 +55,7 @@ const T Tcold = 273.15;    // temperature of the fluid in Kelvin
 const T Tperturb = 1./5. * Tcold + 4./5. * Thot; // temperature of the perturbation
 
 /// Stores geometry information in form of material numbers
-void prepareGeometry(SuperGeometry2D<T>& superGeometry,
+void prepareGeometry(SuperGeometry<T,2>& superGeometry,
                      ThermalUnitConverter<T, NSDESCRIPTOR, TDESCRIPTOR> &converter)
 {
 
@@ -64,7 +63,7 @@ void prepareGeometry(SuperGeometry2D<T>& superGeometry,
   clout << "Prepare Geometry ..." << std::endl;
 
   superGeometry.rename(0,2);
-  superGeometry.rename(2,1,0,1);
+  superGeometry.rename(2,1,{0,1});
 
   std::vector<T> extend( 2, T(0) );
   extend[0] = lx;
@@ -98,31 +97,30 @@ void prepareGeometry(SuperGeometry2D<T>& superGeometry,
 }
 
 void prepareLattice( ThermalUnitConverter<T, NSDESCRIPTOR, TDESCRIPTOR> &converter,
-                     SuperLattice2D<T, NSDESCRIPTOR>& NSlattice,
-                     SuperLattice2D<T, TDESCRIPTOR>& ADlattice,
-                     Dynamics<T, NSDESCRIPTOR> &bulkDynamics,
-                     Dynamics<T, TDESCRIPTOR>& advectionDiffusionBulkDynamics,
-                     SuperGeometry2D<T>& superGeometry )
+                     SuperLattice<T, NSDESCRIPTOR>& NSlattice,
+                     SuperLattice<T, TDESCRIPTOR>& ADlattice,
+                     SuperGeometry<T,2>& superGeometry )
 {
 
   OstreamManager clout(std::cout,"prepareLattice");
 
   T Tomega  = converter.getLatticeThermalRelaxationFrequency();
+  T NSomega = converter.getLatticeRelaxationFrequency();
 
   /// define lattice Dynamics
-  clout << "defining dynamics" << endl;
+  clout << "defining dynamics" << std::endl;
 
-  ADlattice.defineDynamics(superGeometry, 0, &instances::getNoDynamics<T, TDESCRIPTOR>());
-  NSlattice.defineDynamics(superGeometry, 0, &instances::getNoDynamics<T, NSDESCRIPTOR>());
+  ADlattice.defineDynamics<NoDynamics<T,TDESCRIPTOR>>(superGeometry, 0);
+  NSlattice.defineDynamics<NoDynamics<T,NSDESCRIPTOR>>(superGeometry, 0);
 
-  ADlattice.defineDynamics(superGeometry, 1, &advectionDiffusionBulkDynamics);
-  ADlattice.defineDynamics(superGeometry, 2, &advectionDiffusionBulkDynamics);
-  ADlattice.defineDynamics(superGeometry, 3, &advectionDiffusionBulkDynamics);
-  ADlattice.defineDynamics(superGeometry, 4, &advectionDiffusionBulkDynamics);
-  NSlattice.defineDynamics(superGeometry, 1, &bulkDynamics);
-  NSlattice.defineDynamics(superGeometry, 2, &instances::getBounceBack<T, NSDESCRIPTOR>());
-  NSlattice.defineDynamics(superGeometry, 3, &instances::getBounceBack<T, NSDESCRIPTOR>());
-  NSlattice.defineDynamics(superGeometry, 4, &bulkDynamics);
+  ADlattice.defineDynamics<AdvectionDiffusionBGKdynamics>(superGeometry, 1);
+  ADlattice.defineDynamics<AdvectionDiffusionBGKdynamics>(superGeometry, 2);
+  ADlattice.defineDynamics<AdvectionDiffusionBGKdynamics>(superGeometry, 3);
+  ADlattice.defineDynamics<AdvectionDiffusionBGKdynamics>(superGeometry, 4);
+  NSlattice.defineDynamics<ForcedBGKdynamics>(superGeometry, 1);
+  NSlattice.defineDynamics<BounceBack<T,NSDESCRIPTOR>>(superGeometry, 2);
+  NSlattice.defineDynamics<BounceBack<T,NSDESCRIPTOR>>(superGeometry, 3);
+  NSlattice.defineDynamics<ForcedBGKdynamics>(superGeometry, 4);
 
   /// sets boundary
   setAdvectionDiffusionTemperatureBoundary<T,TDESCRIPTOR>(ADlattice, Tomega, superGeometry, 2);
@@ -154,6 +152,9 @@ void prepareLattice( ThermalUnitConverter<T, NSDESCRIPTOR, TDESCRIPTOR> &convert
   ADlattice.defineRho(superGeometry, 4, T_perturb);
   ADlattice.iniEquilibrium(superGeometry, 4, T_perturb, u0);
 
+  NSlattice.setParameter<descriptors::OMEGA>(NSomega);
+  ADlattice.setParameter<descriptors::OMEGA>(Tomega);
+
   /// Make the lattice ready for simulation
   NSlattice.initialize();
   ADlattice.initialize();
@@ -162,18 +163,18 @@ void prepareLattice( ThermalUnitConverter<T, NSDESCRIPTOR, TDESCRIPTOR> &convert
 }
 
 void setBoundaryValues(ThermalUnitConverter<T, NSDESCRIPTOR, TDESCRIPTOR> &converter,
-                       SuperLattice2D<T, NSDESCRIPTOR>& NSlattice,
-                       SuperLattice2D<T, TDESCRIPTOR>& ADlattice,
-                       int iT, SuperGeometry2D<T>& superGeometry)
+                       SuperLattice<T, NSDESCRIPTOR>& NSlattice,
+                       SuperLattice<T, TDESCRIPTOR>& ADlattice,
+                       int iT, SuperGeometry<T,2>& superGeometry)
 {
   // nothing to do here
 }
 
 void getResults(ThermalUnitConverter<T, NSDESCRIPTOR, TDESCRIPTOR> &converter,
-                SuperLattice2D<T, NSDESCRIPTOR>& NSlattice,
-                SuperLattice2D<T, TDESCRIPTOR>& ADlattice, int iT,
-                SuperGeometry2D<T>& superGeometry,
-                Timer<T>& timer,
+                SuperLattice<T, NSDESCRIPTOR>& NSlattice,
+                SuperLattice<T, TDESCRIPTOR>& ADlattice, int iT,
+                SuperGeometry<T,2>& superGeometry,
+                util::Timer<T>& timer,
                 bool converged)
 {
 
@@ -232,14 +233,14 @@ int main(int argc, char *argv[])
 
   ThermalUnitConverter<T, NSDESCRIPTOR, TDESCRIPTOR> converter(
     (T) 0.1/N, // physDeltaX
-    (T) 0.1 / (1e-5 / 0.1 * sqrt( Ra / Pr)) * 0.1 / N, // physDeltaT = charLatticeVelocity / charPhysVelocity * physDeltaX
+    (T) 0.1 / (1e-5 / 0.1 * util::sqrt( Ra / Pr)) * 0.1 / N, // physDeltaT = charLatticeVelocity / charPhysVelocity * physDeltaX
     (T) 0.1,  // charPhysLength
-    (T) 1e-5 / 0.1 * sqrt( Ra / Pr ), // charPhysVelocity
+    (T) 1e-5 / 0.1 * util::sqrt( Ra / Pr ), // charPhysVelocity
     (T) 1e-5,  // physViscosity
     (T) 1.0, // physDensity
     (T) 0.03, // physThermalConductivity
     (T) Pr * 0.03 / 1e-5 / 1.0,    // physSpecificHeatCapacity
-    (T) Ra * 1e-5 * 1e-5 / Pr / 9.81 / (Thot - Tcold) / pow(0.1, 3), // physThermalExpansionCoefficient
+    (T) Ra * 1e-5 * 1e-5 / Pr / 9.81 / (Thot - Tcold) / util::pow(0.1, 3), // physThermalExpansionCoefficient
     (T) Tcold, // charPhysLowTemperature
     (T) Thot // charPhysHighTemperature
   );
@@ -264,24 +265,15 @@ int main(int argc, char *argv[])
 
   HeuristicLoadBalancer<T> loadBalancer(cuboidGeometry);
 
-  SuperGeometry2D<T> superGeometry(cuboidGeometry, loadBalancer, 2);
+  SuperGeometry<T,2> superGeometry(cuboidGeometry, loadBalancer);
 
   prepareGeometry(superGeometry, converter);
 
   /// === 3rd Step: Prepare Lattice ===
 
-  SuperLattice2D<T, TDESCRIPTOR> ADlattice(superGeometry);
-  SuperLattice2D<T, NSDESCRIPTOR> NSlattice(superGeometry);
+  SuperLattice<T, TDESCRIPTOR> ADlattice(superGeometry);
+  SuperLattice<T, NSDESCRIPTOR> NSlattice(superGeometry);
 
-
-  ForcedBGKdynamics<T, NSDESCRIPTOR> NSbulkDynamics(
-    converter.getLatticeRelaxationFrequency(),
-    instances::getBulkMomenta<T,NSDESCRIPTOR>());
-
-  AdvectionDiffusionBGKdynamics<T, TDESCRIPTOR> TbulkDynamics (
-    converter.getLatticeThermalRelaxationFrequency(),
-    instances::getAdvectionDiffusionBulkMomenta<T,TDESCRIPTOR>()
-  );
 
   // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!//
   // This coupling must be necessarily be put on the Navier-Stokes lattice!!
@@ -299,20 +291,17 @@ int main(int argc, char *argv[])
   NSlattice.addLatticeCoupling(superGeometry, 3, coupling, ADlattice);
   NSlattice.addLatticeCoupling(superGeometry, 4, coupling, ADlattice);
 
-  prepareLattice(converter,
-                 NSlattice, ADlattice,
-                 NSbulkDynamics, TbulkDynamics,
-                 superGeometry );
+  prepareLattice(converter, NSlattice, ADlattice, superGeometry);
 
   /// === 4th Step: Main Loop with Timer ===
-  Timer<T> timer(converter.getLatticeTime(maxPhysT), superGeometry.getStatistics().getNvoxel() );
+  util::Timer<T> timer(converter.getLatticeTime(maxPhysT), superGeometry.getStatistics().getNvoxel() );
   timer.start();
 
   util::ValueTracer<T> converge(converter.getLatticeTime(50.),epsilon);
   for (std::size_t iT = 0; iT < converter.getLatticeTime(maxPhysT); ++iT) {
 
     if (converge.hasConverged()) {
-      clout << "Simulation converged." << endl;
+      clout << "Simulation converged." << std::endl;
       getResults(converter, NSlattice, ADlattice, iT, superGeometry, timer, converge.hasConverged());
 
       clout << "Time " << iT << "." << std::endl;

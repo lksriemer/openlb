@@ -43,19 +43,19 @@ computational cells, Int. J. Modern Phys. C 9 (8) (1998) 1189–1202.
 Vertikal Wall, Journal of Heat Transfer  108(1) (1986): 174–181.
  */
 
-
 #include "olb2D.h"
-#include "olb2D.hh"   // use only generic version!
+#include "olb2D.hh"
 
 using namespace olb;
 using namespace olb::descriptors;
 using namespace olb::graphics;
-using namespace std;
 
-typedef double T;
+using T = double;
 
-#define NSDESCRIPTOR D2Q9<POROSITY,VELOCITY_SOLID,FORCE>
-#define TDESCRIPTOR D2Q5<VELOCITY,TEMPERATURE>
+using NSDESCRIPTOR = D2Q9<POROSITY,VELOCITY_SOLID,FORCE>;
+using TDESCRIPTOR  = D2Q5<VELOCITY,TEMPERATURE>;
+
+using TotalEnthalpyAdvectionDiffusionDynamics = TotalEnthalpyAdvectionDiffusionTRTdynamics<T,TDESCRIPTOR>;
 
 // Parameters for the simulation setup
 const T lx  = 88.9e-3;      // length of the channel
@@ -90,108 +90,118 @@ T lattice_Hcold, lattice_Hhot;
 T physDeltaX, physDeltaT;
 
 /// Stores geometry information in form of material numbers
-void prepareGeometry(SuperGeometry2D<T>& superGeometry,
+void prepareGeometry(SuperGeometry<T,2>& superGeometry,
                      ThermalUnitConverter<T, NSDESCRIPTOR, TDESCRIPTOR> const& converter)
 {
 
-    OstreamManager clout(std::cout,"prepareGeometry");
-    clout << "Prepare Geometry ..." << std::endl;
+  OstreamManager clout(std::cout,"prepareGeometry");
+  clout << "Prepare Geometry ..." << std::endl;
 
-    superGeometry.rename(0,4);
+  superGeometry.rename(0,4);
 
-    std::vector<T> extend(2,T());
-    extend[0] = lx;
-    extend[1] = ly;
-    std::vector<T> origin(2,T());
-    origin[0] = converter.getPhysLength(1);
-    origin[1] = 0.5*converter.getPhysLength(1);
-    IndicatorCuboid2D<T> cuboid2(extend, origin);
+  std::vector<T> extend(2,T());
+  extend[0] = lx;
+  extend[1] = ly;
+  std::vector<T> origin(2,T());
+  origin[0] = converter.getPhysLength(1);
+  origin[1] = 0.5*converter.getPhysLength(1);
+  IndicatorCuboid2D<T> cuboid2(extend, origin);
 
-    superGeometry.rename(4,1,cuboid2);
+  superGeometry.rename(4,1,cuboid2);
 
-    std::vector<T> extendwallleft(2,T(0));
-    extendwallleft[0] = converter.getPhysLength(1);
-    extendwallleft[1] = ly;
-    std::vector<T> originwallleft(2,T(0));
-    originwallleft[0] = 0.0;
-    originwallleft[1] = 0.0;
-    IndicatorCuboid2D<T> wallleft(extendwallleft, originwallleft);
+  std::vector<T> extendwallleft(2,T(0));
+  extendwallleft[0] = converter.getPhysLength(1);
+  extendwallleft[1] = ly;
+  std::vector<T> originwallleft(2,T(0));
+  originwallleft[0] = 0.0;
+  originwallleft[1] = 0.0;
+  IndicatorCuboid2D<T> wallleft(extendwallleft, originwallleft);
 
-    std::vector<T> extendwallright(2,T(0));
-    extendwallright[0] = converter.getPhysLength(1);
-    extendwallright[1] = ly;
-    std::vector<T> originwallright(2,T(0));
-    originwallright[0] = lx+converter.getPhysLength(1);
-    originwallright[1] = 0.0;
-    IndicatorCuboid2D<T> wallright(extendwallright, originwallright);
+  std::vector<T> extendwallright(2,T(0));
+  extendwallright[0] = converter.getPhysLength(1);
+  extendwallright[1] = ly;
+  std::vector<T> originwallright(2,T(0));
+  originwallright[0] = lx+converter.getPhysLength(1);
+  originwallright[1] = 0.0;
+  IndicatorCuboid2D<T> wallright(extendwallright, originwallright);
 
-    superGeometry.rename(4,2,1,wallleft);
-    superGeometry.rename(4,3,1,wallright);
+  superGeometry.rename(4,2,1,wallleft);
+  superGeometry.rename(4,3,1,wallright);
 
-    /// Removes all not needed boundary voxels outside the surface
-    superGeometry.clean();
-    /// Removes all not needed boundary voxels inside the surface
-    superGeometry.innerClean();
-    superGeometry.checkForErrors();
+  /// Removes all not needed boundary voxels outside the surface
+  superGeometry.clean();
+  /// Removes all not needed boundary voxels inside the surface
+  superGeometry.innerClean();
+  superGeometry.checkForErrors();
 
-    superGeometry.print();
+  superGeometry.print();
 
-    clout << "Prepare Geometry ... OK" << std::endl;
+  clout << "Prepare Geometry ... OK" << std::endl;
 
 }
 
 void prepareLattice( ThermalUnitConverter<T, NSDESCRIPTOR, TDESCRIPTOR> const& converter,
-                     SuperLattice2D<T, NSDESCRIPTOR>& NSlattice,
-                     SuperLattice2D<T, TDESCRIPTOR>& ADlattice,
-                     ForcedBGKdynamics<T, NSDESCRIPTOR> &bulkDynamics,
-                     Dynamics<T, TDESCRIPTOR>& advectionDiffusionBulkDynamics,
-                     SuperGeometry2D<T>& superGeometry )
+                     SuperLattice<T, NSDESCRIPTOR>& NSlattice,
+                     SuperLattice<T, TDESCRIPTOR>& ADlattice,
+                     SuperGeometry<T,2>& superGeometry )
 {
 
-    OstreamManager clout(std::cout,"prepareLattice");
-    clout << "Prepare Lattice ..." << std::endl;
+  OstreamManager clout(std::cout,"prepareLattice");
+  clout << "Prepare Lattice ..." << std::endl;
 
-    T omega  =  converter.getLatticeRelaxationFrequency();
-    T Tomega  =  converter.getLatticeThermalRelaxationFrequency();
+  T omega  = converter.getLatticeRelaxationFrequency();
+  T Tomega = converter.getLatticeThermalRelaxationFrequency();
 
-    ADlattice.defineDynamics(superGeometry, 0, &instances::getNoDynamics<T, TDESCRIPTOR>());
-    NSlattice.defineDynamics(superGeometry, 0, &instances::getNoDynamics<T, NSDESCRIPTOR>());
+  NSlattice.defineDynamics<NoDynamics>(superGeometry, 0);
+  NSlattice.defineDynamics<ForcedPSMBGKdynamics>(superGeometry.getMaterialIndicator({1, 2, 3, 4}));
 
-    ADlattice.defineDynamics(superGeometry.getMaterialIndicator({1, 2, 3}), &advectionDiffusionBulkDynamics);
-    ADlattice.defineDynamics(superGeometry, 4, &instances::getBounceBack<T, TDESCRIPTOR>());
+  ADlattice.defineDynamics<NoDynamics>(superGeometry, 0);
+  ADlattice.defineDynamics<TotalEnthalpyAdvectionDiffusionDynamics>(superGeometry.getMaterialIndicator({1, 2, 3}));
+  ADlattice.defineDynamics<BounceBack>(superGeometry, 4);
 
-    NSlattice.defineDynamics(superGeometry.getMaterialIndicator({1, 2, 3, 4}), &bulkDynamics);
+  /// sets boundary
+  setRegularizedTemperatureBoundary<T,TDESCRIPTOR>(ADlattice, Tomega, superGeometry.getMaterialIndicator({2, 3}));
+  setInterpolatedVelocityBoundary<T,NSDESCRIPTOR>(NSlattice, omega, superGeometry.getMaterialIndicator({2, 3, 4}));
 
-    /// sets boundary
-    setRegularizedTemperatureBoundary<T,TDESCRIPTOR>(ADlattice, Tomega, superGeometry.getMaterialIndicator({2, 3}));
-    setInterpolatedVelocityBoundary<T,NSDESCRIPTOR>(NSlattice, omega, superGeometry.getMaterialIndicator({2, 3, 4}));
+  NSlattice.setParameter<descriptors::OMEGA>(omega);
 
-    /// define initial conditions
-    AnalyticalConst2D<T,T> rho(1.);
-    AnalyticalConst2D<T,T> u0(0.0, 0.0);
-    AnalyticalConst2D<T,T> T_cold(lattice_Hcold);
-    AnalyticalConst2D<T,T> T_hot(lattice_Hhot);
+  ADlattice.setParameter<descriptors::OMEGA>(Tomega);
+  ADlattice.setParameter<collision::TRT::MAGIC>(0.25);
+  ADlattice.setParameter<TotalEnthalpy::T_S>(Tmelt);
+  ADlattice.setParameter<TotalEnthalpy::T_L>(Tmelt);
+  ADlattice.setParameter<TotalEnthalpy::CP_S>(cp_s);
+  ADlattice.setParameter<TotalEnthalpy::CP_L>(cp_l);
+  ADlattice.setParameter<TotalEnthalpy::LAMBDA_S>(cp_ref / descriptors::invCs2<T,TDESCRIPTOR>() * (converter.getLatticeThermalRelaxationTime() - 0.5) * R_lambda);
+  ADlattice.setParameter<TotalEnthalpy::LAMBDA_L>(cp_ref / descriptors::invCs2<T,TDESCRIPTOR>() * (converter.getLatticeThermalRelaxationTime() - 0.5));
+  ADlattice.setParameter<TotalEnthalpy::L>(L);
 
-    /// for each material set Rho, U and the Equilibrium
-    NSlattice.defineRhoU(superGeometry.getMaterialIndicator({1, 2, 3, 4}), rho, u0);
-    NSlattice.iniEquilibrium(superGeometry.getMaterialIndicator({1, 2, 3, 4}), rho, u0);
+  /// define initial conditions
+  AnalyticalConst2D<T,T> rho(1.);
+  AnalyticalConst2D<T,T> u0(0.0, 0.0);
+  AnalyticalConst2D<T,T> T_cold(lattice_Hcold);
+  AnalyticalConst2D<T,T> T_hot(lattice_Hhot);
 
-    ADlattice.defineRhoU(superGeometry.getMaterialIndicator({1, 3}), T_cold, u0);
-    ADlattice.iniEquilibrium(superGeometry.getMaterialIndicator({1, 3}), T_cold, u0);
-    ADlattice.defineRhoU(superGeometry, 2, T_hot, u0);
-    ADlattice.iniEquilibrium(superGeometry, 2, T_hot, u0);
+  /// for each material set Rho, U and the Equilibrium
+  NSlattice.defineRhoU(superGeometry.getMaterialIndicator({1, 2, 3, 4}), rho, u0);
+  NSlattice.iniEquilibrium(superGeometry.getMaterialIndicator({1, 2, 3, 4}), rho, u0);
 
-    /// Make the lattice ready for simulation
-    NSlattice.initialize();
-    ADlattice.initialize();
+  ADlattice.defineField<descriptors::VELOCITY>(superGeometry.getMaterialIndicator({1, 2, 3}), u0);
+  ADlattice.defineRho(superGeometry.getMaterialIndicator({1, 3}), T_cold);
+  ADlattice.iniEquilibrium(superGeometry.getMaterialIndicator({1, 3}), T_cold, u0);
+  ADlattice.defineRho(superGeometry, 2, T_hot);
+  ADlattice.iniEquilibrium(superGeometry, 2, T_hot, u0);
 
-    clout << "Prepare Lattice ... OK" << std::endl;
+  /// Make the lattice ready for simulation
+  NSlattice.initialize();
+  ADlattice.initialize();
+
+  clout << "Prepare Lattice ... OK" << std::endl;
 }
 
 void setBoundaryValues( ThermalUnitConverter<T, NSDESCRIPTOR, TDESCRIPTOR> const& converter,
-                        SuperLattice2D<T, NSDESCRIPTOR>& NSlattice,
-                        SuperLattice2D<T, TDESCRIPTOR>& ADlattice,
-                        int iT, SuperGeometry2D<T>& superGeometry)
+                        SuperLattice<T, NSDESCRIPTOR>& NSlattice,
+                        SuperLattice<T, TDESCRIPTOR>& ADlattice,
+                        int iT, SuperGeometry<T,2>& superGeometry)
 {
 
 // nothing to do here
@@ -199,195 +209,174 @@ void setBoundaryValues( ThermalUnitConverter<T, NSDESCRIPTOR, TDESCRIPTOR> const
 }
 
 void getResults( ThermalUnitConverter<T, NSDESCRIPTOR, TDESCRIPTOR> const& converter,
-                 SuperLattice2D<T, NSDESCRIPTOR>& NSlattice,
-                 SuperLattice2D<T, TDESCRIPTOR>& ADlattice, int iT,
-                 SuperGeometry2D<T>& superGeometry,
-                 Timer<T>& timer,
+                 SuperLattice<T, NSDESCRIPTOR>& NSlattice,
+                 SuperLattice<T, TDESCRIPTOR>& ADlattice, int iT,
+                 SuperGeometry<T,2>& superGeometry,
+                 util::Timer<T>& timer,
                  bool converged)
 {
 
-    OstreamManager clout(std::cout,"getResults");
+  OstreamManager clout(std::cout,"getResults");
 
-    SuperVTMwriter2D<T> vtkWriter("thermalNaturalConvection2D");
+  SuperVTMwriter2D<T> vtkWriter("thermalNaturalConvection2D");
+  SuperLatticeGeometry2D<T, NSDESCRIPTOR> geometry(NSlattice, superGeometry);
+  SuperLatticeField2D<T, TDESCRIPTOR, VELOCITY> velocity(ADlattice);
+  SuperLatticePhysPressure2D<T, NSDESCRIPTOR> pressure(NSlattice, converter);
+
+  SuperLatticeDensity2D<T, TDESCRIPTOR> enthalpy(ADlattice);
+  enthalpy.getName() = "enthalpy";
+  SuperLatticeField2D<T, NSDESCRIPTOR, POROSITY> liquid_frac(NSlattice);
+  liquid_frac.getName() = "liquid fraction";
+  SuperLatticeField2D<T, TDESCRIPTOR, TEMPERATURE> temperature(ADlattice);
+  temperature.getName() = "temperature";
+  SuperLatticeField2D<T, NSDESCRIPTOR, FORCE> force(NSlattice);
+  force.getName() = "force";
+  vtkWriter.addFunctor( geometry );
+  vtkWriter.addFunctor( pressure );
+  vtkWriter.addFunctor( velocity );
+  vtkWriter.addFunctor( enthalpy );
+  vtkWriter.addFunctor( liquid_frac );
+  vtkWriter.addFunctor( temperature );
+  vtkWriter.addFunctor( force );
+
+  const int vtkIter = converter.getLatticeTime(0.5);
+
+  if (iT == 0) {
+    /// Writes the geometry, cuboid no. and rank no. as vti file for visualization
     SuperLatticeGeometry2D<T, NSDESCRIPTOR> geometry(NSlattice, superGeometry);
-    SuperLatticeField2D<T, TDESCRIPTOR, VELOCITY> velocity(ADlattice);
-    SuperLatticePhysPressure2D<T, NSDESCRIPTOR> pressure(NSlattice, converter);
+    SuperLatticeCuboid2D<T, NSDESCRIPTOR> cuboid(NSlattice);
+    SuperLatticeRank2D<T, NSDESCRIPTOR> rank(NSlattice);
+    vtkWriter.write(geometry);
+    vtkWriter.write(cuboid);
+    vtkWriter.write(rank);
 
-    SuperLatticeDensity2D<T, TDESCRIPTOR> enthalpy(ADlattice);
-    enthalpy.getName() = "enthalpy";
-    SuperLatticeField2D<T, NSDESCRIPTOR, POROSITY> liquid_frac(NSlattice);
-    liquid_frac.getName() = "liquid fraction";
-    SuperLatticeField2D<T, TDESCRIPTOR, TEMPERATURE> temperature(ADlattice);
-    temperature.getName() = "temperature";
-    SuperLatticeField2D<T, NSDESCRIPTOR, FORCE> force(NSlattice);
-    force.getName() = "force";
-    vtkWriter.addFunctor( geometry );
-    vtkWriter.addFunctor( pressure );
-    vtkWriter.addFunctor( velocity );
-    vtkWriter.addFunctor( enthalpy );
-    vtkWriter.addFunctor( liquid_frac );
-    vtkWriter.addFunctor( temperature );
-    vtkWriter.addFunctor( force );
+    vtkWriter.createMasterFile();
+  }
 
-    const int vtkIter = converter.getLatticeTime(0.5);
+  /// Writes the VTK files
+  if (iT % vtkIter == 0 || converged) {
 
-    if (iT == 0) {
-        /// Writes the geometry, cuboid no. and rank no. as vti file for visualization
-        SuperLatticeGeometry2D<T, NSDESCRIPTOR> geometry(NSlattice, superGeometry);
-        SuperLatticeCuboid2D<T, NSDESCRIPTOR> cuboid(NSlattice);
-        SuperLatticeRank2D<T, NSDESCRIPTOR> rank(NSlattice);
-        vtkWriter.write(geometry);
-        vtkWriter.write(cuboid);
-        vtkWriter.write(rank);
+    timer.update(iT);
+    timer.printStep();
 
-        vtkWriter.createMasterFile();
+    /// NSLattice statistics console output
+    NSlattice.getStatistics().print(iT,converter.getPhysTime(iT));
+
+    /// ADLattice statistics console output
+    ADlattice.getStatistics().print(iT,converter.getPhysTime(iT));
+
+    if ( NSlattice.getStatistics().getAverageRho() != NSlattice.getStatistics().getAverageRho() or ADlattice.getStatistics().getAverageRho() != ADlattice.getStatistics().getAverageRho() ) {
+      clout << "simulation diverged! stopping now." << std::endl;
+      exit(1);
     }
-
-    /// Writes the VTK files
-    if (iT % vtkIter == 0 || converged) {
-
-        timer.update(iT);
-        timer.printStep();
-
-        /// NSLattice statistics console output
-        NSlattice.getStatistics().print(iT,converter.getPhysTime(iT));
-
-        /// ADLattice statistics console output
-        ADlattice.getStatistics().print(iT,converter.getPhysTime(iT));
-
-        if ( NSlattice.getStatistics().getAverageRho() != NSlattice.getStatistics().getAverageRho() or ADlattice.getStatistics().getAverageRho() != ADlattice.getStatistics().getAverageRho() ) {
-            clout << "simulation diverged! stopping now." << endl;
-            exit(1);
-        }
-        vtkWriter.write(iT);
-    }
+    vtkWriter.write(iT);
+  }
 }
 
 int main(int argc, char *argv[])
 {
 
-    /// === 1st Step: Initialization ===
-    OstreamManager clout(std::cout,"main");
-    olbInit(&argc, &argv);
-    singleton::directories().setOutputDir("./tmp/");
+  /// === 1st Step: Initialization ===
+  OstreamManager clout(std::cout,"main");
+  olbInit(&argc, &argv);
+  singleton::directories().setOutputDir("./tmp/");
 
-    T char_lattice_u = 0.2;
+  T char_lattice_u = 0.2;
 
-    if (argc >= 2) {
-        N = atoi(argv[1]);
-    }
-    if (argc >= 3) {
-        tau = atof(argv[2]);
-    }
-    if (argc >= 4) {
-        char_lattice_u = atof(argv[3]);
-    }
+  if (argc >= 2) {
+    N = atoi(argv[1]);
+  }
+  if (argc >= 3) {
+    tau = atof(argv[2]);
+  }
+  if (argc >= 4) {
+    char_lattice_u = atof(argv[3]);
+  }
 
-    const T char_u = sqrt( 9.81 * 1.2e-4 * (311. - 302.8) * 6093. );
-    const T conversion_u = char_u / char_lattice_u;
+  const T char_u = util::sqrt( 9.81 * 1.2e-4 * (311. - 302.8) * 6093. );
+  const T conversion_u = char_u / char_lattice_u;
 
-    physDeltaX = lx / N;
-    physDeltaT = physDeltaX / conversion_u;
-    physDeltaT = 6093. / 1.81e-3 / descriptors::invCs2<T,NSDESCRIPTOR>() * (tau - 0.5) * physDeltaX * physDeltaX;
+  physDeltaX = lx / N;
+  physDeltaT = physDeltaX / conversion_u;
+  physDeltaT = 6093. / 1.81e-3 / descriptors::invCs2<T,NSDESCRIPTOR>() * (tau - 0.5) * physDeltaX * physDeltaX;
 
-    lattice_Hcold = cp_s * Tcold;
-    lattice_Hhot = cp_l * Thot;
+  lattice_Hcold = cp_s * Tcold;
+  lattice_Hhot = cp_l * Thot;
 
-    clout << "H_cold " << lattice_Hcold << " H_hot " << lattice_Hhot << endl;
+  clout << "H_cold " << lattice_Hcold << " H_hot " << lattice_Hhot << std::endl;
 
-    ThermalUnitConverter<T, NSDESCRIPTOR, TDESCRIPTOR> const converter(
-        (T) physDeltaX, // physDeltaX
-        (T) physDeltaT, // physDeltaT
-        (T) lx, // charPhysLength
-        (T) char_u, // charPhysVelocity
-        (T) 1.81e-3 / 6093., // physViscosity
-        (T) 6093., // physDensity
-        (T) 32., // physThermalConductivity
-        (T) 381., // physSpecificHeatCapacity
-        (T) 1.2e-4, // physThermalExpansionCoefficient
-        (T) Tcold, // charPhysLowTemperature
-        (T) Thot // charPhysHighTemperature
-    );
-    converter.print();
-    clout << "lattice cp " << converter.getLatticeSpecificHeatCapacity(cp_l) << endl;
+  ThermalUnitConverter<T, NSDESCRIPTOR, TDESCRIPTOR> const converter(
+    (T) physDeltaX, // physDeltaX
+    (T) physDeltaT, // physDeltaT
+    (T) lx, // charPhysLength
+    (T) char_u, // charPhysVelocity
+    (T) 1.81e-3 / 6093., // physViscosity
+    (T) 6093., // physDensity
+    (T) 32., // physThermalConductivity
+    (T) 381., // physSpecificHeatCapacity
+    (T) 1.2e-4, // physThermalExpansionCoefficient
+    (T) Tcold, // charPhysLowTemperature
+    (T) Thot // charPhysHighTemperature
+  );
+  converter.print();
+  clout << "lattice cp " << converter.getLatticeSpecificHeatCapacity(cp_l) << std::endl;
 
-    /// === 2nd Step: Prepare Geometry ===
-    std::vector<T> extend(2,T());
-    extend[0] = lx + 2*converter.getPhysLength(1);
-    extend[1] = ly + converter.getPhysLength(1);
-    std::vector<T> origin(2,T());
-    IndicatorCuboid2D<T> cuboid(extend, origin);
+  /// === 2nd Step: Prepare Geometry ===
+  std::vector<T> extend(2,T());
+  extend[0] = lx + 2*converter.getPhysLength(1);
+  extend[1] = ly + converter.getPhysLength(1);
+  std::vector<T> origin(2,T());
+  IndicatorCuboid2D<T> cuboid(extend, origin);
 
-    /// Instantiation of an empty cuboidGeometry
-    CuboidGeometry2D<T> cuboidGeometry(cuboid, converter.getPhysDeltaX(), singleton::mpi().getSize());
+  /// Instantiation of an empty cuboidGeometry
+  CuboidGeometry2D<T> cuboidGeometry(cuboid, converter.getPhysDeltaX(), singleton::mpi().getSize());
 
-    /// Instantiation of a loadBalancer
-    HeuristicLoadBalancer<T> loadBalancer(cuboidGeometry);
+  /// Instantiation of a loadBalancer
+  HeuristicLoadBalancer<T> loadBalancer(cuboidGeometry);
 
-    /// Instantiation of a superGeometry
-    SuperGeometry2D<T> superGeometry(cuboidGeometry, loadBalancer, 2);
+  /// Instantiation of a superGeometry
+  SuperGeometry<T,2> superGeometry(cuboidGeometry, loadBalancer);
 
-    prepareGeometry(superGeometry, converter);
+  prepareGeometry(superGeometry, converter);
 
-    /// === 3rd Step: Prepare Lattice ===
+  /// === 3rd Step: Prepare Lattice ===
 
-    SuperLattice2D<T, TDESCRIPTOR> ADlattice(superGeometry);
-    SuperLattice2D<T, NSDESCRIPTOR> NSlattice(superGeometry);
+  SuperLattice<T, TDESCRIPTOR> ADlattice(superGeometry);
+  SuperLattice<T, NSDESCRIPTOR> NSlattice(superGeometry);
 
 
+  std::vector<T> dir{0.0, 1.0};
+  T boussinesqForcePrefactor = Ra / util::pow(T(N),3) * Pr * util::pow(cp_ref / descriptors::invCs2<T,TDESCRIPTOR>() * (converter.getLatticeThermalRelaxationTime() - 0.5), 2);
+  clout << "boussinesq " << Ra / util::pow(T(N), 3) * Pr * lambda_l * lambda_l << std::endl;
 
-    ForcedPSMBGKdynamics<T, NSDESCRIPTOR> NSbulkDynamics(
-        converter.getLatticeRelaxationFrequency(),
-        instances::getBulkMomenta<T,NSDESCRIPTOR>());
+  TotalEnthalpyPhaseChangeCouplingGenerator2D<T,NSDESCRIPTOR,TotalEnthalpyAdvectionDiffusionDynamics>
+  coupling(0, converter.getLatticeLength(lx), 0, converter.getLatticeLength(ly),
+           boussinesqForcePrefactor, Tcold, 1., dir);
 
-    TotalEnthalpyAdvectionDiffusionTRTdynamics<T, TDESCRIPTOR> TbulkDynamics (
-        converter.getLatticeThermalRelaxationFrequency(),
-        instances::getAdvectionDiffusionBulkMomenta<T,TDESCRIPTOR>(),
-        1./4.,
-        Tmelt,
-        Tmelt,
-        cp_s,
-        cp_l,
-        cp_ref / descriptors::invCs2<T,TDESCRIPTOR>() * (converter.getLatticeThermalRelaxationTime() - 0.5) * R_lambda,
-        cp_ref / descriptors::invCs2<T,TDESCRIPTOR>() * (converter.getLatticeThermalRelaxationTime() - 0.5),
-        L
-    );
+  NSlattice.addLatticeCoupling(superGeometry, 1, coupling, ADlattice);
 
-    std::vector<T> dir{0.0, 1.0};
-    T boussinesqForcePrefactor = Ra / pow(T(N),3) * Pr * pow(cp_ref / descriptors::invCs2<T,TDESCRIPTOR>() * (converter.getLatticeThermalRelaxationTime() - 0.5), 2);
-    clout << "boussinesq " << Ra / pow(T(N), 3) * Pr * lambda_l * lambda_l << endl;
+  //prepareLattice and setBoundaryConditions
+  prepareLattice(converter, NSlattice, ADlattice, superGeometry);
 
-    TotalEnthalpyPhaseChangeCouplingGenerator2D<T,NSDESCRIPTOR>
-    coupling(0, converter.getLatticeLength(lx), 0, converter.getLatticeLength(ly),
-             boussinesqForcePrefactor, Tcold, 1., dir);
+  /// === 4th Step: Main Loop with Timer ===
+  util::Timer<T> timer(converter.getLatticeTime(maxPhysT), superGeometry.getStatistics().getNvoxel() );
+  timer.start();
 
-    NSlattice.addLatticeCoupling(superGeometry, 1, coupling, ADlattice);
+  for (std::size_t iT = 0; iT < converter.getLatticeTime(maxPhysT)+1; ++iT) {
 
-    //prepareLattice and setBoundaryConditions
-		 prepareLattice(converter,
-										NSlattice, ADlattice,
-										NSbulkDynamics, TbulkDynamics,
-										superGeometry );
+    /// === 5th Step: Definition of Initial and Boundary Conditions ===
+    setBoundaryValues(converter, NSlattice, ADlattice, iT, superGeometry);
 
-    /// === 4th Step: Main Loop with Timer ===
-    Timer<T> timer(converter.getLatticeTime(maxPhysT), superGeometry.getStatistics().getNvoxel() );
-    timer.start();
+    /// === 6th Step: Collide and Stream Execution ===
+    NSlattice.executeCoupling();
+    NSlattice.collideAndStream();
+    ADlattice.collideAndStream();
 
-    for (std::size_t iT = 0; iT < converter.getLatticeTime(maxPhysT)+1; ++iT) {
+    /// === 7th Step: Computation and Output of the Results ===
+    getResults(converter, NSlattice, ADlattice, iT, superGeometry, timer, false);
+  }
 
-        /// === 5th Step: Definition of Initial and Boundary Conditions ===
-        setBoundaryValues(converter, NSlattice, ADlattice, iT, superGeometry);
-
-        /// === 6th Step: Collide and Stream Execution ===
-        NSlattice.executeCoupling();
-        NSlattice.collideAndStream();
-        ADlattice.collideAndStream();
-
-        /// === 7th Step: Computation and Output of the Results ===
-        getResults(converter, NSlattice, ADlattice, iT, superGeometry, timer, false);
-    }
-
-    timer.stop();
-    timer.printSummary();
+  timer.stop();
+  timer.printSummary();
 
 }

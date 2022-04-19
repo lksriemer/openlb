@@ -13,8 +13,9 @@ in pkgs.stdenvNoCC.mkDerivation rec {
 
   buildInputs = with pkgs; let
     texlive-custom = texlive.combine {
-      inherit (texlive) scheme-small collection-langgerman latexmk xpatch xstring siunitx biblatex logreq palatino courier mathpazo helvetic multirow elsarticle widetable;
+      inherit (texlive) scheme-small collection-langgerman latexmk xpatch xstring siunitx biblatex logreq palatino courier mathpazo helvetic multirow elsarticle widetable makecell;
     };
+
   in [
   # make dependencies
     gnumake
@@ -26,9 +27,6 @@ in pkgs.stdenvNoCC.mkDerivation rec {
     gdb
     cgdb
     valgrind
-
-  # autoformat
-    astyle
 
   # result presentation
     gnuplot
@@ -49,5 +47,7 @@ in pkgs.stdenvNoCC.mkDerivation rec {
   in ''
     export NIX_SHELL_NAME="${name}"
     export OPENLB_CONFIG="${config_file}"
+
+    export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/run/opengl-driver/lib
   '';
 }

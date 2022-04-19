@@ -69,8 +69,10 @@ bool Serializer::load(std::string fileName, bool enforceUint)
   if (istr) {
     istr2serializer(*this, istr, enforceUint);
     istr.close();
+    _serializable.postLoad();
     return true;
-  } else {
+  }
+  else {
     return false;
   }
 }
@@ -87,9 +89,23 @@ bool Serializer::save(std::string fileName, bool enforceUint)
     serializer2ostr(*this, ostr, enforceUint);
     ostr.close();
     return true;
-  } else {
+  }
+  else {
     return false;
   }
+}
+
+bool Serializer::load(const std::uint8_t* buffer)
+{
+  buffer2serializer(*this, buffer);
+  _serializable.postLoad();
+  return true;
+}
+
+bool Serializer::save(std::uint8_t* buffer)
+{
+  serializer2buffer(*this, buffer);
+  return true;
 }
 
 void Serializer::computeSize(bool enforceRecompute)
@@ -131,6 +147,17 @@ bool Serializable::load(std::string fileName, const bool enforceUint)
   return tmpSerializer.load();
 }
 
+bool Serializable::save(std::uint8_t* buffer)
+{
+  Serializer tmpSerializer(*this);
+  return tmpSerializer.save(buffer);
+}
+
+bool Serializable::load(const std::uint8_t* buffer)
+{
+  Serializer tmpSerializer(*this);
+  return tmpSerializer.load(buffer);
+}
 
 }  // namespace olb
 

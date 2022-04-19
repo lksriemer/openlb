@@ -31,31 +31,25 @@
  */
 
 #include "olb2D.h"
-#ifndef OLB_PRECOMPILED // Unless precompiled version is used,
-#include "olb2D.hh"   // include full template code
-#endif
-#include <vector>
-#include <cmath>
-#include <iostream>
+#include "olb2D.hh"
+
 
 using namespace olb;
 using namespace olb::descriptors;
 using namespace olb::graphics;
-using namespace olb::util;
-using namespace std;
 
-typedef double T;
-typedef D2Q9<> DESCRIPTOR;
+using T = double;
+using DESCRIPTOR = D2Q9<>;
+using BulkDynamics = ConstRhoBGKdynamics<T,DESCRIPTOR>;
 
 void prepareGeometry( UnitConverter<T,DESCRIPTOR> const& converter,
-                      SuperGeometry2D<T>& superGeometry )
+                      SuperGeometry<T,2>& superGeometry )
 {
   OstreamManager clout( std::cout,"prepareGeometry" );
   clout << "Prepare Geometry ..." << std::endl;
 
-
   superGeometry.rename( 0,2 );
-  superGeometry.rename( 2,1,1,1 );
+  superGeometry.rename( 2,1,{1,1} );
   superGeometry.clean();
 
   T eps = converter.getConversionFactorLength();
@@ -75,9 +69,8 @@ void prepareGeometry( UnitConverter<T,DESCRIPTOR> const& converter,
 }
 
 void prepareLattice( UnitConverter<T,DESCRIPTOR> const& converter,
-                     SuperLattice2D<T, DESCRIPTOR>& sLattice,
-                     Dynamics<T, DESCRIPTOR>& bulkDynamics,
-                     SuperGeometry2D<T>& superGeometry )
+                     SuperLattice<T, DESCRIPTOR>& sLattice,
+                     SuperGeometry<T,2>& superGeometry )
 {
 
   OstreamManager clout( std::cout,"prepareLattice" );
@@ -88,24 +81,23 @@ void prepareLattice( UnitConverter<T,DESCRIPTOR> const& converter,
   // link lattice with dynamics for collision step
 
   // Material=0 -->do nothing
-  sLattice.defineDynamics( superGeometry, 0, &instances::getNoDynamics<T, DESCRIPTOR>() );
+  sLattice.defineDynamics<NoDynamics<T,DESCRIPTOR>>(superGeometry, 0);
 
   // Material=1 -->bulk dynamics
-  sLattice.defineDynamics( superGeometry, 1, &bulkDynamics );
+  sLattice.defineDynamics<BulkDynamics>(superGeometry, 1);
 
   // Material=2,3 -->bulk dynamics, velocity boundary
-  sLattice.defineDynamics( superGeometry, 2, &bulkDynamics );
-  sLattice.defineDynamics( superGeometry, 3, &bulkDynamics );
+  setInterpolatedVelocityBoundary<T,DESCRIPTOR,BulkDynamics>(sLattice, omega, superGeometry, 2);
+  setInterpolatedVelocityBoundary<T,DESCRIPTOR,BulkDynamics>(sLattice, omega, superGeometry, 3);
 
-  setInterpolatedVelocityBoundary<T,DESCRIPTOR, ConstRhoBGKdynamics<T,DESCRIPTOR> >(sLattice, omega, superGeometry, 2);
-  setInterpolatedVelocityBoundary<T,DESCRIPTOR, ConstRhoBGKdynamics<T,DESCRIPTOR> >(sLattice, omega, superGeometry, 3);
+  sLattice.setParameter<descriptors::OMEGA>(omega);
 
   clout << "Prepare Lattice ... OK" << std::endl;
 }
 
 void setBoundaryValues( UnitConverter<T,DESCRIPTOR> const& converter,
-                        SuperLattice2D<T, DESCRIPTOR>& sLattice,
-                        int iT, SuperGeometry2D<T>& superGeometry )
+                        SuperLattice<T, DESCRIPTOR>& sLattice,
+                        int iT, SuperGeometry<T,2>& superGeometry )
 {
 
   if ( iT==0 ) {
@@ -128,12 +120,12 @@ void setBoundaryValues( UnitConverter<T,DESCRIPTOR> const& converter,
   }
 }
 
-void getResults( SuperLattice2D<T, DESCRIPTOR>& sLattice,
-                 UnitConverter<T,DESCRIPTOR> const& converter, std::size_t iT, Timer<T>* timer,
+void getResults( SuperLattice<T, DESCRIPTOR>& sLattice,
+                 UnitConverter<T,DESCRIPTOR> const& converter, std::size_t iT, util::Timer<T>* timer,
                  const T logT, const T maxPhysT, const T imSave, const T vtkSave,
                  std::string filenameGif, std::string filenameVtk,
                  const int timerPrintMode,
-                 const int timerTimeSteps, SuperGeometry2D<T>& superGeometry, bool converged )
+                 const int timerTimeSteps, SuperGeometry<T,2>& superGeometry, bool converged )
 {
 
   OstreamManager clout( std::cout,"getResults" );
@@ -146,9 +138,14 @@ void getResults( SuperLattice2D<T, DESCRIPTOR>& sLattice,
     SuperLatticeGeometry2D<T, DESCRIPTOR> geometry( sLattice, superGeometry );
     SuperLatticeCuboid2D<T, DESCRIPTOR> cuboid( sLattice );
     SuperLatticeRank2D<T, DESCRIPTOR> rank( sLattice );
+    SuperLatticeDiscreteNormal2D<T, DESCRIPTOR> discreteNormal( sLattice, superGeometry, superGeometry.getMaterialIndicator({2, 3}) );
+    SuperLatticeDiscreteNormalType2D<T, DESCRIPTOR> discreteNormalType( sLattice, superGeometry, superGeometry.getMaterialIndicator({2, 3}) );
+   
     vtmWriter.write( geometry );
     vtmWriter.write( cuboid );
     vtmWriter.write( rank );
+    vtmWriter.write( discreteNormal );
+    vtmWriter.write( discreteNormalType );
     vtmWriter.createMasterFile();
   }
 
@@ -163,8 +160,11 @@ void getResults( SuperLattice2D<T, DESCRIPTOR>& sLattice,
 
   // Writes the VTK files
   if ( ( iT%converter.getLatticeTime( vtkSave )==0 && iT>0 ) || converged ) {
+    sLattice.setProcessingContext(ProcessingContext::Evaluation);
+
     SuperLatticePhysVelocity2D<T,DESCRIPTOR> velocity( sLattice, converter );
     SuperLatticePhysPressure2D<T,DESCRIPTOR> pressure( sLattice, converter );
+    
     vtmWriter.addFunctor( velocity );
     vtmWriter.addFunctor( pressure );
     vtmWriter.write( iT );
@@ -232,7 +232,7 @@ int main( int argc, char* argv[] )
   olbInit( &argc, &argv );
   OstreamManager clout( std::cout,"main" );
 
-  string fName( "cavity2d.xml" );
+  std::string fName( "cavity2d.xml" );
   XMLreader config( fName );
 
   std::string olbdir, outputdir;
@@ -248,7 +248,7 @@ int main( int argc, char* argv[] )
   converter->write("cavity2d");
 
   int N = converter->getLatticeLength(1) + 1; // number of voxels in x,y,z direction
-  Timer<T>* timer = createTimer<T>( config, *converter, N*N );
+  util::Timer<T>* timer = util::createTimer<T>( config, *converter, N*N );
 
 
   T logT = config["Output"]["Log"]["SaveTime"].get<T>();
@@ -262,14 +262,11 @@ int main( int argc, char* argv[] )
   if ( timerSkipType == 0 ) {
     timerTimeSteps = converter->getLatticeTime( 1. /*config["Output"]["Timer"]["PhysTime"].get<T>()*/ );
   }
-  else {
-//    config["Output"]["Timer"]["TimeSteps"].read( timerTimeSteps );
-  }
 
   std::string filenameGif = config["Output"]["VisualizationImages"]["Filename"].get<std::string>();
   std::string filenameVtk = config["Output"]["VisualizationVTK"]["Filename"].get<std::string>();
 
-  // === 2rd Step: Prepare Geometry ===
+  // === 2nd Step: Prepare Geometry ===
   Vector<T,2> extend( 1,1 );
   Vector<T,2> origin( 0,0 );
   IndicatorCuboid2D<T> cuboid( extend, origin );
@@ -277,37 +274,30 @@ int main( int argc, char* argv[] )
 #ifdef PARALLEL_MODE_MPI
   CuboidGeometry2D<T> cuboidGeometry( cuboid, converter->getConversionFactorLength(), singleton::mpi().getSize() );
 #else
-  //CuboidGeometry2D<T> cuboidGeometry( cuboid, converter->getConversionFactorLength(), 7 );
   CuboidGeometry2D<T> cuboidGeometry( cuboid, converter->getConversionFactorLength(), 1 );
 #endif
 
   cuboidGeometry.print();
 
   HeuristicLoadBalancer<T> loadBalancer( cuboidGeometry );
-  SuperGeometry2D<T> superGeometry( cuboidGeometry, loadBalancer, 2 );
+  SuperGeometry<T,2> superGeometry( cuboidGeometry, loadBalancer );
   prepareGeometry( *converter, superGeometry );
 
   // === 3rd Step: Prepare Lattice ===
 
-  SuperLattice2D<T, DESCRIPTOR> sLattice( superGeometry );
+  SuperLattice<T, DESCRIPTOR> sLattice( superGeometry );
 
-  ConstRhoBGKdynamics<T, DESCRIPTOR> bulkDynamics (
-    converter->getLatticeRelaxationFrequency(),
-    instances::getBulkMomenta<T,DESCRIPTOR>()
-  );
-
-  //prepareLattice and setBoundaryConditions
-  prepareLattice( *converter, sLattice, bulkDynamics, superGeometry );
+  prepareLattice( *converter, sLattice, superGeometry );
 
   // === 4th Step: Main Loop with Timer ===
   int interval = converter->getLatticeTime( 1 /*config["Application"]["ConvergenceCheck"]["interval"].get<T>()*/ );
-  T epsilon = 1e-3; //config["Application"]["ConvergenceCheck"]["residuum"].get<T>();
+  T epsilon = 1e-3;
   util::ValueTracer<T> converge( interval, epsilon );
 
   timer->start();
   for ( std::size_t iT=0; iT <= converter->getLatticeTime( maxPhysT ); ++iT ) {
     if ( converge.hasConverged() ) {
-      clout << "Simulation converged." << endl;
+      clout << "Simulation converged." << std::endl;
       getResults( sLattice, *converter, iT, timer, logT, maxPhysT, imSave, vtkSave, filenameGif, filenameVtk,
                   timerPrintMode, timerTimeSteps, superGeometry, converge.hasConverged() );
       break;

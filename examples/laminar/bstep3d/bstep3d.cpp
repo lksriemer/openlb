@@ -30,22 +30,15 @@
 
 
 #include "olb3D.h"
-#ifndef OLB_PRECOMPILED // Unless precompiled version is used,
-#include "olb3D.hh"   // include full template code
-#endif
-#include <vector>
-#include <cmath>
-#include <iostream>
-#include <fstream>
+#include "olb3D.hh"
 
 using namespace olb;
 using namespace olb::descriptors;
 using namespace olb::graphics;
-using namespace std;
 
-typedef double T;
-typedef D3Q19<> DESCRIPTOR;
-
+using T = double;
+using DESCRIPTOR = D3Q19<>;
+using BulkDynamics = BGKdynamics<T,DESCRIPTOR>;
 
 // Parameters for the simulation setup
 const T lx1   = 5.0;     // length of step
@@ -60,7 +53,7 @@ const T maxPhysT = 40.;  // max. simulation time in s, SI unit
 
 // Stores geometry information in form of material numbers
 void prepareGeometry( UnitConverter<T,DESCRIPTOR> const& converter,
-                      SuperGeometry3D<T>& superGeometry )
+                      SuperGeometry<T,3>& superGeometry )
 {
 
   OstreamManager clout( std::cout,"prepareGeometry" );
@@ -68,11 +61,11 @@ void prepareGeometry( UnitConverter<T,DESCRIPTOR> const& converter,
 
   superGeometry.rename( 0,2 );
 
-  superGeometry.rename( 2,1,1,1,1 );
+  superGeometry.rename( 2,1,{1,1,1} );
 
   Vector<T,3> extend( lx1, ly1, lz0 );
   Vector<T,3> origin;
-  IndicatorCuboid3D<T> cuboid2( extend, origin );
+  std::shared_ptr<IndicatorF3D<T>> cuboid2 = std::make_shared<IndicatorCuboid3D<T>>( extend, origin );
 
   superGeometry.rename( 1,2,cuboid2 );
 
@@ -100,37 +93,36 @@ void prepareGeometry( UnitConverter<T,DESCRIPTOR> const& converter,
 
 // Set up the geometry of the simulation
 void prepareLattice( UnitConverter<T,DESCRIPTOR> const& converter,
-                     SuperLattice3D<T,DESCRIPTOR>& sLattice,
-                     Dynamics<T, DESCRIPTOR>& bulkDynamics,
-                     SuperGeometry3D<T>& superGeometry )
+                     SuperLattice<T,DESCRIPTOR>& sLattice,
+                     SuperGeometry<T,3>& superGeometry )
 {
 
   OstreamManager clout( std::cout,"prepareLattice" );
-  clout << "Prepare Lattice ..." << endl;
+  clout << "Prepare Lattice ..." << std::endl;
 
   const T omega = converter.getLatticeRelaxationFrequency();
 
   // Material=0 -->do nothing
-  sLattice.defineDynamics( superGeometry, 0, &instances::getNoDynamics<T, DESCRIPTOR>() );
+  sLattice.defineDynamics<NoDynamics>(superGeometry, 0);
 
   // Material=1 -->bulk dynamics
   // Material=3 -->bulk dynamics (inflow)
   // Material=4 -->bulk dynamics (outflow)
   auto bulkIndicator = superGeometry.getMaterialIndicator({1, 3, 4});
-  sLattice.defineDynamics( bulkIndicator, &bulkDynamics );
+  sLattice.defineDynamics<BulkDynamics>(bulkIndicator);
 
   // Material=2 -->bounce back
-  sLattice.defineDynamics( superGeometry, 2, &instances::getBounceBack<T, DESCRIPTOR>() );
+  sLattice.defineDynamics<BounceBack>(superGeometry, 2);
 
   // Setting of the boundary conditions
 
-	//if local boundary conditions are chosen
-	setLocalVelocityBoundary<T,DESCRIPTOR>(sLattice, omega, superGeometry, 3);
-	setLocalPressureBoundary<T,DESCRIPTOR>(sLattice, omega, superGeometry, 4);
+  //if local boundary conditions are chosen
+  setLocalVelocityBoundary<T,DESCRIPTOR>(sLattice, omega, superGeometry, 3);
+  setLocalPressureBoundary<T,DESCRIPTOR>(sLattice, omega, superGeometry, 4);
 
-	//if interpolated boundary conditions are chosen
-	//setInterpolatedVelocityBoundary<T,DESCRIPTOR>(sLattice, omega, superGeometry, 3);
-	//setInterpolatedPressureBoundary<T,DESCRIPTOR>(sLattice, omega, superGeometry, 4);
+  //if interpolated boundary conditions are chosen
+  //setInterpolatedVelocityBoundary<T,DESCRIPTOR>(sLattice, omega, superGeometry, 3);
+  //setInterpolatedPressureBoundary<T,DESCRIPTOR>(sLattice, omega, superGeometry, 4);
 
   // Initial conditions
   AnalyticalConst3D<T,T> ux( 0. );
@@ -143,6 +135,8 @@ void prepareLattice( UnitConverter<T,DESCRIPTOR> const& converter,
   sLattice.defineRhoU( bulkIndicator, rho, u );
   sLattice.iniEquilibrium( bulkIndicator, rho, u );
 
+  sLattice.setParameter<descriptors::OMEGA>(omega);
+
   // Make the lattice ready for simulation
   sLattice.initialize();
 
@@ -151,17 +145,19 @@ void prepareLattice( UnitConverter<T,DESCRIPTOR> const& converter,
 
 // Generates a slowly increasing inflow for the first iTMaxStart timesteps
 void setBoundaryValues( UnitConverter<T,DESCRIPTOR> const& converter,
-                        SuperLattice3D<T,DESCRIPTOR>& sLattice, int iT,
-                        SuperGeometry3D<T>& superGeometry )
+                        SuperLattice<T,DESCRIPTOR>& sLattice, int iT,
+                        SuperGeometry<T,3>& superGeometry )
 {
 
   OstreamManager clout( std::cout,"setBoundaryValues" );
 
   // No of time steps for smooth start-up
-  int iTmaxStart = converter.getLatticeTime( maxPhysT*0.2 );
-  int iTupdate = 5;
+  const int iTmaxStart = converter.getLatticeTime( maxPhysT*0.2 );
+  const int iTupdate = converter.getLatticeTime( 0.01 );
 
   if ( iT%iTupdate==0 && iT<= iTmaxStart ) {
+    sLattice.setProcessingContext(ProcessingContext::Evaluation);
+
     // Smooth start curve, sinus
     // SinusStartScale<T,int> StartScale(iTmaxStart, T(1));
 
@@ -179,16 +175,20 @@ void setBoundaryValues( UnitConverter<T,DESCRIPTOR> const& converter,
     RectanglePoiseuille3D<T> poiseuilleU( superGeometry, 3, maxVelocity, distance2Wall, distance2Wall, distance2Wall );
     sLattice.defineU( superGeometry, 3, poiseuilleU );
 
-    clout << "step=" << iT << "; maxVel=" << maxVelocity[0] << std::endl;
+    if ( iT % (10*iTupdate) == 0 && iT <= iTmaxStart ) {
+      clout << "step=" << iT << "; maxVel=" << maxVelocity[0] << std::endl;
+    }
+
+    sLattice.setProcessingContext(ProcessingContext::Simulation);
   }
 }
 
 // Output to console and files
-void getResults( SuperLattice3D<T,DESCRIPTOR>& sLattice,
+void getResults( SuperLattice<T,DESCRIPTOR>& sLattice,
                  UnitConverter<T,DESCRIPTOR> const& converter,
                  BlockReduction3D2D<T>& planeReduction,
                  int iT,
-                 SuperGeometry3D<T>& superGeometry, Timer<T>& timer)
+                 SuperGeometry<T,3>& superGeometry, util::Timer<T>& timer)
 {
   OstreamManager clout( std::cout,"getResults" );
 
@@ -199,7 +199,7 @@ void getResults( SuperLattice3D<T,DESCRIPTOR>& sLattice,
   vtmWriter.addFunctor( pressure );
 
   const int  vtkIter  = converter.getLatticeTime( 0.2 );
-  const int  statIter = converter.getLatticeTime( 0.1 );
+  const int  statIter = converter.getLatticeTime( 0.2 );
   const int  saveIter = converter.getLatticeTime( 1. );
 
   if ( iT==0 ) {
@@ -215,10 +215,16 @@ void getResults( SuperLattice3D<T,DESCRIPTOR>& sLattice,
 
   // Writes the ppm files
   if ( iT%vtkIter==0 ) {
+    sLattice.setProcessingContext(ProcessingContext::Evaluation);
+
     vtmWriter.write( iT );
     planeReduction.update();
     // write output as JPEG
-    heatmap::write(planeReduction, iT);
+    heatmap::plotParam<T> jpeg_Param;
+    jpeg_Param.maxValue = converter.getCharPhysVelocity() * 3./2.;
+    jpeg_Param.minValue = 0.0;
+    jpeg_Param.fullScreenPlot = true;
+    heatmap::write(planeReduction, iT, jpeg_Param);
   }
 
   // Writes output on the console
@@ -232,12 +238,12 @@ void getResults( SuperLattice3D<T,DESCRIPTOR>& sLattice,
   }
 
   // Saves lattice data
-  if ( iT%( saveIter/2 )==0 && iT>0 ) {
-    clout << "Checkpointing the system at t=" << iT << endl;
-    sLattice.save( "bstep3d.checkpoint" );
-    // The data can be reloaded using
-    //     sLattice.load("bstep3d.checkpoint");
-  }
+  //if ( iT%( saveIter/2 )==0 && iT>0 ) {
+  //  clout << "Checkpointing the system at t=" << iT << std::endl;
+  //  sLattice.save( "bstep3d.checkpoint" );
+  //  // The data can be reloaded using
+  //  //     sLattice.load("bstep3d.checkpoint");
+  //}
 }
 
 int main( int argc, char* argv[] )
@@ -281,24 +287,19 @@ int main( int argc, char* argv[] )
   HeuristicLoadBalancer<T> loadBalancer( cuboidGeometry );
 
   // Instantiation of a superGeometry
-  SuperGeometry3D<T> superGeometry( cuboidGeometry, loadBalancer, 2 );
+  SuperGeometry<T,3> superGeometry( cuboidGeometry, loadBalancer );
 
   prepareGeometry( converter, superGeometry );
 
   // === 3rd Step: Prepare Lattice ===
-  SuperLattice3D<T, DESCRIPTOR> sLattice( superGeometry );
-
-  BGKdynamics<T, DESCRIPTOR> bulkDynamics (
-    converter.getLatticeRelaxationFrequency(),
-    instances::getBulkMomenta<T,DESCRIPTOR>()
-  );
+  SuperLattice<T, DESCRIPTOR> sLattice( superGeometry );
 
   //prepareLattice and set boundaryConditions
-	prepareLattice( converter, sLattice, bulkDynamics, superGeometry );
+  prepareLattice( converter, sLattice, superGeometry );
 
   // === 4th Step: Main Loop with Timer ===
-  clout << "starting simulation..." << endl;
-  Timer<T> timer( converter.getLatticeTime( maxPhysT ), superGeometry.getStatistics().getNvoxel() );
+  clout << "starting simulation..." << std::endl;
+  util::Timer<T> timer( converter.getLatticeTime( maxPhysT ), superGeometry.getStatistics().getNvoxel() );
   timer.start();
 
   // Set up persistent measuring functors for result extraction

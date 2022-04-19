@@ -34,24 +34,17 @@
  * and FVM.
  */
 
-
 #include "olb3D.h"
-#ifndef OLB_PRECOMPILED // Unless precompiled version is used,
-#include "olb3D.hh"   // include full template code;
-#endif
-#include <vector>
-#include <cmath>
-#include <iostream>
-#include <fstream>
+#include "olb3D.hh"
 
 using namespace olb;
 using namespace olb::descriptors;
 using namespace olb::graphics;
 using namespace olb::util;
 
-typedef double T;
-typedef D3Q19<> DESCRIPTOR;
-
+using T = double;
+using DESCRIPTOR = D3Q19<>;
+using BulkDynamics = SmagorinskyBGKdynamics<T,DESCRIPTOR>;
 
 //simulation parameters
 const int N = 40;             // resolution of the model
@@ -62,7 +55,7 @@ const T maxPhysT = 2.;       // max. simulation time in s, SI unit
 
 // Stores data from stl file in geometry in form of material numbers
 void prepareGeometry( UnitConverter<T,DESCRIPTOR> const& converter, IndicatorF3D<T>& indicator,
-                      STLreader<T>& stlReader, SuperGeometry3D<T>& superGeometry )
+                      STLreader<T>& stlReader, SuperGeometry<T,3>& superGeometry )
 {
 
   OstreamManager clout( std::cout,"prepareGeometry" );
@@ -101,9 +94,9 @@ void prepareGeometry( UnitConverter<T,DESCRIPTOR> const& converter, IndicatorF3D
 }
 
 // Set up the geometry of the simulation
-void prepareLattice( SuperLattice3D<T, DESCRIPTOR>& lattice,
-                     UnitConverter<T,DESCRIPTOR> const& converter, Dynamics<T, DESCRIPTOR>& bulkDynamics,
-                     STLreader<T>& stlReader, SuperGeometry3D<T>& superGeometry )
+void prepareLattice( SuperLattice<T, DESCRIPTOR>& lattice,
+                     UnitConverter<T,DESCRIPTOR> const& converter,
+                     STLreader<T>& stlReader, SuperGeometry<T,3>& superGeometry )
 {
 
   OstreamManager clout( std::cout,"prepareLattice" );
@@ -112,29 +105,29 @@ void prepareLattice( SuperLattice3D<T, DESCRIPTOR>& lattice,
   const T omega = converter.getLatticeRelaxationFrequency();
 
   // material=0 --> do nothing
-  lattice.defineDynamics( superGeometry,0,&instances::getNoDynamics<T, DESCRIPTOR>() );
+  lattice.defineDynamics<NoDynamics>(superGeometry, 0);
 
   // material=1 --> bulk dynamics
-  lattice.defineDynamics( superGeometry,1,&bulkDynamics );
+  lattice.defineDynamics<BulkDynamics>(superGeometry, 1);
 
   if ( bouzidiOn ) {
     // material=2 --> no dynamics + bouzidi zero velocity
-    lattice.defineDynamics( superGeometry,2,&instances::getNoDynamics<T,DESCRIPTOR>() );
+    lattice.defineDynamics<NoDynamics>(superGeometry, 2);
     setBouzidiZeroVelocityBoundary<T,DESCRIPTOR>(lattice, superGeometry, 2, stlReader);
     // material=3 --> no dynamics + bouzidi velocity (inflow)
-    lattice.defineDynamics( superGeometry,3,&instances::getNoDynamics<T,DESCRIPTOR>() );
+    lattice.defineDynamics<NoDynamics>(superGeometry, 3);
     setBouzidiVelocityBoundary<T,DESCRIPTOR>(lattice, superGeometry, 3, stlReader);
   }
   else {
     // material=2 --> bounceBack dynamics
-    lattice.defineDynamics( superGeometry, 2, &instances::getBounceBack<T, DESCRIPTOR>() );
+    lattice.defineDynamics<BounceBack>(superGeometry, 2);
     // material=3 --> bulk dynamics + velocity (inflow)
-    lattice.defineDynamics( superGeometry,3,&bulkDynamics );
+    lattice.defineDynamics<BulkDynamics>(superGeometry, 3);
     setInterpolatedVelocityBoundary<T,DESCRIPTOR>(lattice, omega, superGeometry, 3);
   }
 
   // material=4,5 --> bulk dynamics + pressure (outflow)
-  lattice.defineDynamics( superGeometry.getMaterialIndicator({4, 5}),&bulkDynamics );
+  lattice.defineDynamics<BulkDynamics>(superGeometry.getMaterialIndicator({4, 5}));
   setInterpolatedPressureBoundary<T,DESCRIPTOR>(lattice, omega, superGeometry.getMaterialIndicator({4, 5}));
 
   // Initial conditions
@@ -146,6 +139,8 @@ void prepareLattice( SuperLattice3D<T, DESCRIPTOR>& lattice,
   lattice.defineRhoU( superGeometry.getMaterialIndicator({1, 3, 4, 5}),rhoF,uF );
   lattice.iniEquilibrium( superGeometry.getMaterialIndicator({1, 3, 4, 5}),rhoF,uF );
 
+  lattice.setParameter<descriptors::OMEGA>(omega);
+  lattice.setParameter<collision::LES::Smagorinsky>(0.1);
   // Lattice initialize
   lattice.initialize();
 
@@ -153,9 +148,9 @@ void prepareLattice( SuperLattice3D<T, DESCRIPTOR>& lattice,
 }
 
 // Generates a slowly increasing sinuidal inflow
-void setBoundaryValues( SuperLattice3D<T, DESCRIPTOR>& sLattice,
+void setBoundaryValues( SuperLattice<T, DESCRIPTOR>& sLattice,
                         UnitConverter<T,DESCRIPTOR> const& converter, int iT,
-                        SuperGeometry3D<T>& superGeometry )
+                        SuperGeometry<T,3>& superGeometry )
 {
 
   // No of time steps for smooth start-up
@@ -170,10 +165,10 @@ void setBoundaryValues( SuperLattice3D<T, DESCRIPTOR>& sLattice,
     int iTvec[1]= {iT};
     T maxVelocity[1]= {T()};
     nSinusStartScale( maxVelocity,iTvec );
-    CirclePoiseuille3D<T> velocity( superGeometry,3,maxVelocity[0] );
+    CirclePoiseuille3D<T> velocity( superGeometry,3,maxVelocity[0], T() );
 
     if ( bouzidiOn ) {
-      defineUBouzidi<T,DESCRIPTOR>(sLattice, superGeometry,3,velocity );
+      defineUBouzidi<T,DESCRIPTOR>(sLattice, superGeometry, 3, velocity);
     }
     else {
       sLattice.defineU( superGeometry,3,velocity );
@@ -182,10 +177,9 @@ void setBoundaryValues( SuperLattice3D<T, DESCRIPTOR>& sLattice,
 }
 
 // Computes flux at inflow and outflow
-void getResults( SuperLattice3D<T, DESCRIPTOR>& sLattice,
+void getResults( SuperLattice<T, DESCRIPTOR>& sLattice,
                  UnitConverter<T,DESCRIPTOR>& converter, int iT,
-                 Dynamics<T, DESCRIPTOR>& bulkDynamics,
-                 SuperGeometry3D<T>& superGeometry, Timer<T>& timer, STLreader<T>& stlReader )
+                 SuperGeometry<T,3>& superGeometry, util::Timer<T>& timer, STLreader<T>& stlReader )
 {
 
   OstreamManager clout( std::cout,"getResults" );
@@ -216,7 +210,7 @@ void getResults( SuperLattice3D<T, DESCRIPTOR>& sLattice,
     vtmWriter.write( iT );
 
     SuperEuklidNorm3D<T, DESCRIPTOR> normVel( velocity );
-    BlockReduction3D2D<T> planeReduction( normVel, Vector<T,3>({0,0,1}), 600, BlockDataSyncMode::ReduceOnly );
+    BlockReduction3D2D<T> planeReduction( normVel, {0,0,1}, 600, BlockDataSyncMode::ReduceOnly );
     // write output as JPEG
     heatmap::write(planeReduction, iT);
   }
@@ -300,7 +294,7 @@ int main( int argc, char* argv[] )
 
   // Instantiation of a cuboidGeometry with weights
 #ifdef PARALLEL_MODE_MPI
-  const int noOfCuboids = std::min( 16*N,2*singleton::mpi().getSize() );
+  const int noOfCuboids = util::min( 16*N,2*singleton::mpi().getSize() );
 #else
   const int noOfCuboids = 2;
 #endif
@@ -310,31 +304,24 @@ int main( int argc, char* argv[] )
   HeuristicLoadBalancer<T> loadBalancer( cuboidGeometry );
 
   // Instantiation of a superGeometry
-  SuperGeometry3D<T> superGeometry( cuboidGeometry, loadBalancer, 2 );
+  SuperGeometry<T,3> superGeometry( cuboidGeometry, loadBalancer );
 
   prepareGeometry( converter, extendedDomain, stlReader, superGeometry );
 
   // === 3rd Step: Prepare Lattice ===
-  SuperLattice3D<T, DESCRIPTOR> sLattice( superGeometry );
+  SuperLattice<T, DESCRIPTOR> sLattice( superGeometry );
 
-  SmagorinskyBGKdynamics<T, DESCRIPTOR> bulkDynamics( converter.getLatticeRelaxationFrequency(),
-      instances::getBulkMomenta<T, DESCRIPTOR>(), 0.1 );
-
-  //sOffLatticeBoundaryCondition3D<T, DESCRIPTOR> sOffBoundaryCondition( sLattice );
-  //createBouzidiBoundaryCondition3D<T, DESCRIPTOR> ( sOffBoundaryCondition );
-
-  Timer<T> timer1( converter.getLatticeTime( maxPhysT ), superGeometry.getStatistics().getNvoxel() );
+  util::Timer<T> timer1( converter.getLatticeTime( maxPhysT ), superGeometry.getStatistics().getNvoxel() );
   timer1.start();
 
-  prepareLattice( sLattice, converter, bulkDynamics,
-                  stlReader, superGeometry );
+  prepareLattice( sLattice, converter, stlReader, superGeometry );
 
   timer1.stop();
   timer1.printSummary();
 
   // === 4th Step: Main Loop with Timer ===
   clout << "starting simulation..." << std::endl;
-  Timer<T> timer( converter.getLatticeTime( maxPhysT ), superGeometry.getStatistics().getNvoxel() );
+  util::Timer<T> timer( converter.getLatticeTime( maxPhysT ), superGeometry.getStatistics().getNvoxel() );
   timer.start();
 
   for ( std::size_t iT = 0; iT <= converter.getLatticeTime( maxPhysT ); iT++ ) {
@@ -345,7 +332,7 @@ int main( int argc, char* argv[] )
     sLattice.collideAndStream();
 
     // === 7th Step: Computation and Output of the Results ===
-    getResults( sLattice, converter, iT, bulkDynamics, superGeometry, timer, stlReader );
+    getResults( sLattice, converter, iT, superGeometry, timer, stlReader );
   }
 
   timer.stop();

@@ -33,12 +33,6 @@
 #include "olb2D.h"
 #include "olb2D.hh"
 
-#include <vector>
-#include <cmath>
-#include <iostream>
-#include <iomanip>
-#include <fstream>
-
 using namespace olb;
 using namespace olb::descriptors;
 
@@ -57,16 +51,16 @@ T dp;                       // Pressure gradient
 T mu;                       // Dynamic viscosity
 
 #ifdef BGK
-  typedef D2Q9<> DESCRIPTOR;
-  #define DYNAMICS BGKdynamics
+typedef D2Q9<> DESCRIPTOR;
+#define DYNAMICS BGKdynamics
 #endif
 // Porous media
 #ifdef SPAID_PHELAN
-  typedef D2Q9<POROSITY> DESCRIPTOR;
-  #define DYNAMICS PorousBGKdynamics
+typedef D2Q9<POROSITY> DESCRIPTOR;
+#define DYNAMICS PorousBGKdynamics
 #elif defined GUO_ZHAO
-  typedef D2Q9<FORCE,EPSILON,K,NU,BODY_FORCE> DESCRIPTOR;
-  #define DYNAMICS GuoZhaoBGKdynamics
+typedef D2Q9<FORCE,EPSILON,K,NU,BODY_FORCE> DESCRIPTOR;
+#define DYNAMICS GuoZhaoBGKdynamics
 #endif
 
 
@@ -82,7 +76,8 @@ public:
   PhysicalToLatticeVelocityF2D(AnalyticalF2D<T,T>* f_, UnitConverter<T,DESCRIPTOR> const& converter_)
     : AnalyticalF2D<T,T>(2), f(f_), converter(converter_) {};
 
-  bool operator()(T output[], const T x[]) override {
+  bool operator()(T output[], const T x[]) override
+  {
     (*f)(output, x);
     for (int i=0; i<2; ++i) {
       output[i] = converter.getLatticeVelocity( output[i] );
@@ -95,20 +90,24 @@ public:
 template <typename T>
 class PorousPoiseuille2D : public AnalyticalF2D<T,T> {
 protected:
-  T K, dp, mu, radius;
+  T K, dp, mu, radius, wallOffset;
 
 public:
-  PorousPoiseuille2D(T K_, T dp_, T mu_, T radius_)
-    : AnalyticalF2D<T,T>(2), K(K_), dp(dp_), mu(mu_), radius(radius_) {};
+  PorousPoiseuille2D(T K_, T dp_, T mu_, T radius_, T wallOffset_=0.)
+    : AnalyticalF2D<T,T>(2), K(K_), dp(dp_), mu(mu_), radius(radius_),
+      wallOffset(wallOffset_)
+  { }
 
   bool operator()(T output[], const T x[]) override
   {
-    T r = sqrt(epsilon/K);
-    output[0] = dp / mu * K * ( 1. - cosh(r*(x[1] - radius)) / cosh(r*radius) );
+    T r = util::sqrt(epsilon/K);
+    output[0] = dp / mu * K
+     * (1. - util::cosh(r*(x[1] - radius)) / util::cosh(r*(radius-wallOffset)));
     output[1] = 0.;
 
-    if ( x[1] < 0 || x[1] > 2.*radius )
+    if ( x[1] < wallOffset || x[1] > 2.*radius - wallOffset ) {
       output[0] = 0.;
+    }
 
     return true;
   }
@@ -130,7 +129,7 @@ const T residuum = 1e-5;      // residuum for the convergence check
 
 // Stores geometry information in form of material numbers
 void prepareGeometry( UnitConverter<T,DESCRIPTOR> const& converter,
-                      SuperGeometry2D<T>& superGeometry )
+                      SuperGeometry<T,2>& superGeometry )
 {
 
   OstreamManager clout( std::cout,"prepareGeometry" );
@@ -138,7 +137,7 @@ void prepareGeometry( UnitConverter<T,DESCRIPTOR> const& converter,
 
   superGeometry.rename( 0,2 );
 
-  superGeometry.rename( 2,1,1,1 );
+  superGeometry.rename( 2,1,{1,1} );
 
   Vector<T,2> extend;
   Vector<T,2> origin;
@@ -169,9 +168,8 @@ void prepareGeometry( UnitConverter<T,DESCRIPTOR> const& converter,
 
 // Set up the geometry of the simulation
 void prepareLattice( UnitConverter<T,DESCRIPTOR> const& converter,
-                     SuperLattice2D<T, DESCRIPTOR>& sLattice,
-                     Dynamics<T, DESCRIPTOR>& bulkDynamics,
-                     SuperGeometry2D<T>& superGeometry )
+                     SuperLattice<T, DESCRIPTOR>& sLattice,
+                     SuperGeometry<T,2>& superGeometry )
 {
 
   OstreamManager clout( std::cout,"prepareLattice" );
@@ -180,38 +178,44 @@ void prepareLattice( UnitConverter<T,DESCRIPTOR> const& converter,
   const T omega = converter.getLatticeRelaxationFrequency();
 
   // Material=0 -->do nothing
-  sLattice.defineDynamics( superGeometry, 0, &instances::getNoDynamics<T, DESCRIPTOR>() );
+  sLattice.defineDynamics<NoDynamics>(superGeometry, 0);
 
   // Material=1 -->bulk dynamics
-  sLattice.defineDynamics( superGeometry, 1, &bulkDynamics );
+  #ifdef GUO_ZHAO
+  Dynamics<T,DESCRIPTOR>* bulkDynamics = new DYNAMICS<T,DESCRIPTOR>(omega);
+  sLattice.defineDynamics(superGeometry, 1, bulkDynamics);
+  #else
+  sLattice.defineDynamics<DYNAMICS>(superGeometry, 1);
+  #endif
 
   if (boundaryType == bounceBack) {
-    sLattice.defineDynamics( superGeometry, 2, &instances::getBounceBack<T, DESCRIPTOR>() );
+    sLattice.defineDynamics<BounceBack>(superGeometry, 2);
   }
   else {
-	 sLattice.defineDynamics( superGeometry, 2, &bulkDynamics );
-		if(boundaryType == local){
-			setLocalVelocityBoundary<T,DESCRIPTOR>(sLattice, omega, superGeometry, 2);
-		}
-		else{
-			setInterpolatedVelocityBoundary<T,DESCRIPTOR>(sLattice, omega, superGeometry, 2);
-		}
+    if (boundaryType == local) {
+      setLocalVelocityBoundary<T,DESCRIPTOR>(sLattice, omega, superGeometry, 2);
+    }
+    else {
+      setInterpolatedVelocityBoundary<T,DESCRIPTOR>(sLattice, omega, superGeometry, 2);
+    }
   }
 
   // Material=3 -->bulk dynamics
-  sLattice.defineDynamics( superGeometry, 3, &bulkDynamics );
-
   // Material=4 -->bulk dynamics
-  sLattice.defineDynamics( superGeometry, 4, &bulkDynamics );
+  #ifdef GUO_ZHAO
+  sLattice.defineDynamics(superGeometry.getMaterialIndicator({3,4}), bulkDynamics);
+  #else
+  sLattice.defineDynamics<DYNAMICS>(superGeometry.getMaterialIndicator({3,4}));
+  #endif
 
-  if(boundaryType == local){
-		setLocalVelocityBoundary<T,DESCRIPTOR>(sLattice, omega, superGeometry, 3);
-		setLocalPressureBoundary<T,DESCRIPTOR>(sLattice, omega, superGeometry, 4);
-	}
-	else{
-		setInterpolatedVelocityBoundary<T,DESCRIPTOR>(sLattice, omega, superGeometry, 3);
-		setInterpolatedPressureBoundary<T,DESCRIPTOR>(sLattice, omega, superGeometry, 4);
-	}
+  if (boundaryType == local) {
+    setLocalVelocityBoundary<T,DESCRIPTOR>(sLattice, omega, superGeometry, 3);
+    setLocalPressureBoundary<T,DESCRIPTOR>(sLattice, omega, superGeometry, 4);
+  }
+  else {
+    setInterpolatedVelocityBoundary<T,DESCRIPTOR>(sLattice, omega, superGeometry, 3);
+    setInterpolatedPressureBoundary<T,DESCRIPTOR>(sLattice, omega, superGeometry, 4);
+  }
 
 #ifdef SPAID_PHELAN
   T tau = converter.getLatticeRelaxationTime();
@@ -225,14 +229,18 @@ void prepareLattice( UnitConverter<T,DESCRIPTOR> const& converter,
     exit(1);
   }
   AnalyticalConst2D<T,T> porosity( d );
-  for (int i: {0,1,2,3,4}) {
+  for (int i: {
+         0,1,2,3,4
+       }) {
     sLattice.defineField<POROSITY>(superGeometry, i, porosity);
   }
 #elif defined GUO_ZHAO
   AnalyticalConst2D<T,T> eps( epsilon );
   AnalyticalConst2D<T,T> Nu( converter.getLatticeViscosity() );
-  AnalyticalConst2D<T,T> k( Kin/pow(converter.getPhysDeltaX(), 2.) );
-  for (int i: {0,1,2,3,4}) {
+  AnalyticalConst2D<T,T> k( Kin/util::pow(converter.getPhysDeltaX(), 2.) );
+  for (int i: {
+         0,1,2,3,4
+       }) {
     sLattice.defineField<EPSILON>(superGeometry, i, eps);
     sLattice.defineField<NU>(superGeometry, i, Nu);
     sLattice.defineField<K>(superGeometry, i, k);
@@ -243,7 +251,7 @@ void prepareLattice( UnitConverter<T,DESCRIPTOR> const& converter,
   // Pressure for Poiseuille flow with maximum velocity of charU at K->infty
   p0 = 8.*converter.getPhysViscosity()*converter.getCharPhysVelocity()*lx/( ly*ly );
   // Pressure for PorousPoiseuille with maximum velocity of charU for every permeability K
-  //p0 = converter.getCharPhysVelocity() * converter.getPhysViscosity() * converter.getPhysDensity() / Kin * lx / (1. - 1./cosh(sqrt(1./Kin)*ly/2.));
+  //p0 = converter.getCharPhysVelocity() * converter.getPhysViscosity() * converter.getPhysDensity() / Kin * lx / (1. - 1./util::cosh(util::sqrt(1./Kin)*ly/2.));
 
   T p0L = converter.getLatticePressure(p0);
   AnalyticalLinear2D<T,T> rho( -p0L/lx*invCs2<T,DESCRIPTOR>(), 0, p0L*invCs2<T,DESCRIPTOR>()+1 );
@@ -251,15 +259,19 @@ void prepareLattice( UnitConverter<T,DESCRIPTOR> const& converter,
   dp = p0/lx;
   mu = converter.getPhysViscosity()*converter.getPhysDensity();
 
-  //Poiseuille2D<T> uSol( {lx/2.,ly/2.}, {1,0}, converter.getCharPhysVelocity(), ly/2. );
-  PorousPoiseuille2D<T> uSol( Kin, dp, mu, ly/2. );
+  const T wallOffset = (boundaryType == bounceBack) ? 0.5 * converter.getPhysDeltaX() : 0.;
+  PorousPoiseuille2D<T> uSol( Kin, dp, mu, ly/2., wallOffset );
   PhysicalToLatticeVelocityF2D<T> u( &uSol, converter );
 
   // Initialize all values of distribution functions to their local equilibrium
-  for (int i: {0,1,2,3,4}) {
+  for (int i: {
+         0,1,2,3,4
+       }) {
     sLattice.defineRhoU( superGeometry, i, rho, u );
     sLattice.iniEquilibrium( superGeometry, i, rho, u );
   }
+
+  sLattice.setParameter<descriptors::OMEGA>(omega);
 
   // Make the lattice ready for simulation
   sLattice.initialize();
@@ -268,10 +280,9 @@ void prepareLattice( UnitConverter<T,DESCRIPTOR> const& converter,
 }
 
 // Compute error norms
-void error( SuperGeometry2D<T>& superGeometry,
-            SuperLattice2D<T, DESCRIPTOR>& sLattice,
-            UnitConverter<T,DESCRIPTOR> const& converter,
-            Dynamics<T, DESCRIPTOR>& bulkDynamics )
+void error( SuperGeometry<T,2>& superGeometry,
+            SuperLattice<T, DESCRIPTOR>& sLattice,
+            UnitConverter<T,DESCRIPTOR> const& converter )
 {
 
   OstreamManager clout( std::cout,"error" );
@@ -279,9 +290,8 @@ void error( SuperGeometry2D<T>& superGeometry,
   int tmp[]= { };
   T result[2]= { };
 
-  // velocity error
-  //Poiseuille2D<T> uSol( {lx/2.,ly/2.}, {1,0}, converter.getCharPhysVelocity(), ly/2. );
-  PorousPoiseuille2D<T> uSol( Kin, dp, mu, ly/2. );
+  const T wallOffset = (boundaryType == bounceBack) ? 0.5 * converter.getPhysDeltaX() : 0.;
+  PorousPoiseuille2D<T> uSol( Kin, dp, mu, ly/2., wallOffset );
   SuperLatticePhysVelocity2D<T,DESCRIPTOR> u( sLattice,converter );
   auto indicatorF = superGeometry.getMaterialIndicator(1);
 
@@ -334,9 +344,9 @@ void error( SuperGeometry2D<T>& superGeometry,
 }
 
 // Output to console and files
-void getResults( SuperLattice2D<T,DESCRIPTOR>& sLattice, Dynamics<T, DESCRIPTOR>& bulkDynamics,
+void getResults( SuperLattice<T,DESCRIPTOR>& sLattice,
                  UnitConverter<T,DESCRIPTOR> const& converter, int iT,
-                 SuperGeometry2D<T>& superGeometry, Timer<T>& timer, bool hasConverged )
+                 SuperGeometry<T,2>& superGeometry, util::Timer<T>& timer, bool hasConverged )
 {
 
   OstreamManager clout( std::cout,"getResults" );
@@ -347,8 +357,8 @@ void getResults( SuperLattice2D<T,DESCRIPTOR>& sLattice, Dynamics<T, DESCRIPTOR>
   vtmWriter.addFunctor( velocity );
   vtmWriter.addFunctor( pressure );
 
-  //Poiseuille2D<T> uSol( {lx/2.,ly/2.}, {1,0}, converter.getCharPhysVelocity(), ly/2. );
-  PorousPoiseuille2D<T> uSol( Kin, dp, mu, ly/2. );
+  const T wallOffset = (boundaryType == bounceBack) ? 0.5 * converter.getPhysDeltaX() : 0.;
+  PorousPoiseuille2D<T> uSol( Kin, dp, mu, ly/2., wallOffset );
   SuperLatticeFfromAnalyticalF2D<T,DESCRIPTOR> uSolF( uSol, sLattice);
   vtmWriter.addFunctor( uSolF );
 
@@ -386,8 +396,9 @@ void getResults( SuperLattice2D<T,DESCRIPTOR>& sLattice, Dynamics<T, DESCRIPTOR>
       T point[2]= {T(),T()};
       point[0] = lx/2.;
       point[1] = ( T )iY/Ly;
-      //Poiseuille2D<T> uSol( {lx/2.,ly/2.}, {1,0}, converter.getCharPhysVelocity(), ly/2. );
-      PorousPoiseuille2D<T> uSol( Kin, dp, mu, ly/2. );
+
+      const T wallOffset = (boundaryType == bounceBack) ? 0.5 * converter.getPhysDeltaX() : 0.;
+      PorousPoiseuille2D<T> uSol( Kin, dp, mu, ly/2., wallOffset );
       T analytical[2] = {T(),T()};
       uSol( analytical,point );
       SuperLatticePhysVelocity2D<T, DESCRIPTOR> velocity( sLattice, converter );
@@ -410,7 +421,7 @@ void getResults( SuperLattice2D<T,DESCRIPTOR>& sLattice, Dynamics<T, DESCRIPTOR>
     sLattice.getStatistics().print( iT,converter.getPhysTime( iT ) );
 
     // Error norms
-    error( superGeometry, sLattice, converter, bulkDynamics );
+    error( superGeometry, sLattice, converter );
   }
 }
 
@@ -488,28 +499,27 @@ int main( int argc, char* argv[] )
   HeuristicLoadBalancer<T> loadBalancer( cuboidGeometry );
 
   // Instantiation of a superGeometry
-  SuperGeometry2D<T> superGeometry( cuboidGeometry, loadBalancer, 2 );
+  const int overlap = (boundaryType == bounceBack) ? 2 : 3;
+  SuperGeometry<T,2> superGeometry( cuboidGeometry, loadBalancer, overlap );
 
   prepareGeometry( converter, superGeometry );
 
   // === 3rd Step: Prepare Lattice ===
-  SuperLattice2D<T, DESCRIPTOR> sLattice( superGeometry );
-
-  DYNAMICS<T, DESCRIPTOR> bulkDynamics( converter.getLatticeRelaxationFrequency(), instances::getBulkMomenta<T, DESCRIPTOR>() );
+  SuperLattice<T, DESCRIPTOR> sLattice( superGeometry );
 
   //prepareLattice and setBoundaryConditions
-  prepareLattice( converter, sLattice, bulkDynamics, superGeometry );
+  prepareLattice( converter, sLattice, superGeometry );
 
   // === 4th Step: Main Loop with Timer ===
-  clout << "starting simulation..." << endl;
-  Timer<T> timer( converter.getLatticeTime( maxPhysT ), superGeometry.getStatistics().getNvoxel() );
+  clout << "starting simulation..." << std::endl;
+  util::Timer<T> timer( converter.getLatticeTime( maxPhysT ), superGeometry.getStatistics().getNvoxel() );
   util::ValueTracer<T> converge( converter.getLatticeTime( physInterval ), residuum );
   timer.start();
 
   for ( std::size_t iT = 0; iT < converter.getLatticeTime( maxPhysT ); ++iT ) {
     if ( converge.hasConverged() ) {
-      clout << "Simulation converged." << endl;
-      getResults( sLattice, bulkDynamics, converter, iT, superGeometry, timer, converge.hasConverged() );
+      clout << "Simulation converged." << std::endl;
+      getResults( sLattice, converter, iT, superGeometry, timer, converge.hasConverged() );
 
       break;
     }
@@ -521,7 +531,7 @@ int main( int argc, char* argv[] )
     sLattice.collideAndStream();
 
     // === 7th Step: Computation and Output of the Results ===
-    getResults( sLattice, bulkDynamics, converter, iT, superGeometry, timer, converge.hasConverged()  );
+    getResults( sLattice, converter, iT, superGeometry, timer, converge.hasConverged()  );
     converge.takeValue( sLattice.getStatistics().getAverageEnergy(), true );
   }
 

@@ -32,15 +32,12 @@
 
 
 #include "olb3D.h"
-#ifndef OLB_PRECOMPILED // Unless precompiled version is used
-#include "olb3D.hh"     // Include full template code
-#endif
+#include "olb3D.hh"
 
 using namespace olb;
 using namespace olb::descriptors;
 using namespace olb::graphics;
 using namespace olb::util;
-using namespace std;
 
 typedef D3Q19<> DESCRIPTOR;
 
@@ -62,7 +59,7 @@ T geometryLengthZ = 1.e-3 ; // length z-dircetion [m]
 // magnetic particle paramters
 T pRadius = 1.e-5 ;  // particle radius [m]
 T pDensity = 3250.; // particle density [kg / m^3]
-T pVolume = 4. / 3. * M_PI * std::pow(pRadius, 3.); // particle volume [m^3]
+T pVolume = 4. / 3. * M_PI * util::pow(pRadius, 3.); // particle volume [m^3]
 T pMass = pVolume * pDensity; // particle mass [kg]
 T pMag = 67. * pDensity * 0.06; // particle sat. magnetization [A / m]
 T elastModulus = 2.e4; // elastic modulus [Pa]
@@ -79,11 +76,11 @@ T wMag = 215. * wDensity * 8.5e-3; // wire sat. magnetization [A / m]
 // Rayleigh time step
 // can be used as an orientation value for particle time step sizes
 T eta = 0.8766 + 0.1631 * poissonRatio; // [-]
-T t_Rayleigh = (M_PI * pRadius / eta) * std::sqrt(pDensity / shearModulus); // [s]
+T t_Rayleigh = (M_PI * pRadius / eta) * util::sqrt(pDensity / shearModulus); // [s]
 
 void prepareGeometry(UnitConverter<T, DESCRIPTOR> const& converter, IndicatorF3D<T>& wire,
                      IndicatorF3D<T>& indicator, IndicatorF3D<T>& extendedDomain,
-                     SuperGeometry3D<T>& superGeometry)
+                     SuperGeometry<T,3>& superGeometry)
 {
 
   OstreamManager clout(std::cout, "prepareGeometry");
@@ -95,8 +92,8 @@ void prepareGeometry(UnitConverter<T, DESCRIPTOR> const& converter, IndicatorF3D
 
   T minR = superGeometry.getStatistics().getMinPhysR(2)[0];
   minR -= 0.5 * converter.getConversionFactorLength();
-  std::vector < T > center = superGeometry.getStatistics().getCenterPhysR(2);
-  std::vector<T> physExtend = superGeometry.getStatistics().getPhysExtend(1);
+  olb::Vector <T, 3 > center = superGeometry.getStatistics().getCenterPhysR(2);
+  olb::Vector<T, 3> physExtend = superGeometry.getStatistics().getPhysExtend(1);
 
   Vector<T, 3> origin = { minR, center[1], center[2] };
   Vector<T, 3> extend = { converter.getConversionFactorLength(), physExtend[1], physExtend[2] };
@@ -119,10 +116,10 @@ void prepareGeometry(UnitConverter<T, DESCRIPTOR> const& converter, IndicatorF3D
 }
 
 /// Set up the geometry of the simulation
-void prepareLattice(SuperLattice3D<T, DESCRIPTOR>& sLattice,
-                    UnitConverter<T, DESCRIPTOR> const& converter, IndicatorF3D<T>& wire,
-                    Dynamics<T, DESCRIPTOR>& bulkDynamics,
-                    SuperGeometry3D<T>& superGeometry)
+void prepareLattice(SuperLattice<T, DESCRIPTOR>& sLattice,
+                    UnitConverter<T, DESCRIPTOR> const& converter,
+                    IndicatorF3D<T>& wire,
+                    SuperGeometry<T,3>& superGeometry)
 {
   OstreamManager clout(std::cout, "prepareLattice");
   clout << "Prepare Lattice ..." << std::endl;
@@ -130,22 +127,19 @@ void prepareLattice(SuperLattice3D<T, DESCRIPTOR>& sLattice,
   const T omega = (1. / converter.getLatticeRelaxationTime());
 
   /// Material=0 -->do nothing
-  sLattice.defineDynamics(superGeometry, 0,
-                          &instances::getNoDynamics<T, DESCRIPTOR>());
+  sLattice.defineDynamics<NoDynamics>(superGeometry, 0);
 
   /// Material=1 -->bulk dynamics
-  sLattice.defineDynamics(superGeometry, 1, &bulkDynamics);
+  sLattice.defineDynamics<BGKdynamics>(superGeometry, 1);
 
   /// Material=2 -->bounce back
-  sLattice.defineDynamics(superGeometry, 2,
-                          &instances::getBounceBack<T, DESCRIPTOR>());
+  sLattice.defineDynamics<NoDynamics>(superGeometry, 2);
 
-  sLattice.defineDynamics(superGeometry, 3, &bulkDynamics);
-  sLattice.defineDynamics(superGeometry, 4, &bulkDynamics);
+  sLattice.defineDynamics<BGKdynamics>(superGeometry, 3);
+  sLattice.defineDynamics<BGKdynamics>(superGeometry, 4);
 
   /// Material=5 -->do nothing
-  sLattice.defineDynamics(superGeometry, 5,
-                          &instances::getNoDynamics<T, DESCRIPTOR>());
+  sLattice.defineDynamics<NoDynamics>(superGeometry, 5);
   setBouzidiZeroVelocityBoundary<T,DESCRIPTOR>(sLattice, superGeometry, 5, wire);
 
   // boundary conditions for fluid
@@ -166,14 +160,16 @@ void prepareLattice(SuperLattice3D<T, DESCRIPTOR>& sLattice,
   sLattice.defineRhoU(superGeometry, 4, roh, u0);
   sLattice.iniEquilibrium(superGeometry, 4, roh, u0);
 
+  sLattice.setParameter<descriptors::OMEGA>(omega);
+
   sLattice.initialize();
 
   clout << "Prepare Lattice ... OK" << std::endl;
 }
 
-void setBoundaryValues(SuperLattice3D<T, DESCRIPTOR>& sLattice,
+void setBoundaryValues(SuperLattice<T, DESCRIPTOR>& sLattice,
                        UnitConverter<T, DESCRIPTOR> const& converter, SuperParticleSystem3D<T, PARTICLE>& spSys,
-                       int iT, int itStartScaleT, SuperGeometry3D<T>& superGeometry, bool outNS, bool outLP)
+                       int iT, int itStartScaleT, SuperGeometry<T,3>& superGeometry, bool outNS, bool outLP)
 {
 
   OstreamManager clout(std::cout, "setBoundaryValues");
@@ -211,8 +207,8 @@ void setBoundaryValues(SuperLattice3D<T, DESCRIPTOR>& sLattice,
   }
 }
 
-void getResults(SuperGeometry3D<T>& superGeometry,
-                SuperLattice3D<T, DESCRIPTOR>& sLattice,
+void getResults(SuperGeometry<T,3>& superGeometry,
+                SuperLattice<T, DESCRIPTOR>& sLattice,
                 UnitConverter<T, DESCRIPTOR> const& converter,
                 AnalyticalF3D<T,BaseType<T>>& magForce, AnalyticalF3D<T,BaseType<T>>& magField,
                 SuperParticleSystem3D<T, PARTICLE>& spSys,
@@ -291,7 +287,12 @@ int main(int argc, char* argv[])
   singleton::directories().setOutputDir("./tmp/");
   OstreamManager clout(std::cout, "main");
 
-  string fName("magneticParticles3d.xml");
+#if defined(PARALLEL_MODE_MPI) && !defined(FEATURE_CIPIPELINE)
+  clout << "ERROR: Example does not provide MPI support for now and can only be run sequentually!" << std::endl;
+  return -1;
+#endif
+
+  std::string fName("magneticParticles3d.xml");
   XMLreader config(fName);
 
   // converter contains parameters of fluid simulation
@@ -304,7 +305,7 @@ int main(int argc, char* argv[])
   T physDeltaTParticles = t_Rayleigh * 0.4; // [s]
   // particles relaxation time
   T tau_particles = (physDeltaTParticles * 3 * converter->getPhysViscosity() /
-                     std::pow(converter->getConversionFactorLength(), 2.) + 0.5);
+                     util::pow(converter->getConversionFactorLength(), 2.) + 0.5);
 
   // converter contains parameters of particle simulation
   UnitConverterFromResolutionAndRelaxationTime<T, DESCRIPTOR> const converterParticles(
@@ -320,7 +321,7 @@ int main(int argc, char* argv[])
   converterParticles.print();
 
   // name of particle data output file
-  string filename = "particleData.txt";
+  std::string filename = "particleData.txt";
   std::ofstream outputFile;
 
   bool multiOutput = false;
@@ -397,21 +398,18 @@ int main(int argc, char* argv[])
   HeuristicLoadBalancer<T> loadBalancer(cuboidGeometry);
 
   /// Instantiation of a superGeometry
-  SuperGeometry3D<T> superGeometry(cuboidGeometry, loadBalancer, 2);
+  SuperGeometry<T,3> superGeometry(cuboidGeometry, loadBalancer, 3);
 
   prepareGeometry(*converter, wire, cuboid, extendedDomainCuboid,
                   superGeometry);
 
   /// === 3rd Step: Prepare Lattice ===
 
-  SuperLattice3D<T, DESCRIPTOR> sLattice(superGeometry);
-
-  BGKdynamics<T, DESCRIPTOR> bulkDynamics((1. / converter->getLatticeRelaxationTime()),
-                                          instances::getBulkMomenta<T, DESCRIPTOR>());
+  SuperLattice<T, DESCRIPTOR> sLattice(superGeometry);
 
   // gives dynamics to cells
   //prepareLattice and setBoundaryConditions
-  prepareLattice(sLattice, *converter, wire, bulkDynamics,  superGeometry);
+  prepareLattice(sLattice, *converter, wire,  superGeometry);
 
   /// === 4th Step: Prepare Lagrange Particles
 
@@ -424,7 +422,7 @@ int main(int argc, char* argv[])
   spSys.setContactDetection(nanoflannContact);
 
   // magnetic force field from wire
-  std::vector < T > origin = superGeometry.getStatistics().getCenterPhysR(1);
+  olb::Vector <T, 3> origin = superGeometry.getStatistics().getCenterPhysR(1);
   origin[0] = geometryLengthX - 0.675e-3;
   origin[2] = superGeometry.getStatistics().getMinPhysR(1)[2];
 
@@ -439,20 +437,20 @@ int main(int argc, char* argv[])
 
   // Object of magnetic force to know magnetic value at any place in geometry
   // but needs to be called by operator function.
-  // inhomogeneous magnetic field round cylinder
+  // inhomogeneous magnetic field util::round cylinder
   MagneticForceFromCylinder3D<T, T> magForceFromCylOnParticle(car2cyl, wLength,
       wRadius, 4., wMag, pMag, pRadius);
   MagneticFieldFromCylinder3D<T, T> magFieldFromCylOnParticle(car2cyl, wLength,
       wRadius, 4., wMag);
 
   // external magnetic force from the wire
-  auto magneticPForceOne = make_shared
+  auto magneticPForceOne = std::make_shared
                            < MagneticForceForMagP3D<T, PARTICLE, DESCRIPTOR>
                            > (magForceFromCylOnParticle, magFieldFromCylOnParticle, 1.e0);
   spSys.addForce(magneticPForceOne);
 
   // interparticular magnetic force
-  auto interpMagF = make_shared
+  auto interpMagF = std::make_shared
                     < InterpMagForceForMagP3D<T, PARTICLE, DESCRIPTOR>
                     > (1.e0, 1.e0);
   spSys.addForce(interpMagF);
@@ -461,20 +459,20 @@ int main(int argc, char* argv[])
   T dynVisc = converter->getPhysViscosity() * converter->getPhysDensity();
 
   // damping force for the particle rotation
-  auto rotDampingF = make_shared
+  auto rotDampingF = std::make_shared
                      < LinearDampingForceForMagDipoleMoment3D<T, PARTICLE, DESCRIPTOR>
                      > (dynVisc, 1.e0);
   spSys.addForce(rotDampingF);
 
   // mechanic contact force
-  auto hertzMindlinContF = make_shared
+  auto hertzMindlinContF = std::make_shared
                            < HertzMindlinDeresiewicz3D<T, PARTICLE, DESCRIPTOR>
                            > (shearModulus, shearModulus, poissonRatio, poissonRatio, 1.e0, 1.e0, false);
   spSys.addForce(hertzMindlinContF);
 
   // stokes drag force
   SuperLatticeInterpPhysVelocity3D<T, DESCRIPTOR> getVel( sLattice, *converter );
-  auto stokesDragF = make_shared
+  auto stokesDragF = std::make_shared
                      < StokesDragForce3D<T, PARTICLE, DESCRIPTOR>
                      > (getVel, converterParticles);
   spSys.addForce(stokesDragF);
@@ -486,13 +484,13 @@ int main(int argc, char* argv[])
   std::set<int> reflBMat = { 2, 3 };
 
   // particle boundary for deposited particles
-  auto wireBoundary = make_shared
+  auto wireBoundary = std::make_shared
                       < WireBoundaryForMagP3D<T, PARTICLE>
                       > (superGeometry, wireBMaterial);
   spSys.addBoundary(wireBoundary);
 
   // particle boundary
-  auto materialreflectBoundary = make_shared
+  auto materialreflectBoundary = std::make_shared
                                  < SimpleReflectBoundary3D<T, PARTICLE>
                                  > (dT, superGeometry, reflBMat);
   spSys.addBoundary(materialreflectBoundary);
@@ -519,7 +517,7 @@ int main(int argc, char* argv[])
     util::normalize(pDMoment);
   }
   else {
-    clout << "Norm of pDMoment near zero!" << endl;
+    clout << "Norm of pDMoment near zero!" << std::endl;
     exit(0);
   }
 
@@ -527,7 +525,7 @@ int main(int argc, char* argv[])
   PARTICLE<T> magPartTemplate(pPos, pVel, pMass, pRadius, 0, pDMoment, pAVel, pTrq, pMag, 1);
 
   // intialization geometry particles
-  std::vector<T> particlesOrigin(3, T(0));
+  olb::Vector<T, 3> particlesOrigin{};
   particlesOrigin = superGeometry.getStatistics().getMinPhysR(1);
   std::vector<T> particlesExtend(3, T(0));
 
@@ -539,7 +537,7 @@ int main(int argc, char* argv[])
   particlesExtend[2] = (superGeometry.getStatistics().getMaxPhysR(1)[2]) * 2./6. ;
   IndicatorCuboid3D<T> cuboidPart(particlesExtend, particlesOrigin);
 
-  clout << "starting simulation" << endl;
+  clout << "starting simulation" << std::endl;
 
   /// === 5th Step: Main Loop with Timer ===
 
@@ -588,7 +586,6 @@ int main(int argc, char* argv[])
 
   }
   else {
-    sLattice.postLoad();
     sLattice.communicate();
     sLattice.getStatistics().print(iT, converter->getPhysTime(iT));
   }
