@@ -149,12 +149,6 @@ bool getRangeBlockGeometrySmoothIndicatorIntersection2D(BlockGeometryStructure2D
     SmoothIndicatorF2D<T,T,true>& sIndicator,
     T invDeltaX, std::vector<int>& start, std::vector<int>& end);
 
-template<typename T>
-void checkSmoothIndicatorOutOfGeometry( bool& outOfGeometry, Vector<T,2>& ghostPos,
-                                        SmoothIndicatorF2D<T,T,true>& sIndicator,
-                                        Vector<T,2> cellMin, Vector<T,2> cellMax,
-                                        Vector<bool,2> periodic);
-
 template <typename T, typename DESCRIPTOR>
 void setBlockExternalParticleField( BlockGeometryStructure2D<T>& blockGeometry, AnalyticalF<2,T,T>& velocity,
                                     SmoothIndicatorF2D<T,T,true>& sIndicator,

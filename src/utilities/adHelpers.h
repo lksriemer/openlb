@@ -45,8 +45,8 @@ void iniDiagonal(SAD* a, int dim) {
   }
 }
 
-template <typename SAD>
-void iniDiagonal(std::vector<SAD>& a) {
+template <typename C>
+void iniDiagonal(C& a) {
   for (unsigned i = 0; i < a.size(); ++i) {
     a[i].setDiffVariable(i);
   }
@@ -68,9 +68,9 @@ void copyDerivatives(T* target, const TAD* source, int length) {
 
 
 /// copy vector with specified typecast
-template<typename T, typename S>
-std::vector<T> copyAs(const std::vector<S>& input) {
-  std::vector<T> result(input.size(), T());
+template<typename T, typename S, template<typename> typename C>
+C<T> copyAs(const C<S>& input) {
+  C<T> result = ContainerCreator<C<T>>::create(input.size());
 
   for(std::size_t it = 0; it < input.size(); ++it) {
     result[it] = T(input[it]);
@@ -97,9 +97,9 @@ ADf<S,n>* iniAD(const S* source) {
 }
 
 /// copy values and initialize derivatives
-template<unsigned n, typename S>
-std::vector<ADf<S,n>> iniAD(const std::vector<S>& source) {
-  auto result = copyAs<ADf<S,n>,S> (source);
+template<unsigned n, typename S, template<typename> typename C>
+C<ADf<S,n>> iniAD(const C<S>& source) {
+  auto result = copyAs<ADf<S,n>,S,C> (source);
   util::iniDiagonal (result);
   return result;
 }

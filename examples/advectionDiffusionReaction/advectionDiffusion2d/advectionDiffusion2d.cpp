@@ -27,8 +27,8 @@
  *  The solution to a linear, scalar, two-dimensional advection-diffusion
  *  equation is approximated.
  *  The numerical setup and the analytical solution are taken from
- *  [Simonis, S., Frank, M., and Krause, M. J. 2020. Phil. Trans. R. Soc. A378:
- *  20190400. DOI: 10.1098/rsta.2019.0400]
+ *  Simonis, S., Frank, M., and Krause M. J. Applied Mathematics Letters
+ *  (2023) 135:108484, DOI: https://doi.org/10.1016/j.aml.2022.108484.
  *  Error norms are calculated for three subsequent resolutions and stored
  *  in the respective /tmp folders. A python script is provided to calculate
  *  the experimental order of convergence towards the analytical solution.
@@ -42,8 +42,7 @@ using namespace olb;
 using namespace olb::descriptors;
 using namespace olb::graphics;
 
-typedef double T;
-
+using T = FLOATING_POINT_TYPE;
 typedef D2Q5<VELOCITY> TDESCRIPTOR;
 
 /// uncomment for console output of other norms
@@ -122,9 +121,6 @@ void prepareLattice(  SuperLattice<T, TDESCRIPTOR>& ADlattice,
   OstreamManager clout(std::cout,"prepareLattice");
   clout << "Prepare Lattice ..." << std::endl;
 
-  // buffer layer
-  ADlattice.defineDynamics<NoDynamics>(superGeometry.getMaterialIndicator({0}));
-  // bulk
   ADlattice.defineDynamics<AdvectionDiffusionBGKdynamics>(superGeometry.getMaterialIndicator({1}));
 
   AnalyticalConst2D<T,T> u0( converter.getCharLatticeVelocity(), converter.getCharLatticeVelocity() );
@@ -141,6 +137,8 @@ void prepareLattice(  SuperLattice<T, TDESCRIPTOR>& ADlattice,
 
   /// Make the lattice ready for simulation
   ADlattice.initialize();
+
+
   clout << "Prepare Lattice ... OK" << std::endl;
 }
 
@@ -254,6 +252,8 @@ T getResults( SuperLattice<T, TDESCRIPTOR>& ADlattice,
     /// Writes the VTK files
     SuperLatticeDensity2D<T, TDESCRIPTOR> temperature(ADlattice);
     SuperLatticeFfromAnalyticalF2D<T, TDESCRIPTOR> solution(temperatureSol, ADlattice);
+    ADlattice.setProcessingContext(ProcessingContext::Evaluation);
+
 
     vtkWriter.addFunctor( temperature );
     vtkWriter.addFunctor( solution );
@@ -285,7 +285,6 @@ T getResults( SuperLattice<T, TDESCRIPTOR>& ADlattice,
 
 void simulate(int N, int statIter, T mue, T peclet, T physLength)
 {
-
   OstreamManager clout(std::cout,"simulate");
   clout << "Executing the simulation with N=" << std::to_string(N) << std::endl;
 
@@ -337,7 +336,6 @@ void simulate(int N, int statIter, T mue, T peclet, T physLength)
   SuperLattice<T, TDESCRIPTOR> ADlattice(superGeometry);
 
   prepareLattice(ADlattice, superGeometry, converter);
-
   /// === 4th Step: Main Loop with Timer ===
   util::Timer<T> timer( superGeometry.getStatistics().getNvoxel() );
   timer.start();
@@ -365,6 +363,7 @@ void simulate(int N, int statIter, T mue, T peclet, T physLength)
 
   clout << "Simulation Average Relative L2 Error: " << simulationAverage << std::endl;
 
+  ADlattice.setProcessingContext(ProcessingContext::Evaluation);
   timer.stop();
   timer.printSummary();
 }

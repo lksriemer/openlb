@@ -100,7 +100,7 @@ bool BlockLatticePhysCorrBoundaryForce2D<T, DESCRIPTOR>::operator()(
         T f = this->_blockLattice.get(input[0] + c[0], input[1] + c[1])[iPop];
         // Get f_l of the boundary cell
         // Add f_q and f_opp
-        f += this->_blockLattice.get(input[0], input[1])[util::opposite<DESCRIPTOR>(iPop)];
+        f += this->_blockLattice.get(input[0], input[1])[descriptors::opposite<DESCRIPTOR>(iPop)];
         // Update force
         for (int i = 0; i < this->getTargetDim(); ++i) {
           output[i] -= c[i] * (f - 2. * descriptors::t<T,DESCRIPTOR>(iPop));

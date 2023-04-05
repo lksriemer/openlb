@@ -46,11 +46,12 @@ public:
   /// Constructor for (useStored=false)
   Randomizer();
 
-  /// Constructor with passed sequence 
+  /// Constructor with passed sequence
   Randomizer(std::vector<T> sequence);
 
   /// Constroctor with filePath to stored sequence
-  Randomizer(std::string filePathSequence);
+  /// - throws error, if file does not exist and enforceStored=true
+  Randomizer(std::string filePathSequence, bool enforceStored=false );
 
   /// Generate scalar or vector filled with scalars
   template<typename O=T>
@@ -61,7 +62,7 @@ public:
   T generateScalarNormal(T avg, T stdDev, T cutoff );
 
   /// Write sequence to file for later retrieval
-  void writeSequence( std::size_t numOfValues, 
+  void writeSequence( std::size_t numOfValues,
                       std::string filePathSequence = "./randomSequence.dat",
                       int precision = 5 );
 

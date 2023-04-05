@@ -35,7 +35,7 @@ namespace olb {
 /// Generic vector of values supporting basic arithmetic
 template<typename T, unsigned D, typename IMPL>
 struct GenericVector {
-  GenericVector() = default;
+  constexpr GenericVector() = default;
   GenericVector(const GenericVector&) = delete;
   GenericVector(GenericVector&&) = delete;
 
@@ -43,19 +43,20 @@ struct GenericVector {
 
   using value_type = T;
   static constexpr unsigned d = D;
+  static constexpr unsigned size() { return D; }
 
-  const T& operator [] (unsigned iDim) const any_platform
+  constexpr const T& operator [] (unsigned iDim) const any_platform
   {
     return *static_cast<const IMPL*>(this)->getComponentPointer(iDim);
   }
 
-  T& operator [] (unsigned iDim) any_platform
+  constexpr T& operator [] (unsigned iDim) any_platform
   {
     return *static_cast<IMPL*>(this)->getComponentPointer(iDim);
   }
 
   template<typename IMPL_>
-  IMPL& operator = (const GenericVector<T,D,IMPL_>& rhs) any_platform
+  constexpr IMPL& operator = (const GenericVector<T,D,IMPL_>& rhs) any_platform
   {
     for (unsigned iDim=0; iDim < D; ++iDim) {
       operator[](iDim) = rhs[iDim];
@@ -64,7 +65,7 @@ struct GenericVector {
   }
 
   template<typename U, typename IMPL_>
-  IMPL& operator += (const GenericVector<U,D,IMPL_>& rhs) any_platform
+  constexpr IMPL& operator += (const GenericVector<U,D,IMPL_>& rhs) any_platform
   {
     for (unsigned iDim=0; iDim < D; ++iDim) {
       operator[](iDim) += rhs[iDim];
@@ -73,7 +74,7 @@ struct GenericVector {
   }
 
   template<typename IMPL_>
-  IMPL& operator -= (const GenericVector<T,D,IMPL_>& rhs) any_platform
+  constexpr IMPL& operator -= (const GenericVector<T,D,IMPL_>& rhs) any_platform
   {
     for (unsigned iDim=0; iDim < D; ++iDim) {
       operator[](iDim) -= rhs[iDim];
@@ -82,7 +83,7 @@ struct GenericVector {
   }
 
   template<typename U, typename IMPL_>
-  IMPL& operator *= (const GenericVector<U,D,IMPL_>& rhs) any_platform
+  constexpr IMPL& operator *= (const GenericVector<U,D,IMPL_>& rhs) any_platform
   {
     for (unsigned iDim=0; iDim < D; ++iDim) {
       operator[](iDim) *= rhs[iDim];
@@ -91,7 +92,7 @@ struct GenericVector {
   }
 
   template<typename U>
-  meta::enable_if_arithmetic_t<U, IMPL&> operator += (const U& rhs) any_platform
+  constexpr meta::enable_if_arithmetic_t<U, IMPL&> operator += (const U& rhs) any_platform
   {
     for (unsigned iDim=0; iDim < D; ++iDim) {
       operator[](iDim) += rhs;
@@ -100,7 +101,7 @@ struct GenericVector {
   }
 
   template<typename U>
-  meta::enable_if_arithmetic_t<U, IMPL&> operator -= (const U& rhs) any_platform
+  constexpr meta::enable_if_arithmetic_t<U, IMPL&> operator -= (const U& rhs) any_platform
   {
     for (unsigned iDim=0; iDim < D; ++iDim) {
       operator[](iDim) -= rhs;
@@ -109,7 +110,7 @@ struct GenericVector {
   }
 
   template<typename U>
-  meta::enable_if_arithmetic_t<U, IMPL&> operator *= (const U& rhs) any_platform
+  constexpr meta::enable_if_arithmetic_t<U, IMPL&> operator *= (const U& rhs) any_platform
   {
     for (unsigned iDim=0; iDim < D; ++iDim) {
       operator[](iDim) *= rhs;
@@ -118,7 +119,7 @@ struct GenericVector {
   }
 
   template<typename U>
-  meta::enable_if_arithmetic_t<U, IMPL&> operator /= (const U& rhs) any_platform
+  constexpr meta::enable_if_arithmetic_t<U, IMPL&> operator /= (const U& rhs) any_platform
   {
     for (unsigned iDim=0; iDim < D; ++iDim) {
       operator[](iDim) /= rhs;
@@ -128,7 +129,7 @@ struct GenericVector {
 
 
   template<typename IMPL_>
-  bool operator == (const GenericVector<T,D,IMPL_>& rhs) const any_platform
+  constexpr bool operator == (const GenericVector<T,D,IMPL_>& rhs) const any_platform
   {
     bool isEqual = true;
     for (unsigned iDim=0; iDim < D; ++iDim) {
@@ -138,7 +139,7 @@ struct GenericVector {
   }
 
   template<typename IMPL_>
-  bool operator != (const GenericVector<T,D,IMPL_>& rhs) const any_platform
+  constexpr bool operator != (const GenericVector<T,D,IMPL_>& rhs) const any_platform
   {
     for (unsigned iDim=0; iDim < D; ++iDim) {
       if (operator[](iDim) != rhs[iDim]) {

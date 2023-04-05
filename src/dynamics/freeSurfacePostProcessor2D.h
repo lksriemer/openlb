@@ -40,76 +40,6 @@
  */
 
 namespace olb {
-/**
- * Free surface 2D helper. Since the data structure and the necessary functions are quite complex, we provide
- * a class which makes the
- */
-class FreeSurface2D {
-public:
-
-  template <typename CELL>
-  static bool isCellType(CELL& cell, const FreeSurface::Type& type) any_platform;
-
-  template <typename CELL>
-  static bool hasCellFlags(CELL& cell, const FreeSurface::Flags& type) any_platform;
-
-  template <typename CELL>
-  static bool hasNeighbour(CELL& cell, const FreeSurface::Type& type) any_platform;
-
-  template <typename CELL>
-  static bool hasNeighbourFlags(CELL& cell, const FreeSurface::Flags& flags) any_platform;
-
-  template <typename CELL, typename V=typename CELL::value_t>
-  static V getClampedEpsilon(CELL& cell) any_platform;
-
-  template <typename CELL, typename V=typename CELL::value_t>
-  static Vector<V,CELL::descriptor_t::d> computeInterfaceNormal(CELL& cell) any_platform;
-
-  template <typename CELL, typename V=typename CELL::value_t>
-  static Vector<V,CELL::descriptor_t::d> computeParkerYoungInterfaceNormal(CELL& cell) any_platform;
-
-  template<typename T, typename DESCRIPTOR>
-  static T calculateCubeOffset(T volume, const Vector<T,DESCRIPTOR::d>& normal) any_platform;
-
-  template<typename T, typename DESCRIPTOR>
-  static T plicInverse(T d, const Vector<T,DESCRIPTOR::d>& normal) any_platform;
-
-  template <typename CELL, typename V=typename CELL::value_t>
-  static V calculateSurfaceTensionCurvature(CELL& cell) any_platform;
-
-  template <typename CELL, typename V=typename CELL::value_t>
-  static bool isHealthyInterface(CELL& cell) any_platform;
-
-  template <typename CELL, typename V=typename CELL::value_t>
-  static void setCellType(CELL& cell, const FreeSurface::Type& type) any_platform;
-
-  template <typename CELL, typename V=typename CELL::value_t>
-  static void setCellFlags(CELL& cell, const FreeSurface::Flags& flags) any_platform;
-
-  struct NeighbourInfo {
-    bool has_fluid_neighbours = false;
-    bool has_gas_neighbours = false;
-    size_t interface_neighbours = 0;
-  };
-
-  template <typename CELL>
-  static NeighbourInfo getNeighbourInfo(CELL& cell) any_platform;
-
-  /**
-   * Helper class meant to make the necessary variables more accesible and interchangeable
-   */
-  template <typename T>
-  struct Variables {
-    bool drop_isolated_cells;
-    T transition;
-    T lonely_threshold;
-    bool has_surface_tension = true;
-    T surface_tension_parameter = 0.1;
-    T force_conversion_factor = 1.0;
-    T lattice_size = 1.0;
-  };
-
-};
 
 /**
  * Free Surface Processor 1-3
@@ -120,10 +50,17 @@ public:
  * Marks cells which may be changed at the last step.
  * This whole step should be included in the collideAndStream step, though heavy modification of openlb would be necessary
  */
-template<typename T, typename DESCRIPTOR>
 class FreeSurfaceMassFlowPostProcessor2D {
 public:
-  using ParametersD = FreeSurface2D::Variables<T>;
+   using parameters = meta::list<
+    FreeSurface::DROP_ISOLATED_CELLS,
+    FreeSurface::TRANSITION,
+    FreeSurface::LONELY_THRESHOLD,
+    FreeSurface::HAS_SURFACE_TENSION,
+    FreeSurface::SURFACE_TENSION_PARAMETER,
+    FreeSurface::FORCE_CONVERSION_FACTOR,
+    FreeSurface::LATTICE_SIZE
+  >;
 
   static constexpr OperatorScope scope = OperatorScope::PerCellWithParameters;
 
@@ -217,20 +154,16 @@ public:
 /*
 * Setup helper
 */
-
 template<typename T, typename DESCRIPTOR>
 class FreeSurface2DSetup {
 public:
 private:
-  const FreeSurface2D::Variables<T> vars;
   SuperLattice<T, DESCRIPTOR>& sLattice;
 
   // SuperPostProcessors
   // Corresponding to the local block processors
 public:
-  FreeSurface2DSetup(
-    SuperLattice<T, DESCRIPTOR>& sLattice,
-    const FreeSurface2D::Variables<T>& vars);
+  FreeSurface2DSetup(SuperLattice<T, DESCRIPTOR>& sLattice);
 
   void addPostProcessor();
 };

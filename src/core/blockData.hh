@@ -33,6 +33,8 @@
 #include "functors/lattice/blockBaseF2D.h"
 #include "functors/lattice/blockBaseF3D.h"
 
+#include "communication/mpiManager.h"
+
 namespace olb {
 
 template<unsigned D, typename T, typename U>
@@ -141,6 +143,75 @@ bool* BlockData<D,T,U>::getBlock(std::size_t iBlock, std::size_t& sizeBlock, boo
   }
 
   return dataPtr;
+}
+
+namespace singleton {
+
+#ifdef PARALLEL_MODE_MPI
+
+void MpiManager::bCast(BlockData<2,double,double>& sendData, int root, MPI_Comm comm)
+{
+  if (!ok) {
+    return;
+  }
+  for (unsigned iD=0; iD < sendData.getSize(); ++iD) {
+    MPI_Bcast(static_cast<void*>(sendData.getColumn(iD).data()),
+              sendData.getNcells(), MPI_DOUBLE, root, comm);
+  }
+}
+
+void MpiManager::bCast(BlockData<2,float,float>& sendData, int root, MPI_Comm comm)
+{
+  if (!ok) {
+    return;
+  }
+  for (unsigned iD=0; iD < sendData.getSize(); ++iD) {
+    MPI_Bcast(static_cast<void*>(sendData.getColumn(iD).data()),
+              sendData.getNcells(), MPI_FLOAT, root, comm);
+  }
+}
+
+template <>
+void MpiManager::reduce<BlockData<2,double,int> >(BlockData<2,double,int>& sendVal, BlockData<2,double,int>& recvVal,  MPI_Op op, int root, MPI_Comm comm)
+{
+  if (!ok) {
+    return;
+  }
+  for (unsigned iD=0; iD < sendVal.getSize(); ++iD) {
+    MPI_Reduce(static_cast<void*>(sendVal.getColumn(iD).data()),
+               static_cast<void*>(recvVal.getColumn(iD).data()),
+               sendVal.getNcells(), MPI_DOUBLE, op, root, comm);
+  }
+}
+
+template <>
+void MpiManager::reduce<BlockData<2,double,double> >(BlockData<2,double,double>& sendVal, BlockData<2,double,double>& recvVal,  MPI_Op op, int root, MPI_Comm comm)
+{
+  if (!ok) {
+    return;
+  }
+  for (unsigned iD=0; iD < sendVal.getSize(); ++iD) {
+    MPI_Reduce(static_cast<void*>(sendVal.getColumn(iD).data()),
+               static_cast<void*>(recvVal.getColumn(iD).data()),
+               sendVal.getNcells(), MPI_DOUBLE, op, root, comm);
+  }
+}
+
+template <>
+void MpiManager::reduce<BlockData<2,float,float> >(BlockData<2,float,float>& sendVal, BlockData<2,float,float>& recvVal,  MPI_Op op, int root, MPI_Comm comm)
+{
+  if (!ok) {
+    return;
+  }
+  for (unsigned iD=0; iD < sendVal.getSize(); ++iD) {
+    MPI_Reduce(static_cast<void*>(sendVal.getColumn(iD).data()),
+               static_cast<void*>(recvVal.getColumn(iD).data()),
+               sendVal.getNcells(), MPI_FLOAT, op, root, comm);
+  }
+}
+
+#endif
+
 }
 
 }

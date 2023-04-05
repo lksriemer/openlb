@@ -1,7 +1,8 @@
 /*  Lattice Boltzmann sample, written in C++, using the OpenLB
  *  library
  *
- *  Copyright (C) 2017 Mathias J. Krause, Patrick Nathan, Alejandro C. Barreto, Marc Haußmann
+ *  Copyright (C) 2023 Stephan Simonis, Mathias J. Krause, Patrick Nathan,
+ *                     Alejandro C. Barreto, Marc Haußmann
  *  E-mail contact: info@openlb.net
  *  The most recent release of OpenLB can be downloaded at
  *  <http://www.openlb.net/>
@@ -44,9 +45,9 @@ using namespace olb;
 using namespace olb::descriptors;
 using namespace olb::graphics;
 
-using T = double;
+using T = FLOATING_POINT_TYPE;
 
-// Choose your turbulent model of choice
+// Choose turbulence model or collision scheme
 //#define RLB
 #define SMAGORINSKY
 //#define WALE
@@ -54,6 +55,7 @@ using T = double;
 //#define ShearSmagorinsky
 //#define Krause
 //#define DNS
+//#define KBC
 
 #define finiteDiff //for N<256
 
@@ -61,6 +63,8 @@ using T = double;
 typedef D3Q19<AV_SHEAR> DESCRIPTOR;
 #elif defined (WALE)
 typedef D3Q19<EFFECTIVE_OMEGA,VELO_GRAD> DESCRIPTOR;
+#elif defined(KBC)
+typedef D3Q19<GAMMA> DESCRIPTOR;
 #else
 typedef D3Q19<> DESCRIPTOR;
 #endif
@@ -77,7 +81,9 @@ using BulkDynamics = ShearSmagorinskyBGKdynamics<T,DESCRIPTOR>;
 using BulkDynamics = KrauseBGKdynamics<T,DESCRIPTOR>;
 #elif defined(ConsistentStrainSmagorinsky)
 using BulkDynamics = ConStrainSmagorinskyBGKdynamics<T,DESCRIPTOR>;
-#else //DNS Simulation
+#elif defined(KBC)
+using BulkDynamics = KBCdynamics<T, DESCRIPTOR>;
+#else
 using BulkDynamics = SmagorinskyBGKdynamics<T,DESCRIPTOR>;
 #endif
 
@@ -88,7 +94,7 @@ const T volume = util::pow(2. * pi, 3.); // volume of the 2pi periodic box
 
 // Parameters for the simulation setup
 const T maxPhysT = 10;    // max. simulation time in s, SI unit
-int N = 128;              // resolution of the model
+int N = 64;              // resolution of the model
 T Re = 800;               // defined as 1/kinematic viscosity
 T smagoConst = 0.1;       // Smagorisky Constant, for ConsistentStrainSmagorinsky smagoConst = 0.033
 T vtkSave = 0.25;         // time interval in s for vtk and gnuplot output
@@ -104,16 +110,16 @@ protected:
 
 // initial solution of the TGV
 public:
-  Tgv3D(UnitConverter<T,_DESCRIPTOR> const& converter, T frac) : AnalyticalF3D<T,BaseType<T>>(3)
+  Tgv3D(UnitConverter<T,_DESCRIPTOR> const& converter, T frac) : AnalyticalF3D<T,T>(3)
   {
     u0 = converter.getCharLatticeVelocity();
   };
 
-  bool operator()(T output[], const BaseType<T> input[]) override
+  bool operator()(T output[], const T input[]) override
   {
-    T x = input[0];
-    T y = input[1];
-    T z = input[2];
+    const T x = input[0];
+    const T y = input[1];
+    const T z = input[2];
 
     output[0] = u0 * util::sin(x) * util::cos(y) * util::cos(z);
     output[1] = -u0 * util::cos(x) * util::sin(y) * util::cos(z);
@@ -150,13 +156,11 @@ void prepareLattice(SuperLattice<T,DESCRIPTOR>& sLattice,
   OstreamManager clout(std::cout,"prepareLattice");
   clout << "Prepare Lattice ..." << std::endl;
 
-  /// Material=0 -->do nothing
-  sLattice.defineDynamics<NoDynamics>(superGeometry, 0);
   /// Material=1 -->bulk dynamics
   const T omega = converter.getLatticeRelaxationFrequency();
   sLattice.defineDynamics<BulkDynamics>(superGeometry, 1);
   sLattice.setParameter<descriptors::OMEGA>(omega);
-  #if !defined(RLB) && !defined(DNS)
+  #if !defined(RLB) && !defined(DNS) && !defined(KBC)
   sLattice.setParameter<collision::LES::Smagorinsky>(smagoConst);
   #endif
 
@@ -213,7 +217,6 @@ void getDNSValues()
       parsedRow.push_back((parsedRow[1] - parsedDat[parsedDat.size() - 1][1]) / (parsedRow[0] - parsedDat[parsedDat.size()-1][0]));
       parsedRow.push_back(parsedDat[parsedDat.size()-1][1] - parsedRow[2] * parsedDat[parsedDat.size()-1][0]);
     }
-
     parsedDat.push_back(parsedRow);
   }
 
@@ -229,7 +232,6 @@ void getDNSValues()
                               parsedDat[parsedDat.size()-1][3]);
     }
     else {
-
       for (size_t j=0; j < parsedDat.size()-1; j++)  {
         if (inValues_temp[0] > parsedDat[j][0] && inValues_temp[0] < parsedDat[j+1][0]) {
           inValues_temp.push_back(parsedDat[j+1][2] * inValues_temp[0] + parsedDat[j+1][3]);
@@ -279,7 +281,7 @@ void getResults(SuperLattice<T, DESCRIPTOR>& sLattice,
     vtmWriter.write(iT);
 
     // write output of velocity as JPEG
-    SuperEuklidNorm3D<T, DESCRIPTOR> normVel( velocity );
+    SuperEuklidNorm3D<T> normVel( velocity );
     BlockReduction3D2D<T> planeReduction( normVel, {0, 0, 1} );
     heatmap::write(planeReduction, iT);
 
@@ -290,32 +292,32 @@ void getResults(SuperLattice<T, DESCRIPTOR>& sLattice,
     int input[3];
     T output[1];
 
+    ParametersOfOperatorD<T,DESCRIPTOR,BulkDynamics> bulkDynamicsParams{};
+    bulkDynamicsParams.set<descriptors::OMEGA>(omega);
+    if constexpr (BulkDynamics::parameters::contains<descriptors::LATTICE_TIME>()) {
+      bulkDynamicsParams.set<descriptors::LATTICE_TIME>(iT);
+    }
+
 #if defined (finiteDiff)
     std::list<int> matNumber;
     matNumber.push_back(1);
     SuperLatticePhysDissipationFD3D<T, DESCRIPTOR> diss(superGeometry, sLattice, matNumber, converter);
-#if !defined (DNS)
+#if !defined (DNS) && !defined(KBC) && !defined(RLB)
+    bulkDynamicsParams.set<collision::LES::Smagorinsky>(smagoConst);
     SuperLatticePhysEffectiveDissipationFD3D<T, DESCRIPTOR> effectiveDiss(
       superGeometry, sLattice, matNumber, converter,
       [&](Cell<T,DESCRIPTOR>& cell) -> double {
-        BulkDynamics::ParametersD params;
-        params.set<descriptors::OMEGA>(omega);
-        params.set<collision::LES::Smagorinsky>(smagoConst);
-        PopulationCellD<T,DESCRIPTOR> dummyCell(cell.getField<descriptors::POPULATION>());
-        return BulkDynamics::CollisionO().computeEffectiveOmega(dummyCell, params);
+        return BulkDynamics::CollisionO().computeEffectiveOmega(cell, bulkDynamicsParams);
       });
 #endif
 #else
     SuperLatticePhysDissipation3D<T, DESCRIPTOR> diss(sLattice, converter);
-#if !defined (DNS)
-    SuperLatticePhysEffevtiveDissipation3D<T, DESCRIPTOR> effectiveDiss(
+#if !defined (DNS) && !defined(KBC) && !defined(RLB)
+    bulkDynamicsParams.set<collision::LES::Smagorinsky>(smagoConst);
+    SuperLatticePhysEffectiveDissipation3D<T, DESCRIPTOR> effectiveDiss(
       sLattice, converter, smagoConst,
       [&](Cell<T,DESCRIPTOR>& cell) -> double {
-        BulkDynamics::ParametersD params;
-        params.set<descriptors::OMEGA>(omega);
-        params.set<collision::LES::Smagorinsky>(smagoConst);
-        PopulationCellD<T,DESCRIPTOR> dummyCell(cell.getField<descriptors::POPULATION>());
-        return BulkDynamics::CollisionO().computeEffectiveOmega(dummyCell, params);
+        return BulkDynamics::CollisionO().computeEffectiveOmega(cell, bulkDynamicsParams);
       });
 #endif
 #endif
@@ -325,7 +327,7 @@ void getResults(SuperLattice<T, DESCRIPTOR>& sLattice,
     diss_mol /= volume;
     T diss_eff = diss_mol;
 
-#if !defined (DNS)
+#if !defined (DNS) && !defined(KBC) && !defined(RLB)
     SuperIntegral3D<T> integralEffectiveDiss(effectiveDiss, superGeometry, 1);
     integralEffectiveDiss(output, input);
     diss_eff = output[0];
@@ -388,15 +390,12 @@ int main(int argc, char* argv[])
 
   /// === 3rd Step: Prepare Lattice ===
   SuperLattice<T, DESCRIPTOR> sLattice(superGeometry);
-
-
   prepareLattice(sLattice, converter, superGeometry);
 
 #if defined(WALE)
   std::list<int> mat;
   mat.push_back(1);
-  std::unique_ptr;
-  SuperLatticeF3D<T, DESCRIPTOR>> functor(new SuperLatticeVelocityGradientFD3D<T, DESCRIPTOR>(superGeometry, sLattice, mat));
+  std::unique_ptr<SuperLatticeF3D<T, DESCRIPTOR>> functor(new SuperLatticeVelocityGradientFD3D<T, DESCRIPTOR>(superGeometry, sLattice, mat));
 #endif
 
   /// === 4th Step: Main Loop with Timer ===
@@ -407,8 +406,12 @@ int main(int argc, char* argv[])
   setBoundaryValues(sLattice, converter, superGeometry);
 
   for (std::size_t iT = 0; iT <= converter.getLatticeTime(maxPhysT); ++iT) {
+    sLattice.setParameter<descriptors::LATTICE_TIME>(iT);
 #if defined(WALE)
     sLattice.defineField<descriptors::VELO_GRAD>(superGeometry, 1, *functor);
+#endif
+#if defined(ShearSmagorinsky)
+    sLattice.setParameter<descriptors::LATTICE_TIME>(iT);
 #endif
 
     /// === 6th Step: Computation and Output of the Results ===

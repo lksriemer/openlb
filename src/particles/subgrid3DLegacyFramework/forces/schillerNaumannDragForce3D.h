@@ -37,7 +37,7 @@ class ParticleSystem3D;
 
 template<typename T, template<typename U> class PARTICLETYPE, typename DESCRIPTOR>
 class SchillerNaumannDragForce3D : public Force3D<T, PARTICLETYPE> {
-  
+
 public:
   SchillerNaumannDragForce3D(SuperLatticeInterpPhysVelocity3D<T, DESCRIPTOR>& getVel, T dynVisc, T physDensity);
   //SchillerNaumannDragForce3D(SchillerNaumannDragForce3D<T, PARTICLETYPE, DESCRIPTOR>& f);

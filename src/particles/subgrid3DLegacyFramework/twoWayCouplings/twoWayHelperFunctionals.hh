@@ -135,7 +135,7 @@ bool LaddMomentumExchange<T, Lattice>::operator() ( T gF[], T latticeVelF[], T l
     this->_interpLatticeDensity->operator() (fb, fbPos, globic);
 
     // fiPop = density on fBetaPosition in direction iPop
-    fiPop = fb[util::opposite<Lattice >(iPop)];
+    fiPop = fb[descriptors::opposite<Lattice >(iPop)];
     // Get f_l of the boundary cell
     // add density fAlphaL of opposite direction to iPop
     fiPop -= fa[iPop];

@@ -76,6 +76,23 @@ public:
 
   virtual void communicate() { };
 
+  /// Iterate over discrete physical locations
+  template <typename F>
+  void forCorePhysLocations(F f) const;
+
+  /// Iterate over discrete physical locations between min and max
+  template <typename F>
+  void forCorePhysLocations(PhysR<T,D> min, PhysR<T,D> max, F f) const;
+
+  /// Iterate over spatial locations
+  /// NOTE: Based on physical locations (as opposed to its blockStructure version)
+  template <typename F>
+  void forCoreSpatialLocations(F f) const;
+
+  /// Iterate over spatial locations between min and max
+  /// NOTE: Based on physical locations (as opposed to its blockStructure version)
+  template <typename F>
+  void forCoreSpatialLocations(PhysR<T,D> min, PhysR<T,D> max, F f) const;
 };
 
 

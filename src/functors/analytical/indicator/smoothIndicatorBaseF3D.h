@@ -59,7 +59,7 @@ protected:
   S _epsilon;
   std::string _name = "smoothIndicator3D";
 public:
-  void init(Vector<S,3> theta);
+  void init();
   const Vector<S,3>& getMin() const;
   const Vector<S,3>& getMax() const;
   const Vector<S,3>& getPos() const;

@@ -35,6 +35,10 @@ namespace olb {
 template <typename T, typename DESCRIPTOR>
 class SuperLattice;
 
+/// Verifies availability of CUDA device and MPI support
+template <>
+void checkPlatform<Platform::GPU_CUDA>();
+
 template <typename T, typename DESCRIPTOR>
 class ConcreteBlockCommunicator<ConcreteBlockLattice<T,DESCRIPTOR,Platform::GPU_CUDA>>
   final : public BlockCommunicator {
@@ -44,17 +48,21 @@ private:
   MPI_Comm _mpiCommunicator;
 #endif
 
-  class CopyTask;
 #ifdef PARALLEL_MODE_MPI
   class SendTask;
   class RecvTask;
-#endif
 
-  std::vector<std::unique_ptr<CopyTask>> _copyTasks;
-#ifdef PARALLEL_MODE_MPI
   std::vector<std::unique_ptr<SendTask>> _sendTasks;
   std::vector<std::unique_ptr<RecvTask>> _recvTasks;
 #endif
+
+  struct CopyTask;
+
+  class HomogeneousCopyTask;
+  template <Platform PLATFORM>
+  class HeterogeneousCopyTask;
+
+  std::vector<std::unique_ptr<CopyTask>> _copyTasks;
 
 public:
   ConcreteBlockCommunicator(SuperLattice<T,DESCRIPTOR>& super,
@@ -65,16 +73,16 @@ public:
 #endif
                             int iC,
                             const BlockCommunicationNeighborhood<T,DESCRIPTOR::d>& neighborhood);
-
-  void copy() override;
+  ~ConcreteBlockCommunicator();
 
 #ifdef PARALLEL_MODE_MPI
   void receive() override;
   void send() override;
   void unpack() override;
-#endif
-
   void wait() override;
+#else
+  void copy() override;
+#endif
 
 };
 
@@ -82,5 +90,3 @@ public:
 }
 
 #endif
-
-#include "communicator.hh"

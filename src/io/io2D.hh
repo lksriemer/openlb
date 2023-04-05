@@ -33,5 +33,6 @@
 #include "gnuplotWriter.hh"
 #include "serializerIO.hh"
 #include "superVtmWriter2D.hh"
-#include "ostreamManager.hh"
+#include "blockLatticeSTLreader.hh"
+#include "plainWriter.hh"
 

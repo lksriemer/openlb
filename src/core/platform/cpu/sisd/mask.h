@@ -28,8 +28,8 @@
 
 namespace olb {
 
-template <typename T, typename DESCRIPTOR>
-class ConcreteBlockMask<T,DESCRIPTOR,Platform::CPU_SISD> final : public Serializable {
+template <typename T>
+class ConcreteBlockMask<T,Platform::CPU_SISD> final : public Serializable {
 private:
   cpu::sisd::Column<bool> _mask;
   std::size_t _weight;
@@ -68,20 +68,20 @@ public:
 
 };
 
-template<typename T, typename DESCRIPTOR>
-std::size_t ConcreteBlockMask<T,DESCRIPTOR,Platform::CPU_SISD>::getNblock() const
+template<typename T>
+std::size_t ConcreteBlockMask<T,Platform::CPU_SISD>::getNblock() const
 {
   return 1 + _mask.getNblock();
 }
 
-template<typename T, typename DESCRIPTOR>
-std::size_t ConcreteBlockMask<T,DESCRIPTOR,Platform::CPU_SISD>::getSerializableSize() const
+template<typename T>
+std::size_t ConcreteBlockMask<T,Platform::CPU_SISD>::getSerializableSize() const
 {
   return sizeof(_weight) + _mask.getSerializableSize();
 }
 
-template<typename T, typename DESCRIPTOR>
-bool* ConcreteBlockMask<T,DESCRIPTOR,Platform::CPU_SISD>::getBlock(std::size_t iBlock, std::size_t& sizeBlock, bool loadingMode)
+template<typename T>
+bool* ConcreteBlockMask<T,Platform::CPU_SISD>::getBlock(std::size_t iBlock, std::size_t& sizeBlock, bool loadingMode)
 {
   std::size_t currentBlock = 0;
   bool* dataPtr = nullptr;

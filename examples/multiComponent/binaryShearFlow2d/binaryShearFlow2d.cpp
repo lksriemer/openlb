@@ -27,10 +27,14 @@
   * filled with fluid phase I. The top and bottom walls are
   * moving in opposite directions, such that the droplet consisting
   * of phase II is exposed to shear flow and deforms accordingly.
-  * The default parameter setting is taken from A.E. Komrakova et al.,
-  * International Journal of Multiphase Flow 59 (2014) 24–43, and
-  * injected into the more general ternary free energy model from
-  * C Semprebon et al. Physical Review E 93.3 (2016) p. 033305.
+  * The default parameter setting is given in
+  *  A.E. Komrakova et al. International Journal of Multiphase
+  *  Flow 59 (2014) 24–43.
+  * The present example uses the ternary free energy model by
+  *  C Semprebon et al. Physical Review E 93.3 (2016) p. 033305.
+  * Reference results are published in
+  *  S. Simonis et al. Discrete and Continuous Dynamical
+  *  Systems - Series S (2023), doi:10.3934/dcdss.2023069
   *
   * The droplet breakup case should be run on parallel mode
   * because of increased computation time.
@@ -45,7 +49,7 @@ using namespace olb;
 using namespace olb::descriptors;
 using namespace olb::graphics;
 
-typedef double T;
+using T = FLOATING_POINT_TYPE;
 #define DESCRIPTOR D2Q9<CHEM_POTENTIAL,FORCE>
 
 // // DEFAULT [lu] Setup Komrakova et al. 2013 "Lattice Boltzmann ... " Fig. 9
@@ -125,15 +129,15 @@ T physStatIter;     // [pu] physical time step, when output happens
 int vtkIter;        // [lu] lattice time step, when output happens
 int statIter;       // [lu] lattice timestep when statistics apper in terminal
 
-const T PI_2 = 1.57079632679;	// PI/2
+const T PI_2 = 1.57079632679;   // PI/2
 
 // Interpolation for large axis - smallest circle outside droplet
 // This will only work for single ellipsoid droplets with stationary center
 // Particularly in cases of droplet breakup, this will not work
 std::vector<T> circleApproximationBig(SuperLattice<T, DESCRIPTOR>& sLattice2,
-      T minDistance,	// stop criterion: minimum distance for radii
-      int points,		// number of points on the circle
-      T factor ){		// expansion and retraction of the circle with factor 1+factor or 1-factor
+      T minDistance,    // stop criterion: minimum distance for radii
+      int points,       // number of points on the circle
+      T factor ){       // expansion and retraction of the circle with factor 1+factor or 1-factor
   SuperLattice<T, DESCRIPTOR> *sLatticeTest = &sLattice2;;
   SuperLatticeDensity2D<T, DESCRIPTOR> densityCircle( *sLatticeTest );
 
@@ -147,8 +151,8 @@ std::vector<T> circleApproximationBig(SuperLattice<T, DESCRIPTOR>& sLattice2,
   T theta = 0.;
 
   while(std::abs(oldRadius-newRadius) > minDistance){
-    T maxAngle = PI_2;		// third quadrant, as shear direction is known beforehand
-    if( ny/2. + newRadius >= ny - safety) maxAngle = util::asin( ( ny/2. - safety) / newRadius );		// eliminate points in proximity to no-slip wall (phi=0 there)
+    T maxAngle = PI_2;      // third quadrant, as shear direction is known beforehand
+    if( ny/2. + newRadius >= ny - safety) maxAngle = util::asin( ( ny/2. - safety) / newRadius );       // eliminate points in proximity to no-slip wall (phi=0 there)
     for(int i=0; i<=points-1; i++){
       coordinates[0] = nx/2. + util::cos(maxAngle * (T) i/ ((T) (points-1.)) ) * newRadius;
       coordinates[1] = ny/2. + util::sin(maxAngle * (T) i/ ((T) (points-1.)) ) * newRadius;
@@ -244,7 +248,7 @@ void prepareGeometry( SuperGeometry<T,2>& superGeometry,
   T safety = 2*eps;
 
   // top wall, MN=3
-  std::vector<T> origin = {0. - safety, ny-edge};
+  std::vector<T> origin = {T(0) - safety, T(ny)-edge};
   std::vector<T> extend = {nx + 2*safety, edge+safety};
   IndicatorCuboid2D<T> top( extend, origin );
   superGeometry.rename(2, 3, top );
@@ -273,20 +277,8 @@ void prepareLattice( SuperLattice<T, DESCRIPTOR>& sLattice1,
   clout << "Prepare Lattice ..." << std::endl;
 
   // define lattice Dynamics
-  sLattice1.defineDynamics<NoDynamics>( superGeometry, 0 );
-  sLattice2.defineDynamics<NoDynamics>( superGeometry, 0 );
-
   sLattice1.defineDynamics<ForcedBGKdynamics>( superGeometry, 1 );
   sLattice2.defineDynamics<FreeEnergyBGKdynamics>( superGeometry, 1 );
-
-  sLattice1.defineDynamics<NoDynamics>( superGeometry, 2 );
-  sLattice2.defineDynamics<NoDynamics>( superGeometry, 2 );
-
-  sLattice1.defineDynamics<NoDynamics>( superGeometry, 3 );
-  sLattice2.defineDynamics<NoDynamics>( superGeometry, 3 );
-
-  sLattice1.defineDynamics<NoDynamics>( superGeometry, 4 );
-  sLattice2.defineDynamics<NoDynamics>( superGeometry, 4 );
 
   // moving walls (inlet boundary with tangetial velocity condition)
   T omega = converter.getLatticeRelaxationFrequency();
@@ -310,7 +302,7 @@ void prepareLattice( SuperLattice<T, DESCRIPTOR>& sLattice1,
 
   AnalyticalConst2D<T,T> one ( 1. );
 
-  SmoothIndicatorCircle2D<T,T> circle( {nx/2., ny/2.}, radius, converter.getPhysLength(alpha) );
+  SmoothIndicatorCircle2D<T,T> circle( {T(nx)/T(2), T(ny)/T(2)}, radius, converter.getPhysLength(alpha) );
 
   AnalyticalIdentity2D<T,T> rho( one );
   AnalyticalIdentity2D<T,T> phi( one - circle - circle );
@@ -345,7 +337,8 @@ void prepareLattice( SuperLattice<T, DESCRIPTOR>& sLattice1,
 }
 
 void prepareCoupling(SuperLattice<T, DESCRIPTOR>& sLattice1,
-                     SuperLattice<T, DESCRIPTOR>& sLattice2) {
+                     SuperLattice<T, DESCRIPTOR>& sLattice2,
+                     SuperGeometry<T,2>& superGeometry) {
 
   OstreamManager clout( std::cout,"prepareCoupling" );
   clout << "Add lattice coupling" << std::endl;
@@ -356,17 +349,23 @@ void prepareCoupling(SuperLattice<T, DESCRIPTOR>& sLattice1,
     alpha, kappa1, kappa2);
   FreeEnergyForceGenerator2D<T, DESCRIPTOR> coupling2;
 
-  sLattice1.addLatticeCoupling( coupling1, sLattice2 );
-  sLattice2.addLatticeCoupling( coupling2, sLattice1 );
+  sLattice1.addLatticeCoupling( superGeometry, 1, coupling1, sLattice2 );
+  sLattice2.addLatticeCoupling( superGeometry, 1, coupling2, sLattice1 );
+
+  // walls
+  FreeEnergyInletOutletGenerator2D<T,DESCRIPTOR> coupling3;
+  sLattice2.addLatticeCoupling( superGeometry, 3, coupling3, sLattice1 );
+  sLattice2.addLatticeCoupling( superGeometry, 4, coupling3, sLattice1 );
+
 
   {
-    auto& communicator = sLattice1.getCommunicator(PostCoupling());
+    auto& communicator = sLattice1.getCommunicator(stage::PostCoupling());
     communicator.requestField<CHEM_POTENTIAL>();
     communicator.requestOverlap(sLattice1.getOverlap());
     communicator.exchangeRequests();
   }
   {
-    auto& communicator = sLattice2.getCommunicator(PreCoupling());
+    auto& communicator = sLattice2.getCommunicator(stage::PreCoupling());
     communicator.requestField<CHEM_POTENTIAL>();
     communicator.requestOverlap(sLattice2.getOverlap());
     communicator.exchangeRequests();
@@ -508,7 +507,7 @@ int main( int argc, char *argv[] )
   clout << "surface tension        " << surfTen        << "[pu], " << surfTenLatt << "[lu]" << std::endl;
   clout << "Cahn Nr.               " << cahnNr         << std::endl;
   clout << "xi                     " << xiThickness    << "[lu]" << std::endl;
-  clout << "alpha                  " << alpha      	   << "[lu]" << std::endl;
+  clout << "alpha                  " << alpha          << "[lu]" << std::endl;
   clout << "kappa1                 " << kappa1         << "[lu]" << std::endl;
   clout << "kappa2                 " << kappa2         << "[lu]" << std::endl;
   clout << "Peclet Nr.             " << pecletNr       << std::endl;
@@ -554,7 +553,7 @@ int main( int argc, char *argv[] )
 
   prepareLattice( sLattice1, sLattice2, converter, superGeometry );
 
-  prepareCoupling( sLattice1, sLattice2);
+  prepareCoupling(sLattice1, sLattice2, superGeometry);
 
   // === 4th Step: Main Loop with Timer ===
   int iT = 0;

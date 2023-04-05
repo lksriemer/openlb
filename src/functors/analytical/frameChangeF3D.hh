@@ -834,7 +834,7 @@ bool AngleBetweenVectors3D<T, S>::operator()(T output[], const S x[])
 // and _origin
 template<typename T, typename S>
 RotationRoundAxis3D<T, S>::RotationRoundAxis3D(olb::Vector<T, 3> origin,
-	olb::Vector<T, 3> rotAxisDirection, T alpha)
+    olb::Vector<T, 3> rotAxisDirection, T alpha)
   : AnalyticalF3D<T, S>(3),
     _origin(origin),
     _rotAxisDirection(rotAxisDirection),

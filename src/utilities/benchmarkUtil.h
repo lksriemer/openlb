@@ -61,6 +61,12 @@ public:
   \*  \param epsilon  allowed derivation of quantity
   */
   ValueTracer(int deltaT, T epsilon);
+  /// Ctor.
+  /** \param deltaT   corresponds to iteration steps (averaging)
+  \*  \param epsilon  allowed derivation of quantity
+  \*  \param name  quantity name
+  */
+  ValueTracer(int deltaT, T epsilon, std::string name );
   /// Change values of u and L to update characteristic scales of the system.
   void resetScale(T u, T L);
   /// reinitializes the values
@@ -339,9 +345,9 @@ public:
   }
 
   void reset(T lowerBound, T upperBound, T dt) {
-    std::for_each_n(integrators.begin(),numComponents,[&](auto& integrator){
+    for (auto& integrator : integrators) {
       integrator->reset(lowerBound,upperBound,dt);
-    });
+    }
   }
 
   std::array<T,numComponents> getResult()

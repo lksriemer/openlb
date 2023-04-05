@@ -72,7 +72,7 @@ void AdvDiffSNDragForce3D<T,DESCRIPTOR,ADLattice>::applyForce(T force[], Cell<T,
   nsCell->computeU(velF);
   T magVelF = pow((pow(velF[0],2.)+pow(velF[1],2.)+pow(velF[2],2.)),0.5);
   T magVel = pow((pow(vel[0],2.)+pow(vel[1],2.)+pow(vel[2],2.)),0.5);
-  T Re_p = Re_pCoeff*abs(magVelF - magVel); 
+  T Re_p = Re_pCoeff*abs(magVelF - magVel);
   for (int i=0; i < DESCRIPTOR::d; i++) {
     force[i] += dragCoeff*(1. + 0.15*pow(Re_p,0.687))*(velF[i]-vel[i]);
   }

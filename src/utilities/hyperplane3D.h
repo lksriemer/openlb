@@ -92,6 +92,9 @@ struct Hyperplane3D {
   bool isXZPlane() const;
   /// \return true iff normal is orthogonal to Y, Z axis
   bool isYZPlane() const;
+
+  /// \return 2D vector relative to origin projected to 3D
+  Vector<T,3> project(const Vector<T,2>& x) const;
 };
 
 }

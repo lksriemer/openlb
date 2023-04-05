@@ -88,7 +88,7 @@ void genericHeatMapInterface(const HyperplaneLattice3D<T>& hyperPlane, BlockF2D<
       param.pngPath = createFileName( param.dir, name, iT) + ".png";
       param.plotFilePath = createFileName( param.dir + "data/", name, iT) +".p";
 
-      for (size_t pos = 0; pos < param.plotFilePath.length(); pos++) {
+      for (std::size_t pos = 0; pos < param.plotFilePath.length(); pos++) {
         if (param.plotFilePath.at(pos) == '(' || param.plotFilePath.at(pos) == ')') {
           param.plotFilePath.replace(pos,  1,  "");
         }
@@ -105,12 +105,12 @@ void genericHeatMapInterface(const HyperplaneLattice3D<T>& hyperPlane, BlockF2D<
       //aspect ratio declared here
       param.aspect = param.nx/(double)param.ny;
       if (plot.fullScreenPlot) {
-        double base = std::min(param.nx, param.ny);
+        T base = std::min(param.nx, param.ny);
         param.canvasX = param.aspect > 1. ? param.aspect*base : base;
         param.canvasY = param.aspect < 1. ? base/param.aspect : base;
       } else {
-        param.canvasX = param.aspect > 1. ? param.aspect*1000 : 1000;
-        param.canvasY = param.aspect < 1. ? 1000/param.aspect : 1000;
+        param.canvasX = param.aspect > 1. ? param.aspect*1000 : T(1000);
+        param.canvasY = param.aspect < 1. ? 1000/param.aspect : T(1000);
       }
       // avoid exceeding jpeg pixel range
       if (param.canvasX > 65500)
@@ -138,7 +138,7 @@ void writeHeatMapDataFile(detailParam<T>& param)
     for (i[0] = param.nx * param.zoomMin[0]; i[0] < param.nx * param.zoomMax[0]; i[0]++) {
       T evaluated[1];
       (*param.blockData)(evaluated,i);
-      foutMatrix << evaluated[0] << " ";
+      foutMatrix << BaseType<T>(evaluated[0]) << " ";
       if (i[0] == int(param.nx * param.zoomMax[0]) - 1) {
         foutMatrix  << "\n";
       }
@@ -209,27 +209,27 @@ void writeHeatMapPlotFile(detailParam<T>& param, const std::vector<T>& valueArea
 
   //enable colorbox
   if( param.plot->fullScreenPlot == false || param.plot->activateFullScreenPlotColorBox == true ) {
-    fout << "set colorbox vertical user origin 0.85,0.1 size " << 0.025/param.cbXscaling << " ,0.8" << "\n";
+    fout << "set colorbox vertical user origin 0.85,0.1 size " << 0.025/BaseType<T>(param.cbXscaling) << " ,0.8" << "\n";
   }
 
   if ( util::nearZero(param.normal[0]) && util::nearZero(param.normal[1]) ) {
     fout << "set xlabel \"x-axis in m \"" << "\n"
-         << "set ylabel \"y-axis in m \"" << "\n";
+        << "set ylabel \"y-axis in m \"" << "\n";
   }
   else if ( util::nearZero(param.normal[0]) && util::nearZero(param.normal[2]) ) {
     fout << "set xlabel \"x-axis in m \"" << "\n"
-         << "set ylabel \"z-axis in m \"" << "\n";
+        << "set ylabel \"z-axis in m \"" << "\n";
     param.origin[1] = param.origin[2];
   }
   else if ( util::nearZero(param.normal[1]) && util::nearZero(param.normal[2]) ) {
     fout << "set xlabel \"y-axis in m \"" << "\n"
-         << "set ylabel \"z-axis in m \"" << "\n";
+        << "set ylabel \"z-axis in m \"" << "\n";
     param.origin[0] = param.origin[1];
     param.origin[1] = param.origin[2];
   }
   else {
     fout << "set xlabel \"width in m \"" << "\n"
-         << "set ylabel \"height in m \"" << "\n";
+        << "set ylabel \"height in m \"" << "\n";
 
   }
 
@@ -254,17 +254,17 @@ void writeHeatMapPlotFile(detailParam<T>& param, const std::vector<T>& valueArea
   }
 
   if (!util::nearZero(param.plot->maxValue - param.plot->minValue)) {
-    fout << "set cbrange [" << param.plot->minValue << ":" << param.plot->maxValue <<"]" << "\n";
+    fout << "set cbrange [" << BaseType<T>(param.plot ->minValue) << ":" << BaseType<T>(param.plot->maxValue) <<"]" << "\n";
   }
 
   if (valueArea.empty()) {
     fout << "set autoscale fix" << "\n";
   }
   else if (valueArea[0] < valueArea[1]) {
-    fout << "set cbrange [" << valueArea[0] << ":" << valueArea[1] << "]" << "\n";
+    fout << "set cbrange [" << BaseType<T>(valueArea[0]) << ":" << BaseType<T>(valueArea[1]) << "]" << "\n";
   }
   else {
-    fout << "set cbrange [" << valueArea[1] << ":" << valueArea[0] << "]" << "\n";
+    fout << "set cbrange [" << BaseType<T>(valueArea[1]) << ":" << BaseType<T>(valueArea[0]) << "]" << "\n";
   }
 
   if (param.plot->colour == "grey") {
@@ -279,8 +279,8 @@ void writeHeatMapPlotFile(detailParam<T>& param, const std::vector<T>& valueArea
   else {
     fout << "set palette defined ( 0 \"blue\", 1 \"green\", 2 \"yellow\", 3 \"orange\", 4 \"red\" )" << "\n";
   }
-  fout << "splot '" << param.matrixPath << "' u ($1*" << param.spacing << "+" << param.origin[0] + int(param.nx * param.zoomMin[0])*param.spacing << "):"
-       << "($2*" << param.spacing << "+" << param.origin[1] + int(param.ny * param.zoomMin[1])*param.spacing <<"):3 matrix with pm3d" << "\n";
+  fout << "splot '" << param.matrixPath << "' u ($1*" << BaseType<T>(param.spacing) << "+" << BaseType<T>(param.origin[0]) + int(param.nx * BaseType<T>(param.zoomMin[0]))*BaseType<T>(param.spacing) << "):"
+      << "($2*" << BaseType<T>(param.spacing) << "+" << BaseType<T>(param.origin[1]) + int(param.ny * BaseType<T>(param.zoomMin[1]))*BaseType<T>(param.spacing) <<"):3 matrix with pm3d" << "\n";
   fout.close();
   return;
 }
@@ -288,11 +288,11 @@ void writeHeatMapPlotFile(detailParam<T>& param, const std::vector<T>& valueArea
 template< typename T >
 void executeGnuplot(detailParam<T>& param)
 {
-#ifdef WIN32
-  std::cout << "GNUPLOT WORKS ONLT WITH LINUX" << std::endl;
-//  exit (EXIT_FAILURE);
-  return;
-#endif
+  if (! gnuplotInstalled()) {
+    std::cout << "We could not find a gnuplot distribution at your system." << std::endl;
+    std::cout << "We still write the data files s.t. you can plot the data yourself." << std::endl;
+    return;
+  }
 #ifndef WIN32
   if (!system(nullptr)) {
     exit (EXIT_FAILURE);
@@ -302,6 +302,15 @@ void executeGnuplot(detailParam<T>& param)
     std::cout << "Error at GnuplotWriter" << std::endl;
   }
   return;
+#endif
+}
+
+bool gnuplotInstalled()
+{
+#ifdef WIN32
+  return false;
+#else
+  return (! system("which gnuplot >/dev/null 2>/dev/null"));
 #endif
 }
 

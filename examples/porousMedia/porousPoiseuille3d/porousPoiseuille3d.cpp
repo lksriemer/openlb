@@ -36,7 +36,7 @@
 using namespace olb;
 using namespace olb::descriptors;
 
-typedef double T;
+using T = FLOATING_POINT_TYPE;
 
 #define SPAID_PHELAN
 
@@ -183,9 +183,6 @@ void prepareLattice(SuperLattice<T, DESCRIPTOR>& sLattice,
 
   const T omega = converter.getLatticeRelaxationFrequency();
 
-  // Material=0 -->do nothing
-  sLattice.defineDynamics<NoDynamics>(superGeometry, 0);
-
   // Material=1 -->bulk dynamics
   #ifdef GUO_ZHAO
   Dynamics<T,DESCRIPTOR>* dynamics = new DYNAMICS<T,DESCRIPTOR>(omega);
@@ -230,15 +227,13 @@ void prepareLattice(SuperLattice<T, DESCRIPTOR>& sLattice,
 #endif
 
   // Bouzidi
-  sLattice.defineDynamics<NoDynamics>(superGeometry, 2);
   center0[0] -= 0.5*converter.getPhysDeltaX();
   center1[0] += 0.5*converter.getPhysDeltaX();
   IndicatorCylinder3D<T> pipe(center0, center1, radius);
-  setBouzidiZeroVelocityBoundary<T,DESCRIPTOR>(sLattice, superGeometry, 2, pipe);
+  legacy::setBouzidiZeroVelocityBoundary<T,DESCRIPTOR>(sLattice, superGeometry, 2, pipe);
   // Interp
   //sLattice.defineDynamics<DYNAMICS>(superGeometry, 2);
   //setInterpolatedVelocityBoundary<T,DESCRIPTOR>(sLattice, omega, superGeometry, 2);
-
 
   // Material=3 --> bulk dynamics
   #ifdef GUO_ZHAO
@@ -448,8 +443,8 @@ void getResults( SuperLattice<T,DESCRIPTOR>& sLattice,
     T uNumerical[3] = {};
     AnalyticalFfromSuperF3D<T> intpolateVelocity( velocity, true );
     for (int i=0; i<101; i++) {
-      T yInput = diameter*i/100.;
-      T input[3] = {length*0.5, yInput, radius};
+      T yInput = diameter*T(i)/T(100);
+      T input[3] = {length*T(0.5), yInput, radius};
       uSol(uAnalytical, input);
       intpolateVelocity(uNumerical, input);
       gplot.setData( yInput, {uAnalytical[0], uNumerical[0]}, {"analytical","numerical"} );

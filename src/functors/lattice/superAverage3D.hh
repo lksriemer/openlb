@@ -77,7 +77,7 @@ bool SuperAverage3D<T,W>::operator() (W output[], const int input[])
   std::size_t voxels(0);
 
   for (int iC = 0; iC < load.size(); ++iC) {
-    const Cuboid3D<T> cuboid = geometry.get(load.glob(iC));
+    const Cuboid3D<T>& cuboid = geometry.get(load.glob(iC));
     inputTmp[0] = load.glob(iC);
     for (inputTmp[1] = 0; inputTmp[1] < cuboid.getNx(); ++inputTmp[1]) {
       for (inputTmp[2] = 0; inputTmp[2] < cuboid.getNy(); ++inputTmp[2]) {

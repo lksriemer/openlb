@@ -36,7 +36,6 @@
 #include "functors/analytical/indicator/indicatorBaseF2D.h"
 #include "functors/analytical/indicator/indicatorBaseF3D.h"
 #include "functors/analytical/indicator/indicatorF2D.h"
-#include "particles/functions/bodyMotionFunctions.h"
 #include "sdf.h"
 
 namespace olb {
@@ -57,10 +56,11 @@ private:
 public:
   SmoothIndicatorCuboid2D(IndicatorCuboid2D<S>& ind, S epsilon, S theta=0);
   SmoothIndicatorCuboid2D(Vector<S,2>center, S xLength, S yLength, S epsilon, S theta=0);
+  IndicatorCuboid2D<S>& getIndicator();
   Vector<S,2> surfaceNormal(const Vector<S,2>& pos, const S meshSize) override;
   const S signedDistance( const Vector<S,2> input ) override;
   bool distance(S& distance, const Vector<S,2>& origin, const Vector<S,2>& direction, S precision, S pitch) override;
-  S calcArea( ) override;
+  S getArea( ) override;
   Vector<S,2> calcMofiAndMass(const S density) override;
 };
 
@@ -72,10 +72,11 @@ private:
 public:
   SmoothIndicatorCircle2D(IndicatorCircle2D<S>& indPtr, S epsilon);
   SmoothIndicatorCircle2D(Vector<S,2>center, S radius, S epsilon);
+  IndicatorCircle2D<S>& getIndicator();
   Vector<S,2> surfaceNormal(const Vector<S,2>& pos, const S meshSize) override;
   const S signedDistance( const Vector<S,2> input ) override;
   bool distance(S& distance, const Vector<S,2>& origin, const Vector<S,2>& direction, S precision, S pitch) override;
-  S calcArea( ) override;
+  S getArea( ) override;
   Vector<S,2> calcMofiAndMass(const S density) override;
 };
 
@@ -87,10 +88,11 @@ private:
 public:
   SmoothIndicatorTriangle2D(IndicatorEquiTriangle2D<S>& indPtr, S epsilon, S theta=0);
   SmoothIndicatorTriangle2D(Vector<S,2>center, S radius, S epsilon, S theta=0);
+  IndicatorEquiTriangle2D<S>& getIndicator();
   Vector<S,2> surfaceNormal(const Vector<S,2>& pos, const S meshSize) override;
   const S signedDistance( const Vector<S,2> input ) override;
   bool distance(S& distance, const Vector<S,2>& origin, const Vector<S,2>& direction, S precision, S pitch) override;
-  S calcArea( ) override;
+  S getArea( ) override;
   Vector<S,2> calcMofiAndMass(const S density) override;
 };
 
@@ -111,6 +113,11 @@ public:
 };
 */
 
+template <typename T, typename W>
+class AnalyticalFfromBlockF2D;
+template <typename T, typename BaseType>
+class BlockDataF2D;
+
 //implements a custom shaped smooth particle //TODO: Check for consistency
 //ALSO: adap .hh
 template <typename T, typename S, bool PARTICLE=false>
@@ -121,15 +128,18 @@ private:
   const T _latticeSpacing;
   // _center is the local center
   Vector<T,2> _center;
-  // _latticeCenter gives the center in local lattice coordinates
-  Vector<int,2> _latticeCenter;
+  /// Cuboid describing the particle lattice
+  std::unique_ptr<Cuboid2D<T>> _cuboid;
   /// Block data to store signed distance
   std::unique_ptr<BlockData<2,T,BaseType<T>>> _blockData;
+  /// Functor for access on block data
+  std::unique_ptr<BlockDataF2D<T,BaseType<T>>> _cacheFunctor;
+  /// Functor used for interpolation of cached data
+  std::unique_ptr<AnalyticalFfromBlockF2D<T,T>> _interpolateCache;
   /// Cached particle volume (to avoid reiteration)
   T _area;
 
   void initData(IndicatorF2D<T>& ind);
-  void initRotationMatrix();
   void initBlockData(IndicatorF2D<T>& ind);
   void calcCenter();
   void calcCircumRadius();
@@ -140,11 +150,12 @@ public:
                           T theta=0.);
 
   Vector<T,2> getLocalCenter();
-  S calcArea( ) override;
+  S getArea( ) override;
   Vector<T,2> calcMofiAndMass(T rhoP) override;
   Vector<S,2> surfaceNormal(const Vector<S,2>& pos, const S meshSize) override;
   const S signedDistance( const Vector<S,2> input ) override;
   bool regardCell(int input[2]);
+  bool operator()(T output[], const S input[]) override;
 };
 
 //Geng2019:

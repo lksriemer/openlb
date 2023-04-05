@@ -137,8 +137,7 @@ bool BlockIndicatorMaterial2D<T>::operator() (bool output[], const int input[])
 template <typename T>
 bool BlockIndicatorMaterial2D<T>::isEmpty()
 {
-  auto& statistics = this->getBlockGeometry().getStatistics();
-
+  const auto& statistics = this->getBlockGeometry().getStatistics();
   return std::none_of(_materials.cbegin(), _materials.cend(),
                       [&statistics](int material) -> bool {
                         return statistics.getNvoxel(material) > 0;
@@ -148,8 +147,8 @@ bool BlockIndicatorMaterial2D<T>::isEmpty()
 template <typename T>
 Vector<int,2> BlockIndicatorMaterial2D<T>::getMin()
 {
-  auto& blockGeometry = this->getBlockGeometry();
-  auto& statistics    = blockGeometry.getStatistics();
+  const auto& blockGeometry = this->getBlockGeometry();
+  const auto& statistics    = blockGeometry.getStatistics();
 
   Vector<int,2> globalMin{
     blockGeometry.getNx()+blockGeometry.getPadding()-1,

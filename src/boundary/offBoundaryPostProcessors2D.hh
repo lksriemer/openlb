@@ -45,7 +45,7 @@ ZeroVelocityBouzidiLinearPostProcessor2D(int x_, int y_, int iPop_, T dist_)
               << dist << std::endl;
 #endif
   typedef DESCRIPTOR L;
-  opp = util::opposite<L>(iPop);
+  opp = descriptors::opposite<L>(iPop);
   xN = x + descriptors::c<L>(iPop,0);
   yN = y + descriptors::c<L>(iPop,1);
 
@@ -98,7 +98,7 @@ VelocityBouzidiLinearPostProcessor2D(int x_, int y_, int iPop_, T dist_)
               << dist << std::endl;
 #endif
   typedef DESCRIPTOR L;
-  opp = util::opposite<L>(iPop);
+  opp = descriptors::opposite<L>(iPop);
   xN = x + descriptors::c<L>(iPop,0);
   yN = y + descriptors::c<L>(iPop,1);
 
@@ -139,7 +139,7 @@ process(BlockLattice<T,DESCRIPTOR>& blockLattice)
 {
   auto cell = blockLattice.get(x, y);
   auto cellN = blockLattice.get(xN, yN);
-  Dynamics<T,DESCRIPTOR>* dynamics = cellN.getDynamics();
+  auto* dynamics = static_cast<legacy::OffDynamics<T,DESCRIPTOR>*>(cellN.getDynamics());
   T velCoeff = ufrac*dynamics->getVelocityCoefficient(iPop);
   dynamics->defineRho( cellN, cell.computeRho() );
   cell[opp] = q*cellN[iPop] + (1-q)*blockLattice.get(xB, yB)[iPop2] + velCoeff;
@@ -158,7 +158,7 @@ ZeroVelocityBounceBackPostProcessor2D(int x_, int y_, int iPop_, T dist_)
               << dist << std::endl;
 #endif
   typedef DESCRIPTOR L;
-  opp = util::opposite<L>(iPop);
+  opp = descriptors::opposite<L>(iPop);
   xN = x + descriptors::c<L>(iPop,0);
   yN = y + descriptors::c<L>(iPop,1);
   /*
@@ -198,7 +198,7 @@ VelocityBounceBackPostProcessor2D(int x_, int y_, int iPop_, T dist_)
               << dist << std::endl;
 #endif
   typedef DESCRIPTOR L;
-  opp = util::opposite<L>(iPop);
+  opp = descriptors::opposite<L>(iPop);
   xN = x + descriptors::c<L>(iPop,0);
   yN = y + descriptors::c<L>(iPop,1);
 
@@ -224,7 +224,7 @@ process(BlockLattice<T,DESCRIPTOR>& blockLattice)
 {
   auto cell = blockLattice.get(x, y);
   auto cellN = blockLattice.get(xN, yN);
-  Dynamics<T,DESCRIPTOR>* dynamics = cell.getDynamics();
+  auto* dynamics = static_cast<legacy::OffDynamics<T,DESCRIPTOR>*>(cell.getDynamics());
   T velCoeff = dynamics->getVelocityCoefficient(iPop);
   dynamics->defineRho( cellN, cell.computeRho() );
   cell[opp] = cellN[iPop] + velCoeff;
@@ -237,7 +237,7 @@ AntiBounceBackPostProcessor2D(int x_, int y_, int iPop_)
   : x(x_), y(y_), iPop(iPop_)
 {
   typedef DESCRIPTOR L;
-  opp = util::opposite<L>(iPop);
+  opp = descriptors::opposite<L>(iPop);
   xN = x + descriptors::c<L>(iPop,0);
   yN = y + descriptors::c<L>(iPop,1);
 

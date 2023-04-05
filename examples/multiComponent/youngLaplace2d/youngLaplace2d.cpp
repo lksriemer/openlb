@@ -41,7 +41,7 @@ using namespace olb;
 using namespace olb::descriptors;
 using namespace olb::graphics;
 
-typedef double T;
+using T = FLOATING_POINT_TYPE;
 typedef D2Q9<CHEM_POTENTIAL,FORCE> DESCRIPTOR;
 
 // Parameters for the simulation setup
@@ -83,10 +83,6 @@ void prepareLattice( SuperLattice<T, DESCRIPTOR>& sLattice1,
   OstreamManager clout( std::cout,"prepareLattice" );
   clout << "Prepare Lattice ..." << std::endl;
 
-  // define lattice Dynamics
-  sLattice1.defineDynamics<NoDynamics>(superGeometry, 0);
-  sLattice2.defineDynamics<NoDynamics>(superGeometry, 0);
-
   sLattice1.defineDynamics<ForcedBGKdynamics>(superGeometry, 1);
   sLattice2.defineDynamics<FreeEnergyBGKdynamics>( superGeometry, 1);
 
@@ -96,8 +92,8 @@ void prepareLattice( SuperLattice<T, DESCRIPTOR>& sLattice1,
   AnalyticalConst2D<T,T> zeroVelocity( v );
 
   AnalyticalConst2D<T,T> one ( 1. );
-  IndicatorCircle2D<T> ind({nx/2., nx/2.}, radius);
-  SmoothIndicatorCircle2D<T,T> circle( ind, 10.*alpha );
+  IndicatorCircle2D<T> ind({T(nx)/T(2), T(nx)/T(2)}, radius);
+  SmoothIndicatorCircle2D<T,T> circle( ind, T(10)*alpha );
 
   AnalyticalIdentity2D<T,T> rho( one );
   AnalyticalIdentity2D<T,T> phi( one - circle - circle );
@@ -114,13 +110,13 @@ void prepareLattice( SuperLattice<T, DESCRIPTOR>& sLattice1,
   sLattice2.initialize();
 
   {
-    auto& communicator = sLattice1.getCommunicator(PostPostProcess());
+    auto& communicator = sLattice1.getCommunicator(stage::PostPostProcess());
     communicator.requestField<POPULATION>();
     communicator.requestOverlap(sLattice1.getOverlap());
     communicator.exchangeRequests();
   }
   {
-    auto& communicator = sLattice2.getCommunicator(PostPostProcess());
+    auto& communicator = sLattice2.getCommunicator(stage::PostPostProcess());
     communicator.requestField<POPULATION>();
     communicator.requestOverlap(sLattice2.getOverlap());
     communicator.exchangeRequests();
@@ -147,13 +143,13 @@ void prepareCoupling(SuperLattice<T, DESCRIPTOR>& sLattice1,
   sLattice2.addLatticeCoupling( coupling2, sLattice1 );
 
   {
-    auto& communicator = sLattice1.getCommunicator(PostCoupling());
+    auto& communicator = sLattice1.getCommunicator(stage::PostCoupling());
     communicator.requestField<CHEM_POTENTIAL>();
     communicator.requestOverlap(sLattice1.getOverlap());
     communicator.exchangeRequests();
   }
   {
-    auto& communicator = sLattice2.getCommunicator(PreCoupling());
+    auto& communicator = sLattice2.getCommunicator(stage::PreCoupling());
     communicator.requestField<CHEM_POTENTIAL>();
     communicator.requestOverlap(sLattice2.getOverlap());
     communicator.exchangeRequests();
@@ -235,9 +231,9 @@ void getResults( SuperLattice<T, DESCRIPTOR>& sLattice2,
                                           + k2*( onefive*c2*c2*c2*c2 - two*c2*c2*c2 + half*c2*c2 ) );
 
       AnalyticalFfromSuperF2D<T, T> interpolPressure( bulkPressure, true, 1);
-      double position[2] = { 0.5*nx, 0.5*nx };
-      double pressureIn = 0.;
-      double pressureOut = 0.;
+      T position[2] = { T(0.5)*T(nx), T(0.5)*T(nx) };
+      T pressureIn = 0.;
+      T pressureOut = 0.;
       interpolPressure(&pressureIn, position);
       position[0] = ((double)N/100.)*converter.getPhysDeltaX();
       position[1] = ((double)N/100.)*converter.getPhysDeltaX();

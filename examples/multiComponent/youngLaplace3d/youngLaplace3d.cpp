@@ -41,7 +41,7 @@ using namespace olb;
 using namespace olb::descriptors;
 using namespace olb::graphics;
 
-typedef double T;
+using T = FLOATING_POINT_TYPE;
 typedef D3Q19<CHEM_POTENTIAL,FORCE> DESCRIPTOR;
 
 // Parameters for the simulation setup
@@ -53,7 +53,7 @@ const T kappa1 = 0.0075; // For surface tensions      [lattice units]
 const T kappa2 = 0.005;  // For surface tensions      [lattice units]
 const T gama = 1.;       // For mobility of interface [lattice units]
 
-const int maxIter  = 10000;
+const int maxIter  = 60000;
 const int vtkIter  = 200;
 const int statIter = 200;
 
@@ -83,10 +83,6 @@ void prepareLattice( SuperLattice<T, DESCRIPTOR>& sLattice1,
   OstreamManager clout( std::cout,"prepareLattice" );
   clout << "Prepare Lattice ..." << std::endl;
 
-  // define lattice Dynamics
-  sLattice1.defineDynamics<NoDynamics>(superGeometry, 0);
-  sLattice2.defineDynamics<NoDynamics>(superGeometry, 0);
-
   sLattice1.defineDynamics<ForcedBGKdynamics>(superGeometry, 1);
   sLattice2.defineDynamics<FreeEnergyBGKdynamics>(superGeometry, 1);
 
@@ -96,7 +92,7 @@ void prepareLattice( SuperLattice<T, DESCRIPTOR>& sLattice1,
   AnalyticalConst3D<T,T> zeroVelocity( v );
 
   AnalyticalConst3D<T,T> one ( 1. );
-  IndicatorSphere3D<T> sphere( {nx/2., nx/2., nx/2.}, radius );
+  IndicatorSphere3D<T> sphere( {nx/T(2), nx/T(2), nx/T(2)}, radius );
   SmoothIndicatorSphere3D<T,T> smoothSphere( sphere, 10.*alpha );
 
   AnalyticalIdentity3D<T,T> rho( one );
@@ -113,13 +109,13 @@ void prepareLattice( SuperLattice<T, DESCRIPTOR>& sLattice1,
   sLattice2.initialize();
 
   {
-    auto& communicator = sLattice1.getCommunicator(PostPostProcess());
+    auto& communicator = sLattice1.getCommunicator(stage::PostPostProcess());
     communicator.requestField<POPULATION>();
     communicator.requestOverlap(sLattice1.getOverlap());
     communicator.exchangeRequests();
   }
   {
-    auto& communicator = sLattice2.getCommunicator(PostPostProcess());
+    auto& communicator = sLattice2.getCommunicator(stage::PostPostProcess());
     communicator.requestField<POPULATION>();
     communicator.requestOverlap(sLattice2.getOverlap());
     communicator.exchangeRequests();
@@ -146,13 +142,13 @@ void prepareCoupling(SuperLattice<T, DESCRIPTOR>& sLattice1,
   sLattice2.addLatticeCoupling( coupling2, sLattice1 );
 
   {
-    auto& communicator = sLattice1.getCommunicator(PostCoupling());
+    auto& communicator = sLattice1.getCommunicator(stage::PostCoupling());
     communicator.requestField<CHEM_POTENTIAL>();
     communicator.requestOverlap(sLattice1.getOverlap());
     communicator.exchangeRequests();
   }
   {
-    auto& communicator = sLattice2.getCommunicator(PreCoupling());
+    auto& communicator = sLattice2.getCommunicator(stage::PreCoupling());
     communicator.requestField<CHEM_POTENTIAL>();
     communicator.requestOverlap(sLattice2.getOverlap());
     communicator.exchangeRequests();
@@ -234,13 +230,13 @@ void getResults( SuperLattice<T, DESCRIPTOR>& sLattice2,
                                           + k2*( onefive*c2*c2*c2*c2 - two*c2*c2*c2 + half*c2*c2 ) );
 
       AnalyticalFfromSuperF3D<T, T> interpolPressure( bulkPressure, true, 1);
-      double position[3] = { 0.5*nx, 0.5*nx, 0.5*nx };
-      double pressureIn = 0.;
-      double pressureOut = 0.;
+      T position[3] = {nx/T(2), nx/T(2), nx/T(2)};
+      T pressureIn = 0.;
+      T pressureOut = 0.;
       interpolPressure(&pressureIn, position);
-      position[0] = ((double)N/100.)*converter.getPhysDeltaX();
-      position[1] = ((double)N/100.)*converter.getPhysDeltaX();
-      position[2] = ((double)N/100.)*converter.getPhysDeltaX();
+      position[0] = (T(N)/T(100))*converter.getPhysDeltaX();
+      position[1] = (T(N)/T(100))*converter.getPhysDeltaX();
+      position[2] = (T(N)/T(100))*converter.getPhysDeltaX();
       interpolPressure(&pressureOut, position);
 
       clout << "Pressure Difference: " << pressureIn-pressureOut << "  ;  ";

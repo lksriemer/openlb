@@ -94,13 +94,13 @@ struct ZeroDensity {
   }
 
   template <typename TYPE, typename CELL, typename RHO>
-  void define(CELL& cell, const RHO& rho) {};
+  void define(CELL& cell, const RHO& rho) any_platform {};
 
   template <typename TYPE, typename CELL>
-  void initialize(CELL& cell) {};
+  void initialize(CELL& cell) any_platform {};
 
   template <typename TYPE, typename CELL, typename RHO>
-  void inverseShift(CELL& cell, RHO& rho) {};
+  void inverseShift(CELL& cell, RHO& rho) any_platform {};
 
   static std::string getName(){
     return "ZeroDensity";
@@ -115,13 +115,13 @@ struct OneDensity {
   }
 
   template <typename TYPE, typename CELL, typename RHO>
-  void define(CELL& cell, const RHO& rho) {};
+  void define(CELL& cell, const RHO& rho) any_platform {};
 
   template <typename TYPE, typename CELL>
-  void initialize(CELL& cell) {};
+  void initialize(CELL& cell) any_platform {};
 
   template <typename TYPE, typename CELL, typename RHO>
-  void inverseShift(CELL& cell, RHO& rho) {};
+  void inverseShift(CELL& cell, RHO& rho) any_platform {};
 
   static std::string getName(){
     return "OneDensity";
@@ -137,13 +137,13 @@ struct BulkDensity {
   }
 
   template <typename TYPE, typename CELL, typename RHO>
-  void define(CELL& cell, const RHO& rho) {};
+  void define(CELL& cell, const RHO& rho) any_platform {};
 
   template <typename TYPE, typename CELL>
-  void initialize(CELL& cell) {};
+  void initialize(CELL& cell) any_platform {};
 
   template <typename TYPE, typename CELL, typename RHO>
-  void inverseShift(CELL& cell, RHO& rho) {};
+  void inverseShift(CELL& cell, RHO& rho) any_platform {};
 
   static std::string getName(){
     return "BulkDensity";
@@ -161,13 +161,13 @@ struct SourcedDensity {
   }
 
   template <typename TYPE, typename CELL, typename RHO>
-  void define(CELL& cell, const RHO& rho) {};
+  void define(CELL& cell, const RHO& rho) any_platform {};
 
   template <typename TYPE, typename CELL>
-  void initialize(CELL& cell) {};
+  void initialize(CELL& cell) any_platform {};
 
   template <typename TYPE, typename CELL, typename RHO>
-  void inverseShift(CELL& cell, RHO& rho)
+  void inverseShift(CELL& cell, RHO& rho) any_platform
   {
     const auto source = cell.template getField<descriptors::SOURCE>();
     rho -= 0.5 * source;
@@ -189,19 +189,19 @@ struct FixedDensity {
   }
 
   template <typename TYPE, typename CELL, typename R>
-  void define(CELL& cell, const R& rho)
+  void define(CELL& cell, const R& rho) any_platform
   {
     cell.template setField<RHO>(rho);
   }
 
   template <typename TYPE, typename CELL, typename V=typename CELL::value_t>
-  void initialize(CELL& cell)
+  void initialize(CELL& cell) any_platform
   {
     cell.template setField<RHO>(V{1});
   }
 
   template <typename TYPE, typename CELL, typename RHO>
-  void inverseShift(CELL& cell, RHO& rho) {};
+  void inverseShift(CELL& cell, RHO& rho) any_platform {};
 
   static std::string getName(){
     return "FixedDensity";
@@ -217,13 +217,13 @@ struct FreeEnergyInletOutletDensity {
   }
 
   template <typename TYPE, typename CELL, typename RHO>
-  void define(CELL& cell, const RHO& rho)
+  void define(CELL& cell, const RHO& rho) any_platform
   {
     cell.template getFieldPointer<descriptors::FORCE>()[0] = rho;
   }
 
   template <typename TYPE, typename CELL, typename V=typename CELL::value_t>
-  void initialize(CELL& cell)
+  void initialize(CELL& cell) any_platform
   {
     cell.template getFieldPointer<descriptors::FORCE>()[0] = V{1};
   }
@@ -252,13 +252,13 @@ struct HeatFluxBoundaryDensity {
   }
 
   template <typename TYPE, typename CELL, typename RHO>
-  void define(CELL& cell, const RHO& rho) {};
+  void define(CELL& cell, const RHO& rho) any_platform {};
 
   template <typename TYPE, typename CELL>
-  void initialize(CELL& cell) {};
+  void initialize(CELL& cell) any_platform {};
 
   template <typename TYPE, typename CELL, typename RHO>
-  void inverseShift(CELL& cell, RHO& rho) {};
+  void inverseShift(CELL& cell, RHO& rho) any_platform {};
 
   static std::string getName(){
     return "HeatFluxBoundaryDensity";
@@ -277,13 +277,13 @@ struct VelocityBoundaryDensity {
   }
 
   template <typename TYPE, typename CELL, typename RHO>
-  void define(CELL& cell, const RHO& rho) {};
+  void define(CELL& cell, const RHO& rho) any_platform {};
 
   template <typename TYPE, typename CELL>
-  void initialize(CELL& cell) {};
+  void initialize(CELL& cell) any_platform {};
 
   template <typename TYPE, typename CELL, typename RHO>
-  void inverseShift(CELL& cell, RHO& rho) {};
+  void inverseShift(CELL& cell, RHO& rho) any_platform {};
 
   static std::string getName(){
     return "VelocityBoundaryDensity<" + std::to_string(direction) + "," + std::to_string(orientation) + ">";
@@ -303,13 +303,13 @@ struct InnerCornerDensity2D {
   }
 
   template <typename TYPE, typename CELL, typename RHO>
-  void define(CELL& cell, const RHO& rho) {};
+  void define(CELL& cell, const RHO& rho) any_platform {};
 
   template <typename TYPE, typename CELL>
-  void initialize(CELL& cell) {};
+  void initialize(CELL& cell) any_platform {};
 
   template <typename TYPE, typename CELL, typename RHO>
-  void inverseShift(CELL& cell, RHO& rho) {};
+  void inverseShift(CELL& cell, RHO& rho) any_platform {};
 
   static std::string getName(){
     return "InnerCornerDensity2D";
@@ -330,13 +330,13 @@ struct InnerCornerDensity3D {
   }
 
   template <typename TYPE, typename CELL, typename RHO>
-  void define(CELL& cell, const RHO& rho) {};
+  void define(CELL& cell, const RHO& rho) any_platform {};
 
   template <typename TYPE, typename CELL>
-  void initialize(CELL& cell) {};
+  void initialize(CELL& cell) any_platform {};
 
   template <typename TYPE, typename CELL, typename RHO>
-  void inverseShift(CELL& cell, RHO& rho) {};
+  void inverseShift(CELL& cell, RHO& rho) any_platform {};
 
   static std::string getName(){
     return "InnerCornerDensity3D";
@@ -356,13 +356,13 @@ struct InnerEdgeDensity3D {
   }
 
   template <typename TYPE, typename CELL, typename RHO>
-  void define(CELL& cell, const RHO& rho) {};
+  void define(CELL& cell, const RHO& rho) any_platform {};
 
   template <typename TYPE, typename CELL>
-  void initialize(CELL& cell) {};
+  void initialize(CELL& cell) any_platform {};
 
   template <typename TYPE, typename CELL, typename RHO>
-  void inverseShift(CELL& cell, RHO& rho) {};
+  void inverseShift(CELL& cell, RHO& rho) any_platform {};
 
   static std::string getName(){
     return "InnerEdgeDensity3D";
@@ -396,15 +396,15 @@ struct BulkMomentum {
 
   // define the velocity
   template <typename TYPE, typename CELL, typename U>
-  void define(CELL& cell, const U& u){};
+  void define(CELL& cell, const U& u) any_platform {};
 
   template <typename TYPE, typename CELL>
-  void initialize(CELL& cell) {};
+  void initialize(CELL& cell) any_platform {};
 
   template <typename TYPE, typename CELL, typename U>
-  void inverseShift(CELL& cell, U& u) {};
+  void inverseShift(CELL& cell, U& u) any_platform {};
 
-  static std::string getName(){
+  static std::string getName() {
     return "BulkMomentum";
   }
 };
@@ -436,22 +436,22 @@ struct FixedVelocityMomentumGeneric {
 
   // define the velocity
   template <typename TYPE, typename CELL, typename U>
-  void define(CELL& cell, const U& u)
+  void define(CELL& cell, const U& u) any_platform
   {
     cell.template setField<VELOCITY>(u);
   }
 
   template <typename TYPE, typename CELL, typename V=typename CELL::value_t, typename DESCRIPTOR=typename CELL::descriptor_t>
-  void initialize(CELL& cell)
+  void initialize(CELL& cell) any_platform
   {
     Vector<V,DESCRIPTOR::d> u{};
     cell.template setField<VELOCITY>(u);
   }
 
   template <typename TYPE, typename CELL, typename U>
-  void inverseShift(CELL& cell, U& u) {};
+  void inverseShift(CELL& cell, U& u) any_platform {};
 
-  static std::string getName(){
+  static std::string getName() {
     return "FixedVelocityMomentumGeneric";
   }
 };
@@ -502,22 +502,22 @@ struct FixedPressureMomentum {
 
   // define the velocity
   template <typename TYPE, typename CELL, typename U>
-  void define(CELL& cell, const U& u)
+  void define(CELL& cell, const U& u) any_platform
   {
     cell.template setField<VELOCITY>(u);
   }
 
   template <typename TYPE, typename CELL, typename V=typename CELL::value_t, typename DESCRIPTOR=typename CELL::descriptor_t>
-  void initialize(CELL& cell)
+  void initialize(CELL& cell) any_platform
   {
     V u[DESCRIPTOR::d] { V{} };
     cell.template setField<VELOCITY>(u);
   }
 
   template <typename TYPE, typename CELL, typename U>
-  void inverseShift(CELL& cell, U& u) {};
+  void inverseShift(CELL& cell, U& u) any_platform {};
 
-  static std::string getName(){
+  static std::string getName() {
     return "FixedPressureMomentum";
   }
 };
@@ -547,22 +547,22 @@ struct FixedVelocityMomentum {
 
   // define the velocity
   template <typename TYPE, typename CELL, typename U>
-  void define(CELL& cell, const U& u)
+  void define(CELL& cell, const U& u) any_platform
   {
     cell.template setField<descriptors::VELOCITY>(u);
   }
 
   template <typename TYPE, typename CELL, typename V=typename CELL::value_t, typename DESCRIPTOR=typename CELL::descriptor_t>
-  void initialize(CELL& cell)
+  void initialize(CELL& cell) any_platform
   {
     const V u[DESCRIPTOR::d] = { V{} };
     cell.template setField<descriptors::VELOCITY>(u);
   }
 
   template <typename TYPE, typename CELL, typename U>
-  void inverseShift(CELL& cell, U& u) {};
+  void inverseShift(CELL& cell, U& u) any_platform {};
 
-  static std::string getName(){
+  static std::string getName() {
     return "FixedVelocityMomentum";
   }
 };
@@ -620,15 +620,15 @@ struct FixedTemperatureMomentum {
 
   // define the conduction
   template <typename TYPE, typename CELL, typename U>
-  void define(CELL& cell, const U& u){};
+  void define(CELL& cell, const U& u) any_platform {};
 
   template <typename TYPE, typename CELL>
-  void initialize(CELL& cell){};
+  void initialize(CELL& cell) any_platform {};
 
   template <typename TYPE, typename CELL, typename U>
-  void inverseShift(CELL& cell, U& u) {};
+  void inverseShift(CELL& cell, U& u) any_platform {};
 
-  static std::string getName(){
+  static std::string getName() {
     return "FixedTemperatureMomentum";
   }
 };
@@ -666,22 +666,22 @@ struct FixedVelocityMomentumAD {
 
   // define the conduction
   template <typename TYPE, typename CELL, typename U>
-  void define(CELL& cell, const U& u)
+  void define(CELL& cell, const U& u) any_platform
   {
     cell.template setField<VELOCITY>(u);
   }
 
   template <typename TYPE, typename CELL, typename V=typename CELL::value_t, typename DESCRIPTOR=typename CELL::descriptor_t>
-  void initialize(CELL& cell)
+  void initialize(CELL& cell) any_platform
   {
     V u[DESCRIPTOR::d] = { V{} };
     cell.template setField<VELOCITY>(u);
   }
 
   template <typename TYPE, typename CELL, typename U>
-  void inverseShift(CELL& cell, U& u) {};
+  void inverseShift(CELL& cell, U& u) any_platform {};
 
-  static std::string getName(){
+  static std::string getName() {
     return "FixedVelocityMomentumAD";
   }
 };
@@ -705,20 +705,20 @@ struct FreeEnergyInletOutletMomentum {
   }
 
   template <typename TYPE, typename CELL, typename U>
-  void define(CELL& cell, const U& u)
+  void define(CELL& cell, const U& u) any_platform
   {
     cell.template getFieldPointer<descriptors::FORCE>()[1] = u[direction];
   }
 
   template <typename TYPE, typename CELL>
-  void initialize(CELL& cell) {
+  void initialize(CELL& cell) any_platform {
     FixedPressureMomentum<direction,orientation>().template initialize<TYPE>(cell);
   }
 
   template <typename TYPE, typename CELL, typename U>
-  void inverseShift(CELL& cell, U& u) {};
+  void inverseShift(CELL& cell, U& u) any_platform{};
 
-  static std::string getName(){
+  static std::string getName() {
     return "FreeEnergyInletOutletMomentum";
   }
 };
@@ -741,15 +741,15 @@ struct FreeEnergyMomentum {
   }
 
   template <typename TYPE, typename CELL, typename U>
-  void define(CELL& cell, const U& u) {}
+  void define(CELL& cell, const U& u) any_platform {}
 
   template <typename TYPE, typename CELL>
-  void initialize(CELL& cell) {}
+  void initialize(CELL& cell) any_platform {}
 
   template <typename TYPE, typename CELL, typename U>
-  void inverseShift(CELL& cell, U& u) {};
+  void inverseShift(CELL& cell, U& u) any_platform {};
 
-  static std::string getName(){
+  static std::string getName() {
     return "FreeEnergyMomentum";
   }
 };
@@ -792,15 +792,15 @@ struct GuoZhaoMomentum {
 
   // define the velocity
   template <typename TYPE, typename CELL, typename U>
-  void define(CELL& cell, const U& u) { }
+  void define(CELL& cell, const U& u) any_platform { }
 
   template <typename TYPE, typename CELL>
-  void initialize(CELL& cell) { }
+  void initialize(CELL& cell) any_platform { }
 
   template <typename TYPE, typename CELL, typename U>
-  void inverseShift(CELL& cell, U& u) {};
+  void inverseShift(CELL& cell, U& u) any_platform {};
 
-  static std::string getName(){
+  static std::string getName() {
     return "GuoZhaoMomentum";
   }
 };
@@ -823,8 +823,8 @@ struct OffBoundaryMomentum {
   template <typename TYPE, typename CELL, typename U, typename V=typename CELL::value_t, typename DESCRIPTOR=typename CELL::descriptor_t>
   void computeU(CELL& cell, U& u) any_platform
   {
-    const auto distances = cell.template getDynamicFieldPointer<DISTANCES>();
-    const auto velocities = cell.template getDynamicFieldPointer<VELOCITY>();
+    const auto distances = cell.template getFieldPointer<DISTANCES>();
+    const auto velocities = cell.template getFieldPointer<VELOCITY>();
 
     for (int iD = 0; iD < DESCRIPTOR::d; iD++) {
       u[iD] = V{};
@@ -846,11 +846,11 @@ struct OffBoundaryMomentum {
   }
 
   template <typename TYPE, typename CELL, typename U, typename V=typename CELL::value_t, typename DESCRIPTOR=typename CELL::descriptor_t>
-  void define(CELL& cell, const U& u)
+  void define(CELL& cell, const U& u) any_platform
   {
-    const auto distances = cell.template getDynamicFieldPointer<DISTANCES>();
-    auto velocities = cell.template getDynamicFieldPointer<VELOCITY>();
-    auto velocityCoefficient = cell.template getDynamicFieldPointer<VELOCITY_COEFFICIENTS>();
+    const auto distances = cell.template getFieldPointer<DISTANCES>();
+    auto velocities = cell.template getFieldPointer<VELOCITY>();
+    auto velocityCoefficient = cell.template getFieldPointer<VELOCITY_COEFFICIENTS>();
 
     for (int iPop = 0; iPop < DESCRIPTOR::q; iPop++) {
       if ( !util::nearZero(distances[iPop]+1) ) {
@@ -870,18 +870,18 @@ struct OffBoundaryMomentum {
   }
 
   template <typename TYPE, typename CELL, typename DESCRIPTOR=typename CELL::descriptor_t>
-  void initialize(CELL& cell)
+  void initialize(CELL& cell) any_platform
   {
-    auto distances = cell.template getDynamicFieldPointer<DISTANCES>();
+    auto distances = cell.template getFieldPointer<DISTANCES>();
     for (int iPop = 0; iPop < DESCRIPTOR::q; iPop++) {
       distances[iPop] = -1;
     }
   }
 
   template <typename TYPE, typename CELL, typename U>
-  void inverseShift(CELL& cell, U& u) {}
+  void inverseShift(CELL& cell, U& u) any_platform {}
 
-  static std::string getName(){
+  static std::string getName() {
     return "OffBoundaryMomentum";
   }
 };
@@ -918,15 +918,15 @@ struct P1Momentum {
   }
 
   template <typename TYPE, typename CELL, typename U>
-  void define(CELL& cell, const U& u) {}
+  void define(CELL& cell, const U& u) any_platform {}
 
   template <typename TYPE, typename CELL>
-  void initialize(CELL& cell) {}
+  void initialize(CELL& cell) any_platform {}
 
   template <typename TYPE, typename CELL, typename U>
-  void inverseShift(CELL& cell, U& u) {}
+  void inverseShift(CELL& cell, U& u) any_platform {}
 
-  static std::string getName(){
+  static std::string getName() {
     return "P1Momentum";
   }
 };
@@ -934,7 +934,6 @@ struct P1Momentum {
 
 /// Momentum computation for Poisson dynamics.
 struct PoissonMomentum {
-
   template <typename TYPE, typename CELL, typename J, typename DESCRIPTOR=typename CELL::descriptor_t>
   void compute(CELL& cell, J& j) any_platform
   {
@@ -950,15 +949,15 @@ struct PoissonMomentum {
   }
 
   template <typename TYPE, typename CELL, typename U>
-  void define(CELL& cell, const U& u) {}
+  void define(CELL& cell, const U& u) any_platform {}
 
   template <typename TYPE, typename CELL>
-  void initialize(CELL& cell) {}
+  void initialize(CELL& cell) any_platform {}
 
   template <typename TYPE, typename CELL, typename U>
-  void inverseShift(CELL& cell, U& u) {}
+  void inverseShift(CELL& cell, U& u) any_platform {}
 
-  static std::string getName(){
+  static std::string getName() {
     return "PoissonMomentum";
   }
 };
@@ -986,15 +985,15 @@ struct PorousGuoMomentum {
 
   // define the velocity
   template <typename TYPE, typename CELL, typename U>
-  void define(CELL& cell, const U& u) { }
+  void define(CELL& cell, const U& u) any_platform { }
 
   template <typename TYPE, typename CELL>
-  void initialize(CELL& cell) { }
+  void initialize(CELL& cell) any_platform { }
 
   template <typename TYPE, typename CELL, typename U>
-  void inverseShift(CELL& cell, U& u) {}
+  void inverseShift(CELL& cell, U& u) any_platform {}
 
-  static std::string getName(){
+  static std::string getName() {
     return "PorousGuoMomentum";
   }
 };
@@ -1026,21 +1025,21 @@ struct PorousParticleMomentum {
   }
 
   template <typename TYPE, typename CELL, typename U, typename DESCRIPTOR=typename CELL::descriptor_t>
-  void define(CELL& cell, const U& u)
+  void define(CELL& cell, const U& u) any_platform
   {
     MOMENTUM().template define<TYPE>(cell, u);
   }
 
   template <typename TYPE, typename CELL>
-  void initialize(CELL& cell)
+  void initialize(CELL& cell) any_platform
   {
     MOMENTUM().template initialize<TYPE>(cell);
   }
 
   template <typename TYPE, typename CELL, typename U>
-  void inverseShift(CELL& cell, U& u) {}
+  void inverseShift(CELL& cell, U& u) any_platform {}
 
-  static std::string getName(){
+  static std::string getName() {
     return "PorousParticleMomentum<" + MOMENTUM().getName() + ">";
   }
 };
@@ -1065,15 +1064,15 @@ struct ZeroMomentum {
   }
 
   template <typename TYPE, typename CELL, typename U>
-  void define(CELL& cell, const U& u) {}
+  void define(CELL& cell, const U& u) any_platform {}
 
   template <typename TYPE, typename CELL>
-  void initialize(CELL& cell) {}
+  void initialize(CELL& cell) any_platform {}
 
   template <typename TYPE, typename CELL, typename U>
-  void inverseShift(CELL& cell, U& u) {}
+  void inverseShift(CELL& cell, U& u) any_platform {}
 
-  static std::string getName(){
+  static std::string getName() {
     return "ZeroMomentum";
   }
 };
@@ -1098,26 +1097,26 @@ struct ForcedMomentum {
   }
 
   template <typename TYPE, typename CELL, typename U, typename DESCRIPTOR=typename CELL::descriptor_t>
-  void define(CELL& cell, const U& u)
+  void define(CELL& cell, const U& u) any_platform
   {
     MOMENTUM().template define<TYPE>(cell, u);
   }
 
   template <typename TYPE, typename CELL>
-  void initialize(CELL& cell)
+  void initialize(CELL& cell) any_platform
   {
     MOMENTUM().template initialize<TYPE>(cell);
   }
 
   template <typename TYPE, typename CELL, typename U, typename V=typename CELL::value_t, typename DESCRIPTOR=typename CELL::descriptor_t>
-  void inverseShift(CELL& cell, U& u) {
+  void inverseShift(CELL& cell, U& u) any_platform {
     const auto force = cell.template getFieldPointer<descriptors::FORCE>();
     for (int iVel=0; iVel < DESCRIPTOR::d; ++iVel) {
       u[iVel] -= force[iVel] * V(0.5);
     }
   }
 
-  static std::string getName(){
+  static std::string getName() {
     return "ForcedMomentum<" + MOMENTUM().getName() + ">";
   }
 };
@@ -1141,21 +1140,21 @@ struct PorousMomentum {
   }
 
   template <typename TYPE, typename CELL, typename U, typename DESCRIPTOR=typename CELL::descriptor_t>
-  void define(CELL& cell, const U& u)
+  void define(CELL& cell, const U& u) any_platform
   {
     MOMENTUM().template define<TYPE>(cell, u);
   }
 
   template <typename TYPE, typename CELL>
-  void initialize(CELL& cell)
+  void initialize(CELL& cell) any_platform
   {
     MOMENTUM().template initialize<TYPE>(cell);
   }
 
   template <typename TYPE, typename CELL, typename U>
-  void inverseShift(CELL& cell, U& u) {}
+  void inverseShift(CELL& cell, U& u) any_platform {}
 
-  static std::string getName(){
+  static std::string getName() {
     return "PorousMomentum<" + MOMENTUM().getName() + ">";
   }
 };
@@ -1173,7 +1172,7 @@ struct BulkStress {
     lbm<DESCRIPTOR>::computeStress(cell, rho, u, pi);
   }
 
-  static std::string getName(){
+  static std::string getName() {
     return "BulkStress";
   }
 };
@@ -1188,7 +1187,7 @@ struct RegularizedBoundaryStress {
       cell, rho, u, pi);
   }
 
-  static std::string getName(){
+  static std::string getName() {
     return "RegularizedBoundaryStress";
   }
 };
@@ -1217,7 +1216,7 @@ struct InnerCornerStress2D {
     lbm<DESCRIPTOR>::computeStress(newCell, rho, u, pi);
   }
 
-  static std::string getName(){
+  static std::string getName() {
     return "InnerCornerStress2D";
   }
 };
@@ -1245,7 +1244,7 @@ struct InnerCornerStress3D {
     lbm<DESCRIPTOR>::computeStress(newCell, rho, u, pi);
   }
 
-  static std::string getName(){
+  static std::string getName() {
     return "InnerCornerStress3D";
   }
 };
@@ -1270,7 +1269,7 @@ struct InnerEdgeStress3D {
     lbm<DESCRIPTOR>::computeStress(newCell, rho, u, pi);
   }
 
-  static std::string getName(){
+  static std::string getName() {
     return "InnerEdgeStress3D";
   }
 };
@@ -1284,7 +1283,7 @@ struct NoStress {
     //throw std::bad_function_call();
   }
 
-  static std::string getName(){
+  static std::string getName() {
     return "NoStress";
   }
 };
@@ -1299,7 +1298,7 @@ struct ZeroStress {
     }
   }
 
-  static std::string getName(){
+  static std::string getName() {
     return "ZeroStress";
   }
 };
@@ -1330,7 +1329,7 @@ struct ForcedStress {
     }
   }
 
-  static std::string getName(){
+  static std::string getName() {
     return "ForcedStress<" + STRESS().getName() + ">";
   }
 };

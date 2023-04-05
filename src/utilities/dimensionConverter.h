@@ -24,6 +24,8 @@
 #ifndef DIMENSION_CONVERTER_H
 #define DIMENSION_CONVERTER_H
 
+/* #include <numbers> */
+
 #include "functors/analytical/indicator/smoothIndicatorBaseF2D.h"
 #include "functors/analytical/indicator/smoothIndicatorBaseF3D.h"
 
@@ -41,6 +43,12 @@ template <unsigned D>
 struct convert;
 template <>
 struct convert<2> {
+private:
+  template <typename T>
+  constexpr static const T invSqrt2 = T{0.7071067811865475244008443621048490392848359376884740365883};
+  /* constexpr static const T invSqrt2 = T{1} / std::numbers::sqrt2; */
+
+public:
   // Rotational dimensions (rotational degrees of freedom)
   constexpr static const unsigned int rotation = 1;
 
@@ -50,16 +58,22 @@ struct convert<2> {
   // Number of direct neighbors of a cell
   constexpr static const unsigned short directNeighborsCount = 4;
   // Directions to direct neighbors
-  constexpr static const short directNeighborDirections[4][2] = {
+  constexpr static const short directNeighborDirections[directNeighborsCount][2] = {
     {-1, 0}, {0,-1},
     {1, 0}, { 0, 1}
   };
   // Number of all neighboring cells
   constexpr static const unsigned short neighborsCount = 8;
   // Directions to neighbors
-  constexpr static const short neighborDirections[8][2] = {
+  constexpr static const short neighborDirections[neighborsCount][2] = {
     {-1, 1}, {-1, 0}, {-1,-1}, { 0,-1},
     { 1,-1}, { 1, 0}, { 1, 1}, { 0, 1}
+  };
+  // Normalized directions to neighbors
+  template <typename T>
+  constexpr static const T normalizedNeighborDirections[neighborsCount][2] = {
+    {-1*invSqrt2<T>, 1*invSqrt2<T>}, {-1, 0}, {-1*invSqrt2<T>,-1*invSqrt2<T>}, { 0,-1},
+    { 1*invSqrt2<T>,-1*invSqrt2<T>}, { 1, 0}, { 1*invSqrt2<T>, 1*invSqrt2<T>}, { 0, 1}
   };
 
   // Type used for surface representation
@@ -75,6 +89,15 @@ struct convert<2> {
 };
 template <>
 struct convert<3> {
+private:
+  template <typename T>
+  constexpr static const T invSqrt2 = T{0.7071067811865475244008443621048490392848359376884740365883};
+  /* constexpr static const T invSqrt2 = T{1} / std::numbers::sqrt2; */
+  template <typename T>
+  constexpr static const T invSqrt3 = T{0.5773502691896257645091487805019574556476017512701268760186};
+  /* constexpr static const T invSqrt3 = std::numbers::inv_sqrt3; */
+
+public:
   // Rotational dimensions (rotational degrees of freedom)
   constexpr static const unsigned int rotation = 3;
 
@@ -84,7 +107,7 @@ struct convert<3> {
   // Number of direct neighbors of a cell
   constexpr static const unsigned short directNeighborsCount = 6;
   // Directions to direct neighbors
-  constexpr static const short directNeighborDirections[6][3] = {
+  constexpr static const short directNeighborDirections[directNeighborsCount][3] = {
     {-1, 0, 0}, {0,-1, 0},
     { 0, 0,-1}, {1, 0, 0},
     { 0, 1, 0}, {0, 0, 1}
@@ -92,7 +115,7 @@ struct convert<3> {
   // Number of all neighboring cells
   constexpr static const unsigned short neighborsCount = 26;
   // Directions to neighbors
-  constexpr static const short neighborDirections[26][3] = {
+  constexpr static const short neighborDirections[neighborsCount][3] = {
     {-1, 0, 0}, { 0,-1, 0}, { 0, 0,-1},
     {-1,-1, 0}, {-1, 1, 0}, {-1, 0,-1},
     {-1, 0, 1}, { 0,-1,-1}, { 0,-1, 1},
@@ -101,6 +124,18 @@ struct convert<3> {
     { 1, 1, 0}, { 1,-1, 0}, { 1, 0, 1},
     { 1, 0,-1}, { 0, 1, 1}, { 0, 1,-1},
     { 1, 1, 1}, { 1, 1,-1}, { 1,-1, 1}, { 1,-1,-1}
+  };
+  // Normalized directions to neighbors
+  template <typename T>
+  constexpr static const T normalizedNeighborDirections[neighborsCount][3] = {
+    {-1, 0, 0}, { 0,-1, 0}, { 0, 0,-1},
+    {-1*invSqrt2<T>,-1*invSqrt2<T>, 0}, {-1*invSqrt2<T>, 1*invSqrt2<T>, 0}, {-1*invSqrt2<T>, 0,-1*invSqrt2<T>},
+    {-1*invSqrt2<T>, 0, 1*invSqrt2<T>}, { 0,-1*invSqrt2<T>,-1*invSqrt2<T>}, { 0,-1*invSqrt2<T>, 1*invSqrt2<T>},
+    {-1*invSqrt3<T>,-1*invSqrt3<T>,-1*invSqrt3<T>}, {-1*invSqrt3<T>,-1*invSqrt3<T>, 1*invSqrt3<T>}, {-1*invSqrt3<T>, 1*invSqrt3<T>,-1*invSqrt3<T>}, {-1*invSqrt3<T>, 1*invSqrt3<T>, 1*invSqrt3<T>},
+    { 1, 0, 0}, { 0, 1, 0}, { 0, 0, 1},
+    { 1*invSqrt2<T>, 1*invSqrt2<T>, 0}, { 1*invSqrt2<T>,-1*invSqrt2<T>, 0}, { 1*invSqrt2<T>, 0, 1*invSqrt2<T>},
+    { 1*invSqrt2<T>, 0,-1*invSqrt2<T>}, { 0, 1*invSqrt2<T>, 1*invSqrt2<T>}, { 0, 1*invSqrt2<T>,-1*invSqrt2<T>},
+    { 1*invSqrt3<T>, 1*invSqrt3<T>, 1*invSqrt3<T>}, { 1*invSqrt3<T>, 1*invSqrt3<T>,-1*invSqrt3<T>}, { 1*invSqrt3<T>,-1*invSqrt3<T>, 1*invSqrt3<T>}, { 1*invSqrt3<T>,-1*invSqrt3<T>,-1*invSqrt3<T>}
   };
 
   // Type used for surface representation

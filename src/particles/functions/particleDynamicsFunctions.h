@@ -30,112 +30,74 @@
 #define PARTICLE_DYNAMICS_FUNCTIONS_H
 
 
+#include "particles/contact/contactContainer.h"
+#include "particles/contact/wall.h"
 #include <cassert>
 
 namespace olb {
 
 namespace particles {
 
+template <unsigned D>
+constexpr bool isPeriodic(const Vector<bool, D>& periodic)
+{
+  bool isPeriodic = periodic[0] || periodic[1];
+  if constexpr (D == 3) {
+    isPeriodic = isPeriodic || periodic[2];
+  }
+  return isPeriodic;
+}
+
+namespace defaults{
+  template <unsigned D>
+  const auto periodicity = [](){
+    if constexpr (D==3) {
+      return Vector<bool,3>(false,false,false);
+    } else {
+      return Vector<bool,2>(false,false);
+    }
+  };
+}
+
+namespace contact {
+template <typename T, typename PARTICLECONTACTTYPE, typename WALLCONTACTTYPE>
+void communicateContacts(ContactContainer<T, PARTICLECONTACTTYPE, WALLCONTACTTYPE>& contactContainer);
+}
+
 namespace dynamics {
 
-////////////// Dimension sensitive Functions ////////////
 
-//Calculate rotation matrix
-template<unsigned D, typename T>
-struct rotation_matrix;
-
-template<typename T>
-struct rotation_matrix<2,T> {
-  static constexpr Vector<T,4> calculate( Vector<T,1> angle )
-  {
-    Vector<T,4> rotationMatrix;
-
-    T cos = util::cos(angle[0]);
-    T sin = util::sin(angle[0]);
-
-    rotationMatrix[0] = cos;
-    rotationMatrix[1] = sin;
-    rotationMatrix[2] = -sin;
-    rotationMatrix[3] = cos;
-
-    return rotationMatrix;
-  }
-
-  static constexpr Vector<T,4> calculateInverse( Vector<T,1> angle )
-  {
-    return calculate(-1 * angle);
-  }
-};
-
-template<typename T>
-struct rotation_matrix<3,T> {
-  static constexpr Vector<T,9> calculate( Vector<T,3> angle )
-  {
-    Vector<T,9> rotationMatrix;
-
-    T cos0 = util::cos(angle[0]);
-    T cos1 = util::cos(angle[1]);
-    T cos2 = util::cos(angle[2]);
-    T sin0 = util::sin(angle[0]);
-    T sin1 = util::sin(angle[1]);
-    T sin2 = util::sin(angle[2]);
-
-    rotationMatrix[0] = cos1*cos2;
-    rotationMatrix[1] = sin0*sin1*cos2 - cos0*sin2;
-    rotationMatrix[2] = cos0*sin1*cos2 + sin0*sin2;
-    rotationMatrix[3] = cos1*sin2;
-    rotationMatrix[4] = sin0*sin1*sin2 + cos0*cos2;
-    rotationMatrix[5] = cos0*sin1*sin2 - sin0*cos2;
-    rotationMatrix[6] = -sin1;
-    rotationMatrix[7] = sin0*cos1;
-    rotationMatrix[8] = cos0*cos1;
-
-    return rotationMatrix;
-  }
-
-  static constexpr Vector<T,9> calculateInverse( Vector<T,3> angle )
-  {
-    return calculate(-1 * angle);
-  }
-};
 
 //Calculate torque from force and lever
 template<unsigned D, typename T>
-struct torque_from_force;
-
-template<typename T>
-struct torque_from_force<2,T> {
-  static constexpr Vector<T,1> calculate(
-    Vector<T,2> force,
-    PhysR<T,2> lever )
+struct torque_from_force {
+  static constexpr Vector<T,utilities::dimensions::convert<D>::rotation> calculate(
+    Vector<T,D> force, PhysR<T,D> lever )
   {
-    return Vector<T,1>( lever[0]*force[1]-lever[1]*force[0] );
+    if constexpr (D==2){
+      return Vector<T,utilities::dimensions::convert<D>::rotation>( crossProduct( lever, force ) );
+    } else {
+      return crossProduct( lever, force );
+    }
   }
 };
 
-template<typename T>
-struct torque_from_force<3,T> {
-  static constexpr Vector<T,3> calculate(
-    Vector<T,3> force,
-    PhysR<T,3> lever )
-  {
-    return Vector<T,3>( lever[1]*force[2]-lever[2]*force[1],
-                        lever[2]*force[0]-lever[0]*force[2],
-                        lever[0]*force[1]-lever[1]*force[0]
-                      );
-  }
-};
+
+////////////// Dimension sensitive Functions ////////////
+
 
 //Calculate local velocity
 template <typename T, typename PARTICLETYPE>
-Vector<T,PARTICLETYPE::d> calculateLocalVelocity(Particle<T,PARTICLETYPE>& particle, const PhysR<T,PARTICLETYPE::d>& input)
+constexpr Vector<T,PARTICLETYPE::d> calculateLocalVelocity(Particle<T,PARTICLETYPE>& particle, const PhysR<T,PARTICLETYPE::d>& input)
 {
   using namespace descriptors;
 
-  auto velocity = particle.template getField<MOBILITY,VELOCITY>();
-  auto position = particle.template getField<GENERAL,POSITION>();
-  auto angVelocity = Vector<T,utilities::dimensions::convert<PARTICLETYPE::d>::rotation>(
-    particle.template getField<MOBILITY,ANG_VELOCITY>() );
+  const PhysR<T,PARTICLETYPE::d> position =
+    particle.template getField<GENERAL,POSITION>();
+  const Vector<T,PARTICLETYPE::d> velocity =
+    particle.template getField<MOBILITY,VELOCITY>();
+  const Vector<T,utilities::dimensions::convert<PARTICLETYPE::d>::rotation>
+    angVelocity(particle.template getField<MOBILITY,ANG_VELOCITY>());
 
   return util::calculateLocalVelocity(position, velocity, angVelocity, input);
 }
@@ -150,14 +112,15 @@ void unserializeForceTorqueVoxels( Vector<T,PARTICLETYPE::d>& force,
                                    T serializedFunctorForceField[], int iP )
 {
   constexpr unsigned D = PARTICLETYPE::d;
-  const unsigned Drot = utilities::dimensions::convert<D>::rotation;
-  const int serialSize = D+Drot+1;
+  constexpr unsigned Drot = utilities::dimensions::convert<D>::rotation;
+  constexpr int serialSize = D+Drot+1;
 
   const int idxForce = iP*(serialSize);
   const int idxTorque = idxForce+D;
   const int idxTorqueEnd = idxTorque+Drot;
 
   //Get force
+  //TODO: include funcionality to OLB-Vector someday to avoid std::vector cast
   force = std::vector<T>(  serializedFunctorForceField+idxForce,
                            serializedFunctorForceField+idxTorque);
   //Get torque
@@ -171,30 +134,42 @@ template<typename T, typename PARTICLETYPE>
 void unserializeForce( Vector<T,PARTICLETYPE::d>& force,
                        T serializedFunctorForceField[], int iP )
 {
-  const unsigned D = PARTICLETYPE::d;
-  const int serialSize = D;
+  constexpr unsigned D = PARTICLETYPE::d;
+  constexpr int serialSize = D;
 
   const int idxForce = iP*(serialSize);
   const int idxForceEnd = idxForce+D;
 
   //Get force
+  //TODO: include funcionality to OLB-Vector someday to avoid std::vector cast
   force = std::vector<T>(  serializedFunctorForceField+idxForce,
                            serializedFunctorForceField+idxForceEnd);
 }
 
 /// Apply boundary force provided by force functor to the particle center as torque and force
-template<typename T, typename PARTICLETYPE>
-void applyParticleForce( SuperF<PARTICLETYPE::d,T,T>& forceF, ParticleSystem<T,PARTICLETYPE>& particleSystem, std::size_t iP0=0 )
+template<typename T, typename PARTICLETYPE, typename FORCEFUNCTOR>
+void applySerializableParticleForce( FORCEFUNCTOR& forceF, ParticleSystem<T,PARTICLETYPE>& particleSystem, std::size_t iP0=0 )
 {
   constexpr unsigned D = PARTICLETYPE::d;
-  const unsigned Drot = utilities::dimensions::convert<D>::rotation;
+  constexpr unsigned Drot = utilities::dimensions::convert<D>::rotation;
+
+  //Create serialized force field and dummy input
+  int input[1]{};
+  T serializedFunctorForceField[forceF.getTargetDim()]; //TODO: could be decreased by only considering valid_particles
+
+  //Initialize serialized force field when directly using block functors
+  // -as this is usually done inside the super functor
+  if constexpr (std::is_base_of<BlockF<T,PARTICLETYPE::d>, FORCEFUNCTOR>::value){
+    for (int iS=0; iS<forceF.getTargetDim(); ++iS) {
+      serializedFunctorForceField[iS] = 0.;
+    }
+  }
 
   //Retrieve boundary force field
-  int input[1];
-  T serializedFunctorForceField[forceF.getTargetDim()];
   forceF(serializedFunctorForceField, input);
 
   //Loop over particles and apply individual force and torque contribution
+  //TODO: for parallized particles, this represents a redundant loop over the particle system
   for (std::size_t iP=iP0; iP<particleSystem.size(); iP++) {
     auto particle = particleSystem.get(iP);
 
@@ -209,14 +184,35 @@ void applyParticleForce( SuperF<PARTICLETYPE::d,T,T>& forceF, ParticleSystem<T,P
     else {
       unserializeForce<T,PARTICLETYPE>( force, serializedFunctorForceField, iPeval );
     }
+
+    //DEBUG OUTPUT
+//    int rank = singleton::mpi().getRank();
+//    std::cout << "  force(pSys=" << &particleSystem << ",rank=" << rank << ")=" << force << std::endl;
     particle.template setField<descriptors::FORCING,descriptors::FORCE>( force );
   }
 }
 
+/// Apply boundary force provided by force functor to the particle center as torque and force
+/// - allows for additional specification of PCONDITION (as opposed to applySerializedParticleForce)
+template<typename T, typename PARTICLETYPE, typename FORCEFUNCTOR, typename PCONDITION=conditions::valid_particles>
+void applyLocalParticleForce( FORCEFUNCTOR& forceF, ParticleSystem<T,PARTICLETYPE>& particleSystem, std::size_t iP0=0 )
+{
+  //Iterate over particles and apply functor's evaluate() directly
+  for (std::size_t iP=iP0; iP!=particleSystem.size(); iP++) {
+    auto particle = particleSystem.get(iP);
+    //Execute F when particle meets condition
+    doWhenMeetingCondition<T,PARTICLETYPE,PCONDITION>( particle,
+      [&](auto& particle){
+      //Evaluate force functor
+      T output[1];    //dummy output
+      forceF.evaluate(output, particle, iP);
+    });
+  }
+}
 
 /// Initialize all fields in particle (necessary for clang)
 template<typename T, typename PARTICLETYPE>
-void initializeParticle( DynamicFieldGroupsD<T, typename PARTICLETYPE::fieldList>& dynamicFieldGroups, std::size_t iP )
+void initializeParticle( DynamicFieldGroupsD<T, typename PARTICLETYPE::fields_t>& dynamicFieldGroups, std::size_t iP )
 {
   //Define init lambda expression
   typedef std::function<bool(const std::type_info&,int,std::string)> FunctionType;
@@ -224,80 +220,139 @@ void initializeParticle( DynamicFieldGroupsD<T, typename PARTICLETYPE::fieldList
     return true; //resetField=true
   };
   //Call recursive field traversal function with lambda expression
-  descriptors::access_field_content<FunctionType,T,PARTICLETYPE,typename PARTICLETYPE::fieldList>::fieldsL2(
+  descriptors::access_field_content<FunctionType,T,PARTICLETYPE,typename PARTICLETYPE::fields_t>::fieldsL2(
     initFunction, dynamicFieldGroups, iP );
 }
 
-//Apply stokes drag force
-template<typename T, typename DESCRIPTOR, typename PARTICLETYPE>
-void applyStokesForce( ParticleSystem<T,PARTICLETYPE>& particleSystem,
-                       SuperLattice<T, DESCRIPTOR>& sLattice,
-                       SuperGeometry<T,DESCRIPTOR::d>& sGeometry,
-                       UnitConverter<T,DESCRIPTOR> const& converter,
-                       SuperLatticeInterpPhysVelocity<T, DESCRIPTOR>& interpPhysVelF )
+
+
+////////////// Particle Lattice coupling Functions ////////////
+//containing those, not included in particle tasks
+
+/// Couple particle to lattice and detect contacts of resolved particles
+template<typename T, typename DESCRIPTOR, typename PARTICLETYPE, typename PARTICLECONTACTTYPE, typename WALLCONTACTTYPE,
+  typename F=decltype(defaults::periodicity<DESCRIPTOR::d>)>
+void coupleResolvedParticlesToLattice(
+  ParticleSystem<T,PARTICLETYPE>& particleSystem,
+  contact::ContactContainer<T,PARTICLECONTACTTYPE,WALLCONTACTTYPE>& contactContainer,
+  const SuperGeometry<T,DESCRIPTOR::d>& sGeometry,
+  SuperLattice<T,DESCRIPTOR>& sLattice,
+  UnitConverter<T,DESCRIPTOR> const& converter,
+  std::vector<SolidBoundary<T,DESCRIPTOR::d>>& solidBoundaries,
+  F getSetupPeriodicity = defaults::periodicity<DESCRIPTOR::d>)
+{
+  static_assert(DESCRIPTOR::template provides<descriptors::CONTACT_DETECTION>(),
+                "The field CONTACT_DETECTION must be provided.");
+  constexpr unsigned D = DESCRIPTOR::d;
+  using namespace descriptors;
+
+  contactContainer.cleanContacts();
+
+  const PhysR<T,D> min = communication::getCuboidMin<T,D>(sGeometry.getCuboidGeometry());
+  const PhysR<T,D> max = communication::getCuboidMax<T,D>(sGeometry.getCuboidGeometry(), min);
+
+  //Loop over particles
+  for (std::size_t iP=0; iP<particleSystem.size(); ++iP) {
+    auto particle = particleSystem.get(iP);
+    //Write particle field
+    setSuperParticleField( sGeometry, min, max, sLattice, converter,
+                           particleSystem, contactContainer, iP, particle,
+                           solidBoundaries, getSetupPeriodicity );
+
+  }
+
+  contact::communicateContacts<T,PARTICLECONTACTTYPE,WALLCONTACTTYPE>(contactContainer);
+}
+
+/// Couple particle to lattice and detect contacts of resolved particles
+template<typename T, typename DESCRIPTOR, typename PARTICLETYPE, typename PARTICLECONTACTTYPE, typename WALLCONTACTTYPE,
+  typename F=decltype(defaults::periodicity<DESCRIPTOR::d>)>
+void coupleResolvedParticlesToLattice(
+  ParticleSystem<T,PARTICLETYPE>& particleSystem,
+  contact::ContactContainer<T,PARTICLECONTACTTYPE,WALLCONTACTTYPE>& contactContainer,
+  const SuperGeometry<T,DESCRIPTOR::d>& sGeometry,
+  SuperLattice<T,DESCRIPTOR>& sLattice,
+  UnitConverter<T,DESCRIPTOR> const& converter,
+  F getSetupPeriodicity = defaults::periodicity<DESCRIPTOR::d>)
+{
+  std::vector<SolidBoundary<T,DESCRIPTOR::d>> solidBoundaries = std::vector<SolidBoundary<T,DESCRIPTOR::d>>();
+  coupleResolvedParticlesToLattice(particleSystem, contactContainer, sGeometry, sLattice, converter, solidBoundaries, getSetupPeriodicity);
+}
+
+
+/// Couple particle to lattice and detect contacts of resolved particles
+template<typename T, typename DESCRIPTOR, typename PARTICLETYPE, typename PARTICLECONTACTTYPE, typename WALLCONTACTTYPE,
+  typename F=decltype(defaults::periodicity<DESCRIPTOR::d>)>
+void coupleResolvedParticlesToLattice(
+  SuperParticleSystem<T,PARTICLETYPE>& sParticleSystem,
+  contact::ContactContainer<T,PARTICLECONTACTTYPE,WALLCONTACTTYPE>& contactContainer,
+  const SuperGeometry<T,DESCRIPTOR::d>& sGeometry,
+  SuperLattice<T,DESCRIPTOR>& sLattice,
+  UnitConverter<T,DESCRIPTOR> const& converter,
+  std::vector<SolidBoundary<T,DESCRIPTOR::d>>& solidBoundaries,
+  F getSetupPeriodicity = defaults::periodicity<DESCRIPTOR::d>)
+{
+  static_assert(DESCRIPTOR::template provides<descriptors::CONTACT_DETECTION>(),
+                "The field CONTACT_DETECTION must be provided.");
+  constexpr unsigned D = DESCRIPTOR::d;
+  using namespace descriptors;
+
+  const PhysR<T,D> min = communication::getCuboidMin<T,D>(sGeometry.getCuboidGeometry());
+  const PhysR<T,D> max = communication::getCuboidMax<T,D>(sGeometry.getCuboidGeometry(), min);
+
+  //Loop over particles
+  communication::forParticlesInSuperParticleSystem<T, PARTICLETYPE, conditions::valid_particles>(
+      sParticleSystem,
+      [&](Particle<T, PARTICLETYPE>&       particle,
+          ParticleSystem<T, PARTICLETYPE>& particleSystem, int globiC) {
+        const std::size_t globalParticleID =
+            particle.template getField<PARALLELIZATION, ID>();
+        //Write particle field
+        setSuperParticleField(sGeometry, min, max, sLattice, converter,
+                              particleSystem, contactContainer,
+                              globalParticleID, particle, solidBoundaries,
+                              getSetupPeriodicity, globiC );
+      });
+}
+
+/// Couple particle to lattice and detect contacts of resolved particles
+template<typename T, typename DESCRIPTOR, typename PARTICLETYPE, typename PARTICLECONTACTTYPE, typename WALLCONTACTTYPE,
+  typename F=decltype(defaults::periodicity<DESCRIPTOR::d>)>
+void coupleResolvedParticlesToLattice(
+  SuperParticleSystem<T,PARTICLETYPE>& sParticleSystem,
+  contact::ContactContainer<T,PARTICLECONTACTTYPE,WALLCONTACTTYPE>& contactContainer,
+  const SuperGeometry<T,DESCRIPTOR::d>& sGeometry,
+  SuperLattice<T,DESCRIPTOR>& sLattice,
+  UnitConverter<T,DESCRIPTOR> const& converter,
+  F getSetupPeriodicity = defaults::periodicity<DESCRIPTOR::d>)
+{
+  std::vector<SolidBoundary<T,DESCRIPTOR::d>> solidBoundaries = std::vector<SolidBoundary<T,DESCRIPTOR::d>>();
+  coupleResolvedParticlesToLattice(sParticleSystem, contactContainer, sGeometry, sLattice, converter, getSetupPeriodicity);
+}
+
+
+template<typename T, typename PARTICLETYPE>
+T calcKineticEnergy( Particle<T,PARTICLETYPE>& particle )
 {
   using namespace descriptors;
   constexpr unsigned D = PARTICLETYPE::d;
+  constexpr unsigned Drot = utilities::dimensions::convert<D>::rotation;
+  static_assert(D==3, "ERROR: 2D version of calcKineticEnergy not implemented yet!");
 
-  //Calculate general constants
-  T dTinv = 1./converter.getPhysDeltaT();
-  T C1 = 6. * M_PI * converter.getPhysViscosity()
-         * converter.getPhysDensity() * converter.getConversionFactorTime();
+  T pMass = particle.template getField<PHYSPROPERTIES, MASS>();
+  Vector<T,D> vel(particle.template getField<MOBILITY, VELOCITY>());
+  Vector<T,Drot> pMofi(particle.template getField<PHYSPROPERTIES, MOFI>());
+  Vector<T,Drot> angVel(particle.template getField<MOBILITY, ANG_VELOCITY>());
 
-  for (std::size_t iP=0; iP<particleSystem.size(); ++iP) {
-    auto particle = particleSystem.get(iP);
+  T eTrans = T{0.5} * pMass * util::normSqr<T,D>(vel);
+  T eRot = .5*(pMofi[0]*angVel[0]*angVel[0]
+              +pMofi[1]*angVel[1]*angVel[1]
+              +pMofi[2]*angVel[2]*angVel[2]);
+  T eKin = eTrans+eRot;
 
-    //Retrieve particle quantities
-    Vector<T,D> position = particle.template getField<GENERAL,POSITION>();
-    Vector<T,D> velocity = particle.template getField<MOBILITY,VELOCITY>();
-    T radius = particle.template getField<PHYSPROPERTIES,RADIUS>();
-    T mass = particle.template getField<PHYSPROPERTIES,MASS>();
-    T* positionArray = position.data();
-
-    //Calculate particle coefficiants
-    T c = C1 * radius * 1./mass;
-    T C2 = 1. / (1. + c);
-
-    //Create fluid velocity array
-    T fluidVelArray[D] = {0.};
-
-    //Loop over iCs
-    int maxC = sLattice.getLoadBalancer().size();
-    for (int iC = 0; iC < maxC; iC++) {
-      int globiC = sLattice.getLoadBalancer().glob(iC);
-
-      //Retrieve block bounds
-      LatticeR<D> extend = sGeometry.getBlockGeometry(iC).getExtent();
-      PhysR<T,D> physExtend = converter.getPhysDeltaX()*extend;
-      PhysR<T,D> origin = sGeometry.getBlockGeometry(iC).getOrigin();
-      PhysR<T,D> end = origin + physExtend;
-
-      //Check whether inside cuboid
-      bool inside = true;
-      for (unsigned iDim=0; iDim<D; ++iDim) {
-        inside = inside
-                 && (positionArray[iDim] > origin[iDim])
-                 && (positionArray[iDim] < end[iDim]);
-      }
-      if (inside) {
-        interpPhysVelF(fluidVelArray, positionArray, globiC);
-      }
-    }
-
-    //Synchronize, and calculate stokes force
-    Vector<T,3> force;
-    for (int iDim = 0; iDim < PARTICLETYPE::d; ++iDim) {
-      //Communicate
-#ifdef PARALLEL_MODE_MPI
-      singleton::mpi().reduceAndBcast(fluidVelArray[iDim], MPI_SUM);
-#endif
-      //Calculate force
-      force[iDim] = mass * dTinv
-                    * ((c * fluidVelArray[iDim] + velocity[iDim]) * C2 - velocity[iDim]);
-    }
-    particle.template setField<FORCING,FORCE>(force);
-  }
+  return eKin;
 }
+
 
 } //namespace dynamics
 

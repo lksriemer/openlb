@@ -26,26 +26,22 @@
 #define GPU_CUDA_COLUMN_H
 
 #include <memory>
-#include <array>
-#include <stdexcept>
 
 #include "core/platform/platform.h"
 #include "core/serializer.h"
 #include "communication/communicatable.h"
-
-#include "device.h"
-
-#include <thrust/gather.h>
-#include <thrust/scatter.h>
-
-#include <thrust/host_vector.h>
-#include <thrust/device_vector.h>
 
 namespace olb {
 
 namespace gpu {
 
 namespace cuda {
+
+namespace device {
+
+struct Stream;
+
+}
 
 /// Plain column for CUDA GPU targets
 template<typename T>
@@ -54,69 +50,37 @@ class Column final : public AbstractColumn<T>
 private:
   std::size_t _count;
 
-  thrust::host_vector<T>   _hostData;
-  thrust::device_vector<T> _deviceData;
+  struct Data;
+  std::unique_ptr<Data> _data;
 
 public:
   using value_t = T;
 
-  Column(std::size_t count):
-    _count(count),
-    _hostData(count),
-    _deviceData(_hostData)
-  { }
+  Column(std::size_t count);
+  Column(Column<T>&& rhs);
+  Column(const Column<T>& rhs);
+  ~Column();
 
-  Column(Column<T>&& rhs):
-    _count(rhs._count),
-    _hostData(std::move(rhs._hostData)),
-    _deviceData(std::move(rhs._deviceData))
-  { }
+  const T& operator[](std::size_t i) const override;
+  T& operator[](std::size_t i) override;
 
-  virtual ~Column() = default;
+  std::size_t size() const;
 
-  void resize(std::size_t newCount)
-  {
-    _hostData.resize(newCount);
-    _deviceData.resize(newCount);
-    _count = newCount;
-  }
+  const T* data() const;
+  T* data();
 
-  const T& operator[](std::size_t i) const override
-  {
-    return _hostData[i];
-  }
+  const T* deviceData() const;
+  T* deviceData();
 
-  T& operator[](std::size_t i) override
-  {
-    return _hostData[i];
-  }
-
-  std::size_t size() const
-  {
-    return _count;
-  }
-
-  const T* data() const
-  {
-    return _hostData.data();
-  }
-
-  T* data()
-  {
-    return _hostData.data();
-  }
-
-  const T* deviceData() const
-  {
-    return _deviceData.data().get();
-  }
-
-  T* deviceData()
-  {
-    return _deviceData.data().get();
-  }
+  /// Reset size to zero
+  void clear();
+  void resize(std::size_t newCount);
+  void push_back(T value);
+  /// Combined ascending sort and removal of duplicate entries
+  void deduplicate();
 
   void setProcessingContext(ProcessingContext);
+  void setProcessingContext(ProcessingContext, device::Stream&);
 
   /// Number of data blocks for the serializable interface
   std::size_t getNblock() const override;
@@ -140,12 +104,8 @@ private:
   const std::ptrdiff_t _count;
   const std::size_t    _size;
 
-  std::unique_ptr<T[]> _hostData;
-
-  CUmemGenericAllocationHandle _handle;
-  CUmemAllocationProp _prop{};
-  CUmemAccessDesc _access{};
-  CUdeviceptr _ptr;
+  struct Data;
+  std::unique_ptr<Data> _data;
 
   T* _deviceBase;
   T* _devicePopulation;
@@ -155,48 +115,11 @@ private:
 public:
   using value_t = T;
 
-  CyclicColumn(std::size_t count):
-    _count(device::getPageAlignedCount<T>(count)),
-    _size(_count * sizeof(T)),
-    _hostData(new T[_count] { }),
-    _shift(0)
-  {
-    int device = device::get();
+  CyclicColumn(std::size_t count);
+  ~CyclicColumn();
 
-    _prop.type = CU_MEM_ALLOCATION_TYPE_PINNED;
-    _prop.location.type = CU_MEM_LOCATION_TYPE_DEVICE;
-    _prop.location.id = device;
-    device::check(cuMemAddressReserve(&_ptr, 2 * _size, 0, 0, 0));
-
-    // per-population handle until cuMemMap accepts non-zero offset
-    device::check(cuMemCreate(&_handle, _size, &_prop, 0));
-    device::check(cuMemMap(_ptr,         _size, 0, _handle, 0));
-    device::check(cuMemMap(_ptr + _size, _size, 0, _handle, 0));
-
-    _access.location.type = CU_MEM_LOCATION_TYPE_DEVICE;
-    _access.location.id = device;
-    _access.flags = CU_MEM_ACCESS_FLAGS_PROT_READWRITE;
-    device::check(cuMemSetAccess(_ptr, 2 * _size, &_access, 1));
-
-    _deviceBase = reinterpret_cast<T*>(_ptr);
-    _devicePopulation = _deviceBase;
-  }
-
-  ~CyclicColumn() {
-    device::check(cuMemUnmap(_ptr, 2 * _size));
-    device::check(cuMemRelease(_handle));
-    device::check(cuMemAddressFree(_ptr, 2 * _size));
-  }
-
-  const T& operator[](std::size_t i) const override
-  {
-    return _hostData[i];
-  }
-
-  T& operator[](std::size_t i) override
-  {
-    return _hostData[i];
-  }
+  const T& operator[](std::size_t i) const override;
+  T& operator[](std::size_t i) override;
 
   const T* deviceData() const
   {
@@ -284,27 +207,11 @@ public:
 
   /// Serialize data at locations `indices` to `buffer`
   std::size_t serialize(ConstSpan<CellID> indices,
-                        std::uint8_t* buffer) const
-  {
-    thrust::gather(thrust::device,
-                   thrust::device_pointer_cast(indices.begin()),
-                   thrust::device_pointer_cast(indices.end()),
-                   thrust::device_pointer_cast(_column.deviceData()),
-                   thrust::device_pointer_cast(reinterpret_cast<T*>(buffer)));
-    return indices.size() * sizeof(T);
-  }
+                        std::uint8_t* buffer) const;
 
   /// Deserialize data at locations `indices` to `buffer`
   std::size_t deserialize(ConstSpan<CellID> indices,
-                          const std::uint8_t* buffer)
-  {
-    thrust::scatter(thrust::device,
-                    thrust::device_pointer_cast(reinterpret_cast<const T*>(buffer)),
-                    thrust::device_pointer_cast(reinterpret_cast<const T*>(buffer) + indices.size()),
-                    thrust::device_pointer_cast(indices.begin()),
-                    thrust::device_pointer_cast(_column.deviceData()));
-    return indices.size() * sizeof(T);
-  }
+                          const std::uint8_t* buffer);
 
 };
 
@@ -326,32 +233,14 @@ public:
 
   /// Serialize data at locations `indices` to `buffer`
   std::size_t serialize(ConstSpan<CellID> indices,
-                        std::uint8_t* buffer) const
-  {
-    thrust::gather(thrust::device,
-                   thrust::device_pointer_cast(indices.begin()),
-                   thrust::device_pointer_cast(indices.end()),
-                   thrust::device_pointer_cast(_column.deviceData()),
-                   thrust::device_pointer_cast(reinterpret_cast<T*>(buffer)));
-    return indices.size() * sizeof(T);
-  }
+                        std::uint8_t* buffer) const;
 
   /// Deserialize data at locations `indices` to `buffer`
   std::size_t deserialize(ConstSpan<CellID> indices,
-                          const std::uint8_t* buffer)
-  {
-    thrust::scatter(thrust::device,
-                    thrust::device_pointer_cast(reinterpret_cast<const T*>(buffer)),
-                    thrust::device_pointer_cast(reinterpret_cast<const T*>(buffer) + indices.size()),
-                    thrust::device_pointer_cast(indices.begin()),
-                    thrust::device_pointer_cast(_column.deviceData()));
-    return indices.size() * sizeof(T);
-  }
+                          const std::uint8_t* buffer);
 
 };
 
 }
 
 #endif
-
-#include "column.hh"

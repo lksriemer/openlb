@@ -60,7 +60,7 @@ void setRtlbmDirectedTemperatureBoundary(SuperLattice<T, DESCRIPTOR>& sLattice, 
 template<typename T, typename DESCRIPTOR>
 void setRtlbmDirectedTemperatureBoundary(BlockLattice<T,DESCRIPTOR>& _block, BlockIndicatorF3D<T>& indicator,T omega,
     bool includeOuterCells=false);
-    
+
 }//namespace olb
 
 #endif

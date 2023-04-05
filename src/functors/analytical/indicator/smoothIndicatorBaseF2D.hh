@@ -38,12 +38,9 @@ SmoothIndicatorF2D<T,S,false>::SmoothIndicatorF2D()
 { }
 
 template <typename T, typename S>
-void SmoothIndicatorF2D<T,S,false>::init(T theta)
+void SmoothIndicatorF2D<T,S,false>::init()
 {
-  _rotMat[0] = util::cos(theta);
-  _rotMat[1] = util::sin(theta);
-  _rotMat[2] = -util::sin(theta);
-  _rotMat[3] = util::cos(theta);
+  _rotMat = util::calculateInverseRotationMatrix<T,2>( Vector<T,1>(this->_theta) );
 }
 
 template <typename T, typename S>
@@ -104,14 +101,7 @@ template <typename T, typename S>
 void SmoothIndicatorF2D<T,S,false>::setTheta(S theta)
 {
   _theta = theta;
-
-  T const cos = util::cos(theta);
-  T const sin = util::sin(theta);
-
-  _rotMat[0] = cos;
-  _rotMat[1] = sin;
-  _rotMat[2] = -sin;
-  _rotMat[3] = cos;
+  init();
 }
 
 template <typename T, typename S>
@@ -121,11 +111,11 @@ void SmoothIndicatorF2D<T,S,false>::setEpsilon(S epsilon)
 }
 
 template <typename T, typename S>
-S SmoothIndicatorF2D<T, S, false>::calcArea( )
+S SmoothIndicatorF2D<T, S, false>::getArea( )
 {
   // TODO: Fallback
   assert(false);
-  return std::numeric_limits<double>::quiet_NaN();
+  return S(std::numeric_limits<BaseType<S>>::quiet_NaN());
 }
 
 template <typename T, typename S>
@@ -133,7 +123,7 @@ Vector<S,2> SmoothIndicatorF2D<T, S, false>::calcMofiAndMass( S density )
 {
   // TODO: Fallback
   assert(false);
-  return std::numeric_limits<double>::quiet_NaN();
+  return Vector<S,2>(std::numeric_limits<BaseType<S>>::quiet_NaN());
 }
 
 template <typename T, typename S>
@@ -212,7 +202,7 @@ template <typename T, typename S>
 bool SmoothIndicatorF2D<T, S, false>::operator()( T output[], const S input[] )
 {
   T const signedDist = this->signedDistance(input);
-  return sdf::evalPorosity(output, signedDist, this->getEpsilon());
+  return sdf::evalSolidVolumeFraction(output, signedDist, this->getEpsilon());
 }
 
 template <typename T, typename S>
@@ -272,7 +262,7 @@ void SmoothIndicatorF2D<T,S,true>::setEpsilon(S epsilon)
 }
 
 template <typename T, typename S>
-S SmoothIndicatorF2D<T, S, true>::calcArea( )
+S SmoothIndicatorF2D<T, S, true>::getArea( )
 {
   // TODO: Fallback
   assert(false);
@@ -284,7 +274,7 @@ Vector<S,2> SmoothIndicatorF2D<T, S, true>::calcMofiAndMass( S density )
 {
   // TODO: Fallback
   assert(false);
-  return std::numeric_limits<double>::quiet_NaN();
+  return S(std::numeric_limits<BaseType<S>>::quiet_NaN());
 }
 
 template <typename T, typename S>
@@ -364,10 +354,10 @@ bool SmoothIndicatorF2D<T, S, true>::operator()( T output[], const S input[] )
 {
 #ifdef OLB_DEBUG
   OstreamManager clout(std::cout, "SmoothIndicator2D");
-  clout << "WARNING: SmoothIndicatorF2D::operator() a particle (= true) SmoothIndicator does not consider the current position of the particle. Please use the evalPorosity method for this." << std::endl;
+  clout << "WARNING: SmoothIndicatorF2D::operator() a particle (= true) SmoothIndicator does not consider the current position of the particle. Please use the evalSolidVolumeFraction method for this." << std::endl;
 #endif
   T const signedDist = this->signedDistance(input);
-  return sdf::evalPorosity(output, signedDist, this->getEpsilon());
+  return sdf::evalSolidVolumeFraction(output, signedDist, this->getEpsilon());
 }
 
 template <typename T, typename S>

@@ -43,7 +43,7 @@
 
 
 namespace olb {
-    
+
 /// Implementation of a wetting boundary condition for the ternary free energy model, consisting of a BounceBack
 /// dynamics and an FreeEnergyWall PostProcessor.
 /// \param[in] alpha_ - Parameter related to the interface width. [lattice units]

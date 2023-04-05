@@ -46,12 +46,10 @@ using namespace olb;
 using namespace olb::descriptors;
 using namespace olb::graphics;
 
-using T = double;
+using T = FLOATING_POINT_TYPE;
 using DESCRIPTOR = D3Q19<>;
 
-#ifndef PLATFORM_GPU_CUDA
 #define BOUZIDI
-#endif
 
 // Parameters for the simulation setup
 const int N = 10;        // resolution of the model
@@ -116,15 +114,12 @@ void prepareLattice( SuperLattice<T,DESCRIPTOR>& sLattice,
 
   const T omega = converter.getLatticeRelaxationFrequency();
 
-  // Material=0 -->do nothing
-  sLattice.defineDynamics<NoDynamics>(superGeometry, 0);
-
   // Material=1 -->bulk dynamics
   auto bulkIndicator = superGeometry.getMaterialIndicator({1});
   sLattice.defineDynamics<BGKdynamics>(bulkIndicator);
 
   // Material=2 -->bounce back
-  sLattice.defineDynamics<BounceBack>(superGeometry, 2);
+  setBounceBackBoundary(sLattice, superGeometry, 2);
 
   // Setting of the boundary conditions
 
@@ -138,10 +133,9 @@ void prepareLattice( SuperLattice<T,DESCRIPTOR>& sLattice,
 
   // Material=5 -->bouzidi / bounce back
   #ifdef BOUZIDI
-  sLattice.defineDynamics<NoDynamics>(superGeometry, 5);
-  setBouzidiZeroVelocityBoundary<T,DESCRIPTOR>(sLattice, superGeometry, 5, stlReader);
+  setBouzidiBoundary<T,DESCRIPTOR>(sLattice, superGeometry, 5, stlReader);
   #else
-  sLattice.defineDynamics<BounceBack>(superGeometry, 5);
+  setBounceBackBoundary(sLattice, superGeometry, 5);
   #endif
 
   // Initial conditions
@@ -287,7 +281,7 @@ void getResults( SuperLattice<T, DESCRIPTOR>& sLattice,
     vtmWriter.write( iT );
 
     {
-      SuperEuklidNorm3D<T, DESCRIPTOR> normVel( velocity );
+      SuperEuklidNorm3D<T> normVel( velocity );
       BlockReduction3D2D<T> planeReduction( normVel, Vector<T,3>({0, 0, 1}) );
       // write output as JPEG
       heatmap::write(planeReduction, iT);
@@ -375,4 +369,3 @@ int main( int argc, char* argv[] )
   timer.stop();
   timer.printSummary();
 }
-

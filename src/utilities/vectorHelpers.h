@@ -33,6 +33,7 @@
 #include "io/ostreamManager.h"
 #include "utilities/omath.h"
 #include "core/vector.h"
+#include "aDiff.h"
 
 namespace olb {
 
@@ -40,6 +41,12 @@ template<typename T, unsigned Size> class Vector;
 
 namespace util {
 
+template <class T, unsigned DIM> class ADf;
+
+template <class T, unsigned DIM> inline ADf<T,DIM> sqrt (const ADf<T,DIM>& a);
+
+template<typename S>
+using StdVector = std::vector<S,std::allocator<S>>;
 
 /// return true if a is close to zero
 template <typename T>
@@ -91,7 +98,7 @@ inline bool approxEqual(T a, U b)
 }
 
 template <class T>
-inline void copyN(T c[], const T a[], const unsigned dim)
+inline void copyN(T c[], const T a[], const unsigned dim) any_platform
 {
   for (unsigned i=0; i<dim; i++) {
     c[i] = a[i];
@@ -99,7 +106,7 @@ inline void copyN(T c[], const T a[], const unsigned dim)
 }
 
 template <class S, class T>
-inline void copyN(S c[], const T a[], const unsigned dim)
+inline void copyN(S c[], const T a[], const unsigned dim) any_platform
 {
   for (unsigned i=0; i<dim; i++) {
     c[i] = a[i];
@@ -182,6 +189,12 @@ T dotProduct(const Vector<T,D>& a, const Vector<T,D>& b)
   }
 }
 
+template <typename T, unsigned D>
+Vector<T,D> normalize(const Vector<T,D>& a)
+{
+  return a / norm(a);
+}
+
 /// returns a normalized vector, works for arbitrary lengths
 template <typename T>
 std::vector<T> normalize(const std::vector<T>& a)
@@ -217,6 +230,17 @@ Vector<T,Size> ceil(const Vector<T,Size>& a)
   return out;
 }
 
+/// applies fmod to each component of a vector
+template <typename T, typename S, unsigned Size>
+Vector<T,Size> fmod(const Vector<T,Size>& a, S b)
+{
+  Vector<T,Size> out;
+  for (unsigned int iDim=0; iDim < Size; ++iDim) {
+    out[iDim] = util::fmod(a[iDim], b);
+  }
+  return out;
+}
+
 /// computes the average of all elements
 template <typename T, unsigned Size>
 T average(const Vector<T,Size>& a)
@@ -228,21 +252,99 @@ T average(const Vector<T,Size>& a)
   return sum/Size;
 }
 
+/// finds maximum element of all elements
+template <typename T, unsigned Size>
+T max_element(const Vector<T,Size>& a)
+{
+  T max = a[0];
+  for (unsigned int iDim=1; iDim < Size; ++iDim) {
+    max = std::max(max,a[iDim]);
+  }
+  return max;
+}
+
+/// finds minimum element of all elements
+template <typename T, unsigned Size>
+T min_element(const Vector<T,Size>& a)
+{
+  T min = a[0];
+  for (unsigned int iDim=1; iDim < Size; ++iDim) {
+    min = std::min(min,a[iDim]);
+  }
+  return min;
+}
+
+/// finds position of maximum element of all elements
+template <typename T, unsigned Size>
+unsigned maxElementPos(const Vector<T,Size>& a)
+{
+  unsigned maxPos = 0;
+  for (unsigned int iDim=1; iDim < Size; ++iDim) {
+    if (a[iDim]>a[maxPos]){
+      maxPos = iDim;
+    }
+  }
+  return maxPos;
+}
+
+/// finds position of minimum element of all elements
+template <typename T, unsigned Size>
+unsigned minElementPos(const Vector<T,Size>& a)
+{
+  unsigned minPos = 0;
+  for (unsigned int iDim=1; iDim < Size; ++iDim) {
+    if (a[iDim]<a[minPos]){
+      minPos = iDim;
+    }
+  }
+  return minPos;
+}
+
+/// finds maximum element of all absolute elements
+template <typename T, unsigned Size>
+T maxElementAbs(const Vector<T,Size>& a)
+{
+  T maxAbs = a[0];
+  for (unsigned int iDim=1; iDim < Size; ++iDim) {
+    if (abs(a[iDim])>abs(maxAbs)){
+      maxAbs = a[iDim];
+    }
+  }
+  return maxAbs;
+}
+
+/// finds position of maximum element of all absolute elements
+template <typename T, unsigned Size>
+unsigned maxElementAbsPos(const Vector<T,Size>& a)
+{
+  unsigned maxAbsPos = 0;
+  for (unsigned int iDim=1; iDim < Size; ++iDim) {
+    if (abs(a[iDim])>abs(a[maxAbsPos])){
+      maxAbsPos = iDim;
+    }
+  }
+  return maxAbsPos;
+}
+
 /// Calculates angles between two 2D vectors
-template <typename T>
+template <typename T, bool ensureAngularBounds=true>
 T angleBetweenVectors(const Vector<T,2>& a, const Vector<T,2>& b)
 {
-  return util::atan2(b[1]*a[0]-b[0]*a[1], a[0]*b[0]+a[1]*b[1]);
+  if constexpr(ensureAngularBounds){
+    return std::fmod(util::atan2(b[1]*a[0]-b[0]*a[1], a[0]*b[0]+a[1]*b[1]), M_PI);
+  } else {
+    return util::atan2(b[1]*a[0]-b[0]*a[1], a[0]*b[0]+a[1]*b[1]);
+  }
 }
 
 /// Calculates angles between two 3D vectors
-template <typename T>
+template <typename T, bool ensureAngularBounds=true>
 Vector<T,3> angleBetweenVectors(const Vector<T,3>& a, const Vector<T,3>& b)
 {
   Vector<T,3> angles;
-  angles[0] = angleBetweenVectors(Vector<T,2>(a[1], a[2]), Vector<T,2>(b[1], b[2]));
-  angles[1] = angleBetweenVectors(Vector<T,2>(a[0], a[2]), Vector<T,2>(b[0], b[2]));
-  angles[2] = angleBetweenVectors(Vector<T,2>(a[0], a[1]), Vector<T,2>(b[0], b[1]));
+  angles[0] = angleBetweenVectors<T,ensureAngularBounds>(Vector<T,2>(a[1], a[2]), Vector<T,2>(b[1], b[2]));
+  angles[1] = angleBetweenVectors<T,ensureAngularBounds>(Vector<T,2>(a[0], a[2]), Vector<T,2>(b[0], b[2]));
+  angles[2] = angleBetweenVectors<T,ensureAngularBounds>(Vector<T,2>(a[0], a[1]), Vector<T,2>(b[0], b[1]));
   return angles;
 }
 
@@ -333,6 +435,40 @@ template<typename C, typename U>
 bool isContained(const C& c, U object) {
   return (std::find(c.begin(), c.end(), object) != c.end());
 }
+
+/// Creates a container of type C.
+// See below for template specializations.
+template<typename C>
+struct ContainerCreator { };
+
+template<typename T>
+struct ContainerCreator<std::vector<T>> {
+  using C = std::vector<T>;
+
+  static constexpr C create(std::size_t size) {
+    return C(size);
+  }
+};
+
+template<typename T, std::size_t SIZE>
+struct ContainerCreator<std::array<T,SIZE>> {
+  using C = std::array<T,SIZE>;
+
+  static constexpr C create(std::size_t size) {
+    OLB_PRECONDITION(SIZE == size);
+    return C{};
+  }
+};
+
+template<typename T, unsigned SIZE>
+struct ContainerCreator<Vector<T,SIZE>> {
+  using C = Vector<T,SIZE>;
+
+  static constexpr C create(std::size_t size) {
+    OLB_PRECONDITION(SIZE == size);
+    return C{};
+  }
+};
 
 } // namespace util
 

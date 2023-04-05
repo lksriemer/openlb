@@ -31,7 +31,6 @@ namespace olb {
 
 namespace util {
 
-//TODO: disable constructor for <T,true> ?
 template<typename T,bool useStored>
 Randomizer<T,useStored>::Randomizer()
 {
@@ -45,13 +44,24 @@ Randomizer<T,useStored>::Randomizer(std::vector<T> sequence)
 
 
 template<typename T,bool useStored>
-Randomizer<T,useStored>::Randomizer(std::string filePathSequence)
+Randomizer<T,useStored>::Randomizer(std::string filePathSequence,
+                                    bool enforceStored)
 {
-  std::size_t count = 0;
+  [[maybe_unused]] std::size_t count = 0;
   int rank = singleton::mpi().getRank();
   if (rank == 0){
+    //Check whether file exists and create, if not
+    std::ifstream filePre(filePathSequence.c_str(), std::ios::in);
+    if (!filePre.good()){
+      if (!enforceStored){
+        writeSequence(1000,filePathSequence.c_str());
+      } else {
+        throw std::runtime_error("ERROR: Sequence not provided for Randomizer!");
+      }
+    }
+    //Read actual file
+    std::ifstream file(filePathSequence.c_str(), std::ios::in);
     std::string strVal;
-    std::ifstream file(filePathSequence);
     while (std::getline(file, strVal))
     {
       _storedSequence.push_back(std::stod(strVal));

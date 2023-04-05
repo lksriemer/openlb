@@ -158,7 +158,7 @@ bool IndicatorF2D<S>::normal(Vector<S,2>& normal, const Vector<S,2>& origin, con
     S rotate(n);
     S pitch(rotate/2.);
     while (util::abs(pitch) >= precision) {
-      S theta(rotate*M_PI/180.);
+      S theta( util::degreeToRadian(rotate) );
 
       Vector<S,2> vec(util::cos(theta)*direction[0]+util::sin(theta)*direction[1],-util::sin(theta)*direction[0]+util::cos(theta)*direction[1]);
       currentPoint = POS + vec;

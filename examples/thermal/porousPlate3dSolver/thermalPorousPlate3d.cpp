@@ -84,15 +84,19 @@ struct PorousPlate3dSimulationParameters : public parameters::SimulationBase<T>
   }
 };
 
+
 /// Map names to parameter structs.
 // Enables access to instances of parameter structs by names.
 // Default versions are used for Stationarity and Output.
 template<typename T>
 using Parameters = meta::map<
-  Simulation, PorousPlate3dSimulationParameters<T>,
-  Stationarity, parameters::Stationarity<T,Temperature>,
-  Output, parameters::OutputBase<T>
+  Simulation,          PorousPlate3dSimulationParameters<T>,
+  Stationarity,        parameters::Stationarity<T,Temperature>,
+  Output,              parameters::OutputGeneral<T>,
+  VisualizationImages, parameters::OutputPlot<T>,
+  VisualizationVTK,    parameters::OutputPlot<T>
 >;
+
 
 /// Implement analytical solution (velocity) as a functor
 template <typename T, typename S>
@@ -163,13 +167,13 @@ public:
 
 /// Solver class: implements all simulation-specific functions and routines
 template<typename T>
-class PorousPlate3dSolver : public LBSolver<T,Parameters<T>,LATTICES> {
+class PorousPlate3dSolver : public LbSolver<T,Parameters<T>,LATTICES> {
 private:
   mutable OstreamManager            clout {std::cout, "PorousPlate3dSolver"};
 
 public:
-  PorousPlate3dSolver(utilities::TypeIndexedTuple<Parameters<T>> params)
-   : PorousPlate3dSolver::LBSolver(params)
+  PorousPlate3dSolver(utilities::TypeIndexedSharedPtrTuple<Parameters<T>> params)
+   : PorousPlate3dSolver::LbSolver(params)
   { }
 
 protected:
@@ -217,30 +221,26 @@ protected:
 
   void prepareLattices() override
   {
-    std::vector<T> dir{0.0, 1.0, 0.0};
-
     T boussinesqForcePrefactor = 9.81
       / this->converter().getConversionFactorVelocity()
       * this->converter().getConversionFactorTime()
       * this->converter().getCharPhysTemperatureDifference()
       * this->converter().getPhysThermalExpansionCoefficient();
+    auto coupling = constructSharedCoupling(
+      NavierStokesAdvectionDiffusionCoupling{},
+      names::NavierStokes{}, this->lattice(NavierStokes()),
+      names::Temperature{},  this->lattice(Temperature()));
+    coupling->template setParameter<NavierStokesAdvectionDiffusionCoupling::T0>(
+      this->converter().getLatticeTemperature(this->parameters(Simulation()).Tcold));
+    coupling->template setParameter<NavierStokesAdvectionDiffusionCoupling::FORCE_PREFACTOR>(
+      boussinesqForcePrefactor * Vector<T,3>{0.0,1.0,0.0});
 
-    NavierStokesAdvectionDiffusionCouplingGenerator3D<T,NSDESCRIPTOR>
-    coupling(
-      0, this->converter().getLatticeLength(this->parameters(Simulation()).lx),
-      0, this->converter().getLatticeLength(this->parameters(Simulation()).ly),
-      0, this->converter().getLatticeLength(this->parameters(Simulation()).lz),
-      boussinesqForcePrefactor,
-      this->converter().getLatticeTemperature(this->parameters(Simulation()).Tcold),
-      1., dir);
-
-    this->lattice(NavierStokes()).addLatticeCoupling(coupling, this->lattice(Temperature()));
+    this->lattice(NavierStokes()).template addCustomTask<stage::Coupling>([coupling]() {
+      coupling->execute();
+    });
 
     const T Tomega  = this->converter().getLatticeThermalRelaxationFrequency();
     const T NSomega = this->converter().getLatticeRelaxationFrequency();
-
-    this->lattice(Temperature()).template defineDynamics<NoDynamics>(this->geometry(), 0);
-    this->lattice(NavierStokes()).template defineDynamics<NoDynamics>(this->geometry(), 0);
 
     this->lattice(Temperature()).template defineDynamics<AdvectionDiffusionBGKdynamics>(
       this->geometry().getMaterialIndicator({1, 2, 3}));
@@ -315,7 +315,8 @@ protected:
 
   void writeVTK(std::size_t iT) const override
   {
-    SuperVTMwriter3D<T> vtkWriter(this->parameters(Output()).vtkFilename);
+    SuperVTMwriter3D<T> vtkWriter(this->parameters(VisualizationVTK()).filename);
+
     auto& NSlattice = this->lattice(NavierStokes());
     auto& Tlattice = this->lattice(Temperature());
 
@@ -324,10 +325,10 @@ protected:
     SuperLatticePhysTemperature3D<T,NSDESCRIPTOR,TDESCRIPTOR> temperature(Tlattice, this->converter());
 
     AnalyticalHeatFluxPorousPlate3D<T,T> HeatFluxSol(
-      this->parameters(Simulation()).Re, 
-      this->parameters(Simulation()).Pr, 
-      this->converter().getCharPhysTemperatureDifference(), 
-      this->converter().getCharPhysLength(), 
+      this->parameters(Simulation()).Re,
+      this->parameters(Simulation()).Pr,
+      this->converter().getCharPhysTemperatureDifference(),
+      this->converter().getCharPhysLength(),
       this->converter().getThermalConductivity());
     SuperLatticePhysHeatFlux3D<T,NSDESCRIPTOR,TDESCRIPTOR> HeatFlux1(
       Tlattice,
@@ -399,21 +400,26 @@ private:
 
 int main(int argc, char *argv[])
 {
-  using T = double;
+  using T = FLOATING_POINT_TYPE;
 
   olbInit(&argc, &argv);
 
   // create instances of parameter structs
-  utilities::TypeIndexedTuple<Parameters<T>> params;
+  utilities::TypeIndexedSharedPtrTuple<Parameters<T>> params;
   params.template get<Simulation>() = std::make_shared<PorousPlate3dSimulationParameters<T>>();
   params.template get<Stationarity>() = std::make_shared<parameters::Stationarity<T,Temperature>>(
     parameters::Stationarity<T,Temperature>::AverageEnergy, 1.0, 1.e-7);
-  params.template get<Output>() = std::make_shared<parameters::OutputBase<T>>(
+  params.template get<Output>() = std::make_shared<parameters::OutputGeneral<T>>(
     "thermalPorousPlate3d", "../../../", "./tmp/",
-    true, true, 100., 0,
-    false, "", 0.,
-    true, "thermalPorousPlate3d", 100.,
-    true, "thermalPorousPlate3d", 100.);
+    true, true, 100., 0
+    );
+  params.template get<VisualizationImages>() = std::make_shared<parameters::OutputPlot<T>>(
+    true, "thermalPorousPlate3d", 100.
+    );
+  params.template get<VisualizationVTK>() = std::make_shared<parameters::OutputPlot<T>>(
+    true, "thermalPorousPlate3d", 100.
+    );
+
 
   // create instance of solver class
   PorousPlate3dSolver<T> porousPlate(params);

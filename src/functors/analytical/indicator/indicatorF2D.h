@@ -143,6 +143,20 @@ public:
   S signedDistance(const Vector<S,2>& input) override;
 };
 
+/// indicator from VTIreader
+template <typename S>
+class IndicatorBlockData2D : public IndicatorF2D<S> {
+private:
+  BlockData<3,S,S>& _blockData;
+  S const _deltaR;
+  bool const _invert;
+
+public:
+  IndicatorBlockData2D(BlockData<3,S,S>& blockData,
+    Vector<S,3> extend, Vector<S,3> origin, S deltaR, bool invert);
+  S signedDistance(const Vector<S,2>& input) override;
+};
+
 
 
 /// Indicator function creating an layer around an input indicator (for positive \p layerSize) or

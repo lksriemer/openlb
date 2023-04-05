@@ -51,11 +51,11 @@ namespace olb {
 *
 * For pressure and temperature we first shift the physical values by a characteristic value to asure a lattice pressure and lattice temperature between 0 and 1, e.g. __physPressure - charPhysPressure = conversionPressure * latticePressure__
 *
-*  \param latticeRelaxationTime   relaxation time, have to be greater than 0.5!
+*  \param latticeRelaxationTime relaxation time, have to be greater than 0.5!
 *  - - -
 *  \param physViscosity         physical kinematic viscosity in __m^2 / s__
 *  \param poweLawIndex          power-law index
-*  \param physConsistencyCoeff  physicsl consistency coefficient __m^2 s^(n-2)__
+*  \param physConsistencyCoeff  physical consistency coefficient __m^2 s^(n-2)__
 *  \param physDensity           physical density in __kg / m^3__
 *  - - -
 *  \param conversionLength      conversion factor for length __m__
@@ -99,6 +99,14 @@ public:
   {
   }
 
+  /// return Reynolds number
+  constexpr T getReynoldsNumber(  ) const
+  {
+    // Calculation according to Metzner and Reed (1955): 10.1002/aic.690010409
+    return util::pow(this->_charPhysVelocity, T{2} - _powerLawIndex) * util::pow(this->_charPhysLength, _powerLawIndex)
+      / _physConsistencyCoeff;
+  }
+
   /// return consistency coefficient in physical units
   constexpr T getPhysConsistencyCoeff( ) const
   {
@@ -128,9 +136,9 @@ public:
 
   /// nice terminal output for conversion factors, characteristical and physical data
   void print() const override;
-  void print(std::ostream& fout) const;
+  void print(std::ostream& fout) const override;
 
-  void write(std::string const& fileName = "unitConverter") const;
+  void write(std::string const& fileName = "unitConverter") const override;
 
 protected:
   // conversion factors
@@ -144,7 +152,7 @@ private:
   mutable OstreamManager clout;
 };
 
-/// creator function with data given by a XML file
+/// creator function with data given by an XML file
 template <typename T, typename DESCRIPTOR>
 PowerLawUnitConverter<T, DESCRIPTOR>* createPowerLawUnitConverter(XMLreader const& params);
 

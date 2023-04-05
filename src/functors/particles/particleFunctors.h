@@ -1,6 +1,6 @@
 /*  This file is part of the OpenLB library
  *
- *  Copyright (C) 2021 Nicolas Hafen, Mathias J. Krause
+ *  Copyright (C) 2022 Nicolas Hafen, Mathias J. Krause,
  *  E-mail contact: info@openlb.net
  *  The most recent release of OpenLB can be downloaded at
  *  <http://www.openlb.net/>
@@ -21,11 +21,29 @@
  *  Boston, MA  02110-1301, USA.
 */
 
-/** \file
- * Groups all include files for the directory genericFunctions.
+#ifndef PARTICLE_FUNCTORS_H
+#define PARTICLE_FUNCTORS_H
+
+
+#include "functors/groupedFieldF.h"
+
+namespace olb {
+
+/**
+ *  ParticleCircumRadiusF NON-PARALLELIZED (no block/super differentiation) functor,
+ *  which returns the circumRadius of a smoothIndicator.
  */
 
-//#include "particleSystemPhysVelocity3D.h"
-//#include "superParticleBaseF3D.h"
-//#include "blockParticleBaseF3D.h"
-#include "particleF.h"
+template <typename T, typename DESCRIPTOR>
+class ParticleCircumRadiusF : public ContainerF<T,DESCRIPTOR,DynamicFieldGroupsD<T,typename DESCRIPTOR::fields_t>,T> {
+public:
+  ParticleCircumRadiusF( Container<T,DESCRIPTOR,DynamicFieldGroupsD<T,typename DESCRIPTOR::fields_t>>& container );
+
+public:
+  bool operator() (T output[], const int input []);
+
+};
+
+} //namespace olb
+
+#endif

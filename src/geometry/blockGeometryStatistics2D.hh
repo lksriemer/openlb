@@ -81,7 +81,7 @@ void BlockGeometryStatistics2D<T>::update(bool verbose)
     if (verbose) {
       clout << "updated" << std::endl;
     }
-    getStatisticsStatus()=false;
+    getStatisticsStatus() = false;
   }
 }
 
@@ -219,7 +219,7 @@ std::vector<T> BlockGeometryStatistics2D<T>::getLatticeExtend(int material) cons
     return extend;
   }
   catch (std::out_of_range& ex) {
-    std::vector<double, std::allocator<double>> null;
+    std::vector<T> null;
     return null;
   }
 }
@@ -417,7 +417,6 @@ std::vector<int> BlockGeometryStatistics2D<T>::getType(int iX, int iY) const
 template<typename T>
 std::vector<int> BlockGeometryStatistics2D<T>::computeNormal(int iX, int iY)
 {
-  update();
   return const_this->computeNormal(iX, iY);
 }
 
@@ -452,8 +451,6 @@ std::vector<int> BlockGeometryStatistics2D<T>::computeNormal(int iX, int iY) con
 template<typename T>
 std::vector<T> BlockGeometryStatistics2D<T>::computeNormal(int material)
 {
-
-  update();
   return const_this->computeNormal(material);
 }
 
@@ -482,7 +479,6 @@ std::vector<T> BlockGeometryStatistics2D<T>::computeNormal(int material) const
 template<typename T>
 std::vector<int> BlockGeometryStatistics2D<T>::computeDiscreteNormal(int material, T maxNorm)
 {
-  update();
   return const_this->computeDiscreteNormal(material, maxNorm);
 }
 
@@ -513,7 +509,6 @@ template<typename T>
 bool BlockGeometryStatistics2D<T>::check(int material, int iX, int iY,
     unsigned offsetX, unsigned offsetY)
 {
-  update();
   return const_this->check(material, iX, iY, offsetX, offsetY);
 }
 
@@ -536,7 +531,6 @@ template<typename T>
 bool BlockGeometryStatistics2D<T>::find(int material, unsigned offsetX,
                                         unsigned offsetY, int& foundX, int& foundY)
 {
-  update();
   return const_this->find(material, offsetX, offsetY, foundX, foundY);
 }
 

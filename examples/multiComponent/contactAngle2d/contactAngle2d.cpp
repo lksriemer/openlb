@@ -40,7 +40,7 @@ using namespace olb;
 using namespace olb::descriptors;
 using namespace olb::graphics;
 
-typedef double T;
+using T = FLOATING_POINT_TYPE;
 typedef D2Q9<CHEM_POTENTIAL,FORCE> DESCRIPTOR;
 
 // Parameters for the simulation setup
@@ -56,7 +56,7 @@ const T gama = 10.;      // For mobility of interface [lattice units]
 const T h1 =  0.0001448; // Contact angle 100 degrees [lattice units]
 const T h2 = -0.0001448; // Contact angle 100 degrees [lattice units]
 
-const int maxIter = 10000;
+const int maxIter = 70000;
 const int vtkIter  = 1000;
 const int statIter = 1000;
 const bool calcAngle = true;
@@ -96,9 +96,6 @@ void prepareLattice( SuperLattice<T, DESCRIPTOR>& sLattice1,
   clout << "Prepare Lattice ..." << std::endl;
 
   // Define lattice Dynamics
-  sLattice1.defineDynamics<NoDynamics>(superGeometry.getMaterialIndicator({0,2}));
-  sLattice2.defineDynamics<NoDynamics>(superGeometry.getMaterialIndicator({0,2}));
-
   sLattice1.defineDynamics<ForcedBGKdynamics>(superGeometry, 1);
   sLattice2.defineDynamics<FreeEnergyBGKdynamics>(superGeometry, 1);
 
@@ -112,7 +109,7 @@ void prepareLattice( SuperLattice<T, DESCRIPTOR>& sLattice1,
   AnalyticalConst2D<T,T> zeroVelocity( v );
 
   AnalyticalConst2D<T,T> one( 1.0 );
-  IndicatorCircle2D<T> ind({nx/2., 0.}, radius);
+  IndicatorCircle2D<T> ind({T(nx)/T(2), 0.}, radius);
   SmoothIndicatorCircle2D<T,T> circle( ind, 10.*alpha );
 
   AnalyticalIdentity2D<T,T> rho( one );
@@ -160,13 +157,13 @@ void prepareCoupling( SuperLattice<T, DESCRIPTOR>& sLattice1,
   sLattice2.addLatticeCoupling( superGeometry, 1, coupling2, sLattice1 );
 
   {
-    auto& communicator = sLattice1.getCommunicator(PostCoupling());
+    auto& communicator = sLattice1.getCommunicator(stage::PostCoupling());
     communicator.requestField<CHEM_POTENTIAL>();
     communicator.requestOverlap(sLattice1.getOverlap());
     communicator.exchangeRequests();
   }
   {
-    auto& communicator = sLattice2.getCommunicator(PreCoupling());
+    auto& communicator = sLattice2.getCommunicator(stage::PreCoupling());
     communicator.requestField<CHEM_POTENTIAL>();
     communicator.requestOverlap(sLattice2.getOverlap());
     communicator.exchangeRequests();
@@ -239,7 +236,7 @@ void getResults( SuperLattice<T, DESCRIPTOR>& sLattice1,
       T height1 = 0.;
       T height2 = 0.;
 
-      double pos[2] = {0., dx};
+      T pos[2] = {0., dx};
       for (int ix=0; ix<N; ix++) {
         T phi1, phi2;
         pos[0] = ix * dx;
@@ -383,4 +380,3 @@ int main( int argc, char *argv[] )
   timer.printSummary();
 
 }
-

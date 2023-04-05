@@ -38,7 +38,7 @@ using namespace olb;
 using namespace olb::descriptors;
 using namespace olb::graphics;
 
-using T = double;
+using T = FLOATING_POINT_TYPE;
 using DESCRIPTOR = D2Q9<>;
 using BulkDynamics = ConstRhoBGKdynamics<T,DESCRIPTOR>;
 
@@ -77,11 +77,6 @@ void prepareLattice( UnitConverter<T,DESCRIPTOR> const& converter,
   clout << "Prepare Lattice ..." << std::endl;
 
   const T omega = converter.getLatticeRelaxationFrequency();
-
-  // link lattice with dynamics for collision step
-
-  // Material=0 -->do nothing
-  sLattice.defineDynamics<NoDynamics<T,DESCRIPTOR>>(superGeometry, 0);
 
   // Material=1 -->bulk dynamics
   sLattice.defineDynamics<BulkDynamics>(superGeometry, 1);
@@ -132,7 +127,6 @@ void getResults( SuperLattice<T, DESCRIPTOR>& sLattice,
 
   SuperVTMwriter2D<T> vtmWriter( filenameVtk );
 
-
   if ( iT==0 ) {
     // Writes the geometry, cuboid no. and rank no. as vti file for visualization
     SuperLatticeGeometry2D<T, DESCRIPTOR> geometry( sLattice, superGeometry );
@@ -140,7 +134,7 @@ void getResults( SuperLattice<T, DESCRIPTOR>& sLattice,
     SuperLatticeRank2D<T, DESCRIPTOR> rank( sLattice );
     SuperLatticeDiscreteNormal2D<T, DESCRIPTOR> discreteNormal( sLattice, superGeometry, superGeometry.getMaterialIndicator({2, 3}) );
     SuperLatticeDiscreteNormalType2D<T, DESCRIPTOR> discreteNormalType( sLattice, superGeometry, superGeometry.getMaterialIndicator({2, 3}) );
-   
+
     vtmWriter.write( geometry );
     vtmWriter.write( cuboid );
     vtmWriter.write( rank );
@@ -164,7 +158,7 @@ void getResults( SuperLattice<T, DESCRIPTOR>& sLattice,
 
     SuperLatticePhysVelocity2D<T,DESCRIPTOR> velocity( sLattice, converter );
     SuperLatticePhysPressure2D<T,DESCRIPTOR> pressure( sLattice, converter );
-    
+
     vtmWriter.addFunctor( velocity );
     vtmWriter.addFunctor( pressure );
     vtmWriter.write( iT );
@@ -186,7 +180,7 @@ void getResults( SuperLattice<T, DESCRIPTOR>& sLattice,
     // Interpolation functor with velocityField information
     AnalyticalFfromSuperF2D<T> interpolation( velocityField, true, 1 );
 
-    Vector<int,17> y_coord( {128, 125, 124, 123, 122, 109, 94, 79, 64, 58, 36, 22, 13, 9, 8, 7, 0} );
+    Vector<T,17> y_coord( {128, 125, 124, 123, 122, 109, 94, 79, 64, 58, 36, 22, 13, 9, 8, 7, 0} );
     // Ghia, Ghia and Shin, 1982: "High-Re Solutions for Incompressible Flow Using the Navier-Stokes Equations and a Multigrid Method";  Table 1
     Vector<T,17> vel_ghia_RE1000( { 1.0,     0.65928, 0.57492, 0.51117, 0.46604,
                                     0.33304, 0.18719, 0.05702,-0.06080,-0.10648,
@@ -207,7 +201,7 @@ void getResults( SuperLattice<T, DESCRIPTOR>& sLattice,
 
     for ( int nY = 0; nY < 17; ++nY ) {
       // 17 data points evenly distributed between 0 and 1 (height)
-      T position[2] = {0.5, y_coord[nY]/128.0};
+      T position[2] = {0.5, y_coord[nY]/T(128)};
       T velocity[2] = {T(), T()};
       // Interpolate velocityField at "position" and save it in "velocity"
       interpolation( velocity, position );

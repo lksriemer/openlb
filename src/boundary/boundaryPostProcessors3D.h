@@ -47,7 +47,7 @@ public:
     return 0;
   }
 
-  template <typename CELL>
+  template <CONCEPT(Cell) CELL>
   void apply(CELL& cell) any_platform;
 
 private:
@@ -57,40 +57,27 @@ private:
 };
 
 
-/**
-* This class computes a convection BC on a flat wall in 2D
-*/
-template<typename T, typename DESCRIPTOR, int direction, int orientation>
-class StraightConvectionBoundaryProcessor3D : public LocalPostProcessor3D<T,DESCRIPTOR> {
+template <typename DESCRIPTOR, int direction, int orientation>
+class StraightConvectionBoundaryProcessor3D {
 public:
-  StraightConvectionBoundaryProcessor3D(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_, T* uAv_ = NULL);
-  ~StraightConvectionBoundaryProcessor3D() override;
-  int extent() const override
-  {
-    return 1;
+  static constexpr OperatorScope scope = OperatorScope::PerCell;
+
+  struct PREV_CELL : public descriptors::FIELD_BASE<
+    util::populationsContributingToVelocity<DESCRIPTOR,direction,-orientation>().size()
+  > { };
+
+  int getPriority() const {
+    return 0;
   }
-  int extent(int whichDirection) const override
-  {
-    return 1;
-  }
-  void process(BlockLattice<T,DESCRIPTOR>& blockLattice) override;
-  void processSubDomain ( BlockLattice<T,DESCRIPTOR>& blockLattice,
-                          int x0_, int x1_, int y0_, int y1_, int z0_, int z1_) override;
-private:
-  int x0, x1, y0, y1, z0, z1;
-  T**** saveCell;
-  T* uAv;
+
+  template <CONCEPT(Cell) CELL>
+  void initialize(CELL& cell) any_platform;
+
+  template <CONCEPT(Cell) CELL>
+  void apply(CELL& cell) any_platform;
+
 };
 
-template<typename T, typename DESCRIPTOR, int direction, int orientation>
-class StraightConvectionBoundaryProcessorGenerator3D : public PostProcessorGenerator3D<T,DESCRIPTOR> {
-public:
-  StraightConvectionBoundaryProcessorGenerator3D(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_, T* uAv_ = NULL);
-  PostProcessor3D<T,DESCRIPTOR>* generate() const override;
-  PostProcessorGenerator3D<T,DESCRIPTOR>*  clone() const override;
-private:
-  T* uAv;
-};
 
 /**
 * This class computes the skordos BC
@@ -106,7 +93,7 @@ public:
     return 0;
   }
 
-  template <typename CELL>
+  template <CONCEPT(Cell) CELL>
   void apply(CELL& cell) any_platform;
 
 private:
@@ -128,7 +115,7 @@ struct OuterVelocityCornerProcessor3D {
     return 1;
   }
 
-  template <typename CELL>
+  template <CONCEPT(Cell) CELL>
   void apply(CELL& cell) any_platform;
 };
 

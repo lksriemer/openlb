@@ -76,7 +76,7 @@ void setInterpolatedVelocityBoundary(BlockLattice<T,DESCRIPTOR>& block, T omega,
           MixinDynamics,momenta::BasicDirichletVelocityBoundaryTuple
         >::construct(Vector<int,2>(discreteNormal.data() + 1)));
         block.addPostProcessor(
-          typeid(PostStream), {iX, iY},
+          typeid(stage::PostStream), {iX, iY},
           promisePostProcessorForDirectionOrientation<T,DESCRIPTOR,StraightFdBoundaryProcessor2D>(
             Vector<int,2>(discreteNormal.data() + 1)));
       }
@@ -85,7 +85,7 @@ void setInterpolatedVelocityBoundary(BlockLattice<T,DESCRIPTOR>& block, T omega,
           momenta::FixedVelocityBoundaryTuple
         >>();
         block.addPostProcessor(
-          typeid(PostStream), {iX, iY},
+          typeid(stage::PostStream), {iX, iY},
           promisePostProcessorForNormal<T,DESCRIPTOR,OuterVelocityCornerProcessor2D>(
             Vector<int,2>(discreteNormal.data() + 1)));
       }

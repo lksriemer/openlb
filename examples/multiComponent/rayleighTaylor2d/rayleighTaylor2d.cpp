@@ -37,15 +37,15 @@ using namespace olb;
 using namespace olb::descriptors;
 using namespace olb::graphics;
 
-typedef double T;
-typedef D2Q9<VELOCITY,FORCE,EXTERNAL_FORCE,OMEGA> DESCRIPTOR;
+using T = FLOATING_POINT_TYPE;
+using DESCRIPTOR = D2Q9<FORCE,EXTERNAL_FORCE,STATISTIC>;
 
+using COUPLING = ShanChenForcedPostProcessor<interaction::PsiEqualsRho>;
 
 // Parameters for the simulation setup
-const int nx   = 400;
-const int ny   = 200;
-const int maxIter  = 20000;
-
+const int nx   = 800;
+const int ny   = 400;
+const int maxIter = 40000;
 
 // Stores geometry information in form of material numbers
 void prepareGeometry( SuperGeometry<T,2>& superGeometry )
@@ -82,11 +82,12 @@ void prepareGeometry( SuperGeometry<T,2>& superGeometry )
   clout << "Prepare Geometry ... OK" << std::endl;
 }
 
-void prepareLattice( SuperLattice<T, DESCRIPTOR>& sLatticeOne,
-                     SuperLattice<T, DESCRIPTOR>& sLatticeTwo,
-                     SuperGeometry<T,2>& superGeometry )
+template <typename SuperLatticeCoupling>
+void prepareLattice(SuperLattice<T,DESCRIPTOR>& sLatticeOne,
+                    SuperLattice<T,DESCRIPTOR>& sLatticeTwo,
+                    SuperLatticeCoupling& coupling,
+                    SuperGeometry<T,2>& superGeometry)
 {
-
   OstreamManager clout( std::cout,"prepareLattice" );
   clout << "Prepare Lattice ..." << std::endl;
 
@@ -100,26 +101,22 @@ void prepareLattice( SuperLattice<T, DESCRIPTOR>& sLatticeOne,
   // and the lower half with fluid 2. Only fluid 1 experiences a forces,
   // directed downwards.
 
-  // define lattice Dynamics
-  sLatticeOne.defineDynamics<NoDynamics>(superGeometry, 0);
-  sLatticeTwo.defineDynamics<NoDynamics>(superGeometry, 0);
-
   using BulkDynamics = ForcedBGKdynamics<T,DESCRIPTOR,momenta::ExternalVelocityTuple>;
 
   sLatticeOne.defineDynamics<BulkDynamics>(superGeometry, 1);
   sLatticeOne.defineDynamics<BulkDynamics>(superGeometry, 2);
   sLatticeOne.defineDynamics<BulkDynamics>(superGeometry, 3);
   sLatticeOne.defineDynamics<BulkDynamics>(superGeometry, 4);
-  
+
   sLatticeTwo.defineDynamics<BulkDynamics>(superGeometry, 1);
   sLatticeTwo.defineDynamics<BulkDynamics>(superGeometry, 2);
   sLatticeTwo.defineDynamics<BulkDynamics>(superGeometry, 3);
   sLatticeTwo.defineDynamics<BulkDynamics>(superGeometry, 4);
 
-  sLatticeOne.defineDynamics<BounceBack>(superGeometry, 3);
-  sLatticeOne.defineDynamics<BounceBack>(superGeometry, 4);
-  sLatticeTwo.defineDynamics<BounceBack>(superGeometry, 3);
-  sLatticeTwo.defineDynamics<BounceBack>(superGeometry, 4);
+  setBounceBackBoundary(sLatticeOne, superGeometry, 3);
+  setBounceBackBoundary(sLatticeOne, superGeometry, 4);
+  setBounceBackBoundary(sLatticeTwo, superGeometry, 3);
+  setBounceBackBoundary(sLatticeTwo, superGeometry, 4);
 
   sLatticeOne.setParameter<descriptors::OMEGA>(omega1);
   sLatticeTwo.setParameter<descriptors::OMEGA>(omega2);
@@ -130,6 +127,28 @@ void prepareLattice( SuperLattice<T, DESCRIPTOR>& sLatticeOne,
   // A bounce-back node with fictitious density 0, which is experienced by the partner fluid
   sLatticeOne.defineRho(superGeometry, 4, rho1);
   sLatticeTwo.defineRho(superGeometry, 3, rho1);
+
+  coupling.template setParameter<COUPLING::RHO0>({1, 1});
+  coupling.template setParameter<COUPLING::G>(T(3.));
+  coupling.template setParameter<COUPLING::OMEGA_A>(omega1);
+  coupling.template setParameter<COUPLING::OMEGA_B>(omega2);
+
+  sLatticeOne.addPostProcessor<stage::PreCoupling>(meta::id<RhoStatistics>());
+  sLatticeTwo.addPostProcessor<stage::PreCoupling>(meta::id<RhoStatistics>());
+
+  {
+    auto& communicator = sLatticeOne.getCommunicator(stage::PreCoupling());
+    communicator.requestOverlap(1);
+    communicator.requestField<STATISTIC>();
+    communicator.exchangeRequests();
+  }
+
+  {
+    auto& communicator = sLatticeTwo.getCommunicator(stage::PreCoupling());
+    communicator.requestOverlap(1);
+    communicator.requestField<STATISTIC>();
+    communicator.exchangeRequests();
+  }
 
   clout << "Prepare Lattice ... OK" << std::endl;
 }
@@ -167,18 +186,6 @@ void setBoundaryValues( SuperLattice<T, DESCRIPTOR>& sLatticeOne,
     sLatticeTwo.defineRhoU( superGeometry, 2, zero, zeroV );
     sLatticeTwo.iniEquilibrium( superGeometry, 2, zero, zeroV );
 
-    /*sLatticeOne.defineRhoU(superGeometry, 3, zero, zeroV);
-    sLatticeOne.iniEquilibrium(superGeometry, 3, zero, zeroV);
-    sLatticeOne.defineField<descriptors::EXTERNAL_FORCE>(superGeometry, 3, f);
-    sLatticeTwo.defineRhoU(superGeometry, 3, one, zeroV);
-    sLatticeTwo.iniEquilibrium(superGeometry, 3, one, zeroV);
-
-    sLatticeOne.defineRhoU(superGeometry, 4, one, zeroV);
-    sLatticeOne.iniEquilibrium(superGeometry, 4, one, zeroV);
-    sLatticeOne.defineField<descriptors::EXTERNAL_FORCE>(superGeometry, 4, f);
-    sLatticeTwo.defineRhoU(superGeometry, 4, zero, zeroV);
-    sLatticeTwo.iniEquilibrium(superGeometry, 4, zero, zeroV);*/
-
     // Make the lattice ready for simulation
     sLatticeOne.initialize();
     sLatticeTwo.initialize();
@@ -193,8 +200,8 @@ void getResults( SuperLattice<T, DESCRIPTOR>&    sLatticeTwo,
   OstreamManager clout( std::cout,"getResults" );
   SuperVTMwriter2D<T> vtmWriter( "rayleighTaylor2dsLatticeOne" );
 
-  const int vtkIter = 100;
-  const int statIter = 10;
+  const int vtkIter  = 1000;
+  const int statIter = 1000;
 
   if ( iT==0 ) {
     // Writes the geometry, cuboid no. and rank no. as vti file for visualization
@@ -218,8 +225,9 @@ void getResults( SuperLattice<T, DESCRIPTOR>&    sLatticeTwo,
   }
 
   // Writes the VTK files
-  if ( iT%vtkIter==0 ) {
-    clout << "Writing VTK ..." << std::endl;
+  if ( iT % vtkIter==0 ) {
+    sLatticeOne.setProcessingContext(ProcessingContext::Evaluation);
+
     SuperLatticeVelocity2D<T, DESCRIPTOR> velocity( sLatticeOne );
     SuperLatticeDensity2D<T, DESCRIPTOR> density( sLatticeOne );
     vtmWriter.addFunctor( velocity );
@@ -229,22 +237,18 @@ void getResults( SuperLattice<T, DESCRIPTOR>&    sLatticeTwo,
     BlockReduction2D2D<T> planeReduction( density, 600, BlockDataSyncMode::ReduceOnly );
     // write output as JPEG
     heatmap::write(planeReduction, iT);
-
-    clout << "Writing VTK ... OK" << std::endl;
   }
 }
 
 int main( int argc, char *argv[] )
 {
-
   // === 1st Step: Initialization ===
 
   olbInit( &argc, &argv );
   singleton::directories().setOutputDir( "./tmp/" );
   OstreamManager clout( std::cout,"main" );
 
-  const T G      = 3.;
-  T force        = 30./( T )ny/( T )ny;
+  T force = 30./( T )ny/( T )ny;
 
   // === 2nd Step: Prepare Geometry ===
   // Instantiation of a cuboidGeometry with weights
@@ -268,16 +272,12 @@ int main( int argc, char *argv[] )
   SuperLattice<T, DESCRIPTOR> sLatticeOne( superGeometry );
   SuperLattice<T, DESCRIPTOR> sLatticeTwo( superGeometry );
 
+  SuperLatticeCoupling coupling(
+    ShanChenForcedPostProcessor<interaction::PsiEqualsRho>{},
+    names::A{}, sLatticeOne,
+    names::B{}, sLatticeTwo);
 
-  std::vector<T> rho0;
-  rho0.push_back( 1 );
-  rho0.push_back( 1 );
-  PsiEqualsRho<T,T> interactionPotential;
-  ShanChenForcedGenerator2D<T,DESCRIPTOR> coupling( G,rho0,interactionPotential );
-
-  sLatticeOne.addLatticeCoupling( coupling, sLatticeTwo );
-
-  prepareLattice( sLatticeOne, sLatticeTwo, superGeometry );
+  prepareLattice( sLatticeOne, sLatticeTwo, coupling, superGeometry );
 
   // === 4th Step: Main Loop with Timer ===
   int iT = 0;
@@ -286,7 +286,6 @@ int main( int argc, char *argv[] )
   timer.start();
 
   for ( iT=0; iT<maxIter; ++iT ) {
-
     // === 5th Step: Definition of Initial and Boundary Conditions ===
     setBoundaryValues( sLatticeOne, sLatticeTwo, force, iT, superGeometry );
 
@@ -294,10 +293,9 @@ int main( int argc, char *argv[] )
     sLatticeOne.collideAndStream();
     sLatticeTwo.collideAndStream();
 
-    sLatticeOne.communicate();
-    sLatticeTwo.communicate();
-
-    sLatticeOne.executeCoupling();
+    sLatticeOne.executePostProcessors(stage::PreCoupling());
+    sLatticeTwo.executePostProcessors(stage::PreCoupling());
+    coupling.execute();
 
     // === 7th Step: Computation and Output of the Results ===
     getResults( sLatticeTwo, sLatticeOne, iT, superGeometry, timer );
@@ -306,4 +304,3 @@ int main( int argc, char *argv[] )
   timer.stop();
   timer.printSummary();
 }
-

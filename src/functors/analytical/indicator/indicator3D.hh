@@ -28,9 +28,9 @@
 
 #include "indicatorBaseF3D.hh"
 #include "indicatorF3D.hh"
-#include "indicAlt3D.hh"
 #include "indicComb3D.hh"
 #include "indicMod.hh"
+#include "indicatorFromBlockDataF3D.hh"
 
 #include "smoothIndicatorBaseF3D.hh"
 #include "smoothIndicatorF3D.hh"

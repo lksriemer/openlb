@@ -50,6 +50,7 @@ BlockGeometry<T,D>::BlockGeometry(Cuboid<T,D>& cuboid, int padding, int iCglob)
     _statistics(this),
     clout(std::cout, ("BlockGeometry" + std::to_string(D) + "D"))
 {
+  _statistics.update(false);
   addToStatisticsList(&_statistics.getStatisticsStatus());
 }
 
@@ -106,7 +107,7 @@ int BlockGeometry<T,D>::get(LatticeR<D> latticeR) const
 template<typename T, unsigned D>
 int BlockGeometry<T,D>::get(const int latticeR[D]) const
 {
-  return get(latticeR);
+  return _data[0][this->getCellId(latticeR)];
 }
 
 template<typename T, unsigned D>
@@ -171,10 +172,11 @@ Vector<int,D> BlockGeometry<T,D>::getExtent() const
 }
 
 template<typename T, unsigned D>
+template<typename DESCRIPTOR>
 int BlockGeometry<T,D>::clean(bool verbose, std::vector<int> bulkMaterials)
 {
-  using DESCRIPTOR = std::conditional_t<D==2,descriptors::D2Q9<>,descriptors::D3Q27<>>;
-  int counter=0;
+  //using DESCRIPTOR = std::conditional_t<D==2,descriptors::D2Q5<>,descriptors::D3Q27<>>;
+int counter=0;
   bool toClean = true;
   this->forCoreSpatialLocations([&](LatticeR<D> latticeR) {
     // material not 0 and not in bulkMaterials
@@ -226,13 +228,11 @@ int BlockGeometry<T,D>::outerClean(bool verbose, std::vector<int> bulkMaterials)
 template<typename T, unsigned D>
 int BlockGeometry<T,D>::innerClean(bool verbose)
 {
-  int count = 0;
   int count2 = 0;
   using DESCRIPTOR = std::conditional_t<D==2,descriptors::D2Q5<>,descriptors::D3Q7<>>;
 
   this->forCoreSpatialLocations([&](LatticeR<D> latticeR) {
     if (get(latticeR) != 1 && get(latticeR) != 0) {
-      count++;
       if constexpr (D==3){
         bool var[7] = {false};
         for(int iPop = 1; iPop < DESCRIPTOR::q; iPop++){
@@ -273,13 +273,11 @@ int BlockGeometry<T,D>::innerClean(bool verbose)
 template<typename T, unsigned D>
 int BlockGeometry<T,D>::innerClean(int fromM, bool verbose)
 {
-  int count = 0;
   int count2 = 0;
   using DESCRIPTOR = std::conditional_t<D==2,descriptors::D2Q5<>,descriptors::D3Q7<>>;
 
   this->forCoreSpatialLocations([&](LatticeR<D> latticeR) {
     if (get(latticeR) != 1 && get(latticeR) != 0 && get(latticeR) == fromM) {
-      count++;
       if constexpr (D==3){
         bool var[7] = {false};
         for(int iPop = 1; iPop < DESCRIPTOR::q; iPop++){

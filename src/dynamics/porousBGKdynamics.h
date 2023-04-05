@@ -41,6 +41,52 @@ using PorousBGKdynamics = dynamics::Tuple<
 >;
 
 
+namespace particles {
+template <typename DESCRIPTOR, typename CELL,
+          typename V = typename CELL::value_t>
+inline void resetParticleRelatedFields(CELL& cell) noexcept
+{
+  if constexpr (DESCRIPTOR::template provides<descriptors::POROSITY>()) {
+    cell.template setField<descriptors::POROSITY>(
+        descriptors::POROSITY::template getInitialValue<V,DESCRIPTOR>() );
+  }
+  if constexpr (DESCRIPTOR::template provides<
+                    descriptors::VELOCITY_DENOMINATOR>()) {
+    cell.template setField<descriptors::VELOCITY_DENOMINATOR>(
+        descriptors::VELOCITY_DENOMINATOR::template getInitialValue<V,DESCRIPTOR>() );
+  }
+  if constexpr (DESCRIPTOR::template provides<
+                    descriptors::VELOCITY_NUMERATOR>()) {
+    cell.template setField<descriptors::VELOCITY_NUMERATOR>(
+        descriptors::VELOCITY_NUMERATOR::template getInitialValue<V,DESCRIPTOR>() );
+  }
+  if constexpr (DESCRIPTOR::template provides<descriptors::VELOCITY_SOLID>()) {
+    cell.template setField<descriptors::VELOCITY_SOLID>(
+        descriptors::VELOCITY_SOLID::template getInitialValue<V,DESCRIPTOR>() );
+  }
+}
+
+template <typename DESCRIPTOR, typename CELL,
+          typename V = typename CELL::value_t>
+inline void resetParticleContactRelatedFields(CELL& cell) noexcept
+{
+  if constexpr (DESCRIPTOR::template provides<
+                    descriptors::CONTACT_DETECTION>()) {
+    cell.template setField<descriptors::CONTACT_DETECTION>(
+        descriptors::CONTACT_DETECTION::template getInitialValue<V,DESCRIPTOR>() );
+  }
+}
+
+template <typename DESCRIPTOR, typename CELL,
+          typename V = typename CELL::value_t>
+inline void resetAllParticleRelatedFields(CELL& cell) noexcept
+{
+  resetParticleRelatedFields<DESCRIPTOR,CELL,V>(cell);
+  resetParticleContactRelatedFields<DESCRIPTOR,CELL,V>(cell);
+}
+
+} // namespace particles
+
 namespace collision {
 
 /* Implementation of the BGK collision for moving porous media (HLBM approach).
@@ -76,13 +122,9 @@ struct PorousParticle {
       } else {
         for (int i=0; i<DESCRIPTOR::d; i++)  {
           pVelocity[i] += (1.-cell.template getField<descriptors::POROSITY>())
-                          * (cell.template getFieldComponent<descriptors::VELOCITY_NUMERATOR>(i)
-                             / cell.template getField<descriptors::VELOCITY_DENOMINATOR>() - pVelocity[i]);
+                        * (cell.template getFieldComponent<descriptors::VELOCITY_NUMERATOR>(i)
+                        / cell.template getField<descriptors::VELOCITY_DENOMINATOR>() - pVelocity[i]);
         }
-        // reset external field for next timestep
-        cell.template setField<descriptors::POROSITY>(1.);
-        cell.template setField<descriptors::VELOCITY_DENOMINATOR>(0.);
-        cell.template setField<descriptors::VELOCITY_NUMERATOR>({0.,0.,0.});
       }
     }
 
@@ -100,16 +142,22 @@ struct PorousParticle {
       V diff[DESCRIPTOR::q]{ };
 
       if (velDenominator > std::numeric_limits<V>::epsilon()) {
-        for (int iDim=0; iDim<DESCRIPTOR::d; iDim++) {
+        for (int iDim=0; iDim<DESCRIPTOR::d; ++iDim) {
           uPlus[iDim] = u[iDim];
         }
         calculate(cell, uPlus);
+        if constexpr (!isStatic) {
+          particles::resetParticleRelatedFields<DESCRIPTOR,CELL,V>(cell);
+        }
+
         for (int tmp_iPop=0; tmp_iPop < DESCRIPTOR::q; tmp_iPop++) {
           diff[tmp_iPop] +=   EquilibriumF().compute(tmp_iPop, rho, uPlus)
                             - EquilibriumF().compute(tmp_iPop, rho, u);
           cell[tmp_iPop] += diff[tmp_iPop];
         }
       }
+
+      particles::resetParticleContactRelatedFields<DESCRIPTOR,CELL,V>(cell);
 
       return statistic;
     }
@@ -121,6 +169,8 @@ struct PorousParticle {
 template <typename COLLISION>
 struct PSM {
   using parameters = typename meta::list<descriptors::OMEGA>;
+
+  static constexpr bool is_vectorizable = false;
 
   static std::string getName() {
     return "PSM<" + COLLISION::getName() + ">" ;
@@ -141,10 +191,10 @@ struct PSM {
       MomentaF().computeRhoU(cell, rho, u);
       // velocity at the boundary
       auto u_s = cell.template getField<descriptors::VELOCITY_SOLID>();
-      //if (epsilon < 1e-5) {
-      //  return CollisionO().apply(cell, parameters);
-      //}
-      //else {
+      if (epsilon < 1e-5) {
+        return CollisionO().apply(cell, parameters);
+      }
+      else {
         // speed up paramB
         V paramB = (epsilon * paramA) / ((1. - epsilon) + paramA);
         // speed up paramC
@@ -170,13 +220,225 @@ struct PSM {
         for (int iVel=0; iVel<DESCRIPTOR::d; ++iVel) {
           u[iVel] = paramC * u[iVel] + paramB * u_s[iVel];
         }
-      //}
+      }
+
       return {rho, util::normSqr<V,DESCRIPTOR::d>(u)};
     }
   };
 };
 
-}
+// Implementation of the BGK collision step for subgridscale particles
+// extended collision step, computes local drag in a given direction
+template <typename COLLISION>
+struct SubgridParticle {
+  using parameters = typename meta::list<descriptors::OMEGA>;
+
+  static std::string getName() {
+    return "SubgridParticle<" + COLLISION::getName() + ">";
+  }
+
+  template <typename DESCRIPTOR, typename MOMENTA, typename EQUILIBRIUM>
+  struct type {
+    using MomentaF     = typename MOMENTA::template type<DESCRIPTOR>;
+    using CollisionO   = typename COLLISION::template type<DESCRIPTOR,MOMENTA,EQUILIBRIUM>;
+
+    template <typename CELL, typename PARAMETERS, typename V=typename CELL::value_t>
+    CellStatistic<V> apply(CELL& cell, PARAMETERS& parameters) {
+      V rho, u[DESCRIPTOR::d];
+      MomentaF().computeRhoU(cell, rho, u);
+      V porosity = cell.template getField<descriptors::POROSITY>();
+      auto extVelocity = cell.template getFieldPointer<descriptors::LOCAL_DRAG>();
+      //  if (porosity[0] != 0) {
+      //    cout << "extVelocity: " << extVelocity[0] << " " <<  extVelocity[1] << " " <<  extVelocity[2] << " " << std::endl;
+      //    cout << "porosity: " << porosity[0] << std::endl;
+      //  }
+      for (int i=0; i<DESCRIPTOR::d; i++)  {
+        u[i] *= (1.-porosity);
+        u[i] += extVelocity[i];
+      }
+
+      V uSqr = CollisionO().apply(cell, parameters);
+
+      //statistics.incrementStats(rho, uSqr);
+      cell.template setField<descriptors::POROSITY>(0);
+      cell.template setField<descriptors::VELOCITY_NUMERATOR>(0);
+      cell.template setField<descriptors::VELOCITY_DENOMINATOR>(0);
+
+      return {rho, uSqr};
+    }
+  };
+};
+
+// Implementation of the BGK collision for Zeta-Field formulation (Geng2019)
+struct DBBParticleBGK {
+  using parameters = typename meta::list<descriptors::OMEGA>;
+
+  static constexpr bool is_vectorizable = false;
+
+  static std::string getName() {
+    return "DBBParticleBGK";
+  }
+
+  template <typename DESCRIPTOR, typename MOMENTA, typename EQUILIBRIUM>
+  struct type {
+    using MomentaF     = typename MOMENTA::template type<DESCRIPTOR>;
+    using EquilibriumF = typename EQUILIBRIUM::template type<DESCRIPTOR,MOMENTA>;
+
+    template <typename CELL, typename PARAMETERS, typename V=typename CELL::value_t>
+    CellStatistic<V> apply(CELL& cell, PARAMETERS& parameters) {
+      V rho, u[DESCRIPTOR::d],eta[DESCRIPTOR::q],uPlus[DESCRIPTOR::d],tmp_cell[(DESCRIPTOR::q+1)/2];
+      MomentaF().computeRhoU(cell, rho, u);
+      const V omega = parameters.template get<descriptors::OMEGA>();
+      V tmpMomentumLoss[DESCRIPTOR::d]{ };
+      auto velNumerator   = cell.template getFieldPointer<descriptors::VELOCITY_NUMERATOR>();
+      auto zeta           = cell.template getFieldPointer<descriptors::ZETA>();
+      auto velDenominator = cell.template getField<descriptors::VELOCITY_DENOMINATOR>();
+
+      if (velDenominator > 1) {
+        rho /= velDenominator;
+      }
+      for (int tmp_iPop=1; 2*tmp_iPop<DESCRIPTOR::q; tmp_iPop++) {
+        eta[tmp_iPop]=6.*descriptors::t<V,DESCRIPTOR>(tmp_iPop)*rho*(descriptors::c<DESCRIPTOR>(tmp_iPop,0)*(velNumerator[0])+descriptors::c<DESCRIPTOR>(tmp_iPop,1)*(velNumerator[1]));
+        tmp_cell[tmp_iPop]=(zeta[tmp_iPop]*(-cell[tmp_iPop]+cell[descriptors::opposite<DESCRIPTOR>(tmp_iPop)]+eta[tmp_iPop]));
+        cell[tmp_iPop]+=tmp_cell[tmp_iPop]/(1.+2.*(zeta[tmp_iPop]));
+        cell[descriptors::opposite<DESCRIPTOR>(tmp_iPop)]-=tmp_cell[tmp_iPop]/(1.+2.*(zeta[tmp_iPop]));
+        zeta[tmp_iPop] = 0.;
+        zeta[descriptors::opposite<DESCRIPTOR>(tmp_iPop)] = 0.;
+      }
+
+      cell.template setField<descriptors::POROSITY>(1.);
+      cell.template setField<descriptors::VELOCITY_DENOMINATOR>(0);
+
+      MomentaF().computeRhoU(cell, rho, uPlus);
+      V uPlusSqr = lbm<DESCRIPTOR>::bgkCollision(cell, rho, uPlus, omega);
+
+      V diff[DESCRIPTOR::q] = {};
+      for (int tmp_iPop=0; tmp_iPop<DESCRIPTOR::q; tmp_iPop++) {
+        diff[tmp_iPop] += EquilibriumF().compute(tmp_iPop, rho, uPlus)
+                          - EquilibriumF().compute(tmp_iPop, rho, u);
+
+        for (int iDim=0; iDim<DESCRIPTOR::d; iDim++) {
+          tmpMomentumLoss[iDim] -= descriptors::c<DESCRIPTOR>(tmp_iPop,iDim) * diff[tmp_iPop];
+        }
+      }
+
+      for (int i_dim=0; i_dim<DESCRIPTOR::d; i_dim++) {
+        velNumerator[i_dim] = tmpMomentumLoss[i_dim];
+      }
+
+      return {rho, util::normSqr<V,DESCRIPTOR::d>(u)};
+    }
+  };
+};
+
+// Implementation of the HBGK collision step for a porosity model enabling
+// drag computation for many particles
+// including the Krause turbulence modell
+template <typename COLLISION>
+struct KrauseH {
+  using parameters = meta::list<descriptors::OMEGA, LES::Smagorinsky>;
+
+  static std::string getName(){
+    return "KrauseH<" + COLLISION::getName() + ">";
+  }
+
+  template <typename DESCRIPTOR, typename MOMENTA, typename EQUILIBRIUM>
+  struct type {
+    using MomentaF     = typename MOMENTA::template type<DESCRIPTOR>;
+    using EquilibriumF = typename EQUILIBRIUM::template type<DESCRIPTOR,MOMENTA>;
+    using CollisionO   = typename COLLISION::template type<DESCRIPTOR,MOMENTA,EQUILIBRIUM>;
+
+    template <typename CELL, typename PARAMETERS, typename V=typename CELL::value_t>
+    CellStatistic<V> apply(CELL& cell, PARAMETERS& parameters) {
+      V rho, u[DESCRIPTOR::d];
+      V newOmega[DESCRIPTOR::d];
+      V _fieldTmp[4];
+      _fieldTmp[0] = V{1};
+      _fieldTmp[1] = V{};
+      _fieldTmp[2] = V{};
+      _fieldTmp[3] = V{};
+
+      const V smagoConst = parameters.template get<collision::LES::Smagorinsky>();
+      V preFactor = smagoConst*smagoConst
+                    * descriptors::invCs2<V,DESCRIPTOR>()*descriptors::invCs2<V,DESCRIPTOR>()
+                    * 2*util::sqrt(2);
+
+      MomentaF().computeRhoU(cell, rho, u);
+
+      // compute newOmega
+      V omega = parameters.template get<descriptors::OMEGA>();
+      V uSqr = u[0]*u[0];
+      for (int iDim=0; iDim<DESCRIPTOR::d; iDim++) {
+        uSqr += u[iDim]*u[iDim];
+      }
+      /// Molecular realaxation time
+      V tau_mol = 1./omega;
+      for (int iPop=0; iPop<DESCRIPTOR::q; iPop++) {
+        V fNeq = util::fabs(cell[iPop] - EquilibriumF().compute(iPop, rho, u));
+        /// Turbulent realaxation time
+        V tau_turb = 0.5*(util::sqrt(tau_mol*tau_mol+(preFactor*fNeq))-tau_mol);
+        /// Effective realaxation time
+        V tau_eff = tau_mol + tau_turb;
+        newOmega[iPop] = 1./tau_eff;
+      }
+      parameters.template set<descriptors::OMEGA>(newOmega);
+
+
+      V vel_denom = cell.template getField<descriptors::VELOCITY_DENOMINATOR>();
+      if (vel_denom > std::numeric_limits<V>::epsilon()) {
+        V porosity = cell.template getField<descriptors::POROSITY>(); // prod(1-smoothInd)
+        auto vel_num = cell.template getFieldPointer<descriptors::VELOCITY_NUMERATOR>();
+        porosity = 1.-porosity; // 1-prod(1-smoothInd)
+        for (int i=0; i<DESCRIPTOR::d; i++)  {
+          u[i] += porosity * (vel_num[i] / vel_denom - u[i]);
+        }
+      }
+      uSqr = CollisionO().apply(cell, parameters);
+
+      cell.template setField<descriptors::POROSITY>(_fieldTmp[0]);
+      cell.template setField<descriptors::VELOCITY_NUMERATOR>({_fieldTmp[1], _fieldTmp[2]});
+      cell.template setField<descriptors::VELOCITY_DENOMINATOR>(_fieldTmp[3]);
+
+      return {rho, uSqr};
+    }
+  };
+};
+
+/// Implementation of the BGK collision step for a small particles enabling
+/// two way coupling
+template <typename COLLISION>
+struct SmallParticle {
+  using parameters = meta::list<descriptors::OMEGA, LES::Smagorinsky>;
+
+  static std::string getName(){
+    return "SmallParticle<" + COLLISION::getName() + ">";
+  }
+
+  template <typename DESCRIPTOR, typename MOMENTA, typename EQUILIBRIUM>
+  struct type {
+    using MomentaF     = typename MOMENTA::template type<DESCRIPTOR>;
+    using CollisionO   = typename COLLISION::template type<DESCRIPTOR,MOMENTA,EQUILIBRIUM>;
+
+    template <typename CELL, typename PARAMETERS, typename V=typename CELL::value_t>
+    CellStatistic<V> apply(CELL& cell, PARAMETERS& parameters) {
+      V rho, u[DESCRIPTOR::d];
+      MomentaF().computeRhoU(cell, rho, u);
+      V porosity = cell.template getField<descriptors::POROSITY>();
+      auto localVelocity = cell.template getFieldPointer<descriptors::LOCAL_DRAG>();
+
+      //cout << porosity[0]  << " " <<   localVelocity[0]<< " " <<   localVelocity[1]<< " " <<   localVelocity[2]<<std::endl;
+      for (int i=0; i<DESCRIPTOR::d; i++)  {
+        u[i] *= porosity;
+        u[i] += localVelocity[i];
+      }
+      V uSqr = CollisionO().apply(cell, parameters);
+
+      return {rho, uSqr};
+    }
+  };
+};
+
+} // namespace collision
 
 namespace dynamics {
 
@@ -230,7 +492,44 @@ using SmagorinskyPorousParticleBGKdynamics = dynamics::Tuple<
   collision::SmagorinskyEffectiveOmega<collision::PorousParticle<collision::BGK>>
 >;
 
-/// Implementation of the Partially Saturated Method (PSM),
+// BGK collision step for subgridscale particles
+template<typename T, typename DESCRIPTOR, typename MOMENTA=momenta::BulkTuple>
+using SubgridParticleBGKdynamics = dynamics::Tuple<
+  T, DESCRIPTOR,
+  MOMENTA,
+  equilibria::SecondOrder,
+  collision::SubgridParticle<collision::BGK>
+>;
+
+// BGK collision for Zeta-Field formulation (Geng2019)
+template<typename T, typename DESCRIPTOR, typename MOMENTA=momenta::BulkTuple>
+using DBBParticleBGKdynamics = dynamics::Tuple<
+  T, DESCRIPTOR,
+  MOMENTA,
+  equilibria::SecondOrder,
+  collision::DBBParticleBGK
+>;
+
+/// HBGK collision step for a porosity model enabling drag computation for many particles
+/// including the Krause turbulence modell
+template<typename T, typename DESCRIPTOR, typename MOMENTA=momenta::BulkTuple>
+using KrauseHBGKdynamics = dynamics::Tuple<
+  T, DESCRIPTOR,
+  MOMENTA,
+  equilibria::SecondOrder,
+  collision::KrauseH<collision::BGK>
+>;
+
+/// BGK collision step for a small particles enabling two way coupling
+template<typename T, typename DESCRIPTOR, typename MOMENTA=momenta::BulkTuple>
+using SmallParticleBGKdymaics = dynamics::Tuple<
+  T, DESCRIPTOR,
+  MOMENTA,
+  equilibria::SecondOrder,
+  collision::SmallParticle<collision::BGK>
+>;
+
+/// Partially Saturated Method (PSM),
 /// see Krüger, Timm, et al. The Lattice Boltzmann Method. Springer, 2017. (p.447-451)
 template<typename T, typename DESCRIPTOR, typename MOMENTA=momenta::BulkTuple>
 using PSMBGKdynamics = dynamics::Tuple<
@@ -250,12 +549,13 @@ private:
 public:
   using MomentaF = typename MOMENTA::template type<DESCRIPTOR>;
   using EquilibriumF = typename equilibria::SecondOrder::template type<DESCRIPTOR,MOMENTA>;
-  using ParametersD = olb::ParametersD<T,DESCRIPTOR,descriptors::OMEGA>;
+
+  using parameters = meta::list<descriptors::OMEGA>;
 
   constexpr static bool is_vectorizable = false;
   constexpr static bool has_parametrized_momenta = true;
 
-  void setMomentaParameters(ParametersD* parameters) {
+  void setMomentaParameters(decltype(_parameters) parameters) {
     _parameters = parameters;
   }
 
@@ -264,7 +564,7 @@ public:
   }
 
   AbstractParameters<T,DESCRIPTOR>& getParameters(BlockLattice<T,DESCRIPTOR>& block) override {
-    return block.template getData<DynamicsParameters<ForcedPSMBGKdynamics>>();
+    return block.template getData<OperatorParameters<ForcedPSMBGKdynamics>>();
   }
 
   void computeU(ConstCell<T,DESCRIPTOR>& cell, T u[DESCRIPTOR::d]) const override
@@ -354,5 +654,3 @@ public:
 }
 
 #endif
-
-#include "legacy/porousBGKdynamics.h"

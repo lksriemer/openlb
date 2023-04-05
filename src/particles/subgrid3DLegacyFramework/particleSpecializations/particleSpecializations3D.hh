@@ -30,3 +30,4 @@
 #include "elParticle3D.hh"
 #include "magneticParticle3D.hh"
 #include "rotatingParticle3D.hh"
+#include "HaiderLevenspielParticle3D.hh"

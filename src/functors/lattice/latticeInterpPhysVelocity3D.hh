@@ -56,7 +56,7 @@ SuperLatticeInterpPhysVelocity3D<T, DESCRIPTOR>::SuperLatticeInterpPhysVelocity3
       new BlockLatticeInterpPhysVelocity3D<T, DESCRIPTOR>(
         sLattice.getBlock(lociC),
         converter,
-        &sLattice.getCuboidGeometry().get(globiC))
+        sLattice.getCuboidGeometry().get(globiC))
     );
   }
 }
@@ -80,7 +80,7 @@ void SuperLatticeInterpPhysVelocity3D<T, DESCRIPTOR>::operator()(T output[],
 
 template<typename T, typename DESCRIPTOR>
 BlockLatticeInterpPhysVelocity3D<T, DESCRIPTOR>::BlockLatticeInterpPhysVelocity3D(
-  BlockLattice<T, DESCRIPTOR>& blockLattice, UnitConverter<T,DESCRIPTOR> const& converter, Cuboid3D<T>* c)
+  BlockLattice<T, DESCRIPTOR>& blockLattice, UnitConverter<T,DESCRIPTOR> const& converter, const Cuboid3D<T>& c)
   : BlockLatticePhysF3D<T, DESCRIPTOR>(blockLattice, converter, 3),
     _cuboid(c)
 {
@@ -102,10 +102,10 @@ void BlockLatticeInterpPhysVelocity3D<T, DESCRIPTOR>::operator()(T output[3], co
   T d[3], e[3];
   int latIntPos[3] = {0};
   T latPhysPos[3] = {T()};
-  _cuboid->getFloorLatticeR(latIntPos, &input[0]);
-  _cuboid->getPhysR(latPhysPos, latIntPos);
+  _cuboid.getFloorLatticeR(latIntPos, &input[0]);
+  _cuboid.getPhysR(latPhysPos, latIntPos);
 
-  T deltaRinv = 1. / _cuboid->getDeltaR();
+  T deltaRinv = 1. / _cuboid.getDeltaR();
   d[0] = (input[0] - latPhysPos[0]) * deltaRinv;
   d[1] = (input[1] - latPhysPos[1]) * deltaRinv;
   d[2] = (input[2] - latPhysPos[2]) * deltaRinv;

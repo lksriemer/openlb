@@ -36,7 +36,7 @@ namespace olb {
 template<typename T, typename DESCRIPTOR> struct AbstractCollisionO;
 template<typename T, typename DESCRIPTOR, Platform PLATFORM> struct BlockCollisionO;
 template<typename T, typename DESCRIPTOR, Platform PLATFORM> class ConcreteBlockLattice;
-template<typename T, typename DESCRIPTOR, Platform PLATFORM> class ConcreteBlockMask;
+template<typename T,                      Platform PLATFORM> class ConcreteBlockMask;
 template<typename T, typename DESCRIPTOR, Platform PLATFORM, typename DYNAMICS> class ConcreteBlockCollisionO;
 
 /// Concrete CPU dynamics for legacy dynamics
@@ -79,6 +79,26 @@ public:
     auto abstractCell = _lattice.get(cell.getCellId());
     _dynamics->computeRhoU(abstractCell, rho, u);
   }
+  void defineRho(cpu::Cell<T,DESCRIPTOR,PLATFORM>& cell, T& rho) override {
+    auto abstractCell = _lattice.get(cell.getCellId());
+    _dynamics->defineRho(abstractCell, rho);
+  }
+
+  void defineU(cpu::Cell<T,DESCRIPTOR,PLATFORM>& cell, T* u) override {
+    auto abstractCell = _lattice.get(cell.getCellId());
+    _dynamics->defineU(abstractCell, u);
+  }
+
+  void defineRhoU(cpu::Cell<T,DESCRIPTOR,PLATFORM>& cell, T& rho, T* u) override {
+    auto abstractCell = _lattice.get(cell.getCellId());
+    _dynamics->defineRhoU(abstractCell, rho, u);
+  }
+
+  void defineAllMomenta(cpu::Cell<T,DESCRIPTOR,PLATFORM>& cell, T& rho, T* u, T* pi) override {
+    auto abstractCell = _lattice.get(cell.getCellId());
+    _dynamics->defineAllMomenta(abstractCell, rho, u, pi);
+  }
+
   void computeStress(cpu::Cell<T,DESCRIPTOR,PLATFORM>& cell, T& rho, T* u, T* pi) override {
     auto abstractCell = _lattice.get(cell.getCellId());
     _dynamics->computeStress(abstractCell, rho, u, pi);
@@ -96,6 +116,10 @@ public:
     return _dynamics->computeEquilibrium(iPop, rho, u);
   }
 
+  void inverseShiftRhoU(cpu::Cell<T,DESCRIPTOR,PLATFORM>& cell, T& rho, T* u) override {
+    auto abstractCell = _lattice.get(cell.getCellId());
+    _dynamics->inverseShiftRhoU(abstractCell, rho, u);
+  }
 };
 
 /// Concrete collision operator for legacy dynamics
@@ -108,7 +132,7 @@ public:
 template <typename T, typename DESCRIPTOR, Platform PLATFORM>
 class LegacyBlockCollisionO final : public BlockCollisionO<T,DESCRIPTOR,PLATFORM> {
 private:
-  ConcreteBlockMask<T,DESCRIPTOR,PLATFORM> _mask;
+  ConcreteBlockMask<T,PLATFORM> _mask;
   Dynamics<T,DESCRIPTOR>** const _legacyDynamics;
   ConcreteBlockLattice<T,DESCRIPTOR,PLATFORM>* _block;
 
@@ -176,58 +200,65 @@ public:
    * This assumes that `subdomain` is the core mask of BlockDynamicsMap.
    **/
   void apply(ConcreteBlockLattice<T,DESCRIPTOR,PLATFORM>& block,
-             ConcreteBlockMask<T,DESCRIPTOR,PLATFORM>&    subdomain,
+             ConcreteBlockMask<T,PLATFORM>&               subdomain,
              CollisionDispatchStrategy                    strategy) override
   {
     if (strategy != CollisionDispatchStrategy::Dominant) {
       throw std::runtime_error("LegacyBlockCollisionO only supports CollisionDispatchStrategy::Dominant");
     }
 
+    typename LatticeStatistics<T>::Aggregatable statistics{};
+    #ifdef PARALLEL_MODE_OMP
+    #pragma omp declare reduction(+ : typename LatticeStatistics<T>::Aggregatable : omp_out += omp_in) initializer (omp_priv={})
+    #endif
+
     if constexpr (DESCRIPTOR::d == 3) {
-      auto cell = block.get(0,0,0);
       #ifdef PARALLEL_MODE_OMP
-      #pragma omp parallel for schedule(dynamic,1) firstprivate(cell)
+      #pragma omp parallel for schedule(dynamic,1) reduction(+ : statistics)
       #endif
       for (int iX=0; iX < block.getNx(); ++iX) {
+        auto cell = block.get(iX,0,0);
         for (int iY=0; iY < block.getNy(); ++iY) {
           for (int iZ=0; iZ < block.getNz(); ++iZ) {
             CellID iCell = block.getCellId(iX,iY,iZ);
             if (_mask[iCell]) {
               cell.setCellId(iCell);
               if (auto cellStatistic = _legacyDynamics[iCell]->collide(cell)) {
-                block.getStatistics().incrementStats(cellStatistic.rho, cellStatistic.uSqr);
+                statistics.increment(cellStatistic.rho, cellStatistic.uSqr);
               }
             } else {
               cpu::Cell<T,DESCRIPTOR,PLATFORM> cell(block, iCell);
               if (auto cellStatistic = _dynamicsOfCells[iCell]->collide(cell)) {
-                block.getStatistics().incrementStats(cellStatistic.rho, cellStatistic.uSqr);
+                statistics.increment(cellStatistic.rho, cellStatistic.uSqr);
               }
             }
           }
         }
       }
     } else {
-      auto cell = block.get(0,0);
       #ifdef PARALLEL_MODE_OMP
-      #pragma omp parallel for firstprivate(cell)
+      #pragma omp parallel for schedule(dynamic,1) reduction(+ : statistics)
       #endif
       for (int iX=0; iX < block.getNx(); ++iX) {
+        auto cell = block.get(iX,0);
         for (int iY=0; iY < block.getNy(); ++iY) {
           CellID iCell = block.getCellId(iX,iY);
           if (_mask[iCell]) {
             cell.setCellId(iCell);
             if (auto cellStatistic = _legacyDynamics[iCell]->collide(cell)) {
-              block.getStatistics().incrementStats(cellStatistic.rho, cellStatistic.uSqr);
+              statistics.increment(cellStatistic.rho, cellStatistic.uSqr);
             }
           } else {
             cpu::Cell<T,DESCRIPTOR,PLATFORM> cell(block, iCell);
             if (auto cellStatistic = _dynamicsOfCells[iCell]->collide(cell)) {
-              block.getStatistics().incrementStats(cellStatistic.rho, cellStatistic.uSqr);
+              statistics.increment(cellStatistic.rho, cellStatistic.uSqr);
             }
           }
         }
       }
     }
+
+    block.getStatistics().incrementStats(statistics);
   }
 };
 
@@ -309,7 +340,7 @@ DynamicsPromise(meta::id<DYNAMICS>) -> DynamicsPromise<typename DYNAMICS::value_
  **/
 struct CollisionSubdomainMask {
   template <typename T, typename DESCRIPTOR, Platform PLATFORM>
-  using type = ConcreteBlockMask<T,DESCRIPTOR,PLATFORM>;
+  using type = ConcreteBlockMask<T,PLATFORM>;
 };
 
 /// Map between cell indices and concrete dynamics
@@ -335,7 +366,7 @@ private:
   std::unique_ptr<BlockCollisionO<T,DESCRIPTOR,PLATFORM>*[]> _operatorOfCells;
 
   /// Subdomain on which to apply collisions
-  ConcreteBlockMask<T,DESCRIPTOR,PLATFORM>& _coreMask;
+  ConcreteBlockMask<T,PLATFORM>& _coreMask;
   /// Pointer to collision operator with highest cell fraction
   BlockCollisionO<T,DESCRIPTOR,PLATFORM>* _dominantCollisionO;
 
@@ -466,15 +497,16 @@ public:
           collisionO->apply(_lattice, _coreMask, strategy);
         }
       }
-      #ifdef PLATFORM_GPU_CUDA
-      gpu::cuda::device::synchronize();
-      #endif
       break;
 
     default:
       throw std::runtime_error("Invalid collision dispatch strategy");
       break;
     }
+
+    #ifdef PLATFORM_GPU_CUDA
+    gpu::cuda::device::synchronize();
+    #endif
   }
 
   /// Returns a human-readable string listing all managed dynamics and their assigned fraction of cells

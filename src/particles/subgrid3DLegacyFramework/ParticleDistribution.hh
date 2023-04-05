@@ -51,8 +51,8 @@ namespace olb {
     return true;
   };
 
-  /* When creating a ParticleDistribution a matrix ('_sizeCalculation') is created with evenly spaced  
-  * particle categories ranging from 'minRadius' to 'maxRadius' and each concentration is calculated  
+  /* When creating a ParticleDistribution a matrix ('_sizeCalculation') is created with evenly spaced
+  * particle categories ranging from 'minRadius' to 'maxRadius' and each concentration is calculated
   * with the given distribution
   */
   template <typename T, typename S>
@@ -77,10 +77,10 @@ namespace olb {
     calculateParticleArray();
   };
   /* For the calculation of the particleArray, the total concentration is determined
-  * and for every size group the fraction (relative to all particles) and the number 
+  * and for every size group the fraction (relative to all particles) and the number
   * of particles is calculated.
   * If the exact particle number has to be met, the function will be called again
-  * with the difference of particles in the particle array to the specified total  
+  * with the difference of particles in the particle array to the specified total
   * number as an offset.
   */
   template <typename T, typename S>
@@ -120,7 +120,7 @@ namespace olb {
     }
     else {
       _particleArray.clear();
-      // calculate offset and calls function again with offset for convergence, choose 
+      // calculate offset and calls function again with offset for convergence, choose
       // different (larger) divisor if function does not converge
       _particleOffset += (_numberOfParticles - p_count)/7.;
 
@@ -131,7 +131,7 @@ namespace olb {
   void ParticleDistribution<T, S>::getParticleArray(std::vector<T>& particleArray) {
     particleArray = _particleArray;
   };
-  /* returns the next particle radius in particleArray, loops back to the first entry and/or 
+  /* returns the next particle radius in particleArray, loops back to the first entry and/or
   * shuffles the array before returning first particle if specified.
   */
   template <typename T, typename S>
@@ -203,7 +203,7 @@ namespace olb {
     T nSum = 0;
     T output[1] = { };
     T integral = 0;
-    // calculate discrete integral 
+    // calculate discrete integral
     for (std::size_t iT = converter.getLatticeTime(begin); iT <= converter.getLatticeTime(end); iT++) {
       input[0] = converter.getPhysTime(iT);
       timeDistribution(output, input);
@@ -232,7 +232,7 @@ namespace olb {
       return true;
     }
     else {
-      // calculate offset and calls function again with offset for convergence, choose 
+      // calculate offset and calls function again with offset for convergence, choose
       // different (larger) divisor if function does not converge
       _particleOffsetTime += (_numberOfParticles - _timeArray.size())/7.;
       calculateTimeArray(timeDistribution, converter, begin, end);
@@ -249,11 +249,11 @@ namespace olb {
       clout << std::setw(7) << i << std::setw(12) << _timeArray[i] << std::endl;
     }
   };
-  
+
   /* this function can be called every time-step to add a new spherical particle when
-  *  one should be added to the material number specified by the indicator. 
+  *  one should be added to the material number specified by the indicator.
   * 'loopAround' only affects particle array after reaching last particle
-  * 'shuffleParticles=true' shuffles particle array before adding the first particle and after last 
+  * 'shuffleParticles=true' shuffles particle array before adding the first particle and after last
   */
   template <typename T, typename S>
   template <typename C>
@@ -264,15 +264,15 @@ namespace olb {
         supParticleSystem.addParticle(indicator, 4. / 3. * M_PI * util::pow(p_radius, 3) * density, p_radius, 1);
       }
     }
-  }; 
+  };
 
-  /* This function needs to be called at every time-step iT. It checks if according to the pre-calculated time-array a 
+  /* This function needs to be called at every time-step iT. It checks if according to the pre-calculated time-array a
   * particle has to be added. It then activates the next particle in line.
   */
   template <typename T, typename S>
   template <typename C>
   void ParticleDistribution<T, S>::timeActivateParticles(SuperParticleSystem3D<T, Particle3D>& supParticleSystem, C iT, C idOfset) {
-    // check if a new particle has to be activated 
+    // check if a new particle has to be activated
     while (_timeArray[_currentParticle] == iT) {
       // Searches all sub-particle systems
       for (unsigned int pSystems = 0; pSystems < supParticleSystem.getParticleSystems().size(); pSystems++) {
@@ -287,14 +287,14 @@ namespace olb {
         }
       }
       _currentParticle++;
-      // starts at beginning when last particle is reached 
+      // starts at beginning when last particle is reached
       if(_currentParticle == _numberOfParticles){
         _currentParticle = 0;
       }
     }
   };
 
-  /// Sets the particle state 'active' to 'false' for particles with ids from 'beginID' to 'endID'  
+  /// Sets the particle state 'active' to 'false' for particles with ids from 'beginID' to 'endID'
   template <typename T, typename S>
   void ParticleDistribution<T, S>::deactivateParticles(SuperParticleSystem3D<T, Particle3D>& supParticleSystem, int beginID, int endID) {
     // Searches all sub-particle systems
@@ -318,7 +318,7 @@ namespace olb {
   void ParticleDistribution<T, S>::preSpawnSphericalParticles(SuperParticleSystem3D<T, Particle3D>& supParticleSystem, IndicatorF3D<S>& indicator, T density, int beginID, bool shuffle) {
     // call nextParticleRadius to get particle radius
     T p_radius = nextParticleRadius(false, shuffle);
-    do {  
+    do {
       // adds a spherical particle with specified density and '_currentParticle' as its ID
       supParticleSystem.addTracerParticle(indicator, (T)(_currentParticle), 4. / 3. * M_PI * util::pow(p_radius, 3) * density, p_radius, 1);
       p_radius = nextParticleRadius(false, shuffle);

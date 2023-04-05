@@ -57,10 +57,10 @@ public:
 template <typename T, typename DESCRIPTOR>
 class BlockLatticeInterpPhysVelocity2D final : public BlockLatticePhysF2D<T,DESCRIPTOR> {
 protected:
-  Cuboid2D<T>* _cuboid;
+  const Cuboid2D<T>& _cuboid;
 public:
   BlockLatticeInterpPhysVelocity2D(BlockLattice<T,DESCRIPTOR>& blockLattice,
-                                   const UnitConverter<T,DESCRIPTOR>& conv, Cuboid2D<T>* c);
+                                   const UnitConverter<T,DESCRIPTOR>& conv, const Cuboid2D<T>& c);
   BlockLatticeInterpPhysVelocity2D(const BlockLatticeInterpPhysVelocity2D<T,DESCRIPTOR>& rhs);
   bool operator() (T output[2], const int input[2]) override
   {

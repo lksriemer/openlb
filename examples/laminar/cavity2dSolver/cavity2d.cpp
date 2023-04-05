@@ -39,21 +39,27 @@ using Descriptor = descriptors::D2Q9<>;
 using Lattices = meta::map<
   NavierStokes, Descriptor
 >;
-template<typename T>
-using Parameters = meta::map<
-  Simulation, parameters::XmlSimulation<T,Lattices>,
-  Stationarity, parameters::Stationarity<T>,
-  Output, parameters::OutputBase<T>
->;
+
 
 template<typename T>
-class Cavity2dSolver : public LBSolver<T,Parameters<T>,Lattices> {
+using Parameters = meta::map<
+  Simulation,           parameters::XmlSimulation<T,Lattices>,
+  Stationarity,         parameters::Stationarity<T>,
+  Output,               parameters::OutputGeneral<T>,
+  VisualizationVTK,     parameters::OutputPlot<T>,
+  VisualizationGnuplot, parameters::OutputPlot<T>,
+  VisualizationImages,  parameters::OutputPlot<T>
+>;
+
+
+template<typename T>
+class Cavity2dSolver : public LbSolver<T,Parameters<T>,Lattices> {
 private:
   mutable OstreamManager            clout {std::cout, "Cavity2dSolver"};
 
 public:
-  Cavity2dSolver(utilities::TypeIndexedTuple<Parameters<T>> params)
-   : Cavity2dSolver::LBSolver(params)
+  Cavity2dSolver(utilities::TypeIndexedSharedPtrTuple<Parameters<T>> params)
+   : Cavity2dSolver::LbSolver(params)
   { }
 
 protected:
@@ -64,7 +70,7 @@ protected:
     IndicatorCuboid2D<T> cuboid( extend, origin );
 
     this->_cGeometry = std::make_shared<CuboidGeometry2D<T>> (
-      cuboid, 
+      cuboid,
       this->converter().getConversionFactorLength(),
       this->parameters(Simulation()).noC * singleton::mpi().getSize() );
 
@@ -74,7 +80,7 @@ protected:
       *this->_cGeometry);
     this->_sGeometry = std::make_shared<SuperGeometry<T,2>> (
       *this->_cGeometry,
-      *this->_loadBalancer, 
+      *this->_loadBalancer,
       this->parameters(Simulation()).overlap);
 
     this->geometry().rename( 0,2 );
@@ -128,7 +134,7 @@ protected:
   void setBoundaryValues(std::size_t iT) override { }
 
   void prepareVTK() const override {
-    SuperVTMwriter2D<T> vtmWriter(this->parameters(Output()).vtkFilename);
+    SuperVTMwriter2D<T> vtmWriter(this->parameters(VisualizationVTK()).filename);
     auto sLattice = &this->lattice();
 
     SuperLatticeGeometry<T,Descriptor> geometry(*sLattice, this->geometry());
@@ -157,11 +163,11 @@ protected:
   }
 
   void writeVTK(std::size_t iT) const override {
-    SuperVTMwriter2D<T> vtmWriter( this->parameters(Output()).vtkFilename );
+    SuperVTMwriter2D<T> vtmWriter( this->parameters(VisualizationVTK()).filename );
 
     SuperLatticePhysVelocity2D velocity( this->lattice(), this->converter() );
     SuperLatticePhysPressure2D pressure( this->lattice(), this->converter() );
-    
+
     vtmWriter.addFunctor( velocity );
     vtmWriter.addFunctor( pressure );
     vtmWriter.write( iT );
@@ -173,8 +179,8 @@ protected:
     // Interpolation functor with velocityField information
     AnalyticalFfromSuperF2D<T> interpolation( velocityField, true, 1 );
 
-    Vector<int,17> y_coord( {128, 125, 124, 123, 122, 109, 94, 79, 64, 58, 36, 22, 13, 9, 8, 7, 0} );
-    // Ghia, Ghia and Shin, 1982: "High-Re Solutions for Incompressible Flow 
+    Vector<T,17> y_coord( {128, 125, 124, 123, 122, 109, 94, 79, 64, 58, 36, 22, 13, 9, 8, 7, 0} );
+    // Ghia, Ghia and Shin, 1982: "High-Re Solutions for Incompressible Flow
     // Using the Navier-Stokes Equations and a Multigrid Method";  Table 1
     Vector<T,17> vel_ghia_RE1000( { 1.0,     0.65928, 0.57492, 0.51117, 0.46604,
                                     0.33304, 0.18719, 0.05702,-0.06080,-0.10648,
@@ -195,7 +201,7 @@ protected:
 
     for ( int nY = 0; nY < 17; ++nY ) {
       // 17 data points evenly distributed between 0 and 1 (height)
-      T position[2] = {0.5, y_coord[nY]/128.0};
+      T position[2] = {0.5, y_coord[nY]/ T(128)};
       T velocity[2] = {T(), T()};
       // Interpolate velocityField at "position" and save it in "velocity"
       interpolation( velocity, position );
@@ -208,7 +214,7 @@ protected:
     gplot.writePNG();
     // Console output with results
     clout
-      << "absoluteErrorL2(line)=" << norm(vel_simulation - comparison) / 17. 
+      << "absoluteErrorL2(line)=" << norm(vel_simulation - comparison) / 17.
       << "; relativeErrorL2(line)=" << norm(vel_simulation - comparison) / norm(comparison)
       << std::endl;
   }
@@ -217,12 +223,12 @@ protected:
 
 int main( int argc, char* argv[] )
 {
-  using T = double;
+  using T = FLOATING_POINT_TYPE;
 
   olbInit( &argc, &argv );
 
   XMLreader config( "cavity2d.xml" );
-  auto cavity2d = createLBSolver<Cavity2dSolver<T>> (config);
+  auto cavity2d = createLbSolver<Cavity2dSolver<T>> (config);
 
   cavity2d->solve();
 }

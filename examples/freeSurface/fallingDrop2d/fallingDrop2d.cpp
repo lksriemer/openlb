@@ -36,7 +36,7 @@
 using namespace olb;
 using namespace olb::descriptors;
 
-using T = double;
+using T = FLOATING_POINT_TYPE;
 using DESCRIPTOR = D2Q9<descriptors::FORCE, FreeSurface::MASS, FreeSurface::EPSILON, FreeSurface::CELL_TYPE, FreeSurface::CELL_FLAGS, FreeSurface::TEMP_MASS_EXCHANGE, FreeSurface::PREVIOUS_VELOCITY>;
 
 struct FreeSurfaceAppHelper {
@@ -63,7 +63,7 @@ public:
     output[0] = cell_values[0];
     T radius = 0.00155;
 
-    if(x[1] <= radius){
+    if(x[1] < radius){
       output[0] = cell_values[2];
     }else if(x[1] <= radius + lattice_size * 1.1){
       output[0] = cell_values[1];
@@ -77,7 +77,7 @@ public:
     }else{
       for(int i = -1; i <= 1; ++i){
         for(int j = -1; j <= 1; ++j){
-          std::array<T,DESCRIPTOR::d> shifted_diff = {diff[0]+i*lattice_size*1.1, diff[1]+j*lattice_size*1.1};
+          std::array<T,DESCRIPTOR::d> shifted_diff = {diff[0]+i*lattice_size*T(1.1), diff[1]+j*lattice_size*T(1.1)};
           if((shifted_diff[0]*shifted_diff[0] + shifted_diff[1] * shifted_diff[1]) <= radius*radius){
             output[0] = cell_values[1];
             return true;
@@ -107,7 +107,7 @@ public:
     output[1] = 0.;
     for(int i = -1; i <= 1; ++i){
       for(int j = -1; j <= 1; ++j){
-        std::array<T,DESCRIPTOR::d> shifted_diff = {diff[0]+i*lattice_size*1.1, diff[1]+j*lattice_size*1.1};
+        std::array<T,DESCRIPTOR::d> shifted_diff = {diff[0]+i*lattice_size*T(1.1), diff[1]+j*lattice_size*T(1.1)};
         if((shifted_diff[0]*shifted_diff[0] + shifted_diff[1] * shifted_diff[1]) <= radius*radius){
           output[0] = lattice_speed[0];
           output[1] = lattice_speed[1];
@@ -183,25 +183,14 @@ void prepareLattice( UnitConverter<T,DESCRIPTOR> const& converter,
   OstreamManager clout( std::cout,"prepareLattice" );
   clout << "Prepare Lattice ..." << std::endl;
 
-  // Material=0 -->do nothing
-  sLattice.defineDynamics<NoDynamics>(superGeometry, 0);
   // Material=1 -->bulk dynamics
   sLattice.defineDynamics<SmagorinskyForcedBGKdynamics>( superGeometry, 1);
   // Material=2 -->no-slip boundary
-  sLattice.defineDynamics<BounceBack>( superGeometry, 2);
+  setBounceBackBoundary(sLattice, superGeometry, 2);
   //setSlipBoundary<T,DESCRIPTOR>(sLattice, superGeometry, 2);
 
-#ifdef PLATFORM_GPU_CUDA
-  sLattice.forBlocksOnPlatform<Platform::GPU_CUDA>([](auto& block) {
-    block.setCollisionO(
-      gpu::cuda::getFusedCollisionO<T,DESCRIPTOR,
-                                    SmagorinskyForcedBGKdynamics<T,DESCRIPTOR>,
-                                    BounceBack<T,DESCRIPTOR>>());
-  });
-#endif
-
   sLattice.setParameter<descriptors::OMEGA>(converter.getLatticeRelaxationFrequency());
-  sLattice.setParameter<collision::LES::Smagorinsky>(0.2);
+  sLattice.setParameter<collision::LES::Smagorinsky>(T(0.2));
 
   prepareFallingDrop(converter, sLattice, superGeometry, lattice_size, helper);
   clout << "Prepare Lattice ... OK" << std::endl;
@@ -239,7 +228,7 @@ void getResults( SuperLattice<T,DESCRIPTOR>& sLattice,
   const int statIter = 500;
 
   if ( iT==0 ) {
-    SuperVTMwriter2D<T> vtmWriter( "freeSurface" );
+    SuperVTMwriter2D<T> vtmWriter( "fallingDrop2d" );
     // Writes the geometry, cuboid no. and rank no. as vti file for visualization
     SuperLatticeGeometry2D<T, DESCRIPTOR> geometry( sLattice, superGeometry );
     SuperLatticeCuboid2D<T, DESCRIPTOR> cuboid( sLattice );
@@ -255,7 +244,7 @@ void getResults( SuperLattice<T,DESCRIPTOR>& sLattice,
   if ( iT%vtmIter==0 ) {
     sLattice.setProcessingContext(ProcessingContext::Evaluation);
 
-    SuperVTMwriter2D<T> vtmWriter( "freeSurface" );
+    SuperVTMwriter2D<T> vtmWriter( "fallingDrop2d" );
     SuperLatticePhysVelocity2D<T, DESCRIPTOR> velocity( sLattice, converter );
     SuperLatticePhysPressure2D<T, DESCRIPTOR> pressure( sLattice, converter );
     SuperLatticePhysField2D<T, DESCRIPTOR, descriptors::FORCE> force(sLattice, converter.getConversionFactorForce());
@@ -291,12 +280,12 @@ void getResults( SuperLattice<T,DESCRIPTOR>& sLattice,
 namespace {
 
 FreeSurfaceAppHelper free_surface_config {
-  {0.03,0.025},
-  {0.,-9.81},
-  0.03,
-  2.0,
-  true,
-  0.0663
+  {0.03,0.025}, // area
+  {0.,-9.81}, // gravity_force
+  0.03, // char_phys_length
+  2.0, // char_phys_vel
+  true, // has_surface_tension
+  0.0663 // surface_tension_coefficient
 };
 
 class FreeSurfaceConfig {
@@ -305,7 +294,7 @@ public:
   T density = 1e3;
   T physTime = 0.05;
   T latticeRelaxationTime = .516;
-  int N = 512;
+  int N = 526;
 
   // Anti jitter value
   T transitionThreshold = 1e-3;
@@ -389,15 +378,19 @@ int main(int argc, char **argv)
   ***** 6 - lattice force conversion factor
   ***** 7 - lattice length
   */
-  FreeSurface2DSetup<T,DESCRIPTOR> free_surface_setup{sLattice,
-    FreeSurface2D::Variables<T>{
-      true, c.transitionThreshold, c.lonelyThreshold, helper.has_surface_tension, 
-      surface_tension_coefficient_factor * helper.surface_tension_coefficient, 
-      force_conversion_factor, converter.getPhysDeltaX()
-    }
-  };
+  FreeSurface2DSetup<T,DESCRIPTOR> free_surface_setup{sLattice};
 
   free_surface_setup.addPostProcessor();
+
+  // Set variables from freeSurfaceHelpers.h
+  sLattice.setParameter<FreeSurface::DROP_ISOLATED_CELLS>(true);
+  sLattice.setParameter<FreeSurface::TRANSITION>(c.transitionThreshold);
+  sLattice.setParameter<FreeSurface::LONELY_THRESHOLD>(c.lonelyThreshold);
+  sLattice.setParameter<FreeSurface::HAS_SURFACE_TENSION>(helper.has_surface_tension);
+  sLattice.setParameter<FreeSurface::SURFACE_TENSION_PARAMETER>(surface_tension_coefficient_factor * helper.surface_tension_coefficient);
+  sLattice.setParameter<FreeSurface::FORCE_CONVERSION_FACTOR>(force_conversion_factor);
+  sLattice.setParameter<FreeSurface::LATTICE_SIZE>(converter.getPhysDeltaX());
+
 
   // === 4th Step: Main Loop with Timer ===
   clout << "starting simulation..." << std::endl;

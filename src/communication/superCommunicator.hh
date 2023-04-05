@@ -56,13 +56,14 @@ SuperCommunicator<T,SUPER>::SuperCommunicator(
   auto& load = _super.getLoadBalancer();
 
   for (int iC = 0; iC < load.size(); ++iC) {
-    _blockNeighborhoods.emplace_back(  cuboidGeometry
-                                     , load, load.glob(iC)
-                                     , _super.getOverlap()
+    _blockNeighborhoods.emplace_back(
+      std::make_unique<BlockCommunicationNeighborhood<T,SUPER::d>>( cuboidGeometry
+                                                                  , load, load.glob(iC)
+                                                                  , _super.getOverlap()
 #ifdef PARALLEL_MODE_MPI
-                                     , _neighborhoodComm
+                                                                  , _neighborhoodComm
 #endif
-                                     );
+    ));
   }
 }
 
@@ -81,33 +82,34 @@ void SuperCommunicator<T,SUPER>::exchangeRequests()
   auto& load = _super.getLoadBalancer();
 
   for (int iC = 0; iC < load.size(); ++iC) {
-    _blockNeighborhoods[iC].maintain();
+    _blockNeighborhoods[iC]->maintain();
   }
 
   for (int iC = 0; iC < load.size(); ++iC) {
     for (std::type_index field : _fieldsRequested) {
-      _blockNeighborhoods[iC].setFieldAvailability(
+      _blockNeighborhoods[iC]->setFieldAvailability(
         field, _super.getBlock(iC).hasCommunicatable(field));
     }
-  }
-
-  for (int iC = 0; iC < load.size(); ++iC) {
-    _blockNeighborhoods[iC].forLocalNeighbors([&](int localC) {
-      _blockNeighborhoods[iC].setFieldsAvailability(localC, _super.getBlock(load.loc(localC)));
-    });
   }
 
 #ifdef PARALLEL_MODE_MPI
   _tagCoordinator.template coordinate<SUPER::d>(_blockNeighborhoods);
 
   for (int iC = 0; iC < load.size(); ++iC) {
-    _blockNeighborhoods[iC].send(_tagCoordinator);
+    _blockNeighborhoods[iC]->send(_tagCoordinator);
   }
   for (int iC = 0; iC < load.size(); ++iC) {
-    _blockNeighborhoods[iC].receive(_tagCoordinator);
+    _blockNeighborhoods[iC]->receive(_tagCoordinator);
   }
   for (int iC = 0; iC < load.size(); ++iC) {
-    _blockNeighborhoods[iC].wait();
+    _blockNeighborhoods[iC]->wait();
+  }
+
+#else // not using PARALLEL_MODE_MPI
+  for (int iC = 0; iC < load.size(); ++iC) {
+    _blockNeighborhoods[iC]->forNeighbors([&](int localC) {
+      _blockNeighborhoods[iC]->setFieldsAvailability(localC, _super.getBlock(load.loc(localC)));
+    });
   }
 #endif
 
@@ -127,13 +129,13 @@ void SuperCommunicator<T,SUPER>::exchangeRequests()
           _communicatorComm,
 #endif
           iC,
-          _blockNeighborhoods[iC]);
+          *_blockNeighborhoods[iC]);
       });
   }
 
 #ifdef PARALLEL_MODE_MPI
   for (int iC = 0; iC < load.size(); ++iC) {
-    _blockNeighborhoods[iC].forRemoteNeighbors([&](int remoteC) {
+    _blockNeighborhoods[iC]->forNeighbors([&](int remoteC) {
       _remoteCuboidNeighborhood.emplace(remoteC);
     });
   }
@@ -145,7 +147,7 @@ void SuperCommunicator<T,SUPER>::exchangeRequests()
 template <typename T, typename SUPER>
 void SuperCommunicator<T,SUPER>::requestCell(LatticeR<SUPER::d+1> latticeR)
 {
-  _blockNeighborhoods[latticeR[0]].requestCell(latticeR.data()+1);
+  _blockNeighborhoods[latticeR[0]]->requestCell(latticeR.data()+1);
   _ready = false;
   _enabled = true;
 }
@@ -155,10 +157,32 @@ void SuperCommunicator<T,SUPER>::requestOverlap(int width)
 {
   auto& load = _super.getLoadBalancer();
   for (int iC = 0; iC < load.size(); ++iC) {
-    _blockNeighborhoods[iC].requestOverlap(width);
+    _blockNeighborhoods[iC]->requestOverlap(width);
   }
   _ready = false;
   _enabled = true;
+}
+
+template <typename T, typename SUPER>
+void SuperCommunicator<T,SUPER>::requestOverlap(int width, FunctorPtr<SuperIndicatorF<T,SUPER::d>>&& indicatorF)
+{
+  auto& load = _super.getLoadBalancer();
+  for (int iC = 0; iC < load.size(); ++iC) {
+    _blockNeighborhoods[iC]->requestOverlap(width, indicatorF->getBlockIndicatorF(iC));
+  }
+  _ready = false;
+  _enabled = true;
+}
+
+template <typename T, typename SUPER>
+void SuperCommunicator<T,SUPER>::clearRequestedCells()
+{
+  auto& load = _super.getLoadBalancer();
+  for (int iC = 0; iC < load.size(); ++iC) {
+    _blockNeighborhoods[iC]->clearRequestedCells();
+  }
+  _ready = false;
+  _enabled = false;
 }
 
 template <typename T, typename SUPER>
@@ -170,10 +194,6 @@ void SuperCommunicator<T,SUPER>::communicate()
   if (!_ready) {
     throw std::logic_error("Requests must be re-exchanged after any changes");
   }
-
-#ifdef PLATFORM_GPU_CUDA
-  gpu::cuda::device::synchronize();
-#endif
 
   auto& load = _super.getLoadBalancer();
 #ifdef PARALLEL_MODE_MPI
@@ -187,17 +207,11 @@ void SuperCommunicator<T,SUPER>::communicate()
     _blockCommunicators[iC]->unpack();
   }
   for (int iC = 0; iC < load.size(); ++iC) {
-    _blockCommunicators[iC]->copy();
-  }
-  for (int iC = 0; iC < load.size(); ++iC) {
     _blockCommunicators[iC]->wait();
   }
-#else // PARALLEL_MODE_MPI
+#else // not using PARALLEL_MODE_MPI
   for (int iC = 0; iC < load.size(); ++iC) {
     _blockCommunicators[iC]->copy();
-  }
-  for (int iC = 0; iC < load.size(); ++iC) {
-    _blockCommunicators[iC]->wait();
   }
 #endif
 }

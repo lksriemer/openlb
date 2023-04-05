@@ -196,7 +196,7 @@ bool IndicatorF3D<S>::normal(Vector<S,3>& normal, const Vector<S,3>& origin, con
   for (int n: {
          0,120,240
        }) {
-    S thetaMain = n*M_PI/180.;
+    S thetaMain = util::degreeToRadian(n);
 
     /// rotate directionPerpN through 3 angles {0,120,240}
     Vector<S,3> perp;
@@ -224,7 +224,7 @@ bool IndicatorF3D<S>::normal(Vector<S,3>& normal, const Vector<S,3>& origin, con
 
     /// Find 'positive' angle
     Vector<S,3> testPOS;
-    S testAngle(45.*M_PI/180.);
+    S testAngle(0.25*M_PI);
     rotOnAxis(testPOS, perp, rotAxis, testAngle);
     Vector<S,3> testPoint( POS + testPOS);
     //std::cout << "testPOS = [" << testPOS[0] << "," << testPOS[1]  << "," << testPOS[2] << "]" << std::endl;
@@ -243,7 +243,7 @@ bool IndicatorF3D<S>::normal(Vector<S,3>& normal, const Vector<S,3>& origin, con
 
     while (util::abs(pitch) >= precision) {
 
-      S theta(pitch*M_PI/180);
+      S theta(util::degreeToRadian(pitch));
 
       currentPoint = POS + vec;
       (*this)(&currentValue, currentPoint.data());

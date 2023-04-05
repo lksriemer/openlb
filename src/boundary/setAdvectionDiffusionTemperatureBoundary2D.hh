@@ -33,14 +33,14 @@ namespace olb {
 
 ///Initialising the AdvectionDiffusionTemperatureBoundary on the superLattice domain
 template<typename T, typename DESCRIPTOR, typename MixinDynamics>
-void setAdvectionDiffusionTemperatureBoundary(SuperLattice<T, DESCRIPTOR>& sLattice,T omega,SuperGeometry<T,2>& superGeometry, int material)
+void setAdvectionDiffusionTemperatureBoundary(SuperLattice<T, DESCRIPTOR>& sLattice,T omega,SuperGeometry<T,2>& superGeometry, int material, bool neumann)
 {
-  setAdvectionDiffusionTemperatureBoundary<T,DESCRIPTOR,MixinDynamics>(sLattice, omega, superGeometry.getMaterialIndicator(material));
+  setAdvectionDiffusionTemperatureBoundary<T,DESCRIPTOR,MixinDynamics>(sLattice, omega, superGeometry.getMaterialIndicator(material), neumann);
 }
 
 ///Initialising the AdvectionDiffusionTemperatureBoundary on the superLattice domain
 template<typename T, typename DESCRIPTOR, typename MixinDynamics>
-void setAdvectionDiffusionTemperatureBoundary(SuperLattice<T, DESCRIPTOR>& sLattice,T omega,FunctorPtr<SuperIndicatorF2D<T>>&& indicator)
+void setAdvectionDiffusionTemperatureBoundary(SuperLattice<T, DESCRIPTOR>& sLattice,T omega,FunctorPtr<SuperIndicatorF2D<T>>&& indicator, bool neumann)
 {
   OstreamManager clout(std::cout, "setAdvectionDiffusionTemperatureBoundary");
 
@@ -52,7 +52,7 @@ void setAdvectionDiffusionTemperatureBoundary(SuperLattice<T, DESCRIPTOR>& sLatt
   }
   for (int iCloc = 0; iCloc < sLattice.getLoadBalancer().size(); ++iCloc) {
     setAdvectionDiffusionTemperatureBoundary<T,DESCRIPTOR,MixinDynamics>(sLattice.getBlock(iCloc), omega,
-        indicator->getBlockIndicatorF(iCloc), includeOuterCells);
+        indicator->getBlockIndicatorF(iCloc), includeOuterCells, neumann);
   }
   /// Adds needed Cells to the Communicator _commBC in SuperLattice
   addPoints2CommBC(sLattice, std::forward<decltype(indicator)>(indicator), _overlap);
@@ -62,7 +62,7 @@ void setAdvectionDiffusionTemperatureBoundary(SuperLattice<T, DESCRIPTOR>& sLatt
 ///set AdvectionDiffusionTemperature boundary on indicated cells inside the block domains
 template<typename T, typename DESCRIPTOR, typename MixinDynamics>
 void setAdvectionDiffusionTemperatureBoundary(BlockLattice<T,DESCRIPTOR>& block, T omega, BlockIndicatorF2D<T>& indicator,
-    bool includeOuterCells)
+    bool includeOuterCells, bool neumann)
 {
   using namespace boundaryhelper;
   auto& blockGeometryStructure = indicator.getBlockGeometry();
@@ -71,9 +71,18 @@ void setAdvectionDiffusionTemperatureBoundary(BlockLattice<T,DESCRIPTOR>& block,
   blockGeometryStructure.forSpatialLocations([&](auto iX, auto iY) {
     if (blockGeometryStructure.getNeighborhoodRadius({iX, iY}) >= margin
         && indicator(iX, iY)) {
-      Dynamics<T,DESCRIPTOR>* dynamics = nullptr;
-      PostProcessorGenerator2D<T,DESCRIPTOR>* postProcessor = nullptr;
       discreteNormal = indicator.getBlockGeometry().getStatistics().getType(iX,iY);
+      Dynamics<T,DESCRIPTOR>* dynamics = nullptr;
+
+      if (neumann){
+        block.addPostProcessor(
+          typeid(stage::PostStream), {iX,iY},
+          promisePostProcessorForNormal<T, DESCRIPTOR, NeumannBoundarySingleLatticePostProcessor2D>(
+            Vector <int,2> (discreteNormal.data()+1)
+          )
+        );
+      }
+
       if (discreteNormal[0] == 0) {
           dynamics = block.getDynamics(DirectionOrientationMixinDynamicsForPlainMomenta<T,DESCRIPTOR,
             AdvectionDiffusionBoundariesDynamics,MixinDynamics,momenta::EquilibriumBoundaryTuple
@@ -85,7 +94,7 @@ void setAdvectionDiffusionTemperatureBoundary(BlockLattice<T,DESCRIPTOR>& block,
           >::construct(Vector<int,2>(discreteNormal.data() + 1)));
       }
       dynamics->getParameters(block).template set<descriptors::OMEGA>(omega);
-      setBoundary(block, iX,iY, dynamics, postProcessor);
+      setBoundary(block, iX,iY, dynamics);
     }
   });
 }

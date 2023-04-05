@@ -47,12 +47,15 @@ struct OMEGA_MIN : public descriptors::FIELD_BASE<1> { };
 struct OMEGA_MAX : public descriptors::FIELD_BASE<1> { };
 struct M : public descriptors::FIELD_BASE<1> { };
 struct N : public descriptors::FIELD_BASE<1> { };
+// The following is used for Herschel-Bulkley only
+struct YIELD_STRESS : public descriptors::FIELD_BASE<1> { };
+struct SHEAR_RATE_MIN : public descriptors::FIELD_BASE<1> { };
 
 /// Compute and update cell-wise OMEGA using Oswald-de-waele model
-template <typename COLLISION>
+template <typename COLLISION, bool HERSCHELBULKLEY=false>
 struct OmegaFromCell {
   using parameters = typename COLLISION::parameters::template include<
-    descriptors::OMEGA, OMEGA_MIN, OMEGA_MAX, M, N
+    descriptors::OMEGA, OMEGA_MIN, OMEGA_MAX, M, N, YIELD_STRESS, SHEAR_RATE_MIN
   >;
 
   static std::string getName()
@@ -67,17 +70,29 @@ struct OmegaFromCell {
     V pre2 = V{0.5} * descriptors::invCs2<V,DESCRIPTOR>() * omega0 / rho; // strain rate tensor prefactor
     pre2 *= pre2;
     V gamma{};
-    if constexpr (DESCRIPTOR::template provides<descriptors::FORCE>()) {
-      // Cannot be done in just one line, it gives error - I don't know why. Davide Dapelo
-      const auto force = cell.template getField<descriptors::FORCE>();
-      gamma = util::sqrt(V{2}*pre2*lbm<DESCRIPTOR>::computePiNeqNormSqr(cell, force));
+    if constexpr (DESCRIPTOR::template provides<descriptors::SHEAR_RATE_MAGNITUDE>()) {
+      gamma = cell.template getField<descriptors::SHEAR_RATE_MAGNITUDE>();
     }
     else {
-      gamma = util::sqrt(V{2}*pre2*lbm<DESCRIPTOR>::computePiNeqNormSqr(cell));
+      if constexpr (DESCRIPTOR::template provides<descriptors::FORCE>()) {
+        // Cannot be done in just one line, it gives error - I don't know why. Davide Dapelo
+        const auto force = cell.template getField<descriptors::FORCE>();
+        gamma = util::sqrt(V{2}*pre2*lbm<DESCRIPTOR>::computePiNeqNormSqr(cell, force));
+      }
+      else {
+        gamma = util::sqrt(V{2}*pre2*lbm<DESCRIPTOR>::computePiNeqNormSqr(cell));
+      }
+    }
+    if constexpr(HERSCHELBULKLEY) {
+      gamma = util::max(parameters.template get<SHEAR_RATE_MIN>(), gamma);
     }
     V m = parameters.template get<M>();
     V n = parameters.template get<N>();
-    V nuNew = m * util::pow(gamma, n-V{1}); // nu for non-Newtonian fluid
+    V nuNew = m * util::pow(gamma, n-V{1}); // Ostwald-de Waele relation
+    if constexpr(HERSCHELBULKLEY) {
+      // Second term necessary for Herschel-Bulkley relation
+      nuNew += parameters.template get<YIELD_STRESS>() / gamma;
+    }
     V newOmega = V{1} / (nuNew*descriptors::invCs2<V,DESCRIPTOR>() + V{0.5});
     V omegaMax = parameters.template get<OMEGA_MAX>();
     newOmega = util::min(newOmega, omegaMax);
@@ -105,11 +120,13 @@ struct OmegaFromCell {
   };
 };
 
+
+template <int... NORMAL>
+struct PRESSURE_OFFSET : public descriptors::FIELD_BASE<1> { };
+
 /// Combination rule to realize a pressure drop at a periodic boundary
 template <int... NORMAL>
 struct PeriodicPressureOffset {
-  struct OFFSET : public descriptors::FIELD_BASE<1> { };
-
   static std::string getName()
   {
     return "PeriodicPressureOffset";
@@ -131,7 +148,7 @@ struct PeriodicPressureOffset {
       static constexpr auto populations = util::populationsContributingToDirection<DESCRIPTOR, NORMAL...>();
 
       auto statistic = CollisionO().apply(cell, parameters);
-      const V densityOffset = parameters.template get<OFFSET>();
+      const V densityOffset = parameters.template get<PRESSURE_OFFSET<NORMAL...>>();
       for (unsigned iPop : populations) {
         cell[iPop] += (cell[iPop] + descriptors::t<V,DESCRIPTOR>(iPop)) * densityOffset;
       }
@@ -140,7 +157,8 @@ struct PeriodicPressureOffset {
   };
 
   template <typename DESCRIPTOR, typename MOMENTA, typename EQUILIBRIUM, typename COLLISION>
-  using combined_parameters = typename COLLISION::parameters::template include<OFFSET>;
+  using combined_parameters = typename COLLISION::parameters
+                                                ::template include<PRESSURE_OFFSET<NORMAL...>>;
 };
 
 }
@@ -151,7 +169,7 @@ using PowerLawBGKdynamics = dynamics::Tuple<
   T, DESCRIPTOR,
   MOMENTA,
   equilibria::SecondOrder,
-  powerlaw::OmegaFromCell<collision::BGK>
+  powerlaw::OmegaFromCell<collision::BGK,false>
 >;
 
 /// BGK collision using Power Law collision frequency with Guo forcing
@@ -160,7 +178,26 @@ using PowerLawForcedBGKdynamics = dynamics::Tuple<
   T, DESCRIPTOR,
   MOMENTA,
   equilibria::SecondOrder,
-  powerlaw::OmegaFromCell<collision::BGK>,
+  powerlaw::OmegaFromCell<collision::BGK,false>,
+  forcing::Guo<momenta::ForcedWithStress>
+>;
+
+/// BGK collision using Power Law (Herschel Bulkley) collision frequency
+template <typename T, typename DESCRIPTOR, typename MOMENTA=momenta::BulkTuple>
+using PowerLawHerschelBulkleyBGKdynamics = dynamics::Tuple<
+  T, DESCRIPTOR,
+  MOMENTA,
+  equilibria::SecondOrder,
+  powerlaw::OmegaFromCell<collision::BGK,true>
+>;
+
+/// BGK collision using Power Law (Herschel Bulkley) collision frequency with Guo forcing
+template <typename T, typename DESCRIPTOR, typename MOMENTA=momenta::BulkTuple>
+using PowerLawHerschelBulkleyForcedBGKdynamics = dynamics::Tuple<
+  T, DESCRIPTOR,
+  MOMENTA,
+  equilibria::SecondOrder,
+  powerlaw::OmegaFromCell<collision::BGK,true>,
   forcing::Guo<momenta::ForcedWithStress>
 >;
 

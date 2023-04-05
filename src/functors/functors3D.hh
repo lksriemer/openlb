@@ -29,4 +29,4 @@
 #include "groupedFieldF.hh"
 #include "analytical/functors3D.hh"
 #include "lattice/functors3D.hh"
-//#include "particles/particleFunctors.hh"
+#include "particles/particleFunctors.hh"

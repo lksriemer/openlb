@@ -42,7 +42,7 @@ using namespace olb;
 using namespace olb::descriptors;
 using namespace olb::util;
 
-typedef double T;
+using T = FLOATING_POINT_TYPE;
 typedef WallFunctionForcedD3Q19Descriptor DESCRIPTOR;
 
 // Mathmatical constants
@@ -158,7 +158,7 @@ public:
 
   bool operator()(T output[], const S input[])
   {
-    std::uniform_real_distribution<T> distribution(a, b);
+    std::uniform_real_distribution<BaseType<T>> distribution(a, b);
     T nRandom1 = distribution(generator);
     T nRandom2 = distribution(generator);
     T nRandom3 = distribution(generator);
@@ -284,8 +284,6 @@ void prepareLattice(SuperLattice<T,DESCRIPTOR>& sLattice,
   OstreamManager clout(std::cout,"prepareLattice");
   clout << "Prepare Lattice ..." << std::endl;
 
-  /// Material=0 -->do nothing
-  sLattice.defineDynamics<NoDynamics>(superGeometry, 0);
   /// Material=1 -->bulk dynamics
   sLattice.defineDynamics<SmagorinskyForcedBGKdynamics>(superGeometry, 1);
   /// Material = 2 --> boundary node + wallfunction
@@ -296,7 +294,7 @@ void prepareLattice(SuperLattice<T,DESCRIPTOR>& sLattice,
   setInitialConditions(sLattice, converter, superGeometry, forceSolScaled, forceSol);
 
   sLattice.setParameter<descriptors::OMEGA>( converter.getLatticeRelaxationFrequency() );
-  sLattice.setParameter<collision::LES::Smagorinsky>(0.12);
+  sLattice.setParameter<collision::LES::Smagorinsky>(T(0.12));
 
   // Make the lattice ready for simulation
   sLattice.initialize();

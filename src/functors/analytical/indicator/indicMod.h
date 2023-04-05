@@ -24,21 +24,51 @@
 #ifndef INDIC_MOD_H
 #define INDIC_MOD_H
 
+#include "sdf.h"
 #include "utilities/aliases.h"
 #include "utilities/functorPtr.h"
-#include "sdf.h"
 
 namespace olb {
 
 template <typename S, unsigned D>
-class IndicInverse : public IndicatorF<S,D> {
+class IndicInverse : public IndicatorF<S, D> {
 protected:
-  FunctorPtr<IndicatorF<S,D>> _f;
+  FunctorPtr<IndicatorF<S, D>> _f;
+
 public:
-  IndicInverse( FunctorPtr<IndicatorF<S,D>> f, PhysR<S,D> min, PhysR<S,D> max );
-  S signedDistance( const Vector<S,D>& input );
-  //bool operator() (bool output[], const S input[]) override;
+  IndicInverse(FunctorPtr<IndicatorF<S, D>> f, PhysR<S, D> min,
+               PhysR<S, D> max);
+  IndicInverse(FunctorPtr<IndicatorF<S, D>> f);
+  S signedDistance(const Vector<S, D>& input);
 };
 
-}
+template <typename S, unsigned D>
+class IndicScale : public IndicatorF<S, D> {
+protected:
+  FunctorPtr<IndicatorF<S, D>> _f;
+  S                            _scalingFactor;
+
+public:
+  IndicScale(FunctorPtr<IndicatorF<S, D>> f, S scalingFactor = S {1});
+  void setScalingFactor(const S scalingFactor);
+  S getScalingFactor();
+  Vector<S,D> getEstimatedCenter();
+  S    signedDistance(const Vector<S, D>& input);
+};
+
+template <typename S, unsigned D>
+class IndicElongation : public IndicatorF<S, D> {
+protected:
+  FunctorPtr<IndicatorF<S, D>> _f;
+  Vector<S,D>                  _elongation;
+
+public:
+  IndicElongation(FunctorPtr<IndicatorF<S, D>> f, const Vector<S,D>& elongation = Vector<S,D>(0.));
+  void setElongation(const Vector<S,D>& elongation);
+  Vector<S,D> getElongation();
+  Vector<S,D> getEstimatedCenter();
+  S    signedDistance(const Vector<S, D>& input);
+};
+
+} // namespace olb
 #endif

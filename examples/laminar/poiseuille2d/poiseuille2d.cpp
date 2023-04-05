@@ -29,8 +29,13 @@
  */
 
 // the main code of the simulation is in poiseuille2d.h as it is also used by the
-// example poiseuille2dEOC
+// example poiseuille2dEoc
+
+// set flag in order to use mrt collision operators instead of bgk
+//#define ENABLE_MRT
+
 #include "poiseuille2d.h"
+
 //Initialize Gnuplot
 static Gnuplot<T> gplot("centerVelocity");
 
@@ -39,50 +44,14 @@ int main( int argc, char* argv[] )
   // === 1st Step: Initialization ===
   olbInit( &argc, &argv );
   singleton::directories().setOutputDir( "./tmp/" );
-  OstreamManager clout( std::cout,"main" );
 
   // Simulation parameter
   int N = 50;
+  int status = readParameters(argc, argv, N, flowType, boundaryType);
+  if (status != 0) {
+    return status;
+  }
   bool eoc = false;
 
-  if (argc > 1) {
-    if (argv[1][0]=='-'&&argv[1][1]=='h') {
-      OstreamManager clout( std::cout,"help" );
-      clout<<"Usage: program [Resolution] [FlowType] [BoundaryType]"<<std::endl;
-      clout<<"FlowType: 0=forced, 1=nonForced"<<std::endl;
-      clout<<"BoundaryType: 0=bounceBack, 1=local, " 
-           <<"2=interpolated, 3=freeSlip, 4=partialSlip"<<std::endl;
-      clout<<"Default: Resolution=50, FlowType=forced, "
-           <<"BoundaryType=interpolated"<<std::endl;
-      return 0;
-    }
-  }
-
-  if (argc > 1) {
-    N = atoi(argv[1]);
-    if (N < 1) {
-      std::cerr << "Fluid domain is too small" << std::endl;
-      return 1;
-    }
-  }
-
-  if (argc > 2) {
-    int flowTypeNumber = atoi(argv[2]);
-    if (flowTypeNumber < 0 || flowTypeNumber > (int)nonForced) {
-      std::cerr << "Unknown fluid flow type" << std::endl;
-      return 2;
-    }
-    flowType = (FlowType) flowTypeNumber;
-  }
-
-  if (argc > 3) {
-    int boundaryTypeNumber = atoi(argv[3]);
-    if (boundaryTypeNumber < 0 || boundaryTypeNumber > (int) partialSlip) {
-      std::cerr << "Unknown boundary type" << std::endl;
-      return 3;
-    }
-    boundaryType = (BoundaryType) boundaryTypeNumber;
-  }
-  
   simulatePoiseuille(N, gplot, eoc);
 }

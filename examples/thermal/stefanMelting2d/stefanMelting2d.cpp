@@ -48,7 +48,7 @@ using namespace olb;
 using namespace olb::descriptors;
 using namespace olb::graphics;
 
-using T = double;
+using T = FLOATING_POINT_TYPE;
 
 using NSDESCRIPTOR = D2Q9<POROSITY,VELOCITY_SOLID,FORCE>;
 using TDESCRIPTOR  = D2Q5<VELOCITY,TEMPERATURE>;
@@ -261,11 +261,8 @@ void prepareLattice( ThermalUnitConverter<T, NSDESCRIPTOR, TDESCRIPTOR> const& c
   T Tomega  = converter.getLatticeThermalRelaxationFrequency();
   T NSomega = converter.getLatticeRelaxationFrequency();
 
-  ADlattice.defineDynamics<NoDynamics>(superGeometry, 0);
-  NSlattice.defineDynamics<NoDynamics>(superGeometry, 0);
-
   ADlattice.defineDynamics<TotalEnthalpyAdvectionDiffusionDynamics>(superGeometry, 1);
-  ADlattice.defineDynamics<BounceBack>(superGeometry, 2);
+  setBounceBackBoundary(ADlattice, superGeometry, 2);
   ADlattice.defineDynamics<TotalEnthalpyAdvectionDiffusionDynamics>(superGeometry, 3);
   NSlattice.defineDynamics<ForcedPSMBGKdynamics>(superGeometry, 1);
   NSlattice.defineDynamics<ForcedPSMBGKdynamics>(superGeometry, 2);
@@ -335,7 +332,7 @@ void getResults(ThermalUnitConverter<T, NSDESCRIPTOR, TDESCRIPTOR> const& conver
 {
   OstreamManager clout(std::cout,"getResults");
 
-  SuperVTMwriter2D<T> vtkWriter("stefanMelting1d");
+  SuperVTMwriter2D<T> vtkWriter("stefanMelting2d");
   SuperLatticeGeometry2D<T, NSDESCRIPTOR> geometry2(NSlattice, superGeometry);
   SuperLatticePhysVelocity2D<T, NSDESCRIPTOR> velocity(NSlattice, converter);
   SuperLatticePhysPressure2D<T, NSDESCRIPTOR> pressure(NSlattice, converter);

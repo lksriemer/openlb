@@ -95,6 +95,18 @@ public:
   bool operator() (bool output[], const int input[]) override;
 };
 
+/// Indicator extended by a layer
+template <typename T>
+class SuperIndicatorLayer3D : public SuperIndicatorF3D<T> {
+private:
+  FunctorPtr<SuperIndicatorF3D<T>> _indicatorF;
+
+public:
+  SuperIndicatorLayer3D(FunctorPtr<SuperIndicatorF3D<T>>&& indicatorF);
+
+  using SuperIndicatorF3D<T>::operator();
+  bool operator() (bool output[], const int input[]) override;
+};
 
 /// Indicator identity functor
 /**
@@ -108,6 +120,20 @@ protected:
   FunctorPtr<SuperIndicatorF3D<T>> _indicatorF;
 public:
   SuperIndicatorIdentity3D(FunctorPtr<SuperIndicatorF3D<T>>&& indicatorF);
+
+  using SuperIndicatorF3D<T>::operator();
+  bool operator() (bool output[], const int input[]) override;
+};
+
+/// Indicator intersection functor
+template <typename T>
+class SuperIndicatorMultiplication3D : public SuperIndicatorF3D<T> {
+protected:
+  FunctorPtr<SuperIndicatorF3D<T>> _f;
+  FunctorPtr<SuperIndicatorF3D<T>> _g;
+public:
+  SuperIndicatorMultiplication3D(FunctorPtr<SuperIndicatorF3D<T>>&& f,
+    FunctorPtr<SuperIndicatorF3D<T>>&& g);
 
   using SuperIndicatorF3D<T>::operator();
   bool operator() (bool output[], const int input[]) override;

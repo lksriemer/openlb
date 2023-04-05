@@ -25,7 +25,7 @@
 #define DYNAMICS_INTERFACE_H
 
 #include "lbm.h"
-#include "core/fieldParametersD.h"
+#include "core/concepts.h"
 #include "momenta/interface.h"
 
 #include <type_traits>
@@ -114,7 +114,7 @@ struct Dynamics {
   };
   /// Initialize cell to equilibrium and non-equilibrum part
   void iniRegularized(Cell<T,DESCRIPTOR>& cell,
-                      T rho, const T u[DESCRIPTOR::d], const T pi[util::TensorVal<DESCRIPTOR>::n]) {
+                      T rho, const T u[DESCRIPTOR::d], const T pi[util::TensorVal<DESCRIPTOR>::n])  {
     iniEquilibrium(cell, rho, u);
     for (unsigned iPop=0; iPop < DESCRIPTOR::q; ++iPop) {
       cell[iPop] += equilibrium<DESCRIPTOR>::template fromPiToFneq<T>(iPop, pi);
@@ -122,7 +122,8 @@ struct Dynamics {
   };
   /// Calculate population momenta s.t. the physical momenta are reproduced by the computeRhoU
   // This is relevant for correct initialization for some forcing/ sourcing schemes
-  virtual void inverseShiftRhoU(ConstCell<T,DESCRIPTOR>& cell, T& rho, T u[DESCRIPTOR::d]) const {}
+  virtual void inverseShiftRhoU(ConstCell<T,DESCRIPTOR>& cell, T& rho, T u[DESCRIPTOR::d]) const { };
+
 };
 
 namespace dynamics {
@@ -178,17 +179,12 @@ template <
   typename MOMENTA, typename EQUILIBRIUM, typename COLLISION,
   typename COMBINATION_RULE = DefaultCombination
 >
-class Tuple final : public Dynamics<T,DESCRIPTOR> {
-private:
-  using Parameters = typename COMBINATION_RULE::template combined_parameters<DESCRIPTOR,MOMENTA,EQUILIBRIUM,COLLISION>;
-
-public:
+struct Tuple final : public Dynamics<T,DESCRIPTOR> {
   using MomentaF     = typename COMBINATION_RULE::template combined_momenta<DESCRIPTOR,MOMENTA>;
   using EquilibriumF = typename COMBINATION_RULE::template combined_equilibrium<DESCRIPTOR,MOMENTA,EQUILIBRIUM>;
   using CollisionO   = typename COMBINATION_RULE::template combined_collision<DESCRIPTOR,MOMENTA,EQUILIBRIUM,COLLISION>;
-  using ParametersD  = typename Parameters::template decompose_into<
-    ParametersD<T,DESCRIPTOR>::template include_fields
-  >;
+
+  using parameters = typename COMBINATION_RULE::template combined_parameters<DESCRIPTOR,MOMENTA,EQUILIBRIUM,COLLISION>;
 
   constexpr static bool is_vectorizable = is_vectorizable_v<CollisionO>;
 
@@ -222,12 +218,12 @@ public:
   /// Return true iff FIELD is a parameter
   template <typename FIELD>
   constexpr bool hasParameter() const {
-    return Parameters::template contains<FIELD>();
+    return parameters::template contains<FIELD>();
   };
 
   /// Interim workaround for accessing dynamics parameters in legacy post processors
   AbstractParameters<T,DESCRIPTOR>& getParameters(BlockLattice<T,DESCRIPTOR>& block) override {
-    return block.template getData<DynamicsParameters<Tuple>>();
+    return block.template getData<OperatorParameters<Tuple>>();
   }
 
   /// Initialize MOMENTA-specific data for cell
@@ -236,9 +232,12 @@ public:
   };
 
   /// Apply purely-local collision step to a generic CELL
-  template <typename CELL, typename PARAMETERS, typename V=typename CELL::value_t>
-  CellStatistic<typename CELL::value_t> apply(CELL& cell, PARAMETERS& parameters) any_platform {
-    auto params = static_cast<ParametersD&>(parameters).template copyAs<V>();
+  template <CONCEPT(MinimalCell) CELL, typename PARAMETERS, typename V=typename CELL::value_t>
+  CellStatistic<V> apply(CELL& cell, PARAMETERS& parameters) any_platform {
+    // Copy parameters to enable changes in composed dynamics
+    auto params = static_cast<
+      ParametersOfOperatorD<T,DESCRIPTOR,Tuple>&
+    >(parameters).template copyAs<V>();
     return CollisionO().apply(cell, params);
   };
 
@@ -256,7 +255,7 @@ public:
     MomentaF().computeJ(cell, j);
   };
   void computeStress(ConstCell<T,DESCRIPTOR>& cell,
-                     T rho, const T u[DESCRIPTOR::d], T pi[util::TensorVal<DESCRIPTOR >::n]) const override{
+                     T rho, const T u[DESCRIPTOR::d], T pi[util::TensorVal<DESCRIPTOR >::n]) const override {
     MomentaF().computeStress(cell, rho, u, pi);
   };
   void computeRhoU(ConstCell<T,DESCRIPTOR>& cell, T& rho, T u[DESCRIPTOR::d]) const override {
@@ -287,6 +286,9 @@ public:
 
 template <typename T, typename DESCRIPTOR, typename MOMENTA>
 struct CustomCollision : public Dynamics<T,DESCRIPTOR> {
+  using value_t = T;
+  using descriptor_t = DESCRIPTOR;
+
   using MomentaF = typename MOMENTA::template type<DESCRIPTOR>;
 
   void initialize(Cell<T,DESCRIPTOR>& cell) override {
@@ -332,6 +334,59 @@ struct CustomCollision : public Dynamics<T,DESCRIPTOR> {
   }
 };
 
+/// Set PARAMETER of DYNAMICS from CELL (for CustomCollision-based DYNAMICS)
+/**
+ * Allows for e.g. overriding DYNAMICS-wide relaxation frequency by per-cell values:
+ *
+ * \code
+ * template <typename T, typename DESCRIPTOR>
+ * using PerCellOmegaSourcedAdvectionDiffusionBGKdynamics = dynamics::ParameterFromCell<
+ *   descriptors::OMEGA,
+ *   SourcedAdvectionDiffusionBGKdynamics<T,DESCRIPTOR>
+ * >;
+ * \endcode
+ **/
+template <typename PARAMETER, typename DYNAMICS>
+struct ParameterFromCell final : public CustomCollision<
+  typename DYNAMICS::value_t,
+  typename DYNAMICS::descriptor_t,
+  typename DYNAMICS::MomentaF::abstract
+> {
+  using value_t = typename DYNAMICS::value_t;
+  using descriptor_t = typename DYNAMICS::descriptor_t;
+
+  using MomentaF = typename DYNAMICS::MomentaF;
+
+  using parameters = typename DYNAMICS::parameters;
+
+  template<typename M>
+  using exchange_momenta = ParameterFromCell<PARAMETER,typename DYNAMICS::template exchange_momenta<M>>;
+
+  std::type_index id() override {
+    return typeid(ParameterFromCell);
+  };
+
+  AbstractParameters<value_t,descriptor_t>&
+  getParameters(BlockLattice<value_t,descriptor_t>& block) override {
+    return block.template getData<OperatorParameters<ParameterFromCell>>();
+  }
+
+  template <CONCEPT(MinimalCell) CELL, typename PARAMETERS, typename V=typename CELL::value_t>
+  CellStatistic<V> apply(CELL& cell, PARAMETERS& parameters) {
+    parameters.template set<PARAMETER>(
+      cell.template getField<PARAMETER>());
+    return DYNAMICS().apply(cell, parameters);
+  };
+
+  value_t computeEquilibrium(int iPop, value_t rho, const value_t u[descriptor_t::d]) const override {
+    return DYNAMICS().computeEquilibrium(iPop, rho, u);
+  };
+
+  std::string getName() const override {
+    return "ParameterFromCell<" + DYNAMICS().getName() + ">";
+  };
+
+};
 
 /// DYNAMICS doesn't provide apply method template
 template <typename DYNAMICS, typename CELL, typename PARAMETERS, typename = void>

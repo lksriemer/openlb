@@ -46,8 +46,8 @@ namespace olb {
 
 
 template<typename T, typename W>
-SuperVTMwriter2D<T,W>::SuperVTMwriter2D( std::string name, bool binary )
-  : clout( std::cout,"SuperVTMwriter2D" ), _createFile(false), _name(name), _binary(binary)
+SuperVTMwriter2D<T,W>::SuperVTMwriter2D( std::string name, int overlap, bool binary )
+  : clout( std::cout,"SuperVTMwriter2D" ), _createFile(false), _name(name), _overlap(overlap), _binary(binary)
 {}
 
 template<typename T, typename W>
@@ -72,6 +72,9 @@ void SuperVTMwriter2D<T,W>::write(int iT)
     // problem if functors with different SuperStructure are stored
     // since till now, there is only one origin
     auto it_begin = _pointerVec.cbegin();
+    if (it_begin == _pointerVec.end()) {
+      throw std::runtime_error("No functor to write");
+    }
     CuboidGeometry2D<T> const& cGeometry = (**it_begin).getSuperStructure().getCuboidGeometry();
     // no gaps between vti files (cuboids)
     LoadBalancer<T>& load = (**it_begin).getSuperStructure().getLoadBalancer();
@@ -107,7 +110,7 @@ void SuperVTMwriter2D<T,W>::write(int iT)
       T originPhysR[2] = {T()};
       cGeometry.getPhysR(originPhysR,originLatticeR);
 
-      preambleVTI(fullNameVTI, -1,-1,nx,ny, originPhysR[0],originPhysR[1], delta);
+      preambleVTI(fullNameVTI, -_overlap,-_overlap, nx+_overlap-1, ny+_overlap-1, originPhysR[0],originPhysR[1], delta);
       for (auto it : _pointerVec) {
         if (_binary) {
           dataArrayBinary(fullNameVTI, (*it), load.glob(iCloc), nx,ny);
@@ -167,7 +170,7 @@ void SuperVTMwriter2D<T,W>::write(SuperF2D<T,W>& f, int iT)
     T originPhysR[2] = {T()};
     cGeometry.getPhysR(originPhysR,originLatticeR);
 
-    preambleVTI(fullNameVTI, -1,-1, nx,ny, originPhysR[0],originPhysR[1], delta);
+    preambleVTI(fullNameVTI, -_overlap,-_overlap, nx+_overlap-1, ny+_overlap-1, originPhysR[0],originPhysR[1], delta);
     if (_binary) {
       dataArrayBinary(fullNameVTI, f, load.glob(iCloc), nx,ny);
     }
@@ -234,6 +237,8 @@ template<typename T, typename W>
 void SuperVTMwriter2D<T,W>::preambleVTI (const std::string& fullName,
     int x0, int y0, int x1, int y1, T originX, T originY, T delta)
 {
+  const BaseType<T> d_delta = delta;
+  const BaseType<T> d_origin[2] = {originX, originY};
   std::ofstream fout(fullName, std::ios::trunc);
   if (!fout) {
     clout << "Error: could not open " << fullName << std::endl;
@@ -245,8 +250,8 @@ void SuperVTMwriter2D<T,W>::preambleVTI (const std::string& fullName,
        << x0 <<" "<< x1 <<" "
        << y0 <<" "<< y1 <<" "
        << 0 <<" "<< 0
-       << "\" Origin=\"" << originX << " " << originY << " " << "0"
-       << "\" Spacing=\"" << delta << " " << delta << " " << delta << "\">\n";
+       << "\" Origin=\"" << d_origin[0] << " " << d_origin[1] << " " << "0"
+       << "\" Spacing=\"" << d_delta << " " << d_delta << " " << d_delta << "\">\n";
   fout << "<Piece Extent=\""
        << x0 <<" "<< x1 <<" "
        << y0 <<" "<< y1 <<" "
@@ -372,11 +377,11 @@ void SuperVTMwriter2D<T,W>::dataArray(const std::string& fullName,
   for (int iDim = 0; iDim < f.getTargetDim(); ++iDim) {
     evaluated[iDim] = W();
   }
-  // since cuboid has been blowed up by 1 [every dimension]
-  // looping from -1 to ny (= ny+1, as passed)
+  // since cuboid has been blowed up by _overlap [every dimension]
+  // looping from -_overlap to ny (= ny+_overlap, as passed)
   std::vector<int> tmpVec( 3,int(0) );
-  for (i[2]=-1; i[2] < ny+1; ++i[2]) {
-    for (i[1]=-1; i[1] < nx+1; ++i[1]) {
+  for (i[2]=-_overlap; i[2] < ny+_overlap; ++i[2]) {
+    for (i[1]=-_overlap; i[1] < nx+_overlap; ++i[1]) {
       f(evaluated,i);
       for (int iDim = 0; iDim < f.getTargetDim(); ++iDim) {
         //  tmpVec = {iC,iX,iY,iZ};  // std=c++11
@@ -408,7 +413,7 @@ void SuperVTMwriter2D<T,W>::dataArrayBinary(const std::string& fullName,
     clout << "Error: could not open " << fullName << std::endl;
   }
 
-  size_t fullSize = f.getTargetDim() * (nx+2) * (ny+2);    //  how many numbers to write
+  size_t fullSize = f.getTargetDim() * (nx+2*_overlap) * (ny+2*_overlap);    //  how many numbers to write
   size_t binarySize = size_t( fullSize*sizeof(float) );
   // writes first number, which have to be the size(byte) of the following data
   Base64Encoder<unsigned int> sizeEncoder(ofstr, 1);
@@ -424,8 +429,8 @@ void SuperVTMwriter2D<T,W>::dataArrayBinary(const std::string& fullName,
   }
   int itter = 0;
   std::unique_ptr<float[]> bufferFloat(new float[fullSize]);
-  for (i[2] = -1; i[2] < ny+1; ++i[2]) {
-    for (i[1] = -1; i[1] < nx+1; ++i[1]) {
+  for (i[2] = -_overlap; i[2] < ny+_overlap; ++i[2]) {
+    for (i[1] = -_overlap; i[1] < nx+_overlap; ++i[1]) {
       f(evaluated,i);
       for (int iDim = 0; iDim < f.getTargetDim(); ++iDim) {
         bufferFloat[ itter ] = float( evaluated[iDim] );

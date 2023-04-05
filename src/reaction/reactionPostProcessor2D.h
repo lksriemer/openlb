@@ -37,12 +37,14 @@ namespace olb {
 /*
  * Postprocessor to perform a generic chemical reactions
  */
-template<typename T, typename DESCRIPTOR>
+template<typename T, typename DESCRIPTOR, typename REACTIONS>
 class ReactionPostProcessor2D : public LocalPostProcessor2D<T,DESCRIPTOR> {
 public:
   ReactionPostProcessor2D ( int x0, int x1, int y0, int y1,
-                            std::vector<Rate<T>*> rate, std::vector<std::vector<ReactingSpeciesBase2D<T>*>> species );
-  ReactionPostProcessor2D ( std::vector<Rate<T>*> rate, std::vector<std::vector<ReactingSpeciesBase2D<T>*>> species );
+                            std::vector<std::shared_ptr<Rate<T>>> rate, std::shared_ptr<REACTIONS> reactions,
+                            std::vector<BlockStructureD<2>*> partners );
+  ReactionPostProcessor2D ( std::vector<std::shared_ptr<Rate<T>>> rate, std::shared_ptr<REACTIONS> reactions,
+                            std::vector<BlockStructureD<2>*> partners );
   int extent() const override
   {
     return 1;
@@ -55,23 +57,26 @@ public:
   void processSubDomain ( BlockLattice<T,DESCRIPTOR>& blockLattice,
                           int x0, int x1, int y0, int y1 ) override;
 private:
+  template <typename VECT_TYPE, typename F>
+  void functOverReactions(std::vector<VECT_TYPE>& vect, F&& f);
   int _x0, _x1, _y0, _y1;
-  std::vector<long unsigned> _size;
-  std::vector<Rate<T>*> _rate;
-  std::vector<std::vector<ReactingSpeciesBase2D<T>*>> _species;
+  std::vector<size_t> _sizes;
+  std::vector<std::shared_ptr<Rate<T>>> _rate;
+  std::shared_ptr<REACTIONS> _reactions;
+  std::vector<BlockStructureD<2>*> _partners;
 };
 
-template<typename T, typename DESCRIPTOR>
-class ReactionGenerator2D final : public PostProcessorGenerator2D<T,DESCRIPTOR> {
+template<typename T, typename DESCRIPTOR, typename REACTIONS>
+class ReactionGenerator2D final : public LatticeCouplingGenerator2D<T,DESCRIPTOR> {
 public:
   ReactionGenerator2D ( int x0_, int x1_, int y0_, int y1_,
-                        std::vector<Rate<T>*> rate, std::vector<std::vector<ReactingSpeciesBase2D<T>*>> species );
-  ReactionGenerator2D ( std::vector<Rate<T>*> rate, std::vector<std::vector<ReactingSpeciesBase2D<T>*>> species );
-  PostProcessor2D<T,DESCRIPTOR>* generate() const override;
-  PostProcessorGenerator2D<T,DESCRIPTOR>* clone() const override;
+                        std::vector<std::shared_ptr<Rate<T>>> rate, REACTIONS&& reactions );
+  ReactionGenerator2D ( std::vector<std::shared_ptr<Rate<T>>> rate, REACTIONS&& reactions );
+  PostProcessor2D<T,DESCRIPTOR>* generate(std::vector<BlockStructureD<2>*> partners) const override;
+  LatticeCouplingGenerator2D<T,DESCRIPTOR>* clone() const override;
 private:
-  std::vector<Rate<T>*> _rate;
-  std::vector<std::vector<ReactingSpeciesBase2D<T>*>> _species;
+  std::vector<std::shared_ptr<Rate<T>>> _rate;
+  std::shared_ptr<REACTIONS> _reactions;
 };
 
 

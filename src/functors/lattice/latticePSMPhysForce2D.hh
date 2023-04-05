@@ -74,7 +74,7 @@ bool BlockLatticePSMPhysForce2D<T, DESCRIPTOR>::operator()(T output[], const int
 
   T epsilon = 1. - this->_blockLattice.get(input[0], input[1]).template getField<descriptors::POROSITY>();
 
-  //if ((epsilon > 1e-5 && epsilon < 1 - 1e-5)) 
+  //if ((epsilon > 1e-5 && epsilon < 1 - 1e-5))
   if ((epsilon > 1e-5)) {
     T rho, u[DESCRIPTOR::d], u_s[DESCRIPTOR::d];
 
@@ -131,7 +131,7 @@ SuperLatticePSMPhysForce2DMod<T, DESCRIPTOR>::SuperLatticePSMPhysForce2DMod(
   SuperGeometry<T,2>& superGeometry,
   const UnitConverter<T,DESCRIPTOR>& converter,
   IndicatorF2D<T>& shapeIndicator )
-  : SuperLatticePhysF2D<T, DESCRIPTOR>(sLattice, converter, 2) 
+  : SuperLatticePhysF2D<T, DESCRIPTOR>(sLattice, converter, 2)
 {
   this->getName() = "PSMPhysForce";
   for (int iC = 0; iC < this->_sLattice.getLoadBalancer().size(); ++iC) {

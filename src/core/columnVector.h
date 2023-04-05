@@ -76,6 +76,11 @@ public:
     _count(rhs._count),
     _column(std::move(rhs._column)) { }
 
+  std::size_t getSize() const
+  {
+    return _count;
+  }
+
   const COLUMN& operator[](unsigned iDim) const
   {
     return _column[iDim];
@@ -96,7 +101,7 @@ public:
         return operator[](iDim)[i];
       });
     }
-	__builtin_unreachable();
+    __builtin_unreachable();
   }
 
   auto setRow(std::size_t i, const Vector<typename COLUMN::value_t,D>& value)

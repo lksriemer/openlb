@@ -67,6 +67,14 @@ struct ComputeRhoU<BASE,BulkDensity,BulkMomentum> {
   };
 };
 
+template <
+  typename DENSITY,
+  typename MOMENTUM,
+  typename STRESS,
+  typename DefinitionRule
+>
+struct Tuple;
+
 /// Tuple of momenta components forming a moment system
 /**
  * Momenta are reduced on their components DENSITY, MOMETUM, STRESS
@@ -91,6 +99,8 @@ struct ConcreteTuple {
   using momentum = MOMENTUM;
   using stress = STRESS;
   using definition = DefinitionRule;
+
+  using abstract = Tuple<DENSITY,MOMENTUM,STRESS,DefinitionRule>;
 
   template <typename CELL, typename V=typename CELL::value_t>
   V computeRho(CELL& cell) const any_platform
@@ -163,7 +173,7 @@ struct ConcreteTuple {
   }
 
   template <typename CELL, typename RHO>
-  void defineRho(CELL& cell, const RHO& rho)
+  void defineRho(CELL& cell, const RHO& rho) any_platform
   {
     DENSITY().template define<type>(cell, rho);
 
@@ -173,7 +183,7 @@ struct ConcreteTuple {
   }
 
   template <typename CELL, typename U>
-  void defineU(CELL& cell, const U& u)
+  void defineU(CELL& cell, const U& u) any_platform
   {
     MOMENTUM().template define<type>(cell, u);
 
@@ -185,7 +195,7 @@ struct ConcreteTuple {
   }
 
   template <typename CELL, typename RHO, typename U>
-  void defineRhoU(CELL& cell, const RHO& rho, const U& u)
+  void defineRhoU(CELL& cell, const RHO& rho, const U& u) any_platform
   {
     DENSITY().template define<type>(cell, rho);
     MOMENTUM().template define<type>(cell, u);
@@ -199,7 +209,7 @@ struct ConcreteTuple {
   }
 
   template <typename CELL, typename RHO, typename U, typename PI>
-  void defineAllMomenta(CELL& cell, const RHO& rho, const U& u, const PI& pi)
+  void defineAllMomenta(CELL& cell, const RHO& rho, const U& u, const PI& pi) any_platform
   {
     DENSITY().template define<type>(cell, rho);
     MOMENTUM().template define<type>(cell, u);
@@ -220,19 +230,19 @@ struct ConcreteTuple {
   }
 
   template <typename CELL, typename RHO>
-  void inverseShiftRho(CELL& cell, RHO& rho)
+  void inverseShiftRho(CELL& cell, RHO& rho) any_platform
   {
     DENSITY().template inverseShift<type>(cell, rho);
   }
 
   template <typename CELL, typename U>
-  void inverseShiftU(CELL& cell, U& u)
+  void inverseShiftU(CELL& cell, U& u) any_platform
   {
     MOMENTUM().template inverseShift<type>(cell, u);
   }
 
   template <typename CELL, typename RHO, typename U>
-  void inverseShiftRhoU(CELL& cell, RHO& rho, U& u)
+  void inverseShiftRhoU(CELL& cell, RHO& rho, U& u) any_platform
   {
     inverseShiftRho(cell, rho);
     inverseShiftU(cell, u);

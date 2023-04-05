@@ -71,6 +71,7 @@ SuperGeometry<T,D>::SuperGeometry(CuboidGeometry<T,D>& cuboidGeometry,
 
   _statistics.getStatisticsStatus() = true;
   _communicationNeeded = true;
+  updateStatistics(false);
 }
 
 template<typename T, unsigned D>
@@ -196,6 +197,12 @@ SuperGeometryStatistics<T,D>& SuperGeometry<T,D>::getStatistics()
 }
 
 template<typename T, unsigned D>
+const SuperGeometryStatistics<T,D>& SuperGeometry<T,D>::getStatistics() const
+{
+  return _statistics;
+}
+
+template<typename T, unsigned D>
 bool& SuperGeometry<T,D>::getStatisticsStatus()
 {
   return _statistics.getStatisticsStatus();
@@ -221,12 +228,13 @@ void SuperGeometry<T,D>::updateStatistics(bool verbose)
 }
 
 template<typename T, unsigned D>
+template<typename DESCRIPTOR>
 int SuperGeometry<T,D>::clean(bool verbose, std::vector<int> bulkMaterials)
 {
   this->communicate();
   int counter=0;
   for (unsigned iC=0; iC<_block.size(); iC++) {
-    counter+=_block[iC]->clean(false, bulkMaterials);
+    counter+=_block[iC]->template clean <DESCRIPTOR>(false, bulkMaterials);
   }
 #ifdef PARALLEL_MODE_MPI
   singleton::mpi().reduceAndBcast(counter, MPI_SUM);
@@ -304,7 +312,7 @@ int SuperGeometry<T,D>::innerClean(int bcType, bool verbose)
 template<typename T, unsigned D>
 bool SuperGeometry<T,D>::checkForErrors(bool verbose)
 {
-  this->communicate();
+  updateStatistics(verbose);
   bool error = false;
   for (unsigned iC=0; iC<_block.size(); iC++) {
     if (_block[iC]->checkForErrors(false)) {
@@ -447,9 +455,8 @@ void SuperGeometry<T,D>::print()
 
 template<typename T, unsigned D>
 std::unique_ptr<SuperIndicatorF<T,D>> SuperGeometry<T,D>::getMaterialIndicator(
-                                     std::vector<int>&& materials)
+  std::vector<int>&& materials)
 {
-  
   static_assert(std::is_base_of<SuperIndicatorF<T,D>, SuperIndicatorMaterial<T,D>>::value,
                 "Indicator to be constructed is SuperIndicatorF implementation");
 

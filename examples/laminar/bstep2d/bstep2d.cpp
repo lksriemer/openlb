@@ -39,7 +39,7 @@
 
 using namespace olb;
 using namespace olb::descriptors;
-using T = double;
+using T = FLOATING_POINT_TYPE;
 using DESCRIPTOR = D2Q9<>;
 
 using BulkDynamics = BGKdynamics<T,DESCRIPTOR>;
@@ -103,14 +103,12 @@ void prepareLattice( UnitConverter<T,DESCRIPTOR> const& converter,
 
   auto bulkIndicator = superGeometry.getMaterialIndicator({1, 3, 4});
 
-  // Material=0 -->do nothing
-  sLattice.defineDynamics<NoDynamics>(superGeometry, 0);
   // Material=1 -->bulk dynamics
   // Material=3 -->bulk dynamics (inflow)
   // Material=4 -->bulk dynamics (outflow)
   sLattice.defineDynamics<BulkDynamics>(bulkIndicator);
   // Material=2 -->bounce back
-  sLattice.defineDynamics<BounceBack>(superGeometry, 2);
+  setBounceBackBoundary(sLattice, superGeometry, 2);
 
   //if boundary conditions are chosen to be local
   setLocalVelocityBoundary<T,DESCRIPTOR>(sLattice, omega, superGeometry, 3);
@@ -292,13 +290,13 @@ int main( int argc, char* argv[] )
   SuperPlaneIntegralFluxVelocity2D<T> velocityFlux( sLattice,
       converter,
       superGeometry,
-  {lengthStep/2.,  heightInlet / 2.},
+  {lengthStep/T(2),  heightInlet / T(2)},
   {0.,  1.} );
 
   SuperPlaneIntegralFluxPressure2D<T> pressureFlux( sLattice,
       converter,
       superGeometry,
-  {lengthStep/2.,  heightInlet / 2. },
+  {lengthStep/T(2),  heightInlet / T(2) },
   {0.,  1.} );
 
   // === 4th Step: Main Loop with Timer ===

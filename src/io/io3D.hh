@@ -37,5 +37,7 @@
 #include "vtiReader.hh"
 #include "vtiWriter.hh"
 #include "octree.hh"
-#include "ostreamManager.hh"
 #include "vtkWriter.hh"
+#include "blockLatticeSTLreader.hh"
+#include "plainWriter.hh"
+

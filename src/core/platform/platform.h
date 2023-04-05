@@ -27,21 +27,21 @@
 
 #include <stdexcept>
 
+#include "core/meta.h"
+
 /// Top level namespace for all of OpenLB
 namespace olb {
 
 /// OpenLB execution targets
-enum struct Platform {
-#ifdef PLATFORM_CPU_SISD
+enum struct Platform : std::uint8_t {
   CPU_SISD, /// Basic scalar CPU
-#endif
-#ifdef PLATFORM_CPU_SIMD
   CPU_SIMD, /// Vector CPU (AVX2 / AVX-512 collision)
-#endif
-#ifdef PLATFORM_GPU_CUDA
-  GPU_CUDA, /// GPU code using CUDA
-#endif
+  GPU_CUDA, /// GPU using CUDA
 };
+
+/// Verifies requirements for using PLATFORM
+template <Platform PLATFORM>
+void checkPlatform();
 
 /// OpenLB processing contexts
 /**
@@ -57,8 +57,15 @@ enum struct ProcessingContext {
   Simulation  /// Data available on device for evolving the simulation
 };
 
+namespace stage {
+
+template <ProcessingContext CONTEXT>
+struct PreContextSwitchTo { };
+
+}
+
 /// Define preprocessor macros for device-side functions, constant storage
-#ifdef PLATFORM_GPU_CUDA
+#ifdef __CUDACC__
   #define any_platform __device__ __host__
   #ifdef __CUDA_ARCH__
     #define platform_constant constexpr __constant__
@@ -92,6 +99,30 @@ inline auto callUsingConcretePlatform(Platform platform, typename CONCRETIZABLE:
 #ifdef PLATFORM_GPU_CUDA
   case Platform::GPU_CUDA:
     return f(static_cast<typename CONCRETIZABLE::template type<Platform::GPU_CUDA>*>(ptr));
+#endif
+  default:
+    throw std::invalid_argument("Invalid PLATFORM");
+  }
+}
+
+template <typename F>
+inline void callUsingConcretePlatform(Platform platform, F f)
+{
+  switch (platform) {
+#ifdef PLATFORM_CPU_SISD
+  case Platform::CPU_SISD:
+    f(meta::value<Platform::CPU_SISD>{});
+    break;
+#endif
+#ifdef PLATFORM_CPU_SIMD
+  case Platform::CPU_SIMD:
+    f(meta::value<Platform::CPU_SIMD>{});
+    break;
+#endif
+#ifdef PLATFORM_GPU_CUDA
+  case Platform::GPU_CUDA:
+    f(meta::value<Platform::GPU_CUDA>{});
+    break;
 #endif
   default:
     throw std::invalid_argument("Invalid PLATFORM");
@@ -135,7 +166,7 @@ constexpr bool isPlatformCPU(Platform platform) {
     return false;
 #endif
   default:
-    return false;
+    throw std::invalid_argument("Invalid PLATFORM");
   }
 }
 

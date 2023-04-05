@@ -121,6 +121,8 @@ void writeHeatMapPlotFile(detailParam<T>& param, const std::vector<T>& valueArea
 template< typename T >
 void executeGnuplot(detailParam<T>& param);
 
+bool gnuplotInstalled();
+
 } // namespace detail
 
 } // namespace heatmap

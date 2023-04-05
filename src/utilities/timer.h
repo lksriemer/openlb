@@ -148,10 +148,6 @@ public:
     \param printMode Value for selecting style of output. <br>0 = default semicolon-separated single row mode without cpu-time <br>1 = single row mode without cpu-time <br>2 = nicely formatted two-line layout including current and remaining cpu-time
     \sa update()
   */
-
-  /// Returns the total measured time between start() and moment of call in ms.
-  T getCurrRealTimeMs();
-
   void printStep(int printMode=0);
 
   /// Performs an update() followed by a printStep().

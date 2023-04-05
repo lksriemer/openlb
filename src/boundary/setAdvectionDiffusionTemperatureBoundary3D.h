@@ -48,17 +48,17 @@ namespace olb {
 ///Initialising the setAdvectionDiffusionTemperatureBoundary function on the superLattice domain
 ///This is an AdvectionDiffusionBoundary therefore mostly --> MixinDynamics = AdvectionDiffusionRLBdynamics
 template<typename T, typename DESCRIPTOR, typename MixinDynamics = AdvectionDiffusionRLBdynamics<T,DESCRIPTOR>>
-void setAdvectionDiffusionTemperatureBoundary(SuperLattice<T, DESCRIPTOR>& sLattice, T omega, SuperGeometry<T,3>& superGeometry, int material);
+void setAdvectionDiffusionTemperatureBoundary(SuperLattice<T, DESCRIPTOR>& sLattice, T omega, SuperGeometry<T,3>& superGeometry, int material, T dist =0., bool neumann = false);
 
 ///Initialising the setAdvectionDiffusionTemperatureBoundary function on the superLattice domain
 template<typename T, typename DESCRIPTOR, typename MixinDynamics = AdvectionDiffusionRLBdynamics<T,DESCRIPTOR>>
-void setAdvectionDiffusionTemperatureBoundary(SuperLattice<T, DESCRIPTOR>& sLattice, T omega, FunctorPtr<SuperIndicatorF3D<T>>&& indicator);
+void setAdvectionDiffusionTemperatureBoundary(SuperLattice<T, DESCRIPTOR>& sLattice, T omega, FunctorPtr<SuperIndicatorF3D<T>>&& indicator, T dist = 0., bool neumann = false);
 
 
 ///Set AdvectionDiffusionTemperatureBoundary for any indicated cells inside the block domain
 template<typename T, typename DESCRIPTOR, typename MixinDynamics>
 void setAdvectionDiffusionTemperatureBoundary(BlockLattice<T,DESCRIPTOR>& _block, BlockIndicatorF3D<T>& indicator,
-                                              T omega, bool includeOuterCells=false);
+                                              T omega, bool includeOuterCells=false, T dist = 0., bool neumann=false);
 
 }//namespace olb
 

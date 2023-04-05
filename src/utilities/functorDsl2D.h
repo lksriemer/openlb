@@ -69,10 +69,10 @@ std::shared_ptr<SuperF2D<T,W>> norm(std::shared_ptr<SuperF2D<T,W>>        f,
 
 /// Returns restriction of a analytical functor f to the lattice sLattice
 template<typename T, typename W, typename DESCRIPTOR>
-std::shared_ptr<SuperF2D<T,W>> restrict(std::shared_ptr<AnalyticalF2D<T,W>> f,
-                                        SuperLattice<T, DESCRIPTOR>& sLattice);
+std::shared_ptr<SuperF2D<T,W>> restrictF(std::shared_ptr<AnalyticalF2D<T,W>> f,
+                                         SuperLattice<T, DESCRIPTOR>& sLattice);
 
-/// Returns external field functor 
+/// Returns external field functor
 template<typename T,typename DESCRIPTOR, typename FIELD>
 std::enable_if_t<DESCRIPTOR::d == 2, std::shared_ptr<SuperF2D<T>>>
 field(SuperLattice<T,DESCRIPTOR>& sLattice);

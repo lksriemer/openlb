@@ -22,8 +22,8 @@
  *  Boston, MA  02110-1301, USA.
 */
 
-#ifndef LB_DYNAMICS_H
-#define LB_DYNAMICS_H
+#ifndef DYNAMICS_DYNAMICS_H
+#define DYNAMICS_DYNAMICS_H
 
 #include "interface.h"
 
@@ -52,6 +52,15 @@ using NoDynamics = dynamics::Tuple<
     momenta::ZeroStress,
     momenta::DefineSeparately
   >,
+  equilibria::None,
+  collision::None
+>;
+
+/// Dynamics for "dead cells" doing nothing. Variant with density=0
+template <typename T, typename DESCRIPTOR>
+using NoDynamicsWithZero = dynamics::Tuple<
+  T, DESCRIPTOR,
+  momenta::None,
   equilibria::None,
   collision::None
 >;
@@ -175,8 +184,9 @@ private:
   using CORRECTED_DYNAMICS = typename DYNAMICS::template exchange_momenta<MOMENTA>;
 
 public:
-  using MomentaF     = typename MOMENTA::template type<DESCRIPTOR>;
-  using ParametersD  = typename CORRECTED_DYNAMICS::ParametersD;
+  using MomentaF = typename MOMENTA::template type<DESCRIPTOR>;
+
+  using parameters = typename CORRECTED_DYNAMICS::parameters;
 
   template <typename M>
   using exchange_momenta = CombinedRLBdynamics<T,DESCRIPTOR,DYNAMICS,M>;
@@ -186,10 +196,10 @@ public:
   }
 
   AbstractParameters<T,DESCRIPTOR>& getParameters(BlockLattice<T,DESCRIPTOR>& block) override {
-    return block.template getData<DynamicsParameters<CombinedRLBdynamics>>();
+    return block.template getData<OperatorParameters<CombinedRLBdynamics>>();
   }
 
-  template <typename CELL, typename PARAMETERS, typename V=typename CELL::value_t>
+  template <CONCEPT(MinimalCell) CELL, typename PARAMETERS, typename V=typename CELL::value_t>
   CellStatistic<V> apply(CELL& cell, PARAMETERS& parameters) any_platform {
     V rho, u[DESCRIPTOR::d], pi[util::TensorVal<DESCRIPTOR>::n];
     MomentaF().computeAllMomenta(cell,rho,u,pi);
@@ -249,7 +259,7 @@ using BounceBack = dynamics::Tuple<
     momenta::ZeroStress,
     momenta::DefineSeparately
   >,
-  equilibria::None,
+  equilibria::SecondOrder,
   collision::Revert
 >;
 
@@ -268,7 +278,7 @@ using BounceBackBulkDensity = dynamics::Tuple<
     momenta::ZeroStress,
     momenta::DefineSeparately
   >,
-  equilibria::None,
+  equilibria::SecondOrder,
   collision::Revert
 >;
 
@@ -282,7 +292,7 @@ template <typename T, typename DESCRIPTOR>
 using BounceBackVelocity = dynamics::Tuple<
   T, DESCRIPTOR,
   momenta::ExternalVelocityTuple,
-  equilibria::None,
+  equilibria::SecondOrder,
   collision::NguyenLaddCorrection<collision::Revert>
 >;
 
@@ -327,25 +337,25 @@ struct ZeroDistributionDynamics final : public dynamics::CustomCollision<
     momenta::DefineSeparately
   >
 > {
-  using ParametersD = olb::ParametersD<T,DESCRIPTOR>;
+  using parameters = meta::list<>;
 
   std::type_index id() override {
     return typeid(ZeroDistributionDynamics);
   };
 
   AbstractParameters<T,DESCRIPTOR>& getParameters(BlockLattice<T,DESCRIPTOR>& block) override {
-    return block.template getData<DynamicsParameters<ZeroDistributionDynamics>>();
+    return block.template getData<OperatorParameters<ZeroDistributionDynamics>>();
   }
 
   template <typename CELL, typename PARAMETERS, typename V=typename CELL::value_t>
-  CellStatistic<V> apply(CELL& cell, PARAMETERS& parameters) {
+  CellStatistic<V> apply(CELL& cell, PARAMETERS& parameters) any_platform {
     for (int iPop=0; iPop < DESCRIPTOR::q; ++iPop) {
       cell[iPop] = -descriptors::t<T,DESCRIPTOR>(iPop);
     }
     return {-1, -1};
   };
 
-  T computeEquilibrium(int iPop, T rho, const T u[DESCRIPTOR::d]) const override {
+  T computeEquilibrium(int iPop, T rho, const T u[DESCRIPTOR::d]) const any_platform override {
     return 0;
   };
 
@@ -395,15 +405,16 @@ using EquilibriumBoundarySecondOrder = dynamics::Tuple<
  **/
 template <typename T, typename DESCRIPTOR, typename MOMENTA=momenta::BulkTuple>
 struct ForcedVANSBGKdynamics final : public dynamics::CustomCollision<T,DESCRIPTOR,MOMENTA> {
-  using ParametersD = olb::ParametersD<T,DESCRIPTOR,descriptors::OMEGA>;
   using MomentaF = typename MOMENTA::template type<DESCRIPTOR>;
+
+  using parameters = meta::list<descriptors::OMEGA>;
 
   std::type_index id() override {
     return typeid(ForcedVANSBGKdynamics);
   }
 
   AbstractParameters<T,DESCRIPTOR>& getParameters(BlockLattice<T,DESCRIPTOR>& block) override {
-    return block.template getData<DynamicsParameters<ForcedVANSBGKdynamics>>();
+    return block.template getData<OperatorParameters<ForcedVANSBGKdynamics>>();
   }
 
   void computeU(ConstCell<T,DESCRIPTOR>& cell, T u[DESCRIPTOR::d]) const override {

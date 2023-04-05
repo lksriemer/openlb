@@ -23,7 +23,7 @@
 
 #include "platform/platform.h"
 
-#include "olbInit.h"
+#include "threadPool.h"
 
 #include "superData.h"
 #include "blockData.h"
@@ -34,6 +34,7 @@
 #include "blockStructure.h"
 #include "blockLattice.h"
 #include "superLattice.h"
+#include "superLatticeCoupling.h"
 
 #include "cell.h"
 #include "cell.hh"
@@ -48,9 +49,12 @@
 #include "radiativeUnitConverter.h"
 #include "fractionalUnitConverter.h"
 #include "adeUnitConverter.h"
+#include "adsorptionConverter.h"
 
 #include "genericVector.h"
 #include "scalarVector.h"
 #include "columnVector.h"
 #include "vector.h"
 #include "container.h"
+
+#include "olbInit.h"

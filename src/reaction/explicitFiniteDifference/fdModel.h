@@ -28,49 +28,18 @@
 #ifndef FD_MODEL_H
 #define FD_MODEL_H
 
-#include "fdDescriptorField.h"
-#include "fdSchemes.h"
-
 namespace olb {
-
-/*
- * Basic virtual class for all the finite-difference models.
- */
-template<typename T, typename DESCRIPTOR>
-class FdModel {
-public:
-  FdModel(T diffusivity);
-  virtual int extent() =0;
-  virtual void operator()(T* fNew, T* f0, std::vector<std::vector<T>>& f, std::vector<std::vector<T>>& F, Cell<T,DESCRIPTOR>& cell) =0;
-protected:
-  T _diffusivity;
-};
 
 /*
  * Class for finite-difference advection-diffusion model
  */
-template<typename T, typename DESCRIPTOR, typename SCHEME_ADV, typename SCHEME_DIFF>
-class FdAdvectionDiffusionModel : public FdModel<T,DESCRIPTOR> {
+template<typename T, typename SCHEME_ADV, typename SCHEME_DIFF>
+class FdAdvectionDiffusionModel {
 public:
-  FdAdvectionDiffusionModel(T diffusivity);
-  virtual int extent() override;
-  virtual void operator()(T* fNew, T* f0, std::vector<std::vector<T>>& f, std::vector<std::vector<T>>& F, Cell<T,DESCRIPTOR>& cell) override;
-protected:
-  std::shared_ptr<fd::AdvectionSchemeBase<DESCRIPTOR::d,T>> _advectionScheme;
-  std::shared_ptr<fd::DiffusionSchemeBase<DESCRIPTOR::d,T>> _diffusionScheme;
-};
-
-/*
- * Class for finite-difference advection-diffusion model,
- * with an anti-diffusivity term to counterbalance upwind numerical diffusion
- */
-template<typename T, typename DESCRIPTOR, typename SCHEME_ADV, typename SCHEME_DIFF>
-class FdAdvectionDiffusionModelWithAntiDiffusion : public FdAdvectionDiffusionModel<T,DESCRIPTOR,SCHEME_ADV,SCHEME_DIFF> {
-public:
-  FdAdvectionDiffusionModelWithAntiDiffusion(T diffusivity, T antiDiffusionTunig=1.);
-  virtual void operator()(T* fNew, T* f0, std::vector<std::vector<T>>& f, std::vector<std::vector<T>>& F, Cell<T,DESCRIPTOR>& cell) override;
-protected:
-  T _antiDiffusionTuning;
+  FdAdvectionDiffusionModel() = delete;
+  static constexpr int extent();
+  template <typename PARAMETERS>
+  static void apply(T* fNew, T* f0, T f[], T F[], T u[], PARAMETERS& params);
 };
 
 }  // namespace olb

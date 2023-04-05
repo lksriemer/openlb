@@ -85,8 +85,9 @@ using AdvectionDiffusionRLBdynamics = dynamics::Tuple<
 template <typename T, typename DESCRIPTOR, typename DYNAMICS, typename MOMENTA=momenta::AdvectionDiffusionBulkTuple>
 class CombinedAdvectionDiffusionRLBdynamics final : public dynamics::CustomCollision<T,DESCRIPTOR,MOMENTA> {
 public:
-  using MomentaF     = typename MOMENTA::template type<DESCRIPTOR>;
-  using ParametersD  = typename DYNAMICS::ParametersD;
+  using MomentaF = typename MOMENTA::template type<DESCRIPTOR>;
+
+  using parameters = typename DYNAMICS::parameters;
 
   template <typename M>
   using exchange_momenta = CombinedAdvectionDiffusionRLBdynamics<T,DESCRIPTOR,DYNAMICS,M>;
@@ -96,11 +97,11 @@ public:
   };
 
   AbstractParameters<T,DESCRIPTOR>& getParameters(BlockLattice<T,DESCRIPTOR>& block) override {
-    return block.template getData<DynamicsParameters<CombinedAdvectionDiffusionRLBdynamics>>();
+    return block.template getData<OperatorParameters<CombinedAdvectionDiffusionRLBdynamics>>();
   }
 
   template <typename CELL, typename PARAMETERS, typename V=typename CELL::value_t>
-  CellStatistic<V> apply(CELL& cell, PARAMETERS& parameters) {
+  CellStatistic<V> apply(CELL& cell, PARAMETERS& parameters) any_platform {
     V jNeq[DESCRIPTOR::d] { };
 
     const V rho = MomentaF().computeRho(cell);
@@ -119,7 +120,7 @@ public:
     return typename DYNAMICS::CollisionO().apply(cell, parameters);
   };
 
-  T computeEquilibrium(int iPop, T rho, const T u[DESCRIPTOR::d]) const override {
+  T computeEquilibrium(int iPop, T rho, const T u[DESCRIPTOR::d]) const override any_platform {
     return equilibrium<DESCRIPTOR>::template firstOrder(iPop, rho, u);
   };
 
@@ -174,7 +175,7 @@ struct SourcedAdvectionDiffusionBGKdynamics final : public dynamics::CustomColli
     typename MOMENTA::definition
   >::template type<DESCRIPTOR>;
 
-  using ParametersD = olb::ParametersD<T,DESCRIPTOR,descriptors::OMEGA>;
+  using parameters = meta::list<descriptors::OMEGA>;
 
   template<typename M>
   using exchange_momenta = SourcedAdvectionDiffusionBGKdynamics<T,DESCRIPTOR,M>;
@@ -184,7 +185,7 @@ struct SourcedAdvectionDiffusionBGKdynamics final : public dynamics::CustomColli
   };
 
   AbstractParameters<T,DESCRIPTOR>& getParameters(BlockLattice<T,DESCRIPTOR>& block) override {
-    return block.template getData<DynamicsParameters<SourcedAdvectionDiffusionBGKdynamics>>();
+    return block.template getData<OperatorParameters<SourcedAdvectionDiffusionBGKdynamics>>();
   }
 
   template <typename CELL, typename PARAMETERS, typename V=typename CELL::value_t>
@@ -212,6 +213,67 @@ struct SourcedAdvectionDiffusionBGKdynamics final : public dynamics::CustomColli
   };
 };
 
+
+// ======= BGK advection diffusion dynamics with source term  ======//
+// following Seta, T. (2013). Implicit temperature-correction-based
+// immersed-boundary thermal lattice Boltzmann method for the simulation
+// of natural convection. Physical Review E, 87(6), 063304.
+template<typename T, typename DESCRIPTOR, typename MOMENTA=momenta::AdvectionDiffusionBulkTuple>
+struct SourcedLimitedAdvectionDiffusionBGKdynamics final : public dynamics::CustomCollision<
+  T,DESCRIPTOR,
+  momenta::Tuple<
+    momenta::SourcedDensity<typename MOMENTA::density>,
+    typename MOMENTA::momentum,
+    typename MOMENTA::stress,
+    typename MOMENTA::definition
+  >
+> {
+  using MomentaF = typename momenta::Tuple<
+    momenta::SourcedDensity<typename MOMENTA::density>,
+    typename MOMENTA::momentum,
+    typename MOMENTA::stress,
+    typename MOMENTA::definition
+  >::template type<DESCRIPTOR>;
+
+  using parameters = meta::list<descriptors::OMEGA>;
+
+  template<typename M>
+  using exchange_momenta = SourcedLimitedAdvectionDiffusionBGKdynamics<T,DESCRIPTOR,M>;
+
+  std::type_index id() override {
+    return typeid(SourcedLimitedAdvectionDiffusionBGKdynamics);
+  };
+
+  AbstractParameters<T,DESCRIPTOR>& getParameters(BlockLattice<T,DESCRIPTOR>& block) override {
+    return block.template getData<OperatorParameters<SourcedLimitedAdvectionDiffusionBGKdynamics>>();
+  }
+
+  template <typename CELL, typename PARAMETERS, typename V=typename CELL::value_t>
+  CellStatistic<V> apply(CELL& cell, PARAMETERS& parameters) any_platform {
+    const auto u = cell.template getField<descriptors::VELOCITY>();
+    V temperature = MomentaF().computeRho(cell);
+    if (temperature < V{1.e-8}) temperature = V{1.e-8};
+    const V omega = cell.template getField<descriptors::OMEGA>();
+
+    const V uSqr = lbm<DESCRIPTOR>::adeBgkCollision(cell, temperature, u, omega);
+    const V sourceMod = cell.template getField<descriptors::SOURCE>() * (V{1} - V{0.5} * omega);
+
+    for ( int iPop = 0; iPop < DESCRIPTOR::q; iPop++ ) {
+      cell[iPop] += sourceMod * descriptors::t<T,DESCRIPTOR>(iPop);
+    }
+
+    return {temperature, uSqr};
+  };
+
+  T computeEquilibrium(int iPop, T rho, const T u[DESCRIPTOR::d]) const any_platform override {
+    return equilibrium<DESCRIPTOR>::template firstOrder(iPop, rho, u);
+  };
+
+  std::string getName() const override {
+    return "SourcedLimitedAdvectionDiffusionBGKdynamics<" + MomentaF().getName() + ">";
+  };
+};
+
 // ======= BGK advection diffusion dynamics for solid-liquid phase change  ======//
 // following Huang, R. (2015). Phase interface effects in the total
 // enthalpy-based lattice Boltzmann model for solid–liquid phase change.
@@ -221,7 +283,8 @@ struct TotalEnthalpyAdvectionDiffusionBGKdynamics final : public dynamics::Custo
   static constexpr bool is_vectorizable = false;
 
   using MomentaF = typename MOMENTA::template type<DESCRIPTOR>;
-  using ParametersD = olb::ParametersD<T,DESCRIPTOR,
+
+  using parameters = meta::list<
     descriptors::OMEGA,
     TotalEnthalpy::T_S,
     TotalEnthalpy::T_L,
@@ -240,11 +303,11 @@ struct TotalEnthalpyAdvectionDiffusionBGKdynamics final : public dynamics::Custo
   };
 
   AbstractParameters<T,DESCRIPTOR>& getParameters(BlockLattice<T,DESCRIPTOR>& block) override {
-    return block.template getData<DynamicsParameters<TotalEnthalpyAdvectionDiffusionBGKdynamics>>();
+    return block.template getData<OperatorParameters<TotalEnthalpyAdvectionDiffusionBGKdynamics>>();
   }
 
   template<typename V, typename PARAMETERS, typename ENTHALPY>
-  V computeTemperature(const PARAMETERS& parameters, const ENTHALPY& enthalpy) const
+  V computeTemperature(const PARAMETERS& parameters, const ENTHALPY& enthalpy) const any_platform
   {
     using namespace TotalEnthalpy;
 
@@ -270,7 +333,7 @@ struct TotalEnthalpyAdvectionDiffusionBGKdynamics final : public dynamics::Custo
   }
 
   template<typename V, typename PARAMETERS, typename ENTHALPY>
-  V computeLiquidFraction(const PARAMETERS& parameters, const ENTHALPY& enthalpy) const
+  V computeLiquidFraction(const PARAMETERS& parameters, const ENTHALPY& enthalpy) const any_platform
   {
     using namespace TotalEnthalpy;
 
@@ -295,13 +358,13 @@ struct TotalEnthalpyAdvectionDiffusionBGKdynamics final : public dynamics::Custo
     return liquid_fraction;
   }
 
-  T computeEquilibrium(int iPop, T rho, const T u[DESCRIPTOR::d]) const override
+  T computeEquilibrium(int iPop, T rho, const T u[DESCRIPTOR::d]) const override any_platform
   {
     return equilibrium<DESCRIPTOR>::template firstOrder(iPop, rho, u);
   }
 
   template <typename CELL, typename PARAMETERS, typename V=typename CELL::value_t>
-  CellStatistic<V> apply(CELL& cell, PARAMETERS& parameters) {
+  CellStatistic<V> apply(CELL& cell, PARAMETERS& parameters) any_platform {
     using namespace TotalEnthalpy;
 
     const V lambda_s = parameters.template get<LAMBDA_S>();
@@ -356,7 +419,8 @@ struct TotalEnthalpyAdvectionDiffusionTRTdynamics final : public dynamics::Custo
   static constexpr bool is_vectorizable = false;
 
   using MomentaF = typename MOMENTA::template type<DESCRIPTOR>;
-  using ParametersD = olb::ParametersD<T,DESCRIPTOR,
+
+  using parameters = meta::list<
     descriptors::OMEGA,
     collision::TRT::MAGIC,
     TotalEnthalpy::T_S,
@@ -376,7 +440,7 @@ struct TotalEnthalpyAdvectionDiffusionTRTdynamics final : public dynamics::Custo
   };
 
   AbstractParameters<T,DESCRIPTOR>& getParameters(BlockLattice<T,DESCRIPTOR>& block) override {
-    return block.template getData<DynamicsParameters<TotalEnthalpyAdvectionDiffusionTRTdynamics>>();
+    return block.template getData<OperatorParameters<TotalEnthalpyAdvectionDiffusionTRTdynamics>>();
   }
 
   template<typename V, typename PARAMETERS, typename ENTHALPY>
@@ -532,8 +596,8 @@ struct INTERFACE_THICKNESS : public descriptors::FIELD_BASE<1> { };
 template<typename T, typename DESCRIPTOR, typename MOMENTA=momenta::AdvectionDiffusionBulkTuple>
 struct PhaseFieldAdvectionDiffusionBGKdynamics : public dynamics::CustomCollision<T,DESCRIPTOR,MOMENTA> {
   using MomentaF = typename MOMENTA::template type<DESCRIPTOR>;
-  using ParametersD = olb::ParametersD<T,DESCRIPTOR,
-    descriptors::OMEGA,descriptors::INTERFACE_THICKNESS>;
+
+  using parameters = meta::list<descriptors::OMEGA,descriptors::INTERFACE_THICKNESS>;
 
   template<typename M>
   using exchange_momenta = PhaseFieldAdvectionDiffusionBGKdynamics<T,DESCRIPTOR,M>;
@@ -543,7 +607,7 @@ struct PhaseFieldAdvectionDiffusionBGKdynamics : public dynamics::CustomCollisio
   };
 
   AbstractParameters<T,DESCRIPTOR>& getParameters(BlockLattice<T,DESCRIPTOR>& block) override {
-    return block.template getData<DynamicsParameters<PhaseFieldAdvectionDiffusionBGKdynamics>>();
+    return block.template getData<OperatorParameters<PhaseFieldAdvectionDiffusionBGKdynamics>>();
   }
 
   template <typename CELL, typename PARAMETERS, typename V=typename CELL::value_t>
@@ -597,8 +661,7 @@ public:
     typename MOMENTA::definition
   >::template type<DESCRIPTOR>;
 
-  using ParametersD = olb::ParametersD<T,DESCRIPTOR,
-    descriptors::OMEGA,descriptors::LATTICE_TIME>;
+  using parameters = meta::list<descriptors::OMEGA,descriptors::LATTICE_TIME>;
 
   template <typename M>
   using exchange_momenta = ParticleAdvectionDiffusionBGKdynamics<T,DESCRIPTOR,M>;
@@ -608,7 +671,7 @@ public:
   };
 
   AbstractParameters<T,DESCRIPTOR>& getParameters(BlockLattice<T,DESCRIPTOR>& block) override {
-    return block.template getData<DynamicsParameters<ParticleAdvectionDiffusionBGKdynamics>>();
+    return block.template getData<OperatorParameters<ParticleAdvectionDiffusionBGKdynamics>>();
   }
 
   template <typename CELL, typename PARAMETERS, typename V=typename CELL::value_t>
@@ -646,6 +709,13 @@ using AdvectionDiffusionMRTdynamics = dynamics::Tuple<
   AdvectionDiffusionExternalVelocityCollision
 >;
 
+template <typename T, typename DESCRIPTOR>
+using NoCollideDynamics = dynamics::Tuple<
+  T, DESCRIPTOR,
+  momenta::BulkTuple,
+  equilibria::None,
+  collision::None
+>;
 } // namespace olb
 
 #endif

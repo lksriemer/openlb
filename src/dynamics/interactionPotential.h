@@ -33,6 +33,50 @@
 
 namespace olb {
 
+namespace interaction {
+
+// established -- only multicomponent flow
+struct PsiEqualsRho {
+  using parameters = meta::list<>;
+
+  template <typename V, typename PARAMETERS>
+  V compute(V rho, PARAMETERS& params) any_platform {
+    return rho;
+  };
+};
+
+struct ShanChen94 {
+  using parameters = meta::list<>;
+
+  template <typename V, typename PARAMETERS>
+  V compute(V rho, PARAMETERS& params) any_platform {
+    return 4 * util::exp(-200 / rho);
+  };
+};
+
+struct CarnahanStarling {
+  struct G : public descriptors::FIELD_BASE<1> { };
+  struct A : public descriptors::FIELD_BASE<1> { };
+  struct B : public descriptors::FIELD_BASE<1> { };
+  struct T : public descriptors::FIELD_BASE<1> { };
+
+  using parameters = meta::list<G,A,B,T>;
+
+  template <typename V, typename PARAMETERS>
+  V compute(V rho, PARAMETERS& params) any_platform {
+    V c = params.template get<B>() * rho / V{4};
+    V p = rho
+        * (V(0.18727 / 0.4963) * params.template get<A>() / params.template get<B>())
+        * params.template get<T>()
+        * ((V{1} +c+c*c-c*c*c) / (V{1}-c) / (V{1}-c) / (V{1}-c))
+        - params.template get<A>() * rho*rho;
+    return util::sqrt(V{6}*(p-rho/V{3})/ params.template get<G>());
+  };
+};
+
+}
+
+
 // established -- original for both single- and multicomponent flow
 
 template <typename T, typename S>

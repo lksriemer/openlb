@@ -123,14 +123,19 @@ void SuperGeometryStatistics3D<T>::update(bool verbose)
 
 
     // get total number of different materials right
-    _material2n = std::map<int, std::size_t>();
     _nMaterials = int();
-    for (int iCloc=0; iCloc<_superGeometry->getLoadBalancer().size(); iCloc++) {
-      if (_superGeometry->getBlockGeometry(iCloc).getStatistics(false).getNmaterials() > 0) {
-        _nMaterials = _superGeometry->getBlockGeometry(iCloc).getStatistics(false).getNmaterials();
+    {
+      std::set<int> tmpMaterials{};
+      for (int iCloc=0; iCloc<_superGeometry->getLoadBalancer().size(); iCloc++) {
+        const auto& blockMaterial2n = _superGeometry->getBlockGeometry(iCloc).getStatistics(false).getMaterial2n();
+        for (auto [material, _] : blockMaterial2n) {
+          tmpMaterials.insert(material);
+        }
       }
+      _nMaterials = tmpMaterials.size();
     }
 
+    _material2n = std::map<int, std::size_t>();
 
 #ifdef PARALLEL_MODE_MPI
     singleton::mpi().reduceAndBcast(_nMaterials, MPI_SUM);

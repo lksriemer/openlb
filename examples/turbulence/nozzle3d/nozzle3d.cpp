@@ -65,9 +65,9 @@ const auto seed = 0x1337533DAAAAAAAA;
 #endif
 
 // Parameters for the simulation setup
-const int N = 3;                 // resolution of the model, for RLB N>=5, others N>2, but uneven N>=5 recommended
+const int N = 5;                 // resolution of the model, for RLB N>=5, others N>2, but uneven N>=5 recommended
 const int inflowProfileMode = 0; // block profile (mode=0), power profile (mode=1)
-const T maxPhysT = 200.;         // max. simulation time in s, SI unit
+const T maxPhysT = 100.;         // max. simulation time in s, SI unit
 
 template <typename T, typename _DESCRIPTOR>
 class TurbulentVelocity3D : public AnalyticalF3D<T,T> {
@@ -131,7 +131,6 @@ public:
     return true;
   };
 };
-
 
 void prepareGeometry( UnitConverter<T,DESCRIPTOR> const& converter, IndicatorF3D<T>& indicator, SuperGeometry<T,3>& superGeometry )
 {
@@ -207,9 +206,6 @@ void prepareLattice( SuperLattice<T,DESCRIPTOR>& sLattice,
 
   const T omega = converter.getLatticeRelaxationFrequency();
 
-  // Material=0 -->do nothing
-  sLattice.defineDynamics<NoDynamics>(superGeometry, 0);
-
   // Material=1 -->bulk dynamics
   // Material=3 -->bulk dynamics (inflow)
   // Material=4 -->bulk dynamics (outflow)
@@ -220,7 +216,7 @@ void prepareLattice( SuperLattice<T,DESCRIPTOR>& sLattice,
 #elif defined(USE_SMAGORINSKY)
   using BulkDynamics = SmagorinskyBGKdynamics<T,DESCRIPTOR>;
   sLattice.defineDynamics<BulkDynamics>(bulkIndicator);
-  sLattice.setParameter<collision::LES::Smagorinsky>(0.15);
+  sLattice.setParameter<collision::LES::Smagorinsky>(T(0.15));
 #elif defined(USE_SHEAR_SMAGORINSKY)
   using BulkDynamics = ShearSmagorinskyBGKdynamics<T,DESCRIPTOR>;
   sLattice.defineDynamics<BulkDynamics>(bulkIndicator);
@@ -236,7 +232,7 @@ void prepareLattice( SuperLattice<T,DESCRIPTOR>& sLattice,
 #endif
 
   // Material=2 -->bounce back
-  sLattice.defineDynamics<BounceBack>(superGeometry, 2);
+  setBounceBackBoundary(sLattice, superGeometry, 2);
 
   setInterpolatedVelocityBoundary(sLattice, omega, superGeometry, 3);
   setInterpolatedPressureBoundary(sLattice, omega, superGeometry, 4);
@@ -284,9 +280,9 @@ void getResults( SuperLattice<T, DESCRIPTOR>& sLattice,
                  SuperGeometry<T,3>& superGeometry, util::Timer<T>& timer )
 {
   OstreamManager clout( std::cout,"getResults" );
-  SuperVTMwriter3D<T> vtmWriter( "nozzle3d" );
 
   if ( iT==0 ) {
+    SuperVTMwriter3D<T> vtmWriter( "nozzle3d" );
     // Writes the geometry, cuboid no. and rank no. as vti file for visualization
     SuperLatticeGeometry3D<T, DESCRIPTOR> geometry( sLattice, superGeometry );
     SuperLatticeCuboid3D<T, DESCRIPTOR> cuboid( sLattice );
@@ -309,26 +305,19 @@ void getResults( SuperLattice<T, DESCRIPTOR>& sLattice,
   // Writes the vtk files
   if (iT % converter.getLatticeTime(2) == 0) {
     sLattice.setProcessingContext(ProcessingContext::Evaluation);
-
-    // Create the data-reading functors...
-    SuperLatticePhysVelocity3D<T, DESCRIPTOR> velocity( sLattice, converter );
-    SuperLatticePhysPressure3D<T, DESCRIPTOR> pressure( sLattice, converter );
-    vtmWriter.addFunctor( velocity );
-    vtmWriter.addFunctor( pressure );
-    vtmWriter.write( iT );
-
-    SuperEuklidNorm3D<T, DESCRIPTOR> normVel( velocity );
-    BlockReduction3D2D<T> planeReduction( normVel, {0, 1, 0} );
-    // write output as JPEG
-    heatmap::write(planeReduction, iT);
+    sLattice.scheduleBackgroundOutputVTK([&,iT](auto task) {
+      SuperVTMwriter3D<T> vtkWriter("nozzle3d");
+      SuperLatticePhysVelocity3D velocity(sLattice, converter);
+      //SuperLatticePhysPressure3D pressure(sLattice, converter);
+      //vtkWriter.addFunctor(pressure);
+      vtkWriter.addFunctor(velocity);
+      task(vtkWriter, iT);
+    });
   }
 }
 
-
-
 int main( int argc, char* argv[] )
 {
-
   // === 1st Step: Initialization ===
 
   olbInit( &argc, &argv );
@@ -356,7 +345,7 @@ int main( int argc, char* argv[] )
   IndicatorCuboid3D<T> cuboid( extend,origin );
 
   CuboidGeometry3D<T> cuboidGeometry( cuboid, converter.getConversionFactorLength(), singleton::mpi().getSize() );
-  HeuristicLoadBalancer<T> loadBalancer( cuboidGeometry );
+  BlockLoadBalancer<T> loadBalancer( cuboidGeometry );
 
   // === 2nd Step: Prepare Geometry ===
 
@@ -394,6 +383,8 @@ int main( int argc, char* argv[] )
     // === 7th Step: Computation and Output of the Results ===
     getResults(sLattice, converter, iT, superGeometry, timer);
   }
+
+  sLattice.setProcessingContext(ProcessingContext::Evaluation);
 
   timer.stop();
   timer.printSummary();

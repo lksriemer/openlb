@@ -65,11 +65,13 @@ SuperCommunicationTagCoordinator<T>::SuperCommunicationTagCoordinator(LoadBalanc
 template <typename T>
 template <unsigned D>
 void SuperCommunicationTagCoordinator<T>::coordinate(
-  std::vector<BlockCommunicationNeighborhood<T,D>>& neighborhood)
+  std::vector<std::unique_ptr<BlockCommunicationNeighborhood<T,D>>>& neighborhood)
 {
   for (int iC = 0; iC < _loadBalancer.size(); ++iC) {
-    neighborhood[iC].forRemoteNeighbors([&](int jC) {
-      _tags[_loadBalancer.rank(jC)][{_loadBalancer.glob(iC),jC}] = -1;
+    neighborhood[iC]->forNeighbors([&](int jC) {
+      if (!_loadBalancer.isLocal(jC)) {
+        _tags[_loadBalancer.rank(jC)][{_loadBalancer.glob(iC),jC}] = -1;
+      }
     });
   }
 
@@ -84,8 +86,14 @@ void SuperCommunicationTagCoordinator<T>::coordinate(
 template <typename T>
 int SuperCommunicationTagCoordinator<T>::get(int iC, int jC, int iGroup)
 {
-  auto& tags = _tags[_loadBalancer.rank(iC)];
-  return iGroup*tags.size() + tags[{iC,jC}];
+  if (_loadBalancer.isLocal(iC) && _loadBalancer.isLocal(jC)) {
+    return iGroup*_loadBalancer.size()*_loadBalancer.size()
+         + _loadBalancer.loc(iC)*_loadBalancer.size() + _loadBalancer.loc(jC);
+  } else {
+    int kC = _loadBalancer.isLocal(iC) ? jC : iC;
+    auto& tags = _tags[_loadBalancer.rank(kC)];
+    return iGroup*tags.size() + tags[{iC,jC}];
+  }
 }
 
 #endif // PARALLEL_MODE_MPI

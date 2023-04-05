@@ -21,13 +21,18 @@
  *  Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  *  Boston, MA  02110-1301, USA.
  */
- 
+
 /* fourRollMill2d.cpp
  * A spherical domain of fluid phase II is immersed in a cuboid
  * filled with fluid phase I. The bottom left and top right
  * cylinders begin to spin in counterclock-wise direction.
  * The top left and bottom right cylinders spin in clock-wise direction-
  * The velocity field of extensional type deforms the droplet accordingly.
+ * The flow configuration is taken from
+ *  S. Simonis et al. Discrete and Continuous Dynamical
+ *  Systems - Series S (2023), doi:10.3934/dcdss.2023069
+ * The present example uses the ternary free energy model by
+ *  C Semprebon et al. Physical Review E 93.3 (2016) p. 033305.
  *
  * The droplet breakup case should be run on parallel mode
  * because of increased computation time.
@@ -40,7 +45,7 @@ using namespace olb;
 using namespace olb::descriptors;
 using namespace olb::graphics;
 
-typedef double T;
+using T = FLOATING_POINT_TYPE;
 #define DESCRIPTOR D2Q9<CHEM_POTENTIAL,FORCE>
 
 // Guideline parameters:
@@ -77,7 +82,7 @@ const T physVtkIter = 1.;                           // normalized vtk output (i.
 const T physStatIter = 1.;                          // normalized vtk output (i.e. per normalized time step, one output!)
 const T physInterval = 1.;                          // interval for the convergence check in s
 const T residuum = 7e-5;                            // residuum for the convergence check
-const T defResiduum = 0.001;						// deformation residuum criterion
+const T defResiduum = 0.001;                        // deformation residuum criterion
 
 // Set contact angles
 // no boundary touching here...
@@ -159,14 +164,14 @@ T horizontalMeasure(SuperLattice<T, DESCRIPTOR>& sLattice2, int points){
   AnalyticalFfromSuperF2D<T> aDensityH(density2, true, 1);
 
   T dropletLength = 0.;
-  T coordinates[2] = {T(0),nx/2.};	//interpolation coordinates, y fixed
+  T coordinates[2] = {T(0),T(nx)/T(2)}; //interpolation coordinates, y fixed
 
   for(int i=0; i<=points-1; i++){
     coordinates[0] = nx/2. + ((nx/2.) * (T) i/ ((T) (points-1.)));
     T output[1];
     aDensityH( output, coordinates );
 
-    if(output[0] >= 0.0){			//fluid equals continuous phase
+    if(output[0] >= 0.0){           //fluid equals continuous phase
       dropletLength = coordinates[0] - nx/2.;
       break;
     }
@@ -183,14 +188,14 @@ T verticalMeasure(SuperLattice<T, DESCRIPTOR>& sLattice2, int points){
   AnalyticalFfromSuperF2D<T> aDensityV(density2, true, 1);
 
   T dropletLength = 0.;
-  T coordinates[2] = {nx/2.,T(0)};	//interpolation coordinates, x fixed
+  T coordinates[2] = {T(nx)/T(2),T(0)}; //interpolation coordinates, x fixed
 
   for(int i=0; i<=points-1; i++){
     coordinates[1] = nx/2. + ((nx/2.) * (T) i/ ((T) (points-1.)));
     T output[1];
     aDensityV( output, coordinates );
 
-    if(output[0] >= 0.0){			//fluid equals continuous phase
+    if(output[0] >= 0.0){           //fluid equals continuous phase
       dropletLength = coordinates[1] - nx/2.;
       break;
     }
@@ -227,10 +232,10 @@ SuperGeometry<T,2> prepareGeometry(UnitConverter<T,DESCRIPTOR> const& converter)
 
   superGeometry.rename( 0,2 );
   superGeometry.rename( 2,1,{0,0} );
-  superGeometry.rename( 1,3,cylinder1 );	//Material number 3: cylinder bottom left
-  superGeometry.rename( 1,4,cylinder2 );	//Material number 4: cylinder bottom right
-  superGeometry.rename( 1,5,cylinder3 );	//Material number 5: cylinder top right
-  superGeometry.rename( 1,6,cylinder4 );	//Material number 6: cylinder top left
+  superGeometry.rename( 1,3,cylinder1 );    //Material number 3: cylinder bottom left
+  superGeometry.rename( 1,4,cylinder2 );    //Material number 4: cylinder bottom right
+  superGeometry.rename( 1,5,cylinder3 );    //Material number 5: cylinder top right
+  superGeometry.rename( 1,6,cylinder4 );    //Material number 6: cylinder top left
 
   // clean up
   superGeometry.clean();
@@ -252,18 +257,11 @@ void prepareLattice( SuperLattice<T, DESCRIPTOR>& sLattice1,
 
   T omega = converter.getLatticeRelaxationFrequency();
 
-  // define lattice Dynamics
-  sLattice1.defineDynamics<NoDynamics>( superGeometry, 0 );
-  sLattice2.defineDynamics<NoDynamics>( superGeometry, 0 );
-
   sLattice1.defineDynamics<ForcedBGKdynamics>( superGeometry, 1 );
   sLattice2.defineDynamics<FreeEnergyBGKdynamics>( superGeometry, 1 );
 
-  sLattice1.defineDynamics<BounceBack>( superGeometry, 2 );
-  sLattice2.defineDynamics<BounceBack>( superGeometry, 2 );
-
-  sLattice1.defineDynamics<NoDynamics>( superGeometry, 3 );
-  sLattice2.defineDynamics<NoDynamics>( superGeometry, 3 );
+  setBounceBackBoundary(sLattice1,  superGeometry, 2 );
+  setBounceBackBoundary(sLattice2,  superGeometry, 2 );
 
   auto cylinderIndicator1 = superGeometry.getMaterialIndicator(3);
   setFreeEnergyInletBoundary<T, DESCRIPTOR>(sLattice1, omega, cylinderIndicator1, "velocity", 1);
@@ -290,7 +288,7 @@ void prepareLattice( SuperLattice<T, DESCRIPTOR>& sLattice1,
   AnalyticalConst2D<T,T> zero( 0. );
   AnalyticalConst2D<T,T> one ( 1. );
 
-  SmoothIndicatorCircle2D<T,T> circle( {nx/2., nx/2.}, radius, converter.getPhysLength(alpha) );
+  SmoothIndicatorCircle2D<T,T> circle( {T(nx)/T(2), T(nx)/T(2)}, radius, converter.getPhysLength(alpha) );
   AnalyticalIdentity2D<T,T> rho( one );
   AnalyticalIdentity2D<T,T> phi( one - circle - circle );
 
@@ -331,7 +329,8 @@ void prepareLattice( SuperLattice<T, DESCRIPTOR>& sLattice1,
 }
 
 void prepareCoupling(SuperLattice<T, DESCRIPTOR>& sLattice1,
-                     SuperLattice<T, DESCRIPTOR>& sLattice2) {
+                     SuperLattice<T, DESCRIPTOR>& sLattice2,
+                     SuperGeometry<T,2>& superGeometry) {
 
   OstreamManager clout( std::cout,"prepareCoupling" );
   clout << "Add lattice coupling" << std::endl;
@@ -342,17 +341,25 @@ void prepareCoupling(SuperLattice<T, DESCRIPTOR>& sLattice1,
     alpha, kappa1, kappa2);
   FreeEnergyForceGenerator2D<T, DESCRIPTOR> coupling2;
 
-  sLattice1.addLatticeCoupling( coupling1, sLattice2 );
-  sLattice2.addLatticeCoupling( coupling2, sLattice1 );
+  sLattice1.addLatticeCoupling( superGeometry, 1, coupling1, sLattice2 );
+  sLattice2.addLatticeCoupling( superGeometry, 1, coupling2, sLattice1 );
+
+  // walls
+  FreeEnergyInletOutletGenerator2D<T,DESCRIPTOR> coupling3;
+  sLattice2.addLatticeCoupling( superGeometry, 3, coupling3, sLattice1 );
+  sLattice2.addLatticeCoupling( superGeometry, 4, coupling3, sLattice1 );
+  sLattice2.addLatticeCoupling( superGeometry, 5, coupling3, sLattice1 );
+  sLattice2.addLatticeCoupling( superGeometry, 6, coupling3, sLattice1 );
+
 
   {
-    auto& communicator = sLattice1.getCommunicator(PostCoupling());
+    auto& communicator = sLattice1.getCommunicator(stage::PostCoupling());
     communicator.requestField<CHEM_POTENTIAL>();
     communicator.requestOverlap(sLattice1.getOverlap());
     communicator.exchangeRequests();
   }
   {
-    auto& communicator = sLattice2.getCommunicator(PreCoupling());
+    auto& communicator = sLattice2.getCommunicator(stage::PreCoupling());
     communicator.requestField<CHEM_POTENTIAL>();
     communicator.requestOverlap(sLattice2.getOverlap());
     communicator.exchangeRequests();
@@ -514,7 +521,7 @@ int main( int argc, char *argv[] )
 
   prepareLattice( sLattice1, sLattice2, converter, superGeometry );
 
-  prepareCoupling( sLattice1, sLattice2 );
+  prepareCoupling( sLattice1, sLattice2, superGeometry );
 
   // === 4th Step: Main Loop with Timer ===
   int iT = 0;

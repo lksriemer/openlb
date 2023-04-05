@@ -99,7 +99,14 @@ inline auto fmod(T x, S y)
 
 
 // Exp
-inline float exp(float arg)
+template <typename T>
+inline std::enable_if_t<std::is_floating_point_v<T>, T> exp(T arg) any_platform
+{
+  return std::exp(arg);
+}
+
+template <typename T>
+inline std::enable_if_t<std::is_integral_v<T>, double> exp(T arg) any_platform
 {
   return std::exp(arg);
 }
@@ -109,25 +116,9 @@ inline float expf(float arg)
   return exp(arg);
 }
 
-inline double exp(double arg)
-{
-  return std::exp(arg);
-}
-
-inline long double exp(long double arg)
-{
-  return std::exp(arg);
-}
-
 inline long double expl(long double arg)
 {
   return exp(arg);
-}
-
-template <typename T>
-inline std::enable_if_t<std::is_integral_v<T>, double> exp(T arg)
-{
-  return std::exp(arg);
 }
 
 // Log

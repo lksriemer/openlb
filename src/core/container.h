@@ -27,12 +27,12 @@
 namespace olb {
 
 /**
- *  Container is a std::vector inspirated data wrapper that allows for simple
- *  content manipulation of its owned data. FieldArrayD, AnyFieldArrayD, MultiFieldArrayD 
+ *  Container is a std::vector inspired data wrapper that allows for simple
+ *  content manipulation of its owned data. FieldArrayD, AnyFieldArrayD, MultiFieldArrayD
  *  and DynamicFieldGroupsD do handle crucial data operations but do not provide
  *  simple access and manipulation functions as e.g. provided in std:: containers
  *  such as size and capacity handling. This Container class applicable to a provided
- *  FIELD_ARRAY_TYPE adds this functionality. 
+ *  FIELD_ARRAY_TYPE adds this functionality.
  *  It is also intended to be a crucial part in the parallization refactoring of the
  *  particle system by replacing the currently used std::deque container.
  */
@@ -53,7 +53,7 @@ public:
 
   Container( size_type count ):
     _data(FIELD_ARRAY_TYPE(count)),_size(count) { }
- 
+
 
   //// Element access (according to std::vector)
 
@@ -76,8 +76,13 @@ public:
   constexpr void shrink_to_fit(){ _data.resize(_size); }
 
   //// Modifiers (according to std::vector)
- 
+
   constexpr void clear();                             //TODO: implement
+
+  constexpr void erase(size_type i){                  //TODO: own prototype (check common!)
+    _data.swap(i, _size-1);
+    _size--;
+  }
 
   constexpr void push_back(){
     if ( this->capacity()==this->size() ){
@@ -88,11 +93,28 @@ public:
     _size++;
   }
 
+  template<typename COMMUNICATABLE>
+  void push_back( std::uint8_t* buffer ){
+    push_back();
+    const std::vector<unsigned int> indices{(static_cast<unsigned int>(_size)-1)};
+    COMMUNICATABLE(_data).deserialize(indices, buffer);
+  }
+
+  template<typename INTERFACE>
+  void push_back( INTERFACE& interface ){
+    const std::vector<unsigned int> indices{static_cast<unsigned int>(interface.getId())};
+    auto communicatable = interface.getCommunicatable();
+    int serialSize = communicatable.size(indices);
+    std::shared_ptr<std::uint8_t[]> buffer(new std::uint8_t[serialSize]{ });
+    communicatable.serialize(indices, buffer.get());
+    push_back<decltype(communicatable)>( buffer.get() );
+  }
+
   constexpr void pop_back(){ _size--; }
 
-  void resize( size_type new_capacity ){ _data.resize(new_capacity); } 
+  void resize( size_type new_capacity ){ _data.resize(new_capacity); }
 
-  void swapElements(std::size_t i, std::size_t j)
+  void swapElements(size_type i, size_type j)
   {
     _data.swap(i, j);
   }

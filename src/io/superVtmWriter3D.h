@@ -40,7 +40,7 @@ namespace olb {
  *
  * In .pvd files, there are only links/references to a VTKmultiblock file 'vtm'
  *
- * .pvd file structur
+ * .pvd file structure
  * the time series is represented by different 'vtm' files.
  *
  * .vtm file
@@ -50,28 +50,46 @@ namespace olb {
 template<typename T, typename W=T>
 class SuperVTMwriter3D {
 public:
-  SuperVTMwriter3D( const std::string& name, bool binary=true, bool compress=true );
+  /// Construct writer for functor output
+  SuperVTMwriter3D( const std::string& name, int overlap = 1, bool binary=true, bool compress=true );
+  /// Construct writer for CuboidGeometry3D debugging
+  SuperVTMwriter3D( CuboidGeometry3D<T>& cGeometry,
+                    const std::string& name, int overlap = 1, bool binary=true, bool compress=true );
   ///  writes functors stored in pointerVec
-  ///  every thread writes a vti file with data from his cuboids
+  ///  every process writes a vti file with data for each of its cuboids
   ///  the vti files are linked in a pvd file
   void write(int iT=0);
+  ///  writes only the linking pvd file for timestep iT, blocks must be written separately (e.g. asynchronously)
+  void writePVD(int iT);
+  ///  writes the vti file for cuboid iC at timestep iT
+  void writeGlobalVTI(int iT, int iC);
+  ///  writes the vti file for cuboid iCloc at timestep iT
+  void writeVTI(int iT, int iCloc);
+
   ///  writes functor instantaneously, same vti-pvd file structure as above
   void write(SuperF3D<T,W>& f, int iT=0);
   void write(std::shared_ptr<SuperF3D<T,W>> ptr_f, int iT=0);
+
   ///  have to be called before calling write(int iT=0), since it creates
   //   the master pvd file, where all vti are linked!
   void createMasterFile();
+
   ///  put functor to _pointerVec
   ///  to simplify writing process of several functors
   void addFunctor(SuperF3D<T,W>& f);
-  ///  put functor with specific name to _pointerVec 
+  ///  put functor with specific name to _pointerVec
   ///  to simplify writing process of several functors
   void addFunctor(SuperF3D<T,W>& f, const std::string& functorName);
+
   ///  to clear stored functors, not yet used due to lack of necessity
   void clearAddedFunctors();
+
   /// getter for _name
   std::string getName() const;
+
 private:
+  CuboidGeometry3D<T>* _cGeometry = nullptr;
+
   ///  performes <VTKFile ...>, <ImageData ...>, <PieceExtent ...> and <PointData ...>
   void preambleVTI(const std::string& fullName, const Vector<int,3> extent0, const Vector<int,3> extent1,
                    T origin[], T delta);
@@ -97,18 +115,20 @@ private:
                  int iC, const Vector<int,3> extent1);
   ///  performes </PointData> and </Piece>
   void closePiece(const std::string& fullNamePiece);
-private:
-  mutable OstreamManager clout;
+
+  OstreamManager clout;
   ///  default is false, call createMasterFile() and it will be true
   bool _createFile;
   ///  determines the name of .vti and .pvd per iT
   std::string const _name;
   ///  holds added functor, to simplify the use of write function
   std::vector< SuperF3D<T,W>* > _pointerVec;
+  int _overlap;
   ///  writing data base64 encoded
   bool _binary;
   ///  writing data zLib compressed
   bool _compress;
+
 };
 
 

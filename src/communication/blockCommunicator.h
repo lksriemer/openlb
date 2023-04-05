@@ -46,15 +46,14 @@ template<typename T> class SuperCommunicationTagCoordinator;
 struct BlockCommunicator {
   virtual ~BlockCommunicator() { };
 
-  virtual void copy() = 0;
-
 #ifdef PARALLEL_MODE_MPI
   virtual void receive() = 0;
   virtual void send()    = 0;
   virtual void unpack()  = 0;
-#endif
-
   virtual void wait()    = 0;
+#else
+  virtual void copy()    = 0;
+#endif
 
 };
 
@@ -66,16 +65,16 @@ private:
   MPI_Comm _mpiCommunicator;
 #endif
 
-  class CopyTask;
 #ifdef PARALLEL_MODE_MPI
   class SendTask;
   class RecvTask;
-#endif
 
-  std::vector<CopyTask> _copyTasks;
-#ifdef PARALLEL_MODE_MPI
   std::vector<SendTask> _sendTasks;
   std::vector<RecvTask> _recvTasks;
+#else
+  class CopyTask;
+
+  std::vector<CopyTask> _copyTasks;
 #endif
 
 public:
@@ -89,15 +88,14 @@ public:
                             int iC,
                             const BlockCommunicationNeighborhood<T,SUPER::d>& neighborhood);
 
-  void copy() override;
-
 #ifdef PARALLEL_MODE_MPI
   void receive() override;
   void send() override;
   void unpack() override;
-#endif
-
   void wait() override;
+#else
+  void copy() override;
+#endif
 
 };
 

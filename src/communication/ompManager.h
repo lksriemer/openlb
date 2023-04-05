@@ -29,44 +29,24 @@
 #include <omp.h>
 #include "io/ostreamManager.h"
 
-struct ompManager {
-  int size;
-  int rank;
+namespace olb {
 
+struct ompManager {
   void init(bool verbose=true);
-  int get_size() const;
-  int get_rank() const;
-  void set_dynamic(int dynamicThreads);
+
+  int getSize() const;
+  int getRank() const;
+
+  void setDynamic(int dynamicThreads);
 };
 
-void ompManager::init(bool verbose)
-{
-  set_dynamic(0);
-  size = omp_get_max_threads();
-  rank = omp_get_thread_num();
-  if (verbose) {
-    olb::OstreamManager clout(std::cout,"OmpManager");
-    clout << "Sucessfully initialized, numThreads=" << get_size() << std::endl;
-  }
+namespace singleton {
+
+ompManager omp();
+
 }
 
-int ompManager::get_size() const
-{
-  return size;
 }
-
-int ompManager::get_rank() const
-{
-  return rank;
-}
-
-void ompManager::set_dynamic(int dynamicThreads)
-{
-  omp_set_dynamic(dynamicThreads);
-}
-
-ompManager omp;
-#pragma omp threadprivate (omp)
 
 #endif
 

@@ -67,12 +67,12 @@ struct Vertex {
   /// Point coordinates in SI units
   Vector<T,D> coords;
 
-  /// Get dimension 
+  /// Get dimension
   int getDim() const
   {
     return D;
   }
-  
+
 };
 
 template<typename T>

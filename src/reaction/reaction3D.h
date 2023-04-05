@@ -22,7 +22,6 @@
  * Groups all the 3D include files in the explicitFiniteDifference directory.
 */
 
-#include "method.h"
 #include "reactingSpecies3D.h"
 #include "rate.h"
 #include "reactionPostProcessor3D.h"

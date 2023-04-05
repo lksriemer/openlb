@@ -38,6 +38,9 @@ namespace descriptors {
 //                                   Cs Ds Qs
 struct AD_FIELD  : public FIELD_BASE<2, 0, 0> { };
 struct AD_SOURCE : public FIELD_BASE<1, 0, 0> { };
+struct NORMAL_X  : public FIELD_BASE<1, 0, 0> { };
+struct NORMAL_Y  : public FIELD_BASE<1, 0, 0> { };
+struct NORMAL_Z  : public FIELD_BASE<1, 0, 0> { };
 
 } // descriptors
 

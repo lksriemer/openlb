@@ -22,8 +22,9 @@
  * Groups all the generic 3D template files in the explicitFiniteDifference directory.
  */
 
-#include "fdSchemes.hh"
+#include "fdSchemeSpecs/fdSchemeSpecs.hh"
 #include "fdModel.hh"
 #include "fdPostProcessor3D.hh"
+#include "setFdPostProcessor3D.hh"
 #include "boundary/fdBoundaryPostProcessors3D.hh"
-#include "boundary/setFdNeumannZeroBoundary3D.hh"
+#include "boundary/setFdBoundary3D.hh"

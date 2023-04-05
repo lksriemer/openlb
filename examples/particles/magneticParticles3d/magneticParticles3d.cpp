@@ -47,7 +47,7 @@ typedef D3Q19<> DESCRIPTOR;
 #define M_PI 3.14159265358979323846
 #endif
 
-typedef double T;
+using T = FLOATING_POINT_TYPE;
 
 int iT = 0;
 
@@ -126,21 +126,14 @@ void prepareLattice(SuperLattice<T, DESCRIPTOR>& sLattice,
 
   const T omega = (1. / converter.getLatticeRelaxationTime());
 
-  /// Material=0 -->do nothing
-  sLattice.defineDynamics<NoDynamics>(superGeometry, 0);
-
   /// Material=1 -->bulk dynamics
   sLattice.defineDynamics<BGKdynamics>(superGeometry, 1);
-
-  /// Material=2 -->bounce back
-  sLattice.defineDynamics<NoDynamics>(superGeometry, 2);
 
   sLattice.defineDynamics<BGKdynamics>(superGeometry, 3);
   sLattice.defineDynamics<BGKdynamics>(superGeometry, 4);
 
   /// Material=5 -->do nothing
-  sLattice.defineDynamics<NoDynamics>(superGeometry, 5);
-  setBouzidiZeroVelocityBoundary<T,DESCRIPTOR>(sLattice, superGeometry, 5, wire);
+  legacy::setBouzidiZeroVelocityBoundary<T,DESCRIPTOR>(sLattice, superGeometry, 5, wire);
 
   // boundary conditions for fluid
 
@@ -210,7 +203,7 @@ void setBoundaryValues(SuperLattice<T, DESCRIPTOR>& sLattice,
 void getResults(SuperGeometry<T,3>& superGeometry,
                 SuperLattice<T, DESCRIPTOR>& sLattice,
                 UnitConverter<T, DESCRIPTOR> const& converter,
-                AnalyticalF3D<T,BaseType<T>>& magForce, AnalyticalF3D<T,BaseType<T>>& magField,
+                AnalyticalF3D<T,T>& magForce, AnalyticalF3D<T,T>& magField,
                 SuperParticleSystem3D<T, PARTICLE>& spSys,
                 SuperParticleSysVtuWriterMag<T>& particleOut, Timer<double>& timer, int& iT,
                 int& itConsoleOutputFluid, int& itVtkOutputFluid,

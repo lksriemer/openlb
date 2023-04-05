@@ -27,83 +27,13 @@
 #include "latticeDescriptors.h"
 #include "navierStokesAdvectionDiffusionCouplingPostProcessor3D.h"
 #include "core/util.h"
-#include "core/finiteDifference3D.h"
+#include "utilities/finiteDifference3D.h"
 #include "advectionDiffusionForces.hh"
 #include "advectionDiffusionForces.h"
 
 #include "descriptorAlias.h"
 
 namespace olb {
-
-//=====================================================================================
-//==============  NavierStokesAdvectionDiffusionCouplingPostProcessor3D ===========
-//=====================================================================================
-
-template<typename T, typename DESCRIPTOR>
-NavierStokesAdvectionDiffusionCouplingPostProcessor3D<T,DESCRIPTOR>::
-NavierStokesAdvectionDiffusionCouplingPostProcessor3D(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_,
-    T gravity_, T T0_, T deltaTemp_, std::vector<T> dir_,
-    std::vector<BlockStructureD<3>* > partners_)
-  :  x0(x0_), x1(x1_), y0(y0_), y1(y1_), z0(z0_), z1(z1_),
-     gravity(gravity_), T0(T0_), deltaTemp(deltaTemp_),
-     dir(dir_), partners(partners_)
-{
-  this->getName() = "NavierStokesAdvectionDiffusionCouplingPostProcessor3D";
-  // we normalize the direction of force vector
-  T normDir = T();
-  for (unsigned iD = 0; iD < dir.size(); ++iD) {
-    normDir += dir[iD]*dir[iD];
-  }
-  normDir = util::sqrt(normDir);
-  for (unsigned iD = 0; iD < dir.size(); ++iD) {
-    dir[iD] /= normDir;
-  }
-
-  for (unsigned iD = 0; iD < dir.size(); ++iD) {
-    forcePrefactor[iD] = gravity * dir[iD];
-  }
-
-  tPartner = static_cast<BlockLattice<T,descriptors::D3Q7<descriptors::VELOCITY>> *>(partners[0]);
-}
-
-template<typename T, typename DESCRIPTOR>
-void NavierStokesAdvectionDiffusionCouplingPostProcessor3D<T,DESCRIPTOR>::
-processSubDomain(BlockLattice<T,DESCRIPTOR>& blockLattice,
-                 int x0_, int x1_, int y0_, int y1_, int z0_, int z1_)
-{
-
-  int newX0, newX1, newY0, newY1, newZ0, newZ1;
-  if ( util::intersect (
-         x0, x1, y0, y1, z0, z1,
-         x0_, x1_, y0_, y1_, z0_, z1_,
-         newX0, newX1, newY0, newY1, newZ0, newZ1 ) ) {
-
-    for (int iX=newX0; iX<=newX1; ++iX) {
-      for (int iY=newY0; iY<=newY1; ++iY) {
-        for (int iZ=newZ0; iZ<=newZ1; ++iZ) {
-          // computation of the bousinessq force
-          auto force = blockLattice.get(iX,iY,iZ).template getFieldPointer<descriptors::FORCE>();
-          T temperatureDifference = tPartner->get(iX,iY,iZ).computeRho() - T0;
-          for (unsigned iD = 0; iD < L::d; ++iD) {
-            force[iD] = forcePrefactor[iD] * temperatureDifference;
-          }
-          // Velocity coupling
-          auto u = tPartner->get(iX,iY,iZ).template getField<descriptors::VELOCITY>();
-          blockLattice.get(iX,iY,iZ).computeU(u.data());
-          tPartner->get(iX,iY,iZ).template setField<descriptors::VELOCITY>(u);
-        }
-      }
-    }
-  }
-}
-
-template<typename T, typename DESCRIPTOR>
-void NavierStokesAdvectionDiffusionCouplingPostProcessor3D<T,DESCRIPTOR>::
-process(BlockLattice<T,DESCRIPTOR>& blockLattice)
-{
-  processSubDomain(blockLattice, x0, x1, y0, y1, z0, z1);
-}
-
 
 //=====================================================================================
 //==============  TotalEnthalpyPhaseChangeCouplingPostProcessor3D ===============
@@ -148,8 +78,8 @@ processSubDomain(BlockLattice<T,DESCRIPTOR>& blockLattice,
          x0_, x1_, y0_, y1_, z0_, z1_,
          newX0, newX1, newY0, newY1, newZ0, newZ1 ) ) {
     auto* dynamics = static_cast<DYNAMICS*>(tPartner->template getDynamics<DYNAMICS>());
-    typename DYNAMICS::ParametersD& parameters = static_cast<typename DYNAMICS::ParametersD&>(
-      tPartner->template getData<DynamicsParameters<DYNAMICS>>());
+    auto& parameters = static_cast<ParametersOfDynamicsD<DYNAMICS>&>(
+      tPartner->template getData<OperatorParameters<DYNAMICS>>());
 
     for (int iX=newX0; iX<=newX1; ++iX) {
       for (int iY=newY0; iY<=newY1; ++iY) {
@@ -629,29 +559,6 @@ process(BlockLattice<T,DESCRIPTOR>& blockLattice)
   processSubDomain(blockLattice, x0, x1, y0, y1, z0, z1);
 }
 
-// LatticeCouplingGenerator for advectionDiffusion coupling
-
-template<typename T, typename DESCRIPTOR>
-NavierStokesAdvectionDiffusionCouplingGenerator3D<T,DESCRIPTOR>::
-NavierStokesAdvectionDiffusionCouplingGenerator3D(int x0_, int x1_, int y0_, int y1_,int z0_, int z1_, T gravity_, T T0_, T deltaTemp_, std::vector<T> dir_)
-  : LatticeCouplingGenerator3D<T,DESCRIPTOR>(x0_, x1_, y0_, y1_, z0_, z1_),
-    gravity(gravity_), T0(T0_), deltaTemp(deltaTemp_), dir(dir_)
-{ }
-
-template<typename T, typename DESCRIPTOR>
-PostProcessor3D<T,DESCRIPTOR>* NavierStokesAdvectionDiffusionCouplingGenerator3D<T,DESCRIPTOR>::generate (
-  std::vector<BlockStructureD<3>* > partners) const
-{
-  return new NavierStokesAdvectionDiffusionCouplingPostProcessor3D<T,DESCRIPTOR>(
-           this->x0,this->x1,this->y0,this->y1,this->z0,this->z1, gravity, T0, deltaTemp, dir,partners);
-}
-
-template<typename T, typename DESCRIPTOR>
-LatticeCouplingGenerator3D<T,DESCRIPTOR>* NavierStokesAdvectionDiffusionCouplingGenerator3D<T,DESCRIPTOR>::clone() const
-{
-  return new NavierStokesAdvectionDiffusionCouplingGenerator3D<T,DESCRIPTOR>(*this);
-}
-
 // LatticeCouplingGenerator for one-way advectionDiffusion coupling with Stokes drag
 
 template<typename T, typename DESCRIPTOR, typename ADLattice, typename FIELD_A, typename FIELD_B>
@@ -1102,8 +1009,8 @@ VolumeAveragedNavierStokesAdvectionDiffusionParticleCouplingPostProcessor3D(int 
      _cellYn(_partnerLattice->get(x0,y0-1,z0)),
      _cellZp(_partnerLattice->get(x0,y0,z0+1)),
      _cellZn(_partnerLattice->get(x0,y0,z0-1))
-{ 
-  this->getName() = "VolumeAveragedNavierStokesAdvectionDiffusionParticleCouplingPostProcessor3D";  
+{
+  this->getName() = "VolumeAveragedNavierStokesAdvectionDiffusionParticleCouplingPostProcessor3D";
 }
 
 template<typename T, typename DESCRIPTOR, typename POROSITY, typename ADLattice, typename FIELD_A, typename FIELD_B>
@@ -1122,7 +1029,7 @@ processSubDomain(BlockLattice<T,DESCRIPTOR>& blockLattice,
   auto velZn = par ? _cellZn.template getFieldPointer<FIELD_B>() : _cellZn.template getFieldPointer<FIELD_A>();
 
   auto forceNS = blockLattice.get(x0,y0,z0).template getFieldPointer<descriptors::FORCE>();
-  
+
   auto _cellNSXp = blockLattice.get(x0+1,y0,z0);
   auto _cellNSXn = blockLattice.get(x0-1,y0,z0);
   auto _cellNSYp = blockLattice.get(x0,y0+1,z0);
@@ -1142,10 +1049,10 @@ processSubDomain(BlockLattice<T,DESCRIPTOR>& blockLattice,
     for (int iX=newX0; iX<=newX1; ++iX) {
       for (int iY=newY0; iY<=newY1; ++iY) {
         for (int iZ=newZ0; iZ<=newZ1; ++iZ) {
-	  auto nsCell = blockLattice.get(iX,iY,iZ);
-	  T porosityNS = 1. - _cell.computeRho();
-	  nsCell.template setField<POROSITY>(porosityNS);
-	}
+      auto nsCell = blockLattice.get(iX,iY,iZ);
+      T porosityNS = 1. - _cell.computeRho();
+      nsCell.template setField<POROSITY>(porosityNS);
+    }
       }
     }
 
@@ -1157,9 +1064,9 @@ processSubDomain(BlockLattice<T,DESCRIPTOR>& blockLattice,
           T forceValue[3] = {0.,0.,0.};
           T velF[3] = {0.,0.,0.};
 
-          auto nsCell = blockLattice.get(iX,iY,iZ);	  
+          auto nsCell = blockLattice.get(iX,iY,iZ);
           pressure = nsCell.computeRho() / descriptors::invCs2<T,DESCRIPTOR>();
- 
+
           if (_forces.begin() != _forces.end()) {
             // calculating upwind Gradient
             // vel contains velocity information on ADlattice
@@ -1209,25 +1116,25 @@ processSubDomain(BlockLattice<T,DESCRIPTOR>& blockLattice,
             // compute new particle velocity and opposite fluid force
             for (int i=0; i < DESCRIPTOR::d; i++) {
               vel_new[i] = vel[i] + forceValue[i] - velGrad[i];
-	      forceNS[i] = -forceValue[i];    
+              forceNS[i] = -forceValue[i];
             }
           }
           else {
-	    
-	    T porXp = _cellNSXp.template getField<POROSITY>();
+
+        T porXp = _cellNSXp.template getField<POROSITY>();
             T porXn = _cellNSXn.template getField<POROSITY>();
             T porYp = _cellNSYp.template getField<POROSITY>();
             T porYn = _cellNSYn.template getField<POROSITY>();
             T porZp = _cellNSZp.template getField<POROSITY>();
             T porZn = _cellNSZn.template getField<POROSITY>();
-  
+
             porosityForce[0] = 0.5 * pressure * (porXp - porXn);
-	    porosityForce[1] = 0.5 * pressure * (porYp - porYn);
+        porosityForce[1] = 0.5 * pressure * (porYp - porYn);
             porosityForce[2] = 0.5 * pressure * (porZp - porZn);
-	    
-	    for (int i = 0; i < DESCRIPTOR::d; i++) {
-	      forceNS[i] += porosityForce[i];
-	    }
+
+        for (int i = 0; i < DESCRIPTOR::d; i++) {
+          forceNS[i] += porosityForce[i];
+        }
 
             nsCell.computeU(velF);
 
@@ -1262,7 +1169,7 @@ PostProcessor3D<T,DESCRIPTOR>* VolumeAveragedNavierStokesAdvectionDiffusionParti
   std::vector<BlockStructureD<3>* > partners) const
 {
   return new VolumeAveragedNavierStokesAdvectionDiffusionParticleCouplingPostProcessor3D<T,DESCRIPTOR,POROSITY,ADLattice,FIELD_A,FIELD_B>(
-																	  this->x0,this->x1,this->y0,this->y1,this->z0,this->z1, this->iC, partners, ADforces);
+                                                                      this->x0,this->x1,this->y0,this->y1,this->z0,this->z1, this->iC, partners, ADforces);
 }
 
 template<typename T, typename DESCRIPTOR, typename POROSITY, typename ADLattice, typename FIELD_A, typename FIELD_B>

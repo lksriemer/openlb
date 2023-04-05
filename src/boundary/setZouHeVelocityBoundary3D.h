@@ -37,7 +37,6 @@
 #include "io/ostreamManager.h"
 #include "boundaryPostProcessors3D.h"
 #include "zouHeDynamics.h"
-#include "zouHeDynamics.hh"
 #include "setLocalVelocityBoundary3D.h"
 #include "setBoundary3D.h"
 

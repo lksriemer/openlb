@@ -24,6 +24,7 @@
 /** \file
  * Groups all the 3D include files in the boundaryConditions directory.
  */
+
 #include "advectionDiffusionBoundaryPostProcessor3D.h"
 #include "boundaryPostProcessors3D.h"
 #include "extendedFiniteDifferenceBoundary3D.h"
@@ -41,17 +42,21 @@
 #include "setLocalConvectionBoundary3D.h"
 #include "setInterpolatedConvectionBoundary3D.h"
 #include "setAdvectionDiffusionConvectionBoundary3D.h"
+#include "setAdvectionDiffusionNeumannBoundary3D.h"
 #include "setAdvectionDiffusionTemperatureBoundary3D.h"
+#include "setAdvectionDiffusionZeroGradientBoundary3D.h"
 #include "setExtFieldBoundary3D.h"
 #include "setZeroDistributionBoundary3D.h"
 #include "setWallFunctionBoundary3D.h"
 #include "setFreeEnergyInletBoundary3D.h"
 #include "setFreeEnergyOutletBoundary3D.h"
 #include "setFreeEnergyWallBoundary3D.h"
-#include "setBouzidiVelocityBoundary3D.hh"
-#include "setBouzidiZeroVelocityBoundary3D.hh"
+#include "setBouzidiBoundary.h"
+#include "legacy/setBouzidiVelocityBoundary3D.hh"
+#include "legacy/setBouzidiZeroVelocityBoundary3D.hh"
+#include "setBounceBackBoundary.h"
 #include "setBounceBackVelocityBoundary3D.h"
-#include "defineU3D.h"
+#include "legacy/defineU3D.h"
 #include "setSlipBoundary3D.h"
 #include "setSlipBoundaryWithDynamics3D.h"
 #include "setZouHeVelocityBoundary3D.h"
@@ -60,5 +65,6 @@
 #include "setRtlbmDiffuseConstTemperatureBoundary3D.h"
 #include "setRtlbmDirectedTemperatureBoundary3D.h"
 #include "helper.h"
+#include "setNewSlipBoundary3D.h"
 
 #include "boundary3D.hh"

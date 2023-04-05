@@ -60,11 +60,7 @@ SmoothIndicatorCuboid3D<T,S,PARTICLE>::SmoothIndicatorCuboid3D(S xLength, S yLen
   this->_epsilon = epsilon;
   if constexpr (!PARTICLE) {
     this->_pos = _ind.getCenter();
-    this->_theta = {
-      theta[0] * (M_PI/180.),
-      theta[1] * (M_PI/180.),
-      theta[2] * (M_PI/180.)
-    };
+    this->_theta = util::degreeToRadian(theta);
   }
 
   this->_circumRadius = .5*(util::sqrt(xLength*xLength+yLength*yLength+zLength*zLength))+0.5*epsilon;
@@ -80,8 +76,13 @@ SmoothIndicatorCuboid3D<T,S,PARTICLE>::SmoothIndicatorCuboid3D(S xLength, S yLen
       this->_pos[1] + this->getCircumRadius(),
       this->_pos[2] + this->getCircumRadius()
     };
-    this->init(this->_theta);
+    this->init();
   }
+}
+
+template <typename T, typename S, bool PARTICLE>
+IndicatorCuboid3D<S>& SmoothIndicatorCuboid3D<T,S,PARTICLE>::getIndicator(){
+  return _ind;
 }
 
 template <typename T, typename S, bool PARTICLE>
@@ -119,7 +120,7 @@ const S SmoothIndicatorCuboid3D<T, S, PARTICLE>::signedDistance( const PhysR<S,3
   Vector<S,3> p;
   if constexpr(!PARTICLE) {
     // counter-clockwise rotation by _theta=-theta around the current position of the center of mass & translation
-    p = body::motion::rotation<3,S,true>::execute(input, this->_rotMat, this->getPos());
+    p = util::executeRotation<S,3,true>(input, this->_rotMat, this->getPos());
   }
   else {
     p = input;
@@ -143,11 +144,7 @@ SmoothIndicatorEllipsoid3D<T,S,PARTICLE>::SmoothIndicatorEllipsoid3D(Vector<S,3>
   this->_epsilon = epsilon;
   if constexpr (!PARTICLE) {
     this->_pos = center;
-    this->_theta = {
-      theta[0] * (M_PI/180.),
-      theta[1] * (M_PI/180.),
-      theta[2] * (M_PI/180.)
-    };
+    this->_theta = util::degreeToRadian(theta);
   }
 
   T const max_axis = util::max( radius[0], util::max(radius[1], radius[2]) );
@@ -163,8 +160,13 @@ SmoothIndicatorEllipsoid3D<T,S,PARTICLE>::SmoothIndicatorEllipsoid3D(Vector<S,3>
       this->_pos[1] + this->getCircumRadius(),
       this->_pos[2] + this->getCircumRadius()
     };
-    this->init(this->_theta);
+    this->init();
   }
+}
+
+template <typename T, typename S, bool PARTICLE>
+IndicatorEllipsoid3D<S>& SmoothIndicatorEllipsoid3D<T,S,PARTICLE>::getIndicator(){
+  return _ind;
 }
 
 template <typename T, typename S, bool PARTICLE>
@@ -202,7 +204,7 @@ const S SmoothIndicatorEllipsoid3D<T, S, PARTICLE>::signedDistance( const PhysR<
   Vector<S,3> p;
   if constexpr(!PARTICLE) {
     // counter-clockwise rotation by _theta=-theta around the current position of the center of mass & translation
-    p = body::motion::rotation<3,S,true>::execute(input, this->_rotMat, this->getPos());
+    p = util::executeRotation<S,3,true>(input, this->_rotMat, this->getPos());
   }
   else {
     p = input;
@@ -210,6 +212,7 @@ const S SmoothIndicatorEllipsoid3D<T, S, PARTICLE>::signedDistance( const PhysR<
   return _ind.signedDistance(p + _ind.getCenter());
 }
 
+// TODO: Check for correctness
 template <typename T, typename S, bool PARTICLE>
 bool SmoothIndicatorEllipsoid3D<T,S,PARTICLE>::operator()(T output[], const S input[])
 {
@@ -269,11 +272,7 @@ SmoothIndicatorSuperEllipsoid3D<T,S,PARTICLE>::SmoothIndicatorSuperEllipsoid3D(V
   this->_epsilon = epsilon;
   if constexpr (!PARTICLE) {
     this->_pos = _ind.getCenter();
-    this->_theta = {
-      theta[0] * (M_PI/180.),
-      theta[1] * (M_PI/180.),
-      theta[2] * (M_PI/180.)
-    };
+    this->_theta = util::degreeToRadian(theta);
   }
 
   T const max_axis = util::max( xHalfAxis, util::max(yHalfAxis, zHalfAxis) );
@@ -289,8 +288,13 @@ SmoothIndicatorSuperEllipsoid3D<T,S,PARTICLE>::SmoothIndicatorSuperEllipsoid3D(V
       this->_pos[1] + this->getCircumRadius(),
       this->_pos[2] + this->getCircumRadius()
     };
-    this->init(this->_theta);
+    this->init();
   }
+}
+
+template <typename T, typename S, bool PARTICLE>
+IndicatorSuperEllipsoid3D<S>& SmoothIndicatorSuperEllipsoid3D<T,S,PARTICLE>::getIndicator(){
+  return _ind;
 }
 
 template <typename T, typename S, bool PARTICLE>
@@ -340,7 +344,7 @@ const S SmoothIndicatorSuperEllipsoid3D<T, S, PARTICLE>::signedDistance( const P
   Vector<S,3> p;
   if constexpr(!PARTICLE) {
     // counter-clockwise rotation by _theta=-theta around the current position of the center of mass & translation
-    p = body::motion::rotation<3,S,true>::execute(input, this->_rotMat, this->getPos());
+    p = util::executeRotation<S,3,true>(input, this->_rotMat, this->getPos());
   }
   else {
     p = input;
@@ -411,8 +415,14 @@ SmoothIndicatorSphere3D<T,S,PARTICLE>::SmoothIndicatorSphere3D(Vector<S,3> cente
       this->_pos[1] + this->getCircumRadius(),
       this->_pos[2] + this->getCircumRadius()
     };
-    this->init({0.,0.,0.});
+    this->_theta = Vector<T,3>(0.,0.,0.);
+    this->init();
   }
+}
+
+template <typename T, typename S, bool PARTICLE>
+IndicatorSphere3D<S>& SmoothIndicatorSphere3D<T,S,PARTICLE>::getIndicator(){
+  return _ind;
 }
 
 template <typename T, typename S, bool PARTICLE>
@@ -467,8 +477,13 @@ void SmoothIndicatorCylinder3D<T,S,PARTICLE>::initIndicatorCylinder3D(Vector<S,3
       this->_pos[1] + this->getCircumRadius(),
       this->_pos[2] + this->getCircumRadius()
     };
-    this->init(this->_theta);
+    this->init();
   }
+}
+
+template <typename T, typename S, bool PARTICLE>
+IndicatorCylinder3D<S>& SmoothIndicatorCylinder3D<T,S,PARTICLE>::getIndicator(){
+  return _ind;
 }
 
 template <typename T, typename S, bool PARTICLE>
@@ -483,11 +498,7 @@ SmoothIndicatorCylinder3D<T,S,PARTICLE>::SmoothIndicatorCylinder3D(Vector<S,3> c
   this->_epsilon = epsilon;
   if constexpr (!PARTICLE) {
     this->_pos = 0.5 * (_ind.getCenter1() + _ind.getCenter2());
-    this->_theta = {
-      theta[0] * (M_PI/180.),
-      theta[1] * (M_PI/180.),
-      theta[2] * (M_PI/180.)
-    };
+    this->_theta = util::degreeToRadian(theta);
   }
   Vector<T,3> dist = _ind.getCenter2() - _ind.getCenter1();
   S const length = norm(dist);
@@ -539,7 +550,7 @@ const S SmoothIndicatorCylinder3D<T, S, PARTICLE>::signedDistance( const PhysR<S
   Vector<S,3> p;
   if constexpr(!PARTICLE) {
     // counter-clockwise rotation by _theta=-theta around the current position of the center of mass & translation
-    p = body::motion::rotation<3,S,true>::execute(input, this->_rotMat, this->getPos());
+    p = util::executeRotation<S,3,true>(input, this->_rotMat, this->getPos());
   }
   else {
     p = input;
@@ -564,16 +575,17 @@ SmoothIndicatorCone3D<T,S,PARTICLE>::SmoothIndicatorCone3D(Vector<S,3> center1, 
 
   if constexpr (!PARTICLE) {
     this->_pos = _startPos;
-    this->_theta = {
-      theta[0] * (M_PI/180.),
-      theta[1] * (M_PI/180.),
-      theta[2] * (M_PI/180.)
-    };
+    this->_theta = util::degreeToRadian(theta);
   }
 
   Vector<T,3> dist = _ind.getCenter2() - _ind.getCenter1();
   S const length = norm(dist);
   initIndicatorCone3D(theta, length);
+}
+
+template <typename T, typename S, bool PARTICLE>
+IndicatorCone3D<S>& SmoothIndicatorCone3D<T,S,PARTICLE>::getIndicator(){
+  return _ind;
 }
 
 // TODO: Add Moment of inertia for truncated cone
@@ -602,7 +614,7 @@ void SmoothIndicatorCone3D<T,S,PARTICLE>::initIndicatorCone3D(Vector<S,3> theta,
       this->_pos[2] + this->getCircumRadius()
     };
 
-    this->init(this->_theta);
+    this->init();
   }
 }
 
@@ -686,7 +698,7 @@ const S SmoothIndicatorCone3D<T, S, PARTICLE>::signedDistance( const PhysR<S,3> 
   Vector<S,3> p;
   if constexpr(!PARTICLE) {
     // counter-clockwise rotation by _theta=-theta around the current position of the center of mass & translation
-    p = body::motion::rotation<3,S,true>::execute(input, this->_rotMat, this->getPos());
+    p = util::executeRotation<S,3,true>(input, this->_rotMat, this->getPos());
   }
   else {
     p = input;
@@ -714,10 +726,10 @@ SmoothIndicatorCustom3D<T,S,PARTICLE>::SmoothIndicatorCustom3D(T latticeSpacing,
   this->_epsilon = epsilon;
   if constexpr (!PARTICLE) {
     this->_pos = pos;         // global position of the local center
-    this->_theta = (M_PI/180.) * theta;
+    this->_theta = util::degreeToRadian(theta);
+    this->init();
   }
 
-  initRotationMatrix();
   initBlockData(*indPtr);
 
   // calculate mass and centerpoint for rotation
@@ -727,35 +739,28 @@ SmoothIndicatorCustom3D<T,S,PARTICLE>::SmoothIndicatorCustom3D(T latticeSpacing,
 }
 
 template <typename T, typename S, bool PARTICLE>
-void SmoothIndicatorCustom3D<T,S,PARTICLE>::initRotationMatrix()
-{
-  if constexpr(!PARTICLE) {
-    // initialize rotation matrix
-    this->_rotMat = particles::dynamics::rotation_matrix<3,T>::calculate( this->_theta );
-  }
-}
-
-template <typename T, typename S, bool PARTICLE>
 void SmoothIndicatorCustom3D<T,S,PARTICLE>::initBlockData(IndicatorF3D<T>& ind)
 {
   OstreamManager clout(std::cout,"createIndicatorCustom3D");
 
   // initialize temporary values
-  int blockDataSize[3];
-  int blockDataPadding[3];
+  Vector<int,3> blockDataSize;
+  Vector<int,3> blockDataPadding;
   for (unsigned iD=0; iD<3; ++iD) {
-    blockDataSize[iD] = util::ceil( (ind.getMax()[iD] - ind.getMin()[iD]) / _latticeSpacing );
+    blockDataSize[iD] = util::max(
+        util::ceil( (ind.getMax()[iD] - ind.getMin()[iD]) / _latticeSpacing ), 1);
     // Add a padding so that the distance can be cached in the vicinity of the geometry
-    blockDataPadding[iD] = 2*util::ceil(0.05*blockDataSize[iD]);
+    blockDataPadding[iD] = 2*util::ceil(0.2*blockDataSize[iD]);
     blockDataSize[iD] += blockDataPadding[iD];
   }
 
   // create blockData containing signed distance information
-  this->_blockData.reset(new BlockData<3,T,BaseType<T>>({blockDataSize, 0}));
+  _cuboid = Cuboid3D<T>(PhysR<T,3>(0.), _latticeSpacing, blockDataSize);
+  this->_blockData.reset(new BlockData<3,T,BaseType<T>>(_cuboid));
   int iX[3];
-  for (iX[0]=0; iX[0] < blockDataSize[0]; iX[0]++) {
-    for (iX[1]=0; iX[1] < blockDataSize[1]; iX[1]++) {
-      for (iX[2]=0; iX[2] < blockDataSize[2]; iX[2]++) {
+  for (iX[0]=0; iX[0] < this->_blockData->getNx(); ++iX[0]) {
+    for (iX[1]=0; iX[1] < this->_blockData->getNy(); ++iX[1]) {
+      for (iX[2]=0; iX[2] < this->_blockData->getNz(); ++iX[2]) {
         Vector<T,3> input;
         for (unsigned iD=0; iD<3; ++iD) {
           input[iD] = (iX[iD]-blockDataPadding[iD]/2)*_latticeSpacing+ind.getMin()[iD];
@@ -764,6 +769,9 @@ void SmoothIndicatorCustom3D<T,S,PARTICLE>::initBlockData(IndicatorF3D<T>& ind)
       }
     }
   }
+
+  this->_cacheFunctor = std::make_unique<BlockDataF3D<T,BaseType<T>>>(*(this->_blockData));
+  this->_interpolateCache = std::make_unique<AnalyticalFfromBlockF3D<T,T>>(*(this->_cacheFunctor), _cuboid);
 }
 
 template <typename T, typename S, bool PARTICLE>
@@ -834,15 +842,15 @@ void SmoothIndicatorCustom3D<T,S,PARTICLE>::calcCircumRadius()
   Vector<T,3> min(std::numeric_limits<olb::BaseType<T>>::max());
   Vector<T,3> max(-std::numeric_limits<olb::BaseType<T>>::max());
   Vector<T,3> distance;
-  T maxDistance = -std::numeric_limits<olb::BaseType<T>>::max();
+  T maxDistance{0};
 
   int input[3];
   for (input[0] = 0; input[0] < this->_blockData->getNx(); ++input[0]) {
-    distance[0] = this->_center[0] - this->_latticeSpacing*input[0];
+    distance[0] = this->_latticeSpacing * input[0] - this->_center[0];
     for (input[1] = 0; input[1] < this->_blockData->getNy(); ++input[1]) {
-      distance[1] = this->_center[1] - this->_latticeSpacing*input[1];
+      distance[1] = this->_latticeSpacing * input[1] - this->_center[1];
       for (input[2] = 0; input[2] < this->_blockData->getNz(); ++input[2]) {
-        distance[2] = this->_center[2] - this->_latticeSpacing*input[2];
+        distance[2] = this->_latticeSpacing * input[2] - this->_center[2];
         if (regardCell(input)) {
           if constexpr (!PARTICLE) {
             for (unsigned iD=0; iD<3; ++iD) {
@@ -857,13 +865,13 @@ void SmoothIndicatorCustom3D<T,S,PARTICLE>::calcCircumRadius()
   }
 
   if constexpr (!PARTICLE) {
-    min -= Vector<T,3>(-this->_epsilon);
-    max += Vector<T,3>(-this->_epsilon);
-    this->_myMin = this->_pos+min;
-    this->_myMax = this->_pos+max;
+    min -= Vector<T,3>(0.5 * this->_epsilon + _latticeSpacing);
+    max += Vector<T,3>(0.5 * this->_epsilon + _latticeSpacing);
+    this->_myMin = this->_pos + min;
+    this->_myMax = this->_pos + max;
   }
 
-  this->_circumRadius = maxDistance + .5*this->_epsilon;
+  this->_circumRadius = maxDistance + T{0.5} * (this->_epsilon + util::sqrt(3) * _latticeSpacing);
 }
 
 template <typename T, typename S, bool PARTICLE>
@@ -888,35 +896,30 @@ Vector<S,3> SmoothIndicatorCustom3D<T,S,PARTICLE>::surfaceNormal( const Vector<S
 template <typename T, typename S, bool PARTICLE>
 const S SmoothIndicatorCustom3D<T,S,PARTICLE>::signedDistance( const PhysR<S,3> input )
 {
-  // Translation
-  T xDist = input[0];
-  T yDist = input[1];
-  T zDist = input[2];
+  PhysR<T,3> position = input;
   if constexpr (!PARTICLE) {
-    xDist -= this->getPos()[0];
-    yDist -= this->getPos()[1];
-    zDist -= this->getPos()[2];
+    // translation, counter-clockwise rotation by _theta=-theta around (0/0) and movement from rotation center to local center
+    position = util::executeRotation<T,3,true>(input, this->_rotMat, this->getPos());
+  }
+  // The block data originates in (0,0,0) therefore we translate the input position which is relative to center of mass
+  const PhysR<T,3> positionInCache = this->_center + position;
+
+  T signedDistance(0.);
+  if(_interpolateCache->operator()(&signedDistance, positionInCache.data())) {
+    return signedDistance;
   }
 
-  // counter-clockwise rotation by _theta=-theta around (0/0) and movement from rotation center to local center
-  int x;
-  int y;
-  int z;
-  if constexpr (!PARTICLE) {
-    x = util::round((this->_center[0] + this->_rotMat[0]*xDist + this->_rotMat[3]*yDist + this->_rotMat[6]*zDist)/this->_latticeSpacing);
-    y = util::round((this->_center[1] + this->_rotMat[1]*xDist + this->_rotMat[4]*yDist + this->_rotMat[7]*zDist)/this->_latticeSpacing);
-    z = util::round((this->_center[2] + this->_rotMat[2]*xDist + this->_rotMat[5]*yDist + this->_rotMat[8]*zDist)/this->_latticeSpacing);
+  // If all points were outside return an estimation instead
+  LatticeR<3> latticePosition;
+  PhysR<T,3> extraDistance;
+  for(unsigned iDim=0; iDim<3; ++iDim) {
+    latticePosition[iDim] = util::round( positionInCache[iDim] / this->_latticeSpacing );
+    latticePosition[iDim] = util::max(0, latticePosition[iDim]);
+    latticePosition[iDim] = util::min(this->_blockData->getExtent()[iDim] - 1, latticePosition[iDim]);
+    // The extra distance is always positive because it must be outside the geometry
+    extraDistance[iDim] = util::abs(_latticeSpacing * latticePosition[iDim] - positionInCache[iDim]);
   }
-  else {
-    x = util::round((this->_center[0] + xDist)/this->_latticeSpacing);
-    y = util::round((this->_center[1] + yDist)/this->_latticeSpacing);
-    z = util::round((this->_center[2] + zDist)/this->_latticeSpacing);
-  }
-
-  if (x >= 0 && x < _blockData->getNx() && y >= 0 && y < _blockData->getNy() && z >= 0 && z < _blockData->getNz()) {
-    return this->_blockData->get({x, y, z});
-  }
-  return 1;
+  return this->_blockData->get(latticePosition.data()) + norm(extraDistance);
 }
 
 template <typename T, typename S, bool PARTICLE>
@@ -925,6 +928,19 @@ bool SmoothIndicatorCustom3D<T,S,PARTICLE>::regardCell(int input[3])
   return this->_blockData->get(input) < std::numeric_limits<T>::epsilon();
 }
 
+template <typename T, typename S, bool PARTICLE>
+bool SmoothIndicatorCustom3D<T,S,PARTICLE>::operator()(T output[], const S input[])
+{
+  PhysR<T,3> pos(input[0], input[1], input[2]);
+  if constexpr(!PARTICLE) {
+    pos = util::executeRotation<S,3,true>(pos, this->_rotMat, this->getPos());
+  }
+  if(norm(pos) < this->_circumRadius) {
+    return SmoothIndicatorF3D<T, S, PARTICLE>::operator()(output, input);
+  }
+  output[0] = T{0};
+  return false;
+}
 
 } // namespace olb
 

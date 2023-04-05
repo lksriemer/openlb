@@ -39,14 +39,14 @@ public:
   using descriptor_t = DESCRIPTOR;
 
   template <typename POPULATIONS>
-  PopulationCellD(POPULATIONS&& pops):
+  PopulationCellD(POPULATIONS&& pops) any_platform:
     _data{pops} { }
 
-  const T& operator[](unsigned iPop) const {
+  const T& operator[](unsigned iPop) const any_platform {
     return _data[iPop];
   }
 
-  T& operator[](unsigned iPop) {
+  T& operator[](unsigned iPop) any_platform {
     return _data[iPop];
   }
 };

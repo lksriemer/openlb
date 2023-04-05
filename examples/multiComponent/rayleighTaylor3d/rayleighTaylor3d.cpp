@@ -37,21 +37,21 @@ using namespace olb;
 using namespace olb::descriptors;
 using namespace olb::graphics;
 
-typedef double T;
-typedef D3Q19<VELOCITY,FORCE,EXTERNAL_FORCE,OMEGA> DESCRIPTOR;
+using T = float;
+using DESCRIPTOR = D3Q19<FORCE,EXTERNAL_FORCE,STATISTIC>;
 
+using COUPLING = ShanChenForcedPostProcessor<interaction::PsiEqualsRho>;
 
 // Parameters for the simulation setup
-const int nx   = 70;
-const int ny   = 35;
-const int nz   = 70;
-const int maxIter  = 4000;
+const int nx   = 200;
+const int ny   = 100;
+const int nz   = 200;
+const int maxIter  = 10000;
 
 
 // Stores geometry information in form of material numbers
 void prepareGeometry( SuperGeometry<T,3>& superGeometry )
 {
-
   OstreamManager clout( std::cout,"prepareGeometry" );
   clout << "Prepare Geometry ..." << std::endl;
 
@@ -83,9 +83,10 @@ void prepareGeometry( SuperGeometry<T,3>& superGeometry )
   clout << "Prepare Geometry ... OK" << std::endl;
 }
 
-
+template <typename SuperLatticeCoupling>
 void prepareLattice( SuperLattice<T, DESCRIPTOR>& sLatticeOne,
                      SuperLattice<T, DESCRIPTOR>& sLatticeTwo,
+                     SuperLatticeCoupling& coupling,
                      SuperGeometry<T,3>& superGeometry )
 {
 
@@ -103,9 +104,6 @@ void prepareLattice( SuperLattice<T, DESCRIPTOR>& sLatticeOne,
   // directed downwards.
 
   // define lattice Dynamics
-  sLatticeOne.defineDynamics<NoDynamics>(superGeometry, 0);
-  sLatticeTwo.defineDynamics<NoDynamics>(superGeometry, 0);
-
   using BulkDynamics = ForcedBGKdynamics<T,DESCRIPTOR,momenta::ExternalVelocityTuple>;
 
   sLatticeOne.defineDynamics<BulkDynamics>(superGeometry, 1);
@@ -117,10 +115,10 @@ void prepareLattice( SuperLattice<T, DESCRIPTOR>& sLatticeOne,
   sLatticeTwo.defineDynamics<BulkDynamics>(superGeometry, 3);
   sLatticeTwo.defineDynamics<BulkDynamics>(superGeometry, 4);
 
-  sLatticeOne.defineDynamics<BounceBack>(superGeometry, 3);
-  sLatticeOne.defineDynamics<BounceBack>(superGeometry, 4);
-  sLatticeTwo.defineDynamics<BounceBack>(superGeometry, 3);
-  sLatticeTwo.defineDynamics<BounceBack>(superGeometry, 4);
+  setBounceBackBoundary(sLatticeOne, superGeometry, 3);
+  setBounceBackBoundary(sLatticeOne, superGeometry, 4);
+  setBounceBackBoundary(sLatticeTwo, superGeometry, 3);
+  setBounceBackBoundary(sLatticeTwo, superGeometry, 4);
 
   sLatticeOne.setParameter<descriptors::OMEGA>(omega1);
   sLatticeTwo.setParameter<descriptors::OMEGA>(omega2);
@@ -132,6 +130,27 @@ void prepareLattice( SuperLattice<T, DESCRIPTOR>& sLatticeOne,
   sLatticeOne.defineRho(superGeometry, 4, rho1);
   sLatticeTwo.defineRho(superGeometry, 3, rho1);
 
+  coupling.template setParameter<COUPLING::RHO0>({1, 1});
+  coupling.template setParameter<COUPLING::G>(T(3.));
+  coupling.template setParameter<COUPLING::OMEGA_A>(omega1);
+  coupling.template setParameter<COUPLING::OMEGA_B>(omega2);
+
+  sLatticeOne.addPostProcessor<stage::PreCoupling>(meta::id<RhoStatistics>());
+  sLatticeTwo.addPostProcessor<stage::PreCoupling>(meta::id<RhoStatistics>());
+
+  {
+    auto& communicator = sLatticeOne.getCommunicator(stage::PreCoupling());
+    communicator.requestOverlap(1);
+    communicator.requestField<STATISTIC>();
+    communicator.exchangeRequests();
+  }
+
+  {
+    auto& communicator = sLatticeTwo.getCommunicator(stage::PreCoupling());
+    communicator.requestOverlap(1);
+    communicator.requestField<STATISTIC>();
+    communicator.exchangeRequests();
+  }
 
   clout << "Prepare Lattice ... OK" << std::endl;
 }
@@ -182,10 +201,10 @@ void getResults( SuperLattice<T, DESCRIPTOR>& sLatticeTwo,
 {
 
   OstreamManager clout( std::cout,"getResults" );
-  SuperVTMwriter3D<T> vtmWriter( "rayleighTaylor3dsLatticeOne" );
+  SuperVTMwriter3D<T> vtmWriter("rayleighTaylor3dLatticeOne");
 
-  const int vtkIter  = 50;
-  const int statIter = 10;
+  const int vtkIter  = 500;
+  const int statIter = 100;
 
   if ( iT==0 ) {
     // Writes the geometry, cuboid no. and rank no. as vti file for visualization
@@ -210,18 +229,22 @@ void getResults( SuperLattice<T, DESCRIPTOR>& sLatticeTwo,
 
   // Writes the VTK files
   if ( iT%vtkIter==0 ) {
-    clout << "Writing VTK ..." << std::endl;
-    SuperLatticeVelocity3D<T, DESCRIPTOR> velocity( sLatticeOne );
-    SuperLatticeDensity3D<T, DESCRIPTOR> density( sLatticeOne );
-    vtmWriter.addFunctor( velocity );
-    vtmWriter.addFunctor( density );
-    vtmWriter.write( iT );
+    sLatticeOne.setProcessingContext(ProcessingContext::Evaluation);
+    sLatticeOne.scheduleBackgroundOutputVTK([&,iT](auto task) {
+      SuperVTMwriter3D<T> vtkWriter("rayleighTaylor3dLatticeOne");
+      SuperLatticeVelocity3D velocity(sLatticeOne);
+      SuperLatticeDensity3D density(sLatticeOne);
+      vtkWriter.addFunctor(velocity);
+      vtkWriter.addFunctor(density);
+      task(vtkWriter, iT);
+    });
 
-    BlockReduction3D2D<T> planeReduction( density, {0, 0, 1} );
-    // write output as JPEG
-    heatmap::write(planeReduction, iT);
-
-    clout << "Writing VTK ... OK" << std::endl;
+    {
+      SuperLatticeDensity3D density(sLatticeOne);
+      BlockReduction3D2D<T> planeReduction(density, {0, 0, 1});
+      // write output as JPEG
+      heatmap::write(planeReduction, iT);
+    }
   }
 }
 
@@ -235,8 +258,7 @@ int main( int argc, char *argv[] )
   singleton::directories().setOutputDir( "./tmp/" );
   OstreamManager clout( std::cout,"main" );
 
-  const T G      = 3.;
-  T force        = 7./( T )ny/( T )ny;
+  T force = 7./( T )ny/( T )ny;
 
   // === 2nd Step: Prepare Geometry ===
   // Instantiation of a cuboidGeometry with weights
@@ -251,7 +273,7 @@ int main( int argc, char *argv[] )
 
   HeuristicLoadBalancer<T> loadBalancer( cGeometry );
 
-  SuperGeometry<T,3> superGeometry( cGeometry,loadBalancer,2 );
+  SuperGeometry<T,3> superGeometry( cGeometry, loadBalancer, 2 );
 
   prepareGeometry( superGeometry );
 
@@ -260,16 +282,12 @@ int main( int argc, char *argv[] )
   SuperLattice<T, DESCRIPTOR> sLatticeOne( superGeometry );
   SuperLattice<T, DESCRIPTOR> sLatticeTwo( superGeometry );
 
+  SuperLatticeCoupling coupling(
+    ShanChenForcedPostProcessor<interaction::PsiEqualsRho>{},
+    names::A{}, sLatticeOne,
+    names::B{}, sLatticeTwo);
 
-  std::vector<T> rho0;
-  rho0.push_back( 1 );
-  rho0.push_back( 1 );
-  PsiEqualsRho<T,T> interactionPotential;
-  ShanChenForcedGenerator3D<T,DESCRIPTOR> coupling( G,rho0,interactionPotential );
-
-  sLatticeOne.addLatticeCoupling(coupling, sLatticeTwo );
-
-  prepareLattice( sLatticeOne, sLatticeTwo, superGeometry );
+  prepareLattice( sLatticeOne, sLatticeTwo, coupling, superGeometry );
 
   // === 4th Step: Main Loop with Timer ===
   int iT = 0;
@@ -278,7 +296,6 @@ int main( int argc, char *argv[] )
   timer.start();
 
   for ( iT=0; iT<maxIter; ++iT ) {
-
     // === 5th Step: Definition of Initial and Boundary Conditions ===
     setBoundaryValues( sLatticeOne, sLatticeTwo, force, iT, superGeometry );
 
@@ -286,17 +303,17 @@ int main( int argc, char *argv[] )
     sLatticeOne.collideAndStream();
     sLatticeTwo.collideAndStream();
 
-    sLatticeOne.communicate();
-    sLatticeTwo.communicate();
-
-    sLatticeOne.executeCoupling();
-    //sLatticeTwo.executeCoupling();
+    sLatticeOne.executePostProcessors(stage::PreCoupling());
+    sLatticeTwo.executePostProcessors(stage::PreCoupling());
+    coupling.execute();
 
     // === 7th Step: Computation and Output of the Results ===
     getResults( sLatticeTwo, sLatticeOne, iT, superGeometry, timer );
   }
 
+  sLatticeOne.setProcessingContext(ProcessingContext::Evaluation);
+  sLatticeTwo.setProcessingContext(ProcessingContext::Evaluation);
+
   timer.stop();
   timer.printSummary();
 }
-

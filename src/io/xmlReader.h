@@ -38,6 +38,7 @@
 
 #include "io/ostreamManager.h"
 #include "communication/mpiManager.h"
+#include "xmlReaderOutput.h"
 
 namespace olb {
 
@@ -46,18 +47,19 @@ namespace util {
 }
 
 class XMLreader {
+  friend class olb::XMLreaderOutput;
 public:
   /**
    * Constructs a new XMLreader from another XMLreader
    * \param pParent The new root node for the XMLreader
    */
-  XMLreader( TiXmlNode* pParent );
+  XMLreader( TiXmlNode* pParent, OutputChannel outputChannel = OutputChannel::ERRCHANNEL);
   /// Constructs a new XMLreader from a XML file fName
-  XMLreader( const std::string& fName );
+  XMLreader( const std::string& fName, OutputChannel outputChannel = OutputChannel::ERRCHANNEL);
   /// destructor
   ~XMLreader();
   /// Prints out the XML structure read in, mostly for debugging purposes
-  void print(int indent) const;
+  //void print(int indent) const;
   /**
    * Read a value from the xml file
    * \param reference to return the value
@@ -71,14 +73,14 @@ public:
   /// This wrapper function reads the given parameter from the "type_parameter" and "name_parameter_1" or "name_parameter_2" tag and prints a warning, if the parameter can not be read.
   /// The warning contains the default value, if available. Will exit(1) if exitIfMissing == true. The warning is not displayed, if showWarning == false.
   template<typename ParameterType>
-  bool readOrWarn(OstreamManager& clout, std::string name_parameter_1, 
+  bool readOrWarn(std::string name_parameter_1,
                    std::string name_parameter_2, std::string name_parameter_3,
-                   ParameterType& var, bool defaultAvailable, bool exitIfMissing, bool showWarning) const;
+                   ParameterType& var, bool defaultAvailable = true, bool exitIfMissing = false, bool showWarning = true) const;
   /// \return a Subtree placed at name \param name The name from which to take the subtree
   template<typename ParameterType>
-  bool readOrWarn_3Parameters(OstreamManager& clout, std::string name_parameter_1,
+  bool readOrWarn(std::string name_parameter_1,
                    std::string name_parameter_2, std::string name_parameter_3, std::string name_parameter_4,
-                   ParameterType& var, bool defaultAvailable, bool exitIfMissing, bool showWarning) const;
+                   ParameterType& var, bool defaultAvailable = true, bool exitIfMissing = false, bool showWarning = true) const;
   /// \return a Subtree placed at name \param name The name from which to take the subtree
   XMLreader const& operator[] (std::string name) const;
   /**
@@ -95,10 +97,13 @@ public:
   void setWarningsOn(bool warnings) const;
   /// return the name of the element
   std::string getName() const;
+  /// return the text of the element
+  std::string getText() const;
   /// \return the value of attribute
   std::string getAttribute(const std::string& aName) const;
-  /// print warning if verbose mode is on
-  void printWarning(std::string typeName, std::string value, bool verboseOn, bool exitIfMissing) const;
+
+  /// handling all the output for the XMLreader
+  XMLreaderOutput _output;
 private:
   void mainProcessorIni(TiXmlNode* pParent);
   void slaveProcessorIni();
@@ -108,8 +113,8 @@ private:
   std::string _text;
   std::string _name;
   static XMLreader _notFound;
+  OutputChannel _outputChannel;
 protected:
-  mutable OstreamManager clout;
   std::map<std::string, std::string> _attributes;
   std::vector<XMLreader*> _children;
 };
@@ -125,7 +130,7 @@ bool XMLreader::read(util::ADf<T,DIM>& value, bool verboseOn, bool exitIfMissing
 //    if ( _verboseOn ) {
 //      clout << std::string("Error: cannot read value from XML element ") << _name << std::endl;
 //    }
-    printWarning("ADf vector", "", verboseOn, exitIfMissing);
+    _output.printWarning(_name, "ADf vector", "", verboseOn, exitIfMissing);
     return false;
   }
   value = util::ADf<T,DIM>(tmp);
@@ -145,7 +150,7 @@ bool XMLreader::read(std::vector<T>& values, bool verboseOn, bool exitIfMissing 
 //      if ( verboseOn ) {
 //        clout << std::string("Error: cannot read value array from XML element ") << _name << std::endl;
 //      }
-      printWarning("std::vector", "", verboseOn, exitIfMissing);
+      _output.printWarning(_name, "std::vector", "", verboseOn, exitIfMissing);
       return false;
     }
     tmp.push_back(value);
@@ -163,13 +168,14 @@ T XMLreader::get(bool verboseOn, bool exitIfMissing) const
 //    if ( verboseOn ) {
 //      clout << "Error: cannot read value from XML element " << _name << std::endl;
 //    }
-    printWarning(typeid(T).name(), "", verboseOn, exitIfMissing);
+    _output.printWarning(_name, typeid(T).name(), "", verboseOn, exitIfMissing);
   }
   return tmp;
 }
 
+
 template<typename ParameterType>
-bool XMLreader::readOrWarn(OstreamManager& clout, std::string name_parameter_1, 
+bool XMLreader::readOrWarn(std::string name_parameter_1,
                    std::string name_parameter_2, std::string name_parameter_3,
                    ParameterType& var, bool defaultAvailable, bool exitIfMissing, bool showWarning) const
 {
@@ -177,38 +183,14 @@ bool XMLreader::readOrWarn(OstreamManager& clout, std::string name_parameter_1,
   setWarningsOn(false);
   if (name_parameter_3 == "") {
     if (!(*this)[name_parameter_1][name_parameter_2].read<ParameterType>(var, false)) {
-      if (showWarning) {
-        clout << "Warning: Cannot read parameter from XML File: " << "<" << name_parameter_1 << ">"  << "<" << name_parameter_2 << ">" << std::endl;
-        if ( exitIfMissing ) {
-          clout << "Error: This program cannot continue without " << "<" << name_parameter_1 << ">"  << "<" << name_parameter_2 << ">. Optimization aborted." << std::endl;
-          exit(1);
-        }
-        if (defaultAvailable) {
-          clout << "\t  Setting default value: " << name_parameter_2 << " = "<< var << std::endl;
-        }
-        else {
-          clout << "\t  Setting arbitrarily: " << name_parameter_2 << " = " << var << std::endl;
-        }
-      }
+      _output.parameterReading({name_parameter_1, name_parameter_2}, var, defaultAvailable, exitIfMissing, showWarning);
       return false;
     }
     return true;
   }
   else{
     if (!(*this)[name_parameter_1][name_parameter_2][name_parameter_3].read<ParameterType>(var, false)) {
-      if (showWarning) {
-        clout << "Warning: Cannot read parameter from XML File: " << "<" << name_parameter_1 << ">"  << "<" << name_parameter_2 << ">" << "<" << name_parameter_3 << ">" << std::endl;
-        if ( exitIfMissing ) {
-          clout << "Error: This program cannot continue without " << "<" << name_parameter_1 << ">"  << "<" << name_parameter_2 << ">" << "<" << name_parameter_3 << ">. Optimization aborted." << std::endl;
-          exit(1);
-        }
-        if (defaultAvailable) {
-          clout << "\t  Setting default value: " << name_parameter_3 << " = "<< var << std::endl;
-        }
-        else {
-          clout << "\t  Setting arbitrarily: " << name_parameter_3 << " = " << var << std::endl;
-        }
-      }
+      _output.parameterReading({name_parameter_1, name_parameter_2, name_parameter_3}, var, defaultAvailable, exitIfMissing, showWarning);
       return false;
     }
     return true;
@@ -218,7 +200,7 @@ bool XMLreader::readOrWarn(OstreamManager& clout, std::string name_parameter_1,
 }
 
 template<typename ParameterType>
-bool XMLreader::readOrWarn_3Parameters(OstreamManager& clout, std::string name_parameter_1,
+bool XMLreader::readOrWarn(std::string name_parameter_1,
                    std::string name_parameter_2, std::string name_parameter_3, std::string name_parameter_4,
                    ParameterType& var, bool defaultAvailable, bool exitIfMissing, bool showWarning) const
 {
@@ -226,57 +208,22 @@ bool XMLreader::readOrWarn_3Parameters(OstreamManager& clout, std::string name_p
   setWarningsOn(false);
   if (name_parameter_3 == "") {
     if (!(*this)[name_parameter_1][name_parameter_2].read<ParameterType>(var, false)) {
-      if (showWarning) {
-        clout << "Warning: Cannot read parameter from XML File: " << "<" << name_parameter_1 << ">"  << "<" << name_parameter_2 << ">" << std::endl;
-        if ( exitIfMissing ) {
-          clout << "Error: This program cannot continue without " << "<" << name_parameter_1 << ">"  << "<" << name_parameter_2 << ">. Optimization aborted." << std::endl;
-          exit(1);
-        }
-        if (defaultAvailable) {
-          clout << "\t  Setting default value: " << name_parameter_2 << " = "<< var << std::endl;
-        }
-        else {
-          clout << "\t  Setting arbitrarily: " << name_parameter_2 << " = " << var << std::endl;
-        }
-      }
+      _output.parameterReading({name_parameter_1, name_parameter_2}, var, defaultAvailable, exitIfMissing, showWarning);
       return false;
     }
     return true;
   }
   else if(name_parameter_4 == ""){
     if (!(*this)[name_parameter_1][name_parameter_2][name_parameter_3].read<ParameterType>(var, false)) {
-      if (showWarning) {
-        clout << "Warning: Cannot read parameter from XML File: " << "<" << name_parameter_1 << ">"  << "<" << name_parameter_2 << ">" << "<" << name_parameter_3 << ">" << std::endl;
-        if ( exitIfMissing ) {
-          clout << "Error: This program cannot continue without " << "<" << name_parameter_1 << ">"  << "<" << name_parameter_2 << ">" << "<" << name_parameter_3 << ">. Optimization aborted." << std::endl;
-          exit(1);
-        }
-        if (defaultAvailable) {
-          clout << "\t  Setting default value: " << name_parameter_3 << " = "<< var << std::endl;
-        }
-        else {
-          clout << "\t  Setting arbitrarily: " << name_parameter_3 << " = " << var << std::endl;
-        }
-      }
+      _output.parameterReading({name_parameter_1, name_parameter_2, name_parameter_3}, var, defaultAvailable, exitIfMissing, showWarning);
       return false;
     }
     return true;
   }
   else {
     if (!(*this)[name_parameter_1][name_parameter_2][name_parameter_3][name_parameter_4].read<ParameterType>(var, false)) {
-      if (showWarning) {
-        clout << "Warning: Cannot read parameter from XML File: " << "<" << name_parameter_1 << ">"  << "<" << name_parameter_2 << ">" << "<" << name_parameter_3 << ">" << "<" << name_parameter_4 << ">" << std::endl;
-        if ( exitIfMissing ) {
-          clout << "Error: This program cannot continue without " << "<" << name_parameter_1 << ">"  << "<" << name_parameter_2 << ">" << "<" << name_parameter_3 << ">" << "<" << name_parameter_4 << ">. Optimization aborted." << std::endl;
-          exit(1);
-        }
-        if (defaultAvailable) {
-          clout << "\t  Setting default value: " << name_parameter_4 << " = "<< var << std::endl;
-        }
-        else {
-          clout << "\t  Setting arbitrarily: " << name_parameter_4 << " = " << var << std::endl;
-        }
-      }
+      _output.parameterReading({name_parameter_1, name_parameter_2,name_parameter_3,name_parameter_4},
+                                    var, defaultAvailable, exitIfMissing, showWarning);
       return false;
     }
     return true;
@@ -288,16 +235,17 @@ bool XMLreader::readOrWarn_3Parameters(OstreamManager& clout, std::string name_p
 XMLreader XMLreader::_notFound;
 
 XMLreader::XMLreader()
-  : clout(std::cout,"XMLreader")
 {
   _name = "XML node not found";
   _warningsOn = true;
+  _output = XMLreaderOutput(OutputChannel::ERRCHANNEL);
 }
 
-XMLreader::XMLreader( TiXmlNode* pParent)
-  : clout(std::cout,"XMLreader")
+XMLreader::XMLreader( TiXmlNode* pParent, OutputChannel outputChannel) : _output(outputChannel)
 {
+  _outputChannel = outputChannel;
   _warningsOn = true;
+
   if (singleton::mpi().isMainProcessor()) {
     mainProcessorIni(pParent);
   }
@@ -306,10 +254,11 @@ XMLreader::XMLreader( TiXmlNode* pParent)
   }
 }
 
-XMLreader::XMLreader(const std::string& fName)
-  : clout("XMLreader")
+XMLreader::XMLreader(const std::string& fName, OutputChannel outputChannel) : _output(outputChannel)
 {
+  _outputChannel = outputChannel;
   _warningsOn = true;
+
   TiXmlDocument* doc = nullptr;
   int loadOK = false;
 #ifdef PARALLEL_MODE_MPI  // parallel program execution
@@ -318,9 +267,7 @@ XMLreader::XMLreader(const std::string& fName)
     std::string docName = std::string(fName);  // call copy constructor
     doc = new TiXmlDocument(docName.c_str());
     loadOK = doc->LoadFile();
-    if (!loadOK) {
-      clout << std::string("Problem processing input XML file ") << fName << std::endl;
-    }
+    _output.loadFile(loadOK, fName);
 #ifdef PARALLEL_MODE_MPI  // parallel program execution
   }
   if (singleton::mpi().isMainProcessor()) {
@@ -383,7 +330,7 @@ void XMLreader::mainProcessorIni( TiXmlNode* pParent )
     singleton::mpi().bCast(&type, 1);
 #endif
     if ( type==TiXmlNode::TINYXML_ELEMENT ) {
-      _children.push_back( new XMLreader( pChild ) );
+      _children.push_back( new XMLreader( pChild , _outputChannel) );
     }
     else if ( type==TiXmlNode::TINYXML_TEXT ) {
       _text = pChild->ToText()->ValueStr();
@@ -420,7 +367,7 @@ void XMLreader::slaveProcessorIni()
     singleton::mpi().bCast(&type, 1);
 #endif
     if ( type==TiXmlNode::TINYXML_ELEMENT ) {
-      _children.push_back( new XMLreader( nullptr ) );
+      _children.push_back( new XMLreader( nullptr, _outputChannel ) );
     }
     else if ( type==TiXmlNode::TINYXML_TEXT ) {
 #ifdef PARALLEL_MODE_MPI  // parallel program execution
@@ -431,18 +378,6 @@ void XMLreader::slaveProcessorIni()
   while (type != TiXmlNode::TINYXML_UNKNOWN);
 }
 
-void XMLreader::print(int indent) const
-{
-  std::string indentStr(indent, ' ');
-  clout << indentStr << "[" << _name << "]" << std::endl;
-  if (!_text.empty()) {
-    clout << indentStr << "  " << _text << std::endl;
-  }
-  for (unsigned int iNode=0; iNode<_children.size(); ++iNode) {
-    _children[iNode]->print(indent+2);
-  }
-}
-
 XMLreader const& XMLreader::operator[] (std::string fName) const
 {
   for (unsigned int iNode=0; iNode<_children.size(); ++iNode) {
@@ -450,9 +385,7 @@ XMLreader const& XMLreader::operator[] (std::string fName) const
       return *_children[iNode];
     }
   }
-  if ( _warningsOn ) {
-    clout << "Warning: cannot read value from node \"" << _name << "\"" << ", \"" << fName <<"\"" << std::endl;
-  }
+  _output.readValue(_warningsOn, _name, fName);
   return _notFound;
 }
 
@@ -469,6 +402,11 @@ std::vector<XMLreader*>::const_iterator XMLreader::end() const
 std::string XMLreader::getName() const
 {
   return _name;
+}
+
+std::string XMLreader::getText() const
+{
+  return _text;
 }
 
 void XMLreader::setWarningsOn(bool warnings) const
@@ -500,7 +438,7 @@ bool XMLreader::read<bool>(bool& value, bool verboseOn, bool exitIfMissing) cons
     if ( verboseOn ) {
       std::stringstream ss;
       ss << ( value ? "true" : "false" );
-      printWarning("bool", ss.str(),  verboseOn, exitIfMissing);
+      _output.printWarning(_name, "bool", ss.str(),  verboseOn, exitIfMissing);
     }
   }
   return false;
@@ -515,7 +453,7 @@ bool XMLreader::read<int>(int& value, bool verboseOn, bool exitIfMissing) const
   if (!(valueStr >> tmp)) {
     std::stringstream ss;
     ss << value;
-    printWarning("int", ss.str(), verboseOn, exitIfMissing);
+    _output.printWarning(_name, "int", ss.str(), verboseOn, exitIfMissing);
     return false;
   }
   value = tmp;
@@ -531,7 +469,7 @@ bool XMLreader::read<std::size_t>(std::size_t& value, bool verboseOn, bool exitI
   if (!(valueStr >> tmp)) {
     std::stringstream ss;
     ss << value;
-    printWarning("std::size_t", ss.str(), verboseOn, exitIfMissing);
+    _output.printWarning(_name, "std::size_t", ss.str(), verboseOn, exitIfMissing);
     return false;
   }
   value = tmp;
@@ -545,10 +483,24 @@ bool XMLreader::read<double>(double& value, bool verboseOn, bool exitIfMissing) 
   std::stringstream valueStr(_text);
   double tmp = double();
   if (!(valueStr >> tmp)) {
-    printWarning("double", std::to_string(value), verboseOn, exitIfMissing);
+    _output.printWarning(_name, "double", std::to_string(value), verboseOn, exitIfMissing);
     return false;
   }
   value = tmp;
+  return true;
+}
+
+// template specialization for T=long double
+template <>
+bool XMLreader::read<long double>(long double& value, bool verboseOn, bool exitIfMissing) const
+{
+  std::stringstream valueStr(_text);
+  std::string tmp {};
+  if (!(valueStr >> tmp)) {
+    _output.printWarning(_name, "long double", std::to_string(value), verboseOn, exitIfMissing);
+    return false;
+  }
+  value = std::stold(tmp);
   return true;
 }
 
@@ -560,7 +512,7 @@ bool XMLreader::read<float>(float& value, bool verboseOn, bool exitIfMissing) co
   if (!(valueStr >> tmp)) {
     std::stringstream ss;
     ss << value;
-    printWarning("float", ss.str(), verboseOn, exitIfMissing);
+    _output.printWarning(_name, "float", ss.str(), verboseOn, exitIfMissing);
     return false;
   }
   value = tmp;
@@ -578,7 +530,7 @@ bool XMLreader::read<std::string>(std::string& entry, bool verboseOn, bool exitI
   if (!(valueStr >> tmp)) {
     std::stringstream ss;
     ss << entry;
-    printWarning("string", ss.str(), verboseOn, exitIfMissing);
+    _output.printWarning(_name, "string", ss.str(), verboseOn, exitIfMissing);
     return false;
   }
 
@@ -596,22 +548,6 @@ std::string XMLreader::getAttribute(const std::string& aName) const
   //return attributes[aName];
 }
 
-
-/// print warning if verbose mode is on and exit, if exItMissing is true
-void XMLreader::printWarning(std::string typeName, std::string value, bool verboseOn, bool exitIfMissing) const
-{
-
-  if ( verboseOn ) {
-    clout << "Warning: Cannot read " << typeName << " value from XML element " << _name << "." << std::endl;
-    if ( ! value.empty() ) {
-      clout << "         Setting default value = " << value << std::endl;
-    }
-  }
-  if ( exitIfMissing ) {
-    clout << "Error: This program cannot continue without \"" << _name << "\". Optimization aborted." << std::endl;
-    exit(1);
-  }
-}
 
 }  // namespace olb
 

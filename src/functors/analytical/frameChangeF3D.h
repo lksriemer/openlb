@@ -404,18 +404,18 @@ template <typename T, typename S>
 class CartesianToCylinder3D final : public AnalyticalF3D<T,S> {
 protected:
   /// origin of the Cartesian coordinate system
-	olb::Vector<T, 3>_cartesianOrigin;
+    olb::Vector<T, 3>_cartesianOrigin;
   /// direction of the axis along which the cylindrical coordinates are calculated
-	olb::Vector<T, 3> _axisDirection;
+    olb::Vector<T, 3> _axisDirection;
   /// direction to know orientation for math positive to obtain angle phi
   /// of Cartesian point x
-	olb::Vector<T, 3> _orientation;
+    olb::Vector<T, 3> _orientation;
 public:
   CartesianToCylinder3D(olb::Vector<T, 3> cartesianOrigin, T& angle,
-		  	  	  	  	olb::Vector<T, 3> orientation = {T(1),T(),T()});
+                        olb::Vector<T, 3> orientation = {T(1),T(),T()});
   CartesianToCylinder3D(olb::Vector<T, 3> cartesianOrigin,
-		  	  	  	  	olb::Vector<T, 3> axisDirection,
-						olb::Vector<T, 3> orientation = {T(1),T(),T()});
+                        olb::Vector<T, 3> axisDirection,
+                        olb::Vector<T, 3> orientation = {T(1),T(),T()});
   CartesianToCylinder3D(T cartesianOriginX, T cartesianOriginY,
                         T cartesianOriginZ,
                         T axisDirectionX, T axisDirectionY,

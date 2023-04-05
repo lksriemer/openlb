@@ -25,6 +25,8 @@
 #ifndef DYNAMICS_COLLISION_LES_H
 #define DYNAMICS_COLLISION_LES_H
 
+#include "collision.h"
+
 namespace olb {
 
 namespace collision {
@@ -235,11 +237,9 @@ struct WaleEffectiveOmega {
   V computeEffectiveOmega(CELL& cell, PARAMETERS& parameters) any_platform {
     V piNeqNormSqr { };
     MomentaF().computePiNeqNormSqr(cell, piNeqNormSqr);
-    const V rho = MomentaF().computeRho(cell);
     const V omega = parameters.template get<descriptors::OMEGA>();
     const V smagorinsky = parameters.template get<collision::LES::Smagorinsky>();
     const auto velocityGradient = cell.template getField<descriptors::VELO_GRAD>();
-    V piNeqNorm = util::sqrt(piNeqNormSqr);
     V preFactor = smagorinsky*smagorinsky;
     // velocity gradient tensor
     V g[3][3];
@@ -318,6 +318,30 @@ template <typename COLLISION, typename DESCRIPTOR, typename MOMENTA, typename EQ
 struct KrauseEffectiveOmega {
   using MomentaF = typename MOMENTA::template type<DESCRIPTOR>;
   using CollisionO = typename COLLISION::template type<DESCRIPTOR, MOMENTA, EQUILIBRIUM>;
+
+  template <typename CELL, typename PARAMETERS, typename V=typename CELL::value_t>
+  V computeEffectiveOmega(CELL& cell, PARAMETERS& parameters) any_platform {
+    V rho, u[DESCRIPTOR::d], fNeq[DESCRIPTOR::q] { };
+    MomentaF().computeRhoU(cell, rho, u);
+    lbm<DESCRIPTOR>::computeFneq(cell, fNeq, rho, u);
+    const V omega = parameters.template get<descriptors::OMEGA>();
+    const V smagorinsky = parameters.template get<collision::LES::Smagorinsky>();
+    const V preFactor = smagorinsky*smagorinsky
+                      * 3*descriptors::invCs2<V,DESCRIPTOR>()*descriptors::invCs2<V,DESCRIPTOR>()
+                      * 2*util::sqrt(2);
+    FieldD<V,DESCRIPTOR,typename COLLISION::OMEGA> omegaEff;
+    const V tauMol = V{1} / omega;
+    for (unsigned iPop=0; iPop < DESCRIPTOR::q; ++iPop) {
+      V tauTurb = V{0.5}*(util::sqrt(tauMol*tauMol + preFactor/rho * util::fabs(fNeq[iPop])) - tauMol);
+      omegaEff[iPop] = V{1} / (tauMol + tauTurb);
+    }
+    V avgOmegaEff = 0.;
+    for (int iPop=0; iPop < DESCRIPTOR::q; ++iPop) {
+      avgOmegaEff += omegaEff[iPop];
+    }
+    avgOmegaEff /= DESCRIPTOR::q;
+    return avgOmegaEff;
+  }
 
   template <typename CELL, typename PARAMETERS, typename V=typename CELL::value_t>
   CellStatistic<V> apply(CELL& cell, PARAMETERS& parameters) any_platform {

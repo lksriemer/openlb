@@ -62,7 +62,7 @@ struct GuoZhaoLbHelpers {
            ::bgkCollisionAndForcing(cell, rho, u, omega);
   }
 
-  static void updateGuoZhaoForce(Cell<T,DESCRIPTOR>& cell, const T u[DESCRIPTOR::d]) 
+  static void updateGuoZhaoForce(Cell<T,DESCRIPTOR>& cell, const T u[DESCRIPTOR::d])
   {
     GuoZhaoLbExternalHelpers<T,DESCRIPTOR>::updateGuoZhaoForce(cell, u);
   }

@@ -22,10 +22,12 @@
 */
 
 
-/* The particle manager is intended to provide a semi-generic wrapper for dynamic functions in 
+/* The particle manager is intended to provide a semi-generic wrapper for dynamic functions in
  * struct form. Its main purpose is the reduction of loops over all particles. Fitting structs
  * can both be administered by the particle manager or by calling them directly it, if desired.
 */
+
+#include "communication/particleCommunicator.h"
 
 #ifndef PARTICLE_MANAGER_H
 #define PARTICLE_MANAGER_H
@@ -39,42 +41,45 @@ namespace dynamics {
 template<typename T, typename DESCRIPTOR, typename PARTICLETYPE>
 class ParticleManager{
 private:
-  ParticleSystem<T,PARTICLETYPE>& _particleSystem;
+  XParticleSystem<T,PARTICLETYPE>& _xParticleSystem;
   SuperGeometry<T,DESCRIPTOR::d>& _sGeometry;
   SuperLattice<T,DESCRIPTOR>& _sLattice;
   UnitConverter<T,DESCRIPTOR> const& _converter;
   Vector<T,PARTICLETYPE::d> _externalAcceleration;
+  Vector<bool,PARTICLETYPE::d> _periodic;
+  communication::ParticleCommunicator _communicator = communication::ParticleCommunicator();
 
-  //Condition for TASKs requiring a particle loop
-  template <typename TASK>
-  using requires_loop = std::integral_constant<bool, TASK::particleLoop>;
+  //Condition for TASKs requiring no particle loop
   template <typename TASK>
   using requires_no_loop = std::integral_constant<bool, !TASK::particleLoop>;
 
   //Unpack tasks requiring loop
-  template<typename taskList>
-  void unpackTasksLooped(int iP, T timeStepSize);
-
-  //Unpack tasks not requiring loop
-  template<typename taskList>
-  void unpackTasks();
+  template<typename taskList, typename ISEQ>
+  void unpackTasksLooped(Particle<T,PARTICLETYPE>& particle, T timeStepSize, ISEQ seq, int globiC=0);
 
 public:
   //Constructor
-  ParticleManager( 
-    ParticleSystem<T,PARTICLETYPE>& particleSystem,
+  ParticleManager(
+    XParticleSystem<T,PARTICLETYPE>& xParticleSystem,
     SuperGeometry<T,DESCRIPTOR::d>& sGeometry,
     SuperLattice<T,DESCRIPTOR>& sLattice,
     UnitConverter<T,DESCRIPTOR> const& converter,
-    Vector<T,PARTICLETYPE::d> externalAcceleration = Vector<T,PARTICLETYPE::d>(0.) );
+    Vector<T,PARTICLETYPE::d> externalAcceleration = Vector<T,PARTICLETYPE::d>(0.),
+    Vector<bool,PARTICLETYPE::d> periodic = Vector<bool,PARTICLETYPE::d>(false) );
 
   //Execute task and pass time step
   template<typename ...TASKLIST>
   void execute(T timeStepSize);
 
-  //Execute task and use timestep provided by the converter 
+  //Execute task and use timestep provided by the converter
   template<typename ...TASKLIST>
   void execute();
+
+  // Getter for particle communicator
+  const communication::ParticleCommunicator& getParticleCommunicator();
+
+  /// Set external acceleration
+  void setExternalAcceleration(const Vector<T,PARTICLETYPE::d>& externalAcceleration);
 };
 
 

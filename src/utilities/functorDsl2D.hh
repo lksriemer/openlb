@@ -98,8 +98,8 @@ std::shared_ptr<SuperF2D<T,W>> norm(std::shared_ptr<SuperF2D<T,W>>        f,
 }
 
 template<typename T, typename W, typename DESCRIPTOR>
-std::shared_ptr<SuperF2D<T,W>> restrict(std::shared_ptr<AnalyticalF2D<T,W>> f,
-                                        SuperLattice<T, DESCRIPTOR>& sLattice)
+std::shared_ptr<SuperF2D<T,W>> restrictF(std::shared_ptr<AnalyticalF2D<T,W>> f,
+                                         SuperLattice<T, DESCRIPTOR>& sLattice)
 {
   return std::shared_ptr<SuperF2D<T,W>>(
            new SuperLatticeFfromAnalyticalF2D<T,DESCRIPTOR>(std::move(f), sLattice));

@@ -1,65 +1,118 @@
 ###########################################################################
-## installing the configuration makefile
+## OpenLB Makefile
 
-ifdef IN_NIX_SHELL
-  ifndef OPENLB_CONFIG
-    OPENLB_CONFIG = config.mk
-  endif
-  MAKEFILE_INC_TEMP := $(shell cp -n ${OPENLB_CONFIG} config.mk)
-endif
-
+DEFAULT_TARGETS :=
 CLEAN_TARGETS :=
+
+# Call DEFAULT_TARGETS for plain `make`
+all: default
+
+###########################################################################
+## Default build configuration
+
+# Include config.mk environment (optional)
+-include config.mk
+
+include rules.mk
 
 ###########################################################################
 ## Embedded dependencies (optional)
 
-all: dependencies
-
+ifeq ($(USE_EMBEDDED_DEPENDENCIES), ON)
 dependencies:
-	$(MAKE) -C external
+	$(MAKE) CXX=$(CXX) CC=$(CC) -C external
 
 clean-dependencies:
-	make -C external clean
+	$(MAKE) CXX=$(CXX) CC=$(CC) -C external clean
 
 CLEAN_TARGETS += clean-dependencies
+else
+.PHONY: dependencies
+endif
+
+DEFAULT_TARGETS += dependencies
 
 ###########################################################################
-## code generation (CSE)
+## Core library
 
-CSE_GENERATORS := $(shell find src/ -type f -name '*.cse.h.template')
-CSE_GENERATEES := $(patsubst %.cse.h.template, %.cse.h, $(CSE_GENERATORS))
+CORE_CPP_FILES := \
+	src/communication/mpiManager.cpp \
+	src/communication/ompManager.cpp \
+	src/core/olbInit.cpp \
+	src/io/ostreamManager.cpp
+CORE_OBJ_FILES := $(CORE_CPP_FILES:.cpp=.o)
 
-%.cse.h: %.cse.h.template
-	python codegen/cse.py $< $@
+%.o: %.cpp
+	$(CXX) $(CXXFLAGS) -fPIC -Isrc/ -c $< -o $@
 
-cse: $(CSE_GENERATEES)
+build/lib:
+	mkdir -p build/lib
+
+build/lib/libolbcore.a: build/lib $(CORE_OBJ_FILES)
+	ar rc $@ $(CORE_OBJ_FILES)
+
+core: build/lib/libolbcore.a
+
+DEFAULT_TARGETS += core
+
+clean-core:
+	rm -f $(CORE_OBJ_FILES)
+	rm -f build/lib/libolbcore.a
+
+CLEAN_TARGETS += clean-core
 
 ###########################################################################
 ## Examples
 
 EXAMPLES := $(dir $(shell find examples -name 'Makefile'))
 
-$(EXAMPLES):
+CLEAN_SAMPLES_TARGETS :=
+
+$(EXAMPLES): dependencies core
 	$(MAKE) -C $@ onlysample
 
 .PHONY: $(EXAMPLES)
 
-samples: dependencies $(EXAMPLES)
+samples: $(EXAMPLES)
+
+define clean_directory
+clean-$(1):
+	+$(MAKE) -C $(1) clean
+
+CLEAN_SAMPLES_TARGETS += clean-$(1)
+endef
+
+$(foreach sample,$(EXAMPLES), \
+  $(eval $(call clean_directory,$(sample))))
+
+clean-samples: $(CLEAN_SAMPLES_TARGETS)
 
 ###########################################################################
-## Cleaning
+## Code generation (CSE)
 
-clean: $(CLEAN_TARGETS)
+CSE_GENERATORS := $(shell find src/ -type f -name '*.cse.h.template')
+CSE_GENERATEES := $(patsubst %.cse.h.template, %.cse.h, $(CSE_GENERATORS))
 
-###########################################################################
-## User guide documentation
+%.cse.h: %.cse.h.template
+	$(eval $@_GUARD := $(shell grep -Po "#ifndef\ \K[A-Z_]*_CSE_H" $<))
+	python codegen/cse.py $< $($@_GUARD) $@
 
-userguide:
-	@cd doc/userGuide/; \
-	latexmk -pdf -silent -f olb-ug.tex
+cse: $(CSE_GENERATEES)
 
 ###########################################################################
 ## Doxygen documentation
 
 doxygen:
 	doxygen doc/DoxygenConfig
+
+###########################################################################
+## Cleaning
+
+clean: $(CLEAN_TARGETS)
+
+clean-all: clean-samples clean
+
+###########################################################################
+## Default targets (called for plain `make`)
+
+default: $(DEFAULT_TARGETS)

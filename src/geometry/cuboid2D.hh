@@ -218,6 +218,12 @@ bool Cuboid2D<T>::checkPoint(T globX, T globY, int overlap) const
 }
 
 template<typename T>
+bool Cuboid2D<T>::checkPoint(Vector<T,2>& globXY, int overlap) const
+{
+  return checkPoint(globXY[0], globXY[1], overlap);
+}
+
+template<typename T>
 bool Cuboid2D<T>::checkPoint(T globX, T globY, int &locX, int &locY, int overlap) const
 {
   if (overlap!=0) {

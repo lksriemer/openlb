@@ -59,6 +59,7 @@
 #include "functors/analytical/indicator/indicatorF3D.h"
 #include "io/ostreamManager.h"
 #include "utilities/functorPtr.h"
+#include "dynamics/latticeDescriptors.h"
 
 
 // All OpenLB code is contained in this namespace.
@@ -94,8 +95,8 @@ public:
 
   template <typename... L>
   std::enable_if_t<sizeof...(L) == (D+1), int>
-  get(L... latticeR) {
-    return this->get(LatticeR<D+1>{latticeR...});
+  get(L... latticeR) const {
+    return get(LatticeR<D+1>{latticeR...});
   }
 
   /// Read only access to the material numbers with global communication to all ranks
@@ -127,6 +128,8 @@ public:
 
   /// Returns the statistics object
   SuperGeometryStatistics<T,D>& getStatistics();
+  /// Returns the statistics object (readonly)
+  const SuperGeometryStatistics<T,D>& getStatistics() const;
   /// Read and write access to the statistic status flag, update needed = true
   bool& getStatisticsStatus();
   /// Read only access to the statistic status flag, update needed = true
@@ -136,7 +139,7 @@ public:
 
   /// Executes an outer cleaning: Sets all material numbers which are not
   /// bulk-materials to 0 if there is no neighbour from bulkMaterials
-  int clean(bool verbose=true, std::vector<int> bulkMaterials={1});
+  template <typename DESCRIPTOR= std::conditional_t<D==2,descriptors::D2Q9<>,descriptors::D3Q27<>>> int clean(bool verbose=true, std::vector<int> bulkMaterials={1});
   /// Removes not needed fluid cells from the outer domain
   int outerClean(bool verbose=true, std::vector<int> bulkMaterials={1});
   /// inner cleaning for all boundary types

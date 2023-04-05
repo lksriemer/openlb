@@ -70,76 +70,74 @@ void setZouHeVelocityBoundary(BlockLattice<T,DESCRIPTOR>& _block,T omega, BlockI
     if (blockGeometryStructure.getNeighborhoodRadius({iX, iY, iZ}) >= margin
         && indicator(iX, iY, iZ)) {
       Dynamics<T,DESCRIPTOR>* dynamics = nullptr;
-      PostProcessorGenerator3D<T,DESCRIPTOR>* postProcessor = nullptr;
       discreteNormal = indicator.getBlockGeometry().getStatistics().getType(iX, iY, iZ);
       if (discreteNormal[0] == 0) {
         //setVelocityBoundary
-        if (discreteNormal[1] != 0 && discreteNormal[1] == -1) {//set momenta, dynamics and postProcessors on indicated cells
-          dynamics = _block.template getDynamics<ZouHeDynamics<T,DESCRIPTOR, MixinDynamics, 
+        if (discreteNormal[1] != 0 && discreteNormal[1] == -1) {
+          dynamics = _block.template getDynamics<ZouHeDynamics<T,DESCRIPTOR, MixinDynamics,
             momenta::BasicDirichletVelocityBoundaryTuple<0,-1>, 0,-1
           >>();
         }
         else if (discreteNormal[1] != 0 && discreteNormal[1] == 1) {
-          dynamics = _block.template getDynamics<ZouHeDynamics<T,DESCRIPTOR, MixinDynamics, 
+          dynamics = _block.template getDynamics<ZouHeDynamics<T,DESCRIPTOR, MixinDynamics,
             momenta::BasicDirichletVelocityBoundaryTuple<0,1>, 0,1
           >>();
         }
         else if (discreteNormal[2] != 0 && discreteNormal[2] == -1) {
-          dynamics = _block.template getDynamics<ZouHeDynamics<T,DESCRIPTOR, MixinDynamics, 
+          dynamics = _block.template getDynamics<ZouHeDynamics<T,DESCRIPTOR, MixinDynamics,
             momenta::BasicDirichletVelocityBoundaryTuple<1,-1>, 1,-1
           >>();
         }
         else if (discreteNormal[2] != 0 && discreteNormal[2] == 1) {
-          dynamics = _block.template getDynamics<ZouHeDynamics<T,DESCRIPTOR, MixinDynamics, 
+          dynamics = _block.template getDynamics<ZouHeDynamics<T,DESCRIPTOR, MixinDynamics,
             momenta::BasicDirichletVelocityBoundaryTuple<1,1>, 1,1
           >>();
         }
         else if (discreteNormal[3] != 0 && discreteNormal[3] == -1) {
-          dynamics = _block.template getDynamics<ZouHeDynamics<T,DESCRIPTOR, MixinDynamics, 
+          dynamics = _block.template getDynamics<ZouHeDynamics<T,DESCRIPTOR, MixinDynamics,
             momenta::BasicDirichletVelocityBoundaryTuple<2,-1>, 2,-1
           >>();
         }
         else if (discreteNormal[3] != 0 && discreteNormal[3] == 1) {
-          dynamics = _block.template getDynamics<ZouHeDynamics<T,DESCRIPTOR, MixinDynamics, 
+          dynamics = _block.template getDynamics<ZouHeDynamics<T,DESCRIPTOR, MixinDynamics,
             momenta::BasicDirichletVelocityBoundaryTuple<2,1>, 2,1
           >>();
         }
       }
       //ExternalVelocityCorner
       else if (discreteNormal[0] == 1) {
-            dynamics = _block.template getDynamics<typename MixinDynamics::template exchange_momenta<
-              momenta::FixedVelocityBoundaryTuple
-            >>();
-            _block.addPostProcessor(
-              typeid(PostStream), {iX, iY, iZ},
-              promisePostProcessorForNormal<T,DESCRIPTOR,OuterVelocityCornerProcessor3D>(
-                Vector<int,3>(discreteNormal.data() + 1)));
+        dynamics = _block.template getDynamics<typename MixinDynamics::template exchange_momenta<
+          momenta::FixedVelocityBoundaryTuple
+        >>();
+        _block.addPostProcessor(
+          typeid(stage::PostStream), {iX, iY, iZ},
+          promisePostProcessorForNormal<T,DESCRIPTOR,OuterVelocityCornerProcessor3D>(
+            Vector<int,3>(discreteNormal.data() + 1)));
       }
       //InternalVelocityCorner
-      else if (discreteNormal[0] == 2) {//set momenta, dynamics and postProcessors on indicated internal corner cells
-            dynamics = _block.getDynamics(PlainMixinDynamicsForNormalMomenta<T,DESCRIPTOR,
-              CombinedRLBdynamics,MixinDynamics,momenta::InnerCornerVelocityTuple3D
-            >(Vector<int,3>(discreteNormal.data() + 1)));
-            postProcessor = nullptr;
+      else if (discreteNormal[0] == 2) {
+        dynamics = _block.getDynamics(PlainMixinDynamicsForNormalMomenta<T,DESCRIPTOR,
+          CombinedRLBdynamics,MixinDynamics,momenta::InnerCornerVelocityTuple3D
+        >::construct(Vector<int,3>(discreteNormal.data() + 1)));
       }
       //ExternalVelocityEdge
-      else if (discreteNormal[0] == 3) {//set momenta, dynamics and postProcessors on indicated external edge cells
-            dynamics = _block.template getDynamics<typename MixinDynamics::template exchange_momenta<
-              momenta::FixedVelocityBoundaryTuple
-            >>();
-            _block.addPostProcessor(
-              typeid(PostStream), {iX, iY, iZ},
-              promisePostProcessorForNormalSpecial<T,DESCRIPTOR,OuterVelocityEdgeProcessor3D>(
-                Vector<int,3>(discreteNormal.data() + 1)));
+      else if (discreteNormal[0] == 3) {
+        dynamics = _block.template getDynamics<typename MixinDynamics::template exchange_momenta<
+          momenta::FixedVelocityBoundaryTuple
+        >>();
+        _block.addPostProcessor(
+          typeid(stage::PostStream), {iX, iY, iZ},
+          promisePostProcessorForNormalSpecial<T,DESCRIPTOR,OuterVelocityEdgeProcessor3D>(
+            Vector<int,3>(discreteNormal.data() + 1)));
       }
       //InternalVelocityEdge
-      else if (discreteNormal[0] == 4) {//set momenta, dynamics and postProcessors on indicated internal edge cells
-            dynamics = _block.getDynamics(PlainMixinDynamicsForNormalSpecialMomenta<T,DESCRIPTOR,
-              CombinedRLBdynamics,MixinDynamics,momenta::InnerEdgeVelocityTuple3D
-            >::construct(Vector<int,3>(discreteNormal.data() + 1)));
+      else if (discreteNormal[0] == 4) {
+        dynamics = _block.getDynamics(PlainMixinDynamicsForNormalSpecialMomenta<T,DESCRIPTOR,
+          CombinedRLBdynamics,MixinDynamics,momenta::InnerEdgeVelocityTuple3D
+        >::construct(Vector<int,3>(discreteNormal.data() + 1)));
       }
       dynamics->getParameters(_block).template set<descriptors::OMEGA>(omega);
-      setBoundary(_block, iX,iY,iZ, dynamics, postProcessor);
+      setBoundary(_block, iX,iY,iZ, dynamics);
     }
   });
 }

@@ -35,13 +35,14 @@ protected:
 
 public:
   MpiRequest():
-    _request{}, _status{} { };
+    _request{},
+    _status{} { };
 
-  void start() {
+  inline void start() {
     MPI_Start(&_request);
   }
 
-  void wait() {
+  inline void wait() {
     MPI_Wait(&_request, &_status);
   }
 
@@ -53,7 +54,7 @@ public:
 };
 
 /// Non-blocking MPI send request
-class MpiSendRequest : public MpiRequest {
+class MpiSendRequest final : public MpiRequest {
 public:
   template <typename T>
   MpiSendRequest(T* buffer, std::size_t size,
@@ -73,7 +74,7 @@ public:
 };
 
 /// Non-blocking MPI receive request
-class MpiRecvRequest : public MpiRequest {
+class MpiRecvRequest final : public MpiRequest {
 public:
   template <typename T>
   MpiRecvRequest(T* buffer, std::size_t size,

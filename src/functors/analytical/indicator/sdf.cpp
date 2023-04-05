@@ -64,7 +64,7 @@ template Vector<double,3> flip(Vector<double,3> p);
 // primitive alterations
 template double rounding(double a, double r);
 template double elongation(std::function<double(Vector<double,3>)> sdf, Vector<double,3> p, Vector<double,3> h, Vector<double,3> center);
-template bool evalPorosity( double output[], double signedDist, double eps );
+template bool evalSolidVolumeFraction( double output[], double signedDist, double eps );
 
 } // namespace sdf
 } // namespace olb

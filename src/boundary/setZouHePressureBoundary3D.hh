@@ -68,10 +68,9 @@ void setZouHePressureBoundary(BlockLattice<T,DESCRIPTOR>& _block, T omega, Block
     if (blockGeometryStructure.getNeighborhoodRadius({iX, iY, iZ}) >= margin
         && indicator(iX, iY, iZ)) {
       Dynamics<T,DESCRIPTOR>* dynamics = nullptr;
-      PostProcessorGenerator3D<T,DESCRIPTOR>* postProcessor = nullptr;
       discreteNormal = blockGeometryStructure.getStatistics().getType(iX, iY, iZ);
 
-      if (discreteNormal[0] == 0) {//set momenta, dynamics and postProcessors on indicated cells
+      if (discreteNormal[0] == 0) {
         if (discreteNormal[1] != 0 && discreteNormal[1] == -1) {
           dynamics = _block.template getDynamics<ZouHeDynamics<T,DESCRIPTOR, MixinDynamics,
             momenta::BasicDirichletPressureBoundaryTuple< 0,-1>, 0, -1
@@ -104,7 +103,7 @@ void setZouHePressureBoundary(BlockLattice<T,DESCRIPTOR>& _block, T omega, Block
         }
       }
       dynamics->getParameters(_block).template set<descriptors::OMEGA>(omega);
-      setBoundary(_block, iX,iY,iZ, dynamics, postProcessor);
+      setBoundary(_block, iX,iY,iZ, dynamics);
     }
   });
 }

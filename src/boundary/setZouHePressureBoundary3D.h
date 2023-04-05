@@ -36,7 +36,6 @@
 #include "functors/lattice/indicator/blockIndicatorF3D.h"
 #include "io/ostreamManager.h"
 #include "zouHeDynamics.h"
-#include "zouHeDynamics.hh"
 #include "setBoundary3D.h"
 
 namespace olb {

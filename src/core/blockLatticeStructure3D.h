@@ -218,12 +218,6 @@ bool getRangeBlockGeometrySmoothIndicatorIntersection3D(BlockGeometryStructure3D
     SmoothIndicatorF3D<T,T,true>& sIndicator,
     T invDeltaX, std::vector<int>& start, std::vector<int>& end);
 
-template<typename T>
-void checkSmoothIndicatorOutOfGeometry( bool& outOfGeometry, Vector<T,3>& ghostPos,
-                                        SmoothIndicatorF3D<T,T,true>& sIndicator,
-                                        Vector<T,3> cellMin, Vector<T,3> cellMax,
-                                        Vector<bool,3> periodic);
-
 template <typename T, typename DESCRIPTOR>
 void setBlockExternalParticleField( BlockGeometryStructure3D<T>& blockGeometry, AnalyticalF<3,T,T>& velocity,
                                     SmoothIndicatorF3D<T,T,true>& sIndicator,

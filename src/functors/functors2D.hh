@@ -28,3 +28,4 @@
 #include "genericF.hh"
 #include "analytical/functors2D.hh"
 #include "lattice/functors2D.hh"
+#include "particles/particleFunctors.hh"

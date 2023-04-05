@@ -31,66 +31,60 @@
 namespace olb {
 
 
-///////////////////////////////////// class ReactingSpeciesBase2D /////////////////////////////////////
+///////////////////////////////////// class ReactingSpecies2D /////////////////////////////////////
 
-template <typename T>
-ReactingSpeciesBase2D<T>::ReactingSpeciesBase2D(T stoichioCoeff)
+template <typename T, typename DESCRIPTOR, typename SOURCE, typename IMPL>
+ReactingSpecies2D<T,DESCRIPTOR,SOURCE,IMPL>::ReactingSpecies2D(T stoichioCoeff)
   : _stoichioCoeff(stoichioCoeff)
 {}
 
-template <typename T>
-T ReactingSpeciesBase2D<T>::getStoichioCoeff()
+template <typename T, typename DESCRIPTOR, typename SOURCE, typename IMPL>
+T ReactingSpecies2D<T,DESCRIPTOR,SOURCE,IMPL>::getStoichioCoeff()
 {
   return _stoichioCoeff;
 }
 
-
-///////////////////////////////////// class ReactingSpecies2D /////////////////////////////////////
-
-template <typename T, typename DESCRIPTOR, typename SOURCE>
-ReactingSpecies2D<T,DESCRIPTOR,SOURCE>::
-ReactingSpecies2D(SuperGeometry<T,2>& superGeometry, SuperLattice<T, DESCRIPTOR>& sLattice, T stoichioCoeff)
-  : ReactingSpeciesBase2D<T>(stoichioCoeff)
+template <typename T, typename DESCRIPTOR, typename SOURCE, typename IMPL>
+T ReactingSpecies2D<T,DESCRIPTOR,SOURCE,IMPL>::getField(BlockStructureD<2>* blockStructure, int iX, int iY)
 {
-  std::vector<BlockLattice<T,DESCRIPTOR>*> blockLattices;
-  for (int iC = 0; iC < superGeometry.getLoadBalancer().size(); ++iC) {
-    blockLattices.push_back ( &sLattice.getBlock(iC) );
-  }
-  _blockLattice = blockLattices[0];
+  return (static_cast<IMPL*>(this))->getField(blockStructure, iX, iY);
 }
 
-template <typename T, typename DESCRIPTOR, typename SOURCE>
-T ReactingSpecies2D<T,DESCRIPTOR,SOURCE>::
-getSource(int iX, int iY)
+template <typename T, typename DESCRIPTOR, typename SOURCE, typename IMPL>
+T ReactingSpecies2D<T,DESCRIPTOR,SOURCE,IMPL>::getSource(BlockStructureD<2>* blockStructure, int iX, int iY)
 {
-  return this->_blockLattice->get(iX, iY).template getFieldPointer<SOURCE>()[0];
+  return static_cast<BlockLattice<T,DESCRIPTOR>*>(blockStructure)->get(iX, iY).template getFieldPointer<SOURCE>()[0];
 }
 
-template <typename T, typename DESCRIPTOR, typename SOURCE>
-void ReactingSpecies2D<T,DESCRIPTOR,SOURCE>::
-setSource(T val, int iX, int iY)
+template <typename T, typename DESCRIPTOR, typename SOURCE, typename IMPL>
+void ReactingSpecies2D<T,DESCRIPTOR,SOURCE,IMPL>::incrementSource(BlockStructureD<2>* blockStructure, T val, int iX, int iY)
 {
-  this->_blockLattice->get(iX, iY).template setField<SOURCE>(val);
+  static_cast<BlockLattice<T,DESCRIPTOR>*>(blockStructure)->get(iX, iY).template setField<SOURCE>(val + getSource(blockStructure, iX, iY));
+}
+
+template <typename T, typename DESCRIPTOR, typename SOURCE, typename IMPL>
+void ReactingSpecies2D<T,DESCRIPTOR,SOURCE,IMPL>::resetSource(BlockStructureD<2>* blockStructure, int iX, int iY)
+{
+  static_cast<BlockLattice<T,DESCRIPTOR>*>(blockStructure)->get(iX, iY).template setField<SOURCE>(T());
 }
 
 
 ///////////////////////////////////// class FiniteDifferenceReactingSpecies2D /////////////////////////////////////
 
-template <typename T, typename DESCRIPTOR, typename FIELD, typename SOURCE>
-FiniteDifferenceReactingSpecies2D<T,DESCRIPTOR,FIELD,SOURCE>::
-FiniteDifferenceReactingSpecies2D(SuperGeometry<T,2>& superGeometry, SuperLattice<T, DESCRIPTOR>& sLattice, T stoichioCoeff, std::size_t& iT)
-  : ReactingSpecies2D<T,DESCRIPTOR,SOURCE>(superGeometry, sLattice, stoichioCoeff),
+template <typename T, typename DESCRIPTOR, typename SOURCE, typename FIELD>
+FiniteDifferenceReactingSpecies2D<T,DESCRIPTOR,SOURCE,FIELD>::
+FiniteDifferenceReactingSpecies2D(T stoichioCoeff, std::size_t& iT)
+  : ReactingSpecies2D<T,DESCRIPTOR,SOURCE,FiniteDifferenceReactingSpecies2D<T,DESCRIPTOR,SOURCE,FIELD>>(stoichioCoeff),
     _iT(iT)
 {
   static_assert(DESCRIPTOR::template size<FIELD>()  == 2, "FIELD must have size 2." );
   static_assert(DESCRIPTOR::template size<SOURCE>() == 1, "SOURCE must have size 1.");
 }
 
-template <typename T, typename DESCRIPTOR, typename FIELD, typename SOURCE>
-T FiniteDifferenceReactingSpecies2D<T,DESCRIPTOR,FIELD,SOURCE>::
-getField(int iX, int iY)
+template <typename T, typename DESCRIPTOR, typename SOURCE, typename FIELD>
+T FiniteDifferenceReactingSpecies2D<T,DESCRIPTOR,SOURCE,FIELD>::getField(BlockStructureD<2>* blockStructure, int iX, int iY)
 {
-  return *fd::accessNew<T,DESCRIPTOR,FIELD>(this->_blockLattice->get(iX, iY), this->_iT);
+  return *fd::accessNew<T,FIELD>(static_cast<BlockLattice<T,DESCRIPTOR>*>(blockStructure)->get(iX, iY), this->_iT);
 }
 
 
@@ -98,15 +92,14 @@ getField(int iX, int iY)
 
 template <typename T, typename DESCRIPTOR, typename SOURCE>
 LatticeBoltzmannReactingSpecies2D<T,DESCRIPTOR,SOURCE>::
-LatticeBoltzmannReactingSpecies2D(SuperGeometry<T,2>& superGeometry, SuperLattice<T, DESCRIPTOR>& sLattice, T stoichioCoeff)
-  : ReactingSpecies2D<T,DESCRIPTOR,SOURCE>(superGeometry, sLattice, stoichioCoeff)
+LatticeBoltzmannReactingSpecies2D(T stoichioCoeff)
+  : ReactingSpecies2D<T,DESCRIPTOR,SOURCE,LatticeBoltzmannReactingSpecies2D<T,DESCRIPTOR,SOURCE>>(stoichioCoeff)
 {}
 
-template <typename T, typename DESCRIPTOR, typename SOURCE>
-T LatticeBoltzmannReactingSpecies2D<T,DESCRIPTOR,SOURCE>::
-getField(int iX, int iY)
+template <typename T, typename DESCRIPTOR,typename SOURCE>
+T LatticeBoltzmannReactingSpecies2D<T,DESCRIPTOR,SOURCE>::getField(BlockStructureD<2>* blockStructure, int iX, int iY)
 {
-  return this->_blockLattice->get(iX, iY).computeRho();
+  return static_cast<BlockLattice<T,DESCRIPTOR>*>(blockStructure)->get(iX, iY).computeRho();
 }
 
 

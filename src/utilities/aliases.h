@@ -151,6 +151,16 @@ using SuperLatticeF = std::conditional_t<
                      SuperLatticeF3D<T,DESCRIPTOR>
                      >;
 
+template <typename T, typename DESCRIPTOR> class BlockLatticeF2D;
+template <typename T, typename DESCRIPTOR> class BlockLatticeF3D;
+
+template <typename T, typename DESCRIPTOR>
+using BlockLatticeF = std::conditional_t<
+                     DESCRIPTOR::d == 2,
+                     BlockLatticeF2D<T,DESCRIPTOR>,
+                     BlockLatticeF3D<T,DESCRIPTOR>
+                     >;
+
 template <typename T, typename DESCRIPTOR> class LatticeCouplingGenerator2D;
 template <typename T, typename DESCRIPTOR> class LatticeCouplingGenerator3D;
 

@@ -48,7 +48,7 @@ bool BlockGeometryFaces2D<T>::operator() (T output[], const int input[])
   std::size_t counter[5] = {0};
 
   if (!_indicatorF.isEmpty()) {
-    auto& blockGeometry = _indicatorF.getBlockGeometry();
+    const auto& blockGeometry = _indicatorF.getBlockGeometry();
     const Vector<int,2> min = _indicatorF.getMin();
     const Vector<int,2> max = _indicatorF.getMax();
 

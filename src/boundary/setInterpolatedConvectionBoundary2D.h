@@ -42,7 +42,7 @@
 #include "setBoundary2D.h"
 
 namespace olb {
-    
+
 ///Initialising the InterpolatedConvectionBoundary on the superLattice domain
 ///This is an interpolated boundary --> MixinDynamics = BGKdynamics
 ///Usually T* uAv = NULL;

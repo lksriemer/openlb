@@ -1172,7 +1172,7 @@ namespace olb {
     srand(time(nullptr));
     std::vector<T> pos(3, 0.), min(3, std::numeric_limits<T>::max()),
       max(3, std::numeric_limits<T>::min());
-    olb::Vector<T, 3> tmpMin(3, 0.), tmpMax(3, 0.);
+    olb::Vector<T, 3> tmpMin(0.), tmpMax(0.);
     std::set<int>::iterator it = material.begin();
     for (; it != material.end(); ++it) {
       tmpMin = _superGeometry.getStatistics().getMinPhysR(*it);
@@ -1291,6 +1291,79 @@ namespace olb {
                                    locLat[3] + 1)) != material.end()) {
               PARTICLETYPE<T> p(pos, vel, mas, rad);
               addParticle(p);
+            }
+          }
+        }
+      }
+    }
+  }
+
+   template<typename T, template<typename U> class PARTICLETYPE>
+  void SuperParticleSystem3D<T, PARTICLETYPE>::addHL3DParticle(
+    IndicatorF3D<T>& ind, std::set<int> material, T mas, T rad, int no, std::vector<T> vel, T surface, T volume)
+  {
+   std::cout << "addHL3DParticle begin" <<std::endl;
+    srand(clock());
+    std::vector<T> pos(3, 0.);
+    bool indic[1] = { false };
+
+    no += globalNumOfParticles();
+    while (globalNumOfParticles() < no) {
+      pos[0] = ind.getMin()[0]
+        + (T) (rand() % 100000) / 100000. * (ind.getMax()[0] - ind.getMin()[0]);
+      pos[1] = ind.getMin()[1]
+        + (T) (rand() % 100000) / 100000. * (ind.getMax()[1] - ind.getMin()[1]);
+      pos[2] = ind.getMin()[2]
+        + (T) (rand() % 100000) / 100000. * (ind.getMax()[2] - ind.getMin()[2]);
+
+#ifdef PARALLEL_MODE_MPI
+      singleton::mpi().bCast(&*pos.begin(), 3);
+#endif
+
+      int x0, y0, z0;
+      std::vector<int> locLat(4, 0);
+      if (this->_cuboidGeometry.getFloorLatticeR(pos, locLat)) {
+        if (this->_loadBalancer.rank(locLat[0]) == singleton::mpi().getRank()) {
+          x0 = locLat[1];
+          y0 = locLat[2];
+          z0 = locLat[3];
+          if (_superGeometry.get(locLat[0], x0, y0, z0) == 1
+              && _superGeometry.get(locLat[0], x0, y0 + 1, z0) == 1
+              && _superGeometry.get(locLat[0], x0, y0, z0 + 1) == 1
+              && _superGeometry.get(locLat[0], x0, y0 + 1, z0 + 1) == 1
+              && _superGeometry.get(locLat[0], x0 + 1, y0, z0) == 1
+              && _superGeometry.get(locLat[0], x0 + 1, y0 + 1, z0) == 1
+              && _superGeometry.get(locLat[0], x0 + 1, y0, z0 + 1) == 1
+              && _superGeometry.get(locLat[0], x0 + 1, y0 + 1, z0 + 1) == 1
+              && ind(indic, &pos[0])) {
+            if (material.find(
+              _superGeometry.get(locLat[0], locLat[1], locLat[2], locLat[3]))
+              != material.end()
+              && material.find(
+                _superGeometry.get(locLat[0], locLat[1], locLat[2] + 1,
+                                   locLat[3])) != material.end()
+              && material.find(
+                _superGeometry.get(locLat[0], locLat[1], locLat[2],
+                                   locLat[3] + 1)) != material.end()
+              && material.find(
+                _superGeometry.get(locLat[0], locLat[1], locLat[2] + 1,
+                                   locLat[3] + 1)) != material.end()
+              && material.find(
+                _superGeometry.get(locLat[0], locLat[1] + 1, locLat[2],
+                                   locLat[3])) != material.end()
+              && material.find(
+                _superGeometry.get(locLat[0], locLat[1] + 1, locLat[2] + 1,
+                                   locLat[3])) != material.end()
+              && material.find(
+                _superGeometry.get(locLat[0], locLat[1] + 1, locLat[2],
+                                   locLat[3] + 1)) != material.end()
+              && material.find(
+                _superGeometry.get(locLat[0], locLat[1] + 1, locLat[2] + 1,
+                                   locLat[3] + 1)) != material.end()) {
+              //PARTICLETYPE<T> p(pos, vel, mas, rad);
+     PARTICLETYPE<T> p( pos, mas, rad, volume, surface);
+              addParticle(p);
+
             }
           }
         }
@@ -2193,6 +2266,65 @@ namespace olb {
       addParticle(p);
     }
   }
+
+    template<typename T, template<typename U> class PARTICLETYPE>
+  void SuperParticleSystem3D<T, PARTICLETYPE>::addParticlesFromParaviewFile(
+    std::string name)
+  {
+    std::string fullName = createFileName(name) + ".csv";
+    std::ifstream fin(fullName.c_str());
+
+    std::string line;
+ std::getline(fin, line);//first line is header
+ //std::cout << line << std::endl;
+ int counter = 0;
+    T line_size = 13;
+    while (std::getline(fin, line)) {
+  //std::cout << counter << std::endl;
+      std::istringstream iss(line);
+
+      T para_buffer[13];
+   std::string A;
+   iss >>  A;
+   T buffer[PARTICLETYPE<T>::serialPartSize];
+      for (unsigned int i = 0; i < PARTICLETYPE<T>::serialPartSize; i++) {
+
+  buffer[i]=1.;
+      }
+      for (unsigned int i = 1; i < line_size; i++) {
+        iss >> para_buffer[i];
+      }
+   for (unsigned int i=0;i<3;i++)
+   {
+   buffer[i] = para_buffer[i+5];
+   buffer[i+3] = para_buffer[i+10];
+   }
+   buffer[9] = para_buffer[4];
+   buffer[12] = para_buffer[9];
+   buffer[14] = para_buffer[3];
+   buffer[15] = counter;
+      PARTICLETYPE<T> p;
+      p.unserialize(buffer);
+
+   /*
+      if ( !util::nearZero(radius) ) {
+        p.setRad(radius);
+      }
+      if ( !util::nearZero(mass) ) {
+        p.setMass(mass);
+      }*/
+      addParticle(p);
+   if ( !util::nearZero(radius) ) {
+        p.setRad(0.000001);
+      }
+      if ( !util::nearZero(mass) ) {
+        p.setMass(1.);
+      }
+   counter++;
+    }
+  }
+
+
 
   template<typename T, template<typename U> class PARTICLETYPE>
   void SuperParticleSystem3D<T, PARTICLETYPE>::clearParticles()

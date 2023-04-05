@@ -40,9 +40,9 @@ void PowerLawUnitConverter<T, DESCRIPTOR>::print(std::ostream& clout) const
   clout << "----------------- UnitConverter information ------------------" << std::endl;
   clout << "-- Parameters:" << std::endl;
   clout << "Resolution:                           N=              " << this->getResolution() << std::endl;
-  clout << "DESCRIPTOR velocity:                     latticeU=       " << this->getCharLatticeVelocity() << std::endl;
-  clout << "DESCRIPTOR relaxation frequency:         omega=          " << this->getLatticeRelaxationFrequency(  ) << std::endl;
-  clout << "DESCRIPTOR relaxation time:              tau=            " << this->getLatticeRelaxationTime() << std::endl;
+  clout << "Lattice velocity:                     latticeU=       " << this->getCharLatticeVelocity() << std::endl;
+  clout << "Lattice relaxation frequency:         omega=          " << this->getLatticeRelaxationFrequency(  ) << std::endl;
+  clout << "Lattice relaxation time:              tau=            " << this->getLatticeRelaxationTime() << std::endl;
   clout << "Characteristical length(m):           charL=          " << this->getCharPhysLength() << std::endl;
   clout << "Characteristical speed(m/s):          charU=          " << this->getCharPhysVelocity() << std::endl;
   clout << "Phys. char kinematic visco(m^2/s):    charNu=         " << this->getPhysViscosity() << std::endl;

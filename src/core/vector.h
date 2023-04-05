@@ -51,11 +51,11 @@ private:
   friend typename ScalarVector<T,D,Vector<T,D>>::type;
 
 protected:
-  const T* getComponentPointer(unsigned iDim) const any_platform
+  constexpr const T* getComponentPointer(unsigned iDim) const any_platform
   {
     return &_data[iDim];
   }
-  T* getComponentPointer(unsigned iDim) any_platform
+  constexpr T* getComponentPointer(unsigned iDim) any_platform
   {
     return &_data[iDim];
   }
@@ -63,20 +63,20 @@ protected:
 public:
   using value_t = T;
 
-  Vector() any_platform:
+  constexpr Vector() any_platform:
     _data{}
   { }
 
-  Vector(const Vector& rhs) any_platform:
+  constexpr Vector(const Vector& rhs) any_platform:
     _data(rhs._data)
   { }
 
-  Vector(Vector&& rhs) any_platform:
+  constexpr Vector(Vector&& rhs) any_platform:
     _data(rhs._data)
   { }
 
   template <typename W, typename IMPL>
-  Vector(const ScalarVector<W,D,IMPL>& rhs) any_platform
+  constexpr Vector(const ScalarVector<W,D,IMPL>& rhs) any_platform
   {
     for (unsigned iDim=0; iDim < D; ++iDim) {
       _data[iDim] = rhs[iDim];
@@ -87,13 +87,13 @@ public:
             typename std::enable_if_t< (sizeof...(I) > 1
                                     && (meta::is_arithmetic<I>::value && ...)
                                     && sizeof...(I) == D), int> = 0>
-  Vector(I... indexes) any_platform:
+  constexpr Vector(I... indexes) any_platform:
     _data{T(indexes)...}
   { }
 
   // Should be declared explicit
   template <typename U>
-  Vector(const U* v) any_platform
+  constexpr Vector(const U* v) any_platform
   {
     for (unsigned iDim=0; iDim < D; ++iDim) {
       _data[iDim] = static_cast<T>(v[iDim]);
@@ -101,7 +101,7 @@ public:
   }
 
   // Should be declared explicit
-  Vector(const std::vector<T>& v)
+  constexpr Vector(const std::vector<T>& v)
   {
     OLB_PRECONDITION(v.size() == D);
     for (unsigned iDim=0; iDim < D; ++iDim) {
@@ -110,14 +110,14 @@ public:
   }
 
   #ifndef  __CUDA_ARCH__
-  Vector(std::initializer_list<T> v)
+  constexpr Vector(std::initializer_list<T> v)
   {
     OLB_PRECONDITION(v.size() == D);
     std::copy(v.begin(), v.end(), _data.begin());
   }
   #endif
 
-  Vector(T scalar) any_platform
+  constexpr Vector(T scalar) any_platform
   {
     for (unsigned iDim=0; iDim < D; ++iDim) {
       _data[iDim] = scalar;
@@ -126,7 +126,7 @@ public:
 
   /// Construct with entries given by a lambda expression
   template <typename F, typename = decltype(std::declval<F&>()(std::size_t{0}))>
-  Vector(F&& f) any_platform
+  constexpr Vector(F&& f) any_platform
   {
     for (unsigned iDim=0; iDim < D; ++iDim) {
       _data[iDim] = f(iDim);
@@ -134,7 +134,7 @@ public:
   }
 
   template <typename U, typename IMPL_>
-  Vector& operator = (const GenericVector<U,D,IMPL_>& rhs) any_platform
+  constexpr Vector& operator = (const GenericVector<U,D,IMPL_>& rhs) any_platform
   {
     for (unsigned iDim=0; iDim < D; ++iDim) {
       this->operator[](iDim) = rhs[iDim];
@@ -142,7 +142,7 @@ public:
     return *this;
   }
 
-  Vector& operator = (const Vector& rhs) any_platform
+  constexpr Vector& operator = (const Vector& rhs) any_platform
   {
     for (unsigned iDim=0; iDim < D; ++iDim) {
       _data[iDim] = rhs[iDim];
@@ -150,7 +150,7 @@ public:
     return *this;
   }
 
-  Vector& operator = (const Vector&& rhs) any_platform
+  constexpr Vector& operator = (const Vector&& rhs) any_platform
   {
     for (unsigned iDim=0; iDim < D; ++iDim) {
       _data[iDim] = rhs[iDim];
@@ -158,32 +158,32 @@ public:
     return *this;
   }
 
-  const T* data() const any_platform
+  constexpr const T* data() const any_platform
   {
     return _data.data();
   }
 
-  T* data() any_platform
+  constexpr T* data() any_platform
   {
     return _data.data();
   }
 
-  auto begin()
+  constexpr auto begin()
   {
     return _data.begin();
   }
 
-  auto end()
+  constexpr auto end()
   {
     return _data.end();
   }
 
-  int getDim() const any_platform
+  constexpr int getDim() const any_platform
   {
     return D;
   }
 
-  Vector<T,D+1> withPrefix(T prefix) const any_platform
+  constexpr Vector<T,D+1> withPrefix(T prefix) const any_platform
   {
     Vector<T,D+1> tmp;
     tmp[0] = prefix;
@@ -193,8 +193,8 @@ public:
     return tmp;
   }
 
-  std::size_t getNblock() const { return 1; }
-  std::size_t getSerializableSize() const
+  constexpr std::size_t getNblock() const { return 1; }
+  constexpr std::size_t getSerializableSize() const
   {
     return D * sizeof(T);
   };
@@ -213,9 +213,16 @@ public:
 
 };
 
+template <typename T, typename IMPL, typename IMPL_>
+constexpr T crossProduct2D(
+  const ScalarVector<T,2,IMPL>& a, const ScalarVector<T,2,IMPL_>& b)
+{
+  return (a[0]*b[1] - a[1]*b[0]);
+}
 
 template <typename T, typename IMPL, typename IMPL_>
-Vector<T,3> crossProduct3D(const ScalarVector<T,3,IMPL>& a, const ScalarVector<T,3,IMPL_>& b)
+constexpr Vector<T,3> crossProduct3D(
+  const ScalarVector<T,3,IMPL>& a, const ScalarVector<T,3,IMPL_>& b) any_platform
 {
   return Vector<T,3>(
            a[1]*b[2] - a[2]*b[1],
@@ -224,17 +231,27 @@ Vector<T,3> crossProduct3D(const ScalarVector<T,3,IMPL>& a, const ScalarVector<T
          );
 }
 
+template <typename T, unsigned D, typename IMPL, typename IMPL_>
+auto crossProduct(const ScalarVector<T,D,IMPL>& a, const ScalarVector<T,D,IMPL_>& b){
+  static_assert((D==2 || D==3), "ERROR: Unknown dimension!");
+  if constexpr (D==2){
+    return crossProduct2D(a,b);
+  } else {
+    return crossProduct3D(a,b);
+  }
+}
+
 template <typename T, unsigned D, typename IMPL>
-Vector<T,D> normalize(const ScalarVector<T,D,IMPL>& a, T scale = T{1})
+constexpr Vector<T,D> normalize(const ScalarVector<T,D,IMPL>& a, T scale = T{1})
 {
-  const T invScale = scale / norm(a);
+  T invScale (scale / norm(a));
   return Vector<T,D>([invScale,&a](unsigned iDim) -> T {
     return a[iDim] * invScale;
   });
 }
 
 template <typename T, unsigned D, typename IMPL>
-Vector<T,D> abs(const ScalarVector<T,D,IMPL>& a)
+constexpr Vector<T,D> abs(const ScalarVector<T,D,IMPL>& a)
 {
   using namespace util;
   return Vector<T,D>([&a](unsigned iDim) -> T {
@@ -244,27 +261,29 @@ Vector<T,D> abs(const ScalarVector<T,D,IMPL>& a)
 
 
 template <typename T, unsigned D, typename U, typename IMPL>
-meta::enable_if_arithmetic_t<U, Vector<T,D>>
+constexpr meta::enable_if_arithmetic_t<U, Vector<T,D>>
 operator+ (U a, const ScalarVector<T,D,IMPL>& b) any_platform
 {
   return Vector<T,D>(b) += a;
 }
 
 template <typename T, unsigned D, typename U, typename IMPL>
-meta::enable_if_arithmetic_t<U, Vector<T,D>>
+constexpr meta::enable_if_arithmetic_t<U, Vector<T,D>>
 operator+ (const ScalarVector<T,D,IMPL>& a, U b) any_platform
 {
   return Vector<T,D>(a) += b;
 }
 
 template <typename T, unsigned D, typename IMPL, typename IMPL_>
-Vector<T,D> operator+ (const ScalarVector<T,D,IMPL>& a, const ScalarVector<T,D,IMPL_>& b) any_platform
+constexpr Vector<T,D> operator+ (
+  const ScalarVector<T,D,IMPL>& a, const ScalarVector<T,D,IMPL_>& b) any_platform
 {
   return Vector<T,D>(a) += b;
 }
 
 template <typename T, typename W, unsigned D, typename IMPL, typename IMPL_>
-Vector<decltype(T{}+W{}),D> operator+ (const ScalarVector<T,D,IMPL>& a, const ScalarVector<W,D,IMPL_>& b) any_platform
+constexpr Vector<decltype(T{}+W{}),D> operator+ (
+  const ScalarVector<T,D,IMPL>& a, const ScalarVector<W,D,IMPL_>& b) any_platform
 {
   Vector<decltype(T{}+W{}),D> result;
   for (unsigned iDim=0; iDim < D; ++iDim) {
@@ -274,27 +293,29 @@ Vector<decltype(T{}+W{}),D> operator+ (const ScalarVector<T,D,IMPL>& a, const Sc
 }
 
 template <typename T, unsigned D, typename U, typename IMPL>
-meta::enable_if_arithmetic_t<U, Vector<T,D>>
+constexpr meta::enable_if_arithmetic_t<U, Vector<T,D>>
 operator- (U a, const ScalarVector<T,D,IMPL>& b) any_platform
 {
   return Vector<T,D>(a) - b;
 }
 
 template <typename T, unsigned D, typename U, typename IMPL>
-meta::enable_if_arithmetic_t<U, Vector<T,D>>
+constexpr meta::enable_if_arithmetic_t<U, Vector<T,D>>
 operator- (const ScalarVector<T,D,IMPL>& a, U b) any_platform
 {
   return Vector<T,D>(a) -= b;
 }
 
 template <typename T, unsigned D, typename IMPL, typename IMPL_>
-Vector<T,D> operator- (const ScalarVector<T,D,IMPL>& a, const ScalarVector<T,D,IMPL_>& b) any_platform
+constexpr Vector<T,D> operator- (
+  const ScalarVector<T,D,IMPL>& a, const ScalarVector<T,D,IMPL_>& b) any_platform
 {
   return Vector<T,D>(a) -= b;
 }
 
 template <typename T, typename W, unsigned D, typename IMPL, typename IMPL_>
-Vector<decltype(T{}-W{}),D> operator- (const ScalarVector<T,D,IMPL>& a, const ScalarVector<W,D,IMPL_>& b) any_platform
+constexpr Vector<decltype(T{}-W{}),D> operator- (
+  const ScalarVector<T,D,IMPL>& a, const ScalarVector<W,D,IMPL_>& b) any_platform
 {
   Vector<decltype(T{}-W{}),D> result;
   for (unsigned iDim=0; iDim < D; ++iDim) {
@@ -304,7 +325,7 @@ Vector<decltype(T{}-W{}),D> operator- (const ScalarVector<T,D,IMPL>& a, const Sc
 }
 
 template <typename T, unsigned D, typename U, typename IMPL>
-meta::enable_if_arithmetic_t<U, Vector<decltype(T{}*U{}),D>>
+constexpr meta::enable_if_arithmetic_t<U, Vector<decltype(T{}*U{}),D>>
 operator* (U a, const ScalarVector<T,D,IMPL>& b) any_platform
 {
   Vector<decltype(T{}*U{}),D> result(b);
@@ -312,7 +333,7 @@ operator* (U a, const ScalarVector<T,D,IMPL>& b) any_platform
 }
 
 template <typename T, unsigned D, typename U, typename IMPL>
-meta::enable_if_arithmetic_t<U, Vector<T,D>>
+constexpr meta::enable_if_arithmetic_t<U, Vector<decltype(T{}*U{}),D>>
 operator* (const ScalarVector<T,D,IMPL>& a, U b) any_platform
 {
   Vector<decltype(T{}*U{}),D> result(a);
@@ -321,7 +342,8 @@ operator* (const ScalarVector<T,D,IMPL>& a, U b) any_platform
 
 /// Inner product
 template <typename T, typename U, unsigned D, typename IMPL, typename IMPL_>
-auto operator* (const ScalarVector<T,D,IMPL>& a, const ScalarVector<U,D,IMPL_>& b) any_platform
+constexpr auto operator* (
+  const ScalarVector<T,D,IMPL>& a, const ScalarVector<U,D,IMPL_>& b) any_platform
 {
   decltype(T{}*U{}) scalarProduct{};
   for (unsigned iDim=0; iDim < D; ++iDim) {
@@ -331,42 +353,52 @@ auto operator* (const ScalarVector<T,D,IMPL>& a, const ScalarVector<U,D,IMPL_>& 
 }
 
 template <typename T, unsigned D, typename U, typename IMPL>
-meta::enable_if_arithmetic_t<U, Vector<T,D>>
+constexpr meta::enable_if_arithmetic_t<U, Vector<T,D>>
 operator/ (const ScalarVector<T,D,IMPL>& a, U b) any_platform
 {
   return Vector<T,D>(a) /= b;
 }
 
 template<typename T, unsigned D, typename U, typename IMPL>
-meta::enable_if_arithmetic_t<U, bool>
+constexpr meta::enable_if_arithmetic_t<U, bool>
 operator< (U lhs, const ScalarVector<T,D,IMPL>& rhs) any_platform
 {
   return Vector<U,D>(lhs) < rhs;
 }
 
 template<typename T, unsigned D, typename U, typename IMPL>
-meta::enable_if_arithmetic_t<U, bool>
+constexpr meta::enable_if_arithmetic_t<U, bool>
 operator> (const ScalarVector<T,D,IMPL>& lhs, U rhs) any_platform
 {
   return lhs > Vector<U,D>(rhs);
 }
 
 template<typename T, unsigned D, typename U, typename IMPL>
-meta::enable_if_arithmetic_t<U, bool>
+constexpr meta::enable_if_arithmetic_t<U, bool>
 operator<= (U lhs, const ScalarVector<T,D,IMPL>& rhs) any_platform
 {
   return Vector<U,D>(lhs) <= rhs;
 }
 
 template<typename T, unsigned D, typename U, typename IMPL>
-meta::enable_if_arithmetic_t<U, bool>
+constexpr meta::enable_if_arithmetic_t<U, bool>
 operator>= (const ScalarVector<T,D,IMPL>& lhs, U rhs) any_platform
 {
   return lhs >= Vector<U,D>(rhs);
 }
 
 template <typename T, unsigned D, typename IMPL, typename IMPL_>
-Vector<T,D> maxv(const ScalarVector<T,D,IMPL>& v, const ScalarVector<T,D,IMPL_>& w)
+constexpr Vector<T,D> minv(
+  const ScalarVector<T,D,IMPL>& v, const ScalarVector<T,D,IMPL_>& w)
+{
+  return Vector<T,D>([&v,&w](unsigned iDim) -> T {
+    return util::min(v[iDim], w[iDim]);
+  });
+}
+
+template <typename T, unsigned D, typename IMPL, typename IMPL_>
+constexpr Vector<T,D> maxv(
+  const ScalarVector<T,D,IMPL>& v, const ScalarVector<T,D,IMPL_>& w)
 {
   return Vector<T,D>([&v,&w](unsigned iDim) -> T {
     return util::max(v[iDim], w[iDim]);

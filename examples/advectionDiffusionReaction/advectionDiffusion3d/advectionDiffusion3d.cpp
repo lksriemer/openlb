@@ -26,12 +26,10 @@
 /*  adePeriodic3d:
  *  The solution to a linear, scalar, three-dimensional advection-diffusion
  *  equation is approximated.
- *  The numerical setup and the analytical solution for the smooth initial value
- *  problem (IVP) are extruded to three dimensions from the one in
- *  Simonis et al. Phil. Trans. R. Soc. A (2020) 378:20190400,
- *  DOI: https://doi.org/10.1098/rsta.2019.0400.
- *  The numerical setup and the analytical solution for the unsmooth IVP are
- *  proposed as an initial Dirac comb profile in
+ *  The numerical setup is taken from
+ *  Simonis, S., Frank, M., and Krause M. J. Applied Mathematics Letters
+ *  (2023) 135:108484, DOI: https://doi.org/10.1016/j.aml.2022.108484.
+ *  The analytical solution for the unsmooth IVP is proposed in
  *  Dapelo et al., Journal of Computational Science (2021) 51:101363,
  *  DOI: https://doi.org/10.1016/j.jocs.2021.101363.
  *  Error norms are calculated for three subsequent resolutions and stored
@@ -55,14 +53,14 @@ using namespace olb;
 using namespace olb::descriptors;
 using namespace olb::graphics;
 
-using T = double;
+using T = FLOATING_POINT_TYPE;
 using TDESCRIPTOR = D3Q7<VELOCITY>;
 
 /// uncomment for console output of other norms
 #define allNorms
 
 const int nonsmooth = 1;           //switch for initial condition
-const int runs = 3;                // # simulations with increasing resolution
+const int runs = 4;                // # simulations with increasing resolution
 const int N0 = 20;                 // initial # discrete points per dimension
 const int statIter0 = 20;          // initial # lattice output timesteps
 
@@ -200,9 +198,6 @@ void prepareLattice(SuperLattice <T, TDESCRIPTOR> &ADlattice,
     OstreamManager clout(std::cout, "prepareLattice");
     clout << "Prepare Lattice ..." << std::endl;
 
-    // buffer layer
-    ADlattice.defineDynamics<NoDynamics>(superGeometry.getMaterialIndicator({0}));
-    // bulk
     ADlattice.defineDynamics<AdvectionDiffusionBGKdynamics>(superGeometry.getMaterialIndicator({1}));
     // Initial advection velocity
     AnalyticalConst3D<T,T> u0( converter.getCharLatticeVelocity(),
@@ -367,15 +362,13 @@ void simulate(int N, int statIter, T physVel, T peclet, T physLength) {
     std::vector <T> extend(3, T());
     std::vector <T> origin(3, T());
 
-    T eps = std::numeric_limits<T>::epsilon();
+    extend[0] = converter.getCharPhysLength();
+    extend[1] = converter.getCharPhysLength();
+    extend[2] = converter.getCharPhysLength();
 
-    extend[0] = converter.getCharPhysLength() + 2*eps;
-    extend[1] = converter.getCharPhysLength() + 2*eps;
-    extend[2] = converter.getCharPhysLength() + 2*eps;
-
-    origin[0] = -converter.getCharPhysLength() / 2.0 - eps;
-    origin[1] = -converter.getCharPhysLength() / 2.0 - eps;
-    origin[2] = -converter.getCharPhysLength() / 2.0 - eps;
+    origin[0] = -converter.getCharPhysLength() / 2;
+    origin[1] = -converter.getCharPhysLength() / 2;
+    origin[2] = -converter.getCharPhysLength() / 2;
 
     IndicatorCuboid3D <T> cuboid(extend, origin);
 

@@ -31,12 +31,16 @@
 
 #include <vector>
 #include <fstream>
+
 #include "core/singleton.h"
 #include "core/serializer.h"
+#include "core/vector.h"
+
 #include "io/ostreamManager.h"
 #include "io/xmlReader.h"
-#include "core/vector.h"
-#include "geometry/cuboid3D.h"
+
+#include "cuboid3D.h"
+#include "cuboidGeometryMinimizer.h"
 
 // All OpenLB code is contained in this namespace.
 namespace olb {
@@ -107,6 +111,10 @@ public:
   /// Set flag to enable/disable periodicity depending of direction. Be aware that not all directions are true to ensure boundary conditions like for velocity are not disturbed.
   void setPeriodicity(bool periodicityX, bool periodicityY, bool periodicityZ);
 
+  std::vector<Cuboid3D<T>>& cuboids() {
+    return _cuboids;
+  }
+
   /// Gives for a given point (globX/globY/globZ) the related cuboidID
   /// and _p if the point is not in any of the cuboid _childrenQ
   int get_iC(T globX, T globY, T globZ, int offset = 0) const; //TODO old ones
@@ -139,7 +147,7 @@ public:
   void getPhysR(T output[3], const int iCglob, LatticeR<3> latticeR) const;
 
   /// Stores the iC of the neighbouring cuboids in a vector;
-  void getNeighbourhood(int cuboid, std::vector<int>& neighbours, int offset = 0);
+  void getNeighbourhood(int cuboid, std::vector<int>& neighbours, int overlap = 0);
   /// Returns the number of cuboids in the structure
   int getNc() const;
   /// Returns the minimum of the ratio nX/NY in the structure
@@ -177,6 +185,9 @@ public:
   /// Replace the vector of cuboids
   void replaceCuboids(std::vector< Cuboid3D<T> >& cuboids);
 
+  std::size_t replaceContainedBy(Cuboid3D<T> mother);
+  std::size_t hypotheticalReplaceContainedBy(Cuboid3D<T> mother);
+
   /// Sets the number of full cells of each cuboid
   void setWeights(IndicatorF3D<T>& indicatorF);
   /// Resets the cuboid array
@@ -188,12 +199,18 @@ public:
   void add(Cuboid3D<T> cuboid);
   /// Splits cuboid iC, removes it and adds p cuboids of same volume
   void split(int iC, int p);
+  /// Splits cuboid iC, removes it, adds approx. width^3 sized new cuboids
+  void splitRegular(int iC, int width);
   /// Splits cuboid iC, removes it and adds p cuboids of same weight
   void splitByWeight(int iC, int p, IndicatorF3D<T>& indicatorF);
+  /// Splits cuboid iC along dimension iD into cuboids of fractions
+  void splitFractional(int iC, int iD, std::vector<T> fractions);
   /// Removes the cuboid iC
   void remove(int iC);
   /// Removes all cuboids where indicatorF = 0
   void remove(IndicatorF3D<T>& indicatorF);
+  /// Removes all cuboids where weight = 0
+  void removeByWeight();
   /// Shrink cuboid iC so that no empty planes are left
   void shrink(int iC, IndicatorF3D<T>& indicatorF);
   /// Shrink all cuboids so that no empty planes are left
@@ -272,6 +289,69 @@ CuboidGeometry3D<T>* createCuboidGeometry(std::string fileName)
 
   return cGeo;
 }
+
+///Evaluate complete neighbourhood and store in std::map
+template<typename T>
+void evaluateCuboidGeometryNeighbourhood(
+  CuboidGeometry3D<T>& cuboidGeometry,
+  std::map<int,std::vector<int>>& neighbourhood,
+  int offset=0 )
+{
+  for (int iC=0; iC<cuboidGeometry.getNc(); ++iC){
+    //Retrieve neighbours of iC
+    std::vector<int> neighbours;
+    cuboidGeometry.getNeighbourhood(iC, neighbours, offset);
+    neighbourhood[iC]=neighbours;
+  }
+}
+
+
+
+/// Consistency check for neighbour retrieval
+/// - workaround for issue #319
+bool checkCuboidNeighbourhoodConsistency(
+  std::map<int,std::vector<int>>& neighbourhood,
+  bool correct = false,
+  bool verbose = false)
+{
+  bool consistent = true;
+  for ( auto cuboidNeighbourPair : neighbourhood){
+    //Retrieve iC and neighbours
+    int iC = cuboidNeighbourPair.first;
+    std::vector<int>& neighbours = cuboidNeighbourPair.second;
+    //Loop over neighbours
+    for (int iCN : neighbours){
+      //Retreive neighbour's neighbours
+      std::vector<int>& neighboursNeighbours = neighbourhood[iCN];
+      bool iCfound = false;
+      //Loop over neighbour's neighbours
+      for (int iCNN : neighboursNeighbours ){
+        if (iCNN == iC){
+          iCfound=true;
+          break;
+        }
+      }
+      if (!iCfound){
+        //Set consistency boolean to false
+        consistent = false;
+        //Output, if desired
+        if (verbose){
+          std::cout << "iC " << iC << " not found in list of neighbour iC "
+                             << iCN << std::endl;
+        }
+        //Correct, if desired
+        if (correct){
+          neighbourhood[iCN].push_back(iC);
+        }
+      }
+    }
+  }
+  //Return whether consistent
+  return consistent;
+}
+
+
+
 
 }  // namespace olb
 

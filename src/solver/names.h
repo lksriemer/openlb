@@ -35,6 +35,8 @@ namespace olb {
 /// lattice(NavierStokes()).
 namespace names {
 
+struct A { };
+struct B { };
 
 struct NavierStokes : public descriptors::DESCRIPTOR_TAG { };
 struct Temperature  : public descriptors::DESCRIPTOR_TAG { };
@@ -45,13 +47,17 @@ struct Concentration   : public descriptors::DESCRIPTOR_TAG { };
 struct Concentration0  : public descriptors::DESCRIPTOR_TAG { };
 struct Concentration1  : public descriptors::DESCRIPTOR_TAG { };
 struct Concentration2  : public descriptors::DESCRIPTOR_TAG { };
-
+struct VolumeRendering{};
 
 struct Parameter { };
-struct Opti         : public Parameter { };
-struct Output       : public Parameter { };
-struct Simulation   : public Parameter { };
-struct Stationarity : public Parameter { };
+struct Opti                  : public Parameter { };
+struct Output                : public Parameter { };
+struct OutputOpti            : public Parameter { };
+struct VisualizationVTK      : public Parameter { const std::string name {"VisualizationVTK"}; };
+struct VisualizationGnuplot  : public Parameter { const std::string name {"VisualizationGnuplot"}; };
+struct VisualizationImages   : public Parameter { const std::string name {"VisualizationImages"}; };
+struct Simulation            : public Parameter { };
+struct Stationarity          : public Parameter { };
 
 struct Errors       : public Parameter { };
 struct Results      : public Parameter { };

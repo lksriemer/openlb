@@ -66,11 +66,16 @@ protected:
   std::vector<int>  _glob;
   /// maps global cuboid number to the processing thread
   std::map<int,int> _rank;
+  /// maps global cuboid number to local platform
+  std::map<int,Platform> _platform;
+
 public:
   /// Default empty constructor
   LoadBalancer(int size=1);
-  /// Load constructor
+  /// Constructor accepting existing balancing
   LoadBalancer(int size, std::map<int,int>& loc, std::vector<int>& glob, std::map<int,int>& rank);
+  /// Constructor accepting existing heterogeneous balancing
+  LoadBalancer(int size, std::map<int,int>& loc, std::vector<int>& glob, std::map<int,int>& rank, std::map<int,Platform>& platform);
   /// Default empty destructor
   virtual ~LoadBalancer();
   /// Swap method
@@ -94,15 +99,20 @@ public:
 
   /// \return target platform for processing of local cuboid
   virtual Platform platform(int loc) const {
-  #ifdef PLATFORM_GPU_CUDA
-    return Platform::GPU_CUDA;
-  #else
-  #ifdef PLATFORM_CPU_SIMD
-    return Platform::CPU_SIMD;
-  #else
-    return Platform::CPU_SISD;
-  #endif
-  #endif
+    auto iter = _platform.find(glob(loc));
+    if (iter != _platform.end()) {
+      return std::get<1>(*iter);
+    } else {
+    #ifdef PLATFORM_GPU_CUDA
+      return Platform::GPU_CUDA;
+    #else
+    #ifdef PLATFORM_CPU_SIMD
+      return Platform::CPU_SIMD;
+    #else
+      return Platform::CPU_SISD;
+    #endif
+    #endif
+    }
   }
 
   /// equal operator
@@ -116,23 +126,6 @@ public:
   bool* getBlock(std::size_t iBlock, std::size_t& sizeBlock, bool loadingMode) override;
 
   void print(bool multiOutput = false) const;
-
-  virtual void reInit(CuboidGeometry3D<T>& cGeometry3d, const double ratioFullEmpty=1., const double weightEmpty=.0) {}
-
-  virtual void reInit(CuboidGeometry2D<T>& cGeometry2d, const double ratioFullEmpty=1., const double weightEmpty=.0) {}
-
-  /// Write itself into Stringstream
-  virtual void writeToStream(std::ostream& stream)
-  {
-    std::cout << "Error: LoadBalancer.writeToStream not implemented yet." << std::endl;
-    exit(-1);
-  };
-  /// Write itself into File
-  virtual void writeToFile(std::string fileName)
-  {
-    std::cout << "Error: LoadBalancer.writeToFile not implemented yet." << std::endl;
-    exit(-1);
-  };
 
 };
 

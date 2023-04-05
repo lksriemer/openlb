@@ -57,7 +57,7 @@ public:
 
   /// Generate unique tags for given block neighborhood system
   template <unsigned D>
-  void coordinate(std::vector<BlockCommunicationNeighborhood<T,D>>& neighborhood);
+  void coordinate(std::vector<std::unique_ptr<BlockCommunicationNeighborhood<T,D>>>& neighborhood);
 
   /// Returns unique tag for communication between cuboids iC and jC
   /**

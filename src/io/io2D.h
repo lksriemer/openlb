@@ -24,6 +24,8 @@
 /** \file
  * Groups all the 2D include files for the directory io.
  */
+
+#include "printUtils.h"
 #include "base64.h"
 #include "blockGifWriter.h"
 #include "blockVtkWriter2D.h"
@@ -36,4 +38,7 @@
 #include "serializerIO.h"
 #include "superVtmWriter2D.h"
 #include "xmlReader.h"
-
+#include "cliReader.h"
+#include "consoleWriter.h"
+#include "blockLatticeSTLreader.h"
+#include "plainWriter.h"

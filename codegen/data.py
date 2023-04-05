@@ -178,7 +178,7 @@ class Parameters:
                     data[iD] = olb.Expr(alias.name)
                     self.symbols[alias.name] = alias
                     self.optional_assignments.append(
-                        Assignment(alias, Symbol(f"{ self.name }.template get<{ field.__cpp_name__ }>({ iD })")))
+                        Assignment(alias, Symbol(f"{ self.name }.template get<{ field.__cpp_name__ }>()[{ iD }]")))
                 self.expr.set[field](data)
 
     def isChanged(self):

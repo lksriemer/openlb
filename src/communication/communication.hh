@@ -34,5 +34,6 @@
 #include "superCommunicator.hh"
 #include "blockCommunicationNeighborhood.hh"
 #include "superCommunicationTagCoordinator.hh"
+#include "mpiGroup.hh"
 
 #endif

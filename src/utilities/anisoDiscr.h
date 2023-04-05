@@ -28,6 +28,8 @@
  *
  */
 
+#ifndef ANISO_DISCR_H
+#define ANISO_DISCR_H
 
 #include <iostream>
 #include <vector>
@@ -297,3 +299,5 @@ void computeAnisotropyMatrixKimAndLee( double const anisotropyFactor,
 
 
 } // namespace olb
+
+#endif

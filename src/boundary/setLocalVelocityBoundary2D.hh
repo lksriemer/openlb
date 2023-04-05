@@ -80,7 +80,7 @@ void setLocalVelocityBoundary(BlockLattice<T,DESCRIPTOR>& block, T omega, BlockI
           momenta::FixedVelocityBoundaryTuple
         >>();
         block.addPostProcessor(
-          typeid(PostStream), {iX, iY},
+          typeid(stage::PostStream), {iX, iY},
           promisePostProcessorForNormal<T,DESCRIPTOR,OuterVelocityCornerProcessor2D>(
             Vector<int,2>(discreteNormal.data() + 1)));
       }

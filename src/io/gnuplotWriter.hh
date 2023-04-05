@@ -36,7 +36,7 @@ namespace olb {
 /// Constructor with name of outputFiles
 /// boolean true for real-time plotting //WARNING: experimental!
 template< typename T >
-Gnuplot<T>::Gnuplot(std::string name, bool liveplot, std::string preCommand, AxisType axisType, Regression regressionType) 
+Gnuplot<T>::Gnuplot(std::string name, bool liveplot, std::string preCommand, AxisType axisType, Regression regressionType)
   : _name(name),
     _liveplot(liveplot),
     _dataFile(singleton::directories().getGnuplotOutDir()+"data/"+_name+".dat"),
@@ -45,9 +45,17 @@ Gnuplot<T>::Gnuplot(std::string name, bool liveplot, std::string preCommand, Axi
     _axisType(axisType),
     _regressionType(regressionType),
     csvWriter(name)
-{ }
+{
+#ifndef WIN32
+  _gnuplotInstalled = (! system("which gnuplot >/dev/null 2>/dev/null"));
+#endif
+  if ((! _gnuplotInstalled) && (singleton::mpi().getRank() == _rank )) {
+    std::cout << "We could not find a gnuplot distribution at your system." << std::endl;
+    std::cout << "We still write the data files s.t. you can plot the data yourself." << std::endl;
+  }
+}
 
-/// overload the constructor using delegating constructors. 
+/// overload the constructor using delegating constructors.
 /// This has the advantage that there is no necessity for default values which might cause some trouble
 template <typename T>
 Gnuplot<T>::Gnuplot(std::string name) : Gnuplot(name, false, "", LINEAR, OFF) {}
@@ -67,24 +75,7 @@ Gnuplot<T>::Gnuplot(std::string name, AxisType axisType, Regression regressionTy
 template< typename T >
 void Gnuplot<T>::setData(T xValue, T yValue, std::string name, std::string key, char plotType)
 {
-  if (_init) {
-    _dataSize = 1;
-    _key = key;
-    _names = {name};
-    _plotTypes = {plotType};
-
-    if (_liveplot) {
-      writePlotFile("plot");
-    }
-  }
-  csvWriter.writeDataFile(xValue, yValue);
-
-  if (_liveplot && _init) {
-    startGnuplot("plot");
-  }
-
-  _init = false;
-  return;
+  setData(xValue, std::vector<T>{yValue}, std::vector<std::string>{name}, key, std::vector<char>{plotType});
 }
 
 /// writes the data and plot file for two doubles (x and y), where x is increasing integer
@@ -92,7 +83,7 @@ template< typename T >
 void Gnuplot<T>::setData(bool noXvalue, T yValue, std::string name, std::string key, char plotType)
 {
   T xValue = _time;
-  setData(xValue, yValue, name, key, {plotType});
+  setData(xValue, yValue, name, key, std::vector<char>{plotType});
   _time++;
 }
 
@@ -118,13 +109,13 @@ void Gnuplot<T>::setData(T xValue, std::vector<T> yValues, std::vector<std::stri
         _plotTypes.push_back('l');
       }
     }
-    if (_liveplot) {
+    if (_gnuplotInstalled && _liveplot) {
       writePlotFile("plot");
     }
   }
   csvWriter.writeDataFile(xValue,yValues);
 
-  if (_liveplot && _init) {
+  if (_gnuplotInstalled && _liveplot && _init) {
     startGnuplot("plot");
   }
 
@@ -136,7 +127,7 @@ void Gnuplot<T>::setData(T xValue, std::vector<T> yValues, std::vector<std::stri
 /// The kind of scaling is provided by the parameters xAxisType and yAxisType
 template<typename T>
 void Gnuplot<T>::linRegression(std::ofstream& fout, std::string xAxisType, std::string yAxisType)
-{ 
+{
   fout << "set fit quiet\n";
 
   for (unsigned int i = 0; i < _dataSize; ++i) {
@@ -157,7 +148,7 @@ void Gnuplot<T>::linRegression(std::ofstream& fout, std::string xAxisType, std::
 
 /// scales the axes if necessary
 /// to add new kinds of scaling, just add another case, the labels for the x and y axes will be expanded by the kind of scaling (if it's other than linear)
-/// this labeling provides a labeling of the axes even if the function setLabel isn't specifically called 
+/// this labeling provides a labeling of the axes even if the function setLabel isn't specifically called
 template<typename T>
 void Gnuplot<T>::scaleAxes(std::ofstream& fout)
 {
@@ -177,7 +168,7 @@ void Gnuplot<T>::scaleAxes(std::ofstream& fout)
     default:
     {} break;
   }
-  
+
   fout << "\n";
   return;
 }
@@ -197,7 +188,7 @@ void Gnuplot<T>::setData(bool noXvalue, std::vector<T> yValues, std::vector<std:
 template< typename T >
 void Gnuplot<T>::writePDF(std::string plotName)
 {
-  if (!_init) {
+  if (_gnuplotInstalled && (!_init)) {
     writePlotFile("pdf", plotName);
     startGnuplot("plotPDF", plotName);
   }
@@ -214,7 +205,7 @@ void Gnuplot<T>::writePDF(std::string plotName)
 template< typename T >
 void Gnuplot<T>::writePNG(int iT, double xRange, std::string plotName)
 {
-  if (!_init) {
+  if (_gnuplotInstalled && (!_init)) {
     _iT = iT;
     _xRange = xRange;
 
@@ -267,14 +258,14 @@ void Gnuplot<T>::writePlotFile(std::string type, std::string plotName)
       }
       fout <<".png'" << "\n";
     }
-    
+
     /// set precommands
     fout << _preCommand << "\n";
 
-    
+
     /// Scaling the axes if necessary
-    scaleAxes(fout); 
-    
+    scaleAxes(fout);
+
     /// Labelling the axes
 
     fout << "set xlabel '" << _xLabel << "'" << "\n";
@@ -310,7 +301,7 @@ void Gnuplot<T>::writePlotFile(std::string type, std::string plotName)
 
     fout << "path = '" << _dir << "data/"<<_name << ".dat'" << "\n"; /// Path to the data, saves a lot of code in the gnuplot file and within this file
 
-    
+
 
     /// The necessary statements for a regression will be added if needed
     /// IMPORTANT for later additions: the word "plot" needs to be included in every case separatly, see e.g. linRegression
@@ -324,7 +315,7 @@ void Gnuplot<T>::writePlotFile(std::string type, std::string plotName)
       {  /// LINear REGression of the datasets
         linRegression(fout, xAxisType, yAxisType);  /// Create the lin Regression of the datasets, includes the plotting of the regression AND the data
       } break;
-      
+
       case OFF: /// No Regression, just plot the data, OFF same as default
       default:
       {
@@ -333,9 +324,9 @@ void Gnuplot<T>::writePlotFile(std::string type, std::string plotName)
 
     }
     /// vector which holds the information about the plotType
-    /// (e.g. scatterplot 'p' or lineplot 'l': default {'l','l'}) 
+    /// (e.g. scatterplot 'p' or lineplot 'l': default {'l','l'})
 
-    /// plotting the data and for each set 1:2 / 1:3,... 
+    /// plotting the data and for each set 1:2 / 1:3,...
 
     unsigned int i = 0;
     for ( ; i < _dataSize - 1; ++i) {
@@ -350,7 +341,7 @@ void Gnuplot<T>::writePlotFile(std::string type, std::string plotName)
     }
     fout.close();
 
-    
+
   }
   return;
 }
@@ -371,11 +362,6 @@ void Gnuplot<T>::setLabel(std::string xLabel, std::string yLabel)
 template< typename T >
 void Gnuplot<T>::startGnuplot(std::string plotFile, std::string plotName)
 {
-#ifdef WIN32
-  std::cout << "GNUPLOT WORKS ONLY WITH LINUX" << std::endl;
-//  exit (EXIT_FAILURE);
-  return;
-#endif
 #ifndef WIN32
   if (singleton::mpi().getRank() == _rank) {
     if (!system(nullptr)) {

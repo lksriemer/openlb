@@ -75,7 +75,7 @@ void VTKwriter<T,FUNCTOR,VTKTYPE>::writeVTM( int iT, int rankSize, std::string f
   std::string fullNameVTM = singleton::directories().getVtkOutDir() + nameVTM;
   //Write preamble VTM
   preambleVTM(fullNameVTM);
-  //Loop over all cuboids (globIcs) 
+  //Loop over all cuboids (globIcs)
   for (int iC = 0; iC < rankSize; iC++) {
     std::string nameFileData = pathPrefixFileData + createFileName(nameCollection, iT, iC) + fileExtension;
     // puts name of .vti piece to a .pvd file [fullNameVTM]
@@ -122,7 +122,7 @@ void VTKwriter<T,FUNCTOR,VTKTYPE>::write(int iT, std::string nameCollection, F a
         const T delta = cGeometry.getMotherCuboid().getDeltaR();
 
         //Cor each cuboid
-        for (int iCloc = 0; iCloc < loadBalancer.size(); iCloc++) { 
+        for (int iCloc = 0; iCloc < loadBalancer.size(); iCloc++) {
 
           //Retrieve global IC
           int globIC = loadBalancer.glob(iCloc);
@@ -158,7 +158,7 @@ void VTKwriter<T,FUNCTOR,VTKTYPE>::write(int iT, std::string nameCollection, F a
         rankSize = loadBalancer.getRankSize();
 
         //Cor each cuboid
-        for (int iCloc = 0; iCloc < loadBalancer.size(); iCloc++) { 
+        for (int iCloc = 0; iCloc < loadBalancer.size(); iCloc++) {
           //Retrieve global IC
           int globIC = loadBalancer.glob(iCloc);
           // Retrieve container size (number of particles) (TODO: include into common functortype)
@@ -172,7 +172,7 @@ void VTKwriter<T,FUNCTOR,VTKTYPE>::write(int iT, std::string nameCollection, F a
           applyFunctors(fullNameFileData, extent1, globIC);
           // Write celldata (connectivity, offset, types)
           this->cellDataVTU(fullNameFileData, extent1);
-          // Write points 
+          // Write points
           this->dataArrayPoints(fullNameFileData, extent1, globIC);
           // CloseVTU
           closeVTU(fullNameFileData);
@@ -200,7 +200,7 @@ void VTKwriter<T,FUNCTOR,VTKTYPE>::write(int iT, std::string nameCollection, F a
         Vector<int,1> extent1(_pointerVec[0]->getContainerSize());
         // Name VTU
         std::string nameFileData =  "data/" + createFileName(nameCollection, iT ) + fileExtension;
-        // Create PVD 
+        // Create PVD
         dataPVD(iT, fullNamePVD, nameFileData);
         // Full Name VTU
         std::string fullNameFileData = singleton::directories().getVtkOutDir() + nameFileData;
@@ -210,7 +210,7 @@ void VTKwriter<T,FUNCTOR,VTKTYPE>::write(int iT, std::string nameCollection, F a
         applyFunctors(fullNameFileData, extent1);
         // Write celldata (connectivity, offset, types)
         this->cellDataVTU(fullNameFileData, extent1);
-        // Write points 
+        // Write points
         this->dataArrayPoints(fullNameFileData, extent1);
         // CloseVTU
         closeVTU(fullNameFileData);
@@ -252,7 +252,7 @@ void VTKwriter<T,FUNCTOR,VTKTYPE>::write(int iT)
 
 template<typename T, typename FUNCTOR, vtkType VTKTYPE>
 void VTKwriter<T,FUNCTOR,VTKTYPE>::write(FUNCTOR& f, int iT)
-{ 
+{
   //VTI
   if constexpr(VTKTYPE==VTI){
     //Define functor
@@ -274,7 +274,7 @@ void VTKwriter<T,FUNCTOR,VTKTYPE>::write(FUNCTOR& f, int iT)
 
 template<typename T, typename FUNCTOR, vtkType VTKTYPE>
 void VTKwriter<T,FUNCTOR,VTKTYPE>::write(std::shared_ptr<FUNCTOR> ptr_f, int iT)
-{ 
+{
   write(*ptr_f, iT);
 }
 
@@ -358,17 +358,17 @@ void VTKwriter<T,FUNCTOR,VTKTYPE>::preambleVTI (
 
   fout << "<ImageData WholeExtent=\""
        << extent0[0] <<" "<< extent1[0];
-  for (int iDim=1; iDim<D; ++iDim){
+  for (unsigned iDim=1; iDim<D; ++iDim){
     fout << " " << extent0[iDim] << " " << extent1[iDim];
   }
   fout << "\" Origin=\"" << origin[0];
-  for (int iDim=1; iDim<D; ++iDim){
+  for (unsigned iDim=1; iDim<D; ++iDim){
     fout << " " << origin[iDim];
   }
   fout << "\" Spacing=\"" << delta << " " << delta << " " << delta << "\">\n";
   fout << "<Piece Extent=\""
        << extent0[0] <<" "<< extent1[0];
-  for (int iDim=1; iDim<D; ++iDim){
+  for (unsigned iDim=1; iDim<D; ++iDim){
     fout << " " << extent0[iDim] <<" "<< extent1[iDim];
   }
   fout <<"\">\n";
@@ -568,7 +568,7 @@ void VTKwriter<T,FUNCTOR,VTKTYPE>::dataArraySingleFunctor(
 
   //Set ic if parallel
   if constexpr(parallel){ i[0] = iC;}
-  
+
   //Create float array
   size_t numberOfFloats;
   std::unique_ptr<float[]> streamFloat;
@@ -644,16 +644,16 @@ void VTKwriter<T,FUNCTOR,VTKTYPE>::dataArraySingleFunctor(
     const unsigned char* charData = reinterpret_cast<unsigned char*>(streamFloat.get());
     // buffer for compression
     std::unique_ptr<unsigned char[]> comprData(new unsigned char[ binarySize ]);    // stack may be too small
- 
+
     // compress data (not yet decoded as base64) by zlib
     uLongf sizeCompr = compressBound(binarySize);
     compress2( comprData.get(), &sizeCompr, charData, binarySize, -1);
- 
+
     // encode prefix to base64 documented in  http://www.earthmodels.org/software/vtk-and-paraview/vtk-file-formats
     Base64Encoder<uint32_t> prefixEncoder(fout, 4);
     uint32_t prefix[4] = {1,binarySize,binarySize,static_cast<uint32_t>(sizeCompr)};
     prefixEncoder.encode(prefix, 4);
- 
+
     // encode compressed data to base64
     Base64Encoder<unsigned char> dataEncoder( fout, sizeCompr );
     dataEncoder.encode(comprData.get(), sizeCompr);
@@ -670,7 +670,7 @@ void VTKwriter<T,FUNCTOR,VTKTYPE>::dataArraySingleFunctor(
     }
   }
   fout.close();
- 
+
   std::ofstream ffout( fullName,  std::ios::out | std::ios::app );
   if (!ffout) {
     clout << "Error: could not open " << fullName << std::endl;

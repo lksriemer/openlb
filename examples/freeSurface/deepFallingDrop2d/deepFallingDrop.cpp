@@ -36,7 +36,7 @@
 using namespace olb;
 using namespace olb::descriptors;
 
-using T = double;
+using T = FLOATING_POINT_TYPE;
 using DESCRIPTOR = D2Q9<descriptors::FORCE, FreeSurface::MASS, FreeSurface::EPSILON, FreeSurface::CELL_TYPE, FreeSurface::CELL_FLAGS, FreeSurface::TEMP_MASS_EXCHANGE, FreeSurface::PREVIOUS_VELOCITY>;
 
 struct FreeSurfaceAppHelper {
@@ -78,7 +78,7 @@ public:
     }else{
       for(int i = -1; i <= 1; ++i){
         for(int j = -1; j <= 1; ++j){
-          std::array<T,DESCRIPTOR::d> shifted_diff = {diff[0]+i*lattice_size*1.1, diff[1]+j*lattice_size*1.1};
+          std::array<T,DESCRIPTOR::d> shifted_diff = {diff[0]+T(i)*lattice_size*T(1.1), diff[1]+T(j)*lattice_size*T(1.1)};
           if((shifted_diff[0]*shifted_diff[0] + shifted_diff[1] * shifted_diff[1]) <= radius*radius){
             output[0] = cell_values[1];
             return true;
@@ -100,7 +100,7 @@ public:
   FreeSurfaceDeepFallingDropVel2D(T lattice_size_, const std::array<T,DESCRIPTOR::d>& lattice_speed_):AnalyticalF<2,T,T>{2}, lattice_size{lattice_size_}, lattice_speed{lattice_speed_}{}
 
   bool operator()(T output[], const T x[]) override {
-    
+
     T radius = 0.001;
     T pool_height = 0.013;
     std::array<T,DESCRIPTOR::d> point = {0.02, pool_height + radius + lattice_size * 4};
@@ -110,7 +110,7 @@ public:
     output[1] = 0.;
     for(int i = -1; i <= 1; ++i){
       for(int j = -1; j <= 1; ++j){
-        std::array<T,DESCRIPTOR::d> shifted_diff = {diff[0]+i*lattice_size*1.1, diff[1]+j*lattice_size*1.1};
+        std::array<T,DESCRIPTOR::d> shifted_diff = {diff[0]+T(i)*lattice_size*T(1.1), diff[1]+T(j)*lattice_size*T(1.1)};
         if((shifted_diff[0]*shifted_diff[0] + shifted_diff[1] * shifted_diff[1]) <= radius*radius){
           output[0] = lattice_speed[0];
           output[1] = lattice_speed[1];
@@ -175,7 +175,7 @@ void prepareFallingDrop(UnitConverter<T,DESCRIPTOR> const& converter,
 
   T force_factor = 1./ converter.getConversionFactorForce() * converter.getConversionFactorMass();
   AnalyticalConst2D<T,T> force_a{helper.gravity_force[0] * force_factor, helper.gravity_force[1] * force_factor};
-  sLattice.defineField<descriptors::FORCE>(superGeometry.getMaterialIndicator({1}), force_a);
+  sLattice.defineField<descriptors::FORCE>(superGeometry.getMaterialIndicator(1), force_a);
 
 }
 
@@ -195,7 +195,7 @@ void prepareLattice( UnitConverter<T,DESCRIPTOR> const& converter,
   //setSlipBoundary<T,DESCRIPTOR>(sLattice, superGeometry, 2);
 
   sLattice.setParameter<descriptors::OMEGA>(converter.getLatticeRelaxationFrequency());
-  sLattice.setParameter<collision::LES::Smagorinsky>(0.2);
+  sLattice.setParameter<collision::LES::Smagorinsky>(T(0.2));
 
   prepareFallingDrop(converter, sLattice, superGeometry, lattice_size, helper);
   clout << "Prepare Lattice ... OK" << std::endl;
@@ -224,7 +224,7 @@ void setInitialValues(SuperLattice<T, DESCRIPTOR>& sLattice, SuperGeometry<T,2>&
   sLattice.initialize();
 }
 
-void getResults( SuperLattice<T,DESCRIPTOR>& sLattice, 
+void getResults( SuperLattice<T,DESCRIPTOR>& sLattice,
                  UnitConverter<T,DESCRIPTOR> const& converter, int iT,
                  SuperGeometry<T,2>& superGeometry, util::Timer<T>& timer)
 {
@@ -233,7 +233,7 @@ void getResults( SuperLattice<T,DESCRIPTOR>& sLattice,
 
   if ( iT==0 ) {
     // Writes the geometry, cuboid no. and rank no. as vti file for visualization
-    SuperVTMwriter2D<T> vtmWriter( "freeSurface" );
+    SuperVTMwriter2D<T> vtmWriter( "deepFallingDrop2d" );
     SuperLatticeGeometry2D<T, DESCRIPTOR> geometry( sLattice, superGeometry );
     SuperLatticeCuboid2D<T, DESCRIPTOR> cuboid( sLattice );
     SuperLatticeRank2D<T, DESCRIPTOR> rank( sLattice );
@@ -248,7 +248,7 @@ void getResults( SuperLattice<T,DESCRIPTOR>& sLattice,
   if ( iT%vtmIter==0 ) {
     sLattice.setProcessingContext(ProcessingContext::Evaluation);
 
-    SuperVTMwriter2D<T> vtmWriter( "freeSurface" );
+    SuperVTMwriter2D<T> vtmWriter( "deepFallingDrop2d" );
     SuperLatticePhysVelocity2D<T, DESCRIPTOR> velocity( sLattice, converter );
     SuperLatticePhysPressure2D<T, DESCRIPTOR> pressure( sLattice, converter );
     SuperLatticeExternalScalarField2D<T, DESCRIPTOR, FreeSurface::EPSILON> epsilon( sLattice );
@@ -370,15 +370,18 @@ int main(int argc, char **argv)
   ***** 6 - lattice force conversion factor
   ***** 7 - lattice length
   */
-  FreeSurface2DSetup<T,DESCRIPTOR> free_surface_setup{sLattice,
-    FreeSurface2D::Variables<T>{
-      true, c.transitionThreshold, c.lonelyThreshold, helper.has_surface_tension, 
-      surface_tension_coefficient_factor * helper.surface_tension_coefficient, 
-      force_conversion_factor, converter.getPhysDeltaX()
-    }
-  };
+  FreeSurface2DSetup<T,DESCRIPTOR> free_surface_setup{sLattice};
 
   free_surface_setup.addPostProcessor();
+
+  // Set variables from freeSurfaceHelpers.h
+  sLattice.setParameter<FreeSurface::DROP_ISOLATED_CELLS>(true);
+  sLattice.setParameter<FreeSurface::TRANSITION>(c.transitionThreshold);
+  sLattice.setParameter<FreeSurface::LONELY_THRESHOLD>(c.lonelyThreshold);
+  sLattice.setParameter<FreeSurface::HAS_SURFACE_TENSION>(helper.has_surface_tension);
+  sLattice.setParameter<FreeSurface::SURFACE_TENSION_PARAMETER>(surface_tension_coefficient_factor * helper.surface_tension_coefficient);
+  sLattice.setParameter<FreeSurface::FORCE_CONVERSION_FACTOR>(force_conversion_factor);
+  sLattice.setParameter<FreeSurface::LATTICE_SIZE>(converter.getPhysDeltaX());
 
   // === 4th Step: Main Loop with Timer ===
   clout << "starting simulation..." << std::endl;

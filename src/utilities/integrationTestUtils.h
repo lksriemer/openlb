@@ -40,17 +40,17 @@ int evaluateIntegration( std::vector<T>& testValues, bool print=false ){
     T maxErr = testValues[i+2];
     T err = std::abs(ref-val)/ref;
     bool passed = err <= maxErr;
-    if (print || !passed ){ 
+    if (print || !passed ){
       clout << std::setprecision(16);
-      clout << "i:|"     << "Value:                 |" 
-                         << "Reference:             |" 
-                         << "Error:                 |" 
+      clout << "i:|"     << "Value:                 |"
+                         << "Reference:             |"
+                         << "Error:                 |"
                          << "MaxError:              |"
                          << "Passed:" <<  std::endl;
       clout << i << " |" << std::setw(22) << val
                  << " |" << std::setw(22) << ref
-                 << " |" << std::setw(22) << err 
-                 << " |" << std::setw(22) << maxErr 
+                 << " |" << std::setw(22) << err
+                 << " |" << std::setw(22) << maxErr
                  << " |" << passed << std::endl;
       clout << std::setprecision(6);
     }

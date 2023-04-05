@@ -32,40 +32,6 @@
 
 namespace olb {
 
-/// Wrapper for a local plain-copy block communication request
-template <typename BLOCK>
-class ConcreteBlockCommunicator<BLOCK>::CopyTask {
-private:
-  const std::vector<CellID>& _targetCells;
-  const std::vector<CellID>& _sourceCells;
-
-  MultiConcreteCommunicatable<BLOCK> _target;
-  MultiConcreteCommunicatable<BLOCK> _source;
-
-  std::unique_ptr<std::uint8_t[]> _buffer;
-
-public:
-  CopyTask(
-    const std::vector<std::type_index>& fields,
-    const std::vector<CellID>& targetCells, BLOCK& target,
-    const std::vector<CellID>& sourceCells, BLOCK& source):
-    _targetCells(targetCells),
-    _sourceCells(sourceCells),
-    _target(target, fields),
-    _source(source, fields),
-    _buffer(new std::uint8_t[_source.size(_sourceCells)] { })
-  {
-    OLB_ASSERT(_sourceCells.size() == _targetCells.size(),
-               "Source cell count must match target cell count");
-  }
-
-  void copy()
-  {
-    _source.serialize(_sourceCells, _buffer.get());
-    _target.deserialize(_targetCells, _buffer.get());
-  };
-};
-
 #ifdef PARALLEL_MODE_MPI
 
 /// Wrapper for a non-blocking block propagation send request
@@ -177,7 +143,42 @@ public:
   }
 };
 
-#endif // PARALLEL_MODE_MPI
+#else // not using PARALLEL_MODE_MPI
+
+template <typename BLOCK>
+class ConcreteBlockCommunicator<BLOCK>::CopyTask {
+private:
+  const std::vector<CellID>& _targetCells;
+  const std::vector<CellID>& _sourceCells;
+
+  MultiConcreteCommunicatable<BLOCK> _target;
+  MultiConcreteCommunicatable<BLOCK> _source;
+
+  std::unique_ptr<std::uint8_t[]> _buffer;
+
+public:
+  CopyTask(
+    const std::vector<std::type_index>& fields,
+    const std::vector<CellID>& targetCells, BLOCK& target,
+    const std::vector<CellID>& sourceCells, BLOCK& source):
+    _targetCells(targetCells),
+    _sourceCells(sourceCells),
+    _target(target, fields),
+    _source(source, fields),
+    _buffer(new std::uint8_t[_source.size(_sourceCells)] { })
+  {
+    OLB_ASSERT(_sourceCells.size() == _targetCells.size(),
+               "Source cell count must match target cell count");
+  }
+
+  void copy()
+  {
+    _source.serialize(_sourceCells, _buffer.get());
+    _target.deserialize(_targetCells, _buffer.get());
+  };
+};
+
+#endif
 
 template <typename BLOCK>
 template <typename T, typename SUPER>
@@ -196,39 +197,51 @@ ConcreteBlockCommunicator<BLOCK>::ConcreteBlockCommunicator(
 #endif
 {
 #ifdef PARALLEL_MODE_MPI
-  neighborhood.forRemoteNeighbors([&](int remoteC) {
-    if (!neighborhood.getCellsOutboundTo(remoteC).empty()) {
-      _sendTasks.emplace_back(_mpiCommunicator, tagCoordinator.get(remoteC, loadBalancer.glob(_iC)),
-                              loadBalancer.rank(remoteC),
-                              neighborhood.getFieldsCommonWith(remoteC),
-                              neighborhood.getCellsOutboundTo(remoteC),
-                              super.template getBlock<BLOCK>(_iC));
-    }
-    if (!neighborhood.getCellsInboundFrom(remoteC).empty()) {
-      _recvTasks.emplace_back(_mpiCommunicator, tagCoordinator.get(remoteC, loadBalancer.glob(_iC)),
-                              loadBalancer.rank(remoteC),
-                              neighborhood.getFieldsCommonWith(remoteC),
-                              neighborhood.getCellsInboundFrom(remoteC),
-                              super.template getBlock<BLOCK>(_iC));
+  neighborhood.forNeighbors([&](int remoteC) {
+    if (loadBalancer.isLocal(remoteC) && loadBalancer.platform(loadBalancer.loc(remoteC)) == Platform::GPU_CUDA) {
+      if constexpr (std::is_same_v<SUPER, SuperGeometry<T,SUPER::d>>) {
+        if (!neighborhood.getCellsOutboundTo(remoteC).empty()) {
+          _sendTasks.emplace_back(_mpiCommunicator, tagCoordinator.get(loadBalancer.glob(_iC), remoteC),
+                                  loadBalancer.rank(remoteC),
+                                  neighborhood.getFieldsCommonWith(remoteC),
+                                  neighborhood.getCellsOutboundTo(remoteC),
+                                  super.template getBlock<BLOCK>(_iC));
+        }
+      }
+      if (!neighborhood.getCellsInboundFrom(remoteC).empty()) {
+        _recvTasks.emplace_back(_mpiCommunicator, tagCoordinator.get(remoteC, loadBalancer.glob(_iC)),
+                                loadBalancer.rank(remoteC),
+                                neighborhood.getFieldsCommonWith(remoteC),
+                                neighborhood.getCellsInboundFrom(remoteC),
+                                super.template getBlock<BLOCK>(_iC));
+      }
+    } else {
+      if (!neighborhood.getCellsOutboundTo(remoteC).empty()) {
+        _sendTasks.emplace_back(_mpiCommunicator, tagCoordinator.get(loadBalancer.glob(_iC), remoteC),
+                                loadBalancer.rank(remoteC),
+                                neighborhood.getFieldsCommonWith(remoteC),
+                                neighborhood.getCellsOutboundTo(remoteC),
+                                super.template getBlock<BLOCK>(_iC));
+      }
+      if (!neighborhood.getCellsInboundFrom(remoteC).empty()) {
+        _recvTasks.emplace_back(_mpiCommunicator, tagCoordinator.get(remoteC, loadBalancer.glob(_iC)),
+                                loadBalancer.rank(remoteC),
+                                neighborhood.getFieldsCommonWith(remoteC),
+                                neighborhood.getCellsInboundFrom(remoteC),
+                                super.template getBlock<BLOCK>(_iC));
+      }
     }
   });
-#endif // PARALLEL_MODE_MPI
 
-  neighborhood.forLocalNeighbors([&](int localC) {
+#else // not using PARALLEL_MODE_MPI
+  neighborhood.forNeighbors([&](int localC) {
     if (!neighborhood.getCellsInboundFrom(localC).empty()) {
       _copyTasks.emplace_back(neighborhood.getFieldsCommonWith(localC),
                               neighborhood.getCellsInboundFrom(localC),   super.template getBlock<BLOCK>(_iC),
                               neighborhood.getCellsRequestedFrom(localC), super.template getBlock<BLOCK>(loadBalancer.loc(localC)));
     }
   });
-}
-
-template <typename BLOCK>
-void ConcreteBlockCommunicator<BLOCK>::copy()
-{
-  for (auto& task : _copyTasks) {
-    task.copy();
-  }
+#endif
 }
 
 #ifdef PARALLEL_MODE_MPI
@@ -276,11 +289,15 @@ void ConcreteBlockCommunicator<BLOCK>::wait()
   }
 }
 
-#else // PARALLEL_MODE_MPI
+#else // not using PARALLEL_MODE_MPI
 
 template <typename BLOCK>
-void ConcreteBlockCommunicator<BLOCK>::wait()
-{ }
+void ConcreteBlockCommunicator<BLOCK>::copy()
+{
+  for (auto& task : _copyTasks) {
+    task.copy();
+  }
+}
 
 #endif
 

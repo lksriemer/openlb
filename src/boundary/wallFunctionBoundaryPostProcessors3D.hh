@@ -25,7 +25,7 @@
 #define WALLFUNCTION_BOUNDARY_POST_PROCESSORS_3D_HH
 
 #include "wallFunctionBoundaryPostProcessors3D.h"
-#include "core/finiteDifference3D.h"
+#include "utilities/finiteDifference3D.h"
 #include "dynamics/lbm.h"
 #include "core/util.h"
 #include "utilities/vectorHelpers.h"

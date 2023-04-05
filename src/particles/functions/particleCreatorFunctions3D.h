@@ -21,6 +21,8 @@
  *  Boston, MA  02110-1301, USA.
 */
 
+//TODO: WARNING: For now, there is a lot of code duplication, which has to be sorted out in the future.
+
 /* This file contains particle creator functions.
  * Those are generally meant for users to be able to create particles
  * in a comfortable way. As this section might be subject to frequent changes,
@@ -58,14 +60,14 @@ void setResolvedSphere3D(
   typedef SmoothIndicatorF3D<T, T, true> SIndicatorBaseType;
 
   //Create SmoothIndicator
-  std::shared_ptr<SIndicatorBaseType> sIndicatorSPtr(
+  std::unique_ptr<SIndicatorBaseType> sIndicatorPtr(
     new SmoothIndicatorSphere3D<T, T, true>(Vector<T,3> (0.), radius, epsilon ));
 
   //Pass smart pointer to particleSystem
   auto& vectorOfIndicators = particleSystem.template getAssociatedData<
-                             std::vector<std::shared_ptr<SIndicatorBaseType>>>();
+                             std::vector<std::unique_ptr<SIndicatorBaseType>>>();
   std::size_t idxSurface = vectorOfIndicators.size();
-  vectorOfIndicators.push_back( sIndicatorSPtr );
+  vectorOfIndicators.push_back( std::move(sIndicatorPtr) );
 
   // Safety mechanism for wrong particle type - It is better not to use rotation matrix!
   if constexpr ( PARTICLETYPE::template providesNested<SURFACE,ROT_MATRIX>() ) {
@@ -104,25 +106,25 @@ void setResolvedCylinder3D(
   std::size_t idxParticle,
   const Vector<T,3>& position, const Vector<T,3>& normal,
   T height, T radius, T epsilon, T density=0.,
-  const Vector<T,3>& angle = Vector<T,3> (0.),
+  const Vector<T,3>& angleInDegree = Vector<T,3> (0.),
   const Vector<T,3>& velocity = Vector<T,3> (0.))
 {
   using namespace descriptors;
   typedef SmoothIndicatorF3D<T, T, true> SIndicatorBaseType;
 
   //Create SmoothIndicator
-  std::shared_ptr<SIndicatorBaseType> sIndicatorSPtr(
+  std::unique_ptr<SIndicatorBaseType> sIndicatorPtr(
     new SmoothIndicatorCylinder3D<T, T, true>(Vector<T,3>(0.), normal, radius, height, epsilon ));
 
   //Pass smart pointer to particleSystem
   auto& vectorOfIndicators = particleSystem.template getAssociatedData<
-                             std::vector<std::shared_ptr<SIndicatorBaseType>>>();
+                             std::vector<std::unique_ptr<SIndicatorBaseType>>>();
   std::size_t idxSurface = vectorOfIndicators.size();
-  vectorOfIndicators.push_back( sIndicatorSPtr );
+  vectorOfIndicators.push_back( std::move(sIndicatorPtr) );
 
   /// Set resolved cylinder 3D with given suface
   setResolvedObject(particleSystem, idxParticle, idxSurface,
-                    position, density, angle, velocity);
+                    position, density, angleInDegree, velocity);
 }
 
 /// Add resolved cylinder as new particle with new surface
@@ -130,7 +132,7 @@ template<typename T, typename PARTICLETYPE>
 void addResolvedCylinder3D( ParticleSystem<T,PARTICLETYPE>& particleSystem,
                             const Vector<T,3>& position, const Vector<T,3>& normal,
                             T height, T radius, T epsilon, T density=0.,
-                            const Vector<T,3>& angle = Vector<T,3> (0.),
+                            const Vector<T,3>& angleInDegree = Vector<T,3> (0.),
                             const Vector<T,3>& velocity = Vector<T,3> (0.))
 {
   //Retrieve new index
@@ -141,7 +143,7 @@ void addResolvedCylinder3D( ParticleSystem<T,PARTICLETYPE>& particleSystem,
 
   /// Set resolved cylinder 3D at given index
   setResolvedCylinder3D( particleSystem, idxParticle, position,
-                         normal, height, radius, epsilon, density, angle, velocity );
+                         normal, height, radius, epsilon, density, angleInDegree, velocity );
 }
 
 
@@ -152,25 +154,25 @@ template<typename T, typename PARTICLETYPE>
 void setResolvedCuboid3D( ParticleSystem<T,PARTICLETYPE>& particleSystem,
                           std::size_t idxParticle,
                           const Vector<T,3>& position, const Vector<T,3>& extend, T epsilon, T density=0.,
-                          const Vector<T,3>& angle = Vector<T,3> (0.),
+                          const Vector<T,3>& angleInDegree = Vector<T,3> (0.),
                           const Vector<T,3>& velocity = Vector<T,3> (0.))
 {
   using namespace descriptors;
   typedef SmoothIndicatorF3D<T, T, true> SIndicatorBaseType;
 
   //Create SmoothIndicator
-  std::shared_ptr<SIndicatorBaseType> sIndicatorSPtr(
+  std::unique_ptr<SIndicatorBaseType> sIndicatorPtr(
     new SmoothIndicatorCuboid3D<T, T, true>(extend[0], extend[1], extend[2], Vector<T,3>(0.), epsilon ));
 
   //Pass smart pointer to particleSystem
   auto& vectorOfIndicators = particleSystem.template getAssociatedData<
-                             std::vector<std::shared_ptr<SIndicatorBaseType>>>();
+                             std::vector<std::unique_ptr<SIndicatorBaseType>>>();
   std::size_t idxSurface = vectorOfIndicators.size();
-  vectorOfIndicators.push_back( sIndicatorSPtr );
+  vectorOfIndicators.push_back( std::move(sIndicatorPtr) );
 
   /// Set resolved cuboid 3D with given suface
   setResolvedObject(particleSystem, idxParticle, idxSurface,
-                    position, density, angle, velocity);
+                    position, density, angleInDegree, velocity);
 }
 
 
@@ -178,7 +180,7 @@ void setResolvedCuboid3D( ParticleSystem<T,PARTICLETYPE>& particleSystem,
 template<typename T, typename PARTICLETYPE>
 void addResolvedCuboid3D( ParticleSystem<T,PARTICLETYPE>& particleSystem,
                           const Vector<T,3>& position, const Vector<T,3>& extend, T epsilon, T density=0.,
-                          const Vector<T,3>& angle = Vector<T,3> (0.),
+                          const Vector<T,3>& angleInDegree = Vector<T,3> (0.),
                           const Vector<T,3>& velocity = Vector<T,3> (0.))
 {
   //Retrieve new index
@@ -189,7 +191,7 @@ void addResolvedCuboid3D( ParticleSystem<T,PARTICLETYPE>& particleSystem,
 
   /// Set resolved cuboid 3D at given index
   setResolvedCuboid3D( particleSystem, idxParticle, position,
-                       extend, epsilon, density, angle, velocity );
+                       extend, epsilon, density, angleInDegree, velocity );
 }
 
 
@@ -201,26 +203,26 @@ void setResolvedCone3D( ParticleSystem<T,PARTICLETYPE>& particleSystem,
                         std::size_t idxParticle,
                         const Vector<T,3>& position1, const Vector<T,3>& position2,
                         T radius1, T radius2, T epsilon, T density=0,
-                        const Vector<T,3>& angle = Vector<T,3> (0.),
+                        const Vector<T,3>& angleInDegree = Vector<T,3> (0.),
                         const Vector<T,3>& velocity = Vector<T,3> (0.))
 {
   using namespace descriptors;
   typedef SmoothIndicatorF3D<T, T, true> SIndicatorBaseType;
 
   //Create SmoothIndicator
-  std::shared_ptr<SIndicatorBaseType> sIndicatorSPtr(
+  std::unique_ptr<SIndicatorBaseType> sIndicatorPtr(
     new SmoothIndicatorCone3D<T, T, true>(position1, position2, radius1, radius2, epsilon ));
 
   //Pass smart pointer to particleSystem
   auto& vectorOfIndicators = particleSystem.template getAssociatedData<
-                             std::vector<std::shared_ptr<SIndicatorBaseType>>>();
+                             std::vector<std::unique_ptr<SIndicatorBaseType>>>();
   std::size_t idxSurface = vectorOfIndicators.size();
-  vectorOfIndicators.push_back( sIndicatorSPtr );
-  const Vector<T,3> position = sIndicatorSPtr->calcCenterOfMass();
+  const Vector<T,3> position = sIndicatorPtr->calcCenterOfMass();
+  vectorOfIndicators.push_back( std::move(sIndicatorPtr) );
 
   /// Set resolved cone 3D with given suface
   setResolvedObject(particleSystem, idxParticle, idxSurface,
-                    position, density, angle, velocity);
+                    position, density, angleInDegree, velocity);
 }
 
 
@@ -229,7 +231,7 @@ template<typename T, typename PARTICLETYPE>
 void addResolvedCone3D( ParticleSystem<T,PARTICLETYPE>& particleSystem,
                         const Vector<T,3>& position1, const Vector<T,3>& position2,
                         T radius1, T radius2, T epsilon, T density=0,
-                        const Vector<T,3>& angle = Vector<T,3> (0.),
+                        const Vector<T,3>& angleInDegree = Vector<T,3> (0.),
                         const Vector<T,3>& velocity = Vector<T,3> (0.))
 {
   //Retrieve new index
@@ -240,7 +242,7 @@ void addResolvedCone3D( ParticleSystem<T,PARTICLETYPE>& particleSystem,
 
   /// Set resolved cone 3D at given index
   setResolvedCone3D( particleSystem, idxParticle,
-                     position1, position2, radius1, radius2, epsilon, density, angle, velocity );
+                     position1, position2, radius1, radius2, epsilon, density, angleInDegree, velocity );
 }
 
 
@@ -253,25 +255,25 @@ void setResolvedEllipsoid3D( ParticleSystem<T,PARTICLETYPE>& particleSystem,
                              const Vector<T,3>& position,
                              const Vector<T,3>& radius,
                              T epsilon, T density=0.,
-                             const Vector<T,3>& angle = Vector<T,3> (0.),
+                             const Vector<T,3>& angleInDegree = Vector<T,3> (0.),
                              const Vector<T,3>& velocity = Vector<T,3> (0.))
 {
   using namespace descriptors;
   typedef SmoothIndicatorF3D<T, T, true> SIndicatorBaseType;
 
   //Create SmoothIndicator
-  std::shared_ptr<SIndicatorBaseType> sIndicatorSPtr(
+  std::unique_ptr<SIndicatorBaseType> sIndicatorPtr(
     new SmoothIndicatorEllipsoid3D<T, T, true>(Vector<T,3>(0.), radius, epsilon, Vector<T,3>(0.) ));
 
   //Pass smart pointer to particleSystem
   auto& vectorOfIndicators = particleSystem.template getAssociatedData<
-                             std::vector<std::shared_ptr<SIndicatorBaseType>>>();
+                             std::vector<std::unique_ptr<SIndicatorBaseType>>>();
   std::size_t idxSurface = vectorOfIndicators.size();
-  vectorOfIndicators.push_back( sIndicatorSPtr );
+  vectorOfIndicators.push_back( std::move(sIndicatorPtr) );
 
   /// Set resolved ellipsoid 3D with given suface
   setResolvedObject(particleSystem, idxParticle, idxSurface,
-                    position, density, angle, velocity);
+                    position, density, angleInDegree, velocity);
 }
 
 
@@ -281,7 +283,7 @@ void addResolvedEllipsoid3D( ParticleSystem<T,PARTICLETYPE>& particleSystem,
                              const Vector<T,3>& position,
                              const Vector<T,3>& radius,
                              T epsilon, T density=0.,
-                             const Vector<T,3>& angle = Vector<T,3> (0.),
+                             const Vector<T,3>& angleInDegree = Vector<T,3> (0.),
                              const Vector<T,3>& velocity = Vector<T,3> (0.))
 {
   //Retrieve new index
@@ -292,7 +294,7 @@ void addResolvedEllipsoid3D( ParticleSystem<T,PARTICLETYPE>& particleSystem,
 
   /// Set resolved ellipsoid 3D at given index
   setResolvedEllipsoid3D( particleSystem, idxParticle, position,
-                          radius, epsilon, density, angle, velocity );
+                          radius, epsilon, density, angleInDegree, velocity );
 }
 
 
@@ -306,25 +308,25 @@ void setResolvedArbitraryShape3D( ParticleSystem<T,PARTICLETYPE>& particleSystem
                                   T latticeSpacing,
                                   std::shared_ptr<IndicatorF3D<T>> indPtr,
                                   T epsilon, T density=0.,
-                                  Vector<T,3> angle = Vector<T,3> (0.),
+                                  Vector<T,3> angleInDegree = Vector<T,3> (0.),
                                   Vector<T,3> velocity = Vector<T,3> (0.))
 {
   using namespace descriptors;
   typedef SmoothIndicatorF3D<T, T, true> SIndicatorBaseType;
 
   //Create SmoothIndicator
-  std::shared_ptr<SIndicatorBaseType> sIndicatorSPtr(
+  std::unique_ptr<SIndicatorBaseType> sIndicatorPtr(
     new SmoothIndicatorCustom3D<T, T, true>(latticeSpacing, indPtr, Vector<T,3> (0.), epsilon, Vector<T,3> (0.)));
 
   //Pass smart pointer to particleSystem
   auto& vectorOfIndicators = particleSystem.template getAssociatedData<
-                             std::vector<std::shared_ptr<SIndicatorBaseType>>>();
+                             std::vector<std::unique_ptr<SIndicatorBaseType>>>();
   std::size_t idxSurface = vectorOfIndicators.size();
-  vectorOfIndicators.push_back( sIndicatorSPtr );
+  vectorOfIndicators.push_back( std::move(sIndicatorPtr) );
 
   /// Set resolved arbitrary shape with given suface
   setResolvedObject(particleSystem, idxParticle, idxSurface,
-                    position, density, angle, velocity);
+                    position, density, angleInDegree, velocity);
 }
 
 /// Add resolved arbitrary shape as new particle with new surface
@@ -334,7 +336,7 @@ void addResolvedArbitraryShape3D( ParticleSystem<T,PARTICLETYPE>& particleSystem
                                   T latticeSpacing,
                                   std::shared_ptr<IndicatorF3D<T>> indPtr,
                                   T epsilon, T density=0.,
-                                  Vector<T,3> angle = Vector<T,3> (0.),
+                                  Vector<T,3> angleInDegree = Vector<T,3> (0.),
                                   Vector<T,3> velocity = Vector<T,3> (0.))
 {
   //Retrieve new index
@@ -345,9 +347,22 @@ void addResolvedArbitraryShape3D( ParticleSystem<T,PARTICLETYPE>& particleSystem
 
   /// Set resolved arbitrary shape 3D at given index
   setResolvedArbitraryShape3D( particleSystem, idxParticle, position,
-      latticeSpacing, indPtr, epsilon, density, angle, velocity );
+      latticeSpacing, indPtr, epsilon, density, angleInDegree, velocity );
 }
 
+
+//// SUBGRID
+
+//Add subgrid particle
+template<typename T, typename PARTICLETYPE>
+void addSubgridSphere3D(
+  ParticleSystem<T,PARTICLETYPE>& particleSystem,
+  const Vector<T,3>& position, T radius, T density=0.,
+  const Vector<T,3>& velocity = Vector<T,3> (0.) )
+{
+  addSubgridObject( particleSystem,
+    position, radius, density, velocity );
+}
 
 } //namespace creators
 

@@ -32,4 +32,6 @@ OMPFLAGS        := -fopenmp
 # SIMD support may optionally be enabled by adding the `CPU_SIMD` platform
 PLATFORMS       := CPU_SISD # CPU_SIMD
 
+FLOATING_POINT_TYPE := double
+
 USE_EMBEDDED_DEPENDENCIES := ON

@@ -50,7 +50,7 @@ protected:
   std::type_index _id;
   int _priority;
   OperatorScope _scope;
-  std::function<AbstractBlockO<T,DESCRIPTOR>*(Platform)> _constructor;
+  std::function<AbstractBlockO*(Platform)> _constructor;
 
 public:
   template <typename POST_PROCESSOR>
@@ -58,7 +58,7 @@ public:
     _id(typeid(POST_PROCESSOR)),
     _priority(POST_PROCESSOR().getPriority()),
     _scope(POST_PROCESSOR::scope),
-    _constructor([](Platform platform) -> AbstractBlockO<T,DESCRIPTOR>* {
+    _constructor([](Platform platform) -> AbstractBlockO* {
       switch (platform) {
       #ifdef PLATFORM_CPU_SISD
       case Platform::CPU_SISD:
@@ -133,29 +133,15 @@ public:
     }
     #else // CPU_* platform
     #ifdef PARALLEL_MODE_OMP
-    if (static_cast<std::ptrdiff_t>(_postProcessors.size()) >= omp.get_size()) {
-      #pragma omp parallel for schedule(dynamic)
-      for (auto& postProcessor : _postProcessors) {
-        if constexpr (DESCRIPTOR::d == 3) {
-          postProcessor->processSubDomain(block, 0, block.getNx()-1, 0, block.getNy()-1, 0, block.getNz()-1);
-        } else {
-          postProcessor->processSubDomain(block, 0, block.getNx()-1, 0, block.getNy()-1);
-        }
-      }
-      // Disable OpenMP-parallel execution of single post processors (e.g. statistics, bouzidi (hacky))
-      // To be done correctly when implementing BlockPostProcessorMap
-    } else {
-      #endif
-      for (auto& postProcessor : _postProcessors) {
-        if constexpr (DESCRIPTOR::d == 3) {
-          postProcessor->processSubDomain(block, 0, block.getNx()-1, 0, block.getNy()-1, 0, block.getNz()-1);
-        } else {
-          postProcessor->processSubDomain(block, 0, block.getNx()-1, 0, block.getNy()-1);
-        }
-      }
-      #ifdef PARALLEL_MODE_OMP
-    }
+    #pragma omp parallel for schedule(dynamic)
     #endif
+    for (std::size_t i=0; i < _postProcessors.size(); ++i) {
+      if constexpr (DESCRIPTOR::d == 3) {
+        _postProcessors[i]->processSubDomain(block, 0, block.getNx()-1, 0, block.getNy()-1, 0, block.getNz()-1);
+      } else {
+        _postProcessors[i]->processSubDomain(block, 0, block.getNx()-1, 0, block.getNy()-1);
+      }
+    }
     #endif
   }
 
@@ -212,14 +198,22 @@ public:
     _legacyPostProcessors.add(postProcessor);
   }
 
+  /// Schedule post processor for application at iCell
   void add(std::size_t iCell, PostProcessorPromise<T,DESCRIPTOR>&& promise)
   {
     resolve(std::forward<decltype(promise)>(promise)).set(iCell, true);
   }
 
+  /// Add post processor to map, do nothing if it already exists
   void add(PostProcessorPromise<T,DESCRIPTOR>&& promise)
   {
     resolve(std::forward<decltype(promise)>(promise));
+  }
+
+  /// Returns true if map contains post processor
+  bool contains(PostProcessorPromise<T,DESCRIPTOR>&& promise) const
+  {
+    return _map.find(promise.id()) != _map.end();
   }
 
   /// Apply all managed post processors to lattice
@@ -238,38 +232,18 @@ public:
   {
     _legacyPostProcessors.apply(_lattice);
 
-    #ifdef PARALLEL_MODE_OMP
-    if (_map.size() <= 1) {
-      // prevent nested OMP for statistics post processor (hacky, to be reimplemented)
+    if constexpr (PLATFORM == Platform::GPU_CUDA) {
       for (auto& [_, postProcessor] : _map) {
         postProcessor->apply(_lattice);
       }
+      #ifdef PLATFORM_GPU_CUDA
+      gpu::cuda::device::synchronize();
+      #endif
     } else {
-      #pragma omp parallel
-      {
-        #pragma omp single
-        {
-          for (auto& [_, postProcessor] : _map) {
-            auto* ptr = postProcessor.get();
-            #pragma omp task
-            {
-              ptr->apply(_lattice);
-            }
-          }
-        }
+      for (auto& [_, postProcessor] : _map) {
+        postProcessor->apply(_lattice);
       }
     }
-    #else
-    for (auto& [_, postProcessor] : _map) {
-      postProcessor->apply(_lattice);
-    }
-    #endif
-
-    #ifdef PLATFORM_GPU_CUDA
-    if constexpr (PLATFORM == Platform::GPU_CUDA) {
-      gpu::cuda::device::synchronize();
-    }
-    #endif
   }
 
 };

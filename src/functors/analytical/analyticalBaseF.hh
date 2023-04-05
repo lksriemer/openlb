@@ -45,6 +45,35 @@ bool AnalyticalIdentity<D,T,S>::operator()(T output[], const S input[])
   return true;
 }
 
+
+template <unsigned D, typename OldT, typename NewT, typename OldS, typename NewS>
+AnalyticalTypecast<D,OldT,NewT,OldS,NewS>::AnalyticalTypecast(
+  AnalyticalF<D,OldT,OldS>& f)
+  : AnalyticalF<D,NewT,NewS>(f.getTargetDim()), _f(f)
+{
+  this->getName() = _f.getName();
+  // pass through the shared_ptr from _f, e.g. an arithemticClass, to the identity
+  //std::swap( _f._ptrCalcC, this->_ptrCalcC );
+}
+
+template <unsigned D, typename OldT, typename NewT, typename OldS, typename NewS>
+bool AnalyticalTypecast<D,OldT,NewT,OldS,NewS>::operator()(NewT output[], const NewS input[])
+{
+  OldS inputConv[D];
+  for (unsigned i = 0; i < D; ++i) {
+    inputConv[i] = OldS {input[i]};
+  }
+  OldT outputConv[this->getTargetDim()];
+
+  _f(outputConv,inputConv);
+
+  for (int i = 0; i < this->getTargetDim(); ++i) {
+    output[i] = NewT {outputConv[i]};
+  }
+  return true;
+}
+
+
 ////////////////////////////////////////////////////////////////////////////////////////////////
 //
 template <typename T, typename S>

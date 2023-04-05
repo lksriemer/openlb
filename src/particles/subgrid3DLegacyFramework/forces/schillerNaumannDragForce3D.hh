@@ -48,7 +48,7 @@ void SchillerNaumannDragForce3D<T, PARTICLETYPE, DESCRIPTOR>::applyForce(
 {
 
   Vector<T, 3> force = {T(0), T(0), T(0)} ;
-  
+
   T fluidVel[3] = {0., 0., 0.};
   _getVel(fluidVel, &p->getPos()[0], p->getCuboid());
 

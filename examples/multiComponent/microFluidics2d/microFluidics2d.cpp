@@ -42,7 +42,7 @@ using namespace olb;
 using namespace olb::descriptors;
 using namespace olb::graphics;
 
-typedef double T;
+using T = FLOATING_POINT_TYPE;
 typedef D2Q9<CHEM_POTENTIAL,FORCE> DESCRIPTOR;
 
 // Parameters for the simulation setup
@@ -86,23 +86,23 @@ void prepareGeometry( SuperGeometry<T,2>& superGeometry )
   OstreamManager clout( std::cout,"prepareGeometry" );
   clout << "Prepare Geometry ..." << std::endl;
 
-  std::shared_ptr<IndicatorF2D<T>> section1 = std::make_shared<IndicatorCuboid2D<T>>( xl1, yl1, std::vector<T> {xl1/2., ny/2.} );
-  std::shared_ptr<IndicatorF2D<T>> section2 = std::make_shared<IndicatorCuboid2D<T>>( xl2, yl2, std::vector<T> {xl1 + xl2/2., ny/2.} );
-  std::shared_ptr<IndicatorF2D<T>> section3 = std::make_shared<IndicatorCuboid2D<T>>( xl3, yl3, std::vector<T> {xl1 + xl2 + xl3/2., ny/2.} );
-  std::shared_ptr<IndicatorF2D<T>> section4 = std::make_shared<IndicatorCuboid2D<T>>( xl4, yl4, std::vector<T> {xl1 + xl2 + xl3 + xl4/2., ny/2.} );
-  std::shared_ptr<IndicatorF2D<T>> section5 = std::make_shared<IndicatorCuboid2D<T>>( xl5, yl5, std::vector<T> {xl1 + xl2 + xl3 + xl4 + xl5/2., ny/2.} );
+  std::shared_ptr<IndicatorF2D<T>> section1 = std::make_shared<IndicatorCuboid2D<T>>( xl1, yl1, std::vector<T> {xl1/T(2), ny/T(2)} );
+  std::shared_ptr<IndicatorF2D<T>> section2 = std::make_shared<IndicatorCuboid2D<T>>( xl2, yl2, std::vector<T> {xl1 + xl2/T(2), ny/T(2)} );
+  std::shared_ptr<IndicatorF2D<T>> section3 = std::make_shared<IndicatorCuboid2D<T>>( xl3, yl3, std::vector<T> {xl1 + xl2 + xl3/T(2), ny/T(2)} );
+  std::shared_ptr<IndicatorF2D<T>> section4 = std::make_shared<IndicatorCuboid2D<T>>( xl4, yl4, std::vector<T> {xl1 + xl2 + xl3 + xl4/T(2), ny/T(2)} );
+  std::shared_ptr<IndicatorF2D<T>> section5 = std::make_shared<IndicatorCuboid2D<T>>( xl5, yl5, std::vector<T> {xl1 + xl2 + xl3 + xl4 + xl5/T(2), ny/T(2)} );
   IndicatorIdentity2D<T> channel( section1 + section2 + section3 + section4 + section5 );
 
   superGeometry.rename( 0, 2, channel );
   superGeometry.rename( 2,1,{1,1} );
 
   // Inlets and outlet
-  IndicatorCuboid2D<T> inlet1 ( dx, yl1, {0., ny/2.} );
-  IndicatorCuboid2D<T> inlet21( xl2 - dx, dx, {xl1 + xl2/2., 0.} );
-  IndicatorCuboid2D<T> inlet22( xl2 - dx, dx, {xl1 + xl2/2., ny} );
-  IndicatorCuboid2D<T> inlet31( xl4 - dx, dx, {xl1 + xl2 + xl3 + xl4/2., 0.} );
-  IndicatorCuboid2D<T> inlet32( xl4 - dx, dx, {xl1 + xl2 + xl3 + xl4/2., ny} );
-  IndicatorCuboid2D<T> outlet( dx, yl5, {nx, ny/2.} );
+  IndicatorCuboid2D<T> inlet1 ( dx, yl1, {0., ny/T(2)} );
+  IndicatorCuboid2D<T> inlet21( xl2 - dx, dx, {xl1 + xl2/T(2), 0.} );
+  IndicatorCuboid2D<T> inlet22( xl2 - dx, dx, {xl1 + xl2/T(2), ny} );
+  IndicatorCuboid2D<T> inlet31( xl4 - dx, dx, {xl1 + xl2 + xl3 + xl4/T(2), 0.} );
+  IndicatorCuboid2D<T> inlet32( xl4 - dx, dx, {xl1 + xl2 + xl3 + xl4/T(2), ny} );
+  IndicatorCuboid2D<T> outlet( dx, yl5, {nx, ny/T(2)} );
   superGeometry.rename( 2, 3, 1, inlet1 );
   superGeometry.rename( 2, 4, 1, inlet21 );
   superGeometry.rename( 2, 5, 1, inlet22 );
@@ -129,41 +129,9 @@ void prepareLattice( SuperLattice<T, DESCRIPTOR>& sLattice1,
   clout << "Prepare Lattice ..." << std::endl;
 
   // define lattice dynamics
-  sLattice1.defineDynamics<NoDynamics>(superGeometry, 0);
-  sLattice2.defineDynamics<NoDynamics>(superGeometry, 0);
-  sLattice3.defineDynamics<NoDynamics>(superGeometry, 0);
-
   sLattice1.defineDynamics<ForcedBGKdynamics>(superGeometry, 1);
   sLattice2.defineDynamics<FreeEnergyBGKdynamics>(superGeometry, 1);
   sLattice3.defineDynamics<FreeEnergyBGKdynamics>(superGeometry, 1);
-
-  sLattice1.defineDynamics<NoDynamics>(superGeometry, 2);
-  sLattice2.defineDynamics<NoDynamics>(superGeometry, 2);
-  sLattice3.defineDynamics<NoDynamics>(superGeometry, 2);
-
-  sLattice1.defineDynamics<NoDynamics>(superGeometry, 3);
-  sLattice2.defineDynamics<NoDynamics>(superGeometry, 3);
-  sLattice3.defineDynamics<NoDynamics>(superGeometry, 3);
-
-  sLattice1.defineDynamics<NoDynamics>(superGeometry, 4);
-  sLattice2.defineDynamics<NoDynamics>(superGeometry, 4);
-  sLattice3.defineDynamics<NoDynamics>(superGeometry, 4);
-
-  sLattice1.defineDynamics<NoDynamics>(superGeometry, 5);
-  sLattice2.defineDynamics<NoDynamics>(superGeometry, 5);
-  sLattice3.defineDynamics<NoDynamics>(superGeometry, 5);
-
-  sLattice1.defineDynamics<NoDynamics>(superGeometry, 6);
-  sLattice2.defineDynamics<NoDynamics>(superGeometry, 6);
-  sLattice3.defineDynamics<NoDynamics>(superGeometry, 6);
-
-  sLattice1.defineDynamics<NoDynamics>(superGeometry, 7);
-  sLattice2.defineDynamics<NoDynamics>(superGeometry, 7);
-  sLattice3.defineDynamics<NoDynamics>(superGeometry, 7);
-
-  sLattice1.defineDynamics<NoDynamics>(superGeometry, 8);
-  sLattice2.defineDynamics<NoDynamics>(superGeometry, 8);
-  sLattice3.defineDynamics<NoDynamics>(superGeometry, 8);
 
   // add wall boundary
   setFreeEnergyWallBoundary<T,DESCRIPTOR>(sLattice1, superGeometry, 2, alpha, kappa1, kappa2, kappa3, h1, h2, h3, 1);
@@ -199,9 +167,9 @@ void prepareLattice( SuperLattice<T, DESCRIPTOR>& sLattice1,
 
   AnalyticalConst2D<T,T> zero ( 0. );
   AnalyticalConst2D<T,T> one ( 1. );
-  IndicatorCuboid2D<T> ind1(xl1+dx, ny, {xl1/2., ny/2.});
+  IndicatorCuboid2D<T> ind1(xl1+dx, ny, {xl1/T(2), ny/T(2)});
   SmoothIndicatorCuboid2D<T,T> section1( ind1, 0. );
-  IndicatorCuboid2D<T> ind2(xl2 + xl3, ny, {xl1 + (xl2 + xl3)/2., ny/2.});
+  IndicatorCuboid2D<T> ind2(xl2 + xl3, ny, {xl1 + (xl2 + xl3)/T(2), ny/T(2)});
   SmoothIndicatorCuboid2D<T,T> section2( ind2, 0. );
 
   AnalyticalIdentity2D<T,T> c1( section1 );
@@ -259,19 +227,19 @@ void prepareLattice( SuperLattice<T, DESCRIPTOR>& sLattice1,
   sLattice3.communicate();
 
   {
-    auto& communicator = sLattice1.getCommunicator(PostPostProcess());
+    auto& communicator = sLattice1.getCommunicator(stage::PostPostProcess());
     communicator.requestField<POPULATION>();
     communicator.requestOverlap(sLattice1.getOverlap());
     communicator.exchangeRequests();
   }
   {
-    auto& communicator = sLattice2.getCommunicator(PostPostProcess());
+    auto& communicator = sLattice2.getCommunicator(stage::PostPostProcess());
     communicator.requestField<POPULATION>();
     communicator.requestOverlap(sLattice2.getOverlap());
     communicator.exchangeRequests();
   }
   {
-    auto& communicator = sLattice3.getCommunicator(PostPostProcess());
+    auto& communicator = sLattice3.getCommunicator(stage::PostPostProcess());
     communicator.requestField<POPULATION>();
     communicator.requestOverlap(sLattice3.getOverlap());
     communicator.exchangeRequests();
@@ -312,19 +280,19 @@ void prepareCoupling(SuperLattice<T, DESCRIPTOR>& sLattice1,
   sLattice2.addLatticeCoupling<DESCRIPTOR>( superGeometry, 8, coupling4, {&sLattice1, &sLattice3} );
 
   {
-    auto& communicator = sLattice1.getCommunicator(PostCoupling());
+    auto& communicator = sLattice1.getCommunicator(stage::PostCoupling());
     communicator.requestField<CHEM_POTENTIAL>();
     communicator.requestOverlap(sLattice1.getOverlap());
     communicator.exchangeRequests();
   }
   {
-    auto& communicator = sLattice2.getCommunicator(PreCoupling());
+    auto& communicator = sLattice2.getCommunicator(stage::PreCoupling());
     communicator.requestField<CHEM_POTENTIAL>();
     communicator.requestOverlap(sLattice2.getOverlap());
     communicator.exchangeRequests();
   }
   {
-    auto& communicator = sLattice3.getCommunicator(PreCoupling());
+    auto& communicator = sLattice3.getCommunicator(stage::PreCoupling());
     communicator.requestField<CHEM_POTENTIAL>();
     communicator.requestOverlap(sLattice3.getOverlap());
     communicator.exchangeRequests();

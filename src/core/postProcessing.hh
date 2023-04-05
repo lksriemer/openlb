@@ -388,48 +388,7 @@ void StatisticsPostProcessor::type<BLOCK>::apply(BLOCK& blockLattice)
     return;
   }
 
-  #ifndef PARALLEL_MODE_OMP
   blockLattice.getStatistics().reset();
-  #endif
-  #ifdef PARALLEL_MODE_OMP
-  using V = typename BLOCK::value_t;
-  #pragma omp parallel
-  blockLattice.getStatistics().reset();
-
-  int numCells     = 0;
-  V avRho    = V();
-  V avEnergy = V();
-  V maxU     = V();
-
-  #pragma omp parallel
-  {
-    #pragma omp critical
-    {
-      numCells       += blockLattice.getStatistics().getNumCells();
-      avRho          += blockLattice.getStatistics().getAverageRho()
-      *blockLattice.getStatistics().getNumCells();
-      avEnergy       += blockLattice.getStatistics().getAverageEnergy()
-      *blockLattice.getStatistics().getNumCells();
-      if (maxU<blockLattice.getStatistics().getMaxU() )
-      {
-        maxU        = blockLattice.getStatistics().getMaxU();
-      }
-    }
-  }
-  if (numCells==0) {
-    // avoid division by zero
-    avRho = V();
-    avEnergy = V();
-    maxU = V();
-    numCells = 0;
-  }
-  else {
-    avRho    = avRho / numCells;
-    avEnergy = avEnergy / numCells;
-  }
-  #pragma omp parallel
-  blockLattice.getStatistics().reset(avRho, avEnergy, maxU, numCells);
-  #endif
 }
 
 }  // namespace olb

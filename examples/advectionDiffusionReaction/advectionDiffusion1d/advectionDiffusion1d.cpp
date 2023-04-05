@@ -43,8 +43,7 @@ using namespace olb;
 using namespace olb::descriptors;
 using namespace olb::graphics;
 
-typedef double T;
-
+using T = FLOATING_POINT_TYPE;
 typedef D2Q5<VELOCITY> TDESCRIPTOR;
 
 const int runs = 3;                // # simulations with increasing resolution
@@ -114,9 +113,6 @@ void prepareLattice(  SuperLattice<T, TDESCRIPTOR>& ADlattice,
   OstreamManager clout(std::cout,"prepareLattice");
   clout << "Prepare Lattice ..." << std::endl;
 
-  // buffer layer
-  ADlattice.defineDynamics<NoDynamics>(superGeometry.getMaterialIndicator({0}));
-  // bulk
   ADlattice.defineDynamics<AdvectionDiffusionBGKdynamics>(superGeometry.getMaterialIndicator({1}));
 
   AnalyticalConst2D<T,T> u0( converter.getCharLatticeVelocity(), 0.);
@@ -160,13 +156,13 @@ T errorOverLine( SuperLattice<T, TDESCRIPTOR>& ADlattice,
   CSV<T> csvWriterSim("simulation" + std::to_string(converter.getPhysTime(iT)));
   CSV<T> csvWriterAna("analytical" + std::to_string(converter.getPhysTime(iT)));
   for (int i = 0; i <= ndatapoints; i++) {
-    input[0] = -.5*lx + i*dist;
+    input[0] = -T(.5)*lx + i*dist;
     aTemp(resultSim, input);
     temperatureSol(result, input);
 
     tempMSE += (result[0]  - resultSim[0]) * (result[0]  - resultSim[0]);
     // remove division by zero
-    tempSquaredSum += (result[0]+1) * (result[0]+1);
+    tempSquaredSum += (result[0]+T(1)) * (result[0]+T(1));
     csvWriterSim.writeDataFile( input[0], resultSim[0], 16);
     csvWriterAna.writeDataFile(input[0], result[0], 16);
   }
@@ -218,7 +214,7 @@ T getResults( SuperLattice<T, TDESCRIPTOR>& ADlattice,
     T result[1] = {0.};
     T input[2] = {T(), 0};
     for (int i = 0; i <= converter.getResolution(); i++) {
-      input[0] = -.5*converter.getCharPhysLength() + i*converter.getPhysDeltaX();
+      input[0] = -T(.5)*converter.getCharPhysLength() + i*converter.getPhysDeltaX();
       temperatureSol(result, input);
       csvWriterInit.writeDataFile(input[0],result[0], 16);
     }
@@ -227,6 +223,7 @@ T getResults( SuperLattice<T, TDESCRIPTOR>& ADlattice,
     /// Writes the VTK files
     SuperLatticeDensity2D<T, TDESCRIPTOR> temperature(ADlattice);
     SuperLatticeFfromAnalyticalF2D<T, TDESCRIPTOR> solution(temperatureSol, ADlattice);
+    ADlattice.setProcessingContext(ProcessingContext::Evaluation);
 
     vtkWriter.addFunctor( temperature );
     vtkWriter.addFunctor( solution );
@@ -330,6 +327,7 @@ void simulate(int N, int statIter, T mue, T peclet, T physLength)
 
   clout << "Simulation Average Relative L2 Error: " << simulationAverage << std::endl;
 
+  ADlattice.setProcessingContext(ProcessingContext::Evaluation);
   timer.stop();
   timer.printSummary();
 }

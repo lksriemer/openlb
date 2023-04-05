@@ -37,6 +37,7 @@
 #include "geometry/blockGeometryStatistics2D.h"
 #include "geometry/cuboid2D.h"
 #include "communication/communicatable.h"
+#include "dynamics/latticeDescriptors.h"
 
 // All OpenLB code is contained in this namespace.
 namespace olb {
@@ -121,7 +122,7 @@ public:
   template <typename... L>
   std::enable_if_t<sizeof...(L) == D, int>
   get(L... latticeR) const {
-    return this->get(LatticeR<D>{latticeR...});
+    return _data[0][this->getCellId(latticeR...)];
   }
 
   /// returns the (iX,iY) entry in the 2D scalar field
@@ -142,6 +143,12 @@ public:
   /// Transforms lattice to physical coordinates (wrapped from cuboid geometry)
   void getPhysR(T physR[D], const int latticeR[D]) const;
   void getPhysR(T physR[D], LatticeR<D> latticeR) const;
+  Cuboid<T,D>& getCuboid(){
+    return _cuboid;
+  }
+  const Cuboid<T,D>& getCuboid() const {
+    return _cuboid;
+  }
 
   template <typename... L>
   std::enable_if_t<sizeof...(L) == D, void>
@@ -151,7 +158,7 @@ public:
 
   /// Changes all cell materials which are not in bulkMaterials to 0 if
   /// there is no neighbour from bulkMaterials
-  int clean(bool verbose=true, std::vector<int> bulkMaterials={1});
+  template <typename DESCRIPTOR = std::conditional_t<D==2,descriptors::D2Q9<>,descriptors::D3Q27<>>> int clean(bool verbose=true, std::vector<int> bulkMaterials={1});
   /// Changes all cell materials from bulkMaterials to 0 if there is a neighbour with material 0
   int outerClean(bool verbose=true, std::vector<int> bulkMaterials={1});
   /// Changes all cell materials which are not 0 or 1 to 1 if there is a non robust constiallation

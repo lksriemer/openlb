@@ -9,21 +9,21 @@ if [ ! -f $APP ]; then make; fi
 
 for N in `seq 1 3`; do
 
-		  case $N in
-					 1) MAXU=1;   DIR="out_u1e+0" ;;
-					 2) MAXU=0.1; DIR="out_u1e-1" ;;
-					 3) MAXU=10;  DIR="out_u1e+1" ;;
-		  esac
+      case $N in
+          1) MAXU=1;   DIR="out_u1e+0" ;;
+          2) MAXU=0.1; DIR="out_u1e-1" ;;
+          3) MAXU=10;  DIR="out_u1e+1" ;;
+      esac
 
-		  if [ ! -d $DIR ]; then mkdir $DIR; fi
-		  
-		  sed "s/MAXU/$MAXU/g" input-model.xml > $DIR/input.xml
-		  cp $APP $DIR/
+      if [ ! -d $DIR ]; then mkdir $DIR; fi
 
-		  cd $DIR
+      sed "s/MAXU/$MAXU/g" input-model.xml > $DIR/input.xml
+      cp $APP $DIR/
 
-		  mpirun -np $NP $APP 2>&1 | tee log.log \
-					 && cp tmp/gnuplotData/centerVelocity.png ../u_$DIR".png"
+      cd $DIR
 
-		  cd ..
+      mpirun -np $NP $APP 2>&1 | tee log.log \
+          && cp tmp/gnuplotData/centerVelocity.png ../u_$DIR".png"
+
+      cd ..
 done

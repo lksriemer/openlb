@@ -74,12 +74,12 @@ template<typename T, typename DESCRIPTOR, typename PARTICLETYPE>
 bool momentumExchangeAtSurfaceLocation(
   T momentumExchange[],
   PhysR<T,DESCRIPTOR::d>& lever,
-  LatticeR<DESCRIPTOR::d> latticeRinner,
-  BlockGeometry<T,DESCRIPTOR::d>& blockGeometry,
+  const LatticeR<DESCRIPTOR::d>& latticeRinner,
+  const BlockGeometry<T,DESCRIPTOR::d>& blockGeometry,
   BlockLattice<T,DESCRIPTOR>& blockLattice,
   const UnitConverter<T,DESCRIPTOR>& converter,
   Particle<T,PARTICLETYPE>& particle,
-  int bulkMaterial = 1
+  const int bulkMaterial = 1
 )
 {
 
@@ -94,27 +94,27 @@ bool momentumExchangeAtSurfaceLocation(
   blockGeometry.getPhysR(physRinner, latticeRinner);
   //Retrieve inner porosity
   T porosityInner[1] = { };
-  particles::resolved::evalPorosity(porosityInner, physRinner, particle);
+  particles::resolved::evalSolidVolumeFraction(porosityInner, physRinner, particle);
   //Check whether particle and bulk is existent at location
   if ( !util::nearZero(porosityInner[0]) && blockGeometry.get(latticeRinner)==bulkMaterial ) {
     //Loop over distribution functions
     for (int iPop = 1; iPop < DESCRIPTOR::q ; ++iPop) {
       //Calculate outer lattice position (get next cell located in current direction)
       const Vector<int,D> c = descriptors::c<DESCRIPTOR>(iPop);
-      LatticeR<D> latticeRouter = latticeRinner + c;
+      const LatticeR<D> latticeRouter = latticeRinner + c;
       //Retrieve outer phys position
       T physRouter[D] = {0.};
       blockGeometry.getPhysR(physRouter, latticeRouter);
       //Retrieve outer porosity
       T porosityOuter[1] = {0.};
-      particles::resolved::evalPorosity(porosityOuter, physRouter, particle);
+      particles::resolved::evalSolidVolumeFraction(porosityOuter, physRouter, particle);
       //if not both cells are in the full solid domain calculate force
       if ( !(porosityInner[0]==1 && porosityOuter[0]==1) ) {
         //Momentum Exchange Wen
-        T f1 = blockLattice.get( latticeRouter )[iPop];
-        T f2 = blockLattice.get( latticeRinner )[util::opposite<DESCRIPTOR>(iPop)];
+        const T f1 = blockLattice.get( latticeRouter )[iPop];
+        const T f2 = blockLattice.get( latticeRinner )[descriptors::opposite<DESCRIPTOR>(iPop)];
         T pVel[D] = {0.};
-        for (unsigned iDim=0; iDim<D; iDim++) {
+        for (unsigned iDim=0; iDim<D; ++iDim) {
           pVel[iDim] = converter.getLatticeVelocity(particles::dynamics::calculateLocalVelocity(particle, PhysR<T,D>(physRinner))[iDim]);
           momentumExchange[iDim] -= converter.getPhysForce(
                                       population_momentum_exchange<T,D>::calculate( f1, f2, c[iDim], pVel[iDim], deltaR ) );

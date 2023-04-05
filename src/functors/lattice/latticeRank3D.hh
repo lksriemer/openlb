@@ -42,8 +42,8 @@
 namespace olb {
 
 template<typename T, typename DESCRIPTOR>
-SuperLatticeRank3D<T, DESCRIPTOR>::SuperLatticeRank3D(
-  SuperLattice<T, DESCRIPTOR>& sLattice) : SuperLatticeF3D<T, DESCRIPTOR>(sLattice, 1)
+SuperLatticeRank3D<T,DESCRIPTOR>::SuperLatticeRank3D(
+  SuperLattice<T,DESCRIPTOR>& sLattice) : SuperLatticeF3D<T,DESCRIPTOR>(sLattice, 1)
 {
   this->getName() = "rank";
   int maxC = this->_sLattice.getLoadBalancer().size();
@@ -62,9 +62,35 @@ BlockLatticeRank3D<T,DESCRIPTOR>::BlockLatticeRank3D(
 }
 
 template<typename T, typename DESCRIPTOR>
-bool BlockLatticeRank3D<T, DESCRIPTOR>::operator()(T output[], const int input[])
+bool BlockLatticeRank3D<T,DESCRIPTOR>::operator()(T output[], const int input[])
 {
   output[0] = singleton::mpi().getRank() + 1;
+  return true;
+}
+
+template<typename T, typename DESCRIPTOR>
+SuperLatticePlatform<T,DESCRIPTOR>::SuperLatticePlatform(SuperLattice<T,DESCRIPTOR>& sLattice):
+  SuperLatticeF<T,DESCRIPTOR>(sLattice, 1)
+{
+  this->getName() = "platform";
+  auto load = this->_sLattice.getLoadBalancer();
+  for (int iC = 0; iC < load.size(); iC++) {
+    this->_blockF.emplace_back( new BlockLatticePlatform<T,DESCRIPTOR>(this->_sLattice.getBlock(iC)) );
+  }
+}
+
+template<typename T, typename DESCRIPTOR>
+BlockLatticePlatform<T,DESCRIPTOR>::BlockLatticePlatform(
+  BlockLattice<T,DESCRIPTOR>& blockLattice)
+  : BlockLatticeF<T,DESCRIPTOR>(blockLattice, 1)
+{
+  this->getName() = "platform";
+}
+
+template<typename T, typename DESCRIPTOR>
+bool BlockLatticePlatform<T,DESCRIPTOR>::operator()(T output[], const int input[])
+{
+  output[0] = static_cast<std::uint8_t>(this->_blockLattice.getPlatform());
   return true;
 }
 

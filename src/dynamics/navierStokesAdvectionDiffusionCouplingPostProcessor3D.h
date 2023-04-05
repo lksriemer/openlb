@@ -34,60 +34,6 @@
 namespace olb {
 
 
-
-/**
-* Multiphysics class for coupling between different lattices.
-*/
-//======================================================================
-// ========Regularized NSDiffusion Coupling 3D ====================//
-//======================================================================
-template<typename T, typename DESCRIPTOR>
-class NavierStokesAdvectionDiffusionCouplingPostProcessor3D :
-  public LocalPostProcessor3D<T,DESCRIPTOR> {
-public:
-  NavierStokesAdvectionDiffusionCouplingPostProcessor3D(
-    int x0_, int x1_, int y0_, int y1_, int z0_, int z1_,
-    T gravity_, T T0_, T deltaTemp_, std::vector<T> dir_,
-    std::vector<BlockStructureD<3>* > partners_);
-  int extent() const override
-  {
-    return 1;
-  }
-  int extent(int whichDirection) const override
-  {
-    return 1;
-  }
-  void process(BlockLattice<T,DESCRIPTOR>& blockLattice) override;
-  void processSubDomain(BlockLattice<T,DESCRIPTOR>& blockLattice,
-                        int x0_, int x1_, int y0_, int y1_,  int z0_, int z1_) override;
-private:
-  typedef DESCRIPTOR L;
-  int x0, x1, y0, y1, z0, z1;
-  T gravity, T0, deltaTemp;
-  std::vector<T> dir;
-  T forcePrefactor[L::d];
-
-  std::vector<BlockStructureD<3>*> partners;
-  BlockLattice<T,descriptors::D3Q7<descriptors::VELOCITY>> *tPartner;
-};
-
-template<typename T, typename DESCRIPTOR>
-class NavierStokesAdvectionDiffusionCouplingGenerator3D :
-  public LatticeCouplingGenerator3D<T,DESCRIPTOR> {
-public:
-  NavierStokesAdvectionDiffusionCouplingGenerator3D(
-    int x0_, int x1_, int y0_, int y1_,  int z0_, int z1_,
-    T gravity_, T T0_, T deltaTemp_, std::vector<T> dir_);
-  PostProcessor3D<T,DESCRIPTOR>* generate(
-    std::vector<BlockStructureD<3>* > partners) const override;
-  LatticeCouplingGenerator3D<T,DESCRIPTOR>* clone() const override;
-
-private:
-  T gravity, T0, deltaTemp;
-  std::vector<T> dir;
-};
-
-
 //======================================================================
 // ======== Total enthalpy coupling with Boussinesq bouancy 3D and phase change====================//
 //======================================================================
@@ -398,7 +344,7 @@ private:
   std::vector<T> dir;
   T PrTurb;
 };
-  
+
 //======================================================================
 // ========VANS-ADE Particle Coupling 3D ====================//
 //======================================================================
@@ -428,10 +374,10 @@ public:
   void process(BlockLattice<T,DESCRIPTOR>& blockLattice) override;
   void processSubDomain(BlockLattice<T,DESCRIPTOR>& blockLattice,
                         int x0_, int x1_, int y0_, int y1_,  int z0_, int z1_) override;
-                        
+
 protected:
   std::vector<std::reference_wrapper<AdvectionDiffusionForce3D<T, DESCRIPTOR, ADLattice> > > _forces;
-private: 
+private:
   int x0, x1, y0, y1, z0, z1, iC;
   BlockLattice<T,ADLattice>* _partnerLattice;
 
@@ -462,7 +408,7 @@ public:
     std::vector<BlockStructureD<3>* > partners) const override;
   LatticeCouplingGenerator3D<T,DESCRIPTOR>* clone() const override;
   void addForce(AdvectionDiffusionForce3D<T,DESCRIPTOR,ADLattice> &force);
-  
+
 protected:
   std::vector<std::reference_wrapper<AdvectionDiffusionForce3D<T, DESCRIPTOR, ADLattice> > > ADforces;
   };

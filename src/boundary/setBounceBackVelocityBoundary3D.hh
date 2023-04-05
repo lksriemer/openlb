@@ -40,14 +40,11 @@ template<typename T, typename DESCRIPTOR>
 void setBounceBackVelocityBoundary(FunctorPtr<SuperIndicatorF3D<T>>&& indicator, T omega,SuperLattice<T, DESCRIPTOR>& sLattice)
 {
   OstreamManager clout(std::cout, "BounceBackVelocityBoundary");
-  
-  int _overlap = 1;
   bool includeOuterCells = false;
   if (indicator->getSuperGeometry().getOverlap() == 1) {
     includeOuterCells = true;
     clout << "WARNING: overlap == 1, boundary conditions set on overlap despite unknown neighbor materials" << std::endl;
   }
-  // addPoints2CommBC(sLattice,std::forward<decltype(indicator)>(indicator), _overlap);
   clout << sLattice.getLoadBalancer().size() <<"sLattice.getLoadBalancer.size()" << std::endl;
   for (int iC = 0; iC < sLattice.getLoadBalancer().size(); ++iC) {
     setBounceBackVelocityBoundary<T,DESCRIPTOR>(indicator->getBlockIndicatorF(iC),omega,includeOuterCells,sLattice.getBlock(iC));

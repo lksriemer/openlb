@@ -105,7 +105,7 @@ def import_expr(expr, symbols={ }):
     else:
         return eval(serialized.decode('utf-8'), globals(), symbols)
 
-def collision_cse(collision, descriptor, momenta, equilibrium, simple_post_collision = True, concrete = None):
+def collision_cse(collision, descriptor, momenta, equilibrium, concrete = None):
     if concrete is None:
         concrete = collision.type[descriptor,momenta,equilibrium]
     print(f"Generating { concrete.__cpp_name__ }")
@@ -125,23 +125,29 @@ def collision_cse(collision, descriptor, momenta, equilibrium, simple_post_colli
     # Collect population and optional field / parameter assignments
     assignments = result_cell
     optional_assignments = parameters.optional_assignments + cell.optional_assignments
-    # Substitions between internal placeholder variables and symbolic arrays
-    # These are required due to current CSE limititations
-    post_collision = [ ]
-    if simple_post_collision:
-        # Simple dependency between pre and post collision values
-        substitutions = cell.substitutions + parameters.substitutions
-    else:
-        substitutions = parameters.substitutions
-        # Use additional intermediary variables if post collision values
-        # depend on different pre collision populations
-        for subs in cell.substitutions:
-            post_collision.append(Assignment(subs[1], subs[0]))
     # Assign cell statistics placeholders
     assignments.append(Assignment(Symbol("x_rho"), result_rho))
     assignments.append(Assignment(Symbol("x_uSqr"), result_uSqr))
-    # Apply common subexpression elimination and back-substitution of placeholders
-    block = cse(CodeBlock(*assignments), generator).subs(substitutions)
+    # Apply common subexpression elimination
+    block = cse(CodeBlock(*assignments), generator)
+    # Substitions between internal placeholder variables and symbolic arrays
+    # These are required due to current CSE limititations
+    substitutions = parameters.substitutions
+    post_collision = [ ]
+    simple_post_collision = True
+    for assignment in block.args:
+        if assignment.lhs in cell.aliases:
+            atoms = assignment.rhs.free_symbols
+            for (lhs, rhs) in cell.substitutions:
+                if lhs != assignment.lhs and (lhs in atoms or rhs in atoms):
+                    simple_post_collision = False
+    if simple_post_collision:
+        substitutions = cell.substitutions + parameters.substitutions
+    else:
+        for subs in cell.substitutions:
+            post_collision.append(Assignment(subs[1], subs[0]))
+    # Apply back-substitution of placeholders
+    block = block.subs(substitutions)
     # Detect which optional assignments are required to close the symbolic collision
     optional = [ ]
     for symbol in block.free_symbols:
@@ -151,7 +157,7 @@ def collision_cse(collision, descriptor, momenta, equilibrium, simple_post_colli
                     optional.append(assgn)
     # Generate C++ template for CSE-ified collision operator
     return '\n'.join([
-        f"""template <typename CELL, typename PARAMETERS, typename V=typename CELL::value_t>""",
+        f"""template <CONCEPT(MinimalCell) CELL, typename PARAMETERS, typename V=typename CELL::value_t>""",
         f"""CellStatistic<V> apply(CELL& cell, PARAMETERS& parameters) any_platform""",
         "{",
         code(CodeBlock(*optional, *block.args[:-2], *post_collision), symbols=generator.symbols),

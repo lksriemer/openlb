@@ -101,7 +101,7 @@ CellStatistic<T> InamuroAnalyticalDynamics<T,DESCRIPTOR,Dynamics,MOMENTA,directi
 
   T fSum = T();
   for (unsigned iPop = 0; iPop < missInd.size(); ++iPop) {
-    fSum += cell[util::opposite<L>(missInd[iPop])];
+    fSum += cell[descriptors::opposite<L>(missInd[iPop])];
   }
   // do not forget the "+1" in the rhoCs equation in the numerator (it's
   // here because fEq = usualfEq - t[i]
@@ -116,8 +116,8 @@ CellStatistic<T> InamuroAnalyticalDynamics<T,DESCRIPTOR,Dynamics,MOMENTA,directi
 
   T fDiffDiag = T();
   for (unsigned iPop = 0; iPop < missDiagInd.size(); ++iPop)
-    fDiffDiag += descriptors::c<L>(util::opposite<L>(missDiagInd[iPop]),(direction + 1)%2)
-                 * cell[util::opposite<L>(missDiagInd[iPop])];
+    fDiffDiag += descriptors::c<L>(descriptors::opposite<L>(missDiagInd[iPop]),(direction + 1)%2)
+                 * cell[descriptors::opposite<L>(missDiagInd[iPop])];
   fDiffDiag *= orientation;
 
   uCs[(direction + 1)%L::d] = (

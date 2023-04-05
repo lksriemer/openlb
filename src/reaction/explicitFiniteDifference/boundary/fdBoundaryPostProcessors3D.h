@@ -24,8 +24,8 @@
  *  Boston, MA  02110-1301, USA.
 */
 
-#ifndef FD_NO_PENETRATION_BOUNDARY_POST_PROCESSORS_3D_H
-#define FD_NO_PENETRATION_BOUNDARY_POST_PROCESSORS_3D_H
+#ifndef FD_NO_PENETRATION_BOUNDARY_POST_PROCESSORS_3D_DEV03_H
+#define FD_NO_PENETRATION_BOUNDARY_POST_PROCESSORS_3D_DEV03_H
 
 namespace olb {
 
@@ -33,54 +33,15 @@ namespace olb {
 /*
  * Postprocessor to treat no-penetration boundaries in the finite-difference advection-diffusion external field.
  */
-template<typename T, typename DESCRIPTOR, typename FIELD=descriptors::AD_FIELD, typename SOURCE=void>
+template<typename T, typename DESCRIPTOR, typename MODEL, typename SCHEME_BOUND, typename PARAMS, typename FIELD=descriptors::AD_FIELD, typename SOURCE=void>
 class FdBoundaryPostProcessor3D final : public FdBasePostProcessor3D<T,DESCRIPTOR,FIELD,SOURCE> {
 public:
-  FdBoundaryPostProcessor3D ( int x0, int x1, int y0, int y1, int z0, int z1, std::size_t& iT, int normalX, int normalY, int normalZ,
-      std::shared_ptr<FdModel<T,DESCRIPTOR>> model, std::shared_ptr<fd::AdBoundarySchemeBase<3,T>> boundaryScheme );
-  FdBoundaryPostProcessor3D ( std::size_t& iT, int normalX, int normalY, int normalZ,
-      std::shared_ptr<FdModel<T,DESCRIPTOR>> model, std::shared_ptr<fd::AdBoundarySchemeBase<3,T>> boundaryScheme );
-  int extent() const override
-  {
-    return 2;
-  }
-  int extent(int whichDirection) const override
-  {
-    return 2;
-  }
-  void process(BlockLattice<T,DESCRIPTOR>& blockLattice) override;
-  void processSubDomain ( BlockLattice<T,DESCRIPTOR>& blockLattice,
-                          int x0, int x1, int y0, int y1, int z0, int z1 ) override;
-private:
-  int _x0, _x1, _y0, _y1, _z0, _z1;
-  int _normalX, _normalY, _normalZ;
-  std::shared_ptr<FdModel<T,DESCRIPTOR>> _model;
-  std::shared_ptr<fd::AdBoundarySchemeBase<3,T>> _boundaryScheme;
-  std::vector<std::vector<T>> f, F, fNormal, fGhost;
-};
-
-template<typename T, typename DESCRIPTOR, typename FIELD=descriptors::AD_FIELD, typename SOURCE=void>
-class FdBaseBoundaryPostProcessorGenerator3D : public FdBasePostProcessorGenerator3D<T,DESCRIPTOR,FIELD,SOURCE> {
-public:
-  FdBaseBoundaryPostProcessorGenerator3D(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_,
-      std::size_t& iT, int normalX, int normalY, int normalZ,
-      std::shared_ptr<FdModel<T,DESCRIPTOR>> model, std::shared_ptr<fd::AdBoundarySchemeBase<3,T>> boundaryScheme);
-  FdBaseBoundaryPostProcessorGenerator3D(size_t& iT, int normalX, int normalY, int normalZ,
-      std::shared_ptr<FdModel<T,DESCRIPTOR>> model, std::shared_ptr<fd::AdBoundarySchemeBase<3,T>> boundaryScheme );
-  PostProcessor3D<T,DESCRIPTOR>* generate() const override;
-private:
-  int _normalX, _normalY, _normalZ;
-  std::shared_ptr<FdModel<T,DESCRIPTOR>> _model;
-  std::shared_ptr<fd::AdBoundarySchemeBase<3,T>> _boundaryScheme;
-};
-
-template<typename T, typename DESCRIPTOR, typename SCHEME_ADV, typename FIELD=descriptors::AD_FIELD, typename SOURCE=void>
-class FdNeumannZeroBoundaryPostProcessorGenerator3D final : public FdBaseBoundaryPostProcessorGenerator3D<T,DESCRIPTOR,FIELD,SOURCE> {
-public:
-  FdNeumannZeroBoundaryPostProcessorGenerator3D(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_,
-      std::size_t& iT, int normalX, int normalY, int normalZ, std::shared_ptr<FdModel<T,DESCRIPTOR>> model);
-  FdNeumannZeroBoundaryPostProcessorGenerator3D(size_t& iT, int normalX, int normalY, int normalZ, std::shared_ptr<FdModel<T,DESCRIPTOR>> model);
-  PostProcessorGenerator3D<T,DESCRIPTOR>* clone() const override;
+  using parameters = PARAMS;
+  static constexpr OperatorScope scope = OperatorScope::PerCellWithParameters;
+  FdBoundaryPostProcessor3D();
+  int getPriority() const;
+  template <typename CELL, typename PARAMETERS>
+  void apply(CELL& cell, PARAMETERS& vars) any_platform;
 };
 
 }

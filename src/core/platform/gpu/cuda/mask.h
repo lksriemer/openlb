@@ -28,8 +28,8 @@
 
 namespace olb {
 
-template <typename T, typename DESCRIPTOR>
-class ConcreteBlockMask<T,DESCRIPTOR,Platform::GPU_CUDA> final : public Serializable {
+template <typename T>
+class ConcreteBlockMask<T,Platform::GPU_CUDA> final : public Serializable {
 private:
   gpu::cuda::Column<bool> _mask;
   std::size_t _weight;
@@ -64,9 +64,9 @@ public:
     return _mask.deviceData();
   }
 
-  void setProcessingContext(ProcessingContext) {
-    if (_modified) {
-      _mask.setProcessingContext(ProcessingContext::Simulation);
+  void setProcessingContext(ProcessingContext context) {
+    if (_modified && context == ProcessingContext::Simulation) {
+      _mask.setProcessingContext(context);
       _modified = false;
     }
   }
@@ -80,20 +80,20 @@ public:
 
 };
 
-template<typename T, typename DESCRIPTOR>
-std::size_t ConcreteBlockMask<T,DESCRIPTOR,Platform::GPU_CUDA>::getNblock() const
+template<typename T>
+std::size_t ConcreteBlockMask<T,Platform::GPU_CUDA>::getNblock() const
 {
   return 1 + _mask.getNblock();
 }
 
-template<typename T, typename DESCRIPTOR>
-std::size_t ConcreteBlockMask<T,DESCRIPTOR,Platform::GPU_CUDA>::getSerializableSize() const
+template<typename T>
+std::size_t ConcreteBlockMask<T,Platform::GPU_CUDA>::getSerializableSize() const
 {
   return sizeof(_weight) + _mask.getSerializableSize();
 }
 
-template<typename T, typename DESCRIPTOR>
-bool* ConcreteBlockMask<T,DESCRIPTOR,Platform::GPU_CUDA>::getBlock(std::size_t iBlock, std::size_t& sizeBlock, bool loadingMode)
+template<typename T>
+bool* ConcreteBlockMask<T,Platform::GPU_CUDA>::getBlock(std::size_t iBlock, std::size_t& sizeBlock, bool loadingMode)
 {
   std::size_t currentBlock = 0;
   bool* dataPtr = nullptr;

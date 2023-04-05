@@ -48,12 +48,12 @@ namespace olb {
 ///FreeEnergyInletBoundary is local boundary Condition --> MixinDynamics = RLBdynamics
 ///Initialising the Free Energy Inlet Boundary on the superLattice domain
 template<typename T, typename DESCRIPTOR, typename MixinDynamics = RLBdynamics<T, DESCRIPTOR>>
-void setFreeEnergyInletBoundary(SuperLattice<T, DESCRIPTOR>& sLattice, T omega, SuperGeometry<T,2>& superGeometry, int material, 
+void setFreeEnergyInletBoundary(SuperLattice<T, DESCRIPTOR>& sLattice, T omega, SuperGeometry<T,2>& superGeometry, int material,
                                 std::string type, int latticeNumber);
 
 ///Initialising the Free Energy Inlet Boundary on the superLattice domain
 template<typename T, typename DESCRIPTOR, typename MixinDynamics = RLBdynamics<T,DESCRIPTOR>>
-void setFreeEnergyInletBoundary(SuperLattice<T, DESCRIPTOR>& sLattice, T omega, FunctorPtr<SuperIndicatorF2D<T>>&& indicator, 
+void setFreeEnergyInletBoundary(SuperLattice<T, DESCRIPTOR>& sLattice, T omega, FunctorPtr<SuperIndicatorF2D<T>>&& indicator,
                                 std::string type, int latticeNumber);
 
 ///Set FreeEnergyInlet boundary for any indicated cells inside the block domain

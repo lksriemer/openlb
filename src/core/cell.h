@@ -172,6 +172,9 @@ public:
   std::enable_if_t<(DESCRIPTOR::template size<FIELD>() == 1), void>
   setField(typename FIELD::template value_type<T> value);
 
+  template <typename FIELD>
+  void setFieldComponent(unsigned iD, typename FIELD::template value_type<T> value);
+
   /// Get a pointer to the dynamics
   Dynamics<T,DESCRIPTOR>* getDynamics();
 

@@ -99,7 +99,7 @@ bool BlockLatticePhysBoundaryForce3D<T, DESCRIPTOR>::operator()(T output[], cons
         T f = this->_blockLattice.get(input[0] + c[0], input[1] + c[1], input[2] + c[2])[iPop];
         // Get f_l of the boundary cell
         // Add f_q and f_opp
-        f += this->_blockLattice.get(input)[util::opposite<DESCRIPTOR>(iPop)];
+        f += this->_blockLattice.get(input)[descriptors::opposite<DESCRIPTOR>(iPop)];
         // Update force
         for (int i = 0; i < this->getTargetDim(); ++i) {
           output[i] -= c[i] * f;

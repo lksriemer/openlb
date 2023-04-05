@@ -22,7 +22,6 @@
  * Groups all the 2D include files in the explicitFiniteDifference directory.
  */
 
-#include "method.h"
 #include "reactingSpecies2D.h"
 #include "rate.h"
 #include "reactionPostProcessor2D.h"

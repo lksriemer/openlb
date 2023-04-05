@@ -21,7 +21,6 @@
  *  Boston, MA  02110-1301, USA.
 */
 
-
 /* This file contains functions used for the calculation of particle related dynamics.
  *
 */
@@ -30,11 +29,10 @@
 #define SMOOTHINDICATOR_INTERACTION_H
 
 #include "core/blockStructure.h"
-#include "functors/analytical/indicator/smoothIndicatorBaseF2D.h"
-#include "functors/analytical/indicator/smoothIndicatorBaseF3D.h"
-#include "particles/functions/bodyMotionFunctions.h"
 #include "functors/analytical/indicator/indicatorBase.h"
 #include "functors/analytical/indicator/sdf.h"
+#include "functors/analytical/indicator/smoothIndicatorBaseF2D.h"
+#include "functors/analytical/indicator/smoothIndicatorBaseF3D.h"
 
 namespace olb {
 
@@ -43,159 +41,197 @@ namespace particles {
 namespace resolved {
 
 template <typename T, typename S, typename PARTICLETYPE>
-PhysR<S,PARTICLETYPE::d> transformInput( Particle<T,PARTICLETYPE>& particle, const PhysR<S,PARTICLETYPE::d>& input )
+PhysR<S, PARTICLETYPE::d> transformInput(Particle<T, PARTICLETYPE>& particle,
+                                         const PhysR<S, PARTICLETYPE::d>& input)
 {
   using namespace descriptors;
-  auto position = particle.template getField<GENERAL,POSITION>();
-  if constexpr ( PARTICLETYPE::template providesNested<SURFACE,ROT_MATRIX>() ) {
-    auto rotationMatrix = particle.template getField<SURFACE,ROT_MATRIX>();
-    return body::motion::rotation<PARTICLETYPE::d,T,true>::execute(input, rotationMatrix, position);
+  constexpr unsigned D = PARTICLETYPE::d;
+
+  const PhysR<T, D> position = particle.template getField<GENERAL, POSITION>();
+  if constexpr (PARTICLETYPE::template providesNested<SURFACE, ROT_MATRIX>()) {
+    const Vector<T, utilities::dimensions::convert<D>::matrix> rotationMatrix =
+        util::invertRotationMatrix<T, D>(
+            particle.template getField<SURFACE, ROT_MATRIX>());
+    return util::executeRotation<T, D, true>(input, rotationMatrix, position);
   }
   else {
     return input - position;
   }
+
+  __builtin_unreachable();
 }
 
 template <typename T, typename S, typename PARTICLETYPE>
-PhysR<S,PARTICLETYPE::d> transformDirection( Particle<T,PARTICLETYPE>& particle, const PhysR<S,PARTICLETYPE::d>& direction )
+PhysR<S, PARTICLETYPE::d>
+transformDirection(Particle<T, PARTICLETYPE>&       particle,
+                   const PhysR<S, PARTICLETYPE::d>& direction)
 {
+  constexpr unsigned D = PARTICLETYPE::d;
   using namespace descriptors;
-  if constexpr ( PARTICLETYPE::template providesNested<SURFACE,ROT_MATRIX>() ) {
-    auto rotationMatrix = particle.template getField<SURFACE,ROT_MATRIX>();
-    return body::motion::rotation<PARTICLETYPE::d,T>::execute(direction, rotationMatrix);
+
+  if constexpr (PARTICLETYPE::template providesNested<SURFACE, ROT_MATRIX>()) {
+    const Vector<T, utilities::dimensions::convert<D>::matrix> rotationMatrix =
+        util::invertRotationMatrix<T, D>(
+            particle.template getField<SURFACE, ROT_MATRIX>());
+    return util::executeRotation<T, D>(direction, rotationMatrix);
   }
   else {
     return direction;
   }
+
+  __builtin_unreachable();
 }
 
 template <typename T, typename S, typename PARTICLETYPE>
-bool isInsideParticle( Particle<T,PARTICLETYPE>& particle, const PhysR<S,PARTICLETYPE::d>& input )
+bool isInsideParticle(Particle<T, PARTICLETYPE>&       particle,
+                      const PhysR<S, PARTICLETYPE::d>& input)
 {
   using namespace descriptors;
-  auto sIndicator = particle.template getField<SURFACE,SINDICATOR>();
-  PhysR<S,PARTICLETYPE::d> newInput = transformInput(particle, input);
+  auto sIndicator = particle.template getField<SURFACE, SINDICATOR>();
+  PhysR<S, PARTICLETYPE::d> newInput = transformInput(particle, input);
 
   return sIndicator->signedDistance(newInput) <= 0;
 }
 
 template <typename T, typename S, typename PARTICLETYPE>
-bool isInsideCircumRadius( Particle<T,PARTICLETYPE>& particle, const PhysR<S,PARTICLETYPE::d>& input )
+bool isInsideCircumRadius(Particle<T, PARTICLETYPE>&       particle,
+                          const PhysR<S, PARTICLETYPE::d>& input)
 {
   using namespace descriptors;
-  auto sIndicator = particle.template getField<SURFACE,SINDICATOR>();
-  PhysR<S,PARTICLETYPE::d> newInput = transformInput(particle, input);
+  auto sIndicator = particle.template getField<SURFACE, SINDICATOR>();
+  PhysR<S, PARTICLETYPE::d> newInput = transformInput(particle, input);
 
-  return sIndicator->isInsideCircumRadius( newInput );
+  return sIndicator->isInsideCircumRadius(newInput);
 }
 
 template <typename T, typename S, typename PARTICLETYPE>
-const S signedDistanceToParticle( Particle<T,PARTICLETYPE>& particle, const PhysR<S,PARTICLETYPE::d>& input )
+const S signedDistanceToParticle(Particle<T, PARTICLETYPE>&       particle,
+                                 const PhysR<S, PARTICLETYPE::d>& input)
 {
   using namespace descriptors;
-  auto sIndicator = particle.template getField<SURFACE,SINDICATOR>();
-  PhysR<S,PARTICLETYPE::d> newInput = transformInput(particle, input);
+  auto sIndicator = particle.template getField<SURFACE, SINDICATOR>();
+  PhysR<S, PARTICLETYPE::d> newInput = transformInput(particle, input);
 
-  return sIndicator->signedDistance(newInput);
+  //Check whether elongation provided
+  if constexpr ( access::providesElongation<PARTICLETYPE>() ){
+    const unsigned D = PARTICLETYPE::d;
+    //Retrieve original sdf
+    std::function<S(const Vector<S, D>&)> sdf =
+      [&sIndicator](const Vector<S, D>& input) {
+        return sIndicator->signedDistance(input);
+    };
+    //Retrieve elongation
+    auto elongation = access::getElongation( particle );
+    //Return elongated whapper
+    constexpr bool symmetryCheck = false; //User responsibility here.
+    return sdf::elongation<T,symmetryCheck>(sdf, newInput, elongation);
+  } else {
+    return sIndicator->signedDistance(newInput);
+  }
 }
 
 template <typename T, typename S, typename PARTICLETYPE>
-const S distanceToParticle( Particle<T,PARTICLETYPE>& particle, const Vector<S,PARTICLETYPE::d>& origin, const Vector<S,PARTICLETYPE::d>& direction, S precision, S pitch )
+const S distanceToParticle(Particle<T, PARTICLETYPE>&        particle,
+                           const Vector<S, PARTICLETYPE::d>& origin,
+                           const Vector<S, PARTICLETYPE::d>& direction,
+                           S precision, S pitch)
 {
   using namespace descriptors;
-  auto sIndicator = particle.template getField<SURFACE,SINDICATOR>();
-  PhysR<S,PARTICLETYPE::d> input = transformInput(particle, origin);
-  PhysR<S,PARTICLETYPE::d> dir = transformDirection(particle, direction);
+  auto sIndicator = particle.template getField<SURFACE, SINDICATOR>();
+  PhysR<S, PARTICLETYPE::d> input = transformInput(particle, origin);
+  PhysR<S, PARTICLETYPE::d> dir   = transformDirection(particle, direction);
 
   T distance(T(0.));
-  if (util::distance(distance, input, dir, precision, pitch,
-  [&](bool output[1], const T input[3]) {
-  output[0] = sIndicator->signedDistance(PhysR<T,PARTICLETYPE::d>(input)) <= 0;
-    return output[0];
-  },
-  [&](const Vector<T,3>& pos) {
-    // bigger bounding box is usually necessary
-    return norm(pos) <= 1.5*sIndicator->getCircumRadius();
-  })) {
+  if (util::distance(
+          distance, input, dir, precision, pitch,
+          [&](bool output[1], const T input[3]) {
+            output[0] = sIndicator->signedDistance(
+                            PhysR<T, PARTICLETYPE::d>(input)) <= 0;
+            return output[0];
+          },
+          [&](const Vector<T, 3>& pos) {
+            // bigger bounding box is usually necessary
+            return norm(pos) <= 1.5 * sIndicator->getCircumRadius();
+          })) {
     return distance;
   }
   else {
 #ifdef OLB_DEBUG
     OstreamManager clout(std::cout, "distanceCalculation");
-    clout << "WARNING: Distance to particle in direction " << normalize(direction) << " couldn't be calculated." << std::endl;
+    clout << "WARNING: Distance to particle in direction "
+          << normalize(direction) << " couldn't be calculated." << std::endl;
 #endif
     return T(0.);
   }
+
+  __builtin_unreachable();
 }
 
 template <typename T, typename S, typename PARTICLETYPE>
-const S distanceToParticle( Particle<T,PARTICLETYPE>& particle, const Vector<S,PARTICLETYPE::d>& origin, const Vector<S,PARTICLETYPE::d>& direction, S precision )
+const S distanceToParticle(Particle<T, PARTICLETYPE>&        particle,
+                           const Vector<S, PARTICLETYPE::d>& origin,
+                           const Vector<S, PARTICLETYPE::d>& direction,
+                           S                                 precision)
 {
   using namespace descriptors;
-  auto sIndicator = particle.template getField<SURFACE,SINDICATOR>();
-  PhysR<S,PARTICLETYPE::d> input = transformInput(particle, origin);
-  PhysR<S,PARTICLETYPE::d> dir = transformDirection(particle, direction);
+  auto sIndicator = particle.template getField<SURFACE, SINDICATOR>();
+  PhysR<S, PARTICLETYPE::d> input = transformInput(particle, origin);
+  PhysR<S, PARTICLETYPE::d> dir   = transformDirection(particle, direction);
 
   T distance(T(0.));
-  if (util::distance(distance, input, dir, precision,
-  [&](const Vector<T,PARTICLETYPE::d>& input) {
-  return sIndicator->signedDistance(input);
-  },
-  [&](const Vector<T,PARTICLETYPE::d>& pos) {
-    // bigger bounding box is usually necessary
-    return norm(pos) <= 1.5*sIndicator->getCircumRadius();
-  })) {
+  if (util::distance(
+          distance, input, dir, precision,
+          [&](const Vector<T, PARTICLETYPE::d>& input) {
+            return sIndicator->signedDistance(input);
+          },
+          [&](const Vector<T, PARTICLETYPE::d>& pos) {
+            // bigger bounding box is usually necessary
+            return norm(pos) <= 1.5 * sIndicator->getCircumRadius();
+          })) {
     return distance;
   }
   else {
 #ifdef OLB_DEBUG
     OstreamManager clout(std::cout, "distanceCalculation");
-    clout << "WARNING: Distance to particle in direction " << normalize(direction) << " couldn't be calculated." << std::endl;
+    clout << "WARNING: Distance to particle in direction "
+          << normalize(direction) << " couldn't be calculated." << std::endl;
 #endif
     return T(0.);
   }
+
+  __builtin_unreachable();
 }
 
 template <typename T, typename S, typename PARTICLETYPE>
-Vector<S,PARTICLETYPE::d> normalOnParticleSurface( Particle<T,PARTICLETYPE>& particle, const Vector<S,PARTICLETYPE::d>& pos, const T meshSize )
+Vector<S, PARTICLETYPE::d>
+normalOnParticleSurface(Particle<T, PARTICLETYPE>&        particle,
+                        const Vector<S, PARTICLETYPE::d>& pos, const T meshSize)
 {
   using namespace descriptors;
-  constexpr unsigned D = PARTICLETYPE::d;
-  auto sIndicator = particle.template getField<SURFACE,SINDICATOR>();
-  Vector<S,D> normal( S(0) );
-
-  /* the following would not work for example for STLreader, because it has no sdf
-  for (unsigned iD=0; iD<3; ++iD) {
-    Vector<S,D> delta(S(0));
-    delta[iD] = meshSize;
-    normal[iD] = (signedDistanceToParticle( particle, pos+delta ) - signedDistanceToParticle( particle, pos-delta )) / (2*meshSize);
-  }
-  */
+  constexpr unsigned D    = PARTICLETYPE::d;
+  auto         sIndicator = particle.template getField<SURFACE, SINDICATOR>();
 
   // the following gives us the option to overload the calculation of the surface normal for different indicators
-  normal = sIndicator->surfaceNormal(pos, meshSize,
-  [&](const Vector<S,D>& pos) {
+  return sIndicator->surfaceNormal(pos, meshSize, [&](const Vector<S, D>& pos) {
     return transformInput(particle, pos);
   });
-
-  return normal;
 }
 
 template <typename T, typename S, typename PARTICLETYPE>
-bool evalPorosity( T output[], const S input[], Particle<T,PARTICLETYPE>& particle )
+bool evalSolidVolumeFraction(T output[], const S input[],
+                  Particle<T, PARTICLETYPE>& particle)
 {
   using namespace descriptors;
-  auto sIndicator = particle.template getField<SURFACE,SINDICATOR>();
-  T const signedDist = signedDistanceToParticle(particle, PhysR<S,PARTICLETYPE::d>(input));
-  return sdf::evalPorosity(output, signedDist, sIndicator->getEpsilon());
+  auto    sIndicator = particle.template getField<SURFACE, SINDICATOR>();
+  T const signedDist =
+      signedDistanceToParticle(particle, PhysR<S, PARTICLETYPE::d>(input));
+  return sdf::evalSolidVolumeFraction(output, signedDist, sIndicator->getEpsilon());
 }
-
 
 } //namespace resolved
 
 } //namespace particles
 
 } //namespace olb
-
 
 #endif

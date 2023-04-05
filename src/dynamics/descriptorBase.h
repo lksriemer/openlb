@@ -50,8 +50,7 @@ struct FIELD_TUPLE : public meta::list<FIELDS...> {
   /// Deleted constructor to enforce pure usage as type and prevent implicit narrowing conversions
   FIELD_TUPLE() = delete;
 
-  /// Fieldlist, which can be passed if desired
-  using fieldList = meta::list<FIELDS...>;
+  using fields_t = meta::list<FIELDS...>;
 
   template <template<typename...> class COLLECTION>
   using decompose_into = COLLECTION<FIELDS...>;
@@ -141,9 +140,12 @@ struct SPATIAL_DESCRIPTOR : public CONCRETE_FIELD_TUPLE<PARAMETER_TUPLE<D>, FIEL
   static constexpr int d = D;
 };
 
+struct LATTICE_DESCRIPTOR_BASE { };
+
 /// Base descriptor of a D-dimensional lattice with Q directions and a list of additional fields
 template <unsigned D, unsigned Q, typename... FIELDS>
-struct LATTICE_DESCRIPTOR : public CONCRETE_FIELD_TUPLE<PARAMETER_TUPLE<D,Q>, FIELDS...> {
+struct LATTICE_DESCRIPTOR : public LATTICE_DESCRIPTOR_BASE
+                          , public CONCRETE_FIELD_TUPLE<PARAMETER_TUPLE<D,Q>, FIELDS...> {
   /// Type identifier
   using type = TYPE_LATTICE;
   /// Number of dimensions
@@ -165,6 +167,24 @@ struct LATTICE_DESCRIPTOR : public CONCRETE_FIELD_TUPLE<PARAMETER_TUPLE<D,Q>, FI
 
 };
 
+/// Pair of base value and descriptor type
+template <typename T, typename DESCRIPTOR>
+struct VALUED_DESCRIPTOR {
+  using value_t = T;
+  using descriptor_t = DESCRIPTOR;
+};
+
+/// Return pair of base value and descriptor type declared by TYPE
+/**
+ * Used to extract descriptor and associated value type from cell and lattice types.
+ **/
+template <typename TYPE>
+using extract_valued_descriptor_t = VALUED_DESCRIPTOR<
+  typename std::remove_reference_t<TYPE>::value_t,
+  typename std::remove_reference_t<TYPE>::descriptor_t
+>;
+
+
 /// Base descriptor of a particle system
 template <unsigned D, typename... FIELDS>
 struct PARTICLE_DESCRIPTOR : public CONCRETE_FIELD_TUPLE<PARAMETER_TUPLE<D>, FIELDS...> {
@@ -172,9 +192,6 @@ struct PARTICLE_DESCRIPTOR : public CONCRETE_FIELD_TUPLE<PARAMETER_TUPLE<D>, FIE
   using type = TYPE_PARTICLE;
   /// Number of dimensions
   static constexpr int d = D;
-
-
-
 
 };
 

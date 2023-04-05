@@ -30,4 +30,4 @@
 #include "materialBoundary3D.hh"
 #include "wireBoundaryForMagP3D.hh"
 #include "boundarySimpleReflection3D.hh"
-
+#include "materialSTLBoundary3D.hh"

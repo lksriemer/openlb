@@ -35,8 +35,20 @@ LoadBalancer<T>::LoadBalancer(int size) : _size(size)
 {}
 
 template<typename T>
-LoadBalancer<T>::LoadBalancer(int size, std::map<int,int>& loc, std::vector<int>& glob, std::map<int,int>& rank)
+LoadBalancer<T>::LoadBalancer(int size,
+                              std::map<int,int>& loc,
+                              std::vector<int>& glob,
+                              std::map<int,int>& rank)
   : _size(size), _loc(loc), _glob(glob), _rank(rank)
+{}
+
+template<typename T>
+LoadBalancer<T>::LoadBalancer(int size,
+                              std::map<int,int>& loc,
+                              std::vector<int>& glob,
+                              std::map<int,int>& rank,
+                              std::map<int,Platform>& platform)
+  : _size(size), _loc(loc), _glob(glob), _rank(rank), _platform(platform)
 {}
 
 template<typename T>
@@ -50,6 +62,7 @@ void LoadBalancer<T>::swap(LoadBalancer<T>& loadBalancer)
   _loc.swap(loadBalancer._loc);
   _glob.swap(loadBalancer._glob);
   _rank.swap(loadBalancer._rank);
+  _platform.swap(loadBalancer._platform);
 }
 
 template<typename T>
@@ -157,13 +170,11 @@ void LoadBalancer<T>::print(bool multiOutput) const
   for (unsigned i = 0; i < this->_glob.size(); i++) {
     clout << "glob[" << i << "]=" << this->_glob[i] << std::endl;
   }
-  for (auto it = this->_loc.cbegin(); it != this->_loc.cend();
-       it++) {
-    clout << "loc[" << (*it).first << "]=" << (*it).second << std::endl;
+  for (const auto& [globC, locC] : this->_loc) {
+    clout << "loc[" << globC << "]=" << locC << std::endl;
   }
-  for (auto it = this->_rank.cbegin(); it != this->_rank.cend();
-       it++) {
-    clout << "rank[" << (*it).first << "]=" << (*it).second << std::endl;
+  for (const auto& [globC, rank] : this->_rank) {
+    clout << "rank[" << globC << "]=" << rank << std::endl;
   }
   clout.setMultiOutput(false);
 }

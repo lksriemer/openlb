@@ -51,20 +51,76 @@ namespace olb {
 
 
 template<typename T, typename DESCRIPTOR>
+void SuperLattice<T,DESCRIPTOR>::collectStatistics()
+{
+  T weight;
+  T sum_weight = 0;
+  T average_rho = 0;
+  T average_energy = 0;
+  T maxU = 0;
+  T delta = 0;
+
+  getStatistics().reset();
+
+  for (int iC = 0; iC < this->_loadBalancer.size(); ++iC) {
+    delta = this->_cuboidGeometry.get(this->_loadBalancer.glob(iC)).getDeltaR();
+    weight = _block[iC]->getStatistics().getNumCells() * delta
+             * delta * delta;
+    sum_weight += weight;
+    average_rho += _block[iC]->getStatistics().getAverageRho()
+                   * weight;
+    average_energy += _block[iC]->getStatistics().getAverageEnergy()
+                      * weight;
+    if (maxU < _block[iC]->getStatistics().getMaxU()) {
+      maxU = _block[iC]->getStatistics().getMaxU();
+    }
+  }
+
+#ifdef PARALLEL_MODE_MPI
+  singleton::mpi().reduceAndBcast(sum_weight, MPI_SUM);
+  singleton::mpi().reduceAndBcast(average_rho, MPI_SUM);
+  singleton::mpi().reduceAndBcast(average_energy, MPI_SUM);
+  singleton::mpi().reduceAndBcast(maxU, MPI_MAX);
+#endif
+
+  average_rho = average_rho / sum_weight;
+  average_energy = average_energy / sum_weight;
+
+  getStatistics().reset(average_rho, average_energy, maxU, (int) sum_weight);
+  getStatistics().incrementTime();
+
+  for (int iC = 0; iC < this->_loadBalancer.size(); ++iC) {
+    delta = this->_cuboidGeometry.get(this->_loadBalancer.glob(iC)).getDeltaR();
+    _block[iC]->getStatistics().reset(average_rho, average_energy,
+        maxU, (int) sum_weight);
+    _block[iC]->getStatistics().incrementTime();
+  }
+}
+
+template<typename T, typename DESCRIPTOR>
 SuperLattice<T,DESCRIPTOR>::SuperLattice(SuperGeometry<T,DESCRIPTOR::d>& superGeometry)
   : SuperStructure<T,DESCRIPTOR::d>(superGeometry.getCuboidGeometry(),
                                     superGeometry.getLoadBalancer(),
                                     superGeometry.getOverlap()),
-    _communicator{meta::make_array_f<std::unique_ptr<SuperCommunicator<T,SuperLattice>>,
-                                     communication_stages::size>([&](unsigned) {
-      return std::make_unique<SuperCommunicator<T,SuperLattice>>(*this);
-    })},
     _statistics()
 {
+  using namespace stage;
+
   auto& load = this->getLoadBalancer();
 
   for (int iC = 0; iC < load.size(); ++iC) {
     auto& cuboid = this->_cuboidGeometry.get(load.glob(iC));
+    #ifdef PLATFORM_GPU_CUDA
+    if (load.platform(iC) == Platform::GPU_CUDA) {
+      if (gpu::cuda::device::getCount() == 0) {
+        throw std::runtime_error("Load balancer requested GPU processing for cuboid "
+                               + std::to_string(load.glob(iC))
+                               + " but no CUDA device was found on rank "
+                               + std::to_string(singleton::mpi().getRank()));
+
+      }
+    }
+    #endif
     _block.emplace_back(constructUsingConcretePlatform<ConcretizableBlockLattice<T,DESCRIPTOR>>(
       load.platform(iC), cuboid.getExtent(), this->getOverlap()));
   }
@@ -200,6 +256,9 @@ template<typename T, typename DESCRIPTOR>
 void SuperLattice<T,DESCRIPTOR>::defineU(FunctorPtr<SuperIndicatorF<T,DESCRIPTOR::d>>&& indicator,
                                          AnalyticalF<DESCRIPTOR::d,T,T>& u)
 {
+  #ifdef PARALLEL_MODE_OMP
+  #pragma omp parallel for schedule(dynamic,1)
+  #endif
   for (int iC = 0; iC < this->_loadBalancer.size(); ++iC) {
     _block[iC]->defineU(indicator->getBlockIndicatorF(iC),
                         u);
@@ -219,6 +278,9 @@ void SuperLattice<T,DESCRIPTOR>::defineRhoU(FunctorPtr<SuperIndicatorF<T,DESCRIP
                                             AnalyticalF<DESCRIPTOR::d,T,T>& rho,
                                             AnalyticalF<DESCRIPTOR::d,T,T>& u)
 {
+  #ifdef PARALLEL_MODE_OMP
+  #pragma omp parallel for schedule(dynamic,1)
+  #endif
   for (int iC = 0; iC < this->_loadBalancer.size(); ++iC) {
     _block[iC]->defineRhoU(indicator->getBlockIndicatorF(iC),
                           rho, u);
@@ -330,6 +392,15 @@ void SuperLattice<T,DESCRIPTOR>::defineField(SuperGeometry<T,DESCRIPTOR::d>& sGe
 
 template<typename T, typename DESCRIPTOR>
 template <typename FIELD>
+void SuperLattice<T,DESCRIPTOR>::defineField(SuperGeometry<T,DESCRIPTOR::d>& sGeometry, IndicatorF2D<T>& indicator,
+                                             AnalyticalF<DESCRIPTOR::d,T,T>& field)
+{
+  SuperIndicatorFfromIndicatorF2D<T> indicatorF(indicator, sGeometry);
+  defineField<FIELD>(indicatorF, field);
+}
+
+template<typename T, typename DESCRIPTOR>
+template <typename FIELD>
 void SuperLattice<T,DESCRIPTOR>::defineField(SuperGeometry<T,DESCRIPTOR::d>& sGeometry, IndicatorF3D<T>& indicator,
                                              AnalyticalF<DESCRIPTOR::d,T,T>& field)
 {
@@ -338,29 +409,43 @@ void SuperLattice<T,DESCRIPTOR>::defineField(SuperGeometry<T,DESCRIPTOR::d>& sGe
 }
 
 template<typename T, typename DESCRIPTOR>
-template <typename FIELD>
-void SuperLattice<T,DESCRIPTOR>::setParameter(FieldD<T,DESCRIPTOR,FIELD>&& field)
+template <typename PARAMETER>
+void SuperLattice<T,DESCRIPTOR>::setParameter(FieldD<T,DESCRIPTOR,PARAMETER> field)
 {
   for (int iC=0; iC < this->getLoadBalancer().size(); ++iC) {
-    _block[iC]->template setParameter<FIELD>(std::forward<decltype(field)>(field));
+    _block[iC]->template setParameter<PARAMETER>(field);
   }
 }
 
 template<typename T, typename DESCRIPTOR>
-template <typename FIELD, typename DYNAMICS>
-void SuperLattice<T,DESCRIPTOR>::setParameterOfDynamics(FieldD<T,DESCRIPTOR,FIELD>&& field)
+template <typename PARAMETER, typename DYNAMICS>
+void SuperLattice<T,DESCRIPTOR>::setParameterOfDynamics(FieldD<T,DESCRIPTOR,PARAMETER>&& field)
 {
   for (int iC=0; iC < this->getLoadBalancer().size(); ++iC) {
-    _block[iC]->template getData<DynamicsParameters<DYNAMICS>>().template set<FIELD>(
+    _block[iC]->template getData<OperatorParameters<DYNAMICS>>().template set<PARAMETER>(
        std::forward<decltype(field)>(field));
   }
 }
 
 template<typename T, typename DESCRIPTOR>
-template <typename FIELD, template<typename...> typename DYNAMICS>
-void SuperLattice<T,DESCRIPTOR>::setParameterOfDynamics(FieldD<T,DESCRIPTOR,FIELD>&& field)
+template <typename PARAMETER, template<typename...> typename DYNAMICS>
+void SuperLattice<T,DESCRIPTOR>::setParameterOfDynamics(FieldD<T,DESCRIPTOR,PARAMETER>&& field)
 {
-  setParameterOfDynamics<FIELD,DYNAMICS<T,DESCRIPTOR>>(std::forward<decltype(field)>(field));
+  setParameterOfDynamics<PARAMETER,DYNAMICS<T,DESCRIPTOR>>(std::forward<decltype(field)>(field));
+}
+
+template<typename T, typename DESCRIPTOR>
+template <typename PARAMETER, Platform PLATFORM, typename FIELD>
+void SuperLattice<T,DESCRIPTOR>::setParameter(FieldArrayD<T,DESCRIPTOR,PLATFORM,FIELD>& fieldArray)
+{
+  static_assert(DESCRIPTOR::template size<PARAMETER>() == DESCRIPTOR::template size<FIELD>(),
+                "PARAMETER size must equal FIELD size");
+  static_assert(std::is_same_v<typename PARAMETER::template value_type<T>,
+                               typename FIELD::template value_type<T>*>,
+                "PARAMETER must store pointers to FIELD components");
+  for (int iC=0; iC < this->getLoadBalancer().size(); ++iC) {
+    _block[iC]->template setParameter<PARAMETER>(fieldArray);
+  }
 }
 
 template<typename T, typename DESCRIPTOR>
@@ -382,6 +467,25 @@ void SuperLattice<T,DESCRIPTOR>::iniEquilibrium(SuperGeometry<T,DESCRIPTOR::d>& 
   iniEquilibrium(sGeometry.getMaterialIndicator(material), rho, u);
 }
 
+template<typename T, typename DESCRIPTOR>
+void SuperLattice<T,DESCRIPTOR>::iniEquilibrium(FunctorPtr<SuperIndicatorF<T,DESCRIPTOR::d>>&& indicator,
+                                                AnalyticalF<DESCRIPTOR::d,T,T>& rho,
+                                                SuperF<DESCRIPTOR::d,T,T>& u)
+{
+  for (int iC = 0; iC < this->_loadBalancer.size(); ++iC) {
+    _block[iC]->iniEquilibrium(indicator->getBlockIndicatorF(iC), rho, u.getBlockF(iC));
+  }
+  _communicationNeeded = true;
+}
+
+template<typename T, typename DESCRIPTOR>
+void SuperLattice<T,DESCRIPTOR>::iniEquilibrium(SuperGeometry<T,DESCRIPTOR::d>& sGeometry, int material,
+                                                AnalyticalF<DESCRIPTOR::d,T,T>& rho,
+                                                SuperF<DESCRIPTOR::d,T,T>& u)
+{
+  iniEquilibrium(sGeometry.getMaterialIndicator(material), rho, u);
+}
+
 
 template<typename T, typename DESCRIPTOR>
 void SuperLattice<T,DESCRIPTOR>::iniRegularized(FunctorPtr<SuperIndicatorF<T,DESCRIPTOR::d>>&& indicator,
@@ -392,7 +496,7 @@ void SuperLattice<T,DESCRIPTOR>::iniRegularized(FunctorPtr<SuperIndicatorF<T,DES
   for (int iC = 0; iC < this->_loadBalancer.size(); ++iC) {
     _block[iC]->iniRegularized(indicator->getBlockIndicatorF(iC), rho, u, pi);
   }
-  this->_communicationNeeded = true;
+  _communicationNeeded = true;
 }
 
 template<typename T, typename DESCRIPTOR>
@@ -407,36 +511,68 @@ void SuperLattice<T,DESCRIPTOR>::iniRegularized(SuperGeometry<T,DESCRIPTOR::d>& 
 template<typename T, typename DESCRIPTOR>
 void SuperLattice<T,DESCRIPTOR>::collideAndStream()
 {
+  using namespace stage;
+
+  waitForBackgroundTasks(PreCollide());
+  auto& load = this->_loadBalancer;
+
   if (_statisticsEnabled) {
     setParameter<statistics::AVERAGE_RHO>(getStatistics().getAverageRho());
   }
 
-  getCommunicator(PreCollide()).communicate();
+  // Optional pre processing stage
+  executePostProcessors(PreCollide());
 
-  for (int iC = 0; iC < this->_loadBalancer.size(); ++iC) {
+  #ifdef PARALLEL_MODE_OMP
+  #pragma omp sections
+  {
+    // Schedule async processing of non-CPU block collisions
+    #pragma omp section
+    {
+      for (int iC = 0; iC < load.size(); ++iC) {
+        if (load.platform(iC) == Platform::GPU_CUDA) {
+          _block[iC]->collide();
+        }
+      }
+    }
+    // Processing of CPU block collisions
+    #pragma omp section
+    {
+      for (int iC = 0; iC < load.size(); ++iC) {
+        if (isPlatformCPU(load.platform(iC))) {
+          _block[iC]->collide();
+        }
+      }
+    }
+  }
+  #else // PARALLEL_MODE_OMP
+  for (int iC = 0; iC < load.size(); ++iC) {
     _block[iC]->collide();
   }
+  #endif
 
-  getCommunicator(PostCollide()).communicate();
+  // Communicate propagation overlap, optional post processing
+  executePostProcessors(PostCollide());
 
-  for (int iC = 0; iC < this->_loadBalancer.size(); ++iC) {
+  // Block-local propagation
+  for (int iC = 0; iC < load.size(); ++iC) {
     _block[iC]->stream();
   }
 
-  getCommunicator(PostStream()).communicate();
-
+  // Communicate (default) post processor neighborhood and apply them
   executePostProcessors(PostStream());
 
-  for (auto& f : _customPostProcessing) {
-    f(*this);
-  }
+  // Execute custom tasks (arbitrary callables)
+  // (used for multi-stage models such as free surface)
+  executeCustomTasks(PostStream());
 
+  // Final communication stage (e.g. for external coupling)
   getCommunicator(PostPostProcess()).communicate();
 
   if (_statisticsEnabled) {
-    resetStatistics();
+    collectStatistics();
   }
-  this->_communicationNeeded = true;
+  _communicationNeeded = true;
 }
 
 template<typename T, typename DESCRIPTOR>
@@ -445,32 +581,52 @@ void SuperLattice<T,DESCRIPTOR>::executePostProcessors(STAGE stage)
 {
   getCommunicator(stage).communicate();
 
-  for (int iC = 0; iC < this->_loadBalancer.size(); ++iC) {
+  auto& load = this->_loadBalancer;
+
+  #ifdef PARALLEL_MODE_OMP
+  #pragma omp sections
+  {
+    #pragma omp section
+    {
+      for (int iC = 0; iC < load.size(); ++iC) {
+        if (load.platform(iC) == Platform::GPU_CUDA) {
+          _block[iC]->template postProcess<STAGE>();
+        }
+      }
+    }
+    #pragma omp section
+    {
+      for (int iC = 0; iC < load.size(); ++iC) {
+        if (isPlatformCPU(load.platform(iC))) {
+          _block[iC]->template postProcess<STAGE>();
+        }
+      }
+    }
+  }
+  #else // PARALLEL_MODE_OMP
+  for (int iC = 0; iC < load.size(); ++iC) {
     _block[iC]->template postProcess<STAGE>();
   }
+  #endif
 }
 
 template<typename T, typename DESCRIPTOR>
 template<typename STAGE>
 SuperCommunicator<T,SuperLattice<T,DESCRIPTOR>>& SuperLattice<T,DESCRIPTOR>::getCommunicator(STAGE stage)
 {
-  if (communication_stages::template contains<STAGE>()) {
-    return *_communicator[communication_stages::template index<STAGE>()];
-  } else {
-    auto iter = _customCommunicator.find(typeid(STAGE));
-    if (iter == _customCommunicator.end()) {
-      iter = std::get<0>(_customCommunicator.emplace(typeid(STAGE),
-                                                     std::make_unique<SuperCommunicator<T,SuperLattice>>(*this)));
-    }
-    return *std::get<1>(*iter);
+  auto iter = _communicator.find(typeid(STAGE));
+  if (iter == _communicator.end()) {
+    iter = std::get<0>(_communicator.emplace(typeid(STAGE),
+                                             std::make_unique<SuperCommunicator<T,SuperLattice>>(*this)));
   }
+  return *std::get<1>(*iter);
 }
 
 template<typename T, typename DESCRIPTOR>
 void SuperLattice<T,DESCRIPTOR>::communicate()
 {
   if (_communicationNeeded) {
-    getCommunicator(Full()).communicate();
+    getCommunicator(stage::Full()).communicate();
     _communicationNeeded = false;
   }
 }
@@ -494,51 +650,6 @@ template<typename T, typename DESCRIPTOR>
 LatticeStatistics<T> const& SuperLattice<T,DESCRIPTOR>::getStatistics() const
 {
   return _statistics;
-}
-
-template<typename T, typename DESCRIPTOR>
-void SuperLattice<T,DESCRIPTOR>::resetStatistics()
-{
-  T weight;
-  T sum_weight = 0;
-  T average_rho = 0;
-  T average_energy = 0;
-  T maxU = 0;
-  T delta = 0;
-
-  getStatistics().reset();
-
-  for (int iC = 0; iC < this->_loadBalancer.size(); ++iC) {
-    delta = this->_cuboidGeometry.get(this->_loadBalancer.glob(iC)).getDeltaR();
-    weight = _block[iC]->getStatistics().getNumCells() * delta
-             * delta * delta;
-    sum_weight += weight;
-    average_rho += _block[iC]->getStatistics().getAverageRho()
-                   * weight;
-    average_energy += _block[iC]->getStatistics().getAverageEnergy()
-                      * weight;
-    if (maxU < _block[iC]->getStatistics().getMaxU()) {
-      maxU = _block[iC]->getStatistics().getMaxU();
-    }
-  }
-#ifdef PARALLEL_MODE_MPI
-  singleton::mpi().reduceAndBcast(sum_weight, MPI_SUM);
-  singleton::mpi().reduceAndBcast(average_rho, MPI_SUM);
-  singleton::mpi().reduceAndBcast(average_energy, MPI_SUM);
-  singleton::mpi().reduceAndBcast(maxU, MPI_MAX);
-#endif
-
-  average_rho = average_rho / sum_weight;
-  average_energy = average_energy / sum_weight;
-
-  getStatistics().reset(average_rho, average_energy, maxU, (int) sum_weight);
-  getStatistics().incrementTime();
-  for (int iC = 0; iC < this->_loadBalancer.size(); ++iC) {
-    delta = this->_cuboidGeometry.get(this->_loadBalancer.glob(iC)).getDeltaR();
-    _block[iC]->getStatistics().reset(average_rho, average_energy,
-        maxU, (int) sum_weight);
-    _block[iC]->getStatistics().incrementTime();
-  }
 }
 
 template<typename T, typename DESCRIPTOR>
@@ -689,12 +800,70 @@ void SuperLattice<T,DESCRIPTOR>::addLatticeCoupling(SuperGeometry<T,DESCRIPTOR::
 template<typename T, typename DESCRIPTOR>
 void SuperLattice<T,DESCRIPTOR>::executeCoupling()
 {
-  getCommunicator(PreCoupling()).communicate();
+  getCommunicator(stage::PreCoupling()).communicate();
   for (int iC = 0; iC < this->_loadBalancer.size(); ++iC) {
     _block[iC]->executeCoupling();
   }
-  getCommunicator(PostCoupling()).communicate();
+  executeCustomTasks(stage::Coupling());
+  getCommunicator(stage::PostCoupling()).communicate();
   _communicationNeeded = true;
+}
+
+template<typename T, typename DESCRIPTOR>
+template<typename STAGE>
+void SuperLattice<T,DESCRIPTOR>::executeCustomTasks(STAGE stage)
+{
+  for (auto& f : _customTasks[typeid(STAGE)]) {
+    f();
+  }
+}
+
+template<typename T, typename DESCRIPTOR>
+template <typename STAGE, typename F>
+void SuperLattice<T,DESCRIPTOR>::scheduleBackgroundTask(F&& f)
+{
+  _backgroundTasks[typeid(STAGE)].emplace_back(singleton::pool().schedule(f));
+}
+
+template<typename T, typename DESCRIPTOR>
+template <typename F>
+void SuperLattice<T,DESCRIPTOR>::scheduleBackgroundOutput(F&& f)
+{
+  auto& load = this->getLoadBalancer();
+  for (int iC=0; iC < load.size(); ++iC) {
+    if (isPlatformCPU(load.platform(iC))) {
+      scheduleBackgroundTask<stage::PreCollide>(std::bind(f, iC));
+    }
+  }
+  for (int iC=0; iC < load.size(); ++iC) {
+    if (load.platform(iC) == Platform::GPU_CUDA) {
+      scheduleBackgroundTask<stage::PreContextSwitchTo<ProcessingContext::Evaluation>>(std::bind(f, iC));
+    }
+  }
+}
+
+template<typename T, typename DESCRIPTOR>
+template <typename CONTEXT>
+void SuperLattice<T,DESCRIPTOR>::scheduleBackgroundOutputVTK(CONTEXT&& vtkContext)
+{
+  vtkContext([](auto& writer, std::size_t iT) {
+    writer.writePVD(iT);
+  });
+  scheduleBackgroundOutput([vtkContext](int iC) {
+    vtkContext([&](auto& writer, std::size_t iT) {
+      writer.writeVTI(iT, iC);
+    });
+  });
+}
+
+template<typename T, typename DESCRIPTOR>
+template <typename STAGE>
+void SuperLattice<T,DESCRIPTOR>::waitForBackgroundTasks(STAGE)
+{
+  if (!_backgroundTasks[typeid(STAGE)].empty()) {
+    singleton::pool().waitFor(_backgroundTasks[typeid(STAGE)]);
+    _backgroundTasks[typeid(STAGE)].clear();
+  }
 }
 
 template<typename T, typename DESCRIPTOR>

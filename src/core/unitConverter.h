@@ -102,6 +102,7 @@ public:
       _conversionMass( _conversionDensity * util::pow(_conversionLength, 3) ),
       _conversionViscosity(_conversionLength * _conversionLength / _conversionTime),
       _conversionForce( _conversionMass * _conversionLength / (_conversionTime * _conversionTime) ),
+      _conversionTorque( _conversionMass * _conversionLength * _conversionLength / (_conversionTime * _conversionTime) ),
       _conversionPressure( _conversionForce / util::pow(_conversionLength, 2) ),
       _charPhysLength(charPhysLength),
       _charPhysVelocity(charPhysVelocity),
@@ -311,6 +312,22 @@ public:
     return _conversionForce;
   }
 
+  /// conversion from lattice to  physical torque
+  constexpr T getPhysTorque ( T latticeTorque ) const
+  {
+    return _conversionTorque * latticeTorque;
+  }
+  /// conversion from physical to lattice torque
+  constexpr T getLatticeTorque( T physTorque ) const
+  {
+    return physTorque / _conversionTorque;
+  }
+  /// access (read-only) to private member variable
+  constexpr T getConversionFactorTorque() const
+  {
+    return _conversionTorque;
+  }
+
   /// conversion from lattice to  physical pressure
   constexpr T getPhysPressure( T latticePressure ) const
   {
@@ -341,6 +358,7 @@ protected:
   const T _conversionMass;        // kg
   const T _conversionViscosity;   // m^2 / s
   const T _conversionForce;       // kg m / s^2
+  const T _conversionTorque;      // kg m^2 / s^2
   const T _conversionPressure;    // kg / m s^2
 
   // physical units, e.g characteristic or reference values

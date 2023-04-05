@@ -49,7 +49,7 @@ SmoothIndicatorCuboid2D<T,S,PARTICLE>::SmoothIndicatorCuboid2D(Vector<S,2>center
   this->_epsilon = epsilon;
   if constexpr (!PARTICLE) {
     this->_pos =  _ind.getCenter();
-    this->_theta = theta * M_PI/180.;
+    this->_theta = util::degreeToRadian(theta);
   }
 
   this->_circumRadius = .5*(util::sqrt(util::pow( xLength, 2)+util::pow( yLength, 2))) + 0.5*epsilon;
@@ -62,12 +62,17 @@ SmoothIndicatorCuboid2D<T,S,PARTICLE>::SmoothIndicatorCuboid2D(Vector<S,2>center
       this->_pos[0] + this->getCircumRadius(),
       this->_pos[1] + this->getCircumRadius()
     };
-    this->init(this->_theta);
+    this->init();
   }
 }
 
 template <typename T, typename S, bool PARTICLE>
-S SmoothIndicatorCuboid2D<T, S, PARTICLE>::calcArea( )
+IndicatorCuboid2D<S>& SmoothIndicatorCuboid2D<T,S,PARTICLE>::getIndicator(){
+  return _ind;
+}
+
+template <typename T, typename S, bool PARTICLE>
+S SmoothIndicatorCuboid2D<T, S, PARTICLE>::getArea( )
 {
   return _ind.getxLength()*_ind.getyLength();
 }
@@ -77,7 +82,7 @@ Vector<S,2> SmoothIndicatorCuboid2D<T, S, PARTICLE>::calcMofiAndMass( const S de
 {
   const T xLength = _ind.getxLength();
   const T yLength = _ind.getyLength();
-  const T mass = calcArea()*density;
+  const T mass = getArea()*density;
   const T mofi = 1./12.*mass*(xLength*xLength+yLength*yLength);
   return Vector<S,2>(mofi, mass);
 }
@@ -94,7 +99,7 @@ const S SmoothIndicatorCuboid2D<T, S, PARTICLE>::signedDistance( const Vector<S,
   Vector<S,2> p;
   if constexpr(!PARTICLE) {
     // rotation & translation
-    p = body::motion::rotation<2,S,true>::execute(input, this->_rotMat, this->getPos());
+    p = util::executeRotation<S,2,true>(input, this->_rotMat, this->getPos());
   }
   else {
     p = input;
@@ -108,7 +113,7 @@ bool SmoothIndicatorCuboid2D<T, S, PARTICLE>::distance(S& distance, const Vector
   Vector<S,2> p;
   if constexpr(!PARTICLE) {
     // rotation & translation
-    p = body::motion::rotation<2,S,true>::execute(origin, this->_rotMat, this->getPos());
+    p = util::executeRotation<S,2,true>(origin, this->_rotMat, this->getPos());
   }
   else {
     p = origin;
@@ -135,12 +140,18 @@ SmoothIndicatorCircle2D<T,S,PARTICLE>::SmoothIndicatorCircle2D(Vector<S,2>center
   if constexpr (!PARTICLE) {
     this->_myMin = {this->_pos[0] - this->getCircumRadius(), this->_pos[1] - this->getCircumRadius()};
     this->_myMax = {this->_pos[0] + this->getCircumRadius(), this->_pos[1] + this->getCircumRadius()};
-    this->init(0.);
+    this->_theta = 0.;
+    this->init();
   }
 }
 
 template <typename T, typename S, bool PARTICLE>
-S SmoothIndicatorCircle2D<T, S, PARTICLE>::calcArea( )
+IndicatorCircle2D<S>& SmoothIndicatorCircle2D<T,S,PARTICLE>::getIndicator(){
+  return _ind;
+}
+
+template <typename T, typename S, bool PARTICLE>
+S SmoothIndicatorCircle2D<T, S, PARTICLE>::getArea( )
 {
   return M_PI*_ind.getRadius()*_ind.getRadius();
 }
@@ -149,7 +160,7 @@ template <typename T, typename S, bool PARTICLE>
 Vector<S,2> SmoothIndicatorCircle2D<T, S, PARTICLE>::calcMofiAndMass( const S density )
 {
   const T radius = _ind.getRadius();
-  const T mass = calcArea()*density;
+  const T mass = getArea()*density;
   const T mofi = 0.5 * mass * radius * radius;
   return Vector<S,2>(mofi, mass);
 }
@@ -193,19 +204,24 @@ SmoothIndicatorTriangle2D<T,S,PARTICLE>::SmoothIndicatorTriangle2D(Vector<S,2>ce
   this->_epsilon = epsilon;
   if constexpr (!PARTICLE) {
     this->_pos = _ind.getCenter();
-    this->_theta = theta * M_PI/180.;
+    this->_theta = util::degreeToRadian(theta);
   }
 
   this->_circumRadius = radius + 0.5*epsilon;
   if constexpr (!PARTICLE) {
     this->_myMin = {center[0] - this->getCircumRadius(), center[1] - this->getCircumRadius()};
     this->_myMax = {center[0] + this->getCircumRadius(), center[1] + this->getCircumRadius()};
-    this->init(this->_theta);
+    this->init();
   }
 }
 
 template <typename T, typename S, bool PARTICLE>
-S SmoothIndicatorTriangle2D<T, S, PARTICLE>::calcArea( )
+IndicatorEquiTriangle2D<S>& SmoothIndicatorTriangle2D<T,S,PARTICLE>::getIndicator(){
+  return _ind;
+}
+
+template <typename T, typename S, bool PARTICLE>
+S SmoothIndicatorTriangle2D<T, S, PARTICLE>::getArea( )
 {
   const T radius = _ind.getRadius();
   const T altitude = 1.5*radius;
@@ -219,7 +235,7 @@ Vector<S,2> SmoothIndicatorTriangle2D<T, S, PARTICLE>::calcMofiAndMass( const S 
   const T radius = _ind.getRadius();
   const T altitude = 1.5*radius;
   const T base = util::sqrt(3)*radius;
-  const T mass = density*calcArea();
+  const T mass = density*getArea();
   const T mofi = mass*((altitude*altitude/18.)+(base*base/24.));
   return Vector<S,2>(mofi, mass);
 }
@@ -236,7 +252,7 @@ const S SmoothIndicatorTriangle2D<T, S, PARTICLE>::signedDistance( const Vector<
   Vector<S,2> p;
   if constexpr(!PARTICLE) {
     // rotation & translation
-    p = body::motion::rotation<2,S,true>::execute(input, this->_rotMat, this->getPos());
+    p = util::executeRotation<S,2,true>(input, this->_rotMat, this->getPos());
   }
   else {
     p = input;
@@ -250,7 +266,7 @@ bool SmoothIndicatorTriangle2D<T, S, PARTICLE>::distance(S& distance, const Vect
   Vector<S,2> p;
   if constexpr(!PARTICLE) {
     // rotation
-    p = body::motion::rotation<2,S>::execute(origin, this->_rotMat, this->getPos());
+    p = util::executeRotation<S,2>(origin, this->_rotMat, this->getPos());
     // translation
     p -= this->getPos();
   }
@@ -277,7 +293,8 @@ SmoothIndicatorCustom2D<T,S,PARTICLE>::SmoothIndicatorCustom2D(T latticeSpacing,
   this->_epsilon = epsilon;
   if constexpr(!PARTICLE) {
     this->_pos = pos;         // global position of the local center
-    this->_theta = theta * (M_PI/180.);
+    this->_theta = util::degreeToRadian(theta);
+    this->init();
   }
 
   initData(*_indPtr);
@@ -286,7 +303,6 @@ SmoothIndicatorCustom2D<T,S,PARTICLE>::SmoothIndicatorCustom2D(T latticeSpacing,
 template <typename T, typename S, bool PARTICLE>
 void SmoothIndicatorCustom2D<T,S,PARTICLE>::initData(IndicatorF2D<T>& ind)
 {
-  initRotationMatrix();
   initBlockData(ind);
 
   // calculate mass and centerpoint for rotation
@@ -296,38 +312,27 @@ void SmoothIndicatorCustom2D<T,S,PARTICLE>::initData(IndicatorF2D<T>& ind)
 }
 
 template <typename T, typename S, bool PARTICLE>
-void SmoothIndicatorCustom2D<T,S,PARTICLE>::initRotationMatrix()
-{
-  // initialize rotation matrix
-  if constexpr (!PARTICLE) {
-    this->_rotMat[0] = util::cos(this->_theta);
-    this->_rotMat[1] = util::sin(this->_theta);
-    this->_rotMat[2] = -util::sin(this->_theta);
-    this->_rotMat[3] = util::cos(this->_theta);
-  }
-}
-
-template <typename T, typename S, bool PARTICLE>
 void SmoothIndicatorCustom2D<T,S,PARTICLE>::initBlockData(IndicatorF2D<T>& ind)
 {
   OstreamManager clout(std::cout,"createIndicatorCustom2D");
 
   // initialize temporary values
-  int blockDataSize[3];
-  int blockDataPadding[2];
+  Vector<int,2> blockDataSize;
+  Vector<int,2 >blockDataPadding;
   for (unsigned iD=0; iD<2; ++iD) {
-    blockDataSize[iD] = util::ceil( (ind.getMax()[iD] - ind.getMin()[iD]) / _latticeSpacing );
+    blockDataSize[iD] = util::max(
+        util::ceil( (ind.getMax()[iD] - ind.getMin()[iD]) / _latticeSpacing ), 1);
     // Add a padding so that the distance can be cached in the vicinity of the geometry
-    blockDataPadding[iD] = 2*util::ceil(0.05*blockDataSize[iD]);
+    blockDataPadding[iD] = 2*util::ceil(0.2*blockDataSize[iD]);
     blockDataSize[iD] += blockDataPadding[iD];
   }
-  blockDataSize[2] = 1;
 
   // create blockData containing signed distance information
-  this->_blockData.reset(new BlockData<2,T,BaseType<T>>({blockDataSize, 0}));
+  _cuboid = std::make_unique<Cuboid2D<T>>(PhysR<T,2>(0.), _latticeSpacing, blockDataSize);
+  this->_blockData.reset(new BlockData<2,T,BaseType<T>>(*_cuboid));
   int iX[2];
-  for (iX[0]=0; iX[0] < blockDataSize[0]; iX[0]++) {
-    for (iX[1]=0; iX[1] < blockDataSize[1]; iX[1]++) {
+  for (iX[0]=0; iX[0] < this->_blockData->getNx(); ++iX[0]) {
+    for (iX[1]=0; iX[1] < this->_blockData->getNy(); ++iX[1]) {
       Vector<T,2> input;
       for (unsigned iD=0; iD<2; ++iD) {
         input[iD] = (iX[iD]-blockDataPadding[iD]/2)*_latticeSpacing+ind.getMin()[iD];
@@ -335,6 +340,9 @@ void SmoothIndicatorCustom2D<T,S,PARTICLE>::initBlockData(IndicatorF2D<T>& ind)
       this->_blockData->get(iX) = ind.signedDistance(input);
     }
   }
+
+  this->_cacheFunctor = std::make_unique<BlockDataF2D<T,BaseType<T>>>(*(this->_blockData));
+  this->_interpolateCache = std::make_unique<AnalyticalFfromBlockF2D<T,T>>(*(this->_cacheFunctor), *_cuboid);
 }
 
 template <typename T, typename S, bool PARTICLE>
@@ -359,7 +367,7 @@ void SmoothIndicatorCustom2D<T,S,PARTICLE>::calcCenter()
 }
 
 template <typename T, typename S, bool PARTICLE>
-S SmoothIndicatorCustom2D<T,S,PARTICLE>::calcArea( )
+S SmoothIndicatorCustom2D<T,S,PARTICLE>::getArea( )
 {
   return _area;
 }
@@ -397,13 +405,13 @@ void SmoothIndicatorCustom2D<T,S,PARTICLE>::calcCircumRadius()
   Vector<T,2> min(std::numeric_limits<olb::BaseType<T>>::max());
   Vector<T,2> max(-std::numeric_limits<olb::BaseType<T>>::max());
   Vector<T,2> distance;
-  T maxDistance = -std::numeric_limits<olb::BaseType<T>>::max();
+  T maxDistance{0};
 
   int input[2];
   for (input[0] = 0; input[0] < this->_blockData->getNx(); ++input[0]) {
-    distance[0] = this->_center[0] - this->_latticeSpacing*input[0];
+    distance[0] = this->_latticeSpacing*input[0] - this->_center[0];
     for (input[1] = 0; input[1] < this->_blockData->getNy(); ++input[1]) {
-      distance[1] = this->_center[1] - this->_latticeSpacing*input[1];
+      distance[1] = this->_latticeSpacing*input[1] - this->_center[1];
       if (regardCell(input)) {
         if constexpr (!PARTICLE) {
           for (unsigned iD=0; iD<2; ++iD) {
@@ -417,13 +425,13 @@ void SmoothIndicatorCustom2D<T,S,PARTICLE>::calcCircumRadius()
   }
 
   if constexpr (!PARTICLE) {
-    min -= Vector<T,2>(-this->_epsilon);
-    max += Vector<T,2>(-this->_epsilon);
-    this->_myMin = this->_pos+min;
-    this->_myMax = this->_pos+max;
+    min -= Vector<T,2>(0.5 * this->_epsilon + _latticeSpacing);
+    max += Vector<T,2>(0.5 * this->_epsilon + _latticeSpacing);
+    this->_myMin = this->_pos + min;
+    this->_myMax = this->_pos + max;
   }
 
-  this->_circumRadius = maxDistance + .5*this->_epsilon;
+  this->_circumRadius = maxDistance + T{0.5} * (this->_epsilon + util::sqrt(2) * _latticeSpacing);
 }
 
 template <typename T, typename S, bool PARTICLE>
@@ -441,35 +449,50 @@ Vector<S,2> SmoothIndicatorCustom2D<T,S,PARTICLE>::surfaceNormal( const Vector<S
 template <typename T, typename S, bool PARTICLE>
 const S SmoothIndicatorCustom2D<T,S,PARTICLE>::signedDistance( const Vector<S,2> input )
 {
-  // Translation
-  T xDist = input[0];
-  T yDist = input[1];
+  PhysR<T,2> position = input;
   if constexpr (!PARTICLE) {
-    xDist -= this->getPos()[0];
-    yDist -= this->getPos()[1];
+    // translation, counter-clockwise rotation by _theta=-theta around (0/0) and movement from rotation center to local center
+    position = util::executeRotation<T,2,true>(input, this->_rotMat, this->getPos());
+  }
+  // The block data originates in (0,0,0) therefore we translate the input position which is relative to center of mass
+  const PhysR<T,2> positionInCache = this->_center + position;
+
+  T signedDistance(0.);
+  if(_interpolateCache->operator()(&signedDistance, positionInCache.data())) {
+    return signedDistance;
   }
 
-  // counter-clockwise rotation by _theta=-theta around (0/0) and movement from rotation center to local center
-  int x,y;
-  if constexpr(PARTICLE) {
-    x = (xDist + this->_center[0]) / this->_latticeSpacing;
-    y = (yDist + this->_center[1]) / this->_latticeSpacing;
+  // If all points were outside return an estimation instead
+  LatticeR<2> latticePosition;
+  PhysR<T,2> extraDistance;
+  for(unsigned iDim=0; iDim<2; ++iDim) {
+    latticePosition[iDim] = util::round( positionInCache[iDim] / this->_latticeSpacing );
+    latticePosition[iDim] = util::max(0, latticePosition[iDim]);
+    latticePosition[iDim] = util::min(this->_blockData->getExtent()[iDim] - 1, latticePosition[iDim]);
+    // The extra distance is always positive because it must be outside the geometry
+    extraDistance[iDim] = util::abs(_latticeSpacing * latticePosition[iDim] - positionInCache[iDim]);
   }
-  else {
-    x = (xDist*this->_rotMat[0] + yDist*this->_rotMat[2] + this->_center[0]) / this->_latticeSpacing;
-    y = (xDist*this->_rotMat[1] + yDist*this->_rotMat[3] + this->_center[1]) / this->_latticeSpacing;
-  }
-
-  if (x >= 0 && x < this->_blockData->getNx() && y >= 0 && y < this->_blockData->getNy()) {
-    return this->_blockData->get({x, y});
-  }
-  return 1;
+  return this->_blockData->get(latticePosition.data()) + norm(extraDistance);
 }
 
 template <typename T, typename S, bool PARTICLE>
 bool SmoothIndicatorCustom2D<T,S,PARTICLE>::regardCell(int input[2])
 {
   return this->_blockData->get(input) < std::numeric_limits<T>::epsilon();
+}
+
+template <typename T, typename S, bool PARTICLE>
+bool SmoothIndicatorCustom2D<T,S,PARTICLE>::operator()(T output[], const S input[])
+{
+  PhysR<T,2> pos(input[0], input[1]);
+  if constexpr(!PARTICLE) {
+    pos = util::executeRotation<S,2,true>(pos, this->_rotMat, this->getPos());
+  }
+  if(norm(pos) < this->_circumRadius) {
+    return SmoothIndicatorF2D<T, S, PARTICLE>::operator()(output, input);
+  }
+  output[0] = T{0};
+  return false;
 }
 
 
@@ -487,7 +510,8 @@ SmoothIndicatorHTCircle2D<T,S,PARTICLE>::SmoothIndicatorHTCircle2D(Vector<S,2> c
   if constexpr (!PARTICLE) {
     this->_myMin = {center[0] - this->getCircumRadius(), center[1] - this->getCircumRadius()};
     this->_myMax = {center[0] + this->getCircumRadius(), center[1] + this->getCircumRadius()};
-    this->init(0.);
+    this->_theta = 0.;
+    this->init();
   }
 
   T mass = M_PI*radius*radius*density;

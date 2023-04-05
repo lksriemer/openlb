@@ -50,7 +50,7 @@ namespace olb {
 template<typename T, typename W=T>
 class SuperVTMwriter2D {
 public:
-  SuperVTMwriter2D( std::string name, bool binary = true );
+  SuperVTMwriter2D( std::string name, int overlap = 1, bool binary = true );
   ///  writes functors stored in pointerVec
   ///  every thread writes a vti file with data from his cuboids
   ///  the vti files are linked in a pvd file
@@ -108,6 +108,7 @@ private:
   std::string _name;
   ///  holds added functor, to simplify the use of write function
   std::vector< SuperF2D<T,W>* > _pointerVec;
+  int _overlap;
   bool _binary =true;
 };
 

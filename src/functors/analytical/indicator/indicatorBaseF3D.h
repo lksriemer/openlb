@@ -73,8 +73,100 @@ public:
                             std::function<Vector<S,3>(const Vector<S,3>&)> transformPos);
   /// Returns true if `point` is inside a cube with corners `_myMin` and `_myMax`
   bool isInsideBox(Vector<S,3> point);
+
+  // Returns random position in indicator domain
+  /**
+   * \param randomness Callable returning uniformly sampled values in [0,1]
+   **/
+  virtual Vector<S,3> getSample(const std::function<S()>& randomness) const {
+    throw std::runtime_error("Indicator doesn't support random sampling");
+  }
 };
 
+template <typename S>
+class RegularCachedIndicatorF3D : public IndicatorF3D<S> {
+private:
+  IndicatorF3D<S>& _indicatorF;
+  const S _deltaR;
+
+  Cuboid3D<S> _cacheCuboid;
+  BlockStructureD<3> _cacheBlock;
+  cpu::sisd::Column<std::uint8_t> _cache;
+
+public:
+  RegularCachedIndicatorF3D(IndicatorF3D<S>& indicatorF, S deltaR):
+    _indicatorF(indicatorF),
+    _deltaR(deltaR),
+    _cacheCuboid(indicatorF.getMin()[0],  indicatorF.getMin()[1], indicatorF.getMin()[2], deltaR,
+                 (int)((indicatorF.getMax()[0] - indicatorF.getMin()[0]) / deltaR + 1.5),
+                 (int)((indicatorF.getMax()[1] - indicatorF.getMin()[1]) / deltaR + 1.5),
+                 (int)((indicatorF.getMax()[2] - indicatorF.getMin()[2]) / deltaR + 1.5)),
+    _cacheBlock(_cacheCuboid.getExtent(), 0),
+    _cache(_cacheBlock.getNcells())
+  { }
+
+  bool operator() (bool output[1], const S input[3]) override {
+    Vector<int,3> latticeR{};
+    if (_cacheCuboid.getLatticeR(input, latticeR)) {
+      std::size_t iCell = _cacheBlock.getCellId(latticeR);
+      if (_cache[iCell] == 0) {
+        bool result;
+        _indicatorF(&result, input);
+        _cache[iCell] = result ? 1 : 2;
+        output[0] = result;
+        return true;
+      } else {
+        output[0] = _cache[iCell] == 1;
+        return true;
+      }
+    } else {
+      return _indicatorF(output, input);
+    }
+  }
+
+  bool save(std::string fileName) {
+    return _cache.save(fileName);
+  }
+  bool load(std::string fileName) {
+    return _cache.load(fileName);
+  }
+
+  Vector<S,3>& getMin() override {
+    return _indicatorF.getMin();
+  }
+  Vector<S,3>& getMax() override {
+    return _indicatorF.getMax();
+  }
+  bool distance(S& distance, const Vector<S,3>& origin, S precision, const Vector<S,3>& direction) override {
+    return _indicatorF.distance(distance, origin, precision, direction);
+  }
+  bool distance(S& distance, const Vector<S,3>& origin, const Vector<S,3>& direction, S precision, S pitch) override {
+    return _indicatorF.distance(distance, origin, direction, precision, pitch);
+  }
+  bool distance(S& distance, const Vector<S,3>& origin, const Vector<S,3>& direction, int iC=-1) override {
+    return _indicatorF.distance(distance, origin, direction, iC);
+  }
+  bool distance(S& distance, const Vector<S,3>& origin) override {
+    return _indicatorF.distance(distance, origin);
+  }
+  bool distance(S& distance, const S input[]) override {
+    return _indicatorF.distance(distance, input);
+  }
+  bool normal(Vector<S,3>& normal, const Vector<S,3>& origin, const Vector<S,3>& direction, int iC=-1) override {
+    return _indicatorF.normal(normal, origin, direction, iC);
+  }
+  bool rotOnAxis(Vector<S,3>& vec_rot, const Vector<S,3>& vec, const Vector<S,3>& axis, S& theta) override {
+    return _indicatorF.rotOnAxis(vec_rot, vec, axis, theta);
+  }
+
+  S signedDistance(const Vector<S,3>& input) override {
+    return _indicatorF.signedDistance(input);
+  }
+  Vector<S,3> surfaceNormal(const Vector<S,3>& pos, const S meshSize) override {
+    return _indicatorF.surfaceNormal(pos, meshSize);
+  }
+
+};
 
 template <typename S>
 class IndicatorIdentity3D : public IndicatorF3D<S> {

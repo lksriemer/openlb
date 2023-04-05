@@ -143,6 +143,62 @@ public:
     return indices.size() * sizeof(typename COMMUNICATEE::value_type);
   }
 
+  //// ADDITIONAL NON OVERWITTEN CALLS: Removing the necessity to provide indices.
+  ///- Here, intendet to be used for std::array (for which std::tuple_size works),
+  ///  for other COMMUNICATEE types, a different static size retrieval should
+  ///  be implemented.
+  ///- Actually, vector might also work here, however is unfortunately rather
+  ///  passed to ConcreteCommunicatable<std::vector<COLUMN>>
+  ///- TODO: Include properly into complete framework, if found usefull.
+
+  /// Get serialized size for complete data
+  std::size_t size() const
+  {
+    return std::tuple_size<COMMUNICATEE>::value * sizeof(typename COMMUNICATEE::value_type);
+  }
+
+  /// Serialize complete data
+  std::size_t serialize(std::uint8_t* buffer) const
+  {
+    std::size_t noI = std::tuple_size<COMMUNICATEE>::value;
+    if (meta::is_aligned<typename COMMUNICATEE::value_type>(buffer)) {
+      auto* target = reinterpret_cast<typename COMMUNICATEE::value_type*>(buffer);
+      for (CellID index=0; index<noI; ++index) {
+        *(target++) = _communicatee[index];
+      }
+    } else {
+      std::uint8_t* target = buffer;
+      for (CellID index=0; index<noI; ++index) {
+        std::memcpy(target,
+                    reinterpret_cast<const void*>(&_communicatee[index]),
+                    sizeof(typename COMMUNICATEE::value_type));
+        target += sizeof(typename COMMUNICATEE::value_type);
+      }
+    }
+    return noI * sizeof(typename COMMUNICATEE::value_type);
+  }
+
+  /// Deserialize complete data
+  std::size_t deserialize(const std::uint8_t* buffer)
+  {
+    std::size_t noI = std::tuple_size<COMMUNICATEE>::value;
+    if (meta::is_aligned<typename COMMUNICATEE::value_type>(buffer)) {
+      const auto* source = reinterpret_cast<const typename COMMUNICATEE::value_type*>(buffer);
+      for (CellID index=0; index<noI; ++index) {
+        _communicatee[index] = *(source++);
+      }
+    } else {
+      const std::uint8_t* source = buffer;
+      for (CellID index=0; index<noI; ++index) {
+        std::memcpy(reinterpret_cast<void*>(&_communicatee[index]),
+                    source,
+                    sizeof(typename COMMUNICATEE::value_type));
+        source += sizeof(typename COMMUNICATEE::value_type);
+      }
+    }
+    return noI * sizeof(typename COMMUNICATEE::value_type);
+  }
+
 };
 
 template <typename COLUMN>

@@ -41,29 +41,28 @@
 
 namespace olb {
 
-template<typename T, typename DESCRIPTOR>
-SuperEuklidNorm3D<T, DESCRIPTOR>::SuperEuklidNorm3D(
-  SuperLatticeF3D<T, DESCRIPTOR>& f)
-  : SuperLatticeF3D<T, DESCRIPTOR>(f.getSuperLattice(), 1), _f(f)
+template<typename T>
+SuperEuklidNorm3D<T>::SuperEuklidNorm3D(SuperF3D<T>& f)
+  : SuperF3D<T>(f.getSuperStructure(), 1), _f(f)
 {
   this->getName() = "EuklidNorm(" + _f.getName() + ")";
-  int maxC = this->_sLattice.getLoadBalancer().size();
+  const int maxC = f.getSuperStructure().getLoadBalancer().size();
   this->_blockF.reserve(maxC);
   for (int iC = 0; iC < maxC; iC++) {
-    this->_blockF.emplace_back(new BlockEuklidNorm3D<T, DESCRIPTOR>(f.getBlockF(iC)));
+    this->_blockF.emplace_back(new BlockEuklidNorm3D<T>(f.getBlockF(iC)));
   }
 }
 
-template<typename T, typename DESCRIPTOR>
-BlockEuklidNorm3D<T, DESCRIPTOR>::BlockEuklidNorm3D(BlockF3D<T>& f)
+template<typename T>
+BlockEuklidNorm3D<T>::BlockEuklidNorm3D(BlockF3D<T>& f)
   : BlockF3D<T>(f.getBlockStructure(), 1),
     _f(f)
 {
   this->getName() = "EuklidNorm(" + f.getName() + ")";
 }
 
-template<typename T, typename DESCRIPTOR>
-bool BlockEuklidNorm3D<T, DESCRIPTOR>::operator()(T output[], const int input[])
+template<typename T>
+bool BlockEuklidNorm3D<T>::operator()(T output[], const int input[])
 {
   output[0] = T();
   T data[_f.getTargetDim()];

@@ -24,6 +24,7 @@
 #include "superData.hh"
 #include "blockData.hh"
 #include "fieldArrayD.hh"
+#include "fieldParametersD.hh"
 
 #include "superLattice.hh"
 #include "blockLattice.hh"

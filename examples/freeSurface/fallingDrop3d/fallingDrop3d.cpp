@@ -28,7 +28,7 @@
 using namespace olb;
 using namespace olb::descriptors;
 
-using T = double;
+using T = float;
 using DESCRIPTOR = D3Q27<descriptors::FORCE, FreeSurface::MASS, FreeSurface::EPSILON, FreeSurface::CELL_TYPE, FreeSurface::CELL_FLAGS, FreeSurface::TEMP_MASS_EXCHANGE, FreeSurface::PREVIOUS_VELOCITY>;
 
 /*
@@ -75,7 +75,7 @@ public:
       for(int i = -1; i <= 1; ++i){
         for(int j = -1; j <= 1; ++j){
           for(int k = -1; k <= 1; ++k){
-            std::array<T,DESCRIPTOR::d> shifted_diff = {diff[0]+i*lattice_size*1.1, diff[1]+j*lattice_size*1.1, diff[2] + k * lattice_size*1.1};
+            std::array<T,DESCRIPTOR::d> shifted_diff = {diff[0]+i*lattice_size*T{1.1}, diff[1]+j*lattice_size*T{1.1}, diff[2] + k * lattice_size*T{1.1}};
             if((shifted_diff[0]*shifted_diff[0] + shifted_diff[1] * shifted_diff[1]+shifted_diff[2]*shifted_diff[2]) <= radius*radius){
               output[0] = cell_values[1];
               return true;
@@ -98,7 +98,7 @@ public:
   FallingDropVel3D(T lattice_size_, const std::array<T,DESCRIPTOR::d>& lattice_speed_):AnalyticalF<3,T,T>{3}, lattice_size{lattice_size_}, lattice_speed{lattice_speed_}{}
 
   bool operator()(T output[], const T x[]) override {
-    
+
 
     T radius = 0.00155;
     std::array<T,DESCRIPTOR::d> point = {0.015, 0.015, 2 * radius + lattice_size * 2};
@@ -110,7 +110,7 @@ public:
     for(int i = -1; i <= 1; ++i){
       for(int j = -1; j <= 1; ++j){
         for(int k = -1; k <= 1; ++k){
-          std::array<T,DESCRIPTOR::d> shifted_diff = {diff[0]+i*lattice_size*1.1, diff[1]+j*lattice_size*1.1,diff[2]+k*lattice_size*1.1};
+          std::array<T,DESCRIPTOR::d> shifted_diff = {diff[0]+i*lattice_size*T{1.1}, diff[1]+j*lattice_size*T{1.1},diff[2]+k*lattice_size*T{1.1}};
           if((shifted_diff[0]*shifted_diff[0] + shifted_diff[1] * shifted_diff[1]+shifted_diff[2]*shifted_diff[2]) <= radius*radius){
             output[0] = lattice_speed[0];
             output[1] = lattice_speed[1];
@@ -187,8 +187,6 @@ void prepareLattice( UnitConverter<T,DESCRIPTOR> const& converter,
   OstreamManager clout( std::cout,"prepareLattice" );
   clout << "Prepare Lattice ..." << std::endl;
 
-  // Material=0 -->do nothing
-  sLattice.defineDynamics<NoDynamics<T,DESCRIPTOR>>(superGeometry, 0);
   // Material=1 -->bulk dynamics
   sLattice.defineDynamics<SmagorinskyForcedBGKdynamics<T,DESCRIPTOR>>( superGeometry, 1);
   // Material=2 -->no-slip boundary
@@ -196,7 +194,7 @@ void prepareLattice( UnitConverter<T,DESCRIPTOR> const& converter,
   //setSlipBoundary<T,DESCRIPTOR>(sLattice, superGeometry, 2);
 
   sLattice.setParameter<descriptors::OMEGA>(converter.getLatticeRelaxationFrequency());
-  sLattice.setParameter<collision::LES::Smagorinsky>(0.2);
+  sLattice.setParameter<collision::LES::Smagorinsky>(T(0.2));
 
   prepareFallingDrop(converter, sLattice, superGeometry, lattice_size, helper);
   clout << "Prepare Lattice ... OK" << std::endl;
@@ -228,29 +226,34 @@ void setInitialValues(SuperLattice<T, DESCRIPTOR>& sLattice,
   sLattice.initialize();
 }
 
-void getResults( SuperLattice<T,DESCRIPTOR>& sLattice,
-                 UnitConverter<T,DESCRIPTOR> const& converter, int iT,
-                 SuperGeometry<T,3>& superGeometry, util::Timer<T>& timer)
+namespace {
+FreeSurfaceAppHelper free_surface_config;
+
+class FreeSurfaceConfig {
+public:
+  T viscosity = 1e-4;
+  T density = 1e3;
+  T physTime = 0.01;
+  T latticeRelaxationTime = .516;
+  int N = 100;
+
+  // Anti jitter value
+  T transitionThreshold = 1e-3;
+  // When to remove lonely cells
+  T lonelyThreshold = 1.0;
+};
+
+}
+
+void getResults(SuperLattice<T,DESCRIPTOR>& sLattice,
+                UnitConverter<T,DESCRIPTOR> const& converter, int iT,
+                SuperGeometry<T,3>& superGeometry, util::Timer<T>& timer)
 {
   OstreamManager clout( std::cout,"getResults" );
 
-  SuperVTMwriter3D<T> vtmWriter( "freeSurface" );
-  SuperLatticePhysVelocity3D<T, DESCRIPTOR> velocity( sLattice, converter );
-  SuperLatticePhysPressure3D<T, DESCRIPTOR> pressure( sLattice, converter );
-  SuperLatticeExternalScalarField3D<T, DESCRIPTOR, FreeSurface::EPSILON> epsilon( sLattice );
-  SuperLatticeExternalScalarField3D<T, DESCRIPTOR, FreeSurface::CELL_TYPE> cells( sLattice );
-  SuperLatticeExternalScalarField3D<T, DESCRIPTOR, FreeSurface::MASS> mass( sLattice );
-  epsilon.getName() = "epsilon";
-  cells.getName() = "cell_type";
-  mass.getName() = "mass";
-  vtmWriter.addFunctor( velocity );
-  vtmWriter.addFunctor( pressure );
-  vtmWriter.addFunctor( epsilon );
-  vtmWriter.addFunctor( cells );
-  vtmWriter.addFunctor( mass );
-
-  const int vtmIter  = 100;//converter.getLatticeTime( maxPhysT/2000. );
-  const int statIter = 200;//converter.getLatticeTime( maxPhysT/2000. );
+  SuperVTMwriter3D<T> vtmWriter( "fallingDrop3d" );
+  const int vtmIter  = converter.getLatticeTime( FreeSurfaceConfig{}.physTime /  50. );
+  const int statIter = converter.getLatticeTime( FreeSurfaceConfig{}.physTime / 100. );
 
   if ( iT==0 ) {
     // Writes the geometry, cuboid no. and rank no. as vti file for visualization
@@ -266,6 +269,22 @@ void getResults( SuperLattice<T,DESCRIPTOR>& sLattice,
 
   // Writes the vtm files and profile text file
   if ( iT%vtmIter==0 ) {
+    sLattice.setProcessingContext(ProcessingContext::Evaluation);
+
+    SuperLatticePhysVelocity3D<T, DESCRIPTOR> velocity( sLattice, converter );
+    SuperLatticePhysPressure3D<T, DESCRIPTOR> pressure( sLattice, converter );
+    SuperLatticeExternalScalarField3D<T, DESCRIPTOR, FreeSurface::EPSILON> epsilon( sLattice );
+    SuperLatticeExternalScalarField3D<T, DESCRIPTOR, FreeSurface::CELL_TYPE> cells( sLattice );
+    SuperLatticeExternalScalarField3D<T, DESCRIPTOR, FreeSurface::MASS> mass( sLattice );
+    epsilon.getName() = "epsilon";
+    cells.getName() = "cell_type";
+    mass.getName() = "mass";
+    vtmWriter.addFunctor( velocity );
+    vtmWriter.addFunctor( pressure );
+    vtmWriter.addFunctor( epsilon );
+    vtmWriter.addFunctor( cells );
+    vtmWriter.addFunctor( mass );
+
     vtmWriter.write( iT );
   }
 
@@ -280,24 +299,7 @@ void getResults( SuperLattice<T,DESCRIPTOR>& sLattice,
   }
 }
 
-namespace {
-FreeSurfaceAppHelper free_surface_config;
 
-class FreeSurfaceConfig {
-public:
-  T viscosity = 1e-4;
-  T density = 1e3;
-  T physTime = 0.01;
-  T latticeRelaxationTime = .516;
-  int N = 1024;
-
-  // Anti jitter value
-  T transitionThreshold = 1e-3;
-  // When to remove lonely cells
-  T lonelyThreshold = 1.0;
-};
-
-}
 
 int main(int argc, char **argv)
 {
@@ -360,27 +362,18 @@ int main(int argc, char **argv)
 
   prepareLattice( converter, sLattice, superGeometry, lattice_size, helper);
 
-  /*
-  * @param 1 Communicator struct
-  * @param 2 Variable struct
-  ***** subparams
-  ***** 1 - isolated cells drop
-  ***** 2 - conversion threshold
-  ***** 3 - lonely threshold (the same as unhealthy cell threshold)
-  ***** 4 - surface tension active
-  ***** 5 - lattice surface tension coefficient
-  ***** 6 - lattice force conversion factor
-  ***** 7 - lattice length
-  */
-  FreeSurface3DSetup<T,DESCRIPTOR> free_surface_setup{sLattice,
-    FreeSurface3D::Variables<T,DESCRIPTOR>{
-      true, c.transitionThreshold, c.lonelyThreshold, helper.has_surface_tension, 
-      surface_tension_coefficient_factor * helper.surface_tension_coefficient, 
-      force_conversion_factor, converter.getPhysDeltaX()
-    }
-  };
+  FreeSurface3DSetup<T,DESCRIPTOR> free_surface_setup{sLattice};
 
   free_surface_setup.addPostProcessor();
+
+  // Set variables from freeSurfaceHelpers.h
+  sLattice.setParameter<FreeSurface::DROP_ISOLATED_CELLS>(true);
+  sLattice.setParameter<FreeSurface::TRANSITION>(c.transitionThreshold);
+  sLattice.setParameter<FreeSurface::LONELY_THRESHOLD>(c.lonelyThreshold);
+  sLattice.setParameter<FreeSurface::HAS_SURFACE_TENSION>(helper.has_surface_tension);
+  sLattice.setParameter<FreeSurface::SURFACE_TENSION_PARAMETER>(surface_tension_coefficient_factor * helper.surface_tension_coefficient);
+  sLattice.setParameter<FreeSurface::FORCE_CONVERSION_FACTOR>(force_conversion_factor);
+  sLattice.setParameter<FreeSurface::LATTICE_SIZE>(converter.getPhysDeltaX());
 
   // === 4th Step: Main Loop with Timer ===
   clout << "starting simulation..." << std::endl;

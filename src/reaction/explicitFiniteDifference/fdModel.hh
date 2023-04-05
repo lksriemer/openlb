@@ -28,69 +28,23 @@
 #ifndef FD_MODEL_HH
 #define FD_MODEL_HH
 
-#include "fdModel.h"
-
 namespace olb {
 
 
-/////////////////////// class FdModel ///////////////////////
-
-template<typename T, typename DESCRIPTOR>
-FdModel<T,DESCRIPTOR>::FdModel(T diffusivity)
-  : _diffusivity(diffusivity)
-{ }
-
-
-/////////////////////// class FdAdvectionDiffusionModel ///////////////////////
-
-template<typename T, typename DESCRIPTOR, typename SCHEME_ADV, typename SCHEME_DIFF>
-FdAdvectionDiffusionModel<T,DESCRIPTOR,SCHEME_ADV,SCHEME_DIFF>::FdAdvectionDiffusionModel(T diffusivity)
-  : FdModel<T,DESCRIPTOR>(diffusivity),
-    _advectionScheme(std::make_shared<fd::AdvectionScheme<DESCRIPTOR::d,T,SCHEME_ADV>>()),
-    _diffusionScheme(std::make_shared<fd::DiffusionScheme<DESCRIPTOR::d,T,SCHEME_DIFF>>())
-{ }
-
-template<typename T, typename DESCRIPTOR, typename SCHEME_ADV, typename SCHEME_DIFF>
-int FdAdvectionDiffusionModel<T,DESCRIPTOR,SCHEME_ADV,SCHEME_DIFF>::extent()
+template<typename T, typename SCHEME_ADV, typename SCHEME_DIFF>
+constexpr int FdAdvectionDiffusionModel<T,SCHEME_ADV,SCHEME_DIFF>::extent()
 {
-  return util::max<int>(SCHEME_ADV::extent, SCHEME_DIFF::extent);
+  return util::max<int>(SCHEME_ADV::extent(), SCHEME_DIFF::extent());
 }
 
-template<typename T, typename DESCRIPTOR, typename SCHEME_ADV, typename SCHEME_DIFF>
-void FdAdvectionDiffusionModel<T,DESCRIPTOR,SCHEME_ADV,SCHEME_DIFF>::
-operator()(T* fNew, T* f0, std::vector<std::vector<T>>& f, std::vector<std::vector<T>>& F, Cell<T,DESCRIPTOR>& cell)
+template<typename T, typename SCHEME_ADV, typename SCHEME_DIFF>
+template <typename PARAMETERS>
+void FdAdvectionDiffusionModel<T,SCHEME_ADV,SCHEME_DIFF>::
+apply(T* fNew, T* f0, T f[], T F[], T u[], PARAMETERS& params)
 {
-  T uArr[DESCRIPTOR::d];
-  cell.computeU(uArr);
-  std::vector<T> u(DESCRIPTOR::d, T());
-  for (int iD=0; iD<DESCRIPTOR::d; ++iD) {
-    u[iD] = uArr[iD];
-  }
-  *fNew = *f0 - _advectionScheme->operator()(*f0, f, F, u) + _diffusionScheme->operator()(*f0, f, F, this->_diffusivity);
-}
-
-
-/////////////////////// class FdAdvectionDiffusionModel ///////////////////////
-
-template<typename T, typename DESCRIPTOR, typename SCHEME_ADV, typename SCHEME_DIFF>
-FdAdvectionDiffusionModelWithAntiDiffusion<T,DESCRIPTOR,SCHEME_ADV,SCHEME_DIFF>::FdAdvectionDiffusionModelWithAntiDiffusion (
-  T diffusivity, T antiDiffusionTunig)
-  : FdAdvectionDiffusionModel<T,DESCRIPTOR,SCHEME_ADV,SCHEME_DIFF>(diffusivity),
-    _antiDiffusionTuning(antiDiffusionTunig)
-{ }
-
-template<typename T, typename DESCRIPTOR, typename SCHEME_ADV, typename SCHEME_DIFF>
-void FdAdvectionDiffusionModelWithAntiDiffusion<T,DESCRIPTOR,SCHEME_ADV,SCHEME_DIFF>::
-operator()(T* fNew, T* f0, std::vector<std::vector<T>>& f, std::vector<std::vector<T>>& F, Cell<T,DESCRIPTOR>& cell)
-{
-  T uArr[DESCRIPTOR::d];
-  cell.computeU(uArr);
-  std::vector<T> u(DESCRIPTOR::d, T()),  uCorr(DESCRIPTOR::d, T());
-  for (int iD=0; iD<DESCRIPTOR::d; ++iD) {
-    u[iD] = uArr[iD];
-    uCorr[iD] = uArr[iD] * _antiDiffusionTuning;
-  }
-  *fNew = *f0 - this->_advectionScheme->operator()(*f0, f, F, u) + this->_diffusionScheme->operator()(*f0, f, F, this->_diffusivity, uCorr);
+  *fNew = *f0
+        -  SCHEME_ADV::template apply<PARAMETERS>(*f0, f, F, u, params)
+        + SCHEME_DIFF::template apply<PARAMETERS>(*f0, f, F, u, params);
 }
 
 

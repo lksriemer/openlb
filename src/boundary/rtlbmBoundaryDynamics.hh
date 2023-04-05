@@ -53,7 +53,7 @@ CellStatistic<T> RtlbmDiffuseBoundaryDynamics<T,DESCRIPTOR,MOMENTA,direction,ori
   T dirichletTemperature = MomentaF().computeRho(cell);
   constexpr auto missing_iPop = util::subIndexOutgoing<L,direction,orientation>();
   // compute summ of weights for all missing directions
-  double sumWeights = 0;
+  T sumWeights = 0;
   for ( int i : missing_iPop ) {
     sumWeights += descriptors::t<T,L>(i);
   }
@@ -97,7 +97,7 @@ CellStatistic<T> RtlbmDiffuseEdgeBoundaryDynamics<T,DESCRIPTOR,MOMENTA,plane,nor
   T dirichletTemperature = MomentaF().computeRho(cell);
   std::vector<int> missing_iPop = util::subIndexOutgoing3DonEdges<L,plane,normal1,normal2>();
   // compute summ of weights for all missing directions
-  double sumWeights = 0;
+  T sumWeights = 0;
   for ( int i : missing_iPop ) {
     sumWeights += descriptors::t<T,L>(i);
   }
@@ -141,7 +141,7 @@ CellStatistic<T> RtlbmDiffuseCornerBoundaryDynamics<T,DESCRIPTOR,MOMENTA,xNormal
   T dirichletTemperature = MomentaF().computeRho(cell);
   std::vector<int> const missing_iPop = util::subIndexOutgoing3DonCorners<L,xNormal,yNormal,zNormal>();
   // compute summ of weights for all missing directions
-  double sumWeights = 0;
+  T sumWeights = 0;
   for ( int i : missing_iPop ) {
     sumWeights += descriptors::t<T,L>(i);
   }
@@ -198,7 +198,7 @@ CellStatistic<T> RtlbmDiffuseConstBoundaryDynamics<T,DESCRIPTOR,MOMENTA,directio
 
   constexpr auto missing_iPop = util::subIndexOutgoing<L,direction,orientation>();
   // compute summ of weights for all missing directions
-  double sumWeights = 0;
+  T sumWeights = 0;
   for ( int i : missing_iPop ) {
     sumWeights += descriptors::t<T,L>(i);
   }
@@ -255,8 +255,8 @@ CellStatistic<T> RtlbmDiffuseConstEdgeBoundaryDynamics<T,DESCRIPTOR,MOMENTA,plan
     cell[iPop] = - descriptors::t<T,L>(iPop);
   }
 
-  std::vector<int> missing_iPop = util::subIndexOutgoing3DonEdges<L,plane,normal1,normal2>();
-  double sumWeights = 0;
+  constexpr auto missing_iPop = util::subIndexOutgoing3DonEdges<L,plane,normal1,normal2>();
+  T sumWeights = 0;
   for ( int i : missing_iPop ) {
     sumWeights += descriptors::t<T,L>(i);
   }
@@ -313,8 +313,8 @@ CellStatistic<T> RtlbmDiffuseConstCornerBoundaryDynamics<T,DESCRIPTOR,MOMENTA,xN
     cell[iPop] = - descriptors::t<T,L>(iPop);
   }
 
-  std::vector<int> const missing_iPop = util::subIndexOutgoing3DonCorners<L,xNormal,yNormal,zNormal>();
-  double sumWeights = 0;
+  auto missing_iPop = util::subIndexOutgoing3DonCorners<L,xNormal,yNormal,zNormal>();
+  T sumWeights = 0;
   for ( int i : missing_iPop ) {
     sumWeights += descriptors::t<T,L>(i);
   }

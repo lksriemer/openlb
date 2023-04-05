@@ -75,9 +75,9 @@ void CSV<T>::writeDataFile(T xValue, const std::vector<T>& yValues,const std::st
     DATAF = singleton::directories().getGnuplotOutDir()+"data/"+plotNameFile+".dat";
     fout.precision(precision);
     fout.open(DATAF.c_str(), std::ios::out | std::ios::app);
-    fout << xValue;
+    fout << BaseType<T>(xValue);
     for (unsigned int i = 0; i < yValues.size(); i++) {
-      fout << _separator << yValues[i];
+      fout << _separator << BaseType<T>(yValues[i]);
     }
     fout << std::endl;
     fout.close();

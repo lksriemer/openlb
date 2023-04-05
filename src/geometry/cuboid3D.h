@@ -72,12 +72,16 @@ private:
   mutable OstreamManager clout;
 
 public:
+  /// Return minimum bounding cuboid encompassing both a and b
+  static Cuboid3D<T> motherOf(Cuboid3D<T> a, Cuboid3D<T> b);
+
   /// Construction of an empty cuboid at position 0, 0, 0 with delta 0 and nX = nY = nZ = 0
   Cuboid3D();
   /// Construction of a cuboid
   Cuboid3D(T globPosX, T globPosY, T globPosZ, T delta, int nX, int nY, int nZ, int refinementLevel=0);
   /// Construction of a cuboid vector version
   Cuboid3D(std::vector<T> origin, T delta, std::vector<int> extend, int refinementLevel=0);
+  Cuboid3D(Vector<T,3> origin, T delta, Vector<int,3> extend, int refinementLevel=0);
   /// Construction of a cuboid using indicator
   Cuboid3D(IndicatorF3D<T>& indicatorF, T voxelSize, int refinementLevel=0);
   /// Copy constructor
@@ -88,7 +92,7 @@ public:
   void init(T globPosX, T globPosY, T globPosZ, T delta, int nX, int nY, int nZ, int refinementLevel=0); //TODO: remove or private
 
   /// Read only access to left lower corner coordinates
-  Vector<T,3> const getOrigin() const;
+  Vector<T,3> getOrigin() const;
   /// Read only access to the distance of cuboid nodes
   T getDeltaR() const;
   /// Read access to cuboid width
@@ -104,9 +108,15 @@ public:
   /// Returns the actual value of weight (-1 for getLatticeVolume())
   int getWeightValue() const;
   /// Returns the number of full cells
-  size_t getWeight() const;
+  std::size_t getWeight() const;
+  /// Returns the number of full cells w.r.t. indicator
+  std::size_t getWeightIn(IndicatorF3D<T>& indicator) const;
   /// Sets the number of full cells
   void setWeight(size_t fullCells);
+  /// Returns fraction of full cells (weight / volume)
+  T getFraction() const {
+    return T(getWeight()) / getLatticeVolume();
+  }
   /// Returns the refinementLevel
   int getRefinementLevel() const;
   /// Sets the refinementLevel
@@ -117,6 +127,21 @@ public:
   T getPhysPerimeter() const;
   /// Returns the number of Nodes at the perimeter
   int getLatticePerimeter() const;
+
+  bool getLatticeR(Vector<T,3> physR, Vector<int,3>& latticeR, T eps=1e-5) {
+    auto globR = Vector<T,3>{_globPosX, _globPosY, _globPosZ};
+    auto physLatticeR = (physR - globR) / _delta;
+    if (   std::fabs(std::roundf(physLatticeR[0]) - physLatticeR[0]) <= eps
+        && std::fabs(std::roundf(physLatticeR[1]) - physLatticeR[1]) <= eps
+        && std::fabs(std::roundf(physLatticeR[2]) - physLatticeR[2]) <= eps) {
+      latticeR[0] = std::roundf(physLatticeR[0]);
+      latticeR[1] = std::roundf(physLatticeR[1]);
+      latticeR[2] = std::roundf(physLatticeR[2]);
+      return true;
+    } else {
+      return false;
+    }
+  }
 
   /// equal operator
   bool operator==(const Cuboid3D<T>& rhs) const;
@@ -144,6 +169,7 @@ public:
   /// Checks whether a point (globX/gloxY/globZ) is contained in the cuboid
   /// extended with an layer of size overlap*delta
   bool checkPoint(T globX, T globY, T globZ, int overlap = 0) const; //TODO globX-> x + additional interface: with (std::vector<T> physR, int overlap=0)
+  bool checkPoint(Vector<T,3>& globXYZ, int overlap = 0) const;
   /// Same for physical overlap
   bool physCheckPoint(T globX, T globY, T globZ, double overlap = 0) const;
   /// Checks whether a point (globX/gloxY/globZ) is contained and is a node
@@ -169,8 +195,17 @@ public:
   /// Divides the cuboid in p cuboids of equal volume and add them to the given vector
   void divide(int p, std::vector<Cuboid3D<T> > &childrenC) const;
 
+  /// Divides the cuboid into fractions along the iDth dimension
+  void divideFractional(int iD, std::vector<T> fractions, std::vector<Cuboid3D<T>>& childrenC) const;
+
   /// resize the cuboid to the passed size
   void resize(int X, int Y, int Z, int nX, int nY, int nZ);
+
+  /// Returns true iff child is contained fully in present cuboid
+  bool contains(Cuboid3D<T>& child) const;
+  /// Returns true iff cuboid but is partially but not fully contained
+  bool partialOverlapWith(Cuboid3D<T>& cuboid) const;
+
 };
 
 }  // namespace olb

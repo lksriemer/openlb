@@ -64,10 +64,6 @@ bool AnalyticalDerivativeFD1D<T>::operator() (T output[], const T input[])
   return true;
 }
 
-// Conversion to old implementation
-template class AnalyticalDerivativeFD1D<double>;
-
-
 
 
 /// Class for AD Differentiation of 1-dim Functor F: S -> T.

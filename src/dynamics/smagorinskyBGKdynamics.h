@@ -165,6 +165,16 @@ using KrauseBGKdynamics = dynamics::Tuple<
   collision::KrauseEffectiveOmega<collision::PerPopulationBGK>
 >;
 
+/// ForcedBGK collision step computing OMEGA locally using Smagorinsky LES model
+template<typename T, typename DESCRIPTOR, typename MOMENTA=momenta::BulkTuple>
+using SmagorinskyLinearVelocityForcedBGKdynamics = dynamics::Tuple<
+  T, DESCRIPTOR,
+  MOMENTA,
+  equilibria::SecondOrder,
+  collision::SmagorinskyEffectiveOmega<collision::BGK>,
+  forcing::LinearVelocity
+>;
+
 }
 
 #endif

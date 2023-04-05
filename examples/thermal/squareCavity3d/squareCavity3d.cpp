@@ -31,7 +31,7 @@ using namespace olb;
 using namespace olb::descriptors;
 using namespace olb::graphics;
 
-typedef double T;
+using T = FLOATING_POINT_TYPE;
 
 typedef D3Q19<FORCE> NSDESCRIPTOR;
 typedef D3Q7<VELOCITY> TDESCRIPTOR;
@@ -171,15 +171,11 @@ void prepareLattice( ThermalUnitConverter<T, NSDESCRIPTOR, TDESCRIPTOR> &convert
   T omega  = converter.getLatticeRelaxationFrequency();
   T Tomega  = converter.getLatticeThermalRelaxationFrequency();
 
-  /// define lattice Dynamics
-  ADlattice.defineDynamics<NoDynamics>(superGeometry, 0);
-  NSlattice.defineDynamics<NoDynamics>(superGeometry, 0);
-
   ADlattice.defineDynamics<AdvectionDiffusionBGKdynamics>(superGeometry.getMaterialIndicator({1, 2, 3}));
-  ADlattice.defineDynamics<BounceBack>(superGeometry, 4);
+  setBounceBackBoundary(ADlattice, superGeometry, 4);
 
   NSlattice.defineDynamics<ForcedBGKdynamics>(superGeometry.getMaterialIndicator({1, 2, 3}));
-  NSlattice.defineDynamics<BounceBack>(superGeometry, 4);
+  setBounceBackBoundary(NSlattice, superGeometry, 4);
 
   /// sets boundary
   setAdvectionDiffusionTemperatureBoundary<T,TDESCRIPTOR>(ADlattice, Tomega, superGeometry.getMaterialIndicator({2, 3}));
@@ -234,10 +230,9 @@ void getResults(ThermalUnitConverter<T, NSDESCRIPTOR, TDESCRIPTOR> &converter,
                 util::Timer<T>& timer,
                 bool converged)
 {
-
   OstreamManager clout(std::cout,"getResults");
 
-  SuperVTMwriter3D<T> vtkWriter("thermalNaturalConvection3D");
+  SuperVTMwriter3D<T> vtkWriter("squareCavity3d");
   SuperLatticeGeometry3D<T, NSDESCRIPTOR> geometry(NSlattice, superGeometry);
   SuperLatticePhysVelocity3D<T, NSDESCRIPTOR> velocity(NSlattice, converter);
   SuperLatticePhysPressure3D<T, NSDESCRIPTOR> pressure(NSlattice, converter);
@@ -263,6 +258,8 @@ void getResults(ThermalUnitConverter<T, NSDESCRIPTOR, TDESCRIPTOR> &converter,
 
   /// Writes the VTK files
   if (iT%vtkIter == 0 || converged) {
+    NSlattice.setProcessingContext(ProcessingContext::Evaluation);
+    ADlattice.setProcessingContext(ProcessingContext::Evaluation);
 
     timer.update(iT);
     timer.printStep();
@@ -278,7 +275,7 @@ void getResults(ThermalUnitConverter<T, NSDESCRIPTOR, TDESCRIPTOR> &converter,
     BlockGifWriter<T> gifWriter;
     gifWriter.write(planeReduction, Tcold*0.98, Thot*1.02, iT, "temperature");
 
-    SuperEuklidNorm3D<T, NSDESCRIPTOR> normVel( velocity );
+    SuperEuklidNorm3D<T> normVel( velocity );
     BlockReduction3D2D<T> planeReduction2(normVel, {0, 0, 1});
     BlockGifWriter<T> gifWriter2;
     gifWriter2.write( planeReduction2, iT, "velocity" );
@@ -444,26 +441,19 @@ int main(int argc, char *argv[])
   SuperLattice<T, TDESCRIPTOR> ADlattice(superGeometry);
   SuperLattice<T, NSDESCRIPTOR> NSlattice(superGeometry);
 
-
-
-  // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!//
-  // This coupling must be necessarily be put on the Navier-Stokes lattice!!
-  // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!//
-
-  std::vector<T> dir{0.0, 1.0, 0.0};
-
-  T boussinesqForcePrefactor = 9.81 / converter.getConversionFactorVelocity() * converter.getConversionFactorTime() *
-                               converter.getCharPhysTemperatureDifference() * converter.getPhysThermalExpansionCoefficient();
-
-  NavierStokesAdvectionDiffusionCouplingGenerator3D<T,NSDESCRIPTOR>
-  coupling(0, converter.getLatticeLength(lx), 0, converter.getLatticeLength(lx), 0, converter.getLatticeLength(lx),
-           boussinesqForcePrefactor, converter.getLatticeTemperature(Tcold), 1., dir);
-
-  NSlattice.addLatticeCoupling(coupling, ADlattice);
-
   //prepareLattice and setBoundaryCondition
   prepareLattice(converter, NSlattice, ADlattice, superGeometry);
 
+  T boussinesqForcePrefactor = 9.81 / converter.getConversionFactorVelocity() * converter.getConversionFactorTime() *
+                               converter.getCharPhysTemperatureDifference() * converter.getPhysThermalExpansionCoefficient();
+  SuperLatticeCoupling coupling(
+    NavierStokesAdvectionDiffusionCoupling{},
+    names::NavierStokes{}, NSlattice,
+    names::Temperature{},  ADlattice);
+  coupling.setParameter<NavierStokesAdvectionDiffusionCoupling::T0>(
+    converter.getLatticeTemperature(Tcold));
+  coupling.setParameter<NavierStokesAdvectionDiffusionCoupling::FORCE_PREFACTOR>(
+    boussinesqForcePrefactor * Vector<T,3>{0.0,1.0,0.0});
 
   /// === 4th Step: Main Loop with Timer ===
   util::Timer<T> timer(converter.getLatticeTime(maxPhysT), superGeometry.getStatistics().getNvoxel() );
@@ -488,7 +478,7 @@ int main(int argc, char *argv[])
     ADlattice.collideAndStream();
     NSlattice.collideAndStream();
 
-    NSlattice.executeCoupling();
+    coupling.execute();
 
     /// === 7th Step: Computation and Output of the Results ===
     getResults(converter, NSlattice, ADlattice, iT, superGeometry, timer, converge.hasConverged());

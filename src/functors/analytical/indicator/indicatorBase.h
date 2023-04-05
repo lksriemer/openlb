@@ -93,28 +93,66 @@ bool distance(S& distance, const Vector<S,D>& origin, const Vector<S,D>& directi
 
 template <typename S, unsigned D, typename F1, typename F2>
 bool distance(S& distance, const Vector<S,D>& origin, const Vector<S,D>& direction,
-              S precision, F1 sdf, F2 isInsideBoundingBox)
+              S precision, F1 sdf, F2 isInsideBoundingBox, const unsigned maxIt = 1e6)
 {
-  distance = S(0);
-  S signedDistance = sdf(origin);
-  short firstSign = util::sign(signedDistance);
+  S signedDistance{sdf(origin)};
+  Vector<S,D> currPos{origin};
+  const Vector<S,D> dir{util::sign(signedDistance) * normalize(direction)};
 
-  Vector<S,D> currPos = origin;
-  Vector<S,D> dir = normalize(direction);
+  if (util::fabs(signedDistance) <= precision) {
+    distance = util::fabs(signedDistance);
+    return true;
+  }
 
-  while (util::fabs(signedDistance) > precision) {
-    currPos += (signedDistance * firstSign) * dir;
+  distance = S{0};
+  for(unsigned i=0; util::fabs(signedDistance) > precision && i<maxIt; ++i) {
+    distance += signedDistance;
+    currPos += signedDistance * dir;
+    signedDistance = sdf(currPos);
     if (!isInsideBoundingBox(currPos)) {
-      distance = 0;
+      distance = S{0};
       return false;
     }
-    distance += signedDistance;
-    signedDistance = sdf(currPos);
   }
 
   distance = util::fabs(distance);
   return true;
 }
+
+template <typename S, unsigned D, bool normalizeDirection = true>
+bool distance(S& distance, const Vector<S,D>& origin, const Vector<S,D>& direction,
+              S precision, std::function<S(const Vector<S,D>&)> sdf, S maxDistance, const unsigned maxIt = 1e6)
+{
+  S signedDistance{sdf(origin)};
+  Vector<S,D> currPos{origin};
+  Vector<S,D> dir;
+  if constexpr(normalizeDirection) {
+    dir = util::sign(signedDistance) * normalize(direction);
+  }
+  else {
+    dir = util::sign(signedDistance) * direction;
+  }
+
+  if (util::fabs(signedDistance) <= precision) {
+    distance = util::fabs(signedDistance);
+    return true;
+  }
+
+  distance = S{0};
+  for(unsigned i=0; util::fabs(signedDistance) > precision && i<maxIt; ++i) {
+    distance += signedDistance;
+    currPos += signedDistance * dir;
+    signedDistance = sdf(currPos);
+    if (signedDistance > maxDistance) {
+      distance = S{0};
+      return false;
+    }
+  }
+
+  distance = util::fabs(distance);
+  return true;
+}
+
 
 /** Using a bisect to find the unsigned distance (false if distance was not found, true if distance was found)
  *

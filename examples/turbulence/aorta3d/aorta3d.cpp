@@ -42,15 +42,15 @@ using namespace olb::descriptors;
 using namespace olb::graphics;
 using namespace olb::util;
 
-using T = double;
+using T = FLOATING_POINT_TYPE;
 using DESCRIPTOR = D3Q19<>;
 using BulkDynamics = SmagorinskyBGKdynamics<T,DESCRIPTOR>;
 
 //simulation parameters
 const int N = 40;             // resolution of the model
 const int M = 20;             // time discretization refinement
-const bool bouzidiOn = true; // choice of boundary condition
-const T maxPhysT = 2.;       // max. simulation time in s, SI unit
+const bool bouzidiOn = true;  // choice of boundary condition
+const T maxPhysT = 2.;        // max. simulation time in s, SI unit
 
 
 // Stores data from stl file in geometry in form of material numbers
@@ -104,23 +104,18 @@ void prepareLattice( SuperLattice<T, DESCRIPTOR>& lattice,
 
   const T omega = converter.getLatticeRelaxationFrequency();
 
-  // material=0 --> do nothing
-  lattice.defineDynamics<NoDynamics>(superGeometry, 0);
-
   // material=1 --> bulk dynamics
   lattice.defineDynamics<BulkDynamics>(superGeometry, 1);
 
   if ( bouzidiOn ) {
     // material=2 --> no dynamics + bouzidi zero velocity
-    lattice.defineDynamics<NoDynamics>(superGeometry, 2);
-    setBouzidiZeroVelocityBoundary<T,DESCRIPTOR>(lattice, superGeometry, 2, stlReader);
+    setBouzidiBoundary<T,DESCRIPTOR>(lattice, superGeometry, 2, stlReader);
     // material=3 --> no dynamics + bouzidi velocity (inflow)
-    lattice.defineDynamics<NoDynamics>(superGeometry, 3);
-    setBouzidiVelocityBoundary<T,DESCRIPTOR>(lattice, superGeometry, 3, stlReader);
+    setBouzidiBoundary<T,DESCRIPTOR,BouzidiVelocityPostProcessor>(lattice, superGeometry, 3, stlReader);
   }
   else {
     // material=2 --> bounceBack dynamics
-    lattice.defineDynamics<BounceBack>(superGeometry, 2);
+    setBounceBackBoundary(lattice, superGeometry, 2);
     // material=3 --> bulk dynamics + velocity (inflow)
     lattice.defineDynamics<BulkDynamics>(superGeometry, 3);
     setInterpolatedVelocityBoundary<T,DESCRIPTOR>(lattice, omega, superGeometry, 3);
@@ -140,7 +135,7 @@ void prepareLattice( SuperLattice<T, DESCRIPTOR>& lattice,
   lattice.iniEquilibrium( superGeometry.getMaterialIndicator({1, 3, 4, 5}),rhoF,uF );
 
   lattice.setParameter<descriptors::OMEGA>(omega);
-  lattice.setParameter<collision::LES::Smagorinsky>(0.1);
+  lattice.setParameter<collision::LES::Smagorinsky>(T(0.1));
   // Lattice initialize
   lattice.initialize();
 
@@ -168,10 +163,14 @@ void setBoundaryValues( SuperLattice<T, DESCRIPTOR>& sLattice,
     CirclePoiseuille3D<T> velocity( superGeometry,3,maxVelocity[0], T() );
 
     if ( bouzidiOn ) {
-      defineUBouzidi<T,DESCRIPTOR>(sLattice, superGeometry, 3, velocity);
+      setBouzidiVelocity(sLattice, superGeometry, 3, velocity);
+      sLattice.setProcessingContext<Array<descriptors::BOUZIDI_VELOCITY>>(
+        ProcessingContext::Simulation);
     }
     else {
-      sLattice.defineU( superGeometry,3,velocity );
+      sLattice.defineU(superGeometry, 3, velocity);
+      sLattice.setProcessingContext<Array<momenta::FixedVelocityMomentumGeneric::VELOCITY>>(
+        ProcessingContext::Simulation);
     }
   }
 }
@@ -184,16 +183,12 @@ void getResults( SuperLattice<T, DESCRIPTOR>& sLattice,
 
   OstreamManager clout( std::cout,"getResults" );
 
-  SuperVTMwriter3D<T> vtmWriter( "aorta3d" );
-  SuperLatticePhysVelocity3D<T, DESCRIPTOR> velocity( sLattice, converter );
-  SuperLatticePhysPressure3D<T, DESCRIPTOR> pressure( sLattice, converter );
-  vtmWriter.addFunctor( velocity );
-  vtmWriter.addFunctor( pressure );
-
   const int vtkIter  = converter.getLatticeTime( .1 );
   const int statIter = converter.getLatticeTime( .1 );
 
   if ( iT==0 ) {
+    SuperVTMwriter3D<T> vtmWriter("aorta3d");
+
     // Writes the geometry, cuboid no. and rank no. as vti file for visualization
     SuperLatticeGeometry3D<T, DESCRIPTOR> geometry( sLattice, superGeometry );
     SuperLatticeCuboid3D<T, DESCRIPTOR> cuboid( sLattice );
@@ -207,12 +202,15 @@ void getResults( SuperLattice<T, DESCRIPTOR>& sLattice,
 
   // Writes the vtk files
   if ( iT%vtkIter==0 ) {
-    vtmWriter.write( iT );
-
-    SuperEuklidNorm3D<T, DESCRIPTOR> normVel( velocity );
-    BlockReduction3D2D<T> planeReduction( normVel, {0,0,1}, 600, BlockDataSyncMode::ReduceOnly );
-    // write output as JPEG
-    heatmap::write(planeReduction, iT);
+    sLattice.setProcessingContext(ProcessingContext::Evaluation);
+    sLattice.scheduleBackgroundOutputVTK([&,iT](auto task) {
+      SuperVTMwriter3D<T> vtmWriter("aorta3d");
+      SuperLatticePhysVelocity3D velocity(sLattice, converter);
+      SuperLatticePhysPressure3D pressure(sLattice, converter);
+      vtmWriter.addFunctor(velocity);
+      vtmWriter.addFunctor(pressure);
+      task(vtmWriter, iT);
+    });
   }
 
   // Writes output on the console
@@ -257,14 +255,12 @@ void getResults( SuperLattice<T, DESCRIPTOR>& sLattice,
 
   if ( sLattice.getStatistics().getMaxU() > 0.3 ) {
     clout << "PROBLEM uMax=" << sLattice.getStatistics().getMaxU() << std::endl;
-    vtmWriter.write( iT );
-    std::exit( 0 );
+    std::exit(0);
   }
 }
 
 int main( int argc, char* argv[] )
 {
-
   // === 1st Step: Initialization ===
   olbInit( &argc, &argv );
   singleton::directories().setOutputDir( "./tmp/" );
@@ -294,12 +290,11 @@ int main( int argc, char* argv[] )
 
   // Instantiation of a cuboidGeometry with weights
 #ifdef PARALLEL_MODE_MPI
-  const int noOfCuboids = util::min( 16*N,2*singleton::mpi().getSize() );
+  const int noOfCuboids = util::min(16*N, 8*singleton::mpi().getSize());
 #else
   const int noOfCuboids = 2;
 #endif
-  CuboidGeometry3D<T> cuboidGeometry( extendedDomain, converter.getConversionFactorLength(), noOfCuboids );
-
+  CuboidGeometry3D<T> cuboidGeometry( extendedDomain, converter.getConversionFactorLength(), noOfCuboids, "volume" );
   // Instantiation of a loadBalancer
   HeuristicLoadBalancer<T> loadBalancer( cuboidGeometry );
 
@@ -326,7 +321,7 @@ int main( int argc, char* argv[] )
 
   for ( std::size_t iT = 0; iT <= converter.getLatticeTime( maxPhysT ); iT++ ) {
     // === 5th Step: Definition of Initial and Boundary Conditions ===
-    setBoundaryValues( sLattice, /*sOffBoundaryCondition,*/ converter, iT, superGeometry );
+    setBoundaryValues( sLattice, converter, iT, superGeometry );
 
     // === 6th Step: Collide and Stream Execution ===
     sLattice.collideAndStream();

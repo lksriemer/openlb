@@ -76,8 +76,8 @@ template <typename S>
 IndicatorCuboid2D<S>::IndicatorCuboid2D(S xLength, S yLength, Vector<S,2> center, S theta )
   : _center(center), _xLength(xLength), _yLength(yLength), _theta(-theta)
 {
-  this->_myMin = {_center[0] - _xLength/2., _center[1] - _yLength/2.};
-  this->_myMax = {_center[0] + _xLength/2., _center[1] + _yLength/2.};
+  this->_myMin = {_center[0] - _xLength/S(2), _center[1] - _yLength/S(2)};
+  this->_myMax = {_center[0] + _xLength/S(2), _center[1] + _yLength/S(2)};
 }
 
 
@@ -95,8 +95,8 @@ bool IndicatorCuboid2D<S>::operator()(bool output[], const S input[])
     y = input[1];
   }
 
-  output[0] = (  (util::fabs(_center[0] - x) < _xLength/2. || util::approxEqual(util::fabs(_center[0] - x),_xLength/2.) )
-                 && (util::fabs(_center[1] - y) < _yLength/2. || util::approxEqual(util::fabs(_center[1] - y), _yLength/2.) ) );
+  output[0] = (  (util::fabs(_center[0] - x) < _xLength/S(2) || util::approxEqual(util::fabs(_center[0] - x),_xLength/S(2)) )
+                 && (util::fabs(_center[1] - y) < _yLength/S(2) || util::approxEqual(util::fabs(_center[1] - y), _yLength/S(2)) ) );
   return true;
 }
 
@@ -126,7 +126,7 @@ S IndicatorCuboid2D<S>::signedDistance( const Vector<S,2>& input )
   Vector<S,2> ptransl = {input[0]-_center[0], input[1]-_center[1]};
   Vector<S,2> prot = {util::cos(-_theta)*ptransl[0]+util::sin(-_theta)*ptransl[1], util::cos(-_theta)*ptransl[1]-util::sin(-_theta)*ptransl[0]};
 
-  return sdf::box(prot, Vector<S,2>(.5*_xLength, .5*_yLength));
+  return sdf::box(prot, Vector<S,2>(S(.5)*_xLength, S(.5)*_yLength));
 }
 
 
@@ -338,8 +338,8 @@ IndicatorEquiTriangle2D<S>::IndicatorEquiTriangle2D(Vector<S,2> center, S radius
   :  _center(center),
      _radius(radius),
      _a({center[0], center[1]+radius}),
-_b({center[0]-util::sqrt(3)/2.*radius, center[1]-0.5*radius}),
-_c({center[0]+util::sqrt(3)/2.*radius, center[1]-0.5*radius})
+_b({center[0]-util::sqrt(3)/S(2)*radius, center[1]-S(0.5)*radius}),
+_c({center[0]+util::sqrt(3)/S(2)*radius, center[1]-S(0.5)*radius})
 {
 
   this->_myMin = {util::min(_a[0], util::min(_b[0], _c[0])), util::min(_a[1], util::min(_b[1], _c[1]))};
@@ -407,6 +407,55 @@ IndicatorEquiTriangle2D<S>* createIndicatorEquiTriangle2D(XMLreader const& param
   xmlRadius >> radius;
 
   return new IndicatorEquiTriangle2D<S>(center, radius);
+}
+
+
+template <typename S>
+IndicatorBlockData2D<S>::IndicatorBlockData2D(BlockData<3,S,S>& blockData,
+    Vector<S,3> extend, Vector<S,3> origin, S deltaR, bool invert)
+  :  _blockData(blockData), _deltaR(deltaR), _invert(invert)
+{
+  this->_myMin = Vector<S,2>(origin[0], origin[1]);
+  this->_myMax = Vector<S,2>(origin[0] + extend[0], origin[1] + extend[1]);
+
+  OLB_ASSERT(extend[2]-origin[2] == 1, "extend[2]-origin[2] must be 1.")
+}
+
+template <typename S>
+S IndicatorBlockData2D<S>::signedDistance(const Vector<S,2>& input)
+{
+  // Translation
+  S xDist = input[0] - this->_myMin[0];
+  S yDist = input[1] - this->_myMin[1];
+
+  int x = ((this->_myMin[0] + xDist)/_deltaR)+0.5;
+  int y = ((this->_myMin[1] + yDist)/_deltaR)+0.5;
+
+  if (x >= 0 && x < _blockData.getNx() && y >= 0 && y < _blockData.getNy()) {
+    LatticeR<3> input(x,y,0);
+    if (_blockData.get(input) > std::numeric_limits<S>::epsilon()) {
+      if (!_invert){
+        return 1.;
+      } else {
+        return -1.;
+      }
+    }
+    else {
+      if (!_invert){
+        return -1.;
+      } else {
+        return 1.;
+      }
+
+    }
+  }
+
+  if (!_invert){
+    return 1.;
+  } else {
+    return -1.;
+  }
+
 }
 
 template <typename S>

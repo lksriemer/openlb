@@ -113,6 +113,26 @@ public:
   Vector<int,3> getMax() override;
 };
 
+/// Block indicator extended by a layer
+template <typename T>
+class BlockIndicatorLayer3D : public BlockIndicatorF3D<T> {
+protected:
+  BlockIndicatorF3D<T>& _indicatorF;
+
+public:
+  /**
+   * \param indicatorF Block indicator to be extended by a layer
+   **/
+  BlockIndicatorLayer3D(BlockIndicatorF3D<T>& indicatorF);
+
+  using BlockIndicatorF3D<T>::operator();
+  bool operator() (bool output[], const int input[]) override;
+
+  /// Returns min lattice position of the indicated domain's bounding box
+  Vector<int,3> getMin() override;
+  /// Returns max lattice position of the indicated domain's bounding box
+  Vector<int,3> getMax() override;
+};
 
 /// Block indicator identity
 template <typename T>
@@ -124,6 +144,28 @@ public:
    * \param indicatorF Block indicator to be proxied
    **/
   BlockIndicatorIdentity3D(BlockIndicatorF3D<T>& indicatorF);
+
+  using BlockIndicatorF3D<T>::operator();
+  bool operator() (bool output[], const int input[]) override;
+
+  /// Returns min lattice position of the indicated domain's bounding box
+  Vector<int,3> getMin() override;
+  /// Returns max lattice position of the indicated domain's bounding box
+  Vector<int,3> getMax() override;
+};
+
+/// Block indicator intersection
+template <typename T>
+class BlockIndicatorMultiplication3D : public BlockIndicatorF3D<T> {
+protected:
+  BlockIndicatorF3D<T>& _f;
+  BlockIndicatorF3D<T>& _g;
+public:
+  /**
+   * \param f Block indicator to be multiplied
+   * \param g Block indicator to be multiplied
+   **/
+  BlockIndicatorMultiplication3D(BlockIndicatorF3D<T>& f, BlockIndicatorF3D<T>& g);
 
   using BlockIndicatorF3D<T>::operator();
   bool operator() (bool output[], const int input[]) override;

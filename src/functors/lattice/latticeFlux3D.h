@@ -59,7 +59,7 @@ class BlockLatticeFlux3D final : public BlockLatticeF3D<T,DESCRIPTOR> {
 private:
 public:
   BlockLatticeFlux3D(BlockLattice<T,DESCRIPTOR>& blockLattice);
-  bool operator() (T output[3], const int input[3]) override;
+  bool operator() (T output[], const int input[]) override;
 };
 
 }

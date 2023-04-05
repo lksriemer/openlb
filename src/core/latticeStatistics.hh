@@ -191,6 +191,15 @@ void LatticeStatistics<T>::incrementStats(T rho, T uSqr)
 }
 
 template<typename T>
+void LatticeStatistics<T>::incrementStats(Aggregatable& aggregatable)
+{
+  tmpNumCells += aggregatable.nCells;
+  tmpAv[avRho] += aggregatable.avRho;
+  tmpAv[avEnergy] += aggregatable.avEnergy;
+  tmpMax[maxU] = std::max(aggregatable.maxU, tmpMax[maxU]);
+}
+
+template<typename T>
 void LatticeStatistics<T>::gatherAverage(int whichAverage, T value)
 {
   OLB_PRECONDITION( whichAverage < (int) tmpAv.size() );

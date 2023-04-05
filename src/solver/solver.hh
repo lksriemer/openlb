@@ -25,4 +25,4 @@
  * Groups all the generic template files in the directory solver.
  */
 
-#include "LBSolver.hh"
+#include "lbSolver.hh"

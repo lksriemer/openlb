@@ -25,8 +25,14 @@
 #define SISD_OPERATOR_H
 
 #include "mask.h"
+
+#include "core/meta.h"
 #include "core/operator.h"
+
 #include "core/platform/cpu/cell.h"
+#include "core/latticeStatistics.h"
+
+#include "dynamics/dynamics.h"
 
 namespace olb {
 
@@ -39,10 +45,10 @@ namespace sisd {
 template <typename T, typename DESCRIPTOR, typename DYNAMICS>
 class ConcreteDynamics final : public cpu::Dynamics<T,DESCRIPTOR,Platform::CPU_SISD> {
 private:
-  typename DYNAMICS::ParametersD* _parameters;
+  ParametersOfOperatorD<T,DESCRIPTOR,DYNAMICS>* _parameters;
 
 public:
-  ConcreteDynamics(typename DYNAMICS::ParametersD* parameters):
+  ConcreteDynamics(ParametersOfOperatorD<T,DESCRIPTOR,DYNAMICS>* parameters):
     _parameters{parameters} {
   }
 
@@ -70,7 +76,7 @@ public:
   }
 
   T getOmegaOrFallback(T fallback) override {
-    if constexpr (DYNAMICS::ParametersD::fields_t::template contains<descriptors::OMEGA>()) {
+    if constexpr (DYNAMICS::parameters::template contains<descriptors::OMEGA>()) {
       return _parameters->template get<descriptors::OMEGA>();
     } else {
       return fallback;
@@ -82,6 +88,25 @@ public:
     return DYNAMICS().computeEquilibrium(iPop, rho, u);
   }
 
+  void defineRho(cpu::Cell<T,DESCRIPTOR,Platform::CPU_SISD>& cell, T& rho) override {
+    typename DYNAMICS::MomentaF().defineRho(cell, rho);
+  }
+
+  void defineU(cpu::Cell<T,DESCRIPTOR,Platform::CPU_SISD>& cell, T* u) override {
+    typename DYNAMICS::MomentaF().defineU(cell, u);
+  }
+
+  void defineRhoU(cpu::Cell<T,DESCRIPTOR,Platform::CPU_SISD>& cell, T& rho, T* u) override {
+    typename DYNAMICS::MomentaF().defineRhoU(cell, rho, u);
+  }
+
+  void defineAllMomenta(cpu::Cell<T,DESCRIPTOR,Platform::CPU_SISD>& cell, T& rho, T* u, T* pi) override {
+    typename DYNAMICS::MomentaF().defineAllMomenta(cell, rho, u, pi);
+  }
+
+  void inverseShiftRhoU(cpu::Cell<T,DESCRIPTOR,Platform::CPU_SISD>& cell, T& rho, T* u) override {
+    typename DYNAMICS::MomentaF().inverseShiftRhoU(cell, rho, u);
+  }
 };
 
 }
@@ -103,16 +128,108 @@ private:
   std::unique_ptr<DYNAMICS> _dynamics;
   std::unique_ptr<cpu::Dynamics<T,DESCRIPTOR,Platform::CPU_SISD>> _concreteDynamics;
 
-  DynamicsParametersD<T,DESCRIPTOR,Platform::CPU_SISD,DYNAMICS>* _parameters;
-  ConcreteBlockMask<T,DESCRIPTOR,Platform::CPU_SISD>*            _mask;
+  ParametersOfOperatorD<T,DESCRIPTOR,DYNAMICS>* _parameters;
+  ConcreteBlockMask<T,Platform::CPU_SISD>* _mask;
 
   cpu::Dynamics<T,DESCRIPTOR,Platform::CPU_SISD>** _dynamicsOfCells;
+
+  std::vector<CellID> _cells;
+  bool _modified;
+
+  /// Apply DYNAMICS using its mask and fall back to dynamic dispatch for others
+  /**
+   * Loop excludes overlap areas of block as collisions are never applied there.
+   **/
+  void applyDominant(ConcreteBlockLattice<T,DESCRIPTOR,Platform::CPU_SISD>& block,
+                     ConcreteBlockMask<T,Platform::CPU_SISD>&               subdomain)
+  {
+    auto& parameters = *_parameters;
+    auto& mask = *_mask;
+    typename LatticeStatistics<T>::Aggregatable statistics{};
+    #ifdef PARALLEL_MODE_OMP
+    #pragma omp declare reduction(+ : typename LatticeStatistics<T>::Aggregatable : omp_out += omp_in) initializer (omp_priv={})
+    #endif
+
+    if constexpr (DESCRIPTOR::d == 3) {
+      #ifdef PARALLEL_MODE_OMP
+      #pragma omp parallel for schedule(dynamic,1) reduction(+ : statistics)
+      #endif
+      for (int iX=0; iX < block.getNx(); ++iX) {
+        for (int iY=0; iY < block.getNy(); ++iY) {
+          std::size_t iCell = block.getCellId(iX,iY,0);
+          for (int iZ=0; iZ < block.getNz(); ++iZ) {
+            cpu::Cell<T,DESCRIPTOR,Platform::CPU_SISD> cell(block, iCell);
+            if (auto cellStatistic = mask[iCell] ? DYNAMICS().apply(cell, parameters)
+                                                 : _dynamicsOfCells[iCell]->collide(cell)) {
+              statistics.increment(cellStatistic.rho, cellStatistic.uSqr);
+            }
+            iCell += 1;
+          }
+        }
+      }
+    } else {
+      #ifdef PARALLEL_MODE_OMP
+      #pragma omp parallel for schedule(dynamic,1) reduction(+ : statistics)
+      #endif
+      for (int iX=0; iX < block.getNx(); ++iX) {
+        std::size_t iCell = block.getCellId(iX,0);
+        for (int iY=0; iY < block.getNy(); ++iY) {
+          cpu::Cell<T,DESCRIPTOR,Platform::CPU_SISD> cell(block, iCell);
+          if (auto cellStatistic = mask[iCell] ? DYNAMICS().apply(cell, parameters)
+                                               : _dynamicsOfCells[iCell]->collide(cell)) {
+            statistics.increment(cellStatistic.rho, cellStatistic.uSqr);
+          }
+          iCell += 1;
+        }
+      }
+    }
+
+    block.getStatistics().incrementStats(statistics);
+  }
+
+  /// Apply only DYNAMICS, do not apply others
+  void applyIndividual(ConcreteBlockLattice<T,DESCRIPTOR,Platform::CPU_SISD>& block,
+                       ConcreteBlockMask<T,Platform::CPU_SISD>&               subdomain)
+  {
+    // Update cell list from mask
+    if (_modified) {
+      _cells.clear();
+      for (CellID iCell=0; iCell  < block.getNcells(); ++iCell) {
+        if (_mask->operator[](iCell)) {
+          _cells.push_back(iCell);
+        }
+      }
+      _modified = false;
+    }
+
+    auto& parameters = *_parameters;
+    typename LatticeStatistics<T>::Aggregatable statistics{};
+
+    #ifdef PARALLEL_MODE_OMP
+    #pragma omp declare reduction(+ : typename LatticeStatistics<T>::Aggregatable : omp_out += omp_in) initializer (omp_priv={})
+    #endif
+
+    #ifdef PARALLEL_MODE_OMP
+    #pragma omp parallel for schedule(static) reduction(+ : statistics)
+    #endif
+    for (std::size_t i=0; i < _cells.size(); ++i) {
+      std::size_t iCell = _cells[i];
+      cpu::Cell<T,DESCRIPTOR,Platform::CPU_SISD> cell(block, iCell);
+      if (auto cellStatistic = DYNAMICS().apply(cell, parameters)) {
+        statistics.increment(cellStatistic.rho, cellStatistic.uSqr);
+      }
+    }
+
+    block.getStatistics().incrementStats(statistics);
+  }
 
 public:
   ConcreteBlockCollisionO():
     _dynamics(new DYNAMICS()),
     _parameters(nullptr),
-    _mask(nullptr)
+    _mask(nullptr),
+    _cells(0),
+    _modified(true)
   { }
 
   std::type_index id() const override
@@ -136,6 +253,7 @@ public:
     if (state) {
       _dynamicsOfCells[iCell] = _concreteDynamics.get();
     }
+    _modified = true;
   }
 
   Dynamics<T,DESCRIPTOR>* getDynamics() override
@@ -145,66 +263,32 @@ public:
 
   void setup(ConcreteBlockLattice<T,DESCRIPTOR,Platform::CPU_SISD>& block) override
   {
-    _parameters = &block.template getData<DynamicsParameters<DYNAMICS>>();
+    _parameters = &block.template getData<OperatorParameters<DYNAMICS>>().parameters;
     _mask = &block.template getData<DynamicsMask<DYNAMICS>>();
     if constexpr (dynamics::has_parametrized_momenta_v<DYNAMICS>) {
-      _dynamics->setMomentaParameters(&_parameters->parameters);
+      _dynamics->setMomentaParameters(_parameters);
     }
 
-    _concreteDynamics.reset(new cpu::sisd::ConcreteDynamics<T,DESCRIPTOR,DYNAMICS>(&_parameters->parameters));
+    _concreteDynamics.reset(new cpu::sisd::ConcreteDynamics<T,DESCRIPTOR,DYNAMICS>(_parameters));
     // Fetch pointer to concretized dynamic-dispatch field
     _dynamicsOfCells = block.template getField<cpu::DYNAMICS<T,DESCRIPTOR,Platform::CPU_SISD>>()[0].data();
   }
 
   /// Apply collision on subdomain of block
   /**
-   * Loop excludes overlap areas of block as collisions are never applied there.
    * This assumes that `subdomain` is the core mask of BlockDynamicsMap.
    **/
   void apply(ConcreteBlockLattice<T,DESCRIPTOR,Platform::CPU_SISD>& block,
-             ConcreteBlockMask<T,DESCRIPTOR,Platform::CPU_SISD>&    subdomain,
+             ConcreteBlockMask<T,Platform::CPU_SISD>&               subdomain,
              CollisionDispatchStrategy                              strategy) override
   {
-    if (strategy != CollisionDispatchStrategy::Dominant) {
-      throw std::runtime_error("Platform::CPU_SISD currently only support CollisionDispatchStrategy::Dominant");
-    }
-
-    auto& parameters = _parameters->parameters;
-    auto& mask = *_mask;
-    if constexpr (DESCRIPTOR::d == 3) {
-      #ifdef PARALLEL_MODE_OMP
-      #pragma omp parallel for schedule(dynamic,1)
-      #endif
-      for (int iX=0; iX < block.getNx(); ++iX) {
-        auto& statistics = block.getStatistics();
-        for (int iY=0; iY < block.getNy(); ++iY) {
-          std::size_t iCell = block.getCellId(iX,iY,0);
-          for (int iZ=0; iZ < block.getNz(); ++iZ) {
-            cpu::Cell<T,DESCRIPTOR,Platform::CPU_SISD> cell(block, iCell);
-            if (auto cellStatistic = mask[iCell] ? DYNAMICS().apply(cell, parameters)
-                                                 : _dynamicsOfCells[iCell]->collide(cell)) {
-              statistics.incrementStats(cellStatistic.rho, cellStatistic.uSqr);
-            }
-            iCell += 1;
-          }
-        }
-      }
-    } else {
-      #ifdef PARALLEL_MODE_OMP
-      #pragma omp parallel for schedule(dynamic,1)
-      #endif
-      for (int iX=0; iX < block.getNx(); ++iX) {
-        auto& statistics = block.getStatistics();
-        std::size_t iCell = block.getCellId(iX,0);
-        for (int iY=0; iY < block.getNy(); ++iY) {
-          cpu::Cell<T,DESCRIPTOR,Platform::CPU_SISD> cell(block, iCell);
-          if (auto cellStatistic = mask[iCell] ? DYNAMICS().apply(cell, parameters)
-                                               : _dynamicsOfCells[iCell]->collide(cell)) {
-            statistics.incrementStats(cellStatistic.rho, cellStatistic.uSqr);
-          }
-          iCell += 1;
-        }
-      }
+    switch (strategy) {
+    case CollisionDispatchStrategy::Dominant:
+      return applyDominant(block, subdomain);
+    case CollisionDispatchStrategy::Individual:
+      return applyIndividual(block, subdomain);
+    default:
+      throw std::runtime_error("Invalid collision dispatch strategy");
     }
   }
 
@@ -212,11 +296,12 @@ public:
 
 
 /// Application of a cell-wise OPERATOR on a concrete scalar CPU block
-template <typename T, typename DESCRIPTOR, typename OPERATOR>
+template <typename T, typename DESCRIPTOR, CONCEPT(CellOperator) OPERATOR>
 class ConcreteBlockO<T,DESCRIPTOR,Platform::CPU_SISD,OPERATOR,OperatorScope::PerCell> final
   : public BlockO<T,DESCRIPTOR,Platform::CPU_SISD> {
 private:
   std::vector<CellID> _cells;
+  bool _modified;
 
 public:
   std::type_index id() const override
@@ -228,6 +313,7 @@ public:
   {
     if (state) {
       _cells.emplace_back(iCell);
+      _modified = true;
     }
   }
 
@@ -236,8 +322,16 @@ public:
 
   void apply(ConcreteBlockLattice<T,DESCRIPTOR,Platform::CPU_SISD>& block) override
   {
+    if (_modified) {
+      std::sort(_cells.begin(), _cells.end());
+      _cells.erase(std::unique(_cells.begin(), _cells.end()), _cells.end());
+      _modified = false;
+    }
     if (_cells.size() > 0) {
       cpu::Cell<T,DESCRIPTOR,Platform::CPU_SISD> cell(block, 0);
+      #ifdef PARALLEL_MODE_OMP
+      #pragma omp parallel for schedule(static) firstprivate(cell)
+      #endif
       for (CellID iCell : _cells) {
         cell.setCellId(iCell);
         OPERATOR().apply(cell);
@@ -248,13 +342,14 @@ public:
 };
 
 
-template <typename T, typename DESCRIPTOR, typename OPERATOR>
+template <typename T, typename DESCRIPTOR, CONCEPT(CellOperator) OPERATOR>
 class ConcreteBlockO<T,DESCRIPTOR,Platform::CPU_SISD,OPERATOR,OperatorScope::PerCellWithParameters> final
   : public BlockO<T,DESCRIPTOR,Platform::CPU_SISD> {
 private:
   std::vector<CellID> _cells;
+  bool _modified;
 
-  TrivialParametersD<T,DESCRIPTOR,Platform::CPU_SISD,OPERATOR>* _parameters;
+  ParametersOfOperatorD<T,DESCRIPTOR,OPERATOR>* _parameters;
 
 public:
   std::type_index id() const override
@@ -266,21 +361,30 @@ public:
   {
     if (state) {
       _cells.emplace_back(iCell);
+      _modified = true;
     }
   }
 
   void setup(ConcreteBlockLattice<T,DESCRIPTOR,Platform::CPU_SISD>& block) override
   {
-    _parameters = &block.template getData<TrivialParameters<OPERATOR>>();
+    _parameters = &block.template getData<OperatorParameters<OPERATOR>>().parameters;
   }
 
   void apply(ConcreteBlockLattice<T,DESCRIPTOR,Platform::CPU_SISD>& block) override
   {
+    if (_modified) {
+      std::sort(_cells.begin(), _cells.end());
+      _cells.erase(std::unique(_cells.begin(), _cells.end()), _cells.end());
+      _modified = false;
+    }
     if (_cells.size() > 0) {
       cpu::Cell<T,DESCRIPTOR,Platform::CPU_SISD> cell(block, 0);
+      #ifdef PARALLEL_MODE_OMP
+      #pragma omp parallel for schedule(static) firstprivate(cell)
+      #endif
       for (CellID iCell : _cells) {
         cell.setCellId(iCell);
-        OPERATOR().apply(cell, _parameters->parameters);
+        OPERATOR().apply(cell, *_parameters);
       }
     }
   }
@@ -292,7 +396,7 @@ public:
 /**
  * e.g. StatisticsPostProcessor
  **/
-template <typename T, typename DESCRIPTOR, typename OPERATOR>
+template <typename T, typename DESCRIPTOR, CONCEPT(BlockOperator) OPERATOR>
 class ConcreteBlockO<T,DESCRIPTOR,Platform::CPU_SISD,OPERATOR,OperatorScope::PerBlock> final
   : public BlockO<T,DESCRIPTOR,Platform::CPU_SISD> {
 public:

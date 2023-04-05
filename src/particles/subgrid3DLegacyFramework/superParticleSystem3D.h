@@ -113,6 +113,8 @@ public:
   /// and in given Material Number
   void addParticle(IndicatorF3D<T>& ind, std::set<int>  material, T mas, T rad, int no = 1,
                    std::vector<T> vel = {0., 0., 0.});
+ void addHL3DParticle(IndicatorF3D<T>& ind, std::set<int>  material, T mas, T rad, int no = 1,
+                   std::vector<T> vel = {0., 0., 0.}, T surface=1., T volume=1.);
   void addParticle(IndicatorF3D<T>& ind,  std::set<int>  material, T mas, T rad, int no, int id,
                    std::vector<T> vel, std::vector<T> dMoment, std::vector<T> aVel,
                    std::vector<T> torque, T magnetisation, int sActivity)
@@ -144,6 +146,11 @@ public:
 
   /// Add particles form a File. Save using saveToFile(std::string name)
   void addParticlesFromFile(std::string name, T mass, T radius);
+
+
+  /// Add particles form a File. Save using saveToFile(std::string name)
+  void addParticlesFromParaviewFile(std::string name);
+
   /// Add a number of particles with a certain ID (TracerParticle) equally distributed in a given IndicatorF3D
   void addTracerParticle(IndicatorF3D<T>& ind, int idTP, T mas, T rad, int noTP = 1, std::vector<T> vel = {0., 0., 0.});
 

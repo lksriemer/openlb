@@ -27,7 +27,7 @@
 #include "shanChenDynGForcedPostProcessor2D.h"
 #include "interactionPotential.h"
 #include "core/util.h"
-#include "core/finiteDifference2D.h"
+#include "utilities/finiteDifference2D.h"
 
 namespace olb {
 

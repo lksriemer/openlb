@@ -47,14 +47,14 @@ namespace olb {
 ///Implementation of a outlet boundary condition for the partner lattices of the binary or the ternary free energy model.
 ///Initialising the FreeEnergyOutletBoundary on the superLattice domain
 template<typename T, typename DESCRIPTOR, typename MixinDynamics = RLBdynamics<T,DESCRIPTOR>>
-void setFreeEnergyOutletBoundary(SuperLattice<T, DESCRIPTOR>& sLattice, T omega, SuperGeometry<T,3>& superGeometry, int material, 
+void setFreeEnergyOutletBoundary(SuperLattice<T, DESCRIPTOR>& sLattice, T omega, SuperGeometry<T,3>& superGeometry, int material,
                                  std::string type, int latticeNumber);
 
 
 ///Implementation of a outlet boundary condition for the partner lattices of the binary or the ternary free energy model.
 ///Initialising the FreeEnergyOutletBoundary on the superLattice domain
 template<typename T, typename DESCRIPTOR, typename MixinDynamics = RLBdynamics<T,DESCRIPTOR>>
-void setFreeEnergyOutletBoundary(SuperLattice<T, DESCRIPTOR>& sLattice, T omega, FunctorPtr<SuperIndicatorF3D<T>>&& indicator, 
+void setFreeEnergyOutletBoundary(SuperLattice<T, DESCRIPTOR>& sLattice, T omega, FunctorPtr<SuperIndicatorF3D<T>>&& indicator,
                                  std::string type, int latticeNumber);
 
 

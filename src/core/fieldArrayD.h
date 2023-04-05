@@ -261,13 +261,73 @@ public:
     }
   }
 
+  /// Return copy of FIELD data for cell iCell
+  auto getField(std::size_t iCell) const
+  {
+    return this->getRow(iCell);
+  }
+
+  /// Set FIELD data at cell iCell
+  void setField(std::size_t iCell, const FieldD<T,DESCRIPTOR,FIELD>& v)
+  {
+    this->setRow(iCell, v);
+  }
+
+  auto getFieldPointer(std::size_t iCell) const
+  {
+    return this->getRowPointer(iCell);
+  }
+  auto getFieldPointer(std::size_t iCell)
+  {
+    return this->getRowPointer(iCell);
+  }
+
 };
 
+
+
 template <typename T, typename DESCRIPTOR, Platform PLATFORM, typename FIELD>
-ConcreteCommunicatable(FieldArrayD<T,DESCRIPTOR,PLATFORM,FIELD>&) -> ConcreteCommunicatable<
-  ColumnVector<typename ImplementationOf<typename FIELD::template column_type<T>,PLATFORM>::type,
-               DESCRIPTOR::template size<FIELD>()>
->;
+class ConcreteCommunicatable<FieldArrayD<T,DESCRIPTOR,PLATFORM,FIELD>> final : public Communicatable {
+private:
+  FieldArrayD<T,DESCRIPTOR,PLATFORM,FIELD>& _communicatee;
+
+public:
+  ConcreteCommunicatable(FieldArrayD<T,DESCRIPTOR,PLATFORM,FIELD>& communicatee):
+    _communicatee{communicatee} { }
+
+  /// Get serialized size for data at locations `indices`
+  std::size_t size(ConstSpan<CellID> indices) const override
+  {
+    return (ConcreteCommunicatable<
+      ColumnVector<typename ImplementationOf<typename FIELD::template column_type<T>,PLATFORM>::type,
+                 DESCRIPTOR::template size<FIELD>()>
+    >(_communicatee).size(indices));
+  }
+
+  /// Serialize data at locations `indices` to `buffer`
+  std::size_t serialize(ConstSpan<CellID> indices,
+                        std::uint8_t* buffer) const override
+  {
+    std::uint8_t* curr = buffer;
+    curr += ConcreteCommunicatable<
+      ColumnVector<typename ImplementationOf<typename FIELD::template column_type<T>,PLATFORM>::type,
+                   DESCRIPTOR::template size<FIELD>()>
+    >(_communicatee).serialize(indices, curr);
+    return curr - buffer;
+  }
+
+  /// Deserialize data at locations `indices` to `buffer`
+  std::size_t deserialize(ConstSpan<CellID> indices,
+                          const std::uint8_t* buffer) override
+  {
+    const std::uint8_t* curr = buffer;
+    curr += ConcreteCommunicatable<
+      ColumnVector<typename ImplementationOf<typename FIELD::template column_type<T>,PLATFORM>::type,
+                   DESCRIPTOR::template size<FIELD>()>
+    >(_communicatee).deserialize(indices, curr);
+    return curr - buffer;
+  }
+};
 
 /// Storage for a fixed set of static FIELDS and arbitrary custom fields
 /**
@@ -382,6 +442,12 @@ public:
 
 };
 
+//template <typename T, typename DESCRIPTOR, Platform PLATFORM, typename FIELD>
+//ConcreteCommunicatable(FieldArrayD<T,DESCRIPTOR,PLATFORM,FIELD>&) -> ConcreteCommunicatable<
+//  ColumnVector<typename ImplementationOf<typename FIELD::template column_type<T>,PLATFORM>::type,
+//               DESCRIPTOR::template size<FIELD>()>
+//>;
+
 
 template <typename T, typename DESCRIPTOR, Platform PLATFORM, typename... FIELDS>
 class ConcreteCommunicatable<MultiFieldArrayD<T,DESCRIPTOR,PLATFORM,FIELDS...>> final : public Communicatable {
@@ -440,13 +506,13 @@ template <typename T, typename... GROUPS>
 class DynamicFieldGroupsD<T, meta::list<GROUPS...>> {
 private:
   template <typename GROUP>
-  struct ModuleFieldArrayD {
+  struct GroupedFieldArrayD {
     template <typename... FIELDS>
     using curried = MultiFieldArrayD<T,GROUP,Platform::CPU_SISD,FIELDS...>;
     using type = typename GROUP::template decompose_into<curried>;
   };
 
-  std::tuple<typename ModuleFieldArrayD<GROUPS>::type...> _data;
+  std::tuple<typename GroupedFieldArrayD<GROUPS>::type...> _data;
 
   std::size_t _count;
 
@@ -466,15 +532,82 @@ public:
   std::size_t count(){ return _count; }
 
   void resize(std::size_t newCount) {
-    meta::swallow((get<GROUPS>().resize(newCount), 0)...);
+    (get<GROUPS>().resize(newCount), ...);
     _count = newCount;
   }
 
   void swap(std::size_t i, std::size_t j)
   {
-    meta::swallow((get<GROUPS>().swap(i,j), 0)...);
+    (get<GROUPS>().swap(i,j), ...);
   }
 
+  std::size_t constexpr getSerializableSize()
+  {
+    return (get<GROUPS>().getSerializableSize() + ... + 0);
+  }
+
+};
+
+
+
+
+//Communicatable for GroupedFieldArrays
+template<typename DATA, typename... GROUPS>
+class GroupedDataCommunicatable{
+private:
+  DATA& _data;
+
+public:
+  GroupedDataCommunicatable( DATA& data )
+    : _data(data) {}
+
+  /// Get serialized size for data at locations `indices`
+  std::size_t size(ConstSpan<CellID> indices) const
+  {
+    std::size_t size = 0;
+    meta::list<GROUPS...>::for_each([&](auto group) {
+      using GROUP = typename decltype(group)::type;
+      // Workaround for Clang argument deduction bug
+      auto communicatable = ConcreteCommunicatable(_data.template get<GROUP>());
+      size += communicatable.size(indices);
+    });
+    return size;
+  }
+
+  /// Serialize data at locations `indices` to `buffer`
+  std::size_t serialize(ConstSpan<CellID> indices, std::uint8_t* buffer) const
+  {
+    std::uint8_t* curr = buffer;
+    meta::list<GROUPS...>::for_each([&](auto group) {
+      using GROUP = typename decltype(group)::type;
+      // Workaround for Clang argument deduction bug
+      auto communicatable = ConcreteCommunicatable(_data.template get<GROUP>());
+      curr += communicatable.serialize(indices, curr);
+    });
+    return curr - buffer;
+  }
+
+  /// Deserialize data at locations `indices` to `buffer`
+  std::size_t deserialize(ConstSpan<CellID> indices, const std::uint8_t* buffer)
+  {
+    const std::uint8_t* curr = buffer;
+    meta::list<GROUPS...>::for_each([&](auto group) {
+      using GROUP = typename decltype(group)::type;
+      // Workaround for Clang argument deduction bug
+      auto communicatable = ConcreteCommunicatable(_data.template get<GROUP>());
+      curr += communicatable.deserialize(indices, curr);
+    });
+    return curr - buffer;
+  }
+};
+
+/// Declare GroupedDataCommunicatable containing each GROUP in DESCRIPTOR::fields_t
+template <typename DATA, typename DESCRIPTOR>
+struct GroupedDataCommunicatableHelper {
+  template<typename... GROUPS>
+  using CurriedFieldGroupsCommunicatable = GroupedDataCommunicatable<DATA,GROUPS...>;
+
+  using type = typename DESCRIPTOR::template decompose_into<CurriedFieldGroupsCommunicatable>;
 };
 
 /// Declare MultiFieldArrayD containing each field in DESCRIPTOR::fields_t

@@ -50,7 +50,7 @@ using namespace olb;
 using namespace olb::descriptors;
 using namespace olb::graphics;
 
-using T = double;
+using T = FLOATING_POINT_TYPE;
 
 using NSDESCRIPTOR = D2Q9<POROSITY,VELOCITY_SOLID,FORCE>;
 using TDESCRIPTOR  = D2Q5<VELOCITY,TEMPERATURE>;
@@ -152,12 +152,9 @@ void prepareLattice( ThermalUnitConverter<T, NSDESCRIPTOR, TDESCRIPTOR> const& c
   T omega  = converter.getLatticeRelaxationFrequency();
   T Tomega = converter.getLatticeThermalRelaxationFrequency();
 
-  NSlattice.defineDynamics<NoDynamics>(superGeometry, 0);
   NSlattice.defineDynamics<ForcedPSMBGKdynamics>(superGeometry.getMaterialIndicator({1, 2, 3, 4}));
-
-  ADlattice.defineDynamics<NoDynamics>(superGeometry, 0);
   ADlattice.defineDynamics<TotalEnthalpyAdvectionDiffusionDynamics>(superGeometry.getMaterialIndicator({1, 2, 3}));
-  ADlattice.defineDynamics<BounceBack>(superGeometry, 4);
+  setBounceBackBoundary(ADlattice, superGeometry, 4);
 
   /// sets boundary
   setRegularizedTemperatureBoundary<T,TDESCRIPTOR>(ADlattice, Tomega, superGeometry.getMaterialIndicator({2, 3}));
@@ -166,7 +163,7 @@ void prepareLattice( ThermalUnitConverter<T, NSDESCRIPTOR, TDESCRIPTOR> const& c
   NSlattice.setParameter<descriptors::OMEGA>(omega);
 
   ADlattice.setParameter<descriptors::OMEGA>(Tomega);
-  ADlattice.setParameter<collision::TRT::MAGIC>(0.25);
+  ADlattice.setParameter<collision::TRT::MAGIC>(T(0.25));
   ADlattice.setParameter<TotalEnthalpy::T_S>(Tmelt);
   ADlattice.setParameter<TotalEnthalpy::T_L>(Tmelt);
   ADlattice.setParameter<TotalEnthalpy::CP_S>(cp_s);
@@ -218,7 +215,7 @@ void getResults( ThermalUnitConverter<T, NSDESCRIPTOR, TDESCRIPTOR> const& conve
 
   OstreamManager clout(std::cout,"getResults");
 
-  SuperVTMwriter2D<T> vtkWriter("thermalNaturalConvection2D");
+  SuperVTMwriter2D<T> vtkWriter("galliumMelting2d");
   SuperLatticeGeometry2D<T, NSDESCRIPTOR> geometry(NSlattice, superGeometry);
   SuperLatticeField2D<T, TDESCRIPTOR, VELOCITY> velocity(ADlattice);
   SuperLatticePhysPressure2D<T, NSDESCRIPTOR> pressure(NSlattice, converter);

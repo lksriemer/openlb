@@ -162,6 +162,22 @@ public:
   void printExtended();
 };
 
+
+///Evaluate complete neighbourhood and store in std::map
+template<typename T>
+void evaluateCuboidGeometryNeighbourhood(
+  CuboidGeometry2D<T>& cuboidGeometry,
+  std::map<int,std::vector<int>>& neighbourhood,
+  int offset=0 )
+{
+  for (int iC=0; iC<cuboidGeometry.getNc(); ++iC){
+    //Retrieve neighbours of iC
+    std::vector<int> neighbours;
+    cuboidGeometry.getNeighbourhood(iC, neighbours, offset);
+    neighbourhood[iC]=neighbours;
+  }
+}
+
 }  // namespace olb
 
 #endif

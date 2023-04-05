@@ -76,7 +76,7 @@ void setInterpolatedVelocityBoundary(BlockLattice<T,DESCRIPTOR>& _block, T omega
             momenta::BasicDirichletVelocityBoundaryTuple<0,-1>
           >>();
           _block.addPostProcessor(
-            typeid(PostStream), {iX, iY, iZ},
+            typeid(stage::PostStream), {iX, iY, iZ},
             meta::id<PlaneFdBoundaryProcessor3D<T,DESCRIPTOR,0,-1>>());
         }
         else if (discreteNormal[1] != 0 && discreteNormal[1] == 1) {
@@ -84,7 +84,7 @@ void setInterpolatedVelocityBoundary(BlockLattice<T,DESCRIPTOR>& _block, T omega
             momenta::BasicDirichletVelocityBoundaryTuple<0,1>
           >>();
           _block.addPostProcessor(
-            typeid(PostStream), {iX, iY, iZ},
+            typeid(stage::PostStream), {iX, iY, iZ},
             meta::id<PlaneFdBoundaryProcessor3D<T,DESCRIPTOR,0,1>>());
         }
         else if (discreteNormal[2] != 0 && discreteNormal[2] == -1) {
@@ -92,7 +92,7 @@ void setInterpolatedVelocityBoundary(BlockLattice<T,DESCRIPTOR>& _block, T omega
             momenta::BasicDirichletVelocityBoundaryTuple<1,-1>
           >>();
           _block.addPostProcessor(
-            typeid(PostStream), {iX, iY, iZ},
+            typeid(stage::PostStream), {iX, iY, iZ},
             meta::id<PlaneFdBoundaryProcessor3D<T,DESCRIPTOR,1,-1>>());
         }
         else if (discreteNormal[2] != 0 && discreteNormal[2] == 1) {
@@ -100,7 +100,7 @@ void setInterpolatedVelocityBoundary(BlockLattice<T,DESCRIPTOR>& _block, T omega
             momenta::BasicDirichletVelocityBoundaryTuple<1,1>
           >>();
           _block.addPostProcessor(
-            typeid(PostStream), {iX, iY, iZ},
+            typeid(stage::PostStream), {iX, iY, iZ},
             meta::id<PlaneFdBoundaryProcessor3D<T,DESCRIPTOR,1,1>>());
         }
         else if (discreteNormal[3] != 0 && discreteNormal[3] == -1) {
@@ -108,7 +108,7 @@ void setInterpolatedVelocityBoundary(BlockLattice<T,DESCRIPTOR>& _block, T omega
             momenta::BasicDirichletVelocityBoundaryTuple<2,-1>
           >>();
           _block.addPostProcessor(
-            typeid(PostStream), {iX, iY, iZ},
+            typeid(stage::PostStream), {iX, iY, iZ},
             meta::id<PlaneFdBoundaryProcessor3D<T,DESCRIPTOR,2,-1>>());
         }
         else if (discreteNormal[3] != 0 && discreteNormal[3] == 1) {
@@ -116,7 +116,7 @@ void setInterpolatedVelocityBoundary(BlockLattice<T,DESCRIPTOR>& _block, T omega
             momenta::BasicDirichletVelocityBoundaryTuple<2,1>
           >>();
           _block.addPostProcessor(
-            typeid(PostStream), {iX, iY, iZ},
+            typeid(stage::PostStream), {iX, iY, iZ},
             meta::id<PlaneFdBoundaryProcessor3D<T,DESCRIPTOR,2,1>>());
         }
       }
@@ -127,7 +127,7 @@ void setInterpolatedVelocityBoundary(BlockLattice<T,DESCRIPTOR>& _block, T omega
           momenta::FixedVelocityBoundaryTuple
         >>();
         _block.addPostProcessor(
-          typeid(PostStream), {iX, iY, iZ},
+          typeid(stage::PostStream), {iX, iY, iZ},
           promisePostProcessorForNormal<T,DESCRIPTOR,OuterVelocityCornerProcessor3D>(
             Vector<int,3>(discreteNormal.data() + 1)));
       }
@@ -144,7 +144,7 @@ void setInterpolatedVelocityBoundary(BlockLattice<T,DESCRIPTOR>& _block, T omega
           momenta::FixedVelocityBoundaryTuple
         >>();
         _block.addPostProcessor(
-          typeid(PostStream), {iX, iY, iZ},
+          typeid(stage::PostStream), {iX, iY, iZ},
           promisePostProcessorForNormalSpecial<T,DESCRIPTOR,OuterVelocityEdgeProcessor3D>(
             Vector<int,3>(discreteNormal.data() + 1)));
       }

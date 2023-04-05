@@ -112,14 +112,19 @@ void SuperGeometryStatistics2D<T>::update(bool verbose)
 
 
     // get total number of different materials right
-    _material2n = std::map<int, int>();
     _nMaterials = int();
-    for (int iCloc=0; iCloc<_superGeometry->getLoadBalancer().size(); iCloc++) {
-      if (_superGeometry->getBlockGeometry(iCloc).getStatistics(false).getNmaterials() > 0) {
-        _nMaterials = _superGeometry->getBlockGeometry(iCloc).getStatistics(false).getNmaterials();
+    {
+      std::set<int> tmpMaterials{};
+      for (int iCloc=0; iCloc<_superGeometry->getLoadBalancer().size(); iCloc++) {
+        const auto& blockMaterial2n = _superGeometry->getBlockGeometry(iCloc).getStatistics(false).getMaterial2n();
+        for (auto [material, _] : blockMaterial2n) {
+          tmpMaterials.insert(material);
+        }
       }
+      _nMaterials = tmpMaterials.size();
     }
 
+    _material2n = std::map<int, int>();
 
 #ifdef PARALLEL_MODE_MPI
     singleton::mpi().reduceAndBcast(_nMaterials, MPI_SUM);
@@ -378,7 +383,6 @@ std::vector<T> SuperGeometryStatistics2D<T>::getCenterPhysR(int material) const
 template<typename T>
 std::vector<int> SuperGeometryStatistics2D<T>::getType(int iC, int iX, int iY)
 {
-  update();
   return const_this->getType(iC, iX, iY);
 }
 

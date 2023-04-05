@@ -33,6 +33,7 @@
 #include "indicator/smoothIndicatorF3D.h"
 #include "utilities/adHelpers.h"
 #include "utilities/dimensionConverter.h"
+#include "utilities/vectorHelpers.h"
 
 
 /**
@@ -92,7 +93,7 @@ public:
 
   template<typename V, typename U>
   auto copyAs() const {
-    return exchange_type<V,U>(util::copyAs<V,T>(_c));
+    return exchange_type<V,U>(util::copyAs<V,T,util::StdVector>(_c));
   }
 };
 
@@ -504,22 +505,6 @@ public:
   bool operator() (T output[], const S x[]);
 };
 
-//TODO: to be removed
-/** Computes resulting velocity of an object from translational and rotational velocity.
- * \param indicator Class defining the object (needs to be a SmoothIndicatorF2D<T,T,true>)
- * \param u translational velocity of the object - expected in lattice units
- * \param omega rotational velocity of the object - expected in lattice units
- */
-template <typename T, typename S, typename DESCRIPTOR>
-class ParticleU2D : public AnalyticalF2D<T,S> {
-protected:
-  SmoothIndicatorF2D<T,T,true>& _indicator;
-  UnitConverter<T,DESCRIPTOR> const& _converter;
-public:
-  ParticleU2D(SmoothIndicatorF2D<T,T,true>& indicator, UnitConverter<T,DESCRIPTOR> const& converter);
-  bool operator()(T output[], const S input[]) override;
-};
-
 
 //////////////////////////////////3D////////////////////////////////////////////
 /// AnalyticalLinear3D: 3D -> 1D troughout given points (x0,y0,z0,v0), (x1,y1,z1,v1), (x2,y2,z2,v2), (x3,y3,z3,v3)
@@ -612,23 +597,6 @@ private:
 public:
   GaussianHillTimeEvolution2D(T sigma0, T D, T t, Vector<T,2> x0, Vector<T,2> u, T c0);
   bool operator()(T output[1], const S x[2]) override;
-};
-
-
-//TODO: to be removed
-/** Computes resulting velocity of an object from translational and rotational velocity.
- * \param indicator Class defining the object (needs to be a SmoothIndicatorF3D)
- * \param u translational velocity of the object - expected in lattice units
- * \param omega rotational velocity of the object - expected in lattice units
- */
-template <typename T, typename S, typename DESCRIPTOR>
-class ParticleU3D : public AnalyticalF3D<T,S> {
-protected:
-  SmoothIndicatorF3D<T, T, true>& _indicator;
-  UnitConverter<T,DESCRIPTOR> const& _converter;
-public:
-  ParticleU3D(SmoothIndicatorF3D<T, T, true>& indicator, UnitConverter<T,DESCRIPTOR> const& converter);
-  bool operator()(T output[], const S input[]) override;
 };
 
 /** Returns a constant value on every cuboids.

@@ -50,7 +50,41 @@ SuperLatticeTimeAveragedF3D<T>:: SuperLatticeTimeAveragedF3D( SuperF3D<T,T>& sFu
 };
 
 template <typename T>
+SuperLatticeTimeAveragedMagnitudesF3D<T>:: SuperLatticeTimeAveragedMagnitudesF3D( SuperF3D<T,T>& sFunctor)
+  : SuperF3D<T,T>(sFunctor.getSuperStructure(),sFunctor.getTargetDim()),
+    _ensembles(0),
+    _sFunctor(sFunctor),
+    _sData(_sFunctor.getSuperStructure().getCuboidGeometry(),
+           _sFunctor.getSuperStructure().getLoadBalancer(),
+           _sFunctor.getSuperStructure().getOverlap(),
+           _sFunctor.getTargetDim()),
+    _sDataP2(_sFunctor.getSuperStructure().getCuboidGeometry(),
+             _sFunctor.getSuperStructure().getLoadBalancer(),
+             _sFunctor.getSuperStructure().getOverlap(),
+             _sFunctor.getTargetDim())
+{
+  this->getName() = "Time Averaged Magnitudes" + _sFunctor.getName();
+};
+
+template <typename T>
 bool SuperLatticeTimeAveragedF3D<T>::operator() (T output[], const int input[])
+{
+  T iCloc = _sData.getLoadBalancer().loc(input[0]);
+  for ( int iDim = 0; iDim < _sData.getDataSize(); iDim++) {
+    output[iDim] = _sData.getBlock(iCloc).get(input+1,iDim) / _ensembles;
+  }
+  for (int iDim = _sData.getDataSize(); iDim < _sData.getDataSize()*2; iDim++)
+    if (_sDataP2.getBlock(iCloc).get(input+1,(int) iDim-_sDataP2.getDataSize())/_ensembles - _sData.getBlock(iCloc).get(input+1,(int) iDim-_sDataP2.getDataSize())*_sData.getBlock(iCloc).get(input+1,(int) iDim-_sDataP2.getDataSize())/_ensembles/_ensembles<0) {
+      output[iDim]=0;
+    }
+    else {
+      output[iDim] = util::sqrt(_sDataP2.getBlock(iCloc).get(input+1,(int) iDim-_sDataP2.getDataSize())/_ensembles - _sData.getBlock(iCloc).get(input+1,(int) iDim-_sDataP2.getDataSize())*_sData.getBlock(iCloc).get(input+1,(int) iDim-_sDataP2.getDataSize())/_ensembles/_ensembles);
+    }
+  return true;
+};
+
+template <typename T>
+bool SuperLatticeTimeAveragedMagnitudesF3D<T>::operator() (T output[], const int input[])
 {
   T iCloc = _sData.getLoadBalancer().loc(input[0]);
   for ( int iDim = 0; iDim < _sData.getDataSize(); iDim++) {
@@ -73,6 +107,12 @@ int SuperLatticeTimeAveragedF3D<T>::getEnsembles()
 };
 
 template <typename T>
+int SuperLatticeTimeAveragedMagnitudesF3D<T>::getEnsembles()
+{
+  return _ensembles;
+};
+
+template <typename T>
 void SuperLatticeTimeAveragedF3D<T>::addEnsemble()
 {
   int i[4];
@@ -82,7 +122,8 @@ void SuperLatticeTimeAveragedF3D<T>::addEnsemble()
       i[1] = iX;
       i[2] = iY;
       i[3] = iZ;
-      BaseType<T> tmp[_sFunctor.getTargetDim()];
+      //BaseType<T> tmp[_sFunctor.getTargetDim()];
+      T tmp[_sFunctor.getTargetDim()];
       _sFunctor(tmp, i);
       for (int iDim=0; iDim<_sFunctor.getTargetDim(); iDim++) {
         _sData.getBlock(iCloc).get({iX, iY, iZ}, iDim) += (BaseType<T>)(tmp[iDim]) ;
@@ -94,10 +135,38 @@ void SuperLatticeTimeAveragedF3D<T>::addEnsemble()
 };
 
 template <typename T>
+void SuperLatticeTimeAveragedMagnitudesF3D<T>::addEnsemble()
+{
+  int i[4];
+  for (int iCloc=0; iCloc < _sData.getLoadBalancer().size(); ++iCloc) {
+    i[0] = _sData.getLoadBalancer().glob(iCloc);
+    _sData.getBlock(iCloc).forSpatialLocations([&](auto iX, auto iY, auto iZ) {
+      i[1] = iX;
+      i[2] = iY;
+      i[3] = iZ;
+      BaseType<T> tmp[_sFunctor.getTargetDim()];
+      _sFunctor(tmp, i);
+      for (int iDim=0; iDim<_sFunctor.getTargetDim(); iDim++) {
+        _sData.getBlock(iCloc).get({iX, iY, iZ}, iDim) += util::sqrt((BaseType<T>)(tmp[0])*(BaseType<T>)(tmp[0])+(BaseType<T>)(tmp[1])*(BaseType<T>)(tmp[1])+(BaseType<T>)(tmp[2])*(BaseType<T>)(tmp[2])) ;
+        _sDataP2.getBlock(iCloc).get({iX, iY, iZ}, iDim) += (BaseType<T>)(tmp[0]) *(BaseType<T>)(tmp[0]) +(BaseType<T>)(tmp[1]) *(BaseType<T>)(tmp[1])+(BaseType<T>)(tmp[2]) *(BaseType<T>)(tmp[2]) ;
+      }
+    });
+  }
+  _ensembles++;
+};
+
+template <typename T>
 int SuperLatticeTimeAveragedF3D<T>::getBlockFSize() const
 {
   return 0;
 };
+
+template <typename T>
+int SuperLatticeTimeAveragedMagnitudesF3D<T>::getBlockFSize() const
+{
+  return 0;
+};
+
 
 template <typename T>
 SuperLatticeTimeAveragedCrossCorrelationF3D<T>::SuperLatticeTimeAveragedCrossCorrelationF3D(SuperF3D<T,T>& sFunctorM,SuperF3D<T,T>& sFunctorN)
@@ -153,7 +222,7 @@ bool SuperLatticeTimeAveragedCrossCorrelationF3D<T>::operator() (T output[], con
   T iCloc = _sDataMN.getLoadBalancer().loc(input[0]);
   for (int iDimM=0; iDimM<_sFunctorM.getTargetDim(); iDimM++) {
     for (int iDimN=0; iDimN<_sFunctorN.getTargetDim(); iDimN++) {
-      output[iDim] = _sDataMN.getBlock(iCloc).get(input+1,iDim)-_sDataM.getBlock(iCloc).get(input+1,iDimM) *_sDataN.getBlock(iCloc).get(input+1,iDimN)/_ensembles;
+      output[iDim] = _sDataMN.getBlock(iCloc).get(input+1,iDim)-_sDataM.getBlock(iCloc).get(input+1,iDimM) *_sDataN.getBlock(iCloc).get(input+1,iDimN)/_ensembles/_ensembles;
       iDim++;
     }
   }

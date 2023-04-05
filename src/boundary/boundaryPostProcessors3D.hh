@@ -26,7 +26,7 @@
 
 #include "boundaryPostProcessors3D.h"
 
-#include "core/finiteDifference3D.h"
+#include "utilities/finiteDifference3D.h"
 #include "core/util.h"
 
 #include "dynamics/dynamics.h"
@@ -37,7 +37,7 @@ namespace olb {
 ////////  PlaneFdBoundaryProcessor3D ///////////////////////////////////
 
 template <typename T, typename DESCRIPTOR, int direction, int orientation>
-template <typename CELL>
+template <CONCEPT(Cell) CELL>
 void PlaneFdBoundaryProcessor3D<T,DESCRIPTOR,direction,orientation>::apply(CELL& cell)
 {
   using namespace olb::util::tensorIndices3D;
@@ -89,156 +89,80 @@ void PlaneFdBoundaryProcessor3D<T,DESCRIPTOR,direction,orientation>::interpolate
     ::interpolateVector(velDeriv, cell);
 }
 
-
-////////  StraightConvectionBoundaryProcessorGenerator3D ////////////////////////////////
-
-template<typename T, typename DESCRIPTOR, int direction, int orientation>
-StraightConvectionBoundaryProcessor3D<T,DESCRIPTOR,direction,orientation>::
-StraightConvectionBoundaryProcessor3D(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_, T* uAv_)
-  : x0(x0_), x1(x1_), y0(y0_), y1(y1_), z0(z0_), z1(z1_), uAv(uAv_)
+template <typename DESCRIPTOR, int direction, int orientation>
+template <CONCEPT(Cell) CELL>
+void StraightConvectionBoundaryProcessor3D<DESCRIPTOR,direction,orientation>::initialize(CELL& cell)
 {
-  this->getName() = "StraightConvectionBoundaryProcessor3D";
-  OLB_PRECONDITION(x0==x1 || y0==y1 || z0==z1);
-
-  saveCell = new T*** [(size_t)(x1_-x0_+1)];
-  for (int iX=0; iX<=x1_-x0_; ++iX) {
-    saveCell[iX] = new T** [(size_t)(y1_-y0_+1)];
-    for (int iY=0; iY<=y1_-y0_; ++iY) {
-      saveCell[iX][iY] = new T* [(size_t)(z1_-z0_+1)];
-      for (int iZ=0; iZ<=z1_-z0_; ++iZ) {
-        saveCell[iX][iY][iZ] = new T [(size_t)(DESCRIPTOR::q)];
-        for (int iPop=0; iPop<DESCRIPTOR::q; ++iPop) {
-          // default set to -1 in order to avoid wrong results at first call
-          saveCell[iX][iY][iZ][iPop] = T(-1);
-        }
-      }
-    }
+  constexpr auto missing = util::populationsContributingToVelocity<DESCRIPTOR,direction,-orientation>();
+  auto prevCell = cell.template getFieldPointer<PREV_CELL>();
+  for (unsigned i=0; i < missing.size(); ++i) {
+    prevCell[i] = cell[missing[i]];
   }
 }
 
-template<typename T, typename DESCRIPTOR, int direction, int orientation>
-StraightConvectionBoundaryProcessor3D<T,DESCRIPTOR,direction,orientation>::
-~StraightConvectionBoundaryProcessor3D()
+template <typename DESCRIPTOR, int direction, int orientation>
+template <CONCEPT(Cell) CELL>
+void StraightConvectionBoundaryProcessor3D<DESCRIPTOR,direction,orientation>::apply(CELL& cell)
 {
-  this->getName() = "StraightConvectionBoundaryProcessor3D";
+  using V = typename CELL::value_t;
+  constexpr auto missing = util::populationsContributingToVelocity<DESCRIPTOR,direction,-orientation>();
 
-  for (int iX=0; iX<=x1-x0; ++iX) {
-    for (int iY=0; iY<=y1-y0; ++iY) {
-      for (int iZ=0; iZ<=z1-z0; ++iZ) {
-        delete [] saveCell[iX][iY][iZ];
-      }
-      delete [] saveCell[iX][iY];
-    }
-    delete [] saveCell[iX];
+  auto prevCell = cell.template getField<PREV_CELL>();
+
+  for (unsigned i=0; i < missing.size(); ++i) {
+    cell[missing[i]] = prevCell[i];
   }
-  delete [] saveCell;
-}
 
-template<typename T, typename DESCRIPTOR, int direction,int orientation>
-void StraightConvectionBoundaryProcessor3D<T,DESCRIPTOR,direction,orientation>::
-processSubDomain(BlockLattice<T,DESCRIPTOR>& blockLattice, int x0_, int x1_, int y0_, int y1_, int z0_, int z1_)
-{
-  int newX0, newX1, newY0, newY1, newZ0, newZ1;
-  if ( util::intersect (
-         x0, x1, y0, y1, z0, z1,
-         x0_, x1_, y0_, y1_, z0_, z1_,
-         newX0, newX1, newY0, newY1, newZ0, newZ1 ) ) {
+  V rho0, u0[3];
+  V rho1, u1[3];
+  V rho2, u2[3];
 
-    int iX;
-#ifdef PARALLEL_MODE_OMP
-    #pragma omp parallel for
-#endif
-    for (iX=newX0; iX<=newX1; ++iX) {
-      for (int iY=newY0; iY<=newY1; ++iY) {
-        for (int iZ=newZ0; iZ<=newZ1; ++iZ) {
-          Cell<T,DESCRIPTOR> cell = blockLattice.get(iX,iY,iZ);
-          for (int iPop = 0; iPop < DESCRIPTOR::q ; ++iPop) {
-            if (descriptors::c<DESCRIPTOR>(iPop,direction)==-orientation) {
-              // using default -1 avoids wrong first call
-              if (!util::nearZero(1 + saveCell[iX-x0][iY-y0][iZ-z0][iPop]) ) {
-                cell[iPop] = saveCell[iX-x0][iY-y0][iZ-z0][iPop];
-              }
-            }
-          }
+  cell.computeRhoU(rho0, u0);
 
-          T rho0, u0[3];
-          T rho1, u1[3];
-          T rho2, u2[3];
-          if (direction==0) {
-            blockLattice.get(iX,iY,iZ).computeRhoU(rho0,u0);
-            blockLattice.get(iX-orientation,iY,iZ).computeRhoU(rho1,u1);
-            blockLattice.get(iX-orientation*2,iY,iZ).computeRhoU(rho2,u2);
-          }
-          else if (direction==1) {
-            blockLattice.get(iX,iY,iZ).computeRhoU(rho0,u0);
-            blockLattice.get(iX,iY-orientation,iZ).computeRhoU(rho1,u1);
-            blockLattice.get(iX,iY-orientation*2,iZ).computeRhoU(rho2,u2);
-          }
-          else {
-            blockLattice.get(iX,iY,iZ).computeRhoU(rho0,u0);
-            blockLattice.get(iX,iY,iZ-orientation).computeRhoU(rho1,u1);
-            blockLattice.get(iX,iY,iZ-orientation*2).computeRhoU(rho2,u2);
-          }
-
-          // rho0 = T(1); rho1 = T(1); rho2 = T(1);
-
-          T uDelta[3];
-          T uAverage = rho0*u0[direction];
-          if (uAv!=nullptr) {
-            uAverage = *uAv * rho0;
-          }
-          uDelta[0]=-uAverage*0.5*(3*rho0*u0[0]-4*rho1*u1[0]+rho2*u2[0]);
-          uDelta[1]=-uAverage*0.5*(3*rho0*u0[1]-4*rho1*u1[1]+rho2*u2[1]);
-          uDelta[2]=-uAverage*0.5*(3*rho0*u0[2]-4*rho1*u1[2]+rho2*u2[2]);
-
-          for (int iPop = 0; iPop < DESCRIPTOR::q ; ++iPop) {
-            if (descriptors::c<DESCRIPTOR>(iPop,direction) == -orientation) {
-              saveCell[iX-x0][iY-y0][iZ-z0][iPop] = cell[iPop] + descriptors::invCs2<T,DESCRIPTOR>()*descriptors::t<T,DESCRIPTOR>(iPop)*(uDelta[0]*descriptors::c<DESCRIPTOR>(iPop,0)+uDelta[1]*descriptors::c<DESCRIPTOR>(iPop,1)+uDelta[2]*descriptors::c<DESCRIPTOR>(iPop,2));
-            }
-          }
-        }
-      }
-    }
+  static_assert(direction == 0 || direction == 1 || direction ==2,
+                "Direction must be one of 0, 1 or 2");
+  if constexpr (direction == 0) {
+    cell.neighbor({-orientation  ,0,0}).computeRhoU(rho1, u1);
+    cell.neighbor({-orientation*2,0,0}).computeRhoU(rho2, u2);
   }
+  else if constexpr (direction == 1) {
+    cell.neighbor({0,-orientation  ,0}).computeRhoU(rho1, u1);
+    cell.neighbor({0,-orientation*2,0}).computeRhoU(rho2, u2);
+  }
+  else if constexpr (direction == 2) {
+    cell.neighbor({0,0,-orientation  }).computeRhoU(rho1, u1);
+    cell.neighbor({0,0,-orientation*2}).computeRhoU(rho2, u2);
+  }
+
+  V uDelta[3];
+  V uAverage = rho0*u0[direction];
+  //if (uAv!=nullptr) {
+  //  rho0 = V{1};
+  //  rho1 = V{1};
+  //  rho2 = V{1};
+  //  uAverage = *uAv * rho0;
+  //}
+
+  uDelta[0] = -uAverage*0.5*(3*rho0*u0[0]-4*rho1*u1[0]+rho2*u2[0]);
+  uDelta[1] = -uAverage*0.5*(3*rho0*u0[1]-4*rho1*u1[1]+rho2*u2[1]);
+  uDelta[2] = -uAverage*0.5*(3*rho0*u0[2]-4*rho1*u1[2]+rho2*u2[2]);
+
+  for (unsigned i=0; i < missing.size(); ++i) {
+    auto iPop = missing[i];
+    prevCell[i] = cell[iPop]
+                + descriptors::invCs2<V,DESCRIPTOR>()*descriptors::t<V,DESCRIPTOR>(iPop)
+                  * ( uDelta[0]*descriptors::c<DESCRIPTOR>(iPop,0)
+                    + uDelta[1]*descriptors::c<DESCRIPTOR>(iPop,1)
+                    + uDelta[2]*descriptors::c<DESCRIPTOR>(iPop,2));
+  }
+
+  cell.template setField<PREV_CELL>(prevCell);
 }
-
-template<typename T, typename DESCRIPTOR, int direction,int orientation>
-void StraightConvectionBoundaryProcessor3D<T,DESCRIPTOR,direction,orientation>::
-process(BlockLattice<T,DESCRIPTOR>& blockLattice)
-{
-  processSubDomain(blockLattice, x0, x1, y0, y1, z0, z1);
-}
-
-
-////////  StraightConvectionBoundaryProcessorGenerator2D ////////////////////////////////
-
-template<typename T, typename DESCRIPTOR, int direction,int orientation>
-StraightConvectionBoundaryProcessorGenerator3D<T,DESCRIPTOR, direction,orientation>::
-StraightConvectionBoundaryProcessorGenerator3D(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_, T* uAv_)
-  : PostProcessorGenerator3D<T,DESCRIPTOR>(x0_, x1_, y0_, y1_, z0_, z1_), uAv(uAv_)
-{ }
-
-template<typename T, typename DESCRIPTOR, int direction,int orientation>
-PostProcessor3D<T,DESCRIPTOR>*
-StraightConvectionBoundaryProcessorGenerator3D<T,DESCRIPTOR,direction,orientation>::generate() const
-{
-  return new StraightConvectionBoundaryProcessor3D<T,DESCRIPTOR,direction,orientation>
-         ( this->x0, this->x1, this->y0, this->y1, this->z0, this->z1, uAv);
-}
-
-template<typename T, typename DESCRIPTOR, int direction,int orientation>
-PostProcessorGenerator3D<T,DESCRIPTOR>*
-StraightConvectionBoundaryProcessorGenerator3D<T,DESCRIPTOR,direction,orientation>::clone() const
-{
-  return new StraightConvectionBoundaryProcessorGenerator3D<T,DESCRIPTOR,direction,orientation>
-         (this->x0, this->x1, this->y0, this->y1, this->z0, this->z1, uAv);
-}
-
 
 ////////  OuterVelocityEdgeProcessor3D ///////////////////////////////////
 
 template <typename T, typename DESCRIPTOR, int plane, int normal1, int normal2>
-template <typename CELL>
+template <CONCEPT(Cell) CELL>
 void OuterVelocityEdgeProcessor3D<T,DESCRIPTOR,plane,normal1,normal2>::apply(CELL& cell)
 {
   using namespace olb::util::tensorIndices3D;
@@ -312,7 +236,7 @@ void OuterVelocityEdgeProcessor3D<T,DESCRIPTOR,plane,normal1,normal2>
 /////////// OuterVelocityCornerProcessor3D /////////////////////////////////////
 
 template <typename T, typename DESCRIPTOR, int xNormal, int yNormal, int zNormal>
-template <typename CELL>
+template <CONCEPT(Cell) CELL>
 void OuterVelocityCornerProcessor3D<T,DESCRIPTOR,xNormal,yNormal,zNormal>::apply(CELL& cell)
 {
   using namespace olb::util::tensorIndices3D;

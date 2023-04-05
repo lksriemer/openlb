@@ -25,19 +25,52 @@
 #ifndef SUPER_LATTICE_INTERACTION_H
 #define SUPER_LATTICE_INTERACTION_H
 
+#include "core/core.h"
+#include "functors/analytical/analyticalBaseF.h"
+#include "geometry/superGeometry.h"
+#include "particles/particles.h"
 
 // All OpenLB code is contained in this namespace.
 namespace olb {
 
 namespace particles {
 
-
-/// Set particle field
+/// Set particle field with peridic support
+//TODO: remove material 1 from hardcoded version
+//TODO: also remove additional material 1 check in set setBlockParticleField()
 template<typename T, typename DESCRIPTOR, typename PARTICLETYPE>
-void setSuperParticleField( SuperGeometry<T,DESCRIPTOR::d>& sGeometry,
-                            AnalyticalF<DESCRIPTOR::d,T,T>& velocity,
+void setSuperParticleField( const SuperGeometry<T,DESCRIPTOR::d>& sGeometry,
                             SuperLattice<T, DESCRIPTOR>& sLattice,
-                            Particle<T,PARTICLETYPE>& particle );
+                            UnitConverter<T,DESCRIPTOR> const& converter,
+                            Particle<T,PARTICLETYPE>& particle,
+                            const Vector<bool,DESCRIPTOR::d>& periodicity );
+
+
+template<typename T, typename DESCRIPTOR, typename PARTICLETYPE,
+  typename PARTICLECONTACTTYPE, typename WALLCONTACTTYPE, typename F>
+void setSuperParticleField( const SuperGeometry<T,DESCRIPTOR::d>& sGeometry,
+                            const PhysR<T,DESCRIPTOR::d>& min,
+                            const PhysR<T,DESCRIPTOR::d>& max,
+                            SuperLattice<T, DESCRIPTOR>& sLattice,
+                            UnitConverter<T,DESCRIPTOR> const& converter,
+                            ParticleSystem<T,PARTICLETYPE>& particleSystem,
+                            contact::ContactContainer<T,PARTICLECONTACTTYPE,WALLCONTACTTYPE>& particleContacts,
+                            size_t iP,
+                            Particle<T,PARTICLETYPE>& particle,
+                            std::vector<SolidBoundary<T,DESCRIPTOR::d>>& solidBoundaries,
+                            F getSetupPeriodicity,
+                            int globiC = -1 );
+
+
+/// Reset particle field
+template<typename T, typename DESCRIPTOR>
+void resetSuperParticleField( SuperGeometry<T,DESCRIPTOR::d>& sGeometry,
+                              SuperLattice<T, DESCRIPTOR>& sLattice);
+
+//TODO: HOTFIX ONLY
+template<typename T, typename DESCRIPTOR>
+void resetContactField( SuperGeometry<T,DESCRIPTOR::d>& sGeometry,
+                              SuperLattice<T, DESCRIPTOR>& sLattice);
 
 } // namespace particles
 

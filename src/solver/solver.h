@@ -25,6 +25,6 @@
  * Groups all the include files in the directory solver.
  */
 
-#include "LBSolver.h"
+#include "lbSolver.h"
 #include "names.h"
-#include "SolverParameters.h"
+#include "solverParameters.h"

@@ -422,6 +422,7 @@ namespace olb {
   template<typename T, template<typename U> class PARTICLETYPE>
   void ParticleSystem3D<T, PARTICLETYPE>::explicitEuler(T dT, bool scale)
   {
+   //std::cout << "explicit Euler" << std::endl;
 
     T maxDeltaR = _superGeometry.getCuboidGeometry().getMaxDeltaR();
     T maxFactor = T();
@@ -431,8 +432,11 @@ namespace olb {
       if (p.getActive()) {
 
         for (int i = 0; i < 3; i++) {
+  // std::cout <<p.getInvEffectiveMass()<< std::endl;
           p.getVel()[i] += p.getForce()[i] * p.getInvEffectiveMass() * dT;
+    //std::cout << p.getVel()[i] << std::endl;
           p.getPos()[i] += p.getVel()[i] * dT;
+   // std::cout << p.getPos()[i] << std::endl;
 
           // computation of direction depending maxFactor to scale velocity value
           // to keep velocity small enough for simulation
@@ -1645,7 +1649,7 @@ namespace olb {
 
         // Particle velocities before collision
         Vector<double, 3> vel1bc = {p->getVel()} ;
-        Vector<double, 3> vel2bc = {p2->getVel()} ; 
+        Vector<double, 3> vel2bc = {p2->getVel()};
 
         // Normal and tangential particle velocities before collision
         Vector<double, 3> velN1(0., 0., 0.) ;

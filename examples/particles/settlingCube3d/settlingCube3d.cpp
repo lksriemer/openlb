@@ -51,7 +51,7 @@ using namespace olb::util;
 using namespace olb::particles;
 using namespace olb::particles::dynamics;
 
-typedef double T;
+using T = FLOATING_POINT_TYPE;
 
 //Define lattice type
 typedef PorousParticleD3Q19Descriptor DESCRIPTOR;
@@ -87,7 +87,7 @@ T const cubeEdgeLength = 0.0025;
 Vector<T,3> cubeCenter = {centerX,centerY,centerZ};
 Vector<T,3> cubeOrientation = {0.,15.,0.};
 Vector<T,3> cubeVelocity = {0.,0.,0.};
-Vector<T,3> externalAcceleration = {.0, .0, -9.81 * (1. - physDensity / cubeDensity)};
+Vector<T,3> externalAcceleration = {.0, .0, -T(9.81) * (T(1) - physDensity / cubeDensity)};
 
 // Characteristic Quantities
 T const charPhysLength = lengthX;
@@ -124,14 +124,13 @@ void prepareLattice(
   clout << "setting Velocity Boundaries ..." << std::endl;
 
   /// Material=0 -->do nothing
-  sLattice.defineDynamics<NoDynamics>(superGeometry, 0);
   sLattice.defineDynamics<PorousParticleBGKdynamics>(superGeometry, 1);
-  sLattice.defineDynamics<BounceBack>(superGeometry, 2);
+  setBounceBackBoundary(sLattice, superGeometry, 2);
 
   sLattice.setParameter<descriptors::OMEGA>(converter.getLatticeRelaxationFrequency());
 
   {
-    auto& communicator = sLattice.getCommunicator(PostPostProcess());
+    auto& communicator = sLattice.getCommunicator(stage::PostPostProcess());
     communicator.requestFields<POROSITY,VELOCITY_NUMERATOR,VELOCITY_DENOMINATOR>();
     communicator.requestOverlap(sLattice.getOverlap());
     communicator.exchangeRequests();
@@ -264,6 +263,10 @@ int main(int argc, char* argv[])
   ParticleManager<T,DESCRIPTOR,PARTICLETYPE> particleManager(
     particleSystem, superGeometry, sLattice, converter, externalAcceleration);
 
+  // Create and assign resolved particle dynamics
+  particleSystem.defineDynamics<
+    VerletParticleDynamics<T,PARTICLETYPE>>();
+
   // Calculate particle quantities
   T epsilon = 0.5*converter.getConversionFactorLength();
   Vector<T,3> cubeExtend( cubeEdgeLength );
@@ -273,20 +276,18 @@ int main(int argc, char* argv[])
                                  cubeExtend, epsilon, cubeDensity, cubeOrientation );
 
   // Create Particle 2
-  cubeCenter = {centerX,lengthY*0.51,lengthZ*.7};
+  cubeCenter = {centerX,lengthY*T(0.51),lengthZ*T(.7)};
   cubeOrientation = {0.,0.,15.};
   creators::addResolvedCuboid3D( particleSystem, cubeCenter,
                                  cubeExtend, epsilon, cubeDensity, cubeOrientation );
 
-  // Create and assign resolved particle dynamics
-  VerletParticleDynamics<T,PARTICLETYPE> particleDynamics;
-  for (std::size_t iP=0; iP<particleSystem.size(); ++iP) {
-    particleSystem.defineDynamics( iP, &particleDynamics );
-  }
+  // Check ParticleSystem
+  particleSystem.checkForErrors();
 
   /// === 4th Step: Main Loop with Timer ===
   Timer<T> timer(converter.getLatticeTime(maxPhysT), superGeometry.getStatistics().getNvoxel());
   timer.start();
+
 
   /// === 5th Step: Definition of Initial and Boundary Conditions ===
   setBoundaryValues(sLattice, converter, 0, superGeometry);

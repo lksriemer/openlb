@@ -22,8 +22,9 @@
  * Groups all the generic 2D template files in the explicitFiniteDifference directory.
  */
 
-#include "fdSchemes.hh"
+#include "fdSchemeSpecs/fdSchemeSpecs.hh"
 #include "fdModel.hh"
 #include "fdPostProcessor2D.hh"
+#include "setFdPostProcessor2D.hh"
 #include "boundary/fdBoundaryPostProcessors2D.hh"
-#include "boundary/setFdNeumannZeroBoundary2D.hh"
+#include "boundary/setFdBoundary2D.hh"

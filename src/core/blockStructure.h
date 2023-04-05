@@ -118,7 +118,7 @@ public:
     } else {
       return _size[0] * _size[1];
     }
-	__builtin_unreachable();
+    __builtin_unreachable();
   }
 
   /// Get 1D cell ID
@@ -197,6 +197,34 @@ public:
       }
     }
   };
+
+  template <typename F>
+  void forSpatialLocationsParallel(F f) const
+  {
+    using loc = typename LatticeR<D>::value_t;
+    #ifdef PARALLEL_MODE_OMP
+    #pragma omp parallel for schedule(dynamic,1)
+    #endif
+    for (loc iX=-_padding; iX < _core[0] + _padding; ++iX) {
+      for (loc iY=-_padding; iY < _core[1] + _padding; ++iY) {
+        if constexpr (D == 3) {
+          for (loc iZ=-_padding; iZ < _core[2] + _padding; ++iZ) {
+            if constexpr (std::is_invocable_v<F, LatticeR<D>>) {
+              f({iX,iY,iZ});
+            } else {
+              f(iX,iY,iZ);
+            }
+          }
+        } else {
+          if constexpr (std::is_invocable_v<F, LatticeR<D>>) {
+            f({iX,iY});
+          } else {
+            f(iX,iY);
+          }
+        }
+      }
+    }
+  }
 
   template <typename F>
   void forSpatialLocations(LatticeR<D> min, LatticeR<D> max, F f) const

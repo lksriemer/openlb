@@ -75,7 +75,7 @@ struct ReactionData
   ReactionData(ReactionType type) {
     if (type == a2c) {
       numReactions = 1;
-      physReactionCoeff = std::vector<T>({0.25});
+      physReactionCoeff = std::vector<T>(1, 0.25);
       numComponents = 2;
       names = std::vector<std::string>({"Hydrogen","Hydrogene Iodine"});
       stoichiometricCoeff = std::vector<T>({-1,1.});
@@ -136,13 +136,18 @@ struct ReactionSimulationParameters
   }
 };
 
+
 template<typename T>
 using Parameters = meta::map<
   Simulation, ReactionSimulationParameters<T>,
   Stationarity, parameters::Stationarity<T,Concentration<0>, Concentration<1>>,
-  Output, parameters::OutputBase<T,Concentration<0>>,
+  Output, parameters::OutputGeneral<T,Concentration<0>>,
+  VisualizationVTK, parameters::OutputPlot<T>,
+  VisualizationGnuplot, parameters::OutputPlot<T>,
+  VisualizationImages, parameters::OutputPlot<T>,
   Errors, SimulationErrors<T>
 >;
+
 
 // Analytical solution
 template <typename T>
@@ -179,13 +184,13 @@ public:
 
 
 template<typename T>
-class Reaction2dSolver : public LBSolver<T, Parameters<T>, LATTICES> {
+class Reaction2dSolver : public LbSolver<T, Parameters<T>, LATTICES> {
  private:
   mutable OstreamManager            clout {std::cout, "Reaction2dSolver"};
 
 public:
-  Reaction2dSolver(utilities::TypeIndexedTuple<Parameters<T>> params)
-   : Reaction2dSolver::LBSolver(params)
+  Reaction2dSolver(utilities::TypeIndexedSharedPtrTuple<Parameters<T>> params)
+   : Reaction2dSolver::LbSolver(params)
    { }
 
 
@@ -272,8 +277,6 @@ protected:
     const T omega = this->converter().getLatticeRelaxationFrequency();
 
     meta::tuple_for_each(this->_sLattices, [&](auto& lattice, unsigned iLattice) {
-      // buffer layer
-      lattice->template defineDynamics<NoDynamics>(this->geometry(), 0);
       // Dynamics for the use of a source term
       // Material=1 -->bulk dynamics
       lattice->template defineDynamics<SourcedAdvectionDiffusionBGKdynamics>(
@@ -339,7 +342,8 @@ protected:
    void writeVTK(std:: size_t iT) const override
    {
     const auto& params = this->parameters(Simulation());
-    SuperVTMwriter2D<T> vtkWriter(this->parameters(Output()).vtkFilename);
+
+    SuperVTMwriter2D<T> vtkWriter(this->parameters(VisualizationVTK()).filename);
 
     std::vector<SuperLatticeDensity2D<T,TDESCRIPTOR>*> densities;
 
@@ -448,7 +452,7 @@ protected:
 
 int main(int argc, char *argv[])
 {
-  using T = double;
+  using T = FLOATING_POINT_TYPE;
 
   olbInit (&argc, &argv );
 
@@ -470,18 +474,31 @@ int main(int argc, char *argv[])
     std::string output("./tmp/N" + std::to_string(N)  + "/");
     singleton::directories().setOutputDir(output);
 
-    utilities::TypeIndexedTuple<Parameters<T>> params;
+    utilities::TypeIndexedSharedPtrTuple<Parameters<T>> params;
     params.template get<Simulation>()= std::make_shared<ReactionSimulationParameters<T>>(ReactionType::a2cAndBack, N);
     params.template get<Stationarity>() = std::make_shared<parameters::Stationarity<T,Concentration<0>,Concentration<1>>>(
       parameters::Stationarity<T,Concentration<0>, Concentration<1>>:: AverageRho, 1.0, 1e-8);
     params.template get<Errors>() = std::make_shared<SimulationErrors<T>>();
-    params.template get<Output>() = std::make_shared<parameters::OutputBase<T, names::Concentration<0>>>(
+
+    params.template get<Output>() = std::make_shared<parameters::OutputGeneral<T, names::Concentration<0>>>(
       "advectionDiffusionReaction2d", "../../../", output,
-      true, true, 1., 0,
-      true, "advectionDiffusionReaction2d", 1.,
-      false, "", 0.,
+      true, true, 1., 0
+    );
+
+    params.template get<VisualizationGnuplot>() = std::make_shared<parameters::OutputPlot<T>>(
       true, "advectionDiffusionReaction2d", 1.
     );
+
+
+    params.template get<VisualizationImages>() = std::make_shared<parameters::OutputPlot<T>>(
+      false, "", 0.
+    );
+
+
+    params.template get<VisualizationVTK>() = std::make_shared<parameters::OutputPlot<T>>(
+      true, "advectionDiffusionReaction2d", 1.
+    );
+
 
     Reaction2dSolver<T> reaction2d(params);
 
@@ -499,4 +516,3 @@ int main(int argc, char *argv[])
   }
 
  }
-

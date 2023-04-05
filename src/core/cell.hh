@@ -157,6 +157,13 @@ Cell<T,DESCRIPTOR>::setField(typename FIELD::template value_type<T> value)
                                                      FieldD<T,DESCRIPTOR,FIELD>(value));
 }
 
+template <typename T, typename DESCRIPTOR>
+template <typename FIELD>
+void Cell<T,DESCRIPTOR>::setFieldComponent(unsigned iD, typename FIELD::template value_type<T> value)
+{
+  this->_block.template getField<FIELD>()[iD][this->_iCell] = value;
+}
+
 template<typename T, typename DESCRIPTOR>
 const Dynamics<T,DESCRIPTOR>* ConstCell<T,DESCRIPTOR>::getDynamics() const
 {

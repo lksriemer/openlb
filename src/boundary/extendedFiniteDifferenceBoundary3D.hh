@@ -25,7 +25,7 @@
 #define EXTENDED_FINITE_DIFFERENCE_BOUNDARY_3D_HH
 
 #include "extendedFiniteDifferenceBoundary3D.h"
-#include "core/finiteDifference3D.h"
+#include "utilities/finiteDifference3D.h"
 #include "core/util.h"
 #include "dynamics/lbm.h"
 

@@ -41,68 +41,66 @@ namespace olb {
 
 
 /// Super class maintaining block lattices for a cuboid decomposition
-template<typename T, typename DESCRIPTOR>
-class SuperLattice : public SuperStructure<T,DESCRIPTOR::d>
-                   , public BufferSerializable {
+template <typename T, typename DESCRIPTOR>
+class SuperLattice final : public SuperStructure<T,DESCRIPTOR::d>
+                         , public BufferSerializable {
 private:
-  /// Available communication stages (default selection)
-  using communication_stages = meta::list<
-    PreCollide,
-    PostCollide,
-    PostStream,
-    PostPostProcess,
-    PreCoupling,
-    PostCoupling,
-    Full
-  >;
-
   /// Lattices with ghost cell layer of size overlap
   std::vector<std::unique_ptr<BlockLattice<T,DESCRIPTOR>>> _block;
-  /// Communicators for default stages of collideAndStream
-  std::array<std::unique_ptr<SuperCommunicator<T,SuperLattice>>,communication_stages::size> _communicator;
-  /// Communicators for custom stages of collideAndStream
-  std::map<std::type_index,std::unique_ptr<SuperCommunicator<T,SuperLattice>>> _customCommunicator;
+  /// Communicators for stages of collideAndStream
+  std::map<std::type_index,std::unique_ptr<SuperCommunicator<T,SuperLattice>>> _communicator;
   /// True if there are changes to be communicated using manually-triggered Full stage
   bool _communicationNeeded;
-  /// List of custom callables to be executed between PostStream and PostPostProcess
-  std::list<std::function<void(SuperLattice&)>> _customPostProcessing;
+  /// Map of custom stages and associated tasks
+  std::map<std::type_index,std::vector<std::function<void()>>> _customTasks;
+  /// Map of custom background stages and any associated one-off tasks
+  std::map<std::type_index,std::vector<std::future<void>>> _backgroundTasks;
+
   /// Statistics of the super structure
   LatticeStatistics<T> _statistics;
   /// Specifies if statistics are to be calculated
   /**
-   * Always needed for the ConstRhoBGK dynamics. (default = true)
+   * Enabled by default, needed for e.g. ConstRhoBGK dynamics.
    **/
   bool _statisticsEnabled;
+  /// Aggregate global statistics
+  void collectStatistics();
 
 public:
   constexpr static unsigned d = DESCRIPTOR::d;
+
+  /// Base value type of the lattice
+  using value_t = T;
+  /// Descriptor / discrete velocity set of the lattice
+  using descriptor_t = DESCRIPTOR;
 
   using block_t = ConcretizableBlockLattice<T,DESCRIPTOR>;
 
   /// Construct lattice for the cuboid decomposition of superGeometry
   SuperLattice(SuperGeometry<T,DESCRIPTOR::d>& superGeometry);
+  SuperLattice(const SuperLattice&) = delete;
   ~SuperLattice() = default;
 
-  SuperLattice(const SuperLattice&) = delete;
-
-  /// Return BlockLattice with local index locIC
-  BlockLattice<T,DESCRIPTOR>& getBlock(int locIC)
+  /// Return BlockLattice with local index locC
+  BlockLattice<T,DESCRIPTOR>& getBlock(int locC)
   {
-    return *_block[locIC];
+    return *_block[locC];
   };
-
+  /// Return locC-th block lattice casted to BLOCK
+  /**
+   * Only safe to use under external knownledge that the locC-th block is of type BLOCK
+   **/
   template <typename BLOCK>
-  BLOCK& getBlock(int locIC)
+  BLOCK& getBlock(int locC)
   {
-    return *dynamic_cast<BLOCK*>(_block[locIC].get());
+    return *dynamic_cast<BLOCK*>(_block[locC].get());
   };
-
-  /// Return read-only BlockLattice with local index locIC
-  const BlockLattice<T,DESCRIPTOR>& getBlock(int locIC) const
+  /// Return read-only BlockLattice with local index locC
+  const BlockLattice<T,DESCRIPTOR>& getBlock(int locC) const
   {
-    return *_block[locIC];
+    return *_block[locC];
   };
-
+  /// Return locC-th block lattice casted to BLOCK (read-only)
   template <typename BLOCK>
   const BLOCK& getBlock(int locIC) const
   {
@@ -128,6 +126,7 @@ public:
     // Communicate overlap prior to evaluation
     if (context == ProcessingContext::Evaluation) {
       communicate();
+      waitForBackgroundTasks<stage::PreContextSwitchTo<ProcessingContext::Evaluation>>();
     }
     for (int iC = 0; iC < this->_loadBalancer.size(); ++iC) {
       _block[iC]->setProcessingContext(context);
@@ -142,12 +141,14 @@ public:
   void setProcessingContext(ProcessingContext context)
   {
     for (int iC = 0; iC < this->_loadBalancer.size(); ++iC) {
-      _block[iC]->template getData<FIELD_TYPE>().setProcessingContext(context);
+      if (_block[iC]->template hasData<FIELD_TYPE>()) {
+        _block[iC]->template getData<FIELD_TYPE>().setProcessingContext(context);
+      }
     }
   };
 
   /// Return communicator for given communication stage
-  template<typename STAGE>
+  template <typename STAGE>
   SuperCommunicator<T,SuperLattice>& getCommunicator(STAGE stage=STAGE());
   /// Perform full overlap communication if needed
   void communicate() override;
@@ -164,22 +165,30 @@ public:
   std::enable_if_t<sizeof...(R) == DESCRIPTOR::d+1, Cell<T,DESCRIPTOR>>
   get(R... latticeR);
 
-  /// Initialize all lattice cells to become ready for simulation
+  /// Initialize lattice to be ready for simulation
+  /**
+   * Calls default post processors (PostStream) once and
+   * switches processing context to simulation.
+   **/
   void initialize();
 
+  /// Set dynamics of indicated cells to DYNAMICS
   template <typename DYNAMICS>
   void defineDynamics(FunctorPtr<SuperIndicatorF<T,DESCRIPTOR::d>>&& indicator);
+  /// Set dynamics of material cells to DYNAMICS
   template <typename DYNAMICS>
   void defineDynamics(SuperGeometry<T,DESCRIPTOR::d>& sGeometry, int material);
 
+  /// Set dynamics of indicated cells to DYNAMICS<T,DESCRIPTOR>
   template <template<typename...> typename DYNAMICS>
   void defineDynamics(FunctorPtr<SuperIndicatorF<T,DESCRIPTOR::d>>&& indicator);
+  /// Set dynamics of indicated cells to DYNAMICS<T,DESCRIPTOR>
   template <template<typename...> typename DYNAMICS>
   void defineDynamics(SuperGeometry<T,DESCRIPTOR::d>& sGeometry, int material);
 
-  /// Define the dynamics on a domain described by an indicator
+  /// Define the dynamics on a domain described by an indicator (legacy)
   void defineDynamics(FunctorPtr<SuperIndicatorF<T,DESCRIPTOR::d>>&& indicator, Dynamics<T,DESCRIPTOR>* dynamics);
-  /// Define the dynamics on a domain with a particular material number
+  /// Define the dynamics on a domain with a particular material number (legacy)
   void defineDynamics(SuperGeometry<T,DESCRIPTOR::d>& sGeometry, int material,
                       Dynamics<T,DESCRIPTOR>* dynamics);
 
@@ -251,17 +260,20 @@ public:
                    AnalyticalF<DESCRIPTOR::d,T,T>& field);
   /// Defines a field on a indicated domain
   template <typename FIELD>
+  void defineField(SuperGeometry<T,DESCRIPTOR::d>& sGeometry, IndicatorF2D<T>& indicator,
+                   AnalyticalF<DESCRIPTOR::d,T,T>& field);
+  template <typename FIELD>
   void defineField(SuperGeometry<T,DESCRIPTOR::d>& sGeometry, IndicatorF3D<T>& indicator,
                    AnalyticalF<DESCRIPTOR::d,T,T>& field);
 
-  /// Update PARAMETER in all dynamics
+  /// Update PARAMETER in all dynamics and post processors
   /**
    * e.g. SuperLattice::setParameter<OMEGA>(0.6) sets the parameter
-   * OMEGA to 0.6 in all dynamics that declare it as one of their
+   * OMEGA to 0.6 in all operators that declare it as one of their
    * parameters.
    **/
   template <typename PARAMETER>
-  void setParameter(FieldD<T,DESCRIPTOR,PARAMETER>&& field);
+  void setParameter(FieldD<T,DESCRIPTOR,PARAMETER> field);
 
   /// Update PARAMETER in DYNAMICS
   template <typename PARAMETER, typename DYNAMICS>
@@ -269,6 +281,16 @@ public:
   /// Update PARAMETER in DYNAMICS<T,DESCRIPTOR>
   template <typename PARAMETER, template<typename...> typename DYNAMICS>
   void setParameterOfDynamics(FieldD<T,DESCRIPTOR,PARAMETER>&& field);
+
+  /// Set PARAMETER to column pointers of given field array
+  /**
+   * PARAMETER must store size(FIELD) pointers to the value type of FIELD.
+   *
+   * Useful for providing dynamically sized field arrays as parameters to
+   * certain post processors.
+   **/
+  template <typename PARAMETER, Platform PLATFORM, typename FIELD>
+  void setParameter(FieldArrayD<T,DESCRIPTOR,PLATFORM,FIELD>& fieldArray);
 
   /// Initialize by equilibrium on a domain described by an indicator
   /**
@@ -281,6 +303,10 @@ public:
   /// Initialize by equilibrium on a domain with a particular material number
   void iniEquilibrium(SuperGeometry<T,DESCRIPTOR::d>& sGeometry, int material,
                       AnalyticalF<DESCRIPTOR::d,T,T>& rho, AnalyticalF<DESCRIPTOR::d,T,T>& u);
+  void iniEquilibrium(FunctorPtr<SuperIndicatorF<T,DESCRIPTOR::d>>&& indicator,
+                      AnalyticalF<DESCRIPTOR::d,T,T>& rho, SuperF<DESCRIPTOR::d,T,T>& u);
+  void iniEquilibrium(SuperGeometry<T,DESCRIPTOR::d>& sGeometry, int material,
+                      AnalyticalF<DESCRIPTOR::d,T,T>& rho, SuperF<DESCRIPTOR::d,T,T>& u);
   /// Initialize by non- and equilibrium on a domain described by an indicator
   /**
    * \param indicator Indicator describing the target domain
@@ -304,7 +330,7 @@ public:
    * 3. Block local streaming
    * 4. Post-stream communication for boundary conditions / post processors (optional)
    * 5. Execute default post processors on all local block lattices
-   * 6. Execute manually scheduled callables (optional and WIP interface, used for free surface)
+   * 6. Execute manually scheduled post processing callables (optional)
    * 7. Post-post-process communication (optional)
    * 8. Reset lattice statistics and mark overlap state as unclean
    **/
@@ -333,19 +359,23 @@ public:
     }
   };
 
-  /// Add a non-local post-processing step
-  template<typename STAGE=PostStream>
+  /// Add a non-local post-processing step (legacy)
+  template <typename STAGE=stage::PostStream>
   void addPostProcessor(PostProcessorGenerator<T,DESCRIPTOR> const& ppGen);
-  template<typename STAGE=PostStream>
+  /// Add a non-local post-processing step (legacy)
+  template <typename STAGE=stage::PostStream>
   void addPostProcessor(FunctorPtr<SuperIndicatorF<T,DESCRIPTOR::d>>&& indicator,
                         PostProcessorGenerator<T,DESCRIPTOR> const& ppGen);
-  template<typename STAGE=PostStream>
+  /// Add a non-local post-processing step (legacy)
+  template <typename STAGE=stage::PostStream>
   void addPostProcessor(SuperGeometry<T,DESCRIPTOR::d>& sGeometry, int material,
                         PostProcessorGenerator<T,DESCRIPTOR> const& ppGen);
-  template<typename STAGE=PostStream>
+  /// Add a non-local post-processing step (legacy)
+  template <typename STAGE=stage::PostStream>
   void addPostProcessor(FunctorPtr<SuperIndicatorF<T,DESCRIPTOR::d>>&& indicator,
                         PostProcessorPromise<T,DESCRIPTOR>&& promise);
-  template<typename STAGE=PostStream>
+  /// Add a non-local post-processing step (legacy)
+  template <typename STAGE=stage::PostStream>
   void addPostProcessor(PostProcessorPromise<T,DESCRIPTOR>&& promise);
 
   /// Executes post processors for STAGE
@@ -353,54 +383,71 @@ public:
    * 1. Pre-communication for STAGE
    * 2. Execute post processors for STAGE on all block lattices
    **/
-  template<typename STAGE=PostStream>
+  template <typename STAGE=stage::PostStream>
   void executePostProcessors(STAGE stage=STAGE());
 
-  /// Schedules f for execution during post processing
-  /**
-   * This is a placeholder to support the free surface code until a generic
-   * job interface is established.
-   **/
-  void scheduleCustomPostProcessing(std::function<void(SuperLattice&)> f) {
-    _customPostProcessing.emplace_back(f);
-  }
-
-  /// Adds a coupling generator for a vector of partner superLattice
-  template<typename PARTNER_DESCRIPTOR>
+  /// Adds a coupling generator for a vector of partner superLattice (legacy)
+  template <typename PARTNER_DESCRIPTOR>
   void addLatticeCoupling(LatticeCouplingGenerator<T,DESCRIPTOR> const& lcGen,
                           std::vector<SuperLattice<T,PARTNER_DESCRIPTOR>*> partnerLattices);
-  /// Adds a coupling generator for a vector of partner superLattice
-  template<typename PARTNER_DESCRIPTOR>
+  /// Adds a coupling generator for a vector of partner superLattice (legacy)
+  template <typename PARTNER_DESCRIPTOR>
   void addLatticeCoupling(FunctorPtr<SuperIndicatorF<T,DESCRIPTOR::d>>&& indicator,
                           LatticeCouplingGenerator<T,DESCRIPTOR> const& lcGen,
                           std::vector<SuperLattice<T,PARTNER_DESCRIPTOR>*> partnerLattices);
-  /// Adds a coupling generator for a vector of partner superLattice
-  template<typename PARTNER_DESCRIPTOR>
+  /// Adds a coupling generator for a vector of partner superLattice (legacy)
+  template <typename PARTNER_DESCRIPTOR>
   void addLatticeCoupling(SuperGeometry<T,DESCRIPTOR::d>& sGeometry, int material,
                           LatticeCouplingGenerator<T,DESCRIPTOR> const& lcGen,
                           std::vector<SuperLattice<T,PARTNER_DESCRIPTOR>*> partnerLattices);
-  /// Adds a coupling generator for a multiple partner superLattice
-  template<typename... PARTNER_DESCRIPTORS>
+  /// Adds a coupling generator for a multiple partner superLattice (legacy)
+  template <typename... PARTNER_DESCRIPTORS>
   void addLatticeCoupling(LatticeCouplingGenerator<T,DESCRIPTOR> const& lcGen,
                           PARTNER_DESCRIPTORS&... partnerLattices);
-  /// Adds a coupling generator for a multiple partner superLattice
-  template<typename... PARTNER_DESCRIPTORS>
+  /// Adds a coupling generator for a multiple partner superLattice (legacy)
+  template <typename... PARTNER_DESCRIPTORS>
   void addLatticeCoupling(FunctorPtr<SuperIndicatorF<T,DESCRIPTOR::d>>&& indicator,
                           LatticeCouplingGenerator<T,DESCRIPTOR> const& lcGen,
                           PARTNER_DESCRIPTORS&... partnerLattices);
-  /// Adds a coupling generator for a multiple partner superLattice
-  template<typename... PARTNER_DESCRIPTORS>
+  /// Adds a coupling generator for a multiple partner superLattice (legacy)
+  template <typename... PARTNER_DESCRIPTORS>
   void addLatticeCoupling(SuperGeometry<T,DESCRIPTOR::d>& sGeometry, int material,
                           LatticeCouplingGenerator<T,DESCRIPTOR> const& lcGen,
                           PARTNER_DESCRIPTORS&... partnerLattices);
 
-  /// Executes coupling generator for one partner superLattice
+  /// Executes coupling with partner lattices (legacy)
   /**
    * 1. Pre-coupling communication (optional)
    * 2. Execute coupling post processors on all local block lattices
    * 3. Post-coupling communication (optional)
    **/
   void executeCoupling();
+
+  /// Schedules f for execution during every invocation of STAGE
+  template <typename STAGE>
+  void addCustomTask(std::function<void()> f) {
+    _customTasks[typeid(STAGE)].emplace_back(f);
+  }
+  /// Executes custom tasks assigned to STAGE
+  template <typename STAGE>
+  void executeCustomTasks(STAGE stage=STAGE());
+
+  /// Schedule F for one-off background execution to be finished by STAGE
+  template <typename STAGE, typename F>
+  void scheduleBackgroundTask(F&& f);
+  /// Schedule F(iC) for one-off background output of block data
+  template <typename F>
+  void scheduleBackgroundOutput(F&& f);
+  /// Schedule one-off background output of given VTK CONTEXT
+  /**
+   * CONTEXT must accept tasks as a callable task for which
+   * it provides SuperVTMwriter(2,3)D and iT arguments.
+   **/
+  template <typename CONTEXT>
+  void scheduleBackgroundOutputVTK(CONTEXT&& vtkContext);
+  /// Block until all background tasks scheduled for STAGE are completed
+  template <typename STAGE>
+  void waitForBackgroundTasks(STAGE stage=STAGE{});
 
   /// Number of data blocks for the serializable interface
   std::size_t getNblock() const override;
@@ -409,10 +456,6 @@ public:
   /// Return a pointer to the memory of the current block and its size for the serializable interface
   bool* getBlock(std::size_t iBlock, std::size_t& sizeBlock, bool loadingMode) override;
   void postLoad() override;
-
-private:
-  /// Resets and reduce the statistics
-  void resetStatistics();
 
 };
 

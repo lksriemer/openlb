@@ -43,7 +43,7 @@ class SmagorinskyGuoZhaoBGKdynamics : public GuoZhaoBGKdynamics<T,DESCRIPTOR,MOM
 public:
   template<typename M>
   using exchange_momenta = SmagorinskyGuoZhaoBGKdynamics<T,DESCRIPTOR,M>;
-  
+
   /// Constructor.
   //Passing default value for smagoConst_ because 2D boundary conditions accept only
   //two-argument constructor for dynamics class.

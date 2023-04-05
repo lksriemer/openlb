@@ -70,6 +70,18 @@ public:
   bool operator() (T output[], const S input[]) override;
 };
 
+/// Perform explicit typecast for the arguments and results of functor
+// Therefore, casts NewS->OldS and OldT->NewT must be available
+template <unsigned D, typename OldT, typename NewT, typename OldS, typename NewS>
+class AnalyticalTypecast : public AnalyticalF<D,NewT,NewS> {
+protected:
+  AnalyticalF<D,OldT,OldS>& _f;
+public:
+  AnalyticalTypecast(AnalyticalF<D,OldT,OldS>& f);
+  bool operator() (NewT output[], const NewS input[]) override;
+};
+
+
 ////////////// CONVERSION FROM NEW TO OLD IMPLEMENTATION //////////////////////////
 
 template <typename T, typename S>

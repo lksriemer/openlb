@@ -200,6 +200,37 @@ Vector<int,3> BlockIndicatorMaterial3D<T>::getMax()
   return globalMax;
 }
 
+template <typename T>
+BlockIndicatorLayer3D<T>::BlockIndicatorLayer3D(BlockIndicatorF3D<T>& indicatorF)
+  : BlockIndicatorF3D<T>(indicatorF.getBlockGeometry()),
+    _indicatorF(indicatorF)
+{ }
+
+template <typename T>
+bool BlockIndicatorLayer3D<T>::operator() (bool output[], const int input[])
+{
+  _indicatorF(output, input);
+  for (int iPop=1; iPop < descriptors::D3Q27<>::q; ++iPop) {
+    bool tmpOutput{};
+    Vector<int,3> tmpInput(input);
+    tmpInput += descriptors::c<descriptors::D3Q27<>>(iPop);
+    _indicatorF(&tmpOutput, tmpInput.data());
+    output[0] |= tmpOutput;
+  }
+  return true;
+}
+
+template <typename T>
+Vector<int,3> BlockIndicatorLayer3D<T>::getMin()
+{
+  return _indicatorF.getMin()-1;
+}
+
+template <typename T>
+Vector<int,3> BlockIndicatorLayer3D<T>::getMax()
+{
+  return _indicatorF.getMax()+1;
+}
 
 template <typename T>
 BlockIndicatorIdentity3D<T>::BlockIndicatorIdentity3D(BlockIndicatorF3D<T>& indicatorF)
@@ -223,6 +254,44 @@ template <typename T>
 Vector<int,3> BlockIndicatorIdentity3D<T>::getMax()
 {
   return _indicatorF.getMax();
+}
+
+
+template <typename T>
+BlockIndicatorMultiplication3D<T>::BlockIndicatorMultiplication3D(
+  BlockIndicatorF3D<T>& f, BlockIndicatorF3D<T>& g)
+  : BlockIndicatorF3D<T>(f.getBlockGeometry()),
+    _f(f), _g(g)
+{ }
+
+template <typename T>
+bool BlockIndicatorMultiplication3D<T>::operator() (bool output[], const int input[])
+{
+  _f(output, input);
+  if (output[0]) {
+    _g(output, input);
+  }
+  return output[0];
+}
+
+template <typename T>
+Vector<int,3> BlockIndicatorMultiplication3D<T>::getMin()
+{
+  auto resF = _f.getMin();
+  auto resG = _g.getMin();
+  return {util::max(resF[0], resG[0]),
+    util::max(resF[1], resG[1]),
+    util::max(resF[2], resG[2])};
+}
+
+template <typename T>
+Vector<int,3> BlockIndicatorMultiplication3D<T>::getMax()
+{
+  auto resF = _f.getMax();
+  auto resG = _g.getMax();
+  return {util::min(resF[0], resG[0]),
+    util::min(resF[1], resG[1]),
+    util::min(resF[2], resG[2])};
 }
 
 } // namespace olb

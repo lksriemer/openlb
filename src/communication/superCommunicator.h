@@ -33,6 +33,7 @@
 #include "blockCommunicator.h"
 #include "blockCommunicationNeighborhood.h"
 #include "superCommunicationTagCoordinator.h"
+#include "utilities/functorPtr.h"
 
 namespace olb {
 
@@ -60,7 +61,7 @@ private:
 #endif
 
   /// Neighborhood negotiation
-  std::vector<BlockCommunicationNeighborhood<T,SUPER::d>> _blockNeighborhoods;
+  std::vector<std::unique_ptr<BlockCommunicationNeighborhood<T,SUPER::d>>> _blockNeighborhoods;
   /// Per-block communicators constructed to satify requested exchanges
   std::vector<std::unique_ptr<BlockCommunicator>> _blockCommunicators;
 
@@ -88,7 +89,7 @@ public:
     if (std::find(_fieldsRequested.begin(), _fieldsRequested.end(), typeid(FIELD)) == _fieldsRequested.end()) {
       _fieldsRequested.emplace_back(typeid(FIELD));
       for (auto& neighborhood : _blockNeighborhoods) {
-        neighborhood.template requestField<FIELD>();
+        neighborhood->template requestField<FIELD>();
       }
     }
   }
@@ -96,13 +97,18 @@ public:
   /// Convenience method for requesting multiple FIELDS in one call
   template <typename... FIELDS>
   void requestFields() {
-    meta::swallow((requestField<FIELDS>(), 0)...);
+    (requestField<FIELDS>(), ...);
   }
 
   /// Request single cell in the padding area for communication
   void requestCell(LatticeR<SUPER::d+1> latticeR);
   /// Request all cells in overlap of width for communication
   void requestOverlap(int width);
+  /// Request all indicated cells in overlap of width for communication
+  void requestOverlap(int width, FunctorPtr<SuperIndicatorF<T,SUPER::d>>&& indicatorF);
+
+  /// Remove all requested cells
+  void clearRequestedCells();
 
   /// Exchange requests between processes
   void exchangeRequests();

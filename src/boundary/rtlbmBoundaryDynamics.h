@@ -43,7 +43,7 @@ class RtlbmDiffuseBoundaryDynamics : public legacy::BasicDynamics<T,DESCRIPTOR,M
 public:
   template<typename M>
   using exchange_momenta = RtlbmDiffuseBoundaryDynamics<T,DESCRIPTOR,M,direction,orientation>;
-  
+
   /// Constructor
   RtlbmDiffuseBoundaryDynamics(T omega_);
   /// Compute equilibrium distribution function

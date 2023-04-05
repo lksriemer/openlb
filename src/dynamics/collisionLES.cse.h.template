@@ -116,6 +116,8 @@ struct KrauseEffectiveOmega<PerPopulationBGK,descriptors::${name}<FIELDS...>,mom
 
 ${collision_cse(olb.collision.KrauseEffectiveOmega[olb.collision.PerPopulationBGK], DESCRIPTOR, olb.momenta.BulkTuple, olb.equilibria.SecondOrder)}
 
+${effective_omega_cse(olb.collision.KrauseEffectiveOmega[olb.collision.PerPopulationBGK], DESCRIPTOR, olb.momenta.BulkTuple, olb.equilibria.SecondOrder)}
+
 };
 
 % endfor

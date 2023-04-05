@@ -39,3 +39,4 @@
 #include "magneticForceFromHField3D.hh"
 #include "forceFromExtField3D.hh"
 #include "schillerNaumannDragForce3D.hh"
+#include "haiderLevenspielDragForce3D.hh"

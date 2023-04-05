@@ -29,6 +29,7 @@
 #include "adHelpers.h"
 #include "benchmarkUtil.h"
 #include "calc.h"
+#include "norm.h"
 #include "timer.h"
 #include "functorPtr.h"
 #include "functorDsl2D.h"
@@ -40,4 +41,5 @@
 #include "random.h"
 #include "typeIndexedContainers.h"
 #include "integrationTestUtils.h"
+#include "matrix.h"
 #include "geometricOperations.h"

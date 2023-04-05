@@ -154,8 +154,8 @@ protected:
   olb::Vector<T, 3> _orientation;
 public:
   CartesianToPolar2D(olb::Vector<T, 3> cartesianOrigin,
-		  	  	  	 olb::Vector<T, 3> axisDirection,
-					 olb::Vector<T, 3> orientation = {T(1),T(),T()});
+                     olb::Vector<T, 3> axisDirection,
+                     olb::Vector<T, 3> orientation = {T(1),T(),T()});
   CartesianToPolar2D(T cartesianOriginX, T cartesianOriginY,
                      T cartesianOriginZ,
                      T axisDirectionX, T axisDirectionY, T axisDirectionZ,

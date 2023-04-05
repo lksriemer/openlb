@@ -28,7 +28,7 @@
 #include "shanChenForcedSingleComponentPostProcessor3D.h"
 #include "interactionPotential.h"
 #include "core/util.h"
-#include "core/finiteDifference3D.h"
+#include "utilities/finiteDifference3D.h"
 
 namespace olb {
 

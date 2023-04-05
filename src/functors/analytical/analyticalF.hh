@@ -545,24 +545,6 @@ bool AnalyticalParticleAdsorptionLinear2D<T,S>::operator()(T output[], const S i
 }
 
 
-//TODO: to be removed due to eccentricVelocityField
-template <typename T, typename S, typename DESCRIPTOR>
-ParticleU2D<T,S,DESCRIPTOR>::ParticleU2D(SmoothIndicatorF2D<T,T,true>& indicator, UnitConverter<T,DESCRIPTOR> const& converter)
-  :AnalyticalF2D<T,S>(2), _indicator(indicator), _converter(converter)
-{
-  this->getName() = "ParticleU";
-}
-
-template <typename T, typename S, typename DESCRIPTOR>
-bool ParticleU2D<T,S,DESCRIPTOR>::operator()(T output[], const S input[])
-{
-  Vector<T,2> tmp = _indicator.getLocalVel( Vector<S,2>(input) );
-  output[0] = _converter.getLatticeVelocity(tmp[0]);
-  output[1] = _converter.getLatticeVelocity(tmp[1]);
-
-  return true;
-}
-
 
 ///////////////////////////////////////3D///////////////////////////////////////
 template <typename T, typename S>
@@ -713,26 +695,6 @@ template <typename T, typename S>
 bool GaussianHillTimeEvolution2D<T,S>::operator()(T output[1], const S x[2])
 {
   output[0] = _sigma02 / (_sigma02+2*_D*_t) * _c0 * util::exp(- ((x[0]-_x0[0]-_u[0]*_t)*(x[0]-_x0[0]-_u[0]*_t) + (x[1]-_x0[1]-_u[1]*_t)*(x[1]-_x0[1]-_u[1]*_t)) / (2*(_sigma02+2*_D*_t) ));
-  return true;
-}
-
-
-//TODO: to be removed due to eccentricVelocityField
-template <typename T, typename S, typename DESCRIPTOR>
-ParticleU3D<T,S,DESCRIPTOR>::ParticleU3D(SmoothIndicatorF3D<T,T,true>& indicator, UnitConverter<T,DESCRIPTOR> const& converter)
-  :AnalyticalF3D<T,S>(3), _indicator(indicator), _converter(converter)
-{
-  this->getName() = "ParticleU";
-}
-
-template <typename T, typename S, typename DESCRIPTOR>
-bool ParticleU3D<T,S,DESCRIPTOR>::operator()(T output[], const S input[])
-{
-  Vector<T,3> tmp = _indicator.getLocalVel( Vector<S,3>(input) );
-  output[0] = _converter.getLatticeVelocity(tmp[0]);
-  output[1] = _converter.getLatticeVelocity(tmp[1]);
-  output[2] = _converter.getLatticeVelocity(tmp[2]);
-
   return true;
 }
 

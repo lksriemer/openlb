@@ -24,12 +24,13 @@
 /** \file
  * Groups all the 2D include files in the boundaryConditions directory.
  */
+
 #include "boundaryPostProcessors2D.h"
 #include "extendedFiniteDifferenceBoundary2D.h"
 #include "inamuroAnalyticalDynamics.h"
 #include "inamuroNewtonRaphsonDynamics.h"
 #include "offBoundaryPostProcessors2D.h"
-#include "defineU2D.h"
+#include "legacy/defineU2D.h"
 #include "setLocalVelocityBoundary2D.h"
 #include "setInterpolatedVelocityBoundary2D.h"
 #include "setLocalPressureBoundary2D.h"
@@ -40,6 +41,7 @@
 #include "setFreeEnergyOutletBoundary2D.h"
 #include "setRegularizedTemperatureBoundary2D.h"
 #include "setAdvectionDiffusionTemperatureBoundary2D.h"
+#include "setAdvectionDiffusionNeumannBoundary2D.h"
 #include "setRegularizedHeatFluxBoundary2D.h"
 #include "setLocalConvectionBoundary2D.h"
 #include "setInterpolatedConvectionBoundary2D.h"
@@ -50,7 +52,9 @@
 #include "setZouHePressureBoundary2D.h"
 #include "setZouHeVelocityBoundary2D.h"
 #include "helper.h"
-#include "setBouzidiVelocityBoundary2D.hh"
-#include "setBouzidiZeroVelocityBoundary2D.hh"
+#include "setBouzidiBoundary.h"
+#include "setBounceBackBoundary.h"
+#include "legacy/setBouzidiVelocityBoundary2D.hh"
+#include "legacy/setBouzidiZeroVelocityBoundary2D.hh"
 
 #include "boundary2D.hh"

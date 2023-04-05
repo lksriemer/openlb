@@ -101,7 +101,7 @@ bool BlockStdDeviationF3D<T,W>::operator() (W output[], const int input[])
   std::size_t voxels(0);
 
   W outputTmp[_f.getTargetDim()];
-  for(unsigned i=0; i<_f.getTargetDim(); ++i) {
+  for(int i=0; i<_f.getTargetDim(); ++i) {
     outputTmp[i] = W(0);
   }
   int inputTmp[_f.getSourceDim()];

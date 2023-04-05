@@ -31,22 +31,22 @@ namespace momenta {
 /// The momenta are defined one after the other.
 struct DefineSeparately {
   template <typename TYPE, typename CELL, typename V=typename CELL::value_t, typename DESCRIPTOR=typename CELL::descriptor_t>
-  void defineRho(CELL& cell, V rho)
+  void defineRho(CELL& cell, V rho) any_platform
   { }
 
   template <typename TYPE, typename CELL, typename V=typename CELL::value_t, typename DESCRIPTOR=typename CELL::descriptor_t>
-  void defineU(CELL& cell, const V u[DESCRIPTOR::d])
+  void defineU(CELL& cell, const V u[DESCRIPTOR::d]) any_platform
   { }
 
   template <typename TYPE, typename CELL, typename V=typename CELL::value_t, typename DESCRIPTOR=typename CELL::descriptor_t>
   void defineRhoU(CELL& cell,
-               V rho, const V u[DESCRIPTOR::d])
+               V rho, const V u[DESCRIPTOR::d]) any_platform
   { }
 
   template <typename TYPE, typename CELL, typename V=typename CELL::value_t, typename DESCRIPTOR=typename CELL::descriptor_t>
   void defineAllMomenta(CELL& cell,
                V rho, const V u[DESCRIPTOR::d],
-               const V pi[util::TensorVal<DESCRIPTOR >::n])
+               const V pi[util::TensorVal<DESCRIPTOR >::n]) any_platform
   { }
 
   static std::string getName(){
@@ -59,7 +59,7 @@ struct DefineSeparately {
 /// applies the external field descriptors::VELOCITY directly.
 struct DefineToEq {
   template <typename TYPE, typename CELL, typename RHO, typename V=typename CELL::value_t, typename DESCRIPTOR=typename CELL::descriptor_t>
-  void defineRho(CELL& cell, const RHO& rho)
+  void defineRho(CELL& cell, const RHO& rho) any_platform
   {
     // get fluid velocity u
     const auto u = cell.template getField<descriptors::VELOCITY>();
@@ -69,19 +69,19 @@ struct DefineToEq {
   }
 
   template <typename TYPE, typename CELL, typename U, typename V=typename CELL::value_t, typename DESCRIPTOR=typename CELL::descriptor_t>
-  void defineU(CELL& cell, const U& u)
+  void defineU(CELL& cell, const U& u) any_platform
   { }
 
   template <typename TYPE, typename CELL, typename RHO, typename U, typename V=typename CELL::value_t, typename DESCRIPTOR=typename CELL::descriptor_t>
   void defineRhoU(CELL& cell,
-                  const RHO& rho, const U& u)
+                  const RHO& rho, const U& u) any_platform
   {
     defineRho<TYPE>(cell, rho);
   }
 
   template <typename TYPE, typename CELL, typename RHO, typename U, typename PI, typename V=typename CELL::value_t, typename DESCRIPTOR=typename CELL::descriptor_t>
   void defineAllMomenta(CELL& cell,
-                        const RHO& rho, const U& u, const PI& pi)
+                        const RHO& rho, const U& u, const PI& pi) any_platform
   {
     defineRho<TYPE>(cell, rho);
   }
@@ -95,7 +95,7 @@ struct DefineToEq {
 /// modified while the non-equilibrium part is kept.
 struct DefineToNEq {
   template <typename TYPE, typename CELL, typename V=typename CELL::value_t, typename DESCRIPTOR=typename CELL::descriptor_t>
-  void defineRho(CELL& cell, V rho)
+  void defineRho(CELL& cell, V rho) any_platform
   {
     // get old equilibrium data (oldRho, u)
     V oldRho, u[DESCRIPTOR::d];
@@ -107,7 +107,7 @@ struct DefineToNEq {
   }
 
   template <typename TYPE, typename CELL, typename V=typename CELL::value_t, typename DESCRIPTOR=typename CELL::descriptor_t>
-  void defineU(CELL& cell, const V u[DESCRIPTOR::d])
+  void defineU(CELL& cell, const V u[DESCRIPTOR::d]) any_platform
   {
     // get old equilibrium data (rho, oldU)
     V rho, oldU[DESCRIPTOR::d];
@@ -120,7 +120,7 @@ struct DefineToNEq {
 
   template <typename TYPE, typename CELL, typename V=typename CELL::value_t, typename DESCRIPTOR=typename CELL::descriptor_t>
   void defineRhoU(CELL& cell,
-                  V rho, const V u[DESCRIPTOR::d])
+                  V rho, const V u[DESCRIPTOR::d]) any_platform
   {
     V oldRho, oldU[DESCRIPTOR::d];
     TYPE().computeRhoU(cell, oldRho, oldU);
@@ -132,7 +132,7 @@ struct DefineToNEq {
   template <typename TYPE, typename CELL, typename V=typename CELL::value_t, typename DESCRIPTOR=typename CELL::descriptor_t>
   void defineAllMomenta(CELL& cell,
                V rho, const V u[DESCRIPTOR::d],
-               const V pi[util::TensorVal<DESCRIPTOR >::n])
+               const V pi[util::TensorVal<DESCRIPTOR >::n]) any_platform
   {
     lbm<DESCRIPTOR>::defineNEqFromPi(cell, rho, u, pi);
   }
@@ -146,24 +146,24 @@ struct DefineToNEq {
 /// only sets the velocity data.
 struct DefineUSeparately {
   template <typename TYPE, typename CELL, typename RHO, typename V=typename CELL::value_t, typename DESCRIPTOR=typename CELL::descriptor_t>
-  void defineRho(CELL& cell, RHO& rho)
+  void defineRho(CELL& cell, RHO& rho) any_platform
   {
     DefineToNEq().defineRho<TYPE>(cell, rho);
   }
 
   template <typename TYPE, typename CELL, typename U, typename V=typename CELL::value_t, typename DESCRIPTOR=typename CELL::descriptor_t>
-  void defineU(CELL& cell, U& u)
+  void defineU(CELL& cell, U& u) any_platform
   { }
 
   template <typename TYPE, typename CELL, typename RHO, typename U, typename V=typename CELL::value_t, typename DESCRIPTOR=typename CELL::descriptor_t>
-  void defineRhoU(CELL& cell, RHO& rho, U& u)
+  void defineRhoU(CELL& cell, RHO& rho, U& u) any_platform
   {
     defineRho<TYPE>(cell, rho);
   }
 
   template <typename TYPE, typename CELL, typename RHO, typename U, typename PI, typename V=typename CELL::value_t, typename DESCRIPTOR=typename CELL::descriptor_t>
   void defineAllMomenta(CELL& cell,
-                        RHO& rho, U& u, PI& pi)
+                        RHO& rho, U& u, PI& pi) any_platform
   {
     DefineToNEq().defineAllMomenta<TYPE>(cell, rho, u, pi);
   }
@@ -179,7 +179,7 @@ struct DefineUSeparately {
 // field, but uses lbHelpers::computeRhoU as in the bulk.
 struct DefineUSeparatelyTrace {
   template <typename TYPE, typename CELL, typename V=typename CELL::value_t, typename DESCRIPTOR=typename CELL::descriptor_t>
-  void defineRho(CELL& cell, V rho)
+  void defineRho(CELL& cell, V rho) any_platform
   {
     // get old equilibrium data (oldRho, u)
     V oldRho, u[DESCRIPTOR::d];
@@ -192,12 +192,12 @@ struct DefineUSeparatelyTrace {
   }
 
   template <typename TYPE, typename CELL, typename V=typename CELL::value_t, typename DESCRIPTOR=typename CELL::descriptor_t>
-  void defineU(CELL& cell, const V u[DESCRIPTOR::d])
+  void defineU(CELL& cell, const V u[DESCRIPTOR::d]) any_platform
   { }
 
   template <typename TYPE, typename CELL, typename V=typename CELL::value_t, typename DESCRIPTOR=typename CELL::descriptor_t>
   void defineRhoU(CELL& cell,
-               V rho, const V u[DESCRIPTOR::d])
+               V rho, const V u[DESCRIPTOR::d]) any_platform
   {
     defineRho<TYPE>(cell, rho);
   }
@@ -205,7 +205,7 @@ struct DefineUSeparatelyTrace {
   template <typename TYPE, typename CELL, typename V=typename CELL::value_t, typename DESCRIPTOR=typename CELL::descriptor_t>
   void defineAllMomenta(CELL& cell,
                V rho, const V u[DESCRIPTOR::d],
-               const V pi[util::TensorVal<DESCRIPTOR >::n])
+               const V pi[util::TensorVal<DESCRIPTOR >::n]) any_platform
   {
     DefineUSeparately().defineAllMomenta<TYPE>(cell, rho, u, pi);
   }

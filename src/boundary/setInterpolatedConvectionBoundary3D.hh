@@ -61,48 +61,53 @@ void setInterpolatedConvectionBoundary(SuperLattice<T, DESCRIPTOR>& sLattice, T 
 template<typename T, typename DESCRIPTOR>
 void setInterpolatedConvectionBoundary(BlockLattice<T,DESCRIPTOR>& _block, T omega, BlockIndicatorF3D<T>& indicator, T* uAv, bool includeOuterCells)
 {
-  throw std::runtime_error("TODO: Fix implementation of setInterpolatedConvectionBoundary");
-  //auto& blockGeometryStructure = indicator.getBlockGeometry();
-  //const int margin = includeOuterCells ? 0 : 1;
-  //std::vector<int> discreteNormal(4,0);
-  //blockGeometryStructure.forSpatialLocations([&](auto iX, auto iY, auto iZ) {
-  //  if (blockGeometryStructure.getNeighborhoodRadius({iX, iY, iZ}) >= margin
-  //      && indicator(iX, iY, iZ)) {
-  //    PostProcessorGenerator3D<T,DESCRIPTOR>* postProcessor = nullptr;
-  //    discreteNormal = blockGeometryStructure.getStatistics().getType(iX, iY, iZ);
-  //    if (discreteNormal[0] == 0) {
-  //      if (discreteNormal[1] != 0 && discreteNormal[1] == -1) {
-  //        postProcessor = new StraightConvectionBoundaryProcessorGenerator3D
-  //        <T,DESCRIPTOR,0,-1>(x0, x1, y0, y1, z0, z1, uAv);
-  //      }
-  //      else if (discreteNormal[1] != 0 && discreteNormal[1] == 1) {
-  //        postProcessor = new StraightConvectionBoundaryProcessorGenerator3D
-  //        <T,DESCRIPTOR,0,1>(x0, x1, y0, y1, z0, z1, uAv);
-  //      }
-  //      else if (discreteNormal[2] != 0 && discreteNormal[2] == -1) {
-  //        postProcessor = new StraightConvectionBoundaryProcessorGenerator3D
-  //        <T,DESCRIPTOR,1,-1>(x0, x1, y0, y1, z0, z1, uAv);
-  //      }
-  //      else if (discreteNormal[2] != 0 && discreteNormal[2] == 1) {
-  //        postProcessor = new StraightConvectionBoundaryProcessorGenerator3D
-  //        <T,DESCRIPTOR,1,1>(x0, x1, y0, y1, z0, z1, uAv);
-  //      }
-
-  //      else if (discreteNormal[3] != 0 && discreteNormal[3] == -1) {
-  //        postProcessor = new StraightConvectionBoundaryProcessorGenerator3D
-  //        <T,DESCRIPTOR,2,-1>(x0, x1, y0, y1, z0, z1, uAv);
-  //      }
-  //      else if (discreteNormal[3] != 0 && discreteNormal[3] == 1) {
-  //        postProcessor = new StraightConvectionBoundaryProcessorGenerator3D
-  //        <T,DESCRIPTOR,2,1>(x0, x1, y0, y1, z0, z1, uAv);
-
-  //      }
-  //      if (postProcessor) {
-  //        _block.addPostProcessor(*postProcessor);
-  //      }
-  //    }
-  //  }
-  //});
+  auto& blockGeometryStructure = indicator.getBlockGeometry();
+  const int margin = includeOuterCells ? 0 : 1;
+  std::vector<int> discreteNormal(4,0);
+  blockGeometryStructure.forSpatialLocations([&](auto iX, auto iY, auto iZ) {
+    if (blockGeometryStructure.getNeighborhoodRadius({iX, iY, iZ}) >= margin
+        && indicator(iX, iY, iZ)) {
+      discreteNormal = blockGeometryStructure.getStatistics().getType(iX, iY, iZ);
+      if (discreteNormal[0] == 0) {
+        if (discreteNormal[1] != 0 && discreteNormal[1] == -1) {
+          _block.addPostProcessor(
+            typeid(stage::PostStream), {iX, iY, iZ},
+            meta::id<StraightConvectionBoundaryProcessor3D<DESCRIPTOR,0,-1>>());
+          _block.template getField<typename StraightConvectionBoundaryProcessor3D<DESCRIPTOR,0,-1>::PREV_CELL>();
+        }
+        else if (discreteNormal[1] != 0 && discreteNormal[1] == 1) {
+          _block.addPostProcessor(
+            typeid(stage::PostStream), {iX, iY, iZ},
+            meta::id<StraightConvectionBoundaryProcessor3D<DESCRIPTOR,0,1>>());
+          _block.template getField<typename StraightConvectionBoundaryProcessor3D<DESCRIPTOR,0,1>::PREV_CELL>();
+        }
+        else if (discreteNormal[2] != 0 && discreteNormal[2] == -1) {
+          _block.addPostProcessor(
+            typeid(stage::PostStream), {iX, iY, iZ},
+            meta::id<StraightConvectionBoundaryProcessor3D<DESCRIPTOR,1,-1>>());
+          _block.template getField<typename StraightConvectionBoundaryProcessor3D<DESCRIPTOR,1,-1>::PREV_CELL>();
+        }
+        else if (discreteNormal[2] != 0 && discreteNormal[2] == 1) {
+          _block.addPostProcessor(
+            typeid(stage::PostStream), {iX, iY, iZ},
+            meta::id<StraightConvectionBoundaryProcessor3D<DESCRIPTOR,1,1>>());
+          _block.template getField<typename StraightConvectionBoundaryProcessor3D<DESCRIPTOR,1,1>::PREV_CELL>();
+        }
+        else if (discreteNormal[3] != 0 && discreteNormal[3] == -1) {
+          _block.addPostProcessor(
+            typeid(stage::PostStream), {iX, iY, iZ},
+            meta::id<StraightConvectionBoundaryProcessor3D<DESCRIPTOR,2,-1>>());
+          _block.template getField<typename StraightConvectionBoundaryProcessor3D<DESCRIPTOR,2,-1>::PREV_CELL>();
+        }
+        else if (discreteNormal[3] != 0 && discreteNormal[3] == 1) {
+          _block.addPostProcessor(
+            typeid(stage::PostStream), {iX, iY, iZ},
+            meta::id<StraightConvectionBoundaryProcessor3D<DESCRIPTOR,2,1>>());
+          _block.template getField<typename StraightConvectionBoundaryProcessor3D<DESCRIPTOR,2,1>::PREV_CELL>();
+        }
+      }
+    }
+  });
 }
 
 

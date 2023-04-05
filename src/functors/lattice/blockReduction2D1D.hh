@@ -32,6 +32,7 @@
 #include "utilities/vectorHelpers.h"
 #include "functors/analytical/interpolationF2D.h"
 #include "communication/mpiManager.h"
+#include "communication/mpiManagerAD.hh"
 #include "utilities/functorPtr.hh"
 
 

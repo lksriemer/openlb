@@ -135,6 +135,9 @@ struct ParametersD final : public AbstractParameters<T,DESCRIPTOR>
 
   template <typename... Fs>
   using include_fields = ParametersD<T,DESCRIPTOR,FIELDS...,Fs...>;
+  /// Return ParametersD containing FIELDS in addition to all entries of FIELD_LIST
+  template <typename FIELD_LIST>
+  using include = typename FIELD_LIST::template decompose_into<include_fields>;
 
   ParametersD() = default;
 
@@ -175,6 +178,64 @@ struct ParametersD final : public AbstractParameters<T,DESCRIPTOR>
   };
 
 };
+
+/// Deduce ParametersD of OPERATOR w.r.t. T and DESCRIPTOR
+template <typename T, typename DESCRIPTOR, typename OPERATOR>
+using ParametersOfOperatorD = typename ParametersD<T,DESCRIPTOR>::template include<
+  typename OPERATOR::parameters
+>;
+
+/// Deduce ParametersD of DYNAMICS w.r.t. its value type and descriptor
+template <typename DYNAMICS>
+using ParametersOfDynamicsD = typename ParametersD<
+  typename DYNAMICS::value_t,
+  typename DYNAMICS::descriptor_t
+>::template include<
+  typename DYNAMICS::parameters
+>;
+
+/// Abstract base of ConcreteParametersD
+/**
+ * Used for platform-agnostic access to concrete parameter storage.
+ **/
+template <typename T, typename DESCRIPTOR>
+struct AbstractedConcreteParameters {
+  virtual AbstractParameters<T,DESCRIPTOR>& asAbstract() = 0;
+
+  virtual void setProcessingContext(ProcessingContext context) = 0;
+};
+
+/// Concrete storage of ParametersD in olb::Data
+/**
+ * AbstractParameters resp. ParametersD are not directly used
+ * in order to preserve a minimal cross-device implementation
+ * of this critical data structure.
+ **/
+template <typename T, typename DESCRIPTOR, Platform PLATFORM, typename PARAMETERS>
+struct ConcreteParametersD final : public AbstractedConcreteParameters<T,DESCRIPTOR>
+                                 , public Serializable {
+  typename ParametersD<T,DESCRIPTOR>::template include<PARAMETERS> parameters;
+
+  ConcreteParametersD(std::size_t): // TODO: Implement more generic non-cellwise field allocation in Data
+    parameters{}
+  { }
+
+  /// Return abstract interface to host-side parameters
+  AbstractParameters<T,DESCRIPTOR>& asAbstract() override {
+    return parameters;
+  }
+
+  void setProcessingContext(ProcessingContext context) override { }
+
+  /// Number of data blocks for the serializable interface
+  std::size_t getNblock() const override;
+  /// Binary size for the serializer
+  std::size_t getSerializableSize() const override;
+  /// Return a pointer to the memory of the current block and its size for the serializable interface
+  bool* getBlock(std::size_t iBlock, std::size_t& sizeBlock, bool loadingMode) override;
+
+};
+
 
 }
 

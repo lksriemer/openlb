@@ -24,10 +24,10 @@
 #ifndef INDICATOR_F_3D_H
 #define INDICATOR_F_3D_H
 
-#include<vector>
 #include "indicatorBaseF3D.h"
 #include "io/xmlReader.h"
 #include "sdf.h"
+#include "utilities/functorPtr.h"
 
 
 /** \file
@@ -54,6 +54,7 @@
 namespace olb {
 
 template<typename S> class IndicatorIdentity3D;
+template<typename S> class IndicatorCylinder3D;
 
 template <typename S>
 class IndicatorTranslate3D : public IndicatorF3D<S> {
@@ -68,12 +69,14 @@ public:
 
 
 /// indicator function for a 3D circle
+// circle is realized as a cylinder with a very small height
 template <typename S>
 class IndicatorCircle3D : public IndicatorF3D<S> {
 private:
   Vector<S,3> _center;
   Vector<S,3> _normal;
   S _radius2;
+  IndicatorCylinder3D<S> _cylinder;
 public:
   IndicatorCircle3D(Vector<S,3> center, Vector<S,3> normal, S radius);
   IndicatorCircle3D(S center0, S center1, S center2, S normal0, S normal1,
@@ -109,10 +112,10 @@ public:
 template <typename S>
 class IndicatorLayer3D : public IndicatorF3D<S> {
 private:
-  IndicatorF3D<S>& _indicatorF;
+  FunctorPtr<IndicatorF3D<S>> _indicatorF;
   S _layerSize;
 public:
-  IndicatorLayer3D(IndicatorF3D<S>& indicatorF, S layerSize);
+  IndicatorLayer3D(FunctorPtr<IndicatorF3D<S>>&& indicatorF, S layerSize);
   bool operator() (bool output[], const S input[]) override;
   S signedDistance(const Vector<S,3>& input) override;
 };
@@ -153,6 +156,11 @@ public:
   Vector<S,3> const& getCenter2() const;
   S getRadius() const;
   S signedDistance(const Vector<S,3>& input) override;
+  // Returns random position in indicator domain
+  /**
+   * \param randomness Callable returning uniformly sampled values in [0,1]
+   **/
+  Vector<S,3> getSample(const std::function<S()>& randomness) const override;
 };
 
 /// indicator function for a 3d frustum
@@ -247,6 +255,7 @@ public:
   bool operator() (bool output[], const S input[]) override;
   /// Returns signed distance to the nearest point on the indicator surface
   S signedDistance(const Vector<S,3>& input) override;
+  Vector<S,3> getSample(const std::function<S()>& randomness) const override;
 };
 
 
@@ -310,4 +319,3 @@ std::shared_ptr<IndicatorF3D<S>> createIndicatorF3D(XMLreader const& params, boo
 }
 
 #endif
-

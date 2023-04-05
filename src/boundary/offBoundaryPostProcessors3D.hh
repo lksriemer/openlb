@@ -58,7 +58,7 @@ ZeroVelocityBouzidiLinearPostProcessor3D(int x_, int y_, int z_, int iPop_, T di
 #endif
   typedef DESCRIPTOR L;
   const Vector<int,3> c = descriptors::c<DESCRIPTOR>(iPop);
-  opp = util::opposite<L>(iPop);
+  opp = descriptors::opposite<L>(iPop);
   xN = x + c[0];
   yN = y + c[1];
   zN = z + c[2];
@@ -117,7 +117,7 @@ VelocityBouzidiLinearPostProcessor3D(int x_, int y_, int z_, int iPop_, T dist_)
 #endif
   typedef DESCRIPTOR L;
   const Vector<int,3> c = descriptors::c<DESCRIPTOR>(iPop);
-  opp = util::opposite<L>(iPop);
+  opp = descriptors::opposite<L>(iPop);
   xN = x + c[0];
   yN = y + c[1];
   zN = z + c[2];
@@ -185,7 +185,7 @@ ZeroVelocityBounceBackPostProcessor3D(int x_, int y_, int z_, int iPop_, T dist_
 #endif
   typedef DESCRIPTOR L;
   const Vector<int,3> c = descriptors::c<L>(iPop);
-  opp = util::opposite<L>(iPop);
+  opp = descriptors::opposite<L>(iPop);
   xN = x + c[0];
   yN = y + c[1];
   zN = z + c[2];
@@ -227,7 +227,7 @@ VelocityBounceBackPostProcessor3D(int x_, int y_, int z_, int iPop_, T dist_)
 #endif
   typedef DESCRIPTOR L;
   const Vector<int,3> c = descriptors::c<L>(iPop);
-  opp = util::opposite<L>(iPop);
+  opp = descriptors::opposite<L>(iPop);
   xN = x + c[0];
   yN = y + c[1];
   zN = z + c[2];

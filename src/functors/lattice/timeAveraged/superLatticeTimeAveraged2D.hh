@@ -33,7 +33,7 @@
 namespace olb {
 template <typename T>
 SuperLatticeTimeAveragedF2D<T>:: SuperLatticeTimeAveragedF2D( SuperF2D<T,T>& sFunctor)
-  : SuperF2D<T,T>(sFunctor.getSuperStructure(),sFunctor.getTargetDim()*2), _ensembles(0), _sFunctor(sFunctor), 
+  : SuperF2D<T,T>(sFunctor.getSuperStructure(),sFunctor.getTargetDim()*2), _ensembles(0), _sFunctor(sFunctor),
     _sData(_sFunctor.getSuperStructure().getCuboidGeometry(),
            _sFunctor.getSuperStructure().getLoadBalancer(),
            _sFunctor.getSuperStructure().getOverlap(),
@@ -75,8 +75,8 @@ void SuperLatticeTimeAveragedF2D<T>::addEnsemble()
     _sData.getBlock(iCloc).forSpatialLocations([&](auto iX, auto iY) {
       i[1] = iX;
       i[2] = iY;
-      BaseType<T> tmp[_sFunctor.getTargetDim()];
-      _sFunctor(tmp, i);
+      std::vector<BaseType<T>> tmp(_sFunctor.getTargetDim(), 0);
+      _sFunctor(tmp.data(), i);
       for (int iDim=0; iDim<_sFunctor.getTargetDim(); iDim++) {
         _sData.getBlock(iCloc).get({iX, iY}, iDim) += (BaseType<T>)(tmp[iDim]) ;
         _sDataP2.getBlock(iCloc).get({iX, iY}, iDim) += (BaseType<T>)(tmp[iDim]) *(BaseType<T>)(tmp[iDim]) ;
@@ -142,7 +142,7 @@ bool SuperLatticeTimeAveragedCrossCorrelationF2D<T>::operator() (T output[], con
   T iCloc = _sDataMN.getLoadBalancer().loc(input[0]);
   for (int iDimM=0; iDimM<_sFunctorM.getTargetDim(); iDimM++) {
     for (int iDimN=0; iDimN<_sFunctorN.getTargetDim(); iDimN++) {
-      output[iDim] = _sDataMN.getBlock(iCloc).get(input+1,iDim)-_sDataM.getBlock(iCloc).get(input+1,iDimM) *_sDataN.getBlock(iCloc).get(input+1,iDimN)/_ensembles;
+      output[iDim] = _sDataMN.getBlock(iCloc).get(input+1,iDim)-_sDataM.getBlock(iCloc).get(input+1,iDimM) *_sDataN.getBlock(iCloc).get(input+1,iDimN)/_ensembles/_ensembles;
       iDim++;
     }
   }

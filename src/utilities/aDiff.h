@@ -34,10 +34,12 @@
 #include <array>
 #include <iostream>
 #include <cassert>
+#include <type_traits>
 
 #include "core/baseType.h"
 #include "core/vector.h"
 #include "core/util.h"
+
 
 struct AD { };
 
@@ -62,7 +64,7 @@ namespace util {
 template <class T, unsigned DIM>
 class ADf final : public AD {
 private:
-  inline void checkDataType();
+  inline constexpr void checkDataType();
 public:
   using base_t = T;
   static constexpr unsigned dim = DIM;
@@ -73,76 +75,88 @@ public:
   Vector<T,DIM> _d = ( T( 0 ) );
 
   // class functions
-  inline ADf();
+  inline constexpr ADf();
 
-  //explicit ADf(const T& v);
-  inline ADf(const ADf& a);
-  inline ADf(const ADf& a, bool b);
-  inline ADf(const T& v);
-  inline ADf(const T& v, const Vector<T,DIM>& d);
+  inline constexpr ADf(const ADf& a);
+  inline constexpr ADf(const T& v);
+  inline constexpr ADf(const T& v, const Vector<T,DIM>& d);
 
-  ADf(ADf&& a);
+  constexpr ADf(ADf&& a);
 
-  inline T& v();
-  inline T& d(unsigned i);
-  inline const T& d(unsigned i) const;
-  inline Vector<T,DIM>& d();
+  inline constexpr T& v();
+  inline constexpr T& d(unsigned i);
+  inline constexpr const T& d(unsigned i) const;
+  inline constexpr Vector<T,DIM>& d();
 
-  inline ADf& operator = (const ADf& a);
-  inline ADf& operator = (ADf&& a);
-  inline ADf& operator = (const T& v);
+  inline constexpr ADf& operator = (const ADf& a);
+  inline constexpr ADf& operator = (ADf&& a);
+  inline constexpr ADf& operator = (const T& v);
 
-  inline ADf& operator += (const ADf& a);
-  inline ADf& operator += (const T& v);
+  inline constexpr ADf& operator += (const ADf& a);
+  inline constexpr ADf& operator += (const T& v);
 
-  inline ADf& operator -= (const ADf& a);
-  inline ADf& operator -= (const T& v);
+  inline constexpr ADf& operator -= (const ADf& a);
+  inline constexpr ADf& operator -= (const T& v);
 
-  inline ADf& operator *= (const ADf& a);
-  inline ADf& operator *= (const T& v);
+  inline constexpr ADf& operator *= (const ADf& a);
+  inline constexpr ADf& operator *= (const T& v);
 
-  inline ADf& operator /= (const ADf& a);
-  inline ADf& operator /= (const T& v);
+  inline constexpr ADf& operator /= (const ADf& a);
+  inline constexpr ADf& operator /= (const T& v);
 
-  inline void setDiffVariable(unsigned iD);
+  inline constexpr void setDiffVariable(unsigned iD);
 
-  inline bool hasZeroDerivative() const;
-  inline operator base_t() const;
+  inline constexpr bool hasZeroDerivative() const;
+  inline constexpr operator base_t() const;
 };
+
+
+template< class T >
+struct is_adf {
+  static constexpr bool value = false;
+};
+
+template< class S, unsigned DIM >
+struct is_adf<ADf<S,DIM>> {
+  static constexpr bool value = true;
+};
+
+template< class T >
+inline constexpr bool is_adf_v = is_adf<T>::value;
 
 // class functions
 template <class T, unsigned DIM>
-inline ADf<T,DIM>::ADf():ADf<T,DIM>( T() )
+inline constexpr ADf<T,DIM>::ADf():ADf<T,DIM>( T() )
 { }
 
 template <class T, unsigned DIM>
-inline ADf<T,DIM>::ADf(const ADf& a):ADf<T,DIM>(a._v, a._d)
+inline constexpr ADf<T,DIM>::ADf(const ADf& a):ADf<T,DIM>(a._v, a._d)
 { }
 
 template <class T, unsigned DIM>
-inline ADf<T,DIM>::ADf(const T& v):ADf<T,DIM>(v,Vector<T,DIM> {})
+inline constexpr ADf<T,DIM>::ADf(const T& v):ADf<T,DIM>(v,Vector<T,DIM> {})
 { }
 
 template <class T, unsigned DIM>
-inline ADf<T,DIM>::ADf(const T& v, const Vector<T,DIM>& d): _v(v), _d(d)
+inline constexpr ADf<T,DIM>::ADf(const T& v, const Vector<T,DIM>& d): _v(v), _d(d)
 {
   checkDataType();
 }
 
 template <class T, unsigned DIM>
-inline ADf<T,DIM>::ADf(ADf&& a):ADf<T,DIM>(a._v, a._d)
+inline constexpr ADf<T,DIM>::ADf(ADf&& a):ADf<T,DIM>(a._v, a._d)
 { }
 
 /// Check whether the base type is of floating point type
 template <class T, unsigned DIM>
-inline void ADf<T,DIM>::checkDataType()
+inline constexpr void ADf<T,DIM>::checkDataType()
 {
-  static_assert(std::is_floating_point<T>::value,
+  static_assert(std::is_floating_point<BaseType<T>>::value,
                 "Use floating point types (float, double or long double). Do not use integer types.");
 }
 
 template <class T, unsigned DIM>
-inline ADf<T,DIM>& ADf<T,DIM>::operator= (const ADf& a)
+inline constexpr ADf<T,DIM>& ADf<T,DIM>::operator= (const ADf& a)
 {
   _v=a._v;
   _d=a._d;
@@ -150,7 +164,7 @@ inline ADf<T,DIM>& ADf<T,DIM>::operator= (const ADf& a)
 }
 
 template <class T, unsigned DIM>
-inline ADf<T,DIM>& ADf<T,DIM>::operator= (ADf&& a)
+inline constexpr ADf<T,DIM>& ADf<T,DIM>::operator= (ADf&& a)
 {
   _v=a._v;
   _d=a._d;
@@ -158,7 +172,7 @@ inline ADf<T,DIM>& ADf<T,DIM>::operator= (ADf&& a)
 }
 
 template <class T, unsigned DIM>
-inline ADf<T,DIM>& ADf<T,DIM>::operator= (const T& v)
+inline constexpr ADf<T,DIM>& ADf<T,DIM>::operator= (const T& v)
 {
   _v=v;
   _d = ( T() );
@@ -166,7 +180,7 @@ inline ADf<T,DIM>& ADf<T,DIM>::operator= (const T& v)
 }
 
 template <class T, unsigned DIM>
-inline ADf<T,DIM>& ADf<T,DIM>::operator += (const ADf<T,DIM>& a)
+inline constexpr ADf<T,DIM>& ADf<T,DIM>::operator += (const ADf<T,DIM>& a)
 {
   _v+=a._v;
   _d+=a._d;
@@ -174,14 +188,14 @@ inline ADf<T,DIM>& ADf<T,DIM>::operator += (const ADf<T,DIM>& a)
 }
 
 template <class T, unsigned DIM>
-inline ADf<T,DIM>& ADf<T,DIM>::operator += (const T& v)
+inline constexpr ADf<T,DIM>& ADf<T,DIM>::operator += (const T& v)
 {
   _v+=v;
   return *this;
 }
 
 template <class T, unsigned DIM>
-inline ADf<T,DIM>& ADf<T,DIM>::operator -= (const ADf<T,DIM>& a)
+inline constexpr ADf<T,DIM>& ADf<T,DIM>::operator -= (const ADf<T,DIM>& a)
 {
   _v-=a._v;
   _d-=a._d;
@@ -189,14 +203,14 @@ inline ADf<T,DIM>& ADf<T,DIM>::operator -= (const ADf<T,DIM>& a)
 }
 
 template <class T, unsigned DIM>
-inline ADf<T,DIM>& ADf<T,DIM>::operator -= (const T& v)
+inline constexpr ADf<T,DIM>& ADf<T,DIM>::operator -= (const T& v)
 {
   _v-=v;
   return *this;
 }
 
 template <class T, unsigned DIM>
-inline ADf<T,DIM>& ADf<T,DIM>::operator *= (const ADf<T,DIM>& a)
+inline constexpr ADf<T,DIM>& ADf<T,DIM>::operator *= (const ADf<T,DIM>& a)
 {
   _d=_d*a._v+_v*a._d;
   _v*=a._v;
@@ -204,7 +218,7 @@ inline ADf<T,DIM>& ADf<T,DIM>::operator *= (const ADf<T,DIM>& a)
 }
 
 template <class T, unsigned DIM>
-inline ADf<T,DIM>& ADf<T,DIM>::operator *= (const T& v)
+inline constexpr ADf<T,DIM>& ADf<T,DIM>::operator *= (const T& v)
 {
   _v*=v;
   _d*=v;
@@ -212,7 +226,7 @@ inline ADf<T,DIM>& ADf<T,DIM>::operator *= (const T& v)
 }
 
 template <class T, unsigned DIM>
-inline ADf<T,DIM>& ADf<T,DIM>::operator /= (const ADf<T,DIM>& a)
+inline constexpr ADf<T,DIM>& ADf<T,DIM>::operator /= (const ADf<T,DIM>& a)
 {
   T tmp(T(1)/a._v);
   _v*=tmp;
@@ -221,7 +235,7 @@ inline ADf<T,DIM>& ADf<T,DIM>::operator /= (const ADf<T,DIM>& a)
 }
 
 template <class T, unsigned DIM>
-inline ADf<T,DIM>& ADf<T,DIM>::operator /= (const T& v)
+inline constexpr ADf<T,DIM>& ADf<T,DIM>::operator /= (const T& v)
 {
   T tmp(T(1)/v);
   _v*=tmp;
@@ -230,31 +244,31 @@ inline ADf<T,DIM>& ADf<T,DIM>::operator /= (const T& v)
 }
 
 template <class T, unsigned DIM>
-inline T& ADf<T,DIM>::v()
+inline constexpr T& ADf<T,DIM>::v()
 {
   return _v;
 }
 
 template <class T, unsigned DIM>
-inline T& ADf<T,DIM>::d(unsigned i)
+inline constexpr T& ADf<T,DIM>::d(unsigned i)
 {
   return _d[i];
 }
 
 template <class T, unsigned DIM>
-inline const T& ADf<T,DIM>::d(unsigned i) const
+inline constexpr const T& ADf<T,DIM>::d(unsigned i) const
 {
   return _d[i];
 }
 
 template <class T, unsigned DIM>
-inline Vector<T,DIM>& ADf<T,DIM>::d()
+inline constexpr Vector<T,DIM>& ADf<T,DIM>::d()
 {
   return _d;
 }
 
 template <class T, unsigned DIM>
-inline void ADf<T,DIM>::setDiffVariable(unsigned iD)
+inline constexpr void ADf<T,DIM>::setDiffVariable(unsigned iD)
 {
   _d =( T(0) );
   _d[iD] = T(1);
@@ -285,185 +299,90 @@ inline std::istream& operator >> (std::istream& is, ADf<T,DIM>& in)
 // addition, subtraction, multiplication and division
 
 template <class T, unsigned DIM, typename U, typename std::enable_if<std::is_integral<U>::value | std::is_floating_point<U>::value,int>::type = 0>
-inline ADf<T,DIM> operator+ (const U& a, const ADf<T,DIM>& b)
+inline constexpr ADf<T,DIM> operator+ (const U& a, const ADf<T,DIM>& b)
 {
   return ADf<T,DIM>(b) += olb::BaseType<ADf<T,DIM>>(a);
 }
 
 template <class T, unsigned DIM, typename U, typename std::enable_if<std::is_integral<U>::value | std::is_floating_point<U>::value,int>::type = 0>
-inline ADf<T,DIM> operator+ (const ADf<T,DIM>& a,const U& b)
+inline constexpr ADf<T,DIM> operator+ (const ADf<T,DIM>& a,const U& b)
 {
   return ADf<T,DIM>(a) += olb::BaseType<ADf<T,DIM>>(b);
 }
 
 template <class T, unsigned DIM>
-inline ADf<T,DIM> operator+ (const ADf<T,DIM>& a, const ADf<T,DIM>& b)
+inline constexpr ADf<T,DIM> operator+ (const ADf<T,DIM>& a, const ADf<T,DIM>& b)
 {
   return ADf<T,DIM>(a) += b;
 }
 
 template <class T, unsigned DIM, typename U, typename std::enable_if<std::is_integral<U>::value | std::is_floating_point<U>::value,int>::type = 0>
-inline ADf<T,DIM> operator- (const U& a, const ADf<T,DIM>& b)
+inline constexpr ADf<T,DIM> operator- (const U& a, const ADf<T,DIM>& b)
 {
   return ADf<T,DIM>(-ADf<T,DIM>(b) + olb::BaseType<ADf<T,DIM>>(a));
 }
 
 template <class T, unsigned DIM, typename U, typename std::enable_if<std::is_integral<U>::value | std::is_floating_point<U>::value,int>::type = 0>
-inline ADf<T,DIM> operator- (const ADf<T,DIM>& a,const U& b)
+inline constexpr ADf<T,DIM> operator- (const ADf<T,DIM>& a,const U& b)
 {
   return ADf<T,DIM>(a) -= olb::BaseType<ADf<T,DIM>>(b);
 }
 
 template <class T, unsigned DIM>
-inline ADf<T,DIM> operator- (const ADf<T,DIM>& a, const ADf<T,DIM>& b)
+inline constexpr ADf<T,DIM> operator- (const ADf<T,DIM>& a, const ADf<T,DIM>& b)
 {
   return ADf<T,DIM>(a)-=b;
 }
 
 template <class T, unsigned DIM, typename U, typename std::enable_if<std::is_integral<U>::value | std::is_floating_point<U>::value,int>::type = 0>
-inline ADf<T,DIM> operator* (const U& a, const ADf<T,DIM>& b)
+inline constexpr ADf<T,DIM> operator* (const U& a, const ADf<T,DIM>& b)
 {
   return ADf<T,DIM>(b) *= olb::BaseType<ADf<T,DIM>>(a);
 }
 
 template <class T, unsigned DIM, typename U, typename std::enable_if<std::is_integral<U>::value | std::is_floating_point<U>::value,int>::type = 0>
-inline ADf<T,DIM> operator* (const ADf<T,DIM>& a,const U& b)
+inline constexpr ADf<T,DIM> operator* (const ADf<T,DIM>& a,const U& b)
 {
   return ADf<T,DIM>(a) *= olb::BaseType<ADf<T,DIM>>(b);
 }
 
 template <class T, unsigned DIM>
-inline ADf<T,DIM> operator* (const ADf<T,DIM>& a, const ADf<T,DIM>& b)
+inline constexpr ADf<T,DIM> operator* (const ADf<T,DIM>& a, const ADf<T,DIM>& b)
 {
   return ADf<T,DIM>(a) *= b;
 }
 
 template <class T, unsigned DIM, typename U, typename std::enable_if<std::is_integral<U>::value | std::is_floating_point<U>::value,int>::type = 0>
-inline ADf<T,DIM> operator/ (const U& a, const ADf<T,DIM>& b)
+inline constexpr ADf<T,DIM> operator/ (const U& a, const ADf<T,DIM>& b)
 {
   return ADf<T,DIM>(a) /= b;
 }
 
 template <class T, unsigned DIM, typename U, typename std::enable_if<std::is_integral<U>::value | std::is_floating_point<U>::value,int>::type = 0>
-inline ADf<T,DIM> operator/ (const ADf<T,DIM>& a,const U& b)
+inline constexpr ADf<T,DIM> operator/ (const ADf<T,DIM>& a,const U& b)
 {
   return ADf<T,DIM>(a) /= olb::BaseType<ADf<T,DIM>>(b);
 }
 
 
 template <class T, unsigned DIM>
-inline ADf<T,DIM> operator/ (const ADf<T,DIM>& a, const ADf<T,DIM>& b)
+inline constexpr ADf<T,DIM> operator/ (const ADf<T,DIM>& a, const ADf<T,DIM>& b)
 {
   return ADf<T,DIM>(a) /= b;
 }
 
 /* Unary operators */
 template <class T, unsigned DIM>
-inline ADf<T,DIM> operator+ (const ADf<T,DIM>& a)
+inline constexpr ADf<T,DIM> operator+ (const ADf<T,DIM>& a)
 {
   return ADf<T,DIM>(a);
 }
 
 template <class T, unsigned DIM>
-inline ADf<T,DIM> operator- (const ADf<T,DIM>& a)
+inline constexpr ADf<T,DIM> operator- (const ADf<T,DIM>& a)
 {
   return ADf<T,DIM>(a) *= -1;
 }
-
-
-
-
-
-
-
-
-
-
-// General arithmetics for interaction with objects of the first template
-// parameter. This enables computations of second derivatives by pyramiding
-// ADf.
-// addition, subtraction, multiplication and division
-template <class T, unsigned DIM>
-inline ADf<T,DIM> add1(const T& a, const ADf<T,DIM>& b)
-{
-  ADf<T,DIM> c(a+b._v, b._d);
-  return c;
-}
-
-template <class T, unsigned DIM>
-inline ADf<T,DIM> add2(const ADf<T,DIM>& a,const T& b)
-{
-  ADf<T,DIM> c(a._v+b, a._d);
-  return c;
-}
-
-template <class T, unsigned DIM>
-inline ADf<T,DIM> sub1(const T& a, const ADf<T,DIM>& b)
-{
-  ADf<T,DIM> c(a-b._v, b._d);
-  c._d *= -1;
-  return c;
-}
-
-template <class T, unsigned DIM>
-inline ADf<T,DIM> sub2(const ADf<T,DIM>& a,const T& b)
-{
-  ADf<T,DIM> c(a._v-b, a._d);
-  return c;
-}
-
-template <class T, unsigned DIM>
-inline ADf<T,DIM> mul1(const T& a, const ADf<T,DIM>& b)
-{
-  ADf<T,DIM> c(a*b._v, b._d);
-  c._d *= a;
-  return c;
-}
-
-template <class T, unsigned DIM>
-inline ADf<T,DIM> mul2(const ADf<T,DIM>& a,const T& b)
-{
-  ADf<T,DIM> c(a._v*b, a._d);
-  c._d*=b;
-  return c;
-}
-
-template <class T, unsigned DIM>
-inline ADf<T,DIM> di_v1(const T& a, const ADf<T,DIM>& b)
-{
-  ADf<T,DIM> c(a/b._v, b._d);
-  T tmp(-c._v/b._v);
-  c._d*=tmp;
-  return c;
-}
-
-template <class T, unsigned DIM>
-inline ADf<T,DIM> di_v2(const ADf<T,DIM>& a,const T& b)
-{
-  ADf<T,DIM> c(a._v/b, a._d);
-  T tmp = T(1)/b;
-  c._d*=tmp;
-  return c;
-}
-
-template <class T, unsigned DIM>
-inline ADf<T,DIM> pow1(const T& a, const ADf<T,DIM>& b)
-{
-  ADf<T,DIM> c(pow(a,b._v), b._d);
-  T tmp(b._v*pow(a,b._v-T(1)));//,tmp1(c._v*log10(a));
-  c._d*=tmp;
-  return c;
-}
-template <class T, unsigned DIM>
-inline ADf<T,DIM> pow2(const ADf<T,DIM>& a, const T& b)
-{
-  ADf<T,DIM> c(pow(a._v,b), a._d);
-  T tmp(b*pow(a._v,b-T(1)));//,tmp1(c._v*log10(a._v));
-  c._d*=tmp;
-  return c;
-}
-
-
 
 
 
@@ -810,7 +729,7 @@ inline ADf<T,DIM> fmod (const U& a, const ADf<T,DIM>& b)
 
 /// tests if ADf has only zero derivatives
 template <class T, unsigned DIM>
-inline bool ADf<T,DIM>::hasZeroDerivative() const
+constexpr inline bool ADf<T,DIM>::hasZeroDerivative() const
 {
   T sum = 0;
   for (unsigned i=0; i<DIM; i++) {
@@ -823,111 +742,111 @@ inline bool ADf<T,DIM>::hasZeroDerivative() const
 
 // boolean comparison operators: ==, !=, >, >=, <, <=
 template <class T, unsigned DIM>
-inline bool operator == (const ADf<T,DIM> &a, const ADf<T,DIM> &b)
+inline constexpr bool operator == (const ADf<T,DIM> &a, const ADf<T,DIM> &b)
 {
   return a._v==b._v;
 }
 
 template <class T, unsigned DIM, typename U, typename std::enable_if<std::is_integral<U>::value | std::is_floating_point<U>::value,int>::type = 0>
-inline bool operator == (const ADf<T,DIM> &a, const U &b)
+inline constexpr bool operator == (const ADf<T,DIM> &a, const U &b)
 {
   return a._v==olb::BaseType<ADf<T,DIM>>(b);
 }
 
 template <class T, unsigned DIM, typename U, typename std::enable_if<std::is_integral<U>::value | std::is_floating_point<U>::value,int>::type = 0>
-inline bool operator == (const U &a, const ADf<T,DIM> &b)
+inline constexpr bool operator == (const U &a, const ADf<T,DIM> &b)
 {
   return olb::BaseType<ADf<T,DIM>>(a)==b._v;
 }
 
 template <class T, unsigned DIM>
-inline bool operator != (const ADf<T,DIM> &a, const ADf<T,DIM> &b)
+inline constexpr bool operator != (const ADf<T,DIM> &a, const ADf<T,DIM> &b)
 {
   return a._v!=b._v;
 }
 
 template <class T, unsigned DIM, typename U, typename std::enable_if<std::is_integral<U>::value | std::is_floating_point<U>::value,int>::type = 0>
-inline bool operator != (const ADf<T,DIM> &a, const U &b)
+inline constexpr bool operator != (const ADf<T,DIM> &a, const U &b)
 {
   return a._v!=olb::BaseType<ADf<T,DIM>>(b);
 }
 
 template <class T, unsigned DIM, typename U, typename std::enable_if<std::is_integral<U>::value | std::is_floating_point<U>::value,int>::type = 0>
-inline bool operator != (const U &a, const ADf<T,DIM> &b)
+inline constexpr bool operator != (const U &a, const ADf<T,DIM> &b)
 {
   return olb::BaseType<ADf<T,DIM>>(a)!=b._v;
 }
 
 
 template <class T, unsigned DIM>
-inline bool operator > (const ADf<T,DIM> &a, const ADf<T,DIM> &b)
+inline constexpr bool operator > (const ADf<T,DIM> &a, const ADf<T,DIM> &b)
 {
   return a._v>b._v;
 }
 
 template <class T, unsigned DIM, typename U, typename std::enable_if<std::is_integral<U>::value | std::is_floating_point<U>::value,int>::type = 0>
-inline bool operator > (const ADf<T,DIM> &a, const U &b)
+inline constexpr bool operator > (const ADf<T,DIM> &a, const U &b)
 {
   return a._v>olb::BaseType<ADf<T,DIM>>(b);
 }
 
 template <class T, unsigned DIM, typename U, typename std::enable_if<std::is_integral<U>::value | std::is_floating_point<U>::value,int>::type = 0>
-inline bool operator > (const U &a, const ADf<T,DIM> &b)
+inline constexpr bool operator > (const U &a, const ADf<T,DIM> &b)
 {
   return olb::BaseType<ADf<T,DIM>>(a)>b._v;
 }
 
 template <class T, unsigned DIM>
-inline bool operator >= (const ADf<T,DIM> &a, const ADf<T,DIM> &b)
+inline constexpr bool operator >= (const ADf<T,DIM> &a, const ADf<T,DIM> &b)
 {
   return a._v>=b._v;
 }
 
 template <class T, unsigned DIM, typename U, typename std::enable_if<std::is_integral<U>::value | std::is_floating_point<U>::value,int>::type = 0>
-inline bool operator >= (const ADf<T,DIM> &a, const U &b)
+inline constexpr bool operator >= (const ADf<T,DIM> &a, const U &b)
 {
   return a._v>=olb::BaseType<ADf<T,DIM>>(b);
 }
 
 template <class T, unsigned DIM, typename U, typename std::enable_if<std::is_integral<U>::value | std::is_floating_point<U>::value,int>::type = 0>
-inline bool operator >= (const U &a, const ADf<T,DIM> &b)
+inline constexpr bool operator >= (const U &a, const ADf<T,DIM> &b)
 {
   return olb::BaseType<ADf<T,DIM>>(a)>=b._v;
 }
 
 
 template <class T, unsigned DIM>
-inline bool operator < (const ADf<T,DIM> &a, const ADf<T,DIM> &b)
+inline constexpr bool operator < (const ADf<T,DIM> &a, const ADf<T,DIM> &b)
 {
   return a._v<b._v;
 }
 
 template <class T, unsigned DIM, typename U, typename std::enable_if<std::is_integral<U>::value | std::is_floating_point<U>::value,int>::type = 0>
-inline bool operator < (const ADf<T,DIM> &a, const U &b)
+inline constexpr bool operator < (const ADf<T,DIM> &a, const U &b)
 {
   return a._v<olb::BaseType<ADf<T,DIM>>(b);
 }
 
 template <class T, unsigned DIM, typename U, typename std::enable_if<std::is_integral<U>::value | std::is_floating_point<U>::value,int>::type = 0>
-inline bool operator < (const U &a, const ADf<T,DIM> &b)
+inline constexpr bool operator < (const U &a, const ADf<T,DIM> &b)
 {
   return olb::BaseType<ADf<T,DIM>>(a)<b._v;
 }
 
 template <class T, unsigned DIM>
-inline bool operator <= (const ADf<T,DIM> &a, const ADf<T,DIM> &b)
+inline constexpr bool operator <= (const ADf<T,DIM> &a, const ADf<T,DIM> &b)
 {
   return a._v<=b._v;
 }
 
 template <class T, unsigned DIM, typename U, typename std::enable_if<std::is_integral<U>::value | std::is_floating_point<U>::value,int>::type = 0>
-inline bool operator <= (const ADf<T,DIM> &a, const U &b)
+inline constexpr bool operator <= (const ADf<T,DIM> &a, const U &b)
 {
   return a._v<=olb::BaseType<ADf<T,DIM>>(b);
 }
 
 template <class T, unsigned DIM, typename U, typename std::enable_if<std::is_integral<U>::value | std::is_floating_point<U>::value,int>::type = 0>
-inline bool operator <= (const U &a, const ADf<T,DIM> &b)
+inline constexpr bool operator <= (const U &a, const ADf<T,DIM> &b)
 {
   return olb::BaseType<ADf<T,DIM>>(a)<=b._v;
 }
@@ -935,7 +854,7 @@ inline bool operator <= (const U &a, const ADf<T,DIM> &b)
 // typecast functions
 /// typecast from ADf --> olb::BaseType
 template <class T, unsigned DIM>
-inline ADf<T,DIM>::operator ADf<T,DIM>::base_t() const
+inline constexpr ADf<T,DIM>::operator ADf<T,DIM>::base_t() const
 {
 #ifdef AdWarnings
   if (this->hasZeroDerivative() != true) {
@@ -1119,7 +1038,7 @@ inline ADf<T,DIM> llabs (const ADf<T,DIM>& a)
 }
 
 template <class T, unsigned DIM>
-inline ADf<T,DIM> max (const olb::BaseType<ADf<T,DIM>>& a, const ADf<T,DIM>& b)
+inline constexpr ADf<T,DIM> max (const olb::BaseType<ADf<T,DIM>>& a, const ADf<T,DIM>& b)
 {
   ADf<T,DIM> c(a);
   c = max(c, b);
@@ -1127,7 +1046,7 @@ inline ADf<T,DIM> max (const olb::BaseType<ADf<T,DIM>>& a, const ADf<T,DIM>& b)
 }
 
 template <class T, unsigned DIM>
-inline ADf<T,DIM> max(const ADf<T,DIM>& a,const olb::BaseType<ADf<T,DIM>>& b)
+inline constexpr ADf<T,DIM> max(const ADf<T,DIM>& a,const olb::BaseType<ADf<T,DIM>>& b)
 {
   ADf<T,DIM> c(b);
   c = max(a, c);
@@ -1135,14 +1054,14 @@ inline ADf<T,DIM> max(const ADf<T,DIM>& a,const olb::BaseType<ADf<T,DIM>>& b)
 }
 
 template <class T, unsigned DIM>
-inline ADf<T,DIM> max(const ADf<T,DIM>& a, const ADf<T,DIM>& b)
+inline constexpr ADf<T,DIM> max(const ADf<T,DIM>& a, const ADf<T,DIM>& b)
 {
   ADf<T,DIM> c((a + b + fabs(a - b) ) * T(0.5));
   return c;
 }
 
 template <class T, unsigned DIM>
-inline ADf<T,DIM> min (const olb::BaseType<ADf<T,DIM>>& a, const ADf<T,DIM>& b)
+inline constexpr ADf<T,DIM> min (const olb::BaseType<ADf<T,DIM>>& a, const ADf<T,DIM>& b)
 {
   ADf<T,DIM> c(a);
   c = min(c, b);
@@ -1150,7 +1069,7 @@ inline ADf<T,DIM> min (const olb::BaseType<ADf<T,DIM>>& a, const ADf<T,DIM>& b)
 }
 
 template <class T, unsigned DIM>
-inline ADf<T,DIM> min(const ADf<T,DIM>& a,const olb::BaseType<ADf<T,DIM>>& b)
+inline constexpr ADf<T,DIM> min(const ADf<T,DIM>& a,const olb::BaseType<ADf<T,DIM>>& b)
 {
   ADf<T,DIM> c(b);
   c = min(a, c);
@@ -1158,7 +1077,7 @@ inline ADf<T,DIM> min(const ADf<T,DIM>& a,const olb::BaseType<ADf<T,DIM>>& b)
 }
 
 template <class T, unsigned DIM>
-inline ADf<T,DIM> min(const ADf<T,DIM>& a, const ADf<T,DIM>& b)
+inline constexpr ADf<T,DIM> min(const ADf<T,DIM>& a, const ADf<T,DIM>& b)
 {
   ADf<T,DIM> c((a + b - fabs(a - b) ) * T(0.5));
   return c;
@@ -1178,7 +1097,7 @@ inline bool nearZero(const ADf<T,DIM>& a)
 }
 
 template <typename T>
-inline void throwADfException(T arg)
+inline constexpr void throwADfException(T arg)
 {
   static_assert(std::is_floating_point<T>::value,
                 "The data type ADf has slipped in here. If you really want to use it here and lose all derivation information, then perform an explicit typecast.");

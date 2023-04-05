@@ -61,5 +61,17 @@ public:
   bool operator() (T output[], const int input[]) override;
 };
 
+template <typename T, typename DESCRIPTOR>
+struct SuperLatticePlatform final : public SuperLatticeF<T,DESCRIPTOR> {
+  SuperLatticePlatform(SuperLattice<T,DESCRIPTOR>& sLattice);
+};
+
+template <typename T, typename DESCRIPTOR>
+struct BlockLatticePlatform final : public BlockLatticeF<T,DESCRIPTOR> {
+  BlockLatticePlatform(BlockLattice<T,DESCRIPTOR>& blockLattice);
+
+  bool operator() (T output[], const int input[]) override;
+};
+
 }
 #endif

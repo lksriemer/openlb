@@ -39,7 +39,7 @@ using namespace olb;
 using namespace olb::descriptors;
 using namespace olb::graphics;
 
-typedef double T;
+using T = FLOATING_POINT_TYPE;
 typedef D2Q5<VELOCITY,SOURCE> TDESCRIPTOR;
 
 const int runs = 3;              // # simulations with increasing resolution
@@ -82,7 +82,7 @@ struct ReactionData
   ReactionData(){
     if constexpr (type == a2c) {
       numReactions = 1;
-      physReactionCoeff = std::vector<T>({0.25});
+      physReactionCoeff = std::vector<T>(1, T(0.25));
       numComponents = 2;
       names = std::vector<std::string>({"Hydrogen","Hydrogene Iodine"});
       stochCoeff = std::vector<T>({-1,1.});
@@ -185,10 +185,6 @@ void prepareLattice(  SuperLattice<T, TDESCRIPTOR>*& ADlattice,
 
   const T omega = converter.getLatticeAdeRelaxationFrequency();
 
-  // buffer layer
-  ADlattice->defineDynamics<NoDynamics>(superGeometry, 0);
-
-  // bulk
   ADlattice->defineDynamics<SourcedAdvectionDiffusionBGKdynamics>(superGeometry, 1);
 
   AnalyticalConst2D<T,T> u(converter.getLatticeVelocity(flow_rate),converter.getLatticeVelocity(0.0));
@@ -197,12 +193,12 @@ void prepareLattice(  SuperLattice<T, TDESCRIPTOR>*& ADlattice,
   AnalyticalConst2D<T,T> rhoEnd_(converter.getLatticeDensity(rhoEnd));
 
   // Setting of the boundary conditions, inflow and outflow with Dirichlet condition according to analytical solution
-  setAdvectionDiffusionTemperatureBoundary<T, TDESCRIPTOR>(*ADlattice, omega, superGeometry.getMaterialIndicator({3}));
-  setAdvectionDiffusionTemperatureBoundary<T, TDESCRIPTOR>(*ADlattice, omega, superGeometry.getMaterialIndicator({4}));
+  setAdvectionDiffusionTemperatureBoundary<T, TDESCRIPTOR>(*ADlattice, omega, superGeometry.getMaterialIndicator(3));
+  setAdvectionDiffusionTemperatureBoundary<T, TDESCRIPTOR>(*ADlattice, omega, superGeometry.getMaterialIndicator(4));
 
   ADlattice->setParameter<descriptors::OMEGA>(converter.getLatticeAdeRelaxationFrequency());
 
-  auto bulkIndicator = superGeometry.getMaterialIndicator({1});
+  auto bulkIndicator = superGeometry.getMaterialIndicator(1);
   auto everywhere = superGeometry.getMaterialIndicator({1,2,3,4});
 
   // setting flowrate inside reactor, as well as initial concentrations
@@ -363,11 +359,11 @@ void getResults(int statIter, AdeUnitConverter<T, TDESCRIPTOR> converter,
       if (AnalySol == true ){
         T simulationAverage = .0;
         simulationAverage = errorOverLine(densities, superGeometry, iT, converter); //computes error along the middle of the PRF and saves also the concetrations along it
-       if (runs >1){  // EOC Plot
-           singleton::directories().setOutputDir("./tmp/");
-           gploteoc.setData( T(converter.getResolution()) , {simulationAverage}, {"average L2  Error"}, "top right", {'p'});
-           gploteoc.writePNG();
-       }
+        if (runs >1){  // EOC Plot
+          singleton::directories().setOutputDir("./tmp/");
+          gploteoc.setData( T(converter.getResolution()) , simulationAverage, "average L2  Error", "top right", 'p');
+          gploteoc.writePNG();
+        }
       }
 
       else {         // AnalySol == false means no comparison with the analytical solution (no error plots)

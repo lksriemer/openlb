@@ -27,36 +27,22 @@
 #ifndef OLB_INIT_H
 #define OLB_INIT_H
 
-#include "communication/mpiManager.h"
-#include "io/ostreamManager.h"
-#include "io/parallelIO.h"
-#include "communication/ompManager.h"
+#if __cplusplus < 201603L
+#error "OpenLB requires C++17 or newer"
+#endif
+
+#include "threadPool.h"
 
 namespace olb {
 
-inline void olbInit(int *argc, char ***argv, bool multiOutput=false, bool verbose=true)
-{
-  // create an OstreamManager object in order to enable multi output
-  olb::OstreamManager clout(std::cout,"olbInit");
-  clout.setMultiOutput(multiOutput);
-  singleton::mpi().init(argc, argv, verbose);
+namespace singleton {
 
-#ifdef PARALLEL_MODE_MPI
-  /*ParBuf *newCoutBuf = new ParBuf(std::cout.rdbuf());
-  ParBuf *newClogBuf = new ParBuf(std::clog.rdbuf());
-  ParBuf *newCinBuf  = new ParBuf(std::cin.rdbuf());
+ThreadPool& pool();
 
-  std::cout.rdbuf(newCoutBuf);
-  std::clog.rdbuf(newClogBuf);
-  std::cin. rdbuf(newCinBuf);*/
-#endif
-
-#ifdef PARALLEL_MODE_OMP
-  #pragma omp parallel
-  omp.init(verbose);
-#endif
 }
 
-}  // namespace olb
+void olbInit(int *argc, char ***argv, bool multiOutput=false, bool verbose=true);
+
+}
 
 #endif

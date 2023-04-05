@@ -21,6 +21,7 @@
  *  Boston, MA  02110-1301, USA.
 */
 
+//TODO: WARNING: For now, there is a lot of code duplication, which has to be sorted out in the future.
 
 /* This file contains particle creator functions.
  * Those are generally meant for users to be able to create particles
@@ -83,14 +84,14 @@ void setResolvedCircle2D(
   typedef SmoothIndicatorF2D<T, T, true> SIndicatorBaseType;
 
   //Create SmoothIndicator
-  std::shared_ptr<SIndicatorBaseType> sIndicatorSPtr(
+  std::unique_ptr<SIndicatorBaseType> sIndicatorPtr(
     new SmoothIndicatorCircle2D<T, T, true>(Vector<T,2>(0.), radius, epsilon ));
 
   //Pass smart pointer to particleSystem
   auto& vectorOfIndicators = particleSystem.template getAssociatedData<
-                             std::vector<std::shared_ptr<SIndicatorBaseType>>>();
+                             std::vector<std::unique_ptr<SIndicatorBaseType>>>();
   std::size_t idxSurface = vectorOfIndicators.size();
-  vectorOfIndicators.push_back( sIndicatorSPtr );
+  vectorOfIndicators.push_back( std::move(sIndicatorPtr) );
 
   // Safety mechanism for wrong particle type - It is better not to use rotation matrix!
   if constexpr ( PARTICLETYPE::template providesNested<SURFACE,ROT_MATRIX>() ) {
@@ -134,14 +135,14 @@ void setResolvedCuboid2D( ParticleSystem<T,PARTICLETYPE>& particleSystem,
   typedef SmoothIndicatorF2D<T, T, true> SIndicatorBaseType;
 
   //Create SmoothIndicator
-  std::shared_ptr<SIndicatorBaseType> sIndicatorSPtr(
+  std::unique_ptr<SIndicatorBaseType> sIndicatorPtr(
     new SmoothIndicatorCuboid2D<T, T, true>(Vector<T,2>(0.), extend[0], extend[1], epsilon ));
 
   //Pass smart pointer to particleSystem
   auto& vectorOfIndicators = particleSystem.template getAssociatedData<
-                             std::vector<std::shared_ptr<SIndicatorBaseType>>>();
+                             std::vector<std::unique_ptr<SIndicatorBaseType>>>();
   std::size_t idxSurface = vectorOfIndicators.size();
-  vectorOfIndicators.push_back( sIndicatorSPtr );
+  vectorOfIndicators.push_back( std::move(sIndicatorPtr) );
 
   /// Set resolved cuboid 3D with given suface
   setResolvedObject(particleSystem, idxParticle, idxSurface,
@@ -182,14 +183,14 @@ void setResolvedTriangle2D( ParticleSystem<T,PARTICLETYPE>& particleSystem,
   typedef SmoothIndicatorF2D<T, T, true> SIndicatorBaseType;
 
   //Create SmoothIndicator
-  std::shared_ptr<SIndicatorBaseType> sIndicatorSPtr(
+  std::unique_ptr<SIndicatorBaseType> sIndicatorPtr(
     new SmoothIndicatorTriangle2D<T, T, true>(Vector<T,2>(0.), radius, epsilon ));
 
   //Pass smart pointer to particleSystem
   auto& vectorOfIndicators = particleSystem.template getAssociatedData<
-                             std::vector<std::shared_ptr<SIndicatorBaseType>>>();
+                             std::vector<std::unique_ptr<SIndicatorBaseType>>>();
   std::size_t idxSurface = vectorOfIndicators.size();
-  vectorOfIndicators.push_back( sIndicatorSPtr );
+  vectorOfIndicators.push_back( std::move(sIndicatorPtr) );
 
   /// Set resolved triangle 2D with given suface
   setResolvedObject(particleSystem, idxParticle, idxSurface,
@@ -232,14 +233,14 @@ void setResolvedArbitraryShape2D( ParticleSystem<T,PARTICLETYPE>& particleSystem
   typedef SmoothIndicatorF2D<T, T, true> SIndicatorBaseType;
 
   //Create SmoothIndicator
-  std::shared_ptr<SIndicatorBaseType> sIndicatorSPtr(
+  std::unique_ptr<SIndicatorBaseType> sIndicatorPtr(
     new SmoothIndicatorCustom2D<T, T, true>(latticeSpacing, indPtr, Vector<T,2> (0.), epsilon, 0.));
 
   //Pass smart pointer to particleSystem
   auto& vectorOfIndicators = particleSystem.template getAssociatedData<
-                             std::vector<std::shared_ptr<SIndicatorBaseType>>>();
+                             std::vector<std::unique_ptr<SIndicatorBaseType>>>();
   std::size_t idxSurface = vectorOfIndicators.size();
-  vectorOfIndicators.push_back( sIndicatorSPtr );
+  vectorOfIndicators.push_back( std::move(sIndicatorPtr) );
 
   /// Set resolved arbitrary shape with given suface
   setResolvedObject(particleSystem, idxParticle, idxSurface,

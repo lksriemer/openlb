@@ -40,74 +40,6 @@ namespace olb {
 template <typename T> class Cuboid2D;
 template <typename T> class Cuboid3D;
 
-/// Single 2D cuboid neighbourhoods are the basic component of a
-/// 2D communicator
-/** For each cuboid a cuboid neighbourhood is defined. It stores the
- * needed cell coordinates (Cell2D) of other cuboids. Futhermore this
- * class provides basic initialization and communication methods
- * for the class Communicator2D.
- *
- * WARNING: For unstructured grids there is an interpolation needed
- * for the method buffer_outData which is not yet implemented!
- *
- * This class is not intended to be derived from.
- */
-template<typename T>
-struct Cell2D {
-  Cell2D() : latticeR {0,0,0} {};
-  // local position latticeR: iC, iX, iY;
-  int latticeR[3];
-  std::size_t latticeCellId;
-  // global position physR: x, y;
-  T physR[2];
-
-  bool operator==(Cell2D const& rhs) const
-  {
-    return latticeR == rhs.latticeR;
-  };
-
-  /// Copy constructor
-  Cell2D(Cell2D const& rhs) = default;
-
-  /// Copy assignment
-  Cell2D& operator=(Cell2D const& rhs) = default;
-
-};
-
-/// Single 3D cuboid neighbourhoods are the basic component of a
-/// 3D communicator
-/** For each cuboid a cuboid neighbourhood is defined. It stores the
- * needed cell coordinates (Cell3D) of other cuboids. Futhermore this
- * class provides basic initialization and communication methods
- * for the class Communicator3D.
- *
- * WARNING: For unstructured grids there is an interpolation needed
- * for the method buffer_outData which is not yet implemented!
- *
- * This class is not intended to be derived from.
- */
-template<typename T>
-struct Cell3D {
-  Cell3D() : latticeR {0,0,0,0} {};
-  // local position latticeR: iC, iX, iY, iZ;
-  int latticeR[4];
-  std::size_t latticeCellId;
-  // global position physR: x, y, z;
-  T physR[3];
-
-  bool operator==(Cell3D const& rhs) const
-  {
-    return latticeR == rhs.latticeR;
-  };
-
-  /// Copy constructor
-  Cell3D(Cell3D const& rhs) = default;
-
-  /// Copy assignment
-  Cell3D& operator=(Cell3D const& rhs) = default;
-
-};
-
 template<typename T>
 HeuristicLoadBalancer<T>::HeuristicLoadBalancer(CuboidGeometry3D<T>& cGeometry3d,
     const double ratioFullEmpty, const double weightEmpty)
@@ -142,7 +74,6 @@ void HeuristicLoadBalancer<T>::swap(HeuristicLoadBalancer<T>& loadBalancer)
   std::swap(_cGeometry2d, loadBalancer._cGeometry2d);
 }
 
-
 template<typename T>
 void HeuristicLoadBalancer<T>::reInit(CuboidGeometry3D<T>& cGeometry3d, const double ratioFullEmpty, const double weightEmpty)
 {
@@ -156,7 +87,6 @@ void HeuristicLoadBalancer<T>::reInit(CuboidGeometry3D<T>& cGeometry3d, const do
   rank = singleton::mpi().getRank();
   size = util::max<int>(singleton::mpi().getSize(), 1);
 #endif
-  std::vector<Cell3D<T> > inCells;
   //int xN, yN, zN;
   //T globX, globY, globZ;//, delta;
   //boost::shared_array<int> tempInCN(new int[nC]);
@@ -300,7 +230,6 @@ void HeuristicLoadBalancer<T>::reInit(CuboidGeometry2D<T>& cGeometry2d, const do
   rank = singleton::mpi().getRank();
   size = util::max<int>(singleton::mpi().getSize(), 1);
 #endif
-  std::vector<Cell2D<T> > inCells;
   //int xN, yN;
   //T globX, globY;//, delta;
   //boost::shared_array<int> tempInCN(new int[nC]);
@@ -432,39 +361,6 @@ void HeuristicLoadBalancer<T>::reInit(CuboidGeometry2D<T>& cGeometry2d, const do
 #endif
 }
 
-
-
-
-template<typename T>
-void HeuristicLoadBalancer<T>::writeToStream(std::ostream& stream)
-{
-  stream << "<LoadBalancer mode=\"Heuristic\">\n";
-  stream << "<RatioFullEmpty>" << _ratioFullEmpty << "</RatioFullEmpty>\n";
-  stream << "</LoadBalancer>\n";
-}
-
-
-template<typename T>
-void HeuristicLoadBalancer<T>::writeToFile(std::string fileName)
-{
-  if (singleton::mpi().isMainProcessor()) {
-    OstreamManager clout("HeuristicLoadBalancer:writeToFile()");
-    std::string fname = singleton::directories().getLogOutDir() + fileName + ".xml";
-    // Open File
-    std::ofstream fout(fname.c_str());
-    if (!fout) {
-      clout << "Error: could not open " << fname << std::endl;
-    }
-
-    // --- Preamble --- //
-    fout << "<?xml version=\"1.0\"?>\n";
-    fout << "<XMLContent>\n";
-    writeToStream(fout);
-    fout << "</XMLContent>\n";
-
-    fout.close();
-  }
-}
 
 }  // namespace olb
 #endif

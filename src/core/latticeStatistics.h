@@ -45,6 +45,29 @@ class LatticeStatistics {
 public:
   enum { avRho=0, avEnergy=1 } AverageT;
   enum { maxU=0 } MaxT;
+
+  struct Aggregatable {
+    std::size_t nCells = 0;
+    T avRho { };
+    T avEnergy { };
+    T maxU { };
+
+    void increment(T rho, T uSqr) {
+      nCells   += 1;
+      avRho    += rho;
+      avEnergy += uSqr;
+      maxU = std::max(uSqr, maxU);
+    }
+
+    Aggregatable& operator+=(const Aggregatable& rhs) {
+      nCells += rhs.nCells;
+      avRho += rhs.avRho;
+      avEnergy += rhs.avEnergy;
+      maxU = std::max(maxU, rhs.maxU);
+      return *this;
+    }
+  };
+
 public:
   LatticeStatistics();
   ~LatticeStatistics() = default;
@@ -57,6 +80,7 @@ public:
   int subscribeMax();
 
   void incrementStats(T rho, T uSqr);
+  void incrementStats(Aggregatable& aggregatable);
   void gatherAverage(int whichAverage, T value);
   void gatherSum(int whichSum, T value);
   void gatherMin(int whichMin, T value);

@@ -65,23 +65,20 @@ void prepareLattice(SuperLattice<T,DESCRIPTOR>& superLattice,
 {
   const T omega = converter.getLatticeRelaxationFrequency();
 
-  /// Material=0 -->do nothing
-  superLattice.defineDynamics<NoDynamics>(superGeometry, 0);
-
   /// Material=1 -->bulk dynamics
   superLattice.defineDynamics<BulkDynamics>(superGeometry, 1);
 
 #ifdef LID_DRIVEN
   #ifdef LID_DRIVEN_BOUNCE_BACK
-  superLattice.defineDynamics<BounceBack>(superGeometry, 2);
+  setBounceBackBoundary(superLattice, superGeometry, 2);
   superLattice.defineDynamics<BounceBackVelocity>(superGeometry, 3);
   #else // Local velocity boundaries
   setLocalVelocityBoundary<T,DESCRIPTOR,BulkDynamics>(superLattice, omega, superGeometry, 2);
   setLocalVelocityBoundary<T,DESCRIPTOR,BulkDynamics>(superLattice, omega, superGeometry, 3);
   #endif
 #else
-  superLattice.defineDynamics<BounceBack>(superGeometry, 2);
-  superLattice.defineDynamics<BounceBack>(superGeometry, 3);
+  setBounceBackBoundary(superLattice, superGeometry, 2);
+  setBounceBackBoundary(superLattice, superGeometry, 3);
 #endif
 
   superLattice.setParameter<descriptors::OMEGA>(omega);
@@ -161,12 +158,15 @@ int main(int argc, char **argv)
 {
   olbInit(&argc, &argv, false, false);
 
-  singleton::directories().setOlbDir("../../../");
-  singleton::directories().setOutputDir("./tmp/");
+  CLIreader args(argc, argv);
+  const std::size_t size  = args.getValueOrFallback<std::size_t>("--size", 100);
+  const std::size_t steps = args.getValueOrFallback<std::size_t>("--steps", 100);
+  const std::size_t cuboidsPerProcess = args.getValueOrFallback<std::size_t>("--cuboids-per-process", 1);
+  const bool exportResults = !args.contains("--no-results");
 
-  std::size_t size  = argc >= 2 ? atoi(argv[1]) : 100;
-  std::size_t steps = argc >= 3 ? atoi(argv[2]) : 100;
-  std::size_t cuboids_per_process = argc == 4 ? atoi(argv[3]) : 1;
+  if (exportResults) {
+    singleton::directories().setOutputDir("./tmp/");
+  }
 
   UnitConverterFromResolutionAndLatticeVelocity<T,DESCRIPTOR> const converter(
     size,      // resolution: number of voxels per charPhysL
@@ -178,13 +178,13 @@ int main(int argc, char **argv)
   );
 
   Vector<T,3> origin{};
-  Vector<T,3> extend(converter.getCharPhysLength());
+  Vector<T,3> extend(converter.getCharPhysLength() + 0.25 * converter.getConversionFactorLength());
   IndicatorCuboid3D<T> cube(extend, origin);
 
 #ifdef PARALLEL_MODE_MPI
-  CuboidGeometry3D<T> cuboidGeometry(cube, converter.getConversionFactorLength(), cuboids_per_process*singleton::mpi().getSize());
+  CuboidGeometry3D<T> cuboidGeometry(cube, converter.getConversionFactorLength(), cuboidsPerProcess*singleton::mpi().getSize());
 #else
-  CuboidGeometry3D<T> cuboidGeometry(cube, converter.getConversionFactorLength(), cuboids_per_process);
+  CuboidGeometry3D<T> cuboidGeometry(cube, converter.getConversionFactorLength(), cuboidsPerProcess);
 #endif
 
   BlockLoadBalancer<T> loadBalancer(singleton::mpi().getRank(), singleton::mpi().getSize(), cuboidGeometry.getNc(), 0);
@@ -200,7 +200,13 @@ int main(int argc, char **argv)
 
   setBoundaryValues(superLattice, superGeometry, converter);
 
-  getResults(superLattice, superGeometry, converter);
+  if (exportResults) {
+    getResults(superLattice, superGeometry, converter);
+  }
+
+  for (std::size_t iT=0; iT < 10; ++iT) {
+    superLattice.collideAndStream();
+  }
 
   #ifdef PLATFORM_GPU_CUDA
   gpu::cuda::device::synchronize();
@@ -225,17 +231,19 @@ int main(int argc, char **argv)
   if (singleton::mpi().isMainProcessor()) {
     std::cout << size << ", "
               << steps << ", "
-              << cuboids_per_process << ", "
+              << cuboidsPerProcess << ", "
               << singleton::mpi().getSize() << ", "
 #ifdef PARALLEL_MODE_OMP
-              << omp.get_size() << ", "
+              << singleton::omp().getSize() << ", "
 #else
               << 1 << ", "
 #endif
               << timer.getTotalMLUPs() << std::endl;
   }
 
-  getResults(superLattice, superGeometry, converter);
+  if (exportResults) {
+    getResults(superLattice, superGeometry, converter);
+  }
 
   return 0;
 }

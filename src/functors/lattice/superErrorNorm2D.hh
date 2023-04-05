@@ -41,7 +41,7 @@ SuperRelativeErrorLpNorm2D<T,W,P>::SuperRelativeErrorLpNorm2D(
 {
   using namespace functor_dsl;
 
-  auto wantedLatticeF = restrict(wantedF.toShared(), sLattice);
+  auto wantedLatticeF = restrictF(wantedF.toShared(), sLattice);
 
   return norm<P>(wantedLatticeF - f.toShared(), indicatorF.toShared())
          / norm<P>(wantedLatticeF, indicatorF.toShared());
@@ -74,7 +74,7 @@ SuperAbsoluteErrorLpNorm2D<T,W,P>::SuperAbsoluteErrorLpNorm2D(
 {
   using namespace functor_dsl;
 
-  return norm<P>(restrict(wantedF.toShared(), sLattice) - f.toShared(),
+  return norm<P>(restrictF(wantedF.toShared(), sLattice) - f.toShared(),
                  indicatorF.toShared());
 }())
 {

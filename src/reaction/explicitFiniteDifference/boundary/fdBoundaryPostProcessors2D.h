@@ -24,8 +24,8 @@
  *  Boston, MA  02110-1301, USA.
 */
 
-#ifndef FD_NO_PENETRATION_BOUNDARIES_2D_H
-#define FD_NO_PENETRATION_BOUNDARIES_2D_H
+#ifndef FD_NO_PENETRATION_BOUNDARIES_2D_DEV03_H
+#define FD_NO_PENETRATION_BOUNDARIES_2D_DEV03_H
 
 namespace olb {
 
@@ -33,54 +33,15 @@ namespace olb {
 /*
  * Postprocessor to treat no-penetration boundaries in the finite-difference advection-diffusion external field.
  */
-template<typename T, typename DESCRIPTOR, typename FIELD=descriptors::AD_FIELD, typename SOURCE=void>
+template<typename T, typename DESCRIPTOR, typename MODEL, typename SCHEME_BOUND, typename PARAMS, typename FIELD=descriptors::AD_FIELD, typename SOURCE=void>
 class FdBoundaryPostProcessor2D final : public FdBasePostProcessor2D<T,DESCRIPTOR,FIELD,SOURCE> {
 public:
-  FdBoundaryPostProcessor2D ( int x0, int x1, int y0, int y1, std::size_t& iT, int normalX, int normalY,
-      std::shared_ptr<FdModel<T,DESCRIPTOR>> model, std::shared_ptr<fd::AdBoundarySchemeBase<2,T>> boundaryScheme );
-  FdBoundaryPostProcessor2D ( std::size_t& iT, int normalX, int normalY,
-      std::shared_ptr<FdModel<T,DESCRIPTOR>> model, std::shared_ptr<fd::AdBoundarySchemeBase<2,T>> boundaryScheme );
-  int extent() const override
-  {
-    return 2;
-  }
-  int extent(int whichDirection) const override
-  {
-    return 2;
-  }
-  void process(BlockLattice<T,DESCRIPTOR>& blockLattice) override;
-  void processSubDomain ( BlockLattice<T,DESCRIPTOR>& blockLattice,
-                          int x0, int x1, int y0, int y1 ) override;
-private:
-  int _x0, _x1, _y0, _y1;
-  int _normalX, _normalY;
-  std::shared_ptr<FdModel<T,DESCRIPTOR>> _model;
-  std::shared_ptr<fd::AdBoundarySchemeBase<2,T>> _boundaryScheme;
-  std::vector<std::vector<T>> f, F, fNormal, fGhost;
-};
-
-template<typename T, typename DESCRIPTOR, typename FIELD=descriptors::AD_FIELD, typename SOURCE=void>
-class FdBaseBoundaryPostProcessorGenerator2D : public FdBasePostProcessorGenerator2D<T,DESCRIPTOR,FIELD,SOURCE> {
-public:
-  FdBaseBoundaryPostProcessorGenerator2D(int x0_, int x1_, int y0_, int y1_,
-      std::size_t& iT, int normalX, int normalY,
-      std::shared_ptr<FdModel<T,DESCRIPTOR>> model, std::shared_ptr<fd::AdBoundarySchemeBase<2,T>> boundaryScheme );
-  FdBaseBoundaryPostProcessorGenerator2D ( std::size_t& iT, int normalX, int normalY,
-      std::shared_ptr<FdModel<T,DESCRIPTOR>> model, std::shared_ptr<fd::AdBoundarySchemeBase<2,T>> boundaryScheme );
-  PostProcessor2D<T,DESCRIPTOR>* generate() const override;
-private:
-  int _normalX, _normalY;
-  std::shared_ptr<FdModel<T,DESCRIPTOR>> _model;
-  std::shared_ptr<fd::AdBoundarySchemeBase<2,T>> _boundaryScheme;
-};
-
-template<typename T, typename DESCRIPTOR, typename SCHEME_ADV, typename FIELD=descriptors::AD_FIELD, typename SOURCE=void>
-class FdNeumannZeroBoundaryPostProcessorGenerator2D final : public FdBaseBoundaryPostProcessorGenerator2D<T,DESCRIPTOR,FIELD,SOURCE> {
-public:
-  FdNeumannZeroBoundaryPostProcessorGenerator2D(int x0_, int x1_, int y0_, int y1_,
-      std::size_t& iT, int normalX, int normalY, std::shared_ptr<FdModel<T,DESCRIPTOR>> model);
-  FdNeumannZeroBoundaryPostProcessorGenerator2D(size_t& iT, int normalX, int normalY, std::shared_ptr<FdModel<T,DESCRIPTOR>> model);
-  PostProcessorGenerator2D<T,DESCRIPTOR>* clone() const override;
+  using parameters = PARAMS;
+  static constexpr OperatorScope scope = OperatorScope::PerCellWithParameters;
+  FdBoundaryPostProcessor2D();
+  int getPriority() const;
+  template <typename CELL, typename PARAMETERS>
+  void apply(CELL& cell, PARAMETERS& vars) any_platform;
 };
 
 }

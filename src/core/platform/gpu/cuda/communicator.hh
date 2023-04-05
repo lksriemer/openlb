@@ -29,10 +29,49 @@
 #include "communication/superCommunicationTagCoordinator.h"
 
 #include "registry.h"
+#include "context.hh"
 
 #include <thrust/device_vector.h>
 
+#ifdef PARALLEL_MODE_MPI
+#include "mpi.h"
+#if defined(OPEN_MPI) && OPEN_MPI
+#include <mpi-ext.h>
+#endif
+#endif
+
 namespace olb {
+
+template <>
+void checkPlatform<Platform::GPU_CUDA>()
+{
+  OstreamManager clout(std::cout, "GPU_CUDA");
+
+  int nDevices{};
+  cudaGetDeviceCount(&nDevices);
+
+  clout.setMultiOutput(true);
+  if (nDevices < 1) {
+    clout << "No CUDA device found" << std::endl;
+  } else if (nDevices > 1) {
+    clout << "Found " << nDevices << " CUDA devices but only one can be used per MPI process." << std::endl;
+  }
+  clout.setMultiOutput(false);
+
+#ifdef PARALLEL_MODE_MPI
+#if defined(MPIX_CUDA_AWARE_SUPPORT) && MPIX_CUDA_AWARE_SUPPORT
+  if (!MPIX_Query_cuda_support()) {
+    clout << "The used MPI Library is not CUDA-aware. Multi-GPU execution will fail." << std::endl;
+  }
+#endif
+#if defined(MPIX_CUDA_AWARE_SUPPORT) && !MPIX_CUDA_AWARE_SUPPORT
+  clout << "The used MPI Library is not CUDA-aware. Multi-GPU execution will fail." << std::endl;
+#endif
+#if !defined(MPIX_CUDA_AWARE_SUPPORT)
+  clout << "Unable to check for CUDA-aware MPI support. Multi-GPU execution may fail." << std::endl;
+#endif
+#endif // PARALLEL_MODE_MPI
+}
 
 namespace gpu {
 
@@ -298,68 +337,6 @@ void async_scatter_any_fields(cudaStream_t stream,
 
 }
 
-/// Wrapper for a local plain-copy block communication request
-/**
- * Currently only supports GPU-internal communication.
- * This will need to be improved for node-level heterogeneous simulations.
- **/
-template <typename T, typename DESCRIPTOR>
-class ConcreteBlockCommunicator<ConcreteBlockLattice<T,DESCRIPTOR,Platform::GPU_CUDA>>::CopyTask {
-private:
-  thrust::device_vector<gpu::cuda::AnyDeviceFieldArrayD> _sourceFields;
-  thrust::device_vector<gpu::cuda::AnyDeviceFieldArrayD> _targetFields;
-
-  const bool _onlyPopulationField;
-
-  const thrust::device_vector<CellID> _targetCells;
-  const thrust::device_vector<CellID> _sourceCells;
-
-  ConcreteBlockLattice<T,DESCRIPTOR,Platform::GPU_CUDA>& _target;
-  ConcreteBlockLattice<T,DESCRIPTOR,Platform::GPU_CUDA>& _source;
-
-  std::unique_ptr<gpu::cuda::device::Stream> _stream;
-
-public:
-  CopyTask(
-    const std::vector<std::type_index>& fields,
-    const std::vector<CellID>& targetCells, ConcreteBlockLattice<T,DESCRIPTOR,Platform::GPU_CUDA>& target,
-    const std::vector<CellID>& sourceCells, ConcreteBlockLattice<T,DESCRIPTOR,Platform::GPU_CUDA>& source):
-    _sourceFields(source.getDataRegistry().deviceFieldArrays(fields)),
-    _targetFields(target.getDataRegistry().deviceFieldArrays(fields)),
-    _onlyPopulationField(fields.size() == 1 && fields[0] == typeid(descriptors::POPULATION)),
-    _targetCells(targetCells),
-    _sourceCells(sourceCells),
-    _target(target),
-    _source(source),
-    _stream(std::make_unique<gpu::cuda::device::Stream>(cudaStreamNonBlocking))
-  {
-    OLB_ASSERT(_sourceCells.size() == _targetCells.size(),
-               "Source cell count must match target cell count");
-  }
-
-  ~CopyTask()
-  {
-    wait();
-  }
-
-  void copy()
-  {
-    if (_onlyPopulationField) {
-      gpu::cuda::DeviceContext<T,DESCRIPTOR> sourceLattice(_source);
-      gpu::cuda::DeviceContext<T,DESCRIPTOR> targetLattice(_target);
-      gpu::cuda::async_copy_field<descriptors::POPULATION>(_stream->get(), sourceLattice, targetLattice, _sourceCells, _targetCells);
-    } else {
-      gpu::cuda::async_copy_any_fields(_stream->get(), _sourceFields, _targetFields, _sourceCells, _targetCells);
-    }
-  }
-
-  void wait()
-  {
-    _stream->synchronize();
-  }
-
-};
-
 #ifdef PARALLEL_MODE_MPI
 
 /// Wrapper for a non-blocking block propagation send request
@@ -532,6 +509,138 @@ public:
 
 #endif // PARALLEL_MODE_MPI
 
+/// Wrapper for a local plain-copy block communication request
+template <typename T, typename DESCRIPTOR>
+struct ConcreteBlockCommunicator<ConcreteBlockLattice<T,DESCRIPTOR,Platform::GPU_CUDA>>::CopyTask {
+  virtual ~CopyTask() { }
+
+  virtual void copy() = 0;
+  virtual void wait() = 0;
+};
+
+/// Wrapper for a local plain-copy block communication request
+template <typename T, typename DESCRIPTOR>
+class ConcreteBlockCommunicator<ConcreteBlockLattice<T,DESCRIPTOR,Platform::GPU_CUDA>>::HomogeneousCopyTask
+  : public ConcreteBlockCommunicator<ConcreteBlockLattice<T,DESCRIPTOR,Platform::GPU_CUDA>>::CopyTask {
+private:
+  thrust::device_vector<gpu::cuda::AnyDeviceFieldArrayD> _sourceFields;
+  thrust::device_vector<gpu::cuda::AnyDeviceFieldArrayD> _targetFields;
+
+  const bool _onlyPopulationField;
+
+  const thrust::device_vector<CellID> _targetCells;
+  const thrust::device_vector<CellID> _sourceCells;
+
+  ConcreteBlockLattice<T,DESCRIPTOR,Platform::GPU_CUDA>& _target;
+  ConcreteBlockLattice<T,DESCRIPTOR,Platform::GPU_CUDA>& _source;
+
+  std::unique_ptr<gpu::cuda::device::Stream> _stream;
+
+public:
+  HomogeneousCopyTask(
+    const std::vector<std::type_index>& fields,
+    const std::vector<CellID>& targetCells, ConcreteBlockLattice<T,DESCRIPTOR,Platform::GPU_CUDA>& target,
+    const std::vector<CellID>& sourceCells, ConcreteBlockLattice<T,DESCRIPTOR,Platform::GPU_CUDA>& source):
+    _sourceFields(source.getDataRegistry().deviceFieldArrays(fields)),
+    _targetFields(target.getDataRegistry().deviceFieldArrays(fields)),
+    _onlyPopulationField(fields.size() == 1 && fields[0] == typeid(descriptors::POPULATION)),
+    _targetCells(targetCells),
+    _sourceCells(sourceCells),
+    _target(target),
+    _source(source),
+    _stream(std::make_unique<gpu::cuda::device::Stream>(cudaStreamNonBlocking))
+  {
+    OLB_ASSERT(_sourceCells.size() == _targetCells.size(),
+               "Source cell count must match target cell count");
+  }
+
+  ~HomogeneousCopyTask()
+  {
+    wait();
+  }
+
+  void copy() override
+  {
+    if (_onlyPopulationField) {
+      gpu::cuda::DeviceContext<T,DESCRIPTOR> sourceLattice(_source);
+      gpu::cuda::DeviceContext<T,DESCRIPTOR> targetLattice(_target);
+      gpu::cuda::async_copy_field<descriptors::POPULATION>(_stream->get(), sourceLattice, targetLattice, _sourceCells, _targetCells);
+    } else {
+      gpu::cuda::async_copy_any_fields(_stream->get(), _sourceFields, _targetFields, _sourceCells, _targetCells);
+    }
+  }
+
+  void wait() override
+  {
+    _stream->synchronize();
+  }
+
+};
+
+/// Wrapper for a local plain-copy block communication request
+template <typename T, typename DESCRIPTOR>
+template <Platform PLATFORM>
+class ConcreteBlockCommunicator<ConcreteBlockLattice<T,DESCRIPTOR,Platform::GPU_CUDA>>::HeterogeneousCopyTask
+  : public ConcreteBlockCommunicator<ConcreteBlockLattice<T,DESCRIPTOR,Platform::GPU_CUDA>>::CopyTask {
+private:
+  thrust::device_vector<gpu::cuda::AnyDeviceFieldArrayD> _targetFields;
+
+  const bool _onlyPopulationField;
+
+  const thrust::device_vector<CellID> _targetCells;
+  const std::vector<CellID>&          _sourceCells;
+
+  ConcreteBlockLattice<T,DESCRIPTOR,Platform::GPU_CUDA>& _target;
+
+  MultiConcreteCommunicatable<ConcreteBlockLattice<T,DESCRIPTOR,PLATFORM>> _source;
+
+  std::unique_ptr<gpu::cuda::device::Stream> _stream;
+
+  gpu::cuda::Column<std::uint8_t> _buffer;
+
+public:
+  HeterogeneousCopyTask(
+    const std::vector<std::type_index>& fields,
+    const std::vector<CellID>& targetCells, ConcreteBlockLattice<T,DESCRIPTOR,Platform::GPU_CUDA>& target,
+    const std::vector<CellID>& sourceCells, ConcreteBlockLattice<T,DESCRIPTOR,PLATFORM>&           source):
+    _targetFields(target.getDataRegistry().deviceFieldArrays(fields)),
+    _onlyPopulationField(fields.size() == 1 && fields[0] == typeid(descriptors::POPULATION)),
+    _targetCells(targetCells),
+    _sourceCells(sourceCells),
+    _target(target),
+    _source(source, fields),
+    _stream(std::make_unique<gpu::cuda::device::Stream>(cudaStreamNonBlocking)),
+    _buffer(_source.size(_sourceCells))
+  {
+    OLB_ASSERT(_sourceCells.size() == _targetCells.size(),
+               "Source cell count must match target cell count");
+  }
+
+  ~HeterogeneousCopyTask()
+  {
+    wait();
+  }
+
+  void copy() override
+  {
+    _source.serialize(_sourceCells, _buffer.data());
+    _buffer.setProcessingContext(ProcessingContext::Simulation, *_stream);
+
+    if (_onlyPopulationField) {
+      gpu::cuda::DeviceContext<T,DESCRIPTOR> lattice(_target);
+      gpu::cuda::async_scatter_field<descriptors::POPULATION>(_stream->get(), lattice, _targetCells, _buffer.deviceData());
+    } else {
+      gpu::cuda::async_scatter_any_fields(_stream->get(), _targetFields, _targetCells, _buffer.deviceData());
+    }
+  }
+
+  void wait() override
+  {
+    _stream->synchronize();
+  }
+
+};
+
 template <typename T, typename DESCRIPTOR>
 ConcreteBlockCommunicator<ConcreteBlockLattice<T,DESCRIPTOR,Platform::GPU_CUDA>>::ConcreteBlockCommunicator(
   SuperLattice<T,DESCRIPTOR>& super,
@@ -548,43 +657,83 @@ ConcreteBlockCommunicator<ConcreteBlockLattice<T,DESCRIPTOR,Platform::GPU_CUDA>>
 #endif
 {
 #ifdef PARALLEL_MODE_MPI
-  neighborhood.forRemoteNeighbors([&](int remoteC) {
-    if (!neighborhood.getCellsOutboundTo(remoteC).empty()) {
-      _sendTasks.emplace_back(std::make_unique<SendTask>(
-        _mpiCommunicator, tagCoordinator.get(remoteC, loadBalancer.glob(_iC)),
-        loadBalancer.rank(remoteC),
-        neighborhood.getFieldsCommonWith(remoteC),
-        neighborhood.getCellsOutboundTo(remoteC),
-        super.template getBlock<ConcreteBlockLattice<T,DESCRIPTOR,Platform::GPU_CUDA>>(_iC)));
-    }
-    if (!neighborhood.getCellsInboundFrom(remoteC).empty()) {
-      _recvTasks.emplace_back(std::make_unique<RecvTask>(
-        _mpiCommunicator, tagCoordinator.get(remoteC, loadBalancer.glob(_iC)),
-        loadBalancer.rank(remoteC),
-        neighborhood.getFieldsCommonWith(remoteC),
-        neighborhood.getCellsInboundFrom(remoteC),
-        super.template getBlock<ConcreteBlockLattice<T,DESCRIPTOR,Platform::GPU_CUDA>>(_iC)));
+  neighborhood.forNeighbors([&](int remoteC) {
+    if (loadBalancer.isLocal(remoteC)) {
+      const Platform remotePlatform = loadBalancer.platform(loadBalancer.loc(remoteC));
+      if (!neighborhood.getCellsInboundFrom(remoteC).empty()) {
+        switch (remotePlatform) {
+          case Platform::GPU_CUDA:
+            // Use manual copy for local GPU-GPU communication due to better performance
+            _copyTasks.emplace_back(new HomogeneousCopyTask(
+              neighborhood.getFieldsCommonWith(remoteC),
+              neighborhood.getCellsInboundFrom(remoteC),   super.template getBlock<ConcreteBlockLattice<T,DESCRIPTOR,Platform::GPU_CUDA>>(_iC),
+              neighborhood.getCellsRequestedFrom(remoteC), super.template getBlock<ConcreteBlockLattice<T,DESCRIPTOR,Platform::GPU_CUDA>>(loadBalancer.loc(remoteC))));
+            break;
+          case Platform::CPU_SIMD:
+            // Use manual copy for local GPU-CPU communication due to better performance
+            _copyTasks.emplace_back(new HeterogeneousCopyTask<Platform::CPU_SIMD>(
+              neighborhood.getFieldsCommonWith(remoteC),
+              neighborhood.getCellsInboundFrom(remoteC),   super.template getBlock<ConcreteBlockLattice<T,DESCRIPTOR,Platform::GPU_CUDA>>(_iC),
+              neighborhood.getCellsRequestedFrom(remoteC), super.template getBlock<ConcreteBlockLattice<T,DESCRIPTOR,Platform::CPU_SIMD>>(loadBalancer.loc(remoteC))));
+            break;
+          case Platform::CPU_SISD:
+            // Use manual copy for local GPU-CPU communication due to better performance
+            _copyTasks.emplace_back(new HeterogeneousCopyTask<Platform::CPU_SISD>(
+              neighborhood.getFieldsCommonWith(remoteC),
+              neighborhood.getCellsInboundFrom(remoteC),   super.template getBlock<ConcreteBlockLattice<T,DESCRIPTOR,Platform::GPU_CUDA>>(_iC),
+              neighborhood.getCellsRequestedFrom(remoteC), super.template getBlock<ConcreteBlockLattice<T,DESCRIPTOR,Platform::CPU_SISD>>(loadBalancer.loc(remoteC))));
+            break;
+          default:
+            throw std::runtime_error("Invalid remote PLATFORM");
+        }
+      }
+
+      if (!neighborhood.getCellsOutboundTo(remoteC).empty()) {
+        if (remotePlatform != Platform::GPU_CUDA) {
+          _sendTasks.emplace_back(std::make_unique<SendTask>(
+            _mpiCommunicator, tagCoordinator.get(loadBalancer.glob(_iC), remoteC),
+            loadBalancer.rank(remoteC),
+            neighborhood.getFieldsCommonWith(remoteC),
+            neighborhood.getCellsOutboundTo(remoteC),
+            super.template getBlock<ConcreteBlockLattice<T,DESCRIPTOR,Platform::GPU_CUDA>>(_iC)));
+        }
+      }
+    } else {
+      // Handling of non-local GPU-GPU and GPU-^GPU communication in general
+      if (!neighborhood.getCellsOutboundTo(remoteC).empty()) {
+        _sendTasks.emplace_back(std::make_unique<SendTask>(
+          _mpiCommunicator, tagCoordinator.get(loadBalancer.glob(_iC), remoteC),
+          loadBalancer.rank(remoteC),
+          neighborhood.getFieldsCommonWith(remoteC),
+          neighborhood.getCellsOutboundTo(remoteC),
+          super.template getBlock<ConcreteBlockLattice<T,DESCRIPTOR,Platform::GPU_CUDA>>(_iC)));
+      }
+      if (!neighborhood.getCellsInboundFrom(remoteC).empty()) {
+        _recvTasks.emplace_back(std::make_unique<RecvTask>(
+          _mpiCommunicator, tagCoordinator.get(remoteC, loadBalancer.glob(_iC)),
+          loadBalancer.rank(remoteC),
+          neighborhood.getFieldsCommonWith(remoteC),
+          neighborhood.getCellsInboundFrom(remoteC),
+          super.template getBlock<ConcreteBlockLattice<T,DESCRIPTOR,Platform::GPU_CUDA>>(_iC)));
+      }
     }
   });
-#endif // PARALLEL_MODE_MPI
 
-  neighborhood.forLocalNeighbors([&](int localC) {
+#else // not using PARALLEL_MODE_MPI
+  neighborhood.forNeighbors([&](int localC) {
     if (!neighborhood.getCellsInboundFrom(localC).empty()) {
-      _copyTasks.emplace_back(std::make_unique<CopyTask>(
+      _copyTasks.emplace_back(new HomogeneousCopyTask(
         neighborhood.getFieldsCommonWith(localC),
         neighborhood.getCellsInboundFrom(localC),   super.template getBlock<ConcreteBlockLattice<T,DESCRIPTOR,Platform::GPU_CUDA>>(_iC),
         neighborhood.getCellsRequestedFrom(localC), super.template getBlock<ConcreteBlockLattice<T,DESCRIPTOR,Platform::GPU_CUDA>>(loadBalancer.loc(localC))));
     }
   });
+#endif
 }
 
 template <typename T, typename DESCRIPTOR>
-void ConcreteBlockCommunicator<ConcreteBlockLattice<T,DESCRIPTOR,Platform::GPU_CUDA>>::copy()
-{
-  for (auto& task : _copyTasks) {
-    task->copy();
-  }
-}
+ConcreteBlockCommunicator<ConcreteBlockLattice<T,DESCRIPTOR,Platform::GPU_CUDA>>::~ConcreteBlockCommunicator()
+{ }
 
 #ifdef PARALLEL_MODE_MPI
 
@@ -604,6 +753,9 @@ void ConcreteBlockCommunicator<ConcreteBlockLattice<T,DESCRIPTOR,Platform::GPU_C
   }
   for (auto& task : _sendTasks) {
     task->send();
+  }
+  for (auto& task : _copyTasks) {
+    task->copy();
   }
 }
 
@@ -629,24 +781,24 @@ void ConcreteBlockCommunicator<ConcreteBlockLattice<T,DESCRIPTOR,Platform::GPU_C
 template <typename T, typename DESCRIPTOR>
 void ConcreteBlockCommunicator<ConcreteBlockLattice<T,DESCRIPTOR,Platform::GPU_CUDA>>::wait()
 {
+  for (auto& task : _copyTasks) {
+    task->wait();
+  }
   for (auto& task : _recvTasks) {
     task->wait();
   }
   for (auto& task : _sendTasks) {
     task->wait();
   }
-  for (auto& task : _copyTasks) {
-    task->wait();
-  }
 }
 
-#else // PARALLEL_MODE_MPI
+#else // not using PARALLEL_MODE_MPI
 
 template <typename T, typename DESCRIPTOR>
-void ConcreteBlockCommunicator<ConcreteBlockLattice<T,DESCRIPTOR,Platform::GPU_CUDA>>::wait()
+void ConcreteBlockCommunicator<ConcreteBlockLattice<T,DESCRIPTOR,Platform::GPU_CUDA>>::copy()
 {
   for (auto& task : _copyTasks) {
-    task->wait();
+    task->copy();
   }
 }
 

@@ -37,8 +37,8 @@ using namespace olb;
 using namespace olb::descriptors;
 using namespace olb::graphics;
 
-using T = double;
-using DESCRIPTOR = D3Q19<VELOCITY,FORCE,EXTERNAL_FORCE,OMEGA>;
+using T = FLOATING_POINT_TYPE;
+using DESCRIPTOR = D3Q19<VELOCITY,FORCE,EXTERNAL_FORCE,OMEGA,STATISTIC>;
 using BulkDynamics = ForcedShanChenBGKdynamics<T,DESCRIPTOR,momenta::ExternalVelocityTuple>;
 
 
@@ -93,6 +93,29 @@ void prepareLattice( SuperLattice<T, DESCRIPTOR>& sLattice,
 
   sLattice.setParameter<descriptors::OMEGA>(omega1);
 
+  sLattice.addPostProcessor<stage::PreCoupling>(meta::id<RhoStatistics>());
+  {
+    auto& communicator = sLattice.getCommunicator(stage::Coupling());
+    communicator.requestField<descriptors::STATISTIC>();
+    communicator.requestOverlap(1);
+    communicator.exchangeRequests();
+  }
+
+  using COUPLING = ShanChenForcedSingleComponentPostProcessor<T,DESCRIPTOR,interaction::CarnahanStarling>;
+  sLattice.addPostProcessor<stage::Coupling>(meta::id<COUPLING>{});
+  sLattice.setParameter<COUPLING::G>(T(-1));
+  sLattice.setParameter<COUPLING::RHO0>(T(1));
+  sLattice.setParameter<COUPLING::OMEGA>(omega1);
+  sLattice.setParameter<interaction::CarnahanStarling::G>(T(-1));
+  sLattice.setParameter<interaction::CarnahanStarling::A>(T(1));
+  sLattice.setParameter<interaction::CarnahanStarling::B>(T(4));
+  sLattice.setParameter<interaction::CarnahanStarling::T>(T(0.7));
+
+  sLattice.template addCustomTask<stage::PostStream>([&]() {
+    sLattice.executePostProcessors(stage::PreCoupling());
+    sLattice.executePostProcessors(stage::Coupling());
+  });
+
   // Make the lattice ready for simulation
   sLattice.initialize();
 }
@@ -125,15 +148,6 @@ void getResults( SuperLattice<T, DESCRIPTOR>& sLattice, int iT,
     vtmWriter.createMasterFile();
   }
 
-  // Writes the vtk files
-  if ( iT%vtkIter==0 ) {
-    vtmWriter.write( iT );
-
-    BlockReduction3D2D<T> planeReduction( density, {0, 0, 1} );
-    // write output as JPEG
-    heatmap::write(planeReduction, iT);
-  }
-
   // Writes output on the console
   if ( iT%statIter==0 ) {
     // Timer console output
@@ -143,19 +157,28 @@ void getResults( SuperLattice<T, DESCRIPTOR>& sLattice, int iT,
     // Lattice statistics console output
     sLattice.getStatistics().print( iT,iT );
   }
+
+  // Writes the vtk files
+  if ( iT%vtkIter==0 ) {
+    sLattice.setProcessingContext(ProcessingContext::Evaluation);
+
+    clout << "Writing VTK and JPEG..." << std::endl;
+    vtmWriter.write( iT );
+
+    BlockReduction3D2D<T> planeReduction( density, {0, 0, 1} );
+    // write output as JPEG
+    heatmap::write(planeReduction, iT);
+  }
 }
 
 int main( int argc, char *argv[] )
 {
-
   // === 1st Step: Initialization ===
   olbInit( &argc, &argv );
   singleton::directories().setOutputDir( "./tmp/" );
   OstreamManager clout( std::cout,"main" );
   // display messages from every single mpi process
   //clout.setMultiOutput(true);
-
-  const T G      = -1.;
 
   // === 2rd Step: Prepare Geometry ===
 
@@ -181,15 +204,6 @@ int main( int argc, char *argv[] )
   // === 3rd Step: Prepare Lattice ===
   SuperLattice<T, DESCRIPTOR> sLattice( superGeometry );
 
-
-  std::vector<T> rho0;
-  rho0.push_back( 1 );
-  rho0.push_back( 1 );
-  CarnahanStarling<T,T> interactionPotential( G );
-  ShanChenForcedSingleComponentGenerator3D<T,DESCRIPTOR> coupling( G,rho0,interactionPotential );
-
-  sLattice.addLatticeCoupling( coupling, sLattice );
-
   prepareLattice( sLattice, superGeometry );
 
   // === 4th Step: Main Loop ===
@@ -199,14 +213,11 @@ int main( int argc, char *argv[] )
   timer.start();
 
   for ( iT = 0; iT < maxIter; ++iT ) {
-
     // === 5th Step: Definition of Initial and Boundary Conditions ===
     // in this application no boundary conditions have to be adjusted
 
     // === 6th Step: Collide and Stream Execution ===
     sLattice.collideAndStream();
-    sLattice.communicate();
-    sLattice.executeCoupling();
 
     // === 7th Step: Computation and Output of the Results ===
     getResults( sLattice, iT, superGeometry, timer );

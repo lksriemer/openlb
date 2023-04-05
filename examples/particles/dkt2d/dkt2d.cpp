@@ -1,7 +1,7 @@
 /*  Lattice Boltzmann sample, written in C++, using the OpenLB
  *  library
  *
- *  Copyright (C) 2006-2021 Nicolas Hafen, Robin Trunk, Mathias J. Krause
+ *  Copyright (C) 2006-2023 Nicolas Hafen, Robin Trunk, Jan E. Marquardt, Mathias J. Krause
  *  E-mail contact: info@openlb.net
  *  The most recent release of OpenLB can be downloaded at
  *  <http://www.openlb.net/>
@@ -34,6 +34,7 @@
  * The simulation is based on the homogenised lattice Boltzmann approach
  * (HLBM) introduced by Krause et al. in "Particle flow simulations
  * with homogenised lattice Boltzmann methods".
+ * The contact treatment follows 10.1016/j.partic.2022.12.005.
  * The drafting-kissing-tumbling benchmark case is e.g. described
  * in "Drafting, kissing and tumbling process of two particles
  * with different sizes" by Wang et al.
@@ -54,16 +55,26 @@ using namespace olb;
 using namespace olb::descriptors;
 using namespace olb::graphics;
 using namespace olb::particles;
+using namespace olb::particles::access;
+using namespace olb::particles::contact;
 using namespace olb::particles::dynamics;
 using namespace olb::util;
 
-typedef double T;
+using T = FLOATING_POINT_TYPE;
 
 //Define lattice type
-typedef PorousParticleD2Q9Descriptor DESCRIPTOR;
+typedef PorousParticleWithContactD2Q9Descriptor DESCRIPTOR;
 
 //Define particle type
-typedef ResolvedCircle2D PARTICLETYPE;
+typedef ResolvedCircleWithContact2D PARTICLETYPE;
+
+// Define particle-particle contact type
+typedef ParticleContactArbitraryFromOverlapVolume<T, DESCRIPTOR::d, true>
+    PARTICLECONTACTTYPE;
+// Define particle-wall contact type
+typedef WallContactArbitraryFromOverlapVolume<T, DESCRIPTOR::d, true>
+    WALLCONTACTTYPE;
+
 
 #define WriteVTK
 #define WriteGnuPlot
@@ -91,7 +102,16 @@ Vector<T,2> center2 = {centerX2,centerY2};
 
 T rhoP = 1010.;
 T radiusP = 0.001;
-Vector<T,2> accExt = {.0, -9.81 * (1. - 1000. / rhoP)};
+Vector<T,2> accExt = {.0, -T(9.81) * (T(1) - T(1000) / rhoP)};
+
+unsigned contactBoxResolutionPerDirection = 8;
+unsigned particleContactMaterial = 0;
+unsigned wallContactMaterial = 0;
+T youngsModulus = 1e6;
+T poissonRatio = 0.3;
+T dampingConstant = 0.1;
+T coefficientStaticFriction = 0.6;
+T coefficientKineticFriction = 0.3;
 
 void prepareGeometry(UnitConverter<T,DESCRIPTOR> const& converter,
                      SuperGeometry<T,2>& superGeometry)
@@ -118,9 +138,8 @@ void prepareLattice(
   clout << "Prepare Lattice ..." << std::endl;
 
   /// Material=0 -->do nothing
-  sLattice.defineDynamics<NoDynamics>(superGeometry, 0);
   sLattice.defineDynamics<PorousParticleBGKdynamics>(superGeometry, 1);
-  sLattice.defineDynamics<BounceBack>(superGeometry, 2);
+  setBounceBackBoundary(sLattice, superGeometry, 2);
 
   sLattice.setParameter<descriptors::OMEGA>(converter.getLatticeRelaxationFrequency());
 
@@ -276,7 +295,28 @@ int main(int argc, char* argv[])
   ParticleManager<T,DESCRIPTOR,PARTICLETYPE> particleManager(
     particleSystem, superGeometry, sLattice, converter, accExt);
 
-  T epsilon = eps*converter.getConversionFactorLength();
+  // Create and assign resolved particle dynamics
+  particleSystem.defineDynamics<
+    VerletParticleDynamics<T,PARTICLETYPE>>();
+
+  // Create solid boundaries for particle interaction
+  std::vector<SolidBoundary<T, DESCRIPTOR::d>> solidBoundaries;
+  solidBoundaries.push_back(  SolidBoundary<T, DESCRIPTOR::d>(
+        std::make_unique<IndicInverse<T, DESCRIPTOR::d>>(
+          cuboid, cuboid.getMin() - 5 * converter.getPhysDeltaX(),
+          cuboid.getMax() + 5 * converter.getPhysDeltaX()), 2, wallContactMaterial));
+
+  // Create objects for contact treatment
+  ContactContainer<T, PARTICLECONTACTTYPE, WALLCONTACTTYPE> contactContainer;
+  // Generate lookup table for contact properties
+  ContactProperties<T, 1> contactProperties;
+  contactProperties.set(particleContactMaterial, wallContactMaterial,
+                        evalEffectiveYoungModulus(youngsModulus, youngsModulus,
+                                                  poissonRatio, poissonRatio),
+                        dampingConstant, coefficientKineticFriction, coefficientStaticFriction);
+
+
+  T epsilon = eps * converter.getConversionFactorLength();
   T radius = radiusP;
 
   // Create Particle 1
@@ -287,17 +327,20 @@ int main(int argc, char* argv[])
   creators::addResolvedCircle2D( particleSystem, center2,
                                  radius, epsilon, rhoP );
 
-  // Create and assign resolved particle dynamics
-  VerletParticleDynamics<T,PARTICLETYPE> particleDynamics;
-  for (std::size_t iP=0; iP<particleSystem.size(); ++iP) {
-    particleSystem.defineDynamics( iP, &particleDynamics );
+  //Check ParticleSystem
+  particleSystem.checkForErrors();
+
+  // Set contact material
+  for (std::size_t iP = 0; iP < particleSystem.size(); ++iP) {
+    auto particle = particleSystem.get(iP);
+    setContactMaterial(particle, particleContactMaterial);
   }
 
   /// === 5th Step: Definition of Initial and Boundary Conditions ===
   setBoundaryValues(sLattice, converter, superGeometry);
 
   {
-    auto& communicator = sLattice.getCommunicator(PostPostProcess());
+    auto& communicator = sLattice.getCommunicator(stage::PostPostProcess());
     communicator.requestOverlap(sLattice.getOverlap());
     communicator.requestFields<POROSITY,VELOCITY_NUMERATOR,VELOCITY_DENOMINATOR>();
     communicator.exchangeRequests();
@@ -309,10 +352,20 @@ int main(int argc, char* argv[])
     // Execute particle manager
     particleManager.execute<
       couple_lattice_to_particles<T,DESCRIPTOR,PARTICLETYPE>,
-      apply_gravity<T,PARTICLETYPE>,
-      process_dynamics<T,PARTICLETYPE>,
-      couple_particles_to_lattice<T,DESCRIPTOR,PARTICLETYPE>
+      apply_gravity<T,PARTICLETYPE>
     >();
+
+    // Calculate and apply contact forces
+    processContacts<T, PARTICLETYPE, PARTICLECONTACTTYPE, WALLCONTACTTYPE, ContactProperties<T, 1>>(
+        particleSystem, solidBoundaries, contactContainer, contactProperties,
+        superGeometry, contactBoxResolutionPerDirection);
+
+    // Solve equations of motion
+    particleManager.execute<process_dynamics<T,PARTICLETYPE>>();
+
+    // Couple particles to lattice (with contact detection)
+    coupleResolvedParticlesToLattice<T, DESCRIPTOR, PARTICLETYPE, PARTICLECONTACTTYPE, WALLCONTACTTYPE>(
+        particleSystem, contactContainer, superGeometry, sLattice, converter, solidBoundaries);
 
     // Get Results
     getResults(sLattice, converter, iT, superGeometry, timer, particleSystem);

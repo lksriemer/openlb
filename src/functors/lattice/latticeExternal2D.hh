@@ -56,7 +56,7 @@ BlockLatticeExternal2D<T,DESCRIPTOR,FIELD>::BlockLatticeExternal2D
 template <typename T, typename DESCRIPTOR, typename FIELD>
 bool BlockLatticeExternal2D<T,DESCRIPTOR,FIELD>::operator() (T output[], const int input[])
 {
-  T* value0 = fd::accessOld<T,DESCRIPTOR,FIELD>( this->_blockLattice.get( input[0], input[1] ), this->_iT );
+  T* value0 = fd::accessNew<T,FIELD>( this->_blockLattice.get( input[0], input[1] ), this->_iT );
   output[0] = *value0;
   return true;
 }

@@ -41,6 +41,14 @@ struct FD_TAG {
 
 }  // namespace tag
 
+namespace fdParams {
+
+struct Timestep : public descriptors::TYPED_FIELD_BASE<std::size_t,1> { };
+struct Diffusivity : public descriptors::FIELD_BASE<1> { };
+struct AntiDiffusivityTuning : public descriptors::FIELD_BASE<1> { };
+
+}  // namespace fdParams
+
 }  // namespace fd
 
 }  // namespace olb

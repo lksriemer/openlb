@@ -46,6 +46,10 @@ OMPFLAGS        := -fopenmp
 # CPU_SISD must always be present.
 PLATFORMS       := CPU_SISD
 
+# Fundamental arithmetic data type
+# Common options are float or double
+FLOATING_POINT_TYPE := double
+
 # Any entries are passed to the compiler as `-DFEATURE_*` declarations
 # Used to enable some alternative code paths and dependencies
 FEATURES        :=

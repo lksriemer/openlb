@@ -24,156 +24,111 @@
 #ifndef LATTICE_STOKES_DRAG_FORCE_HH
 #define LATTICE_STOKES_DRAG_FORCE_HH
 
+#include "latticeStokesDragForce.h"
+
 namespace olb {
 
 
-template <typename T, typename DESCRIPTOR, typename PARTICLETYPE>
-SuperLatticeStokesDragForce<T,DESCRIPTOR,PARTICLETYPE>::SuperLatticeStokesDragForce(
-  SuperLattice<T,DESCRIPTOR>& sLattice,
-  SuperGeometry<T,DESCRIPTOR::d>& superGeometry,
-  particles::ParticleSystem<T,PARTICLETYPE>& particleSystem,
-  const UnitConverter<T,DESCRIPTOR>& converter,
-  Vector<bool,DESCRIPTOR::d> periodic,
-  std::size_t iP0 )
-  : SuperLatticePhysF<T,DESCRIPTOR>(sLattice,converter,
-      (DESCRIPTOR::d)*(particleSystem.size()-iP0))
-{
-  this->getName() = "physStokesDragForce";
-  int maxC = this->_sLattice.getLoadBalancer().size();
-  this->_blockF.reserve(maxC);
-  PhysR<T,DESCRIPTOR::d> min = superGeometry.getStatistics().getMinPhysR( 1 ); //TODO: disable hardcoded 1
-  PhysR<T,DESCRIPTOR::d> max = superGeometry.getStatistics().getMaxPhysR( 1 ); //TODO: disable hardcoded 1
-  for (int iC = 0; iC < maxC; iC++) {
-    int globiC = this->_sLattice.getLoadBalancer().glob(iC);
-    this->_blockF.emplace_back( new BlockLatticeStokesDragForce<T,DESCRIPTOR, PARTICLETYPE>(
-      this->_sLattice.getBlock(iC),
-      superGeometry.getBlockGeometry(iC),
-      &this->_sLattice.getCuboidGeometry().get(globiC),
-      particleSystem, converter, min, max, periodic, iP0));
-  }
-}
-
-template <typename T, typename DESCRIPTOR, typename PARTICLETYPE>
-bool SuperLatticeStokesDragForce<T,DESCRIPTOR,PARTICLETYPE>::operator() (T output[],
-    const int input[])
-{
-  for (std::size_t iS=0; iS<this->getTargetDim(); ++iS) {
-    output[iS] = 0.;
-  }
-  for (int iC = 0; iC < this->_sLattice.getLoadBalancer().size(); ++iC) {
-    int globiC = this->_sLattice.getLoadBalancer().glob(iC);
-    if ( this->_sLattice.getLoadBalancer().rank(globiC) == singleton::mpi().getRank() ) {
-      this->getBlockF(iC)(output,&input[1]);
-    }
-  }
-
-#ifdef PARALLEL_MODE_MPI
-  for (std::size_t iS = 0; iS < this->getTargetDim(); ++iS) {
-    singleton::mpi().reduceAndBcast(output[iS], MPI_SUM);
-  }
-#endif
-  return true;
-
-}
-
-
-
-
-template<typename T, typename DESCRIPTOR, typename PARTICLETYPE>
-BlockLatticeStokesDragForce<T, DESCRIPTOR, PARTICLETYPE>::BlockLatticeStokesDragForce(
+template<typename T, typename DESCRIPTOR, typename PARTICLETYPE, bool serialize>
+BlockLatticeStokesDragForce<T, DESCRIPTOR, PARTICLETYPE, serialize>::BlockLatticeStokesDragForce(
   BlockLattice<T, DESCRIPTOR>& blockLattice,
-  BlockGeometry<T,DESCRIPTOR::d>& blockGeometry,
-  Cuboid<T,DESCRIPTOR::d>* cuboid,
+  const BlockGeometry<T,DESCRIPTOR::d>& blockGeometry,
   particles::ParticleSystem<T,PARTICLETYPE>& particleSystem,
   const UnitConverter<T,DESCRIPTOR>& converter,
   PhysR<T,DESCRIPTOR::d>cellMin, PhysR<T,DESCRIPTOR::d> cellMax,
   Vector<bool,DESCRIPTOR::d> periodic,
-  std::size_t iP0 )
-  : BlockLatticePhysF<T,DESCRIPTOR>(blockLattice, converter, particleSystem.size()),
-    _blockGeometry(blockGeometry), _blockLattice(blockLattice), _cuboid(cuboid),
+  std::size_t iP0,
+  const F f)
+  : BlockLatticePhysF<T,DESCRIPTOR>(blockLattice, converter,
+                                   (DESCRIPTOR::d)*(particleSystem.size()-iP0)),
+    _blockGeometry(blockGeometry), _blockLattice(blockLattice),
     _particleSystem(particleSystem),
-    _cellMin(cellMin), _cellMax(cellMax), _periodic(periodic), _iP0(iP0)
+    _cellMin(cellMin), _cellMax(cellMax), _periodic(periodic), _iP0(iP0), _f(f)
 {
   this->getName() = "physStokesDragForce";
+  //Calculate precalculated constants
+  _delTinv = 1./this->_converter.getPhysDeltaT();
+  _C1 = 6. * M_PI
+           * converter.getPhysViscosity()
+           * converter.getPhysDensity()
+           * converter.getConversionFactorTime();
 }
 
-template<typename T, typename DESCRIPTOR, typename PARTICLETYPE>
-void BlockLatticeStokesDragForce<T, DESCRIPTOR, PARTICLETYPE>::evaluate(T output[], particles::Particle<T,PARTICLETYPE>& particle, int iP)
+template<typename T, typename DESCRIPTOR, typename PARTICLETYPE, bool serialize>
+void BlockLatticeStokesDragForce<T, DESCRIPTOR, PARTICLETYPE, serialize>::evaluate(
+  T output[], particles::Particle<T,PARTICLETYPE>& particle, int iP)
 {
-  //TODO: adapt serialization size etc!
-  const unsigned D = DESCRIPTOR::d;
+  constexpr unsigned D = DESCRIPTOR::d;
   const int serialSize = D;
 
   using namespace descriptors;
 
   //Retrieve particle quantities
-  auto position = particle.template getField<GENERAL,POSITION>();
-  auto radius = particle.template getField<PHYSPROPERTIES,RADIUS>();
-  auto velocity = particle.template getField<MOBILITY,VELOCITY>();
+  Vector<T,D> position = particle.template getField<GENERAL,POSITION>();
+  Vector<T,D> velocity = particle.template getField<MOBILITY,VELOCITY>();
+  T radius = particle.template getField<PHYSPROPERTIES,RADIUS>();
   T mass = particle.template getField<PHYSPROPERTIES,MASS>();
   T* positionArray = position.data();
 
   //TODO: check, whether creation can be avoided by using a second _blockF list
-  BlockLatticeInterpPhysVelocity<T,DESCRIPTOR> blockInterpPhysVelF( _blockLattice, this->_converter, _cuboid); 
-
-  //Calculate general constants
-  T dTinv = 1./this->_converter.getPhysDeltaT();
-  T C1 = 6. * M_PI * this->_converter.getPhysViscosity()
-       * this->_converter.getPhysDensity() * this->_converter.getConversionFactorTime();
+  const auto& cuboid = _blockGeometry.getCuboid();
+  BlockLatticeInterpPhysVelocity<T,DESCRIPTOR> blockInterpPhysVelF(
+    _blockLattice, this->_converter, cuboid);
 
   //Calculate particle coefficiants
-  T c = C1 * radius * 1./mass;
+  T c = _C1 * radius * 1./mass;
   T C2 = 1. / (1. + c);
 
-  //Retrieve block bounds    
-  LatticeR<D> extend = _blockGeometry.getExtent();
-  PhysR<T,D> physExtend = this->_converter.getPhysDeltaX()*extend;
-  PhysR<T,D> origin = _blockGeometry.getOrigin();
-  PhysR<T,D> end = origin + physExtend;
+  T fluidVelArray[D] = {0.};
 
-  //Check whether inside cuboid
+  //Check whether inside cuboid (when not parallelized)
   bool inside = true;
-  for (int iDim=0; iDim<D; ++iDim){
-    inside = inside 
-          && (positionArray[iDim] > origin[iDim])
-          && (positionArray[iDim] < end[iDim]);
+  if constexpr ( !particles::access::providesParallelization<PARTICLETYPE>() ){
+    inside = cuboid.checkPoint(position);
   }
   if (inside){
 
     //Retrieve interpolated velocity at position
-    T fluidVelArray[D] = {0.};
     blockInterpPhysVelF(fluidVelArray, positionArray);
 
-    //Calculate stokes force
-    Vector<T,D> force(0.);
-    for (int iDim = 0; iDim < PARTICLETYPE::d; ++iDim) {
-      force[iDim] = mass * dTinv
-        * ((c * fluidVelArray[iDim] + velocity[iDim]) * C2 - velocity[iDim]);
-    }
-   
-    //Add force and torque to output
-    std::size_t iPeval = iP-_iP0; //Shifted output index, if iP!=0
-    for (unsigned iDim=0; iDim<D; iDim++) {
-      output[iDim+iPeval*serialSize] += force[iDim];
+    //Record interpolated fluid field, if MOBILITY,FLUIDVEL provided
+    if constexpr( PARTICLETYPE::template providesNested<MOBILITY,FLUIDVEL>() ){
+      particle.template setField<MOBILITY, FLUIDVEL>(fluidVelArray);
     }
 
+    //Calculate stokes force
+    Vector<T,D> tmpForce(0.);
+    for (int iDim = 0; iDim < PARTICLETYPE::d; ++iDim) {
+      tmpForce[iDim] = mass * _delTinv
+        * ((c * fluidVelArray[iDim] + velocity[iDim]) * C2 - velocity[iDim]);
+    }
+
+    _f(particle, position, tmpForce, Vector<T,utilities::dimensions::convert<D>::rotation>(T{0}));
+
+    //Add force and torque to output or apply directly
+    //INFO: serialization only possible to provide analogy to momentumExchange!
+    if constexpr (serialize){
+      std::size_t iPeval = iP-_iP0; //Shifted output index, if iP!=0
+      for (unsigned iDim=0; iDim<D; iDim++) {
+        output[iDim+iPeval*serialSize] += tmpForce[iDim];
+      }
+    } else {
+      //Apply tmpForce as absolute force (no increment, as no empty output[] available)
+      particle.template setField<FORCING,FORCE>( tmpForce );
+    }
   }
 }
 
 
 
-template<typename T, typename DESCRIPTOR, typename PARTICLETYPE>
-bool BlockLatticeStokesDragForce<T, DESCRIPTOR, PARTICLETYPE>::operator()(T output[], const int input[])
+template<typename T, typename DESCRIPTOR, typename PARTICLETYPE, bool serialize>
+bool BlockLatticeStokesDragForce<T, DESCRIPTOR, PARTICLETYPE, serialize>::operator()(T output[], const int input[])
 {
   using namespace descriptors;
   // iterate over all particles in _indicator //TODO: add periodic treatment analogous to momentum exchange
   for (std::size_t iP=_iP0; iP!=_particleSystem.size(); iP++) {
     auto particle = _particleSystem.get(iP);
-    if constexpr( PARTICLETYPE::template providesNested<NUMERICPROPERTIES,ACTIVE>() ) {
-      if (particle.template getField<NUMERICPROPERTIES,ACTIVE>()){
-        evaluate(output, particle, iP);
-      }
-    } else {
+    if (particles::access::isValid(particle)){
       evaluate(output, particle, iP);
     }
   }

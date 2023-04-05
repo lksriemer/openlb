@@ -66,7 +66,8 @@ S IndicatorTranslate3D<S>::signedDistance( const Vector<S,3>& input )
 
 template <typename S>
 IndicatorCircle3D<S>::IndicatorCircle3D(Vector<S,3> center, Vector<S,3> normal, S radius)
-  :  _center(center), _normal(normal), _radius2(radius*radius)
+  :  _center(center), _normal(normal), _radius2(radius*radius),
+     _cylinder(center, normal, radius, 5.0*std::numeric_limits<S>::epsilon())
 {
   _normal = normalize(_normal);
   this->_myMin = _center - radius;
@@ -76,22 +77,15 @@ IndicatorCircle3D<S>::IndicatorCircle3D(Vector<S,3> center, Vector<S,3> normal, 
 template <typename S>
 IndicatorCircle3D<S>::IndicatorCircle3D(S center0, S center1, S center2,
                                         S normal0, S normal1, S normal2, S radius)
-  :  _radius2(radius*radius)
-{
-  _center = {center0, center1, center2};
-  _normal = {normal0, normal1, normal2};
-  _normal = normalize(_normal);
-  this->_myMin = _center - radius;
-  this->_myMax = _center + radius;
-}
+  : IndicatorCircle3D(Vector<S,3>{center0, center1, center2},
+      Vector<S,3>{normal0, normal1, normal2}, radius)
+{ }
 
 // returns true if x is inside the circle
 template <typename S>
 bool IndicatorCircle3D<S>::operator()(bool output[], const S input[])
 {
-  S eps = std::numeric_limits<S>::epsilon();
-  IndicatorCylinder3D<S> cylinder(_center, _normal, getRadius(), 5*eps);
-  return cylinder(output,input);
+  return _cylinder(output,input);
 }
 
 template <typename S>
@@ -204,11 +198,11 @@ bool IndicatorSphere3D<S>::distance(S& distance, const Vector<S,3>& origin,
 
 
 template <typename S>
-IndicatorLayer3D<S>::IndicatorLayer3D(IndicatorF3D<S>& indicatorF, S layerSize)
-  :  _indicatorF(indicatorF), _layerSize(layerSize)
+IndicatorLayer3D<S>::IndicatorLayer3D(FunctorPtr<IndicatorF3D<S>>&& indicatorF, S layerSize)
+  :  _indicatorF(std::move(indicatorF)), _layerSize(layerSize)
 {
-  this->_myMin = indicatorF.getMin() - layerSize;
-  this->_myMax = indicatorF.getMax() + layerSize;
+  this->_myMin = indicatorF->getMin() - layerSize;
+  this->_myMax = indicatorF->getMax() + layerSize;
 }
 
 // returns true if x is inside the layer
@@ -239,7 +233,7 @@ S IndicatorLayer3D<S>::signedDistance( const Vector<S,3>& input )
 {
 
 // Rounding: Creates a Layer with a constant thickness --> edges are rounded
-  return sdf::rounding(_indicatorF.signedDistance(input), _layerSize);
+  return sdf::rounding(_indicatorF->signedDistance(input), _layerSize);
 
 
 }
@@ -401,7 +395,22 @@ S IndicatorCylinder3D<S>::signedDistance( const Vector<S,3>& input )
   return sdf::cylinder(input, _center1, _ba, _baba, util::sqrt(_radius2));
 }
 
-
+template <typename S>
+Vector<S,3> IndicatorCylinder3D<S>::getSample(const std::function<S()>& randomness) const
+{
+  // Select random point on center axis
+  auto axis = _center2 - _center1;
+  auto axisPoint = _center1 + (_center2 - _center1) * randomness();
+  // Compute cut at point on center axis
+  auto hyperplane = Hyperplane3D<S>().originAt(axisPoint)
+                                     .normalTo(axis);
+  // Select random point on 2D circle
+  const S r = util::sqrt(_radius2) * util::sqrt(randomness());
+  const S theta = randomness() * 2 * M_PI;
+  // Project random circle point to axis-orthogonal plane with axisPoint intersect
+  return hyperplane.project({r * util::cos(theta),
+                             r * util::sin(theta)});
+}
 
 //TODO: Rename to IndicatorCappedCone3D and create a real IndicatorCone3D ??
 
@@ -676,6 +685,28 @@ template <typename S>
 S IndicatorCuboid3D<S>::signedDistance( const Vector<S,3>& input )
 {
   return sdf::box(input - _center, Vector<S,3>(.5*_xLength, .5*_yLength, .5*_zLength));
+}
+
+template <typename S>
+Vector<S,3> IndicatorCuboid3D<S>::getSample(const std::function<S()>& randomness) const
+{
+  // Select random point on center axis
+  Vector<S,3> v = {_xLength, _yLength, _zLength};
+  auto it = std::minmax_element(v.begin(), v.end());
+  int min_idx = std::distance(v.begin(), it.first);
+  Vector<S,3> axis{0, 0, 0};
+  axis[min_idx] = v[min_idx];
+  auto axisPoint = _center + axis * randomness();
+  // Compute cut at point on center axis
+  auto hyperplane = Hyperplane3D<S>().originAt(axisPoint)
+                                     .normalTo(axis);
+  // Select random point on 2D square
+  int max_idx = std::distance(v.begin(), it.second);
+  const S width = v[max_idx] * randomness();
+  int i = 3 - max_idx - min_idx;
+  const S height = v[i] * randomness();
+  // Project random square point to axis-orthogonal plane with axisPoint intersect
+  return hyperplane.project({width,height});
 }
 
 

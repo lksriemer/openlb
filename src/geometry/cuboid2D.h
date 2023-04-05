@@ -129,6 +129,7 @@ public:
   /// Checks whether a point (globX/globY) is contained in the cuboid
   /// extended with an layer of size overlap*delta
   bool checkPoint(T globX, T globY, int overlap = 0) const;
+  bool checkPoint(Vector<T,2>& globXY, int overlap = 0) const;
   /// Checks whether a point (globX/gloxY) is contained and is a node
   /// in the cuboid extended with an layer of size overlap*delta and
   /// returns the local active node

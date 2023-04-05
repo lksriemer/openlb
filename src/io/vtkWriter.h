@@ -37,9 +37,9 @@
  *  - The Functor type differs. Those can possibly be bases on a common base class
  *    or a template argument could be provided
  *  - The SuperVTMwriter3D does not take the DESCRIPTOR as argument. The present one does
- *    as this is necessary for the underlying datatype. In order to destinguish between 
+ *    as this is necessary for the underlying datatype. In order to destinguish between
  *    particles and the lattice, the descriptor should be included though.
- *  As soon as the differences are removed, a generic 2D/3D parallized/nonparallized 
+ *  As soon as the differences are removed, a generic 2D/3D parallized/nonparallized
  *  VTKwriter class can be implemented providing all functionality.
  *  WARNING: Due to this, some functionality was not bothered to be implemented
  *  ( e.g. compression and binary writeout).
@@ -59,15 +59,15 @@ public:
   static constexpr unsigned D = FUNCTOR::d;
   /// constructor
   VTKwriter( const std::string & name, bool binary=true, bool compress=true );
-  ///  put functor to _pointerVec  
+  ///  put functor to _pointerVec
   ///  to simplify writing process of several functors
   void addFunctor(FUNCTOR& f);
-  ///  put functor with specific name to _pointerVec 
+  ///  put functor with specific name to _pointerVec
   ///  to simplify writing process of several functors
   void addFunctor(FUNCTOR& f, const std::string& functorName);
   ///  to clear stored functors, not yet used due to lack of necessity
   //
- 
+
 
 
 
@@ -146,8 +146,8 @@ using VTUwriter = VTKwriter<
   T,
   typename std::conditional_t<
     parallel,
-    SuperContainerF<T,DESCRIPTOR,DynamicFieldGroupsD<T,typename DESCRIPTOR::fieldList>,T>,
-    ContainerF<T,DESCRIPTOR,DynamicFieldGroupsD<T,typename DESCRIPTOR::fieldList>,T>
+    SuperContainerF<T,DESCRIPTOR,DynamicFieldGroupsD<T,typename DESCRIPTOR::fields_t>,T>,
+    ContainerF<T,DESCRIPTOR,DynamicFieldGroupsD<T,typename DESCRIPTOR::fields_t>,T>
   >,
   VTU
 >;

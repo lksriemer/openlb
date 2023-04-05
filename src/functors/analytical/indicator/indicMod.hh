@@ -29,28 +29,110 @@
 namespace olb {
 
 template <typename S, unsigned D>
-IndicInverse<S,D>::IndicInverse( FunctorPtr<IndicatorF<S,D>> f, PhysR<S,D> min, PhysR<S,D> max )
-  : _f(std::move(f))
+IndicInverse<S, D>::IndicInverse(FunctorPtr<IndicatorF<S, D>> f,
+                                 PhysR<S, D> min, PhysR<S, D> max)
+    : _f(std::move(f))
 {
   this->_myMin = min;
   this->_myMax = max;
 }
 
+
+/// Alternative constructor enabling quick inversion
+/**
+ * \warning Do to the neglection of specifying min and max, no volume but rather a plane is created!
+ * \warning Might lead to errors, when using min/max checks assuming a volume.
+ **/
 template <typename S, unsigned D>
-S IndicInverse<S,D>::signedDistance(const Vector<S, D>& input)
+IndicInverse<S, D>::IndicInverse(FunctorPtr<IndicatorF<S, D>> f)
+  : _f(std::move(f))
+{
+  this->_myMin = f->getMin();
+  this->_myMax = f->getMax();
+}
+
+template <typename S, unsigned D>
+S IndicInverse<S, D>::signedDistance(const Vector<S, D>& input)
 {
   return -this->_f->signedDistance(input);
 }
 
-/*
 template <typename S, unsigned D>
-bool IndicInverse<S,D>::operator()(bool output[], const S input[])
+IndicScale<S, D>::IndicScale(FunctorPtr<IndicatorF<S, D>> f, S scalingFactor)
+    : _f(std::move(f))
 {
-  this->_f->operator()(output, input);
-  output[0] = !output[0];
-  return output[0];
+  setScalingFactor(scalingFactor);
 }
-*/
 
+template <typename S, unsigned D>
+void IndicScale<S, D>::setScalingFactor(S scalingFactor)
+{
+  _scalingFactor = scalingFactor;
+  this->_myMin = _f->getMin() - scalingFactor*_f->getMin();
+  this->_myMax = _f->getMax() + scalingFactor*_f->getMax();
 }
+
+template <typename S, unsigned D>
+S IndicScale<S, D>::getScalingFactor()
+{
+  return _scalingFactor;
+}
+
+template <typename S, unsigned D>
+Vector<S,D> IndicScale<S, D>::getEstimatedCenter()
+{
+  return 0.5 * (_f->getMin() + _f->getMax());
+}
+
+
+template <typename S, unsigned D>
+S IndicScale<S, D>::signedDistance(const Vector<S, D>& input)
+{
+  std::function<S(const Vector<S, D>&)> sdf =
+      [this](const Vector<S, D>& input) {
+        return this->_f->signedDistance(input);
+      };
+
+  return sdf::scale(sdf, input, _scalingFactor);
+}
+
+template <typename S, unsigned D>
+IndicElongation<S, D>::IndicElongation(FunctorPtr<IndicatorF<S, D>> f, const Vector<S,D>& elongation)
+    : _f(std::move(f))
+{
+  setElongation(elongation);
+}
+
+template <typename S, unsigned D>
+void IndicElongation<S, D>::setElongation(const Vector<S,D>& elongation)
+{
+  _elongation = elongation;
+  this->_myMin = _f->getMin() - elongation;
+  this->_myMax = _f->getMax() + elongation;
+}
+
+template <typename S, unsigned D>
+Vector<S,D> IndicElongation<S, D>::getElongation()
+{
+  return _elongation;
+}
+
+template <typename S, unsigned D>
+Vector<S,D> IndicElongation<S, D>::getEstimatedCenter()
+{
+  return 0.5 * (_f->getMin() + _f->getMax());
+}
+
+template <typename S, unsigned D>
+S IndicElongation<S, D>::signedDistance(const Vector<S, D>& input)
+{
+  std::function<S(const Vector<S, D>&)> sdf =
+      [this](const Vector<S, D>& input) {
+        return this->_f->signedDistance(input);
+      };
+
+  return sdf::elongation(sdf, input, _elongation, getEstimatedCenter());
+}
+
+} // namespace olb
 #endif

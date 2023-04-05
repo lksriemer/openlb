@@ -117,12 +117,12 @@ void setFreeEnergyInletBoundary(BlockLattice<T,DESCRIPTOR>& block,T omega, Block
           if (latticeNumber == 1) {
             if (type == "density") {
               //set momenta and dynamics for a pressure boundary on indicated cells
-              dynamics = block.template getDynamics<CombinedRLBdynamics<T,DESCRIPTOR, 
+              dynamics = block.template getDynamics<CombinedRLBdynamics<T,DESCRIPTOR,
                 MixinDynamics, momenta::RegularizedPressureBoundaryTuple< 1,-1>>>();
             }
             else {
               //set momenta and dynamics for a velocity boundary on indicated cells
-              dynamics = block.template getDynamics<CombinedRLBdynamics<T,DESCRIPTOR, 
+              dynamics = block.template getDynamics<CombinedRLBdynamics<T,DESCRIPTOR,
                 MixinDynamics, momenta::RegularizedVelocityBoundaryTuple< 1,-1>>>();
             }
             block.defineDynamics({iX, iY}, dynamics);
@@ -137,12 +137,12 @@ void setFreeEnergyInletBoundary(BlockLattice<T,DESCRIPTOR>& block,T omega, Block
           if (latticeNumber == 1) {
             if (type == "density") {
               //set momenta and dynamics for a pressure boundary on indicated cells
-              dynamics = block.template getDynamics<CombinedRLBdynamics<T,DESCRIPTOR, MixinDynamics, 
+              dynamics = block.template getDynamics<CombinedRLBdynamics<T,DESCRIPTOR, MixinDynamics,
                 momenta::RegularizedPressureBoundaryTuple< 1,1>>>();
             }
             else {
               //set momenta and dynamics for a velocity boundary on indicated cells
-              dynamics = block.template getDynamics<CombinedRLBdynamics<T,DESCRIPTOR, MixinDynamics, 
+              dynamics = block.template getDynamics<CombinedRLBdynamics<T,DESCRIPTOR, MixinDynamics,
                 momenta::RegularizedVelocityBoundaryTuple< 1,1>>>();
             }
             block.defineDynamics({iX, iY}, dynamics);

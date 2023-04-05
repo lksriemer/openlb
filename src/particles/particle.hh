@@ -35,11 +35,11 @@ namespace particles{
 
 template <typename T, typename PARTICLETYPE>
 Particle<T,PARTICLETYPE>::Particle(
-  DynamicFieldGroupsD<T, typename PARTICLETYPE::fieldList>& dynamicFieldGroupsD,
-  OldBlockDynamicsMap<T,PARTICLETYPE, dynamics::ParticleDynamics<T,PARTICLETYPE>>& dynamicsMap,
+  DynamicFieldGroupsD<T, typename PARTICLETYPE::fields_t>& dynamicFieldGroupsD,
+  std::vector<std::shared_ptr<dynamics::ParticleDynamics<T,PARTICLETYPE>>>& dynamicsVector,
   std::size_t iParticle )
   : _dynamicFieldGroupsD( dynamicFieldGroupsD ),
-    _dynamicsMap( dynamicsMap ),
+    _dynamicsVector( dynamicsVector ),
     _iParticle( iParticle)
 {}
 
@@ -50,15 +50,17 @@ void Particle<T,PARTICLETYPE>::init()
 }
 
 template <typename T, typename PARTICLETYPE>
+template<bool multiOutput>
 void Particle<T,PARTICLETYPE>::print(std::size_t iParticle)
 {
-  particles::io::printGenericParticleInfo<T, PARTICLETYPE>( _dynamicFieldGroupsD, iParticle);
+  particles::io::printGenericParticleInfo<T, PARTICLETYPE,multiOutput>( _dynamicFieldGroupsD, iParticle);
 }
 
 template <typename T, typename PARTICLETYPE>
+template<bool multiOutput>
 void Particle<T,PARTICLETYPE>::print()
 {
-  print(_iParticle);
+  print<multiOutput>(_iParticle);
 }
 
 template <typename T, typename PARTICLETYPE>
@@ -80,24 +82,39 @@ void Particle<T,PARTICLETYPE>::advanceId()
 }
 
 template<typename T, typename PARTICLETYPE>
-void Particle<T,PARTICLETYPE>::defineDynamics(dynamics::ParticleDynamics<T,PARTICLETYPE>* dynamics)
+void Particle<T,PARTICLETYPE>::addDynamics (
+  std::shared_ptr<dynamics::ParticleDynamics<T,PARTICLETYPE>>& dynamicsSPtr )
 {
-  this->_dynamicsMap.set(this->getId(), dynamics);
+  _dynamicsVector.push_back( dynamicsSPtr );
 }
 
 template<typename T, typename PARTICLETYPE>
-dynamics::ParticleDynamics<T,PARTICLETYPE>* Particle<T,PARTICLETYPE>::getDynamics()
-{
-  return &this->_dynamicsMap.get(this->getId());
+template <typename DYNAMICS, typename ...Args>
+void Particle<T,PARTICLETYPE>::defineDynamics (Args&& ...args){
+  _dynamicsVector.push_back( std::make_shared<DYNAMICS>(std::forward<Args>(args)...) );
 }
 
 template<typename T, typename PARTICLETYPE>
-void Particle<T,PARTICLETYPE>::process(T timeStepSize)
+template<bool boundsCheck>
+dynamics::ParticleDynamics<T,PARTICLETYPE>* Particle<T,PARTICLETYPE>::getDynamics(
+  unsigned iDyn)
 {
-  getDynamics()->process(*this, timeStepSize);
+  if constexpr(boundsCheck){
+    return _dynamicsVector.at(iDyn).get();
+  } else {
+    return _dynamicsVector[iDyn].get();
+  }
 }
 
-////////// Get and Set functions
+template<typename T, typename PARTICLETYPE>
+void Particle<T,PARTICLETYPE>::process(T timeStepSize, unsigned short iDyn)
+{
+  if(access::isMotionComputationEnabled(*this)) {
+    getDynamics(iDyn)->process(*this, timeStepSize);
+  }
+}
+
+////////// Get and Set functions //TODO: implement recursively?
 
 
 template <typename T, typename PARTICLETYPE>
@@ -181,7 +198,7 @@ Particle<T,PARTICLETYPE>::setField(
 }
 
 } //namespace particles
-  
+
 } //namespace olb
 
 #endif

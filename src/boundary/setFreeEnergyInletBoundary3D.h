@@ -46,7 +46,7 @@ namespace olb {
 
 ///Initialising the FreeEnergyInletBoundary on the superLattice domain
 template<typename T, typename DESCRIPTOR, typename MixinDynamics = RLBdynamics<T,DESCRIPTOR>>
-void setFreeEnergyInletBoundary(SuperLattice<T, DESCRIPTOR>& sLattice,T omega, SuperGeometry<T,3>& superGeometry, int material, 
+void setFreeEnergyInletBoundary(SuperLattice<T, DESCRIPTOR>& sLattice,T omega, SuperGeometry<T,3>& superGeometry, int material,
                                 std::string type, int latticeNumber);
 
 ///Initialising the FreeEnergyInletBoundary on the superLattice domain

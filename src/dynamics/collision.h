@@ -43,7 +43,7 @@ struct None {
 
   template <typename DESCRIPTOR, typename MOMENTA, typename EQUILIBRIUM>
   struct type {
-    template <typename CELL, typename PARAMETERS, typename V=typename CELL::value_t>
+    template <CONCEPT(MinimalCell) CELL, typename PARAMETERS, typename V=typename CELL::value_t>
     CellStatistic<V> apply(CELL& cell, PARAMETERS& parameters) any_platform {
       return {-1, -1};
     };
@@ -61,7 +61,7 @@ struct BGK {
   struct type {
     using EquilibriumF = typename EQUILIBRIUM::template type<DESCRIPTOR,MOMENTA>;
 
-    template <typename CELL, typename PARAMETERS, typename V=typename CELL::value_t>
+    template <CONCEPT(MinimalCell) CELL, typename PARAMETERS, typename V=typename CELL::value_t>
     CellStatistic<V> apply(CELL& cell, PARAMETERS& parameters) any_platform {
       V fEq[DESCRIPTOR::q] { };
       const auto statistic = EquilibriumF().compute(cell, parameters, fEq);
@@ -87,7 +87,7 @@ struct RLB {
     using MomentaF = typename MOMENTA::template type<DESCRIPTOR>;
     using EquilibriumF = typename EQUILIBRIUM::template type<DESCRIPTOR,MOMENTA>;
 
-    template <typename CELL, typename PARAMETERS, typename V=typename CELL::value_t>
+    template <CONCEPT(MinimalCell) CELL, typename PARAMETERS, typename V=typename CELL::value_t>
     CellStatistic<V> apply(CELL& cell, PARAMETERS& parameters) any_platform {
       V pi[util::TensorVal<DESCRIPTOR>::n] { };
       MomentaF().computeStress(cell, pi);
@@ -119,8 +119,8 @@ struct AdvectionDiffusionRLB {
     using MomentaF = typename MOMENTA::template type<DESCRIPTOR>;
     using EquilibriumF = typename EQUILIBRIUM::template type<DESCRIPTOR,MOMENTA>;
 
-    template <typename CELL, typename PARAMETERS, typename V=typename CELL::value_t>
-    CellStatistic<V> apply(CELL& cell, PARAMETERS& parameters) {
+    template <CONCEPT(MinimalCell) CELL, typename PARAMETERS, typename V=typename CELL::value_t>
+    CellStatistic<V> apply(CELL& cell, PARAMETERS& parameters) any_platform {
       V fEq[DESCRIPTOR::q] { };
       const auto statistic = EquilibriumF().compute(cell, parameters, fEq);
       V j1[DESCRIPTOR::d] { };
@@ -155,7 +155,7 @@ struct ConstRhoBGK {
     using MomentaF     = typename MOMENTA::template type<DESCRIPTOR>;
     using EquilibriumF = typename EQUILIBRIUM::template type<DESCRIPTOR,MOMENTA>;
 
-    template <typename CELL, typename PARAMETERS, typename V=typename CELL::value_t>
+    template <CONCEPT(MinimalCell) CELL, typename PARAMETERS, typename V=typename CELL::value_t>
     CellStatistic<V> apply(CELL& cell, PARAMETERS& parameters) any_platform {
       V fEq[DESCRIPTOR::q];
       const auto statistic = EquilibriumF().compute(cell, parameters, fEq);
@@ -188,7 +188,7 @@ struct PerPopulationBGK {
   struct type {
     using EquilibriumF = typename EQUILIBRIUM::template type<DESCRIPTOR,MOMENTA>;
 
-    template <typename CELL, typename PARAMETERS, typename V=typename CELL::value_t>
+    template <CONCEPT(MinimalCell) CELL, typename PARAMETERS, typename V=typename CELL::value_t>
     CellStatistic<V> apply(CELL& cell, PARAMETERS& parameters) any_platform {
       V fEq[DESCRIPTOR::q] { };
       const auto statistic = EquilibriumF().compute(cell, parameters, fEq);
@@ -216,7 +216,7 @@ struct TRT {
     using MomentaF     = typename MOMENTA::template type<DESCRIPTOR>;
     using EquilibriumF = typename EQUILIBRIUM::template type<DESCRIPTOR,MOMENTA>;
 
-    template <typename CELL, typename PARAMETERS, typename V=typename CELL::value_t>
+    template <CONCEPT(MinimalCell) CELL, typename PARAMETERS, typename V=typename CELL::value_t>
     CellStatistic<V> apply(CELL& cell, PARAMETERS& parameters) any_platform {
       V fPlus[DESCRIPTOR::q], fMinus[DESCRIPTOR::q];
       V fEq[DESCRIPTOR::q], fEqPlus[DESCRIPTOR::q], fEqMinus[DESCRIPTOR::q];
@@ -251,14 +251,14 @@ struct Revert {
 
   template <typename DESCRIPTOR, typename MOMENTA, typename EQUILIBRIUM>
   struct type {
-    template <typename CELL, typename PARAMETERS, typename V=typename CELL::value_t>
+    template <CONCEPT(MinimalCell) CELL, typename PARAMETERS, typename V=typename CELL::value_t>
     CellStatistic<V> apply(CELL& cell, PARAMETERS& parameters) any_platform {
       for (int iPop=1; iPop <= DESCRIPTOR::q/2; ++iPop) {
         V cell_iPop = cell[iPop];
         cell[iPop] = cell[descriptors::opposite<DESCRIPTOR>(iPop)];
         cell[descriptors::opposite<DESCRIPTOR>(iPop)] = cell_iPop;
       }
-      return {-1, -1};
+      return {V{-1}, V{-1}};
     };
   };
 };
@@ -284,7 +284,7 @@ struct NguyenLaddCorrection {
     using MomentaF   = typename MOMENTA::template type<DESCRIPTOR>;
     using CollisionO = typename COLLISION::template type<DESCRIPTOR,MOMENTA,EQUILIBRIUM>;
 
-    template <typename CELL, typename PARAMETERS, typename V=typename CELL::value_t>
+    template <CONCEPT(MinimalCell) CELL, typename PARAMETERS, typename V=typename CELL::value_t>
     CellStatistic<V> apply(CELL& cell, PARAMETERS& parameters) any_platform {
       CollisionO().apply(cell, parameters);
       V rho, u[DESCRIPTOR::d];
@@ -309,8 +309,8 @@ struct PartialBounceBack {
 
   template <typename DESCRIPTOR, typename MOMENTA, typename EQUILIBRIUM>
   struct type {
-    template <typename CELL, typename PARAMETERS, typename V=typename CELL::value_t>
-    CellStatistic<V> apply(CELL& cell, PARAMETERS& parameters) {
+    template <CONCEPT(MinimalCell) CELL, typename PARAMETERS, typename V=typename CELL::value_t>
+    CellStatistic<V> apply(CELL& cell, PARAMETERS& parameters) any_platform {
       for (int iPop=1; iPop <= DESCRIPTOR::q/2; ++iPop) {
         std::swap(cell[iPop], cell[iPop+DESCRIPTOR::q/2]);
       }
@@ -336,8 +336,8 @@ struct Poisson {
   struct type {
     using EquilibriumF = typename EQUILIBRIUM::template type<DESCRIPTOR,MOMENTA>;
 
-    template <typename CELL, typename PARAMETERS, typename V=typename CELL::value_t>
-    CellStatistic<V> apply(CELL& cell, PARAMETERS& parameters) {
+    template <CONCEPT(MinimalCell) CELL, typename PARAMETERS, typename V=typename CELL::value_t>
+    CellStatistic<V> apply(CELL& cell, PARAMETERS& parameters) any_platform {
       V fEq[DESCRIPTOR::q] { };
       const auto statistic = EquilibriumF().compute(cell, parameters, fEq);
       const V omega = parameters.template get<descriptors::OMEGA>();
@@ -366,8 +366,8 @@ struct P1 {
   struct type {
     using EquilibriumF = typename EQUILIBRIUM::template type<DESCRIPTOR,MOMENTA>;
 
-    template <typename CELL, typename PARAMETERS, typename V=typename CELL::value_t>
-    CellStatistic<V> apply(CELL& cell, PARAMETERS& parameters) {
+    template <CONCEPT(MinimalCell) CELL, typename PARAMETERS, typename V=typename CELL::value_t>
+    CellStatistic<V> apply(CELL& cell, PARAMETERS& parameters) any_platform {
       V fEq[DESCRIPTOR::q] { };
       const auto statistic = EquilibriumF().compute(cell, parameters, fEq);
       const V scattering = parameters.template get<SCATTERING>();
@@ -392,8 +392,8 @@ struct FixedEquilibrium {
   struct type {
     using EquilibriumF = typename EQUILIBRIUM::template type<DESCRIPTOR,MOMENTA>;
 
-    template <typename CELL, typename PARAMETERS, typename V=typename CELL::value_t>
-    CellStatistic<V> apply(CELL& cell, PARAMETERS& parameters) {
+    template <CONCEPT(MinimalCell) CELL, typename PARAMETERS, typename V=typename CELL::value_t>
+    CellStatistic<V> apply(CELL& cell, PARAMETERS& parameters) any_platform {
       V fEq[DESCRIPTOR::q] { };
       const auto statistic = EquilibriumF().compute(cell, parameters, fEq);
       for (int iPop=0; iPop < DESCRIPTOR::q; ++iPop) {
@@ -417,8 +417,8 @@ struct ParameterFromCell {
   struct type {
     using CollisionO = typename COLLISION::template type<DESCRIPTOR, MOMENTA, EQUILIBRIUM>;
 
-    template <typename CELL, typename PARAMETERS, typename V=typename CELL::value_t>
-    CellStatistic<V> apply(CELL& cell, PARAMETERS& parameters) {
+    template <CONCEPT(MinimalCell) CELL, typename PARAMETERS, typename V=typename CELL::value_t>
+    CellStatistic<V> apply(CELL& cell, PARAMETERS& parameters) any_platform {
       parameters.template set<PARAMETER>(
         cell.template getField<PARAMETER>());
       return CollisionO().apply(cell, parameters);
@@ -445,8 +445,8 @@ struct OmegaFromCellTauEff {
   struct type {
     using CollisionO = typename COLLISION::template type<DESCRIPTOR, MOMENTA, EQUILIBRIUM>;
 
-    template <typename CELL, typename PARAMETERS, typename V=typename CELL::value_t>
-    CellStatistic<V> apply(CELL& cell, PARAMETERS& parameters) {
+    template <CONCEPT(MinimalCell) CELL, typename PARAMETERS, typename V=typename CELL::value_t>
+    CellStatistic<V> apply(CELL& cell, PARAMETERS& parameters) any_platform {
       parameters.template set<descriptors::OMEGA>(
         V{1} / cell.template getField<descriptors::TAU_EFF>());
       return CollisionO().apply(cell, parameters);

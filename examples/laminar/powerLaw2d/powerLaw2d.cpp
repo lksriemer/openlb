@@ -42,7 +42,7 @@ using namespace olb;
 using namespace olb::descriptors;
 using namespace olb::graphics;
 
-typedef double T;
+using T = FLOATING_POINT_TYPE;
 typedef D2Q9<OMEGA> DESCRIPTOR;
 
 // Parameters for the simulation setup
@@ -107,14 +107,11 @@ void prepareLattice( SuperLattice<T,DESCRIPTOR>& sLattice,
                      PowerLawUnitConverter<T,DESCRIPTOR> const& converter,
                      SuperGeometry<T,2>& superGeometry )
 {
-
   OstreamManager clout( std::cout,"prepareLattice" );
   clout << "Prepare Lattice ..." << std::endl;
 
   const T omega = converter.getLatticeRelaxationFrequency();
 
-  // Material=0 -->do nothing
-  sLattice.defineDynamics<NoDynamics>(superGeometry.getMaterialIndicator(0));
   // Material=1 -->bulk dynamics
 #ifdef SMAGORINSKY
   sLattice.defineDynamics<SmagorinskyPowerLawBGKdynamics>(superGeometry.getMaterialIndicator(1));
@@ -123,7 +120,7 @@ void prepareLattice( SuperLattice<T,DESCRIPTOR>& sLattice,
 #endif
 
   // Material=2 -->bounce back
-  sLattice.defineDynamics<BounceBack>(superGeometry.getMaterialIndicator(2));
+  setBounceBackBoundary(sLattice, superGeometry.getMaterialIndicator(2));
 
   T distance2Wall = converter.getConversionFactorLength()/2.;
   T p0 = converter.getPhysConsistencyCoeff()*util::pow( converter.getCharPhysVelocity(),n )*util::pow( ( n + 1. )/n,n )*util::pow( 2./( ly-distance2Wall*2 ), n + 1.);
@@ -134,7 +131,7 @@ void prepareLattice( SuperLattice<T,DESCRIPTOR>& sLattice,
       typename PowerLawBGKdynamics<T,DESCRIPTOR>::template exchange_combination_rule<
         powerlaw::PeriodicPressureOffset<-1,0>
       >>(superGeometry, 3);
-    sLattice.setParameter<powerlaw::PeriodicPressureOffset<-1,0>::OFFSET>(
+    sLattice.setParameter<powerlaw::PRESSURE_OFFSET<-1,0>>(
       -converter.getLatticeDensityFromPhysPressure( p0*(lx + distance2Wall*2. ))+1);
   }
   else {
@@ -149,7 +146,7 @@ void prepareLattice( SuperLattice<T,DESCRIPTOR>& sLattice,
       typename PowerLawBGKdynamics<T,DESCRIPTOR>::template exchange_combination_rule<
         powerlaw::PeriodicPressureOffset<1,0>
       >>(superGeometry, 4);
-    sLattice.setParameter<powerlaw::PeriodicPressureOffset<1,0>::OFFSET>(
+    sLattice.setParameter<powerlaw::PRESSURE_OFFSET<1,0>>(
       converter.getLatticeDensityFromPhysPressure( p0*(lx + distance2Wall*2.))-1);
   }
   else {
@@ -167,58 +164,41 @@ void prepareLattice( SuperLattice<T,DESCRIPTOR>& sLattice,
   sLattice.setParameter<powerlaw::OMEGA_MIN>(1./(nuMax*descriptors::invCs2<T,DESCRIPTOR>() + 0.5));
   sLattice.setParameter<powerlaw::OMEGA_MAX>(1./(nuMin*descriptors::invCs2<T,DESCRIPTOR>() + 0.5));
 #ifdef SMAGORINSKY
-  sLattice.setParameter<collision::LES::Smagorinsky>(0.15);
+  sLattice.setParameter<collision::LES::Smagorinsky>(T(0.15));
 #endif
+
+  // Define the analytical solutions for pressure and velocity
+  AnalyticalLinear2D<T,T> rho( converter.getLatticeDensityFromPhysPressure( -p0 ) - 1., 0, converter.getLatticeDensityFromPhysPressure(  p0*(lx + distance2Wall*2.)/2. ) );
+  T maxVelocity = converter.getCharLatticeVelocity();
+  PowerLaw2D<T> u( superGeometry, 3, maxVelocity, distance2Wall, ( n + 1. )/n );
+
+  // Set the analytical solutions for pressure and velocity
+  AnalyticalConst2D<T,T> omega0( converter.getLatticeRelaxationFrequency() );
+  sLattice.defineField<descriptors::OMEGA>( superGeometry, 1, omega0 );
+  sLattice.defineField<descriptors::OMEGA>( superGeometry, 3, omega0 );
+  sLattice.defineField<descriptors::OMEGA>( superGeometry, 4, omega0 );
+
+  // Set the analytical solutions for pressure and velocity
+  // Initialize all values of distribution functions to their local equilibrium
+
+  sLattice.defineRhoU( superGeometry, 1, rho, u );
+  sLattice.iniEquilibrium( superGeometry, 1, rho, u );
+
+  sLattice.defineRhoU( superGeometry, 2, rho, u );
+  sLattice.iniEquilibrium( superGeometry, 2, rho, u );
+
+  sLattice.defineRhoU( superGeometry, 3, rho, u );
+  sLattice.iniEquilibrium( superGeometry, 3, rho, u );
+
+  sLattice.defineRhoU( superGeometry, 4, rho, u );
+  sLattice.iniEquilibrium( superGeometry, 4, rho, u );
+
+  // Make the lattice ready for simulation
+  sLattice.initialize();
 
   clout << "Prepare Lattice ... OK" << std::endl;
 }
 
-
-void setBoundaryValues( SuperLattice<T, DESCRIPTOR>& sLattice,
-                        PowerLawUnitConverter<T,DESCRIPTOR> const& converter,
-                        int iT, SuperGeometry<T,2>& superGeometry )
-{
-
-  OstreamManager clout( std::cout,"setBoundaryValues" );
-
-  // Set initial and steady boundary conditions
-  if ( iT==0 ) {
-
-    // Define the analytical solutions for pressure and velocity
-    T maxVelocity = converter.getCharLatticeVelocity();
-    T distance2Wall = converter.getConversionFactorLength()/2.;
-
-    T p0 = converter.getPhysConsistencyCoeff()*util::pow( converter.getCharPhysVelocity(),n )*util::pow( ( n + 1. )/n,n )*util::pow( 2./( ly-distance2Wall*2 ),n + 1. );
-
-    AnalyticalLinear2D<T,T> rho( converter.getLatticeDensityFromPhysPressure( -p0 ) - 1., 0, converter.getLatticeDensityFromPhysPressure(  p0*(lx + distance2Wall*2.)/2. ) );
-
-    PowerLaw2D<T> u( superGeometry, 3, maxVelocity, distance2Wall, ( n + 1. )/n );
-
-    // Set the analytical solutions for pressure and velocity
-    AnalyticalConst2D<T,T> omega0( converter.getLatticeRelaxationFrequency() );
-    sLattice.defineField<descriptors::OMEGA>( superGeometry, 1, omega0 );
-    sLattice.defineField<descriptors::OMEGA>( superGeometry, 3, omega0 );
-    sLattice.defineField<descriptors::OMEGA>( superGeometry, 4, omega0 );
-
-    // Set the analytical solutions for pressure and velocity
-    // Initialize all values of distribution functions to their local equilibrium
-
-    sLattice.defineRhoU( superGeometry, 1, rho, u );
-    sLattice.iniEquilibrium( superGeometry, 1, rho, u );
-
-    sLattice.defineRhoU( superGeometry, 2, rho, u );
-    sLattice.iniEquilibrium( superGeometry, 2, rho, u );
-
-    sLattice.defineRhoU( superGeometry, 3, rho, u );
-    sLattice.iniEquilibrium( superGeometry, 3, rho, u );
-
-    sLattice.defineRhoU( superGeometry, 4, rho, u );
-    sLattice.iniEquilibrium( superGeometry, 4, rho, u );
-
-    // Make the lattice ready for simulation
-    sLattice.initialize();
-  }
-}
 
 // Compute error norms
 void error( SuperGeometry<T,2>& superGeometry,
@@ -296,9 +276,11 @@ void getResults( SuperLattice<T, DESCRIPTOR>& sLattice,
   SuperVTMwriter2D<T> vtmWriter( "powerLaw2d" );
   SuperLatticePhysVelocity2D<T, DESCRIPTOR> velocity( sLattice, converter );
   SuperLatticePhysPressure2D<T, DESCRIPTOR> pressure( sLattice, converter );
+  SuperLatticePhysViscosity2D<T, DESCRIPTOR> viscosity( sLattice, converter );
 
   vtmWriter.addFunctor( velocity );
   vtmWriter.addFunctor( pressure );
+  vtmWriter.addFunctor( viscosity );
 
   if ( iT==0 ) {
     SuperLatticeCuboid2D<T, DESCRIPTOR> cuboid( sLattice );
@@ -325,18 +307,15 @@ void getResults( SuperLattice<T, DESCRIPTOR>& sLattice,
     sLattice.getStatistics().print( iT,converter.getPhysTime( iT ) );
     error( superGeometry, sLattice, converter );
   }
-  return;
 }
 
 
 int main( int argc, char* argv[] )
 {
-
   // === 1st Step: Initialization ===
   olbInit( &argc, &argv );
   singleton::directories().setOutputDir( "./tmp/" );
   OstreamManager clout( std::cout,"main" );
-
 
   singleton::directories().setOutputDir( "./tmp/" );
 
@@ -351,7 +330,6 @@ int main( int argc, char* argv[] )
   config["time"]["Tmax"].read(Tmax);
   config["time"]["Tprint"].read(Tprint);
 
- 
   PowerLawUnitConverterFrom_Resolution_RelaxationTime_Reynolds_PLindex<T, DESCRIPTOR> const converter(
     int {N},     // resolution: number of voxels per charPhysL
     (T)   tau,   // latticeRelaxationTime: relaxation time, have to be greater than 0.5!
@@ -366,10 +344,8 @@ int main( int argc, char* argv[] )
   // Writes the converter log in a file
   converter.write("powerLaw2d");
 
-
   // === 2rd Step: Prepare Geometry ===
   // Instantiation of a cuboidGeometry with weights
-
   Vector<T,2> extend( lx, ly );
   Vector<T,2> origin;
   IndicatorCuboid2D<T> cuboid( extend, origin );
@@ -405,20 +381,16 @@ int main( int argc, char* argv[] )
     if ( converge.hasConverged() ) {
       clout << "Simulation converged." << std::endl;
       getResults( sLattice, converter, iT, superGeometry, timer );
-
       break;
     }
-
-    // === 5th Step: Definition of Initial and Boundary Conditions ===
-    setBoundaryValues( sLattice, converter, iT, superGeometry );
     // === 7th Step: Computation and Output of the Results ===
     getResults( sLattice, converter, iT, superGeometry, timer );
-    converge.takeValue( sLattice.getStatistics().getAverageEnergy(), true );
+    converge.takeValue(sLattice.getStatistics().getAverageEnergy(), true);
     // === 6th Step: Collide and Stream Execution ===
     sLattice.collideAndStream();
 
     if (bcTypePeriodic) {
-      sLattice.stripeOffDensityOffset ( sLattice.getStatistics().getAverageRho()-(T)1 );
+      sLattice.stripeOffDensityOffset(sLattice.getStatistics().getAverageRho()-(T)1);
     }
   }
   timer.stop();

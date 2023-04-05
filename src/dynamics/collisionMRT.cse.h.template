@@ -39,7 +39,7 @@ namespace collision {
 template <typename... FIELDS>
 struct MRT::type<descriptors::${name}<FIELDS...>,momenta::BulkTuple,equilibria::SecondOrder> {
 
-${collision_cse(olb.collision.MRT, DESCRIPTOR, olb.momenta.BulkTuple, olb.equilibria.SecondOrder, simple_post_collision = False)}
+${collision_cse(olb.collision.MRT, DESCRIPTOR, olb.momenta.BulkTuple, olb.equilibria.SecondOrder)}
 
 };
 
@@ -53,7 +53,7 @@ namespace forcing {
 template <typename... FIELDS>
 struct forcing::LaddVerberg::combined_collision<descriptors::${name}<FIELDS...>,momenta::BulkTuple,equilibria::SecondOrder,collision::MRT> {
 
-${collision_cse(olb.collision.MRT, DESCRIPTOR, olb.momenta.BulkTuple, olb.equilibria.SecondOrder, simple_post_collision = False, concrete = olb.forcing.LaddVerberg.combined_collision[DESCRIPTOR, olb.momenta.BulkTuple, olb.equilibria.SecondOrder, olb.collision.MRT])}
+${collision_cse(olb.collision.MRT, DESCRIPTOR, olb.momenta.BulkTuple, olb.equilibria.SecondOrder, concrete = olb.forcing.LaddVerberg.combined_collision[DESCRIPTOR, olb.momenta.BulkTuple, olb.equilibria.SecondOrder, olb.collision.MRT])}
 
 };
 

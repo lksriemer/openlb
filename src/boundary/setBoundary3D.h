@@ -67,7 +67,7 @@ void addPoints2CommBC(SuperLattice<T, DESCRIPTOR>& sLattice, FunctorPtr<SuperInd
     return;
   }
 
-  auto& communicator = sLattice.getCommunicator(PostStream());
+  auto& communicator = sLattice.getCommunicator(stage::PostStream());
   communicator.template requestField<descriptors::POPULATION>();
 
   SuperGeometry<T,3>& superGeometry = indicator->getSuperGeometry();
@@ -311,6 +311,24 @@ RESULT promiseForNormal(Vector<int,3> n)
   }
   else if (n == Vector<int,3> {-1, -1, -1}) {
     return meta::id<TYPE<T,DESCRIPTOR,-1,-1,-1>>();
+  }
+  else if (n == Vector<int,3> {-1, 0, 0}) {
+    return meta::id<TYPE<T,DESCRIPTOR,-1,0,0>>();
+  }
+  else if (n == Vector<int,3> {1, 0, 0}) {
+    return meta::id<TYPE<T,DESCRIPTOR,1,0,0>>();
+  }
+  else if (n == Vector<int,3> {0, -1, 0}) {
+    return meta::id<TYPE<T,DESCRIPTOR,0,-1,0>>();
+  }
+  else if (n == Vector<int,3> {0, 1, 0}) {
+    return meta::id<TYPE<T,DESCRIPTOR,0,1,0>>();
+  }
+  else if (n == Vector<int,3> {0, 0, -1}) {
+    return meta::id<TYPE<T,DESCRIPTOR,0,0,-1>>();
+  }
+  else if (n == Vector<int,3> {0, 0, 1}) {
+    return meta::id<TYPE<T,DESCRIPTOR,0,0,1>>();
   }
   else {
     throw std::domain_error("Invalid normal");

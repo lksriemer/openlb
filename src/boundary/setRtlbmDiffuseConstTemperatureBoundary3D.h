@@ -60,7 +60,7 @@ void setRtlbmDiffuseConstTemperatureBoundary(SuperLattice<T, DESCRIPTOR>& sLatti
 template<typename T, typename DESCRIPTOR>
 void setRtlbmDiffuseConstTemperatureBoundary(BlockLattice<T,DESCRIPTOR>& _block, BlockIndicatorF3D<T>& indicator,T omega,
                                              bool includeOuterCells=false);
-    
+
 }//namespace olb
 
 #endif

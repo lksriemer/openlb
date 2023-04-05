@@ -105,7 +105,7 @@ public:
 
   void print() const override;
 
-  void write(std::string const& fileName = "AdeUnitConverter") const;
+  void write(std::string const& fileName = "AdeUnitConverter") const override;
 
 protected:
   // lattice units, discretization parameters

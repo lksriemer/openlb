@@ -43,20 +43,20 @@
 #include "data.h"
 #include "fieldArrayD.h"
 
+#include "platform/cpu/sisd.h"
+
+#ifdef PLATFORM_CPU_SIMD
+#include "platform/cpu/simd.h"
+#endif
+
+#ifdef PLATFORM_GPU_CUDA
+#include "platform/gpu/cuda.h"
+#endif
+
 #include "blockDynamicsMap.h"
 #include "blockPostProcessorMap.h"
 
 #include "communication/communicatable.h"
-
-#include "platform/cpu/sisd/operator.h"
-
-#ifdef PLATFORM_CPU_SIMD
-#include "platform/cpu/simd/operator.h"
-#endif
-
-#ifdef PLATFORM_GPU_CUDA
-#include "platform/gpu/cuda/operator.h"
-#endif
 
 #include <memory>
 #include <vector>
@@ -87,15 +87,8 @@ class BlockLattice : public BlockStructure<DESCRIPTOR>
 protected:
   const Platform _platform;
 
-  /// List of all coupling post processors
-  std::vector<std::unique_ptr<PostProcessor<T,DESCRIPTOR>>> _latticeCouplings;
-
   bool _statisticsEnabled;
-#ifdef PARALLEL_MODE_OMP
-  LatticeStatistics<T> **statistics;
-#else
-  LatticeStatistics<T> *statistics;
-#endif
+  LatticeStatistics<T>* _statistics;
 
 public:
   BlockLattice(Vector<int,DESCRIPTOR::d> size, int padding, Platform platform);
@@ -124,6 +117,17 @@ public:
     return _platform;
   }
 
+  /// Return whether FIELD_TYPE is available / has been allocated
+  template<typename FIELD_TYPE>
+  bool hasData()
+  {
+    return callUsingConcretePlatform<ConcretizableBlockLattice<T,DESCRIPTOR>>(
+      _platform,
+      this,
+      [&](const auto* lattice) -> bool {
+        return lattice->template hasData<FIELD_TYPE>();
+      });
+  }
   /// Return abstract interface for concrete FIELD_TYPE data
   template<typename FIELD_TYPE>
   const auto& getData(FIELD_TYPE field = FIELD_TYPE{}) const
@@ -218,7 +222,7 @@ public:
   virtual Dynamics<T,DESCRIPTOR>* getDynamics(DynamicsPromise<T,DESCRIPTOR>&&) = 0;
   /// Return pointer to dynamics at iCell
   virtual Dynamics<T,DESCRIPTOR>* getDynamics(CellID iCell) = 0;
-  /// Return pointer to DYNAMICS
+  /// Return pointer to DYNAMICS (legacy)
   template<typename DYNAMICS>
   Dynamics<T,DESCRIPTOR>* getDynamics() {
     return getDynamics(DynamicsPromise(meta::id<DYNAMICS>{}));
@@ -263,51 +267,69 @@ public:
    * \endcode
    **/
   template <typename FIELD>
-  void setParameter(FieldD<T,DESCRIPTOR,FIELD>&& value) {
+  void setParameter(FieldD<T,DESCRIPTOR,FIELD> value) {
     callUsingConcretePlatform<ConcretizableBlockLattice<T,DESCRIPTOR>>(
       _platform,
       this,
       [&](auto* lattice) {
-        lattice->template setParameter<FIELD>(std::forward<decltype(value)>(value));
+        lattice->template setParameter<FIELD>(value);
       });
   }
 
+  template <typename PARAMETER, Platform PLATFORM, typename FIELD>
+  void setParameter(FieldArrayD<T,DESCRIPTOR,PLATFORM,FIELD>& fieldArray) {
+    callUsingConcretePlatform<ConcretizableBlockLattice<T,DESCRIPTOR>>(
+      _platform,
+      this,
+      [&](auto* lattice) {
+        lattice->template setParameter<PARAMETER>(fieldArray);
+      });
+  }
+
+  /// Returns true if stage contains post processor
+  virtual bool hasPostProcessor(std::type_index stage,
+                                PostProcessorPromise<T,DESCRIPTOR>&& promise) = 0;
+  /// Schedule post processor for application to latticeR in stage
   virtual void addPostProcessor(std::type_index stage,
                                 LatticeR<DESCRIPTOR::d> latticeR,
                                 PostProcessorPromise<T,DESCRIPTOR>&& promise) = 0;
-
+  /// Schedule post processor for application to entire block in stage
   virtual void addPostProcessor(std::type_index stage,
                                 PostProcessorPromise<T,DESCRIPTOR>&& promise) = 0;
+  /// Schedule post processor for application to indicated cells in stage
+  virtual void addPostProcessor(std::type_index stage,
+                                BlockIndicatorF<T,DESCRIPTOR::d>& indicator,
+                                PostProcessorPromise<T,DESCRIPTOR>&& promise) = 0;
 
+  /// Schedule legacy post processor for application in stage
   virtual void addPostProcessor(std::type_index stage, PostProcessor<T,DESCRIPTOR>* postProcessor) = 0;
-  /// Add a post processor to stage
+  /// Schedule legacy post processor in stage
   virtual void addPostProcessor(std::type_index stage, const PostProcessorGenerator<T,DESCRIPTOR>& ppGen) = 0;
-  /// Add a post processor on indicated cells to stage
+  /// Schedule legacy post processor for application to indicated cells in stage
   virtual void addPostProcessor(std::type_index stage,
                                 BlockIndicatorF<T,DESCRIPTOR::d>& indicator,
                                 const PostProcessorGenerator<T,DESCRIPTOR>& ppGen) = 0;
-  /// Add a post processor on indicated cells to stage
-  virtual void addPostProcessor(std::type_index stage,
-                                BlockIndicatorF<T,DESCRIPTOR::d>& indicator,
-                                PostProcessorPromise<T,DESCRIPTOR>&& promise) = 0;
 
-  template <typename STAGE=PostStream>
+  /// Schedule legacy post processor for application in STAGE
+  template <typename STAGE=stage::PostStream>
   void addPostProcessor(PostProcessor<T,DESCRIPTOR>* postProcessor) {
     addPostProcessor(typeid(STAGE), postProcessor);
   }
-  template <typename STAGE=PostStream>
+  /// Schedule legacy post processor for application in STAGE
+  template <typename STAGE=stage::PostStream>
   void addPostProcessor(const PostProcessorGenerator<T,DESCRIPTOR>& ppGen) {
     addPostProcessor(typeid(STAGE), ppGen);
   }
-  template <typename STAGE=PostStream>
+  /// Schedule legacy post processor for application to indicated cells in STAGE
+  template <typename STAGE=stage::PostStream>
   void addPostProcessor(BlockIndicatorF<T,DESCRIPTOR::d>& indicator,
                         const PostProcessorGenerator<T,DESCRIPTOR>& ppGen) {
     addPostProcessor(typeid(STAGE), indicator, ppGen);
   }
 
   /// Execute post processors of stage
-  virtual void postProcess(std::type_index stage = typeid(PostStream)) = 0;
-
+  virtual void postProcess(std::type_index stage = typeid(stage::PostStream)) = 0;
+  /// Execute post processors of STAGE
   template <typename STAGE>
   void postProcess() {
     postProcess(typeid(STAGE));
@@ -389,6 +411,8 @@ public:
    **/
   void iniEquilibrium(BlockIndicatorF<T,DESCRIPTOR::d>& indicator,
                       AnalyticalF<DESCRIPTOR::d,T,T>& rho, AnalyticalF<DESCRIPTOR::d,T,T>& u);
+  void iniEquilibrium(BlockIndicatorF<T,DESCRIPTOR::d>& indicator,
+                      AnalyticalF<DESCRIPTOR::d,T,T>& rho, BlockF<T,DESCRIPTOR::d>& u);
 
   /// Initialize by non- and equilibrium on a domain described by an indicator
   /**
@@ -401,13 +425,13 @@ public:
   /// Subtract the given offset from all densities
   void stripeOffDensityOffset(T offset);
 
-  /// Add a non-local post-processing step
+  /// Add a non-local post-processing step (legacy)
   void addLatticeCoupling(LatticeCouplingGenerator<T,DESCRIPTOR> const& lcGen,
                           std::vector<BlockStructureD<DESCRIPTOR::d>*> partners);
   void addLatticeCoupling(BlockIndicatorF<T,DESCRIPTOR::d>& indicator,
                           LatticeCouplingGenerator<T,DESCRIPTOR> const& lcGen,
                           std::vector<BlockStructureD<DESCRIPTOR::d>*> partners);
-  /// Execute couplings steps
+  /// Execute couplings steps (legacy)
   void executeCoupling();
 
   /// Return a handle to the LatticeStatistics object
@@ -458,6 +482,8 @@ public:
     _data.setProcessingContext(context);
   }
 
+  template<typename FIELD_TYPE>
+  bool hasData() const;
   template<typename FIELD_TYPE>
   const auto& getData() const;
   template<typename FIELD_TYPE>
@@ -524,15 +550,40 @@ public:
   }
 
   template <typename FIELD>
-  void setParameter(FieldD<T,DESCRIPTOR,FIELD>&& value)
+  void setParameter(FieldD<T,DESCRIPTOR,FIELD> value)
   {
-    _data.template forEachCastable<AbstractDynamicsParameters<T,DESCRIPTOR>>([&](auto* parameters) {
+    _data.template forEachCastable<AbstractedConcreteParameters<T,DESCRIPTOR>>([&](auto* parameters) {
       auto& params = parameters->asAbstract();
       if (params.template provides<FIELD>()) {
         params.template set<FIELD>(value);
         parameters->setProcessingContext(ProcessingContext::Simulation);
       }
     });
+  }
+
+  template <typename PARAMETER, Platform _PLATFORM, typename FIELD>
+  void setParameter(FieldArrayD<T,DESCRIPTOR,_PLATFORM,FIELD>& fieldArray)
+  {
+    if constexpr (PLATFORM == Platform::GPU_CUDA) {
+      static_assert(PLATFORM == _PLATFORM, "FieldArrayD must be available on PLATFORM");
+    }
+    FieldD<T,DESCRIPTOR,PARAMETER> fieldArrayPointers;
+    for (unsigned iD=0; iD < fieldArray.d; ++iD) {
+      if constexpr (PLATFORM == Platform::GPU_CUDA) {
+        fieldArrayPointers[iD] = fieldArray[iD].deviceData();
+      } else {
+        fieldArrayPointers[iD] = fieldArray[iD].data();
+      }
+    }
+    setParameter<PARAMETER>(std::move(fieldArrayPointers));
+  }
+
+  bool hasPostProcessor(std::type_index stage,
+                        PostProcessorPromise<T,DESCRIPTOR>&& promise) override
+  {
+    auto [postProcessorsOfPriority, _] = _postProcessors[stage].try_emplace(promise.priority(), this);
+    return std::get<1>(*postProcessorsOfPriority).contains(
+      std::forward<decltype(promise)>(promise));
   }
 
   void addPostProcessor(std::type_index stage,

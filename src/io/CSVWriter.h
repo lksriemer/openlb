@@ -67,7 +67,7 @@ private:
   char _separator;
   std::vector<std::string> _columnTags;
 
-  static constexpr int _rank {0};
+  static constexpr int _rank {0};  // only process _rank will write output
 };
 
 

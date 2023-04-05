@@ -26,6 +26,8 @@
 
 namespace olb {
 
+namespace stage {
+
 /// Communication prior to collision
 struct PreCollide      { };
 /// Communication after collision
@@ -40,6 +42,14 @@ struct PreCoupling     { };
 struct PostCoupling    { };
 /// On-demand communication at SuperLattice::communicate
 struct Full            { };
+
+/// Coupling post processors
+struct Coupling { };
+
+/// Collision stage
+struct Collide { };
+
+}
 
 }
 

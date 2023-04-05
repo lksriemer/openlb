@@ -26,8 +26,6 @@
 
 #include "core/postProcessing.h"
 
-#include <thrust/reduce.h>
-
 namespace olb {
 
 
@@ -41,39 +39,7 @@ void setup(ConcreteBlockLattice<T,DESCRIPTOR,Platform::GPU_CUDA>& blockLattice)
   blockLattice.template getField<descriptors::STATISTIC>();
 }
 
-void apply(ConcreteBlockLattice<T,DESCRIPTOR,Platform::GPU_CUDA>& blockLattice)
-{
-  if (!blockLattice.statisticsEnabled()) {
-    return;
-  }
-
-  /// Todo: Reimplement these four separate reductions as single kernel
-  auto& statisticGenerated = blockLattice.template getField<descriptors::STATISTIC_GENERATED>();
-  auto& statistic = blockLattice.template getField<descriptors::STATISTIC>();
-  int nCells = thrust::reduce(thrust::device,
-                              statisticGenerated[0].deviceData(),
-                              statisticGenerated[0].deviceData() + blockLattice.getNcells(),
-                              T{0},
-                              thrust::plus<T>());
-  T rhoSum = thrust::reduce(thrust::device,
-                            statistic[0].deviceData(),
-                            statistic[0].deviceData() + blockLattice.getNcells(),
-                            T{0},
-                            thrust::plus<T>());
-  T uSqrSum = thrust::reduce(thrust::device,
-                             statistic[1].deviceData(),
-                             statistic[1].deviceData() + blockLattice.getNcells(),
-                             T{0},
-                             thrust::plus<T>());
-  T maxU = thrust::reduce(thrust::device,
-                          statistic[1].deviceData(),
-                          statistic[1].deviceData() + blockLattice.getNcells(),
-                          std::numeric_limits<T>::min(),
-                          thrust::maximum<T>());
-  T avgRho = rhoSum / nCells;
-  T avgEnergy = 0.5 * uSqrSum / nCells;
-  blockLattice.getStatistics().reset(avgRho, avgEnergy, util::sqrt(maxU), nCells);
-}
+void apply(ConcreteBlockLattice<T,DESCRIPTOR,Platform::GPU_CUDA>& blockLattice);
 
 };
 

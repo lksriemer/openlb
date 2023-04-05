@@ -40,17 +40,9 @@ SmoothIndicatorF3D<T, S, false>::SmoothIndicatorF3D()
 { }
 
 template <typename T, typename S>
-void SmoothIndicatorF3D<T,S,false>::init(Vector<S,3> theta)
+void SmoothIndicatorF3D<T,S,false>::init()
 {
-  this->_rotMat[0] = util::cos(theta[1])*util::cos(theta[2]);
-  this->_rotMat[1] = util::sin(theta[0])*util::sin(theta[1])*util::cos(theta[2]) - util::cos(theta[0])*util::sin(theta[2]);
-  this->_rotMat[2] = util::cos(theta[0])*util::sin(theta[1])*util::cos(theta[2]) + util::sin(theta[0])*util::sin(theta[2]);
-  this->_rotMat[3] = util::cos(theta[1])*util::sin(theta[2]);
-  this->_rotMat[4] = util::sin(theta[0])*util::sin(theta[1])*util::sin(theta[2]) + util::cos(theta[0])*util::cos(theta[2]);
-  this->_rotMat[5] = util::cos(theta[0])*util::sin(theta[1])*util::sin(theta[2]) - util::sin(theta[0])*util::cos(theta[2]);
-  this->_rotMat[6] = -util::sin(theta[1]);
-  this->_rotMat[7] = util::sin(theta[0])*util::cos(theta[1]);
-  this->_rotMat[8] = util::cos(theta[0])*util::cos(theta[1]);
+  _rotMat = util::calculateInverseRotationMatrix<T,3>( this->_theta );
 }
 
 template <typename T, typename S>
@@ -110,26 +102,8 @@ void SmoothIndicatorF3D<T,S,false>::setPos(Vector<S,3> pos)
 template <typename T, typename S>
 void SmoothIndicatorF3D<T,S,false>::setTheta(Vector<S,3> theta)
 {
-  _theta[0] = theta[0];
-  _theta[1] = theta[1];
-  _theta[2] = theta[2];
-
-  T const cos0 = util::cos(theta[0]);
-  T const cos1 = util::cos(theta[1]);
-  T const cos2 = util::cos(theta[2]);
-  T const sin0 = util::sin(theta[0]);
-  T const sin1 = util::sin(theta[1]);
-  T const sin2 = util::sin(theta[2]);
-
-  this->_rotMat[0] = cos1 * cos2;
-  this->_rotMat[1] = sin0*sin1*cos2 - cos0*sin2;
-  this->_rotMat[2] = cos0*sin1*cos2 + sin0*sin2;
-  this->_rotMat[3] = cos1*sin2;
-  this->_rotMat[4] = sin0*sin1*sin2 + cos0*cos2;
-  this->_rotMat[5] = cos0*sin1*sin2 - sin0*cos2;
-  this->_rotMat[6] = -sin1;
-  this->_rotMat[7] = sin0*cos1;
-  this->_rotMat[8] = cos0*cos1;
+  _theta = theta;
+  init();
 }
 
 template <typename T, typename S>
@@ -143,7 +117,7 @@ S SmoothIndicatorF3D<T, S, false>::getVolume( )
 {
   // TODO: Fallback
   assert(false);
-  return std::numeric_limits<double>::quiet_NaN();
+  return S(std::numeric_limits<BaseType<S>>::quiet_NaN());
 }
 
 template <typename T, typename S>
@@ -151,7 +125,7 @@ Vector<S,4> SmoothIndicatorF3D<T, S, false>::calcMofiAndMass( S density )
 {
   // TODO: Fallback
   assert(false);
-  return std::numeric_limits<double>::quiet_NaN();
+  return Vector<S,4>(std::numeric_limits<BaseType<S>>::quiet_NaN());
 }
 
 template <typename T, typename S>
@@ -159,14 +133,14 @@ Vector<S,3> SmoothIndicatorF3D<T, S, false>::calcCenterOfMass( )
 {
   // TODO: Fallback
   assert(false);
-  return std::numeric_limits<double>::quiet_NaN();
+  return Vector<S,3>(std::numeric_limits<BaseType<S>>::quiet_NaN());
 }
 
 template <typename T, typename S>
 bool SmoothIndicatorF3D<T, S, false>::operator()( T output[], const S input[] )
 {
   T const signedDist = this->signedDistance(input);
-  return sdf::evalPorosity(output, signedDist, this->getEpsilon());
+  return sdf::evalSolidVolumeFraction(output, signedDist, this->getEpsilon());
 }
 
 template <typename T, typename S>
@@ -278,10 +252,10 @@ bool SmoothIndicatorF3D<T, S, true>::operator()( T output[], const S input[] )
 {
 #ifdef OLB_DEBUG
   OstreamManager clout(std::cout, "SmoothIndicator3D");
-  clout << "WARNING: SmoothIndicatorF3D::operator() a particle (= true) SmoothIndicator does not consider the current position of the particle. Please use the evalPorosity method for this." << std::endl;
+  clout << "WARNING: SmoothIndicatorF3D::operator() a particle (= true) SmoothIndicator does not consider the current position of the particle. Please use the evalSolidVolumeFraction method for this." << std::endl;
 #endif
   T const signedDist = this->signedDistance(input);
-  return sdf::evalPorosity(output, signedDist, this->getEpsilon());
+  return sdf::evalSolidVolumeFraction(output, signedDist, this->getEpsilon());
 }
 
 template <typename T, typename S>
@@ -399,7 +373,7 @@ Vector<S,4> SmoothIndicatorF3D<T, S, true>::calcMofiAndMass( S density )
 {
   // TODO: Fallback
   assert(false);
-  return std::numeric_limits<double>::quiet_NaN();
+  return S(std::numeric_limits<BaseType<S>>::quiet_NaN());
 }
 
 template <typename T, typename S>
@@ -407,7 +381,7 @@ Vector<S,3> SmoothIndicatorF3D<T, S, true>::calcCenterOfMass( )
 {
   // TODO: Fallback
   assert(false);
-  return std::numeric_limits<double>::quiet_NaN();
+  return S(std::numeric_limits<BaseType<S>>::quiet_NaN());
 }
 
 } // namespace olb

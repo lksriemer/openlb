@@ -24,6 +24,7 @@
 #ifndef BLOCK_COMMUNICATION_NEIGHBORHOOD_H
 #define BLOCK_COMMUNICATION_NEIGHBORHOOD_H
 
+#include "core/platform/column.h"
 #include "core/blockStructure.h"
 #include "communication/mpiRequest.h"
 #include "communication/loadBalancer.h"
@@ -53,7 +54,7 @@ private:
   const int _padding;
 
   std::vector<std::type_index> _fieldsRequested;
-  std::unique_ptr<bool[]>      _fieldsAvailable;
+  cpu::sisd::Column<bool>      _fieldsAvailable;
   std::map<int, std::vector<std::type_index>> _fieldsCommonWith;
 
   std::map<int, std::vector<CellID>> _cellsInboundFrom;
@@ -82,15 +83,18 @@ public:
   void requestField() {
     if (std::find(_fieldsRequested.begin(), _fieldsRequested.end(), typeid(FIELD)) == _fieldsRequested.end()) {
       _fieldsRequested.emplace_back(typeid(FIELD));
-      _fieldsAvailable.reset(static_cast<bool*>(
-        std::realloc(static_cast<void*>(_fieldsAvailable.release()),
-                     _fieldsRequested.size() * sizeof(bool))));
+      _fieldsAvailable.resize(_fieldsRequested.size());
     }
   }
   /// Request individual cell for communication
   void requestCell(LatticeR<D> latticeR);
   /// Request all cells in overlap of size width for communication
   void requestOverlap(int width);
+  /// Request all indicated cells in overlap of width for communication
+  void requestOverlap(int width, BlockIndicatorF<T,D>& indicatorF);
+
+  /// Remove all requested cells
+  void clearRequestedCells();
 
   /// Update local availability of previously requested field
   void setFieldAvailability(std::type_index field, bool available);
@@ -107,25 +111,13 @@ public:
   void send(SuperCommunicationTagCoordinator<T>&);
   void receive(SuperCommunicationTagCoordinator<T>&);
   void wait();
-
-  /// Calls f(iC) for every non-local cuboid ID iC
-  template <typename F>
-  void forRemoteNeighbors(F f) const {
-    for (const auto& [iC, _] : _cellsRequestedFrom) {
-      if (!_loadBalancer.isLocal(iC)) {
-        f(iC);
-      }
-    }
-  }
 #endif
 
-  /// Calls f(iC) for every local cuboid ID iC
+  /// Calls f(iC) for every neighboring cuboid ID iC
   template <typename F>
-  void forLocalNeighbors(F f) const {
+  void forNeighbors(F f) const {
     for (const auto& [iC, _] : _cellsRequestedFrom) {
-      if (_loadBalancer.isLocal(iC)) {
-        f(iC);
-      }
+      f(iC);
     }
   }
 

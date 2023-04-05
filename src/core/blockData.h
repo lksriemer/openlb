@@ -32,10 +32,10 @@
 #include "utilities/aliases.h"
 #include "dynamics/descriptorTag.h"
 #include "communication/communicatable.h"
-
-#include "platform/column.h"
+#include "core/platform/column.h"
 
 namespace olb {
+
 
 template<unsigned D, typename T, typename U>
 class BlockData : public BlockStructureD<D>

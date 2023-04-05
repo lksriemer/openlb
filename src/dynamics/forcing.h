@@ -70,6 +70,49 @@ struct Guo {
   using combined_parameters = typename COLLISION::parameters;
 };
 
+/// Dynamics combination rule implementing the forcing scheme by Guo et al.
+//template <template <typename> typename Sourced = momenta::Sourced>
+struct AdeGuo {
+  static std::string getName() {
+    return "AdeGuoForcing";
+  }
+
+  template <typename DESCRIPTOR, typename MOMENTA>
+  using combined_momenta = typename MOMENTA::template type<DESCRIPTOR>;
+
+  template <typename DESCRIPTOR, typename MOMENTA, typename EQUILIBRIUM>
+  using combined_equilibrium = typename EQUILIBRIUM::template type<DESCRIPTOR,MOMENTA>;
+
+  template <typename DESCRIPTOR, typename MOMENTA, typename EQUILIBRIUM, typename COLLISION>
+  struct combined_collision {
+    using MomentaF   = typename MOMENTA::template type<DESCRIPTOR>;
+    using CollisionO = typename COLLISION::template type<DESCRIPTOR,MOMENTA,EQUILIBRIUM>;
+
+    static_assert(COLLISION::parameters::template contains<descriptors::OMEGA>(),
+                  "COLLISION must be parametrized using relaxation frequency OMEGA");
+
+    template <typename CELL, typename PARAMETERS, typename V=typename CELL::value_t>
+    CellStatistic<V> apply(CELL& cell, PARAMETERS& parameters) any_platform {
+      const auto u = cell.template getField<descriptors::VELOCITY>();
+      const V rho = MomentaF().computeRho(cell);
+      CollisionO().apply(cell, parameters);
+      const V omega = parameters.template get<descriptors::OMEGA>();
+      const auto source = cell.template getField<descriptors::SOURCE>();
+      for (int iPop=0; iPop < DESCRIPTOR::q; ++iPop) {
+      V sourceTerm{};
+      sourceTerm = source;
+      sourceTerm *= descriptors::t<V,DESCRIPTOR>(iPop);
+      sourceTerm *= (V{1} - omega * V{0.5});
+      cell[iPop] += sourceTerm;
+      }
+      return {rho, util::normSqr<V,DESCRIPTOR::d>(u)};
+    };
+  };
+
+  template <typename DESCRIPTOR, typename MOMENTA, typename EQUILIBRIUM, typename COLLISION>
+  using combined_parameters = typename COLLISION::parameters;
+};
+
 /// Dynamics combination rule implementing the forcing scheme by Kupershtokh et al.
 struct Kupershtokh {
   static std::string getName() {
@@ -168,6 +211,59 @@ public:
       MomentaF().computeRhoU(cell, rho, u);
       CollisionO().apply(cell, parameters);
       return {rho, util::normSqr<V,DESCRIPTOR::d>(u)};
+    };
+  };
+
+  template <typename DESCRIPTOR, typename MOMENTA, typename EQUILIBRIUM, typename COLLISION>
+  using combined_parameters = typename COLLISION::parameters;
+};
+
+struct LinearVelocity {
+  static std::string getName() {
+    return "LinearVelocityForcing";
+  }
+
+  template <typename DESCRIPTOR, typename MOMENTA>
+  using combined_momenta = typename MOMENTA::template type<DESCRIPTOR>;
+
+  template <typename DESCRIPTOR, typename MOMENTA, typename EQUILIBRIUM>
+  using combined_equilibrium = typename EQUILIBRIUM::template type<DESCRIPTOR,MOMENTA>;
+
+  template <typename DESCRIPTOR, typename MOMENTA, typename EQUILIBRIUM, typename COLLISION>
+  struct combined_collision {
+    using MomentaF     = typename MOMENTA::template type<DESCRIPTOR>;
+    using CollisionO   = typename COLLISION::template type<DESCRIPTOR,MOMENTA,EQUILIBRIUM>;
+
+    template <typename CELL, typename PARAMETERS, typename V=typename CELL::value_t>
+    CellStatistic<V> apply(CELL& cell, PARAMETERS& parameters) {
+      V rho, u[DESCRIPTOR::d], pi[util::TensorVal<DESCRIPTOR >::n];
+      MomentaF().computeAllMomenta(cell, rho, u, pi);
+      auto force = cell.template getFieldPointer<descriptors::FORCE>();
+      int nDim = DESCRIPTOR::d;
+      V forceSave[nDim];
+      // adds a+Bu to force, where
+      //   d=2: a1=v[0], a2=v[1], B11=v[2], B12=v[3], B21=v[4], B22=v[5]
+      //   d=2: a1=v[0], a2=v[1], a3=v[2], B11=v[3], B12=v[4], B13=v[5], B21=v[6], B22=v[7], B23=v[8], B31=v[9], B32=v[10], B33=v[11]
+      auto v = cell.template getFieldPointer<descriptors::V12>();
+      for (int iDim=0; iDim<nDim; ++iDim) {
+        forceSave[iDim] = force[iDim];
+        force[iDim] += v[iDim];
+        for (int jDim=0; jDim<nDim; ++jDim) {
+          force[iDim] += v[jDim + iDim*nDim + nDim]*u[jDim];
+        }
+      }
+      for (int iVel=0; iVel<nDim; ++iVel) {
+        u[iVel] += force[iVel] / V{2.};
+      }
+
+      auto statistics = CollisionO().apply(cell, parameters);
+      V newOmega = parameters.template get<descriptors::OMEGA>();
+      lbm<DESCRIPTOR>::addExternalForce(cell, rho, u, newOmega, force);
+      // Writing back to froce fector
+      for (int iVel=0; iVel<nDim; ++iVel) {
+        force[iVel] = forceSave[iVel];
+      }
+      return statistics;
     };
   };
 

@@ -36,7 +36,7 @@
 using namespace olb;
 using namespace olb::descriptors;
 
-typedef double T;
+using T = FLOATING_POINT_TYPE;
 
 //#define BGK
 #define SPAID_PHELAN
@@ -177,9 +177,6 @@ void prepareLattice( UnitConverter<T,DESCRIPTOR> const& converter,
 
   const T omega = converter.getLatticeRelaxationFrequency();
 
-  // Material=0 -->do nothing
-  sLattice.defineDynamics<NoDynamics>(superGeometry, 0);
-
   // Material=1 -->bulk dynamics
   #ifdef GUO_ZHAO
   Dynamics<T,DESCRIPTOR>* bulkDynamics = new DYNAMICS<T,DESCRIPTOR>(omega);
@@ -189,7 +186,7 @@ void prepareLattice( UnitConverter<T,DESCRIPTOR> const& converter,
   #endif
 
   if (boundaryType == bounceBack) {
-    sLattice.defineDynamics<BounceBack>(superGeometry, 2);
+    setBounceBackBoundary(sLattice, superGeometry, 2);
   }
   else {
     if (boundaryType == local) {
@@ -259,7 +256,7 @@ void prepareLattice( UnitConverter<T,DESCRIPTOR> const& converter,
   dp = p0/lx;
   mu = converter.getPhysViscosity()*converter.getPhysDensity();
 
-  const T wallOffset = (boundaryType == bounceBack) ? 0.5 * converter.getPhysDeltaX() : 0.;
+  const T wallOffset = (boundaryType == bounceBack) ? 0.5 * converter.getPhysDeltaX() : T(0.);
   PorousPoiseuille2D<T> uSol( Kin, dp, mu, ly/2., wallOffset );
   PhysicalToLatticeVelocityF2D<T> u( &uSol, converter );
 
@@ -290,7 +287,7 @@ void error( SuperGeometry<T,2>& superGeometry,
   int tmp[]= { };
   T result[2]= { };
 
-  const T wallOffset = (boundaryType == bounceBack) ? 0.5 * converter.getPhysDeltaX() : 0.;
+  const T wallOffset = (boundaryType == bounceBack) ? 0.5 * converter.getPhysDeltaX() : T(0.);
   PorousPoiseuille2D<T> uSol( Kin, dp, mu, ly/2., wallOffset );
   SuperLatticePhysVelocity2D<T,DESCRIPTOR> u( sLattice,converter );
   auto indicatorF = superGeometry.getMaterialIndicator(1);
@@ -357,7 +354,7 @@ void getResults( SuperLattice<T,DESCRIPTOR>& sLattice,
   vtmWriter.addFunctor( velocity );
   vtmWriter.addFunctor( pressure );
 
-  const T wallOffset = (boundaryType == bounceBack) ? 0.5 * converter.getPhysDeltaX() : 0.;
+  const T wallOffset = (boundaryType == bounceBack) ? 0.5 * converter.getPhysDeltaX() : T(0.);
   PorousPoiseuille2D<T> uSol( Kin, dp, mu, ly/2., wallOffset );
   SuperLatticeFfromAnalyticalF2D<T,DESCRIPTOR> uSolF( uSol, sLattice);
   vtmWriter.addFunctor( uSolF );
@@ -397,7 +394,7 @@ void getResults( SuperLattice<T,DESCRIPTOR>& sLattice,
       point[0] = lx/2.;
       point[1] = ( T )iY/Ly;
 
-      const T wallOffset = (boundaryType == bounceBack) ? 0.5 * converter.getPhysDeltaX() : 0.;
+      const T wallOffset = (boundaryType == bounceBack) ? 0.5 * converter.getPhysDeltaX() : T(0.);
       PorousPoiseuille2D<T> uSol( Kin, dp, mu, ly/2., wallOffset );
       T analytical[2] = {T(),T()};
       uSol( analytical,point );

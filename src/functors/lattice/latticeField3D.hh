@@ -43,10 +43,10 @@ namespace olb {
 
 template<typename T, typename DESCRIPTOR, typename FIELD>
 SuperLatticeField3D<T,DESCRIPTOR,FIELD>::SuperLatticeField3D(
-  SuperLattice<T, DESCRIPTOR>& sLattice)
+  SuperLattice<T, DESCRIPTOR>& sLattice, std::string name)
   : SuperLatticeF3D<T, DESCRIPTOR>(sLattice, DESCRIPTOR::template size<FIELD>())
 {
-  this->getName() = "externalField";
+  this->getName() = name;
   int maxC = this->_sLattice.getLoadBalancer().size();
   this->_blockF.reserve(maxC);
   for (int iC = 0; iC < maxC; ++iC) {
@@ -57,10 +57,10 @@ SuperLatticeField3D<T,DESCRIPTOR,FIELD>::SuperLatticeField3D(
 
 template<typename T, typename DESCRIPTOR, typename FIELD>
 BlockLatticeField3D<T,DESCRIPTOR,FIELD>::BlockLatticeField3D(
-  BlockLattice<T, DESCRIPTOR>& blockLattice)
+  BlockLattice<T, DESCRIPTOR>& blockLattice, std::string name)
   : BlockLatticeF3D<T, DESCRIPTOR>(blockLattice, DESCRIPTOR::template size<FIELD>())
 {
-  this->getName() = "externalField";
+  this->getName() = name;
 }
 
 template<typename T, typename DESCRIPTOR, typename FIELD>

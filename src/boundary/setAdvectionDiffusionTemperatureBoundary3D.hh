@@ -28,18 +28,20 @@
 
 #include "setAdvectionDiffusionTemperatureBoundary3D.h"
 
+#include "dynamics/neumannBoundarySingleLatticePostProcessor3D.h"
+
 namespace olb {
 
 ///Initialising the setAdvectionDiffusionTemperatureBoundary function on the superLattice domain
 template<typename T, typename DESCRIPTOR, typename MixinDynamics>
-void setAdvectionDiffusionTemperatureBoundary(SuperLattice<T, DESCRIPTOR>& sLattice, T omega, SuperGeometry<T,3>& superGeometry, int material)
+void setAdvectionDiffusionTemperatureBoundary(SuperLattice<T, DESCRIPTOR>& sLattice, T omega, SuperGeometry<T,3>& superGeometry, int material, T dist, bool neumann)
 {
-  setAdvectionDiffusionTemperatureBoundary<T,DESCRIPTOR,MixinDynamics>(sLattice, omega, superGeometry.getMaterialIndicator(material));
+  setAdvectionDiffusionTemperatureBoundary<T,DESCRIPTOR,MixinDynamics>(sLattice, omega, superGeometry.getMaterialIndicator(material), dist, neumann);
 }
 
 ///Initialising the setAdvectionDiffusionTemperatureBoundary function on the superLattice domain
 template<typename T, typename DESCRIPTOR, typename MixinDynamics>
-void setAdvectionDiffusionTemperatureBoundary(SuperLattice<T, DESCRIPTOR>& sLattice, T omega, FunctorPtr<SuperIndicatorF3D<T>>&& indicator)
+void setAdvectionDiffusionTemperatureBoundary(SuperLattice<T, DESCRIPTOR>& sLattice, T omega, FunctorPtr<SuperIndicatorF3D<T>>&& indicator, T dist, bool neumann)
 {
 
   int _overlap = 1;
@@ -51,7 +53,7 @@ void setAdvectionDiffusionTemperatureBoundary(SuperLattice<T, DESCRIPTOR>& sLatt
   }
   for (int iCloc = 0; iCloc < sLattice.getLoadBalancer().size(); iCloc++) {
     setAdvectionDiffusionTemperatureBoundary<T,DESCRIPTOR,MixinDynamics>(sLattice.getBlock(iCloc),
-        indicator->getBlockIndicatorF(iCloc), omega, includeOuterCells);
+        indicator->getBlockIndicatorF(iCloc), omega, includeOuterCells, dist, neumann);
   }
   /// Adds needed Cells to the Communicator _commBC in SuperLattice
   addPoints2CommBC(sLattice, std::forward<decltype(indicator)>(indicator), _overlap);
@@ -61,7 +63,7 @@ void setAdvectionDiffusionTemperatureBoundary(SuperLattice<T, DESCRIPTOR>& sLatt
 /// Set AdvectionDiffusionTemperatureBoundary for any indicated cells inside the block domain
 template<typename T, typename DESCRIPTOR, typename MixinDynamics>
 void setAdvectionDiffusionTemperatureBoundary(BlockLattice<T,DESCRIPTOR>& _block, BlockIndicatorF3D<T>& indicator, T omega,
-    bool includeOuterCells)
+    bool includeOuterCells, T dist, bool neumann)
 {
   using namespace boundaryhelper;
   const auto& blockGeometryStructure = indicator.getBlockGeometry();
@@ -70,9 +72,18 @@ void setAdvectionDiffusionTemperatureBoundary(BlockLattice<T,DESCRIPTOR>& _block
   blockGeometryStructure.forSpatialLocations([&](auto iX, auto iY, auto iZ) {
     if (blockGeometryStructure.getNeighborhoodRadius({iX, iY, iZ}) >= margin
         && indicator(iX, iY, iZ)) {
-      Dynamics<T,DESCRIPTOR>* dynamics = nullptr;
-      PostProcessorGenerator3D<T,DESCRIPTOR>* postProcessor = nullptr;
       discreteNormal = blockGeometryStructure.getStatistics().getType(iX, iY, iZ);
+      Dynamics<T,DESCRIPTOR>* dynamics = nullptr;
+
+      if (neumann){
+               _block.addPostProcessor(
+          typeid(stage::PostStream), {iX,iY,iZ},
+          promisePostProcessorForNormal<T, DESCRIPTOR, NeumannBoundarySingleLatticePostProcessor3D>(
+            Vector <int,3> (discreteNormal.data()+1)
+          )
+        );
+      }
+
       if (discreteNormal[0] == 0) { // flat //set momenta, dynamics and postProcessors for indicated cells
         if (discreteNormal[1] != 0 && discreteNormal[1] == -1) {
           dynamics = _block.template getDynamics<AdvectionDiffusionBoundariesDynamics<T,DESCRIPTOR,MixinDynamics,momenta::EquilibriumBoundaryTuple,0,-1>>();
@@ -104,7 +115,7 @@ void setAdvectionDiffusionTemperatureBoundary(BlockLattice<T,DESCRIPTOR>& _block
         >::construct(Vector<int,3>(discreteNormal.data() + 1)));
       }
       dynamics->getParameters(_block).template set<descriptors::OMEGA>(omega);
-      setBoundary(_block, iX, iY, iZ, dynamics, postProcessor);
+      setBoundary(_block, iX, iY, iZ, dynamics);
     }
   });
 }

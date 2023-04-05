@@ -29,55 +29,6 @@
 
 namespace olb {
 
-//Legacy danamics support for particle
-template<typename T, typename PARTICLETYPE, typename DYNAMICS=Dynamics<T,PARTICLETYPE>>
-class OldBlockDynamicsMap {
-private:
-  std::size_t _count;
-  std::vector<DYNAMICS*> _dynamics_of_cell;
-
-public:
-  OldBlockDynamicsMap(std::size_t count, DYNAMICS* default_dynamics = nullptr):
-    _count(count),
-    _dynamics_of_cell(count, default_dynamics)
-  { }
-
-  OldBlockDynamicsMap(DYNAMICS* default_dynamics = nullptr):
-    OldBlockDynamicsMap(1, default_dynamics)
-  { }
-
-  const DYNAMICS& get(std::size_t iCell) const
-  {
-    return *_dynamics_of_cell[iCell];
-  }
-
-  DYNAMICS& get(std::size_t iCell)
-  {
-    return *_dynamics_of_cell[iCell];
-  }
-
-  void set(std::size_t iCell, DYNAMICS* dynamics)
-  {
-    _dynamics_of_cell[iCell] = dynamics;
-  }
-
-  std::size_t count()
-  {
-    return _count;
-  }
-
-  void resize(std::size_t newCount) {
-    _count=newCount;
-    _dynamics_of_cell.resize(newCount);
-  }
-
-  void swap(std::size_t i, std::size_t j)
-  {
-    std::swap(_dynamics_of_cell[i], _dynamics_of_cell[j]);
-  }
-
-};
-
 namespace particles{
 
 //Forward declaration
@@ -90,19 +41,22 @@ template<typename T, typename PARTICLETYPE> struct ParticleDynamics;
 template <typename T, typename PARTICLETYPE>
 class Particle {
 private:
-  DynamicFieldGroupsD<T, typename PARTICLETYPE::fieldList>& _dynamicFieldGroupsD;
-  OldBlockDynamicsMap<T,PARTICLETYPE,dynamics::ParticleDynamics<T,PARTICLETYPE>>& _dynamicsMap;
+  using DATA = DynamicFieldGroupsD<T, typename PARTICLETYPE::fields_t>;
+  DATA& _dynamicFieldGroupsD;
+  std::vector<std::shared_ptr<dynamics::ParticleDynamics<T,PARTICLETYPE>>>& _dynamicsVector;
   std::size_t _iParticle;
 public:
-  Particle( DynamicFieldGroupsD<T, typename PARTICLETYPE::fieldList>& dynamicFieldGroupsD,
-            OldBlockDynamicsMap<T,PARTICLETYPE,dynamics::ParticleDynamics<T,PARTICLETYPE>>& _dynamicsMap,
+  Particle( DATA& dynamicFieldGroupsD,
+            std::vector<std::shared_ptr<dynamics::ParticleDynamics<T,PARTICLETYPE>>>& dynamicsVector,
             std::size_t iParticle );
-  
+
   /// Initialize
   void init();
 
-  ///Print 
+  ///Print
+  template<bool multiOutput=PARTICLETYPE::template providesNested<descriptors::PARALLELIZATION>()>
   void print(std::size_t iParticle);
+  template<bool multiOutput=PARTICLETYPE::template providesNested<descriptors::PARALLELIZATION>()>
   void print();
 
   /// Return memory ID of the currently represented particle
@@ -114,16 +68,21 @@ public:
   /// Jump to next particle in linearization sequence
   void advanceId();
 
-  /// Define dynamics for specific particle
-  void defineDynamics(dynamics::ParticleDynamics<T,PARTICLETYPE>* dynamics);
+  /// Add dynamics
+  void addDynamics(std::shared_ptr<dynamics::ParticleDynamics<T,PARTICLETYPE>>& dynamicsSPtr );
 
-  /// Get a pointer to the dynamics
-  dynamics::ParticleDynamics<T,PARTICLETYPE>* getDynamics();
+  /// Define dynamics (factory method)
+  template <typename DYNAMICS, typename ...Args>
+  void defineDynamics(Args&& ...args);
 
-  /// Apply processing to the particle according to local dynamics
-  void process(T timeStepSize);
+  /// Get a pointer to specific dynamics
+  template<bool boundsCheck=false>
+  dynamics::ParticleDynamics<T,PARTICLETYPE>* getDynamics(unsigned iDyn=0);
 
-  ////////// Get and Set functions
+  /// Apply processing to the particle according to dynamics at iDyn
+  void process(T timeStepSize, unsigned short iDyn=0);
+
+  ////////// Get and Set functions //TODO: implement recursively?
 
   /// Return copy of descriptor-declared FIELD as a vector
   template <typename GROUP, typename FIELD>
@@ -165,6 +124,29 @@ public:
       setField( typename PARTICLETYPE::template derivedField<GROUP>
                 ::template derivedField<FIELD>
                 ::template value_type<T> value );
+
+
+  /// Define Communicatable
+  using Communicatable = typename GroupedDataCommunicatableHelper<DATA,PARTICLETYPE>::type;
+  /// Get communicatable necessary for serialization
+  Communicatable getCommunicatable(){
+    return Communicatable(_dynamicFieldGroupsD);
+  }
+  /// Get serialized size
+  std::size_t getSerialSize() const {
+    const std::vector<unsigned int> indices{static_cast<unsigned int>(_iParticle)};
+    return Communicatable(_dynamicFieldGroupsD).size(indices);
+  }
+  /// Serialize data
+  std::size_t serialize(std::uint8_t* buffer) const {
+    const std::vector<unsigned int> indices{static_cast<unsigned int>(_iParticle)};
+    return Communicatable(_dynamicFieldGroupsD).serialize(indices, buffer);
+  }
+  /// Deserialize data
+  std::size_t deserialize(const std::uint8_t* buffer){
+    const std::vector<unsigned int> indices{static_cast<unsigned int>(_iParticle)};
+    return Communicatable(_dynamicFieldGroupsD).deserialize(indices, buffer);
+  }
 
 };
 

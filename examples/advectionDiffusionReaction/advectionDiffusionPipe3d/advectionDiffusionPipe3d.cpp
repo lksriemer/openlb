@@ -51,13 +51,32 @@ using namespace olb;
 using namespace olb::descriptors;
 using namespace olb::graphics;
 
-typedef double T;
-typedef D3Q19<AD_FIELD,EUL2LAGR> DESCRIPTOR_NS;
-typedef D3Q7<VELOCITY> DESCRIPTOR_AD;
-typedef fd::tag::UPWIND  SCHEME_ADV_UPWIND1;
-typedef fd::tag::UPWIND_2_ORDER  SCHEME_ADV_UPWIND2;
-typedef fd::tag::CENTRAL  SCHEME_ADV_CENTRAL;
-typedef fd::tag::CENTRAL SCHEME_DIFF;
+using T = FLOATING_POINT_TYPE;
+typedef D3Q19<AD_FIELD,EUL2LAGR,NORMAL_X,NORMAL_Y,NORMAL_Z> DESCRIPTOR_NS;
+typedef D3Q7<VELOCITY>                                      DESCRIPTOR_AD;
+
+using FdParams = meta::list<
+  fd::fdParams::Timestep,
+  fd::fdParams::AntiDiffusivityTuning,
+  fd::fdParams::Diffusivity
+>;
+
+using MODEL_BULK_1       = FdAdvectionDiffusionModel<T, fd::AdvectionScheme<3,T,fd::tag::CENTRAL>,
+                                                        fd::DiffusionScheme<3,T,fd::tag::CENTRAL>>;
+using MODEL_NEARBORDER_1 = FdAdvectionDiffusionModel<T, fd::AdvectionScheme<3,T,fd::tag::CENTRAL>,
+                                                        fd::DiffusionScheme<3,T,fd::tag::CENTRAL>>;
+using MODEL_BULK_2       = FdAdvectionDiffusionModel<T, fd::AdvectionScheme<3,T,fd::tag::UPWIND>,
+                                                        fd::DiffusionScheme<3,T,fd::tag::CENTRAL>>;
+using MODEL_NEARBORDER_2 = FdAdvectionDiffusionModel<T, fd::AdvectionScheme<3,T,fd::tag::UPWIND>,
+                                                        fd::DiffusionScheme<3,T,fd::tag::CENTRAL>>;
+using MODEL_BULK_3       = FdAdvectionDiffusionModel<T, fd::AdvectionScheme<3,T,fd::tag::UPWIND>,
+                                                        fd::DiffusionScheme<3,T,fd::tag::CENTRAL_WITH_ANTIDIFFUSIVITY>>;
+using MODEL_NEARBORDER_3 = FdAdvectionDiffusionModel<T, fd::AdvectionScheme<3,T,fd::tag::UPWIND>,
+                                                        fd::DiffusionScheme<3,T,fd::tag::CENTRAL_WITH_ANTIDIFFUSIVITY>>;
+using MODEL_BULK_4       = FdAdvectionDiffusionModel<T, fd::AdvectionScheme<3,T,fd::tag::UPWIND_2_ORDER>,
+                                                        fd::DiffusionScheme<3,T,fd::tag::CENTRAL>>;
+using MODEL_NEARBORDER_4 = FdAdvectionDiffusionModel<T, fd::AdvectionScheme<3,T,fd::tag::UPWIND>,
+                                                        fd::DiffusionScheme<3,T,fd::tag::CENTRAL>>;
 
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -102,15 +121,16 @@ void prepareGeometry(SuperGeometry<T,3>& superGeometry)
   OstreamManager clout(std::cout,"prepareGeometry");
   if (! noPlots) clout << "Prepare Geometry ..." << std::endl;
 
-  std::vector<T> origin { -(0.5*nx + 1)*deltaX, -(0.5*ny + 1)*deltaX, -(0.5*nz + 1)*deltaX };
-  std::vector<T> extend { deltaX, (ny + 2.)*deltaX, (nz + 2.)*deltaX };
+  std::vector<T> origin { -T(0.5*nx + 1)*deltaX, -T(0.5*ny + 1)*deltaX, -T(0.5*nz + 1)*deltaX };
+  std::vector<T> extend { deltaX, T(ny + 2.)*deltaX, T(nz + 2.)*deltaX };
   IndicatorCuboid3D<T> inlet(extend, origin);
 
   origin[0] = 0.5*nx*deltaX;
   IndicatorCuboid3D<T> outlet(extend, origin);
 
-  IndicatorCuboid3D<T> seed( {deltaX, (ny + 2.)*deltaX, (nz + 2.)*deltaX},
-                             {(-0.25*(fromCentre ? 1. : nx) - 0.5)*deltaX, -(0.5*ny + 1)*deltaX, -(0.5*nz + 1)*deltaX} );
+  IndicatorCuboid3D<T> seed( {deltaX, (T(ny) + T(2.))*deltaX, (T(nz) + T(2.))*deltaX},
+                             {(-T(0.25)*(fromCentre ? T(1.) : T(nx)) - T(0.5))*deltaX,
+                               -(T(0.5)*T(ny) + T(1))*deltaX, -(T(0.5)*T(nz) + T(1))*deltaX} );
 
   superGeometry.rename(0,2);
   superGeometry.rename( 2,1,{1,1,1} );
@@ -124,6 +144,35 @@ void prepareGeometry(SuperGeometry<T,3>& superGeometry)
   superGeometry.print();
 
   if (! noPlots) clout << "Prepare Geometry ... OK" << std::endl;
+}
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// Set up the finite-difference postprocessors
+template <typename MODEL_BULK, typename MODEL_NEARBORDER>
+void addFdPostProcessors( int iScheme, SuperLattice<T, DESCRIPTOR_NS>& sLatticeNS,
+                          SuperGeometry<T,3>& superGeometry )
+{
+  /* MAT NUM | GEOMETRY     | NAVIER-STOKES | FINITE-DIFFERENCE | lATTICE-BOLTZMANN
+   * 1       | Near-Border  | Bulk          | Bulk              | Bulk
+   * 2       | Wall         | Free-slip     | No-penetration    | Bounce-back
+   * 3       | Inlet-Outlet | Bulk          | No-penetration    | Bounce-back
+   * 4       | Seed         | Bulk          | Bulk              | Bulk
+   * 5       | Bulk         | Bulk          | Bulk              | Bulk
+   */
+  setFdPostProcessor3D<T,DESCRIPTOR_NS,MODEL_NEARBORDER,FdParams,descriptors::AD_FIELD>(sLatticeNS, superGeometry, 1);
+  setFdPostProcessor3D<T,DESCRIPTOR_NS,MODEL_NEARBORDER,FdParams,descriptors::AD_FIELD>(sLatticeNS, superGeometry, 3);
+  setFdPostProcessor3D<T,DESCRIPTOR_NS,MODEL_BULK,      FdParams,descriptors::AD_FIELD>(sLatticeNS, superGeometry, 4);
+  setFdPostProcessor3D<T,DESCRIPTOR_NS,MODEL_BULK,      FdParams,descriptors::AD_FIELD>(sLatticeNS, superGeometry, 5);
+
+  if (iScheme == 1) {
+    setFdBoundary3D<T,DESCRIPTOR_NS,MODEL_BULK,fd::AdNeumannZeroBoundaryScheme<3,T,fd::tag::CENTRAL>,FdParams,descriptors::AD_FIELD> (
+      sLatticeNS, superGeometry, 2 );
+  }
+  else {
+    setFdBoundary3D<T,DESCRIPTOR_NS,MODEL_BULK,fd::AdNeumannZeroBoundaryScheme<3,T,fd::tag::UPWIND>,FdParams,descriptors::AD_FIELD> (
+      sLatticeNS, superGeometry, 2 );
+  }
 }
 
 
@@ -145,55 +194,19 @@ void prepareLattice( SuperLattice<T, DESCRIPTOR_NS>& sLatticeNS,
 
   if (! noPlots) clout << "Prepare Lattice ..." << std::endl;
   sLatticeNS.defineDynamics<BGKdynamics>(superGeometry.getMaterialIndicator({1,2,3,4,5}));
-  sLatticeNS.setParameter<descriptors::OMEGA>(0.8);
+  sLatticeNS.setParameter<descriptors::OMEGA>(T(0.8));
 
-  std::shared_ptr<FdModel<T,DESCRIPTOR_NS>> adModelBulk;
-  std::shared_ptr<FdModel<T,DESCRIPTOR_NS>> adModelNearBorder;
-  if (advectionScheme == 1) {
-    adModelBulk = std::make_shared<FdAdvectionDiffusionModel<T,DESCRIPTOR_NS,SCHEME_ADV_CENTRAL,SCHEME_DIFF>> (
-                  diffusivity * converter.getPhysDeltaT() / ( converter.getPhysDeltaX() * converter.getPhysDeltaX() ) );
-    adModelNearBorder = std::make_shared<FdAdvectionDiffusionModel<T,DESCRIPTOR_NS,SCHEME_ADV_CENTRAL,SCHEME_DIFF>> (
-                        diffusivity * converter.getPhysDeltaT() / ( converter.getPhysDeltaX() * converter.getPhysDeltaX() ) );
-  }
-  else if (advectionScheme == 2) {
-    adModelBulk       = std::make_shared<FdAdvectionDiffusionModel<T,DESCRIPTOR_NS,SCHEME_ADV_UPWIND1,SCHEME_DIFF>> (
-                        diffusivity * converter.getPhysDeltaT() / ( converter.getPhysDeltaX() * converter.getPhysDeltaX() ) );
-    adModelNearBorder = std::make_shared<FdAdvectionDiffusionModel<T,DESCRIPTOR_NS,SCHEME_ADV_UPWIND1,SCHEME_DIFF>> (
-                        diffusivity * converter.getPhysDeltaT() / ( converter.getPhysDeltaX() * converter.getPhysDeltaX() ) );
-  }
-  else if (advectionScheme == 3) {
-    adModelBulk       = std::make_shared<FdAdvectionDiffusionModelWithAntiDiffusion<T,DESCRIPTOR_NS,SCHEME_ADV_UPWIND1,SCHEME_DIFF>> (
-                        diffusivity * converter.getPhysDeltaT() / ( converter.getPhysDeltaX() * converter.getPhysDeltaX() ), antiDiffusionTuning );
-    adModelNearBorder = std::make_shared<FdAdvectionDiffusionModelWithAntiDiffusion<T,DESCRIPTOR_NS,SCHEME_ADV_UPWIND1,SCHEME_DIFF>> (
-                        diffusivity * converter.getPhysDeltaT() / ( converter.getPhysDeltaX() * converter.getPhysDeltaX() ), antiDiffusionTuning );
-  }
-  else if (advectionScheme == 4) {
-    adModelBulk       = std::make_shared<FdAdvectionDiffusionModel<T,DESCRIPTOR_NS,SCHEME_ADV_UPWIND2,SCHEME_DIFF>> (
-                        diffusivity * converter.getPhysDeltaT() / ( converter.getPhysDeltaX() * converter.getPhysDeltaX() ) );
-    adModelNearBorder = std::make_shared<FdAdvectionDiffusionModel<T,DESCRIPTOR_NS,SCHEME_ADV_UPWIND1,SCHEME_DIFF>> (
-                        diffusivity * converter.getPhysDeltaT() / ( converter.getPhysDeltaX() * converter.getPhysDeltaX() ) );
-  }
-  else {
-    throw std::out_of_range("The order of the finite-difference scheme must only be 1 or 2.");
+  switch (advectionScheme) {
+    case 1: addFdPostProcessors<MODEL_BULK_1,MODEL_NEARBORDER_1>(1, sLatticeNS, superGeometry); break;
+    case 2: addFdPostProcessors<MODEL_BULK_2,MODEL_NEARBORDER_2>(2, sLatticeNS, superGeometry); break;
+    case 3: addFdPostProcessors<MODEL_BULK_3,MODEL_NEARBORDER_3>(3, sLatticeNS, superGeometry); break;
+    case 4: addFdPostProcessors<MODEL_BULK_4,MODEL_NEARBORDER_4>(4, sLatticeNS, superGeometry); break;
+    default: throw std::out_of_range("The order of the finite-difference scheme must only be between 1 and 4.");
   }
 
-  FdPostProcessorGenerator3D<T,DESCRIPTOR_NS,descriptors::AD_FIELD> adPostPbulk(iT, adModelBulk);
-  FdPostProcessorGenerator3D<T,DESCRIPTOR_NS,descriptors::AD_FIELD> adPostPnearBorder(iT, adModelNearBorder);
-  sLatticeNS.addPostProcessor(superGeometry, 1, adPostPnearBorder);
-  sLatticeNS.addPostProcessor(superGeometry, 3, adPostPnearBorder);
-  sLatticeNS.addPostProcessor(superGeometry, 4, adPostPbulk);
-  sLatticeNS.addPostProcessor(superGeometry, 5, adPostPbulk);
-
-  if (advectionScheme == 1) {
-    setFdNeumannZeroBoundary<T,DESCRIPTOR_NS,SCHEME_ADV_CENTRAL,descriptors::AD_FIELD>(sLatticeNS, iT, adModelBulk, superGeometry, 2);
-  }
-  else if (advectionScheme == 2 || advectionScheme == 3 || advectionScheme == 4) {
-    setFdNeumannZeroBoundary<T,DESCRIPTOR_NS,SCHEME_ADV_UPWIND1,descriptors::AD_FIELD>(sLatticeNS, iT, adModelBulk, superGeometry, 2);
-  }
-  else {
-    throw std::out_of_range (
-          "prepareLattice(...): The order of the finite-difference scheme must only be 1, 2 or 3, but instead is" + std::to_string(advectionScheme) );
-  }
+  sLatticeNS.setParameter<fd::fdParams::Timestep>(iT);
+  sLatticeNS.setParameter<fd::fdParams::Diffusivity>(diffusivity * converter.getPhysDeltaT() / ( converter.getPhysDeltaX() * converter.getPhysDeltaX()));
+  sLatticeNS.setParameter<fd::fdParams::AntiDiffusivityTuning>(antiDiffusionTuning);
 
   if (! noPlots) clout << "Prepare Lattice ... OK" << std::endl;
 }
@@ -215,7 +228,7 @@ void prepareCoupling ( SuperLattice<T, DESCRIPTOR_NS>& sLatticeNS,
   OstreamManager clout(std::cout, "prepareLattice");
   clout << "Prepare Coupling ..." << std::endl;
 
-  auto& commFields = sLatticeNS.getCommunicator(PostPostProcess());
+  auto& commFields = sLatticeNS.getCommunicator(stage::PostPostProcess());
   commFields.requestField<AD_FIELD>();
   commFields.requestOverlap(sLatticeNS.getOverlap());
   commFields.exchangeRequests();
@@ -278,8 +291,6 @@ void getResults( SuperLattice<T, DESCRIPTOR_NS>& sLatticeNS,
   SuperLatticeEul2LagrDensity3D<T, DESCRIPTOR_NS>    particleDensity( sLatticeNS );
   SuperLatticeExternal3D<T, DESCRIPTOR_NS, AD_FIELD> fdField( sLatticeNS, iT );
   SuperLatticeGeometry3D<T, DESCRIPTOR_NS>           geometry( sLatticeNS, superGeometry );
-
-  SuperVTMwriter3D<T> vtmWriterAD( "writerAD" );
   SuperLatticeDensity3D<T, DESCRIPTOR_AD>            lbField( sLatticeAD );
 
 #ifndef NOVTM
@@ -303,7 +314,6 @@ void getResults( SuperLattice<T, DESCRIPTOR_NS>& sLatticeNS,
   if (iT % tVtm == 0) {
     clout << "Writing vtm files at iT=" << iT << std::endl;
     vtmWriterNS.write(iT);
-    vtmWriterAD.write(iT);
   }
 #endif
 
@@ -317,7 +327,7 @@ void getResults( SuperLattice<T, DESCRIPTOR_NS>& sLatticeNS,
     heatmap::plotParam<T> plotParam_fdField;
     plotParam_fdField.name = "fdField_";
     heatmap::write(planeReduction_fdField, iT);
-    SuperEuklidNorm3D<T, DESCRIPTOR_NS> normVel(velocity);
+    SuperEuklidNorm3D<T> normVel(velocity);
     BlockReduction3D2D<T> planeReduction_normVel( normVel, centre, u, v, 200, BlockDataSyncMode::ReduceOnly );
     heatmap::plotParam<T> plotParam_normVel;
     plotParam_normVel.name = "normVel_";
@@ -328,7 +338,7 @@ void getResults( SuperLattice<T, DESCRIPTOR_NS>& sLatticeNS,
   if (iT % tVtm == 0) {
     T sigma = util::sqrt(2*iT*diffusivity/(deltaX*deltaX/deltaT)); // dimensionless
     Gnuplot<T> gplot( "distribution_" + std::to_string(iT) );
-    T analyticalMeanPointZero[] { -0.25*(fromCentre ? 0. : nx) - 0.5*(1 - nx%2), 0., 0. };
+    T analyticalMeanPointZero[] { -T(0.25)*(fromCentre ? T(0.) : T(nx)) - T(0.5)*(T(1) - T(nx%2)), 0., 0. };
     T analyticalMeanPoint[] { analyticalMeanPointZero[0] + iT*converter.getCharLatticeVelocity(), 0., 0. };
     T numericalMeanPoint_fd {analyticalMeanPointZero[0]};
     T numericalMeanValue_fd {T()};
@@ -355,7 +365,7 @@ void getResults( SuperLattice<T, DESCRIPTOR_NS>& sLatticeNS,
         numericalMeanValue_fd = numericalFd[0];
         numericalMeanPoint_fd = pointP[0];
       }
-      normFd2 += util::pow(numericalFd[0] - (diffusivity>0.0 ? analytical[0] : 0.0), 2 );
+      normFd2 += util::pow(numericalFd[0] - (diffusivity>0.0 ? analytical[0] : T(0.0)), 2 );
       gplot_values.push_back(numericalFd[0]);
       gplot_names.push_back("finite-difference");
       gplot.setData( iX*deltaX, gplot_values, gplot_names );
@@ -426,7 +436,7 @@ int main(int argc, char* argv[])
     ( T )   ny*deltaX,   // charPhysLength
     ( T )   charU,       // charPhysVelocity
     ( T )   0.1 * (deltaX * deltaX) / deltaT,         // physViscosity
-	  ( T )   1.           // physDensity
+    ( T )   1.           // physDensity
     );
   if (! noPlots) clout << "---------- Input data: ------------" << std::endl
         << "advectionScheme    = " << advectionScheme << std::endl
@@ -452,7 +462,7 @@ int main(int argc, char* argv[])
   if (! noPlots) converter.print();
 
   /// === 2rd Step: Prepare Geometry ===
-  std::vector<T> origin { -0.5*(nx + 1.)*deltaX, -0.5*(ny + 1.)*deltaX, -0.5*(nz + 1.)*deltaX };
+  std::vector<T> origin { -T(0.5)*(T(nx) + T(1.))*deltaX, -T(0.5)*(T(ny) + T(1.))*deltaX, -T(0.5)*(T(nz) + T(1.))*deltaX };
   std::vector<T> extend { (nx + 1)*deltaX, (ny + 1)*deltaX, (nz + 1)*deltaX };
   IndicatorCuboid3D<T> cuboid(extend, origin);
 
@@ -493,6 +503,8 @@ int main(int argc, char* argv[])
   timer.start();
 
   for ( iT = 0; iT <= tMax; ++iT ) {
+    sLatticeNS.setParameter<fd::fdParams::Timestep>(iT);
+
     // === 5th Step: Definition of Initial and Boundary Conditions ===
     setBoundaryValues( sLatticeNS, sLatticeAD, converter, superGeometry );
 

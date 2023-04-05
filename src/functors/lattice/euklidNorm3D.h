@@ -47,16 +47,16 @@
 namespace olb {
 
 /// functor that returns pointwise the l2-norm, e.g. of a velocity
-template <typename T, typename DESCRIPTOR>
-class SuperEuklidNorm3D final : public SuperLatticeF3D<T,DESCRIPTOR> {
+template <typename T>
+class SuperEuklidNorm3D final : public SuperF3D<T> {
 private:
-  SuperLatticeF3D<T,DESCRIPTOR>& _f;
+  SuperF3D<T>& _f;
 public:
-  SuperEuklidNorm3D(SuperLatticeF3D<T,DESCRIPTOR>& f);
+  SuperEuklidNorm3D(SuperF3D<T>& f);
 };
 
 /// functor returns pointwise the l2-norm, e.g. of a velocity
-template <typename T, typename DESCRIPTOR>
+template <typename T>
 class BlockEuklidNorm3D final : public BlockF3D<T> {
 protected:
   BlockF3D<T>& _f;

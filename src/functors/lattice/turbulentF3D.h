@@ -30,6 +30,7 @@
 #include "superBaseF3D.h"
 #include "core/unitConverter.h"
 #include "functors/analytical/indicator/indicatorBaseF3D.h"
+#include "latticeDerivatives3D.h"
 #include "latticeVelocity3D.h"
 #include "latticeExternalVelocity3D.h"
 #include "latticePhysVelocity3D.h"
@@ -88,55 +89,6 @@ public:
   void execute(SuperGeometry<T,3>& superGeometry, const int material);
 };
 */
-
-/// functor to get pointwise finite difference Dissipation on local lattice, if globIC is not on
-/// the local processor, the returned vector is empty
-template <typename T>
-class BlockFiniteDifference3D : public BlockF3D<T> {
-private:
-  BlockGeometry<T,3>& _blockGeometry;
-  BlockF3D<T>& _blockFunctor;
-  std::list<int>& _matNumber;
-  int _targetDim;
-  int _n[3];
-public:
-  BlockFiniteDifference3D(BlockGeometry<T,3>& blockGeometry, BlockF3D<T>& blockFunctor, std::list<int>& matNumber);
-  bool operator() (T output[], const int input[]) override;
-};
-
-/// functor to get pointwise explicit filter on local lattice, if globIC is not on
-/// the local processor, the returned vector is empty
-template <typename T>
-class SuperFiniteDifference3D : public SuperF3D<T> {
-private:
-  SuperGeometry<T,3>& _sGeometry;
-  SuperF3D<T>& _sFunctor;
-  std::list<int>& _matNumber;
-public:
-  SuperFiniteDifference3D(SuperGeometry<T,3>& sGeometry, SuperF3D<T>& sFunctor, std::list<int>& matNumber);
-};
-
-template <typename T, typename DESCRIPTOR>
-class BlockPhysFiniteDifference3D : public BlockF3D<T> {
-private:
-  BlockF3D<T>& _blockFinDiff;
-  int _targetDim;
-  const UnitConverter<T,DESCRIPTOR>& _converter;
-public:
-  BlockPhysFiniteDifference3D(BlockF3D<T>& blockFunctor, const UnitConverter<T,DESCRIPTOR>& converter);
-  bool operator() (T output[], const int input[]) override;
-};
-
-/// functor to get pointwise explicit filter on local lattice, if globIC is not on
-/// the local processor, the returned vector is empty
-template <typename T, typename DESCRIPTOR>
-class SuperPhysFiniteDifference3D : public SuperF3D<T> {
-private:
-  SuperFiniteDifference3D<T> _sFinDiff;
-  const UnitConverter<T,DESCRIPTOR>& _converter;
-public:
-  SuperPhysFiniteDifference3D(SuperGeometry<T,3>& sGeometry, SuperF3D<T>& sFunctor, std::list<int>& matNumber, const UnitConverter<T,DESCRIPTOR>& converter);
-};
 
 template <typename T, typename DESCRIPTOR>
 class BlockLatticeVelocityGradientFD3D : public BlockLatticeF3D<T,DESCRIPTOR> {
@@ -280,30 +232,6 @@ private:
   const UnitConverter<T,DESCRIPTOR>& _converter;
 public:
   SuperLatticePhysDissipationFD3D(SuperGeometry<T,3>& sGeometry, SuperLattice<T,DESCRIPTOR>& sLattice, std::list<int>& matNumber, const UnitConverter<T,DESCRIPTOR>& converter);
-};
-
-template <typename T, typename DESCRIPTOR>
-class BlockLatticeEffectiveDissipationFD3D : public BlockLatticeF3D<T,DESCRIPTOR> {
-private:
-  BlockF3D<T>& _blockVeloGrad;
-  const UnitConverter<T,DESCRIPTOR>& _converter;
-  LESDynamics<T, DESCRIPTOR>& _LESdynamics;
-public:
-  BlockLatticeEffectiveDissipationFD3D(BlockLattice<T,DESCRIPTOR>& blockLattice, BlockF3D<T>& blockFunctor,
-                                       const UnitConverter<T,DESCRIPTOR>& converter, LESDynamics<T, DESCRIPTOR>& LESdynamics);
-  bool operator() (T output[], const int input[]);
-};
-
-/// functor to get pointwise explicit filter on local lattice, if globIC is not on
-/// the local processor, the returned vector is empty
-template <typename T, typename DESCRIPTOR>
-class SuperLatticeEffectiveDissipationFD3D : public SuperLatticeF3D<T,DESCRIPTOR> {
-private:
-  SuperLatticeVelocityGradientFD3D<T,DESCRIPTOR> _sVeloGrad;
-  const UnitConverter<T,DESCRIPTOR>& _converter;
-public:
-  SuperLatticeEffectiveDissipationFD3D(SuperGeometry<T,3>& sGeometry, SuperLattice<T,DESCRIPTOR>& sLattice, std::list<int>& matNumber,
-                                       const UnitConverter<T,DESCRIPTOR>& converter, LESDynamics<T, DESCRIPTOR>& LESdynamics);
 };
 
 template <typename T, typename DESCRIPTOR>

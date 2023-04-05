@@ -43,16 +43,16 @@ template<typename T, unsigned D, typename IMPL>
 struct ScalarVector : public GenericVector<T,D,IMPL> {
   using type = GenericVector<T,D,IMPL>;
 
-  static_assert(meta::is_arithmetic<T>::type::value, "T must be scalar type");
+  //static_assert(meta::is_arithmetic<T>::type::value, "T must be scalar type");
 
-  ScalarVector() = default;
+  constexpr ScalarVector() = default;
   ScalarVector(const ScalarVector&) = delete;
   ScalarVector(ScalarVector&&) = delete;
 };
 
 /// Squared euclidean vector norm
 template<typename T, unsigned D, typename IMPL>
-inline T norm_squared(const ScalarVector<T,D,IMPL>& a)
+inline constexpr T norm_squared(const ScalarVector<T,D,IMPL>& a)
 {
   T sqNorm{};
   for (unsigned iDim=0; iDim < D; ++iDim) {
@@ -63,7 +63,7 @@ inline T norm_squared(const ScalarVector<T,D,IMPL>& a)
 
 /// Euclidean vector norm
 template<typename T, unsigned D, typename IMPL>
-inline T norm(const ScalarVector<T,D,IMPL>& a)
+inline constexpr T norm(const ScalarVector<T,D,IMPL>& a)
 {
   using namespace util;
   T sqNorm = norm_squared(a);
@@ -85,7 +85,7 @@ bool closeToZero(const ScalarVector<T,D,IMPL>& a)
 
 /// Copies data into a standard vector
 template<typename T, unsigned D, typename IMPL>
-std::vector<T> toStdVector(const ScalarVector<T,D,IMPL>& a)
+constexpr std::vector<T> toStdVector(const ScalarVector<T,D,IMPL>& a)
 {
   std::vector<T> v(D);
   for (unsigned iDim=0; iDim < D; ++iDim) {
@@ -96,7 +96,7 @@ std::vector<T> toStdVector(const ScalarVector<T,D,IMPL>& a)
 
 /// Returns true if all lhs components are smaller than rhs
 template<typename T, unsigned D, typename U, typename IMPL, typename IMPL_>
-inline bool operator< (const ScalarVector<T,D,IMPL>& lhs, const ScalarVector<U,D,IMPL_>& rhs)
+inline constexpr bool operator< (const ScalarVector<T,D,IMPL>& lhs, const ScalarVector<U,D,IMPL_>& rhs)
 {
   bool smaller = true;
   for (unsigned iDim=0; iDim < D; ++iDim) {
@@ -107,14 +107,14 @@ inline bool operator< (const ScalarVector<T,D,IMPL>& lhs, const ScalarVector<U,D
 
 /// Returns true if all lhs components are greater than rhs
 template<typename T, unsigned D, typename U, typename IMPL, typename IMPL_>
-inline bool operator> (const ScalarVector<T,D,IMPL>& lhs, const ScalarVector<U,D,IMPL_>& rhs)
+inline constexpr bool operator> (const ScalarVector<T,D,IMPL>& lhs, const ScalarVector<U,D,IMPL_>& rhs)
 {
   return rhs < lhs;
 }
 
 /// Returns true if all lhs components are smaller or equal than rhs
 template<typename T, unsigned D, typename U, typename IMPL, typename IMPL_>
-inline bool operator<= (const ScalarVector<T,D,IMPL>& lhs, const ScalarVector<U,D,IMPL_>& rhs)
+inline constexpr bool operator<= (const ScalarVector<T,D,IMPL>& lhs, const ScalarVector<U,D,IMPL_>& rhs)
 {
   bool smallerEq = true;
   for (unsigned iDim=0; iDim < D; ++iDim) {
@@ -125,7 +125,7 @@ inline bool operator<= (const ScalarVector<T,D,IMPL>& lhs, const ScalarVector<U,
 
 /// Returns true if all lhs components are smaller or equal than rhs
 template<typename T, unsigned D, typename U, typename IMPL, typename IMPL_>
-inline bool operator>= (const ScalarVector<T,D,IMPL>& lhs, const ScalarVector<U,D,IMPL_>& rhs)
+inline constexpr bool operator>= (const ScalarVector<T,D,IMPL>& lhs, const ScalarVector<U,D,IMPL_>& rhs)
 {
   return rhs <= lhs;
 }

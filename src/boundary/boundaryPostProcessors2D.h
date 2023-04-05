@@ -47,7 +47,7 @@ public:
     return 0;
   }
 
-  template <typename CELL>
+  template <CONCEPT(Cell) CELL>
   void apply(CELL& cell) any_platform;
 
 private:
@@ -171,7 +171,7 @@ private:
 * equilibrium distributions (i.e. only the Q_i : Pi term)
 */
 template<typename T, typename DESCRIPTOR, int xNormal,int yNormal>
-class OuterVelocityCornerProcessor2D  {
+class OuterVelocityCornerProcessor2D {
 public:
   static constexpr OperatorScope scope = OperatorScope::PerCell;
 
@@ -179,7 +179,7 @@ public:
     return 1;
   }
 
-  template <typename CELL>
+  template <CONCEPT(Cell) CELL>
   void apply(CELL& cell) any_platform;
 
 };

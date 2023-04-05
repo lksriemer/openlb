@@ -31,311 +31,6 @@
 
 namespace olb {
 
-template <typename CELL>
-bool FreeSurface2D::isCellType(CELL& cell, const FreeSurface::Type& type) {
-  return cell.template getField<FreeSurface::CELL_TYPE>() == type;
-}
-
-template <typename CELL>
-bool FreeSurface2D::hasCellFlags(CELL& cell, const FreeSurface::Flags& flags) {
-  return static_cast<bool>(cell.template getField<FreeSurface::CELL_FLAGS>() & flags);
-}
-
-template <typename CELL>
-bool FreeSurface2D::hasNeighbour(CELL& cell, const FreeSurface::Type& type) {
-  for(int i = -1; i <= 1; ++i ){
-    for(int j = -1; j <= 1; ++j){
-      if( i == 0 && j == 0){
-        continue;
-      }
-      auto cellC = cell.neighbor({i,j});
-      if(isCellType(cellC, type)){
-        return true;
-      }
-    }
-  }
-  return false;
-}
-
-template <typename CELL>
-bool FreeSurface2D::hasNeighbourFlags(CELL& cell, const FreeSurface::Flags& flags) {
-  for(int i = -1; i <= 1; ++i ){
-    for(int j = -1; j <= 1; ++j){
-      if( i == 0 && j == 0){
-        continue;
-      }
-      auto cellC = cell.neighbor({i,j});
-      if (hasCellFlags(cellC, flags)) {
-        return true;
-      }
-    }
-  }
-  return false;
-}
-
-template <typename CELL, typename V>
-V FreeSurface2D::getClampedEpsilon(CELL& cell) {
-  V epsilon = cell.template getField<FreeSurface::EPSILON>();
-  return util::max(0., util::min(1., epsilon));
-}
-
-template <typename CELL, typename V>
-Vector<V,CELL::descriptor_t::d> FreeSurface2D::computeInterfaceNormal(CELL& cell) {
-  Vector<V,CELL::descriptor_t::d> normal{};
-  normal[0] = 0.5 * (  getClampedEpsilon(cell.neighbor({-1, 0}))
-                     - getClampedEpsilon(cell.neighbor({ 1, 0})));
-  normal[1] = 0.5 * (  getClampedEpsilon(cell.neighbor({ 0,-1}))
-                     - getClampedEpsilon(cell.neighbor({ 0, 1})));
-  return normal;
-}
-
-template <typename CELL, typename V>
-Vector<V,CELL::descriptor_t::d> FreeSurface2D::computeParkerYoungInterfaceNormal(CELL& cell) {
-  Vector<V,CELL::descriptor_t::d> normal{};
-  for(int i = -1; i <= 1; ++i){
-    for(int j = -1; j <= 1; ++j){
-      if(i == 0 && j == 0){
-        continue;
-      }
-
-      int omega_weight = 1;
-      if(i != 0){
-        omega_weight *= 2;
-      }
-      if(j != 0){
-        omega_weight *= 2;
-      }
-      omega_weight /= 2;
-
-      auto cellC = cell.neighbor({i,j});
-      V epsilon = getClampedEpsilon(cellC);
-
-      normal[0] -= omega_weight * (i * epsilon);
-      normal[1] -= omega_weight * (j * epsilon);
-    }
-  }
-  return normal;
-}
-
-template<typename T, typename DESCRIPTOR>
-T FreeSurface2D::plicInverse(T d_o, const Vector<T,DESCRIPTOR::d>& normal) {
-  const T n1 = util::min(util::abs(normal[0]), util::abs(normal[1]));
-  const T n2 = util::max(util::abs(normal[0]), util::abs(normal[1]));
-
-  const T d = 0.5 * (n1+n2) - util::abs(d_o);
-
-  T vol;
-  if(d < n1){
-    vol = d * d / (2. * n1 * n2);
-  }
-  if(d >= n1){
-    vol = d / n2 - n1 / (2. * n2);
-  }
-
-  return std::copysign(0.5 - vol, d_o) + 0.5;
-}
-
-namespace {
-
-template<typename T, typename DESCRIPTOR>
-std::enable_if_t<DESCRIPTOR::d == 2,T>
-offsetHelper(T volume, const Vector<T,DESCRIPTOR::d>& sorted_normal) any_platform {
-  T d2 = volume * sorted_normal[1] + 0.5 * sorted_normal[0];
-  if(d2 >= sorted_normal[0]){
-    return d2;
-  }
-
-  T d1 = util::sqrt(2. * sorted_normal[0] * sorted_normal[1] * volume);
-  // if ( d1 < sorted_normal[0] )
-  return d1;
-}
-
-}
-
-template<typename T, typename DESCRIPTOR>
-T FreeSurface2D::calculateCubeOffset(T volume, const Vector<T,DESCRIPTOR::d>& normal) {
-  Vector<T,DESCRIPTOR::d> abs_normal{
-    util::abs(normal[0]),
-    util::abs(normal[1])
-  };
-
-  T volume_symmetry = 0.5 - std::abs(volume - 0.5);
-
-  Vector<T,DESCRIPTOR::d> sorted_normal{
-    util::max(util::min(abs_normal[0], abs_normal[1]), 1e-5),
-    util::max(abs_normal[0], abs_normal[1])
-  };
-
-  T d = offsetHelper<T,DESCRIPTOR>(volume_symmetry, sorted_normal);
-
-  return std::copysign(d - 0.5 * (sorted_normal[0] + sorted_normal[1]), volume - 0.5);
-}
-
-template <typename CELL>
-FreeSurface2D::NeighbourInfo FreeSurface2D::getNeighbourInfo(CELL& cell) {
-  NeighbourInfo info{};
-  using DESCRIPTOR = typename CELL::descriptor_t;
-
-  for(int iPop = 1; iPop < DESCRIPTOR::q; ++iPop){
-    auto cellC = cell.neighbor({descriptors::c<DESCRIPTOR>(iPop, 0),
-                                descriptors::c<DESCRIPTOR>(iPop, 1)});
-
-    if(isCellType(cellC, FreeSurface::Type::Gas)){
-      info.has_gas_neighbours = true;
-    }
-    else if(isCellType(cellC, FreeSurface::Type::Fluid)){
-      info.has_fluid_neighbours = true;
-    }
-    else if(isCellType(cellC, FreeSurface::Type::Interface)){
-      ++info.interface_neighbours;
-    }
-  }
-  return info;
-}
-
-template <typename CELL, typename V>
-V FreeSurface2D::calculateSurfaceTensionCurvature(CELL& cell) {
-  auto normal = FreeSurface2D::computeParkerYoungInterfaceNormal(cell);
-
-  using DESCRIPTOR = typename CELL::descriptor_t;
-  {
-    V norm = 0.;
-    for(size_t i = 0; i < DESCRIPTOR::d; ++i){
-      norm += normal[i] * normal[i];
-    }
-
-    norm = util::sqrt(norm);
-
-    if(norm < 1e-6){
-      return 0.;
-    }
-
-    for(size_t i = 0; i <DESCRIPTOR::d; ++i){
-      normal[i] /= norm;
-    }
-  }
-
-  // Rotation matrix is
-  // ( n1 | -n0 )
-  // ( n0 |  n1 )
-
-  // It is 2 because of the amount of fitting parameters. Not because of the dimension
-  constexpr size_t S = 2;
-  std::array<std::array<V,S>, S> lq_matrix;
-  std::array<V,S> b_rhs;
-  for(size_t i = 0; i < S; ++i){
-    for(size_t j = 0; j < S; ++j){
-      lq_matrix[i][j] = 0.;
-    }
-    b_rhs[i] = 0.;
-  }
-
-  // Offset for the plic correction
-  V origin_offset = 0.;
-  {
-    V fill_level = getClampedEpsilon(cell);
-    origin_offset = FreeSurface2D::calculateCubeOffset<V,DESCRIPTOR>(fill_level, normal);
-  }
-
-  // The amount of neighbouring interfaces. if less are available we will solve a reduced curve by setting the less important parameters to zero
-  std::size_t healthy_interfaces = 0;
-
-  for(int i = -1; i <= 1; ++i){
-    for(int j = -1 ; j <= 1; ++j){
-      if(i == 0 && j == 0){
-        continue;
-      }
-
-      auto cellC = cell.neighbor({i,j});
-
-      if(   !FreeSurface2D::isCellType(cellC, FreeSurface::Type::Interface)
-         || !FreeSurface2D::hasNeighbour(cellC, FreeSurface::Type::Gas)) {
-        continue;
-      }
-
-      ++healthy_interfaces;
-
-      V fill_level = getClampedEpsilon(cellC);
-
-      V cube_offset = FreeSurface2D::calculateCubeOffset<V,DESCRIPTOR>(fill_level, normal);
-
-      V x_pos = i;
-      V y_pos = j;
-
-      // Rotation
-      V rot_x_pos = x_pos * normal[1] - y_pos * normal[0];
-      V rot_y_pos = x_pos * normal[0] + y_pos * normal[1] + (cube_offset - origin_offset);
-
-      V rot_x_pos_2 = rot_x_pos * rot_x_pos;
-      V rot_x_pos_3 = rot_x_pos_2 * rot_x_pos;
-      V rot_x_pos_4 = rot_x_pos_3 * rot_x_pos;
-
-      lq_matrix[1][1] += rot_x_pos_2;
-      lq_matrix[1][0] += rot_x_pos_3;
-      lq_matrix[0][0] += rot_x_pos_4;
-
-      b_rhs[0] += rot_x_pos_2*(rot_y_pos);
-      b_rhs[1] += rot_x_pos*(rot_y_pos);
-    }
-  }
-
-  lq_matrix[0][1] = lq_matrix[1][0];
-
-  // Thikonov regularization parameter
-  V alpha = 0.0;
-  for(size_t i = 0; i < DESCRIPTOR::d; ++i){
-    lq_matrix[i][i] += alpha;
-  }
-
-  // It is 2 because of the fitting parameters. Not dependent on the dimension
-  std::array<V,S> solved_fit = FreeSurface::solvePivotedLU<V,S>(lq_matrix, b_rhs, healthy_interfaces);
-
-  // signed curvature -> kappa = y'' / ( (1 + y'²)^(3/2) )
-  V denom = std::sqrt(1. + solved_fit[1]*solved_fit[1]);
-  denom = denom * denom * denom;
-  V curvature = 2.*solved_fit[0] / denom;
-  return util::max(-1., util::min(1., curvature));
-}
-
-template <typename CELL, typename V>
-void FreeSurface2D::setCellType(CELL& cell, const FreeSurface::Type& type) {
-  cell.template setField<FreeSurface::CELL_TYPE>(type);
-}
-
-template <typename CELL, typename V>
-void FreeSurface2D::setCellFlags(CELL& cell, const FreeSurface::Flags& flags){
-  cell.template setField<FreeSurface::CELL_FLAGS>(flags);
-}
-
-template <typename CELL, typename V>
-bool FreeSurface2D::isHealthyInterface(CELL& cell) {
-  bool has_fluid_neighbours = false;
-  bool has_gas_neighbours = false;
-
-  if(!isCellType(cell, FreeSurface::Type::Interface)){
-    return false;
-  }
-
-  using DESCRIPTOR = typename CELL::descriptor_t;
-  for(int iPop = 1; iPop < DESCRIPTOR::q; ++iPop){
-    auto cellC = cell.neighbor({descriptors::c<DESCRIPTOR>(iPop, 0),
-                                descriptors::c<DESCRIPTOR>(iPop, 1)});
-    if(isCellType(cellC, FreeSurface::Type::Gas)){
-      has_gas_neighbours = true;
-      if(has_fluid_neighbours){
-        return true;
-      }
-    }
-    else if(isCellType(cellC, FreeSurface::Type::Fluid)){
-      has_fluid_neighbours = true;
-      if(has_gas_neighbours){
-        return true;
-      }
-    }
-  }
-  return false;
-}
-
 // LocalProcessor 1
 
 // Read
@@ -354,13 +49,25 @@ bool FreeSurface2D::isHealthyInterface(CELL& cell) {
 // CellFlags
 // DFs (only replacing from incoming gas stream)
 
-template <typename T, typename DESCRIPTOR>
 template <typename CELL, typename PARAMETERS>
-void FreeSurfaceMassFlowPostProcessor2D<T, DESCRIPTOR>::apply(CELL& cell, PARAMETERS& vars) {
+void FreeSurfaceMassFlowPostProcessor2D::apply(CELL& cell, PARAMETERS& vars) {
+  using T = typename CELL::value_t;
+  using DESCRIPTOR = typename CELL::descriptor_t;
+
+  using namespace olb::FreeSurface;
+
+  const bool drop_isolated_cells = vars.template get<FreeSurface::DROP_ISOLATED_CELLS>();
+  const T transition = vars.template get<FreeSurface::TRANSITION>();
+  const T lonely_threshold = vars.template get<FreeSurface::LONELY_THRESHOLD>();
+  const bool has_surface_tension = vars.template get<FreeSurface::HAS_SURFACE_TENSION>();
+  const T surface_tension_parameter = vars.template get<FreeSurface::SURFACE_TENSION_PARAMETER>();
+  //const T force_conversion_factor = vars.template get<FreeSurface::FORCE_CONVERSION_FACTOR>();
+  //const T lattice_size = vars.template get<FreeSurface::LATTICE_SIZE>();
+
   /*
   * Minor "hack". Remove all cell flags here, because it is needed in the last processor due to pulling steps in processor 6 and 7
   */
-  FreeSurface2D::setCellFlags(cell, static_cast<FreeSurface::Flags>(0));
+  setCellFlags(cell, static_cast<FreeSurface::Flags>(0));
 
   /*
   * This processor only works on interface types
@@ -377,10 +84,10 @@ void FreeSurfaceMassFlowPostProcessor2D<T, DESCRIPTOR>::apply(CELL& cell, PARAME
     blockLattice.get(iX, iY).template setField<FreeSurface::MASS>(mass_tmp);
   }
   else */
-  if (FreeSurface2D::isCellType(cell, FreeSurface::Type::Interface )) {
+  if (isCellType(cell, FreeSurface::Type::Interface )) {
     T mass_tmp = cell.template getField<FreeSurface::MASS>();
 
-    FreeSurface2D::NeighbourInfo neighbour_info = FreeSurface2D::getNeighbourInfo(cell);
+    FreeSurface::NeighbourInfo neighbour_info = getNeighbourInfo(cell);
 
     for (int iPop = 1; iPop < DESCRIPTOR::q; ++iPop){
       auto cellC = cell.neighbor({descriptors::c<DESCRIPTOR>(iPop, 0),
@@ -393,10 +100,10 @@ void FreeSurfaceMassFlowPostProcessor2D<T, DESCRIPTOR>::apply(CELL& cell, PARAME
       * from Thuerey
       * Added a distinction between the amount of interface nodes. Weight consideration seems to cause artifacts.
       */
-      if( FreeSurface2D::isCellType(cellC, FreeSurface::Type::Fluid)) {
+      if( isCellType(cellC, FreeSurface::Type::Fluid)) {
         mass_tmp += cell[iPop_op] - cellC[iPop];
-      } else if ( FreeSurface2D::isCellType(cellC, FreeSurface::Type::Interface)) {
-        FreeSurface2D::NeighbourInfo neighbour_neighbour_info = FreeSurface2D::getNeighbourInfo(cellC);
+      } else if ( isCellType(cellC, FreeSurface::Type::Interface)) {
+        FreeSurface::NeighbourInfo neighbour_neighbour_info = getNeighbourInfo(cellC);
 
         T mass_flow = 0.;
 
@@ -437,7 +144,7 @@ void FreeSurfaceMassFlowPostProcessor2D<T, DESCRIPTOR>::apply(CELL& cell, PARAME
         /*
         * Exchange depends on how filled the interfaces are
         */
-        mass_tmp += mass_flow * 0.5 * (FreeSurface2D::getClampedEpsilon(cell) + FreeSurface2D::getClampedEpsilon(cellC));
+        mass_tmp += mass_flow * 0.5 * (getClampedEpsilon(cell) + getClampedEpsilon(cellC));
       }
     }
 
@@ -452,16 +159,17 @@ void FreeSurfaceMassFlowPostProcessor2D<T, DESCRIPTOR>::apply(CELL& cell, PARAME
 
     T curvature = 0.;
 
-    if(vars.has_surface_tension){
-      FreeSurface2D::NeighbourInfo info = FreeSurface2D::getNeighbourInfo(cell);
+
+    if(has_surface_tension){
+     FreeSurface::NeighbourInfo info = getNeighbourInfo(cell);
       if(info.has_gas_neighbours){
-        curvature = FreeSurface2D::calculateSurfaceTensionCurvature(cell);
+        curvature = calculateSurfaceTensionCurvature(cell);
       }
 
     }
 
     // Gas pressure adjusting
-    T gas_pressure = 1. - 6. * vars.surface_tension_parameter * curvature;
+    T gas_pressure = 1. - 6. * surface_tension_parameter * curvature;
 
     for(int iPop=1; iPop < DESCRIPTOR::q; iPop++) {
       auto cellC = cell.neighbor({descriptors::c<DESCRIPTOR>(iPop, 0),
@@ -471,13 +179,12 @@ void FreeSurfaceMassFlowPostProcessor2D<T, DESCRIPTOR>::apply(CELL& cell, PARAME
       /*
       * Gas replacement
       */
-      if ( FreeSurface2D::isCellType(cellC, FreeSurface::Type::Gas )) {
+      if ( isCellType(cellC, FreeSurface::Type::Gas )) {
         Vector<T, DESCRIPTOR::d> u_vel = cell.template getField<FreeSurface::PREVIOUS_VELOCITY>();
         T u[DESCRIPTOR::d];
         for(size_t u_i = 0; u_i < DESCRIPTOR::d; ++u_i){
           u[u_i] = u_vel[u_i];
         }
-        T uSqr = util::normSqr<T,DESCRIPTOR::d>(u);
         dfs[iPop_op] = equilibrium<DESCRIPTOR>::secondOrder(iPop, gas_pressure, u)
           + equilibrium<DESCRIPTOR>::secondOrder(iPop_op, gas_pressure, u)
           - cellC[iPop];
@@ -497,16 +204,16 @@ void FreeSurfaceMassFlowPostProcessor2D<T, DESCRIPTOR>::apply(CELL& cell, PARAME
     T rho = cell.computeRho();
 
     // Check if transition needs to happen.
-    if ( mass_tmp < -vars.transition * rho || (mass_tmp < vars.lonely_threshold * rho && !neighbour_info.has_fluid_neighbours) ){
-      FreeSurface2D::setCellFlags(cell, FreeSurface::Flags::ToGas);
+    if ( mass_tmp < -transition * rho || (mass_tmp < lonely_threshold * rho && !neighbour_info.has_fluid_neighbours) ){
+      setCellFlags(cell, FreeSurface::Flags::ToGas);
     }
-    else if ( mass_tmp > (1. + vars.transition)*rho  || ( mass_tmp > (1-vars.lonely_threshold) * rho && !neighbour_info.has_gas_neighbours) ){
-      FreeSurface2D::setCellFlags(cell, FreeSurface::Flags::ToFluid);
-    }else if(vars.drop_isolated_cells && (neighbour_info.interface_neighbours == 0)){
+    else if ( mass_tmp > (1. + transition)*rho  || ( mass_tmp > (1-lonely_threshold) * rho && !neighbour_info.has_gas_neighbours) ){
+      setCellFlags(cell, FreeSurface::Flags::ToFluid);
+    }else if(drop_isolated_cells && (neighbour_info.interface_neighbours == 0)){
       if(!neighbour_info.has_gas_neighbours){
-        FreeSurface2D::setCellFlags(cell, FreeSurface::Flags::ToFluid);
+        setCellFlags(cell, FreeSurface::Flags::ToFluid);
       }else if(!neighbour_info.has_fluid_neighbours){
-        //FreeSurface2D::setCellFlags(cell, FreeSurface::Flags::ToGas);
+        //setCellFlags(cell, FreeSurface::Flags::ToGas);
       }
     }
   }
@@ -531,13 +238,14 @@ void FreeSurfaceMassFlowPostProcessor2D<T, DESCRIPTOR>::apply(CELL& cell, PARAME
 template <typename T, typename DESCRIPTOR>
 template <typename CELL>
 void FreeSurfaceToFluidCellConversionPostProcessor2D<T, DESCRIPTOR>::apply(CELL& cell) {
+  using namespace olb::FreeSurface;
   /*
   * Initializing new interface cells with DFs from surrounding fluid and interface cells
   * Just takes the arithmetic average.
   */
-  if(FreeSurface2D::isCellType(cell, FreeSurface::Type::Gas)){
-    if(FreeSurface2D::hasNeighbourFlags(cell, FreeSurface::Flags::ToFluid)){
-      FreeSurface2D::setCellFlags(cell, FreeSurface::Flags::NewInterface);
+  if(isCellType(cell, FreeSurface::Type::Gas)){
+    if(hasNeighbourFlags(cell, FreeSurface::Flags::ToFluid)){
+      setCellFlags(cell, FreeSurface::Flags::NewInterface);
       T rho_avg = 0.;
       T u_avg[DESCRIPTOR::d] = {0., 0.};
 
@@ -547,7 +255,7 @@ void FreeSurfaceToFluidCellConversionPostProcessor2D<T, DESCRIPTOR>::apply(CELL&
         auto cellC = cell.neighbor({descriptors::c<DESCRIPTOR>(iPop,0),
                                     descriptors::c<DESCRIPTOR>(iPop,1)});
 
-        if (FreeSurface2D::isCellType(cellC, FreeSurface::Type::Fluid) || FreeSurface2D::isCellType(cellC, FreeSurface::Type::Interface)){
+        if (isCellType(cellC, FreeSurface::Type::Fluid) || isCellType(cellC, FreeSurface::Type::Interface)){
           T rho_tmp = 0.;
           T u_tmp[DESCRIPTOR::d] = {0., 0.};
           ++ctr;
@@ -568,12 +276,12 @@ void FreeSurfaceToFluidCellConversionPostProcessor2D<T, DESCRIPTOR>::apply(CELL&
 
       cell.iniEquilibrium(rho_avg, u_avg);
     }
-  }else if(FreeSurface2D::hasCellFlags(cell, FreeSurface::Flags::ToGas)){
+  }else if(hasCellFlags(cell, FreeSurface::Flags::ToGas)){
     /*
     * If a toGas cell has a neighbouring toFluid cell, unset the toGas flag
     */
-    if(FreeSurface2D::hasNeighbourFlags(cell, FreeSurface::Flags::ToFluid)){
-      FreeSurface2D::setCellFlags(cell, static_cast<FreeSurface::Flags>(0));
+    if(hasNeighbourFlags(cell, FreeSurface::Flags::ToFluid)){
+      setCellFlags(cell, static_cast<FreeSurface::Flags>(0));
     }
   }
 }
@@ -594,12 +302,15 @@ void FreeSurfaceToFluidCellConversionPostProcessor2D<T, DESCRIPTOR>::apply(CELL&
 template <typename T, typename DESCRIPTOR>
 template <typename CELL>
 void FreeSurfaceToGasCellConversionPostProcessor2D<T, DESCRIPTOR>::apply(CELL& cell) {
+
+  using namespace olb::FreeSurface;
+
   /*
   * For the to be converted toGas cells, set the neighbours to interface cells
   */
-  if (   FreeSurface2D::isCellType(cell, FreeSurface::Type::Fluid)
-      && FreeSurface2D::hasNeighbourFlags(cell, FreeSurface::Flags::ToGas)){
-    FreeSurface2D::setCellFlags(cell, FreeSurface::Flags::NewInterface);
+  if ( isCellType(cell, FreeSurface::Type::Fluid)
+      && hasNeighbourFlags(cell, FreeSurface::Flags::ToGas)){
+    setCellFlags(cell, FreeSurface::Flags::NewInterface);
     T rho = cell.computeRho();
     cell.template setField<FreeSurface::MASS>(rho);
   }
@@ -625,7 +336,10 @@ void FreeSurfaceToGasCellConversionPostProcessor2D<T, DESCRIPTOR>::apply(CELL& c
 template <typename T, typename DESCRIPTOR>
 template <typename CELL>
 void FreeSurfaceMassExcessPostProcessor2D<T, DESCRIPTOR>::apply(CELL& cell) {
-  if( !FreeSurface2D::isCellType(cell, FreeSurface::Type::Interface) ){
+
+  using namespace olb::FreeSurface;
+
+ if( !isCellType(cell, FreeSurface::Type::Interface) ){
     return;
   }
 
@@ -633,17 +347,17 @@ void FreeSurfaceMassExcessPostProcessor2D<T, DESCRIPTOR>::apply(CELL& cell) {
   T mass = cell.template getField<FreeSurface::MASS>( );
   T mass_excess = 0.;
 
-  auto normal = FreeSurface2D::computeParkerYoungInterfaceNormal(cell);
+  auto normal = computeParkerYoungInterfaceNormal(cell);
   // redistribute excess mass
 
   /// @hint EPSILON of neighbours used here
   /// @hint Mass can be set in this processor, but not epsilon since it is needed for the normal computation. epsilon is set in the next processor
   /// Became untrue due to code section removal, but epsilon is still set in the next part because of pushed mass excess
-  if(FreeSurface2D::hasCellFlags(cell, FreeSurface::Flags::ToGas)){
+  if(hasCellFlags(cell, FreeSurface::Flags::ToGas)){
     mass_excess = mass;
     cell.template setField<FreeSurface::MASS>( 0. );
     normal = {-normal[0], -normal[1]};
-  } else if (FreeSurface2D::hasCellFlags(cell, FreeSurface::Flags::ToFluid)) {
+  } else if (hasCellFlags(cell, FreeSurface::Flags::ToFluid)) {
     mass_excess = mass - rho;
     cell.template setField<FreeSurface::MASS>( rho );
   } else {
@@ -663,9 +377,9 @@ void FreeSurfaceMassExcessPostProcessor2D<T, DESCRIPTOR>::apply(CELL& cell) {
     // Thuerey Paper says we can't use new interface cells
     // or flagged cells
     // But surface tension showed us that it has anisotropic effects
-    if( (FreeSurface2D::isCellType(cellC, FreeSurface::Type::Interface) && (!FreeSurface2D::hasCellFlags(cellC,
-          static_cast<FreeSurface::Flags>(255)) /*|| FreeSurface2D::hasCellFlags(cellC, FreeSurface::Flags::ToFluid)*/ ))
-        /*|| FreeSurface2D::isCellType(cellC, FreeSurface::Type::Fluid)*/
+    if( (isCellType(cellC, FreeSurface::Type::Interface) && (!hasCellFlags(cellC,
+          static_cast<FreeSurface::Flags>(255)) /*|| hasCellFlags(cellC, FreeSurface::Flags::ToFluid)*/ ))
+        /*|| isCellType(cellC, FreeSurface::Type::Fluid)*/
         ){
       products[iPop] = (normal[0] * descriptors::c<DESCRIPTOR>(iPop, 0) + normal[1] * descriptors::c<DESCRIPTOR>(iPop,1));
       if(products[iPop] <= 0){
@@ -694,9 +408,9 @@ void FreeSurfaceMassExcessPostProcessor2D<T, DESCRIPTOR>::apply(CELL& cell) {
     for(int iPop=1; iPop < DESCRIPTOR::q; iPop++) {
       auto cellC = cell.neighbor({descriptors::c<DESCRIPTOR>(iPop,0),
                                   descriptors::c<DESCRIPTOR>(iPop,1)});
-      if( (FreeSurface2D::isCellType(cellC, FreeSurface::Type::Interface) && (!FreeSurface2D::hasCellFlags(cellC,
-          static_cast<FreeSurface::Flags>(255)) /*|| FreeSurface2D::hasCellFlags(cellC, FreeSurface::Flags::ToFluid)*/ ))
-          /*|| FreeSurface2D::isCellType(cellC, FreeSurface::Type::Fluid)*/
+      if( (isCellType(cellC, FreeSurface::Type::Interface) && (!hasCellFlags(cellC,
+          static_cast<FreeSurface::Flags>(255)) /*|| hasCellFlags(cellC, FreeSurface::Flags::ToFluid)*/ ))
+          /*|| isCellType(cellC, FreeSurface::Type::Fluid)*/
           ){
         mass_excess_vector[iPop] = mass_excess * product_fraction;
       } else {
@@ -736,6 +450,9 @@ void FreeSurfaceMassExcessPostProcessor2D<T, DESCRIPTOR>::apply(CELL& cell) {
 template <typename T, typename DESCRIPTOR>
 template <typename CELL>
 void FreeSurfaceFinalizeConversionPostProcessor2D<T, DESCRIPTOR>::apply(CELL& cell) {
+
+  using namespace olb::FreeSurface;
+
   /* Convert flagged cells to appropriate cell types */
   FreeSurface::Flags flags = static_cast<FreeSurface::Flags>(cell.template getField<FreeSurface::CELL_FLAGS>());
 
@@ -743,7 +460,7 @@ void FreeSurfaceFinalizeConversionPostProcessor2D<T, DESCRIPTOR>::apply(CELL& ce
     case FreeSurface::Flags::ToFluid:
     {
       /// @hint moved flag removal to processor 1 without any negative effects
-      FreeSurface2D::setCellType(cell, FreeSurface::Type::Fluid);
+      setCellType(cell, FreeSurface::Type::Fluid);
       cell.template setField<FreeSurface::EPSILON>( 1. );
       T mass_tmp = cell.template getField<FreeSurface::MASS>();
       mass_tmp += cell.template getField<FreeSurface::TEMP_MASS_EXCHANGE>()[0];
@@ -754,7 +471,7 @@ void FreeSurfaceFinalizeConversionPostProcessor2D<T, DESCRIPTOR>::apply(CELL& ce
     case FreeSurface::Flags::ToGas:
     {
       /// @hint moved flag removal to processor 1 without any negative effects
-      FreeSurface2D::setCellType(cell, FreeSurface::Type::Gas);
+      setCellType(cell, FreeSurface::Type::Gas);
       cell.template setField<FreeSurface::EPSILON>( 0. );
       T mass_tmp = cell.template getField<FreeSurface::MASS>();
       mass_tmp += cell.template getField<FreeSurface::TEMP_MASS_EXCHANGE>()[0];
@@ -764,7 +481,7 @@ void FreeSurfaceFinalizeConversionPostProcessor2D<T, DESCRIPTOR>::apply(CELL& ce
     break;
     case FreeSurface::Flags::NewInterface:
     {
-      FreeSurface2D::setCellType(cell, FreeSurface::Type::Interface);
+      setCellType(cell, FreeSurface::Type::Interface);
     }
     break;
     default:
@@ -783,7 +500,7 @@ void FreeSurfaceFinalizeConversionPostProcessor2D<T, DESCRIPTOR>::apply(CELL& ce
                                     descriptors::c<DESCRIPTOR>(iPop,1)});
         auto tempMassExchange = cellC.template getFieldPointer<FreeSurface::TEMP_MASS_EXCHANGE>();
 
-        if (FreeSurface2D::hasCellFlags(cellC,
+        if (hasCellFlags(cellC,
                 FreeSurface::Flags::ToFluid
               | FreeSurface::Flags::ToGas)){
             int iPop_op = descriptors::opposite<DESCRIPTOR>(iPop);
@@ -813,7 +530,7 @@ void FreeSurfaceFinalizeConversionPostProcessor2D<T, DESCRIPTOR>::apply(CELL& ce
         auto cellC = cell.neighbor({descriptors::c<DESCRIPTOR>(iPop,0),
                                     descriptors::c<DESCRIPTOR>(iPop,1)});
         auto tempMassExchange = cellC.template getFieldPointer<FreeSurface::TEMP_MASS_EXCHANGE>();
-        if (FreeSurface2D::hasCellFlags(cellC,
+        if (hasCellFlags(cellC,
               FreeSurface::Flags::ToFluid
             | FreeSurface::Flags::ToGas)) {
           int iPop_op = descriptors::opposite<DESCRIPTOR>(iPop);
@@ -831,20 +548,18 @@ void FreeSurfaceFinalizeConversionPostProcessor2D<T, DESCRIPTOR>::apply(CELL& ce
   }
 }
 
-// Setup
 
+// Setup
 template<typename T, typename DESCRIPTOR>
-FreeSurface2DSetup<T,DESCRIPTOR>::FreeSurface2DSetup(SuperLattice<T, DESCRIPTOR>& sLattice,
-    const FreeSurface2D::Variables<T>& vars_)
+FreeSurface2DSetup<T,DESCRIPTOR>::FreeSurface2DSetup(SuperLattice<T, DESCRIPTOR>& sLattice)
 :
-  vars{vars_},
   sLattice{sLattice}
 {}
 
 template<typename T, typename DESCRIPTOR>
 void FreeSurface2DSetup<T,DESCRIPTOR>::addPostProcessor(){
   sLattice.template addPostProcessor<FreeSurface::Stage0>(
-    meta::id<FreeSurfaceMassFlowPostProcessor2D<T,DESCRIPTOR>>{});
+    meta::id<FreeSurfaceMassFlowPostProcessor2D>{});
   sLattice.template addPostProcessor<FreeSurface::Stage1>(
     meta::id<FreeSurfaceToFluidCellConversionPostProcessor2D<T,DESCRIPTOR>>{});
   sLattice.template addPostProcessor<FreeSurface::Stage2>(
@@ -853,12 +568,6 @@ void FreeSurface2DSetup<T,DESCRIPTOR>::addPostProcessor(){
     meta::id<FreeSurfaceMassExcessPostProcessor2D<T,DESCRIPTOR>>{});
   sLattice.template addPostProcessor<FreeSurface::Stage4>(
     meta::id<FreeSurfaceFinalizeConversionPostProcessor2D<T,DESCRIPTOR>>{});
-
-  for (int iC=0; iC < sLattice.getLoadBalancer().size(); ++iC) {
-    sLattice.getBlock(iC)
-            .template getData<TrivialParameters<FreeSurfaceMassFlowPostProcessor2D<T,DESCRIPTOR>>>() = vars;
-  }
-
   {
     // Communicate DFs, Epsilon and Cell Types
     auto& communicator = sLattice.getCommunicator(FreeSurface::Stage0());
@@ -902,12 +611,12 @@ void FreeSurface2DSetup<T,DESCRIPTOR>::addPostProcessor(){
     communicator.exchangeRequests();
   }
 
-  sLattice.scheduleCustomPostProcessing([](SuperLattice<T,DESCRIPTOR>& lattice) {
-    lattice.executePostProcessors(FreeSurface::Stage0());
-    lattice.executePostProcessors(FreeSurface::Stage1());
-    lattice.executePostProcessors(FreeSurface::Stage2());
-    lattice.executePostProcessors(FreeSurface::Stage3());
-    lattice.executePostProcessors(FreeSurface::Stage4());
+  sLattice.template addCustomTask<stage::PostStream>([&]() {
+    sLattice.executePostProcessors(FreeSurface::Stage0());
+    sLattice.executePostProcessors(FreeSurface::Stage1());
+    sLattice.executePostProcessors(FreeSurface::Stage2());
+    sLattice.executePostProcessors(FreeSurface::Stage3());
+    sLattice.executePostProcessors(FreeSurface::Stage4());
   });
 }
 

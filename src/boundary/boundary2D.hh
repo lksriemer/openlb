@@ -30,7 +30,7 @@
 #include "inamuroAnalyticalDynamics.hh"
 #include "inamuroNewtonRaphsonDynamics.hh"
 #include "offBoundaryPostProcessors2D.hh"
-#include "defineU2D.hh"
+#include "legacy/defineU2D.hh"
 #include "setLocalVelocityBoundary2D.hh"
 #include "setInterpolatedVelocityBoundary2D.hh"
 #include "setLocalPressureBoundary2D.hh"
@@ -47,8 +47,5 @@
 #include "setSlipBoundary2D.hh"
 #include "setSlipBoundaryWithDynamics2D.hh"
 #include "setPartialSlipBoundary2D.hh"
-#include "zouHeDynamics.hh"
 #include "setZouHePressureBoundary2D.hh"
 #include "setZouHeVelocityBoundary2D.hh"
-
-

@@ -60,6 +60,15 @@ ValueTracer<T>::ValueTracer(int deltaT, T epsilon)
 { }
 
 template<typename T>
+ValueTracer<T>::ValueTracer(int deltaT, T epsilon, std::string name)
+  : _deltaT(deltaT),
+    _epsilon(epsilon),
+    _t(0),
+    _converged(false),
+    clout(std::cout,"ValueTracer "+name)
+{ }
+
+template<typename T>
 int ValueTracer<T>::getDeltaT() const
 {
   return _deltaT;

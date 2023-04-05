@@ -209,8 +209,8 @@ CartesianToPolar2D<T, S>::CartesianToPolar2D(T cartesianOriginX,
 
 template<typename T, typename S>
 CartesianToPolar2D<T, S>::CartesianToPolar2D(olb::Vector<T, 3> cartesianOrigin,
-	olb::Vector<T, 3> axisDirection,
-	olb::Vector<T, 3> orientation)
+    olb::Vector<T, 3> axisDirection,
+    olb::Vector<T, 3> orientation)
   : AnalyticalF2D<T, S>(2),
     _cartesianOrigin(cartesianOrigin),
     _axisDirection(axisDirection),

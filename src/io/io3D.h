@@ -24,6 +24,7 @@
 /** \file
  * Groups all the 3D include files for the directory io.
  */
+#include "printUtils.h"
 #include "base64.h"
 #include "blockGifWriter.h"
 #include "blockVtkWriter3D.h"
@@ -39,5 +40,9 @@
 #include "vtiReader.h"
 #include "vtiWriter.h"
 #include "xmlReader.h"
+#include "cliReader.h"
 #include "octree.h"
 #include "vtkWriter.h"
+#include "consoleWriter.h"
+#include "blockLatticeSTLreader.h"
+#include "plainWriter.h"

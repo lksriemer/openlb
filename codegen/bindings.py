@@ -25,15 +25,12 @@ import cppyy
 cppyy.add_include_path('src')
 cppyy.add_include_path('external/tinyxml')
 
-cppyy.cppdef('#define DISABLE_CSE')
 cppyy.cppdef('#define PLATFORM_CPU_SISD')
+cppyy.cppdef('#define DISABLE_CSE')
 cppyy.cppdef('#define any_platform')
 
 cppyy.include('utilities/expr.h')
-cppyy.include('olb2D.h')
-cppyy.include('olb2D.hh')
-cppyy.include('olb3D.h')
-cppyy.include('olb3D.hh')
+cppyy.include('olb.h')
 
 from cppyy.gbl import olb
 

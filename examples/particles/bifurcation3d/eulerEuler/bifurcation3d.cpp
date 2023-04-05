@@ -44,7 +44,7 @@ using namespace olb::descriptors;
 using namespace olb::graphics;
 using namespace olb::util;
 
-typedef double T;
+using T = FLOATING_POINT_TYPE;
 typedef D3Q19<> NSDESCRIPTOR;
 typedef D3Q7<VELOCITY,VELOCITY2> ADDESCRIPTOR;
 
@@ -126,10 +126,6 @@ void prepareLattice( SuperLattice<T, NSDESCRIPTOR>& sLatticeNS,
 
   const T omega = converter.getLatticeRelaxationFrequency();
 
-  // Material=0 --> do nothing
-  sLatticeNS.defineDynamics<NoDynamics>(superGeometry, 0);
-  sLatticeAD.defineDynamics<NoDynamics>(superGeometry, 0);
-
   // Material=1 --> bulk dynamics
   // Material=3 --> bulk dynamics (inflow)
   auto inflowIndicator = superGeometry.getMaterialIndicator({1, 3});
@@ -143,7 +139,6 @@ void prepareLattice( SuperLattice<T, NSDESCRIPTOR>& sLatticeNS,
   // Material=4,5 -->bulk dynamics / do-nothing (outflow)
   auto outflowIndicator = superGeometry.getMaterialIndicator({4, 5});
   sLatticeNS.defineDynamics<BGKdynamics>(outflowIndicator);
-  sLatticeAD.defineDynamics<NoDynamics>(outflowIndicator);
 
   // Material=6 --> bounce-back / bounce-back
   sLatticeNS.defineDynamics<BounceBack>(superGeometry, 6);
@@ -177,7 +172,7 @@ void prepareLattice( SuperLattice<T, NSDESCRIPTOR>& sLatticeNS,
   sLatticeAD.initialize();
 
   {
-    auto& communicator = sLatticeAD.getCommunicator(PostCoupling());
+    auto& communicator = sLatticeAD.getCommunicator(stage::PostCoupling());
     communicator.requestField<descriptors::VELOCITY>();
     communicator.requestOverlap(sLatticeAD.getOverlap());
     communicator.exchangeRequests();
@@ -269,7 +264,7 @@ void getResults( SuperLattice<T, NSDESCRIPTOR>& sLatticeNS,
     vtmWriterAD.write( iT );
 
     // GIF Writer
-    SuperEuklidNorm3D<T, NSDESCRIPTOR> normVel( velocity );
+    SuperEuklidNorm3D<T> normVel( velocity );
     HyperplaneLattice3D<T> gifLattice(
       superGeometry.getCuboidGeometry(),
       Hyperplane3D<T>()

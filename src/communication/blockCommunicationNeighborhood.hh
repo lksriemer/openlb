@@ -109,6 +109,34 @@ void BlockCommunicationNeighborhood<T,D>::requestOverlap(int width)
 }
 
 template <typename T, unsigned D>
+void BlockCommunicationNeighborhood<T,D>::requestOverlap(int width, BlockIndicatorF<T,D>& indicatorF)
+{
+  if (width < 1) {
+    throw std::logic_error("Overlap requests must have width >= 1");
+  }
+  if (width > _padding) {
+    throw std::logic_error("Requested overlap exceeds available padding");
+  }
+
+  auto& cuboid = _cuboidGeometry.get(_iC);
+  BlockStructureD<D> overlapBlock(cuboid.getExtent(), width);
+
+  overlapBlock.forSpatialLocations([&](LatticeR<D> latticeR) {
+    if (overlapBlock.isPadding(latticeR) && indicatorF(latticeR)) {
+      requestCell(latticeR);
+    }
+  });
+}
+
+template <typename T, unsigned D>
+void BlockCommunicationNeighborhood<T,D>::clearRequestedCells()
+{
+  _cellsInboundFrom.clear();
+  _cellsOutboundTo.clear();
+  _cellsRequestedFrom.clear();
+}
+
+template <typename T, unsigned D>
 void BlockCommunicationNeighborhood<T,D>::setFieldAvailability(std::type_index field, bool available)
 {
   auto iter = std::find(_fieldsRequested.begin(), _fieldsRequested.end(), field);
@@ -164,24 +192,22 @@ template <typename T, unsigned D>
 void BlockCommunicationNeighborhood<T,D>::send(SuperCommunicationTagCoordinator<T>& coordinator)
 {
   for (auto& [iC, cells] : _cellsRequestedFrom) {
-    if (!_loadBalancer.isLocal(iC)) {
-      _fieldRequests[iC] = std::make_unique<MpiSendRequest>(
-        _fieldsAvailable.get(), _fieldsRequested.size(),
-        _loadBalancer.rank(iC), coordinator.get(iC, _iC, 0), _neighborhoodComm);
-      _fieldRequests[iC]->start();
+    _fieldRequests[iC] = std::make_unique<MpiSendRequest>(
+      _fieldsAvailable.data(), _fieldsRequested.size(),
+      _loadBalancer.rank(iC), coordinator.get(_iC, iC, 0), _neighborhoodComm);
+    _fieldRequests[iC]->start();
 
-      _cellsRequests[iC] = std::make_unique<MpiSendRequest>(
-        cells.data(), cells.size(),
-        _loadBalancer.rank(iC), coordinator.get(iC, _iC, 1), _neighborhoodComm);
-      _cellsRequests[iC]->start();
-    }
+    _cellsRequests[iC] = std::make_unique<MpiSendRequest>(
+      cells.data(), cells.size(),
+      _loadBalancer.rank(iC), coordinator.get(_iC, iC, 1), _neighborhoodComm);
+    _cellsRequests[iC]->start();
   }
 }
 
 template <typename T, unsigned D>
 void BlockCommunicationNeighborhood<T,D>::receive(SuperCommunicationTagCoordinator<T>& coordinator)
 {
-  forRemoteNeighbors([&](int iC) {
+  forNeighbors([&](int iC) {
     std::unique_ptr<bool[]> fieldsAvailable(new bool[_fieldsRequested.size()] { });
     auto& fieldsCommonWith = _fieldsCommonWith[iC];
     fieldsCommonWith.clear();
@@ -198,9 +224,11 @@ void BlockCommunicationNeighborhood<T,D>::receive(SuperCommunicationTagCoordinat
       }
     }
 
-    std::size_t newOutboundCount = singleton::mpi().probeReceiveSize(_loadBalancer.rank(iC), MPI_UNSIGNED,
-                                                                     coordinator.get(iC, _iC, 1),
-                                                                     _neighborhoodComm);
+    static_assert(sizeof(CellID) == 4 || sizeof(CellID) == 8,
+                  "CellID must be either 4 or 8 byte unsigned integer");
+    std::size_t newOutboundCount = singleton::mpi().probeReceiveSize<CellID>(_loadBalancer.rank(iC),
+                                                                             coordinator.get(iC, _iC, 1),
+                                                                             _neighborhoodComm);
     _cellsOutboundTo[iC].resize(newOutboundCount);
 
     singleton::mpi().receive(
@@ -215,7 +243,7 @@ void BlockCommunicationNeighborhood<T,D>::receive(SuperCommunicationTagCoordinat
 template <typename T, unsigned D>
 void BlockCommunicationNeighborhood<T,D>::wait()
 {
-  forRemoteNeighbors([&](int iC) {
+  forNeighbors([&](int iC) {
     _fieldRequests[iC]->wait();
     _cellsRequests[iC]->wait();
   });

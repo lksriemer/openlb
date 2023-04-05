@@ -74,10 +74,10 @@ namespace olb {
   * to the time and size discretization.
   * Use 'loopAround = true', to start at the beginning of '_particleArray' after reaching its end and
   * 'reshuffleAfterLoop = true' to reshuffle it at the end
-  * 
+  *
   * time activation
   * When dealing with large number of particles adding them will get more time consuming because of the needed
-  * communication between sub-grids of all threads. To counteract this, the particles can be added as passive 
+  * communication between sub-grids of all threads. To counteract this, the particles can be added as passive
   * particles in bulk with 'preSpawnSphericalParticles' and calling 'timeActivateParticles' will activate the
   * particles according to the time distribution.
   **/
@@ -117,4 +117,4 @@ namespace olb {
     ~ParticleDistribution();
   };
 };
-#endif 
+#endif

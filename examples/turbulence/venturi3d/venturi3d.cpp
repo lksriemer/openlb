@@ -41,7 +41,7 @@ using namespace olb;
 using namespace olb::descriptors;
 using namespace olb::graphics;
 
-using T = double;
+using T = FLOATING_POINT_TYPE;
 using DESCRIPTOR = D3Q19<>;
 
 T maxPhysT = 200.0; // max. simulation time in s, SI unit
@@ -103,14 +103,11 @@ void prepareLattice( SuperLattice<T,DESCRIPTOR>& sLattice,
 
   const T omega = converter.getLatticeRelaxationFrequency();
 
-  // Material=0 -->do nothing
-  sLattice.defineDynamics<NoDynamics>(superGeometry, 0);
-
   // Material=1 -->bulk dynamics
   sLattice.defineDynamics<RLBdynamics>(superGeometry, 1);
 
   // Material=2 -->bounce back
-  sLattice.defineDynamics<BounceBack>(superGeometry, 2);
+  setBounceBackBoundary(sLattice, superGeometry, 2);
 
   // Setting of the boundary conditions
   setInterpolatedVelocityBoundary<T,DESCRIPTOR>(sLattice, omega, superGeometry, 3);
@@ -186,7 +183,7 @@ void getResults( SuperLattice<T, DESCRIPTOR>& sLattice,
     vtmWriter.addFunctor( pressure );
     vtmWriter.write( iT );
 
-    SuperEuklidNorm3D<T, DESCRIPTOR> normVel( velocity );
+    SuperEuklidNorm3D<T> normVel( velocity );
     BlockReduction3D2D<T> planeReduction( normVel, {0, 0, 1} );
 
     // write output as JPEG

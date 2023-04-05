@@ -83,22 +83,22 @@ struct id {
   }
 
   TYPE get() const {
-    return TYPE();
+    return TYPE{};
   }
 };
 
 template <typename TYPE>
 using id_t = typename id<TYPE>::type;
 
+/// Identity type to wrap non-type template arguments
+template <auto VALUE, typename TYPE = decltype(VALUE)>
+using value = typename std::integral_constant<TYPE, VALUE>::type;
+
 /// Returns distinct name on GCC, Clang and ICC but may return arbitrary garbage as per the standard
 template <typename T>
 std::string name() {
   return typeid(T).name();
 }
-
-/// Function equivalent of void_t, swallows any argument
-template <typename... ARGS>
-void swallow(ARGS&&...) { }
 
 /// Checks whether T can be used as a scalar arithmetic type
 /**
@@ -229,7 +229,7 @@ struct filter {
   >;
 };
 
-/// Return either nil type list or type list containing FIELD depending on COND
+/// Return either nil type list or type list containing (single) FIELD depending on COND
 template <template <typename> class COND, typename TYPE>
 struct filter<COND,TYPE> {
   using type = std::conditional_t<
@@ -267,9 +267,12 @@ struct reverse<TYPE> {
 template <typename... TYPES>
 using reverse_t = typename reverse<TYPES...>::type;
 
+/// Base of any meta::list
+struct list_base { };
+
 /// Plain wrapper for list of types
 template <typename... TYPES>
-struct list {
+struct list : public list_base {
   static constexpr unsigned size = sizeof...(TYPES);
 
   /// Returns INDEXth type of TYPES
@@ -282,6 +285,12 @@ struct list {
    **/
   template <template<typename...> class COLLECTION>
   using decompose_into = COLLECTION<TYPES...>;
+
+  template <template<typename> class F>
+  using map = list<F<TYPES>...>;
+
+  template <typename F>
+  using map_to_callable_result = list<decltype(std::declval<F&>()(meta::id<TYPES>{}))...>;
 
   template <typename TYPE>
   using push = list<TYPE, TYPES...>;
@@ -319,7 +328,7 @@ struct list {
   /// Calls f for each type of TYPES by-value (in reversed order!)
   template <typename F>
   static constexpr void for_each(F f) {
-    swallow((f(id<TYPES>()), 0)...);
+    (f(id<TYPES>()), ...);
   }
 
   template <typename TYPE>
@@ -329,16 +338,30 @@ struct list {
 
 };
 
-/// Apply F to each element of TUPLE listed in INDICES
-template <typename TUPLE, typename F, std::size_t... INDICES>
-void tuple_for_each_index(TUPLE& tuple, F&& f, std::index_sequence<INDICES...>)
+/// Apply F to each element of meta::list listed in INDICES
+template <typename TYPES, typename F, std::size_t... INDICES>
+void list_for_each_index(F&& f, std::index_sequence<INDICES...>)
 {
-  if constexpr (std::is_invocable_v<F, decltype(std::get<0>(tuple)), unsigned>) {
-    swallow((f(std::get<INDICES>(tuple), INDICES), INDICES)...);
+  if constexpr (std::is_invocable_v<F, decltype(id<typename TYPES::template get<0>>()), unsigned>) {
+    (f(id<typename TYPES::template get<INDICES>>(), INDICES), ...);
   } else {
-    swallow((f(std::get<INDICES>(tuple)), INDICES)...);
+    (f(id<typename TYPES::template get<INDICES>>()), ...);
   }
 }
+
+/// Apply F to each element of TUPLE listed in INDICES
+template <typename TUPLE, typename F, std::size_t...INDICES>
+void tuple_for_each_index(TUPLE& tuple, F&& f, std::index_sequence<INDICES...>)
+{
+  if constexpr (std::is_invocable_v<F, decltype(std::get<0>(tuple)), std::integral_constant<std::size_t,0>>) {
+    (f(std::get<INDICES>(tuple), std::integral_constant<std::size_t,INDICES>{}), ...);
+  } else if constexpr (std::is_invocable_v<F, decltype(std::get<0>(tuple)), unsigned>) {
+    (f(std::get<INDICES>(tuple), INDICES), ...);
+  } else {
+    (f(std::get<INDICES>(tuple)), ...);
+  }
+}
+
 
 /// Apply F to each element of TUPLE
 template <typename TUPLE, typename F>
@@ -351,7 +374,7 @@ void tuple_for_each(TUPLE& tuple, F&& f)
 template <typename T, unsigned D, typename U, std::size_t... INDICES>
 std::array<T,D> make_array(U&& u, std::index_sequence<INDICES...>)
 {
-  return std::array<T,D> {(swallow(INDICES), u)...};
+  return std::array<T,D> {(INDICES, u)...};
 }
 
 /// Return std::array<T,D> where T is initialized with a common value
@@ -400,7 +423,7 @@ constexpr auto array_from_index_sequence(std::index_sequence<Is...>)
   return std::array<std::size_t,sizeof...(Is)>{Is...};
 }
 
-/// Return index sequence of Is matching PREDICATE
+/// Return index sequence of Is matching PREDICATE depending on index
 template <typename PREDICATE, std::size_t... Is>
 constexpr auto filter_index_sequence(PREDICATE predicate, std::index_sequence<Is...>) {
   return (
@@ -410,6 +433,36 @@ constexpr auto filter_index_sequence(PREDICATE predicate, std::index_sequence<Is
     + ...
     + std::index_sequence<>()
   );
+}
+
+/// Return index sequence of Is matching PREDICATE depending on type in TYPES
+template <typename TYPES, typename PREDICATE, std::size_t... Is>
+constexpr auto filter_index_sequence(PREDICATE predicate, std::index_sequence<Is...>) {
+  return (
+      std::conditional_t<predicate(id<typename TYPES::template get<Is>>()),
+                         std::index_sequence<Is>,
+                         std::index_sequence<>>()
+    + ...
+    + std::index_sequence<>()
+  );
+}
+
+/// Return index sequence of Is matching COND in TYPES
+template <typename TYPES, template<typename> class COND, std::size_t... Is>
+constexpr auto filter_index_sequence(std::index_sequence<Is...>) {
+  return (
+      std::conditional_t<COND<typename TYPES::template get<Is>>::value,
+                         std::index_sequence<Is>,
+                         std::index_sequence<>>()
+    + ...
+    + std::index_sequence<>()
+  );
+}
+
+/// Return index sequence of Is matching COND using index_sequence of TYPES
+template <typename TYPES, template<typename> class COND>
+constexpr auto filter_index_sequence() {
+  return filter_index_sequence<TYPES,COND>(std::make_index_sequence<TYPES::size>());
 }
 
 template <typename MAP, std::size_t... Is>
@@ -444,6 +497,13 @@ constexpr auto zero_sequence() {
   }, std::make_index_sequence<N>());
 }
 
+template <std::size_t I, std::size_t O>
+constexpr auto make_index_sequence_in_range() {
+  return map_index_sequence([](std::size_t Is) constexpr {
+    return (Is+I);
+  }, std::make_index_sequence<(O-I)>());
+}
+
 template <std::size_t... Is>
 constexpr bool is_zero_sequence(std::index_sequence<Is...>) {
   return ((Is == 0) && ... && true);
@@ -459,6 +519,48 @@ void call_n_times(F&& f, std::index_sequence<INDICES...>) {
 template <unsigned N, typename F>
 void call_n_times(F&& f) {
   return call_n_times<F>(std::forward<F&&>(f), std::make_index_sequence<N>{});
+}
+
+/// Call fa for indices in index_sequence and call fb for indices in between indices in
+//  index_sequence with size>1
+// - This allows filtering for specific type traits, while preserving the general order
+// - Intended to be used in the particleManger
+template <typename TYPES,typename Fa, typename Fb, std::size_t Ia, std::size_t Iaa, std::size_t... Is>
+void index_sequence_for_subsequence_L2(Fa&& fa, Fb&& fb, std::index_sequence<Ia,Iaa,Is...> seq) {
+  if constexpr (seq.size()>2) {
+    fa(id<typename TYPES::template get<Ia>>());
+    fb(make_index_sequence_in_range<Ia+1,Iaa>());
+    index_sequence_for_subsequence_L2<TYPES>(fa,fb,std::index_sequence<Iaa,Is...>());
+  } else {
+    fa(id<typename TYPES::template get<Ia>>());
+    fb(make_index_sequence_in_range<Ia+1,Iaa>());
+    fa(id<typename TYPES::template get<Iaa>>());
+    fb(make_index_sequence_in_range<Iaa+1,TYPES::size>());
+  }
+}
+
+/// Call fa for indices in index_sequence and call fb for indices in between indices in
+//  index_sequence with size>0
+template <typename TYPES, typename Fa, typename Fb, std::size_t I, std::size_t... Is>
+void index_sequence_for_subsequence_L1(Fa&& fa, Fb&& fb, std::index_sequence<I,Is...> seq) {
+  fb(std::make_index_sequence<I>());
+  if constexpr (seq.size()>1) {
+    index_sequence_for_subsequence_L2<TYPES>(fa, fb, seq );
+  } else {
+    fa(id<typename TYPES::template get<I>>());
+    fb(make_index_sequence_in_range<I+1,TYPES::size>());
+  }
+}
+
+/// Call fa for indices in index_sequence and call fb for indices in between indices in
+//  index_sequence
+template <typename TYPES, typename Fa, typename Fb, std::size_t... Is>
+void index_sequence_for_subsequence(Fa&& fa, Fb&& fb, std::index_sequence<Is...> seq) {
+  if constexpr (seq.size()>0) {
+    index_sequence_for_subsequence_L1<TYPES>(fa, fb, seq );
+  } else {
+    fb(std::make_index_sequence<TYPES::size>());
+  }
 }
 
 template <

@@ -93,6 +93,7 @@ SuperIndicatorMaterial2D<T>::SuperIndicatorMaterial2D(
   SuperGeometry<T,2>& geometry, std::vector<int> materials)
   : SuperIndicatorF2D<T>(geometry)
 {
+  geometry.updateStatistics(false);
   const std::string matString = std::accumulate(
                                   materials.begin()+1,
                                   materials.end(),

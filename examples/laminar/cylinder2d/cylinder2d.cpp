@@ -39,17 +39,14 @@
 #include "olb2D.h"
 #include "olb2D.hh"
 
-
 using namespace olb;
 using namespace olb::descriptors;
 using namespace olb::graphics;
 
-using T = double;
+using T = FLOATING_POINT_TYPE;
 using DESCRIPTOR = D2Q9<>;
 
-#ifndef PLATFORM_GPU_CUDA
 #define BOUZIDI
-#endif
 
 // Parameters for the simulation setup
 const int N = 10;       // resolution of the model
@@ -110,15 +107,12 @@ void prepareLattice( SuperLattice<T,DESCRIPTOR>& sLattice,
 
   const T omega = converter.getLatticeRelaxationFrequency();
 
-  // Material=0 -->do nothing
-  sLattice.defineDynamics<NoDynamics>(superGeometry, 0);
-
   // Material=1 -->bulk dynamics
   auto bulkIndicator = superGeometry.getMaterialIndicator({1});
   sLattice.defineDynamics<BGKdynamics>(bulkIndicator);
 
   // Material=2 -->bounce back
-  sLattice.defineDynamics<BounceBack>(superGeometry, 2);
+  setBounceBackBoundary(sLattice, superGeometry, 2);
 
   // Setting of the boundary conditions
 
@@ -131,12 +125,10 @@ void prepareLattice( SuperLattice<T,DESCRIPTOR>& sLattice,
   setInterpolatedPressureBoundary(sLattice, omega, superGeometry, 4);
 
   // Material=5 -->bouzidi / bounce back
-
   #ifdef BOUZIDI
-  sLattice.defineDynamics<NoDynamics>(superGeometry, 5);
-  setBouzidiZeroVelocityBoundary(sLattice, superGeometry, 5, *circle);
+  setBouzidiBoundary(sLattice, superGeometry, 5, *circle);
   #else
-  sLattice.defineDynamics<BounceBack>(superGeometry, 5);
+  setBounceBackBoundary(sLattice, superGeometry, 5);
   #endif
 
   // Initial conditions

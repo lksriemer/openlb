@@ -286,7 +286,7 @@ void NoLatticeDynamics<T,DESCRIPTOR>::defineAllMomenta (
 template<typename T, typename DESCRIPTOR>
 OffDynamics<T,DESCRIPTOR>::OffDynamics(const T _location[DESCRIPTOR::d])
 {
-  this->getName() = "OffDynamics";  
+  this->getName() = "OffDynamics";
   typedef DESCRIPTOR L;
   for (int iD = 0; iD < L::d; iD++) {
     location[iD] = _location[iD];
@@ -305,7 +305,7 @@ OffDynamics<T,DESCRIPTOR>::OffDynamics(const T _location[DESCRIPTOR::d])
 template<typename T, typename DESCRIPTOR>
 OffDynamics<T,DESCRIPTOR>::OffDynamics(const T _location[DESCRIPTOR::d], T _distances[DESCRIPTOR::q])
 {
-  this->getName() = "OffDynamics";  
+  this->getName() = "OffDynamics";
   typedef DESCRIPTOR L;
   for (int iD = 0; iD < L::d; iD++) {
     location[iD] = _location[iD];

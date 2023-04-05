@@ -36,7 +36,7 @@ using namespace olb;
 using namespace olb::descriptors;
 using namespace olb::graphics;
 
-using T = double;
+using T = FLOATING_POINT_TYPE;
 using DESCRIPTOR = D3Q19<>;
 using BulkDynamics = ConstRhoBGKdynamics<T,DESCRIPTOR>;
 
@@ -82,9 +82,6 @@ void prepareLattice( UnitConverter<T, DESCRIPTOR> const& converter,
   clout << "Prepare Lattice ..." << std::endl;
 
   const T omega = converter.getLatticeRelaxationFrequency();
-
-  // Material=0 -->do nothing
-  lattice.defineDynamics<NoDynamics>(superGeometry, 0);
 
   // Material=1 -->bulk dynamics
   lattice.defineDynamics<BulkDynamics>(superGeometry, 1);
@@ -172,7 +169,7 @@ void getResults( SuperLattice<T,DESCRIPTOR>& sLattice,
     T tmp = T( converter.getCharPhysLength() / 2. );
     T origin[3] = {tmp,tmp,tmp};
 
-    SuperEuklidNorm3D<T, DESCRIPTOR> normVel( velocity );
+    SuperEuklidNorm3D<T> normVel( velocity );
     BlockReduction3D2D<T> planeReduction( normVel, origin, u, v, 600, BlockDataSyncMode::ReduceOnly );
 
     // write a heatmap
@@ -225,7 +222,6 @@ int main( int argc, char **argv )
   SuperGeometry<T,3> superGeometry( cuboidGeometry, loadBalancer );
 
   prepareGeometry( converter, cube, superGeometry );
-
 
   // === 3rd Step: Prepare Lattice ===
   SuperLattice<T, DESCRIPTOR> sLattice( superGeometry );

@@ -32,7 +32,7 @@ using namespace olb;
 using namespace olb::descriptors;
 using namespace olb::graphics;
 
-typedef double T;
+using T = FLOATING_POINT_TYPE;
 
 // #define SMAGORINSKY
 
@@ -189,9 +189,6 @@ void prepareLattice( ThermalUnitConverter<T, NSDESCRIPTOR, TDESCRIPTOR> const& c
   T omega  =  converter.getLatticeRelaxationFrequency();
   T Tomega  =  converter.getLatticeThermalRelaxationFrequency();
 
-  ADlattice.defineDynamics<NoDynamics>(superGeometry, 0);
-  NSlattice.defineDynamics<NoDynamics>(superGeometry, 0);
-
   #ifdef SMAGORINSKY
     NSlattice.defineDynamics<ExternalTauEffLESForcedBGKdynamics<T,NSDESCRIPTOR,momenta::AdvectionDiffusionBulkTuple>>(superGeometry.getMaterialIndicator({1, 2, 3}));
     ADlattice.defineDynamics<ExternalTauEffLESBGKadvectionDiffusionDynamics>(superGeometry.getMaterialIndicator({1, 2, 3}));
@@ -202,8 +199,8 @@ void prepareLattice( ThermalUnitConverter<T, NSDESCRIPTOR, TDESCRIPTOR> const& c
     ADlattice.defineDynamics<AdvectionDiffusionBGKdynamics>(superGeometry.getMaterialIndicator({1, 2, 3}));
   #endif
 
-  ADlattice.defineDynamics<BounceBack>(superGeometry, 4);
-  NSlattice.defineDynamics<BounceBack>(superGeometry, 4);
+  setBounceBackBoundary(ADlattice, superGeometry, 4);
+  setBounceBackBoundary(NSlattice, superGeometry, 4);
 
   /// sets boundary
   setAdvectionDiffusionTemperatureBoundary<T, TDESCRIPTOR>(ADlattice, Tomega, superGeometry.getMaterialIndicator({2, 3}));
@@ -265,7 +262,7 @@ void getResults( ThermalUnitConverter<T, NSDESCRIPTOR, TDESCRIPTOR> const& conve
 
   OstreamManager clout(std::cout,"getResults");
 
-  SuperVTMwriter2D<T> vtkWriter("thermalNaturalConvection2D");
+  SuperVTMwriter2D<T> vtkWriter("squareCavity2d");
   SuperLatticePhysVelocity2D<T, NSDESCRIPTOR> velocity(NSlattice, converter);
   SuperLatticePhysPressure2D<T, NSDESCRIPTOR> pressure(NSlattice, converter);
   SuperLatticePhysTemperature2D<T, NSDESCRIPTOR, TDESCRIPTOR> temperature(ADlattice, converter);
@@ -291,6 +288,8 @@ void getResults( ThermalUnitConverter<T, NSDESCRIPTOR, TDESCRIPTOR> const& conve
 
   /// Writes the VTK files
   if (iT % statIter == 0 || converged) {
+    NSlattice.setProcessingContext(ProcessingContext::Evaluation);
+    ADlattice.setProcessingContext(ProcessingContext::Evaluation);
 
     timer.update(iT);
     timer.printStep();
@@ -304,7 +303,7 @@ void getResults( ThermalUnitConverter<T, NSDESCRIPTOR, TDESCRIPTOR> const& conve
 
     BlockReduction2D2D<T> planeReduction(temperature, 600, BlockDataSyncMode::ReduceOnly);
     BlockGifWriter<T> gifWriter;
-    gifWriter.write(planeReduction, Tcold-.1, Thot+.1, iT, "temperature");
+    gifWriter.write(planeReduction, Tcold-1, Thot+1, iT, "temperature");
 
     SuperEuklidNorm2D<T, NSDESCRIPTOR> normVel( velocity );
     BlockReduction2D2D<T> planeReduction2(normVel, 600, BlockDataSyncMode::ReduceOnly);
@@ -314,7 +313,6 @@ void getResults( ThermalUnitConverter<T, NSDESCRIPTOR, TDESCRIPTOR> const& conve
   }
 
   if ( converged ) {
-
     T nusselt = computeNusselt(superGeometry, NSlattice, ADlattice);
 
     /// Initialize vectors for data output
@@ -595,35 +593,44 @@ int main(int argc, char *argv[])
   SuperLattice<T, TDESCRIPTOR> ADlattice(superGeometry);
   SuperLattice<T, NSDESCRIPTOR> NSlattice(superGeometry);
 
-
-  // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!//
-  // This coupling must be necessarily be put on the Navier-Stokes lattice!!
-  // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!//
-
-  std::vector<T> dir{0.0, 1.0};
+  //prepareLattice and setBoundaryCondition
+  prepareLattice(converter, NSlattice, ADlattice, superGeometry);
 
   T boussinesqForcePrefactor = 9.81 / converter.getConversionFactorVelocity() * converter.getConversionFactorTime() *
                                converter.getCharPhysTemperatureDifference() * converter.getPhysThermalExpansionCoefficient();
 
 #ifdef SMAGORINSKY
-  const T preFactor = smagoConst*smagoConst*descriptors::invCs2<T,NSDESCRIPTOR>()*descriptors::invCs2<T,NSDESCRIPTOR>()*2*util::sqrt(2);
-  SmagorinskyBoussinesqCouplingGenerator2D<T,NSDESCRIPTOR>
-  coupling(0, converter.getLatticeLength(lx), 0, converter.getLatticeLength(lx),
-           boussinesqForcePrefactor, converter.getLatticeTemperature(Tcold), 1., dir, 0.87, preFactor);
+  const T preFactor = smagoConst*smagoConst
+                    * descriptors::invCs2<T,NSDESCRIPTOR>()*descriptors::invCs2<T,NSDESCRIPTOR>()
+                    * 2*util::sqrt(2);
+
+  SuperLatticeCoupling coupling(
+    SmagorinskyBoussinesqCoupling{},
+    names::NavierStokes{}, NSlattice,
+    names::Temperature{},  ADlattice);
+  coupling.setParameter<SmagorinskyBoussinesqCoupling::T0>(
+    converter.getLatticeTemperature(Tcold));
+  coupling.setParameter<SmagorinskyBoussinesqCoupling::FORCE_PREFACTOR>(
+    boussinesqForcePrefactor * Vector<T,2>{0.0,1.0});
+  coupling.setParameter<SmagorinskyBoussinesqCoupling::SMAGORINSKY_PREFACTOR>(preFactor);
+  coupling.setParameter<SmagorinskyBoussinesqCoupling::PR_TURB>(0.87);
+  coupling.setParameter<SmagorinskyBoussinesqCoupling::OMEGA_NSE>(
+    converter.getLatticeRelaxationFrequency());
+  coupling.setParameter<SmagorinskyBoussinesqCoupling::OMEGA_ADE>(
+    converter.getLatticeThermalRelaxationFrequency());
 #else
-  NavierStokesAdvectionDiffusionCouplingGenerator2D<T,NSDESCRIPTOR>
-  coupling(0, converter.getLatticeLength(lx), 0, converter.getLatticeLength(lx),
-           boussinesqForcePrefactor, converter.getLatticeTemperature(Tcold), 1., dir);
+  SuperLatticeCoupling coupling(
+    NavierStokesAdvectionDiffusionCoupling{},
+    names::NavierStokes{}, NSlattice,
+    names::Temperature{},  ADlattice);
+  coupling.setParameter<NavierStokesAdvectionDiffusionCoupling::T0>(
+    converter.getLatticeTemperature(Tcold));
+  coupling.setParameter<NavierStokesAdvectionDiffusionCoupling::FORCE_PREFACTOR>(
+    boussinesqForcePrefactor * Vector<T,2>{0.0,1.0});
 #endif
 
-  NSlattice.addLatticeCoupling(superGeometry, 1, coupling, ADlattice);
-
-  //prepareLattice and setBoundaryCondition
-  prepareLattice(converter, NSlattice, ADlattice, superGeometry);
-
-
 #ifdef SMAGORINSKY
-  SuperVTMwriter2D<T> vtkWriter("thermalNaturalConvection2D");
+  SuperVTMwriter2D<T> vtkWriter("squareCavity2d");
 
   SuperLatticePhysTemperature2D<T,NSDESCRIPTOR, TDESCRIPTOR> sTemp(ADlattice,converter);
   SuperLatticePhysVelocity2D<T,NSDESCRIPTOR> sVel(NSlattice,converter);
@@ -654,7 +661,8 @@ int main(int argc, char *argv[])
     setBoundaryValues(converter, NSlattice, ADlattice, iT, superGeometry);
 
     /// === 6th Step: Collide and Stream Execution ===
-    NSlattice.executeCoupling();
+    coupling.execute();
+
     NSlattice.collideAndStream();
     ADlattice.collideAndStream();
 
@@ -663,12 +671,15 @@ int main(int argc, char *argv[])
       getResults(converter, NSlattice, ADlattice, iT, superGeometry, timer, converge.hasConverged());
     }
     if (!converged && iT % 1000 == 0) {
+      ADlattice.setProcessingContext(ProcessingContext::Evaluation);
       converge.takeValue(computeNusselt(superGeometry, NSlattice, ADlattice),true);
     }
 #ifdef SMAGORINSKY
     if (converged && iT % statisticsIntervall == 0) {
       NSlattice.communicate();
       ADlattice.communicate();
+      NSlattice.setProcessingContext(ProcessingContext::Evaluation);
+      ADlattice.setProcessingContext(ProcessingContext::Evaluation);
       sAveragedTemp.addEnsemble();
       sAveragedVel.addEnsemble();
       sAveragedTempVelCross.addEnsemble();

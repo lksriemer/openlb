@@ -37,9 +37,7 @@
 #include <limits>
 
 #include "geometry/cuboidGeometry3D.h"
-#include "functors/analytical/indicator/indicatorF3D.h"
-#include "communication/loadBalancer.h"
-
+#include "geometry/cuboidGeometryMinimizer.h"
 
 namespace olb {
 
@@ -94,8 +92,10 @@ CuboidGeometry3D<T>::CuboidGeometry3D(IndicatorF3D<T>& indicatorF, T voxelSize, 
 {
   _cuboids.reserve(nC+2);
   add(_motherCuboid);
-  split(0, nC);
-  shrink(indicatorF);
+  if (nC > 1) {
+    split(0, nC);
+    shrink(indicatorF);
+  }
 }
 
 template<typename T>
@@ -116,84 +116,13 @@ CuboidGeometry3D<T>::CuboidGeometry3D(IndicatorF3D<T>& indicatorF, T voxelSize, 
   add(_motherCuboid);
 
   if ( minimizeBy == "volume" ) {
-    // Search for the largest multiplier not dividable by two
-    int initalNc = nC;
-    while ( initalNc % 2 == 0 ) {
-      initalNc /= 2;
-    }
-
-    // Split evenly in initalNc many cuboids and shrink all
-    split(0, initalNc);
-    shrink(indicatorF);
-
-    while ( getNc() < nC ) {
-      // clout << "Starting with " << getNc() << " Cuboids." << std::endl;
-      // Search for the largest child cuboid
-      T iCVolume[getNc()];
-      int maxiC = 0;
-      for (int iC = 0; iC < getNc(); iC++) {
-        iCVolume[iC] = get(iC).getLatticeVolume();
-        if ( iCVolume[iC] > iCVolume[maxiC] ) {
-          maxiC = iC;
-        }
-        // clout << "Cuboid #" << iC << " with volume " << iCVolume[iC] << " and weight " << get(iC).getWeight() << std::endl;
-      }
-      // clout << "Found maximum volume cuboid #" << maxiC << " with volume " << iCVolume[maxiC] << std::endl;
-
-      // looking for largest extend, because halfing the cuboid by its largest extend will result in the smallest surface and therfore in the least comminication cells
-      if ( get(maxiC).getNx() >= get(maxiC).getNy() && get(maxiC).getNx() >= get(maxiC).getNz()) {
-        // clout << "Cut in x direction!" << std::endl;
-        get(maxiC).divide(2,1,1,_cuboids);
-      }
-      else if ( get(maxiC).getNy() >= get(maxiC).getNx() && get(maxiC).getNy() >= get(maxiC).getNz()) {
-        // clout << "Cut in y direction!" << std::endl;
-        get(maxiC).divide(1,2,1,_cuboids);
-      }
-      else {
-        // clout << "Cut in z direction!" << std::endl;
-        get(maxiC).divide(1,1,2,_cuboids);
-      }
-      remove(maxiC);
-      // shrink the two new cuboids
-      shrink(_cuboids.size()-2,indicatorF);
-      shrink(_cuboids.size()-1,indicatorF);
-    }
-
+    minimizeByVolume(*this, indicatorF, nC);
   }
   else if ( minimizeBy == "weight" ) {
-
-    setWeights(indicatorF);
-
-    // conduct a prime factorisation for the number of cuboids nC
-    std::vector<int> factors;
-    int initalNc = nC;
-    // iterate over the prime numbes from 0 to 100 (may have to be extended)
-    for ( int i : {
-            2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71
-          } ) {
-      while ( initalNc % i == 0 ) {
-        initalNc /= i;
-        factors.push_back(i);
-      }
-    }
-
-    // recursively split the current cuboids by each prime factor
-    for ( int i = factors.size() - 1; i >= 0; i-- ) {
-      int currentNc = _cuboids.size();
-      for ( int iC = 0; iC < currentNc; iC++ ) {
-        // clout << "split cuboid number #" << iC << " in " << factors[i] << " parts" << std::endl;
-        splitByWeight(iC, factors[i], indicatorF);
-        shrink(indicatorF);
-      }
-      for ( int iC = 0; iC < currentNc; iC++ ) {
-        // clout << "delet cuboid number #" << iC << std::endl;
-        remove(0);
-      }
-    }
-
+    minimizeByWeight(*this, indicatorF, nC);
   }
-
 }
+
 template<typename T>
 CuboidGeometry3D<T>::CuboidGeometry3D(std::shared_ptr<IndicatorF3D<T>> indicator_sharedPtrF, T voxelSize, int nC, std::string minimizeBy)
   : CuboidGeometry3D<T>(*indicator_sharedPtrF, voxelSize, nC, minimizeBy)
@@ -755,9 +684,6 @@ void CuboidGeometry3D<T>::remove(int iC)
 template<typename T>
 void CuboidGeometry3D<T>::remove(IndicatorF3D<T>& indicatorF)
 {
-
-  //IndicatorIdentity3D<T> tmpIndicatorF(indicatorF);
-
   std::vector<bool> allZero;
   int latticeR[4];
   T physR[3];
@@ -782,6 +708,20 @@ void CuboidGeometry3D<T>::remove(IndicatorF3D<T>& indicatorF)
   }
   for (int iC = _cuboids.size() - 1; iC >= 0; iC--) {
     if (allZero[iC] ) {
+      remove(iC);
+    }
+  }
+}
+
+template<typename T>
+void CuboidGeometry3D<T>::removeByWeight()
+{
+  std::vector<bool> allZero(_cuboids.size(), false);
+  for (unsigned iC = 0; iC < _cuboids.size(); iC++) {
+    allZero[iC] = (_cuboids[iC].getWeight() == 0);
+  }
+  for (int iC = _cuboids.size() - 1; iC >= 0; iC--) {
+    if (allZero[iC]) {
       remove(iC);
     }
   }
@@ -862,7 +802,6 @@ void CuboidGeometry3D<T>::shrink(IndicatorF3D<T>& indicatorF)
 template<typename T>
 void CuboidGeometry3D<T>::split(int iC, int p)
 {
-
   Cuboid3D<T> temp(_cuboids[iC].getOrigin()[0], _cuboids[iC].getOrigin()[1],
                    _cuboids[iC].getOrigin()[2],  _cuboids[iC].getDeltaR(),
                    _cuboids[iC].getNx(), _cuboids[iC].getNy(), _cuboids[iC].getNz());
@@ -870,6 +809,18 @@ void CuboidGeometry3D<T>::split(int iC, int p)
   remove(iC);
 }
 
+template<typename T>
+void CuboidGeometry3D<T>::splitRegular(int iC, int width)
+{
+  Cuboid3D<T> temp(_cuboids[iC].getOrigin()[0], _cuboids[iC].getOrigin()[1],
+                   _cuboids[iC].getOrigin()[2],  _cuboids[iC].getDeltaR(),
+                   _cuboids[iC].getNx(), _cuboids[iC].getNy(), _cuboids[iC].getNz());
+  const int p = std::max(1, temp.getNx() / width);
+  const int q = std::max(1, temp.getNy() / width);
+  const int r = std::max(1, temp.getNz() / width);
+  temp.divide(p, q, r, _cuboids);
+  remove(iC);
+}
 
 template<typename T>
 void CuboidGeometry3D<T>::splitByWeight(int iC, int p, IndicatorF3D<T>& indicatorF)
@@ -1046,6 +997,13 @@ void CuboidGeometry3D<T>::splitByWeight(int iC, int p, IndicatorF3D<T>& indicato
   }
 }
 
+template<typename T>
+void CuboidGeometry3D<T>::splitFractional(int iC, int iD, std::vector<T> fractions)
+{
+  Cuboid3D<T> tmp = _cuboids[iC];
+  tmp.divideFractional(iD, fractions, _cuboids);
+  remove(iC);
+}
 
 template<typename T>
 void CuboidGeometry3D<T>::swap(CuboidGeometry3D<T>& rhs)
@@ -1073,17 +1031,50 @@ void CuboidGeometry3D<T>::replaceCuboids(std::vector< Cuboid3D<T> >& cuboids)
   }
 }
 
+template<typename T>
+std::size_t CuboidGeometry3D<T>::replaceContainedBy(Cuboid3D<T> mother)
+{
+  std::vector<int> toBeRemoved;
+  for (unsigned iC=0; iC < _cuboids.size(); ++iC) {
+    if (mother.partialOverlapWith(_cuboids[iC]) && !mother.contains(_cuboids[iC])) {
+      return 0;
+    } else if (mother.contains(_cuboids[iC])) {
+      toBeRemoved.emplace_back(iC);
+    }
+  }
+  std::sort(toBeRemoved.begin(), toBeRemoved.end(), std::greater{});
+  mother.setWeight(0);
+  for (int dC : toBeRemoved) {
+    mother.setWeight(mother.getWeight() + _cuboids[dC].getWeight());
+    _cuboids.erase(_cuboids.begin() + dC);
+  }
+  _cuboids.push_back(mother);
+  return toBeRemoved.size();
+}
+
+template<typename T>
+std::size_t CuboidGeometry3D<T>::hypotheticalReplaceContainedBy(Cuboid3D<T> mother)
+{
+  std::size_t weight = 0;
+  for (unsigned iC=0; iC < _cuboids.size(); ++iC) {
+    if (mother.partialOverlapWith(_cuboids[iC]) && !mother.contains(_cuboids[iC])) {
+      return 0;
+    } else if (mother.contains(_cuboids[iC])) {
+      weight += _cuboids[iC].getWeight();
+    }
+  }
+  return weight;
+}
 
 template<typename T>
 void CuboidGeometry3D<T>::setWeights(IndicatorF3D<T>& indicatorF)
 {
-
-  //IndicatorIdentity3D<T> tmpIndicatorF(indicatorF);
-  int nC = getNc();
-  int latticeR[4];
-  T physR[3];
-  for ( int iC = nC - 1; iC >= 0; iC--) { // assemble neighbourhood information
-    latticeR[0] = iC;
+  #ifdef PARALLEL_MODE_OMP
+  #pragma omp parallel for schedule(dynamic,1)
+  #endif
+  for (int iC=0; iC < getNc(); ++iC) {
+    int latticeR[4] { iC, 0, 0, 0 };
+    T physR[3];
     int xN = get(iC).getNx();
     int yN = get(iC).getNy();
     int zN = get(iC).getNz();
@@ -1103,12 +1094,7 @@ void CuboidGeometry3D<T>::setWeights(IndicatorF3D<T>& indicatorF)
         }
       }
     }
-    if (fullCells > 0) {
-      get(iC).setWeight(fullCells);
-    }
-    else {
-      remove(iC);
-    }
+    get(iC).setWeight(fullCells);
   }
 }
 

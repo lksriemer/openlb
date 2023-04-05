@@ -126,7 +126,7 @@ template<typename T>
 bool STLtriangle<T>::isPointInside(const PhysR<T,3>& pt) const
 {
   // tests with T=double and T=float show that the epsilon must be increased
-  constexpr T epsilon = std::numeric_limits<T>::epsilon()*T(10);
+  const T epsilon = std::numeric_limits<BaseType<T>>::epsilon()*T(10);
 
   const T beta = pt * uBeta + kBeta;
   const T gamma = pt * uGamma + kGamma;
@@ -158,7 +158,7 @@ bool STLtriangle<T>::testRayIntersect(const Vector<T,3>& pt,
 {
   T rn = 0.;
   Vector<T,3> testPt = pt + rad * normal;
-  Vector<T,3> help;
+  /* Vector<T,3> help; */
 
   for (int i = 0; i < 3; i++) {
     rn += dir[i] * normal[i];
@@ -1352,9 +1352,6 @@ bool STLreader<T>::distance(T& distance, const Vector<T,3>& origin,
     }
   }
 
-  if (_verbose) {
-    clout << "Returning false" << std::endl;
-  }
   return false;
 }
 
@@ -1413,7 +1410,7 @@ Vector<T,3> STLreader<T>::evalSurfaceNormal(const Vector<T,3>& origin)
     bool isInsideOuterPoint;
     this->operator()(&isInsideOuterPoint, (closestPoint+_voxelSize*normal).data());
     normal *= (isInsideInnerPoint && !isInsideOuterPoint ? 1 : -1);
-  } 
+  }
   else {
     bool isInside;
     this->operator()(&isInside, origin.data());

@@ -25,7 +25,7 @@
 #define EXTENDED_FINITE_DIFFERENCE_BOUNDARY_2D_HH
 
 #include "extendedFiniteDifferenceBoundary2D.h"
-#include "core/finiteDifference2D.h"
+#include "utilities/finiteDifference2D.h"
 #include "core/util.h"
 #include "dynamics/lbm.h"
 

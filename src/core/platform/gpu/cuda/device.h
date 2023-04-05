@@ -25,9 +25,7 @@
 #ifndef GPU_CUDA_DEVICE_H
 #define GPU_CUDA_DEVICE_H
 
-#include <stdexcept>
-
-#include <cuda.h>
+#include <cuda_runtime_api.h>
 
 namespace olb {
 
@@ -38,63 +36,29 @@ namespace cuda {
 /// Basic wrappers of common CUDA functions
 namespace device {
 
-void check() {
-  cudaError_t error = cudaGetLastError();
-  if (error != cudaSuccess) {
-    throw std::runtime_error(cudaGetErrorString(error));
-  }
-}
+/// Return number of available devices
+int getCount();
 
-/// Check CUDA driver errors
-void check(CUresult result) {
-  if (result != CUDA_SUCCESS) {
-    const char* description{};
-    cuGetErrorString(result, &description);
-    throw std::runtime_error(std::string(description));
-  }
-}
+/// Check errors
+void check();
 
-void synchronize() {
-  cudaDeviceSynchronize();
-  check();
-}
+/// Synchronize device
+void synchronize();
 
-int get() {
-  int device;
-  cudaGetDevice(&device);
-  check();
-  return device;
-}
+/// Get current device
+int get();
 
-void copyToHost(void* src, void* dst, std::size_t count) {
-  cudaMemcpy(dst, src, count, cudaMemcpyDeviceToHost);
-  check();
-}
+/// Copy data from device to host
+void copyToHost(void* src, void* dst, std::size_t count);
+/// Copy data from host to device
+void copyToDevice(void* src, void* dst, std::size_t count);
 
-void copyToDevice(void* src, void* dst, std::size_t count) {
-  cudaMemcpy(dst, src, count, cudaMemcpyHostToDevice);
-  check();
-}
-
+/// Allocate data on device
 template <typename T>
-T* malloc(std::size_t size) {
-  T* ptr{};
-  cudaMalloc(&ptr, size*sizeof(T));
-  check();
-  return ptr;
-}
+T* malloc(std::size_t size);
 
-/// Returns GPU memory page size
-std::size_t getDevicePageSize() {
-  std::size_t granularity = 0;
-  CUmemAllocationProp prop = {};
-  prop.type = CU_MEM_ALLOCATION_TYPE_PINNED;
-  prop.location.type = CU_MEM_LOCATION_TYPE_DEVICE;
-  prop.location.id = device::get();
-  check(cuMemGetAllocationGranularity(&granularity, &prop, CU_MEM_ALLOC_GRANULARITY_MINIMUM));
-  return granularity;
-}
-
+/// Returns device memory page size
+std::size_t getDevicePageSize();
 /// Returns `count` rounded up to be a multiple of `getDevicePageSize`
 template <typename T>
 std::size_t getPageAlignedCount(std::size_t count)
@@ -110,6 +74,7 @@ std::size_t getPageAlignedCount(std::size_t count)
   return volume;
 };
 
+/// Managed pointer for device-side memory
 template <typename T>
 class unique_ptr {
 private:
@@ -118,28 +83,14 @@ private:
 public:
   unique_ptr():
     _ptr{nullptr} { }
-
   unique_ptr(T* ptr):
     _ptr{ptr} { }
-
   unique_ptr(unique_ptr&& rhs):
     _ptr{rhs.release()} { }
 
-  ~unique_ptr() {
-    if (_ptr != nullptr) {
-      cudaFree(_ptr);
-      check();
-    }
-  }
+  ~unique_ptr();
 
-  unique_ptr& operator=(unique_ptr&& rhs) {
-    if (_ptr != nullptr) {
-      cudaFree(_ptr);
-      check();
-    }
-    _ptr = rhs.release();
-    return *this;
-  }
+  unique_ptr& operator=(unique_ptr&& rhs);
 
   void reset(T* ptr) {
     operator=(unique_ptr<T>(ptr));
@@ -165,31 +116,28 @@ public:
 
 };
 
+
+/// Basic wrapper for device stream
 class Stream {
 private:
   cudaStream_t _stream;
 
 public:
-  Stream(unsigned int flags) {
-    cudaStreamCreateWithFlags(&_stream, flags);
-    check();
-  }
-
-  ~Stream() {
-    cudaStreamDestroy(_stream);
-    check();
-  }
+  Stream(unsigned int flags);
+  ~Stream();
 
   cudaStream_t& get() {
     return _stream;
   }
 
-  void synchronize() {
-    cudaStreamSynchronize(_stream);
-    check();
-  }
+  void synchronize();
 
 };
+
+/// Copy data from device to host (async)
+void asyncCopyToHost(Stream& stream, void* src, void* dst, std::size_t count);
+/// Copy data from host to device (async)
+void asyncCopyToDevice(Stream& stream, void* src, void* dst, std::size_t count);
 
 }
 

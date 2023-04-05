@@ -56,7 +56,7 @@ protected:
   S _epsilon;
   std::string _name = "smoothIndicator2D";
 public:
-  void init(T theta);
+  void init();
   const Vector<S,2>& getMin() const;
   const Vector<S,2>& getMax() const;
   const Vector<S,2>& getPos() const;
@@ -68,7 +68,7 @@ public:
   void setPos(Vector<S,2> pos);
   void setTheta(S theta);
   void setEpsilon(S epsilon);
-  virtual S calcArea();
+  virtual S getArea();
   virtual Vector<S,2> calcMofiAndMass(S density);
   virtual Vector<S,2> surfaceNormal(const Vector<S,2>& pos, const S meshSize);
   virtual Vector<S,2> surfaceNormal(const Vector<S,2>& pos, const S meshSize,
@@ -107,7 +107,7 @@ public:
   const S& getEpsilon() const;
   std::string name();
   void setEpsilon(S epsilon);
-  virtual S calcArea();
+  virtual S getArea();
   virtual Vector<S,2> calcMofiAndMass(S density);
   virtual Vector<S,2> surfaceNormal(const Vector<S,2>& pos, const S meshSize);
   virtual Vector<S,2> surfaceNormal(const Vector<S,2>& pos, const S meshSize,

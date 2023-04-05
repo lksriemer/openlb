@@ -36,7 +36,7 @@ using namespace olb;
 using namespace olb::descriptors;
 using namespace olb::graphics;
 
-using T = double;
+using T = FLOATING_POINT_TYPE;
 using DESCRIPTOR = D3Q19<>;
 using BulkDynamics = BGKdynamics<T,DESCRIPTOR>;
 
@@ -102,9 +102,6 @@ void prepareLattice( UnitConverter<T,DESCRIPTOR> const& converter,
 
   const T omega = converter.getLatticeRelaxationFrequency();
 
-  // Material=0 -->do nothing
-  sLattice.defineDynamics<NoDynamics>(superGeometry, 0);
-
   // Material=1 -->bulk dynamics
   // Material=3 -->bulk dynamics (inflow)
   // Material=4 -->bulk dynamics (outflow)
@@ -112,7 +109,7 @@ void prepareLattice( UnitConverter<T,DESCRIPTOR> const& converter,
   sLattice.defineDynamics<BulkDynamics>(bulkIndicator);
 
   // Material=2 -->bounce back
-  sLattice.defineDynamics<BounceBack>(superGeometry, 2);
+  setBounceBackBoundary(sLattice, superGeometry, 2);
 
   // Setting of the boundary conditions
 
@@ -200,7 +197,7 @@ void getResults( SuperLattice<T,DESCRIPTOR>& sLattice,
 
   const int  vtkIter  = converter.getLatticeTime( 0.2 );
   const int  statIter = converter.getLatticeTime( 0.2 );
-  const int  saveIter = converter.getLatticeTime( 1. );
+  //const int  saveIter = converter.getLatticeTime( 1. );
 
   if ( iT==0 ) {
     // Writes the geometry, cuboid no. and rank no. as vti file for visualization
@@ -304,7 +301,7 @@ int main( int argc, char* argv[] )
 
   // Set up persistent measuring functors for result extraction
   SuperLatticePhysVelocity3D<T, DESCRIPTOR> velocity( sLattice, converter );
-  SuperEuklidNorm3D<T, DESCRIPTOR> normVel( velocity );
+  SuperEuklidNorm3D<T> normVel( velocity );
 
   BlockReduction3D2D<T> planeReduction(
     normVel,

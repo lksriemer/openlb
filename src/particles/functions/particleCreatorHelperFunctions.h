@@ -30,6 +30,8 @@ namespace particles {
 
 namespace creators {
 
+//// Resolved particles
+
 template<typename PARTICLETYPE, bool ROTATION_IS_OPTIONAL=false>
 void checkForErrors()
 {
@@ -39,14 +41,14 @@ void checkForErrors()
                 "A rotation matrix is necessary but not provided.");
 }
 
-/// Set new particle for existing surface
+/// Set new particle for existing surface (and return particle object)
 template<typename T, typename PARTICLETYPE, bool ROTATION_IS_OPTIONAL=false>
-void setResolvedObject(
+Particle<T,PARTICLETYPE> setResolvedObject(
   ParticleSystem<T,PARTICLETYPE>& particleSystem,
   std::size_t idxParticle, std::size_t idxSurface,
   const Vector<T,PARTICLETYPE::d>& position,
   T density,
-  Vector<T,utilities::dimensions::convert<PARTICLETYPE::d>::rotation> angle,
+  Vector<T,utilities::dimensions::convert<PARTICLETYPE::d>::rotation> angleInDegree,
   const Vector<T,PARTICLETYPE::d>& velocity)
 {
   particles::creators::checkForErrors<PARTICLETYPE,ROTATION_IS_OPTIONAL>();
@@ -57,49 +59,49 @@ void setResolvedObject(
 
   //Retrieve smart pointer from particleSystem
   auto& vectorOfIndicators = particleSystem.template getAssociatedData<
-                             std::vector<std::shared_ptr<SIndicatorBaseType>>>();
-  auto sIndicatorSPtr = vectorOfIndicators.at( idxSurface );
+                             std::vector<std::unique_ptr<SIndicatorBaseType>>>();
+  auto sIndicatorPtr = vectorOfIndicators.at( idxSurface ).get();
 
   //Initialize fields (Seems to be necessary for clang-1000.10.44.4 but not for gcc)
   dynamics::initializeParticle<T,PARTICLETYPE>(particleSystem.get().data(), idxParticle);
 
   //Calculate moment of inertia and mass
   Vector<T,utilities::dimensions::convert<D>::rotation> momentOfInertia;
-  T mass;
   if constexpr(D==3) {
     for (unsigned iD=0; iD<D; ++iD) {
-      momentOfInertia[iD] = sIndicatorSPtr->calcMofiAndMass(density)[iD];
+      momentOfInertia[iD] = sIndicatorPtr->calcMofiAndMass(density)[iD];
     }
-    mass = sIndicatorSPtr->calcMofiAndMass(density)[D];
   }
   else {
-    momentOfInertia[0] = sIndicatorSPtr->calcMofiAndMass(density)[0];
-    mass = sIndicatorSPtr->calcMofiAndMass(density)[1];
+    momentOfInertia[0] = sIndicatorPtr->calcMofiAndMass(density)[0];
   }
 
   //Set values
   auto particle = particleSystem.get( idxParticle );
   particle.template setField<GENERAL,POSITION>( position );
-  particle.template setField<SURFACE,SINDICATOR>( sIndicatorSPtr.get() );
-  particle.template setField<PHYSPROPERTIES,MASS>( mass );
+  particle.template setField<SURFACE,SINDICATOR>( sIndicatorPtr );
+  access::setDensity(particle, density);
   particle.template setField<MOBILITY,VELOCITY>( velocity );
   particle.template setField<PHYSPROPERTIES,MOFI>( utilities::dimensions::convert<D>::serialize_rotation(momentOfInertia) );
 
-  angle *= (M_PI/180.);
+  auto angle = util::degreeToRadian(angleInDegree);
   particle.template setField<SURFACE,ANGLE>( utilities::dimensions::convert<D>::serialize_rotation(angle) );
   if constexpr ( PARTICLETYPE::template providesNested<SURFACE,ROT_MATRIX>() ) {
-    const Vector<T,utilities::dimensions::convert<D>::matrix> rotationMatrix = dynamics::rotation_matrix<D,T>::calculate(
+    const Vector<T,utilities::dimensions::convert<D>::matrix> rotationMatrix = util::calculateRotationMatrix<T,D>(
           utilities::dimensions::convert<D>::serialize_rotation(angle) );
     particle.template setField<SURFACE,ROT_MATRIX>( rotationMatrix );
   }
+
+  /// Return new particle object
+  return particle;
 }
 
-/// Add resolved object as new particle with existing surface
+/// Add resolved object as new particle with existing surface (and return particle object)
 template<typename T, typename PARTICLETYPE>
-void addResolvedObject(
+Particle<T,PARTICLETYPE> addResolvedObject(
   ParticleSystem<T,PARTICLETYPE>& particleSystem, std::size_t idxSurface,
   const Vector<T,PARTICLETYPE::d>& position, T density=0.,
-  const Vector<T,utilities::dimensions::convert<PARTICLETYPE::d>::rotation>& angle = Vector<T,utilities::dimensions::convert<PARTICLETYPE::d>::rotation> (0.),
+  const Vector<T,utilities::dimensions::convert<PARTICLETYPE::d>::rotation>& angleInDegree = Vector<T,utilities::dimensions::convert<PARTICLETYPE::d>::rotation> (0.),
   const Vector<T,PARTICLETYPE::d>& velocity = Vector<T,PARTICLETYPE::d> (0.))
 {
   //Retrieve new index
@@ -109,8 +111,81 @@ void addResolvedObject(
   particleSystem.extend();
 
   /// Set resolved object 3D at given index
-  setResolvedObject( particleSystem, idxParticle, idxSurface, position, density, angle, velocity );
+  setResolvedObject( particleSystem, idxParticle, idxSurface, position, density, angleInDegree, velocity );
+
+  /// Return new particle object
+  return particleSystem.get(idxParticle);
 }
+
+
+//// Subgrid particles
+
+/// Set new particle (and return particle object)
+template<typename T, typename PARTICLETYPE>
+Particle<T,PARTICLETYPE> setSubgridObject(
+  ParticleSystem<T,PARTICLETYPE>& particleSystem,
+  std::size_t idxParticle,
+  const Vector<T,PARTICLETYPE::d>& position,
+  T radius, T density,
+  const Vector<T,PARTICLETYPE::d>& velocity,
+  T shapeFactor = T{1})
+{
+  using namespace descriptors;
+  using namespace access;
+  constexpr unsigned D = PARTICLETYPE::d;
+  constexpr unsigned Drot = utilities::dimensions::convert<PARTICLETYPE::d>::rotation;
+
+  //Initialize fields (Seems to be necessary for clang-1000.10.44.4 but not for gcc)
+  particles::dynamics::initializeParticle<T,PARTICLETYPE>(
+    particleSystem.get().data(), idxParticle);
+
+  //Set values
+  auto particle = particleSystem.get( idxParticle );
+  particle.template setField<GENERAL,POSITION>( position );
+  particle.template setField<MOBILITY,VELOCITY>( velocity );
+  particle.template setField<PHYSPROPERTIES,RADIUS>( radius );
+  access::setDensity(particle, density, shapeFactor);
+
+  //Calculate moment of inertia and mass
+  Vector<T,Drot> momentOfInertia;
+  T mass = access::getMass(particle, shapeFactor);
+
+  //Calculate moment of inertia and mass
+  if constexpr(D==3) {
+    momentOfInertia = Vector<T,Drot>(2./5.*mass*radius*radius);
+  } else {
+    momentOfInertia[0] = 0.5*mass*radius*radius;
+  }
+
+  particle.template setField<PHYSPROPERTIES,MOFI>( utilities::dimensions::convert<D>::serialize_rotation(momentOfInertia) );
+
+  /// Return new particle object
+  return particle;
+}
+
+/// Add subgrid object as new particle (and return particle object)
+template<typename T, typename PARTICLETYPE>
+Particle<T,PARTICLETYPE> addSubgridObject(
+  ParticleSystem<T,PARTICLETYPE>& particleSystem,
+  const Vector<T,PARTICLETYPE::d>& position, T radius, T density=0.,
+  const Vector<T,PARTICLETYPE::d>& velocity = Vector<T,PARTICLETYPE::d> (0.))
+{
+  //Retrieve new index
+  std::size_t idxParticle = particleSystem.size();
+
+  //Initialize particle address
+  particleSystem.extend();
+
+  /// Set subgrid object 3D at given index
+  setSubgridObject( particleSystem, idxParticle, position, radius, density,velocity );
+
+  /// Return new particle object
+  return particleSystem.get(idxParticle);
+}
+
+
+
+
 
 } //namespace creators
 

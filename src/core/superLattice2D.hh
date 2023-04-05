@@ -47,14 +47,14 @@ namespace olb {
 
 //TODO: 200116 preliminary version
 template<typename T, typename DESCRIPTOR>
-void setSuperExternalPSMParticleField( SuperGeometry<T,2>& sGeometry, int material, AnalyticalF2D<T,T>& velocity, 
+void setSuperExternalPSMParticleField( SuperGeometry<T,2>& sGeometry, int material, AnalyticalF2D<T,T>& velocity,
                                     T size,
                                     SuperLatticeF2D<T,DESCRIPTOR>& epsilon,
                                     SuperLattice<T, DESCRIPTOR>& sLattice )
 {
   FunctorPtr<SuperIndicatorF2D<T>>&& indicator = sGeometry.getMaterialIndicator(material);
   const int overlap = indicator->getSuperGeometry().getOverlap();
-  for (int iC = 0; iC < sLattice.getLoadBalancer().size(); ++iC) { 
+  for (int iC = 0; iC < sLattice.getLoadBalancer().size(); ++iC) {
     int globIC = sLattice.getLoadBalancer().glob(iC);
     BlockIndicatorF2D<T>& blockIndicator = indicator->getBlockIndicatorF(iC);
     setBlockExternalPSMParticleField( sGeometry.getBlockGeometry(iC), velocity, size, epsilon,

@@ -120,15 +120,36 @@ struct TYPED_FIELD_BASE : public FIELD_BASE<C,U...> {
   }
 };
 
+template <template<typename> typename TYPE, unsigned C, unsigned... U>
+struct TEMPLATE_FIELD_BASE : public FIELD_BASE<C,U...> {
+  template <typename T>
+  using value_type = TYPE<T>;
+
+  template <typename T>
+  using column_type = AbstractColumn<value_type<T>>;
+
+  template <typename T, typename DESCRIPTOR>
+  static constexpr auto getInitialValue() {
+    return Vector<value_type<T>, DESCRIPTOR::template size<FIELD_BASE<C,U...>>()>{};
+  }
+
+  static constexpr bool isSerializable() {
+    return false;
+  }
+};
+
 /// Base of a implicitly propagatable descriptor field
-template <unsigned C, unsigned... U>
-struct PROPAGATABLE_FIELD_BASE : public FIELD_BASE<C,U...> {
+struct PROPAGATABLE_FIELD_BASE : public FIELD_BASE<0,0,1> {
   template <typename T>
   using value_type = T;
 
   template <typename T>
   using column_type = AbstractCyclicColumn<T>;
 };
+
+/// Evaluates to true iff FIELD is propagatable (e.g. POPULATION)
+template <typename FIELD>
+using is_propagatable_field = typename std::is_base_of<PROPAGATABLE_FIELD_BASE, FIELD>::type;
 
 /// Base of a tensor-valued descriptor field
 struct TENSOR {
@@ -155,7 +176,7 @@ struct CELL_ID      : public TYPED_FIELD_BASE<std::size_t,1> { };
 struct MATERIAL     : public TYPED_FIELD_BASE<int,        1> { };
 struct LATTICE_TIME : public TYPED_FIELD_BASE<std::size_t,1> { };
 
-struct POPULATION : public PROPAGATABLE_FIELD_BASE<0, 0, 1> { };
+struct POPULATION : public PROPAGATABLE_FIELD_BASE { };
 
 struct STATISTIC_GENERATED : public TYPED_FIELD_BASE<int,1> { };
 struct STATISTIC           : public FIELD_BASE<2> { };
@@ -168,12 +189,14 @@ struct SOURCE               : public FIELD_BASE<1,  0, 0> { };
 struct FORCE                : public FIELD_BASE<0,  1, 0> { };
 struct EXTERNAL_FORCE       : public FIELD_BASE<0,  1, 0> { };
 struct TAU_EFF              : public FIELD_BASE<1,  0, 0> { };
+struct GAMMA                : public FIELD_BASE<1,  0, 0> { };
 struct CUTOFF_KIN_ENERGY    : public FIELD_BASE<1,  0, 0> { };
 struct CUTOFF_HEAT_FLUX     : public FIELD_BASE<1,  0, 0> { };
 struct CHEM_POTENTIAL       : public FIELD_BASE<1,  0, 0> { };
 struct V6                   : public FIELD_BASE<6,  0, 0> { };
 struct V12                  : public FIELD_BASE<12, 0, 0> { };
 struct OMEGA                : public FIELD_BASE<1,  0, 0> { };
+struct MAGIC                : public FIELD_BASE<1,  0, 0> { };
 struct G                    : public FIELD_BASE<0,  1, 0> { };
 struct EPSILON              : public FIELD_BASE<1,  0, 0> { };
 struct BODY_FORCE           : public FIELD_BASE<0,  1, 0> { };
@@ -189,6 +212,7 @@ struct F                    : public FIELD_BASE<0,  0, 1> { };
 struct DJDF                 : public FIELD_BASE<0,  0, 1> { };
 struct DJDALPHA             : public FIELD_BASE<0,  1, 0> { };
 struct AV_SHEAR             : public FIELD_BASE<1,  0, 0> { };
+struct SHEAR_RATE_MAGNITUDE : public FIELD_BASE<1,  0, 0> { };
 struct TAU_W                : public FIELD_BASE<1,  0, 0> { };
 struct SCALAR               : public FIELD_BASE<1,  0, 0> { };
 struct SMAGO_CONST          : public FIELD_BASE<1,  0, 0> { };
@@ -218,7 +242,8 @@ struct TEMPERATURE          : public FIELD_BASE<1,  0, 0> { };
 struct INTERPHASE_NORMAL    : public FIELD_BASE<0,  1, 0> { };
 struct MASS                 : public FIELD_BASE<1,  0, 0> { };
 struct CELL_TYPE            : public FIELD_BASE<1,  0, 0> { };
-struct COLLISION_DETECTION  : public TYPED_FIELD_BASE<size_t, 1,  0, 0> { };
+struct BOUNDARY             : public FIELD_BASE<1,  0, 0> { };
+struct CONTACT_DETECTION  : public TYPED_FIELD_BASE<size_t, 1,  0, 0> { };
 struct POROSITY             : public FIELD_BASE<1,  0, 0> {
   template <typename T, typename DESCRIPTOR>
   static constexpr auto getInitialValue() {
@@ -227,6 +252,8 @@ struct POROSITY             : public FIELD_BASE<1,  0, 0> {
 };
 struct POROSITY2            : public FIELD_BASE<1,  0, 0> { };
 struct EUL2LAGR             : public FIELD_BASE<1,  0, 0> { };
+struct LOCATION             : public FIELD_BASE<0,  1, 0> { };
+struct VORTICITY            : public FIELD_BASE<1,  0, 0> { };
 
 //TODO: This expression has been removed on master lately. As no obvious equivalent could be found immediately,
 //      it is added back in to enable some functionality on feature/unifiedParticleFramework.

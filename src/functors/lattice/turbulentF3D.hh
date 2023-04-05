@@ -24,17 +24,7 @@
 #ifndef TURBULENT_F_3D_HH
 #define TURBULENT_F_3D_HH
 
-#include<vector>
-#include<cmath>
-
 #include "turbulentF3D.h"
-#include "dynamics/smagorinskyBGKdynamics.h"
-#include "core/superLattice.h"
-#include "core/finiteDifference.h"
-#include "geometry/superGeometry.h"
-#include "utilities/vectorHelpers.h"
-#include "dynamics/lbm.h"  // for computation of lattice rho and velocity
-
 
 namespace olb {
 
@@ -62,7 +52,7 @@ bool SuperLatticeYplus3D<T,DESCRIPTOR>::operator() (T output[], const int input[
   if ( this->_sLattice.getLoadBalancer().rank(globIC) == singleton::mpi().getRank() ) {
     std::vector<T> normalTemp(3,T());
     std::vector<T> normal(3,T());       // normalized
-    T counter = T();
+    unsigned counter {0};
     T distance = T();
     if (_superGeometry.get(input) == 1) {
       for (int iPop = 1; iPop < DESCRIPTOR::q; ++iPop) {
@@ -70,13 +60,13 @@ bool SuperLatticeYplus3D<T,DESCRIPTOR>::operator() (T output[], const int input[
                                input[1] + descriptors::c<DESCRIPTOR>(iPop,0),
                                input[2] + descriptors::c<DESCRIPTOR>(iPop,1),
                                input[3] + descriptors::c<DESCRIPTOR>(iPop,2)) == _material) {
-          counter++;
+          ++counter;
           normalTemp[0] += descriptors::c<DESCRIPTOR>(iPop,0);
           normalTemp[1] += descriptors::c<DESCRIPTOR>(iPop,1);
           normalTemp[2] += descriptors::c<DESCRIPTOR>(iPop,2);
         }
       }
-      if ( !util::nearZero(counter) ) {
+      if ( counter > 0 ) {
         // get physical Coordinates at intersection
 
         std::vector<T> physR(3, T());
@@ -128,253 +118,6 @@ bool SuperLatticeYplus3D<T,DESCRIPTOR>::operator() (T output[], const int input[
     }
   }
   return true;
-}
-
-////////////////////////BlockFiniteDifference3D//////////////////////////////////
-template <typename T>
-BlockFiniteDifference3D<T>::BlockFiniteDifference3D
-(BlockGeometry<T,3>& blockGeometry, BlockF3D<T>& blockFunctor, std::list<int>& matNumber)
-  : BlockF3D<T>(blockFunctor.getBlockStructure(), 3*blockFunctor.getTargetDim()), _blockGeometry(blockGeometry), _blockFunctor(blockFunctor), _matNumber(matNumber)
-{
-  this->getName() = "FiniteDifference";
-  _targetDim = _blockFunctor.getTargetDim();
-  _n[0] = this-> _blockGeometry.getNx()-1;
-  _n[1] = this-> _blockGeometry.getNy()-1;
-  _n[2] = this-> _blockGeometry.getNz()-1;
-
-}
-
-template <typename T>
-bool BlockFiniteDifference3D<T>::operator() (T output[], const int input[])
-{
-//  // derivation tensor
-  std::vector<std::vector<T>> fdGrad;
-
-  fdGrad.resize(_targetDim);
-  for (int i = 0; i < _targetDim; i++) {
-    fdGrad[i].resize(3);
-  }
-
-  for (int i = 0; i < 3; i++) {
-    int fInput_p[3];
-    fInput_p[0] = input[0];
-    fInput_p[1] = input[1];
-    fInput_p[2] = input[2];
-    fInput_p[i]+=1;
-
-    int fInput_2p[3];
-    fInput_2p[0] = input[0];
-    fInput_2p[1] = input[1];
-    fInput_2p[2] = input[2];
-    fInput_2p[i]+=2;
-
-    int fInput_3p[3];
-    fInput_3p[0] = input[0];
-    fInput_3p[1] = input[1];
-    fInput_3p[2] = input[2];
-    fInput_3p[i]+=3;
-
-    int fInput_4p[3];
-    fInput_4p[0] = input[0];
-    fInput_4p[1] = input[1];
-    fInput_4p[2] = input[2];
-    fInput_4p[i]+=4;
-
-    int fInput_n[3];
-    fInput_n[0] = input[0];
-    fInput_n[1] = input[1];
-    fInput_n[2] = input[2];
-    fInput_n[i]-=1;
-
-    int fInput_2n[3];
-    fInput_2n[0] = input[0];
-    fInput_2n[1] = input[1];
-    fInput_2n[2] = input[2];
-    fInput_2n[i]-=2;
-
-    int fInput_3n[3];
-    fInput_3n[0] = input[0];
-    fInput_3n[1] = input[1];
-    fInput_3n[2] = input[2];
-    fInput_3n[i]-=3;
-
-    int fInput_4n[3];
-    fInput_4n[0] = input[0];
-    fInput_4n[1] = input[1];
-    fInput_4n[2] = input[2];
-    fInput_4n[i]-=4;
-
-    T fOutput[_targetDim];
-    _blockFunctor(fOutput,input);
-
-    if (input[i] < 3) {
-      if (std::find(_matNumber.begin(), _matNumber.end(), _blockGeometry.get({fInput_2p[0], fInput_2p[1], fInput_2p[2]})) == _matNumber.end()) {
-        T fOutput_p[_targetDim];
-        _blockFunctor(fOutput_p,fInput_p);
-        for (int j=0; j < _targetDim; j++) {
-          fdGrad[j][i]= -fOutput[j] + fOutput_p[j];
-        }
-      }
-      else {
-        T fOutput_p[_targetDim];
-        _blockFunctor(fOutput_p,fInput_p);
-        T fOutput_2p[_targetDim];
-        _blockFunctor(fOutput_2p,fInput_2p);
-        for (int j=0; j < _targetDim; j++) {
-          fdGrad[j][i]=fd::boundaryGradient(fOutput[j], fOutput_p[j], fOutput_2p[j]);
-        }
-      }
-    }
-    else if (input[i] > _n[i]-3) {
-      if (std::find(_matNumber.begin(), _matNumber.end(), _blockGeometry.get({fInput_2n[0], fInput_2n[1], fInput_2n[2]})) == _matNumber.end()) {
-        T fOutput_n[_targetDim];
-        _blockFunctor(fOutput_n,fInput_n);
-        for (int j=0; j < _targetDim; j++) {
-          fdGrad[j][i]= -fOutput_n[j] + fOutput[j];
-        }
-      }
-      else {
-        T fOutput_n[_targetDim];
-        _blockFunctor(fOutput_n,fInput_n);
-        T fOutput_2n[_targetDim];
-        _blockFunctor(fOutput_2n,fInput_2n);
-        for (int j=0; j < _targetDim; j++) {
-          fdGrad[j][i]=fd::boundaryGradient(-fOutput[j], -fOutput_n[j], -fOutput_2n[j]);
-        }
-      }
-    }
-    else {
-      if ( std::find(_matNumber.begin(), _matNumber.end(), _blockGeometry.get({fInput_n[0], fInput_n[1], fInput_n[2]})) == _matNumber.end()  &&
-          std::find(_matNumber.begin(), _matNumber.end(), _blockGeometry.get({fInput_p[0], fInput_p[1], fInput_p[2]})) == _matNumber.end() ) {
-        for (int j=0; j < _targetDim; j++) {
-          fdGrad[j][i]=0.;
-        }
-        // boundary treatment with Second-order asymmetric gradient
-      }
-      else if (std::find(_matNumber.begin(), _matNumber.end(), _blockGeometry.get({fInput_n[0], fInput_n[1], fInput_n[2]})) == _matNumber.end()) {
-        if (std::find(_matNumber.begin(), _matNumber.end(), _blockGeometry.get({fInput_2p[0], fInput_2p[1], fInput_2p[2]})) == _matNumber.end()) {
-          T fOutput_p[_targetDim];
-          _blockFunctor(fOutput_p,fInput_p);
-          for (int j=0; j < _targetDim; j++) {
-            fdGrad[j][i]= -fOutput[j] + fOutput_p[j];
-          }
-        }
-        else {
-          T fOutput_p[_targetDim];
-          _blockFunctor(fOutput_p,fInput_p);
-          T fOutput_2p[_targetDim];
-          _blockFunctor(fOutput_2p,fInput_2p);
-          for (int j=0; j < _targetDim; j++) {
-            fdGrad[j][i]=fd::boundaryGradient(fOutput[j], fOutput_p[j], fOutput_2p[j]);
-          }
-        }
-      }
-      else if (std::find(_matNumber.begin(), _matNumber.end(), _blockGeometry.get({fInput_p[0], fInput_p[1], fInput_p[2]})) == _matNumber.end() ) {
-        if (std::find(_matNumber.begin(), _matNumber.end(), _blockGeometry.get({fInput_2n[0], fInput_2n[1], fInput_2n[2]})) == _matNumber.end()) {
-          T fOutput_n[_targetDim];
-          _blockFunctor(fOutput_n,fInput_n);
-          for (int j=0; j < _targetDim; j++) {
-            fdGrad[j][i]= -fOutput_n[j] + fOutput[j];
-          }
-        }
-        else {
-          T fOutput_n[_targetDim];
-          _blockFunctor(fOutput_n,fInput_n);
-          T fOutput_2n[_targetDim];
-          _blockFunctor(fOutput_2n,fInput_2n);
-          for (int j=0; j < _targetDim; j++) {
-            fdGrad[j][i]=fd::boundaryGradient(-fOutput[j], -fOutput_n[j], -fOutput_2n[j]);
-          }
-        }
-      }
-      else {
-        //inner domain 8th order central difference
-        T fOutput_n[_targetDim];
-        _blockFunctor(fOutput_n,fInput_n);
-
-        T fOutput_2n[_targetDim];
-        _blockFunctor(fOutput_2n,fInput_2n);
-
-        T fOutput_3n[_targetDim];
-        _blockFunctor(fOutput_3n,fInput_3n);
-
-        T fOutput_4n[_targetDim];
-        _blockFunctor(fOutput_4n,fInput_4n);
-
-        T fOutput_p[_targetDim];
-        _blockFunctor(fOutput_p,fInput_p);
-
-        T fOutput_2p[_targetDim];
-        _blockFunctor(fOutput_2p,fInput_2p);
-
-        T fOutput_3p[_targetDim];
-        _blockFunctor(fOutput_3p,fInput_3p);
-
-        T fOutput_4p[_targetDim];
-        _blockFunctor(fOutput_4p,fInput_4p);
-        for (int j=0; j < _targetDim; j++) {
-          //fdGrad[j][i]=fd::centralGradient(fOutput_p[j], fOutput_n[j]);
-          fdGrad[j][i]=((T)672*(fOutput_p[j]-fOutput_n[j])+(T)168*(fOutput_2n[j]-fOutput_2p[j])
-                        +(T)32*(fOutput_3p[j]-fOutput_3n[j])+(T)3*(fOutput_4n[j]-fOutput_4p[j])) / 840.;
-        }
-      }
-    }
-    for (int i=0; i < 3; i++) {
-      for (int j=0; j < _targetDim; j++) {
-        output[i*3+j] = fdGrad[i][j];
-      }
-    }
-  }
-  return true;
-}
-
-////////////////////////SuperFiniteDifference3D//////////////////////////////////
-template <typename T>
-SuperFiniteDifference3D<T>::SuperFiniteDifference3D
-(SuperGeometry<T,3>& sGeometry, SuperF3D<T>& sFunctor, std::list<int>& matNumber) : SuperF3D<T>(sFunctor.getSuperStructure(),3*sFunctor.getTargetDim()),
-  _sGeometry(sGeometry),_sFunctor(sFunctor), _matNumber(matNumber)
-{
-  this->getName() = "FiniteDifference";
-  int maxC = this->_superStructure.getLoadBalancer().size();
-  this->_blockF.reserve(maxC);
-  for (int iC = 0; iC < maxC; iC++) {
-    this->_blockF.emplace_back(new BlockFiniteDifference3D<T> ( _sGeometry.getBlockGeometry(iC), _sFunctor.getBlockF(iC), _matNumber ));
-  }
-}
-
-////////////////////////BlockPhysFiniteDifference3D//////////////////////////////////
-template <typename T, typename DESCRIPTOR>
-BlockPhysFiniteDifference3D<T,DESCRIPTOR>::BlockPhysFiniteDifference3D
-(BlockF3D<T>& blockFinDiff, const UnitConverter<T,DESCRIPTOR>& converter)
-  : BlockF3D<T>(blockFinDiff.getBlockStructure(), 3*blockFinDiff.getTargetDim()), _blockFinDiff(blockFinDiff), _converter(converter)
-{
-  this->getName() = "PhysFiniteDifference";
-  _targetDim = _blockFinDiff.getTargetDim();
-
-}
-
-template <typename T, typename DESCRIPTOR>
-bool BlockPhysFiniteDifference3D<T,DESCRIPTOR>::operator() (T output[], const int input[])
-{
-  _blockFinDiff(output,input);
-  for (int i = 0; i < _targetDim; i++) {
-    output[i] /= _converter.getConversionFactorLength();
-  }
-  return true;
-}
-
-////////////////////////SuperPhysFiniteDifference3D//////////////////////////////////
-template <typename T, typename DESCRIPTOR>
-SuperPhysFiniteDifference3D<T,DESCRIPTOR>::SuperPhysFiniteDifference3D
-(SuperGeometry<T,3>& sGeometry, SuperF3D<T>& sFunctor, std::list<int>& matNumber, const UnitConverter<T,DESCRIPTOR>& converter) : SuperF3D<T>(sFunctor.getSuperStructure(),3*sFunctor.getTargetDim()),
-  _sFinDiff(sGeometry,sFunctor,matNumber),_converter(converter)
-{
-  this->getName() = "PhysFiniteDifference";
-  int maxC = this->_superStructure.getLoadBalancer().size();
-  this->_blockF.reserve(maxC);
-  for (int iC = 0; iC < maxC; iC++) {
-    this->_blockF.emplace_back(new BlockPhysFiniteDifference3D<T,DESCRIPTOR> (_sFinDiff.getBlockF(iC), _converter ));
-  }
 }
 
 ////////////////////////BlockLatticeVelocityGradientFD3D//////////////////////////////////
@@ -623,46 +366,6 @@ SuperLatticePhysDissipationFD3D<T,DESCRIPTOR>::SuperLatticePhysDissipationFD3D
   this->_blockF.reserve(maxC);
   for (int iC = 0; iC < maxC; iC++) {
     this->_blockF.emplace_back(new BlockLatticePhysDissipationFD3D<T,DESCRIPTOR> (this->_sLattice.getBlock(iC), this->_sVeloGrad.getBlockF(iC), this->_converter));
-  }
-}
-
-////////////////////////BlockLatticeEffectiveDissipationFD3D//////////////////////////////////
-template <typename T, typename DESCRIPTOR>
-BlockLatticeEffectiveDissipationFD3D<T,DESCRIPTOR>::BlockLatticeEffectiveDissipationFD3D
-(BlockLattice<T,DESCRIPTOR>& blockLattice, BlockF3D<T>& blockVeloGrad, const UnitConverter<T,DESCRIPTOR>& converter, LESDynamics<T, DESCRIPTOR>& LESdynamics)
-  : BlockLatticeF3D<T,DESCRIPTOR>(blockLattice, 1), _blockVeloGrad(blockVeloGrad), _converter(converter), _LESdynamics(LESdynamics)
-{
-  this->getName() = "EffectiveDissipationFD";
-}
-
-template <typename T, typename DESCRIPTOR>
-bool BlockLatticeEffectiveDissipationFD3D<T,DESCRIPTOR>::operator() (T output[], const int input[])
-{
-  T velograd[9];
-  _blockVeloGrad(velograd,input);
-  output[0] = velograd[0] * velograd[0] + velograd[1] * velograd[1] + velograd[2] * velograd[2] +
-              velograd[3] * velograd[3] + velograd[4] * velograd[4] + velograd[5] * velograd[5] +
-              velograd[6] * velograd[6] + velograd[7] * velograd[7] + velograd[8] * velograd[8];
-
-  auto cell = this->_blockLattice.get(input[0], input[1], input[2]);
-  T omegaEff = _LESdynamics.getEffectiveOmega(cell);
-  T nuEff = ((1./omegaEff)-0.5)/descriptors::invCs2<T,DESCRIPTOR>();
-  output[0] *= nuEff;
-
-  return true;
-}
-
-////////////////////////SuperLatticeEffectiveDissipationFD3D//////////////////////////////////
-template <typename T, typename DESCRIPTOR>
-SuperLatticeEffectiveDissipationFD3D<T,DESCRIPTOR>::SuperLatticeEffectiveDissipationFD3D
-(SuperGeometry<T,3>& sGeometry, SuperLattice<T,DESCRIPTOR>& sLattice, std::list<int>& matNumber, const UnitConverter<T,DESCRIPTOR>& converter, LESDynamics<T, DESCRIPTOR>& LESdynamics)
-  : SuperLatticeF3D<T,DESCRIPTOR>(sLattice,1), _sVeloGrad(sGeometry, sLattice, matNumber, converter), _converter(converter)
-{
-  this->getName() = "EffectiveDissipationFD";
-  int maxC = this->_superStructure.getLoadBalancer().size();
-  this->_blockF.reserve(maxC);
-  for (int iC = 0; iC < maxC; iC++) {
-    this->_blockF.emplace_back(new BlockLatticeEffectiveDissipationFD3D<T,DESCRIPTOR> (this->_sLattice.getBlock(iC), this->_sVeloGrad.getBlockF(iC), this->_converter));
   }
 }
 

@@ -95,6 +95,52 @@ struct power {
   }
 };
 
+/// Wrapper function object for util::max
+// imitates stl definition of std::plus
+template<class T = void> struct maxOp {
+  /// symbol character for functor naming
+  static const char symbol = 'M';
+
+  constexpr T operator()(const T& x, const T& y) const {
+    return util::max(x, y);
+  }
+};
+
+template<> struct maxOp<void> {
+  /// symbol character for functor naming
+  static const char symbol = 'M';
+
+  template<class T, class U> constexpr auto operator()(T&& t, U&& u) const
+    -> decltype(util::max(std::forward<T>(t), std::forward<U>(u))) {
+      return util::max(std::forward<T>(t), std::forward<U>(u));
+    }
+
+  using is_transparent = void;
+};
+
+/// Wrapper function object for util::min
+// imitates stl definition of std::plus
+template<class T = void> struct minOp {
+  /// symbol character for functor naming
+  static const char symbol = 'm';
+
+  constexpr T operator()(const T& x, const T& y) const {
+    return util::min(x, y);
+  }
+};
+
+template<> struct minOp<void> {
+  /// symbol character for functor naming
+  static const char symbol = 'm';
+
+  template<class T, class U> constexpr auto operator()(T&& t, U&& u) const
+    -> decltype(util::min(std::forward<T>(t), std::forward<U>(u))) {
+      return util::min(std::forward<T>(t), std::forward<U>(u));
+    }
+
+  using is_transparent = void;
+};
+
 } // end namespace util
 
 } // end namespace olb

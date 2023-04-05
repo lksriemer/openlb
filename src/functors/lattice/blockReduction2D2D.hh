@@ -94,8 +94,8 @@ template <typename T>
 Vector<T,2> BlockReduction2D2D<T>::getPhysR(const int& iX, const int& iY) const
 {
   return Vector<T,2> {
-    _origin[0] + double(iX) * _h,
-    _origin[1] + double(iY) * _h
+    _origin[0] + T(iX) * _h,
+    _origin[1] + T(iY) * _h
   };
 }
 

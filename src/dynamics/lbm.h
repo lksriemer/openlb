@@ -299,7 +299,7 @@ struct lbm {
 
   /// Advection diffusion BGK collision step
   template <typename CELL, typename RHO, typename VELOCITY, typename OMEGA, typename V=typename CELL::value_t>
-  static V adeBgkCollision(CELL& cell, const RHO& rho, const VELOCITY& u, const OMEGA& omega)
+  static V adeBgkCollision(CELL& cell, const RHO& rho, const VELOCITY& u, const OMEGA& omega) any_platform
   {
     const V uSqr = util::normSqr<VELOCITY,DESCRIPTOR::d>(u);
     for (int iPop=0; iPop < DESCRIPTOR::q; ++iPop) {
@@ -386,7 +386,7 @@ struct lbm {
   }
 
   template <typename CELL, typename NEWRHO, typename NEWU, typename V=typename CELL::value_t>
-  static void defineEqFirstOrder(CELL& cell, const NEWRHO& newRho, const NEWU& newU)
+  static void defineEqFirstOrder(CELL& cell, const NEWRHO& newRho, const NEWU& newU) any_platform
   {
     for (int iPop=0; iPop < DESCRIPTOR::q; ++iPop) {
       cell[iPop] = equilibrium<DESCRIPTOR>::firstOrder(iPop, newRho, newU);
@@ -396,7 +396,7 @@ struct lbm {
   template <typename CELL, typename OLDRHO, typename OLDU, typename NEWRHO, typename NEWU, typename V=typename CELL::value_t>
   static void defineNEq(CELL& cell,
                         const OLDRHO& oldRho, const OLDU& oldU,
-                        const NEWRHO& newRho, const NEWU& newU)
+                        const NEWRHO& newRho, const NEWU& newU) any_platform
   {
     const V oldUSqr = util::normSqr<OLDU,DESCRIPTOR::d>(oldU);
     const V newUSqr = util::normSqr<NEWU,DESCRIPTOR::d>(newU);
@@ -410,7 +410,7 @@ struct lbm {
   static void defineNEqFromPi(CELL& cell,
                               const RHO& rho,
                               const U& u,
-                              const PI& pi)
+                              const PI& pi) any_platform
   {
     const V uSqr = util::normSqr<U,DESCRIPTOR::d>(u);
     for (int iPop=0; iPop < DESCRIPTOR::q; ++iPop) {
@@ -421,7 +421,7 @@ struct lbm {
 
   /// Computes squared norm of non-equilibrium part of 2nd momentum for forced dynamics
   template <typename CELL, typename FORCE, typename V=typename CELL::value_t>
-  static V computePiNeqNormSqr(CELL& cell, const FORCE& force)
+  static V computePiNeqNormSqr(CELL& cell, const FORCE& force) any_platform
   {
     V rho, u[DESCRIPTOR::d], pi[util::TensorVal<DESCRIPTOR>::n];
     computeAllMomenta(cell, rho, u, pi);
@@ -447,7 +447,7 @@ struct lbm {
 
   /// Computes squared norm of non-equilibrium part of 2nd momentum for standard (non-forced) dynamics
   template <typename CELL, typename V=typename CELL::value_t>
-  static V computePiNeqNormSqr(CELL& cell)
+  static V computePiNeqNormSqr(CELL& cell) any_platform
   {
     V rho, u[DESCRIPTOR::d], pi[util::TensorVal<DESCRIPTOR>::n];
     computeAllMomenta(cell, rho, u, pi);
@@ -460,7 +460,7 @@ struct lbm {
 
   /// Add a force term after BGK collision
   template <typename CELL, typename RHO, typename U, typename OMEGA, typename FORCE, typename V=typename CELL::value_t>
-  static void addExternalForce(CELL& cell, const RHO& rho, const U& u, const OMEGA& omega, const FORCE& force)
+  static void addExternalForce(CELL& cell, const RHO& rho, const U& u, const OMEGA& omega, const FORCE& force) any_platform
   {
     for (int iPop=0; iPop < DESCRIPTOR::q; ++iPop) {
       V c_u{};
@@ -471,7 +471,7 @@ struct lbm {
       V forceTerm{};
       for (int iD=0; iD < DESCRIPTOR::d; ++iD) {
         forceTerm +=
-          (   (V{descriptors::c<DESCRIPTOR>(iPop,iD)} - u[iD]) * descriptors::invCs2<V,DESCRIPTOR>()
+          (   (descriptors::c<DESCRIPTOR>(iPop,iD) - u[iD]) * descriptors::invCs2<V,DESCRIPTOR>()
               + c_u * descriptors::c<DESCRIPTOR>(iPop,iD)
           )
           * force[iD];
@@ -482,7 +482,6 @@ struct lbm {
       cell[iPop] += forceTerm;
     }
   }
-
 };
 
 }

@@ -35,7 +35,6 @@
 #include "functors/analytical/indicator/indicatorBaseF2D.h"
 #include "functors/analytical/indicator/indicatorBaseF3D.h"
 #include "functors/analytical/indicator/indicatorF3D.h"
-#include "particles/functions/bodyMotionFunctions.h"
 #include "sdf.h"
 
 namespace olb {
@@ -49,6 +48,7 @@ private:
 public:
   SmoothIndicatorCuboid3D(IndicatorCuboid3D<S>& ind, S epsilon, Vector<S,3> theta = Vector<S,3> (0.,0.,0.));
   SmoothIndicatorCuboid3D(S xLength, S yLength, S zLength, Vector<S,3> center, S epsilon, Vector<S,3> theta = Vector<S,3> (0.,0.,0.));
+  IndicatorCuboid3D<S>& getIndicator();
   Vector<S,3> surfaceNormal(const Vector<S,3>& pos, const S meshSize) override;
   const S signedDistance( const PhysR<S,3> input ) override;
   S getVolume( ) override;
@@ -64,6 +64,7 @@ private:
 public:
   SmoothIndicatorEllipsoid3D(IndicatorEllipsoid3D<S>& ind, S epsilon, Vector<S,3> theta = Vector<S,3> (0.,0.,0.));
   SmoothIndicatorEllipsoid3D(Vector<S,3> center, Vector<S,3> radius, S epsilon, Vector<S,3> theta = Vector<S,3> (0.,0.,0.));
+  IndicatorEllipsoid3D<S>& getIndicator();
   Vector<S,3> surfaceNormal(const Vector<S,3>& pos, const S meshSize) override;
   const S signedDistance( const PhysR<S,3> input ) override;
   S getVolume( ) override;
@@ -80,6 +81,7 @@ public:
   SmoothIndicatorSuperEllipsoid3D(IndicatorSuperEllipsoid3D<S>& ind, S epsilon, Vector<S,3> theta = Vector<S,3> (0.,0.,0.));
   SmoothIndicatorSuperEllipsoid3D(Vector<S,3> center, S xHalfAxis, S yHalfAxis, S zHalfAxis, S exponent1, S exponent2,
                                   S epsilon, Vector<S,3> theta = Vector<S,3> (0.,0.,0.));
+  IndicatorSuperEllipsoid3D<S>& getIndicator();
   // this implements the beta function from the gamma function and will be deprecated when switching to c++17
   S beta(S arg1, S arg2);
   // calculates cartesian moments
@@ -99,6 +101,7 @@ private:
 public:
   SmoothIndicatorSphere3D(IndicatorSphere3D<S>& ind, S epsilon);
   SmoothIndicatorSphere3D(Vector<S,3> center, S radius, S epsilon);
+  IndicatorSphere3D<S>& getIndicator();
   Vector<S,3> surfaceNormal(const Vector<S,3>& pos, const S meshSize) override;
   const S signedDistance( const PhysR<S,3> input ) override;
   S getVolume( ) override;
@@ -116,6 +119,7 @@ public:
   SmoothIndicatorCylinder3D(IndicatorCylinder3D<S>& ind, S epsilon, Vector<S,3> theta = Vector<S,3> (0.,0.,0.));
   SmoothIndicatorCylinder3D(Vector<S,3> center1, Vector<S,3> center2, S radius, S epsilon, Vector<S,3> theta = Vector<S,3> (0.,0.,0.));
   SmoothIndicatorCylinder3D(Vector<S,3> center, Vector<S,3> normal, S radius, S height, S epsilon, Vector<S,3> theta = Vector<S,3> (0.,0.,0.));
+  IndicatorCylinder3D<S>& getIndicator();
   Vector<S,3> surfaceNormal(const Vector<S,3>& pos, const S meshSize) override;
   const S signedDistance( const PhysR<S,3> input ) override;
   S getVolume( ) override;
@@ -132,6 +136,7 @@ private:
 public:
   SmoothIndicatorCone3D(IndicatorCone3D<S>& indPtr, S epsilon, Vector<S,3> theta = Vector<S,3> (0.,0.,0.));
   SmoothIndicatorCone3D(Vector<S,3> center1, Vector<S,3> center2, S radius1, S radius2, S epsilon, Vector<S,3> theta = Vector<S,3> (0.,0.,0.));
+  IndicatorCone3D<S>& getIndicator();
   Vector<S,3> surfaceNormal(const Vector<S,3>& pos, const S meshSize) override;
   const S signedDistance( const PhysR<S,3> input ) override;
   S getVolume( ) override;
@@ -139,6 +144,11 @@ public:
   Vector<S,3> calcCenterOfMass() override;
 };
 
+
+template <typename T, typename W>
+class AnalyticalFfromBlockF3D;
+template <typename T, typename BaseType>
+class BlockDataF3D;
 
 //implements a custom shaped smooth particle //TODO: Check for consistency
 //ALSO: adap .hh
@@ -150,12 +160,17 @@ private:
   const T _latticeSpacing;
   /// Local center
   PhysR<T,3> _center;
+  /// Cuboid describing the particle lattice
+  Cuboid3D<T> _cuboid;
   /// Block data to store signed distance
   std::unique_ptr<BlockData<3,T,BaseType<T>>> _blockData;
+  /// Functor for access on block data
+  std::unique_ptr<BlockDataF3D<T,BaseType<T>>> _cacheFunctor;
+  /// Functor used for interpolation of cached data
+  std::unique_ptr<AnalyticalFfromBlockF3D<T,T>> _interpolateCache;
   /// Cached particle volume (to avoid reiteration)
   T _volume;
 
-  void initRotationMatrix();
   void initBlockData(IndicatorF3D<T>& ind);
   void calcCenter();
   void calcCircumRadius();
@@ -168,12 +183,13 @@ public:
 
   Vector<T,3> getLocalCenter();
   S getVolume( ) override;
-  Vector<T,4> calcMofiAndMass(T rhoP);
+  Vector<T,4> calcMofiAndMass(T rhoP) override;
   Vector<S,3> surfaceNormal(const Vector<S,3>& pos, const S meshSize) override;
   Vector<S,3> surfaceNormal(const Vector<S,3>& pos, const S meshSize,
                             std::function<Vector<S,3>(const Vector<S,3>&)> transformPos) override;
   const S signedDistance( const PhysR<S,3> input ) override;
   bool regardCell(int input[3]);
+  bool operator()(T output[], const S input[]) override;
 };
 
 

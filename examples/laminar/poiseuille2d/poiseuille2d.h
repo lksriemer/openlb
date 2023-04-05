@@ -23,6 +23,9 @@
  *  Boston, MA  02110-1301, USA.
  */
 
+#ifndef POISEUILLE_2D_H
+#define POISEUILLE_2D_H
+
 #include "olb2D.h"
 #include "olb2D.hh"
 
@@ -31,9 +34,8 @@ using namespace olb;
 using namespace olb::descriptors;
 using namespace olb::graphics;
 
-using T = double;
+using T = FLOATING_POINT_TYPE;
 
-//#define ENABLE_MRT
 #ifdef ENABLE_MRT
 using DESCRIPTOR = D2Q9<tag::MRT,FORCE>;
 using BulkDynamics       = MRTdynamics<T,DESCRIPTOR>;
@@ -130,18 +132,13 @@ void prepareLattice( UnitConverter<T,DESCRIPTOR> const& converter,
     sLattice.defineDynamics<BulkDynamics>(superGeometry, 1);
   }
 
-  // Material=0 -->do nothing
-  sLattice.defineDynamics<NoDynamics>(superGeometry, 0);
-
   if (boundaryType == bounceBack) {
-    sLattice.defineDynamics<BounceBack>(superGeometry, 2);
+    setBounceBackBoundary(sLattice, superGeometry, 2);
   }
   else if (boundaryType == freeSlip) {
-    sLattice.defineDynamics<NoDynamics>(superGeometry, 2);
     setSlipBoundary(sLattice, superGeometry, 2);
   }
   else if (boundaryType == partialSlip) {
-    sLattice.defineDynamics<NoDynamics>(superGeometry, 2);
     setPartialSlipBoundary(sLattice, tuner, superGeometry, 2);
   }
   else {
@@ -229,8 +226,8 @@ void error( SuperGeometry<T,2>& superGeometry,
             SuperLattice<T, DESCRIPTOR>& sLattice,
             UnitConverter<T,DESCRIPTOR> const& converter )
 {
-
   OstreamManager clout( std::cout,"error" );
+  sLattice.setProcessingContext(ProcessingContext::Evaluation);
 
   int tmp[]= { };
   T result[2]= { };
@@ -343,9 +340,12 @@ void getResults( SuperLattice<T,DESCRIPTOR>& sLattice,
                  bool eoc)
 {
   OstreamManager clout( std::cout,"getResults" );
+  const bool lastTimeStep = ( hasConverged || (iT + 1 == converter.getLatticeTime( maxPhysT )) );
+  const bool noslipBoundary = ((boundaryType != freeSlip) && (boundaryType != partialSlip));
+  const int statIter = converter.getLatticeTime( maxPhysT/20. );
 
-  //VTK Data only if no EOC analysis
-  if(eoc == false){
+  // VTK and image output only if no EOC analysis
+  if (! eoc) {
 
     SuperVTMwriter2D<T> vtmWriter( "poiseuille2d" );
     const int vtmIter  = converter.getLatticeTime( maxPhysT/20. );
@@ -373,7 +373,7 @@ void getResults( SuperLattice<T,DESCRIPTOR>& sLattice,
     SuperLatticeFfromAnalyticalF2D<T,DESCRIPTOR> analyticalVelocityLattice(
       analyticalVelocity, sLattice);
     analyticalVelocityLattice.getName() = "analytical solution";
-    if ((boundaryType != freeSlip) && (boundaryType != partialSlip)) {
+    if (noslipBoundary) {
       vtmWriter.addFunctor(analyticalVelocityLattice);
     }
 
@@ -396,7 +396,7 @@ void getResults( SuperLattice<T,DESCRIPTOR>& sLattice,
     }
 
     // Writes the vtm files and profile text file
-    if ( iT%vtmIter==0 || hasConverged ) {
+    if ( iT%vtmIter==0 || lastTimeStep ) {
       sLattice.setProcessingContext(ProcessingContext::Evaluation);
 
       vtmWriter.write( iT );
@@ -409,8 +409,7 @@ void getResults( SuperLattice<T,DESCRIPTOR>& sLattice,
   }
 
   // Output on the console
-  const int statIter = converter.getLatticeTime( maxPhysT/20. );
-  if ( iT%statIter==0 || hasConverged || (iT == converter.getLatticeTime( maxPhysT ) - 1) ) {
+  if ( iT%statIter==0 || lastTimeStep ) {
     // Timer console output
     timer.update( iT );
     timer.printStep();
@@ -419,68 +418,66 @@ void getResults( SuperLattice<T,DESCRIPTOR>& sLattice,
     sLattice.getStatistics().print( iT,converter.getPhysTime( iT ) );
 
     // Error norms
-    if ((boundaryType != freeSlip) && (boundaryType != partialSlip)) {
-      if ( (!eoc) || hasConverged || (iT == converter.getLatticeTime( maxPhysT ) - 1) ) {
+    if (noslipBoundary) {
+      if ( (!eoc) || lastTimeStep ) {
         error( superGeometry, sLattice, converter );
       }
     }
   }
 
   // Gnuplot output
-  if ((boundaryType != freeSlip) && (boundaryType != partialSlip)) {
-    if ( hasConverged || (iT == converter.getLatticeTime( maxPhysT ) - 1) ) {
-      sLattice.setProcessingContext(ProcessingContext::Evaluation);
-      if ( eoc ) {
-        if (flowType == nonForced){
-          gplot.setData (
-            T(converter.getResolution()),
-            { velocityL1AbsError, velocityL2AbsError, velocityLinfAbsError,
-              strainRateL1AbsError, strainRateL2AbsError, strainRateLinfAbsError,
-              pressureL1AbsError, pressureL2AbsError, pressureLinfAbsError },
-            { "velocity L1 abs Error","velocity L2 abs Error",
-              "velocity Linf abs error","strain rate L1 abs error",
-              "strain rate L2 abs error", "strain rate Linf abs error",
-              "pressure L1 abs error", "pressure L2 abs error",
-              "pressure Linf abs error" },
-            "top right",
-            { 'p','p','p','p','p','p','p','p','p' } );
-        } else {
-          // same as above, but without pressure computation
-          gplot.setData (
-            T(converter.getResolution()),
-            { velocityL1AbsError, velocityL2AbsError, velocityLinfAbsError,
-              strainRateL1AbsError, strainRateL2AbsError, strainRateLinfAbsError },
-            { "velocity L1 abs Error","velocity L2 abs Error",
-              "velocity Linf abs error","strain rate L1 abs error",
-              "strain rate L2 abs error", "strain rate Linf abs error"},
-            "top right",
-            { 'p','p','p','p','p', 'p' } );
-        }
+  if ((noslipBoundary) && (lastTimeStep)) {
+    sLattice.setProcessingContext(ProcessingContext::Evaluation);
+    if ( eoc ) {
+      if (flowType == nonForced){
+        gplot.setData (
+          T(converter.getResolution()),
+          { velocityL1AbsError, velocityL2AbsError, velocityLinfAbsError,
+            strainRateL1AbsError, strainRateL2AbsError, strainRateLinfAbsError,
+            pressureL1AbsError, pressureL2AbsError, pressureLinfAbsError },
+          { "velocity L1 abs Error","velocity L2 abs Error",
+            "velocity Linf abs error","strain rate L1 abs error",
+            "strain rate L2 abs error", "strain rate Linf abs error",
+            "pressure L1 abs error", "pressure L2 abs error",
+            "pressure Linf abs error" },
+          "top right",
+          { 'p','p','p','p','p','p','p','p','p' } );
+      } else {
+        // same as above, but without pressure computation
+        gplot.setData (
+          T(converter.getResolution()),
+          { velocityL1AbsError, velocityL2AbsError, velocityLinfAbsError,
+            strainRateL1AbsError, strainRateL2AbsError, strainRateLinfAbsError },
+          { "velocity L1 abs Error","velocity L2 abs Error",
+            "velocity Linf abs error","strain rate L1 abs error",
+            "strain rate L2 abs error", "strain rate Linf abs error"},
+          "top right",
+          { 'p','p','p','p','p', 'p' } );
       }
-      else {  // if !eoc
-        // plot velocity magnitude over line through the center of the simulation domain
-        const T maxVelocity = converter.getPhysVelocity( converter.getCharLatticeVelocity() );
-        T dx = 1. / T(converter.getResolution());
-        T Ly = ly / converter.getConversionFactorLength();
-        const T radius = (boundaryType == bounceBack) ?
-          T(0.5) * (ly - converter.getPhysDeltaX()) : T(0.5) * ly;
-        std::vector<T> axisPoint{ lx/2., ly/2. };
-        std::vector<T> axisDirection{ 1, 0 };
-        Poiseuille2D<T> uSol( axisPoint, axisDirection, maxVelocity, radius );
-        SuperLatticePhysVelocity2D<T, DESCRIPTOR> velocity( sLattice, converter );
-        AnalyticalFfromSuperF2D<T> intpolateVelocity( velocity, true );
-        T point[2] { };
-        point[0] = lx/2.;
-        T analytical[2] { };
-        T numerical[2] { };
-        for ( int iY=0; iY<=Ly; ++iY ) {
-          point[1] = ( T )iY/Ly;
-          uSol( analytical,point );
-          intpolateVelocity( numerical,point );
-          gplot.setData( iY*dx, {analytical[0],numerical[0]}, {"analytical","numerical"} );
-        }
-        gplot.writePNG();
+    }
+    else {  // if !eoc
+      // plot velocity magnitude over line through the center of the simulation domain
+      const T maxVelocity = converter.getPhysVelocity( converter.getCharLatticeVelocity() );
+      T dx = 1. / T(converter.getResolution());
+      T Ly = ly / converter.getConversionFactorLength();
+      const T radius = (boundaryType == bounceBack) ?
+        T(0.5) * (ly - converter.getPhysDeltaX()) : T(0.5) * ly;
+      std::vector<T> axisPoint{ lx/T(2), ly/T(2) };
+      std::vector<T> axisDirection{ 1, 0 };
+      Poiseuille2D<T> uSol( axisPoint, axisDirection, maxVelocity, radius );
+      SuperLatticePhysVelocity2D<T, DESCRIPTOR> velocity( sLattice, converter );
+      AnalyticalFfromSuperF2D<T> intpolateVelocity( velocity, true );
+      T point[2] { };
+      point[0] = lx/2.;
+      T analytical[2] { };
+      T numerical[2] { };
+      for ( int iY=0; iY<=Ly; ++iY ) {
+        point[1] = ( T )iY/Ly;
+        uSol( analytical,point );
+        intpolateVelocity( numerical,point );
+        gplot.setData( iY*dx, {analytical[0],numerical[0]}, {"analytical","numerical"} );
       }
+      gplot.writePNG();
     }
   }
 }
@@ -489,7 +486,7 @@ void getResults( SuperLattice<T,DESCRIPTOR>& sLattice,
 // decided whether eoc anlysis or not
 void simulatePoiseuille( int N, Gnuplot<T>& gplot, bool eoc )
 {
-    OstreamManager clout( std::cout,"simulatePoiseuille" );
+  OstreamManager clout( std::cout,"simulatePoiseuille" );
 
   UnitConverterFromResolutionAndRelaxationTime<T, DESCRIPTOR> const converter(
     int {N},     // resolution: number of voxels per charPhysL
@@ -563,10 +560,58 @@ void simulatePoiseuille( int N, Gnuplot<T>& gplot, bool eoc )
 
     // === 7th Step: Computation and Output of the Results ===
     getResults( sLattice, converter, iT,
-      superGeometry, timer, converge.hasConverged() ,gplot, eoc );
+      superGeometry, timer, converge.hasConverged(), gplot, eoc );
     converge.takeValue( sLattice.getStatistics().getMaxU(), false );
   }
 
   timer.stop();
   timer.printSummary();
 }
+
+/// User dialogue: read optional arguments
+// Resolution, flow and boundary type are modified in place
+int readParameters(int argc, char** argv,
+  int& N, FlowType& flowType, BoundaryType& boundaryType)
+{
+  if (argc > 1) {
+    if (argv[1][0]=='-'&&argv[1][1]=='h') {
+      OstreamManager clout( std::cout,"help" );
+      clout<<"Usage: program [Resolution] [FlowType] [BoundaryType]"<<std::endl;
+      clout<<"FlowType: 0=forced, 1=nonForced"<<std::endl;
+      clout<<"BoundaryType: 0=bounceBack, 1=local, "
+           <<"2=interpolated, 3=freeSlip, 4=partialSlip"<<std::endl;
+      clout<<"Default: Resolution=50, FlowType=forced, "
+           <<"BoundaryType=interpolated"<<std::endl;
+      return 0;
+    }
+  }
+
+  if (argc > 1) {
+    N = atoi(argv[1]);
+    if (N < 1) {
+      std::cerr << "Fluid domain is too small" << std::endl;
+      return 1;
+    }
+  }
+
+  if (argc > 2) {
+    int flowTypeNumber = atoi(argv[2]);
+    if (flowTypeNumber < 0 || flowTypeNumber > (int)nonForced) {
+      std::cerr << "Unknown fluid flow type" << std::endl;
+      return 2;
+    }
+    flowType = (FlowType) flowTypeNumber;
+  }
+
+  if (argc > 3) {
+    int boundaryTypeNumber = atoi(argv[3]);
+    if (boundaryTypeNumber < 0 || boundaryTypeNumber > (int) partialSlip) {
+      std::cerr << "Unknown boundary type" << std::endl;
+      return 3;
+    }
+    boundaryType = (BoundaryType) boundaryTypeNumber;
+  }
+  return 0;
+}
+
+#endif

@@ -1,6 +1,6 @@
 /*  This file is part of the OpenLB library
  *
- *  Copyright (C) 2021 Nicolas Hafen, Thomas Henn, Mathias J. Krause, Marie-Luise Maier
+ *  Copyright (C) 2021 Nicolas Hafen, Mathias J. Krause
  *  E-mail contact: info@openlb.net
  *  The most recent release of OpenLB can be downloaded at
  *  <http://www.openlb.net/>
@@ -21,14 +21,12 @@
  *  Boston, MA  02110-1301, USA.
 */
 
-/** \file
- * Groups all the include .hh-files for 3D particles in
- * the particles directory.
- */
-
 #include "particles/dynamics/particleDynamics.hh"
 #include "particle.hh"
 #include "particleSystem.hh"
+#include "particles/communication/superParticleSystem.hh"
+#include "particles/communication/particleCommunicator.hh"
 #include "particleManager.hh"
 #include "resolved/blockLatticeInteraction.hh"
 #include "resolved/superLatticeInteraction.hh"
+#include "contact/contactObjects.hh"

@@ -48,16 +48,18 @@ class ConcentrationAdvectionDiffusionCouplingPostProcessor2D
 public:
   ConcentrationAdvectionDiffusionCouplingPostProcessor2D(
     int x0_, int x1_, int y0_, int y1_,
-    const std::vector<T>& stoichiometricCoeff_,
+    const std::vector<T>& stochiometricCoeff_,
     const std::vector<T> latticeReactionCoeff_,
     const std::vector<T>& react_order_,
     std::vector<BlockStructureD<2>* > partners_)
-   : x0(x0_), x1(x1_), y0(y0_), y1(y1_), stoichiometricCoeff(stoichiometricCoeff_), latticeReactionCoeff(latticeReactionCoeff_),
+   : x0(x0_), x1(x1_), y0(y0_), y1(y1_),
+     stochiometricCoeff(stochiometricCoeff_),
+     latticeReactionCoeff(latticeReactionCoeff_),
      react_order(react_order_), partners(partners_) {
     this->getName() = "ConcentrationAdvectionDiffusionCouplingPostProcessor2D";
     reaction_number = static_cast<int>(latticeReactionCoeff.size());
     component_number = static_cast<int>(partners.size())+1;
-    for (int i = 0; i<component_number;i++){
+    for (int i = 0; i<component_number; i++) {
       tpartners.emplace_back(
         static_cast<BlockLattice<T,DESCRIPTOR> *>(partners[i]));
     }
@@ -87,40 +89,43 @@ public:
       for (int iX=newX0; iX<=newX1; ++iX) {
         for (int iY=newY0; iY<=newY1; ++iY) {
 
-            std::vector<T> conc;
-            conc.emplace_back(blockLattice.get(iX,iY).computeRho());
-            for (int iter_component = 0; iter_component<component_number-1; ++ iter_component){
-              conc.emplace_back(tpartners[iter_component]->get(iX,iY).computeRho());
-              }
+          T conc[component_number];
+          conc[0] = blockLattice.get(iX,iY).computeRho();
+          for (int iter_component = 1; iter_component<component_number; ++iter_component) {
+            conc[iter_component] = tpartners[iter_component-1]->get(iX,iY).computeRho();
+          }
 
-            T lambda[reaction_number];
-            T reaction_rate;
-            for (int iter_reaction = 0; iter_reaction<reaction_number; ++ iter_reaction){
-              lambda[iter_reaction] = 0;
-              reaction_rate = 1;
-              for(int iter_component = 0; iter_component <component_number; ++ iter_component){
+          T sources[component_number];
+          computeSources(sources, conc);
 
-                reaction_rate = reaction_rate*(util::pow(conc[iter_component],react_order[iter_reaction*component_number+iter_component]));
-              }
-
-              lambda[iter_reaction] = reaction_rate*latticeReactionCoeff[iter_reaction];
-           }
-            T temp_source;
-            for (int iter_component = 0; iter_component<component_number; ++ iter_component){
-              temp_source = 0;
-              for (int iter_reaction = 0; iter_reaction<reaction_number; ++ iter_reaction){
-                temp_source = temp_source + stoichiometricCoeff[iter_reaction*component_number+iter_component]*lambda[iter_reaction];
-              }
-              if (iter_component == 0){
-                blockLattice.get(iX,iY).template setField<descriptors::SOURCE>(
-                temp_source);
-              }
-              else {
-                tpartners[iter_component-1]->get(iX,iY).template setField<descriptors::SOURCE>(
-                temp_source);
-                }
-            }
+          blockLattice.get(iX,iY).template setField<descriptors::SOURCE>(sources[0]);
+          for (int iter_component = 1; iter_component<component_number; ++iter_component) {
+            tpartners[iter_component-1]->get(iX,iY).template setField<descriptors::SOURCE>(
+              sources[iter_component]);
+          }
         }
+      }
+    }
+  }
+
+  void computeSources(T sources[], const T concentrations[]) {
+    T lambda[reaction_number];
+    T reaction_rate;
+    for (int iter_reaction = 0; iter_reaction<reaction_number; ++iter_reaction) {
+      lambda[iter_reaction] = 0;
+      reaction_rate = 1;
+      for(int iter_component = 0; iter_component<component_number; ++iter_component) {
+        reaction_rate *= util::pow(concentrations[iter_component],
+          react_order[iter_reaction*component_number+iter_component]);
+      }
+      lambda[iter_reaction] = reaction_rate*latticeReactionCoeff[iter_reaction];
+    }
+
+    for (int iter_component = 0; iter_component<component_number; ++iter_component) {
+      sources[iter_component] = 0;
+      for (int iter_reaction = 0; iter_reaction<reaction_number; ++iter_reaction) {
+        sources[iter_component]
+          += stochiometricCoeff[iter_reaction*component_number+iter_component]*lambda[iter_reaction];
       }
     }
   }
@@ -129,7 +134,7 @@ private:
   int x0, x1, y0, y1;
   int reaction_number;
   int component_number;
-  const std::vector<T>& stoichiometricCoeff;
+  const std::vector<T>& stochiometricCoeff;
   const std::vector<T> latticeReactionCoeff;
   const std::vector<T>& react_order;
   std::vector<BlockLattice<T,DESCRIPTOR>*> tpartners;
@@ -143,17 +148,17 @@ class ConcentrationAdvectionDiffusionCouplingGenerator2D
 public:
   ConcentrationAdvectionDiffusionCouplingGenerator2D(
     int x0_, int x1_, int y0_, int y1_,
-    const std::vector<T>& stoichiometricCoeff_,
+    const std::vector<T>& stochiometricCoeff_,
     const std::vector<T> latticeReactionCoeff_,
     const std::vector<T>& react_order_)
    : LatticeCouplingGenerator2D<T,DESCRIPTOR>(x0_, x1_, y0_, y1_),
-     stoichiometricCoeff(stoichiometricCoeff_), latticeReactionCoeff(latticeReactionCoeff_), react_order(react_order_)
+     stochiometricCoeff(stochiometricCoeff_), latticeReactionCoeff(latticeReactionCoeff_), react_order(react_order_)
   { }
 
   PostProcessor2D<T,DESCRIPTOR>* generate(
     std::vector<BlockStructureD<2>* > partners) const override {
     return new ConcentrationAdvectionDiffusionCouplingPostProcessor2D<T,DESCRIPTOR>(
-      this->x0,this->x1,this->y0,this->y1, stoichiometricCoeff, latticeReactionCoeff, react_order, partners);
+      this->x0,this->x1,this->y0,this->y1, stochiometricCoeff, latticeReactionCoeff, react_order, partners);
   }
 
   LatticeCouplingGenerator2D<T,DESCRIPTOR>* clone() const override {
@@ -161,7 +166,7 @@ public:
   }
 
 private:
-  const std::vector<T>& stoichiometricCoeff;
+  const std::vector<T>& stochiometricCoeff;
   const std::vector<T> latticeReactionCoeff;
   const std::vector<T>& react_order;
 };

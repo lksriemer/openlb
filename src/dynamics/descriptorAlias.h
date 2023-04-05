@@ -30,6 +30,7 @@
 #include "latticeDescriptors.h"
 #include "mrtLatticeDescriptors.h"
 #include "rtlbmDescriptors.h"
+#include "cum.h"
 
 #include <vector>
 
@@ -72,7 +73,7 @@ using DynSmagorinskyD2Q9Descriptor                  = D2Q9<SMAGO_CONST>;
 using PorousD2Q9Descriptor                          = D2Q9<POROSITY>;
 using ExtendedPorousD2Q9Descriptor                  = D2Q9<POROSITY,LOCAL_DRAG>;
 using PorousParticleD2Q9Descriptor                  = D2Q9<POROSITY,VELOCITY_NUMERATOR,VELOCITY_DENOMINATOR>;
-using PorousParticleWithCollisionD2Q9Descriptor     = D2Q9<POROSITY,VELOCITY_NUMERATOR,VELOCITY_DENOMINATOR,COLLISION_DETECTION>;
+using PorousParticleWithContactD2Q9Descriptor       = D2Q9<POROSITY,VELOCITY_NUMERATOR,VELOCITY_DENOMINATOR,CONTACT_DETECTION>;
 using PSMD2Q9Descriptor                             = D2Q9<POROSITY,VELOCITY_SOLID>;
 using GuoZhaoD2Q9Descriptor                         = D2Q9<FORCE,EPSILON,K,NU,BODY_FORCE>;
 using ADMD2Q9Descriptor                             = D2Q9<FIL_RHO,LOCAL_FIL_VEL_X,LOCAL_FIL_VEL_Y>;
@@ -144,7 +145,7 @@ using PorousD3Q19Descriptor                         = D3Q19<POROSITY>;
 using PorousForcedD3Q19Descriptor                   = D3Q19<POROSITY,FORCE>;
 using ExtendedPorousD3Q19Descriptor                 = D3Q19<POROSITY,LOCAL_DRAG>;
 using PorousParticleD3Q19Descriptor                 = D3Q19<POROSITY,VELOCITY_NUMERATOR,VELOCITY_DENOMINATOR>;
-using PorousParticleWithCollisionD3Q19Descriptor    = D3Q19<POROSITY,VELOCITY_NUMERATOR,VELOCITY_DENOMINATOR,COLLISION_DETECTION>;
+using PorousParticleWithContactD3Q19Descriptor      = D3Q19<POROSITY,VELOCITY_NUMERATOR,VELOCITY_DENOMINATOR,CONTACT_DETECTION>;
 using PSMD3Q19Descriptor                            = D3Q19<POROSITY,VELOCITY_SOLID>;
 using ForcedPSMD3Q19Descriptor                      = D3Q19<POROSITY,VELOCITY_SOLID,FORCE>;
 using GuoZhaoD3Q19Descriptor                        = D3Q19<FORCE,EPSILON,K,NU,BODY_FORCE>;
@@ -168,7 +169,7 @@ using WALED3Q27Descriptor                           = D3Q27<EFFECTIVE_OMEGA,VELO
 using WALEForcedD3Q27Descriptor                     = D3Q27<EFFECTIVE_OMEGA,VELO_GRAD,FORCE>;
 using WallFunctionForcedD3Q27Descriptor             = D3Q27<TAU_W,TAU_EFF,FORCE>;
 using D3Q27DescriptorLebedev                        = D3Q27<tag::RTLBM>;
-
+using CumulantD3Q27Descriptor                       = D3Q27<tag::CUM>;
 }
 
 }

@@ -55,10 +55,23 @@ public:
     _data(new T[count] {})
   { }
 
+  Column():
+    Column(0)
+  { }
+
   Column(Column<T>&& rhs):
     _count(rhs._count),
     _data(rhs._data.release())
   { }
+
+  Column(const Column<T>& rhs):
+    _count(rhs._count),
+    _data(new T[_count] {})
+  {
+    std::copy(rhs._data.get(),
+              rhs._data.get() + _count,
+              _data.get());
+  }
 
   virtual ~Column() = default;
 

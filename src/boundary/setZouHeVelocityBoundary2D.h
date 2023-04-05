@@ -39,7 +39,6 @@
 #include "dynamics/dynamics.h"
 #include "boundaryPostProcessors2D.h"
 #include "zouHeDynamics.h"
-#include "zouHeDynamics.hh"
 #include "setLocalVelocityBoundary2D.h"
 #include "setBoundary2D.h"
 

@@ -26,7 +26,7 @@
 
 #include "boundaryPostProcessors2D.h"
 
-#include "core/finiteDifference2D.h"
+#include "utilities/finiteDifference2D.h"
 #include "core/util.h"
 
 #include "dynamics/dynamics.h"
@@ -37,7 +37,7 @@ namespace olb {
 ///////////  StraightFdBoundaryProcessor2D ///////////////////////////////////
 
 template<typename T, typename DESCRIPTOR, int direction,int orientation>
-template<typename CELL>
+template<CONCEPT(Cell) CELL>
 void StraightFdBoundaryProcessor2D<T,DESCRIPTOR,direction,orientation>::apply(CELL& cell)
 {
   using namespace olb::util::tensorIndices2D;
@@ -406,7 +406,7 @@ PartialSlipBoundaryProcessorGenerator2D<T,DESCRIPTOR>::clone() const
 /////////// OuterVelocityCornerProcessor2D /////////////////////////////////////
 
 template<typename T, typename DESCRIPTOR, int xNormal,int yNormal>
-template<typename CELL>
+template <CONCEPT(Cell) CELL>
 void OuterVelocityCornerProcessor2D<T,DESCRIPTOR,xNormal,yNormal>::apply(CELL& cell)
 {
   using namespace olb::util::tensorIndices2D;

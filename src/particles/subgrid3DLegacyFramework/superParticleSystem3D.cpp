@@ -36,6 +36,8 @@ template class SuperParticleSystem3D<double, Particle3D>;
 
 template class SuperParticleSystem3D<double, MagneticParticle3D>;
 
+//template class SuperParticleSystem3D<double, HaiderLevenspielParticle3D>;
+
 template<>
 template<>
 void SuperParticleSystem3D<double, Particle3D>::

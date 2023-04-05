@@ -27,13 +27,12 @@
 #include "platform/platform.h"
 
 #include "utilities/typeIndexedContainers.h"
-#include "dynamics/context.h"
 
 #include <optional>
 
 namespace olb {
 
-template <typename T, typename DESCRIPTOR, Platform PLATFORM> class ConcreteBlockMask;
+template <typename T, Platform PLATFORM> class ConcreteBlockMask;
 
 /// Describe FieldArray of a FIELD in Data
 /**
@@ -45,14 +44,14 @@ struct Array {
   using type = FieldArrayD<T,DESCRIPTOR,PLATFORM,FIELD>;
 };
 
-/// Describe paramaters of DYNAMICS in Data
+/// Describe paramaters of OPERATOR in Data
 /**
- * i.e. Data::getField<DynamicsParameters<DYNAMICS>> will expose DynamicsParametersD<DYNAMICS>
+ * i.e. Data::getField<OperatorParameters<DYNAMICS>> will expose ConcreteParametersD<DYNAMICS::parameters>
  **/
-template <typename DYNAMICS>
-struct DynamicsParameters {
+template <typename OPERATOR>
+struct OperatorParameters {
   template <typename T, typename DESCRIPTOR, Platform PLATFORM>
-  using type = DynamicsParametersD<T,DESCRIPTOR,PLATFORM,DYNAMICS>;
+  using type = ConcreteParametersD<T,DESCRIPTOR,PLATFORM,typename OPERATOR::parameters>;
 };
 
 /// Describe mask of DYNAMICS in Data
@@ -62,13 +61,7 @@ struct DynamicsParameters {
 template <typename DYNAMICS>
 struct DynamicsMask {
   template <typename T, typename DESCRIPTOR, Platform PLATFORM>
-  using type = ConcreteBlockMask<T,DESCRIPTOR,PLATFORM>;
-};
-
-template <typename CONTEXT>
-struct TrivialParameters {
-  template <typename T, typename DESCRIPTOR, Platform PLATFORM>
-  using type = TrivialParametersD<T,DESCRIPTOR,PLATFORM,CONTEXT>;
+  using type = ConcreteBlockMask<T,PLATFORM>;
 };
 
 /// Helper for referring to arbitrary data instances

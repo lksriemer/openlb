@@ -41,7 +41,7 @@ public:
 
   template<typename M>
   using exchange_momenta = InamuroAnalyticalDynamics<T,DESCRIPTOR,Dynamics,M,direction,orientation>;
-  
+
   /// Constructor
   InamuroAnalyticalDynamics(T omega);
   /// Compute equilibrium distribution function

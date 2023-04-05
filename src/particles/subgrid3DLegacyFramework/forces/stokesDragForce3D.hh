@@ -98,12 +98,6 @@ void StokesDragForce3D<T, PARTICLETYPE, DESCRIPTOR>::applyForce(
                       * ((c * fluidVel[1] + p->getVel()[1]) * C2 - p->getVel()[1]);
   p->getForce()[2] += p->getMass() * _dTinv
                       * ((c * fluidVel[2] + p->getVel()[2]) * C2 - p->getVel()[2]);
-
-  // explicit formulation
-  //  T cex = 6. * M_PI * _mu * p->getRad();
-  //  p->getForce()[0] += cex * (fluidVel[0]-p->getVel()[0]);
-  //  p->getForce()[1] += cex * (fluidVel[1]-p->getVel()[1]);
-  //  p->getForce()[2] += cex * (fluidVel[2]-p->getVel()[2]);
 }
 
 template<typename T, template<typename U> class PARTICLETYPE, typename DESCRIPTOR>

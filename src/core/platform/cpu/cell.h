@@ -24,6 +24,8 @@
 #ifndef CORE_PLATFORM_CPU_CELL_H
 #define CORE_PLATFORM_CPU_CELL_H
 
+#include "dynamics/lbm.h"
+
 namespace olb {
 
 /// Implementations of CPU specifics
@@ -35,12 +37,18 @@ class Cell;
 /// Virtual interface for dynamically-dispatched dynamics access on CPU targets
 template <typename T, typename DESCRIPTOR, Platform PLATFORM>
 struct Dynamics {
+  virtual ~Dynamics() { }
+
   virtual CellStatistic<T> collide(Cell<T,DESCRIPTOR,PLATFORM>& cell) = 0;
 
-  virtual T    computeRho (Cell<T,DESCRIPTOR,PLATFORM>& cell              ) = 0;
-  virtual void computeU   (Cell<T,DESCRIPTOR,PLATFORM>& cell,         T* u) = 0;
-  virtual void computeJ   (Cell<T,DESCRIPTOR,PLATFORM>& cell,         T* j) = 0;
-  virtual void computeRhoU(Cell<T,DESCRIPTOR,PLATFORM>& cell, T& rho, T* u) = 0;
+  virtual T    computeRho      (Cell<T,DESCRIPTOR,PLATFORM>& cell              ) = 0;
+  virtual void computeU        (Cell<T,DESCRIPTOR,PLATFORM>& cell,         T* u) = 0;
+  virtual void computeJ        (Cell<T,DESCRIPTOR,PLATFORM>& cell,         T* j) = 0;
+  virtual void computeRhoU     (Cell<T,DESCRIPTOR,PLATFORM>& cell, T& rho, T* u) = 0;
+  virtual void defineRho       (Cell<T,DESCRIPTOR,PLATFORM>& cell, T& rho      ) = 0;
+  virtual void defineU         (Cell<T,DESCRIPTOR,PLATFORM>& cell,         T* u) = 0;
+  virtual void defineRhoU      (Cell<T,DESCRIPTOR,PLATFORM>& cell, T& rho, T* u) = 0;
+  virtual void defineAllMomenta(Cell<T,DESCRIPTOR,PLATFORM>& cell, T& rho, T* u, T* pi) = 0;
 
   virtual void computeStress    (Cell<T,DESCRIPTOR,PLATFORM>& cell, T& rho, T* u, T* pi) = 0;
   virtual void computeAllMomenta(Cell<T,DESCRIPTOR,PLATFORM>& cell, T& rho, T* u, T* pi) = 0;
@@ -55,6 +63,16 @@ struct Dynamics {
     }
   };
 
+  void iniRegularized(Cell<T,DESCRIPTOR,PLATFORM>& cell,
+                      T rho, T* u, T* pi) {
+    iniEquilibrium(cell, rho, u);
+    for (unsigned iPop=0; iPop < DESCRIPTOR::q; ++iPop) {
+      cell[iPop] += equilibrium<DESCRIPTOR>::template fromPiToFneq<T>(iPop, pi);
+    }
+  }
+
+  virtual void inverseShiftRhoU(Cell<T,DESCRIPTOR,PLATFORM>& cell, T& rho, T* u) = 0;
+
 };
 
 /// CPU specific field mirroring BlockDynamicsMap
@@ -68,15 +86,19 @@ struct DYNAMICS : public descriptors::TYPED_FIELD_BASE<Dynamics<T,DESCRIPTOR,PLA
 template <typename T, typename DESCRIPTOR, Platform PLATFORM>
 class Cell {
 private:
-  ConcreteBlockLattice<T,DESCRIPTOR,PLATFORM>& _lattice;
+  ConcreteBlockLattice<T,DESCRIPTOR,PLATFORM>* _lattice;
   std::size_t _iCell;
 
 public:
   using value_t = T;
   using descriptor_t = DESCRIPTOR;
 
+  Cell():
+    _lattice(nullptr),
+    _iCell(0) { }
+
   Cell(ConcreteBlockLattice<T,DESCRIPTOR,PLATFORM>& lattice, std::size_t iCell=0):
-    _lattice(lattice),
+    _lattice(&lattice),
     _iCell(iCell) { }
 
   CellID getCellId() const {
@@ -88,31 +110,31 @@ public:
   }
 
   T& operator[](unsigned iPop) {
-    return _lattice.template getField<descriptors::POPULATION>()[iPop][_iCell];
+    return _lattice->template getField<descriptors::POPULATION>()[iPop][_iCell];
   }
 
   template <typename FIELD>
   auto getField() const {
-    return _lattice.template getField<FIELD>().getRow(_iCell);
+    return _lattice->template getField<FIELD>().getRow(_iCell);
   }
 
   template <typename FIELD>
   void setField(const FieldD<T,DESCRIPTOR,FIELD>& v) {
-    return _lattice.template getField<FIELD>().setRow(_iCell, v);
+    return _lattice->template getField<FIELD>().setRow(_iCell, v);
   }
 
   template <typename FIELD>
   auto getFieldPointer() {
-    return _lattice.template getField<FIELD>().getRowPointer(_iCell);
+    return _lattice->template getField<FIELD>().getRowPointer(_iCell);
   }
 
   template <typename FIELD>
   auto& getFieldComponent(unsigned iD) {
-    return _lattice.template getField<FIELD>()[iD][_iCell];
+    return _lattice->template getField<FIELD>()[iD][_iCell];
   }
 
   Cell<T,DESCRIPTOR,PLATFORM> neighbor(LatticeR<DESCRIPTOR::d> offset) {
-    return {_lattice, _iCell + _lattice.getNeighborDistance(offset)};
+    return {*_lattice, _iCell + _lattice->getNeighborDistance(offset)};
   }
 
   Dynamics<T,DESCRIPTOR,PLATFORM>& getDynamics() {
@@ -140,8 +162,32 @@ public:
     getDynamics().computeAllMomenta(*this, rho, u, pi);
   }
 
+  void defineRho(T& rho) {
+    getDynamics().defineRho(*this, rho);
+  }
+  void defineU(T* u) {
+    getDynamics().defineU(*this, u);
+  }
+  void defineRhoU(T rho, T* u) {
+    getDynamics().defineRhoU(*this, rho, u);
+  }
+  void defineAllMomenta(T rho, T* u, T* pi) {
+    getDynamics().defineAllMomenta(*this, rho, u, pi);
+  }
+  void definePopulations(const T* f) {
+    for (int iPop=0; iPop < descriptors::q<DESCRIPTOR>(); ++iPop) {
+      operator[](iPop) = f[iPop];
+    }
+  }
+
   void iniEquilibrium(T rho, T* u) {
     getDynamics().iniEquilibrium(*this, rho, u);
+  }
+  void iniRegularized(T rho, T* u, T* pi) {
+    getDynamics().iniRegularized(*this, rho, u, pi);
+  }
+  void inverseShiftRhoU(T& rho, T* u) {
+    getDynamics().inverseShiftRhoU(*this, rho, u);
   }
 
 };

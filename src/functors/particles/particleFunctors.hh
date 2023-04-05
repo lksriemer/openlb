@@ -1,6 +1,6 @@
 /*  This file is part of the OpenLB library
  *
- *  Copyright (C) 2021 Nicolas Hafen, Mathias J. Krause
+ *  Copyright (C) 2021 Nicolas Hafen, Mathias J. Krause,
  *  E-mail contact: info@openlb.net
  *  The most recent release of OpenLB can be downloaded at
  *  <http://www.openlb.net/>
@@ -21,11 +21,34 @@
  *  Boston, MA  02110-1301, USA.
 */
 
-/** \file
- * Groups all include files for the directory genericFunctions.
- */
+#ifndef PARTICLE_FUNCTORS_HH
+#define PARTICLE_FUNCTORS_HH
 
-//#include "particleSystemPhysVelocity3D.hh"
-//#include "superParticleBaseF3D.hh"
-//#include "blockParticleBaseF3D.hh"
-#include "particleF.hh"
+namespace olb {
+
+
+template <typename T, typename DESCRIPTOR>
+ParticleCircumRadiusF<T,DESCRIPTOR>::ParticleCircumRadiusF(
+  Container<T,DESCRIPTOR,DynamicFieldGroupsD<T,typename DESCRIPTOR::fields_t>>& container )
+  : ContainerF<T,DESCRIPTOR,DynamicFieldGroupsD<T,typename DESCRIPTOR::fields_t>,T>( container, 1 )
+{
+  this->getName() = "ParticleCircumRadiusF";
+}
+
+template <typename T, typename DESCRIPTOR>
+bool ParticleCircumRadiusF<T,DESCRIPTOR>::operator()(T output[], const int input[])
+{
+  using namespace olb::descriptors;
+  using GROUP_EVAL = typename DESCRIPTOR::template derivedField<SURFACE>;
+  using FIELD_EVAL = typename GROUP_EVAL::template derivedField<SINDICATOR>;
+  auto sIndicatorPtr = this->getContainer().data().template get<GROUP_EVAL>()
+                  .template getField<FIELD_EVAL>(input[0]);
+  T circumRadius = sIndicatorPtr->getCircumRadius();
+  output[0] = circumRadius;
+  return true; //TODO: add Error handling using true/false
+}
+
+
+} //namespace olb
+
+#endif

@@ -48,7 +48,7 @@ struct wallFunctionParam {
   int fneqMethod = 1;
 
   /*  Used wall profile
-   *  0: Musker profile 
+   *  0: Musker profile
    *  1: power law profile
    */
   int wallProfile = 0;

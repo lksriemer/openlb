@@ -93,6 +93,7 @@ SuperIndicatorMaterial3D<T>::SuperIndicatorMaterial3D(
   SuperGeometry<T,3>& geometry, std::vector<int> materials)
   : SuperIndicatorF3D<T>(geometry)
 {
+  geometry.updateStatistics(false);
   const std::string matString = std::accumulate(
                                   materials.begin()+1,
                                   materials.end(),
@@ -134,6 +135,34 @@ bool SuperIndicatorMaterial3D<T>::operator() (bool output[], const int input[])
 }
 
 template <typename T>
+SuperIndicatorLayer3D<T>::SuperIndicatorLayer3D(FunctorPtr<SuperIndicatorF3D<T>>&& indicatorF)
+  : SuperIndicatorF3D<T>(indicatorF->getSuperGeometry()),
+    _indicatorF(std::move(indicatorF))
+{
+  this->getName() = _indicatorF->getName();
+
+  for (int iC = 0; iC < _indicatorF->getBlockFSize(); ++iC) {
+    this->_blockF.emplace_back(
+      new BlockIndicatorLayer3D<T>(_indicatorF->getBlockIndicatorF(iC)));
+  }
+}
+
+template <typename T>
+bool SuperIndicatorLayer3D<T>::operator()(bool output[], const int input[])
+{
+  _indicatorF(output, input);
+  for (int iPop=1; iPop < descriptors::D3Q27<>::q; ++iPop) {
+    bool tmpOutput{};
+    Vector<int,4> tmpInput(input);
+    auto c_i = descriptors::c<descriptors::D3Q27<>>(iPop);
+    tmpInput += Vector<int,4>{0, c_i[0], c_i[1], c_i[2]};
+    _indicatorF(&tmpOutput, tmpInput.data());
+    output[0] |= tmpOutput;
+  }
+  return true;
+}
+
+template <typename T>
 SuperIndicatorIdentity3D<T>::SuperIndicatorIdentity3D(FunctorPtr<SuperIndicatorF3D<T>>&& indicatorF)
   : SuperIndicatorF3D<T>(indicatorF->getSuperGeometry()),
     _indicatorF(std::move(indicatorF))
@@ -150,6 +179,34 @@ template <typename T>
 bool SuperIndicatorIdentity3D<T>::operator()(bool output[], const int input[])
 {
   return _indicatorF(output, input);
+}
+
+template <typename T>
+SuperIndicatorMultiplication3D<T>::SuperIndicatorMultiplication3D(
+  FunctorPtr<SuperIndicatorF3D<T>>&& f,
+  FunctorPtr<SuperIndicatorF3D<T>>&& g)
+  : SuperIndicatorF3D<T>(f->getSuperGeometry()),
+    _f(std::move(f)), _g(std::move(g))
+{
+  this->getName() = _f->getName() + " * " + _g->getName();
+
+  for (int iC = 0; iC < _f->getBlockFSize(); ++iC) {
+    this->_blockF.emplace_back(
+      new BlockIndicatorMultiplication3D<T>(
+        _f->getBlockIndicatorF(iC),
+        _g->getBlockIndicatorF(iC)));
+  }
+}
+
+template <typename T>
+bool SuperIndicatorMultiplication3D<T>::operator()(
+  bool output[], const int input[])
+{
+  _f(output, input);
+  if (output[0]) {
+    _g(output, input);
+  }
+  return output[0];
 }
 
 } // namespace olb

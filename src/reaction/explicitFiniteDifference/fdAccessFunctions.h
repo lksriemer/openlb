@@ -32,6 +32,7 @@ namespace olb {
 
 namespace fd {
 
+/*
 template<typename T, typename DESCRIPTOR, typename FIELD>
 T* accessOld(Cell<T,DESCRIPTOR> cell, std::size_t iT)
 {
@@ -42,6 +43,26 @@ template<typename T, typename DESCRIPTOR, typename FIELD>
 T* accessNew(Cell<T,DESCRIPTOR> cell, std::size_t iT)
 {
   return &cell.template getFieldPointer<FIELD>()[(iT+1) % 2];
+}
+*/
+
+template<typename T, typename FIELD, typename CELL>
+T* accessOld(CELL cell, std::size_t iT) any_platform
+{
+  return &cell.template getFieldPointer<FIELD>()[iT % 2];
+}
+
+template<typename T, typename FIELD, typename CELL>
+T* accessNew(CELL cell, std::size_t iT) any_platform
+{
+  return &cell.template getFieldPointer<FIELD>()[(iT+1) % 2];
+}
+
+// Convenience function to turn turn two indices from (iExt, iD) in [0, ..., EXTENT-1][0, ..., D-1], into i in [0, ..., D*EXTENT-1]
+template <unsigned EXTENT>
+constexpr unsigned getArrayPos(const unsigned iExt, const unsigned iD) any_platform
+{
+  return iExt*EXTENT + iD;
 }
 
 } // fd

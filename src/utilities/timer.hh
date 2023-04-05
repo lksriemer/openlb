@@ -62,7 +62,7 @@ T Timer<T>::getMLUPps()
 {
   T mlupps = getMLUPs()/singleton::mpi().getSize();
 #ifdef PARALLEL_MODE_OMP
-  mlupps /= omp.get_size();
+  mlupps /= singleton::omp().getSize();
 #endif
   return mlupps;
 }
@@ -79,7 +79,7 @@ T Timer<T>::getTotalMLUPps()
 {
   T tmlupps = getTotalMLUPs()/singleton::mpi().getSize();
 #ifdef PARALLEL_MODE_OMP
-  tmlupps /= omp.get_size();
+  tmlupps /= singleton::omp().getSize();
 #endif
   return tmlupps;
 }
@@ -145,13 +145,6 @@ template<typename T>
 T Timer<T>::getTotalRealTimeMs()
 {
   return timevalDiffTimeMs(msTimeEnd, msTimeStart);
-}
-
-template<typename T>
-T Timer<T>::getCurrRealTimeMs()
-{
-  gettimeofday(&msTimeCur, nullptr);    // time in ms
-  return timevalDiffTimeMs(msTimeCur, msTimeStart);
 }
 
 template<typename T>
@@ -227,8 +220,10 @@ void Timer<T>::printSummary()
   clout << "----------------Summary:Timer----------------" << std::endl;
   clout << "measured time (rt) : " << (int)getTotalRealTimeMs()/1000 << "." << (int)getTotalRealTimeMs()-(int)getTotalRealTimeMs()/1000*1000 << "s" << std::endl;
   clout << "measured time (cpu): " << std::setprecision(3) << std::fixed << getTotalCpuTime() << "s" << std::endl;
-  clout << "average MLUPs :       " << getTotalMLUPs()  << std::endl;
-  clout << "average MLUPps:       " << getTotalMLUPps() << std::endl;
+  if (numFC > 0 && curTS > 0) {
+    clout << "average MLUPs :       " << getTotalMLUPs()  << std::endl;
+    clout << "average MLUPps:       " << getTotalMLUPps() << std::endl;
+  }
   clout << "---------------------------------------------" << std::endl;
 }
 

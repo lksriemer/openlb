@@ -55,6 +55,26 @@ public:
 
 };
 
+template <typename T>
+class SuperLatticeTimeAveragedMagnitudesF3D final:  public SuperF3D<T,T> {
+private:
+  int _ensembles;
+  SuperF3D<T,T>& _sFunctor;
+  SuperData<3,T, T> _sData;
+  SuperData<3,T, T> _sDataP2;
+
+public:
+  SuperLatticeTimeAveragedMagnitudesF3D(SuperF3D<T,T>& sFunctor);
+
+  bool operator() (T output[], const int input[]);
+
+  void addEnsemble();
+
+  int getEnsembles();
+  int getBlockFSize() const;
+
+};
+
 // The functor calculates the crosscorrelation(CC) of two functorvalues averaged above the Time
 // CC = SUM((functorM[iT] - functorMAverage)*(functorN[iT] - functorNAverage))
 // the dimesion of the functor is the product of the given functor dimensions

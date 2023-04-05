@@ -47,7 +47,7 @@ public:
   Gnuplot(std::string name, bool liveplot);
   Gnuplot(std::string name, AxisType axisType);
   Gnuplot(std::string name, AxisType axisType, Regression regressionType);
-  
+
   /// initialises the data file
   void init();
 
@@ -90,8 +90,8 @@ private:
   std::vector<std::string> _names;
   std::string _key;
   std::string _preCommand;
-  AxisType _axisType; 
-  Regression _regressionType; 
+  AxisType _axisType;
+  Regression _regressionType;
 
   /// the creation of the datafile and writing of the data in the CSV format datafile
   /// is now done by the CSV Writer. The functions setData call the CSV Writer writeDataFile function
@@ -106,7 +106,8 @@ private:
   double _xRange = -1;
   T _time = 0.;
 
-  static constexpr int _rank {0};
+  static constexpr int _rank {0};  // only process _rank will write output
+  bool _gnuplotInstalled {false};
 
   /// writes a plot file for type {"plot", "png", "pdf")
   void writePlotFile(std::string type, std::string plotName = "");

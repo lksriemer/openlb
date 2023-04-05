@@ -22,12 +22,16 @@
 
 from argparse import ArgumentParser
 from mako.template import Template
+import cppyy
 
 parser = ArgumentParser()
 parser.add_argument('template', help='Path of template to be evaluated')
+parser.add_argument('guard', help='Include guard of template to exclude previous generation')
 parser.add_argument('output', help='Path of target file')
 
 args = parser.parse_args()
+
+cppyy.cppdef(f"#define {args.guard}")
 
 template = Template(filename=args.template)
 

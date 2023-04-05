@@ -38,7 +38,7 @@ template <typename T, typename DESCRIPTOR, typename FIELD_ARRAY_TYPE, typename W
 class ContainerF : public GenericF<W,int> {
 public:
   ContainerF( Container<T,DESCRIPTOR,FIELD_ARRAY_TYPE>& container, int targetDim );
-  
+
   Container<T,DESCRIPTOR,FIELD_ARRAY_TYPE>& _container;
 
 public:
@@ -48,7 +48,7 @@ public:
   /// \return container
   Container<T,DESCRIPTOR,FIELD_ARRAY_TYPE>& getContainer();
 
-  /// \return size of container 
+  /// \return size of container
   int getContainerSize() const;
 
   bool operator() (W output[], const int input []);
@@ -67,10 +67,10 @@ public:
  */
 
 template <typename T, typename DESCRIPTOR, typename GROUP, typename FIELD>
-class GroupedFieldF : public ContainerF<T,DESCRIPTOR,DynamicFieldGroupsD<T,typename DESCRIPTOR::fieldList>,T> {
+class GroupedFieldF : public ContainerF<T,DESCRIPTOR,DynamicFieldGroupsD<T,typename DESCRIPTOR::fields_t>,T> {
 public:
-  GroupedFieldF( Container<T,DESCRIPTOR,DynamicFieldGroupsD<T,typename DESCRIPTOR::fieldList>>& container );
-  
+  GroupedFieldF( Container<T,DESCRIPTOR,DynamicFieldGroupsD<T,typename DESCRIPTOR::fields_t>>& container );
+
 public:
   bool operator() (T output[], const int input []);
 
@@ -95,7 +95,7 @@ public:
   LoadBalancer<T>& getLoadBalancer();
 
   int getContainerSize() const;
-  
+
   ContainerF<T,DESCRIPTOR,FIELD_ARRAY_TYPE>& getContainerF(int iCloc);
 
   bool operator() (W output[], const int input []);
@@ -111,7 +111,7 @@ class SuperParticleSystem;
 }
 
 template <typename T, typename DESCRIPTOR, typename GROUP, typename FIELD, typename W=T>
-class SuperParticleGroupedFieldF : public SuperContainerF<T,DESCRIPTOR,DynamicFieldGroupsD<T,typename DESCRIPTOR::fieldList>,W> { 
+class SuperParticleGroupedFieldF : public SuperContainerF<T,DESCRIPTOR,DynamicFieldGroupsD<T,typename DESCRIPTOR::fields_t>,W> {
 private:
   particles::SuperParticleSystem<T,DESCRIPTOR>& _sParticleSystem;
 public:

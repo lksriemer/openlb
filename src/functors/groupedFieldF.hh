@@ -30,7 +30,7 @@ namespace olb {
 
 
 template <typename T, typename DESCRIPTOR, typename FIELD_ARRAY_TYPE, typename W>
-ContainerF<T,DESCRIPTOR,FIELD_ARRAY_TYPE,W>::ContainerF( 
+ContainerF<T,DESCRIPTOR,FIELD_ARRAY_TYPE,W>::ContainerF(
   Container<T,DESCRIPTOR,FIELD_ARRAY_TYPE>& container, int targetDim )
   : GenericF<W,int>( targetDim, 1), _container(container)
 {
@@ -38,7 +38,7 @@ ContainerF<T,DESCRIPTOR,FIELD_ARRAY_TYPE,W>::ContainerF(
 }
 
 template <typename T, typename DESCRIPTOR, typename FIELD_ARRAY_TYPE, typename W>
-Container<T,DESCRIPTOR,FIELD_ARRAY_TYPE>& 
+Container<T,DESCRIPTOR,FIELD_ARRAY_TYPE>&
   ContainerF<T,DESCRIPTOR,FIELD_ARRAY_TYPE,W>::getContainer()
 {
   return _container;
@@ -60,9 +60,9 @@ bool ContainerF<T,DESCRIPTOR,FIELD_ARRAY_TYPE,W>::operator()(W output[], const i
 
 
 template <typename T, typename DESCRIPTOR, typename GROUP, typename FIELD>
-GroupedFieldF<T,DESCRIPTOR,GROUP,FIELD>::GroupedFieldF( 
-  Container<T,DESCRIPTOR,DynamicFieldGroupsD<T,typename DESCRIPTOR::fieldList>>& container )
-  : ContainerF<T,DESCRIPTOR,DynamicFieldGroupsD<T,typename DESCRIPTOR::fieldList>,T>( container,
+GroupedFieldF<T,DESCRIPTOR,GROUP,FIELD>::GroupedFieldF(
+  Container<T,DESCRIPTOR,DynamicFieldGroupsD<T,typename DESCRIPTOR::fields_t>>& container )
+  : ContainerF<T,DESCRIPTOR,DynamicFieldGroupsD<T,typename DESCRIPTOR::fields_t>,T>( container,
       DESCRIPTOR::template size<typename meta::derived_type_in_nested<DESCRIPTOR,GROUP,FIELD>::type>() )
 {
   this->getName() = std::string(typeid(FIELD).name());
@@ -78,7 +78,7 @@ bool GroupedFieldF<T,DESCRIPTOR,GROUP,FIELD>::operator()(T output[], const int i
                   .template getFieldPointer<FIELD_EVAL>(input[0]);
 
   for (int iDim=0; iDim<this->getTargetDim(); ++iDim){
-    output[iDim] = fieldValue[iDim]; 
+    output[iDim] = fieldValue[iDim];
   }
   return true; //TODO: add Error handling using true/false
 }
@@ -130,16 +130,16 @@ bool SuperContainerF<T,DESCRIPTOR,FIELD_ARRAY_TYPE,W>::operator()(W output[], co
 
 
 template <typename T, typename DESCRIPTOR, typename GROUP, typename FIELD, typename W>
-SuperParticleGroupedFieldF<T,DESCRIPTOR,GROUP,FIELD,W>::SuperParticleGroupedFieldF( 
+SuperParticleGroupedFieldF<T,DESCRIPTOR,GROUP,FIELD,W>::SuperParticleGroupedFieldF(
   particles::SuperParticleSystem<T,DESCRIPTOR>& sParticleSystem )
-  : SuperContainerF<T,DESCRIPTOR,DynamicFieldGroupsD<T,typename DESCRIPTOR::fieldList>,W>(
-      sParticleSystem.getLoadBalancer(),
+  : SuperContainerF<T,DESCRIPTOR,DynamicFieldGroupsD<T,typename DESCRIPTOR::fields_t>,W>(
+      sParticleSystem.getSuperStructure().getLoadBalancer(),
       DESCRIPTOR::template size<typename meta::derived_type_in_nested<DESCRIPTOR,GROUP,FIELD>::type>() ),
     _sParticleSystem(sParticleSystem)
 {
   this->getName() = std::string(typeid(FIELD).name());
 
-  int maxC = this->_sParticleSystem.getLoadBalancer().size();
+  int maxC = this->_sParticleSystem.getSuperStructure().getLoadBalancer().size();
   this->_containerF.reserve(maxC);
   for (int iC = 0; iC < maxC; iC++) {
 

@@ -175,6 +175,11 @@ bool Hyperplane3D<T>::isYZPlane() const
          util::nearZero(util::dotProduct3D(normal, {0,0,1}));
 }
 
+template <typename T>
+Vector<T,3> Hyperplane3D<T>::project(const Vector<T,2>& x) const
+{
+  return origin + x[0]*u + x[1]*v;
+}
 
 }
 
