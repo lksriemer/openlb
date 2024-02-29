@@ -163,7 +163,7 @@ protected:
 public:
   CirclePowerLaw3D(olb::Vector<T, 3> axisPoint, std::vector<T> axisDirection,  T maxVelocity, T radius, T n, T scale = T(1));
   CirclePowerLaw3D(T center0, T center1, T center2, T normal0, T normal1, T normal2, T radius, T maxVelocity, T n, T scale = T(1));
-  CirclePowerLaw3D(SuperGeometry<T,3>& superGeometry, int material, T maxVelocity, T n, T distance2Wall, T scale = T(1));
+  CirclePowerLaw3D(const SuperGeometry<T,3>& superGeometry, int material, T maxVelocity, T n, T distance2Wall, T scale = T(1));
 
   CirclePowerLaw3D(bool useMeanVelocity, std::vector<T> axisPoint, std::vector<T> axisDirection,  T Velocity, T radius, T n, T scale = T(1));
   CirclePowerLaw3D(bool useMeanVelocity, T center0, T center1, T center2, T normal0, T normal1, T normal2, T radius, T Velocity, T n, T scale = T(1));

@@ -284,6 +284,9 @@ public:
   void execute()
   {
     auto& load = _lattices.template get<0>()->getLoadBalancer();
+    #ifdef PARALLEL_MODE_OMP
+    #pragma omp taskloop
+    #endif
     for (int iC = 0; iC < load.size(); ++iC) {
       _block[iC]->execute();
     }
@@ -317,12 +320,13 @@ public:
   void restrictTo(FunctorPtr<SuperIndicatorF<typename AbstractCouplingO<COUPLEES>::value_t,
                                              AbstractCouplingO<COUPLEES>::descriptor_t::d>>&& indicator)
   {
+    using DESCRIPTOR = typename COUPLEES::values_t::template get<0>::descriptor_t;
     auto& load = _lattices.template get<0>()->getLoadBalancer();
     for (int iC = 0; iC < load.size(); ++iC) {
-      const auto& blockL = _lattices.get(typename COUPLEES::values_t::template get<0>{})->getBlock(iC);
-      const auto& blockI = indicator->getBlockIndicatorF(iC);
-      blockL.forCoreSpatialLocations([&](auto latticeR) {
-        _block[iC]->set(latticeR, blockI(latticeR));
+      const auto& blockL = _lattices.template get<0>()->getBlock(iC);
+      auto& blockI = indicator->getBlockIndicatorF(iC);
+      blockL.forCoreSpatialLocations([&](LatticeR<DESCRIPTOR::d> latticeR) {
+        _block[iC]->set(blockL.getCellId(latticeR), blockI(latticeR));
       });
     }
   }

@@ -30,7 +30,6 @@
 #include "core/blockStructure.h"
 #include "functors/genericF.h"
 #include "functors/analytical/analyticalBaseF.h"
-#include "sdf.h"
 
 namespace olb {
 

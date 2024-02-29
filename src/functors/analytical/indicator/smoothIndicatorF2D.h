@@ -36,7 +36,6 @@
 #include "functors/analytical/indicator/indicatorBaseF2D.h"
 #include "functors/analytical/indicator/indicatorBaseF3D.h"
 #include "functors/analytical/indicator/indicatorF2D.h"
-#include "sdf.h"
 
 namespace olb {
 
@@ -166,6 +165,31 @@ private:
   S _radius;
 public:
   SmoothIndicatorHTCircle2D(Vector<S,2> center, S radius, S epsilon, S density=0, Vector<S,2> vel = Vector<S,2> (0.,0.), S omega = 0);
+  bool operator() (T output[], const S input[]) override;
+  Vector<S,2> calcMofiAndMass(const S density) override;
+};
+
+/// factorizable output smooth circle in 2D with a tangiant or ramp epsilon sector
+template <typename T, typename S, bool PARTICLE=false>
+class SmoothIndicatorFactoredCircle2D final : public SmoothIndicatorF2D<T,S,PARTICLE> {
+private:
+  S _radius;
+  S _factor;
+public:
+  SmoothIndicatorFactoredCircle2D(Vector<S,2> center, S radius, S epsilon, S density=0, Vector<S,2> vel = Vector<S,2> (0.,0.), S omega = 0, S factor = 1.);
+  bool operator() (T output[], const S input[]) override;
+  Vector<S,2> calcMofiAndMass(const S density) override;
+};
+
+/// factorizable output smooth cuboid in 2D with a tangiant or ramp epsilon sector
+template <typename T, typename S, bool PARTICLE=false>
+class SmoothIndicatorFactoredCuboid2D final : public SmoothIndicatorF2D<T,S,PARTICLE> {
+private:
+  S _xLength;
+  S _yLength;
+  S _factor;
+public:
+  SmoothIndicatorFactoredCuboid2D(Vector<S,2> center, S xLength, S yLength, S epsilon, S density=0, Vector<S,2> vel = Vector<S,2> (0.,0.), S omega = 0, S factor = 1.);
   bool operator() (T output[], const S input[]) override;
   Vector<S,2> calcMofiAndMass(const S density) override;
 };

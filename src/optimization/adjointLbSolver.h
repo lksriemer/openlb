@@ -79,6 +79,11 @@ protected:
       this->geometry(), params.controlMaterial, *(params.dObjectiveDf));
     lattice->template defineField<descriptors::DJDALPHA>(
       this->geometry(), params.controlMaterial, *(params.dObjectiveDcontrol));
+
+    // update fields if gpu used
+    lattice->template setProcessingContext<Array<descriptors::F>>(ProcessingContext::Simulation);
+    lattice->template setProcessingContext<Array<descriptors::DJDF>>(ProcessingContext::Simulation);
+    lattice->template setProcessingContext<Array<descriptors::DJDALPHA>>(ProcessingContext::Simulation);
   }
 };
 

@@ -35,7 +35,6 @@
 #include "functors/analytical/indicator/indicatorBaseF2D.h"
 #include "functors/analytical/indicator/indicatorBaseF3D.h"
 #include "functors/analytical/indicator/indicatorF3D.h"
-#include "sdf.h"
 
 namespace olb {
 
@@ -190,6 +189,18 @@ public:
   const S signedDistance( const PhysR<S,3> input ) override;
   bool regardCell(int input[3]);
   bool operator()(T output[], const S input[]) override;
+};
+
+/// factorizable output smooth sphere in 3D with a tangiant or ramp epsilon sector
+template <typename T, typename S, bool PARTICLE=false>
+class SmoothIndicatorFactoredCircle3D final : public SmoothIndicatorF3D<T,S,PARTICLE> {
+private:
+  S _radius;
+  S _factor;
+public:
+  SmoothIndicatorFactoredCircle3D(Vector<S,3> center, S radius, S epsilon, S density=0, Vector<S,3> vel = Vector<S,3> (0.,0.,0.), S omega = 0, S factor = 1.);
+  bool operator() (T output[], const S input[]) override;
+  Vector<S,4> calcMofiAndMass(const S density) override;
 };
 
 

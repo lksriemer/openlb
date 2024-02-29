@@ -32,7 +32,6 @@
 #include "core/blockData.h"
 #include "core/unitConverter.h"
 #include "indicatorBaseF3D.h"
-#include "sdf.h"
 
 /** \file
  * This file contains indicator functions. These return 1 if the given
@@ -174,6 +173,17 @@ public:
   bool operator() (bool output[], const S input[]) override;
 };
 
+
+template <typename T>
+class IndicatorSDF2D : public IndicatorF2D<T> {
+private:
+  std::function<T(Vector<T, 2>)> _f;
+
+public:
+  IndicatorSDF2D(std::function<T(Vector<T, 2>)> f);
+
+  bool operator()(bool output[], const T input[]) override;
+};
 
 /////////creatorFunctions//////////////////////
 template <typename S>

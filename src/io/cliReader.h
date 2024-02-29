@@ -70,7 +70,18 @@ public:
     }
   }
 
+
 };
+
+template <>
+std::string CLIreader::getValueOrFallback<std::string>(
+  const std::string& name, std::string fallback) const {
+  if (contains(name)) {
+    return operator[](name);
+  } else {
+    return fallback;
+  }
+}
 
 }
 

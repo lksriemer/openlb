@@ -24,7 +24,6 @@
 #ifndef INDIC_MOD_H
 #define INDIC_MOD_H
 
-#include "sdf.h"
 #include "utilities/aliases.h"
 #include "utilities/functorPtr.h"
 

@@ -54,6 +54,13 @@ struct BOUZIDI_VELOCITY : public descriptors::FIELD_BASE<0,0,1> {
   }
 };
 
+/// Interpolated Bounce Back (Bouzidi) for ADE Dirichlet field
+struct BOUZIDI_ADE_DIRICHLET : public descriptors::FIELD_BASE<0,0,1> {
+  template <typename T, typename DESCRIPTOR>
+  static constexpr auto getInitialValue() {
+    return Vector<value_type<T>,DESCRIPTOR::template size<BOUZIDI_ADE_DIRICHLET>()>(0);
+  }
+};
 }
 
 /// Post processor for the zero-velocity Bouzidi boundary
@@ -86,6 +93,52 @@ public:
       else if (q[iPop] == V{0}) {
         const int iPop_opposite = descriptors::opposite<DESCRIPTOR>(iPop);
         x_b[iPop_opposite] = x_b[iPop];
+      }
+    }
+  }
+};
+
+class BouzidiAdeDirichletPostProcessor {
+public:
+  static constexpr OperatorScope scope = OperatorScope::PerCell;
+
+  int getPriority() const {
+    return -1;
+  }
+
+  template <typename CELL, typename V = typename CELL::value_t>
+  void apply(CELL& x_b) any_platform {
+    using DESCRIPTOR = typename CELL::descriptor_t;
+    const auto q = x_b.template getFieldPointer<descriptors::BOUZIDI_DISTANCE>();
+    const auto phi_d = x_b.template getFieldPointer<descriptors::BOUZIDI_ADE_DIRICHLET>();
+    V f = V{1/3};       // D2Q5
+    if (descriptors::q<DESCRIPTOR>() == 7) {
+      f = V{0.25};      // D3Q7
+    }
+    for (int iPop = 1; iPop < descriptors::q<DESCRIPTOR>(); ++iPop) {
+      // update missing population if valid bouzidi distance
+      if (q[iPop] > V{0}) {
+        const auto c = descriptors::c<DESCRIPTOR>(iPop);
+        const int iPop_opposite = descriptors::opposite<DESCRIPTOR>(iPop);
+        auto x_s = x_b.neighbor(c);                                             // solid side neighbor
+        auto x_f = x_b.neighbor(descriptors::c<DESCRIPTOR>(iPop_opposite));     // fluid side neighbor opposite to the missing population
+        auto source_d = phi_d[iPop] * f;                                        // source term set by the dirichlet condition
+        auto t_i = descriptors::t<V,DESCRIPTOR>(iPop);
+        auto t_iopp = descriptors::t<V,DESCRIPTOR>(iPop_opposite);
+
+        x_b[iPop_opposite] = (q[iPop] <= V{0.5}) // cut is closer to the fluid cell
+                           * (V{-2} * q[iPop] * (x_s[iPop] + t_i) + (V{2} * q[iPop] - V{1}) * (x_b[iPop] + t_i) + source_d)
+                           + (q[iPop] >  V{0.5}) // cut is closer to the solid cell
+                           * (V{-1} / (V{2} * q[iPop]) * (x_s[iPop] + t_i) + (V{1} - V{1} / (V{2} * q[iPop])) * (x_f[iPop_opposite] + t_iopp) + (V{1} / (V{2} * q[iPop])) * source_d)
+                           - t_iopp;
+      }
+      // if intersection point is on the cell then fall back to full-way bounce back
+      else if (q[iPop] == V{0}) {
+        const int iPop_opposite = descriptors::opposite<DESCRIPTOR>(iPop);
+        auto source_d = phi_d[iPop] * f;
+        auto t_i = descriptors::t<V,DESCRIPTOR>(iPop);
+        auto t_iopp = descriptors::t<V,DESCRIPTOR>(iPop_opposite);
+        x_b[iPop_opposite] = -(x_b[iPop] + t_i) + source_d - t_iopp;
       }
     }
   }
@@ -263,6 +316,10 @@ void setBouzidiBoundary(BlockLattice<T,DESCRIPTOR>& block,
               if constexpr (std::is_same_v<OPERATOR, BouzidiVelocityPostProcessor>) {
                 block.get(boundaryLatticeR).template setFieldComponent<descriptors::BOUZIDI_VELOCITY>(iPop_opposite, 0);
               }
+              // Initialize ade dirichlet coefficients if necessary
+              if constexpr (std::is_same_v<OPERATOR, BouzidiAdeDirichletPostProcessor>) {
+                block.get(boundaryLatticeR).template setFieldComponent<descriptors::BOUZIDI_ADE_DIRICHLET>(iPop_opposite, 0);
+              }
               // Setting up the post processor, if this cell does not have one yet.
               if (!block.isPadding(boundaryLatticeR)) {
                 block.addPostProcessor(typeid(stage::PostStream),
@@ -280,6 +337,10 @@ void setBouzidiBoundary(BlockLattice<T,DESCRIPTOR>& block,
               // Initialize velocity coefficients if necessary
               if constexpr (std::is_same_v<OPERATOR, BouzidiVelocityPostProcessor>) {
                 block.get(boundaryLatticeR).template setFieldComponent<descriptors::BOUZIDI_VELOCITY>(iPop_opposite, 0);
+              }
+              // Initialize velocity coefficients if necessary
+              if constexpr (std::is_same_v<OPERATOR, BouzidiAdeDirichletPostProcessor>) {
+                block.get(boundaryLatticeR).template setFieldComponent<descriptors::BOUZIDI_ADE_DIRICHLET>(iPop_opposite, 0);
               }
               if (!block.isPadding(boundaryLatticeR)) {
                 block.addPostProcessor(typeid(stage::PostStream),
@@ -379,6 +440,141 @@ void setBouzidiVelocity(BlockLattice<T,DESCRIPTOR>& block,
   });
 }
 
+template<typename T, typename DESCRIPTOR>
+void setBouzidiAdeDirichlet(SuperLattice<T,DESCRIPTOR>& sLattice,
+                            SuperGeometry<T,DESCRIPTOR::d>& superGeometry, int material,
+                            T phi_d,
+                            std::vector<int> bulkMaterials = std::vector<int>(1,1))
+{
+  setBouzidiAdeDirichlet<T,DESCRIPTOR>(sLattice, superGeometry.getMaterialIndicator(material), phi_d, bulkMaterials);
+}
+
+template<typename T, typename DESCRIPTOR>
+void setBouzidiAdeDirichlet(SuperLattice<T,DESCRIPTOR>& sLattice,
+                            SuperGeometry<T,DESCRIPTOR::d>& superGeometry, int material,
+                            AnalyticalF<DESCRIPTOR::d,T,T>& phi_d,
+                            std::vector<int> bulkMaterials = std::vector<int>(1,1))
+{
+  setBouzidiAdeDirichlet<T,DESCRIPTOR>(sLattice, superGeometry.getMaterialIndicator(material), phi_d, bulkMaterials);
+}
+
+template<typename T, typename DESCRIPTOR>
+void setBouzidiAdeDirichlet(SuperLattice<T,DESCRIPTOR>& sLattice,
+                            FunctorPtr<SuperIndicatorF<T,DESCRIPTOR::d>>&& boundaryIndicator,
+                            FunctorPtr<SuperIndicatorF<T,DESCRIPTOR::d>>&& bulkIndicator,
+                            T phi_d)
+{
+  auto& load = sLattice.getLoadBalancer();
+  auto& cuboidGeometry = boundaryIndicator->getSuperGeometry().getCuboidGeometry();
+  for (int iCloc = 0; iCloc < load.size(); ++iCloc) {
+    auto& cuboid = cuboidGeometry.get(load.glob(iCloc));
+    setBouzidiAdeDirichlet<T,DESCRIPTOR>(sLattice.getBlock(iCloc),
+                                     boundaryIndicator->getBlockIndicatorF(iCloc),
+                                     bulkIndicator->getBlockIndicatorF(iCloc),
+                                     phi_d,
+                                     cuboid);
+  }
+}
+
+template<typename T, typename DESCRIPTOR>
+void setBouzidiAdeDirichlet(SuperLattice<T,DESCRIPTOR>& sLattice,
+                            FunctorPtr<SuperIndicatorF<T,DESCRIPTOR::d>>&& boundaryIndicator,
+                            FunctorPtr<SuperIndicatorF<T,DESCRIPTOR::d>>&& bulkIndicator,
+                            AnalyticalF<DESCRIPTOR::d,T,T>& phi_d)
+{
+  auto& load = sLattice.getLoadBalancer();
+  auto& cuboidGeometry = boundaryIndicator->getSuperGeometry().getCuboidGeometry();
+  for (int iCloc = 0; iCloc < load.size(); ++iCloc) {
+    auto& cuboid = cuboidGeometry.get(load.glob(iCloc));
+    setBouzidiAdeDirichlet<T,DESCRIPTOR>(sLattice.getBlock(iCloc),
+                                     boundaryIndicator->getBlockIndicatorF(iCloc),
+                                     bulkIndicator->getBlockIndicatorF(iCloc),
+                                     phi_d,
+                                     cuboid);
+  }
+}
+
+template<typename T, typename DESCRIPTOR>
+void setBouzidiAdeDirichlet(SuperLattice<T,DESCRIPTOR>& sLattice,
+                            FunctorPtr<SuperIndicatorF<T,DESCRIPTOR::d>>&& boundaryIndicator,
+                            T phi_d,
+                            std::vector<int> bulkMaterials = std::vector<int>(1,1))
+{
+  setBouzidiAdeDirichlet<T,DESCRIPTOR>(sLattice, std::forward<decltype(boundaryIndicator)>(boundaryIndicator),
+                               boundaryIndicator->getSuperGeometry().getMaterialIndicator(std::move(bulkMaterials)),
+                               phi_d);
+}
+
+template<typename T, typename DESCRIPTOR>
+void setBouzidiAdeDirichlet(SuperLattice<T,DESCRIPTOR>& sLattice,
+                            FunctorPtr<SuperIndicatorF<T,DESCRIPTOR::d>>&& boundaryIndicator,
+                            AnalyticalF<DESCRIPTOR::d,T,T>& phi_d,
+                            std::vector<int> bulkMaterials = std::vector<int>(1,1))
+{
+  setBouzidiAdeDirichlet<T,DESCRIPTOR>(sLattice, std::forward<decltype(boundaryIndicator)>(boundaryIndicator),
+                               boundaryIndicator->getSuperGeometry().getMaterialIndicator(std::move(bulkMaterials)),
+                               phi_d);
+}
+
+template<typename T, typename DESCRIPTOR>
+void setBouzidiAdeDirichlet(BlockLattice<T,DESCRIPTOR>& block,
+                            BlockIndicatorF<T,DESCRIPTOR::d>& boundaryIndicator,
+                            BlockIndicatorF<T,DESCRIPTOR::d>& bulkIndicator,
+                            T phi_d,
+                            Cuboid<T,DESCRIPTOR::d>& cuboid)
+{
+  block.forSpatialLocations([&](LatticeR<DESCRIPTOR::d> solidLatticeR) {
+    if (boundaryIndicator(solidLatticeR)) {
+      for (int iPop = 1; iPop < DESCRIPTOR::q; ++iPop) {
+        Vector<T,DESCRIPTOR::d> boundaryLatticeR(solidLatticeR + descriptors::c<DESCRIPTOR>(iPop));
+        if (block.isInside(boundaryLatticeR)) {
+          const int iPop_opposite = descriptors::opposite<DESCRIPTOR>(iPop);
+          auto x_b = block.get(boundaryLatticeR);
+          const auto opp_bouzidi_dist = x_b.template getFieldComponent<descriptors::BOUZIDI_DISTANCE>(iPop_opposite);
+
+          // check if distance from the fluid cell to the solid cell is a valid bouzidi distance
+          if (opp_bouzidi_dist >= 0) {
+            // set computed velocity into the bouzidi velocity field
+            block.get(boundaryLatticeR).template setFieldComponent<descriptors::BOUZIDI_ADE_DIRICHLET>(iPop_opposite, phi_d);
+          }
+        }
+      }
+    }
+  });
+}
+
+template<typename T, typename DESCRIPTOR>
+void setBouzidiAdeDirichlet(BlockLattice<T,DESCRIPTOR>& block,
+                            BlockIndicatorF<T,DESCRIPTOR::d>& boundaryIndicator,
+                            BlockIndicatorF<T,DESCRIPTOR::d>& bulkIndicator,
+                            AnalyticalF<DESCRIPTOR::d,T,T>& phi_d,
+                            Cuboid<T,DESCRIPTOR::d>& cuboid)
+{
+  block.forSpatialLocations([&](LatticeR<DESCRIPTOR::d> solidLatticeR) {
+    if (boundaryIndicator(solidLatticeR)) {
+      for (int iPop = 1; iPop < DESCRIPTOR::q; ++iPop) {
+        Vector<T,DESCRIPTOR::d> boundaryLatticeR(solidLatticeR + descriptors::c<DESCRIPTOR>(iPop));
+        if (block.isInside(boundaryLatticeR)) {
+          const int iPop_opposite = descriptors::opposite<DESCRIPTOR>(iPop);
+          auto x_b = block.get(boundaryLatticeR);
+          const auto opp_bouzidi_dist = x_b.template getFieldComponent<descriptors::BOUZIDI_DISTANCE>(iPop_opposite);
+
+          // check if distance from the fluid cell to the solid cell is a valid bouzidi distance
+          if (opp_bouzidi_dist >= 0) {
+            T boundaryPhysR[DESCRIPTOR::d] { };
+            T phi_at_cell[1] { };
+            cuboid.getPhysR(boundaryPhysR, boundaryLatticeR);
+
+            phi_d(phi_at_cell, boundaryPhysR);
+
+            // set computed velocity into the bouzidi velocity field
+            block.get(boundaryLatticeR).template setFieldComponent<descriptors::BOUZIDI_ADE_DIRICHLET>(iPop_opposite, phi_at_cell[0]);
+          }
+        }
+      }
+    }
+  });
+}
 }
 
 #endif

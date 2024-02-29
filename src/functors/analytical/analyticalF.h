@@ -118,6 +118,15 @@ protected:
   std::mt19937 gen;
 };
 
+/// AnalyticalRamdomSeededBase: alternative version with seed specification
+template <unsigned D, typename T, typename S, unsigned seed>
+class AnalyticalRandomSeededBase : public AnalyticalF<D,T,S> {
+protected:
+  AnalyticalRandomSeededBase();
+  std::random_device rd;
+  std::mt19937 gen;
+};
+
 /// AnalyticalRandomUniform: DD -> 1D with random image in (0,1)
 template <unsigned D, typename T, typename S>
 class AnalyticalRandomUniform : public AnalyticalRandomBase<D,T,S> {
@@ -133,6 +142,16 @@ template <unsigned D, typename T, typename S>
 class AnalyticalRandomNormal : public AnalyticalRandomBase<D,T,S> {
 public:
   AnalyticalRandomNormal(T mean=0., T stdDev=1.);
+  bool operator() (T output[], const S x[]) override;
+protected:
+  std::normal_distribution<T> distro;
+};
+
+/// AnalyticalRamdomSeededNormal: alternative version with seed specification
+template <unsigned D, typename T, typename S, unsigned seed>
+class AnalyticalRandomSeededNormal : public AnalyticalRandomSeededBase<D,T,S,seed> {
+public:
+  AnalyticalRandomSeededNormal(T mean=0., T stdDev=1.);
   bool operator() (T output[], const S x[]) override;
 protected:
   std::normal_distribution<T> distro;

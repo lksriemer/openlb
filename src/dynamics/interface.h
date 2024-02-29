@@ -202,6 +202,13 @@ struct Tuple final : public Dynamics<T,DESCRIPTOR> {
     NEW_RULE
   >;
 
+  template <template<typename> typename WRAPPER>
+  using wrap_collision = Tuple<
+    T, DESCRIPTOR,
+    MOMENTA, EQUILIBRIUM, WRAPPER<COLLISION>,
+    COMBINATION_RULE
+  >;
+
   std::type_index id() override {
     return typeid(Tuple);
   }
@@ -372,7 +379,7 @@ struct ParameterFromCell final : public CustomCollision<
   }
 
   template <CONCEPT(MinimalCell) CELL, typename PARAMETERS, typename V=typename CELL::value_t>
-  CellStatistic<V> apply(CELL& cell, PARAMETERS& parameters) {
+  CellStatistic<V> apply(CELL& cell, PARAMETERS& parameters) any_platform {
     parameters.template set<PARAMETER>(
       cell.template getField<PARAMETER>());
     return DYNAMICS().apply(cell, parameters);

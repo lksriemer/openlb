@@ -110,12 +110,27 @@ UnitConverter<T, DESCRIPTOR>* createUnitConverter(XMLreader const& params)
   T latticeRelaxationTime{};
   T charLatticeVelocity{};
 
+  int counter = 0; // counting the number of Discretization parameters and returning a warning if more than 2 are provided
+
   // params[parameter].read(value) sets the value or returns false if the parameter can not be found
   params["Application"]["PhysParameters"]["CharPhysLength"].read(charPhysLength);
   params["Application"]["PhysParameters"]["CharPhysVelocity"].read(charPhysVelocity);
   params["Application"]["PhysParameters"]["PhysViscosity"].read(physViscosity);
   params["Application"]["PhysParameters"]["PhysDensity"].read(physDensity);
   params["Application"]["PhysParameters"]["CharPhysPressure"].read(charPhysPressure);
+
+  std::vector<std::string> discretizationParam = {"PhysDeltaX", "Resolution",
+    "CharLatticeVelocity", "PhysDeltaT", "LatticeRelaxationTime"};
+
+  for(int i = 0; i<discretizationParam.size(); i++){
+    std::string test;
+    if(params["Application"]["Discretization"][discretizationParam[i]].read(test,false)){
+      counter++;
+    }
+  }
+  if(counter>2){
+    clout << "WARNING: More than 2 discretization parameters provided" << std::endl;
+  }
 
   if (!params["Application"]["Discretization"]["PhysDeltaX"].read(physDeltaX,false)) {
     if (!params["Application"]["Discretization"]["Resolution"].read<int>(resolution,false)) {

@@ -1,6 +1,6 @@
 /*  This file is part of the OpenLB library
  *
- *  Copyright (C) 2014-2016 Cyril Masquelier, Mathias J. Krause, Albert Mink
+ *  Copyright (C) 2014-2016 Cyril Masquelier, Mathias J. Krause, Albert Mink, Berkay Oralalp
  *  E-mail contact: info@openlb.net
  *  The most recent release of OpenLB can be downloaded at
  *  <http://www.openlb.net/>
@@ -38,8 +38,15 @@ namespace olb {
 
 template <typename S>
 IndicatorTranslate3D<S>::IndicatorTranslate3D(std::array<S,3> translate, IndicatorF3D<S>& indicator)
-  : _translate(translate), _indicator(indicator)
+  : _translate(translate), _indicator(indicator), _myMin(indicator.getMin()), _myMax(indicator.getMax())
 {
+  this->_myMin[0] += this->_translate[0];
+  this->_myMin[1] += this->_translate[1];
+  this->_myMin[2] += this->_translate[2];
+
+  this->_myMax[0] += this->_translate[0];
+  this->_myMax[1] += this->_translate[1];
+  this->_myMax[2] += this->_translate[2];
 }
 
 template< typename S>
@@ -60,6 +67,18 @@ S IndicatorTranslate3D<S>::signedDistance( const Vector<S,3>& input )
 {
   Vector<S,3> translate = sdf::translate(input, {_translate[0], _translate[1], _translate[2]});
   return _indicator.signedDistance(translate);
+}
+
+template <typename S>
+Vector<S,3>& IndicatorTranslate3D<S>::getMin()
+{
+  return _myMin;
+}
+
+template <typename S>
+Vector<S,3>& IndicatorTranslate3D<S>::getMax()
+{
+  return _myMax;
 }
 
 
@@ -666,9 +685,8 @@ bool IndicatorCuboid3D<S>::operator()(bool output[], const S input[])
 {
   // returns true if x is inside the cuboid
   Vector<S,3> q = distanceXYZ(input);
-  output[0] = ( (q[0] < std::numeric_limits<S>::epsilon())
-                && (q[1] < std::numeric_limits<S>::epsilon())
-                && (q[2] < std::numeric_limits<S>::epsilon()) );
+  Vector<S,3> eps = std::numeric_limits<BaseType<S>>::epsilon();
+  output[0] = ( q < eps );
   return output[0];
 }
 
@@ -972,6 +990,18 @@ std::shared_ptr<IndicatorF3D<S>> createIndicatorF3D(XMLreader const& params, boo
     auto firstChild = params.begin(); // get iterator of childTree
     return createIndicatorF3D<S>( **firstChild );
   }
+}
+
+template <typename T>
+IndicatorSDF3D<T>::IndicatorSDF3D(std::function<T(Vector<T, 3>)> f)
+    : _f(f)
+{}
+
+template <typename T>
+bool IndicatorSDF3D<T>::operator()(bool output[], const T input[])
+{
+  output[0] = _f(input) <= 0.0;
+  return true;
 }
 
 

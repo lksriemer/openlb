@@ -54,7 +54,7 @@ template<typename S, typename C>
 class OptimizerLBFGS : public OptimizerLineSearch<S,C> {
 
 private:
-  S _startLamda;
+  S _startLambda;
 
   int _l;
 
@@ -75,7 +75,7 @@ private:
 
 public:
   OptimizerLBFGS(
-    int dimCtrl, S eps, int maxIt, S lamda, int maxStepAttempts,
+    int dimCtrl, S eps, int maxIt, S lambda, int maxStepAttempts,
     std::string stepCondition, int l, S startCoefH, bool verboseOn=true,
     const std::string fname="", const std::string logFileName="",
     bool withUpperBound=false, S upperBound=S(),
@@ -83,14 +83,14 @@ public:
     S controlEps=S(std::numeric_limits<double>::epsilon() ), bool failOnMaxIter = true,
     std::vector<OptimizerLogType> gplotAnalysis = {})
     : OptimizerLineSearch<S,C>(
-      dimCtrl, eps, maxIt, /*lamda*/ 1., maxStepAttempts, stepCondition, verboseOn,
+      dimCtrl, eps, maxIt, /*lambda*/ 1., maxStepAttempts, stepCondition, verboseOn,
       fname, logFileName, withUpperBound, upperBound,
       withLowerBound, lowerBound, vectorBounds, controlEps, failOnMaxIter, gplotAnalysis),
       clout(std::cout,"OptimizerLBFGS")
   {
-    // Starting lamda for iT==0: steepest descent
-    // Line Search will be initialised with the natural lamda = 1
-    _startLamda = lamda;
+    // Starting lambda for iT==0: steepest descent
+    // Line Search will be initialised with the natural lambda = 1
+    _startLambda = lambda;
 
     _l=l;
     _startCoefH = startCoefH;
@@ -198,7 +198,7 @@ public:
       // On first step do normalised steepest descent
       S normDerivative = util::euklidN(this->_derivative.data(), this->_dimCtrl);
       for (int iDim=0; iDim<this->_dimCtrl; iDim++) {
-        this->_direction[iDim] = _startLamda * this->_derivative[iDim] / normDerivative;
+        this->_direction[iDim] = _startLambda * this->_derivative[iDim] / normDerivative;
       }
       // terminate early if we recieve nan controls
       checkDerivativeZero();
@@ -267,7 +267,7 @@ OptimizerLBFGS<S,C>* createOptimizerLBFGS(XMLreader const& params, std::size_t d
   // create variables with default values
   int maxIt = 100;
   int l = 20;
-  S lamda = 1.; //starting lamda for steepest descent step (it==0)
+  S lambda = 1.; //starting lambda for steepest descent step (it==0)
   int maxStepAttempts = 100;
   std::string stepCondition = "StrongWolfe";
 
@@ -292,7 +292,7 @@ OptimizerLBFGS<S,C>* createOptimizerLBFGS(XMLreader const& params, std::size_t d
   // Read Values from XML File from area "Optimization"
   params.readOrWarn<int>("Optimization", "MaxIter", "", maxIt);
   params.readOrWarn<int>("Optimization", "L", "", l);
-  params.readOrWarn<S>("Optimization", "Lamda", "", lamda);
+  params.readOrWarn<S>("Optimization", "Lambda", "", lambda);
   params.readOrWarn<int>("Optimization", "MaxStepAttempts", "", maxStepAttempts);
   params.readOrWarn<std::string>("Optimization", "StepCondition", "", stepCondition);
 
@@ -307,12 +307,10 @@ OptimizerLBFGS<S,C>* createOptimizerLBFGS(XMLreader const& params, std::size_t d
   params.readOrWarn<bool>("Optimization", "VectorBounds", "", vectorBounds);
   if ( params.readOrWarn<S>("Optimization", "UpperBound", "", upperBound, false, false) ) {
     withUpperBound = true;
-    clout << "\t -> ATTENTION!" << std::endl << "\t -> Computing now: withUpperBound = true" << std::endl << "\t -> ATTENTION!" << std::endl;
   }
 
   if ( params.readOrWarn<S>("Optimization", "LowerBound", "", lowerBound, false, false) ) {
     withLowerBound = true;
-    clout << "\t -> ATTENTION!" << std::endl << "\t -> Computing now: withUpperBound = true" << std::endl << "\t -> ATTENTION!" << std::endl;
   }
 
   // get the parameters for the gnuplot Analysis from the xml file from the VisualizationGnuplot area
@@ -324,7 +322,7 @@ OptimizerLBFGS<S,C>* createOptimizerLBFGS(XMLreader const& params, std::size_t d
 
   clout << "Creating optimizer ..." << std::endl;
   // Create Optimizer Object
-  return new OptimizerLBFGS<S,C>(dimCtrl, eps, maxIt, lamda, maxStepAttempts, stepCondition, l, startCoefH,
+  return new OptimizerLBFGS<S,C>(dimCtrl, eps, maxIt, lambda, maxStepAttempts, stepCondition, l, startCoefH,
                                verboseOn, fname, logFileName, withUpperBound, upperBound, withLowerBound, lowerBound, vectorBounds,
                                controlEps, failOnMaxIter, gplotAnalysis);
 }

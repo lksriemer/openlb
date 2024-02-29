@@ -37,8 +37,15 @@ namespace names {
 
 struct A { };
 struct B { };
+struct C { };
+
+struct Component1 { };
+struct Component2 { };
+struct Component3 { };
+struct Component4 { };
 
 struct NavierStokes : public descriptors::DESCRIPTOR_TAG { };
+struct AdvectionDiffusion : public descriptors::DESCRIPTOR_TAG { };
 struct Temperature  : public descriptors::DESCRIPTOR_TAG { };
 
 template <unsigned DIM>
@@ -65,7 +72,6 @@ struct Results      : public Parameter { };
 
 struct OutputChannel { };
 struct debug        : public OutputChannel { };
-struct log          : public OutputChannel { };
 struct error        : public OutputChannel { };
 struct file         : public OutputChannel { };
 struct info         : public OutputChannel { };

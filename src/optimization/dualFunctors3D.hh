@@ -24,16 +24,8 @@
 #ifndef DUAL_FUNCTORS_3D_HH
 #define DUAL_FUNCTORS_3D_HH
 
-#include <vector>
-#include <map>
-#include <memory>
 
 #include "optimization/dualFunctors3D.h"
-#include "optimization/dualLbHelpers.h"
-#include "functors/functors3D.h"
-
-#include "utilities/omath.h"
-#include "utilities/functorDsl3D.h"
 
 
 namespace olb {

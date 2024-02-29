@@ -58,6 +58,7 @@ struct SimulationBase : public ParameterBase
   BT                                    startUpTime {0};
   BT                                    maxTime {1};
   BT                                    physBoundaryValueUpdateTime {0.1};
+  BT                                    physTimeStabilityCheck      {0.1};
 
   bool                                  pressureFilter {false};
 
@@ -180,15 +181,24 @@ template <typename T>
 struct OutputPlot : public ParameterBase
 {
   using BT = BaseType<T>;
+  // pO for print Output to avoid name clashes using off and final as keywords
+  enum PrintOutput {pO_off, pO_intervals, pO_final};
 
   OutputPlot() = default;
 
-  bool output {false};
+  std::string output {"off"};
   std::string filename {"unnamed"};
   BT saveTime;
+  PrintOutput printOutput = pO_off;
 
-  OutputPlot(bool out, std::string name, BT savetime) {
-    output = out;
+  OutputPlot(std::string out, std::string name, BT savetime) {
+    if(out == "off"){
+      printOutput = pO_off;
+    } else if (out == "intervals"){
+      printOutput = pO_intervals;
+    } else if (out == "final"){
+      printOutput = pO_final;
+    }
     filename = name;
     saveTime = savetime;
   }
@@ -241,10 +251,10 @@ template<typename PARAMETERS>
 Reader(std::shared_ptr<PARAMETERS> params_) -> Reader<PARAMETERS, void>;
 
 
-template<typename T, typename TAG>
-struct Reader<OutputGeneral<T>, TAG> : public ReaderBase<OutputGeneral<T>>
+template<typename T, typename LatticeLog, typename TAG>
+struct Reader<OutputGeneral<T,LatticeLog>, TAG> : public ReaderBase<OutputGeneral<T,LatticeLog>>
 {
-  using ReaderBase<OutputGeneral<T>>::ReaderBase;
+  using ReaderBase<OutputGeneral<T,LatticeLog>>::ReaderBase;
 
   void read(XMLreader const& xml)
   {
@@ -271,10 +281,17 @@ struct Reader<OutputPlot<T>, TAG> : public ReaderBase<OutputPlot<T>>
   void read(XMLreader const& xml)
   {
     std::string tag {TAG().name};
-    xml.readOrWarn<bool>("Output", tag, "Output", this->params->output, true, false, true);
-    if (this->params->output) {
+    xml.readOrWarn<std::string>("Output", tag, "Output", this->params->output, true, false, true);
+    if (this->params->output != "off") {
       xml.readOrWarn<std::string>("Output", tag, "Filename", this->params->filename, true, false, false);
       xml.readOrWarn<BaseType<T>>("Output", tag, "SaveTime", this->params->saveTime, true, false, true);
+    }
+    if(this->params->output == "off"){
+      this->params->printOutput = olb::parameters::OutputPlot<T>::pO_off;
+    } else if (this->params->output == "intervals"){
+      this->params->printOutput = olb::parameters::OutputPlot<T>::pO_intervals;
+    } else if (this->params->output == "final"){
+      this->params->printOutput = olb::parameters::OutputPlot<T>::pO_final;
     }
   }
 };
@@ -295,6 +312,8 @@ struct Reader<SimulationBase<T>, TAG> : public ReaderBase<SimulationBase<T>>
 
     this->params->physBoundaryValueUpdateTime = this->params->maxTime / BT(100); // 1% of max. time as default value
     xml.readOrWarn<BT>("Application", "PhysParameters", "BoundaryValueUpdateTime", this->params->physBoundaryValueUpdateTime, true, false, true);
+    this->params->physTimeStabilityCheck = this->params->maxTime / BT(100);
+    xml.readOrWarn<BT>("Application", "PhysParameters", "TimeStabilityCheck", this->params->physTimeStabilityCheck, true, false, true);
   }
 };
 
@@ -346,6 +365,17 @@ std::shared_ptr<PARAMETERS> createParameters(XMLreader const& xml)
   return result;
 }
 
+template <class parameters_map>
+auto createParametersTuple(XMLreader const& xml)
+{
+  utilities::TypeIndexedSharedPtrTuple<parameters_map> paramsTuple;
+  meta::tuple_for_each(paramsTuple.tuple, [&xml](auto& element, auto index) {
+    using parameter_type = typename std::remove_reference_t<decltype(element)>::element_type;
+    using tag = typename parameters_map::keys_t::template get<index()>;
+    element = createParameters<parameter_type,tag>(xml);
+  });
+  return paramsTuple;
+}
 
 } // namespace olb
 

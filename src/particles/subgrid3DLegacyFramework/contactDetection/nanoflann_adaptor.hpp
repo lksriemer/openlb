@@ -39,7 +39,7 @@ class ParticleSystem3D;
 template<typename coord_t, typename Derived>
 class NanoflannParticleAdaptor {
  public:
-//		typedef typename T coord_t;
+//      typedef typename T coord_t;
   const Derived &obj;  //!< A const ref to the data set origin
 
   /// The constructor that sets the data set source

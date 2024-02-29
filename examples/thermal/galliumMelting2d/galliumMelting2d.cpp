@@ -256,16 +256,17 @@ void getResults( ThermalUnitConverter<T, NSDESCRIPTOR, TDESCRIPTOR> const& conve
     timer.update(iT);
     timer.printStep();
 
-    /// NSLattice statistics console output
+    /// NSlattice statistics console output
     NSlattice.getStatistics().print(iT,converter.getPhysTime(iT));
 
-    /// ADLattice statistics console output
+    /// ADlattice statistics console output
     ADlattice.getStatistics().print(iT,converter.getPhysTime(iT));
 
-    if ( NSlattice.getStatistics().getAverageRho() != NSlattice.getStatistics().getAverageRho() or ADlattice.getStatistics().getAverageRho() != ADlattice.getStatistics().getAverageRho() ) {
+    /*if ( NSlattice.getStatistics().getAverageRho() != NSlattice.getStatistics().getAverageRho() or ADlattice.getStatistics().getAverageRho() != ADlattice.getStatistics().getAverageRho() ) {
       clout << "simulation diverged! stopping now." << std::endl;
       exit(1);
-    }
+    }*/
+
     vtkWriter.write(iT);
   }
 }
@@ -352,7 +353,7 @@ int main(int argc, char *argv[])
 
   NSlattice.addLatticeCoupling(superGeometry, 1, coupling, ADlattice);
 
-  //prepareLattice and setBoundaryConditions
+  // prepareLattice and setBoundaryConditions
   prepareLattice(converter, NSlattice, ADlattice, superGeometry);
 
   /// === 4th Step: Main Loop with Timer ===

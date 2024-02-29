@@ -763,6 +763,19 @@ void MpiManager::scatterv<double>(double *sendBuf, int* sendCounts, int* displs,
 }
 
 template <>
+void MpiManager::gather<int>(int* sendBuf, int sendCount,
+                             int* recvBuf, int recvCount,
+                             int root, MPI_Comm comm)
+{
+  if (!ok) {
+    return;
+  }
+  MPI_Gather(static_cast<void*>(sendBuf), sendCount, MPI_INT,
+             static_cast<void*>(recvBuf), recvCount, MPI_INT,
+             root, comm);
+}
+
+template <>
 void MpiManager::gatherv<bool>(bool* sendBuf, int sendCount,
                                     bool* recvBuf, int* recvCounts, int* displs,
                                     int root, MPI_Comm comm)

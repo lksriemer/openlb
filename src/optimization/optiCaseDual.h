@@ -34,13 +34,14 @@
 #include "adjointLbSolver.h"
 #include "controller.h"
 #include "optiCase.h"
+#include "projection.h"
+#include "serialization.h"
 
 namespace olb {
 
 namespace opti {
 
 enum ControlType {ForceControl, PorosityControl};
-enum StartValueType {Control, Porosity, Permeability};
 
 /** This class implements the evaluation of the goal functional
  * and its derivatives by using adjoint LBM.
@@ -59,42 +60,44 @@ template<
 class OptiCaseDual : public OptiCase<S,C> {
 
 private:
-  mutable OstreamManager          clout {std::cout, "OptiCaseDual"};
+  mutable OstreamManager                           clout {std::cout, "OptiCaseDual"};
   using descriptor = typename SOLVER<S,SolverMode::Reference>::AdjointLbSolverBase::DESCRIPTOR;
   static constexpr int dim = descriptor::d;
 
 public:
-  bool                            _verbose {true};
+  bool                                             _verbose {true};
   /// upper limit for the number of control variables (#voxels * field-dimension)
-  std::size_t                     _dimCtrl;
+  std::size_t                                      _dimCtrl;
 
   /// Either force or porosity field
-  ControlType                     _controlType;
-  StartValueType                  _startValueType {Control};
-  std::string                     _projectionName;
+  ControlType                                      _controlType;
+  StartValueType                                   _startValueType {Control};
+  std::string                                      _projectionName;
 
   /// Spatial dimension of controlled field
-  int                             _fieldDim;
-  /// Material number
-  int                             _controlMaterial;
+  int                                              _fieldDim;
+  /// Material number of design domain
+  int                                              _controlMaterial;
   /// Regulatory term in objective functional (so far unused)
-  S                               _regAlpha {0};
+  S                                                _regAlpha {0};
 
   /// Manages the array of control variables
-  Controller<S>*                     _controller {nullptr};
-  UnitConverter<S,descriptor>*       _converter {nullptr};
-  std::shared_ptr<SOLVER<S,SolverMode::Primal>>  _primalSolver;
-  std::shared_ptr<SOLVER<S,SolverMode::Dual>>    _dualSolver;
+  Controller<S>*                                   _controller {nullptr};
+  UnitConverter<S,descriptor>*                     _converter {nullptr};
+  std::shared_ptr<SOLVER<S,SolverMode::Primal>>    _primalSolver;
+  std::shared_ptr<SOLVER<S,SolverMode::Dual>>      _dualSolver;
   std::shared_ptr<SOLVER<S,SolverMode::Reference>> _referenceSolver;
 
-  bool                                         _computeReference {false};
-  std::shared_ptr<SuperGeometry<S,dim>>        _referenceGeometry;
-  std::shared_ptr<SuperLattice<S,descriptor>>  _referenceLattice;
+  bool                                             _computeReference {false};
+  std::shared_ptr<SuperGeometry<S,dim>>            _referenceGeometry;
+  std::shared_ptr<SuperLattice<S,descriptor>>      _referenceLattice;
 
+  std::shared_ptr<GeometrySerializer<S,dim>>       _serializer;
+  std::shared_ptr<projection::Base<S>>             _projection;
   /// maps the control to a lattice functor
-  Projection3D<S, descriptor>*       _projection {nullptr};
-  /// derivative of _projection
-  SuperLatticeF3D<S, descriptor>*    _dProjectionDcontrol {nullptr};
+  std::shared_ptr<SuperLatticeF<S,descriptor>>     _projectedControl;
+  /// derivative of _projectionControl
+  std::shared_ptr<SuperLatticeF<S,descriptor>>     _dProjectionDcontrol;
 
   OptiCaseDual(XMLreader const& xml) {
     readFromXML(xml);
@@ -120,35 +123,6 @@ public:
   void computeDerivatives(
     const C& control, C& derivatives, unsigned optiStep=0) override;
 
-  /// Transform porosity/ permeability startValue into control
-  // This function has to be called from outside at the moment
-  // (the optimizer has to know the initial control itself).
-  S getInitialControl(S startValue) const {
-    S control {0};
-    if (_startValueType == Porosity) {
-      control = porosityToControl(startValue);
-      if (_verbose) {
-        clout << "Transform porosity startValue into control startValue:\n";
-        clout << "Porosity: " << startValue << std::endl;
-        clout << "Control: " << control << std::endl;
-      }
-    }
-    else if (_startValueType == Permeability) {
-      const S tmpPorosity = permeabilityToPorosity(startValue);
-      control = porosityToControl(tmpPorosity);
-      if (_verbose) {
-        clout << "Transform permeability startValue into control startValue:\n";
-        clout << "Permeability: " << startValue << std::endl;
-        clout << "Porosity: " << tmpPorosity << std::endl;
-        clout << "Control: " << control << std::endl;
-      }
-    }
-    else {
-      control = startValue;
-    }
-    return control;
-  }
-
   // get the control values as they were computed in the reference solution
   // only ForceControl & without projection is implemented so far
   C getReferenceControl() const;
@@ -162,20 +136,6 @@ private:
 
   void derivativesFromDualSolution(C& derivatives);
 
-  // Only for porosity optimization
-  virtual S porosityToControl(S porosity) const {
-    /// Inverse projection function to get startValue from porosity
-    return _projection->getInverseFunction(porosity);
-  }
-
-  // Only for porosity optimization
-  virtual S permeabilityToPorosity(S permeability) const {
-    return (S(1) - _projection->gridTerm() / permeability);
-  }
-
-  /// helper that gives global access to material numbers
-  // (hack around the mpi-local storage of geometric data)
-  int getMaterialGlobally(LatticeR<dim+1> latticeR) const;
 };
 
 

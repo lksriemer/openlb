@@ -130,6 +130,50 @@ inline constexpr bool operator>= (const ScalarVector<T,D,IMPL>& lhs, const Scala
   return rhs <= lhs;
 }
 
+/// Returns true if lhs is lexicographically smaller than rhs
+template<typename T, unsigned D, typename U, typename IMPL, typename IMPL_>
+inline constexpr bool lex_smaller (const ScalarVector<T,D,IMPL>& lhs, const ScalarVector<U,D,IMPL_>& rhs)
+{
+  for (unsigned iDim=0; iDim < D; ++iDim) {
+    if (lhs[iDim] < rhs[iDim]) return true;
+    if (lhs[iDim] > rhs[iDim]) return false;
+  }
+  return false;
+}
+
+/// Returns true if lhs is lexicographically greater than rhs
+template<typename T, unsigned D, typename U, typename IMPL, typename IMPL_>
+inline constexpr bool lex_greater (const ScalarVector<T,D,IMPL>& lhs, const ScalarVector<U,D,IMPL_>& rhs)
+{
+  for (unsigned iDim=0; iDim < D; ++iDim) {
+    if (lhs[iDim] > rhs[iDim]) return true;
+    if (lhs[iDim] < rhs[iDim]) return false;
+  }
+  return false;
+}
+
+/// Returns true if lhs is lexicographically smaller or equal to rhs
+template<typename T, unsigned D, typename U, typename IMPL, typename IMPL_>
+inline constexpr bool lex_smaller_eq (const ScalarVector<T,D,IMPL>& lhs, const ScalarVector<U,D,IMPL_>& rhs)
+{
+  for (unsigned iDim=0; iDim < D; ++iDim) {
+    if (lhs[iDim] < rhs[iDim]) return true;
+    if (lhs[iDim] > rhs[iDim]) return false;
+  }
+  return true;
+}
+
+/// Returns true if lhs is lexicographically greater or equal to rhs
+template<typename T, unsigned D, typename U, typename IMPL, typename IMPL_>
+inline constexpr bool lex_greater_eq (const ScalarVector<T,D,IMPL>& lhs, const ScalarVector<U,D,IMPL_>& rhs)
+{
+  for (unsigned iDim=0; iDim < D; ++iDim) {
+    if (lhs[iDim] > rhs[iDim]) return true;
+    if (lhs[iDim] < rhs[iDim]) return false;
+  }
+  return true;
+}
+
 /// Print vector entries to ostream in a human-readable fashion
 template<typename T, unsigned D, typename IMPL>
 inline std::ostream& operator << (std::ostream& os, const ScalarVector<T,D,IMPL>& o)

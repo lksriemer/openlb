@@ -196,6 +196,36 @@ DynamicsPromise<T,DESCRIPTOR> constructConcreteDynamicsForNormalSpecial(Vector<i
   }
 }
 
+//Instatiates DYNAMICS with a direction and an orientation
+template <
+  typename T, typename DESCRIPTOR,
+  template <int...> typename DYNAMICS
+>
+DynamicsPromise<T,DESCRIPTOR> constructConcreteDynamicsForDirectionOrientation(Vector<int,3> n)
+{
+  if (n == Vector<int,3> {-1, 0, 0}) {
+    return DynamicsPromise(meta::id<DYNAMICS<0,-1>>{});
+  }
+  else if (n == Vector<int,3> {1, 0, 0}) {
+    return DynamicsPromise(meta::id<DYNAMICS<0,1>>{});
+  }
+  else if (n == Vector<int,3> {0, -1, 0}) {
+    return DynamicsPromise(meta::id<DYNAMICS<1,-1>>{});
+  }
+  else if (n == Vector<int,3> {0, 1, 0}) {
+    return DynamicsPromise(meta::id<DYNAMICS<1,1>>{});
+  }
+  else if (n == Vector<int,3> {0, 0, -1}) {
+    return DynamicsPromise(meta::id<DYNAMICS<2,-1>>{});
+  }
+  else if (n == Vector<int,3> {0, 0, 1}) {
+    return DynamicsPromise(meta::id<DYNAMICS<2,1>>{});
+  }
+  else {
+    throw std::runtime_error("Could not set Boundary.");
+  }
+}
+
 //constructs Dynamics with a Momenta, a plane and two normals as template args
 template <
   typename T, typename DESCRIPTOR,
@@ -242,7 +272,6 @@ struct NormalSpecialMixinDynamicsForPlainMomenta {
     return constructConcreteDynamicsForNormalSpecial<T,DESCRIPTOR,ConcreteDynamics>(n);
   }
 };
-
 
 //Instantiates TYPE derived from RESULT with values from descreteNormal Vector n
 //RESULT can be either Dynamics or PostProcessorGenerator3D
@@ -312,6 +341,9 @@ RESULT promiseForNormal(Vector<int,3> n)
   else if (n == Vector<int,3> {-1, -1, -1}) {
     return meta::id<TYPE<T,DESCRIPTOR,-1,-1,-1>>();
   }
+  else if (n == Vector<int,3> {-1, -1, 0}) {
+    return meta::id<TYPE<T,DESCRIPTOR,-1,-1,0>>();
+  }
   else if (n == Vector<int,3> {-1, 0, 0}) {
     return meta::id<TYPE<T,DESCRIPTOR,-1,0,0>>();
   }
@@ -321,14 +353,47 @@ RESULT promiseForNormal(Vector<int,3> n)
   else if (n == Vector<int,3> {0, -1, 0}) {
     return meta::id<TYPE<T,DESCRIPTOR,0,-1,0>>();
   }
+  else if (n == Vector<int,3> {-1, 0, -1}) {
+    return meta::id<TYPE<T,DESCRIPTOR,-1,0,-1>>();
+  }
   else if (n == Vector<int,3> {0, 1, 0}) {
     return meta::id<TYPE<T,DESCRIPTOR,0,1,0>>();
   }
   else if (n == Vector<int,3> {0, 0, -1}) {
     return meta::id<TYPE<T,DESCRIPTOR,0,0,-1>>();
   }
+  else if (n == Vector<int,3> {-1, 1, 0}) {
+    return meta::id<TYPE<T,DESCRIPTOR,-1,1,0>>();
+  }
+  else if (n == Vector<int,3> {0, -1, -1}) {
+    return meta::id<TYPE<T,DESCRIPTOR,0,-1,-1>>();
+  }
+  else if (n == Vector<int,3> {0, -1, 1}) {
+    return meta::id<TYPE<T,DESCRIPTOR,0,-1,1>>();
+  }
+  else if (n == Vector<int,3> {-1, 0, 1}) {
+    return meta::id<TYPE<T,DESCRIPTOR,-1,0,1>>();
+  }
+  else if (n == Vector<int,3> {1, 0, -1}) {
+    return meta::id<TYPE<T,DESCRIPTOR,1,0,-1>>();
+  }
   else if (n == Vector<int,3> {0, 0, 1}) {
     return meta::id<TYPE<T,DESCRIPTOR,0,0,1>>();
+  }
+  else if (n == Vector<int,3> {0, 1, -1}) {
+    return meta::id<TYPE<T,DESCRIPTOR,0,1,-1>>();
+  }
+  else if (n == Vector<int,3> {0, 1, 1}) {
+    return meta::id<TYPE<T,DESCRIPTOR,0,1,1>>();
+  }
+  else if (n == Vector<int,3> {1, 0, 1}) {
+    return meta::id<TYPE<T,DESCRIPTOR,1,0,1>>();
+  }
+  else if (n == Vector<int,3> {1, -1, 0}) {
+    return meta::id<TYPE<T,DESCRIPTOR,1,-1,0>>();
+  }
+  else if (n == Vector<int,3> {1, 1, 0}) {
+    return meta::id<TYPE<T,DESCRIPTOR,1,1,0>>();
   }
   else {
     throw std::domain_error("Invalid normal");

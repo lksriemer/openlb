@@ -1,5 +1,7 @@
 include $(OLB_ROOT)/rules.mk
 
+export LC_MESSAGES=C
+
 all: dependencies core $(EXAMPLE)
 
 INCLUDE_DIRS := $(OLB_ROOT)/src
@@ -36,7 +38,7 @@ INCLUDE_FLAGS := -I$(subst $(EMPTY) $(EMPTY), -I,$(INCLUDE_DIRS))
 
 build/missing.txt: $(OBJ_FILES)
 	mkdir -p build
-	$(CXX) $< $(LDFLAGS) -lolbcore 2>&1 | grep -oP ".*undefined reference to \`\K[^']+\)" | sort | uniq > $@
+	$(CXX) $^ $(LDFLAGS) -lolbcore 2>&1 | grep -oP ".*undefined reference to \`\K[^']+\)" | sort | uniq > $@
 
 EXPLICIT_METHOD_INSTANTIATION := \
 	FieldTypeRegistry \
@@ -51,13 +53,19 @@ EXPLICIT_CLASS_INSTANTIATION := \
 	ConcreteBlockCouplingO \
 	ConcreteCommunicatable \
 	ConcreteBlockCommunicator \
+	HeterogeneousCopyTask \
 	ConcreteParametersD \
 	FieldTypeRegistry \
 	unique_ptr \
 	StatisticsPostProcessor
 
+OLB_MIXED_MODE_INCLUDE := \#include <olb.h>\n
+ifdef OLB_MIXED_MODE_INCLUDE_CPP
+	OLB_MIXED_MODE_INCLUDE := $(CPP_FILES:%=\n#include "../%")
+endif
+
 build/olbcuda.cu: build/missing.txt
-	echo "#include <olb.h>" > $@
+	printf '$(OLB_MIXED_MODE_INCLUDE)' > $@
 # Transform missing symbols into explicit template instantiations by:
 # - filtering for a set of known and automatically instantiable methods
 # - excluding destructors
@@ -100,10 +108,10 @@ libolbcuda.so: $(CUDA_OBJ_FILES) build/olbcuda.version
 	$(CUDA_CXX) $(CUDA_CXXFLAGS) -Xlinker --version-script=build/olbcuda.version -shared $(CUDA_OBJ_FILES) -o $@
 
 $(EXAMPLE): $(OBJ_FILES) libolbcuda.so
-	$(CXX) $< -o $@ $(LDFLAGS) -L . -lolbcuda -lolbcore $(CUDA_LDFLAGS)
+	$(CXX) $(OBJ_FILES) -o $@ $(LDFLAGS) -L . -lolbcuda -lolbcore $(CUDA_LDFLAGS)
 
 $(EXAMPLE)-no-cuda-recompile: $(OBJ_FILES)
-	$(CXX) $< -o $(EXAMPLE) $(LDFLAGS) -L . -lolbcuda -lolbcore $(CUDA_LDFLAGS)
+	$(CXX) $^ -o $(EXAMPLE) $(LDFLAGS) -L . -lolbcuda -lolbcore $(CUDA_LDFLAGS)
 
 .PHONY: onlysample
 onlysample: $(EXAMPLE)

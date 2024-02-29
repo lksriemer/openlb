@@ -168,6 +168,16 @@ ParticleContactArbitraryFromOverlapVolume<T, D, CONVEX>::setDampingFactor(
 }
 
 template <typename T, unsigned D, bool CONVEX>
+constexpr void ParticleContactArbitraryFromOverlapVolume<T, D, CONVEX>::
+    setDampingFactorFromInitialVelocity(
+        const T coefficientOfRestitution,
+        const T initialRelativeVelocityMagnitude)
+{
+  setDampingFactor(particles::contact::evalDampingFactor(
+      coefficientOfRestitution, initialRelativeVelocityMagnitude));
+}
+
+template <typename T, unsigned D, bool CONVEX>
 constexpr void
 ParticleContactArbitraryFromOverlapVolume<T, D, CONVEX>::resetMinMax()
 {

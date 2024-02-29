@@ -65,8 +65,6 @@ private:
   int _nX, _nY, _nZ;
   /// Number of full cells
   size_t _weight;
-  /// refinement level, _delta = _delta0^_refinementLevel
-  int _refinementLevel;
 
   /// Specific ostream for the classname in each line
   mutable OstreamManager clout;
@@ -78,18 +76,18 @@ public:
   /// Construction of an empty cuboid at position 0, 0, 0 with delta 0 and nX = nY = nZ = 0
   Cuboid3D();
   /// Construction of a cuboid
-  Cuboid3D(T globPosX, T globPosY, T globPosZ, T delta, int nX, int nY, int nZ, int refinementLevel=0);
+  Cuboid3D(T globPosX, T globPosY, T globPosZ, T delta, int nX, int nY, int nZ);
   /// Construction of a cuboid vector version
-  Cuboid3D(std::vector<T> origin, T delta, std::vector<int> extend, int refinementLevel=0);
-  Cuboid3D(Vector<T,3> origin, T delta, Vector<int,3> extend, int refinementLevel=0);
+  Cuboid3D(std::vector<T> origin, T delta, std::vector<int> extend);
+  Cuboid3D(Vector<T,3> origin, T delta, Vector<int,3> extend);
   /// Construction of a cuboid using indicator
-  Cuboid3D(IndicatorF3D<T>& indicatorF, T voxelSize, int refinementLevel=0);
+  Cuboid3D(IndicatorF3D<T>& indicatorF, T voxelSize);
   /// Copy constructor
   Cuboid3D(Cuboid3D<T> const& rhs, int overlap=0);
   /// Copy assignment
   Cuboid3D& operator=(Cuboid3D const& rhs);
   /// Initializes the cuboid
-  void init(T globPosX, T globPosY, T globPosZ, T delta, int nX, int nY, int nZ, int refinementLevel=0); //TODO: remove or private
+  void init(T globPosX, T globPosY, T globPosZ, T delta, int nX, int nY, int nZ);
 
   /// Read only access to left lower corner coordinates
   Vector<T,3> getOrigin() const;
@@ -117,16 +115,15 @@ public:
   T getFraction() const {
     return T(getWeight()) / getLatticeVolume();
   }
-  /// Returns the refinementLevel
-  int getRefinementLevel() const;
-  /// Sets the refinementLevel
-  void setRefinementLevel(int refLevel);
   /// Returns the number of Nodes in the volume
   size_t getLatticeVolume() const;
   /// Returns the perimeter of the cuboid
   T getPhysPerimeter() const;
   /// Returns the number of Nodes at the perimeter
   int getLatticePerimeter() const;
+
+  /// Refines by splitting each cell into factor^3 cells
+  void refine(int factor);
 
   bool getLatticeR(Vector<T,3> physR, Vector<int,3>& latticeR, T eps=1e-5) {
     auto globR = Vector<T,3>{_globPosX, _globPosY, _globPosZ};
@@ -190,6 +187,8 @@ public:
   bool checkInters(T globX0, T globX1, T globY0, T globY1, T globZ0, T globZ1,
                    int &locX0, int &locX1, int &locY0, int &locY1, int &locZ0, int &locZ1,
                    int overlap = 0) const;
+  /// Returns true iff cuboid intersects child
+  bool checkInters(Cuboid3D<T>& child) const;
   /// Divides the cuboid in p*q*r cuboids of equal volume and add them to the given vector
   void divide(int p, int q, int r, std::vector<Cuboid3D<T> > &childrenC) const;
   /// Divides the cuboid in p cuboids of equal volume and add them to the given vector
@@ -200,11 +199,6 @@ public:
 
   /// resize the cuboid to the passed size
   void resize(int X, int Y, int Z, int nX, int nY, int nZ);
-
-  /// Returns true iff child is contained fully in present cuboid
-  bool contains(Cuboid3D<T>& child) const;
-  /// Returns true iff cuboid but is partially but not fully contained
-  bool partialOverlapWith(Cuboid3D<T>& cuboid) const;
 
 };
 

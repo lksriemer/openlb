@@ -195,131 +195,81 @@ private:
   T tuner;
 };
 
-/// PostProcessor for the wetting boundary condition in the free energy model. This is
-/// required to set rho on the boundary (using the denisty of the neighbouring cell in
-/// direction of inwards facing normal at the boundary), as the coupling between the
-/// lattices requires the calculation of a density gradient.
-template<typename T, typename DESCRIPTOR>
-class FreeEnergyWallProcessor3D : public LocalPostProcessor3D<T, DESCRIPTOR> {
-public:
-  FreeEnergyWallProcessor3D(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_,
-                            int discreteNormalX_, int discreteNormalY_, int discreteNormalZ_, T addend_);
-  int extent() const override
-  {
-    return 2;
-  }
-  int extent(int whichDirection) const override
-  {
-    return 2;
-  }
-  void process(BlockLattice<T,DESCRIPTOR>& blockLattice) override;
-  void processSubDomain(BlockLattice<T,DESCRIPTOR>& blockLattice,
-                        int x0_, int x1_, int y0_, int y1_, int z0_, int z1_ ) override;
-private:
-  int x0, x1, y0, y1, z0, z1;
-  int discreteNormalX, discreteNormalY, discreteNormalZ;
-  T addend;
-};
 
-/// Generator class for the FreeEnergyWall PostProcessor handling the wetting boundary condition.
-template<typename T, typename DESCRIPTOR>
-class FreeEnergyWallProcessorGenerator3D : public PostProcessorGenerator3D<T, DESCRIPTOR> {
-public:
-  FreeEnergyWallProcessorGenerator3D(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_,
-                                     int discreteNormalX_, int discreteNormalY_, int discreteNormalZ_, T addend_);
-  PostProcessor3D<T,DESCRIPTOR>* generate() const override;
-  PostProcessorGenerator3D<T,DESCRIPTOR>*  clone() const override;
-private:
-  int discreteNormalX;
-  int discreteNormalY;
-  int discreteNormalZ;
-  T addend;
-};
-
-
-/// PostProcessor for the chemical potential boundary condition in the free energy model.
+/// PostProcessors for the chemical potential boundary condition in the free energy model.
 /// The chemical potentials on the boundary are set equal to the chemical potential on the
 /// fluid cell normal to the boundary. This is necessary because the coupling between the
 /// lattices requires the calculation of the gradient of the chemical potential.
 ///
-/// It would be preferable if this were implemented as a lattice coupling that ran
+/// It would be preferable if these were implemented as a lattice coupling that ran
 /// between the chemical potential and force lattice couplings. However there is no
 /// access to the discrete normals in lattice couplings.
-template<typename T, typename DESCRIPTOR>
-class FreeEnergyChemPotBoundaryProcessor3D : public LocalPostProcessor3D<T, DESCRIPTOR> {
+template<typename T, typename DESCRIPTOR, int NORMAL_X, int NORMAL_Y, int NORMAL_Z>
+class FreeEnergyChemPotBoundaryProcessor3DA {
 public:
-  FreeEnergyChemPotBoundaryProcessor3D(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_,
-                                       int discreteNormalX_, int discreteNormalY_, int discreteNormalZ_, int latticeNumber_);
-  int extent() const override
-  {
-    return 2;
+  static constexpr OperatorScope scope = OperatorScope::PerCell;
+
+  int getPriority() const {
+    return 0;
   }
-  int extent(int whichDirection) const override
-  {
-    return 2;
-  }
-  void process(BlockLattice<T,DESCRIPTOR>& blockLattice) override;
-  void processSubDomain(BlockLattice<T,DESCRIPTOR>& blockLattice,
-                        int x0_, int x1_, int y0_, int y1_, int z0_, int z1_ ) override;
-private:
-  int x0, x1, y0, y1, z0, z1;
-  int discreteNormalX, discreteNormalY, discreteNormalZ;
-  int latticeNumber;
+
+  template <CONCEPT(Cell) CELL>
+  void apply(CELL& cell) any_platform;
+
 };
 
-/// Generator class for the FreeEnergyChemPotBoundary PostProcessor.
-template<typename T, typename DESCRIPTOR>
-class FreeEnergyChemPotBoundaryProcessorGenerator3D : public PostProcessorGenerator3D<T, DESCRIPTOR> {
+template<typename T, typename DESCRIPTOR, int NORMAL_X, int NORMAL_Y, int NORMAL_Z>
+class FreeEnergyChemPotBoundaryProcessor3DB {
 public:
-  FreeEnergyChemPotBoundaryProcessorGenerator3D(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_,
-      int discreteNormalX_, int discreteNormalY_, int discreteNormalZ_, int latticeNumber_);
-  PostProcessor3D<T,DESCRIPTOR>* generate() const override;
-  PostProcessorGenerator3D<T,DESCRIPTOR>*  clone() const override;
-private:
-  int discreteNormalX;
-  int discreteNormalY;
-  int discreteNormalZ;
-  int latticeNumber;
+  static constexpr OperatorScope scope = OperatorScope::PerCell;
+
+  int getPriority() const {
+    return 0;
+  }
+
+  template <CONCEPT(Cell) CELL>
+  void apply(CELL& cell) any_platform;
+
+};
+
+
+/// PostProcessor for the wetting boundary condition in the free energy model. This is
+/// required to set rho on the boundary (using the denisty of the neighbouring cell in
+/// direction of inwards facing normal at the boundary), as the coupling between the
+/// lattices requires the calculation of a density gradient.
+template<typename T, typename DESCRIPTOR, int NORMAL_X, int NORMAL_Y, int NORMAL_Z>
+class FreeEnergyWallProcessor3D {
+public:
+  using parameters = meta::list<olb::descriptors::ADDEND>;
+
+  static constexpr OperatorScope scope = OperatorScope::PerCellWithParameters;
+
+  int getPriority() const {
+    return 0;
+  }
+
+  template <CONCEPT(Cell) CELL, typename PARAMETERS>
+  void apply(CELL& cell, PARAMETERS& parameters) any_platform;
+
 };
 
 
 /// PostProcessor for the density / velocity outflow boundaries in the free energy model.
 /// The density / order parameters are prescribed to the outflow nodes such that they obey
 /// the local-velocity convective boundary condition given in Lou, Gou, Shi (2013).
-template<typename T, typename DESCRIPTOR>
-class FreeEnergyConvectiveProcessor3D : public LocalPostProcessor3D<T, DESCRIPTOR> {
+template<typename T, typename DESCRIPTOR, int NORMAL_X, int NORMAL_Y, int NORMAL_Z>
+class FreeEnergyConvectiveProcessor3D {
 public:
-  FreeEnergyConvectiveProcessor3D(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_,
-                                  int discreteNormalX_, int discreteNormalY_, int discreteNormalZ_);
-  int extent() const override
-  {
-    return 2;
+  static constexpr OperatorScope scope = OperatorScope::PerCell;
+
+  int getPriority() const {
+    return 0;
   }
-  int extent(int whichDirection) const override
-  {
-    return 2;
-  }
-  void process(BlockLattice<T,DESCRIPTOR>& blockLattice) override;
-  void processSubDomain(BlockLattice<T,DESCRIPTOR>& blockLattice,
-                        int x0_, int x1_, int y0_, int y1_, int z0_, int z1_ ) override;
-private:
-  int x0, x1, y0, y1, z0, z1;
-  int discreteNormalX, discreteNormalY, discreteNormalZ;
+
+  template <CONCEPT(Cell) CELL>
+  void apply(CELL& cell) any_platform;
 };
 
-/// Generator class for the FreeEnergyConvective post processor.
-template<typename T, typename DESCRIPTOR>
-class FreeEnergyConvectiveProcessorGenerator3D : public PostProcessorGenerator3D<T, DESCRIPTOR> {
-public:
-  FreeEnergyConvectiveProcessorGenerator3D(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_,
-      int discreteNormalX_, int discreteNormalY_, int discreteNormalZ_);
-  PostProcessor3D<T,DESCRIPTOR>* generate() const override;
-  PostProcessorGenerator3D<T,DESCRIPTOR>*  clone() const override;
-private:
-  int discreteNormalX;
-  int discreteNormalY;
-  int discreteNormalZ;
-};
 
 }
 

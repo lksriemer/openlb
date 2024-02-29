@@ -488,6 +488,19 @@ bool IndicatorLayer2D<S>::operator()(bool output[], const S input[])
   return true;
 }
 
+
+template <typename T>
+IndicatorSDF2D<T>::IndicatorSDF2D(std::function<T(Vector<T, 2>)> f)
+    : _f(f)
+{}
+
+template <typename T>
+bool IndicatorSDF2D<T>::operator()(bool output[], const T input[])
+{
+  output[0] = _f(input) <= 0.0;
+  return true;
+}
+
 } // namespace olb
 
 #endif

@@ -37,7 +37,8 @@ SuperLatticeParticleForce<T,DESCRIPTOR,PARTICLETYPE,BLOCKFUNCTOR>::SuperLatticeP
   const SuperGeometry<T,DESCRIPTOR::d>& superGeometry,
   particles::ParticleSystem<T,PARTICLETYPE>& particleSystem,
   const UnitConverter<T,DESCRIPTOR>& converter,
-  Vector<bool,DESCRIPTOR::d> periodic, std::size_t iP0, const F f )
+  Vector<bool,DESCRIPTOR::d> periodic, std::size_t iP0,
+  const std::unordered_set<int>& ignoredMaterials, const F f )
   : SuperLatticePhysF<T,DESCRIPTOR>(sLattice,converter,
                                     (DESCRIPTOR::d+utilities::dimensions::convert<DESCRIPTOR::d>::rotation+1)*(particleSystem.size()-iP0))
 {
@@ -55,7 +56,8 @@ SuperLatticeParticleForce<T,DESCRIPTOR,PARTICLETYPE,BLOCKFUNCTOR>::SuperLatticeP
     this->_blockF.emplace_back( new BLOCKFUNCTOR(
                                   this->_sLattice.getBlock(iC),
                                   superGeometry.getBlockGeometry(iC),
-                                  particleSystem, converter, min, max, periodic, iP0, f));
+                                  particleSystem, converter, min, max,
+                                  periodic, iP0, ignoredMaterials, f));
   }
 }
 
@@ -88,12 +90,13 @@ BlockLatticeMomentumExchangeForce<T, DESCRIPTOR, PARTICLETYPE>::BlockLatticeMome
   const UnitConverter<T,DESCRIPTOR>& converter,
   PhysR<T,DESCRIPTOR::d>cellMin, PhysR<T,DESCRIPTOR::d> cellMax,
   Vector<bool,DESCRIPTOR::d> periodic, std::size_t iP0,
-  const F f )
+  const std::unordered_set<int>& ignoredMaterials,  const F f )
   : BlockLatticePhysF<T,DESCRIPTOR>(blockLattice, converter,
                                    (DESCRIPTOR::d+utilities::dimensions::convert<DESCRIPTOR::d>::rotation+1)*(particleSystem.size()-iP0)),
     _blockGeometry(blockGeometry), _blockLattice(blockLattice),
     _particleSystem(particleSystem),
-    _cellMin(cellMin), _cellMax(cellMax), _periodic(periodic), _iP0(iP0), _f(f)
+    _cellMin(cellMin), _cellMax(cellMax), _periodic(periodic),
+    _iP0(iP0), _ignoredMaterials(ignoredMaterials), _f(f)
 {
   this->getName() = "physMomentumExchangeForce";
 }
@@ -117,33 +120,35 @@ void BlockLatticeMomentumExchangeForce<T, DESCRIPTOR, PARTICLETYPE>::evaluate(T 
       _blockLattice, padding, position, circumRadius,
   [&](const LatticeR<D>& latticeRinner) {
 
-    Vector<T,D>tmpForce(0.);
-    PhysR<T,D> lever(0.);
-    if ( particles::resolved::momentumExchangeAtSurfaceLocation(tmpForce.data(),
-          lever, latticeRinner, this->_blockGeometry,
-          this->_blockLattice, this->_converter, particle) ){
+    if (_ignoredMaterials.find(_blockGeometry.getMaterial(latticeRinner)) == _ignoredMaterials.end()) {
+      Vector<T,D>tmpForce(0.);
+      PhysR<T,D> lever(0.);
+      if ( particles::resolved::momentumExchangeAtSurfaceLocation(tmpForce.data(),
+            lever, latticeRinner, this->_blockGeometry,
+            this->_blockLattice, this->_converter, particle) ){
 
-      // count cells of considered object
-      ++numVoxels;
+        // count cells of considered object
+        ++numVoxels;
 
-      //Shift centre of mass (for oblique rotation) if offset provided
-      if constexpr ( PARTICLETYPE::template providesNested<SURFACE,COR_OFFSET>() ){
-        lever -= Vector<T,D> ( particle.template getField<SURFACE,COR_OFFSET>() );
-      }
+        //Shift centre of mass (for oblique rotation) if offset provided
+        if constexpr ( PARTICLETYPE::template providesNested<SURFACE,COR_OFFSET>() ){
+          lever -= Vector<T,D> ( particle.template getField<SURFACE,COR_OFFSET>() );
+        }
 
-      //Calculate torque
-      const Vector<T,Drot> torque = particles::dynamics::torque_from_force<D,T>::calculate( tmpForce, lever );
+        //Calculate torque
+        const Vector<T,Drot> torque = particles::dynamics::torque_from_force<D,T>::calculate( tmpForce, lever );
 
-      T physR[D] = {0.};
-      this->_blockGeometry.getPhysR(physR, latticeRinner);
-      _f(particle, physR, tmpForce, torque);
+        T physR[D] = {0.};
+        this->_blockGeometry.getPhysR(physR, latticeRinner);
+        _f(particle, physR, tmpForce, torque);
 
-      //Add force and torque to output
-      for (unsigned iDim=0; iDim<D; ++iDim) {
-        output[iDim+iPeval*serialSize] += tmpForce[iDim];
-      }
-      for (unsigned iRot=0; iRot<Drot; ++iRot) {
-        output[(iRot+D)+iPeval*serialSize] += torque[iRot];
+        //Add force and torque to output
+        for (unsigned iDim=0; iDim<D; ++iDim) {
+          output[iDim+iPeval*serialSize] += tmpForce[iDim];
+        }
+        for (unsigned iRot=0; iRot<Drot; ++iRot) {
+          output[(iRot+D)+iPeval*serialSize] += torque[iRot];
+        }
       }
     }
   });

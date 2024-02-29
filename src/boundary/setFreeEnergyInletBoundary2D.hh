@@ -156,12 +156,23 @@ void setFreeEnergyInletBoundary(BlockLattice<T,DESCRIPTOR>& block,T omega, Block
         if (latticeNumber != 1) {
           block.defineDynamics({iX, iY}, dynamics);
         }
-        auto postProcessor = std::unique_ptr<PostProcessorGenerator2D<T, DESCRIPTOR>>{ new FreeEnergyChemPotBoundaryProcessorGenerator2D<T, DESCRIPTOR> (
-          iX, iX, iY, iY, discreteNormal[1], discreteNormal[2], latticeNumber ) };
+
+        if ( latticeNumber == 1){
+                block.addPostProcessor(
+          typeid(stage::PostStream), {iX, iY},
+          olb::boundaryhelper::promisePostProcessorForNormal<T,DESCRIPTOR, FreeEnergyChemPotBoundaryProcessor2DA>(
+            Vector<int,2>(discreteNormal.data() + 1)));
+        } else {
+                block.addPostProcessor(
+          typeid(stage::PostStream), {iX, iY},
+          olb::boundaryhelper::promisePostProcessorForNormal<T,DESCRIPTOR, FreeEnergyChemPotBoundaryProcessor2DB>(
+            Vector<int,2>(discreteNormal.data() + 1)));
+        }
+
         dynamics->getParameters(block).template set<descriptors::OMEGA>(omega);
         //sets the boundary on any indicated cell
         //located in setLocalVelocityBoundary2D.h/hh
-        setBoundary(block, iX,iY, dynamics, postProcessor.get());
+        setBoundary(block, iX,iY, dynamics);
 
         if (_output) {
           clout << "setFreeEnergyInletBoundary<" << "," << ">("  << iX << ", "<< iY << ")" << std::endl;

@@ -38,7 +38,7 @@ namespace olb {
 class Expr : public ExprBase {
 public:
   enum struct Op {
-    Add, Mul, Sub, Div, Sqrt, Abs
+    Add, Mul, Sub, Div, Sqrt, Abs, Pow, Exp
   };
 
 private:
@@ -74,6 +74,7 @@ private:
       case Op::Sub: return "(" + lhs->describe() + ") - (" + rhs->describe() + ")";
       case Op::Mul: return "(" + lhs->describe() + ") * (" + rhs->describe() + ")";
       case Op::Div: return "(" + lhs->describe() + ") / (" + rhs->describe() + ")";
+      case Op::Pow: return "Pow(" + lhs->describe() + "," + rhs->describe() + ")";
       default: throw std::invalid_argument("Unsupported binary operation");
       }
     }
@@ -93,6 +94,7 @@ private:
       switch (op) {
       case Op::Sqrt: return "sqrt(" + arg->describe() + ")";
       case Op::Abs:  return "Abs(" + arg->describe() + ")";
+      case Op::Exp:  return "exp(" + arg->describe() + ")";
       default: throw std::invalid_argument("Unsupported unary operation");
       }
     }
@@ -181,6 +183,14 @@ Expr sqrt(Expr x) {
 
 Expr fabs(Expr x) {
   return Expr(Expr::Op::Abs, x);
+}
+
+Expr pow(Expr base, Expr exp) {
+  return Expr(base, Expr::Op::Pow, exp);
+}
+
+Expr exp(Expr x) {
+  return Expr(Expr::Op::Exp, x);
 }
 
 }

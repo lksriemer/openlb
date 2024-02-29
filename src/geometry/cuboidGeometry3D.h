@@ -216,6 +216,11 @@ public:
   /// Shrink all cuboids so that no empty planes are left
   void shrink(IndicatorF3D<T>& indicatorF);
 
+  /// Refines mesh by splitting each cell into factor^3 cells
+  void refine(int factor);
+  /// Tries to refine mesh to given deltaR
+  bool tryRefineTo(T deltaR);
+
   /// Number of data blocks for the serializer interface
   size_t getNblock() const override;
   /// Binary size for the serializer interface
@@ -261,18 +266,14 @@ template<typename T>
 CuboidGeometry3D<T>* createCuboidGeometry(std::string fileName)
 {
   OstreamManager clout("saveCuboidGeometry3D");
-  std::string fname = singleton::directories().getLogOutDir() + fileName + ".xml";
-
-  XMLreader reader(fname);
+  XMLreader reader(fileName);
 
   std::vector<T> origin = getDataFromTag<T>(reader["CuboidGeometry"], "origin", 3);
   std::vector<int> extent = getDataFromTag<int>(reader["CuboidGeometry"], "extent", 3);
   T deltaR = getDataFromTag<T>(reader["CuboidGeometry"], "deltaR", 1)[0];
   size_t weight = getDataFromTag<size_t>(reader["CuboidGeometry"], "weight", 1)[0];
-  int refinementLevel = getDataFromTag<int>(reader["CuboidGeometry"], "refinementLevel", 1)[0];
 
   CuboidGeometry3D<T>* cGeo = new CuboidGeometry3D<T> (origin, deltaR, extent);
-  cGeo->getMotherCuboid().setRefinementLevel(refinementLevel);
   cGeo->getMotherCuboid().setWeight(weight);
   cGeo->clearCuboids();
 
@@ -281,9 +282,8 @@ CuboidGeometry3D<T>* createCuboidGeometry(std::string fileName)
     extent = getDataFromTag<int>(*cub, "extent", 3);
     deltaR = getDataFromTag<T>(*cub, "deltaR", 1)[0];
     weight = getDataFromTag<int>(*cub, "weight", 1)[0];
-    refinementLevel = getDataFromTag<int>(*cub, "refinementLevel", 1)[0];
 
-    cGeo->add( Cuboid3D<T>(origin, deltaR, extent, refinementLevel) );
+    cGeo->add( Cuboid3D<T>(origin, deltaR, extent) );
     cGeo->get(cGeo->getNc() - 1).setWeight(weight);
   }
 

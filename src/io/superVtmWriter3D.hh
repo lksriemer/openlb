@@ -50,21 +50,24 @@
 namespace olb {
 
 
-template<typename T, typename W>
-SuperVTMwriter3D<T,W>::SuperVTMwriter3D( const std::string& name, int overlap, bool binary, bool compress)
+template<typename T, typename OUT_T, typename W>
+SuperVTMwriter3D<T,OUT_T,W>::SuperVTMwriter3D( const std::string& name, int overlap, bool binary, bool compress)
   : clout( std::cout,"SuperVTMwriter3D" ), _createFile(false), _name(name), _overlap(overlap), _binary(binary), _compress(compress)
-{}
+{
+  static_assert(std::is_same_v<OUT_T, float> || std::is_same_v<OUT_T, double>,
+              "OUT_T must be either float or double");
+}
 
-template<typename T, typename W>
-SuperVTMwriter3D<T,W>::SuperVTMwriter3D( CuboidGeometry3D<T>& cGeometry,
+template<typename T, typename OUT_T, typename W>
+SuperVTMwriter3D<T,OUT_T,W>::SuperVTMwriter3D( CuboidGeometry3D<T>& cGeometry,
                                          const std::string& name, int overlap, bool binary, bool compress)
   : SuperVTMwriter3D(name, overlap, binary, compress)
 {
   _cGeometry = &cGeometry;
 }
 
-template<typename T, typename W>
-void SuperVTMwriter3D<T,W>::write(int iT)
+template<typename T, typename OUT_T, typename W>
+void SuperVTMwriter3D<T,OUT_T,W>::write(int iT)
 {
   // update to prevent gaps between vti files / cuboids
   for (SuperF3D<T,W>* f : _pointerVec) {
@@ -75,11 +78,10 @@ void SuperVTMwriter3D<T,W>::write(int iT)
   // problem if functors with different SuperStructure are stored
   // since till now, there is only one origin
   const auto it_begin = _pointerVec.cbegin();
-  if (it_begin == _pointerVec.end()) {
+  if (!_cGeometry && it_begin == _pointerVec.end()) {
     throw std::runtime_error("No functor to write");
   }
   CuboidGeometry3D<T> const& cGeometry = _cGeometry ? *_cGeometry : (**it_begin).getSuperStructure().getCuboidGeometry();
-  LoadBalancer<T>& load = (**it_begin).getSuperStructure().getLoadBalancer();
 
   // PVD, owns all
   writePVD(iT);
@@ -89,6 +91,7 @@ void SuperVTMwriter3D<T,W>::write(int iT)
       writeGlobalVTI(iT, iC);
     }
   } else {
+    LoadBalancer<T>& load = (**it_begin).getSuperStructure().getLoadBalancer();
     // VTI, each process writes its cuboids
     for (int iCloc = 0; iCloc < load.size(); iCloc++) {
       writeVTI(iT, iCloc);
@@ -96,8 +99,8 @@ void SuperVTMwriter3D<T,W>::write(int iT)
   }
 }
 
-template<typename T, typename W>
-void SuperVTMwriter3D<T,W>::writePVD(int iT)
+template<typename T, typename OUT_T, typename W>
+void SuperVTMwriter3D<T,OUT_T,W>::writePVD(int iT)
 {
   // to get first element _pointerVec
   // problem if functors with different SuperStructure are stored
@@ -121,8 +124,8 @@ void SuperVTMwriter3D<T,W>::writePVD(int iT)
   }
 }
 
-template<typename T, typename W>
-void SuperVTMwriter3D<T,W>::writeGlobalVTI(int iT, int iC)
+template<typename T, typename OUT_T, typename W>
+void SuperVTMwriter3D<T,OUT_T,W>::writeGlobalVTI(int iT, int iC)
 {
   const auto it_begin = _pointerVec.cbegin();
   CuboidGeometry3D<T> const& cGeometry = _cGeometry ? *_cGeometry : (**it_begin).getSuperStructure().getCuboidGeometry();
@@ -148,8 +151,8 @@ void SuperVTMwriter3D<T,W>::writeGlobalVTI(int iT, int iC)
   closeVTI(fullNameVTI);
 }
 
-template<typename T, typename W>
-void SuperVTMwriter3D<T,W>::writeVTI(int iT, int iCloc)
+template<typename T, typename OUT_T, typename W>
+void SuperVTMwriter3D<T,OUT_T,W>::writeVTI(int iT, int iCloc)
 {
   const auto it_begin = _pointerVec.cbegin();
   CuboidGeometry3D<T> const& cGeometry = (**it_begin).getSuperStructure().getCuboidGeometry();
@@ -176,8 +179,8 @@ void SuperVTMwriter3D<T,W>::writeVTI(int iT, int iCloc)
   closeVTI(fullNameVTI);
 }
 
-template<typename T, typename W>
-void SuperVTMwriter3D<T,W>::write(SuperF3D<T,W>& f, int iT)
+template<typename T, typename OUT_T, typename W>
+void SuperVTMwriter3D<T,OUT_T,W>::write(SuperF3D<T,W>& f, int iT)
 {
   CuboidGeometry3D<T> const& cGeometry = f.getSuperStructure().getCuboidGeometry();
   LoadBalancer<T>& load = f.getSuperStructure().getLoadBalancer();
@@ -228,14 +231,14 @@ void SuperVTMwriter3D<T,W>::write(SuperF3D<T,W>& f, int iT)
 }
 
 
-template<typename T, typename W>
-void SuperVTMwriter3D<T,W>::write(std::shared_ptr<SuperF3D<T,W>> ptr_f, int iT)
+template<typename T, typename OUT_T, typename W>
+void SuperVTMwriter3D<T,OUT_T,W>::write(std::shared_ptr<SuperF3D<T,W>> ptr_f, int iT)
 {
   write(*ptr_f, iT);
 }
 
-template<typename T, typename W>
-void SuperVTMwriter3D<T,W>::createMasterFile()
+template<typename T, typename OUT_T, typename W>
+void SuperVTMwriter3D<T,OUT_T,W>::createMasterFile()
 {
   int rank = 0;
 #ifdef PARALLEL_MODE_MPI
@@ -250,27 +253,27 @@ void SuperVTMwriter3D<T,W>::createMasterFile()
   }
 }
 
-template<typename T, typename W>
-void SuperVTMwriter3D<T,W>::addFunctor(SuperF3D<T,W>& f)
+template<typename T, typename OUT_T, typename W>
+void SuperVTMwriter3D<T,OUT_T,W>::addFunctor(SuperF3D<T,W>& f)
 {
   _pointerVec.push_back(&f);
 }
 
-template<typename T, typename W>
-void SuperVTMwriter3D<T,W>::addFunctor(SuperF3D<T,W>& f, const std::string& functorName)
+template<typename T, typename OUT_T, typename W>
+void SuperVTMwriter3D<T,OUT_T,W>::addFunctor(SuperF3D<T,W>& f, const std::string& functorName)
 {
   f.getName() = functorName;
   _pointerVec.push_back(&f);
 }
 
-template<typename T, typename W>
-void SuperVTMwriter3D<T,W>::clearAddedFunctors()
+template<typename T, typename OUT_T, typename W>
+void SuperVTMwriter3D<T,OUT_T,W>::clearAddedFunctors()
 {
   _pointerVec.clear();
 }
 
-template<typename T, typename W>
-std::string SuperVTMwriter3D<T,W>::getName() const
+template<typename T, typename OUT_T, typename W>
+std::string SuperVTMwriter3D<T,OUT_T,W>::getName() const
 {
   return _name;
 }
@@ -279,8 +282,8 @@ std::string SuperVTMwriter3D<T,W>::getName() const
 
 
 ////////////////////private member functions///////////////////////////////////
-template<typename T, typename W>
-void SuperVTMwriter3D<T,W>::preambleVTI (const std::string& fullName,
+template<typename T, typename OUT_T, typename W>
+void SuperVTMwriter3D<T,OUT_T,W>::preambleVTI (const std::string& fullName,
     const Vector<int,3> extent0, const Vector<int,3> extent1, T origin[], T delta)
 {
   const BaseType<T> d_delta = delta;
@@ -312,8 +315,8 @@ void SuperVTMwriter3D<T,W>::preambleVTI (const std::string& fullName,
   fout.close();
 }
 
-template<typename T, typename W>
-void SuperVTMwriter3D<T,W>::closeVTI(const std::string& fullNamePiece)
+template<typename T, typename OUT_T, typename W>
+void SuperVTMwriter3D<T,OUT_T,W>::closeVTI(const std::string& fullNamePiece)
 {
   std::ofstream fout(fullNamePiece, std::ios::app );
   if (!fout) {
@@ -324,8 +327,8 @@ void SuperVTMwriter3D<T,W>::closeVTI(const std::string& fullNamePiece)
   fout.close();
 }
 
-template<typename T, typename W>
-void SuperVTMwriter3D<T,W>::preamblePVD(const std::string& fullNamePVD)
+template<typename T, typename OUT_T, typename W>
+void SuperVTMwriter3D<T,OUT_T,W>::preamblePVD(const std::string& fullNamePVD)
 {
   std::ofstream fout(fullNamePVD, std::ios::trunc);
   if (!fout) {
@@ -338,8 +341,8 @@ void SuperVTMwriter3D<T,W>::preamblePVD(const std::string& fullNamePVD)
   fout.close();
 }
 
-template<typename T, typename W>
-void SuperVTMwriter3D<T,W>::closePVD(const std::string& fullNamePVD)
+template<typename T, typename OUT_T, typename W>
+void SuperVTMwriter3D<T,OUT_T,W>::closePVD(const std::string& fullNamePVD)
 {
   std::ofstream fout(fullNamePVD, std::ios::app );
   if (!fout) {
@@ -350,8 +353,8 @@ void SuperVTMwriter3D<T,W>::closePVD(const std::string& fullNamePVD)
   fout.close();
 }
 
-template<typename T, typename W>
-void SuperVTMwriter3D<T,W>::preambleVTM(const std::string& fullNamePVD)
+template<typename T, typename OUT_T, typename W>
+void SuperVTMwriter3D<T,OUT_T,W>::preambleVTM(const std::string& fullNamePVD)
 {
   std::ofstream fout(fullNamePVD, std::ios::trunc);
   if (!fout) {
@@ -364,8 +367,8 @@ void SuperVTMwriter3D<T,W>::preambleVTM(const std::string& fullNamePVD)
   fout.close();
 }
 
-template<typename T, typename W>
-void SuperVTMwriter3D<T,W>::closeVTM(const std::string& fullNamePVD)
+template<typename T, typename OUT_T, typename W>
+void SuperVTMwriter3D<T,OUT_T,W>::closeVTM(const std::string& fullNamePVD)
 {
   std::ofstream fout(fullNamePVD, std::ios::app );
   if (!fout) {
@@ -376,8 +379,8 @@ void SuperVTMwriter3D<T,W>::closeVTM(const std::string& fullNamePVD)
   fout.close();
 }
 
-template<typename T, typename W>
-void SuperVTMwriter3D<T,W>::dataVTM(int iC, const std::string& fullNamePVD,
+template<typename T, typename OUT_T, typename W>
+void SuperVTMwriter3D<T,OUT_T,W>::dataVTM(int iC, const std::string& fullNamePVD,
                                     const std::string& namePiece)
 {
   std::ofstream fout(fullNamePVD, std::ios::app);
@@ -391,8 +394,8 @@ void SuperVTMwriter3D<T,W>::dataVTM(int iC, const std::string& fullNamePVD,
   fout.close();
 }
 
-template<typename T, typename W>
-void SuperVTMwriter3D<T,W>::dataPVDmaster(int iT,
+template<typename T, typename OUT_T, typename W>
+void SuperVTMwriter3D<T,OUT_T,W>::dataPVDmaster(int iT,
     const std::string& fullNamePVDMaster,
     const std::string& namePiece)
 {
@@ -411,8 +414,8 @@ void SuperVTMwriter3D<T,W>::dataPVDmaster(int iT,
   }
 }
 
-template<typename T, typename W>
-void SuperVTMwriter3D<T,W>::dataArray(const std::string& fullName,
+template<typename T, typename OUT_T, typename W>
+void SuperVTMwriter3D<T,OUT_T,W>::dataArray(const std::string& fullName,
                                       SuperF3D<T,W>& f, int iC, const Vector<int,3> extent1)
 {
   std::ofstream fout( fullName, std::ios::out | std::ios::app );
@@ -420,7 +423,12 @@ void SuperVTMwriter3D<T,W>::dataArray(const std::string& fullName,
     clout << "Error: could not open " << fullName << std::endl;
   }
 
-  fout << "<DataArray type=\"Float32\" Name=\"" << f.getName() << "\" NumberOfComponents=\"" << f.getTargetDim() << "\" ";
+  if constexpr (std::is_same_v<OUT_T, float>) {
+    fout << "<DataArray type=\"Float32\" Name=\"" << f.getName() << "\" NumberOfComponents=\"" << f.getTargetDim() << "\" ";
+  }
+  else if constexpr (std::is_same_v<OUT_T, double>) {
+    fout << "<DataArray type=\"Float64\" Name=\"" << f.getName() << "\" NumberOfComponents=\"" << f.getTargetDim() << "\" ";
+  }
   if (_compress || _binary) {
     fout << "format=\"binary\" encoding=\"base64\">\n";
   }
@@ -494,8 +502,8 @@ void SuperVTMwriter3D<T,W>::dataArray(const std::string& fullName,
   ffout.close();
 }
 
-template<typename T, typename W>
-void SuperVTMwriter3D<T,W>::closePiece(const std::string& fullNamePiece)
+template<typename T, typename OUT_T, typename W>
+void SuperVTMwriter3D<T,OUT_T,W>::closePiece(const std::string& fullNamePiece)
 {
   std::ofstream fout(fullNamePiece, std::ios::app );
   if (!fout) {

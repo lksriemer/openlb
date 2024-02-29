@@ -49,10 +49,9 @@ typedef WallFunctionForcedD3Q19Descriptor DESCRIPTOR;
 const T pi = util::acos(-1);
 
 // Parameters for the simulation setup
-const int N = 18;
+const int N = 50;
 const T physRefL = 1.0;     // half channel height in meters
 const T lx = 2. * pi * physRefL;  // streamwise length in meters
-const T ly = 2. * pi * physRefL;  // spanwise length in meters
 const T lz = 2. * physRefL;       // wall-normal length in meters
 
 // Choose friction reynolds number ReTau
@@ -61,11 +60,11 @@ const T lz = 2. * physRefL;       // wall-normal length in meters
 
 // Wallfunction parameters
 const T latticeWallDistance = 0.5;  // lattice distance to boundary
-const int rhoMethod = 0;    // method for density reconstruction
+const int rhoMethod = 2;    // method for density reconstruction
 // 0: Zou-He
 // 1: extrapolation
 // 2: constant
-const int fneqMethod = 1;   // method for fneq reconstruction
+const int fneqMethod = 3;   // method for fneq reconstruction
 // 0: regularized NEBB (Latt)
 // 1: extrapolation NEQ (Guo Zhaoli)
 // 2: regularized second order finite Differnce
@@ -73,6 +72,8 @@ const int fneqMethod = 1;   // method for fneq reconstruction
 const int wallProfile = 0;    // wallfunction profile
 // 0: Musker profile
 // 1: power law profile
+
+// The current wall function parameters are appropriate for y+ > 15. For y+ < 15 other more precise but more unstable options can be chosen.
 
 // Reynolds number based on the friction velocity
 #if defined (Case_ReTau_1000)
@@ -306,7 +307,8 @@ void prepareLattice(SuperLattice<T,DESCRIPTOR>& sLattice,
 void getResults(SuperLattice<T, DESCRIPTOR>& sLattice,
                 UnitConverter<T,DESCRIPTOR> const& converter, size_t iT,
                 SuperGeometry<T,3>& superGeometry, Timer<double>& timer,
-                SuperLatticeTimeAveragedF3D<T>& sAveragedVel)
+                SuperLatticeTimeAveragedF3D<T>& sAveragedVel,
+                SuperLatticeTimeAveragedF3D<T>& sAveragedPress)
 {
   OstreamManager clout(std::cout, "getResults");
 
@@ -320,6 +322,7 @@ void getResults(SuperLattice<T, DESCRIPTOR>& sLattice,
   vtmWriter.addFunctor(velocity);
   vtmWriter.addFunctor(pressure);
   vtmWriter.addFunctor(sAveragedVel);
+  vtmWriter.addFunctor(sAveragedPress);
 
   if (iT == 0) {
     // Writes the geometry, cuboid no. and rank no. as vti file for visualization
@@ -350,6 +353,7 @@ void getResults(SuperLattice<T, DESCRIPTOR>& sLattice,
     // Add ensemble to temporal averaged velocity
     sLattice.communicate();
     sAveragedVel.addEnsemble();
+    sAveragedPress.addEnsemble();
   }
 
   if (iT%converter.getLatticeTime(maxPhysT/20)==0 || iT==converter.getLatticeTime(maxPhysT)-1) {
@@ -398,7 +402,7 @@ int main(int argc, char* argv[])
   const int noOfCuboids = 1;
 #endif
 
-  Vector<T,3> extend(lx, ly, adaptedPhysSimulatedLength);
+  Vector<T,3> extend(lx, 6.*converter.getPhysDeltaX(), adaptedPhysSimulatedLength);
   extend[2] += (1./8.)*converter.getPhysDeltaX();
 
   Vector<T,3> origin(0., 0., 0.);
@@ -459,13 +463,16 @@ int main(int argc, char* argv[])
   SuperLatticePhysVelocity3D<T, DESCRIPTOR> sVel(sLattice, converter);
   SuperLatticeTimeAveragedF3D<T> sAveragedVel(sVel);
 
+  SuperLatticePhysPressure3D<T, DESCRIPTOR> sPress(sLattice, converter);
+  SuperLatticeTimeAveragedF3D<T> sAveragedPress(sPress);
+
   /// === 4th Step: Main Loop with Timer ===
   Timer<double> timer(converter.getLatticeTime(maxPhysT), superGeometry.getStatistics().getNvoxel() );
   timer.start();
 
   for (size_t iT=0; iT<converter.getLatticeTime(maxPhysT); ++iT) {
     /// === 6th Step: Computation and Output of the Results ===
-    getResults(sLattice, converter, iT, superGeometry, timer, sAveragedVel);
+    getResults(sLattice, converter, iT, superGeometry, timer, sAveragedVel, sAveragedPress);
 
     if ( iT%converter.getLatticeTime(maxPhysT/fluxUpdates)==0 || iT == 0 ) {
 

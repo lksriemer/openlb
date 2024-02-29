@@ -24,6 +24,8 @@
 #ifndef SUPER_INDICATOR_F_3D_H
 #define SUPER_INDICATOR_F_3D_H
 
+#include <list>
+
 #include "functors/analytical/indicator/indicatorBaseF3D.h"
 #include "superIndicatorBaseF3D.h"
 #include "geometry/superGeometry.h"
@@ -139,7 +141,21 @@ public:
   bool operator() (bool output[], const int input[]) override;
 };
 
+/// Indicator identifying neighbors of boundary cells
+/**
+ * Checks if neighbor is part of a boundary via passed SuperIndicatorMaterial.
+ **/
+template <typename T>
+class SuperIndicatorBoundaryNeighbor3D : public SuperIndicatorF3D<T> {
+protected:
+  FunctorPtr<SuperIndicatorF3D<T>> _indicatorF;
+  int _overlap;
+public:
+  SuperIndicatorBoundaryNeighbor3D(FunctorPtr<SuperIndicatorF3D<T>>&& indicatorF, int overlap);
 
+  using SuperIndicatorF3D<T>::operator();
+  bool operator() (bool output[], const int input[]) override;
+};
 } // namespace olb
 
 #endif

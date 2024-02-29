@@ -163,6 +163,13 @@ AnalyticalRandomBase<D,T,S>::AnalyticalRandomBase()
   this->getName() = "random";
 }
 
+template <unsigned D, typename T, typename S, unsigned seed>
+AnalyticalRandomSeededBase<D,T,S,seed>::AnalyticalRandomSeededBase()
+  : AnalyticalF<D,T,S>(1),
+    gen(seed)
+{
+  this->getName() = "randomSeeded";
+}
 
 template <unsigned D, typename T, typename S>
 AnalyticalRandomUniform<D,T,S>::AnalyticalRandomUniform(T minVal, T maxVal)
@@ -186,6 +193,19 @@ AnalyticalRandomNormal<D,T,S>::AnalyticalRandomNormal(T mean, T stdDev)
 
 template <unsigned D, typename T, typename S>
 bool AnalyticalRandomNormal<D,T,S>::operator()(T output[], const S x[])
+{
+  output[0] = distro(this->gen);
+  return true;
+}
+
+template <unsigned D, typename T, typename S, unsigned seed>
+AnalyticalRandomSeededNormal<D,T,S,seed>::AnalyticalRandomSeededNormal(T mean, T stdDev)
+  : AnalyticalRandomSeededBase<D,T,S,seed>(),
+    distro{mean, stdDev}
+{ }
+
+template <unsigned D, typename T, typename S, unsigned seed>
+bool AnalyticalRandomSeededNormal<D,T,S,seed>::operator()(T output[], const S x[])
 {
   output[0] = distro(this->gen);
   return true;

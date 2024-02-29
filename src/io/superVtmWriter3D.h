@@ -47,7 +47,7 @@ namespace olb {
  * This file links cuboids ('vti') and represents the entire data of a single timestep.
  *
  */
-template<typename T, typename W=T>
+template<typename T, typename OUT_T=float, typename W=T>
 class SuperVTMwriter3D {
 public:
   /// Construct writer for functor output

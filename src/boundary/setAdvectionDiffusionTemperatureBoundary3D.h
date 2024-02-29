@@ -1,6 +1,6 @@
 /*  This file is part of the OpenLB library
  *
- *  Copyright (C) 2020 Alexander Schulz
+ *  Copyright (C) 2020 Alexander Schulz, 2023 Shota Ito
  *  E-mail contact: info@openlb.net
  *  The most recent release of OpenLB can be downloaded at
  *  <http://www.openlb.net/>
@@ -30,14 +30,11 @@
 #include "utilities/functorPtr.h"
 #include "io/ostreamManager.h"
 #include "geometry/superGeometry.h"
-
 #include "functors/lattice/indicator/superIndicatorBaseF3D.h"
 #include "functors/lattice/indicator/blockIndicatorF3D.h"
 #include "dynamics/dynamics.h"
 #include "dynamics/advectionDiffusionDynamics.h"
-#include "boundaryPostProcessors3D.h"
-#include "advectionDiffusionBoundaryPostProcessor3D.h"
-#include "advectionDiffusionBoundaries.h"
+#include "boundary/dynamics/advectionDiffusionBoundaries.h"
 #include "setBoundary3D.h"
 
 
@@ -48,17 +45,16 @@ namespace olb {
 ///Initialising the setAdvectionDiffusionTemperatureBoundary function on the superLattice domain
 ///This is an AdvectionDiffusionBoundary therefore mostly --> MixinDynamics = AdvectionDiffusionRLBdynamics
 template<typename T, typename DESCRIPTOR, typename MixinDynamics = AdvectionDiffusionRLBdynamics<T,DESCRIPTOR>>
-void setAdvectionDiffusionTemperatureBoundary(SuperLattice<T, DESCRIPTOR>& sLattice, T omega, SuperGeometry<T,3>& superGeometry, int material, T dist =0., bool neumann = false);
+void setAdvectionDiffusionTemperatureBoundary(SuperLattice<T, DESCRIPTOR>& sLattice, SuperGeometry<T,3>& superGeometry, int material);
 
 ///Initialising the setAdvectionDiffusionTemperatureBoundary function on the superLattice domain
 template<typename T, typename DESCRIPTOR, typename MixinDynamics = AdvectionDiffusionRLBdynamics<T,DESCRIPTOR>>
-void setAdvectionDiffusionTemperatureBoundary(SuperLattice<T, DESCRIPTOR>& sLattice, T omega, FunctorPtr<SuperIndicatorF3D<T>>&& indicator, T dist = 0., bool neumann = false);
+void setAdvectionDiffusionTemperatureBoundary(SuperLattice<T, DESCRIPTOR>& sLattice, FunctorPtr<SuperIndicatorF3D<T>>&& indicator);
 
 
 ///Set AdvectionDiffusionTemperatureBoundary for any indicated cells inside the block domain
 template<typename T, typename DESCRIPTOR, typename MixinDynamics>
-void setAdvectionDiffusionTemperatureBoundary(BlockLattice<T,DESCRIPTOR>& _block, BlockIndicatorF3D<T>& indicator,
-                                              T omega, bool includeOuterCells=false, T dist = 0., bool neumann=false);
+void setAdvectionDiffusionTemperatureBoundary(BlockLattice<T,DESCRIPTOR>& _block, BlockIndicatorF3D<T>& indicator);
 
 }//namespace olb
 

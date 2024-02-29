@@ -105,7 +105,7 @@ void SuperGeometryStatistics3D<T>::update(bool verbose)
     for (int iCloc=0; iCloc<_superGeometry->getLoadBalancer().size(); iCloc++) {
       if (_superGeometry->getBlockGeometry(iCloc).getStatistics().getStatisticsStatus() ) {
         auto& blockGeometry = const_cast<BlockGeometry<T,3>&>(_superGeometry->getBlockGeometry(iCloc));
-        blockGeometry.getStatistics(false).update(false);
+        blockGeometry.getStatistics().update(false);
         updateReallyNeeded++;
       }
     }
@@ -127,7 +127,7 @@ void SuperGeometryStatistics3D<T>::update(bool verbose)
     {
       std::set<int> tmpMaterials{};
       for (int iCloc=0; iCloc<_superGeometry->getLoadBalancer().size(); iCloc++) {
-        const auto& blockMaterial2n = _superGeometry->getBlockGeometry(iCloc).getStatistics(false).getMaterial2n();
+        const auto& blockMaterial2n = _superGeometry->getBlockGeometry(iCloc).getStatistics().getMaterial2n();
         for (auto [material, _] : blockMaterial2n) {
           tmpMaterials.insert(material);
         }
@@ -143,13 +143,13 @@ void SuperGeometryStatistics3D<T>::update(bool verbose)
 
     // store the number and min., max. possition for each rank
     for (int iCloc=0; iCloc<_superGeometry->getLoadBalancer().size(); iCloc++) {
-      std::map<int, std::size_t> material2n = _superGeometry->getBlockGeometry(iCloc).getStatistics(false).getMaterial2n();
+      std::map<int, std::size_t> material2n = _superGeometry->getBlockGeometry(iCloc).getStatistics().getMaterial2n();
       std::map<int, std::size_t>::iterator iter;
 
       for (iter = material2n.begin(); iter != material2n.end(); iter++) {
         if (iter->second!=0) {
-          std::vector<T> minPhysR = _superGeometry->getBlockGeometry(iCloc).getStatistics(false).getMinPhysR(iter->first);
-          std::vector<T> maxPhysR = _superGeometry->getBlockGeometry(iCloc).getStatistics(false).getMaxPhysR(iter->first);
+          std::vector<T> minPhysR = _superGeometry->getBlockGeometry(iCloc).getStatistics().getMinPhysR(iter->first);
+          std::vector<T> maxPhysR = _superGeometry->getBlockGeometry(iCloc).getStatistics().getMaxPhysR(iter->first);
           if (_material2n.count(iter->first) == 0) {
             _material2n[iter->first] = iter->second;
             _material2min[iter->first] = minPhysR;
@@ -458,7 +458,7 @@ template<typename T>
 olb::Vector<int, 3> SuperGeometryStatistics3D<T>::getType(int iC, int iX, int iY, int iZ) const
 {
   int iCloc=_superGeometry->getLoadBalancer().loc(iC);
-  olb::Vector<int, 3> discreteNormal = _superGeometry->getBlockGeometry(iCloc).getStatistics(false).getType(iX, iY, iZ);
+  olb::Vector<int, 3> discreteNormal = _superGeometry->getBlockGeometry(iCloc).getStatistics().getType(iX, iY, iZ);
   return discreteNormal;
 }
 
@@ -475,8 +475,8 @@ olb::Vector<T, 3> SuperGeometryStatistics3D<T>::computeNormal(int material) cons
   std::vector<T> normal (3,int());
   for (int iCloc=0; iCloc<_superGeometry->getLoadBalancer().size(); iCloc++) {
     for (int iDim=0; iDim<3; iDim++) {
-      if (_superGeometry->getBlockGeometry(iCloc).getStatistics(false).getNvoxel(material)!=0) {
-        normal[iDim] += _superGeometry->getBlockGeometry(iCloc).getStatistics(false).computeNormal(material)[iDim]*_superGeometry->getBlockGeometry(iCloc).getStatistics(false).getNvoxel(material);
+      if (_superGeometry->getBlockGeometry(iCloc).getStatistics().getNvoxel(material)!=0) {
+        normal[iDim] += _superGeometry->getBlockGeometry(iCloc).getStatistics().computeNormal(material)[iDim]*_superGeometry->getBlockGeometry(iCloc).getStatistics().getNvoxel(material);
       }
     }
   }
@@ -563,13 +563,16 @@ template<typename T>
 void SuperGeometryStatistics3D<T>::print() const
 {
   try {
+    std::size_t nCells = 0;
     for (const auto& material : _material2n) {
       clout << "materialNumber=" << material.first
             << "; count=" << material.second
             << "; minPhysR=(" << _material2min.at(material.first)[0] <<","<< _material2min.at(material.first)[1] <<","<< _material2min.at(material.first)[2] <<")"
             << "; maxPhysR=(" << _material2max.at(material.first)[0] <<","<< _material2max.at(material.first)[1] <<","<< _material2max.at(material.first)[2] <<")"
             << std::endl;
+      nCells += material.second;
     }
+    clout << "countTotal[1e6]=" << nCells / 1.e6 << std::endl;
   }
   catch (std::out_of_range& ex) {
   }

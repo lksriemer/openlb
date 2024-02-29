@@ -502,275 +502,102 @@ PartialSlipBoundaryProcessorGenerator3D<T,DESCRIPTOR>::clone() const
 }
 
 ////////  FreeEnergyWallProcessor3D ////////////////////////////////
+template<typename T, typename DESCRIPTOR, int NORMAL_X, int NORMAL_Y, int NORMAL_Z>
+template <CONCEPT(Cell) CELL, typename PARAMETERS>
+void FreeEnergyWallProcessor3D<T,DESCRIPTOR,NORMAL_X,NORMAL_Y,NORMAL_Z>::apply(CELL& cell, PARAMETERS& vars) {
 
-template<typename T, typename DESCRIPTOR>
-FreeEnergyWallProcessor3D<T,DESCRIPTOR>::FreeEnergyWallProcessor3D(
-  int x0_, int x1_, int y0_, int y1_, int z0_, int z1_,
-  int discreteNormalX_, int discreteNormalY_, int discreteNormalZ_, T addend_)
-  : x0(x0_), x1(x1_), y0(y0_), y1(y1_), z0(z0_), z1(z1_), discreteNormalX(discreteNormalX_),
-    discreteNormalY(discreteNormalY_), discreteNormalZ(discreteNormalZ_), addend(addend_)
-{
-  this->getName() = "FreeEnergyWallProcessor3D";
-}
+  T addend = cell.template getField<descriptors::ADDEND>();
 
-template<typename T, typename DESCRIPTOR>
-void FreeEnergyWallProcessor3D<T,DESCRIPTOR>::
-processSubDomain(BlockLattice<T,DESCRIPTOR>& blockLattice, int x0_, int x1_, int y0_, int y1_, int z0_, int z1_)
-{
-  int newX0, newX1, newY0, newY1, newZ0, newZ1;
-  if ( util::intersect (
-         x0, x1, y0, y1, z0, z1,
-         x0_, x1_, y0_, y1_, z0_, z1_,
-         newX0, newX1, newY0, newY1, newZ0, newZ1 ) ) {
+  T rhoBulk = cell.neighbor({-NORMAL_X, -NORMAL_Y, -NORMAL_Z}).computeRho();
+  T rhoTmp = 0.;
 
-    for (int iX=newX0; iX<=newX1; ++iX) {
-      for (int iY=newY0; iY<=newY1; ++iY) {
-        for (int iZ=newZ0; iZ<=newZ1; ++iZ) {
-          T rhoBulk = blockLattice.get(iX-discreteNormalX, iY-discreteNormalY, iZ-discreteNormalZ).computeRho();
-          T rhoTmp = 0;
-          for (int iPop = 1; iPop < DESCRIPTOR::q; ++iPop) {
-            rhoTmp += blockLattice.get(iX,iY,iZ)[iPop];
-          }
-          T rho = rhoBulk + addend;
-          blockLattice.get(iX,iY,iZ)[0] = rho - rhoTmp - 1;
-        }
-      }
-    }
+  for (int iPop = 1; iPop < DESCRIPTOR::q ; ++iPop) {
+    rhoTmp += cell[iPop];
   }
-}
 
-template<typename T, typename DESCRIPTOR>
-void FreeEnergyWallProcessor3D<T,DESCRIPTOR>::
-process(BlockLattice<T,DESCRIPTOR>& blockLattice)
-{
-  processSubDomain(blockLattice, x0, x1, y0, y1, z0, z1);
-}
+  T rho = rhoBulk + addend;
+  rho -= rhoTmp;
 
-////////  FreeEnergyWallProcessorGenerator3D ////////////////////////////////
+  cell[0] = rho - 1.;
 
-template<typename T, typename DESCRIPTOR>
-FreeEnergyWallProcessorGenerator3D<T,DESCRIPTOR>::FreeEnergyWallProcessorGenerator3D(
-  int x0_, int x1_, int y0_, int y1_, int z0_, int z1_,
-  int discreteNormalX_, int discreteNormalY_, int discreteNormalZ_, T addend_)
-  : PostProcessorGenerator3D<T,DESCRIPTOR>(x0_, x1_, y0_, y1_, z0_, z1_), discreteNormalX(discreteNormalX_),
-    discreteNormalY(discreteNormalY_), discreteNormalZ(discreteNormalZ_), addend(addend_)
-{ }
-
-template<typename T, typename DESCRIPTOR>
-PostProcessor3D<T,DESCRIPTOR>*
-FreeEnergyWallProcessorGenerator3D<T,DESCRIPTOR>::generate() const
-{
-  return new FreeEnergyWallProcessor3D<T,DESCRIPTOR>
-         (this->x0, this->x1, this->y0, this->y1, this->z0, this->z1,
-          discreteNormalX, discreteNormalY, discreteNormalZ, addend);
-}
-
-template<typename T, typename DESCRIPTOR>
-PostProcessorGenerator3D<T,DESCRIPTOR>*
-FreeEnergyWallProcessorGenerator3D<T,DESCRIPTOR>::clone() const
-{
-  return new FreeEnergyWallProcessorGenerator3D<T,DESCRIPTOR>
-         (this->x0, this->x1, this->y0, this->y1, this->z0, this->z1,
-          discreteNormalX, discreteNormalY, discreteNormalZ, addend);
 }
 
 
 ////////  FreeEnergyChemPotBoundaryProcessor3D ////////////////////////////////
+template<typename T, typename DESCRIPTOR, int NORMAL_X, int NORMAL_Y, int NORMAL_Z>
+template <CONCEPT(Cell) CELL>
+void FreeEnergyChemPotBoundaryProcessor3DA<T,DESCRIPTOR,NORMAL_X,NORMAL_Y,NORMAL_Z>::apply(CELL& cell) {
 
-template<typename T, typename DESCRIPTOR>
-FreeEnergyChemPotBoundaryProcessor3D<T,DESCRIPTOR>::
-FreeEnergyChemPotBoundaryProcessor3D(
-  int x0_, int x1_, int y0_, int y1_, int z0_, int z1_, int discreteNormalX_,
-  int discreteNormalY_, int discreteNormalZ_, int latticeNumber_)
-  : x0(x0_), x1(x1_), y0(y0_), y1(y1_), z0(z0_), z1(z1_), discreteNormalX(discreteNormalX_),
-    discreteNormalY(discreteNormalY_), discreteNormalZ(discreteNormalZ_), latticeNumber(latticeNumber_)
-{
-  this->getName() = "FreeEnergyChemPotBoundaryProcessor3D";
+  cell.template setField<descriptors::CHEM_POTENTIAL>(
+    cell.neighbor({-NORMAL_X,-NORMAL_Y,-NORMAL_Z}).template getField<descriptors::CHEM_POTENTIAL>());
+
+  T rho0 = cell.computeRho();
+  T rho1 = cell.neighbor({-NORMAL_X,-NORMAL_Y,-NORMAL_Z}).computeRho();
+
+  cell.template setField<descriptors::CHEM_POTENTIAL>(
+    cell.template getField<descriptors::CHEM_POTENTIAL>() + (rho1 / rho0 - 1) / descriptors::invCs2<T,DESCRIPTOR>());
 }
 
-template<typename T, typename DESCRIPTOR>
-void FreeEnergyChemPotBoundaryProcessor3D<T,DESCRIPTOR>::
-processSubDomain(
-  BlockLattice<T,DESCRIPTOR>& blockLattice, int x0_, int x1_, int y0_, int y1_, int z0_, int z1_)
-{
-  int newX0, newX1, newY0, newY1, newZ0, newZ1;
-  if ( util::intersect (
-         x0, x1, y0, y1, z0, z1,
-         x0_, x1_, y0_, y1_, z0_, z1_,
-         newX0, newX1, newY0, newY1, newZ0, newZ1 ) ) {
+template<typename T, typename DESCRIPTOR, int NORMAL_X, int NORMAL_Y, int NORMAL_Z>
+template <CONCEPT(Cell) CELL>
+void FreeEnergyChemPotBoundaryProcessor3DB<T,DESCRIPTOR,NORMAL_X,NORMAL_Y,NORMAL_Z>::apply(CELL& cell) {
 
-    for (int iX=newX0; iX<=newX1; ++iX) {
-      for (int iY=newY0; iY<=newY1; ++iY) {
-        for (int iZ=newZ0; iZ<=newZ1; ++iZ) {
-          blockLattice.get(iX,iY,iZ).template setField<descriptors::CHEM_POTENTIAL>(
-            blockLattice.get(iX-discreteNormalX, iY-discreteNormalY, iZ-discreteNormalZ).template getField<descriptors::CHEM_POTENTIAL>()
-          );
-          if (latticeNumber == 1) {
-            auto cell = blockLattice.get(iX,iY,iZ);
-            T rho0 = cell.computeRho();
-            T rho1 = blockLattice.get(iX-discreteNormalX, iY-discreteNormalY, iZ-discreteNormalZ).computeRho();
-            cell.template setField<descriptors::CHEM_POTENTIAL>(
-              cell.template getField<descriptors::CHEM_POTENTIAL>() + (rho1 / rho0 - 1) / descriptors::invCs2<T,DESCRIPTOR>()
-            );
-          }
-        }
-      }
-    }
-  }
-}
-
-template<typename T, typename DESCRIPTOR>
-void FreeEnergyChemPotBoundaryProcessor3D<T,DESCRIPTOR>::
-process(BlockLattice<T,DESCRIPTOR>& blockLattice)
-{
-  processSubDomain(blockLattice, x0, x1, y0, y1, z0, z1);
-}
-
-////////  FreeEnergyChemPotBoundaryProcessorGenerator3D ////////////////////////////////
-
-template<typename T, typename DESCRIPTOR>
-FreeEnergyChemPotBoundaryProcessorGenerator3D<T,DESCRIPTOR>::
-FreeEnergyChemPotBoundaryProcessorGenerator3D(
-  int x0_, int x1_, int y0_, int y1_, int z0_, int z1_,
-  int discreteNormalX_, int discreteNormalY_, int discreteNormalZ_, int latticeNumber_)
-  : PostProcessorGenerator3D<T,DESCRIPTOR>(x0_, x1_, y0_, y1_, z0_, z1_), discreteNormalX(discreteNormalX_),
-    discreteNormalY(discreteNormalY_), discreteNormalZ(discreteNormalZ_), latticeNumber(latticeNumber_)
-{ }
-
-template<typename T, typename DESCRIPTOR>
-PostProcessor3D<T,DESCRIPTOR>*
-FreeEnergyChemPotBoundaryProcessorGenerator3D<T,DESCRIPTOR>::generate() const
-{
-  return new FreeEnergyChemPotBoundaryProcessor3D<T,DESCRIPTOR>
-         (this->x0, this->x1, this->y0, this->y1, this->z0, this->z1,
-          discreteNormalX, discreteNormalY, discreteNormalZ, latticeNumber);
-}
-
-template<typename T, typename DESCRIPTOR>
-PostProcessorGenerator3D<T,DESCRIPTOR>*
-FreeEnergyChemPotBoundaryProcessorGenerator3D<T,DESCRIPTOR>::clone() const
-{
-  return new FreeEnergyChemPotBoundaryProcessorGenerator3D<T,DESCRIPTOR>
-         (this->x0, this->x1, this->y0, this->y1, this->z0, this->z1,
-          discreteNormalX, discreteNormalY, discreteNormalZ, latticeNumber);
+  cell.template setField<descriptors::CHEM_POTENTIAL>(
+    cell.neighbor({-NORMAL_X,-NORMAL_Y,-NORMAL_Z}).template getField<descriptors::CHEM_POTENTIAL>());
 }
 
 
 ////////  FreeEnergyConvectiveProcessor3D ////////////////////////////////
+template<typename T, typename DESCRIPTOR, int NORMAL_X, int NORMAL_Y, int NORMAL_Z>
+template <CONCEPT(Cell) CELL>
+void FreeEnergyConvectiveProcessor3D<T,DESCRIPTOR,NORMAL_X,NORMAL_Y,NORMAL_Z>::apply(CELL& cell) {
 
-template<typename T, typename DESCRIPTOR>
-FreeEnergyConvectiveProcessor3D<T,DESCRIPTOR>::
-FreeEnergyConvectiveProcessor3D(
-  int x0_, int x1_, int y0_, int y1_, int z0_, int z1_,
-  int discreteNormalX_, int discreteNormalY_, int discreteNormalZ_)
-  : x0(x0_), x1(x1_), y0(y0_), y1(y1_), z0(z0_), z1(z1_), discreteNormalX(discreteNormalX_),
-    discreteNormalY(discreteNormalY_), discreteNormalZ(discreteNormalZ_)
-{
-  this->getName() = "FreeEnergyConvectiveProcessor3D";
-}
+  T rho, rho0, rho1, u[3];
 
-template<typename T, typename DESCRIPTOR>
-void FreeEnergyConvectiveProcessor3D<T,DESCRIPTOR>::
-processSubDomain(
-  BlockLattice<T,DESCRIPTOR>& blockLattice, int x0_, int x1_, int y0_, int y1_, int z0_, int z1_)
-{
-  int newX0, newX1, newY0, newY1, newZ0, newZ1;
-  if ( util::intersect (
-         x0, x1, y0, y1, z0, z1,
-         x0_, x1_, y0_, y1_, z0_, z1_,
-         newX0, newX1, newY0, newY1, newZ0, newZ1 ) ) {
+  rho0 = cell.computeRho();
 
-    for (int iX=newX0; iX<=newX1; ++iX) {
-      for (int iY=newY0; iY<=newY1; ++iY) {
-        for (int iZ=newZ0; iZ<=newZ1; ++iZ) {
-          T rho, uPerp, rho0, rho1, u[3];
-          rho0 = blockLattice.get(iX,iY,iZ).computeRho();
-          blockLattice.get(iX-discreteNormalX,iY-discreteNormalY,iZ-discreteNormalZ).computeRhoU(rho1, u);
+  cell.neighbor({-NORMAL_X,-NORMAL_Y,-NORMAL_Z}).computeRhoU(rho1, u);
 
-          if (discreteNormalZ == 0) {
-            if (discreteNormalY == 0) {
-              if (discreteNormalX < 0) {
-                uPerp = -u[0];
-              }
-              else {
-                uPerp = u[0];
-              }
-            }
-            else if (discreteNormalX == 0) {
-              if (discreteNormalY < 0) {
-                uPerp = -u[1];
-              }
-              else {
-                uPerp = u[1];
-              }
-            }
-            else {
-              uPerp = util::sqrt(u[0] * u[0] + u[1] * u[1]);
-            }
-          }
-          else if (discreteNormalY == 0) {
-            if (discreteNormalX == 0) {
-              if (discreteNormalZ < 0) {
-                uPerp = -u[2];
-              }
-              else {
-                uPerp = u[2];
-              }
-            }
-            else {
-              uPerp = util::sqrt(u[0] * u[0] + u[2] * u[2]);
-            }
-          }
-          else if (discreteNormalX == 0) {
-            uPerp = util::sqrt(u[1] * u[1] + u[2] * u[2]);
-          }
-          else {
-            uPerp = util::sqrt(u[0] * u[0] + u[1] * u[1] + u[2] * u[2]);
-          }
+  T uPerp = 0;
 
-          rho = (rho0 + uPerp * rho1) / (1. + uPerp);
-          blockLattice.get(iX,iY,iZ).defineRho(rho);
-        }
+  Vector<T, 3> normalVec({NORMAL_X,NORMAL_Y,NORMAL_Z});
+
+  if (normalVec[2] == 0) {
+    if (normalVec[1] == 0) {
+      if (normalVec[0] < 0) {
+        uPerp = -u[0];
+      } else {
+        uPerp = u[0];
       }
+    } else if (normalVec[0] == 0) {
+      if (normalVec[1] < 0) {
+        uPerp = -u[1];
+      } else {
+        uPerp = u[1];
+      }
+    } else {
+      uPerp = util::sqrt(u[0] * u[0] + u[1] * u[1]);
     }
+  } else if (normalVec[1] == 0) {
+    if (normalVec[0] == 0) {
+      if (normalVec[2] < 0) {
+        uPerp = -u[2];
+      } else {
+        uPerp = u[2];
+      }
+    } else {
+      uPerp = util::sqrt(u[0] * u[0] + u[2] * u[2]);
+    }
+  } else if (normalVec[0] == 0) {
+    uPerp = util::sqrt(u[1] * u[1] + u[2] * u[2]);
+  } else {
+    uPerp = util::sqrt(u[0] * u[0] + u[1] * u[1] + u[2] * u[2]);
   }
+
+  rho = (rho0 + uPerp * rho1) / (1. + uPerp);
+  cell.defineRho(rho);
 }
 
-template<typename T, typename DESCRIPTOR>
-void FreeEnergyConvectiveProcessor3D<T,DESCRIPTOR>::
-process(BlockLattice<T,DESCRIPTOR>& blockLattice)
-{
-  processSubDomain(blockLattice, x0, x1, y0, y1, z0, z1);
-}
-
-////////  FreeEnergyConvectiveProcessorGenerator3D ////////////////////////////////
-
-template<typename T, typename DESCRIPTOR>
-FreeEnergyConvectiveProcessorGenerator3D<T,DESCRIPTOR>::
-FreeEnergyConvectiveProcessorGenerator3D(
-  int x0_, int x1_, int y0_, int y1_, int z0_, int z1_,
-  int discreteNormalX_, int discreteNormalY_, int discreteNormalZ_)
-  : PostProcessorGenerator3D<T,DESCRIPTOR>(x0_, x1_, y0_, y1_, z0_, z1_), discreteNormalX(discreteNormalX_),
-    discreteNormalY(discreteNormalY_), discreteNormalZ(discreteNormalZ_)
-{ }
-
-template<typename T, typename DESCRIPTOR>
-PostProcessor3D<T,DESCRIPTOR>*
-FreeEnergyConvectiveProcessorGenerator3D<T,DESCRIPTOR>::generate() const
-{
-  return new FreeEnergyConvectiveProcessor3D<T,DESCRIPTOR>
-         (this->x0, this->x1, this->y0, this->y1, this->z0, this->z1,
-          discreteNormalX, discreteNormalY, discreteNormalZ);
-}
-
-template<typename T, typename DESCRIPTOR>
-PostProcessorGenerator3D<T,DESCRIPTOR>*
-FreeEnergyConvectiveProcessorGenerator3D<T,DESCRIPTOR>::clone() const
-{
-  return new FreeEnergyConvectiveProcessorGenerator3D<T,DESCRIPTOR>
-         (this->x0, this->x1, this->y0, this->y1, this->z0, this->z1,
-          discreteNormalX, discreteNormalY, discreteNormalZ);
-}
 
 }  // namespace olb
 

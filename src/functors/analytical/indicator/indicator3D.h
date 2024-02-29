@@ -34,5 +34,3 @@
 #include "smoothIndicatorBaseF3D.h"
 #include "smoothIndicatorF3D.h"
 #include "smoothIndicatorCalcF3D.h"
-
-#include "sdf.h"

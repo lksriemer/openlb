@@ -44,30 +44,23 @@ void setExtFieldBoundary(SuperLattice<T, DESCRIPTOR>& sLattice, FunctorPtr<Super
 {
   int _overlap = 1;
   OstreamManager clout(std::cout, "setExtFieldBoundary");
-  bool includeOuterCells = false;
-  if (indicator->getSuperGeometry().getOverlap() == 1) {
-    includeOuterCells = true;
-    clout << "WARNING: overlap == 1, boundary conditions set on overlap despite unknown neighbor materials" << std::endl;
-  }
   for (int iCloc = 0; iCloc < sLattice.getLoadBalancer().size(); ++iCloc) {
     setExtFieldBoundary<T,DESCRIPTOR,FIELD_A,FIELD_B>(
       sLattice.getBlock(iCloc),
-      indicator->getBlockIndicatorF(iCloc),
-      includeOuterCells);
+      indicator->getBlockIndicatorF(iCloc));
   }
   /// Adds needed Cells to the Communicator _commBC in SuperLattice
-  addPoints2CommBC(sLattice, std::forward<decltype(indicator)>(indicator), _overlap);
+  addPoints2CommBC(sLattice,std::forward<decltype(indicator)>(indicator), _overlap);
 }
 
 
 /// Set externalFieldBoundary for any indicated cells inside the block domain
 template <typename T, typename DESCRIPTOR, typename FIELD_A, typename FIELD_B>
-void setExtFieldBoundary(BlockLattice<T,DESCRIPTOR>& _block, BlockIndicatorF3D<T>& indicator,
-                         bool includeOuterCells)
+void setExtFieldBoundary(BlockLattice<T,DESCRIPTOR>& _block, BlockIndicatorF3D<T>& indicator)
 {
   OstreamManager clout(std::cout, "setExtFieldBoundary");
   const auto& blockGeometryStructure = indicator.getBlockGeometry();
-  const int margin = includeOuterCells ? 0 : 1;
+  const int margin = 1;
   std::vector<int> discreteNormal(4, 0);
   blockGeometryStructure.forSpatialLocations([&](auto iX, auto iY, auto iZ) {
     if (blockGeometryStructure.getNeighborhoodRadius({iX, iY, iZ}) >= margin

@@ -109,7 +109,7 @@ unsigned particleContactMaterial = 0;
 unsigned wallContactMaterial = 0;
 T youngsModulus = 1e6;
 T poissonRatio = 0.3;
-T dampingConstant = 0.1;
+T coefficientOfRestitution = 0.9;
 T coefficientStaticFriction = 0.6;
 T coefficientKineticFriction = 0.3;
 
@@ -313,7 +313,7 @@ int main(int argc, char* argv[])
   contactProperties.set(particleContactMaterial, wallContactMaterial,
                         evalEffectiveYoungModulus(youngsModulus, youngsModulus,
                                                   poissonRatio, poissonRatio),
-                        dampingConstant, coefficientKineticFriction, coefficientStaticFriction);
+                        coefficientOfRestitution, coefficientKineticFriction, coefficientStaticFriction);
 
 
   T epsilon = eps * converter.getConversionFactorLength();

@@ -43,3 +43,4 @@
 #include "integrationTestUtils.h"
 #include "matrix.h"
 #include "geometricOperations.h"
+#include "permeability.h"

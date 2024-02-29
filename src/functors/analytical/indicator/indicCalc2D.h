@@ -27,7 +27,6 @@
 
 #include "indicatorBaseF2D.h"
 #include "utilities/arithmetic.h"
-#include "sdf.h"
 
 namespace olb {
 

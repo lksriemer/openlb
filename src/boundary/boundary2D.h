@@ -41,7 +41,6 @@
 #include "setFreeEnergyOutletBoundary2D.h"
 #include "setRegularizedTemperatureBoundary2D.h"
 #include "setAdvectionDiffusionTemperatureBoundary2D.h"
-#include "setAdvectionDiffusionNeumannBoundary2D.h"
 #include "setRegularizedHeatFluxBoundary2D.h"
 #include "setLocalConvectionBoundary2D.h"
 #include "setInterpolatedConvectionBoundary2D.h"

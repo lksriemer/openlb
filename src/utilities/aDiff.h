@@ -40,7 +40,6 @@
 #include "core/vector.h"
 #include "core/util.h"
 
-
 struct AD { };
 
 // All OpenLB code is contained in this namespace.
@@ -419,7 +418,7 @@ inline ADf<T,DIM> pow (const ADf<T,DIM>& a, const ADf<T,DIM>& b)
     return exp(b*log(a));
   }
   else {
-    ADf<T,DIM> c(a._v, Vector<T,DIM> {std::numeric_limits<T>::quiet_NaN()});
+    ADf<T,DIM> c(std::pow(a._v, b._v), Vector<T,DIM> {std::numeric_limits<T>::quiet_NaN()});
 #ifdef AdWarnings
     std::cout << "ADf WARNING: pow(Adf) - pow evaluated at non-differentiable point" << std::endl;
 #endif

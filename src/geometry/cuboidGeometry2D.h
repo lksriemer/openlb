@@ -154,8 +154,6 @@ public:
   /// stores the neighbouring cuboids in array neighbours;
   void getNeighbourhood(int cuboid, std::vector<int>& neighbours, int offset = 0);
 
-  void refineArea(T x0, T x1, T y0, T y1, int coarse_level);
-
   /// Prints cuboid geometry details
   void print() const;
   /// Prints cuboid geometry details plus details of all cuboids

@@ -67,8 +67,10 @@ public:
   bool* getNextBlock(std::size_t& sizeBlock, const bool loadingMode);
 
   /// Loads a file and pushes the data into the serialized class. Always in parallel, i.e. one file per rank.
+  template<bool includeLogOutputDir=true>
   bool load(std::string fileName = "", const bool enforceUint=false);
   /// Save `_serializable` into file `filename`. Always in parallel, i.e. one file per rank.
+  template<bool includeLogOutputDir=true>
   bool save(std::string fileName = "", const bool enforceUint=false);
 
   /// Loads serialized class from buffer
@@ -83,6 +85,7 @@ private:
   /// Set `fileName` to `_fileName` if empty and set it to `"Serializable"` if both equal ""
   void validateFileName(std::string &fileName);
   /// Returns full file name for `_fileName`
+  template<bool includeLogOutputDir=true>
   const std::string getFullFileName(const std::string& fileName);
 };
 
@@ -174,8 +177,10 @@ public:
   virtual std::size_t getSerializableSize() const = 0;
 
   /// Save `Serializable` into file `fileName`
+  template<bool includeLogOutputDir=true>
   bool save(std::string fileName = "", const bool enforceUint=false);
   /// Load `Serializable` from file `fileName`
+  template<bool includeLogOutputDir=true>
   bool load(std::string fileName = "", const bool enforceUint=false);
 
   /// Save `Serializable` into buffer of length `getSerializableSize`

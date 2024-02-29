@@ -29,11 +29,7 @@
 #include "freeEnergyPostProcessor2D.hh"
 #include "freeSurfacePostProcessor2D.hh"
 #include "interactionPotential.hh"
-#include "guoZhaoDynamics.hh"
 #include "navierStokesAdvectionDiffusionCouplingPostProcessor2D.hh"
 #include "shanChenDynOmegaForcedPostProcessor2D.hh"
 #include "shanChenForcedSingleComponentPostProcessor2D.hh"
-#include "smagorinskyGuoZhaoDynamics.hh"
 #include "stochasticSGSdynamics.hh"
-#include "superGuoZhaoPostProcessor2D.hh"
-

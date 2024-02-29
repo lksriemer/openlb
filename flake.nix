@@ -36,7 +36,7 @@
         src = ./.;
         buildInputs = with pkgs; let
           custom-texlive = pkgs.texlive.combine {
-            inherit (pkgs.texlive) scheme-small collection-langgerman latexmk xpatch xstring siunitx biblatex logreq palatino courier mathpazo helvetic multirow elsarticle widetable makecell pgfplots spath3;
+            inherit (pkgs.texlive) scheme-small collection-langgerman latexmk xpatch xstring siunitx biblatex logreq palatino courier mathpazo helvetic multirow elsarticle widetable makecell pgfplots spath3 placeins abstract tocloft;
           };
 
         in [
@@ -207,6 +207,41 @@
         '';
       };
 
+      env-heterogeneity = pkgs.mkShell {
+        name = "openlb-heterogeneity";
+        buildInputs = common-env ++ (with pkgs; [
+          gcc11
+          cudatoolkit_11
+          (openmpi.override {
+            cudaSupport = true;
+            cudatoolkit = cudatoolkit_11;
+          })
+        ]);
+        shellHook = let
+          arch = "tigerlake"; # match target CPU as closely as possible
+        in ''
+          export CXX=mpic++
+          export CC=gcc
+
+          export PLATFORMS="CPU_SISD CPU_SIMD GPU_CUDA"
+
+          export CXXFLAGS="-O3 -Wall -march=${arch} -mtune=${arch} -std=c++17"
+
+          export PARALLEL_MODE=HYBRID
+          export OMPFLAGS="-fopenmp"
+
+          export CUDA_CXX=nvcc
+          export CUDA_CXXFLAGS="-O3 -std=c++17 --forward-unknown-to-host-compiler"
+          export CUDA_LDFLAGS="-L/run/opengl-driver/lib"
+          # try to auto-fill CUDA_ARCH for first GPU (override when in doubt)
+          export CUDA_ARCH=$(nvidia-smi --query-gpu=compute_cap --format=csv,noheader | head -n 1 | grep -o [0-9] | tr -d '\n')
+
+          export FLOATING_POINT_TYPE=float
+
+          export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/run/opengl-driver/lib
+        '';
+      };
+
       ## Bootstrap persistent conda environment for code generation (impure)
       # (to be replaced once cppyy can be consistently built using Nix's python facilities)
       env-generate-code = pkgs.stdenvNoCC.mkDerivation rec {
@@ -216,8 +251,7 @@
           export MAMBA_ROOT_PREFIX=$out/
           mkdir -p $MAMBA_ROOT_PREFIX
           ## Create environment either from yml (fixed version) or explicit spec file (fixed hashes)
-          #micromamba create --cacert-path ${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt --yes -f ${./codegen/environment.yml}
-          micromamba create --cacert-path ${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt --yes -n openlb-codegen -c conda-forge -f ${./codegen/environment.txt}
+          micromamba create --cacert-path ${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt --yes -f ${./script/codegen/environment.yml}
         '';
       };
 
@@ -229,7 +263,7 @@
           (pkgs.writeScriptBin "activate-codegen-env" ''
             #!/usr/bin/env bash
             # Enable micromamba shell without completion (preventing error)
-            eval "$(micromamba shell hook --shell=bash | head -n 115)"
+            eval "$(micromamba shell hook --shell=bash)"
             # Use pre-generated environment (unsandboxed)
             export MAMBA_ROOT_PREFIX=${self.packages.${system}.env-generate-code}
             export CLING_STANDARD_PCH=/tmp/cling-pch

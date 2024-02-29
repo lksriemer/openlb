@@ -109,6 +109,28 @@ public:
 };
 
 template <typename T, typename S, typename DESCRIPTOR>
+class DensityTestFlow3D : public AnalyticalF3D<T,S> {
+
+protected:
+  PressureTestFlow3D<T,S,DESCRIPTOR>      pressure;
+  UnitConverter<S,DESCRIPTOR> const&      converter;
+public:
+  DensityTestFlow3D(UnitConverter<S,DESCRIPTOR> const& converter_)
+   : AnalyticalF3D<T,S>(1), pressure(converter_), converter(converter_)
+  {
+    this->getName() = "DensityTestFlow3d";
+  };
+
+  bool operator()(T output[3], const S input[3])
+  {
+    pressure(output, input);
+    output[0] = converter.getPhysDensity(converter.getLatticeDensityFromPhysPressure(output[0]));
+
+    return true;
+  };
+};
+
+template <typename T, typename S, typename DESCRIPTOR>
 class StrainRateTestFlow3D : public AnalyticalF3D<T,S> {
 
 protected:

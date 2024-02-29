@@ -39,28 +39,49 @@ namespace olb {
 
 namespace opti {
 
+/**
+ * @brief Derivatives are computed with automatic differentiation
+ *
+ * @tparam S Fundamental (floating point) datatype
+ * @tparam n Number of optimized (control) parameters
+ * @tparam C Container type
+ */
 template<typename S, std::size_t n,
   template<typename> typename C = util::StdVector>
 class OptiCaseAD : public OptiCase<S,C<S>> {
 
 protected:
   using T = util::ADf<S,n>;
-  std::function<S (const C<S>&)>      _function;
-  std::function<T (const C<T>&)>      _adFunction;
+  std::function<S (const C<S>&)>      _functionHelp   { [](const C<S>&){ return S{}; } };
+  std::function<T (const C<T>&)>      _adFunctionHelp { [](const C<T>&){ return T{}; } };
+  std::function<S (const C<S>&, unsigned)>      _function;
+  std::function<T (const C<T>&, unsigned)>      _adFunction;
 
 public:
   explicit OptiCaseAD() = default;
 
   OptiCaseAD(
+    std::function<S (const C<S>&, unsigned)> function,
+    std::function<T (const C<T>&, unsigned)> adFunction,
+    std::function<void (void)> postEvaluation = [](){})
+   : OptiCase<S,C<S>>(postEvaluation), _function(function), _adFunction(adFunction)
+  { }
+
+  // If function with (only) one argument is passed, use plain wrappers
+  OptiCaseAD(
     std::function<S (const C<S>&)> function,
-    std::function<T (const C<T>&)> adFunction) :
-    _function(function), _adFunction(adFunction)
+    std::function<T (const C<T>&)> adFunction,
+    std::function<void (void)> postEvaluation = [](){})
+   : OptiCase<S,C<S>>(postEvaluation),
+     _functionHelp(function), _adFunctionHelp(adFunction),  // store original functions for memory reasons
+     _function ([&](const C<S>& arg, unsigned){ return _functionHelp(arg); }),
+     _adFunction ([&](const C<T>& arg, unsigned){ return _adFunctionHelp(arg); })
   { }
 
   S evaluateObjective(
     const C<S>& control, unsigned optiStep=0) override
   {
-    return _function(control);
+    return _function(control, optiStep);
   }
 
   void computeDerivatives(const C<S>& control,
@@ -70,7 +91,7 @@ public:
 
     auto adControl = util::iniAD<n,S,C>(control);
 
-    T adResult = _adFunction(adControl);
+    const T adResult = _adFunction(adControl, optiStep);
 
     for(std::size_t it = 0; it < control.size(); ++it){
       derivatives[it] = adResult.d(it);
@@ -86,20 +107,28 @@ template<typename S, std::size_t n, template<typename> typename SOLVER,
   template<typename> typename C = util::StdVector>
 class OptiCaseAdForSolver : public OptiCaseAD<S,n,C> {
 
-protected:
-  using typename OptiCaseAD<S,n,C>::T;
-  std::shared_ptr<SOLVER<S>>    _solver;
-  std::shared_ptr<SOLVER<T>>    _adSolver;
-
 public:
-  OptiCaseAdForSolver(XMLreader const& xml) :
-    _solver(createLbSolver<SOLVER<S>> (xml)),
-    _adSolver(createLbSolver<SOLVER<T>> (xml))
-  {
-    this->_function = getCallable<S>(_solver);
-    this->_adFunction = getCallable<T>(_adSolver);
-  }
+  using typename OptiCaseAD<S,n,C>::T;
+  std::shared_ptr<SOLVER<S>>                    _solver;
+  std::shared_ptr<SOLVER<T>>                    _adSolver;
+
+  OptiCaseAdForSolver(std::shared_ptr<SOLVER<S>> solver,
+    std::shared_ptr<SOLVER<T>> adSolver)
+   : OptiCaseAD<S,n,C>(getCallable<S>(solver), getCallable<T>(adSolver),
+       std::bind(&SOLVER<S>::postProcess, solver)),
+     _solver(solver), _adSolver(adSolver)
+  { }
+
+  OptiCaseAdForSolver(XMLreader const& xml)
+   : OptiCaseAdForSolver(
+      createLbSolver<SOLVER<S>> (xml),
+      createLbSolver<SOLVER<T>> (xml))
+  { }
 };
+
+template<typename S, typename T, template<typename> typename SOLVER>
+OptiCaseAdForSolver(std::shared_ptr<SOLVER<S>>,std::shared_ptr<SOLVER<T>>)
+  -> OptiCaseAdForSolver<S,T::dim,SOLVER,util::StdVector>;
 
 }
 

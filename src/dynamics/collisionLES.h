@@ -26,6 +26,7 @@
 #define DYNAMICS_COLLISION_LES_H
 
 #include "collision.h"
+#include "collisionModifiers.h"
 
 namespace olb {
 

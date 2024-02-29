@@ -33,18 +33,18 @@ struct ContactProperty {
   constexpr ContactProperty() = default;
 
   constexpr ContactProperty(const T _effectiveYoungsModulus,
-                            const T _dampingConstant,
+                            const T _coefficientOfRestitution,
                             const T _coefficientKineticFriction,
                             const T _coefficientStaticFriction,
                             const T _staticKineticTransitionVelocity)
       : effectiveYoungsModulus(_effectiveYoungsModulus)
-      , dampingConstant(_dampingConstant)
+      , coefficientOfRestitution(_coefficientOfRestitution)
       , coefficientOfKineticFriction(_coefficientKineticFriction)
       , coefficientOfStaticFriction(_coefficientStaticFriction)
       , staticKineticTransitionVelocity(_staticKineticTransitionVelocity) {};
 
   T effectiveYoungsModulus {};
-  T dampingConstant {};
+  T coefficientOfRestitution {};
   T coefficientOfKineticFriction {};
   T coefficientOfStaticFriction {};
   T staticKineticTransitionVelocity {};
@@ -70,7 +70,8 @@ public:
 
   /// Set contact properties
   constexpr void set(const unsigned materialA, const unsigned materialB,
-                     const T effectiveYoungsModulus, const T dampingConstant,
+                     const T effectiveYoungsModulus,
+                     const T coefficientOfRestitution,
                      const T coefficientKineticFriction,
                      const T coefficientStaticFriction,
                      const T staticKineticTransitionVelocity = T {0.01});
@@ -79,8 +80,8 @@ public:
   constexpr T getEffectiveYoungsModulus(const unsigned materialA,
                                         const unsigned materialB) const;
   /// Get damping constant
-  constexpr T getDampingConstant(const unsigned materialA,
-                                 const unsigned materialB) const;
+  constexpr T getCoefficientOfRestitution(const unsigned materialA,
+                                          const unsigned materialB) const;
   /// Get coefficient of kinetic friction
   constexpr T getKineticFrictionCoefficient(const unsigned materialA,
                                             const unsigned materialB) const;

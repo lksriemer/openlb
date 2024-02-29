@@ -51,17 +51,16 @@ BlockGeometry<T,D>::BlockGeometry(Cuboid<T,D>& cuboid, int padding, int iCglob)
     clout(std::cout, ("BlockGeometry" + std::to_string(D) + "D"))
 {
   _statistics.update(false);
-  addToStatisticsList(&_statistics.getStatisticsStatus());
 }
 
 template<typename T, unsigned D>
-BlockGeometryStatistics<T,D>& BlockGeometry<T,D>::getStatistics(bool verbose)
+const BlockGeometryStatistics<T,D>& BlockGeometry<T,D>::getStatistics() const
 {
   return _statistics;
 }
 
 template<typename T, unsigned D>
-BlockGeometryStatistics<T,D> const& BlockGeometry<T,D>::getStatistics(bool verbose) const
+BlockGeometryStatistics<T,D>& BlockGeometry<T,D>::getStatistics()
 {
   return _statistics;
 }
@@ -76,26 +75,6 @@ template<typename T, unsigned D>
 T BlockGeometry<T,D>::getDeltaR() const
 {
   return _cuboid.getDeltaR();
-}
-
-template<typename T, unsigned D>
-int& BlockGeometry<T,D>::get(LatticeR<D>latticeR)
-{
-  resetStatistics();
-  return _data[0][this->getCellId(latticeR)];
-}
-
-template<typename T, unsigned D>
-int& BlockGeometry<T,D>::get(const int latticeR[D])
-{
-  return get(latticeR);
-}
-
-template<typename T, unsigned D>
-int& BlockGeometry<T,D>::get(std::size_t iCell)
-{
-  resetStatistics();
-  return _data[0][iCell];
 }
 
 template<typename T, unsigned D>
@@ -140,6 +119,25 @@ int BlockGeometry<T,D>::getMaterial(const int latticeR[D]) const
 }
 
 template<typename T, unsigned D>
+void BlockGeometry<T,D>::set(LatticeR<D> latticeR, int material)
+{
+  set(this->getCellId(latticeR), material);
+}
+
+template<typename T, unsigned D>
+void BlockGeometry<T,D>::set(const int latticeR[D], int material)
+{
+  set(this->getCellId(latticeR), material);
+}
+
+template<typename T, unsigned D>
+void BlockGeometry<T,D>::set(std::size_t iCell, int material)
+{
+  resetStatistics();
+  _data[0][iCell] = material;
+}
+
+template<typename T, unsigned D>
 void BlockGeometry<T,D>::getPhysR(T physR[D], const int latticeR[D]) const
 {
   LatticeR<D> loc{latticeR};
@@ -155,7 +153,7 @@ void BlockGeometry<T,D>::getPhysR(T physR[D], LatticeR<D> loc) const
 }
 
 template<typename T, unsigned D>
-int const& BlockGeometry<T,D>::getIcGlob() const
+int BlockGeometry<T,D>::getIcGlob() const
 {
   return _iCglob;
 }
@@ -188,7 +186,7 @@ int counter=0;
         }
       }
       if (toClean){
-        get(latticeR) = 0;
+        set(latticeR, 0);
         counter++;
       }
     }
@@ -214,7 +212,7 @@ int BlockGeometry<T,D>::outerClean(bool verbose, std::vector<int> bulkMaterials)
         }
       }
       if(toClean){
-        get(latticeR) = 0;
+        set(latticeR, 0);
         counter++;
       }
     }
@@ -245,7 +243,7 @@ int BlockGeometry<T,D>::innerClean(bool verbose)
           if (var[(comb[i][0])] == true
               && var[(comb[i][1])] == true
               && var[(comb[i][2])] == true){
-            get(latticeR) = 1;
+            set(latticeR, 1);
             count2++;//count2 is the same value as before, count2 gets increased even if this cell has already been cleaned
           }
         }
@@ -257,7 +255,7 @@ int BlockGeometry<T,D>::innerClean(bool verbose)
           }
         }
         if(var >= 3){
-          get(latticeR) = 1;
+          set(latticeR, 1);
           count2++;//count2 differs from original count2
         }
       }
@@ -290,7 +288,7 @@ int BlockGeometry<T,D>::innerClean(int fromM, bool verbose)
           if (var[(comb[i][0])] == true
               && var[(comb[i][1])] == true
               && var[(comb[i][2])] == true){
-            get(latticeR) = 1;
+            set(latticeR, 1);
             count2++;//count2 is the same value as before, count2 gets increased even if this cell has already been cleaned
           }
         }
@@ -302,7 +300,7 @@ int BlockGeometry<T,D>::innerClean(int fromM, bool verbose)
           }
         }
         if(var >= 3){
-          get(latticeR) = 1;
+          set(latticeR, 1);
           count2++;//count2 differs from original count2
         }
       }
@@ -325,7 +323,7 @@ void BlockGeometry<T,D>::reset(IndicatorF<T,D>& domain)
     getPhysR(physR, latticeR);
     domain(&output, physR);
     if (output) {
-      get(latticeR) = 0;
+      set(latticeR, 0);
     }
   });
 }
@@ -412,7 +410,7 @@ void BlockGeometry<T,D>::rename(int fromM, int toM)
 {
   this->forCoreSpatialLocations([&](LatticeR<D> latticeR) {
     if (get(latticeR) == fromM) {
-      get(latticeR) = toM;
+      set(latticeR, toM);
     }
   });
 }
@@ -427,7 +425,7 @@ void BlockGeometry<T,D>::rename(int fromM, int toM, IndicatorF<T,D>& condition)
       bool inside[1];
       condition(inside, physR);
       if (inside[0]) {
-        get(latticeR) = toM;
+        set(latticeR, toM);
       }
     }
   });
@@ -459,7 +457,7 @@ void BlockGeometry<T,D>::rename(int fromM, int toM, LatticeR<D> offset)
         }
       }
       if (found) {
-        get(latticeR) = 1245;
+        set(latticeR, 1245); // TODO Replace this embarassing approach
       }
     }
   });
@@ -494,7 +492,7 @@ void BlockGeometry<T,D>::rename(int fromM, int toM, int testM,
         }
       }
       if (!isValid) {
-        get(latticeR) = toM;
+        set(latticeR, toM);
       }
     }
   });
@@ -518,13 +516,13 @@ void BlockGeometry<T,D>::rename(int fromM, int toM, int fluidM,
           if (getMaterial({latticeR[0]+testDirection[0],latticeR[1]+testDirection[1],latticeR[2]+testDirection[2]})!=fluidM ||
               getMaterial({latticeR[0]+2*testDirection[0],latticeR[1]+2*testDirection[1],latticeR[2]+2*testDirection[2]})!=fluidM ||
               getMaterial({latticeR[0]-testDirection[0],latticeR[1]-testDirection[1],latticeR[2]-testDirection[2]})!=0 ) {
-            get(latticeR) = fromM;
+            set(latticeR, fromM);
           }
         } else {
           if (getMaterial({latticeR[0]+testDirection[0],latticeR[1]+testDirection[1]}) != fluidM ||
               getMaterial({latticeR[0]+2*testDirection[0],latticeR[1]+2*testDirection[1]}) != fluidM ||
               getMaterial({latticeR[0]-testDirection[0],latticeR[1]-testDirection[1]}) != 0) {
-            get(latticeR) = fromM;
+            set(latticeR, fromM);
           }
         }
       }
@@ -550,13 +548,13 @@ void BlockGeometry<T,D>::rename(int fromM, int toM, int fluidM,
           if (getMaterial({latticeR[0]+testDirection[0],latticeR[1]+testDirection[1],latticeR[2]+testDirection[2]})!=fluidM ||
               getMaterial({latticeR[0]+2*testDirection[0],latticeR[1]+2*testDirection[1],latticeR[2]+2*testDirection[2]})!=fluidM ||
               getMaterial({latticeR[0]-testDirection[0],latticeR[1]-testDirection[1],latticeR[2]-testDirection[2]})!=0 ) {
-            get(latticeR) = fromM;
+            set(latticeR, fromM);
           }
         } else {
           if (getMaterial({latticeR[0]+testDirection[0],latticeR[1]+testDirection[1]})!=fluidM ||
               getMaterial({latticeR[0]+2*testDirection[0],latticeR[1]+2*testDirection[1]})!=fluidM ||
               getMaterial({latticeR[0]-testDirection[0],latticeR[1]-testDirection[1]})!=0 ) {
-            get(latticeR) = fromM;
+            set(latticeR, fromM);
           }
         }
       }
@@ -578,10 +576,10 @@ void BlockGeometry<T,D>::copyMaterialLayer(IndicatorF3D<T>& condition, int discr
             0 <= latticeR[1] + i * discreteNormal[1] && latticeR[1] + i * discreteNormal[1] < this->getNy()){
           if constexpr(D==3){
             if(0 <= latticeR[2] + i * discreteNormal[2] && latticeR[2] + i * discreteNormal[2] < this->getNz()){
-              get({latticeR[0] + i * discreteNormal[0], latticeR[1] + i * discreteNormal[1], latticeR[2] + i * discreteNormal[2]}) = get(latticeR);
+              set({latticeR[0] + i * discreteNormal[0], latticeR[1] + i * discreteNormal[1], latticeR[2] + i * discreteNormal[2]}, get(latticeR));
             }
           } else {
-            get({latticeR[0] + i * discreteNormal[0], latticeR[1] + i * discreteNormal[1]}) = get(latticeR);
+            set({latticeR[0] + i * discreteNormal[0], latticeR[1] + i * discreteNormal[1]}, get(latticeR));
           }
         }
       }
@@ -639,25 +637,13 @@ void BlockGeometry<T,D>::regionGrowing(int fromM, int toM, LatticeR<D> seed,
     std::map<std::vector<int>, int>::iterator iter;
     for (iter = tmp->begin(); iter != tmp->end(); iter++) {
       if constexpr(D==3){
-        get((iter->first)[0],(iter->first)[1],(iter->first)[2]) = toM;
+        set((iter->first)[0],(iter->first)[1],(iter->first)[2], toM);
       } else {
-        get((iter->first)[0],(iter->first)[1]) = toM;
+        set((iter->first)[0],(iter->first)[1], toM);
       }
     }
   }
   return;
-}
-
-template<typename T, unsigned D>
-void BlockGeometry<T,D>::addToStatisticsList(bool* statisticStatus)
-{
-  _statisticsUpdateNeeded.push_back(statisticStatus);
-}
-
-template<typename T, unsigned D>
-void BlockGeometry<T,D>::removeFromStatisticsList(bool* statisticStatus)
-{
-  _statisticsUpdateNeeded.remove(statisticStatus);
 }
 
 template<typename T, unsigned D>
@@ -737,9 +723,30 @@ void BlockGeometry<T,D>::printNode(std::vector<int> loc)
 template<typename T, unsigned D>
 void BlockGeometry<T,D>::resetStatistics()
 {
-  for (bool* update : _statisticsUpdateNeeded) {
-    *update = true;
-  }
+  _statistics.getStatisticsStatus() = true;
+}
+
+template<typename T, unsigned D>
+std::size_t BlockGeometry<T,D>::getNblock() const
+{
+  return _data.getNblock();
+}
+
+template<typename T, unsigned D>
+std::size_t BlockGeometry<T,D>::getSerializableSize() const
+{
+  return _data.getSerializableSize();
+}
+
+template<typename T, unsigned D>
+bool* BlockGeometry<T,D>::getBlock(std::size_t iBlock, std::size_t& sizeBlock, bool loadingMode)
+{
+  std::size_t currentBlock = 0;
+  bool* dataPtr = nullptr;
+
+  this->registerSerializableOfConstSize(iBlock, sizeBlock, currentBlock, dataPtr, _data, loadingMode);
+
+  return dataPtr;
 }
 
 } // namespace olb

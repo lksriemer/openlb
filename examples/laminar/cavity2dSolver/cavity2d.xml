@@ -3,9 +3,13 @@
     <Name>cavity2d</Name>
     <dim>2</dim>
     <OlbDir>../../</OlbDir>
-    <Discretization>
+    <PressureFilter></PressureFilter>
+    <Discretization> <!--two discretization parameters are required for unit converter-->
       <Resolution>128</Resolution>
-     <LatticeRelaxationTime>0.5384</LatticeRelaxationTime>
+      <LatticeRelaxationTime>0.5384</LatticeRelaxationTime>
+      <PhysDeltaX></PhysDeltaX>
+      <CharLatticeVelocity></CharLatticeVelocity>
+      <PhysDeltaT></PhysDeltaT>
     </Discretization>
     <PhysParameters>
       <PhysMaxTime>100</PhysMaxTime>
@@ -14,45 +18,44 @@
       <CharPhysVelocity>1</CharPhysVelocity>
       <PhysViscosity>0.001</PhysViscosity>
       <PhysDensity>1</PhysDensity>
+      <StartUpTime></StartUpTime>
       <BoundaryValueUpdateTime> 1 </BoundaryValueUpdateTime>
     </PhysParameters>
+    <Mesh>
+      <noCuboidsPerProcess> 1 </noCuboidsPerProcess>
+    </Mesh>
     <ConvergenceCheck>
       <Type>AverageEnergy</Type>
       <Interval>1</Interval>
       <Residuum>1e-3</Residuum>
     </ConvergenceCheck>
-    <Mesh>
-      <noCuboidsPerProcess> 1 </noCuboidsPerProcess>
-    </Mesh>
   </Application>
   <Output>
     <OutputDir>./tmp/</OutputDir>
     <MultiOutput>false</MultiOutput>
+    <PrintLogConverter></PrintLogConverter>
     <Log>
       <VerboseLog> true </VerboseLog>
       <Filename>cavity2d.log</Filename>
       <SaveTime>1</SaveTime>
     </Log>
     <VisualizationGnuplot>
-      <Output> true </Output>
+      <Output> intervals </Output>
       <Filename>centerVelocityX</Filename>
-      <SaveTime>0</SaveTime>
+      <SaveTime>5</SaveTime>
     </VisualizationGnuplot>
     <VisualizationImages>
-      <Output> true </Output>
+      <Output> intervals </Output>
       <Filename>cavity2d</Filename>
       <SaveTime>5</SaveTime>
     </VisualizationImages>
     <VisualizationVTK>
-      <Output> true </Output>
+      <Output> intervals </Output>
       <Filename>cavity2d</Filename>
       <SaveTime>1</SaveTime>
     </VisualizationVTK>
     <Timer>
       <PrintMode>0</PrintMode>
-      <SkipType>0</SkipType>
-      <PhysTime>1</PhysTime>
-      <PrintSummary>true</PrintSummary>
     </Timer>
   </Output>
 </Param>

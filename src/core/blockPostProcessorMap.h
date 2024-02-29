@@ -232,18 +232,13 @@ public:
   {
     _legacyPostProcessors.apply(_lattice);
 
-    if constexpr (PLATFORM == Platform::GPU_CUDA) {
-      for (auto& [_, postProcessor] : _map) {
-        postProcessor->apply(_lattice);
-      }
-      #ifdef PLATFORM_GPU_CUDA
-      gpu::cuda::device::synchronize();
-      #endif
-    } else {
-      for (auto& [_, postProcessor] : _map) {
-        postProcessor->apply(_lattice);
-      }
+    for (auto& [_, postProcessor] : _map) {
+      postProcessor->apply(_lattice);
     }
+
+    #ifdef PLATFORM_GPU_CUDA
+    gpu::cuda::device::synchronize();
+    #endif
   }
 
 };

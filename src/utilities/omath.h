@@ -37,12 +37,20 @@ namespace util {
 template <typename T, typename S>
 any_platform inline auto pow(T base, S exp) -> std::enable_if_t<std::is_arithmetic_v<T>,decltype(std::pow(base,exp))>
 {
+#ifdef  __CUDA_ARCH__
+  return ::pow(base, exp);
+#else
   return std::pow(base, exp);
+#endif
 }
 
-inline float powf(float base, float exp)
+any_platform inline float powf(float base, float exp)
 {
+#ifdef  __CUDA_ARCH__
+  return ::powf(base, exp);
+#else
   return pow(base, exp);
+#endif
 }
 
 inline long double powl(long double base, long double exp)
@@ -250,9 +258,13 @@ inline std::enable_if_t<std::is_integral_v<T>, double> log1p(T arg)
 }
 
 // Sqrt
-inline float sqrtf(float arg)
+any_platform inline float sqrtf(float arg)
 {
+#ifdef  __CUDA_ARCH__
+  return ::sqrtf(arg);
+#else
   return sqrt(arg);
+#endif
 }
 
 inline long double sqrtl(long double arg)
@@ -263,13 +275,21 @@ inline long double sqrtl(long double arg)
 template <typename T>
 inline std::enable_if_t<std::is_floating_point_v<T>, T> sqrt(T arg) any_platform
 {
+#ifdef  __CUDA_ARCH__
+  return ::sqrt(arg);
+#else
   return std::sqrt(arg);
+#endif
 }
 
 template <typename T>
 inline std::enable_if_t<std::is_integral_v<T>, double> sqrt(T arg) any_platform
 {
+#ifdef  __CUDA_ARCH__
+  return ::sqrt(arg);
+#else
   return std::sqrt(arg);
+#endif
 }
 
 // Sin
@@ -860,7 +880,31 @@ inline long long llroundl(long double arg)
 template <typename T>
 inline std::enable_if_t<std::is_arithmetic_v<T>, T> abs(T arg) any_platform
 {
+#ifdef  __CUDA_ARCH__
+  return ::fabs(arg);
+#else
   return std::abs(arg);
+#endif
+}
+
+template <typename T>
+inline std::enable_if_t<std::is_floating_point_v<T>, T> fabs(T arg) any_platform
+{
+#ifdef  __CUDA_ARCH__
+  return ::fabs(arg);
+#else
+  return std::fabs(arg);
+#endif
+}
+
+template <typename T>
+inline std::enable_if_t<std::is_integral_v<T>, double> fabs(T arg) any_platform
+{
+#ifdef  __CUDA_ARCH__
+  return ::fabs(arg);
+#else
+  return std::fabs(arg);
+#endif
 }
 
 inline long labs(long arg)
@@ -886,18 +930,6 @@ inline long double fabs(long double arg)
 inline long double fabsl(long double arg)
 {
   return fabs(arg);
-}
-
-template <typename T>
-inline std::enable_if_t<std::is_floating_point_v<T>, T> fabs(T arg) any_platform
-{
-  return std::fabs(arg);
-}
-
-template <typename T>
-inline std::enable_if_t<std::is_integral_v<T>, double> fabs(T arg) any_platform
-{
-  return std::fabs(arg);
 }
 
 } // namespace util

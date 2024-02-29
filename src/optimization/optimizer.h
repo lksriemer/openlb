@@ -142,6 +142,7 @@ public:
   }
 
   void computeDerivatives(const C& control, C& derivatives) {
+
     _optiCase->computeDerivatives(control, derivatives, _it);
   }
 

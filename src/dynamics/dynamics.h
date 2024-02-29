@@ -39,6 +39,8 @@
 #include "equilibrium.h"
 #include "forcing.h"
 
+#include "collisionModifiers.h"
+
 namespace olb {
 
 /// Dynamics for "dead cells" doing nothing
@@ -99,6 +101,16 @@ using ForcedBGKdynamics = dynamics::Tuple<
   equilibria::SecondOrder,
   collision::BGK,
   forcing::Guo<momenta::Forced>
+>;
+
+// BGK collision step with external force (Guo) for multiple component lattices
+template <typename T, typename DESCRIPTOR, typename MOMENTA=momenta::ExternalVelocityTuple>
+using MultiComponentForcedBGKdynamics = dynamics::Tuple<
+  T, DESCRIPTOR,
+  MOMENTA,
+  equilibria::SecondOrder,
+  collision::BGK,
+  forcing::MCGuo<momenta::Identity>
 >;
 
 /// BGK collision step with external force (Kupershtokh)

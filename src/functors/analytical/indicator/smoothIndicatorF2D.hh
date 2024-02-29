@@ -539,6 +539,131 @@ bool SmoothIndicatorHTCircle2D<T,S,PARTICLE>::operator()(T output[], const S inp
   return true;
 }
 
+//Factored-Indicator for circular boundary layer:
+template <typename T, typename S, bool PARTICLE>
+SmoothIndicatorFactoredCircle2D<T,S,PARTICLE>::SmoothIndicatorFactoredCircle2D(Vector<S,2> center, S radius, S epsilon, S density, Vector<S,2> vel, S omega, S factor)
+  : _radius(radius), _factor(factor)
+{
+  this->_epsilon = epsilon;
+  if constexpr (!PARTICLE) {
+    this->_pos = center;
+  }
+
+  this->_circumRadius = radius + 0.5*epsilon;
+  if constexpr (!PARTICLE) {
+    this->_myMin = {center[0] - this->getCircumRadius(), center[1] - this->getCircumRadius()};
+    this->_myMax = {center[0] + this->getCircumRadius(), center[1] + this->getCircumRadius()};
+    this->init();
+  }
+}
+
+template <typename T, typename S, bool PARTICLE>
+Vector<S,2> SmoothIndicatorFactoredCircle2D<T, S, PARTICLE>::calcMofiAndMass( const S density )
+{
+  T mass = M_PI*_radius*_radius*density;
+  T mofi = 0.5 * mass * _radius * _radius;
+  return Vector<S,2>(mofi, mass);
+}
+
+// returns true if x is inside the sphere
+template <typename T, typename S, bool PARTICLE>
+bool SmoothIndicatorFactoredCircle2D<T,S,PARTICLE>::operator()(T output[], const S input[])
+{
+  double distToCenter2 = util::pow(this->getPos()[0]-input[0], 2) +
+                         util::pow(this->getPos()[1]-input[1], 2);
+  /*double d = util::sqrt(distToCenter2) - this->_radius + this->getEpsilon()/2;
+
+  if(d <= 0){
+    output[0] = T(this->_factor);
+    return true;
+  }
+  else if(d > 0 && d <= this->getEpsilon()){
+    output[0] = T(- this->_factor*(d-this->getEpsilon())/this->getEpsilon());
+    return true;
+  }
+  else{
+    output[0] = 0;
+    return false;
+  }*/
+
+  double d = util::sqrt(distToCenter2) - this->_radius;
+  output[0] = T(this->_factor*(1.-tanh(d/this->getEpsilon()))/2.);
+  return true;
+}
+
+//Factored-Indicator for flat boundary layer:
+template <typename T, typename S, bool PARTICLE>
+SmoothIndicatorFactoredCuboid2D<T,S,PARTICLE>::SmoothIndicatorFactoredCuboid2D(Vector<S,2> center, S xLength, S yLength, S epsilon, S density, Vector<S,2> vel, S omega, S factor)
+  : _xLength(xLength), _yLength(yLength), _factor(factor)
+{
+  this->_epsilon = epsilon;
+  if constexpr (!PARTICLE) {
+    this->_pos = center;
+  }
+
+  this->_circumRadius = .5*(util::sqrt(util::pow( xLength, 2)+util::pow( yLength, 2))) + 0.5*epsilon;
+  if constexpr (!PARTICLE) {
+    this->_myMin = {
+      this->_pos[0] - this->getCircumRadius(),
+      this->_pos[1] - this->getCircumRadius()
+    };
+    this->_myMax = {
+      this->_pos[0] + this->getCircumRadius(),
+      this->_pos[1] + this->getCircumRadius()
+    };
+    this->init();
+  }
+}
+
+template <typename T, typename S, bool PARTICLE>
+Vector<S,2> SmoothIndicatorFactoredCuboid2D<T, S, PARTICLE>::calcMofiAndMass( const S density )
+{
+  T mass = _xLength*_yLength*density;
+  T mofi = 1./12.*mass*(_xLength*_xLength+_yLength*_yLength);
+  return Vector<S,2>(mofi, mass);
+}
+
+// returns true if x is inside the sphere
+template <typename T, typename S, bool PARTICLE>
+bool SmoothIndicatorFactoredCuboid2D<T,S,PARTICLE>::operator()(T output[], const S input[])
+{
+  T d;
+  if(_xLength == 0){
+    T distToCenter2 = util::pow(this->getPos()[1]-input[1], 2);
+    d = util::sqrt(distToCenter2) - this->_yLength/2. /*+ this->getEpsilon()/2*/;
+  }
+  else if(_yLength == 0){
+    T distToCenter2 = util::pow(this->getPos()[0]-input[0], 2);
+    d = util::sqrt(distToCenter2) - this->_xLength/2. + this->getEpsilon()/2;
+  }
+  else{
+    T distToCenter2x = util::pow(this->getPos()[0]-input[0], 2);
+    T distToCenter2y = util::pow(this->getPos()[1]-input[1], 2);
+    T ratio = util::sqrt(distToCenter2y)/util::sqrt(distToCenter2x);
+    if(ratio >= _yLength/_xLength){
+      d = util::sqrt(distToCenter2y) - this->_yLength/2. + this->getEpsilon()/2;
+    }
+    else{
+      d = util::sqrt(distToCenter2x) - this->_xLength/2. + this->getEpsilon()/2;
+    }
+  }
+
+  /*if(d <= 0){
+    output[0] = T(this->_factor);
+    return true;
+  }
+  else if(d > 0 && d <= this->getEpsilon()){
+    output[0] = T(- this->_factor*(d-this->getEpsilon())/this->getEpsilon());
+    return true;
+  }
+  else{
+    output[0] = 0;
+    return false;
+  }*/
+  output[0] = T(this->_factor*(1.-tanh(d/this->getEpsilon()))/2.);
+  return true;
+}
+
 
 } // namespace olb
 

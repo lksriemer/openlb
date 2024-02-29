@@ -49,7 +49,7 @@ namespace creators {
 //// SPHERE 3D
 
 /// Set resolved sphere for existing particle but new surface
-template<typename T, typename PARTICLETYPE>
+template<typename T, typename PARTICLETYPE, bool IGNORE_WARNINGS=false>
 void setResolvedSphere3D(
   ParticleSystem<T,PARTICLETYPE>& particleSystem,
   std::size_t idxParticle,
@@ -70,7 +70,8 @@ void setResolvedSphere3D(
   vectorOfIndicators.push_back( std::move(sIndicatorPtr) );
 
   // Safety mechanism for wrong particle type - It is better not to use rotation matrix!
-  if constexpr ( PARTICLETYPE::template providesNested<SURFACE,ROT_MATRIX>() ) {
+  if constexpr ( PARTICLETYPE::template providesNested<SURFACE,ROT_MATRIX>()
+                 && !IGNORE_WARNINGS ) {
     OstreamManager clout(std::cout, "creatorSphere3D");
     clout << "WARNING: A rotation matrix is provided but is not necessary for a sphere." << std::endl;
   }
@@ -81,7 +82,7 @@ void setResolvedSphere3D(
 }
 
 /// Add resolved sphere as new particle with new surface
-template<typename T, typename PARTICLETYPE>
+template<typename T, typename PARTICLETYPE, bool IGNORE_WARNINGS=false>
 void addResolvedSphere3D( ParticleSystem<T,PARTICLETYPE>& particleSystem,
                           const Vector<T,3>& position, T radius, T epsilon, T density=0.,
                           const Vector<T,3>& velocity = Vector<T,3> (0.))
@@ -93,7 +94,8 @@ void addResolvedSphere3D( ParticleSystem<T,PARTICLETYPE>& particleSystem,
   particleSystem.extend();
 
   /// Set resolved sphere 3D at given index
-  setResolvedSphere3D( particleSystem, idxParticle, position, radius, epsilon, density, velocity );
+  setResolvedSphere3D<T,PARTICLETYPE,IGNORE_WARNINGS>(
+      particleSystem, idxParticle, position, radius, epsilon, density, velocity );
 }
 
 

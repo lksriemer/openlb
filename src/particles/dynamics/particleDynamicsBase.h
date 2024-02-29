@@ -85,6 +85,17 @@ public:
   void process (Particle<T,PARTICLETYPE>& particle, T timeStepSize) override;
 };
 
+template<typename T, typename PARTICLETYPE, typename PCONDITION=conditions::active_particles>
+class VerletParticleDynamicsRotor : public ParticleDynamics<T,PARTICLETYPE> {
+public:
+  /// Constructor
+  VerletParticleDynamicsRotor( Vector<T,PARTICLETYPE::d> angVel );
+  /// Procesisng step
+  void process (Particle<T,PARTICLETYPE>& particle, T timeStepSize) override;
+private:
+  Vector<T,PARTICLETYPE::d> _angVel;
+};
+
 /// Standard dynamics with wall reflection
 template<typename T, typename PARTICLETYPE, bool useCubicBounds=false,
          typename PCONDITION=conditions::active_particles>
@@ -122,11 +133,11 @@ class VerletParticleDynamicsMaterialCapture
 public:
   /// Constructor
   VerletParticleDynamicsMaterialCapture(
-    SuperIndicatorMaterial<T,PARTICLETYPE::d>& materialIndicator );
+    std::shared_ptr<SuperIndicatorMaterial<T,PARTICLETYPE::d>> );
   /// Procesisng step
   void process (Particle<T,PARTICLETYPE>& particle, T timeStepSize) override;
 private:
-  SuperIndicatorMaterial<T,PARTICLETYPE::d>& _materialIndicator;
+  std::shared_ptr<SuperIndicatorMaterial<T,PARTICLETYPE::d>> _materialIndicator;
 };
 
 /// Standard dynamics with wall capture and material number checks
@@ -138,12 +149,98 @@ class VerletParticleDynamicsMaterialAwareWallCapture
 public:
   /// Constructor
   VerletParticleDynamicsMaterialAwareWallCapture( SolidBoundary<T,PARTICLETYPE::d>& solidBoundary,
-    SuperIndicatorMaterial<T,PARTICLETYPE::d>& materialIndicator );
+    std::shared_ptr<SuperIndicatorMaterial<T,PARTICLETYPE::d>> );
   /// Procesisng step
   void process (Particle<T,PARTICLETYPE>& particle, T timeStepSize) override;
 private:
   SolidBoundary<T,PARTICLETYPE::d>& _solidBoundary;
-  SuperIndicatorMaterial<T,PARTICLETYPE::d>& _materialIndicator;
+  std::shared_ptr<SuperIndicatorMaterial<T,PARTICLETYPE::d>> _materialIndicator;
+};
+
+
+/// Standard dynamics with escape
+template<typename T, typename PARTICLETYPE, bool useCubicBounds=false,
+         typename PCONDITION=conditions::active_particles>
+class VerletParticleDynamicsEscape
+  : public VerletParticleDynamics<T,PARTICLETYPE,PCONDITION> {
+public:
+  /// Constructor
+  VerletParticleDynamicsEscape ( SolidBoundary<T,PARTICLETYPE::d>& solidBoundary );
+  /// Procesisng step
+  void process (Particle<T,PARTICLETYPE>& particle, T timeStepSize) override;
+private:
+  SolidBoundary<T,PARTICLETYPE::d>& _solidBoundary;
+};
+
+/// Standard dynamics with material capture
+/// - implies necessity of SuperGeometry, so no DEM only possible
+template<typename T, typename PARTICLETYPE,
+         typename PCONDITION=conditions::active_particles>
+class VerletParticleDynamicsMaterialEscape
+  : public VerletParticleDynamics<T,PARTICLETYPE,PCONDITION> {
+public:
+  /// Constructor
+  VerletParticleDynamicsMaterialEscape(
+    std::shared_ptr<SuperIndicatorMaterial<T,PARTICLETYPE::d>> materialIndicator );
+  /// Procesisng step
+  void process (Particle<T,PARTICLETYPE>& particle, T timeStepSize) override;
+private:
+  std::shared_ptr<SuperIndicatorMaterial<T,PARTICLETYPE::d>> _materialIndicator;
+};
+
+/// Standard dynamics with wall capture and material number checks
+/// - implies necessity of SuperGeometry, so no DEM only possible
+template<typename T, typename PARTICLETYPE,
+         typename PCONDITION=conditions::active_particles>
+class VerletParticleDynamicsMaterialAwareEscape
+  : public VerletParticleDynamics<T,PARTICLETYPE,PCONDITION> {
+public:
+  /// Constructor
+  VerletParticleDynamicsMaterialAwareEscape( SolidBoundary<T,PARTICLETYPE::d>& solidBoundary,
+    std::shared_ptr<SuperIndicatorMaterial<T,PARTICLETYPE::d>> materialIndicator );
+  /// Procesisng step
+  void process (Particle<T,PARTICLETYPE>& particle, T timeStepSize) override;
+private:
+  SolidBoundary<T,PARTICLETYPE::d>& _solidBoundary;
+  std::shared_ptr<SuperIndicatorMaterial<T,PARTICLETYPE::d>> _materialIndicator;
+};
+
+
+/// Standard dynamics with material capture and escape
+/// - implies necessity of SuperGeometry, so no DEM only possible
+template<typename T, typename PARTICLETYPE,
+         typename PCONDITION=conditions::active_particles>
+class VerletParticleDynamicsMaterialCaptureAndEscape
+  : public VerletParticleDynamics<T,PARTICLETYPE,PCONDITION> {
+public:
+  /// Constructor
+  VerletParticleDynamicsMaterialCaptureAndEscape(
+    std::shared_ptr<SuperIndicatorMaterial<T,PARTICLETYPE::d>> captureMaterialIndicator,
+    std::shared_ptr<SuperIndicatorMaterial<T,PARTICLETYPE::d>> escapeMaterialIndicator );
+  /// Procesisng step
+  void process (Particle<T,PARTICLETYPE>& particle, T timeStepSize) override;
+private:
+  std::shared_ptr<SuperIndicatorMaterial<T,PARTICLETYPE::d>> _captureMaterialIndicator;
+  std::shared_ptr<SuperIndicatorMaterial<T,PARTICLETYPE::d>> _escapeMaterialIndicator;
+};
+
+/// Standard dynamics with wall capture nd escape and material number checks
+/// - implies necessity of SuperGeometry, so no DEM only possible
+template<typename T, typename PARTICLETYPE,
+         typename PCONDITION=conditions::active_particles>
+class VerletParticleDynamicsMaterialAwareWallCaptureAndEscape
+  : public VerletParticleDynamics<T,PARTICLETYPE,PCONDITION> {
+public:
+  /// Constructor
+  VerletParticleDynamicsMaterialAwareWallCaptureAndEscape( SolidBoundary<T,PARTICLETYPE::d>& solidBoundary,
+    std::shared_ptr<SuperIndicatorMaterial<T,PARTICLETYPE::d>> captureMaterialIndicator,
+    std::shared_ptr<SuperIndicatorMaterial<T,PARTICLETYPE::d>> escapeMaterialIndicator );
+  /// Procesisng step
+  void process (Particle<T,PARTICLETYPE>& particle, T timeStepSize) override;
+private:
+  SolidBoundary<T,PARTICLETYPE::d>& _solidBoundary;
+  std::shared_ptr<SuperIndicatorMaterial<T,PARTICLETYPE::d>> _captureMaterialIndicator;
+  std::shared_ptr<SuperIndicatorMaterial<T,PARTICLETYPE::d>> _escapeMaterialIndicator;
 };
 
 

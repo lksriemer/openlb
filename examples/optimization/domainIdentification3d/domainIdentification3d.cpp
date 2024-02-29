@@ -48,8 +48,8 @@ template <typename T, SolverMode MODE>
 struct TestDomainOptiParameters
  : public parameters::DistributedOptiSimulation<T,Lattices,MODE>
 {
-  std::shared_ptr<IndicatorF3D<T>> designDomain;
-  std::shared_ptr<IndicatorF3D<T>> objectiveDomain;
+  std::shared_ptr<IndicatorF3D<T>>      designDomain;
+  std::shared_ptr<IndicatorF3D<T>>      objectiveDomain;
 };
 
 /// Enable reading the parameters in DistributedOptiSimulation from xml
@@ -119,7 +119,12 @@ public:
 
   DomainIdSolver(utilities::TypeIndexedSharedPtrTuple<Parameters<T,MODE>> params)
    : DomainIdSolver::AdjointLbSolverBase(params)
-  { }
+  {
+    const std::string name = (MODE == SolverMode::Reference) ? "Reference_Solution"
+      : ((MODE == SolverMode::Primal) ? "Flow_Simulations"
+      : "Dual_Simulations");
+    this->parameters(VisualizationVTK()).filename = name;
+  }
 
 protected:
   /// Set up a cubic geometry and mark the design domain inside
@@ -176,6 +181,13 @@ protected:
 
     // Indicators for material 6 (designDomain)
     this->geometry().rename(1, 6, this->parameters(Opti()).designDomain);
+
+    if constexpr (MODE == SolverMode::Reference) {
+      const unsigned nSimulation = this->geometry().getStatistics().getNvoxel();
+      clout << "Number of fluid voxels in simulation domain: " << nSimulation << std::endl;
+      const unsigned nDesign = this->geometry().getStatistics().getNvoxel(6);
+      clout << "Number of voxels in design domain: " << nDesign << std::endl;
+    }
   }
 
   void prepareLattices() override
@@ -272,23 +284,18 @@ protected:
     }
   }
 
-  void writeVTK(std::size_t iT) const override
+  void prepareVTK() const override
   {
     if constexpr (MODE == SolverMode::Reference) {
+      DomainIdSolver::LbSolver::prepareVTK();
+    }
+  }
+
+  void writeVTK(std::size_t iT) const override
+  {
+    SuperVTMwriter3D<T> writer(this->parameters(VisualizationVTK()).filename);
+    if constexpr (MODE == SolverMode::Reference) {
       // ARTIFICIAL DATA: write solution (unsteady, until convergence in time is obtained)
-      SuperVTMwriter3D<T> writer("Reference_Solution");
-
-      if (iT == 0) {
-        // Writes the geometry, cuboid no. and rank no. as vti file for visualization
-        SuperLatticeGeometry3D<T,descriptor> geometry(this->lattice(NavierStokes()), this->geometry());
-        SuperLatticeCuboid3D<T,descriptor> cuboid(this->lattice(NavierStokes()));
-        SuperLatticeRank3D<T,descriptor> rank(this->lattice(NavierStokes()));
-
-        writer.write(cuboid);
-        writer.write(geometry);
-        writer.write(rank);
-        writer.createMasterFile();
-      }
 
       SuperLatticeGeometry3D<T,descriptor> geometry(this->lattice(NavierStokes()), this->geometry());
       SuperLatticePhysVelocity3D<T,descriptor> velocity(this->lattice(NavierStokes()), this->converter());
@@ -299,28 +306,6 @@ protected:
       writer.addFunctor(velocity);
       writer.addFunctor(pressure);
       writer.write(iT);
-    }
-
-    else if constexpr (MODE == SolverMode::Primal) {
-      // OPTIMISATION: Write stationary flow field
-      if (this->_finishedTimeLoop) {
-        SuperVTMwriter3D<T> writer("Flow_Simulations");
-
-        if (this->parameters(OutputOpti()).counterOptiStep == 0) {
-          writer.createMasterFile();
-        }
-
-        SuperLatticeGeometry3D<T,descriptor> geometry(this->lattice(NavierStokes()), this->geometry());
-        SuperLatticePhysVelocity3D<T,descriptor> velocity(this->lattice(NavierStokes()), this->converter());
-        SuperLatticePhysPressure3D<T,descriptor> pressure(this->lattice(NavierStokes()), this->converter());
-        SuperLatticePorosity3D<T,descriptor> porosity(this->lattice(NavierStokes()));
-        writer.addFunctor(porosity);
-        writer.addFunctor(geometry);
-        writer.addFunctor(velocity);
-        writer.addFunctor(pressure);
-
-        writer.write(this->parameters(OutputOpti()).counterOptiStep);
-      }
     }
   }
 
@@ -379,6 +364,33 @@ protected:
       this->parameters(Results()).djdalpha = std::make_shared<SuperLatticeFfromAnalyticalF3D<T,descriptor>> (zero, lattice);
     }
   }
+
+public:
+  /// Optimization: write stationary flow field once after each simulation
+  // This method is called by the optimizer once at each successful optimization step
+  // (only for the primal simulation)
+  void postProcess() override
+  {
+    if constexpr (MODE == SolverMode::Primal) {
+      if (this->parameters(names::VisualizationVTK()).output != "off") {
+        if (this->parameters(OutputOpti()).counterOptiStep == 0) {
+          DomainIdSolver::LbSolver::prepareVTK();
+        }
+
+        SuperVTMwriter3D<T> writer(this->parameters(VisualizationVTK()).filename);
+        SuperLatticeGeometry3D<T,descriptor> geometry(this->lattice(NavierStokes()), this->geometry());
+        SuperLatticePhysVelocity3D<T,descriptor> velocity(this->lattice(NavierStokes()), this->converter());
+        SuperLatticePhysPressure3D<T,descriptor> pressure(this->lattice(NavierStokes()), this->converter());
+        SuperLatticePorosity3D<T,descriptor> porosity(this->lattice(NavierStokes()));
+        writer.addFunctor(porosity);
+        writer.addFunctor(geometry);
+        writer.addFunctor(velocity);
+        writer.addFunctor(pressure);
+
+        writer.write(this->parameters(OutputOpti()).counterOptiStep);
+      }
+    }
+  }
 };
 
 
@@ -396,7 +408,8 @@ int main(int argc, char **argv)
 
   T startValue;
   config.readOrWarn<T>("Optimization", "StartValue", "", startValue);
-  optimizer->setStartValue(optiCase.getInitialControl(startValue));
+  startValue = projection::getInitialControl(startValue, optiCase);
+  optimizer->setStartValue(startValue);
 
   optimizer->optimize(optiCase);
 }

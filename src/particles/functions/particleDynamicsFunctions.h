@@ -327,7 +327,7 @@ void coupleResolvedParticlesToLattice(
   F getSetupPeriodicity = defaults::periodicity<DESCRIPTOR::d>)
 {
   std::vector<SolidBoundary<T,DESCRIPTOR::d>> solidBoundaries = std::vector<SolidBoundary<T,DESCRIPTOR::d>>();
-  coupleResolvedParticlesToLattice(sParticleSystem, contactContainer, sGeometry, sLattice, converter, getSetupPeriodicity);
+  coupleResolvedParticlesToLattice(sParticleSystem, contactContainer, sGeometry, sLattice, converter, solidBoundaries, getSetupPeriodicity);
 }
 
 

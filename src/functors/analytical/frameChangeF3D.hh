@@ -184,7 +184,7 @@ CirclePowerLaw3D<T>::CirclePowerLaw3D(T center0, T center1, T center2, T normal0
 }
 
 template <typename T>
-CirclePowerLaw3D<T>::CirclePowerLaw3D(SuperGeometry<T,3>& superGeometry,
+CirclePowerLaw3D<T>::CirclePowerLaw3D(const SuperGeometry<T,3>& superGeometry,
                                       int material, T maxVelocity, T n, T distance2Wall, T scale)
   : AnalyticalF3D<T,T>(3), _maxVelocity(maxVelocity), _n(n), _scale(scale)
 {

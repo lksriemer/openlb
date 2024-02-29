@@ -24,7 +24,7 @@
 /** \file
  * Groups all the generic 3D template files in the boundaryConditions directory.
  */
-#include "advectionDiffusionBoundaryPostProcessor3D.hh"
+#include "boundary/postprocessor/advectionDiffusionBoundaryPostProcessor3D.hh"
 #include "boundaryPostProcessors3D.hh"
 #include "extendedFiniteDifferenceBoundary3D.hh"
 #include "inamuroAnalyticalDynamics.hh"
@@ -39,9 +39,8 @@
 #include "setPartialSlipBoundary3D.hh"
 #include "setLocalConvectionBoundary3D.hh"
 #include "setInterpolatedConvectionBoundary3D.hh"
-#include "setAdvectionDiffusionConvectionBoundary3D.hh"
 #include "setAdvectionDiffusionTemperatureBoundary3D.hh"
-#include "setAdvectionDiffusionZeroGradientBoundary3D.hh"
+#include "setZeroGradientBoundary3D.hh"
 #include "setExtFieldBoundary3D.hh"
 #include "setZeroDistributionBoundary3D.hh"
 #include "setWallFunctionBoundary3D.hh"
@@ -58,3 +57,4 @@
 #include "setRtlbmDiffuseConstTemperatureBoundary3D.hh"
 #include "setRtlbmDirectedTemperatureBoundary3D.hh"
 #include "setNewSlipBoundary3D.hh"
+#include "setRobinBoundary3D.hh"

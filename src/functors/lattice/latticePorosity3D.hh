@@ -65,14 +65,8 @@ BlockLatticePorosity3D<T, DESCRIPTOR>::BlockLatticePorosity3D(BlockLattice<T, DE
 template<typename T, typename DESCRIPTOR>
 bool BlockLatticePorosity3D<T, DESCRIPTOR>::operator()(T output[], const int input[])
 {
-#ifndef excludeDualDynamics
   this->_blockLattice.get(input[0], input[1], input[2]).template computeField<descriptors::POROSITY>(
     output);
-#else
-  this->_blockLattice.get(input[0], input[1], input[2]).template computeField<descriptors::POROSITY>(
-    output);
-
-#endif
   return true;
 }
 

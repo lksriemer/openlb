@@ -7,15 +7,15 @@ methods adressing a vast range of tansport problems.
 
 The only mandatory external dependency of OpenLB is GNU Make and a C++ compiler
 with C++17 support. This includes all reasonably recent versions of GCC, Clang
-and Intel C++.
+and ICC.
 
-GPU support depends on Nvidia CUDA 11 or later.
+GPU support depends on Nvidia CUDA 11.4 or later.
 
 ## Installation
 
 1. Adjust the `config.mk` file to fit your local compiler environment
    (examples for some common configurations are available in `config/`
-2. Build the embedded dependencies and core library using `make`
+2. Build the embedded dependencies using `make`
 3. Switch to any of the examples and compile it using `make`
 
 ## Documentation

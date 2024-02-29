@@ -288,6 +288,33 @@ struct Forced {
 };
 
 template <typename MOMENTA>
+struct GuoZhaoForced {
+  template <typename DESCRIPTOR>
+  using type = ConcreteTuple<
+    DESCRIPTOR,
+    typename MOMENTA::template type<DESCRIPTOR>::density,
+    GuoZhaoForcedMomentum<typename MOMENTA::template type<DESCRIPTOR>::momentum>,
+    typename MOMENTA::template type<DESCRIPTOR>::stress,
+    typename MOMENTA::template type<DESCRIPTOR>::definition
+  >;
+};
+
+template <typename MOMENTA>
+struct GuoZhaoForcedWithStress {
+  template <typename DESCRIPTOR>
+  using type = ConcreteTuple<
+    DESCRIPTOR,
+    typename MOMENTA::template type<DESCRIPTOR>::density,
+    GuoZhaoForcedMomentum<typename MOMENTA::template type<DESCRIPTOR>::momentum>,
+    GuoZhaoForcedStress<typename MOMENTA::template type<DESCRIPTOR>::stress>,
+    typename MOMENTA::template type<DESCRIPTOR>::definition
+  >;
+};
+
+template <typename MOMENTA>
+using Identity = MOMENTA;
+
+template <typename MOMENTA>
 struct ForcedWithStress {
   template <typename DESCRIPTOR>
   using type = ConcreteTuple<

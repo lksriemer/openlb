@@ -203,7 +203,7 @@ void prepareLattice( ThermalUnitConverter<T, NSDESCRIPTOR, TDESCRIPTOR> const& c
   setBounceBackBoundary(NSlattice, superGeometry, 4);
 
   /// sets boundary
-  setAdvectionDiffusionTemperatureBoundary<T, TDESCRIPTOR>(ADlattice, Tomega, superGeometry.getMaterialIndicator({2, 3}));
+  setAdvectionDiffusionTemperatureBoundary<T, TDESCRIPTOR>(ADlattice, superGeometry.getMaterialIndicator({2, 3}));
   setLocalVelocityBoundary<T,NSDESCRIPTOR>(NSlattice, omega, superGeometry.getMaterialIndicator({2, 3}));
 
   /// define initial conditions

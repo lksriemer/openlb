@@ -26,7 +26,6 @@
  */
 #include "utilities/aDiff.h"
 #include "adjointLbSolver.h"
-#include "controlledFunctions3D.h"
 #include "dualDynamics.h"
 #include "dualFunctors3D.h"
 #include "dualMrtDynamics.h"
@@ -39,5 +38,6 @@
 #include "optimizerLBFGS.h"
 #include "optimizerSteepestDecent.h"
 #include "optiSolverParameters.h"
+#include "projection.h"
 #include "dualLatticeDescriptors.h"
-#include "sequentialInterpolationF3D.h"
+#include "serialization.h"

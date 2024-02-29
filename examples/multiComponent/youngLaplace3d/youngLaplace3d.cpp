@@ -124,40 +124,6 @@ void prepareLattice( SuperLattice<T, DESCRIPTOR>& sLattice1,
   clout << "Prepare Lattice ... OK" << std::endl;
 }
 
-
-void prepareCoupling(SuperLattice<T, DESCRIPTOR>& sLattice1,
-                     SuperLattice<T, DESCRIPTOR>& sLattice2)
-{
-
-  OstreamManager clout( std::cout,"prepareCoupling" );
-  clout << "Add lattice coupling" << std::endl;
-
-  // Add the lattice couplings
-  // The chemical potential coupling must come before the force coupling
-  FreeEnergyChemicalPotentialGenerator3D<T, DESCRIPTOR> coupling1(
-    alpha, kappa1, kappa2);
-  FreeEnergyForceGenerator3D<T, DESCRIPTOR> coupling2;
-
-  sLattice1.addLatticeCoupling( coupling1, sLattice2 );
-  sLattice2.addLatticeCoupling( coupling2, sLattice1 );
-
-  {
-    auto& communicator = sLattice1.getCommunicator(stage::PostCoupling());
-    communicator.requestField<CHEM_POTENTIAL>();
-    communicator.requestOverlap(sLattice1.getOverlap());
-    communicator.exchangeRequests();
-  }
-  {
-    auto& communicator = sLattice2.getCommunicator(stage::PreCoupling());
-    communicator.requestField<CHEM_POTENTIAL>();
-    communicator.requestOverlap(sLattice2.getOverlap());
-    communicator.exchangeRequests();
-  }
-
-  clout << "Add lattice coupling ... OK!" << std::endl;
-}
-
-
 void getResults( SuperLattice<T, DESCRIPTOR>& sLattice2,
                  SuperLattice<T, DESCRIPTOR>& sLattice1, int iT,
                  SuperGeometry<T,3>& superGeometry, util::Timer<T>& timer,
@@ -189,6 +155,7 @@ void getResults( SuperLattice<T, DESCRIPTOR>& sLattice2,
 
   // Writes the VTK files
   if ( iT%vtkIter==0 ) {
+    sLattice1.setProcessingContext(ProcessingContext::Evaluation);
     AnalyticalConst3D<T,T> half_( 0.5 );
     SuperLatticeFfromAnalyticalF3D<T, DESCRIPTOR> half(half_, sLattice1);
 
@@ -297,7 +264,42 @@ int main( int argc, char *argv[] )
 
   prepareLattice( sLattice1, sLattice2, converter, superGeometry );
 
-  prepareCoupling( sLattice1, sLattice2);
+  // Add the lattice couplings
+  clout << "Add lattice coupling" << std::endl;
+  // The chemical potential coupling must come before the force coupling
+  SuperLatticeCoupling coupling1(
+  ChemicalPotentialCoupling3D{},
+  names::A{}, sLattice1,
+  names::B{}, sLattice2);
+
+  coupling1.template setParameter<ChemicalPotentialCoupling3D::ALPHA>(alpha);
+  coupling1.template setParameter<ChemicalPotentialCoupling3D::KAPPA1>(kappa1);
+  coupling1.template setParameter<ChemicalPotentialCoupling3D::KAPPA2>(kappa2);
+  //coupling1.template setParameter<FreeEnergyChemicalPotentialCoupling3DM::KAPPA3>(kappa3);
+
+  SuperLatticeCoupling coupling2(
+  ForceCoupling3D{},
+  names::A{}, sLattice2,
+  names::B{}, sLattice1);
+
+  {
+    auto& communicator = sLattice1.getCommunicator(stage::PostCoupling());
+    communicator.requestField<CHEM_POTENTIAL>();
+    communicator.requestOverlap(sLattice1.getOverlap());
+    communicator.exchangeRequests();
+  }
+  {
+    auto& communicator = sLattice2.getCommunicator(stage::PreCoupling());
+    communicator.requestField<CHEM_POTENTIAL>();
+    communicator.requestField<RhoStatistics>();
+    communicator.requestOverlap(sLattice2.getOverlap());
+    communicator.exchangeRequests();
+  }
+
+  sLattice1.addPostProcessor<stage::PreCoupling>(meta::id<RhoStatistics>());
+  sLattice2.addPostProcessor<stage::PreCoupling>(meta::id<RhoStatistics>());
+
+  clout << "Add lattice coupling ... OK!" << std::endl;
 
   // === 4th Step: Main Loop with Timer ===
   int iT = 0;
@@ -305,7 +307,7 @@ int main( int argc, char *argv[] )
   util::Timer<T> timer( maxIter, superGeometry.getStatistics().getNvoxel() );
   timer.start();
 
-  for ( iT=0; iT<=maxIter; ++iT ) {
+for ( iT=0; iT<=maxIter; ++iT ) {
     // Computation and output of the results
     getResults( sLattice2, sLattice1, iT, superGeometry, timer, converter );
 
@@ -314,8 +316,18 @@ int main( int argc, char *argv[] )
     sLattice2.collideAndStream();
 
     // Execute coupling between the two lattices
-    sLattice1.executeCoupling();
-    sLattice2.executeCoupling();
+    sLattice1.executePostProcessors(stage::PreCoupling());
+
+    sLattice1.getCommunicator(stage::PreCoupling()).communicate();
+    coupling1.execute();
+    sLattice1.getCommunicator(stage::PostCoupling()).communicate();
+
+    sLattice2.executePostProcessors(stage::PreCoupling());
+
+    sLattice2.getCommunicator(stage::PreCoupling()).communicate();
+    coupling2.execute();
+    sLattice2.getCommunicator(stage::PostCoupling()).communicate();
+
   }
 
   timer.stop();

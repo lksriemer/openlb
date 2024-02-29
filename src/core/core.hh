@@ -37,4 +37,5 @@
 
 #include "unitConverter.hh"
 #include "thermalUnitConverter.hh"
+#include "multiPhaseUnitConverter.hh"
 #include "powerLawUnitConverter.hh"

@@ -147,6 +147,12 @@ public:
     return latticeR >= -_padding && latticeR < _core + _padding;
   };
 
+  /// Return whether location is inside core
+  bool isInsideCore(LatticeR<D> latticeR) const
+  {
+    return latticeR >= 0 && latticeR < _core;
+  };
+
   /// Return whether location is valid
   bool isPadding(LatticeR<D> latticeR) const
   {

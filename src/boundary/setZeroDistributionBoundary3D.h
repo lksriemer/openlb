@@ -36,8 +36,7 @@
 #include "functors/lattice/indicator/blockIndicatorF3D.h"
 #include "dynamics/dynamics.h"
 #include "dynamics/freeEnergyDynamics.h"
-#include "advectionDiffusionBoundaryPostProcessor3D.h"
-#include "advectionDiffusionBoundaries.h"
+#include "boundary/postprocessor/advectionDiffusionBoundaryPostProcessor3D.h"
 #include "extendedFiniteDifferenceBoundary3D.h"
 #include "setBoundary3D.h"
 
@@ -57,7 +56,7 @@ void setZeroDistributionBoundary(SuperLattice<T, DESCRIPTOR>& sLattice, FunctorP
 
 //sets the ZeroDistributionBoundary for any indicated cell inside the block domain
 template<typename T, typename DESCRIPTOR>
-void setZeroDistributionBoundary(BlockLattice<T,DESCRIPTOR>& _block, BlockIndicatorF3D<T>& indicator, bool includeOuterCells=false);
+void setZeroDistributionBoundary(BlockLattice<T,DESCRIPTOR>& _block, BlockIndicatorF3D<T>& indicator);
 
 }//namespace olb
 

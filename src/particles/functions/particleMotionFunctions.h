@@ -93,6 +93,32 @@ void velocityVerletRotation( Particle<T,PARTICLETYPE>& particle, T delTime, T de
 }
 
 template<typename T, typename PARTICLETYPE>
+void velocityVerletRotor( Particle<T,PARTICLETYPE>& particle, T delTime, Vector<T,PARTICLETYPE::d> angVel )
+{
+  using namespace descriptors;
+  constexpr unsigned D = PARTICLETYPE::d;
+  constexpr unsigned Drot = utilities::dimensions::convert<D>::rotation;
+  //Check field existence
+  static_assert(PARTICLETYPE::template providesNested<SURFACE,ANGLE>(), "Field SURFACE:ANGLE has to be provided");
+  static_assert(PARTICLETYPE::template providesNested<MOBILITY,ANG_VELOCITY>(), "Field MOBILITY:ANG_VELOCITY has to be provided");
+  static_assert(PARTICLETYPE::template providesNested<MOBILITY,ANG_ACC_STRD>(), "Field MOBILITY:ANG_ACC_STRD has to be provided");
+  //Calculate quantities
+  Vector<T,Drot> angle( particle.template getField<SURFACE,ANGLE>() + angVel * delTime);
+  Vector<T,Drot> avgAngularAcceleration({0.});
+  Vector<T,Drot> angularVelocity( angVel );
+  //Treat full rotation
+  angle = util::fmod( angle, 2.*M_PI );
+  //Update values
+  particle.template setField<SURFACE,ANGLE>(
+    utilities::dimensions::convert<D>::serialize_rotation(angle) );
+  particle.template setField<MOBILITY,ANG_VELOCITY>(
+    utilities::dimensions::convert<D>::serialize_rotation(angularVelocity) );
+  particle.template setField<MOBILITY,ANG_ACC_STRD>(
+    utilities::dimensions::convert<D>::serialize_rotation(avgAngularAcceleration) );
+
+}
+
+template<typename T, typename PARTICLETYPE>
 void velocityVerletIntegration( Particle<T,PARTICLETYPE>& particle, T delTime,
                                 Vector<T,PARTICLETYPE::d> acceleration,
                                 Vector<T,utilities::dimensions::convert<PARTICLETYPE::d>::rotation> angularAcceleration )

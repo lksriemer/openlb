@@ -1,6 +1,7 @@
 /*  This file is part of the OpenLB library
  *
- *  Copyright (C) 2015 Peter Weisbrod
+ *  Copyright (C) 2024 Tim Bingert, Luiz Czelusniak,
+ *                     Maximilian Schecher, Adrian Kummerlaender
  *  E-mail contact: info@openlb.net
  *  The most recent release of OpenLB can be downloaded at
  *  <http://www.openlb.net/>
@@ -32,6 +33,42 @@
  */
 
 namespace olb {
+
+//Calculate VLEs with PR EoS with non-classical Huron-Vidal mixing rule for n-component mixtures
+class MultiComponentPengRobinson {
+public:
+  MultiComponentPengRobinson(double p_, double T_, std::vector<double> z_, std::vector<double> a_L, std::vector<double> b_L,
+                             std::vector<double> M_L, std::vector<double> Tc_L, std::vector<double> pc_L, std::vector<double> omega_, std::vector<double> devi,
+                             std::vector<double> alpha_, std::vector<double> gI_L, std::vector<double> gII_L);
+  double G_Excess(std::vector<double> x_i, std::vector<double> g_jk, std::vector<double> beta_jk);
+  double b_mix(std::vector<double> x_i);
+  double a_mix(std::vector<double> x_i, std::vector<double> a_i, double b, double G_E);
+  double p_PR(double v, double a_m, double b_m);
+  double gamma_i(std::vector<double> x_i, double a_i, std::vector<double> g_jk, std::vector<double> beta_jk, double _T, int i);
+  double lnfugacity_i(std::vector<double> x_i, double v, double a_m, double b_m, double gamma_i, double _T, int i);
+  std::vector<double> iterate_VLE(double residuum, double beta0);
+  std::vector<double> getChis(int n);
+private:
+  double p, T;
+  std::vector<double> z;
+  const double G{-1.};
+  const double R{1.};
+  const double lambda{0.6232252401};
+  int num_comp;
+  std::vector<double> a_c;
+  std::vector<double> b;
+  std::vector<double> M;
+  std::vector<double> T_c;
+  std::vector<double> p_c;
+  std::vector<double> omega;
+  std::vector<double> m;
+  std::vector<double> alpha;
+  std::vector<double> g_I;
+  std::vector<double> g_II;
+  std::vector<double> init_v = {0.105,120.0};
+  std::vector<double> volatilities = {1.,0.,0.,0.};
+  std::vector<double> chis = {0.5,0.5,0.5,0.5};
+};
 
 namespace interaction {
 
@@ -72,6 +109,103 @@ struct CarnahanStarling {
         - params.template get<A>() * rho*rho;
     return util::sqrt(V{6}*(p-rho/V{3})/ params.template get<G>());
   };
+};
+
+template <unsigned N_COMPONENTS>
+struct MCPRpseudoPotential {
+  template <typename X_I, typename G_JK, typename BETA_JK, typename V=typename X_I::value_t>
+  V G_Excess(const X_I& x_i, const G_JK& g_jk, const BETA_JK& beta_jk) any_platform {
+    V G_E = 0;
+    for(unsigned i = 0; i < N_COMPONENTS; i++){
+      V sum1 = 0;
+      V sum2 = 0;
+      for(unsigned j = 0; j < N_COMPONENTS; j++){
+        sum1 = sum1 + x_i[j]*g_jk[i+N_COMPONENTS*j]*beta_jk[i+N_COMPONENTS*j];
+        sum2 = sum2 + x_i[j]*beta_jk[i+N_COMPONENTS*j];
+      }
+      G_E = G_E + x_i[i] * sum1/sum2;
+    }
+    return G_E;
+  };
+
+  template <typename X_I, typename B, typename V=typename X_I::value_t>
+  V b_mix(const X_I& x_i, const B& b) any_platform {
+    V b_m = 0;
+    for(unsigned i = 0; i < N_COMPONENTS; i++){
+      b_m += b[i]*x_i[i];
+    }
+    return b_m;
+  };
+
+  template <typename X_I, typename A_I, typename B, typename V=typename X_I::value_t>
+  V a_mix(const X_I& x_i, const A_I& a_i, const B& b, V b_m, V G_E) any_platform {
+    V a_sum = 0;
+    for(unsigned i = 0; i < N_COMPONENTS; i++){
+      a_sum = a_sum + x_i[i]*a_i[i]/b[i];
+    }
+    /*double a_m = 0;
+    for(unsigned i = 0; i < N_COMPONENTS; i++){
+      for(unsigned j = 0; j < N_COMPONENTS; j++){
+        a_m += x_i[i]*x_i[j]*util::pow(a_i[i]*a_i[j],0.5);
+      }
+    }
+    return a_m;*/
+    return b_m * (a_sum - G_E / 0.6232252401);
+  };
+
+  template <typename RHO_FIELD, typename __T, typename K, typename A_C, typename B, typename T_C, typename M, typename ALPHA, typename G_I, typename G_II, typename BIG_M, typename V=typename RHO_FIELD::value_t>
+  V compute(const RHO_FIELD& rhoField, const __T& _T, const K& k, const A_C& a_c, const B& b, const T_C& T_c, const M& m, const ALPHA& alpha, const G_I& g_I, const G_II& g_II, const BIG_M& _M) any_platform {
+    Vector<V,N_COMPONENTS> molarRhoField{}, a_i{}, x_i{};
+    Vector<V,N_COMPONENTS*N_COMPONENTS> g_jk{}, beta_jk{};
+    V R = 1;
+    V molarRho = 0;
+    V Rho = 0;
+    for(unsigned i = 0; i < N_COMPONENTS; i++){
+      a_i[i] = a_c[i] * util::pow((1 + m[i] * (1 - util::pow((_T/T_c[i]),0.5))),2);
+      for(unsigned j = 0; j < N_COMPONENTS; j++){
+        g_jk[N_COMPONENTS*i+j] = g_I[N_COMPONENTS*i+j] + g_II[N_COMPONENTS*i+j] * _T;
+        beta_jk[N_COMPONENTS*i+j] = b[j] * util::exp(-alpha[N_COMPONENTS*i+j]*g_jk[N_COMPONENTS*i+j]/(R*_T));
+      }
+      molarRhoField[i] = rhoField[i]/_M[i];
+      molarRho += molarRhoField[i];
+      Rho += rhoField[i];
+    }
+    for(unsigned i = 0; i < N_COMPONENTS; i++){
+      x_i[i] = molarRhoField[i]/molarRho;
+    }
+    V g_E = G_Excess(x_i, g_jk, beta_jk);
+    V b_m = b_mix(x_i, b);
+    V a_m = a_mix(x_i, a_i, b, b_m, g_E);
+    V p = molarRho*R*_T/(1-b_m*molarRho) - a_m*molarRho*molarRho/(1+2*b_m*molarRho-b_m*molarRho*b_m*molarRho);
+    V psi = util::sqrt(-6.*(k*p - Rho/3.));
+    return psi;
+  };
+
+  template <typename RHO_FIELD, typename A_C, typename B, typename T_C, typename M, typename ALPHA, typename G_I, typename G_II, typename BIG_M, typename V=typename RHO_FIELD::value_t>
+  V computeP(const RHO_FIELD& rhoField, V _T, const A_C& a_c, const B& b, const T_C& T_c, const M& m, const ALPHA& alpha, const G_I& g_I, const G_II& g_II, const BIG_M& _M) any_platform {
+    olb::Vector<V,N_COMPONENTS> molarRhoField{}, a_i{}, x_i{};
+    olb::Vector<V,N_COMPONENTS*N_COMPONENTS> g_jk{}, beta_jk{};
+    V R = 1;
+    V molarRho = 0;
+    for(unsigned i = 0; i < N_COMPONENTS; i++){
+      a_i[i] = a_c[i] * util::pow((1 + m[i] * (1 - util::pow((_T/T_c[i]),0.5))),2);
+      for(unsigned j = 0; j < N_COMPONENTS; j++){
+        g_jk[N_COMPONENTS*i+j] = g_I[N_COMPONENTS*i+j] + g_II[N_COMPONENTS*i+j] * _T;
+        beta_jk[N_COMPONENTS*i+j] = b[j] * util::exp(-alpha[N_COMPONENTS*i+j]*g_jk[N_COMPONENTS*i+j]/(R*_T));
+      }
+      molarRhoField[i] = rhoField[i]/_M[i];
+      molarRho += molarRhoField[i];
+    }
+    for(unsigned i = 0; i < N_COMPONENTS; i++){
+      x_i[i] = molarRhoField[i]/molarRho;
+    }
+    V g_E = G_Excess(x_i, g_jk, beta_jk);
+    V b_m = b_mix(x_i, b);
+    V a_m = a_mix(x_i, a_i, b, b_m, g_E);
+    V p = molarRho*R*_T/(1-b_m*molarRho) - a_m*molarRho*molarRho/(1+2*b_m*molarRho-b_m*molarRho*b_m*molarRho);
+    return p;
+  }
+
 };
 
 }
@@ -182,3 +316,5 @@ public:
 } // end namespace olb
 
 #endif
+
+#include "interactionPotential.cse.h"

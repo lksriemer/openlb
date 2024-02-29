@@ -503,10 +503,6 @@ public:
       throw std::runtime_error("Invalid collision dispatch strategy");
       break;
     }
-
-    #ifdef PLATFORM_GPU_CUDA
-    gpu::cuda::device::synchronize();
-    #endif
   }
 
   /// Returns a human-readable string listing all managed dynamics and their assigned fraction of cells

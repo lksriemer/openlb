@@ -97,6 +97,7 @@ void Optimizer<S,C>::optimize()
 {
   // Evaluate objective function
   evaluateObjective(_control, _value);
+  _optiCase->postEvaluation();
 
   // Optimization step (update of _control, _value, _derivatives and _it)
   do {
@@ -109,6 +110,7 @@ void Optimizer<S,C>::optimize()
     optimizationStep();
 
     // Print info
+    _optiCase->postEvaluation();
     if (_verboseOn) {
       print(_it);
     }

@@ -37,15 +37,15 @@ using S = FLOATING_POINT_TYPE;
 constexpr unsigned numberOfDerivatives (3);
 using T = util::ADf<S,numberOfDerivatives>;
 
-XMLreader config("parameter.xml");
 
 
 /** Compute sensitivities with forward difference quotients
  * "control" variable scales the force, objective measures distance of velocity
  * or dissipation to the exact solution
  */
-void sensitivitiesFDQ() {
-  OstreamManager clout(std::cout, "sensitivitiesFDQ");
+void sensitivitiesFdq() {
+  OstreamManager clout(std::cout, "sensitivitiesFdq");
+  XMLreader config("parameterAd.xml");
 
   auto testFlow = createLbSolver <TestFlowSolverDirectOpti<S>> (config);
   testFlow->parameters(Output()).verbose = false;
@@ -65,19 +65,18 @@ void sensitivitiesFDQ() {
  * "control" variable scales the force, objective measures distance of velocity
  * or dissipation to the exact solution
  */
-void sensitivitiesAD() {
+void sensitivitiesAd() {
   // preparation
-  OstreamManager clout(std::cout, "sensitivitiesAD");
+  OstreamManager clout(std::cout, "sensitivitiesAd");
+  XMLreader config("parameterAd.xml");
 
   auto testFlow = createLbSolver <TestFlowSolverDirectOpti<S>> (config);
   auto testFlowAD = createLbSolver <TestFlowSolverDirectOpti<T>> (config);
   testFlow->parameters(Output()).verbose = false;
   testFlowAD->parameters(Output()).verbose = false;
-  testFlowAD->parameters(VisualizationVTK()).output = false;
+  testFlowAD->parameters(VisualizationVTK()).output = "off";
 
-  OptiCaseAD<S, numberOfDerivatives> optiCase(
-    getCallable<S>(testFlow),
-    getCallable<T>(testFlowAD));
+  OptiCaseAdForSolver optiCase(testFlow, testFlowAD);
 
   // evaluate function
   std::vector<S> control (numberOfDerivatives, 2.5);
@@ -94,10 +93,11 @@ void sensitivitiesAD() {
  * number of control variables: "control" scales the force cuboid-wise
  * (independent of the cuboid decomposition which is used for parallelization).
  */
-void sensitivitiesAD_variant(unsigned numberOfControls)
+void sensitivitiesAd_variant(unsigned numberOfControls)
 {
   // preparation
-  OstreamManager clout(std::cout, "sensitivitiesAD");
+  OstreamManager clout(std::cout, "sensitivitiesAd");
+  XMLreader config("parameterAd.xml");
 
   std::vector<S> control (numberOfControls, 2.5);
   util::print(control, "control", clout, ' ');
@@ -105,7 +105,7 @@ void sensitivitiesAD_variant(unsigned numberOfControls)
   // evaluate function
   auto testFlow = createLbSolver <TestFlowSolverDirectOpti<S>> (config);
   auto function = getCallable<S> (testFlow);
-  clout << "objective = " << function(control) << std::endl;
+  clout << "objective = " << function(control, 0) << std::endl;
 
   // compute (forward AD) derivatives
   auto testFlowAD = createLbSolver <TestFlowSolverDirectOpti<T>> (config);
@@ -113,7 +113,7 @@ void sensitivitiesAD_variant(unsigned numberOfControls)
 
   auto controlAD = util::copyAs<T,S,util::StdVector>(control);
   util::iniDiagonal(&controlAD[0], numberOfDerivatives);
-  auto resultAD = derivative(controlAD);
+  auto resultAD = derivative(controlAD, 0);
   util::print(resultAD.d(), "derivatives", clout, ' ');
 }
 
@@ -121,15 +121,16 @@ void sensitivitiesAD_variant(unsigned numberOfControls)
  * "control" variable scales the force, objective measures distance of velocity
  * or dissipation to the exact solution
  */
-void optiAD() {
-  OstreamManager clout(std::cout, "optiAD");
+void optiAd() {
+  OstreamManager clout(std::cout, "optiAd");
+  XMLreader config("parameterAd.xml");
 
   auto testFlow = createLbSolver <TestFlowSolverDirectOpti<S>> (config);
 
   auto testFlowAD = createLbSolver <TestFlowSolverDirectOpti<T>> (config);
   testFlow->parameters(Output()).verbose = false;
   testFlowAD->parameters(Output()).verbose = false;
-  testFlowAD->parameters(VisualizationVTK()).output = false;
+  testFlowAD->parameters(VisualizationVTK()).output = "off";
 
   bool discreteObjective = testFlow->parameters(Opti()).optiReferenceMode;
   auto referenceSolver = createLbSolver <TestFlowSolverDirectOpti<S>> (config);
@@ -139,7 +140,7 @@ void optiAD() {
     // correct control variables
     referenceSolver->parameters(Opti()).computeObjective = false;
     referenceSolver->parameters(Output()).verbose = false;
-    referenceSolver->parameters(VisualizationVTK()).output = false;
+    referenceSolver->parameters(VisualizationVTK()).output = "off";
 
     referenceSolver->parameters(Opti()).applyControl(referenceControl);
     referenceSolver->solve();
@@ -151,9 +152,7 @@ void optiAD() {
      = referenceSolver->parameters(Results()).solution;
   }
 
-  OptiCaseAD<S, numberOfDerivatives> optiCase(
-    getCallable<S>(testFlow),
-    getCallable<T>(testFlowAD));
+  OptiCaseAdForSolver optiCase(testFlow, testFlowAD);
 
   auto optimizer = createOptimizerLBFGS<S>(config, numberOfDerivatives);
 
@@ -175,13 +174,15 @@ void optiAD() {
  */
 void optiAdjoint() {
   OstreamManager clout(std::cout, "optiAdjoint");
+  XMLreader config("parameterAdjoint.xml");
 
   OptiCaseDual<S,TestFlowSolverOptiAdjoint> optiCase (config);
   auto optimizer = createOptimizerLBFGS<S>(config, optiCase._dimCtrl);
 
   S startValue;
   config.readOrWarn<S>("Optimization", "StartValue", "", startValue);
-  optimizer->setStartValue(optiCase.getInitialControl(startValue));
+  startValue = projection::getInitialControl(startValue, optiCase);
+  optimizer->setStartValue(startValue);
 
   optimizer->setReferenceControl(optiCase.getReferenceControl());
 
@@ -194,18 +195,42 @@ int main(int argc, char **argv)
   olbInit(&argc, &argv);
   OstreamManager clout(std::cout, "main");
 
-  clout << "\nCompute sensitivities with forward difference quotients" << std::endl;
-  sensitivitiesFDQ();
+  if (argc > 1) {
+    for (int i = 1; i < argc; ++i) {
+      if (strcmp(argv[i], "sensitivities") == 0) {
+        clout << "\nCompute sensitivities with forward difference quotients" << std::endl;
+        sensitivitiesFdq();
 
-  clout << "\nCompute sensitivities with AD" << std::endl;
-  sensitivitiesAD();
+        clout << "\nCompute sensitivities with AD" << std::endl;
+        sensitivitiesAd();
 
-  clout << "\nCompute sensitivities with AD for 5 blocks" << std::endl;
-  sensitivitiesAD_variant(5);
+        clout << "\nCompute sensitivities with AD for 5 blocks" << std::endl;
+        sensitivitiesAd_variant(5);
+      } else if (strcmp(argv[i], "opti-ad") == 0) {
+        clout << "\nOptimize with AD" << std::endl;
+        optiAd();
+      } else if (strcmp(argv[i], "opti-adjoint") == 0) {
+        clout << "\nOptimize with adjoint lbm" << std::endl;
+        optiAdjoint();
+      } else {
+        clout << "Usage: after program name, state some of the options sensitivities, opti-ad or opti-adjoint. "
+              << "If no option is selected, all of them are performed.\n";
+      }
+    }
+  } else {
+    clout << "\nCompute sensitivities with forward difference quotients" << std::endl;
+    sensitivitiesFdq();
 
-  clout << "\nOptimize with AD" << std::endl;
-  optiAD();
+    clout << "\nCompute sensitivities with AD" << std::endl;
+    sensitivitiesAd();
 
-  clout << "\nOptimize with adjoint lbm" << std::endl;
-  optiAdjoint();
+    clout << "\nCompute sensitivities with AD for 5 blocks" << std::endl;
+    sensitivitiesAd_variant(5);
+
+    clout << "\nOptimize with AD" << std::endl;
+    optiAd();
+
+    clout << "\nOptimize with adjoint lbm" << std::endl;
+    optiAdjoint();
+  }
 }

@@ -201,22 +201,6 @@ struct DirectionOrientationMixinDynamicsForDirectionOrientationMomenta {
   }
 };
 
-//constructs DYNAMICS with MixinDynamics, Momenta, direction and orientation as template args
-template <
-  typename T, typename DESCRIPTOR,
-  template <typename,typename,typename,typename,int,int> typename DYNAMICS,
-  typename MIXIN,
-  typename MOMENTA
->
-struct DirectionOrientationMixinDynamicsForPlainMomenta {
-  template <int x, int y>
-  using ConcreteDynamics = DYNAMICS<T,DESCRIPTOR,MIXIN,MOMENTA,x,y>;
-
-  static auto construct(Vector<int,2> n) {
-    return constructConcreteDynamicsForDirectionOrientation<T,DESCRIPTOR,ConcreteDynamics>(n);
-  }
-};
-
 //constructs MixinDynamics with a Momenta that expects direction and orientation as template args
 template <
   typename T, typename DESCRIPTOR,

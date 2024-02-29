@@ -9,44 +9,54 @@ authors:
     family-names: Kummerländer
     email: adrian.kummerlaender@kit.edu
     orcid: 'https://orcid.org/0000-0003-4392-0045'
-  - given-names: Avis
-    family-names: Sam
-  - given-names: Halim
-    family-names: Kusumaatmaja
+  - given-names: Tim
+    family-names: Bingert
   - given-names: Fedor
     family-names: Bukreev
-  - given-names: Michael
-    family-names: Crocoll
+    orcid: 'https://orcid.org/0009-0007-5615-8869'
+  - given-names: Luiz Eduardo
+    family-names: Czelusniak
+    orcid: 'https://orcid.org/0000-0001-8488-5720'
   - given-names: Davide
     family-names: Dapelo
   - given-names: Nicolas
     family-names: Hafen
+  - given-names: Marc
+    family-names: Heinzelmann
   - given-names: Shota
     family-names: Ito
   - given-names: Julius
     family-names: Jeßberger
     orcid: 'https://orcid.org/0000-0002-7910-1175'
+  - given-names: Halim
+    family-names: Kusumaatmaja
+    orcid: 'https://orcid.org/0000-0002-3392-9479'
   - given-names: Jan
     name-particle: E
     family-names: Marquardt
     orcid: 'https://orcid.org/0000-0002-7666-3439'
-  - given-names: Johanna
-    family-names: Mödl
+  - given-names: Michael
+    family-names: Rennick
+    orcid: 'https://orcid.org/0000-0002-7184-971X'
   - given-names: Tim
     family-names: Pertzel
   - given-names: František
     family-names: Prinz
     orcid: 'https://orcid.org/0000-0003-1506-5213'
-  - given-names: Florian
-    family-names: Raichle
+  - given-names: Martin
+    family-names: Sadric
   - given-names: Maximilian
     family-names: Schecher
   - given-names: Stephan
     family-names: Simonis
     orcid: 'https://orcid.org/0000-0001-8555-4245'
+  - given-names: Pascal
+    family-names: Sitter
   - given-names: Dennis
     family-names: Teutscher
     orcid: 'https://orcid.org/0009-0003-3286-994X'
+  - given-names: Mingliang
+    family-names: Zhong
   - given-names: Mathias
     name-particle: J
     family-names: Krause
@@ -54,11 +64,12 @@ authors:
     orcid: 'https://orcid.org/0000-0003-1026-6462'
 identifiers:
   - type: doi
-    value: 10.5281/zenodo.7773497
-    description: OpenLB Release 1.6
+    value: 10.5281/zenodo.10684609
+    description: OpenLB Release 1.7
   - type: doi
     value: 10.1016/j.camwa.2020.04.033
     description: OpenLB Overview Paper
+repository-code: 'https://gitlab.com/openlb/release'
 url: 'https://openlb.net'
 abstract: >-
   The OpenLB project provides a C++ package for the
@@ -79,5 +90,5 @@ keywords:
   - Process Engineering
   - Optimization
 license: GPL-2.0
-version: '1.6'
-date-released: '2023-04-05'
+version: '1.7'
+date-released: '2024-02-29'

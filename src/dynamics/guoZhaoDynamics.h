@@ -28,98 +28,185 @@
 #ifndef LB_GUOZHAO_DYNAMICS_H
 #define LB_GUOZHAO_DYNAMICS_H
 
-#include "dynamics/descriptorAlias.h"
+#include <type_traits>
+#include <functional>
+
+#include "momenta/interface.h"
+#include "interface.h"
+
 #include "core/util.h"
 #include "core/postProcessing.h"
 #include "core/latticeStatistics.h"
-#include "dynamics/dynamics.h"
+#include "latticeDescriptors.h"
+
+#include "momenta/interface.h"
+#include "momenta/aliases.h"
+
+#include "collision.h"
+#include "equilibrium.h"
+#include "forcing.h"
 
 namespace olb {
 
-/// Implementation of the BGK collision step with porous force according to
-/// Guo and Zhao (2012), described as an external force
-/* Use momenta::Tuple<
-  T,
-  DESCRIPTOR,
-  BulkDensity,
-  GuoZhaoMomentum,
-  BulkStress,
-  DefineToNEq
->;*/
-template<typename T, typename DESCRIPTOR, typename MOMENTA=momenta::BulkTuple>
-class GuoZhaoBGKdynamics : public legacy::BasicDynamics<T,DESCRIPTOR,MOMENTA> {
-public:
-  template<typename M>
-  using exchange_momenta = GuoZhaoBGKdynamics<T,DESCRIPTOR,M>;
+namespace guoZhao {
 
-  using MomentaF = typename MOMENTA::template type<DESCRIPTOR>;
 
-  /// Constructor
-  GuoZhaoBGKdynamics(T omega_);
-  ///  Compute fluid velocity on the cell.
-  void computeU (
-    ConstCell<T,DESCRIPTOR>& cell,
-    T u[DESCRIPTOR::d] ) const override;
-  /// Compute fluid velocity and particle density on the cell.
-  void computeRhoU (
-    ConstCell<T,DESCRIPTOR>& cell,
-    T& rho, T u[DESCRIPTOR::d]) const override;
-  /// Compute equilibrium distribution function
-  T computeEquilibrium(int iPop, T rho, const T u[DESCRIPTOR::d]) const override;
-  /// Collision step
-  CellStatistic<T> collide(Cell<T,DESCRIPTOR>& cell) override;
-  /// Get local relaxation parameter of the dynamics
-  T getOmega() const;
-  /// Set local relaxation parameter of the dynamics
-  void setOmega(T omega_);
-  /// Get local porosity as per from the dynamics class member variable.
-  T getEpsilon();
-protected:
-  /// Copies epsilon from external to member variable to provide access to computeEquilibrium.
-  void updateEpsilon(Cell<T,DESCRIPTOR>& cell);
-  T _omega;  ///< relaxation parameter
-  T _epsilon; ///< porosity. Must be re-declared as a member variable to allow
+template <typename DESCRIPTOR>
+struct guoZhao_equilibrium {
+  /// Computation of equilibrium distribution, second order in u
+  template <typename RHO, typename U, typename USQR, typename EPSILON, typename V=RHO>
+  static V secondOrder(int iPop, const RHO& rho, const U& u, const USQR& uSqr, const EPSILON& epsilon) any_platform
+  {
+    V c_u{};
+    for (int iD=0; iD < DESCRIPTOR::d; ++iD) {
+      c_u += descriptors::c<DESCRIPTOR>(iPop,iD)*u[iD];
+    }
+    return rho
+           * descriptors::t<V,DESCRIPTOR>(iPop)
+           * ( V{1}
+               + descriptors::invCs2<V,DESCRIPTOR>() * c_u
+               + descriptors::invCs2<V,DESCRIPTOR>() * descriptors::invCs2<V,DESCRIPTOR>() * V{0.5} * c_u * c_u / epsilon
+               - descriptors::invCs2<V,DESCRIPTOR>() * V{0.5} * uSqr / epsilon)
+           - descriptors::t<V,DESCRIPTOR>(iPop);
+  }
 };
 
+template <typename DESCRIPTOR>
+struct guoZhao_lbm {
+  /// Add a force term after BGK collision
+  template <typename CELL, typename RHO, typename U, typename OMEGA, typename EPSILON, typename K, typename NU, typename FORCE, typename V=typename CELL::value_t>
+  static void addExternalForce(CELL& cell, const RHO& rho, const U& u, const OMEGA& omega, const EPSILON& epsilon, const K& k, const NU& nu, const FORCE& force) any_platform
+  {
+    for (int iPop=0; iPop < DESCRIPTOR::q; ++iPop) {
+      V c_u = V();
+      for (int iD=0; iD < DESCRIPTOR::d; ++iD) {
+        c_u += descriptors::c<DESCRIPTOR>(iPop,iD)*u[iD];
+      }
+      c_u *= descriptors::invCs2<V,DESCRIPTOR>()*descriptors::invCs2<V,DESCRIPTOR>()/epsilon;
+      V forceTerm = V();
+      for (int iD=0; iD < DESCRIPTOR::d; ++iD) {
+        forceTerm +=
+          (   (epsilon*(V)descriptors::c<DESCRIPTOR>(iPop,iD)-u[iD]) * descriptors::invCs2<V,DESCRIPTOR>()/epsilon
+              + c_u * descriptors::c<DESCRIPTOR>(iPop,iD)
+          )
+          * force[iD];
+      }
+      forceTerm *= descriptors::t<V,DESCRIPTOR>(iPop);
+      forceTerm *= V(1) - omega/V(2);
+      forceTerm *= rho;
+      cell[iPop] += forceTerm;
+    }
+  }
 
-/* Use momenta::Tuple<
-  T,
-  DESCRIPTOR,
-  BulkDensity,
-  PorousGuoMomentum,
-  BulkStress,
-  DefineToNEq
->;*/
-template<typename T, typename DESCRIPTOR, typename MOMENTA=momenta::BulkTuple>
-class PorousGuoSimpleBGKdynamics : public legacy::BasicDynamics<T,DESCRIPTOR,MOMENTA> {
-public:
-  template<typename M>
-  using exchange_momenta = PorousGuoSimpleBGKdynamics<T,DESCRIPTOR,M>;
+  /// Updates the force terms with the reaction from the porous matrix, before applying it
+  template <typename CELL, typename U, typename EPSILON, typename K, typename NU, typename FORCE, typename BODY_F, typename V=typename CELL::value_t>
+  static void updateExternalForce(CELL& cell, const U& u, const EPSILON& epsilon, const K& k, const NU& nu, FORCE& force, BODY_F& bodyF) any_platform
+  {
+    const V uMag = util::sqrt( util::normSqr<V,DESCRIPTOR::d>(u) );
+    const V Fe = 0;//1.75/util::sqrt(150.*util::pow(epsilon,3));
 
-  /// Constructor
-  PorousGuoSimpleBGKdynamics(T omega_);
-  ///  Compute fluid velocity on the cell.
-  void computeU (
-    ConstCell<T,DESCRIPTOR>& cell,
-    T u[DESCRIPTOR::d] ) const override;
-  /// Compute fluid velocity and particle density on the cell.
-  void computeRhoU (
-    ConstCell<T,DESCRIPTOR>& cell,
-    T& rho, T u[DESCRIPTOR::d]) const override;
-  /// Collision step
-  CellStatistic<T> collide(Cell<T,DESCRIPTOR>& cell) override;
-  /// Get local relaxation parameter of the dynamics
-  T getOmega() const;
-  /// Set local relaxation parameter of the dynamics
-  void setOmega(T omega_);
-protected:
-  T _omega;  ///< relaxation parameter
+    // Linear Darcy term, nonlinear Forchheimer term and body force
+    for (int iDim=0; iDim <DESCRIPTOR::d; iDim++) {
+      force[iDim] = -u[iDim]*epsilon*nu/k - epsilon*Fe/util::sqrt(k)*uMag*u[iDim] + bodyF[iDim]*epsilon;
+    }
+  }
 };
 
+struct GuoZhaoSecondOrder {
+  using parameters = meta::list<>;
 
+  static std::string getName() {
+    return "GuoZhaoSecondOrder";
+  }
 
+  template <typename DESCRIPTOR, typename MOMENTA>
+  struct type {
+    using MomentaF = typename MOMENTA::template type<DESCRIPTOR>;
+
+    template <typename RHO, typename U>
+    auto compute(int iPop, const RHO& rho, const U& u) any_platform {
+      assert("GuoZhaoSecondOrder::compute(int, RHO&, U&) should never be called." && false);
+      return RHO();
+    }
+
+    template <typename CELL, typename PARAMETERS, typename FEQ, typename V=typename CELL::value_t>
+    CellStatistic<V> compute(CELL& cell, PARAMETERS& parameters, FEQ& fEq) any_platform {
+      const V epsilon  = cell.template getField<descriptors::EPSILON>();
+      V rho, u[DESCRIPTOR::d];
+      MomentaF().computeRhoU(cell, rho, u);
+      const V uSqr = util::normSqr<V,DESCRIPTOR::d>(u);
+      for (int iPop=0; iPop < DESCRIPTOR::q; ++iPop) {
+        fEq[iPop] = guoZhao_equilibrium<DESCRIPTOR>::secondOrder(iPop, rho, u, uSqr, epsilon);
+      }
+      return {rho, util::normSqr<V,DESCRIPTOR::d>(u)};
+    };
+  };
+};
+
+template <template <typename> typename Forced = momenta::Forced>
+struct GuoZhaoForcing {
+  static std::string getName() {
+    return "GuoEpsilonForcing";
+  }
+
+  template <typename DESCRIPTOR, typename MOMENTA>
+  using combined_momenta = typename Forced<MOMENTA>::template type<DESCRIPTOR>;
+
+  template <typename DESCRIPTOR, typename MOMENTA, typename EQUILIBRIUM>
+  using combined_equilibrium = typename EQUILIBRIUM::template type<DESCRIPTOR,Forced<MOMENTA>>;
+
+  template <typename DESCRIPTOR, typename MOMENTA, typename EQUILIBRIUM, typename COLLISION>
+  struct combined_collision {
+    using MomentaF   = typename Forced<MOMENTA>::template type<DESCRIPTOR>;
+    using CollisionO = typename COLLISION::template type<DESCRIPTOR,Forced<MOMENTA>,EQUILIBRIUM>;
+
+    static_assert(COLLISION::parameters::template contains<descriptors::OMEGA>(),
+                  "COLLISION must be parametrized using relaxation frequency OMEGA");
+
+    template <typename CELL, typename PARAMETERS, typename V=typename CELL::value_t>
+    CellStatistic<V> apply(CELL& cell, PARAMETERS& parameters) any_platform {
+      V rho, u[DESCRIPTOR::d];
+      MomentaF().computeRhoU(cell, rho, u);
+      CollisionO().apply(cell, parameters);
+      const V omega = parameters.template get<descriptors::OMEGA>();
+      const V epsilon  = cell.template getField<descriptors::EPSILON>();
+      const V k        = cell.template getField<descriptors::K>();
+      const V nu       = cell.template getField<descriptors::NU>();
+      auto force       = cell.template getField<descriptors::FORCE>();
+      auto bodyF       = cell.template getField<descriptors::BODY_FORCE>();
+      guoZhao_lbm<DESCRIPTOR>::updateExternalForce(cell, u,epsilon, k, nu, force, bodyF);
+      guoZhao_lbm<DESCRIPTOR>::addExternalForce(cell, rho, u, omega, epsilon, k, nu, force);
+      return {rho, util::normSqr<V,DESCRIPTOR::d>(u)};
+    };
+  };
+
+  template <typename DESCRIPTOR, typename MOMENTA, typename EQUILIBRIUM, typename COLLISION>
+  using combined_parameters = typename COLLISION::parameters;
+};
+
+}
+
+template <typename T, typename DESCRIPTOR, typename MOMENTA=momenta::BulkTuple>
+using GuoZhaoBGKdynamics = dynamics::Tuple<
+  T, DESCRIPTOR,
+  MOMENTA,
+  guoZhao::GuoZhaoSecondOrder,
+  collision::BGK,
+  guoZhao::GuoZhaoForcing<momenta::GuoZhaoForced>
+>;
+
+template <typename T, typename DESCRIPTOR, typename MOMENTA=momenta::BulkTuple>
+using SmagorinskyGuoZhaoBGKdynamics = dynamics::Tuple<
+  T, DESCRIPTOR,
+  MOMENTA,
+  guoZhao::GuoZhaoSecondOrder,
+  collision::SmagorinskyEffectiveOmega<collision::BGK>,
+  guoZhao::GuoZhaoForcing<momenta::GuoZhaoForcedWithStress>
+>;
 
 
 }
 
 #endif
+
+#include "guoZhaoDynamics.cse.h"

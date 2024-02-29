@@ -241,11 +241,24 @@ private:
 
   void indicate3();
 
-  /// Finds normal for points on the surface (do not use for points that aren't on the surface!)
-  Vector<T,3> findNormalOnSurface(const PhysR<T,3>& pt);
+  /// Evaluates the normal for points on the surface (do not use for points that aren't on the surface!)
+  /// Due to rounding errors it's possible that points that were found via STLtriangle.closestPtPointTriangle return false on STLtriangle.isPointInside.
+  /// Therefore, we provide a fallback normal that should be set to the normal of the triangle the cloest point was located on.
+  Vector<T,3> evalNormalOnSurface(const PhysR<T,3>& pt, const Vector<T,3>& fallbackNormal);
 
   /// Finds surface normal
   Vector<T,3> evalSurfaceNormal(const Vector<T,3>& origin);
+
+  /// Evaluate sign for signed distance
+  /// Computes the sign following 10.1109/TVCG.2005.49 (distance corresponds to p - c)
+  /// p: the position that is evaluated
+  /// c: the closest point on the surface
+  /// Note: This method is less robust.
+  short evalSignForSignedDistance(const Vector<T,3>& normal, const Vector<T,3>& distance);
+  /// Evaluate sign for signed distance
+  /// Computest the sign following 10.1145/2461912.2461916
+  /// Note: This method is more robust.
+  short evalSignForSignedDistance(const Vector<T,3>& pt);
 
   /// Size of the smallest voxel
   T _voxelSize;

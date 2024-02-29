@@ -39,6 +39,8 @@
  * for the simulation of 3D particles.
  *
  * This example demonstrates the usage of HLBM in the OpenLB framework.
+ * To improve parallel performance, the particle decomposition scheme
+ * described in 10.48550/arXiv.2312.14172 is used.
  */
 
 #include "olb3D.h"
@@ -53,11 +55,16 @@ using namespace olb::particles::dynamics;
 
 using T = FLOATING_POINT_TYPE;
 
-//Define lattice type
+// Define lattice type
 typedef PorousParticleD3Q19Descriptor DESCRIPTOR;
 
-//Define particleType
+// Define particleType
+#ifdef PARALLEL_MODE_MPI
+// Particle decomposition improves parallel performance
+typedef ResolvedDecomposedParticle3D PARTICLETYPE;
+#else
 typedef ResolvedParticle3D PARTICLETYPE;
+#endif
 
 #define WriteVTK
 
@@ -172,7 +179,7 @@ void setBoundaryValues(SuperLattice<T, DESCRIPTOR>& sLattice,
 void getResults(SuperLattice<T, DESCRIPTOR>& sLattice,
                 UnitConverter<T,DESCRIPTOR> const& converter, int iT,
                 SuperGeometry<T,3>& superGeometry, Timer<T>& timer,
-                ParticleSystem<T,PARTICLETYPE>& particleSystem)
+                XParticleSystem<T, PARTICLETYPE>& xParticleSystem )
 {
   OstreamManager clout(std::cout, "getResults");
 
@@ -181,12 +188,9 @@ void getResults(SuperLattice<T, DESCRIPTOR>& sLattice,
   SuperLatticePhysVelocity3D<T, DESCRIPTOR> velocity(sLattice, converter);
   SuperLatticePhysPressure3D<T, DESCRIPTOR> pressure(sLattice, converter);
   SuperLatticePhysExternalPorosity3D<T, DESCRIPTOR> externalPor(sLattice, converter);
-  SuperLatticeMomentumExchangeForceLocal<T, DESCRIPTOR, PARTICLETYPE> momentumExchange(
-    sLattice, converter, superGeometry, particleSystem);
   vtkWriter.addFunctor(velocity);
   vtkWriter.addFunctor(pressure);
   vtkWriter.addFunctor(externalPor);
-  vtkWriter.addFunctor(momentumExchange);
 
   if (iT == 0) {
     /// Writes the converter log file
@@ -209,10 +213,20 @@ void getResults(SuperLattice<T, DESCRIPTOR>& sLattice,
     timer.update(iT);
     timer.printStep();
     sLattice.getStatistics().print(iT, converter.getPhysTime(iT));
-    for (std::size_t iP=0; iP<particleSystem.size(); ++iP) {
-      auto particle = particleSystem.get(iP);
+#ifdef PARALLEL_MODE_MPI
+    communication::forParticlesInSuperParticleSystem<
+        T, PARTICLETYPE, conditions::valid_particle_centres>(
+        xParticleSystem,
+        [&](Particle<T, PARTICLETYPE>&       particle,
+            ParticleSystem<T, PARTICLETYPE>& particleSystem, int globiC) {
+          io::printResolvedParticleInfo(particle);
+        });
+#else
+    for (std::size_t iP=0; iP<xParticleSystem.size(); ++iP) {
+      auto particle = xParticleSystem.get(iP);
       io::printResolvedParticleInfo(particle);
     }
+#endif
   }
 }
 
@@ -257,7 +271,11 @@ int main(int argc, char* argv[])
   prepareLattice(sLattice, converter, superGeometry);
 
   // Create ParticleSystem
+#ifdef PARALLEL_MODE_MPI
+  SuperParticleSystem<T,PARTICLETYPE> particleSystem(superGeometry);
+#else
   ParticleSystem<T,PARTICLETYPE> particleSystem;
+#endif
 
   //Create particle manager handling coupling, gravity and particle dynamics
   ParticleManager<T,DESCRIPTOR,PARTICLETYPE> particleManager(
@@ -288,7 +306,6 @@ int main(int argc, char* argv[])
   Timer<T> timer(converter.getLatticeTime(maxPhysT), superGeometry.getStatistics().getNvoxel());
   timer.start();
 
-
   /// === 5th Step: Definition of Initial and Boundary Conditions ===
   setBoundaryValues(sLattice, converter, 0, superGeometry);
 
@@ -299,8 +316,14 @@ int main(int argc, char* argv[])
     // Execute particle manager
     particleManager.execute<
       couple_lattice_to_particles<T,DESCRIPTOR,PARTICLETYPE>,
+#ifdef PARALLEL_MODE_MPI
+      communicate_surface_force<T,PARTICLETYPE>,
+#endif
       apply_gravity<T,PARTICLETYPE>,
       process_dynamics<T,PARTICLETYPE>,
+#ifdef PARALLEL_MODE_MPI
+      update_particle_core_distribution<T, PARTICLETYPE>,
+#endif
       couple_particles_to_lattice<T,DESCRIPTOR,PARTICLETYPE>
     >();
 

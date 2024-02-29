@@ -185,7 +185,9 @@ struct STATISTIC           : public FIELD_BASE<2> { };
 // (Field size parametrized: Cs + Ds*D + Qs*Q)  Cs Ds Qs
 struct VELOCITY             : public FIELD_BASE<0,  1, 0> { };
 struct VELOCITY2            : public FIELD_BASE<0,  1, 0> { };
+struct AVERAGE_VELOCITY     : public FIELD_BASE<0,  1, 0> { };
 struct SOURCE               : public FIELD_BASE<1,  0, 0> { };
+struct PRESSCORR            : public FIELD_BASE<1,  0, 0> { };
 struct FORCE                : public FIELD_BASE<0,  1, 0> { };
 struct EXTERNAL_FORCE       : public FIELD_BASE<0,  1, 0> { };
 struct TAU_EFF              : public FIELD_BASE<1,  0, 0> { };
@@ -193,6 +195,7 @@ struct GAMMA                : public FIELD_BASE<1,  0, 0> { };
 struct CUTOFF_KIN_ENERGY    : public FIELD_BASE<1,  0, 0> { };
 struct CUTOFF_HEAT_FLUX     : public FIELD_BASE<1,  0, 0> { };
 struct CHEM_POTENTIAL       : public FIELD_BASE<1,  0, 0> { };
+struct ADDEND               : public FIELD_BASE<1,  0, 0> { };
 struct V6                   : public FIELD_BASE<6,  0, 0> { };
 struct V12                  : public FIELD_BASE<12, 0, 0> { };
 struct OMEGA                : public FIELD_BASE<1,  0, 0> { };
@@ -209,6 +212,12 @@ struct LOCAL_DRAG           : public FIELD_BASE<0,  1, 0> { };
 struct VELOCITY_SOLID       : public FIELD_BASE<0,  1, 0> { };
 struct COORDINATE           : public FIELD_BASE<0,  1, 0> { };
 struct F                    : public FIELD_BASE<0,  0, 1> { };
+struct NEIGHBOR             : public FIELD_BASE<1,  0, 0>{
+  template <typename T, typename DESCRIPTOR>
+  static constexpr auto getInitialValue() {
+    return Vector<value_type<T>,1>(0.);
+  }
+};
 struct DJDF                 : public FIELD_BASE<0,  0, 1> { };
 struct DJDALPHA             : public FIELD_BASE<0,  1, 0> { };
 struct AV_SHEAR             : public FIELD_BASE<1,  0, 0> { };

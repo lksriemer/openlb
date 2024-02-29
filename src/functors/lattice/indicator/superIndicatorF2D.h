@@ -24,6 +24,8 @@
 #ifndef SUPER_INDICATOR_F_2D_H
 #define SUPER_INDICATOR_F_2D_H
 
+#include <list>
+
 #include "functors/analytical/indicator/indicatorBaseF2D.h"
 #include "superIndicatorBaseF2D.h"
 #include "geometry/superGeometry.h"
@@ -113,6 +115,21 @@ public:
   bool operator() (bool output[], const int input[]) override;
 };
 
+/// Indicator identifying neighbors of boundary cells
+/**
+ * Checks if neighbor is part of a boundary via passed SuperIndicatorMaterial.
+ **/
+template <typename T>
+class SuperIndicatorBoundaryNeighbor2D : public SuperIndicatorF2D<T> {
+protected:
+  FunctorPtr<SuperIndicatorF2D<T>> _indicatorF;
+  int _overlap;
+public:
+  SuperIndicatorBoundaryNeighbor2D(FunctorPtr<SuperIndicatorF2D<T>>&& indicatorF, int overlap);
+
+  using SuperIndicatorF2D<T>::operator();
+  bool operator() (bool output[], const int input[]) override;
+};
 
 } // namespace olb
 

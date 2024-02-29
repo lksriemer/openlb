@@ -66,6 +66,7 @@
 namespace olb {
 
 
+template<typename T, typename DESCRIPTOR> class SuperLattice;
 template<typename T, typename DESCRIPTOR> struct Dynamics;
 template<typename T, typename DESCRIPTOR, Platform PLATFORM> class ConcreteBlockLattice;
 
@@ -215,25 +216,33 @@ public:
 
   /// Set dynamics at iCell to promised dynamics
   virtual void setDynamics(CellID iCell, DynamicsPromise<T,DESCRIPTOR>&&) = 0;
-
   // Legacy dynamics setter, to be deprecated
   virtual void setDynamics(CellID iCell, Dynamics<T,DESCRIPTOR>*) = 0;
+
   /// Return pointer to dynamics yielded by promise
   virtual Dynamics<T,DESCRIPTOR>* getDynamics(DynamicsPromise<T,DESCRIPTOR>&&) = 0;
-  /// Return pointer to dynamics at iCell
-  virtual Dynamics<T,DESCRIPTOR>* getDynamics(CellID iCell) = 0;
   /// Return pointer to DYNAMICS (legacy)
   template<typename DYNAMICS>
   Dynamics<T,DESCRIPTOR>* getDynamics() {
     return getDynamics(DynamicsPromise(meta::id<DYNAMICS>{}));
   }
 
+  /// Return pointer to dynamics at iCell
+  virtual Dynamics<T,DESCRIPTOR>* getDynamics(CellID iCell) = 0;
   /// Return pointer to dynamics assigned to latticeR
   template <typename... R>
   std::enable_if_t<sizeof...(R) == DESCRIPTOR::d, Dynamics<T,DESCRIPTOR>*>
   getDynamics(R... latticeR)
   {
     return getDynamics(this->getCellId(latticeR...));
+  }
+
+  /// Assign promised DYNAMICS to latticeR
+  void defineDynamics(LatticeR<DESCRIPTOR::d> latticeR,
+                      DynamicsPromise<T,DESCRIPTOR>&& promise)
+  {
+    setDynamics(this->getCellId(latticeR),
+                std::forward<DynamicsPromise<T,DESCRIPTOR>&&>(promise));
   }
   /// Assign DYNAMICS to latticeR
   template <template<typename,typename> typename DYNAMICS>
@@ -242,9 +251,9 @@ public:
     setDynamics(this->getCellId(latticeR),
                 DynamicsPromise(meta::id<DYNAMICS<T,DESCRIPTOR>>{}));
   }
-
   /// Assign dynamics to latticeR via pointer (legacy)
-  void defineDynamics(LatticeR<DESCRIPTOR::d> latticeR, Dynamics<T,DESCRIPTOR>* dynamics)
+  void defineDynamics(LatticeR<DESCRIPTOR::d> latticeR,
+                      Dynamics<T,DESCRIPTOR>* dynamics)
   {
     setDynamics(this->getCellId(latticeR), dynamics);
   }
@@ -276,6 +285,15 @@ public:
       });
   }
 
+  template <typename PARAMETER, typename FIELD>
+  void setParameter(AbstractFieldArrayD<T,DESCRIPTOR,FIELD>& fieldArray) {
+    callUsingConcretePlatform<ConcretizableBlockLattice<T,DESCRIPTOR>>(
+      _platform,
+      this,
+      [&](auto* lattice) {
+        lattice->template setParameter<PARAMETER>(fieldArray);
+      });
+  }
   template <typename PARAMETER, Platform PLATFORM, typename FIELD>
   void setParameter(FieldArrayD<T,DESCRIPTOR,PLATFORM,FIELD>& fieldArray) {
     callUsingConcretePlatform<ConcretizableBlockLattice<T,DESCRIPTOR>>(
@@ -578,6 +596,13 @@ public:
     setParameter<PARAMETER>(std::move(fieldArrayPointers));
   }
 
+  template <typename PARAMETER, typename FIELD>
+  void setParameter(AbstractFieldArrayD<T,DESCRIPTOR,FIELD>& abstractFieldArray)
+  {
+    auto& fieldArray = dynamic_cast<FieldArrayD<T,DESCRIPTOR,PLATFORM,FIELD>&>(abstractFieldArray);
+    setParameter<PARAMETER>(fieldArray);
+  }
+
   bool hasPostProcessor(std::type_index stage,
                         PostProcessorPromise<T,DESCRIPTOR>&& promise) override
   {
@@ -660,6 +685,61 @@ public:
 
 
 };
+
+
+/// Wrapper for a local heterogeneous block communication request
+/**
+ * Specialized for Platform::GPU_CUDA as SOURCE resp. TARGET
+ **/
+template <typename T, typename DESCRIPTOR, Platform SOURCE, Platform TARGET>
+class HeterogeneousCopyTask;
+
+template <typename T, typename DESCRIPTOR, Platform PLATFORM>
+class ConcreteBlockCommunicator<ConcreteBlockLattice<T,DESCRIPTOR,PLATFORM>>
+  final : public BlockCommunicator {
+private:
+  const int _iC;
+#ifdef PARALLEL_MODE_MPI
+  MPI_Comm _mpiCommunicator;
+#endif
+
+#ifdef PARALLEL_MODE_MPI
+  class SendTask;
+  class RecvTask;
+
+  std::vector<std::unique_ptr<SendTask>> _sendTasks;
+  std::vector<std::unique_ptr<RecvTask>> _recvTasks;
+#endif
+
+public:
+  struct CopyTask;
+
+  ConcreteBlockCommunicator(SuperLattice<T,DESCRIPTOR>& super,
+                            LoadBalancer<T>& loadBalancer,
+#ifdef PARALLEL_MODE_MPI
+                            SuperCommunicationTagCoordinator<T>& tagCoordinator,
+                            MPI_Comm comm,
+#endif
+                            int iC,
+                            const BlockCommunicationNeighborhood<T,DESCRIPTOR::d>& neighborhood);
+  ~ConcreteBlockCommunicator();
+
+#ifdef PARALLEL_MODE_MPI
+  void receive() override;
+  void send() override;
+  void unpack() override;
+  void wait() override;
+#else
+  void copy() override;
+#endif
+
+private:
+  class HomogeneousCopyTask;
+
+  std::vector<std::unique_ptr<CopyTask>> _copyTasks;
+
+};
+
 
 }
 

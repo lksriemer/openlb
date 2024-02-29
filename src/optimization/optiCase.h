@@ -38,10 +38,24 @@ namespace opti {
 // provides function evaluation and gradient computation
 template <typename S, typename C>
 class OptiCase{
+
+protected:
+  std::function<void (void)>         _postEvaluation { [](){} };
+
 public:
+  OptiCase() = default;
+
+  explicit OptiCase(std::function<void (void)> postEvaluation)
+   : _postEvaluation(postEvaluation)
+  { }
+
   virtual S evaluateObjective(const C& control, unsigned optiStep=0) = 0;
   virtual void computeDerivatives (
     const C& control, C& derivatives, unsigned optiStep=0) = 0;
+
+  void postEvaluation() {
+    _postEvaluation();
+  }
 };
 
 
@@ -55,8 +69,9 @@ protected:
 
 public:
   OptiCaseAnalytical(std::function<S (const C&)> function,
-    std::function<void (const C&, C&)> derivative)
-   : _function(function), _derivative(derivative)
+    std::function<void (const C&, C&)> derivative,
+    std::function<void (void)> postEvaluation = [](){})
+   : OptiCase<S,C>(postEvaluation), _function(function), _derivative(derivative)
   { }
 
   S evaluateObjective(
@@ -75,30 +90,49 @@ OptiCaseAnalytical(std::function<S (const C&)>,
                    std::function<void (const C&, C&)>)
   -> OptiCaseAnalytical<S,C>;
 
+template <typename S, typename C>
+OptiCaseAnalytical(std::function<S (const C&)>,
+                   std::function<void (const C&, C&)>,
+                   std::function<void (void)>)
+  -> OptiCaseAnalytical<S,C>;
+
 
 // Abstract base class for gradient computation with difference quotients
 template <typename S, typename C>
 class OptiCaseDQ : public OptiCase<S,C> {
 
 protected:
-  std::function<S (const C&)>          _function;
-  S                                    _stepWidth {1.e-8};
+  std::function<S (const C&)>           _functionHelp   { [](const C&){ return S{}; } };
+  std::function<S (const C&, unsigned)> _function;
+  S                                     _stepWidth {1.e-8};
 
-  bool                                 _objectiveComputed {false};
-  S                                    _objective;
+  bool                                  _objectiveComputed {false};
+  S                                     _objective;
 
 public:
-  explicit OptiCaseDQ(std::function<S (const C&)> function) :
-    _function(function)
+  explicit OptiCaseDQ(std::function<S (const C&, unsigned)> function,
+    std::function<void (void)> postEvaluation)
+   : OptiCase<S,C>(postEvaluation), _function(function)
   { }
 
-  OptiCaseDQ(std::function<S (const C&)> function, S stepWidth) :
-    _function(function), _stepWidth(stepWidth)
+  // If function with (only) one argument is passed, use plain wrapper
+  explicit OptiCaseDQ(std::function<S (const C&)> function,
+    std::function<void (void)> postEvaluation)
+   : OptiCase<S,C>(postEvaluation),
+     _functionHelp(function),
+     _function([&](const C& arg, unsigned){ return _functionHelp(arg); })
   { }
+
+  template <typename F>
+  OptiCaseDQ(F function, S stepWidth,
+    std::function<void (void)> postEvaluation)
+   : OptiCaseDQ(function, postEvaluation) {
+    _stepWidth = stepWidth;
+  }
 
   S evaluateObjective(
     const C& control, unsigned optiStep=0) override {
-    _objective = _function(control);
+    _objective = _function(control, optiStep);
     _objectiveComputed = true;
     return _objective;
   }
@@ -112,12 +146,16 @@ private:
   OstreamManager                                  clout {std::cout, "OptiCaseFDQ"};
 
 public:
-  explicit OptiCaseFDQ(std::function<S (const C&)> function) :
-    OptiCaseDQ<S,C>(function)
+  template <typename F>
+  explicit OptiCaseFDQ(F function,
+    std::function<void (void)> postEvaluation = [](){})
+   : OptiCaseFDQ::OptiCaseDQ(function, postEvaluation)
   { }
 
-  OptiCaseFDQ(std::function<S (const C&)> function, S stepWidth) :
-    OptiCaseDQ<S,C>(function, stepWidth)
+  template <typename F>
+  OptiCaseFDQ(F function, S stepWidth,
+    std::function<void (void)> postEvaluation = [](){})
+   : OptiCaseFDQ::OptiCaseDQ(function, stepWidth, postEvaluation)
   { }
 
   void computeDerivatives(const C& control,
@@ -126,7 +164,7 @@ public:
     assert((control.size() == derivatives.size()));
 
     if (!(this->_objectiveComputed)) {
-      this->evaluateObjective(control);
+      this->evaluateObjective(control, optiStep);
     }
     const S objective(this->_objective);
 
@@ -134,12 +172,28 @@ public:
     {
       C shiftedControl(control);
       shiftedControl[it] += this->_stepWidth;
-      S shiftedObjective = this->evaluateObjective(shiftedControl);
+      S shiftedObjective = this->evaluateObjective(shiftedControl, optiStep);
       derivatives[it] = (shiftedObjective - objective) / this->_stepWidth;
     }
     this->_objectiveComputed = false;
   }
 };
+
+template <typename S, typename C>
+OptiCaseFDQ(std::function<S (const C&)>, std::function<void (void)>)
+  -> OptiCaseFDQ<S,C>;
+
+template <typename S, typename C>
+OptiCaseFDQ(std::function<S (const C&)>, S, std::function<void (void)>)
+  -> OptiCaseFDQ<S,C>;
+
+template <typename S, typename C>
+OptiCaseFDQ(std::function<S (const C&, unsigned)>, std::function<void (void)>)
+  -> OptiCaseFDQ<S,C>;
+
+template <typename S, typename C>
+OptiCaseFDQ(std::function<S (const C&, unsigned)>, S, std::function<void (void)>)
+  -> OptiCaseFDQ<S,C>;
 
 template <typename S, typename C>
 OptiCaseFDQ(std::function<S (const C&)>)
@@ -149,7 +203,13 @@ template <typename S, typename C>
 OptiCaseFDQ(std::function<S (const C&)>, S)
   -> OptiCaseFDQ<S,C>;
 
+template <typename S, typename C>
+OptiCaseFDQ(std::function<S (const C&, unsigned)>)
+  -> OptiCaseFDQ<S,C>;
 
+template <typename S, typename C>
+OptiCaseFDQ(std::function<S (const C&, unsigned)>, S)
+  -> OptiCaseFDQ<S,C>;
 
 /// Gradient computation with central difference quotients
 template <typename S, typename C>
@@ -158,12 +218,16 @@ private:
   OstreamManager                                  clout {std::cout, "OptiCaseCDQ"};
 
 public:
-  explicit OptiCaseCDQ(std::function<S (const C&)> function) :
-    OptiCaseDQ<S,C>(function)
+  template <typename F>
+  explicit OptiCaseCDQ(F function,
+    std::function<void (void)> postEvaluation = [](){})
+   : OptiCaseCDQ::OptiCaseDQ(function, postEvaluation)
   { }
 
-  OptiCaseCDQ(std::function<S (const C&)> function, S stepWidth) :
-    OptiCaseDQ<S,C>(function, stepWidth)
+  template <typename F>
+  OptiCaseCDQ(F function, S stepWidth,
+    std::function<void (void)> postEvaluation = [](){})
+   : OptiCaseCDQ::OptiCaseDQ(function, stepWidth, postEvaluation)
   { }
 
   void computeDerivatives(const C& control,
@@ -175,15 +239,31 @@ public:
     {
       C shiftedControl(control);
       shiftedControl[it] += this->_stepWidth;
-      S shiftedObjective_plus = this->evaluateObjective(shiftedControl);
+      S shiftedObjective_plus = this->evaluateObjective(shiftedControl, optiStep);
 
       shiftedControl[it] = control[it] - this->_stepWidth;
-      S shiftedObjective_minus = this->evaluateObjective(shiftedControl);
+      S shiftedObjective_minus = this->evaluateObjective(shiftedControl, optiStep);
 
       derivatives[it] = 0.5 * (shiftedObjective_plus - shiftedObjective_minus) / this->_stepWidth;
     }
   }
 };
+
+template <typename S, typename C>
+OptiCaseCDQ(std::function<S (const C&)>, std::function<void (void)>)
+  -> OptiCaseCDQ<S,C>;
+
+template <typename S, typename C>
+OptiCaseCDQ(std::function<S (const C&)>, S, std::function<void (void)>)
+  -> OptiCaseCDQ<S,C>;
+
+template <typename S, typename C>
+OptiCaseCDQ(std::function<S (const C&, unsigned)>, std::function<void (void)>)
+  -> OptiCaseCDQ<S,C>;
+
+template <typename S, typename C>
+OptiCaseCDQ(std::function<S (const C&, unsigned)>, S, std::function<void (void)>)
+  -> OptiCaseCDQ<S,C>;
 
 template <typename S, typename C>
 OptiCaseCDQ(std::function<S (const C&)>)
@@ -193,6 +273,13 @@ template <typename S, typename C>
 OptiCaseCDQ(std::function<S (const C&)>, S)
   -> OptiCaseCDQ<S,C>;
 
+template <typename S, typename C>
+OptiCaseCDQ(std::function<S (const C&, unsigned)>)
+  -> OptiCaseCDQ<S,C>;
+
+template <typename S, typename C>
+OptiCaseCDQ(std::function<S (const C&, unsigned)>, S)
+  -> OptiCaseCDQ<S,C>;
 
 } // namespace opti
 

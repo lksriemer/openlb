@@ -224,6 +224,7 @@ template<typename T>
 using Params_TfDirectOpti = meta::map<
   Opti,             TfDirectOpti<T>,
   Output,           parameters::OutputGeneral<T>,
+  OutputOpti,       parameters::OptiOutput<T,SolverMode::Primal>,
   Results,          TfDirectOptiResults<T>,
   Simulation,       TfSimulationParams<T,Lattices>,
   VisualizationVTK, parameters::OutputPlot<T>
@@ -303,6 +304,7 @@ struct TestFlowAdjointOpti
   int                       objectiveMaterial {1};
   TestFlowOptiMode          optiMode          {VELOCITY};
   OptiReferenceSolution     optiReferenceMode {DISCRETE};
+  std::shared_ptr<SuperIndicatorF3D<T>> designDomain {};
 };
 
 /// XML interface for TestFlowOptiSimulation parameters
@@ -357,6 +359,14 @@ public:
     utilities::TypeIndexedSharedPtrTuple<Params_TfOptiAdjoint<T,MODE>> params)
    : TestFlowSolverOptiAdjoint::TestFlowOptiBase(params)
   { }
+
+  void prepareGeometry() override
+  {
+    TestFlowSolverOptiAdjoint::TestFlowBase::prepareGeometry();
+
+    this->parameters(Opti()).designDomain =
+      std::move(this->geometry().getMaterialIndicator(this->parameters(Opti()).controlMaterial));
+  }
 
   void setInitialValues() override
   {

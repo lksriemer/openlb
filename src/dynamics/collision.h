@@ -404,56 +404,6 @@ struct FixedEquilibrium {
   };
 };
 
-/// Override dynamics parameter PARAMETER with cell field PARAMETER
-template <typename PARAMETER, typename COLLISION>
-struct ParameterFromCell {
-  using parameters = typename COLLISION::parameters::template include<PARAMETER>;
-
-  static std::string getName() {
-    return "ParameterFromCell<" + COLLISION::getName() + ">";
-  }
-
-  template <typename DESCRIPTOR, typename MOMENTA, typename EQUILIBRIUM>
-  struct type {
-    using CollisionO = typename COLLISION::template type<DESCRIPTOR, MOMENTA, EQUILIBRIUM>;
-
-    template <CONCEPT(MinimalCell) CELL, typename PARAMETERS, typename V=typename CELL::value_t>
-    CellStatistic<V> apply(CELL& cell, PARAMETERS& parameters) any_platform {
-      parameters.template set<PARAMETER>(
-        cell.template getField<PARAMETER>());
-      return CollisionO().apply(cell, parameters);
-    }
-  };
-};
-
-/// Override dynamics parameter OMEGA with cell field OMEGA
-template <typename COLLISION>
-using OmegaFromCell = ParameterFromCell<descriptors::OMEGA, COLLISION>;
-
-/// Override dynamics parameter OMEGA with inverse of cell field TAU_EFF
-template <typename COLLISION>
-struct OmegaFromCellTauEff {
-  using parameters = typename COLLISION::parameters::template include<
-    descriptors::OMEGA
-  >;
-
-  static std::string getName() {
-    return "OmegaFromCellTauEff<" + COLLISION::getName() + ">";
-  }
-
-  template <typename DESCRIPTOR, typename MOMENTA, typename EQUILIBRIUM>
-  struct type {
-    using CollisionO = typename COLLISION::template type<DESCRIPTOR, MOMENTA, EQUILIBRIUM>;
-
-    template <CONCEPT(MinimalCell) CELL, typename PARAMETERS, typename V=typename CELL::value_t>
-    CellStatistic<V> apply(CELL& cell, PARAMETERS& parameters) any_platform {
-      parameters.template set<descriptors::OMEGA>(
-        V{1} / cell.template getField<descriptors::TAU_EFF>());
-      return CollisionO().apply(cell, parameters);
-    }
-  };
-};
-
 }
 
 }

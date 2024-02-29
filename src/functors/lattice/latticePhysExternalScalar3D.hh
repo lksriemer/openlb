@@ -43,10 +43,10 @@ namespace olb {
 
 template<typename T, typename DESCRIPTOR, typename FIELD>
 SuperLatticePhysExternalScalar3D<T,DESCRIPTOR,FIELD>::SuperLatticePhysExternalScalar3D(
-  SuperLattice<T,DESCRIPTOR>& sLattice, T convFactorToPhysUnits)
+  SuperLattice<T,DESCRIPTOR>& sLattice, T convFactorToPhysUnits, std::string name)
   : SuperLatticeF3D<T,DESCRIPTOR>(sLattice, 3)
 {
-  this->getName() = "physExtScalarField";
+  this->getName() = name;
   const int maxC = this->_sLattice.getLoadBalancer().size();
   this->_blockF.reserve(maxC);
   for (int iC = 0; iC < maxC; iC++) {
@@ -59,19 +59,18 @@ SuperLatticePhysExternalScalar3D<T,DESCRIPTOR,FIELD>::SuperLatticePhysExternalSc
 
 template <typename T, typename DESCRIPTOR, typename FIELD>
 BlockLatticePhysExternalScalar3D<T,DESCRIPTOR,FIELD>::BlockLatticePhysExternalScalar3D(
-  BlockLattice<T,DESCRIPTOR>& blockLattice,
-  T convFactorToPhysUnits)
+  BlockLattice<T,DESCRIPTOR>& blockLattice, T convFactorToPhysUnits, std::string name)
   : BlockLatticeF3D<T,DESCRIPTOR>(blockLattice, 3),
     _convFactorToPhysUnits(convFactorToPhysUnits)
 {
-  this->getName() = "physExtScalarField";
+  this->getName() = name;
 }
 
 template <typename T, typename DESCRIPTOR, typename FIELD>
 bool BlockLatticePhysExternalScalar3D<T,DESCRIPTOR,FIELD>::operator()(
   T output[], const int input[])
 {
-  output[0] = this->_blockLattice.get( input[0], input[1], input[2] ).template getField<FIELD>();
+  output[0] = this->_blockLattice.get( input[0], input[1], input[2] ).template getField<FIELD>() * _convFactorToPhysUnits;
   return true;
 }
 

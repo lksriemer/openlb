@@ -798,6 +798,28 @@ void CuboidGeometry3D<T>::shrink(IndicatorF3D<T>& indicatorF)
                               (int)((maxPhysR[2]-minPhysR[2])/minDelataR + 0.5));
 }
 
+template<typename T>
+void CuboidGeometry3D<T>::refine(int factor)
+{
+  _motherCuboid.refine(factor);
+  for (auto& cuboid : _cuboids) {
+    cuboid.refine(factor);
+  }
+}
+
+template<typename T>
+bool CuboidGeometry3D<T>::tryRefineTo(T goalDeltaR)
+{
+  const T tolerance = std::numeric_limits<T>::epsilon();
+  const T currDeltaR = _motherCuboid.getDeltaR();
+  const int factor = std::ceil(currDeltaR / goalDeltaR);
+  if (util::fabs(currDeltaR / factor - goalDeltaR) < tolerance) {
+    refine(factor);
+    return true;
+  } else {
+    return false;
+  }
+}
 
 template<typename T>
 void CuboidGeometry3D<T>::split(int iC, int p)
@@ -1032,41 +1054,6 @@ void CuboidGeometry3D<T>::replaceCuboids(std::vector< Cuboid3D<T> >& cuboids)
 }
 
 template<typename T>
-std::size_t CuboidGeometry3D<T>::replaceContainedBy(Cuboid3D<T> mother)
-{
-  std::vector<int> toBeRemoved;
-  for (unsigned iC=0; iC < _cuboids.size(); ++iC) {
-    if (mother.partialOverlapWith(_cuboids[iC]) && !mother.contains(_cuboids[iC])) {
-      return 0;
-    } else if (mother.contains(_cuboids[iC])) {
-      toBeRemoved.emplace_back(iC);
-    }
-  }
-  std::sort(toBeRemoved.begin(), toBeRemoved.end(), std::greater{});
-  mother.setWeight(0);
-  for (int dC : toBeRemoved) {
-    mother.setWeight(mother.getWeight() + _cuboids[dC].getWeight());
-    _cuboids.erase(_cuboids.begin() + dC);
-  }
-  _cuboids.push_back(mother);
-  return toBeRemoved.size();
-}
-
-template<typename T>
-std::size_t CuboidGeometry3D<T>::hypotheticalReplaceContainedBy(Cuboid3D<T> mother)
-{
-  std::size_t weight = 0;
-  for (unsigned iC=0; iC < _cuboids.size(); ++iC) {
-    if (mother.partialOverlapWith(_cuboids[iC]) && !mother.contains(_cuboids[iC])) {
-      return 0;
-    } else if (mother.contains(_cuboids[iC])) {
-      weight += _cuboids[iC].getWeight();
-    }
-  }
-  return weight;
-}
-
-template<typename T>
 void CuboidGeometry3D<T>::setWeights(IndicatorF3D<T>& indicatorF)
 {
   #ifdef PARALLEL_MODE_OMP
@@ -1233,7 +1220,6 @@ std::string CuboidGeometry3D<T>::_cuboidParameters(Cuboid3D<T> const& cub)
 
   ss << "\" deltaR=\"" << cub.getDeltaR();
   ss << "\" weight=\"" << cub.getWeightValue();
-  ss << "\" refinementLevel=\"" << cub.getRefinementLevel() << "\"";
   return ss.str();
 }
 

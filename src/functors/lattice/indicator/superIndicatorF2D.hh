@@ -153,6 +153,35 @@ bool SuperIndicatorIdentity2D<T>::operator()(bool output[], const int input[])
   return _indicatorF(output, input);
 }
 
+template <typename T>
+SuperIndicatorBoundaryNeighbor2D<T>::SuperIndicatorBoundaryNeighbor2D(FunctorPtr<SuperIndicatorF2D<T>>&& indicatorF, int overlap)
+  : SuperIndicatorF2D<T>(indicatorF->getSuperGeometry()),
+    _indicatorF(std::move(indicatorF)),
+    _overlap(overlap)
+{
+  this->getName() = "SuperIndicatorBoundaryNeighbor_for_BoundaryMaterial_" + _indicatorF->getName();
+
+  for (int iC = 0; iC < _indicatorF->getBlockFSize(); ++iC) {
+    this->_blockF.emplace_back(
+      new BlockIndicatorBoundaryNeighbor2D<T>(_indicatorF->getBlockIndicatorF(iC), _overlap));
+  }
+}
+
+template <typename T>
+bool SuperIndicatorBoundaryNeighbor2D<T>::operator() (bool output[], const int input[])
+{
+  output[0] = false;
+
+  LoadBalancer<T>& load = this->_superGeometry.getLoadBalancer();
+
+  if (load.isLocal(input[0])) {
+    return this->getBlockF(load.loc(input[0]))(output, &input[1]);
+  }
+  else {
+    return false;
+  }
+}
+
 } // namespace olb
 
 #endif

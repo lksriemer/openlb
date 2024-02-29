@@ -42,17 +42,17 @@ namespace olb {
 ////////////////////// Class Cuboid2D /////////////////////////
 
 template<typename T>
-Cuboid2D<T>::Cuboid2D(T globPosX, T globPosY, T delta,int nX, int nY, int refinementLevel)
+Cuboid2D<T>::Cuboid2D(T globPosX, T globPosY, T delta,int nX, int nY)
   : _weight(std::numeric_limits<size_t>::max()), clout(std::cout,"Cuboid2D")
 {
-  init(globPosX, globPosY, delta, nX, nY, refinementLevel);
+  init(globPosX, globPosY, delta, nX, nY);
 }
 
 template<typename T>
-Cuboid2D<T>::Cuboid2D(Vector<T,2> origin, T delta, Vector<int,2> extend, int refinementLevel)
+Cuboid2D<T>::Cuboid2D(Vector<T,2> origin, T delta, Vector<int,2> extend)
   : _weight(std::numeric_limits<size_t>::max()), clout(std::cout,"Cuboid2D")
 {
-  this->init(origin[0], origin[1], delta, extend[0], extend[1], refinementLevel);
+  this->init(origin[0], origin[1], delta, extend[0], extend[1]);
 }
 
 // copy constructor
@@ -62,7 +62,6 @@ Cuboid2D<T>::Cuboid2D(Cuboid2D<T> const& rhs, int overlap) : clout(std::cout,"Cu
   this->init(rhs._globPosX - rhs._delta*overlap, rhs._globPosY - rhs._delta*overlap,
              rhs._delta, rhs._nX + 2*overlap, rhs._nY + 2*overlap);
   _weight = rhs._weight;
-  _refinementLevel = rhs._refinementLevel;
 }
 
 // copy assignment
@@ -71,19 +70,17 @@ Cuboid2D<T>& Cuboid2D<T>::operator=(Cuboid2D<T> const& rhs)
 {
   this->init(rhs._globPosX, rhs._globPosY, rhs._delta, rhs._nX, rhs._nY);
   _weight = rhs._weight;
-  _refinementLevel = rhs._refinementLevel;
   return *this;
 }
 
 template<typename T>
-void Cuboid2D<T>::init(T globPosX, T globPosY, T delta, int nX, int nY, int refinementLevel)
+void Cuboid2D<T>::init(T globPosX, T globPosY, T delta, int nX, int nY)
 {
   _globPosX = globPosX;
   _globPosY = globPosY;
   _delta    = delta;
   _nX       = nX;
   _nY       = nY;
-  _refinementLevel = refinementLevel;
 }
 
 
@@ -311,7 +308,7 @@ void Cuboid2D<T>::divide(int nX, int nY, std::vector<Cuboid2D<T> > &childrenC) c
     for (int iY=0; iY<nY; iY++) {
       xN_child       = (_nX+nX-iX-1)/nX;
       yN_child       = (_nY+nY-iY-1)/nY;
-      Cuboid2D<T> child(globPosX_child, globPosY_child, _delta, xN_child, yN_child, _refinementLevel);
+      Cuboid2D<T> child(globPosX_child, globPosY_child, _delta, xN_child, yN_child);
       childrenC.push_back(child);
       globPosY_child += yN_child*_delta;
     }
@@ -356,8 +353,8 @@ void Cuboid2D<T>::divide(int p, std::vector<Cuboid2D<T> > &childrenC) const
     int xN_QNoInsertions = _nX;
     int yN_QInsertions = _nY-yN_QNoInsertions;
     int xN_QInsertions = _nX;
-    Cuboid2D<T> firstChildQ(_globPosX, _globPosY, _delta, xN_QNoInsertions, yN_QNoInsertions, _refinementLevel);
-    Cuboid2D<T> secondChildQ(_globPosX, _globPosY+yN_QNoInsertions*_delta, _delta, xN_QInsertions, yN_QInsertions, _refinementLevel);
+    Cuboid2D<T> firstChildQ(_globPosX, _globPosY, _delta, xN_QNoInsertions, yN_QNoInsertions);
+    Cuboid2D<T> secondChildQ(_globPosX, _globPosY+yN_QNoInsertions*_delta, _delta, xN_QInsertions, yN_QInsertions);
     firstChildQ.divide(nX, nY-rest, childrenC);
     secondChildQ.divide(nX+1,rest, childrenC);
   }
@@ -368,8 +365,8 @@ void Cuboid2D<T>::divide(int p, std::vector<Cuboid2D<T> > &childrenC) const
     int yN_QNoInsertions = _nY;
     int xN_QInsertions = _nX-xN_QNoInsertions;
     int yN_QInsertions = _nY;
-    Cuboid2D<T> firstChildQ(_globPosX, _globPosY, _delta, xN_QNoInsertions, yN_QNoInsertions, _refinementLevel);
-    Cuboid2D<T> secondChildQ(_globPosX+xN_QNoInsertions*_delta, _globPosY, _delta, xN_QInsertions, yN_QInsertions, _refinementLevel);
+    Cuboid2D<T> firstChildQ(_globPosX, _globPosY, _delta, xN_QNoInsertions, yN_QNoInsertions);
+    Cuboid2D<T> secondChildQ(_globPosX+xN_QNoInsertions*_delta, _globPosY, _delta, xN_QInsertions, yN_QInsertions);
     firstChildQ.divide(nX-rest, nY, childrenC);
     secondChildQ.divide(rest,nY+1, childrenC);
   }
@@ -383,43 +380,6 @@ void Cuboid2D<T>::resize(int iX, int iY, int nX, int nY)
   _globPosY = _globPosY+iY*_delta;
   _nX = nX;
   _nY = nY;
-}
-
-template<typename T>
-void Cuboid2D<T>::refineToLevel(unsigned int level)
-{
-  int leveldiffabs = int (util::pow(2, level - _refinementLevel ));
-  _delta /= (T)(leveldiffabs);
-  _nX *= leveldiffabs;
-  _nY *= leveldiffabs;
-  _refinementLevel = level;
-}
-
-template<typename T>
-void Cuboid2D<T>::refineIncrease()
-{
-  _delta /= (T)2;
-  _nX = _nX*2;
-  _nY = _nY*2;
-  _refinementLevel++;
-}
-
-template<typename T>
-void Cuboid2D<T>::refineDecrease()
-{
-  if (_refinementLevel == 0) {
-    return;
-  }
-  _delta *= (T)2;
-  _nX = (_nX)/2;
-  _nY = (_nY)/2;
-  _refinementLevel--;
-}
-
-template<typename T>
-int Cuboid2D<T>::get_refinementLevel() const
-{
-  return _refinementLevel;
 }
 
 template<typename T>

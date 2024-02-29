@@ -61,11 +61,11 @@ bool* Serializer::getNextBlock(std::size_t& sizeBlock, bool loadingMode)
   return _serializable.getBlock(_iBlock++, sizeBlock, loadingMode);
 }
 
+template<bool includeLogOutputDir>
 bool Serializer::load(std::string fileName, bool enforceUint)
 {
   validateFileName(fileName);
-
-  std::ifstream istr(getFullFileName(fileName).c_str());
+  std::ifstream istr(getFullFileName<includeLogOutputDir>(fileName).c_str());
   if (istr) {
     istr2serializer(*this, istr, enforceUint);
     istr.close();
@@ -77,6 +77,7 @@ bool Serializer::load(std::string fileName, bool enforceUint)
   }
 }
 
+template<bool includeLogOutputDir>
 bool Serializer::save(std::string fileName, bool enforceUint)
 {
   validateFileName(fileName);
@@ -84,7 +85,7 @@ bool Serializer::save(std::string fileName, bool enforceUint)
   // Determine binary size through `getSerializableSize()` method
   computeSize();
 
-  std::ofstream ostr (getFullFileName(fileName).c_str());
+  std::ofstream ostr (getFullFileName<includeLogOutputDir>(fileName).c_str());
   if (ostr) {
     serializer2ostr(*this, ostr, enforceUint);
     ostr.close();
@@ -126,25 +127,32 @@ void Serializer::validateFileName(std::string &fileName)
   }
 }
 
+template<bool includeLogOutputDir>
 const std::string Serializer::getFullFileName(const std::string& fileName)
 {
-  return singleton::directories().getLogOutDir() + createParallelFileName(fileName) + ".dat";
+  if constexpr(includeLogOutputDir){
+    return singleton::directories().getLogOutDir() + createParallelFileName(fileName) + ".dat";
+  } else {
+    return createParallelFileName(fileName) + ".dat";
+  }
 }
 
 
 
 /////////////// Serializable //////////////////////////
 
+template<bool includeLogOutputDir>
 bool Serializable::save(std::string fileName, const bool enforceUint)
 {
   Serializer tmpSerializer(*this, fileName);
-  return tmpSerializer.save();
+  return tmpSerializer.save<includeLogOutputDir>();
 }
 
+template<bool includeLogOutputDir>
 bool Serializable::load(std::string fileName, const bool enforceUint)
 {
   Serializer tmpSerializer(*this, fileName);
-  return tmpSerializer.load();
+  return tmpSerializer.load<includeLogOutputDir>();
 }
 
 bool Serializable::save(std::uint8_t* buffer)

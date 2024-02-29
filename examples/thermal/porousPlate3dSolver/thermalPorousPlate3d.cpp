@@ -247,9 +247,6 @@ protected:
     this->lattice(NavierStokes()).template defineDynamics<ForcedBGKdynamics>(
       this->geometry().getMaterialIndicator({1, 2, 3}));
 
-    this->lattice(Temperature()).template setParameter<descriptors::OMEGA>(Tomega);
-    this->lattice(NavierStokes()).template setParameter<descriptors::OMEGA>(NSomega);
-
     /// sets boundary
     setLocalVelocityBoundary<T,NSDESCRIPTOR>(
       this->lattice(NavierStokes()),
@@ -257,8 +254,10 @@ protected:
       this->geometry().getMaterialIndicator({2, 3}));
     setAdvectionDiffusionTemperatureBoundary<T,TDESCRIPTOR>(
       this->lattice(Temperature()),
-      Tomega,
       this->geometry().getMaterialIndicator({2, 3}));
+
+    this->lattice(Temperature()).template setParameter<descriptors::OMEGA>(Tomega);
+    this->lattice(NavierStokes()).template setParameter<descriptors::OMEGA>(NSomega);
   }
 
   void setInitialValues() override
@@ -414,10 +413,10 @@ int main(int argc, char *argv[])
     true, true, 100., 0
     );
   params.template get<VisualizationImages>() = std::make_shared<parameters::OutputPlot<T>>(
-    true, "thermalPorousPlate3d", 100.
+    "intervals", "thermalPorousPlate3d", 100.
     );
   params.template get<VisualizationVTK>() = std::make_shared<parameters::OutputPlot<T>>(
-    true, "thermalPorousPlate3d", 100.
+    "intervals", "thermalPorousPlate3d", 100.
     );
 
 

@@ -184,8 +184,8 @@ void prepareLatticeAD(
   setBounceBackBoundary(*sLatticeAD, superGeometry, noInlet);
 
   // boundary for ADE
-  setAdvectionDiffusionTemperatureBoundary<T,ADEDESCRIPTOR>(*sLatticeAD, omegaAD, superGeometry, inlet);
-  setAdvectionDiffusionConvectionBoundary<T,ADEDESCRIPTOR>(*sLatticeAD, superGeometry, 5);
+  setAdvectionDiffusionTemperatureBoundary<T,ADEDESCRIPTOR>(*sLatticeAD, superGeometry, inlet);
+  setZeroGradientBoundary<T,ADEDESCRIPTOR>(*sLatticeAD, superGeometry, 5);
 
   // initialisation for fluid
   AnalyticalConst3D<T, T> rhoI(rhoInlet);

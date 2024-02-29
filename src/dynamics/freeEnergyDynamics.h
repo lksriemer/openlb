@@ -50,7 +50,7 @@ struct FreeEnergy {
     using MomentaF = typename MOMENTA::template type<DESCRIPTOR>;
 
     template <typename RHO, typename U, typename V=RHO>
-    auto compute(int iPop, const RHO& rho, const U& u) {
+    auto compute(int iPop, const RHO& rho, const U& u) any_platform {
       V eq = equilibrium<DESCRIPTOR>::secondOrder(iPop, rho, u);
       if (iPop == 0) {
         eq += (V{1} - descriptors::t<V,DESCRIPTOR>(0)) * rho;
@@ -61,7 +61,7 @@ struct FreeEnergy {
     }
 
     template <typename CELL, typename PARAMETERS, typename FEQ, typename V=typename CELL::value_t>
-    CellStatistic<V> compute(CELL& cell, PARAMETERS& parameters, FEQ& fEq) {
+    CellStatistic<V> compute(CELL& cell, PARAMETERS& parameters, FEQ& fEq) any_platform {
       auto u = cell.template getField<descriptors::FORCE>();
       V rho = MomentaF().computeRho(cell);
       const V uSqr = util::normSqr<V,DESCRIPTOR::d>(u);
@@ -91,7 +91,7 @@ struct FreeEnergy {
     using EquilibriumF = typename EQUILIBRIUM::template type<DESCRIPTOR,MOMENTA>;
 
     template <typename CELL, typename PARAMETERS, typename V=typename CELL::value_t>
-    CellStatistic<V> apply(CELL& cell, PARAMETERS& parameters) {
+    CellStatistic<V> apply(CELL& cell, PARAMETERS& parameters) any_platform {
       V fEq[DESCRIPTOR::q] { };
       const auto statistic = EquilibriumF().compute(cell, parameters, fEq);
       const V omega = parameters.template get<descriptors::OMEGA>();
@@ -126,7 +126,7 @@ struct FreeEnergyInletOutlet {
     using MomentaF = typename MOMENTA::template type<DESCRIPTOR>;
 
     template <typename CELL, typename PARAMETERS, typename V=typename CELL::value_t>
-    CellStatistic<V> apply(CELL& cell, PARAMETERS& parameters) {
+    CellStatistic<V> apply(CELL& cell, PARAMETERS& parameters) any_platform {
       // Do a standard collision neglecting the chemical potential term.
       V rho, u[DESCRIPTOR::d];
       MomentaF().computeRhoU(cell, rho, u);
@@ -141,12 +141,29 @@ struct FreeEnergyInletOutlet {
       V missingRho = rho - V{1};
       V missingWeightSum = 0;
       for (int iPop=0; iPop < DESCRIPTOR::q; ++iPop) {
-        if (std::find(missingIndices.begin(), missingIndices.end(), iPop) != missingIndices.end()) {
+
+        // std::find can conflict with CUDA
+        /*if (std::find(missingIndices.begin(), missingIndices.end(), iPop) != missingIndices.end()) {
+          missingWeightSum += descriptors::t<V,DESCRIPTOR>(iPop);
+        } else {
+          missingRho -= cell[iPop];
+        }*/
+
+        bool contains = false;
+        for(long unsigned int i=0; i < missingIndices.size(); i++){
+          if(missingIndices[i] == (long unsigned int)iPop){
+            contains = true;
+          }
+        }
+
+        if(contains){
           missingWeightSum += descriptors::t<V,DESCRIPTOR>(iPop);
         } else {
           missingRho -= cell[iPop];
         }
+
       }
+
       for (unsigned iPop=0; iPop < missingIndices.size(); ++iPop) {
         cell[missingIndices[iPop]] = missingRho * descriptors::t<V,DESCRIPTOR>(missingIndices[iPop]) / missingWeightSum;
       }

@@ -78,12 +78,10 @@ void setFreeEnergyOutletBoundary(BlockLattice<T,DESCRIPTOR>& block, T omega, Blo
         && indicator(iX, iY)) {
       discreteNormal = blockGeometryStructure.getStatistics().getType(iX,iY);
       if (discreteNormal[0] == 0) {
-        PostProcessorGenerator2D<T, DESCRIPTOR>* convectivePostProcessor =
-          new FreeEnergyConvectiveProcessorGenerator2D<T, DESCRIPTOR> (
-          iX, iX, iY, iY, discreteNormal[1], discreteNormal[2] );
-        if (convectivePostProcessor) {
-          block.addPostProcessor(*convectivePostProcessor);
-        }
+        block.addPostProcessor(
+            typeid(stage::PostStream), {iX, iY},
+            olb::boundaryhelper::promisePostProcessorForNormal<T,DESCRIPTOR, FreeEnergyConvectiveProcessor2D>(
+              Vector<int,2>(discreteNormal.data() + 1)));
 
         if (_output) {
           clout << "setFreeEnergyOutletBoundary<" << "," << ">("  << iX << ", "<< iY << ")" << std::endl;

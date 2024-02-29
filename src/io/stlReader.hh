@@ -874,6 +874,8 @@ STLreader<T>::STLreader(const std::vector<std::vector<T>> meshPoints, T voxelSiz
     break;
   }
 
+  setNormalsOutside();
+
   if (_verbose) {
     print();
   }
@@ -1356,12 +1358,14 @@ bool STLreader<T>::distance(T& distance, const Vector<T,3>& origin,
 }
 
 template<typename T>
-Vector<T,3> STLreader<T>::findNormalOnSurface(const PhysR<T,3>& pt)
+Vector<T,3> STLreader<T>::evalNormalOnSurface(const PhysR<T,3>& pt, const Vector<T,3>& fallbackNormal)
 {
   // Check if the position is on the corner of a triangle
   unsigned countTriangles = 0;
   Vector<T,3> normal(T(0));
 
+  // TODO: Calculate angle-weighted psuedonormal (see 10.1109/TVCG.2005.49) in case the point lies on corners
+  // Edges correspond to an unweighted average (as calculated below) anyway
   for (const STLtriangle<T>& triangle : _mesh.getTriangles()) {
     if (triangle.isPointInside(pt)) {
       ++countTriangles;
@@ -1372,68 +1376,112 @@ Vector<T,3> STLreader<T>::findNormalOnSurface(const PhysR<T,3>& pt)
     return normal / countTriangles;
   }
 
-  // if nothing was found return (0,0,0) to indicate that nothing was found
-  return normal;
+  // If the provided point isn't located on the surface, return the predefined fallback
+  return fallbackNormal;
 }
 
 template<typename T>
 Vector<T,3> STLreader<T>::evalSurfaceNormal(const Vector<T,3>& origin)
 {
   Vector<T,3> normal(0.);
-  PhysR<T,3> closestPoint;
+  Vector<T,3> closestPointOnSurface(0.);
+  const STLtriangle<T>* closestTriangle = nullptr;
   T distance = std::numeric_limits<T>::max();
+
   for (const STLtriangle<T>& triangle : _mesh.getTriangles()) {
     PhysR<T,3> const pointOnTriangle = triangle.closestPtPointTriangle(origin);
-    PhysR<T,3> const currDistance = pointOnTriangle - origin;
-    T currDistanceNorm = norm(currDistance);
-    if (util::nearZero(currDistanceNorm)) {
-      return findNormalOnSurface(origin);
-    }
-    else if (distance > currDistanceNorm) {
+    PhysR<T,3> const currDistance = origin - pointOnTriangle;
+    T currDistanceNorm = norm_squared(currDistance);
+    if (distance > currDistanceNorm) {
       normal = currDistance;
       distance = currDistanceNorm;
-      closestPoint = pointOnTriangle;
+      closestPointOnSurface = pointOnTriangle;
+      closestTriangle = &triangle;
     }
   }
 
-  if (!util::nearZero(norm(normal))) {
-    normal = normalize(normal);
+  distance = util::sqrt(distance);
+  if (!util::nearZero(distance)) {
+    const short signAtInput = evalSignForSignedDistance(origin);
+    normal = normal/distance;
+    normal *= signAtInput;
   }
   else {
-    return normal;
+    normal = evalNormalOnSurface(closestPointOnSurface, closestTriangle->getNormal());
+    // The below isn't necessary because all normals are set to point outside by default (see constructor)
+
+    /* const T tmpStepSize = _voxelSize * T{0.01}; */
+    /* const short signBefore = evalSignForSignedDistance(origin - tmpStepSize * normal, *closestTriangle); */
+    /* const short signAfter  = evalSignForSignedDistance(origin + tmpStepSize * normal, *closestTriangle); */
+
+    /* if(signBefore > 0 || signAfter < 0) { */
+    /*   normal *= T{-1}; */
+    /* } */
   }
 
-  // Possible change of the sign so that the normal fits to the SDF logic
-  if(distance < _voxelSize) {
-    bool isInsideInnerPoint;
-    this->operator()(&isInsideInnerPoint, (closestPoint-_voxelSize*normal).data());
-    bool isInsideOuterPoint;
-    this->operator()(&isInsideOuterPoint, (closestPoint+_voxelSize*normal).data());
-    normal *= (isInsideInnerPoint && !isInsideOuterPoint ? 1 : -1);
-  }
-  else {
-    bool isInside;
-    this->operator()(&isInside, origin.data());
-    normal *= (isInside ? 1 : -1);
-  }
   return normal;
+}
+
+template<typename T>
+short STLreader<T>::evalSignForSignedDistance(const Vector<T,3>& pseudonormal, const Vector<T,3>& distance)
+{
+  const T projection = pseudonormal * distance;
+
+  if(projection > 0) {
+    return 1;
+  }
+  else if (projection < 0 ) {
+    return -1;
+  }
+  return 0;
+}
+
+template<typename T>
+short STLreader<T>::evalSignForSignedDistance(const Vector<T,3>& pt)
+{
+  T windingNumber{0};
+
+  for (const STLtriangle<T>& triangle : _mesh.getTriangles()) {
+    const PhysR<T,3> a = triangle.point[0].coords - pt;
+    const PhysR<T,3> b = triangle.point[1].coords - pt;
+    const PhysR<T,3> c = triangle.point[2].coords - pt;
+
+    const T aNorm = norm(a);
+    const T bNorm = norm(b);
+    const T cNorm = norm(c);
+
+    const T numerator = a * crossProduct3D(b, c);
+    const T denominator = aNorm * bNorm * cNorm + (a*b) * cNorm + (b*c) * aNorm + (c*a) * bNorm;
+
+    windingNumber += util::atan2(numerator,denominator);
+  }
+  windingNumber *= 2;
+
+  if(int(util::round(windingNumber))%2 == 0) {
+    return 1;
+  }
+  return -1;
 }
 
 template<typename T>
 T STLreader<T>::signedDistance(const Vector<T,3>& input)
 {
-  bool isInside;
-  this->operator()(&isInside, input.data());
-  const short sign = (isInside ? -1 : 1);
+  Vector<T,3> distance;
+  Vector<T,3> closestPointOnSurface;
+  T distanceNorm = std::numeric_limits<T>::max();
 
-  T distance = std::numeric_limits<T>::max();
   for (const STLtriangle<T>& triangle : _mesh.getTriangles()) {
-    PhysR<T,3> const pointOnTriangle = triangle.closestPtPointTriangle(input);
-    T currDistance = norm(pointOnTriangle - input);
-    distance = util::min(distance, currDistance);
+    const PhysR<T,3> currPointOnTriangle = triangle.closestPtPointTriangle(input);
+    const Vector<T,3> currDistance = input - currPointOnTriangle;
+    T currDistanceNorm = norm_squared(currDistance);
+    if (distanceNorm > currDistanceNorm) {
+      distanceNorm = currDistanceNorm;
+      distance = currDistance;
+      closestPointOnSurface = currPointOnTriangle;
+    }
   }
 
-  return distance * sign;
+  return util::sqrt(distanceNorm) * evalSignForSignedDistance(input);
 }
 
 template <typename T>

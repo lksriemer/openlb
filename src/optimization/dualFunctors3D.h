@@ -24,12 +24,9 @@
 #ifndef DUAL_FUNCTORS_3D_H
 #define DUAL_FUNCTORS_3D_H
 
-#include "utilities/omath.h"
-#include <vector>
-#include <map>
 
-#include "functors/functors3D.h"
-
+#include "functors/analytical/analyticalBaseF.h"
+#include "functors/lattice/superBaseF3D.h"
 
 namespace olb {
 

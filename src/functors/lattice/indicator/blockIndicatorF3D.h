@@ -176,6 +176,24 @@ public:
   Vector<int,3> getMax() override;
 };
 
+/// Block indicator identifying neighbors of boundary cells
+template <typename T>
+class BlockIndicatorBoundaryNeighbor3D : public BlockIndicatorF3D<T> {
+protected:
+  BlockIndicatorF3D<T>& _indicatorF;
+  int _overlap;
+public:
+  BlockIndicatorBoundaryNeighbor3D(BlockIndicatorF3D<T>& indicatorF, int overlap);
+
+  using BlockIndicatorF3D<T>::operator();
+  bool operator() (bool output[], const int input[]) override;
+
+  /// Returns min lattice position of the indicated domain's bounding box
+  Vector<int,3> getMin() override;
+  /// Returns max lattice position of the indicated domain's bounding box
+  Vector<int,3> getMax() override;
+};
+
 } // namespace olb
 
 #endif

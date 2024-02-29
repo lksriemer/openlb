@@ -53,4 +53,5 @@
 #include "contact/contactFunctions.h"
 #include "contact/contactObjects.h"
 #include "functions/particleContactFunctions.h"
+#include "particles/communication/equationsOfMotionResults.h"
 

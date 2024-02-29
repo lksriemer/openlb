@@ -71,10 +71,16 @@ void FreeEnergyChemicalPotentialCoupling2D<T,DESCRIPTOR>::processSubDomain (
     for (int iX=newX0-1; iX<=newX1+1; ++iX)
       for (int iY=newY0-1; iY<=newY1+1; ++iY) {
         rhoField[0][blockLattice.getCellId(iX, iY)] = blockLattice.get(iX,iY).computeRho();
+        //std::cout << "iX: " << iX << " - iY: " << iY << " - blockLattice.getCellID: " << blockLattice.getCellId(iX, iY) << std::endl;
+        //std::cout << "rhoField[0][" << blockLattice.getCellId(iX, iY) << "] = " << blockLattice.get(iX,iY).computeRho() << std::endl;
       }
+
+    //std::cout << "---------------" << std::endl;
+
     for (int iX=newX0-1; iX<=newX1+1; ++iX)
       for (int iY=newY0-1; iY<=newY1+1; ++iY) {
         rhoField[1][blockLattice.getCellId(iX, iY)] = partnerLattice1->get(iX,iY).computeRho();
+        //std::cout << "rhoField[1][" << blockLattice.getCellId(iX, iY) << "] = " << blockLattice.get(iX,iY).computeRho() << std::endl;
       }
     if (partners.size() > 1) {
       for (int iX=newX0-1; iX<=newX1+1; ++iX)
@@ -90,6 +96,7 @@ void FreeEnergyChemicalPotentialCoupling2D<T,DESCRIPTOR>::processSubDomain (
                        + rhoField[1][blockLattice.getCellId(iX, iY)];
         T densityDifference = rhoField[0][blockLattice.getCellId(iX, iY)]
                               - rhoField[1][blockLattice.getCellId(iX, iY)];
+
         if (partners.size() > 1) {
           densitySum -= rhoField[2][blockLattice.getCellId(iX, iY)];
           densityDifference -= rhoField[2][blockLattice.getCellId(iX, iY)];

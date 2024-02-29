@@ -94,7 +94,7 @@ void SuperGeometryStatistics2D<T>::update(bool verbose)
     for (int iCloc=0; iCloc<_superGeometry->getLoadBalancer().size(); iCloc++) {
       if (_superGeometry->getBlockGeometry(iCloc).getStatistics().getStatisticsStatus() ) {
         auto& blockGeometry = const_cast<BlockGeometry<T,2>&>(_superGeometry->getBlockGeometry(iCloc));
-        blockGeometry.getStatistics(false).update(false);
+        blockGeometry.getStatistics().update(false);
         updateReallyNeeded++;
       }
     }
@@ -116,7 +116,7 @@ void SuperGeometryStatistics2D<T>::update(bool verbose)
     {
       std::set<int> tmpMaterials{};
       for (int iCloc=0; iCloc<_superGeometry->getLoadBalancer().size(); iCloc++) {
-        const auto& blockMaterial2n = _superGeometry->getBlockGeometry(iCloc).getStatistics(false).getMaterial2n();
+        const auto& blockMaterial2n = _superGeometry->getBlockGeometry(iCloc).getStatistics().getMaterial2n();
         for (auto [material, _] : blockMaterial2n) {
           tmpMaterials.insert(material);
         }
@@ -132,13 +132,13 @@ void SuperGeometryStatistics2D<T>::update(bool verbose)
 
     // store the number and min., max. possition for each rank
     for (int iCloc=0; iCloc<_superGeometry->getLoadBalancer().size(); iCloc++) {
-      std::map<int, int> material2n = _superGeometry->getBlockGeometry(iCloc).getStatistics(false).getMaterial2n();
+      std::map<int, int> material2n = _superGeometry->getBlockGeometry(iCloc).getStatistics().getMaterial2n();
       std::map<int, int>::iterator iter;
 
       for (iter = material2n.begin(); iter != material2n.end(); iter++) {
         if (iter->second!=0) {
-          std::vector<T> minPhysR = _superGeometry->getBlockGeometry(iCloc).getStatistics(false).getMinPhysR(iter->first);
-          std::vector<T> maxPhysR = _superGeometry->getBlockGeometry(iCloc).getStatistics(false).getMaxPhysR(iter->first);
+          std::vector<T> minPhysR = _superGeometry->getBlockGeometry(iCloc).getStatistics().getMinPhysR(iter->first);
+          std::vector<T> maxPhysR = _superGeometry->getBlockGeometry(iCloc).getStatistics().getMaxPhysR(iter->first);
           if (_material2n.count(iter->first) == 0) {
             _material2n[iter->first] = iter->second;
             _material2min[iter->first] = minPhysR;
@@ -390,7 +390,7 @@ template<typename T>
 std::vector<int> SuperGeometryStatistics2D<T>::getType(int iC, int iX, int iY) const
 {
   int iCloc=_superGeometry->getLoadBalancer().loc(iC);
-  std::vector<int> discreteNormal = _superGeometry->getBlockGeometry(iCloc).getStatistics(false).getType(iX, iY);
+  std::vector<int> discreteNormal = _superGeometry->getBlockGeometry(iCloc).getStatistics().getType(iX, iY);
   return discreteNormal;
 }
 
@@ -407,8 +407,8 @@ std::vector<T> SuperGeometryStatistics2D<T>::computeNormal(int material) const
   std::vector<T> normal (2,int());
   for (int iCloc=0; iCloc<_superGeometry->getLoadBalancer().size(); iCloc++) {
     for (int iDim=0; iDim<2; iDim++) {
-      if (_superGeometry->getBlockGeometry(iCloc).getStatistics(false).getNvoxel(material)!=0) {
-        normal[iDim] += _superGeometry->getBlockGeometry(iCloc).getStatistics(false).computeNormal(material)[iDim]*_superGeometry->getBlockGeometry(iCloc).getStatistics(false).getNvoxel(material);
+      if (_superGeometry->getBlockGeometry(iCloc).getStatistics().getNvoxel(material)!=0) {
+        normal[iDim] += _superGeometry->getBlockGeometry(iCloc).getStatistics().computeNormal(material)[iDim]*_superGeometry->getBlockGeometry(iCloc).getStatistics().getNvoxel(material);
       }
     }
   }

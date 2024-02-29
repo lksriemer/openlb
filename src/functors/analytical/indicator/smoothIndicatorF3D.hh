@@ -933,6 +933,10 @@ bool SmoothIndicatorCustom3D<T,S,PARTICLE>::operator()(T output[], const S input
 {
   PhysR<T,3> pos(input[0], input[1], input[2]);
   if constexpr(!PARTICLE) {
+    if(norm(this->getPos() - pos) > this->_circumRadius) {
+      output[0] = T{0};
+      return false;
+    }
     pos = util::executeRotation<S,3,true>(pos, this->_rotMat, this->getPos());
   }
   if(norm(pos) < this->_circumRadius) {
@@ -940,6 +944,62 @@ bool SmoothIndicatorCustom3D<T,S,PARTICLE>::operator()(T output[], const S input
   }
   output[0] = T{0};
   return false;
+}
+
+//Factored-Indicator for spherical boundary layer:
+template <typename T, typename S, bool PARTICLE>
+SmoothIndicatorFactoredCircle3D<T,S,PARTICLE>::SmoothIndicatorFactoredCircle3D(Vector<S,3> center, S radius, S epsilon, S density, Vector<S,3> vel, S omega, S factor)
+  : _radius(radius), _factor(factor)
+{
+  this->_epsilon = epsilon;
+  if constexpr (!PARTICLE) {
+    this->_pos = center;
+  }
+
+  this->_circumRadius = radius + 0.5*epsilon;
+  if constexpr (!PARTICLE) {
+    this->_myMin = {center[0] - this->getCircumRadius(), center[1] - this->getCircumRadius(), center[2] - this->getCircumRadius()};
+    this->_myMax = {center[0] + this->getCircumRadius(), center[1] + this->getCircumRadius(), center[2] + this->getCircumRadius()};
+    this->init();
+  }
+}
+
+template <typename T, typename S, bool PARTICLE>
+Vector<S,4> SmoothIndicatorFactoredCircle3D<T, S, PARTICLE>::calcMofiAndMass( const S density )
+{
+  T mass = 4/3*M_PI*_radius*_radius*_radius*density;
+  Vector<S,3> mofi;
+  mofi[0] = 2./5.*mass*_radius*_radius;
+  mofi[1] = 2./5.*mass*_radius*_radius;
+  mofi[2] = 2./5.*mass*_radius*_radius;
+  return Vector<S,4>(mofi[0], mofi[1], mofi[2], mass);
+}
+
+// returns true if x is inside the sphere
+template <typename T, typename S, bool PARTICLE>
+bool SmoothIndicatorFactoredCircle3D<T,S,PARTICLE>::operator()(T output[], const S input[])
+{
+  double distToCenter2 = util::pow(this->getPos()[0]-input[0], 2) +
+                         util::pow(this->getPos()[1]-input[1], 2) +
+                         util::pow(this->getPos()[2]-input[2], 2);
+  /*double d = util::sqrt(distToCenter2) - this->_radius + this->getEpsilon()/2;
+
+  if(d <= 0){
+    output[0] = T(this->_factor);
+    return true;
+  }
+  else if(d > 0 && d <= this->getEpsilon()){
+    output[0] = T(- this->_factor*(d-this->getEpsilon())/this->getEpsilon());
+    return true;
+  }
+  else{
+    output[0] = 0;
+    return false;
+  }*/
+
+  double d = util::sqrt(distToCenter2) - this->_radius;
+  output[0] = T(this->_factor*(1.-tanh(d/this->getEpsilon()))/2.);
+  return true;
 }
 
 } // namespace olb

@@ -10,6 +10,17 @@ all: default
 ###########################################################################
 ## Default build configuration
 
+# Use environment if in Nix shell, otherwise use config.mk
+ifndef IN_NIX_SHELL
+ifeq ($(wildcard config.mk),)
+config.mk: config.git.mk
+	@echo Copying default config
+	cp -n config.git.mk config.mk
+
+DEFAULT_TARGETS += config.mk
+endif
+endif
+
 # Include config.mk environment (optional)
 -include config.mk
 
@@ -20,10 +31,10 @@ include rules.mk
 
 ifeq ($(USE_EMBEDDED_DEPENDENCIES), ON)
 dependencies:
-	$(MAKE) CXX=$(CXX) CC=$(CC) -C external
+	$(MAKE) CXX='$(CXX)' CC='$(CC)' -C external
 
 clean-dependencies:
-	$(MAKE) CXX=$(CXX) CC=$(CC) -C external clean
+	$(MAKE) CXX='$(CXX)' CC='$(CC)' -C external clean
 
 CLEAN_TARGETS += clean-dependencies
 else
@@ -95,7 +106,7 @@ CSE_GENERATEES := $(patsubst %.cse.h.template, %.cse.h, $(CSE_GENERATORS))
 
 %.cse.h: %.cse.h.template
 	$(eval $@_GUARD := $(shell grep -Po "#ifndef\ \K[A-Z_]*_CSE_H" $<))
-	python codegen/cse.py $< $($@_GUARD) $@
+	python script/codegen/cse.py $< $($@_GUARD) $@
 
 cse: $(CSE_GENERATEES)
 

@@ -41,20 +41,41 @@ constexpr T evalEffectiveYoungModulus(T E1, T E2, T nu1, T nu2)
   return T {1} / denominator;
 }
 
+/// Calculates the damping factor according to Carvalho & Martins (2019) (10.1016/j.mechmachtheory.2019.03.028)
+template <typename T>
+constexpr T evalDampingFactor(const T coefficientOfRestitution,
+                              const T initialRelativeVelocityMagnitude)
+{
+  // This case should never happen, but could for example due to initial conditions
+  if (initialRelativeVelocityMagnitude <= 0) {
+    return 0;
+  }
+  return 1.5 * (1 - coefficientOfRestitution) *
+         (11 - coefficientOfRestitution) / (1 + 9 * coefficientOfRestitution) /
+         initialRelativeVelocityMagnitude;
+}
+
 template <typename T, typename PARTICLETYPE>
 T evalContactDetectionDistance(Particle<T, PARTICLETYPE>& particle,
                                T const                    physDeltaX)
 {
   constexpr unsigned D = PARTICLETYPE::d;
 
-  constexpr T factor = []() {
-    static_assert(D == 2 || D == 3, "Only D=2 and D=3 are supported");
-    // TODO: Use with c++20
-    //return 0.5 * (D == 3 ? std::numbers::sqrt3_v<T> : std::numbers::sqrt2_v<T>);
-    return 0.5 * (D == 3 ? 1.7320508075688772935 : 1.4142135623730950488);
-  }();
-  return factor * physDeltaX +
-         particles::access::getEnlargementForContact(particle);
+  if constexpr (particles::access::providesContactMaterial<PARTICLETYPE>()) {
+    constexpr T factor = []() {
+      static_assert(D == 2 || D == 3, "Only D=2 and D=3 are supported");
+      // TODO: Use with c++20
+      //return T{0.5} * (D == 3 ? std::numbers::sqrt3_v<T> : std::numbers::sqrt2_v<T>);
+      return T {0.5} * (D == 3 ? 1.7320508075688772935 : 1.4142135623730950488);
+    }();
+    return factor * physDeltaX +
+           particles::access::getEnlargementForContact(particle);
+  }
+  else {
+    return T {0};
+  }
+
+  __builtin_unreachable();
 }
 
 template <typename T>
@@ -101,10 +122,8 @@ void resetResponsibleRank(CONTACTTYPE& contact)
 template <typename CONTACTTYPE>
 bool isResponsibleRankSet(CONTACTTYPE& contact)
 {
-  return contact.getResponsibleRank() <
-              std::numeric_limits<int>::max();
+  return contact.getResponsibleRank() < std::numeric_limits<int>::max();
 }
-
 
 } // namespace contact
 } // namespace particles

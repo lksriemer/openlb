@@ -217,6 +217,34 @@ bool SuperExtractIndicatorF3D<T,W>::operator()(W output[], const int input[])
 }
 
 
+template <typename T, typename W, typename W2>
+SuperTypecastF3D<T,W,W2>::SuperTypecastF3D(
+  FunctorPtr<SuperF3D<T,W2>>&& f)
+  : SuperF3D<T,W>(f->getSuperStructure(), f->getTargetDim()),
+    _f(std::move(f))
+{
+  this->getName() = _f->getName();
+
+  for (int iC = 0; iC < f->getBlockFSize(); ++iC) {
+    this->_blockF.emplace_back(
+      new BlockTypecastF3D<W,W2>(
+        f->getBlockF(iC))
+    );
+  }
+}
+
+template <typename T, typename W, typename W2>
+bool SuperTypecastF3D<T,W,W2>::operator()(W output[], const int input[])
+{
+  W2 result[this->getTargetDim()];
+  _f(result, input);
+  for (int i = 0; i < this->getTargetDim(); ++i) {
+    output[i] = static_cast<W>(result[i]);
+  }
+  return true;
+}
+
+
 template <typename T, typename W>
 SuperIdentityOnSuperIndicatorF3D<T,W>::SuperIdentityOnSuperIndicatorF3D(SuperF3D<T,W>& f,
     SuperIndicatorF3D<T>& indicatorF,

@@ -78,6 +78,22 @@ struct PlainMixinDynamicsForNormalMomenta {
   }
 };
 
+//constructs Dynamics with template args MixinDynamics, Momenta, direction, and orientation
+template <
+  typename T, typename DESCRIPTOR,
+  template<typename,typename,typename,typename,int,int> typename DYNAMICS,
+  typename MIXIN,
+  typename MOMENTA
+>
+struct DirectionOrientationMixinDynamicsForPlainMomenta {
+  template <int direction, int orientation>
+  using ConcreteDynamics = DYNAMICS<T,DESCRIPTOR,MIXIN,MOMENTA,direction,orientation>;
+
+  template <unsigned D>
+  static auto construct(Vector<int,D> n) {
+    return constructConcreteDynamicsForDirectionOrientation<T,DESCRIPTOR,ConcreteDynamics>(n);
+  }
+};
 
 }//namespace boundaryhelper
 

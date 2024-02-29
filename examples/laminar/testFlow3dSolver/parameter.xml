@@ -38,18 +38,18 @@
     </Log>
 
     <VisualizationVTK>
-      <Output> true </Output>
+      <Output> intervals </Output>
       <SaveTime> 0.5  </SaveTime>
       <Filename> testflow </Filename>
     </VisualizationVTK>
 
     <VisualizationImages>
-      <Output> false </Output>
+      <Output> off </Output>
       <SaveTime> 40000.  </SaveTime>
     </VisualizationImages>
 
     <VisualizationGnuplot>
-      <Output> false </Output>
+      <Output> off </Output>
     </VisualizationGnuplot>
 
     <Timer>

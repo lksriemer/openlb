@@ -38,12 +38,14 @@ BlockLatticeStokesDragForce<T, DESCRIPTOR, PARTICLETYPE, serialize>::BlockLattic
   PhysR<T,DESCRIPTOR::d>cellMin, PhysR<T,DESCRIPTOR::d> cellMax,
   Vector<bool,DESCRIPTOR::d> periodic,
   std::size_t iP0,
+  const std::unordered_set<int>& ignoredMaterials,
   const F f)
   : BlockLatticePhysF<T,DESCRIPTOR>(blockLattice, converter,
                                    (DESCRIPTOR::d)*(particleSystem.size()-iP0)),
     _blockGeometry(blockGeometry), _blockLattice(blockLattice),
     _particleSystem(particleSystem),
-    _cellMin(cellMin), _cellMax(cellMax), _periodic(periodic), _iP0(iP0), _f(f)
+    _cellMin(cellMin), _cellMax(cellMax), _periodic(periodic),
+    _iP0(iP0), _ignoredMaterials(ignoredMaterials), _f(f)
 {
   this->getName() = "physStokesDragForce";
   //Calculate precalculated constants

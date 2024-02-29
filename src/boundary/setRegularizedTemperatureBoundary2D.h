@@ -38,7 +38,7 @@
 #include "dynamics/dynamics.h"
 #include "dynamics/advectionDiffusionDynamics.h"
 #include "dynamics/momenta/aliases.h"
-#include "advectionDiffusionBoundaries.h"
+#include "boundary/dynamics/advectionDiffusionBoundaries.h"
 #include "geometry/blockGeometry.h"
 #include "functors/lattice/indicator/blockIndicatorF2D.h"
 #include "setBoundary2D.h"

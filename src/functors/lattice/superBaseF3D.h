@@ -151,6 +151,16 @@ public:
   bool operator() (W output[], const int input[]);
 };
 
+/// perform explicit typecast from output type W2 to W
+// user has to guarantee that cast is well-defined
+template <typename T, typename W, typename W2>
+class SuperTypecastF3D : public SuperF3D<T,W> {
+protected:
+  FunctorPtr<SuperF3D<T,W2>>        _f;
+public:
+  SuperTypecastF3D(FunctorPtr<SuperF3D<T,W2>>&& f);
+  bool operator() (W output[], const int input[]);
+};
 
 /// identity functor for memory management
 template <typename T, typename W=T>

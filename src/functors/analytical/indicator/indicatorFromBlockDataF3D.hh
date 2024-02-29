@@ -28,7 +28,7 @@ namespace olb {
 
 template <typename S>
 IndicatorBlockData3D<S>::IndicatorBlockData3D(
-  BlockData<3,S,S> blockData,
+  BlockData<3,S,S>& blockData,
   Vector<S,3> extend, Vector<S,3> origin,
   S deltaR, bool invert)
   : _blockData(blockData), _deltaR(deltaR), _invert(invert)
@@ -52,9 +52,10 @@ bool IndicatorBlockData3D<S>::operator()(bool output[], const S input[])
   int z = ((this->_myMin[2] + zDist)/_deltaR)+0.5;
 
   if (x >= 0 && x < _blockData.getNx() && y >= 0 && y < _blockData.getNy() && z >= 0 && z < _blockData.getNz()) {
-    if (this->_blockData.get(x, y, z) > std::numeric_limits<S>::epsilon()) {
+    LatticeR<3> input(x,y,z);
+    if (this->_blockData.get(input) > std::numeric_limits<S>::epsilon()) {
       if (!_invert){
-        output[0] = S(this->_blockData.get(x, y, z));
+        output[0] = S(this->_blockData.get(input));
         return true;
       } else {
         output[0] = S(0);
@@ -66,7 +67,7 @@ bool IndicatorBlockData3D<S>::operator()(bool output[], const S input[])
     output[0] = S(0);
     return false;
   } else {
-    output[0] = 1.-S(this->_blockData.get(x, y, z));
+    output[0] = 1.-S(this->_blockData.get(input));
     return true;
   }
 }

@@ -183,6 +183,7 @@ template <typename MAP>
 struct TypeIndexedTuple {
   /// Storage of values in MAP-order
   using tuple_t = typename MAP::values_t::template decompose_into<std::tuple>;
+  using map_t = MAP;
   tuple_t tuple;
 
   TypeIndexedTuple() any_platform = default;
@@ -204,6 +205,12 @@ struct TypeIndexedTuple {
 
   template <typename KEY>
   using value_t = typename MAP::template value<KEY>;
+
+  /// Return true iff MAP contains KEY
+  template <typename KEY>
+  constexpr bool contains(meta::id<KEY> = meta::id<KEY>{}) any_platform {
+    return MAP::keys_t::template contains<KEY>();
+  }
 
   /// Access Ith element
   template <unsigned I>

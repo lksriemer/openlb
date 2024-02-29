@@ -83,6 +83,37 @@ T pressureL1AbsError = 0;
 T pressureL2AbsError = 0;
 T pressureLinfAbsError = 0;
 
+
+//Windprofile. Equation from OpenFoam
+template <typename T>
+class WindProfile3D : public AnalyticalF3D<T,T> {
+
+protected:
+  T _z0;
+  T _u0;
+  T _d =0;
+  int _windDirection;
+  int _normalToEarth;
+  T _kappa;
+  T _u_fric;
+  T _z_ref;
+
+public:
+  WindProfile3D(T u0, T z0, T z_ref,T kappa, T d, int windDirection = 0, int normalToEarth =2) : AnalyticalF3D<T,T>( 3 )
+  ,_u0(u0), _z0(z0), _z_ref(z_ref), _kappa(kappa), _d(d),_windDirection(windDirection), _normalToEarth(normalToEarth) {
+    _u_fric = (_u0*_kappa)/std::log10((_z_ref+_z0)/_z0);
+    this->getName() = "WindProfile3D";
+  };
+
+  bool operator()( T output[3], const T input[3] ) override {
+    output[_windDirection] = _u_fric / _kappa *std::log10(((input[_normalToEarth]-_d)+_z0)/_z0);
+    return true;
+  };
+
+};
+
+
+
 // Stores geometry information in form of material numbers
 void prepareGeometry( UnitConverter<T,DESCRIPTOR> const& converter,
                       SuperGeometry<T,3>& superGeometry )

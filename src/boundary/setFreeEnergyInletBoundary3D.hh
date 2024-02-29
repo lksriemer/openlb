@@ -183,11 +183,16 @@ void setFreeEnergyInletBoundary(BlockLattice<T,DESCRIPTOR>& _block, T omega, Blo
         }
       }
 
-      PostProcessorGenerator3D<T, DESCRIPTOR>* chemPotPostProcessor =
-        new FreeEnergyChemPotBoundaryProcessorGenerator3D<T, DESCRIPTOR> ( iX, iX, iY, iY, iZ, iZ,
-            discreteNormal[1], discreteNormal[2], discreteNormal[3], latticeNumber );
-      if (chemPotPostProcessor) {
-        _block.addPostProcessor(*chemPotPostProcessor);
+      if (latticeNumber == 1){
+              _block.addPostProcessor(
+        typeid(stage::PostStream), {iX, iY, iZ},
+        olb::boundaryhelper::promisePostProcessorForNormal<T,DESCRIPTOR, FreeEnergyChemPotBoundaryProcessor3DA>(
+          Vector<int,3>(discreteNormal.data() + 1)));
+      } else {
+              _block.addPostProcessor(
+        typeid(stage::PostStream), {iX, iY, iZ},
+        olb::boundaryhelper::promisePostProcessorForNormal<T,DESCRIPTOR, FreeEnergyChemPotBoundaryProcessor3DB>(
+          Vector<int,3>(discreteNormal.data() + 1)));
       }
 
       if (_output) {

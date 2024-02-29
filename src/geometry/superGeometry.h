@@ -66,7 +66,8 @@
 namespace olb {
 
 template<typename T, unsigned D>
-class SuperGeometry : public SuperStructure<T,D> {
+class SuperGeometry : public SuperStructure<T,D>
+                    , public BufferSerializable {
 private:
   /// Vector of block geometries with overlap
   std::vector<std::unique_ptr<BlockGeometry<T,D>>> _block{};
@@ -89,9 +90,9 @@ public:
                 int overlap = 3);
 
   /// Read only access to the material numbers, error handling: returns 0 if data is not available
-  int const& get(int iCglob, LatticeR<D> latticeR) const;
-  int const& get(const int latticeR[D+1]) const;
-  int const& get(LatticeR<D+1> latticeR) const;
+  int get(int iCglob, LatticeR<D> latticeR) const;
+  int get(const int latticeR[D+1]) const;
+  int get(LatticeR<D+1> latticeR) const;
 
   template <typename... L>
   std::enable_if_t<sizeof...(L) == (D+1), int>
@@ -102,9 +103,6 @@ public:
   /// Read only access to the material numbers with global communication to all ranks
   int getAndCommunicate(int iCglob, LatticeR<D> latticeR) const;
   int getAndCommunicate(LatticeR<D+1> latticeR) const;
-  /// Write access to the material numbers, error handling: stops the program if data is not available
-  int& set(std::vector<int> latticeR); //TODO to be removed set->get, problem: with get calling wrong function
-
 
   /// Transforms a lattice to physical position (SI unites)
   std::vector<T> getPhysR(int iCglob, LatticeR<D> latticeR) const;
@@ -139,7 +137,8 @@ public:
 
   /// Executes an outer cleaning: Sets all material numbers which are not
   /// bulk-materials to 0 if there is no neighbour from bulkMaterials
-  template <typename DESCRIPTOR= std::conditional_t<D==2,descriptors::D2Q9<>,descriptors::D3Q27<>>> int clean(bool verbose=true, std::vector<int> bulkMaterials={1});
+  template <typename DESCRIPTOR=std::conditional_t<D==2,descriptors::D2Q9<>,descriptors::D3Q27<>>>
+  int clean(bool verbose=true, std::vector<int> bulkMaterials={1});
   /// Removes not needed fluid cells from the outer domain
   int outerClean(bool verbose=true, std::vector<int> bulkMaterials={1});
   /// inner cleaning for all boundary types
@@ -163,7 +162,7 @@ public:
   /// renames all boundary voxels of material fromBcMat to toBcMat if two neighbour voxel in the direction of the discrete normal are fluid voxel with material fluidM in the region where the indicator function is fulfilled
   void rename(int fromBcMat, int toBcMat, int fluidMat, IndicatorF<T,D>& condition);
   /// renames all boundary voxels of material fromBcMat to toBcMat if two neighbour voxel in the direction of the discrete normal are fluid voxel with material fluidM in the region where the indicator function is fulfilled
-    void rename(int fromBcMat, int toBcMat, int fluidMat, FunctorPtr<IndicatorF<T,D>>&& condition);
+  void rename(int fromBcMat, int toBcMat, int fluidMat, FunctorPtr<IndicatorF<T,D>>&& condition);
 
 
   /// Prints some information about the super geometry
@@ -193,6 +192,13 @@ public:
       _communicationNeeded = false;
     }
   }
+
+  /// Number of data blocks for the serializable interface
+  std::size_t getNblock() const override;
+  /// Binary size for the serializer
+  std::size_t getSerializableSize() const override;
+  /// Return a pointer to the memory of the current block and its size for the serializable interface
+  bool* getBlock(std::size_t iBlock, std::size_t& sizeBlock, bool loadingMode) override;
 
 };
 

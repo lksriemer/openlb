@@ -76,7 +76,7 @@ V velocityBMRho(CELL& cell, const U& u) any_platform
 }
 
 template<int direction, int orientation, typename CELL, typename U, typename FLUX, typename V=typename CELL::value_t, typename DESCRIPTOR=typename CELL::descriptor_t>
-V heatFluxBMRho(CELL& cell, const U& u, FLUX& flux)
+V heatFluxBMRho(CELL& cell, const U& u, FLUX& flux) any_platform
 {
   V rho = velocityBMRho<direction,orientation>(cell, u);
   rho -= orientation * flux / (V{1} + orientation * u[direction]);
@@ -229,7 +229,7 @@ struct FreeEnergyInletOutletDensity {
   }
 
   template <typename TYPE, typename CELL, typename RHO>
-  void inverseShift(CELL& cell, RHO& rho) {};
+  void inverseShift(CELL& cell, RHO& rho) any_platform {};
 
   static std::string getName(){
     return "FreeEnergyInletOutletDensity";
@@ -1122,6 +1122,69 @@ struct ForcedMomentum {
 };
 
 template<typename MOMENTUM>
+struct GuoZhaoForcedMomentum {
+  template <typename TYPE, typename CELL, typename J, typename V=typename CELL::value_t, typename DESCRIPTOR=typename CELL::descriptor_t>
+  void compute(CELL& cell, J& j) any_platform
+  {
+    MOMENTUM().template compute<TYPE>(cell, j);
+  }
+
+  template <typename TYPE, typename CELL, typename U, typename V=typename CELL::value_t, typename DESCRIPTOR=typename CELL::descriptor_t>
+  void computeU(CELL& cell, U& u) any_platform
+  {
+    MOMENTUM().template computeU<TYPE>(cell, u);
+    const V epsilon = cell.template getField<descriptors::EPSILON>();
+    const V nu      = cell.template getField<descriptors::NU>();
+    const V k       = cell.template getField<descriptors::K>();
+    const auto bodyF = cell.template getFieldPointer<descriptors::BODY_FORCE>();
+
+    const V uMag = util::sqrt( util::normSqr<V,DESCRIPTOR::d>(u) );
+    const V Fe = 0.;//1.75/util::sqrt(150.*util::pow(epsilon,3));
+    const V c_0 = 0.5*(1 + 0.5*epsilon*nu/k);
+    const V c_1 = 0.5*epsilon*Fe/util::sqrt(k);
+
+    for (int iVel=0; iVel < DESCRIPTOR::d; ++iVel) {
+      u[iVel] += bodyF[iVel] * V(0.5) * epsilon;
+      u[iVel] /= (c_0 + util::sqrt(c_0*c_0 + c_1*uMag));
+    }
+  }
+
+  template <typename TYPE, typename CELL, typename U, typename DESCRIPTOR=typename CELL::descriptor_t>
+  void define(CELL& cell, const U& u) any_platform
+  {
+    MOMENTUM().template define<TYPE>(cell, u);
+  }
+
+  template <typename TYPE, typename CELL>
+  void initialize(CELL& cell) any_platform
+  {
+    MOMENTUM().template initialize<TYPE>(cell);
+  }
+
+  template <typename TYPE, typename CELL, typename U, typename V=typename CELL::value_t, typename DESCRIPTOR=typename CELL::descriptor_t>
+  void inverseShift(CELL& cell, U& u) any_platform {
+    const V epsilon = cell.template getField<descriptors::EPSILON>();
+    const V nu      = cell.template getField<descriptors::NU>();
+    const V k       = cell.template getField<descriptors::K>();
+    const auto bodyF = cell.template getFieldPointer<descriptors::BODY_FORCE>();
+
+    const V uMag = util::sqrt( util::normSqr<V,DESCRIPTOR::d>(u) );
+    const V Fe = 0.;//1.75/util::sqrt(150.*util::pow(epsilon,3));
+    const V c_0 = 0.5*(1 + 0.5*epsilon*nu/k);
+    const V c_1 = 0.5*epsilon*Fe/util::sqrt(k);
+
+    for (int iVel=0; iVel < DESCRIPTOR::d; ++iVel) {
+      u[iVel] *= (c_0 + util::sqrt(c_0*c_0 + c_1*uMag));
+      u[iVel] -= bodyF[iVel] * V(0.5) * epsilon;
+    }
+  }
+
+  static std::string getName() {
+    return "GuoZhaoForcedMomentum<" + MOMENTUM().getName() + ">";
+  }
+};
+
+template<typename MOMENTUM>
 struct PorousMomentum {
   template <typename TYPE, typename CELL, typename J, typename V=typename CELL::value_t, typename DESCRIPTOR=typename CELL::descriptor_t>
   void compute(CELL& cell, J& j) any_platform
@@ -1331,6 +1394,46 @@ struct ForcedStress {
 
   static std::string getName() {
     return "ForcedStress<" + STRESS().getName() + ">";
+  }
+};
+
+template<typename STRESS>
+struct GuoZhaoForcedStress {
+  template <typename TYPE, typename CELL, typename RHO, typename U, typename PI, typename V=typename CELL::value_t, typename DESCRIPTOR=typename CELL::descriptor_t>
+  void compute(CELL& cell, const RHO& rho, const U& u, PI& pi) any_platform
+  {
+    V uNew[DESCRIPTOR::d] { };
+    const V epsilon = cell.template getField<descriptors::EPSILON>();
+    const V nu      = cell.template getField<descriptors::NU>();
+    const V k       = cell.template getField<descriptors::K>();
+    const auto bodyF = cell.template getFieldPointer<descriptors::BODY_FORCE>();
+
+    const V uMag = util::sqrt( util::normSqr<V,DESCRIPTOR::d>(u) );
+    const V Fe = 0.;//1.75/util::sqrt(150.*util::pow(epsilon,3));
+    const V c_0 = 0.5*(1 + 0.5*epsilon*nu/k);
+    const V c_1 = 0.5*epsilon*Fe/util::sqrt(k);
+
+    for (unsigned iD=0; iD < DESCRIPTOR::d; ++iD) {
+      uNew[iD] = u[iD] * (c_0 + util::sqrt(c_0*c_0 + c_1*uMag)) - V{0.5} * bodyF[iD] * epsilon;
+    }
+    STRESS().template compute<TYPE>(cell, rho, uNew, pi);
+    V forceTensor[util::TensorVal<DESCRIPTOR>::n];
+    // Creation of body force tensor (rho/2.)*(G_alpha*U_beta + U_alpha*G_Beta)
+    int iPi = 0;
+    for (int iAlpha=0; iAlpha < DESCRIPTOR::d; ++iAlpha) {
+      for (int iBeta=iAlpha; iBeta < DESCRIPTOR::d; ++iBeta) {
+        forceTensor[iPi] = V{0.5} * rho * (bodyF[iAlpha]*uNew[iBeta] + uNew[iAlpha]*bodyF[iBeta]);
+        ++iPi;
+      }
+    }
+    // Creation of second-order moment off-equilibrium tensor
+    for (int iPi=0; iPi < util::TensorVal<DESCRIPTOR>::n; ++iPi) {
+      pi[iPi] += forceTensor[iPi];
+    }
+  }
+
+  static std::string getName() {
+    return "GuoZhaoForcedStress<" + STRESS().getName() + ">";
   }
 };
 

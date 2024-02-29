@@ -45,33 +45,28 @@ void setZeroDistributionBoundary(SuperLattice<T, DESCRIPTOR>& sLattice,SuperGeom
 
 //setZeroDistributionBoundary function on the superLattice domain
 //depending on the application, the first function can be skipped and this function can be called directly in the app
+// more information of this boundary can be found here (https://doi.org/10.1016/j.jocs.2016.03.013)
 template<typename T, typename DESCRIPTOR>
 void setZeroDistributionBoundary(SuperLattice<T, DESCRIPTOR>& sLattice, FunctorPtr<SuperIndicatorF3D<T>>&& indicator)
 {
-  bool includeOuterCells = false;
   int _overlap = 1;
   OstreamManager clout(std::cout, "setZeroDistributionBoundary");
-  if (indicator->getSuperGeometry().getOverlap() == 1) {
-    includeOuterCells = true;
-    clout << "WARNING: overlap == 1, boundary conditions set on overlap despite unknown neighbor materials" << std::endl;
-  }
   for (int iCloc = 0; iCloc < sLattice.getLoadBalancer().size(); ++iCloc) {
     //sets ZeroDistributionBoundary on the block level
     setZeroDistributionBoundary<T,DESCRIPTOR>(sLattice.getBlock(iCloc),
-        indicator->getBlockIndicatorF(iCloc), includeOuterCells);
+        indicator->getBlockIndicatorF(iCloc));
   }
-  //the addPoints2CommBC is currently located inside setBoundary3D.h
   /// Adds needed Cells to the Communicator _commBC in SuperLattice
-  addPoints2CommBC(sLattice, std::forward<decltype(indicator)>(indicator), _overlap);
+  addPoints2CommBC(sLattice,std::forward<decltype(indicator)>(indicator), _overlap);
 }
 
 //sets the ZeroDistributionBoundary on the block level
 template<typename T, typename DESCRIPTOR>
-void setZeroDistributionBoundary(BlockLattice<T,DESCRIPTOR>& _block, BlockIndicatorF3D<T>& indicator, bool includeOuterCells)
+void setZeroDistributionBoundary(BlockLattice<T,DESCRIPTOR>& _block, BlockIndicatorF3D<T>& indicator)
 {
   OstreamManager clout(std::cout, "setZeroDistributionBoundary");
   const auto& blockGeometryStructure = indicator.getBlockGeometry();
-  const int margin = includeOuterCells ? 0 : 1;
+  const int margin = 1;
   std::vector<int> discreteNormal(4, 0);
   blockGeometryStructure.forSpatialLocations([&](auto iX, auto iY, auto iZ) {
     if (blockGeometryStructure.getNeighborhoodRadius({iX, iY, iZ}) >= margin

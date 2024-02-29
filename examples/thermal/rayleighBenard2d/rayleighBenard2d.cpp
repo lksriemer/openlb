@@ -117,8 +117,8 @@ void prepareLattice( ThermalUnitConverter<T, NSDESCRIPTOR, TDESCRIPTOR> &convert
   ADlattice.defineDynamics<AdvectionDiffusionBGKdynamics>(superGeometry, 3);
   ADlattice.defineDynamics<AdvectionDiffusionBGKdynamics>(superGeometry, 4);
 
-  setAdvectionDiffusionTemperatureBoundary(ADlattice, Tomega, superGeometry, 2);
-  setAdvectionDiffusionTemperatureBoundary(ADlattice, Tomega, superGeometry, 3);
+  setAdvectionDiffusionTemperatureBoundary(ADlattice, superGeometry, 2);
+  setAdvectionDiffusionTemperatureBoundary(ADlattice, superGeometry, 3);
 
   /// define initial conditions
   AnalyticalConst2D<T,T> rho(1.);

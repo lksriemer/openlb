@@ -576,6 +576,305 @@ void ConcreteBlockLattice<T,DESCRIPTOR,PLATFORM>::postLoad()
 }
 
 
+#ifdef PARALLEL_MODE_MPI
+
+/// Wrapper for a non-blocking block propagation send request
+template <typename T, typename DESCRIPTOR, Platform PLATFORM>
+class ConcreteBlockCommunicator<ConcreteBlockLattice<T,DESCRIPTOR,PLATFORM>>::SendTask {
+private:
+  const std::vector<CellID>& _cells;
+
+  MultiConcreteCommunicatable<ConcreteBlockLattice<T,DESCRIPTOR,PLATFORM>> _source;
+
+  std::unique_ptr<std::uint8_t[]> _buffer;
+  MpiSendRequest _request;
+
+public:
+  SendTask(MPI_Comm comm, int tag, int rank,
+           const std::vector<std::type_index>& fields,
+           const std::vector<CellID>& cells,
+           ConcreteBlockLattice<T,DESCRIPTOR,PLATFORM>& block):
+    _cells(cells),
+    _source(block, fields),
+    _buffer(new std::uint8_t[_source.size(_cells)] { }),
+    _request(_buffer.get(), _source.size(_cells),
+             rank, tag, comm)
+  { }
+
+  void send()
+  {
+    _source.serialize(_cells, _buffer.get());
+    _request.start();
+  }
+
+  void wait()
+  {
+    _request.wait();
+  }
+};
+
+/// Wrapper for a non-blocking block propagation receive request
+template <typename T, typename DESCRIPTOR, Platform PLATFORM>
+class ConcreteBlockCommunicator<ConcreteBlockLattice<T,DESCRIPTOR,PLATFORM>>::RecvTask {
+private:
+  const int _tag;
+  const int _rank;
+  const std::vector<CellID>& _cells;
+
+  MultiConcreteCommunicatable<ConcreteBlockLattice<T,DESCRIPTOR,PLATFORM>> _target;
+
+  std::unique_ptr<std::uint8_t[]> _buffer;
+  MpiRecvRequest _request;
+
+public:
+  /// Manual replacement for std::reference_wrapper<RecvTask>
+  /**
+   * Used to track pending receive requests in std::set.
+   *
+   * This is a workaround for problematic external definition of
+   * dependently-typed comparision operators for nested classes.
+   * Reconsider as soon as depending on C++17 is allowed.
+   **/
+  class ref {
+  private:
+    RecvTask& _task;
+  public:
+    ref(std::unique_ptr<RecvTask>& task): _task(*task) { };
+
+    RecvTask* operator->() const
+    {
+      return &_task;
+    }
+
+    bool operator <(const ref& rhs) const
+    {
+      return _task < rhs._task;
+    }
+  };
+
+  RecvTask(MPI_Comm comm, int tag, int rank,
+           const std::vector<std::type_index>& fields,
+           const std::vector<CellID>& cells,
+           ConcreteBlockLattice<T,DESCRIPTOR,PLATFORM>& block):
+    _tag(tag),
+    _rank(rank),
+    _cells(cells),
+    _target(block, fields),
+    _buffer(new std::uint8_t[_target.size(_cells)] { }),
+    _request(_buffer.get(), _target.size(_cells),
+             _rank, _tag, comm)
+  { }
+
+  bool operator<(const RecvTask& rhs) const
+  {
+    return  _rank  < rhs._rank
+        || (_rank == rhs._rank && _tag < rhs._tag);
+  }
+
+  void receive()
+  {
+    _request.start();
+  };
+
+  bool isDone()
+  {
+    return _request.isDone();
+  }
+
+  void unpack()
+  {
+    _target.deserialize(_cells, _buffer.get());
+  }
+};
+
+#endif // PARALLEL_MODE_MPI
+
+/// Wrapper for a local plain-copy block communication request
+template <typename T, typename DESCRIPTOR, Platform PLATFORM>
+struct ConcreteBlockCommunicator<ConcreteBlockLattice<T,DESCRIPTOR,PLATFORM>>::CopyTask {
+  virtual ~CopyTask() { }
+
+  virtual void copy() = 0;
+  virtual void wait() = 0;
+};
+
+/// Wrapper for a local homogeneous CPU block communication request
+template <typename T, typename DESCRIPTOR, Platform PLATFORM>
+class ConcreteBlockCommunicator<ConcreteBlockLattice<T,DESCRIPTOR,PLATFORM>>::HomogeneousCopyTask
+  : public ConcreteBlockCommunicator<ConcreteBlockLattice<T,DESCRIPTOR,PLATFORM>>::CopyTask {
+private:
+  const std::vector<CellID>& _targetCells;
+  const std::vector<CellID>& _sourceCells;
+
+  MultiConcreteCommunicatable<ConcreteBlockLattice<T,DESCRIPTOR,PLATFORM>> _target;
+  MultiConcreteCommunicatable<ConcreteBlockLattice<T,DESCRIPTOR,PLATFORM>> _source;
+
+  std::unique_ptr<std::uint8_t[]> _buffer;
+
+public:
+  HomogeneousCopyTask(
+    const std::vector<std::type_index>& fields,
+    const std::vector<CellID>& targetCells, ConcreteBlockLattice<T,DESCRIPTOR,PLATFORM>& target,
+    const std::vector<CellID>& sourceCells, ConcreteBlockLattice<T,DESCRIPTOR,PLATFORM>& source):
+    _targetCells(targetCells),
+    _sourceCells(sourceCells),
+    _target(target, fields),
+    _source(source, fields),
+    _buffer(new std::uint8_t[_source.size(_sourceCells)] { })
+  {
+    OLB_ASSERT(_sourceCells.size() == _targetCells.size(),
+               "Source cell count must match target cell count");
+  }
+
+  void copy() override
+  {
+    _source.serialize(_sourceCells, _buffer.get());
+    _target.deserialize(_targetCells, _buffer.get());
+  };
+
+  void wait() override { }
+
+};
+
+
+template <typename T, typename DESCRIPTOR, Platform PLATFORM>
+ConcreteBlockCommunicator<ConcreteBlockLattice<T,DESCRIPTOR,PLATFORM>>::ConcreteBlockCommunicator(
+  SuperLattice<T,DESCRIPTOR>& super,
+  LoadBalancer<T>& loadBalancer,
+#ifdef PARALLEL_MODE_MPI
+  SuperCommunicationTagCoordinator<T>& tagCoordinator,
+  MPI_Comm comm,
+#endif
+  int iC,
+  const BlockCommunicationNeighborhood<T,DESCRIPTOR::d>& neighborhood):
+  _iC(iC)
+#ifdef PARALLEL_MODE_MPI
+, _mpiCommunicator(comm)
+#endif
+{
+#ifdef PARALLEL_MODE_MPI
+  neighborhood.forNeighbors([&](int remoteC) {
+    if (loadBalancer.isLocal(remoteC)) {
+      const Platform remotePlatform = loadBalancer.platform(loadBalancer.loc(remoteC));
+      if (!neighborhood.getCellsInboundFrom(remoteC).empty()) {
+        switch (remotePlatform) {
+#ifdef PLATFORM_GPU_CUDA
+          case Platform::GPU_CUDA:
+            // Use manual copy for local GPU-CPU communication due to better performance
+            _copyTasks.emplace_back(new HeterogeneousCopyTask<T,DESCRIPTOR,Platform::GPU_CUDA,PLATFORM>(
+              neighborhood.getFieldsCommonWith(remoteC),
+              neighborhood.getCellsInboundFrom(remoteC),   super.template getBlock<ConcreteBlockLattice<T,DESCRIPTOR,PLATFORM>>(_iC),
+              neighborhood.getCellsRequestedFrom(remoteC), super.template getBlock<ConcreteBlockLattice<T,DESCRIPTOR,Platform::GPU_CUDA>>(loadBalancer.loc(remoteC))));
+            break;
+#endif
+          default:
+            // Use manual copy for local CPU-CPU communication due to better performance
+            _copyTasks.emplace_back(new HomogeneousCopyTask(
+              neighborhood.getFieldsCommonWith(remoteC),
+              neighborhood.getCellsInboundFrom(remoteC),   super.template getBlock<ConcreteBlockLattice<T,DESCRIPTOR,PLATFORM>>(_iC),
+              neighborhood.getCellsRequestedFrom(remoteC), super.template getBlock<ConcreteBlockLattice<T,DESCRIPTOR,PLATFORM>>(loadBalancer.loc(remoteC))));
+            break;
+        }
+      }
+    } else {
+      if (!neighborhood.getCellsOutboundTo(remoteC).empty()) {
+        _sendTasks.emplace_back(std::make_unique<SendTask>(
+          _mpiCommunicator, tagCoordinator.get(loadBalancer.glob(_iC), remoteC),
+          loadBalancer.rank(remoteC),
+          neighborhood.getFieldsCommonWith(remoteC),
+          neighborhood.getCellsOutboundTo(remoteC),
+          super.template getBlock<ConcreteBlockLattice<T,DESCRIPTOR,PLATFORM>>(_iC)));
+      }
+      if (!neighborhood.getCellsInboundFrom(remoteC).empty()) {
+        _recvTasks.emplace_back(std::make_unique<RecvTask>(
+          _mpiCommunicator, tagCoordinator.get(remoteC, loadBalancer.glob(_iC)),
+          loadBalancer.rank(remoteC),
+          neighborhood.getFieldsCommonWith(remoteC),
+          neighborhood.getCellsInboundFrom(remoteC),
+          super.template getBlock<ConcreteBlockLattice<T,DESCRIPTOR,PLATFORM>>(_iC)));
+      }
+    }
+  });
+
+#else // not using PARALLEL_MODE_MPI
+  neighborhood.forNeighbors([&](int localC) {
+    if (!neighborhood.getCellsInboundFrom(localC).empty()) {
+      _copyTasks.emplace_back(new HomogeneousCopyTask(
+        neighborhood.getFieldsCommonWith(localC),
+        neighborhood.getCellsInboundFrom(localC),   super.template getBlock<ConcreteBlockLattice<T,DESCRIPTOR,PLATFORM>>(_iC),
+        neighborhood.getCellsRequestedFrom(localC), super.template getBlock<ConcreteBlockLattice<T,DESCRIPTOR,PLATFORM>>(loadBalancer.loc(localC))));
+    }
+  });
+#endif
+}
+
+template <typename T, typename DESCRIPTOR, Platform PLATFORM>
+ConcreteBlockCommunicator<ConcreteBlockLattice<T,DESCRIPTOR,PLATFORM>>::~ConcreteBlockCommunicator()
+{ }
+
+#ifdef PARALLEL_MODE_MPI
+
+template <typename T, typename DESCRIPTOR, Platform PLATFORM>
+void ConcreteBlockCommunicator<ConcreteBlockLattice<T,DESCRIPTOR,PLATFORM>>::receive()
+{
+  for (auto& task : _recvTasks) {
+    task->receive();
+  }
+}
+
+template <typename T, typename DESCRIPTOR, Platform PLATFORM>
+void ConcreteBlockCommunicator<ConcreteBlockLattice<T,DESCRIPTOR,PLATFORM>>::send()
+{
+  for (auto& task : _sendTasks) {
+    task->send();
+  }
+  for (auto& task : _copyTasks) {
+    task->copy();
+  }
+}
+
+template <typename T, typename DESCRIPTOR, Platform PLATFORM>
+void ConcreteBlockCommunicator<ConcreteBlockLattice<T,DESCRIPTOR,PLATFORM>>::unpack()
+{
+  std::set<typename RecvTask::ref> pending(_recvTasks.begin(), _recvTasks.end());
+  while (!pending.empty()) {
+    auto task_iterator = pending.begin();
+    while (task_iterator != pending.end()) {
+      auto& task = *task_iterator;
+      if (task->isDone()) {
+        task->unpack();
+        task_iterator = pending.erase(task_iterator);
+      }
+      else {
+        ++task_iterator;
+      }
+    }
+  }
+}
+
+template <typename T, typename DESCRIPTOR, Platform PLATFORM>
+void ConcreteBlockCommunicator<ConcreteBlockLattice<T,DESCRIPTOR,PLATFORM>>::wait()
+{
+  for (auto& task : _copyTasks) {
+    task->wait();
+  }
+  for (auto& task : _sendTasks) {
+    task->wait();
+  }
+}
+
+#else // not using PARALLEL_MODE_MPI
+
+template <typename T, typename DESCRIPTOR, Platform PLATFORM>
+void ConcreteBlockCommunicator<ConcreteBlockLattice<T,DESCRIPTOR,PLATFORM>>::copy()
+{
+  for (auto& task : _copyTasks) {
+    task->copy();
+  }
+}
+
+#endif
+
 }
 
 #endif

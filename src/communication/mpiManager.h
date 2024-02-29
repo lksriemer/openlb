@@ -191,6 +191,11 @@ public:
 
   /// Gather data from multiple processors to one processor
   template <typename T>
+  void gather(T* sendBuf, int sendCount, T* recvBuf, int recvCount,
+              int root = 0, MPI_Comm comm = MPI_COMM_WORLD);
+
+  /// Gather data from multiple processors to one processor
+  template <typename T>
   void gatherv(T* sendBuf, int sendCount, T* recvBuf, int* recvCounts, int* displs,
                int root = 0, MPI_Comm comm = MPI_COMM_WORLD);
 

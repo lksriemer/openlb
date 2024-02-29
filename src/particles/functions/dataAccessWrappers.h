@@ -1,6 +1,6 @@
 /*  This file is part of the OpenLB library
  *
- *  Copyright (C) 2022 Nicolas Hafen, Mathias J. Krause
+ *  Copyright (C) 2022 Nicolas Hafen, Jan E. Marquardt, Martin Sadric, Mathias J. Krause
  *  E-mail contact: info@openlb.net
  *  The most recent release of OpenLB can be downloaded at
  *  <http://www.openlb.net/>
@@ -91,10 +91,55 @@ Vector<T,3> calcAngAcceleration3D( Vector<T,3>& torque, Vector<T,3>& momentOfIne
   return angularAcceleration;
 }
 
-
-
 //// Checks for specific particle fields and groups
 
+/// Provides field ID
+template<typename PARTICLETYPE>
+constexpr bool providesID()
+{
+  using namespace descriptors;
+  return PARTICLETYPE::template providesNested<PARALLELIZATION,ID>();
+}
+template<typename T, typename PARTICLETYPE>
+constexpr bool providesID(Particle<T,PARTICLETYPE>& particle){
+  return providesID<PARTICLETYPE>();
+}
+
+/// Provides field ID
+template<typename PARTICLETYPE>
+constexpr bool providesInvalid()
+{
+  using namespace descriptors;
+  return PARTICLETYPE::template providesNested<GENERAL,INVALID>();
+}
+template<typename T, typename PARTICLETYPE>
+constexpr bool providesInvalid(Particle<T,PARTICLETYPE>& particle){
+  return providesInvalid<PARTICLETYPE>();
+}
+
+/// Provides field POSITION
+template<typename PARTICLETYPE>
+constexpr bool providesPosition()
+{
+  using namespace descriptors;
+  return PARTICLETYPE::template providesNested<GENERAL,POSITION>();
+}
+template<typename T, typename PARTICLETYPE>
+constexpr bool providesPosition(Particle<T,PARTICLETYPE>& particle){
+  return providesPosition<PARTICLETYPE>();
+}
+
+/// Provides field RADIUS
+template<typename PARTICLETYPE>
+constexpr bool providesRadius()
+{
+  using namespace descriptors;
+  return PARTICLETYPE::template providesNested<PHYSPROPERTIES,RADIUS>();
+}
+template<typename T, typename PARTICLETYPE>
+constexpr bool providesRadius(Particle<T,PARTICLETYPE>& particle){
+  return providesRadius<PARTICLETYPE>();
+}
 
 /// Provides field DENSITY
 template<typename PARTICLETYPE>
@@ -107,6 +152,7 @@ template<typename T, typename PARTICLETYPE>
 constexpr bool providesDensity(Particle<T,PARTICLETYPE>& particle){
   return providesDensity<PARTICLETYPE>();
 }
+
 /// Provides field MASS
 template<typename PARTICLETYPE>
 constexpr bool providesMass()
@@ -141,6 +187,78 @@ constexpr bool providesAngle()
 template<typename T, typename PARTICLETYPE>
 constexpr bool providesAngle(Particle<T,PARTICLETYPE>& particle){
   return providesAngle<PARTICLETYPE>();
+}
+
+/// Provides field VELOCITY
+template<typename PARTICLETYPE>
+constexpr bool providesVelocity()
+{
+  using namespace descriptors;
+  return PARTICLETYPE::template providesNested<MOBILITY,VELOCITY>();
+}
+template<typename T, typename PARTICLETYPE>
+constexpr bool providesVelocity(Particle<T,PARTICLETYPE>& particle){
+  return providesVelocity<PARTICLETYPE>();
+}
+
+/// Provides field VELOCITY
+template<typename PARTICLETYPE>
+constexpr bool providesAngVelocity()
+{
+  using namespace descriptors;
+  return PARTICLETYPE::template providesNested<MOBILITY,ANG_VELOCITY>();
+}
+template<typename T, typename PARTICLETYPE>
+constexpr bool providesAngVelocity(Particle<T,PARTICLETYPE>& particle){
+  return providesAngVelocity<PARTICLETYPE>();
+}
+
+/// Provides field FORCE
+template<typename PARTICLETYPE>
+constexpr bool providesForce()
+{
+  using namespace descriptors;
+  return PARTICLETYPE::template providesNested<FORCING,FORCE>();
+}
+template<typename T, typename PARTICLETYPE>
+constexpr bool providesForce(Particle<T,PARTICLETYPE>& particle){
+  return providesForce<PARTICLETYPE>();
+}
+
+/// Provides field TORQUE
+template<typename PARTICLETYPE>
+constexpr bool providesTorque()
+{
+  using namespace descriptors;
+  return PARTICLETYPE::template providesNested<FORCING,TORQUE>();
+}
+template<typename T, typename PARTICLETYPE>
+constexpr bool providesTorque(Particle<T,PARTICLETYPE>& particle){
+  return providesTorque<PARTICLETYPE>();
+}
+
+/// Provides field ADHESION
+template<typename PARTICLETYPE>
+constexpr bool providesAdhesion()
+{
+  using namespace descriptors;
+  return PARTICLETYPE::template providesNested<FORCING,ADHESION>();
+}
+template<typename T, typename PARTICLETYPE>
+constexpr bool providesAdhesion(Particle<T,PARTICLETYPE>& particle){
+  return providesAdhesion<PARTICLETYPE>();
+}
+
+/// Provides field MOFI
+template<typename PARTICLETYPE>
+constexpr bool providesMomentOfInertia()
+{
+  using namespace descriptors;
+  return PARTICLETYPE::template providesNested<PHYSPROPERTIES,MOFI>();
+}
+template<typename T, typename PARTICLETYPE>
+constexpr bool providesMomentOfInertia(Particle<T,PARTICLETYPE>& particle){
+  return providesMomentOfInertia<PARTICLETYPE>();
 }
 
 /// Provides field INVALID
@@ -227,19 +345,20 @@ constexpr bool providesSurface(Particle<T,PARTICLETYPE>& particle){
   return providesSurface<PARTICLETYPE>();
 }
 
-///// Provides field SINDICATOR
-//template<typename PARTICLETYPE>
-//constexpr bool providesSmoothIndicator()
-//{
-//  using namespace descriptors;
-//  return PARTICLETYPE::template providesNested<SURFACE,SINDICATOR>();
-//}
-//template<typename T, typename PARTICLETYPE>
-//constexpr bool providesSmoothIndicator(Particle<T,PARTICLETYPE>& particle){
-//  return providesSmoothIndicator<PARTICLETYPE>();
-//}
+// Provides field SINDICATOR
+template<typename PARTICLETYPE>
+constexpr bool providesSmoothIndicator()
+{
+  using namespace descriptors;
+  return PARTICLETYPE::template providesNested<SURFACE,SINDICATOR>();
+}
+template<typename T, typename PARTICLETYPE>
+constexpr bool providesSmoothIndicator(Particle<T,PARTICLETYPE>& particle)
+{
+  return providesSmoothIndicator<PARTICLETYPE>();
+}
 
-/// Provides group PARALLETATION
+/// Provides group PARALLELIZATION
 template<typename PARTICLETYPE>
 constexpr bool providesParallelization()
 {
@@ -296,6 +415,28 @@ constexpr bool providesElongation(Particle<T,PARTICLETYPE>& particle){
 }
 
 template<typename PARTICLETYPE>
+constexpr bool providesAccelerationStrd()
+{
+  using namespace descriptors;
+  return PARTICLETYPE::template providesNested<MOBILITY,ACCELERATION_STRD>();
+}
+template<typename T, typename PARTICLETYPE>
+constexpr bool providesAccelerationStrd(Particle<T,PARTICLETYPE>& particle){
+  return providesAccelerationStrd<PARTICLETYPE>();
+}
+
+template<typename PARTICLETYPE>
+constexpr bool providesAngAccelerationStrd()
+{
+  using namespace descriptors;
+  return PARTICLETYPE::template providesNested<MOBILITY,ANG_ACC_STRD>();
+}
+template<typename T, typename PARTICLETYPE>
+constexpr bool providesAngAccelerationStrd(Particle<T,PARTICLETYPE>& particle){
+  return providesAngAccelerationStrd<PARTICLETYPE>();
+}
+
+template<typename PARTICLETYPE>
 constexpr bool providesEnlargementForContactTreatment()
 {
   using namespace descriptors;
@@ -337,9 +478,6 @@ constexpr bool is3D(Particle<T,PARTICLETYPE>& particle){
   return is3D<PARTICLETYPE>();
 }
 
-
-
-
 //// Getter for specific particle fields
 
 template<typename T, typename PARTICLETYPE>
@@ -347,7 +485,8 @@ Vector<T,PARTICLETYPE::d> getPosition( Particle<T,PARTICLETYPE> particle )
 {
   using namespace descriptors;
   constexpr unsigned D = PARTICLETYPE::d;
-  static_assert(PARTICLETYPE::template providesNested<GENERAL,POSITION>(), "Field GENERAL:POSITION has to be provided");
+  static_assert(providesPosition<PARTICLETYPE>(),
+      "Field GENERAL:POSITION has to be provided");
   Vector<T,D> position( particle.template getField<GENERAL,POSITION>() );
   return position;
 }
@@ -357,7 +496,7 @@ Vector<T,utilities::dimensions::convert<PARTICLETYPE::d>::rotation> getAngle( Pa
 {
   using namespace descriptors;
   const unsigned Drot = utilities::dimensions::convert<PARTICLETYPE::d>::rotation;
-  static_assert(PARTICLETYPE::template providesNested<SURFACE,ANGLE>(), "Field SURFACE:ANGLE has to be provided");
+  static_assert(providesAngle<PARTICLETYPE>(), "Field SURFACE:ANGLE has to be provided");
   Vector<T,Drot> angle( particle.template getField<SURFACE,ANGLE>() );
   if constexpr (ensureAngularBounds){
     for (unsigned iRot=0; iRot<Drot; ++iRot) {
@@ -372,7 +511,7 @@ Vector<T,utilities::dimensions::convert<PARTICLETYPE::d>::matrix> getRotationMat
 {
   using namespace descriptors;
   const unsigned DrotMat = utilities::dimensions::convert<PARTICLETYPE::d>::matrix;
-  static_assert(PARTICLETYPE::template providesNested<SURFACE,ROT_MATRIX>(), "Field SURFACE:ROT_MATRIX has to be provided");
+  static_assert(providesRotationMatrix<PARTICLETYPE>(), "Field SURFACE:ROT_MATRIX has to be provided");
   Vector<T,DrotMat> rotationMatrix( particle.template getField<SURFACE,ROT_MATRIX>() );
   return rotationMatrix;
 }
@@ -397,7 +536,7 @@ Vector<T,PARTICLETYPE::d> getVelocity( Particle<T,PARTICLETYPE> particle )
 {
   using namespace descriptors;
   constexpr unsigned D = PARTICLETYPE::d;
-  static_assert(PARTICLETYPE::template providesNested<MOBILITY,VELOCITY>(), "Field MOBILITY:VELOCITY has to be provided");
+  static_assert(providesVelocity<PARTICLETYPE>(), "Field MOBILITY:VELOCITY has to be provided");
   Vector<T,D> velocity( particle.template getField<MOBILITY,VELOCITY>() );
   return velocity;
 }
@@ -407,7 +546,7 @@ Vector<T,utilities::dimensions::convert<PARTICLETYPE::d>::rotation> getAngularVe
 {
   using namespace descriptors;
   const unsigned Drot = utilities::dimensions::convert<PARTICLETYPE::d>::rotation;
-  static_assert(PARTICLETYPE::template providesNested<MOBILITY,ANG_VELOCITY>(), "Field MOBILITY:ANG_VELOCITY has to be provided");
+  static_assert(providesAngVelocity<PARTICLETYPE>(), "Field MOBILITY:ANG_VELOCITY has to be provided");
   Vector<T,Drot> angVelocity( particle.template getField<MOBILITY,ANG_VELOCITY>() );
   return angVelocity;
 }
@@ -417,7 +556,7 @@ Vector<T,PARTICLETYPE::d> getForce( Particle<T,PARTICLETYPE> particle )
 {
   using namespace descriptors;
   constexpr unsigned D = PARTICLETYPE::d;
-  static_assert(PARTICLETYPE::template providesNested<FORCING,FORCE>(), "Field FORCING:FORCE has to be provided");
+  static_assert(providesForce<PARTICLETYPE>(), "Field FORCING:FORCE has to be provided");
   Vector<T,D> force( particle.template getField<FORCING,FORCE>() );
   return force;
 }
@@ -427,16 +566,28 @@ Vector<T,utilities::dimensions::convert<PARTICLETYPE::d>::rotation> getTorque( P
 {
   using namespace descriptors;
   const unsigned Drot = utilities::dimensions::convert<PARTICLETYPE::d>::rotation;
-  static_assert(PARTICLETYPE::template providesNested<FORCING,TORQUE>(), "Field FORCING:TORQUE has to be provided");
+  static_assert(providesTorque<PARTICLETYPE>(), "Field FORCING:TORQUE has to be provided");
   Vector<T,Drot> torque( particle.template getField<FORCING,TORQUE>() );
   return torque;
 }
 
 template<typename T, typename PARTICLETYPE>
+Vector<T,utilities::dimensions::convert<PARTICLETYPE::d>::rotation> getMomentOfInertia( Particle<T,PARTICLETYPE> particle )
+{
+  using namespace descriptors;
+  const unsigned Drot = utilities::dimensions::convert<PARTICLETYPE::d>::rotation;
+  static_assert(providesMomentOfInertia<PARTICLETYPE>(), "Field PHYSPROPERTIES:MOFI has to be provided");
+  Vector<T,Drot> mofi( particle.template getField<PHYSPROPERTIES,MOFI>() );
+  return mofi;
+}
+
+// Consisting of normal and tangential adhesion component of particle.
+template<typename T, typename PARTICLETYPE>
 Vector<T,2> getAdhesion( Particle<T,PARTICLETYPE> particle )
 {
   using namespace descriptors;
-  static_assert(PARTICLETYPE::template providesNested<FORCING,ADHESION>(), "Field FORCING:ADHESION has to be provided");
+
+  static_assert(providesAdhesion<PARTICLETYPE>(), "Field FORCING:ADHESION has to be provided");
   Vector<T,2> adhesion( particle.template getField<FORCING,ADHESION>() );
   return adhesion;
 }
@@ -463,72 +614,12 @@ bool isActive( Particle<T,PARTICLETYPE> particle )
   return active;
 }
 
-//Get acceleration (should be extended, when field ACCELERATION available)
-template<typename T, typename PARTICLETYPE>
-Vector<T,PARTICLETYPE::d> getAcceleration( Particle<T,PARTICLETYPE> particle )
-{
-  using namespace descriptors;
-  constexpr unsigned D = PARTICLETYPE::d;
-  static_assert(PARTICLETYPE::template providesNested<FORCING,FORCE>(), "Field FORCING:FORCE has to be provided");
-  static_assert(PARTICLETYPE::template providesNested<PHYSPROPERTIES,MASS>(), "Field PHYSPROPERTIES:MASS has to be provided");
-  Vector<T,D> acceleration;
-  Vector<T,D> force( particle.template getField<FORCING,FORCE>() );
-  T mass = particle.template getField<PHYSPROPERTIES,MASS>();
-  for (unsigned iDim=0; iDim<D; ++iDim) {
-    acceleration[iDim] = force[iDim] / mass;
-  }
-  return acceleration;
-}
-
-//Get angular acceleration (should be extended, when field ANG_ACCELERATION available)
-template<typename T, typename PARTICLETYPE>
-Vector<T,utilities::dimensions::convert<PARTICLETYPE::d>::rotation> getAngAcceleration(
-  Particle<T,PARTICLETYPE> particle )
-{
-  using namespace descriptors;
-  const unsigned Drot = utilities::dimensions::convert<PARTICLETYPE::d>::rotation;
-  static_assert(PARTICLETYPE::template providesNested<FORCING,TORQUE>(), "Field FORCING:TORQUE has to be provided");
-  static_assert(PARTICLETYPE::template providesNested<PHYSPROPERTIES,MOFI>(), "Field PHYSPROPERTIES:MOFI has to be provided");
-  Vector<T,Drot> angularAcceleration;
-  Vector<T,Drot> torque( particle.template getField<FORCING,TORQUE>() );
-  Vector<T,Drot> momentOfInertia( particle.template getField<PHYSPROPERTIES,MOFI>() );
-  if constexpr (PARTICLETYPE::d == 3 && PARTICLETYPE::template providesNested<SURFACE,ROT_MATRIX>()) {
-    const Matrix<T,3,3> rotationMatrix(particle.template getField<SURFACE,ROT_MATRIX>());
-    angularAcceleration = calcAngAcceleration3D( torque, momentOfInertia, rotationMatrix );
-  } else {
-    for (unsigned iRot=0; iRot<Drot; ++iRot) {
-      angularAcceleration[iRot] = torque[iRot] / momentOfInertia[iRot];
-    }
-  }
-  return angularAcceleration;
-}
-
-//Get global id
-template<typename T, typename PARTICLETYPE>
-auto getGlobalID( Particle<T,PARTICLETYPE> particle )
-{
-  using namespace descriptors;
-  static_assert(PARTICLETYPE::template providesNested<PARALLELIZATION,ID>(), "Field PARALLELIZATION:ID has to be provided");
-  auto globalID = particle.template getField<PARALLELIZATION,ID>();
-  return globalID;
-}
-
-//Get globiC (e.g allowing for the determination, whether dealing with particle centre)
-template<typename T, typename PARTICLETYPE>
-auto getGlobalIC( Particle<T,PARTICLETYPE> particle )
-{
-  using namespace descriptors;
-  static_assert(PARTICLETYPE::template providesNested<PARALLELIZATION,ID>(), "Field PARALLELIZATION:ID has to be provided");
-  auto globalIC = particle.template getField<PARALLELIZATION,IC>();
-  return globalIC;
-}
-
 //Get smooth indicator pointer
 template<typename T, typename PARTICLETYPE>
 auto getSmoothIndicatorPtr( Particle<T,PARTICLETYPE> particle )
 {
   using namespace descriptors;
-  static_assert(PARTICLETYPE::template providesNested<SURFACE,SINDICATOR>(), "Field FORCING:SINDICATOR has to be provided");
+  static_assert(providesSmoothIndicator<PARTICLETYPE>(), "Field FORCING:SINDICATOR has to be provided");
   auto sIndicatorPtr = particle.template getField<SURFACE,SINDICATOR>();
   return sIndicatorPtr;
 }
@@ -539,10 +630,10 @@ T getRadius( Particle<T,PARTICLETYPE>& particle )
 {
   using namespace descriptors;
   T radius;
-  if constexpr ( PARTICLETYPE::template providesNested<SURFACE,SINDICATOR>() ) {
+  if constexpr (providesSmoothIndicator<PARTICLETYPE>() ) {
     radius = getSmoothIndicatorPtr(particle)->getCircumRadius();
   }
-  else if constexpr ( PARTICLETYPE::template providesNested<PHYSPROPERTIES,RADIUS>() ) {
+  else if constexpr ( providesRadius<PARTICLETYPE>() ) {
     radius = particle.template getField<PHYSPROPERTIES,RADIUS>();
   }
   else {
@@ -616,12 +707,105 @@ T getMass( Particle<T,PARTICLETYPE> particle, [[maybe_unused]] T shapeFactor = T
   return mass;
 }
 
+template<typename T, typename PARTICLETYPE>
+Vector<T,PARTICLETYPE::d> getAccelerationStrd( Particle<T,PARTICLETYPE> particle )
+{
+  using namespace descriptors;
+
+  if(providesAccelerationStrd(particle)){
+    return particle.template getField<MOBILITY,ACCELERATION_STRD>();
+  }
+}
+
+template<typename T, typename PARTICLETYPE>
+void setAccelerationStrd( Particle<T,PARTICLETYPE> particle, Vector<T,PARTICLETYPE::d> acceleration)
+{
+  using namespace descriptors;
+  static_assert(providesAccelerationStrd<PARTICLETYPE>(), "Field MOBILITY:ACCELERATION has to be provided");
+  if constexpr(providesAccelerationStrd(particle)) {
+    particle.template setField<MOBILITY, ACCELERATION_STRD>(acceleration);
+  }
+}
+
+template<typename T, typename PARTICLETYPE>
+Vector<T,PARTICLETYPE::d> getAcceleration( Particle<T,PARTICLETYPE> particle )
+{
+  using namespace descriptors;
+  constexpr unsigned D = PARTICLETYPE::d;
+
+  static_assert(providesForce<PARTICLETYPE>(), "Field FORCING:FORCE has to be provided");
+  static_assert(providesMass<PARTICLETYPE>(), "Field PHYSPROPERTIES:MASS has to be provided");
+
+  Vector<T,D> acceleration;
+  Vector<T,D> force = getForce(particle);
+  T mass = getMass(particle);
+  for (unsigned iDim=0; iDim<D; ++iDim) {
+    acceleration[iDim] = force[iDim] / mass;
+  }
+  return acceleration;
+}
+
+// no need for setAcceleration (non-std) as it is calculated from force and mass
+
+template<typename T, typename PARTICLETYPE>
+Vector<T,utilities::dimensions::convert<PARTICLETYPE::d>::rotation> getAngAcceleration(
+  Particle<T,PARTICLETYPE> particle )
+{
+  using namespace descriptors;
+
+  const unsigned Drot = utilities::dimensions::convert<PARTICLETYPE::d>::rotation;
+  static_assert(providesTorque<PARTICLETYPE>(), "Field FORCING:TORQUE has to be provided");
+  static_assert(providesMomentOfInertia<PARTICLETYPE>(), "Field PHYSPROPERTIES:MOFI has to be provided");
+  Vector<T,Drot> angularAcceleration;
+  Vector<T,Drot> torque( getTorque(particle));
+  Vector<T,Drot> momentOfInertia( getMomentOfInertia(particle) );
+  if constexpr (PARTICLETYPE::d == 3 && providesRotationMatrix<PARTICLETYPE>()) {
+    const Matrix<T,3,3> rotationMatrix(getRotationMatrix(particle));
+    angularAcceleration = calcAngAcceleration3D( torque, momentOfInertia, rotationMatrix );
+  } else {
+    for (unsigned iRot=0; iRot<Drot; ++iRot) {
+      angularAcceleration[iRot] = torque[iRot] / momentOfInertia[iRot];
+    }
+  }
+  return angularAcceleration;
+}
+
+template<typename T, typename PARTICLETYPE>
+Vector<T,utilities::dimensions::convert<PARTICLETYPE::d>::rotation> getAngAccelerationStrd( Particle<T,PARTICLETYPE> particle )
+{
+  using namespace descriptors;
+
+  if(providesAngAccelerationStrd(particle)){
+    return particle.template getField<MOBILITY,ANG_ACC_STRD>();
+  }
+}
+
+//Get global id
+template<typename T, typename PARTICLETYPE>
+auto getGlobalID( Particle<T,PARTICLETYPE> particle )
+{
+  using namespace descriptors;
+  static_assert(providesID<PARTICLETYPE>(), "Field PARALLELIZATION:ID has to be provided");
+  auto globalID = particle.template getField<PARALLELIZATION,ID>();
+  return globalID;
+}
+
+//Get globiC (e.g allowing for the determination, whether dealing with particle centre)
+template<typename T, typename PARTICLETYPE>
+auto getGlobalIC( Particle<T,PARTICLETYPE> particle )
+{
+  using namespace descriptors;
+  static_assert(providesID<PARTICLETYPE>(), "Field PARALLELIZATION:ID has to be provided");
+  auto globalIC = particle.template getField<PARALLELIZATION,IC>();
+  return globalIC;
+}
+
 //Get dynamics id
 template<typename T, typename PARTICLETYPE>
 unsigned short getDynamicsID( Particle<T,PARTICLETYPE>& particle )
 {
   using namespace descriptors;
-  static_assert(PARTICLETYPE::template providesNested<DYNBEHAVIOUR,DYNAMICS_ID>(),
+  static_assert(providesDynamicsID<PARTICLETYPE>(),
                 "Field DYNBEHAVIOUR:DYNAMICS_ID has to be provided");
   unsigned short dynamicsID = particle.template getField<DYNBEHAVIOUR,DYNAMICS_ID>();
   return dynamicsID;
@@ -632,7 +816,7 @@ template<typename T, typename PARTICLETYPE>
 bool isDetaching( Particle<T,PARTICLETYPE>& particle )
 {
   using namespace descriptors;
-  static_assert(PARTICLETYPE::template providesNested<DYNBEHAVIOUR,DETACHING>(),
+  static_assert(providesDetaching<PARTICLETYPE>(),
                 "Field DYNBEHAVIOUR:DETACHING has to be provided");
   bool detaching = particle.template getField<DYNBEHAVIOUR,DETACHING>();
     return detaching;
@@ -645,7 +829,7 @@ auto getCuboidSurfaceExtent( Particle<T,PARTICLETYPE> particle )
 {
   using namespace descriptors;
   constexpr unsigned D = PARTICLETYPE::d;
-  static_assert(PARTICLETYPE::template providesNested<SURFACE,SINDICATOR>(), "Field FORCING:SINDICATOR has to be provided");
+  static_assert(providesSmoothIndicator<PARTICLETYPE>(), "Field FORCING:SINDICATOR has to be provided");
   using SIndicatorType = std::conditional_t<
     D == 2,
     SmoothIndicatorCuboid2D<T,T,true>,
@@ -677,7 +861,7 @@ Vector<T,PARTICLETYPE::d> getCORoffset( Particle<T,PARTICLETYPE> particle )
 {
   using namespace descriptors;
   constexpr unsigned D = PARTICLETYPE::d;
-  static_assert(PARTICLETYPE::template providesNested<SURFACE,COR_OFFSET>(), "Field SURFACE:COR_OFFSET has to be provided");
+  static_assert(providesCORoffset<PARTICLETYPE>(), "Field SURFACE:COR_OFFSET has to be provided");
   Vector<T,D> offsetCOR( particle.template getField<SURFACE,COR_OFFSET>() );
   return offsetCOR;
 }
@@ -687,7 +871,7 @@ Vector<T,PARTICLETYPE::d> getElongation( Particle<T,PARTICLETYPE> particle )
 {
   using namespace descriptors;
   constexpr unsigned D = PARTICLETYPE::d;
-  static_assert(PARTICLETYPE::template providesNested<SURFACE,ELONGATION>(), "Field SURFACE:ELONGATION has to be provided");
+  static_assert(providesElongation<PARTICLETYPE>(), "Field SURFACE:ELONGATION has to be provided");
   Vector<T,D> elongation( particle.template getField<SURFACE,ELONGATION>() );
   return elongation;
 }
@@ -707,8 +891,14 @@ T getEnlargementForContact( Particle<T,PARTICLETYPE> particle )
   __builtin_unreachable();
 }
 
-
-
+template<typename T, typename PARTICLETYPE>
+unsigned getContactMaterial( Particle<T,PARTICLETYPE> particle)
+{
+  using namespace descriptors;
+  static_assert(providesContactMaterial(particle),
+                "Field MECHPROPERTIES::MATERIAL has to be provided");
+  return particle.template getField<MECHPROPERTIES, MATERIAL>();
+}
 
 //// Setter for specific particle fields
 
@@ -745,6 +935,15 @@ void setMass( Particle<T,PARTICLETYPE> particle, T mass, [[maybe_unused]] T shap
 }
 
 template<typename T, typename PARTICLETYPE>
+void setPosition( Particle<T,PARTICLETYPE> particle, Vector<T,PARTICLETYPE::d> position)
+{
+  using namespace descriptors;
+  static_assert(providesPosition(particle),
+      "Field GENERAL:POSITION has to be provided");
+  particle.template setField<GENERAL, POSITION>(position);
+}
+
+template<typename T, typename PARTICLETYPE>
 void setContactMaterial( Particle<T,PARTICLETYPE> particle, unsigned material )
 {
   using namespace descriptors;
@@ -753,7 +952,190 @@ void setContactMaterial( Particle<T,PARTICLETYPE> particle, unsigned material )
   particle.template setField<MECHPROPERTIES, MATERIAL>(material);
 }
 
+template<typename T, typename PARTICLETYPE>
+void setAngle( Particle<T,PARTICLETYPE> particle, Vector<T,utilities::dimensions::convert<PARTICLETYPE::d>::rotation> angle )
+{
+  using namespace descriptors;
+  static_assert(providesAngle<PARTICLETYPE>(), "Field SURFACE:ANGLE has to be provided");
+  particle.template setField<SURFACE, ANGLE>(utilities::dimensions::convert<
+                  PARTICLETYPE::d>::serialize_rotation(angle));
+}
 
+template<typename T, typename PARTICLETYPE>
+void setRotationMatrix( Particle<T,PARTICLETYPE> particle, Vector<T,utilities::dimensions::convert<PARTICLETYPE::d>::matrix> rotMatrix )
+{
+  using namespace descriptors;
+  static_assert(providesRotationMatrix<PARTICLETYPE>(), "Field SURFACE:ROT_MATRIX has to be provided");
+  particle.template setField<SURFACE,ROT_MATRIX>(rotMatrix);
+}
+
+template<typename T, typename PARTICLETYPE>
+void setVelocity( Particle<T,PARTICLETYPE> particle, Vector<T,PARTICLETYPE::d> velocity )
+{
+  using namespace descriptors;
+  static_assert(providesVelocity<PARTICLETYPE>(), "Field MOBILITY:VELOCITY has to be provided");
+  particle.template setField<MOBILITY,VELOCITY>(velocity);
+}
+
+template<typename T, typename PARTICLETYPE>
+void setAngularVelocity( Particle<T,PARTICLETYPE> particle, Vector<T,utilities::dimensions::convert<PARTICLETYPE::d>::rotation> angVelocity)
+{
+  using namespace descriptors;
+  static_assert(providesAngVelocity<PARTICLETYPE>(), "Field MOBILITY:ANG_VELOCITY has to be provided");
+  particle.template setField<MOBILITY,ANG_VELOCITY>(utilities::dimensions::convert<
+                                             PARTICLETYPE::d>::serialize_rotation(angVelocity));
+}
+
+template<typename T, typename PARTICLETYPE>
+void setAngAccelerationStrd( Particle<T,PARTICLETYPE> particle, Vector<T,utilities::dimensions::convert<PARTICLETYPE::d>::rotation> angAcceleration)
+{
+  using namespace descriptors;
+  static_assert(providesAngAccelerationStrd<PARTICLETYPE>(), "Field MOBILITY:ANG_ACC_STRD has to be provided");
+  particle.template setField<MOBILITY,ANG_ACC_STRD>(utilities::dimensions::convert<
+                                             PARTICLETYPE::d>::serialize_rotation(angAcceleration));
+}
+
+// no need for setAngAcceleration (non-strd) as it is calculated from torque and moment of inertia
+
+template<typename T, typename PARTICLETYPE>
+void setForce( Particle<T,PARTICLETYPE> particle, Vector<T,PARTICLETYPE::d> force )
+{
+  using namespace descriptors;
+  static_assert(providesForce<PARTICLETYPE>(), "Field FORCING:FORCE has to be provided");
+  particle.template setField<FORCING,FORCE>(force);
+}
+
+template<typename T, typename PARTICLETYPE>
+void setTorque( Particle<T,PARTICLETYPE> particle, Vector<T,utilities::dimensions::convert<PARTICLETYPE::d>::rotation> torque )
+{
+  using namespace descriptors;
+  static_assert(providesTorque<PARTICLETYPE>(), "Field FORCING:TORQUE has to be provided");
+  particle.template setField<FORCING,TORQUE>(utilities::dimensions::convert<
+                                             PARTICLETYPE::d>::serialize_rotation(torque));
+}
+
+template<typename T, typename PARTICLETYPE>
+void setMomentOfInertia( Particle<T,PARTICLETYPE> particle, Vector<T,utilities::dimensions::convert<PARTICLETYPE::d>::rotation> mofi)
+{
+  using namespace descriptors;
+  static_assert(providesMomentOfInertia<PARTICLETYPE>(), "Field PHYSPROPERTIES:MOFI has to be provided");
+  particle.template setField<PHYSPROPERTIES,MOFI>(utilities::dimensions::convert<
+                                              PARTICLETYPE::d>::serialize_rotation(mofi));
+}
+
+// Consisting of normal and tangential adhesion component of particle.
+template<typename T, typename PARTICLETYPE>
+void setAdhesion( Particle<T,PARTICLETYPE>& particle, Vector<T,2> adhesion )
+{
+  using namespace descriptors;
+  static_assert(providesAdhesion<PARTICLETYPE>(), "Field FORCING:ADHESION has to be provided");
+  particle.template setField<FORCING,ADHESION>(adhesion);
+}
+
+template<typename T, typename PARTICLETYPE>
+void setInvalid( Particle<T,PARTICLETYPE> particle, bool value=true )
+{
+  using namespace descriptors;
+  static_assert(providesInvalid<PARTICLETYPE>(), "Field GENERAL:INVALID has to be provided");
+  particle.template setField<GENERAL,INVALID>( value );
+}
+
+template<typename T, typename PARTICLETYPE>
+void setValid( Particle<T,PARTICLETYPE> particle, bool value=true )
+{
+  setInvalid(particle, !value);
+}
+
+template<typename T, typename PARTICLETYPE>
+void setActive( Particle<T,PARTICLETYPE> particle, bool value=true)
+{
+  using namespace descriptors;
+  static_assert(providesActive<PARTICLETYPE>(), "Field DYNBEHAVIOUR:ACTIVE has to be provided");
+  particle.template setField<DYNBEHAVIOUR,ACTIVE>( value );
+}
+
+template<typename T, typename PARTICLETYPE>
+void setInactive( Particle<T,PARTICLETYPE> particle, bool value=true)
+{
+  setActive(particle, !value);
+}
+
+//Set smooth indicator pointer
+template<typename T, typename PARTICLETYPE>
+void setSmoothIndicatorPtr( Particle<T,PARTICLETYPE> particle,
+    SmoothIndicatorF<T,T,PARTICLETYPE::d,true>* sindicator )
+{
+  using namespace descriptors;
+  static_assert(providesSmoothIndicator<PARTICLETYPE>(), "Field FORCING:SINDICATOR has to be provided");
+  particle.template setField<SURFACE,SINDICATOR>(sindicator);
+}
+
+//Set radius
+template<typename T, typename PARTICLETYPE>
+void setRadius( Particle<T,PARTICLETYPE>& particle, T radius )
+{
+  using namespace descriptors;
+  static_assert(providesRadius<PARTICLETYPE>(), "Field PHYSPROPERTIES:RADIUS has to be provided");
+  particle.template setField<PHYSPROPERTIES,RADIUS>(radius);
+}
+
+template<typename T, typename PARTICLETYPE>
+void setGlobalID( Particle<T,PARTICLETYPE> particle, std::size_t id )
+{
+  using namespace descriptors;
+  static_assert(providesID<PARTICLETYPE>(), "Field PARALLELIZATION:ID has to be provided");
+  particle.template setField<PARALLELIZATION,ID>(id);
+}
+
+template<typename T, typename PARTICLETYPE>
+void setGlobalIC( Particle<T,PARTICLETYPE> particle, int id )
+{
+  using namespace descriptors;
+  static_assert(providesID<PARTICLETYPE>(), "Field PARALLELIZATION:ID has to be provided");
+  particle.template setField<PARALLELIZATION,IC>(id);
+}
+
+template<typename T, typename PARTICLETYPE>
+void setDynamicsID( Particle<T,PARTICLETYPE>& particle, unsigned short dynamicsID )
+{
+  using namespace descriptors;
+  static_assert(providesDynamicsID<PARTICLETYPE>(),
+                "Field DYNBEHAVIOUR:DYNAMICS_ID has to be provided");
+  particle.template setField<DYNBEHAVIOUR,DYNAMICS_ID>(dynamicsID);
+}
+
+template<typename T, typename PARTICLETYPE>
+void setDetaching( Particle<T,PARTICLETYPE>& particle, bool value)
+{
+  using namespace descriptors;
+  static_assert(providesDetaching<PARTICLETYPE>(),
+                "Field DYNBEHAVIOUR:DETACHING has to be provided");
+  particle.template setField<DYNBEHAVIOUR,DETACHING>(value);
+}
+
+template<typename T, typename PARTICLETYPE>
+void setCORoffset( Particle<T,PARTICLETYPE> particle, Vector<T, PARTICLETYPE::d> offsetCOR )
+{
+  using namespace descriptors;
+  static_assert(providesCORoffset<PARTICLETYPE>(), "Field SURFACE:COR_OFFSET has to be provided");
+  particle.template setField<SURFACE,COR_OFFSET>(offsetCOR);
+}
+
+template<typename T, typename PARTICLETYPE>
+void setElongation( Particle<T,PARTICLETYPE> particle, Vector<T,PARTICLETYPE::d> elongation )
+{
+  using namespace descriptors;
+  static_assert(providesElongation<PARTICLETYPE>(), "Field SURFACE:ELONGATION has to be provided");
+  particle.template setField<SURFACE,ELONGATION>(elongation);
+}
+
+template<typename T, typename PARTICLETYPE>
+void setEnlargementForContact(Particle<T, PARTICLETYPE>& particle, T value)
+{
+  using namespace descriptors;
+  static_assert(access::providesEnlargementForContactTreatment<PARTICLETYPE>(), "Field NUMERICPROPERTIES:ENLARGEMENT_FOR_CONTACT has to be provided");
+  particle.template setField<NUMERICPROPERTIES, ENLARGEMENT_FOR_CONTACT>(value);
+}
 
 /// Check if motion is enabled
 template<typename T, typename PARTICLETYPE>
@@ -766,12 +1148,11 @@ bool isMotionComputationEnabled( Particle<T,PARTICLETYPE>& particle )
     return true;
   }
   else {
-    return particle.template getField<DYNBEHAVIOUR,COMPUTE_CONTACT>();
+    return particle.template getField<DYNBEHAVIOUR,COMPUTE_MOTION>();
   }
 
   __builtin_unreachable();
 }
-
 
 /// Check if contact should be regarded (specification for a single particle)
 template<typename T, typename PARTICLETYPE>
@@ -799,11 +1180,62 @@ bool isContactComputationEnabled(Particle<T,PARTICLETYPE>& particleA,
   return (isContactComputationEnabled(particleA) || isContactComputationEnabled(particleB));
 }
 
+template<typename T, typename PARTICLETYPE>
+void enableMotionComputation(Particle<T, PARTICLETYPE>& particle, bool value = true)
+{
+  using namespace descriptors;
+  static_assert(providesComputeMotion<PARTICLETYPE>(), "Field DYNBEHAVIOUR:COMPUTE_MOTION has to be provided");
+  particle.template setField<DYNBEHAVIOUR, COMPUTE_MOTION>(value);
+}
+
+template<typename T, typename PARTICLETYPE>
+void enableContactComputation(Particle<T, PARTICLETYPE>& particle, bool value = true)
+{
+  using namespace descriptors;
+  static_assert(providesComputeContact<PARTICLETYPE>(), "Field DYNBEHAVIOUR:COMPUTE_CONTACT has to be provided");
+  particle.template setField<DYNBEHAVIOUR, COMPUTE_CONTACT>(value);
+}
+
+template<typename T, typename PARTICLETYPE>
+void disableMotionComputation(Particle<T, PARTICLETYPE>& particle, bool value = true)
+{
+  enableMotionComputation(particle, !value);
+}
+
+template<typename T, typename PARTICLETYPE>
+void disableContactComputation(Particle<T, PARTICLETYPE>& particle, bool value = true)
+{
+  enableContactComputation(particle, !value);
+}
+
+template<typename T, typename PARTICLETYPE>
+void setRestingParticle( Particle<T,PARTICLETYPE> particle)
+{
+  if constexpr(providesVelocity(particle)){
+      setVelocity(particle, Vector<T,PARTICLETYPE::d>(0.));
+  }
+
+  if constexpr(providesAccelerationStrd(particle)){
+      setAccelerationStrd(particle, Vector<T,PARTICLETYPE::d>(0.));
+  }
+
+
+  if constexpr(providesAngVelocity(particle)){
+      setAngularVelocity(particle, Vector<T,utilities::dimensions::convert<PARTICLETYPE::d>::rotation>(0.));
+  }
+
+  if constexpr(providesAngAccelerationStrd(particle)){
+      setAngAccelerationStrd(particle, Vector<T,utilities::dimensions::convert<PARTICLETYPE::d>::rotation>(0.));
+  }
+}
+
 } //namespace access
 
 } //namespace particles
 
 } //namespace olb
+
+
 
 
 #endif

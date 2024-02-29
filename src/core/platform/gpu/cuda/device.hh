@@ -62,8 +62,10 @@ void check(CUresult result) {
 }
 
 void synchronize() {
-  cudaDeviceSynchronize();
-  check();
+  if (getCount() > 0) {
+    cudaDeviceSynchronize();
+    check();
+  }
 }
 
 int get() {

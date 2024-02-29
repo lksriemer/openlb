@@ -75,7 +75,7 @@ SuperGeometry<T,D>::SuperGeometry(CuboidGeometry<T,D>& cuboidGeometry,
 }
 
 template<typename T, unsigned D>
-int const& SuperGeometry<T,D>::get(int iCglob, LatticeR<D> latticeR) const
+int SuperGeometry<T,D>::get(int iCglob, LatticeR<D> latticeR) const
 {
   if ( this->getLoadBalancer().rank(iCglob) == singleton::mpi().getRank() ) {
     return _block[this->getLoadBalancer().loc(iCglob)]->get(
@@ -86,7 +86,7 @@ int const& SuperGeometry<T,D>::get(int iCglob, LatticeR<D> latticeR) const
 }
 
 template<typename T, unsigned D>
-int const& SuperGeometry<T,D>::get(const int latticeR[D+1]) const
+int SuperGeometry<T,D>::get(const int latticeR[D+1]) const
 {
   if constexpr (D == 3){
     return get(latticeR[0], {latticeR[1], latticeR[2], latticeR[3]});
@@ -96,7 +96,7 @@ int const& SuperGeometry<T,D>::get(const int latticeR[D+1]) const
 }
 
 template<typename T, unsigned D>
-int const& SuperGeometry<T,D>::get(LatticeR<D+1> latticeR) const
+int SuperGeometry<T,D>::get(LatticeR<D+1> latticeR) const
 {
   if constexpr (D == 3){
     return get(latticeR[0], {latticeR[1], latticeR[2], latticeR[3]});
@@ -469,6 +469,36 @@ template<typename T, unsigned D>
 std::unique_ptr<SuperIndicatorF<T,D>> SuperGeometry<T,D>::getMaterialIndicator(int material)
 {
   return this->getMaterialIndicator(std::vector<int> { material });
+}
+
+template<typename T, unsigned D>
+std::size_t SuperGeometry<T,D>::getNblock() const
+{
+  return std::accumulate(_block.begin(), _block.end(), size_t(0), [](std::size_t sum, auto& b) -> std::size_t {
+    return sum + b->getNblock();
+  });
+}
+
+
+template<typename T, unsigned D>
+std::size_t SuperGeometry<T,D>::getSerializableSize() const
+{
+  return std::accumulate(_block.begin(), _block.end(), size_t(0), [](std::size_t sum, auto& b) -> std::size_t {
+    return sum + b->getSerializableSize();
+  });
+}
+
+template<typename T, unsigned D>
+bool* SuperGeometry<T,D>::getBlock(std::size_t iBlock, std::size_t& sizeBlock, bool loadingMode)
+{
+  std::size_t currentBlock = 0;
+  bool* dataPtr = nullptr;
+
+  for (std::size_t iC=0; iC < _block.size(); ++iC) {
+    registerSerializableOfConstSize(iBlock, sizeBlock, currentBlock, dataPtr, getBlock(iC), loadingMode);
+  }
+
+  return dataPtr;
 }
 
 } // namespace olb

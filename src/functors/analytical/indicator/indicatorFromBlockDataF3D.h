@@ -29,12 +29,12 @@ namespace olb {
 template <typename S>
 class IndicatorBlockData3D : public IndicatorF3D<S> {
 private:
-  BlockData<3,S,S> _blockData;
+  BlockData<3,S,S>& _blockData;
   S _deltaR;
   bool _invert;
 public:
   /// constructor
-  IndicatorBlockData3D(BlockData<3,S,S> blockData, Vector<S,3> extend, Vector<S,3> origin, S deltaR, bool invert=false);
+  IndicatorBlockData3D(BlockData<3,S,S>& blockData, Vector<S,3> extend, Vector<S,3> origin, S deltaR, bool invert=false);
   /// returns true if input is inside, otherwise false
   bool operator() (bool output[], const S input[]) override;
 };

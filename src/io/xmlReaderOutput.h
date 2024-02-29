@@ -49,6 +49,7 @@ public:
 
 protected:
   mutable OstreamManager clout;
+  bool _inDebugMode = false;
 };
 
 XMLreaderOutput::XMLreaderOutput(OutputChannel outputChannel) : clout(std::cerr, "xmlReaderOutput"){
@@ -60,6 +61,9 @@ XMLreaderOutput::XMLreaderOutput(OutputChannel outputChannel) : clout(std::cerr,
   } else{
     clout = OstreamManager(std::cerr, "xmlReaderOutput");
   }
+#ifdef OLB_DEBUG
+  _inDebugMode = true;
+#endif
 }
 
 template<typename ParameterType>
@@ -69,7 +73,7 @@ void XMLreaderOutput::parameterReading(std::vector<std::string> parameters,
                                     bool exitIfMissing,
                                     bool showWarning) const
 {
-  if (showWarning) {
+  if (showWarning || _inDebugMode) {
     clout << "Warning: Cannot read parameter from XML File: ";
     std::for_each(parameters.begin(), parameters.end(), [this](const std::string name_parameter)
       { clout << "<" << name_parameter << ">"; });

@@ -30,7 +30,6 @@
 #define BLOCK_GEOMETRY_H
 
 #include <vector>
-#include <list>
 
 #include "core/blockStructure.h"
 #include "core/fieldArrayD.hh"
@@ -53,7 +52,8 @@ namespace olb {
  * with different boundaries (like for inflow/output regions).
  */
 template <typename T, unsigned D>
-class BlockGeometry final : public BlockStructureD<D> {
+class BlockGeometry final : public BlockStructureD<D>
+                          , public Serializable {
 private:
   /// Material number storage
   FieldArrayD<T,descriptors::SPATIAL_DESCRIPTOR<2>,Platform::CPU_SISD,descriptors::MATERIAL> _data;
@@ -62,13 +62,11 @@ private:
   /// Cuboid which charaterizes the block geometry
   Cuboid<T,D> _cuboid;
   /// Number of the cuboid, default=-1
-  int _iCglob;
+  const int _iCglob;
   /// Statistic class
   BlockGeometryStatistics<T, D> _statistics;
   /// class specific output stream
   mutable OstreamManager clout;
-  /// List to all depending statistic status objects
-  std::list<bool*> _statisticsUpdateNeeded;
 
 public:
   static constexpr Platform platform = Platform::CPU_SISD;
@@ -79,10 +77,10 @@ public:
     return platform;
   }
 
-  /// Write access to the associated block statistic
-  BlockGeometryStatistics<T,D>& getStatistics(bool verbose=true);
   /// Read only access to the associated block statistic
-  BlockGeometryStatistics<T,D> const& getStatistics(bool verbose=true) const;
+  const BlockGeometryStatistics<T,D>& getStatistics() const;
+  /// Write access to the associated block statistic
+  BlockGeometryStatistics<T,D>& getStatistics();
 
   bool hasCommunicatable(std::type_index field) const {
     return field == typeid(descriptors::MATERIAL);
@@ -94,7 +92,7 @@ public:
   }
 
   /// Read only access to the global iC number which is given !=-1 if the block geometries are part of a super geometry
-  int const& getIcGlob() const;
+  int getIcGlob() const;
   /// Returns the extend of the block in lattice units
   Vector<int,D> getExtent() const;
 
@@ -103,30 +101,18 @@ public:
   /// Read only access to the voxel size given in SI units (meter)
   T getDeltaR() const;
 
-  /// Write access to a material number
-  int& get(LatticeR<D> latticeR);
-  int& get(const int latticeR[D]);
-  int& get(std::size_t iCell);
-
-  template <typename... L>
-  std::enable_if_t<sizeof...(L) == D, int&>
-  get(L... latticeR) {
-    return this->get(LatticeR<D>{latticeR...});
-  }
-
-  /// Read only access to a material number
-  int get(LatticeR<D> latticeR) const;
-  int get(const int latticeR[D]) const;
-  int get(std::size_t iCell) const;
-
+  /// Read-only access to a material number
   template <typename... L>
   std::enable_if_t<sizeof...(L) == D, int>
   get(L... latticeR) const {
     return _data[0][this->getCellId(latticeR...)];
   }
+  int get(LatticeR<D> latticeR) const;
+  int get(const int latticeR[D]) const;
+  int get(std::size_t iCell) const;
 
   /// returns the (iX,iY) entry in the 2D scalar field
-  int getMaterial(LatticeR<D> latticeR) const; // TODO old
+  int getMaterial(LatticeR<D> latticeR) const;
   int getMaterial(const int latticeR[D]) const;
 
   template <typename... L>
@@ -134,6 +120,11 @@ public:
   getMaterial(L... latticeR) const {
     return this->getMaterial(LatticeR<D>{latticeR...});
   }
+
+  /// Write access to a material number
+  void set(LatticeR<D> latticeR, int material);
+  void set(const int latticeR[D], int material);
+  void set(std::size_t iCell, int material);
 
   Vector<T,D> getPhysR(LatticeR<D> latticeR) {
     T physR[D];
@@ -203,13 +194,14 @@ public:
   /// Prints a chosen node and its neighbourhood
   void printNode(std::vector<int> loc);
 
-  /// Adds a pointer to the list of dependent statistic classes
-  void addToStatisticsList(bool* statisticStatus);
-  /// Removes a pointer from the list of dependent statistic classes if existing
-  void removeFromStatisticsList(bool* statisticStatus);
+  /// Number of data blocks for the serializable interface
+  std::size_t getNblock() const override;
+  /// Binary size for the serializer
+  std::size_t getSerializableSize() const override;
+  /// Return a pointer to the memory of the current block and its size for the serializable interface
+  bool* getBlock(std::size_t iBlock, std::size_t& sizeBlock, bool loadingMode) override;
 
 private:
-  /// Resets all depending statistic flags
   void resetStatistics();
 
 };

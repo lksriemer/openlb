@@ -227,6 +227,7 @@ void getResults( SuperLattice<T, DESCRIPTOR>&    sLatticeTwo,
   // Writes the VTK files
   if ( iT % vtkIter==0 ) {
     sLatticeOne.setProcessingContext(ProcessingContext::Evaluation);
+    sLatticeTwo.setProcessingContext(ProcessingContext::Evaluation);
 
     SuperLatticeVelocity2D<T, DESCRIPTOR> velocity( sLatticeOne );
     SuperLatticeDensity2D<T, DESCRIPTOR> density( sLatticeOne );

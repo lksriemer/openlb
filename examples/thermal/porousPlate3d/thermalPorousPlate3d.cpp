@@ -214,12 +214,12 @@ void prepareLattice( ThermalUnitConverter<T, NSDESCRIPTOR, TDESCRIPTOR> const& c
   ADlattice.defineDynamics<AdvectionDiffusionBGKdynamics>(superGeometry.getMaterialIndicator({1, 2, 3}));
   NSlattice.defineDynamics<ForcedBGKdynamics>(superGeometry.getMaterialIndicator({1, 2, 3}));
 
-  ADlattice.setParameter<descriptors::OMEGA>(Tomega);
-  NSlattice.setParameter<descriptors::OMEGA>(NSomega);
-
   /// sets boundary
   setLocalVelocityBoundary<T,NSDESCRIPTOR>(NSlattice, NSomega, superGeometry.getMaterialIndicator({2, 3}));
-  setAdvectionDiffusionTemperatureBoundary<T,TDESCRIPTOR>(ADlattice, Tomega, superGeometry.getMaterialIndicator({2, 3}));
+  setAdvectionDiffusionTemperatureBoundary<T,TDESCRIPTOR>(ADlattice, superGeometry.getMaterialIndicator({2, 3}));
+
+  ADlattice.setParameter<descriptors::OMEGA>(Tomega);
+  NSlattice.setParameter<descriptors::OMEGA>(NSomega);
 }
 
 void setBoundaryValues(ThermalUnitConverter<T, NSDESCRIPTOR, TDESCRIPTOR> const& converter,
@@ -312,6 +312,8 @@ void getResults(ThermalUnitConverter<T, NSDESCRIPTOR, TDESCRIPTOR> const& conver
   /// Writes the VTK files
   if (iT%vtkIter == 0 || converged) {
     NSlattice.getStatistics().print(iT,converter.getPhysTime(iT));
+    ADlattice.setProcessingContext(ProcessingContext::Evaluation);
+    NSlattice.setProcessingContext(ProcessingContext::Evaluation);
     timer.print(iT);
     error(superGeometry, NSlattice, ADlattice, converter, Re);
 

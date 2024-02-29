@@ -31,17 +31,10 @@ template <typename T> class CuboidGeometry3D;
 template <typename T> class IndicatorF3D;
 template <typename T> class Cuboid3D;
 
+/// Splits largest cuboid by-volume until there are nC cuboids
 template <typename T>
-void minimizeByVolume(CuboidGeometry3D<T>& cGeometry, IndicatorF3D<T>& indicatorF, int nC)
+void continueMinimizeByVolume(CuboidGeometry3D<T>& cGeometry, IndicatorF3D<T>& indicatorF, int nC)
 {
-  // Search for the largest multiplier not dividable by two
-  int initalNc = nC;
-  while ( initalNc % 2 == 0 ) {
-    initalNc /= 2;
-  }
-
-  // Split evenly in initalNc many cuboids and shrink all
-  cGeometry.split(0, initalNc);
   cGeometry.shrink(indicatorF);
 
   while (cGeometry.getNc() < nC) {
@@ -74,6 +67,23 @@ void minimizeByVolume(CuboidGeometry3D<T>& cGeometry, IndicatorF3D<T>& indicator
     cGeometry.shrink(cGeometry.cuboids().size()-2, indicatorF);
     cGeometry.shrink(cGeometry.cuboids().size()-1, indicatorF);
   }
+}
+
+/// Splits into nC cuboids by-volume
+template <typename T>
+void minimizeByVolume(CuboidGeometry3D<T>& cGeometry, IndicatorF3D<T>& indicatorF, int nC)
+{
+  // Search for the largest multiplier not dividable by two
+  int initalNc = nC;
+  while ( initalNc % 2 == 0 ) {
+    initalNc /= 2;
+  }
+
+  // Split evenly in initalNc many cuboids and shrink all
+  cGeometry.split(0, initalNc);
+  cGeometry.shrink(indicatorF);
+
+  continueMinimizeByVolume(cGeometry, indicatorF, nC);
 }
 
 template <typename T>

@@ -40,11 +40,19 @@ ifneq ($(filter DISABLE_CSE,$(FILTERED_FEATURES)),)
 	FILTERED_FEATURES := $(filter-out DISABLE_CSE,$(FILTERED_FEATURES))
 endif
 
-LDFLAGS += $(if $(filter $(FEATURES), OPENBLAS),-lopenblas)
-LDFLAGS += -lz -ltinyxml
-
 ifneq ($(filter CPU_SIMD,$(PLATFORMS)),)
 	LDFLAGS += -lrt
+endif
+
+LDFLAGS += -lz -ltinyxml
+LDFLAGS += $(if $(filter $(FEATURES), OPENBLAS),-lopenblas)
+LDFLAGS += $(if $(filter $(FEATURES), VDB),-lopenvdb -ltbb)
+
+ifneq ($(filter VTK,$(FEATURES)),)
+	ifdef VTK_VERSION
+		VTK_VERSION := -$(VTK_VERSION)
+	endif
+	LDFLAGS += $(if $(filter $(FEATURES), VTK),-lvtkIOLegacy$(VTK_VERSION) -lvtkCommonCore$(VTK_VERSION) -lvtkCommonExecutionModel$(VTK_VERSION) -lvtkCommonDataModel$(VTK_VERSION) -lvtkIOCore$(VTK_VERSION) -lvtkIOXML$(VTK_VERSION) -lvtksys$(VTK_VERSION))
 endif
 
 ifneq ($(filter GPU_CUDA,$(PLATFORMS)),)
@@ -58,6 +66,8 @@ ifneq ($(filter GPU_CUDA,$(PLATFORMS)),)
 ## | Turing            | 75         |
 ## | Ampere            | 80, 86, 87 |
 	CUDA_ARCH ?= 75
+	# Remove spaces from user-defined CUDA_ARCH (otherwise the `--generate-code` flag is messed up)
+	CUDA_ARCH := $(strip $(CUDA_ARCH))
 
 	CUDA_LDFLAGS += -lcuda -lcudadevrt -lcudart
 

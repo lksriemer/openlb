@@ -85,7 +85,7 @@ void extendSpawnData(
     const std::function<T(const std::size_t&)>& getCircumRadius,
     const std::function<T(const std::size_t&)>& getParticleVolume)
 {
-  constexpr unsigned maxTries = 1e4;
+  constexpr unsigned maxTries = 1e6;
 
   OstreamManager clout(std::cout, "ParticleSeeding");
   //Create randomizer
@@ -270,7 +270,7 @@ void extendSpawnData(
                                                 getMax,
     const std::function<T(const std::size_t&)>& getParticleVolume)
 {
-  constexpr unsigned maxTries  = 1e4;
+  constexpr unsigned maxTries  = 1e6;
   const auto         getPoints = [&](const PhysR<T, D>& position,
                              const PhysR<T, D>& min, const PhysR<T, D>& max) {
     std::vector<PhysR<T, D>> points;
@@ -421,7 +421,7 @@ void extendSpawnData(
     const std::function<T(const std::size_t&)>& getParticleVolume)
 {
   OstreamManager     clout(std::cout, "ParticleSeeding");
-  constexpr unsigned maxTries = 1e4;
+  constexpr unsigned maxTries = 1e6;
 
   //Create randomizer
   util::Randomizer<T> randomizer;

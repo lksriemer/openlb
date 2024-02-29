@@ -36,8 +36,7 @@
 #include "dynamics/dynamics.h"
 #include "dynamics/advectionDiffusionDynamics.h"
 #include "boundaryPostProcessors3D.h"
-#include "advectionDiffusionBoundaryPostProcessor3D.h"
-#include "advectionDiffusionBoundaries.h"
+#include "boundary/postprocessor/advectionDiffusionBoundaryPostProcessor3D.h"
 #include "setLocalVelocityBoundary3D.h"
 #include "setBoundary3D.h"
 
@@ -55,8 +54,7 @@ void setExtFieldBoundary(SuperLattice<T, DESCRIPTOR>& sLattice, FunctorPtr<Super
 
 ///Set externalFieldBoundary for any indicated cells inside the block domain
 template <typename T, typename DESCRIPTOR, typename FIELD_A, typename FIELD_B>
-void setExtFieldBoundary(BlockLattice<T,DESCRIPTOR>& _block, BlockIndicatorF3D<T>& indicator,
-                         bool includeOuterCells=false);
+void setExtFieldBoundary(BlockLattice<T,DESCRIPTOR>& _block, BlockIndicatorF3D<T>& indicator);
 
 }//namespace olb
 

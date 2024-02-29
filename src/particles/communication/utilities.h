@@ -52,6 +52,64 @@ std::vector<int> getNeighborCuboids(
 
 /// Get neighbour ranks
 template<typename T, unsigned D, bool verbose=false>
+std::unordered_set<int> getNeighbourRanksFromCuboidNeighbourhood(
+  SuperStructure<T,D>& superStructure, int rank, std::map<int,std::vector<int>> neighbourhood )
+{
+  std::unordered_set<int> rankNeighbours;
+
+#ifdef PARALLEL_MODE_MPI
+  auto& loadBalancer = superStructure.getLoadBalancer();
+
+  for ( auto cuboidNeighbourPair : neighbourhood){
+    int globiC = cuboidNeighbourPair.first;
+    if (loadBalancer.rank(globiC) == rank) {
+      std::vector<int>& neighbours = cuboidNeighbourPair.second;
+      for (int globiCN : neighbours ){
+        rankNeighbours.insert( loadBalancer.rank(globiCN));
+      }
+    }
+  }
+
+  if constexpr(verbose){
+    std::cout << rank << ": " << rankNeighbours << std::endl;
+  }
+#endif
+
+  return rankNeighbours;
+}
+
+
+/// Get neighbour ranks
+template<typename T, unsigned D, bool verbose=false>
+std::unordered_set<int> getNeighbourRanksFromCuboidNeighbourhood(
+  SuperStructure<T,D>& superStructure, int rank, const std::vector<std::unordered_set<int>>& neighbourhood )
+{
+  std::map<int,std::vector<int>> neighbourhoodMap;
+
+  for(unsigned i=0; i<neighbourhood.size(); ++i) {
+    neighbourhoodMap[i] = std::vector<int>();
+    for(int iC : neighbourhood[i]) {
+      neighbourhoodMap[i].push_back(iC);
+    }
+  }
+
+  return getNeighbourRanksFromCuboidNeighbourhood<T,D,verbose>(
+    superStructure, rank, neighbourhoodMap );
+}
+
+/// Get neighbour ranks
+template<typename T, unsigned D, bool verbose=false>
+std::unordered_set<int> getNeighbourRanksFromCuboidNeighbourhood(
+  SuperStructure<T,D>& superStructure, const std::vector<std::unordered_set<int>>& neighbourhood )
+{
+  const int rank = singleton::mpi().getRank();
+  return getNeighbourRanksFromCuboidNeighbourhood<T,D,verbose>(
+    superStructure, rank, neighbourhood);
+}
+
+
+/// Get neighbour ranks
+template<typename T, unsigned D, bool verbose=false>
 std::unordered_set<int> getNeighbourRanks(
   SuperStructure<T,D>& superStructure, unsigned offset, int rank )
 {
@@ -71,22 +129,8 @@ std::unordered_set<int> getNeighbourRanks(
   checkCuboidNeighbourhoodConsistency( neighbourhood, correctFaultyNeighbourhood );
 
   //3. evaluate relevant ranks
-  for ( auto cuboidNeighbourPair : neighbourhood){
-    //Retrieve globiC
-    int globiC = cuboidNeighbourPair.first;
-    //Check whether responsible rank (for globiC)
-    if (loadBalancer.rank(globiC) == rank) {
-      //Retrieve neighbours
-      std::vector<int>& neighbours = cuboidNeighbourPair.second;
-      for (int globiCN : neighbours ){
-        rankNeighbours.insert( loadBalancer.rank(globiCN));
-      }
-    }
-  }
-  //Print, if desired
-  if constexpr(verbose){
-    std::cout << rank << ": " << rankNeighbours << std::endl;
-  }
+  rankNeighbours = getNeighbourRanksFromCuboidNeighbourhood<T,D,verbose>(
+    superStructure, rank, neighbourhood );
 #endif
 
   return rankNeighbours;
@@ -95,11 +139,11 @@ std::unordered_set<int> getNeighbourRanks(
 /// Get neighbour ranks
 template<typename T, unsigned D, bool verbose=false>
 std::unordered_set<int> getNeighbourRanks(
-  SuperStructure<T,D>& superStructure, T physOverlap)
+  SuperStructure<T,D>& superStructure, unsigned offset)
 {
   //Retrive parallization infos
   const int rank = singleton::mpi().getRank();
-  return getNeighbourRanks<T,D,false>(superStructure, physOverlap, rank);
+  return getNeighbourRanks<T,D,false>(superStructure, offset, rank);
 }
 
 

@@ -74,6 +74,9 @@ std::size_t appendSerializedParticle(
   int globiCdest;
   deserializeIcDestAndParticle(globiCdest,particleNew,rawBuffer);
   //Update surface pointer
+  if constexpr( access::providesSurface<PARTICLETYPE>() ){
+    updateSurfacePtr( particleSystem, idxParticleNew );
+  }
   return particleNew.getId();
 }
 
@@ -110,6 +113,10 @@ std::size_t insertSerializedParticle(
 #endif
 
 
+  //Update surface pointer
+  if constexpr( access::providesSurface<PARTICLETYPE>() ){
+    updateSurfacePtr( particleSystem, idxParticle );
+  }
   return particle.getId();
 }
 
@@ -125,8 +132,45 @@ std::size_t attachSerializedParticle(
   using namespace descriptors;
 
   std::size_t particleID;
-  //Attach serialized particle
-  particleID = appendSerializedParticle( particleSystem, rawBuffer );
+  //Check whether resolved (or subgrid)
+  //- subgrid has to be appended always, as valid particle data will not
+  //  be present on new core due to previous direct invalidation
+  //- TODO: Check consistency, as for now, invalidated slots are considered
+  //  for resolved, but not for sub grid particles
+  if constexpr( access::providesSurface<PARTICLETYPE>() ){
+    //Attach serialized particle (either at end or at existing index)
+    if (particleSystem.size()==0){
+      particleID = appendSerializedParticle( particleSystem, rawBuffer );
+    } else {
+      //Create temporary particle system to retrieve global id
+      ParticleSystem<T,PARTICLETYPE> particleSystemTmp(1);
+      auto particleTmp = particleSystemTmp.get(0);
+      int globiCdummy;
+      deserializeIcDestAndParticle(globiCdummy,particleTmp,rawBuffer);
+      std::size_t globalID = particleTmp.template getField<PARALLELIZATION,ID>();
+      //Check whether particle already existing
+      // -! Lambda-expression unavailable due to break command
+      bool found=false;
+      //Loop over particles
+      //- including invalid slots, as they are revalidated
+      //  anyways when inserting particle data)
+      for (std::size_t iP=0; iP<particleSystem.size(); ++iP){
+        auto particle = particleSystem.get(iP);
+        auto globalIDiP = particle.template getField<PARALLELIZATION,ID>();
+        if (globalIDiP==globalID){
+          particleID = insertSerializedParticle( particleSystem, iP, rawBuffer );
+          found=true;
+          break;
+        }
+      }
+      if (!found){
+        particleID = appendSerializedParticle( particleSystem, rawBuffer );
+      }
+    }
+  } else { //if constexpr ( access::providesSurface<PARTICLETYPE>() )
+    //Attach serialized particle
+    particleID = appendSerializedParticle( particleSystem, rawBuffer );
+  }
   return particleID;
 }
 
@@ -176,6 +220,31 @@ void prepareRelocation(
 }
 
 
+//Check relocation of discrete surface elements (resolved only)
+template<typename T, typename PARTICLETYPE>
+void checkSurfaceRelocation(
+  SuperParticleSystem<T,PARTICLETYPE>& sParticleSystem,
+  const T physDeltaX,
+  Particle<T,PARTICLETYPE>& particle, int globiC,
+  std::multimap<int,std::unique_ptr<std::uint8_t[]>>& rankDataMapRelocationInter,
+  std::vector<std::unique_ptr<std::uint8_t[]>>& dataListRelocationIntra,
+  std::size_t serialSize, const Vector<bool, PARTICLETYPE::d>& periodicity )
+{
+  //Retrieve cuboid geometry
+  /* auto& superStructure = sParticleSystem.getSuperStructure(); */
+  /* auto& cuboidGeometry = superStructure.getCuboidGeometry(); */
+  //Retrieve position and circumRadius
+  auto position = access::getPosition( particle );
+  const T circumRadius = contact::evalCircumRadius(particle, physDeltaX);
+  const int globiCcentre = particle.template getField<descriptors::PARALLELIZATION,descriptors::IC>();
+  //Get unique iCs on surface and prepare relocation
+  getSurfaceTouchingICs(sParticleSystem, position, circumRadius, periodicity, globiCcentre,
+      [&](const int globiCdest){
+        prepareRelocation( sParticleSystem, particle, globiC, globiCdest,
+          rankDataMapRelocationInter, dataListRelocationIntra, serialSize);
+      });
+}
+
 //Check whether relocation necessary
 //Also differentiate between inter- and intra-core relocation
 //Also check domain exit
@@ -200,6 +269,13 @@ void checkRelocation(
     [&](Particle<T,PARTICLETYPE>& particle,
     ParticleSystem<T,PARTICLETYPE>& particleSystem, int globiC){
 
+    //Retrieve centre iC in previous timestep.
+    //- used to detect iC change
+    //- unly updated for resolved particles
+    int globiCcentreLast= -1;
+    if constexpr( providesSurface<PARTICLETYPE>() ){
+      globiCcentreLast = particle.template getField<PARALLELIZATION,IC>();
+    }
     // Retrieve and update particle position
     // if a periodic setup is used and the particle is out of bounds
     const PhysR<T,D> position = applyPeriodicityToPosition(cuboidGeometry,
@@ -221,6 +297,21 @@ void checkRelocation(
     // (must be here, because it can be that the particle remains on the same block after crossing the boundary)
     // TODO: Add constexpr check if the setup is periodic or not before continuously overwriting the position here
     particle.template setField<GENERAL, POSITION>(position);
+    /*if(isPeriodic(periodicity)) {
+      const PhysR<T,D> min = getCuboidMin<T,D>(cuboidGeometry);
+      const PhysR<T,D> max = getCuboidMax<T,D>(cuboidGeometry, min);
+
+      for(unsigned iD=0; iD<D; ++iD) {
+        position[iD] = applyPeriodicityToPosition(
+            periodicity[iD], position[iD], max[iD], min[iD]);
+      }
+      particle.template setField<GENERAL, POSITION>(position);
+    }*/
+
+    //Update iC, if resolved
+    if constexpr( providesSurface<PARTICLETYPE>() ){
+      particle.template setField<PARALLELIZATION,IC>(globiCcentre);
+    }
 
     //Check whether particle has lost the global domain
     if (particleCentreInDomain){
@@ -229,14 +320,55 @@ void checkRelocation(
       //- subgrid: no data to be sent
       //- resolved: check surface
       if (globiCcentre == globiC){
+        //Check, whether surface parts have to be sent (resolved only)
+        if constexpr( providesSurface<PARTICLETYPE>() ){
+          checkSurfaceRelocation( sParticleSystem, physDeltaX, particle, globiC,
+            rankDataMapRelocationInter, dataListRelocationIntra, serialSize, periodicity );
+        }
       //If particle centre does not reside in iC
       } else { // if (globiCcentre == globiC)
-        //Prepare inter relocation or intra relocation
-        prepareRelocation( sParticleSystem,
-          particle, globiC, globiCcentre,
-          rankDataMapRelocationInter, dataListRelocationIntra, serialSize);
-        //Immediate invalidation (subgrid only)
-        particle.template setField<GENERAL,INVALID>(true);
+        //Differentiate between resolved and subgrid treatment
+        if constexpr( providesSurface<PARTICLETYPE>() ){
+
+          //Detect center switch
+          //- to send data one last time
+          //- necessary, since new responsible iC can only send at next timestep
+          if(globiCcentre!=globiCcentreLast){
+#ifdef VERBOSE_COMMUNICATION
+            int rank = singleton::mpi().getRank();
+            std::cout << std::endl << "[Particle] "
+                      << "CENTRE SWITCH("
+                      << globiCcentreLast << "->" << globiCcentre << ")"
+                      << " at sending from iC=" << globiC
+                      << "(rank=" << rank << ")" << std::endl;
+#endif
+            //Prepare inter relocation or intra relocation
+            //-here: to new responsible ic
+            prepareRelocation( sParticleSystem,
+              particle, globiC, globiCcentre,
+              rankDataMapRelocationInter, dataListRelocationIntra, serialSize);
+
+            if constexpr( providesSurface<PARTICLETYPE>() ){
+              //Sending to self, to avoid invalidation on receiving
+              //- necessary, as responsibility changed
+              prepareRelocation( sParticleSystem,
+                particle, globiCcentre, globiC,
+                rankDataMapRelocationInter, dataListRelocationIntra, serialSize);
+
+              //Check, whether surface parts have to be sent (resolved only)
+              checkSurfaceRelocation( sParticleSystem, physDeltaX, particle, globiC,
+                rankDataMapRelocationInter, dataListRelocationIntra, serialSize, periodicity );
+            }
+
+          } //if(globiCcentre!=globiCcentreLast)
+        } else { //if constexpr( providesSurface<PARTICLETYPE>() )
+          //Prepare inter relocation or intra relocation
+          prepareRelocation( sParticleSystem,
+            particle, globiC, globiCcentre,
+            rankDataMapRelocationInter, dataListRelocationIntra, serialSize);
+          //Immediate invalidation (subgrid only)
+          particle.template setField<GENERAL,INVALID>(true);
+        }
       } // else (globiCcentre == globiC)
     } else { //particleCentreInDomain
       //Invalidate particle
@@ -309,7 +441,8 @@ void sendMappedData(
 template<typename T, typename PARTICLETYPE>
 void checkInvalidationOnReceival(
   SuperParticleSystem<T,PARTICLETYPE>& sParticleSystem,
-  std::vector<std::vector<std::size_t>>& receivedLocalIDs )
+  std::vector<std::vector<std::size_t>>& receivedLocalIDs,
+  const Vector<bool,PARTICLETYPE::d>& periodicity )
 {
   using namespace descriptors;
 
@@ -356,6 +489,24 @@ void checkInvalidationOnReceival(
 #endif
 
     } // if( std::find() )
+    /* else { */
+    /*   // Check if the current block still touches the surface, if not then invalidate the particle */
+    /*   auto& cuboidGeometry = superStructure.getCuboidGeometry(); */
+    /*   const T physDeltaX = cuboidGeometry.getMotherCuboid().getDeltaR(); */
+    /*   const T circumRadius = contact::evalCircumRadius(particle, physDeltaX); */
+    /*   const int globiCcenter = particle.template getField<PARALLELIZATION, IC>(); */
+    /*   bool touchesSurface = false; */
+    /*   communication::getSurfaceTouchingICs( */
+    /*       sParticleSystem, access::getPosition(particle), circumRadius, periodicity, globiCcenter, */
+    /*       [&](int surfaceTouchingGlobiC){ */
+    /*         if(surfaceTouchingGlobiC == globiC) { */
+    /*           touchesSurface = true; */
+    /*         } */
+    /*       }); */
+    /*   if(!touchesSurface) { */
+    /*     particle.template setField<GENERAL,INVALID>(true); */
+    /*   } */
+    /* } */
   }); //forParticlesInSuperParticleSystem<T,PARTICLETYPE,valid_particle_surfaces>
 }
 
@@ -386,6 +537,11 @@ void assignParticleToIC(
       [[maybe_unused]] std::size_t particleID =
         attachSerializedParticle(
         particleSystem, rawBuffer);
+
+      //Add local particle iD to list (resolved only)
+      if constexpr( access::providesSurface<PARTICLETYPE>() ){
+        receivedLocalIDs[iC].push_back(particleID);
+      }
 
 #ifdef VERBOSE_COMMUNICATION
       int rank = singleton::mpi().getRank();
@@ -467,7 +623,8 @@ void receiveParticles(
   std::vector<std::unique_ptr<std::uint8_t[]>>& dataListRelocationIntra,
   std::size_t serialSize,
   MPI_Comm particleDistributionComm,
-  singleton::MpiNonBlockingHelper& mpiNbHelper )
+  singleton::MpiNonBlockingHelper& mpiNbHelper,
+  const Vector<bool,PARTICLETYPE::d>& periodicity )
 {
   using namespace particles::access;
 
@@ -489,7 +646,7 @@ void receiveParticles(
   }
 
   //Retrieve neighbour ranks
-  auto& listNeighbourRanks = sParticleSystem.getNeighbourRanks();
+  auto& listNeighbourRanks = sParticleSystem.getExtendedNeighbourRanks();
   //Iterate over inter core received particle data
   receiveAndExecuteForData( listNeighbourRanks, serialSize,
       particleDistributionComm, mpiNbHelper,
@@ -497,6 +654,11 @@ void receiveParticles(
     //Assign particle to destination iC
     assignParticleToIC( sParticleSystem, receivedLocalIDs, rankOrig, rawBuffer );
   });
+
+  //Check, whether invalidation nccessary
+  if constexpr( providesSurface<PARTICLETYPE>() ){
+    checkInvalidationOnReceival( sParticleSystem, receivedLocalIDs, periodicity );
+  }
 }
 #endif
 
@@ -541,7 +703,7 @@ void updateParticleCuboidDistribution(
   singleton::MpiNonBlockingHelper mpiNbHelper;
 
   //Retrieve rank of direct neighbours
-  auto& listNeighbourRanks = sParticleSystem.getNeighbourRanks();
+  auto& listNeighbourRanks = sParticleSystem.getExtendedNeighbourRanks();
 
   //Create ranDataMapSorted (WARNING: has to be existent until all data is received! c.f. #290)
   std::map<int, std::vector<std::uint8_t> > rankDataMapSorted;
@@ -555,7 +717,7 @@ void updateParticleCuboidDistribution(
 
   //Receive particles via mpi().receive
   receiveParticles( sParticleSystem, dataListRelocationIntra,
-    serialSize, particleDistributionComm, mpiNbHelper );
+    serialSize, particleDistributionComm, mpiNbHelper, periodicity );
 
 #else
   std::cerr

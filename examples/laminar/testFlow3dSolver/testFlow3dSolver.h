@@ -316,6 +316,20 @@ protected:
     SuperLatticeField3D<T,descriptor,descriptors::FORCE> force(
       this->lattice());
 
+    std::shared_ptr<AnalyticalF3D<T,T>> solution
+     = std::make_shared<VelocityTestFlow3D<T,T,descriptor>>(this->converter());
+    SuperLatticeFfromAnalyticalF3D<T,descriptor> solution_lattice(solution, this->lattice());
+    solution_lattice.getName() = "analytical_solution";
+    writer.addFunctor(solution_lattice);
+
+    SuperLatticeDensity3D<T,descriptor> density(this->lattice());
+    writer.addFunctor(density);
+
+    DensityTestFlow3D<T,T,descriptor> analytical_density(this->converter());
+    SuperLatticeFfromAnalyticalF3D<T,descriptor> solution_density_lattice(analytical_density, this->lattice());
+    solution_density_lattice.getName() = "analytical_density";
+    writer.addFunctor(solution_density_lattice);
+
     writer.addFunctor(force);
     writer.addFunctor(geometry);
     writer.addFunctor(velocity);
@@ -341,7 +355,7 @@ protected:
 
       OstreamManager clout(std::cout,"error");
 
-      int tmp[1]; T result[1]; T result1[1];
+      int tmp[1] = {0}; T result[1]; T result1[1];
       VelocityTestFlow3D<T,T,descriptor> uSol(converter);
       SuperLatticePhysVelocity3D<T,descriptor> u(lattice,converter);
       SuperLatticeFfromAnalyticalF3D<T,descriptor> uSolLattice(uSol,lattice);

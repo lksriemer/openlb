@@ -49,11 +49,12 @@ namespace contact {
 
 template <typename T, unsigned D, typename CONTACTTYPE>
 constexpr T
-evalCurrentDampingFactor(CONTACTTYPE& contact, const T dampingFactor,
+evalCurrentDampingFactor(CONTACTTYPE& contact, const T coefficientOfRestitution,
                          const Vector<T, D>& initialRelativeNormalVelocity)
 {
   if (contact.getDampingFactor() < 0) {
-    contact.setDampingFactor(dampingFactor);
+    contact.setDampingFactorFromInitialVelocity(
+        coefficientOfRestitution, norm(initialRelativeNormalVelocity));
   }
   return contact.getDampingFactor();
 }
@@ -306,13 +307,13 @@ getNormalForceFromOverlapVolume(const Vector<T, D>& contactNormal,
 }
 
 template <typename T, typename PARTICLETYPE>
-void applyForceOnParticle([[maybe_unused]] std::multimap<
-                              int, std::unique_ptr<std::uint8_t[]>>& dataMap,
-                          Particle<T, PARTICLETYPE>&                 particle,
-                          XParticleSystem<T, PARTICLETYPE>& particleSystem,
-                          const Vector<T, PARTICLETYPE::d>& contactPoint,
-                          const Vector<T, PARTICLETYPE::d>& normalForce,
-                          const Vector<T, PARTICLETYPE::d>& tangentialForce)
+void applyForceOnParticle(
+    std::multimap<int, std::unique_ptr<std::uint8_t[]>>& dataMap,
+    Particle<T, PARTICLETYPE>&                           particle,
+    XParticleSystem<T, PARTICLETYPE>&                    particleSystem,
+    const Vector<T, PARTICLETYPE::d>&                    contactPoint,
+    const Vector<T, PARTICLETYPE::d>&                    normalForce,
+    const Vector<T, PARTICLETYPE::d>&                    tangentialForce)
 {
   using namespace descriptors;
   constexpr unsigned D            = PARTICLETYPE::d;
@@ -325,15 +326,74 @@ void applyForceOnParticle([[maybe_unused]] std::multimap<
           contactForce, contactPointDistance));
 
   if (access::isContactComputationEnabled(particle)) {
-    // Applying contact force on the particle
-    const Vector<T, D> force = particle.template getField<FORCING, FORCE>();
-    particle.template setField<FORCING, FORCE>(force + contactForce);
+    bool applyNow = true;
 
-    // Torque calculation and application
-    const Vector<T, Drot> torque(particle.template getField<FORCING, TORQUE>());
-    particle.template setField<FORCING, TORQUE>(
-        utilities::dimensions::convert<D>::serialize_rotation(
-            torque + torqueFromContact));
+    if constexpr (access::providesParallelization<PARTICLETYPE>()) {
+      auto& loadBalancer = particleSystem.getSuperStructure().getLoadBalancer();
+      const std::size_t globalParticleIC =
+          particle.template getField<PARALLELIZATION, IC>();
+      int responsibleRank = loadBalancer.rank(globalParticleIC);
+      if (responsibleRank != singleton::mpi().getRank()) {
+        applyNow = false;
+        const std::size_t globalParticleID =
+            particle.template getField<PARALLELIZATION, ID>();
+        extendContactTreatmentResultsDataMap(globalParticleID, contactForce,
+                                             torqueFromContact, responsibleRank,
+                                             dataMap);
+      }
+    }
+
+    if (applyNow) {
+      if constexpr (access::providesParallelization<PARTICLETYPE>()) {
+        // Apply force only to the main particle
+        const std::size_t globalParticleID =
+            particle.template getField<PARALLELIZATION, ID>();
+        particles::communication::forParticlesInSuperParticleSystem<
+            T, PARTICLETYPE, conditions::valid_particles>(
+            particleSystem,
+            [&](Particle<T, PARTICLETYPE>&       particle,
+                ParticleSystem<T, PARTICLETYPE>& particleSystem, int globiC) {
+              const int globalParticleIC =
+                  particle.template getField<PARALLELIZATION, IC>();
+              const std::size_t currGlobalParticleID =
+                  particle.template getField<PARALLELIZATION, ID>();
+              if (currGlobalParticleID == globalParticleID &&
+                  globiC == globalParticleIC) {
+                // Applying contact force on the particle
+                const Vector<T, D> force =
+                    particle.template getField<FORCING, FORCE>();
+                particle.template setField<FORCING, FORCE>(force +
+                                                           contactForce);
+
+                // Torque calculation and application
+                const Vector<T, Drot> torque(
+                    particle.template getField<FORCING, TORQUE>());
+                particle.template setField<FORCING, TORQUE>(
+                    utilities::dimensions::convert<D>::serialize_rotation(
+                        torque + torqueFromContact));
+#ifdef VERBOSE_CONTACT_COMMUNICATION
+                std::cout << "Rank " << singleton::mpi().getRank()
+                          << " procsses data of particle " << globalParticleID
+                          << " (contactForce = " << contactForce + force
+                          << "; torque = " << torqueFromContact + torque << ")"
+                          << std::endl;
+#endif
+              }
+            });
+      }
+      else {
+        // Applying contact force on the particle
+        const Vector<T, D> force = particle.template getField<FORCING, FORCE>();
+        particle.template setField<FORCING, FORCE>(force + contactForce);
+
+        // Torque calculation and application
+        const Vector<T, Drot> torque(
+            particle.template getField<FORCING, TORQUE>());
+        particle.template setField<FORCING, TORQUE>(
+            utilities::dimensions::convert<D>::serialize_rotation(
+                torque + torqueFromContact));
+      }
+    }
   }
 }
 
@@ -438,6 +498,38 @@ void evalStartAndEndPos(Vector<long, D>& startPos, Vector<long, D>& endPos,
     startPos[iD] = util::floor(min[iD] / contactPhysDeltaX[iD]);
     endPos[iD]   = util::ceil(max[iD] / contactPhysDeltaX[iD]);
   }
+}
+
+template <typename T, unsigned D>
+T evalForceViaVolumeCoefficient(const Vector<T, D>& min,
+                                const Vector<T, D>& max, T overlapVolume)
+{
+  const T a = util::log(2. / 3.) / util::log(2.);
+  const T m = 2. / util::sqrt(M_PI) * util::pow(4. / M_PI, -a);
+
+  Vector<T, D> length            = max - min;
+  T            boundingBoxVolume = 1;
+  for (unsigned iD = 0; iD < D; ++iD) {
+    boundingBoxVolume *= length[iD];
+  }
+
+  const T k =
+      m * util::pow(util::max(boundingBoxVolume / overlapVolume, T {1}), a);
+  return k;
+}
+
+template <typename T>
+constexpr T evalForceViaVolumeCoefficient(const T contactVolume,
+                                          const T contactSurface,
+                                          const T indentationDepth)
+{
+  constexpr T a = 0.6118229;
+  constexpr T b = 1.900093;
+  constexpr T c = 0.651237;
+
+  const T x = indentationDepth * contactSurface / contactVolume;
+  const T k = a + b * util::exp(-c * x);
+  return k;
 }
 
 template <typename T, unsigned D, typename F1, typename F2, typename F3,
@@ -565,6 +657,109 @@ void processContactViaVolume(const Vector<T, D>& min, const Vector<T, D>& max,
           << std::endl;
   }
 #endif
+}
+
+template <typename T, unsigned D, typename F1>
+bool evalStartingPoint(const Vector<long, D>& startPos,
+                       const Vector<long, D>& endPos,
+                       const Vector<T, D>&    contactPhysDeltaX,
+                       Vector<long, D>& currPos, F1 isInsideContact)
+{
+  bool pointFound = false;
+
+  forEachPositionWithBreak(startPos, endPos,
+                           [&](const Vector<long, D>& pos, bool& breakLoops) {
+                             PhysR<T, D> physPos;
+                             for (unsigned iD = 0; iD < D; ++iD) {
+                               physPos[iD] = contactPhysDeltaX[iD] * pos[iD];
+                             }
+                             if (isInsideContact(physPos)) {
+                               currPos    = pos;
+                               pointFound = true;
+                               breakLoops = true;
+                             }
+                           });
+
+  return pointFound;
+}
+
+template <typename T, unsigned D, typename F1, typename F2>
+void evalBoundingBoxRecursive(const Vector<long, D>&  startPos,
+                              const Vector<long, D>&  endPos,
+                              const Vector<T, D>&     contactPhysDeltaX,
+                              const Vector<long, D>&  currPos,
+                              const Vector<short, D>& dirIn, F1 isInsideContact,
+                              F2 updateMinMax)
+{
+  PhysR<T, D> currPhysPos;
+  for (unsigned iD = 0; iD < D; ++iD) {
+    currPhysPos[iD] = contactPhysDeltaX[iD] * currPos[iD];
+  }
+  bool isInside   = isInsideContact(currPhysPos);
+  bool isInsideBB = true;
+  for (unsigned iD = 0; iD < D; ++iD) {
+    if (currPos[iD] < startPos[iD] || currPos[iD] > endPos[iD]) {
+      isInsideBB = false;
+      break;
+    }
+  }
+
+  // if point is inside, then we check the neighboring points too, otherwise they cannot be inside for convex shapes
+  if (isInside || isInsideBB) {
+    if (isInside) {
+      updateMinMax(currPhysPos);
+    }
+
+    forEachPosition(Vector<unsigned short, D>(0),
+                    Vector<unsigned short, D>(abs(dirIn)),
+                    [&](const Vector<unsigned short, D>& dirOut) {
+                      if (norm(dirOut) >= 1) {
+                        Vector<short, D> signedDirOut;
+                        for (unsigned iD = 0; iD < D; ++iD) {
+                          signedDirOut[iD] = dirOut[iD] * dirIn[iD];
+                        }
+                        const Vector<long, D> nextPos = signedDirOut + currPos;
+                        evalBoundingBoxRecursive(
+                            startPos, endPos, contactPhysDeltaX, nextPos,
+                            signedDirOut, isInsideContact, updateMinMax);
+                      }
+                    });
+  }
+}
+
+template <typename T, unsigned D, typename F1, typename F2, typename F3>
+void correctBoundingBox(const PhysR<T, D>& min, const PhysR<T, D>& max,
+                        const T        physDeltaX,
+                        const unsigned contactBoxResolutionPerDirection,
+                        F1 isInsideContact, F2 resetContactBox, F3 updateMinMax)
+{
+  const Vector<T, D> contactPhysDeltaX =
+      evalContactDeltaX(min, max, physDeltaX, contactBoxResolutionPerDirection);
+  Vector<long, D> startPos;
+  Vector<long, D> endPos;
+  evalStartAndEndPos(startPos, endPos, max, min, contactPhysDeltaX);
+  resetContactBox();
+
+  Vector<long, D> origin;
+  const bool      originFound = evalStartingPoint(
+      startPos, endPos, contactPhysDeltaX, origin, isInsideContact);
+
+  if (originFound) {
+    PhysR<T, D> physOrigin;
+    for (unsigned iD = 0; iD < D; ++iD) {
+      physOrigin[iD] = contactPhysDeltaX[iD] * origin[iD];
+    }
+    updateMinMax(physOrigin);
+
+    for (unsigned i = 0; i < utilities::dimensions::convert<D>::neighborsCount;
+         ++i) {
+      const Vector<short, D> direction =
+          utilities::dimensions::convert<D>::neighborDirections[i];
+      evalBoundingBoxRecursive(startPos, endPos, contactPhysDeltaX,
+                               origin + direction, direction, isInsideContact,
+                               updateMinMax);
+    }
+  }
 }
 
 template <typename T, unsigned D, typename F1, typename F2, typename F3>
@@ -829,7 +1024,8 @@ struct particle_particle<
                 evalRelativeVelocity(particleA, particleB, center);
             const T dampingFactor = evalCurrentDampingFactor(
                 contact,
-                contactProperties.getDampingConstant(materialA, materialB),
+                contactProperties.getCoefficientOfRestitution(materialA,
+                                                              materialB),
                 evalRelativeNormalVelocity(contactNormal, relVel));
 
             applyForceFromOverlapVolume(
@@ -896,6 +1092,37 @@ struct particle_particle<
                                  contactBoxResolutionPerDirection);
   }
 
+  static void correctBoundingBoxExistingContact(
+      XParticleSystem<T, PARTICLETYPE>& particleSystem,
+      ParticleContactArbitraryFromOverlapVolume<T, PARTICLETYPE::d, CONVEX>&
+          contact,
+      T physDeltaX, unsigned contactBoxResolutionPerDirection)
+  {
+    using namespace descriptors;
+    constexpr unsigned D = PARTICLETYPE::d;
+
+    auto particleA = particleSystem.get(contact.getIDs()[0]);
+    auto particleB = particleSystem.get(contact.getIDs()[1]);
+
+    const std::function<bool(const PhysR<T, D>&)> isInsideContact =
+        [&](const Vector<T, D>& pos) {
+          return particles::resolved::isInsideParticle(particleA, pos) &&
+                 particles::resolved::isInsideParticle(particleB, pos);
+        };
+    const std::function<void()> resetMinMax = [&contact]() {
+      contact.resetMinMax();
+    };
+    const std::function<void(const PhysR<T, D>&)> updateMinMax =
+        [&contact](const PhysR<T, D>& pos) {
+          contact.updateMinMax(pos);
+        };
+
+    particles::contact::correctBoundingBox(
+        contact.getMin(), contact.getMax(), physDeltaX,
+        contactBoxResolutionPerDirection, isInsideContact, resetMinMax,
+        updateMinMax);
+  }
+
   template <
       typename CONTACTPROPERTIES,
       typename F1 = decltype(defaults::periodicity<PARTICLETYPE::d>),
@@ -921,35 +1148,70 @@ struct particle_particle<
 
     for (auto& particleContact : contactContainer.particleContacts) {
       if (!particleContact.isEmpty()) {
-        // Check if contact should be computed
-        bool computeContact = true;
-        if constexpr (access::providesComputeContact<PARTICLETYPE>()) {
-          auto particleA = particleSystem.get(particleContact.getIDs()[0]);
-          auto particleB = particleSystem.get(particleContact.getIDs()[1]);
-          computeContact =
-              access::isContactComputationEnabled(particleA, particleB);
+        bool isResponsible = true;
+
+        if constexpr (access::providesParallelization<PARTICLETYPE>()) {
+          isResponsible = singleton::mpi().getRank() ==
+                          particleContact.getResponsibleRank();
         }
 
-        if (computeContact) {
-          if (particleContact.isNew()) {
-            correctBoundingBoxNewContact(particleSystem, particleContact,
-                                         physDeltaX,
-                                         contactBoxResolutionPerDirection);
-            particleContact.isNew(particleContact.isEmpty());
+        if (isResponsible) {
+          // Check if contact should be computed
+          bool computeContact = true;
+          if constexpr (access::providesComputeContact<PARTICLETYPE>()) {
+            auto particleA = particleSystem.get(particleContact.getIDs()[0]);
+            auto particleB = particleSystem.get(particleContact.getIDs()[1]);
+            computeContact =
+                access::isContactComputationEnabled(particleA, particleB);
+          }
+
+          if (computeContact) {
+            std::array<PhysR<T, PARTICLETYPE::d>, 2> originalPos;
+            if constexpr (isPeriodic(getSetupPeriodicity())) {
+              for (unsigned i = 0; i < 2; ++i) {
+                auto particle = particleSystem.get(particleContact.getIDs()[i]);
+                originalPos[i] =
+                    particle.template getField<GENERAL, POSITION>();
+                particle.template setField<GENERAL, POSITION>(
+                    particleContact.getParticlePositions()[i]);
+              }
+            }
+
+            if (particleContact.isNew()) {
+              correctBoundingBoxNewContact(particleSystem, particleContact,
+                                           physDeltaX,
+                                           contactBoxResolutionPerDirection);
+              particleContact.isNew(particleContact.isEmpty());
+            }
+            else {
+              if constexpr (BBCORRECTIONMETHOD == 1) {
+                correctBoundingBoxExistingContact(
+                    particleSystem, particleContact, physDeltaX,
+                    contactBoxResolutionPerDirection);
+              }
+              else {
+                correctBoundingBoxNewContact(particleSystem, particleContact,
+                                             physDeltaX,
+                                             contactBoxResolutionPerDirection);
+              }
+            }
+            apply(dataMap, particleSystem, particleContact, contactProperties,
+                  physDeltaX, contactBoxResolutionPerDirection, k,
+                  processContactForce);
+
+            if constexpr (isPeriodic(getSetupPeriodicity())) {
+              for (unsigned i = 0; i < 2; ++i) {
+                auto particle = particleSystem.get(particleContact.getIDs()[i]);
+                particle.template setField<GENERAL, POSITION>(originalPos[i]);
+              }
+            }
+            particleContact.setParticlePositionUpdated(false);
           }
           else {
-            correctBoundingBoxNewContact(particleSystem, particleContact,
-                                         physDeltaX,
-                                         contactBoxResolutionPerDirection);
+            // if contact should be ignored, reset min and max so that it counts
+            // as empty and can be deleted during the next cleanContact() call.
+            particleContact.resetMinMax();
           }
-          apply(dataMap, particleSystem, particleContact, contactProperties,
-                physDeltaX, contactBoxResolutionPerDirection, k,
-                processContactForce);
-        }
-        else {
-          // if contact should be ignored, reset min and max so that it counts
-          // as empty and can be deleted during the next cleanContact() call.
-          particleContact.resetMinMax();
         }
       }
     }
@@ -1138,8 +1400,8 @@ struct particle_wall<
             const Vector<T, D> relVel = evalRelativeVelocity(particle, center);
             const T            dampingFactor = evalCurrentDampingFactor(
                 contact,
-                contactProperties.getDampingConstant(particleMaterial,
-                                                                wallMaterial),
+                contactProperties.getCoefficientOfRestitution(particleMaterial,
+                                                                         wallMaterial),
                 evalRelativeNormalVelocity(contactNormal, relVel));
 
             applyForceFromOverlapVolume(
@@ -1208,6 +1470,40 @@ struct particle_wall<
                                  physDeltaX, contactBoxResolutionPerDirection);
   }
 
+  static void correctBoundingBoxExistingContact(
+      XParticleSystem<T, PARTICLETYPE>&               particleSystem,
+      std::vector<SolidBoundary<T, PARTICLETYPE::d>>& solidBoundaries,
+      WallContactArbitraryFromOverlapVolume<T, PARTICLETYPE::d, CONVEX>&
+              contact,
+      const T physDeltaX, const unsigned contactBoxResolutionPerDirection)
+  {
+    using namespace descriptors;
+    constexpr unsigned D = PARTICLETYPE::d;
+
+    auto                 particle = particleSystem.get(contact.getParticleID());
+    SolidBoundary<T, D>& solidBoundary = solidBoundaries[contact.getWallID()];
+
+    const std::function<bool(const PhysR<T, D>&)> isInsideContact =
+        [&](const Vector<T, D>& pos) {
+          bool                          isInsideWall;
+          solidBoundary.getIndicator()->operator()(&isInsideWall, pos.data());
+          return particles::resolved::isInsideParticle(particle, pos) &&
+                 isInsideWall;
+        };
+    const std::function<void()> resetMinMax = [&contact]() {
+      contact.resetMinMax();
+    };
+    const std::function<void(const PhysR<T, D>&)> updateMinMax =
+        [&contact](const PhysR<T, D>& pos) {
+          contact.updateMinMax(pos);
+        };
+
+    particles::contact::correctBoundingBox(
+        contact.getMin(), contact.getMax(), physDeltaX,
+        contactBoxResolutionPerDirection, isInsideContact, resetMinMax,
+        updateMinMax);
+  }
+
   template <
       typename CONTACTPROPERTIES,
       typename F1 = decltype(defaults::periodicity<PARTICLETYPE::d>),
@@ -1234,32 +1530,64 @@ struct particle_wall<
 
     for (auto& wallContact : contactContainer.wallContacts) {
       if (!wallContact.isEmpty()) {
-        // Check if contact should be computed
-        bool computeContact = true;
-        if constexpr (access::providesComputeContact<PARTICLETYPE>()) {
-          auto particle  = particleSystem.get(wallContact.getParticleID());
-          computeContact = access::isContactComputationEnabled(particle);
+        bool isResponsible = true;
+
+        if constexpr (access::providesParallelization<PARTICLETYPE>()) {
+          isResponsible =
+              singleton::mpi().getRank() == wallContact.getResponsibleRank();
         }
 
-        if (computeContact) {
-          if (wallContact.isNew()) {
-            correctBoundingBoxNewContact(particleSystem, solidBoundaries,
-                                         wallContact, physDeltaX,
-                                         contactBoxResolutionPerDirection);
-            wallContact.isNew(wallContact.isEmpty());
+        if (isResponsible) {
+          // Check if contact should be computed
+          bool computeContact = true;
+          if constexpr (access::providesComputeContact<PARTICLETYPE>()) {
+            auto particle  = particleSystem.get(wallContact.getParticleID());
+            computeContact = access::isContactComputationEnabled(particle);
+          }
+
+          if (computeContact) {
+            PhysR<T, PARTICLETYPE::d> originalPos;
+            if constexpr (isPeriodic(getSetupPeriodicity())) {
+              auto particle = particleSystem.get(wallContact.getParticleID());
+              originalPos   = particle.template getField<GENERAL, POSITION>();
+              particle.template setField<GENERAL, POSITION>(
+                  wallContact.getParticlePosition());
+            }
+
+            if (wallContact.isNew()) {
+              correctBoundingBoxNewContact(particleSystem, solidBoundaries,
+                                           wallContact, physDeltaX,
+                                           contactBoxResolutionPerDirection);
+              wallContact.isNew(wallContact.isEmpty());
+            }
+            else {
+              if constexpr (BBCORRECTIONMETHOD == 1) {
+                correctBoundingBoxExistingContact(
+                    particleSystem, solidBoundaries, wallContact, physDeltaX,
+                    contactBoxResolutionPerDirection);
+              }
+              else {
+                correctBoundingBox(particleSystem, solidBoundaries, wallContact,
+                                   physDeltaX,
+                                   contactBoxResolutionPerDirection);
+              }
+            }
+            apply(dataMap, particleSystem, solidBoundaries, wallContact,
+                  contactProperties, physDeltaX,
+                  contactBoxResolutionPerDirection, k, processContactForce);
+
+            if constexpr (isPeriodic(getSetupPeriodicity())) {
+              particleSystem.get(wallContact.getParticleID())
+                  .template setField<GENERAL, POSITION>(originalPos);
+              // TODO: Set that unfied position is not set anymore
+            }
+            wallContact.setParticlePositionUpdated(false);
           }
           else {
-            correctBoundingBox(particleSystem, solidBoundaries, wallContact,
-                               physDeltaX, contactBoxResolutionPerDirection);
+            // if contact should be ignored, reset min and max so that it counts
+            // as empty and can be deleted during the next cleanContact() call.
+            wallContact.resetMinMax();
           }
-          apply(dataMap, particleSystem, solidBoundaries, wallContact,
-                contactProperties, physDeltaX, contactBoxResolutionPerDirection,
-                k, processContactForce);
-        }
-        else {
-          // if contact should be ignored, reset min and max so that it counts
-          // as empty and can be deleted during the next cleanContact() call.
-          wallContact.resetMinMax();
         }
       }
     }
@@ -1268,7 +1596,58 @@ struct particle_wall<
 
 /*
  * Combined contact processing
+ * Adds an option to use different bounding box correction methods for existing contacts:
+ * 0: Less fast, but more accurate option (this option is always used for new contacts)
+ * 1: Faster, but inaccurate option (this option needs tests)
  */
+template <
+    typename T, typename PARTICLETYPE, typename PARTICLECONTACTTYPE,
+    typename WALLCONTACTTYPE, typename CONTACTPROPERTIES,
+    unsigned BBCORRECTIONMETHOD = 0,
+    typename F1 = decltype(defaults::periodicity<PARTICLETYPE::d>),
+    typename F2 = decltype(defaults::processContactForce<T, PARTICLETYPE::d>)>
+void processContacts(
+    SuperParticleSystem<T, PARTICLETYPE>&                      particleSystem,
+    std::vector<SolidBoundary<T, PARTICLETYPE::d>>&            solidBoundaries,
+    ContactContainer<T, PARTICLECONTACTTYPE, WALLCONTACTTYPE>& contactContainer,
+    const CONTACTPROPERTIES&                 contactProperties,
+    const SuperGeometry<T, PARTICLETYPE::d>& sGeometry,
+#ifdef PARALLEL_MODE_MPI
+    MPI_Comm contactTreatmentComm,
+#endif
+    const unsigned contactBoxResolutionPerDirection = 8,
+    const T        k = static_cast<T>(4. / (3 * util::sqrt(M_PI))),
+    F1             getSetupPeriodicity = defaults::periodicity<PARTICLETYPE::d>,
+    F2 processContactForce = defaults::processContactForce<T, PARTICLETYPE::d>)
+
+{
+  std::multimap<int, std::unique_ptr<std::uint8_t[]>> dataMap;
+
+  particle_particle<T, PARTICLETYPE, PARTICLECONTACTTYPE, WALLCONTACTTYPE,
+                    BBCORRECTIONMETHOD>::apply(particleSystem, contactContainer,
+                                               contactProperties, sGeometry,
+                                               dataMap,
+                                               contactBoxResolutionPerDirection,
+                                               k, getSetupPeriodicity,
+                                               processContactForce);
+
+  particle_wall<T, PARTICLETYPE, PARTICLECONTACTTYPE, WALLCONTACTTYPE,
+                BBCORRECTIONMETHOD>::apply(particleSystem, solidBoundaries,
+                                           contactContainer, contactProperties,
+                                           sGeometry, dataMap,
+                                           contactBoxResolutionPerDirection, k,
+                                           getSetupPeriodicity,
+                                           processContactForce);
+  if constexpr (access::providesParallelization<PARTICLETYPE>()) {
+    communicateContactTreatmentResults<T, PARTICLETYPE>(particleSystem, dataMap
+#ifdef PARALLEL_MODE_MPI
+                                                        ,
+                                                        contactTreatmentComm
+#endif
+    );
+  }
+}
+
 template <
     typename T, typename PARTICLETYPE, typename PARTICLECONTACTTYPE,
     typename WALLCONTACTTYPE, typename CONTACTPROPERTIES,

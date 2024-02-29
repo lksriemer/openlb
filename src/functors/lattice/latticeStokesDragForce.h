@@ -24,6 +24,7 @@
 #ifndef LATTICE_STOKES_DRAG_FORCE_H
 #define LATTICE_STOKES_DRAG_FORCE_H
 
+#include <unordered_set>
 
 namespace olb {
 
@@ -46,6 +47,7 @@ private:
   PhysR<T,DESCRIPTOR::d> _cellMax;
   Vector<bool,DESCRIPTOR::d> _periodic;
   std::size_t _iP0;
+  const std::unordered_set<int> _ignoredMaterials;
   const F _f;
   //Precalculated constants
   T _delTinv;
@@ -59,6 +61,7 @@ public:
                                PhysR<T,DESCRIPTOR::d> cellMax = PhysR<T,DESCRIPTOR::d> (0.),
                                Vector<bool,DESCRIPTOR::d> periodic = Vector<bool,DESCRIPTOR::d> (false),
                                std::size_t iP0=0,
+                               const std::unordered_set<int>& ignoredMaterials = std::unordered_set<int>{},
                                const F f = [](auto&, const auto&, const auto&, const auto&){}
                                );
   void evaluate(T output[], particles::Particle<T,PARTICLETYPE>& particle, int iP);

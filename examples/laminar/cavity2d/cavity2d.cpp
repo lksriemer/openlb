@@ -117,10 +117,10 @@ void setBoundaryValues( UnitConverter<T,DESCRIPTOR> const& converter,
 
 void getResults( SuperLattice<T, DESCRIPTOR>& sLattice,
                  UnitConverter<T,DESCRIPTOR> const& converter, std::size_t iT, util::Timer<T>* timer,
-                 const T logT, const T maxPhysT, const T imSave, const T vtkSave,
-                 std::string filenameGif, std::string filenameVtk,
+                 const T logT, const T maxPhysT, const T imSave, const T vtkSave, const T gnuplotSave,
+                 std::string filenameGif, std::string filenameVtk, std::string filenameGnuplot,
                  const int timerPrintMode,
-                 const int timerTimeSteps, SuperGeometry<T,2>& superGeometry, bool converged )
+                 SuperGeometry<T,2>& superGeometry, bool converged )
 {
 
   OstreamManager clout( std::cout,"getResults" );
@@ -146,11 +146,10 @@ void getResults( SuperLattice<T, DESCRIPTOR>& sLattice,
   // Get statistics
   if ( iT%converter.getLatticeTime( logT )==0 || converged ) {
     sLattice.getStatistics().print( iT, converter.getPhysTime( iT ) );
-  }
-
-  if ( iT%timerTimeSteps==0 || converged ) {
     timer->print( iT,timerPrintMode );
   }
+
+
 
   // Writes the VTK files
   if ( ( iT%converter.getLatticeTime( vtkSave )==0 && iT>0 ) || converged ) {
@@ -174,7 +173,8 @@ void getResults( SuperLattice<T, DESCRIPTOR>& sLattice,
   }
 
   // Output for x-velocity along y-position at the last time step
-  if ( iT == converter.getLatticeTime( maxPhysT ) || converged ) {
+  //if ( iT == converter.getLatticeTime( maxPhysT ) || converged ) {
+  if ( (iT%converter.getLatticeTime( gnuplotSave ) == 0 && iT>0 ) || converged ) {
     // Gives access to velocity information on lattice
     SuperLatticePhysVelocity2D<T, DESCRIPTOR> velocityField( sLattice, converter );
     // Interpolation functor with velocityField information
@@ -195,7 +195,7 @@ void getResults( SuperLattice<T, DESCRIPTOR>& sLattice,
     Vector<T,17> vel_simulation;
 
     // Gnuplot interface to create plots
-    static Gnuplot<T> gplot( "centerVelocityX" );
+    Gnuplot<T> gplot( filenameGnuplot + "_iT" + std::to_string(iT) );
     // Define comparison values
     Vector<T,17> comparison = vel_ghia_RE1000;
 
@@ -248,17 +248,15 @@ int main( int argc, char* argv[] )
   T logT = config["Output"]["Log"]["SaveTime"].get<T>();
   T imSave = config["Output"]["VisualizationImages"]["SaveTime"].get<T>();
   T vtkSave = config["Output"]["VisualizationVTK"]["SaveTime"].get<T>();
+  T gnuplotSave = config["Output"]["VisualizationGnuplot"]["SaveTime"].get<T>();
   T maxPhysT = config["Application"]["PhysParameters"]["PhysMaxTime"].get<T>();
-  int timerSkipType = config["Output"]["Timer"]["SkipType"].get<T>();
   int timerPrintMode = config["Output"]["Timer"]["PrintMode"].get<int>();
-  int timerTimeSteps = 1;
 
-  if ( timerSkipType == 0 ) {
-    timerTimeSteps = converter->getLatticeTime( 1. /*config["Output"]["Timer"]["PhysTime"].get<T>()*/ );
-  }
+
 
   std::string filenameGif = config["Output"]["VisualizationImages"]["Filename"].get<std::string>();
   std::string filenameVtk = config["Output"]["VisualizationVTK"]["Filename"].get<std::string>();
+  std::string filenameGnuplot = config["Output"]["VisualizationGnuplot"]["Filename"].get<std::string>();
 
   // === 2nd Step: Prepare Geometry ===
   Vector<T,2> extend( 1,1 );
@@ -292,8 +290,8 @@ int main( int argc, char* argv[] )
   for ( std::size_t iT=0; iT <= converter->getLatticeTime( maxPhysT ); ++iT ) {
     if ( converge.hasConverged() ) {
       clout << "Simulation converged." << std::endl;
-      getResults( sLattice, *converter, iT, timer, logT, maxPhysT, imSave, vtkSave, filenameGif, filenameVtk,
-                  timerPrintMode, timerTimeSteps, superGeometry, converge.hasConverged() );
+      getResults( sLattice, *converter, iT, timer, logT, maxPhysT, imSave, vtkSave, gnuplotSave, filenameGif, filenameVtk,
+                  filenameGnuplot, timerPrintMode, superGeometry, converge.hasConverged() );
       break;
     }
     // === 5th Step: Definition of Initial and Boundary Conditions ===
@@ -301,8 +299,8 @@ int main( int argc, char* argv[] )
     // === 6th Step: Collide and Stream Execution ===
     sLattice.collideAndStream();
     // === 7th Step: Computation and Output of the Results ===
-    getResults( sLattice, *converter, iT, timer, logT, maxPhysT, imSave, vtkSave, filenameGif, filenameVtk,
-                timerPrintMode, timerTimeSteps, superGeometry, converge.hasConverged() );
+    getResults( sLattice, *converter, iT, timer, logT, maxPhysT, imSave, vtkSave, gnuplotSave, filenameGif, filenameVtk,
+                filenameGnuplot, timerPrintMode, superGeometry, converge.hasConverged() );
     converge.takeValue( sLattice.getStatistics().getAverageEnergy(), true );
   }
   timer->stop();

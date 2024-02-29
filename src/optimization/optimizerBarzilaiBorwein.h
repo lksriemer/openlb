@@ -58,7 +58,7 @@ class OptimizerBarzilaiBorwein : public OptimizerLineSearch<S,C> {
 private:
   mutable OstreamManager clout;
 
-  S _startLamda;
+  S _startLambda;
 
   C _lastControl;
   C _lastDerivative;
@@ -69,20 +69,20 @@ private:
 
 public:
   OptimizerBarzilaiBorwein(
-    int dim, S eps, int maxIt, S lamda, int maxStepAttempts, std::string stepCondition,
+    int dim, S eps, int maxIt, S lambda, int maxStepAttempts, std::string stepCondition,
     bool verboseOn=true, const std::string fname="", const std::string logFileName="",
     bool withUpperBound=false, S upperBound=S(), bool withLowerBound=false, S lowerBound=S(),
     bool vectorBounds=false, S controlEps=S(std::numeric_limits<double>::epsilon() ),
     std::vector<OptimizerLogType> gplotAnalysis = {})
-    : OptimizerLineSearch<S,C>(dim, eps, maxIt, /*lamda*/ 1., maxStepAttempts, stepCondition,
+    : OptimizerLineSearch<S,C>(dim, eps, maxIt, /*lambda*/ 1., maxStepAttempts, stepCondition,
       verboseOn, fname, logFileName, withUpperBound, upperBound, withLowerBound,
       lowerBound, vectorBounds, controlEps, true, gplotAnalysis),
       clout(std::cout,"OptimizerBarzilaiBorwein")
   {
 
-    // Starting lamda for iT==0: steepest descent
-    // Line Search will be initialised with the natural lamda = 1
-    _startLamda = lamda;
+    // Starting lambda for iT==0: steepest descent
+    // Line Search will be initialised with the natural lambda = 1
+    _startLambda = lambda;
 
     _lastControl = util::ContainerCreator<C>::create(this->_dimCtrl);
     _lastDerivative = util::ContainerCreator<C>::create(this->_dimCtrl);
@@ -110,7 +110,7 @@ public:
     S sTy = 0.;
     S sTs = 0.;
     S yTy = 0.;
-    // Alternating between lamda_1 and lamda_2, see:
+    // Alternating between lambda_1 and lambda_2, see:
     // http://www.math.ucla.edu/~wotaoyin/math273a/slides/Lec4a_Baizilai_Borwein_method_273a_2015_f.pdf, p.6
     bool alternate = false;
 
@@ -131,7 +131,7 @@ public:
       // On first step do normalised steepest descent
       S normDerivative = util::euklidN(this->_derivative.data(), this->_dimCtrl);
       for (int iDim=0; iDim<this->_dimCtrl; iDim++) {
-        this->_direction[iDim] = _startLamda * this->_derivative[iDim] / normDerivative;
+        this->_direction[iDim] = _startLambda * this->_derivative[iDim] / normDerivative;
       }
       // terminate early if we recieve nan controls
       checkDerivativeZero();
@@ -143,7 +143,7 @@ public:
 
     }
     else {
-      // Calculate lamda as quasi Newton
+      // Calculate lambda as quasi Newton
       for (int iDim=0; iDim<this->_dimCtrl; iDim++) {
         _sStore[iDim] = this->_control[iDim] - _lastControl[iDim];
         _yStore[iDim] = this->_derivative[iDim] - _lastDerivative[iDim];
@@ -153,14 +153,14 @@ public:
           yTy += _yStore[iDim]*_yStore[iDim];
         }
       }
-      // lamda_1 is minimizing || sD - y ||
-      this->_lamda = sTs/sTy; //lamda_1
-      // lamda_2 is minimizing || s - yD^-1 ||
-      //this->_lamda = sTy/yTy; //lamda_2
+      // lambda_1 is minimizing || sD - y ||
+      this->_lambda = sTs/sTy; //lambda_1
+      // lambda_2 is minimizing || s - yD^-1 ||
+      //this->_lambda = sTy/yTy; //lambda_2
 
-      //Alternate lamda_1 and lamda_2
+      //Alternate lambda_1 and lambda_2
       if (alternate && this->_it%2 != 0) {
-        this->_lamda = sTy/yTy;
+        this->_lambda = sTy/yTy;
       }
 
       for (int iDim=0; iDim<this->_dimCtrl; iDim++) {
@@ -188,7 +188,7 @@ OptimizerBarzilaiBorwein<S,C>* createOptimizerBarzilaiBorwein(XMLreader const& p
   S controlEps = S(0);
   S eps = S(1.e-10);
 
-  S lamda = 1.; //starting lamda for steepest descent step (it==0)
+  S lambda = 1.; //starting lambda for steepest descent step (it==0)
   int maxStepAttempts  = 100;
   std::string stepCondition = "None";
 
@@ -210,7 +210,7 @@ OptimizerBarzilaiBorwein<S,C>* createOptimizerBarzilaiBorwein(XMLreader const& p
 
   params.readOrWarn<S>("Optimization", "Tolerance", "", eps);
   params.readOrWarn<S>("Optimization", "ControlTolerance", "", controlEps);
-  params.readOrWarn<S>("Optimization", "Lamda", "", lamda);
+  params.readOrWarn<S>("Optimization", "Lambda", "", lambda);
   params.readOrWarn<int>("Optimization", "MaxStepAttempts", "", maxStepAttempts);
   params.readOrWarn<std::string>("Optimization", "StepCondition", "", stepCondition);
 
@@ -221,11 +221,9 @@ OptimizerBarzilaiBorwein<S,C>* createOptimizerBarzilaiBorwein(XMLreader const& p
   params.readOrWarn<bool>("Optimization", "VectorBounds", "", vectorBounds);
   if ( params.readOrWarn<S>("Optimization", "UpperBound", "", upperBound, false, false) ) {
     withUpperBound = true;
-    clout << "\t -> ATTENTION!" << std::endl << "\t -> Computing now: withUpperBound = true" << std::endl << "\t -> ATTENTION!" << std::endl;
   }
   if ( params.readOrWarn<S>("Optimization", "LowerBound", "", lowerBound, false, false) ) {
     withLowerBound = true;
-    clout << "\t -> ATTENTION!" << std::endl << "\t -> Computing now: withUpperBound = true" << std::endl << "\t -> ATTENTION!" << std::endl;
   }
 
   // get the parameters for the gnuplot Analysis from the xml file from the VisualizationGnuplot area
@@ -234,7 +232,7 @@ OptimizerBarzilaiBorwein<S,C>* createOptimizerBarzilaiBorwein(XMLreader const& p
   getGnuplotTagsFromString(gplotAnalysisString, gplotAnalysis);
 
   // Create Optimizer Object
-  return new OptimizerBarzilaiBorwein<S,C>(dimCtrl, eps, maxIt, lamda, maxStepAttempts, stepCondition,
+  return new OptimizerBarzilaiBorwein<S,C>(dimCtrl, eps, maxIt, lambda, maxStepAttempts, stepCondition,
                                          verboseOn, fname, logFileName, withUpperBound, upperBound, withLowerBound, lowerBound,
                                          vectorBounds, controlEps, gplotAnalysis);
 }

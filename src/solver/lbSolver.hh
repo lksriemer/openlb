@@ -75,17 +75,23 @@ void LbSolver<T,PARAMETERS,LATTICES>::build()
 
   _timer = std::make_unique<util::Timer<BaseType<T>>>(
     converter().getLatticeTime(this->parameters(names::Simulation()).maxTime),
-    _sGeometry->getStatistics().getNvoxel());
+    _sGeometry->getStatistics().getNvoxel(),
+    1); // 1 for printing a short timer summary
 
   if constexpr (isStationary){
-    // for (auto& tracer : _convergenceCheck) {
     for (unsigned i = 0; i < getNumberStationaryLattices(); ++i) {
-      // tracer = std::make_unique<util::ValueTracer<T>>(
       _convergenceCheck[i] = std::make_unique<util::ValueTracer<T>>(
         converter().getLatticeTime(this->parameters(names::Stationarity()).physInterval[i]),
         this->parameters(names::Stationarity()).epsilon[i]);
     }
   }
+
+  _itBoundaryUpdate = util::max(
+    converter().getLatticeTime(this->parameters(names::Simulation()).physBoundaryValueUpdateTime),
+    (unsigned long) {1});
+  _itCheckStability = util::max(
+    converter().getLatticeTime(this->parameters(names::Simulation()).physTimeStabilityCheck),
+    (unsigned long) {1});
 
   renewLattices();
 }
@@ -111,7 +117,7 @@ void LbSolver<T,PARAMETERS,LATTICES>::prepareSimulation()
 
 
   if constexpr (outputVTK) {
-    if (this->parameters(names::VisualizationVTK()).output) {
+    if (this->parameters(names::VisualizationVTK()).output != "off") {
       prepareVTK();
     }
   }
@@ -127,10 +133,7 @@ void LbSolver<T,PARAMETERS,LATTICES>::prepareSimulation()
 template<typename T,  typename PARAMETERS, typename LATTICES>
 void LbSolver<T,PARAMETERS,LATTICES>::timeStep(std::size_t iT)
 {
-  const std::size_t itBoundaryUpdate = util::max(
-    converter().getLatticeTime(this->parameters(names::Simulation()).physBoundaryValueUpdateTime),
-    (unsigned long) {1});
-  if (iT % itBoundaryUpdate == 0) {
+  if (iT % _itBoundaryUpdate == 0) {
     setBoundaryValues(iT);
   }
 
@@ -141,15 +144,21 @@ void LbSolver<T,PARAMETERS,LATTICES>::timeStep(std::size_t iT)
 
 
   if constexpr (outputVTK) {
-    if ( this->parameters(names::VisualizationVTK()).output
+    if ( this->parameters(names::VisualizationVTK()).printOutput == olb::parameters::OutputPlot<T>::pO_intervals
       && iT % converter().getLatticeTime(this->parameters(names::VisualizationVTK()).saveTime) == 0 ) {
       writeVTK(iT);
     }
   }
   if constexpr (outputImages) {
-    if ( this->parameters(names::VisualizationImages()).output
+    if ( this->parameters(names::VisualizationImages()).printOutput == olb::parameters::OutputPlot<T>::pO_intervals
       && iT % converter().getLatticeTime(this->parameters(names::VisualizationImages()).saveTime) == 0 ) {
       writeImages(iT);
+    }
+  }
+  if constexpr (outputGnuplot) {
+    if ( this->parameters(names::VisualizationGnuplot()).printOutput == olb::parameters::OutputPlot<T>::pO_intervals
+      && iT % converter().getLatticeTime(this->parameters(names::VisualizationGnuplot()).saveTime) == 0 ) {
+      writeGnuplot(iT);
     }
   }
   if ( this->parameters(names::Output()).verbose
@@ -190,11 +199,13 @@ void LbSolver<T,PARAMETERS,LATTICES>::timeStep(std::size_t iT)
     });
   }
 
-  checkStability(iT);
+  if (iT % _itCheckStability == 0) {
+    checkStability(iT);
+  }
 }
 
 template<typename T,  typename PARAMETERS, typename LATTICES>
-void LbSolver<T,PARAMETERS,LATTICES>::postprocessing()
+void LbSolver<T,PARAMETERS,LATTICES>::postSimulation()
 {
   meta::tuple_for_each(_sLattices, [](auto& lattice) {
     // TODO: dispose also communication of fields...
@@ -205,16 +216,20 @@ void LbSolver<T,PARAMETERS,LATTICES>::postprocessing()
     printLog(this->_iT);
   }
   if constexpr (outputVTK) {
-    if ( this->parameters(names::VisualizationVTK()).output ) {
+    if ( this->parameters(names::VisualizationVTK()).printOutput == olb::parameters::OutputPlot<T>::pO_final) {
       writeVTK(this->_iT);
     }
   }
   if constexpr (outputImages) {
-    if ( this->parameters(names::VisualizationImages()).output ) {
+    if ( this->parameters(names::VisualizationImages()).printOutput == olb::parameters::OutputPlot<T>::pO_final) {
       writeImages(this->_iT);
     }
   }
-
+  if constexpr (outputGnuplot) {
+    if ( this->parameters(names::VisualizationGnuplot()).printOutput == olb::parameters::OutputPlot<T>::pO_final) {
+      writeGnuplot(this->_iT);
+    }
+  }
   getResults(this->_iT);
 
   _timer->stop();
@@ -224,13 +239,14 @@ void LbSolver<T,PARAMETERS,LATTICES>::postprocessing()
   }
   computeResults();
 
-  _timer->printShortSummary();
-
-  if constexpr (outputGnuplot) {
-    if ( this->parameters(names::VisualizationGnuplot()).output ) {
-      writeGnuplot();
-    }
+  if (this->parameters(names::Output()).verbose) {
+    _timer->printSummary();
   }
+
+  // required to finish output tasks during use of gpu
+  meta::tuple_for_each(_sLattices, [](auto& lattice) {
+    lattice->setProcessingContext(ProcessingContext::Evaluation);
+  });
 
   if (this->parameters(names::Output()).verbose) {
     clout << "Finished postprocessing" << std::endl;
@@ -248,7 +264,9 @@ bool LbSolver<T,PARAMETERS,LATTICES>::exitCondition(std::size_t iT) const
     if (std::all_of(_convergenceCheck.cbegin(), _convergenceCheck.cend(), [](auto& c){
       return c->hasConverged();
       } )) {
-      clout << "Simulation converged." << std::endl;
+      if (this->parameters(names::Output()).verbose) {
+        clout << "Simulation converged." << std::endl;
+      }
       return true;
     }
   }

@@ -37,11 +37,13 @@ SuperParticleSystem<T, PARTICLETYPE>::SuperParticleSystem(
 {
   static_assert(access::providesValid<PARTICLETYPE>(), "Field GENERAL:VALID has to be provided");
   auto loadBalancer = superStructure.getLoadBalancer();
-  for (int iC = 0; iC < loadBalancer.size(); ++iC) {
+  // always create at least one BlockParticleSystem to counteract possible problems
+  // (for example in creator functions, where the first blockParticleSystem is hard coded)
+  _blockParticleSystems.push_back(new ParticleSystem<T, PARTICLETYPE>);
+  for (int iC = 1; iC < loadBalancer.size(); ++iC) {
     _blockParticleSystems.push_back(new ParticleSystem<T, PARTICLETYPE>);
   }
 
-  _neighbourRanks = communication::getNeighbourRanks<T, PARTICLETYPE::d,false>(superStructure, getOffset());
   _cuboidNeighborhood.resize(_superStructure.getCuboidGeometry().getNc());
   updateCuboidNeighborhood();
 }
@@ -104,6 +106,12 @@ template <typename T, typename PARTICLETYPE>
 const std::unordered_set<int>& SuperParticleSystem<T, PARTICLETYPE>::getNeighbourRanks()
 {
   return _neighbourRanks;
+}
+
+template <typename T, typename PARTICLETYPE>
+const std::unordered_set<int>& SuperParticleSystem<T, PARTICLETYPE>::getExtendedNeighbourRanks()
+{
+  return _extendedNeighbourRanks;
 }
 
 template <typename T, typename PARTICLETYPE>
@@ -200,8 +208,6 @@ void SuperParticleSystem<T, PARTICLETYPE>::updateOffsetFromCircumRadius(
 {
   if(_maximalCircumRadius < circumRadius) {
     _maximalCircumRadius = circumRadius;
-    _neighbourRanks = communication::getNeighbourRanks<T, PARTICLETYPE::d,false>(
-        _superStructure, getOffset());
     updateCuboidNeighborhood();
   }
 }
@@ -236,6 +242,16 @@ void SuperParticleSystem<T, PARTICLETYPE>::updateCuboidNeighborhood()
       std::unordered_set<int>(cuboidNeighbourPair.second.begin(),
           cuboidNeighbourPair.second.end());
 
+  }
+
+  _neighbourRanks = communication::getNeighbourRanksFromCuboidNeighbourhood<T, PARTICLETYPE::d, false>(
+    _superStructure, _cuboidNeighborhood);
+
+  _extendedNeighbourRanks = _neighbourRanks;
+  for(int rank : _neighbourRanks) {
+    const std::unordered_set<int> neighborRanks = communication::getNeighbourRanksFromCuboidNeighbourhood<
+      T, PARTICLETYPE::d, false>(_superStructure, rank, _cuboidNeighborhood);
+    _extendedNeighbourRanks.insert(neighborRanks.begin(), neighborRanks.end());
   }
 }
 

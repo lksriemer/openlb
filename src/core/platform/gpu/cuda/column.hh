@@ -103,7 +103,6 @@ void Column<T>::push_back(T value)
 {
   _data->host.push_back(value);
   _count = _data->host.size();
-  _data->device.resize(_count);
 }
 
 template<typename T>
@@ -158,6 +157,9 @@ T* Column<T>::deviceData()
 template<typename T>
 void Column<T>::setProcessingContext(ProcessingContext context)
 {
+  if (_count != _data->device.size()) {
+    _data->device.resize(_count);
+  }
   switch (context) {
   case ProcessingContext::Evaluation:
     device::copyToHost(_data->device.data().get(), _data->host.data(), size()*sizeof(T));
@@ -171,6 +173,9 @@ void Column<T>::setProcessingContext(ProcessingContext context)
 template<typename T>
 void Column<T>::setProcessingContext(ProcessingContext context, device::Stream& stream)
 {
+  if (_count != _data->device.size()) {
+    _data->device.resize(_count);
+  }
   switch (context) {
   case ProcessingContext::Evaluation:
     device::asyncCopyToHost(stream, _data->device.data().get(), _data->host.data(), size()*sizeof(T));

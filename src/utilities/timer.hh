@@ -33,13 +33,14 @@ namespace olb {
 namespace util {
 
 template<typename T>
-Timer<T>::Timer(int maxTimeSteps, size_t numFluidCells)
+Timer<T>::Timer(int maxTimeSteps, size_t numFluidCells, unsigned int printModeSummary)
   : clout(std::cout,"Timer"),
     deltaTS(0), curTS(0), maxTS(maxTimeSteps),
     numFC(numFluidCells), rtRemMs(1) // avoids some stupid numbers in first call of printStep() (not for T=double)
 
 {
   tp = nullptr;
+  this->_printModeSummary = printModeSummary;
 }
 
 template<typename T>
@@ -159,9 +160,15 @@ void Timer<T>::print(std::size_t currentTimeStep, int printMode)
 template<typename T>
 void Timer<T>::printStep(int printMode)
 {
+  printStep(clout, printMode);
+}
+
+template<typename T>
+void Timer<T>::printStep(OstreamManager& fout, int printMode)
+{
   switch (printMode) {
   case 0: //single-line layout, usable for data extraction as csv
-    clout
+    fout
         << "step=" << curTS << "; "
         //      << "stepMax=" << maxTS << "; "
         << "percent=" << 100.0*curTS/maxTS << "; "
@@ -173,7 +180,7 @@ void Timer<T>::printStep(int printMode)
     break;
 
   case 1: //single-line layout (not conform with output-rules)
-    clout
+    fout
         << "latticeTS: "
         << curTS << "/" << maxTS << " (" << 100*curTS/maxTS << "%); "
         << "pas/totTime: "
@@ -187,7 +194,7 @@ void Timer<T>::printStep(int printMode)
     break;
 
   case 2: //pretty double line layout in colums, but non-conform
-    clout
+    fout
         << std::setw(21) << std::left << "Lattice-Timesteps"
         << std::setw(17) << std::left << "| CPU time/estim"
         << std::setw(18) << std::left << "| REAL time/estim"
@@ -203,36 +210,49 @@ void Timer<T>::printStep(int printMode)
     break;
 
   case 3: //performance output only
-    clout
+    fout
         << "step " << curTS << "; "
         << "MLUPs=" << std::setw(8) << getMLUPs() << ", MLUPps=" << std::setw(8) << getMLUPps() << std::endl;
     break;
 
   default:
-    clout << "Error in function printStep in class_timer.h: printMode="<<printMode<<" not found" << std::endl << std::flush;
+    fout << "Error in function printStep in class_timer.h: printMode="<<printMode<<" not found" << std::endl << std::flush;
   }
 }
 
 template<typename T>
 void Timer<T>::printSummary()
 {
-  clout << std::endl;
-  clout << "----------------Summary:Timer----------------" << std::endl;
-  clout << "measured time (rt) : " << (int)getTotalRealTimeMs()/1000 << "." << (int)getTotalRealTimeMs()-(int)getTotalRealTimeMs()/1000*1000 << "s" << std::endl;
-  clout << "measured time (cpu): " << std::setprecision(3) << std::fixed << getTotalCpuTime() << "s" << std::endl;
+  printSummary(clout);
+}
+
+template<typename T>
+void Timer<T>::printSummary(OstreamManager& fout)
+{
+  fout << std::endl;
+  fout << "----------------Summary:Timer----------------" << std::endl;
+  fout << "measured time (rt) : " << (int)getTotalRealTimeMs()/1000 << "." << (int)getTotalRealTimeMs()-(int)getTotalRealTimeMs()/1000*1000 << "s" << std::endl;
+  fout << "measured time (cpu): " << std::setprecision(3) << std::fixed << getTotalCpuTime() << "s" << std::endl;
   if (numFC > 0 && curTS > 0) {
-    clout << "average MLUPs :       " << getTotalMLUPs()  << std::endl;
-    clout << "average MLUPps:       " << getTotalMLUPps() << std::endl;
+    fout << "average MLUPs :       " << getTotalMLUPs()  << std::endl;
+    fout << "average MLUPps:       " << getTotalMLUPps() << std::endl;
   }
-  clout << "---------------------------------------------" << std::endl;
+  fout << "---------------------------------------------" << std::endl;
 }
 
 template<typename T>
 void Timer<T>::printShortSummary()
 {
-  clout << "realTime=" << (int)getTotalRealTimeMs()/1000 << "." << (int)getTotalRealTimeMs()-(int)getTotalRealTimeMs()/1000*1000
-        << "; cpuTime=" <<  std::setprecision(3) << std::fixed << getTotalCpuTime() << std::endl;
+  printShortSummary(clout);
 }
+
+template<typename T>
+void Timer<T>::printShortSummary(OstreamManager& fout)
+{
+  fout << "realTime=" << (int)getTotalRealTimeMs()/1000 << "." << (int)getTotalRealTimeMs()-(int)getTotalRealTimeMs()/1000*1000
+       << "; cpuTime=" <<  std::setprecision(3) << std::fixed << getTotalCpuTime() << std::endl;
+}
+
 
 // Factory function /////////////////////////////////
 
@@ -244,6 +264,7 @@ Timer<T>* createTimer(XMLreader& param, const UnitConverter<T,DESCRIPTOR>& conve
   // initialize parameters with some default values
   T physMaxT = T();
   T physStartT = T();
+  int printModeSummary = 0;
 
   // fetch xml Data and error handling
   if ( ! param["Application"]["PhysParameters"]["PhysMaxTime"].read(physMaxT) ) {
@@ -254,6 +275,9 @@ Timer<T>* createTimer(XMLreader& param, const UnitConverter<T,DESCRIPTOR>& conve
       clout << "Application::PhysParam::MaxTime needs to be renamed to Application::PhysParameters::PhysMaxTime" << std::endl;
     }
   }
+  // read the variable for the mode of printSummary
+  param.readOrWarn<int>("Output","Timer","PrintModeSummary", printModeSummary,true,false,false);
+
 //  if ( ! param["Application"]["PhysParam"]["MaxStartTime"].read(physStartT) ) {
 //    clout << "PhysStartTime not found" << std::endl;
 //  }
@@ -263,7 +287,7 @@ Timer<T>* createTimer(XMLreader& param, const UnitConverter<T,DESCRIPTOR>& conve
 
   //return some default values that produce reasonable output (e.g.
   // zero); in best case there should be no output at all (TODO)
-  return new Timer<T>(maxT, numLatticePoints);
+  return new Timer<T>(maxT, numLatticePoints, printModeSummary);
 }
 
 } // namespace util

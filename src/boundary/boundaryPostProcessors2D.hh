@@ -448,220 +448,74 @@ void OuterVelocityCornerProcessor2D<T,DESCRIPTOR,xNormal,yNormal>::apply(CELL& c
 }
 
 
-template<typename T, typename DESCRIPTOR>
-FreeEnergyWallProcessor2D<T,DESCRIPTOR>::
-FreeEnergyWallProcessor2D(int x0_, int x1_, int y0_, int y1_, int discreteNormalX_, int discreteNormalY_, T addend_)
-  : x0(x0_), x1(x1_), y0(y0_), y1(y1_),
-    discreteNormalX(discreteNormalX_), discreteNormalY(discreteNormalY_),
-    addend(addend_)
-{
-  this->getName() = "FreeEnergyWallProcessor2D";
-}
+////////  FreeEnergyWallProcessor2D ////////////////////////////
+template<typename T, typename DESCRIPTOR, int NORMAL_X, int NORMAL_Y>
+template <CONCEPT(Cell) CELL, typename PARAMETERS>
+void FreeEnergyWallProcessor2D<T,DESCRIPTOR,NORMAL_X,NORMAL_Y>::apply(CELL& cell, PARAMETERS& vars) any_platform {
 
-template<typename T, typename DESCRIPTOR>
-void FreeEnergyWallProcessor2D<T,DESCRIPTOR>::
-processSubDomain(BlockLattice<T,DESCRIPTOR>& blockLattice, int x0_, int x1_, int y0_, int y1_)
-{
-  int newX0, newX1, newY0, newY1;
-  if ( util::intersect (
-         x0, x1, y0, y1,
-         x0_, x1_, y0_, y1_,
-         newX0, newX1, newY0, newY1 ) ) {
+  T addend = cell.template getField<descriptors::ADDEND>();
 
-    for (int iX=newX0; iX<=newX1; ++iX) {
-      for (int iY=newY0; iY<=newY1; ++iY) {
-        T rhoAvg = blockLattice.get(iX-discreteNormalX, iY-discreteNormalY).computeRho();
-        T rhoTmp = 0.;
-        for (int iPop = 1; iPop < DESCRIPTOR::q ; ++iPop) {
-          rhoTmp += blockLattice.get(iX,iY)[iPop];
-        }
-        T rho = rhoAvg + addend;
-        rho -= rhoTmp;
-        blockLattice.get(iX,iY)[0] = rho-1.;
-      }
-    }
+  T rhoAvg = cell.neighbor({-NORMAL_X,-NORMAL_Y}).computeRho();
+  T rhoTmp = 0.;
+
+  for (int iPop = 1; iPop < DESCRIPTOR::q ; ++iPop) {
+    rhoTmp += cell[iPop];
   }
-}
 
-template<typename T, typename DESCRIPTOR>
-void FreeEnergyWallProcessor2D<T,DESCRIPTOR>::
-process(BlockLattice<T,DESCRIPTOR>& blockLattice)
-{
-  processSubDomain(blockLattice, x0, x1, y0, y1);
-}
+  T rho = rhoAvg + addend;
+  rho -= rhoTmp;
 
-template<typename T, typename DESCRIPTOR>
-FreeEnergyWallProcessorGenerator2D<T,DESCRIPTOR>::
-FreeEnergyWallProcessorGenerator2D(int x0_, int x1_, int y0_, int y1_, int discreteNormalX_,
-                                   int discreteNormalY_, T addend_)
-  : PostProcessorGenerator2D<T,DESCRIPTOR>(x0_, x1_, y0_, y1_), discreteNormalX(discreteNormalX_), discreteNormalY(discreteNormalY_), addend(addend_)
-{ }
-
-template<typename T, typename DESCRIPTOR>
-PostProcessor2D<T,DESCRIPTOR>*
-FreeEnergyWallProcessorGenerator2D<T,DESCRIPTOR>::generate() const
-{
-  return new FreeEnergyWallProcessor2D<T,DESCRIPTOR>
-         (this->x0, this->x1, this->y0, this->y1, discreteNormalX, discreteNormalY, addend);
-}
-
-template<typename T, typename DESCRIPTOR>
-PostProcessorGenerator2D<T,DESCRIPTOR>*
-FreeEnergyWallProcessorGenerator2D<T,DESCRIPTOR>::clone() const
-{
-  return new FreeEnergyWallProcessorGenerator2D<T,DESCRIPTOR>
-         (this->x0, this->x1, this->y0, this->y1, discreteNormalX, discreteNormalY, addend);
+  cell[0] = rho - 1.;
 }
 
 
 ////////  FreeEnergyChemPotBoundaryProcessor2D ////////////////////////////
+template<typename T, typename DESCRIPTOR, int NORMAL_X, int NORMAL_Y>
+template <CONCEPT(Cell) CELL>
+void FreeEnergyChemPotBoundaryProcessor2DA<T,DESCRIPTOR,NORMAL_X,NORMAL_Y>::apply(CELL& cell) any_platform {
 
-template<typename T, typename DESCRIPTOR>
-FreeEnergyChemPotBoundaryProcessor2D<T,DESCRIPTOR>::
-FreeEnergyChemPotBoundaryProcessor2D(
-  int x0_, int x1_, int y0_, int y1_, int discreteNormalX_, int discreteNormalY_, int latticeNumber_)
-  : x0(x0_), x1(x1_), y0(y0_), y1(y1_), discreteNormalX(discreteNormalX_),
-    discreteNormalY(discreteNormalY_), latticeNumber(latticeNumber_)
-{
-  this->getName() = "FreeEnergyChemPotBoundaryProcessor2D";
+  cell.template setField<descriptors::CHEM_POTENTIAL>(
+    cell.neighbor({-NORMAL_X,-NORMAL_Y}).template getField<descriptors::CHEM_POTENTIAL>());
+
+  T rho0 = cell.computeRho();
+  T rho1 = cell.neighbor({-NORMAL_X,-NORMAL_Y}).computeRho();
+
+  cell.template setField<descriptors::CHEM_POTENTIAL>(
+    cell.template getField<descriptors::CHEM_POTENTIAL>() + (rho1 / rho0 - 1) / descriptors::invCs2<T,DESCRIPTOR>());
 }
 
-template<typename T, typename DESCRIPTOR>
-void FreeEnergyChemPotBoundaryProcessor2D<T,DESCRIPTOR>::
-processSubDomain(
-  BlockLattice<T,DESCRIPTOR>& blockLattice, int x0_, int x1_, int y0_, int y1_)
-{
-  int newX0, newX1, newY0, newY1;
-  if ( util::intersect (
-         x0, x1, y0, y1,
-         x0_, x1_, y0_, y1_,
-         newX0, newX1, newY0, newY1 ) ) {
+template<typename T, typename DESCRIPTOR, int NORMAL_X, int NORMAL_Y>
+template <CONCEPT(Cell) CELL>
+void FreeEnergyChemPotBoundaryProcessor2DB<T,DESCRIPTOR,NORMAL_X,NORMAL_Y>::apply(CELL& cell) any_platform {
 
-    for (int iX=newX0; iX<=newX1; ++iX) {
-      for (int iY=newY0; iY<=newY1; ++iY) {
-        blockLattice.get(iX,iY).template setField<descriptors::CHEM_POTENTIAL>(
-          blockLattice.get(iX-discreteNormalX, iY-discreteNormalY).template getField<descriptors::CHEM_POTENTIAL>()
-        );
-        if (latticeNumber == 1) {
-          auto cell = blockLattice.get(iX,iY);
-          T rho0 = cell.computeRho();
-          T rho1 = blockLattice.get(iX-discreteNormalX, iY-discreteNormalY).computeRho();
-          cell.template setField<descriptors::CHEM_POTENTIAL>(
-            cell.template getField<descriptors::CHEM_POTENTIAL>() + (rho1 / rho0 - 1) / descriptors::invCs2<T,DESCRIPTOR>()
-          );
-        }
-      }
-    }
-  }
-}
-
-template<typename T, typename DESCRIPTOR>
-void FreeEnergyChemPotBoundaryProcessor2D<T,DESCRIPTOR>::
-process(BlockLattice<T,DESCRIPTOR>& blockLattice)
-{
-  processSubDomain(blockLattice, x0, x1, y0, y1);
-}
-
-////////  FreeEnergyChemPotBoundaryProcessorGenerator2D ////////////////////////////
-
-template<typename T, typename DESCRIPTOR>
-FreeEnergyChemPotBoundaryProcessorGenerator2D<T,DESCRIPTOR>::
-FreeEnergyChemPotBoundaryProcessorGenerator2D(int x0_, int x1_, int y0_, int y1_,
-    int discreteNormalX_, int discreteNormalY_, int latticeNumber_)
-  : PostProcessorGenerator2D<T,DESCRIPTOR>(x0_, x1_, y0_, y1_), discreteNormalX(discreteNormalX_),
-    discreteNormalY(discreteNormalY_), latticeNumber(latticeNumber_)
-{ }
-
-template<typename T, typename DESCRIPTOR>
-PostProcessor2D<T,DESCRIPTOR>*
-FreeEnergyChemPotBoundaryProcessorGenerator2D<T,DESCRIPTOR>::generate() const
-{
-  return new FreeEnergyChemPotBoundaryProcessor2D<T,DESCRIPTOR>
-         (this->x0, this->x1, this->y0, this->y1, discreteNormalX, discreteNormalY, latticeNumber);
-}
-
-template<typename T, typename DESCRIPTOR>
-PostProcessorGenerator2D<T,DESCRIPTOR>*
-FreeEnergyChemPotBoundaryProcessorGenerator2D<T,DESCRIPTOR>::clone() const
-{
-  return new FreeEnergyChemPotBoundaryProcessorGenerator2D<T,DESCRIPTOR>
-         (this->x0, this->x1, this->y0, this->y1, discreteNormalX, discreteNormalY, latticeNumber);
+  cell.template setField<descriptors::CHEM_POTENTIAL>(
+    cell.neighbor({-NORMAL_X,-NORMAL_Y}).template getField<descriptors::CHEM_POTENTIAL>());
 }
 
 
 ////////  FreeEnergyConvectiveProcessor2D ////////////////////////////
+template<typename T, typename DESCRIPTOR, int NORMAL_X, int NORMAL_Y>
+template <CONCEPT(Cell) CELL>
+void FreeEnergyConvectiveProcessor2D<T,DESCRIPTOR,NORMAL_X,NORMAL_Y>::apply(CELL& cell) any_platform {
 
-template<typename T, typename DESCRIPTOR>
-FreeEnergyConvectiveProcessor2D<T,DESCRIPTOR>::
-FreeEnergyConvectiveProcessor2D(
-  int x0_, int x1_, int y0_, int y1_, int discreteNormalX_, int discreteNormalY_)
-  : x0(x0_), x1(x1_), y0(y0_), y1(y1_),
-    discreteNormalX(discreteNormalX_), discreteNormalY(discreteNormalY_)
-{
-  this->getName() = "FreeEnergyConvectiveProcessor2D";
-}
+  T rho, rho0, rho1, u[2];
 
-template<typename T, typename DESCRIPTOR>
-void FreeEnergyConvectiveProcessor2D<T,DESCRIPTOR>::
-processSubDomain(
-  BlockLattice<T,DESCRIPTOR>& blockLattice, int x0_, int x1_, int y0_, int y1_)
-{
-  int newX0, newX1, newY0, newY1;
-  if ( util::intersect (
-         x0, x1, y0, y1,
-         x0_, x1_, y0_, y1_,
-         newX0, newX1, newY0, newY1 ) ) {
+  rho0 = cell.computeRho();
 
-    for (int iX=newX0; iX<=newX1; ++iX) {
-      for (int iY=newY0; iY<=newY1; ++iY) {
-        T rho, rho0, rho1, u[2];
-        rho0 = blockLattice.get(iX,iY).computeRho();
-        blockLattice.get(iX-discreteNormalX,iY-discreteNormalY).computeRhoU(rho1, u);
-        T uPerp = 0;
-        if (discreteNormalX == 0) {
-          uPerp = discreteNormalY * u[1];
-        }
-        else if (discreteNormalY == 0) {
-          uPerp = discreteNormalX * u[0];
-        }
-        rho = (rho0 + uPerp * rho1) / (1. + uPerp);
-        blockLattice.get(iX,iY).defineRho(rho);
-      }
-    }
+  cell.neighbor({-NORMAL_X,-NORMAL_Y}).computeRhoU(rho1, u);
+
+  T uPerp = 0;
+
+  Vector<T,2> normalVec({NORMAL_X,NORMAL_Y});
+
+  if (normalVec[0] == 0) {
+    uPerp = normalVec[1] * u[1];
+  } else if (normalVec[1] == 0) {
+          uPerp = normalVec[0] * u[0];
   }
-}
 
-template<typename T, typename DESCRIPTOR>
-void FreeEnergyConvectiveProcessor2D<T,DESCRIPTOR>::
-process(BlockLattice<T,DESCRIPTOR>& blockLattice)
-{
-  processSubDomain(blockLattice, x0, x1, y0, y1);
-}
-
-////////  FreeEnergyConvectiveProcessorGenerator2D ////////////////////////////
-
-template<typename T, typename DESCRIPTOR>
-FreeEnergyConvectiveProcessorGenerator2D<T,DESCRIPTOR>::
-FreeEnergyConvectiveProcessorGenerator2D(int x0_, int x1_, int y0_, int y1_,
-    int discreteNormalX_, int discreteNormalY_)
-  : PostProcessorGenerator2D<T,DESCRIPTOR>(x0_, x1_, y0_, y1_),
-    discreteNormalX(discreteNormalX_), discreteNormalY(discreteNormalY_)
-{ }
-
-template<typename T, typename DESCRIPTOR>
-PostProcessor2D<T,DESCRIPTOR>*
-FreeEnergyConvectiveProcessorGenerator2D<T,DESCRIPTOR>::generate() const
-{
-  return new FreeEnergyConvectiveProcessor2D<T,DESCRIPTOR>
-         (this->x0, this->x1, this->y0, this->y1, discreteNormalX, discreteNormalY);
-}
-
-template<typename T, typename DESCRIPTOR>
-PostProcessorGenerator2D<T,DESCRIPTOR>*
-FreeEnergyConvectiveProcessorGenerator2D<T,DESCRIPTOR>::clone() const
-{
-  return new FreeEnergyConvectiveProcessorGenerator2D<T,DESCRIPTOR>
-         (this->x0, this->x1, this->y0, this->y1, discreteNormalX, discreteNormalY);
+  rho = (rho0 + uPerp * rho1) / (1. + uPerp);
+  cell.defineRho(rho);
 }
 
 }  // namespace olb

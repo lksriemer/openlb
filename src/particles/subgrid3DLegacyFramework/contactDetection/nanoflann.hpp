@@ -189,7 +189,7 @@ class RadiusResultList {
  public:
   const DistanceType radius;
 
-//			std::vector<std::pair<IndexType,DistanceType> >& m_indices_dists;
+//          std::vector<std::pair<IndexType,DistanceType> >& m_indices_dists;
   std::list<IndexType>& m_indices_list;
 
   inline RadiusResultList(DistanceType radius_,
@@ -533,7 +533,7 @@ class PooledAllocator {
   /* We maintain memory alignment to word boundaries by requiring that all
    allocations be in multiples of the machine wordsize.  */
   /* Size of machine word in bytes.  Must be power of 2. */
-  /* Minimum number of bytes requested at a time from	the system.  Must be multiple of WORDSIZE. */
+  /* Minimum number of bytes requested at a time from   the system.  Must be multiple of WORDSIZE. */
 
   size_t remaining; /* Number of bytes left in current block of storage. */
   void* base; /* Pointer to base of current block of storage. */
@@ -647,7 +647,7 @@ class PooledAllocator {
 // ----------------  CArray -------------------------
 /** A STL container (as wrapper) for arrays of constant size defined at compile time (class imported from the MRPT project)
  * This code is an adapted version from Boost, modifed for its integration
- *	within MRPT (JLBC, Dec/2009) (Renamed array -> CArray to avoid possible potential conflicts).
+ *  within MRPT (JLBC, Dec/2009) (Renamed array -> CArray to avoid possible potential conflicts).
  * See
  *      http://www.josuttis.com/cppcode
  * for details and the latest version.
@@ -1521,14 +1521,14 @@ class KDTreeSingleIndexAdaptor {
  *
  *  Example of usage:
  * \code
- * 	Eigen::Matrix<num_t,Dynamic,Dynamic>  mat;
- * 	// Fill out "mat"...
+ *  Eigen::Matrix<num_t,Dynamic,Dynamic>  mat;
+ *  // Fill out "mat"...
  *
- * 	typedef KDTreeEigenMatrixAdaptor< Eigen::Matrix<num_t,Dynamic,Dynamic> >  my_kd_tree_t;
- * 	const int max_leaf = 10;
- * 	my_kd_tree_t   mat_index(dimdim, mat, max_leaf );
- * 	mat_index.index->buildIndex();
- * 	mat_index.index->...
+ *  typedef KDTreeEigenMatrixAdaptor< Eigen::Matrix<num_t,Dynamic,Dynamic> >  my_kd_tree_t;
+ *  const int max_leaf = 10;
+ *  my_kd_tree_t   mat_index(dimdim, mat, max_leaf );
+ *  mat_index.index->buildIndex();
+ *  mat_index.index->...
  * \endcode
  *
  *  \tparam DIM If set to >0, it specifies a compile-time fixed dimensionality for the points in the data set, allowing more compiler optimizations.

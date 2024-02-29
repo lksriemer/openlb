@@ -237,8 +237,8 @@ void prepareLattice( ThermalUnitConverter<T, NSDESCRIPTOR, TDESCRIPTOR> const& c
   setLocalVelocityBoundary(NSlattice, NSomega, superGeometry, 3);
 
 #ifdef TemperatureBoundary
-  setAdvectionDiffusionTemperatureBoundary(ADlattice, Tomega, superGeometry, 2);
-  setAdvectionDiffusionTemperatureBoundary(ADlattice, Tomega, superGeometry, 3);
+  setAdvectionDiffusionTemperatureBoundary(ADlattice, superGeometry, 2);
+  setAdvectionDiffusionTemperatureBoundary(ADlattice, superGeometry, 3);
 
 #endif
 #ifdef RegularizedTemperatureBoundary
@@ -368,6 +368,8 @@ void getResults(ThermalUnitConverter<T, NSDESCRIPTOR, TDESCRIPTOR> const& conver
   /// Writes the VTK files
   if (iT%vtkIter == 0 || converged) {
     NSlattice.getStatistics().print(iT,converter.getPhysTime(iT));
+    ADlattice.setProcessingContext(ProcessingContext::Evaluation);
+    NSlattice.setProcessingContext(ProcessingContext::Evaluation);
     timer.print(iT);
     error(superGeometry, NSlattice, ADlattice, converter, Re);
     vtkWriter.write(iT);

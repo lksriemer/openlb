@@ -121,8 +121,8 @@ void prepareLattice( ThermalUnitConverter<T, NSDESCRIPTOR, TDESCRIPTOR> &convert
   setBounceBackBoundary(NSlattice, superGeometry, 3);
 
   /// sets boundary
-  setAdvectionDiffusionTemperatureBoundary(ADlattice, Tomega, superGeometry, 2);
-  setAdvectionDiffusionTemperatureBoundary(ADlattice, Tomega, superGeometry, 3);
+  setAdvectionDiffusionTemperatureBoundary(ADlattice, superGeometry, 2);
+  setAdvectionDiffusionTemperatureBoundary(ADlattice, superGeometry, 3);
 
   /// define initial conditions
   AnalyticalConst3D<T,T> rho(1.);

@@ -747,56 +747,71 @@ Vector<T,3> BlockLatticeSTLreader<T>::evalSurfaceNormal(const Vector<T,3>& origi
   Vector<T,3> normal(0.);
   PhysR<T,3> closestPoint;
   T distance = std::numeric_limits<T>::max();
+  STLtriangle<T> t;
   for (const STLtriangle<T>& triangle : _mesh.getTriangles()) {
     PhysR<T,3> const pointOnTriangle = triangle.closestPtPointTriangle(origin);
+    //TODO! There could be a problem with concave surfaces on STL when there is a bigger distance there could be no point on the triangle and function does not work!
+    if (triangle.isPointInside(pointOnTriangle))
+    {
     PhysR<T,3> const currDistance = pointOnTriangle - origin;
     T currDistanceNorm = norm(currDistance);
     if (util::nearZero(currDistanceNorm)) {
+      std::cout << "util near zero" << std::endl;
       return findNormalOnSurface(origin);
     }
     else if (distance > currDistanceNorm) {
       normal = currDistance;
       distance = currDistanceNorm;
       closestPoint = pointOnTriangle;
+      t = triangle;
+    }
     }
   }
 
   if (!util::nearZero(norm(normal))) {
     normal = normalize(normal);
   }
-  else {
-    return normal;
-  }
+  if(util::dotProduct3D(normal, t.getNormal())> 0)
+    {
 
-  // Possible change of the sign so that the normal fits to the SDF logic
-  if(distance < _voxelSize) {
-    bool isInsideInnerPoint;
-    this->operator()(&isInsideInnerPoint, (closestPoint-_voxelSize*normal).data());
-    bool isInsideOuterPoint;
-    this->operator()(&isInsideOuterPoint, (closestPoint+_voxelSize*normal).data());
-    normal *= (isInsideInnerPoint && !isInsideOuterPoint ? 1 : -1);
-  }
-  else {
-    bool isInside;
-    this->operator()(&isInside, origin.data());
-    normal *= (isInside ? 1 : -1);
-  }
+      distance =-1.*util::fabs(distance);
+    }
+    else
+    {
+      distance =util::fabs(distance);
+    }
   return normal;
 }
 
 template<typename T>
-T BlockLatticeSTLreader<T>::signedDistance(int iC, const Vector<T,3>& input)
+T BlockLatticeSTLreader<T>::signedDistance(int iC, const Vector<T,3>& input )
 {
-  bool isInside = false;
-  this->operator()(&isInside, input.data());
-  const short sign = (isInside ? -1 : 1);
   T distance = std::numeric_limits<T>::max();
   auto& triangles = _trianglesInCuboidList[iC];
-  for (const STLtriangle<T>& triangle : triangles) {
+  STLtriangle<T> _triangle;
+  Vector<T,3> normal;
+  for (const STLtriangle<T>& triangle : triangles)
+  {
     PhysR<T,3> pointOnTriangle = triangle.closestPtPointTriangle(input);
-    distance = util::min(distance, norm(pointOnTriangle - input));
+    T distance2 = util::min(distance, norm(pointOnTriangle - input));
+    //TODO! There could be a problem with concave surfaces on STL when there is a bigger distance there could be no point on the triangle and function does not work!
+    if(distance2 < distance && triangle.isPointInside(pointOnTriangle))
+    {
+      distance =distance2;
+      _triangle = triangle;
+      normal = normalize(pointOnTriangle - input);
+    }
   }
-  return distance * sign;
+  if(util::dotProduct3D(normal, _triangle.getNormal())> 0)
+  {
+
+      distance =-1.*util::fabs(distance);
+  }
+  else
+  {
+      distance =util::fabs(distance);
+  }
+  return distance;
 }
 
 template<typename T>

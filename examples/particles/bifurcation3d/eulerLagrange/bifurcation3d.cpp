@@ -241,23 +241,32 @@ void setBoundaryValues( SuperLattice<T, DESCRIPTOR>& superLattice,
 void prepareParticles( UnitConverter<T,DESCRIPTOR> const& converter,
   SuperParticleSystem<T,PARTICLETYPE>& superParticleSystem,
   SolidBoundary<T,3>& wall,
-  SuperIndicatorMaterial<T,3>& materialIndicator,
+  SuperGeometry<T,3>& superGeometry,
   ParticleDynamicsSetup particleDynamicsSetup,
   Randomizer<T>& randomizer )
 {
   OstreamManager clout( std::cout, "prepareParticles" );
   clout << "Prepare Particles ..." << std::endl;
 
+  //Create material indicators for particle boundaries
+  std::vector<int> wallMaterials {2};
+  std::shared_ptr<SuperIndicatorMaterial<T,3>> wallMaterialIndicator =
+    std::make_shared<SuperIndicatorMaterial<T,3>>(superGeometry, wallMaterials);
+  std::vector<int> outletMaterials {4,5};
+  std::shared_ptr<SuperIndicatorMaterial<T,3>> outletMaterialIndicator =
+    std::make_shared<SuperIndicatorMaterial<T,3>>(superGeometry, outletMaterials);
+
   //Add selected particle dynamics
   if (particleDynamicsSetup==wallCapture){
     //Create verlet dynamics with material aware wall capture
     superParticleSystem.defineDynamics<
-      VerletParticleDynamicsMaterialAwareWallCapture<T,PARTICLETYPE>>(
-        wall, materialIndicator);
+      VerletParticleDynamicsMaterialAwareWallCaptureAndEscape<T,PARTICLETYPE>>(
+        wall, wallMaterialIndicator, outletMaterialIndicator);
   } else {
     //Create verlet dynamics with material capture
     superParticleSystem.defineDynamics<
-      VerletParticleDynamicsMaterialCapture<T,PARTICLETYPE>>(materialIndicator);
+      VerletParticleDynamicsMaterialCaptureAndEscape<T,PARTICLETYPE>>(
+        wallMaterialIndicator, outletMaterialIndicator);
   }
 
   // particles generation at inlet3
@@ -526,16 +535,12 @@ int main( int argc, char* argv[] )
   // SuperParticleSystems
   SuperParticleSystem<T,PARTICLETYPE> superParticleSystem(superGeometry);
 
-  //Create verlet particle dynamics with capturing
-  std::vector<int> materials {2,4,5};
-  SuperIndicatorMaterial<T,3> materialIndicator (superGeometry, materials);
-
   //Create particle manager
   ParticleManager<T,DESCRIPTOR,PARTICLETYPE> particleManager(
     superParticleSystem, superGeometry, superLattice, converter);
 
   //Prepare particles
-  prepareParticles( converter, superParticleSystem, wall, materialIndicator,
+  prepareParticles( converter, superParticleSystem, wall, superGeometry,
     particleDynamicsSetup, randomizer );
 
 

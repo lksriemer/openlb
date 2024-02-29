@@ -138,6 +138,7 @@ template<typename T, typename DESCRIPTOR>
 void setFreeEnergyWallBoundary(BlockLattice<T,DESCRIPTOR>& block, BlockIndicatorF2D<T>& indicator,
                                T addend, int latticeNumber, bool includeOuterCells)
 {
+  using namespace boundaryhelper;
   OstreamManager clout(std::cout, "setFreeEnergyWallBoundary");
   auto& blockGeometryStructure = indicator.getBlockGeometry();
   const int margin = includeOuterCells ? 0 : 1;
@@ -154,22 +155,24 @@ void setFreeEnergyWallBoundary(BlockLattice<T,DESCRIPTOR>& block, BlockIndicator
           block.template defineDynamics<FreeEnergyWallDynamics>({iX,iY});
         }
 
-        auto wettingPostProcessor = std::unique_ptr<PostProcessorGenerator2D<T, DESCRIPTOR>>{
-          new FreeEnergyWallProcessorGenerator2D<T, DESCRIPTOR>(
-          iX, iX, iY, iY, discreteNormal[1], discreteNormal[2], addend )
-        };
+          block.addPostProcessor(
+            typeid(stage::PostStream), {iX, iY},
+            promisePostProcessorForNormal<T,DESCRIPTOR,FreeEnergyWallProcessor2D>(
+              Vector<int,2>(discreteNormal.data() + 1)));
+          block.get(iX, iY).template setField<olb::descriptors::ADDEND>(addend);
 
-        auto chemPotPostProcessor = std::unique_ptr<PostProcessorGenerator2D<T, DESCRIPTOR>>{
-          new FreeEnergyChemPotBoundaryProcessorGenerator2D<T, DESCRIPTOR> (
-          iX, iX, iY, iY, discreteNormal[1], discreteNormal[2], latticeNumber )
-        };
+          if(latticeNumber == 1){
+            block.addPostProcessor(
+            typeid(stage::PostStream), {iX, iY},
+            promisePostProcessorForNormal<T,DESCRIPTOR, FreeEnergyChemPotBoundaryProcessor2DA>(
+              Vector<int,2>(discreteNormal.data() + 1)));
+          } else {
+            block.addPostProcessor(
+            typeid(stage::PostStream), {iX, iY},
+            promisePostProcessorForNormal<T,DESCRIPTOR, FreeEnergyChemPotBoundaryProcessor2DB>(
+              Vector<int,2>(discreteNormal.data() + 1)));
+          }
 
-        if (wettingPostProcessor) {
-          block.addPostProcessor(*wettingPostProcessor);
-        }
-        if (chemPotPostProcessor) {
-          block.addPostProcessor(*chemPotPostProcessor);
-        }
       }
     }
   });

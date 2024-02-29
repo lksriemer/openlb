@@ -111,7 +111,7 @@ public:
 
   /// Returns coefficients (a1, a2, B11, B12, B21, B22)
   /// for a linear velocity force modell where F = a + B*lattticeVelocity
-  /// a = -scaleLambda*wanted, B = (scaleLamda 0 0 scaleLamda), so that
+  /// a = -scaleLambda*wanted, B = (scaleLambda 0 0 scaleLambda), so that
   /// F = scaleLambda*(latticeVelocity - wantedVelocity)
   bool operator()(T output[6], const S input[2]);
 

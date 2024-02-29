@@ -31,6 +31,58 @@
 
 
 namespace olb {
+template <typename,typename,int NX, int NY>
+struct FullSlipBoundaryPostProcessor2D{
+  static constexpr OperatorScope scope = OperatorScope::PerCell;
+
+  int getPriority() const {
+    return -1;
+  }
+
+
+  template <typename CELL, typename V = typename CELL::value_t>
+  void apply(CELL& x_b) any_platform {
+    using DESCRIPTOR = typename CELL::descriptor_t;
+    int reflectionPop[DESCRIPTOR::q];
+    int mirrorDirection0;
+    int mirrorDirection1;
+    int mult = 2 / (NX*NX + NY*NY);
+    reflectionPop[0] =0;
+    for (int iPop = 1; iPop < DESCRIPTOR::q; iPop++) {
+      reflectionPop[iPop] = 0;
+      // iPop are the directions which pointing into the fluid, discreteNormal is pointing outwarts
+      int scalarProduct = descriptors::c<DESCRIPTOR>(iPop,0)*NX + descriptors::c<DESCRIPTOR>(iPop,1)*NY;
+      if ( scalarProduct < 0) {
+        // bounce back for the case discreteNormalX = discreteNormalY = 1, that is mult=1
+        if (mult == 1) {
+          mirrorDirection0 = -descriptors::c<DESCRIPTOR>(iPop,0);
+          mirrorDirection1 = -descriptors::c<DESCRIPTOR>(iPop,1);
+        }
+        else {
+          mirrorDirection0 = descriptors::c<DESCRIPTOR>(iPop,0) - mult*scalarProduct*NX;
+          mirrorDirection1 = descriptors::c<DESCRIPTOR>(iPop,1) - mult*scalarProduct*NY;
+        }
+
+        // run through all lattice directions and look for match of direction
+        for (int i = 1; i < DESCRIPTOR::q; i++) {
+          if (descriptors::c<DESCRIPTOR>(i,0)==mirrorDirection0
+              && descriptors::c<DESCRIPTOR>(i,1)==mirrorDirection1) {
+            reflectionPop[iPop] = i;
+            break;
+          }
+        }
+      }
+    }
+    for (int iPop = 1; iPop < DESCRIPTOR::q ; ++iPop) {
+      if (reflectionPop[iPop]!=0) {
+        //do reflection
+        x_b[iPop] = x_b[reflectionPop[iPop]];
+      }
+    }
+  }
+
+};
+
 ///Initialising the SlipBoundary on the superLattice domain
 template<typename T, typename DESCRIPTOR>
 void setSlipBoundary(SuperLattice<T, DESCRIPTOR>& sLattice, SuperGeometry<T,2>& superGeometry, int material)
@@ -76,10 +128,12 @@ void setSlipBoundary(BlockLattice<T,DESCRIPTOR>& block, BlockIndicatorF2D<T>& in
         if (_output) {
           clout << "setSlipBoundary<" << discreteNormal[1] << ","<< discreteNormal[2] << ">("  << iX << ", "<< iX << ", " << iY << ", " << iY << " )" << std::endl;
         }
-        PostProcessorGenerator2D<T, DESCRIPTOR>* postProcessor = new SlipBoundaryProcessorGenerator2D<T, DESCRIPTOR>(iX, iX, iY, iY, discreteNormal[1], discreteNormal[2]);
-        if (postProcessor) {
-          block.addPostProcessor(*postProcessor);
-        }
+        block.addPostProcessor(
+            typeid(stage::PostStream), {iX,iY},
+            boundaryhelper::promisePostProcessorForNormal<T, DESCRIPTOR, FullSlipBoundaryPostProcessor2D>(
+              Vector <int,2> (discreteNormal.data()+1)
+            )
+          );
       }
       else {
         clout << "Warning: Could not addSlipBoundary (" << iX << ", " << iY << "), discreteNormal=(" << discreteNormal[0] <<","<< discreteNormal[1] <<","<< discreteNormal[2] <<"), set to bounceBack" << std::endl;

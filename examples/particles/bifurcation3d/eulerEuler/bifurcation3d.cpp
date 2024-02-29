@@ -148,8 +148,8 @@ void prepareLattice( SuperLattice<T, NSDESCRIPTOR>& sLatticeNS,
   setInterpolatedPressureBoundary<T,NSDESCRIPTOR>(sLatticeNS, omega, superGeometry, 3);
   setInterpolatedVelocityBoundary<T,NSDESCRIPTOR>(sLatticeNS, omega, outflowIndicator);
   setZeroDistributionBoundary<T,ADDESCRIPTOR>(sLatticeAD, superGeometry, 2);
-  setAdvectionDiffusionTemperatureBoundary<T,ADDESCRIPTOR>(sLatticeAD, omegaAD, superGeometry, 3);
-  setAdvectionDiffusionConvectionBoundary<T,ADDESCRIPTOR>(sLatticeAD, outflowIndicator);
+  setAdvectionDiffusionTemperatureBoundary<T,ADDESCRIPTOR>(sLatticeAD, superGeometry, 3);
+  setZeroGradientBoundary<T,ADDESCRIPTOR>(sLatticeAD, outflowIndicator);
   setExtFieldBoundary<T,ADDESCRIPTOR,descriptors::VELOCITY,descriptors::VELOCITY2>(sLatticeAD, superGeometry.getMaterialIndicator({2, 3, 4, 5, 6}));
 
   // Initial conditions

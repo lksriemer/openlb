@@ -1,6 +1,5 @@
 #include <core/core3D.hh>
 #include <boundary/boundary3D.hh>
-#include <communication/communication.hh>
 #include <dynamics/dynamics3D.hh>
 #include <reaction/reaction3D.hh>
 #include <reaction/adsorption.hh>
@@ -12,3 +11,4 @@
 #include <utilities/utilities3D.hh>
 #include <particles/subgrid3DLegacyFramework/particles3D.hh>
 #include <particles/particles.hh>
+#include <communication/communication.hh>

@@ -50,14 +50,14 @@ template <typename T, typename DESCRIPTOR, typename FIELD>
 class SuperLatticePhysExternalScalar3D final : public SuperLatticeF3D<T,DESCRIPTOR> {
 public:
   SuperLatticePhysExternalScalar3D(SuperLattice<T,DESCRIPTOR>& sLattice,
-                                   T convFactorToPhysUnits);
+                                   T convFactorToPhysUnits, std::string name="physExternalScalarField");
 };
 
 template <typename T, typename DESCRIPTOR, typename FIELD>
 class BlockLatticePhysExternalScalar3D final : public BlockLatticeF3D<T,DESCRIPTOR> {
 public:
   BlockLatticePhysExternalScalar3D(BlockLattice<T,DESCRIPTOR>& blockLattice,
-                                   T convFactorToPhysUnits);
+                                   T convFactorToPhysUnits, std::string name="physExternalScalarField");
   bool operator() (T output[], const int input[]) override;
 private:
   const T _convFactorToPhysUnits;

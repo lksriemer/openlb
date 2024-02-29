@@ -294,6 +294,49 @@ Vector<int,3> BlockIndicatorMultiplication3D<T>::getMax()
     util::min(resF[2], resG[2])};
 }
 
+
+template <typename T>
+BlockIndicatorBoundaryNeighbor3D<T>::BlockIndicatorBoundaryNeighbor3D(BlockIndicatorF3D<T>& indicatorF, int overlap)
+  : BlockIndicatorF3D<T>(indicatorF.getBlockGeometry()),
+    _indicatorF(indicatorF),
+    _overlap(overlap)
+{ }
+
+template <typename T>
+bool BlockIndicatorBoundaryNeighbor3D<T>::operator() (bool output[], const int input[])
+{
+  // check if current position is not solid
+  if ( this->getBlockGeometry().getMaterial(input[0],input[1],input[2]) != 0 ) {
+    // check all neighbors if they are part of boundary via indicator
+    for ( int iXo = -_overlap; iXo <= _overlap; ++iXo ) {
+      for ( int iYo = -_overlap; iYo <= _overlap; ++iYo ) {
+        for ( int iZo = -_overlap; iZo <= _overlap; ++iZo ) {
+          const int neighborPos[3] = {iXo + input[0], iYo + input[1], iZo + input[2]};
+          bool partOfBoundary[1] = {false};
+          // material-indicator to check if part of boundary
+          _indicatorF( partOfBoundary, neighborPos );
+          if ( partOfBoundary[0] ) {
+            return true;
+          }
+        }
+      }
+    }
+  }
+  return false;
+}
+
+template <typename T>
+Vector<int,3> BlockIndicatorBoundaryNeighbor3D<T>::getMin()
+{
+  return _indicatorF.getMin() - _overlap;
+}
+
+template <typename T>
+Vector<int,3> BlockIndicatorBoundaryNeighbor3D<T>::getMax()
+{
+  return _indicatorF.getMax() + _overlap;
+}
+
 } // namespace olb
 
 #endif

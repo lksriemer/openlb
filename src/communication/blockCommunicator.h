@@ -35,7 +35,8 @@
 
 namespace olb {
 
-template<typename T> class SuperCommunicationTagCoordinator;
+template <typename T>
+class SuperCommunicationTagCoordinator;
 
 /// Generic communicator for the overlap neighborhood of a block
 /**
@@ -98,6 +99,7 @@ public:
 #endif
 
 };
+
 
 }
 

@@ -30,6 +30,10 @@
 #include "communicatable.h"
 #include "superCommunicationTagCoordinator.h"
 
+#ifdef PLATFORM_GPU_CUDA
+#include "core/platform/gpu/cuda/communicator.h"
+#endif
+
 namespace olb {
 
 #ifdef PARALLEL_MODE_MPI
@@ -300,6 +304,7 @@ void ConcreteBlockCommunicator<BLOCK>::copy()
 }
 
 #endif
+
 
 }
 

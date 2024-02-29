@@ -35,6 +35,8 @@ private:
   SuperStructure<T, PARTICLETYPE::d>            _superStructure;
   /// Cache for all ranks responsible for neighboring cuboids
   std::unordered_set<int>                       _neighbourRanks;
+  /// Cache for all ranks responsible for neighboring cuboids and their neighboring cuboids
+  std::unordered_set<int>                       _extendedNeighbourRanks;
   /// Cached cuboid neighborhood: all cuboid neighbors of all cuboids
   std::vector<std::unordered_set<int>>          _cuboidNeighborhood;
   std::size_t                                   _currentGlobalID = 0;
@@ -55,6 +57,7 @@ public:
   std::vector<ParticleSystem<T, PARTICLETYPE>*>& getBlockParticleSystems();
   SuperStructure<T, PARTICLETYPE::d>&            getSuperStructure();
   const std::unordered_set<int>&                 getNeighbourRanks();
+  const std::unordered_set<int>&                 getExtendedNeighbourRanks();
   const std::vector<std::unordered_set<int>>&    getCuboidNeighborhood();
   std::size_t                                    getGlobID();
   std::size_t                                    getSerialSize() const;

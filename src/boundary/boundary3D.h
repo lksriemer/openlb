@@ -25,7 +25,7 @@
  * Groups all the 3D include files in the boundaryConditions directory.
  */
 
-#include "advectionDiffusionBoundaryPostProcessor3D.h"
+#include "boundary/postprocessor/advectionDiffusionBoundaryPostProcessor3D.h"
 #include "boundaryPostProcessors3D.h"
 #include "extendedFiniteDifferenceBoundary3D.h"
 #include "inamuroAnalyticalDynamics.h"
@@ -41,10 +41,8 @@
 #include "setPartialSlipBoundary3D.h"
 #include "setLocalConvectionBoundary3D.h"
 #include "setInterpolatedConvectionBoundary3D.h"
-#include "setAdvectionDiffusionConvectionBoundary3D.h"
-#include "setAdvectionDiffusionNeumannBoundary3D.h"
 #include "setAdvectionDiffusionTemperatureBoundary3D.h"
-#include "setAdvectionDiffusionZeroGradientBoundary3D.h"
+#include "setZeroGradientBoundary3D.h"
 #include "setExtFieldBoundary3D.h"
 #include "setZeroDistributionBoundary3D.h"
 #include "setWallFunctionBoundary3D.h"
@@ -66,5 +64,7 @@
 #include "setRtlbmDirectedTemperatureBoundary3D.h"
 #include "helper.h"
 #include "setNewSlipBoundary3D.h"
+#include "setRobinBoundary3D.h"
+#include "vortexMethod.h"
 
 #include "boundary3D.hh"

@@ -467,4 +467,5 @@ public:
 }  // namespace olb
 
 #include "thermalUnitConverter.h"
+#include "multiPhaseUnitConverter.h"
 #endif

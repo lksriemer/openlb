@@ -143,7 +143,7 @@ void optimizationRosenbrock(){
   // set parameters for optimization algorithms (mamimal number of steps etc.)
   int dimCtrl = 4;
   int maxIt = 1000;
-  T lamda = 1.;
+  T lambda = 1.;
   int l = 20;
   T startCoefH (1e-4);
   T eps (1.e-7);
@@ -164,15 +164,15 @@ void optimizationRosenbrock(){
    */
 
   OptimizerSteepestDescent<T,C> optimizerSD(
-    dimCtrl, eps, maxIt, lamda, maxStepAttempts, "Wolfe",
+    dimCtrl, eps, maxIt, lambda, maxStepAttempts, "Wolfe",
     verboseOn, fname, logFileName, withUpperBound, upperBound, withLowerBound,
     lowerBound, vectorBounds, controlEps, {OptimizerLogType::control});
   OptimizerLBFGS<T,C> optimizerLBFGS(
-    dimCtrl, eps, maxIt, lamda, maxStepAttempts, "StrongWolfe", l, startCoefH,
+    dimCtrl, eps, maxIt, lambda, maxStepAttempts, "StrongWolfe", l, startCoefH,
     verboseOn, fname, logFileName, withUpperBound, upperBound, withLowerBound,
     lowerBound, vectorBounds, controlEps, true, {OptimizerLogType::control});
   OptimizerBarzilaiBorwein<T,C> optimizerBB(
-    dimCtrl, eps, maxIt, lamda, maxStepAttempts, "Wolfe",
+    dimCtrl, eps, maxIt, lambda, maxStepAttempts, "Wolfe",
     verboseOn, fname, logFileName, withUpperBound, upperBound, withLowerBound,
     lowerBound, vectorBounds, controlEps,
     {OptimizerLogType::value, OptimizerLogType::control});

@@ -26,8 +26,7 @@
 #define OPTI_CASE_DUAL_HH
 
 #include "optiCaseDual.h"
-
-#include <regex>
+#include "serialization.h"
 
 namespace olb {
 
@@ -48,8 +47,10 @@ void OptiCaseDual<S,SOLVER,C>::readFromXML(XMLreader const& xml)
     _startValueType = Porosity;
   } else if (type == "Permeability") {
     _startValueType = Permeability;
-  } else {
+  } else if (type == "Control") {
     _startValueType = Control;
+  } else {
+    _startValueType = ProjectedControl;
   }
    xml.readOrWarn<bool>("Optimization", "ReferenceSolution", "", _computeReference);
 }
@@ -75,126 +76,43 @@ void OptiCaseDual<S,SOLVER,C>::initialize(XMLreader const& xml)
   } else {
     _fieldDim = 1;
   }
-  _dimCtrl = _referenceGeometry->getStatistics().getNvoxel() * _fieldDim;
-  // for mysterious reasons, material 0 is excluded in the function above, so we add it by hand
-  _dimCtrl += _referenceGeometry->getStatistics().getNvoxel(0) * _fieldDim;
+
+  _serializer = std::make_shared<SimpleGeometrySerializer<S,dim>>(*_referenceGeometry);
+  _dimCtrl = _serializer->getNoCells() * _fieldDim;
+
   _controller = new Controller<S>(_dimCtrl);
 
   _primalSolver = createLbSolver <SOLVER<S,SolverMode::Primal>> (xml);
   _dualSolver = createLbSolver <SOLVER<S,SolverMode::Dual>> (xml);
+  this->_postEvaluation = std::bind(&SOLVER<S,SolverMode::Primal>::postProcess, _primalSolver);
 
   if (_computeReference) {
     _primalSolver->parameters(names::Opti()).referenceSolution
      = std::make_shared<SuperLatticePhysVelocity3D<S,descriptor>>(*_referenceLattice, *_converter);
+    _primalSolver->parameters(names::Opti()).referencePorosity
+     = std::make_shared<SuperLatticePorosity3D<S,descriptor>>(*_referenceLattice);
   }
 }
 
 template<typename S, template<typename,SolverMode> typename SOLVER, typename C>
 void OptiCaseDual<S,SOLVER,C>::initializeFields()
 {
-  // set _projection, _dProjectionDcontrol and controlledField of the solvers
-  // _projection, _dProjectionDcontrol need the geometry + lattice data, but
-  // they are independent of the populations.
-  if (_controlType == ForceControl) {
-    if (_projectionName == "Sigmoid") {
-      _projection = new SigmoidFunction<S, descriptor>(*_referenceLattice, *_referenceGeometry, _controlMaterial,
-          *_controller, *_converter, _fieldDim);
-      _dProjectionDcontrol = new DSigmoidFunctionDAlpha<S, descriptor>(*_projection);
-    }
-    else {
-      S scale = 1. / (_converter->getConversionFactorForce() / _converter->getConversionFactorMass());
-      _projection = new Projection3D<S, descriptor>(*_referenceLattice, *_referenceGeometry, _controlMaterial,
-          *_controller, *_converter, _fieldDim, scale);
-      AnalyticalConst3D<S,S>* dProjectionDcontrol = new AnalyticalConst3D<S,S> (scale, scale, scale);
-      _dProjectionDcontrol = new SuperLatticeFfromAnalyticalF3D<S, descriptor>(dProjectionDcontrol, *_referenceLattice);
-    }
-  }
+  _projection = projection::construct<S,descriptor>(*_converter, _projectionName);
 
-  else if (_controlType == PorosityControl) {
-    std::smatch match;
-
-    // --- grid-independent projections --- //
-    if (_projectionName == "Sigmoid") {
-      Projection3D<S, descriptor>* proj_ptr = new SigmoidFunction<S, descriptor>(*_referenceLattice,
-          *_referenceGeometry,
-          _controlMaterial, *_controller,
-          *_converter,
-          _fieldDim);
-      _projection = proj_ptr;
-      _dProjectionDcontrol = new DSigmoidFunctionDAlpha<S, descriptor>(*proj_ptr);
-    }
-    else if (_projectionName == "Rectifier") {
-      Projection3D<S, descriptor>* proj_ptr = new RectifierFunction<S, descriptor>(*_referenceLattice,
-          *_referenceGeometry,
-          _controlMaterial, *_controller,
-          *_converter,
-          _fieldDim);
-      _projection = proj_ptr;
-      _dProjectionDcontrol = new DRectifierFunctionDAlpha<S, descriptor>(*proj_ptr);
-    }
-    else if (_projectionName == "Softplus") {
-      Projection3D<S, descriptor>* proj_ptr = new SoftplusFunction<S, descriptor>(*_referenceLattice,
-          *_referenceGeometry,
-          _controlMaterial, *_controller,
-          *_converter,
-          _fieldDim);
-      _projection = proj_ptr;
-      _dProjectionDcontrol = new DSoftplusFunctionDAlpha<S, descriptor>(*proj_ptr);
-    }
-    else if (_projectionName == "Baron") {
-      _projection = new BaronProjection3D<S, descriptor>(*_referenceLattice, *_referenceGeometry,
-          _controlMaterial, *_controller, *_converter, _fieldDim);
-      _dProjectionDcontrol = new DBaronProjectionDAlpha3D<S, descriptor>(*_referenceLattice,
-          *_referenceGeometry, _controlMaterial,
-          *_controller, *_converter, _fieldDim);
-    }
-    else if (_projectionName == "Krause") {
-      _projection = new KrauseProjection3D<S, descriptor>(*_referenceLattice, *_referenceGeometry,
-          _controlMaterial, *_controller, *_converter, _fieldDim);
-      _dProjectionDcontrol = new DKrauseProjectionDAlpha3D<S, descriptor>(*_referenceLattice,
-          *_referenceGeometry, _controlMaterial,
-          *_controller, *_converter, _fieldDim);
-    }
-
-    // --- gridterm-dependent projections --- //
-    else if (_projectionName == "Foerster") {
-      GiProjection3D<S, descriptor>* proj_ptr = new FoersterGiProjection3D<S, descriptor>(*_referenceLattice,
-          *_referenceGeometry,
-          _controlMaterial, *_controller,
-          *_converter,
-          _fieldDim);
-      _projection = proj_ptr;
-      _dProjectionDcontrol = new DGiProjectionDAlpha3D<S, descriptor>(*proj_ptr);
-    }
-    else if (std::regex_match(_projectionName, match, std::regex ("(Foerster)([0-9])"))) {
-      int n = std::stoi(match[2]);
-      clout << "Creating Projection Foerster" << match[2] << ": util::exp(a^" << 2.0*n << ")" << std::endl;
-      GiProjection3D<S, descriptor>* proj_ptr = new FoersterNGiProjection3D<S, descriptor>(*_referenceLattice,
-          *_referenceGeometry,
-          _controlMaterial, *_controller,
-          *_converter,
-          n, _fieldDim);
-      _projection = proj_ptr;
-      _dProjectionDcontrol = new DGiProjectionDAlpha3D<S, descriptor>(*proj_ptr);
-    }
-    else if (std::regex_match(_projectionName, match, std::regex ("(Stasius)([0-9])"))) {
-      int n = std::stoi(match[2]);
-      clout << "Creating Projection Stasius" << match[2] << ": a^" << 2.0*n << "" << std::endl;
-      GiProjection3D<S, descriptor>* proj_ptr = new StasiusNGiProjection3D<S, descriptor>(*_referenceLattice,
-          *_referenceGeometry,
-          _controlMaterial, *_controller,
-          *_converter,
-          n, _fieldDim);
-      _projection = proj_ptr;
-      _dProjectionDcontrol = new DGiProjectionDAlpha3D<S, descriptor>(*proj_ptr);
-    }
-  }
-
-  std::shared_ptr<AnalyticalF<dim,S,S>> _analyticalAlpha
-   = std::make_shared<SequentialAnalyticalFfromSuperF3D<S>> (*_projection);
-
-  _primalSolver->parameters(names::Opti()).controlledField = _analyticalAlpha;
-  _dualSolver->parameters(names::Opti()).controlledField = _analyticalAlpha;
+  _projectedControl = std::make_shared<SuperLatticeSerialDataF<S,descriptor>>(
+    *_referenceLattice,
+    *_controller,
+    _fieldDim,
+    _serializer,
+    [this](S x) { return _projection->project(x); });
+  _dProjectionDcontrol = std::make_shared<SuperLatticeSerialDataF<S,descriptor>>(
+    *_referenceLattice,
+    *_controller,
+    _fieldDim,
+    _serializer,
+    [this](S x) { return _projection->derivative(x); });
+  _primalSolver->parameters(names::Opti()).controlledField = _projectedControl;
+  _dualSolver->parameters(names::Opti()).controlledField = _projectedControl;
 }
 
 
@@ -266,10 +184,8 @@ void OptiCaseDual<S,SOLVER,C>::computeDerivatives(
   auto& dualParams = _dualSolver->parameters(names::Opti());
 
   dualParams.fpop = primalResults.fpop;
-  dualParams.dObjectiveDf
-   = std::make_shared <SequentialAnalyticalFfromSuperF3D<S>> (*primalResults.djdf);
-  dualParams.dObjectiveDcontrol
-   = std::make_shared <SequentialAnalyticalFfromSuperF3D<S>> (*primalResults.djdalpha);
+  dualParams.dObjectiveDf = primalResults.djdf;
+  dualParams.dObjectiveDcontrol = primalResults.djdalpha;
 
   _dualSolver->solve();
 
@@ -281,99 +197,66 @@ void OptiCaseDual<S,SOLVER,C>::derivativesFromDualSolution(
   C& derivatives)
 {
   const auto& primalGeometry = _primalSolver->parameters(names::Results()).geometry;
+  const S omega = _converter->getLatticeRelaxationFrequency();
+  const int nC = primalGeometry->getCuboidGeometry().getNc();
 
-  if (_controlType == ForceControl) {
-    // get lattice coordinates
-    const int nC = primalGeometry->getCuboidGeometry().getNc();
-    int latticeR[4];
-    for (int iC=0; iC<nC; iC++) {
-      latticeR[0] = iC;
-      int nX = primalGeometry->getCuboidGeometry().get(iC).getNx();
-      int nY = primalGeometry->getCuboidGeometry().get(iC).getNy();
-      int nZ = primalGeometry->getCuboidGeometry().get(iC).getNz();
-      for (int iX=0; iX<nX; iX++) {
-        latticeR[1] = iX;
-        for (int iY=0; iY<nY; iY++) {
-          latticeR[2] = iY;
-          for (int iZ=0; iZ<nZ; iZ++) {
-            latticeR[3] = iZ;
-            const LatticeR<dim+1> latticeRv_new(latticeR);
+  for (int iC = 0; iC < nC; iC++) {
 
-            if (getMaterialGlobally(latticeRv_new) == _controlMaterial) {
-              C derivativesHelp(_fieldDim, 0);
-              if (primalGeometry->getLoadBalancer().rank(iC)  == singleton::mpi().getRank()) {
-                S rho = _primalSolver->parameters(names::Results()).lattice->get(latticeRv_new).computeRho();
+    const Vector<int,3> extend = primalGeometry->getCuboidGeometry().get(iC).getExtent();
+
+    for (int iX = 0; iX < extend[0]; iX++) {
+      for (int iY = 0; iY < extend[1]; iY++) {
+        for (int iZ = 0; iZ < extend[2]; iZ++) {
+          const LatticeR<dim+1> latticeR(iC, iX, iY, iZ);
+
+          if (getMaterialGlobally(*_referenceGeometry, latticeR) == _controlMaterial) {
+            C derivativesHelp(_fieldDim, 0);
+
+            if (primalGeometry->getLoadBalancer().rank(iC)  == singleton::mpi().getRank()) {
+              const S rho_f = _primalSolver->parameters(names::Results()).lattice->get(latticeR).computeRho();
+              S dProjectionDcontrol[_fieldDim];
+              (*_dProjectionDcontrol)(dProjectionDcontrol, latticeR.data());
+
+              if ( _controlType == ForceControl ) {
                 S dObjectiveDcontrol[_fieldDim];
-                (*_primalSolver->parameters(names::Results()).djdalpha)(dObjectiveDcontrol,latticeR);
-                S dProjectionDcontrol[_fieldDim];
-                (*_dProjectionDcontrol)(dProjectionDcontrol,latticeR);
+                (*_primalSolver->parameters(names::Results()).djdalpha)(dObjectiveDcontrol, latticeR.data());
                 for (int iDim=0; iDim<_fieldDim; iDim++) {
                   for (int jPop=0; jPop < descriptor::q; ++jPop) {
-                    S phi_j = _dualSolver->parameters(names::Results()).lattice->get(latticeRv_new)[jPop];
-                    derivativesHelp[iDim] -= rho * descriptors::t<S,descriptor>(jPop)
+                    S phi_j = _dualSolver->parameters(names::Results()).lattice->get(latticeR)[jPop];
+                    derivativesHelp[iDim] -= rho_f * descriptors::t<S,descriptor>(jPop)
                        * descriptors::invCs2<S,descriptor>() * descriptors::c<descriptor>(jPop,iDim) * phi_j;
                   }
                   // dObjectiveDcontrol is zero if objective does not depend on control
                   // --> dObjectiveDcontrol is 0 and therefore dProjectionDcontrol may be
                   // irrelevant for force and porosity optimisation
-                  derivativesHelp[iDim] += _regAlpha * _projection->getControl(latticeR, iDim)
+                  const int index = _serializer->getSerializedComponentIndex(latticeR, iDim, _fieldDim);
+                  derivativesHelp[iDim] += _regAlpha * _controller->getControl(index)
                        + dObjectiveDcontrol[iDim] * dProjectionDcontrol[iDim];
                 }
               }
-#ifdef PARALLEL_MODE_MPI
-              singleton::mpi().bCast(&derivativesHelp[0], _fieldDim, primalGeometry->getLoadBalancer().rank(iC));
-#endif
-              for (int iDim=0; iDim<_fieldDim; iDim++) {
-                derivatives[_projection->getIndex(latticeR,iDim)] = derivativesHelp[iDim];
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  if ( _controlType == PorosityControl ) {
-    const S omega = _converter->getLatticeRelaxationFrequency();
-    const int nC = primalGeometry->getCuboidGeometry().getNc();
-
-    for (int iC = 0; iC < nC; iC++) {
-
-      const Vector<int,3> extend = primalGeometry->getCuboidGeometry().get(iC).getExtent();
-
-      for (int iX = 0; iX < extend[0]; iX++) {
-        for (int iY = 0; iY < extend[1]; iY++) {
-          for (int iZ = 0; iZ < extend[2]; iZ++) {
-            const std::vector<int> latticeR {iC, iX, iY, iZ};
-            const LatticeR<dim+1> latticeR_new(iC, iX, iY, iZ);
-
-            if (getMaterialGlobally(latticeR_new) == _controlMaterial) {
-              S derivativeHelp (0);
-
-              if (primalGeometry->getLoadBalancer().rank(iC)  == singleton::mpi().getRank()) {
-                S rho_f = _primalSolver->parameters(names::Results()).lattice->get(latticeR_new).computeRho();
+              else if ( _controlType == PorosityControl ) {
                 S u_f[3];
-                _primalSolver->parameters(names::Results()).lattice->get(latticeR_new).computeU(u_f);
-                S d = _dualSolver->parameters(names::Results()).lattice->get(latticeR_new).template getField<descriptors::POROSITY>();
-                //S dObjectiveDcontrol;
-                //(*_primalSolver->parameters(names::Results()).dObjectiveDcontrol)(&dObjectiveDcontrol, &latticeR[0]);
-                S dProjectionDcontrol;
-                (*_dProjectionDcontrol)(&dProjectionDcontrol, &latticeR[0]);
+                _primalSolver->parameters(names::Results()).lattice->get(latticeR).computeU(u_f);
+                const S d = _dualSolver->parameters(names::Results()).lattice->get(latticeR).template getField<descriptors::POROSITY>();
 
                 for (int jPop = 0; jPop < descriptor::q; ++jPop) {
-                  S phi_j = _dualSolver->parameters(names::Results()).lattice->get(latticeR_new)[jPop];
+                  S phi_j = _dualSolver->parameters(names::Results()).lattice->get(latticeR)[jPop];
                   S feq_j = equilibrium<descriptor>::secondOrder(jPop, rho_f, u_f) + descriptors::t<S,descriptor>(jPop);
                   for (int iDim = 0; iDim < descriptor::d; iDim++) {
-                    derivativeHelp +=  phi_j*feq_j*( descriptors::c<descriptor>(jPop,iDim) - d*u_f[iDim] )*u_f[iDim]*dProjectionDcontrol;
+                    derivativesHelp[0] +=  phi_j*feq_j*( descriptors::c<descriptor>(jPop,iDim) - d*u_f[iDim] )*u_f[iDim]*dProjectionDcontrol[0];
                   }
                 }
-                derivativeHelp *= -omega*descriptors::invCs2<S,descriptor>();
+                derivativesHelp[0] *= -omega*descriptors::invCs2<S,descriptor>();
               }
+              // correct processing of regularizing term has to be checked in both cases!
+            }
 
 #ifdef PARALLEL_MODE_MPI
-              singleton::mpi().bCast(&derivativeHelp, 1, primalGeometry->getLoadBalancer().rank(iC));
+            singleton::mpi().bCast(&derivativesHelp[0], _fieldDim, primalGeometry->getLoadBalancer().rank(iC));
 #endif
-              derivatives[_projection->getIndex(&latticeR[0],0)] = derivativeHelp;
+            for (int iDim=0; iDim<_fieldDim; ++iDim) {
+              const int index = _serializer->getSerializedComponentIndex(latticeR, iDim, _fieldDim);
+              derivatives[index] = derivativesHelp[iDim];
             }
           }
         }
@@ -385,12 +268,12 @@ void OptiCaseDual<S,SOLVER,C>::derivativesFromDualSolution(
 template<typename S, template<typename,SolverMode> typename SOLVER, typename C>
 C OptiCaseDual<S,SOLVER,C>::getReferenceControl() const
 {
-  assert((this->_computeReference) && "Reference solution has not been computed\n");
-  C result(_dimCtrl, 0);
+  assert((this->_computeReference) && "Reference solution has not yet been computed\n");
+  C result = util::ContainerCreator<C>::create(_dimCtrl);
 
   if (_controlType == ForceControl) {
-    int latticeR[4];
-    for (int iC=0; iC<_referenceGeometry->getCuboidGeometry().getNc(); iC++) {
+      LatticeR<dim+1> latticeR;
+      for (int iC=0; iC<_referenceGeometry->getCuboidGeometry().getNc(); iC++) {
       latticeR[0] = iC;
       int nX = _referenceGeometry->getCuboidGeometry().get(iC).getNx();
       int nY = _referenceGeometry->getCuboidGeometry().get(iC).getNy();
@@ -401,22 +284,22 @@ C OptiCaseDual<S,SOLVER,C>::getReferenceControl() const
           latticeR[2] = iY;
           for (int iZ=0; iZ<nZ; iZ++) {
             latticeR[3] = iZ;
-            const LatticeR<dim+1> latticeRv_new(latticeR);
 
-            if (getMaterialGlobally(latticeRv_new) == _controlMaterial) {
+            if (getMaterialGlobally(*_referenceGeometry, latticeR) == _controlMaterial) {
               C force_help(_fieldDim, 0);
               if (_referenceGeometry->getLoadBalancer().rank(iC)  == singleton::mpi().getRank()) {
                 for (int iDim=0; iDim<_fieldDim; iDim++) {
+                  const auto cell = _referenceLattice->get(latticeR);
                   force_help[iDim]
-                   = _referenceLattice->get(latticeRv_new).template getFieldComponent<descriptors::FORCE>(iDim)
-                    * _converter->getConversionFactorForce() / _converter->getConversionFactorMass();
+                   = _projection->inverse(cell.template getFieldComponent<descriptors::FORCE>(iDim));
                 }
               }
 #ifdef PARALLEL_MODE_MPI
               singleton::mpi().bCast(&force_help[0], _fieldDim, _referenceGeometry->getLoadBalancer().rank(iC));
 #endif
               for (int iDim=0; iDim<_fieldDim; iDim++) {
-                result[_projection->getIndex(latticeR,iDim)] = force_help[iDim];
+                const int index = _serializer->getSerializedComponentIndex(latticeR, iDim, _fieldDim);
+                result[index] = force_help[iDim];
               }
             }
           }
@@ -428,20 +311,6 @@ C OptiCaseDual<S,SOLVER,C>::getReferenceControl() const
     exit(1);
   }
   return result;
-}
-
-template<typename S, template<typename,SolverMode> typename SOLVER, typename C>
-int OptiCaseDual<S,SOLVER,C>::getMaterialGlobally (
-  LatticeR<dim+1> latticeR) const
-{
-  int material = 0;
-  if ( _referenceGeometry->getLoadBalancer().rank(latticeR[0]) == singleton::mpi().getRank() ) {
-    material = _referenceGeometry->get(latticeR);
-  }
-#ifdef PARALLEL_MODE_MPI
-  singleton::mpi().bCast(&material, 1, _referenceGeometry->getLoadBalancer().rank(latticeR[0]));
-#endif
-  return material;
 }
 
 } // namespace opti

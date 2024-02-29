@@ -169,14 +169,14 @@ public:
   {
     if (_type == a2c){
       T uD =_flow_rate / mue;
-      T lamda2 = 0.5 * (uD - util::sqrt(uD * uD + 4 * _data.physReactionCoeff[0]/mue));
-      output[0] = CA_0_phys * util::exp(lamda2 * input[0]);
+      T lambda2 = 0.5 * (uD - util::sqrt(uD * uD + 4 * _data.physReactionCoeff[0]/mue));
+      output[0] = CA_0_phys * util::exp(lambda2 * input[0]);
     }
     else if (_type == a2cAndBack) {
       T Constant = _data.physReactionCoeff[1] * CA_0_phys / (_data.physReactionCoeff[0] + _data.physReactionCoeff[1]);
       T uD = _flow_rate/ mue;
-      T lamda2 = 0.5 * (uD - util::sqrt(uD*uD + 4 * (_data.physReactionCoeff[0] + _data.physReactionCoeff[1]) / mue));
-      output[0] = (CA_0_phys - Constant) * util::exp(lamda2*input[0]) + Constant;
+      T lambda2 = 0.5 * (uD - util::sqrt(uD*uD + 4 * (_data.physReactionCoeff[0] + _data.physReactionCoeff[1]) / mue));
+      output[0] = (CA_0_phys - Constant) * util::exp(lambda2*input[0]) + Constant;
     }
     return true;
   }
@@ -274,8 +274,6 @@ protected:
     });
     this->lattice(Concentration<0>()).addLatticeCoupling(coupling, lattices);
 
-    const T omega = this->converter().getLatticeRelaxationFrequency();
-
     meta::tuple_for_each(this->_sLattices, [&](auto& lattice, unsigned iLattice) {
       // Dynamics for the use of a source term
       // Material=1 -->bulk dynamics
@@ -284,9 +282,9 @@ protected:
 
       // Setting of the boundary conditions, inflow with Dirichlet condition and outflow calculated from analytical solution
       setAdvectionDiffusionTemperatureBoundary<T,TDESCRIPTOR>(
-        *lattice, omega, this->geometry().getMaterialIndicator({3}));
+        *lattice, this->geometry().getMaterialIndicator({3}));
       setAdvectionDiffusionTemperatureBoundary<T,TDESCRIPTOR>(
-        *lattice, omega, this->geometry().getMaterialIndicator({4}));
+        *lattice, this->geometry().getMaterialIndicator({4}));
 
       lattice->template setParameter<descriptors::OMEGA>(this->converter().getLatticeAdeRelaxationFrequency());
     });
@@ -378,7 +376,7 @@ protected:
 
     }
 
-  void writeGnuplot() const override {
+  void writeGnuplot(std:: size_t iT) const override {
     //set up to use Gnuplot
     const auto& params = this->parameters(Simulation());
     Gnuplot<T> gplot( "centerConcentration" );
@@ -486,17 +484,17 @@ int main(int argc, char *argv[])
     );
 
     params.template get<VisualizationGnuplot>() = std::make_shared<parameters::OutputPlot<T>>(
-      true, "advectionDiffusionReaction2d", 1.
+      "intervals", "advectionDiffusionReaction2d", 1.
     );
 
 
     params.template get<VisualizationImages>() = std::make_shared<parameters::OutputPlot<T>>(
-      false, "", 0.
+      "off", "", 0.
     );
 
 
     params.template get<VisualizationVTK>() = std::make_shared<parameters::OutputPlot<T>>(
-      true, "advectionDiffusionReaction2d", 1.
+      "intervals", "advectionDiffusionReaction2d", 1.
     );
 
 

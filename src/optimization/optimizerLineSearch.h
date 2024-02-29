@@ -54,8 +54,8 @@ private:
   mutable OstreamManager clout;
 
 protected:
-  /// Lamda start value
-  S _lamda;
+  /// Lambda start value
+  S _lambda;
   /// Search direction
   C _direction;
   // Upper/Lower bound
@@ -74,7 +74,7 @@ protected:
 
 public:
   /// Construction of an OptimizerLineSearch
-  OptimizerLineSearch(int dimCtrl, S eps, int maxIt, S lamda, int maxStepAttempts, std::string stepCondition,
+  OptimizerLineSearch(int dimCtrl, S eps, int maxIt, S lambda, int maxStepAttempts, std::string stepCondition,
                       bool verboseOn=true, const std::string fname="", const std::string logFileName="",
                       bool withUpperBound=false, S upperBound=S(),
                       bool withLowerBound=false, S lowerBound=S(), bool vectorBounds=false,
@@ -84,7 +84,7 @@ public:
                    lowerBound, vectorBounds, controlEps, failOnMaxIter, gplotAnalysis),
       clout(std::cout,"OptimizerLineSearch")
   {
-    _lamda = lamda;
+    _lambda = lambda;
     _direction = util::ContainerCreator<C>::create(dimCtrl);
     _nextDerivative = util::ContainerCreator<C>::create(dimCtrl);
     _maxStepAttempts = maxStepAttempts;
@@ -213,13 +213,13 @@ public:
     }
 
     // Armijo rule
-    if (!(tempValue <= this->_value + c1*this->_lamda*dir)) {
+    if (!(tempValue <= this->_value + c1*this->_lambda*dir)) {
       if (this->_verboseOn) {
         clout << "Armijo failed!" << std::endl;
       }
       // Decrease step length
       (this->*_stepLengthFunction)(tempValue);
-      //this->_lamda *= .5;
+      //this->_lambda *= .5;
       return false;
     }
     // (strong) Wolfe conditions (curvature condition)
@@ -242,7 +242,7 @@ public:
           clout << "Curvature failed!" << std::endl;
         }
         // Increase step length
-        this->_lamda *= 2.1;
+        this->_lambda *= 2.1;
         return false;
       }
     }
@@ -252,54 +252,54 @@ public:
   // Quadratic Interpolation [Nocedal; p.58]
   void quadraticInterpolationStep(const S& tempValue)
   {
-    S newLamda = S();
+    S newLambda = S();
     S dir = S();
     if (std::isnan(tempValue) ) {
-      newLamda = this->_lamda/2.;
+      newLambda = this->_lambda/2.;
     }
     else {
       for (int iDim=0; iDim<this->_dimCtrl; iDim++) {
         dir += this->_derivative[iDim]*this->_direction[iDim];
       }
-      newLamda = dir*this->_lamda*this->_lamda / (2.*(tempValue - this->_value + dir*this->_lamda));
+      newLambda = dir*this->_lambda*this->_lambda / (2.*(tempValue - this->_value + dir*this->_lambda));
       // Step size control
-      if (newLamda < this->_lamda*.1 ) {
-        newLamda = this->_lamda*.1;
+      if (newLambda < this->_lambda*.1 ) {
+        newLambda = this->_lambda*.1;
       }
-      if (newLamda > this->_lamda*.5 ) {
-        newLamda = this->_lamda*.5;
+      if (newLambda > this->_lambda*.5 ) {
+        newLambda = this->_lambda*.5;
       }
     }
-    this->_lamda = newLamda;
+    this->_lambda = newLambda;
   }
 
-  void backtrackingLineSearch(S& tempValue, S lamda, bool(OptimizerLineSearch::*condition)(const S&))
+  void backtrackingLineSearch(S& tempValue, S lambda, bool(OptimizerLineSearch::*condition)(const S&))
   {
 
-    // Save this->_lamda so that it is unchanged after the line search
-    S startLamda = this->_lamda;
+    // Save this->_lambda so that it is unchanged after the line search
+    S startLambda = this->_lambda;
     int refinementStep = 0;
     // Do line search until the condition is fullfilled
-    // the step size (this->_lamda) will be changed in the condition
+    // the step size (this->_lambda) will be changed in the condition
     while ( !(this->*condition)(tempValue) ) {
-      if ( util::abs(lamda/this->_value) < std::numeric_limits<double>::epsilon() ) {
-        clout << "Excessive refinement steps.\nProgram terminated." <<std::endl;
+      if ( util::abs(lambda/this->_value) < std::numeric_limits<double>::epsilon() ) {
+        clout << "Excessive refinement steps (too small step size).\nProgram terminated." <<std::endl;
         exit(1);
       }
       refinementStep++;
 
       // Leave program if maximum number of step attempts is exceeded.
       if ( refinementStep >= _maxStepAttempts ) {
-        clout << "Excessive refinement steps.\nProgram terminated." <<std::endl;
+        clout << "Excessive refinement steps (maxStepAttempts exeeded).\nProgram terminated." <<std::endl;
         exit(1);
       }
 
-      S newLamda = this->_lamda;
+      S newLambda = this->_lambda;
       bool notSensible = true;
       for (int iDim=0; iDim<this->_dimCtrl; iDim++) {
-        // Go back (newLamda-lamda) from previous control(=control-lamda*direction),
-        // therefore this produces a step of newLamda*direction
-        S tmp  = (newLamda-lamda)*this->_direction[iDim];
+        // Go back (newLambda-lambda) from previous control(=control-lambda*direction),
+        // therefore this produces a step of newLambda*direction
+        S tmp  = (newLambda-lambda)*this->_direction[iDim];
         this->_control[iDim] -= tmp;
         // is this move larger than machine precision wrt control
         if (util::abs(this->_control[iDim]) > 0 && util::abs(tmp) > 0) {
@@ -308,7 +308,7 @@ public:
       }
       // stop excessive refinement steps when values become no longer sensible
       if (notSensible) {
-        clout << "Excessive refinement steps.\nProgram terminated." <<std::endl;
+        clout << "Excessive refinement steps (not sensible).\nProgram terminated." <<std::endl;
         exit(1);
       }
 
@@ -317,7 +317,7 @@ public:
       }
 
       if (this->_verboseOn) {
-        clout << "[Step " << this->_it << "][Ref " << refinementStep << "] <<<<<<<<<< lambda=" << newLamda << " <<<<<<<<<<" << std::endl;
+        clout << "[Step " << this->_it << "][Ref " << refinementStep << "] <<<<<<<<<< lambda=" << newLambda << " <<<<<<<<<<" << std::endl;
       }
 
       if (this->_withUpperBound||this->_withLowerBound) {
@@ -326,9 +326,9 @@ public:
       else {
         this->evaluateObjective(this->_control, tempValue);
       }
-      lamda = newLamda;
+      lambda = newLambda;
     }
-    this->_lamda = startLamda;
+    this->_lambda = startLambda;
   };
 
 
@@ -353,7 +353,7 @@ public:
 
     // Search along line to find new control
     for (int iDim=0; iDim<this->_dimCtrl; iDim++) {
-      this->_control[iDim] -= this->_lamda*_direction[iDim];
+      this->_control[iDim] -= this->_lambda*_direction[iDim];
     }
 
     if (this->_withUpperBound||this->_withLowerBound) {
@@ -362,7 +362,7 @@ public:
     }
 
     if (this->_verboseOn) {
-      clout << "[Step " << this->_it << "] <<<<<<<<<< lambda=" << this->_lamda << " <<<<<<<<<<" << std::endl;
+      clout << "[Step " << this->_it << "] <<<<<<<<<< lambda=" << this->_lambda << " <<<<<<<<<<" << std::endl;
     }
 
     S tempValue = S();
@@ -374,7 +374,7 @@ public:
     }
 
     // Backtracking line search with step condition
-    backtrackingLineSearch(tempValue, this->_lamda, _stepConditionFunction);
+    backtrackingLineSearch(tempValue, this->_lambda, _stepConditionFunction);
 
     if (this->_withUpperBound||this->_withLowerBound) {
       if (this->_verboseOn) {
@@ -402,7 +402,7 @@ public:
       }  // else control diff is zero anyway
     }
     if (this->_verboseOn) {
-      clout << "Controls converged within " << this->_controlEps << ": " << this->_controlsConverged << std::endl;
+      clout << "Controls converged within " << this->_controlEps << ": " << ((this->_controlsConverged) ? "true" : "false") << std::endl;
     }
   };
 };

@@ -35,3 +35,5 @@
 #include "optimizerLBFGS.h"
 #include "optimizerSteepestDecent.h"
 #include "optiSolverParameters.h"
+#include "projection.h"
+#include "serialization.h"

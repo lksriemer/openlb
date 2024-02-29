@@ -58,14 +58,14 @@ private:
 
 public:
   OptimizerSteepestDescent(
-    int dimCtrl, S eps, int maxIt, S lamda, int maxStepAttempts,
+    int dimCtrl, S eps, int maxIt, S lambda, int maxStepAttempts,
     std::string stepCondition, bool verboseOn=true, const std::string fname="",
     const std::string logFileName="", bool withUpperBound=false, S upperBound=S(),
     bool withLowerBound=false, S lowerBound=S(),
     bool vectorBounds=false, S controlEps=S(std::numeric_limits<double>::epsilon() ),
     std::vector<OptimizerLogType> gplotAnalysis = {})
     : OptimizerLineSearch<S,C>(
-      dimCtrl, eps, maxIt, lamda, maxStepAttempts, stepCondition, verboseOn, fname, logFileName,
+      dimCtrl, eps, maxIt, lambda, maxStepAttempts, stepCondition, verboseOn, fname, logFileName,
       withUpperBound, upperBound, withLowerBound, lowerBound, vectorBounds, controlEps, true,gplotAnalysis),
       clout(std::cout,"OptimizerSteepestDescent") {};
 
@@ -101,7 +101,7 @@ OptimizerSteepestDescent<S,C>* createOptimizerSteepestDescent(XMLreader const& p
   S controlEps = S(0);
   S eps = S(1.e-10);
 
-  S lamda = 1.;
+  S lambda = 1.;
   int maxStepAttempts = 100;
   std::string stepCondition = "Armijo";
 
@@ -123,7 +123,7 @@ OptimizerSteepestDescent<S,C>* createOptimizerSteepestDescent(XMLreader const& p
 
   params.readOrWarn<S>("Optimization", "Tolerance", "", eps);
   params.readOrWarn<S>("Optimization", "ControlTolerance", "", controlEps);
-  params.readOrWarn<S>("Optimization", "Lamda", "", lamda);
+  params.readOrWarn<S>("Optimization", "Lambda", "", lambda);
   params.readOrWarn<int>("Optimization", "MaxStepAttempts", "", maxStepAttempts);
   params.readOrWarn<std::string>("Optimization", "StepCondition", "", stepCondition);
 
@@ -134,12 +134,10 @@ OptimizerSteepestDescent<S,C>* createOptimizerSteepestDescent(XMLreader const& p
   params.readOrWarn<bool>("Optimization", "VectorBounds", "", vectorBounds);
   if ( params.readOrWarn<S>("Optimization", "UpperBound", "", upperBound, false, false) ) {
     withUpperBound = true;
-    clout << "\t -> ATTENTION!" << std::endl << "\t -> Computing now: withUpperBound = true" << std::endl << "\t -> ATTENTION!" << std::endl;
   }
 
   if ( params.readOrWarn<S>("Optimization", "LowerBound", "", lowerBound, false, false) ) {
     withLowerBound = true;
-    clout << "\t -> ATTENTION!" << std::endl << "\t -> Computing now: withUpperBound = true" << std::endl << "\t -> ATTENTION!" << std::endl;
   }
 
   // get the parameters for the gnuplot Analysis from the xml file from the VisualizationGnuplot area
@@ -148,7 +146,7 @@ OptimizerSteepestDescent<S,C>* createOptimizerSteepestDescent(XMLreader const& p
   getGnuplotTagsFromString(gplotAnalysisString, gplotAnalysis);
 
   // Create Optimizer Object
-  return new OptimizerSteepestDescent<S,C>(dimCtrl, eps, maxIt, lamda, maxStepAttempts, stepCondition,
+  return new OptimizerSteepestDescent<S,C>(dimCtrl, eps, maxIt, lambda, maxStepAttempts, stepCondition,
                                          verboseOn, fname, logFileName, withUpperBound, upperBound, withLowerBound, lowerBound,
                                          vectorBounds, controlEps, gplotAnalysis);
 }

@@ -140,6 +140,24 @@ public:
   Vector<int,2> getMax() override;
 };
 
+/// Block indicator identifying neighbors of boundary cells
+template <typename T>
+class BlockIndicatorBoundaryNeighbor2D : public BlockIndicatorF2D<T> {
+protected:
+  BlockIndicatorF2D<T>& _indicatorF;
+  int _overlap;
+public:
+  BlockIndicatorBoundaryNeighbor2D(BlockIndicatorF2D<T>& indicatorF, int overlap);
+
+  using BlockIndicatorF2D<T>::operator();
+  bool operator() (bool output[], const int input[]) override;
+
+  /// Returns min lattice position of the indicated domain's bounding box
+  Vector<int,2> getMin() override;
+  /// Returns max lattice position of the indicated domain's bounding box
+  Vector<int,2> getMax() override;
+};
+
 } // namespace olb
 
 #endif

@@ -95,6 +95,8 @@ public:
     return ptr(*this, i);
   }
 
+  virtual void resize(std::size_t newCount) = 0;
+
   virtual void setProcessingContext(ProcessingContext context) = 0;
 
 };
@@ -200,7 +202,7 @@ public:
 template<typename T, typename DESCRIPTOR, Platform PLATFORM, typename FIELD>
 class FieldArrayD final : public ColumnVector<typename ImplementationOf<typename FIELD::template column_type<T>,PLATFORM>::type,
                                               DESCRIPTOR::template size<FIELD>()>
-                        , private AbstractFieldArrayD<T,DESCRIPTOR,FIELD>
+                        , public AbstractFieldArrayD<T,DESCRIPTOR,FIELD>
 {
 private:
   const typename FIELD::template column_type<T>& getAbstractColumn(unsigned iDim) const override
@@ -247,7 +249,7 @@ public:
     }
   }
 
-  void resize(std::size_t newCount) {
+  void resize(std::size_t newCount) override {
     const std::size_t oldCount = this->_count;
     static_cast<ColumnVector<
       column_type,
@@ -284,6 +286,16 @@ public:
 
 };
 
+/// Curried FieldArrayD template for use in callUsingConcretePlatform
+template <typename T, typename DESCRIPTOR, typename FIELD>
+struct ConcretizableFieldArrayD {
+
+using base_t = ColumnVectorBase;
+
+template <Platform PLATFORM>
+using type = FieldArrayD<T,DESCRIPTOR,PLATFORM,FIELD>;
+
+};
 
 
 template <typename T, typename DESCRIPTOR, Platform PLATFORM, typename FIELD>

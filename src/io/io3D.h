@@ -46,3 +46,5 @@
 #include "consoleWriter.h"
 #include "blockLatticeSTLreader.h"
 #include "plainWriter.h"
+#include "analyticalPorosityVolumeF.h"
+#include "analyticalVelocityVolumeF.h"

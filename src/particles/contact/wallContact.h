@@ -118,6 +118,10 @@ public:
   constexpr void setParticlePosition(const PhysR<T, D>& particlePosition);
   /// Set damping factor for contact
   constexpr void setDampingFactor(const T dampingFactor);
+  /// Set damping factor from the magnitude of the initial relative impact velocity in direction of contact normal and the wanted coefficient of restitution
+  constexpr void
+  setDampingFactorFromInitialVelocity(const T coefficientOfRestitution,
+                                      const T initialRelativeVelocityMagnitude);
   /// Set processor that is responsible for contact treatment
   constexpr void setResponsibleRank(const int& rank);
 

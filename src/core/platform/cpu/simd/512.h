@@ -152,6 +152,9 @@ public:
   Pack(int val):
     Pack(static_cast<double>(val)) { }
 
+  Pack(std::size_t val):
+    Pack(static_cast<double>(val)) { }
+
   Pack(double a, double b, double c, double d, double e, double f, double g, double h):
     Pack(_mm512_set_pd(h,g,f,e,d,c,b,a)) { }
 
@@ -255,6 +258,9 @@ public:
     Pack(static_cast<float>(val)) { }
 
   Pack(int val):
+    Pack(static_cast<float>(val)) { }
+
+  Pack(std::size_t val):
     Pack(static_cast<float>(val)) { }
 
   Pack(float a, float b, float c, float d, float e, float f, float g, float h, float i, float j, float k, float l, float m, float n, float o, float p):

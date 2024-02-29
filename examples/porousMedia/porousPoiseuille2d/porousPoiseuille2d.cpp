@@ -29,6 +29,11 @@
  * Guo and Zhao (doi:10.1103/PhysRevE.66.036304)
  */
 
+//#define BGK
+//#define SPAID_PHELAN
+#define GUO_ZHAO
+//#define GUO_ZHAO_SMAGO
+
 
 #include "olb2D.h"
 #include "olb2D.hh"
@@ -37,10 +42,6 @@ using namespace olb;
 using namespace olb::descriptors;
 
 using T = FLOATING_POINT_TYPE;
-
-//#define BGK
-#define SPAID_PHELAN
-//#define GUO_ZHAO
 
 
 T Kin = 1e-2;               // Permeability
@@ -53,14 +54,17 @@ T mu;                       // Dynamic viscosity
 #ifdef BGK
 typedef D2Q9<> DESCRIPTOR;
 #define DYNAMICS BGKdynamics
-#endif
-// Porous media
-#ifdef SPAID_PHELAN
+#elif defined(SPAID_PHELAN)
 typedef D2Q9<POROSITY> DESCRIPTOR;
 #define DYNAMICS PorousBGKdynamics
-#elif defined GUO_ZHAO
+#elif defined(GUO_ZHAO)
 typedef D2Q9<FORCE,EPSILON,K,NU,BODY_FORCE> DESCRIPTOR;
 #define DYNAMICS GuoZhaoBGKdynamics
+#elif defined(GUO_ZHAO_SMAGO)
+typedef D2Q9<FORCE,EPSILON,K,NU,BODY_FORCE> DESCRIPTOR;
+#define DYNAMICS SmagorinskyGuoZhaoBGKdynamics
+#else
+#error "Macro defining type of run missing. That must be a #define followed by BGK, SPAID_PHELAN, GUO_ZHAO or GUO_ZHAO_MAGO."
 #endif
 
 
@@ -178,12 +182,7 @@ void prepareLattice( UnitConverter<T,DESCRIPTOR> const& converter,
   const T omega = converter.getLatticeRelaxationFrequency();
 
   // Material=1 -->bulk dynamics
-  #ifdef GUO_ZHAO
-  Dynamics<T,DESCRIPTOR>* bulkDynamics = new DYNAMICS<T,DESCRIPTOR>(omega);
-  sLattice.defineDynamics(superGeometry, 1, bulkDynamics);
-  #else
   sLattice.defineDynamics<DYNAMICS>(superGeometry, 1);
-  #endif
 
   if (boundaryType == bounceBack) {
     setBounceBackBoundary(sLattice, superGeometry, 2);
@@ -199,11 +198,7 @@ void prepareLattice( UnitConverter<T,DESCRIPTOR> const& converter,
 
   // Material=3 -->bulk dynamics
   // Material=4 -->bulk dynamics
-  #ifdef GUO_ZHAO
-  sLattice.defineDynamics(superGeometry.getMaterialIndicator({3,4}), bulkDynamics);
-  #else
   sLattice.defineDynamics<DYNAMICS>(superGeometry.getMaterialIndicator({3,4}));
-  #endif
 
   if (boundaryType == local) {
     setLocalVelocityBoundary<T,DESCRIPTOR>(sLattice, omega, superGeometry, 3);
@@ -231,7 +226,7 @@ void prepareLattice( UnitConverter<T,DESCRIPTOR> const& converter,
        }) {
     sLattice.defineField<POROSITY>(superGeometry, i, porosity);
   }
-#elif defined GUO_ZHAO
+#elif defined(GUO_ZHAO_SMAGO) || defined(GUO_ZHAO)
   AnalyticalConst2D<T,T> eps( epsilon );
   AnalyticalConst2D<T,T> Nu( converter.getLatticeViscosity() );
   AnalyticalConst2D<T,T> k( Kin/util::pow(converter.getPhysDeltaX(), 2.) );
@@ -265,10 +260,13 @@ void prepareLattice( UnitConverter<T,DESCRIPTOR> const& converter,
          0,1,2,3,4
        }) {
     sLattice.defineRhoU( superGeometry, i, rho, u );
-    sLattice.iniEquilibrium( superGeometry, i, rho, u );
+    //sLattice.iniEquilibrium( superGeometry, i, rho, u ); // gives problems with non-standard equilibria
   }
 
   sLattice.setParameter<descriptors::OMEGA>(omega);
+  #ifdef GUO_ZHAO_SMAGO
+  sLattice.setParameter<collision::LES::Smagorinsky>(T(0.14));
+  #endif
 
   // Make the lattice ready for simulation
   sLattice.initialize();

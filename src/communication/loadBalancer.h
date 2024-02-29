@@ -115,6 +115,10 @@ public:
     }
   }
 
+  virtual void setPlatform(int loc, Platform platform) {
+    _platform[glob(loc)] = platform;
+  }
+
   /// equal operator
   bool operator==(const LoadBalancer<T>& rhs) const;
 

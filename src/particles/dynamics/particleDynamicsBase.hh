@@ -142,6 +142,31 @@ void VerletParticleDynamicsRotationOnly<T,PARTICLETYPE,PCONDITION>::process (
   }); //doWhenMeetingCondition<T,PARTICLETYPE,PCONDITION>
 }
 
+template<typename T, typename PARTICLETYPE, typename PCONDITION>
+VerletParticleDynamicsRotor<T,PARTICLETYPE,PCONDITION>::VerletParticleDynamicsRotor ( Vector<T,PARTICLETYPE::d> angVel )
+{
+  _angVel = angVel;
+  this->getName() = "VerletParticleDynamicsRotor";
+}
+
+template<typename T, typename PARTICLETYPE, typename PCONDITION>
+void VerletParticleDynamicsRotor<T,PARTICLETYPE,PCONDITION>::process (
+  Particle<T,PARTICLETYPE>& particle, T timeStepSize )
+{
+  using namespace particles::access;
+  //Check for particle condition
+  doWhenMeetingCondition<T,PARTICLETYPE,PCONDITION>( particle,[&](){
+    //Verlet algorithm
+    particles::dynamics::velocityVerletRotor(
+      particle, timeStepSize, _angVel );
+    //Check if rotation matrix provided
+    if constexpr ( providesRotationMatrix<PARTICLETYPE>() ) {
+      //Update rotation matrix
+      updateRotationMatrix( particle );
+    }
+  }); //doWhenMeetingCondition<T,PARTICLETYPE,PCONDITION>
+}
+
 
 template<typename T, typename PARTICLETYPE, bool useCubicBounds, typename PCONDITION>
 VerletParticleDynamicsVelocityWallReflection<T,PARTICLETYPE,useCubicBounds,PCONDITION>::
@@ -188,7 +213,7 @@ void VerletParticleDynamicsWallCapture<T,PARTICLETYPE,useCubicBounds,PCONDITION>
 template<typename T, typename PARTICLETYPE, typename PCONDITION>
 VerletParticleDynamicsMaterialCapture<T,PARTICLETYPE,PCONDITION>::
   VerletParticleDynamicsMaterialCapture(
-    SuperIndicatorMaterial<T,PARTICLETYPE::d>& materialIndicator )
+    std::shared_ptr<SuperIndicatorMaterial<T,PARTICLETYPE::d>> materialIndicator )
   : _materialIndicator(materialIndicator)
 {
   this->getName() = "VerletParticleDynamicsMaterialCapture";
@@ -202,7 +227,7 @@ void VerletParticleDynamicsMaterialCapture<T,PARTICLETYPE,PCONDITION>::process (
   //Execute process of VerletParticleDynamcis
   VerletParticleDynamics<T,PARTICLETYPE,PCONDITION>::process(particle,timeStepSize);
   //Apply material capture
-  boundaries::materialCapture(particle, _materialIndicator);
+  boundaries::materialCapture(particle, *_materialIndicator);
 }
 
 
@@ -210,7 +235,7 @@ template<typename T, typename PARTICLETYPE, typename PCONDITION>
 VerletParticleDynamicsMaterialAwareWallCapture<T,PARTICLETYPE,PCONDITION>::
   VerletParticleDynamicsMaterialAwareWallCapture(
     SolidBoundary<T,PARTICLETYPE::d>& solidBoundary,
-    SuperIndicatorMaterial<T,PARTICLETYPE::d>& materialIndicator )
+    std::shared_ptr<SuperIndicatorMaterial<T,PARTICLETYPE::d>> materialIndicator )
   : _solidBoundary(solidBoundary), _materialIndicator(materialIndicator)
 {
   this->getName() = "VerletParticleDynamicsMaterialAwareWallCapture";
@@ -224,7 +249,122 @@ void VerletParticleDynamicsMaterialAwareWallCapture<T,PARTICLETYPE,PCONDITION>::
   //Execute process of VerletParticleDynamcis
   VerletParticleDynamics<T,PARTICLETYPE,PCONDITION>::process(particle,timeStepSize);
   //Apply wall capture
-  boundaries::wallCaptureMaterialAware(particle, _solidBoundary, _materialIndicator);
+  boundaries::wallCaptureMaterialAware(particle, _solidBoundary, *_materialIndicator);
+}
+
+
+template<typename T, typename PARTICLETYPE, bool useCubicBounds, typename PCONDITION>
+VerletParticleDynamicsEscape<T,PARTICLETYPE,useCubicBounds,PCONDITION>::
+  VerletParticleDynamicsEscape(
+    SolidBoundary<T,PARTICLETYPE::d>& solidBoundary )
+  : _solidBoundary(solidBoundary)
+{
+  this->getName() = "VerletParticleDynamicsEscape";
+}
+
+
+template<typename T, typename PARTICLETYPE, bool useCubicBounds, typename PCONDITION>
+void VerletParticleDynamicsEscape<T,PARTICLETYPE,useCubicBounds,PCONDITION>::process (
+  Particle<T,PARTICLETYPE>& particle, T timeStepSize )
+{
+  //Execute process of VerletParticleDynamcis
+  VerletParticleDynamics<T,PARTICLETYPE,PCONDITION>::process(particle,timeStepSize);
+  //Apply escape boundary
+  boundaries::escape<useCubicBounds>(particle, _solidBoundary);
+}
+
+
+template<typename T, typename PARTICLETYPE, typename PCONDITION>
+VerletParticleDynamicsMaterialEscape<T,PARTICLETYPE,PCONDITION>::
+  VerletParticleDynamicsMaterialEscape(
+    std::shared_ptr<SuperIndicatorMaterial<T,PARTICLETYPE::d>> materialIndicator )
+  : _materialIndicator(materialIndicator)
+{
+  this->getName() = "VerletParticleDynamicsMaterialEscape";
+}
+
+
+template<typename T, typename PARTICLETYPE, typename PCONDITION>
+void VerletParticleDynamicsMaterialEscape<T,PARTICLETYPE,PCONDITION>::process (
+  Particle<T,PARTICLETYPE>& particle, T timeStepSize )
+{
+  //Execute process of VerletParticleDynamcis
+  VerletParticleDynamics<T,PARTICLETYPE,PCONDITION>::process(particle,timeStepSize);
+  //Apply material escape
+  boundaries::materialEscape(particle, *_materialIndicator);
+}
+
+
+template<typename T, typename PARTICLETYPE, typename PCONDITION>
+VerletParticleDynamicsMaterialAwareEscape<T,PARTICLETYPE,PCONDITION>::
+  VerletParticleDynamicsMaterialAwareEscape(
+    SolidBoundary<T,PARTICLETYPE::d>& solidBoundary,
+    std::shared_ptr<SuperIndicatorMaterial<T,PARTICLETYPE::d>> materialIndicator )
+  : _solidBoundary(solidBoundary), _materialIndicator(materialIndicator)
+{
+  this->getName() = "VerletParticleDynamicsMaterialAwareEscape";
+}
+
+
+template<typename T, typename PARTICLETYPE, typename PCONDITION>
+void VerletParticleDynamicsMaterialAwareEscape<T,PARTICLETYPE,PCONDITION>::process (
+  Particle<T,PARTICLETYPE>& particle, T timeStepSize )
+{
+  //Execute process of VerletParticleDynamcis
+  VerletParticleDynamics<T,PARTICLETYPE,PCONDITION>::process(particle,timeStepSize);
+  //Apply escape boundary
+  boundaries::escapeMaterialAware(particle, _solidBoundary, *_materialIndicator);
+}
+
+
+
+template<typename T, typename PARTICLETYPE, typename PCONDITION>
+VerletParticleDynamicsMaterialCaptureAndEscape<T,PARTICLETYPE,PCONDITION>::
+  VerletParticleDynamicsMaterialCaptureAndEscape(
+    std::shared_ptr<SuperIndicatorMaterial<T,PARTICLETYPE::d>> captureMaterialIndicator,
+    std::shared_ptr<SuperIndicatorMaterial<T,PARTICLETYPE::d>> escapeMaterialIndicator )
+  : _captureMaterialIndicator(captureMaterialIndicator),
+    _escapeMaterialIndicator(escapeMaterialIndicator)
+{
+  this->getName() = "VerletParticleDynamicsMaterialCaptureAndEscape";
+}
+
+
+template<typename T, typename PARTICLETYPE, typename PCONDITION>
+void VerletParticleDynamicsMaterialCaptureAndEscape<T,PARTICLETYPE,PCONDITION>::process (
+  Particle<T,PARTICLETYPE>& particle, T timeStepSize )
+{
+  //Execute process of VerletParticleDynamcis
+  VerletParticleDynamics<T,PARTICLETYPE,PCONDITION>::process(particle,timeStepSize);
+  //Apply material escape
+  boundaries::materialCaptureAndEscape(particle, *_captureMaterialIndicator,
+      *_escapeMaterialIndicator);
+}
+
+
+template<typename T, typename PARTICLETYPE, typename PCONDITION>
+VerletParticleDynamicsMaterialAwareWallCaptureAndEscape<T,PARTICLETYPE,PCONDITION>::
+  VerletParticleDynamicsMaterialAwareWallCaptureAndEscape(
+    SolidBoundary<T,PARTICLETYPE::d>& solidBoundary,
+    std::shared_ptr<SuperIndicatorMaterial<T,PARTICLETYPE::d>> captureMaterialIndicator,
+    std::shared_ptr<SuperIndicatorMaterial<T,PARTICLETYPE::d>> escapeMaterialIndicator )
+  : _solidBoundary(solidBoundary),
+    _captureMaterialIndicator(captureMaterialIndicator),
+    _escapeMaterialIndicator(escapeMaterialIndicator)
+{
+  this->getName() = "VerletParticleDynamicsMaterialAwareWallCaptureAndEscape";
+}
+
+
+template<typename T, typename PARTICLETYPE, typename PCONDITION>
+void VerletParticleDynamicsMaterialAwareWallCaptureAndEscape<T,PARTICLETYPE,PCONDITION>::process (
+  Particle<T,PARTICLETYPE>& particle, T timeStepSize )
+{
+  //Execute process of VerletParticleDynamcis
+  VerletParticleDynamics<T,PARTICLETYPE,PCONDITION>::process(particle,timeStepSize);
+  //Apply escape boundary
+  boundaries::wallCaptureAndEscapeMaterialAware(particle, _solidBoundary,
+      *_captureMaterialIndicator, *_escapeMaterialIndicator);
 }
 
 

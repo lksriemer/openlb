@@ -158,6 +158,26 @@ bool BlockExtractIndicatorF3D<T>::operator()(T output[], const int input[])
 }
 
 
+template <typename T, typename T2>
+BlockTypecastF3D<T,T2>::BlockTypecastF3D(BlockF3D<T2>& f)
+  : BlockF3D<T>(f.getBlockStructure(), f.getTargetDim()),
+    _f(f)
+{
+  this->getName() = f.getName();
+}
+
+template <typename T, typename T2>
+bool BlockTypecastF3D<T,T2>::operator()(T output[], const int input[])
+{
+  T2 result[this->getTargetDim()];
+  _f(result, input);
+  for (int i = 0; i < this->getTargetDim(); ++i) {
+    output[i] = static_cast<T>(result[i]);
+  }
+  return true;
+}
+
+
 template <typename T, typename DESCRIPTOR>
 BlockLatticeF3D<T,DESCRIPTOR>::BlockLatticeF3D
 (BlockLattice<T,DESCRIPTOR>& blockStructure, int targetDim)

@@ -45,13 +45,16 @@
 namespace olb {
 
 
-template<typename T, typename W>
-SuperVTMwriter2D<T,W>::SuperVTMwriter2D( std::string name, int overlap, bool binary )
+template<typename T, typename OUT_T, typename W>
+SuperVTMwriter2D<T,OUT_T,W>::SuperVTMwriter2D( std::string name, int overlap, bool binary )
   : clout( std::cout,"SuperVTMwriter2D" ), _createFile(false), _name(name), _overlap(overlap), _binary(binary)
-{}
+{
+  static_assert(std::is_same_v<OUT_T, float> || std::is_same_v<OUT_T, double>,
+              "OUT_T must be either float or double");
+}
 
-template<typename T, typename W>
-void SuperVTMwriter2D<T,W>::write(int iT)
+template<typename T, typename OUT_T, typename W>
+void SuperVTMwriter2D<T,OUT_T,W>::write(int iT)
 {
   int rank = 0;
 #ifdef PARALLEL_MODE_MPI
@@ -125,8 +128,8 @@ void SuperVTMwriter2D<T,W>::write(int iT)
   }
 }
 
-template<typename T, typename W>
-void SuperVTMwriter2D<T,W>::write(SuperF2D<T,W>& f, int iT)
+template<typename T, typename OUT_T, typename W>
+void SuperVTMwriter2D<T,OUT_T, W>::write(SuperF2D<T,W>& f, int iT)
 {
   CuboidGeometry2D<T> const& cGeometry = f.getSuperStructure().getCuboidGeometry();
   LoadBalancer<T>& load = f.getSuperStructure().getLoadBalancer();
@@ -182,14 +185,14 @@ void SuperVTMwriter2D<T,W>::write(SuperF2D<T,W>& f, int iT)
   } // cuboid
 }
 
-template<typename T, typename W>
-void SuperVTMwriter2D<T,W>::write(std::shared_ptr<SuperF2D<T,W>> ptr_f, int iT)
+template<typename T, typename OUT_T, typename W>
+void SuperVTMwriter2D<T,OUT_T,W>::write(std::shared_ptr<SuperF2D<T,W>> ptr_f, int iT)
 {
   write(*ptr_f, iT);
 }
 
-template<typename T, typename W>
-void SuperVTMwriter2D<T,W>::createMasterFile()
+template<typename T, typename OUT_T, typename W>
+void SuperVTMwriter2D<T,OUT_T,W>::createMasterFile()
 {
   int rank = 0;
 #ifdef PARALLEL_MODE_MPI
@@ -204,27 +207,27 @@ void SuperVTMwriter2D<T,W>::createMasterFile()
   }
 }
 
-template<typename T, typename W>
-void SuperVTMwriter2D<T,W>::addFunctor(SuperF2D<T,W>& f)
+template<typename T, typename OUT_T, typename W>
+void SuperVTMwriter2D<T,OUT_T,W>::addFunctor(SuperF2D<T,W>& f)
 {
   _pointerVec.push_back(&f);
 }
 
-template<typename T, typename W>
-void SuperVTMwriter2D<T,W>::addFunctor(SuperF2D<T,W>& f, const std::string& functorName)
+template<typename T, typename OUT_T, typename W>
+void SuperVTMwriter2D<T,OUT_T,W>::addFunctor(SuperF2D<T,W>& f, const std::string& functorName)
 {
   f.getName() = functorName;
   _pointerVec.push_back(&f);
 }
 
-template<typename T, typename W>
-void SuperVTMwriter2D<T,W>::clearAddedFunctors()
+template<typename T, typename OUT_T, typename W>
+void SuperVTMwriter2D<T,OUT_T,W>::clearAddedFunctors()
 {
   _pointerVec.clear();
 }
 
-template<typename T, typename W>
-std::string SuperVTMwriter2D<T,W>::getName() const
+template<typename T, typename OUT_T, typename W>
+std::string SuperVTMwriter2D<T,OUT_T,W>::getName() const
 {
   return _name;
 }
@@ -233,8 +236,8 @@ std::string SuperVTMwriter2D<T,W>::getName() const
 
 
 ////////////////////private member functions///////////////////////////////////
-template<typename T, typename W>
-void SuperVTMwriter2D<T,W>::preambleVTI (const std::string& fullName,
+template<typename T, typename OUT_T, typename W>
+void SuperVTMwriter2D<T,OUT_T,W>::preambleVTI (const std::string& fullName,
     int x0, int y0, int x1, int y1, T originX, T originY, T delta)
 {
   const BaseType<T> d_delta = delta;
@@ -260,8 +263,8 @@ void SuperVTMwriter2D<T,W>::preambleVTI (const std::string& fullName,
   fout.close();
 }
 
-template<typename T, typename W>
-void SuperVTMwriter2D<T,W>::closeVTI(const std::string& fullNamePiece)
+template<typename T, typename OUT_T, typename W>
+void SuperVTMwriter2D<T,OUT_T,W>::closeVTI(const std::string& fullNamePiece)
 {
   std::ofstream fout(fullNamePiece, std::ios::app );
   if (!fout) {
@@ -272,8 +275,8 @@ void SuperVTMwriter2D<T,W>::closeVTI(const std::string& fullNamePiece)
   fout.close();
 }
 
-template<typename T, typename W>
-void SuperVTMwriter2D<T,W>::preamblePVD(const std::string& fullNamePVD)
+template<typename T, typename OUT_T, typename W>
+void SuperVTMwriter2D<T,OUT_T,W>::preamblePVD(const std::string& fullNamePVD)
 {
   std::ofstream fout(fullNamePVD, std::ios::trunc);
   if (!fout) {
@@ -286,8 +289,8 @@ void SuperVTMwriter2D<T,W>::preamblePVD(const std::string& fullNamePVD)
   fout.close();
 }
 
-template<typename T, typename W>
-void SuperVTMwriter2D<T,W>::closePVD(const std::string& fullNamePVD)
+template<typename T, typename OUT_T, typename W>
+void SuperVTMwriter2D<T,OUT_T,W>::closePVD(const std::string& fullNamePVD)
 {
   std::ofstream fout(fullNamePVD, std::ios::app );
   if (!fout) {
@@ -298,8 +301,8 @@ void SuperVTMwriter2D<T,W>::closePVD(const std::string& fullNamePVD)
   fout.close();
 }
 
-template<typename T, typename W>
-void SuperVTMwriter2D<T,W>::preambleVTM(const std::string& fullNamePVD)
+template<typename T, typename OUT_T, typename W>
+void SuperVTMwriter2D<T,OUT_T,W>::preambleVTM(const std::string& fullNamePVD)
 {
   std::ofstream fout(fullNamePVD, std::ios::trunc);
   if (!fout) {
@@ -312,8 +315,8 @@ void SuperVTMwriter2D<T,W>::preambleVTM(const std::string& fullNamePVD)
   fout.close();
 }
 
-template<typename T, typename W>
-void SuperVTMwriter2D<T,W>::closeVTM(const std::string& fullNamePVD)
+template<typename T, typename OUT_T, typename W>
+void SuperVTMwriter2D<T,OUT_T,W>::closeVTM(const std::string& fullNamePVD)
 {
   std::ofstream fout(fullNamePVD, std::ios::app );
   if (!fout) {
@@ -324,8 +327,8 @@ void SuperVTMwriter2D<T,W>::closeVTM(const std::string& fullNamePVD)
   fout.close();
 }
 
-template<typename T, typename W>
-void SuperVTMwriter2D<T,W>::dataVTM(int iC, const std::string& fullNamePVD,
+template<typename T, typename OUT_T, typename W>
+void SuperVTMwriter2D<T,OUT_T,W>::dataVTM(int iC, const std::string& fullNamePVD,
                                     const std::string& namePiece)
 {
   std::ofstream fout(fullNamePVD, std::ios::app);
@@ -339,8 +342,8 @@ void SuperVTMwriter2D<T,W>::dataVTM(int iC, const std::string& fullNamePVD,
   fout.close();
 }
 
-template<typename T, typename W>
-void SuperVTMwriter2D<T,W>::dataPVDmaster(int iT,
+template<typename T, typename OUT_T, typename W>
+void SuperVTMwriter2D<T,OUT_T,W>::dataPVDmaster(int iT,
     const std::string& fullNamePVDMaster,
     const std::string& namePiece)
 {
@@ -359,18 +362,25 @@ void SuperVTMwriter2D<T,W>::dataPVDmaster(int iT,
   }
 }
 
-template<typename T, typename W>
-void SuperVTMwriter2D<T,W>::dataArray(const std::string& fullName,
+template<typename T, typename OUT_T, typename W>
+void SuperVTMwriter2D<T,OUT_T,W>::dataArray(const std::string& fullName,
                                       SuperF2D<T,W>& f, int iC, int nx, int ny)
 {
+  std::cout << "DIOCANE" <<std::endl <<std::endl <<std::endl <<std::endl <<std::endl;
   std::ofstream fout( fullName, std::ios::out | std::ios::app );
   if (!fout) {
     clout << "Error: could not open " << fullName << std::endl;
   }
 
   fout << "<DataArray " ;
-  fout << "type=\"Float32\" Name=\"" << f.getName() << "\" "
-       << "NumberOfComponents=\"" << f.getTargetDim() <<"\">\n";
+  if constexpr (std::is_same_v<OUT_T, float>) {
+    fout << "type=\"Float32\" Name=\"" << f.getName() << "\" "
+         << "NumberOfComponents=\"" << f.getTargetDim() <<"\">\n";
+  }
+  else if constexpr (std::is_same_v<OUT_T, double>) {
+    fout << "type=\"Float64\" Name=\"" << f.getName() << "\" "
+         << "NumberOfComponents=\"" << f.getTargetDim() <<"\">\n";
+  }
 
   int i[3] = {iC, 0, 0};
   W evaluated[f.getTargetDim()];
@@ -393,8 +403,8 @@ void SuperVTMwriter2D<T,W>::dataArray(const std::string& fullName,
   fout.close();
 }
 
-template<typename T, typename W>
-void SuperVTMwriter2D<T,W>::dataArrayBinary(const std::string& fullName,
+template<typename T, typename OUT_T, typename W>
+void SuperVTMwriter2D<T,OUT_T,W>::dataArrayBinary(const std::string& fullName,
     SuperF2D<T,W>& f, int iC, int nx, int ny)
 {
   std::ofstream fout( fullName, std::ios::out | std::ios::app );
@@ -403,9 +413,16 @@ void SuperVTMwriter2D<T,W>::dataArrayBinary(const std::string& fullName,
   }
 
   fout << "<DataArray ";
-  fout << "type=\"Float32\" Name=\"" << f.getName() << "\" "
-       << "format=\"binary\" encoding=\"base64\" "
-       << "NumberOfComponents=\"" << f.getTargetDim() <<"\">\n";
+  if constexpr (std::is_same_v<OUT_T, float>) {
+    fout << "type=\"Float32\" Name=\"" << f.getName() << "\" "
+         << "format=\"binary\" encoding=\"base64\" "
+         << "NumberOfComponents=\"" << f.getTargetDim() <<"\">\n";
+  }
+  else if constexpr (std::is_same_v<OUT_T, double>) {
+    fout << "type=\"Float64\" Name=\"" << f.getName() << "\" "
+         << "format=\"binary\" encoding=\"base64\" "
+         << "NumberOfComponents=\"" << f.getTargetDim() <<"\">\n";
+  }
   fout.close();
 
   std::ofstream ofstr( fullName, std::ios::out | std::ios::app | std::ios::binary );
@@ -414,13 +431,13 @@ void SuperVTMwriter2D<T,W>::dataArrayBinary(const std::string& fullName,
   }
 
   size_t fullSize = f.getTargetDim() * (nx+2*_overlap) * (ny+2*_overlap);    //  how many numbers to write
-  size_t binarySize = size_t( fullSize*sizeof(float) );
+  size_t binarySize = size_t( fullSize*sizeof(OUT_T) );
   // writes first number, which have to be the size(byte) of the following data
   Base64Encoder<unsigned int> sizeEncoder(ofstr, 1);
   unsigned int uintBinarySize = (unsigned int)binarySize;
   sizeEncoder.encode(&uintBinarySize, 1);
   //  write numbers from functor
-  Base64Encoder<float>* dataEncoder = new Base64Encoder<float>( ofstr, fullSize );
+  Base64Encoder<OUT_T>* dataEncoder = new Base64Encoder<OUT_T>( ofstr, fullSize );
 
   int i[3] = {iC, 0, 0};
   W evaluated[f.getTargetDim()];
@@ -428,12 +445,12 @@ void SuperVTMwriter2D<T,W>::dataArrayBinary(const std::string& fullName,
     evaluated[iDim] = W();
   }
   int itter = 0;
-  std::unique_ptr<float[]> bufferFloat(new float[fullSize]);
+  std::unique_ptr<OUT_T[]> bufferFloat(new OUT_T[fullSize]);
   for (i[2] = -_overlap; i[2] < ny+_overlap; ++i[2]) {
     for (i[1] = -_overlap; i[1] < nx+_overlap; ++i[1]) {
       f(evaluated,i);
       for (int iDim = 0; iDim < f.getTargetDim(); ++iDim) {
-        bufferFloat[ itter ] = float( evaluated[iDim] );
+        bufferFloat[ itter ] = OUT_T( evaluated[iDim] );
         itter++;
       }
     }
@@ -450,8 +467,8 @@ void SuperVTMwriter2D<T,W>::dataArrayBinary(const std::string& fullName,
   delete dataEncoder;
 }
 
-template<typename T, typename W>
-void SuperVTMwriter2D<T,W>::closePiece(const std::string& fullNamePiece)
+template<typename T, typename OUT_T, typename W>
+void SuperVTMwriter2D<T,OUT_T,W>::closePiece(const std::string& fullNamePiece)
 {
   std::ofstream fout(fullNamePiece, std::ios::app );
   if (!fout) {

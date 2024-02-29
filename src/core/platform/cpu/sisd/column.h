@@ -203,6 +203,11 @@ public:
     refresh();
   }
 
+  void resize(std::size_t count)
+  {
+    throw std::logic_error("Cyclic column can not be resized");
+  }
+
   void setProcessingContext(ProcessingContext) { };
 
   /// Number of data blocks for the serializable interface

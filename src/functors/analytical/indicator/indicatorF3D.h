@@ -1,6 +1,6 @@
 /*  This file is part of the OpenLB library
  *
- *  Copyright (C) 2014-2016 Cyril Masquelier, Mathias J. Krause, Albert Mink
+ *  Copyright (C) 2014-2016 Cyril Masquelier, Mathias J. Krause, Albert Mink, Berkay Oralalp
  *  E-mail contact: info@openlb.net
  *  The most recent release of OpenLB can be downloaded at
  *  <http://www.openlb.net/>
@@ -26,7 +26,6 @@
 
 #include "indicatorBaseF3D.h"
 #include "io/xmlReader.h"
-#include "sdf.h"
 #include "utilities/functorPtr.h"
 
 
@@ -61,10 +60,14 @@ class IndicatorTranslate3D : public IndicatorF3D<S> {
 private:
   std::array<S,3> _translate;
   IndicatorF3D<S>& _indicator;
+  Vector<S,3> _myMin;
+  Vector<S,3> _myMax;
 public:
   IndicatorTranslate3D(std::array<S,3> translate, IndicatorF3D<S>& indicator);
   bool operator() (bool output[], const S input[]) override;
   S signedDistance(const Vector<S,3>& input) override;
+  Vector<S,3>& getMin() override;
+  Vector<S,3>& getMax() override;
 };
 
 
@@ -282,6 +285,18 @@ public:
   /// Returns signed distance to the nearest point on the indicator surface
   S signedDistance(const Vector<S,3>& input) override;
 };
+
+template <typename T>
+class IndicatorSDF3D : public IndicatorF3D<T> {
+private:
+  std::function<T(Vector<T, 3>)> _f;
+
+public:
+  IndicatorSDF3D(std::function<T(Vector<T, 3>)> f);
+
+  bool operator()(bool output[], const T input[]) override;
+};
+
 
 /////////creatorFunctions//////////////////////
 // creator function for geometric primitives

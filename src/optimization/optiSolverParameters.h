@@ -69,8 +69,7 @@ struct Reader<OptiOutput<T,MODE>, TAG> : public ReaderBase<OptiOutput<T,MODE>> {
   using ReaderBase<OptiOutput<T,MODE>>::ReaderBase;
 
   void read(XMLreader const& xml)
-  {
-    }
+  { }
 };
 
 
@@ -99,11 +98,11 @@ struct DirectOptiResults : public OptiResultsBase {
 template<typename T, typename LATTICES>
 struct DistributedOptiSimulationBase : public OptiSimulationBase {
 
-  static constexpr unsigned dim = LATTICES::values_t::template get<0>::d;
+  using descriptor = typename LATTICES::values_t::template get<0>;
 
-  int                                   fieldDim {dim};
+  int                                   fieldDim {descriptor::d};
   int                                   controlMaterial {0};
-  std::shared_ptr<AnalyticalF<dim,T,T>> controlledField;  // this is set by OptiCaseDual
+  std::shared_ptr<SuperLatticeF<T,descriptor>> controlledField;  // this is set by OptiCaseDual
 };
 
 
@@ -115,7 +114,10 @@ template<typename T, typename LATTICES>
 struct DistributedOptiSimulation<T,LATTICES,opti::SolverMode::Primal>
   : public DistributedOptiSimulationBase<T,LATTICES> {
 
+  //using descriptor = typename LATTICES::values_t::template get<0>;
+
   std::shared_ptr<SuperF3D<T,T>> referenceSolution;
+  std::shared_ptr<SuperF3D<T,T>> referencePorosity;
 };
 
 template<typename T, typename LATTICES>
@@ -123,11 +125,11 @@ struct DistributedOptiSimulation<T,LATTICES,opti::SolverMode::Dual>
   : public DistributedOptiSimulationBase<T,LATTICES> {
 
   using descriptor = typename LATTICES::values_t::template get<0>;
-  static constexpr unsigned                   dim = descriptor::d;
+  static constexpr unsigned                    dim = descriptor::d;
 
   std::shared_ptr<SuperLatticeF<T,descriptor>> fpop;
-  std::shared_ptr<AnalyticalF<dim,T,T>>       dObjectiveDf;
-  std::shared_ptr<AnalyticalF<dim,T,T>>       dObjectiveDcontrol;
+  std::shared_ptr<SuperF3D<T,T>>               dObjectiveDf;
+  std::shared_ptr<SuperF3D<T,T>>               dObjectiveDcontrol;
 };
 
 

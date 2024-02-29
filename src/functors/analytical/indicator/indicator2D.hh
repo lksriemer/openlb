@@ -33,5 +33,3 @@
 #include "smoothIndicatorBaseF2D.hh"
 #include "smoothIndicatorF2D.hh"
 #include "smoothIndicatorCalcF2D.hh"
-
-#include "sdf.hh"

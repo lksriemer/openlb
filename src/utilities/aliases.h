@@ -101,14 +101,14 @@ using CuboidGeometry = std::conditional_t<
                      CuboidGeometry3D<T>
                      >;
 
-template<typename T, typename W> class SuperVTMwriter2D;
-template<typename T, typename W> class SuperVTMwriter3D;
+template<typename T, typename OUT_T, typename W> class SuperVTMwriter2D;
+template<typename T, typename OUT_T, typename W> class SuperVTMwriter3D;
 
-template <typename T, unsigned DIM, typename W=T>
+template <typename T, unsigned DIM, typename OUT_T=float, typename W=T>
 using SuperVTMwriter = std::conditional_t<
                      DIM == 2,
-                     SuperVTMwriter2D<T,W>,
-                     SuperVTMwriter3D<T,W>
+                     SuperVTMwriter2D<T,OUT_T,W>,
+                     SuperVTMwriter3D<T,OUT_T,W>
                      >;
 
 template <typename T, typename DESCRIPTOR> class SuperLatticeGeometry2D;
@@ -231,6 +231,16 @@ using BlockIndicatorMaterial = std::conditional_t<
   BlockIndicatorMaterial3D<T>
 >;
 
+template <typename T> class BlockIndicatorBoundaryNeighbor2D;
+template <typename T> class BlockIndicatorBoundaryNeighbor3D;
+
+template <typename T, unsigned D>
+using BlockIndicatorBoundaryNeighbor = std::conditional_t<
+  D == 2,
+  BlockIndicatorBoundaryNeighbor2D<T>,
+  BlockIndicatorBoundaryNeighbor3D<T>
+>;
+
 template <typename T> class BlockIndicatorFfromIndicatorF2D;
 template <typename T> class BlockIndicatorFfromIndicatorF3D;
 
@@ -271,6 +281,16 @@ using SmoothIndicatorF = std::conditional_t<
   SmoothIndicatorF3D<T,T,PARTICLE>
 >;
 
+template <typename T> class SuperIndicatorFfromIndicatorF2D;
+template <typename T> class SuperIndicatorFfromIndicatorF3D;
+
+template <typename T, unsigned D>
+using SuperIndicatorFfromIndicatorF = std::conditional_t<
+  D == 2,
+  SuperIndicatorFfromIndicatorF2D<T>,
+  SuperIndicatorFfromIndicatorF3D<T>
+>;
+
 template <typename T> class SuperIndicatorMaterial2D;
 template <typename T> class SuperIndicatorMaterial3D;
 
@@ -279,6 +299,16 @@ using SuperIndicatorMaterial = std::conditional_t<
   D == 2,
   SuperIndicatorMaterial2D<T>,
   SuperIndicatorMaterial3D<T>
+>;
+
+template <typename T> class SuperIndicatorBoundaryNeighbor2D;
+template <typename T> class SuperIndicatorBoundaryNeighbor3D;
+
+template <typename T, unsigned D>
+using SuperIndicatorBoundaryNeighbor = std::conditional_t<
+  D == 2,
+  SuperIndicatorBoundaryNeighbor2D<T>,
+  SuperIndicatorBoundaryNeighbor3D<T>
 >;
 
 template <typename T, typename DESCRIPTOR, typename FIELD> class SuperField2D;

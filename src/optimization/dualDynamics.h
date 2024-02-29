@@ -1,6 +1,7 @@
 /*  This file is part of the OpenLB library
  *
  *  Copyright (C) 2012 Mathias J. Krause
+ *                2024 Julius Jessberger, Shota Ito, Adrian Kummerlaender
  *  E-mail contact: info@openlb.net
  *  The most recent release of OpenLB can be downloaded at
  *  <http://www.openlb.net/>
@@ -35,8 +36,108 @@
 
 #include "dualLbHelpers.h"
 
+#include "utilities/vectorHelpers.h"
+
 // All OpenLB code is contained in this namespace.
 namespace olb {
+
+namespace collision {
+
+struct DualPorousBGK {
+  using parameters = typename meta::list<descriptors::OMEGA>;
+
+  static std::string getName() {
+    return "DualPorousBGK";
+  }
+
+  template <typename DESCRIPTOR, typename MOMENTA, typename EQUILIBRIUM>
+  struct type {
+    using EquilibriumF = typename EQUILIBRIUM::template type<DESCRIPTOR,MOMENTA>;
+    using MomentaF     = typename MOMENTA::template type<DESCRIPTOR>;
+
+    template <CONCEPT(MinimalCell) CELL, typename PARAMETERS, typename V=typename CELL::value_t>
+    CellStatistic<V> apply(CELL& cell, PARAMETERS& parameters) any_platform {
+      // Revert for backwards-in-time propagation
+      //cell.revert();
+      for (int iPop=1; iPop <= DESCRIPTOR::q/2; ++iPop) {
+        V cell_iPop = cell[iPop];
+        cell[iPop] = cell[descriptors::opposite<DESCRIPTOR>(iPop)];
+        cell[descriptors::opposite<DESCRIPTOR>(iPop)] = cell_iPop;
+      }
+
+      // Preparation
+      const auto pop_f =   cell.template getField<descriptors::F>();
+      const auto dJdF  =   cell.template getFieldPointer<descriptors::DJDF>();
+      const V d      =  cell.template getField<descriptors::POROSITY>();
+      const V omega = parameters.template get<descriptors::OMEGA>();
+
+      // Forward density and velocity
+      V rho_f { };
+      V u_f[DESCRIPTOR::d] { };
+      //this->computeRhoU( pop_f.data(), rho_f, u_f);
+      rho_f = V();
+      for (int iD=0; iD < DESCRIPTOR::d; ++iD) {
+        u_f[iD] = V();
+      }
+      for (int iPop=0; iPop < DESCRIPTOR::q; ++iPop) {
+        rho_f += pop_f[iPop];
+        for (int iD=0; iD < DESCRIPTOR::d; ++iD) {
+          u_f[iD] += pop_f[iPop]*descriptors::c<DESCRIPTOR>(iPop,iD);
+        }
+      }
+      rho_f += (V)1;
+      for (int iD=0; iD < DESCRIPTOR::d; ++iD) {
+        u_f[iD] /= rho_f;
+      }
+
+      // Adjoint equilibrium
+      V pheq[DESCRIPTOR::q] { };
+      for (int i=0; i < DESCRIPTOR::q; ++i) {
+        pheq[i] = V{0};
+        for (int j=0; j < DESCRIPTOR::q; ++j) {
+          V feq_j = equilibrium<DESCRIPTOR>::secondOrder(j, rho_f, u_f)
+              + descriptors::t<V,DESCRIPTOR>(j);
+          V dot_ij = V();
+          for (int iD=0; iD < DESCRIPTOR::d; ++iD) {
+            dot_ij += ( descriptors::c<DESCRIPTOR>(j,iD) - d*u_f[iD] )
+              * ( descriptors::c<DESCRIPTOR>(i,iD) - u_f[iD] );
+          }
+          pheq[i] += cell[j]*feq_j*( V{1} + descriptors::invCs2<V,DESCRIPTOR>()*d*dot_ij );
+        }
+        pheq[i] /= rho_f;
+      }
+
+      // Collision
+      for (int i=0; i < DESCRIPTOR::q; ++i) {
+        cell[i] = cell[i] - omega*( cell[i] - pheq[i] ) + dJdF[i];
+      }
+
+      // Statistics
+      V rho_phi, u_phi[DESCRIPTOR::d];
+      MomentaF().computeRhoU( cell, rho_phi, u_phi );
+      V uSqr_phi = util::normSqr<V,DESCRIPTOR::d>( u_phi );
+
+      // Undo revert
+      //cell.revert();
+      for (int iPop=1; iPop <= DESCRIPTOR::q/2; ++iPop) {
+        V cell_iPop = cell[iPop];
+        cell[iPop] = cell[descriptors::opposite<DESCRIPTOR>(iPop)];
+        cell[descriptors::opposite<DESCRIPTOR>(iPop)] = cell_iPop;
+      }
+      return {rho_phi, uSqr_phi};
+    };
+  };
+};
+
+}
+
+template<typename T, typename DESCRIPTOR, typename MOMENTA=momenta::BulkTuple>
+using DualPorousBGKDynamics = dynamics::Tuple<
+  T, DESCRIPTOR,
+  MOMENTA,
+  equilibria::SecondOrder,
+  collision::DualPorousBGK
+>;
 
 /// All optimization code is contained in this namespace.
 namespace opti {
@@ -82,10 +183,8 @@ DualForcedBGKdynamics<T,DESCRIPTOR,MOMENTA>::DualForcedBGKdynamics (
 template<typename T, typename DESCRIPTOR, typename MOMENTA>
 void DualForcedBGKdynamics<T,DESCRIPTOR,MOMENTA>::defineRho(Cell<T,DESCRIPTOR>& cell, T rho)
 {
-
-  for (int iPop=0; iPop < DESCRIPTOR::q; ++iPop) {
-    cell[iPop]=rho;
-  }
+  // The meaning of this function is not clear. Please contact Julius.
+  throw std::bad_function_call();
 }
 
 template<typename T, typename DESCRIPTOR, typename MOMENTA>
@@ -211,10 +310,8 @@ DualPorousBGKdynamics<T,DESCRIPTOR,MOMENTA>::DualPorousBGKdynamics (
 template<typename T, typename DESCRIPTOR, typename MOMENTA>
 void DualPorousBGKdynamics<T,DESCRIPTOR,MOMENTA>::defineRho(Cell<T,DESCRIPTOR>& cell, T rho)
 {
-
-  for (int iPop=0; iPop < DESCRIPTOR::q; ++iPop) {
-    cell[iPop]=rho;
-  }
+  // The meaning of this function is not clear. Please contact Julius.
+  throw std::bad_function_call();
 }
 
 template<typename T, typename DESCRIPTOR, typename MOMENTA>
@@ -312,3 +409,5 @@ void DualPorousBGKdynamics<T,DESCRIPTOR,MOMENTA>::setOmega(T omega_)
 } // namespace olb
 
 #endif
+
+#include "dualDynamics.cse.h"

@@ -46,7 +46,7 @@ using T = FLOATING_POINT_TYPE;
 typedef D2Q9<CHEM_POTENTIAL,FORCE> DESCRIPTOR;
 
 // Parameters for the simulation setup
-const int N  = 100;
+const int N  = 50;
 const T nx   = 800.;
 const T ny   = 100.;
 const T dx = ny / N;
@@ -129,16 +129,19 @@ void prepareLattice( SuperLattice<T, DESCRIPTOR>& sLattice1,
   clout << "Prepare Lattice ..." << std::endl;
 
   // define lattice dynamics
+  clout << "Prepare Lattice: Define lattice dynamics ..." << std::endl;
   sLattice1.defineDynamics<ForcedBGKdynamics>(superGeometry, 1);
   sLattice2.defineDynamics<FreeEnergyBGKdynamics>(superGeometry, 1);
   sLattice3.defineDynamics<FreeEnergyBGKdynamics>(superGeometry, 1);
 
   // add wall boundary
+  clout << "Prepare Lattice: Add wall boundary ..." << std::endl;
   setFreeEnergyWallBoundary<T,DESCRIPTOR>(sLattice1, superGeometry, 2, alpha, kappa1, kappa2, kappa3, h1, h2, h3, 1);
   setFreeEnergyWallBoundary<T,DESCRIPTOR>(sLattice2, superGeometry, 2, alpha, kappa1, kappa2, kappa3, h1, h2, h3, 2);
   setFreeEnergyWallBoundary<T,DESCRIPTOR>(sLattice3, superGeometry, 2, alpha, kappa1, kappa2, kappa3, h1, h2, h3, 3);
 
   // add inlet boundaries
+  clout << "Prepare Lattice: Add inlet boundaries ..." << std::endl;
   T omega = converter.getLatticeRelaxationFrequency();
   auto inlet1Indicator = superGeometry.getMaterialIndicator(3);
   setFreeEnergyInletBoundary<T,DESCRIPTOR>(sLattice1, omega, inlet1Indicator, "velocity", 1);
@@ -156,12 +159,14 @@ void prepareLattice( SuperLattice<T, DESCRIPTOR>& sLattice1,
   setFreeEnergyInletBoundary<T,DESCRIPTOR>(sLattice3, omega, inlet3Indicator, "velocity", 3);
 
   // add outlet boundary
+  clout << "Prepare Lattice: Add outlet boundary ..." << std::endl;
   auto outletIndicator = superGeometry.getMaterialIndicator(8);
   setFreeEnergyOutletBoundary<T,DESCRIPTOR>(sLattice1, omega, outletIndicator, "density",1);
   setFreeEnergyOutletBoundary<T,DESCRIPTOR>(sLattice2, omega, outletIndicator, "density",2);
   setFreeEnergyOutletBoundary<T,DESCRIPTOR>(sLattice3, omega, outletIndicator, "density",3);
 
   // bulk initial conditions
+  clout << "Prepare Lattice: Bulk initial conditions ..." << std::endl;
   std::vector<T> v( 2,T() );
   AnalyticalConst2D<T,T> zeroVelocity( v );
 
@@ -184,6 +189,7 @@ void prepareLattice( SuperLattice<T, DESCRIPTOR>& sLattice1,
   sLattice3.iniEquilibrium( allIndicator, psi, zeroVelocity );
 
   // inlet boundary conditions
+  clout << "Prepare Lattice: Inlet boundary conditions ..." << std::endl;
   Poiseuille2D<T> inlet1U( superGeometry, 3, 1.5*inlet1Velocity, 0. );
   sLattice1.defineU( inlet1Indicator, inlet1U );
   sLattice2.defineRho( inlet1Indicator, phi );
@@ -204,6 +210,7 @@ void prepareLattice( SuperLattice<T, DESCRIPTOR>& sLattice1,
   sLattice3.defineRho( inlet3Indicator, psi );
 
   // outlet initial / boundary conditions
+  clout << "Prepare Lattice: Outlet initial / Boundary conditions ..." << std::endl;
   AnalyticalConst2D<T,T> rhoOutlet( outletDensity );
   AnalyticalIdentity2D<T,T> phiOutlet( zero );
   AnalyticalIdentity2D<T,T> psiOutlet( rhoOutlet );
@@ -218,10 +225,12 @@ void prepareLattice( SuperLattice<T, DESCRIPTOR>& sLattice1,
   sLattice3.setParameter<collision::FreeEnergy::GAMMA>(gama);
 
   // initialise lattices
+  clout << "Prepare Lattice: Initialise lattices ..." << std::endl;
   sLattice1.initialize();
   sLattice2.initialize();
   sLattice3.initialize();
 
+  clout << "Prepare Lattice: Communicate ..." << std::endl;
   sLattice1.communicate();
   sLattice2.communicate();
   sLattice3.communicate();
@@ -248,7 +257,7 @@ void prepareLattice( SuperLattice<T, DESCRIPTOR>& sLattice1,
   clout << "Prepare Lattice ... OK" << std::endl;
 }
 
-
+/**
 void prepareCoupling(SuperLattice<T, DESCRIPTOR>& sLattice1,
                      SuperLattice<T, DESCRIPTOR>& sLattice2,
                      SuperLattice<T, DESCRIPTOR>& sLattice3,
@@ -300,7 +309,7 @@ void prepareCoupling(SuperLattice<T, DESCRIPTOR>& sLattice1,
 
   clout << "Add lattice coupling ... OK!" << std::endl;
 }
-
+**/
 
 void getResults( SuperLattice<T, DESCRIPTOR>& sLattice1,
                  SuperLattice<T, DESCRIPTOR>& sLattice2,
@@ -335,6 +344,7 @@ void getResults( SuperLattice<T, DESCRIPTOR>& sLattice1,
 
   // Writes the VTK files
   if ( iT%vtkIter==0 ) {
+    sLattice1.setProcessingContext(ProcessingContext::Evaluation);
     SuperLatticeVelocity2D<T, DESCRIPTOR> velocity( sLattice1 );
     SuperLatticeDensity2D<T, DESCRIPTOR> density1( sLattice1 );
     density1.getName() = "rho";
@@ -410,7 +420,85 @@ int main( int argc, char *argv[] )
   //prepareLattice and set boundaryConditions
   prepareLattice( sLattice1, sLattice2, sLattice3, converter, superGeometry );
 
-  prepareCoupling( sLattice1, sLattice2, sLattice3, superGeometry );
+  // Prepare Coupling
+  clout << "Add lattice coupling" << std::endl;
+
+  //FreeEnergyDensityOutletGenerator2D<T,DESCRIPTOR> coupling1( outletDensity );
+  SuperLatticeCoupling coupling1(
+  DensityOutletCoupling2D{},
+  names::A{}, sLattice1,
+  names::B{}, sLattice2,
+  names::C{}, sLattice3
+  );
+
+  coupling1.template setParameter<DensityOutletCoupling2D::RHO>(outletDensity);
+
+  coupling1.restrictTo(superGeometry.getMaterialIndicator({8}));
+
+
+  //FreeEnergyChemicalPotentialGenerator2D<T,DESCRIPTOR> coupling2( alpha, kappa1, kappa2, kappa3 );
+  SuperLatticeCoupling coupling2(
+  ChemicalPotentialCoupling2D{},
+  names::A{}, sLattice1,
+  names::B{}, sLattice2,
+  names::C{}, sLattice3
+  );
+
+  coupling2.template setParameter<ChemicalPotentialCoupling2D::ALPHA>(alpha);
+  coupling2.template setParameter<ChemicalPotentialCoupling2D::KAPPA1>(kappa1);
+  coupling2.template setParameter<ChemicalPotentialCoupling2D::KAPPA2>(kappa2);
+  coupling2.template setParameter<ChemicalPotentialCoupling2D::KAPPA2>(kappa3);
+  coupling2.restrictTo(superGeometry.getMaterialIndicator({1}));
+
+  //FreeEnergyForceGenerator2D<T,DESCRIPTOR> coupling3;
+  SuperLatticeCoupling coupling3(
+  ForceCoupling2D{},
+  names::A{}, sLattice2,
+  names::B{}, sLattice1,
+  names::C{}, sLattice3
+  );
+  coupling3.restrictTo(superGeometry.getMaterialIndicator({1}));
+
+
+  //FreeEnergyInletOutletGenerator2D<T,DESCRIPTOR> coupling4;
+  SuperLatticeCoupling coupling4(
+  InletOutletCoupling2D{},
+  names::A{}, sLattice2,
+  names::B{}, sLattice1,
+  names::C{}, sLattice3
+  );
+  coupling4.restrictTo(superGeometry.getMaterialIndicator({3,4,5,6,7,8}));
+
+  sLattice1.addPostProcessor<stage::PreCoupling>(meta::id<RhoStatistics>());
+  sLattice2.addPostProcessor<stage::PreCoupling>(meta::id<RhoStatistics>());
+  sLattice3.addPostProcessor<stage::PreCoupling>(meta::id<RhoStatistics>());
+
+
+
+  {
+    auto& communicator = sLattice1.getCommunicator(stage::PostCoupling());
+    communicator.requestField<CHEM_POTENTIAL>();
+    communicator.requestField<RhoStatistics>();
+    communicator.requestOverlap(sLattice1.getOverlap());
+    communicator.exchangeRequests();
+  }
+  {
+    auto& communicator = sLattice2.getCommunicator(stage::PreCoupling());
+    communicator.requestField<CHEM_POTENTIAL>();
+    communicator.requestField<RhoStatistics>();
+    communicator.requestOverlap(sLattice2.getOverlap());
+    communicator.exchangeRequests();
+  }
+  {
+    auto& communicator = sLattice3.getCommunicator(stage::PreCoupling());
+    communicator.requestField<CHEM_POTENTIAL>();
+    communicator.requestField<RhoStatistics>();
+    communicator.requestOverlap(sLattice3.getOverlap());
+    communicator.exchangeRequests();
+  }
+
+  clout << "Add lattice coupling ... OK!" << std::endl;
+
 
   // === 4th Step: Main Loop with Timer ===
   int iT = 0;
@@ -427,10 +515,28 @@ int main( int argc, char *argv[] )
     sLattice2.collideAndStream();
     sLattice3.collideAndStream();
 
+    sLattice1.executePostProcessors(stage::PreCoupling());
+    sLattice2.executePostProcessors(stage::PreCoupling());
+    sLattice3.executePostProcessors(stage::PreCoupling());
+
+    sLattice1.getCommunicator(stage::PreCoupling()).communicate();
+    sLattice2.getCommunicator(stage::PreCoupling()).communicate();
+    sLattice3.getCommunicator(stage::PreCoupling()).communicate();
+
     // Execute coupling between the two lattices
-    sLattice1.executeCoupling();
-    sLattice2.executeCoupling();
-    sLattice3.executeCoupling();
+    coupling1.execute();
+    coupling2.execute();
+
+    sLattice1.getCommunicator(stage::PostCoupling()).communicate();
+    sLattice1.executePostProcessors(stage::PostCoupling());
+
+
+    coupling3.execute();
+    coupling4.execute();
+
+
+
+
   }
 
   timer.stop();

@@ -142,6 +142,7 @@ template<typename T, typename DESCRIPTOR>
 void setFreeEnergyWallBoundary(BlockLattice<T,DESCRIPTOR>& _block, BlockIndicatorF3D<T>& indicator,
                                T addend, int latticeNumber, bool includeOuterCells)
 {
+  using namespace boundaryhelper;
   OstreamManager clout(std::cout, "setFreeEnergyWallBoundary");
   const auto& blockGeometryStructure = indicator.getBlockGeometry();
   const int margin = includeOuterCells ? 0 : 1;
@@ -158,21 +159,25 @@ void setFreeEnergyWallBoundary(BlockLattice<T,DESCRIPTOR>& _block, BlockIndicato
           _block.template defineDynamics<FreeEnergyWallDynamics>({iX,iY,iZ});
         }
 
-        auto wettingPostProcessor = std::unique_ptr<PostProcessorGenerator3D<T, DESCRIPTOR>>{
-          new FreeEnergyWallProcessorGenerator3D<T, DESCRIPTOR> ( iX, iX, iY, iY, iZ, iZ,
-                                                                  discreteNormal[1], discreteNormal[2], discreteNormal[3], addend )
-        };
-        auto chemPotPostProcessor = std::unique_ptr<PostProcessorGenerator3D<T, DESCRIPTOR>>{
-          new FreeEnergyChemPotBoundaryProcessorGenerator3D<T, DESCRIPTOR> ( iX, iX, iY, iY, iZ, iZ,
-                                                                             discreteNormal[1], discreteNormal[2], discreteNormal[3], latticeNumber )
-        };
+          _block.addPostProcessor(
+            typeid(stage::PostStream), {iX, iY, iZ},
+            olb::boundaryhelper::promisePostProcessorForNormal<T,DESCRIPTOR,FreeEnergyWallProcessor3D>(
+              Vector<int,3>(discreteNormal.data() + 1)));
+          _block.get(iX, iY, iZ).template setField<olb::descriptors::ADDEND>(addend);
 
-        if (wettingPostProcessor) {
-          _block.addPostProcessor(*wettingPostProcessor);
-        }
-        if (chemPotPostProcessor) {
-          _block.addPostProcessor(*chemPotPostProcessor);
-        }
+
+          if(latticeNumber == 1){
+            _block.addPostProcessor(
+            typeid(stage::PostStream), {iX, iY, iZ},
+            promisePostProcessorForNormal<T,DESCRIPTOR,FreeEnergyChemPotBoundaryProcessor3DA>(
+              Vector<int,3>(discreteNormal.data() + 1)));
+          } else {
+            _block.addPostProcessor(
+            typeid(stage::PostStream), {iX, iY, iZ},
+            promisePostProcessorForNormal<T,DESCRIPTOR,FreeEnergyChemPotBoundaryProcessor3DB>(
+              Vector<int,3>(discreteNormal.data() + 1)));
+          }
+
       }
     }
   });

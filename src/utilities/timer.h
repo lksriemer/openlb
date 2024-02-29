@@ -103,9 +103,11 @@ private:
   T      rtPas{},   rtRem{},   rtTot{};     // times in s
   T      rtPasMs{}, rtRemMs{}, rtTotMs{};   // times in ms
 
+  unsigned int _printModeSummary; // select what kind of timer summary to print (0 for default, 1 for short summary)
+
 public:
   /// initializes timer with the given values, abbreviation to Timer() + initialize(int,int)
-  Timer(int maxTimeSteps, std::size_t numFluidCells=1);
+  Timer(int maxTimeSteps, std::size_t numFluidCells=1, unsigned int printModeSummary = 0);
 
   /// returns the time difference between two timeval objects in ms
   /** The timeval data type is used in the variables for ms-time measurement. \sa getTotalRealTimeMs*/
@@ -149,6 +151,7 @@ public:
     \sa update()
   */
   void printStep(int printMode=0);
+  void printStep(OstreamManager& fout, int printMode=0);
 
   /// Performs an update() followed by a printStep().
   /** Automatically calls the function update(currentTimeStep) (if not yet done with currentTimeStep) and displays the timer's during-iteration-information.
@@ -160,8 +163,10 @@ public:
 
   /// Prints a (short) summary containing the overall time consumption in real and in cpu time for use after computation.
   void printSummary();
+  void printSummary(OstreamManager& fout);
   /// Prints a short summary containing only time consumptions (real and cpu time)
   void printShortSummary();
+  void printShortSummary(OstreamManager& fout);
 };
 
 // Factory function /////////////////////////////////

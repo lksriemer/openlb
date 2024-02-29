@@ -1,6 +1,6 @@
 /*  This file is part of the OpenLB library
  *
- *  Copyright (C) 2020 Alexander Schulz
+ *  Copyright (C) 2020 Alexander Schulz, 2023 Shota Ito
  *  E-mail contact: info@openlb.net
  *  The most recent release of OpenLB can be downloaded at
  *  <http://www.openlb.net/>
@@ -28,73 +28,52 @@
 
 #include "setAdvectionDiffusionTemperatureBoundary2D.h"
 
-
 namespace olb {
 
 ///Initialising the AdvectionDiffusionTemperatureBoundary on the superLattice domain
 template<typename T, typename DESCRIPTOR, typename MixinDynamics>
-void setAdvectionDiffusionTemperatureBoundary(SuperLattice<T, DESCRIPTOR>& sLattice,T omega,SuperGeometry<T,2>& superGeometry, int material, bool neumann)
+void setAdvectionDiffusionTemperatureBoundary(SuperLattice<T, DESCRIPTOR>& sLattice, SuperGeometry<T,2>& superGeometry, int material)
 {
-  setAdvectionDiffusionTemperatureBoundary<T,DESCRIPTOR,MixinDynamics>(sLattice, omega, superGeometry.getMaterialIndicator(material), neumann);
+  setAdvectionDiffusionTemperatureBoundary<T,DESCRIPTOR,MixinDynamics>(sLattice, superGeometry.getMaterialIndicator(material));
 }
 
 ///Initialising the AdvectionDiffusionTemperatureBoundary on the superLattice domain
 template<typename T, typename DESCRIPTOR, typename MixinDynamics>
-void setAdvectionDiffusionTemperatureBoundary(SuperLattice<T, DESCRIPTOR>& sLattice,T omega,FunctorPtr<SuperIndicatorF2D<T>>&& indicator, bool neumann)
+void setAdvectionDiffusionTemperatureBoundary(SuperLattice<T, DESCRIPTOR>& sLattice, FunctorPtr<SuperIndicatorF2D<T>>&& indicator)
 {
   OstreamManager clout(std::cout, "setAdvectionDiffusionTemperatureBoundary");
-
-  int _overlap = 1;
-  bool includeOuterCells = false;
-  if (indicator->getSuperGeometry().getOverlap() == 1) {
-    includeOuterCells = true;
-    clout << "WARNING: overlap == 1, boundary conditions set on overlap despite unknown neighbor materials" << std::endl;
-  }
   for (int iCloc = 0; iCloc < sLattice.getLoadBalancer().size(); ++iCloc) {
-    setAdvectionDiffusionTemperatureBoundary<T,DESCRIPTOR,MixinDynamics>(sLattice.getBlock(iCloc), omega,
-        indicator->getBlockIndicatorF(iCloc), includeOuterCells, neumann);
+    setAdvectionDiffusionTemperatureBoundary<T,DESCRIPTOR,MixinDynamics>(sLattice.getBlock(iCloc),
+        indicator->getBlockIndicatorF(iCloc));
   }
-  /// Adds needed Cells to the Communicator _commBC in SuperLattice
-  addPoints2CommBC(sLattice, std::forward<decltype(indicator)>(indicator), _overlap);
-
 }
 
 ///set AdvectionDiffusionTemperature boundary on indicated cells inside the block domains
 template<typename T, typename DESCRIPTOR, typename MixinDynamics>
-void setAdvectionDiffusionTemperatureBoundary(BlockLattice<T,DESCRIPTOR>& block, T omega, BlockIndicatorF2D<T>& indicator,
-    bool includeOuterCells, bool neumann)
+void setAdvectionDiffusionTemperatureBoundary(BlockLattice<T,DESCRIPTOR>& block, BlockIndicatorF2D<T>& indicator)
 {
   using namespace boundaryhelper;
   auto& blockGeometryStructure = indicator.getBlockGeometry();
-  const int margin = includeOuterCells ? 0 : 1;
+  const int margin = 1;
   std::vector<int> discreteNormal(3,0);
   blockGeometryStructure.forSpatialLocations([&](auto iX, auto iY) {
     if (blockGeometryStructure.getNeighborhoodRadius({iX, iY}) >= margin
         && indicator(iX, iY)) {
       discreteNormal = indicator.getBlockGeometry().getStatistics().getType(iX,iY);
-      Dynamics<T,DESCRIPTOR>* dynamics = nullptr;
-
-      if (neumann){
-        block.addPostProcessor(
-          typeid(stage::PostStream), {iX,iY},
-          promisePostProcessorForNormal<T, DESCRIPTOR, NeumannBoundarySingleLatticePostProcessor2D>(
-            Vector <int,2> (discreteNormal.data()+1)
-          )
-        );
-      }
 
       if (discreteNormal[0] == 0) {
-          dynamics = block.getDynamics(DirectionOrientationMixinDynamicsForPlainMomenta<T,DESCRIPTOR,
-            AdvectionDiffusionBoundariesDynamics,MixinDynamics,momenta::EquilibriumBoundaryTuple
-          >::construct(Vector<int,2>(discreteNormal.data() + 1)));
+        block.defineDynamics({iX,iY}, DirectionOrientationMixinDynamicsForPlainMomenta<T,DESCRIPTOR,
+          AdvectionDiffusionBoundariesDynamics,MixinDynamics,momenta::EquilibriumBoundaryTuple
+        >::construct(Vector<int,2>(discreteNormal.data() + 1)));
       }
-      else if (discreteNormal[0] == 1) {//set momenta, dynamics and postProcessors for indicated AdvectionDiffusionTemperatureBoundary corner cells
-          dynamics = block.getDynamics(NormalMixinDynamicsForPlainMomenta<T,DESCRIPTOR,
-            AdvectionDiffusionCornerDynamics2D,MixinDynamics,momenta::EquilibriumBoundaryTuple
-          >::construct(Vector<int,2>(discreteNormal.data() + 1)));
+      else if (discreteNormal[0] == 1) {
+        block.defineDynamics({iX,iY}, NormalMixinDynamicsForPlainMomenta<T,DESCRIPTOR,
+          AdvectionDiffusionCornerDynamics2D,MixinDynamics,momenta::EquilibriumBoundaryTuple
+        >::construct(Vector<int,2>(discreteNormal.data() + 1)));
       }
-      dynamics->getParameters(block).template set<descriptors::OMEGA>(omega);
-      setBoundary(block, iX,iY, dynamics);
+      else { // discreteNormal[2] == 2 -> internal corner, probably a curved wall
+        throw std::runtime_error("No valid discrete normal found. This BC is not suited for curved walls.");
+      }
     }
   });
 }

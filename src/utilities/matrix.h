@@ -100,7 +100,7 @@ public:
   template <unsigned C>
   constexpr inline Matrix operator*(const Matrix<T, COLS, C>& matrix) const
   {
-    Matrix<T, ROWS, C> result;
+    Matrix<T,ROWS,C> result;
     for (unsigned i = 0; i < ROWS; ++i) {
       for (unsigned j = 0; j < C; ++j) {
         result[i][j] = 0;
@@ -124,7 +124,7 @@ public:
 
   constexpr inline Matrix<T, COLS, ROWS> transpose() const
   {
-    Matrix<T, COLS, ROWS> result;
+    Matrix<T,COLS,ROWS> result;
     for (unsigned m = 0; m < ROWS; ++m) {
       for (unsigned n = 0; n < COLS; ++n) {
         result[n][m] = ((*this)[m][n]);

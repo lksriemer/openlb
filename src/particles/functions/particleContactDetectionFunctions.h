@@ -69,6 +69,54 @@ void unifyPositions(Particle<T, PARTICLETYPE>&       particle1,
       particles::access::getPosition(particle2);
   positions[0] = pos1;
   positions[1] = pos2;
+
+  if constexpr (isPeriodic(getSetupPeriodicity())) {
+    constexpr Vector<bool, PARTICLETYPE::d> isPeriodic(getSetupPeriodicity());
+
+    auto    sIndicator1   = particle1.template getField<SURFACE, SINDICATOR>();
+    const T circumRadius1 = sIndicator1->getCircumRadius() -
+                            sIndicator1->getEpsilon() +
+                            util::max(sIndicator1->getEpsilon(), 0.5 * deltaX);
+    auto    sIndicator2   = particle2.template getField<SURFACE, SINDICATOR>();
+    const T circumRadius2 = sIndicator2->getCircumRadius() -
+                            sIndicator2->getEpsilon() +
+                            util::max(sIndicator2->getEpsilon(), 0.5 * deltaX);
+
+    const PhysR<T, PARTICLETYPE::d> middle = 0.5 * (cellMin + cellMax);
+
+    for (unsigned i = 0; i < PARTICLETYPE::d; ++i) {
+      T const particleMin1 = pos1[i] - circumRadius1;
+      T const particleMax1 = pos1[i] + circumRadius1;
+      T const particleMin2 = pos2[i] - circumRadius2;
+      T const particleMax2 = pos2[i] + circumRadius2;
+
+      // Always solely "move" the second particle
+      if (particleMin1 < cellMin[i] && isPeriodic[i]) {
+        if (pos2[i] > middle[i]) {
+          positions[1][i] = communication::movePositionToStart(
+              pos2[i], cellMax[i], cellMin[i]);
+        }
+      }
+      else if (particleMax1 > cellMax[i] && isPeriodic[i]) {
+        if (pos2[i] < middle[i]) {
+          positions[1][i] = communication::movePositionToEnd(
+              pos2[i], cellMax[i], cellMin[i]);
+        }
+      }
+      else if (particleMin2 < cellMin[i] && isPeriodic[i]) {
+        if (pos1[i] > middle[i]) {
+          positions[1][i] = communication::movePositionToEnd(
+              pos2[i], cellMax[i], cellMin[i]);
+        }
+      }
+      else if (particleMax2 > cellMax[i] && isPeriodic[i]) {
+        if (pos1[i] < middle[i]) {
+          positions[1][i] = communication::movePositionToStart(
+              pos2[i], cellMax[i], cellMin[i]);
+        }
+      }
+    }
+  }
 }
 
 template <typename T, typename PARTICLETYPE, typename F>
@@ -83,6 +131,29 @@ unifyPosition(Particle<T, PARTICLETYPE>&       particle,
       particles::access::getPosition(particle);
   PhysR<T, PARTICLETYPE::d> unifiedPosition(pos);
 
+  if constexpr (isPeriodic(getSetupPeriodicity())) {
+    constexpr Vector<bool, PARTICLETYPE::d> isPeriodic(getSetupPeriodicity());
+
+    auto    sIndicator   = particle.template getField<SURFACE, SINDICATOR>();
+    const T circumRadius = sIndicator->getCircumRadius() -
+                           sIndicator->getEpsilon() +
+                           util::max(sIndicator->getEpsilon(), 0.5 * deltaX);
+
+    for (unsigned i = 0; i < PARTICLETYPE::d; ++i) {
+      T const particleMax = pos[i] + circumRadius;
+      //T const particleMin = pos[i] - circumRadius;
+
+      if (particleMax > cellMax[i] && isPeriodic[i]) {
+        unifiedPosition[i] = communication::movePositionToStart(
+            pos[i], cellMax[i], cellMin[i]);
+      }
+      /*
+      else if (particleMin < cellMin[i] && isPeriodic[i]) {
+        unifiedPosition[i] = cellMax[i] - (cellMin[i] - pos[i]);
+      }
+      */
+    }
+  }
   return unifiedPosition;
 }
 
@@ -95,7 +166,32 @@ evalContactPosition(Particle<T, PARTICLETYPE>&       particle,
                     const PhysR<T, PARTICLETYPE::d>& cellMax,
                     F getSetupPeriodicity, T deltaX)
 {
-  return contactPos;
+  using namespace descriptors;
+
+  if constexpr (!(isPeriodic(getSetupPeriodicity()))) {
+    return contactPos;
+  }
+  else {
+    auto    sIndicator   = particle.template getField<SURFACE, SINDICATOR>();
+    const T circumRadius = sIndicator->getCircumRadius() -
+                           sIndicator->getEpsilon() +
+                           util::max(sIndicator->getEpsilon(), 0.5 * deltaX);
+
+    PhysR<T, PARTICLETYPE::d> ghostPos = contactPos;
+    for (unsigned i = 0; i < PARTICLETYPE::d; ++i) {
+      T const particleMin = particlePos[i] - circumRadius;
+      T const particleMax = particlePos[i] + circumRadius;
+      if (particleMin > contactPos[i] && getSetupPeriodicity()[i]) {
+        ghostPos[i] = communication::movePositionToEnd(
+            contactPos[i], cellMax[i], cellMin[i]);
+      }
+      else if (particleMax < contactPos[i] && getSetupPeriodicity()[i]) {
+        ghostPos[i] = communication::movePositionToStart(
+            contactPos[i], cellMax[i], cellMin[i]);
+      }
+    }
+    return ghostPos;
+  }
 }
 
 template <typename PARTICLECONTACTTYPE, bool IS_INPUT_SORTED = false>

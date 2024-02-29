@@ -53,7 +53,7 @@ ContactProperties<T, N, ENABLE_RANGE_CHECK>::getIndex(unsigned materialA,
 template <typename T, unsigned N, bool ENABLE_RANGE_CHECK>
 constexpr void ContactProperties<T, N, ENABLE_RANGE_CHECK>::set(
     const unsigned materialA, const unsigned materialB,
-    const T effectiveYoungsModulus, const T dampingConstant,
+    const T effectiveYoungsModulus, const T coefficientOfRestitution,
     const T coefficientKineticFriction, const T coefficientStaticFriction,
     const T staticKineticTransitionVelocity)
 {
@@ -64,7 +64,7 @@ constexpr void ContactProperties<T, N, ENABLE_RANGE_CHECK>::set(
   }
 
   data[getIndex(materialA, materialB)] =
-      ContactProperty(effectiveYoungsModulus, dampingConstant,
+      ContactProperty(effectiveYoungsModulus, coefficientOfRestitution,
                       coefficientKineticFriction, coefficientStaticFriction,
                       staticKineticTransitionVelocity);
 }
@@ -79,10 +79,10 @@ ContactProperties<T, N, ENABLE_RANGE_CHECK>::getEffectiveYoungsModulus(
 
 template <typename T, unsigned N, bool ENABLE_RANGE_CHECK>
 constexpr T
-ContactProperties<T, N, ENABLE_RANGE_CHECK>::getDampingConstant(
+ContactProperties<T, N, ENABLE_RANGE_CHECK>::getCoefficientOfRestitution(
     const unsigned materialA, const unsigned materialB) const
 {
-  return data[getIndex(materialA, materialB)].dampingConstant;
+  return data[getIndex(materialA, materialB)].coefficientOfRestitution;
 }
 
 template <typename T, unsigned N, bool ENABLE_RANGE_CHECK>

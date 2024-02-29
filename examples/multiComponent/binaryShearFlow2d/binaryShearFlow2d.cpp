@@ -336,44 +336,6 @@ void prepareLattice( SuperLattice<T, DESCRIPTOR>& sLattice1,
   clout << "Prepare Lattice ... OK" << std::endl;
 }
 
-void prepareCoupling(SuperLattice<T, DESCRIPTOR>& sLattice1,
-                     SuperLattice<T, DESCRIPTOR>& sLattice2,
-                     SuperGeometry<T,2>& superGeometry) {
-
-  OstreamManager clout( std::cout,"prepareCoupling" );
-  clout << "Add lattice coupling" << std::endl;
-
-  // Add the lattice couplings
-  // The chemical potential coupling must come before the force coupling
-  FreeEnergyChemicalPotentialGenerator2D<T, DESCRIPTOR> coupling1(
-    alpha, kappa1, kappa2);
-  FreeEnergyForceGenerator2D<T, DESCRIPTOR> coupling2;
-
-  sLattice1.addLatticeCoupling( superGeometry, 1, coupling1, sLattice2 );
-  sLattice2.addLatticeCoupling( superGeometry, 1, coupling2, sLattice1 );
-
-  // walls
-  FreeEnergyInletOutletGenerator2D<T,DESCRIPTOR> coupling3;
-  sLattice2.addLatticeCoupling( superGeometry, 3, coupling3, sLattice1 );
-  sLattice2.addLatticeCoupling( superGeometry, 4, coupling3, sLattice1 );
-
-
-  {
-    auto& communicator = sLattice1.getCommunicator(stage::PostCoupling());
-    communicator.requestField<CHEM_POTENTIAL>();
-    communicator.requestOverlap(sLattice1.getOverlap());
-    communicator.exchangeRequests();
-  }
-  {
-    auto& communicator = sLattice2.getCommunicator(stage::PreCoupling());
-    communicator.requestField<CHEM_POTENTIAL>();
-    communicator.requestOverlap(sLattice2.getOverlap());
-    communicator.exchangeRequests();
-  }
-
-  clout << "Add lattice coupling ... OK!" << std::endl;
-}
-
 void getResults( SuperLattice<T, DESCRIPTOR>& sLattice2,
                  SuperLattice<T, DESCRIPTOR>& sLattice1, int iT,
                  SuperGeometry<T,2>& superGeometry, util::Timer<T>& timer,
@@ -404,6 +366,7 @@ void getResults( SuperLattice<T, DESCRIPTOR>& sLattice2,
 
   // Writes the VTK files
   if ( iT%vtkIter==0 ) {
+    sLattice1.setProcessingContext(ProcessingContext::Evaluation);
     AnalyticalConst2D<T,T> half_( 0.5 );
     SuperLatticeFfromAnalyticalF2D<T, DESCRIPTOR> half(half_, sLattice1);
 
@@ -553,7 +516,49 @@ int main( int argc, char *argv[] )
 
   prepareLattice( sLattice1, sLattice2, converter, superGeometry );
 
-  prepareCoupling(sLattice1, sLattice2, superGeometry);
+  // Add the lattice couplings
+  // The chemical potential coupling must come before the force coupling
+  SuperLatticeCoupling coupling1(
+  ChemicalPotentialCoupling2D{},
+  names::A{}, sLattice1,
+  names::B{}, sLattice2);
+
+  coupling1.template setParameter<ChemicalPotentialCoupling2D::ALPHA>(alpha);
+  coupling1.template setParameter<ChemicalPotentialCoupling2D::KAPPA1>(kappa1);
+  coupling1.template setParameter<ChemicalPotentialCoupling2D::KAPPA2>(kappa2);
+
+  SuperLatticeCoupling coupling2(
+  ForceCoupling2D{},
+  names::A{}, sLattice2,
+  names::B{}, sLattice1);
+
+  coupling1.restrictTo(superGeometry.getMaterialIndicator({1}));
+  coupling2.restrictTo(superGeometry.getMaterialIndicator({1}));
+
+  // Walls
+  SuperLatticeCoupling coupling3(
+  InletOutletCoupling2D{},
+  names::A{}, sLattice2,
+  names::B{}, sLattice1);
+
+  coupling3.restrictTo(superGeometry.getMaterialIndicator({3,4}));
+
+  sLattice1.addPostProcessor<stage::PreCoupling>(meta::id<RhoStatistics>());
+  sLattice2.addPostProcessor<stage::PreCoupling>(meta::id<RhoStatistics>());
+
+  {
+    auto& communicator = sLattice1.getCommunicator(stage::PostCoupling());
+    communicator.requestField<CHEM_POTENTIAL>();
+    communicator.requestOverlap(sLattice1.getOverlap());
+    communicator.exchangeRequests();
+  }
+  {
+    auto& communicator = sLattice2.getCommunicator(stage::PreCoupling());
+    communicator.requestField<CHEM_POTENTIAL>();
+    communicator.requestField<RhoStatistics>();
+    communicator.requestOverlap(sLattice2.getOverlap());
+    communicator.exchangeRequests();
+  }
 
   // === 4th Step: Main Loop with Timer ===
   int iT = 0;
@@ -566,6 +571,9 @@ int main( int argc, char *argv[] )
   T deformation = 0;
 
   for ( iT=0; iT<=maxIter; ++iT ) {
+
+    sLattice2.setProcessingContext(ProcessingContext::Evaluation);
+    sLattice1.setProcessingContext(ProcessingContext::Evaluation);
     // Measure droplet
     if ( iT%statIter==0 ) {
       old_deformation = deformation;
@@ -579,6 +587,9 @@ int main( int argc, char *argv[] )
       getResults( sLattice2, sLattice1, iT, superGeometry, timer, converter );
       break;
     }
+    sLattice1.setProcessingContext(ProcessingContext::Simulation);
+    sLattice2.setProcessingContext(ProcessingContext::Simulation);
+
     // Computation and output of the results
     getResults( sLattice2, sLattice1, iT, superGeometry, timer, converter );
 
@@ -590,9 +601,13 @@ int main( int argc, char *argv[] )
     sLattice1.communicate();
     sLattice2.communicate();
 
+    sLattice1.executePostProcessors(stage::PreCoupling());
+    sLattice2.executePostProcessors(stage::PreCoupling());
+
     // Execute coupling between the two lattices
-    sLattice1.executeCoupling();
-    sLattice2.executeCoupling();
+    coupling1.execute();
+    coupling2.execute();
+    coupling3.execute();
 
   converge.takeValue( sLattice2.getStatistics().getAverageRho(), true );
   }

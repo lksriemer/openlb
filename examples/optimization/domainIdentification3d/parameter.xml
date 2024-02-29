@@ -23,6 +23,7 @@
       <Re>    </Re>
       <charU> </charU>
       <BoundaryValueUpdateTime> 0.02 </BoundaryValueUpdateTime>
+      <TimeStabilityCheck> 0.06 </TimeStabilityCheck>
     </PhysParameters>
 
     <ConvergenceCheck>
@@ -62,11 +63,11 @@
     <DimensionControl> 1200000 </DimensionControl>
     <FieldDimension> 1 </FieldDimension>
 
-    <RegAlpha> 0.00001 </RegAlpha>
+    <RegAlpha> 0.0 </RegAlpha>
 
     <Algorithm> LBFGS </Algorithm>
     <L> 20 </L>
-    <Lamda> 1. </Lamda>
+    <Lambda> 1. </Lambda>
     <MaxIter> 10 </MaxIter>                                   // 100
     <MaxStepAttempts> 20 </MaxStepAttempts>
     <Tolerance> 1.e-10 </Tolerance>
@@ -110,14 +111,14 @@
       <PrintMode>2</PrintMode>
     </Timer>
     <VisualizationGnuplot>
-      <Output> false </Output>
+      <Output> off </Output>
     </VisualizationGnuplot>
     <VisualizationVTK>
-      <Output> true </Output>
+      <Output> intervals </Output>
       <SaveTime>0.1</SaveTime>
     </VisualizationVTK>
     <VisualizationImages>
-      <Output> false </Output>
+      <Output> off </Output>
     </VisualizationImages>
   </Output>
 

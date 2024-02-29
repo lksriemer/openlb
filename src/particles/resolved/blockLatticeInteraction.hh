@@ -41,7 +41,6 @@ bool getBlockParticleIntersection(const BlockGeometry<T, D>& blockGeometry,
                                   LatticeR<D>& end, PhysR<T, D> position,
                                   T circumRadius)
 {
-
   /// Setting block bounds excluding(!) padding
   LatticeR<D> blockMin(0);
   LatticeR<D> blockMax(blockGeometry.getExtent() - 1);
@@ -62,13 +61,7 @@ bool getBlockParticleIntersection(const BlockGeometry<T, D>& blockGeometry,
     validRange            = validRange && (intersectionRange >= 0.);
   }
 
-  //Interpret valid range
-  if (!validRange) {
-    return false;
-  }
-  else {
-    return true;
-  }
+  return validRange;
 }
 
 template <typename T, unsigned D>
@@ -322,12 +315,12 @@ void setBlockParticleField(
         FieldD<T, DESCRIPTOR, descriptors::POROSITY> porosity {};
         sdf::evalSolidVolumeFraction(porosity.data(), signedDist,
                           sIndicator->getEpsilon());
+
         //For cells containing particle bits
         if (!util::nearZero(porosity[0])) {
           //Retrieve material at cell and ensure location outside of boundary
-          auto material = blockGeometry.get(latticeR);
-          if (wallMaterials.find(material)==wallMaterials.end()) {
-
+          auto material = blockGeometry.getMaterial(latticeR);
+          if (material != 0 && wallMaterials.find(material)==wallMaterials.end()) {
             //Retrieve local velocity
             FieldD<T, DESCRIPTOR, descriptors::VELOCITY> velocity {};
             velocity = particles::dynamics::calculateLocalVelocity(

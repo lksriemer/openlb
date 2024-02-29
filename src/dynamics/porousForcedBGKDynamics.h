@@ -115,11 +115,11 @@ struct PorousParticleKupershtokh {
     template <typename CELL, typename VELOCITY, typename V=typename CELL::value_t>
     void calculate(CELL& cell, VELOCITY& u) {
       if constexpr (isStatic) {
-        for (int i=0; i<DESCRIPTOR::d; i++)  {
+        for (int i=0; i<DESCRIPTOR::d; ++i)  {
           u[i] -= (V{1} - cell.template getField<descriptors::POROSITY>()) * u[i];
         }
       } else {
-        for (int i=0; i<DESCRIPTOR::d; i++)  {
+        for (int i=0; i<DESCRIPTOR::d; ++i)  {
           u[i] +=   (V{1} - cell.template getField<descriptors::POROSITY>())
                   * (  cell.template getFieldComponent<descriptors::VELOCITY_NUMERATOR>(i)
                      / cell.template getField<descriptors::VELOCITY_DENOMINATOR>() - u[i]);

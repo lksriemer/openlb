@@ -40,6 +40,7 @@ using namespace olb::descriptors;
 using namespace olb::graphics;
 
 using T = FLOATING_POINT_TYPE;
+
 typedef D2Q5<VELOCITY,SOURCE> TDESCRIPTOR;
 
 const int runs = 3;              // # simulations with increasing resolution
@@ -120,14 +121,14 @@ public:
     T x = input[0];
     if constexpr (reactionType == a2c){
       T uD = flow_rate / mue;
-      T lamda2 = 0.5 * (uD - util::sqrt(uD * uD + 4 * reactionData.physReactionCoeff[0]/mue));
-      output[0] = CA_0_phys * util::exp(lamda2 * x);
+      T lambda2 = 0.5 * (uD - util::sqrt(uD * uD + 4 * reactionData.physReactionCoeff[0]/mue));
+      output[0] = CA_0_phys * util::exp(lambda2 * x);
     }
     else if constexpr (reactionType == a2cAndBack) {
       T Constant = reactionData.physReactionCoeff[1] * CA_0_phys / (reactionData.physReactionCoeff[0] + reactionData.physReactionCoeff[1]);
       T uD = flow_rate / mue;
-      T lamda2 = 0.5 * (uD - util::sqrt(uD*uD + 4 * (reactionData.physReactionCoeff[0] + reactionData.physReactionCoeff[1]) / mue));
-      output[0] = (CA_0_phys - Constant) * util::exp(lamda2*x) + Constant;
+      T lambda2 = 0.5 * (uD - util::sqrt(uD*uD + 4 * (reactionData.physReactionCoeff[0] + reactionData.physReactionCoeff[1]) / mue));
+      output[0] = (CA_0_phys - Constant) * util::exp(lambda2*x) + Constant;
     }
     return true;
   }
@@ -193,8 +194,8 @@ void prepareLattice(  SuperLattice<T, TDESCRIPTOR>*& ADlattice,
   AnalyticalConst2D<T,T> rhoEnd_(converter.getLatticeDensity(rhoEnd));
 
   // Setting of the boundary conditions, inflow and outflow with Dirichlet condition according to analytical solution
-  setAdvectionDiffusionTemperatureBoundary<T, TDESCRIPTOR>(*ADlattice, omega, superGeometry.getMaterialIndicator(3));
-  setAdvectionDiffusionTemperatureBoundary<T, TDESCRIPTOR>(*ADlattice, omega, superGeometry.getMaterialIndicator(4));
+  setAdvectionDiffusionTemperatureBoundary<T, TDESCRIPTOR>(*ADlattice, superGeometry.getMaterialIndicator(3));
+  setAdvectionDiffusionTemperatureBoundary<T, TDESCRIPTOR>(*ADlattice, superGeometry.getMaterialIndicator(4));
 
   ADlattice->setParameter<descriptors::OMEGA>(converter.getLatticeAdeRelaxationFrequency());
 

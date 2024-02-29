@@ -30,6 +30,7 @@
 #include "cellIndexListD.h"
 #include "fieldArrayD.hh"
 #include "fieldParametersD.h"
+#include "superFieldArrayD.h"
 
 #include "blockStructure.h"
 #include "blockLattice.h"

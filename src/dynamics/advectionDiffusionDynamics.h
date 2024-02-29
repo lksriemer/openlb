@@ -189,7 +189,7 @@ struct SourcedAdvectionDiffusionBGKdynamics final : public dynamics::CustomColli
   }
 
   template <typename CELL, typename PARAMETERS, typename V=typename CELL::value_t>
-  CellStatistic<V> apply(CELL& cell, PARAMETERS& parameters) {
+  CellStatistic<V> apply(CELL& cell, PARAMETERS& parameters) any_platform {
     const auto u = cell.template getField<descriptors::VELOCITY>();
     const V temperature = MomentaF().computeRho(cell);
     const V omega = parameters.template get<descriptors::OMEGA>();
@@ -204,7 +204,7 @@ struct SourcedAdvectionDiffusionBGKdynamics final : public dynamics::CustomColli
     return {temperature, uSqr};
   };
 
-  T computeEquilibrium(int iPop, T rho, const T u[DESCRIPTOR::d]) const override {
+  T computeEquilibrium(int iPop, T rho, const T u[DESCRIPTOR::d]) const override any_platform {
     return equilibrium<DESCRIPTOR>::template firstOrder(iPop, rho, u);
   };
 

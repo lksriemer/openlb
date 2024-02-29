@@ -41,6 +41,7 @@ SuperCommunicator<T,SUPER>::SuperCommunicator(
   _super(super)
 #ifdef PARALLEL_MODE_MPI
 , _tagCoordinator(super.getLoadBalancer())
+, _enabled(false)
 #endif
 {
 #ifdef PARALLEL_MODE_MPI

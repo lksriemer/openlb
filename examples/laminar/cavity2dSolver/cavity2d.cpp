@@ -173,7 +173,7 @@ protected:
     vtmWriter.write( iT );
   }
 
-  void writeGnuplot() const override {
+  void writeGnuplot(std::size_t iT) const override {
     // Gives access to velocity information on lattice
     SuperLatticePhysVelocity2D velocityField( this->lattice(), this->converter() );
     // Interpolation functor with velocityField information
@@ -195,7 +195,7 @@ protected:
     Vector<T,17> vel_simulation;
 
     // Gnuplot interface to create plots
-    static Gnuplot<T> gplot( "centerVelocityX" );
+    Gnuplot<T> gplot( this->parameters(VisualizationGnuplot()).filename + "_iT" + std::to_string(iT) );
     // Define comparison values
     Vector<T,17> comparison = vel_ghia_RE1000;
 

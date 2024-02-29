@@ -59,8 +59,8 @@ void velocityWallReflection( Particle<T,PARTICLETYPE>& particle,
       velocity[iDim] *= coefficientOfRestitution;
     }
     //Apply velocity
-    particle.template setField<MOBILITY,VELOCITY>( velocity );
-    particle.template setField<GENERAL,POSITION>( position );
+    access::setVelocity( particle, velocity );
+    access::setPosition( particle, position );
   });
 }
 
@@ -103,44 +103,46 @@ void wallSlip( Particle<T,PARTICLETYPE>& particle,
       velocity[iDim] = 0.;
     }
     //Apply velocity
-    particle.template setField<MOBILITY,VELOCITY>( velocity );
-    particle.template setField<GENERAL,POSITION>( position );
+    access::setVelocity( particle, velocity );
+    access::setPosition( particle, position );
   });
 }
 
 /// Wall capture
 /// - setting particle field ACTIVE=false at wall impact
+/// - setting resting particle
 template<bool useCubicBounds=false, typename T, typename PARTICLETYPE>
 void wallCapture( Particle<T,PARTICLETYPE>& particle,
   SolidBoundary<T,PARTICLETYPE::d>& solidBoundary )
 {
   using namespace descriptors;
-  static_assert(PARTICLETYPE::template providesNested<DYNBEHAVIOUR,ACTIVE>(), "Field DYNBEHAVIOUR:ACTIVE has to be provided");
   //Execute wall treatment
   doAtParticleWallContact<useCubicBounds>( particle, solidBoundary,
     [&]( Particle<T,PARTICLETYPE>& particle,
     Vector<T,PARTICLETYPE::d>& normal ){
     //Deactivate particle
-    particle.template setField<DYNBEHAVIOUR,ACTIVE>( false );
+    access::setInactive( particle );
+    access::setRestingParticle( particle );
   });
 }
 
 /// Wall capture based on material rather than SolidBoundary
 /// - implies necessity of SuperGeometry, so no DEM only possible
 /// - setting particle field ACTIVE=false at material contact
+/// - setting resting particle
 template<typename T, typename PARTICLETYPE>
 void materialCapture( Particle<T,PARTICLETYPE>& particle,
   SuperIndicatorMaterial<T,PARTICLETYPE::d>& materialIndicator )
 {
   using namespace descriptors;
-  static_assert(PARTICLETYPE::template providesNested<DYNBEHAVIOUR,ACTIVE>(), "Field DYNBEHAVIOUR:ACTIVE has to be provided");
   //Check whether still active
-  bool isActive = particle.template getField<DYNBEHAVIOUR,ACTIVE>();
+  bool isActive = access::isActive( particle );
   if (isActive){
     bool vicinity = checkMaterialVicinity( materialIndicator, particle );
     if (vicinity){
       //Deactivate particle
-      particle.template setField<DYNBEHAVIOUR,ACTIVE>( false );
+      access::setInactive( particle );
+      access::setRestingParticle( particle );
     }
   }
 }
@@ -148,6 +150,7 @@ void materialCapture( Particle<T,PARTICLETYPE>& particle,
 /// Wall capture with material awareness
 /// - implies necessity of SuperGeometry, so no DEM only possible
 /// - setting particle field ACTIVE=false at wall impact
+/// - setting resting particle
 /// - represents combination of wallCapture and materialCapture
 /// - intended to use aprior material check to speed up complex SolidBoudaries carying STLs
 template<typename T, typename PARTICLETYPE>
@@ -156,9 +159,8 @@ void wallCaptureMaterialAware( Particle<T,PARTICLETYPE>& particle,
   SuperIndicatorMaterial<T,PARTICLETYPE::d>& materialIndicator )
 {
   using namespace descriptors;
-  static_assert(PARTICLETYPE::template providesNested<DYNBEHAVIOUR,ACTIVE>(), "Field DYNBEHAVIOUR:ACTIVE has to be provided");
   //Check whether still active
-  bool isActive = particle.template getField<DYNBEHAVIOUR,ACTIVE>();
+  bool isActive = access::isActive( particle );
   if (isActive){
     bool vicinity = checkMaterialVicinity( materialIndicator, particle );
     if (vicinity){
@@ -169,6 +171,121 @@ void wallCaptureMaterialAware( Particle<T,PARTICLETYPE>& particle,
   }
 }
 
+
+/// Escape
+/// - setting particle field ACTIVE=false
+template<bool useCubicBounds=false, typename T, typename PARTICLETYPE>
+void escape ( Particle<T,PARTICLETYPE>& particle,
+  SolidBoundary<T,PARTICLETYPE::d>& solidBoundary )
+{
+  using namespace descriptors;
+  //Execute wall treatment
+  doAtParticleWallContact<useCubicBounds>( particle, solidBoundary,
+    [&]( Particle<T,PARTICLETYPE>& particle,
+    Vector<T,PARTICLETYPE::d>& normal ){
+    //Deactivate particle
+    access::setInactive( particle );
+  });
+}
+
+/// Escape boundary based on material rather than SolidBoundary
+/// - implies necessity of SuperGeometry, so no DEM only possible
+/// - setting particle field ACTIVE=false at material contact
+template<typename T, typename PARTICLETYPE>
+void materialEscape( Particle<T,PARTICLETYPE>& particle,
+  SuperIndicatorMaterial<T,PARTICLETYPE::d>& materialIndicator )
+{
+  using namespace descriptors;
+  //Check whether still active
+  bool isActive = access::isActive( particle );
+  if (isActive){
+    bool vicinity = checkMaterialVicinity( materialIndicator, particle );
+    if (vicinity){
+      //Deactivate particle
+      access::setInactive( particle );
+    }
+  }
+}
+
+/// Escape boundary with material awareness
+/// - implies necessity of SuperGeometry, so no DEM only possible
+/// - setting particle field ACTIVE=false at wall impact
+/// - represents combination of wallCapture and materialCapture
+/// - intended to use aprior material check to speed up complex SolidBoudaries carying STLs
+template<typename T, typename PARTICLETYPE>
+void escapeMaterialAware( Particle<T,PARTICLETYPE>& particle,
+  SolidBoundary<T,PARTICLETYPE::d>& solidBoundary,
+  SuperIndicatorMaterial<T,PARTICLETYPE::d>& materialIndicator )
+{
+  using namespace descriptors;
+  //Check whether still active
+  bool isActive = access::isActive( particle );
+  if (isActive){
+    bool vicinity = checkMaterialVicinity( materialIndicator, particle );
+    if (vicinity){
+      constexpr bool useCubicBounds=false;
+      boundaries::escape<useCubicBounds>(particle, solidBoundary);
+    }
+  }
+}
+
+
+/// Escape and capture based on material rather than SolidBoundary
+/// - implies necessity of SuperGeometry, so no DEM only possible
+/// - setting particle field ACTIVE=false at material contact
+/// - setting resting particle (only capture)
+template<typename T, typename PARTICLETYPE>
+void materialCaptureAndEscape( Particle<T,PARTICLETYPE>& particle,
+  SuperIndicatorMaterial<T,PARTICLETYPE::d>& captureMaterialIndicator,
+  SuperIndicatorMaterial<T,PARTICLETYPE::d>& escapeMaterialIndicator )
+{
+  using namespace descriptors;
+  //Check whether still active
+  bool isActive = access::isActive( particle );
+  if (isActive){
+    bool vicinity = checkMaterialVicinity( captureMaterialIndicator, particle );
+    if (vicinity){
+      access::setInactive( particle );
+      access::setRestingParticle( particle );
+    }
+    else {
+      vicinity = checkMaterialVicinity( escapeMaterialIndicator, particle );
+      if (vicinity){
+        access::setInactive( particle );
+      }
+    }
+  }
+}
+
+/// Escape boundary with material awareness
+/// - implies necessity of SuperGeometry, so no DEM only possible
+/// - setting particle field ACTIVE=false at wall impact
+/// - represents combination of wallCapture and materialCapture
+/// - intended to use aprior material check to speed up complex SolidBoudaries carying STLs
+template<typename T, typename PARTICLETYPE>
+void wallCaptureAndEscapeMaterialAware( Particle<T,PARTICLETYPE>& particle,
+  SolidBoundary<T,PARTICLETYPE::d>& solidBoundary,
+  SuperIndicatorMaterial<T,PARTICLETYPE::d>& captureMaterialIndicator,
+  SuperIndicatorMaterial<T,PARTICLETYPE::d>& escapeMaterialIndicator )
+{
+  using namespace descriptors;
+  //Check whether still active
+  bool isActive = access::isActive( particle );
+  if (isActive){
+    bool vicinity = checkMaterialVicinity( captureMaterialIndicator, particle );
+    if (vicinity){
+      constexpr bool useCubicBounds=false;
+      boundaries::wallCapture<useCubicBounds>(particle, solidBoundary);
+    }
+    else {
+      vicinity = checkMaterialVicinity( escapeMaterialIndicator, particle );
+      if (vicinity){
+        constexpr bool useCubicBounds=false;
+        boundaries::escape<useCubicBounds>(particle, solidBoundary);
+      }
+    }
+  }
+}
 
 
 } //namespace boundaries

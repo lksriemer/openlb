@@ -28,4 +28,3 @@
 #include "dualFunctors3D.hh"
 #include "optiCaseDual.hh"
 #include "optimizer.hh"
-#include "sequentialInterpolationF3D.hh"

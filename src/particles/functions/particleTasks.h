@@ -157,9 +157,10 @@ struct process_dynamics_parallel{
 
 
 /// Couple lattice to parallel particles
+/// - Resolved default: MomentumExchange, serialized
 /// - Subgrid default:  StokesDrag, non-serialized
 template<typename T, typename DESCRIPTOR, typename PARTICLETYPE,
-         typename FORCEFUNCTOR>
+         typename FORCEFUNCTOR=BlockLatticeMomentumExchangeForce<T,DESCRIPTOR,PARTICLETYPE>>
 struct couple_lattice_to_parallel_particles{
   auto static execute(
     SuperParticleSystem<T,PARTICLETYPE>& sParticleSystem,
@@ -223,6 +224,79 @@ struct update_particle_core_distribution{
   static constexpr bool particleLoop = false;
 };
 
+/// Communicate surface force of parallel particles
+template<typename T, typename PARTICLETYPE>
+struct communicate_surface_force{
+  auto static execute(
+    SuperParticleSystem<T,PARTICLETYPE>& sParticleSystem,
+    const communication::ParticleCommunicator& communicator
+    )
+  {
+    using namespace descriptors;
+
+    //Retrieve dimension of force data
+    constexpr unsigned D = PARTICLETYPE::d;
+    constexpr unsigned Drot = utilities::dimensions::convert<D>::rotation;
+    constexpr unsigned forceDataSize = D+Drot;
+
+    //Create globalIdDataMap
+    std::map<std::size_t, Vector<T,forceDataSize>> globalIdDataMap;
+
+    //Communicate surface force and add to globalIdDatamap
+    communication::communicateSurfaceForce( sParticleSystem, globalIdDataMap
+//#ifdef PARALLEL_MODE_MPI
+        , communicator.surfaceForceComm
+//#endif
+      );
+
+    //Assign data in globalIdData Map to correct particle
+    communication::assignSurfaceForce( sParticleSystem, globalIdDataMap );
+  }
+  static constexpr bool latticeCoupling = false;
+  static constexpr bool particleLoop = false;
+};
+
+
+/// Couple particles to lattice
+template<typename T, typename DESCRIPTOR, typename PARTICLETYPE>
+struct couple_parallel_particles_to_lattice{
+  auto static execute(
+    SuperParticleSystem<T,PARTICLETYPE>& sParticleSystem,
+    Particle<T,PARTICLETYPE>& particle,
+    const SuperGeometry<T,DESCRIPTOR::d>& sGeometry,
+    SuperLattice<T,DESCRIPTOR>& sLattice,
+    UnitConverter<T,DESCRIPTOR> const& converter,
+    int globiC,
+    Vector<bool,DESCRIPTOR::d> periodicity =
+      Vector<bool,DESCRIPTOR::d>(false) )
+  {
+    constexpr unsigned D = DESCRIPTOR::d;
+    using namespace descriptors;
+
+    //Retrieve load balancer and local iC
+    auto& superStructure = sParticleSystem.getSuperStructure();
+    auto& loadBalancer = superStructure.getLoadBalancer();
+    int iC = loadBalancer.loc(globiC);
+
+    //Retrieve blockLattice and blockGeometry
+    auto& blockLattice = sLattice.getBlock(iC);
+    auto& blockGeometry = sGeometry.getBlockGeometry(iC);
+
+    //Write particle to field
+    if(isPeriodic(periodicity)) {
+      const PhysR<T,D> min = communication::getCuboidMin<T,D>(sGeometry.getCuboidGeometry());
+      const PhysR<T,D> max = communication::getCuboidMax<T,D>(sGeometry.getCuboidGeometry(), min);
+
+      setBlockParticleField( blockGeometry, blockLattice, converter, min, max,
+                           particle, periodicity);
+    } else {
+      setBlockParticleField( blockGeometry, blockLattice, converter, particle );
+    }
+  }
+  static constexpr bool latticeCoupling = true;
+  static constexpr bool particleLoop = true;
+};
+
 
 
 /// Apply external acceleration (e.g. for apply gravity)
@@ -254,21 +328,28 @@ struct apply_external_acceleration_parallel{
 template<typename T, typename DESCRIPTOR, typename PARTICLETYPE>
 using couple_lattice_to_particles = std::conditional_t<
   access::providesSurface<PARTICLETYPE>(),
-  couple_lattice_to_particles_single_cuboid<T,DESCRIPTOR,PARTICLETYPE,
-    SuperLatticeMomentumExchangeForce<T, DESCRIPTOR, PARTICLETYPE>>,
+  std::conditional_t<
+    access::providesParallelization<PARTICLETYPE>(),
+    couple_lattice_to_parallel_particles<T,DESCRIPTOR,PARTICLETYPE,
+     BlockLatticeMomentumExchangeForce<T, DESCRIPTOR, PARTICLETYPE>>,
+    couple_lattice_to_particles_single_cuboid<T,DESCRIPTOR,PARTICLETYPE,
+     SuperLatticeMomentumExchangeForce<T, DESCRIPTOR, PARTICLETYPE>>>,
   couple_lattice_to_parallel_particles<T,DESCRIPTOR,PARTICLETYPE,
     BlockLatticeStokesDragForce<T,DESCRIPTOR,PARTICLETYPE,false>>
 >;
 
 template<typename T, typename DESCRIPTOR, typename PARTICLETYPE>
-using couple_particles_to_lattice =
-  couple_particles_to_lattice_single_cuboid<T,DESCRIPTOR,PARTICLETYPE>;
+using couple_particles_to_lattice = std::conditional_t<
+  access::providesParallelization<PARTICLETYPE>(),
+  couple_parallel_particles_to_lattice<T,DESCRIPTOR,PARTICLETYPE>,
+  couple_particles_to_lattice_single_cuboid<T,DESCRIPTOR,PARTICLETYPE>
+>;
 
 template<typename T, typename PARTICLETYPE>
 using process_dynamics = std::conditional_t<
-  access::providesSurface<PARTICLETYPE>(),
-  process_dynamics_single_cuboid<T,PARTICLETYPE>,
-  process_dynamics_parallel<T,PARTICLETYPE>
+  access::providesParallelization<PARTICLETYPE>(),
+  process_dynamics_parallel<T,PARTICLETYPE>,
+  process_dynamics_single_cuboid<T,PARTICLETYPE>
 >;
 
 template<typename T, typename PARTICLETYPE>
@@ -277,6 +358,9 @@ using apply_gravity = std::conditional_t<
   apply_external_acceleration_parallel<T,PARTICLETYPE>,
   apply_external_acceleration_single_cuboid<T,PARTICLETYPE>
 >;
+
+template<typename T, typename PARTICLETYPE>
+using communicate_parallel_surface_force = communicate_surface_force<T,PARTICLETYPE>;
 
 #else
 //NON-MPI support for resolved particles

@@ -56,6 +56,13 @@ void checkPlatform<Platform::GPU_CUDA>()
   } else if (nDevices > 1) {
     clout << "Found " << nDevices << " CUDA devices but only one can be used per MPI process." << std::endl;
   }
+#ifdef OLB_DEBUG
+  for (int deviceI=0; deviceI < nDevices; ++deviceI) {
+    cudaDeviceProp deviceProp;
+    cudaGetDeviceProperties(&deviceProp, deviceI);
+    clout << deviceProp.name << " visible" << std::endl;
+  }
+#endif
   clout.setMultiOutput(false);
 
 #ifdef PARALLEL_MODE_MPI
@@ -577,11 +584,10 @@ public:
 
 };
 
-/// Wrapper for a local plain-copy block communication request
-template <typename T, typename DESCRIPTOR>
-template <Platform PLATFORM>
-class ConcreteBlockCommunicator<ConcreteBlockLattice<T,DESCRIPTOR,Platform::GPU_CUDA>>::HeterogeneousCopyTask
-  : public ConcreteBlockCommunicator<ConcreteBlockLattice<T,DESCRIPTOR,Platform::GPU_CUDA>>::CopyTask {
+
+/// Private implementation of heterogeneous copy task between CPU_* source and GPU_CUDA target
+template <typename T, typename DESCRIPTOR, Platform SOURCE>
+class HeterogeneousCopyTaskDataForGpuTarget : public ConcreteHeterogeneousCopyTask {
 private:
   thrust::device_vector<gpu::cuda::AnyDeviceFieldArrayD> _targetFields;
 
@@ -592,17 +598,17 @@ private:
 
   ConcreteBlockLattice<T,DESCRIPTOR,Platform::GPU_CUDA>& _target;
 
-  MultiConcreteCommunicatable<ConcreteBlockLattice<T,DESCRIPTOR,PLATFORM>> _source;
+  MultiConcreteCommunicatable<ConcreteBlockLattice<T,DESCRIPTOR,SOURCE>> _source;
 
   std::unique_ptr<gpu::cuda::device::Stream> _stream;
 
   gpu::cuda::Column<std::uint8_t> _buffer;
 
 public:
-  HeterogeneousCopyTask(
+  HeterogeneousCopyTaskDataForGpuTarget(
     const std::vector<std::type_index>& fields,
     const std::vector<CellID>& targetCells, ConcreteBlockLattice<T,DESCRIPTOR,Platform::GPU_CUDA>& target,
-    const std::vector<CellID>& sourceCells, ConcreteBlockLattice<T,DESCRIPTOR,PLATFORM>&           source):
+    const std::vector<CellID>& sourceCells, ConcreteBlockLattice<T,DESCRIPTOR,SOURCE>&             source):
     _targetFields(target.getDataRegistry().deviceFieldArrays(fields)),
     _onlyPopulationField(fields.size() == 1 && fields[0] == typeid(descriptors::POPULATION)),
     _targetCells(targetCells),
@@ -611,18 +617,9 @@ public:
     _source(source, fields),
     _stream(std::make_unique<gpu::cuda::device::Stream>(cudaStreamNonBlocking)),
     _buffer(_source.size(_sourceCells))
-  {
-    OLB_ASSERT(_sourceCells.size() == _targetCells.size(),
-               "Source cell count must match target cell count");
-  }
+  { }
 
-  ~HeterogeneousCopyTask()
-  {
-    wait();
-  }
-
-  void copy() override
-  {
+  void copy() override {
     _source.serialize(_sourceCells, _buffer.data());
     _buffer.setProcessingContext(ProcessingContext::Simulation, *_stream);
 
@@ -634,12 +631,113 @@ public:
     }
   }
 
-  void wait() override
-  {
+  void wait() override {
     _stream->synchronize();
   }
 
 };
+
+/// Private implementation of heterogeneous copy task between GPU_CUDA source and CPU_* target
+template <typename T, typename DESCRIPTOR, Platform TARGET>
+class HeterogeneousCopyTaskDataForGpuSource : public ConcreteHeterogeneousCopyTask {
+private:
+  thrust::device_vector<gpu::cuda::AnyDeviceFieldArrayD> _sourceFields;
+
+  const std::vector<CellID>&          _targetCells;
+  const thrust::device_vector<CellID> _sourceCells;
+
+  MultiConcreteCommunicatable<ConcreteBlockLattice<T,DESCRIPTOR,TARGET>> _target;
+  ConcreteBlockLattice<T,DESCRIPTOR,Platform::GPU_CUDA>& _source;
+
+  const bool _onlyPopulationField;
+
+  std::unique_ptr<gpu::cuda::device::Stream> _stream;
+
+  gpu::cuda::Column<std::uint8_t> _buffer;
+
+public:
+  HeterogeneousCopyTaskDataForGpuSource(
+    const std::vector<std::type_index>& fields,
+    const std::vector<CellID>& targetCells, ConcreteBlockLattice<T,DESCRIPTOR,TARGET>&             target,
+    const std::vector<CellID>& sourceCells, ConcreteBlockLattice<T,DESCRIPTOR,Platform::GPU_CUDA>& source):
+    _sourceFields(source.getDataRegistry().deviceFieldArrays(fields)),
+    _onlyPopulationField(fields.size() == 1 && fields[0] == typeid(descriptors::POPULATION)),
+    _targetCells(targetCells),
+    _sourceCells(sourceCells),
+    _target(target, fields),
+    _source(source),
+    _stream(std::make_unique<gpu::cuda::device::Stream>(cudaStreamNonBlocking)),
+    _buffer(_target.size(_targetCells))
+  { }
+
+  void copy() override {
+    if (_onlyPopulationField) {
+      gpu::cuda::DeviceContext<T,DESCRIPTOR> lattice(_source);
+      gpu::cuda::async_gather_field<descriptors::POPULATION>(_stream->get(), lattice, _sourceCells, _buffer.deviceData());
+    } else {
+      gpu::cuda::async_gather_any_fields(_stream->get(), _sourceFields, _sourceCells, _buffer.deviceData());
+    }
+
+    _buffer.setProcessingContext(ProcessingContext::Evaluation, *_stream);
+  }
+
+  void wait() override {
+    _stream->synchronize();
+    _target.deserialize(_targetCells, _buffer.data());
+  }
+
+};
+
+template <typename T, typename DESCRIPTOR, Platform SOURCE>
+HeterogeneousCopyTask<T,DESCRIPTOR,SOURCE,Platform::GPU_CUDA>::HeterogeneousCopyTask(
+  const std::vector<std::type_index>& fields,
+  const std::vector<CellID>& targetCells, ConcreteBlockLattice<T,DESCRIPTOR,Platform::GPU_CUDA>& target,
+  const std::vector<CellID>& sourceCells, ConcreteBlockLattice<T,DESCRIPTOR,SOURCE>&             source):
+  _impl(new HeterogeneousCopyTaskDataForGpuTarget<T,DESCRIPTOR,SOURCE>(fields,
+                                                                       targetCells, target,
+                                                                       sourceCells, source))
+{
+  OLB_ASSERT(sourceCells.size() == targetCells.size(),
+             "Source cell count must match target cell count");
+}
+
+template <typename T, typename DESCRIPTOR, Platform SOURCE>
+void HeterogeneousCopyTask<T,DESCRIPTOR,SOURCE,Platform::GPU_CUDA>::copy()
+{
+  _impl->copy();
+}
+
+template <typename T, typename DESCRIPTOR, Platform SOURCE>
+void HeterogeneousCopyTask<T,DESCRIPTOR,SOURCE,Platform::GPU_CUDA>::wait()
+{
+  _impl->wait();
+}
+
+template <typename T, typename DESCRIPTOR, Platform TARGET>
+HeterogeneousCopyTask<T,DESCRIPTOR,Platform::GPU_CUDA,TARGET>::HeterogeneousCopyTask(
+  const std::vector<std::type_index>& fields,
+  const std::vector<CellID>& targetCells, ConcreteBlockLattice<T,DESCRIPTOR,TARGET>&             target,
+  const std::vector<CellID>& sourceCells, ConcreteBlockLattice<T,DESCRIPTOR,Platform::GPU_CUDA>& source):
+  _impl(new HeterogeneousCopyTaskDataForGpuSource<T,DESCRIPTOR,TARGET>(fields,
+                                                                       targetCells, target,
+                                                                       sourceCells, source))
+{
+  OLB_ASSERT(sourceCells.size() == targetCells.size(),
+             "Source cell count must match target cell count");
+}
+
+template <typename T, typename DESCRIPTOR, Platform TARGET>
+void HeterogeneousCopyTask<T,DESCRIPTOR,Platform::GPU_CUDA,TARGET>::copy()
+{
+  _impl->copy();
+}
+
+template <typename T, typename DESCRIPTOR, Platform TARGET>
+void HeterogeneousCopyTask<T,DESCRIPTOR,Platform::GPU_CUDA,TARGET>::wait()
+{
+  _impl->wait();
+}
+
 
 template <typename T, typename DESCRIPTOR>
 ConcreteBlockCommunicator<ConcreteBlockLattice<T,DESCRIPTOR,Platform::GPU_CUDA>>::ConcreteBlockCommunicator(
@@ -671,31 +769,20 @@ ConcreteBlockCommunicator<ConcreteBlockLattice<T,DESCRIPTOR,Platform::GPU_CUDA>>
             break;
           case Platform::CPU_SIMD:
             // Use manual copy for local GPU-CPU communication due to better performance
-            _copyTasks.emplace_back(new HeterogeneousCopyTask<Platform::CPU_SIMD>(
+            _copyTasks.emplace_back(new HeterogeneousCopyTask<T,DESCRIPTOR,Platform::CPU_SIMD,Platform::GPU_CUDA>(
               neighborhood.getFieldsCommonWith(remoteC),
               neighborhood.getCellsInboundFrom(remoteC),   super.template getBlock<ConcreteBlockLattice<T,DESCRIPTOR,Platform::GPU_CUDA>>(_iC),
               neighborhood.getCellsRequestedFrom(remoteC), super.template getBlock<ConcreteBlockLattice<T,DESCRIPTOR,Platform::CPU_SIMD>>(loadBalancer.loc(remoteC))));
             break;
           case Platform::CPU_SISD:
             // Use manual copy for local GPU-CPU communication due to better performance
-            _copyTasks.emplace_back(new HeterogeneousCopyTask<Platform::CPU_SISD>(
+            _copyTasks.emplace_back(new HeterogeneousCopyTask<T,DESCRIPTOR,Platform::CPU_SISD,Platform::GPU_CUDA>(
               neighborhood.getFieldsCommonWith(remoteC),
               neighborhood.getCellsInboundFrom(remoteC),   super.template getBlock<ConcreteBlockLattice<T,DESCRIPTOR,Platform::GPU_CUDA>>(_iC),
               neighborhood.getCellsRequestedFrom(remoteC), super.template getBlock<ConcreteBlockLattice<T,DESCRIPTOR,Platform::CPU_SISD>>(loadBalancer.loc(remoteC))));
             break;
           default:
             throw std::runtime_error("Invalid remote PLATFORM");
-        }
-      }
-
-      if (!neighborhood.getCellsOutboundTo(remoteC).empty()) {
-        if (remotePlatform != Platform::GPU_CUDA) {
-          _sendTasks.emplace_back(std::make_unique<SendTask>(
-            _mpiCommunicator, tagCoordinator.get(loadBalancer.glob(_iC), remoteC),
-            loadBalancer.rank(remoteC),
-            neighborhood.getFieldsCommonWith(remoteC),
-            neighborhood.getCellsOutboundTo(remoteC),
-            super.template getBlock<ConcreteBlockLattice<T,DESCRIPTOR,Platform::GPU_CUDA>>(_iC)));
         }
       }
     } else {

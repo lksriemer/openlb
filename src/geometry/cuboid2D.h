@@ -57,27 +57,25 @@ private:
   T   _globPosX, _globPosY;
   /// Distance to the next node
   T   _delta;
-  /// Number of nodes in the direction x and y and the refinement Level
+  /// Number of nodes in the direction x and y
   int _nX, _nY;
   /// Number of full cells
   size_t _weight;
-  /// refinement level, _delta = _delta0^_refinementLevel
-  int _refinementLevel;
 
   /// Specific ostream for the classname in each line
   mutable OstreamManager clout;
 
 public:
   /// Construction of a cuboid
-  Cuboid2D(T globPosX, T globPosY, T delta, int nX, int nY, int refinementLevel=0);
+  Cuboid2D(T globPosX, T globPosY, T delta, int nX, int nY);
   /// Construction of a cuboid vector version
-  Cuboid2D(Vector<T,2> origin, T delta, Vector<int,2> extend, int refinementLevel=0);
+  Cuboid2D(Vector<T,2> origin, T delta, Vector<int,2> extend);
   /// Copy constructor
   Cuboid2D(Cuboid2D<T> const& rhs, int overlap=0);
   /// Copy assignment
   Cuboid2D& operator=(Cuboid2D const& rhs);
   /// Initializes the cuboid
-  void init(T globPosX, T globPosY, T delta, int nX, int nY, int refinementLevel=0);
+  void init(T globPosX, T globPosY, T delta, int nX, int nY);
   /// Read access to left lower corner coordinates
   T get_globPosX() const;
   T get_globPosY() const;
@@ -156,14 +154,6 @@ public:
   /// resize the cuboid to the passed size
   void resize(int X, int Y, int nX, int nY);
 
-  /// Refines the cuboid with given refinement level
-  void refineToLevel(unsigned int level);
-  /// Refines one more level
-  void refineIncrease();
-  /// Refines one less level
-  void refineDecrease();
-
-  int get_refinementLevel() const;
 };
 
 }  // namespace olb

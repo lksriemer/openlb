@@ -1,45 +1,66 @@
+<!-- certain parameters are read manually in the example -->
+<!-- they are indicated with "read manually in <respective method>". -->
+<!-- The other parameters are read automatically by the unit converter. -->
 <Param>
   <Application>
     <Name>cavity2d</Name>
     <dim>2</dim>
-    <OlbDir>../../</OlbDir>
-    <Discretization>
+    <OlbDir>../../</OlbDir> <!-- read manually in main-->
+    <PressureFilter></PressureFilter>
+    <Discretization> <!--two discretization parameters are required for unit converter-->
       <Resolution>128</Resolution>
-     <LatticeRelaxationTime>0.5384</LatticeRelaxationTime>
+      <LatticeRelaxationTime>0.5384</LatticeRelaxationTime>
+      <PhysDeltaX></PhysDeltaX>
+      <CharLatticeVelocity></CharLatticeVelocity>
+      <PhysDeltaT></PhysDeltaT>
     </Discretization>
     <PhysParameters>
-      <PhysMaxTime>100</PhysMaxTime>
+      <PhysMaxTime>100</PhysMaxTime> <!-- read manually in main-->
       <CharPhysLength>1</CharPhysLength>
       <CharPhysPressure> 0. </CharPhysPressure>
       <CharPhysVelocity>1</CharPhysVelocity>
       <PhysViscosity>0.001</PhysViscosity>
       <PhysDensity>1</PhysDensity>
+      <StartUpTime></StartUpTime>
+      <BoundaryValueUpdateTime></BoundaryValueUpdateTime>
     </PhysParameters>
+    <Mesh>
+      <noCuboidsPerProcess></noCuboidsPerProcess>
+    </Mesh>
     <ConvergenceCheck>
-      <interval>1</interval>
-      <residuum>1e-3</residuum>
+      <Type></Type>
+      <Interval>1</Interval>
+      <Residuum>1e-3</Residuum>
     </ConvergenceCheck>
   </Application>
   <Output>
-    <OutputDir>./tmp/</OutputDir>
+    <OutputDir>./tmp/</OutputDir>  <!-- read manually in main-->
     <MultiOutput>false</MultiOutput>
+    <PrintLogConverter></PrintLogConverter>
     <Log>
       <Filename>cavity2d.log</Filename>
-      <SaveTime>1</SaveTime>
+      <SaveTime>1</SaveTime> <!-- read manually in main-->
+      <VerboseLog></VerboseLog>
     </Log>
     <VisualizationVTK>
-      <Filename>cavity2dvtk</Filename>
-      <SaveTime>1</SaveTime>
+      <Output></Output>
+      <Filename>cavity2dvtk</Filename> <!-- read manually in main-->
+      <SaveTime>1</SaveTime> <!-- read manually in main-->
     </VisualizationVTK>
     <VisualizationImages>
-      <Filename>cavity2dimage</Filename>
-      <SaveTime>5</SaveTime>
+      <Output></Output>
+      <Filename>cavity2dimage</Filename> <!-- read manually in main-->
+      <SaveTime>5</SaveTime> <!-- read manually in main-->
     </VisualizationImages>
+    <VisualizationGnuplot>
+      <Output></Output>
+      <Filename>centerVelocityX</Filename> <!-- read manually in main-->
+      <SaveTime>5</SaveTime> <!-- read manually in main-->
+    </VisualizationGnuplot>
     <Timer>
       <PrintMode>0</PrintMode>
-      <SkipType>0</SkipType>
-      <PhysTime>1</PhysTime>
-      <PrintSummary>true</PrintSummary>
+      <PrintSummary>true</PrintSummary> <!--app specific, unused-->
+      <PrintModeSummary>0</PrintModeSummary>
     </Timer>
   </Output>
 </Param>

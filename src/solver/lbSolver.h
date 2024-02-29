@@ -53,9 +53,15 @@ protected:
   bool                                   _finishedTimeLoop {false};
 
 public:
-  BaseSolver(utilities::TypeIndexedSharedPtrTuple<PARAMETERS> params) : _parameters(params)
+  BaseSolver(utilities::TypeIndexedSharedPtrTuple<PARAMETERS> params)
+   : _parameters(params)
   { }
 
+  /// Actions that shall be executed once after construction
+  virtual void initialize() = 0;
+
+  /// Configurations that take place before solving
+  virtual void preProcess() { }
 
   void solve()
   {
@@ -72,11 +78,11 @@ public:
     } while (! exitCondition(_iT));
 
     _finishedTimeLoop = true;
-    postprocessing();
+    postSimulation();
   }
 
-  /// Actions that shall be executed once after construction
-  virtual void initialize() = 0;
+  /// Actions that take place after solving
+  virtual void postProcess() { }
 
 protected:
   /// Actions that shall be executed before the time-stepping
@@ -90,7 +96,7 @@ protected:
   virtual bool exitCondition(std::size_t iT) const = 0;
 
   /// Actions that shall be executed after the time-stepping
-  virtual void postprocessing() = 0;
+  virtual void postSimulation() = 0;
 
 public:
   /// Access to parameter structs as parameters(KEY())
@@ -158,6 +164,8 @@ protected:
 
   bool                                               _exitMaxU {false};
   BaseType<T>                                        _boundMaxU {1.0};
+  std::size_t                                        _itCheckStability {1};
+  std::size_t                                        _itBoundaryUpdate {1};
 
 public:
   LbSolver(utilities::TypeIndexedSharedPtrTuple<PARAMETERS> params) : LbSolver::BaseSolver(params)
@@ -178,7 +186,7 @@ protected:
   void timeStep(std::size_t iT) override;
 
   /// Evaluate results
-  void postprocessing() override;
+  void postSimulation() override;
 
 
   /// Define the geometry
@@ -240,7 +248,7 @@ protected:
   virtual void writeImages(std::size_t iT) const { };
 
   // Inheritant may override this method for gnuplot output
-  virtual void writeGnuplot() const { };
+  virtual void writeGnuplot(std::size_t iT) const { };
 
   // ------------ Access to converters and lattices ---------------------------
   template<typename... ARGS>
@@ -306,11 +314,20 @@ protected:
 
 /// Returns a function that encapsulates the solving process.
 template<typename T, typename SOLVER>
-std::function<T (const std::vector<T>&)> getCallable(std::shared_ptr<SOLVER> solver){
-  return [=](const std::vector<T>& control) -> T {
+std::function<T (const std::vector<T>&, unsigned)> getCallable(std::shared_ptr<SOLVER> solver){
+  return [=](const std::vector<T>& control, unsigned optiStep) -> T {
     solver->parameters(names::Opti()).applyControl(control);
+    solver->parameters(names::OutputOpti()).counterOptiStep = optiStep;
     solver->solve();
     return solver->parameters(names::Results()).objective;
+  };
+}
+
+/// Returns a function that encapsulates the solving process.
+template<typename SOLVER>
+std::function<void ()> doPostProcess(std::shared_ptr<SOLVER> solver){
+  return [=]() {
+    solver->postProcess();
   };
 }
 
@@ -321,12 +338,7 @@ template <class SOLVER>
 std::shared_ptr<SOLVER> createLbSolver(XMLreader const& xml)
 {
   using parameters_map = typename SOLVER::BaseSolver::Parameters_t;
-  utilities::TypeIndexedSharedPtrTuple<parameters_map> paramsTuple;
-  meta::tuple_for_each(paramsTuple.tuple, [&xml](auto& element, auto index) {
-    using parameter_type = typename std::remove_reference_t<decltype(element)>::element_type;
-    using tag = typename parameters_map::keys_t::template get<index()>;
-    element = createParameters<parameter_type,tag>(xml);
-  });
+  auto paramsTuple = createParametersTuple<parameters_map>(xml);
   return std::make_shared<SOLVER>(paramsTuple);
 }
 

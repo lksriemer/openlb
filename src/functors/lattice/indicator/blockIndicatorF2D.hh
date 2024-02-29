@@ -212,6 +212,47 @@ Vector<int,2> BlockIndicatorIdentity2D<T>::getMax()
   return _indicatorF.getMax();
 }
 
+
+template <typename T>
+BlockIndicatorBoundaryNeighbor2D<T>::BlockIndicatorBoundaryNeighbor2D(BlockIndicatorF2D<T>& indicatorF, int overlap)
+  : BlockIndicatorF2D<T>(indicatorF.getBlockGeometry()),
+    _indicatorF(indicatorF),
+    _overlap(overlap)
+{ }
+
+template <typename T>
+bool BlockIndicatorBoundaryNeighbor2D<T>::operator() (bool output[], const int input[])
+{
+  // check if current position is not solid
+  if ( this->getBlockGeometry().getMaterial(input[0],input[1]) != 0 ) {
+    // check all neighbors if they are part of boundary via indicator
+    for ( int iXo = -_overlap; iXo <= _overlap; ++iXo ) {
+      for ( int iYo = -_overlap; iYo <= _overlap; ++iYo ) {
+        const int neighborPos[2] = {iXo + input[0], iYo + input[1]};
+        bool partOfBoundary[1] = {false};
+        // material-indicator to check if part of boundary
+        _indicatorF( partOfBoundary, neighborPos );
+        if ( partOfBoundary[0] ) {
+          return true;
+        }
+      }
+    }
+  }
+  return false;
+}
+
+template <typename T>
+Vector<int,2> BlockIndicatorBoundaryNeighbor2D<T>::getMin()
+{
+  return _indicatorF.getMin() - _overlap;
+}
+
+template <typename T>
+Vector<int,2> BlockIndicatorBoundaryNeighbor2D<T>::getMax()
+{
+  return _indicatorF.getMax() + _overlap;
+}
+
 } // namespace olb
 
 #endif

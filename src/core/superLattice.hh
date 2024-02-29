@@ -524,32 +524,11 @@ void SuperLattice<T,DESCRIPTOR>::collideAndStream()
   executePostProcessors(PreCollide());
 
   #ifdef PARALLEL_MODE_OMP
-  #pragma omp sections
-  {
-    // Schedule async processing of non-CPU block collisions
-    #pragma omp section
-    {
-      for (int iC = 0; iC < load.size(); ++iC) {
-        if (load.platform(iC) == Platform::GPU_CUDA) {
-          _block[iC]->collide();
-        }
-      }
-    }
-    // Processing of CPU block collisions
-    #pragma omp section
-    {
-      for (int iC = 0; iC < load.size(); ++iC) {
-        if (isPlatformCPU(load.platform(iC))) {
-          _block[iC]->collide();
-        }
-      }
-    }
-  }
-  #else // PARALLEL_MODE_OMP
+  #pragma omp taskloop
+  #endif
   for (int iC = 0; iC < load.size(); ++iC) {
     _block[iC]->collide();
   }
-  #endif
 
   // Communicate propagation overlap, optional post processing
   executePostProcessors(PostCollide());
@@ -579,35 +558,20 @@ template<typename T, typename DESCRIPTOR>
 template<typename STAGE>
 void SuperLattice<T,DESCRIPTOR>::executePostProcessors(STAGE stage)
 {
+  #ifdef PLATFORM_GPU_CUDA
+  gpu::cuda::device::synchronize();
+  #endif
+
   getCommunicator(stage).communicate();
 
   auto& load = this->_loadBalancer;
 
   #ifdef PARALLEL_MODE_OMP
-  #pragma omp sections
-  {
-    #pragma omp section
-    {
-      for (int iC = 0; iC < load.size(); ++iC) {
-        if (load.platform(iC) == Platform::GPU_CUDA) {
-          _block[iC]->template postProcess<STAGE>();
-        }
-      }
-    }
-    #pragma omp section
-    {
-      for (int iC = 0; iC < load.size(); ++iC) {
-        if (isPlatformCPU(load.platform(iC))) {
-          _block[iC]->template postProcess<STAGE>();
-        }
-      }
-    }
-  }
-  #else // PARALLEL_MODE_OMP
+  #pragma omp taskloop
+  #endif
   for (int iC = 0; iC < load.size(); ++iC) {
     _block[iC]->template postProcess<STAGE>();
   }
-  #endif
 }
 
 template<typename T, typename DESCRIPTOR>

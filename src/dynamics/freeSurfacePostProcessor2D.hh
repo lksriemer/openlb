@@ -61,8 +61,6 @@ void FreeSurfaceMassFlowPostProcessor2D::apply(CELL& cell, PARAMETERS& vars) {
   const T lonely_threshold = vars.template get<FreeSurface::LONELY_THRESHOLD>();
   const bool has_surface_tension = vars.template get<FreeSurface::HAS_SURFACE_TENSION>();
   const T surface_tension_parameter = vars.template get<FreeSurface::SURFACE_TENSION_PARAMETER>();
-  //const T force_conversion_factor = vars.template get<FreeSurface::FORCE_CONVERSION_FACTOR>();
-  //const T lattice_size = vars.template get<FreeSurface::LATTICE_SIZE>();
 
   /*
   * Minor "hack". Remove all cell flags here, because it is needed in the last processor due to pulling steps in processor 6 and 7
@@ -72,18 +70,6 @@ void FreeSurfaceMassFlowPostProcessor2D::apply(CELL& cell, PARAMETERS& vars) {
   /*
   * This processor only works on interface types
   */
-  /*if(FreeSurface2D::isCellType(cell, FreeSurface::Type::Fluid )){
-
-    T mass_tmp = blockLattice.get(iX, iY).template getField<FreeSurface::MASS>();
-    for(int iPop = 1; iPop < DESCRIPTOR::q; ++iPop){
-      int iXc = iX + descriptors::c<DESCRIPTOR>(iPop, 0);
-      int iYc = iY + descriptors::c<DESCRIPTOR>(iPop, 1);
-      int iPop_op = descriptors::opposite<DESCRIPTOR>(iPop);
-      mass_tmp += blockLattice.get(iX, iY)[iPop_op] - blockLattice.get(iXc, iYc)[iPop];
-    }
-    blockLattice.get(iX, iY).template setField<FreeSurface::MASS>(mass_tmp);
-  }
-  else */
   if (isCellType(cell, FreeSurface::Type::Interface )) {
     T mass_tmp = cell.template getField<FreeSurface::MASS>();
 
@@ -92,6 +78,7 @@ void FreeSurfaceMassFlowPostProcessor2D::apply(CELL& cell, PARAMETERS& vars) {
     for (int iPop = 1; iPop < DESCRIPTOR::q; ++iPop){
       auto cellC = cell.neighbor({descriptors::c<DESCRIPTOR>(iPop, 0),
                                   descriptors::c<DESCRIPTOR>(iPop, 1)});
+
       int iPop_op = descriptors::opposite<DESCRIPTOR>(iPop);
 
       /*
@@ -159,7 +146,6 @@ void FreeSurfaceMassFlowPostProcessor2D::apply(CELL& cell, PARAMETERS& vars) {
 
     T curvature = 0.;
 
-
     if(has_surface_tension){
      FreeSurface::NeighbourInfo info = getNeighbourInfo(cell);
       if(info.has_gas_neighbours){
@@ -212,8 +198,6 @@ void FreeSurfaceMassFlowPostProcessor2D::apply(CELL& cell, PARAMETERS& vars) {
     }else if(drop_isolated_cells && (neighbour_info.interface_neighbours == 0)){
       if(!neighbour_info.has_gas_neighbours){
         setCellFlags(cell, FreeSurface::Flags::ToFluid);
-      }else if(!neighbour_info.has_fluid_neighbours){
-        //setCellFlags(cell, FreeSurface::Flags::ToGas);
       }
     }
   }
@@ -276,10 +260,9 @@ void FreeSurfaceToFluidCellConversionPostProcessor2D<T, DESCRIPTOR>::apply(CELL&
 
       cell.iniEquilibrium(rho_avg, u_avg);
     }
+
+  // If a toGas cell has a neighbouring toFluid cell, unset the toGas flag
   }else if(hasCellFlags(cell, FreeSurface::Flags::ToGas)){
-    /*
-    * If a toGas cell has a neighbouring toFluid cell, unset the toGas flag
-    */
     if(hasNeighbourFlags(cell, FreeSurface::Flags::ToFluid)){
       setCellFlags(cell, static_cast<FreeSurface::Flags>(0));
     }
@@ -298,16 +281,14 @@ void FreeSurfaceToFluidCellConversionPostProcessor2D<T, DESCRIPTOR>::apply(CELL&
 
 // Write (always range 0)
 // CellFlags
-
 template <typename T, typename DESCRIPTOR>
 template <typename CELL>
 void FreeSurfaceToGasCellConversionPostProcessor2D<T, DESCRIPTOR>::apply(CELL& cell) {
 
   using namespace olb::FreeSurface;
 
-  /*
-  * For the to be converted toGas cells, set the neighbours to interface cells
-  */
+
+  // For the to be converted toGas cells, set the neighbours to interface cells
   if ( isCellType(cell, FreeSurface::Type::Fluid)
       && hasNeighbourFlags(cell, FreeSurface::Flags::ToGas)){
     setCellFlags(cell, FreeSurface::Flags::NewInterface);
@@ -315,6 +296,7 @@ void FreeSurfaceToGasCellConversionPostProcessor2D<T, DESCRIPTOR>::apply(CELL& c
     cell.template setField<FreeSurface::MASS>(rho);
   }
 }
+
 
 // LocalProcessor 6
 
@@ -393,16 +375,7 @@ void FreeSurfaceMassExcessPostProcessor2D<T, DESCRIPTOR>::apply(CELL& cell) {
   /* Prepare Mass excess push */
   Vector<T,DESCRIPTOR::q> mass_excess_vector{};
   mass_excess_vector[0] = 0.;
-  /*
-  if(product_sum > 0){
-    T fraction = 1./ product_sum;
 
-    for(int iPop = 1; iPop < DESCRIPTOR::q; ++iPop){
-      mass_excess_vector[iPop] = mass_excess * products[iPop] * fraction;
-    }
-    cell.template setField<FreeSurface::TEMP_MASS_EXCHANGE>( mass_excess_vector );
-  }
-  else*/
   if (product_total > 0) {
     T product_fraction = 1. / product_total;
     for(int iPop=1; iPop < DESCRIPTOR::q; iPop++) {

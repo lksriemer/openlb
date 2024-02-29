@@ -100,6 +100,7 @@ class AdsorptionReaction {
    */
   T getSurfaceLoading(T soluteConcentration, T particleLoading, T particleConcentration) {
     if (soluteConcentration < 0) return 0; // prevent nan
+    // using D = double;  // because fsolve is hardcoded in double type
 
     // previous surface concentration as initial guess
     T surfaceConcentration = soluteConcentration;

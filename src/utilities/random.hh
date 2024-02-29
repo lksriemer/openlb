@@ -142,8 +142,16 @@ void Randomizer<T,useStored>::writeSequence( std::size_t numOfValues,
 template<typename T,bool useStored>
 T Randomizer<T,useStored>::generateScalarRandom()
 {
-  srand(clock());
-  return (T) (rand() % 100000) / 100000. ; //precision 5
+  // Non-deterministic random number generator
+  std::random_device rd;
+  // Pseudo-random number engine: Mersenne Twister 19937 generator
+  std::mt19937 engine(rd());
+
+  // Distribution to generate numbers in the range [0.0, 1.0)
+  std::uniform_real_distribution<T> distribution(0.0, 1.0);
+
+  // Generate a random number
+  return distribution(engine);
 }
 
 template<typename T,bool useStored>

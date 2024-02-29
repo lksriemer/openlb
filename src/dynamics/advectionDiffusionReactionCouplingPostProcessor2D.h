@@ -89,6 +89,8 @@ public:
       for (int iX=newX0; iX<=newX1; ++iX) {
         for (int iY=newY0; iY<=newY1; ++iY) {
 
+          //std::cout << "iX: " << iX << "     iY: " << iY << std::endl;
+
           T conc[component_number];
           conc[0] = blockLattice.get(iX,iY).computeRho();
           for (int iter_component = 1; iter_component<component_number; ++iter_component) {

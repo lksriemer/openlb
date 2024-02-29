@@ -30,9 +30,12 @@
 #include "blockLoadBalancer.h"
 #include "heuristicLoadBalancer.h"
 #include "randomLoadBalancer.h"
+#include "heterogeneousLoadBalancer.h"
+
 #include "mpiManager.h"
 #include "mpiManagerAD.hh"  // includes aDiff, but “S” is not defined -> it is working if you use the right order in the main cf. apps/mathias/bifurcation-pi
 #include "ompManager.h"
+
 #include "superStructure.h"
 #include "blockCommunicator.h"
 #include "superCommunicator.h"

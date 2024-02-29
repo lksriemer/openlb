@@ -125,6 +125,17 @@ public:
   bool operator() (T output[], const int input[]);
 };
 
+/// perform explicit typecast from output type T2 to T
+// user has to guarantee that cast is well-defined
+template <typename T, typename T2>
+class BlockTypecastF3D : public BlockF3D<T> {
+protected:
+  BlockF3D<T2>&          _f;
+public:
+  BlockTypecastF3D(BlockF3D<T2>& f);
+  bool operator() (T output[], const int input[]);
+};
+
 /// represents all functors that operate on a DESCRIPTOR in general, e.g. getVelocity(), getForce(), getPressure()
 template <typename T, typename DESCRIPTOR>
 class BlockLatticeF3D : public BlockF3D<T> {

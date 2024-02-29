@@ -40,7 +40,6 @@
 using namespace olb;
 using namespace olb::descriptors;
 using namespace olb::graphics;
-using namespace olb::util;
 
 using T = FLOATING_POINT_TYPE;
 using DESCRIPTOR = D3Q19<>;
