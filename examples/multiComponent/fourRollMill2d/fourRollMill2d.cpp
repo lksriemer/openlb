@@ -38,8 +38,7 @@
  * because of increased computation time.
  */
 
-#include "olb2D.h"
-#include "olb2D.hh"
+#include <olb.h>
 
 using namespace olb;
 using namespace olb::descriptors;
@@ -221,11 +220,11 @@ SuperGeometry<T,2> prepareGeometry(UnitConverter<T,DESCRIPTOR> const& converter)
   std::shared_ptr<IndicatorF2D<T>> cylind3 = std::make_shared<IndicatorCircle2D<T>>( center3, radiusCylinder );
   std::shared_ptr<IndicatorF2D<T>> cylind4 = std::make_shared<IndicatorCircle2D<T>>( center4, radiusCylinder );
 
-  CuboidGeometry2D<T>* cGeometry = new CuboidGeometry2D<T>( *(cuboid-(cylind1+cylind2+cylind3+cylind4)),
+  CuboidDecomposition2D<T>* cuboidDecomposition = new CuboidDecomposition2D<T>( *(cuboid-(cylind1+cylind2+cylind3+cylind4)),
                                 converter.getPhysDeltaX(), noOfCuboids );
-  cGeometry->setPeriodicity( true, true );
-  HeuristicLoadBalancer<T>* loadBalancer = new HeuristicLoadBalancer<T>( *cGeometry );
-  SuperGeometry<T,2> superGeometry( *cGeometry,*loadBalancer );
+  cuboidDecomposition->setPeriodicity({ true, true });
+  HeuristicLoadBalancer<T>* loadBalancer = new HeuristicLoadBalancer<T>( *cuboidDecomposition );
+  SuperGeometry<T,2> superGeometry( *cuboidDecomposition,*loadBalancer );
 
   superGeometry.rename( 0,2 );
   superGeometry.rename( 2,1,{0,0} );
@@ -259,17 +258,17 @@ void prepareLattice( SuperLattice<T, DESCRIPTOR>& sLattice1,
 
 
   auto cylinderIndicator1 = superGeometry.getMaterialIndicator(3);
-  setFreeEnergyInletBoundary<T, DESCRIPTOR>(sLattice1, omega, cylinderIndicator1, "velocity", 1);
-  setFreeEnergyInletBoundary<T, DESCRIPTOR>(sLattice2, omega, cylinderIndicator1, "velocity", 2);
+  boundary::set<boundary::FreeEnergyVelocity>(sLattice1, cylinderIndicator1);
+  boundary::set<boundary::FreeEnergyOrderParameter>(sLattice2, cylinderIndicator1);
   auto cylinderIndicator2 = superGeometry.getMaterialIndicator(4);
-  setFreeEnergyInletBoundary<T, DESCRIPTOR>(sLattice1, omega, cylinderIndicator2, "velocity", 1);
-  setFreeEnergyInletBoundary<T, DESCRIPTOR>(sLattice2, omega, cylinderIndicator2, "velocity", 2);
+  boundary::set<boundary::FreeEnergyVelocity>(sLattice1, cylinderIndicator2);
+  boundary::set<boundary::FreeEnergyOrderParameter>(sLattice2, cylinderIndicator2);
   auto cylinderIndicator3 = superGeometry.getMaterialIndicator(5);
-  setFreeEnergyInletBoundary<T, DESCRIPTOR>(sLattice1, omega, cylinderIndicator3, "velocity", 1);
-  setFreeEnergyInletBoundary<T, DESCRIPTOR>(sLattice2, omega, cylinderIndicator3, "velocity", 2);
+  boundary::set<boundary::FreeEnergyVelocity>(sLattice1, cylinderIndicator3);
+  boundary::set<boundary::FreeEnergyOrderParameter>(sLattice2, cylinderIndicator3);
   auto cylinderIndicator4 = superGeometry.getMaterialIndicator(6);
-  setFreeEnergyInletBoundary<T, DESCRIPTOR>(sLattice1, omega, cylinderIndicator4, "velocity", 1);
-  setFreeEnergyInletBoundary<T, DESCRIPTOR>(sLattice2, omega, cylinderIndicator4, "velocity", 2);
+  boundary::set<boundary::FreeEnergyVelocity>(sLattice1, cylinderIndicator4);
+  boundary::set<boundary::FreeEnergyOrderParameter>(sLattice2, cylinderIndicator4);
 
   sLattice1.setParameter<OMEGA>(omega);
   sLattice2.setParameter<OMEGA>(omega);
@@ -334,10 +333,8 @@ void getResults( SuperLattice<T, DESCRIPTOR>& sLattice2,
 
   if ( iT==0 ) {
     // Writes the geometry, cuboid no. and rank no. as vti file for visualization
-    SuperLatticeGeometry2D<T, DESCRIPTOR> geometry( sLattice1, superGeometry );
     SuperLatticeCuboid2D<T, DESCRIPTOR> cuboid( sLattice1 );
     SuperLatticeRank2D<T, DESCRIPTOR> rank( sLattice1 );
-    vtmWriter.write( geometry );
     vtmWriter.write( cuboid );
     vtmWriter.write( rank );
     vtmWriter.createMasterFile();
@@ -386,7 +383,7 @@ void getResults( SuperLattice<T, DESCRIPTOR>& sLattice2,
 int main( int argc, char *argv[] )
 {
   // === 1st Step: Initialization ===
-  olbInit( &argc, &argv );
+  initialize( &argc, &argv );
   singleton::directories().setOutputDir( "./tmp/" );
   OstreamManager clout( std::cout,"main" );
 
@@ -413,7 +410,7 @@ int main( int argc, char *argv[] )
   // 1. compute surface tension from Ca
   surfTen = radius * strainRate * physDensity * contVisc / capillaryNr;
 
-  surfTenLatt = surfTen / (converter.getConversionFactorPressure() * converter.getConversionFactorLength());
+  surfTenLatt = surfTen / (converter.getConversionFactorPressure() * converter.getPhysDeltaX());
 
   // 2. compute interface thickness from Ch
   xiThickness = cahnNr * converter.getLatticeLength(radius);

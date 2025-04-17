@@ -72,6 +72,29 @@ public:
   bool operator() (T output[], const S x[]) override;
 };
 
+/// User friendly AnalyticalF accepting strictly typed callables Vector<T,OUT>(Vector<S,D>)
+template <unsigned D, typename T, typename S>
+class AnalyticalFfromCallableF final: public AnalyticalF<D,T,S> {
+private:
+  std::function<bool(T*,const S*)> _f;
+
+public:
+  template <typename F>
+  AnalyticalFfromCallableF(F&& f):
+    AnalyticalF<D,T,S>(typename decltype(std::function(f))::result_type{}.d),
+    _f([&,f](T* output, const S* input) -> bool {
+      auto out = f(input);
+      for (unsigned iD=0; iD < typename decltype(std::function(f))::result_type{}.d; ++iD) {
+        output[iD] = out[iD];
+      }
+      return true;
+    })
+  { }
+
+  bool operator() (T output[], const S input[]) override {
+    return _f(output, input);
+  }
+};
 
 /// AnalyticalConst: DD -> XD, where XD is defined by value.size()
 template <unsigned D, typename T, typename S>
@@ -559,7 +582,7 @@ private:
   T _physSigmaEff;
   T _physDiffusionCoefficient;
 public:
-  PLSsolution3D(RadiativeUnitConverter<T,DESCRIPTOR> const& converter);
+  PLSsolution3D(T absorption, T scattering);
   bool operator()(T output[1], const S x[3]) override;
 };
 
@@ -631,7 +654,7 @@ class AnalyticalCuboidwiseConst final : public AnalyticalF<D,T,S>{
 private:
   const unsigned _numberOfCuboids;
 
-  std::shared_ptr<const CuboidGeometry<T,D>>  _cuboids;
+  std::shared_ptr<const CuboidDecomposition<T,D>>  _cuboids;
   const std::vector<T>                        _values;
 
 public:
@@ -639,8 +662,8 @@ public:
     const std::vector<T>& values, unsigned targetDim=D)
   : AnalyticalF<D,T,S>(targetDim),
     _numberOfCuboids(values.size()),
-    _cuboids(std::make_shared<CuboidGeometry<T,D>>(
-      sGeometry.getCuboidGeometry().getMotherCuboid(),
+    _cuboids(std::make_shared<CuboidDecomposition<T,D>>(
+      sGeometry.getCuboidDecomposition().getMotherCuboid(),
       _numberOfCuboids)),
     _values(values)
   {
@@ -648,9 +671,9 @@ public:
   }
 
   bool operator() (T output[], const S input[]) override {
-    const auto index = _cuboids->get_iC(input[0], input[1], input[2]);
+    const auto index = _cuboids->getC(input);
     for (int i = 0; i < this->getTargetDim(); ++i) {
-      output[i] = _values[index];
+      output[i] = _values[*index];
     }
     return true;
   }

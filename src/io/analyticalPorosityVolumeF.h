@@ -30,124 +30,97 @@
 #include <openvdb/Grid.h>
 #endif
 
-#if defined(FEATURE_VTK)
-#include <vtkNew.h>
-#include <vtkStructuredPoints.h>
-#include <vtkStructuredPointsReader.h>
-#endif
-
 namespace olb {
 
 template <typename T>
 class AnalyticalPorosityVolumeF final : public AnalyticalF<3,T,T> {
 private:
-#if defined(FEATURE_VTK)
-  vtkNew<vtkStructuredPointsReader> _reader;
-  vtkStructuredPoints* _data;
-#endif
 #ifdef FEATURE_VDB
-  openvdb::GridPtrVecPtr grids;
+  openvdb::GridPtrVecPtr _grids;
+  openvdb::FloatGrid::Ptr _grid;
+  openvdb::math::Transform::Ptr _rotation;
 #endif
-  std::string _fileName;
+
   Vector<int,3> _shape;
-  T _spacing;
+  Vector<T, 3> _origin;
+  T _volumeDeltaX;
 
 public:
-  AnalyticalPorosityVolumeF(std::string fileName, T spacing)
-      : AnalyticalF<3,T,T>(1), _spacing{spacing}
+  /// Reads first grid of VDB file with spacing volumeDeltaX and applies rotation [rad]
+  AnalyticalPorosityVolumeF(std::string fileName, T volumeDeltaX, T rotation=0)
+      : AnalyticalF<3,T,T>(1), _volumeDeltaX{volumeDeltaX}
   {
-    OstreamManager clout(std::cout, "PorosityVolumeImporter");
-    _fileName = fileName;
     #ifdef FEATURE_VDB
-    if (isVDBFile(_fileName)) {
-      openvdb::initialize();
-      openvdb::io::File _vdbFile(_fileName);
-      // Read the OpenVDB file
-      _vdbFile.open();
-      grids = _vdbFile.getGrids();
-      auto grid = openvdb::gridPtrCast<openvdb::FloatGrid>(*grids->begin());
-      _vdbFile.close();
-      openvdb::CoordBBox bounds = grid->evalActiveVoxelBoundingBox();
-      _shape[0] = bounds.max().x() - bounds.min().x();
-      _shape[1] = bounds.max().y() - bounds.min().y();
-      _shape[2] = bounds.max().z() - bounds.min().z();
+    openvdb::io::File _vdbFile(fileName);
+    // Read the OpenVDB file
+    _vdbFile.open();
+    _grids = _vdbFile.getGrids();
+
+    _grid = openvdb::gridPtrCast<openvdb::FloatGrid>(*_grids->begin());
+    auto bbox = _grid->evalActiveVoxelBoundingBox();
+
+    if (rotation != 0) {
+      openvdb::Vec3d minIdx(bbox.min().x(), bbox.min().y(), bbox.min().z());
+      openvdb::Vec3d extents(bbox.extents().x(), bbox.extents().y(), bbox.extents().z());
+      openvdb::Vec3d centerIdx = minIdx + extents * 0.5;
+
+      _rotation = openvdb::math::Transform::createLinearTransform(
+        openvdb::math::Mat4d::identity());
+      _rotation->preTranslate( centerIdx);
+      _rotation->preRotate(rotation, openvdb::math::Z_AXIS);
+      _rotation->preTranslate(-centerIdx);
+      _grid->setTransform(_rotation);
+    } else {
+      _rotation = openvdb::math::Transform::createLinearTransform(
+        openvdb::math::Mat4d::identity());
+      _grid->setTransform(_rotation);
     }
-    #endif
-    #if not defined(FEATURE_VTK)
-    if (isVTKFile(_fileName))
-    {
-      std::cerr << "To use the VTK format, add VTK to the FEATURES list in config.mk";
-      exit(1);
-    }
-    #endif
-    #if defined(FEATURE_VTK)
-    if (isVTKFile(_fileName)) {
-      _reader->SetFileName(fileName.c_str());
-      _reader->Update();
-      _reader->SetScalarsName(_reader->GetScalarsNameInFile(0));
-      auto* _data = _reader->GetOutput();
-      _data->GetDimensions(_shape.data());
-    }
-    #endif
-    #ifndef FEATURE_VDB
-    if (isVDBFile(_fileName))
-    {
-      std::cerr << "To use the VDB format, add VDB to the FEATURES list in config.mk";
-      exit(1);
-    }
+
+    bbox = _grid->evalActiveVoxelBoundingBox();
+    _shape[0] = bbox.max().x() - bbox.min().x();
+    _shape[1] = bbox.max().y() - bbox.min().y();
+    _shape[2] = bbox.max().z() - bbox.min().z();
+    _origin[0] = bbox.min().x();
+    _origin[1] = bbox.min().y();
+    _origin[2] = bbox.min().z();
+
+    _vdbFile.close();
+    #else
+    throw std::runtime_error("VDB support not enabled, set FEATURE := VDB");
     #endif
   }
 
   Vector<T,3> getPhysShape() const {
-    return _shape * _spacing;
+    return _shape * _volumeDeltaX;
+  }
+  Vector<T,3> getOrigin() const{
+    return _origin * _volumeDeltaX;
   }
 
   bool operator()(T output[], const T physR[]) override{
     #ifdef FEATURE_VDB
-    if (isVDBFile(_fileName)) {
-      int iX;
-      int iY;
-      int iZ;
-      iX = util::floor(physR[0] / _spacing);
-      iY = util::floor(physR[1] / _spacing);
-      iZ = util::floor(physR[2] / _spacing);
-      if (iX >= 0 && iY >= 0 && iZ >= 0 && iX < _shape[0] && iY < _shape[1] && iZ < _shape[2]) {
-        auto grid = openvdb::gridPtrCast<openvdb::FloatGrid>(*grids->begin());
-        openvdb::Coord location(iX, iY, iZ);
-        openvdb::FloatGrid::Accessor accessor = grid->getAccessor();
-        output[0] =accessor.getValue(location);
-      } else {
-        output[0]=0;
-      }
-      return true;
+    openvdb::Vec3d worldPos(
+      util::floor(physR[0] / _volumeDeltaX),
+      util::floor(physR[1] / _volumeDeltaX),
+      util::floor(physR[2] / _volumeDeltaX)
+    );
+
+    openvdb::Vec3d indexPos = _grid->transform().worldToIndex(worldPos);
+    openvdb::Coord location(
+      static_cast<int>(std::round(indexPos.x())),
+      static_cast<int>(std::round(indexPos.y())),
+      static_cast<int>(std::round(indexPos.z()))
+    );
+
+    openvdb::FloatGrid::Accessor accessor = _grid->getAccessor();
+    if(accessor.isValueOn(location)){
+      output[0] = _grid->tree().getValue(location);
+    } else {
+      output[0] = 1;
     }
-    #endif
-    #if defined(FEATURE_VTK)
-    if(isVTKFile(_fileName)) {
-      int iX;
-      int iY;
-      int iZ;
-      iX = util::floor(physR[0] / _spacing);
-      iY = util::floor(physR[1] / _spacing);
-      iZ = util::floor(physR[2] / _spacing);
-      if (iX >= 0 && iY >= 0 && iZ >= 0 && iX < _shape[0] && iY < _shape[1] && iZ < _shape[2]) {
-        auto* _data = _reader->GetOutput();
-        output[0] = *static_cast<T*>(_data->GetScalarPointer(iX, iY, iZ));
-      } else {
-        output[0] = 0;
-      }
-      return true;
-    }
+    return true;
     #endif
     return false;
-  }
-
-private:
-  bool isVDBFile(const std::string& fileName) {
-    return (fileName.size() >= 4 && fileName.substr(fileName.size() - 4) == ".vdb");
-  }
-  bool isVTKFile(const std::string& fileName) {
-    return (fileName.size() >= 4 && fileName.substr(fileName.size() - 4) == ".vtk");
   }
 
 };

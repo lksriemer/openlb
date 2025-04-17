@@ -551,10 +551,10 @@ updateParticlePositions(std::vector<SpawnData<T, PARTICLETYPE::d>> spawnData,
 #ifdef PARALLEL_MODE_MPI
   // Prepare a set of destination ranks from all other ranks
   // -> every rank will know the position
-  auto& cuboidGeometry = particleSystem.getSuperStructure().getCuboidGeometry();
+  auto& cuboidDecomposition = particleSystem.getSuperStructure().getCuboidDecomposition();
   auto& loadBalancer   = particleSystem.getSuperStructure().getLoadBalancer();
-  std::unordered_set<int> destRanksSet;
-  for (int iC = 0; iC < cuboidGeometry.getNc(); ++iC) {
+  std::set<int> destRanksSet;
+  for (int iC = 0; iC < cuboidDecomposition.size(); ++iC) {
     int rank = loadBalancer.rank(iC);
     if (rank != singleton::mpi().getRank()) {
       destRanksSet.insert(rank);

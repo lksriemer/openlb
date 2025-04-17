@@ -52,6 +52,7 @@ void UnitConverter<T, DESCRIPTOR>::print(std::ostream& clout) const
   clout << "Mach number:                      machNumber=     " << getMachNumber() << std::endl;
   clout << "Reynolds number:                  reynoldsNumber= " << getReynoldsNumber() << std::endl;
   clout << "Knudsen number:                   knudsenNumber=  " << getKnudsenNumber() << std::endl;
+  clout << "Characteristical CFL number:      charCFLnumber=  " << getCharCFLnumber() << std::endl;
 
   clout << std::endl;
   clout << "-- Conversion factors:" << std::endl;
@@ -65,6 +66,32 @@ void UnitConverter<T, DESCRIPTOR>::print(std::ostream& clout) const
   clout << "Pressure factor(N/m^2):           physPressure=   " << getConversionFactorPressure() << std::endl;
 
   clout << "-------------------------------------------------------------" << std::endl;
+
+  if ( getLatticeRelaxationTime() < T(0.55) && getCharLatticeVelocity() > (T(8)*(getLatticeRelaxationTime() - T(0.5)) + T(1.e-8)) ) {
+    T tauStable = getCharLatticeVelocity() / T(8) + T(0.5);
+    T timeToCell = getConversionFactorTime() / getConversionFactorLength();
+    if (getCharLatticeVelocity() >= T(0.3)) {
+      tauStable = T(0.15) / T(8) + T(0.5);
+      timeToCell = T(0.15) / getCharPhysVelocity();
+    }
+    T dxNew = timeToCell * getPhysViscosity() * descriptors::invCs2<T,DESCRIPTOR>() / (tauStable - T(0.5));
+    T dtNew = dxNew * timeToCell;
+    clout << "WARNING:" << std::endl;
+    clout << "Potentially UNSTABLE combination of relaxation time (tau=" << getLatticeRelaxationTime() << ")" << std::endl;
+    clout << "and characteristical CFL number (lattice velocity) charCFLnumber=" << getCharCFLnumber() << "!" << std::endl;
+    clout << "Potentially maximum characteristical CFL number (maxCharCFLnumber=" << T(8)*(getLatticeRelaxationTime() - T(0.5)) << ")" << std::endl;
+    clout << "Actual characteristical CFL number (charCFLnumber=" << getCharCFLnumber() << ") > " << T(8)*(getLatticeRelaxationTime() - T(0.5)) << std::endl;
+    if (getCharLatticeVelocity() >= T(0.3)) {
+      clout << "Please make the CFL number smaller than 0.3!" << std::endl;
+    }
+    clout << "Please reduce the the cell size or the time step size!" << std::endl;
+    if (getCharLatticeVelocity() >= T(0.3)) {
+      clout << "We recommend to use the cell size of " << dxNew << " m and the time step size of " << dtNew << " s (CFL = 0.15)." << std::endl;
+    } else {
+      clout << "We recommend to use the cell size of " << dxNew << " m and the time step size of " << dtNew << " s." << std::endl;
+    }
+    clout << "-------------------------------------------------------------" << std::endl;
+  }
 
 }
 
@@ -136,9 +163,8 @@ UnitConverter<T, DESCRIPTOR>* createUnitConverter(XMLreader const& params)
     if (!params["Application"]["Discretization"]["Resolution"].read<int>(resolution,false)) {
       if (!params["Application"]["Discretization"]["CharLatticeVelocity"].read(charLatticeVelocity,false)) {
         // NOT found physDeltaX, resolution or charLatticeVelocity
-        clout << "Error: Have not found PhysDeltaX, Resolution or CharLatticeVelocity in XML file."
-              << std::endl;
-        exit (1);
+        throw std::runtime_error("Error: Have not found PhysDeltaX, Resolution or CharLatticeVelocity in XML file.");
+
       }
       else {
         // found charLatticeVelocity
@@ -149,9 +175,7 @@ UnitConverter<T, DESCRIPTOR>* createUnitConverter(XMLreader const& params)
           physDeltaX = physViscosity * charLatticeVelocity / charPhysVelocity * descriptors::invCs2<T,DESCRIPTOR>() / (latticeRelaxationTime - 0.5);
         }
         else {
-          clout << "Error: Only found CharLatticeVelocity, missing PhysDeltaT or LatticeRelaxationTime"
-                << std::endl;
-          exit (1);
+          throw std::runtime_error("Error: Only found CharLatticeVelocity, missing PhysDeltaT or LatticeRelaxationTime");
         }
       }
     }
@@ -164,9 +188,7 @@ UnitConverter<T, DESCRIPTOR>* createUnitConverter(XMLreader const& params)
       }
       else {
         if (!params["Application"]["Discretization"]["LatticeRelaxationTime"].read(latticeRelaxationTime,false)) {
-          clout << "Error: Have not found LatticeRelaxationTime and was not able to derive it using CharLatticeVelocity"
-                << std::endl;
-          exit (1);
+          throw std::runtime_error("Error: Have not found LatticeRelaxationTime and was not able to derive it using CharLatticeVelocity");
         }
       }
     }
@@ -176,9 +198,7 @@ UnitConverter<T, DESCRIPTOR>* createUnitConverter(XMLreader const& params)
     if (!params["Application"]["Discretization"]["LatticeRelaxationTime"].read(latticeRelaxationTime,false)) {
       if (!params["Application"]["Discretization"]["CharLatticeVelocity"].read(charLatticeVelocity,false)) {
         // NOT found physDeltaT, latticeRelaxationTime and charLatticeVelocity
-        clout << "Error: Have not found PhysDeltaT, LatticeRelaxationTime or CharLatticeVelocity in XML file."
-              << std::endl;
-        exit (1);
+        throw std::runtime_error("Error: Have not found PhysDeltaT, LatticeRelaxationTime or CharLatticeVelocity in XML file.");
       }
       else {
         // found charLatticeVelocity

@@ -56,7 +56,7 @@ SuperLatticeInterpPhysVelocity2D<T, DESCRIPTOR>::SuperLatticeInterpPhysVelocity2
       new BlockLatticeInterpPhysVelocity2D<T, DESCRIPTOR>(
         sLattice.getBlock(lociC),
         converter,
-        sLattice.getCuboidGeometry().get(globiC))
+        sLattice.getCuboidDecomposition().get(globiC))
     );
   }
 }

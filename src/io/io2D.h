@@ -37,6 +37,8 @@
 #include "parallelIO.h"
 #include "serializerIO.h"
 #include "superVtmWriter2D.h"
+#include "vtiReader.h"
+#include "vtuPointWriter.h"
 #include "xmlReader.h"
 #include "cliReader.h"
 #include "consoleWriter.h"

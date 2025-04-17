@@ -2,7 +2,7 @@
  *  library
  *
  *  Copyright (C) 2023 Stephan Simonis, Mathias J. Krause, Patrick Nathan,
- *                     Alejandro C. Barreto, Marc Haußmann
+ *                     Alejandro C. Barreto, Marc Haußmann, Liam Sauterleute
  *  E-mail contact: info@openlb.net
  *  The most recent release of OpenLB can be downloaded at
  *  <http://www.openlb.net/>
@@ -38,8 +38,7 @@
  * Journal of Fluid Mechanics 130 (1983): 411-452.
  */
 
-#include "olb3D.h"
-#include "olb3D.hh"
+#include <olb.h>
 
 using namespace olb;
 using namespace olb::descriptors;
@@ -49,13 +48,14 @@ using T = FLOATING_POINT_TYPE;
 
 // Choose turbulence model or collision scheme
 //#define RLB
-#define SMAGORINSKY
+#define _SMAGORINSKY
 //#define WALE
 //#define ConsistentStrainSmagorinsky
 //#define ShearSmagorinsky
 //#define Krause
 //#define DNS
 //#define KBC
+//#define K_EPSILON
 
 #define finiteDiff //for N<256
 
@@ -65,6 +65,9 @@ typedef D3Q19<AV_SHEAR> DESCRIPTOR;
 typedef D3Q19<EFFECTIVE_OMEGA,VELO_GRAD> DESCRIPTOR;
 #elif defined(KBC)
 typedef D3Q19<GAMMA> DESCRIPTOR;
+#elif defined(K_EPSILON)
+using DESCRIPTOR = D3Q19<OMEGA>;
+using KEDESCRIPTOR = D3Q7<VELOCITY, SOURCE, OMEGA, K, EPSILON>;
 #else
 typedef D3Q19<> DESCRIPTOR;
 #endif
@@ -83,6 +86,9 @@ using BulkDynamics = KrauseBGKdynamics<T,DESCRIPTOR>;
 using BulkDynamics = ConStrainSmagorinskyBGKdynamics<T,DESCRIPTOR>;
 #elif defined(KBC)
 using BulkDynamics = KBCdynamics<T, DESCRIPTOR>;
+#elif defined(K_EPSILON)
+using BulkDynamics = dynamics::Tuple<T,DESCRIPTOR,momenta::BulkTuple,equilibria::SecondOrder,collision::ParameterFromCell<descriptors::OMEGA,collision::BGK>>;
+using KEBulkDynamics = SourcedLimitedAdvectionDiffusionBGKdynamics<T,KEDESCRIPTOR>;
 #else
 using BulkDynamics = SmagorinskyBGKdynamics<T,DESCRIPTOR>;
 #endif
@@ -98,6 +104,8 @@ int N = 64;              // resolution of the model
 T Re = 800;               // defined as 1/kinematic viscosity
 T smagoConst = 0.1;       // Smagorisky Constant, for ConsistentStrainSmagorinsky smagoConst = 0.033
 T vtkSave = 0.25;         // time interval in s for vtk and gnuplot output
+const T intensity = 0.04; // turbulent intensity for K_EPSILON dynamics
+
 
 bool plotDNS = true;      //available for Re=800, Re=1600, Re=3000 (maxPhysT<=10)
 std::vector<std::vector<T>> values_DNS;
@@ -128,6 +136,54 @@ public:
     return true;
   };
 };
+
+#ifdef K_EPSILON
+template <typename T, typename _DESCRIPTOR>
+class TgvK3D : public AnalyticalF3D<T,T> {
+
+protected:
+  T u0;
+
+// initial values of k for the the TGV
+public:
+  TgvK3D(UnitConverter<T,_DESCRIPTOR> const& converter, T frac) : AnalyticalF3D<T,T>(1)
+  {
+    u0 = converter.getCharLatticeVelocity();
+  };
+
+  bool operator()(T output[], const T input[]) override
+  {
+    output[0] = 3./2. * intensity * intensity * u0 * u0;
+    return true;
+  };
+};
+
+template <typename T, typename _DESCRIPTOR>
+class TgvE3D : public AnalyticalF3D<T,T> {
+
+protected:
+  T u0, length, dX;
+
+// initial values of epsilon for the TGV
+public:
+  TgvE3D(UnitConverter<T,_DESCRIPTOR> const& converter, T frac) : AnalyticalF3D<T,T>(1)
+  {
+    u0 = converter.getCharLatticeVelocity();
+    length = converter.getCharPhysLength();
+    dX = converter.getPhysDeltaX();
+  };
+
+  bool operator()(T output[], const T input[]) override
+  {
+    T k = 3./2. * intensity * intensity * u0 * u0;
+    output[0] = util::pow(0.09, 3./4.)*util::pow(k, 3./2.)/(length/dX)/0.04;
+
+    return true;
+  };
+};
+#endif
+
+
 
 void prepareGeometry(SuperGeometry<T,3>& superGeometry)
 {
@@ -160,14 +216,100 @@ void prepareLattice(SuperLattice<T,DESCRIPTOR>& sLattice,
   const T omega = converter.getLatticeRelaxationFrequency();
   sLattice.defineDynamics<BulkDynamics>(superGeometry, 1);
   sLattice.setParameter<descriptors::OMEGA>(omega);
-  #if !defined(RLB) && !defined(DNS) && !defined(KBC)
-  sLattice.setParameter<collision::LES::Smagorinsky>(smagoConst);
+  #if !defined(RLB) && !defined(DNS) && !defined(KBC) && !defined(K_EPSILON)
+  sLattice.setParameter<collision::LES::SMAGORINSKY>(smagoConst);
   #endif
 
   sLattice.initialize();
   clout << "Prepare Lattice ... OK" << std::endl;
 }
 
+#ifdef K_EPSILON
+void prepareLatticeKE(SuperLattice<T,KEDESCRIPTOR>& sLatticeKE,
+                    UnitConverter<T,DESCRIPTOR> const& converter,
+                    SuperGeometry<T,3>& superGeometry)
+{
+  OstreamManager clout(std::cout,"prepareLattice");
+  clout << "Prepare Lattice KE ...";
+
+  /// Material=1 -->bulk dynamics
+  sLatticeKE.defineDynamics<KEBulkDynamics>(superGeometry, 1);
+
+  clout << " OK" << std::endl;
+}
+
+void setBoundaryValues(SuperLattice<T, DESCRIPTOR>& sLatticeRANS,
+                       SuperLattice<T, KEDESCRIPTOR>& sLatticeK,
+                       SuperLattice<T, KEDESCRIPTOR>& sLatticeE,
+                       UnitConverter<T,DESCRIPTOR> const& converter,
+                       SuperGeometry<T,3>& superGeometry)
+{
+  OstreamManager clout(std::cout,"setBoundaryValues");
+
+  const T omega = converter.getLatticeRelaxationFrequency();
+  const T dX = converter.getPhysDeltaX();
+  const T dT = converter.getPhysDeltaT();
+  T convK = dX*dX/dT/dT;
+  T convE = dX*dX/dT/dT/dT;
+  T lMix = converter.getCharPhysLength()*0.04;
+  T turbKinEnergy = util::pow(converter.getPhysViscosity()/0.1/(lMix),2.);
+
+  AnalyticalConst3D<T,T> omega0(omega);
+  AnalyticalConst3D<T,T> rho0(1e-8);
+  AnalyticalConst3D<T,T> rhoK(turbKinEnergy/convK);
+  AnalyticalConst3D<T,T> rhoE(0.09*util::pow(turbKinEnergy, 1.5)/lMix/0.1/convE);
+  std::vector<T> velocity( 3,T() );
+  AnalyticalConst3D<T,T> u( velocity );
+
+  AnalyticalConst3D<T,T> rho(1.);
+  Tgv3D<T,DESCRIPTOR> uSol(converter, 1);
+  TgvE3D<T,DESCRIPTOR> eSol(converter, 1);
+  TgvK3D<T,DESCRIPTOR> kSol(converter, 1);
+
+  sLatticeRANS.defineRhoU(superGeometry, 1, rho, uSol);
+  sLatticeRANS.iniEquilibrium(superGeometry, 1, rho, uSol);
+  sLatticeRANS.defineField<descriptors::OMEGA>(superGeometry.getMaterialIndicator(1), omega0);
+  sLatticeRANS.defineField<descriptors::SCALAR>(superGeometry.getMaterialIndicator(1), rho0);
+
+  sLatticeK.defineRhoU(superGeometry, 1, kSol, uSol);
+  sLatticeK.iniEquilibrium(superGeometry, 1, kSol, uSol);
+  sLatticeE.defineRhoU(superGeometry, 1, eSol, uSol);
+  sLatticeE.iniEquilibrium(superGeometry, 1, eSol, uSol);
+
+  sLatticeK.defineField<descriptors::SOURCE>(superGeometry.getMaterialIndicator(1), rho0);
+  sLatticeK.defineField<descriptors::K>(superGeometry.getMaterialIndicator(1), kSol);
+  sLatticeK.defineField<descriptors::OMEGA>(superGeometry.getMaterialIndicator(1), omega0);
+  sLatticeK.defineField<descriptors::VELOCITY>(superGeometry.getMaterialIndicator(1), uSol);
+  sLatticeK.setParameter<descriptors::OMEGA>(omega);
+
+  sLatticeE.defineField<descriptors::SOURCE>(superGeometry.getMaterialIndicator(1), rho0);
+  sLatticeE.defineField<descriptors::EPSILON>(superGeometry.getMaterialIndicator(1), eSol);
+  sLatticeE.defineField<descriptors::OMEGA>(superGeometry.getMaterialIndicator(1), omega0);
+  sLatticeE.defineField<descriptors::VELOCITY>(superGeometry.getMaterialIndicator(1), uSol);
+  sLatticeE.setParameter<descriptors::OMEGA>(omega);
+
+  sLatticeRANS.initialize();
+  sLatticeK.initialize();
+  sLatticeE.initialize();
+
+  {
+    auto& communicatorK = sLatticeK.getCommunicator(stage::PostCoupling());
+    communicatorK.requestField<descriptors::VELOCITY>();
+    communicatorK.requestField<descriptors::K>();
+    communicatorK.requestOverlap(2);
+    communicatorK.exchangeRequests();
+  }
+
+  {
+    auto& communicatorE = sLatticeE.getCommunicator(stage::PostCoupling());
+    communicatorE.requestField<descriptors::VELOCITY>();
+    communicatorE.requestField<descriptors::EPSILON>();
+    communicatorE.requestOverlap(2);
+    communicatorE.exchangeRequests();
+  }
+}
+
+#else
 void setBoundaryValues(SuperLattice<T, DESCRIPTOR>& sLattice,
                        UnitConverter<T,DESCRIPTOR> const& converter,
                        SuperGeometry<T,3>& superGeometry)
@@ -182,6 +324,7 @@ void setBoundaryValues(SuperLattice<T, DESCRIPTOR>& sLattice,
 
   sLattice.initialize();
 }
+#endif
 
 // Interpolate the data points to the output interval
 void getDNSValues()
@@ -245,6 +388,10 @@ void getDNSValues()
 
 
 void getResults(SuperLattice<T, DESCRIPTOR>& sLattice,
+#ifdef K_EPSILON
+                SuperLattice<T, KEDESCRIPTOR>& sLatticeK,
+                SuperLattice<T, KEDESCRIPTOR>& sLatticeE,
+#endif
                 UnitConverter<T,DESCRIPTOR> const& converter, std::size_t iT,
                 SuperGeometry<T,3>& superGeometry, util::Timer<double>& timer)
 {
@@ -256,11 +403,9 @@ void getResults(SuperLattice<T, DESCRIPTOR>& sLattice,
 
   if (iT == 0) {
     // Writes the geometry, cuboid no. and rank no. as vti file for visualization
-    SuperLatticeGeometry3D<T, DESCRIPTOR> geometry(sLattice, superGeometry);
     SuperLatticeCuboid3D<T, DESCRIPTOR> cuboid(sLattice);
     SuperLatticeRank3D<T, DESCRIPTOR> rank(sLattice);
     superGeometry.rename(0,2);
-    vtmWriter.write(geometry);
     vtmWriter.write(cuboid);
     vtmWriter.write(rank);
     vtmWriter.createMasterFile();
@@ -276,6 +421,17 @@ void getResults(SuperLattice<T, DESCRIPTOR>& sLattice,
 
     SuperLatticePhysVelocity3D<T, DESCRIPTOR> velocity(sLattice, converter);
     SuperLatticePhysPressure3D<T, DESCRIPTOR> pressure(sLattice, converter);
+
+#ifdef K_EPSILON
+    SuperLatticeDensity3D<T, KEDESCRIPTOR> K(sLatticeK);
+    SuperLatticeDensity3D<T, KEDESCRIPTOR> E(sLatticeE);
+
+    K.getName() = "k";
+    E.getName() = "e";
+
+    vtmWriter.addFunctor( K );
+    vtmWriter.addFunctor( E );
+#endif
     vtmWriter.addFunctor( velocity );
     vtmWriter.addFunctor( pressure );
     vtmWriter.write(iT);
@@ -302,8 +458,8 @@ void getResults(SuperLattice<T, DESCRIPTOR>& sLattice,
     std::list<int> matNumber;
     matNumber.push_back(1);
     SuperLatticePhysDissipationFD3D<T, DESCRIPTOR> diss(superGeometry, sLattice, matNumber, converter);
-#if !defined (DNS) && !defined(KBC) && !defined(RLB)
-    bulkDynamicsParams.set<collision::LES::Smagorinsky>(smagoConst);
+#if !defined (DNS) && !defined(KBC) && !defined(RLB) && !defined(K_EPSILON)
+    bulkDynamicsParams.set<collision::LES::SMAGORINSKY>(smagoConst);
     SuperLatticePhysEffectiveDissipationFD3D<T, DESCRIPTOR> effectiveDiss(
       superGeometry, sLattice, matNumber, converter,
       [&](Cell<T,DESCRIPTOR>& cell) -> double {
@@ -312,8 +468,8 @@ void getResults(SuperLattice<T, DESCRIPTOR>& sLattice,
 #endif
 #else
     SuperLatticePhysDissipation3D<T, DESCRIPTOR> diss(sLattice, converter);
-#if !defined (DNS) && !defined(KBC) && !defined(RLB)
-    bulkDynamicsParams.set<collision::LES::Smagorinsky>(smagoConst);
+#if !defined (DNS) && !defined(KBC) && !defined(RLB) && !defined(K_EPSILON)
+    bulkDynamicsParams.set<collision::LES::SMAGORINSKY>(smagoConst);
     SuperLatticePhysEffectiveDissipation3D<T, DESCRIPTOR> effectiveDiss(
       sLattice, converter, smagoConst,
       [&](Cell<T,DESCRIPTOR>& cell) -> double {
@@ -327,10 +483,19 @@ void getResults(SuperLattice<T, DESCRIPTOR>& sLattice,
     diss_mol /= volume;
     T diss_eff = diss_mol;
 
-#if !defined (DNS) && !defined(KBC) && !defined(RLB)
+#if !defined (DNS) && !defined(KBC) && !defined(RLB) && !defined(K_EPSILON)
     SuperIntegral3D<T> integralEffectiveDiss(effectiveDiss, superGeometry, 1);
     integralEffectiveDiss(output, input);
     diss_eff = output[0];
+    diss_eff /= volume;
+#elif defined(K_EPSILON)
+    const T dX = converter.getPhysDeltaX();
+    const T dT = converter.getPhysDeltaT();
+    T convE = dX*dX/dT/dT/dT;
+    SuperLatticeDensity3D<T, KEDESCRIPTOR> effectiveDiss(sLatticeE);
+    SuperIntegral3D<T> integralEffectiveDiss(effectiveDiss, superGeometry, 1);
+    integralEffectiveDiss(output, input);
+    diss_eff = output[0]*convE;
     diss_eff /= volume;
 #endif
 
@@ -355,7 +520,7 @@ int main(int argc, char* argv[])
 {
 
   /// === 1st Step: Initialization ===
-  olbInit(&argc, &argv);
+  initialize(&argc, &argv);
   singleton::directories().setOutputDir("./tmp/");
   OstreamManager clout( std::cout,"main" );
 
@@ -367,6 +532,8 @@ int main(int argc, char* argv[])
     (T)   1./Re,    // physViscosity: physical kinematic viscosity in __m^2 / s__
     (T)   1.0       // physDensity: physical density in __kg / m^3__
   );
+
+
   // Prints the converter log as console output
   converter.print();
   // Writes the converter log in a file
@@ -378,24 +545,41 @@ int main(int argc, char* argv[])
   const int noOfCuboids = 1;
 #endif
 
-  CuboidGeometry3D<T> cuboidGeometry(0, 0, 0, converter.getConversionFactorLength(), N, N, N, noOfCuboids);
+  CuboidDecomposition3D<T> cuboidDecomposition(0, converter.getPhysDeltaX(), N, noOfCuboids);
 
-  cuboidGeometry.setPeriodicity(true, true, true);
+  cuboidDecomposition.setPeriodicity({true, true, true});
 
-  HeuristicLoadBalancer<T> loadBalancer(cuboidGeometry);
+  HeuristicLoadBalancer<T> loadBalancer(cuboidDecomposition);
 
   // === 2nd Step: Prepare Geometry ===
-  SuperGeometry<T,3> superGeometry(cuboidGeometry, loadBalancer, 3);
+  SuperGeometry<T,3> superGeometry(cuboidDecomposition, loadBalancer, 3);
   prepareGeometry(superGeometry);
 
   /// === 3rd Step: Prepare Lattice ===
   SuperLattice<T, DESCRIPTOR> sLattice(superGeometry);
   prepareLattice(sLattice, converter, superGeometry);
 
+#ifdef K_EPSILON
+  SuperLattice<T, KEDESCRIPTOR> sLatticeK(superGeometry);
+  prepareLatticeKE(sLatticeK, converter, superGeometry);
+
+  SuperLattice<T, KEDESCRIPTOR> sLatticeE(superGeometry);
+  prepareLatticeKE(sLatticeE, converter, superGeometry);
+#endif
+
 #if defined(WALE)
   std::list<int> mat;
   mat.push_back(1);
   std::unique_ptr<SuperLatticeF3D<T, DESCRIPTOR>> functor(new SuperLatticeVelocityGradientFD3D<T, DESCRIPTOR>(superGeometry, sLattice, mat));
+#endif
+#if defined(K_EPSILON)
+  SuperLatticeCoupling coupling(
+    RANSKE<T>{},
+    names::NavierStokes{}, sLattice,
+    names::TurbKineticEnergy{}, sLatticeK,
+    names::DissipationRate{}, sLatticeE);
+    coupling.setParameter<RANSKE<T>::VISC>(converter.getLatticeViscosity());
+    coupling.setParameter<RANSKE<T>::RNG>(T{1});
 #endif
 
   /// === 4th Step: Main Loop with Timer ===
@@ -403,7 +587,11 @@ int main(int argc, char* argv[])
   timer.start();
 
   // === 5th Step: Definition of Initial and Boundary Conditions ===
+#if !defined(K_EPSILON)
   setBoundaryValues(sLattice, converter, superGeometry);
+#else
+  setBoundaryValues(sLattice, sLatticeK, sLatticeE, converter, superGeometry);
+#endif
 
   for (std::size_t iT = 0; iT <= converter.getLatticeTime(maxPhysT); ++iT) {
     sLattice.setParameter<descriptors::LATTICE_TIME>(iT);
@@ -415,10 +603,19 @@ int main(int argc, char* argv[])
 #endif
 
     /// === 6th Step: Computation and Output of the Results ===
+#if !defined(K_EPSILON)
     getResults(sLattice, converter, iT, superGeometry, timer);
+#else
+    getResults(sLattice, sLatticeK, sLatticeE, converter, iT, superGeometry, timer);
+#endif
 
     /// === 7th Step: Collide and Stream Execution ===
     sLattice.collideAndStream();
+#if defined(K_EPSILON)
+    coupling.execute();
+    sLatticeK.collideAndStream();
+    sLatticeE.collideAndStream();
+#endif
   }
   timer.stop();
   timer.printSummary();

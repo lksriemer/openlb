@@ -30,6 +30,10 @@
 
 #include "core/platform/platform.h"
 
+#ifdef FEATURE_VDB
+#include <openvdb/openvdb.h>
+#endif
+
 namespace olb {
 
 namespace singleton {
@@ -42,7 +46,7 @@ ThreadPool& pool()
 
 }
 
-void olbInit(int *argc, char ***argv, bool multiOutput, bool verbose)
+void initialize(int *argc, char ***argv, bool multiOutput, bool verbose)
 {
   // create an OstreamManager object in order to enable multi output
   olb::OstreamManager clout(std::cout, "olbInit");
@@ -63,6 +67,15 @@ void olbInit(int *argc, char ***argv, bool multiOutput, bool verbose)
   #ifdef PLATFORM_GPU_CUDA
   checkPlatform<Platform::GPU_CUDA>();
   #endif
+
+  #ifdef FEATURE_VDB
+  openvdb::initialize();
+  #endif
+}
+
+void initialize(int argc, char **argv, bool multiOutput, bool verbose)
+{
+  initialize(&argc, &argv, multiOutput, verbose);
 }
 
 }

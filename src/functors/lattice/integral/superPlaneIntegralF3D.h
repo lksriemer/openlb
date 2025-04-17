@@ -116,7 +116,7 @@ public:
    *        (non-)owning pointer or reference to SuperF3D<T>.
    * \param hyperplane
    *        Parametrization of the hyperplane to be integrated.
-   *        The lattice resolution is set to CuboidGeometry3D<T>::getMinDeltaR.
+   *        The lattice resolution is set to CuboidDecomposition3D<T>::getMinDeltaR.
    * \param integrationIndicator
    *        (non-)owning pointer or reference to SuperIndicatorF3D<T>.
    *        Describes the set of lattice points relevant for integration.

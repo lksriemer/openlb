@@ -71,8 +71,8 @@ struct apply_external_acceleration_single_cuboid{
   {
     using namespace descriptors;
     //Apply acceleration
-    Vector<T,PARTICLETYPE::d> force = particle.template getField<FORCING,FORCE>();
-    T mass = particle.template getField<PHYSPROPERTIES,MASS>();
+    Vector<T,PARTICLETYPE::d> force = access::getForce(particle);
+    const T mass = access::getMass(particle);
     force += externalAcceleration * mass;
     particle.template setField<FORCING,FORCE>( force );
   }
@@ -172,8 +172,8 @@ struct couple_lattice_to_parallel_particles{
     std::size_t iP0=0 )
   {
     constexpr unsigned D = DESCRIPTOR::d;
-    const PhysR<T,D> min = communication::getCuboidMin<T,D>(sGeometry.getCuboidGeometry());
-    const PhysR<T,D> max = communication::getCuboidMax<T,D>(sGeometry.getCuboidGeometry(), min);
+    const PhysR<T,D> min = communication::getCuboidMin<T,D>(sGeometry.getCuboidDecomposition());
+    const PhysR<T,D> max = communication::getCuboidMax<T,D>(sGeometry.getCuboidDecomposition(), min);
 
     //Test output
     communication::forSystemsInSuperParticleSystem( sParticleSystem,
@@ -200,6 +200,62 @@ struct couple_lattice_to_parallel_particles{
   static constexpr bool latticeCoupling = true;
   static constexpr bool particleLoop = false;
 };
+
+
+
+/// Couple lattice to parallel particles
+/// - Resolved default: MomentumExchange, serialized
+/// - Subgrid default:  StokesDrag, non-serialized
+template<typename T, typename DESCRIPTOR, typename PARTICLETYPE,
+         typename FORCEFUNCTOR=BlockLatticeMomentumExchangeForce<T,DESCRIPTOR,PARTICLETYPE>,
+         typename FORCEFUNCTOR2=BlockLatticeMomentumExchangeForce<T,DESCRIPTOR,PARTICLETYPE>>
+struct couple_lattice_to_parallel_particles_two_forces{
+  auto static execute(
+    SuperParticleSystem<T,PARTICLETYPE>& sParticleSystem,
+    const SuperGeometry<T,DESCRIPTOR::d>& sGeometry,
+    SuperLattice<T,DESCRIPTOR>& sLattice,
+    UnitConverter<T,DESCRIPTOR> const& converter,
+    Vector<bool,DESCRIPTOR::d> periodicity =
+      Vector<bool,DESCRIPTOR::d>(false),
+    std::size_t iP0=0 )
+  {
+    constexpr unsigned D = DESCRIPTOR::d;
+    const PhysR<T,D> min = communication::getCuboidMin<T,D>(sGeometry.getCuboidDecomposition());
+    const PhysR<T,D> max = communication::getCuboidMax<T,D>(sGeometry.getCuboidDecomposition(), min);
+
+    //Test output
+    communication::forSystemsInSuperParticleSystem( sParticleSystem,
+    [&](ParticleSystem<T,PARTICLETYPE>& particleSystem, int iC, int globiC){
+
+      auto& blockLattice = sLattice.getBlock(iC);
+      auto& blockGeometry = sGeometry.getBlockGeometry(iC);
+
+      //Momentum Exchange/Loss
+      FORCEFUNCTOR forceFunctor( blockLattice, blockGeometry,
+                                 particleSystem, converter, min, max, periodicity, iP0 );
+      FORCEFUNCTOR2 forceFunctor2( blockLattice, blockGeometry,
+                                 particleSystem, converter, min, max, periodicity, iP0 );
+
+
+      //Store boundary force in particles
+      // - if not serialized, allows for additional filtering (e.g. active_particles)
+      if constexpr (FORCEFUNCTOR::serializeForce){
+        dynamics::applySerializableParticleForce( forceFunctor, particleSystem, iP0 );
+        dynamics::applySerializableParticleForce( forceFunctor2, particleSystem, iP0 );
+      } else {
+        using PCONDITION = conditions::active_particles; //TODO: remove hardcoded active_particle limitation
+        dynamics::applyLocalParticleForce<T,PARTICLETYPE,FORCEFUNCTOR,PCONDITION>(
+          forceFunctor, particleSystem, iP0 );
+           dynamics::applyLocalParticleForce<T,PARTICLETYPE,FORCEFUNCTOR2,PCONDITION>(
+          forceFunctor2, particleSystem, iP0 );
+      }
+    });
+  }
+  static constexpr bool latticeCoupling = true;
+  static constexpr bool particleLoop = false;
+};
+
+
 
 
 /// Update particle core distribution of parallel particles
@@ -284,8 +340,8 @@ struct couple_parallel_particles_to_lattice{
 
     //Write particle to field
     if(isPeriodic(periodicity)) {
-      const PhysR<T,D> min = communication::getCuboidMin<T,D>(sGeometry.getCuboidGeometry());
-      const PhysR<T,D> max = communication::getCuboidMax<T,D>(sGeometry.getCuboidGeometry(), min);
+      const PhysR<T,D> min = communication::getCuboidMin<T,D>(sGeometry.getCuboidDecomposition());
+      const PhysR<T,D> max = communication::getCuboidMax<T,D>(sGeometry.getCuboidDecomposition(), min);
 
       setBlockParticleField( blockGeometry, blockLattice, converter, min, max,
                            particle, periodicity);
@@ -310,14 +366,60 @@ struct apply_external_acceleration_parallel{
   {
     using namespace descriptors;
     //Apply acceleration
-    Vector<T,PARTICLETYPE::d> force = particle.template getField<FORCING,FORCE>();
-    T mass = particle.template getField<PHYSPROPERTIES,MASS>();
+    Vector<T,PARTICLETYPE::d> force = access::getForce(particle);
+    const T mass = access::getMass(particle);
     force += externalAcceleration * mass;
     particle.template setField<FORCING,FORCE>( force );
   }
   static constexpr bool latticeCoupling = false;
   static constexpr bool particleLoop = true;
 };
+
+
+/// Clear force and torque values, apply when using more forces
+template<typename T, typename PARTICLETYPE>
+struct clear_force_and_torque{
+  auto static execute(
+    SuperParticleSystem<T,PARTICLETYPE>& sParticleSystem,
+    Particle<T,PARTICLETYPE>& particle,
+    Vector<T,PARTICLETYPE::d> externalAcceleration,
+    T timeStepSize, int globiC=0)
+  {
+    using namespace olb::descriptors;
+    Vector<T,3> zero (0.,0.,0.);
+    particle.template setField<FORCING,FORCE>(zero);
+    static_assert(PARTICLETYPE::template providesNested<FORCING,TORQUE>(), "Field FORCING,TORQUE has to be provided");
+    particle.template setField<FORCING,TORQUE>(zero);
+  }
+  static constexpr bool latticeCoupling = false;
+  static constexpr bool particleLoop = true;
+};
+
+///Euler Rotation -computes the orientation of the main axis of the spheroid to the streamline
+template<typename T, typename PARTICLETYPE>
+struct compute_orientation_index{
+  auto static execute(
+    SuperParticleSystem<T,PARTICLETYPE>& sParticleSystem,
+    Particle<T,PARTICLETYPE>& particle,
+    Vector<T,PARTICLETYPE::d> externalAcceleration,
+    T timeStepSize, int globiC=0)
+  {
+
+    using namespace olb::descriptors;
+    using namespace olb::util;
+    static_assert(PARTICLETYPE::template providesNested<NUMERICPROPERTIES,ORIENTATION>(), "Field NUMERICPROPERTIES,ORIENTATION has to be provided");
+    static_assert(PARTICLETYPE::template providesNested<EULER_ROTATION,ORIENTATION_ANGLE>(), "Field EULER_ROTATION,ORIENTATION_INDEX has to be provided");
+    Vector<T,3> zero (0.,0.,0.);
+    Vector<T,3> fvel (particle.template getField<MOBILITY,FLUIDVEL>());
+    Vector<T,3> porient (particle.template getField<NUMERICPROPERTIES,ORIENTATION>());
+    particle.template setField<EULER_ROTATION,ORIENTATION_ANGLE>(acos(fabs(dotProduct3D(fvel, porient)/norm(fvel)/norm(porient)))/3.141592653*180.);
+  }
+  static constexpr bool latticeCoupling = false;
+  static constexpr bool particleLoop = true;
+};
+
+
+
 
 
 

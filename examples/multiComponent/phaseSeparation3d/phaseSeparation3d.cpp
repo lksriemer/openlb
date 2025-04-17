@@ -30,8 +30,7 @@
  */
 
 
-#include "olb3D.h"
-#include "olb3D.hh"
+#include <olb.h>
 
 using namespace olb;
 using namespace olb::descriptors;
@@ -138,10 +137,8 @@ void getResults( SuperLattice<T, DESCRIPTOR>& sLattice, int iT,
 
   if ( iT==0 ) {
     // Writes the geometry, cuboid no. and rank no. as vti file for visualization
-    SuperLatticeGeometry3D<T, DESCRIPTOR> geometry( sLattice, superGeometry );
     SuperLatticeCuboid3D<T, DESCRIPTOR> cuboid( sLattice );
     SuperLatticeRank3D<T, DESCRIPTOR> rank( sLattice );
-    vtmWriter.write( geometry );
     vtmWriter.write( cuboid );
     vtmWriter.write( rank );
 
@@ -174,7 +171,7 @@ void getResults( SuperLattice<T, DESCRIPTOR>& sLattice, int iT,
 int main( int argc, char *argv[] )
 {
   // === 1st Step: Initialization ===
-  olbInit( &argc, &argv );
+  initialize( &argc, &argv );
   singleton::directories().setOutputDir( "./tmp/" );
   OstreamManager clout( std::cout,"main" );
   // display messages from every single mpi process
@@ -182,22 +179,22 @@ int main( int argc, char *argv[] )
 
   // === 2rd Step: Prepare Geometry ===
 
-  // Instantiation of a cuboidGeometry with weights
+  // Instantiation of a cuboidDecomposition with weights
 #ifdef PARALLEL_MODE_MPI
   const int noOfCuboids = singleton::mpi().getSize();
 #else
   const int noOfCuboids = 1;
 #endif
-  CuboidGeometry3D<T> cuboidGeometry( 0, 0, 0, 1, nx, ny, nz, noOfCuboids );
+  CuboidDecomposition3D<T> cuboidDecomposition(0, 1, {nx, ny, nz}, noOfCuboids);
 
   // Periodic boundaries in x- and y- and z-direction
-  cuboidGeometry.setPeriodicity( true, true, true );
+  cuboidDecomposition.setPeriodicity({ true, true, true });
 
   // Instantiation of a loadBalancer
-  HeuristicLoadBalancer<T> loadBalancer( cuboidGeometry );
+  HeuristicLoadBalancer<T> loadBalancer( cuboidDecomposition );
 
   // Instantiation of a superGeometry
-  SuperGeometry<T,3> superGeometry( cuboidGeometry,loadBalancer,2 );
+  SuperGeometry<T,3> superGeometry( cuboidDecomposition,loadBalancer,2 );
 
   prepareGeometry( superGeometry );
 

@@ -186,20 +186,18 @@ template <typename T, typename W>
 bool AnalyticalFfromBlockF3D<T,W>::operator()(W output[], const T physC[])
 {
   int latticeC[3];
-  int latticeR[3];
-  _cuboid.getFloorLatticeR(latticeR, physC);
+  auto latticeR = _cuboid.getFloorLatticeR(physC);
 
   auto& block = _f.getBlockStructure();
   auto padding = std::min(1, block.getPadding());
 
-  if (LatticeR<3>(latticeR) >= -padding && LatticeR<3>(latticeR) < block.getExtent()+padding-1) {
+  if (latticeR >= -padding && latticeR < block.getExtent()+padding-1) {
     const int& locX = latticeR[0];
     const int& locY = latticeR[1];
     const int& locZ = latticeR[2];
 
-    Vector<T,3> physRiC;
     Vector<T,3> physCv(physC);
-    _cuboid.getPhysR(physRiC.data(), {locX, locY, locZ});
+    Vector<T,3> physRiC = _cuboid.getPhysR({locX, locY, locZ});
 
     // compute weights
     Vector<W,3> d = (physCv - physRiC) * (1. / _cuboid.getDeltaR());
@@ -297,15 +295,15 @@ AnalyticalFfromSuperF3D<T,W>::AnalyticalFfromSuperF3D(SuperF3D<T,W>& f,
     _communicateToAll(communicateToAll),
     _communicateOverlap(communicateOverlap),
     _f(f),
-    _cuboidGeometry(f.getSuperStructure().getCuboidGeometry())
+    _cuboidDecomposition(f.getSuperStructure().getCuboidDecomposition())
 {
-  this->getName() = "fromSuperF";
+  this->getName() = "fromSuperF("+ f.getName()+")";
 
   LoadBalancer<T>& load = _f.getSuperStructure().getLoadBalancer();
   for (int iC = 0; iC < load.size(); ++iC) {
     this->_blockF.emplace_back(
       new AnalyticalFfromBlockF3D<T>(_f.getBlockF(iC),
-                                     _cuboidGeometry.get(load.glob(iC)))
+                                     _cuboidDecomposition.get(load.glob(iC)))
     );
   }
 }
@@ -313,12 +311,15 @@ AnalyticalFfromSuperF3D<T,W>::AnalyticalFfromSuperF3D(SuperF3D<T,W>& f,
 template <typename T, typename W>
 bool AnalyticalFfromSuperF3D<T,W>::operator()(W output[], const T physC[])
 {
-  for (int iD = 0; iD < _f.getTargetDim(); ++iD) {
+  const auto targetDim = _f.getTargetDim();
+  for (int iD = 0; iD < targetDim; ++iD) {
     output[iD] = W();
   }
 
-  int latticeR[4];
-  if (!_cuboidGeometry.getLatticeR(latticeR, physC)) {
+  LatticeR<4> latticeR;
+  if (auto tmp = _cuboidDecomposition.getLatticeR(physC)) {
+    latticeR = *tmp;
+  } else {
     return false;
   }
 
@@ -326,13 +327,11 @@ bool AnalyticalFfromSuperF3D<T,W>::operator()(W output[], const T physC[])
     _f.getSuperStructure().communicate();
   }
 
-  int dataSize = 0;
   int dataFound = 0;
 
-  LoadBalancer<T>& load = _f.getSuperStructure().getLoadBalancer();
+  const LoadBalancer<T>& load = _f.getSuperStructure().getLoadBalancer();
   for (int iC = 0; iC < load.size(); ++iC) {
     if (_blockF[iC]->operator()(output, physC)) {
-      dataSize += _f.getTargetDim();
       ++dataFound;
     }
   }
@@ -340,22 +339,17 @@ bool AnalyticalFfromSuperF3D<T,W>::operator()(W output[], const T physC[])
   if (_communicateToAll) {
 #ifdef PARALLEL_MODE_MPI
     singleton::mpi().reduceAndBcast(dataFound, MPI_SUM);
-    singleton::mpi().reduceAndBcast(dataSize, MPI_SUM);
-#endif
-    dataSize /= dataFound;
-#ifdef PARALLEL_MODE_MPI
-    for (int iD = 0; iD < dataSize; ++iD) {
+    for (int iD = 0; iD < targetDim; ++iD) {
       singleton::mpi().reduceAndBcast(output[iD], MPI_SUM);
     }
 #endif
-    for (int iD = 0; iD < dataSize; ++iD) {
+    for (int iD = 0; iD < targetDim; ++iD) {
       output[iD]/=dataFound;
     }
   }
   else {
     if (dataFound!=0) {
-      dataSize /= dataFound;
-      for (int iD = 0; iD < dataSize; ++iD) {
+      for (int iD = 0; iD < targetDim; ++iD) {
         output[iD]/=dataFound;
       }
     }

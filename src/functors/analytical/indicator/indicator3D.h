@@ -27,6 +27,7 @@
 
 #include "indicatorBaseF3D.h"
 #include "indicatorF3D.h"
+#include "indicatorRotate.h"
 #include "indicComb3D.h"
 #include "indicMod.h"
 #include "indicatorFromBlockDataF3D.h"

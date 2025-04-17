@@ -43,6 +43,25 @@ using SmagorinskyBGKdynamics = dynamics::Tuple<
   collision::SmagorinskyEffectiveOmega<collision::BGK>
 >;
 
+/// Smagorinsky BGK collision step with local Smagorinsky constant
+template<typename T, typename DESCRIPTOR, typename MOMENTA=momenta::BulkTuple>
+using LocalSmagorinskyBGKdynamics = dynamics::Tuple<
+  T, DESCRIPTOR,
+  MOMENTA,
+  equilibria::SecondOrder,
+  collision::ParameterFromCell<collision::LES::SMAGORINSKY,
+                               collision::SmagorinskyEffectiveOmega<collision::BGK>>
+>;
+
+/// Smagorinsky RLB Third Order collision step
+template<typename T, typename DESCRIPTOR, typename MOMENTA=momenta::BulkTuple>
+using SmagorinskyThirdOrderRLBdynamics = dynamics::Tuple<
+  T, DESCRIPTOR,
+  MOMENTA,
+  equilibria::ThirdOrder,
+  collision::SmagorinskyEffectiveOmega<collision::ThirdOrderRLB>
+>;
+
 /// Smagorinsky BGK collision step with Guo forcing
 template<typename T, typename DESCRIPTOR, typename MOMENTA=momenta::BulkTuple>
 using SmagorinskyForcedBGKdynamics = dynamics::Tuple<
@@ -143,7 +162,7 @@ using ExternalSmagorinskyBGKdynamics = dynamics::Tuple<
   T, DESCRIPTOR,
   MOMENTA,
   equilibria::SecondOrder,
-  collision::ParameterFromCell<collision::LES::Smagorinsky,
+  collision::ParameterFromCell<collision::LES::SMAGORINSKY,
                                collision::SmagorinskyEffectiveOmega<collision::BGK>>
 >;
 

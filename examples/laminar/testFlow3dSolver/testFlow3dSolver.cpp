@@ -106,12 +106,10 @@ void eoc() {
 
 int main(int argc, char **argv)
 {
-  olbInit(&argc, &argv);
+  initialize(&argc, &argv);
   OstreamManager clout(std::cout, "main");
 
   clout << "\nExecute standard simulation and compute error norms" << std::endl;
   simulate();
 
-  clout << "\nPerform eoc-study" << std::endl;
-  eoc();
 }

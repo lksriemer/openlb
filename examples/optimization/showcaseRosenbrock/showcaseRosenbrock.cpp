@@ -32,8 +32,7 @@
  */
 
 
-#include "olb3D.h"
-#include "olb3D.hh"
+#include <olb.h>
 
 using namespace olb;
 using namespace olb::opti;
@@ -210,7 +209,7 @@ void optimizationRosenbrock(){
 ////////////////////////////////////////////////////////////////////////////////
 int main(int argc, char *argv[])
 {
-  olbInit(&argc, &argv);
+  initialize(&argc, &argv);
 
   optimizationRosenbrock();
 

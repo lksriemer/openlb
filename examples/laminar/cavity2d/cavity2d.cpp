@@ -30,9 +30,7 @@
  * use. A version for sequential use is also available.
  */
 
-#include "olb2D.h"
-#include "olb2D.hh"
-
+#include "olb.h"
 
 using namespace olb;
 using namespace olb::descriptors;
@@ -52,7 +50,7 @@ void prepareGeometry( UnitConverter<T,DESCRIPTOR> const& converter,
   superGeometry.rename( 2,1,{1,1} );
   superGeometry.clean();
 
-  T eps = converter.getConversionFactorLength();
+  T eps = converter.getPhysDeltaX();
   Vector<T,2> extend( T( 1 ) + 2*eps, 2*eps );
   Vector<T,2> origin( T() - eps, T( 1 ) - eps );
   IndicatorCuboid2D<T> lid( extend, origin );
@@ -72,7 +70,6 @@ void prepareLattice( UnitConverter<T,DESCRIPTOR> const& converter,
                      SuperLattice<T, DESCRIPTOR>& sLattice,
                      SuperGeometry<T,2>& superGeometry )
 {
-
   OstreamManager clout( std::cout,"prepareLattice" );
   clout << "Prepare Lattice ..." << std::endl;
 
@@ -82,8 +79,8 @@ void prepareLattice( UnitConverter<T,DESCRIPTOR> const& converter,
   sLattice.defineDynamics<BulkDynamics>(superGeometry, 1);
 
   // Material=2,3 -->bulk dynamics, velocity boundary
-  setInterpolatedVelocityBoundary<T,DESCRIPTOR,BulkDynamics>(sLattice, omega, superGeometry, 2);
-  setInterpolatedVelocityBoundary<T,DESCRIPTOR,BulkDynamics>(sLattice, omega, superGeometry, 3);
+  boundary::set<boundary::InterpolatedVelocity<T,DESCRIPTOR,BulkDynamics>>(sLattice, superGeometry, 2);
+  boundary::set<boundary::InterpolatedVelocity<T,DESCRIPTOR,BulkDynamics>>(sLattice, superGeometry, 3);
 
   sLattice.setParameter<descriptors::OMEGA>(omega);
 
@@ -94,7 +91,6 @@ void setBoundaryValues( UnitConverter<T,DESCRIPTOR> const& converter,
                         SuperLattice<T, DESCRIPTOR>& sLattice,
                         int iT, SuperGeometry<T,2>& superGeometry )
 {
-
   if ( iT==0 ) {
     // set initial values: v = [0,0]
     AnalyticalConst2D<T,T> rhoF( 1 );
@@ -116,26 +112,23 @@ void setBoundaryValues( UnitConverter<T,DESCRIPTOR> const& converter,
 }
 
 void getResults( SuperLattice<T, DESCRIPTOR>& sLattice,
-                 UnitConverter<T,DESCRIPTOR> const& converter, std::size_t iT, util::Timer<T>* timer,
+                 UnitConverter<T,DESCRIPTOR> const& converter, std::size_t iT, util::Timer<T> timer,
                  const T logT, const T maxPhysT, const T imSave, const T vtkSave, const T gnuplotSave,
                  std::string filenameGif, std::string filenameVtk, std::string filenameGnuplot,
                  const int timerPrintMode,
                  SuperGeometry<T,2>& superGeometry, bool converged )
 {
-
   OstreamManager clout( std::cout,"getResults" );
 
   SuperVTMwriter2D<T> vtmWriter( filenameVtk );
 
   if ( iT==0 ) {
     // Writes the geometry, cuboid no. and rank no. as vti file for visualization
-    SuperLatticeGeometry2D<T, DESCRIPTOR> geometry( sLattice, superGeometry );
     SuperLatticeCuboid2D<T, DESCRIPTOR> cuboid( sLattice );
     SuperLatticeRank2D<T, DESCRIPTOR> rank( sLattice );
     SuperLatticeDiscreteNormal2D<T, DESCRIPTOR> discreteNormal( sLattice, superGeometry, superGeometry.getMaterialIndicator({2, 3}) );
     SuperLatticeDiscreteNormalType2D<T, DESCRIPTOR> discreteNormalType( sLattice, superGeometry, superGeometry.getMaterialIndicator({2, 3}) );
 
-    vtmWriter.write( geometry );
     vtmWriter.write( cuboid );
     vtmWriter.write( rank );
     vtmWriter.write( discreteNormal );
@@ -146,7 +139,7 @@ void getResults( SuperLattice<T, DESCRIPTOR>& sLattice,
   // Get statistics
   if ( iT%converter.getLatticeTime( logT )==0 || converged ) {
     sLattice.getStatistics().print( iT, converter.getPhysTime( iT ) );
-    timer->print( iT,timerPrintMode );
+    timer.print( iT,timerPrintMode );
   }
 
 
@@ -221,9 +214,8 @@ void getResults( SuperLattice<T, DESCRIPTOR>& sLattice,
 
 int main( int argc, char* argv[] )
 {
-
   // === 1st Step: Initialization ===
-  olbInit( &argc, &argv );
+  initialize( &argc, &argv );
   OstreamManager clout( std::cout,"main" );
 
   std::string fName( "cavity2d.xml" );
@@ -235,28 +227,24 @@ int main( int argc, char* argv[] )
   singleton::directories().setOlbDir( olbdir );
   singleton::directories().setOutputDir( outputdir );
 
-  UnitConverter<T,DESCRIPTOR>* converter = createUnitConverter<T,DESCRIPTOR>( config );
+  std::unique_ptr<UnitConverter<T,DESCRIPTOR>> converter(createUnitConverter<T,DESCRIPTOR>( config ));
   // Prints the converter log as console output
   converter->print();
   // Writes the converter log in a file
   converter->write("cavity2d");
 
   int N = converter->getLatticeLength(1) + 1; // number of voxels in x,y,z direction
-  util::Timer<T>* timer = util::createTimer<T>( config, *converter, N*N );
+  std::unique_ptr<util::Timer<T>> timer(util::createTimer<T>( config, *converter, N*N ));
 
-
-  T logT = config["Output"]["Log"]["SaveTime"].get<T>();
-  T imSave = config["Output"]["VisualizationImages"]["SaveTime"].get<T>();
-  T vtkSave = config["Output"]["VisualizationVTK"]["SaveTime"].get<T>();
-  T gnuplotSave = config["Output"]["VisualizationGnuplot"]["SaveTime"].get<T>();
-  T maxPhysT = config["Application"]["PhysParameters"]["PhysMaxTime"].get<T>();
-  int timerPrintMode = config["Output"]["Timer"]["PrintMode"].get<int>();
-
-
-
-  std::string filenameGif = config["Output"]["VisualizationImages"]["Filename"].get<std::string>();
-  std::string filenameVtk = config["Output"]["VisualizationVTK"]["Filename"].get<std::string>();
-  std::string filenameGnuplot = config["Output"]["VisualizationGnuplot"]["Filename"].get<std::string>();
+  const T logT = config["Output"]["Log"]["SaveTime"].get<T>();
+  const T imSave = config["Output"]["VisualizationImages"]["SaveTime"].get<T>();
+  const T vtkSave = config["Output"]["VisualizationVTK"]["SaveTime"].get<T>();
+  const T gnuplotSave = config["Output"]["VisualizationGnuplot"]["SaveTime"].get<T>();
+  const T maxPhysT = config["Application"]["PhysParameters"]["PhysMaxTime"].get<T>();
+  const int timerPrintMode = config["Output"]["Timer"]["PrintMode"].get<int>();
+  const std::string filenameGif = config["Output"]["VisualizationImages"]["Filename"].get<std::string>();
+  const std::string filenameVtk = config["Output"]["VisualizationVTK"]["Filename"].get<std::string>();
+  const std::string filenameGnuplot = config["Output"]["VisualizationGnuplot"]["Filename"].get<std::string>();
 
   // === 2nd Step: Prepare Geometry ===
   Vector<T,2> extend( 1,1 );
@@ -264,25 +252,22 @@ int main( int argc, char* argv[] )
   IndicatorCuboid2D<T> cuboid( extend, origin );
 
 #ifdef PARALLEL_MODE_MPI
-  CuboidGeometry2D<T> cuboidGeometry( cuboid, converter->getConversionFactorLength(), singleton::mpi().getSize() );
+  CuboidDecomposition2D<T> cuboidDecomposition( cuboid, converter->getPhysDeltaX(), singleton::mpi().getSize() );
 #else
-  CuboidGeometry2D<T> cuboidGeometry( cuboid, converter->getConversionFactorLength(), 1 );
+  CuboidDecomposition2D<T> cuboidDecomposition( cuboid, converter->getPhysDeltaX(), 1 );
 #endif
+  cuboidDecomposition.print();
 
-  cuboidGeometry.print();
-
-  HeuristicLoadBalancer<T> loadBalancer( cuboidGeometry );
-  SuperGeometry<T,2> superGeometry( cuboidGeometry, loadBalancer );
+  HeuristicLoadBalancer<T> loadBalancer( cuboidDecomposition );
+  SuperGeometry<T,2> superGeometry( cuboidDecomposition, loadBalancer );
   prepareGeometry( *converter, superGeometry );
 
   // === 3rd Step: Prepare Lattice ===
-
   SuperLattice<T, DESCRIPTOR> sLattice( superGeometry );
-
   prepareLattice( *converter, sLattice, superGeometry );
 
   // === 4th Step: Main Loop with Timer ===
-  int interval = converter->getLatticeTime( 1 /*config["Application"]["ConvergenceCheck"]["interval"].get<T>()*/ );
+  const int interval = converter->getLatticeTime( 1 /*config["Application"]["ConvergenceCheck"]["interval"].get<T>()*/ );
   T epsilon = 1e-3;
   util::ValueTracer<T> converge( interval, epsilon );
 
@@ -290,21 +275,22 @@ int main( int argc, char* argv[] )
   for ( std::size_t iT=0; iT <= converter->getLatticeTime( maxPhysT ); ++iT ) {
     if ( converge.hasConverged() ) {
       clout << "Simulation converged." << std::endl;
-      getResults( sLattice, *converter, iT, timer, logT, maxPhysT, imSave, vtkSave, gnuplotSave, filenameGif, filenameVtk,
+      getResults( sLattice, *converter, iT, *timer, logT, maxPhysT, imSave, vtkSave, gnuplotSave, filenameGif, filenameVtk,
                   filenameGnuplot, timerPrintMode, superGeometry, converge.hasConverged() );
       break;
     }
+
     // === 5th Step: Definition of Initial and Boundary Conditions ===
     setBoundaryValues( *converter, sLattice, iT, superGeometry );
+
     // === 6th Step: Collide and Stream Execution ===
     sLattice.collideAndStream();
+
     // === 7th Step: Computation and Output of the Results ===
-    getResults( sLattice, *converter, iT, timer, logT, maxPhysT, imSave, vtkSave, gnuplotSave, filenameGif, filenameVtk,
+    getResults( sLattice, *converter, iT, *timer, logT, maxPhysT, imSave, vtkSave, gnuplotSave, filenameGif, filenameVtk,
                 filenameGnuplot, timerPrintMode, superGeometry, converge.hasConverged() );
     converge.takeValue( sLattice.getStatistics().getAverageEnergy(), true );
   }
   timer->stop();
   timer->printSummary();
-  delete converter;
-  delete timer;
 }

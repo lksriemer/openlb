@@ -34,8 +34,7 @@
  * fluid components.
  */
 
-#include "olb2D.h"
-#include "olb2D.hh"
+#include <olb.h>
 
 using namespace olb;
 using namespace olb::descriptors;
@@ -135,10 +134,8 @@ void getResults( SuperLattice<T, DESCRIPTOR>& sLattice2,
 
   if ( iT==0 ) {
     // Writes the geometry, cuboid no. and rank no. as vti file for visualization
-    SuperLatticeGeometry2D<T, DESCRIPTOR> geometry( sLattice1, superGeometry );
     SuperLatticeCuboid2D<T, DESCRIPTOR> cuboid( sLattice1 );
     SuperLatticeRank2D<T, DESCRIPTOR> rank( sLattice1 );
-    vtmWriter.write( geometry );
     vtmWriter.write( cuboid );
     vtmWriter.write( rank );
     vtmWriter.createMasterFile();
@@ -219,7 +216,7 @@ int main( int argc, char *argv[] )
 
   // === 1st Step: Initialization ===
 
-  olbInit( &argc, &argv );
+  initialize( &argc, &argv );
   singleton::directories().setOutputDir( "./tmp/" );
   OstreamManager clout( std::cout,"main" );
 
@@ -240,20 +237,20 @@ int main( int argc, char *argv[] )
   std::vector<T> origin = { 0, 0, 0 };
   IndicatorCuboid2D<T> cuboid(extend,origin);
 #ifdef PARALLEL_MODE_MPI
-  CuboidGeometry2D<T> cGeometry( cuboid, converter.getPhysDeltaX(), singleton::mpi().getSize() );
+  CuboidDecomposition2D<T> cuboidDecomposition( cuboid, converter.getPhysDeltaX(), singleton::mpi().getSize() );
 #else
-  CuboidGeometry2D<T> cGeometry( cuboid, converter.getPhysDeltaX() );
+  CuboidDecomposition2D<T> cuboidDecomposition( cuboid, converter.getPhysDeltaX() );
 #endif
 
   // set periodic boundaries to the domain
-  cGeometry.setPeriodicity( true, true );
+  cuboidDecomposition.setPeriodicity({ true, true });
 
   // Instantiation of loadbalancer
-  HeuristicLoadBalancer<T> loadBalancer( cGeometry );
+  HeuristicLoadBalancer<T> loadBalancer( cuboidDecomposition );
   loadBalancer.print();
 
   // Instantiation of superGeometry
-  SuperGeometry<T,2> superGeometry( cGeometry,loadBalancer,2 );
+  SuperGeometry<T,2> superGeometry( cuboidDecomposition,loadBalancer,2 );
 
   prepareGeometry( superGeometry );
 

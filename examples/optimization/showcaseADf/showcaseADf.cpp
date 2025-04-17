@@ -27,8 +27,7 @@
  * It is structured as a tutorial that can be read sequentially.
  */
 
-#include "olb3D.h"
-#include "olb3D.hh"
+#include <olb.h>
 
 
 using namespace olb;
@@ -301,7 +300,7 @@ void functorDerivatives() {
 
 int main(int argc, char **argv)
 {
-  olbInit(&argc, &argv);
+  initialize(&argc, &argv);
 
   functionADfApplication();
   functionDerivatives();

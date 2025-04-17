@@ -22,18 +22,25 @@
 */
 
 /** \file
- * Groups all the 2D include files for the directory opti.
+ * Groups all the 2D include files for the directory optimization.
  */
 
+#include "optimization/core/latticeData.h"
+#include "optimization/core/latticeResults.h"
+#include "optimization/core/serialize.h"
+#include "optimization/core/optiCase.h"
+#include "optimization/core/optiCaseAD.h"
+#include "optimization/core/optiCaseDual.h"
+#include "optimization/core/optimizer.h"
+#include "optimization/core/optimizerBarzilaiBorwein.h"
+#include "optimization/core/optimizerLineSearch.h"
+#include "optimization/core/optimizerLBFGS.h"
+#include "optimization/core/optimizerSteepestDecent.h"
+#include "optimization/core/projection.h"
+#include "optimization/dynamics/dualDynamics.h"
+#include "optimization/functors/dualFunctors3D.h"
+#include "optimization/primitives/primitives.h"
+#include "optimization/solver/objective.h"
+#include "optimization/solver/optiSolverParameters.h"
+#include "optimization/solver/serialization.h"
 #include "utilities/aDiff.h"
-#include "dualDynamics.h"
-#include "optiCase.h"
-#include "optiCaseAD.h"
-#include "optimizer.h"
-#include "optimizerBarzilaiBorwein.h"
-#include "optimizerLineSearch.h"
-#include "optimizerLBFGS.h"
-#include "optimizerSteepestDecent.h"
-#include "optiSolverParameters.h"
-#include "projection.h"
-#include "serialization.h"

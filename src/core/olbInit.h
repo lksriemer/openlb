@@ -27,8 +27,8 @@
 #ifndef OLB_INIT_H
 #define OLB_INIT_H
 
-#if __cplusplus < 201603L
-#error "OpenLB requires C++17 or newer"
+#if __cplusplus < 202002L
+#error "OpenLB requires C++20 or newer"
 #endif
 
 #include "threadPool.h"
@@ -41,7 +41,13 @@ ThreadPool& pool();
 
 }
 
-void olbInit(int *argc, char ***argv, bool multiOutput=false, bool verbose=true);
+/// Initialize OpenLB
+/**
+ * Sets up MPI, thread pool and verifies platform requirements.
+ **/
+void initialize(int *argc, char ***argv, bool multiOutput=false, bool verbose=true);
+/// Initialize OpenLB
+void initialize(int argc, char **argv, bool multiOutput=false, bool verbose=true);
 
 }
 

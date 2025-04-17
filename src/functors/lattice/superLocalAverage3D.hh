@@ -60,7 +60,7 @@ SuperLocalAverage3D<T,W>::SuperLocalAverage3D(
 template<typename T, typename W>
 bool SuperLocalAverage3D<T,W>::operator() (W output[], const int input[])
 {
-  const auto& geometry = this->getSuperStructure().getCuboidGeometry();
+  const auto& geometry = this->getSuperStructure().getCuboidDecomposition();
   const auto& load     = this->getSuperStructure().getLoadBalancer();
 
   for (int i = 0; i < this->getTargetDim(); ++i) {
@@ -71,15 +71,15 @@ bool SuperLocalAverage3D<T,W>::operator() (W output[], const int input[])
     return true;
   }
 
-  T centerOfSphere[3];
-  geometry.getPhysR(centerOfSphere, input);
-  IndicatorSphere3D<T> analyticalSphere(centerOfSphere, _radius);
+  auto centerOfSphere = geometry.getPhysR(input);
+  IndicatorSphere3D<T> analyticalSphere(centerOfSphere.data(), _radius);
   SuperIndicatorFfromIndicatorF3D<T> latticeSphere(
     analyticalSphere,
     _indicatorF->getSuperGeometry());
 
   std::size_t voxels(0);
   int inputTmp[4];
+  std::vector<util::KahanSummator<W>> summators(_f->getTargetDim(), util::KahanSummator<W>());
 
   for (int iC = 0; iC < load.size(); ++iC) {
     inputTmp[0] = load.glob(iC);
@@ -92,13 +92,17 @@ bool SuperLocalAverage3D<T,W>::operator() (W output[], const int input[])
             T outputTmp[_f->getTargetDim()];
             _f(outputTmp, inputTmp);
             for (int i = 0; i < this->getTargetDim(); ++i) {
-              output[i] += outputTmp[i];
+              summators[i].add(outputTmp[i]);
             }
             voxels += 1;
           }
         }
       }
     }
+  }
+
+  for (int i = 0; i < _f->getTargetDim(); ++i) {
+    output[i] = summators[i].getSum();
   }
 
 #ifdef PARALLEL_MODE_MPI

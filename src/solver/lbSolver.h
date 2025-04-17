@@ -53,6 +53,8 @@ protected:
   bool                                   _finishedTimeLoop {false};
 
 public:
+  BaseSolver() = default;
+
   BaseSolver(utilities::TypeIndexedSharedPtrTuple<PARAMETERS> params)
    : _parameters(params)
   { }
@@ -132,14 +134,15 @@ class LbSolver : public BaseSolver<T,PARAMETERS> {
 private:
   mutable OstreamManager                             clout {std::cout, "LbSolver"};
 
-protected:
+public:
   static constexpr unsigned dim = LATTICES::values_t::template get<0>::d;
 
+protected:
   template<typename... DESCRIPTORS>
   using SuperLattices = std::tuple<std::shared_ptr<SuperLattice<T,DESCRIPTORS>>...>;
 
   std::shared_ptr<SuperGeometry<T,dim>>              _sGeometry;
-  std::shared_ptr<CuboidGeometry<T,dim>>             _cGeometry;
+  std::shared_ptr<CuboidDecomposition<T,dim>>             _cGeometry;
   std::shared_ptr<LoadBalancer<T>>                   _loadBalancer;
 
   typename LATTICES::values_t::template decompose_into<SuperLattices>  _sLattices;
@@ -162,21 +165,22 @@ protected:
   static constexpr bool outputImages  = PARAMETERS::keys_t::template contains<names::VisualizationImages>();
   static constexpr bool outputVTK     = PARAMETERS::keys_t::template contains<names::VisualizationVTK>();
 
-  bool                                               _exitMaxU {false};
-  BaseType<T>                                        _boundMaxU {1.0};
   std::size_t                                        _itCheckStability {1};
   std::size_t                                        _itBoundaryUpdate {1};
 
 public:
+  LbSolver() : LbSolver::BaseSolver()
+  { }
+
   LbSolver(utilities::TypeIndexedSharedPtrTuple<PARAMETERS> params) : LbSolver::BaseSolver(params)
   { }
 
-  /// Build geometry, lattice and call computeResults
-  // Allows to return the geometric/ lattice data without solving
-  void buildAndReturn();
-
   /// Set up geometry
   void initialize() override;
+
+  /// Build geometry, lattice
+  // Allows to work with geometric/ lattice data without solving
+  void buildAndReturn();
 
 protected:
   /// Set up lattice and initialize fields
@@ -251,6 +255,7 @@ protected:
   virtual void writeGnuplot(std::size_t iT) const { };
 
   // ------------ Access to converters and lattices ---------------------------
+public:
   template<typename... ARGS>
   auto& converter(ARGS&&... args) {
     using SimulationParameters_t = typename PARAMETERS::template value<names::Simulation>;
@@ -317,7 +322,7 @@ template<typename T, typename SOLVER>
 std::function<T (const std::vector<T>&, unsigned)> getCallable(std::shared_ptr<SOLVER> solver){
   return [=](const std::vector<T>& control, unsigned optiStep) -> T {
     solver->parameters(names::Opti()).applyControl(control);
-    solver->parameters(names::OutputOpti()).counterOptiStep = optiStep;
+    //solver->parameters(names::OutputOpti()).counterOptiStep = optiStep;
     solver->solve();
     return solver->parameters(names::Results()).objective;
   };

@@ -44,6 +44,37 @@ namespace olb {
  * for background processing of e.g. VTK output to reduce blocking of
  * simulation process.
  **/
+#ifdef FEATURE_EMSCRIPTEN
+class ThreadPool { // Dummy implementation for Emscripten
+public:
+  void init(int nThreads, bool verbose) {}
+
+  unsigned size() const { return 0; }
+
+  template <typename F>
+  void scheduleAndForget(F&& f) {
+    throw std::runtime_error("ThreadPool::scheduleAndForget not implemented for Emscripten");
+    f();
+  }
+
+  template <typename F, typename R = std::invoke_result_t<std::decay_t<F>>>
+  std::future<R> schedule(F&& f) {
+    throw std::runtime_error("ThreadPool::schedule not implemented for Emscripten");
+    return std::async(std::launch::async, f);
+  }
+
+  void wait() {}
+
+  template <typename T>
+  void waitFor(std::vector<std::future<T>>& futures) {
+    for (auto& future : futures) {
+      future.wait();
+    }
+  }
+};
+
+#else
+
 class ThreadPool {
 private:
   void work(unsigned iThread)
@@ -179,6 +210,7 @@ public:
   }
 
 };
+#endif
 
 }
 

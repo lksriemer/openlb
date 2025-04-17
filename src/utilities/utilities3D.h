@@ -1,6 +1,7 @@
 /*  This file is part of the OpenLB library
  *
  *  Copyright (C) 2007 Jonas Latt
+ *                2024 Dennis Teutscher
  *  E-mail contact: info@openlb.net
  *  The most recent release of OpenLB can be downloaded at
  *  <http://www.openlb.net/>
@@ -45,3 +46,8 @@
 #include "matrix.h"
 #include "geometricOperations.h"
 #include "permeability.h"
+#include "line3D.h"
+#include "lineLattice3D.h"
+#ifdef FEATURE_PROJ
+#include "osmParser.h"
+#endif

@@ -33,12 +33,12 @@ namespace olb {
 template <typename T, typename DESCRIPTOR, typename FIELD>
 struct SuperLatticePhysField2D final : public SuperIdentity2D<T> {
   SuperLatticePhysField2D(SuperLattice<T,DESCRIPTOR>& sLattice,
-                          T convFactorToPhysUnits):
+                          T convFactorToPhysUnits, std::string name = "physField"):
     SuperIdentity2D<T>([&](){
       return functor_dsl::field<T,DESCRIPTOR,FIELD>(sLattice) * convFactorToPhysUnits;
     }())
   {
-    this->getName() = "physField";
+    this->getName() = name;
   }
 };
 

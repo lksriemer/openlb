@@ -248,8 +248,8 @@ void coupleResolvedParticlesToLattice(
 
   contactContainer.cleanContacts();
 
-  const PhysR<T,D> min = communication::getCuboidMin<T,D>(sGeometry.getCuboidGeometry());
-  const PhysR<T,D> max = communication::getCuboidMax<T,D>(sGeometry.getCuboidGeometry(), min);
+  const PhysR<T,D> min = communication::getCuboidMin<T,D>(sGeometry.getCuboidDecomposition());
+  const PhysR<T,D> max = communication::getCuboidMax<T,D>(sGeometry.getCuboidDecomposition(), min);
 
   //Loop over particles
   for (std::size_t iP=0; iP<particleSystem.size(); ++iP) {
@@ -297,8 +297,8 @@ void coupleResolvedParticlesToLattice(
   constexpr unsigned D = DESCRIPTOR::d;
   using namespace descriptors;
 
-  const PhysR<T,D> min = communication::getCuboidMin<T,D>(sGeometry.getCuboidGeometry());
-  const PhysR<T,D> max = communication::getCuboidMax<T,D>(sGeometry.getCuboidGeometry(), min);
+  const PhysR<T,D> min = communication::getCuboidMin<T,D>(sGeometry.getCuboidDecomposition());
+  const PhysR<T,D> max = communication::getCuboidMax<T,D>(sGeometry.getCuboidDecomposition(), min);
 
   //Loop over particles
   communication::forParticlesInSuperParticleSystem<T, PARTICLETYPE, conditions::valid_particles>(

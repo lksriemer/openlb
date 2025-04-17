@@ -67,14 +67,14 @@ void BlockReduction2D2D<T>::updateToWantedResolution(int resolution)
 template <typename T>
 BlockReduction2D2D<T>::BlockReduction2D2D(
   FunctorPtr<SuperF2D<T>>&& f, int resolution, BlockDataSyncMode mode)
-  : BlockDataF2D<T,T>(f->getSuperStructure().getCuboidGeometry().getMotherCuboid().getNx(),
-                      f->getSuperStructure().getCuboidGeometry().getMotherCuboid().getNy(),
+  : BlockDataF2D<T,T>(f->getSuperStructure().getCuboidDecomposition().getMotherCuboid().getNx(),
+                      f->getSuperStructure().getCuboidDecomposition().getMotherCuboid().getNy(),
                       f->getTargetDim()),
     _f(std::move(f)),
-    _origin(_f->getSuperStructure().getCuboidGeometry().getMotherCuboid().getOrigin()),
-    _h(_f->getSuperStructure().getCuboidGeometry().getMinDeltaR()),
-    _nx(_f->getSuperStructure().getCuboidGeometry().getMotherCuboid().getNx()),
-    _ny(_f->getSuperStructure().getCuboidGeometry().getMotherCuboid().getNy()),
+    _origin(_f->getSuperStructure().getCuboidDecomposition().getMotherCuboid().getOrigin()),
+    _h(_f->getSuperStructure().getCuboidDecomposition().getDeltaR()),
+    _nx(_f->getSuperStructure().getCuboidDecomposition().getMotherCuboid().getNx()),
+    _ny(_f->getSuperStructure().getCuboidDecomposition().getMotherCuboid().getNy()),
     _syncMode(mode)
 {
   this->getName() = "planeReduction(" + _f->getName() + ")";
@@ -112,7 +112,7 @@ HyperplaneLattice3D<T> BlockReduction2D2D<T>::getPlaneDiscretizationIn3D() const
 template <typename T>
 void BlockReduction2D2D<T>::initialize()
 {
-  const CuboidGeometry2D<T>& geometry = _f->getSuperStructure().getCuboidGeometry();
+  const auto& geometry = _f->getSuperStructure().getCuboidDecomposition();
   LoadBalancer<T>&           load     = _f->getSuperStructure().getLoadBalancer();
 
   _rankLocalSubplane.clear();
@@ -124,10 +124,9 @@ void BlockReduction2D2D<T>::initialize()
       // Schedule plane point for storage if its physical position intersects the
       // mother cuboid and the cuboid of the nearest lattice position is local to
       // the current rank:
-      int iC;
-      if ( geometry.getC(physR, iC) ) {
-        if ( load.isLocal(iC) ) {
-          _rankLocalSubplane.emplace_back(iX, iY, iC);
+      if (auto iC = geometry.getC(physR)) {
+        if (load.isLocal(*iC)) {
+          _rankLocalSubplane.emplace_back(iX, iY, *iC);
         }
       }
     }

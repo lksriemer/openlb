@@ -27,7 +27,7 @@
 #include "core/blockStructure.h"
 #include "core/postProcessing.h"
 #include "core/util.h"
-#include "dynamics/latticeDescriptors.h"
+#include "descriptor/descriptor.h"
 #include "utilities/omath.h"
 
 
@@ -37,7 +37,7 @@ namespace olb {
 // ======== Zero Gradient Boundary for AD 3D ======//
 //======================================================================
 template<typename T, typename DESCRIPTOR>
-struct zeroGradientLatticePostProcessor3D
+struct ZeroGradientLatticePostProcessor3D
 {
   static constexpr OperatorScope scope = OperatorScope::PerCell;
 
@@ -47,13 +47,14 @@ struct zeroGradientLatticePostProcessor3D
 
 template <typename CELL>
 void apply(CELL& cell) any_platform{
+  using V = typename CELL::value_t;
   for(int iPop = 0; iPop<DESCRIPTOR::q; iPop++){
     const auto c = descriptors::c<DESCRIPTOR>(iPop);
-    T v = T{0.};
-    T fluidN = cell.neighbor({c[0], c[1], c[2]}).template getField<descriptors::NEIGHBOR>();
-    T fluidNN = cell.neighbor({2*c[0], 2*c[1], 2*c[2]}).template getField<descriptors::NEIGHBOR>();
+    V v = V{0.};
+    V fluidN = cell.neighbor({c[0], c[1], c[2]}).template getField<descriptors::NEIGHBOR>();
+    V fluidNN = cell.neighbor({2*c[0], 2*c[1], 2*c[2]}).template getField<descriptors::NEIGHBOR>();
     v = fluidN * cell.neighbor({c[0], c[1], c[2]})[iPop] + fluidN * fluidNN * cell.neighbor({2*c[0], 2*c[1], 2*c[2]})[iPop];
-    v *= (fluidN - T{0.5} * fluidN * fluidNN);
+    v *= (fluidN - V{0.5} * fluidN * fluidNN);
     cell[iPop] = v;
   }
 }

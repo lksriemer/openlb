@@ -34,7 +34,7 @@ template <typename T, typename DESCRIPTOR, typename FIELD>
 struct SuperLatticePhysField3D final : public SuperIdentity3D<T> {
   SuperLatticePhysField3D(SuperLattice<T,DESCRIPTOR>& sLattice,
                           T convFactorToPhysUnits, std::string name = "physField"):
-    SuperIdentity3D<T>([&](){
+    SuperIdentity3D<T>([&,convFactorToPhysUnits](){
       return functor_dsl::field<T,DESCRIPTOR,FIELD>(sLattice) * convFactorToPhysUnits;
     }())
   {

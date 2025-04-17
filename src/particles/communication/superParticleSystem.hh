@@ -44,7 +44,7 @@ SuperParticleSystem<T, PARTICLETYPE>::SuperParticleSystem(
     _blockParticleSystems.push_back(new ParticleSystem<T, PARTICLETYPE>);
   }
 
-  _cuboidNeighborhood.resize(_superStructure.getCuboidGeometry().getNc());
+  _cuboidNeighborhood.resize(_superStructure.getCuboidDecomposition().size());
   updateCuboidNeighborhood();
 }
 
@@ -103,19 +103,19 @@ void SuperParticleSystem<T,PARTICLETYPE>::defineDynamics (Args&& ...args){
 }
 
 template <typename T, typename PARTICLETYPE>
-const std::unordered_set<int>& SuperParticleSystem<T, PARTICLETYPE>::getNeighbourRanks()
+const std::set<int>& SuperParticleSystem<T, PARTICLETYPE>::getNeighbourRanks()
 {
   return _neighbourRanks;
 }
 
 template <typename T, typename PARTICLETYPE>
-const std::unordered_set<int>& SuperParticleSystem<T, PARTICLETYPE>::getExtendedNeighbourRanks()
+const std::set<int>& SuperParticleSystem<T, PARTICLETYPE>::getExtendedNeighbourRanks()
 {
   return _extendedNeighbourRanks;
 }
 
 template <typename T, typename PARTICLETYPE>
-const std::vector<std::unordered_set<int>>& SuperParticleSystem<T, PARTICLETYPE>::getCuboidNeighborhood()
+const std::vector<std::set<int>>& SuperParticleSystem<T, PARTICLETYPE>::getCuboidNeighborhood()
 {
   return _cuboidNeighborhood;
 }
@@ -215,8 +215,8 @@ void SuperParticleSystem<T, PARTICLETYPE>::updateOffsetFromCircumRadius(
 template <typename T, typename PARTICLETYPE>
 unsigned SuperParticleSystem<T, PARTICLETYPE>::getOffset()
 {
-  auto& cuboidGeometry = _superStructure.getCuboidGeometry();
-  const T physDeltaX = cuboidGeometry.getMotherCuboid().getDeltaR();
+  auto& cuboidDecomposition = _superStructure.getCuboidDecomposition();
+  const T physDeltaX = cuboidDecomposition.getMotherCuboid().getDeltaR();
   unsigned offset = util::max( util::ceil(_maximalCircumRadius/physDeltaX),
       _superStructure.getOverlap() );
   return offset;
@@ -226,22 +226,17 @@ unsigned SuperParticleSystem<T, PARTICLETYPE>::getOffset()
 template <typename T, typename PARTICLETYPE>
 void SuperParticleSystem<T, PARTICLETYPE>::updateCuboidNeighborhood()
 {
-  auto& cuboidGeometry = _superStructure.getCuboidGeometry();
-  unsigned offset = getOffset();
+  auto& cuboidDecomposition = _superStructure.getCuboidDecomposition();
+  int offset = getOffset();
 
   std::map<int,std::vector<int>> neighbourhood;
-  evaluateCuboidGeometryNeighbourhood( cuboidGeometry, neighbourhood, offset);
+  evaluateCuboidDecompositionNeighbourhood(cuboidDecomposition, neighbourhood, offset);
 
   constexpr bool correctFaultyNeighbourhood = true;
-  checkCuboidNeighbourhoodConsistency( neighbourhood, correctFaultyNeighbourhood );
+  checkCuboidNeighbourhoodConsistency(neighbourhood, correctFaultyNeighbourhood);
 
-  for ( const auto& cuboidNeighbourPair: neighbourhood){
-    const int globiC = cuboidNeighbourPair.first;
-
-    _cuboidNeighborhood[globiC] =
-      std::unordered_set<int>(cuboidNeighbourPair.second.begin(),
-          cuboidNeighbourPair.second.end());
-
+  for (auto [globiC, neighbors] : neighbourhood) {
+    _cuboidNeighborhood[globiC] = std::set<int>(neighbors.begin(), neighbors.end());
   }
 
   _neighbourRanks = communication::getNeighbourRanksFromCuboidNeighbourhood<T, PARTICLETYPE::d, false>(
@@ -249,7 +244,7 @@ void SuperParticleSystem<T, PARTICLETYPE>::updateCuboidNeighborhood()
 
   _extendedNeighbourRanks = _neighbourRanks;
   for(int rank : _neighbourRanks) {
-    const std::unordered_set<int> neighborRanks = communication::getNeighbourRanksFromCuboidNeighbourhood<
+    const std::set<int> neighborRanks = communication::getNeighbourRanksFromCuboidNeighbourhood<
       T, PARTICLETYPE::d, false>(_superStructure, rank, _cuboidNeighborhood);
     _extendedNeighbourRanks.insert(neighborRanks.begin(), neighborRanks.end());
   }

@@ -34,8 +34,7 @@
  * automatically.
  */
 
-#include "olb3D.h"
-#include "olb3D.hh"
+#include <olb.h>
 
 using namespace olb;
 using namespace olb::descriptors;
@@ -63,13 +62,13 @@ SuperGeometry<T,3> prepareGeometry( )
 
   // Build CoboidGeometry from IndicatorF (weights are set, remove and shrink is done)
   int N = config["Application"]["Discretization"]["Resolution"].get<int>();
-  CuboidGeometry3D<T>* cuboidGeometry = new CuboidGeometry3D<T>( *venturi, 1./N, singleton::mpi().getSize() );
+  CuboidDecomposition3D<T>* cuboidDecomposition = new CuboidDecomposition3D<T>( *venturi, 1./N, singleton::mpi().getSize() );
 
-  // Build LoadBalancer from CuboidGeometry (weights are respected)
-  HeuristicLoadBalancer<T>* loadBalancer = new HeuristicLoadBalancer<T>( *cuboidGeometry );
+  // Build LoadBalancer from CuboidDecomposition (weights are respected)
+  HeuristicLoadBalancer<T>* loadBalancer = new HeuristicLoadBalancer<T>( *cuboidDecomposition );
 
   // Default instantiation of superGeometry
-  SuperGeometry<T,3> superGeometry( *cuboidGeometry, *loadBalancer, 3 );
+  SuperGeometry<T,3> superGeometry( *cuboidDecomposition, *loadBalancer, 3 );
 
   // Set boundary voxels by rename material numbers
   superGeometry.rename( 0,2, venturi );
@@ -77,6 +76,16 @@ SuperGeometry<T,3> prepareGeometry( )
   superGeometry.rename( 2,3,1, inflow );
   superGeometry.rename( 2,4,1, outflow0 );
   superGeometry.rename( 2,5,1, outflow1 );
+
+  // print some node here to check the geometry
+  //clout << "edge of the upper pipe" << std::endl;
+  //double physR[3] = {120, 5, 50};
+  //superGeometry.print(physR, 2);
+
+  //clout << "center of the right pipe" << std::endl;
+  //double physR2[3] = {5, 50, 50};
+  //superGeometry.print(physR2, 2);
+
 
   // Removes all not needed boundary voxels outside the surface
   superGeometry.clean();
@@ -107,12 +116,12 @@ void prepareLattice( SuperLattice<T,DESCRIPTOR>& sLattice,
   sLattice.defineDynamics<RLBdynamics>(superGeometry, 1);
 
   // Material=2 -->bounce back
-  setBounceBackBoundary(sLattice, superGeometry, 2);
+  boundary::set<boundary::BounceBack>(sLattice, superGeometry, 2);
 
   // Setting of the boundary conditions
-  setInterpolatedVelocityBoundary<T,DESCRIPTOR>(sLattice, omega, superGeometry, 3);
-  setInterpolatedPressureBoundary<T,DESCRIPTOR>(sLattice, omega, superGeometry, 4);
-  setInterpolatedPressureBoundary<T,DESCRIPTOR>(sLattice, omega, superGeometry, 5);
+  boundary::set<boundary::InterpolatedVelocity>(sLattice, superGeometry, 3);
+  boundary::set<boundary::InterpolatedPressure>(sLattice, superGeometry, 4);
+  boundary::set<boundary::InterpolatedPressure>(sLattice, superGeometry, 5);
 
   sLattice.setParameter<descriptors::OMEGA>(omega);
 
@@ -142,7 +151,7 @@ void setBoundaryValues( SuperLattice<T, DESCRIPTOR>& sLattice,
     startScale( &frac,iTvec );
 
     // Creates and sets the Poiseuille inflow profile using functors
-    CirclePoiseuille3D<T> poiseuilleU( superGeometry, 3, frac*converter.getCharLatticeVelocity(), T(), converter.getConversionFactorLength() );
+    CirclePoiseuille3D<T> poiseuilleU( superGeometry, 3, frac*converter.getCharLatticeVelocity(), T(), converter.getPhysDeltaX() );
     sLattice.defineU( superGeometry, 3, poiseuilleU );
 
     clout << "step=" << iT << "; scalingFactor=" << frac << std::endl;
@@ -163,10 +172,8 @@ void getResults( SuperLattice<T, DESCRIPTOR>& sLattice,
 
   if ( iT==0 ) {
     // Writes the geometry, cuboid no. and rank no. as vti file for visualization
-    SuperLatticeGeometry3D<T, DESCRIPTOR> geometry( sLattice, superGeometry );
     SuperLatticeCuboid3D<T, DESCRIPTOR> cuboid( sLattice );
     SuperLatticeRank3D<T, DESCRIPTOR> rank( sLattice );
-    vtmWriter.write( geometry );
     vtmWriter.write( cuboid );
     vtmWriter.write( rank );
     vtmWriter.createMasterFile();
@@ -212,7 +219,7 @@ int main( int argc, char* argv[] )
 {
   // === 1st Step: Initialization ===
 
-  olbInit( &argc, &argv );
+  initialize( &argc, &argv );
   singleton::directories().setOutputDir( "./tmp/" );
   OstreamManager clout( std::cout,"main" );
   // display messages from every single mpi process

@@ -40,12 +40,12 @@ namespace communication {
 
 /// evaluates ranks that need the new particle data
 template <typename T, typename PARTICLECONTACTTYPE, typename WALLCONTACTTYPE>
-std::unordered_set<int>
+std::set<int>
 evalDestRanks(contact::ContactContainer<T, PARTICLECONTACTTYPE,
                                         WALLCONTACTTYPE>& contactContainer,
               const std::size_t                           globalParticleID)
 {
-  std::unordered_set<int> destRanks;
+  std::set<int> destRanks;
 
   for (const PARTICLECONTACTTYPE& contact : contactContainer.particleContacts) {
     if (
@@ -176,7 +176,7 @@ std::size_t evalEquationsOfMotionResults(
               access::getAngle(particle), access::getAngularVelocity(particle));
 
           // Evaluate which ranks need to know the data
-          std::unordered_set<int> destRanks {
+          std::set<int> destRanks {
               evalDestRanks(contactContainer, fieldID.getField(0))};
 
           for (const int destRank : destRanks) {

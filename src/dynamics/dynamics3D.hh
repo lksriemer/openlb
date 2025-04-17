@@ -31,9 +31,7 @@
 #include "freeSurfacePostProcessor3D.hh"
 #include "interactionPotential.hh"
 #include "navierStokesAdvectionDiffusionCouplingPostProcessor3D.hh"
-#include "rtlbmDynamics.hh"
+//#include "rtlbmDynamics.hh"
 #include "shanChenDynOmegaForcedPostProcessor3D.hh"
 #include "shanChenForcedSingleComponentPostProcessor3D.hh"
 #include "stochasticSGSdynamics.hh"
-
-#include "porousAdvectionDiffusionDynamics.hh"

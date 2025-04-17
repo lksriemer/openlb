@@ -1,6 +1,7 @@
 /*  This file is part of the OpenLB library
  *
  *  Copyright (C) 2021 Claudius Holeksa
+ *                2024-2025 Danial Khazaeipoul
  *  E-mail contact: info@openlb.net
  *  The most recent release of OpenLB can be downloaded at
  *  <http://www.openlb.net/>
@@ -21,166 +22,20 @@
  *  Boston, MA  02110-1301, USA.
 */
 
+#include <atomic>
+
 namespace olb {
 
 namespace FreeSurface {
 
 template<typename T, typename DESCRIPTOR>
-std::enable_if_t<DESCRIPTOR::d == 2,T>
-offsetHelper(T volume, const Vector<T,DESCRIPTOR::d>& sorted_normal) any_platform {
-  T d2 = volume * sorted_normal[1] + 0.5 * sorted_normal[0];
-  if(d2 >= sorted_normal[0]){
-    return d2;
-  }
-
-  T d1 = util::sqrt(2. * sorted_normal[0] * sorted_normal[1] * volume);
-
-  return d1;
-}
-
-
-// A lot of magic numbers are happening here. Optimized algorithm taken from Moritz Lehmann
-template<typename T, typename DESCRIPTOR>
-std::enable_if_t<DESCRIPTOR::d == 3,T>
-offsetHelper(T volume, const Vector<T,DESCRIPTOR::d>& sorted_normal) any_platform {
-  T sn0_plus_sn1 = sorted_normal[0] + sorted_normal[1];
-  T sn0_times_sn1 = sorted_normal[0] * sorted_normal[1];
-  T sn2_volume = sorted_normal[2] * volume;
-
-  T min_sn0_plus_sn1_and_sn2 = util::min(sn0_plus_sn1, sorted_normal[2]);
-
-  T d5 = sn2_volume + 0.5 * sn0_plus_sn1;
-  if(d5 > min_sn0_plus_sn1_and_sn2 && d5 <= sorted_normal[2]){
-    return d5;
-  }
-
-  T d2 = 0.5 * sorted_normal[0] + 0.28867513 * util::sqrt( util::max(0., 24. * sorted_normal[1] * sn2_volume - sorted_normal[0]*sorted_normal[0]) );
-
-  if(d2 > sorted_normal[0] && d2 <= sorted_normal[1]){
-    return d2;
-  }
-
-  T d1  = std::cbrt(6.0 * sn0_times_sn1 * sn2_volume);
-  if(d1 <= sorted_normal[0]){
-    return d1;
-  }
-
-  T x3 = 81.0  * sn0_times_sn1 * (sn0_plus_sn1 - 2. * sn2_volume);
-  T y3 = util::sqrt(util::max(0., 23328. * sn0_times_sn1*sn0_times_sn1*sn0_times_sn1 - x3*x3 ));
-  T u3 = std::cbrt(x3*x3 + y3*y3);
-  T d3 = sn0_plus_sn1 - (7.5595264 * sn0_times_sn1 + 0.26456684 * u3) * (1./util::sqrt(u3)) * util::sin(0.5235988 - 0.3333334 * util::atan(y3 / x3));
-  if(d3 > sorted_normal[1] && d3 <= min_sn0_plus_sn1_and_sn2){
-    return d3;
-  }
-
-  T t4 = 9. * util::pow(sn0_plus_sn1 + sorted_normal[2], 2) - 18.;
-  T x4 = util::max(sn0_times_sn1 * sorted_normal[2] * (324. - 648. * volume), 1.1754944e-38);
-  T y4 = util::sqrt(util::max(4. * t4*t4*t4 - x4*x4, 0.));
-  T u4 = std::cbrt(x4*x4 + y4*y4);
-  T d4  = 0.5 * (sn0_plus_sn1 + sorted_normal[2]) - (0.20998684 * t4 + 0.13228342 * u4) * (1./util::sqrt(u4)) * util::sin(0.5235988- 0.3333334 * util::atan(y4/x4));
-
-  return d4;
-}
-
-// A lot of magic numbers are happening here. Optimized algorithm taken from Moritz Lehmann
-template<typename T, typename DESCRIPTOR>
-T offsetHelperOpt(T vol, const Vector<T,DESCRIPTOR::d>& sn) any_platform {
-  const T sn0_p_sn1 = sn[0] + sn[1];
-  const T sn2_t_V = sn[2] * vol;
-
-  if(sn0_p_sn1 <= 2. * sn2_t_V){
-    return sn2_t_V + 0.5 * sn0_p_sn1;
-  }
-
-  const T sq_sn0 = util::pow(sn[0],2), sn1_6 = 6. * sn[1], v1 = sq_sn0 / sn1_6;
-
-  if(v1 <= sn2_t_V && sn2_t_V < v1 + 0.5 * (sn[1]-sn[0])){
-    return 0.5 *(sn[0] + util::sqrt(sq_sn0 + 8.0 * sn[1] * (sn2_t_V - v1)));
-  }
-
-  const T v6 = sn[0] * sn1_6 * sn2_t_V;
-  if(sn2_t_V < v1){
-    return std::cbrt(v6);
-  }
-
-  const T v3 = sn[2] < sn0_p_sn1 ? (util::pow(sn[2],2) * (3. * sn0_p_sn1 - sn[2]) + sq_sn0 *(sn[0] - 3.0 * sn[2]) + util::pow(sn[1],2)*(sn[1]-3.0 * sn[2])) / (sn[0] * sn1_6) : 0.5 * sn0_p_sn1;
-
-  const T sq_sn0_sq_sn1 = sq_sn0 + util::pow(sn[1],2), v6_cb_sn0_sn1 = v6 - util::pow(sn[0],3) - util::pow(sn[1],3);
-
-  const bool case34 = sn2_t_V < v3;
-  const T a = case34 ? v6_cb_sn0_sn1 : 0.5 * (v6_cb_sn0_sn1 - util::pow(sn[2], 3));
-  const T b = case34 ? sq_sn0_sq_sn1 : 0.5 * (sq_sn0_sq_sn1 + util::pow(sn[2], 2));
-  const T c = case34 ? sn0_p_sn1 : 0.5;
-  const T t = util::sqrt(util::pow(c,2) - b);
-  return c - 2.0 * t * util::sin(0.33333334 * util::asin((util::pow(c,3) - 0.5 * a - 1.5 * b * c) / util::pow(t,3)));
-}
-
-template<typename T, size_t S>
-std::array<T,S> solvePivotedLU(std::array<std::array<T,S>,S>& matrix, const std::array<T,S>& b, size_t N) {
-  std::array<T,S> x;
-  std::array<T,S> pivots;
-  for(size_t i = 0; i < S; ++i){
-    pivots[i] = i;
-    x[i] = 0.;
-  }
-
-  N = std::min(N,S);
-
-  for(size_t i = 0; i < N; ++i){
-
-    T max = 0.;
-    size_t max_index = i;
-
-    for(size_t j = i; j < N; ++j){
-      T abs = std::abs(matrix[pivots[j]][i]);
-      if(abs > max){
-        max_index = j;
-        max = abs;
-      }
-    }
-
-    if(max_index != i){
-      size_t tmp_index = pivots[i];
-      pivots[i] = pivots[max_index];
-      pivots[max_index] = tmp_index;
-    }
-
-    for(size_t j = i + 1; j < N; ++j){
-      matrix[pivots[j]][i] /= matrix[pivots[i]][i];
-
-      for(size_t k = i + 1; k < N; ++k){
-
-        matrix[pivots[j]][k] -= matrix[pivots[j]][i] * matrix[pivots[i]][k];
-      }
-    }
-  }
-
-  for(size_t i = 0; i  < N; ++i){
-    x[i] = b[pivots[i]];
-
-    for(size_t j = 0; j < i; ++j){
-      x[i] -= matrix[pivots[i]][j] * x[j];
-    }
-  }
-
-  for(size_t i = N; i > 0; --i){
-    for(size_t j = i; j < N; ++j){
-      x[i-1] -= matrix[pivots[i-1]][j] * x[j];
-    }
-
-    x[i-1] /= matrix[pivots[i-1]][i-1];
-  }
-
-  return x;
-}
-
-template<typename T, typename DESCRIPTOR>
-void initialize(SuperLattice<T,DESCRIPTOR>& lattice) {
-  lattice.executePostProcessors(FreeSurface::Stage0());
-  lattice.executePostProcessors(FreeSurface::Stage1());
-  lattice.executePostProcessors(FreeSurface::Stage2());
-  lattice.executePostProcessors(FreeSurface::Stage3());
-  lattice.executePostProcessors(FreeSurface::Stage4());
+void initialize(SuperLattice<T,DESCRIPTOR>& sLattice) {
+  sLattice.executePostProcessors(FreeSurface::Stage0());
+  sLattice.executePostProcessors(FreeSurface::Stage1());
+  sLattice.executePostProcessors(FreeSurface::Stage2());
+  sLattice.executePostProcessors(FreeSurface::Stage3());
+  sLattice.executePostProcessors(FreeSurface::Stage4());
+  sLattice.executePostProcessors(FreeSurface::Stage5());
 }
 
 template <typename CELL>
@@ -189,528 +44,42 @@ bool isCellType(CELL& cell, const FreeSurface::Type& type) {
 }
 
 template <typename CELL>
-bool hasCellFlags(CELL& cell, const FreeSurface::Flags& flags) {
-  return static_cast<bool>(cell.template getField<FreeSurface::CELL_FLAGS>() & flags);
+void setCellType(CELL& cell, const FreeSurface::Type& type) {
+  cell.template setField<FreeSurface::CELL_TYPE>(type);
 }
 
 template <typename CELL>
 bool hasNeighbour(CELL& cell, const FreeSurface::Type& type) {
   using DESCRIPTOR = typename CELL::descriptor_t;
-  for(int iPop = 1; iPop < DESCRIPTOR::q; ++iPop) {
-    auto cellC = cell.neighbor(descriptors::c<DESCRIPTOR>(iPop));
-    if(isCellType(cellC, type)) {
-      return true;
-    }
+
+  for (int iPop = 1; iPop < DESCRIPTOR::q; ++iPop) {
+    auto nbrCell = cell.neighbor(descriptors::c<DESCRIPTOR>(iPop));
+    if (isCellType(nbrCell, type)) { return true; }
   }
 
   return false;
 }
 
+template <typename CELL>
+bool hasCellFlags(CELL& cell, const FreeSurface::Flags& flags) {
+  return static_cast<bool>(cell.template getField<FreeSurface::CELL_FLAGS>() & flags);
+}
+
+template <typename CELL>
+void setCellFlags(CELL& cell, const FreeSurface::Flags& flags) {
+  cell.template setField<FreeSurface::CELL_FLAGS>(flags);
+}
 
 template <typename CELL>
 bool hasNeighbourFlags(CELL& cell, const FreeSurface::Flags& flags) {
   using DESCRIPTOR = typename CELL::descriptor_t;
-  for(int iPop = 1; iPop < DESCRIPTOR::q; ++iPop) {
-    auto cellC = cell.neighbor(descriptors::c<DESCRIPTOR>(iPop));
-    if(hasCellFlags(cellC, flags)) {
-      return true;
-    }
+
+  for (int iPop = 1; iPop < DESCRIPTOR::q; ++iPop) {
+    auto nbrCell = cell.neighbor(descriptors::c<DESCRIPTOR>(iPop));
+    if (hasCellFlags(nbrCell, flags)) { return true; }
   }
 
   return false;
-}
-
-template <typename CELL, typename V>
-Vector<V,CELL::descriptor_t::d> computeInterfaceNormal(CELL& cell) {
-  Vector<V,CELL::descriptor_t::d> normal{};
-  normal[0] = 0.5 * (  getClampedEpsilon(cell.neighbor({-1, 0, 0}))
-                     - getClampedEpsilon(cell.neighbor({ 1, 0, 0})));
-  normal[1] = 0.5 * (  getClampedEpsilon(cell.neighbor({ 0,-1, 0}))
-                     - getClampedEpsilon(cell.neighbor({ 0, 1, 0})));
-  normal[2] = 0.5 * (  getClampedEpsilon(cell.neighbor({ 0, 0,-1}))
-                     - getClampedEpsilon(cell.neighbor({ 0, 0, 1})));
-  return normal;
-}
-
-template <typename CELL, typename V>
-Vector<V,CELL::descriptor_t::d> computeParkerYoungInterfaceNormal(CELL& cell) {
-  using DESCRIPTOR = typename CELL::descriptor_t;
-
-  Vector<V,CELL::descriptor_t::d> normal{};
-
-  for(size_t dim = 0; dim < CELL::descriptor_t::d; ++dim){
-    normal[dim] = 0;
-  }
-
-  for(int iPop = 1; iPop < DESCRIPTOR::q; iPop++) {
-      int omega_weight = 1;
-      if(descriptors::c<DESCRIPTOR>(iPop, 0) != 0){
-        omega_weight *= 2;
-      }
-      if(descriptors::c<DESCRIPTOR>(iPop, 1) != 0){
-        omega_weight *= 2;
-      }
-
-      // For the 3D case
-      if(CELL::descriptor_t::d == 3 && descriptors::c<DESCRIPTOR>(iPop)[2] != 0){
-        omega_weight *= 2;
-      }
-
-      omega_weight /= 2;
-
-      auto cellC = cell.neighbor(descriptors::c<DESCRIPTOR>(iPop));
-      V epsilon = getClampedEpsilon(cellC);
-
-      normal[0] -= omega_weight * (descriptors::c<DESCRIPTOR>(iPop, 0) * epsilon);
-      normal[1] -= omega_weight * (descriptors::c<DESCRIPTOR>(iPop, 1) * epsilon);
-      if(CELL::descriptor_t::d == 3){
-         normal[2] -= omega_weight * (descriptors::c<DESCRIPTOR>(iPop, 2) * epsilon);
-      }
-
-  }
-
-  return normal;
-}
-
-template <typename CELL, typename V>
-V getClampedEpsilon(CELL& cell) {
-
-  V epsilon = cell.template getField<FreeSurface::EPSILON>();
-  return util::max(0., util::min(1., epsilon));
-}
-
-/*
-template <typename CELL, typename V>
-V getClampedEpsilonCorrected(CELL& cell) {
-
-  if(isCellType(cell, FreeSurface::Type::Interface) && !hasNeighbour(cell, FreeSurface::Type::Gas)){
-    return 1.0;
-  }
-
-  V epsilon = cell.template getField<FreeSurface::EPSILON>();
-
-  return util::max(0., util::min(1., epsilon));
-}
-*/
-
-template<typename T, typename DESCRIPTOR>
-T calculateCubeOffset(T volume, const Vector<T,DESCRIPTOR::d>& normal) {
-  std::vector<T> abs_normal(DESCRIPTOR::d, T{0});
-  for(int i = 0; i < DESCRIPTOR::d; i++){
-    abs_normal[i] = util::abs(normal[i]);
-  }
-
-  T volume_symmetry = 0.5 - util::abs(volume - 0.5);
-
-  std::sort(abs_normal.begin(), abs_normal.end());
-
-  if constexpr (DESCRIPTOR::d == 2) {
-    abs_normal[0] = util::max(normal[0], 1e-5);
-  } else if (DESCRIPTOR::d == 3){
-    abs_normal[0] = util::max(normal[0], 1e-12);
-    abs_normal[1] = util::max(normal[1], 1e-12);
-  }
-
-  T d = offsetHelper<T,DESCRIPTOR>(volume_symmetry, abs_normal);
-
-  T sorted_normal_acc = 0;
-  for(int i = 0; i < DESCRIPTOR::d; i++){
-    sorted_normal_acc += abs_normal[i];
-  }
-
-  return std::copysign(d - 0.5 * sorted_normal_acc, volume - 0.5);
-}
-
-// Optimized version of function calculateCubeOffset for 3D
-template<typename T, typename DESCRIPTOR>
-T calculateCubeOffsetOpt(T volume, const Vector<T,DESCRIPTOR::d>& normal) {
-  olb::Vector<T,DESCRIPTOR::d> abs_normal;
-
-  abs_normal[0] = util::abs(normal[0]);
-  abs_normal[1] = util::abs(normal[1]);
-  abs_normal[2] = util::abs(normal[2]);
-
-  T a_l1 = abs_normal[0] + abs_normal[1] + abs_normal[2];
-
-  T volume_symmetry = 0.5 - util::abs(volume - 0.5);
-
-  olb::Vector<T,DESCRIPTOR::d> sorted_normal;
-  sorted_normal[0] = util::min(util::min(abs_normal[0], abs_normal[1]), abs_normal[2]) / a_l1;
-  sorted_normal[1] = 0.;
-  sorted_normal[2] = util::max(util::max(abs_normal[0], abs_normal[1]), abs_normal[2]) / a_l1;
-
-  sorted_normal[1] = util::max(1. - sorted_normal[0] - sorted_normal[2], 0.);
-
-  T d = offsetHelperOpt<T,DESCRIPTOR>(volume_symmetry, sorted_normal);
-
-  return a_l1 * std::copysign(0.5 - d, volume - 0.5);
-}
-
-template <typename CELL, typename V>
-V calculateSurfaceTensionCurvature(CELL& cell) {
-  using DESCRIPTOR = typename CELL::descriptor_t;
-
-  if constexpr (DESCRIPTOR::d == 2) {
-    return calculateSurfaceTensionCurvature2D(cell);
-  } else if (DESCRIPTOR::d == 3){
-    return calculateSurfaceTensionCurvature3D(cell);
-  }
-
-  return 0;
-}
-
-template <typename CELL, typename V>
-V calculateSurfaceTensionCurvature2D(CELL& cell) {
-  auto normal = computeParkerYoungInterfaceNormal(cell);
-
-  using DESCRIPTOR = typename CELL::descriptor_t;
-  {
-    V norm = 0.;
-    for(size_t i = 0; i < DESCRIPTOR::d; ++i){
-      norm += normal[i] * normal[i];
-    }
-
-    norm = util::sqrt(norm);
-
-    if(norm < 1e-6){
-      return 0.;
-    }
-
-    for(size_t i = 0; i <DESCRIPTOR::d; ++i){
-      normal[i] /= norm;
-    }
-  }
-
-  // Rotation matrix is
-  // ( n1 | -n0 )
-  // ( n0 |  n1 )
-
-  // It is 2 because of the amount of fitting parameters. Not because of the dimension
-  constexpr size_t S = 2;
-  std::array<std::array<V,S>, S> lq_matrix;
-  std::array<V,S> b_rhs;
-  for(size_t i = 0; i < S; ++i){
-    for(size_t j = 0; j < S; ++j){
-      lq_matrix[i][j] = 0.;
-    }
-    b_rhs[i] = 0.;
-  }
-
-  // Offset for the plic correction
-  V origin_offset = 0.;
-  {
-    V fill_level = getClampedEpsilon(cell);
-    origin_offset = calculateCubeOffset<V,DESCRIPTOR>(fill_level, normal);
-  }
-
-  // The amount of neighbouring interfaces. if less are available we will solve a reduced curve by setting the less important parameters to zero
-  std::size_t healthy_interfaces = 0;
-
-  for (int iPop=1; iPop < DESCRIPTOR::q; ++iPop) {
-    auto cellC = cell.neighbor(descriptors::c<DESCRIPTOR>(iPop));
-
-    if(   !isCellType(cellC, FreeSurface::Type::Interface)
-       || !hasNeighbour(cellC, FreeSurface::Type::Gas)) {
-      continue;
-    }
-
-    ++healthy_interfaces;
-
-    V fill_level = getClampedEpsilon(cellC);
-
-    V cube_offset = calculateCubeOffset<V,DESCRIPTOR>(fill_level, normal);
-
-    V x_pos = descriptors::c<DESCRIPTOR>(iPop,0);
-    V y_pos = descriptors::c<DESCRIPTOR>(iPop,1);
-
-    // Rotation
-    V rot_x_pos = x_pos * normal[1] - y_pos * normal[0];
-    V rot_y_pos = x_pos * normal[0] + y_pos * normal[1] + (cube_offset - origin_offset);
-
-    V rot_x_pos_2 = rot_x_pos * rot_x_pos;
-    V rot_x_pos_3 = rot_x_pos_2 * rot_x_pos;
-    V rot_x_pos_4 = rot_x_pos_3 * rot_x_pos;
-
-    lq_matrix[1][1] += rot_x_pos_2;
-    lq_matrix[1][0] += rot_x_pos_3;
-    lq_matrix[0][0] += rot_x_pos_4;
-
-    b_rhs[0] += rot_x_pos_2*(rot_y_pos);
-    b_rhs[1] += rot_x_pos*(rot_y_pos);
-  }
-
-  lq_matrix[0][1] = lq_matrix[1][0];
-
-  // Thikonov regularization parameter
-  V alpha = 0.0;
-  for(size_t i = 0; i < DESCRIPTOR::d; ++i){
-    lq_matrix[i][i] += alpha;
-  }
-
-  // It is 2 because of the fitting parameters. Not dependent on the dimension
-  std::array<V,S> solved_fit = FreeSurface::solvePivotedLU<V,S>(lq_matrix, b_rhs, healthy_interfaces);
-
-  // signed curvature -> kappa = y'' / ( (1 + y'²)^(3/2) )
-  V denom = std::sqrt(1. + solved_fit[1]*solved_fit[1]);
-  denom = denom * denom * denom;
-  V curvature = 2.*solved_fit[0] / denom;
-  return util::max(-1., util::min(1., curvature));
-}
-
-template <typename CELL, typename V>
-V calculateSurfaceTensionCurvature3D(CELL& cell){
-  // This is b_z
-  auto normal = computeParkerYoungInterfaceNormal(cell);
-
-  using DESCRIPTOR = typename CELL::descriptor_t;
-  {
-    V norm = 0.;
-    for(size_t i = 0; i < DESCRIPTOR::d; ++i){
-      norm += normal[i] * normal[i];
-    }
-
-    norm = util::sqrt(norm);
-
-    if(norm < 1e-12){
-      return 0.;
-    }
-
-    for(size_t i = 0; i <DESCRIPTOR::d; ++i){
-      normal[i] /= norm;
-    }
-  }
-
-  std::array<V,3> r_vec{
-    0.56270900, 0.32704452, 0.75921047
-  };
-  /*
-  std::array<T,DESCRIPTOR::d> r_vec{
-    0.,0.,1.
-  };
-  */
-  std::array<std::array<V,3>,3> rotation{{
-    {{0., 0., 0.}},
-    //{{normal[1], -normal[0], 0.}},
-    {{normal[1] * r_vec[2] - normal[2] * r_vec[1], normal[2] * r_vec[0] - normal[0] * r_vec[2], normal[0] * r_vec[1] - normal[1] * r_vec[0]}},
-    {{normal[0], normal[1], normal[2]}}
-  }};
-
-  // Cross product with (0,0,1) x normal
-  // This is b_y
-
-  // (normal[0], normal[1], normal[2])
-
-  V cross_norm = 0.;
-  for(size_t i = 0; i < DESCRIPTOR::d; ++i){
-    cross_norm += rotation[1][i] * rotation[1][i];
-  }
-
-  // If too close too each other use the identity matrix
-  if(cross_norm > 1e-6){
-
-    cross_norm = util::sqrt(cross_norm);
-
-    for(size_t i = 0; i <DESCRIPTOR::d; ++i){
-      rotation[1][i] /= cross_norm;
-    }
-  }else {
-
-    rotation[1] = {{
-      -normal[2],
-      0.,
-      normal[0]
-    }};
-
-    cross_norm = 0.;
-    for(size_t i = 0; i < DESCRIPTOR::d; ++i){
-      cross_norm += rotation[1][i] * rotation[1][i];
-    }
-
-    cross_norm = util::sqrt(cross_norm);
-
-    for(size_t i = 0; i <DESCRIPTOR::d; ++i){
-      rotation[1][i] /= cross_norm;
-    }
-  }
-
-  // Cross product of ((0,0,1) x normal / | (0,0,1) x normal |) x normal
-  // This is b_x
-  rotation[0] = {{
-    rotation[1][1] * normal[2] - rotation[1][2] * normal[1],
-    rotation[1][2] * normal[0] - rotation[1][0] * normal[2],
-    rotation[1][0] * normal[1] - rotation[1][1] * normal[0]
-  }};
-
-  // These three form a matrix and are entered into each row
-  // ( b_x )
-  // ( b_y )
-  // ( b_z )
-
-  constexpr size_t S = 5;
-  std::array<std::array<V,S>, S> lq_matrix;
-  std::array<V,S> b_rhs;
-  for(size_t i = 0; i < S; ++i){
-    for(size_t j = 0; j < S; ++j){
-      lq_matrix[i][j] = 0.;
-    }
-    b_rhs[i] = 0.;
-  }
-  V origin_offset = 0.;
-  {
-    V fill_level = getClampedEpsilon(cell);
-    origin_offset = calculateCubeOffsetOpt<V,DESCRIPTOR>(fill_level, normal);
-  }
-
-  size_t healthy_interfaces = 0;
-  for(int iPop = 1; iPop < DESCRIPTOR::q; iPop++){
-    auto cellC = cell.neighbor(descriptors::c<DESCRIPTOR>(iPop));
-
-    if(!isCellType(cellC, FreeSurface::Type::Interface) || !hasNeighbour(cellC, FreeSurface::Type::Gas)){
-      continue;
-    }
-
-    ++healthy_interfaces;
-
-    V fill_level = getClampedEpsilon(cellC);
-
-    V cube_offset = calculateCubeOffsetOpt<V, DESCRIPTOR>(fill_level, normal);
-
-    int i = descriptors::c<DESCRIPTOR>(iPop)[0];
-    int j = descriptors::c<DESCRIPTOR>(iPop)[1];
-    int k = descriptors::c<DESCRIPTOR>(iPop)[2];
-
-    std::array<V,3> pos{static_cast<V>(i),static_cast<V>(j),static_cast<V>(k)};
-    std::array<V,3> r_pos{0.,0.,cube_offset - origin_offset};
-
-    for(size_t a = 0; a < DESCRIPTOR::d; ++a){
-      for(size_t b = 0; b < DESCRIPTOR::d; ++b){
-        r_pos[a] += rotation[a][b] * pos[b];
-      }
-    }
-
-    V r_x_2 = r_pos[0] * r_pos[0];
-    V r_x_3 = r_x_2 * r_pos[0];
-    V r_x_4 = r_x_3 * r_pos[0];
-
-    V r_y_2 = r_pos[1] * r_pos[1];
-    V r_y_3 = r_y_2 * r_pos[1];
-    V r_y_4 = r_y_3 * r_pos[1];
-
-    V r_x_2_y_2 = r_x_2 * r_y_2;
-    V r_x_3_y = r_x_3 * r_pos[1];
-    V r_x_2_y = r_x_2 * r_pos[1];
-
-    V r_x_y_3 = r_pos[0] * r_y_3;
-    V r_x_y_2 = r_pos[0] * r_y_2;
-
-    V r_x_y = r_pos[0] * r_pos[1];
-
-    lq_matrix[0][0] += r_x_4;
-    lq_matrix[1][1] += r_y_4;
-    lq_matrix[2][2] += r_x_2_y_2;
-    lq_matrix[3][3] += r_x_2;
-    lq_matrix[4][4] += r_y_2;
-
-    // skip [1][0] copy later from [2][2]
-    lq_matrix[2][0] += r_x_3_y;
-    lq_matrix[3][0] += r_x_3;
-    lq_matrix[4][0] += r_x_2_y;
-
-    lq_matrix[2][1] += r_x_y_3;
-    lq_matrix[3][1] += r_x_y_2;
-    lq_matrix[4][1] += r_y_3;
-
-    // skip [3][2] copy from [4][0]
-    // skip [4][2] copy from [3][1]
-
-    lq_matrix[4][3] += r_x_y;
-
-    b_rhs[0] +=  r_x_2 * r_pos[2];
-    b_rhs[1] +=  r_y_2 * r_pos[2];
-    b_rhs[2] +=  r_x_y * r_pos[2];
-    b_rhs[3] +=  r_pos[0] * r_pos[2];
-    b_rhs[4] +=  r_pos[1] * r_pos[2];
-  }
-
-  lq_matrix[1][0] = lq_matrix[2][2];
-  lq_matrix[3][2] = lq_matrix[4][0];
-  lq_matrix[4][2] = lq_matrix[3][1];
-
-  for(size_t i = 0; i < S; ++i){
-    for(size_t j = i + 1; j < S; ++j){
-      lq_matrix[i][j] = lq_matrix[j][i];
-    }
-  }
-
-  // Consider using Thikonov regularization?
-  //T alpha = 1e-8;
-  V alpha = 0.0;
-  for(size_t i = 0; i < S; ++i){
-    lq_matrix[i][i] += alpha;
-  }
-
-  std::array<V,S> solved_fit = FreeSurface::solvePivotedLU<V,S>(lq_matrix, b_rhs, healthy_interfaces);
-
-  V denom = std::sqrt(1. + solved_fit[3]*solved_fit[3] + solved_fit[4]*solved_fit[4]);
-  denom = denom * denom * denom;
-  V curvature = ( (1.+solved_fit[4]*solved_fit[4]) * solved_fit[0] + (1. + solved_fit[3]*solved_fit[3] ) * solved_fit[1] - solved_fit[3] * solved_fit[4] * solved_fit[2] ) / denom;
-
-  return util::max(-1., util::min(1., curvature));
-}
-
-template<typename T, typename DESCRIPTOR>
-T plicInverse(T d_o, const Vector<T,DESCRIPTOR::d>& normal){
-
-  Vector<T,DESCRIPTOR::d> abs_normal;
-  for(int i = 0; i < DESCRIPTOR::d; i++){
-    abs_normal[i] = util::abs(normal[i]);
-  }
-
-  //const T n1 = std::min_element(abs_normal.begin(), abs_normal.end());
-  //const T n2 = std::max_element(abs_normal.begin(), abs_normal.end());
-
-  const T n1 = abs_normal[0];
-  const T n2 = abs_normal[1];
-
-  for(int i = 0; i < DESCRIPTOR::d; i++){
-    if(abs_normal[i] < n1){
-      n1 = abs_normal[i];
-    }
-
-    if(abs_normal[i] > n2){
-      n2 = abs_normal[i];
-    }
-  }
-
-  T abs_normal_acc = 0;
-  for(int i = 0; i < DESCRIPTOR::d; i++){
-    abs_normal_acc += abs_normal[i];
-  }
-  const T n3 = abs_normal_acc - n1 - n2;
-  const T d = 0.5 * (n1+n2+n3) - util::abs(d_o);
-  T vol;
-
-  if(DESCRIPTOR::d == 2){
-    if(d < n1){
-      vol = d * d / (2. * n1 * n2);
-    } else if(d >= n1){
-      vol = d / n2 - n1 / (2. * n2);
-    }
-  }
-
-  if(DESCRIPTOR::d == 3){
-    if(util::min(n1+n3,n2) <= d && d <= n2){
-      vol = (d-0.5 *(n1+n3))/n2;
-    } else if(d < n1){
-      vol = util::pow(d,3) / (6. * n1 * n2 * n3);
-    } else if(d <= n3){
-      vol = (3.0 * d * (d-n1) + std::pow(n1,2))/(6. * n2 * n3);
-    } else {
-      vol = (util::pow(d,3) - util::pow(d-n1,3) - util::pow(d-n3,3) - util::pow(util::max(0., d-n2),3)) / (6. * n1* n2 * n3);
-    }
-  }
-
-  return std::copysign(0.5 - vol, d_o) + 0.5;
 }
 
 template <typename CELL>
@@ -718,58 +87,836 @@ NeighbourInfo getNeighbourInfo(CELL& cell) {
   NeighbourInfo info{};
   using DESCRIPTOR = typename CELL::descriptor_t;
 
-  for(int iPop = 1; iPop < DESCRIPTOR::q; ++iPop){
-    auto cellC = cell.neighbor(descriptors::c<DESCRIPTOR>(iPop));
+  for (int iPop = 1; iPop < DESCRIPTOR::q; ++iPop) {
+    auto nbrCell = cell.neighbor(descriptors::c<DESCRIPTOR>(iPop));
 
-    if(isCellType(cellC, FreeSurface::Type::Gas)){
+    if (isCellType(nbrCell, FreeSurface::Type::Gas)) {
       info.has_gas_neighbours = true;
     }
-    else if(isCellType(cellC, FreeSurface::Type::Fluid)){
+    else if (isCellType(nbrCell, FreeSurface::Type::Fluid)) {
       info.has_fluid_neighbours = true;
     }
-    else if(isCellType(cellC, FreeSurface::Type::Interface)){
+    else if (isCellType(nbrCell, FreeSurface::Type::Interface)) {
       ++info.interface_neighbours;
     }
   }
+
   return info;
 }
 
 template <typename CELL, typename V>
 bool isHealthyInterface(CELL& cell) {
+  using DESCRIPTOR = typename CELL::descriptor_t;
   bool has_fluid_neighbours = false;
   bool has_gas_neighbours = false;
 
-  if(!isCellType(cell, FreeSurface::Type::Interface)){
-    return false;
+  if (!isCellType(cell, FreeSurface::Type::Interface)) { return false; }
+
+  for (int iPop = 1; iPop < DESCRIPTOR::q; ++iPop) {
+    auto nbrCell = cell.neighbor(descriptors::c<DESCRIPTOR>(iPop));
+    if (isCellType(nbrCell, FreeSurface::Type::Gas)) {
+      has_gas_neighbours = true;
+      if (has_fluid_neighbours) { return true; }
+    }
+    else if (isCellType(nbrCell, FreeSurface::Type::Fluid)) {
+      has_fluid_neighbours = true;
+      if (has_gas_neighbours) { return true; }
+    }
   }
 
-  using DESCRIPTOR = typename CELL::descriptor_t;
-  for(int iPop = 1; iPop < DESCRIPTOR::q; ++iPop){
-    auto cellC = cell.neighbor(descriptors::c<DESCRIPTOR>(iPop));
-    if(isCellType(cellC, FreeSurface::Type::Gas)){
-      has_gas_neighbours = true;
-      if(has_fluid_neighbours){
-        return true;
-      }
-    }
-    else if(isCellType(cellC, FreeSurface::Type::Fluid)){
-      has_fluid_neighbours = true;
-      if(has_gas_neighbours){
-        return true;
-      }
-    }
-  }
   return false;
 }
 
 template <typename CELL, typename V>
-void setCellType(CELL& cell, const FreeSurface::Type& type) {
-  cell.template setField<FreeSurface::CELL_TYPE>(type);
+void computeMassExcessWeights
+(
+  CELL& cell, const Vector<V, CELL::descriptor_t::d>& normal,
+  const bool& enableAllInterfaces, Vector<V, CELL::descriptor_t::q>& weights
+) {
+  using DESCRIPTOR = typename CELL::descriptor_t;
+
+  for (int iPop = 1; iPop < DESCRIPTOR::q; ++iPop) {
+    auto direction = descriptors::c<DESCRIPTOR>(iPop);
+    auto nbrCell = cell.neighbor(direction);
+
+    Vector<V, DESCRIPTOR::d> ei{};
+    if constexpr (DESCRIPTOR::d == 3) {
+      ei = {V(direction[0]), V(direction[1]), V(direction[2])};
+    }
+    else { ei = {V(direction[0]), V(direction[1])}; }
+
+    if (isCellType(nbrCell, FreeSurface::Type::Interface) && hasCellFlags(nbrCell, FreeSurface::Flags::None)) {
+      const V nDotDirection = util::dotProduct(normal, ei);
+
+      if (hasCellFlags(cell, FreeSurface::Flags::ToFluid)) {
+        // This cell was converted from interface to fluid, so the normal vector is used as is
+        weights[iPop] = nDotDirection > V(0) ? nDotDirection : V(0);
+      }
+      else if (hasCellFlags(cell, FreeSurface::Flags::ToGas)) {
+        // This cell was converted from interface to gas, so the normal vector is inverted
+        weights[iPop] = nDotDirection < V(0) ? -nDotDirection : V(0);
+      }
+    }
+    else if (hasCellFlags(nbrCell, FreeSurface::Flags::NewInterface) && enableAllInterfaces) {
+      const V nDotDirection = util::dotProduct(normal, ei);
+
+      if (hasCellFlags(cell, FreeSurface::Flags::ToFluid)) {
+        // This cell was converted from interface to fluid, so the normal vector is used as is
+        weights[iPop] = nDotDirection > V(0) ? nDotDirection : V(0);
+      }
+      else if (hasCellFlags(cell, FreeSurface::Flags::ToGas)) {
+        // This cell was converted from interface to gas, so the normal vector is inverted
+        weights[iPop] = nDotDirection < V(0) ? -nDotDirection : V(0);
+      }
+    }
+    else {
+      // If the neighbour is not an interface cell, the weight is set to zero
+      weights[iPop] = V(0);
+    }
+  }
 }
 
 template <typename CELL, typename V>
-void setCellFlags(CELL& cell, const FreeSurface::Flags& flags){
-  cell.template setField<FreeSurface::CELL_FLAGS>(flags);
+V getClampedEpsilon(const CELL& cell) {
+
+  V epsilon = cell.template getField<FreeSurface::EPSILON>();
+  return util::max(V(0), util::min(V(1), epsilon));
+}
+
+template <typename CELL, typename V>
+V getSmoothEpsilon(CELL& cell) {
+  using DESCRIPTOR = typename CELL::descriptor_t;
+
+  // K8 kernel of Williams et al.
+  // Avoid uisng expensive std::pow to boost performance
+  auto kernel = [](auto radius, const auto& direction) {
+    auto norm = norm_squared(direction);
+    if (norm < radius * radius) {
+      auto tmp = decltype(radius)(1) - norm / (radius * radius);
+      return tmp * tmp * tmp * tmp;
+    } else { return decltype(radius)(0); }
+  };
+
+  // Kernel support radius is fixed at 2.0
+  V radius = V(2);
+  V denominator = V(0);
+  V tmp = V(0);
+
+  for (int iPop = 1; iPop < DESCRIPTOR::q; ++iPop) {
+    auto nbrCell = cell.neighbor(descriptors::c<DESCRIPTOR>(iPop));
+    const auto direction = descriptors::c<DESCRIPTOR>(iPop);
+    tmp += kernel(radius, direction) * nbrCell.template getField<FreeSurface::EPSILON>();
+    if (norm(direction) < radius) { denominator += kernel(radius, direction); }
+  }
+
+  return tmp / denominator;
+}
+
+template <typename CELL, typename V>
+V getClampedSmoothEpsilon(const CELL& cell) {
+
+  V epsilon = getSmoothEpsilon(cell);
+  return util::max(V(0), util::min(V(1), epsilon));
+}
+
+template <typename CELL, typename V>
+Vector<V, CELL::descriptor_t::d> computeInterfaceNormal(CELL& cell) {
+
+  // Compute interface normal using Parker-Young approximation
+  Vector<V, CELL::descriptor_t::d> normal{};
+  if constexpr (CELL::descriptor_t::d == 3) {
+    auto eps_minusY             = getClampedEpsilon(cell.neighbor({0, -1, 0}));
+    auto eps_plusY              = getClampedEpsilon(cell.neighbor({0, 1, 0}));
+    auto eps_minusX             = getClampedEpsilon(cell.neighbor({-1, 0, 0}));
+    auto eps_plusX              = getClampedEpsilon(cell.neighbor({1, 0, 0}));
+    auto eps_minusYminusX       = getClampedEpsilon(cell.neighbor({-1, -1, 0}));
+    auto eps_minusYplusX        = getClampedEpsilon(cell.neighbor({1, -1, 0}));
+    auto eps_plusYminusX        = getClampedEpsilon(cell.neighbor({-1, 1, 0}));
+    auto eps_plusYplusX         = getClampedEpsilon(cell.neighbor({1, 1, 0}));
+    auto eps_minusZ             = getClampedEpsilon(cell.neighbor({0, 0, -1}));
+    auto eps_plusZ              = getClampedEpsilon(cell.neighbor({0, 0, 1}));
+    auto eps_minusZminusY       = getClampedEpsilon(cell.neighbor({0, -1, -1}));
+    auto eps_minusZplusY        = getClampedEpsilon(cell.neighbor({0, 1, -1}));
+    auto eps_minusZminusX       = getClampedEpsilon(cell.neighbor({-1, 0, -1}));
+    auto eps_minusZplusX        = getClampedEpsilon(cell.neighbor({1, 0, -1}));
+    auto eps_plusZminusY        = getClampedEpsilon(cell.neighbor({0, -1, 1}));
+    auto eps_plusZplusY         = getClampedEpsilon(cell.neighbor({0, 1, 1}));
+    auto eps_plusZminusX        = getClampedEpsilon(cell.neighbor({-1, 0, 1}));
+    auto eps_plusZplusX         = getClampedEpsilon(cell.neighbor({1, 0, 1}));
+    auto eps_minusZminusYminusX = getClampedEpsilon(cell.neighbor({-1, -1, -1}));
+    auto eps_minusZplusYminusX  = getClampedEpsilon(cell.neighbor({-1, 1, -1}));
+    auto eps_minusZminusYplusX  = getClampedEpsilon(cell.neighbor({1, -1, -1}));
+    auto eps_minusZplusYplusX   = getClampedEpsilon(cell.neighbor({1, 1, -1}));
+    auto eps_plusZminusYminusX  = getClampedEpsilon(cell.neighbor({-1, -1, 1}));
+    auto eps_plusZplusYminusX   = getClampedEpsilon(cell.neighbor({-1, 1, 1}));
+    auto eps_plusZminusYplusX   = getClampedEpsilon(cell.neighbor({1, -1, 1}));
+    auto eps_plusZplusYplusX    = getClampedEpsilon(cell.neighbor({1, 1, 1}));
+
+    // Rearrange arithmetic operations to minimize the number of cancellation events, i.e., positive and negative terms.
+    normal[0]  = V(4) * (eps_minusX - eps_plusX);
+    normal[0] += V(2) * ((eps_minusYminusX + eps_minusZminusX + eps_plusYminusX + eps_plusZminusX) - (eps_plusYplusX + eps_plusZplusX + eps_minusYplusX + eps_minusZplusX));
+    normal[0] += V(1) * ((eps_minusZminusYminusX + eps_plusZminusYminusX + eps_minusZplusYminusX + eps_plusZplusYminusX) - (eps_plusZplusYplusX + eps_minusZplusYplusX + eps_plusZminusYplusX + eps_minusZminusYplusX));
+
+    normal[1]  = V(4) * (eps_minusY - eps_plusY);
+    normal[1] += V(2) * ((eps_minusYminusX + eps_minusZminusY + eps_minusYplusX + eps_plusZminusY) - (eps_plusYplusX + eps_plusZplusY + eps_plusYminusX + eps_minusZplusY));
+    normal[1] += V(1) * ((eps_minusZminusYminusX + eps_plusZminusYminusX + eps_plusZminusYplusX + eps_minusZminusYplusX) - (eps_plusZplusYplusX + eps_minusZplusYplusX + eps_minusZplusYminusX + eps_plusZplusYminusX));
+
+    normal[2]  = V(4) * (eps_minusZ - eps_plusZ);
+    normal[2] += V(2) * ((eps_minusZminusX + eps_minusZminusY + eps_minusZplusX + eps_minusZplusY) - (eps_plusZplusX + eps_plusZplusY + eps_plusZminusX + eps_plusZminusY));
+    normal[2] += V(1) * ((eps_minusZminusYminusX + eps_minusZplusYplusX + eps_minusZplusYminusX + eps_minusZminusYplusX) - (eps_plusZplusYplusX + eps_plusZminusYminusX + eps_plusZminusYplusX + eps_plusZplusYminusX));
+
+    return normal;
+  }
+  else {
+    auto eps_minusY       = getClampedEpsilon(cell.neighbor({0, -1}));
+    auto eps_plusY        = getClampedEpsilon(cell.neighbor({0, 1}));
+    auto eps_minusX       = getClampedEpsilon(cell.neighbor({-1, 0}));
+    auto eps_plusX        = getClampedEpsilon(cell.neighbor({1, 0}));
+    auto eps_minusYminusX = getClampedEpsilon(cell.neighbor({-1, -1}));
+    auto eps_minusYplusX  = getClampedEpsilon(cell.neighbor({1, -1}));
+    auto eps_plusYminusX  = getClampedEpsilon(cell.neighbor({-1, 1}));
+    auto eps_plusYplusX   = getClampedEpsilon(cell.neighbor({1, 1}));
+
+    // Rearrange arithmetic operations to minimize the number of cancellation events, i.e., positive and negative terms.
+    normal[0] = V(2) * (eps_minusX - eps_plusX);
+    normal[0] += V(1) * ((eps_minusYminusX + eps_plusYminusX) - (eps_plusYplusX + eps_minusYplusX));
+
+    normal[1] = V(2) * (eps_minusY - eps_plusY);
+    normal[1] += V(1) * ((eps_minusYminusX + eps_minusYplusX) - (eps_plusYplusX + eps_plusYminusX));
+
+    return normal;
+  }
+}
+
+template<typename T, int N>
+void iterativeRefinement
+(
+  const std::array<T, N * N>& A, const std::array<T, N * N>& M,
+  std::array<T, N>& x, const std::array<T, N>& b, const int Nsol, int maxIter
+) {
+  std::array<T, N> residual{};
+  for (int iter = 0; iter < maxIter; ++iter) {
+    // Compute the residual, i.e., r = b - A * x
+    for (int i = 0; i < Nsol; ++i) {
+      T sum = T(0);
+      for (int j = 0; j < Nsol; ++j) { sum += A[i * N + j] * x[j]; }
+      residual[i] = b[i] - sum;
+    }
+
+    // Forward substitution
+    std::array<T, N> dx = residual;
+    for (int i = 0; i < Nsol; ++i) {
+      for (int k = 0; k < i; ++k) { dx[i] -= M[i * N + k] * dx[k]; }
+    }
+
+    // Backward substitution
+    for (int i = Nsol - 1; i >= 0; --i) {
+      for (int k = i + 1; k < Nsol; ++k) { dx[i] -= M[i * N + k] * dx[k]; }
+      dx[i] /= M[i * N + i];
+    }
+
+    // Update the solution, i.e., x = x + dx
+    for (int i = 0; i < Nsol; ++i) { x[i] += dx[i]; }
+  }
+}
+
+template<typename T, int N>
+void rowPivotingLUSolver(std::array<T, N * N>& M, std::array<T, N>& x, std::array<T, N>& b, const int Nsol) {
+  // Add Tikhonov Regularization to the diagonal elements of M
+  for (int i = 0; i < Nsol; ++i) { M[i * N + i] += T(0); }
+
+  // Make a copy of the original coefficient matrix.
+  std::array<T, N * N> Prev_M = M;
+
+  // Permutation vector to record row swaps.
+  std::array<int, N> row_perm{};
+  for (int i = 0; i < N; ++i) { row_perm[i] = i; }
+
+  // LU decomposition method with row pivoting.
+  for (int i = 0; i < Nsol; ++i) {
+    int pivotRow = i;
+    T maxValue = std::abs(M[i * N + i]);
+
+    for (int j = i + 1; j < Nsol; ++j) {
+      T value = std::abs(M[j * N + i]);
+      if (value > maxValue) {
+        maxValue = value;
+        pivotRow = j;
+      }
+    }
+
+    if (pivotRow != i) {
+      for (int k = 0; k < Nsol; ++k) { std::swap(M[i * N + k], M[pivotRow * N + k]); }
+      std::swap(row_perm[i], row_perm[pivotRow]);
+      std::swap(b[i], b[pivotRow]);
+    }
+
+    for (int j = i + 1; j < Nsol; ++j) {
+      M[j * N + i] /= M[i * N + i];
+      for (int k = i + 1; k < Nsol; ++k) { M[j * N + k] -= M[j * N + i] * M[i * N + k]; }
+    }
+  }
+
+  // Copy the right-hand side array into x array
+  for (int i = 0; i < Nsol; ++i) { x[i] = b[i]; }
+
+  // Forward substitution step, i.e., solve L * x = b in place.
+  for (int i = 0; i < Nsol; ++i) {
+    for (int j = 0; j < i; ++j) { x[i] -= M[i * N + j] * x[j]; }
+  }
+
+  // Backward substitution step, i.e., solve U * x = b in place.
+  for (int i = Nsol - 1; i >= 0; --i) {
+    for (int j = i + 1; j < Nsol; ++j) { x[i] -= M[i * N + j] * x[j]; }
+    x[i] /= M[i * N + i];
+  }
+
+  // Perform iterative refinement of the solution.
+  std::array<T, N * N> tmp = Prev_M;
+  for (int i = 0; i < Nsol; ++i) {
+    for (int j = 0; j < Nsol; ++j) { Prev_M[i * N + j] = tmp[row_perm[i] * N + j]; }
+  }
+  iterativeRefinement<T, N>(Prev_M, M, x, b, Nsol);
+}
+
+template<typename T, int N>
+void completePivotingLUSolver(std::array<T, N * N>& M, std::array<T, N>& x, std::array<T, N>& b, const int Nsol) {
+  // Add Tikhonov Regularization to the diagonal elements of M
+  for (int i = 0; i < Nsol; ++i) { M[i * N + i] += T(0); }
+
+  // Permutation vectors to record row and columns swaps.
+  std::array<int, N> row_perm{}, col_perm{};
+  for (int i = 0; i < N; ++i) {
+    row_perm[i] = i;
+    col_perm[i] = i;
+  }
+
+  // LU decomposition method with complete pivoting.
+  for (int i = 0; i < Nsol; ++i) {
+    int pivotRow = i, pivotCol = i;
+    T maxValue = std::abs(M[i * N + i]);
+
+    for (int r = i; r < Nsol; ++r) {
+      for (int c = i; c < Nsol; ++c) {
+        T value = std::abs(M[r * N + c]);
+        if (value > maxValue) {
+          maxValue = value;
+          pivotRow = r;
+          pivotCol = c;
+        }
+      }
+    }
+
+    if (pivotRow != i) {
+      for (int k = 0; k < Nsol; ++k) { std::swap(M[i * N + k], M[pivotRow * N + k]); }
+      std::swap(row_perm[i], row_perm[pivotRow]);
+      std::swap(b[i], b[pivotRow]);
+    }
+
+    if (pivotCol != i) {
+      for (int k = 0; k < Nsol; ++k) { std::swap(M[k * N + i], M[k * N + pivotCol]); }
+      std::swap(col_perm[i], col_perm[pivotCol]);
+    }
+
+    for (int j = i + 1; j < Nsol; ++j) {
+      M[j * N + i] /= M[i * N + i];
+      for (int k = i + 1; k < Nsol; ++k) { M[j * N + k] -= M[j * N + i] * M[i * N + k]; }
+    }
+  }
+
+  // Copy the right-hand side array into x array
+  for (int i = 0; i < Nsol; ++i) { x[i] = b[i]; }
+
+  // Forward substitution step, i.e., solve L * x = b in place.
+  for (int i = 0; i < Nsol; ++i) {
+    for (int j = 0; j < i; ++j) { x[i] -= M[i * N + j] * x[j]; }
+  }
+
+  // Backward substitution step, i.e., solve U * x = b in place.
+  for (int i = Nsol - 1; i >= 0; --i) {
+    for (int j = i + 1; j < Nsol; ++j) { x[i] -= M[i * N + j] * x[j]; }
+    x[i] /= M[i * N + i];
+  }
+
+  // Reconstruct original x by inverting the permutation, i.e.,
+  // for each index i, the original index is given by col_perm[i].
+  std::array<T, N> tmp = x;
+  for (int i = 0; i < Nsol; ++i) { x[col_perm[i]] = tmp[i]; }
+}
+
+template<typename T, int N>
+void columnPivotingQRSolver(std::array<T, N * N>& M, std::array<T, N>& x, std::array<T, N>& b, const int Nsol) {
+  // Permutation array to record column swaps.
+  std::array<int, N> col_perm{};
+  for (int i = 0; i < N; ++i) { col_perm[i] = i; }
+
+  // Pre-computed column norm array, i.e., L2-normalization of each column.
+  std::array<T, N> col_norm{}, col_norm_tmp{};
+  for (int i = 0; i < Nsol; ++i) {
+    T norm = T(0);
+    for (int j = 0; j < Nsol; ++j) { norm += M[j * N + i] * M[j * N + i]; }
+    col_norm[i] = util::sqrt(norm);
+    col_norm_tmp[i] = col_norm[i];
+  }
+
+  // QR decomposition method with column pivoting.
+  for (int i = 0; i < Nsol; ++i) {
+    int pivotCol = i;
+    T maxValue = col_norm[i];
+
+    for (int j = i + 1; j < Nsol; ++j) {
+      if (col_norm[j] > maxValue) {
+        maxValue = col_norm[j];
+        pivotCol = j;
+      }
+    }
+
+    if (pivotCol != i) {
+      for (int k = 0; k < Nsol; ++k) { std::swap(M[k * N + i], M[k * N + pivotCol]); }
+      std::swap(col_perm[i], col_perm[pivotCol]);
+      std::swap(col_norm[i], col_norm[pivotCol]);
+      std::swap(col_norm_tmp[i], col_norm_tmp[pivotCol]);
+    }
+
+    // Compute the L2-norm of the i-th column, i.e., range is from row (i) to (Nsol - 1),
+    // and the reflection factor (r)
+    T r = T(0);
+    {
+      T norm = T(0);
+      for (int k = i; k < Nsol; ++k) { norm += M[k * N + i] * M[k * N + i]; }
+      norm = util::sqrt(norm);
+      r = M[i * N + i] >= T(0) ? -norm : norm;
+    }
+
+    // Prepare and normalize the Householder array for the i-th column.
+    std::array<T, N> v{};
+    {
+      v[0] = M[i * N + i] - r;
+      for (int k = i + 1; k < Nsol; ++k) { v[k - i] = M[k * N + i]; }
+
+      T norm = T(0);
+      for (int k = 0; k < Nsol - i; ++k) { norm += v[k] * v[k]; }
+      norm = util::sqrt(norm);
+
+      // Otherwise, the Householder array is already zero and no reflection is applied.
+      if (norm != T(0)) {
+        for (int k = 0; k < Nsol - i; ++k) { v[k] /= norm; }
+      }
+    }
+
+    // Apply the Householder reflection to the remaining columns.
+    for (int k = i; k < Nsol; ++k) {
+      T dot_product = T(0);
+      for (int j = 0; j < Nsol - i; ++j) { dot_product += v[j] * M[(j + i) * N + k]; }
+
+      dot_product *= T(2);
+      for (int j = 0; j < Nsol - i; ++j) { M[(j + i) * N + k] -= v[j] * dot_product; }
+    }
+
+    // Apply the Householder reflection to the right-hand side array.
+    {
+      T dot_product = T(0);
+      for (int k = 0; k < Nsol - i; ++k) { dot_product += v[k] * b[k + i]; }
+
+      dot_product *= T(2);
+      for (int k = 0; k < Nsol - i; ++k) { b[k + i] -= v[k] * dot_product; }
+    }
+
+    // Update the column norm array, i.e., adapted from LAPACK’s DGEQP3 routine.
+    for (int k = i + 1; k < Nsol; ++k) {
+      T tmp = col_norm[k] * col_norm[k] - M[i * N + k] * M[i * N + k];
+
+      // Recompute L2-norm from scratch, if tmp becomes negative or it drops below
+      // a specified threshold, e.g., T(0.1)
+      if (tmp <= T(0) || util::sqrt(tmp) < T(0.1) * col_norm_tmp[k]) {
+        T norm = T(0);
+        for (int j = i + 1; j < Nsol; ++j) { norm += M[j * N + k] * M[j * N + k]; }
+        col_norm[k] = util::sqrt(norm);
+        col_norm_tmp[k] = col_norm[k];
+      }
+      else {
+        col_norm[k] = util::sqrt(tmp);
+      }
+    }
+
+    // For the i-th column, replace diagonal elements with (r) and the non-diagonal elements with zero.
+    M[i * N + i] = r;
+    for (int k = i + 1; k < Nsol; ++k) { M[k * N + i] = T(0); }
+  }
+
+  // Backward substitution step, i.e., solve R*x = Qᵀ*b in place.
+  for (int i = Nsol - 1; i >= 0; --i) {
+    T sum = T(0);
+    for (int j = i + 1; j < Nsol; ++j) { sum += M[i * N + j] * x[j]; }
+    x[i] = (b[i] - sum) / M[i * N + i];
+  }
+
+  // Reconstruct x by inverting the permutation, i.e., for each
+  // index i, the original index is given by col_perm[i].
+  std::array<T, N> tmp = x;
+  for (int i = 0; i < Nsol; ++i) { x[col_perm[i]] = tmp[i]; }
+}
+
+// Offset helper: optimized PLIC algorithm taken from Moritz Lehmann FluidX3D
+template<typename T>
+T plicCubeReduced(const T& volume, const Vector<T, 3>& n) {
+  const T n1 = n[0], n2 = n[1], n3 = n[2];
+  const T n12 = n1 + n2, n3V = n3 * volume;
+
+  // (I) Case 5
+  if (n12 <= T(2) * n3V) { return n3V + T(0.5) * n12; }
+
+  // (II) After case 5, check n2 > 0 is true
+  const T sqn1 = util::sqr(n1), n26 = T(6) * n2, v1 = sqn1 / n26;
+
+  // (III) Case 2
+  if (v1 <= n3V && n3V < v1 + T(0.5) * (n2 - n1)) {
+    return T(0.5) * (n1 + util::sqrt(sqn1 + T(8) * n2 * (n3V - v1)));
+  }
+
+  // (IV) Case 1
+  const T V6 = n1 * n26 * n3V;
+  if (n3V < v1) { return std::cbrt(V6); }
+
+  // (V) After case 2, check n1 > 0 is true
+  const T v3 = n3 < n12 ? (util::sqr(n3) * (T(3) * n12 - n3) + sqn1 * (n1 - T(3) * n3) + util::sqr(n2) * (n2 - T(3) * n3)) / (n1 * n26) : T(0.5) * n12;
+  const T sqn12 = sqn1 + util::sqr(n2), V6cbn12 = V6 - util::cube(n1) - util::cube(n2);
+  const bool case34 = n3V < v3; // true: case (3), false: case (4)
+  const T a = case34 ? V6cbn12 : T(0.5) * (V6cbn12 - util::cube(n3));
+  const T b = case34 ? sqn12 : T(0.5) * (sqn12 + util::sqr(n3));
+  const T c = case34 ? n12 : T(0.5);
+  const T t = util::sqrt(util::sqr(c) - b);
+  static constexpr T oneThird = T(1) / T(3);
+
+  return c - T(2) * t * util::sin(oneThird * util::asin((util::cube(c) - T(0.5) * a - T(1.5) * b * c) / util::cube(t)));
+}
+
+// Offset computer: optimized PLIC algorithm taken from Moritz Lehmann FluidX3D
+template<typename T>
+T plicCube(const T& volume, const Vector<T, 3>& n) {
+  // Unit cube-plane intersection: using volume and normal vector to compute the offset
+  const T ax = util::abs(n[0]), ay = util::abs(n[1]), az = util::abs(n[2]);
+
+  // Eliminate symmetry cases, and normalize n using L1 norm
+  const T V = T(0.5) - util::abs(volume - T(0.5)), l = ax + ay + az;
+  const T n1 = util::min(util::min(ax, ay), az) / l;
+  const T n3 = util::max(util::max(ax, ay), az) / l;
+  const T n2 = std::fdim(T(1), n1 + n3); // ensure n2 >= 0
+  const T d = plicCubeReduced<T>(V, {n1, n2, n3});
+
+  return l * std::copysign(T(0.5) - d, volume - T(0.5));
+}
+
+// Volume computer: optimized inverse PLIC algorithm taken from Moritz Lehmann FluidX3D
+template<typename T>
+T plicCubeInverse(const T& d0, const Vector<T, 3>& n) {
+  // Eliminate majority of cases due to symmetry
+  const T n1 = util::min(util::min(util::abs(n[0]), util::abs(n[1])), util::abs(n[2]));
+  const T n3 = util::max(util::max(util::abs(n[0]), util::abs(n[1])), util::abs(n[2]));
+  const T n2 = util::abs(n[0]) - n1 + util::abs(n[1]) + util::abs(n[2]) - n3;
+
+  // Compute PLIC using reduced symmetry, shifting origin from (0.0, 0.0, 0.0) to (0.5, 0.5, 0.5)
+  const T d = T(0.5) * (n1 + n2 + n3) - util::abs(d0);
+
+  T V = T(0);
+  if (util::min(n1 + n2, n3) <= d && d <= n3) {
+    // (I) Case 5
+    V = (d - T(0.5) * (n1 + n2)) / n3;
+  }
+  else if (d < n1) {
+    // (II) Case 1
+    V = util::cube(d) / (T(6) * n1 * n2 * n3);
+  }
+  else if (d <= n2) {
+    // (III) Case 2
+    V = (T(3) * d * (d - n1) + util::sqr(n1)) / (T(6) * n2 * n3);
+  }
+  else {
+    // (IV) Case 3 or 4
+    V = (util::cube(d) - util::cube(d - n1) - util::cube(d - n2) - util::cube(std::fdim(d, n3))) / (T(6) * n1 * n2 * n3);
+  }
+
+  return std::copysign(T(0.5) - V, d0) + V(0.5);
+}
+
+// Compute 2D interface curvature using Moritz Lehmann's FluidX3D algorithm
+template <typename CELL, typename V>
+V computeCurvaturePLIC2D(CELL& cell) {
+  using DESCRIPTOR = typename CELL::descriptor_t;
+
+  // Setup a new coordinate system where bz is perpendicular to the surface, while bx and by are
+  // tangent to the surface.
+  const auto normal = computeInterfaceNormal(cell);
+  Vector<V, 3> by = {normal[0], normal[1], V(0)};
+  if (norm_squared(by) < zeroThreshold<V>()) { return V(0); }
+  by = util::normalize(by);
+
+  const Vector<V, 3> rn{V(0), V(0), V(1)};
+  const Vector<V, 3> bx = crossProduct(by, rn);
+
+  // Number of healthy interface neighbours
+  std::uint8_t nbrInterfaces = std::uint8_t(0);
+
+  // Compute z-offset of center point using PLIC cube
+  const V centerOffset = plicCube<V>(getClampedEpsilon(cell), by);
+
+  // Number of neighbouring interface points, i.e., less than or equal to 8 (neighbours) - 1 (liquid) - 1 (gas).
+  std::array<Vector<V, DESCRIPTOR::d>, 6> points;
+
+  for (int iPop = 1; iPop < DESCRIPTOR::q; ++iPop) {
+    auto nbrCell = cell.neighbor(descriptors::c<DESCRIPTOR>(iPop));
+
+    // Check if the neighbour is an interface cell or has a gas neighbour
+    if (!isCellType(nbrCell, FreeSurface::Type::Interface) || !hasNeighbour(nbrCell, FreeSurface::Type::Gas)) {
+      continue;
+    }
+
+    // Here it is assumed that neighbor normal vector is the same as center normal vector
+    const auto direction = descriptors::c<DESCRIPTOR>(iPop);
+    const Vector<V, 3> ei = {V(direction[0]), V(direction[1]), V(0)};
+    const V offset = plicCube<V>(getClampedEpsilon(nbrCell), by) - centerOffset;
+
+    // Transform coordinate system into (x, f(x)) and apply PLIC offset
+    points[nbrInterfaces++] = {util::dotProduct(ei, bx), util::dotProduct(ei, by) + offset};
+  }
+
+  // Prepare the linear equation system, to be initialized with zeros
+  std::array<V, 4> M{};
+  std::array<V, 2> solution{};
+  std::array<V, 2> b{};
+
+  for (std::uint8_t i = 0; i < nbrInterfaces; ++i) {
+    const V x = points[i][0];
+    const V y = points[i][1];
+    const V x2 = util::sqr(x);
+    const V x3 = util::sqr(x) * x;
+
+    M[0] += x2 * x2;
+    M[1] += x3;
+    M[3] += x2;
+
+    b[0] += x2 * y;
+    b[1] += x * y;
+  }
+
+  // Fill the lower triangle of the symmetric matrix
+  M[2] = M[1];
+
+  // Solve the linear system of equations, compile-time selection.
+  if constexpr (solver == SolverType::rowPivotingLU) {
+    if (nbrInterfaces >= 2) {
+      rowPivotingLUSolver<V, 2>(M, solution, b, 2);
+    } else {
+      rowPivotingLUSolver<V, 2>(M, solution, b, util::min(2, nbrInterfaces));
+    }
+  }
+  else if constexpr (solver == SolverType::completePivotingLU) {
+    if (nbrInterfaces >= 2) {
+      completePivotingLUSolver<V, 2>(M, solution, b, 2);
+    } else {
+      completePivotingLUSolver<V, 2>(M, solution, b, util::min(2, nbrInterfaces));
+    }
+  }
+  else if constexpr (solver == SolverType::columnPivotingQR) {
+    if (nbrInterfaces >= 2) {
+      columnPivotingQRSolver<V, 2>(M, solution, b, 2);
+    } else {
+      columnPivotingQRSolver<V, 2>(M, solution, b, util::min(2, nbrInterfaces));
+    }
+  }
+  else {
+    // Fall back to default solver
+    if (nbrInterfaces >= 2) {
+      completePivotingLUSolver<V, 2>(M, solution, b, 2);
+    } else {
+      completePivotingLUSolver<V, 2>(M, solution, b, util::min(2, nbrInterfaces));
+    }
+  }
+
+  const V A = solution[0], H = solution[1];
+  const V curvature = V(2) * A * util::cube(V(1) / util::sqrt(H * H + V(1)));
+  return util::max(V(-1), util::min(V(1), curvature));
+}
+
+// Compute 3D interface curvature using Moritz Lehmann's FluidX3D algorithm
+template <typename CELL, typename V>
+V computeCurvaturePLIC3D(CELL& cell) {
+  using DESCRIPTOR = typename CELL::descriptor_t;
+
+  // Setup a new coordinate system where bz is perpendicular to the surface, while bx and by are
+  // tangent to the surface.
+  auto bz = computeInterfaceNormal(cell);
+  if (norm_squared(bz) < zeroThreshold<V>()) { return V(0); }
+  bz = util::normalize(bz);
+
+  // A random normalized vector that is just by random chance not collinear with bz
+  // const Vector<V, DESCRIPTOR::d> rn{V(0.56270900), V(0.32704452), V(0.75921047)};
+  const Vector<V, DESCRIPTOR::d> rn{V(0.5402151198529208), V(0.2765640977634561), V(0.7947829415070379)};
+
+  // Normalization is necessary here because bz and rn are not perpendicular
+  const Vector<V, DESCRIPTOR::d> by = util::normalize(crossProduct(bz, rn));
+  const Vector<V, DESCRIPTOR::d> bx = crossProduct(by, bz);
+
+  // Number of healthy interface neighbours
+  std::uint8_t nbrInterfaces = std::uint8_t(0);
+
+  // Compute z-offset of center point using PLIC cube
+  const V centerOffset = plicCube<V>(getClampedEpsilon(cell), bz);
+
+  // Number of neighbouring interface points, i.e., less than or equal to 26 (neighbours) - 1 (liquid) - 1 (gas).
+  std::array<Vector<V, DESCRIPTOR::d>, 24> points;
+
+  for (int iPop = 1; iPop < DESCRIPTOR::q; ++iPop) {
+    auto nbrCell = cell.neighbor(descriptors::c<DESCRIPTOR>(iPop));
+
+    // Check if the neighbour is an interface cell or has a gas neighbour
+    if (!isCellType(nbrCell, FreeSurface::Type::Interface) || !hasNeighbour(nbrCell, FreeSurface::Type::Gas)) {
+      continue;
+    }
+
+    // Here it is assumed that neighbor normal vector is the same as center normal vector
+    const auto direction = descriptors::c<DESCRIPTOR>(iPop);
+    const Vector<V, DESCRIPTOR::d> ei = {V(direction[0]), V(direction[1]), V(direction[2])};
+    const V offset = plicCube<V>(getClampedEpsilon(nbrCell), bz) - centerOffset;
+
+    // Transform coordinate system into (x, y, f(x,y)) and apply PLIC offset
+    points[nbrInterfaces++] = {util::dotProduct(ei, bx), util::dotProduct(ei, by), util::dotProduct(ei, bz) + offset};
+  }
+
+  // Prepare the linear equation system, to be initialized with zeros
+  std::array<V, 25> M{};
+  std::array<V, 5> solution{};
+  std::array<V, 5> b{};
+
+  for (std::uint8_t i = 0; i < nbrInterfaces; ++i) {
+    const V x = points[i][0];
+    const V y = points[i][1];
+    const V z = points[i][2];
+    const V x2 = util::sqr(x);
+    const V y2 = util::sqr(y);
+    const V x3 = x2 * x;
+    const V y3 = y2 * y;
+
+    M[0] += x2 * x2;
+    M[1] += x2 * y2;
+    M[2] += x3 * y;
+    M[3] += x3;
+    M[4] += x2 * y;
+    M[6] += y2 * y2;
+    M[7] += x * y3;
+    M[8] += x * y2;
+    M[9] += y3;
+    M[12] += x2 * y2;
+    M[13] += x2 * y;
+    M[14] += x * y2;
+    M[18] += x2;
+    M[19] += x * y;
+    M[24] += y2;
+
+    b[0] += x2 * z;
+    b[1] += y2 * z;
+    b[2] += x * y * z;
+    b[3] += x * z;
+    b[4] += y * z;
+  }
+
+  // Fill the lower triangle of the symmetric matrix
+  for (std::uint8_t i = 1; i < 5; ++i) {
+    for (std::uint8_t j = 0; j < i; ++j) {
+      M[i * 5 + j] = M[j * 5 + i];
+    }
+  }
+
+  // Solve the linear system of equations, compile-time selection.
+  if constexpr (solver == SolverType::rowPivotingLU) {
+    if (nbrInterfaces >= 5) {
+      rowPivotingLUSolver<V, 5>(M, solution, b, 5);
+    } else {
+      rowPivotingLUSolver<V, 5>(M, solution, b, util::min(5, nbrInterfaces));
+    }
+  }
+  else if constexpr (solver == SolverType::completePivotingLU) {
+    if (nbrInterfaces >= 5) {
+      completePivotingLUSolver<V, 5>(M, solution, b, 5);
+    } else {
+      completePivotingLUSolver<V, 5>(M, solution, b, util::min(5, nbrInterfaces));
+    }
+  }
+  else if constexpr (solver == SolverType::columnPivotingQR) {
+    if (nbrInterfaces >= 5) {
+      columnPivotingQRSolver<V, 5>(M, solution, b, 5);
+    } else {
+      columnPivotingQRSolver<V, 5>(M, solution, b, util::min(5, nbrInterfaces));
+    }
+  }
+  else {
+    // Fall back to default solver
+    if (nbrInterfaces >= 5) {
+      completePivotingLUSolver<V, 5>(M, solution, b, 5);
+    } else {
+      completePivotingLUSolver<V, 5>(M, solution, b, util::min(5, nbrInterfaces));
+    }
+  }
+
+  const V A = solution[0], B = solution[1], C = solution[2], H = solution[3], I = solution[4];
+  const V curvature = (A * (I * I + V(1)) + B * (H * H + V(1)) - C * H * I) * util::cube(V(1) / util::sqrt(H * H + I * I + V(1)));
+  return util::max(V(-1), util::min(V(1), curvature));
+}
+
+template <typename CELL, typename V>
+V computeCurvatureFDM3D(CELL& cell) {
+  using DESCRIPTOR = typename CELL::descriptor_t;
+
+  const auto normal = computeInterfaceNormal(cell);
+  if (norm_squared(normal) < zeroThreshold<V>()) { return V(0); }
+
+  const std::uint32_t gaussianMultipliers [DESCRIPTOR::q] =
+  {
+    std::uint32_t(8),
+    std::uint32_t(4), std::uint32_t(4), std::uint32_t(4),
+    std::uint32_t(2), std::uint32_t(2), std::uint32_t(2),
+    std::uint32_t(2), std::uint32_t(2), std::uint32_t(2),
+    std::uint32_t(1), std::uint32_t(1), std::uint32_t(1), std::uint32_t(1),
+    std::uint32_t(4), std::uint32_t(4), std::uint32_t(4),
+    std::uint32_t(2), std::uint32_t(2), std::uint32_t(2),
+    std::uint32_t(2), std::uint32_t(2), std::uint32_t(2),
+    std::uint32_t(1), std::uint32_t(1), std::uint32_t(1), std::uint32_t(1)
+  };
+
+  V curvature = V(0);
+  V weightSum = V(0);
+
+  for (int iPop = 1; iPop < DESCRIPTOR::q; ++iPop) {
+    auto direction = descriptors::c<DESCRIPTOR>(iPop);
+    auto nbrCell = cell.neighbor(direction);
+
+    // Check if the neighbour is an interface cell or has a gas neighbour
+    if (!isCellType(nbrCell, FreeSurface::Type::Interface) || !hasNeighbour(nbrCell, FreeSurface::Type::Gas)) {
+      continue;
+    }
+
+    const Vector<V, DESCRIPTOR::d> ei = {V(direction[0]), V(direction[1]), V(direction[2])};
+    const auto nbrNormal = util::normalize(computeInterfaceNormal(nbrCell));
+    const V weight = gaussianMultipliers[iPop];
+    weightSum += weight;
+    curvature += weight * util::dotProduct(ei, nbrNormal);
+  }
+
+  curvature /= weightSum;
+  return util::max(V(-1), util::min(V(1), curvature));
+}
+
+template <typename CELL, typename V>
+V computeCurvature(CELL& cell) {
+  using DESCRIPTOR = typename CELL::descriptor_t;
+
+  if constexpr (DESCRIPTOR::d == 2) {
+    return computeCurvaturePLIC2D(cell);
+  } else if (DESCRIPTOR::d == 3) {
+    return computeCurvaturePLIC3D(cell);
+  }
+
+  return V(0);
 }
 
 } // namespace FreeSurface

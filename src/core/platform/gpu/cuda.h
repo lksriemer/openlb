@@ -33,6 +33,7 @@
 #include "cuda/operator.h"
 #include "cuda/registry.h"
 #include "cuda/statistics.h"
+#include "cuda/fieldReduction.h"
 
 #ifdef __CUDACC__
 #include "cuda/precompiled.hh"

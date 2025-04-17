@@ -38,6 +38,7 @@ template<typename T, typename PARTICLETYPE> class Particle;
 
 
 
+
 //TODO: adapt description
 /** Functor that returns forces acting on a particle surface, returns data in output for every particle in a row(described are return values for the first particle).
  * \return output[0]-output[2] translational force - physical units
@@ -57,7 +58,7 @@ private:
   PhysR<T,DESCRIPTOR::d> _cellMax;
   Vector<bool,DESCRIPTOR::d> _periodic;
   std::size_t _iP0;
-  const std::unordered_set<int> _ignoredMaterials;
+  const std::set<int> _ignoredMaterials;
   const F _f;
 public:
   BlockLatticeMomentumExchangeForce( BlockLattice<T,DESCRIPTOR>& blockLattice,
@@ -68,7 +69,7 @@ public:
                                      PhysR<T,DESCRIPTOR::d> cellMax = PhysR<T,DESCRIPTOR::d> (0.),
                                      Vector<bool,DESCRIPTOR::d> periodic = Vector<bool,DESCRIPTOR::d> (false),
                                      std::size_t iP0=0,
-                                     const std::unordered_set<int>& ignoredMaterials = std::unordered_set<int>{},
+                                     const std::set<int>& ignoredMaterials = std::set<int>{},
                                      const F f = [](auto&, const auto&, const auto&, const auto&){}
                                      );
   void evaluate(T output[], particles::Particle<T,PARTICLETYPE>& particle, int iP);
@@ -95,7 +96,7 @@ public:
                              const UnitConverter<T,DESCRIPTOR>& converter,
                              Vector<bool,DESCRIPTOR::d> periodic = Vector<bool,DESCRIPTOR::d> (false),
                              std::size_t iP0=0,
-                             const std::unordered_set<int>& ignoredMaterials = std::unordered_set<int>{},
+                             const std::set<int>& ignoredMaterials = std::set<int>{},
                              const F f = [](auto&, const auto&, const auto&, const auto&){}
                              );
   bool operator() (T output[], const int input[]) override;

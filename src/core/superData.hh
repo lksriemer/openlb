@@ -27,8 +27,7 @@
 
 #include "superData.h"
 
-#include "geometry/cuboidGeometry2D.h"
-#include "geometry/cuboidGeometry3D.h"
+#include "geometry/cuboidDecomposition.h"
 
 #include "functors/lattice/superBaseF2D.h"
 #include "functors/lattice/superBaseF3D.h"
@@ -37,16 +36,16 @@ namespace olb {
 
 
 template<unsigned D, typename T, typename U>
-SuperData<D,T,U>::SuperData(CuboidGeometry<T,D>& cuboidGeometry,
+SuperData<D,T,U>::SuperData(CuboidDecomposition<T,D>& cuboidDecomposition,
                             LoadBalancer<T>& loadBalancer,
                             int overlap, int size)
-  : SuperStructure<T,D>(cuboidGeometry, loadBalancer, overlap),
+  : SuperStructure<T,D>(cuboidDecomposition, loadBalancer, overlap),
     _size(size)
 {
   auto& load = this->getLoadBalancer();
   for (int iC=0; iC < load.size(); ++iC) {
     _block.emplace_back(
-      new BlockData<D,T,U>(cuboidGeometry.get(load.glob(iC)), overlap, size));
+      new BlockData<D,T,U>(cuboidDecomposition.get(load.glob(iC)), overlap, size));
   }
 
   if (overlap >= 1) {
@@ -59,7 +58,7 @@ SuperData<D,T,U>::SuperData(CuboidGeometry<T,D>& cuboidGeometry,
 
 template<unsigned D, typename T, typename U>
 SuperData<D,T,U>::SuperData(SuperF<D,T,U>& rhs)
-  : SuperData(rhs.getSuperStructure().getCuboidGeometry(),
+  : SuperData(rhs.getSuperStructure().getCuboidDecomposition(),
               rhs.getSuperStructure().getLoadBalancer(),
               rhs.getSuperStructure().getOverlap(),
               rhs.getTargetDim())

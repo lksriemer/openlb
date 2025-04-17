@@ -31,17 +31,14 @@
 #include "core/cell.h"
 #include "core/util.h"
 #include "heuristicLoadBalancer.h"
-#include "geometry/cuboid3D.h"
-#include "geometry/cuboidGeometry2D.h"
-#include "geometry/cuboidGeometry3D.h"
+#include "geometry/cuboid.h"
+#include "geometry/cuboidDecomposition.h"
 
 namespace olb {
 
-template <typename T> class Cuboid2D;
-template <typename T> class Cuboid3D;
 
 template<typename T>
-HeuristicLoadBalancer<T>::HeuristicLoadBalancer(CuboidGeometry3D<T>& cGeometry3d,
+HeuristicLoadBalancer<T>::HeuristicLoadBalancer(CuboidDecomposition3D<T>& cGeometry3d,
     const double ratioFullEmpty, const double weightEmpty)
   : _ratioFullEmpty(ratioFullEmpty)
 {
@@ -49,7 +46,7 @@ HeuristicLoadBalancer<T>::HeuristicLoadBalancer(CuboidGeometry3D<T>& cGeometry3d
 }
 
 template<typename T>
-HeuristicLoadBalancer<T>::HeuristicLoadBalancer(CuboidGeometry2D<T>& cGeometry2d,
+HeuristicLoadBalancer<T>::HeuristicLoadBalancer(CuboidDecomposition2D<T>& cGeometry2d,
     const double ratioFullEmpty, const double weightEmpty)
   : _ratioFullEmpty(ratioFullEmpty)
 {
@@ -75,14 +72,14 @@ void HeuristicLoadBalancer<T>::swap(HeuristicLoadBalancer<T>& loadBalancer)
 }
 
 template<typename T>
-void HeuristicLoadBalancer<T>::reInit(CuboidGeometry3D<T>& cGeometry3d, const double ratioFullEmpty, const double weightEmpty)
+void HeuristicLoadBalancer<T>::reInit(CuboidDecomposition3D<T>& cGeometry3d, const double ratioFullEmpty, const double weightEmpty)
 {
   _ratioFullEmpty = ratioFullEmpty;
   this->_glob.clear();
   _cGeometry3d = &cGeometry3d;
   int rank = 0;
   int size = 1;
-  int nC = _cGeometry3d->getNc();
+  int nC = _cGeometry3d->size();
 #ifdef PARALLEL_MODE_MPI
   rank = singleton::mpi().getRank();
   size = util::max<int>(singleton::mpi().getSize(), 1);
@@ -141,36 +138,6 @@ void HeuristicLoadBalancer<T>::reInit(CuboidGeometry3D<T>& cGeometry3d, const do
       }
     }
     while (maxLoad != -1);
-#if 0
-    std::cout << "vwgt" << std::endl;
-    for (int i = 0; i < nC; i++)  {
-      std::cout << "[" << i << "]="<< vwgt[i] << std::endl;
-    }
-
-    for (int i = 0; i < size; i++) {
-      std::cout << "load[" << i << "]=" << currentLoad[i] << std::endl;
-    }
-
-    std::cout << "vwgt" << std::endl;
-    for (int i = 0; i < nC; i++)  {
-      std::cout << vwgt[i] << std::endl;
-    }
-    std::cout << "xadj" << std::endl;
-    for (int i = 0; i < nC+1; i++)  {
-      std::cout << xadj[i] << std::endl;
-    }
-    std::cout << "adjncy" << std::endl;
-    for (int i = 0; i <adjncy.size(); i++)  {
-      std::cout << adjncy[i] << std::endl;
-    }
-    std::cout << "adjcwgt" << std::endl;
-    for (int i = 0; i < adjcwgt.size(); i++)  {
-      std::cout << adjcwgt[i] << std::endl;
-    }
-
-    std::cout << "nC" << nC << " size " << size << " inbalance " <<
-              inbalance << std::endl;
-#endif
     int count = 0;
     for (int i = 0; i < nC; ++i) {
       if (partitionResult[i] == 0) {
@@ -212,20 +179,17 @@ void HeuristicLoadBalancer<T>::reInit(CuboidGeometry3D<T>& cGeometry3d, const do
     this->_size = count;
   }
 #endif
-#ifdef OLB_DEBUG
-  this->print();
-#endif
 }
 
 template<typename T>
-void HeuristicLoadBalancer<T>::reInit(CuboidGeometry2D<T>& cGeometry2d, const double ratioFullEmpty, const double weightEmpty)
+void HeuristicLoadBalancer<T>::reInit(CuboidDecomposition2D<T>& cGeometry2d, const double ratioFullEmpty, const double weightEmpty)
 {
   _ratioFullEmpty = ratioFullEmpty;
   this->_glob.clear();
   _cGeometry2d = &cGeometry2d;
   int rank = 0;
   int size = 1;
-  int nC = _cGeometry2d->getNc();
+  int nC = _cGeometry2d->size();
 #ifdef PARALLEL_MODE_MPI
   rank = singleton::mpi().getRank();
   size = util::max<int>(singleton::mpi().getSize(), 1);
@@ -285,36 +249,6 @@ void HeuristicLoadBalancer<T>::reInit(CuboidGeometry2D<T>& cGeometry2d, const do
       }
     }
     while (maxLoad != -1);
-#if 0
-    std::cout << "vwgt" << std::endl;
-    for (int i = 0; i < nC; i++)  {
-      std::cout << "[" << i << "]="<< vwgt[i] << std::endl;
-    }
-
-    for (int i = 0; i < size; i++) {
-      std::cout << "load[" << i << "]=" << currentLoad[i] << std::endl;
-    }
-
-    std::cout << "vwgt" << std::endl;
-    for (int i = 0; i < nC; i++)  {
-      std::cout << vwgt[i] << std::endl;
-    }
-    std::cout << "xadj" << std::endl;
-    for (int i = 0; i < nC+1; i++)  {
-      std::cout << xadj[i] << std::endl;
-    }
-    std::cout << "adjncy" << std::endl;
-    for (int i = 0; i <adjncy.size(); i++)  {
-      std::cout << adjncy[i] << std::endl;
-    }
-    std::cout << "adjcwgt" << std::endl;
-    for (int i = 0; i < adjcwgt.size(); i++)  {
-      std::cout << adjcwgt[i] << std::endl;
-    }
-
-    std::cout << "nC" << nC << " size " << size << " inbalance " <<
-              inbalance << std::endl;
-#endif
     int count = 0;
     for (int i = 0; i < nC; ++i) {
       if (partitionResult[i] == 0) {
@@ -355,9 +289,6 @@ void HeuristicLoadBalancer<T>::reInit(CuboidGeometry2D<T>& cGeometry2d, const do
     delete[] tmpCuboids;
     this->_size = count;
   }
-#endif
-#ifdef OLB_DEBUG
-  this->print();
 #endif
 }
 

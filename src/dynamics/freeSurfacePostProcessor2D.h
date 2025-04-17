@@ -1,6 +1,7 @@
 /*  This file is part of the OpenLB library
  *
  *  Copyright (C) 2020 Claudius Holeksa, Robin Trunk
+ *                2024-2025 Danial Khazaeipoul
  *  E-mail contact: info@openlb.net
  *  The most recent release of OpenLB can be downloaded at
  *  <http://www.openlb.net/>
@@ -29,47 +30,54 @@
 #include "core/blockLattice.h"
 #include "core/superLattice.h"
 
-#include <array>
-#include <memory>
-
-/* \file
- * PostProcessor classes organising the interface tracking and mass distibution for a
- * free surface model.
- *
- * Description how PostProcessors are applied.
- */
-
 namespace olb {
 
 /**
- * Free Surface Processor 1-3
+ * Free Surface Processor 1
  * Mass Flow
  * Cleans up leftover flags from the previous simulation step.
  * This post processor is responsible for the calculation of exchange mass with the help of the distribution functions.
- * Replaces incoming DFs by calculating equilibrium functions and using the laplace pressure to include surface tension.
- * Marks cells which may be changed at the last step.
  * This whole step should be included in the collideAndStream step, though heavy modification of openlb would be necessary
  */
+template<typename T, typename DESCRIPTOR>
 class FreeSurfaceMassFlowPostProcessor2D {
+public:
+  static constexpr OperatorScope scope = OperatorScope::PerCell;
+
+  int getPriority() const {
+    return 1;
+  }
+
+  template <typename CELL>
+  void apply(CELL& cell) any_platform;
+
+};
+
+/**
+ * Free Surface Processor 2-3
+ * Interface Reconstruction
+ * Replaces incoming DFs by calculating equilibrium functions and using the laplace pressure to include surface tension.
+ * Marks cells which may be changed at the last step.
+ */
+template<typename T, typename DESCRIPTOR>
+class FreeSurfaceInterfaceReconstructionPostProcessor2D {
 public:
    using parameters = meta::list<
     FreeSurface::DROP_ISOLATED_CELLS,
     FreeSurface::TRANSITION,
     FreeSurface::LONELY_THRESHOLD,
     FreeSurface::HAS_SURFACE_TENSION,
-    FreeSurface::SURFACE_TENSION_PARAMETER,
-    FreeSurface::FORCE_CONVERSION_FACTOR,
-    FreeSurface::LATTICE_SIZE
+    FreeSurface::SURFACE_TENSION_PARAMETER
   >;
 
   static constexpr OperatorScope scope = OperatorScope::PerCellWithParameters;
 
   int getPriority() const {
-    return 1;
+    return 2;
   }
 
   template <typename CELL, typename PARAMETERS>
-  void apply(CELL& cell, PARAMETERS& parameters) any_platform;
+  void apply(CELL& cell, PARAMETERS& params) any_platform;
 
 };
 
@@ -84,7 +92,7 @@ public:
   static constexpr OperatorScope scope = OperatorScope::PerCell;
 
   int getPriority() const {
-    return 4;
+    return 3;
   }
 
   template <typename CELL>
@@ -103,7 +111,7 @@ public:
   static constexpr OperatorScope scope = OperatorScope::PerCell;
 
   int getPriority() const {
-    return 5;
+    return 4;
   }
 
   template <typename CELL>
@@ -122,7 +130,7 @@ public:
   static constexpr OperatorScope scope = OperatorScope::PerCell;
 
   int getPriority() const {
-    return 6;
+    return 5;
   }
 
   template <typename CELL>
@@ -140,16 +148,13 @@ public:
   static constexpr OperatorScope scope = OperatorScope::PerCell;
 
   int getPriority() const {
-    return 7;
+    return 6;
   }
 
   template <typename CELL>
   void apply(CELL& cell) any_platform;
 
 };
-
-
-/// Generator class for the PostProcessors tracking the interface.
 
 /*
 * Setup helper
@@ -158,7 +163,7 @@ template<typename T, typename DESCRIPTOR>
 class FreeSurface2DSetup {
 public:
 private:
-  SuperLattice<T, DESCRIPTOR>& sLattice;
+  SuperLattice<T, DESCRIPTOR>& _sLattice;
 
   // SuperPostProcessors
   // Corresponding to the local block processors
@@ -167,6 +172,6 @@ public:
 
   void addPostProcessor();
 };
-}
 
+}
 #endif

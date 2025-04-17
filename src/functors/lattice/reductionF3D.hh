@@ -46,7 +46,7 @@ SuperLatticeFfromAnalyticalF3D<T, DESCRIPTOR>::SuperLatticeFfromAnalyticalF3D(
   this->getName() = "fromAnalyticalF(" + _f->getName() + ")";
 
   LoadBalancer<T>&     load   = sLattice.getLoadBalancer();
-  CuboidGeometry3D<T>& cuboid = sLattice.getCuboidGeometry();
+  auto& cuboid = sLattice.getCuboidDecomposition();
 
   for (int iC = 0; iC < load.size(); ++iC) {
     this->_blockF.emplace_back(
@@ -62,9 +62,8 @@ template<typename T, typename DESCRIPTOR>
 bool SuperLatticeFfromAnalyticalF3D<T, DESCRIPTOR>::operator()(
   T output[], const int input[])
 {
-  T physR[3] = {};
-  this->_sLattice.getCuboidGeometry().getPhysR(physR,input);
-  return _f(output,physR);
+  auto physR = this->_sLattice.getCuboidDecomposition().getPhysR(input);
+  return _f(output,physR.data());
 }
 
 
@@ -84,9 +83,8 @@ template<typename T, typename DESCRIPTOR>
 bool BlockLatticeFfromAnalyticalF3D<T, DESCRIPTOR>::operator()(
   T output[], const int input[])
 {
-  T physR[3] = {};
-  _cuboid.getPhysR(physR,input);
-  return _f(output,physR);
+  auto physR = _cuboid.getPhysR(input);
+  return _f(output,physR.data());
 }
 
 
@@ -174,17 +172,6 @@ SmoothBlockIndicator3D<T, DESCRIPTOR>::SmoothBlockIndicator3D(
     }
   }
 }
-/*
-template<typename T, typename DESCRIPTOR>
-bool SmoothBlockIndicator3D<T, DESCRIPTOR>::operator()(
-  T output[], const int input[])
-{
-  T physR[3] = {};
-  _superGeometry.getPhysR(physR,{input[0],input[1],input[2]} );
-  _f(output,physR);
-  return true;
-}*/
-
 
 template<typename T, typename DESCRIPTOR>
 SuperLatticeInterpPhysVelocity3Degree3D<T, DESCRIPTOR>::
@@ -200,7 +187,7 @@ SuperLatticeInterpPhysVelocity3Degree3D(
       new BlockLatticeInterpPhysVelocity3Degree3D<T, DESCRIPTOR>(
       sLattice.getBlock(iC),
       conv,
-      &sLattice.getCuboidGeometry().get(this->_sLattice.getLoadBalancer().
+      &sLattice.getCuboidDecomposition().get(this->_sLattice.getLoadBalancer().
                                         glob(iC)),
       range);
     _bLattices.push_back(foo);
@@ -245,9 +232,8 @@ void BlockLatticeInterpPhysVelocity3Degree3D<T, DESCRIPTOR>::operator()(
 {
   T u[3], rho, volume;
   int latIntPos[3] = {0};
-  T latPhysPos[3] = {T()};
   _cuboid->getFloorLatticeR(latIntPos, &input[0]);
-  _cuboid->getPhysR(latPhysPos, latIntPos);
+  auto latPhysPos = _cuboid->getPhysR(latIntPos);
 
   volume=T(1);
   for (int i = -_range; i <= _range+1; ++i) {
@@ -310,7 +296,7 @@ SuperLatticeInterpDensity3Degree3D<T, DESCRIPTOR>::SuperLatticeInterpDensity3Deg
       sLattice.getBlock(lociC),
       sGeometry.getBlockGeometry(lociC),
       conv,
-      &sLattice.getCuboidGeometry().get(globiC),
+      &sLattice.getCuboidDecomposition().get(globiC),
       range);
     _bLattices.push_back(foo);
 
@@ -370,13 +356,11 @@ void BlockLatticeInterpDensity3Degree3D<T, DESCRIPTOR>::operator()(
   /** neighbor position on grid of input value in lattice units
    *referred to local cuboid
    */
-  int latIntPos[3] = { 0 };
   // neighbor position on grid of input value in physical units
-  T latPhysPos[3] = { T() };
   // input is physical position on grid
-  _cuboid->getFloorLatticeR(latIntPos, input);
+  auto latIntPos = _cuboid->getFloorLatticeR(input);
   // latPhysPos is global physical position on geometry
-  _cuboid->getPhysR(latPhysPos, latIntPos);
+  auto latPhysPos = _cuboid->getPhysR(latIntPos);
 
   for (unsigned iPop = 0; iPop < DESCRIPTOR::q; ++iPop) {
     output[iPop] = T(0);
@@ -436,7 +420,7 @@ SuperLatticeSmoothDiracDelta3D<T, DESCRIPTOR>::SuperLatticeSmoothDiracDelta3D(
     BlockLatticeSmoothDiracDelta3D<T, DESCRIPTOR>* foo =
       new BlockLatticeSmoothDiracDelta3D<T, DESCRIPTOR>(
       sLattice.getBlock(lociC),
-      conv, &sLattice.getCuboidGeometry().get(globiC)
+      conv, &sLattice.getCuboidDecomposition().get(globiC)
     );
     _bLattices.push_back(foo);
   }
@@ -483,14 +467,12 @@ void BlockLatticeSmoothDiracDelta3D<T, DESCRIPTOR>::operator()(
 {
   int range = 1;
   T a, b, c = T();
-  int latticeRoundedPosP[3] = { 0 };
-  T physRoundedPosP[3] = { T() };
   T physLatticeL = _conv.getConversionFactorLength();
 
   T counter = 0.;
 
-  _cuboid->getLatticeR(latticeRoundedPosP, physPos);
-  _cuboid->getPhysR(physRoundedPosP, latticeRoundedPosP);
+  auto latticeRoundedPosP = _cuboid->getLatticeR(physPos);
+  auto physRoundedPosP = _cuboid->getPhysR(latticeRoundedPosP);
 
   for (int i = -range; i <= range + 1; ++i) {
     for (int j = -range; j <= range + 1; ++j) {

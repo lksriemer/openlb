@@ -43,17 +43,17 @@ namespace creators {
 //// RESOLVED
 
 template<typename T, typename PARTICLETYPE>
-std::unordered_set<int> prepareParallelResolvedParticle(
+std::set<int> prepareParallelResolvedParticle(
   SuperParticleSystem<T,PARTICLETYPE>& sParticleSystem,
   Vector<T,PARTICLETYPE::d> position, T circumRadius,
   const T epsilon, int& globiCcentre, const T physDeltaX,
   const Vector<bool, PARTICLETYPE::d>& periodicity )
 {
   //Retrieving cuboid geometry
-  auto& cuboidGeometry = sParticleSystem.getSuperStructure().getCuboidGeometry();
+  auto& cuboidDecomposition = sParticleSystem.getSuperStructure().getCuboidDecomposition();
   //Find globiC of particle centre
   const bool inDomain = particles::communication::getCuboid(
-      cuboidGeometry, periodicity, position, globiCcentre);
+      cuboidDecomposition, periodicity, position, globiCcentre);
   //TODO: add error handling, when !inDomain
   if (!inDomain){
     std::cerr << "ERROR: Particle added outside domain!" << std::endl;
@@ -66,7 +66,7 @@ std::unordered_set<int> prepareParallelResolvedParticle(
   }
   sParticleSystem.updateOffsetFromCircumRadius(circumRadius);
   //Find globiCs touching the surface hull
-  std::unordered_set<int> setOfICs = communication::getSurfaceTouchingICs( sParticleSystem,
+  std::set<int> setOfICs = communication::getSurfaceTouchingICs( sParticleSystem,
     position, circumRadius, periodicity, globiCcentre );
   //Add globiCcentre to list
   setOfICs.insert(globiCcentre);
@@ -101,7 +101,7 @@ Particle<T,PARTICLETYPE> assignParallelResolvedParticleToiC(
 template<typename T, typename PARTICLETYPE>
 bool assignParallelResolvedParticle(
   ParticleSystem<T,PARTICLETYPE>& particleSystem,
-  std::unordered_set<int>& setOfICs, int globiC,
+  std::set<int>& setOfICs, int globiC,
   std::size_t idxSurface, std::size_t globID, std::size_t& localID, int globiCcentre,
   const Vector<T,PARTICLETYPE::d>& position, T density=0.,
   const Vector<T,utilities::dimensions::convert<PARTICLETYPE::d>::rotation>& angleInDegree
@@ -147,9 +147,9 @@ ParallelParticleLocator addResolvedObject(
   std::size_t globID = sParticleSystem.getGlobID();
   //Prepare particle and get list of touching iCs
   int globiCcentre;
-  std::unordered_set<int> setOfICs = prepareParallelResolvedParticle(sParticleSystem,
+  std::set<int> setOfICs = prepareParallelResolvedParticle(sParticleSystem,
     position, circumRadius, vectorOfIndicators[idxSurface].get()->getEpsilon(), globiCcentre,
-    sParticleSystem.getSuperStructure().getCuboidGeometry().getMotherCuboid().getDeltaR(),
+    sParticleSystem.getSuperStructure().getCuboidDecomposition().getMotherCuboid().getDeltaR(),
     periodicity);
 
   //Iterate over particle systems
@@ -215,9 +215,9 @@ ParallelParticleLocator addResolvedSphere3D(
 
   //Prepare particle and get list of touching iCs
   int globiCcentre;
-  std::unordered_set<int> setOfICs = prepareParallelResolvedParticle(sParticleSystem,
+  std::set<int> setOfICs = prepareParallelResolvedParticle(sParticleSystem,
     position, circumRadius, epsilon, globiCcentre,
-    sParticleSystem.getSuperStructure().getCuboidGeometry().getMotherCuboid().getDeltaR(),
+    sParticleSystem.getSuperStructure().getCuboidDecomposition().getMotherCuboid().getDeltaR(),
     periodicity);
 
   std::size_t idxSurface = addSurface(sParticleSystem,
@@ -263,9 +263,9 @@ ParallelParticleLocator addResolvedCuboid3D(
 
   //Prepare particle and get list of touching iCs
   int globiCcentre;
-  std::unordered_set<int> setOfICs = prepareParallelResolvedParticle(sParticleSystem,
+  std::set<int> setOfICs = prepareParallelResolvedParticle(sParticleSystem,
     position, circumRadius, epsilon, globiCcentre,
-    sParticleSystem.getSuperStructure().getCuboidGeometry().getMotherCuboid().getDeltaR(),
+    sParticleSystem.getSuperStructure().getCuboidDecomposition().getMotherCuboid().getDeltaR(),
     periodicity);
 
   std::size_t idxSurface = addSurface(sParticleSystem,
@@ -311,9 +311,9 @@ ParallelParticleLocator addResolvedCylinder3D(
 
   //Prepare particle and get list of touching iCs
   int globiCcentre;
-  std::unordered_set<int> setOfICs = prepareParallelResolvedParticle(sParticleSystem,
+  std::set<int> setOfICs = prepareParallelResolvedParticle(sParticleSystem,
     position, circumRadius, epsilon, globiCcentre,
-    sParticleSystem.getSuperStructure().getCuboidGeometry().getMotherCuboid().getDeltaR(),
+    sParticleSystem.getSuperStructure().getCuboidDecomposition().getMotherCuboid().getDeltaR(),
     periodicity);
 
   std::size_t idxSurface = addSurface(sParticleSystem,
@@ -360,9 +360,9 @@ ParallelParticleLocator addResolvedArbitraryShape3D(
 
   //Prepare particle and get list of touching iCs
   int globiCcentre;
-  std::unordered_set<int> setOfICs = prepareParallelResolvedParticle(sParticleSystem,
+  std::set<int> setOfICs = prepareParallelResolvedParticle(sParticleSystem,
     position, circumRadius, epsilon, globiCcentre,
-    sParticleSystem.getSuperStructure().getCuboidGeometry().getMotherCuboid().getDeltaR(),
+    sParticleSystem.getSuperStructure().getCuboidDecomposition().getMotherCuboid().getDeltaR(),
     periodicity);
 
   std::size_t idxSurface = addSurface(sParticleSystem,
@@ -408,9 +408,9 @@ ParallelParticleLocator addResolvedCircle2D(
 
   //Prepare particle and get list of touching iCs
   int globiCcentre;
-  std::unordered_set<int> setOfICs = prepareParallelResolvedParticle(sParticleSystem,
+  std::set<int> setOfICs = prepareParallelResolvedParticle(sParticleSystem,
     position, circumRadius, epsilon, globiCcentre,
-    sParticleSystem.getSuperStructure().getCuboidGeometry().getMotherCuboid().getDeltaR(),
+    sParticleSystem.getSuperStructure().getCuboidDecomposition().getMotherCuboid().getDeltaR(),
     periodicity);
 
   std::size_t idxSurface = addSurface(sParticleSystem,
@@ -447,13 +447,16 @@ ParallelParticleLocator addSubgridSphere3D(
 {
   using namespace descriptors;
   //Retrieving cuboid geometry
-  auto& cuboidGeometry = sParticleSystem.getSuperStructure().getCuboidGeometry();
+  auto& cuboidDecomposition = sParticleSystem.getSuperStructure().getCuboidDecomposition();
   //Get global particle id
   std::size_t globID = sParticleSystem.getGlobID();
   //Find globiC the particle belongs to
   int globiCcentre;
-  bool inDomain = cuboidGeometry.getC( position, globiCcentre );
-  if (!inDomain){ std::cerr << "ERROR: Particle added outside domain!" << std::endl; }
+  if (auto iC = cuboidDecomposition.getC(position)) {
+    globiCcentre = *iC;
+  } else {
+    std::cerr << "ERROR: Particle added outside domain!" << std::endl;
+  }
 
   //Iterate over particle systems
   std::size_t localID=0; //Return localID of particle inside particleSystem holding centre
@@ -487,13 +490,16 @@ ParallelParticleLocator addSubgridSphereWithSpecies3D(
 {
   using namespace descriptors;
   //Retrieving cuboid geometry
-  auto& cuboidGeometry = sParticleSystem.getSuperStructure().getCuboidGeometry();
+  auto& cuboidDecomposition = sParticleSystem.getSuperStructure().getCuboidDecomposition();
   //Get global particle id
   std::size_t globID = sParticleSystem.getGlobID();
   //Find globiC the particle belongs to
   int globiCcentre;
-  bool inDomain = cuboidGeometry.getC( position, globiCcentre );
-  if (!inDomain){ std::cerr << "ERROR: Particle added outside domain!" << std::endl; }
+  if (auto iC = cuboidDecomposition.getC(position)) {
+    globiCcentre = *iC;
+  } else {
+    std::cerr << "ERROR: Particle added outside domain!" << std::endl;
+  }
 
   //Iterate over particle systems
   std::size_t localID=0; //Return localID of particle inside particleSystem holding centre

@@ -34,9 +34,22 @@ namespace gpu {
 
 namespace cuda {
 
+namespace concepts {
+
+template <typename CONTAINER>
+concept ConcreteFieldsContainer = requires (CONTAINER& container) {
+  requires olb::concepts::BaseType<typename CONTAINER::value_t>;
+  requires olb::concepts::Descriptor<typename CONTAINER::descriptor_t>;
+  requires (CONTAINER::platform == Platform::GPU_CUDA);
+};
+
+}
+
 /// Return pointers to on-device data for FIELD on lattice
-template <typename T, typename DESCRIPTOR, typename FIELD>
-static auto getDeviceFieldPointer(ConcreteBlockLattice<T,DESCRIPTOR,Platform::GPU_CUDA>& lattice) {
+template <concepts::ConcreteFieldsContainer CONTAINER, typename FIELD>
+static auto getDeviceFieldPointer(CONTAINER& lattice) {
+  using T = typename CONTAINER::value_t;
+  using DESCRIPTOR = typename CONTAINER::descriptor_t;
   auto& fieldArray = lattice.template getField<FIELD>();
   return Vector<typename FIELD::template value_type<T>*,DESCRIPTOR::template size<FIELD>()>([&](unsigned iD) {
     return fieldArray[iD].deviceData();
@@ -44,10 +57,10 @@ static auto getDeviceFieldPointer(ConcreteBlockLattice<T,DESCRIPTOR,Platform::GP
 }
 
 /// Return tuple of pointers to on-device data for multiple FIELDS on lattice
-template <typename T, typename DESCRIPTOR, typename... FIELDS>
+template <concepts::ConcreteFieldsContainer CONTAINER, typename... FIELDS>
 static auto getDeviceFieldPointers(typename meta::list<FIELDS...>,
-                                   ConcreteBlockLattice<T,DESCRIPTOR,Platform::GPU_CUDA>& lattice) {
-  return std::make_tuple(getDeviceFieldPointer<T,DESCRIPTOR,FIELDS>(lattice)...);
+                                   CONTAINER& lattice) {
+  return std::make_tuple(getDeviceFieldPointer<CONTAINER,FIELDS>(lattice)...);
 }
 
 /// Structure for passing pointers to on-device data into CUDA kernels
@@ -58,7 +71,7 @@ private:
 
   /// Pointers to descriptor-declared field data
   decltype(getDeviceFieldPointers(typename DESCRIPTOR::fields_t(),
-                                  std::declval<ConcreteBlockLattice<T,DESCRIPTOR,Platform::GPU_CUDA>&>()))
+                                  std::declval<ConcreteBlockD<T,DESCRIPTOR,Platform::GPU_CUDA>&>()))
   _staticFieldsD;
   /// Pointer to type-erased field data
   /**
@@ -70,7 +83,19 @@ public:
   using value_t = T;
   using descriptor_t = DESCRIPTOR;
 
-  DeviceContext(ConcreteBlockLattice<T,DESCRIPTOR,Platform::GPU_CUDA>& lattice) __host__:
+  template <concepts::ConcreteFieldsContainer CONTAINER>
+  DeviceContext(CONTAINER& lattice) __host__:
+    _nCells(lattice.getNcells()),
+    _staticFieldsD(getDeviceFieldPointers(typename DESCRIPTOR::fields_t(), lattice)),
+    _customFieldsD(lattice.getDataRegistry().deviceData())
+  {
+    static_assert(std::is_same_v<typename CONTAINER::value_t, T>,
+                  "CONTAINER must share value_t");
+    static_assert(std::is_same_v<typename CONTAINER::descriptor_t, DESCRIPTOR>,
+                  "CONTAINER must share descriptor_t");
+  }
+
+  DeviceContext(ConcreteBlockD<T,DESCRIPTOR,Platform::GPU_CUDA>& lattice) __host__:
     _nCells(lattice.getNcells()),
     _staticFieldsD(getDeviceFieldPointers(typename DESCRIPTOR::fields_t(), lattice)),
     _customFieldsD(lattice.getDataRegistry().deviceData())
@@ -106,14 +131,6 @@ private:
                                FieldPtr>::type;
 
 protected:
-  const typename FIELD::template value_type<T>* getComponentPointer(unsigned iDim) const __device__
-  {
-    return _data.template getField<FIELD>()[iDim] + _index;
-  }
-  typename FIELD::template value_type<T>* getComponentPointer(unsigned iDim) __device__
-  {
-    return _data.template getField<FIELD>()[iDim] + _index;
-  }
 
 public:
   FieldPtr(DeviceContext<T,DESCRIPTOR>& data, std::size_t index) __device__:
@@ -123,6 +140,16 @@ public:
   FieldPtr(FieldPtr<T,DESCRIPTOR,FIELD>&& rhs) __device__:
     _data(rhs._data),
     _index(rhs._index) { }
+
+  const typename FIELD::template value_type<T>* getComponentPointer(unsigned iDim) const __device__
+  {
+    return _data.template getField<FIELD>()[iDim] + _index;
+  }
+
+  typename FIELD::template value_type<T>* getComponentPointer(unsigned iDim) __device__
+  {
+    return _data.template getField<FIELD>()[iDim] + _index;
+  }
 
   template <typename U, typename IMPL>
   FieldPtr<T,DESCRIPTOR,FIELD>& operator=(const GenericVector<U,DESCRIPTOR::template size<FIELD>(),IMPL>& rhs) __device__
@@ -151,6 +178,10 @@ public:
     _iCell(iCell)
   { }
 
+  void setCellId(std::size_t iCell) __device__ {
+    _iCell = iCell;
+  }
+
   template <typename FIELD>
   typename FIELD::template value_type<T> getFieldComponent(unsigned iD) __device__ {
     return _data.template getField<FIELD>()[iD][_iCell];
@@ -175,6 +206,12 @@ public:
   template <typename FIELD>
   FieldPtr<T,DESCRIPTOR,FIELD> getFieldPointer() __device__ {
     return FieldPtr<T,DESCRIPTOR,FIELD>(_data, _iCell);
+  }
+
+  template <typename FIELD>
+  auto getFieldComponent(unsigned iD) const __device__ {
+    auto fieldArray = _data.template getField<FIELD>();
+    return fieldArray[iD][_iCell];
   }
 
   template <typename FIELD>
@@ -206,12 +243,14 @@ class Cell;
 template <typename T, typename DESCRIPTOR>
 class DeviceBlockLattice final : public DeviceContext<T,DESCRIPTOR> {
 private:
+  LatticeR<DESCRIPTOR::d> _core;
   LatticeR<DESCRIPTOR::d> _projection;
   int _padding;
 
 public:
   DeviceBlockLattice(ConcreteBlockLattice<T,DESCRIPTOR,Platform::GPU_CUDA>& lattice) __host__:
     DeviceContext<T,DESCRIPTOR>(lattice),
+    _core(lattice.getExtent()),
     _padding{lattice.getPadding()}
   {
     auto size = lattice.getExtent() + 2*_padding;
@@ -223,7 +262,7 @@ public:
   }
 
   CellID getCellId(LatticeR<DESCRIPTOR::d> loc) const __device__ {
-    return (loc+_padding) * _projection;
+    return (loc + _padding) * _projection;
   }
 
   CellDistance getNeighborDistance(LatticeR<DESCRIPTOR::d> dir) const __device__ {
@@ -236,6 +275,32 @@ public:
 
   Cell<T,DESCRIPTOR> get(LatticeR<DESCRIPTOR::d> loc) __device__ {
     return get(getCellId(loc));
+  }
+
+  LatticeR<DESCRIPTOR::d> getLatticeR(CellID iCell) const __device__ {
+    if constexpr (DESCRIPTOR::d == 3) {
+      const std::int32_t iX = iCell / _projection[0];
+      const std::int32_t remainder = iCell % _projection[0];
+      const std::int32_t iY = remainder / _projection[1];
+      const std::int32_t iZ = remainder % _projection[1];
+      return LatticeR<DESCRIPTOR::d>{iX - _padding, iY - _padding, iZ - _padding};
+    } else {
+      const std::int32_t iX = iCell / _projection[0];
+      const std::int32_t iY = iCell % _projection[0];
+      return LatticeR<DESCRIPTOR::d>{iX - _padding, iY - _padding};
+    }
+  };
+
+  bool isInside(LatticeR<DESCRIPTOR::d> loc) const __device__ {
+    return loc >= -_padding && loc < _core + _padding;
+  }
+
+  bool isPadding(LatticeR<DESCRIPTOR::d> loc) const __device__ {
+    return isInside(loc) && !(loc >= 0 && loc < _core);
+  }
+
+  bool isPadding(CellID iCell) const __device__ {
+    return isPadding(getLatticeR(iCell));
   }
 
 };
@@ -251,6 +316,10 @@ protected:
     return static_cast<DeviceBlockLattice<T,DESCRIPTOR>&>(this->_data);
   }
 
+  DeviceBlockLattice<T,DESCRIPTOR>& getBlock() const __device__ {
+    return static_cast<DeviceBlockLattice<T,DESCRIPTOR>&>(this->_data);
+  }
+
 public:
   Cell(DeviceBlockLattice<T,DESCRIPTOR>& data, CellID iCell) __device__:
     DataOnlyCell<T,DESCRIPTOR>(data, iCell)
@@ -262,6 +331,22 @@ public:
 
   Dynamics<T,DESCRIPTOR>& getDynamics() __device__ {
     return *this->template getField<DYNAMICS<T,DESCRIPTOR>>();
+  }
+
+  std::size_t getCellId() const __device__ {
+    return this->_iCell;
+  }
+
+  void setCellId(std::size_t iCell) __device__ {
+    this->_iCell = iCell;
+  }
+
+  void setLatticeR(LatticeR<DESCRIPTOR::d> latticeR) __device__ {
+    this->_iCell = getBlock().getCellId(latticeR);
+  }
+
+  bool isPadding() const __device__ {
+    return getBlock().isPadding(this->_iCell);
   }
 
   T computeRho() __device__ {

@@ -29,6 +29,68 @@
 
 namespace olb {
 
+///Evaluate complete neighbourhood and store in std::map
+template<typename T, unsigned D>
+void evaluateCuboidDecompositionNeighbourhood(
+  CuboidDecomposition<T,D>& cuboidDecomposition,
+  std::map<int,std::vector<int>>& neighbourhood,
+  int offset )
+{
+  for (int iC=0; iC<cuboidDecomposition.size(); ++iC){
+    neighbourhood[iC].clear();
+    auto neighbours = cuboidDecomposition.getNeighborhood(iC, offset);
+    for (int jC : neighbours) {
+      neighbourhood[iC].emplace_back(jC);
+    }
+  }
+}
+
+/// Consistency check for neighbour retrieval
+/// - workaround for issue #319
+bool checkCuboidNeighbourhoodConsistency(
+  std::map<int,std::vector<int>>& neighbourhood,
+  bool correct = false,
+  bool verbose = false)
+{
+  bool consistent = true;
+  for ( auto cuboidNeighbourPair : neighbourhood){
+    //Retrieve iC and neighbours
+    int iC = cuboidNeighbourPair.first;
+    std::vector<int>& neighbours = cuboidNeighbourPair.second;
+    //Loop over neighbours
+    for (int iCN : neighbours){
+      //Retreive neighbour's neighbours
+      std::vector<int>& neighboursNeighbours = neighbourhood[iCN];
+      bool iCfound = false;
+      //Loop over neighbour's neighbours
+      for (int iCNN : neighboursNeighbours ){
+        if (iCNN == iC){
+          iCfound=true;
+          break;
+        }
+      }
+      if (!iCfound){
+        //Set consistency boolean to false
+        consistent = false;
+        //Output, if desired
+        if (verbose){
+          std::cout << "iC " << iC << " not found in list of neighbour iC "
+                             << iCN << std::endl;
+        }
+        //Correct, if desired
+        if (correct){
+          neighbourhood[iCN].push_back(iC);
+        }
+      }
+    }
+  }
+  //Return whether consistent
+  return consistent;
+}
+
+
+
+
 namespace particles {
 
 namespace communication {
@@ -37,25 +99,28 @@ namespace communication {
 /// Get neighbour cuboids
 template<typename T, unsigned D, bool verbose=false>
 std::vector<int> getNeighborCuboids(
-  CuboidGeometry<T,D>& cuboidGeometry, unsigned offset, int globiC )
+  CuboidDecomposition<T,D>& cuboidDecomposition, unsigned offset, int globiC )
 {
-  std::vector<int> neighbors;
-  cuboidGeometry.getNeighbourhood(globiC, neighbors, offset);
+  auto neighbors = cuboidDecomposition.getNeighborhood(globiC, offset);
 
   //Print, if desired
   if constexpr(verbose){
     std::cout << globiC << ": " << neighbors << std::endl;
   }
 
-  return neighbors;
+  std::vector<int> ns;
+  for (int iC : neighbors) {
+    ns.emplace_back(iC);
+  }
+  return ns;
 }
 
 /// Get neighbour ranks
 template<typename T, unsigned D, bool verbose=false>
-std::unordered_set<int> getNeighbourRanksFromCuboidNeighbourhood(
+std::set<int> getNeighbourRanksFromCuboidNeighbourhood(
   SuperStructure<T,D>& superStructure, int rank, std::map<int,std::vector<int>> neighbourhood )
 {
-  std::unordered_set<int> rankNeighbours;
+  std::set<int> rankNeighbours;
 
 #ifdef PARALLEL_MODE_MPI
   auto& loadBalancer = superStructure.getLoadBalancer();
@@ -81,8 +146,8 @@ std::unordered_set<int> getNeighbourRanksFromCuboidNeighbourhood(
 
 /// Get neighbour ranks
 template<typename T, unsigned D, bool verbose=false>
-std::unordered_set<int> getNeighbourRanksFromCuboidNeighbourhood(
-  SuperStructure<T,D>& superStructure, int rank, const std::vector<std::unordered_set<int>>& neighbourhood )
+std::set<int> getNeighbourRanksFromCuboidNeighbourhood(
+  SuperStructure<T,D>& superStructure, int rank, const std::vector<std::set<int>>& neighbourhood )
 {
   std::map<int,std::vector<int>> neighbourhoodMap;
 
@@ -99,8 +164,8 @@ std::unordered_set<int> getNeighbourRanksFromCuboidNeighbourhood(
 
 /// Get neighbour ranks
 template<typename T, unsigned D, bool verbose=false>
-std::unordered_set<int> getNeighbourRanksFromCuboidNeighbourhood(
-  SuperStructure<T,D>& superStructure, const std::vector<std::unordered_set<int>>& neighbourhood )
+std::set<int> getNeighbourRanksFromCuboidNeighbourhood(
+  SuperStructure<T,D>& superStructure, const std::vector<std::set<int>>& neighbourhood )
 {
   const int rank = singleton::mpi().getRank();
   return getNeighbourRanksFromCuboidNeighbourhood<T,D,verbose>(
@@ -110,19 +175,19 @@ std::unordered_set<int> getNeighbourRanksFromCuboidNeighbourhood(
 
 /// Get neighbour ranks
 template<typename T, unsigned D, bool verbose=false>
-std::unordered_set<int> getNeighbourRanks(
+std::set<int> getNeighbourRanks(
   SuperStructure<T,D>& superStructure, unsigned offset, int rank )
 {
-  std::unordered_set<int> rankNeighbours;
+  std::set<int> rankNeighbours;
 
 #ifdef PARALLEL_MODE_MPI
   auto& loadBalancer = superStructure.getLoadBalancer();
-  auto& cuboidGeometry = superStructure.getCuboidGeometry();
+  auto& cuboidDecomposition = superStructure.getCuboidDecomposition();
 
   ///HOTFIX VERSION (according to #319)
   // 1. sample complete neighbourhood
   std::map<int,std::vector<int>> neighbourhood;
-  evaluateCuboidGeometryNeighbourhood( cuboidGeometry, neighbourhood, offset);
+  evaluateCuboidDecompositionNeighbourhood(cuboidDecomposition, neighbourhood, offset);
 
   //2. check consistency
   constexpr bool correctFaultyNeighbourhood = true;
@@ -138,7 +203,7 @@ std::unordered_set<int> getNeighbourRanks(
 
 /// Get neighbour ranks
 template<typename T, unsigned D, bool verbose=false>
-std::unordered_set<int> getNeighbourRanks(
+std::set<int> getNeighbourRanks(
   SuperStructure<T,D>& superStructure, unsigned offset)
 {
   //Retrive parallization infos
@@ -213,9 +278,9 @@ template<typename T, typename PARTICLETYPE>
 void checkCuboidSizes( SuperParticleSystem<T, PARTICLETYPE>& sParticleSystem )
 {
   constexpr unsigned D = PARTICLETYPE::d;
-  auto& cuboidGeometry = sParticleSystem.getSuperStructure().getCuboidGeometry();
+  auto& cuboidDecomposition = sParticleSystem.getSuperStructure().getCuboidDecomposition();
 
-  const T physDeltaX = cuboidGeometry.getMotherCuboid().getDeltaR();
+  const T physDeltaX = cuboidDecomposition.getMotherCuboid().getDeltaR();
 
   T maxCircumRadius{0};
   communication::forParticlesInSuperParticleSystem(
@@ -231,10 +296,10 @@ void checkCuboidSizes( SuperParticleSystem<T, PARTICLETYPE>& sParticleSystem )
 #endif
 
   int minCuboidExtent{std::numeric_limits<int>::max()};
-  for (int iC=0; iC<cuboidGeometry.getNc(); ++iC){
+  for (int iC=0; iC<cuboidDecomposition.size(); ++iC){
     for(unsigned iD=0; iD<D; ++iD){
       minCuboidExtent = util::min(minCuboidExtent,
-          cuboidGeometry.get(iC).getExtent()[iD]);
+          cuboidDecomposition.get(iC).getExtent()[iD]);
     }
   }
 #ifdef PARALLEL_MODE_MPI
@@ -281,31 +346,31 @@ T applyPeriodicityToPosition(const bool isPeriodic, T position, const T max, con
 
 /// Returns minimal coordinate of domain for periodic particle boundaries
 template<typename T, unsigned D>
-Vector<T,D> getCuboidMin(const CuboidGeometry<T,D>& cuboidGeometry)
+Vector<T,D> getCuboidMin(const CuboidDecomposition<T,D>& cuboidDecomposition)
 {
-  const T physDeltaX = cuboidGeometry.getMotherCuboid().getDeltaR();
-  return (cuboidGeometry.getMotherCuboid().getOrigin() - 0.5 * physDeltaX);
+  const T physDeltaX = cuboidDecomposition.getMotherCuboid().getDeltaR();
+  return (cuboidDecomposition.getMotherCuboid().getOrigin() - 0.5 * physDeltaX);
 
 }
 
 /// Returns maximal coordinate of domain for periodic particle boundaries
 template<typename T, unsigned D>
-Vector<T,D> getCuboidMax(const CuboidGeometry<T,D>& cuboidGeometry,
+Vector<T,D> getCuboidMax(const CuboidDecomposition<T,D>& cuboidDecomposition,
     const PhysR<T,D>& min)
 {
-  const T physDeltaX = cuboidGeometry.getMotherCuboid().getDeltaR();
-  return min + physDeltaX * cuboidGeometry.getMotherCuboid().getExtent();
+  const T physDeltaX = cuboidDecomposition.getMotherCuboid().getDeltaR();
+  return min + physDeltaX * cuboidDecomposition.getMotherCuboid().getExtent();
 }
 
 /// Updates a position if out of bounds and periodic setup is used
 template<typename T, unsigned D>
 Vector<T,D> applyPeriodicityToPosition(
-    const CuboidGeometry<T,D>& cuboidGeometry,
+    const CuboidDecomposition<T,D>& cuboidDecomposition,
     const Vector<bool,D>& periodicity,
     PhysR<T,D> position)
 {
-  const PhysR<T,D> min = getCuboidMin<T,D>(cuboidGeometry);
-  const PhysR<T,D> max = getCuboidMax<T,D>(cuboidGeometry, min);
+  const PhysR<T,D> min = getCuboidMin<T,D>(cuboidDecomposition);
+  const PhysR<T,D> max = getCuboidMax<T,D>(cuboidDecomposition, min);
 
   for(unsigned iD=0; iD<D; ++iD) {
     position[iD] = applyPeriodicityToPosition(periodicity[iD],
@@ -317,15 +382,18 @@ Vector<T,D> applyPeriodicityToPosition(
 
 /// Function returns true if cuboid was found and gives iC
 template<typename T, unsigned D>
-bool getCuboid(const CuboidGeometry<T,D>& cuboidGeometry,
+bool getCuboid(const CuboidDecomposition<T,D>& cuboidDecomposition,
     const Vector<bool,D>& periodicity,
     const PhysR<T,D>& position, int& iC)
 {
   PhysR<T,D> newPosition(
-      applyPeriodicityToPosition(cuboidGeometry, periodicity, position));
-  return cuboidGeometry.getC(newPosition, iC);
+      applyPeriodicityToPosition(cuboidDecomposition, periodicity, position));
+  if (auto iC_ = cuboidDecomposition.getC(newPosition)) {
+    iC = *iC_;
+    return true;
+  }
+  return false;
 }
-
 
 } //namespace communication
 

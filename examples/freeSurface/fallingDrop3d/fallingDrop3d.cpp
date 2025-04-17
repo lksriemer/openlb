@@ -22,8 +22,7 @@
 */
 
 
-#include "olb3D.h"
-#include "olb3D.hh"
+#include <olb.h>
 
 using namespace olb;
 using namespace olb::descriptors;
@@ -194,7 +193,7 @@ void prepareLattice( UnitConverter<T,DESCRIPTOR> const& converter,
   //setSlipBoundary<T,DESCRIPTOR>(sLattice, superGeometry, 2);
 
   sLattice.setParameter<descriptors::OMEGA>(converter.getLatticeRelaxationFrequency());
-  sLattice.setParameter<collision::LES::Smagorinsky>(T(0.2));
+  sLattice.setParameter<collision::LES::SMAGORINSKY>(T(0.2));
 
   prepareFallingDrop(converter, sLattice, superGeometry, lattice_size, helper);
   clout << "Prepare Lattice ... OK" << std::endl;
@@ -257,10 +256,8 @@ void getResults(SuperLattice<T,DESCRIPTOR>& sLattice,
 
   if ( iT==0 ) {
     // Writes the geometry, cuboid no. and rank no. as vti file for visualization
-    SuperLatticeGeometry3D<T, DESCRIPTOR> geometry( sLattice, superGeometry );
     SuperLatticeCuboid3D<T, DESCRIPTOR> cuboid( sLattice );
     SuperLatticeRank3D<T, DESCRIPTOR> rank( sLattice );
-    vtmWriter.write( geometry );
     vtmWriter.write( cuboid );
     vtmWriter.write( rank );
 
@@ -303,7 +300,7 @@ void getResults(SuperLattice<T,DESCRIPTOR>& sLattice,
 
 int main(int argc, char **argv)
 {
-  olbInit(&argc, &argv, false, false);
+  initialize(&argc, &argv, false, false);
 
   FreeSurfaceConfig c;
   OstreamManager clerr( std::cerr, "main" );
@@ -333,7 +330,7 @@ int main(int argc, char **argv)
 
   // Convert kg / s^2
   // Basically it is multiplied with s^2 / kg = s^2 * m^3 / (kg * m^2 * m) = 1. / (velocity_factor^2 * density * length_factor)
-  T surface_tension_coefficient_factor = std::pow(converter.getConversionFactorTime(),2)/ (c.density * std::pow(converter.getConversionFactorLength(),3));
+  T surface_tension_coefficient_factor = std::pow(converter.getConversionFactorTime(),2)/ (c.density * std::pow(converter.getPhysDeltaX(),3));
 
   clout<<"Surface: "<<surface_tension_coefficient_factor * helper.surface_tension_coefficient<<std::endl;
   clout<<"Lattice Size: "<<converter.getPhysDeltaX()<<std::endl;
@@ -343,16 +340,16 @@ int main(int argc, char **argv)
   Vector<T,3> origin;
   IndicatorCuboid3D<T> cuboid( extend, origin );
 
-  // Instantiation of a cuboidGeometry with weights
+  // Instantiation of a cuboidDecomposition with weights
 #ifdef PARALLEL_MODE_MPI
   const int noOfCuboids = singleton::mpi().getSize();
 #else
   const int noOfCuboids = 4;
 #endif
-  CuboidGeometry3D<T> cuboidGeometry( cuboid, converter.getConversionFactorLength(), noOfCuboids );
+  CuboidDecomposition3D<T> cuboidDecomposition( cuboid, converter.getPhysDeltaX(), noOfCuboids );
 
-  HeuristicLoadBalancer<T> loadBalancer( cuboidGeometry );
-  SuperGeometry<T,3> superGeometry( cuboidGeometry, loadBalancer, 2 );
+  HeuristicLoadBalancer<T> loadBalancer( cuboidDecomposition );
+  SuperGeometry<T,3> superGeometry( cuboidDecomposition, loadBalancer, 2 );
 
   prepareGeometry( converter, superGeometry );
 
@@ -372,8 +369,6 @@ int main(int argc, char **argv)
   sLattice.setParameter<FreeSurface::LONELY_THRESHOLD>(c.lonelyThreshold);
   sLattice.setParameter<FreeSurface::HAS_SURFACE_TENSION>(helper.has_surface_tension);
   sLattice.setParameter<FreeSurface::SURFACE_TENSION_PARAMETER>(surface_tension_coefficient_factor * helper.surface_tension_coefficient);
-  sLattice.setParameter<FreeSurface::FORCE_CONVERSION_FACTOR>(force_conversion_factor);
-  sLattice.setParameter<FreeSurface::LATTICE_SIZE>(converter.getPhysDeltaX());
 
   // === 4th Step: Main Loop with Timer ===
   clout << "starting simulation..." << std::endl;

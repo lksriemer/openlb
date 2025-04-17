@@ -38,7 +38,7 @@ SuperLatticeParticleForce<T,DESCRIPTOR,PARTICLETYPE,BLOCKFUNCTOR>::SuperLatticeP
   particles::ParticleSystem<T,PARTICLETYPE>& particleSystem,
   const UnitConverter<T,DESCRIPTOR>& converter,
   Vector<bool,DESCRIPTOR::d> periodic, std::size_t iP0,
-  const std::unordered_set<int>& ignoredMaterials, const F f )
+  const std::set<int>& ignoredMaterials, const F f )
   : SuperLatticePhysF<T,DESCRIPTOR>(sLattice,converter,
                                     (DESCRIPTOR::d+utilities::dimensions::convert<DESCRIPTOR::d>::rotation+1)*(particleSystem.size()-iP0))
 {
@@ -48,9 +48,9 @@ SuperLatticeParticleForce<T,DESCRIPTOR,PARTICLETYPE,BLOCKFUNCTOR>::SuperLatticeP
   int maxC = this->_sLattice.getLoadBalancer().size();
   this->_blockF.reserve(maxC);
   const PhysR<T,D> min = particles::communication::getCuboidMin<T,D>(
-      superGeometry.getCuboidGeometry());
+      superGeometry.getCuboidDecomposition());
   const PhysR<T,D> max = particles::communication::getCuboidMax<T,D>(
-      superGeometry.getCuboidGeometry(), min);
+      superGeometry.getCuboidDecomposition(), min);
 
   for (int iC = 0; iC < maxC; ++iC) {
     this->_blockF.emplace_back( new BLOCKFUNCTOR(
@@ -90,7 +90,7 @@ BlockLatticeMomentumExchangeForce<T, DESCRIPTOR, PARTICLETYPE>::BlockLatticeMome
   const UnitConverter<T,DESCRIPTOR>& converter,
   PhysR<T,DESCRIPTOR::d>cellMin, PhysR<T,DESCRIPTOR::d> cellMax,
   Vector<bool,DESCRIPTOR::d> periodic, std::size_t iP0,
-  const std::unordered_set<int>& ignoredMaterials,  const F f )
+  const std::set<int>& ignoredMaterials,  const F f )
   : BlockLatticePhysF<T,DESCRIPTOR>(blockLattice, converter,
                                    (DESCRIPTOR::d+utilities::dimensions::convert<DESCRIPTOR::d>::rotation+1)*(particleSystem.size()-iP0)),
     _blockGeometry(blockGeometry), _blockLattice(blockLattice),
@@ -138,9 +138,9 @@ void BlockLatticeMomentumExchangeForce<T, DESCRIPTOR, PARTICLETYPE>::evaluate(T 
         //Calculate torque
         const Vector<T,Drot> torque = particles::dynamics::torque_from_force<D,T>::calculate( tmpForce, lever );
 
-        T physR[D] = {0.};
-        this->_blockGeometry.getPhysR(physR, latticeRinner);
-        _f(particle, physR, tmpForce, torque);
+        Vector<T,D> physRv;
+        this->_blockGeometry.getPhysR(physRv, latticeRinner);
+        _f(particle, physRv.data(), tmpForce, torque);
 
         //Add force and torque to output
         for (unsigned iDim=0; iDim<D; ++iDim) {

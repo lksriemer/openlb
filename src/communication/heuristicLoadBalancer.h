@@ -27,11 +27,9 @@
 
 
 #include "communication/mpiManager.h"
-#include "geometry/cuboidGeometry2D.h"
-#include "geometry/cuboid3D.h"
-#include "geometry/cuboid3D.hh"
-#include "geometry/cuboidGeometry3D.h"
-#include "geometry/cuboidGeometry3D.hh"
+#include "geometry/cuboid.h"
+#include "geometry/cuboidDecomposition.h"
+#include "geometry/cuboidDecomposition.hh"
 #include "communication/loadBalancer.h"
 
 
@@ -54,8 +52,8 @@ private:
 #ifdef PARALLEL_MODE_MPI
   singleton::MpiNonBlockingHelper _mpiNbHelper;
 #endif
-  CuboidGeometry3D<T>* _cGeometry3d;
-  CuboidGeometry2D<T>* _cGeometry2d;
+  CuboidDecomposition3D<T>* _cGeometry3d;
+  CuboidDecomposition2D<T>* _cGeometry2d;
 
   double _ratioFullEmpty;
 
@@ -63,11 +61,11 @@ public:
   HeuristicLoadBalancer() {};
   ~HeuristicLoadBalancer() override;
 
-  HeuristicLoadBalancer(CuboidGeometry3D<T>& cGeometry3d, const double ratioFullEmpty=1., const double weightEmpty=.0);
-  HeuristicLoadBalancer(CuboidGeometry2D<T>& cGeometry2d, const double ratioFullEmpty=1., const double weightEmpty=.0);
+  HeuristicLoadBalancer(CuboidDecomposition3D<T>& cGeometry3d, const double ratioFullEmpty=1., const double weightEmpty=.0);
+  HeuristicLoadBalancer(CuboidDecomposition2D<T>& cGeometry2d, const double ratioFullEmpty=1., const double weightEmpty=.0);
 
-  void reInit(CuboidGeometry3D<T>& cGeometry3d, const double ratioFullEmpty=1., const double weightEmpty=.0);
-  void reInit(CuboidGeometry2D<T>& cGeometry2d, const double ratioFullEmpty=1., const double weightEmpty=.0);
+  void reInit(CuboidDecomposition3D<T>& cGeometry3d, const double ratioFullEmpty=1., const double weightEmpty=.0);
+  void reInit(CuboidDecomposition2D<T>& cGeometry2d, const double ratioFullEmpty=1., const double weightEmpty=.0);
 
   void swap(HeuristicLoadBalancer<T>& loadBalancer);
 

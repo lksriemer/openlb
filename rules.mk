@@ -35,6 +35,12 @@ LDFLAGS += $(EXTRA_LDFLAGS)
 
 FILTERED_FEATURES := $(FEATURES)
 
+ifneq ($(filter EMSCRIPTEN,$(FEATURES)),) # Check if EMSCRIPTEN is in FEATURES
+	AR := emar
+else
+	AR := ar
+endif
+
 ifneq ($(filter DISABLE_CSE,$(FILTERED_FEATURES)),)
 	CXXFLAGS += -DDISABLE_CSE
 	FILTERED_FEATURES := $(filter-out DISABLE_CSE,$(FILTERED_FEATURES))
@@ -44,15 +50,24 @@ ifneq ($(filter CPU_SIMD,$(PLATFORMS)),)
 	LDFLAGS += -lrt
 endif
 
-LDFLAGS += -lz -ltinyxml
+LDFLAGS += -lz -ltinyxml2
 LDFLAGS += $(if $(filter $(FEATURES), OPENBLAS),-lopenblas)
 LDFLAGS += $(if $(filter $(FEATURES), VDB),-lopenvdb -ltbb)
+
+ifneq ($(filter PROJ,$(FEATURES)),)
+	LDFLAGS += -lproj
+endif
+
 
 ifneq ($(filter VTK,$(FEATURES)),)
 	ifdef VTK_VERSION
 		VTK_VERSION := -$(VTK_VERSION)
 	endif
-	LDFLAGS += $(if $(filter $(FEATURES), VTK),-lvtkIOLegacy$(VTK_VERSION) -lvtkCommonCore$(VTK_VERSION) -lvtkCommonExecutionModel$(VTK_VERSION) -lvtkCommonDataModel$(VTK_VERSION) -lvtkIOCore$(VTK_VERSION) -lvtkIOXML$(VTK_VERSION) -lvtksys$(VTK_VERSION))
+	LDFLAGS += $(if $(filter $(FEATURES), VTK),-lvtkIOLegacy$(VTK_VERSION) -lvtkCommonCore$(VTK_VERSION) -lvtkCommonExecutionModel$(VTK_VERSION) -lvtkCommonDataModel$(VTK_VERSION) -lvtkIOCore$(VTK_VERSION) -lvtkIOXML$(VTK_VERSION) -lvtksys$(VTK_VERSION) -lvtkFiltersCore$(VTK_VERSION) -lvtkImagingCore$(VTK_VERSION) -lvtkIOParallelXML$(VTK_VERSION))
+endif
+
+ifneq ($(filter PRECICE,$(FEATURES)),)
+	LDFLAGS += -lprecice
 endif
 
 ifneq ($(filter GPU_CUDA,$(PLATFORMS)),)
@@ -65,6 +80,9 @@ ifneq ($(filter GPU_CUDA,$(PLATFORMS)),)
 ## | Volta             | 70, 72     |
 ## | Turing            | 75         |
 ## | Ampere            | 80, 86, 87 |
+## | Ada Lovelace      | 89         |
+## | Hopper            | 90         |
+## | Blackwell         | 100        |
 	CUDA_ARCH ?= 75
 	# Remove spaces from user-defined CUDA_ARCH (otherwise the `--generate-code` flag is messed up)
 	CUDA_ARCH := $(strip $(CUDA_ARCH))
@@ -72,7 +90,7 @@ ifneq ($(filter GPU_CUDA,$(PLATFORMS)),)
 	CUDA_LDFLAGS += -lcuda -lcudadevrt -lcudart
 
 	ifndef CUDA_CXXFLAGS
-		CUDA_CXXFLAGS := -O3 -std=c++17
+		CUDA_CXXFLAGS := -O3 -std=c++20
 	endif
 
 	CUDA_CXXFLAGS += --generate-code=arch=compute_$(CUDA_ARCH),code=[compute_$(CUDA_ARCH),sm_$(CUDA_ARCH)]

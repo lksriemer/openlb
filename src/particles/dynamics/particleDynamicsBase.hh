@@ -603,6 +603,295 @@ void VerletParticleDynamicsCubicBoundsDeposition<T,PARTICLETYPE,DEPOSITION_MODEL
   }
 }
 
+
+//this could be used for inner iteration to reduce computational costs when calling the signedDistance function for the particle deposition!
+//meaning not every inner iteration the wall particle distance and orientation is computed!
+#ifdef SIMPLE_DEPO
+extern int depo;
+#endif
+
+
+template<typename T, typename PARTICLETYPE, typename PCONDITION>
+EulerParticleDynamics<T,PARTICLETYPE,PCONDITION>::EulerParticleDynamics ( )
+{
+  this->getName() = "EulerParticleDynamics";
+}
+
+
+template<typename T, typename PARTICLETYPE, typename PCONDITION>
+EulerSpheroidParticleDynamics<T,PARTICLETYPE,PCONDITION>::EulerSpheroidParticleDynamics ( )
+{
+  this->getName() = "EulerSpheroidParticleDynamics";
+}
+
+template<typename T, typename PARTICLETYPE, typename PCONDITION>
+EulerSpheroidParticleDynamicsPeriodic<T,PARTICLETYPE,PCONDITION>::EulerSpheroidParticleDynamicsPeriodic ( Vector<int,3> periodic_dierection )
+ : _periodic_direction(periodic_dierection)
+{
+  this->getName() = "EulerSpheroidParticleDynamicsPeriodic";
+}
+
+template<typename T, typename PARTICLETYPE, typename PCONDITION>
+void EulerParticleDynamics<T,PARTICLETYPE,PCONDITION>::process (
+  Particle<T,PARTICLETYPE>& particle, T timeStepSize )
+{
+  using namespace particles::access;
+  //Check for particle condition
+  doWhenMeetingCondition<T,PARTICLETYPE,PCONDITION>( particle,[&](){
+    //Calculate acceleration
+    auto acceleration = getAcceleration( particle );
+    //Check for angular components
+    if constexpr ( providesAngle<PARTICLETYPE>() ) {
+      //Calculate angular acceleration
+      auto angularAcceleration = getAngAcceleration( particle );
+      //Euler algorithm
+      particles::dynamics::eulerIntegration(
+        particle, timeStepSize, acceleration, angularAcceleration );
+      //Check if rotation matrix provided
+      if constexpr ( providesRotationMatrix<PARTICLETYPE>() ) {
+        //Update rotation matrix
+        updateRotationMatrix( particle );
+      }
+    }
+    else {
+      //Euler algorithm without rotation
+      particles::dynamics::eulerIntegrationTranslation( particle,
+        timeStepSize, acceleration );
+    }
+  }); //doWhenMeetingCondition<T,PARTICLETYPE,PCONDITION>
+}
+
+template<typename T, typename PARTICLETYPE, typename PCONDITION>
+void EulerSpheroidParticleDynamicsPeriodic<T,PARTICLETYPE,PCONDITION>::process (
+  Particle<T,PARTICLETYPE>& particle, T timeStepSize )
+{
+  using namespace particles::access;
+  //Check for particle condition
+  doWhenMeetingCondition<T,PARTICLETYPE,PCONDITION>( particle,[&](){
+    //Calculate acceleration
+    auto acceleration = getAcceleration( particle );
+using namespace olb::descriptors;
+Vector<T,4> quat = particle.template getField<NUMERICPROPERTIES,QUATERNION>();
+Vector<T,3> ang_vel =particle.template getField<NUMERICPROPERTIES, ANG_VELOCITY>();
+
+     eler::computeAngularVelocityLeapFrog(ang_vel, particle.template getField<FORCING,TORQUE>(), particle.template getField<NUMERICPROPERTIES,MOMENT_OF_INERTIA> (),timeStepSize);
+     //the RungeKutta scheme not suitable for non linear equations...
+      //eler::computeAngularVelocityRungeKutta(ang_vel, particle.template getField<FORCING,TORQUE>(), particle.template getField<NUMERICPROPERTIES,MOMENT_OF_INERTIA> (),timeStepSize);
+      //eler::computeAngularVelocity(ang_vel, particle.template getField<FORCING,TORQUE>(), particle.template getField<NUMERICPROPERTIES,MOMENT_OF_INERTIA> (),timeStepSize);
+        particle.template setField<NUMERICPROPERTIES,ANG_VELOCITY>(ang_vel);
+
+
+        particles::dynamics::eulerIntegrationTranslationPeriodic( particle,
+        timeStepSize, acceleration, _periodic_direction );
+
+    //eler::quaternionRotate(quat, timeStepSize, ang_vel);
+    //eler::quaternionRotateLeapFrog(quat, timeStepSize, ang_vel);
+    eler::quaternionRotateRungeKutta(quat, timeStepSize, ang_vel);
+    particle.template setField<NUMERICPROPERTIES,QUATERNION>(quat);
+    particle.template setField<NUMERICPROPERTIES,PARAQUATERNION> (eler::getParaquaternion(quat));
+    particle.template setField<NUMERICPROPERTIES,ROT_MATRIX>(eler::computeTransformMatrixFromEulQuat(quat));
+    particle.template setField<NUMERICPROPERTIES,ORIENTATION>(eler::rotate(eler::inverseTransformMatrix(particle.template getField<NUMERICPROPERTIES,ROT_MATRIX>()), Vector<T,3> (0.,0.,1.)));
+
+
+
+
+  }); //doWhenMeetingCondition<T,PARTICLETYPE,PCONDITION>
+}
+
+template<typename T, typename PARTICLETYPE, typename PCONDITION>
+void EulerSpheroidParticleDynamics<T,PARTICLETYPE,PCONDITION>::process (
+  Particle<T,PARTICLETYPE>& particle, T timeStepSize )
+{
+  using namespace particles::access;
+  //Check for particle condition
+  doWhenMeetingCondition<T,PARTICLETYPE,PCONDITION>( particle,[&](){
+    //Calculate acceleration
+    auto acceleration = getAcceleration( particle );
+using namespace olb::descriptors;
+Vector<T,4> quat = particle.template getField<NUMERICPROPERTIES,QUATERNION>();
+Vector<T,3> ang_vel =particle.template getField<NUMERICPROPERTIES, ANG_VELOCITY>();
+
+     eler::computeAngularVelocityLeapFrog(ang_vel, particle.template getField<FORCING,TORQUE>(), particle.template getField<NUMERICPROPERTIES,MOMENT_OF_INERTIA> (),timeStepSize);
+     //the RungeKutta scheme not suitable for non linear equations...
+      //eler::computeAngularVelocityRungeKutta(ang_vel, particle.template getField<FORCING,TORQUE>(), particle.template getField<NUMERICPROPERTIES,MOMENT_OF_INERTIA> (),timeStepSize);
+      //eler::computeAngularVelocity(ang_vel, particle.template getField<FORCING,TORQUE>(), particle.template getField<NUMERICPROPERTIES,MOMENT_OF_INERTIA> (),timeStepSize);
+        particle.template setField<NUMERICPROPERTIES,ANG_VELOCITY>(ang_vel);
+            particles::dynamics::eulerIntegrationTranslation( particle,
+        timeStepSize, acceleration );
+
+    //eler::quaternionRotate(quat, timeStepSize, ang_vel);
+    //eler::quaternionRotateLeapFrog(quat, timeStepSize, ang_vel);
+    eler::quaternionRotateRungeKutta(quat, timeStepSize, ang_vel);
+    particle.template setField<NUMERICPROPERTIES,QUATERNION>(quat);
+    particle.template setField<NUMERICPROPERTIES,PARAQUATERNION> (eler::getParaquaternion(quat));
+    particle.template setField<NUMERICPROPERTIES,ROT_MATRIX>(eler::computeTransformMatrixFromEulQuat(quat));
+    particle.template setField<NUMERICPROPERTIES,ORIENTATION>(eler::rotate(eler::inverseTransformMatrix(particle.template getField<NUMERICPROPERTIES,ROT_MATRIX>()), Vector<T,3> (0.,0.,1.)));
+
+
+
+
+  }); //doWhenMeetingCondition<T,PARTICLETYPE,PCONDITION>
+}
+
+
+
+
+template<typename T, typename PARTICLETYPE, typename PCONDITION>
+void EulerParticleDynamicsMaterialAwareWallCapture<T,PARTICLETYPE,PCONDITION>::process (
+  Particle<T,PARTICLETYPE>& particle, T timeStepSize )
+{
+
+  //Execute process of eulerParticleDynamcis
+  EulerParticleDynamics<T,PARTICLETYPE,PCONDITION>::process(particle,timeStepSize);
+  //Apply wall capture
+  boundaries::wallCaptureMaterialAware(particle, _solidBoundary, _materialIndicator);
+
+}
+
+template<typename T, typename PARTICLETYPE, typename PCONDITION>
+EulerParticleDynamicsMaterialAwareWallCapture<T,PARTICLETYPE,PCONDITION>::
+  EulerParticleDynamicsMaterialAwareWallCapture(
+    SolidBoundary<T,PARTICLETYPE::d>& solidBoundary,
+    SuperIndicatorMaterial<T,PARTICLETYPE::d>& materialIndicator )
+  : _solidBoundary(solidBoundary), _materialIndicator(materialIndicator)
+{
+  this->getName() = "EulerParticleDynamicsMaterialAwareWallCapture";
+
+}
+
+
+
+
+template<typename T, typename PARTICLETYPE, bool useCubicBounds, typename PCONDITION>
+EulerSpheroidParticleDynamicsWallCapture<T,PARTICLETYPE,useCubicBounds,PCONDITION>::
+  EulerSpheroidParticleDynamicsWallCapture(
+    SolidBoundary<T,PARTICLETYPE::d>& solidBoundary )
+  : _solidBoundary(solidBoundary)
+{
+  this->getName() = "EulerSpheroidParticleDynamicsWallCapture";
+}
+
+template<typename T, typename PARTICLETYPE, bool useCubicBounds, typename PCONDITION>
+void EulerSpheroidParticleDynamicsWallCapture<T,PARTICLETYPE,useCubicBounds,PCONDITION>::process (
+  Particle<T,PARTICLETYPE>& particle, T timeStepSize )
+{
+
+EulerSpheroidParticleDynamics<T,PARTICLETYPE,PCONDITION>::process(particle,timeStepSize);
+  //Apply wall capture
+  boundaries::wallCaptureSpheroidSubgrid<useCubicBounds>(particle, _solidBoundary);
+
+}
+
+
+template<typename T, typename PARTICLETYPE, bool useCubicBounds, typename PCONDITION>
+EulerSpheroidParticleDynamicsMaterialAwareWallCapture<T,PARTICLETYPE,useCubicBounds,PCONDITION>::
+  EulerSpheroidParticleDynamicsMaterialAwareWallCapture(
+    SolidBoundary<T,PARTICLETYPE::d>& solidBoundary,   SuperIndicatorMaterial<T,PARTICLETYPE::d>& materialIndicator )
+  : _solidBoundary(solidBoundary), _materialIndicator(materialIndicator)
+{
+  this->getName() = "EulerSpheroidParticleDynamicsMaterialAwareWallCapture";
+}
+
+template<typename T, typename PARTICLETYPE, bool useCubicBounds, typename PCONDITION>
+void EulerSpheroidParticleDynamicsMaterialAwareWallCapture<T,PARTICLETYPE,useCubicBounds,PCONDITION>::process (
+  Particle<T,PARTICLETYPE>& particle, T timeStepSize )
+{
+
+EulerSpheroidParticleDynamics<T,PARTICLETYPE,PCONDITION>::process(particle,timeStepSize);
+
+  #ifdef SIMPLE_DEPO
+  if (depo==0)
+  {
+  boundaries::wallCaptureMaterialAwareSpheroidSubgrid(particle, _solidBoundary, _materialIndicator);
+  }
+#endif
+  #ifndef SIMPLE_DEPO
+  boundaries::wallCaptureMaterialAwareSpheroidSubgrid(particle, _solidBoundary, _materialIndicator);
+  #endif
+}
+
+
+template<typename T, typename PARTICLETYPE, bool useCubicBounds, typename PCONDITION>
+EulerSpheroidParticleDynamicsMaterialAwareWallCapturePeriodic<T,PARTICLETYPE,useCubicBounds,PCONDITION>::
+  EulerSpheroidParticleDynamicsMaterialAwareWallCapturePeriodic(
+    SolidBoundary<T,PARTICLETYPE::d>& solidBoundary,   SuperIndicatorMaterial<T,PARTICLETYPE::d>& materialIndicator, Vector<int,3> direction )
+  : EulerSpheroidParticleDynamicsPeriodic<T,PARTICLETYPE,PCONDITION>{direction}, _solidBoundary{solidBoundary}, _materialIndicator{materialIndicator}, _direction{direction}
+{
+  //EulerSpheroidParticleDynamicsPeriodic<T,PARTICLETYPE,PCONDITION>(direction);
+  this->getName() = "EulerSpheroidParticleDynamicsMaterialAwareWallCapture";
+}
+
+
+template<typename T, typename PARTICLETYPE, bool useCubicBounds, typename PCONDITION>
+void EulerSpheroidParticleDynamicsMaterialAwareWallCapturePeriodic<T,PARTICLETYPE,useCubicBounds,PCONDITION>::process (
+  Particle<T,PARTICLETYPE>& particle, T timeStepSize )
+{
+EulerSpheroidParticleDynamicsPeriodic<T,PARTICLETYPE,PCONDITION>::process(particle,timeStepSize);
+  //Apply wall capture
+  boundaries::wallCaptureMaterialAwareSpheroidSubgrid(particle, _solidBoundary, _materialIndicator);
+}
+
+
+
+
+
+template<typename T, typename PARTICLETYPE, typename PCONDITION>
+AnalyticalParticleDynamicsTranslationOnly<T,PARTICLETYPE,PCONDITION>::AnalyticalParticleDynamicsTranslationOnly ( )
+{
+
+  this->getName() = "AnalyticalParticleDynamicsTranslationOnly";
+}
+
+template<typename T, typename PARTICLETYPE, typename PCONDITION>
+void AnalyticalParticleDynamicsTranslationOnly<T,PARTICLETYPE,PCONDITION>::process (
+  Particle<T,PARTICLETYPE>& particle, T timeStepSize )
+{
+  using namespace particles::access;
+  //Check for particle condition
+  doWhenMeetingCondition<T,PARTICLETYPE,PCONDITION>( particle,[&](){
+    //Calculate acceleration
+    auto acceleration = getAcceleration( particle );
+    //Check for angular components
+    if constexpr ( providesAngle<PARTICLETYPE>() ) {
+      //Calculate angular acceleration
+      auto angularAcceleration = getAngAcceleration( particle );
+      //Euler algorithm
+      particles::dynamics::eulerIntegration(
+        particle, timeStepSize, acceleration, angularAcceleration );
+      //Check if rotation matrix provided
+      if constexpr ( providesRotationMatrix<PARTICLETYPE>() ) {
+        //Update rotation matrix
+        updateRotationMatrix( particle );
+      }
+    }
+    else {
+      //Euler algorithm without rotation
+      particles::dynamics::analyticalTranslation( particle, acceleration,
+        timeStepSize, particle. template getField<descriptors::MOBILITY, descriptors::FLUIDVEL>());
+    }
+  }); //doWhenMeetingCondition<T,PARTICLETYPE,PCONDITION>
+}
+
+template<typename T, typename PARTICLETYPE, typename PCONDITION>
+AnalyticalParticleDynamicsTranslationOnlyMaterialAwareWallCapture<T,PARTICLETYPE,PCONDITION>::AnalyticalParticleDynamicsTranslationOnlyMaterialAwareWallCapture ( SolidBoundary<T,PARTICLETYPE::d>& solidBoundary,
+    SuperIndicatorMaterial<T,PARTICLETYPE::d>& materialIndicator )
+  : _solidBoundary(solidBoundary), _materialIndicator(materialIndicator)
+{
+  this->getName() = "AnalyticalParticleDynamicsTranslationOnlyMaterialAwareWallCapture";
+}
+
+template<typename T, typename PARTICLETYPE,typename PCONDITION>
+void AnalyticalParticleDynamicsTranslationOnlyMaterialAwareWallCapture<T,PARTICLETYPE,PCONDITION>::process (
+  Particle<T,PARTICLETYPE>& particle, T timeStepSize )
+{
+
+ AnalyticalParticleDynamicsTranslationOnly<T,PARTICLETYPE,PCONDITION>::process(particle, timeStepSize);
+   boundaries::wallCaptureMaterialAware(particle, _solidBoundary, _materialIndicator); //doWhenMeetingCondition<T,PARTICLETYPE,PCONDITION>
+}
+
+
+
+
 } //namespace dynamics
 
 } //namespace particles

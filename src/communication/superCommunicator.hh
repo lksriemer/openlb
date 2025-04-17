@@ -53,12 +53,12 @@ SuperCommunicator<T,SUPER>::SuperCommunicator(
   }
 #endif
 
-  auto& cuboidGeometry = _super.getCuboidGeometry();
+  auto& cuboidDecomposition = _super.getCuboidDecomposition();
   auto& load = _super.getLoadBalancer();
 
   for (int iC = 0; iC < load.size(); ++iC) {
     _blockNeighborhoods.emplace_back(
-      std::make_unique<BlockCommunicationNeighborhood<T,SUPER::d>>( cuboidGeometry
+      std::make_unique<BlockCommunicationNeighborhood<T,SUPER::d>>( cuboidDecomposition
                                                                   , load, load.glob(iC)
                                                                   , _super.getOverlap()
 #ifdef PARALLEL_MODE_MPI

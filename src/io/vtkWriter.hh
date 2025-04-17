@@ -91,7 +91,6 @@ template<typename T, typename FUNCTOR, vtkType VTKTYPE>
 template<bool vtmAsMaster, typename F>
 void VTKwriter<T,FUNCTOR,VTKTYPE>::write(int iT, std::string nameCollection, F applyFunctors)
 {
-
   std::string fileExtension;
 
   int rank = 0;
@@ -111,9 +110,9 @@ void VTKwriter<T,FUNCTOR,VTKTYPE>::write(int iT, std::string nameCollection, F a
       if constexpr(VTKTYPE==VTI){
         fileExtension = ".vti";
 
-        //Retrieve cuboidGeometry from first functor (TODO: include into common functortype)
+        //Retrieve cuboidDecomposition from first functor (TODO: include into common functortype)
         auto& superStructure = dynamic_cast<SuperF<D,T>*>(_pointerVec[0])->getSuperStructure();
-        auto const& cGeometry = superStructure.getCuboidGeometry();
+        auto const& cGeometry = superStructure.getCuboidDecomposition();
         LoadBalancer<T> const& loadBalancer = superStructure.getLoadBalancer();
         rankSize = loadBalancer.getRankSize();
         //Ensure no gaps between vti files (TODO: still necessary?)
@@ -138,10 +137,9 @@ void VTKwriter<T,FUNCTOR,VTKTYPE>::write(int iT, std::string nameCollection, F a
 
           // get dimension/extent for each cuboid
           LatticeR<D> originCuboid(0.);
-          T originPhysR[D] = {T()};
-          cGeometry.getPhysR(originPhysR, globIC, originCuboid);
+          auto originPhysR = cGeometry.getPhysR(originCuboid.withPrefix(globIC));
           //Write preamble VTU
-          preambleVTI(fullNameFileData, extent0, extent1, originPhysR, delta);
+          preambleVTI(fullNameFileData, extent0, extent1, originPhysR.data(), delta);
           //Loop over functors or call individual one
           applyFunctors(fullNameFileData, extent1, globIC);
           //Close piece and vti

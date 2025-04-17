@@ -29,8 +29,7 @@
  */
 
 
-#include "olb3D.h"
-#include "olb3D.hh"
+#include <olb.h>
 
 using namespace olb;
 using namespace olb::descriptors;
@@ -55,7 +54,7 @@ void prepareGeometry( UnitConverter<T, DESCRIPTOR> const& converter, IndicatorF3
   superGeometry.rename( 0,2,indicator );
   superGeometry.rename( 2,1,{1,1,1} );
 
-  T eps = converter.getConversionFactorLength();
+  T eps = converter.getPhysDeltaX();
   Vector<T,3> origin( -eps, converter.getCharPhysLength() - eps, -eps );
   Vector<T,3> extend( converter.getCharPhysLength() + 2*eps, 2*eps, converter.getCharPhysLength() + 2*eps );
   IndicatorCuboid3D<T> lid( extend,origin );
@@ -87,8 +86,8 @@ void prepareLattice( UnitConverter<T, DESCRIPTOR> const& converter,
   lattice.defineDynamics<BulkDynamics>(superGeometry, 1);
 
   // Material=2,3 -->bulk dynamics, velocity boundary
-  setInterpolatedVelocityBoundary<T,DESCRIPTOR,BulkDynamics>(lattice, omega, superGeometry, 2);
-  setInterpolatedVelocityBoundary<T,DESCRIPTOR,BulkDynamics>(lattice, omega, superGeometry, 3);
+  boundary::set<boundary::InterpolatedVelocity>(lattice, superGeometry, 2);
+  boundary::set<boundary::InterpolatedVelocity>(lattice, superGeometry, 3);
 
   lattice.setParameter<descriptors::OMEGA>(omega);
 
@@ -130,13 +129,10 @@ void getResults( SuperLattice<T,DESCRIPTOR>& sLattice,
   const T saveT  = ( T )1.;
 
   if ( iT==0 ) {
-    SuperLatticeGeometry3D<T, DESCRIPTOR> geometry( sLattice, superGeometry );
     SuperLatticeCuboid3D<T, DESCRIPTOR> cuboid( sLattice );
     SuperLatticeRank3D<T, DESCRIPTOR> rank( sLattice );
     SuperLatticeDiscreteNormal3D<T, DESCRIPTOR> discreteNormal( sLattice, superGeometry, superGeometry.getMaterialIndicator({2, 3}) );
     SuperLatticeDiscreteNormalType3D<T, DESCRIPTOR> discreteNormalType( sLattice, superGeometry, superGeometry.getMaterialIndicator({2, 3}) );
-
-    vtmWriter.write( geometry );
     vtmWriter.write( cuboid );
     vtmWriter.write( rank );
     vtmWriter.write( discreteNormal );
@@ -186,7 +182,7 @@ int main( int argc, char **argv )
 
   // === 1st Step: Initialization ===
 
-  olbInit( &argc, &argv );
+  initialize( &argc, &argv );
   singleton::directories().setOutputDir( "./tmp/" );
   OstreamManager clout( std::cout,"main" );
 
@@ -213,13 +209,13 @@ int main( int argc, char **argv )
 
   // Instantiation of a cuboid geometry with weights
   int noCuboids = singleton::mpi().getSize();
-  CuboidGeometry3D<T> cuboidGeometry( cube, converter.getConversionFactorLength(), noCuboids );
+  CuboidDecomposition3D<T> cuboidDecomposition( cube, converter.getPhysDeltaX(), noCuboids );
 
   // Instantiation of a load balancer
-  HeuristicLoadBalancer<T> loadBalancer( cuboidGeometry );
+  HeuristicLoadBalancer<T> loadBalancer( cuboidDecomposition );
 
   // Instantiation of a super geometry
-  SuperGeometry<T,3> superGeometry( cuboidGeometry, loadBalancer );
+  SuperGeometry<T,3> superGeometry( cuboidDecomposition, loadBalancer );
 
   prepareGeometry( converter, cube, superGeometry );
 

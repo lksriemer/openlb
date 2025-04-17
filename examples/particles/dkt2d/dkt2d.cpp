@@ -48,8 +48,7 @@
 #define NEW_FRAMEWORK
 
 
-#include "olb2D.h"
-#include "olb2D.hh"
+#include <olb.h>
 
 using namespace olb;
 using namespace olb::descriptors;
@@ -139,7 +138,7 @@ void prepareLattice(
 
   /// Material=0 -->do nothing
   sLattice.defineDynamics<PorousParticleBGKdynamics>(superGeometry, 1);
-  setBounceBackBoundary(sLattice, superGeometry, 2);
+  boundary::set<boundary::BounceBack>(sLattice, superGeometry, 2);
 
   sLattice.setParameter<descriptors::OMEGA>(converter.getLatticeRelaxationFrequency());
 
@@ -191,10 +190,8 @@ void getResults(SuperLattice<T, DESCRIPTOR>& sLattice,
 
   if (iT == 0) {
     converter.write("dkt");
-    SuperLatticeGeometry2D<T, DESCRIPTOR> geometry(sLattice, superGeometry);
     SuperLatticeCuboid2D<T, DESCRIPTOR> cuboid(sLattice);
     SuperLatticeRank2D<T, DESCRIPTOR> rank(sLattice);
-    vtkWriter.write(geometry);
     vtkWriter.write(cuboid);
     vtkWriter.write(rank);
     vtkWriter.createMasterFile();
@@ -248,7 +245,7 @@ void getResults(SuperLattice<T, DESCRIPTOR>& sLattice,
 int main(int argc, char* argv[])
 {
   /// === 1st Step: Initialization ===
-  olbInit(&argc, &argv);
+  initialize(&argc, &argv);
   singleton::directories().setOutputDir("./tmp/");
   OstreamManager clout(std::cout, "main");
 
@@ -270,13 +267,13 @@ int main(int argc, char* argv[])
   IndicatorCuboid2D<T> cuboid(extend, origin);
 
 #ifdef PARALLEL_MODE_MPI
-  CuboidGeometry2D<T> cuboidGeometry(cuboid, converter.getConversionFactorLength(), singleton::mpi().getSize());
+  CuboidDecomposition2D<T> cuboidDecomposition(cuboid, converter.getPhysDeltaX(), singleton::mpi().getSize());
 #else
-  CuboidGeometry2D<T> cuboidGeometry(cuboid, converter.getConversionFactorLength(), 1);
+  CuboidDecomposition2D<T> cuboidDecomposition(cuboid, converter.getPhysDeltaX(), 1);
 #endif
 
-  HeuristicLoadBalancer<T> loadBalancer(cuboidGeometry);
-  SuperGeometry<T,2> superGeometry(cuboidGeometry, loadBalancer, 2);
+  HeuristicLoadBalancer<T> loadBalancer(cuboidDecomposition);
+  SuperGeometry<T,2> superGeometry(cuboidDecomposition, loadBalancer, 2);
   prepareGeometry(converter, superGeometry);
 
   /// === 3rd Step: Prepare Lattice ===
@@ -316,7 +313,7 @@ int main(int argc, char* argv[])
                         coefficientOfRestitution, coefficientKineticFriction, coefficientStaticFriction);
 
 
-  T epsilon = eps * converter.getConversionFactorLength();
+  T epsilon = eps * converter.getPhysDeltaX();
   T radius = radiusP;
 
   // Create Particle 1

@@ -29,8 +29,7 @@
  */
 
 
-#include "olb3D.h"
-#include "olb3D.hh"
+#include <olb.h>
 
 using namespace olb;
 using namespace olb::descriptors;
@@ -117,12 +116,12 @@ void prepareLattice( ThermalUnitConverter<T, NSDESCRIPTOR, TDESCRIPTOR> &convert
   ADlattice.defineDynamics<AdvectionDiffusionBGKdynamics>(superGeometry.getMaterialIndicator({1, 2, 3, 4}));
   NSlattice.defineDynamics<ForcedBGKdynamics>(superGeometry, 4);
   NSlattice.defineDynamics<ForcedBGKdynamics>(superGeometry, 1);
-  setBounceBackBoundary(NSlattice, superGeometry, 2);
-  setBounceBackBoundary(NSlattice, superGeometry, 3);
+  boundary::set<boundary::BounceBack>(NSlattice, superGeometry, 2);
+  boundary::set<boundary::BounceBack>(NSlattice, superGeometry, 3);
 
   /// sets boundary
-  setAdvectionDiffusionTemperatureBoundary(ADlattice, superGeometry, 2);
-  setAdvectionDiffusionTemperatureBoundary(ADlattice, superGeometry, 3);
+  boundary::set<boundary::AdvectionDiffusionDirichlet>(ADlattice, superGeometry, 2);
+  boundary::set<boundary::AdvectionDiffusionDirichlet>(ADlattice, superGeometry, 3);
 
   /// define initial conditions
   AnalyticalConst3D<T,T> rho(1.);
@@ -164,10 +163,8 @@ void getResults(ThermalUnitConverter<T, NSDESCRIPTOR, TDESCRIPTOR> &converter,
   if (iT == 0) {
     /// Writes the geometry, cuboid no. and rank no. as vti file for visualization
     SuperVTMwriter3D<T> vtkWriter("rayleighBenard3d");
-    SuperLatticeGeometry3D<T, NSDESCRIPTOR> geometry(NSlattice, superGeometry);
     SuperLatticeCuboid3D<T, NSDESCRIPTOR> cuboid(NSlattice);
     SuperLatticeRank3D<T, NSDESCRIPTOR> rank(NSlattice);
-    vtkWriter.write(geometry);
     vtkWriter.write(cuboid);
     vtkWriter.write(rank);
 
@@ -215,7 +212,7 @@ int main(int argc, char *argv[])
 {
   /// === 1st Step: Initialization ===
   OstreamManager clout(std::cout,"main");
-  olbInit(&argc, &argv);
+  initialize(&argc, &argv);
   singleton::directories().setOutputDir("./tmp/");
 
   ThermalUnitConverter<T, NSDESCRIPTOR, TDESCRIPTOR> converter(
@@ -241,13 +238,13 @@ int main(int argc, char *argv[])
   std::vector<T> origin(3,T());
   IndicatorCuboid3D<T> cuboid(extend, origin);
 
-  /// Instantiation of a cuboidGeometry with weights
-  CuboidGeometry3D<T> cuboidGeometry(cuboid, converter.getPhysDeltaX(), singleton::mpi().getSize());
-  cuboidGeometry.setPeriodicity(true, false, true);
+  /// Instantiation of a cuboidDecomposition with weights
+  CuboidDecomposition3D<T> cuboidDecomposition(cuboid, converter.getPhysDeltaX(), singleton::mpi().getSize());
+  cuboidDecomposition.setPeriodicity({true, false, true});
 
-  HeuristicLoadBalancer<T> loadBalancer(cuboidGeometry);
+  HeuristicLoadBalancer<T> loadBalancer(cuboidDecomposition);
 
-  SuperGeometry<T,3> superGeometry(cuboidGeometry, loadBalancer);
+  SuperGeometry<T,3> superGeometry(cuboidDecomposition, loadBalancer);
 
   prepareGeometry(superGeometry, converter);
 

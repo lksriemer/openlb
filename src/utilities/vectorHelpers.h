@@ -1,6 +1,7 @@
 /*  This file is part of the OpenLB library
  *
  *  Copyright (C) 2013, 2014 Lukas Baron, Mathias J. Krause
+ *                2023 Julius Jessberger
  *  E-mail contact: info@openlb.net
  *  The most recent release of OpenLB can be downloaded at
  *  <http://www.openlb.net/>
@@ -33,7 +34,7 @@
 #include "io/ostreamManager.h"
 #include "utilities/omath.h"
 #include "core/vector.h"
-#include "aDiff.h"
+#include "utilities/aDiff.h"
 
 namespace olb {
 
@@ -47,55 +48,6 @@ template <class T, unsigned DIM> inline ADf<T,DIM> sqrt (const ADf<T,DIM>& a);
 
 template<typename S>
 using StdVector = std::vector<S,std::allocator<S>>;
-
-/// return true if a is close to zero
-template <typename T>
-inline bool nearZero(T a)
-{
-  if (a==T()) {
-    return true;
-  }
-  T EPSILON = std::numeric_limits<T>::epsilon();
-  if (a > -EPSILON && a < EPSILON) {
-    return true;
-  }
-  else {
-    return false;
-  }
-}
-
-template <typename T>
-inline bool nearZero(T a, T epsilon)
-{
-  if (a > -epsilon && a < epsilon) {
-    return true;
-  }
-  else {
-    return false;
-  }
-}
-
-template<typename T, typename U=T, typename W=T>
-inline bool approxEqual(T a, U b, W epsilon)
-{
-  if (a==b) {
-    return true;
-  }
-  return nearZero<T>(a - b, epsilon);
-}
-
-template<typename T, typename U=T>
-inline bool approxEqual(T a, U b)
-{
-  if (a==b) {
-    return true;
-  }
-  if (nearZero(a) && nearZero(b)) {
-    return true;
-  }
-  T EPSILON = std::numeric_limits<T>::epsilon()*4.*util::fabs(a);
-  return approxEqual(a,b,EPSILON);
-}
 
 template <class T>
 inline void copyN(T c[], const T a[], const unsigned dim) any_platform
@@ -140,16 +92,14 @@ std::vector<T> fromVector2(const Vector<T,2>& vec)
   return v;
 }
 
-
-/// l2 norm of a vector of arbitrary length
+/// l2 norm to the power of 2 of a vector of arbitrary length
 template <typename T>
-T norm(const std::vector<T>& a)
+T norm2(const T* a, unsigned size)
 {
-  T v(0);
-  for (unsigned iD=0; iD<a.size(); iD++) {
+  T v{};
+  for (unsigned iD=0; iD<size; ++iD) {
     v += a[iD]*a[iD];
   }
-  v = util::sqrt(v);
   return v;
 }
 
@@ -157,11 +107,21 @@ T norm(const std::vector<T>& a)
 template <typename T>
 T norm2(const std::vector<T>& a)
 {
-  T v = T();
-  for (unsigned iD=0; iD<a.size(); iD++) {
-    v += a[iD]*a[iD];
-  }
-  return v;
+  return norm2(a.data(), a.size());
+}
+
+/// l2 norm of a vector of arbitrary length
+template <typename T>
+T norm(const T* a, unsigned size)
+{
+  return util::sqrt(norm2(a, size));
+}
+
+/// l2 norm of a vector of arbitrary length
+template <typename T>
+T norm(const std::vector<T>& a)
+{
+  return norm(a.data(), a.size());
 }
 
 /// dot product, only valid in 3d
@@ -210,7 +170,7 @@ std::vector<T> normalize(const std::vector<T>& a)
 
 /// applies floor to each component of a vector
 template <typename T, unsigned Size>
-Vector<T,Size> floor(const Vector<T,Size>& a)
+Vector<T,Size> floor(const Vector<T,Size>& a) any_platform
 {
   Vector<T,Size> out;
   for (unsigned int iDim=0; iDim < Size; ++iDim) {
@@ -221,7 +181,7 @@ Vector<T,Size> floor(const Vector<T,Size>& a)
 
 /// applies ceil to each component of a vector
 template <typename T, unsigned Size>
-Vector<T,Size> ceil(const Vector<T,Size>& a)
+Vector<T,Size> ceil(const Vector<T,Size>& a) any_platform
 {
   Vector<T,Size> out;
   for (unsigned int iDim=0; iDim < Size; ++iDim) {
@@ -348,6 +308,58 @@ Vector<T,3> angleBetweenVectors(const Vector<T,3>& a, const Vector<T,3>& b)
   return angles;
 }
 
+template <typename T>
+constexpr T determinant(const Vector<T,2>& v0, const Vector<T,2>& v1)
+{
+  return crossProduct2D(v0, v1);
+}
+
+template <typename T>
+constexpr T determinant(const Vector<T,3>& v0, const Vector<T,3>& v1,
+  const Vector<T,3>& v2)
+{
+  return v0[0]*v1[1]*v2[2] + v1[0]*v2[1]*v0[2] + v2[0]*v0[1]*v1[2]
+    - v0[2]*v1[1]*v2[0] - v1[2]*v2[1]*v0[0] - v2[2]*v0[1]*v1[0];
+}
+
+
+/// Solve (a0 a1) x = rhs
+// Returns +-inf if a0, a1 are linearly dependent and rhs is not (no solution)
+// Returns nan if a0, a1, rhs are linearly dependent (infinitely many solutions)
+template <typename T>
+Vector<T,2> solveLinearSystem(const Vector<T,2>& a0,
+  const Vector<T,2>& a1, const Vector<T,2>& rhs)
+{
+  const T det = crossProduct2D(a0, a1);
+  return Vector<T,2> (crossProduct2D(rhs, a1) / det, crossProduct2D(a0, rhs) / det);
+}
+
+template <typename T>
+Vector<T,3> solveLinearSystem_help(const Vector<T,3>& a0,
+  const Vector<T,3>& a1, const Vector<T,3>& a2, const Vector<T,3>& rhs,
+  T det)
+{
+  Vector<T,3> res;
+  res[0] = determinant(rhs, a1, a2) / det;
+  res[1] = determinant(a0, rhs, a2) / det;
+  res[2] = determinant(a0, a1, rhs) / det;
+  return res;
+}
+
+/// Solve (a0 a1 a2) x = rhs
+// Returns +-inf if a0, a1, a2 are linearly dependent and rhs is not (no solution)
+// Returns nan if a0, a1, a2, rhs are linearly dependent (infinitely many solutions)
+// Cf. https://danceswithcode.net/engineeringnotes/linear_equations/linear_equations.html
+// for formula
+template <typename T>
+Vector<T,3> solveLinearSystem(const Vector<T,3>& a0,
+  const Vector<T,3>& a1, const Vector<T,3>& a2, const Vector<T,3>& rhs)
+{
+  const T det = determinant(a0, a1, a2);
+  return solveLinearSystem_help(a0, a1, a2, rhs, det);
+}
+
+
 /*
 /// algorithm by Möller–Trumbore (TODO add ref), implemented by Lucas Cruz and Mathias J. Krause
 /// returns true if there is an intersection of a triangle given by (point0, point1, point1) and a ray given by its origin and direction and computes the distance
@@ -469,6 +481,33 @@ struct ContainerCreator<Vector<T,SIZE>> {
     return C{};
   }
 };
+
+/// @brief Compute serial index of symmetric tensor
+/// @tparam DIM Spatial dimension
+/// @param i First spatial index
+/// @param j Second spatial index
+/// @return Serialized index, as it is used in computeStress
+template<unsigned DIM>
+unsigned serialSymmetricTensorIndex(unsigned i, unsigned j) any_platform
+{
+  OLB_PRECONDITION(DIM > 1);
+  OLB_PRECONDITION(DIM < 4);
+  if constexpr (DIM==2) {
+    return i+j;
+  }
+  else if constexpr (DIM==3) {
+    const unsigned res = i+j;
+    if ((i>0) && (j>0)) {
+      return res+1;
+    } else {
+      return res;
+    }
+  }
+  else {
+    // other dimensions are not implemented
+    exit(1);
+  }
+}
 
 } // namespace util
 

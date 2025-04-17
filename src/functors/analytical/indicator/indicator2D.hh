@@ -28,6 +28,7 @@
 #include "indicatorBaseF2D.hh"
 #include "indicatorF2D.hh"
 #include "indicCalc2D.hh"
+#include "indicatorRotate.hh"
 #include "indicMod.hh"
 
 #include "smoothIndicatorBaseF2D.hh"

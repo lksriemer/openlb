@@ -232,7 +232,7 @@ void checkSurfaceRelocation(
 {
   //Retrieve cuboid geometry
   /* auto& superStructure = sParticleSystem.getSuperStructure(); */
-  /* auto& cuboidGeometry = superStructure.getCuboidGeometry(); */
+  /* auto& cuboidDecomposition = superStructure.getCuboidDecomposition(); */
   //Retrieve position and circumRadius
   auto position = access::getPosition( particle );
   const T circumRadius = contact::evalCircumRadius(particle, physDeltaX);
@@ -262,7 +262,7 @@ void checkRelocation(
 
   //Retrieve load balancer and cuboid geometry
   auto& superStructure = sParticleSystem.getSuperStructure();
-  auto& cuboidGeometry = superStructure.getCuboidGeometry();
+  auto& cuboidDecomposition = superStructure.getCuboidDecomposition();
 
   //Loop over valid particles
   forParticlesInSuperParticleSystem( sParticleSystem,
@@ -278,19 +278,23 @@ void checkRelocation(
     }
     // Retrieve and update particle position
     // if a periodic setup is used and the particle is out of bounds
-    const PhysR<T,D> position = applyPeriodicityToPosition(cuboidGeometry,
+    const PhysR<T,D> position = applyPeriodicityToPosition(cuboidDecomposition,
         periodicity, particle.template getField<GENERAL,POSITION>());
     //Find particle system by position
     int globiCcentre = -1;
     // getC doesn't treat periodicity! We can only use it because we updated it before
-    const bool particleCentreInDomain = cuboidGeometry.getC(position, globiCcentre);
+    auto iC = cuboidDecomposition.getC(position);
+    const bool particleCentreInDomain = iC.operator bool();
+    if (particleCentreInDomain) {
+      globiCcentre = *iC;
+    }
     /*
     // Retrieve particle position
     PhysR<T,D> position = particle.template getField<GENERAL,POSITION>();
     //Find particle system by position
     int globiCcentre = -1;
     const bool particleCentreInDomain = getCuboid(
-        cuboidGeometry, periodicity, position, globiCcentre);
+        cuboidDecomposition, periodicity, position, globiCcentre);
     */
     // Replace the position with the updated position
     // if no periodicity is used or the particle isn't out of bounds nothing happens
@@ -298,8 +302,8 @@ void checkRelocation(
     // TODO: Add constexpr check if the setup is periodic or not before continuously overwriting the position here
     particle.template setField<GENERAL, POSITION>(position);
     /*if(isPeriodic(periodicity)) {
-      const PhysR<T,D> min = getCuboidMin<T,D>(cuboidGeometry);
-      const PhysR<T,D> max = getCuboidMax<T,D>(cuboidGeometry, min);
+      const PhysR<T,D> min = getCuboidMin<T,D>(cuboidDecomposition);
+      const PhysR<T,D> max = getCuboidMax<T,D>(cuboidDecomposition, min);
 
       for(unsigned iD=0; iD<D; ++iD) {
         position[iD] = applyPeriodicityToPosition(
@@ -407,7 +411,7 @@ void fillSendBuffer(
 //Send data for inter-core relocation (particle agnostic)
 void sendMappedData(
   std::map<int, std::vector<std::uint8_t> >& rankDataMapSorted,
-  const std::unordered_set<int>& availableRanks,
+  const std::set<int>& availableRanks,
   const std::size_t serialSize,
   MPI_Comm Comm,
   singleton::MpiNonBlockingHelper& mpiNbHelper )
@@ -491,8 +495,8 @@ void checkInvalidationOnReceival(
     } // if( std::find() )
     /* else { */
     /*   // Check if the current block still touches the surface, if not then invalidate the particle */
-    /*   auto& cuboidGeometry = superStructure.getCuboidGeometry(); */
-    /*   const T physDeltaX = cuboidGeometry.getMotherCuboid().getDeltaR(); */
+    /*   auto& cuboidDecomposition = superStructure.getCuboidDecomposition(); */
+    /*   const T physDeltaX = cuboidDecomposition.getMotherCuboid().getDeltaR(); */
     /*   const T circumRadius = contact::evalCircumRadius(particle, physDeltaX); */
     /*   const int globiCcenter = particle.template getField<PARALLELIZATION, IC>(); */
     /*   bool touchesSurface = false; */
@@ -570,7 +574,7 @@ void assignParticleToIC(
 //WARNING: Expects a message (potentially empty) from all availableRanks
 template<typename F>
 void receiveAndExecuteForData(
-  const std::unordered_set<int>& availableRanks,
+  const std::set<int>& availableRanks,
   std::size_t serialSize,
   MPI_Comm Comm,
   singleton::MpiNonBlockingHelper& mpiNbHelper,
@@ -732,7 +736,7 @@ void updateParticleCuboidDistribution(
 
 template<typename DATA>
 void collectDataAndAppendVector( std::vector<DATA>& dataVector,
-  std::unordered_set<int>& availableRanks,
+  std::set<int>& availableRanks,
   singleton::MpiNonBlockingHelper& mpiNbHelper,
   MPI_Comm commGroup = MPI_COMM_WORLD)
 {

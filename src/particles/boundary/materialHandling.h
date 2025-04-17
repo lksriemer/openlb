@@ -67,15 +67,18 @@ bool checkMaterialVicinity(
   //Retrieve super geometry
   auto& sGeometry = materialIndicator.getSuperGeometry();
   //Get lattice position
-  LatticeR<D+1> latticeR;
-  bool foundPos = sGeometry.getCuboidGeometry().getFloorLatticeR(position, latticeR);
-  if (!foundPos) {std::cerr << "LatticeR (" << latticeR << ") not found!" << std::endl; }
-  //Check whether responsible iC
-  bool isLocal = sGeometry.getLoadBalancer().isLocal(latticeR[0]);
-  if(isLocal){
-    //Check if in vicinity of specified material numbers
-    bool vicinity = materialVicinity<T,D>( materialIndicator, latticeR );
-    return vicinity;
+  auto latticeR = sGeometry.getCuboidDecomposition().getFloorLatticeR(position);
+  bool foundPos = latticeR.operator bool();
+  if (!foundPos) {
+    std::cerr << "Position (" << position << ") not found!" << std::endl;
+  } else {
+    //Check whether responsible iC
+    bool isLocal = sGeometry.getLoadBalancer().isLocal((*latticeR)[0]);
+    if(isLocal){
+      //Check if in vicinity of specified material numbers
+      bool vicinity = materialVicinity<T,D>(materialIndicator, *latticeR);
+      return vicinity;
+    }
   }
   return false;
 }

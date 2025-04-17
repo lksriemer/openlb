@@ -35,8 +35,7 @@
  */
 
 
-#include "olb2D.h"
-#include "olb2D.hh"
+#include <olb.h>
 
 using namespace olb;
 using namespace olb::descriptors;
@@ -218,10 +217,8 @@ T getResults( SuperLattice<T, TDESCRIPTOR>& ADlattice,
 
   if (iT == 0) {
     /// Writes the geometry, cuboid no. and rank no. as vti file for visualization
-    SuperLatticeGeometry2D<T, TDESCRIPTOR> geometry(ADlattice, superGeometry);
     SuperLatticeCuboid2D<T, TDESCRIPTOR> cuboid(ADlattice);
     SuperLatticeRank2D<T, TDESCRIPTOR> rank(ADlattice);
-    vtkWriter.write(geometry);
     vtkWriter.write(cuboid);
     vtkWriter.write(rank);
 
@@ -316,20 +313,20 @@ void simulate(int N, int statIter, T mue, T peclet, T physLength)
 
   IndicatorCuboid2D<T> cuboid(extend, origin);
 
-  /// Instantiation of an empty cuboidGeometry
+  /// Instantiation of an empty cuboidDecomposition
 #ifdef PARALLEL_MODE_MPI
   const int noOfCuboids = singleton::mpi().getSize();
 #else
   const int noOfCuboids = 1;
 #endif
-  CuboidGeometry2D<T> cuboidGeometry(cuboid, converter.getPhysDeltaX(), noOfCuboids);
-  cuboidGeometry.setPeriodicity(true, true);
+  CuboidDecomposition2D<T> cuboidDecomposition(cuboid, converter.getPhysDeltaX(), noOfCuboids);
+  cuboidDecomposition.setPeriodicity({true, true});
 
   /// Instantiation of a loadBalancer
-  HeuristicLoadBalancer<T> loadBalancer(cuboidGeometry);
+  HeuristicLoadBalancer<T> loadBalancer(cuboidDecomposition);
 
   /// Instantiation of a superGeometry
-  SuperGeometry<T,2> superGeometry(cuboidGeometry, loadBalancer, 2);
+  SuperGeometry<T,2> superGeometry(cuboidDecomposition, loadBalancer, 2);
   prepareGeometry(superGeometry, cuboid);
 
   /// === 3rd Step: Prepare Lattice ===
@@ -372,7 +369,7 @@ void simulate(int N, int statIter, T mue, T peclet, T physLength)
 int main(int argc, char *argv[])
 {
   OstreamManager clout(std::cout,"main");
-  olbInit(&argc, &argv);
+  initialize(&argc, &argv);
 
   singleton::directories().setOutputDir("./tmp/");
 

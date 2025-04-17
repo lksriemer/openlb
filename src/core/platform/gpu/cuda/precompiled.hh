@@ -35,5 +35,10 @@
 #include "core/platform/gpu/cuda/dynamics.hh"
 #include "core/platform/gpu/cuda/statistics.hh"
 #include "core/platform/gpu/cuda/communicator.hh"
+#include "core/platform/gpu/cuda/fieldReduction.hh"
+
+#include "fsi/platform/gpu/cuda/integral.hh"
+
+#include "refinement/platform/gpu/cuda/operator.hh"
 
 #endif

@@ -25,7 +25,7 @@
 #define HYPERPLANE_3D_H
 
 #include "core/vector.h"
-#include "geometry/cuboid3D.h"
+#include "geometry/cuboid.h"
 
 namespace olb {
 
@@ -85,6 +85,9 @@ struct Hyperplane3D {
   /// Rotate the spanning vectors around the Z axis
   /// \return Hyperplane3D reference for further construction
   Hyperplane3D& rotateSpanAroundZ(T r);
+  /// Read origin and normal from XML
+  /// \return Hyperplane3D reference for further construction
+  Hyperplane3D& parseFromXML(const std::string& xml);
 
   /// \return true iff normal is orthogonal to X, Y axis
   bool isXYPlane() const;

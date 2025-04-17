@@ -61,10 +61,10 @@ public:
 /// Get material numbers of multiple solid boundaries in std::vector
 /// - can be used to e.g. limit setBoundaryField() by material number
 template<typename T, unsigned D>
-std::unordered_set<int> getLatticeMaterials(
+std::set<int> getLatticeMaterials(
   const std::vector<SolidBoundary<T,D>>& solidBoundaries )
 {
-  std::unordered_set<int> materials;
+  std::set<int> materials;
   for (const SolidBoundary<T,D>& solidBoundary : solidBoundaries ){
     materials.insert( solidBoundary.getLatticeMaterial() );
   }

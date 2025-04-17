@@ -1,6 +1,6 @@
 /*  This file is part of the OpenLB library
  *
- *  Copyright (C) 2022 Jan Eric Marquardt
+ *  Copyright (C) 2022 Jan Eric Marquardt, 2023 Julius Jessberger
  *  E-mail contact: info@openlb.net
  *  The most recent release of OpenLB can be downloaded at
  *  <http://www.openlb.net/>
@@ -24,6 +24,8 @@
 #ifndef MATRIX_H
 #define MATRIX_H
 
+#include "vectorHelpers.h"
+
 namespace olb {
 
 /// Matrix with a defined number of ROWS and columns (COLS)
@@ -39,7 +41,7 @@ public:
   static constexpr unsigned cols = COLS;
 
   constexpr Matrix() {};
-  constexpr Matrix(T data[ROWS][COLS])
+  constexpr Matrix(const T data[ROWS][COLS])
   {
     for (unsigned m = 0; m < ROWS; ++m) {
       for (unsigned n = 0; n < COLS; ++n) {
@@ -133,6 +135,41 @@ public:
     return result;
   }
 };
+
+
+namespace util {
+
+template <typename T>
+constexpr auto determinant(const Matrix<T,2,2>& m)
+{
+  return determinant<T>(m[0], m[1]);
+}
+
+template <typename T>
+constexpr auto determinant(const Matrix<T,3,3>& m)
+{
+  return determinant<T>(m[0], m[1], m[2]);
+}
+
+/// Solve a * x = rhs
+// Returns +-inf if a[0], a[1] are linearly dependent and rhs is not (no solution)
+// Returns nan if a[0], a[1], rhs are linearly dependent (infinitely many solutions)
+template <typename T>
+auto solveLinearSystem(const Matrix<T,2,2>& a, const Vector<T,2>& rhs)
+{
+  return solveLinearSystem(a[0], a[1], rhs);
+}
+
+/// Solve (a0 a1 a2) x = rhs
+// Returns +-inf if a0, a1, a2 are linearly dependent and rhs is not (no solution)
+// Returns nan if a0, a1, a2, rhs are linearly dependent (infinitely many solutions)
+template <typename T>
+auto solveLinearSystem(const Matrix<T,3,3>& a, const Vector<T,3>& rhs)
+{
+  return solveLinearSystem(a[0], a[1], a[2], rhs);
+}
+
+}
 
 } // namespace olb
 

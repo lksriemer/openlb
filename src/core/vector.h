@@ -37,6 +37,7 @@
 #include "scalarVector.h"
 #include "utilities/omath.h"
 #include "utilities/oalgorithm.h"
+
 #include "olbDebug.h"
 
 namespace olb {
@@ -51,14 +52,6 @@ private:
   friend typename ScalarVector<T,D,Vector<T,D>>::type;
 
 protected:
-  constexpr const T* getComponentPointer(unsigned iDim) const any_platform
-  {
-    return &_data[iDim];
-  }
-  constexpr T* getComponentPointer(unsigned iDim) any_platform
-  {
-    return &_data[iDim];
-  }
 
 public:
   using value_t = T;
@@ -91,12 +84,20 @@ public:
     _data{T(indexes)...}
   { }
 
-  // Should be declared explicit
+  /// Construct from Array-of-Structures element at v
   template <typename U>
   constexpr Vector(const U* v) any_platform
   {
     for (unsigned iDim=0; iDim < D; ++iDim) {
       _data[iDim] = static_cast<T>(v[iDim]);
+    }
+  }
+
+  /// Construct from Structure-of-Arrays addresses given by ref and index idx
+  constexpr explicit Vector(const Vector<T*,D>& ref, std::size_t idx) any_platform
+  {
+    for (unsigned iDim=0; iDim < D; ++iDim) {
+      _data[iDim] = ref[iDim][idx];
     }
   }
 
@@ -131,6 +132,16 @@ public:
     for (unsigned iDim=0; iDim < D; ++iDim) {
       _data[iDim] = f(iDim);
     }
+  }
+
+  constexpr const T* getComponentPointer(unsigned iDim) const any_platform
+  {
+    return &_data[iDim];
+  }
+
+  constexpr T* getComponentPointer(unsigned iDim) any_platform
+  {
+    return &_data[iDim];
   }
 
   template <typename U, typename IMPL_>
@@ -183,12 +194,37 @@ public:
     return D;
   }
 
+  /// Return new (prefix,this...) vector
   constexpr Vector<T,D+1> withPrefix(T prefix) const any_platform
   {
     Vector<T,D+1> tmp;
     tmp[0] = prefix;
     for (unsigned iDim=0; iDim < D; ++iDim) {
       tmp[iDim+1] = _data[iDim];
+    }
+    return tmp;
+  }
+
+  /// Return vector without first element
+  constexpr Vector<T,D-1> withoutPrefix() const requires (D > 1) any_platform
+  {
+    Vector<T,D-1> tmp{};
+    for (unsigned iDim=1; iDim < D; ++iDim) {
+      tmp[iDim-1] = _data[iDim];
+    }
+    return tmp;
+  }
+
+  /// Return new (this..., rhs...) vector
+  template <unsigned E>
+  constexpr Vector<T,D+E> append(const Vector<T,E>& rhs) const any_platform
+  {
+    Vector<T,D+E> tmp;
+    for (unsigned iDim=0; iDim < D; ++iDim) {
+      tmp[iDim] = _data[iDim];
+    }
+    for (unsigned iDim=0; iDim < E; ++iDim) {
+      tmp[iDim+D] = rhs[iDim];
     }
     return tmp;
   }
@@ -213,6 +249,9 @@ public:
 
 };
 
+template <typename T, typename... Ts>
+Vector(T&& t, Ts&&... ts) -> Vector<std::remove_cvref_t<T>,1+sizeof...(Ts)>;
+
 template <typename T, typename IMPL, typename IMPL_>
 constexpr T crossProduct2D(
   const ScalarVector<T,2,IMPL>& a, const ScalarVector<T,2,IMPL_>& b)
@@ -232,7 +271,7 @@ constexpr Vector<T,3> crossProduct3D(
 }
 
 template <typename T, unsigned D, typename IMPL, typename IMPL_>
-auto crossProduct(const ScalarVector<T,D,IMPL>& a, const ScalarVector<T,D,IMPL_>& b){
+auto crossProduct(const ScalarVector<T,D,IMPL>& a, const ScalarVector<T,D,IMPL_>& b) any_platform {
   static_assert((D==2 || D==3), "ERROR: Unknown dimension!");
   if constexpr (D==2){
     return crossProduct2D(a,b);
@@ -259,6 +298,13 @@ constexpr Vector<T,D> abs(const ScalarVector<T,D,IMPL>& a)
   });
 }
 
+template <typename T, unsigned D, typename IMPL>
+constexpr Vector<T,D> round(const ScalarVector<T,D,IMPL>& a) any_platform
+{
+  return Vector<T,D>([&a](unsigned iDim) -> T {
+    return util::round(a[iDim]);
+  });
+}
 
 template <typename T, unsigned D, typename U, typename IMPL>
 constexpr meta::enable_if_arithmetic_t<U, Vector<T,D>>
@@ -359,6 +405,17 @@ operator/ (const ScalarVector<T,D,IMPL>& a, U b) any_platform
   return Vector<T,D>(a) /= b;
 }
 
+template <typename T, unsigned D, typename U, typename IMPL>
+constexpr meta::enable_if_arithmetic_t<U, Vector<T,D>>
+operator% (const ScalarVector<T,D,IMPL>& a, U b) any_platform
+{
+  Vector<T,D> r;
+  for (unsigned iDim=0; iDim < D; ++iDim) {
+    r[iDim] = a[iDim] % b;
+  }
+  return r;
+}
+
 template<typename T, unsigned D, typename U, typename IMPL>
 constexpr meta::enable_if_arithmetic_t<U, bool>
 operator< (U lhs, const ScalarVector<T,D,IMPL>& rhs) any_platform
@@ -405,6 +462,25 @@ constexpr Vector<T,D> maxv(
   });
 }
 
+template <typename T, unsigned D, typename IMPL>
+constexpr T max(const ScalarVector<T,D,IMPL>& v)
+{
+  T max = v[0];
+  for (unsigned iD=1; iD < D; ++iD) {
+    if (v[iD] > max) {
+      max = v[iD];
+    }
+  }
+  return max;
+}
+
+
+/// Vector storing a single field instance
+template<typename T, typename DESCRIPTOR, typename FIELD>
+using FieldD = Vector<
+  typename FIELD::template value_type<T>,
+  DESCRIPTOR::template size<FIELD>()
+>;
 
 } // end namespace olb
 

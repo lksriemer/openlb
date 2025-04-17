@@ -28,12 +28,24 @@
 #include "analyticalF.h"
 #include "functors/lattice/blockBaseF2D.h"
 #include "functors/lattice/superBaseF2D.h"
-#include "geometry/cuboidGeometry2D.h"
+#include "geometry/cuboidDecomposition.h"
 #include "geometry/blockGeometry.h"
 #include "geometry/superGeometry.h"
 
 namespace olb {
 
+/// Converts block functors to analytical functors (special version for 2D)
+template <typename T, typename W = T>
+class SpecialAnalyticalFfromBlockF2D final : public AnalyticalF2D<T,W> {
+protected:
+  BlockF2D<W>& _f;
+  Cuboid2D<T>& _cuboid;
+  Vector<T,2> _delta;
+  T _scale;
+public:
+  SpecialAnalyticalFfromBlockF2D(BlockF2D<W>& f, Cuboid2D<T>& cuboid, Vector<T,2> delta, T scale = 1.);
+  bool operator() (W output[], const T physC[]) override;
+};
 
 /// Converts block functors to analytical functors
 template <typename T, typename W = T>
@@ -53,8 +65,8 @@ protected:
   const bool _communicateToAll;
   const bool _communicateOverlap;
 
-  SuperF2D<T>&         _f;
-  CuboidGeometry2D<T>& _cuboidGeometry;
+  SuperF2D<T>& _f;
+  CuboidDecomposition<T,2>& _cuboidDecomposition;
 
   std::vector<std::unique_ptr<AnalyticalFfromBlockF2D<T,W>>> _blockF;
 public:

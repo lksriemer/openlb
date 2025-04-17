@@ -29,7 +29,7 @@ include rules.mk
 ###########################################################################
 ## Embedded dependencies (optional)
 
-ifeq ($(USE_EMBEDDED_DEPENDENCIES), ON)
+ifneq ($(USE_EMBEDDED_DEPENDENCIES), OFF)
 dependencies:
 	$(MAKE) CXX='$(CXX)' CC='$(CC)' -C external
 
@@ -50,7 +50,9 @@ CORE_CPP_FILES := \
 	src/communication/mpiManager.cpp \
 	src/communication/ompManager.cpp \
 	src/core/olbInit.cpp \
+	src/core/expr.cpp \
 	src/io/ostreamManager.cpp
+
 CORE_OBJ_FILES := $(CORE_CPP_FILES:.cpp=.o)
 
 %.o: %.cpp
@@ -60,7 +62,7 @@ build/lib:
 	mkdir -p build/lib
 
 build/lib/libolbcore.a: build/lib $(CORE_OBJ_FILES)
-	ar rc $@ $(CORE_OBJ_FILES)
+	$(AR) rc $@ $(CORE_OBJ_FILES)
 
 core: build/lib/libolbcore.a
 
@@ -75,16 +77,20 @@ CLEAN_TARGETS += clean-core
 ###########################################################################
 ## Examples
 
-EXAMPLES := $(dir $(shell find examples -name 'Makefile'))
+EXAMPLES := $(dir $(shell find examples -name 'Makefile' -not -path 'examples/web/*'))
 
 CLEAN_SAMPLES_TARGETS :=
 
+.PHONY: $(EXAMPLES)
 $(EXAMPLES): dependencies core
 	$(MAKE) -C $@ onlysample
-
-.PHONY: $(EXAMPLES)
-
 samples: $(EXAMPLES)
+
+.PHONY: run-samples
+run-samples:
+	@for dir in $(EXAMPLES); do \
+		$(MAKE) -C $$dir run; \
+	done
 
 define clean_directory
 clean-$(1):
@@ -106,7 +112,7 @@ CSE_GENERATEES := $(patsubst %.cse.h.template, %.cse.h, $(CSE_GENERATORS))
 
 %.cse.h: %.cse.h.template
 	$(eval $@_GUARD := $(shell grep -Po "#ifndef\ \K[A-Z_]*_CSE_H" $<))
-	python script/codegen/cse.py $< $($@_GUARD) $@
+	python script/codegen/legacy/cse.py $< $($@_GUARD) $@
 
 cse: $(CSE_GENERATEES)
 

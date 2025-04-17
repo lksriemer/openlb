@@ -37,8 +37,7 @@
  */
 
 
-#include "olb3D.h"
-#include "olb3D.hh"
+#include <olb.h>
 #include <vector>
 #include <cmath>
 #include <iostream>
@@ -128,7 +127,7 @@ void prepareGeometry(SuperGeometry <T,3> &superGeometry,
   OstreamManager clout(std::cout, "prepareGeometry");
   clout << "Prepare Geometry ..." << std::endl;
 
-  const T delta = converter.getConversionFactorLength();
+  const T delta = converter.getPhysDeltaX();
 
   Vector<T,3> extend( 2*delta, physLength+2*delta, physLength+2*delta );
   Vector<T,3> origin(-delta, -delta, -delta);
@@ -171,13 +170,13 @@ void prepareLattice(SuperLattice <T, TDESCRIPTOR> &ADlattice,
   auto bulkIndicator = superGeometry.getMaterialIndicator({1,3,4});
   ADlattice.defineDynamics<AdvectionDiffusionBGKdynamics>(bulkIndicator);
   // reactive Robin boundary at left side MN=3
-  setRobinBoundary<T, TDESCRIPTOR>(ADlattice, omega, superGeometry.getMaterialIndicator({3}));
+  boundary::set<boundary::Robin>(ADlattice, superGeometry.getMaterialIndicator({3}));
   T reactionRate = converter.getCharLatticeVelocity(); //determines speed of reaction, here equal to velocity
   AnalyticalConst3D <T,T> coefficients(reactionRate, -converter.getLatticeDiffusivity(), reactionRate * Ceq); //set robin coefficients as found in the paper
   ADlattice.template defineField<descriptors::G>(superGeometry.getMaterialIndicator({3}), (coefficients)); //save coefficient in a field
 
   // ZeroGradient using RobinBoundary at right side MN=4
-  setRobinBoundary<T, TDESCRIPTOR>(ADlattice, omega, superGeometry.getMaterialIndicator({4}));
+  boundary::set<boundary::Robin>(ADlattice, superGeometry.getMaterialIndicator({4}));
   AnalyticalConst3D <T,T> coefficients2(0., 1., 0.);
   ADlattice.template defineField<descriptors::G>(superGeometry.getMaterialIndicator({4}), (coefficients2));
 #endif
@@ -187,7 +186,7 @@ void prepareLattice(SuperLattice <T, TDESCRIPTOR> &ADlattice,
   auto bulkIndicator = superGeometry.getMaterialIndicator({1,3,4,5});
   ADlattice.defineDynamics<SourcedAdvectionDiffusionBGKdynamics>(bulkIndicator);
   // BounceBack for MN=3
-  setBounceBackBoundary<T, TDESCRIPTOR>(ADlattice, superGeometry.getMaterialIndicator({3}));
+  boundary::set<boundary::BounceBack><T, TDESCRIPTOR>(ADlattice, superGeometry.getMaterialIndicator({3}));
   // Zero Gradient at right side MN=4
   setZeroGradientBoundary<T, TDESCRIPTOR>(ADlattice, superGeometry.getMaterialIndicator({4}));
   // constants used in defineField
@@ -273,13 +272,10 @@ void getResults(SuperLattice<T, TDESCRIPTOR> &ADlattice,
   if (iT == 0) {
     /// Writes the geometry, cuboid no. and rank no. as vti file for visualization
 
-    SuperLatticeGeometry3D <T, TDESCRIPTOR> geometry(ADlattice, superGeometry);
     SuperLatticeCuboid3D <T, TDESCRIPTOR> cuboid(ADlattice);
     SuperLatticeRank3D <T, TDESCRIPTOR> rank(ADlattice);
-    vtkWriter.write(geometry);
     vtkWriter.write(cuboid);
     vtkWriter.write(rank);
-    vtkWriter.addFunctor( geometry );
 
     vtkWriter.createMasterFile();
     vtkWriter.write(iT);
@@ -323,25 +319,25 @@ void simulate(int N) {
   }
 
   /// === 2nd Step: Prepare Geometry ===
-  Vector<T,3> extend( physLength, converter.getConversionFactorLength(), converter.getConversionFactorLength() ); //minimal length in y,z direction
+  Vector<T,3> extend( physLength, converter.getPhysDeltaX(), converter.getPhysDeltaX() ); //minimal length in y,z direction
   Vector<T,3> origin( 0.0, 0.0, 0.0 );
 
   IndicatorCuboid3D <T> cuboid(extend, origin);
 
-  /// Instantiation of an empty cuboidGeometry
+  /// Instantiation of an empty cuboidDecomposition
 #ifdef PARALLEL_MODE_MPI
   const int noOfCuboids = singleton::mpi().getSize();
 #else
   const int noOfCuboids = 1;
 #endif
-  CuboidGeometry3D <T> cuboidGeometry(cuboid, converter.getPhysDeltaX(), noOfCuboids);
-  cuboidGeometry.setPeriodicity(false, true, true);
+  CuboidDecomposition3D <T> cuboidDecomposition(cuboid, converter.getPhysDeltaX(), noOfCuboids);
+  cuboidDecomposition.setPeriodicity({false, true, true});
 
   /// Instantiation of a loadBalancer
-  HeuristicLoadBalancer <T> loadBalancer(cuboidGeometry);
+  HeuristicLoadBalancer <T> loadBalancer(cuboidDecomposition);
 
   /// Instantiation of a superGeometry
-  SuperGeometry<T,3> superGeometry(cuboidGeometry, loadBalancer, 2);
+  SuperGeometry<T,3> superGeometry(cuboidDecomposition, loadBalancer, 2);
   prepareGeometry(superGeometry, cuboid, converter);
 
   /// === 3rd Step: Prepare Lattice ===
@@ -377,7 +373,7 @@ void simulate(int N) {
 
 int main(int argc, char *argv[]) {
   OstreamManager clout(std::cout, "main");
-  olbInit(&argc, &argv);
+  initialize(&argc, &argv);
 
   for (int i = 0; i < runs; ++i) {
     simulate(pow(2, i) * N0);

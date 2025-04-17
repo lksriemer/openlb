@@ -30,8 +30,7 @@
  */
 
 
-#include "olb3D.h"
-#include "olb3D.hh"
+#include <olb.h>
 
 using namespace olb;
 using namespace olb::descriptors;
@@ -40,7 +39,8 @@ using namespace olb::graphics;
 using T = float;
 using DESCRIPTOR = D3Q19<FORCE,EXTERNAL_FORCE,STATISTIC>;
 
-using COUPLING = ShanChenForcedPostProcessor<interaction::PsiEqualsRho>;
+using COUPLING = PseudopotentialForcedCoupling<interaction::PsiEqualsRho,
+                                               multicomponent_velocity::ShanChen>;
 
 // Parameters for the simulation setup
 const int nx   = 200;
@@ -104,7 +104,7 @@ void prepareLattice( SuperLattice<T, DESCRIPTOR>& sLatticeOne,
   // directed downwards.
 
   // define lattice Dynamics
-  using BulkDynamics = ForcedBGKdynamics<T,DESCRIPTOR,momenta::ExternalVelocityTuple>;
+  using BulkDynamics = ForcedShanChenBGKdynamics<T, DESCRIPTOR, momenta::ExternalVelocityTuple>;
 
   sLatticeOne.defineDynamics<BulkDynamics>(superGeometry, 1);
   sLatticeOne.defineDynamics<BulkDynamics>(superGeometry, 2);
@@ -115,10 +115,10 @@ void prepareLattice( SuperLattice<T, DESCRIPTOR>& sLatticeOne,
   sLatticeTwo.defineDynamics<BulkDynamics>(superGeometry, 3);
   sLatticeTwo.defineDynamics<BulkDynamics>(superGeometry, 4);
 
-  setBounceBackBoundary(sLatticeOne, superGeometry, 3);
-  setBounceBackBoundary(sLatticeOne, superGeometry, 4);
-  setBounceBackBoundary(sLatticeTwo, superGeometry, 3);
-  setBounceBackBoundary(sLatticeTwo, superGeometry, 4);
+  boundary::set<boundary::BounceBack>(sLatticeOne, superGeometry, 3);
+  boundary::set<boundary::BounceBack>(sLatticeOne, superGeometry, 4);
+  boundary::set<boundary::BounceBack>(sLatticeTwo, superGeometry, 3);
+  boundary::set<boundary::BounceBack>(sLatticeTwo, superGeometry, 4);
 
   sLatticeOne.setParameter<descriptors::OMEGA>(omega1);
   sLatticeTwo.setParameter<descriptors::OMEGA>(omega2);
@@ -130,10 +130,9 @@ void prepareLattice( SuperLattice<T, DESCRIPTOR>& sLatticeOne,
   sLatticeOne.defineRho(superGeometry, 4, rho1);
   sLatticeTwo.defineRho(superGeometry, 3, rho1);
 
-  coupling.template setParameter<COUPLING::RHO0>({1, 1});
   coupling.template setParameter<COUPLING::G>(T(3.));
-  coupling.template setParameter<COUPLING::OMEGA_A>(omega1);
-  coupling.template setParameter<COUPLING::OMEGA_B>(omega2);
+  coupling.template setParameter<multicomponent_velocity::ShanChen::OMEGA_A>(omega1);
+  coupling.template setParameter<multicomponent_velocity::ShanChen::OMEGA_B>(omega2);
 
   sLatticeOne.addPostProcessor<stage::PreCoupling>(meta::id<RhoStatistics>());
   sLatticeTwo.addPostProcessor<stage::PreCoupling>(meta::id<RhoStatistics>());
@@ -208,10 +207,8 @@ void getResults( SuperLattice<T, DESCRIPTOR>& sLatticeTwo,
 
   if ( iT==0 ) {
     // Writes the geometry, cuboid no. and rank no. as vti file for visualization
-    SuperLatticeGeometry3D<T, DESCRIPTOR> geometry( sLatticeOne, superGeometry );
     SuperLatticeCuboid3D<T, DESCRIPTOR> cuboid( sLatticeOne );
     SuperLatticeRank3D<T, DESCRIPTOR> rank( sLatticeOne );
-    vtmWriter.write( geometry );
     vtmWriter.write( cuboid );
     vtmWriter.write( rank );
     vtmWriter.createMasterFile();
@@ -256,26 +253,26 @@ int main( int argc, char *argv[] )
 
   // === 1st Step: Initialization ===
 
-  olbInit( &argc, &argv );
+  initialize( &argc, &argv );
   singleton::directories().setOutputDir( "./tmp/" );
   OstreamManager clout( std::cout,"main" );
 
   T force = 7./( T )ny/( T )ny;
 
   // === 2nd Step: Prepare Geometry ===
-  // Instantiation of a cuboidGeometry with weights
+  // Instantiation of a cuboidDecomposition with weights
 
 #ifdef PARALLEL_MODE_MPI
-  CuboidGeometry3D<T> cGeometry( 0, 0, 0, 1, nx, ny, nz, singleton::mpi().getSize() );
+  CuboidDecomposition3D<T> cuboidDecomposition(0, 1, {nx, ny, nz}, singleton::mpi().getSize());
 #else
-  CuboidGeometry3D<T> cGeometry( 0, 0, 0, 1, nx, ny, nz, 1 );
+  CuboidDecomposition3D<T> cuboidDecomposition(0, 1, {nx, ny, nz}, 1);
 #endif
 
-  cGeometry.setPeriodicity( true, false, true );
+  cuboidDecomposition.setPeriodicity({ true, false, true });
 
-  HeuristicLoadBalancer<T> loadBalancer( cGeometry );
+  HeuristicLoadBalancer<T> loadBalancer( cuboidDecomposition );
 
-  SuperGeometry<T,3> superGeometry( cGeometry, loadBalancer, 2 );
+  SuperGeometry<T,3> superGeometry( cuboidDecomposition, loadBalancer, 2 );
 
   prepareGeometry( superGeometry );
 
@@ -285,7 +282,7 @@ int main( int argc, char *argv[] )
   SuperLattice<T, DESCRIPTOR> sLatticeTwo( superGeometry );
 
   SuperLatticeCoupling coupling(
-    ShanChenForcedPostProcessor<interaction::PsiEqualsRho>{},
+    COUPLING{},
     names::A{}, sLatticeOne,
     names::B{}, sLatticeTwo);
 

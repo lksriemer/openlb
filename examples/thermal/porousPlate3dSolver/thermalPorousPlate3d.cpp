@@ -31,8 +31,7 @@
  */
 
 
-#include "olb3D.h"
-#include "olb3D.hh"
+#include <olb.h>
 
 using namespace olb;
 using namespace olb::names;
@@ -186,17 +185,17 @@ protected:
     const std::vector<T> origin(3,T());
     IndicatorCuboid3D<T> cuboid(extend, origin);
 
-    /// Instantiation of a cuboidGeometry with weights
+    /// Instantiation of a cuboidDecomposition with weights
 #ifdef PARALLEL_MODE_MPI
     const unsigned noOfCuboids = this->parameters(Simulation()).noC * singleton::mpi().getSize();
 #else
     const unsigned noOfCuboids = 7;
 #endif
-    this->_cGeometry = std::make_shared<CuboidGeometry3D<T>>(
+    this->_cGeometry = std::make_shared<CuboidDecomposition3D<T>>(
       cuboid,
       this->converter().getPhysDeltaX(),
       noOfCuboids);
-    this->_cGeometry->setPeriodicity(true,false, true);
+    this->_cGeometry->setPeriodicity({true,false, true});
 
     /// Instantiation of a loadBalancer
     this->_loadBalancer = std::make_shared<HeuristicLoadBalancer<T>> (*this->_cGeometry);
@@ -248,11 +247,10 @@ protected:
       this->geometry().getMaterialIndicator({1, 2, 3}));
 
     /// sets boundary
-    setLocalVelocityBoundary<T,NSDESCRIPTOR>(
+    boundary::set<boundary::LocalVelocity>(
       this->lattice(NavierStokes()),
-      NSomega,
       this->geometry().getMaterialIndicator({2, 3}));
-    setAdvectionDiffusionTemperatureBoundary<T,TDESCRIPTOR>(
+    boundary::set<boundary::AdvectionDiffusionDirichlet>(
       this->lattice(Temperature()),
       this->geometry().getMaterialIndicator({2, 3}));
 
@@ -401,7 +399,7 @@ int main(int argc, char *argv[])
 {
   using T = FLOATING_POINT_TYPE;
 
-  olbInit(&argc, &argv);
+  initialize(&argc, &argv);
 
   // create instances of parameter structs
   utilities::TypeIndexedSharedPtrTuple<Parameters<T>> params;

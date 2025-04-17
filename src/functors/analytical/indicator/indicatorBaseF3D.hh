@@ -316,6 +316,12 @@ S IndicatorF3D<S>::signedDistance(const Vector<S,3>& input)
 }
 
 template <typename S>
+S IndicatorF3D<S>::signedDistanceExact(const Vector<S,3>& input)
+{
+  return this->signedDistance(input);
+}
+
+template <typename S>
 Vector<S,3> IndicatorF3D<S>::surfaceNormal(const Vector<S,3>& pos, const S meshSize)
 {
   return util::surfaceNormal(pos, meshSize, [&](const Vector<S,3>& pos) {
@@ -329,6 +335,7 @@ Vector<S,3> IndicatorF3D<S>::surfaceNormal(const Vector<S,3>& pos, const S meshS
 {
   return this->surfaceNormal(transformPos(pos), meshSize);
 }
+
 
 template <typename S>
 bool IndicatorF3D<S>::operator() (bool output[1], const S input[3])
@@ -349,6 +356,21 @@ template <typename S>
 bool IndicatorIdentity3D<S>::operator() (bool output[1], const S input[3])
 {
   return (_f)->operator()(output, input);
+}
+
+
+template <typename S>
+Vector<S,3> IndicatorF3D<S>::surfaceNormalExact(const Vector<S,3>& pos, const S meshSize)
+{
+  return this->surfaceNormal(pos, meshSize);
+}
+
+
+template <typename S>
+Vector<S,3> IndicatorF3D<S>::surfaceNormalExact(const Vector<S,3>& pos, const S meshSize,
+    std::function<Vector<S,3>(const Vector<S,3>&)> transformPos)
+{
+  return this->surfaceNormalExact(transformPos(pos), meshSize);
 }
 
 

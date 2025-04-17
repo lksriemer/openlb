@@ -29,8 +29,7 @@
  */
 
 
-#include "olb2D.h"
-#include "olb2D.hh"
+#include <olb.h>
 
 using namespace olb;
 using namespace olb::descriptors;
@@ -108,8 +107,8 @@ void prepareLattice( ThermalUnitConverter<T, NSDESCRIPTOR, TDESCRIPTOR> &convert
   T NSomega = converter.getLatticeRelaxationFrequency();
 
   NSlattice.defineDynamics<ForcedBGKdynamics>(superGeometry, 1);
-  setBounceBackBoundary(NSlattice, superGeometry, 2);
-  setBounceBackBoundary(NSlattice, superGeometry, 3);
+  boundary::set<boundary::BounceBack>(NSlattice, superGeometry, 2);
+  boundary::set<boundary::BounceBack>(NSlattice, superGeometry, 3);
   NSlattice.defineDynamics<ForcedBGKdynamics>(superGeometry, 4);
 
   ADlattice.defineDynamics<AdvectionDiffusionBGKdynamics>(superGeometry, 1);
@@ -117,8 +116,8 @@ void prepareLattice( ThermalUnitConverter<T, NSDESCRIPTOR, TDESCRIPTOR> &convert
   ADlattice.defineDynamics<AdvectionDiffusionBGKdynamics>(superGeometry, 3);
   ADlattice.defineDynamics<AdvectionDiffusionBGKdynamics>(superGeometry, 4);
 
-  setAdvectionDiffusionTemperatureBoundary(ADlattice, superGeometry, 2);
-  setAdvectionDiffusionTemperatureBoundary(ADlattice, superGeometry, 3);
+  boundary::set<boundary::AdvectionDiffusionDirichlet>(ADlattice, superGeometry, 2);
+  boundary::set<boundary::AdvectionDiffusionDirichlet>(ADlattice, superGeometry, 3);
 
   /// define initial conditions
   AnalyticalConst2D<T,T> rho(1.);
@@ -168,10 +167,8 @@ void getResults(ThermalUnitConverter<T, NSDESCRIPTOR, TDESCRIPTOR> &converter,
     // writeLogFile(converter,"rayleighBenard2d");
 
     /// Writes the geometry, cuboid no. and rank no. as vti file for visualization
-    SuperLatticeGeometry2D<T, NSDESCRIPTOR> geometry(NSlattice, superGeometry);
     SuperLatticeCuboid2D<T, NSDESCRIPTOR> cuboid(NSlattice);
     SuperLatticeRank2D<T, NSDESCRIPTOR> rank(NSlattice);
-    vtkWriter.write(geometry);
     vtkWriter.write(cuboid);
     vtkWriter.write(rank);
 
@@ -212,7 +209,7 @@ int main(int argc, char *argv[])
 {
   /// === 1st Step: Initialization ===
   OstreamManager clout(std::cout,"main");
-  olbInit(&argc, &argv);
+  initialize(&argc, &argv);
   singleton::directories().setOutputDir("./tmp/");
 
   ThermalUnitConverter<T, NSDESCRIPTOR, TDESCRIPTOR> converter(
@@ -237,19 +234,19 @@ int main(int argc, char *argv[])
   std::vector<T> origin(2,T());
   IndicatorCuboid2D<T> cuboid(extend, origin);
 
-  /// Instantiation of a cuboidGeometry with weights
+  /// Instantiation of a cuboidDecomposition with weights
 #ifdef PARALLEL_MODE_MPI
   const int noOfCuboids = singleton::mpi().getSize();
 #else
   const int noOfCuboids = 1;
 #endif
-  CuboidGeometry2D<T> cuboidGeometry(cuboid, converter.getPhysDeltaX(), noOfCuboids);
+  CuboidDecomposition2D<T> cuboidDecomposition(cuboid, converter.getPhysDeltaX(), noOfCuboids);
 
-  cuboidGeometry.setPeriodicity(true, false);
+  cuboidDecomposition.setPeriodicity({true, false});
 
-  HeuristicLoadBalancer<T> loadBalancer(cuboidGeometry);
+  HeuristicLoadBalancer<T> loadBalancer(cuboidDecomposition);
 
-  SuperGeometry<T,2> superGeometry(cuboidGeometry, loadBalancer);
+  SuperGeometry<T,2> superGeometry(cuboidDecomposition, loadBalancer);
 
   prepareGeometry(superGeometry, converter);
 

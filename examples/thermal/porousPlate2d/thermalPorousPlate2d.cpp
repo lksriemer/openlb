@@ -29,8 +29,7 @@
  */
 
 
-#include "olb2D.h"
-#include "olb2D.hh"
+#include <olb.h>
 
 using namespace olb;
 using namespace olb::descriptors;
@@ -229,21 +228,18 @@ void prepareLattice( ThermalUnitConverter<T, NSDESCRIPTOR, TDESCRIPTOR> const& c
   NSlattice.defineDynamics<ForcedBGKdynamics>(superGeometry, 2);
   NSlattice.defineDynamics<ForcedBGKdynamics>(superGeometry, 3);
 
-  ADlattice.setParameter<descriptors::OMEGA>(Tomega);
-  NSlattice.setParameter<descriptors::OMEGA>(NSomega);
-
   /// sets boundary
-  setLocalVelocityBoundary(NSlattice, NSomega, superGeometry, 2);
-  setLocalVelocityBoundary(NSlattice, NSomega, superGeometry, 3);
+  boundary::set<boundary::LocalVelocity>(NSlattice, superGeometry, 2);
+  boundary::set<boundary::LocalVelocity>(NSlattice, superGeometry, 3);
 
 #ifdef TemperatureBoundary
-  setAdvectionDiffusionTemperatureBoundary(ADlattice, superGeometry, 2);
-  setAdvectionDiffusionTemperatureBoundary(ADlattice, superGeometry, 3);
+  boundary::set<boundary::AdvectionDiffusionDirichlet>(ADlattice, superGeometry, 2);
+  boundary::set<boundary::AdvectionDiffusionDirichlet>(ADlattice, superGeometry, 3);
 
 #endif
 #ifdef RegularizedTemperatureBoundary
-  setRegularizedTemperatureBoundary(ADlattice, Tomega, superGeometry, 2);
-  setRegularizedTemperatureBoundary(ADlattice, Tomega, superGeometry, 3);
+  boundary::set<boundary::RegularizedTemperature>(ADlattice, superGeometry.getMaterialIndicator(2));
+  boundary::set<boundary::RegularizedTemperature>(ADlattice, superGeometry.getMaterialIndicator(3));
 
 #endif
 #ifdef RegularizedHeatFluxBoundary
@@ -254,9 +250,15 @@ void prepareLattice( ThermalUnitConverter<T, NSDESCRIPTOR, TDESCRIPTOR> const& c
   T temp = converter.getLatticeSpecificHeatCapacity(converter.getPhysSpecificHeatCapacity())*(converter.getLatticeThermalRelaxationTime() - 0.5) / converter.getLatticeThermalRelaxationTime();
   heatFlux[0] = converter.getLatticeHeatFlux(heatFlux[0]) / temp;
   heatFlux[1] = converter.getLatticeHeatFlux(heatFlux[1]) / temp;
-  setRegularizedHeatFluxBoundary(ADlattice, Tomega, superGeometry, 2, heatFlux);
-  setRegularizedTemperatureBoundary(ADlattice, Tomega, superGeometry, 3);
+  AnalyticalConst2D<T,T> heatFluxC(heatFlux[0], heatFlux[1]);
+  boundary::set<boundary::RegularizedHeatFlux>(ADlattice, superGeometry, 2);
+  ADlattice.defineU(superGeometry, 2, heatFluxC);
+  boundary::set<boundary::RegularizedTemperature>(ADlattice, superGeometry, 3);
+  ADlattice.setParameter<descriptors::OMEGA>(Tomega);
 #endif
+
+  ADlattice.setParameter<descriptors::OMEGA>(Tomega);
+  NSlattice.setParameter<descriptors::OMEGA>(NSomega);
 }
 
 void setBoundaryValues(ThermalUnitConverter<T, NSDESCRIPTOR, TDESCRIPTOR> const& converter,
@@ -320,7 +322,6 @@ void getResults(ThermalUnitConverter<T, NSDESCRIPTOR, TDESCRIPTOR> const& conver
   OstreamManager clout(std::cout,"getResults");
 
   SuperVTMwriter2D<T> vtkWriter("thermalPorousPlate2d");
-  SuperLatticeGeometry2D<T, NSDESCRIPTOR> geometry2(NSlattice, superGeometry);
   SuperLatticePhysVelocity2D<T, NSDESCRIPTOR> velocity(NSlattice, converter);
   SuperLatticePhysPressure2D<T, NSDESCRIPTOR> pressure(NSlattice, converter);
   SuperLatticePhysTemperature2D<T, NSDESCRIPTOR, TDESCRIPTOR> temperature(ADlattice, converter);
@@ -334,7 +335,6 @@ void getResults(ThermalUnitConverter<T, NSDESCRIPTOR, TDESCRIPTOR> const& conver
   AnalyticalHeatFluxPorousPlate2D<T,T> HeatFluxSol(Re, Pr, converter.getCharPhysTemperatureDifference(), converter.getCharPhysLength(), converter.getThermalConductivity());
   SuperLatticeFfromAnalyticalF2D<T,TDESCRIPTOR> HeatFluxSolLattice(HeatFluxSol,ADlattice);
 
-  vtkWriter.addFunctor( geometry2 );
   vtkWriter.addFunctor( pressure );
   vtkWriter.addFunctor( velocity );
   vtkWriter.addFunctor( temperature );
@@ -355,10 +355,8 @@ void getResults(ThermalUnitConverter<T, NSDESCRIPTOR, TDESCRIPTOR> const& conver
     clout << tmpOut[0] << " " << tmpOut[1] << std::endl;
 
     /// Writes the geometry, cuboid no. and rank no. as vti file for visualization
-    SuperLatticeGeometry2D<T, NSDESCRIPTOR> geometry(NSlattice, superGeometry);
     SuperLatticeCuboid2D<T, NSDESCRIPTOR> cuboid(NSlattice);
     SuperLatticeRank2D<T, NSDESCRIPTOR> rank(NSlattice);
-    vtkWriter.write(geometry);
     vtkWriter.write(cuboid);
     vtkWriter.write(rank);
 
@@ -391,7 +389,7 @@ int main(int argc, char *argv[])
 
   /// === 1st Step: Initialization ===
   OstreamManager clout(std::cout,"main");
-  olbInit(&argc, &argv);
+  initialize(&argc, &argv);
   singleton::directories().setOutputDir("./tmp/");
 
   if (argc >= 2) {
@@ -423,20 +421,20 @@ int main(int argc, char *argv[])
   std::vector<T> origin(2,T());
   IndicatorCuboid2D<T> cuboid(extend, origin);
 
-  /// Instantiation of a cuboidGeometry with weights
+  /// Instantiation of a cuboidDecomposition with weights
 #ifdef PARALLEL_MODE_MPI
   const int noOfCuboids = singleton::mpi().getSize();
 #else
   const int noOfCuboids = 1;
 #endif
-  CuboidGeometry2D<T> cuboidGeometry(cuboid, converter.getPhysDeltaX(), noOfCuboids);
-  cuboidGeometry.setPeriodicity(true, false);
+  CuboidDecomposition2D<T> cuboidDecomposition(cuboid, converter.getPhysDeltaX(), noOfCuboids);
+  cuboidDecomposition.setPeriodicity({true, false});
 
   /// Instantiation of a loadBalancer
-  HeuristicLoadBalancer<T> loadBalancer(cuboidGeometry);
+  HeuristicLoadBalancer<T> loadBalancer(cuboidDecomposition);
 
   /// Instantiation of a superGeometry
-  SuperGeometry<T,2> superGeometry(cuboidGeometry, loadBalancer);
+  SuperGeometry<T,2> superGeometry(cuboidDecomposition, loadBalancer);
 
   prepareGeometry(superGeometry, converter);
 

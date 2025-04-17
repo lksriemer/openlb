@@ -185,13 +185,13 @@ void accountForPeriodicParticleBoundary(
   // i.e. when the first/only particle "jumps" from the end to the beginning
   // because then the min and max from the step before isn't valid anymore
   const T physDeltaX =
-      sGeometry.getCuboidGeometry().getMotherCuboid().getDeltaR();
+      sGeometry.getCuboidDecomposition().getMotherCuboid().getDeltaR();
   const PhysR<T, PARTICLETYPE::d> cellMin =
       particles::communication::getCuboidMin<T, PARTICLETYPE::d>(
-          sGeometry.getCuboidGeometry());
+          sGeometry.getCuboidDecomposition());
   const PhysR<T, PARTICLETYPE::d> cellMax =
       particles::communication::getCuboidMax<T, PARTICLETYPE::d>(
-          sGeometry.getCuboidGeometry(), cellMin);
+          sGeometry.getCuboidDecomposition(), cellMin);
 
   communication::forParticlesInSuperParticleSystem(
       sParticleSystem,
@@ -254,7 +254,7 @@ void accountForPeriodicParticleBoundary(
 
 /// evaluate responsible ranks for particle-particle contact
 template <typename T, typename PARTICLETYPE, bool CONVEX>
-std::unordered_set<int> evalDestRanksForDetectionCommunication(
+std::set<int> evalDestRanksForDetectionCommunication(
     ParticleContactArbitraryFromOverlapVolume<T, PARTICLETYPE::d, CONVEX>&
                                           contact,
     SuperParticleSystem<T, PARTICLETYPE>& sParticleSystem, const T deltaX,
@@ -263,14 +263,14 @@ std::unordered_set<int> evalDestRanksForDetectionCommunication(
   using namespace descriptors;
   auto& superStructure = sParticleSystem.getSuperStructure();
   auto& loadBalancer   = superStructure.getLoadBalancer();
-  /* auto& cuboidGeometry = superStructure.getCuboidGeometry(); */
+  /* auto& cuboidDecomposition = superStructure.getCuboidDecomposition(); */
 
   // Set instead of unordered_set so that it's sorted
   // Therefore, it is easier to find the the rank with smallest ID
   std::set<int>                intersectingRanks {};
   std::array<int, 2>           responsibleRank = {-1, -1};
   std::array<std::set<int>, 2> touchedRanks {};
-  std::unordered_set<int>      destRanks {};
+  std::set<int>      destRanks {};
 
   // Function that is called on failure
   const auto errorTreatment = [&contact, &destRanks]() {
@@ -380,7 +380,7 @@ std::unordered_set<int> evalDestRanksForDetectionCommunication(
 
 /// evaluate responsible rank for solid boundary contact
 template <typename T, typename PARTICLETYPE, bool CONVEX>
-std::unordered_set<int> evalDestRanksForDetectionCommunication(
+std::set<int> evalDestRanksForDetectionCommunication(
     WallContactArbitraryFromOverlapVolume<T, PARTICLETYPE::d, CONVEX>& contact,
     SuperParticleSystem<T, PARTICLETYPE>& sParticleSystem, const T deltaX,
     [[maybe_unused]] const Vector<bool, PARTICLETYPE::d>& periodicity)
@@ -390,7 +390,7 @@ std::unordered_set<int> evalDestRanksForDetectionCommunication(
   auto& loadBalancer   = superStructure.getLoadBalancer();
 
   bool                    isSuccessful = false;
-  std::unordered_set<int> destRanks {};
+  std::set<int> destRanks {};
   int                     destRank;
   // Find responsible rank
   communication::forParticlesInSuperParticleSystem<T, PARTICLETYPE,
@@ -426,7 +426,7 @@ std::unordered_set<int> evalDestRanksForDetectionCommunication(
 
 /// evaluate ranks that touch both particles of a particle-particle contact
 template <typename T, typename PARTICLETYPE, bool CONVEX>
-std::unordered_set<int> evalDestRanksForPostContactTreatmentCommunication(
+std::set<int> evalDestRanksForPostContactTreatmentCommunication(
     ParticleContactArbitraryFromOverlapVolume<T, PARTICLETYPE::d, CONVEX>&
                                           contact,
     SuperParticleSystem<T, PARTICLETYPE>& sParticleSystem, const T deltaX,
@@ -435,9 +435,9 @@ std::unordered_set<int> evalDestRanksForPostContactTreatmentCommunication(
   using namespace descriptors;
   auto& superStructure = sParticleSystem.getSuperStructure();
   auto& loadBalancer   = superStructure.getLoadBalancer();
-  auto& cuboidGeometry = superStructure.getCuboidGeometry();
+  auto& cuboidDecomposition = superStructure.getCuboidDecomposition();
 
-  std::unordered_set<int>      destRanks;
+  std::set<int>      destRanks;
   std::array<std::set<int>, 2> touchedRanks;
 
   // Iterate over all particles to populate touched ranks of each particle in the contact
@@ -456,7 +456,7 @@ std::unordered_set<int> evalDestRanksForPostContactTreatmentCommunication(
             // the particle moved, therefore, the iC may have changed
             int        globiCcenter;
             const bool cuboidFound = communication::getCuboid(
-                cuboidGeometry, periodicity, position, globiCcenter);
+                cuboidDecomposition, periodicity, position, globiCcenter);
             if (cuboidFound) {
               touchedRanks[index].insert(loadBalancer.rank(globiCcenter));
 
@@ -491,7 +491,7 @@ std::unordered_set<int> evalDestRanksForPostContactTreatmentCommunication(
 
 /// evaluate ranks that touch the particle of a particle-wall contact
 template <typename T, typename PARTICLETYPE, bool CONVEX>
-std::unordered_set<int> evalDestRanksForPostContactTreatmentCommunication(
+std::set<int> evalDestRanksForPostContactTreatmentCommunication(
     WallContactArbitraryFromOverlapVolume<T, PARTICLETYPE::d, CONVEX>& contact,
     SuperParticleSystem<T, PARTICLETYPE>& sParticleSystem, const T deltaX,
     const Vector<bool, PARTICLETYPE::d>& periodicity)
@@ -499,9 +499,9 @@ std::unordered_set<int> evalDestRanksForPostContactTreatmentCommunication(
   using namespace descriptors;
   auto& superStructure = sParticleSystem.getSuperStructure();
   auto& loadBalancer   = superStructure.getLoadBalancer();
-  auto& cuboidGeometry = superStructure.getCuboidGeometry();
+  auto& cuboidDecomposition = superStructure.getCuboidDecomposition();
 
-  std::unordered_set<int> destRanks;
+  std::set<int> destRanks;
 
   // Find responsible rank
   communication::forParticlesInSuperParticleSystem<T, PARTICLETYPE,
@@ -517,7 +517,7 @@ std::unordered_set<int> evalDestRanksForPostContactTreatmentCommunication(
           // the particle moved, therefore, the iC may have changed
           int        globiCcenter;
           const bool cuboidFound = communication::getCuboid(
-              cuboidGeometry, periodicity, position, globiCcenter);
+              cuboidDecomposition, periodicity, position, globiCcenter);
           if (cuboidFound) {
             destRanks.insert(loadBalancer.rank(globiCcenter));
 
@@ -686,7 +686,7 @@ void communicateParallelContacts(
     resetResponsibleRank(contact);
 
     if (!contact.isEmpty()) {
-      std::unordered_set<int> destRanks {evalDestRanksForDetectionCommunication(
+      std::set<int> destRanks {evalDestRanksForDetectionCommunication(
           contact, sParticleSystem, deltaX, periodicity)};
 
       // Only new contacts need communication because they originate from the on-lattice
@@ -781,7 +781,7 @@ void communicatePostContactTreatmentContacts(
   for (CONTACTTYPE& contact : contacts) {
     if (contact.getResponsibleRank() == singleton::mpi().getRank()) {
       if (!contact.isEmpty()) {
-        std::unordered_set<int> destRanks {
+        std::set<int> destRanks {
             evalDestRanksForPostContactTreatmentCommunication(
                 contact, sParticleSystem, deltaX, periodicity)};
         resetResponsibleRank(contact);

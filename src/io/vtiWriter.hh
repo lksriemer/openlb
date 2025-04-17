@@ -37,8 +37,8 @@
 #include <vector>
 
 #include "core/singleton.h"
-#include "geometry/cuboid3D.h"
-#include "geometry/cuboidGeometry3D.h"
+#include "geometry/cuboid.h"
+#include "geometry/cuboidDecomposition.h"
 #include "core/blockData.h"
 #include "core/superData.h"
 #include "communication/loadBalancer.h"
@@ -67,7 +67,7 @@ void VTIwriter3D<T,BaseType>::writeData( std::string const& fName,
 
 template<typename T, typename BaseType>
 void VTIwriter3D<T,BaseType>::writeData( std::string const& fName, std::string const& fieldName,
-    SuperData<3,T,BaseType> const& superData, CuboidGeometry3D<T> const& cGeometry,
+    SuperData<3,T,BaseType> const& superData, CuboidDecomposition3D<T> const& cGeometry,
     LoadBalancer<T> const& loadBalancer)
 {
   // Generate full file path
@@ -112,7 +112,7 @@ template<typename T, typename BaseType>
 void VTIwriter3D<T,BaseType>::writeData( std::string const& fName,
     std::string const& fieldName, SuperData<3,T,BaseType> const& superData)
 {
-  writeData(fName, fieldName, superData, superData.getCuboidGeometry(), superData.getLoadBalancer());
+  writeData(fName, fieldName, superData, superData.getCuboidDecomposition(), superData.getLoadBalancer());
 }
 
 template<typename T, typename BaseType>

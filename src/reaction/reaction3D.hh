@@ -26,7 +26,3 @@
 #include "rate.hh"
 #include "reactionPostProcessor3D.hh"
 #include "explicitFiniteDifference/explicitFiniteDifference3D.hh"
-
-#include "eul2Lagr/eul2LagrDensity3D.hh"
-#include "eul2Lagr/eul2LagrOperation3D.hh"
-#include "eul2Lagr/eul2LagrPostProcessor3D.hh"

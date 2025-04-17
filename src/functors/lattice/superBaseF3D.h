@@ -223,6 +223,7 @@ public:
   ThermalUnitConverter<T,DESCRIPTOR,TDESCRIPTOR> const& getConverter() const;
 };
 
+
 template <typename T, typename DESCRIPTOR>
 class ComposedSuperLatticeF3D : public SuperLatticeF3D<T,DESCRIPTOR> {
 private:
@@ -235,6 +236,35 @@ public:
                           SuperLatticeF3D<T,DESCRIPTOR>& f2);
   bool operator() (T output[], const int x[]) override;
 };
+
+
+/// Generate a SuperLatticeF from an arbitrary function
+template <typename T, typename DESCRIPTOR>
+class SuperLatticeFfromCallableF final : public SuperLatticeF<T,DESCRIPTOR> {
+public:
+  /// Generate a SuperLatticeF from an arbitrary function
+  /// @tparam F function type
+  /// @param f some function, e.g. lambda expression
+  /// The following types of f are accepted:
+  /// void(T* output, auto cell)
+  /// void(T* output, auto cell, int iCuboid, const int* localCoordinates)
+  /// void(T* output, int iCuboid, const int* localCoordinates)
+  // iCuboid is the local cuboid index
+  template <typename F>
+  SuperLatticeFfromCallableF(SuperLattice<T,DESCRIPTOR>& superLattice, F&& f)
+   : SuperLatticeF<T,DESCRIPTOR>(superLattice, 1)
+  {
+    this->getName() = "FromCallable";
+
+    LoadBalancer<T>& load = this->getSuperStructure().getLoadBalancer();
+    for (int iC = 0; iC < load.size(); ++iC) {
+      this->_blockF.emplace_back(
+        new BlockLatticeFfromCallableF<T,DESCRIPTOR>(
+          this->_sLattice.getBlock(iC), iC, f));
+    }
+  }
+};
+
 
 } // end namespace olb
 

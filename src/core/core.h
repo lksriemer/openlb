@@ -22,8 +22,14 @@
 */
 
 #include "platform/platform.h"
+#include "platform/dispatch.h"
+
+#include "expr.h"
 
 #include "threadPool.h"
+
+#include "concepts.h"
+#include "fields.h"
 
 #include "superData.h"
 #include "blockData.h"
@@ -32,10 +38,18 @@
 #include "fieldParametersD.h"
 #include "superFieldArrayD.h"
 
+#include "data.h"
+
 #include "blockStructure.h"
 #include "blockLattice.h"
+#include "blockD.h"
 #include "superLattice.h"
+#include "superD.h"
+
 #include "superLatticeCoupling.h"
+#include "superLatticePointCoupling.h"
+#include "superLatticeFieldReductionO.h"
+#include "superLatticePointExtraction.h"
 
 #include "cell.h"
 #include "cell.hh"
@@ -57,5 +71,6 @@
 #include "columnVector.h"
 #include "vector.h"
 #include "container.h"
+#include "matrixView.h"
 
 #include "olbInit.h"

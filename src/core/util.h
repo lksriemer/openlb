@@ -1,6 +1,6 @@
 /*  This file is part of the OpenLB library
  *
- *  Copyright (C) 2006, 2007 Jonas Latt, 2020 Adrian Kummerlaender
+ *  Copyright (C) 2006, 2007 Jonas Latt, 2020 Adrian Kummerlaender, 2024 Yuji Shimojima
  *  E-mail contact: info@openlb.net
  *  The most recent release of OpenLB can be downloaded at
  *  <http://www.openlb.net/>
@@ -36,11 +36,10 @@
 
 #include "core/baseType.h"
 #include "core/vector.h"
-#include "utilities/vectorHelpers.h"
 #include "meta.h"
 #include "utilities/omath.h"
 #include "utilities/oalgorithm.h"
-#include "dynamics/descriptorFunction.h"
+#include "descriptor/functions.h"
 
 namespace olb {
 
@@ -51,7 +50,7 @@ namespace util {
 template<typename T> T norm(const std::vector<T>& a);
 
 template <typename T>
-inline int sign(T val)
+inline int sign(T val) any_platform
 {
   return (0 < val) - (val < 0);
 }
@@ -81,9 +80,6 @@ inline bool aligned_to_grid(const std::vector<T>& vec)
           aligned_to_y<T>(vec) or
           aligned_to_z<T>(vec));
 }
-
-
-
 
 
 inline bool intersect (
@@ -133,9 +129,15 @@ inline bool contained(int x, int y, int z,
 
 
 template<typename T>
-T sqr(T arg)
+any_platform T sqr(T arg) any_platform
 {
   return arg*arg;
+}
+
+template<typename T>
+any_platform T cube(T arg)
+{
+  return arg*arg*arg;
 }
 
 /// Compute norm square of a d-dimensional vector
@@ -150,7 +152,7 @@ auto normSqr(const ARRAY_LIKE& u) any_platform
 }
 
 template<unsigned D, typename ARRAY_LIKE>
-auto norm(const ARRAY_LIKE& u)
+auto norm(const ARRAY_LIKE& u) any_platform
 {
   return sqrt(normSqr<ARRAY_LIKE,D>(u));
 }
@@ -183,12 +185,16 @@ T normSqr(const ScalarVector<T,D,IMPL>& u) any_platform
   return uSqr;
 }
 
+
+
 template<typename T, int d>
-T scalarProduct(const T u1[d], const T u2[d])
+T scalarProduct(const Vector<T,d>& u1, const Vector<T,d>& u2)  any_platform
 {
   T prod = T();
-  for (int iD=0; iD<d; ++iD) {
-    prod += u1[iD]*u2[iD];
+  if (u1.size() == u2.size()) {
+    for (unsigned iD=0; iD < u1.size(); ++iD) {
+      prod += u1[iD]*u2[iD];
+    }
   }
   return prod;
 }
@@ -198,7 +204,7 @@ T scalarProduct(const std::vector<T>& u1, const std::vector<T>& u2)
 {
   T prod = T();
   if (u1.size() == u2.size()) {
-    for (int iD=0; iD<u1.size(); ++iD) {
+    for (unsigned iD=0; iD<u1.size(); ++iD) {
       prod += u1[iD]*u2[iD];
     }
   }
@@ -366,6 +372,7 @@ int get_nearest_link(const std::vector<T>& vec)
   return max_index;
 }
 
+
 namespace tensorIndices2D {
 enum { xx=0, xy=1, yy=2 };
 }
@@ -376,7 +383,7 @@ enum { xx=0, xy=1, xz=2, yy=3, yz=4, zz=5 };
 
 /// compute lattice density from lattice pressure
 template <typename T, typename DESCRIPTOR>
-T densityFromPressure( T latticePressure )
+any_platform T densityFromPressure( T latticePressure )
 {
   // rho = p / c_s^2 + 1
   return latticePressure * descriptors::invCs2<T,DESCRIPTOR>() + 1.0;
@@ -384,16 +391,77 @@ T densityFromPressure( T latticePressure )
 
 /// compute lattice pressure from lattice density
 template <typename T, typename DESCRIPTOR>
-T pressureFromDensity( T latticeDensity )
+any_platform T pressureFromDensity( T latticeDensity )
 {
   // p = (rho - 1) * c_s^2
   return (latticeDensity - 1.0) / descriptors::invCs2<T,DESCRIPTOR>();
 }
 
+/// return true if a is close to zero
+template <typename T>
+inline bool nearZero(T a) any_platform
+{
+  if (a==T()) {
+    return true;
+  }
+  T EPSILON = std::numeric_limits<T>::epsilon();
+  if (a > -EPSILON && a < EPSILON) {
+    return true;
+  }
+  else {
+    return false;
+  }
+}
+
+template <typename T>
+inline bool nearZero(T a, T epsilon) any_platform
+{
+  if (a > -epsilon && a < epsilon) {
+    return true;
+  }
+  else {
+    return false;
+  }
+}
+
+template<typename T, typename U=T, typename W=T>
+inline bool approxEqual(T a, U b, W epsilon) any_platform
+{
+  if (a==b) {
+    return true;
+  }
+  return nearZero<T>(a - b, epsilon);
+}
+
+template<typename T, typename U=T>
+inline bool approxEqual(T a, U b) any_platform
+{
+  if (a==b) {
+    return true;
+  }
+  if (nearZero(a) && nearZero(b)) {
+    return true;
+  }
+  T EPSILON = std::numeric_limits<T>::epsilon()*4.*util::fabs(a);
+  return approxEqual(a,b,EPSILON);
+}
+
+template <unsigned D, typename F>
+void forEachOffset(F fn) any_platform {
+  for (int i = -1; i <= 1; ++i) {
+    for (int j = -1; j <= 1; ++j) {
+      if constexpr (D == 3) {
+        for (int k = -1; k <= 1; ++k) { fn(i, j, k); }
+      }
+      else { fn(i, j); }
+    }
+  }
+}
+
 }  // namespace util
 
 template <typename T>
-std::enable_if_t<std::is_arithmetic<T>::type::value, T> abs(T x)
+std::enable_if_t<std::is_arithmetic<T>::type::value, T> abs(T x) any_platform
 {
   return util::fabs(x);
 }

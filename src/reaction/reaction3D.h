@@ -26,7 +26,3 @@
 #include "rate.h"
 #include "reactionPostProcessor3D.h"
 #include "explicitFiniteDifference/explicitFiniteDifference3D.h"
-
-#include "eul2Lagr/eul2LagrDensity3D.h"
-#include "eul2Lagr/eul2LagrOperation3D.h"
-#include "eul2Lagr/eul2LagrPostProcessor3D.h"

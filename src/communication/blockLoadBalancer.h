@@ -21,19 +21,12 @@
  *  Boston, MA  02110-1301, USA.
 */
 
-
 #ifndef BLOCK_LOAD_BALANCER_H
 #define BLOCK_LOAD_BALANCER_H
 
-
 #include "communication/loadBalancer.h"
 
-
-
 namespace olb {
-
-template<typename T> class CuboidGeometry3D;
-template<typename T> class CuboidGeometry2D;
 
 
 template<typename T>
@@ -45,13 +38,14 @@ private:
 public:
   BlockLoadBalancer() {}
   BlockLoadBalancer(int rank, int size, int globChunkSize, int offset);
-  BlockLoadBalancer(CuboidGeometry2D<T>& cGeometry);
-  BlockLoadBalancer(CuboidGeometry3D<T>& cGeometry);
+  BlockLoadBalancer(CuboidDecomposition2D<T>& cGeometry);
+  BlockLoadBalancer(CuboidDecomposition3D<T>& cGeometry);
   void init_chunkD(int rank, int size, int globChunkSize, int offset);
   int locChunkSize() const;
   int firstGlobNum() const;
   int lastGlobNum() const;
 };
+
 }  // namespace olb
 
 #endif

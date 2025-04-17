@@ -117,13 +117,18 @@ void wallCapture( Particle<T,PARTICLETYPE>& particle,
 {
   using namespace descriptors;
   //Execute wall treatment
+    bool isActive = particle.template getField<DYNBEHAVIOUR,ACTIVE>();
+  if (isActive){
   doAtParticleWallContact<useCubicBounds>( particle, solidBoundary,
     [&]( Particle<T,PARTICLETYPE>& particle,
     Vector<T,PARTICLETYPE::d>& normal ){
     //Deactivate particle
+
     access::setInactive( particle );
     access::setRestingParticle( particle );
   });
+  }
+
 }
 
 /// Wall capture based on material rather than SolidBoundary
@@ -283,6 +288,53 @@ void wallCaptureAndEscapeMaterialAware( Particle<T,PARTICLETYPE>& particle,
         constexpr bool useCubicBounds=false;
         boundaries::escape<useCubicBounds>(particle, solidBoundary);
       }
+    }
+  }
+}
+
+
+ template<bool useCubicBounds=false, typename T, typename PARTICLETYPE>
+void wallCaptureSpheroidSubgrid( Particle<T,PARTICLETYPE>& particle,
+  SolidBoundary<T,PARTICLETYPE::d>& solidBoundary )
+{
+  using namespace descriptors;
+  static_assert(PARTICLETYPE::template providesNested<DYNBEHAVIOUR,ACTIVE>(), "Field DYNBEHAVIOUR:ACTIVE has to be provided");
+
+  doAtParticleWallContactSpheroid<useCubicBounds>( particle, solidBoundary,
+    [&]( Particle<T,PARTICLETYPE>& particle,
+    Vector<T,PARTICLETYPE::d>& normal ){
+    //Deactivate particle
+    particle.template setField<DYNBEHAVIOUR,ACTIVE>( false );
+ });
+}
+
+
+  /// Wall capture with material awareness
+/// - implies necessity of SuperGeometry, so no DEM only possible
+/// - setting particle field ACTIVE=false at wall impact
+/// - represents combination of wallCapture and materialCapture
+/// - intended to use aprior material check to speed up complex SolidBoudaries carying STLs
+template<typename T, typename PARTICLETYPE>
+void wallCaptureMaterialAwareSpheroidSubgrid( Particle<T,PARTICLETYPE>& particle,
+  SolidBoundary<T,PARTICLETYPE::d>& solidBoundary,
+  SuperIndicatorMaterial<T,PARTICLETYPE::d>& materialIndicator )
+{
+  using namespace descriptors;
+  static_assert(PARTICLETYPE::template providesNested<DYNBEHAVIOUR,ACTIVE>(), "Field DYNBEHAVIOUR:ACTIVE has to be provided");
+  //Check whether still active
+  bool isActive = particle.template getField<DYNBEHAVIOUR,ACTIVE>();
+  if (isActive){
+    bool vicinity = checkMaterialVicinity( materialIndicator, particle );
+    if (vicinity){
+      //Apply wall capture
+      constexpr bool useCubicBounds=false;
+  doAtParticleWallContactSpheroid(particle, solidBoundary,
+  [&] ( Particle<T,PARTICLETYPE>& particle,
+    Vector<T,PARTICLETYPE::d>& normal ) {
+    //Deactivate particle
+    particle.template setField<DYNBEHAVIOUR,ACTIVE>( false );
+ }
+ );
     }
   }
 }

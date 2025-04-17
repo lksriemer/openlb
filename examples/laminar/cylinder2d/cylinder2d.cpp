@@ -1,4 +1,4 @@
-/*  Lattice Boltzmann sample, written in C++, using the OpenLBlibrary
+/*  Lattice Boltzmann sample, written in C++, using the OpenLB library
  *
  *  Copyright (C) 2006-2019 Jonas Latt, Mathias J. Krause,
  *  Vojtech Cvrcek, Peter Weisbrod, Adrian Kummerländer
@@ -22,7 +22,7 @@
  *  Boston, MA  02110-1301, USA.
  */
 
-/* cylinder2d.cpp:
+/* cylinder2d.h:
  * This example examines a steady flow past a cylinder placed in a channel.
  * The cylinder is offset somewhat from the center of the flow to make the
  * steady-state symmetrical flow unstable. At the inlet, a Poiseuille profile is
@@ -36,8 +36,7 @@
  * Reynolds number to Re=100.
  */
 
-#include "olb2D.h"
-#include "olb2D.hh"
+#include <olb.h>
 
 using namespace olb;
 using namespace olb::descriptors;
@@ -50,6 +49,7 @@ using DESCRIPTOR = D2Q9<>;
 
 // Parameters for the simulation setup
 const int N = 10;       // resolution of the model
+const T CFL = 0.05;     // characteristic CFL number
 const T Re = 20.;       // Reynolds number
 const T maxPhysT = 16;  // max. simulation time in s, SI unit
 const T L = 0.1/N;      // latticeL
@@ -112,23 +112,17 @@ void prepareLattice( SuperLattice<T,DESCRIPTOR>& sLattice,
   sLattice.defineDynamics<BGKdynamics>(bulkIndicator);
 
   // Material=2 -->bounce back
-  setBounceBackBoundary(sLattice, superGeometry, 2);
+  boundary::set<boundary::BounceBack>(sLattice, superGeometry, 2);
 
-  // Setting of the boundary conditions
-
-  //if boundary conditions are chosen to be local
-  //setLocalVelocityBoundary(sLattice, omega, superGeometry, 3);
-  //setLocalPressureBoundary(sLattice, omega, superGeometry, 4);
-
-  //if boundary conditions are chosen to be interpolated
-  setInterpolatedVelocityBoundary(sLattice, omega, superGeometry, 3);
-  setInterpolatedPressureBoundary(sLattice, omega, superGeometry, 4);
+  //if boundary conditions are chosen to be interpolatedy, 3);
+  boundary::set<boundary::InterpolatedVelocity>(sLattice, superGeometry, 3);
+  boundary::set<boundary::InterpolatedPressure>(sLattice, superGeometry, 4);
 
   // Material=5 -->bouzidi / bounce back
   #ifdef BOUZIDI
   setBouzidiBoundary(sLattice, superGeometry, 5, *circle);
   #else
-  setBounceBackBoundary(sLattice, superGeometry, 5);
+  boundary::set<boundary::BounceBack>(sLattice, superGeometry, 5);
   #endif
 
   // Initial conditions
@@ -151,7 +145,7 @@ void prepareLattice( SuperLattice<T,DESCRIPTOR>& sLattice,
 // Generates a slowly increasing inflow for the first iTMaxStart timesteps
 void setBoundaryValues( SuperLattice<T, DESCRIPTOR>& sLattice,
                         UnitConverter<T, DESCRIPTOR> const& converter, int iT,
-                        SuperGeometry<T,2>& superGeometry )
+                        SuperGeometry<T,2>& superGeometry)
 {
 
   OstreamManager clout( std::cout,"setBoundaryValues" );
@@ -196,13 +190,7 @@ void getResults( SuperLattice<T, DESCRIPTOR>& sLattice,
   SuperVTMwriter2D<T> vtmWriter( "cylinder2d" );
   SuperLatticePhysVelocity2D<T, DESCRIPTOR> velocity( sLattice, converter );
   SuperLatticePhysPressure2D<T, DESCRIPTOR> pressure( sLattice, converter );
-  SuperLatticeGeometry2D<T, DESCRIPTOR> materials( sLattice, superGeometry );
-  SuperLatticeRefinementMetricKnudsen2D<T, DESCRIPTOR> quality( sLattice, converter);
-  SuperRoundingF2D<T> roundedQuality ( quality, RoundingMode::NearestInteger);
-  SuperDiscretizationF2D<T> discretization ( roundedQuality, 0., 2. );
 
-  vtmWriter.addFunctor( materials );
-  vtmWriter.addFunctor( quality );
   vtmWriter.addFunctor( velocity );
   vtmWriter.addFunctor( pressure );
 
@@ -218,10 +206,8 @@ void getResults( SuperLattice<T, DESCRIPTOR>& sLattice,
 
   if ( iT == 0 ) {
     // Writes the geometry, cuboid no. and rank no. as vti file for visualization
-    SuperLatticeGeometry2D<T, DESCRIPTOR> geometry( sLattice, superGeometry );
     SuperLatticeCuboid2D<T, DESCRIPTOR> cuboid( sLattice );
     SuperLatticeRank2D<T, DESCRIPTOR> rank( sLattice );
-    vtmWriter.write( geometry );
     vtmWriter.write( cuboid );
     vtmWriter.write( rank );
 
@@ -286,13 +272,6 @@ void getResults( SuperLattice<T, DESCRIPTOR>& sLattice,
       // write output as JPEG
       heatmap::write(planeReduction, iT);
     }
-    {
-      BlockReduction2D2D<T> planeReduction( discretization, 600, BlockDataSyncMode::ReduceOnly );
-      heatmap::plotParam<T> jpeg_scale;
-      jpeg_scale.name = "quality";
-      jpeg_scale.colour = "blackbody";
-      heatmap::write( planeReduction, iT, jpeg_scale );
-    }
   }
 
   // write pdf at last time step
@@ -305,7 +284,7 @@ void getResults( SuperLattice<T, DESCRIPTOR>& sLattice,
 int main( int argc, char* argv[] )
 {
   // === 1st Step: Initialization ===
-  olbInit( &argc, &argv );
+  initialize( &argc, &argv );
   singleton::directories().setOutputDir( "./tmp/" );
   OstreamManager clout( std::cout,"main" );
 
@@ -323,33 +302,32 @@ int main( int argc, char* argv[] )
   converter.write("cylinder2d");
 
   // === 2rd Step: Prepare Geometry ===
-  Vector<T,2> extend( lengthX,lengthY );
+  Vector<T,2> extend( lengthX, lengthY );
   Vector<T,2> origin;
   IndicatorCuboid2D<T> cuboid( extend, origin );
 
-  // Instantiation of a cuboidGeometry with weights
-#ifdef PARALLEL_MODE_MPI
+  // Instantiation of a cuboidDecomposition with weights
+  #ifdef PARALLEL_MODE_MPI
   const int noOfCuboids = singleton::mpi().getSize();
-#else
+  #else
   const int noOfCuboids = 7;
-#endif
-  CuboidGeometry2D<T> cuboidGeometry( cuboid, L, noOfCuboids );
+  #endif
+  CuboidDecomposition2D<T> cuboidDecomposition( cuboid, L, noOfCuboids );
 
   // Instantiation of a loadBalancer
-  HeuristicLoadBalancer<T> loadBalancer( cuboidGeometry );
+  HeuristicLoadBalancer<T> loadBalancer( cuboidDecomposition );
 
   // Instantiation of a superGeometry
-  SuperGeometry<T,2> superGeometry( cuboidGeometry, loadBalancer );
+  SuperGeometry<T,2> superGeometry( cuboidDecomposition, loadBalancer );
 
-  Vector<T,2> center( centerCylinderX,centerCylinderY );
+  Vector<T,2> center( centerCylinderX, centerCylinderY );
   std::shared_ptr<IndicatorF2D<T>> circle = std::make_shared<IndicatorCircle2D<T>>( center, radiusCylinder );
 
-  prepareGeometry( converter, superGeometry, circle );
+  prepareGeometry( converter, superGeometry, circle);
 
   // === 3rd Step: Prepare Lattice ===
   SuperLattice<T, DESCRIPTOR> sLattice( superGeometry );
 
-  //prepareLattice and set boundaryConditions
   prepareLattice( sLattice, converter, superGeometry, circle );
 
   // === 4th Step: Main Loop with Timer ===
@@ -359,13 +337,14 @@ int main( int argc, char* argv[] )
 
   for ( std::size_t iT = 0; iT < converter.getLatticeTime( maxPhysT ); ++iT ) {
     // === 5th Step: Definition of Initial and Boundary Conditions ===
-    setBoundaryValues( sLattice, converter, iT, superGeometry );
+    setBoundaryValues( sLattice, converter, iT, superGeometry);
 
     // === 6th Step: Collide and Stream Execution ===
     sLattice.collideAndStream();
 
     // === 7th Step: Computation and Output of the Results ===
     getResults( sLattice, converter, iT, superGeometry, timer );
+
   }
 
   timer.stop();

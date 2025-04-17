@@ -266,6 +266,151 @@ private:
 
 
 
+/// Standard dynamics for particles
+template<typename T, typename PARTICLETYPE, typename PCONDITION=conditions::active_particles>
+class EulerParticleDynamics : public ParticleDynamics<T,PARTICLETYPE> {
+public:
+  /// Constructor
+  EulerParticleDynamics( );
+  /// Procesisng step
+  void process (Particle<T,PARTICLETYPE>& particle, T timeStepSize) override;
+};
+
+
+/// Standard dynamics with wall capture
+template<typename T, typename PARTICLETYPE,
+         typename PCONDITION=conditions::active_particles>
+class EulerParticleDynamicsMaterialAwareWallCapture
+  : public EulerParticleDynamics<T,PARTICLETYPE,PCONDITION> {
+public:
+  /// Constructor
+  EulerParticleDynamicsMaterialAwareWallCapture( SolidBoundary<T,PARTICLETYPE::d>& solidBoundary ,
+    SuperIndicatorMaterial<T,PARTICLETYPE::d>& materialIndicator );
+  /// Procesisng step
+  void process (Particle<T,PARTICLETYPE>& particle, T timeStepSize) override;
+private:
+  SolidBoundary<T,PARTICLETYPE::d>& _solidBoundary;
+  SuperIndicatorMaterial<T,PARTICLETYPE::d>& _materialIndicator;
+};
+
+
+
+/// Verlet particle dynamics only considering translation (ignoring rotation)
+template<typename T, typename PARTICLETYPE, typename PCONDITION=conditions::active_particles>
+class EulerParticleDynamicsTranslationOnly : public ParticleDynamics<T,PARTICLETYPE> {
+public:
+  /// Constructor
+  EulerParticleDynamicsTranslationOnly( );
+  /// Procesisng step
+  void process (Particle<T,PARTICLETYPE>& particle, T timeStepSize) override;
+};
+
+
+/// Analytical particle dynamics only considering translation (ignoring rotation)
+template<typename T, typename PARTICLETYPE, typename PCONDITION=conditions::active_particles>
+class AnalyticalParticleDynamicsTranslationOnly : public ParticleDynamics<T,PARTICLETYPE> {
+public:
+  /// Constructor
+  AnalyticalParticleDynamicsTranslationOnly( );
+  /// Procesisng step
+  void process (Particle<T,PARTICLETYPE>& particle, T timeStepSize) override;
+};
+
+
+
+/// Standard dynamics with wall capture
+template<typename T, typename PARTICLETYPE,
+         typename PCONDITION=conditions::active_particles>
+class AnalyticalParticleDynamicsTranslationOnlyMaterialAwareWallCapture
+  : public AnalyticalParticleDynamicsTranslationOnly<T,PARTICLETYPE,PCONDITION> {
+public:
+  /// Constructor
+  AnalyticalParticleDynamicsTranslationOnlyMaterialAwareWallCapture( SolidBoundary<T,PARTICLETYPE::d>& solidBoundary,
+    SuperIndicatorMaterial<T,PARTICLETYPE::d>& materialIndicator );
+  /// Procesisng step
+  void process (Particle<T,PARTICLETYPE>& particle, T timeStepSize) override;
+private:
+  SolidBoundary<T,PARTICLETYPE::d>& _solidBoundary;
+  SuperIndicatorMaterial<T,PARTICLETYPE::d>& _materialIndicator;
+};
+
+
+/// Standard dynamics for ELER particles
+template<typename T, typename PARTICLETYPE, typename PCONDITION=conditions::active_particles>
+class EulerSpheroidParticleDynamics : public ParticleDynamics<T,PARTICLETYPE> {
+public:
+  /// Constructor
+  EulerSpheroidParticleDynamics( );
+  /// Procesisng step
+  void process (Particle<T,PARTICLETYPE>& particle, T timeStepSize) override;
+};
+
+
+/// Standard dynamics for ELER particles with periodicity in given direction (infinite pipe flow applications)
+template<typename T, typename PARTICLETYPE, typename PCONDITION=conditions::active_particles>
+class EulerSpheroidParticleDynamicsPeriodic : public ParticleDynamics<T,PARTICLETYPE> {
+public:
+  /// Constructor
+  EulerSpheroidParticleDynamicsPeriodic( Vector<int,3> periodic_direction);
+  /// Procesisng step
+  void process (Particle<T,PARTICLETYPE>& particle, T timeStepSize) override;
+private:
+   Vector<int,3> _periodic_direction;
+};
+
+template<typename T, typename PARTICLETYPE, bool useCubicBounds=false,
+         typename PCONDITION=conditions::active_particles>
+class EulerSpheroidParticleDynamicsWallCapture
+  : public EulerSpheroidParticleDynamics<T,PARTICLETYPE,PCONDITION> {
+public:
+  /// Constructor
+  EulerSpheroidParticleDynamicsWallCapture( SolidBoundary<T,PARTICLETYPE::d>& solidBoundary );
+  /// Procesisng step
+  void process (Particle<T,PARTICLETYPE>& particle, T timeStepSize) override;
+private:
+  SolidBoundary<T,PARTICLETYPE::d>& _solidBoundary;
+};
+
+template<typename T, typename PARTICLETYPE, bool useCubicBounds=false,
+         typename PCONDITION=conditions::active_particles>
+class EulerSpheroidParticleDynamicsMaterialAwareWallCapture
+  : public EulerSpheroidParticleDynamics<T,PARTICLETYPE,PCONDITION> {
+public:
+  /// Constructor
+  EulerSpheroidParticleDynamicsMaterialAwareWallCapture( SolidBoundary<T,PARTICLETYPE::d>& solidBoundary,
+  SuperIndicatorMaterial<T,PARTICLETYPE::d>& materialIndicator );
+  /// Procesisng step
+  void process (Particle<T,PARTICLETYPE>& particle, T timeStepSize) override;
+private:
+  SolidBoundary<T,PARTICLETYPE::d>& _solidBoundary;
+  SuperIndicatorMaterial<T,PARTICLETYPE::d>& _materialIndicator;
+
+};
+
+
+template<typename T, typename PARTICLETYPE, bool useCubicBounds=false,
+         typename PCONDITION=conditions::active_particles>
+class EulerSpheroidParticleDynamicsMaterialAwareWallCapturePeriodic
+  : public EulerSpheroidParticleDynamicsPeriodic<T,PARTICLETYPE,PCONDITION> {
+public:
+  /// Constructor
+  EulerSpheroidParticleDynamicsMaterialAwareWallCapturePeriodic( SolidBoundary<T,PARTICLETYPE::d>& solidBoundary,
+  SuperIndicatorMaterial<T,PARTICLETYPE::d>& materialIndicator, Vector<int,3> direction );
+  /// Procesisng step
+  void process (Particle<T,PARTICLETYPE>& particle, T timeStepSize) override;
+private:
+  SolidBoundary<T,PARTICLETYPE::d>& _solidBoundary;
+  SuperIndicatorMaterial<T,PARTICLETYPE::d>& _materialIndicator;
+  Vector<int,3> _direction;
+
+};
+
+
+
+
+
+
+
 
 //TODO: REWORK FOLLOWING DYNAMICS ACCORDING TO OBOVE ONES
 

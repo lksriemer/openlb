@@ -64,5 +64,32 @@ public:
   bool operator() (T output[], const int input[]) override;
 };
 
+/// functor returns pointwise phys stress tensor for newtonian fluids
+/**
+ * sigma = -p I + 2 mu D
+ *
+ * sigma := stress tensor
+ * p := pressure
+ * mu := dynamic viscosity
+ * D := strain rate tensor
+ **/
+template <typename T, typename DESCRIPTOR>
+class SuperLatticePhysStressTensor3D final : public SuperLatticePhysF3D<T,DESCRIPTOR> {
+public:
+  SuperLatticePhysStressTensor3D(SuperLattice<T,DESCRIPTOR>& sLattice,
+                               const UnitConverter<T,DESCRIPTOR>& converter);
+};
+
+template <typename T, typename DESCRIPTOR>
+class BlockLatticePhysStressTensor3D final : public BlockLatticePhysF3D<T,DESCRIPTOR> {
+private:
+  BlockLatticePhysPressure3D<T,DESCRIPTOR> _pressureF;
+
+public:
+  BlockLatticePhysStressTensor3D(BlockLattice<T,DESCRIPTOR>& blockLattice,
+                               const UnitConverter<T,DESCRIPTOR>& converter);
+  bool operator() (T output[], const int input[]) override;
+};
+
 }
 #endif

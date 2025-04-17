@@ -151,9 +151,9 @@ bool Octree<T>::AABBTri(const STLtriangle<T>& tri, T overlap)
   T eps = std::numeric_limits<T>::epsilon();
 
   for (int j=0; j<3; j++) {
-    v0[j] = tri.point[0].coords[j]-_center[j];
-    v1[j] = tri.point[1].coords[j]-_center[j];
-    v2[j] = tri.point[2].coords[j]-_center[j];
+    v0[j] = tri.point[0][j]-_center[j];
+    v1[j] = tri.point[1][j]-_center[j];
+    v2[j] = tri.point[2][j]-_center[j];
     e[j] = _radius*1.01 + overlap; // + std::numeric_limits<T>::epsilon(); // *1.01;
   }
   for (int j=0; j<3; j++) {
@@ -272,10 +272,10 @@ Octree<T>* Octree<T>::find(const Vector<T,3>& pt,const int& maxDepth)
       return this;
     }
     else {
-      OstreamManager clout(std::cout, "Octree");
-      clout << "Point: " << std::setprecision(10) << pt[0]<< " " <<pt[1]<< " " <<pt[2]<< " " <<std::endl;
-      clout << "Center: " << std::setprecision(10) << _center[0] << " " << _center[1] << " " << _center[2] << " " << std::endl;
-      clout << "Radius: "  << std::setprecision(10)<< _radius << std::endl;
+      //OstreamManager clout(std::cout, "Octree");
+      //clout << "Point: " << std::setprecision(10) << pt[0]<< " " <<pt[1]<< " " <<pt[2]<< " " <<std::endl;
+      //clout << "Center: " << std::setprecision(10) << _center[0] << " " << _center[1] << " " << _center[2] << " " << std::endl;
+      //clout << "Radius: "  << std::setprecision(10)<< _radius << std::endl;
       //throw std::runtime_error("[Octree->find] Point outside of geometry.");
       return nullptr;
     }
@@ -454,9 +454,9 @@ void Octree<T>::write(const Vector<T,3>& pt,const std::string no)
     for (; it != _triangles.end(); ++it) {
       f << "facet normal" << _mesh->getTri(*it).normal[0] << " "  << _mesh->getTri(*it).normal[1] << " "  << _mesh->getTri(*it).normal[2] << " " <<std::endl;
       f << "    outer loop\n";
-      f << "        vertex " << _mesh->getTri(*it).point[0].coords[0] << " " << _mesh->getTri(*it).point[0].coords[1] << " " << _mesh->getTri(*it).point[0].coords[2] << "\n";
-      f << "        vertex " << _mesh->getTri(*it).point[1].coords[0] << " " << _mesh->getTri(*it).point[1].coords[1] << " " << _mesh->getTri(*it).point[1].coords[2] << "\n";
-      f << "        vertex " << _mesh->getTri(*it).point[2].coords[0] << " " << _mesh->getTri(*it).point[2].coords[1] << " " << _mesh->getTri(*it).point[2].coords[2] << "\n";
+      f << "        vertex " << _mesh->getTri(*it).point[0][0] << " " << _mesh->getTri(*it).point[0][1] << " " << _mesh->getTri(*it).point[0][2] << "\n";
+      f << "        vertex " << _mesh->getTri(*it).point[1][0] << " " << _mesh->getTri(*it).point[1][1] << " " << _mesh->getTri(*it).point[1][2] << "\n";
+      f << "        vertex " << _mesh->getTri(*it).point[2][0] << " " << _mesh->getTri(*it).point[2][1] << " " << _mesh->getTri(*it).point[2][2] << "\n";
       f << "    endloop\n";
       f << "endfacet\n";
     }
@@ -485,9 +485,9 @@ void Octree<T>::write(const int depth,const std::string no)
     for (; it != _triangles.end(); ++it) {
       f << "facet normal" << _mesh->getTri(*it).normal[0] << " "  << _mesh->getTri(*it).normal[1] << " "  << _mesh->getTri(*it).normal[2] << " " <<std::endl;
       f << "    outer loop\n";
-      f << "        vertex " << _mesh->getTri(*it).point[0].coords[0] << " " << _mesh->getTri(*it).point[0].coords[1] << " " << _mesh->getTri(*it).point[0].coords[2] << "\n";
-      f << "        vertex " << _mesh->getTri(*it).point[1].coords[0] << " " << _mesh->getTri(*it).point[1].coords[1] << " " << _mesh->getTri(*it).point[1].coords[2] << "\n";
-      f << "        vertex " << _mesh->getTri(*it).point[2].coords[0] << " " << _mesh->getTri(*it).point[2].coords[1] << " " << _mesh->getTri(*it).point[2].coords[2] << "\n";
+      f << "        vertex " << _mesh->getTri(*it).point[0][0] << " " << _mesh->getTri(*it).point[0][1] << " " << _mesh->getTri(*it).point[0][2] << "\n";
+      f << "        vertex " << _mesh->getTri(*it).point[1][0] << " " << _mesh->getTri(*it).point[1][1] << " " << _mesh->getTri(*it).point[1][2] << "\n";
+      f << "        vertex " << _mesh->getTri(*it).point[2][0] << " " << _mesh->getTri(*it).point[2][1] << " " << _mesh->getTri(*it).point[2][2] << "\n";
       f << "    endloop\n";
       f << "endfacet\n";
     }

@@ -31,6 +31,95 @@
 
 namespace olb {
 
+/// Bilinear interpolation for rectangular lattice with dimensions delta[i];
+/// This functor performs bilinear interpolation for 2D data.
+template <typename T, typename W>
+SpecialAnalyticalFfromBlockF2D<T,W>::SpecialAnalyticalFfromBlockF2D(
+  BlockF2D<W>& f, Cuboid2D<T>& cuboid,
+  Vector<T,2> delta, T scale)
+  : AnalyticalF2D<T,W>(f.getTargetDim()), _f(f), _cuboid(cuboid), _delta(delta), _scale(scale)
+{
+  this->getName() = "fromBlockF";
+}
+
+template <typename T, typename W>
+bool SpecialAnalyticalFfromBlockF2D<T,W>::operator()(W output[], const T physC[])
+{
+  Vector<T,2> origin = _cuboid.getOrigin();
+
+  // Scale physC in all 2 dimensions
+  Vector<T,2> physCv;
+  for (int i=0; i<2; i++) {
+    physCv[i] = origin[i] + (physC[i] - origin[i]) * ( _cuboid.getDeltaR() / _delta[i] );
+  }
+
+  int latticeR[2];
+  for (int i=0; i<2; i++) {
+    latticeR[i] = util::max((int)util::floor( (physCv[i] - origin[i]) / _cuboid.getDeltaR() ), 0);
+  }
+  Vector<T,2> physRiC;
+  Vector<W,2> d, e;
+  W output_tmp[3]; // Assuming maximum of 3 components
+  Vector<T,2> latticeRv;
+
+  for (int i=0; i<2; i++) {
+    latticeRv[i] = (T) latticeR[i];
+  }
+  physRiC = origin + latticeRv * _cuboid.getDeltaR();
+  T dr = 1. / _cuboid.getDeltaR();
+
+  // Compute weights
+  d = (physCv - physRiC) * dr;
+  e = 1. - d;
+
+  for (int iD = 0; iD < _f.getTargetDim(); ++iD) {
+    output[iD] = W();
+    output_tmp[iD] = W();
+  }
+
+  // Perform bilinear interpolation
+  // Corner (0,0)
+  _f(output_tmp, latticeR);
+  for (int iD = 0; iD < _f.getTargetDim(); ++iD) {
+    output[iD] += output_tmp[iD] * e[0] * e[1];
+  }
+
+  // Corner (0,1)
+  if (_cuboid.getNy() != 1) {
+    latticeR[1]++;
+  }
+  _f(output_tmp, latticeR);
+  for (int iD = 0; iD < _f.getTargetDim(); ++iD) {
+    output[iD] += output_tmp[iD] * e[0] * d[1];
+  }
+
+  // Corner (1,0)
+  if (_cuboid.getNy() != 1) {
+    latticeR[1]--;
+  }
+  if (_cuboid.getNx() != 1) {
+    latticeR[0]++;
+  }
+  _f(output_tmp, latticeR);
+  for (int iD = 0; iD < _f.getTargetDim(); ++iD) {
+    output[iD] += output_tmp[iD] * d[0] * e[1];
+  }
+
+  // Corner (1,1)
+  if (_cuboid.getNy() != 1) {
+    latticeR[1]++;
+  }
+  _f(output_tmp, latticeR);
+  for (int iD = 0; iD < _f.getTargetDim(); ++iD) {
+    output[iD] += output_tmp[iD] * d[0] * d[1];
+  }
+
+  for (int iD = 0; iD < _f.getTargetDim(); ++iD) {
+    output[iD] *= _scale;
+  }
+
+  return true;
+}
 
 template <typename T, typename W>
 AnalyticalFfromBlockF2D<T,W>::AnalyticalFfromBlockF2D(
@@ -45,8 +134,8 @@ template <typename T, typename W>
 bool AnalyticalFfromBlockF2D<T,W>::operator()(W output[], const T physC[])
 {
   int latticeC[2];
-  int latticeR[2];
-  _cuboid.getFloorLatticeR(latticeR, physC);
+  Vector<T,2> physCv(physC);
+  LatticeR<2> latticeR = _cuboid.getFloorLatticeR(physCv);
 
   auto& block = _f.getBlockStructure();
   auto padding = std::min(1, block.getPadding());
@@ -55,9 +144,7 @@ bool AnalyticalFfromBlockF2D<T,W>::operator()(W output[], const T physC[])
     const int& locX = latticeR[0];
     const int& locY = latticeR[1];
 
-    Vector<T,2> physRiC;
-    Vector<T,2> physCv(physC);
-    _cuboid.getPhysR(physRiC.data(), {locX, locY});
+    Vector<T,2> physRiC = _cuboid.getPhysR({locX, locY});
 
     // compute weights
     Vector<W,2> d = (physCv - physRiC) * (1. / _cuboid.getDeltaR());
@@ -114,15 +201,15 @@ AnalyticalFfromSuperF2D<T,W>::AnalyticalFfromSuperF2D(SuperF2D<T>& f,
     _communicateToAll(communicateToAll),
     _communicateOverlap(communicateOverlap),
     _f(f),
-    _cuboidGeometry(_f.getSuperStructure().getCuboidGeometry())
+    _cuboidDecomposition(_f.getSuperStructure().getCuboidDecomposition())
 {
-  this->getName() = "fromSuperF";
+  this->getName() = "fromSuperF("+ f.getName()+")";
 
   LoadBalancer<T>& load = _f.getSuperStructure().getLoadBalancer();
   for (int iC = 0; iC < load.size(); ++iC) {
     this->_blockF.emplace_back(
       new AnalyticalFfromBlockF2D<T>(_f.getBlockF(iC),
-                                     _cuboidGeometry.get(load.glob(iC)))
+                                     _cuboidDecomposition.get(load.glob(iC)))
     );
   }
 }
@@ -130,12 +217,13 @@ AnalyticalFfromSuperF2D<T,W>::AnalyticalFfromSuperF2D(SuperF2D<T>& f,
 template <typename T, typename W>
 bool AnalyticalFfromSuperF2D<T,W>::operator() (T output[], const T physC[])
 {
-  for (int iD = 0; iD < _f.getTargetDim(); ++iD) {
+  const auto targetDim = _f.getTargetDim();
+  for (int iD = 0; iD < targetDim; ++iD) {
     output[iD] = W();
   }
-
-  int latticeR[3];
-  if (!_cuboidGeometry.getLatticeR(latticeR, physC)) {
+  Vector<T,2> physCV(physC);
+  auto latticeR = _cuboidDecomposition.getLatticeR(physCV);
+  if (!latticeR) {
     return false;
   }
 
@@ -143,13 +231,11 @@ bool AnalyticalFfromSuperF2D<T,W>::operator() (T output[], const T physC[])
     _f.getSuperStructure().communicate();
   }
 
-  int dataSize = 0;
   int dataFound = 0;
 
-  LoadBalancer<T>& load = _f.getSuperStructure().getLoadBalancer();
+  const LoadBalancer<T>& load = _f.getSuperStructure().getLoadBalancer();
   for (int iC = 0; iC < load.size(); ++iC) {
     if (_blockF[iC]->operator()(output, physC)) {
-      dataSize += _f.getTargetDim();
       ++dataFound;
     }
   }
@@ -157,22 +243,17 @@ bool AnalyticalFfromSuperF2D<T,W>::operator() (T output[], const T physC[])
   if (_communicateToAll) {
 #ifdef PARALLEL_MODE_MPI
     singleton::mpi().reduceAndBcast(dataFound, MPI_SUM);
-    singleton::mpi().reduceAndBcast(dataSize, MPI_SUM);
-#endif
-    dataSize /= dataFound;
-#ifdef PARALLEL_MODE_MPI
-    for (int iD = 0; iD < dataSize; ++iD) {
+    for (int iD = 0; iD < targetDim; ++iD) {
       singleton::mpi().reduceAndBcast(output[iD], MPI_SUM);
     }
 #endif
-    for (int iD = 0; iD < dataSize; ++iD) {
+    for (int iD = 0; iD < targetDim; ++iD) {
       output[iD]/=dataFound;
     }
   }
   else {
     if (dataFound!=0) {
-      dataSize /= dataFound;
-      for (int iD = 0; iD < dataSize; ++iD) {
+      for (int iD = 0; iD < targetDim; ++iD) {
         output[iD]/=dataFound;
       }
     }

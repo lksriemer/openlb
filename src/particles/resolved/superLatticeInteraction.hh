@@ -38,8 +38,8 @@ void setSuperParticleField( const SuperGeometry<T,DESCRIPTOR::d>& sGeometry,
                             const Vector<bool,DESCRIPTOR::d>& periodicity )
 {
   constexpr unsigned D = DESCRIPTOR::d;
-  const PhysR<T,D> min = communication::getCuboidMin<T,D>(sGeometry.getCuboidGeometry());
-  const PhysR<T,D> max = communication::getCuboidMax<T,D>(sGeometry.getCuboidGeometry(), min);
+  const PhysR<T,D> min = communication::getCuboidMin<T,D>(sGeometry.getCuboidDecomposition());
+  const PhysR<T,D> max = communication::getCuboidMax<T,D>(sGeometry.getCuboidDecomposition(), min);
 
 
   for (int iC = 0; iC < sLattice.getLoadBalancer().size(); ++iC) {

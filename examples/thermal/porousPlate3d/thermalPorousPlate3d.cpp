@@ -22,8 +22,7 @@
  *  Boston, MA  02110-1301, USA.
  */
 
-#include "olb3D.h"
-#include "olb3D.hh"
+#include <olb.h>
 
 using namespace olb;
 using namespace olb::descriptors;
@@ -31,10 +30,8 @@ using namespace olb::graphics;
 
 using T = FLOATING_POINT_TYPE;
 
-
-typedef D3Q19<FORCE> NSDESCRIPTOR;
-typedef D3Q7<VELOCITY> TDESCRIPTOR;
-
+using NSDESCRIPTOR = D3Q19<FORCE>;
+using TDESCRIPTOR = D3Q7<VELOCITY>;
 
 // Parameters for the simulation setup
 const T lx = 1.0;      // length of the channel
@@ -215,8 +212,8 @@ void prepareLattice( ThermalUnitConverter<T, NSDESCRIPTOR, TDESCRIPTOR> const& c
   NSlattice.defineDynamics<ForcedBGKdynamics>(superGeometry.getMaterialIndicator({1, 2, 3}));
 
   /// sets boundary
-  setLocalVelocityBoundary<T,NSDESCRIPTOR>(NSlattice, NSomega, superGeometry.getMaterialIndicator({2, 3}));
-  setAdvectionDiffusionTemperatureBoundary<T,TDESCRIPTOR>(ADlattice, superGeometry.getMaterialIndicator({2, 3}));
+  boundary::set<boundary::LocalVelocity>(NSlattice, superGeometry.getMaterialIndicator({2, 3}));
+  boundary::set<boundary::AdvectionDiffusionDirichlet>(ADlattice, superGeometry.getMaterialIndicator({2, 3}));
 
   ADlattice.setParameter<descriptors::OMEGA>(Tomega);
   NSlattice.setParameter<descriptors::OMEGA>(NSomega);
@@ -299,10 +296,8 @@ void getResults(ThermalUnitConverter<T, NSDESCRIPTOR, TDESCRIPTOR> const& conver
     //writeLogFile(converter,"thermalPorousPlate3d");
 
     /// Writes the geometry, cuboid no. and rank no. as vti file for visualization
-    SuperLatticeGeometry3D<T, NSDESCRIPTOR> geometry(NSlattice, superGeometry);
     SuperLatticeCuboid3D<T, NSDESCRIPTOR> cuboid(NSlattice);
     SuperLatticeRank3D<T, NSDESCRIPTOR> rank(NSlattice);
-    vtkWriter.write(geometry);
     vtkWriter.write(cuboid);
     vtkWriter.write(rank);
 
@@ -334,7 +329,7 @@ int main(int argc, char *argv[])
 {
   /// === 1st Step: Initialization ===
   OstreamManager clout(std::cout,"main");
-  olbInit(&argc, &argv);
+  initialize(&argc, &argv);
   singleton::directories().setOutputDir("./tmp/");
 
   if (argc >= 2) {
@@ -368,20 +363,16 @@ int main(int argc, char *argv[])
   std::vector<T> origin(3,T());
   IndicatorCuboid3D<T> cuboid(extend, origin);
 
-  /// Instantiation of a cuboidGeometry with weights
-#ifdef PARALLEL_MODE_MPI
-  const int noOfCuboids = singleton::mpi().getSize();
-#else
-  const int noOfCuboids = 7;
-#endif
-  CuboidGeometry3D<T> cuboidGeometry(cuboid, converter.getPhysDeltaX(), noOfCuboids);
-  cuboidGeometry.setPeriodicity(true,false, true);
+  /// Instantiation of a cuboidDecomposition with weights
+  CuboidDecomposition3D<T> cuboidDecomposition(cuboid, converter.getPhysDeltaX(),
+                                               singleton::mpi().getSize());
+  cuboidDecomposition.setPeriodicity({true,false, true});
 
   /// Instantiation of a loadBalancer
-  HeuristicLoadBalancer<T> loadBalancer(cuboidGeometry);
+  HeuristicLoadBalancer<T> loadBalancer(cuboidDecomposition);
 
   /// Instantiation of a superGeometry
-  SuperGeometry<T,3> superGeometry(cuboidGeometry, loadBalancer);
+  SuperGeometry<T,3> superGeometry(cuboidDecomposition, loadBalancer);
 
   prepareGeometry(superGeometry, converter);
 

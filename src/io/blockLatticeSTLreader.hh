@@ -48,9 +48,9 @@ namespace olb {
  * BlockLatticeSTLreader functions
  */
 template<typename T>
-BlockLatticeSTLreader<T>::BlockLatticeSTLreader(CuboidGeometry3D<T>& cbg3d, LoadBalancer<T>& hlb, const std::string fName, T voxelSize, T stlSize,
+BlockLatticeSTLreader<T>::BlockLatticeSTLreader(CuboidDecomposition3D<T>& cbg3d, LoadBalancer<T>& hlb, const std::string fName, T voxelSize, T stlSize,
                         int method, bool verbose, T overlap, T max)
-  : _cuboidGeometry (cbg3d),
+  : _cuboidDecomposition (cbg3d),
     _loadBalancer(hlb),
     _voxelSize(voxelSize),
     _stlSize(stlSize),
@@ -125,28 +125,72 @@ BlockLatticeSTLreader<T>::BlockLatticeSTLreader(CuboidGeometry3D<T>& cbg3d, Load
 
   clout <<"creating of the lists for signed distance function"<< std::endl;
   _trianglesInCuboidList.resize(_loadBalancer.size());
-  //_cuboidGeometry.getNc();
+  //_cuboidDecomposition.size();
   for( int iC=0; iC < _loadBalancer.size();iC++)
   {
     //_trainglesInCuboidList.emplace_back();
     int globC = _loadBalancer.glob(iC);
-    auto& cuboid = _cuboidGeometry.get(globC);
+    auto& cuboid = _cuboidDecomposition.get(globC);
   for (STLtriangle<T>& triangle : _mesh.getTriangles())
   {
     Vector<T,3> center = triangle.getCenter() ;
-    if (cuboid.checkInters(center[0], center[1], center[2], 3))
+/* <<<<<<< HEAD
+    if (cuboid.intersects(center[0], center[1], center[2], 3))
+======= */
+    //TODO!!! For the signed distance function to work correctly, the overlapp (6) in checkInters must be higher than the real overlapp to capture all neighbouring triangles in the overlap correctly
+    if (cuboid.isInside(center, 6))
+
     {
       _trianglesInCuboidList[iC].push_back(triangle);
 
     }
   }
   }
-
+ // clout << "create neighbouring triangels removed" << std::endl;
+ createNeighbouringTriangleInCuboidVector();
+ clout <<'\n' << '\n' << "WARNING! The sensitivity in signed distance function could be insufficient for your case!!!" << '\n' << std::endl;
 
   if (_verbose) {
 
     clout << "Voxelizing ... OK" << std::endl;
   }
+}
+
+template<typename T>
+void BlockLatticeSTLreader<T>::createNeighbouringTriangleInCuboidVector()
+{
+  T sensitivity = 1.e-30;
+  _neighbouringTriangleInCuboidList.resize(_loadBalancer.size());
+  clout << "createNeighbouringTriangleInCuboidVector called" << std::endl;
+  for(int iC=0; iC < _loadBalancer.size();iC++)
+  {
+  _neighbouringTriangleInCuboidList[iC].resize(_trianglesInCuboidList[iC].size());
+
+
+  //searches for the neighbouring triangles in the cuboid
+    for (int ii=0;ii<_neighbouringTriangleInCuboidList[iC].size(); ii++)
+    {
+      std::vector<STLtriangle<T>> vec;
+
+      for(int jj=ii+1;jj<_trianglesInCuboidList[iC].size();jj++)
+      {
+
+      auto& i = (_trianglesInCuboidList[iC])[ii];
+      auto& j = (_trianglesInCuboidList[iC])[jj];
+      STLtriangle<T> pi = i;
+          //searches if there are common edges or vortex in the triangle pair
+      if(norm(i.point[0]-j.point[0]) < sensitivity || norm(i.point[1]-j.point[1]) < sensitivity || norm(i.point[2]-j.point[2]) < sensitivity ||
+      norm(i.point[0]-j.point[1]) < sensitivity || norm(i.point[1]-j.point[2]) < sensitivity || norm(i.point[2]-j.point[0]) < sensitivity ||
+      norm(i.point[0]-j.point[2]) < sensitivity || norm(i.point[1]-j.point[0]) < sensitivity || norm(i.point[2]-j.point[1]) < sensitivity )
+         {
+              STLtriangle<T> pj= j;
+              (_neighbouringTriangleInCuboidList[iC][ii]).push_back(pj);
+              (_neighbouringTriangleInCuboidList[iC][jj]).push_back(pi);
+         }
+      }
+    }
+  }
+  clout << "createneighbouringTriangleInCuboidVector finished" << std::endl;
 }
 
 /*
@@ -771,18 +815,37 @@ Vector<T,3> BlockLatticeSTLreader<T>::evalSurfaceNormal(const Vector<T,3>& origi
   if (!util::nearZero(norm(normal))) {
     normal = normalize(normal);
   }
+  //FP not sure about, how it should work, without that it simply points to the STL!
+ /* else {
+    return normal;
+  }*/
+/*
+  // Possible change of the sign so that the normal fits to the SDF logic
+  if(distance < _voxelSize) {
+    bool isInsideInnerPoint;
+    this->operator()(&isInsideInnerPoint, (closestPoint-_voxelSize*normal).data());
+    bool isInsideOuterPoint;
+    this->operator()(&isInsideOuterPoint, (closestPoint+_voxelSize*normal).data());
+    normal *= (isInsideInnerPoint && !isInsideOuterPoint ? 1 : -1);
+  }
+  else {
+    bool isInside;
+    this->operator()(&isInside, origin.data());
+    normal *= (isInside ? 1 : -1);
+  }*/
+
   if(util::dotProduct3D(normal, t.getNormal())> 0)
     {
 
-      distance =-1.*util::fabs(distance);
+      distance =-1.*util::fabs(distance);//inside
     }
     else
     {
-      distance =util::fabs(distance);
+      distance =util::fabs(distance);//inside
     }
   return normal;
 }
-
+/*
 template<typename T>
 T BlockLatticeSTLreader<T>::signedDistance(int iC, const Vector<T,3>& input )
 {
@@ -818,11 +881,11 @@ template<typename T>
 T BlockLatticeSTLreader<T>::signedDistance(const Vector<T,3>& input)
 {
   int iC = -1;
-  int globC = _cuboidGeometry.get_iC(input, 0);
+  int globC = _cuboidDecomposition.get_iC(input, 0);
   if (_loadBalancer.isLocal(globC)) {
     iC = _loadBalancer.loc(globC);
   } else {
-    globC = _cuboidGeometry.get_iC(input, 3);
+    globC = _cuboidDecomposition.get_iC(input, 3);
     if (_loadBalancer.isLocal(globC)) {
       iC = _loadBalancer.loc(globC);
     } else {
@@ -831,6 +894,198 @@ T BlockLatticeSTLreader<T>::signedDistance(const Vector<T,3>& input)
   }
   return signedDistance(iC, input);
 }
+*/
+
+
+///new signed distance function, sign based on the dot product computation
+template<typename T>
+T BlockLatticeSTLreader<T>::signedDistance(int iC, const Vector<T,3>& input )
+{
+
+  using namespace util;
+  T distance = std::numeric_limits<T>::max();
+  auto& triangles = _trianglesInCuboidList[iC];
+  STLtriangle<T> _triangle;
+  int triangle_index=-1;
+  Vector<T,3> normal;
+
+  for (int i=0;i<triangles.size();i++)
+  {
+    auto& triangle =  triangles[i];
+    PhysR<T,3> pointOnTriangle = triangle.closestPtPointTriangle(input);
+    T distance2 = util::min(distance, norm(pointOnTriangle - input));
+    if(distance2 < distance  && triangle.isPointInside(pointOnTriangle) )
+    {
+      distance =distance2;
+      _triangle = triangle;
+      triangle_index = i;
+      normal = normalize(pointOnTriangle - input);
+    }
+  }
+  Vector<T,3> distancesToEdges = {}, VortexPoint = {}, EdgePoint1 = {}, EdgePoint2 = {};
+  _triangle.getPointToEdgeDistances ((_triangle.closestPtPointTriangle(input)).data(), distancesToEdges);
+  Vector<T,3> pseudoNormal = normal;//used for edge and vortex point type
+  //different threatment for edge points
+  if(_triangle.isEdgePoint(distancesToEdges, EdgePoint1, EdgePoint2))
+  {
+    for(auto& i: _neighbouringTriangleInCuboidList[iC][triangle_index])
+    {
+      if( (EdgePoint1 == i.point[0] || EdgePoint1 == i.point[1] || EdgePoint1 == i.point[2]) && (EdgePoint2 == i.point[0] || EdgePoint2 == i.point[1] || EdgePoint2 == i.point[2]))
+      {
+        pseudoNormal = normalize(M_PI*_triangle.getNormal() + M_PI*i.getNormal());
+        break;
+      }
+     /* if ( i == (_neighbouringTriangleInCuboidList[iC][triangle_index][_neighbouringTriangleInCuboidList[iC][triangle_index].size()-1]))
+        std::cout << "edge not found" << std::endl <<std::endl << std::endl;*/
+    }
+    //set the sign
+  if(util::dotProduct3D(normal, pseudoNormal)> 0)
+  {
+
+      distance =-1.*util::fabs(distance);
+  }
+  else
+  {
+      distance =util::fabs(distance);
+  }
+  }
+  //different threatment for vortex point
+  else if(_triangle.isVortexPoint(distancesToEdges, VortexPoint))
+  {
+    int triangle_counter = 0;
+    Vector<T,3> vortex1, vortex2, edge1, edge2;
+    T dotP;
+    if(VortexPoint == _triangle.point[0])
+    {
+      vortex1 = _triangle.point[1];
+      vortex2 = _triangle.point[2];
+    }
+    else
+    {
+    if(VortexPoint == _triangle.point[1])
+    {
+      vortex1 = _triangle.point[0];
+      vortex2 = _triangle.point[2];
+    }
+    else
+    {
+    if(VortexPoint == _triangle.point[2])
+    {
+      vortex1 = _triangle.point[0];
+      vortex2 = _triangle.point[1];
+    }
+    }
+    }
+    edge1 = normalize(vortex1 - VortexPoint);
+    edge2 = normalize(vortex2 - VortexPoint);
+    dotP = dotProduct3D(edge1, edge2);
+
+       //some problems with 0 and pi angle in acos
+    if(dotP < -0.999999)
+          pseudoNormal = M_PI*_triangle.getNormal();
+        else if(dotP > 0.999999)
+        {pseudoNormal = 0;}
+        else
+        {
+    pseudoNormal = acos(dotP)*_triangle.getNormal();
+    triangle_counter++;
+        }
+
+    for(auto& i: _neighbouringTriangleInCuboidList[iC][triangle_index])
+    {
+      if( VortexPoint ==  i.point[0] || VortexPoint ==  i.point[1] || VortexPoint ==  i.point[2])
+      {
+        Vector<T,3> vortex1, vortex2, edge1, edge2;
+        T dotP;
+        if(VortexPoint == i.point[0])
+        {
+          vortex1 = i.point[1];
+          vortex2 = i.point[2];
+        }
+        else
+        {
+        if(VortexPoint == i.point[1])
+        {
+          vortex1 = i.point[0];
+          vortex2 = i.point[2];
+        }
+        else
+        {
+        if(VortexPoint == i.point[2])
+        {
+          vortex1 = i.point[0];
+          vortex2 = i.point[1];
+        }
+        else
+          std::cout << "something went wrong" << std::endl;
+        }
+        }
+        edge1 = normalize(vortex1 - VortexPoint);
+        edge2 = normalize(vortex2 - VortexPoint);
+        dotP = dotProduct3D(edge1, edge2);
+        //std::cout << "inside if" << std::endl;
+        //some problems with 0 and pi angle in acos
+        if(dotP < -0.999999)
+        { pseudoNormal += M_PI*i.getNormal();}
+        else if(dotP > 0.999999)
+        {;}
+        else
+        {
+        pseudoNormal += acos(dotP)*i.getNormal();
+         triangle_counter++;
+        }
+      }
+
+    }
+    pseudoNormal = normalize(pseudoNormal);
+  /*   std::cout << "normal " << normal  << "pseudonormal " << pseudoNormal << std::endl << std::endl;
+    std::cout << "dotProduct3D is " << util::dotProduct3D(normal, pseudoNormal) << std::endl;
+    std::cout << "number of triangle " << triangle_counter << std::endl; */
+
+  if(util::dotProduct3D(normal, pseudoNormal)> 0)
+  {
+
+      distance =-1.*util::fabs(distance);
+  }
+  else
+  {
+      distance =util::fabs(distance);
+  }
+
+  }
+  else
+  {
+  if(util::dotProduct3D(normal, _triangle.getNormal())> 0)
+  {
+
+      distance =-1.*util::fabs(distance);
+  }
+  else
+  {
+      distance =util::fabs(distance);
+  }
+  }
+  return distance;
+}
+
+template<typename T>
+T BlockLatticeSTLreader<T>::signedDistance(const Vector<T,3>& input)
+{
+  int iC = -1;
+  auto globC = _cuboidDecomposition.getC(input, 0);
+  if (_loadBalancer.isLocal(*globC)) {
+    iC = _loadBalancer.loc(*globC);
+  } else {
+    globC = _cuboidDecomposition.getC(input, 3);
+    if (_loadBalancer.isLocal(*globC)) {
+      iC = _loadBalancer.loc(*globC);
+    } else {
+      throw std::runtime_error("Distance origin must be located within local cuboid (overlap)");
+    }
+  }
+  return signedDistance(iC, input);
+}
+
 
 template <typename T>
 Vector<T,3> BlockLatticeSTLreader<T>::surfaceNormal(const Vector<T,3>& pos, const T meshSize)
@@ -878,9 +1133,9 @@ void BlockLatticeSTLreader<T>::setNormalsOutside()
     if (_tree->find(
           center + _mesh.getTri(i).normal * util::sqrt(3.) * _voxelSize)->getInside()) {
       //      cout << "Wrong direction" << std::endl;
-      Vector<T,3> pt(_mesh.getTri(i).point[0].coords);
-      _mesh.getTri(i).point[0].coords = _mesh.getTri(i).point[2].coords;
-      _mesh.getTri(i).point[2].coords = pt;
+      Vector<T,3> pt(_mesh.getTri(i).point[0]);
+      _mesh.getTri(i).point[0] = _mesh.getTri(i).point[2];
+      _mesh.getTri(i).point[2] = pt;
       _mesh.getTri(i).init();
       //      _mesh.getTri(i).getNormal()[0] *= -1.;
       //      _mesh.getTri(i).getNormal()[1] *= -1.;

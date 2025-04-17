@@ -36,7 +36,7 @@
 #include <limits>
 
 #include "communication/loadBalancer.h"
-#include "geometry/cuboidGeometry3D.h"
+#include "geometry/cuboidDecomposition.h"
 #include "functors/analytical/indicator/indicatorF3D.h"
 #include "functors/analytical/indicator/indicatorBaseF3D.h"
 #include "utilities/vectorHelpers.h"
@@ -104,11 +104,13 @@ private:
   /// The OstreamManager
   mutable OstreamManager clout;
 
-  CuboidGeometry3D<T>& _cuboidGeometry;
+  CuboidDecomposition3D<T>& _cuboidDecomposition;
 
   LoadBalancer<T>& _loadBalancer;
 
   std::vector<std::vector<STLtriangle<T>>> _trianglesInCuboidList;
+
+  std::vector<std::vector<std::vector<STLtriangle<T>>>> _neighbouringTriangleInCuboidList;
 
 public:
   /**
@@ -122,7 +124,7 @@ public:
    * \param verbose Get additional information.
    */
 
-  BlockLatticeSTLreader(CuboidGeometry3D<T>& cbg3d, LoadBalancer<T>& hlb, const std::string fName, T voxelSize, T stlSize=1, int method=2,
+  BlockLatticeSTLreader(CuboidDecomposition3D<T>& cbg3d, LoadBalancer<T>& hlb, const std::string fName, T voxelSize, T stlSize=1, int method=2,
             bool verbose = false, T overlap=0., T max=0.);
   /**
    * Constructs a new BlockLatticeSTLreader from a file
@@ -148,6 +150,11 @@ public:
   T signedDistance(int locC, const Vector<T,3>& input);
   /// Computes signed distance to closest triangle in direction of the surface normal
   T signedDistance(const Vector<T,3>& input) override;
+
+  /*  /// Computes signed distance to closest triangle in direction of the surface normal in local cuboid locC
+  T signedDistance(int locC, const Vector<T,3>& input, STLtriangle<T>& _triangle);
+  /// Computes signed distance to closest triangle in direction of the surface normal
+  T signedDistance(const Vector<T,3>& input, STLtriangle<T>& _triangle);// override;*/
 
   /// Finds and returns normal of the closest surface (triangle)
   Vector<T,3> surfaceNormal(const Vector<T,3>& pos, const T meshSize=0) override;
@@ -180,8 +187,9 @@ public:
   {
     return _mesh;
   };
+  ///Needed for the signed Distance function: Creates a list of neighbouring triangles for each triangle
+  void createNeighbouringTriangleInCuboidVector();
 };
-
 }  // namespace olb
 
 #endif

@@ -61,7 +61,7 @@ bool RotatingForceField3D<T,DESCRIPTOR>::operator()(T output[], const int x[])
   if ( this->_sLattice.getLoadBalancer().rank(x[0]) == singleton::mpi().getRank() ) {
     // local coords are given, fetch local cell and compute value(s)
     std::vector<T> physR(3,T());
-    this->sg.getCuboidGeometry().getPhysR(&(physR[0]),&(x[0]));
+    this->sg.getCuboidDecomposition().getPhysR(&(physR[0]),&(x[0]));
 
     T scalar =  (physR[0]-axisPoint[0])*axisDirection[0]
                 +(physR[1]-axisPoint[1])*axisDirection[1]
@@ -121,7 +121,7 @@ bool HarmonicOscillatingRotatingForceField3D<T,DESCRIPTOR>::operator()(T output[
   if ( this->_sLattice.getLoadBalancer().rank(x[0]) == singleton::mpi().getRank() ) {
     // local coords are given, fetch local cell and compute value(s)
     std::vector<T> physR(3,T());
-    this->sg.getCuboidGeometry().getPhysR(&(physR[0]),&(x[0]));
+    this->sg.getCuboidDecomposition().getPhysR(&(physR[0]),&(x[0]));
 
     T scalar =  (physR[0]-axisPoint[0])*axisDirection[0]
                 +(physR[1]-axisPoint[1])*axisDirection[1]

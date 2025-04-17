@@ -38,8 +38,7 @@
  */
 
 
-#include "olb3D.h"
-#include "olb3D.hh"
+#include <olb.h>
 #include <vector>
 #include <cmath>
 #include <iostream>
@@ -61,7 +60,7 @@ using TDESCRIPTOR = D3Q7<VELOCITY>;
 
 const int nonsmooth = 1;           //switch for initial condition
 const int runs = 4;                // # simulations with increasing resolution
-const int N0 = 20;                 // initial # discrete points per dimension
+const int N0 = 21;                 // initial # discrete points per dimension
 const int statIter0 = 20;          // initial # lattice output timesteps
 
 // Note: the peclet number can also be passed as an argument
@@ -293,10 +292,8 @@ T getResults(SuperLattice<T, TDESCRIPTOR> &ADlattice,
 
     if (iT == 0) {
       /// Writes the geometry, cuboid no. and rank no. as vti file for visualization
-      SuperLatticeGeometry3D <T, TDESCRIPTOR> geometry(ADlattice, superGeometry);
       SuperLatticeCuboid3D <T, TDESCRIPTOR> cuboid(ADlattice);
       SuperLatticeRank3D <T, TDESCRIPTOR> rank(ADlattice);
-      vtkWriter.write(geometry);
       vtkWriter.write(cuboid);
       vtkWriter.write(rank);
 
@@ -372,20 +369,20 @@ void simulate(int N, int statIter, T physVel, T peclet, T physLength) {
 
     IndicatorCuboid3D <T> cuboid(extend, origin);
 
-    /// Instantiation of an empty cuboidGeometry
+    /// Instantiation of an empty cuboidDecomposition
 #ifdef PARALLEL_MODE_MPI
     const int noOfCuboids = singleton::mpi().getSize();
 #else
     const int noOfCuboids = 1;
 #endif
-    CuboidGeometry3D <T> cuboidGeometry(cuboid, converter.getPhysDeltaX(), noOfCuboids);
-    cuboidGeometry.setPeriodicity(true, true, true);
+    CuboidDecomposition3D <T> cuboidDecomposition(cuboid, converter.getPhysDeltaX(), noOfCuboids);
+    cuboidDecomposition.setPeriodicity({true, true, true});
 
     /// Instantiation of a loadBalancer
-    HeuristicLoadBalancer <T> loadBalancer(cuboidGeometry);
+    HeuristicLoadBalancer <T> loadBalancer(cuboidDecomposition);
 
     /// Instantiation of a superGeometry
-    SuperGeometry<T,3> superGeometry(cuboidGeometry, loadBalancer, 2);
+    SuperGeometry<T,3> superGeometry(cuboidDecomposition, loadBalancer, 2);
     prepareGeometry(superGeometry, cuboid);
 
     /// === 3rd Step: Prepare Lattice ===
@@ -436,7 +433,7 @@ void simulate(int N, int statIter, T physVel, T peclet, T physLength) {
 
 int main(int argc, char *argv[]) {
     OstreamManager clout(std::cout, "main");
-    olbInit(&argc, &argv);
+    initialize(&argc, &argv);
 
     // Get peclet number passed as argument
     if (argc > 1) peclet0 = atof(argv[1]);

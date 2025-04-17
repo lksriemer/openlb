@@ -44,7 +44,6 @@ struct ROT_MATRIX {};
 
 //Common
 struct POSITION          : public FIELD_BASE<0,  1, 0> { };
-struct DENSITY           : public FIELD_BASE<1,  0, 0> { };
 struct INVALID           : public FIELD_BASE<1,  0, 0> {  //Storage invalidation, filtered in particleManager
   template <typename T, typename DESCRIPTOR>
   static constexpr auto getInitialValue() {
@@ -78,10 +77,11 @@ struct ID                : public TYPED_FIELD_BASE<size_t, 1, 0, 0> { };
 struct MASS_ADDED        : public FIELD_BASE<1,  0, 0> { };
 struct RADIUS            : public FIELD_BASE<1,  0, 0> { };
 struct SPECIES           : public FIELD_BASE<1,  0, 0> { };
-struct FLUIDVEL          : public FIELD_BASE<0,  1, 0> { }; //Prinz 230214
+struct FLUIDVEL          : public FIELD_BASE<0,  1, 0> { };
 
 // Contact model
-struct ENLARGEMENT_FOR_CONTACT : public FIELD_BASE<1,  0, 0> { };
+struct ENLARGEMENT_FOR_CONTACT  : public FIELD_BASE<1,  0, 0> { };
+struct IS_IN_CONTACT            : public FIELD_BASE<1,  0, 0> { };
 
 //Dimension sensitive fields
 template<unsigned D>
@@ -96,6 +96,37 @@ template<unsigned D>
 struct MOFI_XD           : public FIELD_BASE<utilities::dimensions::convert<D>::rotation,  0, 0>, public MOFI { };
 template<unsigned D>
 struct ROT_MATRIX_XD     : public FIELD_BASE<utilities::dimensions::convert<D>::matrix,  0, 0>, public ROT_MATRIX { };
+
+
+namespace Haider_Levenspiel
+{
+//Haider Levenspiel constatns
+struct A                 : public FIELD_BASE<1,0,0> {};
+struct B                 : public FIELD_BASE<1,0,0> {};
+struct C                 : public FIELD_BASE<1,0,0> {};
+struct D                 : public FIELD_BASE<1,0,0> {};
+}
+//TRAN CONG
+struct CIRCULARITY          : public FIELD_BASE<1,0,0> {};
+struct PROJECTED_SURFACE    : public FIELD_BASE<1,0,0> {};
+struct DA_DN                : public FIELD_BASE<1,0,0> {};
+
+//EULER LAGRANGE EULER ROTATION SPHEROID
+struct QUATERNION : public FIELD_BASE <4,0,0> {};
+struct MOMENT_OF_INERTIA : public FIELD_BASE <3,0,0> {};
+struct ORIENTATION : public FIELD_BASE <3,0,0> {};
+struct ORIENTATION_ANGLE : public FIELD_BASE <1,0,0> {};
+struct TRANSLATIONAL_DYADIC : public FIELD_BASE <9,0,0> {};
+struct BETA : public FIELD_BASE <1,0,0> {};
+///dimensionless constant for Hydrodynamic Torque computation
+struct ABG0 : public FIELD_BASE <3,0,0> {}; ///dimensionless constant for Hydrodynamic Torque computation
+///used for visualisation purposes in Paraview, scales the spheroid in main axis directions ELER
+struct SCALING : public FIELD_BASE <3,0,0> {};
+///Paraview visualisation, different notation of the Quaternions than in ELER
+struct PARAQUATERNION: public FIELD_BASE <4,0,0> {};
+struct LABEL : public FIELD_BASE <1,0,0> {};
+
+
 
 //Indicator
 template<unsigned D>
@@ -171,6 +202,10 @@ struct NUMERICPROPERTIES_RESOLVED_CONTACT
                                   : public PARTICLE_DESCRIPTOR<D,ENLARGEMENT_FOR_CONTACT>, public NUMERICPROPERTIES {};
 
 template<unsigned D>
+struct NUMERICPROPERTIES_RESOLVED_LUBRICATION_FORCE_CORRECTION
+                                  : public PARTICLE_DESCRIPTOR<D,IS_IN_CONTACT>, public NUMERICPROPERTIES {};
+
+template<unsigned D>
 struct FORCING_RESOLVED           : public PARTICLE_DESCRIPTOR<D,FORCE,TORQUE_XD<D>>, public FORCING {};
 
 template<unsigned D>
@@ -197,6 +232,23 @@ struct MECHPROPERTIES_COLLISION   : public PARTICLE_DESCRIPTOR<D,MATERIAL,YOUNG_
 struct PARALLELIZATION_SUBGRID    : public PARTICLE_DESCRIPTOR<1,ID>, public PARALLELIZATION {};
 
 struct PARALLELIZATION_RESOLVED   : public PARTICLE_DESCRIPTOR<1,ID,IC>, public PARALLELIZATION {};
+
+template<unsigned D>
+struct MOBILITY_VERLET_NO_ANGLE_FLUIDVEL   : public PARTICLE_DESCRIPTOR<D,VELOCITY,ACCELERATION_STRD, FLUIDVEL>, public MOBILITY {};
+
+template<unsigned D>
+struct MOBILITY_ANALYTIC_NO_ANGLE_FLUIDVEL   : public PARTICLE_DESCRIPTOR<D,VELOCITY,ACCELERATION_STRD, FLUIDVEL>, public MOBILITY {};
+
+template<unsigned D>
+struct PHYSPROPERTIES_SUBGRID_DENSITY : public PARTICLE_DESCRIPTOR<D,MASS,MASS_ADDED,MOFI_XD<D>,RADIUS, DENSITY>, public PHYSPROPERTIES {};
+
+
+struct HAIDER_LEVENSPIEL          : public PARTICLE_DESCRIPTOR<1,Haider_Levenspiel::A,Haider_Levenspiel::B,Haider_Levenspiel::C,Haider_Levenspiel::D,SCALING,LABEL>, public NUMERICPROPERTIES {};
+
+struct TRAN_CONG : public PARTICLE_DESCRIPTOR<1,CIRCULARITY, PROJECTED_SURFACE, DA_DN,SCALING,LABEL>, public NUMERICPROPERTIES {};
+
+struct EULER_ROTATION : public PARTICLE_DESCRIPTOR<3, MOMENT_OF_INERTIA, ROT_MATRIX_XD<3>, ANG_VELOCITY_XD<3>, ORIENTATION, QUATERNION,TRANSLATIONAL_DYADIC,BETA,ABG0,SCALING,PARAQUATERNION,ORIENTATION_ANGLE, LABEL>, public NUMERICPROPERTIES {};
+
 
 } //namespace descriptors
 

@@ -312,6 +312,32 @@ bool CirclePowerLawTurbulent3D<T>::operator()(T output[], const T x[])
   return true;
 }
 
+template <typename T>
+CircleCasson3D<T>::CircleCasson3D(olb::Vector<T, 3> center, std::vector<T> normal,
+                                      T radius, T cassonViscosity, T pressureDrop, T yieldStress, T scale)
+  : AnalyticalF3D<T,T>(3), _center(center), _normal(util::normalize(normal)),
+    _radius(radius), _cassonViscosity(cassonViscosity), _pressureDrop(pressureDrop), _yieldStress(yieldStress), _scale(scale) { }
+
+template <typename T>
+bool CircleCasson3D<T>::operator()(T output[], const T x[])
+{
+  T r_c = _yieldStress / (_pressureDrop / 2.);
+  T r[3];
+  r[0] = util::sqrt((x[1]-_center[1])*(x[1]-_center[1])+(x[2]-_center[2])*(x[2]-_center[2]));
+  r[1] = util::sqrt((x[0]-_center[0])*(x[0]-_center[0])+(x[2]-_center[2])*(x[2]-_center[2]));
+  r[2] = util::sqrt((x[1]-_center[1])*(x[1]-_center[1])+(x[0]-_center[0])*(x[0]-_center[0]));
+
+  T preFac = 1. / _cassonViscosity;
+  for (std::size_t d = 0; d < 3; ++d) {
+    if (r[d] < r_c) {
+      r[d] = r_c;
+    }
+    output[d] =_scale * _normal[d] * preFac * ((_radius*_radius - r[d]*r[d])*_pressureDrop / 4.0 +
+      _yieldStress * (_radius - util::abs(r[d])) - (4.0 / (3.0*util::sqrt(2.0))) * util::sqrt(_pressureDrop*_yieldStress) * (util::sqrt(util::pow(_radius, 3.0))
+      - util::sqrt(util::pow(util::abs(r[d]), 3.0))));
+  }
+  return true;
+}
 
 template <typename T>
 CirclePoiseuille3D<T>::CirclePoiseuille3D(std::vector<T> center, std::vector<T> normal,

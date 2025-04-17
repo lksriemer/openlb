@@ -1,6 +1,6 @@
 /*  This file is part of the OpenLB library
  *
- *  Copyright (C) 2010-2015 Thomas Henn, Mathias J. Krause, Jonathan Jeppener-Haltenhoff
+ *  Copyright (C) 2010-2024 Thomas Henn, Mathias J. Krause, Jonathan Jeppener-Haltenhoff, Christoph Gaul
  *  E-mail contact: info@openlb.net
  *  The most recent release of OpenLB can be downloaded at
  *  <http://www.openlb.net/>
@@ -38,6 +38,16 @@
 #include "octree.hh"
 #include "stlReader.h"
 
+#ifdef FEATURE_VTK
+#include <vtkSmartPointer.h>
+#include <vtkUnstructuredGrid.h>
+#include <vtkPoints.h>
+#include <vtkCellArray.h>
+#include <vtkFloatArray.h>
+#include <vtkPointData.h>
+#include <vtkTriangle.h>
+#include <vtkXMLUnstructuredGridWriter.h>
+#endif
 
 // All OpenLB code is contained in this namespace.
 namespace olb {
@@ -45,9 +55,9 @@ namespace olb {
 template<typename T>
 void STLtriangle<T>::init()
 {
-  Vector<T,3> A = point[0].coords;
-  Vector<T,3> B = point[1].coords;
-  Vector<T,3> C = point[2].coords;
+  Vector<T,3> A = point[0];
+  Vector<T,3> B = point[1];
+  Vector<T,3> C = point[2];
   Vector<T,3> b, c;
   T bb = 0., bc = 0., cc = 0.;
 
@@ -92,12 +102,12 @@ Vector<T,3> STLtriangle<T>::getCenter()
 {
   Vector<T,3> center( T(0) );
 
-  center[0] = (point[0].coords[0] + point[1].coords[0]
-               + point[2].coords[0]) / 3.;
-  center[1] = (point[0].coords[1] + point[1].coords[1]
-               + point[2].coords[1]) / 3.;
-  center[2] = (point[0].coords[2] + point[1].coords[2]
-               + point[2].coords[2]) / 3.;
+  center[0] = (point[0][0] + point[1][0]
+               + point[2][0]) / 3.;
+  center[1] = (point[0][1] + point[1][1]
+               + point[2][1]) / 3.;
+  center[2] = (point[0][2] + point[1][2]
+               + point[2][2]) / 3.;
 
   return center;
 }
@@ -106,9 +116,9 @@ template<typename T>
 std::vector<T> STLtriangle<T>::getE0()
 {
   Vector<T,3> vec;
-  vec[0] = point[0].coords[0] - point[1].coords[0];
-  vec[1] = point[0].coords[1] - point[1].coords[1];
-  vec[2] = point[0].coords[2] - point[1].coords[2];
+  vec[0] = point[0][0] - point[1][0];
+  vec[1] = point[0][1] - point[1][1];
+  vec[2] = point[0][2] - point[1][2];
   return vec;
 }
 
@@ -116,9 +126,9 @@ template<typename T>
 std::vector<T> STLtriangle<T>::getE1()
 {
   Vector<T,3> vec;
-  vec[0] = point[0].coords[0] - point[2].coords[0];
-  vec[1] = point[0].coords[1] - point[2].coords[1];
-  vec[2] = point[0].coords[2] - point[2].coords[2];
+  vec[0] = point[0][0] - point[2][0];
+  vec[1] = point[0][1] - point[2][1];
+  vec[2] = point[0][2] - point[2][2];
   return vec;
 }
 
@@ -132,7 +142,7 @@ bool STLtriangle<T>::isPointInside(const PhysR<T,3>& pt) const
   const T gamma = pt * uGamma + kGamma;
 
   // check if approximately equal
-  if ( util::nearZero(norm(pt - (point[0].coords + beta*(point[1].coords-point[0].coords) + gamma*(point[2].coords-point[0].coords))), epsilon) ) {
+  if ( util::nearZero(norm(pt - (point[0] + beta*(point[1]-point[0]) + gamma*(point[2]-point[0]))), epsilon) ) {
     const T alpha = T(1) - beta - gamma;
     return (beta >= T(0) || util::nearZero(beta, epsilon))
            && (gamma >= T(0) || util::nearZero(gamma, epsilon))
@@ -265,53 +275,177 @@ Vector<T,3> STLtriangle<T>::closestPtPointTriangle(
   const T nEps = -std::numeric_limits<T>::epsilon();
   const T Eps = std::numeric_limits<T>::epsilon();
 
-  Vector<T,3> ab = point[1].coords - point[0].coords;
-  Vector<T,3> ac = point[2].coords - point[0].coords;
-  Vector<T,3> bc = point[2].coords - point[1].coords;
+  Vector<T,3> ab = point[1] - point[0];
+  Vector<T,3> ac = point[2] - point[0];
+  Vector<T,3> bc = point[2] - point[1];
 
-  T snom = (pt - point[0].coords)*ab;
-  T sdenom = (pt - point[1].coords)*(point[0].coords - point[1].coords);
+  T snom = (pt - point[0])*ab;
+  T sdenom = (pt - point[1])*(point[0] - point[1]);
 
-  T tnom = (pt - point[0].coords)*ac;
-  T tdenom = (pt - point[2].coords)*(point[0].coords - point[2].coords);
+  T tnom = (pt - point[0])*ac;
+  T tdenom = (pt - point[2])*(point[0] - point[2]);
 
   if (snom < nEps && tnom < nEps) {
-    return point[0].coords;
+    return point[0];
   }
 
-  T unom = (pt - point[1].coords)*bc;
-  T udenom = (pt - point[2].coords)*(point[1].coords - point[2].coords);
+  T unom = (pt - point[1])*bc;
+  T udenom = (pt - point[2])*(point[1] - point[2]);
 
   if (sdenom < nEps && unom < nEps) {
-    return point[1].coords;
+    return point[1];
   }
   if (tdenom < nEps && udenom < nEps) {
-    return point[2].coords;
+    return point[2];
   }
 
-  T vc = normal*crossProduct3D(point[0].coords - pt, point[1].coords - pt);
+  T vc = normal*crossProduct3D(point[0] - pt, point[1] - pt);
 
   if (vc < nEps && snom > Eps && sdenom > Eps) {
-    return point[0].coords + snom / (snom + sdenom) * ab;
+    return point[0] + snom / (snom + sdenom) * ab;
   }
 
-  T va = normal*crossProduct3D(point[1].coords - pt, point[2].coords - pt);
+  T va = normal*crossProduct3D(point[1] - pt, point[2] - pt);
 
   if (va < nEps && unom > Eps && udenom > Eps) {
-    return point[1].coords + unom / (unom + udenom) * bc;
+    return point[1] + unom / (unom + udenom) * bc;
   }
 
-  T vb = normal*crossProduct3D(point[2].coords - pt, point[0].coords - pt);
+  T vb = normal*crossProduct3D(point[2] - pt, point[0] - pt);
 
   if (vb < nEps && tnom > Eps && tdenom > Eps) {
-    return point[0].coords + tnom / (tnom + tdenom) * ac;
+    return point[0] + tnom / (tnom + tdenom) * ac;
   }
 
   T u = va / (va + vb + vc);
   T v = vb / (va + vb + vc);
   T w = 1. - u - v;
 
-  return u * point[0].coords + v * point[1].coords + w * point[2].coords;
+  return u * point[0] + v * point[1] + w * point[2];
+}
+
+template<typename T>
+bool STLtriangle<T>::getPointToEdgeDistances(const Vector<T,3>& input, Vector<T,3>& output, T sensitivity)
+{
+  auto P1 = point[0];
+  auto P2 = point[1];
+  output[0] = norm(crossProduct3D(P2-input,P1-P2))/norm(P1-P2);
+  P1 = point[0];
+  P2 = point[2];
+  output[1] = norm(crossProduct3D(P2-input,P1-P2))/norm(P1-P2);
+  P1 = point[1];
+  P2 = point[2];
+  output[2] = norm(crossProduct3D(P2-input,P1-P2))/norm(P1-P2);
+  return true;
+}
+
+template<typename T>
+bool STLtriangle<T>::isEdgePoint (const Vector<T,3> & input,  Vector<T,3>& P1, Vector<T,3> & P2,   T sensitivity )
+{
+  using namespace std;
+  if(input[0] < sensitivity && input[1] >= sensitivity && input[2] >= sensitivity )
+  {
+    P1 = point[0];
+    P2 = point[1];
+    //cout << "edge point " << P1 << " " << P2 << std::endl;
+    return true;
+  }
+  if(input[0] >= sensitivity && input[1] < sensitivity && input[2] >= sensitivity )
+  {
+    P1 = point[0];
+    P2 = point[2];
+    //cout << "edge point" << P1 << " " << P2 << std::endl;
+    return true;
+  }
+  if(input[0] >= sensitivity && input[1] >= sensitivity && input[2] < sensitivity )
+  {
+    P1 = point[1];
+    P2 = point[2];
+   //cout << "edge point" << P1 << " " << P2 << std::endl;
+    return true;
+  }
+  return false;
+}
+
+template<typename T>
+bool STLtriangle<T>::isVortexPoint (const Vector<T,3> & input,Vector<T,3>& P, T sensitivity )
+{
+  olb::OstreamManager clout = OstreamManager(std::cout, "STLtriangle");
+  using namespace std;
+  if (input[0] < sensitivity && input[1] < sensitivity && input[2] < sensitivity )
+  {
+    cout << "Error isVortexPoint! Possible reduce sensitivity!" << std::endl;
+    return false;
+  }
+  if(input[0] < sensitivity && input[1] < sensitivity)
+  {
+    P = point[0];
+    //cout << "vortex point " << P << std::endl;
+    return true;
+  }
+  if(input[0] < sensitivity && input[2] < sensitivity)
+  {
+    P = point[1];
+    //cout << "vortex point " << P << std::endl;
+    return true;
+  }
+  if(input[1] < sensitivity && input[2] < sensitivity)
+  {
+    P = point[2];
+    //cout << "vortex point " << P << std::endl;
+    return true;
+  }
+  return false;
+}
+
+template<typename T>
+Vector<T,3> STLtriangle<T>::closestPointTo(Vector<T,3> physR) {
+  const auto AB = point[1] - point[0];
+  const auto AC = point[2] - point[0];
+  const auto AP = physR     - point[0];
+
+  const auto d1 = AB * AP;
+  const auto d2 = AC * AP;
+  if (d1 <= T{0} && d2 <= T{0}) {
+    return point[0];
+  }
+
+  auto BP = physR - point[1];
+  auto d3 = AB * BP;
+  auto d4 = AC * BP;
+  if (d3 >= T{0} && d4 <= d3) {
+    return point[1];
+  }
+
+  auto vc = d1 * d4 - d3 * d2;
+  if (vc <= T{0} && d1 >= T{0} && d3 <= T{0}) {
+    auto v = d1 / (d1 - d3);
+    return point[0] + v * AB;
+  }
+
+  auto CP = physR - point[2];
+  auto d5 = AB * CP;
+  auto d6 = AC * CP;
+  if (d6 >= T{0} && d5 <= d6) {
+    return point[2];
+  }
+
+  auto vb = d5 * d2 - d1 * d6;
+  if (vb <= T{0} && d2 >= T{0} && d6 <= T{0}) {
+    auto w = d2 / (d2 - d6);
+    return point[0] + w * AC;
+  }
+
+  auto va = d3 * d6 - d5 * d4;
+  if (va <= T{0} && (d4 - d3) >= T{0} && (d5 - d6) >= T{0}) {
+    auto w = (d4 - d3) / ((d4 - d3) + (d5 - d6));
+    return point[1] + w * (point[2] - point[1]);
+  }
+
+  auto denom = 1.0 / (va + vb + vc);
+  auto v = vb * denom;
+  auto w = vc * denom;
+  return point[0] + AB * v + AC * w;
 }
 
 template<typename T>
@@ -342,72 +476,72 @@ STLmesh<T>::STLmesh(std::string fName, T stlSize)
           STLtriangle<T> tri;
           f >> s1 >> tri.normal[0] >> tri.normal[1] >> tri.normal[2];
           f >> s0 >> s1;
-          f >> s0 >> tri.point[0].coords[0] >> tri.point[0].coords[1]
-            >> tri.point[0].coords[2];
-          f >> s0 >> tri.point[1].coords[0] >> tri.point[1].coords[1]
-            >> tri.point[1].coords[2];
-          f >> s0 >> tri.point[2].coords[0] >> tri.point[2].coords[1]
-            >> tri.point[2].coords[2];
+          f >> s0 >> tri.point[0][0] >> tri.point[0][1]
+            >> tri.point[0][2];
+          f >> s0 >> tri.point[1][0] >> tri.point[1][1]
+            >> tri.point[1][2];
+          f >> s0 >> tri.point[2][0] >> tri.point[2][1]
+            >> tri.point[2][2];
           f >> s0;
           f >> s0;
           for (int k = 0; k < 3; k++) {
-            tri.point[0].coords[k] *= stlSize;
-            tri.point[1].coords[k] *= stlSize;
-            tri.point[2].coords[k] *= stlSize;
+            tri.point[0][k] *= stlSize;
+            tri.point[1][k] *= stlSize;
+            tri.point[2][k] *= stlSize;
           }
           if (i == 0) {
             _min = T();
             _max = T();
 
-            _min[0] = tri.point[0].coords[0];
-            _min[1] = tri.point[0].coords[1];
-            _min[2] = tri.point[0].coords[2];
+            _min[0] = tri.point[0][0];
+            _min[1] = tri.point[0][1];
+            _min[2] = tri.point[0][2];
 
-            _max[0] = tri.point[0].coords[0];
-            _max[1] = tri.point[0].coords[1];
-            _max[2] = tri.point[0].coords[2];
+            _max[0] = tri.point[0][0];
+            _max[1] = tri.point[0][1];
+            _max[2] = tri.point[0][2];
 
-            _min[0] = util::min(_min[0], tri.point[1].coords[0]);
-            _min[1] = util::min(_min[1], tri.point[1].coords[1]);
-            _min[2] = util::min(_min[2], tri.point[1].coords[2]);
+            _min[0] = util::min(_min[0], tri.point[1][0]);
+            _min[1] = util::min(_min[1], tri.point[1][1]);
+            _min[2] = util::min(_min[2], tri.point[1][2]);
 
-            _max[0] = util::max(_max[0], tri.point[1].coords[0]);
-            _max[1] = util::max(_max[1], tri.point[1].coords[1]);
-            _max[2] = util::max(_max[2], tri.point[1].coords[2]);
+            _max[0] = util::max(_max[0], tri.point[1][0]);
+            _max[1] = util::max(_max[1], tri.point[1][1]);
+            _max[2] = util::max(_max[2], tri.point[1][2]);
 
-            _min[0] = util::min(_min[0], tri.point[2].coords[0]);
-            _min[1] = util::min(_min[1], tri.point[2].coords[1]);
-            _min[2] = util::min(_min[2], tri.point[2].coords[2]);
+            _min[0] = util::min(_min[0], tri.point[2][0]);
+            _min[1] = util::min(_min[1], tri.point[2][1]);
+            _min[2] = util::min(_min[2], tri.point[2][2]);
 
-            _max[0] = util::max(_max[0], tri.point[2].coords[0]);
-            _max[1] = util::max(_max[1], tri.point[2].coords[1]);
-            _max[2] = util::max(_max[2], tri.point[2].coords[2]);
+            _max[0] = util::max(_max[0], tri.point[2][0]);
+            _max[1] = util::max(_max[1], tri.point[2][1]);
+            _max[2] = util::max(_max[2], tri.point[2][2]);
 
           }
           else {
-            _min[0] = util::min(_min[0], tri.point[0].coords[0]);
-            _min[1] = util::min(_min[1], tri.point[0].coords[1]);
-            _min[2] = util::min(_min[2], tri.point[0].coords[2]);
+            _min[0] = util::min(_min[0], tri.point[0][0]);
+            _min[1] = util::min(_min[1], tri.point[0][1]);
+            _min[2] = util::min(_min[2], tri.point[0][2]);
 
-            _max[0] = util::max(_max[0], tri.point[0].coords[0]);
-            _max[1] = util::max(_max[1], tri.point[0].coords[1]);
-            _max[2] = util::max(_max[2], tri.point[0].coords[2]);
+            _max[0] = util::max(_max[0], tri.point[0][0]);
+            _max[1] = util::max(_max[1], tri.point[0][1]);
+            _max[2] = util::max(_max[2], tri.point[0][2]);
 
-            _min[0] = util::min(_min[0], tri.point[1].coords[0]);
-            _min[1] = util::min(_min[1], tri.point[1].coords[1]);
-            _min[2] = util::min(_min[2], tri.point[1].coords[2]);
+            _min[0] = util::min(_min[0], tri.point[1][0]);
+            _min[1] = util::min(_min[1], tri.point[1][1]);
+            _min[2] = util::min(_min[2], tri.point[1][2]);
 
-            _max[0] = util::max(_max[0], tri.point[1].coords[0]);
-            _max[1] = util::max(_max[1], tri.point[1].coords[1]);
-            _max[2] = util::max(_max[2], tri.point[1].coords[2]);
+            _max[0] = util::max(_max[0], tri.point[1][0]);
+            _max[1] = util::max(_max[1], tri.point[1][1]);
+            _max[2] = util::max(_max[2], tri.point[1][2]);
 
-            _min[0] = util::min(_min[0], tri.point[2].coords[0]);
-            _min[1] = util::min(_min[1], tri.point[2].coords[1]);
-            _min[2] = util::min(_min[2], tri.point[2].coords[2]);
+            _min[0] = util::min(_min[0], tri.point[2][0]);
+            _min[1] = util::min(_min[1], tri.point[2][1]);
+            _min[2] = util::min(_min[2], tri.point[2][2]);
 
-            _max[0] = util::max(_max[0], tri.point[2].coords[0]);
-            _max[1] = util::max(_max[1], tri.point[2].coords[1]);
-            _max[2] = util::max(_max[2], tri.point[2].coords[2]);
+            _max[0] = util::max(_max[0], tri.point[2][0]);
+            _max[1] = util::max(_max[1], tri.point[2][1]);
+            _max[2] = util::max(_max[2], tri.point[2][2]);
           }
 
           i++;
@@ -456,71 +590,71 @@ STLmesh<T>::STLmesh(std::string fName, T stlSize)
       tri.normal[0] = v[0];
       tri.normal[1] = v[1];
       tri.normal[2] = v[2];
-      tri.point[0].coords[0] = v[3];
-      tri.point[0].coords[1] = v[4];
-      tri.point[0].coords[2] = v[5];
-      tri.point[1].coords[0] = v[6];
-      tri.point[1].coords[1] = v[7];
-      tri.point[1].coords[2] = v[8];
-      tri.point[2].coords[0] = v[9];
-      tri.point[2].coords[1] = v[10];
-      tri.point[2].coords[2] = v[11];
+      tri.point[0][0] = v[3];
+      tri.point[0][1] = v[4];
+      tri.point[0][2] = v[5];
+      tri.point[1][0] = v[6];
+      tri.point[1][1] = v[7];
+      tri.point[1][2] = v[8];
+      tri.point[2][0] = v[9];
+      tri.point[2][1] = v[10];
+      tri.point[2][2] = v[11];
 
       for (int k = 0; k < 3; k++) {
-        tri.point[0].coords[k] *= stlSize;
-        tri.point[1].coords[k] *= stlSize;
-        tri.point[2].coords[k] *= stlSize;
+        tri.point[0][k] *= stlSize;
+        tri.point[1][k] *= stlSize;
+        tri.point[2][k] *= stlSize;
       }
       if (i == 0) {
-        _min[0] = tri.point[0].coords[0];
-        _min[1] = tri.point[0].coords[1];
-        _min[2] = tri.point[0].coords[2];
+        _min[0] = tri.point[0][0];
+        _min[1] = tri.point[0][1];
+        _min[2] = tri.point[0][2];
 
-        _max[0] = tri.point[0].coords[0];
-        _max[1] = tri.point[0].coords[1];
-        _max[2] = tri.point[0].coords[2];
+        _max[0] = tri.point[0][0];
+        _max[1] = tri.point[0][1];
+        _max[2] = tri.point[0][2];
 
-        _min[0] = util::min(_min[0], (T) tri.point[1].coords[0]);
-        _min[1] = util::min(_min[1], (T) tri.point[1].coords[1]);
-        _min[2] = util::min(_min[2], (T) tri.point[1].coords[2]);
+        _min[0] = util::min(_min[0], (T) tri.point[1][0]);
+        _min[1] = util::min(_min[1], (T) tri.point[1][1]);
+        _min[2] = util::min(_min[2], (T) tri.point[1][2]);
 
-        _max[0] = util::max(_max[0], (T) tri.point[1].coords[0]);
-        _max[1] = util::max(_max[1], (T) tri.point[1].coords[1]);
-        _max[2] = util::max(_max[2], (T) tri.point[1].coords[2]);
+        _max[0] = util::max(_max[0], (T) tri.point[1][0]);
+        _max[1] = util::max(_max[1], (T) tri.point[1][1]);
+        _max[2] = util::max(_max[2], (T) tri.point[1][2]);
 
-        _min[0] = util::min(_min[0], (T) tri.point[2].coords[0]);
-        _min[1] = util::min(_min[1], (T) tri.point[2].coords[1]);
-        _min[2] = util::min(_min[2], (T) tri.point[2].coords[2]);
+        _min[0] = util::min(_min[0], (T) tri.point[2][0]);
+        _min[1] = util::min(_min[1], (T) tri.point[2][1]);
+        _min[2] = util::min(_min[2], (T) tri.point[2][2]);
 
-        _max[0] = util::max(_max[0], (T) tri.point[2].coords[0]);
-        _max[1] = util::max(_max[1], (T) tri.point[2].coords[1]);
-        _max[2] = util::max(_max[2], (T) tri.point[2].coords[2]);
+        _max[0] = util::max(_max[0], (T) tri.point[2][0]);
+        _max[1] = util::max(_max[1], (T) tri.point[2][1]);
+        _max[2] = util::max(_max[2], (T) tri.point[2][2]);
 
       }
       else {
-        _min[0] = util::min(_min[0], (T) tri.point[0].coords[0]);
-        _min[1] = util::min(_min[1], (T) tri.point[0].coords[1]);
-        _min[2] = util::min(_min[2], (T) tri.point[0].coords[2]);
+        _min[0] = util::min(_min[0], (T) tri.point[0][0]);
+        _min[1] = util::min(_min[1], (T) tri.point[0][1]);
+        _min[2] = util::min(_min[2], (T) tri.point[0][2]);
 
-        _max[0] = util::max(_max[0], (T) tri.point[0].coords[0]);
-        _max[1] = util::max(_max[1], (T) tri.point[0].coords[1]);
-        _max[2] = util::max(_max[2], (T) tri.point[0].coords[2]);
+        _max[0] = util::max(_max[0], (T) tri.point[0][0]);
+        _max[1] = util::max(_max[1], (T) tri.point[0][1]);
+        _max[2] = util::max(_max[2], (T) tri.point[0][2]);
 
-        _min[0] = util::min(_min[0], (T) tri.point[1].coords[0]);
-        _min[1] = util::min(_min[1], (T) tri.point[1].coords[1]);
-        _min[2] = util::min(_min[2], (T) tri.point[1].coords[2]);
+        _min[0] = util::min(_min[0], (T) tri.point[1][0]);
+        _min[1] = util::min(_min[1], (T) tri.point[1][1]);
+        _min[2] = util::min(_min[2], (T) tri.point[1][2]);
 
-        _max[0] = util::max(_max[0], (T) tri.point[1].coords[0]);
-        _max[1] = util::max(_max[1], (T) tri.point[1].coords[1]);
-        _max[2] = util::max(_max[2], (T) tri.point[1].coords[2]);
+        _max[0] = util::max(_max[0], (T) tri.point[1][0]);
+        _max[1] = util::max(_max[1], (T) tri.point[1][1]);
+        _max[2] = util::max(_max[2], (T) tri.point[1][2]);
 
-        _min[0] = util::min(_min[0], (T) tri.point[2].coords[0]);
-        _min[1] = util::min(_min[1], (T) tri.point[2].coords[1]);
-        _min[2] = util::min(_min[2], (T) tri.point[2].coords[2]);
+        _min[0] = util::min(_min[0], (T) tri.point[2][0]);
+        _min[1] = util::min(_min[1], (T) tri.point[2][1]);
+        _min[2] = util::min(_min[2], (T) tri.point[2][2]);
 
-        _max[0] = util::max(_max[0], (T) tri.point[2].coords[0]);
-        _max[1] = util::max(_max[1], (T) tri.point[2].coords[1]);
-        _max[2] = util::max(_max[2], (T) tri.point[2].coords[2]);
+        _max[0] = util::max(_max[0], (T) tri.point[2][0]);
+        _max[1] = util::max(_max[1], (T) tri.point[2][1]);
+        _max[2] = util::max(_max[2], (T) tri.point[2][2]);
       }
       tri.init();
       _triangles.push_back(tri);
@@ -544,75 +678,75 @@ STLmesh<T>::STLmesh(const std::vector<std::vector<T>> meshPoints, T stlSize)
   _triangles.reserve(10000);
   for (size_t i = 0; i < meshPoints.size() / 3; i++) {
     STLtriangle<T> tri;
-    tri.point[0].coords[0] = meshPoints[i*3 + 0][0];
-    tri.point[0].coords[1] = meshPoints[i*3 + 0][1];
-    tri.point[0].coords[2] = meshPoints[i*3 + 0][2];
+    tri.point[0][0] = meshPoints[i*3 + 0][0];
+    tri.point[0][1] = meshPoints[i*3 + 0][1];
+    tri.point[0][2] = meshPoints[i*3 + 0][2];
 
-    tri.point[1].coords[0] = meshPoints[i*3 + 1][0];
-    tri.point[1].coords[1] = meshPoints[i*3 + 1][1];
-    tri.point[1].coords[2] = meshPoints[i*3 + 1][2];
+    tri.point[1][0] = meshPoints[i*3 + 1][0];
+    tri.point[1][1] = meshPoints[i*3 + 1][1];
+    tri.point[1][2] = meshPoints[i*3 + 1][2];
 
-    tri.point[2].coords[0] = meshPoints[i*3 + 2][0];
-    tri.point[2].coords[1] = meshPoints[i*3 + 2][1];
-    tri.point[2].coords[2] = meshPoints[i*3 + 2][2];
+    tri.point[2][0] = meshPoints[i*3 + 2][0];
+    tri.point[2][1] = meshPoints[i*3 + 2][1];
+    tri.point[2][2] = meshPoints[i*3 + 2][2];
     for (int k = 0; k < 3; k++) {
-      tri.point[0].coords[k] *= stlSize;
-      tri.point[1].coords[k] *= stlSize;
-      tri.point[2].coords[k] *= stlSize;
+      tri.point[0][k] *= stlSize;
+      tri.point[1][k] *= stlSize;
+      tri.point[2][k] *= stlSize;
     }
     if (i == 0) {
       _min*=T();
       _max*=T();
 
-      _min[0] = tri.point[0].coords[0];
-      _min[1] = tri.point[0].coords[1];
-      _min[2] = tri.point[0].coords[2];
+      _min[0] = tri.point[0][0];
+      _min[1] = tri.point[0][1];
+      _min[2] = tri.point[0][2];
 
-      _max[0] = tri.point[0].coords[0];
-      _max[1] = tri.point[0].coords[1];
-      _max[2] = tri.point[0].coords[2];
+      _max[0] = tri.point[0][0];
+      _max[1] = tri.point[0][1];
+      _max[2] = tri.point[0][2];
 
-      _min[0] = util::min(_min[0], (T) tri.point[1].coords[0]);
-      _min[1] = util::min(_min[1], (T) tri.point[1].coords[1]);
-      _min[2] = util::min(_min[2], (T) tri.point[1].coords[2]);
+      _min[0] = util::min(_min[0], (T) tri.point[1][0]);
+      _min[1] = util::min(_min[1], (T) tri.point[1][1]);
+      _min[2] = util::min(_min[2], (T) tri.point[1][2]);
 
-      _max[0] = util::max(_max[0], (T) tri.point[1].coords[0]);
-      _max[1] = util::max(_max[1], (T) tri.point[1].coords[1]);
-      _max[2] = util::max(_max[2], (T) tri.point[1].coords[2]);
+      _max[0] = util::max(_max[0], (T) tri.point[1][0]);
+      _max[1] = util::max(_max[1], (T) tri.point[1][1]);
+      _max[2] = util::max(_max[2], (T) tri.point[1][2]);
 
-      _min[0] = util::min(_min[0], (T) tri.point[2].coords[0]);
-      _min[1] = util::min(_min[1], (T) tri.point[2].coords[1]);
-      _min[2] = util::min(_min[2], (T) tri.point[2].coords[2]);
+      _min[0] = util::min(_min[0], (T) tri.point[2][0]);
+      _min[1] = util::min(_min[1], (T) tri.point[2][1]);
+      _min[2] = util::min(_min[2], (T) tri.point[2][2]);
 
-      _max[0] = util::max(_max[0], (T) tri.point[2].coords[0]);
-      _max[1] = util::max(_max[1], (T) tri.point[2].coords[1]);
-      _max[2] = util::max(_max[2], (T) tri.point[2].coords[2]);
+      _max[0] = util::max(_max[0], (T) tri.point[2][0]);
+      _max[1] = util::max(_max[1], (T) tri.point[2][1]);
+      _max[2] = util::max(_max[2], (T) tri.point[2][2]);
 
     }
     else {
-      _min[0] = util::min(_min[0], (T) tri.point[0].coords[0]);
-      _min[1] = util::min(_min[1], (T) tri.point[0].coords[1]);
-      _min[2] = util::min(_min[2], (T) tri.point[0].coords[2]);
+      _min[0] = util::min(_min[0], (T) tri.point[0][0]);
+      _min[1] = util::min(_min[1], (T) tri.point[0][1]);
+      _min[2] = util::min(_min[2], (T) tri.point[0][2]);
 
-      _max[0] = util::max(_max[0], (T) tri.point[0].coords[0]);
-      _max[1] = util::max(_max[1], (T) tri.point[0].coords[1]);
-      _max[2] = util::max(_max[2], (T) tri.point[0].coords[2]);
+      _max[0] = util::max(_max[0], (T) tri.point[0][0]);
+      _max[1] = util::max(_max[1], (T) tri.point[0][1]);
+      _max[2] = util::max(_max[2], (T) tri.point[0][2]);
 
-      _min[0] = util::min(_min[0], (T) tri.point[1].coords[0]);
-      _min[1] = util::min(_min[1], (T) tri.point[1].coords[1]);
-      _min[2] = util::min(_min[2], (T) tri.point[1].coords[2]);
+      _min[0] = util::min(_min[0], (T) tri.point[1][0]);
+      _min[1] = util::min(_min[1], (T) tri.point[1][1]);
+      _min[2] = util::min(_min[2], (T) tri.point[1][2]);
 
-      _max[0] = util::max(_max[0], (T) tri.point[1].coords[0]);
-      _max[1] = util::max(_max[1], (T) tri.point[1].coords[1]);
-      _max[2] = util::max(_max[2], (T) tri.point[1].coords[2]);
+      _max[0] = util::max(_max[0], (T) tri.point[1][0]);
+      _max[1] = util::max(_max[1], (T) tri.point[1][1]);
+      _max[2] = util::max(_max[2], (T) tri.point[1][2]);
 
-      _min[0] = util::min(_min[0], (T) tri.point[2].coords[0]);
-      _min[1] = util::min(_min[1], (T) tri.point[2].coords[1]);
-      _min[2] = util::min(_min[2], (T) tri.point[2].coords[2]);
+      _min[0] = util::min(_min[0], (T) tri.point[2][0]);
+      _min[1] = util::min(_min[1], (T) tri.point[2][1]);
+      _min[2] = util::min(_min[2], (T) tri.point[2][2]);
 
-      _max[0] = util::max(_max[0], (T) tri.point[2].coords[0]);
-      _max[1] = util::max(_max[1], (T) tri.point[2].coords[1]);
-      _max[2] = util::max(_max[2], (T) tri.point[2].coords[2]);
+      _max[0] = util::max(_max[0], (T) tri.point[2][0]);
+      _max[1] = util::max(_max[1], (T) tri.point[2][1]);
+      _max[2] = util::max(_max[2], (T) tri.point[2][2]);
     }
 
     tri.init();
@@ -628,11 +762,11 @@ STLmesh<T>::STLmesh(const std::vector<std::vector<T>> meshPoints, T stlSize)
 }
 
 template<typename T>
-T STLmesh<T>::distPoints(Vertex<T,3>& p1, Vertex<T,3>& p2)
+T STLmesh<T>::distPoints(Vector<T,3>& p1, Vector<T,3>& p2)
 {
-  return util::pow(T(p1.coords[0] - p2.coords[0]), 2)
-         + util::pow(T(p1.coords[1] - p2.coords[1]), 2)
-         + util::pow(T(p1.coords[2] - p2.coords[2]), 2);
+  return util::pow(T(p1[0] - p2[0]), 2)
+         + util::pow(T(p1[1] - p2[1]), 2)
+         + util::pow(T(p1[2] - p2[2]), 2);
 }
 
 template<typename T>
@@ -644,11 +778,11 @@ void STLmesh<T>::print(bool full)
     typename std::vector<STLtriangle<T> >::iterator it = _triangles.begin();
 
     for (; it != _triangles.end(); ++it) {
-      clout << i++ << ": " << it->point[0].coords[0] << " " << it->point[0].coords[1]
-            << " " << it->point[0].coords[2] << " | " << it->point[1].coords[0] << " "
-            << it->point[1].coords[1] << " " << it->point[1].coords[2] << " | "
-            << it->point[2].coords[0] << " " << it->point[2].coords[1] << " "
-            << it->point[2].coords[2] << std::endl;
+      clout << i++ << ": " << it->point[0][0] << " " << it->point[0][1]
+            << " " << it->point[0][2] << " | " << it->point[1][0] << " "
+            << it->point[1][1] << " " << it->point[1][2] << " | "
+            << it->point[2][0] << " " << it->point[2][1] << " "
+            << it->point[2][2] << std::endl;
     }
   }
   clout << "nTriangles=" << _triangles.size() << "; maxDist2=" << _maxDist2
@@ -676,14 +810,14 @@ void STLmesh<T>::write(std::string fName)
       f << "facet normal " << _triangles[i].normal[0] << " "
         << _triangles[i].normal[1] << " " << _triangles[i].normal[2] << "\n";
       f << "    outer loop\n";
-      f << "        vertex " << _triangles[i].point[0].coords[0] << " "
-        << _triangles[i].point[0].coords[1] << " " << _triangles[i].point[0].coords[2]
+      f << "        vertex " << _triangles[i].point[0][0] << " "
+        << _triangles[i].point[0][1] << " " << _triangles[i].point[0][2]
         << "\n";
-      f << "        vertex " << _triangles[i].point[1].coords[0] << " "
-        << _triangles[i].point[1].coords[1] << " " << _triangles[i].point[1].coords[2]
+      f << "        vertex " << _triangles[i].point[1][0] << " "
+        << _triangles[i].point[1][1] << " " << _triangles[i].point[1][2]
         << "\n";
-      f << "        vertex " << _triangles[i].point[2].coords[0] << " "
-        << _triangles[i].point[2].coords[1] << " " << _triangles[i].point[2].coords[2]
+      f << "        vertex " << _triangles[i].point[2][0] << " "
+        << _triangles[i].point[2][1] << " " << _triangles[i].point[2][2]
         << "\n";
       f << "    endloop\n";
       f << "endfacet\n";
@@ -706,12 +840,13 @@ bool STLmesh<T>::testRayIntersect(const std::set<unsigned int>& tris, const Vect
   return false;
 }
 
+
 /*
  * STLReader functions
  */
 template<typename T>
 STLreader<T>::STLreader(const std::string fName, T voxelSize, T stlSize,
-                        int method, bool verbose, T overlap, T max)
+                        RayMode method, bool verbose, T overlap, T max)
   : _voxelSize(voxelSize),
     _stlSize(stlSize),
     _overlap(overlap),
@@ -762,16 +897,16 @@ STLreader<T>::STLreader(const std::string fName, T voxelSize, T stlSize,
 
   /// Indicate nodes of the tree. (Inside/Outside)
   switch (method) {
-  case 1:
+  case RayMode::Robust:
     indicate1();
     break;
-  case 3:
+  case RayMode::DoubleRay:
     indicate3();
     break;
-  case 4:
+  case RayMode::FastRayX:
     indicate2_Xray();
     break;
-  case 5:
+  case RayMode::FastRayY:
     indicate2_Yray();
     break;
   default:
@@ -792,7 +927,7 @@ STLreader<T>::STLreader(const std::string fName, T voxelSize, T stlSize,
  */
 template<typename T>
 STLreader<T>::STLreader(const std::vector<std::vector<T>> meshPoints, T voxelSize, T stlSize,
-                        int method, bool verbose, T overlap, T max)
+                        RayMode method, bool verbose, T overlap, T max)
   : _voxelSize(voxelSize),
     _stlSize(stlSize),
     _overlap(overlap),
@@ -856,17 +991,17 @@ STLreader<T>::STLreader(const std::vector<std::vector<T>> meshPoints, T voxelSiz
 
 
   // Indicate nodes of the tree. (Inside/Outside)
-  switch (method) {
-  case 1:
+ switch (method) {
+  case RayMode::Robust:
     indicate1();
     break;
-  case 3:
+  case RayMode::DoubleRay:
     indicate3();
     break;
-  case 4:
+  case RayMode::FastRayX:
     indicate2_Xray();
     break;
-  case 5:
+  case RayMode::FastRayY:
     indicate2_Yray();
     break;
   default:
@@ -1002,7 +1137,6 @@ void STLreader<T>::indicate2()
     pt[0] += _voxelSize;
   }
 }
-
 
 
 /*
@@ -1227,15 +1361,36 @@ template<typename T>
 bool STLreader<T>::operator() (bool output[], const T input[])
 {
   output[0] = false;
-  T coords = _tree->getRadius();
-  Vector<T,3> c(_tree->getCenter());
-  if (c[0] - coords < input[0] && input[0] < c[0] + coords && c[1] - coords < input[1]
-      && input[1] < c[1] + coords && c[2] - coords < input[2] && input[2] < c[2] + coords) {
+  if (isInsideRootTree(input)) {
     std::vector<T> tmp(input, input + 3);
     output[0] = _tree->find(tmp)->getInside();
   }
   return true;
 }
+
+
+template<typename T>
+bool STLreader<T>::isInsideRootTree(const T input[])
+{
+  T coords = _tree->getRadius();
+  Vector<T,3> c(_tree->getCenter());
+  return c[0] - coords < input[0] && input[0] < c[0] + coords && c[1] - coords < input[1]
+      && input[1] < c[1] + coords && c[2] - coords < input[2] && input[2] < c[2] + coords;
+}
+
+
+template<typename T>
+Vector<T,3> STLreader<T>::closestPointInBoundingBox(const Vector<T,3>& input)
+{
+  T coords = _tree->getRadius();
+  Vector<T,3> c(_tree->getCenter());
+  Vector<T,3> closestPoint;
+  for(int i = 0; i < 3; ++i) {
+    closestPoint[i] = util::max(c[i] - coords, util::min(c[i] + coords, input[i]));
+  }
+  return closestPoint;
+}
+
 
 template<typename T>
 bool STLreader<T>::distance(T& distance, const Vector<T,3>& origin,
@@ -1347,9 +1502,11 @@ bool STLreader<T>::distance(T& distance, const Vector<T,3>& origin,
     }
     else {
       Octree<T>* tmpNode = _tree->find(pt);
-      tmpNode->intersectRayNode(pt, dir, s);
-      for (int i = 0; i < 3; i++) {
-        pt[i] = s[i] + step * dir[i];
+      if (tmpNode) {
+        tmpNode->intersectRayNode(pt, dir, s);
+        for (int i = 0; i < 3; i++) {
+          pt[i] = s[i] + step * dir[i];
+        }
       }
     }
   }
@@ -1358,20 +1515,41 @@ bool STLreader<T>::distance(T& distance, const Vector<T,3>& origin,
 }
 
 template<typename T>
+template<typename F>
+void STLreader<T>::iterateOverCloseTriangles(const PhysR<T,3>& pt, F func, Octree<T>* leafNode) {
+  // Find the leaf node in the Octree that contains the input point
+  leafNode = _tree->find(pt);
+
+  if (leafNode && !leafNode->getTriangles().empty()) {
+    const std::vector<unsigned int>& triangleIndices = leafNode->getTriangles();
+    for (unsigned int idx : triangleIndices) {
+      const STLtriangle<T>& triangle = _mesh.getTri(idx);
+      func(triangle);
+    }
+  }
+  else {
+    for (const STLtriangle<T>& triangle : _mesh.getTriangles()) {
+      func(triangle);
+    }
+  }
+};
+
+template<typename T>
 Vector<T,3> STLreader<T>::evalNormalOnSurface(const PhysR<T,3>& pt, const Vector<T,3>& fallbackNormal)
 {
   // Check if the position is on the corner of a triangle
   unsigned countTriangles = 0;
   Vector<T,3> normal(T(0));
 
-  // TODO: Calculate angle-weighted psuedonormal (see 10.1109/TVCG.2005.49) in case the point lies on corners
-  // Edges correspond to an unweighted average (as calculated below) anyway
-  for (const STLtriangle<T>& triangle : _mesh.getTriangles()) {
-    if (triangle.isPointInside(pt)) {
-      ++countTriangles;
-      normal+=triangle.getNormal();
-    }
-  }
+  iterateOverCloseTriangles(pt, [&](const STLtriangle<T>& triangle){
+      // TODO: Calculate angle-weighted psuedonormal (see 10.1109/TVCG.2005.49) in case the point lies on corners
+      // Edges correspond to an unweighted average (as calculated below) anyway
+      if (triangle.isPointInside(pt)) {
+        ++countTriangles;
+        normal+=triangle.getNormal();
+      }
+    });
+
   if (countTriangles > 0) {
     return normal / countTriangles;
   }
@@ -1381,30 +1559,31 @@ Vector<T,3> STLreader<T>::evalNormalOnSurface(const PhysR<T,3>& pt, const Vector
 }
 
 template<typename T>
+template<SignMode SIGNMODE>
 Vector<T,3> STLreader<T>::evalSurfaceNormal(const Vector<T,3>& origin)
 {
   Vector<T,3> normal(0.);
   Vector<T,3> closestPointOnSurface(0.);
   const STLtriangle<T>* closestTriangle = nullptr;
   T distance = std::numeric_limits<T>::max();
+  const PhysR<T,3> pt(closestPointInBoundingBox(origin));
 
-  for (const STLtriangle<T>& triangle : _mesh.getTriangles()) {
-    PhysR<T,3> const pointOnTriangle = triangle.closestPtPointTriangle(origin);
-    PhysR<T,3> const currDistance = origin - pointOnTriangle;
-    T currDistanceNorm = norm_squared(currDistance);
-    if (distance > currDistanceNorm) {
-      normal = currDistance;
-      distance = currDistanceNorm;
-      closestPointOnSurface = pointOnTriangle;
-      closestTriangle = &triangle;
-    }
-  }
+  iterateOverCloseTriangles(pt, [&](const STLtriangle<T>& triangle) {
+      PhysR<T,3> const pointOnTriangle = triangle.closestPtPointTriangle(pt);
+      PhysR<T,3> const currDistance = pt - pointOnTriangle;
+      T currDistanceNorm = norm_squared(currDistance);
+      if (distance > currDistanceNorm) {
+        normal = currDistance;
+        distance = currDistanceNorm;
+        closestPointOnSurface = pointOnTriangle;
+        closestTriangle = &triangle;
+      }
+    });
 
   distance = util::sqrt(distance);
   if (!util::nearZero(distance)) {
-    const short signAtInput = evalSignForSignedDistance(origin);
     normal = normal/distance;
-    normal *= signAtInput;
+    normal *= evalSignForSignedDistance<SIGNMODE>(origin, distance);
   }
   else {
     normal = evalNormalOnSurface(closestPointOnSurface, closestTriangle->getNormal());
@@ -1422,8 +1601,84 @@ Vector<T,3> STLreader<T>::evalSurfaceNormal(const Vector<T,3>& origin)
   return normal;
 }
 
+
 template<typename T>
-short STLreader<T>::evalSignForSignedDistance(const Vector<T,3>& pseudonormal, const Vector<T,3>& distance)
+template<SignMode SIGNMODE>
+Vector<T,3> STLreader<T>::evalSurfaceNormalForPseudoNormal(const Vector<T,3>& origin, Vector<T,3> & outputPointOnSurface)
+{
+  Vector<T,3> normal(0.);
+  Vector<T,3> closestPointOnSurface(0.);
+  const STLtriangle<T>* closestTriangle = nullptr;
+  T distance = std::numeric_limits<T>::max();
+  const PhysR<T,3> pt(closestPointInBoundingBox(origin));
+
+  iterateOverCloseTriangles(pt, [&](const STLtriangle<T>& triangle) {
+      PhysR<T,3> const pointOnTriangle = triangle.closestPtPointTriangle(pt);
+      PhysR<T,3> const currDistance = pt - pointOnTriangle;
+      T currDistanceNorm = norm_squared(currDistance);
+      if (distance > currDistanceNorm) {
+        normal = currDistance;
+        distance = currDistanceNorm;
+        closestPointOnSurface = pointOnTriangle;
+        closestTriangle = &triangle;
+      }
+    });
+
+/*   distance = util::sqrt(distance);
+  if (!util::nearZero(distance)) {
+    normal = normal/distance;
+    normal *= evalSignForSignedDistance<SIGNMODE>(origin, distance);
+  }
+  else { */
+    normal = evalNormalOnSurface(closestPointOnSurface, closestTriangle->getNormal());
+    outputPointOnSurface = closestPointOnSurface;
+
+    // The below isn't necessary because all normals are set to point outside by default (see constructor)
+
+    /* const T tmpStepSize = _voxelSize * T{0.01}; */
+    /* const short signBefore = evalSignForSignedDistance(origin - tmpStepSize * normal, *closestTriangle); */
+    /* const short signAfter  = evalSignForSignedDistance(origin + tmpStepSize * normal, *closestTriangle); */
+
+    /* if(signBefore > 0 || signAfter < 0) { */
+    /*   normal *= T{-1}; */
+    /* } */
+  //}
+
+  return normal;
+}
+
+
+template <typename T>
+template <SignMode SIGNMODE>
+short STLreader<T>::evalSignForSignedDistance(
+    const Vector<T,3>& pt, [[maybe_unused]] const T distance, Vector<T,3>  vecdist, STLtriangle<T> stlT)
+{
+  short sign;
+
+  if constexpr (SIGNMODE == SignMode::EXACT)
+  {
+
+    if(distance < _voxelSize) {
+
+    sign = evalSignForSignedDistanceFromWindingNumber(pt);
+    //sign = evalSignForSignedDistanceFromNormal(stlT.getNormal(), vecdist);
+   /* Vector<T,3> closestPointOnSurface (0.);
+    Vector<T,3> normal = evalSurfaceNormalForPseudoNormal<SignMode::EXACT>(pt,closestPointOnSurface);
+      sign = evalSignForSignedDistanceFromNormal(normal, pt - closestPointOnSurface);*/
+    }
+    else
+    {
+    sign = evalSignForSignedDistanceFromCache(pt);
+    }
+  }
+  else {
+  sign = evalSignForSignedDistanceFromCache(pt);
+  }
+  return sign;
+}
+
+template<typename T>
+short STLreader<T>::evalSignForSignedDistanceFromPseudonormal(const Vector<T,3>& pseudonormal, const Vector<T,3>& distance)
 {
   const T projection = pseudonormal * distance;
 
@@ -1436,15 +1691,34 @@ short STLreader<T>::evalSignForSignedDistance(const Vector<T,3>& pseudonormal, c
   return 0;
 }
 
+
+//aproximation not working for concave surfaces
 template<typename T>
-short STLreader<T>::evalSignForSignedDistance(const Vector<T,3>& pt)
+short STLreader<T>::evalSignForSignedDistanceFromNormal(const Vector<T,3>& normal, const Vector<T,3>& distance)
+{
+  const T projection = normal * distance;
+
+  if(projection > 0) {
+    return 1;
+  }
+  else if (projection < 0 ) {
+    return -1;
+  }
+  return 0;
+}
+
+
+
+
+template<typename T>
+short STLreader<T>::evalSignForSignedDistanceFromWindingNumber(const Vector<T,3>& pt)
 {
   T windingNumber{0};
 
   for (const STLtriangle<T>& triangle : _mesh.getTriangles()) {
-    const PhysR<T,3> a = triangle.point[0].coords - pt;
-    const PhysR<T,3> b = triangle.point[1].coords - pt;
-    const PhysR<T,3> c = triangle.point[2].coords - pt;
+    const PhysR<T,3> a = triangle.point[0] - pt;
+    const PhysR<T,3> b = triangle.point[1] - pt;
+    const PhysR<T,3> c = triangle.point[2] - pt;
 
     const T aNorm = norm(a);
     const T bNorm = norm(b);
@@ -1463,31 +1737,84 @@ short STLreader<T>::evalSignForSignedDistance(const Vector<T,3>& pt)
   return -1;
 }
 
-template<typename T>
-T STLreader<T>::signedDistance(const Vector<T,3>& input)
+
+template <typename T>
+T STLreader<T>::signedDistance(const Vector<T, 3>& input)
 {
-  Vector<T,3> distance;
-  Vector<T,3> closestPointOnSurface;
-  T distanceNorm = std::numeric_limits<T>::max();
-
-  for (const STLtriangle<T>& triangle : _mesh.getTriangles()) {
-    const PhysR<T,3> currPointOnTriangle = triangle.closestPtPointTriangle(input);
-    const Vector<T,3> currDistance = input - currPointOnTriangle;
-    T currDistanceNorm = norm_squared(currDistance);
-    if (distanceNorm > currDistanceNorm) {
-      distanceNorm = currDistanceNorm;
-      distance = currDistance;
-      closestPointOnSurface = currPointOnTriangle;
-    }
-  }
-
-  return util::sqrt(distanceNorm) * evalSignForSignedDistance(input);
+  return signedDistance<SignMode::CACHED>(input);
 }
+
+template <typename T>
+T STLreader<T>::signedDistanceExact(const Vector<T, 3>& input)
+{
+  return signedDistance<SignMode::EXACT>(input);
+}
+
+
+
+
+template <typename T>
+template <SignMode SIGNMODE>
+T STLreader<T>::signedDistance(const Vector<T, 3>& input)
+{
+  T distanceNorm = std::numeric_limits<T>::max();
+  //Vector<T,3>  distVec  (std::numeric_limits<T>::max(),std::numeric_limits<T>::max(),std::numeric_limits<T>::max());
+  T extraDistance{};
+  //STLtriangle<T> stlT;
+
+  const auto evalDistance = [&](const Vector<T,3>& pt) {
+    iterateOverCloseTriangles(pt, [&](const STLtriangle<T>& triangle) {
+        const PhysR<T, 3> currPointOnTriangle =
+            triangle.closestPtPointTriangle(pt);
+        const Vector<T, 3> currDistance     = pt - currPointOnTriangle;
+        T                  currDistanceNorm = norm_squared(currDistance);
+        distanceNorm = util::min(distanceNorm, currDistanceNorm);
+       /* if(distanceNorm -currDistanceNorm < std::numeric_limits<T>::min())
+       {distVec = currDistanceNorm;
+       stlT = triangle;}*/
+      });
+    return util::sqrt(distanceNorm);
+  };
+
+  if(!isInsideRootTree(input.data())) {
+    const PhysR<T,3> ptInsideTree = closestPointInBoundingBox(input);
+    const T distance = evalDistance(ptInsideTree);
+    extraDistance = norm(ptInsideTree - input);
+    return distance + extraDistance;
+  }
+  const T distance = evalDistance(input);
+
+  return evalSignForSignedDistance<SIGNMODE>(input, distance) * distance;
+}
+
+
+template<typename T>
+short STLreader<T>::evalSignForSignedDistanceFromCache(const Vector<T,3>& pt)
+{
+  bool isInside;
+  this->operator()(&isInside, pt.data());
+  return (isInside ? -1 : 1);
+}
+
+
 
 template <typename T>
 Vector<T,3> STLreader<T>::surfaceNormal(const Vector<T,3>& pos, const T meshSize)
 {
-  return evalSurfaceNormal(pos);
+  return surfaceNormal<SignMode::CACHED>(pos, meshSize);
+}
+
+template <typename T>
+Vector<T,3> STLreader<T>::surfaceNormalExact(const Vector<T,3>& pos, const T meshSize)
+{
+  return surfaceNormal<SignMode::EXACT>(pos, meshSize);
+}
+
+template <typename T>
+template <SignMode SIGNMODE>
+Vector<T,3> STLreader<T>::surfaceNormal(const Vector<T,3>& pos, const T meshSize)
+{
+  return evalSurfaceNormal<SIGNMODE>(pos);
 }
 
 template<typename T>
@@ -1530,9 +1857,9 @@ void STLreader<T>::setNormalsOutside()
     if (_tree->find(
           center + _mesh.getTri(i).normal * util::sqrt(3.) * _voxelSize)->getInside()) {
       //      cout << "Wrong direction" << std::endl;
-      Vector<T,3> pt(_mesh.getTri(i).point[0].coords);
-      _mesh.getTri(i).point[0].coords = _mesh.getTri(i).point[2].coords;
-      _mesh.getTri(i).point[2].coords = pt;
+      Vector<T,3> pt(_mesh.getTri(i).point[0]);
+      _mesh.getTri(i).point[0] = _mesh.getTri(i).point[2];
+      _mesh.getTri(i).point[2] = pt;
       _mesh.getTri(i).init();
       //      _mesh.getTri(i).getNormal()[0] *= -1.;
       //      _mesh.getTri(i).getNormal()[1] *= -1.;

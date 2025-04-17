@@ -119,7 +119,7 @@ void AdvDiffRotatingForce3D<T,DESCRIPTOR,ADLattice>::applyForce(T force[], Cell<
 //  if ( this->_sLattice.getLoadBalancer().rank(latticeR[0]) == singleton::mpi().getRank() ) {
   // local coords are given, fetch local cell and compute value(s)
   std::vector<T> physR(3,T());
-  this->sg.getCuboidGeometry().getPhysR(&(physR[0]),&(latticeR[0]));
+  this->sg.getCuboidDecomposition().getPhysR(&(physR[0]),&(latticeR[0]));
 
   T scalar =  (physR[0]-axisPoint[0])*axisDirection[0]
               +(physR[1]-axisPoint[1])*axisDirection[1]
@@ -155,7 +155,7 @@ template<typename T, typename DESCRIPTOR,
 void AdvDiffMagneticWireForce3D<T,DESCRIPTOR,ADLattice>::applyForce(T force[], Cell<T,DESCRIPTOR> *nsCell, Cell<T,ADLattice> *adCell, T vel[], int latticeR[])
 {
   std::vector<T> physR(3,T());
-  this->sg.getCuboidGeometry().getPhysR(&(physR[0]),&(latticeR[0]));
+  this->sg.getCuboidDecomposition().getPhysR(&(physR[0]),&(latticeR[0]));
   T pos[3] = { T(), T(), T() };
   pos[0] = physR[0];
   pos[1] = physR[1];

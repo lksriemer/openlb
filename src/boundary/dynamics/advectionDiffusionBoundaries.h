@@ -25,7 +25,7 @@
 #ifndef ADVECTION_DIFFUSION_BOUNDARIES_H
 #define ADVECTION_DIFFUSION_BOUNDARIES_H
 
-#include "dynamics/latticeDescriptors.h"
+#include "descriptor/descriptor.h"
 #include "dynamics/advectionDiffusionDynamics.h"
 #include "dynamics/dynamics.h"
 
@@ -39,8 +39,16 @@ namespace olb {
 template<typename T, typename DESCRIPTOR, typename DYNAMICS, typename MOMENTA, int direction, int orientation>
 struct AdvectionDiffusionBoundariesDynamics final : public dynamics::CustomCollision<T,DESCRIPTOR,MOMENTA> {
   using MomentaF = typename MOMENTA::template type<DESCRIPTOR>;
+  using EquilibriumF = typename DYNAMICS::template exchange_momenta<MOMENTA>::EquilibriumF;
 
   using parameters = typename DYNAMICS::parameters;
+
+  template <typename NEW_T>
+  using exchange_value_type = AdvectionDiffusionBoundariesDynamics<
+    NEW_T, DESCRIPTOR,
+    DYNAMICS, MOMENTA, direction,
+    orientation
+  >;
 
   template <typename M>
   using exchange_momenta = AdvectionDiffusionBoundariesDynamics<T,DESCRIPTOR,DYNAMICS,M,direction,orientation>;
@@ -54,7 +62,7 @@ struct AdvectionDiffusionBoundariesDynamics final : public dynamics::CustomColli
   }
 
   template <typename CELL, typename PARAMETERS, typename V=typename CELL::value_t>
-  CellStatistic<V> apply(CELL& cell, PARAMETERS& parameters) any_platform {
+  CellStatistic<V> collide(CELL& cell, PARAMETERS& parameters) any_platform {
     V dirichletTemperature = MomentaF().computeRho(cell);
 
     // Placeholder - the index calculation of this section can and should be done at compile time
@@ -81,9 +89,9 @@ struct AdvectionDiffusionBoundariesDynamics final : public dynamics::CustomColli
       // has to be checked!
       for (unsigned iPop : unknownIndices) {
         cell[iPop] =
-          equilibrium<DESCRIPTOR>::template firstOrder(iPop, dirichletTemperature, u)
+          equilibrium<DESCRIPTOR>::firstOrder(iPop, dirichletTemperature, u)
           - (cell[descriptors::opposite<DESCRIPTOR>(iPop)]
-             - equilibrium<DESCRIPTOR>::template firstOrder(
+             - equilibrium<DESCRIPTOR>::firstOrder(
                descriptors::opposite<DESCRIPTOR>(iPop),
                dirichletTemperature, u));
       }
@@ -91,8 +99,10 @@ struct AdvectionDiffusionBoundariesDynamics final : public dynamics::CustomColli
     }
   };
 
-  T computeEquilibrium(int iPop, T rho, const T u[DESCRIPTOR::d]) const override any_platform {
-    return equilibrium<DESCRIPTOR>::template firstOrder(iPop, rho, u);
+  void computeEquilibrium(ConstCell<T,DESCRIPTOR>& cell, T rho, const T u[DESCRIPTOR::d], T fEq[DESCRIPTOR::q]) const override {
+    for ( int iPop = 0; iPop < DESCRIPTOR::q; iPop++ ) {
+      fEq[iPop] = equilibrium<DESCRIPTOR>::firstOrder(iPop, rho, u);
+    }
   };
 
   std::string getName() const override {
@@ -114,8 +124,16 @@ template<typename T, typename DESCRIPTOR, typename DYNAMICS, typename MOMENTA, i
 class AdvectionDiffusionEdgesDynamics final : public dynamics::CustomCollision<T,DESCRIPTOR,MOMENTA> {
 public:
   using MomentaF = typename MOMENTA::template type<DESCRIPTOR>;
+  using EquilibriumF = typename DYNAMICS::template exchange_momenta<MOMENTA>::EquilibriumF;
 
   using parameters = typename DYNAMICS::parameters;
+
+  template <typename NEW_T>
+  using exchange_value_type = AdvectionDiffusionEdgesDynamics<
+    NEW_T, DESCRIPTOR,
+    DYNAMICS, MOMENTA, plane,
+    normal1, normal2
+  >;
 
   template <typename M>
   using exchange_momenta = AdvectionDiffusionEdgesDynamics<T,DESCRIPTOR,DYNAMICS,M,plane,normal1,normal2>;
@@ -129,7 +147,7 @@ public:
   }
 
   template <typename CELL, typename PARAMETERS, typename V=typename CELL::value_t>
-  CellStatistic<V> apply(CELL& cell, PARAMETERS& parameters) any_platform {
+  CellStatistic<V> collide(CELL& cell, PARAMETERS& parameters) any_platform {
     V temperature = MomentaF().computeRho(cell);
     auto u = cell.template getField<descriptors::VELOCITY>();
     // I need to get Missing information on the corners !!!!
@@ -141,9 +159,9 @@ public:
     // I have the right number of equations for the number of unknowns using these lattices
 
     for (unsigned iPop : unknownIndexes) {
-      cell[iPop] = equilibrium<DESCRIPTOR>::template firstOrder(iPop, temperature, u)
+      cell[iPop] = equilibrium<DESCRIPTOR>::firstOrder(iPop, temperature, u)
                  - (  cell[descriptors::opposite<DESCRIPTOR>(iPop)]
-                    - equilibrium<DESCRIPTOR>::template firstOrder(descriptors::opposite<DESCRIPTOR>(iPop),
+                    - equilibrium<DESCRIPTOR>::firstOrder(descriptors::opposite<DESCRIPTOR>(iPop),
                                                                    temperature,
                                                                    u));
     }
@@ -152,8 +170,10 @@ public:
     return typename DYNAMICS::template exchange_momenta<MOMENTA>::CollisionO().apply(cell, parameters);
   };
 
-  T computeEquilibrium(int iPop, T rho, const T u[DESCRIPTOR::d]) const override any_platform {
-    return equilibrium<DESCRIPTOR>::template firstOrder(iPop, rho, u);
+  void computeEquilibrium(ConstCell<T,DESCRIPTOR>& cell, T rho, const T u[DESCRIPTOR::d], T fEq[DESCRIPTOR::q]) const override {
+    for ( int iPop = 0; iPop < DESCRIPTOR::q; iPop++ ) {
+      fEq[iPop] = equilibrium<DESCRIPTOR>::firstOrder(iPop, rho, u);
+    }
   };
 
   std::string getName() const override {
@@ -173,8 +193,16 @@ AdvectionDiffusionEdgesDynamics< T, DESCRIPTOR, DYNAMICS, MOMENTA, ARGS...>
 template<typename T, typename DESCRIPTOR, typename DYNAMICS, typename MOMENTA, int xNormal, int yNormal>
 struct AdvectionDiffusionCornerDynamics2D final : public dynamics::CustomCollision<T,DESCRIPTOR,MOMENTA> {
   using MomentaF = typename MOMENTA::template type<DESCRIPTOR>;
+  using EquilibriumF = typename DYNAMICS::template exchange_momenta<MOMENTA>::EquilibriumF;
 
   using parameters = typename DYNAMICS::parameters;
+
+  template <typename NEW_T>
+  using exchange_value_type = AdvectionDiffusionCornerDynamics2D<
+    NEW_T, DESCRIPTOR,
+    DYNAMICS, MOMENTA,
+    xNormal, yNormal
+  >;
 
   template <typename M>
   using exchange_momenta = AdvectionDiffusionCornerDynamics2D<T,DESCRIPTOR,DYNAMICS,M,xNormal,yNormal>;
@@ -188,7 +216,7 @@ struct AdvectionDiffusionCornerDynamics2D final : public dynamics::CustomCollisi
   }
 
   template <typename CELL, typename PARAMETERS, typename V=typename CELL::value_t>
-  CellStatistic<V> apply(CELL& cell, PARAMETERS& parameters) any_platform {
+  CellStatistic<V> collide(CELL& cell, PARAMETERS& parameters) any_platform {
     V temperature = MomentaF().computeRho(cell);
     auto u = cell.template getField<descriptors::VELOCITY>();
     // I need to get Missing information on the corners !!!!
@@ -200,9 +228,9 @@ struct AdvectionDiffusionCornerDynamics2D final : public dynamics::CustomCollisi
     // I have the right number of equations for the number of unknowns using these lattices
 
     for (unsigned iPop : unknownIndexes) {
-      cell[iPop] = equilibrium<DESCRIPTOR>::template firstOrder(iPop, temperature, u)
+      cell[iPop] = equilibrium<DESCRIPTOR>::firstOrder(iPop, temperature, u)
                  - (  cell[descriptors::opposite<DESCRIPTOR>(iPop)]
-                    - equilibrium<DESCRIPTOR>::template firstOrder(descriptors::opposite<DESCRIPTOR>(iPop),
+                    - equilibrium<DESCRIPTOR>::firstOrder(descriptors::opposite<DESCRIPTOR>(iPop),
                                                                    temperature,
                                                                    u));
     }
@@ -211,8 +239,10 @@ struct AdvectionDiffusionCornerDynamics2D final : public dynamics::CustomCollisi
     return typename DYNAMICS::CollisionO().apply(cell, parameters);
   };
 
-  T computeEquilibrium(int iPop, T rho, const T u[DESCRIPTOR::d]) const override any_platform {
-    return equilibrium<DESCRIPTOR>::template firstOrder(iPop, rho, u);
+  void computeEquilibrium(ConstCell<T,DESCRIPTOR>& cell, T rho, const T u[DESCRIPTOR::d], T fEq[DESCRIPTOR::q]) const override {
+    for ( int iPop = 0; iPop < DESCRIPTOR::q; iPop++ ) {
+      fEq[iPop] = equilibrium<DESCRIPTOR>::firstOrder(iPop, rho, u);
+    }
   };
 
   std::string getName() const override {
@@ -233,8 +263,16 @@ using AdvectionLocalDiffusionCornerDynamics2D = dynamics::ParameterFromCell<desc
 template<typename T, typename DESCRIPTOR, typename DYNAMICS, typename MOMENTA, int xNormal, int yNormal, int zNormal>
 struct AdvectionDiffusionCornerDynamics3D final : public dynamics::CustomCollision<T,DESCRIPTOR,MOMENTA> {
   using MomentaF = typename MOMENTA::template type<DESCRIPTOR>;
+  using EquilibriumF = typename DYNAMICS::template exchange_momenta<MOMENTA>::EquilibriumF;
 
   using parameters = typename DYNAMICS::parameters;
+
+  template <typename NEW_T>
+  using exchange_value_type = AdvectionDiffusionCornerDynamics3D<
+    NEW_T, DESCRIPTOR,
+    DYNAMICS, MOMENTA, xNormal,
+    yNormal, zNormal
+  >;
 
   template <typename M>
   using exchange_momenta = AdvectionDiffusionCornerDynamics3D<T,DESCRIPTOR,DYNAMICS,M,xNormal,yNormal,zNormal>;
@@ -248,7 +286,7 @@ struct AdvectionDiffusionCornerDynamics3D final : public dynamics::CustomCollisi
   }
 
   template <typename CELL, typename PARAMETERS, typename V=typename CELL::value_t>
-  CellStatistic<V> apply(CELL& cell, PARAMETERS& parameters) any_platform {
+  CellStatistic<V> collide(CELL& cell, PARAMETERS& parameters) any_platform {
     V temperature = MomentaF().computeRho(cell);
     auto u = cell.template getField<descriptors::VELOCITY>();
     // I need to get Missing information on the corners !!!!
@@ -260,9 +298,9 @@ struct AdvectionDiffusionCornerDynamics3D final : public dynamics::CustomCollisi
     // I have the right number of equations for the number of unknowns using these lattices
 
     for (unsigned iPop : unknownIndexes) {
-      cell[iPop] = equilibrium<DESCRIPTOR>::template firstOrder(iPop, temperature, u)
+      cell[iPop] = equilibrium<DESCRIPTOR>::firstOrder(iPop, temperature, u)
                  - (  cell[descriptors::opposite<DESCRIPTOR>(iPop)]
-                    - equilibrium<DESCRIPTOR>::template firstOrder(descriptors::opposite<DESCRIPTOR>(iPop),
+                    - equilibrium<DESCRIPTOR>::firstOrder(descriptors::opposite<DESCRIPTOR>(iPop),
                                                                    temperature,
                                                                    u));
     }
@@ -271,8 +309,10 @@ struct AdvectionDiffusionCornerDynamics3D final : public dynamics::CustomCollisi
     return typename DYNAMICS::template exchange_momenta<MOMENTA>::CollisionO().apply(cell, parameters);
   };
 
-  T computeEquilibrium(int iPop, T rho, const T u[DESCRIPTOR::d]) const override any_platform {
-    return equilibrium<DESCRIPTOR>::template firstOrder(iPop, rho, u);
+  void computeEquilibrium(ConstCell<T,DESCRIPTOR>& cell, T rho, const T u[DESCRIPTOR::d], T fEq[DESCRIPTOR::q]) const override {
+    for ( int iPop = 0; iPop < DESCRIPTOR::q; iPop++ ) {
+      fEq[iPop] = equilibrium<DESCRIPTOR>::firstOrder(iPop, rho, u);
+    }
   };
 
   std::string getName() const override {

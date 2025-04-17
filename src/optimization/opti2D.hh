@@ -22,7 +22,9 @@
 */
 
 /** \file
- * Groups all the 2D generic template files for the directory io.
+ * Groups all the 2D generic template files for the directory optimization.
  */
 
-#include "optimizer.hh"
+#include "optimization/core/optiCaseDual.hh"
+#include "optimization/core/optimizer.hh"
+#include "optimization/functors/dualFunctors3D.hh"

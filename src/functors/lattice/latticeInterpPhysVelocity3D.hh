@@ -56,7 +56,7 @@ SuperLatticeInterpPhysVelocity3D<T, DESCRIPTOR>::SuperLatticeInterpPhysVelocity3
       new BlockLatticeInterpPhysVelocity3D<T, DESCRIPTOR>(
         sLattice.getBlock(lociC),
         converter,
-        sLattice.getCuboidGeometry().get(globiC))
+        sLattice.getCuboidDecomposition().get(globiC))
     );
   }
 }
@@ -100,10 +100,8 @@ void BlockLatticeInterpPhysVelocity3D<T, DESCRIPTOR>::operator()(T output[3], co
 {
   T u[3], rho, volume;
   T d[3], e[3];
-  int latIntPos[3] = {0};
-  T latPhysPos[3] = {T()};
-  _cuboid.getFloorLatticeR(latIntPos, &input[0]);
-  _cuboid.getPhysR(latPhysPos, latIntPos);
+  auto latIntPos = _cuboid.getFloorLatticeR(&input[0]);
+  auto latPhysPos = _cuboid.getPhysR(latIntPos);
 
   T deltaRinv = 1. / _cuboid.getDeltaR();
   d[0] = (input[0] - latPhysPos[0]) * deltaRinv;

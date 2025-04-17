@@ -26,8 +26,7 @@
 #ifndef POISEUILLE_2D_H
 #define POISEUILLE_2D_H
 
-#include "olb2D.h"
-#include "olb2D.hh"
+#include <olb.h>
 
 
 using namespace olb;
@@ -52,7 +51,7 @@ typedef enum {bounceBack, local, interpolated, freeSlip, partialSlip} BoundaryTy
 
 
 // Parameters for the simulation setup
-FlowType flowType = forced;
+FlowType flowType = nonForced;
 BoundaryType boundaryType = interpolated;
 const T lx  = 2.;             // length of the channel
 const T ly  = 1.;             // height of the channel
@@ -60,7 +59,7 @@ const T Re = 10.;             // Reynolds number
 const T maxPhysT = 30.;       // max. simulation time in s, SI unit
 const T physInterval = 0.25;  // interval for the convergence check in s
 const T residuum = 1e-9;      // residuum for the convergence check
-const T tuner = 0.99;         // for partialSlip only: 0->bounceBack, 1->freeSlip
+const T tuner = 0.5;         // for partialSlip only: 0->bounceBack, 1->freeSlip
 
 
 // variables for eoc analysis
@@ -110,8 +109,8 @@ void prepareGeometry( UnitConverter<T,DESCRIPTOR> const& converter,
   superGeometry.checkForErrors();
 
   superGeometry.print();
-
   clout << "Prepare Geometry ... OK" << std::endl;
+
 }
 
 // Set up the geometry of the simulation
@@ -133,31 +132,32 @@ void prepareLattice( UnitConverter<T,DESCRIPTOR> const& converter,
   }
 
   if (boundaryType == bounceBack) {
-    setBounceBackBoundary(sLattice, superGeometry, 2);
+    boundary::set<boundary::BounceBack>(sLattice, superGeometry, 2);
   }
   else if (boundaryType == freeSlip) {
-    setSlipBoundary(sLattice, superGeometry, 2);
+    boundary::set<boundary::FullSlip>(sLattice, superGeometry, 2);
   }
   else if (boundaryType == partialSlip) {
-    setPartialSlipBoundary(sLattice, tuner, superGeometry, 2);
+    boundary::set<boundary::PartialSlip>(sLattice, superGeometry, 2);
+    sLattice.template setParameter<descriptors::TUNER>(tuner);
   }
   else {
     if (boundaryType == local) {
-      setLocalVelocityBoundary(sLattice, omega, superGeometry, 2);
+      boundary::set<boundary::LocalVelocity>(sLattice, superGeometry, 2);
     }
     else {
-      setInterpolatedVelocityBoundary(sLattice, omega, superGeometry, 2);
+      boundary::set<boundary::InterpolatedVelocity>(sLattice, superGeometry, 3);
     }
   }
 
   if (flowType == nonForced) {
     if (boundaryType == local) {
-      setLocalVelocityBoundary(sLattice, omega, superGeometry, 3);
-      setLocalPressureBoundary(sLattice, omega, superGeometry, 4);
+      boundary::set<boundary::LocalVelocity>(sLattice, superGeometry, 3);
+      boundary::set<boundary::LocalPressure>(sLattice, superGeometry, 4);
     }
     else {
-      setInterpolatedVelocityBoundary(sLattice, omega, superGeometry, 3);
-      setInterpolatedPressureBoundary(sLattice, omega, superGeometry, 4);
+      boundary::set<boundary::InterpolatedVelocity>(sLattice, superGeometry, 3);
+      boundary::set<boundary::InterpolatedPressure>(sLattice, superGeometry, 4);
     }
   }
 
@@ -346,14 +346,13 @@ void getResults( SuperLattice<T,DESCRIPTOR>& sLattice,
 
   // VTK and image output only if no EOC analysis
   if (! eoc) {
-
     SuperVTMwriter2D<T> vtmWriter( "poiseuille2d" );
     const int vtmIter  = converter.getLatticeTime( maxPhysT/20. );
 
     SuperLatticePhysVelocity2D<T,DESCRIPTOR> velocity( sLattice, converter );
-    SuperLatticeGeometry2D<T,DESCRIPTOR> materials( sLattice, superGeometry );
+    //SuperGeometryF<T,DESCRIPTOR> materials( superGeometry );
     vtmWriter.addFunctor( velocity );
-    vtmWriter.addFunctor(materials);
+    //vtmWriter.addFunctor( materials);
 
     SuperLatticePhysPressure2D<T,DESCRIPTOR> pressure( sLattice, converter );
     if (flowType == nonForced) {
@@ -379,19 +378,16 @@ void getResults( SuperLattice<T,DESCRIPTOR>& sLattice,
 
     if ( iT==0 ) {
       // Writes the geometry, cuboid no. and rank no. as vti file for visualization
-      SuperLatticeGeometry2D<T, DESCRIPTOR> geometry( sLattice, superGeometry );
       SuperLatticeCuboid2D<T, DESCRIPTOR> cuboid( sLattice );
       SuperLatticeRank2D<T, DESCRIPTOR> rank( sLattice );
       SuperLatticeDiscreteNormal2D<T, DESCRIPTOR> discreteNormal(
         sLattice, superGeometry, superGeometry.getMaterialIndicator({2, 3}) );
       SuperLatticeDiscreteNormalType2D<T, DESCRIPTOR> discreteNormalType(
         sLattice, superGeometry, superGeometry.getMaterialIndicator({2, 3, 4, 5}) );
-      vtmWriter.write( geometry );
       vtmWriter.write( cuboid );
       vtmWriter.write( rank );
       vtmWriter.write( discreteNormal );
       vtmWriter.write( discreteNormalType );
-
       vtmWriter.createMasterFile();
     }
 
@@ -459,7 +455,7 @@ void getResults( SuperLattice<T,DESCRIPTOR>& sLattice,
       // plot velocity magnitude over line through the center of the simulation domain
       const T maxVelocity = converter.getPhysVelocity( converter.getCharLatticeVelocity() );
       T dx = 1. / T(converter.getResolution());
-      T Ly = ly / converter.getConversionFactorLength();
+      T Ly = ly / converter.getPhysDeltaX();
       const T radius = (boundaryType == bounceBack) ?
         T(0.5) * (ly - converter.getPhysDeltaX()) : T(0.5) * ly;
       std::vector<T> axisPoint{ lx/T(2), ly/T(2) };
@@ -507,29 +503,30 @@ void simulatePoiseuille( int N, Gnuplot<T>& gplot, bool eoc )
   Vector<T,2> origin;
   IndicatorCuboid2D<T> cuboid( extend, origin );
 
-  // Instantiation of a cuboidGeometry with weights
+  // Instantiation of a cuboidDecomposition with weights
 #ifdef PARALLEL_MODE_MPI
   const int noOfCuboids = singleton::mpi().getSize();
 #else
   const int noOfCuboids = 1;
 #endif
-  CuboidGeometry2D<T> cuboidGeometry(
-    cuboid, converter.getConversionFactorLength(), noOfCuboids );
+  CuboidDecomposition2D<T> cuboidDecomposition(
+    cuboid, converter.getPhysDeltaX(), noOfCuboids );
 
 
   if (flowType == forced) {
     // Periodic boundaries in x-direction
-    cuboidGeometry.setPeriodicity( true, false );
+    cuboidDecomposition.setPeriodicity({ true, false });
   }
 
   // Instantiation of a loadBalancer
-  HeuristicLoadBalancer<T> loadBalancer( cuboidGeometry );
+  HeuristicLoadBalancer<T> loadBalancer( cuboidDecomposition );
 
   // Instantiation of a superGeometry
   const int overlap = (flowType == forced) ? 2 : 3;
-  SuperGeometry<T,2> superGeometry( cuboidGeometry, loadBalancer, overlap );
+  SuperGeometry<T,2> superGeometry( cuboidDecomposition, loadBalancer, overlap );
 
   prepareGeometry( converter, superGeometry );
+
 
   // === 3rd Step: Prepare Lattice ===
   SuperLattice<T, DESCRIPTOR> sLattice( superGeometry );

@@ -191,13 +191,19 @@ public:
 
   /// Gather data from multiple processors to one processor
   template <typename T>
-  void gather(T* sendBuf, int sendCount, T* recvBuf, int recvCount,
-              int root = 0, MPI_Comm comm = MPI_COMM_WORLD);
+  void gather(T* sendBuf, int sendCount, T* recvBuf, int recvCount, int root = 0, MPI_Comm comm = MPI_COMM_WORLD);
+
+  /// Gather data from multiple processors to every processor
+  template <typename T>
+  void allGather(T* sendBuf, int sendCount, T* recvBuf, int recvCount, MPI_Comm comm = MPI_COMM_WORLD);
 
   /// Gather data from multiple processors to one processor
   template <typename T>
-  void gatherv(T* sendBuf, int sendCount, T* recvBuf, int* recvCounts, int* displs,
-               int root = 0, MPI_Comm comm = MPI_COMM_WORLD);
+  void gatherv(T* sendBuf, int sendCount, T* recvBuf, int* recvCounts, int* displs, int root = 0, MPI_Comm comm = MPI_COMM_WORLD);
+
+  /// Gather data from multiple processors to every processor
+  template <typename T>
+  void allGatherv(T* sendBuf, int sendCount, T* recvBuf, int* recvCounts, int* displs, MPI_Comm comm = MPI_COMM_WORLD);
 
   /// Broadcast data from one processor to multiple processors
   template <typename T>
@@ -208,6 +214,10 @@ public:
   void bCast(BlockData<2,util::ADf<T,DIM>,util::ADf<T,DIM>>& sendData, int root = 0, MPI_Comm comm = MPI_COMM_WORLD);
   template <typename T>
   void bCast(T& sendVal, int root = 0, MPI_Comm comm = MPI_COMM_WORLD);
+  template <typename T,unsigned DIM>
+  void bCast(Vector<T,DIM>& sendData, int root = 0, MPI_Comm comm = MPI_COMM_WORLD) {
+    bCast(sendData.data(), DIM, root, comm);
+  }
 
   /// Broadcast data when root is unknown to other processors
   template <typename T>
@@ -225,6 +235,8 @@ public:
   /// Reduction operation toward one processor
   template <typename T>
   void reduce(T& sendVal, T& recvVal, MPI_Op op, int root = 0, MPI_Comm = MPI_COMM_WORLD);
+  template <typename T>
+  void reduce(T* sendVal, T* recvVal, int count, MPI_Op op, int root = 0, MPI_Comm = MPI_COMM_WORLD);
   template <typename T,unsigned DIM>
   void reduce(util::ADf<T,DIM>& sendVal, util::ADf<T,DIM>& recvVal,
               MPI_Op op, int root = 0, MPI_Comm = MPI_COMM_WORLD);
@@ -243,6 +255,17 @@ public:
   void reduceAndBcast(T& reductVal, MPI_Op op, int root = 0, MPI_Comm comm = MPI_COMM_WORLD);
   template <typename T,unsigned DIM>
   void reduceAndBcast(util::ADf<T,DIM>& reductVal, MPI_Op op, int root = 0, MPI_Comm comm = MPI_COMM_WORLD);
+
+  template <typename T>
+  void allreduce(const T* in, T* out, int count, MPI_Op op, MPI_Comm comm = MPI_COMM_WORLD);
+
+  /// All reduction operation of a vector data
+  template <typename T>
+  void allReduce(T& reductVal, MPI_Op op, MPI_Comm comm = MPI_COMM_WORLD);
+
+  /// Element-per-element all-reduction of a vector of data (in-place)
+  template <typename T>
+  void allReduceVect(std::vector<T>& reductVal, MPI_Op op, MPI_Comm comm = MPI_COMM_WORLD);
 
   /// Complete a non-blocking MPI operation
   void wait(MPI_Request* request, MPI_Status* status);

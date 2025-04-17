@@ -1,6 +1,7 @@
 /*  This file is part of the OpenLB library
  *
  *  Copyright (C) 2007 Jonas Latt
+ *                2024 Dennis Teutscher
  *  E-mail contact: info@openlb.net
  *  The most recent release of OpenLB can be downloaded at
  *  <http://www.openlb.net/>
@@ -31,4 +32,9 @@
 #include "functorDsl3D.hh"
 #include "hyperplane3D.hh"
 #include "hyperplaneLattice3D.hh"
+#include "line3D.hh"
+#include "lineLattice3D.hh"
 #include "random.hh"
+#ifdef FEATURE_PROJ
+#include "osmParser.hh"
+#endif

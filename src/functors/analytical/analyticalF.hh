@@ -632,10 +632,12 @@ bool AnalyticalScaled3D<T,S>::operator()(T output[], const S x[])
 
 // see Mink et al. 2016 in Sec.3.1.
 template <typename T, typename S, typename DESCRIPTOR>
-PLSsolution3D<T,S,DESCRIPTOR>::PLSsolution3D(RadiativeUnitConverter<T,DESCRIPTOR> const& converter)
+PLSsolution3D<T,S,DESCRIPTOR>::PLSsolution3D( T absorption, T scattering )
   : AnalyticalF3D<T,S>(1),
-    _physSigmaEff(util::sqrt( converter.getPhysAbsorption() / converter.getPhysDiffusion() )),
-    _physDiffusionCoefficient(converter.getPhysDiffusion())
+    _physSigmaEff(util::sqrt( 3.*absorption*(absorption+scattering))),
+//    _physSigmaEff(util::sqrt( converter.getPhysAbsorption() / converter.getPhysDiffusion() )),
+    _physDiffusionCoefficient( 1./(3. * (absorption+scattering)) )
+//    _physDiffusionCoefficient(converter.getPhysDiffusion())
 {
   this->getName() = "PLSsolution3D";
 }

@@ -53,9 +53,9 @@ SuperIndicatorFfromIndicatorF2D<T>::SuperIndicatorFfromIndicatorF2D(
 template <typename T>
 bool SuperIndicatorFfromIndicatorF2D<T>::operator() (bool output[], const int input[])
 {
-  T physR[2];
-  this->_superStructure.getCuboidGeometry().getPhysR(physR, input);
-  return _indicatorF(output, physR);
+  LatticeR<3> latticeR(input);
+  auto physR = this->_superStructure.getCuboidDecomposition().getPhysR(input);
+  return _indicatorF(output, physR.data());
 }
 
 
@@ -83,7 +83,7 @@ bool SuperIndicatorFfromSmoothIndicatorF2D<T, HLBM>::operator() (bool output[], 
 {
   T physR[2];
   T inside[1];
-  this->_superStructure.getCuboidGeometry().getPhysR(physR, input);
+  this->_superStructure.getCuboidDecomposition().getPhysR(physR, input);
   _indicatorF(inside, physR);
   return !util::nearZero(inside[0]);
 }

@@ -113,7 +113,7 @@ public:
    *        (non-)owning pointer or reference to SuperF2D<T>.
    * \param hyperplane
    *        Parametrization of the hyperplane to be integrated.
-   *        The lattice resolution is set to CuboidGeometry2D<T>::getMinDeltaR.
+   *        The lattice resolution is set to CuboidDecomposition2D<T>::getMinDeltaR.
    * \param integrationIndicator
    *        (non-)owning pointer or reference to SuperIndicatorF2D<T>.
    *        Describes the set of lattice points relevant for integration.

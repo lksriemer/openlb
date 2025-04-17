@@ -64,14 +64,6 @@ private:
   std::array<Pack<T>,D> _packs;
 
 protected:
-  const Pack<T>* getComponentPointer(unsigned iDim) const
-  {
-    return &_packs[iDim];
-  }
-  Pack<T>* getComponentPointer(unsigned iDim)
-  {
-    return &_packs[iDim];
-  }
 
 public:
   FieldPtr(ColumnVector<Column<T>,D>& columns, std::size_t index):
@@ -86,6 +78,16 @@ public:
     _data(rhs._data),
     _index(rhs._index),
     _packs(rhs._packs) { }
+
+  const Pack<T>* getComponentPointer(unsigned iDim) const
+  {
+    return &_packs[iDim];
+  }
+
+  Pack<T>* getComponentPointer(unsigned iDim)
+  {
+    return &_packs[iDim];
+  }
 
   template <typename U, typename IMPL>
   FieldPtr<T,D>& operator=(const GenericVector<U,D,IMPL>& rhs)
@@ -238,7 +240,7 @@ public:
   }
 
   CellStatistic<T> collide(cpu::Cell<T,DESCRIPTOR,Platform::CPU_SIMD>& cell) override {
-    return DYNAMICS().apply(cell, *_parameters);
+    return DYNAMICS().collide(cell, *_parameters);
   }
 
   T computeRho(cpu::Cell<T,DESCRIPTOR,Platform::CPU_SIMD>& cell) override {
@@ -269,9 +271,9 @@ public:
     __builtin_unreachable();
   }
 
-  T computeEquilibrium(int iPop, T rho, T* u) override {
-    return DYNAMICS().computeEquilibrium(iPop, rho, u);
-  }
+  void computeEquilibrium(cpu::Cell<T,DESCRIPTOR,Platform::CPU_SIMD>& cell, T rho, T* u, T* fEq) override {
+    typename DYNAMICS::EquilibriumF().compute(cell, rho, u, fEq);
+  };
 
   void defineRho(cpu::Cell<T,DESCRIPTOR,Platform::CPU_SIMD>& cell, T& rho) override {
     typename DYNAMICS::MomentaF().defineRho(cell, rho);
@@ -340,7 +342,8 @@ private:
     if constexpr (dynamics::is_vectorizable_v<DYNAMICS>) {
       if (cpu::simd::Mask<T> m = {mask.raw(), iCell}) {
         cpu::simd::Cell<T,DESCRIPTOR,cpu::simd::Pack<T>,descriptors::POPULATION> cell(block, iCell, m);
-        auto cellStatistic = DYNAMICS().apply(cell, parameters);
+        auto simdParameters = parameters.template copyAs<cpu::simd::Pack<T>>();
+        auto cellStatistic = DYNAMICS().collide(cell, simdParameters);
         for (unsigned i=0; i < cpu::simd::Pack<T>::size; ++i) {
           if (mask[iCell+i]) {
             if (cellStatistic.rho[i] != T{-1}) {
@@ -440,7 +443,7 @@ public:
       for (std::size_t iCell=0; iCell < block.getNcells(); ++iCell) {
         if (mask[iCell]) {
           cpu::Cell<T,DESCRIPTOR,Platform::CPU_SIMD> cell(block, iCell);
-          if (auto cellStatistic = DYNAMICS().apply(cell, *_parameters)) {
+          if (auto cellStatistic = DYNAMICS().collide(cell, *_parameters)) {
             statistics.increment(cellStatistic.rho, cellStatistic.uSqr);
           }
         } else if (subdomain[iCell]) {
@@ -456,7 +459,7 @@ public:
 
 
 /// Application of a cell-wise OPERATOR on a concrete vector CPU block
-template <typename T, typename DESCRIPTOR, CONCEPT(CellOperator) OPERATOR>
+template <typename T, typename DESCRIPTOR, concepts::CellOperator OPERATOR>
 class ConcreteBlockO<T,DESCRIPTOR,Platform::CPU_SIMD,OPERATOR,OperatorScope::PerCell> final
   : public BlockO<T,DESCRIPTOR,Platform::CPU_SIMD> {
 private:
@@ -469,6 +472,11 @@ public:
   std::type_index id() const override
   {
     return typeid(OPERATOR);
+  }
+
+  std::size_t weight() const override
+  {
+    return _cells.size();
   }
 
   void set(CellID iCell, bool state) override
@@ -504,7 +512,7 @@ public:
 };
 
 
-template <typename T, typename DESCRIPTOR, CONCEPT(CellOperator) OPERATOR>
+template <typename T, typename DESCRIPTOR, concepts::CellOperator OPERATOR>
 class ConcreteBlockO<T,DESCRIPTOR,Platform::CPU_SIMD,OPERATOR,OperatorScope::PerCellWithParameters> final
   : public BlockO<T,DESCRIPTOR,Platform::CPU_SIMD> {
 private:
@@ -519,6 +527,11 @@ public:
   std::type_index id() const override
   {
     return typeid(OPERATOR);
+  }
+
+  std::size_t weight() const override
+  {
+    return _cells.size();
   }
 
   void set(CellID iCell, bool state) override
@@ -560,13 +573,18 @@ public:
 /**
  * e.g. StatisticsPostProcessor
  **/
-template <typename T, typename DESCRIPTOR, CONCEPT(BlockOperator) OPERATOR>
+template <typename T, typename DESCRIPTOR, concepts::BlockOperator OPERATOR>
 class ConcreteBlockO<T,DESCRIPTOR,Platform::CPU_SIMD,OPERATOR,OperatorScope::PerBlock> final
   : public BlockO<T,DESCRIPTOR,Platform::CPU_SIMD> {
 public:
   std::type_index id() const override
   {
     return typeid(OPERATOR);
+  }
+
+  std::size_t weight() const override
+  {
+    return 0;
   }
 
   void set(CellID iCell, bool state) override

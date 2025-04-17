@@ -22,11 +22,16 @@
  *  Boston, MA  02110-1301, USA.
  */
 
+/* squareCavity2d.cpp
+ * The reference is the paper in "Gaedtke, M., Wachter, S., Raedle, M., Nirschl, H., & Krause, M. J. (2018).
+ * Application of a lattice Boltzmann method combined with a Smagorinsky turbulence model to spatially resolved heat flux inside a refrigerated vehicle.
+ * Computers & Mathematics with Applications, 76(10), 2315-2329."
+ */
+
 // natural convection of air in a square cavity in 2D
 
 
-#include "olb2D.h"
-#include "olb2D.hh"
+#include <olb.h>
 
 using namespace olb;
 using namespace olb::descriptors;
@@ -157,7 +162,7 @@ void prepareGeometry(SuperGeometry<T,2>& superGeometry,
   extendwallright[0] = converter.getPhysLength(1);
   extendwallright[1] = lx;
   std::vector<T> originwallright(2,T(0));
-  originwallright[0] = lx+converter.getPhysLength(1);
+  originwallright[0] = lx+1.5*converter.getPhysLength(1);
   originwallright[1] = 0.0;
   IndicatorCuboid2D<T> wallright(extendwallright, originwallright);
 
@@ -192,19 +197,19 @@ void prepareLattice( ThermalUnitConverter<T, NSDESCRIPTOR, TDESCRIPTOR> const& c
   #ifdef SMAGORINSKY
     NSlattice.defineDynamics<ExternalTauEffLESForcedBGKdynamics<T,NSDESCRIPTOR,momenta::AdvectionDiffusionBulkTuple>>(superGeometry.getMaterialIndicator({1, 2, 3}));
     ADlattice.defineDynamics<ExternalTauEffLESBGKadvectionDiffusionDynamics>(superGeometry.getMaterialIndicator({1, 2, 3}));
-    NSlattice.setParameter<collision::LES::Smagorinsky>(smagoConst);
-    ADlattice.setParameter<collision::LES::Smagorinsky>(smagoConst);
+    NSlattice.setParameter<collision::LES::SMAGORINSKY>(smagoConst);
+    ADlattice.setParameter<collision::LES::SMAGORINSKY>(smagoConst);
   #else
     NSlattice.defineDynamics<ForcedBGKdynamics>(superGeometry.getMaterialIndicator({1, 2, 3}));
     ADlattice.defineDynamics<AdvectionDiffusionBGKdynamics>(superGeometry.getMaterialIndicator({1, 2, 3}));
   #endif
 
-  setBounceBackBoundary(ADlattice, superGeometry, 4);
-  setBounceBackBoundary(NSlattice, superGeometry, 4);
+  boundary::set<boundary::BounceBack>(ADlattice, superGeometry, 4);
+  boundary::set<boundary::BounceBack>(NSlattice, superGeometry, 4);
 
   /// sets boundary
-  setAdvectionDiffusionTemperatureBoundary<T, TDESCRIPTOR>(ADlattice, superGeometry.getMaterialIndicator({2, 3}));
-  setLocalVelocityBoundary<T,NSDESCRIPTOR>(NSlattice, omega, superGeometry.getMaterialIndicator({2, 3}));
+  boundary::set<boundary::AdvectionDiffusionDirichlet>(ADlattice, superGeometry.getMaterialIndicator({2, 3}));
+  boundary::set<boundary::LocalVelocity>(NSlattice, superGeometry.getMaterialIndicator({2, 3}));
 
   /// define initial conditions
   AnalyticalConst2D<T,T> rho(1.);
@@ -276,10 +281,8 @@ void getResults( ThermalUnitConverter<T, NSDESCRIPTOR, TDESCRIPTOR> const& conve
 
   if (iT == 0) {
     /// Writes the geometry, cuboid no. and rank no. as vti file for visualization
-    SuperLatticeGeometry2D<T, NSDESCRIPTOR> geometry(NSlattice, superGeometry);
     SuperLatticeCuboid2D<T, NSDESCRIPTOR> cuboid(NSlattice);
     SuperLatticeRank2D<T, NSDESCRIPTOR> rank(NSlattice);
-    vtkWriter.write(geometry);
     vtkWriter.write(cuboid);
     vtkWriter.write(rank);
 
@@ -503,7 +506,7 @@ int main(int argc, char *argv[])
 
   /// === 1st Step: Initialization ===
   OstreamManager clout(std::cout,"main");
-  olbInit(&argc, &argv);
+  initialize(&argc, &argv);
   singleton::directories().setOutputDir("./tmp/");
 
 #ifndef SMAGORINSKY
@@ -577,14 +580,14 @@ int main(int argc, char *argv[])
   std::vector<T> origin(2,T());
   IndicatorCuboid2D<T> cuboid(extend, origin);
 
-  /// Instantiation of an empty cuboidGeometry
-  CuboidGeometry2D<T> cuboidGeometry(cuboid, converter.getPhysDeltaX(), singleton::mpi().getSize());
+  /// Instantiation of an empty cuboidDecomposition
+  CuboidDecomposition2D<T> cuboidDecomposition(cuboid, converter.getPhysDeltaX(), singleton::mpi().getSize());
 
   /// Instantiation of a loadBalancer
-  HeuristicLoadBalancer<T> loadBalancer(cuboidGeometry);
+  HeuristicLoadBalancer<T> loadBalancer(cuboidDecomposition);
 
   /// Instantiation of a superGeometry
-  SuperGeometry<T,2> superGeometry(cuboidGeometry, loadBalancer);
+  SuperGeometry<T,2> superGeometry(cuboidDecomposition, loadBalancer);
 
   prepareGeometry(superGeometry, converter);
 

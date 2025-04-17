@@ -24,8 +24,7 @@
 // This app is used for the validation of the ADE-LBM and of the Dirchlet and Zero-Gradient BC regarding the transported concentration.
 // The simulation setup and analytic solution is taken from Krüger et al. 2017 page 324 (doi: https://doi.org/10.1007/978-3-319-44649-3).
 
-#include "olb3D.h"
-#include "olb3D.hh"   // use only generic version!
+#include <olb.h>
 #include <cmath>
 using namespace olb;
 using namespace olb::descriptors;
@@ -80,8 +79,6 @@ void writeGeometry3D(SuperVTMwriter3D<T> vtmWriter,
                      SuperGeometry<T,3>& superGeometry,
                      SuperLattice<T,RADDESCRIPTOR>& adLattice)
 {
-  SuperLatticeGeometry3D<T,RADDESCRIPTOR> geometry(adLattice, superGeometry);
-  vtmWriter.write(geometry);
 
   vtmWriter.createMasterFile();
 }
@@ -155,10 +152,10 @@ void prepareLattice(AdeUnitConverter<T,RADDESCRIPTOR> const& converter,
   adLattice.template defineDynamics<NoDynamics>(superGeometry, 0);
   adLattice.template defineDynamics<AdvectionDiffusionBGKdynamics>(bulkIndicator);
 
-  setAdvectionDiffusionTemperatureBoundary<T, RADDESCRIPTOR>(adLattice, superGeometry.getMaterialIndicator({2}));
+  boundary::set<boundary::AdvectionDiffusionDirichlet>(adLattice, superGeometry.getMaterialIndicator({2}));
   setZeroGradientBoundary<T, RADDESCRIPTOR>(adLattice, superGeometry.getMaterialIndicator({3}));
   setZeroGradientBoundary<T, RADDESCRIPTOR>(adLattice, superGeometry.getMaterialIndicator({4}));
-  setAdvectionDiffusionTemperatureBoundary<T, RADDESCRIPTOR>(adLattice, superGeometry.getMaterialIndicator({5}));
+  boundary::set<boundary::AdvectionDiffusionDirichlet>(adLattice, superGeometry.getMaterialIndicator({5}));
 
   // Initial conditions
   AnalyticalConst3D<T,T> rho0(1.e-8);
@@ -289,23 +286,23 @@ int simulateFlow(T D)
   const Vector<T,3> extend(length, height, width);
   IndicatorCuboid3D<T> cuboid(extend, origin);
 
-  // Instantiation of a cuboidGeometry with weights
+  // Instantiation of a cuboidDecomposition with weights
 #ifdef PARALLEL_MODE_MPI
   const int noOfCuboids = singleton::mpi().getSize();
 #else
   const int noOfCuboids = 1;
 #endif
-  CuboidGeometry3D<T> cuboidGeometry(cuboid, dx, noOfCuboids);
+  CuboidDecomposition3D<T> cuboidDecomposition(cuboid, dx, noOfCuboids);
 
   // periodic in the z dir
-  cuboidGeometry.setPeriodicity(false, false, true);
+  cuboidDecomposition.setPeriodicity({false, false, true});
 
   // load balancer
-  HeuristicLoadBalancer<T> loadBalancer(cuboidGeometry);
+  HeuristicLoadBalancer<T> loadBalancer(cuboidDecomposition);
 
   // superGeometry
   const int overlap = 3;
-  SuperGeometry<T,3> superGeometry(cuboidGeometry, loadBalancer, overlap);
+  SuperGeometry<T,3> superGeometry(cuboidDecomposition, loadBalancer, overlap);
 
   prepareGeometry<T>(converter, superGeometry);
 
@@ -343,7 +340,7 @@ int simulateFlow(T D)
 }
 
 int main(int argc, char* argv[]) {
-  olbInit(&argc, &argv);
+  initialize(&argc, &argv);
   singleton::directories().setOutputDir("./tmp/");
 
   if constexpr(true) {

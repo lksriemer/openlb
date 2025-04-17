@@ -43,8 +43,7 @@
  * described in 10.48550/arXiv.2312.14172 is used.
  */
 
-#include "olb3D.h"
-#include "olb3D.hh"     // use generic version only!
+#include <olb.h>
 
 using namespace olb;
 using namespace olb::descriptors;
@@ -132,7 +131,7 @@ void prepareLattice(
 
   /// Material=0 -->do nothing
   sLattice.defineDynamics<PorousParticleBGKdynamics>(superGeometry, 1);
-  setBounceBackBoundary(sLattice, superGeometry, 2);
+  boundary::set<boundary::BounceBack>(sLattice, superGeometry, 2);
 
   sLattice.setParameter<descriptors::OMEGA>(converter.getLatticeRelaxationFrequency());
 
@@ -194,10 +193,8 @@ void getResults(SuperLattice<T, DESCRIPTOR>& sLattice,
 
   if (iT == 0) {
     /// Writes the converter log file
-    SuperLatticeGeometry3D<T, DESCRIPTOR> geometry(sLattice, superGeometry);
     SuperLatticeCuboid3D<T, DESCRIPTOR> cuboid(sLattice);
     SuperLatticeRank3D<T, DESCRIPTOR> rank(sLattice);
-    vtkWriter.write(geometry);
     vtkWriter.write(cuboid);
     vtkWriter.write(rank);
     vtkWriter.createMasterFile();
@@ -233,7 +230,7 @@ void getResults(SuperLattice<T, DESCRIPTOR>& sLattice,
 int main(int argc, char* argv[])
 {
   /// === 1st Step: Initialization ===
-  olbInit(&argc, &argv);
+  initialize(&argc, &argv);
   singleton::directories().setOutputDir("./tmp/");
   OstreamManager clout(std::cout, "main");
 
@@ -248,20 +245,20 @@ int main(int argc, char* argv[])
   converter.print();
 
   /// === 2rd Step: Prepare Geometry ===
-  /// Instantiation of a cuboidGeometry with weights
+  /// Instantiation of a cuboidDecomposition with weights
   Vector<T,3> origin( 0. );
   Vector<T,3> extend( lengthX, lengthY, lengthZ );
   IndicatorCuboid3D<T> cuboid(extend, origin);
 
 #ifdef PARALLEL_MODE_MPI
-  CuboidGeometry3D<T> cuboidGeometry(cuboid, converter.getConversionFactorLength(), singleton::mpi().getSize());
+  CuboidDecomposition3D<T> cuboidDecomposition(cuboid, converter.getPhysDeltaX(), singleton::mpi().getSize());
 #else
-  CuboidGeometry3D<T> cuboidGeometry(cuboid, converter.getConversionFactorLength(), 7);
+  CuboidDecomposition3D<T> cuboidDecomposition(cuboid, converter.getPhysDeltaX(), 7);
 #endif
-  cuboidGeometry.print();
+  cuboidDecomposition.print();
 
-  HeuristicLoadBalancer<T> loadBalancer(cuboidGeometry);
-  SuperGeometry<T,3> superGeometry(cuboidGeometry, loadBalancer, 2);
+  HeuristicLoadBalancer<T> loadBalancer(cuboidDecomposition);
+  SuperGeometry<T,3> superGeometry(cuboidDecomposition, loadBalancer, 2);
   prepareGeometry(converter, superGeometry);
 
   /// === 3rd Step: Prepare Lattice ===
@@ -286,7 +283,7 @@ int main(int argc, char* argv[])
     VerletParticleDynamics<T,PARTICLETYPE>>();
 
   // Calculate particle quantities
-  T epsilon = 0.5*converter.getConversionFactorLength();
+  T epsilon = 0.5*converter.getPhysDeltaX();
   Vector<T,3> cubeExtend( cubeEdgeLength );
 
   // Create Particle 1

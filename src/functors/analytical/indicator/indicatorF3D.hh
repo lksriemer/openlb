@@ -81,8 +81,6 @@ Vector<S,3>& IndicatorTranslate3D<S>::getMax()
   return _myMax;
 }
 
-
-
 template <typename S>
 IndicatorCircle3D<S>::IndicatorCircle3D(Vector<S,3> center, Vector<S,3> normal, S radius)
   :  _center(center), _normal(normal), _radius2(radius*radius),
@@ -709,25 +707,143 @@ template <typename S>
 Vector<S,3> IndicatorCuboid3D<S>::getSample(const std::function<S()>& randomness) const
 {
   // Select random point on center axis
-  Vector<S,3> v = {_xLength, _yLength, _zLength};
-  auto it = std::minmax_element(v.begin(), v.end());
-  int min_idx = std::distance(v.begin(), it.first);
+  std::vector<S> v = {_xLength, _yLength, _zLength};
+  auto min = std::min_element(v.begin(), v.end());
+  int index = std::distance(v.begin(), min);
   Vector<S,3> axis{0, 0, 0};
-  axis[min_idx] = v[min_idx];
-  auto axisPoint = _center + axis * randomness();
+  axis[index] = v[index];
+  auto origin = _center;
+  origin[0] -= v[0]/S{2};
+  origin[1] -= v[1]/S{2};
+  origin[2] -= v[2]/S{2};
+  auto axisPoint = origin + axis * randomness();
   // Compute cut at point on center axis
   auto hyperplane = Hyperplane3D<S>().originAt(axisPoint)
                                      .normalTo(axis);
-  // Select random point on 2D square
-  int max_idx = std::distance(v.begin(), it.second);
-  const S width = v[max_idx] * randomness();
-  int i = 3 - max_idx - min_idx;
-  const S height = v[i] * randomness();
-  // Project random square point to axis-orthogonal plane with axisPoint intersect
-  return hyperplane.project({width,height});
+  std::vector<S> coord;
+  for(int i = 0; i<3; i++) {
+    if(i != index) {
+      S var = v[i] * randomness();
+      coord.emplace_back(var);
+    }
+  }
+  return hyperplane.project({coord[0],coord[1]});
 }
 
 
+
+template <typename S>
+IndicatorPolygon3D<S>::IndicatorPolygon3D(std::vector<Vector<S, 4>> points)
+  : _points(points) {
+  OstreamManager clout("IndicatorPolygon3D");
+  Vector<S,4> min = {std::numeric_limits<S>::max(),std::numeric_limits<S>::max(),std::numeric_limits<S>::max(),std::numeric_limits<S>::max()};
+  Vector<S,4> max = {std::numeric_limits<S>::lowest(),std::numeric_limits<S>::lowest(),std::numeric_limits<S>::lowest(),std::numeric_limits<S>::lowest()};
+  //Calculate normal vector
+  Vector<S, 3> p1(points[0][0], points[0][1], points[0][2]);
+  Vector<S, 3> p2(points[1][0], points[1][1], points[1][2]);
+  Vector<S, 3> p3(points[2][0], points[2][1], points[2][2]);
+  _normal = crossProduct(p2 - p1, p3 - p1);
+  _normal = normalize(_normal);
+
+  // Project all points to 2D plane
+  for (const auto& point : _points) {
+    _projectedPolygon2D.push_back(Vector<S, 2>(point[0], point[1]));
+    if (point[0] < min[0])
+      min[0] = point[0]; // Update x component of min
+    if (point[1] < min[1])
+      min[1] = point[1]; // Update y component of min
+
+    // Update max values for x and y
+    if (point[0] > max[0])
+      max[0] = point[0]; // Update x component of max
+    if (point[1] > max[1])
+      max[1] = point[1];
+  }
+      // Set _min and _max using only x and y values from min and max vectors
+  _min = {min[0], min[1], 0}; // Store only x and y for the bounding box
+  _max = {max[0], max[1], 30};
+
+  // Output the results for debugging
+  //clout << "min (x, y): " << _min << std::endl;
+  //clout << "max (x, y): " << _max << std::endl;
+}
+
+template <typename S>
+bool IndicatorPolygon3D<S>::operator()(bool output[], const S input[]) {
+  OstreamManager clout ("operator");
+  Vector<S, 3> point(input[0], input[1], input[2]);
+  S zOffset = _points[0][3];
+
+  // Check if in polygon
+  Vector<S, 2> projected2DPoint = Vector<S, 2>(point[0], point[1]);
+  bool isInside = isPointInPolygon2D(projected2DPoint, _projectedPolygon2D);
+
+  if (!isInside) {
+    output[0] = false;
+    return false;
+  }
+
+  // interpolate height (Prototype)
+  S interpolatedHeight = interpolateHeight(point[0], point[1]);
+
+  // Check if point inside height
+  if (point[2] < zOffset || point[2] > (zOffset + interpolatedHeight)) {
+    output[0] = false;
+    return false;
+  }
+
+  output[0] = true;
+  return true;
+}
+
+template <typename S>
+Vector<S, 2> IndicatorPolygon3D<S>::projectTo2D(const Vector<S, 3>& point) {
+  return Vector<S, 2>(point[0], point[1]);
+}
+template <typename S>
+S IndicatorPolygon3D<S>::interpolateHeight(S x, S y) {
+// Linear interpolation
+  for (size_t i = 0; i < _points.size(); ++i) {
+    const Vector<S, 4>& p1 = _points[i];
+    const Vector<S, 4>& p2 = _points[(i + 1) % _points.size()];
+
+    S t = (x - p1[0]) / (p2[0] - p1[0]);
+    t = std::clamp(t, S(0), S(1));
+
+    S interpolatedHeight = p1[2] + t * (p2[2] - p1[2]);
+    return interpolatedHeight;
+  }
+  return 0;
+}
+template <typename S>
+bool IndicatorPolygon3D<S>::isPointInPolygon2D(const Vector<S, 2>& point, const std::vector<Vector<S, 2>>& polygon) {
+  bool isInside = false;
+  int numVertices = polygon.size();
+
+  // Ray-Casting to check if inside polygon
+  for (int i = 0, j = numVertices - 1; i < numVertices; j = i++) {
+    const Vector<S, 2>& currentVertex = polygon[i];
+    const Vector<S, 2>& previousVertex = polygon[j];
+
+    if ((currentVertex[1] > point[1]) != (previousVertex[1] > point[1]) &&
+      point[0] < (previousVertex[0] - currentVertex[0]) * (point[1] - currentVertex[1]) /
+      (previousVertex[1] - currentVertex[1]) + currentVertex[0]) {
+      isInside = !isInside;
+    }
+  }
+  return isInside;
+}
+template <typename S>
+Vector<S,3>& IndicatorPolygon3D<S>::getMin()
+{
+  return _min;
+}
+
+template <typename S>
+Vector<S,3>& IndicatorPolygon3D<S>::getMax()
+{
+  return _max;
+}
 
 template <typename S>
 IndicatorCuboidRotate3D<S>::IndicatorCuboidRotate3D(Vector<S,3> extend, Vector<S,3> origin, S theta, int plane, Vector<S,3> centerRotation)

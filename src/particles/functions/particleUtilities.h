@@ -296,8 +296,8 @@ bool searchParticleGlobally( SuperParticleSystem<T,PARTICLETYPE>& sParticleSyste
  */
 template<typename T, unsigned D, typename F=std::function<void(int)>,
   bool domainWarning=false, bool checkDiscretePoints=false>
-std::unordered_set<int> getSurfaceTouchingICs(
-  CuboidGeometry<T,D>& cuboidGeometry,
+std::set<int> getSurfaceTouchingICs(
+  CuboidDecomposition<T,D>& cuboidDecomposition,
   Vector<T,D> position, T circumRadius,
   const Vector<bool, D>& periodicity,
   int globiC, F f=[](int){} )
@@ -305,14 +305,14 @@ std::unordered_set<int> getSurfaceTouchingICs(
   // This option is prone to errors
   if constexpr(checkDiscretePoints) {
     //Set of destination iCs preventing sending to same iC multiple times
-    std::unordered_set<int> iCs;
+    std::set<int> iCs;
     //Retrieve points on hull
     auto pointsOnHull = discrete_points_on_hull::calculate( position, circumRadius );
     //Iterate over points on hull
     for (const PhysR<T,D>& point : pointsOnHull){
       //Retrieve residence iC
       int globiConHull=0;
-      const bool cuboidFound = getCuboid(cuboidGeometry,
+      const bool cuboidFound = getCuboid(cuboidDecomposition,
           periodicity, point, globiConHull);
       if constexpr(domainWarning){
         if (!cuboidFound){
@@ -331,10 +331,10 @@ std::unordered_set<int> getSurfaceTouchingICs(
     return iCs;
   }
   else {
-    const T physDeltaX = cuboidGeometry.getMotherCuboid().getDeltaR();
+    const T physDeltaX = cuboidDecomposition.getMotherCuboid().getDeltaR();
     std::vector<int> tmp = communication::getNeighborCuboids<T,D,false>(
-          cuboidGeometry, util::ceil(circumRadius/physDeltaX), globiC);
-    std::unordered_set<int> iCs;
+          cuboidDecomposition, util::ceil(circumRadius/physDeltaX), globiC);
+    std::set<int> iCs;
     for(const int entry : tmp) {
       if( globiC != entry ) {
         iCs.insert(entry);
@@ -347,14 +347,14 @@ std::unordered_set<int> getSurfaceTouchingICs(
 }
 
 template<typename T, typename PARTICLETYPE, typename F=std::function<void(int)>>
-std::unordered_set<int> getSurfaceTouchingICs(
+std::set<int> getSurfaceTouchingICs(
   SuperParticleSystem<T,PARTICLETYPE>& sParticleSystem,
   Vector<T,PARTICLETYPE::d> position, T circumRadius,
   const Vector<bool, PARTICLETYPE::d>& periodicity,
   int globiC, F f=[](int){} )
 {
-  std::unordered_set<int> neighbors = sParticleSystem.getCuboidNeighborhood()[globiC];
-  for(const int neighbor: neighbors) {
+  const auto& neighbors = sParticleSystem.getCuboidNeighborhood()[globiC];
+  for(int neighbor: neighbors) {
     f(neighbor);
   }
   return neighbors;
@@ -365,13 +365,13 @@ std::unordered_set<int> getSurfaceTouchingICs(
 template<typename T, unsigned D, typename F=std::function<void(int)>,
   bool domainWarning=false>
 std::vector<int> getVectorOfSurfaceTouchingICs(
-  CuboidGeometry<T,D>& cuboidGeometry,
+  CuboidDecomposition<T,D>& cuboidDecomposition,
   Vector<T,D> position, T circumRadius,
   const Vector<bool, D>& periodicity,
   int globiC, F f=[](int){} )
 {
-  const std::unordered_set<int> touchedICs{getSurfaceTouchingICs<T,D,F,domainWarning>(
-      cuboidGeometry, position, circumRadius, periodicity, globiC, f)};
+  const std::set<int> touchedICs{getSurfaceTouchingICs<T,D,F,domainWarning>(
+      cuboidDecomposition, position, circumRadius, periodicity, globiC, f)};
   std::vector<int> listOfICs;
   listOfICs.insert(listOfICs.end(), touchedICs.begin(), touchedICs.end());
   return listOfICs;

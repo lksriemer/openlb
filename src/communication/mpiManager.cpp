@@ -776,6 +776,112 @@ void MpiManager::gather<int>(int* sendBuf, int sendCount,
 }
 
 template <>
+void MpiManager::allGather<bool>(bool* sendBuf, int sendCount,
+                                 bool* recvBuf, int recvCount,
+                                 MPI_Comm comm)
+{
+  if (!ok) {
+    return;
+  }
+  MPI_Allgather(static_cast<void*>(sendBuf), sendCount, MPI_BYTE,
+                static_cast<void*>(recvBuf), recvCount, MPI_BYTE,
+                comm);
+}
+
+template <>
+void MpiManager::allGather<char>(char* sendBuf, int sendCount,
+                                 char* recvBuf, int recvCount,
+                                 MPI_Comm comm)
+{
+  if (!ok) {
+    return;
+  }
+  MPI_Allgather(static_cast<void*>(sendBuf), sendCount, MPI_CHAR,
+                static_cast<void*>(recvBuf), recvCount, MPI_CHAR,
+                comm);
+}
+
+template <>
+void MpiManager::allGather<int>(int* sendBuf, int sendCount,
+                                int* recvBuf, int recvCount,
+                                MPI_Comm comm)
+{
+  if (!ok) {
+    return;
+  }
+  MPI_Allgather(static_cast<void*>(sendBuf), sendCount, MPI_INT,
+                static_cast<void*>(recvBuf), recvCount, MPI_INT,
+                comm);
+}
+
+template <>
+void MpiManager::allGather<float>(float* sendBuf, int sendCount,
+                                  float* recvBuf, int recvCount,
+                                  MPI_Comm comm)
+{
+  if (!ok) {
+    return;
+  }
+  MPI_Allgather(static_cast<void*>(sendBuf), sendCount, MPI_FLOAT,
+                static_cast<void*>(recvBuf), recvCount, MPI_FLOAT,
+                comm);
+}
+
+template <>
+void MpiManager::allGather<double>(double* sendBuf, int sendCount,
+                                   double* recvBuf, int recvCount,
+                                   MPI_Comm comm)
+{
+  if (!ok) {
+    return;
+  }
+  MPI_Allgather(static_cast<void*>(sendBuf), sendCount, MPI_DOUBLE,
+                static_cast<void*>(recvBuf), recvCount, MPI_DOUBLE,
+                comm);
+}
+
+template <>
+void MpiManager::allGather<std::size_t>(std::size_t* sendBuf, int sendCount,
+                                        std::size_t* recvBuf, int recvCount,
+                                        MPI_Comm comm)
+{
+  if (!ok) {
+    return;
+  }
+  MPI_Allgather(static_cast<void*>(sendBuf), sendCount, MPI_UNSIGNED_LONG,
+                static_cast<void*>(recvBuf), recvCount, MPI_UNSIGNED_LONG,
+                comm);
+}
+
+#if defined(__x86_64__) || defined(_M_X64) || defined(__ppc64__) || defined(__aarch64__)
+template <>
+void MpiManager::allGather<std::uint32_t>(std::uint32_t* sendBuf, int sendCount,
+                                          std::uint32_t* recvBuf, int recvCount,
+                                          MPI_Comm comm)
+{
+  if (!ok) {
+    return;
+  }
+  MPI_Allgather(static_cast<void*>(sendBuf), sendCount, MPI_UINT32_T,
+                static_cast<void*>(recvBuf), recvCount, MPI_UINT32_T,
+                comm);
+}
+#else
+template <>
+void MpiManager::allGather<std::uint64_t>(std::uint64_t* sendBuf, int sendCount,
+                                          std::uint64_t* recvBuf, int recvCount,
+                                          MPI_Comm comm)
+{
+  if (!ok) {
+    return;
+  }
+  MPI_Allgather(static_cast<void*>(sendBuf), sendCount, MPI_UINT64_T,
+                static_cast<void*>(recvBuf), recvCount, MPI_UINT64_T,
+                comm);
+}
+#endif
+
+template <>
 void MpiManager::gatherv<bool>(bool* sendBuf, int sendCount,
                                     bool* recvBuf, int* recvCounts, int* displs,
                                     int root, MPI_Comm comm)
@@ -852,6 +958,112 @@ void MpiManager::gatherv<std::size_t>(std::size_t* sendBuf, int sendCount,
               static_cast<void*>(recvBuf), recvCounts, displs, MPI_UNSIGNED_LONG,
               root, comm);
 }
+
+template <>
+void MpiManager::allGatherv<bool>(bool* sendBuf, int sendCount,
+                                  bool* recvBuf, int* recvCounts, int* displs,
+                                  MPI_Comm comm)
+{
+  if (!ok) {
+    return;
+  }
+  MPI_Allgatherv(static_cast<void*>(sendBuf), sendCount, MPI_BYTE,
+                 static_cast<void*>(recvBuf), recvCounts, displs,
+                 MPI_BYTE, comm);
+}
+
+template <>
+void MpiManager::allGatherv<char>(char* sendBuf, int sendCount,
+                                  char* recvBuf, int* recvCounts, int* displs,
+                                  MPI_Comm comm)
+{
+  if (!ok) {
+    return;
+  }
+  MPI_Allgatherv(static_cast<void*>(sendBuf), sendCount, MPI_CHAR,
+                 static_cast<void*>(recvBuf), recvCounts, displs,
+                 MPI_CHAR, comm);
+}
+
+template <>
+void MpiManager::allGatherv<int>(int* sendBuf, int sendCount,
+                                 int* recvBuf, int* recvCounts, int* displs,
+                                 MPI_Comm comm)
+{
+  if (!ok) {
+    return;
+  }
+  MPI_Allgatherv(static_cast<void*>(sendBuf), sendCount, MPI_INT,
+                 static_cast<void*>(recvBuf), recvCounts, displs,
+                 MPI_INT, comm);
+}
+
+template <>
+void MpiManager::allGatherv<float>(float* sendBuf, int sendCount,
+                                   float* recvBuf, int* recvCounts, int* displs,
+                                   MPI_Comm comm)
+{
+  if (!ok) {
+    return;
+  }
+  MPI_Allgatherv(static_cast<void*>(sendBuf), sendCount, MPI_FLOAT,
+                 static_cast<void*>(recvBuf), recvCounts, displs,
+                 MPI_FLOAT, comm);
+}
+
+template <>
+void MpiManager::allGatherv<double>(double* sendBuf, int sendCount,
+                                    double* recvBuf, int* recvCounts, int* displs,
+                                    MPI_Comm comm)
+{
+  if (!ok) {
+    return;
+  }
+  MPI_Allgatherv(static_cast<void*>(sendBuf), sendCount, MPI_DOUBLE,
+                 static_cast<void*>(recvBuf), recvCounts, displs,
+                 MPI_DOUBLE, comm);
+}
+
+template <>
+void MpiManager::allGatherv<std::size_t>(std::size_t* sendBuf, int sendCount,
+                                         std::size_t* recvBuf, int* recvCounts, int* displs,
+                                         MPI_Comm comm)
+{
+  if (!ok) {
+    return;
+  }
+  MPI_Allgatherv(static_cast<void*>(sendBuf), sendCount, MPI_UNSIGNED_LONG,
+                 static_cast<void*>(recvBuf), recvCounts, displs,
+                 MPI_UNSIGNED_LONG, comm);
+}
+
+#if defined(__x86_64__) || defined(_M_X64) || defined(__ppc64__) || defined(__aarch64__)
+template <>
+void MpiManager::allGatherv<std::uint32_t>(std::uint32_t* sendBuf, int sendCount,
+                                           std::uint32_t* recvBuf, int* recvCounts, int* displs,
+                                           MPI_Comm comm)
+{
+  if (!ok) {
+    return;
+  }
+  MPI_Allgatherv(static_cast<void*>(sendBuf), sendCount, MPI_UINT32_T,
+                 static_cast<void*>(recvBuf), recvCounts, displs,
+                 MPI_UINT32_T, comm);
+}
+#else
+template <>
+void MpiManager::allGatherv<std::uint64_t>(std::uint64_t* sendBuf, int sendCount,
+                                           std::uint64_t* recvBuf, int* recvCounts, int* displs,
+                                           MPI_Comm comm)
+{
+  if (!ok) {
+    return;
+  }
+  MPI_Allgatherv(static_cast<void*>(sendBuf), sendCount, MPI_UINT64_T,
+                 static_cast<void*>(recvBuf), recvCounts, displs,
+                 MPI_UINT64_T, comm);
+}
+#endif
 
 template <>
 void MpiManager::bCast<bool>(bool* sendBuf, int sendCount, int root, MPI_Comm comm)
@@ -1121,6 +1333,15 @@ void MpiManager::reduce<float>(float& sendVal, float& recvVal,  MPI_Op op, int r
 }
 
 template <>
+void MpiManager::reduce<float>(float* sendVal, float* recvVal, int count, MPI_Op op, int root, MPI_Comm comm)
+{
+  if (!ok) {
+    return;
+  }
+  MPI_Reduce(sendVal, recvVal, count, MPI_FLOAT, op, root, comm);
+}
+
+template <>
 void MpiManager::reduce<double>(double& sendVal, double& recvVal,  MPI_Op op, int root, MPI_Comm comm)
 {
   if (!ok) {
@@ -1224,8 +1445,8 @@ void MpiManager::reduceAndBcast<int>(int& reductVal, MPI_Op op, int root, MPI_Co
   MPI_Reduce(&reductVal, &recvVal, 1, MPI_INT, op, root, comm);
   reductVal = recvVal;
   MPI_Bcast(&reductVal, 1, MPI_INT, root, comm);
-
 }
+
 
 template <>
 void MpiManager::reduceAndBcast<float>(float& reductVal, MPI_Op op, int root, MPI_Comm comm)
@@ -1237,7 +1458,6 @@ void MpiManager::reduceAndBcast<float>(float& reductVal, MPI_Op op, int root, MP
   MPI_Reduce(&reductVal, &recvVal, 1, MPI_FLOAT, op, root, comm);
   reductVal = recvVal;
   MPI_Bcast(&reductVal, 1, MPI_FLOAT, root, comm);
-
 }
 
 template <>
@@ -1291,6 +1511,217 @@ void MpiManager::reduceAndBcast<unsigned long>(unsigned long& reductVal, MPI_Op 
   MPI_Bcast(&reductVal, 1, MPI_UNSIGNED_LONG, root, comm);
 
 }
+
+template <>
+void MpiManager::allreduce<float>(const float* in, float* out, int count, MPI_Op op, MPI_Comm comm)
+{
+  if (!ok) {
+    return;
+  }
+  MPI_Allreduce(in, out, count, MPI_FLOAT, op, comm);
+}
+
+template <>
+void MpiManager::allreduce<double>(const double* in, double* out, int count, MPI_Op op, MPI_Comm comm)
+{
+  if (!ok) {
+    return;
+  }
+  MPI_Allreduce(in, out, count, MPI_DOUBLE, op, comm);
+}
+
+template <>
+void MpiManager::allreduce<unsigned>(const unsigned* in, unsigned* out, int count, MPI_Op op, MPI_Comm comm)
+{
+  if (!ok) {
+    return;
+  }
+  MPI_Allreduce(in, out, count, MPI_UNSIGNED, op, comm);
+}
+
+template <>
+void MpiManager::allreduce<int>(const int* in, int* out, int count, MPI_Op op, MPI_Comm comm)
+{
+  if (!ok) {
+    return;
+  }
+  MPI_Allreduce(in, out, count, MPI_INT, op, comm);
+}
+
+template <>
+void MpiManager::allReduce<bool>(bool& reductVal, MPI_Op op, MPI_Comm comm)
+{
+  if (!ok) {
+    return;
+  }
+  bool recvVal;
+  MPI_Allreduce(static_cast<void*>(&reductVal), static_cast<void*>(&recvVal), 1, MPI_BYTE, op, comm);
+  reductVal = recvVal;
+}
+
+template <>
+void MpiManager::allReduce<char>(char& reductVal, MPI_Op op, MPI_Comm comm)
+{
+  if (!ok) {
+    return;
+  }
+  char recvVal;
+  MPI_Allreduce(static_cast<void*>(&reductVal), static_cast<void*>(&recvVal), 1, MPI_CHAR, op, comm);
+  reductVal = recvVal;
+}
+
+template <>
+void MpiManager::allReduce<int>(int& reductVal, MPI_Op op, MPI_Comm comm)
+{
+  if (!ok) {
+    return;
+  }
+  int recvVal;
+  MPI_Allreduce(static_cast<void*>(&reductVal), static_cast<void*>(&recvVal), 1, MPI_INT, op, comm);
+  reductVal = recvVal;
+}
+
+template <>
+void MpiManager::allReduce<float>(float& reductVal, MPI_Op op, MPI_Comm comm)
+{
+  if (!ok) {
+    return;
+  }
+  float recvVal;
+  MPI_Allreduce(static_cast<void*>(&reductVal), static_cast<void*>(&recvVal), 1, MPI_FLOAT, op, comm);
+  reductVal = recvVal;
+}
+
+template <>
+void MpiManager::allReduce<double>(double& reductVal, MPI_Op op, MPI_Comm comm)
+{
+  if (!ok) {
+    return;
+  }
+  double recvVal;
+  MPI_Allreduce(static_cast<void*>(&reductVal), static_cast<void*>(&recvVal), 1, MPI_DOUBLE, op, comm);
+  reductVal = recvVal;
+}
+
+template <>
+void MpiManager::allReduce<long double>(long double& reductVal, MPI_Op op, MPI_Comm comm)
+{
+  if (!ok) {
+    return;
+  }
+  long double recvVal;
+  MPI_Allreduce(static_cast<void*>(&reductVal), static_cast<void*>(&recvVal), 1, MPI_LONG_DOUBLE, op, comm);
+  reductVal = recvVal;
+}
+
+template <>
+void MpiManager::allReduce<std::size_t>(std::size_t& reductVal, MPI_Op op, MPI_Comm comm)
+{
+  if (!ok) {
+    return;
+  }
+  std::size_t recvVal;
+  MPI_Allreduce(static_cast<void*>(&reductVal), static_cast<void*>(&recvVal), 1, MPI_UNSIGNED_LONG, op, comm);
+  reductVal = recvVal;
+}
+
+#if defined(__x86_64__) || defined(_M_X64) || defined(__ppc64__) || defined(__aarch64__)
+template <>
+void MpiManager::allReduce<std::uint32_t>(std::uint32_t& reductVal, MPI_Op op, MPI_Comm comm)
+{
+  if (!ok) {
+    return;
+  }
+  std::uint32_t recvVal;
+  MPI_Allreduce(static_cast<void*>(&reductVal), static_cast<void*>(&recvVal), 1, MPI_UNSIGNED, op, comm);
+  reductVal = recvVal;
+}
+#else
+template <>
+void MpiManager::allReduce<std::uint64_t>(std::uint64_t& reductVal, MPI_Op op, MPI_Comm comm)
+{
+  if (!ok) {
+    return;
+  }
+  std::uint64_t recvVal;
+  MPI_Allreduce(static_cast<void*>(&reductVal), static_cast<void*>(&recvVal), 1, MPI_UNSIGNED_LONG, op, comm);
+  reductVal = recvVal;
+}
+#endif
+
+template <>
+void MpiManager::allReduceVect<char>(std::vector<char>& reductVal, MPI_Op op, MPI_Comm comm)
+{
+  if (!ok) {
+    return;
+  }
+  MPI_Allreduce(MPI_IN_PLACE, static_cast<void*>(reductVal.data()), static_cast<int>(reductVal.size()), MPI_CHAR, op, comm);
+}
+
+template <>
+void MpiManager::allReduceVect<int>(std::vector<int>& reductVal, MPI_Op op, MPI_Comm comm)
+{
+  if (!ok) {
+    return;
+  }
+  MPI_Allreduce(MPI_IN_PLACE, static_cast<void*>(reductVal.data()), static_cast<int>(reductVal.size()), MPI_INT, op, comm);
+}
+
+template <>
+void MpiManager::allReduceVect<float>(std::vector<float>& reductVal, MPI_Op op, MPI_Comm comm)
+{
+  if (!ok) {
+    return;
+  }
+  MPI_Allreduce(MPI_IN_PLACE, static_cast<void*>(reductVal.data()), static_cast<int>(reductVal.size()), MPI_FLOAT, op, comm);
+}
+
+template <>
+void MpiManager::allReduceVect<double>(std::vector<double>& reductVal, MPI_Op op, MPI_Comm comm)
+{
+  if (!ok) {
+    return;
+  }
+  MPI_Allreduce(MPI_IN_PLACE, static_cast<void*>(reductVal.data()), static_cast<int>(reductVal.size()), MPI_DOUBLE, op, comm);
+}
+
+template <>
+void MpiManager::allReduceVect<long double>(std::vector<long double>& reductVal, MPI_Op op, MPI_Comm comm)
+{
+  if (!ok) {
+    return;
+  }
+  MPI_Allreduce(MPI_IN_PLACE, static_cast<void*>(reductVal.data()), static_cast<int>(reductVal.size()), MPI_LONG_DOUBLE, op, comm);
+}
+
+template <>
+void MpiManager::allReduceVect<std::size_t>(std::vector<std::size_t>& reductVal, MPI_Op op, MPI_Comm comm)
+{
+  if (!ok) {
+    return;
+  }
+  MPI_Allreduce(MPI_IN_PLACE, static_cast<void*>(reductVal.data()), static_cast<int>(reductVal.size()), MPI_UNSIGNED_LONG, op, comm);
+}
+
+#if defined(__x86_64__) || defined(_M_X64) || defined(__ppc64__) || defined(__aarch64__)
+template <>
+void MpiManager::allReduceVect<std::uint32_t>(std::vector<std::uint32_t>& reductVal, MPI_Op op, MPI_Comm comm)
+{
+  if (!ok) {
+    return;
+  }
+  MPI_Allreduce(MPI_IN_PLACE, static_cast<void*>(reductVal.data()), static_cast<int>(reductVal.size()), MPI_UNSIGNED, op, comm);
+}
+#else
+template <>
+void MpiManager::allReduceVect<std::uint64_t>(std::vector<std::uint64_t>& reductVal, MPI_Op op, MPI_Comm comm)
+{
+  if (!ok) {
+    return;
+  }
+  MPI_Allreduce(MPI_IN_PLACE, static_cast<void*>(reductVal.data()), static_cast<int>(reductVal.size()), MPI_UNSIGNED_LONG, op, comm);
+}
+#endif
 
 void MpiManager::wait(MPI_Request* request, MPI_Status* status)
 {

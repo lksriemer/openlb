@@ -59,8 +59,6 @@ bool IndicatorF2DfromIndicatorF3D<S>::operator()(bool output[], const S input[])
   return true;
 }
 
-
-
 // Warning : the cuboid is only defined parallel to the plans x=0 and y=0 !!!
 // For other cuboids, please use the parallelepiped version
 template <typename S>

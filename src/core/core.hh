@@ -26,8 +26,11 @@
 #include "fieldArrayD.hh"
 #include "fieldParametersD.hh"
 
+#include "data.hh"
+
 #include "superLattice.hh"
 #include "blockLattice.hh"
+#include "blockD.hh"
 
 #include "cell.hh"
 
@@ -39,3 +42,5 @@
 #include "thermalUnitConverter.hh"
 #include "multiPhaseUnitConverter.hh"
 #include "powerLawUnitConverter.hh"
+
+#include "superLatticePointExtraction.hh"

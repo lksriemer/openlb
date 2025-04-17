@@ -1,4 +1,5 @@
 #include <core/core3D.h>
+#include <descriptor/descriptor.h>
 #include <boundary/boundary3D.h>
 #include <communication/communication.h>
 #include <datatype.h>
@@ -12,5 +13,6 @@
 #include <optimization/opti3D.h>
 #include <solver/solver.h>
 #include <utilities/utilities3D.h>
-#include <particles/subgrid3DLegacyFramework/particles3D.h>
 #include <particles/particles.h>
+#include <fsi/fsi.h>
+#include <refinement/refinement.h>

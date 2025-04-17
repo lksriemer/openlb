@@ -92,10 +92,30 @@ struct ShanChen94 {
 };
 
 struct CarnahanStarling {
-  struct G : public descriptors::FIELD_BASE<1> { };
-  struct A : public descriptors::FIELD_BASE<1> { };
-  struct B : public descriptors::FIELD_BASE<1> { };
-  struct T : public descriptors::FIELD_BASE<1> { };
+  struct G : public descriptors::FIELD_BASE<1> {
+    template <typename T, typename DESCRIPTOR,typename FIELD>
+    static constexpr auto isValid(FieldD<T,DESCRIPTOR,FIELD> value) {
+      return value != 0;
+    }
+  };
+  struct A : public descriptors::FIELD_BASE<1> {
+    template <typename T, typename DESCRIPTOR,typename FIELD>
+    static constexpr auto isValid(FieldD<T,DESCRIPTOR,FIELD> value) {
+      return value > 0;
+    }
+  };
+  struct B : public descriptors::FIELD_BASE<1> {
+    template <typename T, typename DESCRIPTOR,typename FIELD>
+    static constexpr auto isValid(FieldD<T,DESCRIPTOR,FIELD> value) {
+      return value > 0;
+    }
+   };
+  struct T : public descriptors::FIELD_BASE<1> {
+    template <typename T, typename DESCRIPTOR,typename FIELD>
+    static constexpr auto isValid(FieldD<T,DESCRIPTOR,FIELD> value) {
+      return value > 0;
+    }
+   };
 
   using parameters = meta::list<G,A,B,T>;
 
@@ -108,6 +128,90 @@ struct CarnahanStarling {
         * ((V{1} +c+c*c-c*c*c) / (V{1}-c) / (V{1}-c) / (V{1}-c))
         - params.template get<A>() * rho*rho;
     return util::sqrt(V{6}*(p-rho/V{3})/ params.template get<G>());
+  };
+};
+
+// Polinomial EOS
+struct Polinomial {
+  struct G              : public descriptors::FIELD_BASE<1> { };
+  struct KAPPAP         : public descriptors::FIELD_BASE<1> { };
+
+  struct RHOV           : public descriptors::FIELD_BASE<1> { };
+  struct RHOL           : public descriptors::FIELD_BASE<1> { };
+  struct THICKNESS      : public descriptors::FIELD_BASE<1> { };
+  struct SURFTENSION    : public descriptors::FIELD_BASE<1> { };
+
+  struct RHOC           : public descriptors::FIELD_BASE<1> { };
+  struct PC             : public descriptors::FIELD_BASE<1> { };
+
+  using parameters = meta::list<G,KAPPAP,RHOV,RHOL,THICKNESS,SURFTENSION,RHOC,PC>;
+
+  template <typename V, typename COUPLING>
+  static void computeParameters(COUPLING& coupling) {
+    // Set G
+    const V g = V(-1.);
+    coupling.template setParameter<interaction::Polinomial::G>(g);
+    // Compute and set rhoc (critical density)
+    auto rhov = coupling.template getParameter<interaction::Polinomial::RHOV>()[0];
+    auto rhol = coupling.template getParameter<interaction::Polinomial::RHOL>()[0];
+    const V rhoc = 0.5 * ( rhov + rhol );
+    coupling.template setParameter<interaction::Polinomial::RHOC>(rhoc);
+    // Compute p_c
+    const V rho1 = rhov + V(0.33) * ( rhol - rhov );
+    const V rho2 = rhov + V(0.67) * ( rhol - rhov );
+    // Coefficients
+    const V A = 1. / ( rhol - rhov );
+    const V B = 1. / 2. / sqrt(rhol) / ( sqrt(rhol) - sqrt(rhov) );
+    const V C = 1. / 2. / sqrt(rhol) / ( sqrt(rhov) + sqrt(rhol) );
+    // f1
+    const V f1 = A * log( sqrt(rho1) - sqrt(rhov) )
+               - B * log( sqrt(rhol) - sqrt(rho1) )
+               - C * log( sqrt(rho1) + sqrt(rhol) );
+    // f2
+    const V f2 = A * log( sqrt(rho2) - sqrt(rhov) )
+               - B * log( sqrt(rhol) - sqrt(rho2) )
+               - C * log( sqrt(rho2) + sqrt(rhol) );
+    // p_c
+    auto thickness = coupling.template getParameter<interaction::Polinomial::THICKNESS>()[0];
+    const V pc = rhoc * rhoc * rhoc / V(6.) * pow( ( f2 - f1 ) / thickness, 2 );
+    coupling.template setParameter<interaction::Polinomial::PC>(pc);
+    // Compute kappap
+    const V a = V(1./4.);
+    const V b = rhol / V(2.);
+    const V c = sqrt(rhov) / V(3.);
+    const V d = sqrt(rhov) * rhol;
+    // g1
+    const V g1 = a * rhov * rhov - b * rhov - c * pow( rhov, V(1.5) ) + d * sqrt( rhov );
+    // g2
+    const V g2 = a * rhol * rhol - b * rhol - c * pow( rhol, V(1.5) ) + d * sqrt( rhol );
+    // kappaLi
+    auto gamma = coupling.template getParameter<interaction::Polinomial::SURFTENSION>()[0];
+    const V kappaP = V(9.) * sqrt( rhoc * rhoc * rhoc ) *gamma
+                    / g / sqrt( V(6.) * pc ) / ( g2 - g1 ) ;
+    coupling.template setParameter<interaction::Polinomial::KAPPAP>(kappaP);
+  }
+
+  template <typename V, typename PARAMETERS>
+  V compute( V Rho, PARAMETERS& params ) any_platform {
+    V p = computeP( Rho, params );
+    auto g = params.template get<G>(); // critical density
+    V psi = util::sqrt( V(2.)*( p - Rho/V(3.) )/g );
+    return psi;
+  };
+
+  template <typename V, typename PARAMETERS>
+  V computeP(V Rho, PARAMETERS& params ) any_platform {
+    auto rho_c = params.template get<RHOC>(); // critical density
+    auto p_c = params.template get<PC>(); // critical pressure
+    auto rho_v = params.template get<RHOV>(); // vapor density
+    auto rho_l = params.template get<RHOL>(); // liquid density
+    const V sqrt_rho_v = sqrt(rho_v);
+    const V sqrt_Rho = sqrt(Rho);
+    V p = p_c / rho_c / rho_c / rho_c * (
+          V(2.) * Rho * Rho * Rho + ( rho_v - V(2.) * rho_l ) * Rho * Rho
+          - V(3.) * sqrt_rho_v * Rho* Rho * sqrt_Rho + V(2.) * sqrt_rho_v * rho_l * Rho * sqrt_Rho
+          + sqrt_rho_v * rho_l * rho_l * sqrt_Rho );
+    return p;
   };
 };
 
@@ -210,6 +314,7 @@ struct MCPRpseudoPotential {
 
 }
 
+#ifndef USING_LEGACY_CODEGEN
 
 // established -- original for both single- and multicomponent flow
 
@@ -312,6 +417,8 @@ public:
   Normal(T sigma=1., T mu=1.);
   bool operator() (T psi[], const S rho[]);
 };
+
+#endif // not USING_LEGACY_CODEGEN
 
 } // end namespace olb
 

@@ -24,7 +24,9 @@
 #ifndef CELL_D_H
 #define CELL_D_H
 
-#include "fieldArrayD.h"
+#include <type_traits>
+
+#include "fieldArrayD.hh"
 
 namespace olb {
 
@@ -99,6 +101,59 @@ public:
   template <typename FIELD>
   auto& getFieldComponent(unsigned iD) {
     return _fieldsD.template getFieldComponent<FIELD>(0, iD);
+  }
+
+};
+
+/// Single cell with full field data and dynamics interface
+template<typename T, typename DESCRIPTOR, typename DYNAMICS>
+class FullCellD : public CellD<T,DESCRIPTOR> {
+public:
+  FullCellD() : CellD<T,DESCRIPTOR>()
+  { }
+
+  T computeRho() const {
+    return typename DYNAMICS::MomentaF().computeRho(*this);
+  }
+  void computeU(T* u) {
+    typename DYNAMICS::MomentaF().computeU(*this, u);
+  }
+  void computeJ(T* j) {
+    typename DYNAMICS::MomentaF().computeJ(*this, j);
+  }
+  void computeRhoU(T& rho, T* u) {
+    typename DYNAMICS::MomentaF().computeRhoU(*this, rho, u);
+  }
+  void computeStress(T* pi) {
+    T rho, u[DESCRIPTOR::d] { };
+    typename DYNAMICS::MomentaF().computeRhoU(*this, rho, u);
+    typename DYNAMICS::MomentaF().computeStress(*this, rho, u, pi);
+  }
+  void computeAllMomenta(T& rho, T* u, T* pi) {
+    typename DYNAMICS::MomentaF().computeAllMomenta(*this, rho, u, pi);
+  }
+
+  void defineRho(T& rho) {
+    typename DYNAMICS::MomentaF().defineRho(*this, rho);
+  }
+  void defineU(T* u) {
+    typename DYNAMICS::MomentaF().defineU(*this, u);
+  }
+  void defineRhoU(T rho, T* u) {
+    typename DYNAMICS::MomentaF().defineRhoU(*this, rho, u);
+  }
+  void defineAllMomenta(T rho, T* u, T* pi) {
+    typename DYNAMICS::MomentaF().defineAllMomenta(*this, rho, u, pi);
+  }
+
+  void iniEquilibrium(T rho, T* u) {
+    typename DYNAMICS::MomentaF().iniEquilibrium(*this, rho, u);
+  }
+  void iniRegularized(T rho, T* u, T* pi) {
+    typename DYNAMICS::MomentaF().iniRegularized(*this, rho, u, pi);
+  }
+  void inverseShiftRhoU(T& rho, T* u) {
+    typename DYNAMICS::MomentaF().inverseShiftRhoU(*this, rho, u);
   }
 
 };

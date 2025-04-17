@@ -156,6 +156,64 @@ void eulerIntegrationTranslation(
   particle.template setField<MOBILITY,VELOCITY>( velocity );
 }
 
+
+/// Euler integration
+template<typename T, typename PARTICLETYPE>
+void eulerIntegrationTranslationPeriodic(
+  Particle<T,PARTICLETYPE>& particle, T delTime,
+  Vector<T,PARTICLETYPE::d> acceleration, Vector<int,PARTICLETYPE::d> periodicity )
+{
+  using namespace descriptors;
+  constexpr unsigned D = PARTICLETYPE::d;
+  //Check field existence
+  static_assert(PARTICLETYPE::template providesNested<GENERAL,POSITION>(), "Field POSITION has to be provided");
+  static_assert(PARTICLETYPE::template providesNested<MOBILITY,VELOCITY>(), "Field VELOCITY has to be provided");
+  //Calculate quantities
+  Vector<T,D> velocity( particle.template getField<MOBILITY,VELOCITY>() + acceleration * delTime );
+  Vector<T,D> position( particle.template getField<GENERAL,POSITION>() + velocity * delTime );
+  Vector<T,3> velocity_tmp ( particle.template getField<MOBILITY,VELOCITY>());
+  Vector<T,3> position_tmp (particle.template getField<GENERAL,POSITION>());
+  if(periodicity[0] == 1)
+  {
+    //velocity[0] = velocity_tmp[0];
+    position[0] = position_tmp[0];
+   /* velocity_tmp[1] = (particle.template getField<MOBILITY,VELOCITY>())[1] + acceleration[1]*delTime;
+    velocity_tmp[2] = (particle.template getField<MOBILITY,VELOCITY>())[2] + acceleration[2]*delTime;
+    position_tmp[1] = (particle.template getField<MOBILITY,POSITION>())[1] + velocity_tmp[1]*delTime;
+    position_tmp[2] = (particle.template getField<MOBILITY,POSITION>())[2] + velocity_tmp[2]*delTime;
+    velocity_tmp[0] = (particle.template getField<MOBILITY,VELOCITY>())[0];
+    position_tmp[0] = (particle.template getField<MOBILITY,POSITION>())[0];*/
+  }
+    else if (periodicity[1] == 1)
+    {
+       //velocity[1] = velocity_tmp[1];
+       position[1] = position_tmp[1];
+   /* velocity_tmp[0] = (particle.template getField<MOBILITY,VELOCITY>())[0] + acceleration[0]*delTime;
+    velocity_tmp[2] = (particle.template getField<MOBILITY,VELOCITY>())[2] + acceleration[2]*delTime;
+    position_tmp[0] = (particle.template getField<MOBILITY,POSITION>())[0] + velocity_tmp[0]*delTime;
+    position_tmp[2] = (particle.template getField<MOBILITY,POSITION>())[2] + velocity_tmp[2]*delTime;
+    velocity_tmp[1] = (particle.template getField<MOBILITY,VELOCITY>())[1];
+    position_tmp[1] = (particle.template getField<MOBILITY,POSITION>())[1];*/
+    }
+        else if (periodicity[2] == 1)
+        {
+           //velocity[2] = velocity_tmp[2];
+           position[2] = position_tmp[2];
+  /*  velocity_tmp[0] = (particle.template getField<MOBILITY,VELOCITY>())[0] + acceleration[0]*delTime;
+    velocity_tmp[1] = (particle.template getField<MOBILITY,VELOCITY>())[1] + acceleration[1]*delTime;
+    position_tmp[0] = (particle.template getField<MOBILITY,POSITION>())[0] + velocity_tmp[0]*delTime;
+    position_tmp[1] = (particle.template getField<MOBILITY,POSITION>())[1] + velocity_tmp[1]*delTime;
+    velocity_tmp[2] = (particle.template getField<MOBILITY,VELOCITY>())[2];
+    position_tmp[2] = (particle.template getField<MOBILITY,POSITION>())[2];*/
+        }
+    else
+      std::cout << "No discrete normal in direction of coordinate axis" <<std::endl;
+  //Update values
+  particle.template setField<GENERAL,POSITION>( position );
+  particle.template setField<MOBILITY,VELOCITY>( velocity );
+}
+
+
 template<typename T, typename PARTICLETYPE>
 void eulerIntegrationRotation(
   Particle<T,PARTICLETYPE>& particle, T delTime,

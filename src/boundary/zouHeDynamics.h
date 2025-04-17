@@ -28,14 +28,23 @@
 
 namespace olb {
 
-/**
-* Implementation of Zou-He boundary condition following
-* the paper from Zou and He. This implementation is lattice independent.
-* The implementation follow the idea proposed int the paper
-* Qisu Zou, Xiaoyi He,
-* "On pressure and velocity boundary conditions for the lattice Boltzmann BGK model",
-* Phys. Fluids , (1997), Volume 9, Issue 6, pp. 1591-1598
-*/
+/** Boundary condition details:
+ *
+ * Given name: Zou-He
+ *
+ * References:
+ * non-equilibrium bounce back method [Zou and He, 1997, doi: 10.1063/1.869307]
+ *
+ * Equation: Navier-Stokes
+ *
+ * Type: onLattice
+ *
+ * Condition on first moment (velocity): Dirichlet type
+ * or
+ * Condition on zeroth moment (pressure): Dirichlet type
+ *
+ * This implementation is lattice independent.
+ */
 template<typename T, typename DESCRIPTOR, typename DYNAMICS, typename MOMENTA, int direction, int orientation>
 class ZouHeDynamics : public dynamics::CustomCollision<T,DESCRIPTOR,MOMENTA> {
 private:
@@ -43,7 +52,10 @@ private:
   using CORRECTED_DYNAMICS = typename DYNAMICS::template exchange_momenta<MOMENTA>;
 
 public:
+  constexpr static bool is_vectorizable = false;
+
   using MomentaF = typename MOMENTA::template type<DESCRIPTOR>;
+  using EquilibriumF = typename CORRECTED_DYNAMICS::EquilibriumF;
 
   using parameters = typename CORRECTED_DYNAMICS::parameters;
 
@@ -59,7 +71,7 @@ public:
   }
 
   template <typename CELL, typename PARAMETERS, typename V=typename CELL::value_t>
-  CellStatistic<V> apply(CELL& cell, PARAMETERS& parameters) any_platform {
+  CellStatistic<V> collide(CELL& cell, PARAMETERS& parameters) any_platform {
     // Along all the commented parts of this code there will be an example based
     // on the situation where the wall's normal vector if (0,1) and the
     // numerotation of the velocites are done according to the D2Q9
@@ -89,14 +101,15 @@ public:
     V falseRho, falseU[DESCRIPTOR::d];
     MomentaF().computeRhoU(cell, rho, u);
     V uSqr = util::normSqr<V,DESCRIPTOR::d>(u);
+    V fEq[DESCRIPTOR::q] {};
+    EquilibriumF().compute(cell, rho, u, fEq);
 
     // The unknown non equilibrium populations are bounced back
     // (f[3] = feq[3] + fneq[7], f[4] = feq[4] + fneq[8],
     //  f[5] = feq[5] + fneq[1])
     for (unsigned iPop = 0; iPop < missingIndexes.size(); ++iPop) {
       cell[missingIndexes[iPop]] = cell[descriptors::opposite<DESCRIPTOR>(missingIndexes[iPop])]
-        - computeEquilibrium(descriptors::opposite<DESCRIPTOR>(missingIndexes[iPop]), rho, u)
-        + computeEquilibrium(missingIndexes[iPop], rho, u);
+        - fEq[descriptors::opposite<DESCRIPTOR>(missingIndexes[iPop])] + fEq[missingIndexes[iPop]];
     }
 
     // We recompute rho and u in order to have the new momentum and density. Since
@@ -121,8 +134,8 @@ public:
     return {rho, uSqr};
   }
 
-  T computeEquilibrium(int iPop, T rho, const T u[DESCRIPTOR::d]) const override any_platform {
-    return typename CORRECTED_DYNAMICS::EquilibriumF().compute(iPop, rho, u);
+  void computeEquilibrium(ConstCell<T,DESCRIPTOR>& cell, T rho, const T u[DESCRIPTOR::d], T fEq[DESCRIPTOR::q]) const override {
+    EquilibriumF().compute(cell, rho, u, fEq);
   };
 
   std::string getName() const override {

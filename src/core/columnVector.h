@@ -46,6 +46,8 @@ namespace olb {
  **/
 struct ColumnVectorBase : public Serializable {
   virtual ~ColumnVectorBase() { };
+
+  virtual void resize(std::size_t newCount) = 0;
 };
 
 /// Vector of columns
@@ -121,15 +123,6 @@ public:
     return const_ptr(*this, i);
   }
 
-  /// Resize columns, potentially invalidates any inbound pointers
-  void resize(std::size_t newCount)
-  {
-    for (unsigned iDim=0; iDim < D; ++iDim) {
-      _column[iDim].resize(newCount);
-    }
-    _count = newCount;
-  }
-
   /// Swap contents of row i and row j
   /**
    * Required to realize sorted column stores in CellIndexListD
@@ -139,6 +132,13 @@ public:
     for (unsigned iDim=0; iDim < D; ++iDim) {
       std::swap(_column[iDim][i], _column[iDim][j]);
     }
+  }
+
+  void resize(std::size_t newCount) override {
+    for (unsigned iDim=0; iDim < D; ++iDim) {
+      operator[](iDim).resize(newCount);
+    }
+    _count = newCount;
   }
 
   /// Number of data blocks for the serializable interface
@@ -195,10 +195,6 @@ private:
   friend typename ScalarVector<const typename COLUMN::value_t,D,const_ptr>::type;
 
 protected:
-  const typename COLUMN::value_t* getComponentPointer(unsigned iDim) const
-  {
-    return &_data[iDim][_index];
-  }
 
 public:
   const_ptr(const ColumnVector<COLUMN,D>& columns, std::size_t index):
@@ -208,6 +204,11 @@ public:
   const_ptr(const_ptr&& rhs):
     _data(rhs._data),
     _index(rhs._index) { }
+
+  const typename COLUMN::value_t* getComponentPointer(unsigned iDim) const
+  {
+    return &_data[iDim][_index];
+  }
 
   std::size_t getIndex() const
   {
@@ -231,14 +232,6 @@ private:
   friend typename ScalarVector<typename COLUMN::value_t,D,ptr>::type;
 
 protected:
-  const typename COLUMN::value_t* getComponentPointer(unsigned iDim) const
-  {
-    return &_data[iDim][_index];
-  }
-  typename COLUMN::value_t* getComponentPointer(unsigned iDim)
-  {
-    return &_data[iDim][_index];
-  }
 
 public:
   ptr(ColumnVector<COLUMN,D>& columns, std::size_t index):
@@ -248,6 +241,16 @@ public:
   ptr(ptr&& rhs):
     _data(rhs._data),
     _index(rhs._index) { }
+
+  const typename COLUMN::value_t* getComponentPointer(unsigned iDim) const
+  {
+    return &_data[iDim][_index];
+  }
+
+  typename COLUMN::value_t* getComponentPointer(unsigned iDim)
+  {
+    return &_data[iDim][_index];
+  }
 
   template <typename U, typename IMPL>
   ptr& operator=(const GenericVector<U,D,IMPL>& rhs)

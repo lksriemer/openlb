@@ -44,7 +44,7 @@ namespace olb {
  * super structures containing overlapping blocks.
  *
  * SUPER must expose load balancer via getLoadBalancer
- * SUPER must expose cuboid geometry via getCuboidGeometry
+ * SUPER must expose cuboid geometry via getCuboidDecomposition
  *
  * Blocks must be exposed via SUPER::getBlock
  * Blocks must implement FieldsCommunicatable

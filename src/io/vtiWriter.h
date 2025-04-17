@@ -40,8 +40,6 @@ namespace olb {
 template< typename T, typename BaseType> class BlockData3D;
 template< typename T, typename BaseType> class SuperData3D;
 template< typename T> class LoadBalancer;
-template< typename T> class Cuboid3D;
-template< typename T> class CuboidGeometry3D;
 
 template<typename T, typename BaseType>
 class VTIwriter3D {
@@ -52,7 +50,7 @@ public:
                          BlockData<3,T,BaseType> const& blockData, Cuboid3D<T> const& cuboid);
   /// Write Super Data
   static void writeData( std::string const& fName, std::string const& fieldName,
-                         SuperData<3,T,BaseType> const& superData, CuboidGeometry3D<T> const& cGeometry,
+                         SuperData<3,T,BaseType> const& superData, CuboidDecomposition3D<T> const& cGeometry,
                          LoadBalancer<T> const& loadBalancer);
   /// Write Super Data with its own cGeometry and loadBalancer
   static void writeData( std::string const& fName, std::string const& fieldName,

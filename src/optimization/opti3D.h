@@ -22,22 +22,26 @@
 */
 
 /** \file
- * Groups all the 3D include files for the directory opti.
+ * Groups all the 3D include files for the directory optimization.
  */
+
+#include "optimization/core/latticeData.h"
+#include "optimization/core/latticeResults.h"
+#include "optimization/core/serialize.h"
+#include "optimization/core/optiCase.h"
+#include "optimization/core/optiCaseAD.h"
+#include "optimization/core/optiCaseDual.h"
+#include "optimization/core/optimizer.h"
+#include "optimization/core/optimizerBarzilaiBorwein.h"
+#include "optimization/core/optimizerLineSearch.h"
+#include "optimization/core/optimizerLBFGS.h"
+#include "optimization/core/optimizerSteepestDecent.h"
+#include "optimization/core/projection.h"
+#include "optimization/dynamics/dualDynamics.h"
+#include "optimization/dynamics/dualMrtDynamics.h"
+#include "optimization/functors/dualFunctors3D.h"
+#include "optimization/solver/adjointLbSolver.h"
+#include "optimization/solver/objective.h"
+#include "optimization/solver/optiSolverParameters.h"
+#include "optimization/solver/serialization.h"
 #include "utilities/aDiff.h"
-#include "adjointLbSolver.h"
-#include "dualDynamics.h"
-#include "dualFunctors3D.h"
-#include "dualMrtDynamics.h"
-#include "optiCase.h"
-#include "optiCaseAD.h"
-#include "optiCaseDual.h"
-#include "optimizer.h"
-#include "optimizerBarzilaiBorwein.h"
-#include "optimizerLineSearch.h"
-#include "optimizerLBFGS.h"
-#include "optimizerSteepestDecent.h"
-#include "optiSolverParameters.h"
-#include "projection.h"
-#include "dualLatticeDescriptors.h"
-#include "serialization.h"

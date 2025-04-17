@@ -33,8 +33,7 @@
  * for the free-energy model with two fluid components.
  */
 
-#include "olb2D.h"
-#include "olb2D.hh"
+#include <olb.h>
 
 using namespace olb;
 using namespace olb::descriptors;
@@ -63,6 +62,35 @@ const bool calcAngle = true;
 
 T angle_prev = 90.;
 
+T helperFunction( T alpha, T kappa1, T kappa2, T h1, T h2, int latticeNumber )
+{
+  T addend = 0;
+  if (latticeNumber==1) {
+    addend = 1./(alpha*alpha) * ( (h1/kappa1) + (h2/kappa2) );
+  }
+  else if (latticeNumber==2) {
+    addend = 1./(alpha*alpha) * ( (h1/kappa1) + (-h2/kappa2) );
+  }
+  else if (latticeNumber==3) {
+    addend = 1./(alpha*alpha) * ( (h1/kappa1) + (h2/kappa2) );
+  }
+  return addend;
+}
+
+T helperFunction( T alpha, T kappa1, T kappa2, T kappa3, T h1, T h2, T h3, int latticeNumber )
+{
+  T addend = 0;
+  if (latticeNumber==1) {
+    addend = 1./(alpha*alpha) * ( (h1/kappa1) + (h2/kappa2) + (h3/kappa3) );
+  }
+  else if (latticeNumber==2) {
+    addend = 1./(alpha*alpha) * ( (h1/kappa1) + (-h2/kappa2) );
+  }
+  else if (latticeNumber==3) {
+    addend = 1./(alpha*alpha) * ( (h3/kappa3) );
+  }
+  return addend;
+}
 
 void prepareGeometry( SuperGeometry<T,2>& superGeometry,
                       UnitConverter<T, DESCRIPTOR>& converter)
@@ -99,9 +127,18 @@ void prepareLattice( SuperLattice<T, DESCRIPTOR>& sLattice1,
   sLattice1.defineDynamics<ForcedBGKdynamics>(superGeometry, 1);
   sLattice2.defineDynamics<FreeEnergyBGKdynamics>(superGeometry, 1);
 
+  // Defining walls
+  auto walls = superGeometry.getMaterialIndicator({2});
+
+  // Compute Addends
+  T addend1 = helperFunction( alpha, kappa1, kappa2, h1, h2, 1 );
+  T addend2 = helperFunction( alpha, kappa1, kappa2, h1, h2, 2 );
+
   // Add wall boundary
-  setFreeEnergyWallBoundary(sLattice1, superGeometry, 2, alpha, kappa1, kappa2, h1, h2, 1);
-  setFreeEnergyWallBoundary(sLattice2, superGeometry, 2, alpha, kappa1, kappa2, h1, h2, 2);
+  boundary::set<boundary::FreeEnergyWallMomentum>(sLattice1, walls);
+  sLattice1.setParameter<descriptors::ADDEND>( addend1 );
+  boundary::set<boundary::FreeEnergyWallOrderParameter>(sLattice2, walls);
+  sLattice2.setParameter<descriptors::ADDEND>( addend2 );
 
   // Bulk initial conditions
   // Define circular domain for fluid 2
@@ -150,10 +187,8 @@ void getResults( SuperLattice<T, DESCRIPTOR>& sLattice1,
 
   if ( iT==0 ) {
     // Writes the geometry, cuboid no. and rank no. as vti file for visualization
-    SuperLatticeGeometry2D<T, DESCRIPTOR> geometry( sLattice1, superGeometry );
     SuperLatticeCuboid2D<T, DESCRIPTOR> cuboid( sLattice1 );
     SuperLatticeRank2D<T, DESCRIPTOR> rank( sLattice1 );
-    vtmWriter.write( geometry );
     vtmWriter.write( cuboid );
     vtmWriter.write( rank );
     vtmWriter.createMasterFile();
@@ -278,7 +313,7 @@ int main( int argc, char *argv[] )
 
   // === 1st Step: Initialization ===
 
-  olbInit( &argc, &argv );
+  initialize( &argc, &argv );
   singleton::directories().setOutputDir( "./tmp/" );
   OstreamManager clout( std::cout,"main" );
 
@@ -299,20 +334,20 @@ int main( int argc, char *argv[] )
   std::vector<T> origin = { 0., 0. };
   IndicatorCuboid2D<T> cuboid(extend,origin);
 #ifdef PARALLEL_MODE_MPI
-  CuboidGeometry2D<T> cGeometry( cuboid, converter.getPhysDeltaX(), singleton::mpi().getSize() );
+  CuboidDecomposition2D<T> cuboidDecomposition( cuboid, converter.getPhysDeltaX(), singleton::mpi().getSize() );
 #else
-  CuboidGeometry2D<T> cGeometry( cuboid, converter.getPhysDeltaX() );
+  CuboidDecomposition2D<T> cuboidDecomposition( cuboid, converter.getPhysDeltaX() );
 #endif
 
   // Set periodic boundaries to the domain
-  cGeometry.setPeriodicity( true, false );
+  cuboidDecomposition.setPeriodicity({ true, false });
 
   // Instantiation of loadbalancer
-  HeuristicLoadBalancer<T> loadBalancer( cGeometry );
+  HeuristicLoadBalancer<T> loadBalancer( cuboidDecomposition );
   loadBalancer.print();
 
   // Instantiation of superGeometry
-  SuperGeometry<T,2> superGeometry( cGeometry,loadBalancer );
+  SuperGeometry<T,2> superGeometry( cuboidDecomposition,loadBalancer );
 
   prepareGeometry( superGeometry, converter );
 

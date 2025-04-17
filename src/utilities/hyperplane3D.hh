@@ -155,6 +155,37 @@ Hyperplane3D<T>& Hyperplane3D<T>::rotateSpanAroundZ(T r)
 }
 
 template <typename T>
+Hyperplane3D<T>& Hyperplane3D<T>::parseFromXML(const std::string& xmlData)
+{
+  using namespace tinyxml2;
+  XMLDocument doc;
+  if (doc.Parse(xmlData.c_str()) != XML_SUCCESS) {
+    throw std::runtime_error("Failed to parse XML: " + std::string(doc.ErrorStr()));
+  }
+  XMLElement* root = doc.FirstChildElement("UpdateSlice");
+  if (!root) {
+    throw std::runtime_error("Root element <UpdateSlice> not found.");
+  }
+  XMLElement* origin = root->FirstChildElement("origin");
+  if (!origin) {
+    throw std::runtime_error("Element <origin> not found.");
+  }
+  const T ox = origin->DoubleAttribute("x");
+  const T oy = origin->DoubleAttribute("y");
+  const T oz = origin->DoubleAttribute("z");
+  XMLElement* normal = root->FirstChildElement("normal");
+  if (!normal) {
+    throw std::runtime_error("Element <normal> not found.");
+  }
+  const T nx = normal->DoubleAttribute("x");
+  const T ny = normal->DoubleAttribute("y");
+  const T nz = normal->DoubleAttribute("z");
+  Vector n{nx, ny, nz};
+  return originAt({ox,oy,oz})
+        .normalTo(normalize(n));
+}
+
+template <typename T>
 bool Hyperplane3D<T>::isXYPlane() const
 {
   return util::nearZero(util::dotProduct3D(normal, {1,0,0})) &&

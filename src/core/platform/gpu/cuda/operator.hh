@@ -29,6 +29,8 @@
 #include "context.hh"
 #include "dynamics.hh"
 
+#include "solver/names.h"
+
 namespace olb {
 
 /// Mask of non-overlap block subdomain
@@ -40,18 +42,18 @@ namespace gpu {
 /// Implementations of Nvidia CUDA specifics
 namespace cuda {
 
-/// Masked application of DYNAMICS::apply for use in kernel::call_operators
+/// Masked application of DYNAMICS::collide for use in kernel::call_operators
 template <typename T, typename DESCRIPTOR, typename DYNAMICS>
 class MaskedCollision {
 private:
-  /// Pointer to on-device parameters structure to be passed to DYNAMICS::apply
+  /// Pointer to on-device parameters structure to be passed to DYNAMICS::collide
   ParametersOfOperatorD<T,DESCRIPTOR,DYNAMICS> _parameters;
   /// Pointer to on-device mask array
   bool* _mask;
 
   CellStatistic<T> apply(DeviceContext<T,DESCRIPTOR>& lattice, CellID iCell) __device__ {
     DataOnlyCell<T,DESCRIPTOR> cell(lattice, iCell);
-    return DYNAMICS().apply(cell, _parameters);
+    return DYNAMICS().collide(cell, _parameters);
   }
 
 public:
@@ -88,7 +90,7 @@ public:
 
 };
 
-/// List-based application of DYNAMICS::apply for use in kernel::call_list_operators
+/// List-based application of DYNAMICS::collide for use in kernel::call_list_operators
 template <typename T, typename DESCRIPTOR, typename DYNAMICS>
 class ListedCollision {
 private:
@@ -101,13 +103,13 @@ public:
 
   bool operator()(DeviceContext<T,DESCRIPTOR>& lattice, CellID iCell) __device__ {
     DataOnlyCell<T,DESCRIPTOR> cell(lattice, iCell);
-    DYNAMICS().apply(cell, _parameters);
+    DYNAMICS().collide(cell, _parameters);
     return true;
   }
 
   bool operator()(DeviceContext<T,DESCRIPTOR>& lattice, CellID iCell, CellStatistic<T>& statistic) __device__ {
     DataOnlyCell<T,DESCRIPTOR> cell(lattice, iCell);
-    statistic = DYNAMICS().apply(cell, _parameters);
+    statistic = DYNAMICS().collide(cell, _parameters);
     return true;
   }
 
@@ -205,6 +207,51 @@ public:
                   CellID iCell) __device__ {
     auto cells = lattices.exchange_values([&](auto name) -> auto {
       return Cell{lattices.get(name), iCell};
+    });
+    COUPLER().apply(cells, _parameters);
+    return true;
+  }
+
+};
+
+/// Unrestricted application of COUPLING::apply with parameters
+template <typename COUPLER, typename COUPLEES>
+class ParticleCouplingWithParameters {
+private:
+  typename AbstractCouplingO<COUPLEES>::ParametersD::template include<
+    typename meta::merge<
+      typename COUPLER::parameters,
+      meta::list<
+        fields::converter::PHYS_DELTA_X,
+        fields::BLOCK_LOWER
+      >
+    >
+  > _parameters;
+
+public:
+  template <typename PARAMETERS>
+  ParticleCouplingWithParameters(PARAMETERS& parameters) any_platform:
+    _parameters{parameters}
+  { }
+
+  template <typename CONTEXT>
+  bool operator()(CONTEXT& lattices,
+                  CellID iParticle) __device__ {
+    using V = typename CONTEXT::template value_t<names::Points>::value_t;
+    using DESCRIPTOR = typename CONTEXT::template value_t<names::Points>::descriptor_t;
+    const auto originR = _parameters.template get<fields::BLOCK_LOWER>();
+    const auto deltaX = _parameters.template get<fields::converter::PHYS_DELTA_X>();
+    const Vector<V*,DESCRIPTOR::d> physRs(lattices.get(meta::id<names::Points>{})
+                                                  .template getField<fields::PHYS_R>());
+    const PhysR<V,DESCRIPTOR::d> physR{physRs, iParticle};
+    const LatticeR<DESCRIPTOR::d> latticeR = util::floor((physR - originR) / deltaX + V{0.5});
+    auto cells = lattices.exchange_values([&](auto name) -> auto {
+      if constexpr (std::is_same_v<typename decltype(name)::type, names::Points>) {
+        return DataOnlyCell{lattices.get(name), iParticle};
+      } else {
+        const auto iCell = lattices.get(name).getCellId(latticeR);
+        return Cell{lattices.get(name), iCell};
+      }
     });
     COUPLER().apply(cells, _parameters);
     return true;
@@ -347,6 +394,19 @@ void call_coupling_operators(CONTEXTS lattices, bool* subdomain, OPERATORS... op
   (ops(lattices, iCell) || ... );
 }
 
+/// CUDA kernel for applying UnmaskedCoupling(WithParameters)
+template <typename CONTEXTS, typename... OPERATORS>
+void call_particle_coupling_operators(CONTEXTS lattices,
+                                      std::size_t nParticles,
+                                      OPERATORS... ops) __global__ {
+  const CellID iParticle = blockIdx.x * blockDim.x + threadIdx.x;
+  if (!(iParticle < nParticles)) {
+    return;
+  }
+  (ops(lattices, iParticle) || ... );
+}
+
+
 /// CUDA kernel for constructing on-device ConcreteDynamics
 template <typename T, typename DESCRIPTOR, typename DYNAMICS, typename PARAMETERS=typename DYNAMICS::ParametersD>
 void construct_dynamics(void* target, PARAMETERS* parameters) __global__ {
@@ -456,6 +516,17 @@ void call_coupling_operators(CONTEXT& lattices, bool* subdomain, ARGS&&... args)
   const auto block_count = (nCells + block_size - 1) / block_size;
   kernel::call_coupling_operators<CONTEXT,ARGS...><<<block_count,block_size>>>(
     lattices, subdomain, std::forward<decltype(args)>(args)...);
+  device::check();
+}
+
+/// Apply coupling on particles and lattices
+template <typename CONTEXT, typename... ARGS>
+void call_particle_coupling_operators(CONTEXT& lattices, ARGS&&... args) {
+  const auto nParticles = lattices.get(meta::id<names::Points>{}).getNcells();
+  const auto block_size = 32;
+  const auto block_count = (nParticles + block_size - 1) / block_size;
+  kernel::call_particle_coupling_operators<CONTEXT,ARGS...><<<block_count,block_size>>>(
+    lattices, nParticles, std::forward<decltype(args)>(args)...);
   device::check();
 }
 
@@ -569,14 +640,14 @@ void ConcreteBlockCollisionO<T,DESCRIPTOR,Platform::GPU_CUDA,DYNAMICS>::setup(
   }
 }
 
-template <typename T, typename DESCRIPTOR, typename OPERATOR>
+template <typename T, typename DESCRIPTOR, concepts::CellOperator OPERATOR>
 ConcreteBlockO<T,DESCRIPTOR,Platform::GPU_CUDA,OPERATOR,OperatorScope::PerCell>::ConcreteBlockO():
   _cells(0),
   _modified{false},
   _stream{cudaStreamDefault}
 { }
 
-template <typename T, typename DESCRIPTOR, typename OPERATOR>
+template <typename T, typename DESCRIPTOR, concepts::CellOperator OPERATOR>
 void ConcreteBlockO<T,DESCRIPTOR,Platform::GPU_CUDA,OPERATOR,OperatorScope::PerCell>::apply(
   ConcreteBlockLattice<T,DESCRIPTOR,Platform::GPU_CUDA>& block)
 {
@@ -594,14 +665,14 @@ void ConcreteBlockO<T,DESCRIPTOR,Platform::GPU_CUDA,OPERATOR,OperatorScope::PerC
   }
 }
 
-template <typename T, typename DESCRIPTOR, typename OPERATOR>
+template <typename T, typename DESCRIPTOR, concepts::CellOperator OPERATOR>
 ConcreteBlockO<T,DESCRIPTOR,Platform::GPU_CUDA,OPERATOR,OperatorScope::PerCellWithParameters>::ConcreteBlockO():
   _cells(0),
   _modified{false},
   _stream{cudaStreamDefault}
 { }
 
-template <typename T, typename DESCRIPTOR, typename OPERATOR>
+template <typename T, typename DESCRIPTOR, concepts::CellOperator OPERATOR>
 void ConcreteBlockO<T,DESCRIPTOR,Platform::GPU_CUDA,OPERATOR,OperatorScope::PerCellWithParameters>::apply(
   ConcreteBlockLattice<T,DESCRIPTOR,Platform::GPU_CUDA>& block)
 {
@@ -683,6 +754,34 @@ void ConcreteBlockCouplingO<COUPLEES,Platform::GPU_CUDA,COUPLER,OperatorScope::P
       deviceLattice, mask.deviceData(),
       gpu::cuda::UnmaskedCouplingWithParameters<COUPLER,COUPLEES>{_parameters});
   }
+}
+
+template <typename COUPLER, typename COUPLEES>
+void ConcreteBlockPointCouplingO<COUPLEES,Platform::GPU_CUDA,COUPLER,OperatorScope::PerCellWithParameters>::set(
+  CellID iCell, bool state)
+{
+  throw std::bad_function_call();
+}
+
+template <typename COUPLER, typename COUPLEES>
+void ConcreteBlockPointCouplingO<COUPLEES,Platform::GPU_CUDA,COUPLER,OperatorScope::PerCellWithParameters>::execute()
+{
+  if (_lattices.get(meta::id<names::Points>{})->getNcells() == 0) {
+    return;
+  }
+
+  auto* particleLattice = _lattices.get(meta::id<names::Points>{});
+  auto deviceLattice = _lattices.exchange_values([&](auto name) -> auto {
+    if constexpr (std::is_same_v<typename decltype(name)::type, names::Points>) {
+      return gpu::cuda::DeviceContext{*_lattices.get(name)};
+    } else {
+      return gpu::cuda::DeviceBlockLattice{*_lattices.get(name)};
+    }
+  });
+
+  gpu::cuda::call_particle_coupling_operators(
+    deviceLattice,
+    gpu::cuda::ParticleCouplingWithParameters<COUPLER,COUPLEES>{_parameters});
 }
 
 }

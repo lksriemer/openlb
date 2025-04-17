@@ -34,8 +34,7 @@
  * fluid components.
  */
 
-#include "olb3D.h"
-#include "olb3D.hh"
+#include <olb.h>
 
 using namespace olb;
 using namespace olb::descriptors;
@@ -135,10 +134,8 @@ void getResults( SuperLattice<T, DESCRIPTOR>& sLattice2,
 
   if ( iT==0 ) {
     // Writes the geometry, cuboid no. and rank no. as vti file for visualization
-    SuperLatticeGeometry3D<T, DESCRIPTOR> geometry( sLattice1, superGeometry );
     SuperLatticeCuboid3D<T, DESCRIPTOR> cuboid( sLattice1 );
     SuperLatticeRank3D<T, DESCRIPTOR> rank( sLattice1 );
-    vtmWriter.write( geometry );
     vtmWriter.write( cuboid );
     vtmWriter.write( rank );
     vtmWriter.createMasterFile();
@@ -220,7 +217,7 @@ int main( int argc, char *argv[] )
 
   // === 1st Step: Initialization ===
 
-  olbInit( &argc, &argv );
+  initialize( &argc, &argv );
   singleton::directories().setOutputDir( "./tmp/" );
   OstreamManager clout( std::cout,"main" );
 
@@ -241,20 +238,20 @@ int main( int argc, char *argv[] )
   std::vector<T> origin = { 0, 0, 0 };
   IndicatorCuboid3D<T> cuboid(extend,origin);
 #ifdef PARALLEL_MODE_MPI
-  CuboidGeometry3D<T> cGeometry( cuboid, converter.getPhysDeltaX(), singleton::mpi().getSize() );
+  CuboidDecomposition3D<T> cuboidDecomposition( cuboid, converter.getPhysDeltaX(), singleton::mpi().getSize() );
 #else
-  CuboidGeometry3D<T> cGeometry( cuboid, converter.getPhysDeltaX() );
+  CuboidDecomposition3D<T> cuboidDecomposition( cuboid, converter.getPhysDeltaX() );
 #endif
 
   // set periodic boundaries to the domain
-  cGeometry.setPeriodicity( true, true, true );
+  cuboidDecomposition.setPeriodicity({ true, true, true });
 
   // Instantiation of loadbalancer
-  HeuristicLoadBalancer<T> loadBalancer( cGeometry );
+  HeuristicLoadBalancer<T> loadBalancer( cuboidDecomposition );
   loadBalancer.print();
 
   // Instantiation of superGeometry
-  SuperGeometry<T,3> superGeometry( cGeometry,loadBalancer,2 );
+  SuperGeometry<T,3> superGeometry( cuboidDecomposition,loadBalancer,2 );
 
   prepareGeometry( superGeometry );
 
