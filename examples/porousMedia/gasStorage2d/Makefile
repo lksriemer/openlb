@@ -1,3 +1,3 @@
-EXAMPLE = porousCity3d
+EXAMPLE = gasStorage2d
 OLB_ROOT := ../../..
 include $(OLB_ROOT)/default.mk

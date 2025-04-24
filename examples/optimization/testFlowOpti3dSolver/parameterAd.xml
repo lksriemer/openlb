@@ -36,13 +36,12 @@
   <Optimization>
     <ControlMaterial> 1 </ControlMaterial>
     <ControlTolerance> 0 </ControlTolerance>
-    <ControlType> Force </ControlType>
     <CuboidWiseControl> true </CuboidWiseControl>
     <FailOnMaxIter> false </FailOnMaxIter>
     <FieldDimension> 3 </FieldDimension>
     <InputFileName> control.dat </InputFileName>
     <L> 20 </L>
-    <Lamda> 1. </Lamda>
+    <Lambda> 1. </Lambda>
     <LogFileName> log.txt </LogFileName>
     <MaxIter> 10 </MaxIter>
     <MaxStepAttempts> 20 </MaxStepAttempts>

@@ -89,6 +89,36 @@ struct ZerothOrder {
   };
 };
 
+struct CahnHilliardZerothOrder {
+  using parameters = meta::list<>;
+
+  static std::string getName() {
+    return "CahnHilliardZerothOrder";
+  }
+
+  template <typename DESCRIPTOR, typename MOMENTA>
+  struct type {
+    using MomentaF = typename MOMENTA::template type<DESCRIPTOR>;
+
+    template <typename CELL, typename RHO, typename U, typename FEQ, typename V=typename CELL::value_t>
+    CellStatistic<V> compute(CELL& cell, RHO& rho, U& u, FEQ& fEq) any_platform {
+      const auto mu = cell.template getField<descriptors::CHEM_POTENTIAL>();
+      fEq[0] = rho - (1-descriptors::t<V,DESCRIPTOR>(0))*mu-descriptors::t<V,DESCRIPTOR>(0);
+      for (int iPop=1; iPop < DESCRIPTOR::q; ++iPop) {
+        fEq[iPop] = descriptors::t<V,DESCRIPTOR>(iPop)*mu-descriptors::t<V,DESCRIPTOR>(iPop);
+      }
+      return {rho, util::normSqr<V,DESCRIPTOR::d>(u)};
+    }
+
+    template <typename CELL, typename PARAMETERS, typename FEQ, typename V=typename CELL::value_t>
+    CellStatistic<V> compute(CELL& cell, PARAMETERS& parameters, FEQ& fEq) any_platform {
+      V rho, u[DESCRIPTOR::d];
+      MomentaF().computeRhoU(cell, rho, u);
+      return compute(cell, rho, u, fEq);
+    };
+  };
+};
+
 struct FirstOrder {
   using parameters = meta::list<>;
 

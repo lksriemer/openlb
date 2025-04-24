@@ -72,6 +72,79 @@ std::optional<PostProcessorPromise<T,DESCRIPTOR>> getPostProcessor(DiscreteNorma
 
 template <concepts::BaseType T, concepts::LatticeDescriptor DESCRIPTOR, typename MixinDynamics>
 requires (DESCRIPTOR::d == 2)
+struct PhaseFieldCurvedWall<T,DESCRIPTOR,MixinDynamics> {
+
+using value_t = T;
+using descriptor_t = DESCRIPTOR;
+
+CellDistance getNeighborhoodRadius() {
+  return 1;
+}
+
+std::optional<DynamicsPromise<T,DESCRIPTOR>> getDynamics(DiscreteNormalType type,
+                                                         DiscreteNormal<DESCRIPTOR> n) {
+  return meta::id<MixinDynamics>();
+}
+
+std::optional<PostProcessorPromise<T,DESCRIPTOR>> getPostProcessor(DiscreteNormalType type,
+                                                                   DiscreteNormal<DESCRIPTOR> n) {
+  switch (type) {
+  case DiscreteNormalType::Flat:
+    if (n[0] == 0 && n[1] == 0) {
+      return meta::id<GeometricPhaseFieldCurvedWallProcessor2D<T,DESCRIPTOR>>();
+    }
+    return boundaryhelper::promisePostProcessorForNormal<T,DESCRIPTOR,IsoPhaseFieldCurvedWallProcessor2D>(n);
+
+  case DiscreteNormalType::ExternalCorner:
+    return boundaryhelper::promisePostProcessorForNormal<T,DESCRIPTOR,IsoPhaseFieldCurvedWallProcessor2D>(n);
+
+  case DiscreteNormalType::InternalCorner:
+    return boundaryhelper::promisePostProcessorForNormal<T,DESCRIPTOR,IsoPhaseFieldCurvedWallProcessor2D>(n);
+
+  default:
+    return meta::id<GeometricPhaseFieldCurvedWallProcessor2D<T,DESCRIPTOR>>();
+  }
+}
+
+};
+
+template <concepts::BaseType T, concepts::LatticeDescriptor DESCRIPTOR, typename MixinDynamics>
+requires (DESCRIPTOR::d == 2)
+struct WellBalancedWall<T,DESCRIPTOR,MixinDynamics> {
+
+  using value_t = T;
+  using descriptor_t = DESCRIPTOR;
+
+  CellDistance getNeighborhoodRadius() {
+    return 1;
+  }
+
+  std::optional<DynamicsPromise<T,DESCRIPTOR>> getDynamics(DiscreteNormalType type,
+  DiscreteNormal<DESCRIPTOR> n) {
+    switch (type) {
+    case DiscreteNormalType::Flat:
+      return meta::id<MixinDynamics>();
+
+    default:
+      return std::nullopt;
+    }
+  }
+
+  std::optional<PostProcessorPromise<T,DESCRIPTOR>> getPostProcessor(DiscreteNormalType type,
+  DiscreteNormal<DESCRIPTOR> n) {
+    switch (type) {
+    case DiscreteNormalType::Flat:
+      return boundaryhelper::promisePostProcessorForNormal<T,DESCRIPTOR,WellBalancedWallProcessor2D>(n);
+
+    default:
+      return std::nullopt;
+    }
+  }
+
+};
+
+template <concepts::BaseType T, concepts::LatticeDescriptor DESCRIPTOR, typename MixinDynamics>
+requires (DESCRIPTOR::d == 2)
 struct FreeEnergyWallMomentum<T,DESCRIPTOR,MixinDynamics> {
 
 using value_t = T;
@@ -116,7 +189,7 @@ std::optional<PostProcessorPromise<T,DESCRIPTOR>> getPostProcessor(DiscreteNorma
 
 };
 
-template <concepts::BaseType T, concepts::LatticeDescriptor DESCRIPTOR, typename MixinDynamics>
+/*template <concepts::BaseType T, concepts::LatticeDescriptor DESCRIPTOR, typename MixinDynamics>
 requires (DESCRIPTOR::d == 2)
 struct SignedDistanceBoundary<T,DESCRIPTOR,MixinDynamics> {
 
@@ -137,7 +210,7 @@ std::optional<PostProcessorPromise<T,DESCRIPTOR>> getPostProcessor(DiscreteNorma
   return boundaryhelper::promisePostProcessorForNormal<T,DESCRIPTOR,normGradPsiBoundary2D>(n);
 }
 
-};
+};*/
 
 }
 

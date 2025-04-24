@@ -2,7 +2,7 @@ all: lib zlib tinyxml2
 .PHONY: zlib tinyxml2
 
 lib:
-	mkdir lib
+	mkdir -p lib
 
 zlib:
 	make -C zlib

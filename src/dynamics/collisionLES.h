@@ -89,6 +89,45 @@ struct SmagorinskyEffectiveOmega {
 };
 
 template <typename COLLISION, typename DESCRIPTOR, typename MOMENTA, typename EQUILIBRIUM>
+struct IncompressibleSmagorinskyEffectiveOmega {
+  using MomentaF = typename MOMENTA::template type<DESCRIPTOR>;
+  using CollisionO = typename COLLISION::template type<DESCRIPTOR, MOMENTA, EQUILIBRIUM>;
+
+  template <concepts::Cell CELL, concepts::Parameters PARAMETERS, typename V=typename CELL::value_t>
+  V computeEffectiveOmega(CELL& cell, PARAMETERS& parameters) any_platform {
+    V piNeqNormSqr { };
+    MomentaF().computePiNeqNormSqr(cell, piNeqNormSqr);
+    V u[DESCRIPTOR::d];
+    MomentaF().computeU(cell, u);
+    //const V rho = MomentaF().computeRho(cell);
+    const V rho = cell.template getField<descriptors::RHO>();
+    const auto nablaRho = cell.template getField<descriptors::NABLARHO>();
+    V nablaRhoSqr = util::normSqr<V,DESCRIPTOR::d>(nablaRho);
+    V nablaRhoU = nablaRho[0]*u[0]+nablaRho[1]*u[1];
+    const V omega = parameters.template get<descriptors::OMEGA>();
+    const V smagorinsky = parameters.template get<collision::LES::SMAGORINSKY>();
+    V piNeqNorm = util::sqrt(piNeqNormSqr);
+    V preFactor = smagorinsky*smagorinsky
+                * descriptors::invCs2<V,DESCRIPTOR>()*descriptors::invCs2<V,DESCRIPTOR>()
+                * 2 * util::sqrt(2);
+    /// Molecular realaxation time
+    V tauMol = V{1} / omega;
+    /// Turbulent realaxation time
+    V tauTurb = V{0.5} * (util::sqrt(tauMol*tauMol + preFactor / rho * piNeqNorm) - tauMol);
+    /// Effective realaxation time
+    V tauEff = tauMol + tauTurb;
+    return  V{1} / tauEff;
+  }
+
+  template <concepts::Cell CELL, concepts::Parameters PARAMETERS, typename V=typename CELL::value_t>
+  CellStatistic<V> apply(CELL& cell, PARAMETERS& parameters) any_platform {
+    parameters.template set<descriptors::OMEGA>(
+      computeEffectiveOmega(cell, parameters));
+    return CollisionO().apply(cell, parameters);
+  }
+};
+
+template <typename COLLISION, typename DESCRIPTOR, typename MOMENTA, typename EQUILIBRIUM>
 struct LocalSmagorinskyEffectiveOmega {
   using MomentaF = typename MOMENTA::template type<DESCRIPTOR>;
   using CollisionO = typename COLLISION::template type<DESCRIPTOR, MOMENTA, EQUILIBRIUM>;
@@ -471,6 +510,24 @@ struct SmagorinskyEffectiveOmega {
 
   template <typename DESCRIPTOR, typename MOMENTA, typename EQUILIBRIUM>
   using type = detail::SmagorinskyEffectiveOmega<COLLISION,DESCRIPTOR,MOMENTA,EQUILIBRIUM>;
+};
+
+/// Compute dynamics parameter OMEGA locally using Smagorinsky LES model
+template <typename COLLISION>
+struct IncompressibleSmagorinskyEffectiveOmega {
+  using parameters = typename COLLISION::parameters::template include<
+    descriptors::OMEGA, LES::SMAGORINSKY
+  >;
+
+  static_assert(COLLISION::parameters::template contains<descriptors::OMEGA>(),
+                "COLLISION must be parametrized using relaxation frequency OMEGA");
+
+  static std::string getName() {
+    return "SmagorinskyEffectiveOmega<" + COLLISION::getName() + ">";
+  }
+
+  template <typename DESCRIPTOR, typename MOMENTA, typename EQUILIBRIUM>
+  using type = detail::IncompressibleSmagorinskyEffectiveOmega<COLLISION,DESCRIPTOR,MOMENTA,EQUILIBRIUM>;
 };
 
 template <typename COLLISION>

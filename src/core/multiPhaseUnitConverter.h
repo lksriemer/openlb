@@ -217,15 +217,13 @@ public:
     T latticeRelaxationTime,
     T latticeDensity,
     T charPhysLength,
-    T charPhysVelocity,
     T physViscosity,
     T physDensity,
-    T physSurfaceTension,
     T charPhysPressure = 0 ) : UnitConverter<T, DESCRIPTOR>(
         (charPhysLength/resolution),
         (latticeRelaxationTime - 0.5) / descriptors::invCs2<T,DESCRIPTOR>() * util::pow((charPhysLength/resolution),2) / physViscosity,
         charPhysLength,
-        charPhysVelocity,
+        0,
         physViscosity,
         (physDensity/latticeDensity),
         charPhysPressure),
@@ -234,28 +232,14 @@ public:
         this->_conversionViscosity * this->_conversionViscosity /
         this->_conversionLength ),
       _conversionChemicalPotential( this->_conversionVelocity * this->_conversionVelocity ),
-      _physSurfaceTension(physSurfaceTension),
-      _latticeSurfaceTension( physSurfaceTension / _conversionSurfaceTension ),
       clout(std::cout,"MultiPhaseUnitConv")
   {
-  };
-
-  /// return surface tension in physical units
-  constexpr T getPhysSurfaceTension(  ) const
-  {
-    return _physSurfaceTension;
   };
 
   /// access (read-only) to private member variable
   constexpr T getConversionFactorSurfaceTension() const
   {
     return _conversionSurfaceTension;
-  };
-
-  /// return lattice surface tension for parameter fitting
-  constexpr T getLatticeSurfaceTension(  ) const
-  {
-    return _latticeSurfaceTension;
   };
 
   /// access (read-only) to private member variable
@@ -271,19 +255,31 @@ public:
                  userViscosity / this->_conversionViscosity;
   };
 
+  /// compute lattice surface tension from physical one
+  constexpr T computeLatticeSurfaceTension( T userSurfaceTension ) const
+  {
+    return userSurfaceTension / this->_conversionSurfaceTension;
+  };
+
+  /// compute Reynolds from kinematic viscosity
+  constexpr T computeReynolds( T userVelocity, T userLength, T userViscosity ) const
+  {
+    return userVelocity * userLength / userViscosity;
+  };
+
+  /// compute Weber
+  constexpr T computeWeber( T userVelocity, T userLength, T userSurfaceTension ) const
+  {
+    return userLength * userVelocity * userVelocity / userSurfaceTension;
+  };
+
 /// nice terminal output for conversion factors, characteristical and physical data
   void print() const override;
 
 protected:
   // conversion factors
   const T _conversionSurfaceTension;            // J / m^2 = kg / s^2
-  const T _conversionChemicalPotential;            // J / kg = m^2 / s^2
-
-  // physical units, e.g characteristic or reference values
-  const T _physSurfaceTension;                  // J / m^2 = kg / s^2
-
-  // lattice units, discretization parameters
-  const T _latticeSurfaceTension;               // -
+  const T _conversionChemicalPotential;         // J / kg = m^2 / s^2
 
 private:
   mutable OstreamManager clout;

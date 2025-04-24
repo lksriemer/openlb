@@ -246,6 +246,50 @@ struct TRT {
   };
 };
 
+struct ITRT {
+  struct TAU_MINUS : public descriptors::FIELD_BASE<1> { };
+  struct MAXNABLARHO : public descriptors::FIELD_BASE<1> { };
+
+  using parameters = typename meta::list<descriptors::OMEGA,TAU_MINUS,MAXNABLARHO>;
+
+  static std::string getName() {
+    return "ITRT";
+  }
+
+  template <typename DESCRIPTOR, typename MOMENTA, typename EQUILIBRIUM>
+  struct type {
+    using MomentaF     = typename MOMENTA::template type<DESCRIPTOR>;
+    using EquilibriumF = typename EQUILIBRIUM::template type<DESCRIPTOR,MOMENTA>;
+
+    template <concepts::MinimalCell CELL, typename PARAMETERS, typename V=typename CELL::value_t>
+    CellStatistic<V> apply(CELL& cell, PARAMETERS& parameters) any_platform {
+      V fPlus[DESCRIPTOR::q], fMinus[DESCRIPTOR::q];
+      V fEq[DESCRIPTOR::q], fEqPlus[DESCRIPTOR::q], fEqMinus[DESCRIPTOR::q];
+      const auto statistic = EquilibriumF().compute(cell, parameters, fEq);
+      for (int iPop=0; iPop < DESCRIPTOR::q; ++iPop) {
+        fPlus[iPop]  = 0.5 * (cell[iPop] + cell[descriptors::opposite<DESCRIPTOR>(iPop)]);
+        fMinus[iPop] = 0.5 * (cell[iPop] - cell[descriptors::opposite<DESCRIPTOR>(iPop)]);
+      }
+      for (int iPop=0; iPop < DESCRIPTOR::q; ++iPop) {
+        fEqPlus[iPop]  = 0.5 * (fEq[iPop] + fEq[descriptors::opposite<DESCRIPTOR>(iPop)]);
+        fEqMinus[iPop] = 0.5 * (fEq[iPop] - fEq[descriptors::opposite<DESCRIPTOR>(iPop)]);
+      }
+
+      const V omega = parameters.template get<descriptors::OMEGA>();
+      V tau = V{1} / omega;
+      const V tau2 = parameters.template get<TAU_MINUS>();
+      const auto nablaRho = cell.template getField<descriptors::NABLARHO>();
+      V ratio = util::norm<DESCRIPTOR::d>(nablaRho) / parameters.template get<MAXNABLARHO>();
+      const V omega2 = V{1} / (tau + ratio * (tau2 - tau));
+
+      for (int iPop=0; iPop < DESCRIPTOR::q; ++iPop) {
+        cell[iPop] -= omega * (fPlus[iPop] - fEqPlus[iPop]) + omega2 * (fMinus[iPop] - fEqMinus[iPop]);
+      }
+      return statistic;
+    };
+  };
+};
+
 struct Revert {
   using parameters = typename meta::list<>;
 

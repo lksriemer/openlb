@@ -88,7 +88,7 @@ std::shared_ptr<IndicatorF3D<T>> makeInjectionTubeI(const UnitConverter<T,DESCRI
   Vector<T,3> origin(4.*converter.getCharPhysLength(),
                      5.5*converter.getCharPhysLength()+converter.getPhysDeltaX(),
                      5.5*converter.getCharPhysLength()+converter.getPhysDeltaX());
-  Vector<T,3> extend(80.*converter.getCharPhysLength(),
+  Vector<T,3> extend(60.*converter.getCharPhysLength(),
                      5.5*converter.getCharPhysLength()+converter.getPhysDeltaX(),
                      5.5*converter.getCharPhysLength()+converter.getPhysDeltaX());
   return std::shared_ptr<IndicatorF3D<T>>(new IndicatorCylinder3D<T>(extend, origin, 5.5*converter.getCharPhysLength()));
@@ -136,15 +136,15 @@ void prepareGeometry(const UnitConverter<T,DESCRIPTOR>& converter,
   }
 
   {
-    Vector<T,3> origin(80.*converter.getCharPhysLength()-converter.getPhysDeltaX(),
+    Vector<T,3> origin(60.*converter.getCharPhysLength()-converter.getPhysDeltaX(),
                        5.5*converter.getCharPhysLength()+converter.getPhysDeltaX(),
                        5.5*converter.getCharPhysLength()+converter.getPhysDeltaX());
-    Vector<T,3> extend(80.*converter.getCharPhysLength(),
+    Vector<T,3> extend(60.*converter.getCharPhysLength(),
                        5.5*converter.getCharPhysLength()+converter.getPhysDeltaX(),
                        5.5*converter.getCharPhysLength()+converter.getPhysDeltaX());
 
     IndicatorCylinder3D<T> cylinderOUT(extend, origin, 5.5*converter.getCharPhysLength());
-    superGeometry.rename(1,4,1, cylinderOUT);
+    superGeometry.rename(1,4, cylinderOUT);
   }
 
   superGeometry.clean();
@@ -245,7 +245,6 @@ void setBoundaryValues(const UnitConverter<T,DESCRIPTOR>& converter,
     vortex.setIntensityProfile(intensity);
   }
 
-  //const T startUpFactor = 0.1 * 1.0 / converter.getCharLatticeVelocity();
   const T startUpFactor = 0.001 * 1.0 / converter.getCharLatticeVelocity();
   const T maxStartTPhys = (60*converter.getCharPhysLength()/converter.getCharPhysVelocity()) * startUpFactor;
   const auto maxStartT = converter.getLatticeTime(maxStartTPhys);

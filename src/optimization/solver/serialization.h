@@ -516,6 +516,8 @@ C serialDataFromField(SuperLattice<T,DESCRIPTOR>& sLattice,
 template<
   typename S,
   template<typename,SolverMode> typename SOLVER,
+  concepts::Field CONTROLLED_FIELD,
+  template<typename...> typename PRIMAL_DYNAMICS,
   typename C>
 class OptiCaseDual;
 
@@ -530,16 +532,17 @@ class OptiCaseDual;
 /// @param solver the solver, whose FIELD data is taken
 /// @return vector with the field data
 template<
-  typename FIELD,
   typename T,
   template<typename,SolverMode> typename SOLVER,
+  concepts::Field CONTROLLED_FIELD,
+  template<typename...> typename PRIMAL_DYNAMICS,
   typename C=std::vector<T>>
-C serialDataFromField(OptiCaseDual<T,SOLVER,C>& optiCase,
+C serialDataFromField(OptiCaseDual<T,SOLVER,CONTROLLED_FIELD,PRIMAL_DYNAMICS,C>& optiCase,
   std::shared_ptr<SOLVER<T,SolverMode::Reference>> solver)
 {
   using descriptor = typename SOLVER<T,SolverMode::Reference>::AdjointLbSolver::DESCRIPTOR;
   return serialDataFromField<
-    FIELD, T, descriptor, C>(
+    CONTROLLED_FIELD, T, descriptor, C>(
     solver->lattice(),
     *(optiCase._serializer),
     *(optiCase._controlIndicator),
@@ -559,14 +562,15 @@ C serialDataFromField(OptiCaseDual<T,SOLVER,C>& optiCase,
 /// @param solver the solver, whose FIELD data is taken
 /// @return vector with the field data
 template<
-  typename FIELD,
   typename T,
   template<typename,SolverMode> typename SOLVER,
+  concepts::Field CONTROLLED_FIELD,
+  template<typename...> typename PRIMAL_DYNAMICS,
   typename C=std::vector<T>>
-C getControl(OptiCaseDual<T,SOLVER,C>& optiCase,
+C getControl(OptiCaseDual<T,SOLVER,CONTROLLED_FIELD,PRIMAL_DYNAMICS,C>& optiCase,
   std::shared_ptr<SOLVER<T,SolverMode::Reference>> solver)
 {
-  C result = serialDataFromField<FIELD,T,SOLVER,C>(optiCase, solver);
+  C result = serialDataFromField<T,SOLVER,CONTROLLED_FIELD,PRIMAL_DYNAMICS,C>(optiCase, solver);
   std::transform(result.begin(), result.end(), result.begin(), [&](auto r){
     return optiCase._projection->inverse(r);
   });

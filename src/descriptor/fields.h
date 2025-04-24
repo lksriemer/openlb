@@ -330,6 +330,7 @@ struct UY                   : public FIELD_BASE<1,  0, 0> { };
 struct UZ                   : public FIELD_BASE<1,  0, 0> { };
 struct TEMPGRADIENT         : public FIELD_BASE<0,  1, 0> { };
 struct AVERAGE_VELOCITY     : public FIELD_BASE<0,  1, 0> { };
+struct MAX_VELOCITY         : public FIELD_BASE<1,  0, 0> { };
 struct AVERAGE_DENSITY      : public FIELD_BASE<1,  0, 0> { };
 struct AVERAGE_TKE          : public FIELD_BASE<0,  1, 0> { };
 struct SOURCE               : public FIELD_BASE<1,  0, 0> { };
@@ -426,11 +427,13 @@ struct INTERPHASE_NORMAL    : public FIELD_BASE<0,  1, 0> { };
 struct MASS                 : public FIELD_BASE<1,  0, 0> { };
 struct CELL_TYPE            : public FIELD_BASE<1,  0, 0> { };
 struct BOUNDARY             : public FIELD_BASE<1,  0, 0> { };
+struct CONV_POPS            : public FIELD_BASE<0,  0, 1> { };
 struct SOURCE_OLD           : public FIELD_BASE<1,  0, 0> { };
 struct TOP                  : public FIELD_BASE<1,  0, 0> { };
 struct BOTTOM               : public FIELD_BASE<1,  0, 0> { };
 struct OLD_PHIU             : public FIELD_BASE<0,  1, 0> { };
-struct CONTACT_DETECTION    : public TYPED_FIELD_BASE<std::size_t, 1, 0, 0> { };
+struct PHIWETTING           : public FIELD_BASE<1, 0, 0> { };
+struct CONTACT_DETECTION    : public TYPED_FIELD_BASE<size_t, 1,  0, 0> { };
 struct POROSITY             : public FIELD_BASE<1,  0, 0> {
   template <typename T, typename DESCRIPTOR>
   static constexpr auto getInitialValue() {

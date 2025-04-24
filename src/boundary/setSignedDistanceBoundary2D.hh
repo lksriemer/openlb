@@ -64,9 +64,17 @@ void setSignedDistanceBoundary(BlockLattice<T,DESCRIPTOR>& block, BlockIndicator
     if (blockGeometryStructure.getNeighborhoodRadius({iX, iY}) >= margin
         && indicator(iX, iY)) {
       discreteNormal = indicator.getBlockGeometry().getStatistics().getType(iX, iY);
-      block.addPostProcessor(typeid(stage::IterativePostProcess),{iX,iY},
-        promisePostProcessorForNormal<T,DESCRIPTOR,normGradPsiBoundary2D>(
-        Vector<int,2>(discreteNormal.data() + 1)));
+      T discreteNormalSum=0;
+      for (int iD=0; iD<DESCRIPTOR::d; iD++) {
+        discreteNormalSum += abs(discreteNormal[iD+1]);
+      }
+      if (discreteNormalSum == 0) {
+        block.addPostProcessor(typeid(stage::IterativePostProcess),{iX,iY},meta::id<normGradPsi>{});
+      } else {
+        block.addPostProcessor(typeid(stage::IterativePostProcess),{iX,iY},
+          promisePostProcessorForNormal<T,DESCRIPTOR,normGradPsiBoundary2D>(
+          Vector<int,2>(discreteNormal.data() + 1)));
+      }
     }
   });
 }

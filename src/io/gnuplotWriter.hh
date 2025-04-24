@@ -271,7 +271,7 @@ void Gnuplot<T>::writePlotFile(std::string type, std::string plotName)
     fout << "set yrange [" << _ymin << ":" << _ymax << "]" << "\n";
 
     /// Setting log scales for individual axes
-    if ( xlog ) { 
+    if ( xlog ) {
         fout << "set logscale x " << xlogn << "\n";
         //fout << "set format x '" << xlogn << "^{%.0f}'\n";
     }

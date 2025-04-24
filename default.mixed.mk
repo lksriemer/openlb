@@ -79,7 +79,8 @@ EXPLICIT_CLASS_INSTANTIATION_LINKER := \
 	ConcreteParametersD \
 	unique_ptr \
 	StatisticsPostProcessor \
-	IntegratePorousElementFieldsO
+	IntegratePorousElementFieldsO \
+	BlockLatticeFieldReduction
 
 OLB_MIXED_MODE_INCLUDE := \#include <olb.h>\n
 ifdef OLB_MIXED_MODE_INCLUDE_CPP

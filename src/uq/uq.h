@@ -26,13 +26,13 @@
 #define UQ_H
 
 #include "distribution.h"
-#include "generalized_polynomial_chaos.h"
-#include "latin_hypercube_sampling.h"
-#include "monte_carlo.h"
+#include "generalizedPolynomialChaos.h"
+#include "latinHypercubeSampling.h"
+#include "monteCarlo.h"
 #include "polynomial.h"
 #include "postprocessing.h"
-#include "quasi_monte_carlo.h"
-#include "uncertainty_quantification.h"
-#include "utils.h"
+#include "quasiMonteCarlo.h"
+#include "uncertaintyQuantification.h"
+#include "filesIO.h"
 
 #endif // UQ_H

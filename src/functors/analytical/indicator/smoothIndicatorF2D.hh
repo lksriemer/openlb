@@ -569,24 +569,10 @@ Vector<S,2> SmoothIndicatorFactoredCircle2D<T, S, PARTICLE>::calcMofiAndMass( co
 template <typename T, typename S, bool PARTICLE>
 bool SmoothIndicatorFactoredCircle2D<T,S,PARTICLE>::operator()(T output[], const S input[])
 {
-  double distToCenter2 = util::pow(this->getPos()[0]-input[0], 2) +
-                         util::pow(this->getPos()[1]-input[1], 2);
-  /*double d = util::sqrt(distToCenter2) - this->_radius + this->getEpsilon()/2;
+  T distToCenter2 = util::pow(this->getPos()[0]-input[0], 2) +
+                    util::pow(this->getPos()[1]-input[1], 2);
 
-  if(d <= 0){
-    output[0] = T(this->_factor);
-    return true;
-  }
-  else if(d > 0 && d <= this->getEpsilon()){
-    output[0] = T(- this->_factor*(d-this->getEpsilon())/this->getEpsilon());
-    return true;
-  }
-  else{
-    output[0] = 0;
-    return false;
-  }*/
-
-  double d = util::sqrt(distToCenter2) - this->_radius;
+  T d = util::sqrt(distToCenter2) - this->_radius;
   output[0] = T(this->_factor*(1.-tanh(d/this->getEpsilon()))/2.);
   return true;
 }
@@ -630,36 +616,24 @@ bool SmoothIndicatorFactoredCuboid2D<T,S,PARTICLE>::operator()(T output[], const
   T d;
   if(_xLength == 0){
     T distToCenter2 = util::pow(this->getPos()[1]-input[1], 2);
-    d = util::sqrt(distToCenter2) - this->_yLength/2. /*+ this->getEpsilon()/2*/;
+    d = util::sqrt(distToCenter2) - this->_yLength/2.;
   }
   else if(_yLength == 0){
     T distToCenter2 = util::pow(this->getPos()[0]-input[0], 2);
-    d = util::sqrt(distToCenter2) - this->_xLength/2. + this->getEpsilon()/2;
+    d = util::sqrt(distToCenter2) - this->_xLength/2.;
   }
   else{
     T distToCenter2x = util::pow(this->getPos()[0]-input[0], 2);
     T distToCenter2y = util::pow(this->getPos()[1]-input[1], 2);
     T ratio = util::sqrt(distToCenter2y)/util::sqrt(distToCenter2x);
     if(ratio >= _yLength/_xLength){
-      d = util::sqrt(distToCenter2y) - this->_yLength/2. + this->getEpsilon()/2;
+      d = util::sqrt(distToCenter2y) - this->_yLength/2.;
     }
     else{
-      d = util::sqrt(distToCenter2x) - this->_xLength/2. + this->getEpsilon()/2;
+      d = util::sqrt(distToCenter2x) - this->_xLength/2.;
     }
   }
 
-  /*if(d <= 0){
-    output[0] = T(this->_factor);
-    return true;
-  }
-  else if(d > 0 && d <= this->getEpsilon()){
-    output[0] = T(- this->_factor*(d-this->getEpsilon())/this->getEpsilon());
-    return true;
-  }
-  else{
-    output[0] = 0;
-    return false;
-  }*/
   output[0] = T(this->_factor*(1.-tanh(d/this->getEpsilon()))/2.);
   return true;
 }

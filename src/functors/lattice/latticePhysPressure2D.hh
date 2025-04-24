@@ -73,5 +73,37 @@ bool BlockLatticePhysPressure2D<T,DESCRIPTOR>::operator() (T output[], const int
   return true;
 }
 
+
+template<typename T,typename DESCRIPTOR>
+SuperLatticePhysIncPressure2D<T,DESCRIPTOR>::SuperLatticePhysIncPressure2D(
+  SuperLattice<T,DESCRIPTOR>& sLattice, const UnitConverter<T,DESCRIPTOR>& converter)
+  : SuperLatticePhysF2D<T,DESCRIPTOR>(sLattice, converter, 1)
+{
+  this->getName() = "physIncPressure";
+  int maxC = this->_sLattice.getLoadBalancer().size();
+  this->_blockF.reserve(maxC);
+  for (int iC = 0; iC < maxC; iC++) {
+    this->_blockF.emplace_back(new BlockLatticePhysIncPressure2D<T,DESCRIPTOR>(this->_sLattice.getBlock(iC), this->_converter));
+  }
+}
+
+template <typename T, typename DESCRIPTOR>
+BlockLatticePhysIncPressure2D<T,DESCRIPTOR>::BlockLatticePhysIncPressure2D
+(BlockLattice<T,DESCRIPTOR>& blockLattice, const UnitConverter<T,DESCRIPTOR>& converter)
+  : BlockLatticePhysF2D<T,DESCRIPTOR>(blockLattice,converter,1)
+{
+  this->getName() = "physIncPressure";
+}
+
+
+template <typename T, typename DESCRIPTOR>
+bool BlockLatticePhysIncPressure2D<T,DESCRIPTOR>::operator() (T output[], const int input[])
+{
+  T latticePressure = this->_blockLattice.get( input[0], input[1] ).computeRho();
+  output[0] = this->_converter.getPhysPressure(latticePressure);
+
+  return true;
+}
+
 }
 #endif

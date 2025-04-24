@@ -45,7 +45,6 @@ private:
     }
   }
 
-// initial solution of the TGV
 public:
   FringeZoneSmagorinskyConstant(const UnitConverter<T,_DESCRIPTOR>& converter,
                                 T bulkSmagorinskyConstant)
@@ -58,53 +57,52 @@ public:
   bool operator()(T output[], const T input[]) override {
     const T x = input[0];
 
-    T empiricalK = 200.; // increase if required Re=10^4 -> 200, Re 2*10^4 - 300
-    //T empiricalP = 3.;
+    T empiricalK = 200.;                       // increase if required Re=10^4 -> 200, Re 2*10^4 - 300
     T xStart = 45.*charPhysLength-physDeltaX;  // T xStart = 55.*charPhysLength-physDeltaX;
-    T xEnd = 70.*charPhysLength; //60.*charPhysLength-2.*physDeltaX; // if inside domain
-    T xRise = 15.*charPhysLength;  // T xRise = 5.*charPhysLength;
+    T xEnd = 70.*charPhysLength;               // 60.*charPhysLength-2.*physDeltaX; // if inside domain
+    T xRise = 15.*charPhysLength;              // T xRise = 5.*charPhysLength;
     T xFall = 2.*charPhysLength;
+
     // OPTION A:
-    /*
-     *                 empiricalK*csBulk
-     *               _____________
+    /* Adaption of fringe zone [Lundbladh et al. 1999, url: http://www.fluidosol.se/thesismod/paper9.pdf]
+     *
+     *               _____________ ................. empiricalK*csBulk
      *              /             \
      *             /               \
      *            /                 \
      *           /                   \
      *          /                     \
-     * ________/                       \________
-     *         |xStart                | xEnd
+     * ________/                       \________ ... csBulk
+     *         |xStart                 |xEnd
      *         |-----|           |-----|
      *          xRise             xFall
      *
-     * Adaption of fringe zone [Lundbladh et al., 1999, url: http://www.fluidosol.se/thesismod/paper9.pdf]
-     * fringe function:
-     * empiricalK*csBulk: maximal Smagorinsky constant
-     * xStart: begin of the fringe zone
-     * xEnd: end of the fringe zone
-     * bRise: rise distance
-     * bFall: fall distance
+     * Fringe function:
+     *  empiricalK*csBulk   (maximal Smagorinsky constant)
+     *  xStart              (begin of the fringe zone)
+     *  xEnd                (end of the fringe zone)
+     *  bRise               (rise distance)
+     *  bFall               (fall distance)
      *
      * S is a smooth step function:
-     * S(x)=0,     for x<=0
-     * S(x)=1/( 1 + util::exp( (1/(x-1)) + (1/x) ) ),  for 0<x<1,
-     * S(x)=1,     for x>=1.
+     *   S(x)=0,                                         for x<=0,
+     *   S(x)=1/( 1 + util::exp( (1/(x-1)) + (1/x) ) ),  for 0<x<1,
+     *   S(x)=1,                                         for x>=1.
      */
     output[0] = csBulk*(empiricalK*(s((x - xStart)/xRise ) - s((x - xEnd)/xFall + T(1.)) ) + 1.0);
 
     // OPTION B:
-    /* Adaption of sponge zone [Xue, Yao, Davidson, 2022, doi: 10.1063/5.0090641]
-     * \nu_{sponge} = \nu_{eff} [ K ( (x - x_{start})/(x_{end}-x_{start}) )^{p} + 1 ],
-     * where:
-     * K = 1000  (empirical)
-     * p = 3     (empirical)
-     * \nu_{eff} (as always, effective viscosity of LBM LES scheme)
-     * x_{start} (starting point of sponge layer)
-     * x_{end}   (end point of sponge layer)
-     * x         (current grid point of evaluation)
+    /* Adaption of sponge zone [Xue et al. 2022, doi: 10.1063/5.0090641]
      *
-     * Here:
+     *  \nu_{sponge} = \nu_{eff} [ K ( (x - x_{start})/(x_{end}-x_{start}) )^{p} + 1 ],
+     * where:
+     *  K = 1000  (empirical)
+     *  p = 3     (empirical)
+     *  \nu_{eff} (as always, effective viscosity of LBM LES scheme)
+     *  x_{start} (starting point of sponge layer)
+     *  x_{end}   (end point of sponge layer)
+     *  x         (current grid point of evaluation)
+     *
      * Sponge Smagorinsky constant as function of spatial location in x.
      * The constant effectuates a change of viscosity by a factor of order O(K(x-...)^{p}+1).
      */

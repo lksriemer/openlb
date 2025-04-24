@@ -42,8 +42,6 @@ namespace olb {
 
 namespace opti {
 
-enum ControlType {ForceControl, PorosityControl};
-
 template<typename S, unsigned dim>
 class GeometrySerializer;
 
@@ -66,6 +64,8 @@ class DistributedObjective;
 template<
   typename S,
   template<typename,SolverMode> typename SOLVER,
+  concepts::Field CONTROLLED_FIELD,
+  template<typename...> typename PRIMAL_DYNAMICS,
   typename C = std::vector<S>>
 class OptiCaseDual : public OptiCase<S,C> {
 
@@ -73,19 +73,16 @@ private:
   mutable OstreamManager                           clout {std::cout, "OptiCaseDual"};
   using descriptor = typename SOLVER<S,SolverMode::Reference>::AdjointLbSolver::DESCRIPTOR;
   static constexpr unsigned dim = descriptor::d;
+  static constexpr unsigned fieldDim = CONTROLLED_FIELD::template size<descriptor>();
 
 public:
   bool                                             _verbose {true};
   /// upper limit for the number of control variables (#voxels * field-dimension)
   std::size_t                                      _dimCtrl;
 
-  /// Either force or porosity field
-  ControlType                                      _controlType;
   StartValueType                                   _startValueType {Control};
   std::string                                      _projectionName;
 
-  /// Spatial dimension of controlled field
-  int                                              _fieldDim;
   /// Marks, where there are active control variables
   std::shared_ptr<SuperIndicatorF<S,dim>>          _controlIndicator;
 
@@ -97,7 +94,6 @@ public:
 
   std::shared_ptr<DistributedObjective<S,SOLVER>>  _objective;
 
-  bool                                             _computeReference {false};
   std::shared_ptr<SuperGeometry<S,dim>>            _primalGeometry;
   // this lattice is not used for simulations, but rather for functor syntax
   std::shared_ptr<SuperLattice<S,descriptor>>      _refLattice;
@@ -148,6 +144,7 @@ private:
 
   void derivativesFromDualSolution(C& derivatives);
 
+  void derivativesFromDualSolutionPointwise(C& derivatives, LatticeR<dim+1> latticeR);
 };
 
 

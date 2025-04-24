@@ -146,7 +146,7 @@ void prepareLattice( UnitConverter<T,DESCRIPTOR> const& converter,
       boundary::set<boundary::LocalVelocity>(sLattice, superGeometry, 2);
     }
     else {
-      boundary::set<boundary::InterpolatedVelocity>(sLattice, superGeometry, 3);
+      boundary::set<boundary::InterpolatedVelocity>(sLattice, superGeometry, 2);
     }
   }
 
@@ -577,7 +577,7 @@ int readParameters(int argc, char** argv,
       clout<<"FlowType: 0=forced, 1=nonForced"<<std::endl;
       clout<<"BoundaryType: 0=bounceBack, 1=local, "
            <<"2=interpolated, 3=freeSlip, 4=partialSlip"<<std::endl;
-      clout<<"Default: Resolution=50, FlowType=forced, "
+      clout<<"Default: Resolution=50, FlowType=nonForced, "
            <<"BoundaryType=interpolated"<<std::endl;
       return 0;
     }

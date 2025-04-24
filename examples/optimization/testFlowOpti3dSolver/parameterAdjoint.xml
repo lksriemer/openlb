@@ -11,11 +11,11 @@
     <PhysParameters>
       <CharPhysLength> 1 </CharPhysLength>
       <CharPhysVelocity> 1 </CharPhysVelocity>
-      <PhysDensity> 1. </PhysDensity> <!-- 1200.0 -->
-      <CharPhysPressure> 0. </CharPhysPressure> <!-- 0.0 -->
-      <PhysViscosity> 0.1 </PhysViscosity> <!-- 0.01 -->
-      <PhysMaxTime> 6.0 </PhysMaxTime> <!-- 8.0 -->
-      <StartUpTime> 4.0 </StartUpTime> <!-- 5.0 -->
+      <PhysDensity> 1. </PhysDensity>
+      <CharPhysPressure> 0. </CharPhysPressure>
+      <PhysViscosity> 0.1 </PhysViscosity>
+      <PhysMaxTime> 6.0 </PhysMaxTime>
+      <StartUpTime> 4.0 </StartUpTime>
       <BoundaryValueUpdateTime> 0.001 </BoundaryValueUpdateTime>
     </PhysParameters>
     <Mesh>
@@ -35,15 +35,15 @@
 
   <Optimization>
     <ControlMaterial> 1 </ControlMaterial>
-    <ControlType> Force </ControlType>
     <CuboidWiseControl> true </CuboidWiseControl>
-    <!--<DimensionControl> 2918700 </DimensionControl>-->
     <FailOnMaxIter> false </FailOnMaxIter>
     <FieldDimension> 3 </FieldDimension>
     <L> 20 </L>
-    <Lamda> 1. </Lamda>
-    <MaxIter> 10 </MaxIter>
-    <MaxStepAttempts> 20 </MaxStepAttempts>
+    <Lambda> 1. </Lambda>
+    <MaxIter> 15 </MaxIter>
+    <MaxStepAttempts> 10 </MaxStepAttempts>
+    <Tolerance> 2.e-5 </Tolerance>
+    <ControlTolerance> 0 </ControlTolerance>
     <Projection> ForceFactor </Projection>
     <ReferenceSolution> true </ReferenceSolution>
     <RegAlpha> 0 </RegAlpha>

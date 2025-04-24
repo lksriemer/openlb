@@ -26,6 +26,8 @@
 // in a shear flow. (cf. https://doi.org/10.1016/j.camwa.2010.03.057)
 // Identical simulation parameters are chosen as in the publication.
 
+#undef PARALLEL_MODE_MPI
+
 #include "olb3D.h"
 #include "olb3D.hh"
 

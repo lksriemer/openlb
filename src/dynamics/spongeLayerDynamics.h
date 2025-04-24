@@ -22,10 +22,10 @@
 */
 
 /* spongeLayerDynamics.h:
- * Implements the absorbing layer described in equation (24) of 
- * H. Xu and P. Sagaut, “Analysis of the absorbing layers for the 
- * weakly-compressible lattice Boltzmann methods”, Journal of 
- * Computational Physics, vol. 245, pp. 14–42, Jul. 2013, 
+ * Implements the absorbing layer described in equation (24) of
+ * H. Xu and P. Sagaut, “Analysis of the absorbing layers for the
+ * weakly-compressible lattice Boltzmann methods”, Journal of
+ * Computational Physics, vol. 245, pp. 14–42, Jul. 2013,
  * doi: 10.1016/j.jcp.2013.02.051.
 */
 
@@ -62,13 +62,13 @@ public:
     const V uyRef = cell.template getField<descriptors::UY>();
     const V uzRef = cell.template getField<descriptors::UZ>();
     const V uRef[3] = {uxRef, uyRef, uzRef};
-    
+
     const V omega = parameters.template get<descriptors::OMEGA>();
     const V sigma = cell.template getField<descriptors::DAMPING>();
 
     V fEqRef[DESCRIPTOR::q] { };
     EquilibriumF().compute(cell, rhoRef, uRef, fEqRef);
-    
+
     for (int iPop=0; iPop < DESCRIPTOR::q; ++iPop) {
       cell[iPop] = cell[iPop] + omega * ( fEq[iPop] - cell[iPop]) + sigma * ( fEqRef[iPop] - fEq[iPop] );
     }

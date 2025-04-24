@@ -33,3 +33,4 @@
 #include "fringe2D.hh"
 #include "interpolationF2D.hh"
 #include "indicator/indicator2D.hh"
+#include "phaseFieldF2D.hh"

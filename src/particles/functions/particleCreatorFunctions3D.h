@@ -774,11 +774,9 @@ const Vector<T,3> ang_velocity = Vector<T,3> (0.) /*arround principle axis*/, in
   communication::forSystemsInSuperParticleSystem( sParticleSystem,
   [&](ParticleSystem<T,PARTICLETYPE>& particleSystem, int iC, int globiC){
 
-    //Do only on residence iC
-    if (globiC == globiCcentre){
-      //Run creator on particleSystem
-      T a = diameter/2.;//semi_minor_axis
-      T beta = length/diameter;
+  //Do only on residence iC
+  if (globiC == globiCcentre){
+    //Run creator on particleSystem
 
   addSubgridEulerRotationSpheroid( particleSystem,
     position, length, diameter, density, eul_ang, velocity, ang_velocity, label );
@@ -821,7 +819,6 @@ const Vector<T,3> ang_velocity = Vector<T,3> (0.) /*arround principle axis*/, in
     if (globiC == globiCcentre){
       //Run creator on particleSystem
       T a = diameter/2.;//semi_minor_axis
-      T beta = length/diameter;
 
   addSubgridEulerRotationSpheroid( particleSystem,
     position, length, diameter, density, eul_quat, velocity, ang_velocity, label );

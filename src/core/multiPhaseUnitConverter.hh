@@ -81,7 +81,6 @@ void MultiPhaseUnitConverterFromRelaxationTime<T, DESCRIPTOR>::print() const
   clout << "Lattice velocity:                           latticeU=                       " << this->getCharLatticeVelocity() << std::endl;
   clout << "Lattice relaxation frequency:               omega=                          " << this->getLatticeRelaxationFrequency() << std::endl;
   clout << "Lattice relaxation time:                    tau=                            " << this->getLatticeRelaxationTime() << std::endl;
-  clout << "Lattice Surface Tension(J/m^2):             latSurfaceTension=              " << getLatticeSurfaceTension() << std::endl;
   clout << "--------------------- Parameters in physical units: --------------------" << std::endl;
   clout << "Characteristical length(m):                 charL=                          " << this->getCharPhysLength() << std::endl;
   clout << "Characteristical speed(m/s):                charU=                          " << this->getCharPhysVelocity() << std::endl;
@@ -90,7 +89,6 @@ void MultiPhaseUnitConverterFromRelaxationTime<T, DESCRIPTOR>::print() const
   clout << "Reynolds number:                            reynoldsNumber=                 " << this->getReynoldsNumber() << std::endl;
   clout << "Phys. Delta X(m):                           physDeltaX=                     " << this->getPhysDeltaX() << std::endl;
   clout << "Phys. Delta T(s):                           physDeltaT=                     " << this->getPhysDeltaT() << std::endl;
-  clout << "Phys. Surface Tension(J/m^2):               physSurfaceTension=             " << getPhysSurfaceTension() << std::endl;
 
   clout << "----------------- Conversion factors:-----------------------------------" << std::endl;
   clout << "Voxel length(m):                            physDeltaX=                     " << this->getConversionFactorLength() << std::endl;

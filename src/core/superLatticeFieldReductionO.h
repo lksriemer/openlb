@@ -128,6 +128,7 @@ public:
     for (int iC = 0; iC < load.size(); ++iC) {
       auto& block         = _sLattice.getBlock(iC);
       auto& elementsBlock = _superReducedFieldD->getBlock(iC);
+      elementsBlock.resize(1);
       block.template setParameter<fields::array_of<FIELD>>(elementsBlock.template getField<FIELD>());
     }
 

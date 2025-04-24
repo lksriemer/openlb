@@ -1,6 +1,6 @@
 /*  Lattice Boltzmann sample, written in C++, using the OpenLB library
  *
- *  Copyright (C) 2024 Fedor Bukreev, Adrian Kummerlaender,
+ *  Copyright (C) 2025 Fedor Bukreev, Adrian Kummerlaender, Yuji (Sam) Shimojima,
  *                     Jonathan Jeppener-Haltenhoff, Marc Haußmann,
  *                     Mathias J. Krause
  *  E-mail contact: info@openlb.net
@@ -40,9 +40,9 @@ using namespace olb::descriptors;
 using namespace olb::util;
 
 using T = FLOATING_POINT_TYPE;
-using DESCRIPTOR = D3Q19<FORCE,STRAINRATE>;
+using DESCRIPTOR = D3Q19<FORCE,TENSOR,VELOCITY,POROSITY,VELOCITY2>;
 
-#define HRR
+#define HRR_COLLISION
 
 // Parameters for the simulation setup
 const int N = 40;
@@ -50,7 +50,7 @@ const T physRefL = 1.0;     // half channel height in meters
 const T lx = 2. * std::numbers::pi_v<T> * physRefL;  // streamwise length in meters
 const T ly = 2. * std::numbers::pi_v<T> * physRefL/10.;  // spanwise length in meters
 const T lz = 2. * physRefL;       // wall-normal length in meters
-#ifdef HRR
+#ifdef HRR_COLLISION
 const T hybridConst = 0.99;   // very strong influence of numerical diffusion. 0.99 meand 1% FDM strain rate tensor, which is already enough!
 #endif
 
@@ -98,13 +98,6 @@ T charPhysNu = 5./100000.;
 T charPhysNu = 2.3/100000.;
 #endif
 
-// number of forcing updates over simulation time
-#if defined (Case_ReTau_1000)
-T fluxUpdates = 4000;
-#elif defined (Case_ReTau_2000)
-T fluxUpdates = 4000;
-#endif
-
 // physical simulated length adapted for lattice distance to boundary in meters
 const T adaptedPhysSimulatedLength = 2 * physRefL / ( 1. - 2./N*(1.-latticeWallDistance) );
 // Characteristic physical mean bulk velocity from Dean correlations in meters - Malaspinas and Sagaut (2014)
@@ -125,6 +118,22 @@ std::default_random_engine generator(seed);
 #else
 std::default_random_engine generator(0x1337533DAAAAAAAA);
 #endif
+
+struct CellSpatialCalculationVelocityField {
+  static constexpr OperatorScope scope = OperatorScope::PerCell;
+  int getPriority() const { return 2; }
+
+  template <typename CELL>
+  void apply(CELL& cell) any_platform
+  {
+    //every value is the lattice(non-dimensional) unit
+    using DESCRIPTOR = typename CELL::descriptor_t;
+    using V          = typename CELL::value_t;
+    Vector<V, DESCRIPTOR::d> lattice_u {};
+    cell.computeU(lattice_u.data());
+    cell.template setField<descriptors::VELOCITY2>(lattice_u);
+  }
+};
 
 template <typename T, typename S>
 class Channel3D : public AnalyticalF3D<T,S> {
@@ -167,38 +176,6 @@ public:
   };
 };
 
-template <typename T, typename S>
-class TrackedForcing3D : public AnalyticalF3D<T,S> {
-protected:
-  const T _um;
-  const T _utau;
-  const T _h2;
-  T _aveVelocity;
-
-public:
-  TrackedForcing3D(UnitConverter<T,DESCRIPTOR> const& converter, int ReTau)
-    : AnalyticalF3D<T, S>(3)
-    , _um{converter.getCharPhysVelocity()}
-    , _utau{ReTau * converter.getPhysViscosity()/physRefL}
-    , _h2{physRefL}
-    , _aveVelocity{_um}
-  { };
-
-  void updateAveVelocity(T newVel)
-  {
-    _aveVelocity = newVel;
-  }
-
-  bool operator()(T output[], const S input[])
-  {
-    output[0] = util::pow(_utau, 2)/_h2 + (_um - _aveVelocity)*_um/_h2;
-    output[1] = 0;
-    output[2] = 0;
-
-    return true;
-  };
-};
-
 void prepareGeometry(SuperGeometry<T,3>& superGeometry,
                      IndicatorF3D<T>& indicator,
                      const UnitConverter<T,DESCRIPTOR>& converter)
@@ -226,15 +203,16 @@ void prepareGeometry(SuperGeometry<T,3>& superGeometry,
 // set up initial conditions
 void setInitialConditions(SuperLattice<T, DESCRIPTOR>& sLattice,
                           const UnitConverter<T,DESCRIPTOR>& converter,
-                          SuperGeometry<T,3>& superGeometry,
-                          AnalyticalScaled3D<T, T>& forceSolScaled,
-                          TrackedForcing3D<T, T>& forceSol)
+                          SuperGeometry<T,3>& superGeometry)
 {
   OstreamManager clout(std::cout, "setInitialConditions");
   clout << "Set initial conditions ..." << std::endl;
 
   AnalyticalConst3D<T, T> rho(1.);
   AnalyticalConst3D<T, T> rho0(0.);
+  AnalyticalConst3D<T, T> u0(0.,0.,0.);
+  AnalyticalConst3D<T,T> tag1(1);
+  AnalyticalConst3D<T,T> tag0(0);
   Channel3D<T, T> uSol(converter, 1.);
 
   sLattice.defineRhoU(superGeometry, 1, rho, uSol);
@@ -243,11 +221,15 @@ void setInitialConditions(SuperLattice<T, DESCRIPTOR>& sLattice,
   sLattice.defineRhoU(superGeometry, 2, rho, uSol);
   sLattice.iniEquilibrium(superGeometry, 2, rho, uSol);
 
-  // Force Initialization
-  forceSol.updateAveVelocity(converter.getCharPhysVelocity()); // New average velocity
-
-  // Initialize force
-  sLattice.defineField<descriptors::FORCE>(superGeometry, 1, forceSolScaled);
+  sLattice.defineField<reduction::TAGS_U>(superGeometry, 1, tag1);
+  sLattice.defineField<reduction::TAGS_U>(superGeometry.getMaterialIndicator({0,2}), tag0);
+  sLattice.defineField<descriptors::VELOCITY2>(superGeometry.getMaterialIndicator({0,1,2}), uSol);
+  sLattice.defineField<descriptors::VELOCITY>(superGeometry.getMaterialIndicator({0,1,2}), u0);
+  sLattice.defineField<FORCE>(superGeometry.getMaterialIndicator({0,1,2}), u0);
+  sLattice.defineField<descriptors::POROSITY>(superGeometry.getMaterialIndicator({0,2}), rho0);
+  sLattice.defineField<descriptors::POROSITY>(superGeometry, 1, rho);
+  sLattice.addPostProcessor<stage::PostStream>(superGeometry.getMaterialIndicator({1,2}),
+                                               meta::id<CellSpatialCalculationVelocityField>{});
 
   clout << "Set initial conditions ... OK" << std::endl;
 }
@@ -256,10 +238,7 @@ void setInitialConditions(SuperLattice<T, DESCRIPTOR>& sLattice,
 void prepareLattice(SuperLattice<T,DESCRIPTOR>& sLattice,
                     const UnitConverter<T,DESCRIPTOR>& converter,
                     SuperGeometry<T,3>& superGeometry,
-                    AnalyticalScaled3D<T, T>& forceSolScaled,
-                    TrackedForcing3D<T, T>& forceSol,
-                    WallModelParameters<T>& wallModelParameters
-                   )
+                    WallModelParameters<T>& wallModelParameters)
 {
   OstreamManager clout(std::cout,"prepareLattice");
   clout << "Prepare Lattice ..." << std::endl;
@@ -267,7 +246,7 @@ void prepareLattice(SuperLattice<T,DESCRIPTOR>& sLattice,
   /// Material=1 -->bulk dynamics
   setTurbulentWallModelDynamics(sLattice, superGeometry, 1, wallModelParameters);
   sLattice.defineDynamics<BounceBack>(superGeometry, 2);
-#ifdef HRR
+#ifdef HRR_COLLISION
   sLattice.addPostProcessor<stage::PostStream>(superGeometry.getMaterialIndicator({1}),
                                                meta::id<FDMstrainRateTensorPostProcessor>{});
   AnalyticalConst3D<T, T> hybrid(hybridConst);
@@ -278,7 +257,7 @@ void prepareLattice(SuperLattice<T,DESCRIPTOR>& sLattice,
 
   /// === Set Initial Conditions == ///
   setTurbulentWallModel(sLattice, superGeometry, 2, wallModelParameters);
-  setInitialConditions(sLattice, converter, superGeometry, forceSolScaled, forceSol);
+  setInitialConditions(sLattice, converter, superGeometry);
 
   sLattice.setParameter<descriptors::OMEGA>( converter.getLatticeRelaxationFrequency() );
   sLattice.setParameter<collision::LES::SMAGORINSKY>(T(0.12));
@@ -298,7 +277,7 @@ void getResults(SuperLattice<T, DESCRIPTOR>& sLattice,
 {
   OstreamManager clout(std::cout, "getResults");
 
-  const T checkstatistics = (T)maxPhysT/200.;
+  const T checkstatistics = converter.getPhysTime(100);//(T)maxPhysT/200.;
 
   SuperVTMwriter3D<T> vtmWriter("channel3d");
   SuperLatticePhysVelocity3D velocity(sLattice, converter);
@@ -307,6 +286,7 @@ void getResults(SuperLattice<T, DESCRIPTOR>& sLattice,
   vtmWriter.addFunctor(pressure);
   vtmWriter.addFunctor(sAveragedVel);
   vtmWriter.addFunctor(sAveragedPress);
+
 
   if (iT == 0) {
     // Writes the geometry, cuboid no. and rank no. as vti file for visualization
@@ -339,6 +319,7 @@ void getResults(SuperLattice<T, DESCRIPTOR>& sLattice,
   }
 
   if (iT%converter.getLatticeTime(checkstatistics)/*converter.getLatticeTime(maxPhysT/20)*/==0 || iT==converter.getLatticeTime(maxPhysT)-1) {
+    sLattice.setProcessingContext(ProcessingContext::Evaluation);
     // Writes the vtk files
     vtmWriter.write(iT);
   }
@@ -402,25 +383,6 @@ int main(int argc, char* argv[])
   /// === 3rd Step: Prepare Lattice ===
   SuperLattice<T, DESCRIPTOR> sLattice(superGeometry);
 
-  //forcing of the channel
-  TrackedForcing3D<T,T> forceSol(converter, ReTau);
-  AnalyticalScaled3D<T,T> forceSolScaled(forceSol, 1./(converter.getConversionFactorForce()/converter.getConversionFactorMass()));
-
-  int input[3] { };
-  T output[5] { };
-
-  Vector<T,3> normal( 1, 0, 0 );
-  std::vector<int> normalvec{ 1, 0, 0 };
-  Vector<T,3> center;
-  for (int i = 0 ; i <3; ++i) {
-    center[i] = origin[i] + extend[i]/2;
-  }
-  SuperLatticePhysVelocity3D<T, DESCRIPTOR> velocity(sLattice, converter);
-  std::vector<int> materials;
-  materials.push_back( 1 );
-
-  std::list<int> materialslist;
-  materialslist.push_back( 1 );
 
   WallModelParameters<T> wallModelParameters;
   wallModelParameters.bodyForce = bodyForce;
@@ -432,11 +394,21 @@ int main(int argc, char* argv[])
   wallModelParameters.wallFunctionProfile = wallFunctionProfile;
   wallModelParameters.latticeWallDistance = latticeWallDistance;
 
-  prepareLattice(sLattice, converter, superGeometry,
-                 forceSolScaled, forceSol, wallModelParameters);
+  prepareLattice(sLattice, converter, superGeometry, wallModelParameters);
 
-  SuperPlaneIntegralFluxVelocity3D<T> velFlux(sLattice, converter, superGeometry, center, normal, materials,
-      BlockDataReductionMode::Discrete);
+  //forcing of the channel
+  SuperLatticeFieldReductionO<T, DESCRIPTOR, descriptors::VELOCITY2, reduction::SumO,
+                              reduction::checkBulkTag<reduction::TAGS_U>> sumProcessor(sLattice);
+  SuperLatticeCoupling coupling(
+    TurbulentChannelForce<T>{},
+    names::NavierStokes{}, sLattice);
+  coupling.setParameter<TurbulentChannelForce<T>::CHAR_LATTICE_U>(converter.getCharLatticeVelocity());
+  coupling.setParameter<TurbulentChannelForce<T>::CHAR_LATTICE_L>(converter.getLatticeLength(adaptedPhysSimulatedLength));
+  coupling.setParameter<TurbulentChannelForce<T>::LATTICE_UTAU>((T)converter.getLatticeVelocity(ReTau * converter.getPhysViscosity()/physRefL));
+  coupling.setParameter<TurbulentChannelForce<T>::LATTICE_CHANNEL_VOLUME>(converter.getLatticeLength(lz) *converter.getLatticeLength(ly) *converter.getLatticeLength(lx));
+  coupling.setParameter<TurbulentChannelForce<T>::LATTICE_U_SUM>({converter.getCharLatticeVelocity(),0.,0.});
+  coupling.restrictTo(superGeometry.getMaterialIndicator(1));
+  coupling.execute();
 
   /// === 5th Step: Definition of turbulent Statistics Objects ===
 
@@ -453,18 +425,10 @@ int main(int argc, char* argv[])
   for (size_t iT=0; iT<converter.getLatticeTime(maxPhysT); ++iT) {
     /// === 6th Step: Computation and Output of the Results ===
     getResults(sLattice, converter, iT, superGeometry, timer, sAveragedVel, sAveragedPress);
-
-    if ( iT%converter.getLatticeTime(maxPhysT/fluxUpdates)==0 || iT == 0 ) {
-      velFlux(output, input);
-      T flux = output[0];
-      T area = output[1];
-      forceSol.updateAveVelocity(flux/area);
-      sLattice.defineField<FORCE>(superGeometry, 1, forceSolScaled);
-    }
-
+    coupling.setParameter<TurbulentChannelForce<T>::LATTICE_U_SUM>(sumProcessor.compute());
+    coupling.execute();
     /// === 7th Step: Collide and Stream Execution ===
     sLattice.collideAndStream();
-
   }
   timer.stop();
   timer.printSummary();

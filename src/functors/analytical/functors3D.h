@@ -35,3 +35,4 @@
 #include "interpolationF3D.h"
 #include "indicator/indicator3D.h"
 #include "atmBoundary.h"
+#include "physWallShearStressOnSurface3D.h"

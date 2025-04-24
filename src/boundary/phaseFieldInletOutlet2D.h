@@ -31,10 +31,229 @@
 #include "phaseFieldInletOutlet.h"
 #include "zouHeDynamics.h"
 #include "dynamics/freeEnergyDynamics.h"
+#include "phaseFieldBoundaryDynamics.h"
 
 namespace olb {
 
 namespace boundary {
+
+template <concepts::BaseType T, concepts::LatticeDescriptor DESCRIPTOR, typename MixinDynamics>
+requires (DESCRIPTOR::d == 2)
+struct IncompressibleZouHeVelocity<T,DESCRIPTOR,MixinDynamics> {
+
+using value_t = T;
+using descriptor_t = DESCRIPTOR;
+
+CellDistance getNeighborhoodRadius() {
+  return 1;
+}
+
+std::optional<DynamicsPromise<T,DESCRIPTOR>> getDynamics(DiscreteNormalType type,
+                                                         DiscreteNormal<DESCRIPTOR> n) {
+  switch (type) {
+  case DiscreteNormalType::Flat:
+    return boundaryhelper::DirectionOrientationMixinDynamicsForDirectionOrientationMomenta<T,DESCRIPTOR,
+      IncZouHeDynamics,MixinDynamics,momenta::IncDirichletVelocityBoundaryTuple
+    >::construct(n);
+
+  case DiscreteNormalType::ExternalCorner:
+    return meta::id<typename MixinDynamics::template exchange_momenta<momenta::FixedVelocityBoundaryTuple>>{};
+
+  case DiscreteNormalType::InternalCorner:
+    return boundaryhelper::PlainMixinDynamicsForNormalMomenta<T,DESCRIPTOR,
+      CombinedRLBdynamics,MixinDynamics,momenta::InnerCornerVelocityTuple2D
+    >::construct(n);
+
+  default:
+    return std::nullopt;
+  }
+}
+
+std::optional<PostProcessorPromise<T,DESCRIPTOR>> getPostProcessor(DiscreteNormalType type,
+                                                                   DiscreteNormal<DESCRIPTOR> n) {
+  switch (type) {
+  case DiscreteNormalType::ExternalCorner:
+    return boundaryhelper::promisePostProcessorForNormal<T,DESCRIPTOR,OuterVelocityCornerProcessor2D>(n);
+
+  default:
+    return std::nullopt;
+  }
+}
+
+};
+
+template <concepts::BaseType T, concepts::LatticeDescriptor DESCRIPTOR, typename MixinDynamics>
+requires (DESCRIPTOR::d == 2)
+struct IncompressibleZouHePressure<T,DESCRIPTOR,MixinDynamics> {
+
+using value_t = T;
+using descriptor_t = DESCRIPTOR;
+
+CellDistance getNeighborhoodRadius() {
+  return 1;
+}
+
+std::optional<DynamicsPromise<T,DESCRIPTOR>> getDynamics(DiscreteNormalType type,
+                                                         DiscreteNormal<DESCRIPTOR> n) {
+  switch (type) {
+  case DiscreteNormalType::Flat:
+    return boundaryhelper::DirectionOrientationMixinDynamicsForDirectionOrientationMomenta<T,DESCRIPTOR,
+      IncZouHeDynamics,MixinDynamics,momenta::IncDirichletPressureBoundaryTuple
+    >::construct(n);
+
+  case DiscreteNormalType::ExternalCorner:
+    return meta::id<typename MixinDynamics::template exchange_momenta<momenta::FixedVelocityBoundaryTuple>>{};
+
+  case DiscreteNormalType::InternalCorner:
+    return boundaryhelper::PlainMixinDynamicsForNormalMomenta<T,DESCRIPTOR,
+      CombinedRLBdynamics,MixinDynamics,momenta::InnerCornerVelocityTuple2D
+    >::construct(n);
+
+  default:
+    return std::nullopt;
+  }
+}
+
+std::optional<PostProcessorPromise<T,DESCRIPTOR>> getPostProcessor(DiscreteNormalType type,
+                                                                   DiscreteNormal<DESCRIPTOR> n) {
+  switch (type) {
+
+  case DiscreteNormalType::ExternalCorner:
+    return boundaryhelper::promisePostProcessorForNormal<T,DESCRIPTOR,OuterVelocityCornerProcessor2D>(n);
+
+  default:
+    return std::nullopt;
+  }
+}
+
+};
+
+template <concepts::BaseType T, concepts::LatticeDescriptor DESCRIPTOR, typename MixinDynamics>
+requires (DESCRIPTOR::d == 2)
+struct IncompressibleConvective<T,DESCRIPTOR,MixinDynamics> {
+
+using value_t = T;
+using descriptor_t = DESCRIPTOR;
+
+CellDistance getNeighborhoodRadius() {
+  return 1;
+}
+
+std::optional<DynamicsPromise<T,DESCRIPTOR>> getDynamics(DiscreteNormalType type,
+                                                         DiscreteNormal<DESCRIPTOR> n) {
+  switch (type) {
+  case DiscreteNormalType::Flat:
+    return boundaryhelper::DirectionOrientationMixinDynamicsForPlainMomenta<T,DESCRIPTOR,
+          ConvectiveOutletDynamics,MixinDynamics,
+          momenta::IncBulkTuple<momenta::ForcedMomentum<momenta::IncompressibleBulkMomentum>>
+        >::construct(n);
+
+  /*case DiscreteNormalType::ExternalCorner:
+    return meta::id<typename MixinDynamics::template exchange_momenta<momenta::FixedVelocityBoundaryTuple>>{};
+
+  case DiscreteNormalType::InternalCorner:
+    return boundaryhelper::PlainMixinDynamicsForNormalMomenta<T,DESCRIPTOR,
+      CombinedRLBdynamics,MixinDynamics,momenta::InnerCornerVelocityTuple2D
+    >::construct(n);*/
+
+  default:
+    return std::nullopt;
+  }
+  //return DynamicsPromise(meta::id<MixinDynamics>{});
+}
+
+std::optional<PostProcessorPromise<T,DESCRIPTOR>> getPostProcessor(DiscreteNormalType type,
+                                                                   DiscreteNormal<DESCRIPTOR> n) {
+  return meta::id<ConvectivePostProcessor2D<T,DESCRIPTOR>>();
+}
+
+};
+
+template <concepts::BaseType T, concepts::LatticeDescriptor DESCRIPTOR, typename MixinDynamics>
+requires (DESCRIPTOR::d == 2)
+struct PhaseFieldInlet<T,DESCRIPTOR,MixinDynamics> {
+
+using value_t = T;
+using descriptor_t = DESCRIPTOR;
+
+CellDistance getNeighborhoodRadius() {
+  return 1;
+}
+
+std::optional<DynamicsPromise<T,DESCRIPTOR>> getDynamics(DiscreteNormalType type,
+                                                         DiscreteNormal<DESCRIPTOR> n) {
+  switch (type) {
+  case DiscreteNormalType::Flat:
+    return boundaryhelper::DirectionOrientationMixinDynamicsForPlainMomenta<T,DESCRIPTOR,
+          PhaseFieldInletDynamics,MixinDynamics,momenta::EquilibriumBoundaryTuple
+        >::construct(n);
+
+  case DiscreteNormalType::ExternalCorner:
+    return meta::id<typename MixinDynamics::template exchange_momenta<momenta::FixedVelocityBoundaryTuple>>{};
+
+  case DiscreteNormalType::InternalCorner:
+    return boundaryhelper::PlainMixinDynamicsForNormalMomenta<T,DESCRIPTOR,
+      CombinedRLBdynamics,MixinDynamics,momenta::InnerCornerVelocityTuple2D
+    >::construct(n);
+
+  default:
+    return std::nullopt;
+  }
+}
+
+std::optional<PostProcessorPromise<T,DESCRIPTOR>> getPostProcessor(DiscreteNormalType type,
+                                                                   DiscreteNormal<DESCRIPTOR> n) {
+  switch (type) {
+  case DiscreteNormalType::ExternalCorner:
+    return boundaryhelper::promisePostProcessorForNormal<T,DESCRIPTOR,OuterVelocityCornerProcessor2D>(n);
+
+  default:
+    return std::nullopt;
+  }
+}
+
+};
+
+template <concepts::BaseType T, concepts::LatticeDescriptor DESCRIPTOR, typename MixinDynamics>
+requires (DESCRIPTOR::d == 2)
+struct PhaseFieldConvective<T,DESCRIPTOR,MixinDynamics> {
+
+using value_t = T;
+using descriptor_t = DESCRIPTOR;
+
+CellDistance getNeighborhoodRadius() {
+  return 1;
+}
+
+std::optional<DynamicsPromise<T,DESCRIPTOR>> getDynamics(DiscreteNormalType type,
+                                                         DiscreteNormal<DESCRIPTOR> n) {
+  switch (type) {
+  case DiscreteNormalType::Flat:
+    return boundaryhelper::DirectionOrientationMixinDynamicsForPlainMomenta<T,DESCRIPTOR,
+          PhaseFieldConvectiveOutletDynamics,MixinDynamics,momenta::ExternalVelocityTuple
+        >::construct(n);
+
+  /*case DiscreteNormalType::ExternalCorner:
+    return meta::id<typename MixinDynamics::template exchange_momenta<momenta::FixedVelocityBoundaryTuple>>{};
+
+  case DiscreteNormalType::InternalCorner:
+    return boundaryhelper::PlainMixinDynamicsForNormalMomenta<T,DESCRIPTOR,
+      CombinedRLBdynamics,MixinDynamics,momenta::InnerCornerVelocityTuple2D
+    >::construct(n);*/
+
+  default:
+    return std::nullopt;
+  }
+  //return DynamicsPromise(meta::id<MixinDynamics>{});
+}
+
+std::optional<PostProcessorPromise<T,DESCRIPTOR>> getPostProcessor(DiscreteNormalType type,
+                                                                   DiscreteNormal<DESCRIPTOR> n) {
+  return boundaryhelper::promisePostProcessorForNormal<T,DESCRIPTOR,FlatConvectivePhaseFieldPostProcessor2D>(n);
+  //return std::nullopt;
+}
+
+};
 
 template <concepts::BaseType T, concepts::LatticeDescriptor DESCRIPTOR, typename MixinDynamics>
 requires (DESCRIPTOR::d == 2)

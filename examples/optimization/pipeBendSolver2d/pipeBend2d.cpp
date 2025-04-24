@@ -628,7 +628,7 @@ int main(int argc, char **argv)
 
   // create instances for optimization
   // creates solvers, organizes coupling between them, implements derivative computation
-  OptiCaseDual<S,PipeBendOptiSolver> optiCase(config);
+  OptiCaseDual<S,PipeBendOptiSolver,descriptors::POROSITY,PorousBGKdynamics> optiCase(config);
 
   std::shared_ptr<DistributedObjective<S,PipeBendOptiSolver>> objective;  // implements objective computation
   if constexpr (dissipationObjective) {

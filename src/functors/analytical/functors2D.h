@@ -34,3 +34,4 @@
 #include "fringe2D.h"
 #include "interpolationF2D.h"
 #include "indicator/indicator2D.h"
+#include "phaseFieldF2D.h"

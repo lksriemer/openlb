@@ -25,9 +25,9 @@
 #ifndef UQ_HH
 #define UQ_HH
 
-#include "generalized_polynomial_chaos.hh"
+#include "generalizedPolynomialChaos.hh"
 #include "polynomial.hh"
-#include "uncertainty_quantification.hh"
-#include "utils.hh"
+#include "uncertaintyQuantification.hh"
+#include "filesIO.hh"
 
 #endif // UQ_HH

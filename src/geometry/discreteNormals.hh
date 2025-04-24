@@ -127,7 +127,8 @@ std::pair<DiscreteNormalType,Vector<int,2>> computeBoundaryTypeAndNormal(
 
       if (!fluidI({iX, iY - 1})
           && !outsideI({iX, iY - 1})
-          && outsideI({iX - 1, iY - 1})) {
+          && (outsideI({iX - 1, iY - 1}) || !fluidI({iX - 1, iY - 1}))
+          && fluidI({iX + 1, iY + 1})) {
         discreteNormal[0] = 2;
         discreteNormal[1] = -1;
         discreteNormal[2] = -1;
@@ -135,7 +136,8 @@ std::pair<DiscreteNormalType,Vector<int,2>> computeBoundaryTypeAndNormal(
 
       if (!fluidI({iX, iY + 1})
           && !outsideI({iX, iY + 1})
-          && outsideI({iX - 1, iY + 1})) {
+          && (outsideI({iX - 1, iY + 1}) || !fluidI({iX - 1, iY + 1}))
+          && fluidI({iX + 1, iY - 1})) {
         discreteNormal[0] = 2;
         discreteNormal[1] = -1;
         discreteNormal[2] = 1;
@@ -148,7 +150,8 @@ std::pair<DiscreteNormalType,Vector<int,2>> computeBoundaryTypeAndNormal(
 
       if (!fluidI({iX, iY - 1})
           && !outsideI({iX, iY - 1})
-          && outsideI({iX + 1, iY - 1})) {
+          && (outsideI({iX + 1, iY - 1}) || !fluidI({iX + 1, iY - 1}))
+          && fluidI({iX - 1, iY + 1})) {
         discreteNormal[0] = 2;
         discreteNormal[1] = 1;
         discreteNormal[2] = -1;
@@ -156,7 +159,8 @@ std::pair<DiscreteNormalType,Vector<int,2>> computeBoundaryTypeAndNormal(
 
       if (!fluidI({iX, iY + 1})
           && !outsideI({iX, iY + 1})
-          && outsideI({iX + 1, iY + 1})) {
+          && (outsideI({iX + 1, iY + 1}) || !fluidI({iX + 1, iY + 1}))
+          && fluidI({iX - 1, iY - 1})) {
         discreteNormal[0] = 2;
         discreteNormal[1] = 1;
         discreteNormal[2] = 1;

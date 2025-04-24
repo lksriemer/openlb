@@ -34,6 +34,7 @@ struct TAG_CORE : public descriptors::TYPED_FIELD_BASE<int, 1> {};
 }
 
 namespace reduction {
+struct TAGS_U             : public descriptors::TYPED_FIELD_BASE<int, 1> {};
 
 struct ConditionTrue {
   template <typename CELL>
@@ -41,6 +42,15 @@ struct ConditionTrue {
     return true;
   }
 };
+
+template <typename TAG_FIELD>
+  struct checkBulkTag {
+    template <typename CELL>
+    bool operator()(CELL& cell) any_platform
+    {
+      return cell.template getField<TAG_FIELD>() == (int) 1;
+    }
+  };
 
 struct SumO {
   template <typename FIELDD>

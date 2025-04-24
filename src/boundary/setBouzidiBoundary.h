@@ -27,6 +27,7 @@
 #include "bouzidiFields.h"
 #include "postprocessor/bouzidiSlipVelocityPostProcessor3D.h"
 #include "postprocessor/bouzidiTemperatureJumpPostProcessor3D.h"
+#include "setBoundary2D.h"
 
 // M. Bouzidi, M. Firdaouss, and P. Lallemand.
 // Momentum transfer of a Boltzmann-lattice fluid with boundaries.
@@ -896,6 +897,318 @@ void setBouzidiTemperatureJump(BlockLattice<T,DESCRIPTOR>& block,
     }
   });
 }
+
+/// Set Bouzidi boundary with contact angle for phase field models on indicated cells of sLattice
+template<typename T, typename DESCRIPTOR, typename OPERATOR = BouzidiPostProcessor>
+void setBouzidiPhaseField(SuperLattice<T, DESCRIPTOR>& sLattice,
+                        FunctorPtr<SuperIndicatorF<T,DESCRIPTOR::d>>&& boundaryIndicator,
+                        FunctorPtr<SuperIndicatorF<T,DESCRIPTOR::d>>&& bulkIndicator,
+                        IndicatorF<T,DESCRIPTOR::d>&                   indicatorAnalyticalBoundary)
+{
+  int _overlap = 1;
+  OstreamManager clout(std::cout, "BouzidiPhaseFieldSetter");
+  auto& load = sLattice.getLoadBalancer();
+  for (int iC=0; iC < load.size(); ++iC) {
+    setBouzidiPhaseField<T,DESCRIPTOR,OPERATOR>(sLattice.getBlock(iC),
+                          (bulkIndicator->getBlockIndicatorF(iC)).getBlockGeometry(),
+                          boundaryIndicator->getBlockIndicatorF(iC),
+                          bulkIndicator->getBlockIndicatorF(iC),
+                          indicatorAnalyticalBoundary);
+  }
+  /// Adds needed Cells to the Communicator _commBC in SuperLattice
+  auto& communicator = sLattice.getCommunicator(stage::PostStream());
+  communicator.template requestField<descriptors::STATISTIC>();
+  communicator.template requestField<descriptors::BOUNDARY>();
+
+  SuperIndicatorBoundaryNeighbor<T,DESCRIPTOR::d> neighborIndicator(std::forward<decltype(boundaryIndicator)>(boundaryIndicator), _overlap);
+  communicator.requestOverlap(_overlap, neighborIndicator);
+  communicator.exchangeRequests();
+  //addPoints2CommBC<T,DESCRIPTOR>(sLattice, std::forward<decltype(boundaryIndicator)>(boundaryIndicator), _overlap);
+  clout.setMultiOutput(false);
+}
+
+
+/// Set Bouzidi boundary on material cells of sLattice
+template<typename T, typename DESCRIPTOR, typename OPERATOR = BouzidiPostProcessor>
+void setBouzidiPhaseField(SuperLattice<T, DESCRIPTOR>& sLattice,
+                        SuperGeometry<T,DESCRIPTOR::d>& superGeometry,
+                        int materialOfSolidObstacle,
+                        IndicatorF<T,DESCRIPTOR::d>& indicatorAnalyticalBoundary,
+                        std::vector<int> bulkMaterials = std::vector<int>(1,1))
+{
+  //Getting the indicators by material numbers and calling the superLattice method via the indicators:
+  setBouzidiPhaseField<T,DESCRIPTOR,OPERATOR>(sLattice,
+                      FunctorPtr<SuperIndicatorF<T,DESCRIPTOR::d>>(superGeometry.getMaterialIndicator(materialOfSolidObstacle)),
+                      FunctorPtr<SuperIndicatorF<T,DESCRIPTOR::d>>(superGeometry.getMaterialIndicator(std::move(bulkMaterials))),
+                      indicatorAnalyticalBoundary);
+}
+
+
+/// Set Bouzidi boundary on indicated cells of block lattice
+template<typename T, typename DESCRIPTOR, typename OPERATOR = BouzidiPostProcessor>
+void setBouzidiPhaseField(BlockLattice<T,DESCRIPTOR>& block,
+                        BlockGeometry<T,DESCRIPTOR::d>& blockGeometry,
+                        BlockIndicatorF<T,DESCRIPTOR::d>& boundaryIndicator,
+                        BlockIndicatorF<T,DESCRIPTOR::d>& bulkIndicator,
+                        IndicatorF<T,DESCRIPTOR::d>& indicatorAnalyticalBoundary,
+                        bool verbose = false)
+{
+  OstreamManager clout(std::cout, "BouzidiPhaseFieldSetter");
+  clout.setMultiOutput(true);
+
+  const T deltaR = blockGeometry.getDeltaR();
+  // for each solid cell: all of its fluid neighbors need population updates
+  block.forSpatialLocations([&](LatticeR<DESCRIPTOR::d> solidLatticeR) {
+    // Check if cell is solid cell
+
+    if ( blockGeometry.getNeighborhoodRadius(solidLatticeR) >= 1
+        && boundaryIndicator(solidLatticeR)) {
+      std::vector<int> discreteNormal(DESCRIPTOR::d+1, 0);
+      discreteNormal = boundaryIndicator.getBlockGeometry().getStatistics().getType(solidLatticeR[0],solidLatticeR[1]);
+
+      for (int iPop=1; iPop < DESCRIPTOR::q; ++iPop) {
+        Vector<T,DESCRIPTOR::d> boundaryLatticeR(solidLatticeR + descriptors::c<DESCRIPTOR>(iPop));
+        const auto c = descriptors::c<DESCRIPTOR>(iPop);
+        const auto iPop_opposite = descriptors::opposite<DESCRIPTOR>(iPop);
+
+        if (blockGeometry.isInside(boundaryLatticeR)) {
+          auto boundaryPhysR = blockGeometry.getPhysR(boundaryLatticeR);
+          // check if neighbor is fluid cell
+          if (bulkIndicator(boundaryLatticeR.data())) {
+            T dist = -1;    // distance to boundary
+            T qIpop = -1;   // normed distance (Bouzidi distance) to boundary
+            const T norm = deltaR * util::norm<DESCRIPTOR::d>(descriptors::c<DESCRIPTOR>(iPop));
+            auto direction = -deltaR * c; // vector pointing from the boundary cell to the solid cell
+
+            // Check if distance calculation was performed correctly
+            if (indicatorAnalyticalBoundary.distance(dist, boundaryPhysR, direction, blockGeometry.getIcGlob())) {
+              qIpop = dist / norm;
+
+              // if distance function returned a dist. not suitable for Bouzidi -> fall-back
+              if ((qIpop < 0) || (qIpop > 1)) {
+                if(verbose) {
+                  clout << "Error, non suitable dist. at lattice: (" << boundaryLatticeR << "), physical: (" << blockGeometry.getPhysR(boundaryLatticeR) << "), direction " << iPop << ". Fall-back to bounce-back." << std::endl;
+                }
+
+                // fall-back: half-way bounce back
+                qIpop = 0.5;
+              }
+            }
+            // if distance function couldn't compute any distance -> fall-back
+            else {
+              if(verbose) {
+                clout << "Error, no boundary found at lattice:(" << boundaryLatticeR << "), physical: (" << blockGeometry.getPhysR(boundaryLatticeR) << "), direction: " << iPop << ".Fall-back to bounce-back." << std::endl;
+              }
+
+              // fall-back: half-way bounce back
+              qIpop = 0.5;
+            }
+            //clout << "Distance to boundary at lattice:(" << boundaryLatticeR << ") and direction (" << iPop << "): " << qIpop << std::endl;
+            // double check
+            if (qIpop >= 0) {
+              // Bouzidi require the fluid side neighbor of the boundary cell also to be fluid
+              if (bulkIndicator(boundaryLatticeR + descriptors::c<DESCRIPTOR>(iPop))) {
+                // Standard case, c.f. Bouzidi paper, setting Bouzidi-distance
+                block.get(boundaryLatticeR).template setFieldComponent<descriptors::BOUZIDI_DISTANCE>(iPop_opposite, qIpop);
+              }
+              else {
+                // If no fluid cell found: fall-back to bounce-back
+                block.get(boundaryLatticeR).template setFieldComponent<descriptors::BOUZIDI_DISTANCE>(iPop_opposite, T{0.5});
+              }
+              // Setting up the post processor, if this cell does not have one yet.
+              if (!block.isPadding(boundaryLatticeR)) {
+                block.addPostProcessor(typeid(stage::PostStream),
+                                      boundaryLatticeR,
+                                      meta::id<OPERATOR>{});
+              }
+            }
+          }
+          // if neigbour cell is not fluid
+          else {
+            // check if neighbor cell is not solid
+            if (blockGeometry.getMaterial(boundaryLatticeR) != 0) {
+              // fall-back to half-way bounce-back
+              block.get(boundaryLatticeR).template setFieldComponent<descriptors::BOUZIDI_DISTANCE>(iPop_opposite, T{0.5});
+              if (!block.isPadding(boundaryLatticeR)) {
+                block.addPostProcessor(typeid(stage::PostStream),
+                                      boundaryLatticeR,
+                                      meta::id<OPERATOR>{});
+              }
+            }
+          }
+        }
+      }
+      T discreteNormalSum=0;
+      for (int iD=0; iD<DESCRIPTOR::d; iD++) {
+        discreteNormalSum += abs(discreteNormal[iD+1]);
+      }
+      if (discreteNormalSum == 0) {
+        block.addPostProcessor(
+          typeid(stage::PreCoupling), solidLatticeR, meta::id<GeometricPhaseFieldCurvedWallProcessor2D<T,DESCRIPTOR>>());
+      } else {
+        block.addPostProcessor(
+          typeid(stage::PreCoupling), solidLatticeR,
+          boundaryhelper::promisePostProcessorForNormal<T,DESCRIPTOR,IsoPhaseFieldCurvedWallProcessor2D>(Vector<int,2>(discreteNormal.data() + 1)));
+      }
+    }
+  });
+}
+
+
+/// Set Bouzidi boundary with contact angle for phase field models on indicated cells of sLattice
+template<typename T, typename DESCRIPTOR, typename OPERATOR = BouzidiPostProcessor>
+void setBouzidiWellBalanced(SuperLattice<T, DESCRIPTOR>& sLattice,
+                        FunctorPtr<SuperIndicatorF<T,DESCRIPTOR::d>>&& boundaryIndicator,
+                        FunctorPtr<SuperIndicatorF<T,DESCRIPTOR::d>>&& bulkIndicator,
+                        IndicatorF<T,DESCRIPTOR::d>&                   indicatorAnalyticalBoundary)
+{
+  int _overlap = 1;
+  OstreamManager clout(std::cout, "BouzidiWellBalancedSetter");
+  auto& load = sLattice.getLoadBalancer();
+  for (int iC=0; iC < load.size(); ++iC) {
+    setBouzidiWellBalanced<T,DESCRIPTOR,OPERATOR>(sLattice.getBlock(iC),
+                          (bulkIndicator->getBlockIndicatorF(iC)).getBlockGeometry(),
+                          boundaryIndicator->getBlockIndicatorF(iC),
+                          bulkIndicator->getBlockIndicatorF(iC),
+                          indicatorAnalyticalBoundary);
+  }
+  /// Adds needed Cells to the Communicator _commBC in SuperLattice
+  auto& communicator = sLattice.getCommunicator(stage::PostStream());
+  communicator.template requestField<descriptors::STATISTIC>();
+  communicator.template requestField<descriptors::BOUNDARY>();
+
+  SuperIndicatorBoundaryNeighbor<T,DESCRIPTOR::d> neighborIndicator(std::forward<decltype(boundaryIndicator)>(boundaryIndicator), _overlap);
+  communicator.requestOverlap(_overlap, neighborIndicator);
+  communicator.exchangeRequests();
+  //addPoints2CommBC<T,DESCRIPTOR>(sLattice, std::forward<decltype(boundaryIndicator)>(boundaryIndicator), _overlap);
+  clout.setMultiOutput(false);
+}
+
+
+/// Set Bouzidi boundary on material cells of sLattice
+template<typename T, typename DESCRIPTOR, typename OPERATOR = BouzidiPostProcessor>
+void setBouzidiWellBalanced(SuperLattice<T, DESCRIPTOR>& sLattice,
+                        SuperGeometry<T,DESCRIPTOR::d>& superGeometry,
+                        int materialOfSolidObstacle,
+                        IndicatorF<T,DESCRIPTOR::d>& indicatorAnalyticalBoundary,
+                        std::vector<int> bulkMaterials = std::vector<int>(1,1))
+{
+  //Getting the indicators by material numbers and calling the superLattice method via the indicators:
+  setBouzidiWellBalanced<T,DESCRIPTOR,OPERATOR>(sLattice,
+                      FunctorPtr<SuperIndicatorF<T,DESCRIPTOR::d>>(superGeometry.getMaterialIndicator(materialOfSolidObstacle)),
+                      FunctorPtr<SuperIndicatorF<T,DESCRIPTOR::d>>(superGeometry.getMaterialIndicator(std::move(bulkMaterials))),
+                      indicatorAnalyticalBoundary);
+}
+
+
+/// Set Bouzidi boundary on indicated cells of block lattice
+template<typename T, typename DESCRIPTOR, typename OPERATOR = BouzidiPostProcessor>
+void setBouzidiWellBalanced(BlockLattice<T,DESCRIPTOR>& block,
+                        BlockGeometry<T,DESCRIPTOR::d>& blockGeometry,
+                        BlockIndicatorF<T,DESCRIPTOR::d>& boundaryIndicator,
+                        BlockIndicatorF<T,DESCRIPTOR::d>& bulkIndicator,
+                        IndicatorF<T,DESCRIPTOR::d>& indicatorAnalyticalBoundary,
+                        bool verbose = false)
+{
+  OstreamManager clout(std::cout, "BouzidiWellBalancedSetter");
+  clout.setMultiOutput(true);
+
+  const T deltaR = blockGeometry.getDeltaR();
+  // for each solid cell: all of its fluid neighbors need population updates
+  block.forSpatialLocations([&](LatticeR<DESCRIPTOR::d> solidLatticeR) {
+    // Check if cell is solid cell
+    if ( blockGeometry.getNeighborhoodRadius(solidLatticeR) >= 1
+        && boundaryIndicator(solidLatticeR)) {
+      std::vector<int> discreteNormal(DESCRIPTOR::d+1, 0);
+      if constexpr ( DESCRIPTOR::d==2 ) {
+        discreteNormal = boundaryIndicator.getBlockGeometry().getStatistics().getType(solidLatticeR[0],solidLatticeR[1]);
+        block.addPostProcessor(
+          typeid(stage::PreCoupling), solidLatticeR, boundaryhelper::promisePostProcessorForNormal<T,DESCRIPTOR,WellBalancedWallProcessor2D>(
+            Vector<int,DESCRIPTOR::d>(discreteNormal.data() + 1)));
+      }
+      else if constexpr ( DESCRIPTOR::d==3 ) {
+        discreteNormal = boundaryIndicator.getBlockGeometry().getStatistics().getType(solidLatticeR[0],solidLatticeR[1],solidLatticeR[2]);
+        block.addPostProcessor(
+          typeid(stage::PreCoupling), solidLatticeR, boundaryhelper::promisePostProcessorForNormal<T,DESCRIPTOR,WellBalancedWallProcessor3D>(
+            Vector<int,DESCRIPTOR::d>(discreteNormal.data() + 1)));
+      }
+
+      for (int iPop=1; iPop < DESCRIPTOR::q; ++iPop) {
+        Vector<T,DESCRIPTOR::d> boundaryLatticeR(solidLatticeR + descriptors::c<DESCRIPTOR>(iPop));
+        const auto c = descriptors::c<DESCRIPTOR>(iPop);
+        const auto iPop_opposite = descriptors::opposite<DESCRIPTOR>(iPop);
+
+        if (blockGeometry.isInside(boundaryLatticeR)) {
+          auto boundaryPhysR = blockGeometry.getPhysR(boundaryLatticeR);
+          // check if neighbor is fluid cell
+          if (bulkIndicator(boundaryLatticeR.data())) {
+            T dist = -1;    // distance to boundary
+            T qIpop = -1;   // normed distance (Bouzidi distance) to boundary
+            const T norm = deltaR * util::norm<DESCRIPTOR::d>(descriptors::c<DESCRIPTOR>(iPop));
+            auto direction = -deltaR * c; // vector pointing from the boundary cell to the solid cell
+
+            // Check if distance calculation was performed correctly
+            if (indicatorAnalyticalBoundary.distance(dist, boundaryPhysR, direction, blockGeometry.getIcGlob())) {
+              qIpop = dist / norm;
+
+              // if distance function returned a dist. not suitable for Bouzidi -> fall-back
+              if ((qIpop < 0) || (qIpop > 1)) {
+                if(verbose) {
+                  clout << "Error, non suitable dist. at lattice: (" << boundaryLatticeR << "), physical: (" << blockGeometry.getPhysR(boundaryLatticeR) << "), direction " << iPop << ". Fall-back to bounce-back." << std::endl;
+                }
+
+                // fall-back: half-way bounce back
+                qIpop = 0.5;
+              }
+            }
+            // if distance function couldn't compute any distance -> fall-back
+            else {
+              if(verbose) {
+                clout << "Error, no boundary found at lattice:(" << boundaryLatticeR << "), physical: (" << blockGeometry.getPhysR(boundaryLatticeR) << "), direction: " << iPop << ".Fall-back to bounce-back." << std::endl;
+              }
+
+              // fall-back: half-way bounce back
+              qIpop = 0.5;
+            }
+            //clout << "Distance to boundary at lattice:(" << boundaryLatticeR << ") and direction (" << iPop << "): " << qIpop << std::endl;
+            // double check
+            if (qIpop >= 0) {
+              // Bouzidi require the fluid side neighbor of the boundary cell also to be fluid
+              if (bulkIndicator(boundaryLatticeR + descriptors::c<DESCRIPTOR>(iPop))) {
+                // Standard case, c.f. Bouzidi paper, setting Bouzidi-distance
+                block.get(boundaryLatticeR).template setFieldComponent<descriptors::BOUZIDI_DISTANCE>(iPop_opposite, qIpop);
+              }
+              else {
+                // If no fluid cell found: fall-back to bounce-back
+                block.get(boundaryLatticeR).template setFieldComponent<descriptors::BOUZIDI_DISTANCE>(iPop_opposite, T{0.5});
+              }
+              // Setting up the post processor, if this cell does not have one yet.
+              if (!block.isPadding(boundaryLatticeR)) {
+                block.addPostProcessor(typeid(stage::PostStream),
+                                      boundaryLatticeR,
+                                      meta::id<OPERATOR>{});
+              }
+            }
+          }
+          // if neigbour cell is not fluid
+          else {
+            // check if neighbor cell is not solid
+            if (blockGeometry.getMaterial(boundaryLatticeR) != 0) {
+              // fall-back to half-way bounce-back
+              block.get(boundaryLatticeR).template setFieldComponent<descriptors::BOUZIDI_DISTANCE>(iPop_opposite, T{0.5});
+              if (!block.isPadding(boundaryLatticeR)) {
+                block.addPostProcessor(typeid(stage::PostStream),
+                                      boundaryLatticeR,
+                                      meta::id<OPERATOR>{});
+              }
+            }
+          }
+        }
+      }
+    }
+  });
+}
+
 
 } // namespace olb
 

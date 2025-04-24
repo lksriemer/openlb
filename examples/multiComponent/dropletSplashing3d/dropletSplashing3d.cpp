@@ -309,10 +309,8 @@ int main( int argc, char *argv[] )
     (T)   0.7,                       // lattice relaxation time
     (T)   rho_liquid/1000,          // lattice density
     (T)   Lx,                        // charPhysLength: reference length of simulation geometry
-    (T)   U_droplet,                 // charPhysVelocity: maximal/highest expected velocity during simulation in __m / s__
     (T)   nu_liquid,                 // physViscosity: physical kinematic viscosity in __m^2 / s__
-    (T)   rho_liquid,                // physDensity: physical density in __kg / m^3__
-    (T)   SurfTension                // physSurfaceTension: physical surface tnesion in __kg / s__
+    (T)   rho_liquid                 // physDensity: physical density in __kg / m^3__
   );
 
   // Prints the converter log as console output

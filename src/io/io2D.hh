@@ -38,4 +38,5 @@
 #include "vtuSurfaceWriter.hh"
 #include "blockLatticeSTLreader.hh"
 #include "plainWriter.hh"
+#include "vtiReader.hh"
 

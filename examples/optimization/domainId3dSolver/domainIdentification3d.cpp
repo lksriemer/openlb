@@ -37,7 +37,7 @@ using namespace olb::descriptors;
 using namespace olb::names;
 using namespace olb::opti;
 
-using Descriptor = DualPorousD3Q19Descriptor;
+using Descriptor = D3Q19<POROSITY,opti::F,opti::DJDF>;
 using Lattices = meta::map<
                  NavierStokes, Descriptor
                  >;
@@ -233,6 +233,11 @@ protected:
     }
     const T omega = this->converter().getLatticeRelaxationFrequency();
     lattice.template setParameter<descriptors::OMEGA>(omega);
+
+    AnalyticalConst3D<T,T> omegaF(omega);
+    lattice.template defineField<OMEGA>(
+      this->geometry().getMaterialIndicator({1,2,3,4,6}),
+      omegaF);
   }
 
   void setInitialValues() override
@@ -516,7 +521,7 @@ int main(int argc, char **argv)
 
   using T = FLOATING_POINT_TYPE;
 
-  OptiCaseDual<T,DomainIdSolver> optiCase(config);
+  OptiCaseDual<T,DomainIdSolver,descriptors::POROSITY,PorousBGKdynamics> optiCase(config);
 
   // classical objective from functors
   //auto objective = std::make_shared<RelativeDifferenceVelocityObjective<T>>(config);

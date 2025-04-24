@@ -176,7 +176,7 @@ void optiAdjoint() {
   OstreamManager clout(std::cout, "optiAdjoint");
   XMLreader config("parameterAdjoint.xml");
 
-  OptiCaseDual<S,TestFlowSolverOptiAdjoint> optiCase (config);
+  OptiCaseDual<S,TestFlowSolverOptiAdjoint,descriptors::FORCE,ForcedBGKdynamics> optiCase (config);
   // classical approach: define objective via functors
   //auto objective = std::make_shared<TestFlowObjective<S>>(config);
   // use generic objective handling
@@ -190,7 +190,7 @@ void optiAdjoint() {
   S startValue;
   config.readOrWarn<S>("Optimization", "StartValue", "", startValue);
   startValue = projection::getInitialControl(startValue, optiCase);
-  const auto referenceControl = getControl<descriptors::FORCE,S,TestFlowSolverOptiAdjoint>(
+  const auto referenceControl = getControl<S,TestFlowSolverOptiAdjoint,descriptors::FORCE,ForcedBGKdynamics>(
     optiCase, objectiveHelp->_referenceSolver);
 
   optimizer->setReferenceControl(referenceControl);

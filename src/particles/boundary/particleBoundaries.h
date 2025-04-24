@@ -327,7 +327,7 @@ void wallCaptureMaterialAwareSpheroidSubgrid( Particle<T,PARTICLETYPE>& particle
     bool vicinity = checkMaterialVicinity( materialIndicator, particle );
     if (vicinity){
       //Apply wall capture
-      constexpr bool useCubicBounds=false;
+      //constexpr bool useCubicBounds=false;
   doAtParticleWallContactSpheroid(particle, solidBoundary,
   [&] ( Particle<T,PARTICLETYPE>& particle,
     Vector<T,PARTICLETYPE::d>& normal ) {

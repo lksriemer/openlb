@@ -52,9 +52,6 @@ template<typename T, typename DESCRIPTOR, typename PARTICLETYPE>
 void BlockLatticeSpheroidLiftForce<T, DESCRIPTOR, PARTICLETYPE>::evaluate(T output[], particles::Particle<T,PARTICLETYPE>& particle, int iP)
 {
   constexpr unsigned D = DESCRIPTOR::d;
-  const int serialSize = D;
-  const unsigned Drot = utilities::dimensions::convert<D>::rotation;
-  //const int serialSize = D+Drot+1;
 
   using namespace descriptors;
   using namespace eler;
@@ -62,11 +59,7 @@ void BlockLatticeSpheroidLiftForce<T, DESCRIPTOR, PARTICLETYPE>::evaluate(T outp
   //Retrieve particle quantities
   Vector<T,D> position = particle.template getField<GENERAL,POSITION>();
   Vector<T,D> velocity = particle.template getField<MOBILITY,VELOCITY>();
-  T radius = particle.template getField<PHYSPROPERTIES,RADIUS>();
-  T mass = particle.template getField<PHYSPROPERTIES,MASS>();
   T* positionArray = position.data();
-
-
 
   //TODO: check, whether creation can be avoided by using a second _blockF list
   const auto& cuboid = _blockGeometry.getCuboid();

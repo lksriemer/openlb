@@ -407,8 +407,8 @@ using SpecialAnalyticalFfromBlockF = std::conditional_t<
 >;
 
 
-template <typename T, typename DESCRIPTOR, typename FIELD> class SuperLatticePhysField2D;
-template <typename T, typename DESCRIPTOR, typename FIELD> class SuperLatticePhysField3D;
+template <typename T, typename DESCRIPTOR, typename FIELD> struct SuperLatticePhysField2D;
+template <typename T, typename DESCRIPTOR, typename FIELD> struct SuperLatticePhysField3D;
 
 template <typename T, typename DESCRIPTOR, typename FIELD>
 using SuperLatticePhysField = std::conditional_t<

@@ -208,7 +208,7 @@
           export CXX=clang++
           export CC=clang
 
-          export CXXFLAGS="-O3 -Wall -march=native -mtune=native -std=c++20"
+          export CXXFLAGS="-O3 -Wall -march=native -mtune=native -std=c++20 -Wno-vla-cxx-extension"
 
           export PARALLEL_MODE=NONE
 

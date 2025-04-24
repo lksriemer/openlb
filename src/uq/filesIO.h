@@ -26,8 +26,8 @@
 
 #include <unistd.h>
 #include <limits.h>
-#include <libgen.h>    // For dirname
-#include <sys/stat.h>  // For stat, mkdir
+#include <libgen.h>   // For dirname
+#include <sys/stat.h> // For stat, mkdir
 #include <string>
 #include <vector>
 #include <fstream>
@@ -43,7 +43,6 @@
 
 // #include "matrix.h"
 
-
 // Utility function to check if a directory exists
 bool directoryExists(const std::string& path);
 
@@ -53,24 +52,21 @@ bool createDirectory(const std::string& path);
 // Utility function to delete a directory
 bool deleteDirectory(const std::string& path);
 
-// Utility function to find the relative path to the "src" directory
-// std::string findRelativePathToSrc();
-
 // Utility function to check if a file exists
 bool fileExists(const std::string& name);
 
 // Utility function to save a 1D vector to a binary file
-template<typename T>
+template <typename T>
 void saveVector1D(const std::string& filePath, const std::vector<T>& vec);
 
 // Utility function to read a 1D vector from a binary file
-template<typename T>
+template <typename T>
 void readVector1D(const std::string& filePath, std::vector<T>& vec);
 
 // Utility function to save a 3D vector to a binary file
-template<typename T>
+template <typename T>
 void saveVector3D(const std::string& filePath, const std::vector<std::vector<std::vector<T>>>& vec);
 
 // Utility function to read a 3D vector from a binary file
-template<typename T>
+template <typename T>
 void readVector3D(const std::string& filePath, std::vector<std::vector<std::vector<T>>>& vec);

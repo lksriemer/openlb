@@ -33,3 +33,4 @@
 #include "fringe3D.hh"
 #include "interpolationF3D.hh"
 #include "indicator/indicator3D.hh"
+#include "physWallShearStressOnSurface3D.hh"

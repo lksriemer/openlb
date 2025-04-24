@@ -30,5 +30,6 @@
 #include "offBoundaryPostProcessors2D.hh"
 #include "legacy/defineU2D.hh"
 #include "localPressure2D.h"
+#include "setSignedDistanceBoundary2D.hh"
 #include "slip2D.hh"
 #include "partialSlip2D.hh"

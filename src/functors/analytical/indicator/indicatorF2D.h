@@ -85,6 +85,36 @@ public:
   S signedDistance(const Vector<S,2>& input) override;
 };
 
+/// indicator function for a 2D NACA airfoil
+template <typename S>
+class IndicatorAirfoil2D : public IndicatorF2D<S> {
+private:
+  const Vector<S,2> _center;      // Center point of the airfoil
+  const S _chordLength;           // Length from leading to trailing edge
+  const S _camber;   // Thickness as percentage of chord length
+  const S _camberPos;                // Max Camber
+  const S _thicknessPercentage;             // Max Camber Position
+
+  // NACA coefficients for thickness distribution formula
+  static constexpr S _coeffs[5] = {0.2969, -0.1260, -0.3516, 0.2843, -0.1036};
+  static constexpr S _exponents[5] = {0.5, 1.0, 2.0, 3.0, 4.0};
+
+  // Function to compute the local thickness at a given point along the camber line
+  S computeThickness(S x) const;
+
+  S computeCamber(S x) const;
+
+  // Function to transform a point considering rotation
+  void transformPoint(S& x, S& y) const;
+
+public:
+  IndicatorAirfoil2D(Vector<S,2> center, S chordLength, S camber, S camberPos, S thicknessPercentage);
+  Vector<S,2> const& getCenter() const;
+  S const getChordLength() const;
+  S const getThicknessPercentage() const;
+  bool operator() (bool output[], const S input[]) override;
+  S signedDistance(const Vector<S,2>& input) override;
+};
 
 /// indicator function for a 2D circle
 template <typename S>
@@ -156,7 +186,19 @@ public:
   S signedDistance(const Vector<S,2>& input) override;
 };
 
+///indicator from VTIreader
+template <typename S>
+class IndicatorBlockData2Dvti : public IndicatorF2D<S> {
+private:
+  BlockData<2,S,S>& _blockData;
+  S const _deltaR;
+  bool const _invert;
 
+public:
+  IndicatorBlockData2Dvti(BlockData<2,S,S>& blockData,
+    Vector<S,2> extend, Vector<S,2> origin, S deltaR, bool invert);
+  S signedDistance(const Vector<S,2>& input) override;
+};
 
 /// Indicator function creating an layer around an input indicator (for positive \p layerSize) or
 /// reducing the input indicator by a layer (for negative \p layerSize).

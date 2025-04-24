@@ -70,6 +70,29 @@ V velocityBMRho(CELL& cell, const U& u) any_platform
   return (V{2}*rhoNormal+rhoOnWall+V{1}) / (V{1}+orientation*u[direction]);
 }
 
+template<int direction, int orientation, typename CELL, typename U, typename V=typename CELL::value_t, typename DESCRIPTOR=typename CELL::descriptor_t>
+V velocityBMP(CELL& cell, const U& u) any_platform
+{
+  constexpr auto onWallIndices = util::populationsContributingToVelocity<DESCRIPTOR,direction,0>();
+  constexpr auto normalIndices = util::populationsContributingToVelocity<DESCRIPTOR,direction,orientation>();
+
+  auto rho = cell.template getField<descriptors::RHO>();
+
+  V pOnWall{};
+  for (auto e : onWallIndices) {
+    pOnWall += cell[e];
+  }
+  pOnWall -= cell[0];
+
+  V pNormal{};
+  for (auto e : normalIndices) {
+    pNormal += cell[e];
+  }
+
+  return ((V{2}*pNormal+pOnWall-rho*orientation*u[direction])/descriptors::invCs2<V,DESCRIPTOR>()
+        -0.5*rho*descriptors::t<V,DESCRIPTOR>(0)*u[direction]*u[direction]) / (V{1}-descriptors::t<V,DESCRIPTOR>(0));
+}
+
 template<int direction, int orientation, typename CELL, typename U, typename FLUX, typename V=typename CELL::value_t, typename DESCRIPTOR=typename CELL::descriptor_t>
 V heatFluxBMRho(CELL& cell, const U& u, FLUX& flux) any_platform
 {
@@ -322,6 +345,31 @@ struct VelocityBoundaryDensity {
   }
 };
 
+/// Pressure computation for fixed velocity boundary
+template <int direction, int orientation>
+struct VelocityBoundaryPressure {
+  template <typename TYPE, typename CELL, typename P, typename V=typename CELL::value_t, typename DESCRIPTOR=typename CELL::descriptor_t>
+  void compute(CELL& cell, P& p) any_platform
+  {
+    V u[DESCRIPTOR::d];
+    TYPE().computeU(cell, u);
+    p = velocityBMP<direction,orientation>(cell, u);
+  }
+
+  template <typename TYPE, typename CELL, typename P>
+  void define(CELL& cell, const P& p) any_platform {};
+
+  template <typename TYPE, typename CELL>
+  void initialize(CELL& cell) any_platform {};
+
+  template <typename TYPE, typename CELL, typename P>
+  void inverseShift(CELL& cell, P& p) any_platform {};
+
+  static std::string getName(){
+    return "VelocityBoundaryPressure<" + std::to_string(direction) + "," + std::to_string(orientation) + ">";
+  }
+};
+
 template <int normalX, int normalY>
 struct InnerCornerDensity2D {
   template <typename TYPE, typename CELL, typename RHO, typename V=typename CELL::value_t, typename DESCRIPTOR=typename CELL::descriptor_t>
@@ -457,6 +505,7 @@ struct IncompressibleBulkMomentum {
     auto rho = cell.template getField<descriptors::RHO>();
     for (int iD=0; iD < DESCRIPTOR::d; ++iD) {
       u[iD] /= rho;
+      if (fabs(u[iD]) < 1e-15) u[iD] = 0;
     }
   }
 
@@ -585,6 +634,90 @@ struct FixedPressureMomentum {
 
   static std::string getName() {
     return "FixedPressureMomentum";
+  }
+};
+
+/** The velocity is stored in the external field U, except for the component
+ * "direction", which is computed by means of the population and the pressure.
+ * This is for incompressible multi-phase models.
+ */
+template <int direction, int orientation>
+struct PressureBoundaryMomentum {
+  struct VELOCITY : public descriptors::FIELD_BASE<0, 1, 0> { };
+
+  // compute the momentum
+  template <typename TYPE, typename CELL, typename J, typename V=typename CELL::value_t, typename DESCRIPTOR=typename CELL::descriptor_t>
+  void compute(CELL& cell, J& j) any_platform
+  {
+    computeU<TYPE>(cell, j);
+    auto rho = cell.template getField<descriptors::RHO>();
+    for (int iD=0; iD<DESCRIPTOR::d; ++iD) {
+      j[iD] *= rho;
+    }
+  }
+
+  // compute the velocity
+  template <typename TYPE, typename CELL, typename U, typename V=typename CELL::value_t, typename DESCRIPTOR=typename CELL::descriptor_t>
+  void computeU(CELL& cell, U& u) any_platform
+  {
+    auto values = cell.template getField<VELOCITY>();
+    for (int iD=0; iD<DESCRIPTOR::d; ++iD) {
+      u[iD] = values[iD];
+    }
+    auto rho = cell.template getField<descriptors::RHO>();
+    auto gradRho = cell.template getField<descriptors::NABLARHO>();
+    //V rho = 10.;
+    //V gradRho[2] = {0.,0.};
+    auto force = cell.template getField<descriptors::FORCE>();
+    const V p = TYPE().computeRho(cell);
+
+    constexpr auto onWallIndices = util::populationsContributingToVelocity<DESCRIPTOR,direction,0>();
+    constexpr auto normalIndices = util::populationsContributingToVelocity<DESCRIPTOR,direction,orientation>();
+
+    V popOnWall = V{};
+    for (auto e : onWallIndices) {
+      popOnWall += cell[e];
+    }
+    popOnWall -= cell[0];
+
+    V popNormal = V{};
+    for (auto e : normalIndices) {
+      popNormal += cell[e];
+    }
+
+    V w0 = descriptors::t<V,DESCRIPTOR>(0);
+    V cs2 = 1./descriptors::invCs2<V,DESCRIPTOR>();
+    V pops = V{2}*popNormal+popOnWall;
+    V term = cs2*(V{2}*rho-gradRho[direction])/(V{2}*rho*w0);
+    V otherU = 0;
+    for (int iDim = 1; iDim < DESCRIPTOR::d; ++iDim) {
+      u[(direction+iDim)%DESCRIPTOR::d] = 0.5/rho*force[(direction+iDim)%DESCRIPTOR::d];
+      otherU += cs2*0.5*u[(direction+iDim)%DESCRIPTOR::d]*gradRho[(direction+iDim)%DESCRIPTOR::d]
+                -0.5*w0*rho*u[(direction+iDim)%DESCRIPTOR::d]*u[(direction+iDim)%DESCRIPTOR::d];
+    }
+    u[direction] = orientation*(-term + sqrt(term*term + V{2}/rho/w0*(cs2*(pops+0.5*force[direction])-(V{1}-w0)*p+otherU)));
+    //u[direction] = orientation*(-cs2/w0 + sqrt(cs2*cs2/w0/w0 + V{2}/rho/w0*(cs2*pops-(V{1}-w0)*p)));
+  }
+
+  // define the velocity
+  template <typename TYPE, typename CELL, typename U>
+  void define(CELL& cell, const U& u) any_platform
+  {
+    cell.template setField<VELOCITY>(u);
+  }
+
+  template <typename TYPE, typename CELL, typename V=typename CELL::value_t, typename DESCRIPTOR=typename CELL::descriptor_t>
+  void initialize(CELL& cell) any_platform
+  {
+    V u[DESCRIPTOR::d] { V{} };
+    cell.template setField<VELOCITY>(u);
+  }
+
+  template <typename TYPE, typename CELL, typename U>
+  void inverseShift(CELL& cell, U& u) any_platform {};
+
+  static std::string getName() {
+    return "PressureBoundaryMomentum";
   }
 };
 
@@ -1498,6 +1631,37 @@ struct BulkStress {
   }
 };
 
+/** Standard stress computation as second moment of the population.
+ * Utilizes the implementation in lbHelpers.
+ */
+struct IncompressibleBulkStress {
+  template <typename TYPE, typename CELL, typename P, typename U, typename PI, typename V=typename CELL::value_t, typename DESCRIPTOR=typename CELL::descriptor_t>
+  void compute(CELL& cell, const P& p, const U& u, PI& pi) any_platform
+  {
+    int iPi = 0;
+    const auto rho = cell.template getField<descriptors::RHO>();
+    for (int iAlpha=0; iAlpha < DESCRIPTOR::d; ++iAlpha) {
+      for (int iBeta=iAlpha; iBeta < DESCRIPTOR::d; ++iBeta) {
+        pi[iPi] = V();
+        for (int iPop=0; iPop < DESCRIPTOR::q; ++iPop) {
+          pi[iPi] += descriptors::c<DESCRIPTOR>(iPop,iAlpha)*
+                     descriptors::c<DESCRIPTOR>(iPop,iBeta) * cell[iPop];
+        }
+        // stripe off equilibrium contribution
+        pi[iPi] -= rho*u[iAlpha]*u[iBeta];
+        if (iAlpha==iBeta) {
+          pi[iPi] -= p;
+        }
+        ++iPi;
+      }
+    }
+  }
+
+  static std::string getName() {
+    return "IncompressibleBulkStress";
+  }
+};
+
 /// Computation of the stress tensor for regularized boundary nodes
 template <int direction, int orientation>
 struct RegularizedBoundaryStress {
@@ -1674,6 +1838,38 @@ struct ForcedStress {
 
   static std::string getName() {
     return "ForcedStress<" + STRESS().getName() + ">";
+  }
+};
+
+template<typename STRESS>
+struct ForcedIncompressibleStress {
+  template <typename TYPE, typename CELL, typename P, typename U, typename PI, typename V=typename CELL::value_t, typename DESCRIPTOR=typename CELL::descriptor_t>
+  void compute(CELL& cell, const P& p, const U& u, PI& pi) any_platform
+  {
+    V uNew[DESCRIPTOR::d] { };
+    const auto force = cell.template getFieldPointer<descriptors::FORCE>();
+    const auto partialRho = cell.template getFieldPointer<descriptors::NABLARHO>();
+    for (unsigned iD=0; iD < DESCRIPTOR::d; ++iD) {
+      uNew[iD] = u[iD] - V{0.5} * force[iD];
+    }
+    STRESS().template compute<TYPE>(cell, p, uNew, pi);
+    V forceTensor[util::TensorVal<DESCRIPTOR>::n];
+    int iPi = 0;
+    for (int iAlpha=0; iAlpha < DESCRIPTOR::d; ++iAlpha) {
+      for (int iBeta=iAlpha; iBeta < DESCRIPTOR::d; ++iBeta) {
+        forceTensor[iPi] = V{0.5} /descriptors::invCs2<V,DESCRIPTOR>() * (partialRho[iAlpha]*uNew[iBeta] + uNew[iAlpha]*partialRho[iBeta]);
+        if (iAlpha == iBeta) forceTensor[iPi] += V{0.5} /descriptors::invCs2<V,DESCRIPTOR>() * partialRho[iAlpha]*uNew[iAlpha];
+        ++iPi;
+      }
+    }
+    // Creation of second-order moment off-equilibrium tensor
+    for (int iPi=0; iPi < util::TensorVal<DESCRIPTOR>::n; ++iPi) {
+      pi[iPi] += forceTensor[iPi];
+    }
+  }
+
+  static std::string getName() {
+    return "ForcedIncompressibleStress<" + STRESS().getName() + ">";
   }
 };
 

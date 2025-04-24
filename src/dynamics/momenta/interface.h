@@ -336,6 +336,18 @@ struct ForcedWithStress {
 };
 
 template <typename MOMENTA>
+struct ForcedWithIncompressibleStress {
+  template <typename DESCRIPTOR>
+  using type = ConcreteTuple<
+    DESCRIPTOR,
+    typename MOMENTA::template type<DESCRIPTOR>::density,
+    ForcedMomentum<typename MOMENTA::template type<DESCRIPTOR>::momentum>,
+    ForcedIncompressibleStress<typename MOMENTA::template type<DESCRIPTOR>::stress>,
+    typename MOMENTA::template type<DESCRIPTOR>::definition
+>;
+};
+
+template <typename MOMENTA>
 struct Porous {
   template <typename DESCRIPTOR>
   using type = ConcreteTuple<

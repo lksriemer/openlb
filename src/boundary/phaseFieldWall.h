@@ -25,6 +25,7 @@
 #define OLB_BOUNDARY_PHASE_FIELD_WALL_H_
 
 #include "dynamics/freeEnergyDynamics.h"
+#include "dynamics/dynamics.h"
 
 namespace olb {
 
@@ -40,6 +41,20 @@ struct PhaseFieldWall;
 template <
   concepts::BaseType T,
   concepts::LatticeDescriptor DESCRIPTOR,
+  typename MixinDynamics = BounceBackBulkDensityADE<T,DESCRIPTOR>
+>
+struct PhaseFieldCurvedWall;
+
+template <
+concepts::BaseType T,
+concepts::LatticeDescriptor DESCRIPTOR,
+typename MixinDynamics = BounceBackBulkDensityWellBalanced<T,DESCRIPTOR>
+>
+struct WellBalancedWall;
+
+template <
+  concepts::BaseType T,
+  concepts::LatticeDescriptor DESCRIPTOR,
   typename MixinDynamics = BounceBackBulkDensity<T,DESCRIPTOR>
 >
 struct FreeEnergyWallMomentum;
@@ -51,12 +66,12 @@ template <
 >
 struct FreeEnergyWallOrderParameter;
 
-template <
+/*template <
   concepts::BaseType T,
   concepts::LatticeDescriptor DESCRIPTOR,
   typename MixinDynamics = NoDynamics<T,DESCRIPTOR>
 >
-struct SignedDistanceBoundary; //TODO: wait for stage flexibility
+struct SignedDistanceBoundary; //TODO: wait for stage flexibility*/
 
 }
 

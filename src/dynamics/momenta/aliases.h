@@ -50,7 +50,7 @@ template<typename MOMENTUM>
 using IncBulkTuple = Tuple<
   BulkPressure<MOMENTUM>,
   IncompressibleBulkMomentum,
-  BulkStress,
+  IncompressibleBulkStress,
   DefineToNEq
 >;
 
@@ -150,12 +150,32 @@ using BasicDirichletVelocityBoundaryTuple = Tuple<
   DefineSeparately
 >;
 
+/// Velocity boundary node. Pressure and velocity are computed via boundary
+/// condition, whereas stress is computed as in the bulk.
+template <int direction, int orientation>
+using IncDirichletVelocityBoundaryTuple = Tuple<
+  VelocityBoundaryPressure<direction,orientation>,
+  FixedVelocityMomentumGeneric,
+  BulkStress,
+  DefineSeparately
+>;
+
 /// Pressure boundary node. Density and velocity are computed via boundary
 /// condition, whereas stress is computed as in the bulk.
 template <int direction, int orientation>
 using BasicDirichletPressureBoundaryTuple = Tuple<
   FixedDensity,
   FixedPressureMomentum<direction,orientation>,
+  BulkStress,
+  DefineSeparately
+>;
+
+/// Pressure boundary node. Pressure and velocity are computed via boundary
+/// condition, whereas stress is computed as in the bulk.
+template <int direction, int orientation>
+using IncDirichletPressureBoundaryTuple = Tuple<
+  FixedDensity,
+  PressureBoundaryMomentum<direction,orientation>,
   BulkStress,
   DefineSeparately
 >;

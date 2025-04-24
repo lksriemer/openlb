@@ -31,6 +31,41 @@ namespace boundary {
 template <
   concepts::BaseType T,
   concepts::LatticeDescriptor DESCRIPTOR,
+  typename MixinDynamics = MPIncTRTdynamics<T,DESCRIPTOR>
+>
+struct IncompressibleZouHeVelocity;
+
+template <
+  concepts::BaseType T,
+  concepts::LatticeDescriptor DESCRIPTOR,
+  typename MixinDynamics = MPIncTRTdynamics<T,DESCRIPTOR>
+>
+struct IncompressibleZouHePressure;
+
+template <
+  concepts::BaseType T,
+  concepts::LatticeDescriptor DESCRIPTOR,
+  typename MixinDynamics = MPIncTRTdynamics<T,DESCRIPTOR>
+>
+struct IncompressibleConvective;
+
+template <
+  concepts::BaseType T,
+  concepts::LatticeDescriptor DESCRIPTOR,
+  typename MixinDynamics = AllenCahnBGKdynamics<T,DESCRIPTOR>
+>
+struct PhaseFieldInlet;
+
+template <
+  concepts::BaseType T,
+  concepts::LatticeDescriptor DESCRIPTOR,
+  typename MixinDynamics = AllenCahnBGKdynamics<T,DESCRIPTOR>
+>
+struct PhaseFieldConvective;
+
+template <
+  concepts::BaseType T,
+  concepts::LatticeDescriptor DESCRIPTOR,
   typename MixinDynamics = RLBdynamics<T, DESCRIPTOR>
 >
 struct FreeEnergyVelocity;

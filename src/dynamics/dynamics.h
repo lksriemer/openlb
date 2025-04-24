@@ -41,6 +41,9 @@
 
 #include "collisionModifiers.h"
 
+// TODO: Check this later
+#include "collisionLES.h"
+
 namespace olb {
 
 /// Dynamics for "dead cells" doing nothing
@@ -314,6 +317,42 @@ using MPIncBGKdynamics = dynamics::Tuple<
   forcing::Liang<momenta::Forced>
 >;
 
+template <typename T, typename DESCRIPTOR>
+using MPIncTRTdynamics = dynamics::Tuple<
+  T, DESCRIPTOR,
+  momenta::IncBulkTuple<momenta::ForcedMomentum<momenta::IncompressibleBulkMomentum>>,
+  equilibria::MPIncompressible,
+  collision::OmegaFromCellTauEff<collision::TRT>,
+  forcing::Liang<momenta::Forced>
+>;
+
+template <typename T, typename DESCRIPTOR>
+using MultiPhaseIncTRTdynamics = dynamics::Tuple<
+  T, DESCRIPTOR,
+  momenta::IncBulkTuple<momenta::ForcedMomentum<momenta::IncompressibleBulkMomentum>>,
+  equilibria::MPIncompressible,
+  collision::OmegaFromCellTauEff<collision::ITRT>,
+  forcing::LiangTRT<momenta::Forced>
+>;
+
+template <typename T, typename DESCRIPTOR>
+using MultiPhaseSmagorinskyIncBGKdynamics = dynamics::Tuple<
+  T, DESCRIPTOR,
+  momenta::IncBulkTuple<momenta::ForcedMomentum<momenta::IncompressibleBulkMomentum>>,
+  equilibria::MPIncompressible,
+  collision::OmegaFromCellTauEff<collision::IncompressibleSmagorinskyEffectiveOmega<collision::BGK>>,
+  forcing::Liang<momenta::ForcedWithIncompressibleStress>
+>;
+
+template <typename T, typename DESCRIPTOR>
+using MultiPhaseSmagorinskyIncTRTdynamics = dynamics::Tuple<
+  T, DESCRIPTOR,
+  momenta::IncBulkTuple<momenta::ForcedMomentum<momenta::IncompressibleBulkMomentum>>,
+  equilibria::MPIncompressible,
+  collision::OmegaFromCellTauEff<collision::IncompressibleSmagorinskyEffectiveOmega<collision::ITRT>>,
+  forcing::LiangTRT<momenta::ForcedWithIncompressibleStress>
+>;
+
 template <typename T, typename DESCRIPTOR, typename MOMENTA=momenta::ExternalVelocityTuple>
 using AllenCahnBGKdynamics = dynamics::Tuple<
   T, DESCRIPTOR,
@@ -322,6 +361,16 @@ using AllenCahnBGKdynamics = dynamics::Tuple<
   collision::BGK,
   forcing::AllenCahn
 >;
+
+template <typename T, typename DESCRIPTOR, typename MOMENTA=momenta::ExternalVelocityTuple>
+using WellBalancedCahnHilliardBGKdynamics = dynamics::Tuple<
+  T, DESCRIPTOR,
+  MOMENTA,
+  equilibria::CahnHilliardZerothOrder,
+  collision::BGK,
+  forcing::WellBalancedCahnHilliard
+>;
+
 
 /// Regularized BGK collision step
 /**
@@ -475,6 +524,19 @@ using BounceBackBulkDensityADE = dynamics::Tuple<
     momenta::DefineSeparately
   >,
   equilibria::FirstOrder,
+  collision::Revert
+>;
+
+template <typename T, typename DESCRIPTOR>
+using BounceBackBulkDensityWellBalanced = dynamics::Tuple<
+  T, DESCRIPTOR,
+  momenta::Tuple<
+    momenta::BulkDensity,
+    momenta::ZeroMomentum,
+    momenta::ZeroStress,
+    momenta::DefineSeparately
+  >,
+  equilibria::CahnHilliardZerothOrder,
   collision::Revert
 >;
 

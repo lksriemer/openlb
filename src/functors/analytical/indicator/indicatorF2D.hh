@@ -36,6 +36,121 @@
 
 namespace olb {
 
+// indicator function for a 2D NACA airfoil
+template <typename S>
+IndicatorAirfoil2D<S>::IndicatorAirfoil2D(Vector<S,2> center, S chordLength, S camber, S camberPos, S thicknessPercentage)
+  : _center(center),
+    _chordLength(chordLength),
+    _camber(camber),
+    _camberPos(camberPos),
+    _thicknessPercentage(thicknessPercentage)
+{
+  // Set bounding box
+  S maxThickness = _chordLength * _thicknessPercentage;
+  this->_myMin = {_center[0] - _chordLength/S(2), _center[1] - maxThickness/S(2)};
+  this->_myMax = {_center[0] + _chordLength/S(2), _center[1] + maxThickness/S(2)};
+}
+
+template <typename S>
+Vector<S,2> const& IndicatorAirfoil2D<S>::getCenter() const
+{
+  return _center;
+}
+
+template <typename S>
+S const IndicatorAirfoil2D<S>::getChordLength() const
+{
+  return _chordLength;
+}
+
+template <typename S>
+S const IndicatorAirfoil2D<S>::getThicknessPercentage() const
+{
+  return _thicknessPercentage;
+}
+
+
+template <typename S>
+S IndicatorAirfoil2D<S>::computeThickness(S x) const
+{
+  // Equation for a symmetrical 4-digit NACA airfoil
+  S yt = 0;
+  for (int i = 0; i < 5; i++) {
+    yt += _coeffs[i] * util::pow(x/_chordLength, _exponents[i]);
+  }
+  yt = 5 * _thicknessPercentage * _chordLength * yt;
+  // yt = distance from camber line to surface (i.e. half thickness)
+
+  return 2 * yt;
+}
+
+template <typename S>
+S IndicatorAirfoil2D<S>::computeCamber(S x) const
+{
+  // computing Chord to later add to Operator check whether point is in Indicator
+  // translating to local coordinates
+  x = x/_chordLength;
+  S computedCamber = 0;
+  // splitting by cases
+  if(_camber == 0) computedCamber = 0;
+  else if(x <= _camberPos) computedCamber = (_camber/pow(_camberPos,2))*(2*_camberPos*x - pow(x,2));
+  else if(x >= _camberPos) computedCamber = (_camber/pow((1 - _camberPos),2))*(1 - 2* _camberPos + 2*_camberPos*x - pow(x,2));
+  return computedCamber;
+}
+
+template <typename S>
+void IndicatorAirfoil2D<S>::transformPoint(S& x, S& y) const
+{
+    // Adjust the coordinates relative to the center of the airfoil.
+    x -= _center[0];
+    y -= _center[1];
+    // Translating the point back relative to the leading edge
+    x += _chordLength/S(2);
+}
+
+// returns true if point is inside the airfoil
+template <typename S>
+bool IndicatorAirfoil2D<S>::operator()(bool output[], const S input[])
+{
+  S x = input[0];
+  S y = input[1];
+
+  // Transform the point to the airfoil's local coordinate system
+  transformPoint(x, y);
+
+  // Check if point is within the airfoil
+  // Step 1: Check if the point’s x-coordinate is within airfoil camber
+  if (x < 0 || x > _chordLength) {
+    output[0] = false;
+    return true;
+  }
+
+  // Step 2: Check if y-coordinate is between the airfoil's upper and lower surface
+  if(y>=0) output[0] = (util::fabs(y) <= computeThickness(x)/2 + computeCamber(x));
+  else if(y<0) output[0] = (util::fabs(y) <= computeThickness(x)/2 - computeCamber(x));
+  return true;
+}
+
+template <typename S>
+S IndicatorAirfoil2D<S>::signedDistance(const Vector<S,2>& input)
+{
+  S signedDistance = S{1};
+  return signedDistance;
+}
+
+template <typename S>
+IndicatorAirfoil2D<S>* createIndicatorAirfoil2D(XMLreader const& params, bool verbose)
+{
+  Vector<S,2> center;
+  S chordLength = 1;            // Default chord length
+  S thicknessPercentage = 0.12; // Default thickness percentage
+
+  std::stringstream(params.getAttribute("center")) >> center[0] >> center[1];
+  std::stringstream(params.getAttribute("chord")) >> chordLength;
+
+  return new IndicatorAirfoil2D<S>(center, chordLength, thicknessPercentage);
+}
+
 // Warning : the cuboid is only defined parallel to the plans x=0 and y=0 !!!
 // For other cuboids, please use the parallelepiped version
 template <typename S>
@@ -455,6 +570,57 @@ S IndicatorBlockData2D<S>::signedDistance(const Vector<S,2>& input)
   }
 
 }
+
+template <typename S>
+IndicatorBlockData2Dvti<S>::IndicatorBlockData2Dvti(
+    BlockData<2, S, S>& blockData, Vector<S, 2> extend, Vector<S, 2> origin,
+    S deltaR, bool invert)
+    : _blockData(blockData)
+    , _deltaR(deltaR)
+    , _invert(invert)
+{
+  this->_myMin = Vector<S, 2>(origin[0], origin[1]);
+  this->_myMax = Vector<S, 2>(origin[0] + extend[0], origin[1] + extend[1]);
+}
+
+template <typename S>
+S IndicatorBlockData2Dvti<S>::signedDistance(const Vector<S, 2>& input)
+{
+ // Translation
+  S xDist = input[0] - this->_myMin[0];
+  S yDist = input[1] - this->_myMin[1];
+
+  int x = ((this->_myMin[0] + xDist) / _deltaR) + 0.5;
+  int y = ((this->_myMin[1] + yDist) / _deltaR) + 0.5;
+
+  if (x >= 0 && x < _blockData.getNx() && y >= 0 && y < _blockData.getNy()) {
+    LatticeR<2> input(x, y);
+    if (_blockData.get(input) > std::numeric_limits<S>::epsilon()) {
+      if (!_invert) {
+        return 1.;
+      }
+      else {
+        return -1.;
+      }
+    }
+    else {
+      if (!_invert) {
+        return -1.;
+      }
+      else {
+        return 1.;
+      }
+    }
+  }
+
+  if (!_invert) {
+    return 1.;
+  }
+  else {
+    return -1.;
+  }
+}
+
 
 template <typename S>
 IndicatorLayer2D<S>::IndicatorLayer2D(IndicatorF2D<S>& indicatorF, S layerSize)

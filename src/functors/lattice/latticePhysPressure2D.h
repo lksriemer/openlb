@@ -59,5 +59,27 @@ public:
   bool operator() (T output[], const int input[]) override;
 };
 
+/// functor to get pointwise phys pressure from incompressible model on local lattices
+template <typename T, typename DESCRIPTOR>
+class SuperLatticePhysIncPressure2D final : public SuperLatticePhysF2D<T,DESCRIPTOR> {
+public:
+  SuperLatticePhysIncPressure2D(SuperLattice<T,DESCRIPTOR>& sLattice,
+                                const UnitConverter<T,DESCRIPTOR>& converter);
+};
+
+template <typename T, typename DESCRIPTOR>
+SuperLatticePhysIncPressure2D(SuperLattice<T,DESCRIPTOR>&,
+                              const UnitConverter<T,DESCRIPTOR>&)
+  -> SuperLatticePhysIncPressure2D<T,DESCRIPTOR>;
+
+/// BlockLatticePhysPressure2D returns pointwise phys pressure from incompressible model on local lattices.
+template <typename T, typename DESCRIPTOR>
+class BlockLatticePhysIncPressure2D final : public BlockLatticePhysF2D<T,DESCRIPTOR> {
+public:
+  BlockLatticePhysIncPressure2D(BlockLattice<T,DESCRIPTOR>& blockLattice,
+                                const UnitConverter<T,DESCRIPTOR>& converter);
+  bool operator() (T output[], const int input[]) override;
+};
+
 }
 #endif

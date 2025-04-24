@@ -31,8 +31,6 @@
   </Application>
 
   <Optimization>
-    <ControlType> porosity </ControlType>
-
     <DimensionControl> 1200 </DimensionControl>
     <FieldDimension> 1 </FieldDimension>
 

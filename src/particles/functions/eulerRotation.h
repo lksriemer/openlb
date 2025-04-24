@@ -65,12 +65,11 @@ void qnormalize(Vector <T,4> & vec)
   for(int i= 0; i < 4;i++)
    norm += vec[i]*vec[i];
 
-  if(norm != 0)
-  {
+  if (norm != 0) {
     norm = olb::util::sqrt(norm);
-  for(int i=0; i< 4;i++)
-    vec[i] /= norm;
-  }
+    for(int i=0; i< 4;i++)
+      vec[i] /= norm;
+    }
   }
 
 ///compute transformation matrix from eul angles using x-convention Goldstein(1980), in degrees
@@ -380,14 +379,15 @@ return invTMat;
     {
       bool verbose =false;
       std::random_device rd;
-      int num = rd();
-      if(direction[0] ==1)
-        if(verbose) std::cout << "X" << std::endl;
-      else if(direction[1] ==1)
-       if(verbose) std::cout << "Y" << std::endl;
-      else if(direction[2] ==1)
-        if(verbose)std::cout << "Z" << std::endl;
-      //std::cout << "random device " << num << std::endl;
+      if (direction[0] == 1) {
+        if(verbose) { std::cout << "X" << std::endl; }
+      }
+      else if (direction[1] == 1) {
+        if (verbose) { std::cout << "Y" << std::endl; }
+      }
+      else if(direction[2] == 1) {
+        if(verbose) { std::cout << "Z" << std::endl; }
+      }
       std::mt19937 generator (rd());
       T fluidVelArray2 [3];
       T fluidVelArray1 [3];
@@ -419,13 +419,11 @@ return invTMat;
 
 
 
-        ///computes velocity gradient in given direction in positionArray by central finite difference using points in the distance of deltaX
+    ///computes velocity gradient in given direction in positionArray by central finite difference using points in the distance of deltaX
     template<typename T, typename DESCRIPTOR>
     void veloGradientInterpFDTurbulence ( Vector<T,3> &res, BlockLatticeInterpPhysVelocity<T,DESCRIPTOR> & blockInterpPhysVelF , Vector<T,3> & direction, Vector<T,3> & positionArray, T deltaX, Vector<T,3> & std_dev)
     {
       std::random_device rd;
-      int num = rd();
-      //std::cout << "random device " << num << std::endl;
       std::mt19937 generator (rd());
       T fluidVelArray2 [3];
       T fluidVelArray1 [3];
@@ -437,21 +435,16 @@ return invTMat;
       std::normal_distribution<T> disty ((fluidVelArray2[1] - fluidVelArray1[1])/(2*deltaX), util::sqrt(2*std_dev[1]/(2*deltaX)));
       std::normal_distribution<T> distz ((fluidVelArray2[2] - fluidVelArray1[2])/(2*deltaX), util::sqrt(2*std_dev[2]/(2*deltaX)));
 
-
       res[0] = distx(generator);
       res[1] = disty(generator);
       res[2] = distz(generator);
-
-
     }
 
-            ///computes velocity gradient in given direction in positionArray by central finite difference using points in the distance of deltaX
+    ///computes velocity gradient in given direction in positionArray by central finite difference using points in the distance of deltaX
     template<typename T, typename DESCRIPTOR>
     void veloGradientInterpFDTurbulenceAnalytical ( Vector<T,3> & res , Vector<T,3> & direction, Vector<T,3> & positionArray, T deltaX, Vector<T,3> & std_dev)
     {
       std::random_device rd;
-      int num = rd();
-      //std::cout << "random device " << num << std::endl;
       std::mt19937 generator (rd());
       T fluidVelArray2 [3];
       T fluidVelArray1 [3];
