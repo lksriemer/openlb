@@ -47,6 +47,10 @@ _vimrc_local.vim
 *.gp
 *.png
 *.pdf
+*.jpg
+*.jpeg
+*.matrix
+*.p
 
 *.swp
 .ycm_extra_conf.py

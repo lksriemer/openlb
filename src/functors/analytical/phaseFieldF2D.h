@@ -86,5 +86,30 @@ public:
   bool operator()(T output[], const T x[]) override;
 };
 
+
+
+template <typename T, typename DESCRIPTOR>
+class IncompressibleEquilibriumPopulations2D : public AnalyticalF2D<T,T> {
+protected:
+  FunctorPtr<AnalyticalF2D<T,T>> _density;
+  FunctorPtr<AnalyticalF2D<T,T>> _pressure;
+  FunctorPtr<AnalyticalF2D<T,T>> _velocity;
+
+public:
+  IncompressibleEquilibriumPopulations2D(FunctorPtr<AnalyticalF2D<T,T>> density, FunctorPtr<AnalyticalF2D<T,T>> pressure, FunctorPtr<AnalyticalF2D<T,T>> velocity);
+  bool operator()(T output[], const T input[]) override;
+};
+
+template <typename T, typename DESCRIPTOR>
+class FirstOrderEquilibriumPopulations2D : public AnalyticalF2D<T,T> {
+protected:
+  FunctorPtr<AnalyticalF2D<T,T>> _density;
+  FunctorPtr<AnalyticalF2D<T,T>> _velocity;
+
+public:
+  FirstOrderEquilibriumPopulations2D(FunctorPtr<AnalyticalF2D<T,T>> density, FunctorPtr<AnalyticalF2D<T,T>> velocity);
+  bool operator()(T output[], const T input[]) override;
+};
+
 } // end namespace olb
 #endif

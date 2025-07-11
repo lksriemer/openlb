@@ -114,5 +114,52 @@ bool ShiftedLaplacePressure2D<T>::operator()(T output[], const T x[])
 }
 
 
+template <typename T, typename DESCRIPTOR>
+IncompressibleEquilibriumPopulations2D<T, DESCRIPTOR>::IncompressibleEquilibriumPopulations2D(FunctorPtr<AnalyticalF2D<T,T>> density, FunctorPtr<AnalyticalF2D<T,T>> pressure, FunctorPtr<AnalyticalF2D<T,T>> velocity): AnalyticalF2D<T,T>(DESCRIPTOR::q)
+  , _density{std::move(density)}, _pressure{std::move(pressure)}, _velocity{std::move(velocity)}
+{
+}
+
+template <typename T, typename DESCRIPTOR>
+bool IncompressibleEquilibriumPopulations2D<T, DESCRIPTOR>::operator()(T output[], const T input[])
+{
+  T d;
+  T p;
+  T v [2];
+  this->_density(&d, input);
+  this->_pressure(&p, input);
+  this->_velocity(v, input);
+
+  for(int iPop = 0; iPop < 9; ++iPop){
+    output[iPop] = olb::equilibrium<DESCRIPTOR>::mpincompressible(iPop, d, v, p);
+  }
+  
+  return true;
+}
+
+template <typename T, typename DESCRIPTOR>
+FirstOrderEquilibriumPopulations2D<T, DESCRIPTOR>::FirstOrderEquilibriumPopulations2D(FunctorPtr<AnalyticalF2D<T,T>> density, FunctorPtr<AnalyticalF2D<T,T>> velocity): AnalyticalF2D<T,T>(DESCRIPTOR::q)
+  , _density{std::move(density)}, _velocity{std::move(velocity)}
+{
+
+}
+
+template <typename T, typename DESCRIPTOR>
+bool FirstOrderEquilibriumPopulations2D<T, DESCRIPTOR>::operator()(T output[], const T input[])
+{
+  T d;
+  T v [2];
+  this->_density(&d, input);
+  this->_velocity(v, input);
+
+  for(int iPop = 0; iPop < 9; ++iPop){
+    output[iPop] = olb::equilibrium<DESCRIPTOR>::firstOrder(iPop, d, v);
+  }
+  
+  return true;
+}
+
+
+
 } // end namespace olb
 #endif
