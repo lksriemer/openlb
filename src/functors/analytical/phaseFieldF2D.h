@@ -57,6 +57,21 @@ public:
   bool operator()(T output[], const T input[]) override;
 };
 
+template <typename T>
+class CircularFadingInterface2D : public AnalyticalF2D<T,T> {
+protected:
+  FunctorPtr<AnalyticalF2D<T,T>> _phi;
+  std::vector<T> _center;
+  T _interfaceWidth;
+  T _radius;
+  int _fade_steps;
+  int _current_step;
+
+public:
+  CircularFadingInterface2D(FunctorPtr<AnalyticalF2D<T,T>> phi, std::vector<T> center, T radius, T interfaceWidth, int current_step, int fade_steps);
+  bool operator()(T output[], const T input[]) override;
+};
+
 // smooth Young-Laplace pressure over interface
 template <typename T>
 class LaplacePressure2D : public AnalyticalF2D<T,T> {

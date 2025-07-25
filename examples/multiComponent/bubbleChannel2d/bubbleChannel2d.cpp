@@ -66,8 +66,22 @@ T         Re    = 100; // Reynolds number of channel flow []
 const T   theta = M_PI * 40. / 180.; // contact angle (<90 is wetting) [radians]
 const T   w     = 6.; // lattice interface thickness [lattice units]
 int       maxIter  = 200000;
+
 const int vtkIter  = 1000;
 const int statIter = 1000;
+
+const int total_ramp_iTs = 3;
+const int smoothing_ramp_iTs = 10;
+
+bool is_bubble_spawn_iT(int iT){
+  return (iT % 10000) == 100;
+}
+
+bool is_vtk_time(int iT){
+  return iT % vtkIter == 0 || iT >= 10099;
+}
+
+// 100 1 0.05 works
 
 void prepareGeometry(SuperGeometry<T, 2>& superGeometry, T dx)
 {
@@ -308,33 +322,17 @@ void insert_bubble(
   OstreamManager clout(std::cout, "main");
 
   clout << "Starting bubble insertion" << std::endl;
-  // TODO:
-  // The current approach is to set the entire fields again, 
-  // changed at where the new bubble is supposed to be
-  // Maybe instead only change values there?
 
-  // TODO:
-  // CUrrently all current values are passed into this fucntion
-  // How to actually get them? From the sLattices?
-
-  // TODO:
-  // Check if there already is a bubble too close to the new bubble
-
-  
 
   IndicatorCircle2D<T> bubble_circle(pos, diameter / 2. * 1.1);
   superGeometry.rename(1, 17, bubble_circle);
   
-  auto all    = superGeometry.getMaterialIndicator({1});
+  auto all    = superGeometry.getMaterialIndicator({1, 2, 3, 4, 5});
   auto bubble_ind = superGeometry.getMaterialIndicator({17});
 
   // AnalyticalConst2D<T, T> tauv_anal(tau_v);
   // auto tauv = std::make_shared<SuperLatticeFfromAnalyticalF2D<T, NSDESCRIPTOR>>(tauv_anal);
   // AnalyticalConst2D<T, T> taul(tau_l);
-
-  // TODO: Do we even need to do thigs with tau?
-  // If yes, how to get it? This way?
-  // SuperLatticeExternalScalarField2D<T, NSDESCRIPTOR, TAU_EFF> tau(sLatticeNS);
 
   std::shared_ptr<AnalyticalF2D<T,T>> one = std::make_shared<AnalyticalConst2D<T,T>>(1.);
 
@@ -348,6 +346,7 @@ void insert_bubble(
   SuperLatticeVelocity2D<T,NSDESCRIPTOR>  u_ns_raw (sLatticeNS);
   SuperLatticeDensity2D<T,ACDESCRIPTOR>   phi_raw(sLatticeAC);
   SuperLatticeVelocity2D<T,ACDESCRIPTOR>  u_ac_raw (sLatticeAC);
+  SuperLatticeIncPressure2D<T, NSDESCRIPTOR> pressure_computed_raw(sLatticeNS);
 
   std::shared_ptr<AnalyticalF2D<T,T>> u_ns = std::make_shared<AnalyticalFfromSuperF2D<T,T>>(u_ns_raw);
   std::shared_ptr<AnalyticalF2D<T,T>> u_ac = std::make_shared<AnalyticalFfromSuperF2D<T,T>>(u_ac_raw);
@@ -358,14 +357,15 @@ void insert_bubble(
   // auto phi = std::dynamic_pointer_cast<AnalyticalF2D<T,T>>(phi_anal_ptr);
   std::shared_ptr<AnalyticalF2D<T,T>> phi = std::make_shared<AnalyticalFfromSuperF2D<T,T>>(phi_raw);
 
+  std::shared_ptr<AnalyticalF2D<T,T>> pressure_computed = std::make_shared<AnalyticalFfromSuperF2D<T,T>>(pressure_computed_raw);
+
   // auto rhov = std::make_shared<AnalyticalConst2D<T, T>>(rhos[0] / C_density);
   // auto tauv = std::make_shared<AnalyticalConst2D<T, T>>(tau_v);
 
   // Create the new bubbble phi, add it into the current phi
 
-  std::shared_ptr<AnalyticalF2D<T,T>> phi_new_bubble = std::make_shared<CircularInterface2D<T>>(pos, dx * diameter / 2., dx * w, 1.,
-                                        true);
-
+  std::shared_ptr<AnalyticalF2D<T,T>> phi_new_bubble = 
+    std::make_shared<CircularInterface2D<T>>(pos, dx * diameter / 2., dx * w, 1., true);
   auto phi_new = phi + phi_new_bubble - one;
 
   // Update tau
@@ -377,8 +377,8 @@ void insert_bubble(
 
   // Now create the pressure / velocity for our new bubbble
 
-  std::shared_ptr<AnalyticalF2D<T, T>> bubblePressure(new LaplacePressure2D<T>(
-      pos, dx * diameter / 2., dx * w, sigma * C_sigma / C_p));
+  std::shared_ptr<AnalyticalF2D<T, T>> bubblePressure(
+      new LaplacePressure2D<T>(pos, dx * diameter / 2., dx * w, sigma * C_sigma / C_p));
   std::shared_ptr<AnalyticalF2D<T, T>> halfYLPressure(
       new AnalyticalConst2D<T, T>(2. * sigma / diameter / 2.));
 
@@ -391,8 +391,10 @@ void insert_bubble(
   clout << "Finalizing bubble insertion" << std::endl;
 
 
-  std::shared_ptr<AnalyticalF2D<T,T>> rhov = std::make_shared<AnalyticalConst2D<T, T>>(rhos[0] / C_density);
-  std::shared_ptr<AnalyticalF2D<T,T>> rhol = std::make_shared<AnalyticalConst2D<T, T>>(rhos[1] / C_density);
+  std::shared_ptr<AnalyticalF2D<T,T>> rhov = 
+    std::make_shared<AnalyticalConst2D<T, T>>(rhos[0] / C_density);
+  std::shared_ptr<AnalyticalF2D<T,T>> rhol = 
+    std::make_shared<AnalyticalConst2D<T, T>>(rhos[1] / C_density);
   auto rho = rhov + (rhol - rhov) * phi_new; // rho is density
 
   // sLatticeNS.defineField<descriptors::RHO>(all, *rho);
@@ -416,6 +418,7 @@ void insert_bubble(
 }
 
 
+// Not functioonal right now
 void update_fading_bubble(
     std::vector<T>& pos, double diameter,
     int elapsed_iTs,
@@ -426,21 +429,26 @@ void update_fading_bubble(
 {
   OstreamManager clout(std::cout, "main");
 
-  const auto total_ramp_iTs = 10;
-
-  if(elapsed_iTs > total_ramp_iTs){
+  if(elapsed_iTs >= total_ramp_iTs
+  //  - ((total_ramp_iTs * smoothing_ramp_iTs) + 49) / 50
+  ){
     return;
   }
 
   const double alpha_raw = (double)elapsed_iTs / (double)total_ramp_iTs;
   std::shared_ptr<AnalyticalF2D<T,T>> alpha = std::make_shared<AnalyticalConst2D<T,T>>(alpha_raw);
-  std::shared_ptr<AnalyticalF2D<T,T>> ramp_increment = std::make_shared<AnalyticalConst2D<T,T>>(1./(double)(total_ramp_iTs + 1));
+  std::shared_ptr<AnalyticalF2D<T,T>> ramp_increment = std::make_shared<AnalyticalConst2D<T,T>>(1./(double)(total_ramp_iTs));
 
   clout << "Starting fading bubble update" << std::endl;
 
+  IndicatorCircle2D<T> bubble_circle(pos, diameter / 2. * 1.1);
+  superGeometry.rename(1, 23, bubble_circle);
+  
   auto all    = superGeometry.getMaterialIndicator({1});
+  auto bubble_ind = superGeometry.getMaterialIndicator({23});
 
   std::shared_ptr<AnalyticalF2D<T,T>> one = std::make_shared<AnalyticalConst2D<T,T>>(1.);
+  std::shared_ptr<AnalyticalF2D<T,T>> one_over_total_iTs = std::make_shared<AnalyticalConst2D<T,T>>(1./T(total_ramp_iTs));
 
   T dx        = converter.getPhysDeltaX();
   T C_sigma   = converter.getConversionFactorSurfaceTension();
@@ -459,13 +467,29 @@ void update_fading_bubble(
   std::shared_ptr<AnalyticalF2D<T,T>> p = std::make_shared<AnalyticalFfromSuperF2D<T,T>>(p_raw);
   std::shared_ptr<AnalyticalF2D<T,T>> phi = std::make_shared<AnalyticalFfromSuperF2D<T,T>>(phi_raw);
 
-  
+  // std::shared_ptr<AnalyticalF2D<T,T>> pressure_computed = std::make_shared<AnalyticalFfromSuperF2D<T,T>>(pressure_computed_raw);
+
+  std::shared_ptr<AnalyticalF2D<T,T>> phi_new_bubble;
+  if(elapsed_iTs == 0){
+    phi_new_bubble = std::make_shared<CircularInterface2D<T>>(pos, dx * diameter / 2., dx * w, 1./T(total_ramp_iTs), true);
+  } 
+  else{
+    phi_new_bubble = std::make_shared<CircularFadingInterface2D<T>>(phi, pos, dx * diameter / 2. * 1.1, dx * w, elapsed_iTs, total_ramp_iTs);
+  }
   // Create the new bubbble phi, add it into the current phi
 
-  std::shared_ptr<AnalyticalF2D<T,T>> phi_new_bubble = std::make_shared<CircularInterface2D<T>>(pos, dx * diameter / 2., dx * w, 1.,
-                                        true);
+  
 
-  auto phi_new = phi + ramp_increment * (phi_new_bubble - one);
+  auto phi_new = elapsed_iTs == 0 ? phi + (phi_new_bubble - one_over_total_iTs) : phi_new_bubble;
+
+  // SuperLatticeDensity2D<T,ACDESCRIPTOR> phi_raw(sLatticeAC);
+  // std::shared_ptr<AnalyticalF2D<T,T>> phi = 
+  //     std::make_shared<AnalyticalFfromSuperF2D<T,T>>(phi_raw);
+  // std::shared_ptr<AnalyticalF2D<T,T>> one_over_total_iTs = 
+  //     std::make_shared<AnalyticalConst2D<T,T>>(1./T(10.));
+  // std::shared_ptr<AnalyticalF2D<T,T>> phi_new_bubble = 
+  //     std::make_shared<CircularInterface2D<T>>(pos, dx * diameter / 2., dx * w, 1./T(10.), true);
+  // auto phi_new = phi + (phi_new_bubble - one_over_total_iTs);
 
   // Now create the pressure / velocity for our new bubbble
 
@@ -474,6 +498,7 @@ void update_fading_bubble(
   std::shared_ptr<AnalyticalF2D<T, T>> halfYLPressure(
       new AnalyticalConst2D<T, T>(2. * sigma / diameter / 2.));
 
+  // TODO UNCOMMENT
   // This is keeping the old pressure where the bubble is formed
   auto p_new = p + ramp_increment * (bubblePressure + halfYLPressure);
 
@@ -492,20 +517,31 @@ void update_fading_bubble(
   auto pop_functor_ns = std::make_shared<IncompressibleEquilibriumPopulations2D<T, NSDESCRIPTOR>>(rho, p_new, u_ns);
   auto pop_functor_ac = std::make_shared<FirstOrderEquilibriumPopulations2D<T, ACDESCRIPTOR>>(phi_new, u_ac);
 
-  sLatticeNS.defineField<descriptors::POPULATION>(all, *pop_functor_ns);
-  sLatticeAC.defineField<descriptors::POPULATION>(all, *pop_functor_ac);
+  sLatticeNS.defineField<descriptors::POPULATION>(bubble_ind, *pop_functor_ns);
+  sLatticeAC.defineField<descriptors::POPULATION>(bubble_ind, *pop_functor_ac);
+
+  superGeometry.rename(23, 1);
 
   clout << "Finished fading bubble insertion" << std::endl;
 }
 
 
+
 void getResults(SuperLattice<T, NSDESCRIPTOR>& sLatticeNS,
                 SuperLattice<T, ACDESCRIPTOR>& sLatticeAC, int iT,
                 SuperGeometry<T, 2>& superGeometry, util::Timer<T>& timer,
-                UnitConverter<T, NSDESCRIPTOR> converter)
+                MultiPhaseUnitConverterFromRelaxationTime<T, NSDESCRIPTOR> converter)
 {
   OstreamManager      clout(std::cout, "getResults");
   SuperVTMwriter2D<T> vtmWriter("bubbleChannel2d");
+
+  T dx        = converter.getPhysDeltaX();
+  T C_sigma   = converter.getConversionFactorSurfaceTension();
+  T C_density = converter.getConversionFactorDensity();
+  T C_p       = C_sigma / dx;
+  T sigma     = surfaceTension / C_sigma;
+
+
   if (iT == 0) {
     // Writes the geometry, cuboid no. and rank no. as vti file for visualization
     SuperLatticeCuboid2D<T, NSDESCRIPTOR> cuboid(sLatticeNS);
@@ -524,7 +560,7 @@ void getResults(SuperLattice<T, NSDESCRIPTOR>& sLatticeNS,
   }
 
   // Writes the VTK files
-  if (iT % vtkIter == 0) {
+  if (is_vtk_time(iT)) {
     SuperLatticePhysIncPressure2D<T, NSDESCRIPTOR> p_total(sLatticeNS,
                                                            converter);
     p_total.getName() = "p_total";
@@ -557,6 +593,28 @@ void getResults(SuperLattice<T, NSDESCRIPTOR>& sLatticeNS,
   phi_raw.getName() = "phi_raw";
   u_ac_raw.getName() = "u_ac_raw";
 
+  std::vector<T> pos = {dx * 2. * diameter, dx * Ny / 2.};
+  std::shared_ptr<AnalyticalF2D<T,T>> one_over_total_iTs_anal = std::make_shared<AnalyticalConst2D<T,T>>(1./T(total_ramp_iTs));
+  std::shared_ptr<AnalyticalF2D<T,T>> phi_anal = std::make_shared<AnalyticalFfromSuperF2D<T,T>>(phi_raw);
+  std::shared_ptr<AnalyticalF2D<T,T>> phi_new_bubble_anal = std::make_shared<CircularInterface2D<T>>(pos, dx * diameter / 2., dx * w, 1./T(total_ramp_iTs), true);
+  
+  auto phi_infading_bubble_anal = phi_anal + (phi_new_bubble_anal - one_over_total_iTs_anal);
+  
+  SuperLatticeFfromAnalyticalF2D<T, NSDESCRIPTOR> phi_infading_bubble(phi_infading_bubble_anal,
+                                                                sLatticeNS);
+  SuperLatticeFfromAnalyticalF2D<T, NSDESCRIPTOR> phi_new_bubble(phi_new_bubble_anal,
+                                                                sLatticeNS);   
+  SuperLatticeFfromAnalyticalF2D<T, NSDESCRIPTOR> one_over_total_iTs(one_over_total_iTs_anal,
+                                                                sLatticeNS);   
+  phi_new_bubble.getName() = "phi_new_bubble";                                                     
+  phi_infading_bubble.getName() = "phi_infading_bubble";
+  one_over_total_iTs.getName() = "one_over_ten";
+  // vtmWriter.addFunctor(phi_new_bubble);
+  // vtmWriter.addFunctor(phi_infading_bubble);
+  // vtmWriter.addFunctor(one_over_total_iTs);
+
+  
+
   // // vtmWriter.addFunctor(p_raw);
   // // vtmWriter.addFunctor(u_ns_raw);
   // // vtmWriter.addFunctor(phi_raw);
@@ -572,10 +630,6 @@ void getResults(SuperLattice<T, NSDESCRIPTOR>& sLatticeNS,
     // vtmWriter.addFunctor(psi);
     vtmWriter.write(iT);
   }
-}
-
-bool is_bubble_spawn_iT(int iT){
-  return (iT % 25000) == 100;
 }
 
 void simulate(T Re)
@@ -675,7 +729,10 @@ void simulate(T Re)
 
     // if(!bubble_spawn_iTs.empty()){
     //   const auto elapsed_iTs_since_last_spawn = iT - bubble_spawn_iTs.back();
-    //   update_fading_bubble(bubble_positions.back(), bubble_diameters.back(), elapsed_iTs_since_last_spawn, converter, sLatticeNS, sLatticeAC, superGeometry);
+
+    //   // if(elapsed_iTs_since_last_spawn % smoothing_ramp_iTs == 0){
+    //   //   update_fading_bubble(bubble_positions.back(), bubble_diameters.back(), elapsed_iTs_since_last_spawn / smoothing_ramp_iTs, converter, sLatticeNS, sLatticeAC, superGeometry);
+    //   // }
     // }
 
     

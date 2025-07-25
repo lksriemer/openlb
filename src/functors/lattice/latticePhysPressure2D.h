@@ -72,12 +72,33 @@ SuperLatticePhysIncPressure2D(SuperLattice<T,DESCRIPTOR>&,
                               const UnitConverter<T,DESCRIPTOR>&)
   -> SuperLatticePhysIncPressure2D<T,DESCRIPTOR>;
 
+/// functor to get pointwise pressure from incompressible model on local lattices
+template <typename T, typename DESCRIPTOR>
+class SuperLatticeIncPressure2D final : public SuperLatticeF2D<T,DESCRIPTOR> {
+public:
+  SuperLatticeIncPressure2D(SuperLattice<T,DESCRIPTOR>& sLattice);
+};
+
+template <typename T, typename DESCRIPTOR>
+SuperLatticeIncPressure2D(SuperLattice<T,DESCRIPTOR>&)
+  -> SuperLatticeIncPressure2D<T,DESCRIPTOR>;
+
+  
 /// BlockLatticePhysPressure2D returns pointwise phys pressure from incompressible model on local lattices.
 template <typename T, typename DESCRIPTOR>
 class BlockLatticePhysIncPressure2D final : public BlockLatticePhysF2D<T,DESCRIPTOR> {
 public:
   BlockLatticePhysIncPressure2D(BlockLattice<T,DESCRIPTOR>& blockLattice,
                                 const UnitConverter<T,DESCRIPTOR>& converter);
+  bool operator() (T output[], const int input[]) override;
+};
+
+
+/// BlockLatticePhysPressure2D returns pointwise pressure from incompressible model on local lattices.
+template <typename T, typename DESCRIPTOR>
+class BlockLatticeIncPressure2D final : public BlockLatticeF2D<T,DESCRIPTOR> {
+public:
+  BlockLatticeIncPressure2D(BlockLattice<T,DESCRIPTOR>& blockLattice);
   bool operator() (T output[], const int input[]) override;
 };
 
